@@ -51,6 +51,14 @@ export interface ContainmentOptions {
 	writeOnlyRoots?: readonly string[];
 	/** Cross-session leak roots to deny. Defaults to the real memories/sessions/contexts dirs. */
 	leakRoots?: readonly string[];
+	/**
+	 * Whether the active backend can express "writable directory, except this file" — see
+	 * COMMAND_BEARING_CONFIG. True for seatbelt, false for Landlock, which cannot.
+	 *
+	 * Defaults to false, so a caller that does not know its backend gets the portable policy rather
+	 * than one that silently breaks the CLIs on Linux.
+	 */
+	narrowsWithinGrant?: boolean;
 }
 
 /**
@@ -75,11 +83,99 @@ const CACHE_DIRS = [
 	path.join(".yarn", "berry", "cache"),
 	path.join(".rustup", "toolchains"),
 	path.join(".rustup", "downloads"),
+	// Go keeps its module cache under ~/go, but ~/go also holds checked-out source and `go install`
+	// output, so only the cache is granted. Missed in the original list; `go build` failed for it.
+	path.join("go", "pkg", "mod"),
+	// The build cache is separate from the module cache and `go build` needs both. On macOS it lands in
+	// ~/Library/Caches (already granted); on Linux it is ~/.cache/go-build, which nothing else covers.
+	path.join(".cache", "go-build"),
 	// No credential convention of their own, so granted whole.
 	".pnpm-store",
 	".deno",
 	path.join("Library", "Caches"),
 	path.join("Library", "pnpm"),
+];
+
+/**
+ * Config and state directories of the CLIs xcsh ships plugins and skills for — the same list it probes
+ * for in `internal-urls/computer-profile.ts`.
+ *
+ * Granted read and write. In v19.100.0 the home deny covered all of these, so every one of `gh`, `glab`,
+ * `sf`, `az`, `aws` and `gcloud` failed on its own configuration — and the agent is instructed to file
+ * issues with `gh` (#2581). Write is required, not convenience: `az` writes a log per invocation to
+ * `~/.azure/commands`, `sf` writes a dated log into `~/.sf`, and both `aws` and `gcloud` refresh cached
+ * tokens without being asked. Measured with these read-only instead: `az` exits 1 on
+ * `~/.azure/commands/<stamp>.log`, and `sf` reproduces the original `EPERM` crash on `~/.sf/sf-<date>.log`.
+ *
+ * The cost, stated plainly: a fence keyed on paths cannot let `aws` read `~/.aws/credentials` without
+ * letting `cat` read it, so the operator's cloud credentials are readable from a fenced shell. Accepted,
+ * because the fence exists to stop the assistant wandering between customer workspaces rather than to
+ * withhold the operator's credential store from the operator's own CLIs — and the native `az`/`aws` tools
+ * already act with those credentials, so denying only the shell path broke the CLIs without protecting
+ * anything. `~/.ssh` and `~/.gnupg` are still denied: no shipped tool needs them.
+ *
+ * Reading a credential is not the same as being able to *replace* one, so see COMMAND_BEARING_CONFIG.
+ */
+const TOOL_CONFIG_DIRS = [
+	path.join(".config", "gh"), // gh
+	path.join(".config", "glab-cli"), // glab, XDG layout
+	path.join("Library", "Application Support", "glab-cli"), // glab, macOS layout
+	".sf", // sf
+	".sfdx", // sf, legacy layout still read by current versions
+	".azure", // az
+	".aws", // aws
+	path.join(".config", "gcloud"), // gcloud
+	".docker", // docker
+	".kube", // kubectl
+	".terraform.d", // terraform
+];
+
+/**
+ * Paths inside TOOL_CONFIG_DIRS that name a command or hold a loadable executable. Read-only, so the
+ * grant above never becomes a way to run code later.
+ *
+ * This is the distinction that matters: reading `~/.aws/credentials` discloses a secret, but *writing*
+ * `~/.aws/config` installs a `credential_process` that the operator's next — unfenced — `aws` call
+ * executes, with access to every customer workspace and private file the fence exists to protect. That
+ * is an escape from the sandbox rather than a leak inside it. `~/.cargo/config.toml` and
+ * `~/.gradle/init.gradle` are excluded from the cache carve-out for exactly this reason; these are the
+ * same class, and none of them was writable before #2581, so keeping them read-only means that change
+ * adds no new write capability on any path that can cause execution.
+ *
+ * Each entry is a documented mechanism, not a guess: `credential_process` (aws), `user.exec`
+ * (kubeconfig), `credsStore`/`credHelpers` and CLI plugins (docker), Python extensions (az), provider
+ * binaries (terraform), the virtualenv `activate` that gcloud's launcher sources, and `!`-prefixed shell
+ * aliases (gh, glab). The CLIs still read all of them, so nothing stops working; only rewriting does.
+ * `gh auth login` and `glab auth login` are interactive and belong outside a fenced session anyway.
+ */
+const COMMAND_BEARING_CONFIG = [
+	path.join(".aws", "config"), // credential_process = <command>
+	path.join(".aws", "cli", "alias"), // aws aliases; a leading `!` runs through a shell
+	path.join(".azure", "config"), // extension.index_url + use_dynamic_install fetch and run wheels
+	path.join(".kube", "config"), // users[].user.exec.command
+	path.join(".docker", "config.json"), // credsStore / credHelpers -> docker-credential-*
+	path.join(".docker", "cli-plugins"), // docker-* plugin executables
+	path.join(".azure", "cliextensions"), // az extensions, executed as Python
+	path.join(".terraform.d", "plugins"), // provider binaries
+	path.join(".config", "gcloud", "virtenv"), // sourced by the gcloud launcher
+	path.join(".config", "gh", "config.yml"), // gh alias set x '!sh -c ...', plus editor/browser/pager
+	// glab keeps aliases in their own file, so those can be held read-only. Its config.yml cannot:
+	// glab rewrites it on ordinary commands (atomic rename) to refresh the OAuth token and the
+	// update-check stamp, and holding it read-only reproduced #2581 — `glab auth status` exits 1 with
+	// "rename …/.config.yml".
+	//
+	// Worse than a failed command, and the reason this is not merely a convenience: the OAuth refresh
+	// already happened at GitLab, so a denied write loses the rotated refresh token and the operator's
+	// login is permanently dead — `invalid_grant` afterwards, even outside the fence. Observed while
+	// testing this change, which cost a real `glab auth login`. Any CLI that refreshes a rotating token
+	// must be able to persist it.
+	//
+	// Left writable, and the residual exposure is stated rather than hidden:
+	// that file also carries `editor`, `browser` and `duo_cli_binary_path`/`duo_cli_auto_run`, so a write
+	// there IS a code-execution vector this fence does not close. `gh` needs no such exception because it
+	// was measured working with its config.yml read-only.
+	path.join(".config", "glab-cli", "aliases.yml"),
+	path.join("Library", "Application Support", "glab-cli", "aliases.yml"),
 ];
 
 /** Read-only inside home: configuration a tool needs to behave correctly, but must not rewrite. */
@@ -97,6 +193,33 @@ function canonical(root: string): string | undefined {
 		return fs.realpathSync(root);
 	} catch {
 		return undefined;
+	}
+}
+
+/**
+ * Canonicalise as much of `target` as already exists, keeping the absent tail.
+ *
+ * `canonical` gives up on a path whose leaf is missing, and falling back to the literal string is not
+ * safe for a rule whose job is to *narrow* another one. With `~/.aws` symlinked to a vault — chezmoi,
+ * stow and yadm all do this — and no config file yet, the grant is emitted resolved (`<vault>`) while
+ * the read-only rule keeps the link spelling (`~/.aws/config`). Both backends match a rule against the
+ * path the kernel resolved, so the narrower rule covers nothing.
+ *
+ * That was verified as a real escape before this existed: through the real seatbelt profile,
+ * `printf 'credential_process = …' > <vault>/config` succeeded. Note `fenceVerdict` did NOT show it,
+ * because `pathIsWithin` normalises symlinks — the in-process check was safe while the emitted profile
+ * was not, so a test asserting only the verdict passes while the boundary leaks.
+ */
+function canonicalThroughExisting(target: string): string {
+	const tail: string[] = [];
+	let current = target;
+	for (;;) {
+		const resolved = canonical(current);
+		if (resolved !== undefined) return path.join(resolved, ...tail);
+		const parent = path.dirname(current);
+		if (parent === current) return target;
+		tail.unshift(path.basename(current));
+		current = parent;
 	}
 }
 
@@ -194,9 +317,25 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		// Granted whether or not they exist yet. `~/.bun` has to be writable *before* the first
 		// `bun install` creates it, so dropping absent caches would break exactly the first run.
 		// Canonicalised when present, so a symlinked cache resolves to its real location.
-		for (const cache of CACHE_DIRS) allow.add(canonical(path.join(home, cache)) ?? path.join(home, cache));
-		for (const config of READ_ONLY_HOME) {
-			allowReadOnly.add(canonical(path.join(home, config)) ?? path.join(home, config));
+		for (const cache of [...CACHE_DIRS, ...TOOL_CONFIG_DIRS]) {
+			allow.add(canonicalThroughExisting(path.join(home, cache)));
+		}
+		// Deeper than the grant above, so `fenceVerdict` picks these and write becomes a deny while read
+		// stays allowed. Emitted even when absent, or creating the file would be the way around it — and
+		// resolved through existing ancestors, or a symlinked config dir puts the two rules in different
+		// namespaces and the narrower one stops applying.
+		//
+		// COMMAND_BEARING_CONFIG only when the backend can express a narrowing *inside* a grant.
+		// Seatbelt can: it is last-match-wins, so a deeper deny simply overrides. Landlock cannot — its
+		// rules are allow-only and always recursive, so a read-only child turns its parent into a split
+		// dir that loses write on its own inode. Verified with `containment-check plan`: adding
+		// `~/.azure/cliextensions` as read-only made `~/.azure` itself `r-`, which would stop `az` from
+		// creating `azureProfile.json` at all. Applying it anyway would trade a code-execution path for
+		// breaking the very CLIs #2581 is about, so the gap is reported instead — the same choice already
+		// made for `truncationUngoverned`.
+		const narrowed = options.narrowsWithinGrant ? COMMAND_BEARING_CONFIG : [];
+		for (const config of [...READ_ONLY_HOME, ...narrowed]) {
+			allowReadOnly.add(canonicalThroughExisting(path.join(home, config)));
 		}
 	}
 
@@ -260,6 +399,14 @@ export interface ContainmentStatus {
 	 * different claims and an operator is entitled to know which one they have.
 	 */
 	readonly truncationUngoverned?: boolean;
+	/**
+	 * Set when the backend cannot hold a file read-only inside a writable directory, so the
+	 * command-bearing CLI settings (`~/.aws/config`, `~/.kube/config`, …) are writable. Landlock's rules
+	 * are allow-only and recursive; narrowing inside a grant would strip write from the parent directory
+	 * and break the CLIs the grant exists for. Reported rather than folded into `osEnforced`, because it
+	 * changes what a write to those paths means, not whether the boundary holds.
+	 */
+	readonly commandConfigWritable?: boolean;
 }
 
 /**
@@ -301,6 +448,8 @@ export function containmentStatus(
 			osEnforced: true,
 			// Absent on the ABI that governs truncation; present, and stated, on the one that does not.
 			...(probed.truncateHandled === false ? { truncationUngoverned: true } : {}),
+			// Always true here: no Landlock ABI can narrow a right inside a grant.
+			commandConfigWritable: true,
 		};
 	}
 	return { enabled: true, backend: "scanner-only", osEnforced: false };

@@ -543,6 +543,9 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			extraRoots: artifactsDir ? [artifactsDir] : [],
 			readOnlyRoots: (this.session.settings.get("sandbox.allowRead") as string[] | undefined) ?? [],
 			writeOnlyRoots: (this.session.settings.get("sandbox.allowWrite") as string[] | undefined) ?? [],
+			// Only seatbelt can hold a file read-only inside a writable directory; Landlock's rules are
+			// recursive, so asking for it there would strip write from the parent and break the CLIs.
+			narrowsWithinGrant: containmentStatus(true).backend === "seatbelt",
 		});
 	}
 
