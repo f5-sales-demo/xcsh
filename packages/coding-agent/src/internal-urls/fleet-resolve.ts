@@ -210,6 +210,127 @@ export function classifyRepo(classes: RepoClasses | null, repo: RepoIdentity | n
 	return { className: className || CLASS_UNCLASSIFIED, declared, trustedOrg, definition };
 }
 
+/** The fleet split by what may be done in each repository, rather than by class name. */
+export interface AuthorityPartition {
+	/** Repositories xcsh authors in directly. */
+	readonly authored: readonly string[];
+	/** Repositories whose implementation belongs to a coding harness. */
+	readonly delegated: readonly string[];
+	/** Repositories that change only through the governed path. */
+	readonly governed: readonly string[];
+	/** Declared repositories whose class carries an authority this build does not know. */
+	readonly unknown: readonly string[];
+	/** Distinct `delegate_to` targets across the delegating classes. */
+	readonly delegateTargets: readonly string[];
+}
+
+/**
+ * Group every *declared* repository by the authority its class carries.
+ *
+ * Classes are the manifest's vocabulary; authority is what actually decides how xcsh
+ * contributes, and it is the only thing that answers "is this one mine?". Grouping by it
+ * keeps that answer correct if docs-control ever adds a fourth class — a new authoring
+ * class lands in `authored` without a change here.
+ *
+ * Only declared repositories appear. An unlisted one is UNCLASSIFIED and must never be
+ * presented as authorable, which is the same fail-closed stance `classifyRepo` takes.
+ */
+export function partitionByAuthority(classes: RepoClasses): AuthorityPartition {
+	const authored: string[] = [];
+	const delegated: string[] = [];
+	const governed: string[] = [];
+	const unknown: string[] = [];
+	const delegateTargets = new Set<string>();
+
+	for (const [repo, className] of Object.entries(classes.repos)) {
+		// An assignment naming an undefined class has no authority to read, so it falls
+		// through to `unknown` — never to `authored`.
+		const definition = classes.classes[className];
+		switch (definition?.authority) {
+			case AUTHORITY_AUTHOR:
+				authored.push(repo);
+				break;
+			case AUTHORITY_DELEGATE:
+				delegated.push(repo);
+				if (definition.delegateTo) delegateTargets.add(definition.delegateTo);
+				break;
+			case AUTHORITY_GOVERNED:
+				governed.push(repo);
+				break;
+			default:
+				unknown.push(repo);
+				break;
+		}
+	}
+
+	return {
+		authored: authored.sort(),
+		delegated: delegated.sort(),
+		governed: governed.sort(),
+		unknown: unknown.sort(),
+		delegateTargets: [...delegateTargets].sort(),
+	};
+}
+
+/** Repository names as inline code, or an explicit marker when the group is empty. */
+function renderRepoList(repos: readonly string[]): string {
+	return repos.length > 0 ? repos.map(r => `\`${r}\``).join(" ") : "_none_";
+}
+
+/**
+ * The roster, stated plainly: which repositories xcsh authors in, which belong to a
+ * coding harness, and which move only through the governed path.
+ *
+ * `renderFleet` below already lists every class in manifest detail, but reading it means
+ * mapping class → authority → "is this mine?" for each entry. That question comes up on
+ * its own ("which repositories do I manage?"), so answer it once, by name, and let it be
+ * read rather than inferred.
+ */
+function renderTerritory(classes: RepoClasses): string[] {
+	const { authored, delegated, governed, unknown, delegateTargets } = partitionByAuthority(classes);
+	const handOff =
+		delegateTargets.length > 0 ? delegateTargets.map(t => `\`${t}\``).join(", ") : "a dedicated coding harness";
+
+	const lines = [
+		"## Your territory",
+		"",
+		`**You author in these ${authored.length} repositories** — every one whose class carries`,
+		`\`authority: ${AUTHORITY_AUTHOR}\`. Documentation, Terraform plans, network diagrams, howtos and`,
+		"demo scripts are yours to write here, through the governed path:",
+		"",
+		renderRepoList(authored),
+		"",
+		`**${delegated.length} repositories are delegated** to ${handOff}. Your deliverable there is a`,
+		"verified issue plus the specification, review and documentation around it — never an",
+		"implementation:",
+		"",
+		renderRepoList(delegated),
+		"",
+		`**${governed.length} repositories change through the governed path only** — fleet plumbing whose`,
+		"changes propagate everywhere:",
+		"",
+		renderRepoList(governed),
+		"",
+	];
+
+	if (unknown.length > 0) {
+		lines.push(
+			`**${unknown.length} repositories carry an authority this build does not recognize.** Treat them`,
+			"as `delegate`, the restrictive case, and ask docs-control to fix the manifest:",
+			"",
+			renderRepoList(unknown),
+			"",
+		);
+	}
+
+	lines.push(
+		"This roster is read from the manifest, never inferred from what a repository contains. A",
+		"repository missing from it is UNCLASSIFIED and is never authored, whatever it holds.",
+		"",
+	);
+	return lines;
+}
+
 /** The behaviour each authority implies, stated so the agent does not have to infer it. */
 function authorityGuidance(authority: string): string[] {
 	switch (authority) {
@@ -309,16 +430,7 @@ function renderFleet(classes: RepoClasses): string[] {
 		const def = classes.classes[className];
 		lines.push(`### ${className} (${repos.length}) — authority: ${def?.authority ?? "unknown"}`);
 		if (def?.description) lines.push("", def.description);
-		lines.push(
-			"",
-			repos.length > 0
-				? repos
-						.sort()
-						.map(r => `\`${r}\``)
-						.join(" ")
-				: "_none_",
-			"",
-		);
+		lines.push("", renderRepoList(repos.sort()), "");
 	}
 
 	lines.push(
@@ -392,6 +504,7 @@ export function renderFleetDoc(
 		"# Fleet — repository classes and your authority here",
 		"",
 		...renderCurrentRepo(slug, verdict, classes),
+		...renderTerritory(classes),
 		...renderFleet(classes),
 		...renderProvenance(origin, classes),
 		...FOOTER,

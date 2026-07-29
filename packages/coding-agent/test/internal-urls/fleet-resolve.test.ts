@@ -6,6 +6,7 @@ import {
 	createFleetResolver,
 	createLiveCwdGetter,
 	parseRepoClasses,
+	partitionByAuthority,
 	repoNameFromOrigin,
 	TRUSTED_ORGS,
 } from "@f5-sales-demo/xcsh/internal-urls/fleet-resolve";
@@ -322,5 +323,143 @@ describe("xcsh://fleet document", () => {
 		expect(received.join(" ")).toContain("docs-control");
 		expect(res.content).toContain("## Fleet");
 		expect(res.content).toContain("mcn");
+	});
+});
+
+describe("partitionByAuthority", () => {
+	const SOURCE_REPO = "f5-sales-demo/docs-control";
+
+	/** Build a RepoClasses from a repo_classes literal, the way the manifest ships it. */
+	function classesOf(repoClasses: unknown) {
+		const parsed = parseRepoClasses(JSON.stringify({ source_repo: SOURCE_REPO, repo_classes: repoClasses }));
+		if (!parsed) throw new Error("fixture did not parse");
+		return parsed;
+	}
+
+	it("groups declared repos by the authority their class carries", () => {
+		const parsed = parseRepoClasses(GOVERNANCE);
+		if (!parsed) throw new Error("fixture did not parse");
+		const part = partitionByAuthority(parsed);
+		expect(part.authored).toEqual(["mcn", "waf"]);
+		expect(part.delegated).toEqual(["api-specs", "xcsh"]);
+		expect(part.governed).toEqual(["docs-control"]);
+		expect(part.unknown).toEqual([]);
+	});
+
+	it("reports the delegate targets the manifest declares, deduped", () => {
+		const part = partitionByAuthority(
+			classesOf({
+				_default: "developer",
+				classes: {
+					developer: { authority: "delegate", delegate_to: "claude-code|codex" },
+					tooling: { authority: "delegate", delegate_to: "claude-code|codex" },
+				},
+				repos: { xcsh: "developer", console: "tooling" },
+			}),
+		);
+		expect(part.delegateTargets).toEqual(["claude-code|codex"]);
+	});
+
+	it("never lists a repo whose class carries an unrecognized authority as authored", () => {
+		const part = partitionByAuthority(
+			classesOf({
+				_default: "developer",
+				classes: { odd: { authority: "curator" }, content: { authority: "author" } },
+				repos: { weird: "odd", mcn: "content" },
+			}),
+		);
+		expect(part.unknown).toEqual(["weird"]);
+		expect(part.authored).toEqual(["mcn"]);
+	});
+
+	it("never lists a repo assigned to an undefined class as authored", () => {
+		// A typo in `repos` must withhold authority, not inherit it from somewhere.
+		const part = partitionByAuthority(
+			classesOf({
+				_default: "developer",
+				classes: { content: { authority: "author" } },
+				repos: { mcn: "content", oops: "contnet" },
+			}),
+		);
+		expect(part.authored).toEqual(["mcn"]);
+		expect(part.unknown).toEqual(["oops"]);
+	});
+
+	it("picks up a new authoring class without needing a code change", () => {
+		// Grouping by authority rather than class name is what makes this hold.
+		const part = partitionByAuthority(
+			classesOf({
+				_default: "developer",
+				classes: { collateral: { authority: "author" } },
+				repos: { "account-plans": "collateral" },
+			}),
+		);
+		expect(part.authored).toEqual(["account-plans"]);
+	});
+
+	it("handles a manifest that assigns no repositories at all", () => {
+		const part = partitionByAuthority(
+			classesOf({ _default: "developer", classes: { content: { authority: "author" } }, repos: {} }),
+		);
+		expect(part.authored).toEqual([]);
+		expect(part.delegated).toEqual([]);
+		expect(part.governed).toEqual([]);
+		expect(part.unknown).toEqual([]);
+	});
+});
+
+describe("xcsh://fleet territory roster", () => {
+	/** The territory section: everything between its heading and the class listing. */
+	function territoryOf(doc: string): string {
+		const start = doc.indexOf("## Your territory");
+		expect(start).toBeGreaterThan(-1);
+		return doc.slice(start, doc.indexOf("## Fleet"));
+	}
+
+	it("names the repositories xcsh authors in, so the answer is read not inferred", async () => {
+		const territory = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
+		expect(territory).toContain("`mcn`");
+		expect(territory).toContain("`waf`");
+		expect(territory).toMatch(/2 repositories/);
+	});
+
+	it("separates the delegated repos and names who they go to", async () => {
+		const territory = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
+		expect(territory).toContain("`xcsh`");
+		expect(territory).toContain("`api-specs`");
+		expect(territory).toContain("claude-code|codex");
+		expect(territory).toMatch(/verified issue/i);
+	});
+
+	it("states the roster is manifest-declared, not inferred from repo contents", async () => {
+		const territory = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
+		expect(territory).toMatch(/read from the manifest/i);
+		expect(territory).toContain("UNCLASSIFIED");
+	});
+
+	it("shows the same roster from a developer repo — it describes the fleet, not the cwd", async () => {
+		const fromContent = territoryOf(await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE));
+		const fromDeveloper = territoryOf(await render("https://github.com/f5-sales-demo/xcsh.git", GOVERNANCE));
+		expect(fromDeveloper).toBe(fromContent);
+	});
+
+	it("appears after the current-repo verdict and before the class listing", async () => {
+		const doc = await render("https://github.com/f5-sales-demo/mcn.git", GOVERNANCE);
+		expect(doc.indexOf("## This repository")).toBeLessThan(doc.indexOf("## Your territory"));
+		expect(doc.indexOf("## Your territory")).toBeLessThan(doc.indexOf("## Fleet"));
+	});
+
+	it("renders an empty authoring group explicitly rather than silently", async () => {
+		const noContent = JSON.stringify({
+			source_repo: "f5-sales-demo/docs-control",
+			repo_classes: {
+				_default: "developer",
+				classes: { developer: { authority: "delegate", delegate_to: "claude-code|codex" } },
+				repos: { xcsh: "developer" },
+			},
+		});
+		const territory = territoryOf(await render("https://github.com/f5-sales-demo/xcsh.git", noContent));
+		expect(territory).toContain("_none_");
+		expect(territory).toMatch(/0 repositories/);
 	});
 });
