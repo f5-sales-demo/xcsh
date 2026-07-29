@@ -241,21 +241,56 @@ describe("buildContainmentFence — review findings", () => {
 		// Read AND write: these CLIs persist refreshed tokens, logs and profiles as part of ordinary
 		// use. `gh auth login`, `az login`, `aws sso login` and `sf org login` all write here.
 		for (const config of [
-			".config/gh/hosts.yml",
-			".config/glab-cli/config.yml",
-			"Library/Application Support/glab-cli/config.yml",
+			".config/gh/hosts.yml", // the token gh authenticates with
 			".sf/sf-2026-07-28.log",
 			".sfdx/alias.json",
 			".azure/azureProfile.json",
-			".aws/config",
 			".aws/credentials",
-			".config/gcloud/virtenv/bin/activate",
-			".docker/config.json",
-			".kube/config",
+			".config/gcloud/access_tokens.db",
+			".docker/contexts/meta/x",
+			".kube/cache/discovery/x",
 			".terraform.d/credentials.tfrc.json",
 		]) {
 			expect(fenceVerdict(fence, path.join(home, config), "read")).toBe("allow");
 			expect(fenceVerdict(fence, path.join(home, config), "write")).toBe("allow");
+		}
+
+		// Readable, but see the command-bearing test below: these are deliberately not writable.
+		for (const readOnly of [".aws/config", ".kube/config", "Library/Application Support/glab-cli/config.yml"]) {
+			expect(fenceVerdict(fence, path.join(home, readOnly), "read")).toBe("allow");
+		}
+	});
+
+	// The grant above must not become a way to run code later. Writing `~/.aws/config` installs a
+	// `credential_process` that the operator's next — unfenced — `aws` call executes, with access to
+	// everything the fence protects. That is an escape, not a leak, so every command-bearing path stays
+	// read-only: the CLI still reads it, nothing stops working, only rewriting is refused.
+	it("never grants write to configuration that names a command or holds an executable", () => {
+		const home = realTmp("execconf");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+
+		for (const bearing of [
+			".aws/config", // credential_process = <command>
+			".kube/config", // users[].user.exec.command
+			".docker/config.json", // credsStore / credHelpers
+			".docker/cli-plugins/docker-evil", // plugin executable
+			".azure/cliextensions/evil/__init__.py", // az extension, executed as Python
+			".terraform.d/plugins/evil", // provider binary
+			".config/gcloud/virtenv/bin/activate", // sourced by the gcloud launcher
+			".config/gh/config.yml", // gh alias set x '!sh -c …'
+			".config/glab-cli/config.yml", // glab aliases
+			"Library/Application Support/glab-cli/config.yml",
+		]) {
+			expect(fenceVerdict(fence, path.join(home, bearing), "write")).toBe("deny");
+			// Read must survive, or the CLI cannot authenticate and #2581 is back.
+			expect(fenceVerdict(fence, path.join(home, bearing), "read")).toBe("allow");
+		}
+
+		// The state each CLI genuinely writes stays writable, or `az` exits 1 and `sf` hangs — measured.
+		for (const state of [".azure/commands/x.log", ".sf/sf-2026-07-28.log", ".aws/sso/cache/x.json"]) {
+			expect(fenceVerdict(fence, path.join(home, state), "write")).toBe("allow");
 		}
 	});
 

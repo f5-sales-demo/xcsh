@@ -78,6 +78,9 @@ const CACHE_DIRS = [
 	// Go keeps its module cache under ~/go, but ~/go also holds checked-out source and `go install`
 	// output, so only the cache is granted. Missed in the original list; `go build` failed for it.
 	path.join("go", "pkg", "mod"),
+	// The build cache is separate from the module cache and `go build` needs both. On macOS it lands in
+	// ~/Library/Caches (already granted); on Linux it is ~/.cache/go-build, which nothing else covers.
+	path.join(".cache", "go-build"),
 	// No credential convention of their own, so granted whole.
 	".pnpm-store",
 	".deno",
@@ -89,18 +92,21 @@ const CACHE_DIRS = [
  * Config and state directories of the CLIs xcsh ships plugins and skills for — the same list it probes
  * for in `internal-urls/computer-profile.ts`.
  *
- * Granted **read and write**, which is a deliberate trade rather than an oversight. In v19.100.0 the home
- * deny covered all of these, so every one of `gh`, `glab`, `sf`, `az`, `aws` and `gcloud` failed on its
- * own configuration — and the agent is instructed to file issues with `gh`. Write is required too: these
- * CLIs persist refreshed tokens, logs and profiles during ordinary use, and `gh auth login`, `az login`,
- * `aws sso login` and `sf org login` all write here.
+ * Granted read and write. In v19.100.0 the home deny covered all of these, so every one of `gh`, `glab`,
+ * `sf`, `az`, `aws` and `gcloud` failed on its own configuration — and the agent is instructed to file
+ * issues with `gh` (#2581). Write is required, not convenience: `az` writes a log per invocation to
+ * `~/.azure/commands`, `sf` writes a dated log into `~/.sf`, and both `aws` and `gcloud` refresh cached
+ * tokens without being asked. Measured with these read-only instead: `az` exits 1 on
+ * `~/.azure/commands/<stamp>.log`, and `sf` reproduces the original `EPERM` crash on `~/.sf/sf-<date>.log`.
  *
  * The cost, stated plainly: a fence keyed on paths cannot let `aws` read `~/.aws/credentials` without
- * letting `cat` read it, so the operator's cloud credentials are reachable from a fenced shell. That is
- * accepted because the fence exists to stop the assistant wandering between customer workspaces, not to
- * withhold the operator's own credential store from the operator's own CLIs — and because the native
- * `az`/`aws` tools already act with those credentials, so denying the shell path broke the CLIs without
- * protecting anything. What is *not* granted: `~/.ssh`, `~/.gnupg`, and every path no shipped tool needs.
+ * letting `cat` read it, so the operator's cloud credentials are readable from a fenced shell. Accepted,
+ * because the fence exists to stop the assistant wandering between customer workspaces rather than to
+ * withhold the operator's credential store from the operator's own CLIs — and the native `az`/`aws` tools
+ * already act with those credentials, so denying only the shell path broke the CLIs without protecting
+ * anything. `~/.ssh` and `~/.gnupg` are still denied: no shipped tool needs them.
+ *
+ * Reading a credential is not the same as being able to *replace* one, so see COMMAND_BEARING_CONFIG.
  */
 const TOOL_CONFIG_DIRS = [
 	path.join(".config", "gh"), // gh
@@ -114,6 +120,37 @@ const TOOL_CONFIG_DIRS = [
 	".docker", // docker
 	".kube", // kubectl
 	".terraform.d", // terraform
+];
+
+/**
+ * Paths inside TOOL_CONFIG_DIRS that name a command or hold a loadable executable. Read-only, so the
+ * grant above never becomes a way to run code later.
+ *
+ * This is the distinction that matters: reading `~/.aws/credentials` discloses a secret, but *writing*
+ * `~/.aws/config` installs a `credential_process` that the operator's next — unfenced — `aws` call
+ * executes, with access to every customer workspace and private file the fence exists to protect. That
+ * is an escape from the sandbox rather than a leak inside it. `~/.cargo/config.toml` and
+ * `~/.gradle/init.gradle` are excluded from the cache carve-out for exactly this reason; these are the
+ * same class, and none of them was writable before #2581, so keeping them read-only means that change
+ * adds no new write capability on any path that can cause execution.
+ *
+ * Each entry is a documented mechanism, not a guess: `credential_process` (aws), `user.exec`
+ * (kubeconfig), `credsStore`/`credHelpers` and CLI plugins (docker), Python extensions (az), provider
+ * binaries (terraform), the virtualenv `activate` that gcloud's launcher sources, and `!`-prefixed shell
+ * aliases (gh, glab). The CLIs still read all of them, so nothing stops working; only rewriting does.
+ * `gh auth login` and `glab auth login` are interactive and belong outside a fenced session anyway.
+ */
+const COMMAND_BEARING_CONFIG = [
+	path.join(".aws", "config"), // credential_process = <command>
+	path.join(".kube", "config"), // users[].user.exec.command
+	path.join(".docker", "config.json"), // credsStore / credHelpers -> docker-credential-*
+	path.join(".docker", "cli-plugins"), // docker-* plugin executables
+	path.join(".azure", "cliextensions"), // az extensions, executed as Python
+	path.join(".terraform.d", "plugins"), // provider binaries
+	path.join(".config", "gcloud", "virtenv"), // sourced by the gcloud launcher
+	path.join(".config", "gh", "config.yml"), // gh alias set x '!sh -c ...'
+	path.join(".config", "glab-cli", "config.yml"), // glab aliases, XDG layout
+	path.join("Library", "Application Support", "glab-cli", "config.yml"), // glab aliases, macOS layout
 ];
 
 /** Read-only inside home: configuration a tool needs to behave correctly, but must not rewrite. */
@@ -231,7 +268,9 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		for (const cache of [...CACHE_DIRS, ...TOOL_CONFIG_DIRS]) {
 			allow.add(canonical(path.join(home, cache)) ?? path.join(home, cache));
 		}
-		for (const config of READ_ONLY_HOME) {
+		// Deeper than the grant above, so `fenceVerdict` picks these and write becomes a deny while read
+		// stays allowed. Emitted even when absent, or creating the file would be the way around it.
+		for (const config of [...READ_ONLY_HOME, ...COMMAND_BEARING_CONFIG]) {
 			allowReadOnly.add(canonical(path.join(home, config)) ?? path.join(home, config));
 		}
 	}

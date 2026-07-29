@@ -10,8 +10,10 @@ followed symlinks — so how a path is spelled does not change what is reachable
 - Ordinary work is unrestricted: system paths, `/tmp`, package caches (`~/.bun`, `~/.cargo`,
   `~/go/pkg/mod`, …), the network, and running programs are all untouched.
 - The CLIs you drive keep their own configuration, so `gh`, `glab`, `az`, `aws`, `gcloud`, `sf`,
-  `docker`, `kubectl` and `terraform` all work normally — including the commands that log in and write
-  a refreshed token back.
+  `docker`, `kubectl` and `terraform` all work normally, including the token refreshes and logs they
+  write as they go. What you cannot do is *rewrite* the settings that name a command to run —
+  `~/.aws/config`, `~/.kube/config`, `~/.docker/config.json`, a plugin directory. Those stay readable
+  and are refused for writing, because a later unfenced run of that CLI would execute what you wrote.
 - What is refused: reading or writing outside the session directory — another checkout, `~/.ssh`,
   `~/.gnupg`, `~/Documents`, and other sessions' transcripts. `~/.gitconfig` is readable, not writable.
 - `cd` out of the session tree is refused, because every later relative path would resolve there.
