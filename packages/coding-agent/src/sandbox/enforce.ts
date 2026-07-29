@@ -30,8 +30,18 @@
  *
  * So: keep it, and do not extend it. Another spelling caught here buys little now, and the pattern of
  * adding one has a poor record — two adversarial rounds on the #2542 fix alone produced six bypasses.
+ *
+ * **It is still a real layer, though, not a legacy one (#2582.)** It was tempting to conclude that the
+ * fence sits below this and therefore this can only produce false positives. That is wrong: the fence is
+ * allow-by-default and denies only home plus the workspace's ancestors, so it does not cover a second
+ * customer tree under an unrelated root, and `policy.ts` withholds the shared OS temp dir from the file
+ * tools on purpose. Deleting this would hand both away. What #2582 actually fixed is narrower — the
+ * *false refusals*, where this layer refused what the fence grants; see `fenceAlsoPermits`.
  */
+import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
+import { pathIsWithin } from "@f5-sales-demo/pi-utils";
 import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
 import { lexShellCommand, type ShellSimpleCommand } from "../tools/shell-lex";
 import { provenExemptWords } from "./command-operands";
@@ -42,6 +52,16 @@ export interface ToolCallCheck {
 	input: Record<string, unknown>;
 	cwd: string;
 	policy: SandboxPolicy;
+	/**
+	 * Whether an OS backend is confining the `bash` tool's shell — seatbelt or Landlock.
+	 *
+	 * It does not stand this scan down. It only stops the scan refusing the operational paths the fence
+	 * grants, so the composite is no longer stricter than either engine — see `fenceAlsoPermits`.
+	 *
+	 * Absent means "not known", which keeps every refusal in place: understating the backend costs a
+	 * false refusal, while overstating it would relax the only boundary a scanner-only host has.
+	 */
+	shellOsConfined?: boolean;
 }
 
 export interface ToolCallDecision {
@@ -151,6 +171,65 @@ const SYSTEM_WRITE_SINKS = new Set([
 function isSystemWriteSink(resolved: string): boolean {
 	// /dev/fd/N is an already-open descriptor of this process, not a path it can newly reach.
 	return SYSTEM_WRITE_SINKS.has(resolved) || resolved.startsWith("/dev/fd/");
+}
+
+/**
+ * Paths the containment fence permits, which this scan must therefore stop refusing (#2582).
+ *
+ * The two engines have opposite defaults: this one is `SandboxPolicy`, deny-by-default and confined to
+ * the cwd, while the fence is allow-by-default with targeted denies. Running both made the composite
+ * their intersection, so the scan refused work the fence permits and `xcsh://about` promises — a `/tmp`
+ * write, a `~/.gitconfig` read, `cd /tmp`. That falsified the model's own instructions and taught it to
+ * abandon operations that were allowed.
+ *
+ * Only the *false refusals* go away. The scan keeps deciding, because it is not merely a slower copy of
+ * the fence: the fence denies home and the workspace's ancestors and allows everything else, so it does
+ * NOT cover a second customer tree under an unrelated root (`/data/globex`), and `policy.ts` deliberately
+ * withholds the shared OS temp dir from the *file* tools to stop one session reading another's scratch.
+ * Deleting this layer would hand both of those away. Adversarial review caught that; #2582's premise that
+ * the scan "cannot add security" is wrong.
+ *
+ * So this is a narrow, enumerated set — the operational paths the fence grants — and it applies to the
+ * shell only, gated on a backend actually being there. `python` is covered by no fence on any platform,
+ * and on a host with no backend this scan is the whole boundary, so neither is widened.
+ */
+function fenceAlsoPermits(resolved: string, access: SandboxAccess): boolean {
+	// The fence never mentions the temp directories, so they are reachable below the text whatever this
+	// says. Refusing them here only produced a diagnostic that contradicted the documentation.
+	if (tempRoots().some(root => pathIsWithin(root, resolved))) return true;
+	// Granted read-only by the fence (`READ_ONLY_HOME`): a tool needs it to behave correctly, and it must
+	// not be rewritten. The write direction stays refused, which matches the fence exactly.
+	if (access === "read") {
+		const home = os.homedir();
+		return [path.join(home, ".gitconfig"), path.join(home, ".config", "git")].some(root =>
+			pathIsWithin(root, resolved),
+		);
+	}
+	return false;
+}
+
+/**
+ * The temp directories, resolved once.
+ *
+ * Both spellings are needed, and conflating them is the bug this comment exists to prevent: on macOS
+ * `os.tmpdir()` is the *per-user* `/var/folders/…/T`, which is not `/tmp` at all. `xcsh://about` promises
+ * `/tmp` specifically, so covering only `os.tmpdir()` left the exact case #2582 reported still refused.
+ * Real paths as well as nominal ones, because `/tmp` is a symlink to `/private/tmp` and a resolved
+ * candidate carries the latter.
+ */
+let cachedTempRoots: string[] | undefined;
+function tempRoots(): string[] {
+	if (cachedTempRoots === undefined) {
+		const resolve = (input: string): string => {
+			try {
+				return fs.realpathSync(input);
+			} catch {
+				return input;
+			}
+		};
+		cachedTempRoots = [...new Set(["/tmp", resolve("/tmp"), os.tmpdir(), resolve(os.tmpdir())])];
+	}
+	return cachedTempRoots;
 }
 
 function firstString(input: Record<string, unknown>, keys: string[]): string | undefined {
@@ -554,13 +633,18 @@ function searchBases(raw: string, base: (token: string) => string): string[] {
 
 function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean): ToolCallDecision {
 	const { input, cwd, policy } = check;
+	// The fence's allowances apply to the shell only, and only where a backend is actually enforcing.
+	const fenced = shell && check.shellOsConfined === true;
 
 	const rawCwd = typeof input.cwd === "string" ? input.cwd : undefined;
 	const base = rawCwd ? resolveToCwd(rawCwd, cwd) : cwd;
 	// Both boundaries, for the same reason a `cd` target needs both: relative paths are never
 	// scanned, so wherever the command runs is somewhere it can write freely. Read alone let
 	// `{ cwd: "/shared/ctx", command: "touch notes.md" }` write into a read-only root.
-	if (rawCwd && !(policy.isAllowed(base, "read") && policy.isAllowed(base, "write"))) {
+	// `cwd: "/tmp"` has to answer the same as `cd /tmp`, or the false refusal simply moves to the other
+	// interface — and `cwd` is the one the bash prompt tells the model to prefer over `cd`.
+	const fencePermitsBase = fenced && fenceAlsoPermits(base, "read") && fenceAlsoPermits(base, "write");
+	if (rawCwd && !fencePermitsBase && !(policy.isAllowed(base, "read") && policy.isAllowed(base, "write"))) {
 		return { block: true, reason: describeDirectoryChange(policy, base) };
 	}
 
@@ -600,6 +684,9 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 				// because relative paths go unchecked wherever the shell is standing.
 				const moved = path.resolve(base, expandPath(token));
 				if (policy.isAllowed(moved, "read") && policy.isAllowed(moved, "write")) continue;
+				// `cd /tmp` was refused while the fence permits standing there, and the boundary no
+				// longer follows the shell (#2589), so where it stands widens nothing.
+				if (fenced && fenceAlsoPermits(moved, "read") && fenceAlsoPermits(moved, "write")) continue;
 				return { block: true, reason: describeDirectoryChange(policy, moved) };
 			}
 			const resolved = resolveToCwd(token, base);
@@ -608,6 +695,9 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 			// read or traverse". It never licenses writing into /etc, /usr or /opt; only the
 			// discard-and-echo devices are writable.
 			if (access === "read" ? isSystemPath(resolved) : isSystemWriteSink(resolved)) continue;
+			// Anything the fence grants outright: refusing it here contradicted the documentation and
+			// bought nothing, since the fence permits it below the text either way.
+			if (fenced && fenceAlsoPermits(resolved, access)) continue;
 			return deny(policy, resolved, access);
 		}
 	}

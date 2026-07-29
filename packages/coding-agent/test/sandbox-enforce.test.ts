@@ -672,3 +672,125 @@ describe("paths reaching the shell through an expansion (#2534)", () => {
 		expect(check("bash", { command: 'cat "$SECRET"' }).block).toBe(false);
 	});
 });
+
+/**
+ * #2582: two policy engines with opposite defaults, and the composite was stricter than either.
+ *
+ * This scan is `SandboxPolicy` — deny-by-default, confined to the cwd. The containment fence is
+ * allow-by-default with targeted denies. Running both made the effective policy their intersection, so
+ * the scan refused work the fence permits and `xcsh://about` promises: a `/tmp` write, a `~/.gitconfig`
+ * read, `cd /tmp`.
+ *
+ * Only those false refusals go away. The scan keeps deciding, because it is NOT a slower copy of the
+ * fence — adversarial review showed the fence allows a second customer tree under an unrelated root, and
+ * `policy.ts` withholds the shared temp dir from the file tools deliberately. Standing this layer down
+ * would have handed both away, so #2582's premise that it "cannot add security" is refuted.
+ */
+describe("evaluateToolCall — bash false refusals under an OS fence (#2582)", () => {
+	const fenced = (input: Record<string, unknown>) =>
+		evaluateToolCall({ toolName: "bash", input, cwd: CWD, policy: makePolicy(), shellOsConfined: true });
+	const unfenced = (input: Record<string, unknown>) =>
+		evaluateToolCall({ toolName: "bash", input, cwd: CWD, policy: makePolicy(), shellOsConfined: false });
+	const tmp = fs.realpathSync(os.tmpdir());
+
+	// Each was measured refused on v19.100.0 while the fence permitted it.
+	it("stops refusing the operational paths the fence grants", () => {
+		expect(fenced({ command: `printf x > ${path.join(tmp, "probe.txt")}` }).block).toBe(false);
+		expect(fenced({ command: `cat ${path.join(tmp, "probe.txt")}` }).block).toBe(false);
+		expect(fenced({ command: `cd ${tmp}` }).block).toBe(false);
+		expect(fenced({ command: `cat ${path.join(os.homedir(), ".gitconfig")} | wc -l` }).block).toBe(false);
+	});
+
+	// The fence grants ~/.gitconfig READ only, and so does this. Diverging in the other direction would
+	// be worse than the bug: a permitted-looking write that the fence then refuses.
+	it("keeps the read-only home config read-only", () => {
+		expect(fenced({ command: `echo x >> ${path.join(os.homedir(), ".gitconfig")}` }).block).toBe(true);
+	});
+
+	// The protection the fence does NOT provide, and the reason this layer stays.
+	it("still refuses a tree the fence would allow", () => {
+		for (const command of ["cat /work/custB/secret.json", "cat /data/globex/secrets.tf"]) {
+			expect(fenced({ command }).block).toBe(true);
+			expect(unfenced({ command }).block).toBe(true);
+		}
+	});
+
+	// Nothing changes where no backend is enforcing: there the scan is the whole boundary.
+	it("changes nothing on a host with no OS backend", () => {
+		expect(unfenced({ command: `printf x > ${path.join(tmp, "probe.txt")}` }).block).toBe(true);
+		expect(unfenced({ command: `cd ${tmp}` }).block).toBe(true);
+	});
+
+	// python is covered by no fence on any platform, so it must never get the allowance.
+	it("never widens python", () => {
+		const python = (code: string) =>
+			evaluateToolCall({
+				toolName: "python",
+				input: { code },
+				cwd: CWD,
+				policy: makePolicy(),
+				shellOsConfined: true,
+			});
+		expect(python(`open('${path.join(tmp, "probe.txt")}','w')`).block).toBe(true);
+		expect(python("open('notes.md').read()").block).toBe(false);
+	});
+
+	// Nor the structured file tools, which have no subprocess to confine.
+	it("never widens the structured file tools", () => {
+		const write = evaluateToolCall({
+			toolName: "write",
+			input: { file_path: path.join(tmp, "probe.txt") },
+			cwd: CWD,
+			policy: makePolicy(),
+			shellOsConfined: true,
+		});
+		expect(write.block).toBe(true);
+	});
+
+	// Absent must mean "keep deciding": a caller that cannot answer must not relax the boundary.
+	it("keeps refusing when the caller does not say", () => {
+		expect(check("bash", { command: `printf x > ${path.join(tmp, "probe.txt")}` }).block).toBe(true);
+	});
+});
+
+// Review: the fenced allowance was applied only to paths parsed out of the command text, so the
+// documented `cwd` parameter — which the bash prompt tells the model to prefer over `cd` — still
+// refused a temp path. The false refusal simply moved to the other interface.
+describe("evaluateToolCall — the bash cwd parameter agrees with cd (#2582)", () => {
+	const tmp = fs.realpathSync(os.tmpdir());
+
+	it("accepts a cwd the fence permits", () => {
+		const decision = evaluateToolCall({
+			toolName: "bash",
+			input: { command: "pwd", cwd: tmp },
+			cwd: CWD,
+			policy: makePolicy(),
+			shellOsConfined: true,
+		});
+		expect(decision.block).toBe(false);
+	});
+
+	it("still refuses a cwd nothing permits", () => {
+		for (const dir of ["/work/custB", "/data/globex"]) {
+			const decision = evaluateToolCall({
+				toolName: "bash",
+				input: { command: "pwd", cwd: dir },
+				cwd: CWD,
+				policy: makePolicy(),
+				shellOsConfined: true,
+			});
+			expect(decision.block).toBe(true);
+		}
+	});
+
+	it("keeps refusing a temp cwd where no backend is enforcing", () => {
+		const decision = evaluateToolCall({
+			toolName: "bash",
+			input: { command: "pwd", cwd: tmp },
+			cwd: CWD,
+			policy: makePolicy(),
+			shellOsConfined: false,
+		});
+		expect(decision.block).toBe(true);
+	});
+});

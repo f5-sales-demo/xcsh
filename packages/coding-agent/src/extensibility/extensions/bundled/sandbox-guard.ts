@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { settings } from "../../../config/settings";
+import { containmentStatus } from "../../../sandbox/containment";
 import { evaluateToolCall } from "../../../sandbox/enforce";
 import { resolveSessionPolicy } from "../../../sandbox/session-policy";
 
@@ -30,6 +31,11 @@ export default function sandboxGuard(pi: ExtensionAPI): void {
 			input: event.input as Record<string, unknown>,
 			cwd: ctx.cwd,
 			policy,
+			// Asked per call rather than cached at load: the answer comes from a probe of the running
+			// kernel, and a session can be created before the native module has been reached. The probe
+			// itself memoises, so this costs nothing after the first call. When an OS backend confines the
+			// shell, the command-text scan stops deciding for `bash` — see the #2582 note in enforce.ts.
+			shellOsConfined: containmentStatus(true).osEnforced,
 		});
 		return decision.block ? { block: true, reason: decision.reason } : undefined;
 	});
