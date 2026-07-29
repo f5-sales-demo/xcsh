@@ -15,6 +15,7 @@ import { renderStatusLine } from "../tui";
 import { CachedOutputBlock } from "../tui/output-block";
 import { formatDimensionNote, resizeImage } from "../utils/image-resize";
 import { ensureTool } from "../utils/tools-manager";
+import { buildLlmEndpointCandidates } from "../web/llms-endpoints";
 import { extractWithParallel, findParallelApiKey, getParallelExtractContent } from "../web/parallel";
 import { specialHandlers } from "../web/scrapers";
 import type { RenderResult } from "../web/scrapers/types";
@@ -95,32 +96,6 @@ const MAX_INLINE_IMAGE_OUTPUT_BYTES = 300 * 1024;
  */
 function hasCommand(cmd: string): boolean {
 	return Boolean($which(cmd));
-}
-
-/**
- * Build llms.txt candidates scoped to the requested URL
- */
-function buildLlmEndpointCandidates(url: string): string[] {
-	try {
-		const parsed = new URL(url);
-		if (parsed.pathname === "/") {
-			return [`${parsed.origin}/.well-known/llms.txt`, `${parsed.origin}/llms.txt`, `${parsed.origin}/llms.md`];
-		}
-
-		const trimmedPath = parsed.pathname.replace(/\/+$/, "");
-		const segments = trimmedPath.split("/").filter(Boolean);
-		const scopeDepth = parsed.pathname.endsWith("/") ? segments.length : Math.max(segments.length - 1, 1);
-		const endpoints: string[] = [];
-
-		for (let depth = scopeDepth; depth >= 1; depth--) {
-			const scope = `/${segments.slice(0, depth).join("/")}/`;
-			endpoints.push(`${parsed.origin}${scope}llms.txt`, `${parsed.origin}${scope}llms.md`);
-		}
-
-		return endpoints;
-	} catch {
-		return [];
-	}
 }
 
 /**
