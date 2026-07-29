@@ -752,3 +752,45 @@ describe("evaluateToolCall — bash false refusals under an OS fence (#2582)", (
 		expect(check("bash", { command: `printf x > ${path.join(tmp, "probe.txt")}` }).block).toBe(true);
 	});
 });
+
+// Review: the fenced allowance was applied only to paths parsed out of the command text, so the
+// documented `cwd` parameter — which the bash prompt tells the model to prefer over `cd` — still
+// refused a temp path. The false refusal simply moved to the other interface.
+describe("evaluateToolCall — the bash cwd parameter agrees with cd (#2582)", () => {
+	const tmp = fs.realpathSync(os.tmpdir());
+
+	it("accepts a cwd the fence permits", () => {
+		const decision = evaluateToolCall({
+			toolName: "bash",
+			input: { command: "pwd", cwd: tmp },
+			cwd: CWD,
+			policy: makePolicy(),
+			shellOsConfined: true,
+		});
+		expect(decision.block).toBe(false);
+	});
+
+	it("still refuses a cwd nothing permits", () => {
+		for (const dir of ["/work/custB", "/data/globex"]) {
+			const decision = evaluateToolCall({
+				toolName: "bash",
+				input: { command: "pwd", cwd: dir },
+				cwd: CWD,
+				policy: makePolicy(),
+				shellOsConfined: true,
+			});
+			expect(decision.block).toBe(true);
+		}
+	});
+
+	it("keeps refusing a temp cwd where no backend is enforcing", () => {
+		const decision = evaluateToolCall({
+			toolName: "bash",
+			input: { command: "pwd", cwd: tmp },
+			cwd: CWD,
+			policy: makePolicy(),
+			shellOsConfined: false,
+		});
+		expect(decision.block).toBe(true);
+	});
+});

@@ -641,7 +641,10 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 	// Both boundaries, for the same reason a `cd` target needs both: relative paths are never
 	// scanned, so wherever the command runs is somewhere it can write freely. Read alone let
 	// `{ cwd: "/shared/ctx", command: "touch notes.md" }` write into a read-only root.
-	if (rawCwd && !(policy.isAllowed(base, "read") && policy.isAllowed(base, "write"))) {
+	// `cwd: "/tmp"` has to answer the same as `cd /tmp`, or the false refusal simply moves to the other
+	// interface — and `cwd` is the one the bash prompt tells the model to prefer over `cd`.
+	const fencePermitsBase = fenced && fenceAlsoPermits(base, "read") && fenceAlsoPermits(base, "write");
+	if (rawCwd && !fencePermitsBase && !(policy.isAllowed(base, "read") && policy.isAllowed(base, "write"))) {
 		return { block: true, reason: describeDirectoryChange(policy, base) };
 	}
 

@@ -235,6 +235,11 @@ function tooBroadToDeny(candidate: string): boolean {
 	if (candidate === path.parse(candidate).root) return true;
 	const never = [
 		safeReal(os.tmpdir()),
+		// Both spellings: `/tmp` resolves to `/private/tmp` on macOS, and the ancestor walk works on
+		// resolved paths. Without the resolved form, a workspace at `/tmp/<x>/repo` denied `/private/tmp`
+		// — every other temp path with it — which contradicts the `/tmp` guarantee in `xcsh://about`.
+		"/tmp",
+		safeReal("/tmp"),
 		"/usr",
 		"/bin",
 		"/sbin",

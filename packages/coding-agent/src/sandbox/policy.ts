@@ -113,11 +113,19 @@ export interface DefaultSandboxOptions {
  * contexts are explicitly denied, so even a broad user-configured allow cannot re-expose
  * another customer's memory, session, or credentials.
  *
- * Note: the OS temp dir is deliberately NOT allowlisted. It is shared across all
+ * Note: the OS temp dir is deliberately NOT allowlisted here. It is shared across all
  * sessions, so allowing it would let one customer's session read another's scratch
  * files. The agent should work in temp directories under its CWD; internal tool temp
  * usage bypasses this boundary (it is not a model-invoked path). A specific session
  * temp dir can still be granted via `tmpDir`.
+ *
+ * That still holds for every tool this policy governs directly. It does NOT hold for
+ * `bash` on a host with an OS backend: the containment fence never mentions the temp
+ * directories, so they are reachable below the command text regardless, and refusing
+ * them in the text scan produced only a diagnostic that contradicted `xcsh://about`
+ * (#2582). The protection was spelling-deep in any case — `T=/tmp/other; cat "$T"`
+ * never went through this check. Treat shared temp as readable by a fenced shell, and
+ * put anything that must not cross sessions under the session directory or `tmpDir`.
  */
 export function buildDefaultSandboxPolicy(opts: DefaultSandboxOptions): SandboxPolicy {
 	const cwd = path.resolve(opts.cwd);

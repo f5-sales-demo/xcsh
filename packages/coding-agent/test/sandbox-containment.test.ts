@@ -574,3 +574,27 @@ describe("buildContainmentFence — isolation does not depend on how deep the wo
 		}
 	});
 });
+
+// Review of the ancestor walk: with the workspace under /tmp, canonicalisation gives /private/tmp/…,
+// and `tooBroadToDeny` named `/private` and `os.tmpdir()` but not the resolved `/tmp` — so the walk
+// denied /private/tmp and took every other temp path with it, against the guarantee in xcsh://about.
+describe("buildContainmentFence — the ancestor walk never denies a temp root", () => {
+	it("leaves /tmp usable when the workspace itself lives under it", () => {
+		const home = realTmp("tmphome");
+		const workspace = `/tmp/fence-tmp-probe-${process.pid}/repo`;
+		fs.mkdirSync(workspace, { recursive: true });
+		try {
+			const fence = buildContainmentFence({ workspace, home });
+			for (const root of fence.deny) {
+				expect(root).not.toBe("/tmp");
+				expect(root).not.toBe(fs.realpathSync("/tmp"));
+			}
+			expect(fenceVerdict(fence, "/private/tmp/other-session.txt", "read")).toBe("allow");
+			// The workspace's own container is still denied, which is the point of the walk.
+			expect(fenceVerdict(fence, `/private/tmp/fence-tmp-probe-${process.pid}/sibling/x`, "read")).toBe("deny");
+			expect(fenceVerdict(fence, path.join(fs.realpathSync(workspace), "mine.txt"), "write")).toBe("allow");
+		} finally {
+			fs.rmSync(`/tmp/fence-tmp-probe-${process.pid}`, { recursive: true, force: true });
+		}
+	});
+});
