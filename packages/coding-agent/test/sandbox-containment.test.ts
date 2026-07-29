@@ -521,3 +521,87 @@ describe("containmentStatus", () => {
 		expect(containmentStatus(true, "win32", scannerOnly).osEnforced).toBe(false);
 	});
 });
+
+/**
+ * The parent deny was one level deep, and that is not where tenants necessarily sit.
+ *
+ * `buildContainmentFence` denied home and the workspace's *immediate* parent. With a layout of
+ * `<container>/<tenant>/repo` the immediate parent is the tenant, so every OTHER tenant matched no rule
+ * and the fence allowed it — read and write. That went unnoticed because the command-text scan is
+ * deny-by-default and refused those paths on the way in, so the composite looked correct while the fence
+ * alone was not. Removing that scan for OS-confined shells (#2582) is what exposed it.
+ *
+ * Found by adversarial review of #2582, reproduced here before fixing: `<container>/globex/repo/secrets.tf`
+ * was `read=allow write=allow`.
+ */
+describe("buildContainmentFence — isolation does not depend on how deep the workspace sits", () => {
+	it("denies a cousin tenant, not just an immediate sibling", () => {
+		const home = realTmp("cousinhome");
+		const container = realTmp("tenants");
+		const workspace = path.join(container, "acme", "repo");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(path.join(container, "globex", "repo"), { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+
+		// The case that exists for this fence, one level deeper than the original rule reached.
+		for (const access of ["read", "write"] as const) {
+			expect(fenceVerdict(fence, path.join(container, "globex", "repo", "secrets.tf"), access)).toBe("deny");
+			expect(fenceVerdict(fence, path.join(container, "acme", "other-repo", "x"), access)).toBe("deny");
+			expect(fenceVerdict(fence, path.join(container, "loose-file.txt"), access)).toBe("deny");
+		}
+		// …and the workspace itself still works, or the fence is useless.
+		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
+	});
+
+	it("still refuses to deny a root too broad to deny", () => {
+		const home = realTmp("broadhome");
+		// Directly under the OS temp dir: walking up must stop rather than deny $TMPDIR or /.
+		const workspace = path.join(fs.realpathSync(os.tmpdir()), `fence-broad-${process.pid}`);
+		fs.mkdirSync(workspace, { recursive: true });
+		try {
+			const fence = buildContainmentFence({ workspace, home });
+			for (const root of fence.deny) {
+				expect(root).not.toBe("/");
+				expect(root).not.toBe(fs.realpathSync(os.tmpdir()));
+			}
+			// Operational paths stay reachable however far up the walk went.
+			for (const p of ["/usr/bin/env", "/etc/hosts", "/bin/sh"]) {
+				expect(fenceVerdict(fence, p, "read")).toBe("allow");
+			}
+		} finally {
+			fs.rmSync(workspace, { recursive: true, force: true });
+		}
+	});
+});
+
+// Review of the ancestor walk: with the workspace under /tmp, canonicalisation gives /private/tmp/…,
+// and `tooBroadToDeny` named `/private` and `os.tmpdir()` but not the resolved `/tmp` — so the walk
+// denied /private/tmp and took every other temp path with it, against the guarantee in xcsh://about.
+describe("buildContainmentFence — the ancestor walk never denies a temp root", () => {
+	it("leaves /tmp usable when the workspace itself lives under it", () => {
+		const home = realTmp("tmphome");
+		const container = `/tmp/fence-tmp-probe-${process.pid}`;
+		const workspace = path.join(container, "repo");
+		fs.mkdirSync(workspace, { recursive: true });
+		try {
+			// Resolved, never hardcoded: `/tmp` really is `/private/tmp` on macOS and really is `/tmp` on
+			// Linux, and the fence works in resolved paths. Writing the macOS spelling in made this pass
+			// locally and fail on the Linux runner, where it asserted against a path that exists nowhere.
+			const realTmpRoot = fs.realpathSync("/tmp");
+			const realContainer = fs.realpathSync(container);
+
+			const fence = buildContainmentFence({ workspace, home });
+			for (const root of fence.deny) {
+				expect(root).not.toBe("/tmp");
+				expect(root).not.toBe(realTmpRoot);
+			}
+			expect(fenceVerdict(fence, path.join(realTmpRoot, "other-session.txt"), "read")).toBe("allow");
+			// The workspace's own container is still denied, which is the point of the walk.
+			expect(fenceVerdict(fence, path.join(realContainer, "sibling", "x"), "read")).toBe("deny");
+			expect(fenceVerdict(fence, path.join(fs.realpathSync(workspace), "mine.txt"), "write")).toBe("allow");
+		} finally {
+			fs.rmSync(container, { recursive: true, force: true });
+		}
+	});
+});

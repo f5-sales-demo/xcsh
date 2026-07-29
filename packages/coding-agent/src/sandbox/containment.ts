@@ -235,6 +235,11 @@ function tooBroadToDeny(candidate: string): boolean {
 	if (candidate === path.parse(candidate).root) return true;
 	const never = [
 		safeReal(os.tmpdir()),
+		// Both spellings: `/tmp` resolves to `/private/tmp` on macOS, and the ancestor walk works on
+		// resolved paths. Without the resolved form, a workspace at `/tmp/<x>/repo` denied `/private/tmp`
+		// — every other temp path with it — which contradicts the `/tmp` guarantee in `xcsh://about`.
+		"/tmp",
+		safeReal("/tmp"),
 		"/usr",
 		"/bin",
 		"/sbin",
@@ -289,13 +294,28 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	const allowWriteOnly = new Set<string>();
 	const deny = new Set<string>();
 
-	// Home is one fence. The workspace's own parent is the other, and it is the one that matters when
+	// Home is one fence. The workspace's ancestors are the other, and they are what matters when
 	// checkouts live outside home: with /work/customer-a as the workspace, /work/customer-b matched no
-	// rule at all and was readable and writable. Denying the parent closes sibling access wherever the
-	// checkouts sit, which is the threat this exists for.
+	// rule at all and was readable and writable.
+	//
+	// Every ancestor, not just the immediate parent. One level only works when the parent happens to be
+	// the container the tenants sit in; with `<container>/<tenant>/repo` the immediate parent IS the
+	// tenant, so every OTHER tenant matched nothing and the fence allowed it, read and write. That went
+	// unnoticed because the command-text scan is deny-by-default and refused those paths on the way in —
+	// the composite looked right while the fence alone did not. Removing that scan for OS-confined shells
+	// (#2582) is what exposed it, so the two changes ship together.
+	//
+	// Denying an ancestor costs nothing above it: the walk stops before anything `tooBroadToDeny`
+	// rejects, so `/`, `/usr`, `/tmp` and `$TMPDIR` are never denied and operational paths stay
+	// reachable. And it costs nothing below: the workspace is allowed at greater depth, and
+	// `fenceVerdict` takes the deepest match.
 	if (home !== undefined && home !== workspace) deny.add(home);
-	const parent = path.dirname(workspace);
-	if (parent !== workspace && !tooBroadToDeny(parent)) deny.add(parent);
+	for (let ancestor = path.dirname(workspace); ; ancestor = path.dirname(ancestor)) {
+		if (tooBroadToDeny(ancestor)) break;
+		deny.add(ancestor);
+		const next = path.dirname(ancestor);
+		if (next === ancestor) break; // reached a filesystem root that `tooBroadToDeny` did not name
+	}
 
 	for (const root of [options.sessionTmp, ...(options.extraRoots ?? [])]) {
 		if (root === undefined) continue;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { _resetSettingsForTest, Settings, settings } from "@f5-sales-demo/xcsh/config/settings";
 import sandboxGuard from "@f5-sales-demo/xcsh/extensibility/extensions/bundled/sandbox-guard";
+import { containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
 
 const CWD = "/work/custA";
 
@@ -70,5 +71,43 @@ describe("sandbox-guard bundled extension", () => {
 		// Revoking it re-blocks (cache tracks the current allow-list, not a one-way widen).
 		settings.override("sandbox.allowRead", []);
 		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
+	});
+	/**
+	 * #2582, at the layer that actually shipped the divergence.
+	 *
+	 * The guard is what refused a `/tmp` write and a `~/.gitconfig` read on v19.100.0 — operations the
+	 * fence permits and `xcsh://about` promises. It now asks whether an OS backend is confining the
+	 * shell, and stands aside for `bash` when one is. Keyed off the product's own
+	 * `containmentStatus(true).osEnforced` rather than a platform check written here, so this test and
+	 * the shipped behaviour cannot drift apart.
+	 */
+	describe("bash and the OS fence (#2582)", () => {
+		const osEnforced = containmentStatus(true).osEnforced;
+
+		it(`${osEnforced ? "defers to the fence" : "is the boundary"} for a bash command naming a reachable path`, async () => {
+			await initSandbox(true);
+			const handler = captureHandler()!;
+			// The fence permits both of these; the scan refused both.
+			for (const command of ["printf x > /tmp/xcsh-guard-probe.txt", "cat /etc/hosts"]) {
+				const decision = await call(handler, "bash", { command });
+				if (osEnforced) expect(decision).toBeUndefined();
+				else expect(decision).toMatchObject({ block: true });
+			}
+		});
+
+		it("never stands aside for python, which no fence covers", async () => {
+			await initSandbox(true);
+			const handler = captureHandler()!;
+			expect(await call(handler, "python", { code: "open('/work/custB/secret').read()" })).toMatchObject({
+				block: true,
+			});
+		});
+
+		it("never stands aside for the structured file tools", async () => {
+			await initSandbox(true);
+			const handler = captureHandler()!;
+			expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
+			expect(await call(handler, "write", { file_path: "/work/custB/planted" })).toMatchObject({ block: true });
+		});
 	});
 });

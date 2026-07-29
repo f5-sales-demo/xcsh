@@ -44,22 +44,19 @@ describe("two-customer isolation", () => {
 		expect(reads(parent, path.join(custB, "secret.env"))).toBe(false);
 	});
 
-	it("blocks Bash reads of custB from custA (relative and absolute)", () => {
+	// The scan keeps deciding for bash even where the OS fence is enforcing, because the fence is
+	// allow-by-default: it denies home and the workspace's ancestors, so a customer tree under an
+	// unrelated root matches nothing and the fence permits it. That is exactly what this layer covers,
+	// and #2582 narrowed only its false refusals rather than standing it down.
+	it("blocks Bash reads of custB from custA, fence or no fence", () => {
 		const policy = buildDefaultSandboxPolicy({ cwd: custA });
-		const relative = evaluateToolCall({
-			toolName: "bash",
-			input: { command: "cat ../custB/secret.env" },
-			cwd: custA,
-			policy,
-		});
-		const absolute = evaluateToolCall({
-			toolName: "bash",
-			input: { command: `cat ${path.join(custB, "secret.env")}` },
-			cwd: custA,
-			policy,
-		});
-		expect(relative.block).toBe(true);
-		expect(absolute.block).toBe(true);
+		const scan = (command: string, shellOsConfined: boolean) =>
+			evaluateToolCall({ toolName: "bash", input: { command }, cwd: custA, policy, shellOsConfined });
+
+		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
+			expect(scan(command, false).block).toBe(true);
+			expect(scan(command, true).block).toBe(true);
+		}
 	});
 });
 
