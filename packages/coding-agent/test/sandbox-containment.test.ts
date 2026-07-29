@@ -581,20 +581,27 @@ describe("buildContainmentFence — isolation does not depend on how deep the wo
 describe("buildContainmentFence — the ancestor walk never denies a temp root", () => {
 	it("leaves /tmp usable when the workspace itself lives under it", () => {
 		const home = realTmp("tmphome");
-		const workspace = `/tmp/fence-tmp-probe-${process.pid}/repo`;
+		const container = `/tmp/fence-tmp-probe-${process.pid}`;
+		const workspace = path.join(container, "repo");
 		fs.mkdirSync(workspace, { recursive: true });
 		try {
+			// Resolved, never hardcoded: `/tmp` really is `/private/tmp` on macOS and really is `/tmp` on
+			// Linux, and the fence works in resolved paths. Writing the macOS spelling in made this pass
+			// locally and fail on the Linux runner, where it asserted against a path that exists nowhere.
+			const realTmpRoot = fs.realpathSync("/tmp");
+			const realContainer = fs.realpathSync(container);
+
 			const fence = buildContainmentFence({ workspace, home });
 			for (const root of fence.deny) {
 				expect(root).not.toBe("/tmp");
-				expect(root).not.toBe(fs.realpathSync("/tmp"));
+				expect(root).not.toBe(realTmpRoot);
 			}
-			expect(fenceVerdict(fence, "/private/tmp/other-session.txt", "read")).toBe("allow");
+			expect(fenceVerdict(fence, path.join(realTmpRoot, "other-session.txt"), "read")).toBe("allow");
 			// The workspace's own container is still denied, which is the point of the walk.
-			expect(fenceVerdict(fence, `/private/tmp/fence-tmp-probe-${process.pid}/sibling/x`, "read")).toBe("deny");
+			expect(fenceVerdict(fence, path.join(realContainer, "sibling", "x"), "read")).toBe("deny");
 			expect(fenceVerdict(fence, path.join(fs.realpathSync(workspace), "mine.txt"), "write")).toBe("allow");
 		} finally {
-			fs.rmSync(`/tmp/fence-tmp-probe-${process.pid}`, { recursive: true, force: true });
+			fs.rmSync(container, { recursive: true, force: true });
 		}
 	});
 });
