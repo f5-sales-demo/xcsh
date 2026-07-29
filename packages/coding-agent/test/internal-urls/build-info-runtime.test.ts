@@ -190,6 +190,23 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("live-git");
 	});
 
+	// The federated product docs publish an llms.txt index, abridged and complete
+	// documents, and a tiered hierarchy for every locale — not only the default
+	// one. A model told about a language-less surface will pull default-locale
+	// context and translate it rather than fetch the language that already exists.
+	it("describes the per-locale llms.txt surface, not only the default locale's", () => {
+		const info = {
+			...embedded,
+			source: "live-git" as const,
+			resolvedAt: "2026-04-19T16:00:00Z",
+		};
+		const md = renderAboutDoc(info, null, null, null);
+		expect(md).toContain("{locale}/llms.txt");
+		expect(md).toContain("{locale}/llms-small.txt");
+		expect(md).toContain("{locale}/llms-full.txt");
+		expect(md).toContain("/_llms-txt/{locale}/");
+	});
+
 	it("labels the source as `compiled` when values came from the baked-in binary", () => {
 		const info = {
 			...embedded,
