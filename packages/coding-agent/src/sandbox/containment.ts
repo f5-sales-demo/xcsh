@@ -51,6 +51,14 @@ export interface ContainmentOptions {
 	writeOnlyRoots?: readonly string[];
 	/** Cross-session leak roots to deny. Defaults to the real memories/sessions/contexts dirs. */
 	leakRoots?: readonly string[];
+	/**
+	 * Whether the active backend can express "writable directory, except this file" — see
+	 * COMMAND_BEARING_CONFIG. True for seatbelt, false for Landlock, which cannot.
+	 *
+	 * Defaults to false, so a caller that does not know its backend gets the portable policy rather
+	 * than one that silently breaks the CLIs on Linux.
+	 */
+	narrowsWithinGrant?: boolean;
 }
 
 /**
@@ -143,6 +151,7 @@ const TOOL_CONFIG_DIRS = [
 const COMMAND_BEARING_CONFIG = [
 	path.join(".aws", "config"), // credential_process = <command>
 	path.join(".aws", "cli", "alias"), // aws aliases; a leading `!` runs through a shell
+	path.join(".azure", "config"), // extension.index_url + use_dynamic_install fetch and run wheels
 	path.join(".kube", "config"), // users[].user.exec.command
 	path.join(".docker", "config.json"), // credsStore / credHelpers -> docker-credential-*
 	path.join(".docker", "cli-plugins"), // docker-* plugin executables
@@ -315,7 +324,17 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		// stays allowed. Emitted even when absent, or creating the file would be the way around it — and
 		// resolved through existing ancestors, or a symlinked config dir puts the two rules in different
 		// namespaces and the narrower one stops applying.
-		for (const config of [...READ_ONLY_HOME, ...COMMAND_BEARING_CONFIG]) {
+		//
+		// COMMAND_BEARING_CONFIG only when the backend can express a narrowing *inside* a grant.
+		// Seatbelt can: it is last-match-wins, so a deeper deny simply overrides. Landlock cannot — its
+		// rules are allow-only and always recursive, so a read-only child turns its parent into a split
+		// dir that loses write on its own inode. Verified with `containment-check plan`: adding
+		// `~/.azure/cliextensions` as read-only made `~/.azure` itself `r-`, which would stop `az` from
+		// creating `azureProfile.json` at all. Applying it anyway would trade a code-execution path for
+		// breaking the very CLIs #2581 is about, so the gap is reported instead — the same choice already
+		// made for `truncationUngoverned`.
+		const narrowed = options.narrowsWithinGrant ? COMMAND_BEARING_CONFIG : [];
+		for (const config of [...READ_ONLY_HOME, ...narrowed]) {
 			allowReadOnly.add(canonicalThroughExisting(path.join(home, config)));
 		}
 	}
@@ -380,6 +399,14 @@ export interface ContainmentStatus {
 	 * different claims and an operator is entitled to know which one they have.
 	 */
 	readonly truncationUngoverned?: boolean;
+	/**
+	 * Set when the backend cannot hold a file read-only inside a writable directory, so the
+	 * command-bearing CLI settings (`~/.aws/config`, `~/.kube/config`, …) are writable. Landlock's rules
+	 * are allow-only and recursive; narrowing inside a grant would strip write from the parent directory
+	 * and break the CLIs the grant exists for. Reported rather than folded into `osEnforced`, because it
+	 * changes what a write to those paths means, not whether the boundary holds.
+	 */
+	readonly commandConfigWritable?: boolean;
 }
 
 /**
@@ -421,6 +448,8 @@ export function containmentStatus(
 			osEnforced: true,
 			// Absent on the ABI that governs truncation; present, and stated, on the one that does not.
 			...(probed.truncateHandled === false ? { truncationUngoverned: true } : {}),
+			// Always true here: no Landlock ABI can narrow a right inside a grant.
+			commandConfigWritable: true,
 		};
 	}
 	return { enabled: true, backend: "scanner-only", osEnforced: false };

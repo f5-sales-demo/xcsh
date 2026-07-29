@@ -255,7 +255,8 @@ describe("buildContainmentFence — review findings", () => {
 			expect(fenceVerdict(fence, path.join(home, config), "write")).toBe("allow");
 		}
 
-		// Readable, but see the command-bearing test below: these are deliberately not writable.
+		// Readable, but see the command-bearing test below: these are deliberately not writable when the
+		// backend can express that.
 		for (const readOnly of [".aws/config", ".kube/config", "Library/Application Support/glab-cli/aliases.yml"]) {
 			expect(fenceVerdict(fence, path.join(home, readOnly), "read")).toBe("allow");
 		}
@@ -269,7 +270,7 @@ describe("buildContainmentFence — review findings", () => {
 		const home = realTmp("execconf");
 		const workspace = path.join(home, "w");
 		fs.mkdirSync(workspace, { recursive: true });
-		const fence = buildContainmentFence({ workspace, home });
+		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
 
 		for (const bearing of [
 			".aws/config", // credential_process = <command>
@@ -309,7 +310,7 @@ describe("buildContainmentFence — review findings", () => {
 		fs.symlinkSync(vault, path.join(home, ".aws"));
 		expect(fs.existsSync(path.join(vault, "config"))).toBe(false);
 
-		const fence = buildContainmentFence({ workspace, home });
+		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
 
 		// Assert the emitted ROOT, not the verdict. `fenceVerdict` normalises symlinks via
 		// `pathIsWithin`, so it answered "deny" even while the profile handed to sandbox-exec carried the
@@ -330,12 +331,46 @@ describe("buildContainmentFence — review findings", () => {
 		const home = realTmp("aliashome");
 		const workspace = path.join(home, "w");
 		fs.mkdirSync(workspace, { recursive: true });
-		const fence = buildContainmentFence({ workspace, home });
+		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
 
 		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "alias"), "write")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "alias"), "read")).toBe("allow");
 		// The cache beside it is what `aws sso login` and assume-role write, so it stays writable.
 		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "cache", "x.json"), "write")).toBe("allow");
+	});
+
+	// Landlock cannot narrow a right inside a grant: its rules are allow-only and recursive, so holding
+	// a file read-only inside a writable directory turns the parent into a split dir that loses write on
+	// its own inode. Verified with `containment-check plan` — adding ~/.azure/cliextensions as read-only
+	// made ~/.azure itself `r-`, which stops `az` writing azureProfile.json at all. So on that backend the
+	// narrowing is skipped and the gap is reported, rather than breaking the CLIs #2581 is about.
+	it("skips the command-bearing narrowing on a backend that cannot express it", () => {
+		const home = realTmp("nonarrow");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: false });
+
+		// Writable, because the alternative is a directory the CLI cannot write to at all.
+		for (const bearing of [".aws/config", ".kube/config", ".azure/config"]) {
+			expect(fenceVerdict(fence, path.join(home, bearing), "write")).toBe("allow");
+		}
+		// ~/.gitconfig is NOT part of this: it is read-only via its own root, not a narrowing inside a
+		// grant, so it must survive on every backend.
+		expect(fenceVerdict(fence, path.join(home, ".gitconfig"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(home, ".gitconfig"), "read")).toBe("allow");
+		// And the boundary itself is unchanged.
+		expect(fenceVerdict(fence, path.join(home, ".ssh", "id_rsa"), "read")).toBe("deny");
+	});
+
+	// Defaulting to the portable policy matters: a caller that does not know its backend must not get
+	// rules that break every CLI on Linux.
+	it("defaults to the portable policy when the caller does not say", () => {
+		const home = realTmp("defaultnarrow");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+
+		expect(fenceVerdict(fence, path.join(home, ".aws", "config"), "write")).toBe("allow");
 	});
 
 	// Same defect as the CACHE_DIRS carve-out, missed for Go: `go` is in the tool list xcsh probes for,
@@ -420,7 +455,14 @@ describe("containmentStatus", () => {
 			enabled: true,
 			backend: "landlock",
 			osEnforced: true,
+			// No Landlock ABI can narrow a right inside a grant, so the command-bearing CLI settings are
+			// writable there and the model is told so. Seatbelt reports no such field.
+			commandConfigWritable: true,
 		});
+	});
+
+	it("does not claim command-bearing config is writable under seatbelt", () => {
+		expect(containmentStatus(true, "darwin")).not.toHaveProperty("commandConfigWritable");
 	});
 
 	// The case that must not over-claim: a Linux box where Landlock is absent or too old.
