@@ -7,10 +7,13 @@ Filesystem isolation is **on**. Enforcement for the `bash` tool: **{{containment
 Your shell is confined by the operating system, not by inspecting the command you wrote. A path is
 checked where it is actually opened, after the shell has expanded variables, resolved aliases and
 followed symlinks — so how a path is spelled does not change what is reachable.
-- Ordinary work is unrestricted: system paths, `/tmp`, package caches (`~/.bun`, `~/.cargo`, …), the
-  network, and running programs are all untouched.
+- Ordinary work is unrestricted: system paths, `/tmp`, package caches (`~/.bun`, `~/.cargo`,
+  `~/go/pkg/mod`, …), the network, and running programs are all untouched.
+- The CLIs you drive keep their own configuration, so `gh`, `glab`, `az`, `aws`, `gcloud`, `sf`,
+  `docker`, `kubectl` and `terraform` all work normally — including the commands that log in and write
+  a refreshed token back.
 - What is refused: reading or writing outside the session directory — another checkout, `~/.ssh`,
-  `~/.aws`, `~/Documents`, and other sessions' transcripts. `~/.gitconfig` is readable, not writable.
+  `~/.gnupg`, `~/Documents`, and other sessions' transcripts. `~/.gitconfig` is readable, not writable.
 - `cd` out of the session tree is refused, because every later relative path would resolve there.
 
 If a command is refused, do not try to reach the same path a different way: the boundary is enforced

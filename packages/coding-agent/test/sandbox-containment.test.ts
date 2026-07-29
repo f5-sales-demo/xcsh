@@ -74,7 +74,11 @@ describe("buildContainmentFence", () => {
 		fs.mkdirSync(workspace, { recursive: true });
 		const fence = buildContainmentFence({ workspace, home });
 
-		for (const secret of [".ssh/id_rsa", ".aws/credentials", ".gnupg/secring.gpg", "Documents/tax.pdf"]) {
+		// `.aws/credentials` was on this list until #2581. It is now granted, deliberately: it is the
+		// credential store of a CLI xcsh drives, and a path-based fence cannot let `aws` read it without
+		// letting `cat` read it. What stays here is what no shipped tool needs — SSH and GPG private
+		// keys, and the operator's documents.
+		for (const secret of [".ssh/id_rsa", ".gnupg/secring.gpg", "Documents/tax.pdf"]) {
 			expect(fenceVerdict(fence, path.join(home, secret), "read")).toBe("deny");
 		}
 	});
@@ -222,6 +226,72 @@ describe("buildContainmentFence — review findings", () => {
 			".gradle/caches/modules-2/x",
 		]) {
 			expect(fenceVerdict(fence, path.join(home, artifact), "write")).toBe("allow");
+		}
+	});
+
+	// #2581: the home deny left every CLI xcsh ships a plugin for unable to read its own configuration.
+	// Measured on v19.100.0: `gh` exited 1, `glab` 2, `az` 1 with a Python traceback, `aws` 255 blaming a
+	// missing profile, `gcloud` 1, and `sf` exited **0** while crashing — a failure no script can detect.
+	it("grants each shipped CLI its own config and state directory", () => {
+		const home = realTmp("clihome");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+
+		// Read AND write: these CLIs persist refreshed tokens, logs and profiles as part of ordinary
+		// use. `gh auth login`, `az login`, `aws sso login` and `sf org login` all write here.
+		for (const config of [
+			".config/gh/hosts.yml",
+			".config/glab-cli/config.yml",
+			"Library/Application Support/glab-cli/config.yml",
+			".sf/sf-2026-07-28.log",
+			".sfdx/alias.json",
+			".azure/azureProfile.json",
+			".aws/config",
+			".aws/credentials",
+			".config/gcloud/virtenv/bin/activate",
+			".docker/config.json",
+			".kube/config",
+			".terraform.d/credentials.tfrc.json",
+		]) {
+			expect(fenceVerdict(fence, path.join(home, config), "read")).toBe("allow");
+			expect(fenceVerdict(fence, path.join(home, config), "write")).toBe("allow");
+		}
+	});
+
+	// Same defect as the CACHE_DIRS carve-out, missed for Go: `go` is in the tool list xcsh probes for,
+	// and its module cache lives at ~/go/pkg/mod, so `go build` failed inside the fence.
+	it("grants the Go module cache so `go build` works", () => {
+		const home = realTmp("gohome");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+
+		expect(fenceVerdict(fence, path.join(home, "go/pkg/mod/cache/download/x"), "write")).toBe("allow");
+		// Not the whole of ~/go — that holds checked-out source and built binaries, and granting it
+		// would put `go install` output inside the fence.
+		expect(fenceVerdict(fence, path.join(home, "go/src/private/x"), "read")).toBe("deny");
+	});
+
+	// The grants above must not have widened anything else. This is the property that makes the fence
+	// worth having at all, so it is asserted beside the change that could break it.
+	it("still isolates customer workspaces and private keys after the CLI grants", () => {
+		const home = realTmp("stillhome");
+		const workspace = path.join(home, "GIT", "custA");
+		const sessions = path.join(home, ".xcsh", "agent", "sessions");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(sessions, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
+
+		for (const denied of [
+			"GIT/custB/secrets.tf", // the sibling checkout this fence exists for
+			".ssh/id_ed25519",
+			".gnupg/secring.gpg",
+			"Documents/contract.pdf",
+			".xcsh/agent/sessions/other.jsonl", // another session's transcript
+		]) {
+			expect(fenceVerdict(fence, path.join(home, denied), "read")).toBe("deny");
+			expect(fenceVerdict(fence, path.join(home, denied), "write")).toBe("deny");
 		}
 	});
 

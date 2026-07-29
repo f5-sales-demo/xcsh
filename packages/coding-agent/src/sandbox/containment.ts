@@ -75,11 +75,45 @@ const CACHE_DIRS = [
 	path.join(".yarn", "berry", "cache"),
 	path.join(".rustup", "toolchains"),
 	path.join(".rustup", "downloads"),
+	// Go keeps its module cache under ~/go, but ~/go also holds checked-out source and `go install`
+	// output, so only the cache is granted. Missed in the original list; `go build` failed for it.
+	path.join("go", "pkg", "mod"),
 	// No credential convention of their own, so granted whole.
 	".pnpm-store",
 	".deno",
 	path.join("Library", "Caches"),
 	path.join("Library", "pnpm"),
+];
+
+/**
+ * Config and state directories of the CLIs xcsh ships plugins and skills for — the same list it probes
+ * for in `internal-urls/computer-profile.ts`.
+ *
+ * Granted **read and write**, which is a deliberate trade rather than an oversight. In v19.100.0 the home
+ * deny covered all of these, so every one of `gh`, `glab`, `sf`, `az`, `aws` and `gcloud` failed on its
+ * own configuration — and the agent is instructed to file issues with `gh`. Write is required too: these
+ * CLIs persist refreshed tokens, logs and profiles during ordinary use, and `gh auth login`, `az login`,
+ * `aws sso login` and `sf org login` all write here.
+ *
+ * The cost, stated plainly: a fence keyed on paths cannot let `aws` read `~/.aws/credentials` without
+ * letting `cat` read it, so the operator's cloud credentials are reachable from a fenced shell. That is
+ * accepted because the fence exists to stop the assistant wandering between customer workspaces, not to
+ * withhold the operator's own credential store from the operator's own CLIs — and because the native
+ * `az`/`aws` tools already act with those credentials, so denying the shell path broke the CLIs without
+ * protecting anything. What is *not* granted: `~/.ssh`, `~/.gnupg`, and every path no shipped tool needs.
+ */
+const TOOL_CONFIG_DIRS = [
+	path.join(".config", "gh"), // gh
+	path.join(".config", "glab-cli"), // glab, XDG layout
+	path.join("Library", "Application Support", "glab-cli"), // glab, macOS layout
+	".sf", // sf
+	".sfdx", // sf, legacy layout still read by current versions
+	".azure", // az
+	".aws", // aws
+	path.join(".config", "gcloud"), // gcloud
+	".docker", // docker
+	".kube", // kubectl
+	".terraform.d", // terraform
 ];
 
 /** Read-only inside home: configuration a tool needs to behave correctly, but must not rewrite. */
@@ -194,7 +228,9 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		// Granted whether or not they exist yet. `~/.bun` has to be writable *before* the first
 		// `bun install` creates it, so dropping absent caches would break exactly the first run.
 		// Canonicalised when present, so a symlinked cache resolves to its real location.
-		for (const cache of CACHE_DIRS) allow.add(canonical(path.join(home, cache)) ?? path.join(home, cache));
+		for (const cache of [...CACHE_DIRS, ...TOOL_CONFIG_DIRS]) {
+			allow.add(canonical(path.join(home, cache)) ?? path.join(home, cache));
+		}
 		for (const config of READ_ONLY_HOME) {
 			allowReadOnly.add(canonical(path.join(home, config)) ?? path.join(home, config));
 		}
