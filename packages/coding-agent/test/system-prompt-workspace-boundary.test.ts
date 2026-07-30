@@ -61,13 +61,30 @@ describe("system prompt workspace boundary", () => {
 
 	it("prohibits ranging across the filesystem for context", () => {
 		expect(flat()).toContain("**MUST NOT** range across the filesystem");
-		expect(flat()).toMatch(/never widen to its parent/i);
 	});
 
-	// The sandbox link: enforcement is named so a refusal is legible as the boundary
-	// working, which is what stops the reach-for-another-spelling reflex.
-	it("names that filesystem isolation is enforced and refusals are not reroutable", () => {
-		expect(flat()).toMatch(/isolation is enforced/i);
+	// `buildDefaultSandboxPolicy` allows reads OUTSIDE the CWD: user-level skills, the
+	// plugin dir, and any `--allow-path` / `sandbox.allowRead` grant. An absolute "never
+	// widen beyond the working directory" would forbid paths the operator deliberately
+	// granted, and would contradict the Procedure section's "if a skill matches the
+	// domain, you MUST read it before starting".
+	it("acknowledges explicit grants and the allowlisted read locations", () => {
+		expect(flat()).toMatch(/--allow-path/);
+		expect(flat()).toMatch(/skills and plugins/i);
+		expect(flat()).not.toMatch(/never widen to its parent/i);
+	});
+
+	// The sandbox link: naming the sandbox is what makes a refusal legible as the
+	// boundary working, which stops the reach-for-another-spelling reflex.
+	//
+	// But it MUST be conditional. `buildSystemPrompt` is handed no containment status,
+	// so the block cannot know whether isolation is on; under `--no-sandbox` or
+	// `sandbox.enabled: false` nothing is refused at all. Asserting enforcement as fact
+	// would give a deliberately-degraded session false assurance about isolation.
+	it("names the sandbox without asserting enforcement unconditionally", () => {
+		expect(flat()).toMatch(/sandbox confines this session/i);
+		expect(flat()).toMatch(/when it is active/i);
+		expect(flat()).not.toMatch(/isolation is enforced/i);
 		expect(flat()).toMatch(/reach the same path another way/i);
 	});
 
