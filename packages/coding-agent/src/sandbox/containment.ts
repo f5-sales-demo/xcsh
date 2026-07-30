@@ -383,6 +383,16 @@ function dataRootEntries(fsRoot: string): string[] {
 	}
 }
 
+/** Canonicalise a list of roots, dropping the ones that are absent. */
+function resolveAll(roots: readonly string[] | undefined): Set<string> {
+	const resolved = new Set<string>();
+	for (const root of roots ?? []) {
+		const real = canonical(root);
+		if (real !== undefined) resolved.add(real);
+	}
+	return resolved;
+}
+
 /** realpath without throwing, for building the never-deny list. */
 function safeReal(input: string): string {
 	try {
@@ -449,13 +459,20 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	}
 	// Kept distinct. Merging them into one read+write list made a folder shared for reading writable,
 	// undoing the read/write split built for #2516 — found by adversarial review.
-	for (const root of options.readOnlyRoots ?? []) {
-		const resolved = canonical(root);
-		if (resolved !== undefined) allowReadOnly.add(resolved);
+	//
+	// A root in BOTH lists is the exception, and it is not hypothetical: `--allow-path <dir>` maps into
+	// `sandbox.allowRead` *and* `sandbox.allowWrite` (main.ts:649). Left as two rules those sit at equal
+	// depth, and `fenceVerdict` tests read-only first, so the write was refused — the flag the prompt
+	// offers as the remedy for a refusal granted read only. A full allow is what both grants together
+	// mean; the one-directional cases below are untouched.
+	const readOnlyResolved = resolveAll(options.readOnlyRoots);
+	const writeOnlyResolved = resolveAll(options.writeOnlyRoots);
+	for (const root of readOnlyResolved) {
+		if (writeOnlyResolved.has(root)) allow.add(root);
+		else allowReadOnly.add(root);
 	}
-	for (const root of options.writeOnlyRoots ?? []) {
-		const resolved = canonical(root);
-		if (resolved !== undefined) allowWriteOnly.add(resolved);
+	for (const root of writeOnlyResolved) {
+		if (!readOnlyResolved.has(root)) allowWriteOnly.add(root);
 	}
 
 	if (home !== undefined) {

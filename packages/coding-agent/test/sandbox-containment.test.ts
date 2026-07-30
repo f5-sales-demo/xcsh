@@ -172,6 +172,54 @@ describe("buildContainmentFence", () => {
  * matched no rule rather than a rule that was wrong. Denying home was never the whole boundary.
  */
 describe("buildContainmentFence — review findings", () => {
+	// `--allow-path <dir>` maps into BOTH sandbox.allowRead and sandbox.allowWrite (main.ts:649), which
+	// reaches the fence as the same root in readOnlyRoots and writeOnlyRoots. Those two rules sit at
+	// equal depth, and `fenceVerdict` tests read-only first, so the write was refused — the flag granted
+	// read only, while the containment prompt tells the model it "grants read and write". The documented
+	// remedy for a refusal did not work, which is worse than a missing feature.
+	it("grants read AND write when a root is given as both read-only and write-only", () => {
+		const home = realTmp("bothhome");
+		const workspace = path.join(home, "w");
+		const granted = realTmp("granted");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const fence = buildContainmentFence({
+			workspace,
+			home,
+			readOnlyRoots: [granted],
+			writeOnlyRoots: [granted],
+		});
+
+		expect(fenceVerdict(fence, path.join(granted, "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(granted, "x"), "write")).toBe("allow");
+		// Asserted on the emitted rules too: a single allow, not two half-grants that happen to combine.
+		expect(fence.allow).toContain(granted);
+		expect(fence.allowReadOnly).not.toContain(granted);
+		expect(fence.allowWriteOnly).not.toContain(granted);
+	});
+
+	// The split must survive, or this fix would undo #2516: a folder shared for reading must not become
+	// writable just because some *other* root was granted both ways.
+	it("keeps one-directional grants one-directional", () => {
+		const home = realTmp("splithome");
+		const workspace = path.join(home, "w");
+		const readable = realTmp("readable");
+		const writable = realTmp("writable");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const fence = buildContainmentFence({
+			workspace,
+			home,
+			readOnlyRoots: [readable],
+			writeOnlyRoots: [writable],
+		});
+
+		expect(fenceVerdict(fence, path.join(readable, "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(readable, "x"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(writable, "x"), "write")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(writable, "x"), "read")).toBe("deny");
+	});
+
 	it("denies the workspace's siblings even when the workspace is outside home", () => {
 		// Verified allow/allow before the fix: with /work/customer-a as the workspace, /work/customer-b
 		// matched nothing and was readable AND writable. A fleet keeping customer folders outside the
