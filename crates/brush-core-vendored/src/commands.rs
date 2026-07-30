@@ -191,7 +191,10 @@ pub fn compose_std_command<S: AsRef<OsStr>>(
 	if let Some(fence) = context.params.containment.as_ref() {
 		if let sys::landlock::Availability::Available(abi) = sys::landlock::availability() {
 			let plan = fence.compile_grant_plan(&crate::containment::RealFs);
-			let ruleset = sys::landlock::build_ruleset(&plan, abi).map_err(|err| {
+			// Only the roots the operator's policy names may be created if absent — never a path the
+			// grant compiler merely discovered while enumerating a split directory.
+			let creatable: Vec<std::path::PathBuf> = fence.allow.clone();
+			let ruleset = sys::landlock::build_ruleset(&plan, abi, &creatable).map_err(|err| {
 				error::ErrorKind::ContainmentSetupFailed(command_name.to_owned(), err)
 			})?;
 			sys::landlock::arm(&mut cmd, ruleset);
