@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -14,9 +14,13 @@ import sandboxGuard from "@f5-sales-demo/xcsh/extensibility/extensions/bundled/s
  */
 let CWD: string;
 let OTHER: string;
+/** Removed after the file runs; these leaked `guard-*` directories into the OS temp dir (#2633). */
+let container: string;
+
+afterAll(() => fs.rmSync(container, { recursive: true, force: true }));
 
 beforeAll(() => {
-	const container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "guard-")));
+	container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-guard-")));
 	CWD = path.join(container, "custA");
 	OTHER = path.join(container, "custB");
 	fs.mkdirSync(CWD);

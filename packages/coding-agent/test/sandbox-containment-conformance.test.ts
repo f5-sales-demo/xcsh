@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -17,11 +17,16 @@ import { buildContainmentFence, type FenceAccess, fenceVerdict } from "@f5-sales
  * than illustrative.
  */
 describe("containment fence: TypeScript and Rust agree", () => {
-	const home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "conf-home-")));
+	const home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-conf-home-")));
 	const workspace = path.join(home, "GIT", "custA");
 	const sibling = path.join(home, "GIT", "custB");
 	const leak = path.join(home, ".xcsh", "agent", "sessions");
-	const shared = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "conf-shared-")));
+	const shared = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-conf-shared-")));
+
+	// Removed after the file runs; both fixtures above leaked into the OS temp dir (#2633).
+	afterAll(() => {
+		for (const dir of [home, shared]) fs.rmSync(dir, { recursive: true, force: true });
+	});
 	for (const dir of [workspace, sibling, leak, path.join(home, ".ssh"), path.join(home, ".bun")]) {
 		fs.mkdirSync(dir, { recursive: true });
 	}
