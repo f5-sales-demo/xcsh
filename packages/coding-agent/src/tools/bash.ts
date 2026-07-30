@@ -134,6 +134,22 @@ function normalizeResultOutput(result: BashResult | BashInteractiveResult): stri
 }
 
 /**
+ * A working directory has to exist and be a directory. Shared by both call sites so the session's cwd
+ * and the `cwd` argument report the same way, and so the message names the path rather than describing
+ * an internal invariant.
+ */
+async function assertUsableDirectory(dir: string): Promise<void> {
+	let stat: fs.Stats;
+	try {
+		stat = await fs.promises.stat(dir);
+	} catch (err) {
+		if (isEnoent(err)) throw new ToolError(`Working directory does not exist: ${dir}`);
+		throw err;
+	}
+	if (!stat.isDirectory()) throw new ToolError(`Working directory is not a directory: ${dir}`);
+}
+
+/**
  * The fence as the `ReadBoundary` the internal-URL expander wants.
  *
  * A two-method shim rather than a shared interface: the expander only ever asks about reads, and giving
@@ -599,6 +615,25 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			}
 		}
 
+		// The session's own working directory, checked before anything reasons about a boundary anchored
+		// on it. `resolveSessionFence` below builds a `ContainmentFence`, which refuses to build on a
+		// workspace it cannot canonicalise — deliberately, since rules on an unresolved path would grant
+		// nothing while looking like they enforce. That throw used to surface here instead of the cwd
+		// error, so a mistyped directory reported "sandbox containment: cannot canonicalise the session
+		// workspace …" rather than naming the directory (#2624). The invariant is right; it just must not
+		// be the first thing a caller hears about a path that plainly does not exist.
+		//
+		// Only `session.cwd` is checked here. The `cwd` *argument* can carry an internal URL that has not
+		// been expanded yet, so it keeps its own check below, after expansion.
+		await assertUsableDirectory(this.session.cwd);
+
+		// Built ONCE per invocation and shared with the executor below. Two calls meant two builds on the
+		// session's first command — the resolver caches per configuration, and these two asked for
+		// different configurations — which doubled a cost that lands as user-visible latency. Sharing is
+		// also the more correct answer: the internal-URL check and the shell are then reasoning about the
+		// same boundary rather than two that merely agree today.
+		const fence = this.#containmentFence();
+
 		const localOptions = {
 			getArtifactsDir: this.session.getArtifactsDir,
 			getSessionId: this.session.getSessionId,
@@ -610,7 +645,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			// Refuse a URL resolving outside the session's boundary rather than handing bash a path the
 			// session's own `read` tool would deny (#2468). The roots below are the session's own, which
 			// the boundary denies wholesale because they sit under the sessions directory.
-			readBoundary: readBoundaryFor(resolveSessionFence(this.session.cwd, this.session.settings), this.session.cwd),
+			readBoundary: readBoundaryFor(fence, this.session.cwd),
 			sessionOwnedRoots: () => {
 				const roots = [resolveLocalRoot(localOptions)];
 				const artifactsDir = this.session.getArtifactsDir?.();
@@ -630,18 +665,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		}
 
 		const commandCwd = cwd ? resolveToCwd(cwd, this.session.cwd) : this.session.cwd;
-		let cwdStat: fs.Stats;
-		try {
-			cwdStat = await fs.promises.stat(commandCwd);
-		} catch (err) {
-			if (isEnoent(err)) {
-				throw new ToolError(`Working directory does not exist: ${commandCwd}`);
-			}
-			throw err;
-		}
-		if (!cwdStat.isDirectory()) {
-			throw new ToolError(`Working directory is not a directory: ${commandCwd}`);
-		}
+		await assertUsableDirectory(commandCwd);
 
 		// Clamp to reasonable range: 1s - 3600s (1 hour)
 		const timeoutSec = clampTimeout("bash", rawTimeout);
@@ -726,7 +750,6 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// Only worth giving up when there is an OS backend for the non-PTY path to use and none for this
 		// one. Where no backend exists — Linux without Landlock, Windows — both paths are scanner-only,
 		// so disabling PTY would remove interactive terminals and improve containment by nothing.
-		const fence = this.#containmentFence();
 		const osBackend = containmentStatus(fence !== undefined);
 		const ptyConfinable = !osBackend.osEnforced || osBackend.backend === "seatbelt";
 		const usePty = pty && ptyConfinable && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;

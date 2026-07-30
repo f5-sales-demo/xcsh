@@ -312,8 +312,14 @@ function canonicalThroughExisting(target: string): string {
 	const tail: string[] = [];
 	let current = target;
 	for (;;) {
-		const resolved = canonical(current);
-		if (resolved !== undefined) return path.join(resolved, ...tail);
+		// `existsSync` before `realpathSync`, because the walk is otherwise exception-driven: every absent
+		// segment costs a thrown-and-caught ENOENT. A fresh home has ten-or-so absent cache dirs, and that
+		// alone was 8ms of a 15ms fence build — paid on the session's first `bash` call. `existsSync` does
+		// not throw, so the common "absent leaf, present parent" case now costs two cheap stats.
+		if (fs.existsSync(current)) {
+			const resolved = canonical(current);
+			if (resolved !== undefined) return path.join(resolved, ...tail);
+		}
 		const parent = path.dirname(current);
 		if (parent === current) return target;
 		tail.unshift(path.basename(current));
@@ -451,7 +457,7 @@ function otherFilesystemRoots(fsRoot: string): string[] {
  * Per-session state the agent keeps in the *shared* OS temp dir, which every session can reach.
  *
  * `local://` content lands at `<tmp>/xcsh-local/<sessionId>` (`internal-urls/local-protocol.ts`) and a
- * task's artifacts at `<tmp>/xcsh-task-<id>` (`task/index.ts`) whenever no session artifacts dir is
+ * task's artifacts at `<tmp>/xcsh-tasks/<id>` (`task/index.ts`) whenever no session artifacts dir is
  * configured. Those are the same class as `~/.xcsh/agent/sessions` — one session reading another's
  * working notes — so they belong in the leak roots rather than being covered incidentally.
  *
@@ -459,21 +465,16 @@ function otherFilesystemRoots(fsRoot: string): string[] {
  * wholesale is the false refusal #2582 removed. The session's OWN local root is granted back through
  * `extraRoots` at greater depth, so `local://` keeps working.
  *
- * The task dirs carry a unique id, so they are enumerated rather than named. One created after the fence
- * is built is not covered — the same fail-open residual the root enumeration has, and it applies to a
- * *concurrent* session's scratch rather than to anything of the operator's.
+ * **Two fixed parents, deliberately never enumerated.** The first version listed the temp dir looking for
+ * `xcsh-task-*` siblings, which cost 15ms of a 25-42ms fence build on a 17k-entry temp directory — per
+ * build, and unbounded as the directory fills. That was enough to push a trivial `echo` past the 50ms
+ * auto-background threshold. It was also strictly weaker: enumeration cannot cover a directory created
+ * after the fence was built, while a parent rule covers every child forever. `task/index.ts` was changed
+ * to nest under `xcsh-tasks/` to make that possible.
  */
 function sharedTempLeakRoots(): string[] {
 	const tmp = safeReal(os.tmpdir());
-	const roots = [path.join(tmp, "xcsh-local")];
-	try {
-		for (const entry of fs.readdirSync(tmp, { withFileTypes: true })) {
-			if (entry.isDirectory() && entry.name.startsWith("xcsh-task-")) roots.push(path.join(tmp, entry.name));
-		}
-	} catch {
-		// Enumeration is a bonus; the fixed-name root above is the one that matters.
-	}
-	return roots;
+	return [path.join(tmp, "xcsh-local"), path.join(tmp, "xcsh-tasks")];
 }
 
 /** realpath without throwing, for building the never-deny list. */

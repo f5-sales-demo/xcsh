@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -181,7 +181,7 @@ describe("buildContainmentFence", () => {
  */
 describe("buildContainmentFence — adversarial review of #2624", () => {
 	// The shared temp root holds per-session state: `local://` content at `<tmp>/xcsh-local/<sessionId>`
-	// (local-protocol.ts:118) and task artifacts at `<tmp>/xcsh-task-<id>` (task/index.ts:651). Both are
+	// (local-protocol.ts:118) and task artifacts at `<tmp>/xcsh-tasks/<id>` (task/index.ts). Both are
 	// exactly the cross-session channel the leak roots exist to close, and classifying `tmp` as
 	// operational made every session's copy readable and writable by every other session.
 	it("denies other sessions' local roots under the shared temp dir", () => {
@@ -198,6 +198,43 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 		// Ordinary scratch beside it stays reachable — `xcsh://about` promises `/tmp`, and the refusal of
 		// it was one of the false refusals #2582 removed. Only the agent's own per-session trees are shut.
 		expect(fenceVerdict(fence, path.join(sharedTmp, "scratch.txt"), "write")).toBe("allow");
+	});
+
+	/**
+	 * The fence is built on the session's first `bash` call, so its cost is user-visible latency.
+	 *
+	 * The first version of the leak-root fix enumerated the OS temp dir looking for `xcsh-task-*`
+	 * siblings. On a workstation with 17,505 entries in it that was 15ms of a 25-42ms build — per build,
+	 * and growing without bound as the temp dir fills. It pushed `echo short` past the 50ms
+	 * auto-background threshold, which is how it was caught: a *timing* test in `tools.test.ts` failed,
+	 * not a containment one.
+	 *
+	 * Asserted by counting `readdir` calls rather than by wall-clock time. A timing threshold would be the
+	 * obvious test and the wrong one: it flakes on a loaded runner, and it measures the symptom instead of
+	 * the cause. What must stay true is that a fence build enumerates *only* the filesystem root — a
+	 * bounded, tiny directory — and never a temp or home directory whose size is the operator's business.
+	 */
+	it("enumerates only the filesystem root, never a large directory", () => {
+		const home = realTmp("perf");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const scanned: string[] = [];
+		const spy = spyOn(fs, "readdirSync").mockImplementation(((dir: fs.PathLike) => {
+			scanned.push(String(dir));
+			return [];
+		}) as unknown as typeof fs.readdirSync);
+		try {
+			buildContainmentFence({ workspace, home, fsRoot: home });
+		} finally {
+			spy.mockRestore();
+		}
+
+		// Exactly the configured root, once. The earlier version also listed `os.tmpdir()` hunting for
+		// `xcsh-task-*` siblings, which cost 15ms of a 25-42ms build on a 17k-entry directory and pushed a
+		// trivial `echo` past the 50ms auto-background threshold — caught by a *timing* test elsewhere,
+		// not by anything here.
+		expect(scanned).toEqual([home]);
 	});
 
 	// …and the session's own local root must stay reachable, or `local://` breaks for everyone. Granted
@@ -936,7 +973,11 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 
 		// Other users live here, and nothing operational does.
 		expect(fence.deny).toContain(process.platform === "darwin" ? "/Users" : "/home");
+		// Only what this platform actually has: `/private` is macOS-only, and `realpathSync` on an absent
+		// path throws — which failed the Linux runner while passing locally. The file already warns about
+		// exactly this trap two describes up, and I walked into it anyway.
 		for (const operational of ["/usr", "/bin", "/sbin", "/etc", "/dev", "/opt", "/var", "/private", "/tmp"]) {
+			if (!fs.existsSync(operational)) continue;
 			expect(fence.deny).not.toContain(operational);
 			expect(fence.deny).not.toContain(fs.realpathSync(operational));
 		}
