@@ -215,6 +215,45 @@ pub const fn truncate_handled(abi: u32) -> bool {
 	abi >= 3
 }
 
+/// Create a granted directory so a rule can attach to it, or leave the filesystem alone.
+///
+/// Only ever called for a path the plan grants **write** on, so creating it grants nothing the fence did
+/// not already intend. Bounded deliberately:
+///
+/// - refuses if any existing ancestor is a symlink, so a linked `~/.config` cannot cause a directory to
+///   appear somewhere else on the filesystem — `create_dir_all` would happily follow it;
+/// - creates directories only, never files, because a rule on a file may carry only file rights;
+/// - silent, and silent about failure too. This runs on every spawn, so a line here would be noise, and
+///   a failure is not fatal: the grant is dropped exactly as it was before, which is today's behaviour.
+///
+/// **Known limitation, measured.** This runs while composing an *external* command, so on a genuinely
+/// fresh home a shell **builtin** that opens a granted-but-absent path first still fails with `ENOENT` —
+/// `printf x > ~/.aws/config` before anything has been spawned. #2588 is about the CLIs, which are
+/// external, so they are covered; closing the builtin case as well means creating these at the point the
+/// fence is attached rather than per-spawn, which is a wider change than this.
+fn create_grantable_dir(path: &Path) {
+	if path.symlink_metadata().is_ok() {
+		return; // It exists; `open_path` failed for some other reason and creating is not the answer.
+	}
+	// Walk to the deepest ancestor that exists, checking nothing on the way is a link.
+	let mut existing = path.parent();
+	while let Some(ancestor) = existing {
+		match ancestor.symlink_metadata() {
+			Ok(metadata) => {
+				if metadata.file_type().is_symlink() {
+					return;
+				}
+				break;
+			}
+			Err(_) => existing = ancestor.parent(),
+		}
+	}
+	if existing.is_none() {
+		return; // No existing ancestor at all: nothing to anchor creation to.
+	}
+	let _ = std::fs::create_dir_all(path);
+}
+
 /// Build a Landlock ruleset from a compiled grant plan.
 ///
 /// Every syscall that can allocate or fail informatively happens here, before `fork`. The child is left
@@ -264,6 +303,14 @@ pub fn build_ruleset(plan: &GrantPlan, abi: u32) -> io::Result<OwnedFd> {
 		}
 		if allowed == 0 {
 			continue;
+		}
+		// A granted directory that does not exist yet cannot carry a rule: Landlock attaches to an inode,
+		// so `open` fails and the grant is dropped while the home deny stays in force. On a fresh home
+		// that left `~/.aws`, `~/.config/gh` and the package caches unreachable *and* uncreatable, so
+		// first-run and login flows failed with a bare `EACCES` (#2588). Creating it first is within the
+		// authority the fence already confers — it is a path the shell is being granted write on.
+		if open_path(path).is_none() && rights.write {
+			create_grantable_dir(path);
 		}
 		let Some(parent) = open_path(path) else {
 			continue;

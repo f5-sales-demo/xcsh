@@ -99,6 +99,57 @@ expect "ls / fails (split directory)" refused "ls / > /dev/null"
 expect "NO_NEW_PRIVS is set in the child" ok \
 	"grep -q 'NoNewPrivs:.*1' /proc/self/status"
 
+printf '\n=== a fresh home can create its granted config dirs (#2588) ===\n'
+# A Landlock rule attaches to an inode, so a granted directory that does not exist yet cannot carry one:
+# `open` fails, the grant is dropped, and the home deny stays. Creating it needs write on the *parent*,
+# which is the denied home — so on a fresh machine `~/.aws` and `~/.config/gh` were unreachable AND
+# uncreatable, and every first-run or login flow failed with a bare EACCES.
+#
+# Measured before the fix, on ABI 9: `mkdir ~/.aws` inside the fence gave "Permission denied".
+FRESH="$ROOT/fresh"
+mkdir -p "$FRESH/w"
+FRESH_FENCE=$(printf '{"allow":["%s","%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
+	"$FRESH/w" "$FRESH/.aws" "$FRESH/.config/gh" "$FRESH")
+
+fresh_expect() {
+	local label="$1" want="$2"; shift 2
+	local out rc
+	out=$("$BIN" run --fence "$FRESH_FENCE" --cwd "$FRESH/w" "$*" 2>&1); rc=$?
+	local got=ok; [ "$rc" -eq 0 ] || got=refused
+	if [ "$got" = "$want" ]; then
+		printf 'PASS  %-52s (%s)\n' "$label" "$got"; pass=$((pass+1))
+	else
+		printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"
+		fail=$((fail+1))
+	fi
+}
+
+# An external command, which is what a CLI is — the grant is prepared while composing it.
+fresh_expect "write into an absent granted dir" ok \
+	"/bin/sh -c 'printf x > $FRESH/.aws/config'"
+fresh_expect "write into an absent nested granted dir" ok \
+	"/bin/sh -c 'printf y > $FRESH/.config/gh/hosts.yml'"
+
+if [ -d "$FRESH/.aws" ] && [ -d "$FRESH/.config/gh" ]; then
+	printf 'PASS  %-52s (created)\n' "the dirs themselves now exist"; pass=$((pass+1))
+else
+	printf 'FAIL  %-52s the granted dirs were not created\n' "the dirs themselves now exist"; fail=$((fail+1))
+fi
+
+# Creation must not follow a symlinked ancestor out of the tree: `create_dir_all` would happily do it,
+# which would make a directory appear somewhere the operator never granted.
+LINKED="$ROOT/linked"
+mkdir -p "$LINKED/w" "$ROOT/elsewhere"
+ln -s "$ROOT/elsewhere" "$LINKED/.config"
+LINK_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
+	"$LINKED/w" "$LINKED/.config/gh" "$LINKED")
+"$BIN" run --fence "$LINK_FENCE" --cwd "$LINKED/w" "/bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
+if [ -e "$ROOT/elsewhere/gh" ]; then
+	printf 'FAIL  %-52s created through the symlink\n' "creation refuses a symlinked ancestor"; fail=$((fail+1))
+else
+	printf 'PASS  %-52s (refused)\n' "creation refuses a symlinked ancestor"; pass=$((pass+1))
+fi
+
 printf '\n=== %d passed, %d failed ===\n' "$pass" "$fail"
 rm -rf "$ROOT" /tmp/ll-e2e-probe
 [ "$fail" -eq 0 ]
