@@ -20,7 +20,15 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as natives from "@f5-sales-demo/pi-natives";
-import { getMemoriesDir, getSessionsDir, getXCSHContextsDir, pathIsWithin } from "@f5-sales-demo/pi-utils";
+import {
+	getAgentDir,
+	getConfigRootDir,
+	getMemoriesDir,
+	getPluginsDir,
+	getSessionsDir,
+	getXCSHContextsDir,
+	pathIsWithin,
+} from "@f5-sales-demo/pi-utils";
 
 export type FenceAccess = "read" | "write";
 export type FenceVerdict = "allow" | "deny";
@@ -59,6 +67,15 @@ export interface ContainmentOptions {
 	 * than one that silently breaks the CLIs on Linux.
 	 */
 	narrowsWithinGrant?: boolean;
+	/**
+	 * The filesystem root whose immediate entries are classified as operational or data — see
+	 * DATA_ROOTS. Overridable for tests; defaults to the real root.
+	 *
+	 * A test cannot use the real `/`, and pointing this at a temp directory instead is not merely
+	 * convenient: it is the only way to assert that an unknown root is denied *while* its operational
+	 * siblings are not, which is the whole property.
+	 */
+	fsRoot?: string;
 }
 
 /**
@@ -182,6 +199,77 @@ const COMMAND_BEARING_CONFIG = [
 const READ_ONLY_HOME = [".gitconfig", path.join(".config", "git")];
 
 /**
+ * Names of top-level directories that hold tools rather than data.
+ *
+ * Used to classify the immediate entries of the filesystem root: an entry NOT named here holds
+ * somebody's files, and is denied (see DATA_ROOTS). Matching is by basename, so it works the same for
+ * the real `/` and for the synthetic root a test injects.
+ *
+ * A name here is not a grant — the fence is allow-by-default, so these are simply left unmentioned.
+ * The list is deliberately generous: a wrong entry costs one unreachable data root, while a missing
+ * entry breaks a toolchain, which is the failure this whole change exists to remove. Both platforms in
+ * one list, because a name absent from a platform simply never matches.
+ */
+const OPERATIONAL_ROOT_NAMES = new Set([
+	// macOS and Linux system trees
+	"usr",
+	"bin",
+	"sbin",
+	"lib",
+	"lib32",
+	"lib64",
+	"libx32",
+	"etc",
+	"opt",
+	"dev",
+	"proc",
+	"sys",
+	"run",
+	"boot",
+	"var",
+	"tmp",
+	"private",
+	"System",
+	"Library",
+	"Applications",
+	"cores",
+	// Package managers and container runtimes that own a root of their own
+	"nix",
+	"snap",
+	"vendor",
+]);
+
+/**
+ * The operator's own profile and settings, read by the agent to describe the machine it is on.
+ *
+ * Read-only, and named individually rather than by their directory: the config root also holds the
+ * cross-session leak dirs, which stay denied at greater depth.
+ */
+const AGENT_PROFILE_FILES = ["user-profile.json", "computer-profile.json", "settings.json"].map(name =>
+	path.join(getConfigRootDir(), name),
+);
+
+/**
+ * Top-level directories that hold data on some machine even when this one has none of them.
+ *
+ * Denied by name whether or not the root enumeration sees them, because that enumeration is one
+ * `readdir` and a fence whose coverage disappears if the call fails is not a fence. Everything the
+ * fleet actually keeps customer material under is here, so enumeration only ever *adds* the
+ * unforeseen — `/data`, `/scratch`, a bespoke mount.
+ */
+const DATA_ROOTS = [
+	"/Users", // macOS home container: other operators' accounts, /Users/Shared
+	"/home", // Linux home container
+	"/root", // Linux superuser home
+	"/Volumes", // macOS mounts. Per-container, not per-child: /Volumes/Macintosh HD resolves to /,
+	"/mnt", // which `tooBroadToDeny` then rejects, and the kernel resolves such a path before any
+	"/media", // rule matches it — so denying the container cannot deny the boot volume.
+	"/srv",
+	"/net",
+	"/export",
+];
+
+/**
  * Canonicalise a root, or return undefined when it is absent.
  *
  * Canonicalisation is load-bearing rather than tidiness: a seatbelt `(subpath "/tmp/x")` rule grants
@@ -229,10 +317,19 @@ function canonicalThroughExisting(target: string): string {
  * Denying the workspace's parent closes sibling access, but the parent is not always a sibling
  * container. A workspace directly under `/`, under a system directory, or under the OS temp dir would
  * otherwise deny `/`, `/usr` or `/tmp` — refusing exactly the work this fence is supposed to leave
- * alone. The home tree is excluded too because the home deny already covers it, at the right depth.
+ * alone.
+ *
+ * `/Users` and `/home` were here too, and deliberately are no longer: those hold other operators'
+ * accounts, so denying them is the point rather than the accident (#2624). The workspace, the caches
+ * and the tool config dirs all match at greater depth, and home is denied anyway, so nothing inside
+ * the current account changes.
  */
-function tooBroadToDeny(candidate: string): boolean {
+function tooBroadToDeny(candidate: string, fsRoot: string): boolean {
 	if (candidate === path.parse(candidate).root) return true;
+	// The configured filesystem root, whatever it is. In production that is the same as the check
+	// above; for a test it is the injected root, which the ancestor walk would otherwise deny — taking
+	// every operational sibling with it and hiding the very distinction being asserted.
+	if (candidate === fsRoot) return true;
 	const never = [
 		safeReal(os.tmpdir()),
 		// Both spellings: `/tmp` resolves to `/private/tmp` on macOS, and the ancestor walk works on
@@ -253,10 +350,37 @@ function tooBroadToDeny(candidate: string): boolean {
 		"/private",
 		"/System",
 		"/Library",
-		"/Users",
-		"/home",
 	];
 	return never.includes(candidate);
+}
+
+/**
+ * Immediate entries of `fsRoot` that are not operational, so they hold data.
+ *
+ * One `readdir`, and its failure is not fatal: DATA_ROOTS already covers everything the fleet keeps
+ * customer material under, so this only adds the unforeseen. Entries are returned as their link path
+ * and canonicalised by the caller, which is where `/Volumes/Macintosh HD -> /` gets rejected.
+ *
+ * A directory mounted *after* this runs is not seen, and is therefore allowed. Stated rather than
+ * hidden: the alternative — denying the root itself and re-allowing the operational set — is complete
+ * but denies every path not on that list, which is the failure mode #2624 exists to remove.
+ */
+function dataRootEntries(fsRoot: string): string[] {
+	try {
+		return (
+			fs
+				.readdirSync(fsRoot, { withFileTypes: true })
+				.filter(entry => entry.isDirectory() || entry.isSymbolicLink())
+				// A dotted entry at the filesystem root is a system synthetic — `/.vol`, `/.resolve`,
+				// `/.nofollow` on macOS — not a place anyone keeps material. Denying them adds noise to every
+				// emitted profile and, for `/.vol`, restricts a lookup path the OS uses itself.
+				.filter(entry => !entry.name.startsWith("."))
+				.filter(entry => !OPERATIONAL_ROOT_NAMES.has(entry.name))
+				.map(entry => path.join(fsRoot, entry.name))
+		);
+	} catch {
+		return [];
+	}
 }
 
 /** realpath without throwing, for building the never-deny list. */
@@ -289,6 +413,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	}
 
 	const home = canonical(options.home ?? os.homedir());
+	const fsRoot = options.fsRoot ?? path.parse(workspace).root;
 	const allow = new Set<string>([workspace]);
 	const allowReadOnly = new Set<string>();
 	const allowWriteOnly = new Set<string>();
@@ -311,7 +436,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// `fenceVerdict` takes the deepest match.
 	if (home !== undefined && home !== workspace) deny.add(home);
 	for (let ancestor = path.dirname(workspace); ; ancestor = path.dirname(ancestor)) {
-		if (tooBroadToDeny(ancestor)) break;
+		if (tooBroadToDeny(ancestor, fsRoot)) break;
 		deny.add(ancestor);
 		const next = path.dirname(ancestor);
 		if (next === ancestor) break; // reached a filesystem root that `tooBroadToDeny` did not name
@@ -359,13 +484,53 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		}
 	}
 
+	// The agent's own inputs, which sit inside the denied home tree. The file tools allow-listed these
+	// while the fence did not, so `bash` could not read a plugin that `read` could — one of the
+	// asymmetries #2624 removes now that both consult this fence. Read-only: they are inputs, and a
+	// write changes what a later session loads. Emitted through existing ancestors so the skills
+	// directory, which is created on first use, is covered before it exists rather than after.
+	for (const own of [getPluginsDir(), path.join(getAgentDir(), "skills"), ...AGENT_PROFILE_FILES]) {
+		allowReadOnly.add(canonicalThroughExisting(own));
+	}
+
+	// Top-level directories that hold somebody's files. Without these the fence covered only home and
+	// the workspace's ancestors, so with the workspace at `~/MEDDPICC/EQUIFAX` another operator's
+	// account, an external volume and `/data/globex` were all readable AND writable — measured. The
+	// command-text scan was refusing them on the way in, which is exactly why that scan could not
+	// simply be stood down (#2624).
+	//
+	// Two sources, and the static one is not redundant: enumeration is a single `readdir` that can
+	// fail, and coverage that evaporates with it would be worse than no claim at all. So the known data
+	// roots are denied by name, and enumeration adds whatever this machine has that the list does not
+	// foresee.
+	//
+	// The known roots are resolved through their existing ancestors rather than dropped when absent, so
+	// a `/data` created *after* the session starts is already denied. Seatbelt matches a `(subpath …)`
+	// prefix whether or not the path exists; Landlock cannot attach a rule to an absent inode, but its
+	// plan never grants a path `readdir` did not see either, so nothing is lost there.
+	const known = DATA_ROOTS.map(name => canonicalThroughExisting(path.join(fsRoot, path.basename(name))));
+	const found = dataRootEntries(fsRoot).map(entry => canonical(entry) ?? entry);
+	for (const resolved of [...known, ...found]) {
+		if (tooBroadToDeny(resolved, fsRoot)) continue; // e.g. /Volumes/Macintosh HD -> /
+		// A deny beats an allow at EQUAL depth, so denying a root that IS the workspace or IS something
+		// the operator granted would not be redundant — it would silently revoke the grant. Deeper is
+		// fine and intended: an ancestor deny with the workspace allowed inside it is the normal shape.
+		if (resolved === workspace) continue;
+		if (allow.has(resolved) || allowReadOnly.has(resolved) || allowWriteOnly.has(resolved)) continue;
+		deny.add(resolved);
+	}
+
 	// Cross-session leak roots. These may sit *under* an allowed root — the agent dir is inside home,
 	// and a session whose workspace is the agent dir would otherwise re-expose every other session's
 	// transcript. `fenceVerdict` resolves that by depth, so nesting is safe rather than accidental.
+	//
+	// Emitted even when absent, for the reason COMMAND_BEARING_CONFIG is: a rule that appears only once
+	// the directory does is one nobody can rely on, and creating it would otherwise be the way around
+	// it. Today the home deny covers all three anyway, so this matters only where the agent dir has
+	// been relocated outside home — but "only matters in that case" is how the last few holes were built.
 	const leaks = options.leakRoots ?? [getMemoriesDir(), getSessionsDir(), getXCSHContextsDir()];
 	for (const leak of leaks) {
-		const resolved = canonical(leak);
-		if (resolved !== undefined) deny.add(resolved);
+		deny.add(canonicalThroughExisting(leak));
 	}
 
 	return {

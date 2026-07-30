@@ -175,3 +175,70 @@ describe("two-customer isolation, enforced in the shell", () => {
 		expect(text).toContain("TOKEN=b");
 	});
 });
+
+/**
+ * The container other operators' accounts live in, enforced by the kernel (#2624).
+ *
+ * The scenario above puts both tenants under one container, which the ancestor walk already covered.
+ * This asserts the rule that was genuinely missing: a top-level root holding somebody else's files is
+ * denied. Measured reachable before — `/Users/<otheruser>`, `/Volumes/<other>`, `/data/globex` all
+ * matched no rule and defaulted to allow, read and write.
+ *
+ * Deliberately run against the REAL filesystem root with the real home, because a synthetic root
+ * cannot show this. Under a temp-directory root the ancestor walk denies that whole container anyway,
+ * so the test passes with or without the rule and proves nothing — measured, before rewriting it this
+ * way. `ls` of the home container needs no write access and no planted file, which is what makes a
+ * real-filesystem assertion possible here.
+ */
+describe("the container other operators' accounts live in", () => {
+	const OS_ENFORCED = containmentStatus(true).osEnforced;
+	// Both exist on their platform, both list successfully when unfenced, and neither holds anything a
+	// toolchain needs — so a refusal here is the rule working rather than an accident of permissions.
+	const HOME_CONTAINER = process.platform === "darwin" ? "/Users" : "/home";
+
+	async function shell(command: string, fenced = true) {
+		// The session's own checkout: a real directory under the real home, so the fence is shaped
+		// exactly as it is in production rather than by an injected root.
+		const workspace = fs.realpathSync(process.cwd());
+		const fence = buildContainmentFence({ workspace });
+		let out = "";
+		const result = (await executeShell(
+			{
+				command,
+				cwd: workspace,
+				fence: fenced
+					? {
+							allow: [...fence.allow],
+							allowReadOnly: [...fence.allowReadOnly],
+							allowWriteOnly: [...fence.allowWriteOnly],
+							deny: [...fence.deny],
+						}
+					: undefined,
+			},
+			(_e, c) => {
+				out += c ?? "";
+			},
+		)) as { exitCode?: number; output?: string };
+		return { code: result?.exitCode ?? -1, text: out + (result?.output ?? "") };
+	}
+
+	it(`${OS_ENFORCED ? "cannot" : "can still"} be listed from a fenced shell`, async () => {
+		const { code } = await shell(`/bin/ls ${HOME_CONTAINER}`);
+		if (OS_ENFORCED) expect(code).not.toBe(0);
+		else expect(code).toBe(0);
+	});
+
+	it("while the operational roots and the session's own tree still work", async () => {
+		// If the profile denied something a process needs to start, every assertion above would pass for
+		// the wrong reason. This is the positive control that says commands still run at all.
+		const sys = await shell("/bin/cat /etc/hosts > /dev/null && /bin/ls /usr/bin > /dev/null && echo sysok");
+		expect(sys.text).toContain("sysok");
+		const own = await shell("/bin/ls package.json");
+		expect(own.code).toBe(0);
+	});
+
+	it("but the same listing unfenced succeeds — the control", async () => {
+		const { code } = await shell(`/bin/ls ${HOME_CONTAINER}`, false);
+		expect(code).toBe(0);
+	});
+});

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getAgentDir, getPluginsDir } from "@f5-sales-demo/pi-utils";
 import { buildContainmentFence, containmentStatus, fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
 
 /**
@@ -603,5 +604,161 @@ describe("buildContainmentFence — the ancestor walk never denies a temp root",
 		} finally {
 			fs.rmSync(container, { recursive: true, force: true });
 		}
+	});
+});
+
+/**
+ * Data roots that are neither the workspace nor operational (#2624).
+ *
+ * The home deny and the ancestor walk together cover the realistic case — customer checkouts under
+ * `~`. They cover nothing under an unrelated root: measured with the workspace at
+ * `~/MEDDPICC/EQUIFAX`, the fence allowed `/Users/<otheruser>/…`, `/Volumes/Backup/…`, `/data/globex`
+ * and `/srv/tenantZ`, read and write. The command-text scan was refusing those on the way in, so the
+ * composite looked right while the fence alone did not — and that scan is what #2624 stops using as a
+ * boundary, so this has to hold on its own now.
+ *
+ * The rule is one readdir of the filesystem root: an entry whose name is not operational holds data
+ * rather than tools, and is denied. Nothing operational is touched, which is the property that
+ * separates this from a deny-by-default profile.
+ */
+describe("buildContainmentFence — data roots outside the workspace", () => {
+	/** A synthetic filesystem root, so an assertion never depends on what this machine mounts. */
+	function syntheticRoot(suffix: string, entries: readonly string[]): string {
+		const root = realTmp(suffix);
+		for (const entry of entries) fs.mkdirSync(path.join(root, entry), { recursive: true });
+		return root;
+	}
+
+	it("denies unrelated data roots while leaving every operational root alone", () => {
+		const fsRoot = syntheticRoot("fsdata", ["usr", "bin", "etc", "opt", "var", "Users", "data", "srv", "Volumes"]);
+		const home = path.join(fsRoot, "Users", "me");
+		const workspace = path.join(home, "MEDDPICC", "EQUIFAX");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(path.join(fsRoot, "Users", "otheruser"), { recursive: true });
+		fs.mkdirSync(path.join(fsRoot, "data", "globex"), { recursive: true });
+		fs.mkdirSync(path.join(fsRoot, "Volumes", "Backup"), { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, fsRoot });
+
+		// The four cases measured as reachable before this existed.
+		for (const leak of [
+			path.join("Users", "otheruser", "customerX"),
+			path.join("data", "globex", "secrets.tf"),
+			path.join("srv", "tenantZ", "notes.md"),
+			path.join("Volumes", "Backup", "customerY"),
+		]) {
+			const candidate = path.join(fsRoot, leak);
+			expect(fenceVerdict(fence, candidate, "read")).toBe("deny");
+			expect(fenceVerdict(fence, candidate, "write")).toBe("deny");
+		}
+
+		// …and nothing a tool needs. This fence restricts no operation; that is what makes it gentle.
+		for (const operational of ["usr/bin/env", "bin/sh", "etc/hosts", "opt/homebrew/bin/bun", "var/log/x"]) {
+			expect(fenceVerdict(fence, path.join(fsRoot, operational), "read")).toBe("allow");
+		}
+		// The workspace still wins inside its denied ancestors.
+		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
+	});
+
+	// Enumeration only sees what exists when the fence is built, so a known data root that does not
+	// exist yet has to be denied by name — otherwise `mkdir /data` mid-session would open it. Seatbelt
+	// matches a `(subpath …)` prefix whether or not the path is there, so the rule costs nothing.
+	it("denies a known data root that does not exist yet", () => {
+		const fsRoot = syntheticRoot("fsabsent", ["usr", "Users"]);
+		const home = path.join(fsRoot, "Users", "me");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		expect(fs.existsSync(path.join(fsRoot, "srv"))).toBe(false);
+
+		const fence = buildContainmentFence({ workspace, home, fsRoot });
+
+		expect(fence.deny).toContain(path.join(fsRoot, "srv"));
+		expect(fenceVerdict(fence, path.join(fsRoot, "srv", "tenantZ", "x"), "read")).toBe("deny");
+	});
+
+	// A deny beats an allow at EQUAL depth, so denying a root that is itself the workspace would not
+	// merely be redundant — it would kill the session's own tree. Reachable wherever a container puts
+	// the checkout at the top level: /app, /src, /workspaces.
+	it("never denies a top-level root that is itself the workspace", () => {
+		const fsRoot = syntheticRoot("fsws", ["usr", "app"]);
+		const workspace = path.join(fsRoot, "app");
+		const fence = buildContainmentFence({ workspace, home: path.join(fsRoot, "Users", "me"), fsRoot });
+
+		expect(fence.deny).not.toContain(workspace);
+		expect(fenceVerdict(fence, path.join(workspace, "src", "main.ts"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(workspace, "src", "main.ts"), "write")).toBe("allow");
+	});
+
+	// Same equal-depth hazard for a root the operator granted deliberately. `--allow-path /shared` must
+	// win over a blanket "unknown root" deny, or the flag would silently do nothing.
+	it("never denies a top-level root the operator granted", () => {
+		const fsRoot = syntheticRoot("fsgrant", ["usr", "shared", "readonly", "data"]);
+		const home = path.join(fsRoot, "Users", "me");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const fence = buildContainmentFence({
+			workspace,
+			home,
+			fsRoot,
+			extraRoots: [path.join(fsRoot, "shared")],
+			readOnlyRoots: [path.join(fsRoot, "readonly")],
+		});
+
+		expect(fenceVerdict(fence, path.join(fsRoot, "shared", "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fsRoot, "shared", "x"), "write")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fsRoot, "readonly", "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fsRoot, "readonly", "x"), "write")).toBe("deny");
+		// An ungranted data root beside them is still denied, or the carve-out proved nothing.
+		expect(fenceVerdict(fence, path.join(fsRoot, "data", "x"), "read")).toBe("deny");
+	});
+
+	// The synthetic root proves the rule; this proves it is wired to the real filesystem, which is the
+	// part that actually ships. Asserted on the emitted roots, because that is what the backend compiles.
+	it("denies the real home container on this machine and no operational root", () => {
+		const fence = buildContainmentFence({ workspace: fs.realpathSync(process.cwd()) });
+
+		// Other users live here, and nothing operational does.
+		expect(fence.deny).toContain(process.platform === "darwin" ? "/Users" : "/home");
+		for (const operational of ["/usr", "/bin", "/sbin", "/etc", "/dev", "/opt", "/var", "/private", "/tmp"]) {
+			expect(fence.deny).not.toContain(operational);
+			expect(fence.deny).not.toContain(fs.realpathSync(operational));
+		}
+		expect(fenceVerdict(fence, "/usr/bin/env", "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fs.realpathSync("/tmp"), "scratch.txt"), "write")).toBe("allow");
+	});
+
+	// The agent's own plugins and user skills sit under `~/.xcsh`, inside the home deny. The file tools
+	// allow-listed them and the fence did not, so `bash` could not read a plugin the `read` tool could —
+	// the asymmetry #2624 removes. Emitted whether or not they exist yet: the skills dir is created on
+	// first use, and a rule that appears only after the directory does is a rule nobody can rely on.
+	it("grants the agent's own plugins and user skills, which sit under denied home", () => {
+		const fence = buildContainmentFence({ workspace: fs.realpathSync(process.cwd()) });
+
+		for (const own of [getPluginsDir(), path.join(getAgentDir(), "skills")]) {
+			expect(fenceVerdict(fence, path.join(own, "probe", "manifest.json"), "read")).toBe("allow");
+			// Read-only: these are inputs, and a write there changes what a later session loads.
+			expect(fenceVerdict(fence, path.join(own, "probe", "manifest.json"), "write")).toBe("deny");
+		}
+	});
+
+	// A leak root inside the granted plugins tree must still win, and it must win while ABSENT — the
+	// case that used to fall through, because `canonical` drops a path that does not exist yet and the
+	// home deny was quietly covering for it. Passed explicitly rather than read from the environment:
+	// the ambient dirs depend on whether an earlier test relocated the agent dir, which is not a
+	// property this test is about.
+	it("denies a cross-session leak root nested inside a grant, even before it exists", () => {
+		const home = realTmp("leaknest");
+		const workspace = path.join(home, "w");
+		const plugins = path.join(home, ".xcsh", "plugins");
+		const leak = path.join(plugins, "shared-state");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(plugins, { recursive: true });
+		expect(fs.existsSync(leak)).toBe(false);
+
+		const fence = buildContainmentFence({ workspace, home, leakRoots: [leak] });
+
+		expect(fence.deny).toContain(leak);
+		expect(fenceVerdict(fence, path.join(leak, "other-session.json"), "read")).toBe("deny");
 	});
 });
