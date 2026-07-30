@@ -11,13 +11,19 @@ import { evaluateToolCall } from "@f5-sales-demo/xcsh/sandbox/enforce";
 import { resolveSessionFence } from "@f5-sales-demo/xcsh/sandbox/session-fence";
 
 let tmp: TempDir;
+let home: string;
 let parent: string;
 let custA: string;
 let custB: string;
 
 beforeAll(() => {
 	tmp = TempDir.createSync("xcsh-sbx-iso-");
-	parent = tmp.absolute();
+	// The customers live in a container *inside* home, which is the layout the fleet uses
+	// (`~/MEDDPICC/<customer>`). They used to sit directly in `home`, and #2637 deliberately leaves that
+	// case open — the siblings are in home, so nothing can read all of home and refuse them. Keeping the
+	// old shape here would have asserted a protection that no longer exists.
+	home = path.join(tmp.absolute(), "home");
+	parent = path.join(home, "customers");
 	custA = path.join(parent, "custA");
 	custB = path.join(parent, "custB");
 	fs.mkdirSync(custA, { recursive: true });
@@ -70,8 +76,10 @@ describe("functionality preservation under the sandbox", () => {
 		expect(reads(custA, path.join(getAgentDir(), "skills", "account-planning", "SKILL.md"))).toBe(false);
 	});
 
-	it("still blocks unrelated home dotfiles (e.g. ~/.ssh)", () => {
-		expect(reads(custA, path.join(os.homedir(), ".ssh", "id_rsa"))).toBe(true);
+	// #2637: the operator's own dotfiles are theirs. What stays blocked is another customer's folder and
+	// another session's state, asserted above and below.
+	it("no longer blocks the operator's own home dotfiles", () => {
+		expect(reads(custA, path.join(os.homedir(), ".ssh", "id_rsa"))).toBe(false);
 	});
 });
 
@@ -109,7 +117,7 @@ describe("two-customer isolation, enforced in the shell", () => {
 	const OS_ENFORCED = containmentStatus(true).osEnforced;
 
 	function fenceFor(cwd: string) {
-		const fence = buildContainmentFence({ workspace: cwd, home: parent });
+		const fence = buildContainmentFence({ workspace: cwd, home });
 		return {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
@@ -178,68 +186,13 @@ describe("two-customer isolation, enforced in the shell", () => {
 });
 
 /**
- * The container other operators' accounts live in, enforced by the kernel (#2624).
+ * Other operators' accounts are no longer fenced (#2637).
  *
- * The scenario above puts both tenants under one container, which the ancestor walk already covered.
- * This asserts the rule that was genuinely missing: a top-level root holding somebody else's files is
- * denied. Measured reachable before — `/Users/<otheruser>`, `/Volumes/<other>`, `/data/globex` all
- * matched no rule and defaulted to allow, read and write.
+ * #2624 denied `/Users` and `/home` wholesale and asserted here that listing them failed. That deny took
+ * this operator's own home with it, which is what refused `~/git/STYLE_GUIDE.md`, so #2637 removed it. A
+ * home directory is 0700 and the filesystem already refuses another account; the fence is not here to
+ * re-implement file permissions, and this suite should not claim a protection it no longer provides.
  *
- * Deliberately run against the REAL filesystem root with the real home, because a synthetic root
- * cannot show this. Under a temp-directory root the ancestor walk denies that whole container anyway,
- * so the test passes with or without the rule and proves nothing — measured, before rewriting it this
- * way. `ls` of the home container needs no write access and no planted file, which is what makes a
- * real-filesystem assertion possible here.
+ * What replaced the assertion is the one below it: the customer container inside home, which is the
+ * surface that actually matters and is asserted through the kernel above.
  */
-describe("the container other operators' accounts live in", () => {
-	const OS_ENFORCED = containmentStatus(true).osEnforced;
-	// Both exist on their platform, both list successfully when unfenced, and neither holds anything a
-	// toolchain needs — so a refusal here is the rule working rather than an accident of permissions.
-	const HOME_CONTAINER = process.platform === "darwin" ? "/Users" : "/home";
-
-	async function shell(command: string, fenced = true) {
-		// The session's own checkout: a real directory under the real home, so the fence is shaped
-		// exactly as it is in production rather than by an injected root.
-		const workspace = fs.realpathSync(process.cwd());
-		const fence = buildContainmentFence({ workspace });
-		let out = "";
-		const result = (await executeShell(
-			{
-				command,
-				cwd: workspace,
-				fence: fenced
-					? {
-							allow: [...fence.allow],
-							allowReadOnly: [...fence.allowReadOnly],
-							allowWriteOnly: [...fence.allowWriteOnly],
-							deny: [...fence.deny],
-						}
-					: undefined,
-			},
-			(_e, c) => {
-				out += c ?? "";
-			},
-		)) as { exitCode?: number; output?: string };
-		return { code: result?.exitCode ?? -1, text: out + (result?.output ?? "") };
-	}
-
-	it(`${OS_ENFORCED ? "cannot" : "can still"} be listed from a fenced shell`, async () => {
-		const { code } = await shell(`/bin/ls ${HOME_CONTAINER}`);
-		if (OS_ENFORCED) expect(code).not.toBe(0);
-		else expect(code).toBe(0);
-	});
-
-	it("while the operational roots and the session's own tree still work", async () => {
-		// If the profile denied something a process needs to start, every assertion above would pass for
-		// the wrong reason. This is the positive control that says commands still run at all.
-		const sys = await shell("/bin/cat /etc/hosts > /dev/null && /bin/ls /usr/bin > /dev/null && echo sysok");
-		expect(sys.text).toContain("sysok");
-		const own = await shell("/bin/ls package.json");
-		expect(own.code).toBe(0);
-	});
-
-	it("but the same listing unfenced succeeds — the control", async () => {
-		const { code } = await shell(`/bin/ls ${HOME_CONTAINER}`, false);
-		expect(code).toBe(0);
-	});
-});

@@ -203,6 +203,12 @@ const COMMAND_BEARING_CONFIG = [
 	// was measured working with its config.yml read-only.
 	path.join(".config", "glab-cli", "aliases.yml"),
 	path.join("Library", "Application Support", "glab-cli", "aliases.yml"),
+	// Build configuration that redirects a later build. Protected by *omission* while home was denied —
+	// the cache carve-outs grant `.cargo/registry` rather than `.cargo` — so #2637 had to name them. A
+	// write here is persistence, not theft: the operator's next build runs what it says. Reads are fine.
+	path.join(".cargo", "config.toml"),
+	path.join(".gradle", "init.gradle"),
+	path.join(".gradle", "init.d"),
 ];
 
 /** Read-only inside home: configuration a tool needs to behave correctly, but must not rewrite. */
@@ -268,9 +274,10 @@ const AGENT_PROFILE_FILES = ["user-profile.json", "computer-profile.json", "sett
  * unforeseen — `/data`, `/scratch`, a bespoke mount.
  */
 const DATA_ROOTS = [
-	"/Users", // macOS home container: other operators' accounts, /Users/Shared
-	"/home", // Linux home container
-	"/root", // Linux superuser home
+	// `/Users` and `/home` are deliberately absent: denying the home container denies this operator's own
+	// home with it, which is the whole of #2637. Other accounts are 0700, so the filesystem already refuses
+	// them; the fence is not here to re-implement file permissions.
+	"/root", // Linux superuser home: not this operator's account
 	"/Volumes", // macOS mounts. Per-container, not per-child: /Volumes/Macintosh HD resolves to /,
 	"/mnt", // which `tooBroadToDeny` then rejects, and the kernel resolves such a path before any
 	"/media", // rule matches it — so denying the container cannot deny the boot volume.
@@ -528,8 +535,22 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// rejects, so `/`, `/usr`, `/tmp` and `$TMPDIR` are never denied and operational paths stay
 	// reachable. And it costs nothing below: the workspace is allowed at greater depth, and
 	// `fenceVerdict` takes the deepest match.
-	if (home !== undefined && home !== workspace) deny.add(home);
+	// Home is never denied, and the walk stops there (#2637).
+	//
+	// This is a professional courtesy, not a prison: an effort to stop *inadvertent* filesystem wandering
+	// between customers, for an operator with senior technical skills and the same rights on this machine
+	// as the agent acting for them. Denying home outright refused `~/git/STYLE_GUIDE.md` and then needed
+	// ~30 carve-outs to make ordinary tooling work again — every one of them evidence the posture was wrong.
+	//
+	// What the walk still covers is the part that matters: every level between the workspace and home. With
+	// the workspace at `~/MEDDPICC/EQUIFAX`, `~/MEDDPICC` is denied so the `ACME` sibling is unreachable,
+	// and with `<container>/<tenant>/repo` every level up to home is denied, so the v19.100.1 cross-tenant
+	// regression does not return.
+	//
+	// A session whose folder IS home, or a direct child of it, therefore fences nothing above itself. That
+	// is deliberate: if the operator chooses to work in home, that is their filesystem to lay out.
 	for (let ancestor = path.dirname(workspace); ; ancestor = path.dirname(ancestor)) {
+		if (ancestor === home) break; // the operator's own account is theirs
 		if (tooBroadToDeny(ancestor, fsRoot)) break;
 		deny.add(ancestor);
 		const next = path.dirname(ancestor);
@@ -629,6 +650,11 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		// e.g. /Volumes/Macintosh HD -> /. Skipped for the whole-root list, per the note above.
 		if (!rootScoped.has(resolved) && tooBroadToDeny(resolved, fsRoot)) continue;
 		if (resolved === fsRoot) continue; // never the root the workspace lives on
+		// Never a directory that CONTAINS home, because denying it denies home (#2637). Removing `/Users`
+		// and `/home` from the static list was not enough: the root enumeration re-adds them, since
+		// `Users` is not an operational name. That is what still refused `~/git/STYLE_GUIDE.md` at the
+		// kernel while `fenceVerdict` said allow — the unit tests use synthetic roots and could not see it.
+		if (home !== undefined && pathIsWithin(resolved, home)) continue;
 		// A deny beats an allow at EQUAL depth, so denying a root that IS the workspace or IS something
 		// the operator granted would not be redundant — it would silently revoke the grant. Deeper is
 		// fine and intended: an ancestor deny with the workspace allowed inside it is the normal shape.
