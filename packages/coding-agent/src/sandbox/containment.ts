@@ -60,6 +60,16 @@ export interface ContainmentOptions {
 	/** Cross-session leak roots to deny. Defaults to the real memories/sessions/contexts dirs. */
 	leakRoots?: readonly string[];
 	/**
+	 * Home directory used to expand a leading `~` in a granted root. Overridable for tests, which cannot
+	 * put a fixture in the operator's real home.
+	 */
+	homeForTilde?: string;
+	/**
+	 * Filesystem roots other than the workspace's own, denied wholesale — on Windows, the other drive
+	 * letters. Overridable for tests, which cannot mount a second volume.
+	 */
+	otherRoots?: readonly string[];
+	/**
 	 * Whether the active backend can express "writable directory, except this file" — see
 	 * COMMAND_BEARING_CONFIG. True for seatbelt, false for Landlock, which cannot.
 	 *
@@ -383,14 +393,87 @@ function dataRootEntries(fsRoot: string): string[] {
 	}
 }
 
-/** Canonicalise a list of roots, dropping the ones that are absent. */
-function resolveAll(roots: readonly string[] | undefined): Set<string> {
+/**
+ * Canonicalise a list of *granted* roots — `--allow-path`, `sandbox.allowRead`, `sandbox.allowWrite`.
+ *
+ * Two things a plain `canonical` got wrong, both found by adversarial review, and both the same mistake:
+ * a grant that resolves to nothing is silently dropped, so the flag appears to do nothing while the
+ * refusal it was meant to lift keeps recommending it.
+ *
+ *  - `~` is expanded. Passed straight to `realpathSync` it names a path that does not exist, so
+ *    `sandbox.allowRead: ["~/shared"]` was discarded — and since `~` sits inside the denied home tree,
+ *    the grant did not merely fail to widen, it left the path refused. The policy this replaced expanded
+ *    it, so this was a regression rather than an old gap.
+ *  - An absent target is kept, resolved through the ancestors that do exist, so `--allow-path
+ *    <new-output-dir>` can authorize creating it. Harmless while an unnamed path defaulted to allow;
+ *    once unknown top-level roots are denied, dropping the grant turns the flag into a refusal.
+ */
+function resolveGrants(roots: readonly string[] | undefined, home: string): Set<string> {
 	const resolved = new Set<string>();
 	for (const root of roots ?? []) {
-		const real = canonical(root);
-		if (real !== undefined) resolved.add(real);
+		const expanded = root === "~" ? home : root.startsWith(`~${path.sep}`) ? path.join(home, root.slice(2)) : root;
+		resolved.add(canonicalThroughExisting(expanded));
 	}
 	return resolved;
+}
+
+/**
+ * Filesystem roots other than the one the workspace is on.
+ *
+ * On POSIX there is one root and this is empty. On Windows every drive letter is its own root, so a
+ * workspace on `C:` left `D:\customerB` and any mapped share matching no rule at all — and Windows has
+ * no kernel backend, so the command-text scan is the entire boundary there. While that scan was
+ * deny-by-default it refused those paths incidentally; making it agree with the fence (#2624) removed
+ * the cover and exposed the gap. Found by adversarial review.
+ *
+ * **Unverified on Windows.** The probe below cannot run on the platforms this fleet uses, so what is
+ * tested is the denying, not the discovery — see the test, which injects the list. A drive holding a
+ * toolchain is opened again with `--allow-path`, which grants at greater depth.
+ *
+ * UNC paths (`\\server\share`) have no enumerable root and are not covered.
+ */
+function otherFilesystemRoots(fsRoot: string): string[] {
+	if (process.platform !== "win32") return [];
+	const roots: string[] = [];
+	for (let letter = "A".charCodeAt(0); letter <= "Z".charCodeAt(0); letter++) {
+		const drive = `${String.fromCharCode(letter)}:${path.sep}`;
+		if (drive.toLowerCase() === fsRoot.toLowerCase()) continue;
+		try {
+			if (fs.statSync(drive).isDirectory()) roots.push(drive);
+		} catch {
+			// Not mounted. 26 stat calls once per fence build; cheaper than any alternative.
+		}
+	}
+	return roots;
+}
+
+/**
+ * Per-session state the agent keeps in the *shared* OS temp dir, which every session can reach.
+ *
+ * `local://` content lands at `<tmp>/xcsh-local/<sessionId>` (`internal-urls/local-protocol.ts`) and a
+ * task's artifacts at `<tmp>/xcsh-task-<id>` (`task/index.ts`) whenever no session artifacts dir is
+ * configured. Those are the same class as `~/.xcsh/agent/sessions` — one session reading another's
+ * working notes — so they belong in the leak roots rather than being covered incidentally.
+ *
+ * Nothing else in the temp dir is touched: `xcsh://about` promises `/tmp` is reachable, and refusing it
+ * wholesale is the false refusal #2582 removed. The session's OWN local root is granted back through
+ * `extraRoots` at greater depth, so `local://` keeps working.
+ *
+ * The task dirs carry a unique id, so they are enumerated rather than named. One created after the fence
+ * is built is not covered — the same fail-open residual the root enumeration has, and it applies to a
+ * *concurrent* session's scratch rather than to anything of the operator's.
+ */
+function sharedTempLeakRoots(): string[] {
+	const tmp = safeReal(os.tmpdir());
+	const roots = [path.join(tmp, "xcsh-local")];
+	try {
+		for (const entry of fs.readdirSync(tmp, { withFileTypes: true })) {
+			if (entry.isDirectory() && entry.name.startsWith("xcsh-task-")) roots.push(path.join(tmp, entry.name));
+		}
+	} catch {
+		// Enumeration is a bonus; the fixed-name root above is the one that matters.
+	}
+	return roots;
 }
 
 /** realpath without throwing, for building the never-deny list. */
@@ -452,10 +535,14 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		if (next === ancestor) break; // reached a filesystem root that `tooBroadToDeny` did not name
 	}
 
-	for (const root of [options.sessionTmp, ...(options.extraRoots ?? [])]) {
-		if (root === undefined) continue;
-		const resolved = canonical(root);
-		if (resolved !== undefined) allow.add(resolved);
+	// Through `resolveGrants` like the allow-lists, so a session temp dir or artifacts dir that does not
+	// exist yet is still granted rather than silently dropped.
+	const tildeHome = canonical(options.homeForTilde ?? options.home ?? os.homedir()) ?? os.homedir();
+	for (const root of resolveGrants(
+		[options.sessionTmp, ...(options.extraRoots ?? [])].filter((r): r is string => r !== undefined),
+		tildeHome,
+	)) {
+		allow.add(root);
 	}
 	// Kept distinct. Merging them into one read+write list made a folder shared for reading writable,
 	// undoing the read/write split built for #2516 — found by adversarial review.
@@ -465,8 +552,8 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// depth, and `fenceVerdict` tests read-only first, so the write was refused — the flag the prompt
 	// offers as the remedy for a refusal granted read only. A full allow is what both grants together
 	// mean; the one-directional cases below are untouched.
-	const readOnlyResolved = resolveAll(options.readOnlyRoots);
-	const writeOnlyResolved = resolveAll(options.writeOnlyRoots);
+	const readOnlyResolved = resolveGrants(options.readOnlyRoots, tildeHome);
+	const writeOnlyResolved = resolveGrants(options.writeOnlyRoots, tildeHome);
 	for (const root of readOnlyResolved) {
 		if (writeOnlyResolved.has(root)) allow.add(root);
 		else allowReadOnly.add(root);
@@ -527,8 +614,20 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// plan never grants a path `readdir` did not see either, so nothing is lost there.
 	const known = DATA_ROOTS.map(name => canonicalThroughExisting(path.join(fsRoot, path.basename(name))));
 	const found = dataRootEntries(fsRoot).map(entry => canonical(entry) ?? entry);
-	for (const resolved of [...known, ...found]) {
-		if (tooBroadToDeny(resolved, fsRoot)) continue; // e.g. /Volumes/Macintosh HD -> /
+	// Whole filesystem roots other than the workspace's own — the other Windows drives.
+	//
+	// Deliberately NOT run through `tooBroadToDeny`. On Windows `D:\` *is* a filesystem root, so that
+	// check would drop every entry and make this rule a no-op on the one platform it exists for. The
+	// protection it provides is already covered here: `otherFilesystemRoots` skips `fsRoot` itself, and
+	// the workspace and grant checks below apply to these too. Verified as a live hazard rather than a
+	// theoretical one — the first version of this did filter them, and the test could not see it because
+	// a temp directory is not a filesystem root on this platform.
+	const others = (options.otherRoots ?? otherFilesystemRoots(fsRoot)).map(root => canonicalThroughExisting(root));
+	const rootScoped = new Set(others);
+	for (const resolved of [...known, ...found, ...others]) {
+		// e.g. /Volumes/Macintosh HD -> /. Skipped for the whole-root list, per the note above.
+		if (!rootScoped.has(resolved) && tooBroadToDeny(resolved, fsRoot)) continue;
+		if (resolved === fsRoot) continue; // never the root the workspace lives on
 		// A deny beats an allow at EQUAL depth, so denying a root that IS the workspace or IS something
 		// the operator granted would not be redundant — it would silently revoke the grant. Deeper is
 		// fine and intended: an ancestor deny with the workspace allowed inside it is the normal shape.
@@ -545,7 +644,12 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// the directory does is one nobody can rely on, and creating it would otherwise be the way around
 	// it. Today the home deny covers all three anyway, so this matters only where the agent dir has
 	// been relocated outside home — but "only matters in that case" is how the last few holes were built.
-	const leaks = options.leakRoots ?? [getMemoriesDir(), getSessionsDir(), getXCSHContextsDir()];
+	const leaks = options.leakRoots ?? [
+		getMemoriesDir(),
+		getSessionsDir(),
+		getXCSHContextsDir(),
+		...sharedTempLeakRoots(),
+	];
 	for (const leak of leaks) {
 		deny.add(canonicalThroughExisting(leak));
 	}
