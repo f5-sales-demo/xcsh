@@ -42,22 +42,27 @@ const TASK_COMMANDS = {
 type RustTaskName = keyof typeof TASK_COMMANDS;
 
 const repoRoot = path.join(import.meta.dir, "..");
-const taskName = process.argv[2];
 
-if (!isRustTaskName(taskName)) {
-	console.error(`Unknown Rust task: ${taskName ?? "(missing)"}`);
-	process.exit(1);
-}
+// Guarded so the decision helpers can be imported and tested. Without this, importing the module ran the
+// whole task and called process.exit, which is why the skip logic had no test to catch #2573.
+if (import.meta.main) {
+	const taskName = process.argv[2];
 
-if (!(isCI() || (await hasRustAffectingChanges()))) {
-	console.log(`Skipping ${taskName} (not in CI and no Rust-affecting changes were found).`);
-	process.exit(0);
-}
+	if (!isRustTaskName(taskName)) {
+		console.error(`Unknown Rust task: ${taskName ?? "(missing)"}`);
+		process.exit(1);
+	}
 
-for (const command of TASK_COMMANDS[taskName]) {
-	const exitCode = await runCommand(command);
-	if (exitCode !== 0) {
-		process.exit(exitCode);
+	if (!(isCI() || (await hasRustAffectingChanges(taskName)))) {
+		console.log(`Skipping ${taskName} (not in CI and no Rust-affecting changes were found).`);
+		process.exit(0);
+	}
+
+	for (const command of TASK_COMMANDS[taskName]) {
+		const exitCode = await runCommand(command);
+		if (exitCode !== 0) {
+			process.exit(exitCode);
+		}
 	}
 }
 
@@ -72,18 +77,62 @@ function isCI(): boolean {
 	return normalized !== "" && normalized !== "0" && normalized !== "false";
 }
 
-async function hasRustAffectingChanges(): Promise<boolean> {
-	const result = await $`git status --porcelain -z`.cwd(repoRoot).quiet().nothrow();
-	if (result.exitCode !== 0) {
-		const stderr = result.stderr.toString().trim();
-		const suffix = stderr === "" ? `exit ${result.exitCode}` : stderr;
+/**
+ * Whether this branch touches Rust — uncommitted edits OR anything already committed on it.
+ *
+ * Committing used to switch the check off. `git status --porcelain` reports the working tree only, so the
+ * moment Rust changes were committed the tree went clean, this returned false, and `check:rs` skipped
+ * itself — precisely when someone is about to push. A real `cargo fmt` violation reached CI that way
+ * (#2573), and the skip message reads like a considered decision rather than a gap.
+ *
+ * So the question is asked of the branch, not of the tree: uncommitted changes plus the diff against the
+ * default branch. Anything that cannot be determined runs the task, matching the existing posture that a
+ * broken git query must not silently disable a gate.
+ */
+async function hasRustAffectingChanges(taskName: RustTaskName): Promise<boolean> {
+	const uncommitted = await $`git status --porcelain -z`.cwd(repoRoot).quiet().nothrow();
+	if (uncommitted.exitCode !== 0) {
+		const stderr = uncommitted.stderr.toString().trim();
+		const suffix = stderr === "" ? `exit ${uncommitted.exitCode}` : stderr;
 		console.warn(`Warning: failed to inspect git status: ${suffix}. Running ${taskName} conservatively.`);
 		return true;
 	}
-	return getChangedPathsFromPorcelain(result.stdout).some(isRustAffectingPath);
+	if (getChangedPathsFromPorcelain(uncommitted.stdout).some(isRustAffectingPath)) return true;
+
+	const base = await defaultBranchRef();
+	if (base === undefined) {
+		console.warn(`Warning: could not resolve the default branch. Running ${taskName} conservatively.`);
+		return true;
+	}
+	// Three dots: compare against the merge base, so commits that merged into the default branch after
+	// this one started are not mistaken for changes this branch made.
+	const committed = await $`git diff --name-only -z ${`${base}...HEAD`}`.cwd(repoRoot).quiet().nothrow();
+	if (committed.exitCode !== 0) {
+		const stderr = committed.stderr.toString().trim();
+		const suffix = stderr === "" ? `exit ${committed.exitCode}` : stderr;
+		console.warn(`Warning: failed to diff against ${base}: ${suffix}. Running ${taskName} conservatively.`);
+		return true;
+	}
+	return new TextDecoder().decode(committed.stdout).split("\0").filter(Boolean).some(isRustAffectingPath);
 }
 
-function getChangedPathsFromPorcelain(buf: Uint8Array): string[] {
+/** The default branch's remote ref, preferring what the remote itself reports. */
+async function defaultBranchRef(): Promise<string | undefined> {
+	const symbolic = await $`git symbolic-ref --quiet refs/remotes/origin/HEAD`.cwd(repoRoot).quiet().nothrow();
+	if (symbolic.exitCode === 0) {
+		const ref = symbolic.stdout.toString().trim();
+		if (ref !== "") return ref;
+	}
+	// A fresh clone may not have origin/HEAD set. Fall back to the conventional names, remote first,
+	// and only to a local branch when there is no remote copy to compare against.
+	for (const candidate of ["origin/main", "origin/master", "main", "master"]) {
+		const exists = await $`git rev-parse --verify --quiet ${`${candidate}^{commit}`}`.cwd(repoRoot).quiet().nothrow();
+		if (exists.exitCode === 0) return candidate;
+	}
+	return undefined;
+}
+
+export function getChangedPathsFromPorcelain(buf: Uint8Array): string[] {
 	const entries = new TextDecoder().decode(buf).split("\0").filter(Boolean);
 	const changedPaths: string[] = [];
 
@@ -109,7 +158,7 @@ function getChangedPathsFromPorcelain(buf: Uint8Array): string[] {
 	return changedPaths;
 }
 
-function isRustAffectingPath(changedPath: string): boolean {
+export function isRustAffectingPath(changedPath: string): boolean {
 	const normalized = changedPath.replace(/\\/g, "/");
 	const fileName = normalized.slice(normalized.lastIndexOf("/") + 1);
 	return (
