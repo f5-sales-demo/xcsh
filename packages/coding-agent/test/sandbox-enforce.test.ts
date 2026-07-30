@@ -845,3 +845,98 @@ describe("evaluateToolCall — operand writes are checked against the write boun
 		}
 	});
 });
+
+/**
+ * Review of the operand-direction fix found four more ways a write reached a read-only root.
+ *
+ * The critical one is structural and is NOT fully closed here: the table is a denylist, so a mutating
+ * command it does not model still defaults to a read check. What is closed is the set that matters most —
+ * the plain mutators (`rm`, `touch`, `mkdir`, `chmod`, …), which were the largest hole — plus three
+ * defects in the model itself. The residual is tracked rather than implied away.
+ */
+describe("evaluateToolCall — operand writes, review round two (GHSA-q4hg)", () => {
+	const bash = (command: string) => check("bash", { command });
+
+	// `touch` and `rm` against a read-allowed root were classified as reads and permitted.
+	it("refuses the plain mutators against a read-only root", () => {
+		for (const command of [
+			"touch /shared/ctx/x",
+			"rm /shared/ctx/file",
+			"rm -rf /shared/ctx/dir",
+			"mkdir /shared/ctx/newdir",
+			"rmdir /shared/ctx/dir",
+			"ln -s /work/custA/a /shared/ctx/link",
+			"shred /shared/ctx/file",
+			"unlink /shared/ctx/file",
+		]) {
+			expect(bash(command).block).toBe(true);
+			expect(bash(command).reason).toContain("write boundary");
+		}
+	});
+
+	// `chmod 644 f` — the mode is a positional but not a path.
+	it("skips the leading non-path operand of chmod and chown", () => {
+		expect(bash("chmod 644 /shared/ctx/file").block).toBe(true);
+		expect(bash("chown me /shared/ctx/file").block).toBe(true);
+		// …and the mode itself is not mistaken for a path in the tree.
+		expect(bash("chmod 644 in-tree.txt").block).toBe(false);
+	});
+
+	// `mv` REMOVES its source, so a source in a read-only root is a mutation of that root.
+	it("treats an mv source as a write, because mv deletes it", () => {
+		expect(bash("mv /shared/ctx/file .").block).toBe(true);
+		expect(bash("mv /shared/ctx/file /shared/ctx/other").block).toBe(true);
+		// `cp` does not remove its source, so that stays a read.
+		expect(bash("cp /shared/ctx/file .").block).toBe(false);
+	});
+
+	// `install -d` creates directories rather than copying into the last operand.
+	it("treats every operand of install -d as written", () => {
+		expect(bash("install -d /shared/ctx/newdir").block).toBe(true);
+		expect(bash("install -d /shared/ctx/a /shared/ctx/b").block).toBe(true);
+	});
+
+	// A bundled short option used to hit the unrecognized-option path and abandon the command, which
+	// fails OPEN — the exact direction this module must never fail in.
+	it("understands bundled short flags", () => {
+		expect(bash("echo x | tee -ai /shared/ctx/x").block).toBe(true);
+		expect(bash("rm -rf /shared/ctx/dir").block).toBe(true);
+	});
+
+	// Everything after `--` is a positional, however much it looks like an option.
+	it("honours end-of-options", () => {
+		// Without this, `-t` parses as target-directory and relabels the next word as a write target.
+		expect(bash("cp -- -t /drop/secret out.txt").block).toBe(true);
+	});
+});
+
+/**
+ * In-place editors, compressors and downloaders — the mutators found by measuring the residual rather
+ * than by review. Each was permitted against a read-only root before being modelled.
+ */
+describe("evaluateToolCall — in-place and output-naming commands (GHSA-q4hg)", () => {
+	const bash = (command: string) => check("bash", { command });
+
+	it("treats an in-place sed as writing its file operands", () => {
+		expect(bash("sed -i 's/a/b/' /shared/ctx/file").block).toBe(true);
+		// GNU attaches the backup suffix to the flag; exact matching let this spelling through.
+		expect(bash("sed -i.bak 's/a/b/' /shared/ctx/file").block).toBe(true);
+	});
+
+	it("leaves a reading sed alone", () => {
+		// No -i, so nothing is written and the read-only grant is enough.
+		expect(bash("sed -n 's/a/b/p' /shared/ctx/file").block).toBe(false);
+		expect(bash("cat /shared/ctx/file").block).toBe(false);
+	});
+
+	it("treats compressors as replacing their input", () => {
+		for (const command of ["gzip /shared/ctx/file", "xz /shared/ctx/file", "bzip2 /shared/ctx/file"]) {
+			expect(bash(command).block).toBe(true);
+		}
+	});
+
+	it("treats a downloader's output option as a write", () => {
+		expect(bash("curl -o /shared/ctx/x https://example.com").block).toBe(true);
+		expect(bash("wget -O /shared/ctx/x https://example.com").block).toBe(true);
+	});
+});
