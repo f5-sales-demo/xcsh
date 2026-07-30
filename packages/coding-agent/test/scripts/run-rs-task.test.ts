@@ -77,3 +77,40 @@ describe("getChangedPathsFromPorcelain", () => {
 		expect(getChangedPathsFromPorcelain(new Uint8Array())).toEqual([]);
 	});
 });
+
+/**
+ * Review of #2573's fix found two ways the predicate could still miss a Rust change.
+ *
+ * Both were confirmed before fixing. A rename is the subtler one: `git diff --name-only` reports only the
+ * destination when rename detection is on, so `git mv src/foo.rs src/foo.txt` emitted just the .txt path
+ * and a branch that deleted a module looked Rust-free. The diff now passes `--no-renames`, which splits it
+ * into a delete plus an add so the .rs side is visible — that flag is what these paths stand in for.
+ */
+describe("isRustAffectingPath — paths that must not slip through", () => {
+	it("sees the source side of a rename away from Rust", () => {
+		// What `--no-renames` surfaces: the deleted .rs plus the added non-Rust file.
+		expect(["src/foo.rs", "src/foo.txt"].some(isRustAffectingPath)).toBe(true);
+		// And what plain --name-only would have surfaced on its own is not enough.
+		expect(isRustAffectingPath("src/foo.txt")).toBe(false);
+	});
+
+	// crates/tree-sitter-glimmer/build.rs compiles parser.c and scanner.c, so these change what Cargo
+	// produces and clippy can fail on the result.
+	it("treats C/C++ sources compiled by a build script as Rust-affecting", () => {
+		for (const changedPath of [
+			"crates/tree-sitter-glimmer/src/parser.c",
+			"crates/tree-sitter-glimmer/src/scanner.c",
+			"crates/tree-sitter-glimmer/src/tree_sitter/parser.h",
+			"crates/foo/src/thing.cc",
+			"crates/foo/src/thing.cpp",
+		]) {
+			expect(isRustAffectingPath(changedPath)).toBe(true);
+		}
+	});
+
+	it("does not treat prose that merely mentions those extensions as code", () => {
+		for (const changedPath of ["docs/parser.c.md", "notes-about-h.txt"]) {
+			expect(isRustAffectingPath(changedPath)).toBe(false);
+		}
+	});
+});

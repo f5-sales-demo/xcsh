@@ -106,7 +106,15 @@ async function hasRustAffectingChanges(taskName: RustTaskName): Promise<boolean>
 	}
 	// Three dots: compare against the merge base, so commits that merged into the default branch after
 	// this one started are not mistaken for changes this branch made.
-	const committed = await $`git diff --name-only -z ${`${base}...HEAD`}`.cwd(repoRoot).quiet().nothrow();
+	//
+	// `--no-renames` is load-bearing: with rename detection, `git diff --name-only` reports only the
+	// destination, so `git mv src/foo.rs src/foo.txt` emitted just the .txt path and the branch looked
+	// Rust-free while having deleted a module. Verified in a scratch repo. Without renames the same change
+	// appears as a delete plus an add, so the .rs side is visible.
+	const committed = await $`git diff --name-only --no-renames -z ${`${base}...HEAD`}`
+		.cwd(repoRoot)
+		.quiet()
+		.nothrow();
 	if (committed.exitCode !== 0) {
 		const stderr = committed.stderr.toString().trim();
 		const suffix = stderr === "" ? `exit ${committed.exitCode}` : stderr;
@@ -164,8 +172,23 @@ export function isRustAffectingPath(changedPath: string): boolean {
 	return (
 		normalized.endsWith(".rs") ||
 		normalized.startsWith(".cargo/") ||
+		isNativeSource(normalized) ||
 		isOneOf(fileName, RUST_AFFECTING_FILE_NAMES)
 	);
+}
+
+/**
+ * C/C++ sources a `build.rs` compiles into a crate.
+ *
+ * `crates/tree-sitter-glimmer/build.rs` builds `parser.c` and `scanner.c`, so editing one changes what
+ * Cargo produces — and clippy can fail on code that no longer links. Those files matched nothing here, so
+ * a branch touching only them skipped the Rust checks entirely.
+ *
+ * Deliberately not scoped to `crates/`: a false positive costs one clippy run, while a false negative is
+ * the gap this function exists to close. That is the same "when unsure, run" posture as the callers.
+ */
+function isNativeSource(normalizedPath: string): boolean {
+	return [".c", ".h", ".cc", ".cpp", ".hpp", ".cxx"].some(extension => normalizedPath.endsWith(extension));
 }
 
 function isOneOf<T extends string>(value: string, values: readonly T[]): value is T {
