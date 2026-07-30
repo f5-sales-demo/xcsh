@@ -35,7 +35,7 @@
 
 use std::io;
 use std::os::fd::{AsRawFd, OwnedFd};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use nix::libc;
@@ -217,41 +217,62 @@ pub const fn truncate_handled(abi: u32) -> bool {
 
 /// Create a granted directory so a rule can attach to it, or leave the filesystem alone.
 ///
-/// Only ever called for a path the plan grants **write** on, so creating it grants nothing the fence did
-/// not already intend. Bounded deliberately:
+/// Only called for a path the operator's policy named explicitly *and* granted write on, so creating it
+/// confers nothing the fence did not already intend. Bounded deliberately, each bound answering a way this
+/// could otherwise reach outside the fence:
 ///
-/// - refuses if any existing ancestor is a symlink, so a linked `~/.config` cannot cause a directory to
-///   appear somewhere else on the filesystem — `create_dir_all` would happily follow it;
-/// - creates directories only, never files, because a rule on a file may carry only file rights;
-/// - silent, and silent about failure too. This runs on every spawn, so a line here would be noise, and
-///   a failure is not fatal: the grant is dropped exactly as it was before, which is today's behaviour.
+/// - **Every** component is checked, from the filesystem root down, and a symlink anywhere in the chain
+///   refuses the whole operation. Checking only the deepest existing ancestor was not enough: with
+///   `~/.config` a link and `~/.config/gh` existing through it, the deepest existing ancestor is an
+///   ordinary directory and the link goes unnoticed.
+/// - Created with mode `0o700` explicitly, not the process umask. Brush has a `umask` builtin, so
+///   `umask 000; some-command` would otherwise produce a world-writable `~/.aws` or `~/.kube` and let
+///   another local user plant credentials or command-bearing configuration.
+/// - Directories only, since a rule on a file may carry only file rights.
+/// - Silent, including on failure: this runs per spawn, so a line would be noise, and a failure drops the
+///   grant exactly as before.
 ///
-/// **Known limitation, measured.** This runs while composing an *external* command, so on a genuinely
-/// fresh home a shell **builtin** that opens a granted-but-absent path first still fails with `ENOENT` —
-/// `printf x > ~/.aws/config` before anything has been spawned. #2588 is about the CLIs, which are
-/// external, so they are covered; closing the builtin case as well means creating these at the point the
-/// fence is attached rather than per-spawn, which is a wider change than this.
+/// Residual: the check and the create are not atomic, so a symlink planted in between would still be
+/// followed. Closing that needs per-component `mkdirat` with `O_NOFOLLOW`. It is left because the window
+/// requires write access to the operator's own home, where an attacker has better options directly.
 fn create_grantable_dir(path: &Path) {
 	if path.symlink_metadata().is_ok() {
-		return; // It exists; `open_path` failed for some other reason and creating is not the answer.
+		return; // It exists; `open_path` failed for another reason and creating is not the answer.
 	}
-	// Walk to the deepest ancestor that exists, checking nothing on the way is a link.
-	let mut existing = path.parent();
-	while let Some(ancestor) = existing {
-		match ancestor.symlink_metadata() {
+	if !path.is_absolute() || components_are_link_free(path) != Some(true) {
+		return;
+	}
+	let mut builder = std::fs::DirBuilder::new();
+	builder.recursive(true);
+	std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
+	let _ = builder.create(path);
+}
+
+/// Whether every existing component of `path` is an ordinary directory rather than a symlink.
+///
+/// `None` when the answer cannot be established, which callers must treat as "do not proceed".
+fn components_are_link_free(path: &Path) -> Option<bool> {
+	let mut walked = std::path::PathBuf::new();
+	for component in path.components() {
+		walked.push(component);
+		match walked.symlink_metadata() {
 			Ok(metadata) => {
-				if metadata.file_type().is_symlink() {
-					return;
+				let kind = metadata.file_type();
+				if kind.is_symlink() {
+					return Some(false);
 				}
-				break;
+				if !kind.is_dir() {
+					// A file where a directory must be: creation would fail anyway, and following it is
+					// not something to attempt.
+					return Some(false);
+				}
 			}
-			Err(_) => existing = ancestor.parent(),
+			// Absent from here down, which is the ordinary case for the tail being created.
+			Err(error) if error.kind() == io::ErrorKind::NotFound => return Some(true),
+			Err(_) => return None,
 		}
 	}
-	if existing.is_none() {
-		return; // No existing ancestor at all: nothing to anchor creation to.
-	}
-	let _ = std::fs::create_dir_all(path);
+	Some(true)
 }
 
 /// Build a Landlock ruleset from a compiled grant plan.
@@ -262,7 +283,7 @@ fn create_grantable_dir(path: &Path) {
 /// A grant whose path cannot be opened is skipped rather than fatal: an enumerated entry can be a
 /// dangling symlink, and a plan may name a cache directory that does not exist yet. Skipping is the
 /// fail-closed direction, because an ungranted path stays denied.
-pub fn build_ruleset(plan: &GrantPlan, abi: u32) -> io::Result<OwnedFd> {
+pub fn build_ruleset(plan: &GrantPlan, abi: u32, creatable: &[PathBuf]) -> io::Result<OwnedFd> {
 	use std::os::fd::FromRawFd;
 
 	let attr = RulesetAttr { handled_access_fs: handled_rights(abi) };
@@ -309,7 +330,11 @@ pub fn build_ruleset(plan: &GrantPlan, abi: u32) -> io::Result<OwnedFd> {
 		// that left `~/.aws`, `~/.config/gh` and the package caches unreachable *and* uncreatable, so
 		// first-run and login flows failed with a bare `EACCES` (#2588). Creating it first is within the
 		// authority the fence already confers — it is a path the shell is being granted write on.
-		if open_path(path).is_none() && rights.write {
+		// Only a root the fence named explicitly. `plan.grants` also holds entries discovered while
+		// enumerating a split directory, and recreating one of those as a *directory* — after a
+		// concurrent delete, say, or mid atomic-replace — would mutate a path the operator never asked
+		// to be created and could be the wrong object type entirely.
+		if rights.write && creatable.iter().any(|root| root == path) && open_path(path).is_none() {
 			create_grantable_dir(path);
 		}
 		let Some(parent) = open_path(path) else {

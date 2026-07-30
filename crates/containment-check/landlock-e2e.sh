@@ -150,6 +150,54 @@ else
 	printf 'PASS  %-52s (refused)\n' "creation refuses a symlinked ancestor"; pass=$((pass+1))
 fi
 
+# The guard must inspect EVERY component, not just the deepest existing one. With `.config` a link and
+# `.config/gh` existing through it, the deepest existing ancestor is an ordinary directory and the link
+# would go unnoticed — so this plants exactly that shape.
+DEEP="$ROOT/deep"
+mkdir -p "$DEEP/w" "$ROOT/target/gh"
+ln -s "$ROOT/target" "$DEEP/.config"
+DEEP_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
+	"$DEEP/w" "$DEEP/.config/gh/sub" "$DEEP")
+"$BIN" run --fence "$DEEP_FENCE" --cwd "$DEEP/w" "/bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
+if [ -e "$ROOT/target/gh/sub" ]; then
+	printf 'FAIL  %-52s created through a deeper symlink\n' "every component is checked, not just the last"; fail=$((fail+1))
+else
+	printf 'PASS  %-52s (refused)\n' "every component is checked, not just the last"; pass=$((pass+1))
+fi
+
+# Brush has a `umask` builtin, so the process mask is attacker-influenced from inside the session. A
+# created credential directory must not inherit it.
+MODE_HOME="$ROOT/mode"
+mkdir -p "$MODE_HOME/w"
+MODE_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
+	"$MODE_HOME/w" "$MODE_HOME/.aws" "$MODE_HOME")
+"$BIN" run --fence "$MODE_FENCE" --cwd "$MODE_HOME/w" "umask 000; /bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
+if [ -d "$MODE_HOME/.aws" ]; then
+	mode=$(stat -c '%a' "$MODE_HOME/.aws" 2>/dev/null || stat -f '%Lp' "$MODE_HOME/.aws")
+	if [ "$mode" = "700" ]; then
+		printf 'PASS  %-52s (0%s)\n' "created dirs ignore the process umask" "$mode"; pass=$((pass+1))
+	else
+		printf 'FAIL  %-52s mode=0%s want=0700\n' "created dirs ignore the process umask" "$mode"; fail=$((fail+1))
+	fi
+else
+	printf 'FAIL  %-52s the dir was not created at all\n' "created dirs ignore the process umask"; fail=$((fail+1))
+fi
+
+# A path the compiler merely *discovered* while enumerating a split directory must never be recreated —
+# it may be the wrong object type, or mid atomic-replace. Only roots the fence names are eligible.
+ENUM_HOME="$ROOT/enum"
+mkdir -p "$ENUM_HOME/w" "$ENUM_HOME/keep"
+printf 'x' > "$ENUM_HOME/keep/afile"
+ENUM_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
+	"$ENUM_HOME/w" "$ENUM_HOME/keep" "$ENUM_HOME")
+rm -f "$ENUM_HOME/keep/afile"   # disappears between compilation and use
+"$BIN" run --fence "$ENUM_FENCE" --cwd "$ENUM_HOME/w" "/bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
+if [ -d "$ENUM_HOME/keep/afile" ]; then
+	printf 'FAIL  %-52s recreated a discovered entry as a directory\n' "only fence-named roots are created"; fail=$((fail+1))
+else
+	printf 'PASS  %-52s (not recreated)\n' "only fence-named roots are created"; pass=$((pass+1))
+fi
+
 printf '\n=== %d passed, %d failed ===\n' "$pass" "$fail"
 rm -rf "$ROOT" /tmp/ll-e2e-probe
 [ "$fail" -eq 0 ]
