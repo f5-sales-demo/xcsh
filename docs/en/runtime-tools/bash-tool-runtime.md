@@ -255,6 +255,53 @@ This component is wired by `CommandController.handleBashCommand()` and fed from 
 | Interactive bang command (`!`) | `AgentSession.executeBash` + `BashExecutionComponent` | No (uses executor directly)                                          | Dedicated bash execution component                                       | Controller catches exceptions and shows UI error |
 | RPC `bash` command             | `rpc-mode` -> `session.executeBash`                   | No                                                                   | Returns `BashResult` directly                                            | Consumer handles returned fields                 |
 
+## Filesystem containment: what enforces it, and where
+
+The bash tool's filesystem boundary is enforced below the command text — the shell's own `cd` and
+redirections are checked where they act, and spawned children are confined by the operating system. Which
+OS mechanism does that depends on the host, and on one host family there is **no OS mechanism at all**.
+
+`xcsh://about` reports the active backend for the machine you are on. This table is for planning a fleet
+before you get there.
+
+| Host | Kernel | Landlock ABI | Backend | Boundary |
+| ---- | ------ | ------------ | ------- | -------- |
+| macOS | — | — | `seatbelt` | OS-enforced |
+| RHEL 9 and derivatives | 5.14 | 1 | `scanner-only` | **command-text scan only** |
+| Ubuntu 22.04, stock GA kernel | 5.15 | 1 | `scanner-only` | **command-text scan only** |
+| Debian 12 | 6.1 | 2 | `landlock` | OS-enforced; `truncate(2)` ungoverned |
+| Ubuntu 22.04 HWE, Ubuntu 24.04 | 6.8 | 4 | `landlock` | OS-enforced |
+| Fedora current | 6.1x–7.x | 6–9 | `landlock` | OS-enforced |
+
+ABI numbers are anchored on two measured hosts: kernel 6.8.0-azure reports ABI 4, kernel 7.1.3 reports
+ABI 9. The rest follow the kernel-to-ABI mapping.
+
+### Why ABI 1 gets no OS boundary
+
+`LANDLOCK_ACCESS_FS_REFER` does not exist before ABI 2, and the kernel denies cross-directory `rename` and
+`link` whenever a ruleset handles *any* filesystem right. On ABI 1 there is therefore no way to permit
+`mv a/x b/x`, and no way for `git` to do its write-tmp-then-rename. Confining on ABI 1 would break ordinary
+work, which this boundary's design forbids, so it is refused rather than degraded.
+
+That is a deliberate trade and not a bug to work around: the alternative is a boundary that breaks `git`.
+
+### What scanner-only means in practice
+
+The command-text scan is still there and still refuses out-of-tree paths, but it reads what was *written*
+rather than what the shell will *do*. A path assembled at runtime — `P=/other/customer/secrets; cat "$P"`
+— is not caught. Treat it as a statement of intent, not a guarantee.
+
+**If sessions on an ABI 1 host handle more than one customer's data, that is a materially weaker posture
+than the macOS default**, and the remedy is operational rather than a code change: run a newer kernel
+(Ubuntu 22.04 HWE is the smallest step), or run those sessions in a container on a newer host.
+
+### Debian 12 / ABI 2
+
+Landlock confines every read and every write, but `LANDLOCK_ACCESS_FS_TRUNCATE` only exists from ABI 3, so
+`truncate(2)` on a path outside the boundary is not governed. It destroys rather than discloses, and is
+unreachable through `>`. `containmentStatus` reports this as `truncationUngoverned` and `xcsh://about`
+states it, so the session knows.
+
 ## Operational caveats
 
 - Interceptor only blocks commands when suggested tool is currently available in context.
