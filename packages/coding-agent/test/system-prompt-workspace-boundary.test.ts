@@ -64,7 +64,7 @@ describe("system prompt workspace boundary", () => {
 		expect(flat()).toContain("**MUST NOT** range across the filesystem");
 	});
 
-	// `buildDefaultSandboxPolicy` allows reads OUTSIDE the CWD: user-level skills, the
+	// The session fence allows reads OUTSIDE the CWD: user-level skills, the
 	// plugin dir, and any `--allow-path` / `sandbox.allowRead` grant. An absolute "never
 	// widen beyond the working directory" would forbid paths the operator deliberately
 	// granted, and would contradict the Procedure section's "if a skill matches the

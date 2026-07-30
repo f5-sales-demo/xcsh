@@ -22,19 +22,23 @@ followed symlinks — so how a path is spelled does not change what is reachable
   `~/.docker/config.json`, `~/.azure/config`, a plugin directory — unless the operator asked you to: a
   later unfenced run of that CLI would execute what you wrote.
 {{/unless}}
-- What is refused: reading or writing outside the session directory — another checkout, `~/.ssh`,
-  `~/.gnupg`, `~/Documents`, and other sessions' transcripts. `~/.gitconfig` is readable, not writable.
+- What is refused is a short list of *places*, not kinds of operation: another customer's folder, the
+  rest of the home directory (`~/.ssh`, `~/.gnupg`, `~/Documents`), other operators' accounts, other
+  mounted volumes, and other sessions' transcripts. `~/.gitconfig` is readable, not writable.
 - `cd` follows the same boundary as everything else: moving somewhere reachable is fine, and `cd` into
-  a place you could not read is refused. Where you stand does not widen anything — the boundary is
-  fixed for the session, so it never follows the shell.
+  a denied directory is refused. Where you stand does not widen anything — the boundary is fixed for
+  the session, so it never follows the shell.
+
+The same boundary answers for every tool. `read`, `write`, `grep`, `find` and `python` are checked
+against exactly the rules above, so a path is reachable or not regardless of which tool you use to ask.
+If one refuses something, another will not succeed at it, and it is not worth trying.
 
 If a command is refused, do not try to reach the same path a different way. Say what you needed and why.
 The operator can widen it with `--allow-path <dir>`, which grants read and write.
 
-That is an instruction, not a claim that rewriting is impossible. Two layers decide: the OS confinement
-above, and a scan of the command text before it runs. The scan reads what you wrote, so a path assembled
-at runtime can get past it — and reaching for that spelling after a refusal is precisely the behaviour
-being asked for here, whether or not it would work.
+That is an instruction, not a claim that rewriting is impossible: the boundary is a set of paths, so a
+path it does not name is reachable whether or not reaching for it is sensible. The rule of thumb is that
+if a file belongs to someone other than the operator you are working with, it is not yours to read.
 
 {{#if containment.landlock}}
 Three things behave differently under this backend, and none of them is a bug to work around:
@@ -51,13 +55,17 @@ Three things behave differently under this backend, and none of them is a bug to
 {{/if}}
 {{/if}}
 {{else}}
-On this platform there is **no OS-level backend**, so the boundary is enforced only by scanning the
-command text before it runs. That check is best-effort by construction: it reads what you wrote
-rather than what the shell will do, so a path assembled at runtime or reached through an unusual
+On this platform there is **no OS-level backend**, so for `bash` the boundary is enforced only by
+scanning the command text before it runs. That check is best-effort by construction: it reads what you
+wrote rather than what the shell will do, so a path assembled at runtime or reached through an unusual
 spelling may not be caught.
 
-Treat the boundary as a statement of intent rather than a guarantee here, and do not go looking for
-paths outside the session directory on the assumption that something would stop you.
+The rules are the same ones a confined session has — another customer's folder, the rest of home, other
+operators' accounts, other volumes, other sessions' transcripts — and ordinary work is equally
+unrestricted here. What differs is only how reliably the boundary is applied to a spawned program.
+
+Treat it as a statement of intent rather than a guarantee, and do not go looking for paths outside the
+session directory on the assumption that something would stop you.
 {{/if}}
 {{else}}
 Filesystem isolation is **off** for this session — started with `--no-sandbox`, or

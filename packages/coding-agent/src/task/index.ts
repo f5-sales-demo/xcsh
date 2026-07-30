@@ -648,7 +648,12 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 		// Derive artifacts directory
 		const sessionFile = this.session.getSessionFile();
 		const artifactsDir = sessionFile ? sessionFile.slice(0, -6) : null;
-		const tempArtifactsDir = artifactsDir ? null : path.join(os.tmpdir(), `xcsh-task-${Snowflake.next()}`);
+		// Under a fixed `xcsh-tasks/` parent rather than a flat `xcsh-task-<id>` sibling, so the
+		// containment fence can deny every session's task artifacts with ONE rule (#2624). Flat names
+		// forced it to enumerate the OS temp dir, which cost 15ms on a 17k-entry directory — per fence
+		// build, growing without bound as the temp dir fills — and still could not cover a dir created
+		// after the fence was built. A fixed parent covers both.
+		const tempArtifactsDir = artifactsDir ? null : path.join(os.tmpdir(), "xcsh-tasks", Snowflake.next());
 		const effectiveArtifactsDir = artifactsDir || tempArtifactsDir!;
 
 		// Initialize progress tracking
