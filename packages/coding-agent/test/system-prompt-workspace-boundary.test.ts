@@ -39,6 +39,7 @@ describe("system prompt workspace boundary", () => {
 	it("renders the block exactly once", () => {
 		expect(count(OPEN_TAG)).toBe(1);
 		expect(count(CLOSE_TAG)).toBe(1);
+		expect(rendered).not.toContain("%%WORKSPACE_BOUNDARY%%");
 	});
 
 	// The filesystem scope belongs beside the F5 XC tenant/namespace scope — the two
@@ -94,6 +95,21 @@ describe("system prompt workspace boundary", () => {
 	it("does not forbid cross-customer work outright", () => {
 		expect(flat()).not.toMatch(/MUST NOT (read|access|open|touch) (another|other|a different)/i);
 		expect(flat()).toMatch(/state the crossing/i);
+	});
+
+	// A custom system prompt (--system-prompt, or an auto-discovered project/global
+	// SYSTEM.md) swaps in custom-system-prompt.md, which has no Workspace section. The
+	// confidentiality guidance MUST NOT be the thing that disappears when an operator
+	// customises their prompt. Same requirement the deprecation guardrails already meet,
+	// via the same replace-or-append marker.
+	it("survives a custom system prompt", async () => {
+		const custom = await buildSystemPrompt({
+			tools: new Map(),
+			customPrompt: "You are a custom operator prompt.",
+		});
+		expect(custom).toContain(OPEN_TAG);
+		expect(custom).toContain(CLOSE_TAG);
+		expect(custom).not.toContain("%%WORKSPACE_BOUNDARY%%");
 	});
 
 	// The non-empty guard is load-bearing: `block()` returns "" when the block is

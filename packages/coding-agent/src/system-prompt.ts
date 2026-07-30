@@ -26,9 +26,11 @@ import { listXcshPluginSummaries, type XcshPluginSummary } from "./discovery/hel
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
+import workspaceBoundaryTemplate from "./prompts/system/workspace-boundary.md" with { type: "text" };
 
 /** Sentinel in system-prompt.md replaced with the rendered deprecation guardrails. */
 const DEPRECATION_GUARDRAILS_MARKER = "%%DEPRECATION_GUARDRAILS%%";
+const WORKSPACE_BOUNDARY_MARKER = "%%WORKSPACE_BOUNDARY%%";
 
 let _buildMeta: { version: string; repoSlug: string } | null = null;
 
@@ -815,6 +817,14 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		knowledgeTopics: options.knowledgeTopics,
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
+
+	// The workspace boundary is always-on for the same reason: a custom system prompt
+	// swaps in a template with no Workspace section, and the confidentiality guidance
+	// must not be what disappears when an operator customises their prompt.
+	const workspaceBoundary = workspaceBoundaryTemplate.trimEnd();
+	rendered = rendered.includes(WORKSPACE_BOUNDARY_MARKER)
+		? rendered.replace(WORKSPACE_BOUNDARY_MARKER, workspaceBoundary)
+		: `${rendered}\n\n${workspaceBoundary}`;
 
 	// Deprecation guardrails are always-on: replace the section marker in the default
 	// template, or append when the active template has none (e.g. a fully custom system
