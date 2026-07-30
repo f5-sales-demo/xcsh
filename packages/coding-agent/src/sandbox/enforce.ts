@@ -44,7 +44,7 @@ import * as path from "node:path";
 import { pathIsWithin } from "@f5-sales-demo/pi-utils";
 import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
 import { lexShellCommand, type ShellSimpleCommand } from "../tools/shell-lex";
-import { provenExemptWords } from "./command-operands";
+import { provenExemptWords, writtenOperandWords } from "./command-operands";
 import type { SandboxAccess, SandboxPolicy } from "./policy";
 
 export interface ToolCallCheck {
@@ -585,7 +585,12 @@ function shellPathCandidates(command: string): ShellScan {
 	// `<>` opens for both, so it stays a read here and picks up its write below: a floor occurrence
 	// may carry only one access, and read is the one the floor would have used anyway.
 	const writeTargets = lexed.words.filter(word => word.redirect === "write");
-	const inWriteTarget = (at: number): boolean => writeTargets.some(word => at >= word.start && at < word.end);
+	// Plus the operands the invoked program writes itself — `tee FILE`, `dd of=FILE`, `cp SRC DST`.
+	// Those had no direction signal and defaulted to a read check, so a write into an allowRead-only
+	// root passed and a write into an allowWrite-only root was refused (GHSA-q4hg).
+	const writtenOperands = lexed.commands.flatMap(simpleCommand => writtenOperandWords(simpleCommand));
+	const inWriteTarget = (at: number): boolean =>
+		[...writeTargets, ...writtenOperands].some(word => at >= word.start && at < word.end);
 
 	// A floor occurrence takes the access its own operator gave it; failing that, the span of a
 	// lexed write target it sits inside; failing that, read.
