@@ -81,9 +81,11 @@ describe("containment fence: TypeScript and Rust agree", () => {
 	// Both must resolve the symlink, or the pre-check and the enforcement disagree about the one
 	// case an attacker would reach for.
 	it("agrees when the path arrives through a symlink", () => {
+		// Points at the sibling checkout, not `~/.ssh`: #2637 stopped denying the operator's own dotfiles,
+		// so using one as the "denied" target made TS and Rust agree on `allow` and proved nothing.
 		const pivot = path.join(workspace, "pivot");
-		fs.symlinkSync(path.join(home, ".ssh"), pivot);
-		const viaLink = path.join(pivot, "id_rsa");
+		fs.symlinkSync(sibling, pivot);
+		const viaLink = path.join(pivot, "secrets.tf");
 
 		expect(fenceVerdict(fence, viaLink, "read")).toBe("deny");
 		expect(fencePermits(wire, viaLink, false)).toBe(false);

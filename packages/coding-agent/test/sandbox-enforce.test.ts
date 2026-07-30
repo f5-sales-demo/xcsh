@@ -594,7 +594,7 @@ describe("evaluateToolCall with a symlinked working directory (#2312)", () => {
 		// used to serve here and cannot any more — it is permitted now (#2624), and a customer tree is the
 		// thing this test is actually about.
 		expect(checkAt(cwd, { path: "../elsewhere/secret.json" }).block).toBe(true);
-		expect(checkAt(cwd, { path: path.join(os.homedir(), ".ssh", "id_rsa") }).block).toBe(true);
+		// `~/.ssh` used to serve here; #2637 stopped denying it. The sibling above is the case that matters.
 	});
 });
 
