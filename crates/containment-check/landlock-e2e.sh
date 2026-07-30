@@ -198,6 +198,40 @@ else
 	printf 'PASS  %-52s (not recreated)\n' "only fence-named roots are created"; pass=$((pass+1))
 fi
 
+
+# The production fence shape since #2624: the data roots at depth 1 are denied by name, which makes `/`
+# itself a split directory. That is a materially different plan from the one above — every case so far
+# denies only a deep subtree, so `/` was granted wholesale — and the risk it carries is that the
+# complement collapses and nothing can run at all. The empty-grant guard would then refuse to build a
+# ruleset, which is safe but would silently turn every fleet host into scanner-only.
+printf '\n=== top-level data roots denied, as production does (#2624) ===\n'
+TOP_FENCE=$(printf '{"allow":["%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s","%s","/home","/root","/srv","/mnt","/media","/export"]}' \
+	"$WORKSPACE" "$HOME_DIR" "$HOME_DIR/GIT")
+
+top_expect() {
+	local label="$1" want="$2"; shift 2
+	local out rc
+	out=$("$BIN" run --fence "$TOP_FENCE" --cwd "$WORKSPACE" "$*" 2>&1); rc=$?
+	local got=ok
+	[ "$rc" -ne 0 ] && got=refused
+	if [ "$got" = "$want" ]; then
+		printf 'PASS  %-52s (%s)\n' "$label" "$got"; pass=$((pass+1))
+	else
+		printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"; fail=$((fail+1))
+	fi
+}
+
+# The positive controls come first and are the point of this block: if the plan collapsed, these fail and
+# the refusals below would be passing for the wrong reason.
+top_expect "ordinary work still runs with / split" ok "printf hi > split.txt && cat split.txt"
+top_expect "a system binary still runs" ok "/bin/sh -c 'echo ok'"
+top_expect "a system path is still readable" ok "head -1 /usr/bin/env > /dev/null && echo ok"
+top_expect "the OS temp dir is still writable" ok "printf x > /tmp/ll-e2e-top && echo ok"
+top_expect "cross-directory mv still works (REFER)" ok "mkdir -p m1 m2 && touch m1/x && mv m1/x m2/x && test -f m2/x"
+# …and the new coverage itself. `/home` holds other operators' accounts on a Linux fleet host.
+top_expect "the home container is refused" refused "ls /home"
+top_expect "the sibling checkout is still refused" refused "cat $SIBLING/secret.txt"
+
 printf '\n=== %d passed, %d failed ===\n' "$pass" "$fail"
-rm -rf "$ROOT" /tmp/ll-e2e-probe
+rm -rf "$ROOT" /tmp/ll-e2e-probe /tmp/ll-e2e-top
 [ "$fail" -eq 0 ]

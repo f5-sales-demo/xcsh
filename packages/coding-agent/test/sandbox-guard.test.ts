@@ -1,9 +1,27 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeAll, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { _resetSettingsForTest, Settings, settings } from "@f5-sales-demo/xcsh/config/settings";
 import sandboxGuard from "@f5-sales-demo/xcsh/extensibility/extensions/bundled/sandbox-guard";
-import { containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
 
-const CWD = "/work/custA";
+/**
+ * Real directories, because the guard now resolves a `ContainmentFence` and a fence refuses to build on
+ * a workspace it cannot canonicalise — it would rather throw than emit rules that silently match
+ * nothing (#2624). The synthetic `/work/custA` this used only worked against the policy it replaced.
+ *
+ * Two tenants under one container, which is the shape the fence covers by denying the container.
+ */
+let CWD: string;
+let OTHER: string;
+
+beforeAll(() => {
+	const container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "guard-")));
+	CWD = path.join(container, "custA");
+	OTHER = path.join(container, "custB");
+	fs.mkdirSync(CWD);
+	fs.mkdirSync(OTHER);
+});
 
 interface ToolCallEvent {
 	type: "tool_call";
@@ -44,7 +62,7 @@ describe("sandbox-guard bundled extension", () => {
 	it("blocks an out-of-tree read when enabled", async () => {
 		await initSandbox(true);
 		const handler = captureHandler()!;
-		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
+		expect(await call(handler, "read", { file_path: path.join(OTHER, "secret") })).toMatchObject({ block: true });
 	});
 
 	it("allows an in-tree read when enabled", async () => {
@@ -56,58 +74,63 @@ describe("sandbox-guard bundled extension", () => {
 	it("is a no-op when sandbox.enabled is false (--no-sandbox)", async () => {
 		await initSandbox(false);
 		const handler = captureHandler()!;
-		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toBeUndefined();
+		expect(await call(handler, "read", { file_path: path.join(OTHER, "secret") })).toBeUndefined();
 	});
 
-	it("honors a MID-SESSION allowRead grant (settings.override busts the policy cache)", async () => {
+	it("honors a MID-SESSION allowRead grant (settings.override busts the fence cache)", async () => {
 		await initSandbox(true);
 		const handler = captureHandler()!;
-		// First call caches the policy; the path is out-of-tree → blocked.
-		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
-		// The user grants /work/custB at runtime (e.g. the Office pane picks a context
-		// folder). A cwd-only cache would keep blocking; the allow-list-keyed cache rebuilds.
-		settings.override("sandbox.allowRead", ["/work/custB"]);
-		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toBeUndefined();
+		const secret = path.join(OTHER, "secret");
+		// First call caches the fence; the path is out-of-tree → blocked.
+		expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
+		// The user grants custB at runtime (e.g. the Office pane picks a context folder). A cwd-only
+		// cache would keep blocking; the allow-list-keyed cache rebuilds.
+		settings.override("sandbox.allowRead", [OTHER]);
+		expect(await call(handler, "read", { file_path: secret })).toBeUndefined();
 		// Revoking it re-blocks (cache tracks the current allow-list, not a one-way widen).
 		settings.override("sandbox.allowRead", []);
-		expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
+		expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
 	});
-	/**
-	 * #2582, at the layer that actually shipped the divergence.
-	 *
-	 * The guard is what refused a `/tmp` write and a `~/.gitconfig` read on v19.100.0 — operations the
-	 * fence permits and `xcsh://about` promises. It now asks whether an OS backend is confining the
-	 * shell, and stands aside for `bash` when one is. Keyed off the product's own
-	 * `containmentStatus(true).osEnforced` rather than a platform check written here, so this test and
-	 * the shipped behaviour cannot drift apart.
-	 */
-	describe("bash and the OS fence (#2582)", () => {
-		const osEnforced = containmentStatus(true).osEnforced;
 
-		it(`${osEnforced ? "defers to the fence" : "is the boundary"} for a bash command naming a reachable path`, async () => {
+	/**
+	 * #2624, at the layer that shipped the divergence.
+	 *
+	 * This guard is what refused a `/tmp` write and a `~/.gitconfig` read on v19.100.0 — operations the
+	 * fence permits and `xcsh://about` promises. It used to ask whether an OS backend was confining the
+	 * shell and stand aside for `bash` when one was, which meant the answer to "is this path reachable"
+	 * depended on the platform. Now there is one fence for every tool, so the same path gets the same
+	 * answer whichever tool asks and whatever backend is running.
+	 */
+	describe("one boundary for every tool", () => {
+		it("permits the operational paths the fence permits, for bash", async () => {
 			await initSandbox(true);
 			const handler = captureHandler()!;
-			// The fence permits both of these; the scan refused both.
 			for (const command of ["printf x > /tmp/xcsh-guard-probe.txt", "cat /etc/hosts"]) {
-				const decision = await call(handler, "bash", { command });
-				if (osEnforced) expect(decision).toBeUndefined();
-				else expect(decision).toMatchObject({ block: true });
+				expect(await call(handler, "bash", { command })).toBeUndefined();
 			}
 		});
 
-		it("never stands aside for python, which no fence covers", async () => {
+		// The same paths, through the tools that have no subprocess to confine. Answering differently is
+		// what taught the model to retry a refused read through the shell.
+		it("permits them for python and the structured file tools too", async () => {
 			await initSandbox(true);
 			const handler = captureHandler()!;
-			expect(await call(handler, "python", { code: "open('/work/custB/secret').read()" })).toMatchObject({
-				block: true,
-			});
+			expect(await call(handler, "python", { code: 'open("/etc/hosts").read()' })).toBeUndefined();
+			expect(await call(handler, "read", { file_path: "/etc/hosts" })).toBeUndefined();
+			expect(await call(handler, "write", { file_path: "/tmp/xcsh-guard-probe.txt" })).toBeUndefined();
 		});
 
-		it("never stands aside for the structured file tools", async () => {
+		// And the coverage that must not move: a neighbouring tenant, through every interface.
+		it("refuses the neighbouring tenant through bash, python and the file tools", async () => {
 			await initSandbox(true);
 			const handler = captureHandler()!;
-			expect(await call(handler, "read", { file_path: "/work/custB/secret" })).toMatchObject({ block: true });
-			expect(await call(handler, "write", { file_path: "/work/custB/planted" })).toMatchObject({ block: true });
+			const secret = path.join(OTHER, "secret");
+			expect(await call(handler, "bash", { command: `cat ${secret}` })).toMatchObject({ block: true });
+			expect(await call(handler, "python", { code: `open("${secret}").read()` })).toMatchObject({ block: true });
+			expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
+			expect(await call(handler, "write", { file_path: path.join(OTHER, "planted") })).toMatchObject({
+				block: true,
+			});
 		});
 	});
 });

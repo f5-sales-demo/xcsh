@@ -16,8 +16,8 @@ import { resolveLocalRoot } from "../internal-urls/local-protocol";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
-import { buildContainmentFence, containmentStatus } from "../sandbox/containment";
-import { resolveSessionPolicy } from "../sandbox/session-policy";
+import { type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
+import { resolveSessionFence } from "../sandbox/session-fence";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import { renderStatusLine } from "../tui";
@@ -131,6 +131,34 @@ interface ManagedBashJobHandle {
 
 function normalizeResultOutput(result: BashResult | BashInteractiveResult): string {
 	return result.output || "";
+}
+
+/**
+ * A working directory has to exist and be a directory. Shared by both call sites so the session's cwd
+ * and the `cwd` argument report the same way, and so the message names the path rather than describing
+ * an internal invariant.
+ */
+async function assertUsableDirectory(dir: string): Promise<void> {
+	let stat: fs.Stats;
+	try {
+		stat = await fs.promises.stat(dir);
+	} catch (err) {
+		if (isEnoent(err)) throw new ToolError(`Working directory does not exist: ${dir}`);
+		throw err;
+	}
+	if (!stat.isDirectory()) throw new ToolError(`Working directory is not a directory: ${dir}`);
+}
+
+/**
+ * The fence as the `ReadBoundary` the internal-URL expander wants.
+ *
+ * A two-method shim rather than a shared interface: the expander only ever asks about reads, and giving
+ * it the whole fence would invite it to grow a second opinion about writes. `undefined` in means
+ * isolation is off, which the expander already treats as "do not check".
+ */
+export function readBoundaryFor(fence: ContainmentFence | undefined, cwd: string) {
+	if (!fence) return undefined;
+	return { cwd, isAllowed: (candidate: string) => fenceVerdict(fence, candidate, "read") === "allow" };
 }
 
 function isInteractiveResult(result: BashResult | BashInteractiveResult): result is BashInteractiveResult {
@@ -504,9 +532,11 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	 * An *operator* moving the project — startup, or the slash command that calls `setProjectDir` — does
 	 * re-anchor it. That asymmetry is the point: the operator may move the boundary, the model may not.
 	 *
-	 * Note the read/write tools are unaffected by this class of bug: `SandboxPolicy` is deny-by-default,
-	 * so relocating its root grants nothing new. Only an allow-by-default fence loses a deny when it
-	 * moves, which is why this needed fixing here and not there.
+	 * The anchor matters more since #2624, not less: the read/write tools now consult this same
+	 * allow-by-default fence, which loses a deny when its root moves. The deny-by-default policy they
+	 * used to have would have granted nothing new on a relocation and so masked the problem there.
+	 * `sandbox-guard` still resolves from `ctx.cwd` rather than the anchor, because a tool call names its
+	 * own paths and has no persistent shell to relocate.
 	 */
 	#containmentRoot(): string {
 		const project = getProjectDir();
@@ -532,20 +562,12 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	 * `xcsh shell`. Only the model's tool call is fenced (#2554).
 	 */
 	#containmentFence() {
-		const root = this.#containmentRoot();
-		const policy = resolveSessionPolicy(root, this.session.settings);
-		if (!policy) return undefined; // --no-sandbox / sandbox.enabled = false
 		const artifactsDir = this.session.getArtifactsDir?.();
-		// The three grants stay distinct. Merging allowRead and allowWrite into one read+write list
-		// made a folder shared for reading writable, undoing the split built for #2516.
-		return buildContainmentFence({
-			workspace: root,
+		// One resolver, shared with `sandbox-guard` and the internal-URL check, so the pre-check and the
+		// kernel cannot be looking at different boundaries (#2624). It reads the allow-lists and picks
+		// `narrowsWithinGrant` from the active backend itself.
+		return resolveSessionFence(this.#containmentRoot(), this.session.settings, {
 			extraRoots: artifactsDir ? [artifactsDir] : [],
-			readOnlyRoots: (this.session.settings.get("sandbox.allowRead") as string[] | undefined) ?? [],
-			writeOnlyRoots: (this.session.settings.get("sandbox.allowWrite") as string[] | undefined) ?? [],
-			// Only seatbelt can hold a file read-only inside a writable directory; Landlock's rules are
-			// recursive, so asking for it there would strip write from the parent and break the CLIs.
-			narrowsWithinGrant: containmentStatus(true).backend === "seatbelt",
 		});
 	}
 
@@ -593,6 +615,25 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			}
 		}
 
+		// The session's own working directory, checked before anything reasons about a boundary anchored
+		// on it. `resolveSessionFence` below builds a `ContainmentFence`, which refuses to build on a
+		// workspace it cannot canonicalise — deliberately, since rules on an unresolved path would grant
+		// nothing while looking like they enforce. That throw used to surface here instead of the cwd
+		// error, so a mistyped directory reported "sandbox containment: cannot canonicalise the session
+		// workspace …" rather than naming the directory (#2624). The invariant is right; it just must not
+		// be the first thing a caller hears about a path that plainly does not exist.
+		//
+		// Only `session.cwd` is checked here. The `cwd` *argument* can carry an internal URL that has not
+		// been expanded yet, so it keeps its own check below, after expansion.
+		await assertUsableDirectory(this.session.cwd);
+
+		// Built ONCE per invocation and shared with the executor below. Two calls meant two builds on the
+		// session's first command — the resolver caches per configuration, and these two asked for
+		// different configurations — which doubled a cost that lands as user-visible latency. Sharing is
+		// also the more correct answer: the internal-URL check and the shell are then reasoning about the
+		// same boundary rather than two that merely agree today.
+		const fence = this.#containmentFence();
+
 		const localOptions = {
 			getArtifactsDir: this.session.getArtifactsDir,
 			getSessionId: this.session.getSessionId,
@@ -603,8 +644,8 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			localOptions,
 			// Refuse a URL resolving outside the session's boundary rather than handing bash a path the
 			// session's own `read` tool would deny (#2468). The roots below are the session's own, which
-			// the default policy denies wholesale because they sit under the sessions directory.
-			readBoundary: resolveSessionPolicy(this.session.cwd, this.session.settings),
+			// the boundary denies wholesale because they sit under the sessions directory.
+			readBoundary: readBoundaryFor(fence, this.session.cwd),
 			sessionOwnedRoots: () => {
 				const roots = [resolveLocalRoot(localOptions)];
 				const artifactsDir = this.session.getArtifactsDir?.();
@@ -624,18 +665,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		}
 
 		const commandCwd = cwd ? resolveToCwd(cwd, this.session.cwd) : this.session.cwd;
-		let cwdStat: fs.Stats;
-		try {
-			cwdStat = await fs.promises.stat(commandCwd);
-		} catch (err) {
-			if (isEnoent(err)) {
-				throw new ToolError(`Working directory does not exist: ${commandCwd}`);
-			}
-			throw err;
-		}
-		if (!cwdStat.isDirectory()) {
-			throw new ToolError(`Working directory is not a directory: ${commandCwd}`);
-		}
+		await assertUsableDirectory(commandCwd);
 
 		// Clamp to reasonable range: 1s - 3600s (1 hour)
 		const timeoutSec = clampTimeout("bash", rawTimeout);
@@ -720,7 +750,6 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// Only worth giving up when there is an OS backend for the non-PTY path to use and none for this
 		// one. Where no backend exists — Linux without Landlock, Windows — both paths are scanner-only,
 		// so disabling PTY would remove interactive terminals and improve containment by nothing.
-		const fence = this.#containmentFence();
 		const osBackend = containmentStatus(fence !== undefined);
 		const ptyConfinable = !osBackend.osEnforced || osBackend.backend === "seatbelt";
 		const usePty = pty && ptyConfinable && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;

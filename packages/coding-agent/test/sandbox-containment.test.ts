@@ -1,7 +1,8 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getAgentDir, getPluginsDir } from "@f5-sales-demo/pi-utils";
 import { buildContainmentFence, containmentStatus, fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
 
 /**
@@ -170,7 +171,260 @@ describe("buildContainmentFence", () => {
  * They share a shape worth naming: the fence is permissive by default, so every gap is a path that
  * matched no rule rather than a rule that was wrong. Denying home was never the whole boundary.
  */
+/**
+ * Adversarial review of #2624, which found three ways the single boundary was looser than intended.
+ *
+ * All three are the same shape: the fence is allow-by-default, so anything it fails to *name* is
+ * reachable — and while the second policy was there, its deny-by-default posture was quietly covering
+ * for each gap. Removing that posture is what exposed them, which is the risk this whole change carries
+ * and the reason the review was worth running.
+ */
+describe("buildContainmentFence — adversarial review of #2624", () => {
+	// The shared temp root holds per-session state: `local://` content at `<tmp>/xcsh-local/<sessionId>`
+	// (local-protocol.ts:118) and task artifacts at `<tmp>/xcsh-tasks/<id>` (task/index.ts). Both are
+	// exactly the cross-session channel the leak roots exist to close, and classifying `tmp` as
+	// operational made every session's copy readable and writable by every other session.
+	it("denies other sessions' local roots under the shared temp dir", () => {
+		const home = realTmp("leaktmp");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const sharedTmp = fs.realpathSync(os.tmpdir());
+
+		const fence = buildContainmentFence({ workspace, home });
+
+		const otherLocal = path.join(sharedTmp, "xcsh-local", "other-session", "handoff.json");
+		expect(fenceVerdict(fence, otherLocal, "read")).toBe("deny");
+		expect(fenceVerdict(fence, otherLocal, "write")).toBe("deny");
+		// Ordinary scratch beside it stays reachable — `xcsh://about` promises `/tmp`, and the refusal of
+		// it was one of the false refusals #2582 removed. Only the agent's own per-session trees are shut.
+		expect(fenceVerdict(fence, path.join(sharedTmp, "scratch.txt"), "write")).toBe("allow");
+	});
+
+	/**
+	 * The fence is built on the session's first `bash` call, so its cost is user-visible latency.
+	 *
+	 * The first version of the leak-root fix enumerated the OS temp dir looking for `xcsh-task-*`
+	 * siblings. On a workstation with 17,505 entries in it that was 15ms of a 25-42ms build — per build,
+	 * and growing without bound as the temp dir fills. It pushed `echo short` past the 50ms
+	 * auto-background threshold, which is how it was caught: a *timing* test in `tools.test.ts` failed,
+	 * not a containment one.
+	 *
+	 * Asserted by counting `readdir` calls rather than by wall-clock time. A timing threshold would be the
+	 * obvious test and the wrong one: it flakes on a loaded runner, and it measures the symptom instead of
+	 * the cause. What must stay true is that a fence build enumerates *only* the filesystem root — a
+	 * bounded, tiny directory — and never a temp or home directory whose size is the operator's business.
+	 */
+	it("enumerates only the filesystem root, never a large directory", () => {
+		const home = realTmp("perf");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const scanned: string[] = [];
+		const spy = spyOn(fs, "readdirSync").mockImplementation(((dir: fs.PathLike) => {
+			scanned.push(String(dir));
+			return [];
+		}) as unknown as typeof fs.readdirSync);
+		try {
+			buildContainmentFence({ workspace, home, fsRoot: home });
+		} finally {
+			spy.mockRestore();
+		}
+
+		// Exactly the configured root, once. The earlier version also listed `os.tmpdir()` hunting for
+		// `xcsh-task-*` siblings, which cost 15ms of a 25-42ms build on a 17k-entry directory and pushed a
+		// trivial `echo` past the 50ms auto-background threshold — caught by a *timing* test elsewhere,
+		// not by anything here.
+		expect(scanned).toEqual([home]);
+	});
+
+	// …and the session's own local root must stay reachable, or `local://` breaks for everyone. Granted
+	// through `extraRoots`, at greater depth than the deny.
+	it("keeps the session's own local root reachable inside that deny", () => {
+		const home = realTmp("ownlocal");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const mine = path.join(fs.realpathSync(os.tmpdir()), "xcsh-local", "my-session");
+		fs.mkdirSync(mine, { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, extraRoots: [mine] });
+
+		expect(fenceVerdict(fence, path.join(mine, "handoff.json"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(mine, "handoff.json"), "write")).toBe("allow");
+		// A different session's, under the same parent, is still refused.
+		const theirs = path.join(fs.realpathSync(os.tmpdir()), "xcsh-local", "their-session", "x");
+		expect(fenceVerdict(fence, theirs, "read")).toBe("deny");
+	});
+
+	// `sandbox.allowRead: ["~/shared"]` was passed straight to `realpathSync`, which does not expand `~`,
+	// so the rule named a path that does not exist and was dropped. The grant then appeared to do nothing
+	// while the refusal it was meant to lift kept recommending it — worse than an unimplemented flag. The
+	// policy this replaced expanded `~` (`expandPath`), so this was a regression, not an old gap.
+	it("expands ~ in a granted root", () => {
+		const home = realTmp("tildehome");
+		const workspace = path.join(home, "w");
+		const shared = path.join(home, "shared");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(shared, { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, readOnlyRoots: ["~/shared"], homeForTilde: home });
+
+		expect(fenceVerdict(fence, path.join(shared, "ref.csv"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(shared, "ref.csv"), "write")).toBe("deny");
+	});
+
+	/**
+	 * A workspace's filesystem root is the only one enumerated, so on Windows a second drive matched no
+	 * rule and was allowed — and Windows has no kernel backend, so the text scan is the whole boundary
+	 * there. Deny-by-default used to refuse `D:\customerB`; allow-by-default does not.
+	 *
+	 * The list is injectable because the enumeration it replaces cannot run here: probing `A:`–`Z:` needs
+	 * a Windows host. This asserts the part that decides — that a named sibling root is denied and the
+	 * workspace's own is not — and the enumeration itself is stated as unverified rather than implied to
+	 * be tested.
+	 */
+	it("denies other filesystem roots, as a second Windows drive would be", () => {
+		const home = realTmp("otherroots");
+		const workspace = path.join(home, "w");
+		const otherRoot = realTmp("driveD");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(path.join(otherRoot, "customerB"), { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, otherRoots: [otherRoot] });
+
+		expect(fence.deny).toContain(otherRoot);
+		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "secret.tf"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "secret.tf"), "write")).toBe("deny");
+		// The workspace's own tree is untouched, or the deny was simply too broad.
+		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
+	});
+
+	/**
+	 * The hazard the test above cannot see, asserted white-box.
+	 *
+	 * `tooBroadToDeny` refuses to deny a filesystem root, which is right for the workspace's own. On
+	 * Windows `D:\` IS a filesystem root, so running the other-roots list through that check drops every
+	 * entry and the rule becomes a no-op on the only platform it exists for. The first version did exactly
+	 * that, and the injected-temp-dir test passed anyway, because a temp directory is not a root here.
+	 *
+	 * `/` is the only value on this platform that reproduces the shape. Nonsense as a real configuration —
+	 * which is the point: this asserts the list is not silently filtered, not that anyone should pass it.
+	 */
+	it("does not let the never-deny-a-root rule filter the other-roots list", () => {
+		const container = realTmp("rootfilter");
+		const workspace = path.join(container, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		// `fsRoot` is the container, so `/` is a filesystem root that is NOT this workspace's — the exact
+		// shape a second Windows drive has, and the only way to produce it on this platform.
+		const fence = buildContainmentFence({
+			workspace,
+			home: realTmp("rootfilter-home"),
+			fsRoot: container,
+			otherRoots: ["/"],
+		});
+
+		expect(fence.deny).toContain("/");
+	});
+
+	// …but the root the workspace actually lives on is never denied, however it arrives.
+	it("never denies the workspace's own filesystem root", () => {
+		const container = realTmp("ownroot");
+		const workspace = path.join(container, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const fence = buildContainmentFence({
+			workspace,
+			home: realTmp("ownroot-home"),
+			fsRoot: container,
+			otherRoots: [container],
+		});
+
+		expect(fence.deny).not.toContain(container);
+		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
+	});
+
+	// …and the operator can still open one deliberately, which is the escape hatch for a toolchain that
+	// lives on another drive.
+	it("lets a granted root override an other-root deny", () => {
+		const home = realTmp("otherrootsgrant");
+		const workspace = path.join(home, "w");
+		const otherRoot = realTmp("driveE");
+		const tools = path.join(otherRoot, "tools");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(tools, { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, otherRoots: [otherRoot], extraRoots: [tools] });
+
+		expect(fenceVerdict(fence, path.join(tools, "bin", "cc"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "x"), "read")).toBe("deny");
+	});
+
+	// `--allow-path <dir>` for a directory that does not exist yet was dropped, so the grant could not
+	// authorize creating it. Harmless while an unnamed path defaulted to allow; now that unknown top-level
+	// roots are denied, the drop turns the flag into a refusal.
+	it("honours a granted root that does not exist yet", () => {
+		const home = realTmp("absentgrant");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		const notYet = path.join(home, "output-dir");
+		expect(fs.existsSync(notYet)).toBe(false);
+
+		const fence = buildContainmentFence({ workspace, home, extraRoots: [notYet] });
+
+		expect(fence.allow).toContain(notYet);
+		expect(fenceVerdict(fence, path.join(notYet, "report.csv"), "write")).toBe("allow");
+	});
+});
+
 describe("buildContainmentFence — review findings", () => {
+	// `--allow-path <dir>` maps into BOTH sandbox.allowRead and sandbox.allowWrite (main.ts:649), which
+	// reaches the fence as the same root in readOnlyRoots and writeOnlyRoots. Those two rules sit at
+	// equal depth, and `fenceVerdict` tests read-only first, so the write was refused — the flag granted
+	// read only, while the containment prompt tells the model it "grants read and write". The documented
+	// remedy for a refusal did not work, which is worse than a missing feature.
+	it("grants read AND write when a root is given as both read-only and write-only", () => {
+		const home = realTmp("bothhome");
+		const workspace = path.join(home, "w");
+		const granted = realTmp("granted");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const fence = buildContainmentFence({
+			workspace,
+			home,
+			readOnlyRoots: [granted],
+			writeOnlyRoots: [granted],
+		});
+
+		expect(fenceVerdict(fence, path.join(granted, "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(granted, "x"), "write")).toBe("allow");
+		// Asserted on the emitted rules too: a single allow, not two half-grants that happen to combine.
+		expect(fence.allow).toContain(granted);
+		expect(fence.allowReadOnly).not.toContain(granted);
+		expect(fence.allowWriteOnly).not.toContain(granted);
+	});
+
+	// The split must survive, or this fix would undo #2516: a folder shared for reading must not become
+	// writable just because some *other* root was granted both ways.
+	it("keeps one-directional grants one-directional", () => {
+		const home = realTmp("splithome");
+		const workspace = path.join(home, "w");
+		const readable = realTmp("readable");
+		const writable = realTmp("writable");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const fence = buildContainmentFence({
+			workspace,
+			home,
+			readOnlyRoots: [readable],
+			writeOnlyRoots: [writable],
+		});
+
+		expect(fenceVerdict(fence, path.join(readable, "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(readable, "x"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(writable, "x"), "write")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(writable, "x"), "read")).toBe("deny");
+	});
+
 	it("denies the workspace's siblings even when the workspace is outside home", () => {
 		// Verified allow/allow before the fix: with /work/customer-a as the workspace, /work/customer-b
 		// matched nothing and was readable AND writable. A fleet keeping customer folders outside the
@@ -603,5 +857,165 @@ describe("buildContainmentFence — the ancestor walk never denies a temp root",
 		} finally {
 			fs.rmSync(container, { recursive: true, force: true });
 		}
+	});
+});
+
+/**
+ * Data roots that are neither the workspace nor operational (#2624).
+ *
+ * The home deny and the ancestor walk together cover the realistic case — customer checkouts under
+ * `~`. They cover nothing under an unrelated root: measured with the workspace at
+ * `~/MEDDPICC/EQUIFAX`, the fence allowed `/Users/<otheruser>/…`, `/Volumes/Backup/…`, `/data/globex`
+ * and `/srv/tenantZ`, read and write. The command-text scan was refusing those on the way in, so the
+ * composite looked right while the fence alone did not — and that scan is what #2624 stops using as a
+ * boundary, so this has to hold on its own now.
+ *
+ * The rule is one readdir of the filesystem root: an entry whose name is not operational holds data
+ * rather than tools, and is denied. Nothing operational is touched, which is the property that
+ * separates this from a deny-by-default profile.
+ */
+describe("buildContainmentFence — data roots outside the workspace", () => {
+	/** A synthetic filesystem root, so an assertion never depends on what this machine mounts. */
+	function syntheticRoot(suffix: string, entries: readonly string[]): string {
+		const root = realTmp(suffix);
+		for (const entry of entries) fs.mkdirSync(path.join(root, entry), { recursive: true });
+		return root;
+	}
+
+	it("denies unrelated data roots while leaving every operational root alone", () => {
+		const fsRoot = syntheticRoot("fsdata", ["usr", "bin", "etc", "opt", "var", "Users", "data", "srv", "Volumes"]);
+		const home = path.join(fsRoot, "Users", "me");
+		const workspace = path.join(home, "MEDDPICC", "EQUIFAX");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(path.join(fsRoot, "Users", "otheruser"), { recursive: true });
+		fs.mkdirSync(path.join(fsRoot, "data", "globex"), { recursive: true });
+		fs.mkdirSync(path.join(fsRoot, "Volumes", "Backup"), { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, fsRoot });
+
+		// The four cases measured as reachable before this existed.
+		for (const leak of [
+			path.join("Users", "otheruser", "customerX"),
+			path.join("data", "globex", "secrets.tf"),
+			path.join("srv", "tenantZ", "notes.md"),
+			path.join("Volumes", "Backup", "customerY"),
+		]) {
+			const candidate = path.join(fsRoot, leak);
+			expect(fenceVerdict(fence, candidate, "read")).toBe("deny");
+			expect(fenceVerdict(fence, candidate, "write")).toBe("deny");
+		}
+
+		// …and nothing a tool needs. This fence restricts no operation; that is what makes it gentle.
+		for (const operational of ["usr/bin/env", "bin/sh", "etc/hosts", "opt/homebrew/bin/bun", "var/log/x"]) {
+			expect(fenceVerdict(fence, path.join(fsRoot, operational), "read")).toBe("allow");
+		}
+		// The workspace still wins inside its denied ancestors.
+		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
+	});
+
+	// Enumeration only sees what exists when the fence is built, so a known data root that does not
+	// exist yet has to be denied by name — otherwise `mkdir /data` mid-session would open it. Seatbelt
+	// matches a `(subpath …)` prefix whether or not the path is there, so the rule costs nothing.
+	it("denies a known data root that does not exist yet", () => {
+		const fsRoot = syntheticRoot("fsabsent", ["usr", "Users"]);
+		const home = path.join(fsRoot, "Users", "me");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+		expect(fs.existsSync(path.join(fsRoot, "srv"))).toBe(false);
+
+		const fence = buildContainmentFence({ workspace, home, fsRoot });
+
+		expect(fence.deny).toContain(path.join(fsRoot, "srv"));
+		expect(fenceVerdict(fence, path.join(fsRoot, "srv", "tenantZ", "x"), "read")).toBe("deny");
+	});
+
+	// A deny beats an allow at EQUAL depth, so denying a root that is itself the workspace would not
+	// merely be redundant — it would kill the session's own tree. Reachable wherever a container puts
+	// the checkout at the top level: /app, /src, /workspaces.
+	it("never denies a top-level root that is itself the workspace", () => {
+		const fsRoot = syntheticRoot("fsws", ["usr", "app"]);
+		const workspace = path.join(fsRoot, "app");
+		const fence = buildContainmentFence({ workspace, home: path.join(fsRoot, "Users", "me"), fsRoot });
+
+		expect(fence.deny).not.toContain(workspace);
+		expect(fenceVerdict(fence, path.join(workspace, "src", "main.ts"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(workspace, "src", "main.ts"), "write")).toBe("allow");
+	});
+
+	// Same equal-depth hazard for a root the operator granted deliberately. `--allow-path /shared` must
+	// win over a blanket "unknown root" deny, or the flag would silently do nothing.
+	it("never denies a top-level root the operator granted", () => {
+		const fsRoot = syntheticRoot("fsgrant", ["usr", "shared", "readonly", "data"]);
+		const home = path.join(fsRoot, "Users", "me");
+		const workspace = path.join(home, "w");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const fence = buildContainmentFence({
+			workspace,
+			home,
+			fsRoot,
+			extraRoots: [path.join(fsRoot, "shared")],
+			readOnlyRoots: [path.join(fsRoot, "readonly")],
+		});
+
+		expect(fenceVerdict(fence, path.join(fsRoot, "shared", "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fsRoot, "shared", "x"), "write")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fsRoot, "readonly", "x"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fsRoot, "readonly", "x"), "write")).toBe("deny");
+		// An ungranted data root beside them is still denied, or the carve-out proved nothing.
+		expect(fenceVerdict(fence, path.join(fsRoot, "data", "x"), "read")).toBe("deny");
+	});
+
+	// The synthetic root proves the rule; this proves it is wired to the real filesystem, which is the
+	// part that actually ships. Asserted on the emitted roots, because that is what the backend compiles.
+	it("denies the real home container on this machine and no operational root", () => {
+		const fence = buildContainmentFence({ workspace: fs.realpathSync(process.cwd()) });
+
+		// Other users live here, and nothing operational does.
+		expect(fence.deny).toContain(process.platform === "darwin" ? "/Users" : "/home");
+		// Only what this platform actually has: `/private` is macOS-only, and `realpathSync` on an absent
+		// path throws — which failed the Linux runner while passing locally. The file already warns about
+		// exactly this trap two describes up, and I walked into it anyway.
+		for (const operational of ["/usr", "/bin", "/sbin", "/etc", "/dev", "/opt", "/var", "/private", "/tmp"]) {
+			if (!fs.existsSync(operational)) continue;
+			expect(fence.deny).not.toContain(operational);
+			expect(fence.deny).not.toContain(fs.realpathSync(operational));
+		}
+		expect(fenceVerdict(fence, "/usr/bin/env", "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fs.realpathSync("/tmp"), "scratch.txt"), "write")).toBe("allow");
+	});
+
+	// The agent's own plugins and user skills sit under `~/.xcsh`, inside the home deny. The file tools
+	// allow-listed them and the fence did not, so `bash` could not read a plugin the `read` tool could —
+	// the asymmetry #2624 removes. Emitted whether or not they exist yet: the skills dir is created on
+	// first use, and a rule that appears only after the directory does is a rule nobody can rely on.
+	it("grants the agent's own plugins and user skills, which sit under denied home", () => {
+		const fence = buildContainmentFence({ workspace: fs.realpathSync(process.cwd()) });
+
+		for (const own of [getPluginsDir(), path.join(getAgentDir(), "skills")]) {
+			expect(fenceVerdict(fence, path.join(own, "probe", "manifest.json"), "read")).toBe("allow");
+			// Read-only: these are inputs, and a write there changes what a later session loads.
+			expect(fenceVerdict(fence, path.join(own, "probe", "manifest.json"), "write")).toBe("deny");
+		}
+	});
+
+	// A leak root inside the granted plugins tree must still win, and it must win while ABSENT — the
+	// case that used to fall through, because `canonical` drops a path that does not exist yet and the
+	// home deny was quietly covering for it. Passed explicitly rather than read from the environment:
+	// the ambient dirs depend on whether an earlier test relocated the agent dir, which is not a
+	// property this test is about.
+	it("denies a cross-session leak root nested inside a grant, even before it exists", () => {
+		const home = realTmp("leaknest");
+		const workspace = path.join(home, "w");
+		const plugins = path.join(home, ".xcsh", "plugins");
+		const leak = path.join(plugins, "shared-state");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(plugins, { recursive: true });
+		expect(fs.existsSync(leak)).toBe(false);
+
+		const fence = buildContainmentFence({ workspace, home, leakRoots: [leak] });
+
+		expect(fence.deny).toContain(leak);
+		expect(fenceVerdict(fence, path.join(leak, "other-session.json"), "read")).toBe("deny");
 	});
 });
