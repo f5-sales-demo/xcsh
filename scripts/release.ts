@@ -339,6 +339,24 @@ async function openReleasePR(version: string, commits: string[]): Promise<void> 
 		return;
 	}
 
+	// A version bump may only touch manifests and lockfiles. `git add .` stages whatever is in the tree,
+	// and `bun run check` runs just above — which regenerates files. A stale sibling extension checkout
+	// made that regeneration a silent DOWNGRADE of the committed capability contract (1.12.0 -> 1.8.0, with
+	// the whole handshake block deleted), and it would have been committed here as "chore: bump version"
+	// (#2578). Fixed at the source in generate-extension-capabilities.ts; this refuses to ship whatever
+	// the next generator does by accident.
+	const unexpected = stagedPathsOutsideVersionBump(staged.split("\n"));
+	if (unexpected.length > 0) {
+		console.error("Error: the version bump staged files that are not manifests or lockfiles:");
+		for (const changedPath of unexpected) console.error(`  ${changedPath}`);
+		console.error("\nA release commit must contain the version bump and nothing else. Inspect those paths —");
+		console.error("a generator run by `bun run check` has probably rewritten committed content.");
+		await $`git reset`;
+		await $`git checkout main`;
+		await $`git branch -D ${branch}`;
+		process.exit(1);
+	}
+
 	await $`git commit -m ${`chore: bump version to v${version}`}`;
 
 	console.log(`Pushing ${branch} to origin…`);
@@ -661,4 +679,32 @@ if (import.meta.main) {
 		console.error("  bun scripts/release.ts watch       Watch CI for current commit");
 		process.exit(1);
 	}
+}
+
+/**
+ * Staged paths a version bump has no business touching.
+ *
+ * The bump rewrites version fields in manifests and whatever the lockfiles then need. Anything else in a
+ * release commit arrived by accident — in practice from a generator that `bun run check` runs just before
+ * `git add .` (#2578).
+ *
+ * Allowed by shape rather than by an enumerated list, so adding a workspace package does not need a change
+ * here: manifests (`package.json`, `Cargo.toml`), lockfiles, and changelogs, at any depth.
+ */
+export function stagedPathsOutsideVersionBump(stagedPaths: readonly string[]): string[] {
+	return stagedPaths.map(entry => entry.trim()).filter(entry => entry !== "" && !isVersionBumpPath(entry));
+}
+
+function isVersionBumpPath(stagedPath: string): boolean {
+	const normalized = stagedPath.replace(/\\/g, "/");
+	const fileName = normalized.slice(normalized.lastIndexOf("/") + 1);
+	return [
+		"package.json",
+		"Cargo.toml",
+		"Cargo.lock",
+		"bun.lock",
+		"bun.lockb",
+		"package-lock.json",
+		"CHANGELOG.md",
+	].includes(fileName);
 }
