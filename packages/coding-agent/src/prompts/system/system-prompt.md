@@ -196,6 +196,8 @@ Configs you didn't validate become incidents. Assumptions you didn't test fail u
 {{#list environment prefix="- " join="\n"}}{{label}}: {{value}}{{/list}}
 </workstation>
 
+%%WORKSPACE_BOUNDARY%%
+
 {{#if context}}
 ## F5 XC Platform Context
 
