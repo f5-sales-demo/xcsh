@@ -1,4 +1,4 @@
-import { describe, expect, it, spyOn } from "bun:test";
+import { afterAll, describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -12,9 +12,33 @@ import { buildContainmentFence, containmentStatus, fenceVerdict } from "@f5-sale
  * not a stricter policy — see #2554.
  */
 
+/**
+ * Fixture directories, removed after the file runs (#2633).
+ *
+ * These leaked for a long time: 2,714 `fence-*` directories were sitting in the OS temp dir, from 52 call
+ * sites here with no cleanup. That is not merely untidy — it is what made `readdirSync(os.tmpdir())`
+ * expensive enough (15.4ms) to cause a real latency regression in #2624, and it buries anyone reading that
+ * directory to debug a temp-path problem.
+ *
+ * The `xcsh-` prefix is deliberate. The previous prefixes were generic — `fence-`, `sf-`, `conf-` — and a
+ * bulk cleanup of `sf-*` would also match the Salesforce CLI's own `sf-telemetry` directory. Fixtures
+ * should be identifiable as ours from the name alone, so removing them can never take somebody else's
+ * state with them.
+ *
+ * Cleanup lives in `afterAll`, not at the end of each test: a `rmSync` in the body is skipped when an
+ * assertion throws, which is exactly when the file is being re-run repeatedly and littering fastest.
+ */
+const fixtures: string[] = [];
+
+afterAll(() => {
+	for (const dir of fixtures) fs.rmSync(dir, { recursive: true, force: true });
+	fixtures.length = 0;
+});
+
 function realTmp(suffix: string): string {
-	const dir = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), `fence-${suffix}-`));
-	return fs.realpathSync(dir);
+	const dir = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), `xcsh-fence-${suffix}-`)));
+	fixtures.push(dir);
+	return dir;
 }
 
 describe("buildContainmentFence", () => {

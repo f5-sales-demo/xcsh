@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -11,8 +11,19 @@ import { resolveSessionFence, type SettingsReader } from "@f5-sales-demo/xcsh/sa
  * would rather throw. The synthetic `/work/custA` these tests used to pass around only worked because
  * the policy they replaced never touched the filesystem.
  */
+/** Fixture containers, removed after the file runs — these leaked 78 `sf-*` directories (#2633). */
+const fixtures: string[] = [];
+
+afterAll(() => {
+	for (const dir of fixtures) fs.rmSync(dir, { recursive: true, force: true });
+	fixtures.length = 0;
+});
+
 function tenants(suffix: string): { mine: string; theirs: string; shared: string } {
-	const container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), `sf-${suffix}-`)));
+	const container = fs.realpathSync(
+		fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), `xcsh-sessfence-${suffix}-`)),
+	);
+	fixtures.push(container);
 	const mine = path.join(container, "custA");
 	const theirs = path.join(container, "custB");
 	// Beside the tenants, so the ancestor walk denies it by default and an allow-list has something to
