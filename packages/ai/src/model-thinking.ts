@@ -68,6 +68,18 @@ const ANTHROPIC_ADAPTIVE_EFFORTS: readonly Effort[] = [
 	Effort.XHigh,
 	Effort.Max,
 ];
+/**
+ * Anthropic Messages API versions MEASURED to accept the full adaptive enum
+ * (`xhigh` and `max`) with no fallback chain to be capped against.
+ *
+ * Probed 2026-07-30 against the live gateway with a bogus control value, which
+ * was rejected everywhere — so the accepts mean something (#2630).
+ *
+ * Adding a version here without a probe is the defect this set exists to
+ * prevent: an unprobed model must fail closed to DEFAULT_REASONING_EFFORTS.
+ */
+const ANTHROPIC_EXTENDED_EFFORT_VERSIONS: ReadonlySet<string> = new Set(["5.0"]);
+
 const GEMINI_3_PRO_EFFORTS: readonly Effort[] = [Effort.Low, Effort.High];
 const GEMINI_3_FLASH_EFFORTS: readonly Effort[] = [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High];
 const GPT_5_2_PLUS_EFFORTS: readonly Effort[] = [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh];
@@ -449,15 +461,42 @@ function inferAnthropicSupportedEfforts<TApi extends Api>(
 		(model.api === "anthropic-messages" || model.api === "bedrock-converse-stream") &&
 		semverGte(parsedModel.version, "4.6")
 	) {
-		// Opus 4.6+ and Sonnet 5+ accept the extended range. Sonnet 4.6 tops out at
-		// `high` — the reason this can't key on version alone (#2341).
+		// Only 5.x accepts the extended range. Probed against the live gateway on
+		// 2026-07-30 with a bogus control value (rejected everywhere, so the accepts
+		// mean something) — #2630:
+		//
+		//   model              low med high xhigh max   fallbacks
+		//   claude-opus-5       Y   Y    Y     Y    Y   (none)
+		//   claude-sonnet-5     Y   Y    Y     Y    Y   (none)
+		//   claude-opus-4-8     Y   Y    Y     Y    Y   opus-4-6, opus-4-5
+		//   claude-opus-4-6     Y   Y    Y     .    Y   opus-4-5, sonnet-4-6
+		//   claude-sonnet-4-6   Y   Y    Y     .    Y   (none)
+		//   claude-opus-4-5     Y   Y    Y     .    .   (none)
+		//
+		// The ceiling is what a model group AND its fallbacks accept, because the
+		// gateway re-sends an identical body on fallback instead of re-mapping per
+		// target — in #2630 both fallbacks 400'd on the same `xhigh`.
+		// `claude-opus-4-5` accepts neither `xhigh` nor `max` and sits in both 4.x
+		// chains, so 4.6 and 4.8 cap at `high` even though 4.8 accepts `xhigh`
+		// alone. 5.x has no fallback chain, so it keeps its full range.
+		//
+		// #2346 keyed this on `kind === "opus" || version >= 5.0` after probing only
+		// opus-5 and sonnet-5, which handed `xhigh` to every opus >= 4.6 and made
+		// resumed sessions pinned to opus-4-6 fail with a 400.
 		const extended = parsedModel.kind === "opus" || semverGte(parsedModel.version, "5.0");
 		if (!extended) return DEFAULT_REASONING_EFFORTS;
-		// `max` is only claimed for the first-party Messages API, where the enum was
-		// verified against the live gateway. Bedrock's effort support is not verified
-		// here, so it keeps the pre-existing `xhigh` ceiling rather than being widened
-		// on an assumption.
-		return model.api === "anthropic-messages" ? ANTHROPIC_ADAPTIVE_EFFORTS : DEFAULT_REASONING_EFFORTS_WITH_XHIGH;
+		// Bedrock was NOT probed, so it keeps its pre-existing `xhigh` ceiling.
+		// Narrowing it here would repeat #2346's mistake in the opposite direction —
+		// changing a whole family's capability without measuring it.
+		if (model.api === "bedrock-converse-stream") return DEFAULT_REASONING_EFFORTS_WITH_XHIGH;
+		// Messages API: opt in per MEASURED version, never by an open-ended
+		// comparison. `semverGte(version, "5.0")` would hand the extended enum to
+		// every future Claude the moment it lands in the catalog — the same
+		// open-ended grant that caused this bug. Unprobed versions fail closed to
+		// the conservative range; add one here only with a probe to back it.
+		return ANTHROPIC_EXTENDED_EFFORT_VERSIONS.has(`${parsedModel.version.major}.${parsedModel.version.minor}`)
+			? ANTHROPIC_ADAPTIVE_EFFORTS
+			: DEFAULT_REASONING_EFFORTS;
 	}
 	return inferFallbackEfforts(model);
 }
