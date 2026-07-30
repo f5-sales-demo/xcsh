@@ -84,9 +84,22 @@ describe("system prompt workspace boundary", () => {
 	// would give a deliberately-degraded session false assurance about isolation.
 	it("names the sandbox without asserting enforcement unconditionally", () => {
 		expect(flat()).toMatch(/sandbox confines this session/i);
-		expect(flat()).toMatch(/when it is active/i);
+		// The property is that the refusal is stated CONDITIONALLY on the sandbox being
+		// active; either phrasing of that condition satisfies it.
+		expect(flat()).toMatch(/when (it|the sandbox) is active/i);
 		expect(flat()).not.toMatch(/isolation is enforced/i);
 		expect(flat()).toMatch(/reach the same path another way/i);
+	});
+
+	// Codex round 3 called the block false assurance about the customer boundary. Refuted
+	// as stated -- "Reachable does not mean in scope" already tells the model the sandbox
+	// will not stop a sibling read. But the two boundaries sat in adjacent bullets and
+	// could be read as one, so the block now names which boundary the sandbox enforces.
+	// This is the awareness the change exists to create: crossing between sibling
+	// customers is refused by nothing, which is precisely why the rule is the model's.
+	it("distinguishes the sandbox boundary from the customer boundary", () => {
+		expect(flat()).toMatch(/boundary is the working directory, not the customer subdirectory/i);
+		expect(flat()).toMatch(/nothing refuses a sibling/i);
 	});
 
 	// Guards the non-goal. Work that genuinely spans two subdirectories must stay

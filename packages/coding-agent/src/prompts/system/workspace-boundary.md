@@ -8,7 +8,8 @@ work: what the task needs is inside it, and another customer's material is not y
 - Subdirectories may themselves be separate customers. Reachable does not mean in scope: work in
   the one the task names, state the crossing when the task genuinely spans more than one, and
   **MUST NOT** merge two customers' material into one artifact.
-- A sandbox confines this session's file access. When it is active, a path outside the boundary is
-  refused — that is the boundary working, not a tool failure. Say what you needed and why, and
-  **MUST NOT** reach the same path another way.
+- A sandbox confines this session's file access, but its boundary is the working directory, not the
+  customer subdirectory: nothing refuses a sibling, so the rule above is yours to keep. When the
+  sandbox is active a path outside the working directory is refused — that is the boundary working,
+  not a tool failure. Say what you needed and why, and **MUST NOT** reach the same path another way.
 </workspace-boundary>
