@@ -1,8 +1,7 @@
 import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { settings } from "../../../config/settings";
-import { containmentStatus } from "../../../sandbox/containment";
 import { evaluateToolCall } from "../../../sandbox/enforce";
-import { resolveSessionPolicy } from "../../../sandbox/session-policy";
+import { resolveSessionFence } from "../../../sandbox/session-fence";
 
 /**
  * Session filesystem sandbox (bundled, default-on).
@@ -24,18 +23,13 @@ export default function sandboxGuard(pi: ExtensionAPI): void {
 	// An extension only ever sees the module-global settings proxy, so that is the reader it
 	// passes; the bash tool passes its own session's Settings instance instead.
 	pi.on("tool_call", (event, ctx) => {
-		const policy = resolveSessionPolicy(ctx.cwd, settings as unknown as { get(key: string): unknown });
-		if (!policy) return undefined;
+		const fence = resolveSessionFence(ctx.cwd, settings as unknown as { get(key: string): unknown });
+		if (!fence) return undefined; // --no-sandbox / sandbox.enabled = false
 		const decision = evaluateToolCall({
 			toolName: event.toolName,
 			input: event.input as Record<string, unknown>,
 			cwd: ctx.cwd,
-			policy,
-			// Asked per call rather than cached at load: the answer comes from a probe of the running
-			// kernel, and a session can be created before the native module has been reached. The probe
-			// itself memoises, so this costs nothing after the first call. When an OS backend confines the
-			// shell, the command-text scan stops deciding for `bash` — see the #2582 note in enforce.ts.
-			shellOsConfined: containmentStatus(true).osEnforced,
+			fence,
 		});
 		return decision.block ? { block: true, reason: decision.reason } : undefined;
 	});

@@ -1,14 +1,14 @@
 /**
- * Pure evaluation of a tool call against a SandboxPolicy.
+ * Pure evaluation of a tool call against the containment fence.
  *
  * Maps each path-taking tool to its path argument(s) and access mode, resolves the
- * path relative to the session cwd, and asks the policy whether it is allowed. Kept
+ * path relative to the session cwd, and asks the fence whether it is allowed. Kept
  * free of settings/runtime so it is fully unit-testable; the bundled `sandbox-guard`
- * extension is a thin wrapper that supplies cwd, settings, and the policy.
+ * extension is a thin wrapper that supplies cwd, settings, and the fence.
  *
  * Search tools (`find`/`grep`/`ast_grep`/`ast_edit`) accept comma-/whitespace-delimited
  * multi-path inputs that the tools split (via `splitTopLevel`) and search from a common
- * base directory. We split the same way and policy-check EVERY token's base, so a
+ * base directory. We split the same way and check EVERY token's base, so a
  * multi-path input cannot smuggle a sibling directory past the gate.
  *
  * Arbitrary-code tools (`bash`, `python`) cannot be fully contained in-process: this
@@ -23,45 +23,49 @@
  *
  * What remains this file's job:
  *  - every structured file tool (`read`/`write`/`edit`/`grep`/…), which has no subprocess to confine
- *  - `python`, which is not covered by the shell fence at all
- *  - `bash` on platforms with no backend — Linux Landlock is a follow-up, Windows has no equivalent —
- *    where this is again the only layer, and `xcsh://about` says so
+ *  - `python`, whose kernel is a shared, lock-protected gateway reused across sessions, so it can never
+ *    carry a per-session fence and this is the only thing deciding for it
+ *  - `bash` on a platform with no backend, where this is again the only layer and `xcsh://about` says so
  *  - a fast pre-check that produces a readable refusal before a command runs
  *
  * So: keep it, and do not extend it. Another spelling caught here buys little now, and the pattern of
  * adding one has a poor record — two adversarial rounds on the #2542 fix alone produced six bypasses.
  *
- * **It is still a real layer, though, not a legacy one (#2582.)** It was tempting to conclude that the
- * fence sits below this and therefore this can only produce false positives. That is wrong: the fence is
- * allow-by-default and denies only home plus the workspace's ancestors, so it does not cover a second
- * customer tree under an unrelated root, and `policy.ts` withholds the shared OS temp dir from the file
- * tools on purpose. Deleting this would hand both away. What #2582 actually fixed is narrower — the
- * *false refusals*, where this layer refused what the fence grants; see `fenceAlsoPermits`.
+ * **One policy, asked at two places (#2624.)** This used to consult `SandboxPolicy`, which was
+ * deny-by-default and confined to the cwd, while the fence below it is allow-by-default with targeted
+ * denies. Running both made the effective boundary their intersection, and the intersection refused
+ * ordinary work: `grep -oE '<title>[^<]*</title>'` was rejected because the floor reads the fragment
+ * `/title` out of the closing tag and a deny-by-default policy has to refuse an unrecognised absolute
+ * path. So were `</h1>`, `</td>`, `--pretty=format:'%h </%an>'`, `cd "$DEST"`, `read /etc/hosts` and a
+ * `/tmp` write — none of which has anything to do with reaching another customer's files.
+ *
+ * The floor is unchanged, because the floor was never the problem. It guesses which fragments of a
+ * command might be paths, and under allow-by-default a wrong guess matches no rule and costs nothing.
+ * Deny-by-default is what turned each wrong guess into a refusal, so the posture went rather than the
+ * guessing — which also means this file no longer needs to know about system roots, temp directories or
+ * which backend is running. The fence answers all of that, and it is the same answer the kernel gives.
  */
-import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
-import { pathIsWithin } from "@f5-sales-demo/pi-utils";
 import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
 import { lexShellCommand, type ShellSimpleCommand } from "../tools/shell-lex";
 import { provenExemptWords, writtenOperandWords } from "./command-operands";
-import type { SandboxAccess, SandboxPolicy } from "./policy";
+import { type ContainmentFence, type FenceAccess, fenceVerdict } from "./containment";
+
+/** The two access directions, named as the fence names them. */
+type SandboxAccess = FenceAccess;
 
 export interface ToolCallCheck {
 	toolName: string;
 	input: Record<string, unknown>;
 	cwd: string;
-	policy: SandboxPolicy;
 	/**
-	 * Whether an OS backend is confining the `bash` tool's shell — seatbelt or Landlock.
+	 * The session's boundary — the same object the OS backend compiles for `bash`.
 	 *
-	 * It does not stand this scan down. It only stops the scan refusing the operational paths the fence
-	 * grants, so the composite is no longer stricter than either engine — see `fenceAlsoPermits`.
-	 *
-	 * Absent means "not known", which keeps every refusal in place: understating the backend costs a
-	 * false refusal, while overstating it would relax the only boundary a scanner-only host has.
+	 * Absent is not a case: a session with isolation off has no fence, and its caller does not evaluate
+	 * at all (`resolveSessionFence` returns undefined and `sandbox-guard` returns early). Passing one
+	 * here means "decide against this".
 	 */
-	shellOsConfined?: boolean;
+	fence: ContainmentFence;
 }
 
 export interface ToolCallDecision {
@@ -75,8 +79,6 @@ interface PathArgSpec {
 	/** Candidate input keys, tried in order; first non-empty string wins. */
 	keys: string[];
 	access: SandboxAccess;
-	/** Exempt OS system paths (for tools that legitimately execute system binaries). */
-	systemExempt?: boolean;
 }
 
 /**
@@ -95,11 +97,12 @@ const TOOL_PATHS: Record<string, PathArgSpec[]> = {
 		{ keys: ["catalog_path"], access: "read" },
 		{ keys: ["screenshot_dir"], access: "write" },
 	],
-	// debug executes an arbitrary program and reads source files; system binaries are ok.
+	// debug executes an arbitrary program and reads source files. System binaries needed no exemption
+	// once the fence started deciding: it never mentions `/usr` or `/bin`, so they are simply allowed.
 	debug: [
-		{ keys: ["program"], access: "read", systemExempt: true },
-		{ keys: ["file"], access: "read", systemExempt: true },
-		{ keys: ["cwd"], access: "read", systemExempt: true },
+		{ keys: ["program"], access: "read" },
+		{ keys: ["file"], access: "read" },
+		{ keys: ["cwd"], access: "read" },
 	],
 };
 
@@ -125,113 +128,6 @@ const CODE_FIELDS: Record<string, string[]> = {
 	python: ["code"],
 };
 
-/**
- * Standard OS directories a subprocess may legitimately read or traverse (interpreters,
- * libraries, device files) and which hold no customer data. Only the code-tool scan
- * treats these as benign; the file tools stay strictly confined to the policy. Notably
- * excludes /tmp, /var, /private, and home — those can hold per-session or per-user data.
- */
-const SYSTEM_READ_ROOTS = [
-	"/usr",
-	"/bin",
-	"/sbin",
-	"/lib",
-	"/lib64",
-	"/opt",
-	"/etc",
-	"/dev",
-	"/proc",
-	"/sys",
-	"/System",
-	"/Library",
-];
-
-function isSystemPath(resolved: string): boolean {
-	return SYSTEM_READ_ROOTS.some(root => resolved === root || resolved.startsWith(`${root}${path.sep}`));
-}
-
-/**
- * Character devices that discard output or route it back to the caller's own descriptors. Writing
- * to one stores nothing and reaches no file, so it cannot carry data across the boundary — and
- * `> /dev/null` is too common to refuse.
- *
- * An exact list, not a `/dev` prefix: `/dev` also holds raw block devices like `/dev/disk0`, where
- * a write is both an escape and a catastrophe.
- */
-const SYSTEM_WRITE_SINKS = new Set([
-	"/dev/null",
-	"/dev/zero",
-	"/dev/full",
-	"/dev/tty",
-	"/dev/stdin",
-	"/dev/stdout",
-	"/dev/stderr",
-]);
-
-function isSystemWriteSink(resolved: string): boolean {
-	// /dev/fd/N is an already-open descriptor of this process, not a path it can newly reach.
-	return SYSTEM_WRITE_SINKS.has(resolved) || resolved.startsWith("/dev/fd/");
-}
-
-/**
- * Paths the containment fence permits, which this scan must therefore stop refusing (#2582).
- *
- * The two engines have opposite defaults: this one is `SandboxPolicy`, deny-by-default and confined to
- * the cwd, while the fence is allow-by-default with targeted denies. Running both made the composite
- * their intersection, so the scan refused work the fence permits and `xcsh://about` promises — a `/tmp`
- * write, a `~/.gitconfig` read, `cd /tmp`. That falsified the model's own instructions and taught it to
- * abandon operations that were allowed.
- *
- * Only the *false refusals* go away. The scan keeps deciding, because it is not merely a slower copy of
- * the fence: the fence denies home and the workspace's ancestors and allows everything else, so it does
- * NOT cover a second customer tree under an unrelated root (`/data/globex`), and `policy.ts` deliberately
- * withholds the shared OS temp dir from the *file* tools to stop one session reading another's scratch.
- * Deleting this layer would hand both of those away. Adversarial review caught that; #2582's premise that
- * the scan "cannot add security" is wrong.
- *
- * So this is a narrow, enumerated set — the operational paths the fence grants — and it applies to the
- * shell only, gated on a backend actually being there. `python` is covered by no fence on any platform,
- * and on a host with no backend this scan is the whole boundary, so neither is widened.
- */
-function fenceAlsoPermits(resolved: string, access: SandboxAccess): boolean {
-	// The fence never mentions the temp directories, so they are reachable below the text whatever this
-	// says. Refusing them here only produced a diagnostic that contradicted the documentation.
-	if (tempRoots().some(root => pathIsWithin(root, resolved))) return true;
-	// Granted read-only by the fence (`READ_ONLY_HOME`): a tool needs it to behave correctly, and it must
-	// not be rewritten. The write direction stays refused, which matches the fence exactly.
-	if (access === "read") {
-		const home = os.homedir();
-		return [path.join(home, ".gitconfig"), path.join(home, ".config", "git")].some(root =>
-			pathIsWithin(root, resolved),
-		);
-	}
-	return false;
-}
-
-/**
- * The temp directories, resolved once.
- *
- * Both spellings are needed, and conflating them is the bug this comment exists to prevent: on macOS
- * `os.tmpdir()` is the *per-user* `/var/folders/…/T`, which is not `/tmp` at all. `xcsh://about` promises
- * `/tmp` specifically, so covering only `os.tmpdir()` left the exact case #2582 reported still refused.
- * Real paths as well as nominal ones, because `/tmp` is a symlink to `/private/tmp` and a resolved
- * candidate carries the latter.
- */
-let cachedTempRoots: string[] | undefined;
-function tempRoots(): string[] {
-	if (cachedTempRoots === undefined) {
-		const resolve = (input: string): string => {
-			try {
-				return fs.realpathSync(input);
-			} catch {
-				return input;
-			}
-		};
-		cachedTempRoots = [...new Set(["/tmp", resolve("/tmp"), os.tmpdir(), resolve(os.tmpdir())])];
-	}
-	return cachedTempRoots;
-}
-
 function firstString(input: Record<string, unknown>, keys: string[]): string | undefined {
 	for (const key of keys) {
 		const value = input[key];
@@ -240,8 +136,22 @@ function firstString(input: Record<string, unknown>, keys: string[]): string | u
 	return undefined;
 }
 
-function deny(policy: SandboxPolicy, resolved: string, access: SandboxAccess): ToolCallDecision {
-	return { block: true, reason: policy.describe(resolved, access) };
+/** Whether the session's boundary permits `access` on an already-resolved absolute path. */
+function permits(check: ToolCallCheck, resolved: string, access: SandboxAccess): boolean {
+	return fenceVerdict(check.fence, resolved, access) === "allow";
+}
+
+/**
+ * The refusal the model sees. Wording preserved from the policy this replaced, because the bash prompt
+ * and the skill-URL boundary both tell the model to expect it.
+ */
+function deny(cwd: string, resolved: string, access: SandboxAccess): ToolCallDecision {
+	return {
+		block: true,
+		reason:
+			`Path is outside this session's ${access} boundary (working directory: ${cwd}): ${resolved}. ` +
+			"Use --allow-path or the sandbox.allow* settings to widen it, or --no-sandbox to disable isolation.",
+	};
 }
 
 /**
@@ -435,27 +345,21 @@ function codePathCandidates(command: string): PathCandidate[] {
  * confidently, the floor stands alone.
  */
 /**
- * Something the shell will act on whose path this layer cannot resolve — `cd "$DEST"`.
+ * A `cd` whose target this layer cannot resolve — `cd "$DEST"`, `cd $(git rev-parse …)`, `cd -` — is
+ * **not** refused (#2624).
  *
- * Refusal is justified here and *not* for a redirect target, which is the asymmetry worth stating: a
- * redirect target that escapes damages one file, while a directory change silently relocates every
- * later relative path in the session, and relative paths are never candidates at all. So an
- * unresolvable `cd` fails closed, and an unresolvable `> "$LOG"` does not.
+ * It used to be, on the reasoning that a directory change relocates every later relative path while a
+ * redirect target damages only one file. That reasoning is sound and the refusal still had to go: the
+ * three spellings above are ordinary shell, they were refused outright, and the layer that actually
+ * decides now checks `cd` where the shell performs it — after expansion, with the boundary fixed for
+ * the session so standing somewhere new widens nothing (#2589).
  *
- * The reverse was tried (#2552) and refused `make > "$LOG"`, `> "$TMPDIR/f"` and `> out-$$.txt` —
- * ordinary shell, writing in-tree. Narrowing it is not possible either: a variable's *value* can
- * contain `../`, so `> "out-$X"` escapes while looking relative. Resolving that needs the expansion,
- * which only the shell has — Phase 2 (#2554).
+ * It was never a boundary in any case. Its own history records `c=cd; $c /`, `alias g=cd; g /` and a
+ * symlink created in the same command as still open (#2553), so what it cost in refused work it did not
+ * buy back in coverage. A resolvable target is still checked — that is precise and free.
  */
-interface UnresolvableTarget {
-	text: string;
-	/** What the shell was about to do, for a message that names the actual problem. */
-	what: "directory change";
-}
-
 interface ShellScan {
 	candidates: PathCandidate[];
-	unresolvable: UnresolvableTarget[];
 }
 
 /**
@@ -463,12 +367,8 @@ interface ShellScan {
  * may well be readable, and the problem is that standing there redefines every relative path the
  * boundary trusts to stay in the tree.
  */
-function describeDirectoryChange(policy: SandboxPolicy, target?: string, unresolved?: string): string {
-	const what =
-		target === undefined
-			? `a directory this check cannot resolve from the command text (${unresolved})`
-			: `${target}, which is outside it`;
-	return `Refusing to change the working directory to ${what} (session directory: ${policy.cwd}). Relative paths are trusted to stay inside the session tree, so moving out of it would silently take every later path with it. Use an absolute path, or --allow-path to widen the boundary first.`;
+function describeDirectoryChange(cwd: string, target: string): string {
+	return `Refusing to change the working directory to ${target}, which is outside it (session directory: ${cwd}). Relative paths are trusted to stay inside the session tree, so moving out of it would silently take every later path with it. Use an absolute path, or --allow-path to widen the boundary first.`;
 }
 
 /** Builtins that move the shell, and therefore move what every later relative path means. */
@@ -494,20 +394,21 @@ const COMMAND_PREFIXES = new Set(["builtin"]);
 const DIRECTORY_CHANGE_TOKEN = /(^|[\s;&|(])(cd|pushd)([\s;&|)]|$)/;
 
 /**
- * Targets of a directory change: a candidate that must resolve in-tree, or the raw text when it
- * cannot be resolved at all.
+ * Literal targets of a directory change, as candidates that must resolve in-tree.
  *
  * This gate exists because a relative operand is never a candidate — the floor assumes it resolves
  * under the session directory. `cd` is what breaks that assumption: the bash tool runs one
  * persistent brush-core shell in the agent's own process, so a directory change outlives the call
  * that made it and afterwards `cat tmp/x` reads somewhere else entirely (#2542).
  *
- * It is defence-in-depth, not a boundary. Verified still open: `c=cd; $c /`, `alias g=cd; g /`, and
- * a symlink created in the same command (#2553). Those need the shell's own resolution, which is
- * Phase 2 (#2554). Do not add a seventh spelling here — two adversarial rounds produced six.
+ * Only what can be read from the text. A target this cannot resolve — `cd "$DEST"`, `cd -`, `cd` with
+ * no operand, an option nobody here recognises — is skipped rather than refused (#2624): see ShellScan
+ * for why, and note that the escapes this gate never caught (`c=cd; $c /`, `alias g=cd; g /`) are
+ * caught below the text by the shell itself. Do not add a seventh spelling here — two adversarial
+ * rounds produced six.
  */
-function directoryChangeTargets(commands: readonly ShellSimpleCommand[], depth = 0): (PathCandidate | string)[] {
-	const targets: (PathCandidate | string)[] = [];
+function directoryChangeTargets(commands: readonly ShellSimpleCommand[], depth = 0): PathCandidate[] {
+	const targets: PathCandidate[] = [];
 
 	for (const command of commands) {
 		if (command.name === undefined) continue;
@@ -523,27 +424,20 @@ function directoryChangeTargets(commands: readonly ShellSimpleCommand[], depth =
 		// 'cd /'` and `sh -c '…'` both arrive here. One level is enough for every real spelling;
 		// deeper nesting is unprovable.
 		if (SCRIPT_RUNNERS.has(name)) {
+			if (depth > 0) continue;
 			for (const operand of operands) {
-				if (!operand.literal) {
-					targets.push(operand.text); // `eval "$cmd"` — nothing to read
-					continue;
-				}
+				if (!operand.literal) continue; // `eval "$cmd"` — nothing to read
 				if (!DIRECTORY_CHANGE_TOKEN.test(operand.text)) continue;
-				if (depth > 0) {
-					targets.push(operand.text);
-					continue;
-				}
 				const inner = lexShellCommand(operand.text);
-				if (inner.unterminated) targets.push(operand.text);
-				else targets.push(...directoryChangeTargets(inner.commands, depth + 1));
+				if (!inner.unterminated) targets.push(...directoryChangeTargets(inner.commands, depth + 1));
 			}
 			continue;
 		}
 
 		if (!DIRECTORY_CHANGE.has(name)) continue;
 
-		// Options precede the target and are all boolean. One the model does not recognise means the
-		// target cannot be located, so the proof fails rather than guessing which operand it is.
+		// Options precede the target and are all boolean. One this does not recognise means the target
+		// cannot be located, so nothing is claimed about it.
 		let index = 0;
 		let unparseable = false;
 		while (index < operands.length && operands[index].text.startsWith("-") && operands[index].text !== "-") {
@@ -553,17 +447,13 @@ function directoryChangeTargets(commands: readonly ShellSimpleCommand[], depth =
 			}
 			index++;
 		}
-		if (unparseable) {
-			targets.push(operands.map(word => word.text).join(" "));
-			continue;
-		}
+		if (unparseable) continue;
 
 		const target = operands[index];
-		// `cd` with no operand goes to $HOME; `cd -` returns somewhere only the shell remembers; a
-		// non-literal target cannot be resolved from text.
-		if (target === undefined) targets.push(`${name} (no target: goes to $HOME)`);
-		else if (!target.literal || target.text === "-") targets.push(target.text);
-		else targets.push({ token: target.text, access: "read", mustBeInTree: true });
+		// `cd` with no operand goes to $HOME and `cd -` somewhere only the shell remembers; a non-literal
+		// target cannot be resolved from text. All three are the shell's to decide.
+		if (target === undefined || !target.literal || target.text === "-") continue;
+		targets.push({ token: target.text, access: "read", mustBeInTree: true });
 	}
 	return targets;
 }
@@ -572,7 +462,7 @@ function shellPathCandidates(command: string): ShellScan {
 	const lexed = lexShellCommand(command);
 	// Unbalanced quotes mean every word boundary is a guess: neither the blanking nor the write
 	// marking below can be trusted, so fall back to the floor, checked as reads.
-	if (lexed.unterminated) return { candidates: codePathCandidates(command), unresolvable: [] };
+	if (lexed.unterminated) return { candidates: codePathCandidates(command) };
 
 	const exemptSpans = lexed.commands.flatMap(simpleCommand => provenExemptWords(simpleCommand));
 	let scanned = command;
@@ -607,17 +497,13 @@ function shellPathCandidates(command: string): ShellScan {
 		for (const access of word.redirect === "read-write" ? WRITE_AND_READ : [word.redirect]) {
 			// A non-literal target — `$VAR`, a substitution, a glob — is not checked. `text` is not a
 			// stand-in for one filesystem reference, and refusing on that basis rejected ordinary
-			// in-tree shell (see UnresolvableTarget). Resolving it is Phase 2's job.
+			// in-tree shell (#2552). The shell resolves it below the text instead.
 			if (word.literal) candidates.push({ token: word.text, access });
 		}
 	}
 
-	const unresolvable: UnresolvableTarget[] = [];
-	for (const target of directoryChangeTargets(lexed.commands)) {
-		if (typeof target === "string") unresolvable.push({ text: target, what: "directory change" });
-		else candidates.push(target);
-	}
-	return { candidates, unresolvable };
+	candidates.push(...directoryChangeTargets(lexed.commands));
+	return { candidates };
 }
 
 /** Base directories a search input would actually search, split like the tools do. */
@@ -637,20 +523,15 @@ function searchBases(raw: string, base: (token: string) => string): string[] {
 }
 
 function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean): ToolCallDecision {
-	const { input, cwd, policy } = check;
-	// The fence's allowances apply to the shell only, and only where a backend is actually enforcing.
-	const fenced = shell && check.shellOsConfined === true;
+	const { input, cwd } = check;
 
 	const rawCwd = typeof input.cwd === "string" ? input.cwd : undefined;
 	const base = rawCwd ? resolveToCwd(rawCwd, cwd) : cwd;
-	// Both boundaries, for the same reason a `cd` target needs both: relative paths are never
-	// scanned, so wherever the command runs is somewhere it can write freely. Read alone let
+	// Both directions, for the same reason a `cd` target needs both: relative paths are never scanned,
+	// so wherever the command runs is somewhere it can write freely. Read alone let
 	// `{ cwd: "/shared/ctx", command: "touch notes.md" }` write into a read-only root.
-	// `cwd: "/tmp"` has to answer the same as `cd /tmp`, or the false refusal simply moves to the other
-	// interface — and `cwd` is the one the bash prompt tells the model to prefer over `cd`.
-	const fencePermitsBase = fenced && fenceAlsoPermits(base, "read") && fenceAlsoPermits(base, "write");
-	if (rawCwd && !fencePermitsBase && !(policy.isAllowed(base, "read") && policy.isAllowed(base, "write"))) {
-		return { block: true, reason: describeDirectoryChange(policy, base) };
+	if (rawCwd && !(permits(check, base, "read") && permits(check, base, "write"))) {
+		return { block: true, reason: describeDirectoryChange(cwd, base) };
 	}
 
 	const commands: string[] = [];
@@ -669,41 +550,21 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 		// Only bash gets the shell-aware treatment. Python is not shell: lexing `open('/x')` as
 		// shell yields one non-absolute word and would lose the check entirely, and it has no
 		// redirects, so every candidate it produces is a read.
-		const scan: ShellScan = shell
-			? shellPathCandidates(command)
-			: { candidates: codePathCandidates(command), unresolvable: [] };
-		// Refused before any candidate is resolved: there is no path to check, and that is
-		// precisely the problem. The residual this does NOT cover is an expansion in an
-		// operand rather than a redirect target — `cat "$SECRET"` — which cannot be resolved
-		// at this layer at all. That is the Phase 2 OS-sandbox's job; do not read the text
-		// boundary as complete (#2534).
-		for (const target of scan.unresolvable) {
-			return { block: true, reason: describeDirectoryChange(policy, undefined, target.text) };
-		}
+		const scan: ShellScan = shell ? shellPathCandidates(command) : { candidates: codePathCandidates(command) };
 		const seen = new Set<string>();
 		for (const { token, access, mustBeInTree } of scan.candidates) {
 			if (!seen.add(`${access}\0${mustBeInTree ? "cd\0" : ""}${token}`)) continue;
 			if (mustBeInTree) {
 				// `path.resolve`, not `resolveToCwd`: the latter maps an all-slashes path to the cwd,
-				// which would read `cd /` as `cd .` and let the shell walk out. Both boundaries,
+				// which would read `cd /` as `cd .` and let the shell walk out. Both directions,
 				// because relative paths go unchecked wherever the shell is standing.
 				const moved = path.resolve(base, expandPath(token));
-				if (policy.isAllowed(moved, "read") && policy.isAllowed(moved, "write")) continue;
-				// `cd /tmp` was refused while the fence permits standing there, and the boundary no
-				// longer follows the shell (#2589), so where it stands widens nothing.
-				if (fenced && fenceAlsoPermits(moved, "read") && fenceAlsoPermits(moved, "write")) continue;
-				return { block: true, reason: describeDirectoryChange(policy, moved) };
+				if (permits(check, moved, "read") && permits(check, moved, "write")) continue;
+				return { block: true, reason: describeDirectoryChange(cwd, moved) };
 			}
 			const resolved = resolveToCwd(token, base);
-			if (policy.isAllowed(resolved, access)) continue;
-			// SYSTEM_READ_ROOTS is a read allowance — "directories a subprocess may legitimately
-			// read or traverse". It never licenses writing into /etc, /usr or /opt; only the
-			// discard-and-echo devices are writable.
-			if (access === "read" ? isSystemPath(resolved) : isSystemWriteSink(resolved)) continue;
-			// Anything the fence grants outright: refusing it here contradicted the documentation and
-			// bought nothing, since the fence permits it below the text either way.
-			if (fenced && fenceAlsoPermits(resolved, access)) continue;
-			return deny(policy, resolved, access);
+			if (permits(check, resolved, access)) continue;
+			return deny(cwd, resolved, access);
 		}
 	}
 
@@ -719,7 +580,7 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
  * out of tree via the leading segments, so no stripping is needed for the boundary check.)
  */
 function evaluateEdit(check: ToolCallCheck): ToolCallDecision {
-	const { input, cwd, policy } = check;
+	const { input, cwd } = check;
 	const targets: string[] = [];
 	const add = (value: unknown): void => {
 		if (typeof value === "string" && value.length > 0) targets.push(value);
@@ -739,7 +600,7 @@ function evaluateEdit(check: ToolCallCheck): ToolCallDecision {
 	}
 	for (const target of targets) {
 		const resolved = resolveToCwd(target, cwd);
-		if (!policy.isAllowed(resolved, "write")) return deny(policy, resolved, "write");
+		if (!permits(check, resolved, "write")) return deny(cwd, resolved, "write");
 	}
 	return ALLOW;
 }
@@ -750,13 +611,13 @@ function evaluateEdit(check: ToolCallCheck): ToolCallDecision {
  * and an exfiltration. Registered dynamically (not in BUILTIN_TOOLS).
  */
 function evaluateGenerateImage(check: ToolCallCheck): ToolCallDecision {
-	const { input, cwd, policy } = check;
+	const { input, cwd } = check;
 	if (Array.isArray(input.input)) {
 		for (const entry of input.input) {
 			const value = entry && typeof entry === "object" ? (entry as Record<string, unknown>).path : undefined;
 			if (typeof value === "string" && value.length > 0) {
 				const resolved = resolveToCwd(value, cwd);
-				if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
+				if (!permits(check, resolved, "read")) return deny(cwd, resolved, "read");
 			}
 		}
 	}
@@ -785,39 +646,38 @@ function navLocalPath(raw: string): string | undefined {
  * another session's file contents to the model, so local navigation is a read escape.
  */
 function evaluatePuppeteer(check: ToolCallCheck): ToolCallDecision {
-	const { input, cwd, policy } = check;
+	const { input, cwd } = check;
 	const screenshot = firstString(input, ["path"]);
 	if (screenshot) {
 		const resolved = resolveToCwd(screenshot, cwd);
-		if (!policy.isAllowed(resolved, "write")) return deny(policy, resolved, "write");
+		if (!permits(check, resolved, "write")) return deny(cwd, resolved, "write");
 	}
 	if (typeof input.url === "string") {
 		const local = navLocalPath(input.url);
 		if (local) {
 			const resolved = resolveToCwd(local, cwd);
-			if (!policy.isAllowed(resolved, "read")) return deny(policy, resolved, "read");
+			if (!permits(check, resolved, "read")) return deny(cwd, resolved, "read");
 		}
 	}
 	return ALLOW;
 }
 
 function evaluateSearchTool(check: ToolCallCheck, spec: SearchSpec): ToolCallDecision {
-	const { input, cwd, policy } = check;
+	const { input, cwd } = check;
 	const raw = typeof input[spec.key] === "string" ? (input[spec.key] as string) : "";
 	for (const basePath of searchBases(raw, spec.base)) {
 		const resolved = resolveToCwd(basePath, cwd);
-		if (!policy.isAllowed(resolved, spec.access)) return deny(policy, resolved, spec.access);
+		if (!permits(check, resolved, spec.access)) return deny(cwd, resolved, spec.access);
 	}
 	return ALLOW;
 }
 
 /**
- * Decide whether a tool call is allowed under the policy. Tools with no recognized
- * path argument are always allowed.
+ * Decide whether a tool call is allowed under the session's fence. Tools with no recognized path
+ * argument are always allowed.
  */
 export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
-	const { toolName, input, cwd, policy } = check;
-	if (!policy.enabled) return ALLOW;
+	const { toolName, input, cwd } = check;
 
 	const codeFields = CODE_FIELDS[toolName];
 	if (codeFields) return evaluateCodeTool(check, codeFields, toolName === "bash");
@@ -836,9 +696,8 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 		const raw = firstString(input, spec.keys);
 		if (!raw) continue; // optional path → defaults to cwd, which is allowed
 		const resolved = resolveToCwd(raw, cwd);
-		if (policy.isAllowed(resolved, spec.access)) continue;
-		if (spec.systemExempt && isSystemPath(resolved)) continue;
-		return deny(policy, resolved, spec.access);
+		if (permits(check, resolved, spec.access)) continue;
+		return deny(cwd, resolved, spec.access);
 	}
 	return ALLOW;
 }

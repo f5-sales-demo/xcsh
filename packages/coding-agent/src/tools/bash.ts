@@ -16,8 +16,8 @@ import { resolveLocalRoot } from "../internal-urls/local-protocol";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
-import { buildContainmentFence, containmentStatus } from "../sandbox/containment";
-import { resolveSessionPolicy } from "../sandbox/session-policy";
+import { type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
+import { resolveSessionFence } from "../sandbox/session-fence";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import { renderStatusLine } from "../tui";
@@ -131,6 +131,18 @@ interface ManagedBashJobHandle {
 
 function normalizeResultOutput(result: BashResult | BashInteractiveResult): string {
 	return result.output || "";
+}
+
+/**
+ * The fence as the `ReadBoundary` the internal-URL expander wants.
+ *
+ * A two-method shim rather than a shared interface: the expander only ever asks about reads, and giving
+ * it the whole fence would invite it to grow a second opinion about writes. `undefined` in means
+ * isolation is off, which the expander already treats as "do not check".
+ */
+export function readBoundaryFor(fence: ContainmentFence | undefined, cwd: string) {
+	if (!fence) return undefined;
+	return { cwd, isAllowed: (candidate: string) => fenceVerdict(fence, candidate, "read") === "allow" };
 }
 
 function isInteractiveResult(result: BashResult | BashInteractiveResult): result is BashInteractiveResult {
@@ -504,9 +516,11 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	 * An *operator* moving the project — startup, or the slash command that calls `setProjectDir` — does
 	 * re-anchor it. That asymmetry is the point: the operator may move the boundary, the model may not.
 	 *
-	 * Note the read/write tools are unaffected by this class of bug: `SandboxPolicy` is deny-by-default,
-	 * so relocating its root grants nothing new. Only an allow-by-default fence loses a deny when it
-	 * moves, which is why this needed fixing here and not there.
+	 * The anchor matters more since #2624, not less: the read/write tools now consult this same
+	 * allow-by-default fence, which loses a deny when its root moves. The deny-by-default policy they
+	 * used to have would have granted nothing new on a relocation and so masked the problem there.
+	 * `sandbox-guard` still resolves from `ctx.cwd` rather than the anchor, because a tool call names its
+	 * own paths and has no persistent shell to relocate.
 	 */
 	#containmentRoot(): string {
 		const project = getProjectDir();
@@ -532,20 +546,12 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	 * `xcsh shell`. Only the model's tool call is fenced (#2554).
 	 */
 	#containmentFence() {
-		const root = this.#containmentRoot();
-		const policy = resolveSessionPolicy(root, this.session.settings);
-		if (!policy) return undefined; // --no-sandbox / sandbox.enabled = false
 		const artifactsDir = this.session.getArtifactsDir?.();
-		// The three grants stay distinct. Merging allowRead and allowWrite into one read+write list
-		// made a folder shared for reading writable, undoing the split built for #2516.
-		return buildContainmentFence({
-			workspace: root,
+		// One resolver, shared with `sandbox-guard` and the internal-URL check, so the pre-check and the
+		// kernel cannot be looking at different boundaries (#2624). It reads the allow-lists and picks
+		// `narrowsWithinGrant` from the active backend itself.
+		return resolveSessionFence(this.#containmentRoot(), this.session.settings, {
 			extraRoots: artifactsDir ? [artifactsDir] : [],
-			readOnlyRoots: (this.session.settings.get("sandbox.allowRead") as string[] | undefined) ?? [],
-			writeOnlyRoots: (this.session.settings.get("sandbox.allowWrite") as string[] | undefined) ?? [],
-			// Only seatbelt can hold a file read-only inside a writable directory; Landlock's rules are
-			// recursive, so asking for it there would strip write from the parent and break the CLIs.
-			narrowsWithinGrant: containmentStatus(true).backend === "seatbelt",
 		});
 	}
 
@@ -603,8 +609,8 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			localOptions,
 			// Refuse a URL resolving outside the session's boundary rather than handing bash a path the
 			// session's own `read` tool would deny (#2468). The roots below are the session's own, which
-			// the default policy denies wholesale because they sit under the sessions directory.
-			readBoundary: resolveSessionPolicy(this.session.cwd, this.session.settings),
+			// the boundary denies wholesale because they sit under the sessions directory.
+			readBoundary: readBoundaryFor(resolveSessionFence(this.session.cwd, this.session.settings), this.session.cwd),
 			sessionOwnedRoots: () => {
 				const roots = [resolveLocalRoot(localOptions)];
 				const artifactsDir = this.session.getArtifactsDir?.();

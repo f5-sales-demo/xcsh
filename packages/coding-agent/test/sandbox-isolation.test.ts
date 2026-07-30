@@ -8,7 +8,7 @@ import { discoverAndLoadExtensions } from "@f5-sales-demo/xcsh/extensibility/ext
 import { getMemoryRoot } from "@f5-sales-demo/xcsh/memories";
 import { buildContainmentFence, containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
 import { evaluateToolCall } from "@f5-sales-demo/xcsh/sandbox/enforce";
-import { buildDefaultSandboxPolicy } from "@f5-sales-demo/xcsh/sandbox/policy";
+import { resolveSessionFence } from "@f5-sales-demo/xcsh/sandbox/session-fence";
 
 let tmp: TempDir;
 let parent: string;
@@ -28,9 +28,10 @@ beforeAll(() => {
 
 afterAll(() => tmp.removeSync());
 
+/** Whether the `read` tool would be refused — the same fence the shell is confined by (#2624). */
 function reads(cwd: string, filePath: string): boolean {
-	const policy = buildDefaultSandboxPolicy({ cwd });
-	return evaluateToolCall({ toolName: "read", input: { file_path: filePath }, cwd, policy }).block;
+	const fence = resolveSessionFence(cwd, { get: () => undefined })!;
+	return evaluateToolCall({ toolName: "read", input: { file_path: filePath }, cwd, fence }).block;
 }
 
 describe("two-customer isolation", () => {
@@ -44,19 +45,19 @@ describe("two-customer isolation", () => {
 		expect(reads(parent, path.join(custB, "secret.env"))).toBe(false);
 	});
 
-	// The scan keeps deciding for bash even where the OS fence is enforcing, because the fence is
-	// allow-by-default: it denies home and the workspace's ancestors, so a customer tree under an
-	// unrelated root matches nothing and the fence permits it. That is exactly what this layer covers,
-	// and #2582 narrowed only its false refusals rather than standing it down.
-	it("blocks Bash reads of custB from custA, fence or no fence", () => {
-		const policy = buildDefaultSandboxPolicy({ cwd: custA });
-		const scan = (command: string, shellOsConfined: boolean) =>
-			evaluateToolCall({ toolName: "bash", input: { command }, cwd: custA, policy, shellOsConfined });
+	// The pre-check and the kernel now consult one fence (#2624), so this asserts they agree rather than
+	// that one is stricter. The `shellOsConfined` flag it used to pass is gone with the second policy —
+	// there is no longer a version of this question whose answer depends on which backend is running.
+	it("blocks Bash reads of custB from custA", () => {
+		const fence = resolveSessionFence(custA, { get: () => undefined })!;
+		const scan = (command: string) => evaluateToolCall({ toolName: "bash", input: { command }, cwd: custA, fence });
 
 		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
-			expect(scan(command, false).block).toBe(true);
-			expect(scan(command, true).block).toBe(true);
+			expect(scan(command).block).toBe(true);
 		}
+		// …and the same fence permits the session's own tree, or the assertion above would hold for a
+		// fence that refused everything.
+		expect(scan("cat notes.md").block).toBe(false);
 	});
 });
 
