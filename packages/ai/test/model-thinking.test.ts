@@ -4,6 +4,7 @@ import {
 	clampThinkingLevelForModel,
 	Effort,
 	enrichModelThinking,
+	getSupportedEfforts,
 	linkSparkPromotionTargets,
 	mapEffortToAnthropicAdaptiveEffort,
 	mapEffortToGoogleThinkingLevel,
@@ -105,16 +106,54 @@ describe("model thinking metadata", () => {
 		expect(opus46.thinking).toEqual({
 			mode: "anthropic-adaptive",
 			minLevel: Effort.Minimal,
-			maxLevel: Effort.Max,
+			// `high`, not `max` — opus 4.6 on the Messages API rejects `xhigh`, and its
+			// fallback chain (opus-4-5) rejects `max` too, so the ceiling is `high`.
+			// Measured 2026-07-30; this previously claimed `max` on an unprobed
+			// assumption and produced 400s on resumed sessions (#2630).
+			maxLevel: Effort.High,
 		});
 		expect(sonnet46.thinking).toEqual({
 			mode: "anthropic-adaptive",
 			minLevel: Effort.Minimal,
 			maxLevel: Effort.High,
 		});
-		expect(mapEffortToAnthropicAdaptiveEffort(opus46, Effort.XHigh)).toBe("xhigh");
-		expect(mapEffortToAnthropicAdaptiveEffort(opus46, Effort.Max)).toBe("max");
+		// opus 4.6 now refuses xhigh/max for the same reason sonnet 4.6 always has:
+		// the Messages API rejects `xhigh` on both, and opus 4.6's fallback chain
+		// rejects `max`. Asserting the old `"xhigh"`/`"max"` here is what let #2630
+		// ship — the mapping was pinned to an unprobed assumption.
+		expect(() => mapEffortToAnthropicAdaptiveEffort(opus46, Effort.XHigh)).toThrow(/not supported/);
+		expect(() => mapEffortToAnthropicAdaptiveEffort(opus46, Effort.Max)).toThrow(/not supported/);
 		expect(() => mapEffortToAnthropicAdaptiveEffort(sonnet46, Effort.XHigh)).toThrow(/not supported/);
+		// The user-facing path clamps rather than throwing; see effort-ladder.test.ts.
+		expect(mapEffortToAnthropicAdaptiveEffort(opus46, Effort.High)).toBe("high");
+	});
+});
+
+/**
+ * #2630 follow-up. The first fix keyed the extended enum on
+ * `semverGte(version, "5.0")`, which grants `xhigh`/`max` to every FUTURE Claude
+ * version the moment it appears in the catalog — the same open-ended grant that
+ * caused #2630 in the first place (#2346 keyed on `kind === "opus"`).
+ *
+ * Capability must be opt-in per measured version, so an unprobed model fails
+ * closed to the conservative range instead of inheriting an unverified ceiling.
+ */
+describe("unprobed Claude versions fail closed — #2630", () => {
+	for (const id of ["claude-opus-6", "claude-sonnet-6", "claude-opus-5.1"]) {
+		it(`${id} does not inherit xhigh or max before it is probed`, () => {
+			const model = createModel({ id, api: "anthropic-messages", provider: "anthropic" });
+			const levels = getSupportedEfforts(model);
+			expect(levels).not.toContain(Effort.XHigh);
+			expect(levels).not.toContain(Effort.Max);
+		});
+	}
+
+	it("still grants the measured 5.0 models their full range", () => {
+		for (const id of ["claude-opus-5", "claude-sonnet-5"]) {
+			const levels = getSupportedEfforts(createModel({ id, api: "anthropic-messages", provider: "anthropic" }));
+			expect(levels).toContain(Effort.XHigh);
+			expect(levels).toContain(Effort.Max);
+		}
 	});
 });
 
