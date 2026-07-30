@@ -27,8 +27,10 @@ Full documentation is available at **[https://f5-sales-demo.github.io/xcsh/](htt
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for workflow rules,
-branch naming, and CI requirements.
+See [DEVELOPING.md](DEVELOPING.md) for the engineering guide — prerequisites,
+project structure, setup, the TDD workflow, linting, testing, and release
+automation — and [CONTRIBUTING.md](CONTRIBUTING.md) for workflow rules, branch
+naming, and CI requirements.
 
 ## License
 
