@@ -30,10 +30,15 @@ if (import.meta.main) {
 	// Measured on a real machine: a sibling checkout left at contractVersion 1.8.0 overwrote the committed
 	// 1.12.0 and deleted the whole `handshake` feature block, on every `bun run check`, `bun test` and
 	// `bun run build`. `release.ts` runs `git commit -a`, so the downgrade was one release away from shipping.
-	const siblingPath =
-		process.env.XCSH_EXTENSION_CAPABILITIES ??
-		path.resolve(here, "../../../../xcsh-chrome-extension/capabilities.json");
-	if (fs.existsSync(siblingPath) && path.resolve(siblingPath) !== vendoredPath) {
+	// The guard applies to the path found by *proximity*, which is the accidental one. An explicitly set
+	// XCSH_EXTENSION_CAPABILITIES is a deliberate statement about which manifest to compile in — including a
+	// major-version co-build that removes tools on purpose — so it is honoured and merely announced.
+	const explicitPath = process.env.XCSH_EXTENSION_CAPABILITIES;
+	const siblingPath = explicitPath ?? path.resolve(here, "../../../../xcsh-chrome-extension/capabilities.json");
+	if (explicitPath !== undefined && fs.existsSync(explicitPath) && path.resolve(explicitPath) !== vendoredPath) {
+		console.log(`Adopting ${explicitPath} (XCSH_EXTENSION_CAPABILITIES set explicitly).`);
+		fs.copyFileSync(explicitPath, vendoredPath);
+	} else if (explicitPath === undefined && fs.existsSync(siblingPath) && path.resolve(siblingPath) !== vendoredPath) {
 		adoptSiblingIfNotARegression(siblingPath, vendoredPath);
 	}
 
@@ -104,7 +109,8 @@ interface CapabilityManifest {
 export function regressionReason(sibling: CapabilityManifest, vendored: CapabilityManifest): string | undefined {
 	const siblingVersion = sibling.contractVersion ?? "";
 	const vendoredVersion = vendored.contractVersion ?? "";
-	if (compareContractVersions(siblingVersion, vendoredVersion) < 0) {
+	const versionOrder = compareContractVersions(siblingVersion, vendoredVersion);
+	if (versionOrder < 0) {
 		return `contractVersion would go backwards, ${vendoredVersion} -> ${siblingVersion}`;
 	}
 
@@ -117,7 +123,36 @@ export function regressionReason(sibling: CapabilityManifest, vendored: Capabili
 	const lostFeatures = missingKeys(Object.keys(vendored.features ?? {}), Object.keys(sibling.features ?? {}));
 	if (lostFeatures.length > 0) return `features would be lost: ${lostFeatures.join(", ")}`;
 
+	// Equal versions with different content mean one side changed without bumping, so the version says
+	// nothing about which is fresher. That is not hypothetical: a tool was once added while contractVersion
+	// stayed put, which is exactly how a stale same-version sibling could regress nested tool params or
+	// feature internals past a check that only compares names. Refuse and let the operator decide, via
+	// XCSH_EXTENSION_CAPABILITIES if they mean it.
+	if (versionOrder === 0 && !sameContent(sibling, vendored)) {
+		return `contractVersion is unchanged at ${vendoredVersion} but the content differs, so neither copy is provably fresher`;
+	}
+
 	return undefined;
+}
+
+/**
+ * Whole-manifest equality, by canonical JSON.
+ *
+ * Deliberately not a deep field-by-field comparison: the question is only "are these the same document",
+ * and any difference at an equal version is enough to refuse.
+ */
+function sameContent(left: CapabilityManifest, right: CapabilityManifest): boolean {
+	return canonicalJson(left) === canonicalJson(right);
+}
+
+/** JSON with object keys sorted, so key order alone does not read as a difference. */
+function canonicalJson(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+	if (value !== null && typeof value === "object") {
+		const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+		return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(",")}}`;
+	}
+	return JSON.stringify(value) ?? "null";
 }
 
 function missingKeys(expected: readonly string[], actual: readonly string[]): string[] {

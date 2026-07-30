@@ -56,6 +56,18 @@ describe("regressionReason", () => {
 		expect(regressionReason(vendored, vendored)).toBeUndefined();
 	});
 
+	// A tool was once added without touching contractVersion, so an equal version proves nothing about
+	// which copy is fresher. Refuse rather than guess; XCSH_EXTENSION_CAPABILITIES is the deliberate path.
+	it("refuses an equal version whose content differs", () => {
+		const sibling = { ...vendored, tools: [...vendored.tools, { name: "set_host_tools_error" }] };
+		expect(regressionReason(sibling, vendored)).toContain("content differs");
+	});
+
+	it("is not fooled by key order alone", () => {
+		const reordered = { tools: vendored.tools, features: vendored.features, contractVersion: "1.12.0" };
+		expect(regressionReason(reordered, vendored)).toBeUndefined();
+	});
+
 	// A manifest with no contractVersion compares as 0.0.0, so it can never overwrite a real one.
 	it("refuses a manifest missing its contract version", () => {
 		expect(regressionReason({ tools: vendored.tools, features: vendored.features }, vendored)).toContain("backwards");
