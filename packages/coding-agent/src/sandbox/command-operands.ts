@@ -278,3 +278,195 @@ export function provenExemptWords(cmd: ShellSimpleCommand): ShellWord[] {
 
 	return exempt;
 }
+
+/** cp's flag-only options; shared so the mv/install entries stay readable. */
+const COPY_BOOLEAN_OPTIONS = [
+	"-a",
+	"--archive",
+	"-b",
+	"--backup",
+	"-d",
+	"-f",
+	"--force",
+	"-i",
+	"--interactive",
+	"-H",
+	"-l",
+	"--link",
+	"-L",
+	"--dereference",
+	"-n",
+	"--no-clobber",
+	"-P",
+	"--no-dereference",
+	"-p",
+	"-R",
+	"-r",
+	"--recursive",
+	"-s",
+	"--symbolic-link",
+	"-u",
+	"--update",
+	"-v",
+	"--verbose",
+	"-x",
+	"--one-file-system",
+] as const satisfies readonly string[];
+
+/**
+ * Which operands a command *writes*, so the boundary check picks the right direction.
+ *
+ * The read/write split in `enforce.ts` is derived from shell redirections. A write the invoked program
+ * performs on one of its own operands — `tee FILE`, `dd of=FILE`, `cp SRC DST`, `sort -o FILE` — had no
+ * such signal and defaulted to a read check. Under an `allowRead`-only grant that check passes, so the
+ * write lands on a path shared for reading only; confirmed at the decision layer, where all four returned
+ * `block: false` (GHSA-q4hg). The same misclassification refused those commands against a *write-only*
+ * grant, which is the mirror-image false refusal.
+ *
+ * Adding to this table is monotonic. Marking an operand as a write that is really a read costs a false
+ * refusal, which is the direction the surrounding code already errs in; missing one leaves today's
+ * behaviour untouched. So it is safe to extend, and deliberately incomplete rather than guessed at:
+ * `tar -f` is absent because whether it reads or writes depends on the mode letters, and getting that
+ * wrong in the permissive direction is the bug being fixed.
+ *
+ * Same suppression rule as `provenExemptWords`: an option this model cannot parse exactly shifts operand
+ * positions, so anything unrecognized abandons the command rather than guessing at a slot.
+ */
+interface WriteOperandSpec {
+	/** Options taking a separate value, so it is not mistaken for a positional operand. */
+	valueOptions: readonly string[];
+	/** Options that are flags only. */
+	booleanOptions: readonly string[];
+	/** `--output=F` style options whose value is the written path. */
+	outputOptions?: readonly string[];
+	/** `of=F` style prefixes whose value is the written path. */
+	outputPrefixes?: readonly string[];
+	/** Every positional operand is written (`tee a b c`). */
+	writesAllPositional?: boolean;
+	/** The final positional operand is written (`cp src dst`). */
+	writesLastPositional?: boolean;
+	/** With this option present the destination moves into it, so positional slots stop being writes. */
+	destinationOption?: string;
+}
+
+const WRITE_OPERAND_SPECS: Record<string, WriteOperandSpec> = {
+	// tee writes every file operand; it reads stdin, never the files.
+	tee: {
+		valueOptions: [],
+		booleanOptions: ["-a", "--append", "-i", "--ignore-interrupts", "-p"],
+		writesAllPositional: true,
+	},
+	// `of=` is the output file. `if=` stays a read, which is what the floor already gives it.
+	dd: { valueOptions: [], booleanOptions: [], outputPrefixes: ["of="] },
+	sort: {
+		valueOptions: ["-k", "-t", "-S", "-T", "--key", "--field-separator", "--buffer-size"],
+		booleanOptions: ["-b", "-d", "-f", "-g", "-i", "-M", "-h", "-n", "-R", "-r", "-u", "-V", "-z", "-c", "-s"],
+		outputOptions: ["-o", "--output"],
+	},
+	cp: {
+		valueOptions: ["-S", "--suffix", "-t", "--target-directory"],
+		booleanOptions: COPY_BOOLEAN_OPTIONS,
+		writesLastPositional: true,
+		destinationOption: "-t",
+	},
+	mv: {
+		valueOptions: ["-S", "--suffix", "-t", "--target-directory"],
+		booleanOptions: ["-f", "--force", "-i", "--interactive", "-n", "--no-clobber", "-v", "--verbose", "-u"],
+		writesLastPositional: true,
+		destinationOption: "-t",
+	},
+	install: {
+		valueOptions: ["-m", "--mode", "-o", "--owner", "-g", "--group", "-t", "--target-directory", "-S", "--suffix"],
+		booleanOptions: ["-b", "-c", "-C", "-d", "-D", "-p", "-s", "-v", "--verbose", "--backup"],
+		writesLastPositional: true,
+		destinationOption: "-t",
+	},
+	truncate: {
+		valueOptions: ["-s", "--size", "-r", "--reference"],
+		booleanOptions: ["-c", "--no-create", "-o", "--io-blocks"],
+		writesAllPositional: true,
+	},
+};
+
+/**
+ * Words of `cmd` the invoked command writes to.
+ *
+ * Empty whenever anything is uncertain — an unknown command, an unrecognized option, a non-literal word.
+ * A word returned here is checked against the write boundary instead of the read one.
+ */
+export function writtenOperandWords(cmd: ShellSimpleCommand): ShellWord[] {
+	if (cmd.name === undefined) return [];
+	const spec = WRITE_OPERAND_SPECS[cmd.name];
+	if (spec === undefined) return [];
+
+	const operandWords = cmd.words.slice(cmd.operandStart).filter(word => word.redirect === undefined);
+
+	// An unparsable option shifts every positional slot, so abandon rather than mark the wrong word.
+	for (const word of operandWords) {
+		const option = optionName(word.text);
+		if (option === undefined) continue;
+		if (isOutputOption(spec, option) || spec.valueOptions.includes(option)) continue;
+		if (!spec.booleanOptions.includes(option)) return [];
+	}
+
+	const written: ShellWord[] = [];
+	const positional: ShellWord[] = [];
+	let destinationMoved = false;
+
+	for (let index = 0; index < operandWords.length; index += 1) {
+		const word = operandWords[index];
+		const option = optionName(word.text);
+
+		if (option !== undefined) {
+			const attached = word.text.includes("=");
+			if (isOutputOption(spec, option)) {
+				// `--output=F` carries its value; `-o F` takes the next word.
+				const target = attached ? valueAfterEquals(word) : operandWords[index + 1];
+				if (!attached) index += 1;
+				if (target?.literal) written.push(target);
+				continue;
+			}
+			if (spec.valueOptions.includes(option)) {
+				if (option === spec.destinationOption) destinationMoved = true;
+				if (!attached) {
+					const target = operandWords[index + 1];
+					index += 1;
+					if (target?.literal) written.push(target);
+				} else if (word.literal) {
+					written.push(word);
+				}
+			}
+			continue;
+		}
+
+		// `of=PATH` and friends are positional in shape but name their own direction.
+		const prefix = spec.outputPrefixes?.find(candidate => word.text.startsWith(candidate));
+		if (prefix !== undefined) {
+			if (word.literal) written.push(word);
+			continue;
+		}
+
+		positional.push(word);
+	}
+
+	if (spec.writesAllPositional) {
+		written.push(...positional.filter(word => word.literal));
+	} else if (spec.writesLastPositional && !destinationMoved && positional.length >= 2) {
+		// Only with a source present. A lone operand is `cp x` — an error, not a write to model.
+		const destination = positional[positional.length - 1];
+		if (destination.literal) written.push(destination);
+	}
+
+	return written;
+}
+
+function isOutputOption(spec: WriteOperandSpec, option: string): boolean {
+	return spec.outputOptions?.includes(option) ?? false;
+}
+
+/** The value half of an `--option=value` word, as a span the caller can mark. */
+function valueAfterEquals(word: ShellWord): ShellWord | undefined {
+	const equals = word.text.indexOf("=");
+	if (equals === -1) return undefined;
+	return { ...word, text: word.text.slice(equals + 1) };
+}

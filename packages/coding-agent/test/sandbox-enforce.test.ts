@@ -794,3 +794,54 @@ describe("evaluateToolCall — the bash cwd parameter agrees with cd (#2582)", (
 		expect(decision.block).toBe(true);
 	});
 });
+
+/**
+ * GHSA-q4hg — a write reached through a command *operand* was checked against the READ boundary.
+ *
+ * The read/write split applies to shell redirections. `tee FILE`, `dd of=FILE`, `cp SRC DST` and
+ * `sort -o FILE` are writes the invoked program performs, and every one of them was classified as a read.
+ * Under an `allowRead`-only grant that check passes, so the write lands on a path the operator shared for
+ * reading only. Confirmed at the decision layer before this fix: all four returned `block: false`.
+ *
+ * It cuts the other way too. A write-only `allowWrite` grant refused `tee` into it, because a read check
+ * against a write-only root fails — a false refusal produced by the same misclassification.
+ *
+ * On a host with an OS backend the fence settles this below the text regardless. On Windows and Linux
+ * without Landlock this scan is the only boundary, which is where the bypass was live.
+ */
+describe("evaluateToolCall — operand writes are checked against the write boundary (GHSA-q4hg)", () => {
+	// `/shared/ctx` is read-allowed and NOT write-allowed; `/drop` is write-allowed and NOT read-allowed.
+	const bash = (command: string) => check("bash", { command });
+
+	it("refuses an operand write into a read-only root", () => {
+		for (const command of [
+			"echo x | tee /shared/ctx/planted.txt",
+			"echo x | tee -a /shared/ctx/planted.txt",
+			"cp notes.md /shared/ctx/planted.txt",
+			"dd of=/shared/ctx/planted.txt if=notes.md",
+			"sort -o /shared/ctx/planted.txt notes.md",
+		]) {
+			expect(bash(command).block).toBe(true);
+			expect(bash(command).reason).toContain("write boundary");
+		}
+	});
+
+	it("permits the same operand write into a write-only root", () => {
+		for (const command of ["echo x | tee /drop/out.log", "cp notes.md /drop/out.log", "dd of=/drop/out.log"]) {
+			expect(bash(command).block).toBe(false);
+		}
+	});
+
+	it("still reads the source operand as a read", () => {
+		// `cp` reads its source: a source in a write-only root must stay refused.
+		expect(bash("cp /drop/out.log notes.md").block).toBe(true);
+		// …and a source in a read-only root is fine.
+		expect(bash("cp /shared/ctx/in.txt notes.md").block).toBe(false);
+	});
+
+	it("leaves in-tree operand writes alone", () => {
+		for (const command of ["echo x | tee out.log", "cp a.txt b.txt", "sort -o sorted.txt in.txt"]) {
+			expect(bash(command).block).toBe(false);
+		}
+	});
+});
