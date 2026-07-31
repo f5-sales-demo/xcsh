@@ -432,6 +432,28 @@ describe("CI invalidates stale release PRs before the full test matrix", () => {
 	});
 });
 
+describe("CI installs Zig without a deprecated JavaScript action", () => {
+	it("uses a checksum-pinned composite installer in every Zig-dependent job", async () => {
+		const root = path.join(import.meta.dir, "../../..");
+		const workflow = await fs.readFile(path.join(root, ".github/workflows/ci.yml"), "utf8");
+		const installer = await fs.readFile(path.join(root, ".github/actions/setup-zig/action.yml"), "utf8");
+
+		expect(workflow).not.toContain("mlugg/setup-zig");
+		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(3);
+		expect(installer).toContain("using: composite");
+		expect(installer).toContain('ZIG_VERSION: "0.15.2"');
+		expect(installer).toMatch(/zig-x86_64-linux-\$\{ZIG_VERSION\}\.tar\.xz/);
+		expect(installer).toContain("02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239");
+		expect(installer).toContain("sha256sum --check");
+		expect(installer.match(/uses: actions\/cache@v5/g)).toHaveLength(2);
+		expect(installer).toContain("setup-zig-tarball-zig-x86_64-linux-0.15.2.tar.xz");
+		expect(installer).toContain("ZIG_GLOBAL_CACHE_DIR");
+		expect(installer).toContain("ZIG_LOCAL_CACHE_DIR");
+		expect(installer).toContain('>> "$GITHUB_PATH"');
+		expect(installer).toContain('"$ZIG_DIR/zig" version');
+	});
+});
+
 describe("vim ex-command onUpdate throttle bypass (commit 8f5b630ac)", () => {
 	it("vim.ts onKbdStep forces update when engine.inputMode is command or search mode", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/tools/vim.ts"), "utf8");
