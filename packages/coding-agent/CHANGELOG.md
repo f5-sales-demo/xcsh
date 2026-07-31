@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Removed Biome findings from generated Site CLI transport descriptions ([#2715](https://github.com/f5-sales-demo/xcsh/issues/2715))
+
 ## [19.105.1] - 2026-07-31
 
 ### Fixed
