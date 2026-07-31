@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed GPT-5.6 Sol inference through LiteLLM when deterministic print mode requests an unsupported temperature ([#2698](https://github.com/f5-sales-demo/xcsh/issues/2698))
+
 ## [19.104.0] - 2026-07-31
 
 ### Added
