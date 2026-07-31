@@ -13,7 +13,13 @@ const outputPath = path.join(repoRoot, "src/internal-urls/console-catalog.genera
  * site so a re-capture cannot reintroduce it.
  */
 function sanitizeTenantHosts(text: string): string {
-	return text.replace(/\b[a-z0-9][a-z0-9-]*\.staging\.volterra\.us\b/gi, "example.staging.volterra.us");
+	return (
+		text
+			.replace(/\b[a-z0-9][a-z0-9-]*\.staging\.volterra\.us\b/gi, "example.staging.volterra.us")
+			// Catalog prose names the tenant too ("on the live <name> staging tenant"). Matched by shape
+			// rather than by the person's name, so this file never has to carry the identifier it removes.
+			.replace(/\b(?!example\b)[A-Za-z][\w.-]*(?=\s+staging\s+tenant\b)/g, "example")
+	);
 }
 
 function resolveCatalogRoot(): string | null {
