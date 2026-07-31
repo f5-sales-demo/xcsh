@@ -35,6 +35,25 @@ function createModel<TApi extends Api>(overrides: {
 }
 
 describe("model thinking metadata", () => {
+	it("bundles GPT-5.6 Sol for LiteLLM with verified high reasoning limits", () => {
+		const model = getBundledModel("litellm", "gpt-5.6-sol");
+
+		expect(model).toMatchObject({
+			id: "gpt-5.6-sol",
+			api: "openai-completions",
+			provider: "litellm",
+			reasoning: true,
+			contextWindow: 1050000,
+			maxTokens: 128000,
+			thinking: {
+				mode: "effort",
+				minLevel: Effort.High,
+				maxLevel: Effort.High,
+			},
+		});
+		expect(getSupportedEfforts(model)).toEqual([Effort.High]);
+	});
+
 	it("stores supported efforts for Codex mini in model metadata", () => {
 		const model = createModel({
 			id: "gpt-5.1-codex-mini",

@@ -15,7 +15,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { $env, logger, readProviderFromModelsYml } from "@f5-sales-demo/pi-utils";
+import { $env, isEnoent, logger, readProviderFromModelsYml } from "@f5-sales-demo/pi-utils";
 import { DEFAULT_MODEL_ROLE } from "./settings-schema";
 
 /** Current config schema version. Bump when the generated format changes. */
@@ -79,6 +79,17 @@ export function generateModelsYml(baseUrl: string, options?: GenerateModelsYmlOp
 
 	lines.push("");
 	return lines.join("\n");
+}
+
+/** Persist models.yml with owner-only permissions because it may contain a literal proxy credential. */
+export async function writeLiteLLMModelsYml(filePath: string, content: string): Promise<void> {
+	await fs.promises.mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
+	try {
+		await fs.promises.chmod(filePath, 0o600);
+	} catch (error) {
+		if (!isEnoent(error)) throw error;
+	}
+	await fs.promises.writeFile(filePath, content, { encoding: "utf-8", mode: 0o600 });
 }
 
 export interface LiteLLMConfig {

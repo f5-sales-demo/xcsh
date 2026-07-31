@@ -13,6 +13,7 @@ import {
 	healConfigYmlModelRoles,
 	probeLiteLLMConnection,
 	readLiteLLMConfig,
+	writeLiteLLMModelsYml,
 } from "../../config/auto-config";
 import { getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
@@ -46,6 +47,7 @@ import { AssistantMessageComponent } from "../components/assistant-message";
 import { ExtensionDashboard } from "../components/extensions";
 import { GutterBlock } from "../components/gutter-block";
 import { HistorySearchComponent } from "../components/history-search";
+import { LiteLLMModelSelectorComponent } from "../components/litellm-model-selector";
 import { ModelSelectorComponent } from "../components/model-selector";
 import { OAuthSelectorComponent } from "../components/oauth-selector";
 import { PluginSelectorComponent } from "../components/plugin-selector";
@@ -58,7 +60,7 @@ import { ToolExecutionComponent } from "../components/tool-execution";
 import { TreeSelectorComponent } from "../components/tree-selector";
 import { UserMessageSelectorComponent } from "../components/user-message-selector";
 import type { SessionObserverRegistry } from "../session-observer-registry";
-import { applyModelAfterLogin } from "./login-model";
+import { applyModelAfterLogin, getAvailableLiteLLMLoginModelChoices, LITELLM_LOGIN_MODEL_CHOICES } from "./login-model";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
@@ -470,6 +472,69 @@ export class SelectorController {
 			);
 			return { component: selector, focus: selector };
 		});
+	}
+
+	async #showLiteLLMLoginModelSelector(availableModelIds: readonly string[]): Promise<boolean> {
+		const choices = getAvailableLiteLLMLoginModelChoices(availableModelIds);
+		const available = new Set(choices.map(choice => choice.modelId));
+		const unavailable = LITELLM_LOGIN_MODEL_CHOICES.filter(choice => !available.has(choice.modelId));
+
+		if (unavailable.length > 0) {
+			this.ctx.chatContainer.addChild(
+				new Text(
+					theme.fg(
+						"warning",
+						`Unavailable from this proxy: ${unavailable.map(choice => choice.label).join(", ")}`,
+					),
+					1,
+					0,
+				),
+			);
+		}
+
+		if (choices.length === 0) {
+			this.ctx.showError("LiteLLM login succeeded, but neither GPT-5.6 Sol nor Claude Opus 5 is available.");
+			return false;
+		}
+
+		const { promise, resolve } = Promise.withResolvers<boolean>();
+		let applying = false;
+		this.showSelector(done => {
+			const selector = new LiteLLMModelSelectorComponent(
+				choices,
+				choice => {
+					if (applying) return;
+					applying = true;
+					void (async () => {
+						try {
+							const applied = await applyModelAfterLogin(this.ctx.session, choice);
+							if (!applied) {
+								this.ctx.showError(`Model unavailable after refresh: ${choice.provider}/${choice.modelId}`);
+								applying = false;
+								return;
+							}
+							this.ctx.statusLine.invalidate();
+							this.ctx.updateEditorBorderColor();
+							done();
+							resolve(true);
+							this.ctx.ui.requestRender();
+						} catch (error) {
+							this.ctx.showError(error instanceof Error ? error.message : String(error));
+							applying = false;
+						}
+					})();
+				},
+				() => {
+					if (applying) return;
+					done();
+					resolve(false);
+					this.ctx.ui.requestRender();
+				},
+			);
+			return { component: selector, focus: selector.getSelectList() };
+		});
+
+		return promise;
 	}
 
 	async showPluginSelector(mode: "install" | "uninstall" = "install"): Promise<void> {
@@ -927,8 +992,7 @@ export class SelectorController {
 				apiBasePath: probe.apiBasePath,
 				apiKeyLiteral: result.apiKey,
 			});
-			fs.mkdirSync(path.dirname(modelsPath), { recursive: true });
-			fs.writeFileSync(modelsPath, yml);
+			await writeLiteLLMModelsYml(modelsPath, yml);
 
 			// Create/heal config.yml for model defaults
 			const configPath = path.join(path.dirname(modelsPath), "config.yml");
@@ -940,10 +1004,23 @@ export class SelectorController {
 			// Force online refresh so the registry re-probes the new proxy
 			// instead of serving stale data from the in-process SQLite cache.
 			await this.ctx.session.modelRegistry.refresh("online");
+			const modelSelected = await this.#showLiteLLMLoginModelSelector(probe.models);
 
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(
 				new Text(theme.fg("success", `LiteLLM configuration saved to ${modelsPath}`), 1, 0),
+			);
+			this.ctx.chatContainer.addChild(
+				new Text(
+					theme.fg(
+						modelSelected ? "dim" : "warning",
+						modelSelected
+							? "Use /model to switch models without logging in again."
+							: "No model selected. Use /model to choose one without logging in again.",
+					),
+					1,
+					0,
+				),
 			);
 			this.ctx.ui.requestRender();
 		} catch (error: unknown) {
@@ -1143,29 +1220,17 @@ export class SelectorController {
 
 				// Auto-retry once on network errors
 				if (!probe.reachable && probe.error && !/\b(401|403|Unauthorized|Forbidden)\b/i.test(probe.error)) {
-					await new Promise(resolve => setTimeout(resolve, 1000));
+					await Bun.sleep(1000);
 					probe = await probeLiteLLMConnection(baseUrl, apiKey);
 				}
 
 				if (probe.reachable) {
-					// Auto-select best model
-					const preferenceOrder = ["claude-opus", "claude-sonnet", "claude", "gpt-4", "gpt"];
-					let selectedModel: string | undefined;
-					for (const pref of preferenceOrder) {
-						selectedModel = probe.models.find(m => m.toLowerCase().includes(pref));
-						if (selectedModel) break;
-					}
-					if (!selectedModel && probe.models.length > 0) {
-						selectedModel = probe.models[0];
-					}
-
 					// Save config
 					const yml = generateModelsYml(baseUrl, {
 						apiBasePath: probe.apiBasePath,
 						apiKeyLiteral: apiKey,
 					});
-					fs.mkdirSync(path.dirname(modelsPath), { recursive: true, mode: 0o700 });
-					fs.writeFileSync(modelsPath, yml, { mode: 0o600 });
+					await writeLiteLLMModelsYml(modelsPath, yml);
 
 					const configPath = path.join(path.dirname(modelsPath), "config.yml");
 					if (!fs.existsSync(configPath)) {
@@ -1174,10 +1239,13 @@ export class SelectorController {
 					healConfigYmlModelRoles(configPath);
 
 					await this.ctx.session.modelRegistry.refresh("online");
-					// Make the freshly-configured provider usable immediately so the LLM
-					// readiness gate lifts without requiring a manual /model selection.
-					await applyModelAfterLogin(this.ctx.session, selectedModel);
+					const modelSelected = await this.#showLiteLLMLoginModelSelector(probe.models);
 					await this.ctx.refreshWelcomeAfterLogin();
+					this.ctx.showStatus(
+						modelSelected
+							? "LiteLLM configured. Use /model to switch models without logging in again."
+							: "LiteLLM configured. Use /model to select a model.",
+					);
 					probeSuccess = true;
 				} else {
 					const errorMsg = probe.error ?? "connection failed";
