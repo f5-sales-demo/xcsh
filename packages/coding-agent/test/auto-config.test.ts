@@ -15,6 +15,7 @@ import {
 	tryAutoConfigLiteLLM,
 	validateModelsConfig,
 	warnIfConfigDrifted,
+	writeLiteLLMModelsYml,
 } from "../src/config/auto-config";
 
 // Isolated temp directory per test
@@ -136,6 +137,23 @@ describe("hasLiteLLMEnv()", () => {
 // =========================================================================
 
 describe("generateModelsYml()", () => {
+	test.skipIf(process.platform === "win32")(
+		"stores literal proxy credentials with owner-only permissions",
+		async () => {
+			fs.writeFileSync(modelsPath, "permissive", { mode: 0o644 });
+
+			await writeLiteLLMModelsYml(
+				modelsPath,
+				generateModelsYml("https://proxy.example.com", {
+					apiKeyLiteral: "sk-private-test-key",
+				}),
+			);
+
+			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
+			expect(fs.readFileSync(modelsPath, "utf-8")).toContain('apiKey: "sk-private-test-key"');
+		},
+	);
+
 	test("generates valid YAML with anthropic and litellm providers", () => {
 		const yml = generateModelsYml("https://proxy.example.com");
 		expect(yml).toContain("providers:");

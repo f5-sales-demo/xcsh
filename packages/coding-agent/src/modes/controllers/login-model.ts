@@ -1,4 +1,35 @@
+import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Model } from "@f5-sales-demo/pi-ai";
+
+export interface LiteLLMLoginModelChoice {
+	label: string;
+	description: string;
+	provider: "anthropic" | "litellm";
+	modelId: "claude-opus-5" | "gpt-5.6-sol";
+	thinkingLevel: ThinkingLevel;
+}
+
+export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
+	{
+		label: "GPT-5.6 Sol",
+		description: "OpenAI-compatible model with high reasoning",
+		provider: "litellm",
+		modelId: "gpt-5.6-sol",
+		thinkingLevel: ThinkingLevel.High,
+	},
+	{
+		label: "Claude Opus 5",
+		description: "Anthropic Messages model with high reasoning",
+		provider: "anthropic",
+		modelId: "claude-opus-5",
+		thinkingLevel: ThinkingLevel.High,
+	},
+];
+
+export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly string[]): LiteLLMLoginModelChoice[] {
+	const available = new Set(availableModelIds);
+	return LITELLM_LOGIN_MODEL_CHOICES.filter(choice => available.has(choice.modelId));
+}
 
 /**
  * Minimal session surface needed to apply a model after a successful login.
@@ -6,27 +37,30 @@ import type { Model } from "@f5-sales-demo/pi-ai";
  * AgentSession type, and so it stays trivially unit-testable.
  */
 interface ModelApplicableSession {
-	model: Model | undefined;
 	modelRegistry: { getAll(): Model[] };
-	setModel(model: Model, role: "default", options?: { selector?: string }): Promise<void>;
+	setModel(model: Model, role: "default", options: { selector: string; thinkingLevel: ThinkingLevel }): Promise<void>;
+	setThinkingLevel(level: ThinkingLevel): void;
 }
 
 /**
- * After a successful `/login`, make the freshly-configured provider immediately
- * usable by setting it as the session's default model — but only when the session
- * has no model yet, so we never override a model the user already chose.
+ * After a successful `/login`, apply the model the user explicitly selected as
+ * the active and persisted default model, including its thinking level.
  *
- * Returns true when a model was applied. The login wizard auto-selects a model id
- * from the provider's /models list; resolving it here (post-registry-refresh) is
- * what lets the LLM readiness gate lift without a manual `/model` step.
+ * Returns true when the exact provider/model pair resolves after registry refresh.
  */
 export async function applyModelAfterLogin(
 	session: ModelApplicableSession,
-	selectedModelId: string | undefined,
+	choice: LiteLLMLoginModelChoice,
 ): Promise<boolean> {
-	if (session.model || !selectedModelId) return false;
-	const resolved = session.modelRegistry.getAll().find(m => m.id === selectedModelId);
+	const resolved = session.modelRegistry
+		.getAll()
+		.find(model => model.provider === choice.provider && model.id === choice.modelId);
 	if (!resolved) return false;
-	await session.setModel(resolved, "default", { selector: resolved.id });
+	const selector = `${choice.provider}/${choice.modelId}`;
+	await session.setModel(resolved, "default", {
+		selector,
+		thinkingLevel: choice.thinkingLevel,
+	});
+	session.setThinkingLevel(choice.thinkingLevel);
 	return true;
 }

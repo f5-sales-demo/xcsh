@@ -1,45 +1,81 @@
 import { describe, expect, it, vi } from "bun:test";
-import { applyModelAfterLogin } from "@f5-sales-demo/xcsh/modes/controllers/login-model";
+import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import {
+	applyModelAfterLogin,
+	getAvailableLiteLLMLoginModelChoices,
+	LITELLM_LOGIN_MODEL_CHOICES,
+} from "@f5-sales-demo/xcsh/modes/controllers/login-model";
 
 function makeSession(opts: { model?: { id: string; provider: string }; models: { id: string; provider: string }[] }) {
 	const setModel = vi.fn(async (_model: { id: string; provider: string }, _role: string, _opts?: unknown) => {});
+	const setThinkingLevel = vi.fn((_level: ThinkingLevel) => {});
 	const session = {
 		model: opts.model,
 		modelRegistry: { getAll: () => opts.models },
 		setModel,
+		setThinkingLevel,
 	};
-	return { session, setModel };
+	return { session, setModel, setThinkingLevel };
 }
 const M = (id: string, provider = "litellm") => ({ id, provider });
+const GPT_CHOICE = LITELLM_LOGIN_MODEL_CHOICES[0]!;
+const OPUS_CHOICE = LITELLM_LOGIN_MODEL_CHOICES[1]!;
 
 describe("applyModelAfterLogin", () => {
-	it("sets the session model when none is configured and the id resolves", async () => {
-		const { session, setModel } = makeSession({ model: undefined, models: [M("claude-opus-4")] });
-		const applied = await applyModelAfterLogin(session as never, "claude-opus-4");
+	it("persists the selected model and high thinking", async () => {
+		const { session, setModel, setThinkingLevel } = makeSession({
+			model: undefined,
+			models: [M("gpt-5.6-sol")],
+		});
+		const applied = await applyModelAfterLogin(session as never, GPT_CHOICE);
 		expect(applied).toBe(true);
 		expect(setModel).toHaveBeenCalledTimes(1);
-		expect(setModel.mock.calls[0][0]).toMatchObject({ id: "claude-opus-4" });
+		expect(setModel.mock.calls[0][0]).toMatchObject({ id: "gpt-5.6-sol", provider: "litellm" });
 		expect(setModel.mock.calls[0][1]).toBe("default");
+		expect(setModel.mock.calls[0][2]).toEqual({
+			selector: "litellm/gpt-5.6-sol",
+			thinkingLevel: ThinkingLevel.High,
+		});
+		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
 	});
 
-	it("does not override an already-configured session model", async () => {
-		const { session, setModel } = makeSession({ model: M("existing"), models: [M("claude-opus-4")] });
-		const applied = await applyModelAfterLogin(session as never, "claude-opus-4");
+	it("applies an explicit post-login choice over the existing session model", async () => {
+		const { session, setModel } = makeSession({
+			model: M("existing"),
+			models: [M("claude-opus-5", "anthropic")],
+		});
+		const applied = await applyModelAfterLogin(session as never, OPUS_CHOICE);
+		expect(applied).toBe(true);
+		expect(setModel).toHaveBeenCalledWith(
+			M("claude-opus-5", "anthropic"),
+			"default",
+			expect.objectContaining({ selector: "anthropic/claude-opus-5" }),
+		);
+	});
+
+	it("requires the selected provider and model pair to resolve", async () => {
+		const { session, setModel } = makeSession({
+			model: undefined,
+			models: [M("claude-opus-5", "litellm")],
+		});
+		const applied = await applyModelAfterLogin(session as never, OPUS_CHOICE);
 		expect(applied).toBe(false);
 		expect(setModel).not.toHaveBeenCalled();
 	});
+});
 
-	it("returns false when the selected id is not in the registry", async () => {
-		const { session, setModel } = makeSession({ model: undefined, models: [M("other")] });
-		const applied = await applyModelAfterLogin(session as never, "claude-opus-4");
-		expect(applied).toBe(false);
-		expect(setModel).not.toHaveBeenCalled();
+describe("getAvailableLiteLLMLoginModelChoices", () => {
+	it("returns only curated models advertised by the authenticated catalog", () => {
+		const choices = getAvailableLiteLLMLoginModelChoices(["gpt-5.6-sol", "unrelated-model"]);
+		expect(choices).toEqual([GPT_CHOICE]);
 	});
 
-	it("returns false when there is no selected model id", async () => {
-		const { session, setModel } = makeSession({ model: undefined, models: [M("claude-opus-4")] });
-		const applied = await applyModelAfterLogin(session as never, undefined);
-		expect(applied).toBe(false);
-		expect(setModel).not.toHaveBeenCalled();
+	it("returns both curated choices in their stable display order", () => {
+		const choices = getAvailableLiteLLMLoginModelChoices(["claude-opus-5", "gpt-5.6-sol"]);
+		expect(choices).toEqual([GPT_CHOICE, OPUS_CHOICE]);
+	});
+
+	it("returns no choices when neither curated model is advertised", () => {
+		expect(getAvailableLiteLLMLoginModelChoices(["gpt-5.6-terra"])).toEqual([]);
 	});
 });
