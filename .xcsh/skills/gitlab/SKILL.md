@@ -33,7 +33,7 @@ Only call `glab_setup(action: "check")` and `glab_setup(action: "status")` for d
 |-------------|-------------|
 | "show me bugs", "list open issues", "issues assigned to alice" | `glab_issue_list` |
 | "show issue #42", "view issue details", "what's in ticket 123" | `glab_issue_view` |
-| "find issues about Tempus", "search for login timeout", "bugs mentioning Safari" | `glab_search` |
+| "find issues about Example Corp", "search for login timeout", "bugs mentioning Safari" | `glab_search` |
 | "configure GitLab", "set up glab", "save project path" | `glab_setup(action: "save_project", project: "...")` |
 
 **Always try the search/list tool first.** If it fails with "not configured", show the setup message above and stop — do not call multiple tools trying to auto-configure.

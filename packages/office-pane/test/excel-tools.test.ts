@@ -795,11 +795,11 @@ describe("add_sheet", () => {
 			id: "as-1",
 			toolCallId: "tc-as-1",
 			toolName: "add_sheet",
-			arguments: { name: "MEDDPICC — Visa, Inc." },
+			arguments: { name: "MEDDPICC — Example Corp" },
 		});
 		await flush();
 
-		expect(excel.sheetNames()).toContain("MEDDPICC — Visa, Inc.");
+		expect(excel.sheetNames()).toContain("MEDDPICC — Example Corp");
 		expect(firstText(callFrom(t))).toContain("Created");
 		d.dispose();
 	});
@@ -903,11 +903,11 @@ describe("add_sheet", () => {
 			id: "as-7",
 			toolCallId: "tc-as-7",
 			toolName: "write_range",
-			arguments: { address: "Deal!A1:B1", values: [["Account Name", "Visa, Inc."]] },
+			arguments: { address: "Deal!A1:B1", values: [["Account Name", "Example Corp"]] },
 		});
 		await flush();
 
-		expect(excel.sheetCells("Deal")["A1:B1"]).toEqual([["Account Name", "Visa, Inc."]]);
+		expect(excel.sheetCells("Deal")["A1:B1"]).toEqual([["Account Name", "Example Corp"]]);
 		d.dispose();
 	});
 });
@@ -934,7 +934,7 @@ describe("write_cells", () => {
 			toolName: "write_cells",
 			arguments: {
 				cells: [
-					{ address: "C4", value: "Visa, Inc." },
+					{ address: "C4", value: "Example Corp" },
 					{ address: "N7", value: 473687 },
 					{ address: "I5", value: 0.6 },
 				],
@@ -942,7 +942,7 @@ describe("write_cells", () => {
 		});
 		await flush();
 
-		expect(excel.cells.C4).toEqual([["Visa, Inc."]]);
+		expect(excel.cells.C4).toEqual([["Example Corp"]]);
 		expect(excel.cells.N7).toEqual([[473687]]);
 		expect(excel.cells.I5).toEqual([[0.6]]);
 		expect(firstText(callFrom(t))).toContain("3");
@@ -960,11 +960,11 @@ describe("write_cells", () => {
 			id: "wc-2",
 			toolCallId: "tc-wc-2",
 			toolName: "write_cells",
-			arguments: { cells: [{ address: "'MEDDPICC Deal Review Sheet'!C4", value: "Visa" }] },
+			arguments: { cells: [{ address: "'MEDDPICC Deal Review Sheet'!C4", value: "Example Corp" }] },
 		});
 		await flush();
 
-		expect(excel.sheetCells("MEDDPICC Deal Review Sheet").C4).toEqual([["Visa"]]);
+		expect(excel.sheetCells("MEDDPICC Deal Review Sheet").C4).toEqual([["Example Corp"]]);
 		d.dispose();
 	});
 
