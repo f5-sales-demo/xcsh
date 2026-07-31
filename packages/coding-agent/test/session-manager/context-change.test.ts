@@ -5,7 +5,7 @@ describe("SessionManager.appendContextChange", () => {
 	it("writes a context_change entry with the given fields", () => {
 		const session = SessionManager.inMemory();
 
-		const id = session.appendContextChange("prod", "acme-corp", "production");
+		const id = session.appendContextChange("prod", "example-corp", "production");
 
 		const entries = session.getEntries();
 		const entry = entries.find(e => e.type === "context_change");
@@ -22,7 +22,7 @@ describe("SessionManager.appendContextChange", () => {
 
 	it("returns a non-empty entry id", () => {
 		const session = SessionManager.inMemory();
-		const id = session.appendContextChange("prod", "acme-corp", "default");
+		const id = session.appendContextChange("prod", "example-corp", "default");
 		expect(id.length).toBeGreaterThan(0);
 	});
 });

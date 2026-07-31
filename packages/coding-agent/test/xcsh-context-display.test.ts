@@ -18,8 +18,8 @@ function status(overrides: Partial<ContextStatus> = {}): ContextStatus {
 
 describe("formatContextLabel", () => {
 	it("uses tenant and namespace when both are present", () => {
-		expect(formatContextLabel(status({ activeContextTenant: "acme", activeContextNamespace: "prod" }))).toBe(
-			"acme:prod",
+		expect(formatContextLabel(status({ activeContextTenant: "example", activeContextNamespace: "prod" }))).toBe(
+			"example:prod",
 		);
 	});
 
@@ -32,8 +32,8 @@ describe("formatContextLabel", () => {
 	});
 
 	it("prefers tenant over name when both are present", () => {
-		expect(formatContextLabel(status({ activeContextTenant: "acme", activeContextName: "my-context" }))).toBe(
-			"acme:default",
+		expect(formatContextLabel(status({ activeContextTenant: "example", activeContextName: "my-context" }))).toBe(
+			"example:default",
 		);
 	});
 
@@ -44,22 +44,24 @@ describe("formatContextLabel", () => {
 	it("appends warning icon when token is expiring", () => {
 		expect(
 			formatContextLabel(
-				status({ activeContextTenant: "acme", activeContextNamespace: "prod", tokenHealth: "expiring" }),
+				status({ activeContextTenant: "example", activeContextNamespace: "prod", tokenHealth: "expiring" }),
 			),
-		).toBe("acme:prod ⚠");
+		).toBe("example:prod ⚠");
 	});
 
 	it("appends warning icon when token is expired", () => {
 		expect(
 			formatContextLabel(
-				status({ activeContextTenant: "acme", activeContextNamespace: "prod", tokenHealth: "expired" }),
+				status({ activeContextTenant: "example", activeContextNamespace: "prod", tokenHealth: "expired" }),
 			),
-		).toBe("acme:prod ⚠");
+		).toBe("example:prod ⚠");
 	});
 
 	it("no suffix when token health is ok", () => {
 		expect(
-			formatContextLabel(status({ activeContextTenant: "acme", activeContextNamespace: "prod", tokenHealth: "ok" })),
-		).toBe("acme:prod");
+			formatContextLabel(
+				status({ activeContextTenant: "example", activeContextNamespace: "prod", tokenHealth: "ok" }),
+			),
+		).toBe("example:prod");
 	});
 });

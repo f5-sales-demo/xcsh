@@ -53,19 +53,19 @@ describe("xcsh-env", () => {
 		});
 
 		it("returns false when only XCSH_API_URL is set (URL alone is not an override)", () => {
-			process.env[XCSH_API_URL] = "https://acme.console.ves.volterra.io";
+			process.env[XCSH_API_URL] = "https://example.console.ves.volterra.io";
 			expect(hasEnvOverride()).toBe(false);
 		});
 	});
 
 	describe("sessionKeyFromUrl", () => {
 		it("keys staging and production of the same tenant distinctly", () => {
-			expect(sessionKeyFromUrl("https://acme.staging.volterra.us/web/home")).toEqual({
-				tenant: "example-corp",
+			expect(sessionKeyFromUrl("https://example.staging.volterra.us/web/home")).toEqual({
+				tenant: "example",
 				env: "staging",
 			});
-			expect(sessionKeyFromUrl("https://acme.console.ves.volterra.io/web/x")).toEqual({
-				tenant: "example-corp",
+			expect(sessionKeyFromUrl("https://example.console.ves.volterra.io/web/x")).toEqual({
+				tenant: "example",
 				env: "production",
 			});
 		});
@@ -84,20 +84,20 @@ describe("xcsh-env", () => {
 		// on every cell — a discovered worker's key must match the tab's key, or the
 		// panel gate shows "No xcsh running for this tenant". Change one, change both.
 		const GOLDEN: Array<[string | undefined, { tenant: string; env: "production" | "staging" } | null]> = [
-			["https://acme.console.ves.volterra.io/web/x", { tenant: "example-corp", env: "production" }],
-			["https://acme.staging.volterra.us/web/home", { tenant: "example-corp", env: "staging" }],
+			["https://example.console.ves.volterra.io/web/x", { tenant: "example", env: "production" }],
+			["https://example.staging.volterra.us/web/home", { tenant: "example", env: "staging" }],
 			["https://f5-amer-ent.console.ves.volterra.io/web/home?iss=x", { tenant: "example-corp", env: "production" }],
 			[
-				"https://login.ves.volterra.io/auth/realms/acme-abc123/protocol/openid-connect/auth",
-				{ tenant: "example-corp", env: "production" },
+				"https://login.ves.volterra.io/auth/realms/example-abc123/protocol/openid-connect/auth",
+				{ tenant: "example", env: "production" },
 			],
 			[
-				"https://login-staging.volterra.us/auth/realms/acme-x/protocol/openid-connect/auth",
-				{ tenant: "example-corp", env: "staging" },
+				"https://login-staging.volterra.us/auth/realms/example-x/protocol/openid-connect/auth",
+				{ tenant: "example", env: "staging" },
 			],
 			["https://console.ves.volterra.io/web/devportal/domain", null],
 			["https://login.ves.volterra.io/auth/realms/volterra/protocol/openid-connect/auth", null],
-			["https://acme.ves.volterra.io", null],
+			["https://example.ves.volterra.io", null],
 			["https://192.168.1.10/web/home", null],
 			["https://api.gateway.internal", null],
 			[undefined, null],
@@ -119,16 +119,16 @@ describe("xcsh-env", () => {
 			// apiUrl parses → apiUrl wins (the live/active context is authoritative)
 			[
 				"console apiUrl + tenantKey → apiUrl wins",
-				"https://acme.console.ves.volterra.io",
-				"acme|production",
-				"acme",
+				"https://example.console.ves.volterra.io",
+				"example|production",
+				"example",
 				"production",
 			],
 			[
 				"staging apiUrl → staging env",
-				"https://acme.staging.volterra.us/web/home",
-				"acme|production",
-				"acme",
+				"https://example.staging.volterra.us/web/home",
+				"example|production",
+				"example",
 				"staging",
 			],
 			[
@@ -141,33 +141,33 @@ describe("xcsh-env", () => {
 			// apiUrl present but UNPARSEABLE → fall back to tenantKey (the #1872 fix)
 			[
 				"non-console apiUrl + tenantKey → FALLBACK",
-				"https://acme.ves.volterra.io",
-				"acme|production",
-				"acme",
+				"https://example.ves.volterra.io",
+				"example|production",
+				"example",
 				"production",
 			],
 			[
 				"bare console host + tenantKey → FALLBACK",
 				"https://console.ves.volterra.io",
-				"acme|production",
-				"acme",
+				"example|production",
+				"example",
 				"production",
 			],
 			[
 				"unparseable apiUrl + staging tenantKey → FALLBACK",
 				"https://api.gateway.internal",
-				"acme|staging",
-				"acme",
+				"example|staging",
+				"example",
 				"staging",
 			],
 			// no apiUrl → tenantKey (contextless bound worker / adopted spare)
-			["no apiUrl + tenantKey", null, "acme|production", "acme", "production"],
+			["no apiUrl + tenantKey", null, "example|production", "example", "production"],
 			// nothing known → null (unbound spare / interactive no-context)
 			["no apiUrl + no tenantKey → null", null, null, null, null],
 			["unparseable apiUrl + no tenantKey → null", "https://api.gateway.internal", null, null, null],
 			["unparseable apiUrl + empty tenantKey → null", "https://api.gateway.internal", "", null, null],
 			// malformed tenantKey (missing env half) → tenant only, env null
-			["tenantKey without env half → tenant only", null, "acme", "acme", null],
+			["tenantKey without env half → tenant only", null, "example", "example", null],
 		];
 		it.each(M)("%s", (_label, apiUrl, tenantKey, tenant, env) => {
 			expect(deriveTenantEnv(apiUrl, tenantKey)).toEqual({ tenant, env });
@@ -176,11 +176,11 @@ describe("xcsh-env", () => {
 
 	describe("deriveTenantFromUrl", () => {
 		it("returns the first hostname label for a normal F5 XC URL", () => {
-			expect(deriveTenantFromUrl("https://acme.console.ves.volterra.io")).toBe("acme");
+			expect(deriveTenantFromUrl("https://example.console.ves.volterra.io")).toBe("example");
 		});
 
 		it("lowercases mixed-case labels", () => {
-			expect(deriveTenantFromUrl("https://Acme-01.console.example.com")).toBe("acme-01");
+			expect(deriveTenantFromUrl("https://Example-01.console.example.com")).toBe("example-01");
 		});
 
 		it("returns a 63-character label as-is", () => {
@@ -194,15 +194,15 @@ describe("xcsh-env", () => {
 		});
 
 		it("returns null for labels containing underscores", () => {
-			expect(deriveTenantFromUrl("https://acme_01.example.com")).toBeNull();
+			expect(deriveTenantFromUrl("https://example_01.example.com")).toBeNull();
 		});
 
 		it("returns null for labels with a leading hyphen", () => {
-			expect(deriveTenantFromUrl("https://-acme.example.com")).toBeNull();
+			expect(deriveTenantFromUrl("https://-example.example.com")).toBeNull();
 		});
 
 		it("returns null for labels with a trailing hyphen", () => {
-			expect(deriveTenantFromUrl("https://acme-.example.com")).toBeNull();
+			expect(deriveTenantFromUrl("https://example-.example.com")).toBeNull();
 		});
 
 		it("returns null for dotless hostnames (including localhost)", () => {

@@ -20,7 +20,7 @@ xcsh は **コンテキスト** を通じて F5 Distributed Cloud に接続し�
 F5 XC コンソールから次の3つの情報が必要です：テナント URL、API トークン、およびオプションでネームスペース。
 
 ```
-/context create production https://acme.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -41,8 +41,8 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     acme                                         │
-│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_TENANT     example                                         │
+│ XCSH_API_URL    https://example.console.ves.volterra.io         │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -79,7 +79,7 @@ Context 'production' created. Use /context activate production to switch to it.
 ```
 
 ```
-  production           https://acme.console.ves.volterra.io
+  production           https://example.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -122,7 +122,7 @@ Context 'production' created. Use /context activate production to switch to it.
 コンテキストには追加の環境変数を設定でき、アクティブ化時にセッションに注入されます。認証情報セットには含まれないテナント固有の設定に便利です。
 
 ```
-/context set CUSTOM_HEADER=x-acme-trace
+/context set CUSTOM_HEADER=x-example-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL

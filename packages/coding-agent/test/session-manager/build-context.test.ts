@@ -344,17 +344,17 @@ describe("buildSessionContext", () => {
 	describe("context_change replay", () => {
 		it("derives activeContextName and activeContextTenant from the only context_change entry", () => {
 			const session = SessionManager.inMemory();
-			session.appendContextChange("prod", "acme-corp", "production");
+			session.appendContextChange("prod", "example-corp", "production");
 
 			const ctx = session.buildSessionContext();
 
 			expect(ctx.activeContextName).toBe("prod");
-			expect(ctx.activeContextTenant).toBe("acme-corp");
+			expect(ctx.activeContextTenant).toBe("example-corp");
 		});
 
 		it("uses the most recent context_change when multiple are present", () => {
 			const session = SessionManager.inMemory();
-			session.appendContextChange("prod", "acme-corp", "production");
+			session.appendContextChange("prod", "example-corp", "production");
 			session.appendContextChange("staging", "beta-llc", "staging");
 
 			const ctx = session.buildSessionContext();

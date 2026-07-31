@@ -773,7 +773,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	const filteredSkills = hasRead ? skills : [];
 
 	// contexts values match the tenant label derived from the API URL hostname (first DNS label).
-	// Example: https://acme.console.ves.volterra.io → tenant "acme" → contexts: ["acme"]
+	// Example: https://example.console.ves.volterra.io → tenant "example" → contexts: ["example"]
 	const contextName = context?.tenant;
 	const contextFilteredSkills = filteredSkills.filter(s => isApplicableToContext(s, contextName));
 
