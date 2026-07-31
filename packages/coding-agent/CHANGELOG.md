@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.6] - 2026-07-31
+
 ### Breaking Changes
 
 - Removed the `registerProfileCollector()` extension API and the `xcsh://user` and `xcsh://computer` routes. Extensions must no longer register workstation or user identity collectors. ([#2674](https://github.com/f5-sales-demo/xcsh/issues/2674))
