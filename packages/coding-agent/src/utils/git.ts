@@ -1328,7 +1328,13 @@ export const repo = {
 	 */
 	async ignored(cwd: string, signal?: AbortSignal): Promise<boolean> {
 		const result = await runCommand(cwd, ["check-ignore", "-q", "."], { readOnly: true, signal });
-		return result.exitCode === 0;
+		// 0 = ignored, 1 = not ignored. Both are answers. Anything else is git declining to
+		// decide — 128 for a directory outside a repository, dubious ownership, a corrupt
+		// config — and folding those into `false` would report a confident "not ignored"
+		// that the caller cannot distinguish from a real one.
+		if (result.exitCode === 0) return true;
+		if (result.exitCode === 1) return false;
+		throw new GitCommandError(["check-ignore", "-q", "."], result);
 	},
 
 	/** Resolve the repository root (may be a worktree root). */

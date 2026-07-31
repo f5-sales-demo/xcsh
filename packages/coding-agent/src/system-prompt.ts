@@ -23,7 +23,7 @@ import type { SkillsSettings } from "./config/settings";
 import { renderDeprecationGuardrails } from "./deprecations";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
 import { listXcshPluginSummaries, type XcshPluginSummary } from "./discovery/helpers";
-import { resolveStartFolder, type StartFolder } from "./discovery/start-folder";
+import { defaultStartFolderDeps, resolveStartFolder, type StartFolder } from "./discovery/start-folder";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
 import startFolderTemplate from "./prompts/system/start-folder.md" with { type: "text" };
@@ -134,9 +134,20 @@ const START_FOLDER_TIMEOUT_MS = 1500;
  * that way is a missing suggestion rather than a secret pushed to a hosted repository.
  */
 async function resolveStartFolderBounded(cwd: string): Promise<StartFolder> {
-	return await withTimeout(resolveStartFolder(cwd), START_FOLDER_TIMEOUT_MS, "start-folder probe timed out").catch(
-		() => ({ kind: "plain" }) as StartFolder,
-	);
+	// `withTimeout` only rejects its own wrapper, so without this the git subprocesses keep
+	// running after the fallback — and the prompt is rebuilt many times per session, so they
+	// would accumulate. Aborting on expiry lets the git layer tear its child down.
+	const controller = new AbortController();
+	try {
+		return await withTimeout(
+			resolveStartFolder(cwd, defaultStartFolderDeps, controller.signal),
+			START_FOLDER_TIMEOUT_MS,
+			"start-folder probe timed out",
+		);
+	} catch {
+		controller.abort();
+		return { kind: "plain" };
+	}
 }
 // The walk's `limit` caps DISCOVERED files, not directories VISITED — so a dir
 // with ~no XCSH.md (e.g. serving from $HOME) would otherwise traverse the entire

@@ -36,19 +36,19 @@ export interface StartFolder {
 /** Injected so the branches are testable without a real repository on disk. */
 export interface StartFolderDeps {
 	/** Repository root for `cwd`, or null when `cwd` is not in one. */
-	repoRoot(cwd: string): Promise<string | null>;
+	repoRoot(cwd: string, signal?: AbortSignal): Promise<string | null>;
 	/** URL of the `origin` remote, or null when there is none. */
-	originUrl(cwd: string): Promise<string | null>;
+	originUrl(cwd: string, signal?: AbortSignal): Promise<string | null>;
 	/** Whether `cwd` itself is excluded by gitignore rules. */
-	isIgnored(cwd: string): Promise<boolean>;
+	isIgnored(cwd: string, signal?: AbortSignal): Promise<boolean>;
 }
 
 export const defaultStartFolderDeps: StartFolderDeps = {
-	repoRoot: cwd => git.repo.root(cwd),
+	repoRoot: (cwd, signal) => git.repo.root(cwd, signal),
 	// `remote.url` reports "no such remote" as undefined; this interface uses null for
 	// absent throughout, so normalise here rather than accepting both downstream.
-	originUrl: async cwd => (await git.remote.url(cwd, "origin")) ?? null,
-	isIgnored: cwd => git.repo.ignored(cwd),
+	originUrl: async (cwd, signal) => (await git.remote.url(cwd, "origin", signal)) ?? null,
+	isIgnored: (cwd, signal) => git.repo.ignored(cwd, signal),
 };
 
 /**
@@ -79,10 +79,11 @@ export function classifyStartFolder(repoRoot: string | null, originUrl: string |
 export async function resolveStartFolder(
 	cwd: string,
 	deps: StartFolderDeps = defaultStartFolderDeps,
+	signal?: AbortSignal,
 ): Promise<StartFolder> {
 	let root: string | null;
 	try {
-		root = await deps.repoRoot(cwd);
+		root = await deps.repoRoot(cwd, signal);
 	} catch {
 		return { kind: "plain" };
 	}
@@ -90,14 +91,14 @@ export async function resolveStartFolder(
 
 	let origin: string | null = null;
 	try {
-		origin = await deps.originUrl(cwd);
+		origin = await deps.originUrl(cwd, signal);
 	} catch {
 		// Repository confirmed, remote unknown — see above.
 	}
 
 	let ignored = false;
 	try {
-		ignored = await deps.isIgnored(cwd);
+		ignored = await deps.isIgnored(cwd, signal);
 	} catch {
 		// `check-ignore` reports "not ignored" as exit 1, not as a failure, so a throw here
 		// means git itself is broken — and `repoRoot` already succeeded. Treat it as not

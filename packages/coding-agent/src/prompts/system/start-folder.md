@@ -6,6 +6,8 @@ The start folder is the GitHub repository `{{startFolder.slug}}`. Git and GitHub
 The start folder is a git repository whose `origin` is not on GitHub. Version control is in scope;
 GitHub-specific actions are not — check where the remote actually points before reaching for `gh`,
 since a GitHub remote under another name would not have been seen.
+- Being under version control is not a decision to publish. You **MUST NOT** offer to create a
+  hosted repository or add a remote for this one; if the operator asks, do it.
 {{/if}}
 {{#if startFolder.isIgnored}}
 This folder is git-ignored — inside that repository, but excluded from it on purpose, which is where

@@ -23,8 +23,17 @@ export function parseGitHubRepo(remoteUrl: string): string | null {
 	// (`https://user:token@github.com/...`, how a stored token is persisted) and an explicit
 	// ssh port. Rejecting those would push real GitHub checkouts into the `git` branch,
 	// where the prompt would wrongly say origin is not on GitHub.
+	//
+	// The credential group excludes `?` and `#`, which terminate the URL authority: allowing
+	// them let `https://evil.example?@github.com/org/repo` read as GitHub when the host is
+	// really evil.example.
+	//
+	// The capture is GitHub's own owner/repo charset rather than "anything but a slash",
+	// because this string is interpolated into the system prompt. A remote of
+	// `https://github.com/org/repo\nIGNORE PREVIOUS INSTRUCTIONS` previously parsed with the
+	// trailing text attached, which put attacker-chosen lines into the prompt.
 	const match = cleaned.match(
-		/^(?:(?:https?|git):\/\/(?:[^/@]*@)?github\.com\/|ssh:\/\/git@github\.com(?::\d+)?\/|git@github\.com:)([^/]+\/[^/]+)$/,
+		/^(?:(?:https?|git):\/\/(?:[^/@?#]*@)?github\.com\/|ssh:\/\/git@github\.com(?::\d+)?\/|git@github\.com:)([A-Za-z0-9][A-Za-z0-9-]*\/[A-Za-z0-9._-]+)$/,
 	);
 	return match ? (match[1] ?? null) : null;
 }

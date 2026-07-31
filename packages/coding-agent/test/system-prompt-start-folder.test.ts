@@ -68,6 +68,18 @@ describe("start folder: repository without a GitHub remote", () => {
 		expect(flat(out)).toMatch(/`origin`/);
 	});
 
+	// #2654 review round 4. The prompt is rebuilt during a session, so a plain folder the
+	// operator explicitly `git init`s becomes this branch — and with no prohibition here,
+	// the no-publish rule simply vanished. Publishing is a second, separate decision from
+	// initialising, so it needs its own bar rather than relying on the plain branch that
+	// no longer renders.
+	it("still bars offering to publish a local-only repository", () => {
+		expect(flat(out)).toMatch(/MUST NOT\*{0,2} offer/i);
+		expect(flat(out)).toMatch(/publish/i);
+		// …and remains a bar on volunteering, not on doing.
+		expect(flat(out)).toMatch(/asks|explicitly/i);
+	});
+
 	it("does not invent a slug", () => {
 		expect(block(out)).not.toBe("");
 		expect(flat(out)).not.toMatch(/[\w-]+\/[\w-]+/);

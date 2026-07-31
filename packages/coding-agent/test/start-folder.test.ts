@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { classifyStartFolder, resolveStartFolder, type StartFolderDeps } from "../src/discovery/start-folder";
+import * as git from "../src/utils/git";
 
 /** Deps that answer as told; any field omitted throws, so a test must state what it exercises. */
 function deps(over: Partial<StartFolderDeps>): StartFolderDeps {
@@ -107,6 +111,36 @@ describe("a git-ignored start folder", () => {
 	});
 });
 
+describe("resolveStartFolder cancellation", () => {
+	// #2654 review round 4: the timeout wrapper only rejects its own promise, so unless the
+	// signal actually reaches the probes their git subprocesses outlive the fallback — and
+	// the prompt is rebuilt many times per session.
+	it("hands the caller's signal to every probe", async () => {
+		const seen: (AbortSignal | undefined)[] = [];
+		const controller = new AbortController();
+		await resolveStartFolder(
+			"/w",
+			{
+				repoRoot: async (_c, s) => {
+					seen.push(s);
+					return "/w";
+				},
+				originUrl: async (_c, s) => {
+					seen.push(s);
+					return null;
+				},
+				isIgnored: async (_c, s) => {
+					seen.push(s);
+					return false;
+				},
+			},
+			controller.signal,
+		);
+		expect(seen).toHaveLength(3);
+		expect(seen.every(s => s === controller.signal)).toBe(true);
+	});
+});
+
 describe("resolveStartFolder fails in the safe direction", () => {
 	it("resolves plain when the repo probe throws", async () => {
 		const got = await resolveStartFolder("/w", deps({}));
@@ -132,5 +166,33 @@ describe("resolveStartFolder fails in the safe direction", () => {
 			deps({ repoRoot: async () => "/w", originUrl: async () => "git@github.com:f5-sales-demo/xcsh.git" }),
 		);
 		expect(got).toEqual({ kind: "github", slug: "f5-sales-demo/xcsh" });
+	});
+});
+
+describe("git.repo.ignored reports only what it knows", () => {
+	// #2654 review round 4. `runCommand` returns exit codes rather than throwing, so
+	// mapping "anything but 0" to false silently turned a fatal 128 — dubious ownership,
+	// a corrupt repository — into a confident "not ignored", dropping the sensitive-subtree
+	// warning. Only 0 and 1 are answers; 128 is reachable simply by asking outside a repo.
+	it("throws rather than answering when git could not decide", async () => {
+		const outside = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-notrepo-"));
+		try {
+			expect(git.repo.ignored(outside)).rejects.toThrow();
+		} finally {
+			fs.rmSync(outside, { recursive: true, force: true });
+		}
+	});
+
+	it("answers cleanly inside a repository", async () => {
+		const root = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-repo-"));
+		try {
+			await Bun.$`git init -q`.cwd(root).quiet();
+			fs.writeFileSync(path.join(root, ".gitignore"), "hidden/\n");
+			fs.mkdirSync(path.join(root, "hidden"));
+			expect(await git.repo.ignored(root)).toBe(false);
+			expect(await git.repo.ignored(path.join(root, "hidden"))).toBe(true);
+		} finally {
+			fs.rmSync(root, { recursive: true, force: true });
+		}
 	});
 });
