@@ -1,0 +1,355 @@
+{
+  "counts": {
+    ".github/workflows/deploy-office-pane.yml": {
+      "email": 1
+    },
+    ".xcsh/skills/gitlab/SKILL.md": {
+      "customer-identifier": 1
+    },
+    ".xcsh/skills/terraform-provider/SKILL.md": {
+      "customer-identifier": 3
+    },
+    "assets/ask.webp": {
+      "email": 1
+    },
+    "assets/perplexity.webp": {
+      "email": 1
+    },
+    "assets/python.webp": {
+      "email": 1
+    },
+    "assets/review.webp": {
+      "email": 3
+    },
+    "assets/slash.webp": {
+      "email": 1
+    },
+    "bun.lock": {
+      "email": 1
+    },
+    "crates/brush-core-vendored/src/sys/unix/landlock.rs": {
+      "home-path": 2
+    },
+    "crates/containment-check/tests/complement.rs": {
+      "home-path": 39
+    },
+    "docs/ar/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/de/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/en/mcp/mcp-config.md": {
+      "customer-identifier": 1
+    },
+    "docs/en/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/es/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/fr/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/hi/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/it/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/ja/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/ko/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/pt-br/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/th/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/zh-cn/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "docs/zh-tw/runtime-tools/task-agent-discovery.md": {
+      "customer-identifier": 2
+    },
+    "package.json": {
+      "email": 1
+    },
+    "packages/ai/src/providers/openai-codex/constants.ts": {
+      "customer-identifier": 1
+    },
+    "packages/ai/src/utils/oauth/kagi.ts": {
+      "email": 1
+    },
+    "packages/ai/test/google-gemini-cli-alignment.test.ts": {
+      "customer-identifier": 1
+    },
+    "packages/ai/test/kagi-login.test.ts": {
+      "email": 1
+    },
+    "packages/ai/test/zenmux-provider.test.ts": {
+      "person-name": 2
+    },
+    "packages/chat-ui/test/markdown/fidelity.test.ts": {
+      "email": 1
+    },
+    "packages/chat-ui/test/markdown/fixtures/autolink.golden.html": {
+      "email": 1
+    },
+    "packages/chat-ui/test/markdown/fixtures/autolink.md": {
+      "email": 1
+    },
+    "packages/chat-ui/test/markdown/fixtures/mixed-datasheet.golden.html": {
+      "email": 1
+    },
+    "packages/chat-ui/test/markdown/fixtures/mixed-datasheet.md": {
+      "email": 1
+    },
+    "packages/chat-ui/test/markdown/render.test.tsx": {
+      "email": 1
+    },
+    "packages/coding-agent/CHANGELOG.md": {
+      "home-path": 1
+    },
+    "packages/coding-agent/bench/extension-session.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/bench/ttft.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/commands/manager.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/discovery/agents-md.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/agents.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/claude-plugins.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/claude.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/cline.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/codex.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/cursor.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/gemini.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/github.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/mcp-json.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/opencode.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/ssh.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/vscode.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/discovery/windsurf.ts": {
+      "person-name": 1
+    },
+    "packages/coding-agent/src/extensibility/skills.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts": {
+      "email": 1
+    },
+    "packages/coding-agent/src/internal-urls/api-spec-index.generated.ts": {
+      "email": 1
+    },
+    "packages/coding-agent/src/internal-urls/terraform-resolve.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/modes/components/agent-dashboard.ts": {
+      "customer-identifier": 3
+    },
+    "packages/coding-agent/src/modes/components/extensions/inspector-panel.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/modes/components/status-line/git-utils.ts": {
+      "email": 3
+    },
+    "packages/coding-agent/src/prompts/tools/read-chunk.md": {
+      "email": 1
+    },
+    "packages/coding-agent/src/prompts/tools/xcsh-api.md": {
+      "customer-identifier": 2
+    },
+    "packages/coding-agent/src/slash-commands/marketplace-install-parser.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/task/discovery.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/tools/xcsh-api.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/src/web/scrapers/dockerhub.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/test/browser/acquire-helpers.test.ts": {
+      "home-path": 9
+    },
+    "packages/coding-agent/test/core/python-kernel-env.test.ts": {
+      "home-path": 5
+    },
+    "packages/coding-agent/test/discovery/pi-config-dir.test.ts": {
+      "home-path": 1
+    },
+    "packages/coding-agent/test/env-secret-masking.test.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/test/git-url.test.ts": {
+      "email": 2
+    },
+    "packages/coding-agent/test/herdr-reporter.test.ts": {
+      "home-path": 1
+    },
+    "packages/coding-agent/test/internal-urls/build-info-factory.test.ts": {
+      "home-path": 3
+    },
+    "packages/coding-agent/test/internal-urls/profile-collectors.test.ts": {
+      "phone": 1
+    },
+    "packages/coding-agent/test/internal-urls/user-profile.test.ts": {
+      "email": 1,
+      "phone": 1
+    },
+    "packages/coding-agent/test/manager-core.test.ts": {
+      "customer-identifier": 6,
+      "home-path": 1
+    },
+    "packages/coding-agent/test/manager-wait-diagnostics.test.ts": {
+      "customer-identifier": 2
+    },
+    "packages/coding-agent/test/manager.int.test.ts": {
+      "customer-identifier": 18
+    },
+    "packages/coding-agent/test/marketplace/fetcher.test.ts": {
+      "email": 1
+    },
+    "packages/coding-agent/test/mcp-roots-list.test.ts": {
+      "home-path": 1
+    },
+    "packages/coding-agent/test/native-host.int.test.ts": {
+      "customer-identifier": 2
+    },
+    "packages/coding-agent/test/resource-management/manifest-parser.test.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/test/sdk-context-integration.test.ts": {
+      "customer-identifier": 3
+    },
+    "packages/coding-agent/test/services/context-env.test.ts": {
+      "customer-identifier": 3
+    },
+    "packages/coding-agent/test/session-manager/context-change.test.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/test/session-manager/file-operations.test.ts": {
+      "home-path": 2
+    },
+    "packages/coding-agent/test/session-manager/move-to.test.ts": {
+      "home-path": 2
+    },
+    "packages/coding-agent/test/skills.test.ts": {
+      "home-path": 2
+    },
+    "packages/coding-agent/test/status-line-git-utils.test.ts": {
+      "email": 9
+    },
+    "packages/coding-agent/test/system-prompt-templates.test.ts": {
+      "customer-identifier": 4
+    },
+    "packages/coding-agent/test/tools/web-search-kagi.test.ts": {
+      "email": 1
+    },
+    "packages/coding-agent/test/update-cli.test.ts": {
+      "home-path": 3
+    },
+    "packages/coding-agent/test/xcsh-api-client.test.ts": {
+      "customer-identifier": 4
+    },
+    "packages/coding-agent/test/xcsh-api-tool.test.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/test/xcsh-context-knowledge.test.ts": {
+      "home-path": 1
+    },
+    "packages/coding-agent/test/xcsh-context-service.test.ts": {
+      "email": 3
+    },
+    "packages/coding-agent/test/xcsh-env.test.ts": {
+      "customer-identifier": 1
+    },
+    "packages/coding-agent/test/xcsh-test-fixtures.ts": {
+      "home-path": 1
+    },
+    "packages/office-pane/assets/fonts/MesloLGS-NF-Bold-Italic.ttf": {
+      "email": 2
+    },
+    "packages/office-pane/assets/fonts/MesloLGS-NF-Bold.ttf": {
+      "email": 2
+    },
+    "packages/office-pane/assets/fonts/MesloLGS-NF-Italic.ttf": {
+      "email": 2
+    },
+    "packages/office-pane/assets/fonts/MesloLGS-NF-Regular.ttf": {
+      "email": 2
+    },
+    "packages/office-pane/test/bridge-discovery.test.ts": {
+      "customer-identifier": 7
+    },
+    "packages/resource-management/test/manifest-export.test.ts": {
+      "customer-identifier": 15
+    },
+    "packages/resource-management/test/manifest-parser.test.ts": {
+      "customer-identifier": 1
+    },
+    "packages/resource-management/test/minimal-export-matrix.test.ts": {
+      "customer-identifier": 5
+    },
+    "packages/tui/src/components/markdown.ts": {
+      "email": 1
+    },
+    "packages/typescript-edit-benchmark/fixtures.tar.gz": {
+      "email": 1
+    },
+    "packages/utils/test/mermaid-label-centering.test.ts": {
+      "email": 1
+    },
+    "plugin-discovery-matrix/fixtures/deal-self-describing.json": {
+      "customer-identifier": 1
+    },
+    "plugin-discovery-matrix/fixtures/deal-thin.json": {
+      "customer-identifier": 1
+    },
+    "plugin-discovery-matrix/fixtures/transcripts/invoked-abspath.jsonl": {
+      "home-path": 1
+    },
+    "scripts/ci-release-homebrew.ts": {
+      "email": 1
+    },
+    "uat-matrix/console-phrases.yaml": {
+      "customer-identifier": 2
+    }
+  },
+  "version": 1
+}
