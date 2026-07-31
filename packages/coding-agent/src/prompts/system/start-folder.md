@@ -7,6 +7,10 @@ The start folder is a git repository whose `origin` is not on GitHub. Version co
 GitHub-specific actions are not — check where the remote actually points before reaching for `gh`,
 since a GitHub remote under another name would not have been seen.
 {{/if}}
+{{#if startFolder.isIgnored}}
+This folder is git-ignored — inside that repository, but excluded from it on purpose, which is where
+lab state and credentials usually sit. You **MUST NOT** offer to force-add or publish its contents.
+{{/if}}
 {{#if startFolder.isPlain}}
 The start folder is not a git repository, and this is a network-engineering tool: it may hold tenant
 automation, lab state, captures or credentials that must never reach a hosted repository.

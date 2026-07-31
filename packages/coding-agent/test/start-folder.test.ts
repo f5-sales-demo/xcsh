@@ -10,6 +10,7 @@ function deps(over: Partial<StartFolderDeps>): StartFolderDeps {
 		originUrl: async () => {
 			throw new Error("originUrl not stubbed");
 		},
+		isIgnored: async () => false,
 		...over,
 	};
 }
@@ -55,6 +56,54 @@ describe("classifyStartFolder", () => {
 		]) {
 			expect(classifyStartFolder("/w", url)).toEqual({ kind: "git" });
 		}
+	});
+});
+
+describe("a git-ignored start folder", () => {
+	// The repository is real, but this subtree was deliberately excluded from it — the
+	// shape of `acme-app/lab-secrets/`, which is exactly where tenant credentials live.
+	// The kind stays accurate; the caution rides alongside it.
+	it("keeps the kind and flags the exclusion", () => {
+		expect(classifyStartFolder("/w", "https://github.com/acme/app.git", true)).toEqual({
+			kind: "github",
+			slug: "acme/app",
+			ignored: true,
+		});
+		expect(classifyStartFolder("/w", null, true)).toEqual({ kind: "git", ignored: true });
+	});
+
+	it("does not flag an unignored folder", () => {
+		expect(classifyStartFolder("/w", null, false)).toEqual({ kind: "git" });
+	});
+
+	it("is resolved end to end from the probes", async () => {
+		const got = await resolveStartFolder(
+			"/w",
+			deps({
+				repoRoot: async () => "/w",
+				originUrl: async () => "https://github.com/acme/app.git",
+				isIgnored: async () => true,
+			}),
+		);
+		expect(got).toEqual({ kind: "github", slug: "acme/app", ignored: true });
+	});
+
+	// `git check-ignore` exits 1 for "not ignored", which is an answer rather than a
+	// failure, so a throw here means git itself is broken — and repoRoot already
+	// succeeded, so that is close to impossible. Treat it as "not ignored" rather than
+	// cautioning in every repository on the strength of a broken probe.
+	it("treats an unanswerable ignore probe as not ignored", async () => {
+		const got = await resolveStartFolder(
+			"/w",
+			deps({
+				repoRoot: async () => "/w",
+				originUrl: async () => null,
+				isIgnored: async () => {
+					throw new Error("check-ignore blew up");
+				},
+			}),
+		);
+		expect(got).toEqual({ kind: "git" });
 	});
 });
 

@@ -844,6 +844,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 			isGitHub: startFolder.kind === "github",
 			isGit: startFolder.kind === "git",
 			isPlain: startFolder.kind === "plain",
+			isIgnored: startFolder.ignored === true,
 			slug: startFolder.slug ?? "",
 		},
 	};

@@ -18,8 +18,13 @@ export function parseGitHubRepo(remoteUrl: string): string | null {
 	// Each scheme carries its own delimiter rather than a shared `[:/]`. scp-style SSH needs
 	// the colon: without it git resolves the string as a local path, not a github.com host,
 	// so `git@github.com/org/repo` is not a GitHub remote and must not read as one.
+	//
+	// The url forms allow the two decorations git actually writes — credentials in https
+	// (`https://user:token@github.com/...`, how a stored token is persisted) and an explicit
+	// ssh port. Rejecting those would push real GitHub checkouts into the `git` branch,
+	// where the prompt would wrongly say origin is not on GitHub.
 	const match = cleaned.match(
-		/^(?:(?:https?|git):\/\/github\.com\/|ssh:\/\/git@github\.com\/|git@github\.com:)([^/]+\/[^/]+)$/,
+		/^(?:(?:https?|git):\/\/(?:[^/@]*@)?github\.com\/|ssh:\/\/git@github\.com(?::\d+)?\/|git@github\.com:)([^/]+\/[^/]+)$/,
 	);
 	return match ? (match[1] ?? null) : null;
 }

@@ -26,6 +26,11 @@ export interface StartFolder {
 	readonly kind: StartFolderKind;
 	/** `owner/repo`, present only when `kind` is `"github"`. */
 	readonly slug?: string;
+	/**
+	 * The start folder is itself git-ignored: inside a repository, but deliberately
+	 * excluded from it. Set only when it is — absent reads as "not ignored".
+	 */
+	readonly ignored?: true;
 }
 
 /** Injected so the branches are testable without a real repository on disk. */
@@ -34,6 +39,8 @@ export interface StartFolderDeps {
 	repoRoot(cwd: string): Promise<string | null>;
 	/** URL of the `origin` remote, or null when there is none. */
 	originUrl(cwd: string): Promise<string | null>;
+	/** Whether `cwd` itself is excluded by gitignore rules. */
+	isIgnored(cwd: string): Promise<boolean>;
 }
 
 export const defaultStartFolderDeps: StartFolderDeps = {
@@ -41,6 +48,7 @@ export const defaultStartFolderDeps: StartFolderDeps = {
 	// `remote.url` reports "no such remote" as undefined; this interface uses null for
 	// absent throughout, so normalise here rather than accepting both downstream.
 	originUrl: async cwd => (await git.remote.url(cwd, "origin")) ?? null,
+	isIgnored: cwd => git.repo.ignored(cwd),
 };
 
 /**
@@ -50,10 +58,13 @@ export const defaultStartFolderDeps: StartFolderDeps = {
  * and `git://`, and rejects look-alike hosts. Re-deriving that here would be a second
  * definition to keep in step.
  */
-export function classifyStartFolder(repoRoot: string | null, originUrl: string | null): StartFolder {
+export function classifyStartFolder(repoRoot: string | null, originUrl: string | null, ignored = false): StartFolder {
 	if (!repoRoot) return { kind: "plain" };
 	const slug = originUrl ? parseGitHubRepo(originUrl) : null;
-	return slug ? { kind: "github", slug } : { kind: "git" };
+	const base: StartFolder = slug ? { kind: "github", slug } : { kind: "git" };
+	// The kind stays accurate — the repository is real — and the exclusion rides alongside
+	// it, rather than pretending a checkout is not a checkout.
+	return ignored ? { ...base, ignored: true } : base;
 }
 
 /**
@@ -83,5 +94,14 @@ export async function resolveStartFolder(
 	} catch {
 		// Repository confirmed, remote unknown — see above.
 	}
-	return classifyStartFolder(root, origin);
+
+	let ignored = false;
+	try {
+		ignored = await deps.isIgnored(cwd);
+	} catch {
+		// `check-ignore` reports "not ignored" as exit 1, not as a failure, so a throw here
+		// means git itself is broken — and `repoRoot` already succeeded. Treat it as not
+		// ignored rather than cautioning in every repository on a broken probe.
+	}
+	return classifyStartFolder(root, origin, ignored);
 }

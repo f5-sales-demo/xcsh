@@ -1320,6 +1320,17 @@ export const head = {
 // ════════════════════════════════════════════════════════════════════════════
 
 export const repo = {
+	/**
+	 * Whether `cwd` itself is excluded by gitignore rules.
+	 *
+	 * `check-ignore` exits 1 for "not ignored", which is an answer rather than a failure,
+	 * so only exit 0 counts as ignored and anything else reads as not.
+	 */
+	async ignored(cwd: string, signal?: AbortSignal): Promise<boolean> {
+		const result = await runCommand(cwd, ["check-ignore", "-q", "."], { readOnly: true, signal });
+		return result.exitCode === 0;
+	},
+
 	/** Resolve the repository root (may be a worktree root). */
 	async root(cwd: string, signal?: AbortSignal): Promise<string | null> {
 		const repository = await resolveRepository(cwd);

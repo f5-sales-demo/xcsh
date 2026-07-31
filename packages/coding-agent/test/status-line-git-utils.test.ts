@@ -60,6 +60,18 @@ describe("parseGitHubRepo", () => {
 		expect(parseGitHubRepo("https://github.com:org/repo")).toBeNull();
 	});
 
+	// Tightening the anchor must not reject GitHub remotes that really are valid: an
+	// explicit ssh port, and credential-bearing https as git writes it for a stored token.
+	// These land in the `git` branch otherwise, which then falsely states origin is not on
+	// GitHub and suppresses GitHub work in a real GitHub checkout.
+	test("accepts an explicit ssh port and credential-bearing https", () => {
+		expect(parseGitHubRepo("ssh://git@github.com:22/org/repo.git")).toBe("org/repo");
+		expect(parseGitHubRepo("https://user:token@github.com/org/repo.git")).toBe("org/repo");
+		expect(parseGitHubRepo("https://oauth2:ghp_x@github.com/org/repo")).toBe("org/repo");
+		// Still not a licence to accept any host.
+		expect(parseGitHubRepo("https://user:token@gitlab.com/org/repo")).toBeNull();
+	});
+
 	test("returns null for extra path segments beyond owner/repo", () => {
 		expect(parseGitHubRepo("https://github.com/org/repo/tree/main")).toBeNull();
 	});
