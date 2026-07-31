@@ -103,13 +103,13 @@ describe("interpretPageState", () => {
 
 	it("detects PRODUCTION LOGIN (login.ves.volterra.io)", () => {
 		const state = interpretPageState(
-			"https://login.ves.volterra.io/auth/realms/acme-corp-xyz789/protocol/openid-connect/auth",
+			"https://login.ves.volterra.io/auth/realms/example-corp-xyz789/protocol/openid-connect/auth",
 			null,
 			ROUTES,
 		);
 		expect(state.operation).toBe("login");
 		expect(state.environment).toBe("production");
-		expect(state.tenant).toBe("acme-corp");
+		expect(state.tenant).toBe("example-corp");
 	});
 
 	it("detects tenant + environment on CONSOLE pages (staging)", () => {
@@ -124,11 +124,11 @@ describe("interpretPageState", () => {
 
 	it("detects tenant + environment on CONSOLE pages (production)", () => {
 		const state = interpretPageState(
-			"https://acme-corp.console.ves.volterra.io/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
+			"https://example-corp.console.ves.volterra.io/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/origin_pools",
 			null,
 			ROUTES,
 		);
-		expect(state.tenant).toBe("acme-corp");
+		expect(state.tenant).toBe("example-corp");
 		expect(state.environment).toBe("production");
 	});
 

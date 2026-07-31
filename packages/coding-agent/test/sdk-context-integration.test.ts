@@ -64,7 +64,7 @@ describe("createAgentSession context tracking", () => {
 	it("scenario 1: emits context_change only at session start when a context is active", async () => {
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
@@ -92,7 +92,7 @@ describe("createAgentSession context tracking", () => {
 			expect(contextChanges[0]).toMatchObject({
 				type: "context_change",
 				contextName: "prod",
-				tenant: "acme-corp",
+				tenant: "example-corp",
 				namespace: "production",
 			});
 			expect(customMessages).toHaveLength(0);
@@ -128,7 +128,7 @@ describe("createAgentSession context tracking", () => {
 	it("scenario 2: session starts with context A; mid-session activate emits both context_change and custom_message", async () => {
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
@@ -190,13 +190,13 @@ describe("createAgentSession context tracking", () => {
 		// and custom_message (so the LLM gains context it never had at startup).
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
 		await ContextService.instance.createContext({
 			name: "staging",
-			apiUrl: "https://acme-corp-staging.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp-staging.console.ves.volterra.io/api",
 			apiToken: "tok-staging",
 			defaultNamespace: "staging",
 		});
@@ -236,7 +236,7 @@ describe("createAgentSession context tracking", () => {
 			expect(contextChanges[0]).toMatchObject({
 				type: "context_change",
 				contextName: "prod",
-				tenant: "acme-corp",
+				tenant: "example-corp",
 				namespace: "production",
 			});
 			expect(customMessages).toHaveLength(1);
@@ -253,7 +253,7 @@ describe("createAgentSession context tracking", () => {
 		// switches (name changes) should produce an LLM-visible custom_message.
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
@@ -298,7 +298,7 @@ describe("createAgentSession context tracking", () => {
 		// LLM's active context immediately.
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
@@ -355,7 +355,7 @@ describe("createAgentSession context tracking", () => {
 		// addDisposeHook + ContextService.offContextChange should prevent this.
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
@@ -485,7 +485,7 @@ describe("createAgentSession context tracking", () => {
 		// leaving the LLM anchored on the old namespace. New guard (name-or-namespace) emits.
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "tok",
 			defaultNamespace: "production",
 		});
@@ -520,7 +520,7 @@ describe("createAgentSession context tracking", () => {
 			expect(contextChanges[0]).toMatchObject({
 				type: "context_change",
 				contextName: "prod",
-				tenant: "acme-corp",
+				tenant: "example-corp",
 				namespace: "staging",
 			});
 			expect(customMessages).toHaveLength(1);
@@ -528,7 +528,7 @@ describe("createAgentSession context tracking", () => {
 			// Content should mention the namespace change. Exact wording is "[F5 XC namespace
 			// changed to staging]" (not "[Context switched to prod]" — the name didn't change).
 			expect(content).toContain("namespace changed to staging");
-			expect(content).toContain("Tenant: acme-corp");
+			expect(content).toContain("Tenant: example-corp");
 			expect(content).toContain("namespace: staging");
 		} finally {
 			await session.dispose();
@@ -538,11 +538,11 @@ describe("createAgentSession context tracking", () => {
 	it("bootstrap: XCSH_SESSION_TENANT binds the context matching that tenant (extension worker)", async () => {
 		await ContextService.instance.createContext({
 			name: "prod",
-			apiUrl: "https://acme-corp.console.ves.volterra.io/api",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "t",
 			defaultNamespace: "default",
 		});
-		process.env.XCSH_SESSION_TENANT = "acme-corp|production";
+		process.env.XCSH_SESSION_TENANT = "example-corp|production";
 		try {
 			const { session } = await createAgentSession({
 				cwd,
@@ -573,7 +573,7 @@ describe("createAgentSession context tracking", () => {
 			apiToken: "t",
 			defaultNamespace: "default",
 		});
-		process.env.XCSH_SESSION_TENANT = "acme-corp|production";
+		process.env.XCSH_SESSION_TENANT = "example-corp|production";
 		try {
 			const { session } = await createAgentSession({
 				cwd,

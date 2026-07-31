@@ -4,9 +4,9 @@ import { COLORS } from "../src";
 import { StatusBar } from "../src/components/StatusBar";
 
 test("renders the rounded context percentage and the session label", () => {
-	const { container } = render(<StatusBar contextPct={42.6} sessionLabel="acme·prod" />);
+	const { container } = render(<StatusBar contextPct={42.6} sessionLabel="example·prod" />);
 	expect(screen.getByText("43%")).toBeDefined();
-	expect(screen.getByText("acme·prod")).toBeDefined();
+	expect(screen.getByText("example·prod")).toBeDefined();
 	// The session segment is F5 red.
 	const session = container.querySelector(".seg-session") as HTMLElement;
 	expect(session.style.background).toContain(COLORS.f5Red);

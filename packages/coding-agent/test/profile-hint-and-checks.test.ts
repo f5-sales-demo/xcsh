@@ -50,13 +50,13 @@ describe("system-prompt userProfile hint", () => {
 			userProfile: {
 				name: "Ada Lovelace",
 				role: "Mathematician",
-				org: "Acme",
+				org: "Example",
 			},
 		});
 		expect(rendered).toContain("Primary Human");
 		expect(rendered).toContain("Ada Lovelace");
 		expect(rendered).toContain("Mathematician");
-		expect(rendered).toContain("Acme");
+		expect(rendered).toContain("Example");
 		expect(rendered).toContain("xcsh://user");
 	});
 
@@ -84,7 +84,7 @@ describe("system-prompt userProfile hint", () => {
 		const template = await Bun.file(systemPromptPath).text();
 		const rendered = prompt.render(template, {
 			...baseRenderContext,
-			userProfile: { name: "Ada Lovelace", role: "Mathematician", org: "Acme" },
+			userProfile: { name: "Ada Lovelace", role: "Mathematician", org: "Example" },
 		});
 		expect(rendered).toContain("MUST** read");
 		expect(rendered).toContain("PII");

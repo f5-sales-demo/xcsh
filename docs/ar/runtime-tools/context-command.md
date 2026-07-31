@@ -22,7 +22,7 @@ i18n:
 تحتاج إلى ثلاثة أشياء من وحدة تحكم F5 XC الخاصة بك: عنوان URL للمستأجر، ورمز API، واختيارياً مساحة أسماء.
 
 ```
-/context create production https://acme.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -43,8 +43,8 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     acme                                         │
-│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_TENANT     example                                         │
+│ XCSH_API_URL    https://example.console.ves.volterra.io         │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -81,7 +81,7 @@ Context 'production' created. Use /context activate production to switch to it.
 ```
 
 ```
-  production           https://acme.console.ves.volterra.io
+  production           https://example.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -124,7 +124,7 @@ Context 'production' created. Use /context activate production to switch to it.
 يمكن أن تحمل السياقات متغيرات بيئة إضافية تُحقن في جلستك عند التفعيل. مفيدة للتكوينات الخاصة بكل مستأجر والتي ليست جزءاً من مجموعة بيانات الاعتماد.
 
 ```
-/context set CUSTOM_HEADER=x-acme-trace
+/context set CUSTOM_HEADER=x-example-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL

@@ -23,7 +23,7 @@ function reg(...recs: WorkerRec[]): Registry {
 }
 const W = (sessionId: string, port: number, lastSeen = 0): WorkerRec => ({
 	sessionId,
-	tenant: "acme|production",
+	tenant: "example|production",
 	port,
 	pid: 1,
 	lastSeen,
@@ -31,10 +31,10 @@ const W = (sessionId: string, port: number, lastSeen = 0): WorkerRec => ({
 
 describe("parseControlMsg", () => {
 	test("valid provision/release/status", () => {
-		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "acme|staging" })).toEqual({
+		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "example|staging" })).toEqual({
 			type: "provision",
 			sessionId: "tab-7",
-			tenant: "acme|staging",
+			tenant: "example|staging",
 		});
 		expect(parseControlMsg({ type: "release", sessionId: "tab-7" })).toEqual({ type: "release", sessionId: "tab-7" });
 		expect(parseControlMsg({ type: "status" })).toEqual({ type: "status" });
@@ -49,7 +49,7 @@ describe("parseControlMsg", () => {
 	});
 	test("rejects junk / missing fields / bad tenant", () => {
 		expect(parseControlMsg({ type: "provision", sessionId: "tab-7" })).toBeNull(); // no tenant
-		expect(parseControlMsg({ type: "provision", tenant: "acme|staging" })).toBeNull(); // no sessionId
+		expect(parseControlMsg({ type: "provision", tenant: "example|staging" })).toBeNull(); // no sessionId
 		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "no-pipe" })).toBeNull();
 		expect(parseControlMsg({ type: "release" })).toBeNull();
 		expect(parseControlMsg({ type: "nope", sessionId: "tab-7" })).toBeNull();
@@ -224,7 +224,7 @@ describe("selectSpawnPort never probes a port it already handed out (#2463)", ()
 	function regWith(entries: Array<[string, number]>): Registry {
 		const reg: Registry = new Map();
 		for (const [sessionId, port] of entries) {
-			reg.set(sessionId, { sessionId, tenant: "acme|staging", port, pid: 1000 + port, lastSeen: 0 });
+			reg.set(sessionId, { sessionId, tenant: "example|staging", port, pid: 1000 + port, lastSeen: 0 });
 		}
 		return reg;
 	}

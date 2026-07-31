@@ -118,7 +118,7 @@ test("Chrome-style launch of the installed wrapper reaches the relay and ensures
 	});
 
 	const stdin = host.stdin as import("bun").FileSink;
-	stdin.write(encodeNm({ type: "provision", tenantKey: "acme|staging" }));
+	stdin.write(encodeNm({ type: "provision", tenantKey: "example|staging" }));
 	stdin.flush();
 
 	let up = false;

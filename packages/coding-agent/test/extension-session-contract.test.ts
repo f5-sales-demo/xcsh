@@ -87,7 +87,7 @@ describe("extension session contract", () => {
 				XCSH_API_URL: process.env.XCSH_API_URL,
 			};
 			process.env.XCSH_SESSION_ID = "tab-7";
-			process.env.XCSH_SESSION_TENANT = "acme|staging";
+			process.env.XCSH_SESSION_TENANT = "example|staging";
 			delete process.env.XCSH_API_URL;
 		});
 		afterEach(() => {
@@ -102,7 +102,7 @@ describe("extension session contract", () => {
 		it("echoes XCSH_SESSION_ID as the tab-correlation sessionId and parses the tenant", () => {
 			const info = sessionInfoForWorker();
 			expect(info.sessionId).toBe("tab-7");
-			expect(info.tenant).toBe("acme");
+			expect(info.tenant).toBe("example");
 			expect(info.env).toBe("staging");
 			expect(info.apiUrl).toBeNull();
 			expect(info.contextBound).toBe(false);
@@ -121,10 +121,10 @@ describe("extension session contract", () => {
 		it("reports the bound identity after setWorkerIdentity (late-bind)", () => {
 			delete process.env.XCSH_SESSION_ID;
 			delete process.env.XCSH_SESSION_TENANT;
-			setWorkerIdentity("tab-7", "acme|staging");
+			setWorkerIdentity("tab-7", "example|staging");
 			const info = sessionInfoForWorker();
 			expect(info.sessionId).toBe("tab-7");
-			expect(info.tenant).toBe("acme");
+			expect(info.tenant).toBe("example");
 			expect(info.env).toBe("staging");
 		});
 	});
@@ -141,7 +141,7 @@ describe("extension session contract", () => {
 				XCSH_API_URL: process.env.XCSH_API_URL,
 			};
 			process.env.XCSH_SESSION_ID = "tab-7";
-			process.env.XCSH_SESSION_TENANT = "acme|staging";
+			process.env.XCSH_SESSION_TENANT = "example|staging";
 			delete process.env.XCSH_API_URL;
 			server = new BridgeServer();
 			// port 0 = OS-ephemeral; skipOriginCheck so a non-extension client may connect.
@@ -162,7 +162,7 @@ describe("extension session contract", () => {
 
 			expect(ack.type).toBe("hello_ack");
 			expect(ack.sessionId).toBe("tab-7");
-			expect(ack.tenant).toBe("acme");
+			expect(ack.tenant).toBe("example");
 			expect(ack.env).toBe("staging");
 			expect(ack.contextBound).toBe(false);
 			// The extension requires contract major 1 to bind + route (session-routing).

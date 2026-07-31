@@ -398,8 +398,8 @@ describe("renderAboutDoc platform context section", () => {
 		const now = Date.now();
 		const context: ContextStatus = {
 			activeContextName: "prod",
-			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeContextTenant: "acme-corp",
+			activeContextUrl: "https://example-corp.console.ves.volterra.io/api",
+			activeContextTenant: "example-corp",
 			activeContextNamespace: "production",
 			credentialSource: "context",
 			authStatus: "connected",
@@ -408,7 +408,7 @@ describe("renderAboutDoc platform context section", () => {
 			authCheckedAt: now - 3 * 60_000, // 3 min ago
 		};
 		const doc = renderAboutDoc(fakeBuildInfo(), context, null, null);
-		expect(doc).toContain("**Tenant:** acme-corp");
+		expect(doc).toContain("**Tenant:** example-corp");
 		expect(doc).toContain("**Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected (latency: 142ms, checked: 3 min ago)");
 		expect(doc).toContain("**Credential Source:** context (name: prod)");
@@ -417,8 +417,8 @@ describe("renderAboutDoc platform context section", () => {
 	it("renders auth status without latency suffix when authCheckedAt is absent", () => {
 		const context: ContextStatus = {
 			activeContextName: "prod",
-			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeContextTenant: "acme-corp",
+			activeContextUrl: "https://example-corp.console.ves.volterra.io/api",
+			activeContextTenant: "example-corp",
 			activeContextNamespace: "production",
 			credentialSource: "context",
 			authStatus: "unknown",
@@ -447,8 +447,8 @@ describe("renderAboutDoc platform context section", () => {
 	it("omits '(name: ...)' suffix when credential source is not 'context'", () => {
 		const context: ContextStatus = {
 			activeContextName: "prod",
-			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeContextTenant: "acme-corp",
+			activeContextUrl: "https://example-corp.console.ves.volterra.io/api",
+			activeContextTenant: "example-corp",
 			activeContextNamespace: "production",
 			credentialSource: "environment",
 			authStatus: "connected",
@@ -466,15 +466,15 @@ describe("renderAboutDoc platform context section", () => {
 		// the configured section so users see the tenant/namespace they're actually connected to.
 		const context: ContextStatus = {
 			activeContextName: null,
-			activeContextUrl: "https://acme-corp.console.ves.volterra.io/api",
-			activeContextTenant: "acme-corp",
+			activeContextUrl: "https://example-corp.console.ves.volterra.io/api",
+			activeContextTenant: "example-corp",
 			activeContextNamespace: "production",
 			credentialSource: "environment",
 			authStatus: "connected",
 			isConfigured: true,
 		};
 		const doc = renderAboutDoc(fakeBuildInfo(), context, null, null);
-		expect(doc).toContain("- **Tenant:** acme-corp");
+		expect(doc).toContain("- **Tenant:** example-corp");
 		expect(doc).toContain("- **Namespace:** production");
 		expect(doc).toContain("**Auth Status:** connected");
 		expect(doc).toContain("**Credential Source:** environment");
