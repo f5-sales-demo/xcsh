@@ -15,6 +15,7 @@ Generate these sections in order. Pull data from available sources (Salesforce, 
 ### 1. Account Intelligence
 
 Gather from Salesforce (`xcsh://salesforce`, `sf_query`):
+
 - Account name, industry, annual revenue, account type
 - Open pipeline: deal names, stages, amounts, close dates
 - Recent activity: last touch dates, recent stage changes
@@ -24,6 +25,7 @@ Gather from Salesforce (`xcsh://salesforce`, `sf_query`):
 ### 2. Stakeholder Mapping
 
 For each known attendee:
+
 - Name, title, role in the decision process
 - MEDDPICC role: Economic Buyer, Champion, Technical Evaluator, Blocker
 - Known priorities and pain points
@@ -35,6 +37,7 @@ If attendee information is incomplete, list what is known and flag gaps.
 ### 3. Meeting Objectives
 
 Help the SE define:
+
 - **Primary objective**: The one thing that must happen for this meeting to succeed
 - **Secondary objectives**: 2-3 additional outcomes to pursue if primary is achieved
 - **Minimum acceptable outcome**: What makes the meeting not a waste of time
@@ -45,27 +48,32 @@ Help the SE define:
 Tailor to the deal stage and product area. Organized by MEDDPICC element:
 
 **Identifying Pain:**
+
 - What business problem are you trying to solve?
 - What is the cost of the current state? (quantify if possible)
 - What has changed that makes this a priority now?
 - Who else is affected by this problem?
 
 **Metrics:**
+
 - How will you measure success?
 - What KPIs does your leadership track for this area?
 - What would a 6-month post-deployment review look like?
 
 **Decision Criteria:**
+
 - What are the must-have requirements vs nice-to-haves?
 - Are there technical standards or compliance requirements?
 - What does your evaluation process look like?
 
 **Decision Process:**
+
 - Who needs to approve this purchase?
 - What is the timeline for a decision?
 - Are there budget cycles or fiscal deadlines?
 
 **Competition:**
+
 - Who else are you evaluating?
 - What do you like about the alternatives?
 - Have you worked with any of these vendors before?
@@ -75,6 +83,7 @@ Tailor to the deal stage and product area. Organized by MEDDPICC element:
 Adapt based on meeting type:
 
 **Discovery Call (30-60 min):**
+
 1. Introductions and meeting objectives (5 min)
 2. Customer environment overview (10 min)
 3. Pain point deep-dive (15 min)
@@ -82,6 +91,7 @@ Adapt based on meeting type:
 5. Next steps and action items (5 min)
 
 **Technical Deep Dive (60-90 min):**
+
 1. Recap of previous discussions (5 min)
 2. Architecture review (15 min)
 3. Product demonstration (30 min)
@@ -90,6 +100,7 @@ Adapt based on meeting type:
 6. Next steps (5 min)
 
 **Executive Briefing (30 min):**
+
 1. Business context and pain statement (5 min)
 2. Solution value proposition (10 min)
 3. Proof points and references (5 min)
@@ -99,6 +110,7 @@ Adapt based on meeting type:
 ### 6. Competitive Preparation
 
 If competitors are in the deal:
+
 - Review competitive positioning using the `competitive` skill
 - Prepare 2-3 differentiation talking points specific to this deal
 - Anticipate competitor objections and prepare responses
@@ -107,6 +119,7 @@ If competitors are in the deal:
 ### 7. Follow-Up Plan
 
 Before the meeting ends, prepare:
+
 - Action items with owners and dates
 - Follow-up email template with meeting summary
 - Next meeting agenda sketch

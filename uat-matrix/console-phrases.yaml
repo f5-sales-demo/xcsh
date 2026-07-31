@@ -22,6 +22,7 @@
 #                       {console_resource, api_path, resource_name} also GET-verified
 #   cleanup           : api_path/name pairs to force-delete on teardown
 #                       (parents first so dependants release)
+---
 defaults:
   namespace: demo
   tenant: example.staging.volterra.us
@@ -36,7 +37,7 @@ phrases:
     modality: console
     operation: create
     console_resource: health-check
-    verify: { api_path: healthchecks, resource_name: uat-hc-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-1" }
+    verify: {api_path: healthchecks, resource_name: uat-hc-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-1"}
     nested: []
     cleanup: ["healthchecks/uat-hc-1"]
 
@@ -45,7 +46,7 @@ phrases:
     modality: console
     operation: delete
     console_resource: health-check
-    verify: { api_path: healthchecks, resource_name: uat-hc-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-hc-1" }
+    verify: {api_path: healthchecks, resource_name: uat-hc-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-hc-1"}
     nested: []
     cleanup: ["healthchecks/uat-hc-1"]
 
@@ -54,7 +55,7 @@ phrases:
     modality: console
     operation: create
     console_resource: app-firewall
-    verify: { api_path: app_firewalls, resource_name: uat-waf-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-waf-1" }
+    verify: {api_path: app_firewalls, resource_name: uat-waf-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-waf-1"}
     nested: []
     cleanup: ["app_firewalls/uat-waf-1"]
 
@@ -63,7 +64,7 @@ phrases:
     modality: console
     operation: delete
     console_resource: app-firewall
-    verify: { api_path: app_firewalls, resource_name: uat-waf-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waf-1" }
+    verify: {api_path: app_firewalls, resource_name: uat-waf-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waf-1"}
     nested: []
     cleanup: ["app_firewalls/uat-waf-1"]
 
@@ -72,7 +73,7 @@ phrases:
     modality: console
     operation: create
     console_resource: service-policy
-    verify: { api_path: service_policys, resource_name: uat-sp-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-sp-1" }
+    verify: {api_path: service_policys, resource_name: uat-sp-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-sp-1"}
     nested: []
     cleanup: ["service_policys/uat-sp-1"]
 
@@ -81,7 +82,7 @@ phrases:
     modality: console
     operation: delete
     console_resource: service-policy
-    verify: { api_path: service_policys, resource_name: uat-sp-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-sp-1" }
+    verify: {api_path: service_policys, resource_name: uat-sp-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-sp-1"}
     nested: []
     cleanup: ["service_policys/uat-sp-1"]
 
@@ -90,7 +91,7 @@ phrases:
     modality: console
     operation: create
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-1" }
+    verify: {api_path: origin_pools, resource_name: uat-op-1, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-1"}
     nested: []
     cleanup: ["origin_pools/uat-op-1"]
 
@@ -99,7 +100,7 @@ phrases:
     modality: console
     operation: delete
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-op-1" }
+    verify: {api_path: origin_pools, resource_name: uat-op-1, namespace: demo, expect_http_delete: 404, ui_readback: "uat-op-1"}
     nested: []
     cleanup: ["origin_pools/uat-op-1"]
 
@@ -111,9 +112,9 @@ phrases:
     modality: console
     operation: create
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-hc, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-hc" }
+    verify: {api_path: origin_pools, resource_name: uat-op-hc, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-hc"}
     nested:
-      - { console_resource: health-check, api_path: healthchecks, resource_name: uat-hc-dep }
+      - {console_resource: health-check, api_path: healthchecks, resource_name: uat-hc-dep}
     cleanup: ["origin_pools/uat-op-hc", "healthchecks/uat-hc-dep"]
 
   - id: C-NEST-OPHC-02
@@ -121,9 +122,9 @@ phrases:
     modality: console
     operation: delete
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-hc, namespace: demo, expect_http_delete: 404, ui_readback: "uat-op-hc" }
+    verify: {api_path: origin_pools, resource_name: uat-op-hc, namespace: demo, expect_http_delete: 404, ui_readback: "uat-op-hc"}
     nested:
-      - { console_resource: health-check, api_path: healthchecks, resource_name: uat-hc-dep }
+      - {console_resource: health-check, api_path: healthchecks, resource_name: uat-hc-dep}
     cleanup: ["origin_pools/uat-op-hc", "healthchecks/uat-hc-dep"]
 
   - id: C-NEST-LBOP-01
@@ -131,9 +132,9 @@ phrases:
     modality: console
     operation: create
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-lb-op, namespace: demo, expect_http_create: 200, ui_readback: "uat-lb-op" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-lb-op, namespace: demo, expect_http_create: 200, ui_readback: "uat-lb-op"}
     nested:
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbop-pool }
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbop-pool}
     cleanup: ["http_loadbalancers/uat-lb-op", "origin_pools/uat-lbop-pool"]
 
   - id: C-NEST-LBOP-02
@@ -141,9 +142,9 @@ phrases:
     modality: console
     operation: delete
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-lb-op, namespace: demo, expect_http_delete: 404, ui_readback: "uat-lb-op" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-lb-op, namespace: demo, expect_http_delete: 404, ui_readback: "uat-lb-op"}
     nested:
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbop-pool }
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbop-pool}
     cleanup: ["http_loadbalancers/uat-lb-op", "origin_pools/uat-lbop-pool"]
 
   - id: C-NEST-LBWAF-01
@@ -151,10 +152,10 @@ phrases:
     modality: console
     operation: create
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-lb-waf, namespace: demo, expect_http_create: 200, ui_readback: "uat-lb-waf" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-lb-waf, namespace: demo, expect_http_create: 200, ui_readback: "uat-lb-waf"}
     nested:
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbwaf-pool }
-      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-lbwaf-waf }
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbwaf-pool}
+      - {console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-lbwaf-waf}
     cleanup: ["http_loadbalancers/uat-lb-waf", "app_firewalls/uat-lbwaf-waf", "origin_pools/uat-lbwaf-pool"]
 
   - id: C-NEST-LBWAF-02
@@ -162,10 +163,10 @@ phrases:
     modality: console
     operation: delete
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-lb-waf, namespace: demo, expect_http_delete: 404, ui_readback: "uat-lb-waf" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-lb-waf, namespace: demo, expect_http_delete: 404, ui_readback: "uat-lb-waf"}
     nested:
-      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-lbwaf-waf }
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbwaf-pool }
+      - {console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-lbwaf-waf}
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-lbwaf-pool}
     cleanup: ["http_loadbalancers/uat-lb-waf", "app_firewalls/uat-lbwaf-waf", "origin_pools/uat-lbwaf-pool"]
 
   # ===========================================================================
@@ -177,10 +178,10 @@ phrases:
     modality: console
     operation: create
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-waap-lb, namespace: demo, expect_http_create: 200, ui_readback: "uat-waap-lb" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-waap-lb, namespace: demo, expect_http_create: 200, ui_readback: "uat-waap-lb"}
     nested:
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap-pool }
-      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap-waf }
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap-pool}
+      - {console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap-waf}
     cleanup: ["http_loadbalancers/uat-waap-lb", "app_firewalls/uat-waap-waf", "origin_pools/uat-waap-pool"]
 
   - id: C-WAAP-02
@@ -188,10 +189,10 @@ phrases:
     modality: console
     operation: delete
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-waap-lb, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waap-lb" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-waap-lb, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waap-lb"}
     nested:
-      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap-waf }
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap-pool }
+      - {console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap-waf}
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap-pool}
     cleanup: ["http_loadbalancers/uat-waap-lb", "app_firewalls/uat-waap-waf", "origin_pools/uat-waap-pool"]
 
   - id: C-WAAP-03
@@ -199,10 +200,10 @@ phrases:
     modality: console
     operation: create
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-waap2-lb, namespace: demo, expect_http_create: 200, ui_readback: "uat-waap2-lb" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-waap2-lb, namespace: demo, expect_http_create: 200, ui_readback: "uat-waap2-lb"}
     nested:
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap2-pool }
-      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap2-waf }
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap2-pool}
+      - {console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap2-waf}
     cleanup: ["http_loadbalancers/uat-waap2-lb", "app_firewalls/uat-waap2-waf", "origin_pools/uat-waap2-pool"]
 
   - id: C-WAAP-04
@@ -210,10 +211,10 @@ phrases:
     modality: console
     operation: delete
     console_resource: http-load-balancer
-    verify: { api_path: http_loadbalancers, resource_name: uat-waap2-lb, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waap2-lb" }
+    verify: {api_path: http_loadbalancers, resource_name: uat-waap2-lb, namespace: demo, expect_http_delete: 404, ui_readback: "uat-waap2-lb"}
     nested:
-      - { console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap2-waf }
-      - { console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap2-pool }
+      - {console_resource: app-firewall, api_path: app_firewalls, resource_name: uat-waap2-waf}
+      - {console_resource: origin-pool, api_path: origin_pools, resource_name: uat-waap2-pool}
     cleanup: ["http_loadbalancers/uat-waap2-lb", "app_firewalls/uat-waap2-waf", "origin_pools/uat-waap2-pool"]
 
   # ===========================================================================
@@ -226,7 +227,7 @@ phrases:
     modality: console
     operation: create
     console_resource: health-check
-    verify: { api_path: healthchecks, resource_name: uat-hc-v1, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v1" }
+    verify: {api_path: healthchecks, resource_name: uat-hc-v1, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v1"}
     nested: []
     cleanup: ["healthchecks/uat-hc-v1"]
 
@@ -235,7 +236,7 @@ phrases:
     modality: console
     operation: create
     console_resource: health-check
-    verify: { api_path: healthchecks, resource_name: uat-hc-v2, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v2" }
+    verify: {api_path: healthchecks, resource_name: uat-hc-v2, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v2"}
     nested: []
     cleanup: ["healthchecks/uat-hc-v2"]
 
@@ -244,7 +245,7 @@ phrases:
     modality: console
     operation: create
     console_resource: health-check
-    verify: { api_path: healthchecks, resource_name: uat-hc-v3, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v3" }
+    verify: {api_path: healthchecks, resource_name: uat-hc-v3, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v3"}
     nested: []
     cleanup: ["healthchecks/uat-hc-v3"]
 
@@ -253,7 +254,7 @@ phrases:
     modality: console
     operation: create
     console_resource: health-check
-    verify: { api_path: healthchecks, resource_name: uat-hc-v4, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v4" }
+    verify: {api_path: healthchecks, resource_name: uat-hc-v4, namespace: demo, expect_http_create: 200, ui_readback: "uat-hc-v4"}
     nested: []
     cleanup: ["healthchecks/uat-hc-v4"]
 
@@ -262,7 +263,7 @@ phrases:
     modality: console
     operation: create
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-v1, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v1" }
+    verify: {api_path: origin_pools, resource_name: uat-op-v1, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v1"}
     nested: []
     cleanup: ["origin_pools/uat-op-v1"]
 
@@ -271,7 +272,7 @@ phrases:
     modality: console
     operation: create
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-v2, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v2" }
+    verify: {api_path: origin_pools, resource_name: uat-op-v2, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v2"}
     nested: []
     cleanup: ["origin_pools/uat-op-v2"]
 
@@ -280,7 +281,7 @@ phrases:
     modality: console
     operation: create
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-v3, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v3" }
+    verify: {api_path: origin_pools, resource_name: uat-op-v3, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v3"}
     nested: []
     cleanup: ["origin_pools/uat-op-v3"]
 
@@ -289,6 +290,6 @@ phrases:
     modality: console
     operation: create
     console_resource: origin-pool
-    verify: { api_path: origin_pools, resource_name: uat-op-v4, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v4" }
+    verify: {api_path: origin_pools, resource_name: uat-op-v4, namespace: demo, expect_http_create: 200, ui_readback: "uat-op-v4"}
     nested: []
     cleanup: ["origin_pools/uat-op-v4"]

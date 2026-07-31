@@ -51,16 +51,23 @@
 ## [19.51.5] - 2026-06-26
 
 ### Fixed
-- Sign + notarize the embedded native addon (`pi_natives.*.node`) in `build-sign-macos` **before** it is embedded into the compiled binary. xcsh extracts the embedded `.node` to `~/.xcsh/natives/<ver>/` at runtime; previously that extracted copy was ad-hoc-signed, so managed/MDM Macs blocked the `dlopen` ("could not verify it is free of malware"). The addon is now Developer-ID-signed with hardened runtime and notarized, so Gatekeeper's online check passes it without manual approval.
+
+- Sign + notarize the embedded native addon (`pi_natives.*.node`) in `build-sign-macos` **before** it is embedded into
+  the compiled binary. xcsh extracts the embedded `.node` to `~/.xcsh/natives/<ver>/` at runtime; previously that
+  extracted copy was ad-hoc-signed, so managed/MDM Macs blocked the `dlopen` ("could not verify it is free of
+  malware"). The addon is now Developer-ID-signed with hardened runtime and notarized, so Gatekeeper's online check
+  passes it without manual approval.
 
 ## [19.51.4] - 2026-06-26
 
 ### Added
+
 - Deterministic NL→XC console automation: the system prompt mandates the purpose-built `catalog_workflow_runner` console skill (extension-driven) and forbids the generic Puppeteer browser tool for F5 XC console pages; visible Chrome is framed as the flagship showcase, headless as the exception.
 - Native-messaging host auto-install on console-automation init (idempotent), with a baked-in Web Store URL and fail-fast guidance when the extension is not connected.
 - Gated, security-clean relay tracing in `chrome-host` for diagnosing the bridge-connect step.
 
 ### Fixed
+
 - Native host now uses the compiled `xcsh` binary (not `bun + cli.ts`), which survives Chrome's stripped-env launch.
 - Re-embedded console catalog/field-metadata with the `urn:xcsh:console:workflow:v1` schema and the tcp-load-balancer / network-interface defect fixes plus label corrections.
 - Pre-existing biome lint/format issues that were blocking CI.
@@ -85,7 +92,10 @@
 
 ### Changed
 
-- Salesforce tools extracted to marketplace plugin: sf_setup, sf_query, sf_org_display, and sf_pipeline_report are now available as an installable plugin (`@f5-sales-demo/xcsh-salesforce`) via the Extension API instead of built-in tools. Install with `xcsh plugin install salesforce`. Context discovery, pipeline reporting, and container-adapted authentication are preserved with full feature parity. ([#1059](https://github.com/f5-sales-demo/xcsh/issues/1059))
+- Salesforce tools extracted to marketplace plugin: sf_setup, sf_query, sf_org_display, and sf_pipeline_report are now
+  available as an installable plugin (`@f5-sales-demo/xcsh-salesforce`) via the Extension API instead of built-in
+  tools. Install with `xcsh plugin install salesforce`. Context discovery, pipeline reporting, and container-adapted
+  authentication are preserved with full feature parity. ([#1059](https://github.com/f5-sales-demo/xcsh/issues/1059))
 
 ## [18.75.0] - 2026-05-23
 
@@ -97,7 +107,11 @@
 
 ### Fixed
 
-- Welcome banner cloud provider hints: AWS SSO token expiry now correctly suggests `aws sso login` instead of `aws configure`; Google Cloud check replaced `gcloud auth list` (false positives on expired tokens) with `gcloud auth print-access-token`; F5 XC Context surfaces `errorClass` (network/URL) in hints; GitLab `project_inaccessible` gets its own hint; Salesforce differentiates `session_expired` and `not_configured` hints ([#825](https://github.com/f5-sales-demo/xcsh/issues/825))
+- Welcome banner cloud provider hints: AWS SSO token expiry now correctly suggests `aws sso login` instead of `aws
+  configure`; Google Cloud check replaced `gcloud auth list` (false positives on expired tokens) with `gcloud auth
+  print-access-token`; F5 XC Context surfaces `errorClass` (network/URL) in hints; GitLab `project_inaccessible` gets
+  its own hint; Salesforce differentiates `session_expired` and `not_configured` hints
+  ([#825](https://github.com/f5-sales-demo/xcsh/issues/825))
 
 ## [18.64.0] - 2026-05-13
 
@@ -110,7 +124,11 @@
 
 ### Changed
 
-- Regenerated API spec index from catalog v2.1.82: http_loadbalancer CRUD verification corrections (6 new server defaults, corrected minimum configs, cross-field dependencies, default_pool inline pool discovery, 5 composable routing approaches) and tcp_loadbalancer minimum config corrections (listen_port, origin_pools_weights, do_not_advertise format, 9 server defaults, forced hash_policy default) ([#753](https://github.com/f5-sales-demo/xcsh/issues/753), [#757](https://github.com/f5-sales-demo/xcsh/issues/757))
+- Regenerated API spec index from catalog v2.1.82: http_loadbalancer CRUD verification corrections (6 new server
+  defaults, corrected minimum configs, cross-field dependencies, default_pool inline pool discovery, 5 composable
+  routing approaches) and tcp_loadbalancer minimum config corrections (listen_port, origin_pools_weights,
+  do_not_advertise format, 9 server defaults, forced hash_policy default)
+  ([#753](https://github.com/f5-sales-demo/xcsh/issues/753), [#757](https://github.com/f5-sales-demo/xcsh/issues/757))
 
 ## [18.53.0] - 2026-05-09
 
@@ -174,25 +192,40 @@
 
 ### Fixed
 
-- Fixed gutter width propagation in the fallback tool renderer: `#formatToolExecution()` now receives the actual available width at render-time and uses it for line truncation instead of a hardcoded 80-column limit. On narrow terminals (<82 cols) this prevents content wider than the gutter-adjusted viewport; on wide terminals it allows longer output lines. ([#117](https://github.com/f5-sales-demo/xcsh/issues/117))
+- Fixed gutter width propagation in the fallback tool renderer: `#formatToolExecution()` now receives the actual
+  available width at render-time and uses it for line truncation instead of a hardcoded 80-column limit. On narrow
+  terminals (<82 cols) this prevents content wider than the gutter-adjusted viewport; on wide terminals it allows
+  longer output lines. ([#117](https://github.com/f5-sales-demo/xcsh/issues/117))
 - Fixed `resolveConfigValue` returning literal env var names (e.g. `"LITELLM_API_KEY"`) as API keys when the env var is unset, causing 401 errors on first launch. The resolver now rejects unresolved `ALL_CAPS_WITH_UNDERSCORES` patterns, matching the existing guard in `resolveYamlApiKeyConfig`. ([#241](https://github.com/f5-sales-demo/xcsh/issues/241))
 
 ### Changed
 
-- Renamed F5 XC credential system from "profile" to "context" to align with kubectl conventions. The `/profile` command is now `/context`, all types/classes use `Context*` naming (`ContextService`, `ContextStatus`, `F5XCContext`, etc.), on-disk paths changed from `profiles/` to `contexts/` and `active_profile` to `active_context`, and the status-line segment ID is now `context_f5xc`. ([#302](https://github.com/f5-sales-demo/xcsh/issues/302))
+- Renamed F5 XC credential system from "profile" to "context" to align with kubectl conventions. The `/profile` command
+  is now `/context`, all types/classes use `Context*` naming (`ContextService`, `ContextStatus`, `F5XCContext`, etc.),
+  on-disk paths changed from `profiles/` to `contexts/` and `active_profile` to `active_context`, and the status-line
+  segment ID is now `context_f5xc`. ([#302](https://github.com/f5-sales-demo/xcsh/issues/302))
 
 ## [18.12.0] - 2026-04-23
 
 ### Changed
 
-- **System prompt realigned around the SE coworker primary mission.** The `<role>` block now leads with "technical coworker for F5 Distributed Cloud sales engineers" and names demos, MEDDPICC qualification, customer meeting preparation, and F5 XC product subject-matter expertise as primary activities — technical depth is retained as an explicit enabling credential, not subordinated. `<behavior>` reframes around the **presentation reflex** (confirming a capability before verifying it against current docs) with a conditional clause preserving the **deployment reflex** guard when the task is infrastructure. `<stakes>` leads with customer-facing risk (lost deals, damaged credibility, post-sale trust erosion) and retains infra stakes (outages, security exposures) as a secondary clause.
+- **System prompt realigned around the SE coworker primary mission.** The `<role>` block now leads with "technical
+  coworker for F5 Distributed Cloud sales engineers" and names demos, MEDDPICC qualification, customer meeting
+  preparation, and F5 XC product subject-matter expertise as primary activities — technical depth is retained as an
+  explicit enabling credential, not subordinated. `<behavior>` reframes around the **presentation reflex** (confirming
+  a capability before verifying it against current docs) with a conditional clause preserving the **deployment reflex**
+  guard when the task is infrastructure. `<stakes>` leads with customer-facing risk (lost deals, damaged credibility,
+  post-sale trust erosion) and retains infra stakes (outages, security exposures) as a secondary clause.
 - **Identity section moved above Workspace in the rendered prompt.** Static behavioral anchors now occupy the highest-attention position at the top of the prompt, and dynamic context-file changes no longer invalidate the cache for static behavioral content.
 - **Replaced the sea-color epistemic-integrity example** with a bot-defense-SKU vs contract-claim scenario. The three examples now cover SE domain (product claim vs contract reality), infra domain (LB health-check probe layer), and technical domain (mutex race) — diverse and domain-grounded.
 - **Compressed the `xcsh://` routing instruction** from 3 lines to 2 lines. The redundant trigger-phrase enumeration is removed; the MUST directive is sufficient now that `xcsh://about` also documents the architecture.
 
 ### Added
 
-- **`.xcsh/rules/config-integrity.md`** — new scoped rule carrying the dependency-first IaC guidance that previously lived in the always-on `<config-integrity>` block. Fires on `tool:edit` and `tool:write` for `.tf`, `.yaml`, `.yml`, `.json`, `.sh`, `Makefile`, `Dockerfile`, `.toml`. Uses `condition: "."` (always-true regex) so the rules engine registers it — rules without a `condition` are silently dropped.
+- **`.xcsh/rules/config-integrity.md`** — new scoped rule carrying the dependency-first IaC guidance that previously
+  lived in the always-on `<config-integrity>` block. Fires on `tool:edit` and `tool:write` for `.tf`, `.yaml`, `.yml`,
+  `.json`, `.sh`, `Makefile`, `Dockerfile`, `.toml`. Uses `condition: "."` (always-true regex) so the rules engine
+  registers it — rules without a `condition` are silently dropped.
 - **`xcsh://about` enriched** with `## Lineage` (upstream fork + maintainer), `## Architecture` (package role map), and `## Capabilities` (feature surface summary). On-demand only; zero system-prompt token cost.
 
 ### Removed
@@ -205,12 +238,24 @@ Refs: #254, #243.
 
 ### Removed
 
-- **All built-in themes except `xcsh-dark` and `xcsh-light` have been removed.** The 99 community themes previously shipped under `packages/coding-agent/src/modes/theme/defaults/` (`dark-ocean`, `dark-dracula`, `titanium`, `anthracite`, etc.), as well as the base `dark` and `light` themes, are no longer included. The hardcoded fallback when a user's theme fails to load now targets `xcsh-dark`. Users on a removed theme will fall back to `xcsh-dark` on next launch. User-authored themes under `~/.xcsh/agent/themes/` are unaffected.
+- **All built-in themes except `xcsh-dark` and `xcsh-light` have been removed.** The 99 community themes previously
+  shipped under `packages/coding-agent/src/modes/theme/defaults/` (`dark-ocean`, `dark-dracula`, `titanium`,
+  `anthracite`, etc.), as well as the base `dark` and `light` themes, are no longer included. The hardcoded fallback
+  when a user's theme fails to load now targets `xcsh-dark`. Users on a removed theme will fall back to `xcsh-dark` on
+  next launch. User-authored themes under `~/.xcsh/agent/themes/` are unaffected.
 
 ### Changed
 
-- **TUI tool-call outcomes now render as a single colored gutter ball (●).** Inline `✓/✗/⚠` status icons were removed from every tool renderer. A new "warning" outcome (orange ball) signals non-error degraded states such as grep with zero matches, exa with zero results, ast-grep with zero matches, or ask falling back to a headless/empty-questions path. `xcsh-dark` uses `warmAmber` (#ffb347); `xcsh-light` uses `#b85e00` (WCAG AA on white). User-authored themes inherit via the `gutterWarning → warning` fallback chain.
-- **`AgentToolResult` and `tool_execution_end` events gain an optional `isWarning?: boolean`** alongside `isError`. Tools that want an orange gutter ball on zero-result or fallback paths set this field (or use the new `ToolResultBuilder.isWarning()` fluent method). Extensions subscribing to `tool_execution_end` and `tool_result` hook events now receive the flag; existing extensions are unaffected. Backwards-compatible — unset means "not a warning."
+- **TUI tool-call outcomes now render as a single colored gutter ball (●).** Inline `✓/✗/⚠` status icons were
+  removed from every tool renderer. A new "warning" outcome (orange ball) signals non-error degraded states such as
+  grep with zero matches, exa with zero results, ast-grep with zero matches, or ask falling back to a
+  headless/empty-questions path. `xcsh-dark` uses `warmAmber` (#ffb347); `xcsh-light` uses `#b85e00` (WCAG AA on
+  white). User-authored themes inherit via the `gutterWarning → warning` fallback chain.
+- **`AgentToolResult` and `tool_execution_end` events gain an optional `isWarning?: boolean`** alongside `isError`.
+  Tools that want an orange gutter ball on zero-result or fallback paths set this field (or use the new
+  `ToolResultBuilder.isWarning()` fluent method). Extensions subscribing to `tool_execution_end` and `tool_result` hook
+  events now receive the flag; existing extensions are unaffected. Backwards-compatible — unset means "not a
+  warning."
 - **`formatEmptyMessage` and `formatErrorMessage` helpers no longer prepend ⚠/✗ glyphs.** Centralized fix so every tool renderer inherits the glyph-free output without a per-file workaround.
 
 Refs: #173.
@@ -219,7 +264,10 @@ Refs: #173.
 
 ### Fixed
 
-- Widened the `defaultThinkingLevel` schema enum to include `"off"`, which was already a supported runtime value via `resolveThinkingLevelForModel` but was not declared as a valid schema value. This closes a type-safety gap where programmatic callers (tests, config.yml edits) could set `"off"` without a `SettingValue` type narrowing it. The `/settings` UI dropdown is unchanged; the widening is schema-level only.
+- Widened the `defaultThinkingLevel` schema enum to include `"off"`, which was already a supported runtime value via
+  `resolveThinkingLevelForModel` but was not declared as a valid schema value. This closes a type-safety gap where
+  programmatic callers (tests, config.yml edits) could set `"off"` without a `SettingValue` type narrowing it. The
+  `/settings` UI dropdown is unchanged; the widening is schema-level only.
 
 ### Changed
 
@@ -3910,7 +3958,10 @@ Refs: #173.
 
 ### Fixed
 
-- External edits to `config.yml` are now preserved when omp reloads or saves unrelated settings. Previously, editing config.yml directly (e.g., removing a package from `packages` array) would be silently reverted on next omp startup when automatic setters like `setLastChangelogVersion()` triggered a save. ([#1046](https://github.com/badlogic/pi-mono/pull/1046) by [@nicobailonMD](https://github.com/nicobailonMD))
+- External edits to `config.yml` are now preserved when omp reloads or saves unrelated settings. Previously, editing
+  config.yml directly (e.g., removing a package from `packages` array) would be silently reverted on next omp startup
+  when automatic setters like `setLastChangelogVersion()` triggered a save.
+  ([#1046](https://github.com/badlogic/pi-mono/pull/1046) by [@nicobailonMD](https://github.com/nicobailonMD))
 
 ## [8.13.0] - 2026-01-29
 
@@ -5060,7 +5111,13 @@ Refs: #173.
 ### Added
 
 - Exported `InteractiveModeOptions` type for programmatic SDK usage
-- Exported additional UI components for extensions: `ArminComponent`, `AssistantMessageComponent`, `BashExecutionComponent`, `BranchSummaryMessageComponent`, `CompactionSummaryMessageComponent`, `CustomEditor`, `CustomMessageComponent`, `FooterComponent`, `ExtensionEditorComponent`, `ExtensionInputComponent`, `ExtensionSelectorComponent`, `LoginDialogComponent`, `ModelSelectorComponent`, `OAuthSelectorComponent`, `SessionSelectorComponent`, `SettingsSelectorComponent`, `ShowImagesSelectorComponent`, `ThemeSelectorComponent`, `ThinkingSelectorComponent`, `ToolExecutionComponent`, `TreeSelectorComponent`, `UserMessageComponent`, `UserMessageSelectorComponent`
+- Exported additional UI components for extensions: `ArminComponent`, `AssistantMessageComponent`,
+  `BashExecutionComponent`, `BranchSummaryMessageComponent`, `CompactionSummaryMessageComponent`, `CustomEditor`,
+  `CustomMessageComponent`, `FooterComponent`, `ExtensionEditorComponent`, `ExtensionInputComponent`,
+  `ExtensionSelectorComponent`, `LoginDialogComponent`, `ModelSelectorComponent`, `OAuthSelectorComponent`,
+  `SessionSelectorComponent`, `SettingsSelectorComponent`, `ShowImagesSelectorComponent`, `ThemeSelectorComponent`,
+  `ThinkingSelectorComponent`, `ToolExecutionComponent`, `TreeSelectorComponent`, `UserMessageComponent`,
+  `UserMessageSelectorComponent`
 - Exported `renderDiff`, `truncateToVisualLines`, and related types for extension use
 - `setFooter()` and `setHeader()` methods on `ExtensionUIContext` for custom footer/header components
 - `setEditorComponent()` method on `ExtensionUIContext` for custom editor components
@@ -5507,7 +5564,12 @@ Refs: #173.
 
 ### Added
 
-- Added 65 new built-in color themes including dark variants (abyss, aurora, cavern, copper, cosmos, eclipse, ember, equinox, lavender, lunar, midnight, nebula, rainforest, reef, sakura, slate, solstice, starfall, swamp, taiga, terminal, tundra, twilight, volcanic), light variants (aurora-day, canyon, cirrus, coral, dawn, dunes, eucalyptus, frost, glacier, haze, honeycomb, lagoon, lavender, meadow, mint, opal, orchard, paper, prism, sand, savanna, soleil, wetland, zenith), and material themes (alabaster, amethyst, anthracite, basalt, birch, graphite, limestone, mahogany, marble, obsidian, onyx, pearl, porcelain, quartz, sandstone, titanium)
+- Added 65 new built-in color themes including dark variants (abyss, aurora, cavern, copper, cosmos, eclipse, ember,
+  equinox, lavender, lunar, midnight, nebula, rainforest, reef, sakura, slate, solstice, starfall, swamp, taiga,
+  terminal, tundra, twilight, volcanic), light variants (aurora-day, canyon, cirrus, coral, dawn, dunes, eucalyptus,
+  frost, glacier, haze, honeycomb, lagoon, lavender, meadow, mint, opal, orchard, paper, prism, sand, savanna, soleil,
+  wetland, zenith), and material themes (alabaster, amethyst, anthracite, basalt, birch, graphite, limestone, mahogany,
+  marble, obsidian, onyx, pearl, porcelain, quartz, sandstone, titanium)
 
 ### Fixed
 
@@ -6342,7 +6404,11 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
 
 ### Breaking
 
-- **Session hooks API redesign**: Merged `branch` event into `session` event. `BranchEvent`, `BranchEventResult` types and `pi.on("branch", ...)` removed. Use `pi.on("session", ...)` with `reason: "before_branch" | "branch"` instead. `AgentSession.branch()` returns `{ cancelled }` instead of `{ skipped }`. `AgentSession.reset()` and `switchSession()` now return `boolean` (false if cancelled by hook). RPC commands `reset`, `switch_session`, and `branch` now include `cancelled` in response data. ([#278](https://github.com/badlogic/pi-mono/issues/278))
+- **Session hooks API redesign**: Merged `branch` event into `session` event. `BranchEvent`, `BranchEventResult` types
+  and `pi.on("branch", ...)` removed. Use `pi.on("session", ...)` with `reason: "before_branch" | "branch"` instead.
+  `AgentSession.branch()` returns `{ cancelled }` instead of `{ skipped }`. `AgentSession.reset()` and
+  `switchSession()` now return `boolean` (false if cancelled by hook). RPC commands `reset`, `switch_session`, and
+  `branch` now include `cancelled` in response data. ([#278](https://github.com/badlogic/pi-mono/issues/278))
 
 ### Added
 
@@ -6498,7 +6564,11 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
 
 - **Subagent example improvements**: Parallel mode now streams updates from all tasks. Chain mode shows all completed steps during streaming. Expanded view uses proper markdown rendering with syntax highlighting. Usage footer shows turn count.
 
-- **Skills standard compliance**: Skills now adhere to the [Agent Skills standard](https://agentskills.io/specification). Validates name (must match parent directory, lowercase, max 64 chars), description (required, max 1024 chars), and frontmatter fields. Warns on violations but remains lenient. Prompt format changed to XML structure. Removed `{baseDir}` placeholder in favor of relative paths. ([#231](https://github.com/badlogic/pi-mono/issues/231))
+- **Skills standard compliance**: Skills now adhere to the [Agent Skills
+  standard](https://agentskills.io/specification). Validates name (must match parent directory, lowercase, max 64
+  chars), description (required, max 1024 chars), and frontmatter fields. Warns on violations but remains lenient.
+  Prompt format changed to XML structure. Removed `{baseDir}` placeholder in favor of relative paths.
+  ([#231](https://github.com/badlogic/pi-mono/issues/231))
 
 ### Fixed
 
@@ -6563,7 +6633,10 @@ Total color count increased from 46 to 50. See [docs/theme.md](docs/theme.md) fo
 
 ### Fixed
 
-- Fixed Claude models via GitHub Copilot re-answering all previous prompts in multi-turn conversations. The issue was that assistant message content was sent as an array instead of a string, which Copilot's Claude adapter misinterpreted. Also added missing `Openai-Intent: conversation-edits` header and fixed `X-Initiator` logic to check for any assistant/tool message in history. ([#209](https://github.com/badlogic/pi-mono/issues/209))
+- Fixed Claude models via GitHub Copilot re-answering all previous prompts in multi-turn conversations. The issue was
+  that assistant message content was sent as an array instead of a string, which Copilot's Claude adapter
+  misinterpreted. Also added missing `Openai-Intent: conversation-edits` header and fixed `X-Initiator` logic to check
+  for any assistant/tool message in history. ([#209](https://github.com/badlogic/pi-mono/issues/209))
 
 - Detect image MIME type via file magic (read tool and `@file` attachments), not filename extension.
 
@@ -6651,7 +6724,11 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Added
 
-- **Inline image rendering**: Terminals supporting Kitty graphics protocol (Kitty, Ghostty, WezTerm) or iTerm2 inline images now render images inline in tool output. Aspect ratio is preserved by querying terminal cell dimensions on startup. Toggle with `/show-images` command or `terminal.showImages` setting. Falls back to text placeholder on unsupported terminals or when disabled. ([#177](https://github.com/badlogic/pi-mono/pull/177) by [@nicobailon](https://github.com/nicobailon))
+- **Inline image rendering**: Terminals supporting Kitty graphics protocol (Kitty, Ghostty, WezTerm) or iTerm2 inline
+  images now render images inline in tool output. Aspect ratio is preserved by querying terminal cell dimensions on
+  startup. Toggle with `/show-images` command or `terminal.showImages` setting. Falls back to text placeholder on
+  unsupported terminals or when disabled. ([#177](https://github.com/badlogic/pi-mono/pull/177) by
+  [@nicobailon](https://github.com/nicobailon))
 
 - **Gemini 3 Pro thinking levels**: Thinking level selector now works with Gemini 3 Pro models. Minimal/low map to Google's LOW, medium/high map to Google's HIGH. ([#176](https://github.com/badlogic/pi-mono/pull/176) by [@markusylisiurunen](https://github.com/markusylisiurunen))
 
@@ -6687,7 +6764,11 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Added
 
-- **Skills system**: Auto-discover and load instruction files on-demand. Supports Claude Code (`~/.claude/skills/*/SKILL.md`), Codex CLI (`~/.codex/skills/`), and OMP-native formats (`~/.omp/agent/skills/`, `.omp/skills/`). Skills are listed in system prompt with descriptions, agent loads them via read tool when needed. Supports `{baseDir}` placeholder. Disable with `--no-skills` or `skills.enabled: false` in settings. ([#169](https://github.com/badlogic/pi-mono/issues/169))
+- **Skills system**: Auto-discover and load instruction files on-demand. Supports Claude Code
+  (`~/.claude/skills/*/SKILL.md`), Codex CLI (`~/.codex/skills/`), and OMP-native formats (`~/.omp/agent/skills/`,
+  `.omp/skills/`). Skills are listed in system prompt with descriptions, agent loads them via read tool when needed.
+  Supports `{baseDir}` placeholder. Disable with `--no-skills` or `skills.enabled: false` in settings.
+  ([#169](https://github.com/badlogic/pi-mono/issues/169))
 
 - **Version flag**: Added `--version` / `-v` flag to display the current version and exit. ([#170](https://github.com/badlogic/pi-mono/pull/170))
 
@@ -6695,7 +6776,11 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Added
 
-- **Auto-retry on transient errors**: Automatically retries requests when providers return overloaded, rate limit, or server errors (429, 500, 502, 503, 504). Uses exponential backoff (2s, 4s, 8s). Shows retry status in TUI with option to cancel via Escape. Configurable in `settings.json` via `retry.enabled`, `retry.maxRetries`, `retry.baseDelayMs`. RPC mode emits `auto_retry_start` and `auto_retry_end` events. ([#157](https://github.com/badlogic/pi-mono/issues/157))
+- **Auto-retry on transient errors**: Automatically retries requests when providers return overloaded, rate limit, or
+  server errors (429, 500, 502, 503, 504). Uses exponential backoff (2s, 4s, 8s). Shows retry status in TUI with option
+  to cancel via Escape. Configurable in `settings.json` via `retry.enabled`, `retry.maxRetries`, `retry.baseDelayMs`.
+  RPC mode emits `auto_retry_start` and `auto_retry_end` events.
+  ([#157](https://github.com/badlogic/pi-mono/issues/157))
 
 - **HTML export line numbers**: Read tool calls in HTML exports now display line number ranges (e.g., `file.txt:10-20`) when offset/limit parameters are used, matching the TUI display format. Line numbers appear in yellow color for better visibility. ([#166](https://github.com/badlogic/pi-mono/issues/166))
 
@@ -6721,7 +6806,12 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Added
 
-- **Hooks system**: TypeScript modules that extend agent behavior by subscribing to lifecycle events. Hooks can intercept tool calls, prompt for confirmation, modify results, and inject messages from external sources. Auto-discovered from `~/.omp/agent/hooks/*.ts` and `.omp/hooks/*.ts`. Thanks to [@nicobailon](https://github.com/nicobailon) for the collaboration on the design and implementation. ([#145](https://github.com/badlogic/pi-mono/issues/145), supersedes [#158](https://github.com/badlogic/pi-mono/pull/158))
+- **Hooks system**: TypeScript modules that extend agent behavior by subscribing to lifecycle events. Hooks can
+  intercept tool calls, prompt for confirmation, modify results, and inject messages from external sources.
+  Auto-discovered from `~/.omp/agent/hooks/*.ts` and `.omp/hooks/*.ts`. Thanks to
+  [@nicobailon](https://github.com/nicobailon) for the collaboration on the design and implementation.
+  ([#145](https://github.com/badlogic/pi-mono/issues/145), supersedes
+  [#158](https://github.com/badlogic/pi-mono/pull/158))
 
 - **`pi.send()` API**: Hooks can inject messages into the agent session from external sources (file watchers, webhooks, CI systems). If streaming, messages are queued; otherwise a new agent loop starts immediately.
 
@@ -6759,7 +6849,10 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Breaking Changes
 
-- **New RPC protocol**: The RPC mode (`--mode rpc`) has been completely redesigned with a new JSON protocol. The old protocol is no longer supported. See [`docs/rpc.md`](docs/rpc.md) for the new protocol documentation and [`test/rpc-example.ts`](test/rpc-example.ts) for a working example. Includes `RpcClient` TypeScript class for easy integration. ([#91](https://github.com/badlogic/pi-mono/issues/91))
+- **New RPC protocol**: The RPC mode (`--mode rpc`) has been completely redesigned with a new JSON protocol. The old
+  protocol is no longer supported. See [`docs/rpc.md`](docs/rpc.md) for the new protocol documentation and
+  [`test/rpc-example.ts`](test/rpc-example.ts) for a working example. Includes `RpcClient` TypeScript class for easy
+  integration. ([#91](https://github.com/badlogic/pi-mono/issues/91))
 
 ### Changed
 
@@ -6769,7 +6862,10 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Changed
 
-- **Major code refactoring**: Restructured codebase for better maintainability and separation of concerns. Moved files into organized directories (`core/`, `modes/`, `utils/`, `cli/`). Extracted `AgentSession` class as central session management abstraction. Split `main.ts` and `tui-renderer.ts` into focused modules. See `DEVELOPMENT.md` for the new code map. ([#153](https://github.com/badlogic/pi-mono/issues/153))
+- **Major code refactoring**: Restructured codebase for better maintainability and separation of concerns. Moved files
+  into organized directories (`core/`, `modes/`, `utils/`, `cli/`). Extracted `AgentSession` class as central session
+  management abstraction. Split `main.ts` and `tui-renderer.ts` into focused modules. See `DEVELOPMENT.md` for the new
+  code map. ([#153](https://github.com/badlogic/pi-mono/issues/153))
 
 ## [0.14.2] - 2025-12-08
 
@@ -6795,13 +6891,20 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Added
 
-- **OpenAI compatibility overrides in models.json**: Custom models using `openai-completions` API can now specify a `compat` object to override provider quirks (`supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`, `maxTokensField`). Useful for LiteLLM, custom proxies, and other non-standard endpoints. ([#133](https://github.com/badlogic/pi-mono/issues/133), thanks @fink-andreas for the initial idea and PR)
+- **OpenAI compatibility overrides in models.json**: Custom models using `openai-completions` API can now specify a
+  `compat` object to override provider quirks (`supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`,
+  `maxTokensField`). Useful for LiteLLM, custom proxies, and other non-standard endpoints.
+  ([#133](https://github.com/badlogic/pi-mono/issues/133), thanks @fink-andreas for the initial idea and PR)
 
 - **xhigh thinking level**: Added `xhigh` thinking level for OpenAI codex-max models. Cycle through thinking levels with Shift+Tab; `xhigh` appears only when using a codex-max model. ([#143](https://github.com/badlogic/pi-mono/issues/143))
 
 - **Collapse changelog setting**: Add `"collapseChangelog": true` to `~/.omp/agent/settings.json` to show a condensed "Updated to vX.Y.Z" message instead of the full changelog after updates. Use `/changelog` to view the full changelog. ([#148](https://github.com/badlogic/pi-mono/issues/148))
 
-- **Bash mode**: Execute shell commands directly from the editor by prefixing with `!` (e.g., `!ls -la`). Output streams in real-time, is added to the LLM context, and persists in session history. Supports multiline commands, cancellation (Escape), truncation for large outputs, and preview/expand toggle (Ctrl+O). Also available in RPC mode via `{"type":"bash","command":"..."}`. ([#112](https://github.com/badlogic/pi-mono/pull/112), original implementation by [@markusylisiurunen](https://github.com/markusylisiurunen))
+- **Bash mode**: Execute shell commands directly from the editor by prefixing with `!` (e.g., `!ls -la`). Output
+  streams in real-time, is added to the LLM context, and persists in session history. Supports multiline commands,
+  cancellation (Escape), truncation for large outputs, and preview/expand toggle (Ctrl+O). Also available in RPC mode
+  via `{"type":"bash","command":"..."}`. ([#112](https://github.com/badlogic/pi-mono/pull/112), original implementation
+  by [@markusylisiurunen](https://github.com/markusylisiurunen))
 
 ## [0.13.2] - 2025-12-07
 
@@ -6857,7 +6960,10 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 ### Added
 
 - **Fuzzy search models and sessions**: Implemented a simple fuzzy search for models and sessions (e.g., `codexmax` now finds `gpt-5.1-codex-max`). ([#122](https://github.com/badlogic/pi-mono/pull/122) by [@markusylisiurunen](https://github.com/markusylisiurunen))
-- **Prompt History Navigation**: Browse previously submitted prompts using Up/Down arrow keys when the editor is empty. Press Up to cycle through older prompts, Down to return to newer ones or clear the editor. Similar to shell history and Claude Code's prompt history feature. History is session-scoped and stores up to 100 entries. ([#121](https://github.com/badlogic/pi-mono/pull/121) by [@nicobailon](https://github.com/nicobailon))
+- **Prompt History Navigation**: Browse previously submitted prompts using Up/Down arrow keys when the editor is empty.
+  Press Up to cycle through older prompts, Down to return to newer ones or clear the editor. Similar to shell history
+  and Claude Code's prompt history feature. History is session-scoped and stores up to 100 entries.
+  ([#121](https://github.com/badlogic/pi-mono/pull/121) by [@nicobailon](https://github.com/nicobailon))
 - **`/resume` Command**: Switch to a different session mid-conversation. Opens an interactive selector showing all available sessions. Equivalent to the `--resume` CLI flag but can be used without restarting the agent. ([#117](https://github.com/badlogic/pi-mono/pull/117) by [@hewliyang](https://github.com/hewliyang))
 
 ## [0.12.11] - 2025-12-05
