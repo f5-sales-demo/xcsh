@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Restricted LiteLLM `models.yml` setup, auto-fix, discovery-upgrade, and backup writes to owner-only permissions ([#2713](https://github.com/f5-sales-demo/xcsh/issues/2713))
+
 ## [19.105.1] - 2026-07-31
 
 ### Fixed

@@ -219,6 +219,9 @@ describe("tryAutoConfigLiteLLM()", () => {
 
 		const content = fs.readFileSync(modelsPath, "utf-8");
 		expect(content).toContain("https://proxy.example.com/anthropic");
+		if (process.platform !== "win32") {
+			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
+		}
 	});
 
 	test("returns false when env vars not set", () => {
@@ -1273,6 +1276,7 @@ describe("probeAndUpgradeLiteLLMConfig()", () => {
 			"",
 		].join("\n");
 		fs.writeFileSync(modelsPath, literalConfig);
+		fs.chmodSync(modelsPath, 0o644);
 		expect(literalConfig).toContain('apiKey: "sk-real-literal-key-789"');
 		expect(literalConfig).not.toContain("type: openai-compat");
 
@@ -1288,6 +1292,10 @@ describe("probeAndUpgradeLiteLLMConfig()", () => {
 		// Must preserve the literal key
 		expect(afterContent).toContain('apiKey: "sk-real-literal-key-789"');
 		expect(afterContent).toContain("type: openai-compat");
+		if (process.platform !== "win32") {
+			expect(fs.statSync(`${modelsPath}.bak`).mode & 0o777).toBe(0o600);
+			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
+		}
 	});
 });
 
@@ -1338,12 +1346,17 @@ describe("autoFixModelsConfig() literal key preservation", () => {
 				apiKeyLiteral: "sk-preserved-key-456",
 			}),
 		);
+		fs.chmodSync(modelsPath, 0o644);
 
 		const result = autoFixModelsConfig(modelsPath);
 		expect(result.fixed).toBe(true);
 
 		const afterContent = fs.readFileSync(modelsPath, "utf-8");
 		expect(afterContent).toContain('apiKey: "sk-preserved-key-456"');
+		if (process.platform !== "win32") {
+			expect(fs.statSync(`${modelsPath}.bak`).mode & 0o777).toBe(0o600);
+			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
+		}
 	});
 
 	test("keeps env var reference when no literal key exists", () => {

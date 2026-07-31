@@ -20,6 +20,8 @@ import { DEFAULT_MODEL_ROLE } from "./settings-schema";
 
 /** Current config schema version. Bump when the generated format changes. */
 export const CURRENT_CONFIG_VERSION = 2;
+const LITELLM_CONFIG_DIR_MODE = 0o700;
+const LITELLM_MODELS_FILE_MODE = 0o600;
 
 // ---------------------------------------------------------------------------
 // Detection
@@ -83,13 +85,13 @@ export function generateModelsYml(baseUrl: string, options?: GenerateModelsYmlOp
 
 /** Persist models.yml with owner-only permissions because it may contain a literal proxy credential. */
 export async function writeLiteLLMModelsYml(filePath: string, content: string): Promise<void> {
-	await fs.promises.mkdir(path.dirname(filePath), { recursive: true, mode: 0o700 });
+	await fs.promises.mkdir(path.dirname(filePath), { recursive: true, mode: LITELLM_CONFIG_DIR_MODE });
 	try {
-		await fs.promises.chmod(filePath, 0o600);
+		await fs.promises.chmod(filePath, LITELLM_MODELS_FILE_MODE);
 	} catch (error) {
 		if (!isEnoent(error)) throw error;
 	}
-	await fs.promises.writeFile(filePath, content, { encoding: "utf-8", mode: 0o600 });
+	await fs.promises.writeFile(filePath, content, { encoding: "utf-8", mode: LITELLM_MODELS_FILE_MODE });
 }
 
 export interface LiteLLMConfig {
@@ -217,15 +219,13 @@ export function readApiKeyLiteral(modelsPath: string): string | undefined {
 	return undefined;
 }
 
-/** Create a .bak backup of a file if it exists. Returns true if backed up. */
-function backupIfExists(filePath: string): boolean {
+/** Create an owner-only .bak backup of models.yml. Returns true if backed up. */
+function backupModelsConfigIfExists(filePath: string): boolean {
+	const backupPath = `${filePath}.bak`;
 	try {
-		if (fs.existsSync(filePath)) {
-			fs.copyFileSync(filePath, `${filePath}.bak`);
-			return true;
-		}
+		return safeWriteModelsConfig(backupPath, fs.readFileSync(filePath));
 	} catch (err) {
-		logger.warn("Failed to create backup", { filePath, err });
+		if (!isEnoent(err)) logger.warn("Failed to create backup", { filePath, err });
 	}
 	return false;
 }
@@ -238,6 +238,23 @@ function safeWrite(filePath: string, content: string): boolean {
 		return true;
 	} catch (err) {
 		logger.warn("Failed to write config file", { filePath, err });
+		return false;
+	}
+}
+
+/** Write models.yml content without ever exposing it through group/world-readable permissions. */
+function safeWriteModelsConfig(filePath: string, content: string | Uint8Array): boolean {
+	try {
+		fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: LITELLM_CONFIG_DIR_MODE });
+		try {
+			fs.chmodSync(filePath, LITELLM_MODELS_FILE_MODE);
+		} catch (err) {
+			if (!isEnoent(err)) throw err;
+		}
+		fs.writeFileSync(filePath, content, { encoding: "utf-8", mode: LITELLM_MODELS_FILE_MODE });
+		return true;
+	} catch (err) {
+		logger.warn("Failed to write LiteLLM models config", { filePath, err });
 		return false;
 	}
 }
@@ -367,7 +384,7 @@ export function tryAutoConfigLiteLLM(modelsPath: string): boolean {
 	const baseUrl = getLiteLLMBaseUrl();
 	if (!baseUrl) return false;
 
-	if (!safeWrite(modelsPath, generateModelsYml(baseUrl))) return false;
+	if (!safeWriteModelsConfig(modelsPath, generateModelsYml(baseUrl))) return false;
 	logger.debug("Auto-configured LiteLLM proxy", { modelsPath, baseUrl });
 
 	// Write config.yml if it doesn't exist, or heal it if it's missing modelRoles
@@ -501,10 +518,10 @@ export function autoFixModelsConfig(modelsPath: string): FixResult {
 
 	const existingLiteralKey = readApiKeyLiteral(modelsPath);
 
-	backupIfExists(modelsPath);
+	backupModelsConfigIfExists(modelsPath);
 
 	if (
-		!safeWrite(
+		!safeWriteModelsConfig(
 			modelsPath,
 			generateModelsYml(baseUrl, {
 				...(existingLiteralKey ? { apiKeyLiteral: existingLiteralKey } : {}),
@@ -688,12 +705,12 @@ export async function probeAndUpgradeLiteLLMConfig(
 
 	// Upgrade: backup and regenerate with correct base path, preserving literal keys
 	const existingLiteralKey = readApiKeyLiteral(modelsPath);
-	backupIfExists(modelsPath);
+	backupModelsConfigIfExists(modelsPath);
 	const newContent = generateModelsYml(baseUrl, {
 		apiBasePath: probe.apiBasePath,
 		...(existingLiteralKey ? { apiKeyLiteral: existingLiteralKey } : {}),
 	});
-	if (!safeWrite(modelsPath, newContent)) {
+	if (!safeWriteModelsConfig(modelsPath, newContent)) {
 		return false;
 	}
 
