@@ -6,6 +6,7 @@
 
 ### Fixed
 
+- Removed Biome findings from generated Site CLI transport descriptions ([#2715](https://github.com/f5-sales-demo/xcsh/issues/2715))
 - Restricted LiteLLM `models.yml` setup, auto-fix, discovery-upgrade, and backup writes to owner-only permissions ([#2713](https://github.com/f5-sales-demo/xcsh/issues/2713))
 - Fixed `--no-tools` print requests forcing inactive `todo_write` through eager-todo enforcement ([#2711](https://github.com/f5-sales-demo/xcsh/issues/2711))
 

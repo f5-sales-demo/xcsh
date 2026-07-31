@@ -668,10 +668,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 						...(entry.example ? [`- example argument: \`${entry.example}\``] : []),
 						"",
 						entry.transport === "global-get"
-							? "GLOBAL scope: GET .../vpm/debug/global/" + subpath + " — NOT reachable via exec-user."
+							? `GLOBAL scope: GET .../vpm/debug/global/${subpath} — NOT reachable via exec-user.`
 							: entry.transport === "exec"
 								? "Exec tier: privileged and mutating. Do not run speculatively."
-								: 'POST .../vpm/debug/{node}/exec-user with {"command":["' + subpath + '", ...]}.',
+								: `POST .../vpm/debug/{node}/exec-user with {"command":["${subpath}", ...]}.`,
 					].join("\n")
 				: `Unknown Site CLI command: ${subpath}\n\nRead xcsh://sitecli for the full list (build ${build}).`;
 		}
