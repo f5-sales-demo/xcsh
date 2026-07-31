@@ -543,7 +543,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// ~30 carve-outs to make ordinary tooling work again — every one of them evidence the posture was wrong.
 	//
 	// What the walk still covers is the part that matters: every level between the workspace and home. With
-	// the workspace at `~/MEDDPICC/EQUIFAX`, `~/MEDDPICC` is denied so the `ACME` sibling is unreachable,
+	// the workspace at `~/MEDDPICC/CUSTOMER-A`, `~/MEDDPICC` is denied so the `CUSTOMER-B` sibling is unreachable,
 	// and with `<container>/<tenant>/repo` every level up to home is denied, so the v19.100.1 cross-tenant
 	// regression does not return.
 	//
@@ -620,7 +620,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	}
 
 	// Top-level directories that hold somebody's files. Without these the fence covered only home and
-	// the workspace's ancestors, so with the workspace at `~/MEDDPICC/EQUIFAX` another operator's
+	// the workspace's ancestors, so with the workspace at `~/MEDDPICC/CUSTOMER-A` another operator's
 	// account, an external volume and `/data/globex` were all readable AND writable — measured. The
 	// command-text scan was refusing them on the way in, which is exactly why that scan could not
 	// simply be stood down (#2624).
