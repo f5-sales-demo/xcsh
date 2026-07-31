@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.104.0] - 2026-07-31
+
 ### Added
 
 - Added a post-login LiteLLM model chooser for GPT-5.6 Sol and Claude Opus 5 with High reasoning; authenticated users can switch later with `/model`
