@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added a post-login LiteLLM model chooser for GPT-5.6 Sol and Claude Opus 5 with High reasoning; authenticated users can switch later with `/model`
+
+### Fixed
+
+- Restricted LiteLLM credential configuration files to owner-only permissions
+
 ## [19.51.5] - 2026-06-26
 
 ### Fixed
