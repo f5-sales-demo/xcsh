@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.5] - 2026-07-31
+
 ### Fixed
 
 - Added post-publication Homebrew install verification to the release workflow ([#2719](https://github.com/f5-sales-demo/xcsh/issues/2719))
