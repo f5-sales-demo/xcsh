@@ -433,13 +433,27 @@ describe("CI invalidates stale release PRs before the full test matrix", () => {
 });
 
 describe("CI installs Zig without a deprecated JavaScript action", () => {
+	it("executes the Zig installer on every release runner before native builds", async () => {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const smokeJob = workflow.match(/\n {2}setup-zig:\n[\s\S]*?(?=\n {2}native:\n)/)?.[0] ?? "";
+		const nativeJob = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
+
+		expect(smokeJob).toContain("ubuntu-22.04");
+		expect(smokeJob).toContain("macos-15-intel");
+		expect(smokeJob).toContain("macos-14");
+		expect(smokeJob).toContain("windows-latest");
+		expect(smokeJob).toContain("uses: ./.github/actions/setup-zig");
+		expect(smokeJob).toContain("run: zig version");
+		expect(nativeJob).toContain("needs: setup-zig");
+	});
+
 	it("uses a checksum-pinned composite installer for every native release runner", async () => {
 		const root = path.join(import.meta.dir, "../../..");
 		const workflow = await fs.readFile(path.join(root, ".github/workflows/ci.yml"), "utf8");
 		const installer = await fs.readFile(path.join(root, ".github/actions/setup-zig/action.yml"), "utf8");
 
 		expect(workflow).not.toContain("mlugg/setup-zig");
-		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(3);
+		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(4);
 		expect(installer).toContain("using: composite");
 		expect(installer).toContain('ZIG_VERSION: "0.15.2"');
 		const releases = [
