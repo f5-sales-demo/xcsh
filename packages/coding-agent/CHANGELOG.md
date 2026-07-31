@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed the checksum-pinned Zig installer on macOS and Windows native release runners ([#61](https://github.com/f5-sales-demo/xcsh/issues/61))
+
 ## [19.105.5] - 2026-07-31
 
 ### Fixed

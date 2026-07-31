@@ -7,43 +7,83 @@ runs:
     - name: Restore Zig release archive
       uses: actions/cache@v5
       with:
-        path: ${{ runner.temp }}/zig-0.15.2.tar.xz
-        key: setup-zig-tarball-zig-x86_64-linux-0.15.2.tar.xz
+        path: ${{ runner.temp }}/zig-downloads
+        key: setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.15.2
 
     - name: Restore Zig build cache
       uses: actions/cache@v5
       with:
         path: ${{ github.workspace }}/.zig-cache
-        key: setup-zig-cache-v2-${{ github.job }}-zig-x86_64-linux-0.15.2-${{ github.sha }}
-        restore-keys: setup-zig-cache-v2-${{ github.job }}-zig-x86_64-linux-0.15.2-
+        key: setup-zig-cache-v3-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-0.15.2-${{ github.sha }}
+        restore-keys: setup-zig-cache-v3-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-0.15.2-
 
     - name: Install Zig 0.15.2
       shell: bash
       env:
         ZIG_VERSION: "0.15.2"
-        ZIG_SHA256: 02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239
       run: |
         set -euo pipefail
 
-        if [[ "$RUNNER_OS" != "Linux" || "$RUNNER_ARCH" != "X64" ]]; then
-          echo "::error::The pinned Zig installer supports only Linux X64 runners"
-          exit 1
+        case "$RUNNER_OS/$RUNNER_ARCH" in
+          Linux/X64)
+            PLATFORM="x86_64-linux"
+            EXTENSION="tar.xz"
+            ZIG_SHA256="02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239"
+            ;;
+          macOS/X64)
+            PLATFORM="x86_64-macos"
+            EXTENSION="tar.xz"
+            ZIG_SHA256="375b6909fc1495d16fc2c7db9538f707456bfc3373b14ee83fdd3e22b3d43f7f"
+            ;;
+          macOS/ARM64)
+            PLATFORM="aarch64-macos"
+            EXTENSION="tar.xz"
+            ZIG_SHA256="3cc2bab367e185cdfb27501c4b30b1b0653c28d9f73df8dc91488e66ece5fa6b"
+            ;;
+          Windows/X64)
+            PLATFORM="x86_64-windows"
+            EXTENSION="zip"
+            ZIG_SHA256="3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c"
+            ;;
+          *)
+            echo "::error::Unsupported Zig runner: $RUNNER_OS/$RUNNER_ARCH"
+            exit 1
+            ;;
+        esac
+
+        RUNNER_TEMP_PATH="$RUNNER_TEMP"
+        WORKSPACE_PATH="$GITHUB_WORKSPACE"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          RUNNER_TEMP_PATH=$(cygpath -u "$RUNNER_TEMP")
+          WORKSPACE_PATH=$(cygpath -u "$GITHUB_WORKSPACE")
         fi
 
-        ARCHIVE="$RUNNER_TEMP/zig-${ZIG_VERSION}.tar.xz"
-        ZIG_DIR="$RUNNER_TEMP/zig-${ZIG_VERSION}"
-        ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
+        ARCHIVE_DIR="$RUNNER_TEMP_PATH/zig-downloads"
+        ARCHIVE="$ARCHIVE_DIR/zig-${PLATFORM}-${ZIG_VERSION}.${EXTENSION}"
+        ZIG_DIR="$RUNNER_TEMP_PATH/zig-${ZIG_VERSION}"
+        ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${PLATFORM}-${ZIG_VERSION}.${EXTENSION}"
+        mkdir -p "$ARCHIVE_DIR"
 
-        if [[ ! -f "$ARCHIVE" ]] || ! printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | sha256sum --check --status; then
+        if [[ ! -f "$ARCHIVE" ]] || ! printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | shasum -a 256 --check --status; then
           curl --silent --show-error --fail --location \
             --retry 3 --retry-all-errors --connect-timeout 15 --max-time 180 \
             --output "$ARCHIVE" "$ZIG_URL"
         fi
-        printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | sha256sum --check
+        printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | shasum -a 256 --check
 
         mkdir -p "$ZIG_DIR"
-        tar --extract --xz --file "$ARCHIVE" --directory "$ZIG_DIR" --strip-components=1
-        echo "$ZIG_DIR" >> "$GITHUB_PATH"
-        printf 'ZIG_GLOBAL_CACHE_DIR=%s/.zig-cache\nZIG_LOCAL_CACHE_DIR=%s/.zig-cache\n' \
-          "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
-        "$ZIG_DIR/zig" version
+        tar --extract --file "$ARCHIVE" --directory "$ZIG_DIR" --strip-components=1
+
+        ZIG_PATH="$ZIG_DIR"
+        ZIG_BINARY="$ZIG_DIR/zig"
+        ZIG_CACHE_DIR="$WORKSPACE_PATH/.zig-cache"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          ZIG_PATH=$(cygpath -w "$ZIG_DIR")
+          ZIG_BINARY="$ZIG_DIR/zig.exe"
+          ZIG_CACHE_DIR=$(cygpath -w "$ZIG_CACHE_DIR")
+        fi
+
+        echo "$ZIG_PATH" >> "$GITHUB_PATH"
+        printf 'ZIG_GLOBAL_CACHE_DIR=%s\nZIG_LOCAL_CACHE_DIR=%s\n' \
+          "$ZIG_CACHE_DIR" "$ZIG_CACHE_DIR" >> "$GITHUB_ENV"
+        "$ZIG_BINARY" version
