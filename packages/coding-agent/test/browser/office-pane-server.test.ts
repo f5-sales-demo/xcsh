@@ -18,6 +18,7 @@ import {
 	missingPaneFiles,
 	paneSourceForLayout,
 	paneUnavailableMessage,
+	publishCompletePane,
 	resolvePaneDir,
 	sanitizeArchivePath,
 	startOfficePaneServer,
@@ -241,6 +242,47 @@ describe("refusing when no pane bundle is available", () => {
 			}
 		});
 	}
+
+	/**
+	 * A cache directory is only ever published complete.
+	 *
+	 * Extraction used to write straight into the final hash-addressed directory, so an interruption or a
+	 * full disk left a partial bundle THERE — and the next run accepted it, permanently. Validating each
+	 * file's contents would be an endless chase (a truncated .js is still valid text); staging the
+	 * extraction and renaming it into place only once it validates closes every variant at once.
+	 */
+	it("does not publish a cache directory when the extraction came out incomplete", async () => {
+		const root = mkdtempSync(join(tmpdir(), "office-pane-atomic-"));
+		const target = join(root, "bundle");
+		try {
+			await expect(
+				publishCompletePane(target, async staging => {
+					await writeFile(join(staging, "taskpane.html"), "<!DOCTYPE html>");
+				}),
+			).rejects.toThrow(/taskpane\.js/);
+			expect(await Bun.file(join(target, "taskpane.html")).exists()).toBe(false);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
+	it("publishes the cache directory once the extraction is complete", async () => {
+		const root = mkdtempSync(join(tmpdir(), "office-pane-atomic-ok-"));
+		const target = join(root, "bundle");
+		try {
+			const published = await publishCompletePane(target, async staging => {
+				await mkdir(join(staging, "assets"), { recursive: true });
+				await writeFile(join(staging, "taskpane.html"), "<!DOCTYPE html>");
+				await writeFile(join(staging, "taskpane.js"), "console.log(1);");
+				await writeFile(join(staging, "assets", "color.png"), "png");
+				await writeFile(join(staging, "manifest.json"), JSON.stringify({ icons: ["assets/color.png"] }));
+			});
+			expect(published).toBe(target);
+			expect(await isCompletePane(target)).toBe(true);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
 
 	it("refuses a directory with no taskpane.html, naming it", async () => {
 		const empty = mkdtempSync(join(tmpdir(), "office-pane-empty-"));

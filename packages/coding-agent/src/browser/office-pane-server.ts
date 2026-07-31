@@ -227,6 +227,40 @@ export async function resolvePaneDir(dir: string, source: PaneSource): Promise<s
 }
 
 /**
+ * Extract into a staging directory and move it into place only once it validates.
+ *
+ * Extraction used to write straight into the final hash-addressed directory, so an interruption or a
+ * full disk left a partial bundle exactly where the next run looks for a finished one — and every run
+ * after that accepted it, serving a pane whose JS 404s or whose script is half a file.
+ *
+ * Validating file CONTENTS would be an endless chase: a truncated `taskpane.js` is still valid text, so
+ * each new file type invites its own check. Publishing atomically closes the whole class instead. A
+ * crash leaves a `.incoming-*` directory, which the cache lookup ignores because it is not the name it
+ * asks for.
+ *
+ * The staging name carries the pid so two processes racing a first run cannot rename over each other
+ * mid-extraction.
+ */
+export async function publishCompletePane(
+	outputDir: string,
+	extractInto: (stagingDir: string) => Promise<void>,
+): Promise<string> {
+	const stagingDir = `${outputDir}.incoming-${process.pid}`;
+	await fs.rm(stagingDir, { recursive: true, force: true });
+	await fs.mkdir(stagingDir, { recursive: true });
+	try {
+		await extractInto(stagingDir);
+		// Validate BEFORE publishing, so an incomplete extraction never becomes the cache.
+		await resolvePaneDir(stagingDir, "compiled");
+		await fs.rm(outputDir, { recursive: true, force: true });
+		await fs.rename(stagingDir, outputDir);
+		return outputDir;
+	} finally {
+		await fs.rm(stagingDir, { recursive: true, force: true });
+	}
+}
+
+/**
  * Resolve the directory the assets are served from: the extracted embedded
  * bundle in a compiled binary, else `packages/office-pane/dist` in dev.
  */
@@ -254,12 +288,9 @@ export async function getOfficePaneDir(): Promise<string> {
 		// to extract it again rather than to tell anyone anything.
 		if (await isCompletePane(outputDir)) return outputDir;
 
-		await fs.rm(outputDir, { recursive: true, force: true });
-		await fs.mkdir(outputDir, { recursive: true });
-		await extractEmbeddedArchive(archiveBytes, outputDir);
 		// Still incomplete after a fresh extraction means the baked archive is itself short, which no
-		// amount of retrying fixes. Refuse rather than serve a pane with holes in it.
-		return resolvePaneDir(outputDir, "compiled");
+		// amount of retrying fixes — publishCompletePane refuses rather than serving a pane with holes.
+		return publishCompletePane(outputDir, staging => extractEmbeddedArchive(archiveBytes, staging));
 	})();
 
 	return compiledDirPromise;
