@@ -194,9 +194,9 @@ describe("resolveResumableSession", () => {
 	});
 
 	it("keeps local matches resumable when header cwd differs", async () => {
-		writeSession("2025-01-01_moved.jsonl", "/Users/user/project", "moved1234");
+		writeSession("2025-01-01_moved.jsonl", "/Users/example/project", "moved1234");
 
-		const match = await resolveResumableSession("moved", "/Users/user/project", sessionDir);
+		const match = await resolveResumableSession("moved", "/Users/alice/project", sessionDir);
 
 		expect(match?.scope).toBe("local");
 		expect(match?.session.path).toBe(path.join(sessionDir, "2025-01-01_moved.jsonl"));

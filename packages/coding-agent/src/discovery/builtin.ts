@@ -34,7 +34,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "native";
-const DISPLAY_NAME = "OMP";
+const SOURCE_LABEL = "OMP";
 const DESCRIPTION = "Native OMP configuration from ~/.xcsh and .xcsh/";
 const PRIORITY = 100;
 
@@ -214,7 +214,7 @@ async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> 
 
 registerProvider<MCPServer>(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadMCPServers,
@@ -254,7 +254,7 @@ async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemProm
 
 registerProvider<SystemPrompt>(systemPromptCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Custom system prompt from SYSTEM.md",
 	priority: PRIORITY,
 	load: loadSystemPrompt,
@@ -291,7 +291,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadSkills,
@@ -323,7 +323,7 @@ async function loadSlashCommands(ctx: LoadContext): Promise<LoadResult<SlashComm
 
 registerProvider<SlashCommand>(slashCommandCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadSlashCommands,
@@ -350,7 +350,7 @@ async function loadRules(ctx: LoadContext): Promise<LoadResult<Rule>> {
 
 registerProvider<Rule>(ruleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadRules,
@@ -381,7 +381,7 @@ async function loadPrompts(ctx: LoadContext): Promise<LoadResult<Prompt>> {
 
 registerProvider<Prompt>(promptCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadPrompts,
@@ -490,7 +490,7 @@ async function loadExtensionModules(ctx: LoadContext): Promise<LoadResult<Extens
 
 registerProvider<ExtensionModule>(extensionModuleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadExtensionModules,
@@ -557,7 +557,7 @@ async function loadExtensions(ctx: LoadContext): Promise<LoadResult<Extension>> 
 
 registerProvider<Extension>(extensionCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadExtensions,
@@ -592,7 +592,7 @@ async function loadInstructions(ctx: LoadContext): Promise<LoadResult<Instructio
 
 registerProvider<Instruction>(instructionCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadInstructions,
@@ -651,7 +651,7 @@ async function loadHooks(ctx: LoadContext): Promise<LoadResult<Hook>> {
 
 registerProvider<Hook>(hookCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadHooks,
@@ -767,7 +767,7 @@ async function loadTools(ctx: LoadContext): Promise<LoadResult<CustomTool>> {
 
 registerProvider<CustomTool>(toolCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadTools,
@@ -802,7 +802,7 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 
 registerProvider<Settings>(settingsCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: DESCRIPTION,
 	priority: PRIORITY,
 	load: loadSettings,
@@ -844,7 +844,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 
 registerProvider<ContextFile>(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load XCSH.md from .xcsh/ directories",
 	priority: PRIORITY,
 	load: loadContextFiles,

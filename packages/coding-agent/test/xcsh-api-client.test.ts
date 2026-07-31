@@ -102,7 +102,10 @@ describe("XCSHApiClient", () => {
 				if (fetchCount <= 2) {
 					return new Response(JSON.stringify({}), { status: 503 });
 				}
-				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
+				return new Response(
+					JSON.stringify({ items: [{ name: "example-namespace-one" }, { name: "example-namespace-two" }] }),
+					{ status: 200 },
+				);
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new XCSHApiClient({
@@ -115,7 +118,7 @@ describe("XCSHApiClient", () => {
 			});
 
 			const result = await client.listNamespaces();
-			expect(result).toEqual([{ name: "ns1" }, { name: "ns2" }]);
+			expect(result).toEqual([{ name: "example-namespace-one" }, { name: "example-namespace-two" }]);
 			expect(fetchCount).toBe(3);
 		});
 
@@ -181,7 +184,7 @@ describe("XCSHApiClient", () => {
 						headers: { "Retry-After": "1" },
 					});
 				}
-				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
+				return new Response(JSON.stringify({ items: [{ name: "example-namespace-one" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new XCSHApiClient({
@@ -194,7 +197,7 @@ describe("XCSHApiClient", () => {
 			});
 
 			const result = await client.listNamespaces();
-			expect(result).toEqual([{ name: "ns1" }]);
+			expect(result).toEqual([{ name: "example-namespace-one" }]);
 			expect(fetchCount).toBe(2);
 		});
 
@@ -210,7 +213,7 @@ describe("XCSHApiClient", () => {
 				if (injectedCalls === 1) {
 					return new Response(JSON.stringify({}), { status: 429, headers: { "Retry-After": "1" } });
 				}
-				return new Response(JSON.stringify({ items: [{ name: "ns1" }] }), { status: 200 });
+				return new Response(JSON.stringify({ items: [{ name: "example-namespace-one" }] }), { status: 200 });
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new XCSHApiClient({
@@ -230,7 +233,7 @@ describe("XCSHApiClient", () => {
 					return new Response(JSON.stringify({ items: [{ name: "WRONG" }] }), { status: 200 });
 				}) as unknown as typeof globalThis.fetch;
 				const result = await pending;
-				expect(result).toEqual([{ name: "ns1" }]);
+				expect(result).toEqual([{ name: "example-namespace-one" }]);
 				expect(injectedCalls).toBe(2);
 				expect(globalCalls).toBe(0);
 			} finally {
@@ -274,7 +277,10 @@ describe("XCSHApiClient", () => {
 
 		it("returns parsed namespaces on 200", async () => {
 			const fetchMock = (async () => {
-				return new Response(JSON.stringify({ items: [{ name: "ns1" }, { name: "ns2" }] }), { status: 200 });
+				return new Response(
+					JSON.stringify({ items: [{ name: "example-namespace-one" }, { name: "example-namespace-two" }] }),
+					{ status: 200 },
+				);
 			}) as unknown as typeof globalThis.fetch;
 
 			const client = new XCSHApiClient({
@@ -285,7 +291,7 @@ describe("XCSHApiClient", () => {
 			});
 
 			const result = await client.listNamespaces();
-			expect(result).toEqual([{ name: "ns1" }, { name: "ns2" }]);
+			expect(result).toEqual([{ name: "example-namespace-one" }, { name: "example-namespace-two" }]);
 		});
 	});
 
@@ -357,8 +363,8 @@ describe("XCSHApiClient", () => {
 				return new Response(
 					JSON.stringify({
 						items: [
-							{ name: "obj1", namespace: "demo-app", kind: "http_loadbalancer" },
-							{ name: "obj2", namespace: "demo-app", kind: "origin_pool" },
+							{ name: "obj1", namespace: "example-namespace-one", kind: "http_loadbalancer" },
+							{ name: "obj2", namespace: "example-namespace-one", kind: "origin_pool" },
 						],
 					}),
 					{ status: 200 },
@@ -372,12 +378,12 @@ describe("XCSHApiClient", () => {
 				maxRetries: 0,
 			});
 
-			const result = await client.listObjects("ns1", "http_loadbalancers");
+			const result = await client.listObjects("example-namespace-one", "http_loadbalancers");
 			expect(result).toEqual([
-				{ name: "obj1", namespace: "demo-app", kind: "http_loadbalancer" },
-				{ name: "obj2", namespace: "demo-app", kind: "origin_pool" },
+				{ name: "obj1", namespace: "example-namespace-one", kind: "http_loadbalancer" },
+				{ name: "obj2", namespace: "example-namespace-one", kind: "origin_pool" },
 			]);
-			expect(capturedUrl).toBe(`${TEST_API_URL}/api/web/namespaces/ns1/http_loadbalancers`);
+			expect(capturedUrl).toBe(`${TEST_API_URL}/api/web/namespaces/example-namespace-one/http_loadbalancers`);
 		});
 
 		it("throws auth error on 401", async () => {
@@ -393,7 +399,7 @@ describe("XCSHApiClient", () => {
 			});
 
 			try {
-				await client.listObjects("ns1", "http_loadbalancers");
+				await client.listObjects("example-namespace-one", "http_loadbalancers");
 				expect.unreachable("should have thrown");
 			} catch (err) {
 				expect(err).toBeInstanceOf(XCSHApiError);

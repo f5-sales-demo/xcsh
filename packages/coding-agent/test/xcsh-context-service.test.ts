@@ -754,7 +754,7 @@ describe("ContextService", () => {
 		});
 
 		it("env map vars respect per-field process.env precedence", async () => {
-			process.env.XCSH_EMAIL = "dana@example.com";
+			process.env.XCSH_EMAIL = "alex@example.com";
 			writeContext(xcshContextsDir, TEST_CONTEXT_ENV);
 			writeActiveContext(xcshConfigDir, TEST_CONTEXT_ENV.name);
 
@@ -777,12 +777,12 @@ describe("ContextService", () => {
 				apiUrl: "https://t.console.ves.volterra.io",
 				apiToken: "tok",
 				defaultNamespace: "default",
-				env: { XCSH_LB_NAME: "my-lb", XCSH_EMAIL: "a@b.com" },
+				env: { XCSH_LB_NAME: "my-lb", XCSH_EMAIL: "yuri@example.net" },
 			});
 
 			const data = JSON.parse(fs.readFileSync(path.join(xcshContextsDir, "with-env.json"), "utf-8"));
 			expect(data.env.XCSH_LB_NAME).toBe("my-lb");
-			expect(data.env.XCSH_EMAIL).toBe("a@b.com");
+			expect(data.env.XCSH_EMAIL).toBe("yuri@example.net");
 		});
 
 		it("getStatus includes tenant and namespace", async () => {

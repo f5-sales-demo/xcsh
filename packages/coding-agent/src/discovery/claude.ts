@@ -29,7 +29,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "xcsh";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "xcsh";
 const PRIORITY = 80;
 const CONFIG_DIR = ".xcsh";
 
@@ -472,7 +472,7 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 
 registerProvider<MCPServer>(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from .xcsh.json and .xcsh/mcp.json",
 	priority: PRIORITY,
 	load: loadMCPServers,
@@ -480,7 +480,7 @@ registerProvider<MCPServer>(mcpCapability.id, {
 
 registerProvider<ContextFile>(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load CLAUDE.md files from .xcsh/ directories",
 	priority: PRIORITY,
 	load: loadContextFiles,
@@ -488,7 +488,7 @@ registerProvider<ContextFile>(contextFileCapability.id, {
 
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load skills from .xcsh/skills/*/SKILL.md",
 	priority: PRIORITY,
 	load: loadSkills,
@@ -496,7 +496,7 @@ registerProvider<Skill>(skillCapability.id, {
 
 registerProvider<ExtensionModule>(extensionModuleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load extension modules from .xcsh/extensions",
 	priority: PRIORITY,
 	load: loadExtensionModules,
@@ -504,7 +504,7 @@ registerProvider<ExtensionModule>(extensionModuleCapability.id, {
 
 registerProvider<SlashCommand>(slashCommandCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load slash commands from .xcsh/commands/*.md",
 	priority: PRIORITY,
 	load: loadSlashCommands,
@@ -512,7 +512,7 @@ registerProvider<SlashCommand>(slashCommandCapability.id, {
 
 registerProvider<Hook>(hookCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load hooks from .xcsh/hooks/pre/ and .xcsh/hooks/post/",
 	priority: PRIORITY,
 	load: loadHooks,
@@ -520,7 +520,7 @@ registerProvider<Hook>(hookCapability.id, {
 
 registerProvider<CustomTool>(toolCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load custom tools from .xcsh/tools/",
 	priority: PRIORITY,
 	load: loadTools,
@@ -528,7 +528,7 @@ registerProvider<CustomTool>(toolCapability.id, {
 
 registerProvider<Settings>(settingsCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load settings from .xcsh/settings.json",
 	priority: PRIORITY,
 	load: loadSettings,
@@ -536,7 +536,7 @@ registerProvider<Settings>(settingsCapability.id, {
 
 registerProvider<SystemPrompt>(systemPromptCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load system prompt from .xcsh/SYSTEM.md",
 	priority: PRIORITY,
 	load: loadSystemPrompts,

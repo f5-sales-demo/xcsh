@@ -15,15 +15,15 @@ describe("detectCompiledRuntime", () => {
 	});
 
 	it("is true when PI_COMPILED env is set, even for plain URLs", () => {
-		expect(detectCompiledRuntime("file:///home/user/xcsh/src/x.ts", { PI_COMPILED: "1" })).toBe(true);
+		expect(detectCompiledRuntime("file:///home/example/xcsh/src/x.ts", { PI_COMPILED: "1" })).toBe(true);
 	});
 
 	it("is false for an ordinary source file:// URL with no env", () => {
-		expect(detectCompiledRuntime("file:///home/user/xcsh/src/x.ts", {})).toBe(false);
+		expect(detectCompiledRuntime("file:///home/example/xcsh/src/x.ts", {})).toBe(false);
 	});
 
 	it("is false when PI_COMPILED env is explicitly empty", () => {
-		expect(detectCompiledRuntime("file:///home/user/xcsh/src/x.ts", { PI_COMPILED: "" })).toBe(false);
+		expect(detectCompiledRuntime("file:///home/example/xcsh/src/x.ts", { PI_COMPILED: "" })).toBe(false);
 	});
 
 	it("is true if any one of the markers is present (first match short-circuits)", () => {

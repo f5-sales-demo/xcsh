@@ -33,7 +33,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "cursor";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "Cursor";
 const PRIORITY = 50;
 
 // =============================================================================
@@ -197,7 +197,7 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 
 registerProvider(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from ~/.cursor/mcp.json and .cursor/mcp.json",
 	priority: PRIORITY,
 	load: loadMCPServers,
@@ -205,7 +205,7 @@ registerProvider(mcpCapability.id, {
 
 registerProvider(ruleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load rules from .cursor/rules/*.mdc and legacy .cursorrules",
 	priority: PRIORITY,
 	load: loadRules,
@@ -213,7 +213,7 @@ registerProvider(ruleCapability.id, {
 
 registerProvider(settingsCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load settings from ~/.cursor/settings.json and .cursor/settings.json",
 	priority: PRIORITY,
 	load: loadSettings,

@@ -82,31 +82,31 @@ fn realistic() -> (FakeFs, ContainmentFence) {
 		"/opt/shared/ctx.md",
 		"/opt/other/thing",
 		"/drop/out.log",
-		"/home/user/notes.md",
-		"/home/user/.ssh/id_rsa",
-		"/home/user/Documents/tax.pdf",
-		"/home/user/.gitconfig",
-		"/home/user/.cargo/registry/index",
-		"/home/user/.cargo/credentials.toml",
-		"/home/user/GIT/custB/secret.env",
-		"/home/user/GIT/custA/notes.md",
-		"/home/user/GIT/custA/sub/deep.txt",
-		"/home/user/GIT/custA/.xcsh/sessions/other.jsonl",
+		"/home/example/notes.md",
+		"/home/alice/.ssh/id_rsa",
+		"/home/alice/Documents/tax.pdf",
+		"/home/alice/.gitconfig",
+		"/home/alice/.cargo/registry/index",
+		"/home/alice/.cargo/credentials.toml",
+		"/home/alice/GIT/custB/secret.env",
+		"/home/alice/GIT/custA/notes.md",
+		"/home/alice/GIT/custA/sub/deep.txt",
+		"/home/alice/GIT/custA/.xcsh/sessions/other.jsonl",
 	]);
 	let fence = ContainmentFence {
 		allow:            vec![
-			PathBuf::from("/home/user/GIT/custA"),
-			PathBuf::from("/home/user/.cargo/registry"),
+			PathBuf::from("/home/alice/GIT/custA"),
+			PathBuf::from("/home/alice/.cargo/registry"),
 		],
-		allow_read_only:  vec![PathBuf::from("/home/user/.gitconfig"), PathBuf::from("/opt/shared")],
+		allow_read_only:  vec![PathBuf::from("/home/alice/.gitconfig"), PathBuf::from("/opt/shared")],
 		allow_write_only: vec![PathBuf::from("/drop")],
-		// `/home/user/GIT` nested inside `/home/user` exercises deny-inside-deny; the `.xcsh/sessions`
-		// root is a deny inside an allow inside a deny, which is the case seatbelt handles by rule
-		// order and Landlock cannot.
+		// `/home/alice/GIT` nested inside `/home/alice` exercises deny-inside-deny; the
+		// `.xcsh/sessions` root is a deny inside an allow inside a deny, which is the case
+		// seatbelt handles by rule order and Landlock cannot.
 		deny:             vec![
-			PathBuf::from("/home/user"),
-			PathBuf::from("/home/user/GIT"),
-			PathBuf::from("/home/user/GIT/custA/.xcsh/sessions"),
+			PathBuf::from("/home/alice"),
+			PathBuf::from("/home/alice/GIT"),
+			PathBuf::from("/home/alice/GIT/custA/.xcsh/sessions"),
 		],
 	};
 	(fs, fence)
@@ -116,12 +116,12 @@ fn candidates(fs: &FakeFs) -> Vec<PathBuf> {
 	let mut out: Vec<PathBuf> = fs.paths.iter().cloned().collect();
 	// Paths that do not exist yet, because a write target usually does not.
 	for extra in [
-		"/home/user/GIT/custA/created-later.txt",
-		"/home/user/GIT/custA/sub/created-later.txt",
-		"/home/user/GIT/custB/planted.env",
+		"/home/alice/GIT/custA/created-later.txt",
+		"/home/alice/GIT/custA/sub/created-later.txt",
+		"/home/alice/GIT/custB/planted.env",
 		"/tmp/new-file",
 		"/drop/new.log",
-		"/home/user/.ssh/planted",
+		"/home/alice/.ssh/planted",
 	] {
 		out.push(PathBuf::from(extra));
 	}
@@ -201,7 +201,9 @@ fn everything_outside_the_fence_stays_reachable() {
 	// The whole point of the complement: paths the fence never mentions must keep
 	// working, in both directions. If this fails, the backend has turned a gentle
 	// fence into a deny-by-default one.
-	for path in ["/usr/bin/env", "/etc/hosts", "/tmp/scratch", "/tmp/new-file", "/home/user/notes.md"] {
+	for path in
+		["/usr/bin/env", "/etc/hosts", "/tmp/scratch", "/tmp/new-file", "/home/example/notes.md"]
+	{
 		let path = PathBuf::from(path);
 		assert!(plan.permits(&path, FenceAccess::Read), "{} should be readable", path.display());
 		assert!(plan.permits(&path, FenceAccess::Write), "{} should be writable", path.display());
@@ -214,11 +216,11 @@ fn the_denied_home_and_sibling_checkout_are_unreachable() {
 	let plan = fence.compile_grant_plan(&fs);
 
 	for path in [
-		"/home/user/.ssh/id_rsa",
-		"/home/user/Documents/tax.pdf",
-		"/home/user/.cargo/credentials.toml",
-		"/home/user/GIT/custB/secret.env",
-		"/home/user/GIT/custA/.xcsh/sessions/other.jsonl",
+		"/home/alice/.ssh/id_rsa",
+		"/home/alice/Documents/tax.pdf",
+		"/home/alice/.cargo/credentials.toml",
+		"/home/alice/GIT/custB/secret.env",
+		"/home/alice/GIT/custA/.xcsh/sessions/other.jsonl",
 	] {
 		let path = PathBuf::from(path);
 		assert!(!plan.permits(&path, FenceAccess::Read), "{} must not be readable", path.display());
@@ -232,10 +234,10 @@ fn the_workspace_and_its_carve_outs_are_fully_usable() {
 	let plan = fence.compile_grant_plan(&fs);
 
 	for path in [
-		"/home/user/GIT/custA/notes.md",
-		"/home/user/GIT/custA/sub/deep.txt",
-		"/home/user/GIT/custA/sub/created-later.txt",
-		"/home/user/.cargo/registry/index",
+		"/home/alice/GIT/custA/notes.md",
+		"/home/alice/GIT/custA/sub/deep.txt",
+		"/home/alice/GIT/custA/sub/created-later.txt",
+		"/home/alice/.cargo/registry/index",
 	] {
 		let path = PathBuf::from(path);
 		assert!(plan.permits(&path, FenceAccess::Read), "{} should be readable", path.display());
@@ -248,7 +250,7 @@ fn read_only_and_write_only_roots_keep_their_direction() {
 	let (fs, fence) = realistic();
 	let plan = fence.compile_grant_plan(&fs);
 
-	let gitconfig = PathBuf::from("/home/user/.gitconfig");
+	let gitconfig = PathBuf::from("/home/alice/.gitconfig");
 	assert!(plan.permits(&gitconfig, FenceAccess::Read));
 	assert!(!plan.permits(&gitconfig, FenceAccess::Write));
 
@@ -314,9 +316,9 @@ fn the_documented_costs_hold() {
 	// when the workspace *is* the agent directory, which no ordinary session does.
 	// Running unconfined while still reporting `landlock` would be the worst of the
 	// three; refusing every command turns a narrow cost into a dead session.
-	let workspace = PathBuf::from("/home/user/GIT/custA");
+	let workspace = PathBuf::from("/home/alice/GIT/custA");
 	assert!(split.contains(&workspace), "a deny inside the workspace splits the workspace");
-	assert!(!plan.permits(Path::new("/home/user/GIT/custA/created-later.txt"), FenceAccess::Write));
+	assert!(!plan.permits(Path::new("/home/alice/GIT/custA/created-later.txt"), FenceAccess::Write));
 }
 
 /// A directory that has to be enumerated but cannot be grants nothing, and says
@@ -330,8 +332,8 @@ fn unenumerable_directories_fail_closed() {
 		}
 	}
 	let fence = ContainmentFence {
-		allow: vec![PathBuf::from("/home/user/GIT/custA")],
-		deny: vec![PathBuf::from("/home/user")],
+		allow: vec![PathBuf::from("/home/alice/GIT/custA")],
+		deny: vec![PathBuf::from("/home/alice")],
 		..ContainmentFence::default()
 	};
 	let plan = fence.compile_grant_plan(&Blind);
@@ -341,17 +343,17 @@ fn unenumerable_directories_fail_closed() {
 	// enumerated.
 	assert!(!plan.permits(Path::new("/usr/bin/env"), FenceAccess::Read));
 	// The explicit allow still lands, because it needs no enumeration.
-	assert!(plan.permits(Path::new("/home/user/GIT/custA/notes.md"), FenceAccess::Read));
+	assert!(plan.permits(Path::new("/home/alice/GIT/custA/notes.md"), FenceAccess::Read));
 }
 
 /// An empty fence restricts nothing, and must compile to a plan that says so.
 #[test]
 fn an_empty_fence_grants_the_whole_tree() {
-	let fs = FakeFs::new(&["/usr/bin/env", "/home/user/x"]);
+	let fs = FakeFs::new(&["/usr/bin/env", "/home/alice/x"]);
 	let plan = ContainmentFence::default().compile_grant_plan(&fs);
 
 	assert!(plan.split_dirs.is_empty(), "nothing splits when nothing is denied");
-	for path in ["/usr/bin/env", "/home/user/x", "/anything/at/all"] {
+	for path in ["/usr/bin/env", "/home/alice/x", "/anything/at/all"] {
 		assert!(plan.permits(Path::new(path), FenceAccess::Read));
 		assert!(plan.permits(Path::new(path), FenceAccess::Write));
 	}

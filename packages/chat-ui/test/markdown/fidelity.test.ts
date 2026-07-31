@@ -130,7 +130,7 @@ describe("Layer 1 — structural invariants", () => {
 		expect(links[0].getAttribute("href")).toBe("https://www.f5.com");
 		expect(links[0].getAttribute("target")).toBe("_blank");
 		expect(links[0].getAttribute("rel")).toContain("noopener");
-		expect(links[1].getAttribute("href")).toBe("mailto:a@b.com");
+		expect(links[1].getAttribute("href")).toBe("mailto:yuri@example.net");
 	});
 
 	test("emphasis: bold / italic / bold-italic / underscore variants", () => {

@@ -6,7 +6,7 @@ describe("parseManifests", () => {
 		const objects = [
 			{
 				kind: "http_loadbalancer",
-				metadata: { name: "my-lb", namespace: "production" },
+				metadata: { name: "my-lb", namespace: "demo-app" },
 				spec: { domains: ["example.com"] },
 			},
 		];
@@ -14,7 +14,7 @@ describe("parseManifests", () => {
 		expect(result).toHaveLength(1);
 		expect(result[0].kind).toBe("http_loadbalancer");
 		expect(result[0].metadata.name).toBe("my-lb");
-		expect(result[0].metadata.namespace).toBe("production");
+		expect(result[0].metadata.namespace).toBe("demo-app");
 		expect(result[0].spec.domains).toEqual(["example.com"]);
 	});
 

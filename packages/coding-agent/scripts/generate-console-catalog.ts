@@ -2,6 +2,7 @@
 // scripts/generate-console-catalog.ts
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { sanitizePublicIpv4Examples } from "./sanitize-generated-content";
 
 const repoRoot = path.resolve(import.meta.dir, "..");
 const outputPath = path.join(repoRoot, "src/internal-urls/console-catalog.generated.ts");
@@ -98,7 +99,7 @@ const output = [
 	"",
 ].join("\n");
 
-await Bun.write(outputPath, sanitizeTenantHosts(output));
+await Bun.write(outputPath, sanitizePublicIpv4Examples(sanitizeTenantHosts(output)));
 console.log(
 	`Wrote ${outputPath} (workflows=${Object.keys(data.workflows).length}, resources=${Object.keys(data.resources).length})`,
 );

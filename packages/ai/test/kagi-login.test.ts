@@ -23,7 +23,7 @@ describe("kagi login", () => {
 		expect(authUrl).toBe("https://kagi.com/settings/api");
 		expect(authInstructions).toContain("Kagi Search API key");
 		expect(authInstructions).toContain("beta-only");
-		expect(authInstructions).toContain("dana@example.com");
+		expect(authInstructions).toContain("Kagi support");
 		expect(promptMessage).toBe("Paste your Kagi API key");
 		expect(promptPlaceholder).toBe("KG_...");
 		expect(apiKey).toBe("KG_test_key");

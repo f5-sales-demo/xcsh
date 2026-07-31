@@ -27,7 +27,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "windsurf";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "Windsurf";
 const PRIORITY = 50;
 
 // =============================================================================
@@ -132,7 +132,7 @@ async function loadRules(ctx: LoadContext): Promise<LoadResult<Rule>> {
 
 registerProvider<MCPServer>(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from Windsurf config (mcp_config.json)",
 	priority: PRIORITY,
 	load: loadMCPServers,
@@ -140,7 +140,7 @@ registerProvider<MCPServer>(mcpCapability.id, {
 
 registerProvider<Rule>(ruleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load rules from Windsurf (.windsurf/rules/*.md, memories/global_rules.md, .windsurfrules)",
 	priority: PRIORITY,
 	load: loadRules,

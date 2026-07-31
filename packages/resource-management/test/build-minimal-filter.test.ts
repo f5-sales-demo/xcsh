@@ -86,7 +86,7 @@ describe("metadata → filter → applyMinimalExportFilter (end-to-end)", () => 
 		const filter = buildFilterFromMetadata(meta);
 
 		const spec = {
-			origin_servers: [{ public_ip: { ip: "192.0.2.37" } }],
+			origin_servers: [{ public_ip: { ip: "192.0.2.1" } }],
 			port: 443,
 			loadbalancer_algorithm: "ROUND_ROBIN", // matches default → stripped
 			endpoint_selection: "LOCAL_PREFERRED", // differs from default → kept
@@ -97,7 +97,7 @@ describe("metadata → filter → applyMinimalExportFilter (end-to-end)", () => 
 		const result = applyMinimalExportFilter(spec, filter);
 
 		expect(result).toEqual({
-			origin_servers: [{ public_ip: { ip: "192.0.2.37" } }],
+			origin_servers: [{ public_ip: { ip: "192.0.2.1" } }],
 			port: 443,
 			endpoint_selection: "LOCAL_PREFERRED",
 		});

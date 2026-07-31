@@ -86,7 +86,10 @@ describe("xcsh-env", () => {
 		const GOLDEN: Array<[string | undefined, { tenant: string; env: "production" | "staging" } | null]> = [
 			["https://example-corp.console.ves.volterra.io/web/x", { tenant: "example-corp", env: "production" }],
 			["https://example-corp.staging.volterra.us/web/home", { tenant: "example-corp", env: "staging" }],
-			["https://f5-amer-ent.console.ves.volterra.io/web/home?iss=x", { tenant: "example-corp", env: "production" }],
+			[
+				"https://example-partners.console.ves.volterra.io/web/home?iss=x",
+				{ tenant: "example-partners", env: "production" },
+			],
 			[
 				"https://login.ves.volterra.io/auth/realms/example-corp-abc123/protocol/openid-connect/auth",
 				{ tenant: "example-corp", env: "production" },
@@ -235,8 +238,8 @@ describe("xcsh-env", () => {
 
 		it("reduces a pasted full browser URL to its origin", () => {
 			const pasted =
-				"https://f5-amer-ent.console.ves.volterra.io/web/home?iss=https%3A%2F%2Flogin.ves.volterra.io%2Fauth%2Frealms%2Ff5-amer-ent-x";
-			expect(normalizeApiUrl(pasted)).toBe("https://f5-amer-ent.console.ves.volterra.io");
+				"https://example-partners.console.ves.volterra.io/web/home?iss=https%3A%2F%2Flogin.ves.volterra.io%2Fauth%2Frealms%2Fexample-partners-x";
+			expect(normalizeApiUrl(pasted)).toBe("https://example-partners.console.ves.volterra.io");
 		});
 
 		it("preserves a non-default port", () => {

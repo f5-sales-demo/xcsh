@@ -16,7 +16,7 @@ describe("Kagi web search error handling", () => {
 
 	it("surfaces beta access denial messages from JSON error bodies", async () => {
 		const providerMessage =
-			"Kagi Search API is in beta. Please contact dana@example.com to enable API access for your account.";
+			"Kagi Search API is in beta. Please contact Kagi support to enable API access for your account.";
 
 		using _hook = hookFetch(
 			() =>

@@ -424,9 +424,9 @@ fn file_kind(fd: &OwnedFd) -> Option<FileKind> {
 ///
 /// **`O_NOFOLLOW` is load-bearing, not defensive.** A Landlock rule attaches to the inode behind the
 /// descriptor, so following a symlink here grants whatever it points at. Measured before this was added:
-/// a symlink sitting in a split directory and aimed at the denied home — `/home/user -> /home/user` — was
+/// a symlink sitting in a split directory and aimed at the denied home — `/home/example -> /home/alice` — was
 /// enumerated as an ordinary child, granted, and resolved to the home's inode. That did not merely expose
-/// the path through the link; it made `cat /home/user/secret.txt` succeed directly. The whole deny was gone.
+/// the path through the link; it made `cat /home/alice/secret.txt` succeed directly. The whole deny was gone.
 ///
 /// Split directories lose write rights on their own inode, so a *confined* command cannot plant such a
 /// link itself — but one already on disk is enough, and relying on that would be relying on an accident.

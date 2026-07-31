@@ -355,12 +355,12 @@ describe("buildSessionContext", () => {
 		it("uses the most recent context_change when multiple are present", () => {
 			const session = SessionManager.inMemory();
 			session.appendContextChange("prod", "example-corp", "production");
-			session.appendContextChange("staging", "beta-llc", "staging");
+			session.appendContextChange("staging", "example-partners", "staging");
 
 			const ctx = session.buildSessionContext();
 
 			expect(ctx.activeContextName).toBe("staging");
-			expect(ctx.activeContextTenant).toBe("beta-llc");
+			expect(ctx.activeContextTenant).toBe("example-partners");
 		});
 
 		it("leaves both fields undefined when no context_change entries exist", () => {

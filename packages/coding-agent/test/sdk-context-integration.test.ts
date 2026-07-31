@@ -134,7 +134,7 @@ describe("createAgentSession context tracking", () => {
 		});
 		await ContextService.instance.createContext({
 			name: "staging",
-			apiUrl: "https://beta-llc.console.ves.volterra.io/api",
+			apiUrl: "https://example-partners.console.ves.volterra.io/api",
 			apiToken: "tok2",
 			defaultNamespace: "staging",
 		});
@@ -169,13 +169,13 @@ describe("createAgentSession context tracking", () => {
 			expect(contextChanges[0]).toMatchObject({
 				type: "context_change",
 				contextName: "staging",
-				tenant: "example-corp",
+				tenant: "example-partners",
 				namespace: "staging",
 			});
 			expect(customMessages).toHaveLength(1);
 			const content = (customMessages[0] as { content: string }).content;
 			expect(content).toContain("[Context switched to staging]");
-			expect(content).toContain("Tenant: beta-llc");
+			expect(content).toContain("Tenant: example-partners");
 			expect(content).toContain("namespace: staging");
 			expect((customMessages[0] as { display: boolean }).display).toBe(true);
 		} finally {
@@ -304,7 +304,7 @@ describe("createAgentSession context tracking", () => {
 		});
 		await ContextService.instance.createContext({
 			name: "staging",
-			apiUrl: "https://beta-llc.console.ves.volterra.io/api",
+			apiUrl: "https://example-partners.console.ves.volterra.io/api",
 			apiToken: "tok2",
 			defaultNamespace: "staging",
 		});
@@ -361,7 +361,7 @@ describe("createAgentSession context tracking", () => {
 		});
 		await ContextService.instance.createContext({
 			name: "staging",
-			apiUrl: "https://beta-llc.console.ves.volterra.io/api",
+			apiUrl: "https://example-partners.console.ves.volterra.io/api",
 			apiToken: "tok2",
 			defaultNamespace: "staging",
 		});

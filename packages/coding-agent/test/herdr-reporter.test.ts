@@ -259,7 +259,7 @@ describe("herdr-reporter extension", () => {
 			const { pi, handlers } = makeMockPi();
 
 			herdrReporter(pi);
-			const file = "/Users/user/.xcsh/agent/sessions/-proj/2026-07-23T00-00-00Z_abc.jsonl";
+			const file = "/Users/example/.xcsh/agent/sessions/-proj/2026-07-23T00-00-00Z_abc.jsonl";
 			await handlers.get("session_start")?.({}, sessionCtx(file));
 
 			await waitFor(() => herdr.received.some(m => m.method === "pane.report_agent_session"));

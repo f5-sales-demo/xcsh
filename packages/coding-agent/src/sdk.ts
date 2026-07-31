@@ -82,9 +82,7 @@ import {
 	RuleProtocolHandler,
 	SkillProtocolHandler,
 } from "./internal-urls";
-import { buildComputerHint, loadComputerProfile } from "./internal-urls/computer-profile";
 import { createLiveCwdGetter } from "./internal-urls/fleet-resolve";
-import { loadProfile, type UserProfile } from "./internal-urls/user-profile";
 import { disposeAllKernelSessions, disposeKernelSessionsByOwner } from "./ipy/executor";
 import { LSP_STARTUP_EVENT_CHANNEL, type LspStartupEvent } from "./lsp/startup-events";
 import { discoverAndLoadMCPTools, type MCPManager, type MCPToolsLoadResult } from "./mcp";
@@ -1590,47 +1588,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				}
 				appendPrompt = parts.join("\n\n");
 			}
-			// Load user profile — used for system prompt hint
-			let _profile: UserProfile;
-			try {
-				_profile = await loadProfile();
-			} catch {
-				_profile = {};
-			}
-			let userProfile: { name: string; role: string; org: string } | undefined;
-			if (_profile.givenName || _profile.familyName) {
-				const _name = [_profile.givenName, _profile.familyName].filter(Boolean).join(" ");
-				if (_name) {
-					userProfile = {
-						name: _name,
-						role: _profile.role ?? _profile.jobTitle ?? "",
-						org:
-							typeof _profile.worksFor === "string"
-								? _profile.worksFor
-								: ((_profile.worksFor as { name?: string } | undefined)?.name ?? ""),
-					};
-				}
-			}
-
-			// Load compact computer profile hint for system prompt
-			let computerProfile:
-				| {
-						ramGB: number;
-						cpu: string;
-						os: string;
-						cores?: number;
-						shell?: string;
-						diskFree?: string;
-						model?: string;
-				  }
-				| undefined;
-			try {
-				const _computerProfile = await loadComputerProfile();
-				computerProfile = buildComputerHint(_computerProfile) ?? undefined;
-			} catch {
-				// No computer profile — hint block omitted
-			}
-
 			const currentLocale = getLocale();
 			const localeName = currentLocale !== "en" ? getLocaleDisplayName(currentLocale) : undefined;
 			const localeForPrompt = localeName ? { code: currentLocale, name: localeName } : undefined;
@@ -1654,8 +1611,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				secretsEnabled,
 				context: contextForPrompt,
 				locale: localeForPrompt,
-				userProfile,
-				computerProfile,
 				knowledgeTopics,
 				contextSkillDirs,
 				contextIncludeSkills,
@@ -1686,8 +1641,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					secretsEnabled,
 					context: contextForPrompt,
 					locale: localeForPrompt,
-					userProfile,
-					computerProfile,
 					knowledgeTopics,
 					contextSkillDirs,
 					contextIncludeSkills,

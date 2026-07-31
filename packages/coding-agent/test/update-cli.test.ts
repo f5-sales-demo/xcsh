@@ -8,19 +8,19 @@ describe("update-cli install target detection", () => {
 	// --- Existing tests (bun and binary) ---
 
 	it("uses bun update when prioritized xcsh is inside bun global bin", () => {
-		const method = _resolveUpdateMethodForTest("/Users/user/.bun/bin/xcsh", "/Users/user/.bun/bin");
+		const method = _resolveUpdateMethodForTest("/Users/example/.bun/bin/xcsh", "/Users/example/.bun/bin");
 
 		expect(method).toBe("bun");
 	});
 
 	it("uses binary update when prioritized xcsh is outside bun global bin", () => {
-		const method = _resolveUpdateMethodForTest("/Users/user/.local/bin/xcsh", "/Users/user/.bun/bin");
+		const method = _resolveUpdateMethodForTest("/Users/example/.local/bin/xcsh", "/Users/example/.bun/bin");
 
 		expect(method).toBe("binary");
 	});
 
 	it("uses binary update when bun global bin cannot be resolved", () => {
-		const method = _resolveUpdateMethodForTest("/Users/user/.local/bin/xcsh", undefined);
+		const method = _resolveUpdateMethodForTest("/Users/example/.local/bin/xcsh", undefined);
 
 		expect(method).toBe("binary");
 	});

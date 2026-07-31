@@ -14,7 +14,7 @@ import { expandTilde } from "../tools/path-utils";
 import { createSourceMeta, expandEnvVarsDeep } from "./helpers";
 
 const PROVIDER_ID = "ssh-json";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "SSH Config";
 
 interface SSHConfigFile {
 	hosts?: Record<
@@ -146,7 +146,7 @@ async function load(ctx: LoadContext): Promise<LoadResult<SSHHost>> {
 
 registerProvider(sshCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load SSH hosts from managed xcsh paths and legacy ssh.json/.ssh.json files",
 	priority: 5,
 	load,

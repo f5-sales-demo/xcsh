@@ -39,7 +39,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "codex";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "OpenAI Codex";
 const PRIORITY = 70;
 
 function getProjectCodexDir(ctx: LoadContext): string {
@@ -464,7 +464,7 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 
 registerProvider<ContextFile>(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load context files from ~/.codex/AGENTS.md (user-level only)",
 	priority: PRIORITY,
 	load: loadContextFiles,
@@ -472,7 +472,7 @@ registerProvider<ContextFile>(contextFileCapability.id, {
 
 registerProvider<MCPServer>(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from config.toml [mcp_servers.*] sections",
 	priority: PRIORITY,
 	load: loadMCPServers,
@@ -480,7 +480,7 @@ registerProvider<MCPServer>(mcpCapability.id, {
 
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load skills from ~/.codex/skills and .codex/skills/",
 	priority: PRIORITY,
 	load: loadSkills,
@@ -488,7 +488,7 @@ registerProvider<Skill>(skillCapability.id, {
 
 registerProvider<ExtensionModule>(extensionModuleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load extension modules from ~/.codex/extensions and .codex/extensions/",
 	priority: PRIORITY,
 	load: loadExtensionModules,
@@ -496,7 +496,7 @@ registerProvider<ExtensionModule>(extensionModuleCapability.id, {
 
 registerProvider<SlashCommand>(slashCommandCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load slash commands from ~/.codex/commands and .codex/commands/",
 	priority: PRIORITY,
 	load: loadSlashCommands,
@@ -504,7 +504,7 @@ registerProvider<SlashCommand>(slashCommandCapability.id, {
 
 registerProvider<Prompt>(promptCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load prompts from ~/.codex/prompts and .codex/prompts/",
 	priority: PRIORITY,
 	load: loadPrompts,
@@ -512,7 +512,7 @@ registerProvider<Prompt>(promptCapability.id, {
 
 registerProvider<Hook>(hookCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load hooks from ~/.codex/hooks and .codex/hooks/",
 	priority: PRIORITY,
 	load: loadHooks,
@@ -520,7 +520,7 @@ registerProvider<Hook>(hookCapability.id, {
 
 registerProvider<CustomTool>(toolCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load custom tools from ~/.codex/tools and .codex/tools/",
 	priority: PRIORITY,
 	load: loadTools,
@@ -528,7 +528,7 @@ registerProvider<CustomTool>(toolCapability.id, {
 
 registerProvider<Settings>(settingsCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load settings from config.toml",
 	priority: PRIORITY,
 	load: loadSettings,

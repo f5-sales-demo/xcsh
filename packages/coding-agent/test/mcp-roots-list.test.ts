@@ -106,7 +106,7 @@ describe("roots response shape", () => {
 	it("produces valid file:// URI on Windows-style paths", () => {
 		// path.basename and pathToFileURL are platform-dependent for
 		// Windows paths; only assert the URI format, not the name.
-		const result = getRoots("C:\\Users\\user\\myproject");
+		const result = getRoots("C:\\Users\\example\\myproject");
 		expect(result.roots[0].uri).toMatch(/^file:\/\/\//);
 		expect(result.roots[0].name).toBeTruthy();
 	});

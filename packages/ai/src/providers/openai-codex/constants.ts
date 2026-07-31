@@ -6,7 +6,7 @@ export const CODEX_BASE_URL = "https://chatgpt.com/backend-api";
 
 export const OPENAI_HEADERS = {
 	BETA: "OpenAI-Beta",
-	ACCOUNT_ID: "example-corp",
+	ACCOUNT_ID_HEADER: "chatgpt-account-id",
 	ORIGINATOR: "originator",
 	SESSION_ID: "session_id",
 	CONVERSATION_ID: "conversation_id",

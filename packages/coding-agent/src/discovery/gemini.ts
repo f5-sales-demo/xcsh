@@ -37,7 +37,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "gemini";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "Gemini CLI";
 const PRIORITY = 60;
 
 // =============================================================================
@@ -311,7 +311,7 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 
 registerProvider(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from ~/.gemini/settings.json and .gemini/settings.json",
 	priority: PRIORITY,
 	load: loadMCPServers,
@@ -319,7 +319,7 @@ registerProvider(mcpCapability.id, {
 
 registerProvider(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load GEMINI.md context files",
 	priority: PRIORITY,
 	load: loadContextFiles,
@@ -365,7 +365,7 @@ async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemProm
 
 registerProvider<SystemPrompt>(systemPromptCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load system.md custom system prompt files",
 	priority: PRIORITY,
 	load: loadSystemPrompt,
@@ -373,7 +373,7 @@ registerProvider<SystemPrompt>(systemPromptCapability.id, {
 
 registerProvider(extensionCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load extensions from ~/.gemini/extensions/ and .gemini/extensions/",
 	priority: PRIORITY,
 	load: loadExtensions,
@@ -381,7 +381,7 @@ registerProvider(extensionCapability.id, {
 
 registerProvider(extensionModuleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load extension modules from ~/.gemini/extensions/ and .gemini/extensions/",
 	priority: PRIORITY,
 	load: loadExtensionModules,
@@ -389,7 +389,7 @@ registerProvider(extensionModuleCapability.id, {
 
 registerProvider(settingsCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load settings from ~/.gemini/settings.json and .gemini/settings.json",
 	priority: PRIORITY,
 	load: loadSettings,

@@ -22,7 +22,7 @@ import type { LoadContext, LoadResult, SourceMeta } from "../capability/types";
 import { calculateDepth, createSourceMeta, getProjectPath, loadFilesFromDir } from "./helpers";
 
 const PROVIDER_ID = "github";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "GitHub Copilot";
 const PRIORITY = 30;
 
 // =============================================================================
@@ -103,7 +103,7 @@ function transformInstruction(name: string, content: string, filePath: string, s
 
 registerProvider(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load copilot-instructions.md from .github/",
 	priority: PRIORITY,
 	load: loadContextFiles,
@@ -111,7 +111,7 @@ registerProvider(contextFileCapability.id, {
 
 registerProvider(instructionCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load *.instructions.md from .github/instructions/ with applyTo frontmatter",
 	priority: PRIORITY,
 	load: loadInstructions,

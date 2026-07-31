@@ -51,13 +51,13 @@ function hasAssistantEntry(entries: unknown[]): boolean {
 
 describe("stripOuterDoubleQuotes", () => {
 	it("strips matching double quotes", () => {
-		expect(stripOuterDoubleQuotes('"C:\\Users\\user"')).toBe("C:\\Users\\user");
+		expect(stripOuterDoubleQuotes('"C:\\Users\\example"')).toBe("C:\\Users\\example");
 	});
 	it("strips matching double quotes from POSIX paths", () => {
 		expect(stripOuterDoubleQuotes('"/home/user/test"')).toBe("/home/user/test");
 	});
 	it("passes through unquoted paths", () => {
-		expect(stripOuterDoubleQuotes("C:\\Users\\user")).toBe("C:\\Users\\user");
+		expect(stripOuterDoubleQuotes("C:\\Users\\example")).toBe("C:\\Users\\example");
 	});
 	it("does not strip mismatched quotes", () => {
 		expect(stripOuterDoubleQuotes('"mismatched')).toBe('"mismatched');

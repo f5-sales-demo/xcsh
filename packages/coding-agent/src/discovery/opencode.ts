@@ -39,7 +39,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "opencode";
-const DISPLAY_NAME = "Dana R.";
+const SOURCE_LABEL = "OpenCode";
 const PRIORITY = 55;
 
 // =============================================================================
@@ -346,7 +346,7 @@ async function loadSettings(ctx: LoadContext): Promise<LoadResult<Settings>> {
 
 registerProvider(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load AGENTS.md from ~/.config/opencode/",
 	priority: PRIORITY,
 	load: loadContextFiles,
@@ -354,7 +354,7 @@ registerProvider(contextFileCapability.id, {
 
 registerProvider(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from opencode.json mcp key",
 	priority: PRIORITY,
 	load: loadMCPServers,
@@ -362,7 +362,7 @@ registerProvider(mcpCapability.id, {
 
 registerProvider(skillCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load skills from ~/.config/opencode/skills/ and .opencode/skills/",
 	priority: PRIORITY,
 	load: loadSkills,
@@ -370,7 +370,7 @@ registerProvider(skillCapability.id, {
 
 registerProvider(extensionModuleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load extension modules from ~/.config/opencode/plugins/ and .opencode/plugins/",
 	priority: PRIORITY,
 	load: loadExtensionModules,
@@ -378,7 +378,7 @@ registerProvider(extensionModuleCapability.id, {
 
 registerProvider(slashCommandCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load slash commands from ~/.config/opencode/commands/ and .opencode/commands/",
 	priority: PRIORITY,
 	load: loadSlashCommands,
@@ -386,7 +386,7 @@ registerProvider(slashCommandCapability.id, {
 
 registerProvider(settingsCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load settings from opencode.json",
 	priority: PRIORITY,
 	load: loadSettings,

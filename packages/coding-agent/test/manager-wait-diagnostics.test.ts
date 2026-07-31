@@ -77,7 +77,7 @@ describe("describePortScan (#2463 mode C)", () => {
 		const lines = describePortScan(
 			[
 				{ port: 19222, tenant: "example-corp" },
-				{ port: 19223, tenant: "example-corp" },
+				{ port: 19223, tenant: "example-stale" },
 				{ port: 19224, error: "connect ECONNREFUSED 127.0.0.1:19224" },
 				{ port: 19225, error: "connect ECONNREFUSED 127.0.0.1:19225" },
 			],
@@ -101,7 +101,7 @@ describe("describePortScan (#2463 mode C)", () => {
 		).join("\n");
 		expect(allRefused).toContain("no port answered at all");
 
-		const wrongTenant = describePortScan([{ port: 19222, tenant: "example-corp" }], "example-corp").join("\n");
+		const wrongTenant = describePortScan([{ port: 19222, tenant: "example-other" }], "example-corp").join("\n");
 		expect(wrongTenant).not.toContain("no port answered at all");
 		expect(wrongTenant).toContain("matched 0 of 1");
 	});

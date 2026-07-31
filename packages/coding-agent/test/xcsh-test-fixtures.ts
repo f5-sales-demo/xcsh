@@ -82,7 +82,7 @@ export const TEST_CONTEXT_WITH_KNOWLEDGE = {
 	apiToken: TEST_XCSH_TOKEN,
 	defaultNamespace: TEST_XCSH_NAMESPACE,
 	knowledgeSources: [
-		{ url: "/home/user/skills", type: "skill-dir" as const, label: "Custom Skills" },
+		{ url: "/home/example/skills", type: "skill-dir" as const, label: "Custom Skills" },
 		{ url: "https://example.com/llms.txt", type: "llms-txt" as const },
 	],
 	includeSkills: ["xcsh-*"],
