@@ -33,9 +33,6 @@
     "crates/containment-check/tests/complement.rs": {
       "home-path": 39
     },
-    "crates/pi-natives/src/keys.rs": {
-      "home-path": 2
-    },
     "docs/ar/runtime-tools/task-agent-discovery.md": {
       "customer-identifier": 2
     },
@@ -80,12 +77,6 @@
     },
     "package.json": {
       "email": 1
-    },
-    "packages/ai/src/providers/cursor/gen/agent_pb.ts": {
-      "person-name": 1
-    },
-    "packages/ai/src/providers/cursor/proto/agent.proto": {
-      "person-name": 1
     },
     "packages/ai/src/providers/openai-codex/constants.ts": {
       "customer-identifier": 1
@@ -181,8 +172,7 @@
       "email": 1
     },
     "packages/coding-agent/src/internal-urls/api-spec-index.generated.ts": {
-      "email": 1,
-      "person-name": 68
+      "email": 1
     },
     "packages/coding-agent/src/internal-urls/terraform-resolve.ts": {
       "customer-identifier": 1
@@ -225,12 +215,6 @@
     },
     "packages/coding-agent/test/env-secret-masking.test.ts": {
       "customer-identifier": 1
-    },
-    "packages/coding-agent/test/fixtures/before-compaction.jsonl": {
-      "home-path": 598
-    },
-    "packages/coding-agent/test/fixtures/large-session.jsonl": {
-      "home-path": 23
     },
     "packages/coding-agent/test/git-url.test.ts": {
       "email": 2
@@ -359,9 +343,6 @@
     },
     "plugin-discovery-matrix/fixtures/transcripts/invoked-abspath.jsonl": {
       "home-path": 1
-    },
-    "plugin-discovery-matrix/fixtures/transcripts/real-invoked.jsonl": {
-      "email": 5
     },
     "scripts/ci-release-homebrew.ts": {
       "email": 1

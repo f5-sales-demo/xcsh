@@ -185,8 +185,8 @@ describe("parseSalesforceUserRecord", () => {
 	it("maps identity, employment, manager, and address fields", () => {
 		const rec = {
 			Id: "005000000000001",
-			FirstName: "Robin",
-			LastName: "Mordasiewicz",
+			FirstName: "Dana",
+			LastName: "Rivera",
 			Email: "dana@example.com",
 			Title: "Solutions Engineer",
 			Department: "Sales",
@@ -203,8 +203,8 @@ describe("parseSalesforceUserRecord", () => {
 
 		const p = parseSalesforceUserRecord(rec);
 
-		expect(p.givenName).toBe("Robin");
-		expect(p.familyName).toBe("Mordasiewicz");
+		expect(p.givenName).toBe("Dana");
+		expect(p.familyName).toBe("Rivera");
 		expect(p.email).toBe("dana@example.com");
 		expect(p.jobTitle).toBe("Solutions Engineer");
 		expect(p.department).toBe("Sales");
