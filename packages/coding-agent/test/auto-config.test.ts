@@ -962,6 +962,42 @@ describe("config schema versioning", () => {
 		expect(fs.existsSync(`${modelsPath}.bak`)).toBe(true);
 	});
 
+	test.skipIf(process.platform === "win32")(
+		"startupHealthCheck upgrades version 2 metadata with owner-only live and backup files",
+		() => {
+			setEnv("https://proxy.example.com", "sk-abc123");
+			fs.writeFileSync(
+				modelsPath,
+				[
+					"configVersion: 2",
+					"providers:",
+					"  anthropic:",
+					'    baseUrl: "https://proxy.example.com/anthropic"',
+					"    apiKey: LITELLM_API_KEY",
+					"  litellm:",
+					'    baseUrl: "https://proxy.example.com/v1"',
+					"    apiKey: LITELLM_API_KEY",
+					"    api: openai-completions",
+					"    discovery:",
+					"      type: openai-compat",
+				].join("\n"),
+				{ mode: 0o644 },
+			);
+
+			const repaired = startupHealthCheck("ok", modelsPath, {
+				anthropic: { baseUrl: "https://proxy.example.com/anthropic" },
+			});
+
+			expect(repaired).toBe(true);
+			const content = fs.readFileSync(modelsPath, "utf-8");
+			expect(content).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
+			expect(content).toContain("gpt-5.6-sol:");
+			expect(content).toContain("minLevel: high");
+			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
+			expect(fs.statSync(`${modelsPath}.bak`).mode & 0o777).toBe(0o600);
+		},
+	);
+
 	test("startupHealthCheck does not regenerate when configVersion is current", () => {
 		setEnv("https://proxy.example.com", "sk-abc123");
 		fs.mkdirSync(path.dirname(modelsPath), { recursive: true });
