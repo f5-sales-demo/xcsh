@@ -17,6 +17,7 @@ import {
 	getOfficePaneDir,
 	OFFICE_PANE_PORT,
 	type OfficePaneServer,
+	OfficePaneUnavailableError,
 	readManifest,
 	startOfficePaneServer,
 } from "../browser/office-pane-server";
@@ -55,9 +56,15 @@ export interface OfficeServeDeps {
 	startOfficePaneServer: typeof startOfficePaneServer;
 	startHeadlessChatBridge: typeof startHeadlessChatBridge;
 	supersedeStaleServe: typeof supersedeStaleServe;
+	getOfficePaneDir: typeof getOfficePaneDir;
 }
 
-const defaultServeDeps: OfficeServeDeps = { startOfficePaneServer, startHeadlessChatBridge, supersedeStaleServe };
+const defaultServeDeps: OfficeServeDeps = {
+	startOfficePaneServer,
+	startHeadlessChatBridge,
+	supersedeStaleServe,
+	getOfficePaneDir,
+};
 
 /** A running `office serve`: the pane file server, the (optional) chat bridge, and
  *  a teardown that disposes both. */
@@ -75,6 +82,12 @@ export interface OfficeServeHandle {
  * Extracted from {@link runServe} so the start/teardown wiring is unit-testable.
  */
 export async function startOfficeServe(deps: OfficeServeDeps = defaultServeDeps): Promise<OfficeServeHandle> {
+	// Prove there is a pane to serve BEFORE anything is torn down. supersedeStaleServe SIGTERMs a
+	// running serve to take the port, so checking afterwards let an install with no pane at all stop
+	// the operator's working one and then exit with nothing in its place. Refusing loudly is only an
+	// improvement if it refuses before it breaks something.
+	await deps.getOfficePaneDir();
+
 	// Step down a stale serve squatting :8444 (e.g. left over from before a
 	// `brew upgrade`) so this start binds cleanly instead of "port 8444 in use".
 	const superseded = await deps.supersedeStaleServe(OFFICE_PANE_PORT);
@@ -238,6 +251,21 @@ export async function runOfficeCommand(
 	args: OfficeCommandArgs,
 	deps: OfficeCommandDeps = defaultCommandDeps,
 ): Promise<void> {
+	try {
+		await dispatchOfficeCommand(args, deps);
+	} catch (err) {
+		// Only this one class. The published npm form carries `office` and no pane bundle, so every
+		// action here can legitimately have nothing to work with — that is a fact about the install,
+		// not a defect, and it deserves the remedy rather than a stack trace. Anything else rethrows
+		// with its stack intact, because swallowing a real failure here is how the original silent
+		// 404 survived.
+		if (!(err instanceof OfficePaneUnavailableError)) throw err;
+		console.error(err.message);
+		process.exitCode = 1;
+	}
+}
+
+async function dispatchOfficeCommand(args: OfficeCommandArgs, deps: OfficeCommandDeps): Promise<void> {
 	switch (args.action) {
 		case "serve":
 			await deps.serve();
