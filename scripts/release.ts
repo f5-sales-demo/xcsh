@@ -529,19 +529,33 @@ export function classifyReleaseAction(opts: {
 	return opts.tagExists ? "already-released" : "bumped-untagged";
 }
 
+export type OpenReleasePR = {
+	version: string;
+	baseRefOid: string;
+};
+
 /** Idempotent reconcile plan for the set of open `release/vX.Y.Z` PRs. There must be
  * exactly ONE canonical next version (or none): any open release PR whose version
- * isn't `target` is a stale/superseded phantom (e.g. a v19.63.0 stranded after a
- * v19.62.1 shipped the same commit range) and must be closed; the target is created
- * only when it isn't already open. Pure + deterministic — running it repeatedly on
- * the same (open PRs, target) always yields the same plan, so `auto-release`
- * converges instead of accumulating conflicting release branches. */
-export function planReleaseReconcile(opts: { openReleaseVersions: string[]; target: string | null }): {
+ * isn't `target`, or whose recorded base no longer matches the default branch, is a
+ * stale/superseded phantom and must be closed. The target is created only when a
+ * current target PR isn't already open. Pure + deterministic — running it repeatedly
+ * on the same inputs always yields the same plan, so `auto-release` converges instead
+ * of retaining a release generated before newer commits merged. */
+export function planReleaseReconcile(opts: {
+	openReleasePRs: OpenReleasePR[];
+	target: string | null;
+	currentMainOid: string;
+}): {
 	toCreate: string | null;
 	toClose: string[];
 } {
-	const toClose = opts.openReleaseVersions.filter(v => v !== opts.target);
-	const toCreate = opts.target && !opts.openReleaseVersions.includes(opts.target) ? opts.target : null;
+	const currentTargetOpen = opts.openReleasePRs.some(
+		pr => pr.version === opts.target && pr.baseRefOid === opts.currentMainOid,
+	);
+	const toClose = opts.openReleasePRs
+		.filter(pr => pr.version !== opts.target || pr.baseRefOid !== opts.currentMainOid)
+		.map(pr => pr.version);
+	const toCreate = opts.target && !currentTargetOpen ? opts.target : null;
 	return { toCreate, toClose };
 }
 
@@ -572,29 +586,28 @@ function bumpedUntaggedGuidance(version: string): string {
 	].join("\n");
 }
 
-/** Versions of the currently-open `release/vX.Y.Z` PRs (best-effort; [] on error). */
-async function listOpenReleaseVersions(): Promise<string[]> {
-	try {
-		const out = await $`gh pr list --state open --limit 50 --json headRefName`.text();
-		const prs = JSON.parse(out) as { headRefName: string }[];
-		return prs
-			.map(p => p.headRefName)
-			.filter(b => /^release\/v\d+\.\d+\.\d+$/.test(b))
-			.map(b => b.replace(/^release\/v/, ""));
-	} catch {
-		return [];
-	}
+/** Currently-open `release/vX.Y.Z` PRs and their recorded base commits. */
+async function listOpenReleasePRs(): Promise<OpenReleasePR[]> {
+	const out = await $`gh pr list --state open --limit 50 --json headRefName,baseRefOid`.text();
+	const prs = JSON.parse(out) as { headRefName: string; baseRefOid: string }[];
+	return prs
+		.filter(pr => /^release\/v\d+\.\d+\.\d+$/.test(pr.headRefName))
+		.map(pr => ({ version: pr.headRefName.replace(/^release\/v/, ""), baseRefOid: pr.baseRefOid }));
 }
 
-/** Close a stale/superseded release PR and delete its branch (best-effort, non-fatal). */
+/** Current default-branch commit queried from GitHub, independent of local checkout state. */
+async function readDefaultBranchOid(): Promise<string> {
+	const endpoint = "repos/{owner}/{repo}/commits/HEAD";
+	const oid = (await $`gh api ${endpoint} --jq .sha`.text()).trim();
+	if (!oid) throw new Error("GitHub returned an empty default-branch commit OID");
+	return oid;
+}
+
+/** Close a stale/superseded release PR and delete its branch before replacement. */
 async function closeStaleReleasePR(version: string): Promise<void> {
 	const branch = `release/v${version}`;
 	console.log(`Superseding stale release PR ${branch}…`);
-	try {
-		await $`gh pr close ${branch} --delete-branch --comment ${"Superseded by the canonical auto-release target (idempotent reconcile); these commits are covered by a newer release PR or an already-published tag."}`;
-	} catch (e) {
-		console.warn(`  (could not close ${branch}: ${e}) — non-fatal`);
-	}
+	await $`gh pr close ${branch} --delete-branch --comment ${"Superseded by the canonical auto-release target (idempotent reconcile); these commits are covered by a newer release PR or an already-published tag."}`;
 }
 
 async function cmdAutoRelease(): Promise<void> {
@@ -607,8 +620,8 @@ async function cmdAutoRelease(): Promise<void> {
 	// closing any stale/phantom release PRs a prior run left behind. Deterministic —
 	// re-running with the same repo state yields the same open-release-PR set, so a
 	// stranded conflicting release branch is cleaned programmatically, not by hand.
-	const openVersions = await listOpenReleaseVersions();
-	const plan = planReleaseReconcile({ openReleaseVersions: openVersions, target });
+	const [openReleasePRs, currentMainOid] = await Promise.all([listOpenReleasePRs(), readDefaultBranchOid()]);
+	const plan = planReleaseReconcile({ openReleasePRs, target, currentMainOid });
 	for (const v of plan.toClose) await closeStaleReleasePR(v);
 
 	if (!result) {
