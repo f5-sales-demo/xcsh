@@ -111,10 +111,10 @@ test("a /command chat_request is expanded into the command body", async () => {
 test("arguments after the command name are substituted into $ARGUMENTS", async () => {
 	const h = harness([QUALIFY]);
 	new ChatHandler(h.server, h.session).attach();
-	h.fire({ type: "chat_request", id: "c-2", text: "/meddpicc:qualify-deal Visa, Inc.", mode: "educational" });
+	h.fire({ type: "chat_request", id: "c-2", text: "/meddpicc:qualify-deal Example Corp", mode: "educational" });
 	await flush();
 
-	expect(h.prompts[0]).toContain('the deal "Visa, Inc."');
+	expect(h.prompts[0]).toContain('the deal "Example Corp"');
 	expect(h.prompts[0]).not.toContain("$ARGUMENTS");
 });
 
@@ -123,10 +123,10 @@ test("an unknown /name is left alone so the skill convention still applies", asy
 	// not by expansion. Rewriting or rejecting an unmatched name would break them.
 	const h = harness([QUALIFY]);
 	new ChatHandler(h.server, h.session).attach();
-	h.fire({ type: "chat_request", id: "c-3", text: "/meddpicc:deal-review Visa", mode: "educational" });
+	h.fire({ type: "chat_request", id: "c-3", text: "/meddpicc:deal-review Example Corp", mode: "educational" });
 	await flush();
 
-	expect(h.prompts[0]).toContain("/meddpicc:deal-review Visa");
+	expect(h.prompts[0]).toContain("/meddpicc:deal-review Example Corp");
 });
 
 test("ordinary prose is untouched", async () => {
