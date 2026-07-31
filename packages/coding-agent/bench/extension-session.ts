@@ -79,7 +79,7 @@ function spawnWorker(cmd: string[], port: number, extraEnv: Record<string, strin
 			...process.env,
 			XCSH_BROWSER_PROVIDER: "extension",
 			XCSH_SESSION_ID: "tab-bench",
-			XCSH_SESSION_TENANT: "example|staging",
+			XCSH_SESSION_TENANT: "example-corp|staging",
 			XCSH_BRIDGE_PORT: String(port),
 			// Isolate the tenant binding exactly as manager.ts does (undefined removes the var).
 			XCSH_API_URL: undefined,
@@ -204,7 +204,7 @@ async function measureAdoption(cmd: string[]): Promise<number> {
 		if (!(await waitBridgeReady(port, READY_DEADLINE_MS))) throw new Error("spare never became ready");
 		await sleep(ADOPT_SETTLE_MS); // ensure createAgentSession finished → fully warm
 		const t0 = Bun.nanoseconds();
-		(proc as { send(m: unknown): void }).send({ type: "bind", sessionId: "tab-bench", tenant: "example|staging" });
+		(proc as { send(m: unknown): void }).send({ type: "bind", sessionId: "tab-bench", tenant: "example-corp|staging" });
 		const timedOut = await Promise.race([bound.then(() => false), sleep(SESSION_DEADLINE_MS).then(() => true)]);
 		if (timedOut) throw new Error("bind never acked");
 		return (Bun.nanoseconds() - t0) / 1e6;

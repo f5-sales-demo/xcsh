@@ -6,7 +6,7 @@ import {
 } from "@f5-sales-demo/xcsh/modes/components/context-add-wizard";
 
 const BASE_STATE = {
-	url: "https://example.console.ves.volterra.io",
+	url: "https://example-corp.console.ves.volterra.io",
 	token: "tok-abc-1234",
 	name: "prod",
 	namespace: "system",
@@ -16,11 +16,11 @@ const BASE_STATE = {
 
 describe("validateWizardUrl", () => {
 	it("accepts valid HTTPS URL", () => {
-		expect(validateWizardUrl("https://example.console.ves.volterra.io")).toBeNull();
+		expect(validateWizardUrl("https://example-corp.console.ves.volterra.io")).toBeNull();
 	});
 
 	it("rejects HTTP URL", () => {
-		expect(validateWizardUrl("http://example.console.ves.volterra.io")).not.toBeNull();
+		expect(validateWizardUrl("http://example-corp.console.ves.volterra.io")).not.toBeNull();
 	});
 
 	it("rejects non-URL string", () => {
@@ -41,7 +41,7 @@ describe("validateWizardUrl", () => {
 
 	it("accepts valid multi-label hostname", () => {
 		expect(validateWizardUrl("https://api.example.com")).toBeNull();
-		expect(validateWizardUrl("https://example.console.ves.volterra.io")).toBeNull();
+		expect(validateWizardUrl("https://example-corp.console.ves.volterra.io")).toBeNull();
 	});
 });
 
@@ -69,7 +69,7 @@ describe("buildWizardContext", () => {
 	it("builds the core fields and omits env when no credentials given", () => {
 		const ctx = buildWizardContext(BASE_STATE);
 		expect(ctx.name).toBe("prod");
-		expect(ctx.apiUrl).toBe("https://example.console.ves.volterra.io");
+		expect(ctx.apiUrl).toBe("https://example-corp.console.ves.volterra.io");
 		expect(ctx.apiToken).toBe("tok-abc-1234");
 		expect(ctx.defaultNamespace).toBe("system");
 		expect(ctx.env).toBeUndefined();
@@ -102,7 +102,7 @@ describe("buildWizardContext", () => {
 	});
 
 	it("preserves a password exactly (no trimming)", () => {
-		const ctx = buildWizardContext({ ...BASE_STATE, password: "  pad ded  " });
-		expect(ctx.env?.XCSH_CONSOLE_PASSWORD).toBe("  pad ded  ");
+		const ctx = buildWizardContext({ ...BASE_STATE, password: "  padded  " });
+		expect(ctx.env?.XCSH_CONSOLE_PASSWORD).toBe("  padded  ");
 	});
 });

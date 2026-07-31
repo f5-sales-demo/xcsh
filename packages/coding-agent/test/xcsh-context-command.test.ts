@@ -257,7 +257,7 @@ describe("/context slash command handler", () => {
 	});
 
 	it("/context list shows env-only entry when XCSH_API_URL is set", async () => {
-		process.env.XCSH_API_URL = "https://example.console.ves.volterra.io";
+		process.env.XCSH_API_URL = "https://example-corp.console.ves.volterra.io";
 		process.env.XCSH_API_TOKEN = "FAKE-TOKEN";
 		const service = ContextService.init(xcshConfigDir);
 		await service.loadActive();
@@ -268,7 +268,7 @@ describe("/context slash command handler", () => {
 		expect(ctx.messages[0].type).toBe("status");
 		const plain = ctx.messages[0].text.replace(/\x1b\[[0-9;]*m/g, "");
 		expect(plain).toContain("contexts");
-		expect(plain).toContain("example");
+		expect(plain).toContain("example-corp");
 		expect(plain).toContain("via env vars");
 	});
 

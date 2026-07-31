@@ -413,7 +413,7 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 	it("denies other filesystem roots, as a second Windows drive would be", () => {
 		const home = realTmp("otherroots");
 		const workspace = path.join(home, "w");
-		const otherRoot = realTmp("driveD");
+		const otherRoot = realTmp("drive-d");
 		fs.mkdirSync(workspace, { recursive: true });
 		fs.mkdirSync(path.join(otherRoot, "customerB"), { recursive: true });
 
@@ -931,7 +931,7 @@ describe("buildContainmentFence — isolation does not depend on how deep the wo
 	it("denies a cousin tenant, not just an immediate sibling", () => {
 		const home = realTmp("cousinhome");
 		const container = realTmp("tenants");
-		const workspace = path.join(container, "example", "repo");
+		const workspace = path.join(container, "example-corp", "repo");
 		fs.mkdirSync(workspace, { recursive: true });
 		fs.mkdirSync(path.join(container, "globex", "repo"), { recursive: true });
 		const fence = buildContainmentFence({ workspace, home });
@@ -939,7 +939,7 @@ describe("buildContainmentFence — isolation does not depend on how deep the wo
 		// The case that exists for this fence, one level deeper than the original rule reached.
 		for (const access of ["read", "write"] as const) {
 			expect(fenceVerdict(fence, path.join(container, "globex", "repo", "secrets.tf"), access)).toBe("deny");
-			expect(fenceVerdict(fence, path.join(container, "example", "other-repo", "x"), access)).toBe("deny");
+			expect(fenceVerdict(fence, path.join(container, "example-corp", "other-repo", "x"), access)).toBe("deny");
 			expect(fenceVerdict(fence, path.join(container, "loose-file.txt"), access)).toBe("deny");
 		}
 		// …and the workspace itself still works, or the fence is useless.

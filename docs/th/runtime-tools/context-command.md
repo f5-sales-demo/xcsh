@@ -22,7 +22,7 @@ xcsh เชื่อมต่อกับ F5 Distributed Cloud ผ่าน **co
 คุณต้องการข้อมูลสามอย่างจาก F5 XC คอนโซล ของคุณ: tenant URL, API token และ namespace (ไม่บังคับ)
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -43,8 +43,8 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -81,7 +81,7 @@ Context 'production' created. Use /context activate production to switch to it.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -124,7 +124,7 @@ Tab completion จะแสดงชื่อ namespace จาก tenant ที�
 Contexts สามารถพกพา environment variables เพิ่มเติมที่จะถูกฉีดเข้าไปในเซสชันของคุณเมื่อเปิดใช้งาน มีประโยชน์สำหรับการกำหนดค่าต่อ tenant ที่ไม่ได้เป็นส่วนหนึ่งของชุดข้อมูลรับรอง
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -134,7 +134,7 @@ Aliases: `add` = `set`, `remove`/`clear` = `unset`
 
 ## Tab Completion
 
-พิมพ์ `/context ` แล้วกด Tab dropdown จะแสดง:
+พิมพ์ `/context` แล้วกด Tab dropdown จะแสดง:
 
 1. **ชื่อ Context** -- พร้อม hints ของ tenant URL เพื่อให้คุณแยกแยะ tenants ได้
 2. **`-`** -- ปรากฏเมื่อคุณเคยสลับมาก่อน แสดง context ที่คุณจะสลับไป

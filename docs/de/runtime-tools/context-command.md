@@ -22,7 +22,7 @@ xcsh verbindet sich mit F5 Distributed Cloud über **Kontexte** -- benannte Anme
 Sie benötigen drei Dinge aus Ihrer F5 XC Konsole: die Tenant-URL, ein API-Token und optional einen Namespace.
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -43,8 +43,8 @@ Oder verwenden Sie den geführten Assistenten, wenn Sie schrittweise Eingabeauff
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -81,7 +81,7 @@ Zweimaliges Aufrufen von `/context -` bringt Sie zurück zum Ausgangspunkt.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -124,7 +124,7 @@ Tab-Vervollständigung bietet Namespace-Namen vom aktiven Tenant an.
 Kontexte können zusätzliche Umgebungsvariablen enthalten, die bei der Aktivierung in Ihre Sitzung injiziert werden. Nützlich für Tenant-spezifische Konfiguration, die nicht Teil des Anmeldedatensatzes ist.
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -134,7 +134,7 @@ Aliase: `add` = `set`, `remove`/`clear` = `unset`.
 
 ## Tab-Vervollständigung
 
-Geben Sie `/context ` ein und drücken Sie Tab. Das Dropdown zeigt:
+Geben Sie `/context` ein und drücken Sie Tab. Das Dropdown zeigt:
 
 1. **Kontextnamen** -- mit Tenant-URL-Hinweisen, damit Sie Tenants unterscheiden können
 2. **`-`** -- erscheint, wenn Sie zuvor gewechselt haben, zeigt an, zu welchem Kontext Sie wechseln würden

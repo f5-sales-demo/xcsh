@@ -22,7 +22,7 @@ xcsh se connecte à F5 Distributed Cloud via des **contextes** -- des jeux d'ide
 Vous avez besoin de trois éléments depuis votre console F5 XC : l'URL du tenant, un jeton API, et optionnellement un namespace.
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -43,8 +43,8 @@ Ou utilisez l'assistant guidé si vous préférez des invites étape par étape 
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -81,7 +81,7 @@ Appeler `/context -` deux fois vous ramène à votre point de départ.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -124,7 +124,7 @@ L'autocomplétion par tabulation propose les noms de namespace du tenant actif.
 Les contextes peuvent contenir des variables d'environnement supplémentaires qui sont injectées dans votre session lors de l'activation. Utile pour une configuration propre à chaque tenant qui ne fait pas partie du jeu d'identifiants.
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -134,7 +134,7 @@ Alias : `add` = `set`, `remove`/`clear` = `unset`.
 
 ## Autocomplétion par tabulation
 
-Tapez `/context ` et appuyez sur Tab. Le menu déroulant affiche :
+Tapez `/context` et appuyez sur Tab. Le menu déroulant affiche :
 
 1. **Noms de contextes** -- avec des indications d'URL de tenant, pour distinguer les tenants
 2. **`-`** -- apparaît lorsque vous avez déjà basculé, indique vers quel contexte vous reviendriez

@@ -86,9 +86,9 @@ describe("mergeProfile", () => {
 		});
 
 		it("does not overwrite existing worksFor", () => {
-			const target: UserProfile = { worksFor: { name: "Example" } };
+			const target: UserProfile = { worksFor: { name: "Example Corp" } };
 			mergeProfile(target, { worksFor: { name: "F5" } });
-			expect(target.worksFor?.name).toBe("Example");
+			expect(target.worksFor?.name).toBe("Example Corp");
 		});
 
 		it("sets birthPlace when target has none", () => {

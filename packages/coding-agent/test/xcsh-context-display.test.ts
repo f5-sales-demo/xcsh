@@ -18,8 +18,8 @@ function status(overrides: Partial<ContextStatus> = {}): ContextStatus {
 
 describe("formatContextLabel", () => {
 	it("uses tenant and namespace when both are present", () => {
-		expect(formatContextLabel(status({ activeContextTenant: "example", activeContextNamespace: "prod" }))).toBe(
-			"example:prod",
+		expect(formatContextLabel(status({ activeContextTenant: "example-corp", activeContextNamespace: "prod" }))).toBe(
+			"example-corp:prod",
 		);
 	});
 
@@ -32,8 +32,8 @@ describe("formatContextLabel", () => {
 	});
 
 	it("prefers tenant over name when both are present", () => {
-		expect(formatContextLabel(status({ activeContextTenant: "example", activeContextName: "my-context" }))).toBe(
-			"example:default",
+		expect(formatContextLabel(status({ activeContextTenant: "example-corp", activeContextName: "my-context" }))).toBe(
+			"example-corp:default",
 		);
 	});
 
@@ -44,24 +44,24 @@ describe("formatContextLabel", () => {
 	it("appends warning icon when token is expiring", () => {
 		expect(
 			formatContextLabel(
-				status({ activeContextTenant: "example", activeContextNamespace: "prod", tokenHealth: "expiring" }),
+				status({ activeContextTenant: "example-corp", activeContextNamespace: "prod", tokenHealth: "expiring" }),
 			),
-		).toBe("example:prod ⚠");
+		).toBe("example-corp:prod ⚠");
 	});
 
 	it("appends warning icon when token is expired", () => {
 		expect(
 			formatContextLabel(
-				status({ activeContextTenant: "example", activeContextNamespace: "prod", tokenHealth: "expired" }),
+				status({ activeContextTenant: "example-corp", activeContextNamespace: "prod", tokenHealth: "expired" }),
 			),
-		).toBe("example:prod ⚠");
+		).toBe("example-corp:prod ⚠");
 	});
 
 	it("no suffix when token health is ok", () => {
 		expect(
 			formatContextLabel(
-				status({ activeContextTenant: "example", activeContextNamespace: "prod", tokenHealth: "ok" }),
+				status({ activeContextTenant: "example-corp", activeContextNamespace: "prod", tokenHealth: "ok" }),
 			),
-		).toBe("example:prod");
+		).toBe("example-corp:prod");
 	});
 });

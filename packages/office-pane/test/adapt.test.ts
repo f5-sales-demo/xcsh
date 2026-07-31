@@ -160,7 +160,7 @@ describe("turnsToMessages", () => {
 	test("a done assistant turn carries its cited references onto the row", () => {
 		const refs = [
 			{ kind: "doc" as const, title: "WAF docs", url: "https://docs.cloud.f5.com/waf" },
-			{ kind: "console" as const, title: "HTTP LB", url: "https://example.console.ves.volterra.io/lb" },
+			{ kind: "console" as const, title: "HTTP LB", url: "https://example-corp.console.ves.volterra.io/lb" },
 		];
 		const turns: Turn[] = [user("u-1", "how?"), assistant("c-1", "See the docs.", { references: refs })];
 		const msgs = turnsToMessages({ turns, status: "done" });
