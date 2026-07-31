@@ -43,6 +43,7 @@ describe("startOfficeServe", () => {
 		const chat = { disposed: false };
 		const supersede = noopSupersede();
 		const deps: OfficeServeDeps = {
+			getOfficePaneDir: (async () => "/fixture/pane/dist") as OfficeServeDeps["getOfficePaneDir"],
 			startOfficePaneServer: (async () => pane.server) as OfficeServeDeps["startOfficePaneServer"],
 			startHeadlessChatBridge: (async () => ({
 				bridge: { port: 19222, wssPort: 19322 },
@@ -67,6 +68,7 @@ describe("startOfficeServe", () => {
 	test("a bridge-start failure is NON-fatal: the pane still serves (chat=null), dispose still stops the pane", async () => {
 		const pane = fakePaneServer();
 		const deps: OfficeServeDeps = {
+			getOfficePaneDir: (async () => "/fixture/pane/dist") as OfficeServeDeps["getOfficePaneDir"],
 			startOfficePaneServer: (async () => pane.server) as OfficeServeDeps["startOfficePaneServer"],
 			startHeadlessChatBridge: (async () => {
 				throw new Error("bridge boom");
@@ -86,6 +88,7 @@ describe("startOfficeServe", () => {
 		const pane = fakePaneServer();
 		let paneStarted = false;
 		const deps: OfficeServeDeps = {
+			getOfficePaneDir: (async () => "/fixture/pane/dist") as OfficeServeDeps["getOfficePaneDir"],
 			startOfficePaneServer: (async () => {
 				paneStarted = true;
 				return pane.server;
@@ -101,6 +104,38 @@ describe("startOfficeServe", () => {
 
 		await expect(startOfficeServe(deps)).rejects.toThrow(/isn't an xcsh office serve/);
 		expect(paneStarted).toBe(false);
+	});
+
+	/**
+	 * Prove we can serve BEFORE killing what is already serving.
+	 *
+	 * `supersedeStaleServe` SIGTERMs a running `office serve` so the new one can take :8444. Checking
+	 * pane availability after that means an npm-installed xcsh — which has no pane at all — stops the
+	 * operator's working brew-installed pane and then exits with nothing in its place. Refusing loudly
+	 * is only an improvement if it refuses before it breaks something.
+	 */
+	test("does not supersede a running serve when it has no pane to replace it with", async () => {
+		const calls: string[] = [];
+		const deps: OfficeServeDeps = {
+			getOfficePaneDir: (async () => {
+				throw new OfficePaneUnavailableError("no pane in this install", "packaged");
+			}) as OfficeServeDeps["getOfficePaneDir"],
+			supersedeStaleServe: (async () => {
+				calls.push("supersede");
+				return { superseded: false };
+			}) as unknown as OfficeServeDeps["supersedeStaleServe"],
+			startOfficePaneServer: (async () => {
+				calls.push("start");
+				throw new Error("unreachable");
+			}) as OfficeServeDeps["startOfficePaneServer"],
+			startHeadlessChatBridge: (async () => ({
+				bridge: { port: 1, wssPort: 2 },
+				dispose: async () => {},
+			})) as unknown as OfficeServeDeps["startHeadlessChatBridge"],
+		};
+
+		await expect(startOfficeServe(deps)).rejects.toThrow(OfficePaneUnavailableError);
+		expect(calls).toEqual([]);
 	});
 });
 

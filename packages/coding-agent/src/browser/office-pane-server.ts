@@ -47,8 +47,17 @@ const DEV_DIST_DIR = path.resolve(import.meta.dir, "..", "..", "..", "office-pan
 const DEV_PACKAGE_DIR = path.dirname(DEV_DIST_DIR);
 const COMPILED_DIR_ROOT = path.join(os.tmpdir(), "xcsh-office-pane");
 
-/** Its presence is what makes a directory a built pane rather than merely a directory. */
-const PANE_MARKER = "taskpane.html";
+/**
+ * What a directory must contain to be a usable pane — everything the commands consume.
+ *
+ * Not one marker. The build writes `taskpane.html` first and `manifest.json` three steps later, so a
+ * single marker accepts an interrupted build: `serve` would answer the page, then `manifest` and
+ * `sideload` would fail with the same ENOENT this check exists to replace. Each entry is here because
+ * a command needs it — the page and its bundle for `serve`, the manifest for `manifest` and `sideload`.
+ * Fonts and icons are deliberately absent: missing them is cosmetic, and refusing the whole pane over
+ * a typeface would be its own kind of dishonesty.
+ */
+const PANE_REQUIRED_FILES = ["taskpane.html", "taskpane.js", "manifest.json"] as const;
 
 /** Which supply route was expected to provide the pane, and therefore what the remedy is. */
 export type PaneSource = "compiled" | "dev" | "packaged";
@@ -153,8 +162,17 @@ export function paneSourceForLayout(officePanePackagePresent: boolean): PaneSour
  * Serving nothing quietly is the failure this exists to prevent.
  */
 export async function resolvePaneDir(dir: string, source: PaneSource): Promise<string> {
-	if (await Bun.file(path.join(dir, PANE_MARKER)).exists()) return dir;
-	throw new OfficePaneUnavailableError(paneUnavailableMessage(dir, source), source);
+	const missing: string[] = [];
+	for (const name of PANE_REQUIRED_FILES) {
+		if (!(await Bun.file(path.join(dir, name)).exists())) missing.push(name);
+	}
+	if (missing.length === 0) return dir;
+	// Name what is absent. "The pane is missing" sends someone looking at the whole directory; "no
+	// manifest.json" points at the step of the build that did not finish.
+	throw new OfficePaneUnavailableError(
+		`${paneUnavailableMessage(dir, source)} (missing: ${missing.join(", ")})`,
+		source,
+	);
 }
 
 /**

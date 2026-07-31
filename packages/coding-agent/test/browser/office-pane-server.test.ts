@@ -116,6 +116,32 @@ describe("refusing when no pane bundle is available", () => {
 		expect(await resolvePaneDir(dir, "dev")).toBe(dir);
 	});
 
+	// The build writes taskpane.html, THEN taskpane.js, manifest.json, icons and fonts (build.ts:180
+	// onwards). A single marker therefore accepts an interrupted build: the page is there, the manifest
+	// is not, and `office manifest` / `office sideload` fail with the same ENOENT this change exists to
+	// remove. The check has to cover what the commands actually consume.
+	it("refuses a half-built dist that has the page but not the manifest", async () => {
+		const half = mkdtempSync(join(tmpdir(), "office-pane-half-"));
+		try {
+			await writeFile(join(half, "taskpane.html"), "<!DOCTYPE html>");
+			await writeFile(join(half, "taskpane.js"), "console.log(1);");
+			await expect(resolvePaneDir(half, "dev")).rejects.toThrow(/manifest\.json/);
+		} finally {
+			rmSync(half, { recursive: true, force: true });
+		}
+	});
+
+	it("refuses a dist whose page has no bundle beside it", async () => {
+		const noBundle = mkdtempSync(join(tmpdir(), "office-pane-nojs-"));
+		try {
+			await writeFile(join(noBundle, "taskpane.html"), "<!DOCTYPE html>");
+			await writeFile(join(noBundle, "manifest.json"), "{}");
+			await expect(resolvePaneDir(noBundle, "dev")).rejects.toThrow(/taskpane\.js/);
+		} finally {
+			rmSync(noBundle, { recursive: true, force: true });
+		}
+	});
+
 	it("refuses a directory with no taskpane.html, naming it", async () => {
 		const empty = mkdtempSync(join(tmpdir(), "office-pane-empty-"));
 		try {

@@ -56,9 +56,15 @@ export interface OfficeServeDeps {
 	startOfficePaneServer: typeof startOfficePaneServer;
 	startHeadlessChatBridge: typeof startHeadlessChatBridge;
 	supersedeStaleServe: typeof supersedeStaleServe;
+	getOfficePaneDir: typeof getOfficePaneDir;
 }
 
-const defaultServeDeps: OfficeServeDeps = { startOfficePaneServer, startHeadlessChatBridge, supersedeStaleServe };
+const defaultServeDeps: OfficeServeDeps = {
+	startOfficePaneServer,
+	startHeadlessChatBridge,
+	supersedeStaleServe,
+	getOfficePaneDir,
+};
 
 /** A running `office serve`: the pane file server, the (optional) chat bridge, and
  *  a teardown that disposes both. */
@@ -76,6 +82,12 @@ export interface OfficeServeHandle {
  * Extracted from {@link runServe} so the start/teardown wiring is unit-testable.
  */
 export async function startOfficeServe(deps: OfficeServeDeps = defaultServeDeps): Promise<OfficeServeHandle> {
+	// Prove there is a pane to serve BEFORE anything is torn down. supersedeStaleServe SIGTERMs a
+	// running serve to take the port, so checking afterwards let an install with no pane at all stop
+	// the operator's working one and then exit with nothing in its place. Refusing loudly is only an
+	// improvement if it refuses before it breaks something.
+	await deps.getOfficePaneDir();
+
 	// Step down a stale serve squatting :8444 (e.g. left over from before a
 	// `brew upgrade`) so this start binds cleanly instead of "port 8444 in use".
 	const superseded = await deps.supersedeStaleServe(OFFICE_PANE_PORT);
