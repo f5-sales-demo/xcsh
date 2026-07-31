@@ -4,7 +4,7 @@
  *
  * Anchored at both ends, which matters: the pattern used to be unanchored, so any URL
  * merely *containing* "github.com/" parsed as a GitHub repository —
- * `https://gitlab.example/github.com/acme/repo.git` returned `acme/repo`. That is now a
+ * `https://gitlab.example/github.com/example-corp/repo.git` returned `example-corp/repo`. That is now a
  * decision about authority, not just a status-line label: `discovery/start-folder.ts`
  * turns it into system-prompt text telling the agent GitHub work is in scope, so a
  * repository hosted elsewhere could misdirect authenticated `gh` operations. `github.com`

@@ -118,11 +118,11 @@ describe("start folder: not a repository", () => {
 describe("start folder: git-ignored subtree of a repository", () => {
 	let out = "";
 	beforeAll(async () => {
-		out = await render({ kind: "github", slug: "acme/app", ignored: true });
+		out = await render({ kind: "github", slug: "example-corp/app", ignored: true });
 	});
 
 	it("still names the repository", () => {
-		expect(flat(out)).toContain("acme/app");
+		expect(flat(out)).toContain("example-corp/app");
 	});
 
 	// The gap this closes: without it the prompt declares GitHub work in scope for a
@@ -134,7 +134,7 @@ describe("start folder: git-ignored subtree of a repository", () => {
 	});
 
 	it("does not warn when the folder is not ignored", async () => {
-		const plainRepo = await render({ kind: "github", slug: "acme/app" });
+		const plainRepo = await render({ kind: "github", slug: "example-corp/app" });
 		expect(block(plainRepo)).not.toBe("");
 		expect(flat(plainRepo)).not.toMatch(/git-ignored|excluded/i);
 	});

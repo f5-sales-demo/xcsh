@@ -44,8 +44,8 @@ describe("parseGitHubRepo", () => {
 	// GitHub repo. start-folder.ts turns that answer into prompt text authorising GitHub
 	// work, so a GitLab URL with github.com in its path could misdirect `gh` operations.
 	test("returns null when github.com appears in the path rather than the host", () => {
-		expect(parseGitHubRepo("https://gitlab.example/github.com/acme/repo.git")).toBeNull();
-		expect(parseGitHubRepo("https://evil.example/?x=github.com/acme/repo")).toBeNull();
+		expect(parseGitHubRepo("https://gitlab.example/github.com/example-corp/repo.git")).toBeNull();
+		expect(parseGitHubRepo("https://evil.example/?x=github.com/example-corp/repo")).toBeNull();
 		expect(parseGitHubRepo("https://github.com.evil.example/org/name.git")).toBeNull();
 	});
 

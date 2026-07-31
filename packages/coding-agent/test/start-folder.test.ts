@@ -54,8 +54,8 @@ describe("classifyStartFolder", () => {
 	it("is git for remotes that only look like GitHub", () => {
 		for (const url of [
 			"https://github.com.evil.example/org/name.git",
-			"https://gitlab.example/github.com/acme/repo.git",
-			"https://evil.example/?x=github.com/acme/repo",
+			"https://gitlab.example/github.com/example-corp/repo.git",
+			"https://evil.example/?x=github.com/example-corp/repo",
 			"https://github.com/org/repo/tree/main",
 		]) {
 			expect(classifyStartFolder("/w", url)).toEqual({ kind: "git" });
@@ -65,12 +65,12 @@ describe("classifyStartFolder", () => {
 
 describe("a git-ignored start folder", () => {
 	// The repository is real, but this subtree was deliberately excluded from it — the
-	// shape of `acme-app/lab-secrets/`, which is exactly where tenant credentials live.
+	// shape of `example-corp-app/lab-secrets/`, which is exactly where tenant credentials live.
 	// The kind stays accurate; the caution rides alongside it.
 	it("keeps the kind and flags the exclusion", () => {
-		expect(classifyStartFolder("/w", "https://github.com/acme/app.git", true)).toEqual({
+		expect(classifyStartFolder("/w", "https://github.com/example-corp/app.git", true)).toEqual({
 			kind: "github",
-			slug: "acme/app",
+			slug: "example-corp/app",
 			ignored: true,
 		});
 		expect(classifyStartFolder("/w", null, true)).toEqual({ kind: "git", ignored: true });
@@ -85,11 +85,11 @@ describe("a git-ignored start folder", () => {
 			"/w",
 			deps({
 				repoRoot: async () => "/w",
-				originUrl: async () => "https://github.com/acme/app.git",
+				originUrl: async () => "https://github.com/example-corp/app.git",
 				isIgnored: async () => true,
 			}),
 		);
-		expect(got).toEqual({ kind: "github", slug: "acme/app", ignored: true });
+		expect(got).toEqual({ kind: "github", slug: "example-corp/app", ignored: true });
 	});
 
 	// `git check-ignore` exits 1 for "not ignored", which is an answer rather than a
