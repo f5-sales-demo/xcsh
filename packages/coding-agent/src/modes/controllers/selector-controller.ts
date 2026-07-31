@@ -7,6 +7,7 @@ import type { Component } from "@f5-sales-demo/pi-tui";
 import { Input, Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir, t } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../../capability/fs";
+import { writeAgentConfigFileSync } from "../../config/agent-config-file";
 import {
 	generateConfigYml,
 	generateModelsYml,
@@ -997,7 +998,7 @@ export class SelectorController {
 			// Create/heal config.yml for model defaults
 			const configPath = path.join(path.dirname(modelsPath), "config.yml");
 			if (!fs.existsSync(configPath)) {
-				fs.writeFileSync(configPath, generateConfigYml());
+				writeAgentConfigFileSync(configPath, generateConfigYml());
 			}
 			healConfigYmlModelRoles(configPath);
 
@@ -1234,7 +1235,7 @@ export class SelectorController {
 
 					const configPath = path.join(path.dirname(modelsPath), "config.yml");
 					if (!fs.existsSync(configPath)) {
-						fs.writeFileSync(configPath, generateConfigYml());
+						writeAgentConfigFileSync(configPath, generateConfigYml());
 					}
 					healConfigYmlModelRoles(configPath);
 

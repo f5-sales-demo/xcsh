@@ -35,6 +35,7 @@ import {
 } from "../modes/theme/theme";
 import { AgentStorage } from "../session/agent-storage";
 import { type EditMode, normalizeEditMode } from "../utils/edit-mode";
+import { hardenAgentConfigFile, writeAgentConfigFile } from "./agent-config-file";
 import { withFileLock } from "./file-lock";
 import {
 	type BashInterceptorRule,
@@ -421,6 +422,7 @@ export class Settings {
 
 			// Migrate from legacy formats if needed
 			await this.#migrateFromLegacy();
+			await hardenAgentConfigFile(this.#configPath!);
 
 			// Load global settings from config.yml
 			this.#global = await this.#loadYaml(this.#configPath!);
@@ -504,7 +506,7 @@ export class Settings {
 		// 3. Write merged settings
 		if (migrated && Object.keys(settings).length > 0) {
 			try {
-				await Bun.write(this.#configPath, YAML.stringify(settings, null, 2));
+				await writeAgentConfigFile(this.#configPath, YAML.stringify(settings, null, 2));
 				logger.debug("Settings: migrated to config.yml", { path: this.#configPath });
 			} catch {}
 		}
@@ -592,7 +594,7 @@ export class Settings {
 
 				// Update our global with any external changes we preserved
 				this.#global = current;
-				await Bun.write(configPath, YAML.stringify(this.#global, null, 2));
+				await writeAgentConfigFile(configPath, YAML.stringify(this.#global, null, 2));
 			});
 		} catch (error) {
 			logger.warn("Settings: save failed", { error: String(error) });
