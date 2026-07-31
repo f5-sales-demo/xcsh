@@ -270,9 +270,13 @@ describe("office sideload starts the server from the current folder", () => {
  * which is precisely how the silent 404 survived in the first place.
  */
 describe("runOfficeCommand and an unavailable pane", () => {
+	// Restores a NUMBER, never `undefined`. Assigning undefined to process.exitCode is a no-op in Bun,
+	// so an earlier version of this helper left the 1 that runOfficeCommand sets in place — and since
+	// bun test honours the process's exit code, the whole suite exited 1 while reporting "0 fail". CI
+	// caught it; locally the file passed and only its status disagreed.
 	const withExitCode = async (fn: () => Promise<void>): Promise<number | undefined> => {
-		const before = process.exitCode;
-		process.exitCode = undefined;
+		const before = process.exitCode ?? 0;
+		process.exitCode = 0;
 		try {
 			await fn();
 			return process.exitCode;
