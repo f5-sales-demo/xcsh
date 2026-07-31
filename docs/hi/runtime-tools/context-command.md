@@ -22,7 +22,7 @@ xcsh **संदर्भों (contexts)** के माध्यम से F5
 आपको अपने F5 XC कंसोल से तीन चीज़ों की आवश्यकता है: टेनेंट URL, एक API टोकन, और वैकल्पिक रूप से एक नेमस्पेस।
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -43,8 +43,8 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -81,7 +81,7 @@ Context 'production' created. Use /context activate production to switch to it.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -124,7 +124,7 @@ Context 'production' created. Use /context activate production to switch to it.
 संदर्भ अतिरिक्त एनवायरनमेंट वेरिएबल ले जा सकते हैं जो सक्रियण पर आपके सत्र में इंजेक्ट किए जाते हैं। प्रति-टेनेंट कॉन्फ़िगरेशन के लिए उपयोगी जो क्रेडेंशियल सेट का हिस्सा नहीं है।
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -134,7 +134,7 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ## टैब कंप्लीशन
 
-`/context ` टाइप करें और Tab दबाएं। ड्रॉपडाउन दिखाता है:
+`/context` टाइप करें और Tab दबाएं। ड्रॉपडाउन दिखाता है:
 
 1. **संदर्भ नाम** -- टेनेंट URL संकेतों के साथ, ताकि आप टेनेंट्स को अलग-अलग पहचान सकें
 2. **`-`** -- तब दिखाई देता है जब आपने पहले स्विच किया हो, दिखाता है कि आप किस संदर्भ पर पलटेंगे

@@ -20,7 +20,7 @@ xcsh 通过**上下文**连接到 F5 Distributed Cloud -- 上下文是将租户 
 您需要从 F5 XC 控制台获取三项信息：租户 URL、API 令牌，以及可选的命名空间。
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -41,8 +41,8 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -79,7 +79,7 @@ Context 'production' created. Use /context activate production to switch to it.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -122,7 +122,7 @@ Tab 补全会提供来自活跃租户的命名空间名称。
 上下文可以携带额外的环境变量，这些变量会在激活时注入您的会话中。适用于不属于凭据集但与特定租户相关的配置。
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -132,7 +132,7 @@ Tab 补全会提供来自活跃租户的命名空间名称。
 
 ## Tab 补全
 
-输入 `/context ` 并按 Tab 键。下拉列表会显示：
+输入 `/context` 并按 Tab 键。下拉列表会显示：
 
 1. **上下文名称** -- 带有租户 URL 提示，便于区分不同租户
 2. **`-`** -- 在您之前切换过时出现，显示将要切换到的上下文

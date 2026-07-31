@@ -6,7 +6,7 @@
  * override `XCSH_MANAGER_SOCK`) for NDJSON control frames — one JSON object per
  * line — validated by the pure `manager-core` protocol:
  *
- *   {"type":"provision","sessionId":"tab-7","tenant":"example|staging"}
+ *   {"type":"provision","sessionId":"tab-7","tenant":"example-corp|staging"}
  *        → spawn a worker for that sessionId (idempotent). The registry is keyed
  *          on sessionId, so two tabs of the SAME tenant get two workers.
  *   {"type":"release","sessionId":"tab-7"}  → kill + forget that session's worker

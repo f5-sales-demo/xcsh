@@ -76,15 +76,15 @@ describe("describePortScan (#2463 mode C)", () => {
 		// whether the second worker was absent, late, or answering another tenant.
 		const lines = describePortScan(
 			[
-				{ port: 19222, tenant: "example" },
+				{ port: 19222, tenant: "example-corp" },
 				{ port: 19223, tenant: "example-corp" },
 				{ port: 19224, error: "connect ECONNREFUSED 127.0.0.1:19224" },
 				{ port: 19225, error: "connect ECONNREFUSED 127.0.0.1:19225" },
 			],
-			"example",
+			"example-corp",
 		).join("\n");
 		expect(lines).toContain("19222");
-		expect(lines).toContain("example");
+		expect(lines).toContain("example-corp");
 		expect(lines).toContain("19223");
 		expect(lines).toContain("stale"); // a DIFFERENT tenant is the interesting case
 		expect(lines).toContain("ECONNREFUSED");
@@ -97,11 +97,11 @@ describe("describePortScan (#2463 mode C)", () => {
 				{ port: 19222, error: "ECONNREFUSED" },
 				{ port: 19223, error: "ECONNREFUSED" },
 			],
-			"example",
+			"example-corp",
 		).join("\n");
 		expect(allRefused).toContain("no port answered at all");
 
-		const wrongTenant = describePortScan([{ port: 19222, tenant: "example-corp" }], "example").join("\n");
+		const wrongTenant = describePortScan([{ port: 19222, tenant: "example-corp" }], "example-corp").join("\n");
 		expect(wrongTenant).not.toContain("no port answered at all");
 		expect(wrongTenant).toContain("matched 0 of 1");
 	});
@@ -113,7 +113,7 @@ describe("describePortScan reports who holds a silent port (#2463)", () => {
 	 * showed both workers provisioned on distinct ports and the FIRST one silent:
 	 *
 	 *     24800: no answer — ws error
-	 *     24801: tenant "example"
+	 *     24801: tenant "example-corp"
 	 *
 	 * and could go no further, because "no answer" covers two different defects. A dead
 	 * worker means something killed it; a live one that never answers means its bridge
@@ -125,10 +125,10 @@ describe("describePortScan reports who holds a silent port (#2463)", () => {
 		const lines = describePortScan(
 			[
 				{ port: 24800, error: "ws error", holders: [13389] },
-				{ port: 24801, tenant: "example" },
+				{ port: 24801, tenant: "example-corp" },
 				{ port: 24802, error: "ws error", holders: [] },
 			],
-			"example",
+			"example-corp",
 		).join("\n");
 		expect(lines).toContain("24800");
 		expect(lines).toContain("13389"); // alive but not answering — bridge/event-loop
@@ -136,21 +136,23 @@ describe("describePortScan reports who holds a silent port (#2463)", () => {
 	});
 
 	test("says so explicitly when a silent port has no holder — the worker is gone", () => {
-		const lines = describePortScan([{ port: 24800, error: "ECONNREFUSED", holders: [] }], "example").join("\n");
+		const lines = describePortScan([{ port: 24800, error: "ECONNREFUSED", holders: [] }], "example-corp").join("\n");
 		expect(lines).toContain("nothing holds it");
 		expect(lines).not.toContain("held by");
 	});
 
 	test("omits holder wording when the caller could not enumerate", () => {
 		// lsof absent, or the sweep failed: unknown must not read as "gone".
-		const lines = describePortScan([{ port: 24800, error: "ws error" }], "example").join("\n");
+		const lines = describePortScan([{ port: 24800, error: "ws error" }], "example-corp").join("\n");
 		expect(lines).not.toContain("nothing holds it");
 		expect(lines).not.toContain("held by");
 	});
 
 	test("an answering port needs no holder annotation", () => {
-		const lines = describePortScan([{ port: 24801, tenant: "example", holders: [13391] }], "example").join("\n");
-		expect(lines).toContain('tenant "example"');
+		const lines = describePortScan([{ port: 24801, tenant: "example-corp", holders: [13391] }], "example-corp").join(
+			"\n",
+		);
+		expect(lines).toContain('tenant "example-corp"');
 		expect(lines).not.toContain("13391"); // it answered; who holds it adds nothing
 	});
 });
