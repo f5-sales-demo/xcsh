@@ -23,7 +23,7 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Never auto-cancel a tag run. The publishing chain (build-release ->
-  # create-release -> publish-npm / update-homebrew) lives in this workflow and
+  # create-release -> publish-npm / update-homebrew -> install verification) lives in this workflow and
   # inherits this group, so a cancel between publish-npm and update-homebrew
   # would leave the version on npm with Homebrew stale and no rollback. All six
   # jobs were cancelled on the v19.96.0 run; that escaped harm only because the
@@ -1090,6 +1090,61 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun scripts/ci-release-homebrew.ts --update-tap
+
+  # Install from the published tap so a successful formula push cannot mask a
+  # stale version, bad checksum, missing archive, or binary startup failure.
+  verify-homebrew-install:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [update-homebrew]
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - name: Install published xcsh formula and verify startup
+        env:
+          EXPECTED_VERSION: ${{ github.ref_name }}
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          set -euo pipefail
+
+          expected="${EXPECTED_VERSION#v}"
+          max_attempts=8
+          delay=10
+
+          brew uninstall --force f5-sales-demo/tap/xcsh 2>/dev/null || true
+          brew untap f5-sales-demo/tap 2>/dev/null || true
+
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "=== Homebrew install attempt $attempt/$max_attempts ==="
+
+            # Re-clone the tap on every attempt so a stale local formula cannot
+            # make a propagation retry install the previous release again.
+            brew untap f5-sales-demo/tap 2>/dev/null || true
+            brew tap f5-sales-demo/tap
+
+            if brew install f5-sales-demo/tap/xcsh; then
+              installed=$(xcsh --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+              echo "Installed version: ${installed:-unknown}; expected: $expected"
+
+              if [ "$installed" = "$expected" ]; then
+                xcsh --help >/dev/null
+                binary="$(brew --prefix f5-sales-demo/tap/xcsh)/bin/xcsh"
+                codesign --verify --deep --strict "$binary"
+                spctl --assess --verbose=4 --type install "$binary"
+                echo "Homebrew install verification passed"
+                exit 0
+              fi
+            fi
+
+            brew uninstall --force f5-sales-demo/tap/xcsh 2>/dev/null || true
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "::error::Homebrew install verification failed after $max_attempts attempts"
+              exit 1
+            fi
+
+            echo "Waiting ${delay}s for tap and release-asset propagation..."
+            sleep "$delay"
+            if [ "$delay" -lt 60 ]; then delay=$((delay * 2)); fi
+          done
 
   # Publish to npm
   publish-npm:

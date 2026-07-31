@@ -7,7 +7,8 @@ name: Tag on version bump
 # version and push the git tag `v<X.Y.Z>`. The tag push is not subject to
 # branch protection, so this step always succeeds and triggers the tag-gated
 # release chain (build-release / build-sign-macos / create-release /
-# publish-npm / update-homebrew / verify-npm-install) defined in ci.yml.
+# publish-npm / update-homebrew / verify-npm-install / verify-homebrew-install)
+# defined in ci.yml.
 #
 # Also supports workflow_dispatch for retroactive tagging: supply a
 # `commit_sha` whose subject matches the bump pattern, and this workflow will

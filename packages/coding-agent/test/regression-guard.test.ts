@@ -454,6 +454,39 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 	});
 });
 
+describe("CI verifies the published Homebrew formula end to end", () => {
+	async function loadVerifyHomebrewJob(): Promise<string> {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const match = workflow.match(/\n {2}verify-homebrew-install:\n[\s\S]*?(?=\n {2}[a-z][a-z-]+:\n)/);
+		expect(match).not.toBeNull();
+		return match?.[0] ?? "";
+	}
+
+	it("runs on macOS only after the Homebrew tap update", async () => {
+		const job = await loadVerifyHomebrewJob();
+		expect(job).toContain("needs: [update-homebrew]");
+		expect(job).toContain("runs-on: macos-14");
+	});
+
+	it("installs from a clean tap state with bounded retries", async () => {
+		const job = await loadVerifyHomebrewJob();
+		expect(job).toContain("brew untap f5-sales-demo/tap");
+		expect(job).toContain("brew install f5-sales-demo/tap/xcsh");
+		expect(job).toContain("max_attempts=");
+	});
+
+	it("requires the published version and launches the installed CLI", async () => {
+		const job = await loadVerifyHomebrewJob();
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal string match against YAML content
+		expect(job).toContain("EXPECTED_VERSION: ${{ github.ref_name }}");
+		expect(job).toContain("installed=$(xcsh --version");
+		expect(job).toContain('if [ "$installed" = "$expected" ]');
+		expect(job).toContain("xcsh --help >/dev/null");
+		expect(job).toContain('codesign --verify --deep --strict "$binary"');
+		expect(job).toContain('spctl --assess --verbose=4 --type install "$binary"');
+	});
+});
+
 describe("vim ex-command onUpdate throttle bypass (commit 8f5b630ac)", () => {
 	it("vim.ts onKbdStep forces update when engine.inputMode is command or search mode", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/tools/vim.ts"), "utf8");
