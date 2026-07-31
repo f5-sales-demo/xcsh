@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { planReleaseReconcile } from "../../../../scripts/release";
+import { planReleaseReconcile, planStaleReleaseInvalidation } from "../../../../scripts/release";
 
 /**
  * Idempotent auto-release reconcile (#deterministic-ci).
@@ -84,5 +84,28 @@ describe("planReleaseReconcile", () => {
 				currentMainOid,
 			}),
 		).toEqual({ toCreate: null, toClose: ["19.63.0", "20.0.0"] });
+	});
+});
+
+describe("planStaleReleaseInvalidation", () => {
+	it("closes only release PRs created from an older main commit", () => {
+		expect(
+			planStaleReleaseInvalidation({
+				openReleasePRs: [
+					{ version: "19.105.4", baseRefOid: "main-before-fix" },
+					{ version: "19.105.5", baseRefOid: "main-current" },
+				],
+				currentMainOid: "main-current",
+			}),
+		).toEqual(["19.105.4"]);
+	});
+
+	it("is a no-op when every open release PR is based on current main", () => {
+		expect(
+			planStaleReleaseInvalidation({
+				openReleasePRs: [{ version: "19.105.5", baseRefOid: "main-current" }],
+				currentMainOid: "main-current",
+			}),
+		).toEqual([]);
 	});
 });

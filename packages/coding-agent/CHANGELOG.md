@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Invalidated stale release PRs immediately on new `main` pushes, before the full release-creation gate ([#2732](https://github.com/f5-sales-demo/xcsh/issues/2732))
 - Regenerated stale same-version release PRs when newer commits have merged into `main` ([#2727](https://github.com/f5-sales-demo/xcsh/issues/2727))
 
 ## [19.105.3] - 2026-07-31
