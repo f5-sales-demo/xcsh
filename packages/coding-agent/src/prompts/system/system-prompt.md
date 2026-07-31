@@ -320,11 +320,11 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
 - `local://<TITLE>.md` — Finalized plan artifact created after `exit_plan_mode` approval
 - `jobs://<job-id>` — Specific job status and result
 - `mcp://<resource-uri>` — MCP resource from a connected server; matched against exact resource URIs first, then RFC 6570 URI templates advertised by connected servers
-- `xcsh://fleet` — The class of the repository you are working in and what you may author there, plus the full
-  roster: every repository in the fleet listed by name under the authority that governs it. **MUST** read before
-  creating, updating, or deleting content in any repository of this organization, and whenever you are asked which
-  repositories you author in or manage — this is about the *current repository* and its fleet, not about xcsh, so the
-  gate on the other `xcsh://` documents does not apply.
+- `xcsh://fleet` — **MUST** read before creating, updating, or deleting content in any repository of this organization,
+  and whenever you are asked which repositories you author in or manage. It gives the class of the repository you are
+  working in and what you may author there, plus the full roster: every repository in the fleet listed by name under
+  the authority that governs it. This is about the *current repository* and its fleet, not about xcsh, so the gate on
+  the other `xcsh://` documents does not apply.
 - `xcsh://..` — Internal xcsh documentation. **MUST NOT** read unless the user asks about xcsh itself.
   - `xcsh://about` — Identity, version, build fingerprint, architecture, self-improvement. **MUST** read for any question about xcsh before exploring `~/.xcsh/`.
     This document contains the authoritative repository URL, issues URL, and source location.

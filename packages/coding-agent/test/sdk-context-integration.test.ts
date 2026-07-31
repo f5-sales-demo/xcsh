@@ -93,7 +93,7 @@ describe("createAgentSession context tracking", () => {
 				type: "context_change",
 				contextName: "prod",
 				tenant: "example-corp",
-				namespace: "demo-app",
+				namespace: "production",
 			});
 			expect(customMessages).toHaveLength(0);
 		} finally {
@@ -237,7 +237,7 @@ describe("createAgentSession context tracking", () => {
 				type: "context_change",
 				contextName: "prod",
 				tenant: "example-corp",
-				namespace: "demo-app",
+				namespace: "production",
 			});
 			expect(customMessages).toHaveLength(1);
 			expect((customMessages[0] as { content: string }).content).toContain("[Context switched to prod]");

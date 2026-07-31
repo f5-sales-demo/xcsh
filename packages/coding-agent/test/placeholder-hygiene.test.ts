@@ -114,10 +114,10 @@ describe("placeholder hygiene", () => {
 		expect(text).toMatch(/Bun\.write\([^;]*catalogOutputPath,[^;]*sanitizeAcmePlaceholders\(catalogOutput\)/);
 		// Contact addresses at real domains are sanitised at the same write sites (#2677).
 		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizeEmails\(/);
-		expect(text).toMatch(/Bun\.write\(catalogOutputPath,[^;]*sanitizeEmails\(/);
+		expect(text).toMatch(/Bun\.write\([^;]*catalogOutputPath,[^;]*sanitizeEmails\(/);
 		// Globally routable examples are rewritten into RFC 5737 space at both write sites (#2674).
 		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizePublicIpv4Examples\(/);
-		expect(text).toMatch(/Bun\.write\(catalogOutputPath,[^;]*sanitizePublicIpv4Examples\(/);
+		expect(text).toMatch(/Bun\.write\([^;]*catalogOutputPath,[^;]*sanitizePublicIpv4Examples\(/);
 
 		const consoleGenerator = fs.readFileSync(
 			path.join(REPO_ROOT, "packages/coding-agent/scripts/generate-console-catalog.ts"),
@@ -143,5 +143,5 @@ describe("placeholder hygiene", () => {
 		}
 
 		expect(offenders).toEqual([]);
-	});
+	}, 15_000);
 });

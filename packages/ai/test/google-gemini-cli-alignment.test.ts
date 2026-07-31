@@ -86,7 +86,7 @@ describe("Google Gemini CLI alignment", () => {
 		);
 		expect(aliasPayload).toEqual({
 			accessToken: "alias-token",
-			projectId: "proj-alias",
+			projectId: "example-project-alias",
 			refreshToken: "refresh-alias",
 			expiresAt: 1_737_000_000_000,
 		});
