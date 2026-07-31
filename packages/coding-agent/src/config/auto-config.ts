@@ -16,6 +16,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { $env, isEnoent, logger, readProviderFromModelsYml } from "@f5-sales-demo/pi-utils";
+import { hardenAgentConfigFileSync, writeAgentConfigFileSync } from "./agent-config-file";
 import { DEFAULT_MODEL_ROLE } from "./settings-schema";
 
 /** Current config schema version. Bump when the generated format changes. */
@@ -189,6 +190,7 @@ const UNRESOLVABLE_DEFAULT_PROVIDER_PREFIXES = ["bench-instant/"];
  */
 export function healConfigYmlModelRoles(configPath: string): void {
 	try {
+		hardenAgentConfigFileSync(configPath);
 		const content = fs.readFileSync(configPath, "utf-8");
 		if (!content.includes("modelRoles:")) return; // binary default applies
 		const defaultLine = /^(\s*)default:\s*(\S+)\s*$/m;
@@ -197,7 +199,7 @@ export function healConfigYmlModelRoles(configPath: string): void {
 			const [, indent, value] = match;
 			if (UNRESOLVABLE_DEFAULT_PROVIDER_PREFIXES.some(prefix => value.startsWith(prefix))) {
 				const healed = content.replace(defaultLine, `${indent}default: ${DEFAULT_MODEL_ROLE_VALUE}`);
-				fs.writeFileSync(configPath, healed);
+				writeAgentConfigFileSync(configPath, healed);
 				logger.debug("Healed config.yml: replaced unresolvable default modelRole", {
 					configPath,
 					previous: value,
@@ -244,8 +246,7 @@ function backupModelsConfigIfExists(filePath: string): boolean {
 /** Safely write a file, creating parent directories. */
 function safeWrite(filePath: string, content: string): boolean {
 	try {
-		fs.mkdirSync(path.dirname(filePath), { recursive: true });
-		fs.writeFileSync(filePath, content, "utf-8");
+		writeAgentConfigFileSync(filePath, content);
 		return true;
 	} catch (err) {
 		logger.warn("Failed to write config file", { filePath, err });
