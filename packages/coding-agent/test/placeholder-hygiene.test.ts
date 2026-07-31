@@ -113,7 +113,12 @@ describe("placeholder hygiene", () => {
 		const generator = path.join(REPO_ROOT, "packages/coding-agent/scripts/generate-api-spec-index.ts");
 		const text = fs.readFileSync(generator, "utf8");
 		// Both emitted artifacts must go through the sanitiser, or the next upstream sync undoes #2650.
-		expect(text).toContain("Bun.write(outputPath, sanitizePlaceholders(output))");
-		expect(text).toContain("Bun.write(catalogOutputPath, sanitizePlaceholders(catalogOutput))");
+		// Matched loosely on purpose: sanitisers compose (#2677 wraps this one), and pinning the exact
+		// call text made this assertion fail for a correct change rather than an incorrect one.
+		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizePlaceholders\(output\)/);
+		expect(text).toMatch(/Bun\.write\(catalogOutputPath,[^;]*sanitizePlaceholders\(catalogOutput\)/);
+		// Contact addresses at real domains are sanitised at the same write sites (#2677).
+		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizeEmails\(/);
+		expect(text).toMatch(/Bun\.write\(catalogOutputPath,[^;]*sanitizeEmails\(/);
 	});
 });
