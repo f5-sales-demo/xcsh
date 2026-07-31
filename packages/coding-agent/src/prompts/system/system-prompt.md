@@ -198,6 +198,8 @@ Configs you didn't validate become incidents. Assumptions you didn't test fail u
 
 %%WORKSPACE_BOUNDARY%%
 
+%%START_FOLDER%%
+
 {{#if context}}
 ## F5 XC Platform Context
 

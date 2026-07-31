@@ -23,14 +23,17 @@ import type { SkillsSettings } from "./config/settings";
 import { renderDeprecationGuardrails } from "./deprecations";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
 import { listXcshPluginSummaries, type XcshPluginSummary } from "./discovery/helpers";
+import { defaultStartFolderDeps, resolveStartFolder, type StartFolder } from "./discovery/start-folder";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
+import startFolderTemplate from "./prompts/system/start-folder.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
 import workspaceBoundaryTemplate from "./prompts/system/workspace-boundary.md" with { type: "text" };
 
 /** Sentinel in system-prompt.md replaced with the rendered deprecation guardrails. */
 const DEPRECATION_GUARDRAILS_MARKER = "%%DEPRECATION_GUARDRAILS%%";
 const WORKSPACE_BOUNDARY_MARKER = "%%WORKSPACE_BOUNDARY%%";
+const START_FOLDER_MARKER = "%%START_FOLDER%%";
 
 let _buildMeta: { version: string; repoSlug: string } | null = null;
 
@@ -119,6 +122,33 @@ const AGENTS_MD_MIN_DEPTH = 1;
 const AGENTS_MD_MAX_DEPTH = 4;
 const AGENTS_MD_LIMIT = 200;
 const SYSTEM_PROMPT_PREP_TIMEOUT_MS = 5000;
+/** Bound on the two git probes behind the start-folder block. */
+const START_FOLDER_TIMEOUT_MS = 1500;
+
+/**
+ * The start folder's kind, or the restrictive answer.
+ *
+ * `resolveStartFolder` already swallows probe failures, so this adds only the deadline: a
+ * git call on a slow or enormous repository must not hold up the prompt. Expiry resolves to
+ * `plain`, which withholds GitHub scope — the safe direction, since the cost of being wrong
+ * that way is a missing suggestion rather than a secret pushed to a hosted repository.
+ */
+async function resolveStartFolderBounded(cwd: string): Promise<StartFolder> {
+	// `withTimeout` only rejects its own wrapper, so without this the git subprocesses keep
+	// running after the fallback — and the prompt is rebuilt many times per session, so they
+	// would accumulate. Aborting on expiry lets the git layer tear its child down.
+	const controller = new AbortController();
+	try {
+		return await withTimeout(
+			resolveStartFolder(cwd, defaultStartFolderDeps, controller.signal),
+			START_FOLDER_TIMEOUT_MS,
+			"start-folder probe timed out",
+		);
+	} catch {
+		controller.abort();
+		return { kind: "plain" };
+	}
+}
 // The walk's `limit` caps DISCOVERED files, not directories VISITED — so a dir
 // with ~no XCSH.md (e.g. serving from $HOME) would otherwise traverse the entire
 // tree to AGENTS_MD_MAX_DEPTH and stall prep. These bound the traversal itself:
@@ -547,6 +577,9 @@ export interface BuildSystemPromptOptions {
 	/** Pre-computed nested-XCSH.md search (skips the CWD walk if provided). Hoisted
 	 *  once per session so tool-refresh rebuilds never re-walk the tree. */
 	agentsMdSearch?: AgentsMdSearch;
+	/** Pre-resolved start-folder kind (skips the git probes). Supplied by tests and by
+	 *  callers that already know, e.g. an SDK embedder. */
+	startFolder?: StartFolder;
 	/**
 	 * Explicit disabled extension IDs applied to context-file discovery instead of the
 	 * global settings default. Pass `[]` to discover independent of process-wide settings.
@@ -618,6 +651,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		cwd,
 		contextFiles: providedContextFiles,
 		agentsMdSearch: providedAgentsMdSearch,
+		startFolder: providedStartFolder,
 		skills: providedSkills,
 		rules,
 		alwaysApplyRules,
@@ -785,6 +819,8 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	const injectedAlwaysApplyRules = dedupeAlwaysApplyRules(alwaysApplyRules, promptSources);
 
 	const environment = await logger.time("getEnvironmentInfo", getEnvironmentInfo);
+	const startFolder =
+		providedStartFolder ?? (await logger.time("resolveStartFolder", resolveStartFolderBounded, resolvedCwd));
 	const data = {
 		systemPromptCustomization: effectiveSystemPromptCustomization,
 		customPrompt: resolvedCustomPrompt,
@@ -815,6 +851,13 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		userProfile: options.userProfile,
 		computerProfile: options.computerProfile,
 		knowledgeTopics: options.knowledgeTopics,
+		startFolder: {
+			isGitHub: startFolder.kind === "github",
+			isGit: startFolder.kind === "git",
+			isPlain: startFolder.kind === "plain",
+			isIgnored: startFolder.ignored === true,
+			slug: startFolder.slug ?? "",
+		},
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 
@@ -825,6 +868,14 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	rendered = rendered.includes(WORKSPACE_BOUNDARY_MARKER)
 		? rendered.replace(WORKSPACE_BOUNDARY_MARKER, workspaceBoundary)
 		: `${rendered}\n\n${workspaceBoundary}`;
+
+	// The start-folder block is always-on for the same reason, and matters more: its
+	// restrictive branch is what stops a folder of tenant secrets being offered up for
+	// publication, and that must not vanish because an operator set --system-prompt.
+	const startFolderBlock = prompt.render(startFolderTemplate, data).trimEnd();
+	rendered = rendered.includes(START_FOLDER_MARKER)
+		? rendered.replace(START_FOLDER_MARKER, startFolderBlock)
+		: `${rendered}\n\n${startFolderBlock}`;
 
 	// Deprecation guardrails are always-on: replace the section marker in the default
 	// template, or append when the active template has none (e.g. a fully custom system
