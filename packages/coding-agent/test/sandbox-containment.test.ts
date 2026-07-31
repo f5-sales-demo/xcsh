@@ -213,7 +213,7 @@ describe("buildContainmentFence", () => {
 /**
  * The operator's home is theirs (#2637).
  *
- * Reported: `Read ~/git/STYLE_GUIDE.md` refused with the workspace at `~/MEDDPICC/EQUIFAX`. The refusal was
+ * Reported: `Read ~/git/STYLE_GUIDE.md` refused with the workspace at `~/MEDDPICC/CUSTOMER-A`. The refusal was
  * correct for the rule and the model declined to work around it, so the work simply stopped and the
  * operator was told the boundary was working as intended.
  *
@@ -222,12 +222,12 @@ describe("buildContainmentFence", () => {
  * them. It is not a prison, and it does not re-implement file permissions.
  */
 describe("buildContainmentFence — the operator's home is theirs (#2637)", () => {
-	/** `<home>/MEDDPICC/EQUIFAX`, the shape the report came from. */
+	/** `<home>/MEDDPICC/CUSTOMER-A`, the shape the report came from. */
 	function customerSession(suffix: string) {
 		const home = realTmp(suffix);
 		const container = path.join(home, "MEDDPICC");
-		const workspace = path.join(container, "EQUIFAX");
-		const sibling = path.join(container, "ACME");
+		const workspace = path.join(container, "CUSTOMER-A");
+		const sibling = path.join(container, "CUSTOMER-B");
 		const elsewhere = path.join(home, "git");
 		for (const dir of [workspace, sibling, elsewhere]) fs.mkdirSync(dir, { recursive: true });
 		return { home, container, workspace, sibling, elsewhere };
@@ -256,14 +256,14 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 	it("still refuses other tenants when the workspace is nested deeper", () => {
 		const home = realTmp("nested");
 		const container = path.join(home, "MEDDPICC");
-		const workspace = path.join(container, "EQUIFAX", "repo");
-		const otherTenant = path.join(container, "ACME", "repo");
+		const workspace = path.join(container, "CUSTOMER-A", "repo");
+		const otherTenant = path.join(container, "CUSTOMER-B", "repo");
 		for (const dir of [workspace, otherTenant]) fs.mkdirSync(dir, { recursive: true });
 
 		const fence = buildContainmentFence({ workspace, home });
 
 		expect(fenceVerdict(fence, path.join(otherTenant, "secret.env"), "read")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(container, "EQUIFAX", "sibling-of-repo"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(container, "CUSTOMER-A", "sibling-of-repo"), "read")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(workspace, "mine.md"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(home, "git", "STYLE_GUIDE.md"), "read")).toBe("allow");
 	});
@@ -1004,7 +1004,7 @@ describe("buildContainmentFence — the ancestor walk never denies a temp root",
  *
  * The home deny and the ancestor walk together cover the realistic case — customer checkouts under
  * `~`. They cover nothing under an unrelated root: measured with the workspace at
- * `~/MEDDPICC/EQUIFAX`, the fence allowed `/Users/<otheruser>/…`, `/Volumes/Backup/…`, `/data/globex`
+ * `~/MEDDPICC/CUSTOMER-A`, the fence allowed `/Users/<otheruser>/…`, `/Volumes/Backup/…`, `/data/globex`
  * and `/srv/tenantZ`, read and write. The command-text scan was refusing those on the way in, so the
  * composite looked right while the fence alone did not — and that scan is what #2624 stops using as a
  * boundary, so this has to hold on its own now.
@@ -1024,7 +1024,7 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 	it("denies unrelated data roots while leaving every operational root alone", () => {
 		const fsRoot = syntheticRoot("fsdata", ["usr", "bin", "etc", "opt", "var", "Users", "data", "srv", "Volumes"]);
 		const home = path.join(fsRoot, "Users", "me");
-		const workspace = path.join(home, "MEDDPICC", "EQUIFAX");
+		const workspace = path.join(home, "MEDDPICC", "CUSTOMER-A");
 		fs.mkdirSync(workspace, { recursive: true });
 		fs.mkdirSync(path.join(fsRoot, "Users", "otheruser"), { recursive: true });
 		fs.mkdirSync(path.join(fsRoot, "data", "globex"), { recursive: true });
