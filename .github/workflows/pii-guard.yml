@@ -1,0 +1,44 @@
+---
+# Ratchet gate over the managed PII scanner.
+#
+# CLAUDE.md requires that repositories, fixtures, generated output and commit messages carry no real
+# PII, and CONTRIBUTING.md documents a sweep procedure — but nothing ran that scanner automatically,
+# which is how a batch of real customer names, a work email and a personal tenant identifier reached
+# a public default branch.
+#
+# The repository still carries a backlog of findings, most of them false positives, so this job does
+# not demand zero. It pins the backlog in .github/pii-baseline.json and fails only when the count
+# grows. Fixing findings and lowering the baseline is the intended direction.
+name: pii-guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pii-guard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pii-guard:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # The scanner reads tracked blobs from the object database, not the worktree, and the
+          # gate compares against a committed baseline. Neither needs history.
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify the gate's own behaviour before trusting its verdict
+        run: bash tests/test-pii-baseline-gate.sh
+
+      # The same entry point a developer runs as `bun run pii:gate`, so CI and local cannot drift.
+      # It distinguishes "findings grew" (fail) from "the scan could not run" (also fail, loudly)
+      # from "findings exist but did not grow" (pass).
+      - name: Scan tracked content and fail only if findings grew over the baseline
+        run: bash scripts/pii-gate.sh
