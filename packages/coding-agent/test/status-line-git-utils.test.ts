@@ -49,6 +49,17 @@ describe("parseGitHubRepo", () => {
 		expect(parseGitHubRepo("https://github.com.evil.example/org/name.git")).toBeNull();
 	});
 
+	// scp-style SSH needs the colon. Without it git resolves the string as a LOCAL PATH --
+	// `git ls-remote git@github.com/org/repo` reports "does not appear to be a git
+	// repository" without opening an SSH connection -- so it is not a GitHub remote, and a
+	// shared `[:/]` delimiter for every scheme wrongly accepted it.
+	test("requires the colon in scp-style ssh, and the slash in url schemes", () => {
+		expect(parseGitHubRepo("git@github.com:org/repo")).toBe("org/repo");
+		expect(parseGitHubRepo("git@github.com/org/repo")).toBeNull();
+		expect(parseGitHubRepo("ssh://git@github.com/user/repo")).toBe("user/repo");
+		expect(parseGitHubRepo("https://github.com:org/repo")).toBeNull();
+	});
+
 	test("returns null for extra path segments beyond owner/repo", () => {
 		expect(parseGitHubRepo("https://github.com/org/repo/tree/main")).toBeNull();
 	});

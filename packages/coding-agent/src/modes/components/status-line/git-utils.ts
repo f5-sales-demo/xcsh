@@ -15,7 +15,12 @@
 export function parseGitHubRepo(remoteUrl: string): string | null {
 	// Strip a trailing ".git" first so the anchor can require owner/repo to end the path.
 	const cleaned = remoteUrl.trim().replace(/\.git$/, "");
-	const match = cleaned.match(/^(?:https?:\/\/|ssh:\/\/git@|git@|git:\/\/)github\.com[:/]([^/]+\/[^/]+)$/);
+	// Each scheme carries its own delimiter rather than a shared `[:/]`. scp-style SSH needs
+	// the colon: without it git resolves the string as a local path, not a github.com host,
+	// so `git@github.com/org/repo` is not a GitHub remote and must not read as one.
+	const match = cleaned.match(
+		/^(?:(?:https?|git):\/\/github\.com\/|ssh:\/\/git@github\.com\/|git@github\.com:)([^/]+\/[^/]+)$/,
+	);
 	return match ? (match[1] ?? null) : null;
 }
 
