@@ -693,7 +693,7 @@ function buildParams(
 		}
 	}
 
-	if (options?.temperature !== undefined) {
+	if (options?.temperature !== undefined && compat.supportsTemperature) {
 		params.temperature = options.temperature;
 	}
 	if (options?.topP !== undefined) {

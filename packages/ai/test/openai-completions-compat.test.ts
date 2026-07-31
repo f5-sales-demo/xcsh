@@ -68,6 +68,7 @@ describe("openai-completions compatibility", () => {
 		};
 		const compat = {
 			supportsStore: true,
+			supportsTemperature: true,
 			supportsDeveloperRole: true,
 			supportsReasoningEffort: true,
 			reasoningEffortMap: {},
@@ -235,6 +236,45 @@ describe("openai-completions compatibility", () => {
 				controller: "mlx",
 			}),
 		);
+	});
+
+	it("omits unsupported temperature from discovered GPT-5.6 Sol requests", async () => {
+		const model: Model<"openai-completions"> = {
+			...getBundledModel("litellm", "gpt-5.6-sol"),
+			api: "openai-completions",
+			compat: undefined,
+		};
+		const { promise, resolve } = Promise.withResolvers<unknown>();
+		streamOpenAICompletions(model, baseContext(), {
+			apiKey: "test-key",
+			temperature: 0,
+			signal: createAbortedSignal(),
+			onPayload: payload => resolve(payload),
+		});
+
+		const payload = toObject(await promise);
+		expect(payload).not.toBeNull();
+		if (!payload) throw new Error("request payload missing");
+		expect(Reflect.has(payload, "temperature")).toBe(false);
+	});
+
+	it("preserves explicit temperature for models that support it", async () => {
+		const model: Model<"openai-completions"> = {
+			...getBundledModel("openai", "gpt-4o-mini"),
+			api: "openai-completions",
+		};
+		const { promise, resolve } = Promise.withResolvers<unknown>();
+		streamOpenAICompletions(model, baseContext(), {
+			apiKey: "test-key",
+			temperature: 0.25,
+			signal: createAbortedSignal(),
+			onPayload: payload => resolve(payload),
+		});
+
+		const payload = toObject(await promise);
+		expect(payload).not.toBeNull();
+		if (!payload) throw new Error("request payload missing");
+		expect(Reflect.get(payload, "temperature")).toBe(0.25);
 	});
 
 	it("preserves the streamed reasoning field name for follow-up requests", async () => {
