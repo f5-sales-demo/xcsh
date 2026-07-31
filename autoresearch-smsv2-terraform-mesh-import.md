@@ -27,8 +27,8 @@
 - do not modify the benchmark scripts
 - all test resources prefixed ar-test-mesh-*
 - SMSv2 sites and site_mesh_group always in system namespace
-- HTTPS auto-cert LB in r-mordasiewicz namespace
-- virtual site in r-mordasiewicz namespace
+- HTTPS auto-cert LB in example-corp namespace
+- virtual site in example-corp namespace
 - requires XCSH_API_URL and XCSH_API_TOKEN
 - requires Azure CLI (az) authenticated for T2 and T3
 - terraform import test: "No changes" after plan = PASS

@@ -8,7 +8,7 @@ set -euo pipefail
 
 API_URL="${XCSH_API_URL:-}"
 API_TOKEN="${XCSH_API_TOKEN:-}"
-NS="r-mordasiewicz"
+NS="example-corp"
 PHRASES_FILE="$(dirname "$0")/autoresearch-smsv2-terraform-mesh-import-phrases.yaml"
 WORK_DIR="/tmp/ar-smsv2-mesh-$$"
 TF_DEVRC="${TF_CLI_CONFIG_FILE:-}"
@@ -341,7 +341,7 @@ resource "xcsh_securemesh_site_v2" "ce1" {
 
 resource "xcsh_virtual_site" "vsite" {
   name      = "ar-test-vs-mesh"
-  namespace = "demo-app"
+  namespace = "example-corp"
 
   site_type = "CUSTOMER_EDGE"
   site_selector {
@@ -352,7 +352,7 @@ resource "xcsh_virtual_site" "vsite" {
 
 resource "xcsh_http_loadbalancer" "lb" {
   name      = "ar-test-lb-https-mesh"
-  namespace = "demo-app"
+  namespace = "example-corp"
 
   domains = ["ar-test-lb-https-mesh.example.com"]
 
@@ -620,7 +620,7 @@ resource "xcsh_securemesh_site_v2" "ce1" {
 
 resource "xcsh_virtual_site" "vsite" {
   name      = "ar-test-vs-mesh"
-  namespace = "demo-app"
+  namespace = "example-corp"
   site_type = "CUSTOMER_EDGE"
   site_selector {
     expressions = ["ves.io/siteName in (ar-test-mesh-ce1)"]
@@ -629,7 +629,7 @@ resource "xcsh_virtual_site" "vsite" {
 
 resource "xcsh_http_loadbalancer" "lb" {
   name      = "ar-test-lb-https-mesh"
-  namespace = "demo-app"
+  namespace = "example-corp"
   domains   = ["ar-test-lb-https-mesh.example.com"]
   https_auto_cert {}
   advertise_on_public_default_vip {}

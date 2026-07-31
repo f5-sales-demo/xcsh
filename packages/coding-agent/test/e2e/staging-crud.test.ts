@@ -8,7 +8,7 @@
  * with no external dependencies, and cleans up after itself.
  *
  * Run:
- *   XCSH_STAGING_API_URL=https://nferreira.staging.volterra.us \
+ *   XCSH_STAGING_API_URL=https://example.staging.volterra.us \
  *   XCSH_STAGING_API_TOKEN=<token> \
  *   bun test test/e2e/staging-crud.test.ts
  */
@@ -16,7 +16,7 @@ import { afterAll, describe, expect, it } from "bun:test";
 
 const API_URL = process.env.XCSH_STAGING_API_URL;
 const API_TOKEN = process.env.XCSH_STAGING_API_TOKEN;
-const NS = process.env.XCSH_STAGING_NAMESPACE ?? "r-mordasiewicz";
+const NS = process.env.XCSH_STAGING_NAMESPACE ?? "example-corp";
 const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
 const canRun = !isCI && !!API_URL && !!API_TOKEN;
 

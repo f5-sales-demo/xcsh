@@ -27,7 +27,7 @@
 - each option test must result in HTTP 200 from F5 XC API
 - all test resources are prefixed ar-test-smsv2-*
 - SMSv2 sites always created in system namespace
-- prerequisite objects (firewall policies, log receivers, cluster groups) created in r-mordasiewicz namespace
+- prerequisite objects (firewall policies, log receivers, cluster groups) created in example-corp namespace
 - dc_cluster_group and site_mesh_group prerequisites created in system namespace
 - when T2 or T3 fail, stop and fix the deployment/mesh issue first
 - requires XCSH_API_URL and XCSH_API_TOKEN in environment

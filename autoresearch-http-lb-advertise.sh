@@ -6,7 +6,7 @@ set -euo pipefail
 
 API_URL="${XCSH_API_URL:-}"
 API_TOKEN="${XCSH_API_TOKEN:-}"
-NS="r-mordasiewicz"
+NS="example-corp"
 PREFIX="ar-test-lb-adv"
 POOL_NAME="ar-test-lb-adv-pool"
 VSITE_NAME="ar-test-vs-ce"

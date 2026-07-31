@@ -15,7 +15,7 @@
  */
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
 
-const BASE = process.env.XCSH_API_URL ?? "https://nferreira.staging.volterra.us";
+const BASE = process.env.XCSH_API_URL ?? "https://example.staging.volterra.us";
 const ROUTE = `${BASE}/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/http_loadbalancers`;
 
 let server: BridgeServer;

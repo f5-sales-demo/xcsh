@@ -26,8 +26,8 @@ function makeStatus(overrides: Partial<ContextStatus> = {}): ContextStatus {
 	return {
 		activeContextName: "test-context",
 		activeContextUrl: "https://example.console.ves.volterra.io/api",
-		activeContextTenant: "nferreira",
-		activeContextNamespace: "r-mordasiewicz",
+		activeContextTenant: "example",
+		activeContextNamespace: "example-corp",
 		credentialSource: "context",
 		authStatus: "valid",
 		isConfigured: true,
@@ -39,14 +39,14 @@ function makeStatus(overrides: Partial<ContextStatus> = {}): ContextStatus {
 describe("truncateContextLabel", () => {
 	it("returns full label when maxWidth is large enough", () => {
 		const result = truncateContextLabel(makeStatus(), 30);
-		expect(result).toBe("nferreira:r-mordasiewicz");
+		expect(result).toBe("example:example-corp");
 	});
 
 	it("truncates namespace with ellipsis when width is 15-24", () => {
 		const result = truncateContextLabel(makeStatus(), 18);
 		expect(result).not.toBeNull();
 		expect(result!.length).toBeLessThanOrEqual(18);
-		expect(result!).toMatch(/^nferreira:.*…$/);
+		expect(result!).toMatch(/^example:.*…$/);
 	});
 
 	it("abbreviates both sides when width is 8-14", () => {

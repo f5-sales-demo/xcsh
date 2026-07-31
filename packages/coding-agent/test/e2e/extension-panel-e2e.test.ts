@@ -23,9 +23,9 @@
  *   - When the Chrome window opens: click the xcsh toolbar icon to open the panel.
  *
  * Run:
- *   XCSH_STAGING_API_URL=https://nferreira.staging.volterra.us \
+ *   XCSH_STAGING_API_URL=https://example.staging.volterra.us \
  *   XCSH_STAGING_API_TOKEN=<token> \
- *   dana@example.com \
+ *   XCSH_STAGING_USERNAME=dana@example.com \
  *   XCSH_STAGING_PASSWORD=<pw> \
  *   bun test test/e2e/extension-panel-e2e.test.ts
  */
@@ -56,7 +56,7 @@ const API_URL = process.env.XCSH_STAGING_API_URL;
 const API_TOKEN = process.env.XCSH_STAGING_API_TOKEN;
 const USERNAME = process.env.XCSH_STAGING_USERNAME;
 const PASSWORD = process.env.XCSH_STAGING_PASSWORD;
-const NS = process.env.XCSH_STAGING_NAMESPACE ?? "r-mordasiewicz";
+const NS = process.env.XCSH_STAGING_NAMESPACE ?? "example-corp";
 const canRun = canRunLive(process.env);
 
 // Console lands on the SAME namespace the API verifies against, so the LLM

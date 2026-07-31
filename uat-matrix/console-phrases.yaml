@@ -24,7 +24,7 @@
 #                       (parents first so dependants release)
 defaults:
   namespace: demo
-  tenant: example-corp
+  tenant: example.staging.volterra.us
 
 phrases:
   # ===========================================================================

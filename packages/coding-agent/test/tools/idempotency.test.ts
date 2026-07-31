@@ -38,11 +38,11 @@ describe("isAlreadyExistsError", () => {
 });
 
 describe("isTrustedApiUrl (SSRF / credential-leak guard)", () => {
-	const expected = "https://nferreira.staging.volterra.us";
+	const expected = "https://example.staging.volterra.us";
 
 	it("allows the configured tenant host over https", () => {
-		expect(isTrustedApiUrl("https://nferreira.staging.volterra.us", expected)).toBe(true);
-		expect(isTrustedApiUrl("https://nferreira.staging.volterra.us/", expected)).toBe(true);
+		expect(isTrustedApiUrl("https://example.staging.volterra.us", expected)).toBe(true);
+		expect(isTrustedApiUrl("https://example.staging.volterra.us/", expected)).toBe(true);
 	});
 
 	it("rejects a mismatched host (credential exfil target)", () => {
@@ -50,7 +50,7 @@ describe("isTrustedApiUrl (SSRF / credential-leak guard)", () => {
 	});
 
 	it("rejects non-https schemes", () => {
-		expect(isTrustedApiUrl("http://nferreira.staging.volterra.us", expected)).toBe(false);
+		expect(isTrustedApiUrl("http://example.staging.volterra.us", expected)).toBe(false);
 		expect(isTrustedApiUrl("file:///etc/passwd", expected)).toBe(false);
 	});
 

@@ -40,7 +40,7 @@ declare const chrome: {
 	tabs: { query(queryInfo: Record<string, unknown>): Promise<Array<{ id?: number; url?: string }>> };
 };
 
-const EXT_PATH = process.env.XCSH_EXT_DIST ?? "/Users/user/GIT/f5-sales-demo/xcsh-chrome-extension/dist";
+const EXT_PATH = process.env.XCSH_EXT_DIST ?? "/Users/example/GIT/f5-sales-demo/xcsh-chrome-extension/dist";
 
 // Local, hermetic fixture standing in for the F5 XC console. The live staging
 // console requires an authenticated Okta session that a fresh Puppeteer profile
