@@ -18,13 +18,19 @@ import * as path from "node:path";
 
 const REPO_ROOT = path.resolve(import.meta.dir, "../../..");
 
-/** Files whose whole point is to name the thing they ban, or to rewrite it. */
+/**
+ * Files whose whole point is to name the thing they ban, or to rewrite it — including this one.
+ *
+ * Self-exemption is load-bearing: `git grep` searches the index, so while this file was untracked it
+ * was invisible to its own scan and passed locally, then failed in CI the moment it was committed.
+ */
 const ALLOWED_FILES = new Set([
 	"CLAUDE.md",
 	"CONTRIBUTING.md",
 	"README.md",
 	"STYLE_GUIDE.md",
 	"packages/coding-agent/scripts/generate-api-spec-index.ts",
+	"packages/coding-agent/test/placeholder-hygiene.test.ts",
 ]);
 
 /** RFC 8555 vocabulary. Not the placeholder — must never be renamed. */
