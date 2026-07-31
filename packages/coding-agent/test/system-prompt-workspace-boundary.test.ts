@@ -1,5 +1,10 @@
-import { beforeAll, describe, expect, it } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it } from "bun:test";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { TempDir } from "@f5-sales-demo/pi-utils";
 import { registerCodingAgentPromptHelpers } from "../src/config/prompt-templates";
+import { evaluateToolCall } from "../src/sandbox/enforce";
+import { resolveSessionFence } from "../src/sandbox/session-fence";
 import { buildSystemPrompt } from "../src/system-prompt";
 
 const OPEN_TAG = "<workspace-boundary>";
@@ -23,9 +28,9 @@ function block(): string {
 /**
  * The block with whitespace runs collapsed, for matching prose.
  *
- * The block is hard-wrapped, so a phrase can straddle a line break plus its indent
- * ("reach the\n  same path another way"). Matching the raw text would make these
- * assertions fail on a rewrap that changed nothing about the meaning.
+ * The block is hard-wrapped, so a phrase can straddle a line break plus its indent.
+ * Matching the raw text would make these assertions fail on a rewrap that changed
+ * nothing about the meaning.
  */
 function flat(): string {
 	return block().replace(/\s+/g, " ");
@@ -54,60 +59,62 @@ describe("system prompt workspace boundary", () => {
 		expect(boundary).toBeLessThan(nextSection);
 	});
 
-	// A possibility, never an assertion: nothing in the prompt knows the directory's
-	// shape, because a customer boundary is not visible in the filesystem.
-	it("primes the single-customer case without asserting it", () => {
-		expect(flat()).toMatch(/may be scoped to a single customer/i);
-	});
-
-	it("prohibits ranging across the filesystem for context", () => {
-		expect(flat()).toContain("**MUST NOT** range across the filesystem");
-	});
-
-	// The session fence allows reads OUTSIDE the CWD: user-level skills, the
-	// plugin dir, and any `--allow-path` / `sandbox.allowRead` grant. An absolute "never
-	// widen beyond the working directory" would forbid paths the operator deliberately
-	// granted, and would contradict the Procedure section's "if a skill matches the
-	// domain, you MUST read it before starting".
-	it("acknowledges explicit grants and the allowlisted read locations", () => {
-		expect(flat()).toMatch(/--allow-path/);
-		expect(flat()).toMatch(/skills and plugins/i);
-		expect(flat()).not.toMatch(/never widen to its parent/i);
-	});
-
-	// The sandbox link: naming the sandbox is what makes a refusal legible as the
-	// boundary working, which stops the reach-for-another-spelling reflex.
+	// The one thing the fence cannot do. Where the working directory holds several
+	// tenants, they are all inside the allowed subtree, so separating them is
+	// judgment and nothing else.
 	//
-	// But it MUST be conditional. `buildSystemPrompt` is handed no containment status,
-	// so the block cannot know whether isolation is on; under `--no-sandbox` or
-	// `sandbox.enabled: false` nothing is refused at all. Asserting enforcement as fact
-	// would give a deliberately-degraded session false assurance about isolation.
-	it("names the sandbox without asserting enforcement unconditionally", () => {
-		expect(flat()).toMatch(/sandbox confines this session/i);
-		// The property is that the refusal is stated CONDITIONALLY on the sandbox being
-		// active; either phrasing of that condition satisfies it.
-		expect(flat()).toMatch(/when (it|the sandbox) is active/i);
-		expect(flat()).not.toMatch(/isolation is enforced/i);
-		expect(flat()).toMatch(/reach the same path another way/i);
+	// "tenant" is deliberate: it is the agnostic term for one bounded scope of work,
+	// and it matches the F5 XC tenant named in the Platform Context block directly
+	// below. "customer" would be narrower than the category this actually covers.
+	it("covers the case the fence leaves open", () => {
+		expect(flat()).toMatch(/subdirectories of the working directory/i);
+		expect(flat()).toMatch(/your judgment/i);
 	});
 
-	// Codex round 3 called the block false assurance about the customer boundary. Refuted
-	// as stated -- "Reachable does not mean in scope" already tells the model the sandbox
-	// will not stop a sibling read. But the two boundaries sat in adjacent bullets and
-	// could be read as one, so the block now names which boundary the sandbox enforces.
-	// This is the awareness the change exists to create: crossing between sibling
-	// customers is refused by nothing, which is precisely why the rule is the model's.
-	it("distinguishes the sandbox boundary from the customer boundary", () => {
-		expect(flat()).toMatch(/boundary is the working directory, not the customer subdirectory/i);
-		expect(flat()).toMatch(/nothing refuses a sibling/i);
+	// #2643 review, confirmed. `resolveSessionFence` returns undefined outright when
+	// `sandbox.enabled` is false, so under `--no-sandbox` nothing is refused anywhere.
+	// Scoping this block to subdirectories of the working directory would leave those
+	// sessions with no always-loaded statement about tenant scope at all — the text
+	// that covers it (containment.md) sits behind the `xcsh://` gate, which the prompt
+	// tells the model not to read unless asked about xcsh itself.
+	//
+	// Stated as judgment, never as a prohibition on reading: the point is that reaching
+	// something is not the same as it being in scope, not that paths are off limits.
+	it("covers sessions where filesystem isolation is off", () => {
+		expect(flat()).toMatch(/isolation is off/i);
+		expect(flat()).toMatch(/not the same as it being in scope/i);
 	});
 
-	// Guards the non-goal. Work that genuinely spans two subdirectories must stay
-	// possible; the requirement is that the crossing be deliberate and stated. This
-	// fails if a later edit quietly turns the block into a lockdown.
-	it("does not forbid cross-customer work outright", () => {
-		expect(flat()).not.toMatch(/MUST NOT (read|access|open|touch) (another|other|a different)/i);
-		expect(flat()).toMatch(/state the crossing/i);
+	// #2643 review round 2, confirmed. "Work in the one the task names" is guidance,
+	// not a rule, so the only MUST NOT covered merging — leaving an agent free to read
+	// a neighbouring tenant's secrets for "precedent" without breaking anything
+	// explicit. That accidental context loading is the whole reason this block exists.
+	//
+	// The rule is scoped to TENANTS and conditioned on the task, which is what keeps it
+	// a useful control rather than a filesystem-wide prohibition: it says nothing about
+	// the paths the fence deliberately leaves open.
+	it("forbids opening another tenant only when the task did not ask", () => {
+		expect(flat()).toMatch(/MUST NOT\*{0,2} open another tenant/i);
+		expect(flat()).toMatch(/the task did not ask/i);
+	});
+
+	// Guards the non-goal. Work that genuinely spans two tenants must stay possible;
+	// the requirement is that the crossing be deliberate and stated. A MUST NOT about
+	// opening another tenant is acceptable ONLY while that permission survives beside
+	// it, so this guards the permission rather than pattern-matching the prohibition.
+	it("does not forbid cross-tenant work outright", () => {
+		expect(flat()).toMatch(/say so when the task genuinely spans more than one/i);
+		expect(flat()).toMatch(/MUST NOT\*{0,2} merge two tenants/i);
+		expect(flat()).not.toMatch(/MUST NOT\*{0,2} (work|operate|act) across/i);
+	});
+
+	// #2643. The block must not re-impose at the prompt layer what the fence
+	// deliberately stopped enforcing: `containment.ts` records that a deny-by-default
+	// boundary "refuses ordinary work", and the wider filesystem is open on purpose.
+	// A blanket prohibition on looking anywhere is the restriction that was removed.
+	it("does not prohibit reading paths the fence allows", () => {
+		expect(flat()).not.toMatch(/range across the filesystem/i);
+		expect(flat()).not.toMatch(/never widen/i);
 	});
 
 	// A custom system prompt (--system-prompt, or an auto-discovered project/global
@@ -131,5 +138,62 @@ describe("system prompt workspace boundary", () => {
 	it("leaves no unrendered template syntax in the block", () => {
 		expect(block()).not.toBe("");
 		expect(block()).not.toContain("{{");
+	});
+});
+
+/**
+ * Binds the prompt's description of reachability to what the fence actually does.
+ *
+ * This block has twice asserted a mechanism fact that reality contradicted: an
+ * unconditional "isolation is enforced" (false under `--no-sandbox`, caught in review),
+ * and "nothing refuses a sibling" (true when written, falsified a day later when #2624 /
+ * #2637 unified the fence and started denying the workspace's parent). Prose cannot be
+ * trusted to stay true about code it does not import.
+ *
+ * So the claim is measured rather than reviewed. If the deny logic changes again, this
+ * fails and names the sentence that went stale, instead of shipping a confident
+ * falsehood in every session's prompt.
+ */
+describe("workspace boundary claims match the real fence", () => {
+	let tmp: TempDir;
+	let parent: string;
+	let tenantA: string;
+	let tenantB: string;
+
+	beforeAll(() => {
+		tmp = TempDir.createSync("xcsh-boundary-claim-");
+		parent = path.join(tmp.absolute(), "customers");
+		tenantA = path.join(parent, "tenantA");
+		tenantB = path.join(parent, "tenantB");
+		fs.mkdirSync(tenantA, { recursive: true });
+		fs.mkdirSync(tenantB, { recursive: true });
+		fs.writeFileSync(path.join(tenantA, "notes.md"), "a");
+		fs.writeFileSync(path.join(tenantB, "secret.env"), "TOKEN=b");
+	});
+
+	afterAll(() => tmp.removeSync());
+
+	/** Whether the `read` tool would be refused from `cwd`, through the real session fence. */
+	function refuses(cwd: string, filePath: string): boolean {
+		const fence = resolveSessionFence(cwd, { get: () => undefined });
+		if (!fence) throw new Error("expected a fence: sandboxing should default to on");
+		return evaluateToolCall({ toolName: "read", input: { file_path: filePath }, cwd, fence }).block;
+	}
+
+	// What the block claims: from a working directory holding several tenants, every
+	// one of them is reachable and no crossing is refused.
+	it("is right that a crossing between children of the working directory is not refused", () => {
+		expect(refuses(parent, path.join(tenantA, "notes.md"))).toBe(false);
+		expect(refuses(parent, path.join(tenantB, "secret.env"))).toBe(false);
+	});
+
+	// And the converse the block must NOT claim. From inside one customer the fence
+	// denies the parent, so a sibling read IS refused — the generalisation this block
+	// used to make ("nothing refuses a sibling") is false and must not come back.
+	it("does not let the block generalise to siblings the fence refuses", () => {
+		const siblingRefused = refuses(tenantA, path.join(tenantB, "secret.env"));
+		expect(siblingRefused).toBe(true);
+		expect(flat()).not.toMatch(/nothing refuses a sibling/i);
+		expect(flat()).not.toMatch(/boundary is the working directory, not the customer subdirectory/i);
 	});
 });
