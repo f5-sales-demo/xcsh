@@ -1320,6 +1320,23 @@ export const head = {
 // ════════════════════════════════════════════════════════════════════════════
 
 export const repo = {
+	/**
+	 * Whether `cwd` itself is excluded by gitignore rules.
+	 *
+	 * `check-ignore` exits 1 for "not ignored", which is an answer rather than a failure,
+	 * so only exit 0 counts as ignored and anything else reads as not.
+	 */
+	async ignored(cwd: string, signal?: AbortSignal): Promise<boolean> {
+		const result = await runCommand(cwd, ["check-ignore", "-q", "."], { readOnly: true, signal });
+		// 0 = ignored, 1 = not ignored. Both are answers. Anything else is git declining to
+		// decide — 128 for a directory outside a repository, dubious ownership, a corrupt
+		// config — and folding those into `false` would report a confident "not ignored"
+		// that the caller cannot distinguish from a real one.
+		if (result.exitCode === 0) return true;
+		if (result.exitCode === 1) return false;
+		throw new GitCommandError(["check-ignore", "-q", "."], result);
+	},
+
 	/** Resolve the repository root (may be a worktree root). */
 	async root(cwd: string, signal?: AbortSignal): Promise<string | null> {
 		const repository = await resolveRepository(cwd);
