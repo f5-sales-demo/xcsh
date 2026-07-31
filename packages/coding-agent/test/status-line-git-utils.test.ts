@@ -40,6 +40,19 @@ describe("parseGitHubRepo", () => {
 		expect(parseGitHubRepo("not-a-url")).toBeNull();
 	});
 
+	// The regex was unanchored, so any URL merely CONTAINING "github.com/" parsed as a
+	// GitHub repo. start-folder.ts turns that answer into prompt text authorising GitHub
+	// work, so a GitLab URL with github.com in its path could misdirect `gh` operations.
+	test("returns null when github.com appears in the path rather than the host", () => {
+		expect(parseGitHubRepo("https://gitlab.example/github.com/acme/repo.git")).toBeNull();
+		expect(parseGitHubRepo("https://evil.example/?x=github.com/acme/repo")).toBeNull();
+		expect(parseGitHubRepo("https://github.com.evil.example/org/name.git")).toBeNull();
+	});
+
+	test("returns null for extra path segments beyond owner/repo", () => {
+		expect(parseGitHubRepo("https://github.com/org/repo/tree/main")).toBeNull();
+	});
+
 	test("handles GitHub Enterprise-style URLs (no match)", () => {
 		expect(parseGitHubRepo("https://github.corp.com/org/repo.git")).toBeNull();
 	});

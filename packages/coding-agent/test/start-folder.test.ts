@@ -43,10 +43,18 @@ describe("classifyStartFolder", () => {
 		expect(classifyStartFolder("/w", null)).toEqual({ kind: "git" });
 	});
 
-	// A hostname that merely contains "github.com" is not GitHub. Getting this wrong would
-	// grant GitHub scope to a look-alike host.
-	it("is git for a remote on a github.com look-alike host", () => {
-		expect(classifyStartFolder("/w", "https://github.com.evil.example/org/name.git")).toEqual({ kind: "git" });
+	// A host that merely contains "github.com" is not GitHub, and neither is a URL with
+	// github.com somewhere in its PATH. Getting either wrong grants GitHub scope — and
+	// prompt text authorising it — to a repository hosted somewhere else entirely.
+	it("is git for remotes that only look like GitHub", () => {
+		for (const url of [
+			"https://github.com.evil.example/org/name.git",
+			"https://gitlab.example/github.com/acme/repo.git",
+			"https://evil.example/?x=github.com/acme/repo",
+			"https://github.com/org/repo/tree/main",
+		]) {
+			expect(classifyStartFolder("/w", url)).toEqual({ kind: "git" });
+		}
 	});
 });
 

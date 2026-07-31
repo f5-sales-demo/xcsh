@@ -1,13 +1,22 @@
 /**
  * Extract "owner/repo" from a GitHub remote URL.
- * Handles HTTPS, SSH (scp-style), and git:// protocols.
+ * Handles HTTPS, SSH (scp-style and ssh://), and git:// protocols.
+ *
+ * Anchored at both ends, which matters: the pattern used to be unanchored, so any URL
+ * merely *containing* "github.com/" parsed as a GitHub repository —
+ * `https://gitlab.example/github.com/acme/repo.git` returned `acme/repo`. That is now a
+ * decision about authority, not just a status-line label: `discovery/start-folder.ts`
+ * turns it into system-prompt text telling the agent GitHub work is in scope, so a
+ * repository hosted elsewhere could misdirect authenticated `gh` operations. `github.com`
+ * must be the host, and `owner/repo` must be the whole path.
  *
  * @returns "owner/repo" or null if the URL isn't a recognized GitHub remote.
  */
 export function parseGitHubRepo(remoteUrl: string): string | null {
-	const match = remoteUrl.match(/github\.com[:/]([^/]+\/[^/]+)/);
-	if (!match) return null;
-	return match[1].replace(/\.git$/, "");
+	// Strip a trailing ".git" first so the anchor can require owner/repo to end the path.
+	const cleaned = remoteUrl.trim().replace(/\.git$/, "");
+	const match = cleaned.match(/^(?:https?:\/\/|ssh:\/\/git@|git@|git:\/\/)github\.com[:/]([^/]+\/[^/]+)$/);
+	return match ? (match[1] ?? null) : null;
 }
 
 /**

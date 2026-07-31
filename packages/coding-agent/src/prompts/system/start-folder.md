@@ -3,8 +3,9 @@
 The start folder is the GitHub repository `{{startFolder.slug}}`. Git and GitHub work is in scope here.
 {{/if}}
 {{#if startFolder.isGit}}
-The start folder is a git repository, but its remote is not on GitHub. Version control is in scope;
-GitHub-specific actions are not — check where the remote actually points before reaching for `gh`.
+The start folder is a git repository whose `origin` is not on GitHub. Version control is in scope;
+GitHub-specific actions are not — check where the remote actually points before reaching for `gh`,
+since a GitHub remote under another name would not have been seen.
 {{/if}}
 {{#if startFolder.isPlain}}
 The start folder is not a git repository, and this is a network-engineering tool: it may hold tenant

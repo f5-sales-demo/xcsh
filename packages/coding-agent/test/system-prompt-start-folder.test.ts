@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { registerCodingAgentPromptHelpers } from "../src/config/prompt-templates";
-import type { StartFolder } from "../src/discovery/start-folder";
+import { resolveStartFolder, type StartFolder } from "../src/discovery/start-folder";
 import { buildSystemPrompt } from "../src/system-prompt";
 
 const OPEN_TAG = "<start-folder>";
@@ -59,6 +59,13 @@ describe("start folder: repository without a GitHub remote", () => {
 	it("keeps version control in scope but not GitHub actions", () => {
 		expect(flat(out)).toMatch(/version control/i);
 		expect(flat(out)).toMatch(/not on github/i);
+	});
+
+	// Only `origin` is probed. A repository whose GitHub remote is named `upstream` lands
+	// here, so a bare claim about "its remote" would be false; naming `origin` keeps the
+	// statement true and tells the agent what to re-check.
+	it("attributes the finding to origin specifically", () => {
+		expect(flat(out)).toMatch(/`origin`/);
 	});
 
 	it("does not invent a slug", () => {
@@ -124,16 +131,24 @@ describe("start folder block mechanics", () => {
 		expect(flat(out)).toMatch(/MUST NOT\*{0,2} offer/i);
 	});
 
-	// End to end, against the real cwd rather than an injected kind: this suite runs
-	// inside a GitHub checkout (or a worktree of one, which `repo.root` resolves), so
-	// omitting `startFolder` must probe and land on the github branch naming this repo.
+	// End to end against the real cwd rather than an injected kind: omitting `startFolder`
+	// must actually probe. The expectation is derived from this checkout rather than
+	// pinned to `f5-sales-demo/xcsh`, so the suite still holds in a fork, a source
+	// archive, or a clone whose remote was renamed or removed.
 	//
 	// The fail-safe direction is asserted in start-folder.test.ts against stubbed probes;
 	// it cannot be exercised here, because here the probes succeed.
 	it("probes the real cwd when no start folder is supplied", async () => {
+		const expected = await resolveStartFolder(process.cwd());
 		const out = await buildSystemPrompt({ tools: new Map() });
 		expect(out).toContain(OPEN_TAG);
-		expect(flat(out)).toMatch(/git and github work is in scope/i);
-		expect(flat(out)).toContain("f5-sales-demo/xcsh");
+		if (expected.kind === "github") {
+			expect(flat(out)).toMatch(/git and github work is in scope/i);
+			expect(flat(out)).toContain(expected.slug ?? "");
+		} else if (expected.kind === "git") {
+			expect(flat(out)).toMatch(/not on github/i);
+		} else {
+			expect(flat(out)).toMatch(/not a git repository/i);
+		}
 	});
 });
