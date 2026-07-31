@@ -539,7 +539,11 @@ export class ModelSelectorComponent extends Container {
 				this.#sortCanonicalModels(fuzzyMatches);
 				this.#filteredCanonicalModels = fuzzyMatches;
 			} else {
-				const fuzzyMatches = fuzzyFilter(baseModels, query, ({ id, provider }) => `${id} ${provider}`);
+				const fuzzyMatches = fuzzyFilter(
+					baseModels,
+					query,
+					({ id, model, provider, selector }) => `${selector} ${id} ${provider} ${model.name}`,
+				);
 				this.#sortModels(fuzzyMatches);
 				this.#filteredModels = fuzzyMatches;
 			}

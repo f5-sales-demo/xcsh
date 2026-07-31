@@ -125,4 +125,22 @@ describe("ModelSelector role badge thinking display", () => {
 		expect(menuRendered).toContain("Set as custom-fast");
 		expect(menuRendered).toContain("Set as SMOL (Quick)");
 	});
+
+	test("finds a model by its displayed provider/model selector", async () => {
+		installTestTheme();
+		const model = getBundledModel("anthropic", "claude-sonnet-4-5");
+		if (!model) throw new Error("Expected bundled model anthropic/claude-sonnet-4-5");
+
+		const selector = createSelector(model, Settings.isolated());
+		await Bun.sleep(0);
+
+		for (const character of `${model.provider}/${model.id}`) {
+			selector.handleInput(character);
+		}
+
+		installTestTheme();
+		const rendered = normalizeRenderedText(selector.render(220).join("\n"));
+		expect(rendered).toContain(`${model.provider}/${model.id}`);
+		expect(rendered).not.toContain("No matching models");
+	});
 });

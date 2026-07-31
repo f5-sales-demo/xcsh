@@ -121,4 +121,16 @@ describe("Settings", () => {
 			expect(savedSettings.defaultThinkingLevel).toBe(Effort.High);
 		});
 	});
+
+	describe.skipIf(process.platform === "win32")("config file permissions", () => {
+		it("restores owner-only permissions when rewriting config.yml", async () => {
+			fs.writeFileSync(getConfigPath(), "modelRoles:\n  default: anthropic/claude-opus-5\n", { mode: 0o644 });
+			const settings = await Settings.init({ cwd: projectDir, agentDir });
+
+			settings.set("defaultThinkingLevel", Effort.High);
+			await settings.flush();
+
+			expect(fs.statSync(getConfigPath()).mode & 0o777).toBe(0o600);
+		});
+	});
 });

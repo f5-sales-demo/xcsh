@@ -221,6 +221,7 @@ describe("tryAutoConfigLiteLLM()", () => {
 		expect(content).toContain("https://proxy.example.com/anthropic");
 		if (process.platform !== "win32") {
 			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
+			expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
 		}
 	});
 
