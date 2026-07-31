@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.6] - 2026-07-31
+
 ### Fixed
 
 - Fixed the checksum-pinned Zig installer on macOS and Windows native release runners and added cross-platform pre-merge validation ([#61](https://github.com/f5-sales-demo/xcsh/issues/61))
