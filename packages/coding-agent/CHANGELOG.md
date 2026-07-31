@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.7] - 2026-07-31
+
 ### Fixed
 
 - Fixed exact `provider/model` searches in `/model` and restricted global agent configuration writes to owner-only permissions ([#2741](https://github.com/f5-sales-demo/xcsh/issues/2741))
