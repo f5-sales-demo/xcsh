@@ -221,6 +221,23 @@ describe("AgentSession eager todo enforcement", () => {
 		expect(session.formatSessionAsText()).not.toContain("<user-request>");
 	});
 
+	it("does not force todo_write when the tool is registered but inactive", async () => {
+		session.agent.setTools(session.agent.state.tools.filter(tool => tool.name !== "todo_write"));
+
+		await session.prompt("list all work trees");
+
+		expect(observedCalls).toEqual([
+			{
+				toolChoice: undefined,
+				toolNames: ["bash"],
+				messageRoles: ["user"],
+				messageTexts: ["list all work trees"],
+				lastMessageRole: "user",
+				lastMessageText: "list all work trees",
+			},
+		]);
+	});
+
 	it("initializes todos once, then continues within the same user turn", async () => {
 		scriptedResponses = [
 			createToolCallAssistantMessage("todo_write", {

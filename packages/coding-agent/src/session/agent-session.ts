@@ -4391,7 +4391,7 @@ export class AgentSession {
 			return undefined;
 		}
 
-		if (!this.#toolRegistry.has("todo_write")) {
+		if (!this.agent.state.tools.some(tool => tool.name === "todo_write")) {
 			logger.warn("Eager todo enforcement skipped because todo_write is unavailable", {
 				activeToolNames: this.agent.state.tools.map(tool => tool.name),
 			});
