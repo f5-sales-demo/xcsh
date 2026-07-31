@@ -124,8 +124,7 @@ const CACHE_DIRS = [
 ];
 
 /**
- * Config and state directories of the CLIs xcsh ships plugins and skills for — the same list it probes
- * for in `internal-urls/computer-profile.ts`.
+ * Config and state directories of the CLIs xcsh ships plugins and skills for.
  *
  * Granted read and write. In v19.100.0 the home deny covered all of these, so every one of `gh`, `glab`,
  * `sf`, `az`, `aws` and `gcloud` failed on its own configuration — and the agent is instructed to file
@@ -256,14 +255,12 @@ const OPERATIONAL_ROOT_NAMES = new Set([
 ]);
 
 /**
- * The operator's own profile and settings, read by the agent to describe the machine it is on.
+ * The operator's settings, read by the agent to configure the current session.
  *
  * Read-only, and named individually rather than by their directory: the config root also holds the
  * cross-session leak dirs, which stay denied at greater depth.
  */
-const AGENT_PROFILE_FILES = ["user-profile.json", "computer-profile.json", "settings.json"].map(name =>
-	path.join(getConfigRootDir(), name),
-);
+const AGENT_PROFILE_FILES = [path.join(getConfigRootDir(), "settings.json")];
 
 /**
  * Top-level directories that hold data on some machine even when this one has none of them.

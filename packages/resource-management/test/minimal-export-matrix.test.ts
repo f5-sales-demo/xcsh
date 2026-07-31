@@ -14,7 +14,7 @@ function makeFilter(overrides: Partial<MinimalExportFilter> = {}): MinimalExport
 }
 
 function _roundTrip(spec: Record<string, unknown>, kind: string): Record<string, unknown> {
-	const manifest = { kind, metadata: { name: "test", namespace: "ns" }, spec };
+	const manifest = { kind, metadata: { name: "test", namespace: "example-namespace" }, spec };
 	const json = formatManifestOutput([manifest], "json");
 	const parsed = parseManifests([JSON.parse(json) as Record<string, unknown>], "test");
 	return parsed[0].spec;
@@ -41,7 +41,7 @@ describe("round-trip: export → format → parse for each resource type", () =>
 			const spec = { user_field: "value", domains: ["example.com"] };
 			const filter = makeFilter({ serverDefaults: { default_field: {} } });
 			const apiResponse = {
-				metadata: { name: `test-${kind}`, namespace: "ns" },
+				metadata: { name: `test-${kind}`, namespace: "example-namespace" },
 				spec: { ...spec, default_field: {} },
 			};
 
@@ -58,7 +58,7 @@ describe("round-trip: export → format → parse for each resource type", () =>
 
 		test(`${kind}: YAML round-trip preserves content`, () => {
 			const apiResponse = {
-				metadata: { name: `yaml-${kind}`, namespace: "ns" },
+				metadata: { name: `yaml-${kind}`, namespace: "example-namespace" },
 				spec: { domains: ["example.com"], config: { enabled: true } },
 			};
 
@@ -157,7 +157,7 @@ describe("stripping behavior matrix", () => {
 			oneofDefaultVariants: { round_robin: "round_robin" },
 		});
 		const spec = {
-			origin_servers: [{ public_ip: { ip: "1.2.3.4" } }],
+			origin_servers: [{ public_ip: { ip: "192.0.2.1" } }],
 			port: 443,
 			use_tls: { sni: "example.com" },
 			loadbalancer_algorithm: "ROUND_ROBIN",
@@ -207,7 +207,7 @@ describe("stripping behavior matrix", () => {
 		const filter = makeFilter();
 		const spec = {
 			type: "SITE_MESH_GROUP_TYPE_FULL_MESH",
-			virtual_site: { tenant: "t", namespace: "ns", name: "vs" },
+			virtual_site: { tenant: "example-corp", namespace: "example-namespace", name: "example-site" },
 		};
 		const result = applyMinimalExportFilter(spec, filter);
 		expect(result).toEqual(spec);

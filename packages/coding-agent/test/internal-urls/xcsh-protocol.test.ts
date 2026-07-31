@@ -1,9 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { InternalDocsProtocolHandler, InternalUrlRouter } from "../../src/internal-urls";
 import { createApiSpecResolver } from "../../src/internal-urls/api-spec-resolve";
 import type { RuntimeBuildInfo } from "../../src/internal-urls/build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES } from "../../src/internal-urls/docs-index.generated";
-import { PROFILE_COLLECTORS } from "../../src/internal-urls/profile-collectors";
 
 function injectedInfo(overrides: Partial<RuntimeBuildInfo> = {}): RuntimeBuildInfo {
 	return {
@@ -204,128 +203,22 @@ describe("xcsh://api-spec", () => {
 	});
 });
 
-describe("xcsh://user", () => {
-	it("resolves xcsh://user to a markdown profile", async () => {
-		const resource = await createRouter().resolve("xcsh://user");
-		expect(resource.contentType).toBe("text/markdown");
-		expect(resource.content).toContain("User Profile");
+describe("retired profile routes", () => {
+	it.each(["xcsh://user", "xcsh://computer"])("does not expose %s", async url => {
+		await expect(createRouter().resolve(url)).rejects.toThrow(
+			`Documentation file not found: ${url.slice("xcsh://".length)}`,
+		);
 	});
 
-	it("appears in xcsh:// root listing", async () => {
-		const resource = await createRouter().resolve("xcsh://");
-		expect(resource.content).toContain("xcsh://user");
-		expect(resource.content).toContain("human user profile");
-	});
-
-	it("returns seed instructions when profile is empty on a fresh HOME", async () => {
-		// The test runs with whatever HOME is set; if user-profile.json exists
-		// it renders the profile, otherwise it shows seed instructions.
-		const resource = await createRouter().resolve("xcsh://user");
-		expect(resource.content.length).toBeGreaterThan(0);
-		// Either populated or has seed instructions — both are valid
-		const hasProfile = resource.content.includes("## Identity");
-		const hasSeedHint = resource.content.includes("seed=true");
-		expect(hasProfile || hasSeedHint).toBe(true);
-	});
-
-	describe("?seed=true", () => {
-		afterEach(() => vi.restoreAllMocks());
-
-		/**
-		 * Stateful in-memory profile store so a seed write is visible to the
-		 * following read, and no real ~/.xcsh/user-profile.json is touched.
-		 */
-		function mockProfileStore(): void {
-			let stored: object = {};
-			vi.spyOn(Bun, "file").mockReturnValue({
-				json: () => Promise.resolve(stored),
-			} as unknown as ReturnType<typeof Bun.file>);
-			vi.spyOn(Bun, "write").mockImplementation((async (_dest: unknown, data: unknown) => {
-				stored = JSON.parse(String(data)) as object;
-				return String(data).length;
-			}) as typeof Bun.write);
-		}
-
-		it("seeds the profile so a subsequent read returns a populated (non-empty) profile", async () => {
-			mockProfileStore();
-			for (const c of PROFILE_COLLECTORS) vi.spyOn(c, "available").mockResolvedValue(false);
-			vi.spyOn(PROFILE_COLLECTORS.find(c => c.id === "git")!, "available").mockResolvedValue(true);
-			vi.spyOn(PROFILE_COLLECTORS.find(c => c.id === "git")!, "collect").mockResolvedValue({
-				givenName: "Ada",
-				familyName: "Lovelace",
-				email: "ada@example.com",
-			});
-
-			const router = createRouter();
-			const seeded = await router.resolve("xcsh://user?seed=true");
-			expect(seeded.content).toContain("Ada Lovelace");
-
-			const read = await router.resolve("xcsh://user");
-			expect(read.content).not.toContain("No profile data yet");
-			expect(read.content).toContain("Ada Lovelace");
-			expect(read.content).toContain("ada@example.com");
-		});
-
-		it("renders a Seed Report describing each collector outcome", async () => {
-			mockProfileStore();
-			for (const c of PROFILE_COLLECTORS) vi.spyOn(c, "available").mockResolvedValue(false);
-
-			const resource = await createRouter().resolve("xcsh://user?seed=true");
-			expect(resource.content).toContain("Seed Report");
-			// every registered collector reports a status
-			for (const c of PROFILE_COLLECTORS) {
-				expect(resource.content).toContain(c.name);
-			}
-		});
-
-		it("keeps sourcePath as xcsh://user regardless of seed query param", async () => {
-			mockProfileStore();
-			for (const c of PROFILE_COLLECTORS) vi.spyOn(c, "available").mockResolvedValue(false);
-			const resource = await createRouter().resolve("xcsh://user?seed=true");
-			expect(resource.sourcePath).toBe("xcsh://user");
-		});
+	it("does not advertise profile routes", async () => {
+		const content = (await createRouter().resolve("xcsh://")).content;
+		expect(content).not.toContain("xcsh://user");
+		expect(content).not.toContain("xcsh://computer");
 	});
 });
 
-describe("xcsh://computer", () => {
-	it("resolves xcsh://computer to a markdown profile", async () => {
-		const resource = await createRouter().resolve("xcsh://computer");
-		expect(resource.contentType).toBe("text/markdown");
-		expect(resource.content).toContain("Computer Profile");
-	});
-
-	it("appears in xcsh:// root listing", async () => {
-		const resource = await createRouter().resolve("xcsh://");
-		expect(resource.content).toContain("xcsh://computer");
-		expect(resource.content).toContain("machine hardware");
-	});
-
-	it("returns either populated profile or collection instructions", async () => {
-		const resource = await createRouter().resolve("xcsh://computer");
-		expect(resource.content.length).toBeGreaterThan(0);
-		const hasProfile =
-			resource.content.includes("## Hardware") ||
-			resource.content.includes("## CPU") ||
-			resource.content.includes("## Memory");
-		const hasSeedHint = resource.content.includes("xcsh://computer?refresh=true");
-		expect(hasProfile || hasSeedHint).toBe(true);
-	});
-
-	it("sourcePath is xcsh://computer regardless of refresh query param", async () => {
-		const resource = await createRouter().resolve("xcsh://computer");
-		expect(resource.sourcePath).toBe("xcsh://computer");
-	});
-
-	it("root listing count includes computer entry", async () => {
-		const resource = await createRouter().resolve("xcsh://");
-		const listItems = resource.content.split("\n").filter(line => line.startsWith("- ["));
-		expect(listItems.length).toBeGreaterThanOrEqual(5);
-	});
-
+describe("xcsh:// root listing", () => {
 	it("advertised count equals the number of entries actually listed", async () => {
-		// The count used to be a hand-maintained `EMBEDDED_DOC_FILENAMES.length + N`
-		// offset that nothing pinned, so adding a route rendered a wrong header with a
-		// green suite. Tie the advertised number to the real listing.
 		const resource = await createRouter().resolve("xcsh://");
 		const advertised = Number(resource.content.match(/^(\d+) files available:$/m)?.[1]);
 		const listItems = resource.content.split("\n").filter(line => line.startsWith("- ["));

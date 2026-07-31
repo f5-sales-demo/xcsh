@@ -33,4 +33,4 @@ signatures: recommended
 
 ---
 
-See https://www.f5.com or email support@f5.com for details.
+See <https://www.f5.com> or email <quinn@example.net> for details.

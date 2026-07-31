@@ -460,8 +460,8 @@ describe("toSkillSummaries", () => {
 	const skill = (name: string, description: string): Skill => ({
 		name,
 		description,
-		filePath: `/Users/someone/private/skills/${name}/SKILL.md`,
-		baseDir: "/Users/someone/private/skills",
+		filePath: `/Users/example/private/skills/${name}/SKILL.md`,
+		baseDir: "/Users/example/private/skills",
 		source: "native:project",
 		_source: { kind: "project" } as never,
 	});

@@ -26,7 +26,7 @@ import {
 import { substitutePluginRoot } from "./substitute-plugin-root";
 
 const PROVIDER_ID = "xcsh-plugins";
-const DISPLAY_NAME = "xcsh Marketplace";
+const SOURCE_LABEL = "xcsh Marketplace";
 const PRIORITY = 70; // Below claude.ts (80) so user .xcsh/ overrides win
 
 // =============================================================================
@@ -258,7 +258,7 @@ async function loadMCPServers(ctx: LoadContext): Promise<LoadResult<MCPServer>> 
 
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load skills from xcsh marketplace plugins (~/.xcsh/plugins/cache/)",
 	priority: PRIORITY,
 	load: loadSkills,
@@ -266,7 +266,7 @@ registerProvider<Skill>(skillCapability.id, {
 
 registerProvider<SlashCommand>(slashCommandCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load slash commands from xcsh marketplace plugins",
 	priority: PRIORITY,
 	load: loadSlashCommands,
@@ -274,7 +274,7 @@ registerProvider<SlashCommand>(slashCommandCapability.id, {
 
 registerProvider<Hook>(hookCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load hooks from xcsh marketplace plugins",
 	priority: PRIORITY,
 	load: loadHooks,
@@ -282,7 +282,7 @@ registerProvider<Hook>(hookCapability.id, {
 
 registerProvider<CustomTool>(toolCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load custom tools from xcsh marketplace plugins",
 	priority: PRIORITY,
 	load: loadTools,
@@ -290,7 +290,7 @@ registerProvider<CustomTool>(toolCapability.id, {
 
 registerProvider<MCPServer>(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from marketplace plugin .mcp.json files",
 	priority: PRIORITY,
 	load: loadMCPServers,

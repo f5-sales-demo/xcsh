@@ -160,7 +160,7 @@ function buildCodexHeaders(options: CodexModelDiscoveryOptions): Headers {
 	const headers = new Headers(options.headers);
 	headers.set("Authorization", `Bearer ${options.accessToken}`);
 	if (options.accountId && options.accountId.trim().length > 0) {
-		headers.set(OPENAI_HEADERS.ACCOUNT_ID, options.accountId);
+		headers.set(OPENAI_HEADERS.ACCOUNT_ID_HEADER, options.accountId);
 	}
 	headers.set(OPENAI_HEADERS.BETA, OPENAI_HEADER_VALUES.BETA_RESPONSES);
 	headers.set(OPENAI_HEADERS.ORIGINATOR, OPENAI_HEADER_VALUES.ORIGINATOR_CODEX);

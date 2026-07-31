@@ -19,7 +19,7 @@ describe("PI_CONFIG_DIR", () => {
 		process.env.PI_CONFIG_DIR = ".config/xcsh";
 		const ctx: LoadContext = {
 			cwd: "/work/project",
-			home: "/home/tester",
+			home: "/home/example",
 			repoRoot: null,
 		};
 

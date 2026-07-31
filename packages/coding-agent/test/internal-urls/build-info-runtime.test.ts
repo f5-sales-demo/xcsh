@@ -329,8 +329,6 @@ describe("renderAboutDoc", () => {
 		expect(md).toContain("slash commands");
 		// SE specialization layer (must not be omitted)
 		expect(md).toContain("F5 XC API integration");
-		expect(md).toContain("xcsh://user");
-		expect(md).toContain("xcsh://computer");
 		expect(md).toContain("deal-analyst");
 		expect(md).toContain("api-catalog");
 	});

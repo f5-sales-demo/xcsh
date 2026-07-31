@@ -35,7 +35,6 @@ import type { ModelRegistry } from "../../config/model-registry";
 import type { EditToolDetails } from "../../edit";
 import type { BashResult } from "../../exec/bash-executor";
 import type { ExecOptions, ExecResult } from "../../exec/exec";
-import type { ProfileCollector } from "../../internal-urls/profile-collectors";
 import type { PythonResult } from "../../ipy/executor";
 import type { Theme } from "../../modes/theme/theme";
 import type { CompactionPreparation, CompactionResult } from "../../session/compaction";
@@ -1105,9 +1104,6 @@ export interface ExtensionAPI {
 
 	/** Register a service status check for the welcome screen. */
 	registerServiceStatus(contribution: ServiceStatusContribution): void;
-
-	/** Register a profile collector that pushes discovered person-data to the user profile. */
-	registerProfileCollector(collector: ProfileCollector): void;
 
 	// =========================================================================
 	// Actions

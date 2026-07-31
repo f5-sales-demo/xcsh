@@ -5,7 +5,7 @@ describe("Python gateway environment filtering", () => {
 	it("filters sensitive and unknown variables from shell env", () => {
 		const env: Record<string, string | undefined> = {
 			PATH: "/bin",
-			HOME: "/home/test",
+			HOME: "/home/example",
 			OPENAI_API_KEY: "secret",
 			ANTHROPIC_API_KEY: "also-secret",
 			UNSAFE_TOKEN: "nope",
@@ -16,7 +16,7 @@ describe("Python gateway environment filtering", () => {
 		const filtered = filterEnv(env);
 
 		expect(filtered.PATH).toBe("/bin");
-		expect(filtered.HOME).toBe("/home/test");
+		expect(filtered.HOME).toBe("/home/example");
 		expect(filtered.PI_CUSTOM).toBe("1");
 		expect(filtered.LC_ALL).toBe("en_US.UTF-8");
 		expect(filtered.OPENAI_API_KEY).toBeUndefined();
@@ -26,7 +26,7 @@ describe("Python gateway environment filtering", () => {
 
 	it("preserves XDG and LC prefixed variables", () => {
 		const env: Record<string, string | undefined> = {
-			XDG_CONFIG_HOME: "/home/test/.config",
+			XDG_CONFIG_HOME: "/home/example/.config",
 			XDG_RUNTIME_DIR: "/run/user/1000",
 			LC_CTYPE: "UTF-8",
 			LC_MESSAGES: "en_US.UTF-8",
@@ -34,7 +34,7 @@ describe("Python gateway environment filtering", () => {
 
 		const filtered = filterEnv(env);
 
-		expect(filtered.XDG_CONFIG_HOME).toBe("/home/test/.config");
+		expect(filtered.XDG_CONFIG_HOME).toBe("/home/example/.config");
 		expect(filtered.XDG_RUNTIME_DIR).toBe("/run/user/1000");
 		expect(filtered.LC_CTYPE).toBe("UTF-8");
 		expect(filtered.LC_MESSAGES).toBe("en_US.UTF-8");
@@ -43,7 +43,7 @@ describe("Python gateway environment filtering", () => {
 	it("passes filtered env through to resolved runtime", () => {
 		const env: Record<string, string | undefined> = {
 			PATH: "/usr/bin",
-			HOME: "/home/test",
+			HOME: "/home/example",
 			OPENAI_API_KEY: "secret",
 			PI_DEBUG: "1",
 		};

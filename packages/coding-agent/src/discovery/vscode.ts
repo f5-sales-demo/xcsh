@@ -12,7 +12,7 @@ import type { LoadContext, LoadResult } from "../capability/types";
 import { createSourceMeta, expandEnvVarsDeep, getProjectPath } from "./helpers";
 
 const PROVIDER_ID = "vscode";
-const DISPLAY_NAME = "VS Code";
+const SOURCE_LABEL = "VS Code";
 const PRIORITY = 20;
 
 // =============================================================================
@@ -21,7 +21,7 @@ const PRIORITY = 20;
 
 registerProvider<MCPServer>(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from .vscode/mcp.json",
 	priority: PRIORITY,
 	async load(ctx: LoadContext): Promise<LoadResult<MCPServer>> {

@@ -692,10 +692,10 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
 	expect(fs.existsSync(sock)).toBe(true);
 
-	await send({ type: "provision", sessionId: "tab-iso", tenant: "isolate|staging" });
+	await send({ type: "provision", sessionId: "tab-iso", tenant: "example-isolate|staging" });
 
 	// The worker must advertise the PROVISIONED tenant, not the ambient apiUrl's.
-	const port = await findTenant("isolate", 80);
+	const port = await findTenant("example-isolate", 80);
 	expect(port).not.toBeNull();
 	const leaked = await findTenant("leaktenant", 4);
 	expect(leaked).toBeNull();
@@ -710,7 +710,7 @@ test("a provision frame split across two TCP writes is still parsed (NDJSON buff
 	// so the manager's data handler sees the frame across two separate reads.
 	// Without a per-connection buffer, neither half is valid JSON and the command
 	// is silently dropped → no worker ever comes up.
-	const frame = `${JSON.stringify({ type: "provision", sessionId: "tab-split", tenant: "split|staging" })}\n`;
+	const frame = `${JSON.stringify({ type: "provision", sessionId: "tab-split", tenant: "example-split|staging" })}\n`;
 	const cut = Math.floor(frame.length / 2);
 	const c = await Bun.connect({ unix: sock, socket: { data() {} } });
 	c.write(frame.slice(0, cut));
@@ -719,7 +719,7 @@ test("a provision frame split across two TCP writes is still parsed (NDJSON buff
 	await Bun.sleep(50);
 	c.end();
 
-	const port = await findTenant("split", 80);
+	const port = await findTenant("example-split", 80);
 	expect(port).not.toBeNull();
 
 	await send({ type: "release", sessionId: "tab-split" });
@@ -728,8 +728,8 @@ test("a provision frame split across two TCP writes is still parsed (NDJSON buff
 test("a worker that dies out of band is reconciled so the next provision respawns", async () => {
 	await startManager();
 
-	await send({ type: "provision", sessionId: "tab-revive", tenant: "revive|staging" });
-	const first = await findTenant("revive", 80);
+	await send({ type: "provision", sessionId: "tab-revive", tenant: "example-revive|staging" });
+	const first = await findTenant("example-revive", 80);
 	expect(first).not.toBeNull();
 
 	// Kill the worker OUT OF BAND (not via release) by discovering its pid from
@@ -756,8 +756,8 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 
 	// Re-provision the SAME tenant. Only possible to come back up if needsProvision
 	// flipped true — i.e. the dead worker was reconciled out of the registry.
-	await send({ type: "provision", sessionId: "tab-revive", tenant: "revive|staging" });
-	const second = await findTenant("revive", 80);
+	await send({ type: "provision", sessionId: "tab-revive", tenant: "example-revive|staging" });
+	const second = await findTenant("example-revive", 80);
 	expect(second).not.toBeNull();
 
 	await send({ type: "release", sessionId: "tab-revive" });
@@ -766,8 +766,8 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 test("a second manager on the same socket detects the live first and self-exits without orphaning it", async () => {
 	// Manager A binds the socket and brings up a live worker.
 	await startManager();
-	await send({ type: "provision", sessionId: "tab-solo", tenant: "solo|a" });
-	const portA = await findTenant("solo", 80);
+	await send({ type: "provision", sessionId: "tab-solo", tenant: "example-solo|staging" });
+	const portA = await findTenant("example-solo", 80);
 	expect(portA).not.toBeNull();
 
 	// Manager B cold-starts on the SAME socket. Its bind collides; it must probe,
@@ -790,13 +790,13 @@ test("a second manager on the same socket detects the live first and self-exits 
 
 	// A is UNHARMED: its socket still accepts control frames and still spawns
 	// workers — provision a different tenant and confirm a new worker appears.
-	await send({ type: "provision", sessionId: "tab-twin", tenant: "twin|a" });
-	const portTwin = await findTenant("twin", 80);
+	await send({ type: "provision", sessionId: "tab-twin", tenant: "example-twin|staging" });
+	const portTwin = await findTenant("example-twin", 80);
 	expect(portTwin).not.toBeNull();
 
 	// And A never lost its original socket: the first worker is still reachable.
 	const ackSolo = await probe(portA as number);
-	expect(ackSolo.tenant).toBe("solo");
+	expect(ackSolo.tenant).toBe("example-solo");
 
 	await send({ type: "release", sessionId: "tab-solo" });
 	await send({ type: "release", sessionId: "tab-twin" });
@@ -831,8 +831,8 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 	expect(outcome).toBe("alive");
 
 	// And it actually works: provision spawns a real worker.
-	await send({ type: "provision", sessionId: "tab-stale", tenant: "stale|staging" });
-	const port = await findTenant("stale", 80);
+	await send({ type: "provision", sessionId: "tab-stale", tenant: "example-stale|staging" });
+	const port = await findTenant("example-stale", 80);
 	expect(port).not.toBeNull();
 	await send({ type: "release", sessionId: "tab-stale" });
 }, 60_000);

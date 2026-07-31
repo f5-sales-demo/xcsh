@@ -50,7 +50,7 @@ describe("parseControlMsg", () => {
 	test("rejects junk / missing fields / bad tenant", () => {
 		expect(parseControlMsg({ type: "provision", sessionId: "tab-7" })).toBeNull(); // no tenant
 		expect(parseControlMsg({ type: "provision", tenant: "example-corp|staging" })).toBeNull(); // no sessionId
-		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "no-pipe" })).toBeNull();
+		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "example-no-pipe" })).toBeNull();
 		expect(parseControlMsg({ type: "release" })).toBeNull();
 		expect(parseControlMsg({ type: "nope", sessionId: "tab-7" })).toBeNull();
 		expect(parseControlMsg(null)).toBeNull();
@@ -98,7 +98,7 @@ describe("manager state file round-trip", () => {
 	const s: ManagerState = {
 		pid: 4242,
 		version: "19.58.1",
-		socket: "/home/u/.xcsh/manager.sock",
+		socket: "/home/example/.xcsh/manager.sock",
 		startedAt: 1_700_000,
 	};
 	it("serialize → parse is identity", () => {

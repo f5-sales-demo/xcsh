@@ -857,7 +857,7 @@ async function requestOpenAiRemoteCompaction(
 	if (model.provider === "openai-codex") {
 		const accountId = getCodexAccountId(apiKey);
 		if (accountId) {
-			headers[OPENAI_HEADERS.ACCOUNT_ID] = accountId;
+			headers[OPENAI_HEADERS.ACCOUNT_ID_HEADER] = accountId;
 		}
 		headers[OPENAI_HEADERS.BETA] = OPENAI_HEADER_VALUES.BETA_RESPONSES;
 		headers[OPENAI_HEADERS.ORIGINATOR] = OPENAI_HEADER_VALUES.ORIGINATOR_CODEX;

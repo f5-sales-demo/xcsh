@@ -104,7 +104,7 @@ describe("ContextService knowledge sources", () => {
 		await service.loadActive();
 
 		const config = service.getActiveContextSkillConfig();
-		expect(config.skillDirs).toEqual(["/home/test/skills"]);
+		expect(config.skillDirs).toEqual(["/home/example/skills"]);
 		expect(config.includeSkills).toEqual(["xcsh-*"]);
 		expect(config.excludeSkills).toEqual(["deprecated-*"]);
 	});

@@ -13,7 +13,7 @@ import type { LoadContext, LoadResult } from "../capability/types";
 import { buildRuleFromMarkdown, createSourceMeta, loadFilesFromDir } from "./helpers";
 
 const PROVIDER_ID = "cline";
-const DISPLAY_NAME = "Cline";
+const SOURCE_LABEL = "Cline";
 const PRIORITY = 40;
 
 async function findClinerules(startDir: string): Promise<{ path: string; isDir: boolean } | null> {
@@ -76,7 +76,7 @@ async function loadRules(ctx: LoadContext): Promise<LoadResult<Rule>> {
 // Register provider
 registerProvider<Rule>(ruleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load rules from .clinerules (single file or directory)",
 	priority: PRIORITY,
 	load: loadRules,

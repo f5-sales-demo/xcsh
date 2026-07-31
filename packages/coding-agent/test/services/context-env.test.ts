@@ -26,9 +26,9 @@ describe("createContextEnv", () => {
 
 	describe("resolvePath()", () => {
 		it("substitutes explicit params first", () => {
-			const ctx = createContextEnv(makeSettings({ XCSH_NAMESPACE: "env-ns" }));
-			const result = ctx.resolvePath("/api/{namespace}/resources", { namespace: "explicit-ns" });
-			expect(result).toBe("/api/explicit-ns/resources");
+			const ctx = createContextEnv(makeSettings({ XCSH_NAMESPACE: "example-environment" }));
+			const result = ctx.resolvePath("/api/{namespace}/resources", { namespace: "example-explicit" });
+			expect(result).toBe("/api/example-explicit/resources");
 		});
 
 		it("falls back to XCSH_NAMESPACE for {namespace}", () => {

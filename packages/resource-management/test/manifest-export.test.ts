@@ -15,7 +15,7 @@ describe("toManifest", () => {
 				uid: "abc-123",
 				creation_timestamp: "2026-01-01T00:00:00Z",
 				creator_id: "user@example.com",
-				tenant: "my-tenant",
+				tenant: "example-corp",
 			},
 			spec: {
 				domains: ["example.com"],
@@ -41,7 +41,7 @@ describe("toManifest", () => {
 
 	test("strips system_metadata and status", () => {
 		const apiResponse = {
-			metadata: { name: "test", namespace: "ns" },
+			metadata: { name: "test", namespace: "example-namespace" },
 			system_metadata: { uid: "x", creation_timestamp: "2026-01-01T00:00:00Z" },
 			spec: { foo: "bar" },
 			status: { phase: "ready" },
@@ -58,7 +58,7 @@ describe("toManifest", () => {
 		const apiResponse = {
 			metadata: {
 				name: "test",
-				namespace: "ns",
+				namespace: "example-namespace",
 				labels: { a: "b" },
 				annotations: { x: "y" },
 				description: "desc",
@@ -85,7 +85,7 @@ describe("toManifest", () => {
 		const apiResponse = {
 			metadata: {
 				name: "test",
-				namespace: "ns",
+				namespace: "example-namespace",
 				labels: {},
 				annotations: {},
 			},
@@ -94,14 +94,14 @@ describe("toManifest", () => {
 
 		const result = toManifest(apiResponse, "healthcheck");
 
-		expect(result.metadata).toEqual({ name: "test", namespace: "ns" });
+		expect(result.metadata).toEqual({ name: "test", namespace: "example-namespace" });
 	});
 
 	test("omits null and undefined metadata values", () => {
 		const apiResponse = {
 			metadata: {
 				name: "test",
-				namespace: "ns",
+				namespace: "example-namespace",
 				description: null,
 				disable: undefined,
 			},
@@ -110,11 +110,11 @@ describe("toManifest", () => {
 
 		const result = toManifest(apiResponse, "origin_pool");
 
-		expect(result.metadata).toEqual({ name: "test", namespace: "ns" });
+		expect(result.metadata).toEqual({ name: "test", namespace: "example-namespace" });
 	});
 
 	test("handles empty spec", () => {
-		const result = toManifest({ metadata: { name: "x", namespace: "y" }, spec: {} }, "app_firewall");
+		const result = toManifest({ metadata: { name: "x", namespace: "example-namespace" }, spec: {} }, "app_firewall");
 		expect(result.spec).toEqual({});
 	});
 
@@ -127,7 +127,7 @@ describe("toManifest", () => {
 
 	test("preserves full spec including server-added defaults", () => {
 		const apiResponse = {
-			metadata: { name: "fw", namespace: "ns" },
+			metadata: { name: "fw", namespace: "example-namespace" },
 			spec: {
 				user_field: "value",
 				monitoring: {},
@@ -149,8 +149,8 @@ describe("toManifestList", () => {
 	test("transforms list response items", () => {
 		const listResponse = {
 			items: [
-				{ metadata: { name: "a", namespace: "ns" }, spec: { x: 1 } },
-				{ metadata: { name: "b", namespace: "ns" }, spec: { y: 2 } },
+				{ metadata: { name: "a", namespace: "example-namespace" }, spec: { x: 1 } },
+				{ metadata: { name: "b", namespace: "example-namespace" }, spec: { y: 2 } },
 			],
 		};
 
@@ -158,8 +158,8 @@ describe("toManifestList", () => {
 
 		expect(result).toHaveLength(2);
 		expect(result[0].kind).toBe("origin_pool");
-		expect(result[0].metadata).toEqual({ name: "a", namespace: "ns" });
-		expect(result[1].metadata).toEqual({ name: "b", namespace: "ns" });
+		expect(result[0].metadata).toEqual({ name: "a", namespace: "example-namespace" });
+		expect(result[1].metadata).toEqual({ name: "b", namespace: "example-namespace" });
 	});
 
 	test("returns empty array for empty list", () => {
@@ -174,7 +174,7 @@ describe("toManifestList", () => {
 		const listResponse = {
 			items: [
 				{
-					metadata: { name: "a", namespace: "ns" },
+					metadata: { name: "a", namespace: "example-namespace" },
 					system_metadata: { uid: "x" },
 					spec: {},
 					status: {},
@@ -366,7 +366,7 @@ describe("applyMinimalExportFilter", () => {
 
 	test("toManifest with filter produces minimal output", () => {
 		const apiResponse = {
-			metadata: { name: "fw", namespace: "ns" },
+			metadata: { name: "fw", namespace: "example-namespace" },
 			spec: {
 				user_field: "value",
 				monitoring: {},

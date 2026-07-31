@@ -12,7 +12,7 @@ import {
 
 describe("acquire helpers", () => {
 	it("dedicatedProfileDir is under ~/.xcsh", () => {
-		expect(dedicatedProfileDir("/home/u")).toBe("/home/u/.xcsh/chrome-profile");
+		expect(dedicatedProfileDir("/home/example")).toBe("/home/example/.xcsh/chrome-profile");
 	});
 
 	it("buildLaunchArgs includes the debug port and hygiene flags", () => {
@@ -24,8 +24,8 @@ describe("acquire helpers", () => {
 	});
 
 	it("buildLaunchArgs adds --user-data-dir when a profileDir is given", () => {
-		const args = buildLaunchArgs({ debugPort: 9333, profileDir: "/home/u/.xcsh/chrome-profile" });
-		expect(args).toContain("--user-data-dir=/home/u/.xcsh/chrome-profile");
+		const args = buildLaunchArgs({ debugPort: 9333, profileDir: "/home/example/.xcsh/chrome-profile" });
+		expect(args).toContain("--user-data-dir=/home/example/.xcsh/chrome-profile");
 		expect(args).toContain("--remote-debugging-port=9333");
 	});
 
@@ -36,26 +36,28 @@ describe("acquire helpers", () => {
 		// Puppeteer's message when an explicit --user-data-dir is held by a running browser.
 		expect(
 			isProfileLockError(
-				"The browser is already running for /Users/u/Library/Application Support/Google/Chrome. Use a different `userDataDir` or stop the running browser first.",
+				"The browser is already running for /Users/example/Library/Application Support/Google/Chrome. Use a different `userDataDir` or stop the running browser first.",
 			),
 		).toBe(true);
 		expect(isProfileLockError("some unrelated error")).toBe(false);
 	});
 
 	it("defaultProfileDir resolves the macOS default profile", () => {
-		expect(defaultProfileDir({ platform: "darwin", home: "/Users/u" })).toBe(
-			"/Users/u/Library/Application Support/Google/Chrome",
+		expect(defaultProfileDir({ platform: "darwin", home: "/Users/example" })).toBe(
+			"/Users/example/Library/Application Support/Google/Chrome",
 		);
 	});
 
 	it("defaultProfileDir resolves the Linux default profile", () => {
-		expect(defaultProfileDir({ platform: "linux", home: "/home/u" })).toBe("/home/u/.config/google-chrome");
+		expect(defaultProfileDir({ platform: "linux", home: "/home/example" })).toBe(
+			"/home/example/.config/google-chrome",
+		);
 	});
 
 	it("defaultProfileDir resolves the Windows default profile from LOCALAPPDATA", () => {
-		expect(defaultProfileDir({ platform: "win32", env: { LOCALAPPDATA: "C:\\Users\\u\\AppData\\Local" } })).toBe(
-			path.join("C:\\Users\\u\\AppData\\Local", "Google", "Chrome", "User Data"),
-		);
+		expect(
+			defaultProfileDir({ platform: "win32", env: { LOCALAPPDATA: "C:\\Users\\example\\AppData\\Local" } }),
+		).toBe(path.join("C:\\Users\\example\\AppData\\Local", "Google", "Chrome", "User Data"));
 	});
 
 	it("defaultProfileDir returns null for unsupported platforms", () => {

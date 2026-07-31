@@ -119,7 +119,4 @@ if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
 	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
 }
 
-const { discoverAndApplyLanguage } = await import("./discovery/language");
-await discoverAndApplyLanguage();
-
 await runCli(process.argv.slice(2));

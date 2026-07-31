@@ -118,14 +118,14 @@ describe("pickBridge()", () => {
 
 	it("(3) filters by tenant when opts.tenant is specified", () => {
 		const a = makeBridge({ port: 19222, tenant: "example-corp" });
-		const b = makeBridge({ port: 19223, tenant: "other" });
+		const b = makeBridge({ port: 19223, tenant: "example-other" });
 		const result = pickBridge([a, b], { tenant: "example-corp" });
 		expect(result?.port).toBe(19222);
 	});
 
 	it("(4) returns undefined when tenant filter matches nothing", () => {
 		const a = makeBridge({ port: 19222, tenant: "example-corp" });
-		expect(pickBridge([a], { tenant: "nobody" })).toBeUndefined();
+		expect(pickBridge([a], { tenant: "example-nobody" })).toBeUndefined();
 	});
 
 	it("(5) prefers contextBound=true over false by default (even with older lastSeen)", () => {
@@ -150,16 +150,16 @@ describe("pickBridge()", () => {
 	});
 
 	it("(8) respects tenant filter and contextBound preference together", () => {
-		const a = makeBridge({ port: 19222, tenant: "x", contextBound: false, lastSeen: 999 });
-		const b = makeBridge({ port: 19223, tenant: "x", contextBound: true, lastSeen: 1 });
-		const c = makeBridge({ port: 19224, tenant: "y", contextBound: true, lastSeen: 9999 });
-		const result = pickBridge([a, b, c], { tenant: "x" });
+		const a = makeBridge({ port: 19222, tenant: "example-alpha", contextBound: false, lastSeen: 999 });
+		const b = makeBridge({ port: 19223, tenant: "example-alpha", contextBound: true, lastSeen: 1 });
+		const c = makeBridge({ port: 19224, tenant: "example-beta", contextBound: true, lastSeen: 9999 });
+		const result = pickBridge([a, b, c], { tenant: "example-alpha" });
 		expect(result?.port).toBe(19223); // b: tenant=x + contextBound=true; c excluded
 	});
 
 	it("(9) null tenant filter includes bridges with null tenant", () => {
 		const nullTenant = makeBridge({ port: 19222, tenant: null });
-		const named = makeBridge({ port: 19223, tenant: "foo" });
+		const named = makeBridge({ port: 19223, tenant: "example-named" });
 		const result = pickBridge([nullTenant, named], { tenant: null });
 		expect(result?.port).toBe(19222);
 	});
