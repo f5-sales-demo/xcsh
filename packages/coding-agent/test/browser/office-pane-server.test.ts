@@ -13,6 +13,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	handleAssetRequest,
+	isCompletePane,
+	manifestAssetPaths,
+	missingPaneFiles,
 	paneSourceForLayout,
 	paneUnavailableMessage,
 	resolvePaneDir,
@@ -140,6 +143,77 @@ describe("refusing when no pane bundle is available", () => {
 		} finally {
 			rmSync(noBundle, { recursive: true, force: true });
 		}
+	});
+
+	/**
+	 * The icons are not cosmetic, which is what an earlier version of this guard assumed.
+	 *
+	 * `office sideload` shells out to office-addin-debugging, whose zip step fails outright on a
+	 * missing `assets/color.png` — the comment in runSideload records exactly that. And the build
+	 * copies `assets/` AFTER manifest.json, so an interruption between the two leaves every other
+	 * required file in place. Worse, runSideload removes the existing WEF manifest links first, so the
+	 * failure lands after the working registration has already been deleted.
+	 *
+	 * The required assets are read out of the manifest rather than listed here, so adding an icon to
+	 * the manifest cannot leave this check behind.
+	 */
+	it("refuses a dist whose manifest references icons that were never copied", async () => {
+		const noIcons = mkdtempSync(join(tmpdir(), "office-pane-noicons-"));
+		try {
+			await writeFile(join(noIcons, "taskpane.html"), "<!DOCTYPE html>");
+			await writeFile(join(noIcons, "taskpane.js"), "console.log(1);");
+			await writeFile(
+				join(noIcons, "manifest.json"),
+				JSON.stringify({ icons: ["assets/color.png", "assets/outline.png"] }),
+			);
+			await expect(resolvePaneDir(noIcons, "dev")).rejects.toThrow(/assets\/color\.png/);
+		} finally {
+			rmSync(noIcons, { recursive: true, force: true });
+		}
+	});
+
+	it("accepts a dist whose manifest references only assets that are present", async () => {
+		const complete = mkdtempSync(join(tmpdir(), "office-pane-complete-"));
+		try {
+			await mkdir(join(complete, "assets"), { recursive: true });
+			await writeFile(join(complete, "taskpane.html"), "<!DOCTYPE html>");
+			await writeFile(join(complete, "taskpane.js"), "console.log(1);");
+			await writeFile(join(complete, "assets", "color.png"), "png");
+			await writeFile(join(complete, "manifest.json"), JSON.stringify({ icons: ["assets/color.png"] }));
+			expect(await resolvePaneDir(complete, "dev")).toBe(complete);
+		} finally {
+			rmSync(complete, { recursive: true, force: true });
+		}
+	});
+
+	/**
+	 * The predicate the compiled cache reuses. Its old form was `taskpane.html` alone, so an extraction
+	 * interrupted after the page but before its bundle produced a hash-addressed directory that every
+	 * later run accepted — serving a pane whose JS 404s until somebody deleted a temp directory they had
+	 * no reason to suspect. A compiled run cannot be exercised from here, but this is what it consults.
+	 */
+	it("does not call a half-extracted bundle complete", async () => {
+		const partial = mkdtempSync(join(tmpdir(), "office-pane-partial-"));
+		try {
+			await writeFile(join(partial, "taskpane.html"), "<!DOCTYPE html>");
+			expect(await isCompletePane(partial)).toBe(false);
+			expect(await missingPaneFiles(partial)).toContain("taskpane.js");
+		} finally {
+			rmSync(partial, { recursive: true, force: true });
+		}
+	});
+
+	it("calls the real built pane complete", async () => {
+		// `dir` is the fully-populated fixture this file builds in beforeAll.
+		expect(await isCompletePane(dir)).toBe(true);
+		expect(await missingPaneFiles(dir)).toEqual([]);
+	});
+
+	it("reads both manifest URL forms as the same dist-relative asset", () => {
+		const paths = manifestAssetPaths(
+			JSON.stringify({ a: "assets/color.png", b: "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png" }),
+		);
+		expect(paths).toEqual(["assets/color.png", "assets/icon-16.png"]);
 	});
 
 	it("refuses a directory with no taskpane.html, naming it", async () => {

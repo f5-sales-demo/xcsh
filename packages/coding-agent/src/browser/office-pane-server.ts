@@ -48,16 +48,32 @@ const DEV_PACKAGE_DIR = path.dirname(DEV_DIST_DIR);
 const COMPILED_DIR_ROOT = path.join(os.tmpdir(), "xcsh-office-pane");
 
 /**
- * What a directory must contain to be a usable pane — everything the commands consume.
+ * The files a usable pane must have regardless of what its manifest says.
  *
  * Not one marker. The build writes `taskpane.html` first and `manifest.json` three steps later, so a
  * single marker accepts an interrupted build: `serve` would answer the page, then `manifest` and
- * `sideload` would fail with the same ENOENT this check exists to replace. Each entry is here because
- * a command needs it — the page and its bundle for `serve`, the manifest for `manifest` and `sideload`.
- * Fonts and icons are deliberately absent: missing them is cosmetic, and refusing the whole pane over
- * a typeface would be its own kind of dishonesty.
+ * `sideload` would fail with the same ENOENT this check exists to replace.
  */
 const PANE_REQUIRED_FILES = ["taskpane.html", "taskpane.js", "manifest.json"] as const;
+
+/**
+ * The assets a manifest says it needs, as dist-relative paths.
+ *
+ * Read out of the manifest rather than listed in this file, so adding an icon there cannot leave this
+ * check behind — the same "one map, or the copies drift" rule the rest of the pane follows.
+ *
+ * They are NOT cosmetic, which an earlier version of this guard assumed by grouping them with the
+ * fonts. `office sideload` shells out to office-addin-debugging, whose zip step fails outright on a
+ * missing `assets/color.png`; the comment in `runSideload` records exactly that. Since the build copies
+ * `assets/` after `manifest.json`, an interruption between the two leaves every other required file in
+ * place — and `runSideload` deletes the existing WEF registration before it discovers the problem.
+ *
+ * The manifest carries both forms, `assets/color.png` and an absolute `…:8444/assets/icon-16.png`, and
+ * both normalise to the same dist-relative path.
+ */
+export function manifestAssetPaths(manifestText: string): string[] {
+	return [...new Set(manifestText.match(/assets\/[\w.-]+/g) ?? [])];
+}
 
 /** Which supply route was expected to provide the pane, and therefore what the remedy is. */
 export type PaneSource = "compiled" | "dev" | "packaged";
@@ -154,6 +170,27 @@ export function paneSourceForLayout(officePanePackagePresent: boolean): PaneSour
 	return officePanePackagePresent ? "dev" : "packaged";
 }
 
+/** Which of the files a usable pane needs are absent from `dir`. Empty means complete. */
+export async function missingPaneFiles(dir: string): Promise<string[]> {
+	const missing: string[] = [];
+	for (const name of PANE_REQUIRED_FILES) {
+		if (!(await Bun.file(path.join(dir, name)).exists())) missing.push(name);
+	}
+	// Only worth asking once the manifest is there to be read.
+	if (!missing.includes("manifest.json")) {
+		const manifestText = await Bun.file(path.join(dir, "manifest.json")).text();
+		for (const asset of manifestAssetPaths(manifestText)) {
+			if (!(await Bun.file(path.join(dir, asset)).exists())) missing.push(asset);
+		}
+	}
+	return missing;
+}
+
+/** True when `dir` holds every file a pane needs. */
+export async function isCompletePane(dir: string): Promise<boolean> {
+	return (await missingPaneFiles(dir)).length === 0;
+}
+
 /**
  * Return `dir` only if it actually holds a built pane, else refuse with {@link paneUnavailableMessage}.
  *
@@ -162,10 +199,7 @@ export function paneSourceForLayout(officePanePackagePresent: boolean): PaneSour
  * Serving nothing quietly is the failure this exists to prevent.
  */
 export async function resolvePaneDir(dir: string, source: PaneSource): Promise<string> {
-	const missing: string[] = [];
-	for (const name of PANE_REQUIRED_FILES) {
-		if (!(await Bun.file(path.join(dir, name)).exists())) missing.push(name);
-	}
+	const missing = await missingPaneFiles(dir);
 	if (missing.length === 0) return dir;
 	// Name what is absent. "The pane is missing" sends someone looking at the whole directory; "no
 	// manifest.json" points at the step of the build that did not finish.
@@ -194,15 +228,21 @@ export async function getOfficePaneDir(): Promise<string> {
 	compiledDirPromise = (async () => {
 		const bundleHash = Bun.hash(archiveBytes).toString(16);
 		const outputDir = path.join(COMPILED_DIR_ROOT, bundleHash);
-		const markerPath = path.join(outputDir, "taskpane.html");
-		try {
-			if ((await fs.stat(markerPath)).isFile()) return outputDir;
-		} catch {}
+		// A cached extraction is reused only if it is COMPLETE. The old check was `taskpane.html` alone,
+		// so an extraction interrupted after the page but before its bundle left a hash-addressed
+		// directory that every later run accepted — superseding a working server to serve a pane whose
+		// JS 404s, until somebody deleted a temp directory they had no reason to suspect.
+		//
+		// Incomplete is not fatal here, unlike in the dev case: the archive is in hand, so the remedy is
+		// to extract it again rather than to tell anyone anything.
+		if (await isCompletePane(outputDir)) return outputDir;
 
 		await fs.rm(outputDir, { recursive: true, force: true });
 		await fs.mkdir(outputDir, { recursive: true });
 		await extractEmbeddedArchive(archiveBytes, outputDir);
-		return outputDir;
+		// Still incomplete after a fresh extraction means the baked archive is itself short, which no
+		// amount of retrying fixes. Refuse rather than serve a pane with holes in it.
+		return resolvePaneDir(outputDir, "compiled");
 	})();
 
 	return compiledDirPromise;
