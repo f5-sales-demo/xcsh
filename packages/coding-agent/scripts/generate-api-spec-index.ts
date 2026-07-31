@@ -97,6 +97,22 @@ const REPO = "f5-sales-demo/api-specs-enriched";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 const catalogOutputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-catalog-index.generated.ts");
 
+/** Domains reserved for documentation by RFC 2606 / RFC 6761. */
+const RESERVED_EMAIL_DOMAINS = new Set(["example.com", "example.net", "example.org"]);
+
+/**
+ * Upstream specs illustrate contact fields with addresses at real domains — `gmail.com`, `f5.com`,
+ * `company.com`. At least one is a real person's work address rather than a placeholder, and
+ * STYLE_GUIDE.md allows only a placeholder name at a reserved domain. Replace the whole address, not
+ * just the domain: keeping the local part would keep the person's name (#2659).
+ */
+function sanitizeEmails(text: string): string {
+	// The lookbehind skips URL userinfo (`https://token:secret@host`), which is not a contact address.
+	return text.replace(/(?<![:/])\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/g, (whole, domain) =>
+		RESERVED_EMAIL_DOMAINS.has(String(domain).toLowerCase()) ? whole : "dana@example.com",
+	);
+}
+
 /**
  * Upstream specs use ACME as a placeholder tenant, company and hostname. STYLE_GUIDE.md bans it:
  * it is not trademark-cleared, and in TLS content the name already belongs to RFC 8555. Rewrite it
@@ -571,7 +587,7 @@ const output = [
 	.filter(l => l !== undefined)
 	.join("\n");
 
-await Bun.write(outputPath, sanitizePlaceholders(output));
+await Bun.write(outputPath, sanitizeEmails(sanitizePlaceholders(output)));
 
 const outputSize = (Buffer.byteLength(output) / 1024 / 1024).toFixed(1);
 console.log(
@@ -615,7 +631,7 @@ if (catalog) {
 		"",
 	].join("\n");
 
-	await Bun.write(catalogOutputPath, sanitizePlaceholders(catalogOutput));
+	await Bun.write(catalogOutputPath, sanitizeEmails(sanitizePlaceholders(catalogOutput)));
 	const catalogSize = (Buffer.byteLength(catalogOutput) / 1024 / 1024).toFixed(1);
 	console.log(
 		`Generated ${path.relative(process.cwd(), catalogOutputPath)} (${categories.length} categories, ${catalogSize} MB)`,
