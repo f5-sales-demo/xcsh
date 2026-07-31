@@ -85,13 +85,27 @@ describe("system prompt workspace boundary", () => {
 		expect(flat()).toMatch(/not the same as it being in scope/i);
 	});
 
-	// Guards the non-goal. Work that genuinely spans two subdirectories must stay
-	// possible; the requirement is that the crossing be deliberate and stated. This
-	// fails if a later edit quietly turns the block into a lockdown.
-	it("does not forbid cross-customer work outright", () => {
-		expect(flat()).not.toMatch(/MUST NOT (read|access|open|touch) (another|other|a different)/i);
+	// #2643 review round 2, confirmed. "Work in the one the task names" is guidance,
+	// not a rule, so the only MUST NOT covered merging — leaving an agent free to read
+	// a neighbouring tenant's secrets for "precedent" without breaking anything
+	// explicit. That accidental context loading is the whole reason this block exists.
+	//
+	// The rule is scoped to TENANTS and conditioned on the task, which is what keeps it
+	// a useful control rather than a filesystem-wide prohibition: it says nothing about
+	// the paths the fence deliberately leaves open.
+	it("forbids opening another tenant only when the task did not ask", () => {
+		expect(flat()).toMatch(/MUST NOT\*{0,2} open another tenant/i);
+		expect(flat()).toMatch(/the task did not ask/i);
+	});
+
+	// Guards the non-goal. Work that genuinely spans two tenants must stay possible;
+	// the requirement is that the crossing be deliberate and stated. A MUST NOT about
+	// opening another tenant is acceptable ONLY while that permission survives beside
+	// it, so this guards the permission rather than pattern-matching the prohibition.
+	it("does not forbid cross-tenant work outright", () => {
 		expect(flat()).toMatch(/say so when the task genuinely spans more than one/i);
 		expect(flat()).toMatch(/MUST NOT\*{0,2} merge two tenants/i);
+		expect(flat()).not.toMatch(/MUST NOT\*{0,2} (work|operate|act) across/i);
 	});
 
 	// #2643. The block must not re-impose at the prompt layer what the fence
