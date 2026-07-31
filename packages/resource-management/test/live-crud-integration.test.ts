@@ -1,7 +1,7 @@
 /**
  * Live CRUD integration tests against real F5 XC API.
  *
- * Reads credentials from ~/.config/xcsh/contexts/nferreira.json (active context).
+ * Reads credentials from ~/.config/xcsh/contexts/example.json (active context).
  * Creates test resources with unique names, runs full CRUD cycle, then cleans up.
  *
  * Run: XCSH_LIVE_TEST=1 bun test test/live-crud-integration.test.ts
@@ -32,7 +32,7 @@ interface ContextConfig {
 
 function loadContext(): ContextConfig {
 	const configDir = path.join(os.homedir(), ".config", "xcsh", "contexts");
-	const ctxFile = path.join(configDir, "nferreira.json");
+	const ctxFile = path.join(configDir, "example.json");
 	if (!fs.existsSync(ctxFile)) {
 		throw new Error(`Context file not found: ${ctxFile}`);
 	}

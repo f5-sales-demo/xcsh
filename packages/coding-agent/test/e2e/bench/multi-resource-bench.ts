@@ -17,9 +17,9 @@
  * window opens — click the xcsh toolbar icon to open the panel.
  *
  * Run:
- *   XCSH_STAGING_API_URL=https://nferreira.staging.volterra.us \
+ *   XCSH_STAGING_API_URL=https://example.staging.volterra.us \
  *   XCSH_STAGING_API_TOKEN=<token> \
- *   XCSH_STAGING_USERNAME=r.mordasiewicz@f5.com \
+ *   XCSH_STAGING_USERNAME=dana@example.com \
  *   XCSH_STAGING_PASSWORD=<pw> \
  *   bun test/e2e/bench/multi-resource-bench.ts [--runs 3] [--only workflow_directed]
  *        [--out results.json] [--check] [--update-baseline] [--gate-resources]
@@ -101,7 +101,7 @@ const API_URL = process.env.XCSH_STAGING_API_URL;
 const API_TOKEN = process.env.XCSH_STAGING_API_TOKEN;
 const USERNAME = process.env.XCSH_STAGING_USERNAME;
 const PASSWORD = process.env.XCSH_STAGING_PASSWORD;
-const NS = process.env.XCSH_STAGING_NAMESPACE ?? "r-mordasiewicz";
+const NS = process.env.XCSH_STAGING_NAMESPACE ?? "example-corp";
 const CONSOLE_URL =
 	process.env.XCSH_STAGING_CONSOLE_URL ??
 	`${API_URL}/web/workspaces/web-app-and-api-protection/namespaces/${NS}/manage/load_balancers/http_loadbalancers`;

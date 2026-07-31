@@ -3,7 +3,7 @@
   "backendNodeId": 59,
   "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
   "name": "HTTP Load Balancers - Load Balancers | Web App & API Protection",
-  "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/http_loadbalancers",
+  "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/http_loadbalancers",
   "children": [
     {
       "role": "none",
@@ -58,7 +58,7 @@
                                       "backendNodeId": 217,
                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                       "name": "",
-                                      "url": "https://nferreira.staging.volterra.us/web/home",
+                                      "url": "https://example.staging.volterra.us/web/home",
                                       "children": [
                                         {
                                           "role": "none",
@@ -448,7 +448,7 @@
                                                       "backendNodeId": 261,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "Security",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/overview/security",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/overview/security",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -484,7 +484,7 @@
                                                       "backendNodeId": 264,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "Performance",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/overview/performance",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/overview/performance",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -724,7 +724,7 @@
                                                       "backendNodeId": 286,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "BIG-IP Virtual Servers",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/bigip_virtual_server",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/bigip_virtual_server",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -760,7 +760,7 @@
                                                       "backendNodeId": 289,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "Third-Party Applications EA filters active",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/third_party_application",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/third_party_application",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -857,7 +857,7 @@
                                                       "backendNodeId": 296,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "App Firewall",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/app_firewall",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/app_firewall",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -949,7 +949,7 @@
                                                       "backendNodeId": 304,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "Rate Limiter Policies",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/rate_limiter_policies",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/rate_limiter_policies",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -1097,7 +1097,7 @@
                                                       "backendNodeId": 317,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "Public IP Addresses",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/public_ip",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/public_ip",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -1488,7 +1488,7 @@
                                                       "backendNodeId": 359,
                                                       "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                       "name": "Saved Filters",
-                                                      "url": "https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/saved_filters",
+                                                      "url": "https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/saved_filters",
                                                       "children": [
                                                         {
                                                           "role": "none",
@@ -1874,7 +1874,7 @@
                                                                   "backendNodeId": 398,
                                                                   "loaderId": "3A3EF5F8F0603051607E0E90845DAD7F",
                                                                   "name": "Home",
-                                                                  "url": "https://nferreira.staging.volterra.us/web/home",
+                                                                  "url": "https://example.staging.volterra.us/web/home",
                                                                   "children": [
                                                                     {
                                                                       "role": "StaticText",

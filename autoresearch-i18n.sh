@@ -13,7 +13,7 @@ set -euo pipefail
 
 API_URL="${XCSH_API_URL:-}"
 API_TOKEN="${XCSH_API_TOKEN:-}"
-NS="r-mordasiewicz"
+NS="example-corp"
 PHRASES_FILE="$(dirname "$0")/autoresearch-i18n-phrases.yaml"
 WORK_DIR="/tmp/ar-i18n-$$"
 TF_DEVRC="${TF_CLI_CONFIG_FILE:-}"

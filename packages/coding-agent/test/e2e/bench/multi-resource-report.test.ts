@@ -44,7 +44,7 @@ describe("freePlanPrompt — byte-equal to the extension-panel-e2e multi-resourc
 describe("workflowDirectedPrompt — steers the model to call catalog_workflow_runner", () => {
 	const wf = workflowNames("abc123");
 	const prompt = workflowDirectedPrompt(wf, {
-		namespace: "r-mordasiewicz",
+		namespace: "example-corp",
 		domain: "app.example.com",
 		originServer: "httpbin.org",
 		originPort: 80,

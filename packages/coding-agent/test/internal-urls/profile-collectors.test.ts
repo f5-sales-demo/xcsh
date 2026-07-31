@@ -187,12 +187,12 @@ describe("parseSalesforceUserRecord", () => {
 			Id: "005000000000001",
 			FirstName: "Robin",
 			LastName: "Mordasiewicz",
-			Email: "r.mordasiewicz@f5.com",
+			Email: "dana@example.com",
 			Title: "Solutions Engineer",
 			Department: "Sales",
 			Division: "Americas",
 			CompanyName: "F5",
-			Manager: { Name: "Jane Boss", Email: "jane@f5.com" },
+			Manager: { Name: "Jane Boss", Email: "jane@example.com" },
 			Street: "1 Main St",
 			City: "Toronto",
 			State: "ON",
@@ -205,14 +205,14 @@ describe("parseSalesforceUserRecord", () => {
 
 		expect(p.givenName).toBe("Robin");
 		expect(p.familyName).toBe("Mordasiewicz");
-		expect(p.email).toBe("r.mordasiewicz@f5.com");
+		expect(p.email).toBe("dana@example.com");
 		expect(p.jobTitle).toBe("Solutions Engineer");
 		expect(p.department).toBe("Sales");
 		expect(p.division).toBe("Americas");
 		expect(p.worksFor?.name).toBe("F5");
 		expect(p.manager?.givenName).toBe("Jane");
 		expect(p.manager?.familyName).toBe("Boss");
-		expect(p.manager?.email).toBe("jane@f5.com");
+		expect(p.manager?.email).toBe("jane@example.com");
 		expect(p.address?.addressLocality).toBe("Toronto");
 		expect(p.address?.addressCountry).toBe("Canada");
 		expect(p.telephone).toBe("+1-555-0100");

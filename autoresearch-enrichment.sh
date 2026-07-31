@@ -41,7 +41,7 @@ for resource in ${RESOURCES}; do
   (cd "${API_SPECS_DIR}" && \
     XCSH_API_URL="${XCSH_API_URL}" \
     XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
-    XCSH_NAMESPACE="r-mordasiewicz" \
+    XCSH_NAMESPACE="example-corp" \
     python3 -W ignore -m scripts.discovery.constraint_prober \
       --resource "${resource}" \
       --output "${output_file}" \

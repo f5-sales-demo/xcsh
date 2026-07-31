@@ -20,7 +20,7 @@
 
 ## Constraints
 
-- always clean up ar-test-* resources in namespace r-mordasiewicz after each run
+- always clean up ar-test-* resources in namespace example-corp after each run
 - do not modify constraint_prober.py or validate_curl_examples.py directly
 - when checks fail, stop and fix the upstream repo indicated in triage report
 - requires XCSH_API_URL and XCSH_API_TOKEN in environment

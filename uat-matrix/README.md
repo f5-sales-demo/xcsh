@@ -26,7 +26,7 @@ This is **additive** — it does not modify the `autoresearch/` framework or the
 ## Environment
 
 ```bash
-export XCSH_API_URL="https://nferreira.staging.volterra.us"
+export XCSH_API_URL="https://example.staging.volterra.us"
 export XCSH_API_TOKEN="…"     # API GET verification + cleanup
 export XCSH_USERNAME="…"            # console login
 export XCSH_CONSOLE_PASSWORD="…"
@@ -71,4 +71,4 @@ measure raw router accuracy), `--report-dir`.
 - `screenshots/<phrase-id>/step-*.png` — per-step console screenshots.
 
 Cleanup runs automatically on exit (unless `--no-cleanup`), deleting `uat-*` (in `demo`) and
-`ar-test-*` (in `r-mordasiewicz`) resources, parents before children.
+`ar-test-*` (in `example-corp`) resources, parents before children.
