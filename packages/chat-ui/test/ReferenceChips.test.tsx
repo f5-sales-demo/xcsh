@@ -7,7 +7,7 @@ const doc: ChatReference = { kind: "doc", title: "WAF overview", url: "https://d
 const console: ChatReference = {
 	kind: "console",
 	title: "HTTP LB",
-	url: "https://example.console.ves.volterra.io/lb",
+	url: "https://example-corp.console.ves.volterra.io/lb",
 };
 
 test("renders a labelled Sources list with one chip per reference", () => {

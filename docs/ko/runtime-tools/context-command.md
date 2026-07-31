@@ -20,7 +20,7 @@ xcsh는 **컨텍스트**를 통해 F5 Distributed Cloud에 연결합니다 -- �
 F5 XC 콘솔에서 세 가지가 필요합니다: 테넌트 URL, API 토큰, 그리고 선택적으로 네임스페이스입니다.
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -41,8 +41,8 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -79,7 +79,7 @@ Context 'production' created. Use /context activate production to switch to it.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -122,7 +122,7 @@ Context 'production' created. Use /context activate production to switch to it.
 컨텍스트는 활성화 시 세션에 주입되는 추가 환경 변수를 포함할 수 있습니다. 자격 증명 세트에 포함되지 않는 테넌트별 구성에 유용합니다.
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -132,7 +132,7 @@ Context 'production' created. Use /context activate production to switch to it.
 
 ## 탭 완성
 
-`/context `를 입력하고 Tab을 누르세요. 드롭다운에 다음이 표시됩니다:
+`/context`를 입력하고 Tab을 누르세요. 드롭다운에 다음이 표시됩니다:
 
 1. **컨텍스트 이름** -- 테넌트 URL 힌트가 포함되어 테넌트를 구분할 수 있습니다
 2. **`-`** -- 이전에 전환한 적이 있을 때 표시되며, 어떤 컨텍스트로 전환될지 보여줍니다

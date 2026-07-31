@@ -22,7 +22,7 @@ xcsh si connette a F5 Distributed Cloud tramite i **contesti** -- set di credenz
 Servono tre informazioni dalla console F5 XC: l'URL del tenant, un token API e opzionalmente un namespace.
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -43,8 +43,8 @@ Oppure utilizzare la procedura guidata se si preferiscono i prompt passo-passo:
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -81,7 +81,7 @@ Eseguire `/context -` due volte riporta al punto di partenza.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -124,7 +124,7 @@ Il completamento automatico con Tab suggerisce i nomi dei namespace dal tenant a
 I contesti possono contenere variabili d'ambiente aggiuntive che vengono iniettate nella sessione al momento dell'attivazione. Utile per configurazioni specifiche del tenant che non fanno parte del set di credenziali.
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -134,7 +134,7 @@ Alias: `add` = `set`, `remove`/`clear` = `unset`.
 
 ## Completamento con Tab
 
-Digitare `/context ` e premere Tab. Il menu a discesa mostra:
+Digitare `/context` e premere Tab. Il menu a discesa mostra:
 
 1. **Nomi dei contesti** -- con indicazioni sull'URL del tenant, per distinguere i diversi tenant
 2. **`-`** -- appare quando si è già effettuato un cambio, mostra verso quale contesto si tornerebbe

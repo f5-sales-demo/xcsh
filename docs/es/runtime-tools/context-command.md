@@ -22,7 +22,7 @@ xcsh se conecta a F5 Distributed Cloud a través de **contextos** -- conjuntos d
 Necesita tres elementos de su consola de F5 XC: la URL del tenant, un token de API y, opcionalmente, un namespace.
 
 ```
-/context create production https://example.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -43,8 +43,8 @@ O utilice el asistente guiado si prefiere indicaciones paso a paso:
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     example                                         │
-│ XCSH_API_URL    https://example.console.ves.volterra.io         │
+│ XCSH_TENANT     example-corp                                 │
+│ XCSH_API_URL    https://example-corp.console.ves.volterra.io │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -81,7 +81,7 @@ Llamar a `/context -` dos veces le devuelve al punto de partida.
 ```
 
 ```
-  production           https://example.console.ves.volterra.io
+  production           https://example-corp.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -124,7 +124,7 @@ El autocompletado con Tab ofrece nombres de namespace del tenant activo.
 Los contextos pueden llevar variables de entorno adicionales que se inyectan en su sesión al activarse. Útil para configuraciones por tenant que no forman parte del conjunto de credenciales.
 
 ```
-/context set CUSTOM_HEADER=x-example-trace
+/context set CUSTOM_HEADER=x-example-corp-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL
@@ -134,7 +134,7 @@ Alias: `add` = `set`, `remove`/`clear` = `unset`.
 
 ## Autocompletado con Tab
 
-Escriba `/context ` y presione Tab. El menú desplegable muestra:
+Escriba `/context` y presione Tab. El menú desplegable muestra:
 
 1. **Nombres de contexto** -- con indicaciones de URL del tenant, para que pueda distinguir los tenants
 2. **`-`** -- aparece cuando ha cambiado anteriormente, muestra a qué contexto volvería

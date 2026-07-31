@@ -38,9 +38,9 @@ describe("resolveAutoBind — extension", () => {
 		expect(
 			resolveAutoBind({
 				kind: "extension",
-				availableContexts: ["example", "globex"],
+				availableContexts: ["example-corp", "globex"],
 				tenantKey: "globex|production",
-				contextTenantKeys: { example: "example|staging", globex: "globex|production" },
+				contextTenantKeys: { "example-corp": "example-corp|staging", globex: "globex|production" },
 			}),
 		).toEqual({ kind: "bind", contextName: "globex" });
 	});
@@ -48,14 +48,14 @@ describe("resolveAutoBind — extension", () => {
 		expect(
 			resolveAutoBind({
 				kind: "extension",
-				availableContexts: ["example"],
+				availableContexts: ["example-corp"],
 				tenantKey: "globex|production",
-				contextTenantKeys: { example: "example|staging" },
+				contextTenantKeys: { "example-corp": "example-corp|staging" },
 			}),
 		).toEqual({ kind: "needsSelection" });
 	});
 	test("no tenant key → none", () => {
-		expect(resolveAutoBind({ kind: "extension", availableContexts: ["example"], tenantKey: null })).toEqual({
+		expect(resolveAutoBind({ kind: "extension", availableContexts: ["example-corp"], tenantKey: null })).toEqual({
 			kind: "none",
 		});
 	});
@@ -119,16 +119,16 @@ describe("activateTenantContext", () => {
 	});
 
 	test("activates the context whose apiUrl matches the tenant key", async () => {
-		// Create a stored context for tenant "example" on production.
+		// Create a stored context for tenant "example-corp" on production.
 		await ContextService.instance.createContext({
-			name: "example-prod",
-			apiUrl: "https://example.console.ves.volterra.io/api",
+			name: "example-corp-prod",
+			apiUrl: "https://example-corp.console.ves.volterra.io/api",
 			apiToken: "t",
 			defaultNamespace: "system",
 		});
-		const activated = await activateTenantContext("example|production");
+		const activated = await activateTenantContext("example-corp|production");
 		expect(activated).toBe(true);
-		expect(ContextService.instance.getStatus().activeContextName).toBe("example-prod");
+		expect(ContextService.instance.getStatus().activeContextName).toBe("example-corp-prod");
 	});
 
 	test("returns false and leaves unbound when no context matches", async () => {

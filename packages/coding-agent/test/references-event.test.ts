@@ -63,7 +63,9 @@ describe("referencesEventFor", () => {
 	});
 
 	test("classifies a tenant console deep link as console, not doc", () => {
-		const ev = referencesEventFor(messageEnd(cited("Open https://example.console.ves.volterra.io/lb to confirm.")));
+		const ev = referencesEventFor(
+			messageEnd(cited("Open https://example-corp.console.ves.volterra.io/lb to confirm.")),
+		);
 		expect(ev?.references[0].kind).toBe("console");
 	});
 });
