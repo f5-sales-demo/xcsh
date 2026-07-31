@@ -19,7 +19,7 @@ import { $env, isEnoent, logger, readProviderFromModelsYml } from "@f5-sales-dem
 import { DEFAULT_MODEL_ROLE } from "./settings-schema";
 
 /** Current config schema version. Bump when the generated format changes. */
-export const CURRENT_CONFIG_VERSION = 2;
+export const CURRENT_CONFIG_VERSION = 3;
 const LITELLM_CONFIG_DIR_MODE = 0o700;
 const LITELLM_MODELS_FILE_MODE = 0o600;
 
@@ -77,6 +77,17 @@ export function generateModelsYml(baseUrl: string, options?: GenerateModelsYmlOp
 		"    api: openai-completions",
 		"    discovery:",
 		"      type: openai-compat",
+		"    modelOverrides:",
+		"      gpt-5.6-sol:",
+		"        reasoning: true",
+		"        thinking:",
+		"          mode: effort",
+		"          minLevel: high",
+		"          maxLevel: high",
+		"        contextWindow: 1050000",
+		"        maxTokens: 128000",
+		"        compat:",
+		"          supportsTemperature: false",
 	];
 
 	lines.push("");

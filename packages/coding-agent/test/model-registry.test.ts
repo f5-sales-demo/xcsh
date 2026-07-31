@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Effort, type Model, type OpenAICompat, type ThinkingConfig, writeModelCache } from "@f5-sales-demo/pi-ai";
 import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
+import { generateModelsYml } from "@f5-sales-demo/xcsh/config/auto-config";
 import {
 	kNoAuth,
 	MODEL_ROLES,
@@ -1802,6 +1803,45 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
+		test("generated config preserves GPT-5.6 Sol High reasoning metadata after discovery", async () => {
+			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
+			const previousApiKey = Bun.env.LITELLM_API_KEY;
+			try {
+				Bun.env.LITELLM_BASE_URL = "https://proxy.example.com";
+				Bun.env.LITELLM_API_KEY = "test-key";
+				const generatedModelsPath = path.join(tempDir, "generated-models.yml");
+				fs.writeFileSync(
+					generatedModelsPath,
+					generateModelsYml("https://proxy.example.com", {
+						apiBasePath: "/api/v1",
+						apiKeyLiteral: "test-key",
+					}),
+				);
+				using _hook = mockOpenAiCompatibleModels("https://proxy.example.com/api/v1/models", [
+					"gpt-5.6-sol",
+					"unrelated-model",
+				]);
+
+				const registry = new ModelRegistry(authStorage, generatedModelsPath);
+				await registry.refreshProvider("litellm", "online");
+
+				const model = registry.find("litellm", "gpt-5.6-sol");
+				expect(model).toMatchObject({
+					reasoning: true,
+					thinking: { mode: "effort", minLevel: Effort.High, maxLevel: Effort.High },
+					contextWindow: 1_050_000,
+					maxTokens: 128_000,
+					compat: { supportsTemperature: false },
+				});
+				expect(registry.find("litellm", "unrelated-model")?.reasoning).toBe(false);
+			} finally {
+				if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
+				else Bun.env.LITELLM_BASE_URL = previousBaseUrl;
+				if (previousApiKey === undefined) delete Bun.env.LITELLM_API_KEY;
+				else Bun.env.LITELLM_API_KEY = previousApiKey;
+			}
+		});
+
 		test("config with discovery.type openai-compat loads without schema error", () => {
 			writeRawModelsJson({
 				litellm: {
