@@ -4,6 +4,7 @@
 
 ### Fixed
 
+- Added post-publication Homebrew install verification to the release workflow ([#2719](https://github.com/f5-sales-demo/xcsh/issues/2719))
 - Replaced the deprecated Node 20 Zig setup action with a checksum-pinned official installer ([#61](https://github.com/f5-sales-demo/xcsh/issues/61))
 - Invalidated stale release PRs immediately on new `main` pushes, before the full release-creation gate ([#2732](https://github.com/f5-sales-demo/xcsh/issues/2732))
 - Preserved GPT-5.6 Sol High reasoning and token-limit metadata through generated LiteLLM model discovery ([#2729](https://github.com/f5-sales-demo/xcsh/issues/2729))
