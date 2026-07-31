@@ -417,6 +417,21 @@ describe("CI verify-npm-install uses version-pinned install with backoff (PR #93
 	});
 });
 
+describe("CI invalidates stale release PRs before the full test matrix", () => {
+	it("runs stale invalidation immediately while keeping release creation fully gated", async () => {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const match = workflow.match(/\n {2}invalidate-stale-release-prs:\n[\s\S]*?(?=\n {2}auto-release:\n)/);
+		expect(match).not.toBeNull();
+		const job = match?.[0] ?? "";
+		expect(job).not.toContain("needs:");
+		expect(job).toContain("github.ref == 'refs/heads/main'");
+		expect(job).toContain("!startsWith(github.event.head_commit.message, 'chore:')");
+		expect(job).toContain("pull-requests: write");
+		expect(job).toContain("bun scripts/release.ts invalidate-stale");
+		expect(workflow).toContain("needs: [check, native, test, install_methods]");
+	});
+});
+
 describe("vim ex-command onUpdate throttle bypass (commit 8f5b630ac)", () => {
 	it("vim.ts onKbdStep forces update when engine.inputMode is command or search mode", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/tools/vim.ts"), "utf8");

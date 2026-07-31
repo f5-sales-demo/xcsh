@@ -559,6 +559,15 @@ export function planReleaseReconcile(opts: {
 	return { toCreate, toClose };
 }
 
+/** Release PRs that can no longer represent current main and must be invalidated
+ * before their already-green checks allow auto-merge. */
+export function planStaleReleaseInvalidation(opts: {
+	openReleasePRs: OpenReleasePR[];
+	currentMainOid: string;
+}): string[] {
+	return opts.openReleasePRs.filter(pr => pr.baseRefOid !== opts.currentMainOid).map(pr => pr.version);
+}
+
 /** Current in-repo version from the canonical package.json (no leading v). */
 async function readInRepoVersion(): Promise<string> {
 	const pkg = await Bun.file("packages/coding-agent/package.json").json();
@@ -608,6 +617,17 @@ async function closeStaleReleasePR(version: string): Promise<void> {
 	const branch = `release/v${version}`;
 	console.log(`Superseding stale release PR ${branch}…`);
 	await $`gh pr close ${branch} --delete-branch --comment ${"Superseded by the canonical auto-release target (idempotent reconcile); these commits are covered by a newer release PR or an already-published tag."}`;
+}
+
+async function cmdInvalidateStaleReleasePRs(): Promise<void> {
+	console.log("\n=== Invalidate Stale Release PRs ===\n");
+	const [openReleasePRs, currentMainOid] = await Promise.all([listOpenReleasePRs(), readDefaultBranchOid()]);
+	const staleVersions = planStaleReleaseInvalidation({ openReleasePRs, currentMainOid });
+	if (staleVersions.length === 0) {
+		console.log("No stale release PRs found.");
+		return;
+	}
+	for (const version of staleVersions) await closeStaleReleasePR(version);
 }
 
 async function cmdAutoRelease(): Promise<void> {
@@ -674,12 +694,15 @@ if (import.meta.main) {
 		console.error("Usage:");
 		console.error("  bun scripts/release.ts <version>   Open a release PR that bumps to <version>");
 		console.error("  bun scripts/release.ts auto        Detect version from conventional commits + open release PR");
+		console.error("  bun scripts/release.ts invalidate-stale  Close release PRs not based on current main");
 		console.error("  bun scripts/release.ts watch       Watch CI for current commit");
 		process.exit(1);
 	}
 
 	if (arg === "watch") {
 		await cmdWatch();
+	} else if (arg === "invalidate-stale") {
+		await cmdInvalidateStaleReleasePRs();
 	} else if (arg === "auto") {
 		await cmdAutoRelease();
 	} else if (/^\d+\.\d+\.\d+/.test(arg)) {
@@ -689,6 +712,7 @@ if (import.meta.main) {
 		console.error("Usage:");
 		console.error("  bun scripts/release.ts <version>   Open a release PR that bumps to <version>");
 		console.error("  bun scripts/release.ts auto        Detect version from conventional commits + open release PR");
+		console.error("  bun scripts/release.ts invalidate-stale  Close release PRs not based on current main");
 		console.error("  bun scripts/release.ts watch       Watch CI for current commit");
 		process.exit(1);
 	}
