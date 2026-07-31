@@ -43,7 +43,32 @@ const IS_BUN_COMPILED =
 
 // Dev-mode assets: packages/coding-agent/src/browser → packages/office-pane/dist.
 const DEV_DIST_DIR = path.resolve(import.meta.dir, "..", "..", "..", "office-pane", "dist");
+/** The office-pane package itself. Present in a checkout, absent from a published tarball. */
+const DEV_PACKAGE_DIR = path.dirname(DEV_DIST_DIR);
 const COMPILED_DIR_ROOT = path.join(os.tmpdir(), "xcsh-office-pane");
+
+/** Its presence is what makes a directory a built pane rather than merely a directory. */
+const PANE_MARKER = "taskpane.html";
+
+/** Which supply route was expected to provide the pane, and therefore what the remedy is. */
+export type PaneSource = "compiled" | "dev" | "packaged";
+
+/**
+ * There is no pane to serve, and it is the environment's doing rather than a bug.
+ *
+ * Its own class so the command boundary can print the remedy and exit 1, while a real defect keeps its
+ * stack trace. String-matching the message would couple the two and quietly swallow the next genuine
+ * failure whose text happened to look similar.
+ */
+export class OfficePaneUnavailableError extends Error {
+	constructor(
+		message: string,
+		readonly source: PaneSource,
+	) {
+		super(message);
+		this.name = "OfficePaneUnavailableError";
+	}
+}
 
 const getEmbeddedArchive = (() => {
 	const txt = embeddedPaneArchiveTxt.replaceAll(/[\s\r\n]/g, "").trim();
@@ -82,16 +107,70 @@ async function extractEmbeddedArchive(archiveBytes: Buffer, outputDir: string): 
 }
 
 /**
+ * Why there is no pane to serve, and what to do about it.
+ *
+ * Pure, and separate from the check, because the wording is the whole value of this path and the two
+ * audiences need opposite advice. Telling a developer to install a binary hides that they have simply
+ * not built yet; telling somebody who installed from npm to run a build names a directory they do not
+ * have. Getting that backwards is worse than the ENOENT it replaces.
+ */
+export function paneUnavailableMessage(distDir: string, source: PaneSource): string {
+	if (source === "compiled") {
+		return (
+			"The Office pane is missing from this binary: office-pane.generated.txt carries no embedded " +
+			"archive. Rebuild the binary with the office-pane assets baked in."
+		);
+	}
+	if (source === "dev") {
+		return (
+			`The Office pane has not been built: ${distDir} does not exist. ` +
+			"Run `bun run build` in packages/office-pane, then try again."
+		);
+	}
+	return (
+		"The Office pane is not included in the npm package — it ships as a build-time asset of the " +
+		"compiled binary, which is also what provides the sideload and the trusted certificate. " +
+		"Install it with `brew install f5-sales-demo/tap/xcsh` and run `xcsh office` from there."
+	);
+}
+
+/**
+ * Which supply route a non-compiled run was relying on, from whether the office-pane package is here.
+ *
+ * A checkout has `packages/office-pane` and may simply not have built it; a published tarball has no
+ * `packages/` directory at all. One line, but the line that chooses between two opposite remedies, so
+ * it is named and tested rather than inlined as a ternary nothing covers.
+ */
+export function paneSourceForLayout(officePanePackagePresent: boolean): PaneSource {
+	return officePanePackagePresent ? "dev" : "packaged";
+}
+
+/**
+ * Return `dir` only if it actually holds a built pane, else refuse with {@link paneUnavailableMessage}.
+ *
+ * The dev branch used to return its path unchecked, which is how a published npm install came to bind
+ * :8444 and answer 404 to every request — Office rendered "Not Found" and nothing reported an error.
+ * Serving nothing quietly is the failure this exists to prevent.
+ */
+export async function resolvePaneDir(dir: string, source: PaneSource): Promise<string> {
+	if (await Bun.file(path.join(dir, PANE_MARKER)).exists()) return dir;
+	throw new OfficePaneUnavailableError(paneUnavailableMessage(dir, source), source);
+}
+
+/**
  * Resolve the directory the assets are served from: the extracted embedded
  * bundle in a compiled binary, else `packages/office-pane/dist` in dev.
  */
 export async function getOfficePaneDir(): Promise<string> {
-	if (!IS_BUN_COMPILED) return DEV_DIST_DIR;
+	if (!IS_BUN_COMPILED) {
+		const present = await Bun.file(path.join(DEV_PACKAGE_DIR, "package.json")).exists();
+		return resolvePaneDir(DEV_DIST_DIR, paneSourceForLayout(present));
+	}
 	if (compiledDirPromise) return compiledDirPromise;
 
 	const archiveBytes = getEmbeddedArchive?.();
 	if (!archiveBytes) {
-		throw new Error("Compiled office-pane bundle missing. Rebuild the binary with the embedded office-pane assets.");
+		throw new OfficePaneUnavailableError(paneUnavailableMessage(COMPILED_DIR_ROOT, "compiled"), "compiled");
 	}
 
 	compiledDirPromise = (async () => {
@@ -151,9 +230,13 @@ export interface OfficePaneServer {
  * Start the fixed :8444 HTTPS listener serving the embedded/dev assets. Resolves
  * TLS via {@link resolveBridgeTls} (the shared local-ip.sh cert). Serves only GET
  * (405 otherwise); unknown paths return 404.
+ *
+ * The asset directory is resolved BEFORE the port is bound and before TLS is fetched, so a run with
+ * no pane available refuses without holding :8444 and without reaching the network. `assetDir` is the
+ * seam that lets a test assert exactly that, in the same spirit as the pure `handleAssetRequest`.
  */
-export async function startOfficePaneServer(port = OFFICE_PANE_PORT): Promise<OfficePaneServer> {
-	const dir = await getOfficePaneDir();
+export async function startOfficePaneServer(port = OFFICE_PANE_PORT, assetDir?: string): Promise<OfficePaneServer> {
+	const dir = assetDir === undefined ? await getOfficePaneDir() : await resolvePaneDir(assetDir, "dev");
 	const tls = await resolveBridgeTls();
 
 	const server = Bun.serve({

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { OfficePaneUnavailableError } from "../src/browser/office-pane-server";
 import {
 	type OfficeServeDeps,
 	officeWefDirs,
@@ -220,5 +221,67 @@ describe("office sideload starts the server from the current folder", () => {
 		expect(s.order).toEqual(["serve"]);
 		s.releaseServe();
 		await run;
+	});
+});
+
+/**
+ * The command boundary turns an absent pane into advice, and leaves everything else alone.
+ *
+ * The published npm form of xcsh carries `office` with no pane bundle, so any action can legitimately
+ * find nothing to work with. That is a fact about the install rather than a defect, and it earns a
+ * remedy and a non-zero exit — not the uncaught ENOENT with an internal path that 19.103.3 produced.
+ *
+ * The second test is the important half. Catching broadly here would swallow the next real failure,
+ * which is precisely how the silent 404 survived in the first place.
+ */
+describe("runOfficeCommand and an unavailable pane", () => {
+	const withExitCode = async (fn: () => Promise<void>): Promise<number | undefined> => {
+		const before = process.exitCode;
+		process.exitCode = undefined;
+		try {
+			await fn();
+			return process.exitCode;
+		} finally {
+			process.exitCode = before;
+		}
+	};
+
+	test("reports the remedy and exits non-zero instead of throwing", async () => {
+		const said: string[] = [];
+		const error = console.error;
+		console.error = (...parts: unknown[]) => {
+			said.push(parts.join(" "));
+		};
+		try {
+			const code = await withExitCode(async () => {
+				await runOfficeCommand(
+					{ action: "serve" },
+					{
+						sideload: async () => {},
+						serve: async () => {
+							throw new OfficePaneUnavailableError("no pane here, install the binary", "packaged");
+						},
+					},
+				);
+			});
+			expect(code).toBe(1);
+			expect(said.join(" ")).toContain("no pane here, install the binary");
+		} finally {
+			console.error = error;
+		}
+	});
+
+	test("rethrows anything that is not an unavailable pane", async () => {
+		await expect(
+			runOfficeCommand(
+				{ action: "serve" },
+				{
+					sideload: async () => {},
+					serve: async () => {
+						throw new Error("a real defect, with a stack worth keeping");
+					},
+				},
+			),
+		).rejects.toThrow(/a real defect/);
 	});
 });

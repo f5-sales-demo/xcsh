@@ -11,7 +11,14 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { handleAssetRequest, sanitizeArchivePath } from "../../src/browser/office-pane-server";
+import {
+	handleAssetRequest,
+	paneSourceForLayout,
+	paneUnavailableMessage,
+	resolvePaneDir,
+	sanitizeArchivePath,
+	startOfficePaneServer,
+} from "../../src/browser/office-pane-server";
 
 let dir: string;
 
@@ -88,5 +95,83 @@ describe("sanitizeArchivePath", () => {
 		expect(sanitizeArchivePath("/etc/passwd")).toBeNull();
 		expect(sanitizeArchivePath("")).toBeNull();
 		expect(sanitizeArchivePath(".")).toBeNull();
+	});
+});
+
+/**
+ * Refusing honestly when there is no pane to serve.
+ *
+ * The published npm form of xcsh carries the `office` command and neither of the pane's two supply
+ * routes: `office-pane.generated.txt` is a 0-byte placeholder, and the tarball has no `packages/`
+ * directory, so the dev path `packages/office-pane/dist` cannot resolve. `IS_BUN_COMPILED` is false
+ * there, so the dev branch is taken — and that branch used to return a path it never checked.
+ *
+ * Measured against a real install of 19.103.3: `office manifest` threw an uncaught ENOENT naming an
+ * internal path, and `office serve` bound :8444 and answered 404 to every request, including
+ * /taskpane.html, so Excel showed "Not Found" while the command looked like it had worked. Serving
+ * nothing quietly is the failure worth preventing; a stack trace is merely rude.
+ */
+describe("refusing when no pane bundle is available", () => {
+	it("accepts a directory that really holds a built pane", async () => {
+		expect(await resolvePaneDir(dir, "dev")).toBe(dir);
+	});
+
+	it("refuses a directory with no taskpane.html, naming it", async () => {
+		const empty = mkdtempSync(join(tmpdir(), "office-pane-empty-"));
+		try {
+			await expect(resolvePaneDir(empty, "dev")).rejects.toThrow(
+				new RegExp(empty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+			);
+		} finally {
+			rmSync(empty, { recursive: true, force: true });
+		}
+	});
+
+	// The two audiences need different remedies, so the message may not be generic. Getting this
+	// backwards is worse than saying nothing: telling a developer to install a binary hides that they
+	// simply have not built yet, and telling an npm user to run a build names a directory they do not
+	// have.
+	it("tells a packaged install the pane ships in the compiled binary", () => {
+		const said = paneUnavailableMessage("/somewhere/office-pane/dist", "packaged");
+		expect(said).toMatch(/brew install f5-sales-demo\/tap\/xcsh/);
+		expect(said).not.toMatch(/bun run build/);
+	});
+
+	it("tells a dev checkout to build the pane, not to install a binary", () => {
+		const said = paneUnavailableMessage("/repo/packages/office-pane/dist", "dev");
+		expect(said).toMatch(/bun run build/);
+		expect(said).toMatch(/packages\/office-pane/);
+		expect(said).not.toMatch(/brew install/);
+	});
+
+	it("says which supply route was missing rather than only that something was", () => {
+		expect(paneUnavailableMessage("/x/dist", "compiled")).toMatch(/embedded|baked|binary/i);
+	});
+
+	// The pairing, not the ternary: an inverted discriminator would hand each audience the other's
+	// remedy, which is the one way this can be worse than the ENOENT it replaced.
+	it("pairs a present office-pane package with the build advice, and its absence with the binary", () => {
+		expect(paneUnavailableMessage("/d", paneSourceForLayout(true))).toMatch(/bun run build/);
+		expect(paneUnavailableMessage("/d", paneSourceForLayout(true))).not.toMatch(/brew/);
+		expect(paneUnavailableMessage("/d", paneSourceForLayout(false))).toMatch(/brew install/);
+		expect(paneUnavailableMessage("/d", paneSourceForLayout(false))).not.toMatch(/bun run build/);
+	});
+
+	/**
+	 * The acceptance criterion that matters operationally: a pane server that cannot serve must not
+	 * hold the port. Binding first and 404ing is what made this invisible — Office connects, renders
+	 * "Not Found", and nothing in the log disagrees.
+	 *
+	 * A free high port is used, never the real 8444, so this cannot disturb a pane server someone is
+	 * actually running. It never reaches TLS either: the refusal happens before `resolveBridgeTls`,
+	 * which is what keeps this test hermetic and offline.
+	 */
+	it("does not bind a port when there is nothing to serve", async () => {
+		const port = 41_899;
+		await expect(startOfficePaneServer(port, "/definitely/not/a/pane/dir")).rejects.toThrow();
+		// If the failed start had bound the port, this would throw EADDRINUSE.
+		const probe = Bun.serve({ port, hostname: "127.0.0.1", fetch: () => new Response("ok") });
+		expect(probe.port).toBe(port);
+		probe.stop(true);
 	});
 });

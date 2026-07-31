@@ -17,6 +17,7 @@ import {
 	getOfficePaneDir,
 	OFFICE_PANE_PORT,
 	type OfficePaneServer,
+	OfficePaneUnavailableError,
 	readManifest,
 	startOfficePaneServer,
 } from "../browser/office-pane-server";
@@ -238,6 +239,21 @@ export async function runOfficeCommand(
 	args: OfficeCommandArgs,
 	deps: OfficeCommandDeps = defaultCommandDeps,
 ): Promise<void> {
+	try {
+		await dispatchOfficeCommand(args, deps);
+	} catch (err) {
+		// Only this one class. The published npm form carries `office` and no pane bundle, so every
+		// action here can legitimately have nothing to work with — that is a fact about the install,
+		// not a defect, and it deserves the remedy rather than a stack trace. Anything else rethrows
+		// with its stack intact, because swallowing a real failure here is how the original silent
+		// 404 survived.
+		if (!(err instanceof OfficePaneUnavailableError)) throw err;
+		console.error(err.message);
+		process.exitCode = 1;
+	}
+}
+
+async function dispatchOfficeCommand(args: OfficeCommandArgs, deps: OfficeCommandDeps): Promise<void> {
 	switch (args.action) {
 		case "serve":
 			await deps.serve();
