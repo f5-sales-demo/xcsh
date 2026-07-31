@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.5] - 2026-07-31
+
 ### Fixed
 
 - Replaced the deprecated Node 20 Zig setup action with a checksum-pinned official installer ([#61](https://github.com/f5-sales-demo/xcsh/issues/61))
