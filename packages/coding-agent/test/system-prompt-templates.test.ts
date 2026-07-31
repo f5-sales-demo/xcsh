@@ -399,21 +399,21 @@ describe("system Handlebars prompt templates", () => {
 		const rendered = prompt.render(template, {
 			...baseRenderContext,
 			context: {
-				tenant: "acme-corp",
+				tenant: "example-corp",
 				namespace: "production",
 				credentialSource: "context",
 				authStatus: "connected",
-				apiUrl: "https://acme-corp.console.ves.volterra.io",
+				apiUrl: "https://example-corp.console.ves.volterra.io",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
-		expect(rendered).toContain("You are currently connected to F5 XC tenant: acme-corp, namespace: production.");
+		expect(rendered).toContain("You are currently connected to F5 XC tenant: example-corp, namespace: production.");
 		expect(rendered).toContain("Credential source: context.");
 		expect(rendered).toContain("Auth status: connected.");
 		expect(rendered).toContain(
 			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
 		);
-		expect(rendered).toContain("Console URL: https://acme-corp.console.ves.volterra.io.");
+		expect(rendered).toContain("Console URL: https://example-corp.console.ves.volterra.io.");
 		expect(rendered).toContain("**MUST** use this URL as the base");
 	});
 
@@ -431,21 +431,21 @@ describe("system Handlebars prompt templates", () => {
 		const rendered = prompt.render(template, {
 			...baseRenderContext,
 			context: {
-				tenant: "acme-corp",
+				tenant: "example-corp",
 				namespace: "production",
 				credentialSource: "context",
 				authStatus: "connected",
-				apiUrl: "https://acme-corp.console.ves.volterra.io",
+				apiUrl: "https://example-corp.console.ves.volterra.io",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
-		expect(rendered).toContain("You are currently connected to F5 XC tenant: acme-corp, namespace: production.");
+		expect(rendered).toContain("You are currently connected to F5 XC tenant: example-corp, namespace: production.");
 		expect(rendered).toContain("Credential source: context.");
 		expect(rendered).toContain("Auth status: connected.");
 		expect(rendered).toContain(
 			"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",
 		);
-		expect(rendered).toContain("Console URL: https://acme-corp.console.ves.volterra.io.");
+		expect(rendered).toContain("Console URL: https://example-corp.console.ves.volterra.io.");
 		expect(rendered).toContain("**MUST** use this URL as the base");
 	});
 
@@ -463,7 +463,7 @@ describe("system Handlebars prompt templates", () => {
 		const rendered = prompt.render(template, {
 			...baseRenderContext,
 			context: {
-				tenant: "acme-corp",
+				tenant: "example-corp",
 				namespace: "production",
 				credentialSource: "context",
 				authStatus: "connected",
@@ -485,14 +485,16 @@ describe("system Handlebars prompt templates", () => {
 			const rendered = prompt.render(template, {
 				...baseRenderContext,
 				context: {
-					tenant: "acme-corp",
+					tenant: "example-corp",
 					namespace: "production",
 					credentialSource: "environment",
 					authStatus: "connected",
 				},
 			});
 			expect(rendered).toContain("## F5 XC Platform Context");
-			expect(rendered).toContain("You are currently connected to F5 XC tenant: acme-corp, namespace: production.");
+			expect(rendered).toContain(
+				"You are currently connected to F5 XC tenant: example-corp, namespace: production.",
+			);
 			expect(rendered).toContain("Credential source: environment.");
 			expect(rendered).toContain(
 				"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",

@@ -117,14 +117,14 @@ describe("pickBridge()", () => {
 	});
 
 	it("(3) filters by tenant when opts.tenant is specified", () => {
-		const a = makeBridge({ port: 19222, tenant: "acme" });
+		const a = makeBridge({ port: 19222, tenant: "example" });
 		const b = makeBridge({ port: 19223, tenant: "other" });
-		const result = pickBridge([a, b], { tenant: "acme" });
+		const result = pickBridge([a, b], { tenant: "example" });
 		expect(result?.port).toBe(19222);
 	});
 
 	it("(4) returns undefined when tenant filter matches nothing", () => {
-		const a = makeBridge({ port: 19222, tenant: "acme" });
+		const a = makeBridge({ port: 19222, tenant: "example" });
 		expect(pickBridge([a], { tenant: "nobody" })).toBeUndefined();
 	});
 
@@ -167,8 +167,8 @@ describe("pickBridge()", () => {
 	// --- requireServeKind filter (issue #2201 port-collision correctness core) ---
 
 	it("(10) requireServeKind:'office' rejects a browser-kind bridge (even with matching tenant)", () => {
-		const browser = makeBridge({ port: 19342, serveKind: "browser", tenant: "acme" });
-		expect(pickBridge([browser], { requireServeKind: "office", tenant: "acme" })).toBeUndefined();
+		const browser = makeBridge({ port: 19342, serveKind: "browser", tenant: "example" });
+		expect(pickBridge([browser], { requireServeKind: "office", tenant: "example" })).toBeUndefined();
 	});
 
 	it("(11) requireServeKind:'office' rejects a serveKind:null bridge (stale/legacy → fail-safe)", () => {

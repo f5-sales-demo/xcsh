@@ -9,7 +9,7 @@ import { probe } from "./bridge-probe";
  */
 describe("bridge probe() frame demultiplexing", () => {
 	it("returns hello_ack even when a telemetry span races ahead of it", async () => {
-		const ack = { type: "hello_ack", tenant: "acme", env: "staging", sessionId: "tab-1" };
+		const ack = { type: "hello_ack", tenant: "example", env: "staging", sessionId: "tab-1" };
 		const span = { type: "span", stage: "session_build", ms: 745, sid: "tab-1", cold: true };
 		const server = Bun.serve({
 			port: 0,
@@ -28,14 +28,14 @@ describe("bridge probe() frame demultiplexing", () => {
 		});
 		try {
 			const frame = await probe(server.port as number);
-			expect(frame).toMatchObject({ type: "hello_ack", tenant: "acme", env: "staging" });
+			expect(frame).toMatchObject({ type: "hello_ack", tenant: "example", env: "staging" });
 		} finally {
 			server.stop(true);
 		}
 	});
 
 	it("still returns hello_ack when it is the only frame", async () => {
-		const ack = { type: "hello_ack", tenant: "acme", env: "prod", sessionId: "tab-2" };
+		const ack = { type: "hello_ack", tenant: "example", env: "prod", sessionId: "tab-2" };
 		const server = Bun.serve({
 			port: 0,
 			fetch(req, srv) {
@@ -51,7 +51,7 @@ describe("bridge probe() frame demultiplexing", () => {
 		});
 		try {
 			const frame = await probe(server.port as number);
-			expect(frame).toMatchObject({ type: "hello_ack", tenant: "acme", env: "prod" });
+			expect(frame).toMatchObject({ type: "hello_ack", tenant: "example", env: "prod" });
 		} finally {
 			server.stop(true);
 		}

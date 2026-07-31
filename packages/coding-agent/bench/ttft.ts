@@ -73,7 +73,7 @@ async function sendProvision(sock: string): Promise<void> {
   const c = await Bun.connect({ unix: sock, socket: { data() {} } });
   // The manager's parseControlMsg requires a piped "tenant|env" string (isTenant);
   // a bare tenant is rejected and the provision silently dropped.
-  c.write(`${JSON.stringify({ type: "provision", sessionId: "tab-bench", tenant: "acme|production" })}\n`);
+  c.write(`${JSON.stringify({ type: "provision", sessionId: "tab-bench", tenant: "example|production" })}\n`);
   await sleep(50);
   c.end();
 }

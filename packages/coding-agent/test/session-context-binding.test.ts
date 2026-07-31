@@ -38,9 +38,9 @@ describe("resolveAutoBind — extension", () => {
 		expect(
 			resolveAutoBind({
 				kind: "extension",
-				availableContexts: ["acme", "globex"],
+				availableContexts: ["example", "globex"],
 				tenantKey: "globex|production",
-				contextTenantKeys: { acme: "acme|staging", globex: "globex|production" },
+				contextTenantKeys: { example: "example|staging", globex: "globex|production" },
 			}),
 		).toEqual({ kind: "bind", contextName: "globex" });
 	});
@@ -48,14 +48,14 @@ describe("resolveAutoBind — extension", () => {
 		expect(
 			resolveAutoBind({
 				kind: "extension",
-				availableContexts: ["acme"],
+				availableContexts: ["example"],
 				tenantKey: "globex|production",
-				contextTenantKeys: { acme: "acme|staging" },
+				contextTenantKeys: { example: "example|staging" },
 			}),
 		).toEqual({ kind: "needsSelection" });
 	});
 	test("no tenant key → none", () => {
-		expect(resolveAutoBind({ kind: "extension", availableContexts: ["acme"], tenantKey: null })).toEqual({
+		expect(resolveAutoBind({ kind: "extension", availableContexts: ["example"], tenantKey: null })).toEqual({
 			kind: "none",
 		});
 	});
@@ -119,16 +119,16 @@ describe("activateTenantContext", () => {
 	});
 
 	test("activates the context whose apiUrl matches the tenant key", async () => {
-		// Create a stored context for tenant "acme" on production.
+		// Create a stored context for tenant "example" on production.
 		await ContextService.instance.createContext({
-			name: "acme-prod",
-			apiUrl: "https://acme.console.ves.volterra.io/api",
+			name: "example-prod",
+			apiUrl: "https://example.console.ves.volterra.io/api",
 			apiToken: "t",
 			defaultNamespace: "system",
 		});
-		const activated = await activateTenantContext("acme|production");
+		const activated = await activateTenantContext("example|production");
 		expect(activated).toBe(true);
-		expect(ContextService.instance.getStatus().activeContextName).toBe("acme-prod");
+		expect(ContextService.instance.getStatus().activeContextName).toBe("example-prod");
 	});
 
 	test("returns false and leaves unbound when no context matches", async () => {

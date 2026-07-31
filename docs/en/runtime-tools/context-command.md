@@ -17,7 +17,7 @@ xcsh connects to F5 Distributed Cloud through **contexts** -- named credential s
 You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
-/context create production https://acme.console.ves.volterra.io p12k3-your-api-token
+/context create production https://example.console.ves.volterra.io p12k3-your-api-token
 ```
 
 ```
@@ -38,8 +38,8 @@ Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 ╭─ production ─────────────────────────────────────────────────╮
-│ XCSH_TENANT     acme                                         │
-│ XCSH_API_URL    https://acme.console.ves.volterra.io         │
+│ XCSH_TENANT     example                                         │
+│ XCSH_API_URL    https://example.console.ves.volterra.io         │
 │ XCSH_API_TOKEN  ...oken                                      │
 │ Status          Connected (312ms)                            │
 ├─ Environment ────────────────────────────────────────────────┤
@@ -76,7 +76,7 @@ Calling `/context -` twice returns you to where you started.
 ```
 
 ```
-  production           https://acme.console.ves.volterra.io
+  production           https://example.console.ves.volterra.io
 * staging              https://staging.console.ves.volterra.io
 ```
 
@@ -119,7 +119,7 @@ Tab completion offers namespace names from the active tenant.
 Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
-/context set CUSTOM_HEADER=x-acme-trace
+/context set CUSTOM_HEADER=x-example-trace
 /context set LOG_LEVEL=debug
 /context env list
 /context unset LOG_LEVEL

@@ -142,7 +142,7 @@ test("chrome-host ensures the manager and relays a provision frame", async () =>
 	});
 
 	const stdin = host.stdin as import("bun").FileSink;
-	stdin.write(encodeNm({ type: "provision", sessionId: "tab-1", tenant: "acme|staging" }));
+	stdin.write(encodeNm({ type: "provision", sessionId: "tab-1", tenant: "example|staging" }));
 	stdin.flush();
 
 	let up = false;
@@ -187,7 +187,7 @@ test("chrome-host supersedes an OLDER running manager and takes over (#1874)", a
 		stderr: "ignore",
 	});
 	const stdin = host.stdin as import("bun").FileSink;
-	stdin.write(encodeNm({ type: "provision", sessionId: "tab-1", tenant: "acme|staging" }));
+	stdin.write(encodeNm({ type: "provision", sessionId: "tab-1", tenant: "example|staging" }));
 	stdin.flush();
 
 	let superseded = false;

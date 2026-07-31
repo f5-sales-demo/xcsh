@@ -397,7 +397,7 @@ test("adopts a warm spare on provision, then replenishes the pool (XCSH_WORKER_P
 	// Pool fills at startup: exactly one spare is pre-warmed.
 	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
 
-	await send({ type: "provision", sessionId: "tab-7", tenant: "acme|staging" });
+	await send({ type: "provision", sessionId: "tab-7", tenant: "example|staging" });
 
 	// The provision ADOPTS the warm spare (IPC bind), not a cold-spawn.
 	expect(await waitForStderr(getErr, "adopted spare", 120)).toBe(true);
@@ -418,11 +418,11 @@ test("adopted spare's hello_ack advertises BOTH tenant AND env (#1872 contract)"
 	// filters any bridge missing tenant OR env and shows "No xcsh running".
 	const getErr = await startManagerWithPool("1");
 	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
-	await send({ type: "provision", sessionId: "tab-7", tenant: "acme|staging" });
+	await send({ type: "provision", sessionId: "tab-7", tenant: "example|staging" });
 	expect(await waitForStderr(getErr, "adopted spare", 120)).toBe(true);
-	const ack = await findFrame("acme", "staging", 80);
+	const ack = await findFrame("example", "staging", 80);
 	expect(ack).not.toBeNull();
-	expect(ack).toMatchObject({ tenant: "acme", env: "staging" });
+	expect(ack).toMatchObject({ tenant: "example", env: "staging" });
 	await send({ type: "release", sessionId: "tab-7" });
 }, 60_000);
 
@@ -468,7 +468,7 @@ test("graceful shutdown frame reaps spares, removes the socket + manager.json, e
 test("superseded shutdown LEAVES bound workers alive for re-adoption; manual reaps them (#1874 Task 6)", async () => {
 	const getErr = await startManagerWithPool("1");
 	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
-	await send({ type: "provision", sessionId: "tab-7", tenant: "acme|staging" });
+	await send({ type: "provision", sessionId: "tab-7", tenant: "example|staging" });
 	// Deterministic: wait for the manager's adopt log instead of a flaky WS bridge
 	// probe (findTenant) that depends on context-activation timing under CI load —
 	// the exact source of the ~50% CI flake at this line.
@@ -499,7 +499,7 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 		try {
 			const ack = await probe(port);
 			lastTenant = String(ack.tenant);
-			if (ack.tenant === "acme") {
+			if (ack.tenant === "example") {
 				survived = true;
 				break;
 			}
@@ -516,7 +516,7 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 		const holders = await pidsOnPort(port);
 		throw new Error(
 			[
-				`worker did not outlive its manager: no "acme" ack on port ${port} within ${SURVIVAL_BUDGET_MS}ms`,
+				`worker did not outlive its manager: no "example" ack on port ${port} within ${SURVIVAL_BUDGET_MS}ms`,
 				`  pids still holding the port: ${holders.length > 0 ? holders.join(", ") : "NONE (the worker is gone)"}`,
 				`  last ack tenant: ${lastTenant}`,
 				`  last probe error: ${lastProbeErr}`,
@@ -566,7 +566,7 @@ test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=
 	await Bun.sleep(500);
 	expect(getErr()).not.toContain("pre-warmed spare");
 
-	await send({ type: "provision", sessionId: "tab-7", tenant: "acme|staging" });
+	await send({ type: "provision", sessionId: "tab-7", tenant: "example|staging" });
 
 	// With no spare to adopt, the provision cold-spawns (fallback path).
 	expect(await waitForStderr(getErr, "provisioned tab-7", 120)).toBe(true);
@@ -589,12 +589,12 @@ test("provision spawns a worker advertising the tenant; release reaps it", async
 	for (let i = 0; i < 60 && !fs.existsSync(sock); i++) await Bun.sleep(100);
 	expect(fs.existsSync(sock)).toBe(true);
 
-	await send({ type: "provision", sessionId: "tab-1", tenant: "acme|staging" });
+	await send({ type: "provision", sessionId: "tab-1", tenant: "example|staging" });
 
-	const port = await findTenant("acme", 80);
+	const port = await findTenant("example", 80);
 	expect(port).not.toBeNull();
 	// #1872: the cold-spawn frame must carry env too (not just tenant).
-	expect(await probe(port as number)).toMatchObject({ tenant: "acme", env: "staging" });
+	expect(await probe(port as number)).toMatchObject({ tenant: "example", env: "staging" });
 
 	// Release should reap the worker: the port stops answering the handshake.
 	await send({ type: "release", sessionId: "tab-1" });
@@ -616,11 +616,11 @@ test("provision spawns one worker PER sessionId (two same-tenant tabs → two wo
 
 	// Two tabs of the SAME tenant, keyed by distinct sessionIds. The manager keys
 	// its registry on sessionId, not tenant, so each tab gets its OWN worker on its
-	// own range port — even though both advertise the same tenant "acme".
-	await send({ type: "provision", sessionId: "tab-101", tenant: "acme|staging" });
-	await send({ type: "provision", sessionId: "tab-102", tenant: "acme|staging" });
+	// own range port — even though both advertise the same tenant "example".
+	await send({ type: "provision", sessionId: "tab-101", tenant: "example|staging" });
+	await send({ type: "provision", sessionId: "tab-102", tenant: "example|staging" });
 
-	// Both workers should come up on distinct range ports, both advertising "acme".
+	// Both workers should come up on distinct range ports, both advertising "example".
 	// Keep what each port LAST said instead of discarding it: a bare count cannot
 	// separate "the second worker never spawned" from "it spawned late" from "it
 	// answered under another tenant", and CI has reported this as `Received: 1`
@@ -633,7 +633,7 @@ test("provision spawns one worker PER sessionId (two same-tenant tabs → two wo
 				try {
 					const a = await probe(p);
 					lastSeen.set(p, { tenant: String(a.tenant) });
-					if (a.tenant === "acme") ports.add(p);
+					if (a.tenant === "example") ports.add(p);
 				} catch (e) {
 					lastSeen.set(p, { error: e instanceof Error ? e.message : String(e) });
 				}
@@ -650,14 +650,14 @@ test("provision spawns one worker PER sessionId (two same-tenant tabs → two wo
 		for (const p of RANGE) holdersByPort.set(p, await pidsOnPort(p));
 		throw new Error(
 			[
-				`expected 2 distinct range ports advertising "acme", saw ${ports.size}`,
+				`expected 2 distinct range ports advertising "example", saw ${ports.size}`,
 				...describePortScan(
 					RANGE.map(p => ({
 						port: p,
 						...(lastSeen.get(p) ?? { error: "never probed" }),
 						holders: holdersByPort.get(p),
 					})),
-					"acme",
+					"example",
 				),
 				...describeManagerCensus(getErr()),
 			].join("\n"),
@@ -839,7 +839,7 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 
 test("cold spawn emits manager_provision + worker_boot spans with cold=true", async () => {
 	const getErr = await startManagerWithPool("0"); // no spares -> cold spawn
-	await send({ type: "provision", sessionId: "tab-501", tenant: "acme|production" });
+	await send({ type: "provision", sessionId: "tab-501", tenant: "example|production" });
 	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
 
 	// Wait for the STAGES asserted below, not for a span count (#2364).
@@ -869,7 +869,7 @@ test("warm adopt emits worker_boot span with cold=false", async () => {
 	// above already wait here; this one did not.
 	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
 
-	await send({ type: "provision", sessionId: "tab-777", tenant: "acme|production" });
+	await send({ type: "provision", sessionId: "tab-777", tenant: "example|production" });
 	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
 
 	// The wait must cover activateTenantContext, which runs inside the bind closure
@@ -889,7 +889,7 @@ test("a manager on a STALE binary refuses the next provision (draining) and step
 	await startManager({ XCSH_FORCE_STALE: "1" });
 	// Spawning would ENOENT on the deleted binary → the provision is refused with the
 	// existing `draining` contract so the host retries the successor manager.
-	const reply = await request({ type: "provision", sessionId: "tab-1", tenant: "acme|staging" });
+	const reply = await request({ type: "provision", sessionId: "tab-1", tenant: "example|staging" });
 	expect(reply).toEqual({ type: "draining" });
 	// gracefulShutdown("updated") removes the socket + manager.json and exits.
 	let gone = false;
@@ -906,7 +906,7 @@ test("a manager on a STALE binary refuses the next provision (draining) and step
 test("a HEALTHY manager (present binary) never recycles — provisions normally, stays up", async () => {
 	await startManager(); // dev binary present → not stale
 	// A normal provision writes NO control reply (only draining does) → request times out → null.
-	const reply = await request({ type: "provision", sessionId: "tab-1", tenant: "acme|staging" }, 1500);
+	const reply = await request({ type: "provision", sessionId: "tab-1", tenant: "example|staging" }, 1500);
 	expect(reply).toBeNull(); // NOT draining — the manager served it
 	// Still alive: socket persists and the hello handshake still answers.
 	expect(fs.existsSync(sock)).toBe(true);
