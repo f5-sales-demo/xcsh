@@ -122,10 +122,10 @@ function applyLimitFilter<T>(items: T[], args: Args, idOf: (t: T) => string): T[
 function cfgFromEnv(args: Args): MatrixConfig {
 	return {
 		xcshBin: process.env.XCSH_BIN ?? "xcsh",
-		apiUrl: process.env.XCSH_API_URL ?? "https://nferreira.staging.volterra.us",
+		apiUrl: process.env.XCSH_API_URL ?? "https://example.staging.volterra.us",
 		apiToken: process.env.XCSH_API_TOKEN ?? "",
 		consoleNamespace: process.env.XCSH_NAMESPACE ?? "demo",
-		tenant: (process.env.XCSH_API_URL ?? "https://nferreira.staging.volterra.us")
+		tenant: (process.env.XCSH_API_URL ?? "https://example.staging.volterra.us")
 			.replace(/^https?:\/\//, "")
 			.split(".")[0]!,
 		observable: args.observable,
@@ -189,7 +189,7 @@ async function listNames(ns: string, apiPath: string, prefix: string, cfg: Matri
 }
 
 async function cleanup(cfg: MatrixConfig): Promise<void> {
-	console.log("\n[cleanup] deleting uat-* (demo) and ar-test-* (r-mordasiewicz) resources, parents first...");
+	console.log("\n[cleanup] deleting uat-* (demo) and ar-test-* (example-corp) resources, parents first...");
 	for (const ap of DEMO_CLEANUP_PATHS) {
 		for (const name of await listNames(cfg.consoleNamespace, ap, "uat-", cfg)) {
 			const code = await apiDelete(`/api/config/namespaces/${cfg.consoleNamespace}/${ap}/${name}`, cfg);
@@ -197,8 +197,8 @@ async function cleanup(cfg: MatrixConfig): Promise<void> {
 		}
 	}
 	for (const ap of AR_CLEANUP_PATHS) {
-		for (const name of await listNames("r-mordasiewicz", ap, "ar-test-", cfg)) {
-			await apiDelete(`/api/config/namespaces/r-mordasiewicz/${ap}/${name}`, cfg);
+		for (const name of await listNames("example-corp", ap, "ar-test-", cfg)) {
+			await apiDelete(`/api/config/namespaces/example-corp/${ap}/${name}`, cfg);
 		}
 	}
 	console.log("[cleanup] done");

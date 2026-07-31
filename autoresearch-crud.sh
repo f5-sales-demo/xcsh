@@ -11,7 +11,7 @@ PHRASES_FILE="${PHRASES_FILE:-${SCRIPT_DIR}/autoresearch-crud-phrases.yaml}"
 WORK_DIR="/tmp/ar-crud-$$"
 API_URL="${XCSH_API_URL:-}"
 API_TOKEN="${XCSH_API_TOKEN:-}"
-NAMESPACE="r-mordasiewicz"
+NAMESPACE="example-corp"
 
 if [ -z "${API_URL}" ] || [ -z "${API_TOKEN}" ]; then
   echo "ERROR: XCSH_API_URL and XCSH_API_TOKEN must be set" >&2

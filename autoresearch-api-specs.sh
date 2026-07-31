@@ -10,7 +10,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_SPECS_DIR="${SCRIPT_DIR}/../api-specs-enriched"
 WORK_DIR="/tmp/ar-api-specs-$$"
-NAMESPACE="${XCSH_NAMESPACE:-r-mordasiewicz}"
+NAMESPACE="${XCSH_NAMESPACE:-example-corp}"
 DRY_RUN="${DRY_RUN:-false}"
 
 if [ -z "${XCSH_API_URL:-}" ] || [ -z "${XCSH_API_TOKEN:-}" ]; then

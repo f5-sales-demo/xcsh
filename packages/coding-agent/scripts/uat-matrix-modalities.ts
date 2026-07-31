@@ -259,7 +259,7 @@ export async function runJson(p: CrudPhrase, cfg: MatrixConfig): Promise<Cell> {
 			detail: "skip_crud_test=true",
 		};
 	}
-	const ns = p.api_namespace || "r-mordasiewicz";
+	const ns = p.api_namespace || "example-corp";
 	const verifyPath =
 		p.namespace_scoped === false
 			? `/api/web/namespaces/${p.resource_name}`

@@ -75,7 +75,7 @@ describe("cleanupOrder — delete respects the F5 XC reference chain", () => {
 
 describe("resourcePath — config API path builder (mirrors staging-crud)", () => {
 	it("builds a collection path without a name", () => {
-		expect(resourcePath("r-mordasiewicz", "healthchecks")).toBe("/api/config/namespaces/r-mordasiewicz/healthchecks");
+		expect(resourcePath("example-corp", "healthchecks")).toBe("/api/config/namespaces/example-corp/healthchecks");
 	});
 	it("appends the item name for a per-resource path", () => {
 		expect(resourcePath("ns1", "http_loadbalancers", "lb-1")).toBe(

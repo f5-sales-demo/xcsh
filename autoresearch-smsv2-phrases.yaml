@@ -115,13 +115,13 @@ phrases:
     option_group: logs_receiver
     option_field: log_receiver
     site_name: ar-test-smsv2-7b
-    phrase: "Create a SecureMesh site v2 named ar-test-smsv2-7b in namespace system using Azure not_managed provider sending logs to global log receiver ar-test-smsv2-glr in namespace r-mordasiewicz"
+    phrase: "Create a SecureMesh site v2 named ar-test-smsv2-7b in namespace system using Azure not_managed provider sending logs to global log receiver ar-test-smsv2-glr in namespace example-corp"
     prerequisites:
       - type: global_log_receiver
         name: ar-test-smsv2-glr
         api_path: global_log_receivers
-        namespace: r-mordasiewicz
-        payload: '{"metadata":{"name":"ar-test-smsv2-glr","namespace":"r-mordasiewicz"},"spec":{"request_logs":{},"http_receiver":{"uri":"http://logs.example.com:8080/logs","no_tls":{},"disable_authentication":{}}}}'
+        namespace: example-corp
+        payload: '{"metadata":{"name":"ar-test-smsv2-glr","namespace":"example-corp"},"spec":{"request_logs":{},"http_receiver":{"uri":"http://logs.example.com:8080/logs","no_tls":{},"disable_authentication":{}}}}'
 
   # ── Group 8: s2s_sli ──────────────────────────────────────────────────────
   - id: "8a"

@@ -23,8 +23,8 @@
 
 - do not modify benchmark scripts
 - all test resources prefixed ar-test-lb-adv-* or ar-test-vs-*
-- test LBs in namespace r-mordasiewicz
-- virtual sites in namespace r-mordasiewicz, type CUSTOMER_EDGE
+- test LBs in namespace example-corp
+- virtual sites in namespace example-corp, type CUSTOMER_EDGE
 - origin pool ar-test-lb-adv-pool must exist before T1 runs (created by setup)
 - when xcsh uses wrong advertise field, fix_repo=xcsh
 - when xcsh uses wrong network enum value, fix_repo=api-specs-enriched

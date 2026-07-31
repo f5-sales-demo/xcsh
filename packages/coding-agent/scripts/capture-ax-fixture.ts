@@ -4,7 +4,7 @@
 import puppeteer from "puppeteer";
 
 const CHROME = process.env.CHROME_PATH;
-const BASE = process.env.XCSH_CONSOLE_URL ?? "https://nferreira.staging.volterra.us";
+const BASE = process.env.XCSH_CONSOLE_URL ?? "https://example.staging.volterra.us";
 const NS = process.env.XCSH_NS ?? "demo";
 const OUT = "test/browser/fixtures/xc-http-lb-create.ax.json";
 

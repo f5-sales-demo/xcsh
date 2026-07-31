@@ -1,83 +1,83 @@
 phrases:
   # === healthcheck (4 phrases) ===
-  - phrase: "Create a healthcheck named ar-test-hc in namespace r-mordasiewicz that checks /healthz via HTTP every 10 seconds"
+  - phrase: "Create a healthcheck named ar-test-hc in namespace example-corp that checks /healthz via HTTP every 10 seconds"
     operation: create
     resource: healthcheck
     resource_name: ar-test-hc
     api_path: healthchecks
     expect_fields: [name, http_health_check]
 
-  - phrase: "Read the healthcheck named ar-test-hc from namespace r-mordasiewicz and show its configuration"
+  - phrase: "Read the healthcheck named ar-test-hc from namespace example-corp and show its configuration"
     operation: read
     resource: healthcheck
     resource_name: ar-test-hc
     api_path: healthchecks
     expect_fields: [name]
 
-  - phrase: "Update the healthcheck ar-test-hc in namespace r-mordasiewicz to check every 15 seconds instead of 10"
+  - phrase: "Update the healthcheck ar-test-hc in namespace example-corp to check every 15 seconds instead of 10"
     operation: update
     resource: healthcheck
     resource_name: ar-test-hc
     api_path: healthchecks
     expect_fields: [interval]
 
-  - phrase: "Delete the healthcheck ar-test-hc from namespace r-mordasiewicz"
+  - phrase: "Delete the healthcheck ar-test-hc from namespace example-corp"
     operation: delete
     resource: healthcheck
     resource_name: ar-test-hc
     api_path: healthchecks
 
   # === app_firewall (4 phrases) ===
-  - phrase: "Create an app firewall named ar-test-waf in namespace r-mordasiewicz with blocking mode"
+  - phrase: "Create an app firewall named ar-test-waf in namespace example-corp with blocking mode"
     operation: create
     resource: app_firewall
     resource_name: ar-test-waf
     api_path: app_firewalls
     expect_fields: [name, blocking]
 
-  - phrase: "Read the app firewall named ar-test-waf from namespace r-mordasiewicz"
+  - phrase: "Read the app firewall named ar-test-waf from namespace example-corp"
     operation: read
     resource: app_firewall
     resource_name: ar-test-waf
     api_path: app_firewalls
     expect_fields: [name]
 
-  - phrase: "Update app firewall ar-test-waf in namespace r-mordasiewicz to add description 'test firewall'"
+  - phrase: "Update app firewall ar-test-waf in namespace example-corp to add description 'test firewall'"
     operation: update
     resource: app_firewall
     resource_name: ar-test-waf
     api_path: app_firewalls
     expect_fields: [description]
 
-  - phrase: "Delete the app firewall ar-test-waf from namespace r-mordasiewicz"
+  - phrase: "Delete the app firewall ar-test-waf from namespace example-corp"
     operation: delete
     resource: app_firewall
     resource_name: ar-test-waf
     api_path: app_firewalls
 
   # === service_policy (4 phrases) ===
-  - phrase: "Create a service policy named ar-test-policy in namespace r-mordasiewicz that allows all traffic"
+  - phrase: "Create a service policy named ar-test-policy in namespace example-corp that allows all traffic"
     operation: create
     resource: service_policy
     resource_name: ar-test-policy
     api_path: service_policys
     expect_fields: [name]
 
-  - phrase: "Read the service policy named ar-test-policy from namespace r-mordasiewicz"
+  - phrase: "Read the service policy named ar-test-policy from namespace example-corp"
     operation: read
     resource: service_policy
     resource_name: ar-test-policy
     api_path: service_policys
     expect_fields: [name]
 
-  - phrase: "Update service policy ar-test-policy in namespace r-mordasiewicz to add description 'test policy'"
+  - phrase: "Update service policy ar-test-policy in namespace example-corp to add description 'test policy'"
     operation: update
     resource: service_policy
     resource_name: ar-test-policy
     api_path: service_policys
     expect_fields: [description]
 
-  - phrase: "Delete the service policy ar-test-policy from namespace r-mordasiewicz"
+  - phrase: "Delete the service policy ar-test-policy from namespace example-corp"
     operation: delete
     resource: service_policy
     resource_name: ar-test-policy
@@ -122,28 +122,28 @@ phrases:
     skip_crud_test: true
 
   # === origin_pool (4 phrases) ===
-  - phrase: "Create an origin pool named ar-test-pool in namespace r-mordasiewicz with one origin server at 10.0.1.10 on port 8080"
+  - phrase: "Create an origin pool named ar-test-pool in namespace example-corp with one origin server at 10.0.1.10 on port 8080"
     operation: create
     resource: origin_pool
     resource_name: ar-test-pool
     api_path: origin_pools
     expect_fields: [name, origin_servers]
 
-  - phrase: "Read the origin pool named ar-test-pool from namespace r-mordasiewicz"
+  - phrase: "Read the origin pool named ar-test-pool from namespace example-corp"
     operation: read
     resource: origin_pool
     resource_name: ar-test-pool
     api_path: origin_pools
     expect_fields: [name]
 
-  - phrase: "Update origin pool ar-test-pool in namespace r-mordasiewicz to add description 'test pool'"
+  - phrase: "Update origin pool ar-test-pool in namespace example-corp to add description 'test pool'"
     operation: update
     resource: origin_pool
     resource_name: ar-test-pool
     api_path: origin_pools
     expect_fields: [description]
 
-  - phrase: "Delete the origin pool ar-test-pool from namespace r-mordasiewicz"
+  - phrase: "Delete the origin pool ar-test-pool from namespace example-corp"
     operation: delete
     resource: origin_pool
     resource_name: ar-test-pool
@@ -151,7 +151,7 @@ phrases:
 
   # === http_loadbalancer (5 phrases: setup pool + CRUD) ===
   # Phrase 21: create a dedicated origin pool for the LB (setup step, counted as create)
-  - phrase: "Create an origin pool named ar-test-lb-pool in namespace r-mordasiewicz with one origin server at 10.0.1.20 on port 80"
+  - phrase: "Create an origin pool named ar-test-lb-pool in namespace example-corp with one origin server at 10.0.1.20 on port 80"
     operation: create
     resource: origin_pool
     resource_name: ar-test-lb-pool
@@ -159,28 +159,28 @@ phrases:
     expect_fields: [name, origin_servers]
 
   # Phrase 22: create LB referencing the pool (tests dependency chaining)
-  - phrase: "Create an HTTP load balancer named ar-test-lb in namespace r-mordasiewicz on domain ar-test.example.com routing to origin pool ar-test-lb-pool"
+  - phrase: "Create an HTTP load balancer named ar-test-lb in namespace example-corp on domain ar-test.example.com routing to origin pool ar-test-lb-pool"
     operation: create
     resource: http_loadbalancer
     resource_name: ar-test-lb
     api_path: http_loadbalancers
     expect_fields: [name, domains]
 
-  - phrase: "Read the HTTP load balancer named ar-test-lb from namespace r-mordasiewicz"
+  - phrase: "Read the HTTP load balancer named ar-test-lb from namespace example-corp"
     operation: read
     resource: http_loadbalancer
     resource_name: ar-test-lb
     api_path: http_loadbalancers
     expect_fields: [name]
 
-  - phrase: "Update the HTTP load balancer ar-test-lb in namespace r-mordasiewicz to add description 'test lb'"
+  - phrase: "Update the HTTP load balancer ar-test-lb in namespace example-corp to add description 'test lb'"
     operation: update
     resource: http_loadbalancer
     resource_name: ar-test-lb
     api_path: http_loadbalancers
     expect_fields: [description]
 
-  - phrase: "Delete the HTTP load balancer ar-test-lb from namespace r-mordasiewicz"
+  - phrase: "Delete the HTTP load balancer ar-test-lb from namespace example-corp"
     operation: delete
     resource: http_loadbalancer
     resource_name: ar-test-lb
@@ -188,42 +188,42 @@ phrases:
 
 
   # === tcp_loadbalancer (6 phrases — includes pool setup/teardown) ===
-  - phrase: "Create an origin pool named ar-test-tcp-pool in namespace r-mordasiewicz with one origin server at 10.0.1.30 on port 80"
+  - phrase: "Create an origin pool named ar-test-tcp-pool in namespace example-corp with one origin server at 10.0.1.30 on port 80"
     operation: create
     resource: origin_pool
     resource_name: ar-test-tcp-pool
     api_path: origin_pools
     namespace_scoped: true
 
-  - phrase: "Create a TCP load balancer named ar-test-tcplb in namespace r-mordasiewicz on listen port 8080 with do_not_advertise routing to origin pool ar-test-tcp-pool"
+  - phrase: "Create a TCP load balancer named ar-test-tcplb in namespace example-corp on listen port 8080 with do_not_advertise routing to origin pool ar-test-tcp-pool"
     operation: create
     resource: tcp_loadbalancer
     resource_name: ar-test-tcplb
     api_path: tcp_loadbalancers
     namespace_scoped: true
 
-  - phrase: "Read the TCP load balancer named ar-test-tcplb from namespace r-mordasiewicz"
+  - phrase: "Read the TCP load balancer named ar-test-tcplb from namespace example-corp"
     operation: read
     resource: tcp_loadbalancer
     resource_name: ar-test-tcplb
     api_path: tcp_loadbalancers
     namespace_scoped: true
 
-  - phrase: "Update the TCP load balancer ar-test-tcplb in namespace r-mordasiewicz to add description 'test tcp lb'"
+  - phrase: "Update the TCP load balancer ar-test-tcplb in namespace example-corp to add description 'test tcp lb'"
     operation: update
     resource: tcp_loadbalancer
     resource_name: ar-test-tcplb
     api_path: tcp_loadbalancers
     namespace_scoped: true
 
-  - phrase: "Delete the TCP load balancer ar-test-tcplb from namespace r-mordasiewicz"
+  - phrase: "Delete the TCP load balancer ar-test-tcplb from namespace example-corp"
     operation: delete
     resource: tcp_loadbalancer
     resource_name: ar-test-tcplb
     api_path: tcp_loadbalancers
     namespace_scoped: true
 
-  - phrase: "Delete the origin pool ar-test-tcp-pool from namespace r-mordasiewicz"
+  - phrase: "Delete the origin pool ar-test-tcp-pool from namespace example-corp"
     operation: delete
     resource: origin_pool
     resource_name: ar-test-tcp-pool
@@ -231,28 +231,28 @@ phrases:
     namespace_scoped: true
 
   # === api_definition (4 phrases) ===
-  - phrase: "Create an API definition named ar-test-apidef in namespace r-mordasiewicz with empty spec"
+  - phrase: "Create an API definition named ar-test-apidef in namespace example-corp with empty spec"
     operation: create
     resource: api_definition
     resource_name: ar-test-apidef
     api_path: api_definitions
     namespace_scoped: true
 
-  - phrase: "Read the API definition named ar-test-apidef from namespace r-mordasiewicz"
+  - phrase: "Read the API definition named ar-test-apidef from namespace example-corp"
     operation: read
     resource: api_definition
     resource_name: ar-test-apidef
     api_path: api_definitions
     namespace_scoped: true
 
-  - phrase: "Update the API definition ar-test-apidef in namespace r-mordasiewicz to add description 'test api definition'"
+  - phrase: "Update the API definition ar-test-apidef in namespace example-corp to add description 'test api definition'"
     operation: update
     resource: api_definition
     resource_name: ar-test-apidef
     api_path: api_definitions
     namespace_scoped: true
 
-  - phrase: "Delete the API definition ar-test-apidef from namespace r-mordasiewicz"
+  - phrase: "Delete the API definition ar-test-apidef from namespace example-corp"
     operation: delete
     resource: api_definition
     resource_name: ar-test-apidef
@@ -260,28 +260,28 @@ phrases:
     namespace_scoped: true
 
   # === api_discovery (4 phrases) ===
-  - phrase: "Create an API discovery named ar-test-apidisc in namespace r-mordasiewicz with user_defined_api_discovery_policy"
+  - phrase: "Create an API discovery named ar-test-apidisc in namespace example-corp with user_defined_api_discovery_policy"
     operation: create
     resource: api_discovery
     resource_name: ar-test-apidisc
     api_path: api_discoverys
     namespace_scoped: true
 
-  - phrase: "Read the API discovery named ar-test-apidisc from namespace r-mordasiewicz"
+  - phrase: "Read the API discovery named ar-test-apidisc from namespace example-corp"
     operation: read
     resource: api_discovery
     resource_name: ar-test-apidisc
     api_path: api_discoverys
     namespace_scoped: true
 
-  - phrase: "Update the API discovery ar-test-apidisc in namespace r-mordasiewicz to add description 'test api discovery'"
+  - phrase: "Update the API discovery ar-test-apidisc in namespace example-corp to add description 'test api discovery'"
     operation: update
     resource: api_discovery
     resource_name: ar-test-apidisc
     api_path: api_discoverys
     namespace_scoped: true
 
-  - phrase: "Delete the API discovery ar-test-apidisc from namespace r-mordasiewicz"
+  - phrase: "Delete the API discovery ar-test-apidisc from namespace example-corp"
     operation: delete
     resource: api_discovery
     resource_name: ar-test-apidisc
@@ -289,28 +289,28 @@ phrases:
     namespace_scoped: true
 
   # === policer (4 phrases) ===
-  - phrase: "Create a policer named ar-test-policer in namespace r-mordasiewicz with burst_size 10 and committed_information_rate 5"
+  - phrase: "Create a policer named ar-test-policer in namespace example-corp with burst_size 10 and committed_information_rate 5"
     operation: create
     resource: policer
     resource_name: ar-test-policer
     api_path: policers
     namespace_scoped: true
 
-  - phrase: "Read the policer named ar-test-policer from namespace r-mordasiewicz"
+  - phrase: "Read the policer named ar-test-policer from namespace example-corp"
     operation: read
     resource: policer
     resource_name: ar-test-policer
     api_path: policers
     namespace_scoped: true
 
-  - phrase: "Update the policer ar-test-policer in namespace r-mordasiewicz to add description 'test policer'"
+  - phrase: "Update the policer ar-test-policer in namespace example-corp to add description 'test policer'"
     operation: update
     resource: policer
     resource_name: ar-test-policer
     api_path: policers
     namespace_scoped: true
 
-  - phrase: "Delete the policer ar-test-policer from namespace r-mordasiewicz"
+  - phrase: "Delete the policer ar-test-policer from namespace example-corp"
     operation: delete
     resource: policer
     resource_name: ar-test-policer
@@ -318,28 +318,28 @@ phrases:
     namespace_scoped: true
 
   # === rate_limiter (4 phrases) — HTTP request rate limiting resource ===
-  - phrase: "Create a rate limiter named ar-test-ratelimiter in namespace r-mordasiewicz with total_number 5 per second and burst_multiplier 10"
+  - phrase: "Create a rate limiter named ar-test-ratelimiter in namespace example-corp with total_number 5 per second and burst_multiplier 10"
     operation: create
     resource: rate_limiter
     resource_name: ar-test-ratelimiter
     api_path: rate_limiters
     namespace_scoped: true
 
-  - phrase: "Read the rate limiter named ar-test-ratelimiter from namespace r-mordasiewicz"
+  - phrase: "Read the rate limiter named ar-test-ratelimiter from namespace example-corp"
     operation: read
     resource: rate_limiter
     resource_name: ar-test-ratelimiter
     api_path: rate_limiters
     namespace_scoped: true
 
-  - phrase: "Update the rate limiter ar-test-ratelimiter in namespace r-mordasiewicz to add description 'test rate limiter'"
+  - phrase: "Update the rate limiter ar-test-ratelimiter in namespace example-corp to add description 'test rate limiter'"
     operation: update
     resource: rate_limiter
     resource_name: ar-test-ratelimiter
     api_path: rate_limiters
     namespace_scoped: true
 
-  - phrase: "Delete the rate limiter ar-test-ratelimiter from namespace r-mordasiewicz"
+  - phrase: "Delete the rate limiter ar-test-ratelimiter from namespace example-corp"
     operation: delete
     resource: rate_limiter
     resource_name: ar-test-ratelimiter
@@ -347,28 +347,28 @@ phrases:
     namespace_scoped: true
 
   # === waf_exclusion_policy (4 phrases) ===
-  - phrase: "Create a WAF exclusion policy named ar-test-wafexcl in namespace r-mordasiewicz with one exclusion rule named exclude-health matching path /health"
+  - phrase: "Create a WAF exclusion policy named ar-test-wafexcl in namespace example-corp with one exclusion rule named exclude-health matching path /health"
     operation: create
     resource: waf_exclusion_policy
     resource_name: ar-test-wafexcl
     api_path: waf_exclusion_policys
     namespace_scoped: true
 
-  - phrase: "Read the WAF exclusion policy named ar-test-wafexcl from namespace r-mordasiewicz"
+  - phrase: "Read the WAF exclusion policy named ar-test-wafexcl from namespace example-corp"
     operation: read
     resource: waf_exclusion_policy
     resource_name: ar-test-wafexcl
     api_path: waf_exclusion_policys
     namespace_scoped: true
 
-  - phrase: "Update the WAF exclusion policy ar-test-wafexcl in namespace r-mordasiewicz to add description 'test waf exclusion'"
+  - phrase: "Update the WAF exclusion policy ar-test-wafexcl in namespace example-corp to add description 'test waf exclusion'"
     operation: update
     resource: waf_exclusion_policy
     resource_name: ar-test-wafexcl
     api_path: waf_exclusion_policys
     namespace_scoped: true
 
-  - phrase: "Delete the WAF exclusion policy ar-test-wafexcl from namespace r-mordasiewicz"
+  - phrase: "Delete the WAF exclusion policy ar-test-wafexcl from namespace example-corp"
     operation: delete
     resource: waf_exclusion_policy
     resource_name: ar-test-wafexcl
@@ -376,28 +376,28 @@ phrases:
     namespace_scoped: true
 
   # === user_identification (4 phrases) ===
-  - phrase: "Create a user identification named ar-test-userid in namespace r-mordasiewicz with one rule identifying users by client IP"
+  - phrase: "Create a user identification named ar-test-userid in namespace example-corp with one rule identifying users by client IP"
     operation: create
     resource: user_identification
     resource_name: ar-test-userid
     api_path: user_identifications
     namespace_scoped: true
 
-  - phrase: "Read the user identification named ar-test-userid from namespace r-mordasiewicz"
+  - phrase: "Read the user identification named ar-test-userid from namespace example-corp"
     operation: read
     resource: user_identification
     resource_name: ar-test-userid
     api_path: user_identifications
     namespace_scoped: true
 
-  - phrase: "Update the user identification ar-test-userid in namespace r-mordasiewicz to add description 'test user identification'"
+  - phrase: "Update the user identification ar-test-userid in namespace example-corp to add description 'test user identification'"
     operation: update
     resource: user_identification
     resource_name: ar-test-userid
     api_path: user_identifications
     namespace_scoped: true
 
-  - phrase: "Delete the user identification ar-test-userid from namespace r-mordasiewicz"
+  - phrase: "Delete the user identification ar-test-userid from namespace example-corp"
     operation: delete
     resource: user_identification
     resource_name: ar-test-userid
@@ -405,28 +405,28 @@ phrases:
     namespace_scoped: true
 
   # === malicious_user_mitigation (4 phrases) ===
-  - phrase: "Create a malicious user mitigation named ar-test-maluser in namespace r-mordasiewicz with empty spec"
+  - phrase: "Create a malicious user mitigation named ar-test-maluser in namespace example-corp with empty spec"
     operation: create
     resource: malicious_user_mitigation
     resource_name: ar-test-maluser
     api_path: malicious_user_mitigations
     namespace_scoped: true
 
-  - phrase: "Read the malicious user mitigation named ar-test-maluser from namespace r-mordasiewicz"
+  - phrase: "Read the malicious user mitigation named ar-test-maluser from namespace example-corp"
     operation: read
     resource: malicious_user_mitigation
     resource_name: ar-test-maluser
     api_path: malicious_user_mitigations
     namespace_scoped: true
 
-  - phrase: "Update the malicious user mitigation ar-test-maluser in namespace r-mordasiewicz to add description 'test malicious user mitigation'"
+  - phrase: "Update the malicious user mitigation ar-test-maluser in namespace example-corp to add description 'test malicious user mitigation'"
     operation: update
     resource: malicious_user_mitigation
     resource_name: ar-test-maluser
     api_path: malicious_user_mitigations
     namespace_scoped: true
 
-  - phrase: "Delete the malicious user mitigation ar-test-maluser from namespace r-mordasiewicz"
+  - phrase: "Delete the malicious user mitigation ar-test-maluser from namespace example-corp"
     operation: delete
     resource: malicious_user_mitigation
     resource_name: ar-test-maluser
@@ -434,28 +434,28 @@ phrases:
     namespace_scoped: true
 
   # === sensitive_data_policy (4 phrases) ===
-  - phrase: "Create a sensitive data policy named ar-test-sdp in namespace r-mordasiewicz with empty spec"
+  - phrase: "Create a sensitive data policy named ar-test-sdp in namespace example-corp with empty spec"
     operation: create
     resource: sensitive_data_policy
     resource_name: ar-test-sdp
     api_path: sensitive_data_policys
     namespace_scoped: true
 
-  - phrase: "Read the sensitive data policy named ar-test-sdp from namespace r-mordasiewicz"
+  - phrase: "Read the sensitive data policy named ar-test-sdp from namespace example-corp"
     operation: read
     resource: sensitive_data_policy
     resource_name: ar-test-sdp
     api_path: sensitive_data_policys
     namespace_scoped: true
 
-  - phrase: "Update the sensitive data policy ar-test-sdp in namespace r-mordasiewicz to add description 'test sensitive data policy'"
+  - phrase: "Update the sensitive data policy ar-test-sdp in namespace example-corp to add description 'test sensitive data policy'"
     operation: update
     resource: sensitive_data_policy
     resource_name: ar-test-sdp
     api_path: sensitive_data_policys
     namespace_scoped: true
 
-  - phrase: "Delete the sensitive data policy ar-test-sdp from namespace r-mordasiewicz"
+  - phrase: "Delete the sensitive data policy ar-test-sdp from namespace example-corp"
     operation: delete
     resource: sensitive_data_policy
     resource_name: ar-test-sdp
@@ -463,28 +463,28 @@ phrases:
     namespace_scoped: true
 
   # === protocol_inspection (4 phrases) ===
-  - phrase: "Create a protocol inspection named ar-test-procinsp in namespace r-mordasiewicz with compliance checks disabled and signatures enabled"
+  - phrase: "Create a protocol inspection named ar-test-procinsp in namespace example-corp with compliance checks disabled and signatures enabled"
     operation: create
     resource: protocol_inspection
     resource_name: ar-test-procinsp
     api_path: protocol_inspections
     namespace_scoped: true
 
-  - phrase: "Read the protocol inspection named ar-test-procinsp from namespace r-mordasiewicz"
+  - phrase: "Read the protocol inspection named ar-test-procinsp from namespace example-corp"
     operation: read
     resource: protocol_inspection
     resource_name: ar-test-procinsp
     api_path: protocol_inspections
     namespace_scoped: true
 
-  - phrase: "Update the protocol inspection ar-test-procinsp in namespace r-mordasiewicz to add description 'test protocol inspection'"
+  - phrase: "Update the protocol inspection ar-test-procinsp in namespace example-corp to add description 'test protocol inspection'"
     operation: update
     resource: protocol_inspection
     resource_name: ar-test-procinsp
     api_path: protocol_inspections
     namespace_scoped: true
 
-  - phrase: "Delete the protocol inspection ar-test-procinsp from namespace r-mordasiewicz"
+  - phrase: "Delete the protocol inspection ar-test-procinsp from namespace example-corp"
     operation: delete
     resource: protocol_inspection
     resource_name: ar-test-procinsp
@@ -492,28 +492,28 @@ phrases:
     namespace_scoped: true
 
   # === network_policy (4 phrases) ===
-  - phrase: "Create a network policy named ar-test-netpol in namespace r-mordasiewicz with endpoint matching any address"
+  - phrase: "Create a network policy named ar-test-netpol in namespace example-corp with endpoint matching any address"
     operation: create
     resource: network_policy
     resource_name: ar-test-netpol
     api_path: network_policys
     namespace_scoped: true
 
-  - phrase: "Read the network policy named ar-test-netpol from namespace r-mordasiewicz"
+  - phrase: "Read the network policy named ar-test-netpol from namespace example-corp"
     operation: read
     resource: network_policy
     resource_name: ar-test-netpol
     api_path: network_policys
     namespace_scoped: true
 
-  - phrase: "Update the network policy ar-test-netpol in namespace r-mordasiewicz to add description 'test network policy'"
+  - phrase: "Update the network policy ar-test-netpol in namespace example-corp to add description 'test network policy'"
     operation: update
     resource: network_policy
     resource_name: ar-test-netpol
     api_path: network_policys
     namespace_scoped: true
 
-  - phrase: "Delete the network policy ar-test-netpol from namespace r-mordasiewicz"
+  - phrase: "Delete the network policy ar-test-netpol from namespace example-corp"
     operation: delete
     resource: network_policy
     resource_name: ar-test-netpol
@@ -521,28 +521,28 @@ phrases:
     namespace_scoped: true
 
   # === virtual_site (4 phrases) ===
-  - phrase: "Create a virtual site named ar-test-vsite in namespace r-mordasiewicz of type REGIONAL_EDGE with site selector expression ves.io/siteName=any"
+  - phrase: "Create a virtual site named ar-test-vsite in namespace example-corp of type REGIONAL_EDGE with site selector expression ves.io/siteName=any"
     operation: create
     resource: virtual_site
     resource_name: ar-test-vsite
     api_path: virtual_sites
     namespace_scoped: true
 
-  - phrase: "Read the virtual site named ar-test-vsite from namespace r-mordasiewicz"
+  - phrase: "Read the virtual site named ar-test-vsite from namespace example-corp"
     operation: read
     resource: virtual_site
     resource_name: ar-test-vsite
     api_path: virtual_sites
     namespace_scoped: true
 
-  - phrase: "Update the virtual site ar-test-vsite in namespace r-mordasiewicz to add description 'test virtual site'"
+  - phrase: "Update the virtual site ar-test-vsite in namespace example-corp to add description 'test virtual site'"
     operation: update
     resource: virtual_site
     resource_name: ar-test-vsite
     api_path: virtual_sites
     namespace_scoped: true
 
-  - phrase: "Delete the virtual site ar-test-vsite from namespace r-mordasiewicz"
+  - phrase: "Delete the virtual site ar-test-vsite from namespace example-corp"
     operation: delete
     resource: virtual_site
     resource_name: ar-test-vsite
@@ -550,28 +550,28 @@ phrases:
     namespace_scoped: true
 
   # === forward_proxy_policy (4 phrases) ===
-  - phrase: "Create a forward proxy policy named ar-test-fpp in namespace r-mordasiewicz using drp_http_connect proxy with allow_all rule"
+  - phrase: "Create a forward proxy policy named ar-test-fpp in namespace example-corp using drp_http_connect proxy with allow_all rule"
     operation: create
     resource: forward_proxy_policy
     resource_name: ar-test-fpp
     api_path: forward_proxy_policys
     namespace_scoped: true
 
-  - phrase: "Read the forward proxy policy named ar-test-fpp from namespace r-mordasiewicz"
+  - phrase: "Read the forward proxy policy named ar-test-fpp from namespace example-corp"
     operation: read
     resource: forward_proxy_policy
     resource_name: ar-test-fpp
     api_path: forward_proxy_policys
     namespace_scoped: true
 
-  - phrase: "Update the forward proxy policy ar-test-fpp in namespace r-mordasiewicz to add description 'test forward proxy policy'"
+  - phrase: "Update the forward proxy policy ar-test-fpp in namespace example-corp to add description 'test forward proxy policy'"
     operation: update
     resource: forward_proxy_policy
     resource_name: ar-test-fpp
     api_path: forward_proxy_policys
     namespace_scoped: true
 
-  - phrase: "Delete the forward proxy policy ar-test-fpp from namespace r-mordasiewicz"
+  - phrase: "Delete the forward proxy policy ar-test-fpp from namespace example-corp"
     operation: delete
     resource: forward_proxy_policy
     resource_name: ar-test-fpp
@@ -579,28 +579,28 @@ phrases:
     namespace_scoped: true
 
   # === global_log_receiver (4 phrases) ===
-  - phrase: "Create a global log receiver named ar-test-logrx in namespace r-mordasiewicz sending request_logs via HTTP to http://logs.example.com/ingest"
+  - phrase: "Create a global log receiver named ar-test-logrx in namespace example-corp sending request_logs via HTTP to http://logs.example.com/ingest"
     operation: create
     resource: global_log_receiver
     resource_name: ar-test-logrx
     api_path: global_log_receivers
     namespace_scoped: true
 
-  - phrase: "Read the global log receiver named ar-test-logrx from namespace r-mordasiewicz"
+  - phrase: "Read the global log receiver named ar-test-logrx from namespace example-corp"
     operation: read
     resource: global_log_receiver
     resource_name: ar-test-logrx
     api_path: global_log_receivers
     namespace_scoped: true
 
-  - phrase: "Update the global log receiver ar-test-logrx in namespace r-mordasiewicz to add description 'test log receiver'"
+  - phrase: "Update the global log receiver ar-test-logrx in namespace example-corp to add description 'test log receiver'"
     operation: update
     resource: global_log_receiver
     resource_name: ar-test-logrx
     api_path: global_log_receivers
     namespace_scoped: true
 
-  - phrase: "Delete the global log receiver ar-test-logrx from namespace r-mordasiewicz"
+  - phrase: "Delete the global log receiver ar-test-logrx from namespace example-corp"
     operation: delete
     resource: global_log_receiver
     resource_name: ar-test-logrx
@@ -608,28 +608,28 @@ phrases:
     namespace_scoped: true
 
   # === alert_receiver (4 phrases) ===
-  - phrase: "Create an alert receiver named ar-test-alertrx in namespace r-mordasiewicz sending email notifications to alerts@example.com"
+  - phrase: "Create an alert receiver named ar-test-alertrx in namespace example-corp sending email notifications to alerts@example.com"
     operation: create
     resource: alert_receiver
     resource_name: ar-test-alertrx
     api_path: alert_receivers
     namespace_scoped: true
 
-  - phrase: "Read the alert receiver named ar-test-alertrx from namespace r-mordasiewicz"
+  - phrase: "Read the alert receiver named ar-test-alertrx from namespace example-corp"
     operation: read
     resource: alert_receiver
     resource_name: ar-test-alertrx
     api_path: alert_receivers
     namespace_scoped: true
 
-  - phrase: "Update the alert receiver ar-test-alertrx in namespace r-mordasiewicz to add description 'test alert receiver'"
+  - phrase: "Update the alert receiver ar-test-alertrx in namespace example-corp to add description 'test alert receiver'"
     operation: update
     resource: alert_receiver
     resource_name: ar-test-alertrx
     api_path: alert_receivers
     namespace_scoped: true
 
-  - phrase: "Delete the alert receiver ar-test-alertrx from namespace r-mordasiewicz"
+  - phrase: "Delete the alert receiver ar-test-alertrx from namespace example-corp"
     operation: delete
     resource: alert_receiver
     resource_name: ar-test-alertrx
@@ -637,28 +637,28 @@ phrases:
     namespace_scoped: true
 
   # === enhanced_firewall_policy (4 phrases) ===
-  - phrase: "Create an enhanced firewall policy named ar-test-efp in namespace r-mordasiewicz with empty spec"
+  - phrase: "Create an enhanced firewall policy named ar-test-efp in namespace example-corp with empty spec"
     operation: create
     resource: enhanced_firewall_policy
     resource_name: ar-test-efp
     api_path: enhanced_firewall_policys
     namespace_scoped: true
 
-  - phrase: "Read the enhanced firewall policy named ar-test-efp from namespace r-mordasiewicz"
+  - phrase: "Read the enhanced firewall policy named ar-test-efp from namespace example-corp"
     operation: read
     resource: enhanced_firewall_policy
     resource_name: ar-test-efp
     api_path: enhanced_firewall_policys
     namespace_scoped: true
 
-  - phrase: "Update the enhanced firewall policy ar-test-efp in namespace r-mordasiewicz to add description 'test enhanced firewall policy'"
+  - phrase: "Update the enhanced firewall policy ar-test-efp in namespace example-corp to add description 'test enhanced firewall policy'"
     operation: update
     resource: enhanced_firewall_policy
     resource_name: ar-test-efp
     api_path: enhanced_firewall_policys
     namespace_scoped: true
 
-  - phrase: "Delete the enhanced firewall policy ar-test-efp from namespace r-mordasiewicz"
+  - phrase: "Delete the enhanced firewall policy ar-test-efp from namespace example-corp"
     operation: delete
     resource: enhanced_firewall_policy
     resource_name: ar-test-efp

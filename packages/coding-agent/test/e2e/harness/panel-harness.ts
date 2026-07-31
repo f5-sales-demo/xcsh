@@ -53,7 +53,7 @@ export const PANEL_URL = `chrome-extension://${EXT_ID}/side-panel.html`;
 
 /** Default staging console landing URL (WAAP → load balancers). */
 export const DEFAULT_CONSOLE_URL =
-	"https://nferreira.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/system/manage/load_balancers/http_loadbalancers";
+	"https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/system/manage/load_balancers/http_loadbalancers";
 
 const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
