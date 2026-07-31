@@ -469,9 +469,11 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 			expect(installer).toContain(checksum);
 		}
 		expect(installer).toContain('case "$RUNNER_OS/$RUNNER_ARCH" in');
-		expect(installer).toContain("command -v sha256sum");
-		expect(installer).toContain("sha256sum --check");
-		expect(installer).toContain("shasum -a 256 --check");
+		expect(installer).toContain('if [[ "$RUNNER_OS" == "macOS" ]]');
+		expect(installer).toContain("sha256sum -c");
+		expect(installer).toContain("shasum -a 256 -c");
+		expect(installer).toContain('if [[ "$EXTENSION" == "zip" ]]');
+		expect(installer).toContain('unzip -q -o "$ARCHIVE"');
 		expect(installer.match(/uses: actions\/cache@v5/g)).toHaveLength(2);
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(installer).toContain("setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.15.2");

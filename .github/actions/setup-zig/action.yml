@@ -60,27 +60,31 @@ runs:
 
         ARCHIVE_DIR="$RUNNER_TEMP_PATH/zig-downloads"
         ARCHIVE="$ARCHIVE_DIR/zig-${PLATFORM}-${ZIG_VERSION}.${EXTENSION}"
-        ZIG_DIR="$RUNNER_TEMP_PATH/zig-${ZIG_VERSION}"
+        ZIG_DIR="$RUNNER_TEMP_PATH/zig-${PLATFORM}-${ZIG_VERSION}"
         ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${PLATFORM}-${ZIG_VERSION}.${EXTENSION}"
         mkdir -p "$ARCHIVE_DIR"
 
         verify_archive() {
-          if command -v sha256sum >/dev/null 2>&1; then
-            printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | sha256sum --check "$@"
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | shasum -a 256 -c
           else
-            printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | shasum -a 256 --check "$@"
+            printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | sha256sum -c
           fi
         }
 
-        if [[ ! -f "$ARCHIVE" ]] || ! verify_archive --status; then
+        if [[ ! -f "$ARCHIVE" ]] || ! verify_archive >/dev/null 2>&1; then
           curl --silent --show-error --fail --location \
             --retry 3 --retry-all-errors --connect-timeout 15 --max-time 180 \
             --output "$ARCHIVE" "$ZIG_URL"
         fi
         verify_archive
 
-        mkdir -p "$ZIG_DIR"
-        tar --extract --file "$ARCHIVE" --directory "$ZIG_DIR" --strip-components=1
+        if [[ "$EXTENSION" == "zip" ]]; then
+          unzip -q -o "$ARCHIVE" -d "$RUNNER_TEMP_PATH"
+        else
+          mkdir -p "$ZIG_DIR"
+          tar --extract --file "$ARCHIVE" --directory "$ZIG_DIR" --strip-components=1
+        fi
 
         ZIG_PATH="$ZIG_DIR"
         ZIG_BINARY="$ZIG_DIR/zig"
