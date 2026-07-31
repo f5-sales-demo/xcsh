@@ -110,7 +110,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:check:full
 
+  setup-zig:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-15-intel, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Zig 0.15.2
+        uses: ./.github/actions/setup-zig
+      - name: Verify Zig
+        shell: bash
+        run: zig version
+
   native:
+    needs: setup-zig
     strategy:
       fail-fast: false
       matrix:

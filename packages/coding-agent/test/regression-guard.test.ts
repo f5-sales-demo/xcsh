@@ -433,24 +433,57 @@ describe("CI invalidates stale release PRs before the full test matrix", () => {
 });
 
 describe("CI installs Zig without a deprecated JavaScript action", () => {
-	it("uses a checksum-pinned composite installer in every Zig-dependent job", async () => {
+	it("executes the Zig installer on every release runner before native builds", async () => {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const smokeJob = workflow.match(/\n {2}setup-zig:\n[\s\S]*?(?=\n {2}native:\n)/)?.[0] ?? "";
+		const nativeJob = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
+
+		expect(smokeJob).toContain("ubuntu-22.04");
+		expect(smokeJob).toContain("macos-15-intel");
+		expect(smokeJob).toContain("macos-14");
+		expect(smokeJob).toContain("windows-latest");
+		expect(smokeJob).toContain("uses: ./.github/actions/setup-zig");
+		expect(smokeJob).toContain("run: zig version");
+		expect(nativeJob).toContain("needs: setup-zig");
+	});
+
+	it("uses a checksum-pinned composite installer for every native release runner", async () => {
 		const root = path.join(import.meta.dir, "../../..");
 		const workflow = await fs.readFile(path.join(root, ".github/workflows/ci.yml"), "utf8");
 		const installer = await fs.readFile(path.join(root, ".github/actions/setup-zig/action.yml"), "utf8");
 
 		expect(workflow).not.toContain("mlugg/setup-zig");
-		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(3);
+		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(4);
 		expect(installer).toContain("using: composite");
 		expect(installer).toContain('ZIG_VERSION: "0.15.2"');
-		expect(installer).toMatch(/zig-x86_64-linux-\$\{ZIG_VERSION\}\.tar\.xz/);
-		expect(installer).toContain("02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239");
-		expect(installer).toContain("sha256sum --check");
+		const releases = [
+			["Linux/X64", "x86_64-linux", "tar.xz", "02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239"],
+			["macOS/X64", "x86_64-macos", "tar.xz", "375b6909fc1495d16fc2c7db9538f707456bfc3373b14ee83fdd3e22b3d43f7f"],
+			["macOS/ARM64", "aarch64-macos", "tar.xz", "3cc2bab367e185cdfb27501c4b30b1b0653c28d9f73df8dc91488e66ece5fa6b"],
+			["Windows/X64", "x86_64-windows", "zip", "3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c"],
+		] as const;
+		for (const [runner, platform, extension, checksum] of releases) {
+			expect(installer).toContain(`${runner})`);
+			expect(installer).toContain(`PLATFORM="${platform}"`);
+			expect(installer).toContain(`EXTENSION="${extension}"`);
+			expect(installer).toContain(checksum);
+		}
+		expect(installer).toContain('case "$RUNNER_OS/$RUNNER_ARCH" in');
+		expect(installer).toContain('if [[ "$RUNNER_OS" == "macOS" ]]');
+		expect(installer).toContain("sha256sum -c");
+		expect(installer).toContain("shasum -a 256 -c");
+		expect(installer).toContain('if [[ "$EXTENSION" == "zip" ]]');
+		expect(installer).toContain('unzip -q -o "$ARCHIVE"');
 		expect(installer.match(/uses: actions\/cache@v5/g)).toHaveLength(2);
-		expect(installer).toContain("setup-zig-tarball-zig-x86_64-linux-0.15.2.tar.xz");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+		expect(installer).toContain("setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.15.2");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+		expect(installer).toContain("setup-zig-cache-v3-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}");
 		expect(installer).toContain("ZIG_GLOBAL_CACHE_DIR");
 		expect(installer).toContain("ZIG_LOCAL_CACHE_DIR");
+		expect(installer).toContain('cygpath -w "$ZIG_DIR"');
 		expect(installer).toContain('>> "$GITHUB_PATH"');
-		expect(installer).toContain('"$ZIG_DIR/zig" version');
+		expect(installer).toContain('"$ZIG_BINARY" version');
 	});
 });
 
