@@ -15,7 +15,6 @@ import { loadCapability } from "../../discovery";
 import { getExtensionNameFromPath, getPreloadedPluginRoots } from "../../discovery/helpers";
 import type { ExecOptions } from "../../exec/exec";
 import { execCommand } from "../../exec/exec";
-import { PROFILE_COLLECTORS, type ProfileCollector } from "../../internal-urls/profile-collectors";
 import type { CustomMessage } from "../../session/messages";
 import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
@@ -182,13 +181,6 @@ class ConcreteExtensionAPI implements ExtensionAPI, IExtensionRuntime {
 
 	registerServiceStatus(contribution: ServiceStatusContribution): void {
 		this.extension.serviceStatuses.set(contribution.name, contribution);
-	}
-
-	registerProfileCollector(collector: ProfileCollector): void {
-		const arr = PROFILE_COLLECTORS as ProfileCollector[];
-		if (!arr.some(c => c.id === collector.id)) {
-			arr.push(collector);
-		}
 	}
 
 	getFlag(name: string): boolean | string | undefined {

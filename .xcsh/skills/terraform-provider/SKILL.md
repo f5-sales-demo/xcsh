@@ -25,10 +25,10 @@ Auth comes from env vars (set ONE): XCSH_API_TOKEN | XCSH_P12_FILE+XCSH_P12_PASS
 Templates (adapt name/namespace/fields per request):
 
 http_loadbalancer: resource "xcsh_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} http { port=80 } default_route_pools { pool { name="origin-pool-name" namespace="default" } weight=1 priority=1 } }
-Pool ref: set pool.name to existing origin pool name in same namespace. HTTPS: replace http { port=80 } with https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} }. WAF: add disable_waf {} or app_firewall { name="waf" namespace="ns" }. Import: terraform import xcsh_http_loadbalancer.example ns/name
+Pool ref: set pool.name to existing origin pool name in same namespace. HTTPS: replace http { port=80 } with https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} }. WAF: add disable_waf {} or app_firewall { name="waf" namespace="example-namespace" }. Import: terraform import xcsh_http_loadbalancer.example example-namespace/name
 
 origin_pool: resource "xcsh_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } loadbalancer_algorithm="ROUND_ROBIN" endpoint_selection="LOCAL_PREFERRED" }
-Healthcheck ref: add healthcheck { name="hc" namespace="ns" }. Import: terraform import xcsh_origin_pool.example ns/name
+Healthcheck ref: add healthcheck { name="hc" namespace="example-namespace" }. Import: terraform import xcsh_origin_pool.example example-namespace/name
 
 healthcheck: resource "xcsh_healthcheck" "example" { name="example" namespace="default" http_health_check { path="/healthz" } timeout=3 interval=10 unhealthy_threshold=3 healthy_threshold=3 }
 TCP: replace http_health_check with tcp_health_check {}. Import: terraform import xcsh_healthcheck.example ns/name
@@ -48,7 +48,7 @@ Import: terraform import xcsh_rate_limiter_policy.example ns/name
 api_definition: resource "xcsh_api_definition" "example" { name="example" namespace="default" swagger_specs=["string:///BASE64_SPEC"] }
 Import: terraform import xcsh_api_definition.example ns/name
 
-namespace: resource "xcsh_namespace" "example" { name="staging" }
+xcsh_namespace: resource "xcsh_namespace" "example" { name="example-staging" }
 Labels: add labels = { env="prod" }. Import: terraform import xcsh_namespace.example name
 
 Troubleshoot: "one of X must be set" = add empty block. "unsupported argument" = check template. Output corrected resource block.

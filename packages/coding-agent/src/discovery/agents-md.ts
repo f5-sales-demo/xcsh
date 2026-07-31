@@ -13,7 +13,7 @@ import type { LoadContext, LoadResult } from "../capability/types";
 import { calculateDepth, createSourceMeta } from "./helpers";
 
 const PROVIDER_ID = "agents-md";
-const DISPLAY_NAME = "XCSH.md";
+const SOURCE_LABEL = "XCSH.md";
 
 /**
  * Load standalone XCSH.md files.
@@ -60,7 +60,7 @@ async function loadAgentsMd(ctx: LoadContext): Promise<LoadResult<ContextFile>> 
 
 registerProvider(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Standalone XCSH.md files (project-root agent init file)",
 	priority: 10,
 	load: loadAgentsMd,

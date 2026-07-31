@@ -269,16 +269,6 @@ For bulk generation (converters, exporters), read the API spec ONCE per resource
 then apply the schema consistently across all generated objects.
 </schema-first-generation>
 
-{{#if userProfile}}
-## Primary Human
-
-{{userProfile.name}}, {{userProfile.role}}, {{userProfile.org}}. `xcsh://user` **MUST** read: identity, comms, PII. **SHOULD NOT** routine work.
-{{/if}}
-
-{{#if computerProfile}}
-`xcsh://computer`. {{computerProfile.ramGB}}GB, {{computerProfile.cpu}}, {{computerProfile.os}}{{#if computerProfile.shell}}, {{computerProfile.shell}}{{/if}}.{{#if computerProfile.managed}} Managed{{#unless computerProfile.admin}} (not admin{{#if computerProfile.endpointAgentCount}}, {{computerProfile.endpointAgentCount}} agents{{/if}}){{/unless}}.{{/if}}
-{{/if}}
-
 {{#if contextFiles.length}}
 <context>
 Context files below **MUST** be followed for all tasks:
@@ -326,10 +316,6 @@ Most tools resolve custom protocol URLs to internal resources (not web URLs):
     For the running version alone, the `<workstation>` header already has it — no tool call needed. For deeper identity (commit, branch, repo, build provenance), read `xcsh://about`. Do not call external GitHub tools or run `xcsh --version`.
   - `xcsh://changes` — Recent merged PRs (what's new since your build), resolved live via `gh`. Read for "what's new / can you do X now / is Y fixed yet" — these are **never** static answers.
   - `xcsh://source` — Capability → source-path map ("where is X implemented?") and the soft/hard editable-surface rule.
-  - `xcsh://user` — Primary human user profile (identity, employment, contact, demographics). Read when personal identity context is needed. Do not read proactively on every turn.
-  - `xcsh://user?seed=true` — Refresh profile from Salesforce, GitHub, and system sources.
-  - `xcsh://computer` — Machine hardware and environment profile. Read when platform-specific recommendations needed.
-  - `xcsh://computer?refresh=true` — Re-collect hardware data.
 - `xcsh://api-spec/` — F5 XC API specifications (schema introspection, field types, validation).
 - `xcsh://api-catalog/` — F5 XC API operations catalog (CRUD execution).
 - `xcsh://console/` — F5 XC admin-console catalogue: UI routes, form sections, and deterministic browser-automation workflows.

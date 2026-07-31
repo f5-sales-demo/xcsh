@@ -203,8 +203,8 @@ Swap exactly one block per oneOf group — e.g. `enable_ha {}` replaces `disable
 - CORRECT: `tls_config {\n  default_security {}\n}`
 - WRONG: `full_mesh { data_plane_mesh {} }`
 - CORRECT: `full_mesh {\n  data_plane_mesh {}\n}`
-- WRONG: `virtual_site = { name = "x", namespace = "y" }` (object literal — NOT a nested block)
-- CORRECT: `virtual_site {\n  name = "x"\n  namespace = "y"\n}` (nested block)
+- WRONG: `virtual_site = { name = "example-site", namespace = "example-namespace" }` (object literal — NOT a nested block)
+- CORRECT: `virtual_site {\n  name = "example-site"\n  namespace = "example-namespace"\n}` (nested block)
 
 For HTTPS auto-cert: use `https_auto_cert {}` block (tls defaults apply). For HTTP: use `http { port = 80 }`. For HTTPS redirect: add `http_redirect = true` inside `https_auto_cert`.
 

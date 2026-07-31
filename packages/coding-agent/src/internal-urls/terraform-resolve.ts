@@ -114,7 +114,7 @@ function renderL0(index: TerraformIndex): string {
 		"- `xcsh_namespace`: name",
 		"",
 		"Import: `terraform import xcsh_{type}.example namespace/name`",
-		'Cross-refs use blocks: `app_firewall { name = "x" namespace = "y" }` not string refs.',
+		'Cross-refs use blocks: `app_firewall { name = "example-firewall" namespace = "example-namespace" }` not string refs.',
 		"",
 	];
 	return lines.join("\n");

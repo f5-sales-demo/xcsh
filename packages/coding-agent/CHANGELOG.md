@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- Removed the `registerProfileCollector()` extension API and the `xcsh://user` and `xcsh://computer` routes. Extensions must no longer register workstation or user identity collectors. ([#2674](https://github.com/f5-sales-demo/xcsh/issues/2674))
+
+### Removed
+
+- Removed automatic collection, persistence, and prompt injection of user and workstation profile data, including names, contact details, employer and manager information, addresses, social identifiers, hostnames, and endpoint security inventory. ([#2674](https://github.com/f5-sales-demo/xcsh/issues/2674))
+
 ### Fixed
 
 - Fixed the checksum-pinned Zig installer on macOS and Windows native release runners and added cross-platform pre-merge validation ([#61](https://github.com/f5-sales-demo/xcsh/issues/61))

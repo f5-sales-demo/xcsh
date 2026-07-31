@@ -18,7 +18,7 @@ test("escapeHtml neutralizes all HTML metacharacters", () => {
 test("isSafeUrl accepts http(s)/mailto and rejects javascript:", () => {
 	expect(isSafeUrl("https://f5.com")).toBe(true);
 	expect(isSafeUrl("http://f5.com")).toBe(true);
-	expect(isSafeUrl("mailto:a@b.com")).toBe(true);
+	expect(isSafeUrl("mailto:yuri@example.net")).toBe(true);
 	expect(isSafeUrl("javascript:alert(1)")).toBe(false);
 	expect(isSafeUrl("data:text/html,x")).toBe(false);
 });

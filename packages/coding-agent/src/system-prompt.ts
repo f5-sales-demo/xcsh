@@ -610,25 +610,6 @@ export interface BuildSystemPromptOptions {
 	};
 	/** Locale for LLM response language. When set and non-English, a `<language>` block is injected into the system prompt. */
 	locale?: { code: string; name: string };
-	/** Compact user profile hint injected into Workspace section. Omit when no profile exists. */
-	userProfile?: {
-		name: string;
-		role: string;
-		org: string;
-	};
-	/** Compact computer profile hint for the workstation section. Omit when no profile is cached. */
-	computerProfile?: {
-		ramGB: number;
-		cpu: string;
-		os: string;
-		cores?: number;
-		shell?: string;
-		diskFree?: string;
-		model?: string;
-		managed?: boolean;
-		admin?: boolean;
-		endpointAgentCount?: number;
-	};
 	knowledgeTopics?: string;
 	contextSkillDirs?: string[];
 	contextIncludeSkills?: string[];
@@ -848,8 +829,6 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		secretsEnabled,
 		context,
 		locale: options.locale,
-		userProfile: options.userProfile,
-		computerProfile: options.computerProfile,
 		knowledgeTopics: options.knowledgeTopics,
 		startFolder: {
 			isGitHub: startFolder.kind === "github",

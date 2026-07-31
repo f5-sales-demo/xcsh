@@ -50,7 +50,7 @@ describe("parseControlMsg", () => {
 	test("rejects junk / missing fields / bad tenant", () => {
 		expect(parseControlMsg({ type: "provision", sessionId: "tab-7" })).toBeNull(); // no tenant
 		expect(parseControlMsg({ type: "provision", tenant: "example-corp|staging" })).toBeNull(); // no sessionId
-		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "no-pipe" })).toBeNull();
+		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "example-no-pipe" })).toBeNull();
 		expect(parseControlMsg({ type: "release" })).toBeNull();
 		expect(parseControlMsg({ type: "nope", sessionId: "tab-7" })).toBeNull();
 		expect(parseControlMsg(null)).toBeNull();

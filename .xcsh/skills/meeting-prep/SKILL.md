@@ -117,7 +117,6 @@ Before the meeting ends, prepare:
 | Source | What to Pull | Tool |
 |---|---|---|
 | Salesforce | Account data, pipeline, contacts | `sf_query` |
-| User profile | SE identity, territory | `xcsh://user` |
 | Product docs | Current capabilities for positioning | llms.txt hierarchy |
 | Competitive skill | Competitor positioning | `skill://competitive` |
 | Account history | Past interactions, closed deals | `sf_query` with historical templates |

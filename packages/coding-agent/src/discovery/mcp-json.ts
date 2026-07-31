@@ -15,7 +15,7 @@ import type { LoadContext, LoadResult, SourceMeta } from "../capability/types";
 import { createSourceMeta, expandEnvVarsDeep } from "./helpers";
 
 const PROVIDER_ID = "mcp-json";
-const DISPLAY_NAME = "MCP Config";
+const SOURCE_LABEL = "MCP Config";
 
 /**
  * Raw MCP JSON format (matches Claude Desktop's format).
@@ -164,7 +164,7 @@ async function load(ctx: LoadContext): Promise<LoadResult<MCPServer>> {
 // Register provider
 registerProvider(mcpCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load MCP servers from standalone mcp.json or .mcp.json in project root",
 	priority: 5,
 	load,

@@ -345,7 +345,7 @@ describe("end-to-end env secret masking", () => {
 		sink.push("XCSH_CONSOLE_PASSWORD=zedta2-hyxzyk-qahvUt\n");
 		sink.push("LITELLM_API_KEY=sk-e5de24b2e74f41a2af7c444873812bc3\n");
 		sink.push("XCSH_NAMESPACE=example-namespace\n");
-		sink.push("XCSH_API_URL=https://f5-amer-ent.console.ves.volterra.io\n");
+		sink.push("XCSH_API_URL=https://example-partners.console.ves.volterra.io\n");
 
 		const result = await sink.dump();
 
@@ -356,7 +356,7 @@ describe("end-to-end env secret masking", () => {
 
 		// Non-secrets MUST still appear
 		expect(result.output).toContain("example-namespace");
-		expect(result.output).toContain("https://f5-amer-ent.console.ves.volterra.io");
+		expect(result.output).toContain("https://example-partners.console.ves.volterra.io");
 		expect(result.output).toContain("XCSH_NAMESPACE=");
 		expect(result.output).toContain("XCSH_API_URL=");
 	});
@@ -370,7 +370,7 @@ describe("end-to-end env secret masking", () => {
 
 		sink.push(`> GET /api/web/namespaces/example-namespace HTTP/2\n`);
 		sink.push(`> Authorization: APIToken ${token}\n`);
-		sink.push(`> Host: f5-amer-ent.console.ves.volterra.io\n`);
+		sink.push(`> Host: example-partners.console.ves.volterra.io\n`);
 		sink.push(`< HTTP/2 200\n`);
 		sink.push(`{"items": []}\n`);
 

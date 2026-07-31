@@ -26,7 +26,7 @@ export async function loginKagi(options: OAuthController): Promise<string> {
 	options.onAuth?.({
 		url: AUTH_URL,
 		instructions:
-			"Copy your Kagi Search API key from Kagi API settings. Search API access is beta-only; if unavailable, email support@kagi.com.",
+			"Copy your Kagi Search API key from Kagi API settings. Search API access is beta-only; if unavailable, email Kagi support.",
 	});
 
 	const apiKey = await options.onPrompt({

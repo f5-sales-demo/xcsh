@@ -5,6 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { $ } from "bun";
 import { isLocalSpecsCurrent } from "./api-specs-version";
+import { sanitizePublicIpv4Examples } from "./sanitize-generated-content";
 
 interface SpecPathOperation {
 	operationId?: string;
@@ -108,7 +109,7 @@ const RESERVED_EMAIL_DOMAINS = new Set(["example.com", "example.net", "example.o
  */
 function sanitizeEmails(text: string): string {
 	// The lookbehind skips URL userinfo (`https://token:secret@host`), which is not a contact address.
-	return text.replace(/(?<![:/])\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b/g, (whole, domain) =>
+	return text.replace(/(?<![:/])\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]+)\b/g, (whole, domain) =>
 		RESERVED_EMAIL_DOMAINS.has(String(domain).toLowerCase()) ? whole : "dana@example.com",
 	);
 }
@@ -587,7 +588,7 @@ const output = [
 	.filter(l => l !== undefined)
 	.join("\n");
 
-await Bun.write(outputPath, sanitizeEmails(sanitizePlaceholders(output)));
+await Bun.write(outputPath, sanitizePublicIpv4Examples(sanitizeEmails(sanitizePlaceholders(output))));
 
 const outputSize = (Buffer.byteLength(output) / 1024 / 1024).toFixed(1);
 console.log(
@@ -631,7 +632,7 @@ if (catalog) {
 		"",
 	].join("\n");
 
-	await Bun.write(catalogOutputPath, sanitizeEmails(sanitizePlaceholders(catalogOutput)));
+	await Bun.write(catalogOutputPath, sanitizePublicIpv4Examples(sanitizeEmails(sanitizePlaceholders(catalogOutput))));
 	const catalogSize = (Buffer.byteLength(catalogOutput) / 1024 / 1024).toFixed(1);
 	console.log(
 		`Generated ${path.relative(process.cwd(), catalogOutputPath)} (${categories.length} categories, ${catalogSize} MB)`,

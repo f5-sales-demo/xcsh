@@ -24,7 +24,7 @@ import {
 } from "./helpers";
 
 const PROVIDER_ID = "agents";
-const DISPLAY_NAME = "Agents (standard)";
+const SOURCE_LABEL = "Agents (standard)";
 const PRIORITY = 70;
 const AGENT_DIR_CANDIDATES = [".agent", ".agents"] as const;
 
@@ -68,7 +68,7 @@ async function loadSkills(ctx: LoadContext): Promise<LoadResult<Skill>> {
 
 registerProvider<Skill>(skillCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load skills from .agent/skills and .agents/skills (project walk-up + user home)",
 	priority: PRIORITY,
 	load: loadSkills,
@@ -96,7 +96,7 @@ async function loadRules(ctx: LoadContext): Promise<LoadResult<Rule>> {
 
 registerProvider<Rule>(ruleCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load rules from .agent/rules and .agents/rules (project walk-up + user home)",
 	priority: PRIORITY,
 	load: loadRules,
@@ -128,7 +128,7 @@ async function loadPrompts(ctx: LoadContext): Promise<LoadResult<Prompt>> {
 
 registerProvider<Prompt>(promptCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load prompts from .agent/prompts and .agents/prompts (project walk-up + user home)",
 	priority: PRIORITY,
 	load: loadPrompts,
@@ -161,7 +161,7 @@ async function loadSlashCommands(ctx: LoadContext): Promise<LoadResult<SlashComm
 
 registerProvider<SlashCommand>(slashCommandCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load commands from .agent/commands and .agents/commands (project walk-up + user home)",
 	priority: PRIORITY,
 	load: loadSlashCommands,
@@ -188,7 +188,7 @@ async function loadContextFiles(ctx: LoadContext): Promise<LoadResult<ContextFil
 
 registerProvider<ContextFile>(contextFileCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load AGENTS.md from .agent and .agents (project walk-up + user home)",
 	priority: PRIORITY,
 	load: loadContextFiles,
@@ -212,7 +212,7 @@ async function loadSystemPrompt(ctx: LoadContext): Promise<LoadResult<SystemProm
 
 registerProvider<SystemPrompt>(systemPromptCapability.id, {
 	id: PROVIDER_ID,
-	displayName: DISPLAY_NAME,
+	displayName: SOURCE_LABEL,
 	description: "Load SYSTEM.md from .agent and .agents (project walk-up + user home)",
 	priority: PRIORITY,
 	load: loadSystemPrompt,

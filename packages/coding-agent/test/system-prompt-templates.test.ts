@@ -400,14 +400,14 @@ describe("system Handlebars prompt templates", () => {
 			...baseRenderContext,
 			context: {
 				tenant: "example-corp",
-				namespace: "production",
+				namespace: "demo-app",
 				credentialSource: "context",
 				authStatus: "connected",
 				apiUrl: "https://example-corp.console.ves.volterra.io",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
-		expect(rendered).toContain("You are currently connected to F5 XC tenant: example-corp, namespace: production.");
+		expect(rendered).toContain("You are currently connected to F5 XC tenant: example-corp, namespace: demo-app.");
 		expect(rendered).toContain("Credential source: context.");
 		expect(rendered).toContain("Auth status: connected.");
 		expect(rendered).toContain(
@@ -432,14 +432,14 @@ describe("system Handlebars prompt templates", () => {
 			...baseRenderContext,
 			context: {
 				tenant: "example-corp",
-				namespace: "production",
+				namespace: "demo-app",
 				credentialSource: "context",
 				authStatus: "connected",
 				apiUrl: "https://example-corp.console.ves.volterra.io",
 			},
 		});
 		expect(rendered).toContain("## F5 XC Platform Context");
-		expect(rendered).toContain("You are currently connected to F5 XC tenant: example-corp, namespace: production.");
+		expect(rendered).toContain("You are currently connected to F5 XC tenant: example-corp, namespace: demo-app.");
 		expect(rendered).toContain("Credential source: context.");
 		expect(rendered).toContain("Auth status: connected.");
 		expect(rendered).toContain(
@@ -464,7 +464,7 @@ describe("system Handlebars prompt templates", () => {
 			...baseRenderContext,
 			context: {
 				tenant: "example-corp",
-				namespace: "production",
+				namespace: "demo-app",
 				credentialSource: "context",
 				authStatus: "connected",
 			},
@@ -486,15 +486,13 @@ describe("system Handlebars prompt templates", () => {
 				...baseRenderContext,
 				context: {
 					tenant: "example-corp",
-					namespace: "production",
+					namespace: "demo-app",
 					credentialSource: "environment",
 					authStatus: "connected",
 				},
 			});
 			expect(rendered).toContain("## F5 XC Platform Context");
-			expect(rendered).toContain(
-				"You are currently connected to F5 XC tenant: example-corp, namespace: production.",
-			);
+			expect(rendered).toContain("You are currently connected to F5 XC tenant: example-corp, namespace: demo-app.");
 			expect(rendered).toContain("Credential source: environment.");
 			expect(rendered).toContain(
 				"All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.",

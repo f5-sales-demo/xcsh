@@ -261,7 +261,6 @@ export function renderAboutDoc(
 		"SE specialization: F5 XC API integration (xcsh_api, api-catalog, api-spec),",
 		"F5 XC federated product docs (llms.txt hierarchy),",
 		"F5 XC console browser automation (catalog_workflow_runner, xcsh://console/ workflow catalog),",
-		"user/computer profiling (xcsh://user, xcsh://computer),",
 		"SE-specific subagents (deal-analyst, status-operator, cli-operator, github-ops).",
 		"",
 		"## What to do when asked about xcsh itself",

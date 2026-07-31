@@ -15,7 +15,7 @@
 #   verify:
 #     api_path        : underscore/plural API path for the GET check
 #     resource_name   : object name to GET
-#     namespace       : API namespace (demo)
+#     namespace field : API scope (demo)
 #     expect_http_create / expect_http_delete : 200 / 404
 #     ui_readback     : text the workflow asserts in the list (UI confirmation)
 #   nested            : ordered child resources (created BEFORE the parent); each

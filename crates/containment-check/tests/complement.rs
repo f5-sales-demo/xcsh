@@ -100,9 +100,9 @@ fn realistic() -> (FakeFs, ContainmentFence) {
 		],
 		allow_read_only:  vec![PathBuf::from("/home/alice/.gitconfig"), PathBuf::from("/opt/shared")],
 		allow_write_only: vec![PathBuf::from("/drop")],
-		// `/home/alice/GIT` nested inside `/home/alice` exercises deny-inside-deny; the `.xcsh/sessions`
-		// root is a deny inside an allow inside a deny, which is the case seatbelt handles by rule
-		// order and Landlock cannot.
+		// `/home/alice/GIT` nested inside `/home/alice` exercises deny-inside-deny; the
+		// `.xcsh/sessions` root is a deny inside an allow inside a deny, which is the case
+		// seatbelt handles by rule order and Landlock cannot.
 		deny:             vec![
 			PathBuf::from("/home/alice"),
 			PathBuf::from("/home/alice/GIT"),
@@ -201,7 +201,9 @@ fn everything_outside_the_fence_stays_reachable() {
 	// The whole point of the complement: paths the fence never mentions must keep
 	// working, in both directions. If this fails, the backend has turned a gentle
 	// fence into a deny-by-default one.
-	for path in ["/usr/bin/env", "/etc/hosts", "/tmp/scratch", "/tmp/new-file", "/home/example/notes.md"] {
+	for path in
+		["/usr/bin/env", "/etc/hosts", "/tmp/scratch", "/tmp/new-file", "/home/example/notes.md"]
+	{
 		let path = PathBuf::from(path);
 		assert!(plan.permits(&path, FenceAccess::Read), "{} should be readable", path.display());
 		assert!(plan.permits(&path, FenceAccess::Write), "{} should be writable", path.display());

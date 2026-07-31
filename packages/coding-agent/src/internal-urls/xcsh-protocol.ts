@@ -19,8 +19,6 @@
  * - xcsh://terraform/ - Terraform provider index
  * - xcsh://terraform/{category} - Category resource list
  * - xcsh://terraform/{category}/{resource} - Self-contained resource doc
- * - xcsh://user - Human user profile
- * - xcsh://user?seed=true - Seed profile from sources and render
  *
  * Note: Salesforce context (xcsh://salesforce) has been extracted to the
  * salesforce plugin. See packages/salesforce/ for the standalone implementation.
@@ -41,7 +39,6 @@ import type {
 } from "./api-spec-types";
 import { getRuntimeBuildInfo, type RuntimeBuildInfo, renderAboutDoc } from "./build-info-runtime";
 import { type ChangesResolver, createChangesResolver } from "./changes-resolve";
-import { loadComputerProfile, renderComputerProfileMarkdown, seedComputerProfile } from "./computer-profile";
 import { type ConsoleCatalogData, EMPTY_CONSOLE_CATALOG } from "./console-catalog-types";
 import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./console-field-metadata-types";
 import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
@@ -53,8 +50,6 @@ import { createSourceResolver, type SourceResolver } from "./source-resolve";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
-import type { UserProfile } from "./user-profile";
-import { loadProfile, renderProfileMarkdown, renderSeedReport, seedProfile } from "./user-profile";
 
 const SCHEME_PREFIX = "xcsh://";
 const ABOUT_ROUTE = "about";
@@ -62,8 +57,6 @@ const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
 const BRANDING_HOST = "branding";
 const TERRAFORM_HOST = "terraform";
-const USER_ROUTE = "user";
-const COMPUTER_ROUTE = "computer";
 const CONSOLE_HOST = "console";
 const EXTENSION_HOST = "extension";
 const PLUGIN_HOST = "plugin";
@@ -467,14 +460,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			return this.#resolveSiteCli(url);
 		}
 
-		if (host === USER_ROUTE) {
-			return this.#resolveUserProfile(url);
-		}
-
-		if (host === COMPUTER_ROUTE) {
-			return this.#resolveComputerProfile(url);
-		}
-
 		if (host === EXTENSION_HOST) {
 			return this.#resolveExtension(url);
 		}
@@ -502,60 +487,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		};
 	}
 
-	async #resolveUserProfile(url: InternalUrl): Promise<InternalResource> {
-		const params = new URLSearchParams(url.search);
-		const shouldSeed = params.get("seed") === "true";
-
-		let profile: UserProfile;
-		let seedReport = "";
-		if (shouldSeed) {
-			const seeded = await seedProfile();
-			profile = seeded.profile;
-			seedReport = renderSeedReport(seeded.results);
-		} else {
-			profile = await loadProfile();
-		}
-		const content = renderProfileMarkdown(profile) + seedReport;
-
-		const hasOwnership = profile._fieldOwnership && Object.keys(profile._fieldOwnership).length > 0;
-		const notes: string[] = [
-			"This profile is the authoritative source for person data (manager, partner, territories, role).",
-			"Do NOT query Salesforce or other services for fields that are already populated here.",
-		];
-		if (hasOwnership) {
-			notes.push(
-				`Fields owned by external sources: ${Object.entries(profile._fieldOwnership!)
-					.map(([k, v]) => `${k} (${v})`)
-					.join(", ")}. These are automatically kept in sync.`,
-			);
-		}
-
-		return {
-			url: url.href,
-			content,
-			contentType: "text/markdown",
-			size: Buffer.byteLength(content, "utf-8"),
-			sourcePath: `xcsh://${USER_ROUTE}`,
-			notes,
-		};
-	}
-
-	async #resolveComputerProfile(url: InternalUrl): Promise<InternalResource> {
-		const params = new URLSearchParams(url.search);
-		const shouldRefresh = params.get("refresh") === "true";
-
-		const profile = shouldRefresh ? await seedComputerProfile() : await loadComputerProfile();
-		const content = renderComputerProfileMarkdown(profile);
-
-		return {
-			url: url.href,
-			content,
-			contentType: "text/markdown",
-			size: Buffer.byteLength(content, "utf-8"),
-			sourcePath: `xcsh://${COMPUTER_ROUTE}`,
-		};
-	}
-
 	async #listDocs(url: InternalUrl): Promise<InternalResource> {
 		if (EMBEDDED_DOC_FILENAMES.length === 0) {
 			throw new Error("No documentation files found");
@@ -571,8 +502,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const apiSpecEntry = `- [${API_SPEC_HOST}/](${SCHEME_PREFIX}${API_SPEC_HOST}/) — F5 XC API specifications (${specs.index.domains.length} domains, v${specs.version})`;
 		const apiCatalogEntry = `- [${API_CATALOG_HOST}/](${SCHEME_PREFIX}${API_CATALOG_HOST}/) — F5 XC API operation catalog (${catalog.summaries.length} categories, v${catalog.index.version})`;
 		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
-		const userEntry = `- [${USER_ROUTE}](${SCHEME_PREFIX}${USER_ROUTE}) — human user profile`;
-		const computerEntry = `- [${COMPUTER_ROUTE}](${SCHEME_PREFIX}${COMPUTER_ROUTE}) — machine hardware and environment profile`;
 		const tf = loadTerraformIndex();
 		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
 		const entries = [
@@ -584,8 +513,6 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			apiCatalogEntry,
 			brandingEntry,
 			terraformEntry,
-			userEntry,
-			computerEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		];
 		// Derived, not hand-maintained: the advertised count used to be a magic

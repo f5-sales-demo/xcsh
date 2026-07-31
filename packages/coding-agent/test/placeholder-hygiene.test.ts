@@ -35,6 +35,8 @@ const ALLOWED_FILES = new Set([
 
 /** RFC 8555 vocabulary. Not the placeholder — must never be renamed. */
 const PROTOCOL_TERMS = [/_acme-challenge/gi, /\bacme challenge\b/gi];
+const CONTACT_EMAIL_RE = /(?<![:/])\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]+)\b/g;
+const RESERVED_EMAIL_DOMAINS = new Set(["example.com", "example.net", "example.org"]);
 
 const BINARY_EXTENSIONS = new Set([
 	".gif",
@@ -120,5 +122,33 @@ describe("placeholder hygiene", () => {
 		// Contact addresses at real domains are sanitised at the same write sites (#2677).
 		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizeEmails\(/);
 		expect(text).toMatch(/Bun\.write\(catalogOutputPath,[^;]*sanitizeEmails\(/);
+		// Globally routable examples are rewritten into RFC 5737 space at both write sites (#2674).
+		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizePublicIpv4Examples\(/);
+		expect(text).toMatch(/Bun\.write\(catalogOutputPath,[^;]*sanitizePublicIpv4Examples\(/);
+
+		const consoleGenerator = fs.readFileSync(
+			path.join(REPO_ROOT, "packages/coding-agent/scripts/generate-console-catalog.ts"),
+			"utf8",
+		);
+		expect(consoleGenerator).toMatch(/Bun\.write\(outputPath,[^;]*sanitizePublicIpv4Examples\(/);
+	});
+
+	it("generated API indexes contain only reserved-domain contact addresses", () => {
+		const generatedFiles = [
+			"packages/coding-agent/src/internal-urls/api-spec-index.generated.ts",
+			"packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts",
+		];
+		const offenders: string[] = [];
+
+		for (const rel of generatedFiles) {
+			const text = fs.readFileSync(path.join(REPO_ROOT, rel), "utf8");
+			let count = 0;
+			for (const match of text.matchAll(CONTACT_EMAIL_RE)) {
+				if (!RESERVED_EMAIL_DOMAINS.has(match[1].toLowerCase())) count++;
+			}
+			if (count > 0) offenders.push(`${rel} (${count})`);
+		}
+
+		expect(offenders).toEqual([]);
 	});
 });

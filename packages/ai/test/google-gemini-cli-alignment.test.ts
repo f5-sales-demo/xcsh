@@ -79,7 +79,7 @@ describe("Google Gemini CLI alignment", () => {
 		const aliasPayload = parseGeminiCliCredentials(
 			JSON.stringify({
 				token: "alias-token",
-				project_id: "proj-alias",
+				project_id: "example-project-alias",
 				refresh: "refresh-alias",
 				expires: 1_737_000_000,
 			}),

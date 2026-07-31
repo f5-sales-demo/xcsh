@@ -43,7 +43,7 @@ describe("zenmux provider support", () => {
 						data: [
 							{
 								id: "anthropic/claude-opus-4.6",
-								display_name: "Anthropic: Claude Opus 4.6",
+								display_name: "MODEL_ALPHA",
 								owned_by: "anthropic",
 								input_modalities: ["text", "image"],
 								capabilities: { reasoning: true },
@@ -57,7 +57,7 @@ describe("zenmux provider support", () => {
 							},
 							{
 								id: "openai/gpt-5.2",
-								display_name: "OpenAI: GPT-5.2",
+								display_name: "MODEL_BETA",
 								owned_by: "openai",
 								input_modalities: ["text"],
 								capabilities: { reasoning: true },

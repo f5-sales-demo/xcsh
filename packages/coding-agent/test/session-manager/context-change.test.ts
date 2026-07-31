@@ -5,7 +5,7 @@ describe("SessionManager.appendContextChange", () => {
 	it("writes a context_change entry with the given fields", () => {
 		const session = SessionManager.inMemory();
 
-		const id = session.appendContextChange("prod", "example-corp", "production");
+		const id = session.appendContextChange("prod", "example-corp", "demo-app");
 
 		const entries = session.getEntries();
 		const entry = entries.find(e => e.type === "context_change");
@@ -14,7 +14,7 @@ describe("SessionManager.appendContextChange", () => {
 			type: "context_change",
 			contextName: "prod",
 			tenant: "example-corp",
-			namespace: "production",
+			namespace: "demo-app",
 			id,
 		});
 		expect(typeof (entry as { timestamp: string }).timestamp).toBe("string");
