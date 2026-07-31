@@ -216,6 +216,32 @@ describe("refusing when no pane bundle is available", () => {
 		expect(paths).toEqual(["assets/color.png", "assets/icon-16.png"]);
 	});
 
+	/**
+	 * Presence is not validity, and the two failures look identical from outside.
+	 *
+	 * The build writes manifest.json in one `Bun.write`, but an interrupted or full disk can still leave
+	 * it truncated — and a truncated manifest has no asset references, so an existence-only check finds
+	 * nothing missing and calls the pane complete. `office manifest` would then print invalid JSON and
+	 * `office sideload` would hand a broken manifest to office-addin-debugging.
+	 */
+	for (const [label, text] of [
+		["zero-byte", ""],
+		["truncated mid-value", '{"icons": ["assets/color.png"'],
+		["not JSON at all", "<html>nope</html>"],
+	] as const) {
+		it(`refuses a ${label} manifest`, async () => {
+			const bad = mkdtempSync(join(tmpdir(), "office-pane-badmanifest-"));
+			try {
+				await writeFile(join(bad, "taskpane.html"), "<!DOCTYPE html>");
+				await writeFile(join(bad, "taskpane.js"), "console.log(1);");
+				await writeFile(join(bad, "manifest.json"), text);
+				await expect(resolvePaneDir(bad, "dev")).rejects.toThrow(/manifest\.json/);
+			} finally {
+				rmSync(bad, { recursive: true, force: true });
+			}
+		});
+	}
+
 	it("refuses a directory with no taskpane.html, naming it", async () => {
 		const empty = mkdtempSync(join(tmpdir(), "office-pane-empty-"));
 		try {

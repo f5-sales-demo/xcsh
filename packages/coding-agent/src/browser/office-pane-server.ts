@@ -170,17 +170,34 @@ export function paneSourceForLayout(officePanePackagePresent: boolean): PaneSour
 	return officePanePackagePresent ? "dev" : "packaged";
 }
 
+/** The manifest's text if it parses as JSON, else null — presence alone says too little. */
+async function readValidManifest(manifestPath: string): Promise<string | null> {
+	try {
+		const text = await Bun.file(manifestPath).text();
+		JSON.parse(text);
+		return text;
+	} catch {
+		return null;
+	}
+}
+
 /** Which of the files a usable pane needs are absent from `dir`. Empty means complete. */
 export async function missingPaneFiles(dir: string): Promise<string[]> {
 	const missing: string[] = [];
 	for (const name of PANE_REQUIRED_FILES) {
 		if (!(await Bun.file(path.join(dir, name)).exists())) missing.push(name);
 	}
-	// Only worth asking once the manifest is there to be read.
+	// Only worth asking once the manifest is there to be read — and a manifest that is present but
+	// unreadable is not a manifest. A truncated one has no asset references, so an existence-only check
+	// finds nothing missing, calls the pane complete, and lets `office manifest` print invalid JSON.
 	if (!missing.includes("manifest.json")) {
-		const manifestText = await Bun.file(path.join(dir, "manifest.json")).text();
-		for (const asset of manifestAssetPaths(manifestText)) {
-			if (!(await Bun.file(path.join(dir, asset)).exists())) missing.push(asset);
+		const manifestText = await readValidManifest(path.join(dir, "manifest.json"));
+		if (manifestText === null) {
+			missing.push("manifest.json (present but not valid JSON)");
+		} else {
+			for (const asset of manifestAssetPaths(manifestText)) {
+				if (!(await Bun.file(path.join(dir, asset)).exists())) missing.push(asset);
+			}
 		}
 	}
 	return missing;
