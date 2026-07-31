@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.5] - 2026-07-31
+
 ### Fixed
 
 - Invalidated stale release PRs immediately on new `main` pushes, before the full release-creation gate ([#2732](https://github.com/f5-sales-demo/xcsh/issues/2732))
