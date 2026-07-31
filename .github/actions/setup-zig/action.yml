@@ -64,12 +64,20 @@ runs:
         ZIG_URL="https://ziglang.org/download/${ZIG_VERSION}/zig-${PLATFORM}-${ZIG_VERSION}.${EXTENSION}"
         mkdir -p "$ARCHIVE_DIR"
 
-        if [[ ! -f "$ARCHIVE" ]] || ! printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | shasum -a 256 --check --status; then
+        verify_archive() {
+          if command -v sha256sum >/dev/null 2>&1; then
+            printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | sha256sum --check "$@"
+          else
+            printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | shasum -a 256 --check "$@"
+          fi
+        }
+
+        if [[ ! -f "$ARCHIVE" ]] || ! verify_archive --status; then
           curl --silent --show-error --fail --location \
             --retry 3 --retry-all-errors --connect-timeout 15 --max-time 180 \
             --output "$ARCHIVE" "$ZIG_URL"
         fi
-        printf '%s  %s\n' "$ZIG_SHA256" "$ARCHIVE" | shasum -a 256 --check
+        verify_archive
 
         mkdir -p "$ZIG_DIR"
         tar --extract --file "$ARCHIVE" --directory "$ZIG_DIR" --strip-components=1
