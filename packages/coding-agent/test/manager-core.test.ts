@@ -98,7 +98,7 @@ describe("manager state file round-trip", () => {
 	const s: ManagerState = {
 		pid: 4242,
 		version: "19.58.1",
-		socket: "/home/u/.xcsh/manager.sock",
+		socket: "/home/example/.xcsh/manager.sock",
 		startedAt: 1_700_000,
 	};
 	it("serialize → parse is identity", () => {
