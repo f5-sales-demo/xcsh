@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.104.0] - 2026-07-31
+
 ### Added
 
 - Added LiteLLM catalog metadata for GPT-5.6 Sol with verified High reasoning and token limits
