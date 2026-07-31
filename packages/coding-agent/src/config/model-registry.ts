@@ -140,6 +140,7 @@ const ReasoningEffortMapSchema = Type.Object({
 
 const OpenAICompatSchema = Type.Object({
 	supportsStore: Type.Optional(Type.Boolean()),
+	supportsTemperature: Type.Optional(Type.Boolean()),
 	supportsDeveloperRole: Type.Optional(Type.Boolean()),
 	supportsReasoningEffort: Type.Optional(Type.Boolean()),
 	reasoningEffortMap: Type.Optional(ReasoningEffortMapSchema),

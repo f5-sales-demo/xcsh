@@ -87,6 +87,7 @@ export function detectOpenAICompat(model: Model<"openai-completions">, resolvedB
 
 	return {
 		supportsStore: !isNonStandard,
+		supportsTemperature: model.id.toLowerCase() !== "gpt-5.6-sol",
 		supportsDeveloperRole: !isNonStandard,
 		supportsReasoningEffort: !isGrok && !isZai,
 		reasoningEffortMap,
@@ -133,6 +134,7 @@ export function resolveOpenAICompat(
 
 	return {
 		supportsStore: model.compat.supportsStore ?? detected.supportsStore,
+		supportsTemperature: model.compat.supportsTemperature ?? detected.supportsTemperature,
 		supportsDeveloperRole: model.compat.supportsDeveloperRole ?? detected.supportsDeveloperRole,
 		supportsReasoningEffort: model.compat.supportsReasoningEffort ?? detected.supportsReasoningEffort,
 		reasoningEffortMap: model.compat.reasoningEffortMap ?? detected.reasoningEffortMap,
