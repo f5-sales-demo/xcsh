@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.3] - 2026-07-31
+
 ### Fixed
 
 - Fixed `--no-tools` print requests forcing inactive `todo_write` through eager-todo enforcement ([#2711](https://github.com/f5-sales-demo/xcsh/issues/2711))
