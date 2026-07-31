@@ -5,7 +5,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { $ } from "bun";
 import { isLocalSpecsCurrent } from "./api-specs-version";
-import { sanitizePublicIpv4Examples } from "./sanitize-generated-content";
+import { sanitizeAcmePlaceholders, sanitizePublicIpv4Examples } from "./sanitize-generated-content";
 
 interface SpecPathOperation {
 	operationId?: string;
@@ -112,25 +112,6 @@ function sanitizeEmails(text: string): string {
 	return text.replace(/(?<![:/])\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]+)\b/g, (whole, domain) =>
 		RESERVED_EMAIL_DOMAINS.has(String(domain).toLowerCase()) ? whole : "dana@example.com",
 	);
-}
-
-/**
- * Upstream specs use ACME as a placeholder tenant, company and hostname. STYLE_GUIDE.md bans it:
- * it is not trademark-cleared, and in TLS content the name already belongs to RFC 8555. Rewrite it
- * to the `Example` pattern here rather than in the emitted file, so a regeneration cannot bring it
- * back (#2650).
- *
- * `_acme-challenge` is the RFC 8555 DNS-01 record label, not the placeholder, and must survive.
- */
-function sanitizePlaceholders(text: string): string {
-	// The sentinel must contain no form of the word being rewritten, or the rewrite eats it.
-	const CHALLENGE = " RFC8555_DNS01 ";
-	return text
-		.replace(/_acme-challenge/gi, CHALLENGE)
-		.replace(/ACME/g, "Example")
-		.replace(/Acme/g, "Example")
-		.replace(/acme/g, "example")
-		.replaceAll(CHALLENGE, "_acme-challenge");
 }
 
 const MAX_RETRIES = 3;
@@ -588,7 +569,7 @@ const output = [
 	.filter(l => l !== undefined)
 	.join("\n");
 
-await Bun.write(outputPath, sanitizePublicIpv4Examples(sanitizeEmails(sanitizePlaceholders(output))));
+await Bun.write(outputPath, sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(output))));
 
 const outputSize = (Buffer.byteLength(output) / 1024 / 1024).toFixed(1);
 console.log(
@@ -632,7 +613,10 @@ if (catalog) {
 		"",
 	].join("\n");
 
-	await Bun.write(catalogOutputPath, sanitizePublicIpv4Examples(sanitizeEmails(sanitizePlaceholders(catalogOutput))));
+	await Bun.write(
+		catalogOutputPath,
+		sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(catalogOutput))),
+	);
 	const catalogSize = (Buffer.byteLength(catalogOutput) / 1024 / 1024).toFixed(1);
 	console.log(
 		`Generated ${path.relative(process.cwd(), catalogOutputPath)} (${categories.length} categories, ${catalogSize} MB)`,

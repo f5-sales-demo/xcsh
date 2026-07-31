@@ -1,7 +1,33 @@
 import { describe, expect, it } from "bun:test";
-import { sanitizePublicIpv4Examples } from "../../scripts/sanitize-generated-content";
+import {
+	countAcmePlaceholderOccurrences,
+	sanitizeAcmePlaceholders,
+	sanitizePublicIpv4Examples,
+} from "../../scripts/sanitize-generated-content";
 
 describe("generated-content sanitization", () => {
+	it("replaces ACME placeholder identities with the Example pattern", () => {
+		const source = "tenant=ACME company=Acme hostname=acme.internal";
+
+		expect(countAcmePlaceholderOccurrences(source)).toBe(3);
+		expect(sanitizeAcmePlaceholders(source)).toBe("tenant=Example company=Example hostname=example.internal");
+	});
+
+	it("preserves registered RFC 8555 terminology", () => {
+		const source = [
+			"Automated Certificate Management Environment (ACME)",
+			"RFC 8555 (ACME)",
+			"ACME (RFC 8555)",
+			"ACME protocol",
+			"ACME service",
+			"ACME challenge",
+			"_acme-challenge",
+		].join("\n");
+
+		expect(countAcmePlaceholderOccurrences(source)).toBe(0);
+		expect(sanitizeAcmePlaceholders(source)).toBe(source);
+	});
+
 	it("replaces globally routable IPv4 examples deterministically", () => {
 		const publicAddress = ["8", "8", "4", "4"].join(".");
 		const result = sanitizePublicIpv4Examples(`primary=${publicAddress} secondary=${publicAddress}`);

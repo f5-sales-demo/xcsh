@@ -2,6 +2,9 @@ const IPV4_RE = /(?<![A-Za-z0-9.])((?:[0-9]{1,3}\.){3}[0-9]{1,3})(?:\/([0-9]{1,2
 const DOTTED_VERSION_PREFIX_RE =
 	/(?:(?:chrome|headlesschrome|chromium|firefox|safari|edg|edge|opera)\/\s*$|[A-Za-z0-9_.-]*version[A-Za-z0-9_.-]*\s*[:=]\s*['"`]?\s*$|version[A-Za-z0-9_.-]*\)?\.to(?:be|equal)\(\s*['"`]?\s*$)/i;
 const SVG_PATH_ATTRIBUTE_RE = /(?:^|\s)d\s*=\s*(['"])/gi;
+const RFC_8555_TERM_RE =
+	/_acme-challenge|\bAutomated Certificate Management Environment\s*\(ACME\)|\bRFC\s*8555\s*\(ACME\)|\bACME\s*\(RFC\s*8555\)|\bACME\s+(?:account|authorization|certificate|challenge|client|directory|nonce|order|protocol|server|service)\b/gi;
+const RFC_8555_TOKEN_RE = /\0RFC8555_([0-9]+)\0/g;
 
 type Ipv4Address = readonly [number, number, number, number];
 type Ipv4Range = readonly [Ipv4Address, number];
@@ -29,6 +32,42 @@ const DOCUMENTATION_PREFIXES: readonly (readonly [number, number, number])[] = [
 	[198, 51, 100],
 	[203, 0, 113],
 ];
+
+interface ProtectedRfc8555Terms {
+	text: string;
+	terms: string[];
+}
+
+function protectRfc8555Terms(text: string): ProtectedRfc8555Terms {
+	const terms: string[] = [];
+	return {
+		text: text.replace(RFC_8555_TERM_RE, term => {
+			const token = `\0RFC8555_${terms.length}\0`;
+			terms.push(term);
+			return token;
+		}),
+		terms,
+	};
+}
+
+/** Count uses of the name that are not RFC 8555 terminology. */
+export function countAcmePlaceholderOccurrences(text: string): number {
+	const protectedText = protectRfc8555Terms(text).text;
+	return protectedText.match(/acme/gi)?.length ?? 0;
+}
+
+/**
+ * Replace fictitious ACME tenants, companies, and hosts with the Example pattern while preserving
+ * registered RFC 8555 terminology.
+ */
+export function sanitizeAcmePlaceholders(text: string): string {
+	const protectedTerms = protectRfc8555Terms(text);
+	const sanitized = protectedTerms.text
+		.replace(/ACME/g, "Example")
+		.replace(/Acme/g, "Example")
+		.replace(/acme/g, "example");
+	return sanitized.replace(RFC_8555_TOKEN_RE, (token, index: string) => protectedTerms.terms[Number(index)] ?? token);
+}
 
 function parseIpv4(value: string): Ipv4Address | undefined {
 	const octets = value.split(".").map(Number);
