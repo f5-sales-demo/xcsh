@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [19.105.1] - 2026-07-31
+
 ### Fixed
 
 - Fixed GPT-5.6 Sol requests to omit the unsupported temperature parameter ([#2698](https://github.com/f5-sales-demo/xcsh/issues/2698))
