@@ -113,7 +113,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh api --method PUT "repos/${REPOSITORY}/immutable-releases" -F enabled=true >/dev/null
+          gh api --method PUT "repos/${REPOSITORY}/immutable-releases" >/dev/null
           gh api "repos/${REPOSITORY}/immutable-releases" \
             | jq -e '.enabled == true' >/dev/null || {
             echo "::error::Repository release immutability must be enabled before tagging"
