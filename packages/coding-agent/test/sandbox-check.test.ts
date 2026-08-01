@@ -7,7 +7,11 @@ import { $ } from "bun";
 import type { SandboxCheckReport } from "../src/cli/sandbox-check";
 import { Settings } from "../src/config/settings";
 import { _resetShellSessionsForTest } from "../src/exec/bash-executor";
-import { SANDBOX_OPERATOR_HOME_ENV, SANDBOX_SESSION_ROOT_ENV } from "../src/sandbox/session-fence";
+import {
+	SANDBOX_CHECK_NAMED_SIBLING_ENV,
+	SANDBOX_OPERATOR_HOME_ENV,
+	SANDBOX_SESSION_ROOT_ENV,
+} from "../src/sandbox/session-fence";
 import type { ToolSession } from "../src/tools";
 import { BashTool, type BashToolDetails } from "../src/tools/bash";
 
@@ -57,6 +61,7 @@ async function runInsideLiveProfile(workspace: string, attemptContextOverride = 
 		...(attemptContextOverride
 			? {
 					env: {
+						[SANDBOX_CHECK_NAMED_SIBLING_ENV]: path.join(workspace, "bogus-sibling"),
 						[SANDBOX_SESSION_ROOT_ENV]: path.join(workspace, "bogus-root"),
 						[SANDBOX_OPERATOR_HOME_ENV]: path.join(workspace, "bogus-home"),
 					},
@@ -104,6 +109,10 @@ it("reports a healthy matrix when invoked inside the live bash profile", async (
 it("reports a healthy matrix for a live session rooted directly under operator home", async () => {
 	const home = fs.realpathSync(os.homedir());
 	const fixturePaths: string[] = [];
+	const liveSiblingPrefix = ".xcsh-sandbox-check-live-sibling-";
+	const liveSiblingCount = (): number =>
+		fs.readdirSync(home).filter(entry => entry.startsWith(liveSiblingPrefix)).length;
+	const liveSiblingCountBefore = liveSiblingCount();
 	const createFixture = (prefix: string): string => {
 		const fixture = fs.realpathSync(fs.mkdtempSync(path.join(home, prefix)));
 		fixturePaths.push(fixture);
@@ -148,6 +157,7 @@ it("reports a healthy matrix for a live session rooted directly under operator h
 		expect(parentEnumerationDenied).toBe(true);
 	} finally {
 		_resetShellSessionsForTest();
+		expect(liveSiblingCount()).toBe(liveSiblingCountBefore);
 		for (const fixture of fixturePaths) {
 			fs.rmSync(fixture, { recursive: true, force: true });
 			expect(fs.existsSync(fixture)).toBe(false);

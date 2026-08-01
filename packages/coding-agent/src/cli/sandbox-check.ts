@@ -8,7 +8,11 @@ import { Settings } from "../config/settings";
 import { fenceForNative } from "../exec/bash-executor";
 import { buildContainmentFence, type ContainmentFence, containmentStatus } from "../sandbox/containment";
 import { evaluateToolCall } from "../sandbox/enforce";
-import { SANDBOX_OPERATOR_HOME_ENV, SANDBOX_SESSION_ROOT_ENV } from "../sandbox/session-fence";
+import {
+	SANDBOX_CHECK_NAMED_SIBLING_ENV,
+	SANDBOX_OPERATOR_HOME_ENV,
+	SANDBOX_SESSION_ROOT_ENV,
+} from "../sandbox/session-fence";
 import { BashTool, type ToolSession } from "../tools";
 
 export type SandboxCheckResultStatus = "PASS" | "FAIL" | "SKIP" | "ERROR";
@@ -202,6 +206,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 	try {
 		const inheritedWorkspace = process.env[SANDBOX_SESSION_ROOT_ENV];
 		const inheritedHome = process.env[SANDBOX_OPERATOR_HOME_ENV];
+		const inheritedSibling = process.env[SANDBOX_CHECK_NAMED_SIBLING_ENV];
 		const inheritedProfile = inheritedWorkspace !== undefined;
 		const workspaceInput = inheritedWorkspace ?? process.cwd();
 		const homeInput = inheritedHome ?? os.homedir();
@@ -212,6 +217,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		const liveWorkspace = inheritedWorkspace ?? (await fs.realpath(workspaceInput));
 		const liveHome = inheritedHome ?? (await fs.realpath(homeInput));
 		redactions.push([liveWorkspace, "<workspace>"], [liveHome, "<operator-home>"]);
+		if (inheritedSibling !== undefined) redactions.push([inheritedSibling, "<session-parent>/<synthetic-sibling>"]);
 
 		const fixtureBase = inheritedProfile ? liveWorkspace : await fs.realpath(os.tmpdir());
 		fixtureRoot = await fs.mkdtemp(path.join(fixtureBase, ".xcsh-sandbox-check-policy-"));
@@ -319,17 +325,19 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 
 		await check("named sibling remains reachable", async () => {
 			const displayPath = "<session-parent>/<synthetic-sibling>";
-			let liveSibling: string;
-			try {
-				liveSibling = await fs.mkdtemp(path.join(path.dirname(liveWorkspace), ".xcsh-sandbox-check-sibling-"));
-				fixturePaths.push(liveSibling);
-				nonEnumerableCleanupDirs.add(liveSibling);
-				redactions.push([liveSibling, displayPath]);
-				const namedFile = path.join(liveSibling, "named.txt");
-				await Bun.write(namedFile, "sibling\n");
-				knownCleanupLeaves.push(namedFile);
-			} catch (error) {
-				return exceptionOutcome("create named sibling fixture", displayPath, error, redactions);
+			let liveSibling = inheritedSibling;
+			if (liveSibling === undefined) {
+				try {
+					liveSibling = await fs.mkdtemp(path.join(path.dirname(liveWorkspace), ".xcsh-sandbox-check-sibling-"));
+					fixturePaths.push(liveSibling);
+					nonEnumerableCleanupDirs.add(liveSibling);
+					redactions.push([liveSibling, displayPath]);
+					const namedFile = path.join(liveSibling, "named.txt");
+					await Bun.write(namedFile, "sibling\n");
+					knownCleanupLeaves.push(namedFile);
+				} catch (error) {
+					return exceptionOutcome("create named sibling fixture", displayPath, error, redactions);
+				}
 			}
 			const result = await shellProbe(
 				'test "$(cat named.txt)" = sibling',
