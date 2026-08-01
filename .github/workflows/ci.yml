@@ -1142,6 +1142,7 @@ jobs:
 
               if [ "$installed" = "$expected" ]; then
                 xcsh --help >/dev/null
+                xcsh sandbox check
                 binary="$(brew --prefix f5-sales-demo/tap/xcsh)/bin/xcsh"
                 codesign --verify --deep --strict "$binary"
                 spctl --assess --verbose=4 --type install "$binary"
