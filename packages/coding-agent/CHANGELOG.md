@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [20.2.1] - 2026-08-01
+
+### Fixed
+
+- Made root launch flags reject ambiguous subcommand placement without entering agent startup, kept subcommand help correctly routed, and added installed conformance coverage that explicit grants restore parent enumeration ([#2817](https://github.com/f5-sales-demo/xcsh/issues/2817))
+
 ## [20.2.0] - 2026-08-01
 
 ### Breaking Changes
