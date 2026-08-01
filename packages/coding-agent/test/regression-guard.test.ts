@@ -428,7 +428,9 @@ describe("CI invalidates stale release PRs before the full test matrix", () => {
 		expect(job).not.toContain("needs:");
 		expect(job).toContain("github.ref == 'refs/heads/main'");
 		expect(job).toContain("!startsWith(github.event.head_commit.message, 'chore:')");
-		expect(job).toContain("pull-requests: write");
+		// The job authenticates checkout and gh with RELEASE_TOKEN. Its generated
+		// GITHUB_TOKEN must retain no repository permissions.
+		expect(job).toContain("permissions: {}");
 		expect(job).toContain("bun scripts/release.ts invalidate-stale");
 		expect(workflow).toContain("needs: [check, native, test, install_methods]");
 	});

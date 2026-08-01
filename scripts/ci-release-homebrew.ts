@@ -46,6 +46,10 @@ function getTag(): string {
 
 async function createArchives(): Promise<void> {
 	console.log("Creating archives for Homebrew...");
+	const sourceDateEpoch = process.env.SOURCE_DATE_EPOCH;
+	if (!isDryRun && (!sourceDateEpoch || !/^\d+$/.test(sourceDateEpoch))) {
+		throw new Error("SOURCE_DATE_EPOCH is required for deterministic release archives");
+	}
 
 	for (const target of archiveTargets) {
 		const binaryPath = path.join(binariesDir, target.binary);
@@ -62,19 +66,22 @@ async function createArchives(): Promise<void> {
 		const tmpDir = await fs.mkdtemp(path.join(repoRoot, ".tmp-homebrew-"));
 		try {
 			await fs.copyFile(binaryPath, path.join(tmpDir, "xcsh"));
+			await fs.rm(archivePath, { force: true });
+			const stagedBinary = path.join(tmpDir, "xcsh");
 
 			if (target.format === "zip") {
 				if (isDryRun) {
-					console.log(`  DRY RUN: zip -j ${archivePath} ${tmpDir}/xcsh`);
+					console.log(`  DRY RUN: zip -X -j ${archivePath} ${tmpDir}/xcsh`);
 				} else {
-					await $`zip -j ${archivePath} ${path.join(tmpDir, "xcsh")}`;
+					await $`touch -d ${`@${sourceDateEpoch}`} ${stagedBinary}`;
+					await $`zip -X -j ${archivePath} ${stagedBinary}`;
 					console.log(`  Created ${target.archive}`);
 				}
 			} else {
 				if (isDryRun) {
-					console.log(`  DRY RUN: tar czf ${archivePath} -C ${tmpDir} xcsh`);
+					console.log(`  DRY RUN: deterministic tar + gzip -n ${archivePath}`);
 				} else {
-					await $`tar czf ${archivePath} -C ${tmpDir} xcsh`;
+					await $`tar --sort=name --mtime=${`@${sourceDateEpoch}`} --owner=0 --group=0 --numeric-owner -cf - -C ${tmpDir} xcsh | gzip -n > ${archivePath}`;
 					console.log(`  Created ${target.archive}`);
 				}
 			}

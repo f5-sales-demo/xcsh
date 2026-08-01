@@ -10,17 +10,19 @@
  * duplicated here.
  *
  * Source resolution (first hit wins):
- *   1. $API_SPECS_DEFAULTS_FILE         — explicit path to the artifact
- *   2. ../../../../api-specs-enriched/docs/specifications/api/minimal-export-defaults.json (local checkout)
- *   3. GitHub latest release asset       — minimal-export-defaults.json from $REPO
- *   4. none found                        — emit an empty table + warn (non-fatal)
+ *   1. Exact dispatched release          — when $API_SPECS_VERSION and $API_SPECS_TAG are both set
+ *   2. $API_SPECS_DEFAULTS_FILE          — explicit path to the artifact
+ *   3. ../../../../api-specs-enriched/docs/specifications/api/minimal-export-defaults.json (local checkout)
+ *   4. GitHub latest release asset       — minimal-export-defaults.json from $REPO
+ *   5. none found                        — emit an empty table + warn (non-fatal)
  *
- * The empty-table fallback is intentional: a kind with no entry exports
- * everything (today's behavior), so the build never breaks while
- * api-specs-enriched coverage is still being filled in.
+ * The empty-table fallback applies only to non-dispatch development: a kind
+ * with no entry exports everything (today's behavior). Exact dispatched
+ * releases must include a matching artifact and never use this fallback.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { type ApiSpecReleaseIdentity, releaseIdentityFromEnvironment } from "../../../scripts/api-spec-delivery";
 
 const REPO = "f5-sales-demo/api-specs-enriched";
 const ARTIFACT_NAME = "minimal-export-defaults.json";
@@ -41,14 +43,26 @@ interface DefaultsArtifact {
 	resources: Record<string, Partial<KindDefaultsMetadata>>;
 }
 
-async function fetchWithRetry(url: string, init?: RequestInit): Promise<Response> {
+type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+
+interface LoadedArtifact {
+	text: string;
+	source: string;
+}
+
+interface ParsedArtifact {
+	table: Record<string, KindDefaultsMetadata>;
+	version: string;
+}
+
+async function fetchWithRetry(url: string, init?: RequestInit, fetcher: Fetcher = globalThis.fetch): Promise<Response> {
 	let lastError: Error | null = null;
 	for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
 		if (attempt > 0) {
 			await Bun.sleep(INITIAL_BACKOFF_MS * 2 ** (attempt - 1));
 		}
 		try {
-			const response = await fetch(url, init);
+			const response = await fetcher(url, init);
 			if (response.status === 403 || response.status === 429) {
 				const retryAfter = response.headers.get("retry-after");
 				const waitMs = retryAfter ? Number.parseInt(retryAfter, 10) * 1000 : INITIAL_BACKOFF_MS * 2 ** attempt;
@@ -72,11 +86,15 @@ function githubHeaders(): Record<string, string> {
 	return headers;
 }
 
-async function resolveLatestTag(): Promise<string | undefined> {
+async function resolveLatestTag(fetcher: Fetcher): Promise<string | undefined> {
 	try {
-		const response = await fetchWithRetry(`https://api.github.com/repos/${REPO}/releases/latest`, {
-			headers: githubHeaders(),
-		});
+		const response = await fetchWithRetry(
+			`https://api.github.com/repos/${REPO}/releases/latest`,
+			{
+				headers: githubHeaders(),
+			},
+			fetcher,
+		);
 		if (!response.ok) return undefined;
 		const data = (await response.json()) as { tag_name?: string };
 		return data.tag_name;
@@ -85,9 +103,36 @@ async function resolveLatestTag(): Promise<string | undefined> {
 	}
 }
 
+function releaseArtifactUrl(releaseTag: string): string {
+	return `https://github.com/${REPO}/releases/download/${releaseTag}/${ARTIFACT_NAME}`;
+}
+
 /** Returns the raw artifact JSON text, or undefined if no source is available. */
-async function loadArtifactText(): Promise<{ text: string; source: string } | undefined> {
-	const envFile = process.env.API_SPECS_DEFAULTS_FILE;
+export async function loadArtifactText(
+	env: Record<string, string | undefined> = process.env,
+	fetcher: Fetcher = globalThis.fetch,
+): Promise<LoadedArtifact | undefined> {
+	const releaseIdentity = releaseIdentityFromEnvironment(env);
+	if (releaseIdentity) {
+		const expectedSha256 = env.API_SPECS_DEFAULTS_SHA256;
+		if (!expectedSha256 || !/^[0-9a-f]{64}$/.test(expectedSha256)) {
+			throw new Error("API_SPECS_DEFAULTS_SHA256 must be a lowercase SHA-256 digest");
+		}
+		const url = releaseArtifactUrl(releaseIdentity.releaseTag);
+		const response = await fetchWithRetry(url, { redirect: "follow" }, fetcher);
+		if (!response.ok) {
+			throw new Error(
+				`${ARTIFACT_NAME} is absent from dispatched release ${releaseIdentity.releaseTag} (${response.status})`,
+			);
+		}
+		const bytes = new Uint8Array(await response.arrayBuffer());
+		if (new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== expectedSha256) {
+			throw new Error(`${ARTIFACT_NAME} differs from its immutable publication receipt`);
+		}
+		return { text: new TextDecoder().decode(bytes), source: url };
+	}
+
+	const envFile = env.API_SPECS_DEFAULTS_FILE;
 	if (envFile && fs.existsSync(envFile)) {
 		return { text: fs.readFileSync(envFile, "utf8"), source: envFile };
 	}
@@ -100,10 +145,10 @@ async function loadArtifactText(): Promise<{ text: string; source: string } | un
 		return { text: fs.readFileSync(localCheckout, "utf8"), source: localCheckout };
 	}
 
-	const tag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
+	const tag = await resolveLatestTag(fetcher);
 	if (tag) {
-		const url = `https://github.com/${REPO}/releases/download/${tag}/${ARTIFACT_NAME}`;
-		const response = await fetchWithRetry(url, { redirect: "follow" });
+		const url = releaseArtifactUrl(tag);
+		const response = await fetchWithRetry(url, { redirect: "follow" }, fetcher);
 		if (response.ok) {
 			return { text: await response.text(), source: url };
 		}
@@ -122,6 +167,21 @@ function normalizeEntry(raw: Partial<KindDefaultsMetadata>): KindDefaultsMetadat
 	};
 }
 
+export function parseArtifact(loaded: LoadedArtifact, releaseIdentity?: ApiSpecReleaseIdentity): ParsedArtifact {
+	const artifact = JSON.parse(loaded.text) as DefaultsArtifact;
+	if (releaseIdentity && artifact.version !== releaseIdentity.version) {
+		throw new Error(
+			`${ARTIFACT_NAME} version ${String(artifact.version)} does not match dispatched version ${releaseIdentity.version}`,
+		);
+	}
+
+	const table: Record<string, KindDefaultsMetadata> = {};
+	for (const [kind, raw] of Object.entries(artifact.resources ?? {})) {
+		table[kind] = normalizeEntry(raw);
+	}
+	return { table, version: artifact.version ?? "unknown" };
+}
+
 function render(table: Record<string, KindDefaultsMetadata>, source: string | undefined, version: string): string {
 	const kinds = Object.keys(table).sort();
 	const body = JSON.stringify(Object.fromEntries(kinds.map(k => [k, table[k]])), null, "\t");
@@ -138,19 +198,18 @@ export const DEFAULTS_METADATA: Record<string, KindDefaultsMetadata> = ${body};
 }
 
 async function main(): Promise<void> {
-	const loaded = await loadArtifactText();
+	const releaseIdentity = releaseIdentityFromEnvironment(process.env);
+	const loaded = await loadArtifactText(process.env);
 
 	let table: Record<string, KindDefaultsMetadata> = {};
 	let version = "unknown";
 	let source: string | undefined;
 
 	if (loaded) {
-		const artifact = JSON.parse(loaded.text) as DefaultsArtifact;
-		version = artifact.version ?? "unknown";
+		const parsed = parseArtifact(loaded, releaseIdentity);
+		table = parsed.table;
+		version = parsed.version;
 		source = loaded.source;
-		for (const [kind, raw] of Object.entries(artifact.resources ?? {})) {
-			table[kind] = normalizeEntry(raw);
-		}
 		console.log(`Loaded ${Object.keys(table).length} kinds from ${loaded.source}`);
 	} else {
 		console.warn(`WARNING: no ${ARTIFACT_NAME} source found — writing an empty defaults table.`);
@@ -162,4 +221,4 @@ async function main(): Promise<void> {
 	console.log(`Wrote ${outputPath}`);
 }
 
-await main();
+if (import.meta.main) await main();

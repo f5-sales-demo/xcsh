@@ -33,8 +33,7 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: write
+permissions: {}
 
 concurrency:
   group: tag-on-version-bump
@@ -42,12 +41,14 @@ concurrency:
 
 jobs:
   tag:
+    name: Create immutable release tag
     # push path: only run when the head commit starts with the bump prefix.
     # workflow_dispatch path: always run (the extract step validates input).
     if: >-
       github.event_name == 'workflow_dispatch' ||
       startsWith(github.event.head_commit.message, 'chore: bump version to v')
     runs-on: ubuntu-22.04
+    permissions: {}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -105,6 +106,19 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Extracted tag: $tag (from $SHA)"
+
+      - name: Enable and require immutable releases before tagging
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api --method PUT "repos/${REPOSITORY}/immutable-releases" -F enabled=true >/dev/null
+          gh api "repos/${REPOSITORY}/immutable-releases" \
+            | jq -e '.enabled == true' >/dev/null || {
+            echo "::error::Repository release immutability must be enabled before tagging"
+            exit 1
+          }
 
       - name: Guard against duplicate tag
         id: guard
