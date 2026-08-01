@@ -17,6 +17,7 @@ smoke_cli() {
 	"$omp_bin" --version
 	"$omp_bin" --help >/dev/null
 	"$omp_bin" stats --summary >/dev/null
+	XCSH_SMOKE_TEST_SPECS=1 "$omp_bin" >/dev/null
 }
 
 find_tarball() {
