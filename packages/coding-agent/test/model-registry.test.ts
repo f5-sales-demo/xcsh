@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Effort, type Model, type OpenAICompat, type ThinkingConfig, writeModelCache } from "@f5-sales-demo/pi-ai";
 import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
-import { generateModelsYml } from "@f5-sales-demo/xcsh/config/auto-config";
+import { generateModelsYml } from "../src/config/auto-config";
 import {
 	kNoAuth,
 	MODEL_ROLES,
