@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [20.2.0] - 2026-08-01
+
 ### Breaking Changes
 
 - Adopted browser bridge contract 2.0: Chrome chat requests now require explicit tab and session routing, terminal chat errors expose only a closed reason code, and Chrome clients can no longer configure provider credentials or send console login credentials through the bridge ([#2802](https://github.com/f5-sales-demo/xcsh/issues/2802))
