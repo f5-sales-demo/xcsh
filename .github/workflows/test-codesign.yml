@@ -80,9 +80,7 @@ jobs:
           fi
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          toolchain: nightly-2026-03-27
+      - uses: ./.github/actions/setup-rust
       - uses: Swatinem/rust-cache@v2
         with:
           cache-workspace-crates: true

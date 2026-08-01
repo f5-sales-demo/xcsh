@@ -1,0 +1,29 @@
+name: Setup Rust
+description: Install the repository-pinned Rust toolchain and an optional cross-compilation target
+
+inputs:
+  target:
+    description: Optional Rust compilation target to add to the active repository toolchain
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Install repository Rust toolchain
+      shell: bash
+      env:
+        RUST_TARGET: ${{ inputs.target }}
+      run: |
+        set -euo pipefail
+
+        # With no explicit channel, rustup installs the active toolchain declared by
+        # rust-toolchain.toml. Target installation is deliberately unqualified so it
+        # cannot drift onto a different sysroot from the one Cargo uses.
+        rustup toolchain install --profile minimal --no-self-update
+        if [ -n "$RUST_TARGET" ]; then
+          rustup target add "$RUST_TARGET"
+        fi
+
+        rustup show active-toolchain
+        rustc --version --verbose
