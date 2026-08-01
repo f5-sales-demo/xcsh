@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [20.0.0] - 2026-08-01
+
 ### Breaking Changes
 
 - Restricted package exports to the root SDK and `browser/chat-protocol`; unsupported deep imports are no longer published.

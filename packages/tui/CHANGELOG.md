@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [20.0.0] - 2026-08-01
+
 ### Fixed
 
 - Apply the slash-command menu layout so long command names no longer hide descriptions.
