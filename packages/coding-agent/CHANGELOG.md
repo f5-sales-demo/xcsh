@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [20.1.0] - 2026-08-01
+
 ### Added
 
 - Added `xcsh sandbox check` to verify the installed sandbox with synthetic fixtures and automatic cleanup ([#2790](https://github.com/f5-sales-demo/xcsh/issues/2790))
