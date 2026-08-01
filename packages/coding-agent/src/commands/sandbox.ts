@@ -15,11 +15,12 @@ export default class Sandbox extends Command {
 
 	static flags = {
 		json: Flags.boolean({ description: "Output JSON" }),
+		verbose: Flags.boolean({ char: "v", description: "Show failure details" }),
 	};
 
 	async run(): Promise<void> {
 		const { flags } = await this.parse(Sandbox);
-		const report = await runSandboxCheck({ json: flags.json });
+		const report = await runSandboxCheck({ json: flags.json, verbose: flags.verbose });
 		if (report.summary.failed > 0) process.exitCode = 1;
 	}
 }

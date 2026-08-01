@@ -8,6 +8,7 @@ import { Settings } from "../config/settings";
 import { fenceForNative } from "../exec/bash-executor";
 import { buildContainmentFence, type ContainmentFence, containmentStatus } from "../sandbox/containment";
 import { evaluateToolCall } from "../sandbox/enforce";
+import { SANDBOX_OPERATOR_HOME_ENV, SANDBOX_SESSION_ROOT_ENV } from "../sandbox/session-fence";
 import { BashTool, type ToolSession } from "../tools";
 
 export type SandboxCheckResultStatus = "PASS" | "FAIL" | "SKIP";
@@ -15,6 +16,8 @@ export type SandboxCheckResultStatus = "PASS" | "FAIL" | "SKIP";
 export interface SandboxCheckResult {
 	name: string;
 	status: SandboxCheckResultStatus;
+	/** Present on failures and skips; paths are generalized before they leave the process. */
+	detail?: string;
 }
 
 export interface SandboxCheckReport {
@@ -30,32 +33,108 @@ export interface SandboxCheckReport {
 
 export interface SandboxCheckOptions {
 	json?: boolean;
+	verbose?: boolean;
 }
+
+interface ProbeOutcome {
+	passed: boolean;
+	detail?: string;
+}
+
+interface ShellProbeResult {
+	exitCode: number;
+	output: string;
+}
+
+type Redaction = readonly [path: string, label: string];
 
 function quote(value: string): string {
 	return JSON.stringify(value);
 }
 
-async function shellExitCode(
+function errorCode(error: unknown): string | undefined {
+	if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+	const code = (error as { code?: unknown }).code;
+	return typeof code === "string" ? code : undefined;
+}
+
+function sanitizeDetail(value: string, redactions: readonly Redaction[]): string {
+	let sanitized = value;
+	for (const [actual, label] of [...redactions].sort(([a], [b]) => b.length - a.length)) {
+		if (actual.length > 0) sanitized = sanitized.replaceAll(actual, label);
+	}
+	sanitized = sanitized.replace(/\s+/gu, " ").trim();
+	return sanitized.length > 500 ? `${sanitized.slice(0, 497)}...` : sanitized;
+}
+
+function errnoFromOutput(output: string): string {
+	if (/operation not permitted/iu.test(output)) return "EPERM";
+	if (/permission denied/iu.test(output)) return "EACCES";
+	if (/no such file or directory/iu.test(output)) return "ENOENT";
+	if (/not a directory/iu.test(output)) return "ENOTDIR";
+	return "unknown";
+}
+
+function exceptionOutcome(
+	assertion: string,
+	displayPath: string,
+	error: unknown,
+	redactions: readonly Redaction[],
+): ProbeOutcome {
+	const message = error instanceof Error ? error.message : String(error);
+	return {
+		passed: false,
+		detail: sanitizeDetail(
+			`${assertion}; path=${displayPath}; errno=${errorCode(error) ?? "unknown"}; error=${message}`,
+			redactions,
+		),
+	};
+}
+
+function shellOutcome(
+	result: ShellProbeResult,
+	expectSuccess: boolean,
+	assertion: string,
+	displayPath: string,
+	redactions: readonly Redaction[],
+): ProbeOutcome {
+	const passed = expectSuccess ? result.exitCode === 0 : result.exitCode !== 0;
+	if (passed) return { passed: true };
+	const output = sanitizeDetail(result.output, redactions);
+	const errno = result.exitCode === 0 ? "none" : errnoFromOutput(output);
+	return {
+		passed: false,
+		detail: sanitizeDetail(
+			`${assertion}; path=${displayPath}; exit=${result.exitCode}; errno=${errno}${output ? `; output=${output}` : ""}`,
+			redactions,
+		),
+	};
+}
+
+async function shellProbe(
 	command: string,
 	cwd: string,
-	fence: ContainmentFence,
+	fence: ContainmentFence | undefined,
 	signal: AbortSignal,
-): Promise<number> {
+): Promise<ShellProbeResult> {
+	let output = "";
 	const result = await executeShell(
 		{
 			command,
 			cwd,
-			fence: fenceForNative(fence),
+			fence: fence === undefined ? undefined : fenceForNative(fence),
 			signal,
 			timeoutMs: 15_000,
 		},
-		() => {},
+		(error, chunk) => {
+			if (error) output += `${error.message}\n`;
+			else output += chunk;
+		},
 	);
-	return result.exitCode ?? -1;
+	return { exitCode: result.exitCode ?? -1, output };
 }
 
-function renderReport(report: SandboxCheckReport, json: boolean): void {
+function renderReport(report: SandboxCheckReport, json: boolean, verbose: boolean): void {
 	if (json) {
 		process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 		return;
@@ -63,43 +142,72 @@ function renderReport(report: SandboxCheckReport, json: boolean): void {
 
 	const enforcement = report.osEnforced ? "OS enforced" : "scanner only";
 	process.stdout.write(`Sandbox backend: ${report.backend} (${enforcement})\n\n`);
-	const width = Math.max(...report.checks.map(check => check.name.length));
+	const width = Math.max(0, ...report.checks.map(check => check.name.length));
 	for (const check of report.checks) {
 		process.stdout.write(`${check.status.padEnd(4)}  ${check.name.padEnd(width)}\n`);
+		if (verbose && check.detail) process.stdout.write(`      ${check.detail}\n`);
 	}
 	process.stdout.write(
 		`\n${report.summary.passed} passed, ${report.summary.failed} failed, ${report.summary.skipped} skipped\n`,
 	);
+	if (!verbose && report.summary.failed > 0) {
+		process.stdout.write("Run `xcsh sandbox check --verbose` for failure details.\n");
+	}
 }
 
 /** Run the conformance matrix and report only after every synthetic fixture has been removed. */
 export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promise<SandboxCheckReport> {
 	const backend = containmentStatus(true);
 	const checks: SandboxCheckResult[] = [];
+	const fixturePaths: string[] = [];
+	const knownCleanupLeaves: string[] = [];
+	const nonEnumerableCleanupDirs = new Set<string>();
+	const redactions: Redaction[] = [];
 	const abortController = new AbortController();
 	const interrupt = () => abortController.abort();
 	process.once("SIGINT", interrupt);
 	process.once("SIGTERM", interrupt);
 
 	let fixtureRoot: string | undefined;
-	const add = (name: string, status: SandboxCheckResultStatus): void => {
-		checks.push({ name, status });
+	const add = (name: string, status: SandboxCheckResultStatus, detail?: string): void => {
+		checks.push({ name, status, ...(detail ? { detail } : {}) });
 	};
-	const check = async (name: string, probe: () => boolean | Promise<boolean>): Promise<void> => {
+	const check = async (
+		name: string,
+		probe: () => boolean | ProbeOutcome | Promise<boolean | ProbeOutcome>,
+	): Promise<void> => {
 		if (abortController.signal.aborted) {
-			add(name, "FAIL");
+			add(name, "FAIL", "probe aborted before execution; path=<probe>; errno=ABORTED");
 			return;
 		}
 		try {
-			add(name, (await probe()) ? "PASS" : "FAIL");
-		} catch {
-			add(name, "FAIL");
+			const result = await probe();
+			const outcome = typeof result === "boolean" ? { passed: result } : result;
+			add(
+				name,
+				outcome.passed ? "PASS" : "FAIL",
+				outcome.passed ? undefined : (outcome.detail ?? "assertion failed; path=<probe>; errno=unknown"),
+			);
+		} catch (error) {
+			const outcome = exceptionOutcome("probe threw", "<probe>", error, redactions);
+			add(name, "FAIL", outcome.detail);
 		}
 	};
 
 	try {
-		const tmpRoot = await fs.realpath(os.tmpdir());
-		fixtureRoot = await fs.mkdtemp(path.join(tmpRoot, "xcsh-sandbox-check-"));
+		const inheritedProfile = process.env[SANDBOX_SESSION_ROOT_ENV] !== undefined;
+		const workspaceInput = process.env[SANDBOX_SESSION_ROOT_ENV] ?? process.cwd();
+		const homeInput = process.env[SANDBOX_OPERATOR_HOME_ENV] ?? os.homedir();
+		redactions.push([workspaceInput, "<workspace>"], [homeInput, "<operator-home>"]);
+		const liveWorkspace = await fs.realpath(workspaceInput);
+		const liveHome = await fs.realpath(homeInput);
+		redactions.push([liveWorkspace, "<workspace>"], [liveHome, "<operator-home>"]);
+
+		const fixtureBase = inheritedProfile ? liveWorkspace : await fs.realpath(os.tmpdir());
+		fixtureRoot = await fs.mkdtemp(path.join(fixtureBase, ".xcsh-sandbox-check-policy-"));
+		fixturePaths.push(fixtureRoot);
+		redactions.push([fixtureRoot, "<synthetic-root>"]);
+
 		const accountRoot = path.join(fixtureRoot, "Users");
 		const operatorHome = path.join(accountRoot, "operator");
 		const otherHome = path.join(accountRoot, "other-account");
@@ -165,39 +273,132 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				cwd: workspace,
 				fence,
 			});
-			return blocked.every(result => result.block) && !ownConfig.block;
+			const passed = blocked.every(result => result.block) && !ownConfig.block;
+			return passed
+				? { passed: true }
+				: {
+						passed: false,
+						detail: "structured-tool policy disagreed with the shell boundary; path=<synthetic-root>; errno=none",
+					};
 		});
 
 		await check("workspace read, write, glob, and recursion", async () => {
+			const displayPath = "<workspace>/<synthetic-fixture>";
+			let liveFixture: string;
+			try {
+				liveFixture = await fs.mkdtemp(path.join(liveWorkspace, ".xcsh-sandbox-check-workspace-"));
+				fixturePaths.push(liveFixture);
+				redactions.push([liveFixture, displayPath]);
+				await fs.mkdir(path.join(liveFixture, "nested"));
+				await Bun.write(path.join(liveFixture, "own.txt"), "own\n");
+			} catch (error) {
+				return exceptionOutcome("create live workspace fixture", displayPath, error, redactions);
+			}
 			const command =
 				"cat own.txt > /dev/null && printf created > created.txt && " +
 				"printf '%s\\n' ./* > /dev/null && find . -type f > /dev/null";
-			return (await shellExitCode(command, workspace, fence, abortController.signal)) === 0;
+			const result = await shellProbe(command, liveFixture, undefined, abortController.signal);
+			return shellOutcome(
+				result,
+				true,
+				"live profile must allow workspace read, write, glob, and recursion",
+				displayPath,
+				redactions,
+			);
 		});
+
 		await check("named sibling remains reachable", async () => {
-			const command = `cd ${quote(sibling)} && test "$(cat named.txt)" = sibling`;
-			return (await shellExitCode(command, workspace, fence, abortController.signal)) === 0;
+			const displayPath = "<session-parent>/<synthetic-sibling>";
+			let liveSibling: string;
+			try {
+				liveSibling = await fs.mkdtemp(path.join(path.dirname(liveWorkspace), ".xcsh-sandbox-check-sibling-"));
+				fixturePaths.push(liveSibling);
+				nonEnumerableCleanupDirs.add(liveSibling);
+				redactions.push([liveSibling, displayPath]);
+				const namedFile = path.join(liveSibling, "named.txt");
+				await Bun.write(namedFile, "sibling\n");
+				knownCleanupLeaves.push(namedFile);
+			} catch (error) {
+				return exceptionOutcome("create named sibling fixture", displayPath, error, redactions);
+			}
+			const result = await shellProbe(
+				'test "$(cat named.txt)" = sibling',
+				liveSibling,
+				undefined,
+				abortController.signal,
+			);
+			return shellOutcome(result, true, "live profile must allow a named sibling read", displayPath, redactions);
 		});
 
 		if (backend.osEnforced) {
 			await check("session parent cannot be enumerated", async () => {
-				const command = `ls ${quote(workspaces)} > /dev/null`;
-				return (await shellExitCode(command, workspace, fence, abortController.signal)) !== 0;
+				const result = await shellProbe(
+					`ls ${quote(workspaces)} > /dev/null`,
+					workspace,
+					fence,
+					abortController.signal,
+				);
+				return shellOutcome(
+					result,
+					false,
+					"synthetic session parent enumeration must be refused",
+					"<synthetic-session-parent>",
+					redactions,
+				);
 			});
 			await check("account container cannot be enumerated", async () => {
-				const command = `ls ${quote(accountRoot)} > /dev/null`;
-				return (await shellExitCode(command, workspace, fence, abortController.signal)) !== 0;
+				const result = await shellProbe(
+					`ls ${quote(accountRoot)} > /dev/null`,
+					workspace,
+					fence,
+					abortController.signal,
+				);
+				return shellOutcome(
+					result,
+					false,
+					"synthetic account container enumeration must be refused",
+					"<synthetic-account-container>",
+					redactions,
+				);
 			});
 			await check("synthetic other account cannot be entered", async () => {
-				const command = `cd ${quote(otherHome)}`;
-				return (await shellExitCode(command, workspace, fence, abortController.signal)) !== 0;
+				const result = await shellProbe(`cd ${quote(otherHome)}`, workspace, fence, abortController.signal);
+				return shellOutcome(
+					result,
+					false,
+					"synthetic other account traversal must be refused",
+					"<synthetic-other-account>",
+					redactions,
+				);
 			});
 			await check("cross-session stores cannot be read", async () => {
-				const sessionRead = `cat ${quote(path.join(otherSession, "state.jsonl"))} > /dev/null`;
-				const memoryRead = `cat ${quote(path.join(otherMemory, "MEMORY.md"))} > /dev/null`;
-				return (
-					(await shellExitCode(sessionRead, workspace, fence, abortController.signal)) !== 0 &&
-					(await shellExitCode(memoryRead, workspace, fence, abortController.signal)) !== 0
+				const sessionRead = await shellProbe(
+					`cat ${quote(path.join(otherSession, "state.jsonl"))} > /dev/null`,
+					workspace,
+					fence,
+					abortController.signal,
+				);
+				const sessionOutcome = shellOutcome(
+					sessionRead,
+					false,
+					"synthetic other session read must be refused",
+					"<synthetic-session-store>/<synthetic-session>",
+					redactions,
+				);
+				if (!sessionOutcome.passed) return sessionOutcome;
+
+				const memoryRead = await shellProbe(
+					`cat ${quote(path.join(otherMemory, "MEMORY.md"))} > /dev/null`,
+					workspace,
+					fence,
+					abortController.signal,
+				);
+				return shellOutcome(
+					memoryRead,
+					false,
+					"synthetic other memory read must be refused",
+					"<synthetic-memory-store>/<synthetic-memory>",
+					redactions,
 				);
 			});
 		} else {
@@ -207,14 +408,39 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				"synthetic other account cannot be entered",
 				"cross-session stores cannot be read",
 			]) {
-				add(name, "SKIP");
+				add(name, "SKIP", "OS enforcement backend unavailable; path=<probe>; errno=unsupported");
 			}
 		}
 
 		await check("operator home configuration is writable", async () => {
-			const target = path.join(configDir, "config");
-			const command = `printf operator > ${quote(target)} && test "$(cat ${quote(target)})" = operator`;
-			return (await shellExitCode(command, workspace, fence, abortController.signal)) === 0;
+			const displayPath = "<operator-home>/<synthetic-fixture>";
+			let liveConfig: string;
+			try {
+				// Landlock cannot grant creation on a split directory without also granting every
+				// denied descendant. The live fence therefore grants operator-owned CLI config roots
+				// explicitly; use one of those when another Landlock profile is already inherited.
+				// Standalone and Seatbelt checks retain the direct-home probe.
+				const configBase =
+					inheritedProfile && backend.backend === "landlock" ? path.join(liveHome, ".config", "gh") : liveHome;
+				liveConfig = await fs.mkdtemp(path.join(configBase, ".xcsh-sandbox-check-home-"));
+				fixturePaths.push(liveConfig);
+				redactions.push([liveConfig, displayPath]);
+			} catch (error) {
+				return exceptionOutcome("create operator-home fixture", displayPath, error, redactions);
+			}
+			const result = await shellProbe(
+				'printf operator > config && test "$(cat config)" = operator',
+				liveConfig,
+				undefined,
+				abortController.signal,
+			);
+			return shellOutcome(
+				result,
+				true,
+				"live profile must allow operator-home configuration writes",
+				displayPath,
+				redactions,
+			);
 		});
 
 		await check("cwd resets across tool calls", async () => {
@@ -248,23 +474,56 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					.map(part => part.text)
 					.join("")
 					.trim();
-			return text(moved) === nested && text(reset) === workspace && text(explicit) === nested;
+			const passed = text(moved) === nested && text(reset) === workspace && text(explicit) === nested;
+			return passed
+				? { passed: true }
+				: {
+						passed: false,
+						detail:
+							"tool-call cwd did not reset to <synthetic-workspace> or honor explicit cwd; path=<synthetic-root>; errno=none",
+					};
 		});
-	} catch {
-		add("conformance matrix completed", "FAIL");
+	} catch (error) {
+		const outcome = exceptionOutcome("conformance matrix setup failed", "<probe>", error, redactions);
+		add("conformance matrix completed", "FAIL", outcome.detail);
 	} finally {
 		process.off("SIGINT", interrupt);
 		process.off("SIGTERM", interrupt);
-		if (fixtureRoot === undefined) {
-			add("synthetic fixtures removed", "FAIL");
-		} else {
+		const cleanupFailures: string[] = [];
+		for (const leafPath of [...knownCleanupLeaves].reverse()) {
 			try {
-				await fs.rm(fixtureRoot, { recursive: true, force: true });
-				await fs.stat(fixtureRoot);
-				add("synthetic fixtures removed", "FAIL");
+				await fs.rm(leafPath, { force: true });
 			} catch (error) {
-				add("synthetic fixtures removed", isEnoent(error) ? "PASS" : "FAIL");
+				if (!isEnoent(error)) cleanupFailures.push(error instanceof Error ? error.message : String(error));
 			}
+		}
+		for (const fixturePath of [...fixturePaths].reverse()) {
+			try {
+				// Landlock denies enumeration of the session parent. A sibling created after the
+				// profile snapshot consequently cannot be walked during recursive cleanup, even
+				// though its known leaf and the directory itself can be removed by name.
+				if (nonEnumerableCleanupDirs.has(fixturePath)) await fs.rmdir(fixturePath);
+				else await fs.rm(fixturePath, { recursive: true, force: true });
+				await fs.stat(fixturePath);
+				cleanupFailures.push(`fixture remains at ${fixturePath}`);
+			} catch (error) {
+				if (!isEnoent(error)) cleanupFailures.push(error instanceof Error ? error.message : String(error));
+			}
+		}
+
+		if (fixtureRoot === undefined || cleanupFailures.length > 0) {
+			add(
+				"synthetic fixtures removed",
+				"FAIL",
+				sanitizeDetail(
+					`fixture cleanup incomplete; path=<synthetic-fixtures>; errno=${
+						fixtureRoot === undefined ? "ENOENT" : "unknown"
+					}${cleanupFailures.length > 0 ? `; error=${cleanupFailures.join("; ")}` : ""}`,
+					redactions,
+				),
+			);
+		} else {
+			add("synthetic fixtures removed", "PASS");
 		}
 	}
 
@@ -278,6 +537,6 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			skipped: checks.filter(result => result.status === "SKIP").length,
 		},
 	};
-	renderReport(report, options.json ?? false);
+	renderReport(report, options.json ?? false, options.verbose ?? false);
 	return report;
 }
