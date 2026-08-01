@@ -561,7 +561,7 @@ describe("renderAboutDoc containment section", () => {
 		expect(doc).toContain("readable and writable");
 		expect(doc).toContain("directory containing the session root cannot");
 		expect(doc).toContain("sibling path the operator names directly");
-		expect(doc).toContain("Cross-session stores and data roots remain denied");
+		expect(doc).toContain("Cross-session stores, other operators' accounts, and data roots remain denied");
 		// Ordinary work remains available and an operator can deliberately restore discovery.
 		expect(doc).toContain("--allow-path");
 	});
