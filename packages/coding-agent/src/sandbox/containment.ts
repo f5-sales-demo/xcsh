@@ -8,8 +8,8 @@
  *
  * So the fence is gentle. It leaves `/usr`, `/tmp`, package caches, the network and process execution
  * alone. Its cross-tenant courtesy removes the discovery step — enumerating the session root's parent —
- * while keeping named operator access. Explicit data-root and cross-session state denies remain where
- * the model has no legitimate reason to wander (#2554).
+ * while keeping named operator access. Other operators' accounts, explicit data roots and cross-session
+ * state remain denied where the model has no legitimate reason to wander (#2554).
  *
  * Produced declaratively rather than as an ordered rule list, because the two backends disagree about
  * order: seatbelt evaluates rules in sequence with the last match winning, while Landlock only grants
@@ -197,9 +197,8 @@ const OPERATIONAL_ROOT_NAMES = new Set([
  * unforeseen — `/data`, `/scratch`, a bespoke mount.
  */
 const DATA_ROOTS = [
-	// `/Users` and `/home` are deliberately absent: denying the home container denies this operator's own
-	// home with it, which is the whole of #2637. Other accounts are 0700, so the filesystem already refuses
-	// them; the fence is not here to re-implement file permissions.
+	"/Users", // Account containers are denied, then this operator's canonical home is allowed back at
+	"/home", // greater depth. That preserves #2637 without exposing another local account (#2788).
 	"/root", // Linux superuser home: not this operator's account
 	"/Volumes", // macOS mounts. Per-container, not per-child: /Volumes/Macintosh HD resolves to /,
 	"/mnt", // which `tooBroadToDeny` then rejects, and the kernel resolves such a path before any
@@ -481,6 +480,11 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	}
 
 	if (home !== undefined) {
+		// The account container is a data root, but this operator's whole home belongs to them (#2637).
+		// A deeper full allow preserves their normal filesystem rights while leaving sibling accounts under
+		// the broader deny. Cross-session stores are denied again at still greater depth below.
+		allow.add(home);
+
 		// Granted whether or not they exist yet. `~/.bun` has to be writable *before* the first
 		// `bun install` creates it, so dropping absent caches would break exactly the first run.
 		// Canonicalised when present, so a symlinked cache resolves to its real location.
@@ -505,6 +509,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// prefix whether or not the path exists; Landlock cannot attach a rule to an absent inode, but its
 	// plan never grants a path `readdir` did not see either, so nothing is lost there.
 	const known = DATA_ROOTS.map(name => canonicalThroughExisting(path.join(fsRoot, path.basename(name))));
+	const accountRoots = new Set(["Users", "home"].map(name => canonicalThroughExisting(path.join(fsRoot, name))));
 	const found = dataRootEntries(fsRoot).map(entry => canonical(entry) ?? entry);
 	// Whole filesystem roots other than the workspace's own — the other Windows drives.
 	//
@@ -520,11 +525,11 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		// e.g. /Volumes/Macintosh HD -> /. Skipped for the whole-root list, per the note above.
 		if (!rootScoped.has(resolved) && tooBroadToDeny(resolved, fsRoot)) continue;
 		if (resolved === fsRoot) continue; // never the root the workspace lives on
-		// Never a directory that CONTAINS home, because denying it denies home (#2637). Removing `/Users`
-		// and `/home` from the static list was not enough: the root enumeration re-adds them, since
-		// `Users` is not an operational name. That is what still refused `~/git/STYLE_GUIDE.md` at the
-		// kernel while `fenceVerdict` said allow — the unit tests use synthetic roots and could not see it.
-		if (home !== undefined && pathIsWithin(resolved, home)) continue;
+		// A directory containing home is normally too broad to deny because it would revoke the operator's
+		// own files (#2637). Account containers are the deliberate exception: they are denied here and the
+		// canonical home allow above wins at greater depth, isolating sibling accounts without hobbling the
+		// operator (#2788).
+		if (home !== undefined && pathIsWithin(resolved, home) && !accountRoots.has(resolved)) continue;
 		// A deny beats an allow at EQUAL depth, so denying a root that IS the workspace or IS something
 		// the operator granted would not be redundant — it would silently revoke the grant. Deeper is
 		// fine and intended: an ancestor deny with the workspace allowed inside it is the normal shape.

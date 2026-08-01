@@ -17,7 +17,10 @@ import { buildContainmentFence, type FenceAccess, fenceVerdict } from "../src/sa
  * than illustrative.
  */
 describe("containment fence: TypeScript and Rust agree", () => {
-	const home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-conf-home-")));
+	const fsRoot = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-conf-root-")));
+	const accountRoot = path.join(fsRoot, "Users");
+	const home = path.join(accountRoot, "operator");
+	const otherHome = path.join(accountRoot, "other-account");
 	const workspace = path.join(home, "GIT", "custA");
 	const sibling = path.join(home, "GIT", "custB");
 	const leak = path.join(home, ".xcsh", "agent", "sessions");
@@ -25,14 +28,14 @@ describe("containment fence: TypeScript and Rust agree", () => {
 
 	// Removed after the file runs; both fixtures above leaked into the OS temp dir (#2633).
 	afterAll(() => {
-		for (const dir of [home, shared]) fs.rmSync(dir, { recursive: true, force: true });
+		for (const dir of [fsRoot, shared]) fs.rmSync(dir, { recursive: true, force: true });
 	});
-	for (const dir of [workspace, sibling, leak, path.join(home, ".ssh"), path.join(home, ".bun")]) {
+	for (const dir of [workspace, sibling, otherHome, leak, path.join(home, ".ssh"), path.join(home, ".bun")]) {
 		fs.mkdirSync(dir, { recursive: true });
 	}
 	fs.writeFileSync(path.join(home, ".gitconfig"), "[user]\n");
 
-	const fence = buildContainmentFence({ workspace, home, extraRoots: [shared], leakRoots: [leak] });
+	const fence = buildContainmentFence({ workspace, home, fsRoot, extraRoots: [shared], leakRoots: [leak] });
 	const wire = {
 		allow: [...fence.allow],
 		allowReadOnly: [...fence.allowReadOnly],
@@ -51,6 +54,10 @@ describe("containment fence: TypeScript and Rust agree", () => {
 		path.join(sibling, "secret.env"),
 		path.join(home, "Documents", "tax.pdf"),
 		home,
+		// another local account and its container
+		path.join(otherHome, "workspace", "notes.md"),
+		otherHome,
+		accountRoot,
 		// carve-outs
 		path.join(home, ".bun", "install", "cache", "pkg"),
 		path.join(home, ".cargo", "registry", "x"), // absent on purpose
@@ -98,6 +105,15 @@ describe("containment fence: TypeScript and Rust agree", () => {
 		expect(fencePermits(wire, parent, false, true)).toBe(false);
 		expect(fenceVerdict(fence, sibling, "read")).toBe("allow");
 		expect(fencePermits(wire, sibling, false, false)).toBe(true);
+	});
+
+	it("agrees that the operator's home is allowed inside a denied account container", () => {
+		expect(fenceVerdict(fence, accountRoot, "enumerate")).toBe("deny");
+		expect(fencePermits(wire, accountRoot, false, true)).toBe(false);
+		expect(fenceVerdict(fence, path.join(otherHome, "workspace"), "read")).toBe("deny");
+		expect(fencePermits(wire, path.join(otherHome, "workspace"), false, false)).toBe(false);
+		expect(fenceVerdict(fence, path.join(home, ".zshrc"), "write")).toBe("allow");
+		expect(fencePermits(wire, path.join(home, ".zshrc"), true, false)).toBe(true);
 	});
 
 	it("agrees that an absent fence restricts nothing", () => {

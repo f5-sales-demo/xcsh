@@ -918,10 +918,22 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 
 		const fence = buildContainmentFence({ workspace, home, fsRoot });
 
-		// Another account is no longer denied (#2637): the container holding it also holds this operator's
-		// home, and denying it denied `~/git/STYLE_GUIDE.md`. A home directory is 0700, so the filesystem
-		// already refuses it — the fence does not re-implement file permissions.
-		expect(fenceVerdict(fence, path.join(fsRoot, "Users", "otheruser", "customerX"), "read")).toBe("allow");
+		// The account container is denied, with only this operator's canonical home allowed back at greater
+		// depth. This keeps all of the operator-rights fix from #2637 without exposing another local account.
+		const accountRoot = path.join(fsRoot, "Users");
+		const otherHome = path.join(accountRoot, "otheruser");
+		expect(fence.deny).toContain(accountRoot);
+		expect(fence.allow).toContain(home);
+		expect(fenceVerdict(fence, accountRoot, "enumerate")).toBe("deny");
+		for (const access of ["read", "write", "enumerate"] as const) {
+			expect(fenceVerdict(fence, path.join(otherHome, "workspace"), access)).toBe("deny");
+			expect(fenceVerdict(fence, path.join(home, ".config", "tool"), access)).toBe("allow");
+		}
+
+		// The operator can still override the courtesy with an explicit grant.
+		const granted = buildContainmentFence({ workspace, home, fsRoot, extraRoots: [otherHome] });
+		expect(fenceVerdict(granted, path.join(otherHome, "named-file"), "read")).toBe("allow");
+		expect(fenceVerdict(granted, path.join(otherHome, "named-file"), "write")).toBe("allow");
 
 		// The unrelated data roots, still denied — these were measured reachable before #2624.
 		for (const leak of [
@@ -1000,9 +1012,13 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 	it("denies the real home container on this machine and no operational root", () => {
 		const fence = buildContainmentFence({ workspace: fs.realpathSync(process.cwd()) });
 
-		// The home container is NOT denied since #2637 — denying it denies the operator's own home, which
-		// is what refused `~/git/STYLE_GUIDE.md` at the kernel while `fenceVerdict` said allow.
-		expect(fence.deny).not.toContain(process.platform === "darwin" ? "/Users" : "/home");
+		const accountRoot = path.join(
+			path.parse(fs.realpathSync(process.cwd())).root,
+			process.platform === "linux" ? "home" : "Users",
+		);
+		expect(fence.deny).toContain(accountRoot);
+		expect(fence.allow).toContain(fs.realpathSync(os.homedir()));
+		expect(fenceVerdict(fence, fs.realpathSync(os.homedir()), "write")).toBe("allow");
 		// Only what this platform actually has: `/private` is macOS-only, and `realpathSync` on an absent
 		// path throws — which failed the Linux runner while passing locally. The file already warns about
 		// exactly this trap two describes up, and I walked into it anyway.
