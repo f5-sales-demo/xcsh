@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Detect PII-shaped values in tracked Git content without reading the worktree.
 
 The scanner deliberately has two modes:
@@ -50,6 +49,7 @@ MEDIA_SUFFIXES = {
     ".webm",
     ".webp",
 }
+TEXT_MEDIA_SUFFIXES = {".svg"}
 SOURCE_CODE_SUFFIXES = {
     ".c",
     ".cc",
@@ -127,6 +127,11 @@ PDF_AUTHOR_RE = re.compile(
 )
 SENSITIVE_MEDIA_TAG_RE = re.compile(
     r"GPSLatitude|GPSLongitude|OwnerName|CameraOwnerName", re.IGNORECASE
+)
+MEDIA_AUTHOR_METADATA_RE = re.compile(
+    r"(?:^|\n)(?:Author|Artist|Creator|OwnerName|CameraOwnerName)"
+    r"(?:\s*[:=]\s*|\n+)(?P<value>[^\r\n]+)",
+    re.IGNORECASE,
 )
 PROVENANCE_TRAILER_RE = re.compile(
     r"^(?:Co-authored-by|Signed-off-by|Reviewed-by|Acked-by|Tested-by):",
@@ -316,11 +321,11 @@ def is_nonliteral_code_expression(path: str, match: re.Match[str]) -> bool:
 
 
 def safe_phone(value: str) -> bool:
-    """Return whether a phone number is in NANP's fictional 0100-0199 range."""
+    """Return whether a phone number uses NANP's fictional 555-0100--0199 block."""
     digits = re.sub(r"\D", "", value)
-    if len(digits) == len("18005550100") and digits.startswith("1"):
+    if len(digits) in {8, 11} and digits.startswith("1"):
         digits = digits[1:]
-    return len(digits) == len("8005550100") and digits.startswith("80055501")
+    return bool(re.fullmatch(r"(?:[2-9][0-9]{2})?55501[0-9]{2}", digits))
 
 
 def add_finding(
@@ -329,7 +334,6 @@ def add_finding(
     path: str,
     line: int,
     category: str,
-    severity: str = "high",
     message: str,
 ) -> None:
     """Add one redacted and deduplicated finding."""
@@ -338,7 +342,27 @@ def add_finding(
             path=redact_path(path),
             line=line,
             category=category,
-            severity=severity,
+            severity="high",
+            message=message,
+        )
+    )
+
+
+def add_review_finding(
+    findings: set[Finding],
+    *,
+    path: str,
+    line: int,
+    category: str,
+    message: str,
+) -> None:
+    """Add one redacted and deduplicated manual-review finding."""
+    findings.add(
+        Finding(
+            path=redact_path(path),
+            line=line,
+            category=category,
+            severity="review",
             message=message,
         )
     )
@@ -364,12 +388,11 @@ def scan_contacts(
     path: str,
     line_number: int,
     line: str,
-    legal_path: bool,
-    provenance_trailer: bool,
+    attribution_context: bool,
     findings: set[Finding],
 ) -> None:
     """Scan one line for contact details, home paths, and person names."""
-    if not legal_path and not provenance_trailer:
+    if not attribution_context:
         for match in EMAIL_RE.finditer(line):
             if not safe_email(match.group(0)) and not is_uri_userinfo(line, match):
                 add_finding(
@@ -494,12 +517,11 @@ def scan_public_ips(
             attribute = None
         if attribute is not None:
             continue
-        add_finding(
+        add_review_finding(
             findings,
             path=path,
             line=line_number,
             category="public-ip-review",
-            severity="review",
             message="globally routable unicast IPv4 address is outside documentation ranges",
         )
 
@@ -515,8 +537,7 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
             path,
             line_number,
             line,
-            legal_path,
-            provenance_trailer,
+            legal_path or provenance_trailer,
             findings,
         )
         scan_structured_identity(path, line_number, line, findings)
@@ -529,14 +550,37 @@ def looks_binary(data: bytes) -> bool:
     return b"\0" in data[:8192]
 
 
-def scan_binary(path: str, data: bytes, findings: set[Finding]) -> None:
+def scan_binary(path: str, data: bytes, findings: set[Finding], *, media: bool) -> None:
     """Inspect ASCII-compatible binary metadata without rendering the file."""
     # Keep only printable metadata runs. Treating every byte as Latin-1 lets
     # compression noise masquerade as contact syntax across arbitrary bytes.
     text = "\n".join(
         (match.group(0).decode("ascii") for match in PRINTABLE_ASCII_RE.finditer(data)),
     )
-    scan_text(path, text, findings)
+    if not media:
+        scan_text(path, text, findings)
+        return
+
+    for metadata in MEDIA_AUTHOR_METADATA_RE.finditer(text):
+        value = metadata.group("value")
+        emails = list(EMAIL_RE.finditer(value))
+        for email in emails:
+            if not safe_email(email.group(0)):
+                add_finding(
+                    findings,
+                    path=path,
+                    line=0,
+                    category="email",
+                    message="media metadata contains a non-reserved email address",
+                )
+        if not emails and not placeholder_value(value):
+            add_finding(
+                findings,
+                path=path,
+                line=0,
+                category="media-author",
+                message="binary media contains literal author metadata",
+            )
     if SENSITIVE_MEDIA_TAG_RE.search(text):
         add_finding(
             findings,
@@ -562,16 +606,18 @@ def scan_blob(path: str, data: bytes, findings: set[Finding]) -> None:
         return
     suffix = PurePosixPath(path).suffix.lower()
     if suffix in MEDIA_SUFFIXES:
-        add_finding(
+        add_review_finding(
             findings,
             path=path,
             line=0,
             category="media-review",
-            severity="review",
             message="media requires metadata, OCR, and visual review",
         )
+    if suffix in MEDIA_SUFFIXES - TEXT_MEDIA_SUFFIXES:
+        scan_binary(path, data, findings, media=True)
+        return
     if looks_binary(data):
-        scan_binary(path, data, findings)
+        scan_binary(path, data, findings, media=False)
         return
     scan_text(path, data.decode("utf-8", "replace"), findings)
 
