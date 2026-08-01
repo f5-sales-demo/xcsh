@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [20.0.4] - 2026-08-01
+
 ### Fixed
 
 - Reset model bash tool calls to the session working directory so a command-local `cd` cannot silently relocate later calls ([#2724](https://github.com/f5-sales-demo/xcsh/issues/2724))
