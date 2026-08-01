@@ -5,115 +5,778 @@ on:
   repository_dispatch:
     types: [enriched-specs-updated]
 
+concurrency:
+  group: api-spec-update
+  cancel-in-progress: false
+
+permissions: {}
+
 jobs:
   update-api-specs:
+    name: Deliver Published API Specifications
     runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
+    timeout-minutes: 360
+    permissions: {}
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out fresh main
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
+          ref: main
 
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: "1.3"
 
+      - name: Validate dispatch identity
+        id: delivery
+        run: bun scripts/api-spec-delivery.ts validate-event
+
+      - name: Verify exact published release
+        id: source_release
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: bun scripts/api-spec-delivery.ts verify-release
+
+      - name: Check durable delivery ledger on main
+        id: main_delivery
+        env:
+          DELIVERY_LEDGER_FILE: ${{ steps.delivery.outputs.ledger_path }}
+          DELIVERY_PUBLICATION_LEDGER_FILE: ${{ steps.delivery.outputs.publication_ledger_path }}
+        run: bun scripts/api-spec-delivery.ts check-ledger
+
+      - name: Check pending delivery on main
+        if: steps.main_delivery.outputs.applied != 'true'
+        id: main_pending
+        env:
+          DELIVERY_PENDING_FILE: ${{ steps.delivery.outputs.pending_path }}
+        run: bun scripts/api-spec-delivery.ts check-pending
+
+      - name: Prepare deterministic delivery branch
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
+        id: branch
+        env:
+          BRANCH: ${{ steps.delivery.outputs.branch }}
+          PENDING_PATH: ${{ steps.delivery.outputs.pending_path }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git fetch --no-tags origin "$BRANCH:refs/remotes/origin/$BRANCH"
+            BRANCH_PENDING="$RUNNER_TEMP/api-spec-delivery-pending.json"
+            git show "origin/$BRANCH:$PENDING_PATH" > "$BRANCH_PENDING" || {
+              echo "::error::Existing delivery branch has no pending identity marker"
+              exit 1
+            }
+            export DELIVERY_PENDING_FILE="$BRANCH_PENDING"
+            bun scripts/api-spec-delivery.ts verify-pending
+
+            ALLOWED_PATHS='^(packages/coding-agent/src/internal-urls/(api-spec-index|api-catalog-index|terraform-index)\.generated\.ts|packages/resource-management/src/defaults-metadata\.generated\.ts|tools/(spec-delivery-pending|spec-release)\.json)$'
+            UNEXPECTED_PATHS=$(git diff --name-only "origin/main...origin/$BRANCH" | grep -Ev "$ALLOWED_PATHS" || true)
+            if [ -n "$UNEXPECTED_PATHS" ]; then
+              echo "::error::Existing delivery branch contains unexpected paths"
+              printf '%s\n' "$UNEXPECTED_PATHS"
+              exit 1
+            fi
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+            echo "resumed=true" >> "$GITHUB_OUTPUT"
+          else
+            git checkout -B "$BRANCH" origin/main
+            echo "resumed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve exact published provider release
+        if: steps.main_delivery.outputs.applied != 'true'
+        id: provider_release
+        env:
+          EXPECTED_COMMIT: ${{ steps.delivery.outputs.target_commit }}
+          EXPECTED_DELIVERY_ID: ${{ steps.delivery.outputs.provider_delivery_id }}
+          EXPECTED_SPEC_TAG: ${{ steps.delivery.outputs.release_tag }}
+          EXPECTED_SPEC_VERSION: ${{ steps.delivery.outputs.version }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          SOURCE_PIN_FILE: ${{ steps.source_release.outputs.pin_path }}
+        run: |
+          set -euo pipefail
+          PROVIDER_REPOSITORY=f5-sales-demo/terraform-provider-xcsh
+          [[ "$EXPECTED_DELIVERY_ID" =~ ^[0-9a-f]{64}$ ]] || exit 1
+          [[ "$EXPECTED_COMMIT" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          canonical_id() {
+            local version=$1 tag=$2 commit=$3 canonical
+            canonical=$(jq -cnS \
+              --arg commit "$commit" \
+              --arg event_type enriched-specs-updated \
+              --arg source f5-sales-demo/api-specs-enriched \
+              --arg tag "$tag" \
+              --arg target "$PROVIDER_REPOSITORY" \
+              --arg version "$version" \
+              '{commit:$commit,event_type:$event_type,source:$source,tag:$tag,target:$target,version:$version}')
+            printf '%s' "$canonical" | shasum -a 256 | awk '{print $1}'
+          }
+          for attempt in $(seq 1 120); do
+            PROVIDER_MAIN_SHA=$(gh api "repos/$PROVIDER_REPOSITORY/git/ref/heads/main" --jq '.object.sha' 2>/dev/null || true)
+            if [[ ! "$PROVIDER_MAIN_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              sleep 30
+              continue
+            fi
+            PROVIDER_LEDGER=$(gh api \
+              "repos/$PROVIDER_REPOSITORY/contents/tools/spec-deliveries.json?ref=$PROVIDER_MAIN_SHA" \
+              -H "Accept: application/vnd.github.raw+json" 2>/dev/null || true)
+            PROVIDER_EVIDENCE=$(gh api \
+              "repos/$PROVIDER_REPOSITORY/contents/tools/provider-publication-receipts.json?ref=$PROVIDER_MAIN_SHA" \
+              -H "Accept: application/vnd.github.raw+json" 2>/dev/null || true)
+            if [ -z "$PROVIDER_LEDGER" ] || [ -z "$PROVIDER_EVIDENCE" ]; then
+              sleep 30
+              continue
+            fi
+            printf '%s' "$PROVIDER_LEDGER" | jq -e '
+              type == "object" and (keys | sort) == ["deliveries", "version"] and
+              .version == 1 and (.deliveries | type == "object")
+            ' >/dev/null || { echo "::error::Provider delivery ledger is malformed"; exit 1; }
+            printf '%s' "$PROVIDER_EVIDENCE" | jq -e '
+              type == "object" and (keys | sort) == ["receipts", "version"] and
+              .version == 1 and (.receipts | type == "object")
+            ' >/dev/null || { echo "::error::Provider publication evidence ledger is malformed"; exit 1; }
+            [ "$(printf '%s' "$PROVIDER_LEDGER" | jq -cS '.deliveries | keys')" = \
+              "$(printf '%s' "$PROVIDER_EVIDENCE" | jq -cS '.receipts | keys')" ] || {
+              echo "::error::Provider common and detailed ledgers have different delivery keys"
+              exit 1
+            }
+            while IFS= read -r LEDGER_ENTRY; do
+              LEDGER_KEY=$(printf '%s' "$LEDGER_ENTRY" | jq -r '.key')
+              printf '%s' "$LEDGER_ENTRY" | jq -e '
+                (.value | type == "object") and
+                (.value | keys | sort) == ["release_tag", "target_commit", "version"] and
+                (.value.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) and
+                .value.release_tag == ("v" + .value.version) and
+                (.value.target_commit | test("^[0-9a-f]{40}$"))
+              ' >/dev/null || { echo "::error::Provider delivery ledger contains a malformed entry"; exit 1; }
+              CANONICAL_KEY=$(canonical_id \
+                "$(printf '%s' "$LEDGER_ENTRY" | jq -r '.value.version')" \
+                "$(printf '%s' "$LEDGER_ENTRY" | jq -r '.value.release_tag')" \
+                "$(printf '%s' "$LEDGER_ENTRY" | jq -r '.value.target_commit')")
+              [ "$LEDGER_KEY" = "$CANONICAL_KEY" ] || {
+                echo "::error::Provider delivery ledger contains a noncanonical key"
+                exit 1
+              }
+            done < <(printf '%s' "$PROVIDER_LEDGER" | jq -c '.deliveries | to_entries[]')
+            while IFS= read -r RECEIPT_ENTRY; do
+              RECEIPT_KEY=$(printf '%s' "$RECEIPT_ENTRY" | jq -r '.key')
+              COMMON_ENTRY=$(printf '%s' "$PROVIDER_LEDGER" | jq -c --arg id "$RECEIPT_KEY" '.deliveries[$id]')
+              printf '%s' "$RECEIPT_ENTRY" | jq -e --argjson common "$COMMON_ENTRY" '
+                (.value | type == "object") and
+                (.value | keys | sort) == ["delivery", "publication"] and
+                .value.delivery == $common and
+                (.value.publication | type == "object") and
+                (.value.publication | keys | sort) == ["assets", "commit", "spec_release_sha256", "tag", "version"] and
+                (.value.publication.commit | test("^[0-9a-f]{40}$")) and
+                (.value.publication.spec_release_sha256 | test("^[0-9a-f]{64}$")) and
+                .value.publication.tag == ("v" + .value.publication.version) and
+                (.value.publication.assets | keys | sort) == [
+                  ("mcp-data-" + .value.publication.version + ".tar.gz"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_SHA256SUMS"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_SHA256SUMS.sig"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_darwin_amd64.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_darwin_arm64.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_freebsd_386.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_freebsd_amd64.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_linux_386.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_linux_amd64.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_linux_arm.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_linux_arm64.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_manifest.json"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_windows_386.zip"),
+                  ("terraform-provider-xcsh_" + .value.publication.version + "_windows_amd64.zip")
+                ] and
+                ([.value.publication.assets[] | test("^[0-9a-f]{64}$")] | all)
+              ' >/dev/null || { echo "::error::Provider publication ledger contains malformed evidence"; exit 1; }
+            done < <(printf '%s' "$PROVIDER_EVIDENCE" | jq -c '.receipts | to_entries[]')
+
+            ENTRY=$(printf '%s' "$PROVIDER_LEDGER" | jq -c --arg id "$EXPECTED_DELIVERY_ID" '.deliveries[$id] // empty')
+            if [ -n "$ENTRY" ]; then
+              printf '%s' "$ENTRY" | jq -e --arg tag "$EXPECTED_SPEC_TAG" --arg commit "$EXPECTED_COMMIT" \
+                --arg version "$EXPECTED_SPEC_VERSION" \
+                '. == {release_tag:$tag,target_commit:$commit,version:$version}' >/dev/null || {
+                echo "::error::Provider ledger entry disagrees with the dispatched identity"
+                exit 1
+              }
+              DELIVERY_EVIDENCE=$(printf '%s' "$PROVIDER_EVIDENCE" | jq -c --arg id "$EXPECTED_DELIVERY_ID" '.receipts[$id]')
+              EVIDENCE=$(printf '%s' "$DELIVERY_EVIDENCE" | jq -c '.publication')
+                PROVIDER_TAG=$(printf '%s' "$EVIDENCE" | jq -r '.tag')
+                PROVIDER_COMMIT=$(printf '%s' "$EVIDENCE" | jq -r '.commit')
+                PROVIDER_TAG_COMMIT=$(gh api \
+                  "repos/$PROVIDER_REPOSITORY/commits/$PROVIDER_TAG" --jq '.sha')
+                [ "$PROVIDER_TAG_COMMIT" = "$PROVIDER_COMMIT" ] || {
+                  echo "::error::Provider tag no longer identifies its receipted commit"
+                  exit 1
+                }
+                PROVIDER_RELEASE=$(gh api \
+                  "repos/$PROVIDER_REPOSITORY/releases/tags/$PROVIDER_TAG")
+                printf '%s' "$PROVIDER_RELEASE" | jq -e --arg tag "$PROVIDER_TAG" '
+                  .tag_name == $tag and .draft == false and .prerelease == false and
+                  .immutable == true and (.assets | type == "array")
+                ' >/dev/null || {
+                  echo "::error::Provider release is absent or not final"
+                  exit 1
+                }
+                RECEIPTS=$(printf '%s' "$PROVIDER_RELEASE" | jq -r '.body // ""' \
+                  | sed -n 's/^<!-- provider-publication-receipt:\(.*\) -->$/\1/p')
+                [ "$(printf '%s\n' "$RECEIPTS" | awk 'NF { count++ } END { print count + 0 }')" -eq 1 ] || {
+                  echo "::error::Provider release does not contain exactly one publication receipt"
+                  exit 1
+                }
+                [ "$(printf '%s' "$RECEIPTS" | jq -cS .)" = "$(printf '%s' "$EVIDENCE" | jq -cS .)" ] || {
+                  echo "::error::Provider release receipt differs from durable publication evidence"
+                  exit 1
+                }
+                RELEASE_ASSETS=$(printf '%s' "$PROVIDER_RELEASE" | jq -r '.assets[].name' | sort)
+                EVIDENCE_ASSETS=$(printf '%s' "$EVIDENCE" | jq -r '.assets | keys[]' | sort)
+                [ "$RELEASE_ASSETS" = "$EVIDENCE_ASSETS" ] || {
+                  echo "::error::Provider release asset set differs from its publication evidence"
+                  exit 1
+                }
+                while IFS= read -r ASSET; do
+                  API_DIGEST=$(printf '%s' "$PROVIDER_RELEASE" | jq -er --arg name "$ASSET" '
+                    [.assets[] | select(.name == $name)] |
+                    if length == 1 then .[0].digest else empty end')
+                  RECEIPT_DIGEST=$(printf '%s' "$EVIDENCE" | jq -r --arg name "$ASSET" '.assets[$name]')
+                  [ "$API_DIGEST" = "sha256:$RECEIPT_DIGEST" ] || {
+                    echo "::error::Provider release bytes differ from publication evidence for $ASSET"
+                    exit 1
+                  }
+                done <<< "$RELEASE_ASSETS"
+                gh api \
+                  "repos/$PROVIDER_REPOSITORY/contents/tools/spec-release.json?ref=$PROVIDER_COMMIT" \
+                  -H "Accept: application/vnd.github.raw+json" \
+                  > "$RUNNER_TEMP/provider-spec-release.json"
+                PROVIDER_PIN_SHA=$(shasum -a 256 "$RUNNER_TEMP/provider-spec-release.json" | awk '{print $1}')
+                [ "$PROVIDER_PIN_SHA" = "$(printf '%s' "$EVIDENCE" | jq -r '.spec_release_sha256')" ] || {
+                  echo "::error::Provider release spec pin differs from publication evidence"
+                  exit 1
+                }
+                jq -e --arg tag "$EXPECTED_SPEC_TAG" --arg commit "$EXPECTED_COMMIT" \
+                  --arg version "$EXPECTED_SPEC_VERSION" '
+                  type == "object" and
+                  (keys | sort) == ["assets", "release_tag", "target_commit", "version"] and
+                  .release_tag == $tag and .target_commit == $commit and .version == $version and
+                  (.assets | keys | sort) == [
+                    "api-catalog.json", ("f5xc-api-specs-" + $tag + ".zip"),
+                    "index.json", "minimal-export-defaults.json", "openapi.json"
+                  ] and ([.assets[] | test("^[0-9a-f]{64}$")] | all)
+                ' "$RUNNER_TEMP/provider-spec-release.json" >/dev/null || {
+                  echo "::error::Provider release carries a malformed or mismatched spec pin"
+                  exit 1
+                }
+                [ "$(jq -cS . "$RUNNER_TEMP/provider-spec-release.json")" = "$(jq -cS . "$SOURCE_PIN_FILE")" ] || {
+                  echo "::error::Provider release consumed different spec bytes from this receiver"
+                  exit 1
+                }
+                SPEC_MARKER=$(gh api \
+                  "repos/$PROVIDER_REPOSITORY/contents/tools/spec-version.txt?ref=$PROVIDER_COMMIT" \
+                  -H "Accept: application/vnd.github.raw+json")
+                [ "${SPEC_MARKER//$'\n'/}" = "$EXPECTED_SPEC_TAG" ] || {
+                  echo "::error::Provider publication evidence names another spec release"
+                  exit 1
+                }
+                echo "::notice::Provider delivery is published in immutable release $PROVIDER_TAG"
+                echo "provider_commit=$PROVIDER_COMMIT" >> "$GITHUB_OUTPUT"
+                echo "provider_tag=$PROVIDER_TAG" >> "$GITHUB_OUTPUT"
+                exit 0
+            fi
+
+            CONFLICT=$(printf '%s' "$PROVIDER_LEDGER" | jq -r --arg tag "$EXPECTED_SPEC_TAG" \
+              '[.deliveries | to_entries[] | select(.value.release_tag == $tag)][0].key // empty')
+            if [ -n "$CONFLICT" ]; then
+              echo "::error::Provider applied the spec tag under a different delivery identity"
+              exit 1
+            fi
+            if [ $((attempt % 10)) -eq 0 ]; then
+              echo "::notice::Still waiting for provider post-publication acknowledgment"
+            fi
+            sleep 30
+          done
+          echo "::error::Timed out waiting for the exact provider delivery to publish"
+          exit 1
+
       - name: Cache bun dependencies
+        if: steps.main_delivery.outputs.applied != 'true'
         uses: actions/cache@v5
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
 
-      - run: bun install --frozen-lockfile
+      - name: Install dependencies
+        if: steps.main_delivery.outputs.applied != 'true'
+        run: bun install --frozen-lockfile
 
-      - name: Log dispatch payload
-        env:
-          PAYLOAD_VERSION: ${{ github.event.client_payload.version }}
-          PAYLOAD_SOURCE: ${{ github.event.client_payload.trigger_source }}
-        run: |
-          echo "::notice::Received enriched-specs-updated dispatch"
-          echo "Upstream version: ${PAYLOAD_VERSION:-unknown}"
-          echo "Trigger source: ${PAYLOAD_SOURCE:-unknown}"
-
-      - name: Remove stale generated files so the script downloads fresh specs
+      - name: Remove stale generated files
+        if: steps.main_delivery.outputs.applied != 'true'
         run: |
           rm -f packages/coding-agent/src/internal-urls/api-spec-index.generated.ts
           rm -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
           rm -f packages/coding-agent/src/internal-urls/terraform-index.generated.ts
           rm -f packages/resource-management/src/defaults-metadata.generated.ts
 
-      - name: Regenerate API spec index from latest release
+      - name: Generate exact API spec and catalog indexes
+        if: steps.main_delivery.outputs.applied != 'true'
         working-directory: packages/coding-agent
+        env:
+          API_SPECS_TAG: ${{ steps.delivery.outputs.release_tag }}
+          API_SPECS_VERSION: ${{ steps.delivery.outputs.version }}
+          API_SPECS_BUNDLE_SHA256: ${{ steps.source_release.outputs.bundle_sha256 }}
+          API_SPECS_CATALOG_SHA256: ${{ steps.source_release.outputs.catalog_sha256 }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun run generate-api-spec-index
 
-      - name: Regenerate Terraform index from latest release
+      - name: Generate Terraform index
+        if: steps.main_delivery.outputs.applied != 'true'
         working-directory: packages/coding-agent
+        env:
+          API_SPECS_TAG: ${{ steps.delivery.outputs.release_tag }}
+          API_SPECS_VERSION: ${{ steps.delivery.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TERRAFORM_PROVIDER_COMMIT: ${{ steps.provider_release.outputs.provider_commit }}
+          TERRAFORM_PROVIDER_TAG: ${{ steps.provider_release.outputs.provider_tag }}
         run: bun run generate-terraform-index
 
-      - name: Regenerate minimum-settings defaults table from latest release
+      - name: Generate exact minimum-settings defaults table
+        if: steps.main_delivery.outputs.applied != 'true'
         working-directory: packages/resource-management
+        env:
+          API_SPECS_TAG: ${{ steps.delivery.outputs.release_tag }}
+          API_SPECS_VERSION: ${{ steps.delivery.outputs.version }}
+          API_SPECS_DEFAULTS_SHA256: ${{ steps.source_release.outputs.defaults_sha256 }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: bun run generate-defaults
 
-      - name: Verify generated files exist
-        working-directory: packages/coding-agent
-        run: |
-          test -f src/internal-urls/api-spec-index.generated.ts
-          test -f src/internal-urls/api-catalog-index.generated.ts
-          test -f src/internal-urls/terraform-index.generated.ts
-          test -f ../resource-management/src/defaults-metadata.generated.ts
+      - name: Record exact generated delivery attestation
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
+        env:
+          PROVIDER_COMMIT: ${{ steps.provider_release.outputs.provider_commit }}
+          PROVIDER_TAG: ${{ steps.provider_release.outputs.provider_tag }}
+          SOURCE_RELEASE_PIN_FILE: ${{ steps.source_release.outputs.pin_path }}
+        run: bun scripts/api-spec-delivery.ts record-pending
 
-      - name: Check for changes
-        id: changes
-        run: |
-          if git diff --quiet; then
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No changes detected — specs already up to date"
-          else
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
-            SPEC_VERSION=$(grep 'API_SPEC_VERSION' packages/coding-agent/src/internal-urls/api-spec-index.generated.ts | grep -o '"[^"]*"' | tr -d '"')
-            echo "spec_version=${SPEC_VERSION}" >> "$GITHUB_OUTPUT"
-            echo "::notice::Specs updated to ${SPEC_VERSION}"
-          fi
+      - name: Verify exact regenerated delivery bytes
+        if: steps.main_delivery.outputs.applied != 'true'
+        env:
+          PROVIDER_COMMIT: ${{ steps.provider_release.outputs.provider_commit }}
+          PROVIDER_TAG: ${{ steps.provider_release.outputs.provider_tag }}
+        run: bun scripts/api-spec-delivery.ts verify-generated
 
-      - name: Configure git
-        if: steps.changes.outputs.has_changes == 'true'
+      - name: Commit and push generated delivery
+        if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
+        env:
+          BRANCH: ${{ steps.delivery.outputs.branch }}
+          SPEC_VERSION: ${{ steps.delivery.outputs.version }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Create issue and PR with updated specs
-        if: steps.changes.outputs.has_changes == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          SPEC_VERSION: ${{ steps.changes.outputs.spec_version }}
-        run: |
-          BRANCH="chore/api-specs-${SPEC_VERSION}"
-          git checkout -b "$BRANCH"
           git add -f packages/coding-agent/src/internal-urls/api-spec-index.generated.ts
           git add -f packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts
+          git add -f packages/coding-agent/src/internal-urls/terraform-index.generated.ts
           git add -f packages/resource-management/src/defaults-metadata.generated.ts
-          # fix: (not chore:) so the embedded-spec/defaults refresh triggers an
-          # auto-release and publishes @f5-sales-demo/pi-resource-management with
-          # the fresh defaults table — otherwise consumers stay stale (auto-release
-          # in ci.yml skips chore:). The squash-merge commit uses this message.
-          git commit -m "fix(coding-agent): update embedded API specs to ${SPEC_VERSION}"
-          git push origin "$BRANCH"
-          ISSUE_URL=$(gh issue create \
-            --title "chore: update embedded API specs to ${SPEC_VERSION}" \
-            --body "Automated update triggered by upstream api-specs-enriched release to ${SPEC_VERSION}.")
-          ISSUE_NUM=$(echo "$ISSUE_URL" | grep -o '[0-9]*$')
-          gh pr create \
-            --base main \
-            --head "$BRANCH" \
-            --title "fix(coding-agent): update embedded API specs to ${SPEC_VERSION}" \
-            --body "Automated update triggered by upstream api-specs-enriched release.
+          git add tools/spec-release.json
+          git add tools/spec-delivery-pending.json
+          if git diff --cached --quiet; then
+            echo "::notice::Resumed delivery already has the exact regenerated bytes"
+          else
+            git commit -m "fix(coding-agent): update embedded API specs to $SPEC_VERSION"
+            git push --set-upstream origin "$BRANCH"
+          fi
 
-          This PR updates the embedded API spec index and catalog to ${SPEC_VERSION}.
+      - name: Create or resume generated-artifact pull request
+        if: steps.main_delivery.outputs.applied != 'true'
+        id: generated_pr
+        env:
+          BRANCH: ${{ steps.delivery.outputs.branch }}
+          DELIVERY_ID: ${{ steps.delivery.outputs.delivery_id }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          SPEC_VERSION: ${{ steps.delivery.outputs.version }}
+        run: |
+          set -euo pipefail
+          PR_JSON=$(gh pr list --head "$BRANCH" --state all --limit 10 --json number,state)
+          PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.[0].number // empty')
+          PR_STATE=$(printf '%s' "$PR_JSON" | jq -r '.[0].state // empty')
 
-          Closes #${ISSUE_NUM}"
-          gh pr merge "$BRANCH" --squash --auto --delete-branch
+          if [ -n "$PR_NUMBER" ]; then
+            if [ "$PR_STATE" = "CLOSED" ]; then
+              gh pr reopen "$PR_NUMBER"
+              PR_STATE=OPEN
+            fi
+          else
+            DELIVERY_PREFIX=${DELIVERY_ID:0:12}
+            ISSUE_TITLE="chore: generate API spec delivery $DELIVERY_PREFIX"
+            ISSUE_JSON=$(gh issue list --state all --search "$ISSUE_TITLE in:title" --limit 100 --json number,state,title)
+            ISSUE_NUMBER=$(printf '%s' "$ISSUE_JSON" | jq -r --arg title "$ISSUE_TITLE" \
+              '[.[] | select(.title == $title)][0].number // empty')
+            ISSUE_STATE=$(printf '%s' "$ISSUE_JSON" | jq -r --arg title "$ISSUE_TITLE" \
+              '[.[] | select(.title == $title)][0].state // empty')
+            if [ -z "$ISSUE_NUMBER" ]; then
+              ISSUE_URL=$(gh issue create \
+                --title "$ISSUE_TITLE" \
+                --body "Track exact artifact generation for api-specs-enriched delivery $DELIVERY_PREFIX at v$SPEC_VERSION.")
+              ISSUE_NUMBER=${ISSUE_URL##*/}
+            elif [ "$ISSUE_STATE" = "CLOSED" ]; then
+              gh issue reopen "$ISSUE_NUMBER"
+            fi
+
+            PR_URL=$(gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "fix(coding-agent): update embedded API specs to $SPEC_VERSION" \
+              --body "Automated exact-tag generation from api-specs-enriched v$SPEC_VERSION.
+
+          This PR records a pending delivery marker. It does not acknowledge application; the durable ledger is updated only after the resulting xcsh release is published and verified.
+
+          Closes #$ISSUE_NUMBER")
+            PR_NUMBER=${PR_URL##*/}
+            PR_STATE=OPEN
+          fi
+
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || {
+            echo "::error::Could not resolve the generated-artifact PR number"
+            exit 1
+          }
+          if [ "$PR_STATE" != "MERGED" ]; then
+            gh pr merge "$PR_NUMBER" --squash --auto
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for generated artifacts to merge
+        if: steps.main_delivery.outputs.applied != 'true'
+        id: generated_merge
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          PR_NUMBER: ${{ steps.generated_pr.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || exit 1
+          for attempt in $(seq 1 240); do
+            PR_JSON=$(gh pr view "$PR_NUMBER" --json state,mergeCommit)
+            PR_STATE=$(printf '%s' "$PR_JSON" | jq -r '.state')
+            if [ "$PR_STATE" = "MERGED" ]; then
+              MERGE_SHA=$(printf '%s' "$PR_JSON" | jq -r '.mergeCommit.oid // empty')
+              [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+                echo "::error::Merged delivery PR has no full merge commit SHA"
+                exit 1
+              }
+              echo "merge_sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            if [ "$PR_STATE" = "CLOSED" ]; then
+              echo "::error::Generated-artifact PR closed without merging"
+              exit 1
+            fi
+            if [ $((attempt % 20)) -eq 0 ]; then
+              echo "::notice::Still waiting for generated-artifact PR $PR_NUMBER to merge"
+            fi
+            sleep 30
+          done
+          echo "::error::Timed out waiting for generated-artifact PR to merge"
+          exit 1
+
+      - name: Verify post-merge release publication
+        if: steps.main_delivery.outputs.applied != 'true'
+        id: publication
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          MERGE_SHA: ${{ steps.generated_merge.outputs.merge_sha }}
+          PENDING_PATH: ${{ steps.delivery.outputs.pending_path }}
+          PROVIDER_COMMIT: ${{ steps.provider_release.outputs.provider_commit }}
+          PROVIDER_TAG: ${{ steps.provider_release.outputs.provider_tag }}
+        run: |
+          set -euo pipefail
+          [[ "$MERGE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          for attempt in $(seq 1 240); do
+            while IFS= read -r TAG; do
+              [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || continue
+              TAG_REF=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" 2>/dev/null || true)
+              TAG_SHA=$(printf '%s' "$TAG_REF" | jq -r 'select(.object.type == "commit") | .object.sha // empty')
+              [[ "$TAG_SHA" =~ ^[0-9a-f]{40}$ ]] || continue
+              ANCESTRY=$(gh api "repos/$GITHUB_REPOSITORY/compare/$MERGE_SHA...$TAG_SHA" --jq '.status' 2>/dev/null || true)
+              if [ "$ANCESTRY" != "ahead" ] && [ "$ANCESTRY" != "identical" ]; then
+                continue
+              fi
+
+              RUN_JSON=$(gh run list --workflow ci.yml --event push --limit 100 \
+                --json conclusion,headBranch,headSha,status)
+              RUN_STATUS=$(printf '%s' "$RUN_JSON" | jq -r --arg tag "$TAG" --arg sha "$TAG_SHA" \
+                '[.[] | select(.headBranch == $tag and .headSha == $sha)][0].status // empty')
+              RUN_CONCLUSION=$(printf '%s' "$RUN_JSON" | jq -r --arg tag "$TAG" --arg sha "$TAG_SHA" \
+                '[.[] | select(.headBranch == $tag and .headSha == $sha)][0].conclusion // empty')
+              if [ "$RUN_STATUS" != "completed" ] || [ "$RUN_CONCLUSION" != "success" ]; then
+                continue
+              fi
+
+              VERSION=${TAG#v}
+              XCSH_NPM=$(npm view "@f5-sales-demo/xcsh@$VERSION" version gitHead dist.integrity --json 2>/dev/null || true)
+              DEFAULTS_NPM=$(npm view "@f5-sales-demo/pi-resource-management@$VERSION" version gitHead dist.integrity --json 2>/dev/null || true)
+              printf '%s' "$XCSH_NPM" | jq -e --arg version "$VERSION" --arg commit "$TAG_SHA" '
+                .version == $version and .gitHead == $commit and
+                (."dist.integrity" | test("^sha512-[A-Za-z0-9+/]+={0,2}$"))
+              ' >/dev/null || continue
+              printf '%s' "$DEFAULTS_NPM" | jq -e --arg version "$VERSION" --arg commit "$TAG_SHA" '
+                .version == $version and .gitHead == $commit and
+                (."dist.integrity" | test("^sha512-[A-Za-z0-9+/]+={0,2}$"))
+              ' >/dev/null || continue
+
+              RELEASE_JSON=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" 2>/dev/null || true)
+              printf '%s' "$RELEASE_JSON" | jq -e --arg tag "$TAG" '
+                .tag_name == $tag and .draft == false and .prerelease == false and .immutable == true and
+                (.assets | type == "array") and
+                ([.assets[] | .name] | sort) == [
+                  "pi_natives.darwin-arm64.node",
+                  "pi_natives.darwin-x64-baseline.node",
+                  "pi_natives.darwin-x64-modern.node",
+                  "pi_natives.linux-arm64.node",
+                  "pi_natives.linux-x64-baseline.node",
+                  "pi_natives.linux-x64-modern.node",
+                  "pi_natives.win32-x64-baseline.node",
+                  "pi_natives.win32-x64-modern.node",
+                  "xcsh-darwin-arm64",
+                  "xcsh-darwin-arm64.zip",
+                  "xcsh-darwin-x64",
+                  "xcsh-darwin-x64.zip",
+                  "xcsh-linux-arm64",
+                  "xcsh-linux-arm64.tar.gz",
+                  "xcsh-linux-x64",
+                  "xcsh-linux-x64.tar.gz",
+                  "xcsh-windows-x64.exe"
+                ] and
+                ([.assets[] | .digest | test("^sha256:[0-9a-f]{64}$")] | all)
+              ' >/dev/null || continue
+
+              CONTENT_MATCH=true
+              for FILE in \
+                packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts \
+                packages/coding-agent/src/internal-urls/api-spec-index.generated.ts \
+                packages/coding-agent/src/internal-urls/terraform-index.generated.ts \
+                packages/resource-management/src/defaults-metadata.generated.ts \
+                tools/spec-delivery-pending.json \
+                tools/spec-release.json; do
+                MERGE_BLOB=$(gh api "repos/$GITHUB_REPOSITORY/contents/$FILE?ref=$MERGE_SHA" --jq '.sha' 2>/dev/null || true)
+                TAG_BLOB=$(gh api "repos/$GITHUB_REPOSITORY/contents/$FILE?ref=$TAG_SHA" --jq '.sha' 2>/dev/null || true)
+                if [[ ! "$MERGE_BLOB" =~ ^[0-9a-f]{40}$ ]] || [ "$MERGE_BLOB" != "$TAG_BLOB" ]; then
+                  CONTENT_MATCH=false
+                  break
+                fi
+              done
+              if [ "$CONTENT_MATCH" != true ]; then
+                continue
+              fi
+
+              TAG_PENDING="$RUNNER_TEMP/xcsh-release-pending.json"
+              TAG_PIN="$RUNNER_TEMP/xcsh-release-spec-pin.json"
+              gh api "repos/$GITHUB_REPOSITORY/contents/$PENDING_PATH?ref=$TAG_SHA" \
+                -H "Accept: application/vnd.github.raw+json" > "$TAG_PENDING"
+              gh api "repos/$GITHUB_REPOSITORY/contents/tools/spec-release.json?ref=$TAG_SHA" \
+                -H "Accept: application/vnd.github.raw+json" > "$TAG_PIN"
+              export DELIVERY_PENDING_FILE="$TAG_PENDING"
+              bun scripts/api-spec-delivery.ts verify-pending
+              [ "$(shasum -a 256 "$TAG_PIN" | awk '{print $1}')" = \
+                "$(jq -r '.spec_release_sha256' "$TAG_PENDING")" ] || continue
+              jq -e --arg commit "$PROVIDER_COMMIT" --arg tag "$PROVIDER_TAG" '
+                .provider == {commit:$commit,tag:$tag}
+              ' "$TAG_PENDING" >/dev/null || continue
+
+              PUBLICATION_RECEIPT="$RUNNER_TEMP/xcsh-publication-receipt.json"
+              jq -nS \
+                --arg commit "$TAG_SHA" \
+                --arg defaults_git_head "$(printf '%s' "$DEFAULTS_NPM" | jq -r '.gitHead')" \
+                --arg defaults_integrity "$(printf '%s' "$DEFAULTS_NPM" | jq -r '."dist.integrity"')" \
+                --arg provider_commit "$PROVIDER_COMMIT" \
+                --arg provider_tag "$PROVIDER_TAG" \
+                --arg spec_sha "$(jq -r '.spec_release_sha256' "$TAG_PENDING")" \
+                --arg tag "$TAG" \
+                --arg version "$VERSION" \
+                --arg xcsh_git_head "$(printf '%s' "$XCSH_NPM" | jq -r '.gitHead')" \
+                --arg xcsh_integrity "$(printf '%s' "$XCSH_NPM" | jq -r '."dist.integrity"')" \
+                --argjson assets "$(printf '%s' "$RELEASE_JSON" | jq -c \
+                  '.assets | map({key:.name,value:(.digest | sub("^sha256:"; ""))}) | from_entries')" \
+                --argjson generated "$(jq -c '.generated' "$TAG_PENDING")" '
+                {
+                  assets:$assets,
+                  commit:$commit,
+                  generated:$generated,
+                  npm:{
+                    "@f5-sales-demo/pi-resource-management":{git_head:$defaults_git_head,integrity:$defaults_integrity},
+                    "@f5-sales-demo/xcsh":{git_head:$xcsh_git_head,integrity:$xcsh_integrity}
+                  },
+                  provider:{commit:$provider_commit,tag:$provider_tag},
+                  spec_release_sha256:$spec_sha,
+                  tag:$tag,
+                  version:$version
+                }
+              ' > "$PUBLICATION_RECEIPT"
+              echo "::notice::Verified immutable $TAG release, exact source tree, assets, and npm artifacts"
+              echo "receipt_path=$PUBLICATION_RECEIPT" >> "$GITHUB_OUTPUT"
+              echo "release_tag=$TAG" >> "$GITHUB_OUTPUT"
+              exit 0
+            done < <(gh release list --limit 20 --json tagName --jq '.[].tagName')
+
+            if [ $((attempt % 10)) -eq 0 ]; then
+              echo "::notice::Still waiting for a successful published release containing $MERGE_SHA"
+            fi
+            sleep 30
+          done
+          echo "::error::No successfully published release containing the generated delivery appeared"
+          exit 1
+
+      - name: Prepare post-publication acknowledgment
+        if: steps.main_delivery.outputs.applied != 'true'
+        env:
+          ACK_BRANCH: ${{ steps.delivery.outputs.ack_branch }}
+          DELIVERY_ID: ${{ steps.delivery.outputs.delivery_id }}
+          LEDGER_PATH: ${{ steps.delivery.outputs.ledger_path }}
+          PENDING_PATH: ${{ steps.delivery.outputs.pending_path }}
+          PUBLICATION_LEDGER_PATH: ${{ steps.delivery.outputs.publication_ledger_path }}
+          PUBLICATION_RECEIPT_FILE: ${{ steps.publication.outputs.receipt_path }}
+          SPEC_VERSION: ${{ steps.delivery.outputs.version }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if git ls-remote --exit-code --heads origin "$ACK_BRANCH" >/dev/null 2>&1; then
+            git fetch --no-tags origin "$ACK_BRANCH:refs/remotes/origin/$ACK_BRANCH"
+            ACK_LEDGER="$RUNNER_TEMP/api-spec-delivery-ack-ledger.json"
+            git show "origin/$ACK_BRANCH:$LEDGER_PATH" > "$ACK_LEDGER" || {
+              echo "::error::Existing acknowledgment branch has no delivery ledger"
+              exit 1
+            }
+            export DELIVERY_LEDGER_FILE="$ACK_LEDGER"
+            ACK_PUBLICATION_LEDGER="$RUNNER_TEMP/api-spec-delivery-ack-publication-ledger.json"
+            git show "origin/$ACK_BRANCH:$PUBLICATION_LEDGER_PATH" > "$ACK_PUBLICATION_LEDGER" || {
+              echo "::error::Existing acknowledgment branch has no publication evidence ledger"
+              exit 1
+            }
+            export DELIVERY_PUBLICATION_LEDGER_FILE="$ACK_PUBLICATION_LEDGER"
+            bun scripts/api-spec-delivery.ts verify-ledger
+            jq -e --arg id "$DELIVERY_ID" --slurpfile receipt "$PUBLICATION_RECEIPT_FILE" \
+              '.receipts[$id].publication == $receipt[0]' "$ACK_PUBLICATION_LEDGER" >/dev/null || {
+              echo "::error::Existing acknowledgment branch carries different publication evidence"
+              exit 1
+            }
+            if git cat-file -e "origin/$ACK_BRANCH:$PENDING_PATH" 2>/dev/null; then
+              echo "::error::Existing acknowledgment branch did not remove the pending marker"
+              exit 1
+            fi
+            ACK_ALLOWED='^tools/(spec-deliveries|spec-delivery-pending|xcsh-publication-receipts)\.json$'
+            ACK_UNEXPECTED=$(git diff --name-only "origin/main...origin/$ACK_BRANCH" | grep -Ev "$ACK_ALLOWED" || true)
+            if [ -n "$ACK_UNEXPECTED" ]; then
+              echo "::error::Existing acknowledgment branch contains unexpected paths"
+              printf '%s\n' "$ACK_UNEXPECTED"
+              exit 1
+            fi
+            git checkout -B "$ACK_BRANCH" "origin/$ACK_BRANCH"
+          else
+            git checkout -B "$ACK_BRANCH" origin/main
+            export DELIVERY_PENDING_FILE="$PENDING_PATH"
+            bun scripts/api-spec-delivery.ts verify-pending
+            bun scripts/api-spec-delivery.ts acknowledge
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add "$LEDGER_PATH"
+            git add "$PUBLICATION_LEDGER_PATH"
+            git add -u "$PENDING_PATH"
+            git diff --cached --quiet && {
+              echo "::error::Post-publication acknowledgment produced no change"
+              exit 1
+            }
+            git commit -m "chore: acknowledge published API specs $SPEC_VERSION"
+            git push --set-upstream origin "$ACK_BRANCH"
+          fi
+
+      - name: Create or resume acknowledgment pull request
+        if: steps.main_delivery.outputs.applied != 'true'
+        id: acknowledgment_pr
+        env:
+          ACK_BRANCH: ${{ steps.delivery.outputs.ack_branch }}
+          DELIVERY_ID: ${{ steps.delivery.outputs.delivery_id }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          RELEASE_TAG: ${{ steps.publication.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+          PR_JSON=$(gh pr list --head "$ACK_BRANCH" --state all --limit 10 --json number,state)
+          PR_NUMBER=$(printf '%s' "$PR_JSON" | jq -r '.[0].number // empty')
+          PR_STATE=$(printf '%s' "$PR_JSON" | jq -r '.[0].state // empty')
+          if [ -n "$PR_NUMBER" ]; then
+            if [ "$PR_STATE" = "CLOSED" ]; then
+              gh pr reopen "$PR_NUMBER"
+              PR_STATE=OPEN
+            fi
+          else
+            DELIVERY_PREFIX=${DELIVERY_ID:0:12}
+            ISSUE_TITLE="chore: acknowledge published API spec delivery $DELIVERY_PREFIX"
+            ISSUE_JSON=$(gh issue list --state all --search "$ISSUE_TITLE in:title" --limit 100 --json number,state,title)
+            ISSUE_NUMBER=$(printf '%s' "$ISSUE_JSON" | jq -r --arg title "$ISSUE_TITLE" \
+              '[.[] | select(.title == $title)][0].number // empty')
+            ISSUE_STATE=$(printf '%s' "$ISSUE_JSON" | jq -r --arg title "$ISSUE_TITLE" \
+              '[.[] | select(.title == $title)][0].state // empty')
+            if [ -z "$ISSUE_NUMBER" ]; then
+              ISSUE_URL=$(gh issue create \
+                --title "$ISSUE_TITLE" \
+                --body "Record delivery $DELIVERY_PREFIX only after verified publication in $RELEASE_TAG.")
+              ISSUE_NUMBER=${ISSUE_URL##*/}
+            elif [ "$ISSUE_STATE" = "CLOSED" ]; then
+              gh issue reopen "$ISSUE_NUMBER"
+            fi
+
+            PR_URL=$(gh pr create \
+              --base main \
+              --head "$ACK_BRANCH" \
+              --title "chore: acknowledge published API spec delivery $DELIVERY_PREFIX" \
+              --body "The generated API spec delivery is present in verified published release $RELEASE_TAG.
+
+          This PR moves the exact delivery from the pending marker into the durable receiver ledger used by upstream completion polling.
+
+          Closes #$ISSUE_NUMBER")
+            PR_NUMBER=${PR_URL##*/}
+            PR_STATE=OPEN
+          fi
+
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || {
+            echo "::error::Could not resolve the acknowledgment PR number"
+            exit 1
+          }
+          if [ "$PR_STATE" != "MERGED" ]; then
+            gh pr merge "$PR_NUMBER" --squash --auto --delete-branch
+          fi
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Verify acknowledgment reached main
+        if: steps.main_delivery.outputs.applied != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          LEDGER_PATH: ${{ steps.delivery.outputs.ledger_path }}
+          PUBLICATION_LEDGER_PATH: ${{ steps.delivery.outputs.publication_ledger_path }}
+          PR_NUMBER: ${{ steps.acknowledgment_pr.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]] || exit 1
+          for attempt in $(seq 1 240); do
+            PR_STATE=$(gh pr view "$PR_NUMBER" --json state --jq '.state')
+            if [ "$PR_STATE" = "MERGED" ]; then
+              git fetch --no-tags origin main
+              MAIN_LEDGER="$RUNNER_TEMP/api-spec-delivery-main-ledger.json"
+              git show "origin/main:$LEDGER_PATH" > "$MAIN_LEDGER"
+              MAIN_PUBLICATION_LEDGER="$RUNNER_TEMP/api-spec-delivery-main-publication-ledger.json"
+              git show "origin/main:$PUBLICATION_LEDGER_PATH" > "$MAIN_PUBLICATION_LEDGER"
+              export DELIVERY_LEDGER_FILE="$MAIN_LEDGER"
+              export DELIVERY_PUBLICATION_LEDGER_FILE="$MAIN_PUBLICATION_LEDGER"
+              bun scripts/api-spec-delivery.ts verify-ledger
+              echo "::notice::Durable post-publication delivery acknowledgment is present on main"
+              exit 0
+            fi
+            if [ "$PR_STATE" = "CLOSED" ]; then
+              echo "::error::Acknowledgment PR closed without merging"
+              exit 1
+            fi
+            if [ $((attempt % 20)) -eq 0 ]; then
+              echo "::notice::Still waiting for acknowledgment PR $PR_NUMBER to merge"
+            fi
+            sleep 30
+          done
+          echo "::error::Timed out waiting for delivery acknowledgment to reach main"
+          exit 1

@@ -4,6 +4,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { $ } from "bun";
+import {
+	type ApiSpecReleaseIdentity,
+	releaseIdentityFromEnvironment,
+	validateArtifactVersion,
+} from "../../../scripts/api-spec-delivery";
 import { isLocalSpecsCurrent } from "./api-specs-version";
 import { sanitizeAcmePlaceholders, sanitizePublicIpv4Examples } from "./sanitize-generated-content";
 
@@ -97,6 +102,19 @@ interface RawIndex {
 const REPO = "f5-sales-demo/api-specs-enriched";
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-spec-index.generated.ts");
 const catalogOutputPath = path.resolve(import.meta.dir, "../src/internal-urls/api-catalog-index.generated.ts");
+const releaseIdentity = releaseIdentityFromEnvironment(process.env);
+
+function requiredSha256(value: string | undefined, field: string): string {
+	if (!value || !/^[0-9a-f]{64}$/.test(value)) throw new Error(`${field} must be a lowercase SHA-256 digest`);
+	return value;
+}
+
+const expectedBundleSha256 = releaseIdentity
+	? requiredSha256(process.env.API_SPECS_BUNDLE_SHA256, "API_SPECS_BUNDLE_SHA256")
+	: undefined;
+const expectedCatalogSha256 = releaseIdentity
+	? requiredSha256(process.env.API_SPECS_CATALOG_SHA256, "API_SPECS_CATALOG_SHA256")
+	: undefined;
 
 /** Domains reserved for documentation by RFC 2606 / RFC 6761. */
 const RESERVED_EMAIL_DOMAINS = new Set(["example.com", "example.net", "example.org"]);
@@ -164,10 +182,10 @@ async function resolveLatestTag(): Promise<string> {
 	return data.tag_name;
 }
 
-async function downloadFromRelease(): Promise<string> {
+async function downloadFromRelease(exactTag?: string, expectedSha256?: string): Promise<string> {
 	const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "api-specs-"));
 	downloadedTmpDir = tmpDir;
-	const tag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
+	const tag = exactTag ?? (await resolveLatestTag());
 	const zipName = `f5xc-api-specs-${tag}.zip`;
 	const downloadUrl = `https://github.com/${REPO}/releases/download/${tag}/${zipName}`;
 
@@ -179,6 +197,9 @@ async function downloadFromRelease(): Promise<string> {
 
 	const zipPath = path.join(tmpDir, zipName);
 	const buffer = Buffer.from(await response.arrayBuffer());
+	if (expectedSha256 && new Bun.CryptoHasher("sha256").update(buffer).digest("hex") !== expectedSha256) {
+		throw new Error(`Downloaded ${zipName} differs from its immutable publication receipt`);
+	}
 	fs.writeFileSync(zipPath, buffer);
 
 	const extractDir = path.join(tmpDir, "extracted");
@@ -210,7 +231,11 @@ function readLocalSpecsVersion(specsDir: string): string | undefined {
 	}
 }
 
-async function findSpecsDir(): Promise<string> {
+async function findSpecsDir(identity: ApiSpecReleaseIdentity | undefined): Promise<string> {
+	if (identity) {
+		return downloadFromRelease(identity.releaseTag, expectedBundleSha256);
+	}
+
 	const envDir = process.env.API_SPECS_DIR;
 	if (envDir && fs.existsSync(envDir)) {
 		// Explicit override — the caller is responsible for its freshness.
@@ -242,50 +267,64 @@ async function findSpecsDir(): Promise<string> {
 	return downloadFromRelease();
 }
 
-async function downloadCatalog(specsDir: string): Promise<Record<string, unknown> | null> {
+async function downloadJsonReleaseAsset(
+	tag: string,
+	assetName: string,
+	required: boolean,
+	expectedSha256?: string,
+): Promise<Record<string, unknown> | null> {
+	const url = `https://github.com/${REPO}/releases/download/${tag}/${assetName}`;
+	console.log(`Downloading ${assetName} from ${url}...`);
+	try {
+		const response = await fetchWithRetry(url, { redirect: "follow" });
+		if (!response.ok) {
+			if (required) {
+				throw new Error(`Required ${assetName} is absent from release ${tag}: HTTP ${response.status}`);
+			}
+			console.warn(`${assetName} not found (${response.status}), skipping generation`);
+			return null;
+		}
+		const bytes = new Uint8Array(await response.arrayBuffer());
+		if (expectedSha256 && new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== expectedSha256) {
+			throw new Error(`Downloaded ${assetName} differs from its immutable publication receipt`);
+		}
+		return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+	} catch (error) {
+		if (required) throw error;
+		console.warn(`Failed to download ${assetName}: ${error instanceof Error ? error.message : error}`);
+		return null;
+	}
+}
+
+async function downloadCatalog(
+	specsDir: string,
+	identity: ApiSpecReleaseIdentity | undefined,
+): Promise<Record<string, unknown> | null> {
+	if (identity) {
+		return downloadJsonReleaseAsset(identity.releaseTag, "api-catalog.json", true, expectedCatalogSha256);
+	}
+
 	const catalogPath = path.join(specsDir, "api-catalog.json");
 	if (fs.existsSync(catalogPath)) {
 		return JSON.parse(fs.readFileSync(catalogPath, "utf-8"));
 	}
 
-	const catalogTag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
-	const catalogUrl = `https://github.com/${REPO}/releases/download/${catalogTag}/api-catalog.json`;
-	console.log(`Downloading API catalog from ${catalogUrl}...`);
-	try {
-		const response = await fetchWithRetry(catalogUrl, { redirect: "follow" });
-		if (!response.ok) {
-			console.warn(`api-catalog.json not found (${response.status}), skipping catalog generation`);
-			return null;
-		}
-		const text = await response.text();
-		return JSON.parse(text);
-	} catch (err) {
-		console.warn(`Failed to download api-catalog.json: ${err instanceof Error ? err.message : err}`);
-		return null;
-	}
+	return downloadJsonReleaseAsset(await resolveLatestTag(), "api-catalog.json", false);
 }
 
-async function downloadValidation(specsDir: string): Promise<Record<string, unknown> | null> {
+async function downloadValidation(
+	specsDir: string,
+	identity: ApiSpecReleaseIdentity | undefined,
+): Promise<Record<string, unknown> | null> {
 	const validationPath = path.join(specsDir, "validation.json");
 	if (fs.existsSync(validationPath)) {
 		return JSON.parse(fs.readFileSync(validationPath, "utf-8"));
 	}
-
-	const validationTag = process.env.API_SPECS_TAG ?? (await resolveLatestTag());
-	const validationUrl = `https://github.com/${REPO}/releases/download/${validationTag}/validation.json`;
-	console.log(`Downloading validation.json from ${validationUrl}...`);
-	try {
-		const response = await fetchWithRetry(validationUrl, { redirect: "follow" });
-		if (!response.ok) {
-			console.warn(`validation.json not found (${response.status}), skipping validation data generation`);
-			return null;
-		}
-		const text = await response.text();
-		return JSON.parse(text);
-	} catch (err) {
-		console.warn(`Failed to download validation.json: ${err instanceof Error ? err.message : err}`);
-		return null;
+	if (identity) {
+		throw new Error(`Required validation.json is absent from the ${identity.releaseTag} spec bundle`);
 	}
+
+	return downloadJsonReleaseAsset(await resolveLatestTag(), "validation.json", false);
 }
 
 function serializeEnrichment(key: string, value: unknown): string | undefined {
@@ -295,12 +334,12 @@ function serializeEnrichment(key: string, value: unknown): string | undefined {
 
 let downloadedTmpDir: string | null = null;
 
-if (fs.existsSync(outputPath) && fs.existsSync(catalogOutputPath) && process.env.CI) {
+if (!releaseIdentity && fs.existsSync(outputPath) && fs.existsSync(catalogOutputPath) && process.env.CI) {
 	console.log("Generated spec files already exist in CI — skipping regeneration.");
 	process.exit(0);
 }
 
-const specsDir = await findSpecsDir();
+const specsDir = await findSpecsDir(releaseIdentity);
 console.log(`Reading specs from: ${specsDir}`);
 
 const indexPath = path.join(specsDir, "index.json");
@@ -310,9 +349,11 @@ if (!fs.existsSync(indexPath)) {
 }
 
 const rawIndex: RawIndex = JSON.parse(fs.readFileSync(indexPath, "utf-8"));
+if (releaseIdentity) validateArtifactVersion(rawIndex, releaseIdentity, "index.json");
 
-const catalog = await downloadCatalog(specsDir);
-const validation = await downloadValidation(specsDir);
+const catalog = await downloadCatalog(specsDir, releaseIdentity);
+if (releaseIdentity) validateArtifactVersion(catalog, releaseIdentity, "api-catalog.json");
+const validation = await downloadValidation(specsDir, releaseIdentity);
 
 const pathToCatalogCategories = new Map<string, string[]>();
 if (catalog) {
