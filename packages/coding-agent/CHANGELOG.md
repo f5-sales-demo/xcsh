@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added `xcsh sandbox check` to verify the installed sandbox with synthetic fixtures and automatic cleanup ([#2790](https://github.com/f5-sales-demo/xcsh/issues/2790))
+
 ### Fixed
 
 - Denied local account containers and other operators' homes while preserving full access to the current operator's home ([#2788](https://github.com/f5-sales-demo/xcsh/issues/2788))
