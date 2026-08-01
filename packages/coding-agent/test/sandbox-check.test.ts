@@ -18,16 +18,20 @@ import { BashTool, type BashToolDetails } from "../src/tools/bash";
 const cli = path.resolve(import.meta.dir, "../src/cli.ts");
 const sandboxCheckExecutable = process.env.XCSH_TEST_SANDBOX_CHECK_BINARY;
 
-function sandboxCheckCommand(...flags: string[]): string {
+function sandboxCommand(args: string[], prefixFlags: string[] = []): string {
 	const argv = sandboxCheckExecutable === undefined ? [process.execPath, cli] : [sandboxCheckExecutable];
-	return [...argv, "sandbox", "check", ...flags].map(value => JSON.stringify(value)).join(" ");
+	return [...argv, ...prefixFlags, "sandbox", ...args].map(value => JSON.stringify(value)).join(" ");
+}
+
+function sandboxCheckCommand(flags: string[] = [], prefixFlags: string[] = []): string {
+	return sandboxCommand(["check", ...flags], prefixFlags);
 }
 
 async function runSandboxCheckProcess(
 	flags: string[],
 	env: Record<string, string | undefined> = process.env,
 ): Promise<$.ShellOutput> {
-	return await $`${{ raw: sandboxCheckCommand(...flags) }}`.env(env).quiet().nothrow();
+	return await $`${{ raw: sandboxCheckCommand(flags) }}`.env(env).quiet().nothrow();
 }
 
 function resultText(result: AgentToolResult<BashToolDetails>): string {
@@ -53,10 +57,14 @@ function createSession(workspace: string): ToolSession {
 	} as ToolSession;
 }
 
-async function runInsideLiveProfile(workspace: string, attemptContextOverride = false): Promise<SandboxCheckReport> {
+async function runInsideLiveProfile(
+	workspace: string,
+	attemptContextOverride = false,
+	prefixFlags: string[] = [],
+): Promise<SandboxCheckReport> {
 	const bash = new BashTool(createSession(workspace));
 	const result = await bash.execute("sandbox-check-nested", {
-		command: sandboxCheckCommand("--json"),
+		command: sandboxCheckCommand(["--json"], prefixFlags),
 		cwd: fs.realpathSync(os.tmpdir()),
 		...(attemptContextOverride
 			? {
@@ -75,14 +83,15 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	expect(["seatbelt", "landlock", "scanner-only"]).toContain(report.backend);
 	expect(report.summary.failed).toBe(0);
 	expect(report.summary.errors).toBe(0);
-	expect(report.checks).toHaveLength(10);
+	expect(report.checks).toHaveLength(11);
 	expect(report.checks).toContainEqual({ name: "structured tools share the boundary", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "cwd resets across tool calls", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
 	if (report.osEnforced) {
-		expect(report.summary).toEqual({ passed: 10, failed: 0, errors: 0, skipped: 0 });
+		expect(report.summary).toEqual({ passed: 11, failed: 0, errors: 0, skipped: 0 });
 		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "synthetic other account cannot be entered", status: "PASS" });
+		expect(report.checks).toContainEqual({ name: "explicit grant restores parent enumeration", status: "PASS" });
 	}
 }
 
@@ -92,6 +101,45 @@ it("runs the standalone installed-process matrix and verifies fixture cleanup", 
 
 	expect(result.exitCode).toBe(0);
 	assertHealthyReport(report);
+}, 30_000);
+
+it("rejects launch flags before the installed sandbox subcommand without entering agent startup", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const workspace = fs.realpathSync(fs.mkdtempSync(path.join(home, ".xcsh-sandbox-check-prefix-flags-")));
+	try {
+		for (const prefixFlags of [["--no-sandbox"], ["--allow-path", fs.realpathSync(os.tmpdir())]]) {
+			const bash = new BashTool(createSession(workspace));
+			let message = "";
+			try {
+				await bash.execute("sandbox-check-invalid-prefix", {
+					command: sandboxCheckCommand([], prefixFlags),
+				});
+			} catch (error) {
+				message = error instanceof Error ? error.message : String(error);
+			}
+			expect(message).toContain("launch flag");
+			expect(message).toContain("subcommands must come first");
+			expect(message).toContain("Command exited with code 2");
+			expect(message).not.toContain("Uncaught Exception");
+			expect(message).not.toContain("realpathSync");
+			expect(message).not.toContain(home);
+		}
+	} finally {
+		_resetShellSessionsForTest();
+		fs.rmSync(workspace, { recursive: true, force: true });
+		expect(fs.existsSync(workspace)).toBe(false);
+	}
+}, 30_000);
+
+it("renders sandbox help when sandbox launch flags precede the subcommand", async () => {
+	for (const prefixFlags of [["--no-sandbox"], ["--allow-path", fs.realpathSync(os.tmpdir())]]) {
+		const result = await $`${{ raw: sandboxCommand(["--help"], prefixFlags) }}`.quiet().nothrow();
+		const output = result.stdout.toString();
+		expect(result.exitCode).toBe(0);
+		expect(output).toContain("Verify the installed filesystem sandbox");
+		expect(output).toContain("sandbox [ACTION] [FLAGS]");
+		expect(output).not.toContain("COMMANDS");
+	}
 }, 30_000);
 
 it("reports a healthy matrix when invoked inside the live bash profile", async () => {

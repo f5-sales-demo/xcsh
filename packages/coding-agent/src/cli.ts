@@ -5,6 +5,8 @@ import { APP_NAME, initI18n, MIN_BUN_VERSION, registerLocales, t, VERSION } from
  * lightweight CLI runner from pi-utils.
  */
 import { type CommandEntry, run } from "@f5-sales-demo/pi-utils/cli";
+import { FlagUsageError } from "./cli/flag-spec";
+import { findPrefixedCommand } from "./cli/root-command-routing";
 import { locales } from "./locales/index";
 
 registerLocales(locales);
@@ -89,11 +91,41 @@ function isSubcommand(first: string | undefined): boolean {
 	return commands.some(e => e.name === first || e.aliases?.includes(first));
 }
 
+function requestsHelp(args: readonly string[]): boolean {
+	for (const arg of args) {
+		if (arg === "--") return false;
+		if (arg === "--help" || arg === "-h") return true;
+	}
+	return false;
+}
+
 /** Run the CLI with the given argv (no `process.argv` prefix). */
 export function runCli(argv: string[]): Promise<void> {
 	// --help and --version are handled by run() directly, don't rewrite those.
 	// Everything else that isn't a known subcommand routes to "launch".
 	const first = argv[0];
+	const prefixedCommand = findPrefixedCommand(argv, token => isSubcommand(token));
+	if (
+		prefixedCommand !== undefined &&
+		!prefixedCommand.prefixFlags.some(flag => flag === "help" || flag === "version")
+	) {
+		if (requestsHelp(prefixedCommand.commandArgs)) {
+			return run({
+				bin: APP_NAME,
+				version: VERSION,
+				argv: [prefixedCommand.command, ...prefixedCommand.commandArgs],
+				commands,
+				help: showHelp,
+			});
+		}
+		const flags = [...new Set(prefixedCommand.prefixFlags)].map(flag => `--${flag}`).join(", ");
+		process.stderr.write(
+			`Error: launch ${prefixedCommand.prefixFlags.length === 1 ? "flag" : "flags"} ${flags} cannot precede the ` +
+				`\`${prefixedCommand.command}\` subcommand. Launch flags configure an agent session; subcommands must come first.\n`,
+		);
+		process.exitCode = 2;
+		return Promise.resolve();
+	}
 	const runArgv =
 		// Chrome launches the native-messaging host with the calling extension's
 		// origin (chrome-extension://…/) as the first arg. Route that to the
@@ -120,4 +152,10 @@ if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
 	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
 }
 
-await runCli(process.argv.slice(2));
+try {
+	await runCli(process.argv.slice(2));
+} catch (error) {
+	if (!(error instanceof FlagUsageError)) throw error;
+	process.stderr.write(`Error: ${error.message}\n`);
+	process.exitCode = 2;
+}
