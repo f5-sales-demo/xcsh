@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { ExitPlanModeTool } from "@f5-sales-demo/xcsh/tools/exit-plan-mode";
+import { Settings } from "../../src/config/settings";
+import type { ToolSession } from "../../src/tools";
+import { ExitPlanModeTool } from "../../src/tools/exit-plan-mode";
 
 describe("ExitPlanModeTool", () => {
 	let tmpDir: string;

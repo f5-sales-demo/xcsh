@@ -6,7 +6,7 @@ import {
 	HOST_PROFILES,
 	hostProfile,
 	isClientHost,
-} from "@f5-sales-demo/xcsh/browser/host-profiles";
+} from "../../src/browser/host-profiles";
 
 /** Substrings that must NEVER leak into a document (Office) host prompt — they
  * are Chrome-extension-only concepts that would confuse an Office assistant. */

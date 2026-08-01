@@ -5,8 +5,8 @@ import {
 	mermaidThemeSignature,
 	prerenderMermaid,
 	renderMermaidThemed,
-} from "@f5-sales-demo/xcsh/modes/theme/mermaid-cache";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
+} from "../src/modes/theme/mermaid-cache";
+import { getThemeByName } from "../src/modes/theme/theme";
 
 const SRC = "graph LR\n A[Login] --> B{Auth}\n B --> C[Home]";
 const ESC = "\x1b[";
@@ -53,7 +53,7 @@ describe("renderMermaidThemed", () => {
 });
 
 describe("theme-aware cache", () => {
-	it("caches separately per theme and retains ANSI (does not strip)", async () => {
+	it("caches separately per theme without changing the rendered output", async () => {
 		const dark = (await getThemeByName("xcsh-dark"))!;
 		const light = (await getThemeByName("xcsh-light"))!;
 		const md = `\`\`\`mermaid\n${SRC}\n\`\`\``;
@@ -62,13 +62,22 @@ describe("theme-aware cache", () => {
 		prerenderMermaid(md, light);
 
 		const hash = Bun.hash(SRC);
-		const d = getMermaidAscii(hash, mermaidThemeSignature(dark));
-		const l = getMermaidAscii(hash, mermaidThemeSignature(light));
+		const darkSignature = mermaidThemeSignature(dark);
+		const lightSignature = mermaidThemeSignature(light);
+		const d = getMermaidAscii(hash, darkSignature);
+		const l = getMermaidAscii(hash, lightSignature);
 
 		expect(d).not.toBeNull();
 		expect(l).not.toBeNull();
-		expect(d!).toContain(ESC); // colored, not stripped
-		expect(d).not.toBe(l); // different theme → different render
+		expect(darkSignature).not.toBe(lightSignature);
+		expect(d).toBe(renderMermaidThemed(SRC, dark));
+		expect(l).toBe(renderMermaidThemed(SRC, light));
+		if (Bun.env.NO_COLOR) {
+			expect(d!).not.toContain(ESC);
+		} else {
+			expect(d!).toContain(ESC);
+			expect(d).not.toBe(l);
+		}
 	});
 
 	it("returns null for a signature that was never rendered", async () => {

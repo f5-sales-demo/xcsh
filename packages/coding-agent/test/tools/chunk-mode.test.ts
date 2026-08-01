@@ -3,14 +3,14 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { ChunkReadStatus, ChunkState } from "@f5-sales-demo/pi-natives";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { EditTool } from "@f5-sales-demo/xcsh/edit";
-import { getLanguageFromPath } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { GrepTool } from "@f5-sales-demo/xcsh/tools/grep";
-import { ReadTool } from "@f5-sales-demo/xcsh/tools/read";
-import { resolveFileDisplayMode } from "@f5-sales-demo/xcsh/utils/file-display-mode";
+import { _resetSettingsForTest, Settings } from "../../src/config/settings";
+import { EditTool } from "../../src/edit";
 import { applyChunkEdits } from "../../src/edit/modes/chunk";
+import { getLanguageFromPath } from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { GrepTool } from "../../src/tools/grep";
+import { ReadTool } from "../../src/tools/read";
+import { resolveFileDisplayMode } from "../../src/utils/file-display-mode";
 
 function getText(result: { content: Array<{ type: string; text?: string }> }): string {
 	return result.content

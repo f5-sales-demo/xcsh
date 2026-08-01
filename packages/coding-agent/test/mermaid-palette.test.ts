@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { buildMermaidAsciiTheme, buildNodeAccents } from "@f5-sales-demo/xcsh/modes/theme/mermaid-palette";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import { buildMermaidAsciiTheme, buildNodeAccents } from "../src/modes/theme/mermaid-palette";
+import { getThemeByName } from "../src/modes/theme/theme";
 
 const isHex = (s: string): boolean => /^#[0-9a-fA-F]{6}$/.test(s);
 

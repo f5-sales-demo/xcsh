@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { Settings } from "../../src/config/settings";
+import { createTools, type ToolSession } from "../../src/tools";
 
 function createSession(overrides: Partial<ToolSession> = {}): ToolSession {
 	return {

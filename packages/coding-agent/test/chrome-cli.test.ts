@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import { nativeHostLaunchCommand } from "@f5-sales-demo/xcsh/cli/chrome-cli";
+import { nativeHostLaunchCommand } from "../src/cli/chrome-cli";
 
 // #1874: the native-messaging wrapper must launch a VERSION-STABLE xcsh (the
 // PATH/symlink, e.g. /opt/homebrew/bin/xcsh) — never a versioned Cellar path

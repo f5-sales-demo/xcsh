@@ -4,11 +4,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { type AssistantMessage, getBundledModel } from "@f5-sales-demo/pi-ai";
 import { getSessionsDir, Snowflake } from "@f5-sales-demo/pi-utils";
-import type { Rule } from "@f5-sales-demo/xcsh/capability/rule";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
-import { SecretObfuscator } from "@f5-sales-demo/xcsh/secrets";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import type { Rule } from "../src/capability/rule";
+import { Settings } from "../src/config/settings";
+import { createAgentSession } from "../src/sdk";
+import { SecretObfuscator } from "../src/secrets";
+import { SessionManager } from "../src/session/session-manager";
 
 function createTtsrRule(name: string): Rule {
 	return {

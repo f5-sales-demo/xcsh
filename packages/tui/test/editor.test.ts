@@ -296,6 +296,37 @@ describe("Editor component", () => {
 			await expect(promise).resolves.toBe("/");
 		});
 
+		it("caps the slash-command name column so descriptions remain visible", async () => {
+			const editor = new Editor(defaultEditorTheme);
+			editor.setAutocompleteProvider({
+				async getSuggestions() {
+					return {
+						items: [
+							{ label: "/help", value: "/help", description: "short description" },
+							{
+								label: "/a-command-name-that-is-far-too-long-for-the-menu",
+								value: "/a-command-name-that-is-far-too-long-for-the-menu",
+								description: "long description",
+							},
+						],
+						prefix: "/",
+					};
+				},
+				applyCompletion(lines, cursorLine, cursorCol) {
+					return { lines, cursorLine, cursorCol };
+				},
+			});
+
+			editor.handleInput("/");
+			await Bun.sleep(0);
+			const rendered = editor.render(100).map(line => stripVTControlCharacters(line));
+			const short = rendered.find(line => line.includes("short description"));
+			const long = rendered.find(line => line.includes("long description"));
+
+			expect(short?.indexOf("short description")).toBe(34);
+			expect(long?.indexOf("long description")).toBe(34);
+		});
+
 		it("triggers file-reference autocomplete when typing at-sign", async () => {
 			const editor = new Editor(defaultEditorTheme);
 			const { promise, resolve } = Promise.withResolvers<string>();

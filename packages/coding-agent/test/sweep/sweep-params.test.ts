@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { isScopedOut, paramsFor, SCOPED_OUT, SWEEP_PARAMS } from "../../src/sweep/sweep-params";
+import {
+	FORM_SWEEP_BLOCKERS,
+	formSweepBlockerFor,
+	isScopedOut,
+	paramsFor,
+	SCOPED_OUT,
+	SWEEP_PARAMS,
+} from "../../src/sweep/sweep-params";
 
 describe("isScopedOut", () => {
 	it("scopes out cloud/external resources", () => {
@@ -34,5 +41,16 @@ describe("paramsFor", () => {
 describe("invariants", () => {
 	it("scoped-out and curated sets do not overlap (a resource is one or the other)", () => {
 		for (const r of Object.keys(SWEEP_PARAMS)) expect(SCOPED_OUT.has(r)).toBe(false);
+	});
+
+	it("reports known upstream form-workflow blockers with actionable reasons", () => {
+		expect(formSweepBlockerFor("alert-policy")).toContain("alert_receivers");
+		expect(formSweepBlockerFor("malicious-user-mitigation")).toContain("Add Item");
+		expect(formSweepBlockerFor("health-check")).toBeUndefined();
+		for (const [resource, reason] of Object.entries(FORM_SWEEP_BLOCKERS)) {
+			expect(reason).toMatch(/^(missing nested|placeholder default)/);
+			expect(SCOPED_OUT.has(resource)).toBe(false);
+			expect(resource in SWEEP_PARAMS).toBe(false);
+		}
 	});
 });

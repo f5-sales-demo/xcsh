@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { handleArtifactHub } from "@f5-sales-demo/xcsh/web/scrapers/artifacthub";
-import { handleCoinGecko } from "@f5-sales-demo/xcsh/web/scrapers/coingecko";
-import { handleDiscogs } from "@f5-sales-demo/xcsh/web/scrapers/discogs";
+import { handleArtifactHub } from "../../../src/web/scrapers/artifacthub";
+import { handleCoinGecko } from "../../../src/web/scrapers/coingecko";
+import { handleDiscogs } from "../../../src/web/scrapers/discogs";
 
 const SKIP = !Bun.env.WEB_FETCH_INTEGRATION;
 

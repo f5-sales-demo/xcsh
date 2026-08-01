@@ -8,8 +8,12 @@ import type { ToolDefinition } from "../../extensibility/extensions";
 import type { Theme } from "../../modes/theme/theme";
 import { replaceTabs, truncateToWidth } from "../../tools/render-utils";
 import * as git from "../../utils/git";
-import { applyAutoresearchContractToExperimentState } from "../apply-contract-to-state";
-import { loadAutoresearchScriptSnapshot, pathMatchesContractPath, readAutoresearchContract } from "../contract";
+import {
+	applyAutoresearchContractToExperimentState,
+	loadAutoresearchScriptSnapshot,
+	pathMatchesContractPath,
+	readAutoresearchContract,
+} from "../contract";
 import { computeRunModifiedPaths, getCurrentAutoresearchBranch, parseWorkDirDirtyPathsWithStatus } from "../git";
 import {
 	formatNum,

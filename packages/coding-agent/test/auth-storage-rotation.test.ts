@@ -5,7 +5,7 @@ import * as path from "node:path";
 import type { OAuthCredentials, UsageProvider } from "@f5-sales-demo/pi-ai";
 import * as ai from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { AuthStorage } from "../src/session/auth-storage";
 
 describe("AuthStorage account rotation", () => {
 	let tempDir: string;

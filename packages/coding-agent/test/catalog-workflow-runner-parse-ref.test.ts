@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseWorkflowRef } from "@f5-sales-demo/xcsh/tools/catalog-workflow-runner";
+import { parseWorkflowRef } from "../src/tools/catalog-workflow-runner";
 
 describe("parseWorkflowRef", () => {
 	// -------------------------------------------------------------------------

@@ -24,7 +24,7 @@ bun add @f5-sales-demo/xcsh
 
 ## 진입점
 
-`@f5-sales-demo/xcsh`는 패키지 루트(및 `@f5-sales-demo/xcsh/sdk`를 통해서도)에서 SDK API를 내보냅니다.
+`@f5-sales-demo/xcsh`는 패키지 루트에서 SDK API를 내보냅니다.
 
 임베더를 위한 핵심 내보내기:
 

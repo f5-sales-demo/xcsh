@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { registerLocales } from "@f5-sales-demo/pi-utils";
-import { WelcomeComponent } from "@f5-sales-demo/xcsh/modes/components/welcome";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { locales } from "../src/locales/index";
+import { WelcomeComponent } from "../src/modes/components/welcome";
+import { initTheme } from "../src/modes/theme/theme";
 
 registerLocales(locales);
 

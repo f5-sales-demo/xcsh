@@ -2,11 +2,11 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:
 import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { SubmittedUserInput } from "@f5-sales-demo/xcsh/modes/types";
 import { ModelRegistry } from "../src/config/model-registry";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
 import { InteractiveMode } from "../src/modes/interactive-mode";
+import { initTheme } from "../src/modes/theme/theme";
+import type { SubmittedUserInput } from "../src/modes/types";
 import { AgentSession } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";

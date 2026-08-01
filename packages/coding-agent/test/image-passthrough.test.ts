@@ -8,7 +8,7 @@ import {
 	isImageLine,
 	isImagePassthroughEnabled,
 	sanitizeWithImagePassthrough,
-} from "@f5-sales-demo/xcsh/utils/image-passthrough";
+} from "../src/utils/image-passthrough";
 
 // Minimal image protocol fixtures
 const ITERM2_SEQUENCE =

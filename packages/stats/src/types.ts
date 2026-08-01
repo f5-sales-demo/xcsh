@@ -1,4 +1,4 @@
-import type { AssistantMessage, StopReason, Usage } from "@f5-sales-demo/pi-ai";
+import type { AssistantMessage, Message, StopReason, Usage } from "@f5-sales-demo/pi-ai";
 
 /**
  * Extracted stats from an assistant message.
@@ -36,8 +36,8 @@ export interface MessageStats {
  * Full details of a request, including content.
  */
 export interface RequestDetails extends MessageStats {
-	messages: any[]; // The full conversation history or just the last turn
-	output: any; // The model's response
+	messages: Message[];
+	output: AssistantMessage;
 }
 
 /**
@@ -169,7 +169,14 @@ export interface SessionMessageEntry {
 	id: string;
 	parentId: string | null;
 	timestamp: string;
-	message: AssistantMessage | { role: "user" | "toolResult" };
+	message: Message;
 }
 
-export type SessionEntry = SessionHeader | SessionMessageEntry | { type: string };
+export interface SessionTreeEntry {
+	type: string;
+	id: string;
+	parentId: string | null;
+	[key: string]: unknown;
+}
+
+export type SessionEntry = SessionHeader | SessionMessageEntry | SessionTreeEntry | { type: string };

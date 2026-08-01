@@ -23,13 +23,16 @@ function sanitizeTenantHosts(text: string): string {
 	);
 }
 
-function resolveCatalogRoot(): string | null {
+function resolveCatalogRoot(): { root: string; version: string } | null {
 	const fromEnv = process.env.CONSOLE_CATALOG_DIR;
-	if (fromEnv && fs.existsSync(path.join(fromEnv, "catalog"))) return fromEnv;
+	if (fromEnv && fs.existsSync(path.join(fromEnv, "catalog"))) {
+		return { root: fromEnv, version: process.env.CONSOLE_CATALOG_VERSION ?? "local" };
+	}
 	// Local sibling checkout: <workspace>/console
 	const sibling = path.resolve(repoRoot, "../../../console");
-	if (fs.existsSync(path.join(sibling, "catalog"))) return sibling;
-	// TODO(P2): add release-artifact download mirroring generate-api-spec-index.ts.
+	if (fs.existsSync(path.join(sibling, "catalog"))) {
+		return { root: sibling, version: process.env.CONSOLE_CATALOG_VERSION ?? "local" };
+	}
 	return null;
 }
 
@@ -62,11 +65,12 @@ function build(): {
 	routes: Record<string, string>;
 	navigation: string | null;
 } {
-	const root = resolveCatalogRoot();
-	if (!root) {
+	const resolved = resolveCatalogRoot();
+	if (!resolved) {
 		console.warn("console catalogue source not found; emitting empty catalogue");
 		return { version: "unavailable", workflows: {}, resources: {}, routes: {}, navigation: null };
 	}
+	const { root, version } = resolved;
 	const catalog = path.join(root, "catalog");
 	// workflows keyed "<resource>/<operation>" (directory/file)
 	const workflows = readYamlDir(path.join(catalog, "workflows"), rel => rel.split(path.sep).join("/"));
@@ -75,7 +79,6 @@ function build(): {
 	const routes = readYamlDir(path.join(catalog, "routes"), rel => path.basename(rel));
 	const navPath = path.join(catalog, "navigation/console-tree.yaml");
 	const navigation = fs.existsSync(navPath) ? fs.readFileSync(navPath, "utf-8") : null;
-	const version = process.env.CONSOLE_CATALOG_VERSION ?? "local";
 	return { version, workflows, resources, routes, navigation };
 }
 

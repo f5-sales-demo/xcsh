@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { ResolveTool, resolveToolRenderer } from "@f5-sales-demo/xcsh/tools/resolve";
+import { Settings } from "../../src/config/settings";
+import { getThemeByName } from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { ResolveTool, resolveToolRenderer } from "../../src/tools/resolve";
 
 function createSession(handler?: (input: unknown) => Promise<unknown>): ToolSession {
 	return {

@@ -4,9 +4,9 @@ import type { AssistantMessage, Message, Usage } from "@f5-sales-demo/pi-ai";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { Container, type TUI } from "@f5-sales-demo/pi-tui";
-import { BtwController } from "@f5-sales-demo/xcsh/modes/controllers/btw-controller";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { InteractiveModeContext } from "@f5-sales-demo/xcsh/modes/types";
+import { BtwController } from "../../../src/modes/controllers/btw-controller";
+import { initTheme } from "../../../src/modes/theme/theme";
+import type { InteractiveModeContext } from "../../../src/modes/types";
 
 const usage: Usage = {
 	input: 0,

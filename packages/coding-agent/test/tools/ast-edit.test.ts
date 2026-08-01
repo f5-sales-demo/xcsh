@@ -4,12 +4,12 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { adaptSchemaForStrict } from "@f5-sales-demo/pi-ai/utils/schema";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { InternalUrlRouter } from "@f5-sales-demo/xcsh/internal-urls/router";
-import { ToolChoiceQueue } from "@f5-sales-demo/xcsh/session/tool-choice-queue";
-import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { astEditToolRenderer } from "@f5-sales-demo/xcsh/tools/ast-edit";
+import { Settings } from "../../src/config/settings";
+import { InternalUrlRouter } from "../../src/internal-urls/router";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import { ToolChoiceQueue } from "../../src/session/tool-choice-queue";
+import { createTools, type ToolSession } from "../../src/tools";
+import { astEditToolRenderer } from "../../src/tools/ast-edit";
 
 function createTestSession(cwd = "/tmp/test", overrides: Partial<ToolSession> = {}): ToolSession {
 	return {

@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { LoadContext } from "@f5-sales-demo/xcsh/capability/types";
-import { getConfigDirs } from "@f5-sales-demo/xcsh/config";
-import { getUserPath } from "@f5-sales-demo/xcsh/discovery/helpers";
+import type { LoadContext } from "../../src/capability/types";
+import { getConfigDirs } from "../../src/config";
+import { getUserPath } from "../../src/discovery/helpers";
 
 describe("PI_CONFIG_DIR", () => {
 	const original = process.env.PI_CONFIG_DIR;

@@ -6,9 +6,9 @@
 import * as path from "node:path";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import { ProcessTerminal, TUI } from "@f5-sales-demo/pi-tui";
-import { AssistantMessageComponent } from "@f5-sales-demo/xcsh/modes/components/assistant-message";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { sleep } from "bun";
+import { AssistantMessageComponent } from "../src/modes/components/assistant-message";
+import { initTheme } from "../src/modes/theme/theme";
 
 // Initialize dark theme with full color support
 Bun.env.COLORTERM = "truecolor";

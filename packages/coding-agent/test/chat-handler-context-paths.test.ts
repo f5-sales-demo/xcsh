@@ -6,8 +6,8 @@
 import { afterEach, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { composeChatPrompt, grantSandboxPaths, sanitizeContextPaths } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import { _resetSettingsForTest, Settings, settings } from "@f5-sales-demo/xcsh/config/settings";
+import { composeChatPrompt, grantSandboxPaths, sanitizeContextPaths } from "../src/browser/chat-handler";
+import { _resetSettingsForTest, Settings, settings } from "../src/config/settings";
 
 afterEach(() => _resetSettingsForTest());
 

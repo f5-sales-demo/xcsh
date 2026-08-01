@@ -24,7 +24,7 @@ bun add @f5-sales-demo/xcsh
 
 ## एंट्री पॉइंट
 
-`@f5-sales-demo/xcsh` पैकेज रूट से SDK APIs एक्सपोर्ट करता है (और `@f5-sales-demo/xcsh/sdk` के माध्यम से भी)।
+`@f5-sales-demo/xcsh` पैकेज रूट से SDK APIs एक्सपोर्ट करता है।
 
 एम्बेडर्स के लिए कोर एक्सपोर्ट:
 

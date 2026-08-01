@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { ContainmentFence } from "@f5-sales-demo/xcsh/sandbox/containment";
-import { evaluateToolCall } from "@f5-sales-demo/xcsh/sandbox/enforce";
-import { resolveSessionFence } from "@f5-sales-demo/xcsh/sandbox/session-fence";
+import type { ContainmentFence } from "../src/sandbox/containment";
+import { evaluateToolCall } from "../src/sandbox/enforce";
+import { resolveSessionFence } from "../src/sandbox/session-fence";
 
 const CWD = "/work/custA";
 

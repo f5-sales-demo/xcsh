@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import { pythonToolRenderer } from "@f5-sales-demo/xcsh/tools/python";
+import { getThemeByName } from "../../src/modes/theme/theme";
+import { pythonToolRenderer } from "../../src/tools/python";
 
 describe("pythonToolRenderer", () => {
 	it("renders truncated output when collapsed and full output when expanded", async () => {

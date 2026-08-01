@@ -36,7 +36,7 @@ hook 패키지(`src/extensibility/hooks/`)는 여전히 내보내지고 API 표�
 hook 모듈은 팩토리를 기본 내보내기해야 합니다:
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function hook(pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -262,7 +262,7 @@ UI 없이 실행할 때 기본 no-op 컨텍스트 동작은 다음과 같습니�
 ### 안전하지 않은 bash 명령 차단
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -280,7 +280,7 @@ export default function (pi: HookAPI): void {
 ### 실행 후 도구 출력 편집
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_result", async event => {
@@ -299,7 +299,7 @@ export default function (pi: HookAPI): void {
 ### LLM 호출당 모델 컨텍스트 수정
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("context", async event => {
@@ -312,7 +312,7 @@ export default function (pi: HookAPI): void {
 ### 명령 안전 컨텍스트 메서드로 슬래시 명령 등록
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.registerCommand("handoff", {

@@ -4,7 +4,7 @@
  * (the Office bridge uses this for `sandbox-guard`, its filesystem safety net).
  */
 import { describe, expect, test } from "bun:test";
-import { loadExtensions } from "@f5-sales-demo/xcsh/extensibility/extensions/loader";
+import { loadExtensions } from "../src/extensibility/extensions/loader";
 
 const CWD = "/tmp";
 

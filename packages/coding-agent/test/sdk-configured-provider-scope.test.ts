@@ -3,11 +3,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { ModelRegistry } from "../src/config/model-registry";
+import { Settings } from "../src/config/settings";
+import { createAgentSession } from "../src/sdk";
+import { AuthStorage } from "../src/session/auth-storage";
+import { SessionManager } from "../src/session/session-manager";
 
 /**
  * WS1 regression: automatic model selection must stay scoped to providers the

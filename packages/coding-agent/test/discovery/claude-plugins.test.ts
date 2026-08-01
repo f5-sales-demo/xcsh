@@ -2,13 +2,9 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { clearCache as clearFsCache } from "@f5-sales-demo/xcsh/capability/fs";
-import {
-	clearXcshPluginRootsCache,
-	listXcshPluginRoots,
-	parseXcshPluginsRegistry,
-} from "@f5-sales-demo/xcsh/discovery/helpers";
-import { discoverAgents } from "@f5-sales-demo/xcsh/task/discovery";
+import { clearCache as clearFsCache } from "../../src/capability/fs";
+import { clearXcshPluginRootsCache, listXcshPluginRoots, parseXcshPluginsRegistry } from "../../src/discovery/helpers";
+import { discoverAgents } from "../../src/task/discovery";
 
 describe("parseXcshPluginsRegistry", () => {
 	test("parses valid registry", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import { vimToolRenderer } from "@f5-sales-demo/xcsh/tools/vim";
+import { getThemeByName } from "../../src/modes/theme/theme";
+import { vimToolRenderer } from "../../src/tools/vim";
 
 const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 

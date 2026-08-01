@@ -8,15 +8,15 @@ import {
 	type PythonKernelExecutor,
 	resetPreludeDocsCache,
 	warmPythonEnvironment,
-} from "@f5-sales-demo/xcsh/ipy/executor";
+} from "../../src/ipy/executor";
 import {
 	type KernelExecuteOptions,
 	type KernelExecuteResult,
 	type KernelShutdownResult,
 	type PreludeHelper,
 	PythonKernel,
-} from "@f5-sales-demo/xcsh/ipy/kernel";
-import { DEFAULT_MAX_BYTES } from "@f5-sales-demo/xcsh/session/streaming-output";
+} from "../../src/ipy/kernel";
+import { DEFAULT_MAX_BYTES } from "../../src/session/streaming-output";
 
 class FakeKernel implements PythonKernelExecutor {
 	private result: KernelExecuteResult;

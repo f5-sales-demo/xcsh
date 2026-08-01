@@ -5,11 +5,11 @@ import * as path from "node:path";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { Effort, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { CustomTool } from "@f5-sales-demo/xcsh/extensibility/custom-tools/types";
-import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 import { Type } from "@sinclair/typebox";
+import { Settings } from "../src/config/settings";
+import type { CustomTool } from "../src/extensibility/custom-tools/types";
+import { createAgentSession } from "../src/sdk";
+import { SessionManager } from "../src/session/session-manager";
 
 function createMcpCustomTool(name: string, serverName: string, mcpToolName: string): CustomTool {
 	return {

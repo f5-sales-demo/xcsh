@@ -4,15 +4,15 @@ import { Agent, type AgentMessage, type AgentTool } from "@f5-sales-demo/pi-agen
 import { type AssistantMessage, getBundledModel, type TextContent, type ToolCall } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import { convertToLlm } from "@f5-sales-demo/xcsh/session/messages";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { TodoWriteTool } from "@f5-sales-demo/xcsh/tools";
 import { Type } from "@sinclair/typebox";
+import { ModelRegistry } from "../src/config/model-registry";
+import { Settings } from "../src/config/settings";
+import { AgentSession } from "../src/session/agent-session";
+import { AuthStorage } from "../src/session/auth-storage";
+import { convertToLlm } from "../src/session/messages";
+import { SessionManager } from "../src/session/session-manager";
+import type { ToolSession } from "../src/tools";
+import { TodoWriteTool } from "../src/tools";
 
 class MockAssistantStream extends AssistantMessageEventStream {}
 

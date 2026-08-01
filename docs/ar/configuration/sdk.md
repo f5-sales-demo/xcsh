@@ -26,7 +26,7 @@ bun add @f5-sales-demo/xcsh
 
 ## نقاط الدخول
 
-يُصدِّر `@f5-sales-demo/xcsh` واجهات برمجة SDK من جذر الحزمة (وأيضاً عبر `@f5-sales-demo/xcsh/sdk`).
+يُصدِّر `@f5-sales-demo/xcsh` واجهات برمجة SDK من جذر الحزمة.
 
 الصادرات الأساسية للمضمِّنين:
 

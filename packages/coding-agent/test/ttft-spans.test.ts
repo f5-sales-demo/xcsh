@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { chatSpans, coldStartSpans, sessionBuildSpan } from "@f5-sales-demo/xcsh/browser/ttft-spans";
+import { chatSpans, coldStartSpans, sessionBuildSpan } from "../src/browser/ttft-spans";
 
 describe("chatSpans", () => {
 	it("splits route->first-token into disjoint provider_ttft + chat_handler summing to the whole", () => {

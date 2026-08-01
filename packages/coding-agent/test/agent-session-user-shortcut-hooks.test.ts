@@ -3,15 +3,15 @@ import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import * as bashExecutor from "@f5-sales-demo/xcsh/exec/bash-executor";
-import type { ExtensionRunner } from "@f5-sales-demo/xcsh/extensibility/extensions";
-import * as pythonExecutor from "@f5-sales-demo/xcsh/ipy/executor";
-import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
-import { TOOL_TIMEOUTS } from "@f5-sales-demo/xcsh/tools/tool-timeouts";
+import { ModelRegistry } from "../src/config/model-registry";
+import { Settings } from "../src/config/settings";
+import * as bashExecutor from "../src/exec/bash-executor";
+import type { ExtensionRunner } from "../src/extensibility/extensions";
+import * as pythonExecutor from "../src/ipy/executor";
+import { AgentSession } from "../src/session/agent-session";
+import { AuthStorage } from "../src/session/auth-storage";
+import { SessionManager } from "../src/session/session-manager";
+import { TOOL_TIMEOUTS } from "../src/tools/tool-timeouts";
 
 describe("AgentSession user shortcut hooks", () => {
 	let tempDir: TempDir;

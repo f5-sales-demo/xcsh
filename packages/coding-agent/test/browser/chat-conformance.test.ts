@@ -4,6 +4,8 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import Ajv from "ajv";
+import conformance from "../../src/browser/chat-conformance.json";
 import {
 	isChatRequest,
 	isChatStop,
@@ -11,9 +13,7 @@ import {
 	isHostToolResult,
 	isHostToolUpdate,
 	isSetHostTools,
-} from "@f5-sales-demo/xcsh/browser/chat-protocol";
-import Ajv from "ajv";
-import conformance from "../../src/browser/chat-conformance.json";
+} from "../../src/browser/chat-protocol";
 
 const ajv = new Ajv({ strict: false });
 

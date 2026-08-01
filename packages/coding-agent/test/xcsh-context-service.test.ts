@@ -3,8 +3,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { ContextError, ContextService, type XCSHContext } from "@f5-sales-demo/xcsh/services/xcsh-context";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { ContextError, ContextService, type XCSHContext } from "../src/services/xcsh-context";
 import {
 	TEST_CONTEXT as _TEST_CONTEXT,
 	TEST_CONTEXT_STAGING as _TEST_CONTEXT_STAGING,

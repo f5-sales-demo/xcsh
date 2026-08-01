@@ -7,7 +7,7 @@ import type {
 	InstalledPluginsRegistry,
 	MarketplaceRegistryEntry,
 	MarketplacesRegistry,
-} from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace";
+} from "../../src/extensibility/plugins/marketplace";
 import {
 	addInstalledPlugin,
 	addMarketplaceEntry,
@@ -22,7 +22,7 @@ import {
 	removeMarketplaceEntry,
 	writeInstalledPluginsRegistry,
 	writeMarketplacesRegistry,
-} from "@f5-sales-demo/xcsh/extensibility/plugins/marketplace";
+} from "../../src/extensibility/plugins/marketplace";
 
 // Inline the parseXcshPluginsRegistry validation logic to avoid pulling
 // in discovery/helpers.ts which transitively imports @f5-sales-demo/pi-natives.

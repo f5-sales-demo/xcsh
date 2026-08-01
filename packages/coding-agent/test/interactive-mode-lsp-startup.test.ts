@@ -6,10 +6,10 @@ import { locales } from "../src/locales/index";
 
 registerLocales(locales);
 
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { ModelRegistry } from "../src/config/model-registry";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
 import { InteractiveMode } from "../src/modes/interactive-mode";
+import { initTheme } from "../src/modes/theme/theme";
 import { AgentSession } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";

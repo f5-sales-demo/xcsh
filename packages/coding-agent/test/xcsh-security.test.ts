@@ -3,9 +3,9 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { ContextError, ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
-import { handleContextCommand } from "@f5-sales-demo/xcsh/services/xcsh-context-command";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { ContextError, ContextService } from "../src/services/xcsh-context";
+import { handleContextCommand } from "../src/services/xcsh-context-command";
 import { TEST_CONTEXT, TEST_CONTEXT_WITH_ENV, TEST_LONG_TOKEN } from "./xcsh-test-fixtures";
 
 function writeContext(

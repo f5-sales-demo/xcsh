@@ -13,7 +13,7 @@ import {
 	openMemoryDb,
 	tryClaimGlobalPhase2Job,
 	upsertThreads,
-} from "@f5-sales-demo/xcsh/memories/storage";
+} from "../src/memories/storage";
 
 const GLOBAL_KIND = "memory_consolidate_global";
 const PROJECT_CWD = "/repo";

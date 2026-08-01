@@ -36,7 +36,7 @@ i18n:
 フックモジュールはファクトリーをデフォルトエクスポートする必要があります：
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function hook(pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -262,7 +262,7 @@ UIなしで実行する場合、デフォルトのno-opコンテキスト動作�
 ### 安全でないbashコマンドをブロックする
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -280,7 +280,7 @@ export default function (pi: HookAPI): void {
 ### 実行後にツール出力を編集する
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_result", async event => {
@@ -299,7 +299,7 @@ export default function (pi: HookAPI): void {
 ### LLM呼び出しごとにモデルコンテキストを変更する
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("context", async event => {
@@ -312,7 +312,7 @@ export default function (pi: HookAPI): void {
 ### コマンドセーフなコンテキストメソッドでスラッシュコマンドを登録する
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.registerCommand("handoff", {

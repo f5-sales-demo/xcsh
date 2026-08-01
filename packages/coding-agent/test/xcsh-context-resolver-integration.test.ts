@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { ContextService } from "../src/services/xcsh-context";
 import { restoreEnv } from "./helpers/env";
 
 describe("ContextService with local contexts", () => {

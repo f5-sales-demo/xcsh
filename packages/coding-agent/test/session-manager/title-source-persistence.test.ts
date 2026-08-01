@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { getConfigRootDir, setAgentDir } from "@f5-sales-demo/pi-utils";
-import { loadEntriesFromFile, type SessionHeader, SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { loadEntriesFromFile, type SessionHeader, SessionManager } from "../../src/session/session-manager";
 
 function makeAssistantMessage() {
 	return {

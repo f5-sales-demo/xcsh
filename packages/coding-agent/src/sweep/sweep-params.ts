@@ -12,6 +12,9 @@
  *    pre-provisioned external infrastructure (cloud sites, connectors). These
  *    are NOT sweepable on staging with name+namespace and are excluded from the
  *    coverage denominator rather than counted as failures.
+ *  - FORM_SWEEP_BLOCKERS: generated console workflows that are known not to
+ *    model a required nested form. They are reported separately until the
+ *    source workflows are fixed and validated upstream.
  */
 
 /** A throwaway password that satisfies typical complexity rules. */
@@ -38,6 +41,26 @@ export const SCOPED_OUT: ReadonlySet<string> = new Set([
 	"discovery",
 	"code-base-integration",
 ]);
+
+/**
+ * Known blockers in generated create workflows. These workflows are owned by
+ * the console catalog; the embedded copy in this repository must not be patched
+ * by hand. Keep each reason explicit so a sweep cannot silently treat a known
+ * invalid workflow as supported coverage.
+ */
+export const FORM_SWEEP_BLOCKERS: Readonly<Record<string, string>> = {
+	"alert-policy": "placeholder defaults for nested alert_receivers and policy_rules fields",
+	"malicious-user-mitigation": "missing nested Add Item steps for the required rules field",
+	"data-type": "placeholder default for the nested data_type_rules field",
+	policer: "missing nested Add Item steps for the required policer_rules field",
+	"user-identification": "missing nested Add Item steps for the required rules field",
+	"usb-policy": "placeholder default for the nested allowed_usb_devices field",
+	"dns-lb-pool": "missing nested Add Item steps for the required pool_members field",
+	"app-setting": "placeholder default for the nested app_type_settings field",
+	bgp: "missing nested form steps for the required bgp_parameters field",
+	subnet: "placeholder default for the nested site_subnet_parameters field",
+	"third-party-application": "missing nested form steps for the required application_configuration field",
+};
 
 /**
  * Curated scalar inputs for standalone-creatable resources (Bucket A1). Only
@@ -87,15 +110,6 @@ export const SWEEP_PARAMS: Readonly<Record<string, Record<string, unknown>>> = {
 	},
 	"app-type": { ai_ml_feature_type: "Sensitive Data Detection" },
 	proxy: { site_or_virtual_site: "site", proxy_choice: "http_proxy" },
-	// --- nested/list required: NOT defaulted. These need real workflow steps
-	// (Configure sub-forms, rule tables, Add Item flows). Fake "default"
-	// placeholders were removed — they passed validateParams but put invalid
-	// values into form fields (e.g. "default" in a Public IP field). These
-	// resources fail honestly at validateParams until their workflow steps
-	// handle the nested fields. ---
-	// TODO: alert-policy, malicious-user-mitigation, data-type, policer,
-	// user-identification, usb-policy, dns-lb-pool, app-setting, bgp, subnet,
-	// third-party-application
 	// fleet upgrade_wait_time (spec constraint lte:900) belongs in the workflow
 	// param default, derived from the spec — not hand-coded here.
 	"virtual-site": { site_selector_expression: "ves.io/siteName in (xcsh-sweep)" },
@@ -104,6 +118,11 @@ export const SWEEP_PARAMS: Readonly<Record<string, Record<string, unknown>>> = {
 /** True when a resource is scoped out of the sweep (cloud/external dependency). */
 export function isScopedOut(resource: string): boolean {
 	return SCOPED_OUT.has(resource);
+}
+
+/** Return the upstream workflow blocker for a form sweep, when one is known. */
+export function formSweepBlockerFor(resource: string): string | undefined {
+	return FORM_SWEEP_BLOCKERS[resource];
 }
 
 /** Merge curated sweep inputs over the base {name, namespace} for a resource. */

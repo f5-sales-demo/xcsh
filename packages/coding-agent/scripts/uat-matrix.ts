@@ -37,6 +37,7 @@ import {
 import { type Cell, type Modality, type ReportContext, summarize, writeReport } from "./uat-matrix-report";
 
 const REPO_ROOT = path.resolve(import.meta.dir, "../../..");
+const CORPUS_ROOT = "research/benchmarks/uat-matrix/corpora";
 const LOCALES = ["en", "ja", "ko", "zh-cn", "fr", "de", "es", "pt-br", "it", "ar", "hi", "th"];
 // Cleanup order: parents before children so dependants release.
 const DEMO_CLEANUP_PATHS = [
@@ -104,7 +105,7 @@ function parseArgs(): Args {
 		dryRun: has("--dry-run"),
 		selfTestApi: has("--self-test-api"),
 		strictNl: has("--strict-nl"),
-		reportDir: get("--report-dir") ?? path.join(REPO_ROOT, "uat-matrix", "reports", ts),
+		reportDir: get("--report-dir") ?? path.join(REPO_ROOT, "research", "benchmarks", "uat-matrix", "reports", ts),
 	};
 }
 
@@ -218,7 +219,7 @@ async function main() {
 
 	// --- Dry run: parse corpora, print the planned matrix, validate triggers ---
 	if (args.dryRun) {
-		const consolePhrases = loadYaml<{ phrases: ConsolePhrase[] }>("uat-matrix/console-phrases.yaml").phrases ?? [];
+		const consolePhrases = loadYaml<{ phrases: ConsolePhrase[] }>(`${CORPUS_ROOT}/console.yaml`).phrases ?? [];
 		const triggerRe =
 			/(in|open|using|through) the (f5 xc )?(web )?console|using chrome|in the f5 xc ui|walk me through|show me in/i;
 		let bad = 0;
@@ -232,7 +233,7 @@ async function main() {
 			);
 		}
 		console.log(
-			`\n[dry-run] json=${loadYaml<{ phrases: CrudPhrase[] }>("autoresearch-crud-phrases.yaml").phrases.length} hcl=${loadYaml<{ phrases: TfPhrase[] }>("terraform-phrases.yaml").phrases.length} i18n=${loadYaml<{ phrases: I18nPhrase[] }>("autoresearch-i18n-phrases.yaml").phrases.length}×${LOCALES.length}`,
+			`\n[dry-run] json=${loadYaml<{ phrases: CrudPhrase[] }>(`${CORPUS_ROOT}/crud.yaml`).phrases.length} hcl=${loadYaml<{ phrases: TfPhrase[] }>(`${CORPUS_ROOT}/terraform.yaml`).phrases.length} i18n=${loadYaml<{ phrases: I18nPhrase[] }>(`${CORPUS_ROOT}/i18n.yaml`).phrases.length}×${LOCALES.length}`,
 		);
 		console.log(
 			bad === 0
@@ -260,7 +261,7 @@ async function main() {
 	if (args.modalities.has("console")) {
 		await ensureExtensionConnectedAndLogin(cfg);
 		const phrases = applyLimitFilter(
-			loadYaml<{ phrases: ConsolePhrase[] }>("uat-matrix/console-phrases.yaml").phrases,
+			loadYaml<{ phrases: ConsolePhrase[] }>(`${CORPUS_ROOT}/console.yaml`).phrases,
 			args,
 			p => p.id,
 		);
@@ -276,7 +277,7 @@ async function main() {
 	// --- JSON ---
 	if (args.modalities.has("json")) {
 		const phrases = applyLimitFilter(
-			loadYaml<{ phrases: CrudPhrase[] }>("autoresearch-crud-phrases.yaml").phrases,
+			loadYaml<{ phrases: CrudPhrase[] }>(`${CORPUS_ROOT}/crud.yaml`).phrases,
 			args,
 			p => `J-${p.resource}-${p.operation}`,
 		);
@@ -292,7 +293,7 @@ async function main() {
 	if (args.modalities.has("hcl")) {
 		const tfOk = await terraformAvailable();
 		const phrases = applyLimitFilter(
-			loadYaml<{ phrases: TfPhrase[] }>("terraform-phrases.yaml").phrases,
+			loadYaml<{ phrases: TfPhrase[] }>(`${CORPUS_ROOT}/terraform.yaml`).phrases,
 			args,
 			p => `H-${p.expect_resource ?? p.operation}-${p.operation}`,
 		);
@@ -309,7 +310,7 @@ async function main() {
 	// --- i18n ---
 	if (args.modalities.has("i18n")) {
 		const phrases = applyLimitFilter(
-			loadYaml<{ phrases: I18nPhrase[] }>("autoresearch-i18n-phrases.yaml").phrases,
+			loadYaml<{ phrases: I18nPhrase[] }>(`${CORPUS_ROOT}/i18n.yaml`).phrases,
 			args,
 			p => p.id,
 		);

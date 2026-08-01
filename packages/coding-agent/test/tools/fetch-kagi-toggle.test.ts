@@ -5,13 +5,13 @@ import * as path from "node:path";
 import * as natives from "@f5-sales-demo/pi-natives";
 import * as piUtils from "@f5-sales-demo/pi-utils";
 import { hookFetch, ptree, Snowflake } from "@f5-sales-demo/pi-utils";
-import { type SettingPath, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { ReadTool } from "@f5-sales-demo/xcsh/tools/read";
-import * as imageResize from "@f5-sales-demo/xcsh/utils/image-resize";
-import * as toolsManager from "@f5-sales-demo/xcsh/utils/tools-manager";
-import * as scrapers from "@f5-sales-demo/xcsh/web/scrapers/types";
-import * as scraperUtils from "@f5-sales-demo/xcsh/web/scrapers/utils";
+import { type SettingPath, Settings } from "../../src/config/settings";
+import type { ToolSession } from "../../src/tools";
+import { ReadTool } from "../../src/tools/read";
+import * as imageResize from "../../src/utils/image-resize";
+import * as toolsManager from "../../src/utils/tools-manager";
+import * as scrapers from "../../src/web/scrapers/types";
+import * as scraperUtils from "../../src/web/scrapers/utils";
 
 const withMissingSystemPython = () => {
 	const whichSpy = vi.spyOn(Bun, "which").mockImplementation(() => null);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { readToolRenderer } from "@f5-sales-demo/xcsh/tools/read";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import { readToolRenderer } from "../../src/tools/read";
 
 describe("read renderResult has no terminal status glyph (image branch)", () => {
 	it("image success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {

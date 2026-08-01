@@ -15,7 +15,7 @@ import {
 	insertMessageStats,
 	setFileOffset,
 } from "./db";
-import { getSessionEntry, listAllSessionFiles, parseSessionFile } from "./parser";
+import { getSessionMessageChain, listAllSessionFiles, parseSessionFile } from "./parser";
 import type { DashboardStats, MessageStats, RequestDetails } from "./types";
 
 /**
@@ -106,17 +106,14 @@ export async function getRequestDetails(id: number): Promise<RequestDetails | nu
 	const msg = getMessageById(id);
 	if (!msg) return null;
 
-	const entry = await getSessionEntry(msg.sessionFile, msg.entryId);
-	if (entry?.type !== "message") return null;
-
-	// TODO: Get parent/context messages?
-	// For now we return the single entry which contains the assistant response.
-	// The user prompt is likely the parent.
+	const entries = await getSessionMessageChain(msg.sessionFile, msg.entryId);
+	const entry = entries.at(-1);
+	if (entry?.message.role !== "assistant") return null;
 
 	return {
 		...msg,
-		messages: [entry],
-		output: (entry as any).message,
+		messages: entries.map(item => item.message),
+		output: entry.message,
 	};
 }
 

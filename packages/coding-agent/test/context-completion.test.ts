@@ -3,10 +3,10 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { BUILTIN_SLASH_COMMANDS } from "@f5-sales-demo/xcsh/extensibility/slash-commands";
-import { ContextService, type XCSHContext } from "@f5-sales-demo/xcsh/services/xcsh-context";
-import { BUILTIN_SLASH_COMMAND_DEFS } from "@f5-sales-demo/xcsh/slash-commands/builtin-registry";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { BUILTIN_SLASH_COMMANDS } from "../src/extensibility/slash-commands";
+import { ContextService, type XCSHContext } from "../src/services/xcsh-context";
+import { BUILTIN_SLASH_COMMAND_DEFS } from "../src/slash-commands/builtin-registry";
 import {
 	TEST_CONTEXT,
 	TEST_CONTEXT_INCOMPATIBLE,

@@ -11,8 +11,8 @@ import {
 	parseSessionEntries,
 	type SessionMessageEntry,
 } from "@f5-sales-demo/xcsh";
-import { RpcClient } from "@f5-sales-demo/xcsh/modes/rpc/rpc-client";
-import type { BashExecutionMessage } from "@f5-sales-demo/xcsh/session/messages";
+import { RpcClient } from "../src/modes/rpc/rpc-client";
+import type { BashExecutionMessage } from "../src/session/messages";
 import { e2eApiKey } from "./utilities";
 
 type MessageEndEvent = Extract<AgentEvent, { type: "message_end" }>;

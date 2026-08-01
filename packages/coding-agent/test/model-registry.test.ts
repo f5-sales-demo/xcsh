@@ -4,16 +4,16 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Effort, type Model, type OpenAICompat, type ThinkingConfig, writeModelCache } from "@f5-sales-demo/pi-ai";
 import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
-import { generateModelsYml } from "@f5-sales-demo/xcsh/config/auto-config";
+import { generateModelsYml } from "../src/config/auto-config";
 import {
 	kNoAuth,
 	MODEL_ROLES,
 	ModelRegistry,
 	resolveApiKeyConfig,
 	resolveYamlApiKeyConfig,
-} from "@f5-sales-demo/xcsh/config/model-registry";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+} from "../src/config/model-registry";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { AuthStorage } from "../src/session/auth-storage";
 
 describe("ModelRegistry", () => {
 	let tempDir: string;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { ChatHandler } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import type { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import type { AgentSession, AgentSessionEvent } from "@f5-sales-demo/xcsh/session/agent-session";
+import { ChatHandler } from "../src/browser/chat-handler";
+import type { BridgeServer } from "../src/browser/extension-bridge";
+import type { AgentSession, AgentSessionEvent } from "../src/session/agent-session";
 
 function makeFakes(deltas: string[] = ["Hi"]) {
 	const sent: Record<string, unknown>[] = [];

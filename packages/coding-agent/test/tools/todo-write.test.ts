@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { type TodoPhase, TodoWriteTool } from "@f5-sales-demo/xcsh/tools";
 import chalk from "chalk";
+import { Settings } from "../../src/config/settings";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { type TodoPhase, TodoWriteTool } from "../../src/tools";
 import { todoWriteToolRenderer } from "../../src/tools/todo-write";
 
 function createSession(initialPhases: TodoPhase[] = []): ToolSession {

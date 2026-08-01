@@ -3,12 +3,12 @@ import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import { getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ModelResolutionSource } from "@f5-sales-demo/xcsh/session/active-model";
-import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { ModelRegistry } from "../../src/config/model-registry";
+import { Settings } from "../../src/config/settings";
+import type { ModelResolutionSource } from "../../src/session/active-model";
+import { AgentSession } from "../../src/session/agent-session";
+import { AuthStorage } from "../../src/session/auth-storage";
+import { SessionManager } from "../../src/session/session-manager";
 
 // #2459 requires the about doc to distinguish a mid-session switch from launch configuration, so the
 // session has to remember where its model came from.

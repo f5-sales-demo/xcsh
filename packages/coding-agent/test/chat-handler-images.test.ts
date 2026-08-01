@@ -7,10 +7,10 @@
  *     `ImageContent[]` (base64 vision blocks) — the engine already renders those.
  */
 import { expect, test } from "bun:test";
-import { ChatHandler } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import { isChatRequest } from "@f5-sales-demo/xcsh/browser/chat-protocol";
-import type { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import type { AgentSession, AgentSessionEvent } from "@f5-sales-demo/xcsh/session/agent-session";
+import { ChatHandler } from "../src/browser/chat-handler";
+import { isChatRequest } from "../src/browser/chat-protocol";
+import type { BridgeServer } from "../src/browser/extension-bridge";
+import type { AgentSession, AgentSessionEvent } from "../src/session/agent-session";
 
 // Harness that captures the options passed to session.prompt so we can assert on
 // the forwarded images.

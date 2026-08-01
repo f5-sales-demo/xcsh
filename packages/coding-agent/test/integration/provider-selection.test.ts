@@ -6,9 +6,9 @@
  * path — not just mocked objects.
  */
 import { afterEach, describe, expect, it } from "bun:test";
-import { type BridgeServer, startBridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import { ExtensionBrowserProvider } from "@f5-sales-demo/xcsh/browser/extension-provider";
-import { CdpBrowserProvider, selectProvider } from "@f5-sales-demo/xcsh/browser/provider";
+import { type BridgeServer, startBridgeServer } from "../../src/browser/extension-bridge";
+import { ExtensionBrowserProvider } from "../../src/browser/extension-provider";
+import { CdpBrowserProvider, selectProvider } from "../../src/browser/provider";
 
 describe("selectProvider", () => {
 	let server: BridgeServer | null = null;

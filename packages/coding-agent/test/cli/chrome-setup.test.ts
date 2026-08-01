@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { EXTENSION_ID, WEB_STORE_URL } from "@f5-sales-demo/xcsh/cli/chrome-cli";
+import { EXTENSION_ID, WEB_STORE_URL } from "../../src/cli/chrome-cli";
 
 describe("EXTENSION_ID", () => {
 	it("is the canonical Chrome Web Store ID", () => {

@@ -10,15 +10,15 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { clearCache, readFile } from "@f5-sales-demo/xcsh/capability/fs";
-import type { Rule } from "@f5-sales-demo/xcsh/capability/rule";
-import type { LoadContext } from "@f5-sales-demo/xcsh/capability/types";
+import { clearCache, readFile } from "../../src/capability/fs";
+import type { Rule } from "../../src/capability/rule";
+import type { LoadContext } from "../../src/capability/types";
 import {
 	buildRuleFromMarkdown,
 	calculateDepth,
 	loadFilesFromDir,
 	scanSkillsFromDir,
-} from "@f5-sales-demo/xcsh/discovery/helpers";
+} from "../../src/discovery/helpers";
 
 const AGENT_DIR_CANDIDATES = [".agent", ".agents"] as const;
 const PROVIDER_ID = "agents";

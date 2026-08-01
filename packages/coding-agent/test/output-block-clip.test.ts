@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { visibleWidth } from "@f5-sales-demo/pi-tui";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import { renderOutputBlock } from "@f5-sales-demo/xcsh/tui/output-block";
+import { getThemeByName } from "../src/modes/theme/theme";
+import { renderOutputBlock } from "../src/tui/output-block";
 
 const WIDTH = 40;
 // A single diagram-ish line far wider than the inner content width.

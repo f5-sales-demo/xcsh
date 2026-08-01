@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { visibleWidth } from "@f5-sales-demo/pi-tui";
-import { UserMessageComponent } from "@f5-sales-demo/xcsh/modes/components/user-message";
-import { initTheme, theme } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import { UserMessageComponent } from "../src/modes/components/user-message";
+import { initTheme, theme } from "../src/modes/theme/theme";
 
 const OSC133_ZONE_START = "\x1b]133;A\x07";
 const OSC133_ZONE_END = "\x1b]133;B\x07";
