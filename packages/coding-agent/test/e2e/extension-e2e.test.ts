@@ -18,15 +18,6 @@
  * (Requires a display — these tests launch a visible Chrome.)
  */
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-
-// E2E tests require a display + the real Chrome extension loaded — skip in CI.
-// IMPORTANT: never `process.exit()` from a test module. It terminates the whole
-// `bun test` runner with that exit code, masking every other test's result (a
-// `process.exit(0)` here silently turned the entire xcsh suite green in CI — see
-// issue #1903). Skip cleanly with `describe.skipIf(isCI)` and import puppeteer
-// dynamically inside `beforeAll` so it never loads on a runner without Chrome.
-const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
-
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -34,13 +25,21 @@ import * as path from "node:path";
 import type { Browser, WebWorker } from "puppeteer";
 import { type BridgeServer, startBridgeServer } from "../../src/browser/extension-bridge";
 
+// E2E tests require a display + an explicitly configured extension build.
+// IMPORTANT: never `process.exit()` from a test module. It terminates the whole
+// `bun test` runner with that exit code, masking every other test's result (a
+// `process.exit(0)` here silently turned the entire xcsh suite green in CI — see
+// issue #1903). Skip cleanly and import puppeteer dynamically inside `beforeAll`
+// so it never loads when the external prerequisite is unavailable.
+const isCI = !!process.env.CI || !!process.env.GITHUB_ACTIONS;
+const EXT_PATH = process.env.XCSH_EXT_DIST ?? "";
+const hasExtensionBuild = EXT_PATH !== "" && fs.existsSync(path.join(EXT_PATH, "manifest.json"));
+
 // `chrome` is the extension API available inside worker.evaluate() callbacks —
 // they execute in the service-worker realm, not this test process.
 declare const chrome: {
 	tabs: { query(queryInfo: Record<string, unknown>): Promise<Array<{ id?: number; url?: string }>> };
 };
-
-const EXT_PATH = process.env.XCSH_EXT_DIST ?? "/Users/example/GIT/f5-sales-demo/xcsh-chrome-extension/dist";
 
 // Local, hermetic fixture standing in for the F5 XC console. The live staging
 // console requires an authenticated Okta session that a fresh Puppeteer profile
@@ -94,9 +93,9 @@ let worker: WebWorker | null = null;
 let boundTabId: number | null = null;
 
 // --- Lifecycle ---
-// The whole suite is skipped in CI (no display / no Chrome). `skipIf` means the
-// hooks below never run there, so the dynamic puppeteer import stays inert.
-describe.skipIf(isCI)("Extension E2E (real Chrome via Puppeteer)", () => {
+// `skipIf` means the hooks below never run in CI or without an extension build,
+// so the dynamic puppeteer import stays inert.
+describe.skipIf(isCI || !hasExtensionBuild)("Extension E2E (real Chrome via Puppeteer)", () => {
 	beforeAll(async () => {
 		// 0. Serve the hermetic console fixture over TLS on a loopback port, behind
 		//    a throwaway self-signed cert.

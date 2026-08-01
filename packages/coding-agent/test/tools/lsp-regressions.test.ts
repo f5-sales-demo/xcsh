@@ -5,9 +5,9 @@ import type { RenderResultOptions } from "@f5-sales-demo/pi-agent-core";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import * as piUtils from "@f5-sales-demo/pi-utils";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { getServersForFile, loadConfig } from "@f5-sales-demo/xcsh/lsp/config";
-import { renderCall, renderResult } from "@f5-sales-demo/xcsh/lsp/render";
-import type { CodeAction, SymbolInformation } from "@f5-sales-demo/xcsh/lsp/types";
+import { getServersForFile, loadConfig } from "../../src/lsp/config";
+import { renderCall, renderResult } from "../../src/lsp/render";
+import type { CodeAction, SymbolInformation } from "../../src/lsp/types";
 import {
 	applyCodeAction,
 	collectGlobMatches,
@@ -16,9 +16,9 @@ import {
 	filterWorkspaceSymbols,
 	hasGlobPattern,
 	resolveSymbolColumn,
-} from "@f5-sales-demo/xcsh/lsp/utils";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import { clampTimeout } from "@f5-sales-demo/xcsh/tools/tool-timeouts";
+} from "../../src/lsp/utils";
+import { getThemeByName } from "../../src/modes/theme/theme";
+import { clampTimeout } from "../../src/tools/tool-timeouts";
 
 describe("lsp regressions", () => {
 	it("detects bracket-style glob patterns", () => {

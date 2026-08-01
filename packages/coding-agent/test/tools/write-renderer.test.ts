@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { writeToolRenderer } from "@f5-sales-demo/xcsh/tools/write";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import { writeToolRenderer } from "../../src/tools/write";
 
 describe("write renderResult has no terminal status glyph", () => {
 	it("success renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { disposeAllKernelSessions, executePython } from "@f5-sales-demo/xcsh/ipy/executor";
-import type { KernelExecuteOptions, KernelExecuteResult, KernelShutdownResult } from "@f5-sales-demo/xcsh/ipy/kernel";
-import { PythonKernel } from "@f5-sales-demo/xcsh/ipy/kernel";
+import { disposeAllKernelSessions, executePython } from "../../src/ipy/executor";
+import type { KernelExecuteOptions, KernelExecuteResult, KernelShutdownResult } from "../../src/ipy/kernel";
+import { PythonKernel } from "../../src/ipy/kernel";
 
 class FakeKernel {
 	executeCalls = 0;

@@ -1,11 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import {
-	composeChatPrompt,
-	KEEPALIVE_INTERVAL_MS,
-	shouldSendKeepalive,
-} from "@f5-sales-demo/xcsh/browser/chat-handler";
-import type { PageContextSnapshot } from "@f5-sales-demo/xcsh/browser/chat-protocol";
-import { classifyReferenceKind } from "@f5-sales-demo/xcsh/references";
+import { composeChatPrompt, KEEPALIVE_INTERVAL_MS, shouldSendKeepalive } from "../../src/browser/chat-handler";
+import type { PageContextSnapshot } from "../../src/browser/chat-protocol";
+import { classifyReferenceKind } from "../../src/references";
 
 describe("composeChatPrompt", () => {
 	it("includes mode instruction and user text", () => {

@@ -26,7 +26,7 @@ bun add @f5-sales-demo/xcsh
 
 ## Einstiegspunkte
 
-`@f5-sales-demo/xcsh` exportiert die SDK-APIs aus dem Paketstamm (sowie über `@f5-sales-demo/xcsh/sdk`).
+`@f5-sales-demo/xcsh` exportiert die SDK-APIs aus dem Paketstamm.
 
 Kernexporte für Einbetter:
 

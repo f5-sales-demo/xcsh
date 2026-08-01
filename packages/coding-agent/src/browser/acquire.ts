@@ -1,7 +1,6 @@
-import { execFileSync } from "node:child_process";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { Browser, Page } from "puppeteer";
+import puppeteer, { type Browser, type Page } from "puppeteer";
 import { assertLoopbackBrowserUrl, pickCoDrivePage, resolveBrowserConnectUrl } from "../tools/browser";
 import { locateChrome } from "./chrome-locate";
 
@@ -37,15 +36,12 @@ export function defaultProfileDir(opts?: {
 }
 
 async function withLaunchTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	const timeout = new Promise<never>((_resolve, reject) => {
-		timer = setTimeout(() => reject(new Error("launch timed out")), ms);
-	});
-	try {
-		return await Promise.race([p, timeout]);
-	} finally {
-		if (timer) clearTimeout(timer);
-	}
+	return await Promise.race([
+		p,
+		Bun.sleep(ms).then(() => {
+			throw new Error("launch timed out");
+		}),
+	]);
 }
 
 export function buildLaunchArgs(opts: { profileDir?: string; debugPort: number }): string[] {
@@ -99,13 +95,8 @@ export function isProfileLockError(message: string): boolean {
 }
 
 function defaultExec(cmd: string, args: string[]): { code: number } {
-	try {
-		execFileSync(cmd, args, { stdio: "ignore" });
-		return { code: 0 };
-	} catch (e) {
-		const code = (e as { status?: number }).status;
-		return { code: typeof code === "number" ? code : 1 };
-	}
+	const result = Bun.spawnSync([cmd, ...args], { stdin: "ignore", stdout: "ignore", stderr: "ignore" });
+	return { code: result.exitCode };
 }
 
 export function isChromeRunning(
@@ -126,13 +117,51 @@ async function waitForChromeExit(timeoutMs = 8000, pollMs = 300): Promise<boolea
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		if (!isChromeRunning()) return true;
-		await new Promise(r => setTimeout(r, pollMs));
+		await Bun.sleep(pollMs);
 	}
 	return false;
 }
 
+async function runChromeControlCommand(command: { cmd: string; args: string[] }): Promise<number> {
+	const child = Bun.spawn([command.cmd, ...command.args], {
+		stdin: "ignore",
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	return await child.exited;
+}
+
+/**
+ * Gracefully replace the debug-enabled default-profile Chrome process with a
+ * normal Chrome process. This is only called when xcsh performed the original
+ * consented relaunch; it never force-terminates a browser.
+ */
+export async function restoreDefaultChromeWithoutDebugPort(settings: { get(key: string): unknown }): Promise<void> {
+	const located = locateChrome({ settings });
+	const profileDir = defaultProfileDir();
+	const quit = quitChromeCommand();
+	if (!located || !profileDir || !quit) {
+		throw new Error("Chrome restoration is unsupported on this platform");
+	}
+
+	await runChromeControlCommand(quit);
+	if (!(await waitForChromeExit())) {
+		throw new Error("Chrome did not exit after the graceful quit request");
+	}
+
+	const child = Bun.spawn([located.path, `--user-data-dir=${profileDir}`], {
+		stdin: "ignore",
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+	child.unref();
+	await Bun.sleep(100);
+	if (child.exitCode !== null && child.exitCode !== 0) {
+		throw new Error(`Chrome exited while restoring the default profile (code ${child.exitCode})`);
+	}
+}
+
 async function tryAttach(browserURL: string): Promise<{ browser: Browser; page: Page } | null> {
-	const puppeteer = (await import("puppeteer")).default;
 	try {
 		const browser = await puppeteer.connect({ browserURL });
 		const pages = await browser.pages();
@@ -144,7 +173,6 @@ async function tryAttach(browserURL: string): Promise<{ browser: Browser; page: 
 }
 
 async function launch(executablePath: string, args: string[]): Promise<Browser> {
-	const puppeteer = (await import("puppeteer")).default;
 	return puppeteer.launch({ headless: false, executablePath, args, defaultViewport: null });
 }
 
@@ -204,11 +232,7 @@ export async function acquirePage(opts: {
 			if (allowRelaunch) {
 				const quit = quitChromeCommand();
 				if (quit) {
-					try {
-						execFileSync(quit.cmd, quit.args, { stdio: "ignore" });
-					} catch {
-						/* ignore quit errors; verify via waitForChromeExit */
-					}
+					await runChromeControlCommand(quit);
 					const exited = await waitForChromeExit();
 					if (exited) {
 						const browser = await withLaunchTimeout(

@@ -2,14 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import {
-	ApplyPatchError,
-	applyPatch,
-	ParseError,
-	type PatchInput,
-	parseDiffHunks,
-	seekSequence,
-} from "@f5-sales-demo/xcsh/edit";
+import { ApplyPatchError, applyPatch, ParseError, type PatchInput, parseDiffHunks, seekSequence } from "../../src/edit";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Legacy parser for test fixtures (*** Begin Patch format)

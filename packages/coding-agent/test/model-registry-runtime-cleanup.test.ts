@@ -4,8 +4,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { type AssistantMessageEventStream, clearCustomApis, getCustomApi } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { ModelRegistry, type ProviderConfigInput } from "@f5-sales-demo/xcsh/config/model-registry";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { ModelRegistry, type ProviderConfigInput } from "../src/config/model-registry";
+import { AuthStorage } from "../src/session/auth-storage";
 
 describe("ModelRegistry runtime source cleanup", () => {
 	let tempDir: string;

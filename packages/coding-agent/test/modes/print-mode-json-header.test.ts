@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { Model } from "@f5-sales-demo/pi-ai";
-import { buildJsonSessionHeaderLine } from "@f5-sales-demo/xcsh/modes/print-mode";
-import { CURRENT_SESSION_VERSION, type SessionHeader } from "@f5-sales-demo/xcsh/session/session-manager";
+import { buildJsonSessionHeaderLine } from "../../src/modes/print-mode";
+import { CURRENT_SESSION_VERSION, type SessionHeader } from "../../src/session/session-manager";
 
 const header: SessionHeader = {
 	type: "session",

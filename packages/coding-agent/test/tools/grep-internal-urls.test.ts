@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { ArtifactProtocolHandler } from "@f5-sales-demo/xcsh/internal-urls/artifact-protocol";
-import { InternalUrlRouter } from "@f5-sales-demo/xcsh/internal-urls/router";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { GrepTool } from "@f5-sales-demo/xcsh/tools/grep";
+import { Settings } from "../../src/config/settings";
+import { ArtifactProtocolHandler } from "../../src/internal-urls/artifact-protocol";
+import { InternalUrlRouter } from "../../src/internal-urls/router";
+import type { ToolSession } from "../../src/tools";
+import { GrepTool } from "../../src/tools/grep";
 
 function getResultText(result: { content: Array<{ type: string; text?: string }> }): string {
 	return result.content

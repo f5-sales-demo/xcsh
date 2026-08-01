@@ -7,7 +7,7 @@
  * frames back and verifies the client receives them.
  */
 import { afterEach, describe, expect, it } from "bun:test";
-import { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
+import { BridgeServer } from "../../src/browser/extension-bridge";
 
 describe("Chat bridge round-trip", () => {
 	let server: BridgeServer | null = null;

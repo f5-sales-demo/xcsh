@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { isChatRequest, isChatStop } from "@f5-sales-demo/xcsh/browser/chat-protocol";
+import { isChatRequest, isChatStop } from "../../src/browser/chat-protocol";
 
 describe("isChatRequest", () => {
 	it("accepts a valid chat_request with c- prefix", () => {

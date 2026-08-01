@@ -5,13 +5,9 @@ import * as path from "node:path";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import * as ai from "@f5-sales-demo/pi-ai";
 import { getAgentDbPath, Snowflake } from "@f5-sales-demo/pi-utils";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import {
-	buildMemoryToolDeveloperInstructions,
-	getMemoryRoot,
-	startMemoryStartupTask,
-} from "@f5-sales-demo/xcsh/memories";
-import * as memoryStorage from "@f5-sales-demo/xcsh/memories/storage";
+import { Settings } from "../src/config/settings";
+import { buildMemoryToolDeveloperInstructions, getMemoryRoot, startMemoryStartupTask } from "../src/memories";
+import * as memoryStorage from "../src/memories/storage";
 
 interface SessionFixture {
 	agentDir: string;

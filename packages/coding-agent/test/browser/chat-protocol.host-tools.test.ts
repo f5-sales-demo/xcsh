@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { isHostToolResult, isHostToolUpdate, isSetHostTools } from "@f5-sales-demo/xcsh/browser/chat-protocol";
+import { isHostToolResult, isHostToolUpdate, isSetHostTools } from "../../src/browser/chat-protocol";
 
 // A well-formed AgentToolResult carries a `content[]` array (NOT a `{ data }`
 // object). The host-tool guards must lock this shape so a malformed client

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { ChatHandler, classifyChatErrorReason } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import type { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import type { AgentSession, AgentSessionEvent } from "@f5-sales-demo/xcsh/session/agent-session";
+import { ChatHandler, classifyChatErrorReason } from "../src/browser/chat-handler";
+import type { BridgeServer } from "../src/browser/extension-bridge";
+import type { AgentSession, AgentSessionEvent } from "../src/session/agent-session";
 
 /** Harness exposing the bridge onMessage/onDisconnected hooks and captured sends,
  * with a prompt() that can be made to reject. */

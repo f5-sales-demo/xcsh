@@ -1,4 +1,0 @@
-{"type":"turn_start"}
-{"type":"tool_execution_start","toolCallId":"t1","toolName":"bash","args":{"command":"bun xcsh://plugin/meddpicc/file/engine/cli.ts score deal.json"}}
-{"type":"tool_execution_end","toolCallId":"t1","toolName":"bash","result":{"stdout":"{\"overallScore\":65.6}"}}
-{"type":"turn_end"}

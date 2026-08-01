@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { lexShellCommand } from "@f5-sales-demo/xcsh/tools/shell-lex";
+import { lexShellCommand } from "../../src/tools/shell-lex";
 
 /** The raw source span a word covers, so offset assertions stay readable. */
 function span(command: string, index: number): string {

@@ -24,7 +24,7 @@ bun add @f5-sales-demo/xcsh
 
 ## 進入點
 
-`@f5-sales-demo/xcsh` 從套件根目錄匯出 SDK API（也可透過 `@f5-sales-demo/xcsh/sdk` 存取）。
+`@f5-sales-demo/xcsh` 從套件根目錄匯出 SDK API（也可透過 `@f5-sales-demo/xcsh` 存取）。
 
 嵌入器的核心匯出項目：
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { editToolRenderer } from "@f5-sales-demo/xcsh/edit/renderer";
+import { editToolRenderer } from "../../src/edit/renderer";
 import { getThemeByName } from "../../src/modes/theme/theme";
 
 const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;

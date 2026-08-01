@@ -6,8 +6,8 @@ import { Type } from "@sinclair/typebox";
 import type { ToolDefinition } from "../../extensibility/extensions";
 import type { Theme } from "../../modes/theme/theme";
 import { replaceTabs, truncateToWidth } from "../../tools/render-utils";
-import { applyAutoresearchContractToExperimentState } from "../apply-contract-to-state";
 import {
+	applyAutoresearchContractToExperimentState,
 	contractListsEqual,
 	contractPathListsEqual,
 	loadAutoresearchScriptSnapshot,

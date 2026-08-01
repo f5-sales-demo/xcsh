@@ -26,7 +26,7 @@ bun add @f5-sales-demo/xcsh
 
 ## Punti di ingresso
 
-`@f5-sales-demo/xcsh` esporta le API dell'SDK dalla radice del pacchetto (e anche tramite `@f5-sales-demo/xcsh/sdk`).
+`@f5-sales-demo/xcsh` esporta le API dell'SDK dalla radice del pacchetto.
 
 Esportazioni principali per gli embedder:
 

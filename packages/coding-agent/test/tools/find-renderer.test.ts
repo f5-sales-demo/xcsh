@@ -3,10 +3,10 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { FindTool, findToolRenderer } from "@f5-sales-demo/xcsh/tools/find";
+import { Settings } from "../../src/config/settings";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { FindTool, findToolRenderer } from "../../src/tools/find";
 
 describe("find renderResult has no terminal status glyph", () => {
 	it("zero-result renderResult contains no ✓/✗/⚠ after ANSI strip", async () => {

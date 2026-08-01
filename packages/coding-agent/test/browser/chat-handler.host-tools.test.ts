@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
-import { ChatHandler } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import type { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import type { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { ChatHandler } from "../../src/browser/chat-handler";
+import type { BridgeServer } from "../../src/browser/extension-bridge";
+import type { AgentSession } from "../../src/session/agent-session";
 
 /**
  * A2/A3 host-tool wiring tests for `ChatHandler`.

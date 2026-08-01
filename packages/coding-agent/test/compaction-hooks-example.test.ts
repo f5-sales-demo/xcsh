@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import type { HookAPI, SessionBeforeCompactEvent, SessionCompactEvent } from "@f5-sales-demo/xcsh/extensibility/hooks";
+import type { HookAPI, SessionBeforeCompactEvent, SessionCompactEvent } from "../src/extensibility/hooks";
 
 describe("Documentation example", () => {
 	it("custom compaction example should type-check correctly", () => {

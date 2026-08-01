@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import { parseRuleConditionAndScope, type Rule } from "@f5-sales-demo/xcsh/capability/rule";
-import { TtsrManager } from "@f5-sales-demo/xcsh/export/ttsr";
+import { parseRuleConditionAndScope, type Rule } from "../src/capability/rule";
+import { TtsrManager } from "../src/export/ttsr";
 
 function makeRule(partial: Partial<Rule>): Rule {
 	return {

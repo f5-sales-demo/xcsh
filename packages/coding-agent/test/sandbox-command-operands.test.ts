@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { provenExemptWords } from "@f5-sales-demo/xcsh/sandbox/command-operands";
-import { lexShellCommand } from "@f5-sales-demo/xcsh/tools/shell-lex";
+import { provenExemptWords } from "../src/sandbox/command-operands";
+import { lexShellCommand } from "../src/tools/shell-lex";
 
 /** The literal text of every word the exemption rules can prove is not a filesystem reference. */
 function exempt(command: string): string[] {

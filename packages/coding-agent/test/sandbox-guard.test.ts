@@ -2,8 +2,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { _resetSettingsForTest, Settings, settings } from "@f5-sales-demo/xcsh/config/settings";
-import sandboxGuard from "@f5-sales-demo/xcsh/extensibility/extensions/bundled/sandbox-guard";
+import { _resetSettingsForTest, Settings, settings } from "../src/config/settings";
+import sandboxGuard from "../src/extensibility/extensions/bundled/sandbox-guard";
 
 /**
  * Real directories, because the guard now resolves a `ContainmentFence` and a fence refuses to build on

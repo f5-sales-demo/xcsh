@@ -7,15 +7,10 @@ import { locales } from "../src/locales/index";
 
 registerLocales(locales);
 
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { ContextService, CURRENT_SCHEMA_VERSION, type XCSHContext } from "@f5-sales-demo/xcsh/services/xcsh-context";
-import { handleContextCommand } from "@f5-sales-demo/xcsh/services/xcsh-context-command";
-import {
-	formatAuthIndicator,
-	formatExpiration,
-	formatRelativeTime,
-	renderXCSHTable,
-} from "@f5-sales-demo/xcsh/services/xcsh-table";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { ContextService, CURRENT_SCHEMA_VERSION, type XCSHContext } from "../src/services/xcsh-context";
+import { handleContextCommand } from "../src/services/xcsh-context-command";
+import { formatAuthIndicator, formatExpiration, formatRelativeTime, renderXCSHTable } from "../src/services/xcsh-table";
 import { TEST_CONTEXT, TEST_CONTEXT_STAGING as TEST_CONTEXT_2 } from "./xcsh-test-fixtures";
 
 describe("formatAuthIndicator", () => {

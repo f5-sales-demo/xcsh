@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { getAgentDir, getPluginsDir, setAgentDir, TempDir } from "@f5-sales-demo/pi-utils";
-import { discoverAndLoadExtensions } from "@f5-sales-demo/xcsh/extensibility/extensions/loader";
+import { discoverAndLoadExtensions } from "../src/extensibility/extensions/loader";
 
 describe("plugin extension discovery", () => {
 	let projectDir: TempDir;

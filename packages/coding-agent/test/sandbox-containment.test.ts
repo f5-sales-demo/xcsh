@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { getAgentDir, getPluginsDir } from "@f5-sales-demo/pi-utils";
-import { buildContainmentFence, containmentStatus, fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
+import { buildContainmentFence, containmentStatus, fenceVerdict } from "../src/sandbox/containment";
 
 /**
  * The fence is deliberately *gentle*: the only thing it prevents is the assistant wandering the

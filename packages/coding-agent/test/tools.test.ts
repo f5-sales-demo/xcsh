@@ -6,21 +6,21 @@ import * as url from "node:url";
 import * as zlib from "node:zlib";
 import type { AgentToolContext } from "@f5-sales-demo/pi-agent-core";
 import { $which, Snowflake } from "@f5-sales-demo/pi-utils";
-import { AsyncJobManager } from "@f5-sales-demo/xcsh/async";
-import { DEFAULT_BASH_INTERCEPTOR_RULES, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { EditTool } from "@f5-sales-demo/xcsh/edit";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { BashTool } from "@f5-sales-demo/xcsh/tools/bash";
-import { CancelJobTool } from "@f5-sales-demo/xcsh/tools/cancel-job";
-import { FindTool } from "@f5-sales-demo/xcsh/tools/find";
-import { GrepTool } from "@f5-sales-demo/xcsh/tools/grep";
-import { wrapToolWithMetaNotice } from "@f5-sales-demo/xcsh/tools/output-meta";
-import { PollTool } from "@f5-sales-demo/xcsh/tools/poll-tool";
-import { ReadTool } from "@f5-sales-demo/xcsh/tools/read";
-import { WriteTool } from "@f5-sales-demo/xcsh/tools/write";
-import * as markitUtils from "@f5-sales-demo/xcsh/utils/markit";
 import { unzipSync } from "fflate";
+import { AsyncJobManager } from "../src/async";
+import { DEFAULT_BASH_INTERCEPTOR_RULES, Settings } from "../src/config/settings";
+import { EditTool } from "../src/edit";
+import { SessionManager } from "../src/session/session-manager";
+import type { ToolSession } from "../src/tools";
+import { BashTool } from "../src/tools/bash";
+import { CancelJobTool } from "../src/tools/cancel-job";
+import { FindTool } from "../src/tools/find";
+import { GrepTool } from "../src/tools/grep";
+import { wrapToolWithMetaNotice } from "../src/tools/output-meta";
+import { PollTool } from "../src/tools/poll-tool";
+import { ReadTool } from "../src/tools/read";
+import { WriteTool } from "../src/tools/write";
+import * as markitUtils from "../src/utils/markit";
 
 // Helper to extract text from content blocks
 function getTextOutput(result: any): string {

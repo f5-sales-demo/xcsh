@@ -8,8 +8,8 @@ import {
 	validateSchemaCompatibility,
 	validateStrictSchemaEnforcement,
 } from "@f5-sales-demo/pi-ai/utils/schema";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { createTools, HIDDEN_TOOLS, type ToolSession } from "@f5-sales-demo/xcsh/tools";
+import { Settings } from "../../src/config/settings";
+import { createTools, HIDDEN_TOOLS, type ToolSession } from "../../src/tools";
 
 interface ToolSchemaEntry {
 	name: string;

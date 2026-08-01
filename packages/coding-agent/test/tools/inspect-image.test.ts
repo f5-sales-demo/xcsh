@@ -4,13 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { completeSimple, Model } from "@f5-sales-demo/pi-ai";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { InspectImageTool } from "@f5-sales-demo/xcsh/tools/inspect-image";
-import { inspectImageToolRenderer } from "@f5-sales-demo/xcsh/tools/inspect-image-renderer";
-import { toolRenderers } from "@f5-sales-demo/xcsh/tools/renderers";
 import { Value } from "@sinclair/typebox/value";
+import { Settings } from "../../src/config/settings";
+import { getThemeByName } from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { InspectImageTool } from "../../src/tools/inspect-image";
+import { inspectImageToolRenderer } from "../../src/tools/inspect-image-renderer";
+import { toolRenderers } from "../../src/tools/renderers";
 
 const TINY_PNG_BASE64 =
 	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";

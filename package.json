@@ -69,6 +69,7 @@
 		"*.{js,ts,jsx,tsx,json,jsonc,css}": "biome check --write --no-errors-on-unmatched"
 	},
 	"overrides": {
+		"adm-zip": "0.6.0",
 		"ajv": "^8.20",
 		"date-fns": "~4.4.0"
 	},

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	BRIDGE_PORT_BASE_DEFAULT,
-	deriveBridgePorts,
-	resolveBridgePortBase,
-} from "@f5-sales-demo/xcsh/browser/extension-bridge";
+import { BRIDGE_PORT_BASE_DEFAULT, deriveBridgePorts, resolveBridgePortBase } from "../../src/browser/extension-bridge";
 
 /**
  * The bridge port layout is a fixed global today, so every clone, worktree and live session on a

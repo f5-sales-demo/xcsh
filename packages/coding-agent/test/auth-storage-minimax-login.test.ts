@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+import { AuthStorage } from "../src/session/auth-storage";
 
 describe("AuthStorage MiniMax login", () => {
 	let tempDir: string;

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
 
 describe("bash.environment setting", () => {
 	let testDir: string;

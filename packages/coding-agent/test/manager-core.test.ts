@@ -1,5 +1,4 @@
 import { describe, expect, it, test } from "bun:test";
-import { sparesToSpawn } from "@f5-sales-demo/xcsh/commands/manager-core";
 import {
 	binaryIsStale,
 	keepaliveFrame,
@@ -11,6 +10,7 @@ import {
 	selectSpawnPort,
 	serializeManagerState,
 	shouldSupersede,
+	sparesToSpawn,
 	staleKeys,
 	touchLastSeen,
 	type WorkerRec,

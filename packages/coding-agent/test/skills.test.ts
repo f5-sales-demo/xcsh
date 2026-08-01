@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { type Skill as CapabilitySkill, skillCapability } from "@f5-sales-demo/xcsh/capability/skill";
-import { getCapability } from "@f5-sales-demo/xcsh/discovery";
-import { loadSkills, loadSkillsFromDir, type Skill, toSkillSummaries } from "@f5-sales-demo/xcsh/extensibility/skills";
+import { type Skill as CapabilitySkill, skillCapability } from "../src/capability/skill";
+import { getCapability } from "../src/discovery";
+import { loadSkills, loadSkillsFromDir, type Skill, toSkillSummaries } from "../src/extensibility/skills";
 
 const fixturesDir = path.resolve(import.meta.dirname, "fixtures/skills");
 const collisionFixturesDir = path.resolve(import.meta.dirname, "fixtures/skills-collision");

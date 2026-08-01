@@ -52,8 +52,7 @@ xcsh/
 │   ├── agent/           # Core agent runtime
 │   ├── utils/           # Shared utilities
 │   ├── natives/         # Native Bun bindings (Rust via napi)
-│   ├── stats/           # Usage statistics
-│   └── swarm-extension/ # Multi-agent swarm extension
+│   └── stats/           # Usage statistics
 ├── crates/              # Rust crates (brush-*, pi-natives, tree-sitter-glimmer)
 ├── biome.json           # Biome v2 linter/formatter config
 ├── tsconfig.json        # Root TypeScript config
@@ -345,7 +344,7 @@ Closes #<N>
 
 Use the short package directory name:
 
-`ai` | `tui` | `coding-agent` | `agent` | `utils` | `natives` | `stats` | `swarm-extension`
+`ai` | `tui` | `coding-agent` | `agent` | `utils` | `natives` | `stats`
 
 Omit scope for root-level changes (CI, docs, config).
 

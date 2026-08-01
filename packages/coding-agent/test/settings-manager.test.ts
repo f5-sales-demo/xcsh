@@ -4,8 +4,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Effort } from "@f5-sales-demo/pi-ai";
 import { getProjectAgentDir, Snowflake } from "@f5-sales-demo/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
 import { YAML } from "bun";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
 
 describe("Settings", () => {
 	let testDir: string;

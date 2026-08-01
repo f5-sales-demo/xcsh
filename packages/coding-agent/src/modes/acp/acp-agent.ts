@@ -21,6 +21,7 @@ import {
 	PROTOCOL_VERSION,
 	type PromptRequest,
 	type PromptResponse,
+	RequestError,
 	type ResumeSessionRequest,
 	type ResumeSessionResponse,
 	type SessionConfigOption,
@@ -357,11 +358,14 @@ export class AcpAgent implements Agent {
 		}
 	}
 
-	async extMethod(_method: string, _params: { [key: string]: unknown }): Promise<{ [key: string]: unknown }> {
-		throw new Error("ACP extension methods are not implemented");
+	async extMethod(method: string, _params: { [key: string]: unknown }): Promise<{ [key: string]: unknown }> {
+		throw RequestError.methodNotFound(method);
 	}
 
-	async extNotification(_method: string, _params: { [key: string]: unknown }): Promise<void> {}
+	async extNotification(_method: string, _params: { [key: string]: unknown }): Promise<void> {
+		// JSON-RPC notifications have no response channel. Unknown extension notifications
+		// are intentionally ignored because this agent advertises no ACP extensions.
+	}
 
 	get signal(): AbortSignal {
 		return this.#connection.signal;

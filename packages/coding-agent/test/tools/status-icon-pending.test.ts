@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { initTheme, theme } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import { formatStatusIcon } from "@f5-sales-demo/xcsh/tools/render-utils";
+import { initTheme, theme } from "../../src/modes/theme/theme";
+import { formatStatusIcon } from "../../src/tools/render-utils";
 
 describe("formatStatusIcon", () => {
 	it("returns empty string for pending (gutter ball is the spinner)", async () => {

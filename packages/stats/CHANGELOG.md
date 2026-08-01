@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Reconstruct request details from the ordered parent-message chain, including safe handling of missing parents and malformed cycles.
+
 ## [13.6.0] - 2026-03-03
 ### Fixed
 

@@ -24,7 +24,7 @@ bun add @f5-sales-demo/xcsh
 
 ## エントリポイント
 
-`@f5-sales-demo/xcsh` はパッケージルート（および `@f5-sales-demo/xcsh/sdk` 経由）からSDK APIをエクスポートします。
+`@f5-sales-demo/xcsh` はパッケージルート（および `@f5-sales-demo/xcsh` 経由）からSDK APIをエクスポートします。
 
 エンベッダー向けのコアエクスポート:
 

@@ -11,9 +11,9 @@ import {
 	ModelRegistry,
 	resolveApiKeyConfig,
 	resolveYamlApiKeyConfig,
-} from "@f5-sales-demo/xcsh/config/model-registry";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
+} from "../src/config/model-registry";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { AuthStorage } from "../src/session/auth-storage";
 
 describe("ModelRegistry", () => {
 	let tempDir: string;

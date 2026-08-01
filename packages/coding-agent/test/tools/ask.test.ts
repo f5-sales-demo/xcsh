@@ -1,10 +1,10 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import type { AgentToolContext } from "@f5-sales-demo/pi-agent-core";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { getThemeByName, initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { AskTool, askToolRenderer } from "@f5-sales-demo/xcsh/tools/ask";
-import { ToolAbortError } from "@f5-sales-demo/xcsh/tools/tool-errors";
+import { Settings } from "../../src/config/settings";
+import { getThemeByName, initTheme } from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { AskTool, askToolRenderer } from "../../src/tools/ask";
+import { ToolAbortError } from "../../src/tools/tool-errors";
 
 function createSession(overrides: Partial<ToolSession> = {}): ToolSession {
 	return {

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { clearMermaidCache } from "@f5-sales-demo/xcsh/modes/theme/mermaid-cache";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import { mermaidRenderer } from "@f5-sales-demo/xcsh/tools/mermaid-renderer";
+import { clearMermaidCache } from "../src/modes/theme/mermaid-cache";
+import { getThemeByName } from "../src/modes/theme/theme";
+import { mermaidRenderer } from "../src/tools/mermaid-renderer";
 
 const SRC = "graph LR\n A[Login] --> B[Auth]\n B --> C[Home]";
 

@@ -3,10 +3,10 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { createAgentSession } from "@f5-sales-demo/xcsh/sdk";
-import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { _resetSettingsForTest, Settings } from "../src/config/settings";
+import { createAgentSession } from "../src/sdk";
+import { ContextService } from "../src/services/xcsh-context";
+import { SessionManager } from "../src/session/session-manager";
 
 describe("createAgentSession context tracking", () => {
 	const tempDirs: string[] = [];

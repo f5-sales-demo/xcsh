@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell } from "@f5-sales-demo/pi-natives";
-import { buildContainmentFence } from "@f5-sales-demo/xcsh/sandbox/containment";
+import { buildContainmentFence } from "../src/sandbox/containment";
 
 /**
  * The fence has to hold against a path that changes while it is being checked.

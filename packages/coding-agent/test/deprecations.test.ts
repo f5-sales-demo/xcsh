@@ -4,7 +4,7 @@ import {
 	isDisallowedCliCommand,
 	renderDeprecationGuardrails,
 	XCSH_NATIVE_API_GUIDANCE,
-} from "@f5-sales-demo/xcsh/deprecations";
+} from "../src/deprecations";
 
 describe("getDeprecatedClis", () => {
 	test("includes vesctl from branding data", () => {

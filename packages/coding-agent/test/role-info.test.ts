@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { getRoleInfo } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+import { getRoleInfo } from "../src/config/model-registry";
+import { Settings } from "../src/config/settings";
 
 describe("getRoleInfo", () => {
 	test("returns built-in role info", () => {

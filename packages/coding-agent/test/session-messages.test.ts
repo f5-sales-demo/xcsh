@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { Message } from "@f5-sales-demo/pi-ai";
 import { inferCopilotInitiator } from "@f5-sales-demo/pi-ai/providers/github-copilot-headers";
-import { convertToLlm } from "@f5-sales-demo/xcsh/session/messages";
+import { convertToLlm } from "../src/session/messages";
 
 function expectAttribution(message: Message | undefined, expected: "user" | "agent" | undefined): void {
 	expect(message).toBeDefined();

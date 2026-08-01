@@ -4,11 +4,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { createAgentSession, type ExtensionFactory } from "@f5-sales-demo/xcsh/sdk";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { ModelRegistry } from "../src/config/model-registry";
+import { Settings } from "../src/config/settings";
+import { createAgentSession, type ExtensionFactory } from "../src/sdk";
+import { AuthStorage } from "../src/session/auth-storage";
+import { SessionManager } from "../src/session/session-manager";
 
 describe("createAgentSession deferred model pattern resolution", () => {
 	let tempDir: string;

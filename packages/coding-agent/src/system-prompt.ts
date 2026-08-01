@@ -34,6 +34,8 @@ import workspaceBoundaryTemplate from "./prompts/system/workspace-boundary.md" w
 const DEPRECATION_GUARDRAILS_MARKER = "%%DEPRECATION_GUARDRAILS%%";
 const WORKSPACE_BOUNDARY_MARKER = "%%WORKSPACE_BOUNDARY%%";
 const START_FOLDER_MARKER = "%%START_FOLDER%%";
+/** Baseline registry used only when prompt construction runs without a concrete tool map. */
+const DEFAULT_SYSTEM_PROMPT_TOOL_NAMES = ["read", "bash", "python", "edit", "write"] as const;
 
 let _buildMeta: { version: string; repoSlug: string } | null = null;
 
@@ -771,8 +773,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 			// Tools map provided
 			toolNames = Array.from(tools.keys());
 		} else {
-			// Use defaults
-			toolNames = ["read", "bash", "python", "edit", "write"]; // TODO: Why?
+			toolNames = [...DEFAULT_SYSTEM_PROMPT_TOOL_NAMES];
 		}
 	}
 

@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { BashTool } from "@f5-sales-demo/xcsh/tools/bash";
+import { Settings } from "../src/config/settings";
+import type { ToolSession } from "../src/tools";
+import { BashTool } from "../src/tools/bash";
 
 /**
  * Can the model move the boundary it is inside?

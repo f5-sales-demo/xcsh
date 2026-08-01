@@ -4,8 +4,8 @@ import * as path from "node:path";
 import type { RenderResultOptions } from "@f5-sales-demo/pi-agent-core";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { ImageProtocol, TERMINAL } from "@f5-sales-demo/pi-tui";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import { bashToolRenderer } from "@f5-sales-demo/xcsh/tools/bash";
+import { getThemeByName } from "../../src/modes/theme/theme";
+import { bashToolRenderer } from "../../src/tools/bash";
 
 type MutableTerminalInfo = {
 	imageProtocol: ImageProtocol | null;
@@ -77,7 +77,7 @@ describe("bashToolRenderer", () => {
 			{ content: [{ type: "text", text: "" }], details: { timeoutSeconds: 120 }, isError: false },
 			{ expanded: true, isPartial: false, renderContext: { timeout: 1200 } },
 			uiTheme,
-			{ command: "python3 scripts/vim-edit-benchmark.py", timeout: 1200 },
+			{ command: "python3 scripts/long-running-task.py", timeout: 1200 },
 		);
 		const rendered = sanitizeText(component.render(120).join("\n"));
 		expect(rendered).toContain("Timeout: 120s");

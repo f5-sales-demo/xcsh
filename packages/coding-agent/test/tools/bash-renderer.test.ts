@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { ImageProtocol, TERMINAL } from "@f5-sales-demo/pi-tui";
-import { bashToolRenderer } from "@f5-sales-demo/xcsh/tools/bash";
 import { _resetSettingsForTest, Settings } from "../../src/config/settings";
 import { SETTINGS_SCHEMA } from "../../src/config/settings-schema";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import { bashToolRenderer } from "../../src/tools/bash";
 
 function stripAnsi(str: string): string {
 	return str.replace(/\x1b\[[0-9;]*m/g, "");

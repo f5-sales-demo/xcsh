@@ -4,10 +4,10 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { createAgentSession, type ExtensionFactory } from "@f5-sales-demo/xcsh/sdk";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 import { Type } from "@sinclair/typebox";
+import { Settings } from "../src/config/settings";
+import { createAgentSession, type ExtensionFactory } from "../src/sdk";
+import { SessionManager } from "../src/session/session-manager";
 
 const toolActivationExtension: ExtensionFactory = pi => {
 	pi.registerTool({

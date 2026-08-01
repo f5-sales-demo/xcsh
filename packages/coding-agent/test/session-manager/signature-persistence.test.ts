@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import { getBlobsDir, TempDir } from "@f5-sales-demo/pi-utils";
-import { SessionManager, type SessionMessageEntry } from "@f5-sales-demo/xcsh/session/session-manager";
+import { SessionManager, type SessionMessageEntry } from "../../src/session/session-manager";
 
 function isAssistantSessionEntry(entry: unknown): entry is SessionMessageEntry & { message: AssistantMessage } {
 	return (

@@ -9,8 +9,8 @@ import {
 	resolveModelFromString,
 	resolveModelOverride,
 	resolveModelRoleValue,
-} from "@f5-sales-demo/xcsh/config/model-resolver";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
+} from "../src/config/model-resolver";
+import { Settings } from "../src/config/settings";
 
 // Mock models for testing
 const mockModels: Model<"anthropic-messages">[] = [

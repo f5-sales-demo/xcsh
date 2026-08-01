@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test, vi } from "bun:test";
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import { Container, Spacer } from "@f5-sales-demo/pi-tui";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { InteractiveModeContext } from "@f5-sales-demo/xcsh/modes/types";
-import { UiHelpers } from "@f5-sales-demo/xcsh/modes/utils/ui-helpers";
-import type { SessionContext } from "@f5-sales-demo/xcsh/session/session-manager";
+import { _resetSettingsForTest, Settings } from "../../../src/config/settings";
+import { initTheme } from "../../../src/modes/theme/theme";
+import type { InteractiveModeContext } from "../../../src/modes/types";
+import { UiHelpers } from "../../../src/modes/utils/ui-helpers";
+import type { SessionContext } from "../../../src/session/session-manager";
 
 function baseCtx(): InteractiveModeContext {
 	return {
