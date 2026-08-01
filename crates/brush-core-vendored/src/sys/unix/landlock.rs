@@ -169,9 +169,14 @@ pub fn availability() -> Availability {
 	})
 }
 
-/// The rights granted for reading a subtree.
-const fn read_rights() -> u64 {
-	ACCESS_FS_READ_FILE | ACCESS_FS_READ_DIR
+/// The right granted for reading file contents in a subtree.
+const fn read_file_rights() -> u64 {
+	ACCESS_FS_READ_FILE
+}
+
+/// The right granted for reading directory entries in a subtree.
+const fn enumerate_rights() -> u64 {
+	ACCESS_FS_READ_DIR
 }
 
 /// The rights granted for writing a subtree, at the given ABI.
@@ -202,7 +207,7 @@ const fn write_rights(abi: u32) -> u64 {
 /// ABI rather than written out.
 #[must_use]
 pub const fn handled_rights(abi: u32) -> u64 {
-	read_rights() | write_rights(abi)
+	read_file_rights() | enumerate_rights() | write_rights(abi)
 }
 
 /// Whether truncation is governed at this ABI.
@@ -317,7 +322,10 @@ pub fn build_ruleset(plan: &GrantPlan, abi: u32, creatable: &[PathBuf]) -> io::R
 	for (path, rights) in &plan.grants {
 		let mut allowed = 0_u64;
 		if rights.read {
-			allowed |= read_rights();
+			allowed |= read_file_rights();
+		}
+		if rights.enumerate {
+			allowed |= enumerate_rights();
 		}
 		if rights.write {
 			allowed |= write_rights(abi);

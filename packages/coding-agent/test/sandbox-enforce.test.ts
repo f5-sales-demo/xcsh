@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { ContainmentFence } from "../src/sandbox/containment";
+import { buildContainmentFence, type ContainmentFence } from "../src/sandbox/containment";
 import { evaluateToolCall } from "../src/sandbox/enforce";
 import { resolveSessionFence } from "../src/sandbox/session-fence";
 
@@ -33,6 +33,7 @@ function makeFence(): ContainmentFence {
 			"/work", // the container: every other tenant under it is unreachable
 			os.homedir(), // ~/.ssh, ~/Documents, another checkout — the real fence denies all of home
 		],
+		denyEnumerate: [],
 	};
 }
 
@@ -83,6 +84,30 @@ describe("evaluateToolCall", () => {
 		// of the asymmetries #2624 removes — a fenced `bash` could already `grep /etc`.
 		expect(check("ast_grep", { path: "/etc" }).block).toBe(false);
 		expect(check("ast_grep", { path: "/work/custB" }).block).toBe(true);
+	});
+
+	it("blocks parent enumeration without blocking a named sibling file", () => {
+		const parent = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-enumerate-")));
+		const workspace = path.join(parent, "example-a");
+		const sibling = path.join(parent, "example-b");
+		fs.mkdirSync(workspace);
+		fs.mkdirSync(sibling);
+		fs.symlinkSync("..", path.join(workspace, "parent-link"));
+		const namedFile = path.join(sibling, "context.md");
+		fs.writeFileSync(namedFile, "context");
+		try {
+			const fence = buildContainmentFence({ workspace, home: parent });
+			const evaluate = (toolName: string, input: Record<string, unknown>) =>
+				evaluateToolCall({ toolName, input, cwd: workspace, fence });
+
+			expect(evaluate("read", { file_path: parent }).block).toBe(true);
+			expect(evaluate("read", { file_path: path.join(workspace, "parent-link") }).block).toBe(true);
+			expect(evaluate("read", { file_path: namedFile }).block).toBe(false);
+			expect(evaluate("grep", { pattern: "context", path: parent }).block).toBe(true);
+			expect(evaluate("ast_edit", { path: parent }).block).toBe(true);
+		} finally {
+			fs.rmSync(parent, { recursive: true, force: true });
+		}
 	});
 
 	it("find: pattern base escaping the tree is blocked; in-tree glob allowed", () => {
@@ -413,6 +438,7 @@ describe("evaluateToolCall", () => {
 			allowReadOnly: ["/shared/ctx"],
 			allowWriteOnly: [],
 			deny: [],
+			denyEnumerate: [],
 		};
 		const inRoCwd = (command: string) =>
 			evaluateToolCall({ toolName: "bash", input: { command }, cwd: "/shared/ctx", fence: readOnlyCwd });
@@ -521,7 +547,13 @@ describe("evaluateToolCall", () => {
 	// undefined and `sandbox-guard` returns before evaluating. The equivalent here is a fence with no
 	// rules at all, which allows everything by construction.
 	it("allows everything under a fence with no rules", () => {
-		const open: ContainmentFence = { allow: [], allowReadOnly: [], allowWriteOnly: [], deny: [] };
+		const open: ContainmentFence = {
+			allow: [],
+			allowReadOnly: [],
+			allowWriteOnly: [],
+			deny: [],
+			denyEnumerate: [],
+		};
 		expect(check("read", { file_path: "/etc/passwd" }, open).block).toBe(false);
 		expect(check("bash", { command: "cat ../custB/x" }, open).block).toBe(false);
 	});
@@ -588,13 +620,12 @@ describe("evaluateToolCall with a symlinked working directory (#2312)", () => {
 		expect(checkAt(cwd, { path: "brand-new.ts" }, "write").block).toBe(false);
 	});
 
-	it("still blocks genuinely out-of-tree paths from a symlinked cwd", () => {
+	it("still blocks parent enumeration from a symlinked cwd", () => {
 		const cwd = symlinkedCwd();
-		// A sibling of the symlinked cwd: the ancestor walk denies the container they share. `/etc/passwd`
-		// used to serve here and cannot any more — it is permitted now (#2624), and a customer tree is the
-		// thing this test is actually about.
-		expect(checkAt(cwd, { path: "../elsewhere/secret.json" }).block).toBe(true);
-		// `~/.ssh` used to serve here; #2637 stopped denying it. The sibling above is the case that matters.
+		const parent = path.dirname(fs.realpathSync(cwd));
+		expect(checkAt(cwd, { path: parent }).block).toBe(true);
+		// The deny is exact and does not revoke operator authority over a named child.
+		expect(checkAt(cwd, { path: "../elsewhere/secret.json" }).block).toBe(false);
 	});
 });
 

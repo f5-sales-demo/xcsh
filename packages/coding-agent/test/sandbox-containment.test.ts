@@ -42,21 +42,23 @@ function realTmp(suffix: string): string {
 }
 
 describe("buildContainmentFence", () => {
-	it("denies the home tree and re-allows the workspace inside it", () => {
+	it("denies parent enumeration while preserving named access", () => {
 		const home = realTmp("home");
 		const workspace = path.join(home, "GIT", "custA");
 		fs.mkdirSync(workspace, { recursive: true });
 		const fence = buildContainmentFence({ workspace, home });
 
-		// Home is not denied (#2637). What is denied is the container the checkouts sit in, which is what
-		// makes the sibling unreachable — the same protection, one level narrower.
+		// Home and the shared container remain usable by name (#2637). Only the scanning step is refused.
 		expect(fence.deny).not.toContain(home);
-		expect(fence.deny).toContain(path.join(home, "GIT"));
+		expect(fence.deny).not.toContain(path.join(home, "GIT"));
+		expect(fence.denyEnumerate).toContain(path.join(home, "GIT"));
 		expect(fence.allow).toContain(workspace);
-		// A sibling checkout under the same home is the cross-customer case this exists for.
-		expect(fenceVerdict(fence, path.join(home, "GIT", "custB", "secret"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(home, "GIT"), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(home, "GIT", "custB", "secret"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(home, "GIT", "custB", "secret"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
+		expect(fenceVerdict(fence, workspace, "enumerate")).toBe("allow");
 	});
 
 	it("leaves everything outside home alone — nothing operational is restricted", () => {
@@ -70,6 +72,21 @@ describe("buildContainmentFence", () => {
 		}
 		// The OS temp dir is not customer data and must stay usable for both directions.
 		expect(fenceVerdict(fence, path.join(fs.realpathSync(os.tmpdir()), "scratch"), "write")).toBe("allow");
+	});
+
+	it("lets an explicit read grant restore parent enumeration", () => {
+		const home = realTmp("enumeration-override");
+		const parent = path.join(home, "customers");
+		const workspace = path.join(parent, "example-a");
+		fs.mkdirSync(workspace, { recursive: true });
+
+		const defaultFence = buildContainmentFence({ workspace, home });
+		const readGranted = buildContainmentFence({ workspace, home, readOnlyRoots: [parent] });
+		const writeGranted = buildContainmentFence({ workspace, home, writeOnlyRoots: [parent] });
+
+		expect(fenceVerdict(defaultFence, parent, "enumerate")).toBe("deny");
+		expect(fenceVerdict(readGranted, parent, "enumerate")).toBe("allow");
+		expect(fenceVerdict(writeGranted, parent, "enumerate")).toBe("deny");
 	});
 
 	it("re-allows package caches so toolchains keep working", () => {
@@ -153,7 +170,7 @@ describe("buildContainmentFence", () => {
 
 		expect(fence.allow).toContain(workspace);
 		expect(fence.allow).not.toContain(link);
-		for (const root of [...fence.allow, ...fence.allowReadOnly, ...fence.deny]) {
+		for (const root of [...fence.allow, ...fence.allowReadOnly, ...fence.deny, ...fence.denyEnumerate]) {
 			expect(path.isAbsolute(root)).toBe(true);
 			// A root that exists must already be its own real path. One that does not yet exist (an
 			// absent cache dir) has nothing to resolve, and is emitted so it can be created later.
@@ -241,19 +258,18 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		expect(fence.deny).not.toContain(home);
 	});
 
-	it("still refuses the session folder's sibling and its container", () => {
+	it("refuses scanning the session folder's parent without refusing a named sibling", () => {
 		const { home, container, workspace, sibling } = customerSession("sibling");
 		const fence = buildContainmentFence({ workspace, home });
 
-		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "read")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "write")).toBe("deny");
-		expect(fence.deny).toContain(container);
+		expect(fenceVerdict(fence, container, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "write")).toBe("allow");
+		expect(fence.denyEnumerate).toContain(container);
 		expect(fenceVerdict(fence, path.join(workspace, "mine.md"), "write")).toBe("allow");
 	});
 
-	// The v19.100.1 regression: with `<container>/<tenant>/repo`, denying only the immediate parent left
-	// every OTHER tenant reachable. Stopping the walk at home must not bring that back.
-	it("still refuses other tenants when the workspace is nested deeper", () => {
+	it("keeps the enumeration deny exact when the workspace is nested deeper", () => {
 		const home = realTmp("nested");
 		const container = path.join(home, "MEDDPICC");
 		const workspace = path.join(container, "CUSTOMER-A", "repo");
@@ -262,19 +278,18 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 
 		const fence = buildContainmentFence({ workspace, home });
 
-		expect(fenceVerdict(fence, path.join(otherTenant, "secret.env"), "read")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(container, "CUSTOMER-A", "sibling-of-repo"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.dirname(workspace), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(otherTenant, "secret.env"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(container, "CUSTOMER-A", "sibling-of-repo"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(workspace, "mine.md"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(home, "git", "STYLE_GUIDE.md"), "read")).toBe("allow");
 	});
 
 	/**
-	 * A session whose folder IS home, or a direct child of it, fences nothing above itself.
+	 * A session whose folder is a direct child of home protects the home listing, not home contents.
 	 *
-	 * Asserted rather than left to be discovered, because it is the deliberate consequence of not denying
-	 * home: the siblings live in home, so there is no arrangement of rules that reads all of home and
-	 * refuses a sibling inside it. If the operator chooses to work there, that is their filesystem to lay
-	 * out — and a test that pretended otherwise would be claiming a protection that does not exist.
+	 * The sibling remains reachable by name because the operator's home is theirs. What the session cannot
+	 * do accidentally is list home and discover which sibling names exist.
 	 */
 	it("does not fence home when the session folder sits directly in it", () => {
 		const home = realTmp("inhome");
@@ -288,6 +303,7 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		const fence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
 
 		expect(fence.deny).not.toContain(home);
+		expect(fenceVerdict(fence, home, "enumerate")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "read")).toBe("allow");
 		// The cross-SESSION surfaces are still closed, because those are the agent's own state rather
 		// than the operator's layout.
@@ -556,10 +572,7 @@ describe("buildContainmentFence — review findings", () => {
 		expect(fenceVerdict(fence, path.join(writable, "x"), "read")).toBe("deny");
 	});
 
-	it("denies the workspace's siblings even when the workspace is outside home", () => {
-		// Verified allow/allow before the fix: with /work/customer-a as the workspace, /work/customer-b
-		// matched nothing and was readable AND writable. A fleet keeping customer folders outside the
-		// home tree got no containment at all.
+	it("denies sibling discovery even when the workspace is outside home", () => {
 		const base = realTmp("work");
 		const a = path.join(base, "customer-a");
 		const b = path.join(base, "customer-b");
@@ -567,8 +580,9 @@ describe("buildContainmentFence — review findings", () => {
 		fs.mkdirSync(b);
 		const fence = buildContainmentFence({ workspace: a, home: path.join(base, "unrelated-home") });
 
-		expect(fenceVerdict(fence, path.join(b, "secret"), "read")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(b, "planted"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, base, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(b, "secret"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(b, "planted"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(a, "own.md"), "write")).toBe("allow");
 	});
 
@@ -778,7 +792,7 @@ describe("buildContainmentFence — review findings", () => {
 
 	// The grants above must not have widened anything else. This is the property that makes the fence
 	// worth having at all, so it is asserted beside the change that could break it.
-	it("still isolates customer workspaces and private keys after the CLI grants", () => {
+	it("keeps discovery and cross-session isolation after the CLI grants", () => {
 		const home = realTmp("stillhome");
 		const workspace = path.join(home, "GIT", "custA");
 		const sessions = path.join(home, ".xcsh", "agent", "sessions");
@@ -786,15 +800,11 @@ describe("buildContainmentFence — review findings", () => {
 		fs.mkdirSync(sessions, { recursive: true });
 		const fence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
 
-		// The two things left inside home since #2637, and the only two this fence is for: another
-		// customer's checkout, and another session's transcript. Both are inadvertent-wandering surfaces.
-		for (const denied of [
-			"GIT/custB/secrets.tf", // the sibling checkout this fence exists for
-			".xcsh/agent/sessions/other.jsonl", // another session's transcript
-		]) {
-			expect(fenceVerdict(fence, path.join(home, denied), "read")).toBe("deny");
-			expect(fenceVerdict(fence, path.join(home, denied), "write")).toBe("deny");
-		}
+		expect(fenceVerdict(fence, path.join(home, "GIT"), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(home, "GIT/custB/secrets.tf"), "read")).toBe("allow");
+		const otherSession = path.join(home, ".xcsh/agent/sessions/other.jsonl");
+		expect(fenceVerdict(fence, otherSession, "read")).toBe("deny");
+		expect(fenceVerdict(fence, otherSession, "write")).toBe("deny");
 		// The operator's own private files are not withheld from them. Asserted rather than left implicit,
 		// so anyone auditing what this fence protects sees the choice.
 		for (const own of [".ssh/id_ed25519", ".gnupg/secring.gpg", "Documents/contract.pdf"]) {
@@ -915,20 +925,8 @@ describe("containmentStatus", () => {
 	});
 });
 
-/**
- * The parent deny was one level deep, and that is not where tenants necessarily sit.
- *
- * `buildContainmentFence` denied home and the workspace's *immediate* parent. With a layout of
- * `<container>/<tenant>/repo` the immediate parent is the tenant, so every OTHER tenant matched no rule
- * and the fence allowed it — read and write. That went unnoticed because the command-text scan is
- * deny-by-default and refused those paths on the way in, so the composite looked correct while the fence
- * alone was not. Removing that scan for OS-confined shells (#2582) is what exposed it.
- *
- * Found by adversarial review of #2582, reproduced here before fixing: `<container>/globex/repo/secrets.tf`
- * was `read=allow write=allow`.
- */
-describe("buildContainmentFence — isolation does not depend on how deep the workspace sits", () => {
-	it("denies a cousin tenant, not just an immediate sibling", () => {
+describe("buildContainmentFence — enumeration isolation is exact", () => {
+	it("does not turn the courtesy into a named-path restriction", () => {
 		const home = realTmp("cousinhome");
 		const container = realTmp("tenants");
 		const workspace = path.join(container, "example-corp", "repo");
@@ -936,11 +934,12 @@ describe("buildContainmentFence — isolation does not depend on how deep the wo
 		fs.mkdirSync(path.join(container, "globex", "repo"), { recursive: true });
 		const fence = buildContainmentFence({ workspace, home });
 
-		// The case that exists for this fence, one level deeper than the original rule reached.
+		expect(fenceVerdict(fence, path.dirname(workspace), "enumerate")).toBe("deny");
+		// Known paths stay under the operator's normal authority.
 		for (const access of ["read", "write"] as const) {
-			expect(fenceVerdict(fence, path.join(container, "globex", "repo", "secrets.tf"), access)).toBe("deny");
-			expect(fenceVerdict(fence, path.join(container, "example-corp", "other-repo", "x"), access)).toBe("deny");
-			expect(fenceVerdict(fence, path.join(container, "loose-file.txt"), access)).toBe("deny");
+			expect(fenceVerdict(fence, path.join(container, "globex", "repo", "secrets.tf"), access)).toBe("allow");
+			expect(fenceVerdict(fence, path.join(container, "example-corp", "other-repo", "x"), access)).toBe("allow");
+			expect(fenceVerdict(fence, path.join(container, "loose-file.txt"), access)).toBe("allow");
 		}
 		// …and the workspace itself still works, or the fence is useless.
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "read")).toBe("allow");
@@ -990,8 +989,9 @@ describe("buildContainmentFence — the ancestor walk never denies a temp root",
 				expect(root).not.toBe(realTmpRoot);
 			}
 			expect(fenceVerdict(fence, path.join(realTmpRoot, "other-session.txt"), "read")).toBe("allow");
-			// The workspace's own container is still denied, which is the point of the walk.
-			expect(fenceVerdict(fence, path.join(realContainer, "sibling", "x"), "read")).toBe("deny");
+			// The workspace's own container cannot be scanned, but a named child is still reachable.
+			expect(fenceVerdict(fence, realContainer, "enumerate")).toBe("deny");
+			expect(fenceVerdict(fence, path.join(realContainer, "sibling", "x"), "read")).toBe("allow");
 			expect(fenceVerdict(fence, path.join(fs.realpathSync(workspace), "mine.txt"), "write")).toBe("allow");
 		} finally {
 			fs.rmSync(container, { recursive: true, force: true });

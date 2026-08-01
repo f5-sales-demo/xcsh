@@ -45,6 +45,7 @@
  * guessing — which also means this file no longer needs to know about system roots, temp directories or
  * which backend is running. The fence answers all of that, and it is the same answer the kernel gives.
  */
+import * as fs from "node:fs";
 import * as path from "node:path";
 import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
 import { lexShellCommand, type ShellSimpleCommand } from "../tools/shell-lex";
@@ -668,6 +669,23 @@ function evaluateSearchTool(check: ToolCallCheck, spec: SearchSpec): ToolCallDec
 	for (const basePath of searchBases(raw, spec.base)) {
 		const resolved = resolveToCwd(basePath, cwd);
 		if (!permits(check, resolved, spec.access)) return deny(cwd, resolved, spec.access);
+		if (!permits(check, resolved, "enumerate")) return deny(cwd, resolved, "enumerate");
+	}
+	return ALLOW;
+}
+
+/** `read` lists a directory when its path resolves to one; named file reads do not enumerate it. */
+function evaluateReadTool(check: ToolCallCheck): ToolCallDecision {
+	const raw = firstString(check.input, ["file_path", "path"]);
+	if (!raw) return ALLOW;
+	const resolved = resolveToCwd(raw, check.cwd);
+	if (!permits(check, resolved, "read")) return deny(check.cwd, resolved, "read");
+	try {
+		if (fs.statSync(resolved).isDirectory() && !permits(check, resolved, "enumerate")) {
+			return deny(check.cwd, resolved, "enumerate");
+		}
+	} catch {
+		// The tool owns its normal not-found/error contract; the fence has already decided the read path.
 	}
 	return ALLOW;
 }
@@ -683,6 +701,7 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	if (codeFields) return evaluateCodeTool(check, codeFields, toolName === "bash");
 
 	if (toolName === "edit") return evaluateEdit(check);
+	if (toolName === "read") return evaluateReadTool(check);
 	if (toolName === "generate_image") return evaluateGenerateImage(check);
 	if (toolName === "puppeteer") return evaluatePuppeteer(check);
 

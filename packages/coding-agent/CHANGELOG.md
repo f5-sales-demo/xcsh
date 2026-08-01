@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Prevented sandbox sessions from enumerating the session root's parent while preserving named operator access and explicit read-grant overrides ([#2725](https://github.com/f5-sales-demo/xcsh/issues/2725))
+
 ## [20.0.0] - 2026-08-01
 
 ### Breaking Changes

@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getSessionsDir } from "@f5-sales-demo/pi-utils";
 import { _resetSettingsForTest, Settings, settings } from "../src/config/settings";
 import sandboxGuard from "../src/extensibility/extensions/bundled/sandbox-guard";
 
@@ -63,10 +64,10 @@ describe("sandbox-guard bundled extension", () => {
 		expect(typeof captureHandler()).toBe("function");
 	});
 
-	it("blocks an out-of-tree read when enabled", async () => {
+	it("blocks enumeration of the session root's parent when enabled", async () => {
 		await initSandbox(true);
 		const handler = captureHandler()!;
-		expect(await call(handler, "read", { file_path: path.join(OTHER, "secret") })).toMatchObject({ block: true });
+		expect(await call(handler, "read", { file_path: container })).toMatchObject({ block: true });
 	});
 
 	it("allows an in-tree read when enabled", async () => {
@@ -81,19 +82,18 @@ describe("sandbox-guard bundled extension", () => {
 		expect(await call(handler, "read", { file_path: path.join(OTHER, "secret") })).toBeUndefined();
 	});
 
-	it("honors a MID-SESSION allowRead grant (settings.override busts the fence cache)", async () => {
+	it("honors a MID-SESSION parent-enumeration grant (settings.override busts the fence cache)", async () => {
 		await initSandbox(true);
 		const handler = captureHandler()!;
-		const secret = path.join(OTHER, "secret");
-		// First call caches the fence; the path is out-of-tree → blocked.
-		expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
-		// The user grants custB at runtime (e.g. the Office pane picks a context folder). A cwd-only
-		// cache would keep blocking; the allow-list-keyed cache rebuilds.
-		settings.override("sandbox.allowRead", [OTHER]);
-		expect(await call(handler, "read", { file_path: secret })).toBeUndefined();
+		// First call caches the fence; the parent cannot be enumerated.
+		expect(await call(handler, "read", { file_path: container })).toMatchObject({ block: true });
+		// The user grants the parent at runtime. A cwd-only cache would keep blocking; the
+		// allow-list-keyed cache rebuilds and restores enumeration.
+		settings.override("sandbox.allowRead", [container]);
+		expect(await call(handler, "read", { file_path: container })).toBeUndefined();
 		// Revoking it re-blocks (cache tracks the current allow-list, not a one-way widen).
 		settings.override("sandbox.allowRead", []);
-		expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
+		expect(await call(handler, "read", { file_path: container })).toMatchObject({ block: true });
 	});
 
 	/**
@@ -124,17 +124,27 @@ describe("sandbox-guard bundled extension", () => {
 			expect(await call(handler, "write", { file_path: "/tmp/xcsh-guard-probe.txt" })).toBeUndefined();
 		});
 
-		// And the coverage that must not move: a neighbouring tenant, through every interface.
-		it("refuses the neighbouring tenant through bash, python and the file tools", async () => {
+		it("preserves named sibling reads and writes through every interface", async () => {
 			await initSandbox(true);
 			const handler = captureHandler()!;
 			const secret = path.join(OTHER, "secret");
+			expect(await call(handler, "bash", { command: `cat ${secret}` })).toBeUndefined();
+			expect(await call(handler, "python", { code: `open("${secret}").read()` })).toBeUndefined();
+			expect(await call(handler, "read", { file_path: secret })).toBeUndefined();
+			expect(await call(handler, "write", { file_path: path.join(OTHER, "planted") })).toBeUndefined();
+		});
+
+		// Cross-session state remains a real deny, independent of the discovery-only sibling courtesy.
+		it("refuses another session's state through bash, python and the file tools", async () => {
+			await initSandbox(true);
+			const handler = captureHandler()!;
+			const secret = path.join(getSessionsDir(), "other-session.jsonl");
 			expect(await call(handler, "bash", { command: `cat ${secret}` })).toMatchObject({ block: true });
 			expect(await call(handler, "python", { code: `open("${secret}").read()` })).toMatchObject({ block: true });
 			expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
-			expect(await call(handler, "write", { file_path: path.join(OTHER, "planted") })).toMatchObject({
-				block: true,
-			});
+			expect(
+				await call(handler, "write", { file_path: path.join(getSessionsDir(), "planted.jsonl") }),
+			).toMatchObject({ block: true });
 		});
 	});
 });

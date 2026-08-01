@@ -6,8 +6,9 @@
 //! written cannot matter.
 //!
 //! It is deliberately permissive. Anything matched by no root is outside the fence and allowed, so
-//! `/usr`, `/tmp`, package caches, the network and process execution are untouched. The single thing
-//! it prevents is reaching into another customer's checkout or the operator's private files.
+//! `/usr`, `/tmp`, package caches, the network and process execution are untouched. Cross-tenant
+//! isolation removes accidental parent enumeration while preserving named operator access; explicit
+//! data-root and cross-session state denies remain recursive.
 //!
 //! The fence is per-invocation and absent by default: only the model's `bash` tool supplies one.
 //! Host-driven shell use — credential helpers, the interactive `xcsh shell`, snapshot sourcing —
@@ -108,6 +109,8 @@ pub enum FenceAccess {
 	Read,
 	/// Writing or creating a path.
 	Write,
+	/// Reading the entries of one directory.
+	Enumerate,
 }
 
 /// Canonical roots describing what the shell may reach.
@@ -121,6 +124,8 @@ pub struct ContainmentFence {
 	pub allow_write_only: Vec<PathBuf>,
 	/// Roots denied in both directions, winning over any allow they sit inside.
 	pub deny: Vec<PathBuf>,
+	/// Exact directories whose entries may not be enumerated. Descendants remain reachable by name.
+	pub deny_enumerate: Vec<PathBuf>,
 }
 
 /// How specific a matching root is. Deeper wins, so a nested rule beats the root it sits inside.
@@ -200,9 +205,20 @@ impl ContainmentFence {
 			&& self.allow_read_only.is_empty()
 			&& self.allow_write_only.is_empty()
 			&& self.deny.is_empty()
+			&& self.deny_enumerate.is_empty()
 		{
 			return true;
 		}
+
+		if access == FenceAccess::Enumerate && self.deny_enumerate.iter().any(|root| root == resolved) {
+			return false;
+		}
+
+		let ordinary_access = if access == FenceAccess::Enumerate {
+			FenceAccess::Read
+		} else {
+			access
+		};
 
 		let denied = deepest_match(&self.deny, resolved);
 		let read_only = deepest_match(&self.allow_read_only, resolved);
@@ -220,10 +236,10 @@ impl ContainmentFence {
 			return false;
 		}
 		if read_only == Some(deepest) {
-			return access == FenceAccess::Read;
+			return ordinary_access == FenceAccess::Read;
 		}
 		if write_only == Some(deepest) {
-			return access == FenceAccess::Write;
+			return ordinary_access == FenceAccess::Write;
 		}
 		true
 	}
@@ -256,10 +272,12 @@ impl DirLister for RealFs {
 /// Which directions a single grant covers.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct GrantRights {
-	/// The subtree may be read.
+	/// Files in the subtree may be read.
 	pub read:  bool,
 	/// The subtree may be written.
 	pub write: bool,
+	/// Directories in the subtree may be enumerated.
+	pub enumerate: bool,
 }
 
 /// What a fence root grants, ordered so the greater value wins when two roots name the same path.
@@ -281,8 +299,10 @@ impl RootKind {
 		match (self, access) {
 			(Self::Deny, _) => false,
 			(Self::Allow, _) => true,
-			(Self::ReadOnly, FenceAccess::Read) | (Self::WriteOnly, FenceAccess::Write) => true,
-			(Self::ReadOnly, FenceAccess::Write) | (Self::WriteOnly, FenceAccess::Read) => false,
+			(Self::ReadOnly, FenceAccess::Read | FenceAccess::Enumerate)
+			| (Self::WriteOnly, FenceAccess::Write) => true,
+			(Self::ReadOnly, FenceAccess::Write)
+			| (Self::WriteOnly, FenceAccess::Read | FenceAccess::Enumerate) => false,
 		}
 	}
 }
@@ -291,6 +311,7 @@ impl RootKind {
 #[derive(Debug, Default)]
 struct Node {
 	kind: Option<RootKind>,
+	deny_enumerate: bool,
 	kids: std::collections::BTreeMap<std::ffi::OsString, Node>,
 }
 
@@ -301,8 +322,9 @@ impl Node {
 	/// which is what keeps the rule count small and avoids enumerating directories needlessly.
 	fn subtree_differs(&self, inherited: bool, access: FenceAccess) -> bool {
 		self.kids.values().any(|kid| {
-			let here = kid.kind.map_or(inherited, |kind| kind.grants(access));
-			here != inherited || kid.subtree_differs(here, access)
+			let recursive = kid.kind.map_or(inherited, |kind| kind.grants(access));
+			let here = recursive && !(access == FenceAccess::Enumerate && kid.deny_enumerate);
+			here != inherited || kid.subtree_differs(recursive, access)
 		})
 	}
 }
@@ -342,6 +364,7 @@ impl GrantPlan {
 				&& match access {
 					FenceAccess::Read => rights.read,
 					FenceAccess::Write => rights.write,
+					FenceAccess::Enumerate => rights.enumerate,
 				}
 		})
 	}
@@ -355,7 +378,7 @@ impl ContainmentFence {
 	/// So the denied subtrees are subtracted by walking down to each one and granting its siblings at
 	/// every level, which is the only way to preserve "a path matched by nothing is allowed".
 	///
-	/// **Compiled once per direction and merged.** Doing both at once would let a read-only root split
+	/// **Compiled once per direction and merged.** Combining directions would let a read-only root split
 	/// the *read* plan, breaking `ls` of its parent for no reason — the directions are independent
 	/// because Landlock unions rights per rule.
 	///
@@ -373,7 +396,7 @@ impl ContainmentFence {
 		let mut split_dirs: Vec<PathBuf> = Vec::new();
 		let mut unenumerable: Vec<PathBuf> = Vec::new();
 
-		for access in [FenceAccess::Read, FenceAccess::Write] {
+		for access in [FenceAccess::Read, FenceAccess::Write, FenceAccess::Enumerate] {
 			let mut granted: Vec<PathBuf> = Vec::new();
 			walk_for_access(
 				&trie,
@@ -390,6 +413,7 @@ impl ContainmentFence {
 				match access {
 					FenceAccess::Read => rights.read = true,
 					FenceAccess::Write => rights.write = true,
+					FenceAccess::Enumerate => rights.enumerate = true,
 				}
 			}
 		}
@@ -420,6 +444,15 @@ impl ContainmentFence {
 				node.kind = Some(node.kind.map_or(kind, |existing| existing.max(kind)));
 			}
 		}
+		for path in &self.deny_enumerate {
+			let mut node = &mut root;
+			for component in path.components() {
+				if let Component::Normal(name) = component {
+					node = node.kids.entry(name.to_os_string()).or_default();
+				}
+			}
+			node.deny_enumerate = true;
+		}
 		root
 	}
 }
@@ -437,17 +470,18 @@ fn walk_for_access(
 	split_dirs: &mut Vec<PathBuf>,
 	unenumerable: &mut Vec<PathBuf>,
 ) {
-	let here = node.kind.map_or(inherited, |kind| kind.grants(access));
+	let recursive = node.kind.map_or(inherited, |kind| kind.grants(access));
+	let here = recursive && !(access == FenceAccess::Enumerate && node.deny_enumerate);
 
 	// Uniform subtree: one rule settles it, and no directory has to be read.
-	if !node.subtree_differs(here, access) {
+	if here == recursive && !node.subtree_differs(recursive, access) {
 		if here {
 			granted.push(path.to_path_buf());
 		}
 		return;
 	}
 
-	if here {
+	if recursive {
 		// Granted here but not everywhere below, so this directory cannot be granted as a subtree.
 		// Grant the children that are not mentioned by the fence, and record what that costs.
 		split_dirs.push(path.to_path_buf());
@@ -467,7 +501,7 @@ fn walk_for_access(
 		walk_for_access(
 			kid,
 			&path.join(name),
-			here,
+			recursive,
 			access,
 			lister,
 			granted,
@@ -535,6 +569,7 @@ impl ContainmentFence {
 			/// Existence and stat only, never contents or a directory listing.
 			Metadata(&'a PathBuf),
 			Deny(&'a PathBuf),
+			DenyEnumerate(&'a PathBuf),
 			Allow(&'a PathBuf),
 			ReadOnly(&'a PathBuf),
 			WriteOnly(&'a PathBuf),
@@ -543,6 +578,7 @@ impl ContainmentFence {
 		let mut rules: Vec<Rule<'_>> = Vec::new();
 		rules.extend(self.deny.iter().map(Rule::Deny));
 		rules.extend(self.deny.iter().map(Rule::Metadata));
+		rules.extend(self.deny_enumerate.iter().map(Rule::DenyEnumerate));
 		rules.extend(self.allow.iter().map(Rule::Allow));
 		rules.extend(self.allow_read_only.iter().map(Rule::ReadOnly));
 		rules.extend(self.allow_write_only.iter().map(Rule::WriteOnly));
@@ -555,6 +591,8 @@ impl ContainmentFence {
 			Rule::Deny(root) => (depth(root), 2),
 			// After the deny at the same depth, so it re-permits stat and nothing else.
 			Rule::Metadata(root) => (depth(root), 3),
+			// Exact enumeration denies win over a recursive allow at the same depth.
+			Rule::DenyEnumerate(root) => (depth(root), 4),
 		});
 
 		let mut profile = String::from("(version 1)\n(allow default)\n");
@@ -570,6 +608,12 @@ impl ContainmentFence {
 				// denied — so a sibling's name is still not discoverable, only that the parent exists.
 				Rule::Metadata(root) => profile.push_str(&format!(
 					"(allow file-read-metadata (subpath \"{}\"))\n",
+					 escape_for_profile(root)
+				)),
+				// A literal `file-read-data` denial prevents `readdir` on this directory but does not
+				// cover a named child. Traversal, metadata, and reads below a known child stay allowed.
+				Rule::DenyEnumerate(root) => profile.push_str(&format!(
+					"(deny file-read-data (literal \"{}\"))\n",
 					escape_for_profile(root)
 				)),
 				Rule::Allow(root) => profile.push_str(&format!(

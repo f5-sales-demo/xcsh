@@ -267,6 +267,7 @@ impl Spec {
 			let expansions = pattern.expand(
 				shell.working_dir(),
 				Some(&patterns::Pattern::accept_all_expand_filter),
+				Some(&patterns::Pattern::accept_all_expand_filter),
 				&patterns::FilenameExpansionOptions::default(),
 			)?;
 
@@ -1086,6 +1087,7 @@ async fn get_file_completions(
 		.expand(
 			shell.working_dir(),
 			Some(&path_filter),
+			Some(&patterns::Pattern::accept_all_expand_filter),
 			&patterns::FilenameExpansionOptions::default(),
 		)
 		.unwrap_or_default()

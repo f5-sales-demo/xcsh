@@ -24,6 +24,7 @@ export function fenceForNative(fence: ContainmentFence | undefined) {
 		allowReadOnly: [...fence.allowReadOnly],
 		allowWriteOnly: [...fence.allowWriteOnly],
 		deny: [...fence.deny],
+		denyEnumerate: [...fence.denyEnumerate],
 	};
 }
 

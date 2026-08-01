@@ -52,19 +52,21 @@ describe("resolveSessionFence", () => {
 		expect(resolveSessionFence(mine, reader({ "sandbox.enabled": false }))).toBeUndefined();
 	});
 
-	it("fails closed when the setting cannot be read", () => {
+	it("keeps parent discovery closed when the setting cannot be read", () => {
 		const { mine, theirs } = tenants("throw");
 		const fence = resolveSessionFence(mine, throwingReader);
 		expect(fence).toBeDefined();
-		expect(fenceVerdict(fence!, path.join(theirs, "x"), "read")).toBe("deny");
+		expect(fenceVerdict(fence!, path.dirname(mine), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence!, path.join(theirs, "x"), "read")).toBe("allow");
 	});
 
-	it("denies the neighbouring tenant while the workspace works", () => {
+	it("denies neighbour discovery while named paths and the workspace work", () => {
 		const { mine, theirs } = tenants("basic");
 		const fence = resolveSessionFence(mine, reader({}))!;
 		expect(fenceVerdict(fence, path.join(mine, "notes.md"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(mine, "out.ts"), "write")).toBe("allow");
-		expect(fenceVerdict(fence, path.join(theirs, "notes.md"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.dirname(mine), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(theirs, "notes.md"), "read")).toBe("allow");
 	});
 
 	// Allow-by-default is the posture now, so a path under no rule at all is reachable. That is the
@@ -89,12 +91,12 @@ describe("resolveSessionFence", () => {
 	// isolated Settings instance. A cwd-keyed cache would hand one session the other's boundary.
 	it("distinguishes same-cwd sessions whose settings differ", () => {
 		const { mine, shared } = tenants("samecwd");
-		const permissive = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
-		const strict = resolveSessionFence(mine, reader({}))!;
+		const readOnly = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
+		const ordinary = resolveSessionFence(mine, reader({}))!;
 
-		expect(fenceVerdict(permissive, path.join(shared, "file.md"), "read")).toBe("allow");
-		expect(fenceVerdict(strict, path.join(shared, "file.md"), "read")).toBe("deny");
-		expect(permissive).not.toBe(strict);
+		expect(fenceVerdict(readOnly, path.join(shared, "file.md"), "write")).toBe("deny");
+		expect(fenceVerdict(ordinary, path.join(shared, "file.md"), "write")).toBe("allow");
+		expect(readOnly).not.toBe(ordinary);
 	});
 
 	it("reuses the fence for an identical configuration", () => {
@@ -105,17 +107,19 @@ describe("resolveSessionFence", () => {
 	});
 
 	it("rebuilds when an allow-list is widened mid-session", () => {
-		const { mine, shared } = tenants("widen");
+		const { mine } = tenants("widen");
+		const parent = path.dirname(mine);
 		const before = resolveSessionFence(mine, reader({}))!;
-		const after = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
-		expect(fenceVerdict(before, path.join(shared, "x"), "read")).toBe("deny");
-		expect(fenceVerdict(after, path.join(shared, "x"), "read")).toBe("allow");
+		const after = resolveSessionFence(mine, reader({ "sandbox.allowRead": [parent] }))!;
+		expect(fenceVerdict(before, parent, "enumerate")).toBe("deny");
+		expect(fenceVerdict(after, parent, "enumerate")).toBe("allow");
 	});
 
 	// The bash tool passes its artifacts dir here rather than building a second fence of its own, which
 	// is what let the two disagree before. A different extras value must not be served from cache.
 	it("keys the cache on extra roots too", () => {
-		const { mine, shared: artifacts } = tenants("extras");
+		const { mine } = tenants("extras");
+		const artifacts = path.join(path.parse(mine).root, "srv", "xcsh-artifacts-test");
 		const without = resolveSessionFence(mine, reader({}))!;
 		const with_ = resolveSessionFence(mine, reader({}), { extraRoots: [artifacts] })!;
 		expect(without).not.toBe(with_);
