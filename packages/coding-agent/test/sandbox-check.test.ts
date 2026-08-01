@@ -2,43 +2,40 @@ import { expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import type { AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { $ } from "bun";
 import type { SandboxCheckReport } from "../src/cli/sandbox-check";
 import { Settings } from "../src/config/settings";
 import { _resetShellSessionsForTest } from "../src/exec/bash-executor";
 import { SANDBOX_OPERATOR_HOME_ENV, SANDBOX_SESSION_ROOT_ENV } from "../src/sandbox/session-fence";
 import type { ToolSession } from "../src/tools";
-import { BashTool } from "../src/tools/bash";
+import { BashTool, type BashToolDetails } from "../src/tools/bash";
 
 const cli = path.resolve(import.meta.dir, "../src/cli.ts");
+const sandboxCheckExecutable = process.env.XCSH_TEST_SANDBOX_CHECK_BINARY;
 
-function assertHealthyReport(report: SandboxCheckReport): void {
-	expect(["seatbelt", "landlock", "scanner-only"]).toContain(report.backend);
-	expect(report.summary.failed).toBe(0);
-	expect(report.checks).toHaveLength(10);
-	expect(report.checks).toContainEqual({ name: "structured tools share the boundary", status: "PASS" });
-	expect(report.checks).toContainEqual({ name: "cwd resets across tool calls", status: "PASS" });
-	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
-	if (report.osEnforced) {
-		expect(report.summary).toEqual({ passed: 10, failed: 0, skipped: 0 });
-		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
-		expect(report.checks).toContainEqual({ name: "synthetic other account cannot be entered", status: "PASS" });
-	}
+function sandboxCheckCommand(...flags: string[]): string {
+	const argv = sandboxCheckExecutable === undefined ? [process.execPath, cli] : [sandboxCheckExecutable];
+	return [...argv, "sandbox", "check", ...flags].map(value => JSON.stringify(value)).join(" ");
 }
 
-it("runs the standalone installed-process matrix and verifies fixture cleanup", async () => {
-	const result = await $`bun ${cli} sandbox check --json`.quiet().nothrow();
-	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
+async function runSandboxCheckProcess(
+	flags: string[],
+	env: Record<string, string | undefined> = process.env,
+): Promise<$.ShellOutput> {
+	return await $`${{ raw: sandboxCheckCommand(...flags) }}`.env(env).quiet().nothrow();
+}
 
-	expect(result.exitCode).toBe(0);
-	assertHealthyReport(report);
-}, 30_000);
+function resultText(result: AgentToolResult<BashToolDetails>): string {
+	return result.content
+		.filter((part): part is { type: "text"; text: string } => part.type === "text")
+		.map(part => part.text)
+		.join("")
+		.trim();
+}
 
-it("reports a healthy matrix when invoked inside the live bash profile", async () => {
-	const container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "sandbox-check-live-")));
-	const workspace = path.join(container, "workspace");
-	fs.mkdirSync(workspace);
-	const session = {
+function createSession(workspace: string): ToolSession {
+	return {
 		cwd: workspace,
 		hasUI: false,
 		hasEditTool: true,
@@ -50,22 +47,145 @@ it("reports a healthy matrix when invoked inside the live bash profile", async (
 		}),
 		getSessionId: () => "sandbox-check-nested-profile",
 	} as ToolSession;
-	const bash = new BashTool(session);
+}
 
+async function runInsideLiveProfile(workspace: string, attemptContextOverride = false): Promise<SandboxCheckReport> {
+	const bash = new BashTool(createSession(workspace));
+	const result = await bash.execute("sandbox-check-nested", {
+		command: sandboxCheckCommand("--json"),
+		cwd: fs.realpathSync(os.tmpdir()),
+		...(attemptContextOverride
+			? {
+					env: {
+						[SANDBOX_SESSION_ROOT_ENV]: path.join(workspace, "bogus-root"),
+						[SANDBOX_OPERATOR_HOME_ENV]: path.join(workspace, "bogus-home"),
+					},
+				}
+			: {}),
+	});
+	return JSON.parse(resultText(result)) as SandboxCheckReport;
+}
+
+function assertHealthyReport(report: SandboxCheckReport): void {
+	expect(["seatbelt", "landlock", "scanner-only"]).toContain(report.backend);
+	expect(report.summary.failed).toBe(0);
+	expect(report.summary.errors).toBe(0);
+	expect(report.checks).toHaveLength(10);
+	expect(report.checks).toContainEqual({ name: "structured tools share the boundary", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "cwd resets across tool calls", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
+	if (report.osEnforced) {
+		expect(report.summary).toEqual({ passed: 10, failed: 0, errors: 0, skipped: 0 });
+		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
+		expect(report.checks).toContainEqual({ name: "synthetic other account cannot be entered", status: "PASS" });
+	}
+}
+
+it("runs the standalone installed-process matrix and verifies fixture cleanup", async () => {
+	const result = await runSandboxCheckProcess(["--json"]);
+	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
+
+	expect(result.exitCode).toBe(0);
+	assertHealthyReport(report);
+}, 30_000);
+
+it("reports a healthy matrix when invoked inside the live bash profile", async () => {
+	const container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "sandbox-check-live-")));
+	const workspace = path.join(container, "workspace");
+	fs.mkdirSync(workspace);
 	try {
-		const result = await bash.execute("sandbox-check-nested", {
-			command: `${JSON.stringify(process.execPath)} ${JSON.stringify(cli)} sandbox check --json`,
-			cwd: fs.realpathSync(os.tmpdir()),
-		});
-		const output = result.content
-			.filter((part): part is { type: "text"; text: string } => part.type === "text")
-			.map(part => part.text)
-			.join("")
-			.trim();
-		const report = JSON.parse(output) as SandboxCheckReport;
-		assertHealthyReport(report);
+		assertHealthyReport(await runInsideLiveProfile(workspace));
 	} finally {
 		_resetShellSessionsForTest();
+		fs.rmSync(container, { recursive: true, force: true });
+	}
+}, 30_000);
+
+it("reports a healthy matrix for a live session rooted directly under operator home", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const fixturePaths: string[] = [];
+	const createFixture = (prefix: string): string => {
+		const fixture = fs.realpathSync(fs.mkdtempSync(path.join(home, prefix)));
+		fixturePaths.push(fixture);
+		return fixture;
+	};
+
+	try {
+		const workspace = createFixture(".xcsh-sandbox-check-home-child-");
+		const sibling = createFixture(".xcsh-sandbox-check-named-sibling-");
+		const configFixture = createFixture(".xcsh-sandbox-check-config-");
+		fs.writeFileSync(path.join(sibling, "named.txt"), "sibling\n");
+		const bash = new BashTool(createSession(workspace));
+
+		// The context variables are host-owned; model-supplied replacements must not move the probes.
+		assertHealthyReport(await runInsideLiveProfile(workspace, true));
+
+		await bash.execute("sandbox-check-workspace-capability", {
+			command: "printf own > own.txt && printf '%s\\n' ./* > /dev/null && find . -type f > /dev/null",
+		});
+		expect(fs.readFileSync(path.join(workspace, "own.txt"), "utf8")).toBe("own");
+
+		const siblingRead = await bash.execute("sandbox-check-sibling-capability", {
+			command: 'test "$(cat named.txt)" = sibling',
+			cwd: sibling,
+		});
+		expect(resultText(siblingRead)).toBe("(no output)");
+
+		await bash.execute("sandbox-check-config-capability", {
+			command: "printf operator > config",
+			cwd: configFixture,
+		});
+		expect(fs.readFileSync(path.join(configFixture, "config"), "utf8")).toBe("operator");
+
+		let parentEnumerationDenied = false;
+		try {
+			await bash.execute("sandbox-check-parent-enumeration", {
+				command: `ls ${JSON.stringify(home)} > /dev/null`,
+			});
+		} catch {
+			parentEnumerationDenied = true;
+		}
+		expect(parentEnumerationDenied).toBe(true);
+	} finally {
+		_resetShellSessionsForTest();
+		for (const fixture of fixturePaths) {
+			fs.rmSync(fixture, { recursive: true, force: true });
+			expect(fs.existsSync(fixture)).toBe(false);
+		}
+	}
+}, 30_000);
+
+it("distinguishes setup errors from sandbox failures and skips empty cleanup", async () => {
+	const container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "sandbox-check-setup-")));
+	const missingWorkspace = path.join(container, "missing-workspace");
+	const env = {
+		...process.env,
+		[SANDBOX_SESSION_ROOT_ENV]: missingWorkspace,
+		[SANDBOX_OPERATOR_HOME_ENV]: container,
+	};
+
+	try {
+		const jsonResult = await runSandboxCheckProcess(["--json"], env);
+		const report = JSON.parse(jsonResult.stdout.toString()) as SandboxCheckReport;
+
+		expect(jsonResult.exitCode).toBe(1);
+		expect(report.summary).toEqual({ passed: 0, failed: 0, errors: 1, skipped: 1 });
+		expect(report.checks[0]?.name).toBe("conformance matrix setup");
+		expect(report.checks[0]?.status).toBe("ERROR");
+		expect(report.checks[0]?.detail).not.toContain(missingWorkspace);
+		expect(report.checks[1]).toEqual({
+			name: "synthetic fixtures removed",
+			status: "SKIP",
+			detail: "setup created no fixtures; path=<synthetic-fixtures>; errno=none",
+		});
+
+		const humanResult = await runSandboxCheckProcess([], env);
+		const human = humanResult.stdout.toString();
+		expect(humanResult.exitCode).toBe(1);
+		expect(human).toContain("ERROR");
+		expect(human).toContain("0 passed, 0 failed, 1 errors, 1 skipped");
+		expect(human).toContain("Conformance matrix did not run.");
+	} finally {
 		fs.rmSync(container, { recursive: true, force: true });
 	}
 }, 30_000);
@@ -83,7 +203,7 @@ it("reports generalized assertion, path, and errno details for a failed probe", 
 	};
 
 	try {
-		const jsonResult = await $`bun ${cli} sandbox check --json`.env(env).quiet().nothrow();
+		const jsonResult = await runSandboxCheckProcess(["--json"], env);
 		const report = JSON.parse(jsonResult.stdout.toString()) as SandboxCheckReport;
 		const failure = report.checks.find(check => check.name === "operator home configuration is writable");
 
@@ -94,7 +214,7 @@ it("reports generalized assertion, path, and errno details for a failed probe", 
 		expect(failure?.detail).toContain("errno=ENOTDIR");
 		expect(failure?.detail).not.toContain(invalidHome);
 
-		const verboseResult = await $`bun ${cli} sandbox check --verbose`.env(env).quiet().nothrow();
+		const verboseResult = await runSandboxCheckProcess(["--verbose"], env);
 		const verbose = verboseResult.stdout.toString();
 		expect(verboseResult.exitCode).toBe(1);
 		expect(verbose).toContain("path=<operator-home>/<synthetic-fixture>");
@@ -103,4 +223,4 @@ it("reports generalized assertion, path, and errno details for a failed probe", 
 	} finally {
 		fs.rmSync(container, { recursive: true, force: true });
 	}
-}, 30_000);
+}, 60_000);

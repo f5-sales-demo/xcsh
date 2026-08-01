@@ -11,12 +11,12 @@ import { evaluateToolCall } from "../sandbox/enforce";
 import { SANDBOX_OPERATOR_HOME_ENV, SANDBOX_SESSION_ROOT_ENV } from "../sandbox/session-fence";
 import { BashTool, type ToolSession } from "../tools";
 
-export type SandboxCheckResultStatus = "PASS" | "FAIL" | "SKIP";
+export type SandboxCheckResultStatus = "PASS" | "FAIL" | "SKIP" | "ERROR";
 
 export interface SandboxCheckResult {
 	name: string;
 	status: SandboxCheckResultStatus;
-	/** Present on failures and skips; paths are generalized before they leave the process. */
+	/** Present on failures, errors, and skips; paths are generalized before they leave the process. */
 	detail?: string;
 }
 
@@ -27,6 +27,7 @@ export interface SandboxCheckReport {
 	summary: {
 		passed: number;
 		failed: number;
+		errors: number;
 		skipped: number;
 	};
 }
@@ -142,15 +143,19 @@ function renderReport(report: SandboxCheckReport, json: boolean, verbose: boolea
 
 	const enforcement = report.osEnforced ? "OS enforced" : "scanner only";
 	process.stdout.write(`Sandbox backend: ${report.backend} (${enforcement})\n\n`);
-	const width = Math.max(0, ...report.checks.map(check => check.name.length));
+	const nameWidth = Math.max(0, ...report.checks.map(check => check.name.length));
+	const statusWidth = Math.max(0, ...report.checks.map(check => check.status.length));
 	for (const check of report.checks) {
-		process.stdout.write(`${check.status.padEnd(4)}  ${check.name.padEnd(width)}\n`);
+		process.stdout.write(`${check.status.padEnd(statusWidth)}  ${check.name.padEnd(nameWidth)}\n`);
 		if (verbose && check.detail) process.stdout.write(`      ${check.detail}\n`);
 	}
 	process.stdout.write(
-		`\n${report.summary.passed} passed, ${report.summary.failed} failed, ${report.summary.skipped} skipped\n`,
+		`\n${report.summary.passed} passed, ${report.summary.failed} failed, ${report.summary.errors} errors, ${report.summary.skipped} skipped\n`,
 	);
-	if (!verbose && report.summary.failed > 0) {
+	if (report.checks.some(check => check.name === "conformance matrix setup" && check.status === "ERROR")) {
+		process.stdout.write("Conformance matrix did not run.\n");
+	}
+	if (!verbose && (report.summary.failed > 0 || report.summary.errors > 0)) {
 		process.stdout.write("Run `xcsh sandbox check --verbose` for failure details.\n");
 	}
 }
@@ -177,7 +182,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		probe: () => boolean | ProbeOutcome | Promise<boolean | ProbeOutcome>,
 	): Promise<void> => {
 		if (abortController.signal.aborted) {
-			add(name, "FAIL", "probe aborted before execution; path=<probe>; errno=ABORTED");
+			add(name, "ERROR", "probe aborted before execution; path=<probe>; errno=ABORTED");
 			return;
 		}
 		try {
@@ -190,17 +195,22 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			);
 		} catch (error) {
 			const outcome = exceptionOutcome("probe threw", "<probe>", error, redactions);
-			add(name, "FAIL", outcome.detail);
+			add(name, "ERROR", outcome.detail);
 		}
 	};
 
 	try {
-		const inheritedProfile = process.env[SANDBOX_SESSION_ROOT_ENV] !== undefined;
-		const workspaceInput = process.env[SANDBOX_SESSION_ROOT_ENV] ?? process.cwd();
-		const homeInput = process.env[SANDBOX_OPERATOR_HOME_ENV] ?? os.homedir();
+		const inheritedWorkspace = process.env[SANDBOX_SESSION_ROOT_ENV];
+		const inheritedHome = process.env[SANDBOX_OPERATOR_HOME_ENV];
+		const inheritedProfile = inheritedWorkspace !== undefined;
+		const workspaceInput = inheritedWorkspace ?? process.cwd();
+		const homeInput = inheritedHome ?? os.homedir();
 		redactions.push([workspaceInput, "<workspace>"], [homeInput, "<operator-home>"]);
-		const liveWorkspace = await fs.realpath(workspaceInput);
-		const liveHome = await fs.realpath(homeInput);
+		// BashTool owns and canonicalises inherited values before applying Seatbelt/Landlock. Re-running
+		// realpath here can require metadata access that the live profile deliberately withholds from the
+		// session parent — which is the operator home for a `~/<workspace>` layout (#2807).
+		const liveWorkspace = inheritedWorkspace ?? (await fs.realpath(workspaceInput));
+		const liveHome = inheritedHome ?? (await fs.realpath(homeInput));
 		redactions.push([liveWorkspace, "<workspace>"], [liveHome, "<operator-home>"]);
 
 		const fixtureBase = inheritedProfile ? liveWorkspace : await fs.realpath(os.tmpdir());
@@ -485,7 +495,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		});
 	} catch (error) {
 		const outcome = exceptionOutcome("conformance matrix setup failed", "<probe>", error, redactions);
-		add("conformance matrix completed", "FAIL", outcome.detail);
+		add("conformance matrix setup", "ERROR", outcome.detail);
 	} finally {
 		process.off("SIGINT", interrupt);
 		process.off("SIGTERM", interrupt);
@@ -511,17 +521,17 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			}
 		}
 
-		if (fixtureRoot === undefined || cleanupFailures.length > 0) {
+		if (cleanupFailures.length > 0) {
 			add(
 				"synthetic fixtures removed",
-				"FAIL",
+				"ERROR",
 				sanitizeDetail(
-					`fixture cleanup incomplete; path=<synthetic-fixtures>; errno=${
-						fixtureRoot === undefined ? "ENOENT" : "unknown"
-					}${cleanupFailures.length > 0 ? `; error=${cleanupFailures.join("; ")}` : ""}`,
+					`fixture cleanup incomplete; path=<synthetic-fixtures>; errno=unknown; error=${cleanupFailures.join("; ")}`,
 					redactions,
 				),
 			);
+		} else if (fixturePaths.length === 0) {
+			add("synthetic fixtures removed", "SKIP", "setup created no fixtures; path=<synthetic-fixtures>; errno=none");
 		} else {
 			add("synthetic fixtures removed", "PASS");
 		}
@@ -534,6 +544,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		summary: {
 			passed: checks.filter(result => result.status === "PASS").length,
 			failed: checks.filter(result => result.status === "FAIL").length,
+			errors: checks.filter(result => result.status === "ERROR").length,
 			skipped: checks.filter(result => result.status === "SKIP").length,
 		},
 	};

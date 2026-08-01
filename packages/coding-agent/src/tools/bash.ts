@@ -178,6 +178,17 @@ function normalizeBashEnv(env: Record<string, string> | undefined): Record<strin
 	return normalized;
 }
 
+/** Canonical context resolved by the unfenced host before a child inherits the live profile. */
+async function canonicalizeSandboxContextPath(input: string): Promise<string> {
+	try {
+		return await fs.promises.realpath(input);
+	} catch {
+		// The fence builder already handles an unavailable home conservatively. Keep ordinary bash calls
+		// working in that case; the diagnostic will report the path-specific failure if it is invoked.
+		return input;
+	}
+}
+
 function escapeBashEnvValueForDisplay(value: string): string {
 	return value
 		.replaceAll("\\", "\\\\")
@@ -634,14 +645,18 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// Landlock restrictions compose and cannot be relaxed by its subprocess, so the diagnostic needs
 		// the immutable session anchor even when this individual call uses `cwd` or starts with `cd`.
 		// Keep these values host-owned: tool-supplied env cannot replace them.
-		const env =
-			fence === undefined
-				? requestedEnv
-				: {
-						...requestedEnv,
-						[SANDBOX_SESSION_ROOT_ENV]: containmentRoot,
-						[SANDBOX_OPERATOR_HOME_ENV]: os.homedir(),
-					};
+		let env = requestedEnv;
+		if (fence !== undefined) {
+			const [trustedSessionRoot, trustedOperatorHome] = await Promise.all([
+				canonicalizeSandboxContextPath(containmentRoot),
+				canonicalizeSandboxContextPath(os.homedir()),
+			]);
+			env = {
+				...requestedEnv,
+				[SANDBOX_SESSION_ROOT_ENV]: trustedSessionRoot,
+				[SANDBOX_OPERATOR_HOME_ENV]: trustedOperatorHome,
+			};
+		}
 
 		const localOptions = {
 			getArtifactsDir: this.session.getArtifactsDir,
