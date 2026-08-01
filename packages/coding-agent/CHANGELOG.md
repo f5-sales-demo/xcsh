@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [20.0.3] - 2026-08-01
+
 ### Fixed
 
 - Made operator-owned home files, CLI configuration, shell profiles, SSH state, plugins, skills, and settings consistently writable while preserving cross-session and data-root isolation ([#2720](https://github.com/f5-sales-demo/xcsh/issues/2720))
