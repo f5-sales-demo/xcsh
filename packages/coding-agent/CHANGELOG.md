@@ -8,6 +8,10 @@
 
 - Adopted browser bridge contract 2.0: Chrome chat requests now require explicit tab and session routing, terminal chat errors expose only a closed reason code, and Chrome clients can no longer configure provider credentials or send console login credentials through the bridge ([#2802](https://github.com/f5-sales-demo/xcsh/issues/2802))
 
+### Fixed
+
+- Made root launch flags reject ambiguous subcommand placement without entering agent startup, kept subcommand help correctly routed, and added installed conformance coverage that explicit grants restore parent enumeration ([#2817](https://github.com/f5-sales-demo/xcsh/issues/2817))
+
 ## [20.1.2] - 2026-08-01
 
 ### Fixed

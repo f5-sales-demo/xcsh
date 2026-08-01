@@ -2,11 +2,11 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { executeShell } from "@f5-sales-demo/pi-natives";
+import { executeShell, fencePermits } from "@f5-sales-demo/pi-natives";
 import { isEnoent } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../config/settings";
 import { fenceForNative } from "../exec/bash-executor";
-import { buildContainmentFence, type ContainmentFence, containmentStatus } from "../sandbox/containment";
+import { buildContainmentFence, type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
 import { evaluateToolCall } from "../sandbox/enforce";
 import {
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
@@ -364,6 +364,46 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					redactions,
 				);
 			});
+			await check("explicit grant restores parent enumeration", async () => {
+				const grantedFence = buildContainmentFence({
+					workspace,
+					home: operatorHome,
+					fsRoot: fixtureRoot,
+					leakRoots: [sessionStore, memoryStore],
+					readOnlyRoots: [workspaces],
+					writeOnlyRoots: [workspaces],
+				});
+				const grantedNativeFence = fenceForNative(grantedFence);
+				if (
+					fenceVerdict(grantedFence, workspaces, "enumerate") !== "allow" ||
+					grantedNativeFence === undefined ||
+					!fencePermits(grantedNativeFence, workspaces, false, true)
+				) {
+					return {
+						passed: false,
+						detail:
+							"explicit grant was not accepted by both policy engines; path=<synthetic-session-parent>; errno=none",
+					};
+				}
+
+				// An inherited OS profile cannot be widened by a child. In that topology the live
+				// profile already grants this synthetic path through the workspace, so exercise the
+				// real operation there after both policy engines accepted the explicit grant. A
+				// standalone check applies the granted fence itself and covers the OS compiler too.
+				const result = await shellProbe(
+					`ls ${quote(workspaces)} > /dev/null`,
+					workspace,
+					inheritedProfile ? undefined : grantedFence,
+					abortController.signal,
+				);
+				return shellOutcome(
+					result,
+					true,
+					"explicit grant must restore synthetic session parent enumeration",
+					"<synthetic-session-parent>",
+					redactions,
+				);
+			});
 			await check("account container cannot be enumerated", async () => {
 				const result = await shellProbe(
 					`ls ${quote(accountRoot)} > /dev/null`,
@@ -422,6 +462,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		} else {
 			for (const name of [
 				"session parent cannot be enumerated",
+				"explicit grant restores parent enumeration",
 				"account container cannot be enumerated",
 				"synthetic other account cannot be entered",
 				"cross-session stores cannot be read",

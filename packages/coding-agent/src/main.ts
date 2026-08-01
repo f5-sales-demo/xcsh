@@ -321,13 +321,11 @@ async function maybeAutoChdir(parsed: Args): Promise<void> {
 		return;
 	}
 
-	const normalizePath = (value: string) => {
-		const resolved = realpathSync(path.resolve(value));
-		return process.platform === "win32" ? resolved.toLowerCase() : resolved;
-	};
-
-	const cwd = normalizePath(getProjectDir());
-	const normalizedHome = normalizePath(home);
+	// A nested xcsh process may inherit a profile that permits named home access but withholds parent
+	// metadata. Comparison is advisory auto-chdir logic, so an unavailable realpath must fall back to
+	// the resolved spelling instead of crashing before command dispatch (#2817).
+	const cwd = normalizePathForComparison(getProjectDir());
+	const normalizedHome = normalizePathForComparison(home);
 	if (cwd !== normalizedHome) {
 		return;
 	}
@@ -356,7 +354,7 @@ async function maybeAutoChdir(parsed: Args): Promise<void> {
 
 	try {
 		const fallback = os.tmpdir();
-		if (fallback && normalizePath(fallback) !== cwd && (await isDirectory(fallback))) {
+		if (fallback && normalizePathForComparison(fallback) !== cwd && (await isDirectory(fallback))) {
 			setProjectDir(fallback);
 		}
 	} catch {
