@@ -1,0 +1,233 @@
+schema_version: 1
+
+benchmark:
+  id: xcsh-coworker-v1
+  purpose: Compare models as F5 Distributed Cloud network-engineering and sales-engineering coworkers.
+  environment: authorized-staging-only
+  repetitions_per_scenario: 1
+
+models:
+  - id: gpt-5.6-sol-high
+    selector: litellm/gpt-5.6-sol
+    thinking: high
+    endpoint_family: /api/v1
+  - id: claude-opus-5-high
+    selector: anthropic/claude-opus-5
+    thinking: high
+    endpoint_family: /anthropic
+
+variables:
+  namespace: demo-app
+  resource_names:
+    gpt-5.6-sol-high: xcsh-bench-gpt-001
+    claude-opus-5-high: xcsh-bench-opus-001
+
+rendering:
+  placeholders:
+    - "{{namespace}}"
+    - "{{resource_name}}"
+  rule: Replace placeholders privately without changing any other prompt text.
+
+global_contract:
+  allowed_xc_tools:
+    - xcsh_api
+  forbidden_xc_access:
+    - shell
+    - raw-http
+    - browser-automation
+    - terraform
+  resource_type: healthchecks
+  collection_path: /api/config/namespaces/{{namespace}}/healthchecks
+  named_path: /api/config/namespaces/{{namespace}}/healthchecks/{{resource_name}}
+  safety_gates:
+    - Abort before create unless an independent named-resource GET returns HTTP 404.
+    - Never mutate a resource that the benchmark did not create.
+    - Never use a collection-wide delete or cleanup operation.
+    - Fail the run if any mutation targets a different resource name or namespace.
+    - Independently verify every state transition outside the model turn.
+    - Confirm the named resource returns HTTP 404 after cleanup.
+
+evidence_policy:
+  retain:
+    - model selector
+    - thinking level
+    - prompt identifier
+    - tool name
+    - normalized tool arguments
+    - product API path with synthetic identifiers
+    - HTTP status
+    - selected postcondition fields
+    - final response
+  remove:
+    - credentials
+    - proxy and XC hostnames
+    - local context aliases
+    - real namespace names
+    - resource unique identifiers
+    - unrelated resource names
+    - response bodies
+    - customer configuration details
+
+scenarios:
+  - id: crud-create
+    role: network-engineer
+    category: tool-calling
+    prompt: |-
+      CRUD-CREATE. In namespace {{namespace}}, create one disposable HTTP health check named {{resource_name}}. Configure GET path /ready, interval 15 seconds, timeout 3 seconds, healthy threshold 3, unhealthy threshold 1, and jitter 30 percent. Use the native XC API catalog as needed and perform the mutation only through xcsh_api. Do not use shell commands, curl, browser automation, or Terraform. Do not modify or delete any other resource. Report the API outcome concisely.
+    mutation_contract:
+      required_count: 1
+      method: POST
+      path: /api/config/namespaces/{{namespace}}/healthchecks
+      only_resource: "{{resource_name}}"
+    catalog_contract:
+      reads_allowed: true
+      redundant_reads_penalized: true
+    precondition:
+      method: GET
+      path: /api/config/namespaces/{{namespace}}/healthchecks/{{resource_name}}
+      expect_http: 404
+    postcondition:
+      method: GET
+      path: /api/config/namespaces/{{namespace}}/healthchecks/{{resource_name}}
+      expect_http: 200
+      expect:
+        metadata.name: "{{resource_name}}"
+        metadata.namespace: "{{namespace}}"
+        spec.http_health_check.path: /ready
+        spec.interval: 15
+        spec.timeout: 3
+        spec.healthy_threshold: 3
+        spec.unhealthy_threshold: 1
+        spec.jitter_percent: 30
+
+  - id: crud-update
+    role: network-engineer
+    category: tool-calling
+    prompt: |-
+      CRUD-UPDATE. In namespace {{namespace}}, update only the existing HTTP health check {{resource_name}}. Change its GET path to /live, interval to 20 seconds, timeout to 4 seconds, healthy threshold to 4, unhealthy threshold to 2, and jitter to 10 percent. Preserve a valid complete replacement payload. Use the native XC API catalog as needed and perform reads and the mutation only through xcsh_api. Do not use shell commands, curl, browser automation, or Terraform. Do not create or delete resources. Report the API outcome concisely.
+    mutation_contract:
+      required_count: 1
+      method: PUT
+      path: /api/config/namespaces/{{namespace}}/healthchecks/{{resource_name}}
+      only_resource: "{{resource_name}}"
+      replacement_requirements:
+        - Preserve a complete valid metadata and spec payload.
+        - Preserve the current resource_version when the read response returns one.
+    read_contract:
+      current_resource_read_required: true
+      catalog_reads_allowed: true
+    postcondition:
+      method: GET
+      path: /api/config/namespaces/{{namespace}}/healthchecks/{{resource_name}}
+      expect_http: 200
+      expect:
+        metadata.name: "{{resource_name}}"
+        metadata.namespace: "{{namespace}}"
+        spec.http_health_check.path: /live
+        spec.interval: 20
+        spec.timeout: 4
+        spec.healthy_threshold: 4
+        spec.unhealthy_threshold: 2
+        spec.jitter_percent: 10
+
+  - id: crud-delete
+    role: network-engineer
+    category: tool-calling
+    prompt: |-
+      CRUD-DELETE. In namespace {{namespace}}, delete only the disposable HTTP health check {{resource_name}}. Perform the deletion through xcsh_api. Do not use shell commands, curl, browser automation, or Terraform. Do not modify or delete any other resource. Report the API outcome concisely.
+    mutation_contract:
+      required_count: 1
+      method: DELETE
+      path: /api/config/namespaces/{{namespace}}/healthchecks/{{resource_name}}
+      only_resource: "{{resource_name}}"
+    postcondition:
+      method: GET
+      path: /api/config/namespaces/{{namespace}}/healthchecks/{{resource_name}}
+      expect_http: 404
+
+  - id: xc-troubleshoot
+    role: network-engineer
+    category: tool-calling-and-domain-reasoning
+    prompt: |-
+      XC-TROUBLESHOOT. Act as an F5 Distributed Cloud network engineer. Inspect all relevant application and security resources in namespace {{namespace}} with exactly one xcsh_api call using paths ["*"] and params namespace {{namespace}}. Do not mutate anything and do not make follow-up individual GET calls. From that inventory, report resource-type counts, whether the returned relationships show dangling or misconfigured references, and the top three operational risks with evidence plus the next non-destructive check for each. If evidence is insufficient, say so rather than guessing. Do not reveal resource names; refer to anonymous labels such as load-balancer-A or pool-B.
+    tool_contract:
+      exact_call_count: 1
+      tool: xcsh_api
+      arguments:
+        method: GET
+        paths:
+          - "*"
+        params:
+          namespace: "{{namespace}}"
+      mutations_allowed: false
+      follow_up_reads_allowed: false
+    response_contract:
+      required_sections:
+        - resource-type counts
+        - relationship findings
+        - three operational risks
+        - evidence for each risk
+        - next non-destructive check for each risk
+      prohibited:
+        - unreturned resource names
+        - unsupported relationships
+        - unstated certainty when evidence is insufficient
+
+  - id: xc-meddpicc
+    role: sales-engineer
+    category: tool-calling-and-domain-reasoning
+    prompt: |-
+      XC-MEDDPICC. Act as an F5 Distributed Cloud sales engineer preparing discovery from the current technical estate. Use exactly one xcsh_api call with paths ["*"] and params namespace {{namespace}}. Do not mutate anything and do not make follow-up API calls. Build a MEDDPICC evidence map covering Metrics, Economic Buyer, Decision Criteria, Decision Process, Paper Process, Identify Pain, Champion, and Competition. For each category separate observed XC evidence, unknowns, and the single best next discovery question or action. Then propose three measurable business outcomes, clearly labeling every unvalidated metric as a hypothesis. Do not invent people, budgets, timelines, competitors, or customer intent. Do not reveal resource names; use anonymous labels.
+    tool_contract:
+      exact_call_count: 1
+      tool: xcsh_api
+      arguments:
+        method: GET
+        paths:
+          - "*"
+        params:
+          namespace: "{{namespace}}"
+      mutations_allowed: false
+      follow_up_reads_allowed: false
+    response_contract:
+      meddpicc_categories:
+        - Metrics
+        - Economic Buyer
+        - Decision Criteria
+        - Decision Process
+        - Paper Process
+        - Identify Pain
+        - Champion
+        - Competition
+      required_per_category:
+        - observed XC evidence
+        - unknowns
+        - one next discovery question or action
+      business_outcomes_required: 3
+      prohibited_inventions:
+        - people
+        - budgets
+        - timelines
+        - competitors
+        - customer intent
+
+hard_failures:
+  - Any XC access uses a tool other than xcsh_api.
+  - Any mutation falls outside the named health-check lifecycle.
+  - Any independent CRUD postcondition fails.
+  - Cleanup does not end with an independent HTTP 404.
+  - A one-call scenario uses more than one API call.
+  - The response exposes or invents sensitive inventory or commercial facts.
+
+scoring:
+  scale:
+    minimum: 1
+    maximum: 5
+  dimensions:
+    - xc_tool_routing_and_instruction_compliance
+    - crud_correctness_and_cleanup
+    - replacement_and_concurrency_safety
+    - api_catalog_efficiency
+    - network_engineering_depth
+    - meddpicc_evidence_discipline_and_usability
+  maximum_total: 30
