@@ -1170,8 +1170,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						},
 					}),
 				getPluginRoots: () => listXcshPluginRoots(os.homedir(), cwd).then(r => r.roots),
-				// Classification must follow the session's `cd`, not the process cwd, which
-				// never moves. The bash tool emits `cwd:changed` when it relocates.
+				// Classification follows explicit session relocation events, not command-local `cd` and not the
+				// process cwd. Model bash calls reset to this session root on every invocation (#2724).
 				fleetDeps: { cwd: createLiveCwdGetter(cwd, eventBus) },
 			}),
 		);

@@ -58,6 +58,22 @@ describe("executeBash", () => {
 		expect(result.output.trim()).toBe(fs.realpathSync(tempDir));
 	});
 
+	it("preserves cwd for direct operator shell sessions", async () => {
+		const subdir = path.join(tempDir, "operator-cwd");
+		fs.mkdirSync(subdir);
+		const sessionKey = "operator-cwd-persistence";
+
+		const changed = await executeBash(`cd ${JSON.stringify(subdir)}`, {
+			cwd: tempDir,
+			timeout: 5000,
+			sessionKey,
+		});
+		expect(changed.newCwd).toBe(subdir);
+
+		const later = await executeBash("pwd", { timeout: 5000, sessionKey });
+		expect(later.output.trim()).toBe(subdir);
+	});
+
 	it("canonicalizes symlinked cwd before execution", async () => {
 		if (process.platform === "win32") {
 			return;

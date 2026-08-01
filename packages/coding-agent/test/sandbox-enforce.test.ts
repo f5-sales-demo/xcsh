@@ -251,10 +251,9 @@ describe("evaluateToolCall", () => {
 	// look like a path, and the boundary never saw it at all (#2520). A single space was the only
 	// thing standing between a blocked read and an allowed one.
 	// A relative operand is never checked, because the floor assumes it resolves under the session
-	// directory. `cd` is what breaks that assumption: the bash tool runs one persistent in-process
-	// shell, so a directory change outlives the call that made it and every later relative path
-	// resolves somewhere else. Refusing a `cd` that cannot be proven to stay in-tree is what keeps
-	// the assumption true — see #2542, where `cd /` then `cat tmp/x` read a sibling's file.
+	// directory. A `cd` can break that assumption within the same call, even though the next call resets
+	// to the session root. Refusing a change that cannot be proven to stay in-tree keeps the unchecked
+	// relative operands safe — see #2542, where `cd /` then `cat tmp/x` read a sibling's file.
 	it("bash: cd into a denied directory is refused", () => {
 		// In-tree: allowed.
 		expect(check("bash", { command: "cd sub" }).block).toBe(false);

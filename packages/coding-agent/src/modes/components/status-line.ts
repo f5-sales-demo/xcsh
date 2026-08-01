@@ -212,7 +212,7 @@ export class StatusLineComponent implements Component {
 		this.#invalidateGitCaches();
 	}
 
-	/** Update the displayed working directory (e.g. after a user !cd command). */
+	/** Update the displayed working directory after an operator command or explicit session move. */
 	setCwd(cwd: string): void {
 		this.#cwd = cwd;
 		this.#invalidateGitCaches();

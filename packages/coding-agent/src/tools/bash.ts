@@ -7,7 +7,7 @@ import type {
 } from "@f5-sales-demo/pi-agent-core";
 import type { Component } from "@f5-sales-demo/pi-tui";
 import { ImageProtocol, TERMINAL, Text } from "@f5-sales-demo/pi-tui";
-import { $env, getProjectDir, isEnoent, prompt, setShellPwd } from "@f5-sales-demo/pi-utils";
+import { $env, getProjectDir, isEnoent, prompt } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { Settings } from "../config/settings";
 import { type BashResult, executeBash } from "../exec/bash-executor";
@@ -516,17 +516,13 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	/**
 	 * Where this session's boundary is anchored.
 	 *
-	 * **Not the live cwd.** The fence used to be rebuilt from `session.cwd`, which line ~717 replaces
-	 * with whatever PWD the command ended in — so the model could move the boundary with a `cd`. Measured
-	 * on a workspace outside the home tree, which is the layout the sibling-checkout deny exists for:
-	 * with `/work/custA` as the workspace, `/work/custB/secret.env` was denied; `cd /usr` is permitted
-	 * (correctly — `/usr` is not sensitive), and the *next* fence was rooted at `/usr`, where the parent
-	 * deny of `/work` cannot be expressed because `dirname("/usr")` is `/` and denying the root is refused
-	 * as too broad. `/work/custB` then became readable **and** writable. Two tool calls, no exotic
-	 * spelling, and the tenant boundary was gone.
+	 * **Not a command's final PWD.** Every model tool call starts from `session.cwd` and a command-local
+	 * `cd` is discarded when that call ends (#2724). Before that reset existed, writing the final PWD
+	 * back into `session.cwd` also moved this fence: after `cd /usr`, the next boundary was rooted at
+	 * `/usr` and could no longer protect a workspace under `/work` (#2589).
 	 *
-	 * So the anchor is captured once per session and never follows the shell. It is keyed on the session
-	 * object rather than held on this instance because the tool is built by a factory
+	 * The anchor remains captured once per session as a defensive invariant and never follows the shell.
+	 * It is keyed on the session object rather than held on this instance because the tool is built by a factory
 	 * (`bash: s => new BashTool(s)`) and must not depend on how long an instance happens to live.
 	 *
 	 * An *operator* moving the project — startup, or the slash command that calls `setProjectDir` — does
@@ -546,8 +542,8 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			return this.session.cwd;
 		}
 		if (anchor.project !== project) {
-			// The operator moved the project. Re-anchor there rather than at `session.cwd`, which a
-			// model `cd` may have moved in the meantime.
+			// The operator moved the project. This is an explicit boundary relocation, unlike a model's
+			// command-local `cd`.
 			FENCE_ANCHORS.set(this.session, { root: project, project });
 			return project;
 		}
@@ -787,13 +783,6 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 						}
 					},
 				});
-		// Update working directory if the persistent shell changed it
-		if ("newCwd" in result && result.newCwd && result.newCwd !== this.session.cwd) {
-			this.session.cwd = result.newCwd;
-			setShellPwd(result.newCwd);
-			this.session.eventBus?.emit("cwd:changed", result.newCwd);
-		}
-
 		if (result.cancelled) {
 			if (signal?.aborted) {
 				throw new ToolAbortError(normalizeResultOutput(result) || "Command aborted");
