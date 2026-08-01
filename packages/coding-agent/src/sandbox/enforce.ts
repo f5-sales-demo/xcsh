@@ -156,11 +156,9 @@ function deny(cwd: string, resolved: string, access: SandboxAccess): ToolCallDec
 }
 
 /**
- * `$HOME` and `${HOME}` are spellings of `~`, which `looksLikePath` already treats as a
- * path (#2534). Three ways to name one file, only one of them checked, is an oversight
- * rather than a policy: `cat ~/.ssh/id_rsa` was blocked while `cat $HOME/.ssh/id_rsa`
- * was not. Rewriting to `~` here means detection AND resolution both see the real path,
- * so the denial names the file rather than a literal dollar sign.
+ * `$HOME` and `${HOME}` are spellings of `~`, which `looksLikePath` already treats as a path (#2534).
+ * Rewriting to `~` means detection and resolution answer consistently whether the resulting home path
+ * is allowed or denied by an explicit rule.
  *
  * `\b` keeps `$HOMEBREW_PREFIX` and friends out of it.
  */

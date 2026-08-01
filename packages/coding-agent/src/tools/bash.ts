@@ -564,8 +564,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	#containmentFence() {
 		const artifactsDir = this.session.getArtifactsDir?.();
 		// One resolver, shared with `sandbox-guard` and the internal-URL check, so the pre-check and the
-		// kernel cannot be looking at different boundaries (#2624). It reads the allow-lists and picks
-		// `narrowsWithinGrant` from the active backend itself.
+		// kernel cannot be looking at different boundaries (#2624).
 		return resolveSessionFence(this.#containmentRoot(), this.session.settings, {
 			extraRoots: artifactsDir ? [artifactsDir] : [],
 		});

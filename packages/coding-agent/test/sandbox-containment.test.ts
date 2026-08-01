@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it, spyOn } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getAgentDir, getPluginsDir } from "@f5-sales-demo/pi-utils";
+import { getAgentDir, getConfigRootDir, getPluginsDir } from "@f5-sales-demo/pi-utils";
 import { buildContainmentFence, containmentStatus, fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
 
 /**
@@ -95,25 +95,35 @@ describe("buildContainmentFence", () => {
 		fs.mkdirSync(workspace, { recursive: true });
 		const fence = buildContainmentFence({ workspace, home });
 
-		// These sit inside the denied home tree and must be carved back out, or `bun install`,
-		// `cargo build` and `npm ci` fail — the exact breakage this fence must not cause. Narrowed to
-		// the artifact subdirectories, because granting the parents exposed credentials.
+		// Keep these explicit grants stable for toolchain compatibility. Home is otherwise available under
+		// the operator-rights policy, so the grants must not introduce a narrower write rule.
 		for (const cache of [".bun/install/cache", ".cargo/registry", ".npm/_cacache", ".m2/repository"]) {
 			expect(fenceVerdict(fence, path.join(home, cache, "x"), "write")).toBe("allow");
 		}
 	});
 
-	it("keeps git config readable but not writable", () => {
+	it("keeps operator-owned home and configuration writable", () => {
 		const home = realTmp("home4");
 		const workspace = path.join(home, "w");
 		fs.mkdirSync(workspace, { recursive: true });
 		const fence = buildContainmentFence({ workspace, home });
 
-		expect(fenceVerdict(fence, path.join(home, ".gitconfig"), "read")).toBe("allow");
-		expect(fenceVerdict(fence, path.join(home, ".gitconfig"), "write")).toBe("deny");
+		for (const own of [
+			".gitconfig",
+			".aws/config",
+			".zshrc",
+			".zprofile",
+			".ssh/config",
+			".xcsh/settings.json",
+			".xcsh/plugins/example/plugin.json",
+			".xcsh/skills/example/SKILL.md",
+		]) {
+			expect(fenceVerdict(fence, path.join(home, own), "read")).toBe("allow");
+			expect(fenceVerdict(fence, path.join(home, own), "write")).toBe("allow");
+		}
 	});
 
-	it("denies credentials even though they sit in the same home", () => {
+	it("keeps the operator's private files under their normal filesystem rights", () => {
 		const home = realTmp("home5");
 		const workspace = path.join(home, "w");
 		fs.mkdirSync(workspace, { recursive: true });
@@ -308,18 +318,6 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		// The cross-SESSION surfaces are still closed, because those are the agent's own state rather
 		// than the operator's layout.
 		expect(fenceVerdict(fence, path.join(sessions, "x.jsonl"), "read")).toBe("deny");
-	});
-
-	// A write that installs something a later unfenced run executes is a different concern from context
-	// isolation, so #2637 does not relax it.
-	it("still refuses writes to command-bearing CLI config", () => {
-		const { home, workspace } = customerSession("cmdconfig");
-		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
-
-		for (const vector of [path.join(".aws", "config"), path.join(".cargo", "config.toml")]) {
-			expect(fenceVerdict(fence, path.join(home, vector), "write")).toBe("deny");
-			expect(fenceVerdict(fence, path.join(home, vector), "read")).toBe("allow");
-		}
 	});
 });
 
@@ -598,28 +596,22 @@ describe("buildContainmentFence — review findings", () => {
 		expect(fenceVerdict(system, "/etc/hosts", "read")).toBe("allow");
 	});
 
-	it("keeps toolchain credentials outside the cache carve-outs", () => {
-		// Verified writable before the fix: granting ~/.cargo, ~/.m2, ~/.gradle and ~/.npm whole put
-		// credentials.toml, settings.xml, init.gradle and _authToken inside the fence — credential
-		// theft and persistent build-config tampering, not merely a read.
+	it("keeps operator-owned toolchain configuration writable while preserving cache access", () => {
 		const home = realTmp("credhome");
 		const workspace = path.join(home, "w");
 		fs.mkdirSync(workspace, { recursive: true });
 		const fence = buildContainmentFence({ workspace, home });
 
-		// Since #2637 home is the operator's own, so the credential files here read and write like anything
-		// else of theirs. What must stay refused is a write that redirects a later build — persistence
-		// rather than theft — which needed naming in COMMAND_BEARING_CONFIG once the cache carve-outs
-		// stopped shielding it by omission.
-		const narrowing = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
-		for (const buildVector of [".cargo/config.toml", ".gradle/init.gradle"]) {
-			expect(fenceVerdict(narrowing, path.join(home, buildVector), "write")).toBe("deny");
-			expect(fenceVerdict(narrowing, path.join(home, buildVector), "read")).toBe("allow");
-		}
-		for (const own of [".cargo/credentials.toml", ".m2/settings.xml", ".npm/_authToken"]) {
+		for (const own of [
+			".cargo/config.toml",
+			".cargo/credentials.toml",
+			".gradle/init.gradle",
+			".m2/settings.xml",
+			".npm/_authToken",
+		]) {
 			expect(fenceVerdict(fence, path.join(home, own), "read")).toBe("allow");
+			expect(fenceVerdict(fence, path.join(home, own), "write")).toBe("allow");
 		}
-		// The parts a build actually writes stay granted, or the carve-out was pointless.
 		for (const artifact of [
 			".cargo/registry/index/x",
 			".m2/repository/org/x.jar",
@@ -657,24 +649,9 @@ describe("buildContainmentFence — review findings", () => {
 			expect(fenceVerdict(fence, path.join(home, config), "write")).toBe("allow");
 		}
 
-		// Readable, but see the command-bearing test below: these are deliberately not writable when the
-		// backend can express that.
-		for (const readOnly of [".aws/config", ".kube/config", "Library/Application Support/glab-cli/aliases.yml"]) {
-			expect(fenceVerdict(fence, path.join(home, readOnly), "read")).toBe("allow");
-		}
-	});
-
-	// The grant above must not become a way to run code later. Writing `~/.aws/config` installs a
-	// `credential_process` that the operator's next — unfenced — `aws` call executes, with access to
-	// everything the fence protects. That is an escape, not a leak, so every command-bearing path stays
-	// read-only: the CLI still reads it, nothing stops working, only rewriting is refused.
-	it("never grants write to configuration that names a command or holds an executable", () => {
-		const home = realTmp("execconf");
-		const workspace = path.join(home, "w");
-		fs.mkdirSync(workspace, { recursive: true });
-		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
-
-		for (const bearing of [
+		// These paths can name commands, but that does not turn this courtesy into a privilege boundary
+		// against the operator. Shell profiles and SSH configuration are writable for the same reason.
+		for (const config of [
 			".aws/config", // credential_process = <command>
 			".kube/config", // users[].user.exec.command
 			".docker/config.json", // credsStore / credHelpers
@@ -687,93 +664,9 @@ describe("buildContainmentFence — review findings", () => {
 			"Library/Application Support/glab-cli/aliases.yml",
 			".aws/cli/alias", // an aws alias starting with `!` runs through a shell
 		]) {
-			expect(fenceVerdict(fence, path.join(home, bearing), "write")).toBe("deny");
-			// Read must survive, or the CLI cannot authenticate and #2581 is back.
-			expect(fenceVerdict(fence, path.join(home, bearing), "read")).toBe("allow");
+			expect(fenceVerdict(fence, path.join(home, config), "read")).toBe("allow");
+			expect(fenceVerdict(fence, path.join(home, config), "write")).toBe("allow");
 		}
-
-		// The state each CLI genuinely writes stays writable, or `az` exits 1 and `sf` hangs — measured.
-		for (const state of [".azure/commands/x.log", ".sf/sf-2026-07-28.log", ".aws/sso/cache/x.json"]) {
-			expect(fenceVerdict(fence, path.join(home, state), "write")).toBe("allow");
-		}
-	});
-
-	// A read-only descendant must land in the same namespace as the grant it narrows. `canonical`
-	// returns undefined for a path that does not exist yet, and falling back to the literal string is
-	// unsafe: with ~/.aws symlinked (chezmoi, stow and yadm all do this) the grant resolves to the link
-	// target while the read-only rule keeps the link path, so the kernel matches only the grant and the
-	// `credential_process` protection evaporates. Verified allow/allow before the fix.
-	it("protects command-bearing config even when its directory is a symlink", () => {
-		const home = realTmp("symconf");
-		const workspace = path.join(home, "w");
-		const vault = realTmp("vault");
-		fs.mkdirSync(workspace, { recursive: true });
-		// ~/.aws -> <vault>, and no config file exists inside it yet.
-		fs.symlinkSync(vault, path.join(home, ".aws"));
-		expect(fs.existsSync(path.join(vault, "config"))).toBe(false);
-
-		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
-
-		// Assert the emitted ROOT, not the verdict. `fenceVerdict` normalises symlinks via
-		// `pathIsWithin`, so it answered "deny" even while the profile handed to sandbox-exec carried the
-		// unresolved spelling and the write went through. Verified: with the literal rule,
-		// `printf 'credential_process = …' > <vault>/config` succeeded under the real seatbelt profile.
-		// Only the emitted string tells the truth here, because that is what the backend compiles.
-		expect(fence.allowReadOnly).toContain(path.join(vault, "config"));
-		expect(fence.allowReadOnly).not.toContain(path.join(home, ".aws", "config"));
-		expect(fence.allow).toContain(vault);
-
-		// …while the rest of the tree stays writable, or `aws sso login` breaks.
-		expect(fenceVerdict(fence, path.join(vault, "sso", "cache", "x.json"), "write")).toBe("allow");
-	});
-
-	// AWS CLI reads ~/.aws/cli/alias, where an alias starting with `!` runs through a shell and can
-	// shadow a normal top-level command. Missed on the first pass because ~/.aws was granted wholesale.
-	it("refuses writes to the aws alias file, which executes through a shell", () => {
-		const home = realTmp("aliashome");
-		const workspace = path.join(home, "w");
-		fs.mkdirSync(workspace, { recursive: true });
-		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: true });
-
-		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "alias"), "write")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "alias"), "read")).toBe("allow");
-		// The cache beside it is what `aws sso login` and assume-role write, so it stays writable.
-		expect(fenceVerdict(fence, path.join(home, ".aws", "cli", "cache", "x.json"), "write")).toBe("allow");
-	});
-
-	// Landlock cannot narrow a right inside a grant: its rules are allow-only and recursive, so holding
-	// a file read-only inside a writable directory turns the parent into a split dir that loses write on
-	// its own inode. Verified with `containment-check plan` — adding ~/.azure/cliextensions as read-only
-	// made ~/.azure itself `r-`, which stops `az` writing azureProfile.json at all. So on that backend the
-	// narrowing is skipped and the gap is reported, rather than breaking the CLIs #2581 is about.
-	it("skips the command-bearing narrowing on a backend that cannot express it", () => {
-		const home = realTmp("nonarrow");
-		const workspace = path.join(home, "w");
-		fs.mkdirSync(workspace, { recursive: true });
-		const fence = buildContainmentFence({ workspace, home, narrowsWithinGrant: false });
-
-		// Writable, because the alternative is a directory the CLI cannot write to at all.
-		for (const bearing of [".aws/config", ".kube/config", ".azure/config"]) {
-			expect(fenceVerdict(fence, path.join(home, bearing), "write")).toBe("allow");
-		}
-		// ~/.gitconfig is NOT part of this: it is read-only via its own root, not a narrowing inside a
-		// grant, so it must survive on every backend.
-		expect(fenceVerdict(fence, path.join(home, ".gitconfig"), "write")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(home, ".gitconfig"), "read")).toBe("allow");
-		// And the boundary still applies where it should: the workspace's container, not the operator's own
-		// dotfiles, which #2637 stopped denying.
-		expect(fenceVerdict(fence, path.join(home, ".ssh", "id_rsa"), "read")).toBe("allow");
-	});
-
-	// Defaulting to the portable policy matters: a caller that does not know its backend must not get
-	// rules that break every CLI on Linux.
-	it("defaults to the portable policy when the caller does not say", () => {
-		const home = realTmp("defaultnarrow");
-		const workspace = path.join(home, "w");
-		fs.mkdirSync(workspace, { recursive: true });
-		const fence = buildContainmentFence({ workspace, home });
-
-		expect(fenceVerdict(fence, path.join(home, ".aws", "config"), "write")).toBe("allow");
 	});
 
 	// Same defect as the CACHE_DIRS carve-out, missed for Go: `go` is in the tool list xcsh probes for,
@@ -858,14 +751,7 @@ describe("containmentStatus", () => {
 			enabled: true,
 			backend: "landlock",
 			osEnforced: true,
-			// No Landlock ABI can narrow a right inside a grant, so the command-bearing CLI settings are
-			// writable there and the model is told so. Seatbelt reports no such field.
-			commandConfigWritable: true,
 		});
-	});
-
-	it("does not claim command-bearing config is writable under seatbelt", () => {
-		expect(containmentStatus(true, "darwin")).not.toHaveProperty("commandConfigWritable");
 	});
 
 	// The case that must not over-claim: a Linux box where Landlock is absent or too old.
@@ -1129,17 +1015,18 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 		expect(fenceVerdict(fence, path.join(fs.realpathSync("/tmp"), "scratch.txt"), "write")).toBe("allow");
 	});
 
-	// The agent's own plugins and user skills sit under `~/.xcsh`, inside the home deny. The file tools
-	// allow-listed them and the fence did not, so `bash` could not read a plugin the `read` tool could —
-	// the asymmetry #2624 removes. Emitted whether or not they exist yet: the skills dir is created on
-	// first use, and a rule that appears only after the directory does is a rule nobody can rely on.
-	it("grants the agent's own plugins and user skills, which sit under denied home", () => {
+	// Agent configuration belongs to the operator just like shell and CLI configuration. Keeping these
+	// read-only would still be a privilege boundary even though they happen to be xcsh inputs.
+	it("keeps the agent's plugins, user skills, and settings writable", () => {
 		const fence = buildContainmentFence({ workspace: fs.realpathSync(process.cwd()) });
 
-		for (const own of [getPluginsDir(), path.join(getAgentDir(), "skills")]) {
-			expect(fenceVerdict(fence, path.join(own, "probe", "manifest.json"), "read")).toBe("allow");
-			// Read-only: these are inputs, and a write there changes what a later session loads.
-			expect(fenceVerdict(fence, path.join(own, "probe", "manifest.json"), "write")).toBe("deny");
+		for (const own of [
+			path.join(getPluginsDir(), "probe", "manifest.json"),
+			path.join(getAgentDir(), "skills", "probe", "SKILL.md"),
+			path.join(getConfigRootDir(), "settings.json"),
+		]) {
+			expect(fenceVerdict(fence, own, "read")).toBe("allow");
+			expect(fenceVerdict(fence, own, "write")).toBe("allow");
 		}
 	});
 

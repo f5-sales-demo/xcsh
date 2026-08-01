@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell } from "@f5-sales-demo/pi-natives";
-import { getAgentDir, getPluginsDir, TempDir } from "@f5-sales-demo/pi-utils";
+import { getAgentDir, getConfigRootDir, getPluginsDir, TempDir } from "@f5-sales-demo/pi-utils";
 import { discoverAndLoadExtensions } from "@f5-sales-demo/xcsh/extensibility/extensions/loader";
 import { getMemoryRoot } from "@f5-sales-demo/xcsh/memories";
 import { buildContainmentFence, containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
@@ -40,6 +40,12 @@ function reads(cwd: string, filePath: string): boolean {
 	return evaluateToolCall({ toolName: "read", input: { file_path: filePath }, cwd, fence }).block;
 }
 
+/** Whether the `write` tool would be refused. */
+function writes(cwd: string, filePath: string): boolean {
+	const fence = resolveSessionFence(cwd, { get: () => undefined })!;
+	return evaluateToolCall({ toolName: "write", input: { file_path: filePath }, cwd, fence }).block;
+}
+
 describe("two-customer isolation", () => {
 	it("a session in custA cannot enumerate the parent but can use a named custB path", () => {
 		expect(reads(custA, parent)).toBe(true);
@@ -72,18 +78,30 @@ describe("two-customer isolation", () => {
 });
 
 describe("functionality preservation under the sandbox", () => {
-	it("keeps the plugin cache readable (e.g. the meddpicc engine)", () => {
-		expect(reads(custA, path.join(getPluginsDir(), "cache", "plugins", "meddpicc", "engine", "cli.ts"))).toBe(false);
+	it("keeps operator-owned plugins writable (e.g. the meddpicc engine)", () => {
+		const plugin = path.join(getPluginsDir(), "cache", "plugins", "meddpicc", "engine", "cli.ts");
+		expect(reads(custA, plugin)).toBe(false);
+		expect(writes(custA, plugin)).toBe(false);
 	});
 
-	it("keeps user-level skills readable", () => {
-		expect(reads(custA, path.join(getAgentDir(), "skills", "account-planning", "SKILL.md"))).toBe(false);
+	it("keeps user-level skills and settings writable", () => {
+		for (const own of [
+			path.join(getAgentDir(), "skills", "account-planning", "SKILL.md"),
+			path.join(getConfigRootDir(), "settings.json"),
+		]) {
+			expect(reads(custA, own)).toBe(false);
+			expect(writes(custA, own)).toBe(false);
+		}
 	});
 
 	// #2637: the operator's own dotfiles are theirs. What stays blocked is another customer's folder and
 	// another session's state, asserted above and below.
-	it("no longer blocks the operator's own home dotfiles", () => {
-		expect(reads(custA, path.join(os.homedir(), ".ssh", "id_rsa"))).toBe(false);
+	it("keeps the operator's own home and configuration writable", () => {
+		for (const own of [".gitconfig", ".aws/config", ".zshrc", ".zprofile", ".ssh/config"]) {
+			const target = path.join(os.homedir(), own);
+			expect(reads(custA, target)).toBe(false);
+			expect(writes(custA, target)).toBe(false);
+		}
 	});
 });
 
@@ -159,6 +177,22 @@ describe("two-customer isolation, enforced in the shell", () => {
 		expect(fs.readFileSync(path.join(custB, "planted.env"), "utf8")).toBe("x");
 		await shell(custA, `cp ${path.join(custB, "secret.env")} .`);
 		expect(fs.existsSync(path.join(custA, "secret.env"))).toBe(true);
+	});
+
+	it("allows operator-owned configuration writes through the OS fence", async () => {
+		const targets = [
+			path.join(home, ".gitconfig"),
+			path.join(home, ".aws", "config"),
+			path.join(home, ".zshrc"),
+			path.join(home, ".ssh", "config"),
+			path.join(home, ".xcsh", "plugins", "example", "plugin.json"),
+		];
+		for (const target of targets) {
+			fs.mkdirSync(path.dirname(target), { recursive: true });
+			const result = await shell(custA, `printf operator > ${JSON.stringify(target)}`);
+			expect(result.code).toBe(0);
+			expect(fs.readFileSync(target, "utf8")).toBe("operator");
+		}
 	});
 
 	it(`a spawned parent listing ${OS_ENFORCED ? "is" : "is not"} OS-confined`, async () => {

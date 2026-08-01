@@ -14,7 +14,7 @@
  * allow-by-default with targeted denies, so the effective boundary was their intersection and the
  * intersection refused ordinary work. One object means the pre-check and the kernel cannot disagree.
  */
-import { buildContainmentFence, type ContainmentFence, containmentStatus } from "./containment";
+import { buildContainmentFence, type ContainmentFence } from "./containment";
 
 /** The slice of `Settings` this needs — supplied explicitly so the caller names its own source. */
 export interface SettingsReader {
@@ -64,16 +64,12 @@ export function resolveSessionFence(
 
 	const allowRead = readSetting<string[]>(settings, "sandbox.allowRead", []);
 	const allowWrite = readSetting<string[]>(settings, "sandbox.allowWrite", []);
-	// Only seatbelt can hold a file read-only inside a writable directory; Landlock's rules are
-	// recursive, so asking for it there would strip write from the parent and break the CLIs (#2581).
-	const narrowsWithinGrant = containmentStatus(true).backend === "seatbelt";
 	const signature = [
 		workspace,
 		JSON.stringify(allowRead),
 		JSON.stringify(allowWrite),
 		extras.sessionTmp ?? "",
 		JSON.stringify(extras.extraRoots ?? []),
-		String(narrowsWithinGrant),
 	].join(" ");
 
 	const cached = cache.get(signature);
@@ -88,7 +84,6 @@ export function resolveSessionFence(
 		extraRoots: extras.extraRoots,
 		readOnlyRoots: allowRead,
 		writeOnlyRoots: allowWrite,
-		narrowsWithinGrant,
 	});
 	if (cache.size >= CACHE_LIMIT) {
 		const oldest = cache.keys().next();
