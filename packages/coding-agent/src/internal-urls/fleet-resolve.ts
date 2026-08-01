@@ -149,13 +149,10 @@ export interface CwdEventSource {
 }
 
 /**
- * A getter for the working directory the *session* is in, not the one the process
- * started in.
+ * A getter for the working directory the *session* is rooted in, not the one the process started in.
  *
- * The bash tool keeps its own cwd and updates it on `cd`, emitting `cwd:changed`
- * (`tools/bash.ts`); `process.chdir` is never called for it. Classifying against
- * `process.cwd()` would therefore keep reporting the startup repository, so a
- * `content` grant could survive after moving into a `developer` repository.
+ * Model bash calls reset to this root, so a command-local `cd` must not emit this event. The event is
+ * reserved for an explicit session relocation; `process.chdir` is never used for either case.
  */
 export function createLiveCwdGetter(initialCwd: string, events?: CwdEventSource): () => string {
 	let current = initialCwd;

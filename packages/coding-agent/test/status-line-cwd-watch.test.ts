@@ -61,10 +61,9 @@ describe("StatusLineComponent.watchCwd", () => {
 	});
 
 	it("renders the cwd from the cwd:changed event payload, not getShellPwd()", () => {
-		// Regression for #118: the statusline must track the cwd carried by the
-		// cwd:changed event (the assistant's working directory), not the global
-		// shellPwd. The event payload and shellPwd can diverge when a user !cd
-		// command updates shellPwd but the assistant's cwd stays unchanged.
+		// Regression for #118: the statusline must track an explicit session relocation carried by the
+		// event, not the global shellPwd. The two can diverge because an operator `!cd` updates shellPwd
+		// while model tool calls remain rooted at the session directory (#2724).
 		//
 		// Use persistent, pid-scoped directories rather than mkdtempSync with
 		// cleanup. getTopBorder() kicks off fire-and-forget async IIFEs inside

@@ -64,7 +64,7 @@ export interface BashResult {
 	outputLines: number;
 	outputBytes: number;
 	artifactId?: string;
-	/** Actual working directory after the command ran (persistent shell only). */
+	/** Actual working directory after the command ran; direct operator-shell callers may persist it. */
 	newCwd?: string;
 }
 

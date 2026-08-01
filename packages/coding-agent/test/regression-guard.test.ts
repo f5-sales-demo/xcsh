@@ -233,9 +233,11 @@ describe("bash tool secret masking (PR #77)", () => {
 		expect(src).toContain("obfuscator");
 	});
 
-	it("bash.ts integrates setShellPwd for cwd tracking", async () => {
+	it("bash.ts does not persist a model command's final cwd", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/tools/bash.ts"), "utf8");
-		expect(src).toContain("setShellPwd");
+		expect(src).not.toContain("setShellPwd");
+		expect(src).not.toContain("session.cwd = result.newCwd");
+		expect(src).not.toContain('emit("cwd:changed", result.newCwd)');
 	});
 });
 
@@ -578,7 +580,7 @@ describe("Provider registration: env var fallback must not send literal name (PR
 
 // ─── Statusline CWD Tracking (#118, #120) ─────────────────────────────────
 
-describe("statusline tracks assistant cwd, not global shellPwd (PR #120 regression, #118)", () => {
+describe("statusline tracks the session root, not global shellPwd (PR #120 regression, #118)", () => {
 	it("status-line.ts owns a #cwd field initialized from session.cwd, not a stale global", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/modes/components/status-line.ts"), "utf8");
 		// The component must declare #cwd as a typed field (not inline-initialized from a global)

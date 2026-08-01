@@ -121,11 +121,10 @@ describe("classifyRepo", () => {
 	});
 });
 
-describe("live working directory (#2429 review)", () => {
-	it("follows the session's cd instead of pinning the startup directory", () => {
-		// The bash tool tracks its own cwd and emits `cwd:changed`; process.cwd() never
-		// moves. Classifying against the startup directory would keep a content grant
-		// alive after cd'ing into a developer repository.
+describe("live session root (#2429 review)", () => {
+	it("follows an explicit session relocation instead of the process directory", () => {
+		// Model bash calls do not emit this event for command-local `cd`. An explicit session move may,
+		// while process.cwd() remains unchanged.
 		const handlers: Array<(next: unknown) => void> = [];
 		const events = {
 			on(_event: "cwd:changed", handler: (next: unknown) => void) {
