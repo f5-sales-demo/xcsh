@@ -556,9 +556,13 @@ describe("renderAboutDoc containment section", () => {
 		expect(doc).toContain("## Sandbox containment");
 		expect(doc).toContain("seatbelt");
 		expect(doc).toContain("how a path is spelled does not change what is reachable");
-		// The agent must be told not to retry a refusal a different way — that is wasted turns.
-		expect(doc).toContain("do not try to reach the same path a different way");
-		// And that ordinary work is not restricted, so it does not treat the fence as a reason to stop.
+		// The contract distinguishes operator rights from session-context isolation.
+		expect(doc).toContain("home and configuration belong to the operator");
+		expect(doc).toContain("readable and writable");
+		expect(doc).toContain("directory containing the session root cannot");
+		expect(doc).toContain("sibling path the operator names directly");
+		expect(doc).toContain("Cross-session stores and data roots remain denied");
+		// Ordinary work remains available and an operator can deliberately restore discovery.
 		expect(doc).toContain("--allow-path");
 	});
 
