@@ -6,6 +6,7 @@
 
 - Made operator-owned home files, CLI configuration, shell profiles, SSH state, plugins, skills, and settings consistently writable while preserving cross-session and data-root isolation ([#2720](https://github.com/f5-sales-demo/xcsh/issues/2720))
 - Prevented sandbox sessions from enumerating the session root's parent while preserving named operator access and explicit read-grant overrides ([#2725](https://github.com/f5-sales-demo/xcsh/issues/2725))
+- Included the generated API-spec indexes in npm artifacts and exercised them in tarball install smoke tests ([#2760](https://github.com/f5-sales-demo/xcsh/issues/2760))
 
 ## [20.0.0] - 2026-08-01
 
