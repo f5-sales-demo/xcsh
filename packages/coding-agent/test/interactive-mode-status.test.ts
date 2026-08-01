@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, test, vi } from "bun:test";
 import { Container } from "@f5-sales-demo/pi-tui";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { InteractiveModeContext } from "@f5-sales-demo/xcsh/modes/types";
-import { UiHelpers } from "@f5-sales-demo/xcsh/modes/utils/ui-helpers";
-import { buildSessionContext } from "@f5-sales-demo/xcsh/session/session-manager";
+import { initTheme } from "../src/modes/theme/theme";
+import type { InteractiveModeContext } from "../src/modes/types";
+import { UiHelpers } from "../src/modes/utils/ui-helpers";
+import { buildSessionContext } from "../src/session/session-manager";
 
 function renderLastLine(container: Container, width = 120): string {
 	const last = container.children[container.children.length - 1];

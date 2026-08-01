@@ -6,13 +6,13 @@ import { Agent } from "@f5-sales-demo/pi-agent-core";
 import { type AssistantMessage, type Context, getBundledModel, type ToolCall } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { ChatHandler } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import type { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { ChatHandler } from "../../src/browser/chat-handler";
+import type { BridgeServer } from "../../src/browser/extension-bridge";
+import { ModelRegistry } from "../../src/config/model-registry";
+import { Settings } from "../../src/config/settings";
+import { AgentSession } from "../../src/session/agent-session";
+import { AuthStorage } from "../../src/session/auth-storage";
+import { SessionManager } from "../../src/session/session-manager";
 
 /**
  * A4 — the acceptance gate for #2046: an END-TO-END proof that a WS-registered host

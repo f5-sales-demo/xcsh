@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { F5_LOGO_ROWS } from "@f5-sales-demo/xcsh/modes/components/welcome";
+import { F5_LOGO_ROWS } from "../src/modes/components/welcome";
 
 /**
  * Regression guard for the F5 startup logo (issue #1863).

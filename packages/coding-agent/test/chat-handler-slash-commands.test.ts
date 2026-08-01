@@ -13,11 +13,11 @@
  * Expansion therefore belongs here, on `req.text`, before composition.
  */
 import { expect, test } from "bun:test";
-import { ChatHandler } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import { isListCommands } from "@f5-sales-demo/xcsh/browser/chat-protocol";
-import type { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import type { FileSlashCommand } from "@f5-sales-demo/xcsh/extensibility/slash-commands";
-import type { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { ChatHandler } from "../src/browser/chat-handler";
+import { isListCommands } from "../src/browser/chat-protocol";
+import type { BridgeServer } from "../src/browser/extension-bridge";
+import type { FileSlashCommand } from "../src/extensibility/slash-commands";
+import type { AgentSession } from "../src/session/agent-session";
 
 const QUALIFY: FileSlashCommand = {
 	name: "meddpicc:qualify-deal",

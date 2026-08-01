@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { normalizePluginDisplayName } from "@f5-sales-demo/xcsh/modes/components/plugins/state-manager";
+import { normalizePluginDisplayName } from "../src/modes/components/plugins/state-manager";
 
 describe("normalizePluginDisplayName", () => {
 	describe("xcsh- prefix stripping", () => {

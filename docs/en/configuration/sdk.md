@@ -21,7 +21,7 @@ bun add @f5-sales-demo/xcsh
 
 ## Entry points
 
-`@f5-sales-demo/xcsh` exports the SDK APIs from the package root (and also via `@f5-sales-demo/xcsh/sdk`).
+`@f5-sales-demo/xcsh` exports the SDK APIs from the package root.
 
 Core exports for embedders:
 

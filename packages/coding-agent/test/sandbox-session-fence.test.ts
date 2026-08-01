@@ -2,8 +2,8 @@ import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
-import { resolveSessionFence, type SettingsReader } from "@f5-sales-demo/xcsh/sandbox/session-fence";
+import { fenceVerdict } from "../src/sandbox/containment";
+import { resolveSessionFence, type SettingsReader } from "../src/sandbox/session-fence";
 
 /**
  * Real directories, because a fence is built from canonical paths and refuses to build on one it cannot

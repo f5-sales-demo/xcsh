@@ -3,14 +3,14 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { TUI } from "@f5-sales-demo/pi-tui";
-import { _resetSettingsForTest, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { ToolExecutionComponent } from "@f5-sales-demo/xcsh/modes/components/tool-execution";
-import * as themeModule from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { resetVimRendererStateForTest, VimTool, vimToolRenderer } from "@f5-sales-demo/xcsh/tools/vim";
-import { VimBuffer } from "@f5-sales-demo/xcsh/vim/buffer";
-import { VimEngine } from "@f5-sales-demo/xcsh/vim/engine";
-import { parseKeySequences } from "@f5-sales-demo/xcsh/vim/parser";
+import { _resetSettingsForTest, Settings } from "../../src/config/settings";
+import { ToolExecutionComponent } from "../../src/modes/components/tool-execution";
+import * as themeModule from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { resetVimRendererStateForTest, VimTool, vimToolRenderer } from "../../src/tools/vim";
+import { VimBuffer } from "../../src/vim/buffer";
+import { VimEngine } from "../../src/vim/engine";
+import { parseKeySequences } from "../../src/vim/parser";
 
 function textResult(result: { content: Array<{ type: string; text?: string }> }): string {
 	return result.content

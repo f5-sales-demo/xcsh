@@ -1,9 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	buildWizardContext,
-	validateWizardName,
-	validateWizardUrl,
-} from "@f5-sales-demo/xcsh/modes/components/context-add-wizard";
+import { buildWizardContext, validateWizardName, validateWizardUrl } from "../src/modes/components/context-add-wizard";
 
 const BASE_STATE = {
 	url: "https://example-corp.console.ves.volterra.io",

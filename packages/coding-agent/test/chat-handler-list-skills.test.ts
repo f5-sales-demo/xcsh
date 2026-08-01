@@ -6,10 +6,10 @@
  * `read` tool + system prompt (Phase 2A); this frame is enumeration only.
  */
 import { expect, test } from "bun:test";
-import { ChatHandler } from "@f5-sales-demo/xcsh/browser/chat-handler";
-import { isListSkills } from "@f5-sales-demo/xcsh/browser/chat-protocol";
-import type { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import type { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
+import { ChatHandler } from "../src/browser/chat-handler";
+import { isListSkills } from "../src/browser/chat-protocol";
+import type { BridgeServer } from "../src/browser/extension-bridge";
+import type { AgentSession } from "../src/session/agent-session";
 
 function harness(skills: Array<{ name: string; description: string }> = []) {
 	const sent: Record<string, unknown>[] = [];

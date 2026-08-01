@@ -10,15 +10,15 @@ import { Agent, AgentBusyError, type AgentTool } from "@f5-sales-demo/pi-agent-c
 import { type AssistantMessage, getBundledModel, type Message, type ToolCall } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import type { Rule } from "@f5-sales-demo/xcsh/capability/rule";
-import { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { TtsrManager } from "@f5-sales-demo/xcsh/export/ttsr";
-import { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
-import { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import { convertToLlm } from "@f5-sales-demo/xcsh/session/messages";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
 import { Type } from "@sinclair/typebox";
+import type { Rule } from "../src/capability/rule";
+import { ModelRegistry } from "../src/config/model-registry";
+import { Settings } from "../src/config/settings";
+import { TtsrManager } from "../src/export/ttsr";
+import { AgentSession } from "../src/session/agent-session";
+import { AuthStorage } from "../src/session/auth-storage";
+import { convertToLlm } from "../src/session/messages";
+import { SessionManager } from "../src/session/session-manager";
 
 // Mock stream that mimics AssistantMessageEventStream
 class MockAssistantStream extends AssistantMessageEventStream {}

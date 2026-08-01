@@ -6,7 +6,7 @@
  * and PendingRequests id-correlation end-to-end.
  */
 import { afterEach, describe, expect, it } from "bun:test";
-import { type BridgeServer, startBridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
+import { type BridgeServer, startBridgeServer } from "../../src/browser/extension-bridge";
 
 describe("BridgeServer round-trip", () => {
 	let server: BridgeServer | null = null;

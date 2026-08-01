@@ -4,13 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import * as pythonExecutor from "@f5-sales-demo/xcsh/ipy/executor";
-import type { PreludeHelper, PythonKernel as PythonKernelInstance } from "@f5-sales-demo/xcsh/ipy/kernel";
-import * as pythonKernel from "@f5-sales-demo/xcsh/ipy/kernel";
-import * as memories from "@f5-sales-demo/xcsh/memories";
-import { createAgentSession, type ExtensionFactory } from "@f5-sales-demo/xcsh/sdk";
-import { SessionManager } from "@f5-sales-demo/xcsh/session/session-manager";
+import { Settings } from "../src/config/settings";
+import * as pythonExecutor from "../src/ipy/executor";
+import type { PreludeHelper, PythonKernel as PythonKernelInstance } from "../src/ipy/kernel";
+import * as pythonKernel from "../src/ipy/kernel";
+import * as memories from "../src/memories";
+import { createAgentSession, type ExtensionFactory } from "../src/sdk";
+import { SessionManager } from "../src/session/session-manager";
 
 const OK_EXECUTION = { status: "ok", cancelled: false, timedOut: false, stdinRequested: false } as const;
 

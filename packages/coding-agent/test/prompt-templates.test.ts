@@ -9,9 +9,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { expandPromptTemplate, type PromptTemplate } from "@f5-sales-demo/xcsh/config/prompt-templates";
-import { expandSlashCommand, type FileSlashCommand } from "@f5-sales-demo/xcsh/extensibility/slash-commands";
-import { parseCommandArgs, substituteArgs } from "@f5-sales-demo/xcsh/utils/command-args";
+import { expandPromptTemplate, type PromptTemplate } from "../src/config/prompt-templates";
+import { expandSlashCommand, type FileSlashCommand } from "../src/extensibility/slash-commands";
+import { parseCommandArgs, substituteArgs } from "../src/utils/command-args";
 
 // ============================================================================
 // substituteArgs

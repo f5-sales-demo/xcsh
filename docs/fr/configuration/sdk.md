@@ -26,7 +26,7 @@ bun add @f5-sales-demo/xcsh
 
 ## Points d'entrée
 
-`@f5-sales-demo/xcsh` exporte les API du SDK depuis la racine du paquet (ainsi que via `@f5-sales-demo/xcsh/sdk`).
+`@f5-sales-demo/xcsh` exporte les API du SDK depuis la racine du paquet.
 
 Exports principaux pour les intégrateurs :
 

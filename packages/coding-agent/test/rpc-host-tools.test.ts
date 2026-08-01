@@ -3,13 +3,9 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { AgentEvent } from "@f5-sales-demo/pi-agent-core";
-import type {
-	RpcHostToolCallRequest,
-	RpcHostToolCancelRequest,
-	RpcHostToolUpdate,
-} from "@f5-sales-demo/xcsh/host-tools";
-import { RpcHostToolBridge } from "@f5-sales-demo/xcsh/host-tools";
-import { defineRpcClientTool, RpcClient } from "@f5-sales-demo/xcsh/modes";
+import type { RpcHostToolCallRequest, RpcHostToolCancelRequest, RpcHostToolUpdate } from "../src/host-tools";
+import { RpcHostToolBridge } from "../src/host-tools";
+import { defineRpcClientTool, RpcClient } from "../src/modes";
 
 const tempPaths: string[] = [];
 

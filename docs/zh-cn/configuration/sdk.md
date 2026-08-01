@@ -24,7 +24,7 @@ bun add @f5-sales-demo/xcsh
 
 ## 入口点
 
-`@f5-sales-demo/xcsh` 从包根目录（以及通过 `@f5-sales-demo/xcsh/sdk`）导出 SDK API。
+`@f5-sales-demo/xcsh` 从包根目录（以及通过 `@f5-sales-demo/xcsh`）导出 SDK API。
 
 嵌入方的核心导出：
 

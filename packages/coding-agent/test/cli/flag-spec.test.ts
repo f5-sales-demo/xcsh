@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { type Mode, parseArgs } from "@f5-sales-demo/xcsh/cli/args";
-import {
-	buildCliFlags,
-	flagSpec,
-	LAUNCH_FLAGS,
-	normalizeFlagTokens,
-	takesValue,
-} from "@f5-sales-demo/xcsh/cli/flag-spec";
-import Index from "@f5-sales-demo/xcsh/commands/launch";
+import { type Mode, parseArgs } from "../../src/cli/args";
+import { buildCliFlags, flagSpec, LAUNCH_FLAGS, normalizeFlagTokens, takesValue } from "../../src/cli/flag-spec";
+import Index from "../../src/commands/launch";
 
 const visibleNames = Object.entries(LAUNCH_FLAGS)
 	.filter(([, spec]) => !("hidden" in spec))

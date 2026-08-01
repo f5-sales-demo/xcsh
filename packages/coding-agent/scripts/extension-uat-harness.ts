@@ -13,6 +13,7 @@
  *
  * Usage: bun scripts/extension-uat-harness.ts
  */
+import * as fs from "node:fs/promises";
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
 
 const BASE = process.env.XCSH_API_URL ?? "https://example.staging.volterra.us";
@@ -40,6 +41,25 @@ function userVerify(name: string, detail: string) {
 	console.log(`  👁 ${name}: ${detail}`);
 }
 
+function firstRef(result: Record<string, unknown>): string | undefined {
+	const refs = result.refs;
+	if (!Array.isArray(refs)) return undefined;
+	const first = refs[0];
+	if (typeof first !== "object" || first === null || !("ref" in first)) return undefined;
+	return typeof first.ref === "string" ? first.ref : undefined;
+}
+
+function isUploadedFileMetadata(value: unknown): value is { size: number; type: string } {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"size" in value &&
+		typeof value.size === "number" &&
+		"type" in value &&
+		typeof value.type === "string"
+	);
+}
+
 async function run() {
 	console.log("\n🚀 F5 XC Console Agent — UAT Harness\n");
 	console.log("[0] Starting bridge server...");
@@ -49,7 +69,7 @@ async function run() {
 	const deadline = Date.now() + 60_000;
 	while (Date.now() < deadline) {
 		if (server.connected) break;
-		await new Promise(r => setTimeout(r, 2000));
+		await Bun.sleep(2000);
 		process.stdout.write(".");
 	}
 	if (!server.connected) {
@@ -165,8 +185,7 @@ async function run() {
 		const s = await tool("screenshot", {}, 30000);
 		const data = (s as any)?.data;
 		if (data && typeof data === "string" && data.length > 100) {
-			const fs = await import("node:fs");
-			fs.writeFileSync("/tmp/uat-screenshot.png", Buffer.from(data, "base64"));
+			await fs.writeFile("/tmp/uat-screenshot.png", Buffer.from(data, "base64"));
 			userVerify("screenshot", "saved to /tmp/uat-screenshot.png — verify it shows the console page");
 		} else {
 			fail("screenshot", "no data returned (Chrome debugger infobar may need accepting)");
@@ -288,15 +307,60 @@ async function run() {
 		fail("resize_window", (e as Error).message);
 	}
 
-	console.log("[19] select_option (skip — needs a real <select> on the current page)");
-	results.push({
-		tool: "select_option",
-		status: "PASS",
-		detail: "deferred — exercised via form_input + catalogue workflow",
-	});
+	console.log("[19] select_option (deterministic injected fixture)");
+	try {
+		await tool("javascript_tool", {
+			code: `(() => {
+				document.getElementById("xcsh-uat-fixture")?.remove();
+				const root = document.createElement("div");
+				root.id = "xcsh-uat-fixture";
+				root.innerHTML = '<label for="xcsh-uat-select">xcsh UAT choice</label><select id="xcsh-uat-select" name="xcsh-uat-select"><option value="alpha">Alpha</option><option value="beta">Beta</option></select><label for="xcsh-uat-file">xcsh UAT file</label><input id="xcsh-uat-file" name="xcsh-uat-file" type="file">';
+				document.body.append(root);
+				return true;
+			})()`,
+		});
+		const found = await tool("find", { selector: "select[name='xcsh-uat-select']" });
+		const ref = firstRef(found);
+		if (!ref) {
+			fail("select_option", "fixture select did not produce an accessibility ref");
+		} else {
+			await tool("select_option", { ref, value: "beta" });
+			const selected = await tool("javascript_tool", {
+				code: `document.getElementById("xcsh-uat-select")?.value`,
+			});
+			selected.result === "beta"
+				? pass("select_option", "selected and observed the beta value")
+				: fail("select_option", `expected beta, received ${JSON.stringify(selected.result)}`);
+		}
+	} catch (e) {
+		fail("select_option", (e as Error).message);
+	}
 
-	console.log("[20] file_upload");
-	results.push({ tool: "file_upload", status: "PASS", detail: "Phase 1 stub — returns acknowledgment" });
+	console.log("[20] file_upload (deterministic injected fixture)");
+	try {
+		const found = await tool("find", { selector: "textbox[name='xcsh-uat-file']" });
+		const ref = firstRef(found);
+		if (!ref) {
+			fail("file_upload", "fixture file input did not produce an accessibility ref");
+		} else {
+			await tool("file_upload", { ref, files: ["data:text/plain;base64,eGNzaC11YXQ="] });
+			const uploaded = await tool("javascript_tool", {
+				code: `(() => {
+					const input = document.getElementById("xcsh-uat-file");
+					const file = input instanceof HTMLInputElement ? input.files?.[0] : undefined;
+					return file ? { size: file.size, type: file.type } : null;
+				})()`,
+			});
+			const metadata = uploaded.result;
+			isUploadedFileMetadata(metadata) && metadata.size === 8 && metadata.type === "text/plain"
+				? pass("file_upload", "uploaded and observed an 8-byte text file")
+				: fail("file_upload", `unexpected file metadata: ${JSON.stringify(metadata)}`);
+		}
+	} catch (e) {
+		fail("file_upload", (e as Error).message);
+	} finally {
+		await tool("javascript_tool", { code: `document.getElementById("xcsh-uat-fixture")?.remove()` }).catch(() => {});
+	}
 
 	console.log("[21] detach");
 	try {

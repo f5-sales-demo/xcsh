@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { getThemeByName } from "@f5-sales-demo/xcsh/modes/theme/theme";
 import { Settings } from "../../src/config/settings";
 import {
 	buildDiscoverableMCPSearchIndex,
 	type DiscoverableMCPSearchIndex,
 } from "../../src/mcp/discoverable-tool-metadata";
+import { getThemeByName } from "../../src/modes/theme/theme";
 import type { ToolSession } from "../../src/tools/index";
 import {
 	renderSearchToolBm25Description,

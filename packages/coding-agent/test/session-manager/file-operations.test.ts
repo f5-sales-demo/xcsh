@@ -10,7 +10,7 @@ import {
 	resolveResumableSession,
 	type SessionHeader,
 	SessionManager,
-} from "@f5-sales-demo/xcsh/session/session-manager";
+} from "../../src/session/session-manager";
 
 describe("loadEntriesFromFile", () => {
 	let tempDir: string;

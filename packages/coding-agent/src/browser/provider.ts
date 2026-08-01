@@ -1,4 +1,11 @@
-import { type AcquireAction, acquirePage, decideAcquireAction, isChromeRunning } from "./acquire";
+import { logger } from "@f5-sales-demo/pi-utils";
+import {
+	type AcquireAction,
+	acquirePage,
+	decideAcquireAction,
+	isChromeRunning,
+	restoreDefaultChromeWithoutDebugPort,
+} from "./acquire";
 import { ensureAuthenticated } from "./auth";
 import { CdpPageActions } from "./cdp-page-actions";
 import { locateChrome } from "./chrome-locate";
@@ -53,6 +60,11 @@ export class CdpBrowserProvider implements BrowserProvider {
 	readonly name = "cdp";
 	#settings: Settings;
 	#probes: { probeDebuggable: () => Promise<boolean>; chromeRunning: () => boolean; chromeInstalled: () => boolean };
+	#lifecycle: {
+		acquirePage: typeof acquirePage;
+		ensureAuthenticated: typeof ensureAuthenticated;
+		restoreDefaultChromeWithoutDebugPort: typeof restoreDefaultChromeWithoutDebugPort;
+	};
 
 	constructor(
 		settings: Settings,
@@ -61,12 +73,22 @@ export class CdpBrowserProvider implements BrowserProvider {
 			chromeRunning: () => boolean;
 			chromeInstalled: () => boolean;
 		},
+		lifecycle?: {
+			acquirePage: typeof acquirePage;
+			ensureAuthenticated: typeof ensureAuthenticated;
+			restoreDefaultChromeWithoutDebugPort: typeof restoreDefaultChromeWithoutDebugPort;
+		},
 	) {
 		this.#settings = settings;
 		this.#probes = probes ?? {
 			probeDebuggable: probeDebuggableDefault,
 			chromeRunning: () => isChromeRunning(),
 			chromeInstalled: () => locateChrome({ settings }) != null,
+		};
+		this.#lifecycle = lifecycle ?? {
+			acquirePage,
+			ensureAuthenticated,
+			restoreDefaultChromeWithoutDebugPort,
 		};
 	}
 
@@ -80,8 +102,11 @@ export class CdpBrowserProvider implements BrowserProvider {
 	}
 
 	async acquire(consoleUrl: string): Promise<AcquiredBrowser> {
-		const { browser, page, mode } = await acquirePage({ settings: this.#settings, debugPort: DEBUG_PORT });
-		await ensureAuthenticated(page, consoleUrl);
+		const { browser, page, mode } = await this.#lifecycle.acquirePage({
+			settings: this.#settings,
+			debugPort: DEBUG_PORT,
+		});
+		await this.#lifecycle.ensureAuthenticated(page, consoleUrl);
 		const dropPort = this.#settings.get("browser.dropPortAfter") === true;
 		const relaunched = mode === "relaunched-default";
 		return {
@@ -89,11 +114,14 @@ export class CdpBrowserProvider implements BrowserProvider {
 			mode,
 			release: async () => {
 				await browser.disconnect().catch(() => {});
-				// dropPortAfter: only meaningful when WE opened the port via relaunch; reopening
-				// the real profile without the flag is itself a relaunch — gate it tightly.
 				if (dropPort && relaunched) {
-					// Best-effort: leave to a follow-up; never force-kill. (No-op stub acceptable here —
-					// the port closes when the user next restarts Chrome. See spec "dropPortAfter".)
+					try {
+						await this.#lifecycle.restoreDefaultChromeWithoutDebugPort(this.#settings);
+					} catch (error) {
+						logger.warn("Failed to restore Chrome without the debug port", {
+							error: error instanceof Error ? error.message : String(error),
+						});
+					}
 				}
 			},
 		};

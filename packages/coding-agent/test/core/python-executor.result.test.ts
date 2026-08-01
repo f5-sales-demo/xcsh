@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { executePythonWithKernel, type PythonKernelExecutor } from "@f5-sales-demo/xcsh/ipy/executor";
-import type { KernelExecuteOptions, KernelExecuteResult } from "@f5-sales-demo/xcsh/ipy/kernel";
+import { executePythonWithKernel, type PythonKernelExecutor } from "../../src/ipy/executor";
+import type { KernelExecuteOptions, KernelExecuteResult } from "../../src/ipy/kernel";
 
 class FakeKernel implements PythonKernelExecutor {
 	private result: KernelExecuteResult;

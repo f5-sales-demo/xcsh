@@ -9,8 +9,8 @@ import {
 	partitionByAuthority,
 	repoNameFromOrigin,
 	TRUSTED_ORGS,
-} from "@f5-sales-demo/xcsh/internal-urls/fleet-resolve";
-import type { InternalUrl } from "@f5-sales-demo/xcsh/internal-urls/types";
+} from "../../src/internal-urls/fleet-resolve";
+import type { InternalUrl } from "../../src/internal-urls/types";
 
 function parseUrl(urlStr: string): InternalUrl {
 	const url = new URL(urlStr) as InternalUrl;

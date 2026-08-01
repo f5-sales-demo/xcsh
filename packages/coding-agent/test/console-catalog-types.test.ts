@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { ConsoleCatalogData } from "@f5-sales-demo/xcsh/internal-urls/console-catalog-types";
-import { EMPTY_CONSOLE_CATALOG } from "@f5-sales-demo/xcsh/internal-urls/console-catalog-types";
+import type { ConsoleCatalogData } from "../src/internal-urls/console-catalog-types";
+import { EMPTY_CONSOLE_CATALOG } from "../src/internal-urls/console-catalog-types";
 
 describe("ConsoleCatalogData", () => {
 	it("accepts a minimal catalogue shape", () => {

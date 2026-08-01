@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "bun:test";
-import { InputController } from "@f5-sales-demo/xcsh/modes/controllers/input-controller";
-import type { InteractiveModeContext } from "@f5-sales-demo/xcsh/modes/types";
+import { InputController } from "../src/modes/controllers/input-controller";
+import type { InteractiveModeContext } from "../src/modes/types";
 
 function createContext(opts: { hasProvider: boolean }) {
 	let editorText = "";

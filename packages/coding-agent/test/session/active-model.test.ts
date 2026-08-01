@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Model } from "@f5-sales-demo/pi-ai";
-import { buildActiveModelSnapshot, gatewayHost } from "@f5-sales-demo/xcsh/session/active-model";
+import { buildActiveModelSnapshot, gatewayHost } from "../../src/session/active-model";
 
 function fakeModel(overrides: Partial<Model> = {}): Model {
 	return {

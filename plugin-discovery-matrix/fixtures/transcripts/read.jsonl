@@ -1,4 +1,0 @@
-{"type":"turn_start"}
-{"type":"tool_execution_start","toolCallId":"t1","toolName":"read","args":{"path":"xcsh://plugin/meddpicc/schema"}}
-{"type":"tool_execution_end","toolCallId":"t1","toolName":"read","result":{}}
-{"type":"turn_end"}

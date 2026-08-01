@@ -4,11 +4,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell } from "@f5-sales-demo/pi-natives";
 import { getAgentDir, getPluginsDir, TempDir } from "@f5-sales-demo/pi-utils";
-import { discoverAndLoadExtensions } from "@f5-sales-demo/xcsh/extensibility/extensions/loader";
-import { getMemoryRoot } from "@f5-sales-demo/xcsh/memories";
-import { buildContainmentFence, containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
-import { evaluateToolCall } from "@f5-sales-demo/xcsh/sandbox/enforce";
-import { resolveSessionFence } from "@f5-sales-demo/xcsh/sandbox/session-fence";
+import { discoverAndLoadExtensions } from "../src/extensibility/extensions/loader";
+import { getMemoryRoot } from "../src/memories";
+import { buildContainmentFence, containmentStatus } from "../src/sandbox/containment";
+import { evaluateToolCall } from "../src/sandbox/enforce";
+import { resolveSessionFence } from "../src/sandbox/session-fence";
 
 let tmp: TempDir;
 let home: string;

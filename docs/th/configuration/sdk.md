@@ -24,7 +24,7 @@ bun add @f5-sales-demo/xcsh
 
 ## จุดเข้าถึง
 
-`@f5-sales-demo/xcsh` ส่งออก SDK APIs จาก root ของแพ็กเกจ (และยังส่งออกผ่าน `@f5-sales-demo/xcsh/sdk` ด้วย)
+`@f5-sales-demo/xcsh` ส่งออก SDK APIs จาก root ของแพ็กเกจ
 
 การส่งออกหลักสำหรับผู้ฝัง:
 

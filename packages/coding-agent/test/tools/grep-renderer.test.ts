@@ -3,10 +3,10 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { GrepTool, grepToolRenderer } from "@f5-sales-demo/xcsh/tools/grep";
+import { Settings } from "../../src/config/settings";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import type { ToolSession } from "../../src/tools";
+import { GrepTool, grepToolRenderer } from "../../src/tools/grep";
 
 describe("grepToolRenderer", () => {
 	it("keeps summary and truncation rows inside the collapsed line budget", async () => {

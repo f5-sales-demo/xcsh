@@ -3,11 +3,11 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { InternalUrlRouter } from "@f5-sales-demo/xcsh/internal-urls/router";
-import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { astGrepToolRenderer } from "@f5-sales-demo/xcsh/tools/ast-grep";
+import { Settings } from "../../src/config/settings";
+import { InternalUrlRouter } from "../../src/internal-urls/router";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import { createTools, type ToolSession } from "../../src/tools";
+import { astGrepToolRenderer } from "../../src/tools/ast-grep";
 
 function createTestSession(cwd = "/tmp/test", overrides: Partial<ToolSession> = {}): ToolSession {
 	return {

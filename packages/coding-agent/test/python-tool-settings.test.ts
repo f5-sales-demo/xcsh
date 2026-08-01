@@ -3,11 +3,11 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import { type SettingPath, Settings } from "@f5-sales-demo/xcsh/config/settings";
-import * as pythonExecutor from "@f5-sales-demo/xcsh/ipy/executor";
-import * as pythonKernel from "@f5-sales-demo/xcsh/ipy/kernel";
-import { createTools, type ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { PythonTool } from "@f5-sales-demo/xcsh/tools/python";
+import { type SettingPath, Settings } from "../src/config/settings";
+import * as pythonExecutor from "../src/ipy/executor";
+import * as pythonKernel from "../src/ipy/kernel";
+import { createTools, type ToolSession } from "../src/tools";
+import { PythonTool } from "../src/tools/python";
 
 function createSession(
 	cwd: string,

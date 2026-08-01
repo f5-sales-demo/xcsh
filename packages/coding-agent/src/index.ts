@@ -1,3 +1,4 @@
+import type { HookAPI, HookFactory } from "./extensibility/hooks/types";
 import { HookEditorComponent, HookInputComponent, HookSelectorComponent } from "./modes/components";
 
 // Core session management
@@ -25,7 +26,6 @@ export * from "./extensibility/custom-tools";
 export type * from "./extensibility/extensions";
 // Extension types and utilities
 export * from "./extensibility/extensions";
-// Hook system types (legacy re-export)
 // Skills
 export * from "./extensibility/skills";
 // Slash commands
@@ -53,6 +53,7 @@ export type * from "./task/types";
 // Tools (detail types and utilities)
 export * from "./tools";
 export * from "./utils/git";
+export type { HookAPI, HookFactory };
 // UI components for extensions
 export {
 	HookEditorComponent as ExtensionEditorComponent,

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { visibleWidth } from "@f5-sales-demo/pi-tui";
-import { HookSelectorComponent } from "@f5-sales-demo/xcsh/modes/components/hook-selector";
-import { getThemeByName, setThemeInstance } from "@f5-sales-demo/xcsh/modes/theme/theme";
+import { HookSelectorComponent } from "../src/modes/components/hook-selector";
+import { getThemeByName, setThemeInstance } from "../src/modes/theme/theme";
 
 beforeAll(async () => {
 	const theme = await getThemeByName("xcsh-dark");

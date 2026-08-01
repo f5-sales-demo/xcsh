@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Apply the slash-command menu layout so long command names no longer hide descriptions.
+
 ## [14.1.1] - 2026-04-14
 
 ### Breaking Changes

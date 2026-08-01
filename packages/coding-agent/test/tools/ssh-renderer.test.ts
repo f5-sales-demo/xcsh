@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import { sshToolRenderer } from "@f5-sales-demo/xcsh/tools/ssh";
 import { getThemeByName } from "../../src/modes/theme/theme";
+import { sshToolRenderer } from "../../src/tools/ssh";
 
 const GLYPH_REGEX = /[✓✔✗✘⚠ⓘ]/;
 

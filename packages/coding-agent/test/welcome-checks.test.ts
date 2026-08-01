@@ -4,7 +4,7 @@ import {
 	hasActiveLlmProvider,
 	runWelcomeChecks,
 	validateContextWithStartupRetry,
-} from "@f5-sales-demo/xcsh/modes/components/welcome-checks";
+} from "../src/modes/components/welcome-checks";
 
 function mockAuth(opts: { hasAuth?: boolean; peekApiKey?: string | undefined }) {
 	return { hasAuth: () => opts.hasAuth ?? false, peekApiKey: async () => opts.peekApiKey } as any;

@@ -4,7 +4,7 @@ import {
 	applyModelAfterLogin,
 	getAvailableLiteLLMLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
-} from "@f5-sales-demo/xcsh/modes/controllers/login-model";
+} from "../src/modes/controllers/login-model";
 
 function makeSession(opts: { model?: { id: string; provider: string }; models: { id: string; provider: string }[] }) {
 	const setModel = vi.fn(async (_model: { id: string; provider: string }, _role: string, _opts?: unknown) => {});

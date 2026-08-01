@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { TempDir } from "@f5-sales-demo/pi-utils";
-import { BridgeServer } from "@f5-sales-demo/xcsh/browser/extension-bridge";
-import { resetWorkerIdentity, sessionInfoForWorker, setWorkerIdentity } from "@f5-sales-demo/xcsh/commands/worker";
-import { ContextService } from "@f5-sales-demo/xcsh/services/xcsh-context";
+import { BridgeServer } from "../src/browser/extension-bridge";
+import { resetWorkerIdentity, sessionInfoForWorker, setWorkerIdentity } from "../src/commands/worker";
+import { ContextService } from "../src/services/xcsh-context";
 
 /**
  * Characterization tests for the per-tab extension SESSION contract.

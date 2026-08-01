@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Effort } from "@f5-sales-demo/pi-ai";
-import { parseArgs } from "@f5-sales-demo/xcsh/cli/args";
+import { parseArgs } from "../src/cli/args";
 
 describe("parseArgs", () => {
 	describe("--version flag", () => {

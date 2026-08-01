@@ -291,7 +291,7 @@ describe("formatBashEnvAssignments masking logic", () => {
 	test("sensitive keys would be masked (pattern check)", () => {
 		const env: Record<string, string> = {
 			API_KEY: "sk-1234567890abcdef",
-			XCSH_API_TOKEN: "OULzp2FaqP1FTmgygm1dn5BDfYA=",
+			XCSH_API_TOKEN: "test-token-value-for-masking",
 			NAMESPACE: "example-namespace",
 		};
 
@@ -332,7 +332,7 @@ describe("formatBashEnvAssignments masking logic", () => {
 describe("end-to-end env secret masking", () => {
 	test("simulates printenv output with real-world env var patterns", async () => {
 		const obfuscator = new SecretObfuscator([
-			{ type: "plain", content: "OULzp2FaqP1FTmgygm1dn5BDfYA=", mode: "obfuscate" },
+			{ type: "plain", content: "test-token-value-for-masking", mode: "obfuscate" },
 			{ type: "plain", content: "zedta2-hyxzyk-qahvUt", mode: "obfuscate" },
 			{ type: "plain", content: "sk-e5de24b2e74f41a2af7c444873812bc3", mode: "obfuscate" },
 		]);
@@ -341,7 +341,7 @@ describe("end-to-end env secret masking", () => {
 		});
 
 		// Simulate printenv output
-		sink.push("XCSH_API_TOKEN=OULzp2FaqP1FTmgygm1dn5BDfYA=\n");
+		sink.push("XCSH_API_TOKEN=test-token-value-for-masking\n");
 		sink.push("XCSH_CONSOLE_PASSWORD=zedta2-hyxzyk-qahvUt\n");
 		sink.push("LITELLM_API_KEY=sk-e5de24b2e74f41a2af7c444873812bc3\n");
 		sink.push("XCSH_NAMESPACE=example-namespace\n");
@@ -350,7 +350,7 @@ describe("end-to-end env secret masking", () => {
 		const result = await sink.dump();
 
 		// Secrets must NOT appear
-		expect(result.output).not.toContain("OULzp2FaqP1FTmgygm1dn5BDfYA=");
+		expect(result.output).not.toContain("test-token-value-for-masking");
 		expect(result.output).not.toContain("zedta2-hyxzyk-qahvUt");
 		expect(result.output).not.toContain("sk-e5de24b2e74f41a2af7c444873812bc3");
 
@@ -362,7 +362,7 @@ describe("end-to-end env secret masking", () => {
 	});
 
 	test("simulates curl command output leaking token in verbose mode", async () => {
-		const token = "OULzp2FaqP1FTmgygm1dn5BDfYA=";
+		const token = "test-token-value-for-masking";
 		const obfuscator = new SecretObfuscator([{ type: "plain", content: token, mode: "obfuscate" }]);
 		const sink = new OutputSink({
 			maskSecrets: t => obfuscator.obfuscate(t),

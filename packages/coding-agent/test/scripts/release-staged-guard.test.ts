@@ -29,7 +29,6 @@ describe("stagedPathsOutsideVersionBump", () => {
 		"packages/natives/package.json",
 		"packages/resource-management/package.json",
 		"packages/stats/package.json",
-		"packages/swarm-extension/package.json",
 		"packages/tui/package.json",
 		"packages/utils/package.json",
 	];

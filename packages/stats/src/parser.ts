@@ -167,3 +167,41 @@ export async function getSessionEntry(sessionPath: string, entryId: string): Pro
 	}
 	return null;
 }
+
+/**
+ * Reconstruct the message ancestry ending at a session entry.
+ *
+ * Non-message tree entries are traversed but omitted from the returned conversation.
+ * Missing parents and malformed cycles terminate the walk without hiding the messages
+ * that were recovered successfully.
+ */
+export async function getSessionMessageChain(sessionPath: string, entryId: string): Promise<SessionMessageEntry[]> {
+	let bytes: Uint8Array;
+	try {
+		bytes = await Bun.file(sessionPath).bytes();
+	} catch (err) {
+		if (isEnoent(err)) return [];
+		throw err;
+	}
+
+	const { entries } = parseSessionEntriesLenient(bytes);
+	const byId = new Map<string, SessionMessageEntry | (SessionEntry & { id: string; parentId: string | null })>();
+	for (const entry of entries) {
+		if ("id" in entry && "parentId" in entry && typeof entry.id === "string") {
+			byId.set(entry.id, entry);
+		}
+	}
+
+	const messages: SessionMessageEntry[] = [];
+	const visited = new Set<string>();
+	let current = byId.get(entryId);
+	while (current && !visited.has(current.id)) {
+		visited.add(current.id);
+		if (current.type === "message" && "message" in current) {
+			messages.push(current as SessionMessageEntry);
+		}
+		current = current.parentId ? byId.get(current.parentId) : undefined;
+	}
+
+	return messages.reverse();
+}

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import { hookFetch, TempDir } from "@f5-sales-demo/pi-utils";
-import * as gatewayCoordinator from "@f5-sales-demo/xcsh/ipy/gateway-coordinator";
-import { PythonKernel } from "@f5-sales-demo/xcsh/ipy/kernel";
 import type { Subprocess } from "bun";
+import * as gatewayCoordinator from "../../src/ipy/gateway-coordinator";
+import { PythonKernel } from "../../src/ipy/kernel";
 
 type SpawnOptions = Bun.SpawnOptions.SpawnOptions<
 	Bun.SpawnOptions.Writable,

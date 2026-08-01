@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 import type { Tool, ToolCall } from "@f5-sales-demo/pi-ai/types";
 import { enforceStrictSchema } from "@f5-sales-demo/pi-ai/utils/schema";
 import { validateToolArguments } from "@f5-sales-demo/pi-ai/utils/validation";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import type { ToolSession } from "@f5-sales-demo/xcsh/tools";
-import { SubmitResultTool } from "@f5-sales-demo/xcsh/tools/submit-result";
+import { Settings } from "../../src/config/settings";
+import type { ToolSession } from "../../src/tools";
+import { SubmitResultTool } from "../../src/tools/submit-result";
 
 function createSession(overrides: Partial<ToolSession> = {}): ToolSession {
 	return {

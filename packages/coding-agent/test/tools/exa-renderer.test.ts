@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
-import type { ExaRenderDetails } from "@f5-sales-demo/xcsh/exa";
-import { renderExaResult } from "@f5-sales-demo/xcsh/exa";
+import type { ExaRenderDetails } from "../../src/exa";
+import { renderExaResult } from "../../src/exa";
 import { getThemeByName } from "../../src/modes/theme/theme";
 
 describe("exa renderResult has no terminal status glyph", () => {

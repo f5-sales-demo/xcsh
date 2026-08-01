@@ -6,16 +6,16 @@ import {
 	executePython,
 	resetPreludeDocsCache,
 	warmPythonEnvironment,
-} from "@f5-sales-demo/xcsh/ipy/executor";
-import * as gatewayCoordinator from "@f5-sales-demo/xcsh/ipy/gateway-coordinator";
+} from "../../src/ipy/executor";
+import * as gatewayCoordinator from "../../src/ipy/gateway-coordinator";
 import type {
 	KernelExecuteResult,
 	KernelShutdownResult,
 	PreludeHelper,
 	PythonKernel as PythonKernelInstance,
-} from "@f5-sales-demo/xcsh/ipy/kernel";
-import * as pythonKernel from "@f5-sales-demo/xcsh/ipy/kernel";
-import { PythonKernel } from "@f5-sales-demo/xcsh/ipy/kernel";
+} from "../../src/ipy/kernel";
+import * as pythonKernel from "../../src/ipy/kernel";
+import { PythonKernel } from "../../src/ipy/kernel";
 
 const OK_RESULT: KernelExecuteResult = {
 	status: "ok",

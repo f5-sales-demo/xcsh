@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { fencePermits } from "@f5-sales-demo/pi-natives";
-import { buildContainmentFence, type FenceAccess, fenceVerdict } from "@f5-sales-demo/xcsh/sandbox/containment";
+import { buildContainmentFence, type FenceAccess, fenceVerdict } from "../src/sandbox/containment";
 
 /**
  * One rule set, two implementations: `fenceVerdict` in TypeScript decides at the text layer, and

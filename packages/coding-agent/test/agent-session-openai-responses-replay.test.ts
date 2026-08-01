@@ -12,13 +12,9 @@ import type {
 } from "@f5-sales-demo/pi-ai/types";
 import { createOpenAIResponsesHistoryPayload } from "@f5-sales-demo/pi-ai/utils";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
-import type { AgentSession } from "@f5-sales-demo/xcsh/session/agent-session";
-import type { AuthStorage } from "@f5-sales-demo/xcsh/session/auth-storage";
-import {
-	type SessionEntry,
-	SessionManager,
-	type SessionMessageEntry,
-} from "@f5-sales-demo/xcsh/session/session-manager";
+import type { AgentSession } from "../src/session/agent-session";
+import type { AuthStorage } from "../src/session/auth-storage";
+import { type SessionEntry, SessionManager, type SessionMessageEntry } from "../src/session/session-manager";
 
 function createUsage(): Usage {
 	return {
@@ -176,9 +172,9 @@ async function createSessionHarness(
 ): Promise<{ session: AgentSession; authStorage: AuthStorage }> {
 	const { provider = "openai", modelId = "gpt-5-mini" } = options;
 	const [{ createAgentSession }, { Settings }, { AuthStorage }] = await Promise.all([
-		import("@f5-sales-demo/xcsh/sdk"),
-		import("@f5-sales-demo/xcsh/config/settings"),
-		import("@f5-sales-demo/xcsh/session/auth-storage"),
+		import("../src/sdk"),
+		import("../src/config/settings"),
+		import("../src/session/auth-storage"),
 	]);
 	const authStorage = await AuthStorage.create(path.join(tempDir, `testauth-${Snowflake.next()}.db`));
 	authStorage.setRuntimeApiKey("openai", "test-key");

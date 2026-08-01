@@ -8,7 +8,7 @@ import {
 	PORT_RANGE_START,
 	portCandidates,
 	resolveForcedPort,
-} from "@f5-sales-demo/xcsh/browser/extension-bridge";
+} from "../../src/browser/extension-bridge";
 
 describe("PendingRequests", () => {
 	it("resolves the matching id and ignores unknown ids", async () => {

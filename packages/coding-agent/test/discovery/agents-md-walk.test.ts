@@ -7,8 +7,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { buildSystemPrompt, discoverAgentsMdFiles } from "@f5-sales-demo/xcsh/system-prompt";
 import { registerCodingAgentPromptHelpers } from "../../src/config/prompt-templates";
+import { buildSystemPrompt, discoverAgentsMdFiles } from "../../src/system-prompt";
 
 /** Build a wide/deep tree of `breadth^depth` dirs with NO XCSH.md anywhere. */
 function makeWideTree(root: string, breadth: number, depth: number): number {

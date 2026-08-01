@@ -415,8 +415,6 @@ describe("ACP agent", () => {
  * `AgentSideConnection`, so an advertised-but-undispatchable capability fails.
  */
 const METHOD_NOT_FOUND = -32601;
-/** Our agent routes methods outside AGENT_METHODS to `extMethod`, which we do not implement. */
-const INTERNAL_ERROR = -32603;
 
 interface JsonRpcResponse {
 	id: number;
@@ -530,9 +528,9 @@ describe("ACP dispatch over a real AgentSideConnection", () => {
 		await wire.request("initialize", { protocolVersion: 1, clientCapabilities: {} });
 
 		const response = await wire.request("session/definitely_not_a_method", {});
-		// Unknown methods fall through to `extMethod`, which we do not implement,
-		// so this proves the wire is live and errors rather than no-ops.
-		expect(response.error?.code).toBe(INTERNAL_ERROR);
+		// Unknown methods fall through to `extMethod`, which returns the protocol's
+		// standard unsupported-method response rather than an internal error.
+		expect(response.error?.code).toBe(METHOD_NOT_FOUND);
 		expect(response.result).toBeUndefined();
 	});
 });

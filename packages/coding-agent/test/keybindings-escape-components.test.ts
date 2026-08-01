@@ -1,13 +1,13 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
 import { getBundledModel } from "@f5-sales-demo/pi-ai";
 import { setKeybindings, type TUI } from "@f5-sales-demo/pi-tui";
-import { KeybindingsManager } from "@f5-sales-demo/xcsh/config/keybindings";
-import type { ModelRegistry } from "@f5-sales-demo/xcsh/config/model-registry";
-import { Settings } from "@f5-sales-demo/xcsh/config/settings";
-import { ModelSelectorComponent } from "@f5-sales-demo/xcsh/modes/components/model-selector";
-import { SessionSelectorComponent } from "@f5-sales-demo/xcsh/modes/components/session-selector";
-import { initTheme } from "@f5-sales-demo/xcsh/modes/theme/theme";
-import type { SessionInfo } from "@f5-sales-demo/xcsh/session/session-manager";
+import { KeybindingsManager } from "../src/config/keybindings";
+import type { ModelRegistry } from "../src/config/model-registry";
+import { Settings } from "../src/config/settings";
+import { ModelSelectorComponent } from "../src/modes/components/model-selector";
+import { SessionSelectorComponent } from "../src/modes/components/session-selector";
+import { initTheme } from "../src/modes/theme/theme";
+import type { SessionInfo } from "../src/session/session-manager";
 
 beforeAll(() => {
 	initTheme();

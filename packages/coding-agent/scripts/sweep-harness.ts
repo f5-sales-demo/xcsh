@@ -28,7 +28,7 @@ import * as path from "node:path";
 import * as yaml from "yaml";
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
-import { isScopedOut, paramsFor } from "../src/sweep/sweep-params";
+import { formSweepBlockerFor, isScopedOut, paramsFor } from "../src/sweep/sweep-params";
 import {
 	apiCollectionPath,
 	apiItemPath,
@@ -87,6 +87,11 @@ interface ResourceOutcome {
 	resource: string;
 	name: string;
 	ops: Record<string, OpOutcome>;
+}
+
+interface BlockedResource {
+	resource: string;
+	reason: string;
 }
 
 /** Deterministic, DNS-1035-safe test instance name for a resource. */
@@ -328,13 +333,25 @@ async function main() {
 		console.warn("⚠  XCSH_API_URL / XCSH_API_TOKEN not set — API cross-check will be indeterminate.");
 	}
 	const discovered = discover(filter);
-	const resources = discovered.filter(r => !isScopedOut(r));
 	const scoped = discovered.filter(isScopedOut);
+	const candidates = discovered.filter(r => !isScopedOut(r));
+	const blocked: BlockedResource[] = candidates.flatMap(resource => {
+		const reason = formSweepBlockerFor(resource);
+		return reason ? [{ resource, reason }] : [];
+	});
+	const blockedNames = new Set(blocked.map(entry => entry.resource));
+	const resources = candidates.filter(resource => !blockedNames.has(resource));
 	console.log(
-		`\nHonest sweep: ${resources.length} resources × CRUD against ${BASE_URL || "(no base url)"} ns=${NAMESPACE}` +
+		`\nHonest sweep: ${resources.length} resources × CRUD` +
 			(scoped.length ? ` (${scoped.length} scoped out: cloud/external deps)` : "") +
+			(blocked.length ? ` (${blocked.length} blocked by upstream form workflows)` : "") +
 			"\n",
 	);
+	if (resources.length === 0) {
+		fs.writeFileSync(OUT_PATH, JSON.stringify({ scopedOut: scoped, blocked, results: [] }, null, 2));
+		console.log(`Wrote ${OUT_PATH}`);
+		return;
+	}
 
 	// Own ONE bridge for the whole sweep and inject it so every workflow reuses it.
 	const server = await startBridgeServer();
@@ -436,10 +453,7 @@ async function main() {
 		for (const resource of resources) {
 			results.push(await sweepResource(resource));
 			// Write incrementally so a long run's partial progress survives a hang/crash.
-			fs.writeFileSync(
-				OUT_PATH,
-				JSON.stringify({ namespace: NAMESPACE, baseUrl: BASE_URL, scopedOut: scoped, results }, null, 2),
-			);
+			fs.writeFileSync(OUT_PATH, JSON.stringify({ scopedOut: scoped, blocked, results }, null, 2));
 		}
 	} finally {
 		await server.close().catch(() => {});
@@ -459,12 +473,12 @@ async function main() {
 		);
 	}
 	const fullCrud = results.filter(r => CRUD.every(op => r.ops[op]!.verdict === "pass")).length;
-	console.log(`\n  FULL-CRUD strict-green: ${fullCrud}/${results.length} (scoped out: ${scoped.length})\n`);
-
-	fs.writeFileSync(
-		OUT_PATH,
-		JSON.stringify({ namespace: NAMESPACE, baseUrl: BASE_URL, scopedOut: scoped, results }, null, 2),
+	console.log(
+		`\n  FULL-CRUD strict-green: ${fullCrud}/${results.length} ` +
+			`(scoped out: ${scoped.length}, upstream-blocked: ${blocked.length})\n`,
 	);
+
+	fs.writeFileSync(OUT_PATH, JSON.stringify({ scopedOut: scoped, blocked, results }, null, 2));
 	console.log(`Wrote ${OUT_PATH}`);
 }
 

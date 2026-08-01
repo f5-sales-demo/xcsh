@@ -5,8 +5,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { TempDir } from "@f5-sales-demo/pi-utils";
 import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
-import herdrReporter from "@f5-sales-demo/xcsh/extensibility/extensions/bundled/herdr-reporter";
-import { discoverAndLoadExtensions } from "@f5-sales-demo/xcsh/extensibility/extensions/loader";
+import herdrReporter from "../src/extensibility/extensions/bundled/herdr-reporter";
+import { discoverAndLoadExtensions } from "../src/extensibility/extensions/loader";
 import { filterUserExtensions } from "./utils/filter-user-extensions";
 
 type AnyHandler = (event: unknown, ctx: unknown) => void | Promise<void>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { assertLoopbackBrowserUrl, pickCoDrivePage, resolveBrowserConnectUrl } from "@f5-sales-demo/xcsh/tools/browser";
+import { assertLoopbackBrowserUrl, pickCoDrivePage, resolveBrowserConnectUrl } from "../../src/tools/browser";
 
 function fakeSettings(value?: string) {
 	return { get: (k: string) => (k === "browser.connectUrl" ? value : undefined) } as never;

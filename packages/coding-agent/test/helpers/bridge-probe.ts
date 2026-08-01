@@ -10,7 +10,7 @@
  * Consumed by both `worker-spawn.int.test.ts` (Task 4) and `manager.int.test.ts`
  * (Task 5); do not inline a copy.
  */
-import { EXTENSION_ID } from "@f5-sales-demo/xcsh/cli/chrome-cli";
+import { EXTENSION_ID } from "../../src/cli/chrome-cli";
 
 /** The `Origin` header the bridge's origin check expects. */
 export const PROBE_ORIGIN = `chrome-extension://${EXTENSION_ID}`;

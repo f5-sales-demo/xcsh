@@ -1,8 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	CONSOLE_CATALOG_DATA,
-	CONSOLE_CATALOG_VERSION,
-} from "@f5-sales-demo/xcsh/internal-urls/console-catalog.generated";
+import { CONSOLE_CATALOG_DATA, CONSOLE_CATALOG_VERSION } from "../src/internal-urls/console-catalog.generated";
 
 describe("console catalogue generated module", () => {
 	it("exports a version string and a catalogue object", () => {

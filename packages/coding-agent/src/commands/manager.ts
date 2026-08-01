@@ -91,47 +91,47 @@ function pidListeningOn(port: number): number {
  * origin header the bridge requires), resolving the `hello_ack` frame or null.
  * EXTENSION_ID is lazy-required so it stays off the manager's cold-start path. */
 function bridgeHello(port: number, timeoutMs = 400): Promise<Record<string, unknown> | null> {
-	return new Promise(resolve => {
-		let done = false;
-		const finish = (v: Record<string, unknown> | null) => {
-			if (done) return;
-			done = true;
-			resolve(v);
-		};
-		let ws: WebSocket;
+	const { promise, resolve } = Promise.withResolvers<Record<string, unknown> | null>();
+	let done = false;
+	const finish = (value: Record<string, unknown> | null) => {
+		if (done) return;
+		done = true;
+		resolve(value);
+	};
+	let ws: WebSocket;
+	try {
+		const { EXTENSION_ID } = require("../cli/chrome-cli");
+		// Intentionally ws://: the internal Chrome re-adoption client targets the
+		// bridge's local ws listener and does not cross the Office TLS boundary.
+		ws = new WebSocket(`ws://127.0.0.1:${port}`, {
+			headers: { Origin: `chrome-extension://${EXTENSION_ID}` },
+		} as unknown as string[]);
+	} catch {
+		finish(null);
+		return promise;
+	}
+	const close = () => {
 		try {
-			const { EXTENSION_ID } = require("../cli/chrome-cli");
-			// Intentionally ws:// — the bridge's ws listener remains up under dual-listen,
-			// and this internal re-adoption client needs no TLS. Moving it to wss:// is
-			// deferred to the ws-sunset PR (#2045 follow-up); do not change here.
-			ws = new WebSocket(`ws://127.0.0.1:${port}`, {
-				headers: { Origin: `chrome-extension://${EXTENSION_ID}` },
-			} as unknown as string[]);
+			ws.close();
 		} catch {
-			return finish(null);
+			/* already closing */
 		}
-		const close = () => {
-			try {
-				ws.close();
-			} catch {
-				/* already closing */
-			}
-		};
-		ws.onopen = () => ws.send(JSON.stringify({ type: "hello" }));
-		ws.onmessage = e => {
-			try {
-				finish(JSON.parse(String(e.data)) as Record<string, unknown>);
-			} catch {
-				finish(null);
-			}
-			close();
-		};
-		ws.onerror = () => finish(null);
-		setTimeout(() => {
-			close();
+	};
+	ws.onopen = () => ws.send(JSON.stringify({ type: "hello" }));
+	ws.onmessage = event => {
+		try {
+			finish(JSON.parse(String(event.data)) as Record<string, unknown>);
+		} catch {
 			finish(null);
-		}, timeoutMs);
+		}
+		close();
+	};
+	ws.onerror = () => finish(null);
+	void Bun.sleep(timeoutMs).then(() => {
+		close();
+		finish(null);
 	});
+	return promise;
 }
 
 /**

@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- Restricted package exports to the root SDK and `browser/chat-protocol`; unsupported deep imports are no longer published.
+
+### Changed
+
+- Reduced the published package to runtime source and release documentation, excluding repository-only scripts, examples, and tests.
+- Made generated console form-workflow blockers explicit in sweep results instead of supplying invalid placeholder values.
+
 ## [19.105.7] - 2026-07-31
 
 ### Fixed
@@ -44,6 +53,9 @@
 
 ### Fixed
 
+- Restored the default Chrome profile without remote-debugging flags after browser automation when `browser.dropPortAfter` is enabled.
+- Return the standard ACP method-not-found error for unsupported extension requests while ignoring unsupported notifications.
+- Exercise select and file-upload operations in extension UAT instead of recording deferred operations as passing.
 - Fixed GPT-5.6 Sol inference through LiteLLM when deterministic print mode requests an unsupported temperature ([#2698](https://github.com/f5-sales-demo/xcsh/issues/2698))
 
 ## [19.104.0] - 2026-07-31

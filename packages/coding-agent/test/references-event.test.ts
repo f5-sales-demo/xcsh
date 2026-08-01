@@ -9,7 +9,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import type { AgentEvent } from "@f5-sales-demo/pi-agent-core";
-import { referencesEventFor } from "@f5-sales-demo/xcsh/references";
+import { referencesEventFor } from "../src/references";
 
 function messageEnd(message: unknown): AgentEvent {
 	return { type: "message_end", message } as unknown as AgentEvent;

@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell } from "@f5-sales-demo/pi-natives";
-import { buildContainmentFence, containmentStatus } from "@f5-sales-demo/xcsh/sandbox/containment";
+import { buildContainmentFence, containmentStatus } from "../src/sandbox/containment";
 
 /**
  * Whether an OS-level backend exists here, taken from the product rather than from a platform check

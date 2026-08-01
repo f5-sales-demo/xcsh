@@ -36,7 +36,7 @@ Hook 包（`src/extensibility/hooks/`）仍作为 API 接口导出并可正常�
 一个 Hook 模块必须默认导出一个工厂函数：
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function hook(pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -261,7 +261,7 @@ tool_call 处理程序
 ### 阻止不安全的 Bash 命令
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_call", async (event, ctx) => {
@@ -279,7 +279,7 @@ export default function (pi: HookAPI): void {
 ### 在执行后对工具输出进行脱敏处理
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("tool_result", async event => {
@@ -298,7 +298,7 @@ export default function (pi: HookAPI): void {
 ### 在每次 LLM 调用时修改模型上下文
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.on("context", async event => {
@@ -311,7 +311,7 @@ export default function (pi: HookAPI): void {
 ### 注册带有命令安全上下文方法的斜杠命令
 
 ```ts
-import type { HookAPI } from "@f5-sales-demo/xcsh/hooks";
+import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI): void {
  pi.registerCommand("handoff", {
