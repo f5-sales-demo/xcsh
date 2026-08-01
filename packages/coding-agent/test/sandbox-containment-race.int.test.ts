@@ -28,7 +28,13 @@ describe("containment holds while the path is being swapped underneath it", () =
 	const ATTEMPTS = 200;
 	let home: string;
 	let workspace: string;
-	let wire: { allow: string[]; allowReadOnly: string[]; allowWriteOnly: string[]; deny: string[] };
+	let wire: {
+		allow: string[];
+		allowReadOnly: string[];
+		allowWriteOnly: string[];
+		deny: string[];
+		denyEnumerate: string[];
+	};
 
 	beforeAll(() => {
 		home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "race-")));
@@ -76,12 +82,15 @@ describe("containment holds while the path is being swapped underneath it", () =
 			].join("\n"),
 		);
 
-		const fence = buildContainmentFence({ workspace, home });
+		// The race contract still needs a recursively denied target. Production sibling paths are named
+		// access now, so classify this synthetic target as a cross-session leak root for the test.
+		const fence = buildContainmentFence({ workspace, home, leakRoots: [sibling] });
 		wire = {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
 			deny: [...fence.deny],
+			denyEnumerate: [...fence.denyEnumerate],
 		};
 	});
 

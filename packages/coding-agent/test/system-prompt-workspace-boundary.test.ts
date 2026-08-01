@@ -146,9 +146,8 @@ describe("system prompt workspace boundary", () => {
  *
  * This block has twice asserted a mechanism fact that reality contradicted: an
  * unconditional "isolation is enforced" (false under `--no-sandbox`, caught in review),
- * and "nothing refuses a sibling" (true when written, falsified a day later when #2624 /
- * #2637 unified the fence and started denying the workspace's parent). Prose cannot be
- * trusted to stay true about code it does not import.
+ * and "nothing refuses a sibling" (too broad once the workspace parent stopped being
+ * enumerable). Prose cannot be trusted to stay true about code it does not import.
  *
  * So the claim is measured rather than reviewed. If the deny logic changes again, this
  * fails and names the sentence that went stale, instead of shipping a confident
@@ -187,13 +186,13 @@ describe("workspace boundary claims match the real fence", () => {
 		expect(refuses(parent, path.join(tenantB, "secret.env"))).toBe(false);
 	});
 
-	// And the converse the block must NOT claim. From inside one customer the fence
-	// denies the parent, so a sibling read IS refused — the generalisation this block
-	// used to make ("nothing refuses a sibling") is false and must not come back.
-	it("does not let the block generalise to siblings the fence refuses", () => {
-		const siblingRefused = refuses(tenantA, path.join(tenantB, "secret.env"));
-		expect(siblingRefused).toBe(true);
-		expect(flat()).not.toMatch(/nothing refuses a sibling/i);
-		expect(flat()).not.toMatch(/boundary is the working directory, not the customer subdirectory/i);
+	// From inside one tenant the courtesy boundary removes discovery, not operator authority. The
+	// parent cannot be listed, but a sibling file named by the task remains reachable. The prompt must
+	// therefore keep tenant separation in judgment instead of claiming the filesystem makes it happen.
+	it("matches the discovery-only boundary around sibling workspaces", () => {
+		expect(refuses(tenantA, parent)).toBe(true);
+		expect(refuses(tenantA, path.join(tenantB, "secret.env"))).toBe(false);
+		expect(flat()).toMatch(/keeping tenants apart is your judgment/i);
+		expect(flat()).not.toMatch(/filesystem (?:refuses|prevents|blocks) (?:a )?sibling/i);
 	});
 });

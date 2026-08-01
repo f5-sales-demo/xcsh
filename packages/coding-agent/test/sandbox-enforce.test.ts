@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { ContainmentFence } from "../src/sandbox/containment";
+import { buildContainmentFence, type ContainmentFence } from "../src/sandbox/containment";
 import { evaluateToolCall } from "../src/sandbox/enforce";
 import { resolveSessionFence } from "../src/sandbox/session-fence";
 
@@ -13,8 +13,8 @@ const CWD = "/work/custA";
  *
  * `ContainmentFence` is a plain record of canonical roots, so these tests need no filesystem — which is
  * what keeps them a unit test of `evaluateToolCall` rather than of `buildContainmentFence`. The shape
- * mirrors a real session: the workspace read+write, a couple of one-directional grants, and the
- * workspace's container denied so a neighbouring tenant is unreachable.
+ * exercises the workspace, one-directional grants, and a protected data root. Parent enumeration and
+ * named sibling access are covered with a real built fence below.
  *
  * Note what is deliberately absent: any rule about `/etc`, `/usr`, `/tmp` or an unrelated `/elsewhere`.
  * The fence is allow-by-default, so those are reachable, and that is the loosening #2624 is — a
@@ -23,16 +23,10 @@ const CWD = "/work/custA";
 function makeFence(): ContainmentFence {
 	return {
 		allow: [CWD],
-		allowReadOnly: [
-			"/opt/xcsh/plugins", // plugin cache
-			"/shared/ctx", // shared context: readable, deliberately not writable
-			path.join(os.homedir(), ".gitconfig"), // needed by git, must not be rewritten
-		],
+		allowReadOnly: ["/shared/ctx"], // shared context: readable, deliberately not writable
 		allowWriteOnly: ["/drop"], // write-only drop box, deliberately not readable
-		deny: [
-			"/work", // the container: every other tenant under it is unreachable
-			os.homedir(), // ~/.ssh, ~/Documents, another checkout — the real fence denies all of home
-		],
+		deny: ["/work"], // stands in for a data root or cross-session store
+		denyEnumerate: [],
 	};
 }
 
@@ -71,9 +65,9 @@ describe("evaluateToolCall", () => {
 		expect(check("edit", { file_path: "/work/custB/hosts" }).block).toBe(true);
 	});
 
-	it("treats plugin cache as readable (meddpicc engine) but not writable", () => {
+	it("keeps operator-owned plugin state readable and writable", () => {
 		expect(check("read", { file_path: "/opt/xcsh/plugins/meddpicc/cli.ts" }).block).toBe(false);
-		expect(check("write", { file_path: "/opt/xcsh/plugins/x" }).block).toBe(true);
+		expect(check("write", { file_path: "/opt/xcsh/plugins/x" }).block).toBe(false);
 	});
 
 	it("search tools: absent path defaults to cwd (allowed); explicit out-of-tree blocked", () => {
@@ -83,6 +77,30 @@ describe("evaluateToolCall", () => {
 		// of the asymmetries #2624 removes — a fenced `bash` could already `grep /etc`.
 		expect(check("ast_grep", { path: "/etc" }).block).toBe(false);
 		expect(check("ast_grep", { path: "/work/custB" }).block).toBe(true);
+	});
+
+	it("blocks parent enumeration without blocking a named sibling file", () => {
+		const parent = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-enumerate-")));
+		const workspace = path.join(parent, "example-a");
+		const sibling = path.join(parent, "example-b");
+		fs.mkdirSync(workspace);
+		fs.mkdirSync(sibling);
+		fs.symlinkSync("..", path.join(workspace, "parent-link"));
+		const namedFile = path.join(sibling, "context.md");
+		fs.writeFileSync(namedFile, "context");
+		try {
+			const fence = buildContainmentFence({ workspace, home: parent });
+			const evaluate = (toolName: string, input: Record<string, unknown>) =>
+				evaluateToolCall({ toolName, input, cwd: workspace, fence });
+
+			expect(evaluate("read", { file_path: parent }).block).toBe(true);
+			expect(evaluate("read", { file_path: path.join(workspace, "parent-link") }).block).toBe(true);
+			expect(evaluate("read", { file_path: namedFile }).block).toBe(false);
+			expect(evaluate("grep", { pattern: "context", path: parent }).block).toBe(true);
+			expect(evaluate("ast_edit", { path: parent }).block).toBe(true);
+		} finally {
+			fs.rmSync(parent, { recursive: true, force: true });
+		}
 	});
 
 	it("find: pattern base escaping the tree is blocked; in-tree glob allowed", () => {
@@ -106,7 +124,7 @@ describe("evaluateToolCall", () => {
 
 	it("bash: blocks absolute-path escapes, exempts OS system paths", () => {
 		expect(check("bash", { command: "cat /work/custB/secrets.env" }).block).toBe(true);
-		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(true);
+		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(false);
 		expect(check("bash", { command: "cat /etc/os-release" }).block).toBe(false);
 		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
 	});
@@ -246,7 +264,7 @@ describe("evaluateToolCall", () => {
 		// Into something the fence denies: refused, which is the case that matters.
 		expect(check("bash", { command: "cd /work/custB" }).block).toBe(true);
 		expect(check("bash", { command: "cd .." }).block).toBe(true);
-		expect(check("bash", { command: "cd ~" }).block).toBe(true);
+		expect(check("bash", { command: "cd ~" }).block).toBe(false);
 		// `cd /` is allowed now (#2624). Standing at `/` widens nothing: the boundary is fixed for the
 		// session and no longer follows the shell (#2589), so a later relative path is still decided
 		// against the same rules — `cd / && cat Users/other/x` is refused by the fence at the open.
@@ -256,11 +274,10 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "cd" }).block).toBe(false);
 		expect(check("bash", { command: "cd -" }).block).toBe(false);
 		expect(check("bash", { command: "pushd /" }).block).toBe(false);
-		// `$HOME` is still caught, but by the floor rather than the `cd` gate: it rewrites the token to
-		// `~`, which resolves into the denied home tree.
-		expect(check("bash", { command: "cd $HOME" }).block).toBe(true);
-		expect(check("bash", { command: 'cd "$HOME"' }).block).toBe(true);
-		expect(check("bash", { command: "pushd $HOME" }).block).toBe(true);
+		// Home is operator-owned and remains available through every spelling.
+		expect(check("bash", { command: "cd $HOME" }).block).toBe(false);
+		expect(check("bash", { command: 'cd "$HOME"' }).block).toBe(false);
+		expect(check("bash", { command: "pushd $HOME" }).block).toBe(false);
 	});
 
 	// Clamping the session cwd between calls would not have been enough: one call can both move the
@@ -269,7 +286,7 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "cd .. && cat custB/secret" }).block).toBe(true);
 		expect(check("bash", { command: "cd ..; cat custB/secret" }).block).toBe(true);
 		expect(check("bash", { command: "(cd /work/custB && cat secret)" }).block).toBe(true);
-		expect(check("bash", { command: "cd $HOME && cat .ssh/id_rsa" }).block).toBe(true);
+		expect(check("bash", { command: "cd $HOME && cat .ssh/id_rsa" }).block).toBe(false);
 		expect(check("bash", { command: "cd /work/custB && cat secret" }).block).toBe(true);
 		// `cd /` is the case that changed: it is permitted, and the relative read after it lands in a
 		// temp path the fence allows anyway. What must still fail is reaching a *denied* tree from there,
@@ -309,8 +326,7 @@ describe("evaluateToolCall", () => {
 	});
 
 	// A cd destination must be somewhere any relative path would be acceptable — which means write
-	// as well as read. The default policy grants the plugin and skill directories read-only, and
-	// moving into one turned every unchecked relative path into a write there.
+	// as well as read. An explicit read-only grant cannot become writable through relative paths.
 	it("bash: a directory change needs write access, not just read", () => {
 		// /shared/ctx is readable and deliberately not writable.
 		expect(check("bash", { command: "cd /shared/ctx" }).block).toBe(true);
@@ -413,6 +429,7 @@ describe("evaluateToolCall", () => {
 			allowReadOnly: ["/shared/ctx"],
 			allowWriteOnly: [],
 			deny: [],
+			denyEnumerate: [],
 		};
 		const inRoCwd = (command: string) =>
 			evaluateToolCall({ toolName: "bash", input: { command }, cwd: "/shared/ctx", fence: readOnlyCwd });
@@ -521,7 +538,13 @@ describe("evaluateToolCall", () => {
 	// undefined and `sandbox-guard` returns before evaluating. The equivalent here is a fence with no
 	// rules at all, which allows everything by construction.
 	it("allows everything under a fence with no rules", () => {
-		const open: ContainmentFence = { allow: [], allowReadOnly: [], allowWriteOnly: [], deny: [] };
+		const open: ContainmentFence = {
+			allow: [],
+			allowReadOnly: [],
+			allowWriteOnly: [],
+			deny: [],
+			denyEnumerate: [],
+		};
 		expect(check("read", { file_path: "/etc/passwd" }, open).block).toBe(false);
 		expect(check("bash", { command: "cat ../custB/x" }, open).block).toBe(false);
 	});
@@ -588,13 +611,12 @@ describe("evaluateToolCall with a symlinked working directory (#2312)", () => {
 		expect(checkAt(cwd, { path: "brand-new.ts" }, "write").block).toBe(false);
 	});
 
-	it("still blocks genuinely out-of-tree paths from a symlinked cwd", () => {
+	it("still blocks parent enumeration from a symlinked cwd", () => {
 		const cwd = symlinkedCwd();
-		// A sibling of the symlinked cwd: the ancestor walk denies the container they share. `/etc/passwd`
-		// used to serve here and cannot any more — it is permitted now (#2624), and a customer tree is the
-		// thing this test is actually about.
-		expect(checkAt(cwd, { path: "../elsewhere/secret.json" }).block).toBe(true);
-		// `~/.ssh` used to serve here; #2637 stopped denying it. The sibling above is the case that matters.
+		const parent = path.dirname(fs.realpathSync(cwd));
+		expect(checkAt(cwd, { path: parent }).block).toBe(true);
+		// The deny is exact and does not revoke operator authority over a named child.
+		expect(checkAt(cwd, { path: "../elsewhere/secret.json" }).block).toBe(false);
 	});
 });
 
@@ -663,8 +685,8 @@ describe("paths reaching the shell through an expansion (#2534)", () => {
 	 * The boundary reads the command as text, so a path arriving via a parameter expansion was
 	 * never checked. Only part of that is fixable at this layer, and the split matters:
 	 *
-	 *   - `$HOME`/`${HOME}` mean exactly what `~` means, which is already handled. Three
-	 *     spellings of one file, one of them blocked, is an oversight rather than a policy.
+	 *   - `$HOME`/`${HOME}` mean exactly what `~` means, which is already handled. All three spellings
+	 *     must preserve the operator's normal home access.
 	 *   - Everything else — a variable in an operand, and a variable in a redirect target — is
 	 *     genuinely unresolvable here and is left open on purpose. See below.
 	 */
@@ -672,11 +694,11 @@ describe("paths reaching the shell through an expansion (#2534)", () => {
 	// template literal is a template interpolation, and `HOME` is not a TS binding.
 	const BRACED_HOME = `$\u007bHOME\u007d`;
 
-	it("treats $HOME and its braced form as ~, which is already blocked", () => {
-		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(true); // the existing rule
-		expect(check("bash", { command: "cat $HOME/.ssh/id_rsa" }).block).toBe(true);
-		expect(check("bash", { command: `cat ${BRACED_HOME}/.ssh/id_rsa` }).block).toBe(true);
-		expect(check("bash", { command: 'cp secret "$HOME/exfil"' }).block).toBe(true);
+	it("treats $HOME and its braced form as the operator-owned home", () => {
+		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(false);
+		expect(check("bash", { command: "cat $HOME/.ssh/id_rsa" }).block).toBe(false);
+		expect(check("bash", { command: `cat ${BRACED_HOME}/.ssh/id_rsa` }).block).toBe(false);
+		expect(check("bash", { command: 'cp secret "$HOME/exfil"' }).block).toBe(false);
 		// A different variable that merely starts with HOME must not be rewritten.
 		expect(check("bash", { command: "echo $HOMEBREW_PREFIX" }).block).toBe(false);
 	});
@@ -778,15 +800,13 @@ describe("evaluateToolCall — the reported false refusals (#2624)", () => {
 		const gitconfig = path.join(os.homedir(), ".gitconfig");
 		expect(check("bash", { command: `cat ${gitconfig}` }).block).toBe(false);
 		expect(check("read", { file_path: gitconfig }).block).toBe(false);
-		// Read-only in the fence, so the write direction is refused on both — the split still holds.
-		expect(check("bash", { command: `printf x > ${gitconfig}` }).block).toBe(true);
-		expect(check("write", { file_path: gitconfig }).block).toBe(true);
+		expect(check("bash", { command: `printf x > ${gitconfig}` }).block).toBe(false);
+		expect(check("write", { file_path: gitconfig }).block).toBe(false);
 	});
 
 	// What the change must NOT do. The fence still denies these, so the pre-check still refuses them.
 	it("keeps refusing the paths the fence denies", () => {
 		expect(check("bash", { command: "cat /work/custB/secret.env" }).block).toBe(true);
-		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(true);
 		expect(check("read", { file_path: "/work/custB/secret.env" }).block).toBe(true);
 		expect(check("python", { code: 'open("/work/custB/secret.env").read()' }).block).toBe(true);
 		expect(check("grep", { pattern: "TOKEN", path: "/work/custB" }).block).toBe(true);
@@ -804,7 +824,6 @@ describe("evaluateToolCall — the bash cwd parameter agrees with cd (#2624)", (
 
 	it("still refuses a cwd the fence denies", () => {
 		expect(check("bash", { command: "ls", cwd: "/work/custB" }).block).toBe(true);
-		expect(check("bash", { command: "ls", cwd: os.homedir() }).block).toBe(true);
 	});
 
 	// A read-only root is not somewhere a command may stand: every relative path it then writes would

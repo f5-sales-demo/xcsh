@@ -108,6 +108,7 @@ fn realistic() -> (FakeFs, ContainmentFence) {
 			PathBuf::from("/home/alice/GIT"),
 			PathBuf::from("/home/alice/GIT/custA/.xcsh/sessions"),
 		],
+		deny_enumerate:   Vec::new(),
 	};
 	(fs, fence)
 }
@@ -135,7 +136,7 @@ fn plan_never_permits_what_the_fence_denies() {
 
 	let mut escapes = Vec::new();
 	for path in candidates(&fs) {
-		for access in [FenceAccess::Read, FenceAccess::Write] {
+		for access in [FenceAccess::Read, FenceAccess::Write, FenceAccess::Enumerate] {
 			if plan.permits(&path, access) && !fence.permits_resolved(&path, access) {
 				escapes.push(format!("{access:?} {}", path.display()));
 			}
@@ -165,7 +166,7 @@ fn plan_agrees_with_the_fence_except_on_split_directories() {
 		{
 			continue;
 		}
-		for access in [FenceAccess::Read, FenceAccess::Write] {
+		for access in [FenceAccess::Read, FenceAccess::Write, FenceAccess::Enumerate] {
 			let planned = plan.permits(&path, access);
 			let fenced = fence.permits_resolved(&path, access);
 			if planned != fenced {
@@ -183,7 +184,7 @@ fn split_directories_are_only_ever_stricter() {
 	let plan = fence.compile_grant_plan(&fs);
 
 	for dir in &plan.split_dirs {
-		for access in [FenceAccess::Read, FenceAccess::Write] {
+		for access in [FenceAccess::Read, FenceAccess::Write, FenceAccess::Enumerate] {
 			assert!(
 				!(plan.permits(dir, access) && !fence.permits_resolved(dir, access)),
 				"split dir {} is laxer than the fence for {access:?}",
@@ -356,7 +357,29 @@ fn an_empty_fence_grants_the_whole_tree() {
 	for path in ["/usr/bin/env", "/home/alice/x", "/anything/at/all"] {
 		assert!(plan.permits(Path::new(path), FenceAccess::Read));
 		assert!(plan.permits(Path::new(path), FenceAccess::Write));
+		assert!(plan.permits(Path::new(path), FenceAccess::Enumerate));
 	}
+}
+
+#[test]
+fn an_exact_enumeration_deny_keeps_named_descendants_reachable() {
+	let fs = FakeFs::new(&[
+		"/home/alice/customers/example-a/notes.md",
+		"/home/alice/customers/example-b/context.md",
+	]);
+	let parent = PathBuf::from("/home/alice/customers");
+	let sibling = PathBuf::from("/home/alice/customers/example-b/context.md");
+	let sibling_dir = PathBuf::from("/home/alice/customers/example-b");
+	let fence =
+		ContainmentFence { deny_enumerate: vec![parent.clone()], ..ContainmentFence::default() };
+	let plan = fence.compile_grant_plan(&fs);
+
+	assert!(!fence.permits_resolved(&parent, FenceAccess::Enumerate));
+	assert!(!plan.permits(&parent, FenceAccess::Enumerate));
+	assert!(fence.permits_resolved(&sibling, FenceAccess::Read));
+	assert!(plan.permits(&sibling, FenceAccess::Read));
+	assert!(fence.permits_resolved(&sibling_dir, FenceAccess::Enumerate));
+	assert!(plan.permits(&sibling_dir, FenceAccess::Enumerate));
 }
 
 /// Two lists naming the same path must resolve the way `permits_resolved` does:

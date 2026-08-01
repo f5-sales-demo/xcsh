@@ -85,6 +85,16 @@ expect "truncate a file in the workspace" ok ": > own.txt && test ! -s own.txt"
 expect "pipeline with grep and sed" ok "printf 'a\\nb\\n' > p.txt && sed -n 2p p.txt | grep b"
 expect "tar roundtrip" ok "mkdir -p t && echo x > t/f && tar czf t.tgz t && rm -rf t && tar xzf t.tgz && cat t/f"
 
+printf '\n=== exact parent enumeration courtesy ===\n'
+BASE_FENCE="$FENCE"
+FENCE=$(printf '{"allow":["%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":[],"denyEnumerate":["%s"]}' \
+	"$WORKSPACE" "$HOME_DIR/GIT")
+expect "listing the protected parent" refused "ls $HOME_DIR/GIT > /dev/null"
+expect "read a named sibling file" ok "cat $SIBLING/secret.txt > /dev/null && echo named-ok"
+expect "write a named sibling file" ok "printf named > $SIBLING/named.txt && test -f $SIBLING/named.txt"
+expect "list below a named sibling" ok "ls $SIBLING > /dev/null && echo child-ok"
+FENCE="$BASE_FENCE"
+
 printf '\n=== directional roots keep their direction ===\n'
 expect "read the read-only root" ok "cat $HOME_DIR/.gitconfig > /dev/null && echo ok"
 expect "write the read-only root" refused "printf x >> $HOME_DIR/.gitconfig"
