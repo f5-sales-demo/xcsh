@@ -75,7 +75,7 @@ describe.skipIf(!canRun)("staging CRUD matrix (real F5 XC API)", () => {
 	});
 
 	it("VERIFY-GONE: the resource is no longer retrievable (404)", async () => {
-		await new Promise(r => setTimeout(r, 2000)); // eventual consistency
+		await Bun.sleep(2000); // eventual consistency
 		const { status } = await api("GET", `${hcPath}/${RESOURCE}`);
 		expect(status).toBe(404);
 	});
