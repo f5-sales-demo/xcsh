@@ -18,7 +18,7 @@ use std::path::PathBuf;
 use brush_core::containment::{ContainmentFence, GrantPlan, RealFs};
 use clap::{Parser, Subcommand};
 
-/// The fence as JSON, matching the four lists the napi boundary already passes.
+/// The fence as JSON, matching the lists the napi boundary already passes.
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct FenceJson {
@@ -30,6 +30,8 @@ struct FenceJson {
 	allow_write_only: Vec<PathBuf>,
 	#[serde(default)]
 	deny:             Vec<PathBuf>,
+	#[serde(default)]
+	deny_enumerate:   Vec<PathBuf>,
 }
 
 impl From<FenceJson> for ContainmentFence {
@@ -39,6 +41,7 @@ impl From<FenceJson> for ContainmentFence {
 			allow_read_only:  json.allow_read_only,
 			allow_write_only: json.allow_write_only,
 			deny:             json.deny,
+			deny_enumerate:   json.deny_enumerate,
 		}
 	}
 }

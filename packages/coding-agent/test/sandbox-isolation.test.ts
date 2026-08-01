@@ -41,8 +41,9 @@ function reads(cwd: string, filePath: string): boolean {
 }
 
 describe("two-customer isolation", () => {
-	it("a session in custA cannot read custB, but can read its own files", () => {
-		expect(reads(custA, path.join(custB, "secret.env"))).toBe(true);
+	it("a session in custA cannot enumerate the parent but can use a named custB path", () => {
+		expect(reads(custA, parent)).toBe(true);
+		expect(reads(custA, path.join(custB, "secret.env"))).toBe(false);
 		expect(reads(custA, path.join(custA, "notes.md"))).toBe(false);
 	});
 
@@ -51,19 +52,22 @@ describe("two-customer isolation", () => {
 		expect(reads(parent, path.join(custB, "secret.env"))).toBe(false);
 	});
 
-	// The pre-check and the kernel now consult one fence (#2624), so this asserts they agree rather than
-	// that one is stricter. The `shellOsConfined` flag it used to pass is gone with the second policy —
-	// there is no longer a version of this question whose answer depends on which backend is running.
-	it("blocks Bash reads of custB from custA", () => {
+	it("keeps Bash named access under the operator's authority", () => {
 		const fence = resolveSessionFence(custA, { get: () => undefined })!;
 		const scan = (command: string) => evaluateToolCall({ toolName: "bash", input: { command }, cwd: custA, fence });
 
 		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
-			expect(scan(command).block).toBe(true);
+			expect(scan(command).block).toBe(false);
 		}
-		// …and the same fence permits the session's own tree, or the assertion above would hold for a
-		// fence that refused everything.
 		expect(scan("cat notes.md").block).toBe(false);
+	});
+
+	it("blocks structured recursive discovery from the shared parent", () => {
+		const fence = resolveSessionFence(custA, { get: () => undefined })!;
+		for (const toolName of ["find", "grep", "ast_grep", "ast_edit"]) {
+			const input = toolName === "find" ? { pattern: `${parent}/**/*` } : { path: parent };
+			expect(evaluateToolCall({ toolName, input, cwd: custA, fence }).block).toBe(true);
+		}
 	});
 });
 
@@ -123,6 +127,7 @@ describe("two-customer isolation, enforced in the shell", () => {
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
 			deny: [...fence.deny],
+			denyEnumerate: [...fence.denyEnumerate],
 		};
 	}
 
@@ -135,41 +140,31 @@ describe("two-customer isolation, enforced in the shell", () => {
 	}
 
 	/**
-	 * Routes the shell itself closes, so they hold on every platform.
-	 *
-	 * `cd` is refused in-process, which takes the whole command down with it, and a redirect target is
-	 * opened by the shell rather than by the child. Neither needs an OS backend, which is why they are
-	 * asserted unconditionally.
+	 * Brush expands globs in the agent process, before an OS sandbox can help. The enumeration check must
+	 * therefore happen before `read_dir`, on every platform.
 	 */
-	it("a session in custA cannot reach custB through anything the shell does itself", async () => {
-		for (const command of [
-			"cd ../custB && cat secret.env",
-			"c=cd; $c ../custB && cat secret.env",
-			`printf x > ${path.join(custB, "planted.env")}`,
-		]) {
-			const { text } = await shell(custA, command);
-			expect(text).not.toContain("TOKEN=b");
-		}
-		expect(fs.existsSync(path.join(custB, "planted.env"))).toBe(false);
+	it("a parent glob does not reveal sibling names", async () => {
+		const { text } = await shell(custA, "printf '%s\\n' ../*");
+		expect(text).not.toContain("custB");
 	});
 
-	/**
-	 * Routes where the *child* does the opening, so only the kernel can refuse them.
-	 *
-	 * Asserted according to the product's own `containmentStatus` rather than skipped off macOS: these
-	 * reads really do succeed where no backend exists (#2572), and a skipped test would read as though
-	 * they did not. This inverts and starts failing when Landlock lands, which is the point.
-	 */
-	it(`a session in custA ${OS_ENFORCED ? "cannot" : "can still"} reach custB through a spawned command`, async () => {
-		// Both branches assert something. Gating the assertion away instead would leave a test that
-		// passes while checking nothing, which reports as coverage of exactly the gap that is open.
+	it("named sibling reads, traversal, and writes remain available", async () => {
 		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
 			const { text } = await shell(custA, command);
-			if (OS_ENFORCED) expect(text).not.toContain("TOKEN=b");
-			else expect(text).toContain("TOKEN=b");
+			expect(text).toContain("TOKEN=b");
 		}
+		const moved = await shell(custA, "cd ../custB && cat secret.env");
+		expect(moved.text).toContain("TOKEN=b");
+		await shell(custA, `printf x > ${path.join(custB, "planted.env")}`);
+		expect(fs.readFileSync(path.join(custB, "planted.env"), "utf8")).toBe("x");
 		await shell(custA, `cp ${path.join(custB, "secret.env")} .`);
-		expect(fs.existsSync(path.join(custA, "secret.env"))).toBe(!OS_ENFORCED);
+		expect(fs.existsSync(path.join(custA, "secret.env"))).toBe(true);
+	});
+
+	it(`a spawned parent listing ${OS_ENFORCED ? "is" : "is not"} OS-confined`, async () => {
+		const { text } = await shell(custA, "ls ..");
+		if (OS_ENFORCED) expect(text).not.toContain("custB");
+		else expect(text).toContain("custB");
 	});
 
 	it("but works normally inside its own folder", async () => {

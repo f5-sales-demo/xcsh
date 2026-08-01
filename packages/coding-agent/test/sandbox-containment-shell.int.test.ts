@@ -29,7 +29,13 @@ describe("containment enforced inside the shell", () => {
 	let home: string;
 	let workspace: string;
 	let sibling: string;
-	let wire: { allow: string[]; allowReadOnly: string[]; allowWriteOnly: string[]; deny: string[] };
+	let wire: {
+		allow: string[];
+		allowReadOnly: string[];
+		allowWriteOnly: string[];
+		deny: string[];
+		denyEnumerate: string[];
+	};
 
 	beforeAll(() => {
 		home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "contain-")));
@@ -38,12 +44,15 @@ describe("containment enforced inside the shell", () => {
 		fs.mkdirSync(workspace, { recursive: true });
 		fs.mkdirSync(sibling, { recursive: true });
 		fs.writeFileSync(path.join(sibling, "secret.txt"), "CUSTB-CANARY-9001\n");
-		const fence = buildContainmentFence({ workspace, home });
+		// Keep a recursive deny in this suite so it continues exercising read/write enforcement. The
+		// production sibling policy is enumeration-only and is covered in the glob and isolation suites.
+		const fence = buildContainmentFence({ workspace, home, leakRoots: [sibling] });
 		wire = {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
 			deny: [...fence.deny],
+			denyEnumerate: [...fence.denyEnumerate],
 		};
 	});
 
@@ -180,12 +189,13 @@ describe("containment enforced inside the shell", () => {
 	it("survives a workspace path containing shell-hostile characters", async () => {
 		const odd = path.join(workspace, 'we"ird\nname');
 		fs.mkdirSync(odd, { recursive: true });
-		const oddFence = buildContainmentFence({ workspace: odd, home });
+		const oddFence = buildContainmentFence({ workspace: odd, home, leakRoots: [sibling] });
 		const oddWire = {
 			allow: [...oddFence.allow],
 			allowReadOnly: [...oddFence.allowReadOnly],
 			allowWriteOnly: [...oddFence.allowWriteOnly],
 			deny: [...oddFence.deny],
+			denyEnumerate: [...oddFence.denyEnumerate],
 		};
 		let out = "";
 		const result = (await executeShell(
@@ -229,7 +239,13 @@ describe("containment enforced inside the shell", () => {
 describe("glob expansion does not disclose names outside the fence", () => {
 	let base: string;
 	let workspace: string;
-	let wire: { allow: string[]; allowReadOnly: string[]; allowWriteOnly: string[]; deny: string[] };
+	let wire: {
+		allow: string[];
+		allowReadOnly: string[];
+		allowWriteOnly: string[];
+		deny: string[];
+		denyEnumerate: string[];
+	};
 
 	beforeAll(() => {
 		base = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "glob-")));
@@ -243,6 +259,7 @@ describe("glob expansion does not disclose names outside the fence", () => {
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
 			deny: [...fence.deny],
+			denyEnumerate: [...fence.denyEnumerate],
 		};
 	});
 

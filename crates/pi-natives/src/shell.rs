@@ -102,6 +102,8 @@ pub struct ContainmentFenceOptions {
 	pub allow_write_only: Vec<String>,
 	/// Roots denied in both directions, winning over any allow they sit inside.
 	pub deny:             Vec<String>,
+	/// Exact directories whose entries may not be enumerated.
+	pub deny_enumerate:   Vec<String>,
 }
 
 impl From<&ContainmentFenceOptions> for ContainmentFence {
@@ -111,6 +113,7 @@ impl From<&ContainmentFenceOptions> for ContainmentFence {
 			allow_read_only:  options.allow_read_only.iter().map(PathBuf::from).collect(),
 			allow_write_only: options.allow_write_only.iter().map(PathBuf::from).collect(),
 			deny:             options.deny.iter().map(PathBuf::from).collect(),
+			deny_enumerate:   options.deny_enumerate.iter().map(PathBuf::from).collect(),
 		}
 	}
 }
@@ -119,8 +122,15 @@ impl From<&ContainmentFenceOptions> for ContainmentFence {
 /// both this implementation and the TypeScript one, which is the only guard
 /// against the two drifting.
 #[napi]
-pub fn fence_permits(fence: ContainmentFenceOptions, candidate: String, write: bool) -> bool {
-	let access = if write {
+pub fn fence_permits(
+	fence: ContainmentFenceOptions,
+	candidate: String,
+	write: bool,
+	enumerate: Option<bool>,
+) -> bool {
+	let access = if enumerate == Some(true) {
+		FenceAccess::Enumerate
+	} else if write {
 		FenceAccess::Write
 	} else {
 		FenceAccess::Read

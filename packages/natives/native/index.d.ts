@@ -487,6 +487,8 @@ export interface ContainmentFenceOptions {
   allowWriteOnly: Array<string>
   /** Roots denied in both directions, winning over any allow they sit inside. */
   deny: Array<string>
+  /** Exact directories whose entries may not be enumerated. */
+  denyEnumerate: Array<string>
 }
 
 /** A context line (before or after a match). */
@@ -641,7 +643,7 @@ export interface ExtractSegmentsResult {
  * both this implementation and the TypeScript one, which is the only guard
  * against the two drifting.
  */
-export declare function fencePermits(fence: ContainmentFenceOptions, candidate: string, write: boolean): boolean
+export declare function fencePermits(fence: ContainmentFenceOptions, candidate: string, write: boolean, enumerate?: boolean | undefined | null): boolean
 
 /** Resolved filesystem entry kind for glob filters and match metadata. */
 export declare enum FileType {

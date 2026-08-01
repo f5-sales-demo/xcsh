@@ -6,10 +6,10 @@
  * Confining a shell that way refuses ordinary work: measured on macOS 26.3, a deny-default seatbelt
  * profile could not even `execvp /bin/cat`.
  *
- * So the fence is gentle. It restricts no operation — `/usr`, `/tmp`, package caches, the network and
- * process execution are never mentioned, and nothing that works today stops working. The single thing
- * it prevents is the assistant wandering the filesystem: reading or writing another customer's
- * checkout, `~/.ssh`, `~/Documents`. That is where the cross-customer risk actually lives (#2554).
+ * So the fence is gentle. It leaves `/usr`, `/tmp`, package caches, the network and process execution
+ * alone. Its cross-tenant courtesy removes the discovery step — enumerating the session root's parent —
+ * while keeping named operator access. Explicit data-root and cross-session state denies remain where
+ * the model has no legitimate reason to wander (#2554).
  *
  * Produced declaratively rather than as an ordered rule list, because the two backends disagree about
  * order: seatbelt evaluates rules in sequence with the last match winning, while Landlock only grants
@@ -27,10 +27,11 @@ import {
 	getPluginsDir,
 	getSessionsDir,
 	getXCSHContextsDir,
+	normalizePathForComparison,
 	pathIsWithin,
 } from "@f5-sales-demo/pi-utils";
 
-export type FenceAccess = "read" | "write";
+export type FenceAccess = "read" | "write" | "enumerate";
 export type FenceVerdict = "allow" | "deny";
 
 export interface ContainmentFence {
@@ -42,6 +43,8 @@ export interface ContainmentFence {
 	readonly allowWriteOnly: readonly string[];
 	/** Canonical roots denied in both directions, winning over any allow they sit inside. */
 	readonly deny: readonly string[];
+	/** Canonical directories whose own entries may not be enumerated. Descendants remain reachable by name. */
+	readonly denyEnumerate: readonly string[];
 }
 
 export interface ContainmentOptions {
@@ -516,43 +519,15 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	const allowReadOnly = new Set<string>();
 	const allowWriteOnly = new Set<string>();
 	const deny = new Set<string>();
+	const denyEnumerate = new Set<string>();
 
-	// Home is one fence. The workspace's ancestors are the other, and they are what matters when
-	// checkouts live outside home: with /work/customer-a as the workspace, /work/customer-b matched no
-	// rule at all and was readable and writable.
-	//
-	// Every ancestor, not just the immediate parent. One level only works when the parent happens to be
-	// the container the tenants sit in; with `<container>/<tenant>/repo` the immediate parent IS the
-	// tenant, so every OTHER tenant matched nothing and the fence allowed it, read and write. That went
-	// unnoticed because the command-text scan is deny-by-default and refused those paths on the way in —
-	// the composite looked right while the fence alone did not. Removing that scan for OS-confined shells
-	// (#2582) is what exposed it, so the two changes ship together.
-	//
-	// Denying an ancestor costs nothing above it: the walk stops before anything `tooBroadToDeny`
-	// rejects, so `/`, `/usr`, `/tmp` and `$TMPDIR` are never denied and operational paths stay
-	// reachable. And it costs nothing below: the workspace is allowed at greater depth, and
-	// `fenceVerdict` takes the deepest match.
-	// Home is never denied, and the walk stops there (#2637).
-	//
-	// This is a professional courtesy, not a prison: an effort to stop *inadvertent* filesystem wandering
-	// between customers, for an operator with senior technical skills and the same rights on this machine
-	// as the agent acting for them. Denying home outright refused `~/git/STYLE_GUIDE.md` and then needed
-	// ~30 carve-outs to make ordinary tooling work again — every one of them evidence the posture was wrong.
-	//
-	// What the walk still covers is the part that matters: every level between the workspace and home. With
-	// the workspace at `~/MEDDPICC/CUSTOMER-A`, `~/MEDDPICC` is denied so the `CUSTOMER-B` sibling is unreachable,
-	// and with `<container>/<tenant>/repo` every level up to home is denied, so the v19.100.1 cross-tenant
-	// regression does not return.
-	//
-	// A session whose folder IS home, or a direct child of it, therefore fences nothing above itself. That
-	// is deliberate: if the operator chooses to work in home, that is their filesystem to lay out.
-	for (let ancestor = path.dirname(workspace); ; ancestor = path.dirname(ancestor)) {
-		if (ancestor === home) break; // the operator's own account is theirs
-		if (tooBroadToDeny(ancestor, fsRoot)) break;
-		deny.add(ancestor);
-		const next = path.dirname(ancestor);
-		if (next === ancestor) break; // reached a filesystem root that `tooBroadToDeny` did not name
-	}
+	// The fence is a professional courtesy, not a privilege boundary. Refusing an entire parent tree
+	// withheld paths the operator is entitled to use and recreated the whole-home failure from #2637.
+	// What matters for cross-tenant context isolation is the discovery step: without a directory listing,
+	// a session cannot casually scan the container and learn which sibling workspaces exist. The exact
+	// parent therefore loses enumeration only; traversal and named reads/writes remain ordinary filesystem
+	// operations. Operational parents such as `/usr` and the system temp directory are left alone.
+	const parentToProtect = path.dirname(workspace);
 
 	// Through `resolveGrants` like the allow-lists, so a session temp dir or artifacts dir that does not
 	// exist yet is still granted rather than silently dropped.
@@ -579,6 +554,15 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	}
 	for (const root of writeOnlyResolved) {
 		if (!readOnlyResolved.has(root)) allowWriteOnly.add(root);
+	}
+
+	// An explicit read grant is the operator overriding this courtesy. The default allow-by-default
+	// posture is intentionally not enough: it keeps named access working, while this one exact directory
+	// still cannot be scanned. `--allow-path` appears in both settings lists, so it reaches this branch via
+	// `readOnlyResolved`; a write-only grant does not imply permission to learn directory entries.
+	const parentExplicitlyReadable = [...readOnlyResolved].some(root => pathIsWithin(root, parentToProtect));
+	if (!tooBroadToDeny(parentToProtect, fsRoot) && !parentExplicitlyReadable) {
+		denyEnumerate.add(parentToProtect);
 	}
 
 	if (home !== undefined) {
@@ -683,6 +667,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		allowReadOnly: [...allowReadOnly],
 		allowWriteOnly: [...allowWriteOnly],
 		deny: [...deny],
+		denyEnumerate: [...denyEnumerate],
 	};
 }
 
@@ -694,18 +679,26 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
  * here is **allow**: a path matched by no rule is outside the fence and none of its business.
  */
 export function fenceVerdict(fence: ContainmentFence, candidate: string, access: FenceAccess): FenceVerdict {
+	if (access === "enumerate") {
+		const normalizedCandidate = normalizePathForComparison(candidate);
+		if (fence.denyEnumerate.some(root => normalizePathForComparison(root) === normalizedCandidate)) {
+			return "deny";
+		}
+	}
+
 	const denied = deepestMatch(fence.deny, candidate);
 	const readOnly = deepestMatch(fence.allowReadOnly, candidate);
 	const writeOnly = deepestMatch(fence.allowWriteOnly, candidate);
 	const allowed = deepestMatch(fence.allow, candidate);
+	const ordinaryAccess = access === "enumerate" ? "read" : access;
 
 	const depth = (root: string | undefined): number => (root === undefined ? -1 : root.length);
 	const deepest = Math.max(depth(denied), depth(readOnly), depth(writeOnly), depth(allowed));
 
 	// Deny first at equal depth: the leak roots depend on it.
 	if (denied !== undefined && depth(denied) === deepest) return "deny";
-	if (readOnly !== undefined && depth(readOnly) === deepest) return access === "read" ? "allow" : "deny";
-	if (writeOnly !== undefined && depth(writeOnly) === deepest) return access === "write" ? "allow" : "deny";
+	if (readOnly !== undefined && depth(readOnly) === deepest) return ordinaryAccess === "read" ? "allow" : "deny";
+	if (writeOnly !== undefined && depth(writeOnly) === deepest) return ordinaryAccess === "write" ? "allow" : "deny";
 	if (allowed !== undefined && depth(allowed) === deepest) return "allow";
 	return "allow";
 }

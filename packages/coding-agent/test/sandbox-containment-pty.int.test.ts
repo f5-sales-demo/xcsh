@@ -39,7 +39,13 @@ describe("containment covers the PTY path, not just the in-process shell", () =>
 	let home: string;
 	let workspace: string;
 	let sibling: string;
-	let wire: { allow: string[]; allowReadOnly: string[]; allowWriteOnly: string[]; deny: string[] };
+	let wire: {
+		allow: string[];
+		allowReadOnly: string[];
+		allowWriteOnly: string[];
+		deny: string[];
+		denyEnumerate: string[];
+	};
 
 	beforeAll(() => {
 		home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "pty-contain-")));
@@ -48,12 +54,13 @@ describe("containment covers the PTY path, not just the in-process shell", () =>
 		fs.mkdirSync(workspace, { recursive: true });
 		fs.mkdirSync(sibling, { recursive: true });
 		fs.writeFileSync(path.join(sibling, "secret.txt"), "PTY-CANARY-7734\n");
-		const fence = buildContainmentFence({ workspace, home });
+		const fence = buildContainmentFence({ workspace, home, leakRoots: [sibling] });
 		wire = {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
 			deny: [...fence.deny],
+			denyEnumerate: [...fence.denyEnumerate],
 		};
 	});
 
@@ -131,6 +138,7 @@ describe("containment covers the PTY path, not just the in-process shell", () =>
 					allowReadOnly: [...realFence.allowReadOnly],
 					allowWriteOnly: [...realFence.allowWriteOnly],
 					deny: [...realFence.deny],
+					denyEnumerate: [...realFence.denyEnumerate],
 				},
 			},
 			(_err: Error | null, chunk: string) => {

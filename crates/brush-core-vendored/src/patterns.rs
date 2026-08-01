@@ -126,16 +126,19 @@ impl Pattern {
 	///
 	/// * `working_dir` - The current working directory, used for relative paths.
 	/// * `path_filter` - Optionally provides a function that filters paths after expansion.
+	/// * `enumerate_filter` - Optionally decides whether a directory may be read during expansion.
 
 	#[allow(clippy::unwrap_in_result)]
-	pub(crate) fn expand<PF>(
+	pub(crate) fn expand<PF, EF>(
 		&self,
 		working_dir: &Path,
 		path_filter: Option<&PF>,
+		enumerate_filter: Option<&EF>,
 		options: &FilenameExpansionOptions,
 	) -> Result<Vec<String>, error::Error>
 	where
 		PF: Fn(&Path) -> bool,
+		EF: Fn(&Path) -> bool,
 	{
 		// If the pattern is completely empty, then short-circuit the function; there's
 		// no reason to proceed onward when we know there's no expansions.
@@ -225,6 +228,9 @@ impl Pattern {
 
 			let current_paths = std::mem::take(&mut paths_so_far);
 			for current_path in current_paths {
+				if enumerate_filter.is_some_and(|filter| !filter(&current_path)) {
+					continue;
+				}
 				let subpattern = Self::from(&component)
 					.set_extended_globbing(self.enable_extended_globbing)
 					.set_case_insensitive(self.case_insensitive);

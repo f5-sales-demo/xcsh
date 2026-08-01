@@ -38,6 +38,7 @@ describe("containment fence: TypeScript and Rust agree", () => {
 		allowReadOnly: [...fence.allowReadOnly],
 		allowWriteOnly: [...fence.allowWriteOnly],
 		deny: [...fence.deny],
+		denyEnumerate: [...fence.denyEnumerate],
 	};
 
 	const corpus: string[] = [
@@ -69,9 +70,9 @@ describe("containment fence: TypeScript and Rust agree", () => {
 	it("returns the same verdict for every path, in both directions", () => {
 		const disagreements: string[] = [];
 		for (const candidate of corpus) {
-			for (const access of ["read", "write"] as FenceAccess[]) {
+			for (const access of ["read", "write", "enumerate"] as FenceAccess[]) {
 				const ts = fenceVerdict(fence, candidate, access) === "allow";
-				const rust = fencePermits(wire, candidate, access === "write");
+				const rust = fencePermits(wire, candidate, access === "write", access === "enumerate");
 				if (ts !== rust) disagreements.push(`${access} ${candidate}: ts=${ts} rust=${rust}`);
 			}
 		}
@@ -81,18 +82,26 @@ describe("containment fence: TypeScript and Rust agree", () => {
 	// Both must resolve the symlink, or the pre-check and the enforcement disagree about the one
 	// case an attacker would reach for.
 	it("agrees when the path arrives through a symlink", () => {
-		// Points at the sibling checkout, not `~/.ssh`: #2637 stopped denying the operator's own dotfiles,
-		// so using one as the "denied" target made TS and Rust agree on `allow` and proved nothing.
+		// Points at the cross-session leak root. Named sibling paths are deliberately reachable now; the
+		// courtesy prevents discovering them by enumerating the shared parent.
 		const pivot = path.join(workspace, "pivot");
-		fs.symlinkSync(sibling, pivot);
+		fs.symlinkSync(leak, pivot);
 		const viaLink = path.join(pivot, "secrets.tf");
 
 		expect(fenceVerdict(fence, viaLink, "read")).toBe("deny");
-		expect(fencePermits(wire, viaLink, false)).toBe(false);
+		expect(fencePermits(wire, viaLink, false, false)).toBe(false);
+	});
+
+	it("agrees that only the shared parent loses enumeration", () => {
+		const parent = path.dirname(workspace);
+		expect(fenceVerdict(fence, parent, "enumerate")).toBe("deny");
+		expect(fencePermits(wire, parent, false, true)).toBe(false);
+		expect(fenceVerdict(fence, sibling, "read")).toBe("allow");
+		expect(fencePermits(wire, sibling, false, false)).toBe(true);
 	});
 
 	it("agrees that an absent fence restricts nothing", () => {
-		const empty = { allow: [], allowReadOnly: [], allowWriteOnly: [], deny: [] };
+		const empty = { allow: [], allowReadOnly: [], allowWriteOnly: [], deny: [], denyEnumerate: [] };
 		for (const candidate of corpus) {
 			expect(fencePermits(empty, candidate, true)).toBe(true);
 		}

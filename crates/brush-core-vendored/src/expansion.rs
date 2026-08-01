@@ -646,12 +646,16 @@ impl<'a> WordExpander<'a> {
 				.expand(
 					self.shell.working_dir(),
 					Some(&|path: &std::path::Path| fence.permits(path, crate::containment::FenceAccess::Read)),
+					Some(&|path: &std::path::Path| {
+						fence.permits(path, crate::containment::FenceAccess::Enumerate)
+					}),
 					&options,
 				)
 				.unwrap_or_default(),
 			None => pattern
 				.expand(
 					self.shell.working_dir(),
+					Some(&patterns::Pattern::accept_all_expand_filter),
 					Some(&patterns::Pattern::accept_all_expand_filter),
 					&options,
 				)
