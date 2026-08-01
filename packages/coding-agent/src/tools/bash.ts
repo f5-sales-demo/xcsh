@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as os from "node:os";
 import type {
 	AgentTool,
 	AgentToolContext,
@@ -17,7 +18,7 @@ import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
 import { type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
-import { resolveSessionFence } from "../sandbox/session-fence";
+import { resolveSessionFence, SANDBOX_OPERATOR_HOME_ENV, SANDBOX_SESSION_ROOT_ENV } from "../sandbox/session-fence";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import { renderStatusLine } from "../tui";
@@ -557,11 +558,11 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	 * RPC `bash` reach it too, and the same brush-core runs credential helpers and the interactive
 	 * `xcsh shell`. Only the model's tool call is fenced (#2554).
 	 */
-	#containmentFence() {
+	#containmentFence(root = this.#containmentRoot()) {
 		const artifactsDir = this.session.getArtifactsDir?.();
 		// One resolver, shared with `sandbox-guard` and the internal-URL check, so the pre-check and the
 		// kernel cannot be looking at different boundaries (#2624).
-		return resolveSessionFence(this.#containmentRoot(), this.session.settings, {
+		return resolveSessionFence(root, this.session.settings, {
 			extraRoots: artifactsDir ? [artifactsDir] : [],
 		});
 	}
@@ -583,7 +584,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		ctx?: AgentToolContext,
 	): Promise<AgentToolResult<BashToolDetails>> {
 		let command = rawCommand;
-		const env = normalizeBashEnv(rawEnv);
+		const requestedEnv = normalizeBashEnv(rawEnv);
 
 		// Extract leading `cd <path> && ...` into cwd when the model ignores the cwd parameter.
 		if (!cwd) {
@@ -627,7 +628,20 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// different configurations — which doubled a cost that lands as user-visible latency. Sharing is
 		// also the more correct answer: the internal-URL check and the shell are then reasoning about the
 		// same boundary rather than two that merely agree today.
-		const fence = this.#containmentFence();
+		const containmentRoot = this.#containmentRoot();
+		const fence = this.#containmentFence(containmentRoot);
+		// A nested `xcsh sandbox check` must exercise the grants of this exact live profile. Seatbelt and
+		// Landlock restrictions compose and cannot be relaxed by its subprocess, so the diagnostic needs
+		// the immutable session anchor even when this individual call uses `cwd` or starts with `cd`.
+		// Keep these values host-owned: tool-supplied env cannot replace them.
+		const env =
+			fence === undefined
+				? requestedEnv
+				: {
+						...requestedEnv,
+						[SANDBOX_SESSION_ROOT_ENV]: containmentRoot,
+						[SANDBOX_OPERATOR_HOME_ENV]: os.homedir(),
+					};
 
 		const localOptions = {
 			getArtifactsDir: this.session.getArtifactsDir,

@@ -16,6 +16,17 @@
  */
 import { buildContainmentFence, type ContainmentFence } from "./containment";
 
+/**
+ * Trusted context added to commands launched by the fenced model bash tool.
+ *
+ * A subprocess cannot infer the session anchor after a command-local `cd`, and an inherited OS
+ * sandbox cannot be loosened. The installed sandbox diagnostic uses these values to place its
+ * allow-side fixtures inside paths the live bash profile already grants instead of inventing a
+ * second workspace under the system temp directory (#2800).
+ */
+export const SANDBOX_SESSION_ROOT_ENV = "XCSH_SANDBOX_SESSION_ROOT";
+export const SANDBOX_OPERATOR_HOME_ENV = "XCSH_SANDBOX_OPERATOR_HOME";
+
 /** The slice of `Settings` this needs — supplied explicitly so the caller names its own source. */
 export interface SettingsReader {
 	get(key: string): unknown;

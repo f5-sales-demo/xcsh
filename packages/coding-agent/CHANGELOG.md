@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Made `xcsh sandbox check` exercise the live bash profile, report actionable failure details, and run under macOS and Linux confinement in CI ([#2800](https://github.com/f5-sales-demo/xcsh/issues/2800))
+
 ## [20.1.0] - 2026-08-01
 
 ### Added
