@@ -26,7 +26,7 @@ export interface ExtensionCapabilities {
 
 export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	"version": "0.1.0",
-	"contractVersion": "1.12.0",
+	"contractVersion": "2.0.0",
 	"multiPortDiscovery": true,
 	"protocol": "tool_request/result",
 	"tools": [
@@ -120,33 +120,6 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 				],
 				"properties": {
 					"url": {
-						"type": "string"
-					}
-				}
-			},
-			"flags": {
-				"mutates": true
-			}
-		},
-		{
-			"name": "login",
-			"summary": "Drive the F5 XC OIDC/Keycloak login end-to-end (production + staging consoles).",
-			"category": "navigation",
-			"params": {
-				"type": "object",
-				"required": [
-					"email",
-					"password",
-					"consoleUrl"
-				],
-				"properties": {
-					"email": {
-						"type": "string"
-					},
-					"password": {
-						"type": "string"
-					},
-					"consoleUrl": {
 						"type": "string"
 					}
 				}
@@ -617,7 +590,7 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 		},
 		{
 			"name": "diag_bridges",
-			"summary": "List discovered xcsh bridges (port, tenant, env, sessionId, lastSeen) for multi-session diagnostics.",
+			"summary": "List discovered xcsh bridge health without tenant, environment, or session identifiers.",
 			"category": "read",
 			"params": {
 				"type": "object",
@@ -638,16 +611,6 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 		{
 			"name": "diag_ttft",
 			"summary": "Diagnostic: init→first-token timeline (per-stage ms, total, dominant, cold/warm).",
-			"category": "read",
-			"params": {
-				"type": "object",
-				"properties": {}
-			},
-			"flags": {}
-		},
-		{
-			"name": "capture_login_flow",
-			"summary": "Diagnostic: captured login redirect chain annotated with tenant/env (Phase 0b).",
 			"category": "read",
 			"params": {
 				"type": "object",
@@ -786,29 +749,6 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 		}
 	],
 	"features": {
-		"handshake": {
-			"serveKind": [
-				"office",
-				"browser"
-			],
-			"officePortRange": [
-				19242,
-				19261
-			],
-			"officeWssPortRange": [
-				19342,
-				19361
-			],
-			"browserPortRange": [
-				19222,
-				19241
-			],
-			"browserWssPortRange": [
-				19322,
-				19341
-			],
-			"description": "hello_ack advertises serveKind — how the bridge was STARTED (office-serve vs Chrome worker), distinct from the client's announced host. `xcsh office serve` binds the dedicated office port range and advertises serveKind:\"office\"; the Chrome worker binds the browser range and advertises \"browser\". The Office pane scans only the office wss range AND filters on serveKind:\"office\", so it can never adopt a Chrome worker (a serveKind absent/null is treated as ineligible)."
-		},
 		"explainMode": {
 			"tool": "set_explain_mode",
 			"default": false,
@@ -855,14 +795,7 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 				"host_tool_call",
 				"host_tool_update",
 				"host_tool_result",
-				"host_tool_cancel",
-				"configure",
-				"configure_ack",
-				"configure_error",
-				"list_skills",
-				"skills",
-				"list_commands",
-				"commands"
+				"host_tool_cancel"
 			],
 			"description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel.",
 			"promptHints": {
@@ -882,6 +815,6 @@ export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
 	}
 };
 
-export const EXTENSION_CONTRACT_VERSION = "1.12.0";
+export const EXTENSION_CONTRACT_VERSION = "2.0.0";
 
-export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","set_bridge_port","navigate","login","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","query_dom","find","wait_for","assert_text","screenshot","read_console","read_network","diag_suspension","diag_bridges","diag_activation","diag_ttft","capture_login_flow","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];
+export const EXTENSION_TOOL_NAMES: readonly string[] = ["ping","capabilities","reload","debug_exec","detach","set_bridge_port","navigate","scroll_to","resize_window","tabs_list","tabs_create","tabs_close","click","click_element","click_xy","type_text","form_input","key_press","select_option","label_select","file_upload","read_ax","get_page_text","query_dom","find","wait_for","assert_text","screenshot","read_console","read_network","diag_suspension","diag_bridges","diag_activation","diag_ttft","wait_for_api_response","get_page_context","javascript_tool","browser_batch","set_explain_mode","annotate"];

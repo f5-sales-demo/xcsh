@@ -142,18 +142,19 @@ describe("host profiles", () => {
 		});
 	}
 
-	it("chrome retains ALL its behavioral rules byte-for-byte (only wrapper + one sentence change)", () => {
+	it("chrome retains its behavioral rules and keeps authentication operator-owned", () => {
 		const t = HOST_PROFILES.chrome.systemPrompt;
 		for (const keyword of [
 			"TEXT FIRST",
 			"catalog_workflow_runner",
 			"DEPENDENCY ORDER",
 			"port 19222",
-			"login tool",
+			"authenticate directly in the browser",
 			"Do NOT open new tabs",
 		]) {
 			expect(t).toContain(keyword);
 		}
+		expect(t).not.toContain("login tool");
 	});
 
 	it("each doc host layers its own app context", () => {

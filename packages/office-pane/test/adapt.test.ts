@@ -26,12 +26,8 @@ describe("errorText", () => {
 		expect(errorText("provider-5xx")).toBe(ERROR_MESSAGES["provider-5xx"]);
 	});
 
-	test("falls back to raw error text when reason is absent", () => {
-		expect(errorText(undefined, "  boom  ")).toBe("boom");
-	});
-
-	test("falls back to a generic message when neither is present", () => {
-		expect(errorText(undefined, "")).toBe("Something went wrong. Please try again.");
+	test("falls back to fixed generic copy when the reason is absent", () => {
+		expect(errorText(undefined)).toBe("Something went wrong. Please try again.");
 	});
 
 	test("covers every ChatErrorReason (exhaustive map)", () => {
@@ -76,7 +72,7 @@ describe("turnsToMessages", () => {
 
 	test("a session error after prior turns (retryable reason) appends a synthetic row WITH retry text", () => {
 		const turns: Turn[] = [user("u-1", "hi"), assistant("c-1", "answer")];
-		const msgs = turnsToMessages({ turns, status: "error", reason: "provider-5xx", error: "boom" });
+		const msgs = turnsToMessages({ turns, status: "error", reason: "provider-5xx" });
 		expect(msgs).toHaveLength(3);
 		const last = msgs[msgs.length - 1];
 		expect(last).toMatchObject({ role: "assistant", error: true, text: ERROR_MESSAGES["provider-5xx"] });

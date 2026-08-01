@@ -20,6 +20,8 @@ function harness() {
 	let onDisc: () => void = () => {};
 	const promptCalls: Array<{ text: string; options?: Record<string, unknown> }> = [];
 	const server = {
+		serveKind: "office",
+		clientHost: "excel",
 		send: (p: unknown) => sent.push(p as Record<string, unknown>),
 		onMessage: (cb: (m: Record<string, unknown>) => void) => {
 			onMsg = cb;
@@ -49,42 +51,51 @@ function harness() {
 	};
 }
 
-const flush = (ms = 20) => new Promise(r => setTimeout(r, ms));
+const flush = (ms = 20) => Bun.sleep(ms);
 
 test("isChatRequest accepts a valid images array", () => {
 	expect(
-		isChatRequest({
-			type: "chat_request",
-			id: "c-1",
-			text: "describe",
-			mode: "educational",
-			images: [{ data: "AAAA", mimeType: "image/png" }],
-		}),
+		isChatRequest(
+			{
+				type: "chat_request",
+				id: "c-1",
+				text: "describe",
+				mode: "educational",
+				images: [{ data: "AAAA", mimeType: "image/png" }],
+			},
+			"transport",
+		),
 	).toBe(true);
 });
 
 test("isChatRequest accepts a request with no images (optional field)", () => {
-	expect(isChatRequest({ type: "chat_request", id: "c-1", text: "hi", mode: "educational" })).toBe(true);
+	expect(isChatRequest({ type: "chat_request", id: "c-1", text: "hi", mode: "educational" }, "transport")).toBe(true);
 });
 
 test("isChatRequest rejects malformed images", () => {
 	// Not an array.
-	expect(isChatRequest({ type: "chat_request", id: "c-1", text: "x", mode: "educational", images: "nope" })).toBe(
-		false,
-	);
+	expect(
+		isChatRequest({ type: "chat_request", id: "c-1", text: "x", mode: "educational", images: "nope" }, "transport"),
+	).toBe(false);
 	// Missing mimeType.
 	expect(
-		isChatRequest({ type: "chat_request", id: "c-1", text: "x", mode: "educational", images: [{ data: "AAAA" }] }),
+		isChatRequest(
+			{ type: "chat_request", id: "c-1", text: "x", mode: "educational", images: [{ data: "AAAA" }] },
+			"transport",
+		),
 	).toBe(false);
 	// Non-string data.
 	expect(
-		isChatRequest({
-			type: "chat_request",
-			id: "c-1",
-			text: "x",
-			mode: "educational",
-			images: [{ data: 123, mimeType: "image/png" }],
-		}),
+		isChatRequest(
+			{
+				type: "chat_request",
+				id: "c-1",
+				text: "x",
+				mode: "educational",
+				images: [{ data: 123, mimeType: "image/png" }],
+			},
+			"transport",
+		),
 	).toBe(false);
 });
 

@@ -46,6 +46,7 @@ import type {
 	SlashCommandInfo,
 	SlashCommandsList,
 } from "@f5-sales-demo/xcsh/browser/chat-protocol";
+import { CHAT_ERROR_REASONS } from "./reasons";
 
 // --- Native wire types, re-exported under office-pane's local names. ---
 export type {
@@ -137,7 +138,11 @@ export function isChatDone(msg: unknown): msg is ChatDone {
 }
 
 export function isChatError(msg: unknown): msg is ChatError {
-	return isObj(msg) && msg.type === "chat_error";
+	return (
+		isObj(msg) &&
+		msg.type === "chat_error" &&
+		CHAT_ERROR_REASONS.includes(msg.reason as (typeof CHAT_ERROR_REASONS)[number])
+	);
 }
 
 export function isChatKeepalive(msg: unknown): msg is ChatKeepalive {
@@ -167,7 +172,7 @@ export function isConfigureAck(msg: unknown): msg is ConfigureAck {
 
 /** Inbound guard: xcsh rejected a provider configure. */
 export function isConfigureError(msg: unknown): msg is ConfigureError {
-	return isObj(msg) && msg.type === "configure_error" && typeof msg.error === "string";
+	return isObj(msg) && msg.type === "configure_error" && msg.reason === "configuration-rejected";
 }
 
 /** Inbound guard: xcsh replied to `list_skills` with the loaded skills. */

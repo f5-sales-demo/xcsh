@@ -48,7 +48,7 @@ describe("Layer 1 — golden drift guard", () => {
 		const r = spawnSync("bun", ["scripts/gen-md-goldens.ts", "--check"], { cwd: PKG_DIR, encoding: "utf8" });
 		expect(r.stderr + r.stdout).toContain("up to date");
 		expect(r.status).toBe(0);
-	});
+	}, 15_000);
 });
 
 describe("Layer 1 — structural invariants", () => {

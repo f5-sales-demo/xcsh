@@ -83,6 +83,10 @@ export interface ChatRequest {
 	context: PageContextSnapshot | null;
 	mode: InteractionMode;
 	history_hint?: string;
+	/** Required for the Chrome host, whose side panel routes each turn to an
+	 * explicitly bound tab and tenant session. Office routing is transport-bound. */
+	tabId?: number;
+	sessionKey?: string;
 	/** Optional photo/image attachments, sent to the model as vision blocks. */
 	images?: ChatImage[];
 	/** Absolute local paths (files/folders) the user attached as context. The engine
@@ -175,11 +179,8 @@ export interface ChatDone {
 	references?: ChatReference[];
 }
 
-/** Machine-readable cause of a terminal chat_error, so the panel can render a
- * distinct, actionable message (and decide whether to auto-recover) instead of a
- * generic failure. Additive/optional on the wire (contract 1.6.0); an omitted
- * reason means an unclassified error (legacy behavior — show the error text).
- * Shared vocabulary with the extension (keep both lists identical). */
+/** Machine-readable cause of a terminal chat_error. Raw provider error text is
+ * deliberately absent because it can carry identity-bearing response content. */
 export const CHAT_ERROR_REASONS = [
 	"bridge-disconnected", // the worker's bridge closed mid-turn
 	"bridge-unresponsive", // the socket looked open but the worker never answered
@@ -197,8 +198,7 @@ export type ChatErrorReason = (typeof CHAT_ERROR_REASONS)[number];
 export interface ChatError {
 	type: "chat_error";
 	id: string;
-	error: string;
-	reason?: ChatErrorReason;
+	reason: ChatErrorReason;
 }
 
 /** Liveness signal (contract 1.7.0): the worker is actively working the turn — e.g.
@@ -217,7 +217,7 @@ export interface ChatKeepalive {
 // to whatever host is driving the WS bridge (the chrome extension, an Office
 // add-in, etc.). The frames are FIELD-IDENTICAL to the transport-neutral
 // `RpcHostTool*` vocabulary (`src/host-tools/`), so they are re-exported here
-// rather than re-declared — one vocabulary across every transport, no drift.
+// rather than redeclared — one vocabulary across every transport, no drift.
 //
 // CRITICAL: `host_tool_result.result` and `host_tool_update.partialResult` are
 // `AgentToolResult` values — a `content[]` array — NOT a `{ data }` object. The
@@ -262,14 +262,13 @@ export interface SetHostToolsError {
 }
 
 // ---------------------------------------------------------------------------
-// Provider configuration channel (contract 1.9.0)
+// Office provider configuration channel
 //
-// Lets a bridge client (the Chrome extension, the office-xcsh add-in) configure
-// xcsh's LLM provider at runtime — after the socket is connected — without
-// restarting the worker and WITHOUT persisting the token to disk. xcsh stays the
-// intelligence engine; this only swaps the provider credentials/model in session
-// memory. Single config in-flight, so — like `set_host_tools` — there is no `id`
-// correlation field. Mirrors the set_host_tools ack/nack shape exactly.
+// Lets the office-xcsh add-in configure xcsh's LLM provider at runtime after the
+// socket is connected, without restarting the worker or persisting the token.
+// Contract-2 Chrome clients have no credential-configuration interface. Single
+// config in-flight, so — like `set_host_tools` — there is no `id` correlation
+// field. Mirrors the set_host_tools ack/nack shape exactly.
 // ---------------------------------------------------------------------------
 
 /** Inbound: the client configures the LLM provider. `token` is required and
@@ -292,10 +291,10 @@ export interface ConfigureAck {
 }
 
 /** Outbound: nacks a `configure` that failed (bad frame, unknown model, missing
- * API key). Emitted instead of the ack so a client awaiting it never hangs. */
+ * API key). The fixed reason prevents provider text from crossing the bridge. */
 export interface ConfigureError {
 	type: "configure_error";
-	error: string;
+	reason: "configuration-rejected";
 }
 
 // ---------------------------------------------------------------------------
@@ -317,14 +316,19 @@ function isValidChatImages(v: unknown): boolean {
 	});
 }
 
-export function isChatRequest(msg: Record<string, unknown>): boolean {
+export function isChatRequest(msg: Record<string, unknown>, routing: "browser" | "transport"): boolean {
 	return (
 		msg.type === "chat_request" &&
 		hasChatIdPrefix(msg.id) &&
 		typeof msg.text === "string" &&
 		typeof msg.mode === "string" &&
 		VALID_MODES.has(msg.mode) &&
-		isValidChatImages(msg.images)
+		isValidChatImages(msg.images) &&
+		(routing === "transport" ||
+			(typeof msg.tabId === "number" &&
+				Number.isFinite(msg.tabId) &&
+				typeof msg.sessionKey === "string" &&
+				msg.sessionKey.length > 0))
 	);
 }
 

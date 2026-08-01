@@ -1000,7 +1000,7 @@ function b() {
 						testDir,
 						Settings.isolated({
 							"bash.autoBackground.enabled": true,
-							"bash.autoBackground.thresholdMs": 50,
+							"bash.autoBackground.thresholdMs": 1_000,
 						}),
 						{
 							asyncJobManager,

@@ -84,7 +84,6 @@ export const BROWSER_TOOL_NAMES: readonly string[] = [
 	"fill",
 	"type_text",
 	"screenshot",
-	"login",
 	"read_ax",
 	"get_page_context",
 	"query_dom",

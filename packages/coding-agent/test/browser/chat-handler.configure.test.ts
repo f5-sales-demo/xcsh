@@ -13,9 +13,16 @@ import type { AgentSession } from "../../src/session/agent-session";
  * test can assert the session-only, non-persistent provider swap and the ack/nack.
  */
 class FakeBridgeServer {
+	readonly serveKind: "browser" | "office";
+	readonly clientHost: "excel" | null;
 	sent: Array<Record<string, unknown>> = [];
 	#onMessage: Array<(m: Record<string, unknown>) => void> = [];
 	#onDisconnected: Array<() => void> = [];
+
+	constructor(serveKind: "browser" | "office" = "office") {
+		this.serveKind = serveKind;
+		this.clientHost = serveKind === "office" ? "excel" : null;
+	}
 
 	send(payload: unknown): void {
 		this.sent.push(payload as Record<string, unknown>);
@@ -91,8 +98,12 @@ class FakeAgentSession {
 	}
 }
 
-function makeHandler(): { handler: ChatHandler; server: FakeBridgeServer; session: FakeAgentSession } {
-	const server = new FakeBridgeServer();
+function makeHandler(serveKind: "browser" | "office" = "office"): {
+	handler: ChatHandler;
+	server: FakeBridgeServer;
+	session: FakeAgentSession;
+} {
+	const server = new FakeBridgeServer(serveKind);
 	const session = new FakeAgentSession();
 	const handler = new ChatHandler(server as unknown as BridgeServer, session as unknown as AgentSession);
 	handler.attach();
@@ -106,12 +117,23 @@ async function flush(): Promise<void> {
 }
 
 describe("ChatHandler configure frame (#2095)", () => {
+	it("ignores provider configuration from the Chrome extension profile", async () => {
+		const { server, session } = makeHandler("browser");
+		server.emit({ type: "configure", token: "<XC_API_TOKEN>" });
+		await flush();
+
+		expect(session.modelRegistry.runtimeApiKeys).toHaveLength(0);
+		expect(session.setModelCalls).toHaveLength(0);
+		expect(server.ofType("configure_ack")).toHaveLength(0);
+		expect(server.ofType("configure_error")).toHaveLength(0);
+	});
+
 	it("(a) baseUrl+token+model → registerProvider with the gateway config, setModel, configure_ack", async () => {
 		const { server, session } = makeHandler();
 		server.emit({
 			type: "configure",
 			baseUrl: "https://f5ai.pd.f5net.com/anthropic",
-			token: "sk-test-123",
+			token: "<XC_API_TOKEN>",
 			model: "claude-sonnet-4-5",
 		});
 		await flush();
@@ -120,7 +142,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 		const call = session.modelRegistry.registerProviderCalls[0];
 		expect(call.providerName).toBe("anthropic");
 		expect(call.config.baseUrl).toBe("https://f5ai.pd.f5net.com/anthropic");
-		expect(call.config.apiKey).toBe("sk-test-123");
+		expect(call.config.apiKey).toBe("<XC_API_TOKEN>");
 		expect(call.config.headers).toEqual({ "anthropic-beta": "context-1m-2025-08-07" });
 		expect(call.sourceId).toBe("office-configure");
 		// No models[] → registerProvider overrides the existing anthropic models, not persisted.
@@ -139,7 +161,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 		server.emit({
 			type: "configure",
 			baseUrl: "https://f5ai.pd.f5net.com/anthropic",
-			token: "sk-test-123",
+			token: "<XC_API_TOKEN>",
 		});
 		await flush();
 
@@ -149,11 +171,11 @@ describe("ChatHandler configure frame (#2095)", () => {
 
 	it("(b) key-only (no baseUrl) → setRuntimeApiKey path, no registerProvider", async () => {
 		const { server, session } = makeHandler();
-		server.emit({ type: "configure", token: "sk-key-only", model: "claude-opus-4-8" });
+		server.emit({ type: "configure", token: "<XC_API_TOKEN>", model: "claude-opus-4-8" });
 		await flush();
 
 		expect(session.modelRegistry.registerProviderCalls).toHaveLength(0);
-		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "anthropic", apiKey: "sk-key-only" }]);
+		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "anthropic", apiKey: "<XC_API_TOKEN>" }]);
 		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-opus-4-8" }]);
 		expect(server.ofType("configure_ack")[0].model).toBe("claude-opus-4-8");
 	});
@@ -162,31 +184,35 @@ describe("ChatHandler configure frame (#2095)", () => {
 		const { server, session } = makeHandler();
 		session.setModelError = new Error("No API key for anthropic/claude-opus-4-8");
 		// Must not throw synchronously or asynchronously out of the handler.
-		expect(() => server.emit({ type: "configure", token: "sk-bad" })).not.toThrow();
+		expect(() => server.emit({ type: "configure", token: "<XC_API_TOKEN>" })).not.toThrow();
 		await flush();
 
 		expect(server.ofType("configure_ack")).toHaveLength(0);
 		const errs = server.ofType("configure_error");
 		expect(errs).toHaveLength(1);
-		expect(errs[0].error).toBe("No API key for anthropic/claude-opus-4-8");
+		expect(errs[0]).toEqual({ type: "configure_error", reason: "configuration-rejected" });
 	});
 
 	it("(c2) unknown model id → configure_error (find returns undefined), no throw escapes", async () => {
 		const { server, session } = makeHandler();
-		expect(() => server.emit({ type: "configure", token: "sk-x", model: "no-such-model" })).not.toThrow();
+		expect(() => server.emit({ type: "configure", token: "<XC_API_TOKEN>", model: "no-such-model" })).not.toThrow();
 		await flush();
 
 		expect(session.setModelCalls).toHaveLength(0);
 		expect(server.ofType("configure_ack")).toHaveLength(0);
 		const errs = server.ofType("configure_error");
 		expect(errs).toHaveLength(1);
-		expect(typeof errs[0].error).toBe("string");
+		expect(errs[0]).toEqual({ type: "configure_error", reason: "configuration-rejected" });
 	});
 
 	it("(e) non-https baseUrl → configure_error, registerProvider never called (SSRF guard)", async () => {
 		const { server, session } = makeHandler();
 		expect(() =>
-			server.emit({ type: "configure", baseUrl: "http://evil.internal/anthropic", token: "sk-x" }),
+			server.emit({
+				type: "configure",
+				baseUrl: "http://gateway.example.internal/anthropic",
+				token: "<XC_API_TOKEN>",
+			}),
 		).not.toThrow();
 		await flush();
 
@@ -196,12 +222,12 @@ describe("ChatHandler configure frame (#2095)", () => {
 		expect(server.ofType("configure_ack")).toHaveLength(0);
 		const errs = server.ofType("configure_error");
 		expect(errs).toHaveLength(1);
-		expect(String(errs[0].error)).toMatch(/https/i);
+		expect(errs[0]).toEqual({ type: "configure_error", reason: "configuration-rejected" });
 	});
 
 	it("(e2) malformed baseUrl → configure_error, registerProvider never called", async () => {
 		const { server, session } = makeHandler();
-		expect(() => server.emit({ type: "configure", baseUrl: "not-a-url", token: "sk-x" })).not.toThrow();
+		expect(() => server.emit({ type: "configure", baseUrl: "not-a-url", token: "<XC_API_TOKEN>" })).not.toThrow();
 		await flush();
 
 		expect(session.modelRegistry.registerProviderCalls).toHaveLength(0);
@@ -216,7 +242,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 		server.emit({
 			type: "configure",
 			baseUrl: "https://127-0-0-1.local-ip.sh:8443/anthropic",
-			token: "sk-x",
+			token: "<XC_API_TOKEN>",
 			model: "claude-opus-4-8",
 		});
 		await flush();

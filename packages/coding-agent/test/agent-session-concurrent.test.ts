@@ -150,9 +150,21 @@ describe("AgentSession concurrent prompt guard", () => {
 		const firstPrompt = session.prompt("First message");
 		await Bun.sleep(10);
 
-		// steer should work while streaming
-		expect(() => session.steer("Steering message")).not.toThrow();
-		expect(session.queuedMessageCount).toBe(1);
+		// steer should work while streaming. On a cold start the agent can consume
+		// the steering queue before this test observes it, so assert the public
+		// outcome rather than requiring one transient queue length.
+		await expect(session.steer("Steering message")).resolves.toBeUndefined();
+		await waitFor(
+			() =>
+				session.queuedMessageCount === 1 ||
+				session.messages.some(
+					message =>
+						message.role === "user" &&
+						(typeof message.content === "string"
+							? message.content === "Steering message"
+							: message.content.some(part => part.type === "text" && part.text === "Steering message")),
+				),
+		);
 
 		// Cleanup
 		await session.abort();
@@ -167,7 +179,7 @@ describe("AgentSession concurrent prompt guard", () => {
 		await Bun.sleep(10);
 
 		// followUp should work while streaming
-		expect(() => session.followUp("Follow-up message")).not.toThrow();
+		await expect(session.followUp("Follow-up message")).resolves.toBeUndefined();
 		expect(session.queuedMessageCount).toBe(1);
 
 		// Cleanup

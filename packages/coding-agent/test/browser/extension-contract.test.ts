@@ -6,7 +6,9 @@ import {
 	EXTENSION_TOOL_NAMES,
 } from "../../src/browser/capabilities.generated";
 import capabilitiesJson from "../../src/browser/capabilities.json";
+import type { BridgeServer, ToolResult } from "../../src/browser/extension-bridge";
 import { checkContractVersion, extractRequestedTools } from "../../src/browser/extension-contract";
+import { ExtensionBrowserProvider } from "../../src/browser/extension-provider";
 
 const VENDORED = capabilitiesJson as {
 	contractVersion: string;
@@ -99,5 +101,71 @@ describe("extension contract drift guards", () => {
 			.map(t => t.name)
 			.filter(name => !requested.has(name) && !KNOWN_UNWRAPPED.has(name));
 		expect(missing).toEqual([]);
+	});
+});
+
+describe("ExtensionBrowserProvider contract-2 handshake", () => {
+	type RequestCall = { name: string; params: Record<string, unknown> };
+
+	function fakeServer(handle: (name: string, params: Record<string, unknown>) => ToolResult): {
+		server: BridgeServer;
+		calls: RequestCall[];
+	} {
+		const calls: RequestCall[] = [];
+		const server = {
+			connected: true,
+			request: async (name: string, params: Record<string, unknown>) => {
+				calls.push({ name, params });
+				return handle(name, params);
+			},
+		} as unknown as BridgeServer;
+		return { server, calls };
+	}
+
+	it("fails closed on a mismatched contract before navigation", async () => {
+		const { server, calls } = fakeServer(name => ({
+			content: name === "capabilities" ? { contractVersion: "1.0.0" } : { ok: true },
+			is_error: false,
+		}));
+
+		await expect(
+			new ExtensionBrowserProvider({ server }).acquire("https://tenant.console.ves.volterra.io"),
+		).rejects.toThrow("capability mismatch");
+		expect(calls.map(call => call.name)).toEqual(["capabilities"]);
+	});
+
+	it("does not fall back to the legacy ping handshake when capabilities is unavailable", async () => {
+		const { server, calls } = fakeServer(name => ({
+			content: name === "capabilities" ? "unsupported" : { ok: true },
+			is_error: name === "capabilities",
+		}));
+
+		await expect(
+			new ExtensionBrowserProvider({ server }).acquire("https://tenant.console.ves.volterra.io"),
+		).rejects.toThrow('extension tool "capabilities" failed');
+		expect(calls.map(call => call.name)).toEqual(["capabilities"]);
+	});
+
+	it("navigates without reading or forwarding ambient browser credentials", async () => {
+		const previousUsername = process.env.XCSH_USERNAME;
+		const previousPassword = process.env.XCSH_CONSOLE_PASSWORD;
+		process.env.XCSH_USERNAME = "<XC_USERNAME>";
+		process.env.XCSH_CONSOLE_PASSWORD = "<XC_CONSOLE_PASSWORD>";
+		try {
+			const { server, calls } = fakeServer(name => ({
+				content: name === "capabilities" ? { contractVersion: EXTENSION_CONTRACT_VERSION } : { ok: true },
+				is_error: false,
+			}));
+
+			await new ExtensionBrowserProvider({ server }).acquire("https://tenant.console.ves.volterra.io");
+			expect(calls.map(call => call.name)).toEqual(["capabilities", "navigate"]);
+			expect(JSON.stringify(calls)).not.toContain("<XC_USERNAME>");
+			expect(JSON.stringify(calls)).not.toContain("<XC_CONSOLE_PASSWORD>");
+		} finally {
+			if (previousUsername === undefined) delete process.env.XCSH_USERNAME;
+			else process.env.XCSH_USERNAME = previousUsername;
+			if (previousPassword === undefined) delete process.env.XCSH_CONSOLE_PASSWORD;
+			else process.env.XCSH_CONSOLE_PASSWORD = previousPassword;
+		}
 	});
 });

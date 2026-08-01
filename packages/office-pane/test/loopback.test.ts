@@ -274,9 +274,18 @@ describe("LoopbackBridgeTransport — inbound messages", () => {
 		const { transport, ws } = await connected();
 		const received: ChatInbound[] = [];
 		transport.onMessage(m => received.push(m));
-		ws.receive(JSON.stringify({ type: "chat_error", id: "x", error: "fail" }));
+		ws.receive(JSON.stringify({ type: "chat_error", id: "x", reason: "provider-5xx" }));
 		expect(received).toHaveLength(1);
-		expect(received[0]).toMatchObject({ type: "chat_error", error: "fail" });
+		expect(received[0]).toMatchObject({ type: "chat_error", reason: "provider-5xx" });
+	});
+
+	it("rejects a chat_error without a recognized contract-2 reason", async () => {
+		const { transport, ws } = await connected();
+		const received: ChatInbound[] = [];
+		transport.onMessage(m => received.push(m));
+		ws.receive(JSON.stringify({ type: "chat_error", id: "x" }));
+		ws.receive(JSON.stringify({ type: "chat_error", id: "x", reason: "unknown" }));
+		expect(received).toHaveLength(0);
 	});
 
 	it("(10) subscriber receives chat_keepalive", async () => {

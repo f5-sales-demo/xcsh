@@ -90,11 +90,11 @@ test("a rejected provision surfaces provisioning='error' + provisionError and do
 	await waitFor(() => {
 		expect(result.current.provisioning).toBe("error");
 	});
-	expect(result.current.provisionError).toMatch(/configure_error: bad token/);
+	expect(result.current.provisionError).toMatch(/provider configuration failed/i);
 	expect(advertised).toBe(false);
 });
 
-test("a reason-less chat_error surfaces status=error with raw error text (no silent state)", async () => {
+test("a reason-only chat_error surfaces fixed status without raw provider text", async () => {
 	const mock = new MockTransport();
 	const { result } = renderHook(() => useChatSession(mock));
 
@@ -105,12 +105,11 @@ test("a reason-less chat_error surfaces status=error with raw error text (no sil
 	if (!req) throw new Error("expected chat_request in mock.sent");
 
 	await act(async () => {
-		mock.emit({ type: "chat_error", id: req.id, error: "Upstream exploded: 502" });
+		mock.emit({ type: "chat_error", id: req.id, reason: "provider-5xx" });
 	});
 
 	expect(result.current.status).toBe("error");
-	expect(result.current.reason).toBeUndefined();
-	expect(result.current.error).toBe("Upstream exploded: 502");
+	expect(result.current.reason).toBe("provider-5xx");
 });
 
 test("streaming deltas + chat_done accumulates text and sets status done", async () => {
@@ -608,6 +607,6 @@ test("a chat banked before the first token reads back as a terminal message, not
 	if (!assistant || assistant.kind !== "assistant") throw new Error("expected an archived assistant turn");
 	// Nothing arrived, so there is no partial answer to preserve: say it was stopped
 	// rather than render an empty assistant row.
-	expect(assistant.state.status).toBe("error");
-	expect(assistant.state.error).toMatch(/stopped/i);
+	expect(assistant.state.status).toBe("done");
+	expect(assistant.state.text).toMatch(/stopped/i);
 });

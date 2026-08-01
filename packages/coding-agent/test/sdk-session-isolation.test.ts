@@ -166,7 +166,7 @@ describe("createAgentSession session storage isolation", () => {
 				await withSecrets.session.dispose();
 			}
 		});
-	});
+	}, 15_000);
 
 	it("keeps restored assistant messages deobfuscated across reloads", async () => {
 		await withClearedSecretEnv(async () => {

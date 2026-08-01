@@ -191,15 +191,15 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 		if (!token) {
 			return Promise.reject(new Error("configure requires a non-empty token"));
 		}
-		return new Promise<string>((resolve, reject) => {
-			this._pendingConfigure = { resolve, reject };
-			this.send({
-				type: "configure",
-				token,
-				...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
-				...(config.model ? { model: config.model } : {}),
-			});
+		const { promise, resolve, reject } = Promise.withResolvers<string>();
+		this._pendingConfigure = { resolve, reject };
+		this.send({
+			type: "configure",
+			token,
+			...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
+			...(config.model ? { model: config.model } : {}),
 		});
+		return promise;
 	}
 
 	/**
@@ -433,7 +433,6 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 			this._emit({
 				type: "chat_error",
 				id: turnId,
-				error: "The connection to the local xcsh bridge was lost.",
 				reason: "bridge-disconnected",
 			});
 		}
@@ -518,7 +517,7 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 			return;
 		}
 		if (isConfigureError(msg)) {
-			this._pendingConfigure?.reject(new Error(msg.error));
+			this._pendingConfigure?.reject(new Error("Provider configuration was rejected."));
 			this._pendingConfigure = null;
 			return;
 		}

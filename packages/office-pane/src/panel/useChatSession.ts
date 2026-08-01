@@ -112,7 +112,7 @@ function settleForArchive(turns: Turn[]): Turn[] {
 		if (turn.kind !== "assistant" || turn.state.status !== "streaming") return turn;
 		const settled: TurnState = turn.state.text
 			? { ...turn.state, status: "done" }
-			: { ...turn.state, status: "error", error: "Stopped before a response arrived." };
+			: { ...turn.state, status: "done", text: "Stopped before a response arrived." };
 		return { kind: "assistant", state: settled, activities: settleActivities(turn.activities) };
 	});
 }
@@ -164,9 +164,6 @@ export interface ChatSessionResult {
 	/** Populated when status is 'error'; mirrors TurnState.reason for turn errors
 	 *  and is set to 'bridge-disconnected' for transport.connect() failures. */
 	reason?: ChatErrorReason;
-	/** Raw error text when status is 'error'; the fallback shown when `reason`
-	 *  is absent (an unclassified error), so the banner is never silent. */
-	error?: string;
 	/** Provisioning lifecycle — chat is gated until this is 'ready'. */
 	provisioning: Provisioning;
 	/** Set when provisioning is 'error' (a rejected provider `configure`); the
@@ -203,7 +200,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const turnsRef = useRef<Turn[]>(turns);
 	turnsRef.current = turns;
 	// Holds a connect() rejection; reset whenever transport changes.
-	const [connectErr, setConnectErr] = useState<{ reason: ChatErrorReason; message: string } | null>(null);
+	const [connectErr, setConnectErr] = useState<ChatErrorReason | null>(null);
 	const [provisioning, setProvisioning] = useState<Provisioning>("connecting");
 	const [provisionError, setProvisionError] = useState<string | undefined>(undefined);
 	const [skills, setSkills] = useState<SkillInfo[]>([]);
@@ -236,12 +233,12 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 				setProvisioning("configuring");
 				try {
 					await hooksRef.current?.provision?.();
-				} catch (err: unknown) {
+				} catch {
 					// A rejected provider configure is surfaced (never swallowed): chat
 					// stays gated and host tools are NOT advertised. #2134.
-					console.error("[useChatSession] provider configure failed:", err);
+					console.error("[useChatSession] provider configuration failed");
 					if (mounted) {
-						setProvisionError(err instanceof Error ? err.message : String(err));
+						setProvisionError("Provider configuration failed. Review the gateway settings and retry.");
 						setProvisioning("error");
 					}
 					return;
@@ -260,13 +257,10 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					/* transport already gone — skip; the submenu stays empty */
 				}
 			})
-			.catch((err: unknown) => {
-				console.error("[useChatSession] transport.connect() failed:", err);
+			.catch(() => {
+				console.error("[useChatSession] transport connection failed");
 				if (mounted) {
-					setConnectErr({
-						reason: "bridge-disconnected",
-						message: err instanceof Error ? err.message : String(err),
-					});
+					setConnectErr("bridge-disconnected");
 				}
 			});
 		const unsub = transport.onMessage(msg => {
@@ -353,20 +347,19 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					...(contextPaths && contextPaths.length > 0 ? { contextPaths } : {}),
 					...(webSearch ? { web_search: true } : {}),
 				});
-			} catch (err) {
+			} catch {
 				// A closed/failed transport throws synchronously (e.g. "Cannot send in
 				// state 'closed'"). Without this guard the optimistic assistant turn
 				// above would stay in 'streaming' forever (a perpetual spinner). Fold it
 				// into a terminal error so the failure is never silent; the transport is
 				// gone, so this is reported as bridge-disconnected (no dead-end Retry).
-				console.error("[useChatSession] transport.send() failed:", err);
-				const message = err instanceof Error ? err.message : String(err);
+				console.error("[useChatSession] transport send failed");
 				setTurns(prev =>
 					prev.map(turn =>
 						turn.kind === "assistant" && turn.state.id === id
 							? {
 									kind: "assistant",
-									state: { ...turn.state, status: "error", error: message, reason: "bridge-disconnected" },
+									state: { ...turn.state, status: "error", reason: "bridge-disconnected" },
 									activities: turn.activities,
 								}
 							: turn,
@@ -473,15 +466,12 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	// spurious chat bubble for a connection-level error.
 	let status: ChatSessionResult["status"];
 	let reason: ChatErrorReason | undefined;
-	let error: string | undefined;
 	if (connectErr) {
 		status = "error";
-		reason = connectErr.reason;
-		error = connectErr.message;
+		reason = connectErr;
 	} else if (lastAssistant) {
 		status = lastAssistant.state.status;
 		reason = lastAssistant.state.reason;
-		error = lastAssistant.state.error;
 	} else {
 		status = "idle";
 	}
@@ -498,7 +488,6 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		exitHistory,
 		status,
 		reason,
-		error,
 		provisioning,
 		provisionError,
 		skills,

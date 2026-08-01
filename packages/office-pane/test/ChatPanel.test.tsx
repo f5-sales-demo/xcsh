@@ -10,9 +10,10 @@ async function settle(): Promise<void> {
 	});
 }
 
-test("renders the terminal shell: pinned control row, transcript live region, and composer", () => {
+test("renders the terminal shell: pinned control row, transcript live region, and composer", async () => {
 	const { container } = render(<ChatPanel transport={new MockTransport()} />);
 	const scope = within(container);
+	await settle();
 	const log = scope.getByRole("log", { name: /conversation/i });
 	expect(log).toBeDefined();
 	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
@@ -267,7 +268,7 @@ test("a rejected provision renders a NON-SILENT config error with a Reconfigure 
 
 	// The failure is surfaced as an alert carrying the reason — not swallowed to console.
 	const alert = await waitFor(() => scope.getByRole("alert"));
-	expect(alert.textContent).toMatch(/token expired/i);
+	expect(alert.textContent).toMatch(/provider configuration failed/i);
 
 	// The recovery action reopens the gateway config.
 	const reconfigure = scope.getByRole("button", { name: /reconfigure/i });
@@ -343,7 +344,7 @@ test("auto-opens the gateway config when a turn fails with provider-4xx (bad gat
 
 	// The worker rejects the turn because the configured provider said 4xx.
 	await act(async () => {
-		mock.emit({ type: "chat_error", id: req.id, reason: "provider-4xx", error: "401 Unauthorized" });
+		mock.emit({ type: "chat_error", id: req.id, reason: "provider-4xx" });
 	});
 
 	expect(opened).toBe(1);

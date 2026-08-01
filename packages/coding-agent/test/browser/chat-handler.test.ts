@@ -37,6 +37,24 @@ describe("composeChatPrompt", () => {
 		expect(result).toContain("explain this LB");
 	});
 
+	it("keeps authentication operator-owned on login pages", () => {
+		const context: PageContextSnapshot = {
+			v: 1,
+			capturedAt: 1719000000000,
+			tabId: 1,
+			url: "https://login.ves.volterra.io/auth/realms/example-tenant/protocol/openid-connect/auth",
+			path: "/auth/realms/example-tenant/protocol/openid-connect/auth",
+			title: "Sign in",
+			ax: null,
+			api: null,
+			truncated: false,
+		};
+		const result = composeChatPrompt("help me sign in", context, "educational", "chrome");
+		expect(result).toContain("authenticate directly in the browser");
+		expect(result).toContain("Never request, accept, or enter");
+		expect(result).not.toContain("login tool");
+	});
+
 	it("handles all five interaction modes", () => {
 		const modes = ["educational", "presentation", "configuration", "screenshot", "annotation"] as const;
 		for (const mode of modes) {
