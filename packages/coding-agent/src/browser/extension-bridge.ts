@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Server, ServerWebSocket } from "bun";
 import { LOCALIP_HOST } from "./bridge-cert";
+import { EXTENSION_ID } from "./extension-identity";
 import { type ClientHost, isClientHost } from "./host-profiles";
 
 export interface ToolResult {
@@ -189,8 +190,6 @@ export const ADDIN_ALLOWED_ORIGIN_SUFFIXES = ["local-ip.sh"] as const;
  */
 export function isAllowedBridgeOrigin(origin: string | null | undefined): boolean {
 	if (!origin) return false;
-	// Lazy require avoids a top-level import cycle (chrome-cli imports this module).
-	const { EXTENSION_ID } = require("../cli/chrome-cli") as { EXTENSION_ID: string };
 	if (origin === `chrome-extension://${EXTENSION_ID}`) return true;
 	let url: URL;
 	try {
@@ -403,7 +402,6 @@ export class BridgeServer {
 	listen(port: number, opts?: BridgeListenOpts): boolean {
 		// Extract the fetch + websocket handlers to locals so BOTH the ws and the wss
 		// listeners share ONE implementation (DRY). Behavior is unchanged from before.
-		const { EXTENSION_ID } = require("../cli/chrome-cli") as { EXTENSION_ID: string };
 		const fetch = (req: Request, server: Server<undefined>): Response | undefined => {
 			const origin = req.headers.get("origin");
 			// SUPERSET gate: the Chrome ext origin stays allowed (Chrome path preserved);
@@ -480,11 +478,10 @@ export class BridgeServer {
 			ws.send(JSON.stringify({ type: "pong" }));
 		} else if (msg.type === "hello") {
 			// Identity handshake: tell the extension which tenant this process serves.
-			// Record the announced client host (contract 1.10.0): Office sends its
-			// lowercased Office.context.host ("excel"|"powerpoint"|"word"); the Chrome
-			// extension omits it → clientHost stays null → the browser profile. Invalid
-			// values are ignored (null retained). Echoed back so the client can confirm.
-			if (isClientHost(msg.host)) this.#clientHost = msg.host;
+			// Record the announced client host only on the server-owned Office bridge.
+			// A browser client cannot gain Office routing or provider configuration by
+			// claiming an Office host in an untrusted hello frame.
+			this.#clientHost = this.#serveKind === "office" && isClientHost(msg.host) ? msg.host : null;
 			const info = this.#sessionInfo?.() ?? {
 				tenant: null,
 				env: null,
@@ -506,7 +503,7 @@ export class BridgeServer {
 					serveKind: this.#serveKind,
 					pid: process.pid,
 					wssPort: this.wssPort,
-					canConfigureProvider: true,
+					...(this.#serveKind === "office" ? { canConfigureProvider: true } : {}),
 				}),
 			);
 		} else {

@@ -27,6 +27,7 @@ interface HelloAck {
 	host: string | null;
 	serveKind: string;
 	pid: number;
+	canConfigureProvider?: boolean;
 }
 
 /** Open a fake client, send `hello` (optionally announcing a client host), resolve
@@ -157,7 +158,7 @@ describe("extension session contract", () => {
 			}
 		});
 
-		it("answers hello with the worker's session identity and a major-1 contract", async () => {
+		it("answers hello with the worker's session identity and a major-2 contract", async () => {
 			const ack = await handshake(server.port);
 
 			expect(ack.type).toBe("hello_ack");
@@ -165,14 +166,15 @@ describe("extension session contract", () => {
 			expect(ack.tenant).toBe("example-corp");
 			expect(ack.env).toBe("staging");
 			expect(ack.contextBound).toBe(false);
-			// The extension requires contract major 1 to bind + route (session-routing).
-			expect(Number(ack.contractVersion.split(".")[0])).toBe(1);
+			// The clean-break extension requires contract major 2 to bind and route.
+			expect(Number(ack.contractVersion.split(".")[0])).toBe(2);
 			expect(typeof ack.pid).toBe("number");
 		});
 
 		it("defaults host to null when the client announces none (Chrome extension)", async () => {
 			const ack = await handshake(server.port);
 			expect(ack.host).toBeNull();
+			expect("canConfigureProvider" in ack).toBe(false);
 		});
 
 		it("advertises serveKind 'browser' by default (a bare BridgeServer is the worker path)", async () => {
@@ -180,9 +182,19 @@ describe("extension session contract", () => {
 			expect(ack.serveKind).toBe("browser");
 		});
 
-		it("echoes a valid announced client host (Office add-in)", async () => {
+		it("does not grant Office capabilities from a browser-client host claim", async () => {
+			const ack = await handshake(server.port, 5_000, "excel");
+			expect(ack.host).toBeNull();
+			expect("canConfigureProvider" in ack).toBe(false);
+			expect(server.clientHost).toBeNull();
+		});
+
+		it("echoes a valid announced client host on an Office bridge", async () => {
+			server.setServeKind("office");
 			const ack = await handshake(server.port, 5_000, "excel");
 			expect(ack.host).toBe("excel");
+			expect(ack.serveKind).toBe("office");
+			expect(ack.canConfigureProvider).toBe(true);
 			expect(server.clientHost).toBe("excel");
 		});
 

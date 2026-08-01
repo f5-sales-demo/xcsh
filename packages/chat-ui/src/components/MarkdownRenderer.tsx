@@ -33,8 +33,8 @@ function scheduleFrame(cb: () => void): () => void {
 	const raf = (globalThis as { requestAnimationFrame?: (cb: FrameRequestCallback) => number }).requestAnimationFrame;
 	if (typeof raf === "function") {
 		const id = raf(() => cb());
-		const caf = (globalThis as { cancelAnimationFrame?: (id: number) => void }).cancelAnimationFrame;
-		return () => caf?.(id);
+		const cancelFrame = (globalThis as { cancelAnimationFrame?: (id: number) => void }).cancelAnimationFrame;
+		return () => cancelFrame?.(id);
 	}
 	cb();
 	return () => {};

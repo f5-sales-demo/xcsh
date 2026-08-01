@@ -26,6 +26,7 @@ import { Command } from "@f5-sales-demo/pi-utils/cli";
 // slows the manager's cold start — keep the daemon's module graph minimal).
 import { VERSION } from "@f5-sales-demo/pi-utils/dirs";
 import { portCandidates } from "../browser/extension-bridge";
+import { EXTENSION_ID } from "../browser/extension-identity";
 // Lean standalone fn (compiled-runtime detection) — no heavy graph, safe for the daemon.
 import { detectCompiledRuntime } from "../internal-urls/build-info-runtime";
 import { removeManagerState, writeManagerState } from "../services/manager-state";
@@ -88,8 +89,7 @@ function pidListeningOn(port: number): number {
 }
 
 /** Complete the extension `hello` handshake against a bridge port (with the
- * origin header the bridge requires), resolving the `hello_ack` frame or null.
- * EXTENSION_ID is lazy-required so it stays off the manager's cold-start path. */
+ * origin header the bridge requires), resolving the `hello_ack` frame or null. */
 function bridgeHello(port: number, timeoutMs = 400): Promise<Record<string, unknown> | null> {
 	const { promise, resolve } = Promise.withResolvers<Record<string, unknown> | null>();
 	let done = false;
@@ -100,7 +100,6 @@ function bridgeHello(port: number, timeoutMs = 400): Promise<Record<string, unkn
 	};
 	let ws: WebSocket;
 	try {
-		const { EXTENSION_ID } = require("../cli/chrome-cli");
 		// Intentionally ws://: the internal Chrome re-adoption client targets the
 		// bridge's local ws listener and does not cross the Office TLS boundary.
 		ws = new WebSocket(`ws://127.0.0.1:${port}`, {
@@ -528,6 +527,12 @@ export default class Manager extends Command {
 			},
 		};
 
+		// Finish startup reconciliation before publishing the control socket. A socket
+		// that accepts connections is the manager's readiness contract: clients send
+		// their first frame immediately, and a request/reply client can otherwise time
+		// out while the initial bridge scan is still loading and probing dependencies.
+		await readoptWorkers();
+
 		// Single-manager invariant + stale-socket reclamation. A live manager is
 		// never clobbered (we probe first and again on collision); a stale socket
 		// from a crashed/killed manager is reclaimed rather than crashing on
@@ -567,11 +572,6 @@ export default class Manager extends Command {
 		// down gracefully instead of orphaning workers + a stale socket/state file.
 		process.on("SIGTERM", () => gracefulShutdown("manual"));
 		process.on("SIGINT", () => gracefulShutdown("manual"));
-
-		// Zero-downtime handoff: re-adopt any bound workers a superseded manager left
-		// running BEFORE filling the pool (so their ports aren't mistaken for free).
-		// Awaited but bounded (~parallel 400ms); the socket already accepts connections.
-		await readoptWorkers();
 
 		// Pre-warm the spare pool so provisions can adopt instead of cold-spawn.
 		if (poolTarget > 0) maintainPool();

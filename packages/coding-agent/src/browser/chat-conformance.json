@@ -1,9 +1,9 @@
 {
-  "contractVersion": "1.12.0",
+  "contractVersion": "2.0.0",
   "schemas": {
     "chat_request": {
       "type": "object",
-      "required": ["type", "id", "text", "context", "mode"],
+      "required": ["type", "id", "text", "context", "mode", "tabId", "sessionKey"],
       "properties": {
         "type": {
           "const": "chat_request",
@@ -125,6 +125,13 @@
             }
           ]
         },
+        "tabId": {
+          "type": "number"
+        },
+        "sessionKey": {
+          "minLength": 1,
+          "type": "string"
+        },
         "history_hint": {
           "type": "string"
         }
@@ -198,7 +205,7 @@
     },
     "chat_error": {
       "type": "object",
-      "required": ["type", "id", "error"],
+      "required": ["type", "id", "reason"],
       "properties": {
         "type": {
           "const": "chat_error",
@@ -206,9 +213,6 @@
         },
         "id": {
           "pattern": "^c-",
-          "type": "string"
-        },
-        "error": {
           "type": "string"
         },
         "reason": {
@@ -349,52 +353,6 @@
       "properties": {
         "type": {
           "const": "set_host_tools_error",
-          "type": "string"
-        },
-        "error": {
-          "type": "string"
-        }
-      }
-    },
-    "configure": {
-      "type": "object",
-      "required": ["type", "token"],
-      "properties": {
-        "type": {
-          "const": "configure",
-          "type": "string"
-        },
-        "baseUrl": {
-          "type": "string"
-        },
-        "token": {
-          "type": "string",
-          "minLength": 1
-        },
-        "model": {
-          "type": "string"
-        }
-      }
-    },
-    "configure_ack": {
-      "type": "object",
-      "required": ["type", "model"],
-      "properties": {
-        "type": {
-          "const": "configure_ack",
-          "type": "string"
-        },
-        "model": {
-          "type": "string"
-        }
-      }
-    },
-    "configure_error": {
-      "type": "object",
-      "required": ["type", "error"],
-      "properties": {
-        "type": {
-          "const": "configure_error",
           "type": "string"
         },
         "error": {
@@ -599,68 +557,6 @@
           "type": "boolean"
         }
       }
-    },
-    "list_skills": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": {
-          "const": "list_skills",
-          "type": "string"
-        }
-      }
-    },
-    "skills": {
-      "type": "object",
-      "required": ["type", "skills"],
-      "properties": {
-        "type": {
-          "const": "skills",
-          "type": "string"
-        },
-        "skills": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["name", "description"],
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "description": { "type": "string" }
-            }
-          }
-        }
-      }
-    },
-    "list_commands": {
-      "type": "object",
-      "required": ["type"],
-      "properties": {
-        "type": {
-          "const": "list_commands",
-          "type": "string"
-        }
-      }
-    },
-    "commands": {
-      "type": "object",
-      "required": ["type", "commands"],
-      "properties": {
-        "type": {
-          "const": "commands",
-          "type": "string"
-        },
-        "commands": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["name", "description"],
-            "properties": {
-              "name": { "type": "string", "minLength": 1 },
-              "description": { "type": "string" }
-            }
-          }
-        }
-      }
     }
   },
   "examples": {
@@ -738,6 +634,8 @@
           "truncated": false
         },
         "mode": "educational",
+        "tabId": 7,
+        "sessionKey": "example-corp|production",
         "history_hint": "conv-1"
       },
       "chat_request_no_context": {
@@ -745,7 +643,9 @@
         "id": "c-2222",
         "text": "help me build a WAF policy",
         "context": null,
-        "mode": "configuration"
+        "mode": "configuration",
+        "tabId": 7,
+        "sessionKey": "example-corp|production"
       },
       "chat_stop": {
         "type": "chat_stop",
@@ -781,7 +681,6 @@
       "chat_error": {
         "type": "chat_error",
         "id": "c-1111",
-        "error": "HTTP 403 forbidden",
         "reason": "provider-4xx"
       },
       "chat_tool_notice": {
@@ -821,24 +720,6 @@
         "type": "set_host_tools_error",
         "error": "Host tool \"office_read_range\" must provide a non-empty description"
       },
-      "configure": {
-        "type": "configure",
-        "baseUrl": "https://f5ai.pd.f5net.com/anthropic",
-        "token": "sk-example-token-123",
-        "model": "claude-opus-4-8"
-      },
-      "configure_no_baseUrl": {
-        "type": "configure",
-        "token": "sk-example-token-123"
-      },
-      "configure_ack": {
-        "type": "configure_ack",
-        "model": "claude-opus-4-8"
-      },
-      "configure_error": {
-        "type": "configure_error",
-        "error": "No model anthropic/claude-opus-4-8 available"
-      },
       "host_tool_call": {
         "type": "host_tool_call",
         "id": "7295551234567890",
@@ -876,38 +757,6 @@
         "type": "host_tool_cancel",
         "id": "7295551234567891",
         "targetId": "7295551234567890"
-      },
-      "list_skills": {
-        "type": "list_skills"
-      },
-      "skills": {
-        "type": "skills",
-        "skills": [
-          {
-            "name": "meddpicc:deal-review",
-            "description": "Facilitate a structured weekly MEDDPICC deal review"
-          }
-        ]
-      },
-      "skills_empty": {
-        "type": "skills",
-        "skills": []
-      },
-      "list_commands": {
-        "type": "list_commands"
-      },
-      "commands": {
-        "type": "commands",
-        "commands": [
-          {
-            "name": "meddpicc:qualify-deal",
-            "description": "Score and qualify a deal using the MEDDPICC framework"
-          }
-        ]
-      },
-      "commands_empty": {
-        "type": "commands",
-        "commands": []
       }
     },
     "invalid": [
@@ -953,6 +802,8 @@
             "truncated": false
           },
           "mode": "educational",
+          "tabId": 7,
+          "sessionKey": "example-corp|production",
           "history_hint": "conv-1"
         }
       },
@@ -998,6 +849,8 @@
             "truncated": false
           },
           "mode": "wizard",
+          "tabId": 7,
+          "sessionKey": "example-corp|production",
           "history_hint": "conv-1"
         }
       },
@@ -1008,7 +861,107 @@
           "type": "chat_request",
           "id": "c-1",
           "context": null,
-          "mode": "educational"
+          "mode": "educational",
+          "tabId": 7,
+          "sessionKey": "example-corp|production"
+        }
+      },
+      {
+        "schema": "chat_request",
+        "why": "missing tabId",
+        "value": {
+          "type": "chat_request",
+          "id": "c-1111",
+          "text": "What does this load balancer do?",
+          "context": {
+            "v": 1,
+            "capturedAt": 1719000000000,
+            "tabId": 7,
+            "url": "https://example-corp.console.ves.volterra.io/web/namespaces/default/http_loadbalancers/lb1",
+            "path": "/web/namespaces/default/http_loadbalancers/lb1",
+            "title": "lb1 — Distributed Cloud",
+            "ax": {
+              "role": "WebArea",
+              "name": "lb1",
+              "children": [
+                {
+                  "role": "button",
+                  "name": "Edit",
+                  "ref": "e12"
+                }
+              ]
+            },
+            "api": {
+              "url": "/api/config/namespaces/default/http_loadbalancers/lb1",
+              "status": 200,
+              "resourceType": "http_loadbalancers",
+              "body": {
+                "metadata": {
+                  "name": "lb1"
+                },
+                "spec": {
+                  "domains": ["lb1.example.com"]
+                }
+              },
+              "truncated": false
+            },
+            "truncated": false
+          },
+          "mode": "educational",
+          "sessionKey": "example-corp|production"
+        }
+      },
+      {
+        "schema": "chat_request",
+        "why": "missing sessionKey",
+        "value": {
+          "type": "chat_request",
+          "id": "c-1111",
+          "text": "What does this load balancer do?",
+          "context": {
+            "v": 1,
+            "capturedAt": 1719000000000,
+            "tabId": 7,
+            "url": "https://example-corp.console.ves.volterra.io/web/namespaces/default/http_loadbalancers/lb1",
+            "path": "/web/namespaces/default/http_loadbalancers/lb1",
+            "title": "lb1 — Distributed Cloud",
+            "ax": {
+              "role": "WebArea",
+              "name": "lb1",
+              "children": [
+                {
+                  "role": "button",
+                  "name": "Edit",
+                  "ref": "e12"
+                }
+              ]
+            },
+            "api": {
+              "url": "/api/config/namespaces/default/http_loadbalancers/lb1",
+              "status": 200,
+              "resourceType": "http_loadbalancers",
+              "body": {
+                "metadata": {
+                  "name": "lb1"
+                },
+                "spec": {
+                  "domains": ["lb1.example.com"]
+                }
+              },
+              "truncated": false
+            },
+            "truncated": false
+          },
+          "mode": "educational",
+          "tabId": 7
+        }
+      },
+      {
+        "schema": "chat_error",
+        "why": "missing reason",
+        "value": {
+          "type": "chat_error",
+          "id": "c-1"
         }
       },
       {
@@ -1089,68 +1042,6 @@
           "id": "1",
           "result": {
             "content": "nope"
-          }
-        }
-      },
-      {
-        "schema": "configure",
-        "why": "token missing",
-        "value": {
-          "type": "configure",
-          "baseUrl": "https://f5ai.pd.f5net.com/anthropic",
-          "model": "claude-opus-4-8"
-        }
-      },
-      {
-        "schema": "configure",
-        "why": "token empty",
-        "value": {
-          "type": "configure",
-          "token": ""
-        }
-      },
-      {
-        "schema": "commands",
-        "why": "commands must be an array, not a name-keyed map",
-        "value": {
-          "type": "commands",
-          "commands": {
-            "meddpicc:qualify-deal": "Score and qualify a deal"
-          }
-        }
-      },
-      {
-        "schema": "commands",
-        "why": "an entry with no description has nothing to render in the menu",
-        "value": {
-          "type": "commands",
-          "commands": [
-            {
-              "name": "meddpicc:qualify-deal"
-            }
-          ]
-        }
-      },
-      {
-        "schema": "commands",
-        "why": "an entry with an empty name cannot be sent back as a prompt",
-        "value": {
-          "type": "commands",
-          "commands": [
-            {
-              "name": "",
-              "description": "Score and qualify a deal"
-            }
-          ]
-        }
-      },
-      {
-        "schema": "skills",
-        "why": "skills must be an array, not a name-keyed map",
-        "value": {
-          "type": "skills",
-          "skills": {
-            "meddpicc:coach": "MEDDPICC coaching"
           }
         }
       }

@@ -12,8 +12,8 @@ function done(refs?: ChatDoneMsg["references"]): ChatDoneMsg {
 	return { type: "chat_done", id: ID, references: refs };
 }
 
-function error(reason: ChatErrorMsg["reason"], errorText = "boom"): ChatErrorMsg {
-	return { type: "chat_error", id: ID, error: errorText, reason };
+function error(reason: ChatErrorMsg["reason"]): ChatErrorMsg {
+	return { type: "chat_error", id: ID, reason };
 }
 
 describe("reduceChatTurn — in-order deltas + done", () => {
@@ -42,7 +42,7 @@ describe("reduceChatTurn — chat_error", () => {
 		state = reduceChatTurn(state, error("session-busy"));
 		expect(state.status).toBe("error");
 		expect(state.reason).toBe("session-busy");
-		expect(state.error).toBe("boom");
+		expect("error" in state).toBe(false);
 	});
 
 	it("ignores messages after terminal status", () => {

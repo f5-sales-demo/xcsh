@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- Adopted browser bridge contract 2.0: Chrome chat requests now require explicit tab and session routing, terminal chat errors expose only a closed reason code, and Chrome clients can no longer configure provider credentials or send console login credentials through the bridge ([#2802](https://github.com/f5-sales-demo/xcsh/issues/2802))
+
 ## [20.1.2] - 2026-08-01
 
 ### Fixed
@@ -36,7 +40,7 @@
 
 - Made operator-owned home files, CLI configuration, shell profiles, SSH state, plugins, skills, and settings consistently writable while preserving cross-session and data-root isolation ([#2720](https://github.com/f5-sales-demo/xcsh/issues/2720))
 - Prevented sandbox sessions from enumerating the session root's parent while preserving named operator access and explicit read-grant overrides ([#2725](https://github.com/f5-sales-demo/xcsh/issues/2725))
-- Included the generated API-spec indexes in npm artifacts and exercised them in tarball install smoke tests ([#2760](https://github.com/f5-sales-demo/xcsh/issues/2760))
+- Included the generated API-spec indices in npm artifacts and exercised them in tarball install smoke tests ([#2760](https://github.com/f5-sales-demo/xcsh/issues/2760))
 
 ## [20.0.0] - 2026-08-01
 
@@ -225,7 +229,7 @@
 - Fixed relationship column pollution in `flattenRecord` where null relationships (e.g., `Account: null`) created a bare `Account` column alongside `Account.Name` from non-null records
 - Fixed aggregate SOQL columns rendering as `expr0`/`expr1` by adding aliases (`TotalDeals`, `TotalAmount`) to template queries in sf-query prompt
 - Fixed duplicate org entries in welcome-screen Salesforce status check (`welcome-checks.ts`)
-- Fixed pre-existing biome lint warning in `glab/formatters.ts` (string concatenation -> template literal)
+- Fixed pre-existing biome linting warning in `glab/formatters.ts` (string concatenation -> template literal)
 - Fixed pre-existing test timeouts in `model-registry-runtime-provider.test.ts` and `interactive-mode-lsp-startup.test.ts` by increasing timeout for integration-level tests that shell out to CLIs
 - Fixed profile caching test contaminating real `~/.sf/config.json` with mock data by adding HOME isolation
 
@@ -477,7 +481,7 @@ Refs: #173.
 - Deferred diagnostics support in LSP writethrough: `onDeferredDiagnostics` callback and `deferredSignal` in `WritethroughOptions` allow callers to receive diagnostics that arrive after the main 5-second timeout
 - Language detection for `.pm` (Perl modules), `.astro` (Astro framework), and special filenames `containerfile` and `justfile`
 - Workspace-scoped diagnostics and reload actions via `*` file parameter; `diagnostics` action now supports `*` for workspace-wide diagnostics across all configured servers
-- Socket-mode DAP adapter support for debuggers like dlv that communicate via network sockets instead of stdio; Linux uses unix domain sockets, macOS/other platforms use TCP with client-addr dialing
+- Socket-mode DAP adapter support for debuggers like dlv that communicate via network sockets instead of stdio; Linux uses Unix domain sockets, macOS/other platforms use TCP with client-addr dialing
 - Improved extensionless binary debugging: native debuggers (gdb, lldb-dap) and adapters with root markers are now preferred over unrelated adapters like debugpy
 - Debug tool with DAP (Debug Adapter Protocol) support for launching and attaching debuggers, setting breakpoints, stepping through execution, inspecting threads/stack/variables, and evaluating expressions
 - Debug adapter configuration for gdb, lldb-dap, debugpy, and dlv with language/file-type matching and root marker detection
@@ -588,7 +592,7 @@ Refs: #173.
 - Removed unused `_createErrorToolResult` helper function from RPC host-tools module
 - Fixed Go receiver method indentation in append operations to preserve relative indentation from the anchor chunk
 - Fixed Go type chunk line counts to report only the type body lines instead of including grouped receiver methods
-- Fixed enum variant insertion to avoid adding extra blank lines between variants
+- Fixed enum variant insertion to avoid adding extra empty lines between variants
 - Chunk read output now correctly preserves embedded CRC in selectors (e.g., `class_Foo.fn_bar#ZZPM`) instead of stripping them during path parsing
 - Chunk edit error messages now consistently report checksum mismatches with format `Checksum mismatch` instead of variable phrasing
 - Chunk-mode read output now correctly displays scoped response trees showing only touched chunks and adjacent siblings, preventing unrelated distant chunks from appearing in responses
@@ -663,7 +667,7 @@ Refs: #173.
 
 ### Added
 
-- Added URL reading capability to `read` tool with support for web pages, GitHub issues, Stack Overflow, Wikipedia, Reddit, NPM, arXiv, technical blogs, RSS/Atom feeds, and JSON endpoints
+- Added URL reading capability to `read` tool with support for web pages, GitHub issues, Stack Overflow, Wikipedia, Reddit, npm, arXiv, technical blogs, RSS/Atom feeds, and JSON endpoints
 - Added `offset` and `limit` parameter support for paginating cached URL fetch results
 - Added URL caching mechanism to avoid redundant network requests when reading the same URL multiple times
 
@@ -1388,7 +1392,7 @@ Refs: #173.
 - Added `refreshProvider()` method to refresh models for a specific provider on demand
 - Added `getDiscoverableProviders()` method to list all configured discoverable providers
 - Added `getProviderDiscoveryState()` method to inspect provider discovery status, cache age, and errors
-- Added provider discovery state tracking with status indicators (idle, ok, cached, unavailable, unauthenticated)
+- Added provider discovery state tracking with status indicators (idle, OK, cached, unavailable, unauthenticated)
 - Added model caching with 24-hour TTL to preserve discovered models across sessions
 - Added provider-specific empty state messages in model selector showing cache age and discovery status
 - Added live provider refresh when switching provider tabs in model selector
@@ -1657,7 +1661,7 @@ Refs: #173.
 
 - Updated hashline prompt documentation with clearer operation syntax and improved examples showing full edit structure with path and edits array
 - Refactored `href` Handlebars helper to return JSON-quoted strings for safer embedding in JSON blocks within prompts
-- Improved `hashlineParseText` to correctly preserve blank lines and trailing empty strings in array input while stripping trailing newlines from string input
+- Improved `hashlineParseText` to correctly preserve empty lines and trailing empty strings in array input while stripping trailing newlines from string input
 - Optimized duplicate line detection in range replacements to use trimmed comparison, reducing false positives from whitespace differences
 - Refactored Kagi search provider to use shared Kagi API utilities from `web/kagi` module
 - Changed HTML-to-text rendering priority order to try Kagi first, then Jina, Trafilatura, and Lynx
@@ -3256,7 +3260,7 @@ Refs: #173.
 - Changed screenshot format to always use PNG instead of supporting JPEG with quality parameter
 - Changed default extract_readable format from text to markdown
 - Changed screenshot storage to use temporary directory with Snowflake IDs instead of artifacts directory
-- Changed ResizedImage interface to return buffer as Uint8Array with lazy-loaded base64 data getter for improved memory efficiency
+- Changed ResizedImage interface to return buffer as Uint8Array with lazy loaded base64 data getter for improved memory efficiency
 
 ### Removed
 
@@ -3855,7 +3859,7 @@ Refs: #173.
 - Added detailed phased execution pattern with four phases (Foundation, Parallel Implementation, Integration, Dependent Layer) and WASM-to-N-API migration example
 - Added table of dependency patterns that must be sequential (API creation before bindings, interface definition before implementation, etc.)
 - Added phased execution guidance for migrations and refactors to prevent parallel work on dependent layers
-- Added example demonstrating phased execution pattern for porting WASM to N-API with sequential foundation, parallel implementation, integration, and dependent layer phases
+- Added example demonstrating phased execution pattern for porting Wasm to N-API with sequential foundation, parallel implementation, integration, and dependent layer phases
 
 ### Changed
 
@@ -3865,7 +3869,7 @@ Refs: #173.
 - Updated binary build process to exclude worker files from compilation, reducing binary size
 - Modified update mechanism to download and install native addon alongside CLI binary for platform-specific functionality
 - Updated find tool to emit streaming match updates via callback, allowing real-time progress feedback during file searches
-- Modified find tool to use native match metadata (mtime, fileType) from WASM layer instead of redundant filesystem stats, improving performance
+- Modified find tool to use native match metadata (mtime, fileType) from Wasm layer instead of redundant filesystem stats, improving performance
 - Restructured Task tool documentation to emphasize context quality and explicit API contracts for subagent success
 - Updated task execution guidance to require structured context with Goal, Constraints, Existing Code, and API Contract sections
 - Reorganized parallelization rules with explicit dependency patterns and phased execution guidance for migrations
@@ -3952,7 +3956,7 @@ Refs: #173.
 - Git branch detection in status line now works synchronously without race conditions
 - Shell session initialization properly restores trap handlers and shell functions after command execution
 - Sanitized `BASH_ENV`/`ENV` during persistent shell startup and snapshot creation to prevent basic shells from exiting immediately.
-- Cached shell snapshots per shell binary to avoid sourcing zsh snapshots in bash sessions.
+- Cached shell snapshots per shell binary to avoid sourcing Zsh snapshots in bash sessions.
 - Filtered unsafe bash options (onecmd/monitor/restricted) out of shell snapshots to prevent session exits.
 
 ## [9.2.2] - 2026-01-31
@@ -4135,7 +4139,7 @@ Refs: #173.
 ### Fixed
 
 - Fixed plan reference injection and workflow prompt parameters for plan mode
-- Fixed tool downloads hanging on slow/blocked GitHub by adding timeouts and zip extraction fallback
+- Fixed tool downloads hanging on slow/blocked GitHub by adding timeouts and ZIP extraction fallback
 - Fixed missing UI notification when tools are downloaded or installed on demand
 
 ## [8.4.0] - 2026-01-25
@@ -4228,7 +4232,7 @@ Refs: #173.
 - Added Python kernel session pooling with MAX_KERNEL_SESSIONS limit and automatic eviction of oldest sessions
 - Added automatic idle kernel session cleanup timer (5-minute timeout, 30-second interval)
 - Added types/assets/index.d.ts for global TypeScript module declarations supporting `.md`, `.py`, and `.wasm?raw` imports
-- Added bunfig.toml loader configuration for importing markdown, Python, and WASM files as text modules
+- Added bunfig.toml loader configuration for importing markdown, Python, and Wasm files as text modules
 - Added color manipulation utilities (hexToHsv, hsvToHex, shiftHue) to pi-utils for accessible theme adjustments
 - Added color-blind mode setting for improved accessibility
 - Added filesystem error type guards (isEnoent, isEacces, isPerm, isEnotempty, isFsError, hasFsCode) to pi-utils for safe error handling
@@ -4288,7 +4292,7 @@ Refs: #173.
 - Changed Python kernel resource management with gateway shutdown on session disposal
 - Updated TypeScript configuration for better publish-time configuration handling with tsconfig.publish.json
 - Updated TypeScript and Bun configuration for monorepo-wide build consistency and reduced boilerplate
-- Removed WASM base64 encoding build script; imports now use Bun loader with `wasm?raw` query parameter
+- Removed Wasm base64 encoding build script; imports now use Bun loader with `wasm?raw` query parameter
 - Unified TypeScript checking pipeline with tsgo-based configuration instead of per-package tsconfig.publish.json boilerplate
 - Refactored scanDirectoryForSkills to use async/await with concurrent directory scanning via Promise.all
 - Improved error logging in settings manager for config file access failures
@@ -4706,18 +4710,18 @@ Refs: #173.
 
 ### Changed
 
-- Updated WASM loading to use streaming for development environments with base64 fallback
+- Updated Wasm loading to use streaming for development environments with base64 fallback
 - Added scripts directory to published package files
 
 ## [5.7.68] - 2026-01-18
 
 ### Changed
 
-- Updated WASM loading to use base64-encoded WASM for better compatibility with compiled binaries
+- Updated Wasm loading to use base64-encoded Wasm for better compatibility with compiled binaries
 
 ### Fixed
 
-- Fixed WASM loading issues in compiled binary builds
+- Fixed Wasm loading issues in compiled binary builds
 
 ## [5.7.67] - 2026-01-18
 
@@ -4900,10 +4904,10 @@ Refs: #173.
 
 ### Changed
 
-- Replaced wasm-vips with Photon for more stable WASM image processing
+- Replaced wasm-vips with Photon for more stable Wasm image processing
 - Added graceful fallback to original images when image resizing fails
 - Added error handling for image conversion failures in interactive mode to prevent crashes
-- Replace wasm-vips with Photon for more stable WASM image processing (fixes worker thread crashes)
+- Replace wasm-vips with Photon for more stable Wasm image processing (fixes worker thread crashes)
 
 ## [5.0.0] - 2026-01-12
 
@@ -5113,7 +5117,7 @@ Refs: #173.
 - Separated `/export` and `/dump` commands—`/export` now only exports to HTML file, while `/dump` copies session transcript to clipboard
 - Updated `/export` command to no longer accept `--copy` flag (use `/dump` instead)
 - Changed prompt template rendering to use Handlebars instead of simple string replacement
-- Updated prompt layout optimization to normalize indentation and collapse excessive blank lines
+- Updated prompt layout optimization to normalize indentation and collapse excessive empty lines
 - Changed auth migration to merge credentials per-provider instead of skipping when any credentials exist in database
 - Migrated settings and auth credential storage from JSON files to SQLite database (agent.db)
 - Updated credential migration message to reference agent.db instead of auth.json
@@ -5205,7 +5209,7 @@ Refs: #173.
 - `pi.sendUserMessage()` for sending user messages from extensions
 - Extension UI dialogs (`select`, `confirm`, `input`) support `timeout` option with live countdown display
 - Extension UI dialogs accept optional `AbortSignal` to programmatically dismiss dialogs
-- Async extension factories for dynamic imports and lazy-loaded dependencies
+- Async extension factories for dynamic imports and lazy loaded dependencies
 - `user_bash` event for intercepting user `!`/`!!` commands
 - Built-in renderers used automatically for tool overrides without custom `renderCall`/`renderResult`
 - `InteractiveMode`, `runPrintMode()`, `runRpcMode()` exported for building custom run modes
@@ -5407,7 +5411,7 @@ Refs: #173.
 - Changed YouTube scraper to use async command execution with proper stream handling
 - Improved rust-analyzer diagnostic polling to use version-based stability detection instead of time-based delays
 - Changed theme icons for extension types to use Unicode symbols (✧, ⚒) instead of text abbreviations (SK, TL, MCP)
-- Changed task tool to use short CamelCase task IDs instead of agent-based naming (e.g., 'SessionStore' instead of 'explore_0')
+- Changed task tool to use short camelCase task IDs instead of agent-based naming (e.g., 'SessionStore' instead of 'explore_0')
 - Changed task tool to accept single `agent` parameter at top level instead of per-task agent specification
 - Changed reviewer agent to use `complete` tool instead of `submit_review` for finishing reviews
 - Changed theme icons for extensions to use Unicode symbols instead of text abbreviations
@@ -5532,7 +5536,7 @@ Refs: #173.
 
 ### Changed
 
-- Refactored tool renderers to be co-located with their respective tool implementations for improved code organization
+- Refactored tool renderers to be colocated with their respective tool implementations for improved code organization
 - Changed web search to try all configured providers in sequence with fallback before reporting errors
 - Changed default Anthropic web search model from `claude-sonnet-4-5-20250514` to `claude-haiku-4-5`
 - Changed read tool to show first 50KB of oversized lines instead of directing users to bash sed
@@ -5861,11 +5865,11 @@ Refs: #173.
 
 - Added shell environment snapshot to preserve user aliases, functions, and shell options when executing bash commands
 - Added support for `OMP_BASH_NO_CI`, `OMP_BASH_NO_LOGIN`, and `OMP_SHELL_PREFIX` environment variables for shell customization
-- Added zsh support alongside bash for shell detection and configuration
+- Added Zsh support alongside bash for shell detection and configuration
 
 ### Changed
 
-- Changed shell detection to prefer user's `$SHELL` when it's bash or zsh, with improved fallback path resolution
+- Changed shell detection to prefer user's `$SHELL` when it's bash or Zsh, with improved fallback path resolution
 - Changed Edit tool to reject `.ipynb` files with guidance to use NotebookEdit tool instead
 
 ## [1.500.0] - 2026-01-03
@@ -5955,7 +5959,7 @@ Refs: #173.
 - LSP server warmup at startup: LSP servers are now started at launch to avoid cold-start delays when first writing files.
 - LSP server status in welcome banner: Shows which language servers are active and ready.
 - Edit fuzzy match setting: Added `edit.fuzzyMatch` setting (enabled by default) to control whether the edit tool accepts high-confidence fuzzy matches for whitespace/indentation differences. Toggle via `/settings`.
-- Multi-server LSP diagnostics: Diagnostics now query all applicable language servers for a file type. For TypeScript/JavaScript projects with Biome, this means both type errors (from tsserver) and lint errors (from Biome) are reported together.
+- Multi-server LSP diagnostics: Diagnostics now query all applicable language servers for a file type. For TypeScript/JavaScript projects with Biome, this means both type errors (from tsserver) and linting errors (from Biome) are reported together.
 - Comprehensive LSP server configurations for 40+ languages including Rust, Go, Python, Java, Kotlin, Scala, Haskell, OCaml, Elixir, Ruby, PHP, C#, Lua, Nix, and many more. Each server includes sensible defaults for args, settings, and init options.
 - Extended LSP config file search paths: Now searches for `lsp.json`, `.lsp.json` in project root and `.omp/` subdirectory, plus user-level configs in `~/.omp/` and home directory.
 
@@ -6794,7 +6798,7 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 - Fixed read tool failing on macOS screenshot filenames due to Unicode Narrow No-Break Space (U+202F) in timestamp. Added fallback to try macOS variant paths and consolidated duplicate expandPath functions into shared path-utils.ts. ([#181](https://github.com/badlogic/pi-mono/pull/181) by [@nicobailon](https://github.com/nicobailon))
 
-- Fixed double blank lines rendering after markdown code blocks ([#173](https://github.com/badlogic/pi-mono/pull/173) by [@markusylisiurunen](https://github.com/markusylisiurunen))
+- Fixed double empty lines rendering after markdown code blocks ([#173](https://github.com/badlogic/pi-mono/pull/173) by [@markusylisiurunen](https://github.com/markusylisiurunen))
 
 ## [0.20.1] - 2025-12-13
 
@@ -7235,7 +7239,7 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 ### Fixed
 
-- `@`-references now handle special characters in file names (spaces, quotes, unicode)
+- `@`-references now handle special characters in filenames (spaces, quotes, unicode)
 - Fixed cursor positioning issues with multi-byte unicode characters in editor
 
 ## [0.10.4] - 2025-11-28

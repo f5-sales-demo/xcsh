@@ -127,7 +127,7 @@ function request(ws: WebSocket, send: Frame, expect: string, timeoutMs: number):
 }
 
 /** Stream one turn, returning the assistant's text and how it ended. */
-function turn(ws: WebSocket, text: string): Promise<{ reply: string; ended: string; error?: string }> {
+function turn(ws: WebSocket, text: string): Promise<{ reply: string; ended: string; reason?: string }> {
 	return new Promise((resolve, reject) => {
 		let reply = "";
 		const timer = setTimeout(() => {
@@ -140,7 +140,7 @@ function turn(ws: WebSocket, text: string): Promise<{ reply: string; ended: stri
 			if (msg.type !== "chat_done" && msg.type !== "chat_error") return;
 			clearTimeout(timer);
 			ws.removeEventListener("message", onMessage);
-			resolve({ reply, ended: String(msg.type), error: msg.error ? String(msg.error) : undefined });
+			resolve({ reply, ended: String(msg.type), reason: msg.reason ? String(msg.reason) : undefined });
 		}
 		ws.addEventListener("message", onMessage);
 		ws.send(JSON.stringify({ type: "chat_request", id: "c-uat-1", text, mode: "educational" }));
@@ -203,7 +203,7 @@ if (!withTurn) {
 	const target = commands.find(c => c.name.endsWith(":meddpicc-status")) ?? commands[0];
 	console.log(`\nP3 — invoking /${target.name}`);
 	const t = await turn(bridge.ws, `/${target.name}`);
-	check(t.ended === "chat_done", "the turn completed", t.error ?? "");
+	check(t.ended === "chat_done", "the turn completed", t.reason ?? "");
 	// If expansion did not happen the model receives the literal "/name" and tends to
 	// echo or question it, so a reply that quotes the command back is the failure mode.
 	check(t.reply.trim().length > 0, "the assistant replied");

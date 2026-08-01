@@ -10,6 +10,8 @@ function makeFakes(opts: { isStreaming?: boolean; promptRejects?: string } = {})
 	let onMsg: (m: Record<string, unknown>) => void = () => {};
 	let onDisc: () => void = () => {};
 	const server = {
+		serveKind: "browser",
+		clientHost: null,
 		send: (p: unknown) => sent.push(p as Record<string, unknown>),
 		onMessage: (cb: (m: Record<string, unknown>) => void) => {
 			onMsg = cb;
@@ -47,8 +49,8 @@ describe("classifyChatErrorReason", () => {
 		expect(classifyChatErrorReason("HTTP 400 Invalid model name")).toBe("provider-4xx");
 		expect(classifyChatErrorReason("403 forbidden")).toBe("provider-4xx");
 	});
-	it("returns undefined for an unclassified error (panel shows raw text)", () => {
-		expect(classifyChatErrorReason("something weird happened")).toBeUndefined();
+	it("fails closed to provider-5xx for an unclassified error", () => {
+		expect(classifyChatErrorReason("something weird happened")).toBe("provider-5xx");
 	});
 });
 
@@ -56,8 +58,16 @@ describe("ChatHandler emits a machine-readable reason on every terminal chat_err
 	it("session-busy → queues the request (tool_notice, no rejection) instead of rejecting", async () => {
 		const { sent, server, session, fire } = makeFakes({ isStreaming: true });
 		new ChatHandler(server, session).attach();
-		await fire({ type: "chat_request", id: "c-1", text: "hi", context: null, mode: "educational" });
-		await new Promise(r => setTimeout(r, 5));
+		await fire({
+			type: "chat_request",
+			id: "c-1",
+			text: "hi",
+			context: null,
+			mode: "educational",
+			tabId: 7,
+			sessionKey: "example-corp|production",
+		});
+		await Bun.sleep(5);
 		// Queued, not rejected: a tool_notice tells the panel the prompt is waiting.
 		const notices = sent.filter(f => f.type === "chat_tool_notice" && f.tool === "queue");
 		expect(notices.length).toBe(1);
@@ -69,13 +79,20 @@ describe("ChatHandler emits a machine-readable reason on every terminal chat_err
 		const { sent, server, session, fire, disconnect } = makeFakes({ promptRejects: undefined });
 		new ChatHandler(server, session).attach();
 		// Start a turn but keep it pending by never resolving deltas; then disconnect.
-		void fire({ type: "chat_request", id: "c-2", text: "hi", context: null, mode: "educational" });
+		void fire({
+			type: "chat_request",
+			id: "c-2",
+			text: "hi",
+			context: null,
+			mode: "educational",
+			tabId: 7,
+			sessionKey: "example-corp|production",
+		});
 		disconnect();
 		const err = errorsOf(sent).find(e => e.reason === "bridge-disconnected");
 		expect(err).toEqual({
 			type: "chat_error",
 			id: "c-2",
-			error: "bridge disconnected",
 			reason: "bridge-disconnected",
 		});
 	});
@@ -83,8 +100,16 @@ describe("ChatHandler emits a machine-readable reason on every terminal chat_err
 	it("prompt rejection → classified reason (provider-4xx)", async () => {
 		const { sent, server, session, fire } = makeFakes({ promptRejects: "HTTP 400 Invalid model name" });
 		new ChatHandler(server, session).attach();
-		await fire({ type: "chat_request", id: "c-3", text: "hi", context: null, mode: "educational" });
-		await new Promise(r => setTimeout(r, 5));
+		await fire({
+			type: "chat_request",
+			id: "c-3",
+			text: "hi",
+			context: null,
+			mode: "educational",
+			tabId: 7,
+			sessionKey: "example-corp|production",
+		});
+		await Bun.sleep(5);
 		const err = errorsOf(sent).find(e => e.id === "c-3" && e.type === "chat_error");
 		expect(err?.reason).toBe("provider-4xx");
 	});
@@ -94,11 +119,27 @@ describe("ChatHandler emits a machine-readable reason on every terminal chat_err
 		const handler = new ChatHandler(server, session);
 		handler.attach();
 		// Start a turn that completes immediately (prompt resolves).
-		void fire({ type: "chat_request", id: "c-A", text: "first", context: null, mode: "educational" });
+		void fire({
+			type: "chat_request",
+			id: "c-A",
+			text: "first",
+			context: null,
+			mode: "educational",
+			tabId: 7,
+			sessionKey: "example-corp|production",
+		});
 		// Before c-A finishes (it's mid-await), queue a second request.
-		void fire({ type: "chat_request", id: "c-B", text: "second", context: null, mode: "educational" });
+		void fire({
+			type: "chat_request",
+			id: "c-B",
+			text: "second",
+			context: null,
+			mode: "educational",
+			tabId: 7,
+			sessionKey: "example-corp|production",
+		});
 		// Wait for both to settle (c-A finishes → c-B replays automatically).
-		await new Promise(r => setTimeout(r, 50));
+		await Bun.sleep(50);
 		// c-B should have produced a chat_done (it ran, not rejected).
 		const doneIds = sent.filter(f => f.type === "chat_done").map(f => f.id);
 		expect(doneIds).toContain("c-A"); // first turn completed
@@ -110,9 +151,17 @@ describe("ChatHandler emits a machine-readable reason on every terminal chat_err
 		const { sent, server, session, fire } = makeFakes();
 		const handler = new ChatHandler(server, session);
 		handler.attach();
-		void fire({ type: "chat_request", id: "c-4", text: "hi", context: null, mode: "educational" });
+		void fire({
+			type: "chat_request",
+			id: "c-4",
+			text: "hi",
+			context: null,
+			mode: "educational",
+			tabId: 7,
+			sessionKey: "example-corp|production",
+		});
 		handler.dispose();
 		const err = errorsOf(sent).find(e => e.reason === "session-disposed");
-		expect(err).toEqual({ type: "chat_error", id: "c-4", error: "session disposed", reason: "session-disposed" });
+		expect(err).toEqual({ type: "chat_error", id: "c-4", reason: "session-disposed" });
 	});
 });

@@ -9,7 +9,6 @@ import conformance from "../../src/browser/chat-conformance.json";
 import {
 	isChatRequest,
 	isChatStop,
-	isConfigure,
 	isHostToolResult,
 	isHostToolUpdate,
 	isSetHostTools,
@@ -56,11 +55,11 @@ describe("chat-conformance: invalid examples are rejected by schemas", () => {
 
 describe("chat-conformance: xcsh parsers accept valid examples", () => {
 	it("isChatRequest accepts valid chat_request example", () => {
-		expect(isChatRequest(validExamples.chat_request as Record<string, unknown>)).toBe(true);
+		expect(isChatRequest(validExamples.chat_request as Record<string, unknown>, "browser")).toBe(true);
 	});
 
 	it("isChatRequest accepts valid chat_request_no_context example", () => {
-		expect(isChatRequest(validExamples.chat_request_no_context as Record<string, unknown>)).toBe(true);
+		expect(isChatRequest(validExamples.chat_request_no_context as Record<string, unknown>, "browser")).toBe(true);
 	});
 
 	it("isChatStop accepts valid chat_stop example", () => {
@@ -72,7 +71,7 @@ describe("chat-conformance: xcsh parsers reject invalid examples", () => {
 	for (const { schema: schemaKey, why, value } of invalidExamples) {
 		if (schemaKey === "chat_request") {
 			it(`isChatRequest rejects: ${why}`, () => {
-				expect(isChatRequest(value as Record<string, unknown>)).toBe(false);
+				expect(isChatRequest(value as Record<string, unknown>, "browser")).toBe(false);
 			});
 		}
 		if (schemaKey === "chat_stop") {
@@ -109,24 +108,6 @@ describe("chat-conformance: xcsh host-tool guards accept/reject the goldens", ()
 	});
 });
 
-describe("chat-conformance: xcsh configure guard accepts/rejects the goldens", () => {
-	it("isConfigure accepts the configure golden (baseUrl + token + model)", () => {
-		expect(isConfigure(validExamples.configure as Record<string, unknown>)).toBe(true);
-	});
-
-	it("isConfigure accepts the key-only configure golden (no baseUrl)", () => {
-		expect(isConfigure(validExamples.configure_no_baseUrl as Record<string, unknown>)).toBe(true);
-	});
-
-	it("isConfigure rejects the invalid configure goldens (missing/empty token)", () => {
-		for (const { schema: schemaKey, value } of invalidExamples) {
-			if (schemaKey === "configure") {
-				expect(isConfigure(value as Record<string, unknown>)).toBe(false);
-			}
-		}
-	});
-});
-
 describe("chat-conformance: xcsh outbound frames validate against schemas", () => {
 	it("chat_delta frame validates", () => {
 		const frame = { type: "chat_delta", id: "c-test", seq: 0, delta: "hello" };
@@ -151,7 +132,7 @@ describe("chat-conformance: xcsh outbound frames validate against schemas", () =
 	});
 
 	it("chat_error frame validates", () => {
-		const frame = { type: "chat_error", id: "c-test", error: "something broke" };
+		const frame = { type: "chat_error", id: "c-test", reason: "provider-5xx" };
 		const validate = ajv.compile(schemas.chat_error);
 		expect(validate(frame)).toBe(true);
 	});

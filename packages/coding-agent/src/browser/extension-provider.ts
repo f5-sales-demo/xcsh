@@ -24,11 +24,6 @@ export function resolveRef(tree: AxRefNode, selector: string): string {
 /** Thin wrapper over the bridge for the page-level operations the agent needs. */
 export interface ExtensionPage {
 	navigate(url: string): Promise<void>;
-	login(
-		email: string,
-		password: string,
-		consoleUrl: string,
-	): Promise<{ loggedIn: boolean; finalUrl: string; steps: string[] }>;
 	readAx(): Promise<AxRefNode>;
 	click(ref: string): Promise<void>;
 	screenshot(): Promise<string>;
@@ -102,25 +97,17 @@ function unwrap(result: ToolResult, tool: string): unknown {
 
 /**
  * Connect-time discovery handshake: confirm the extension is live and that its
- * published capability contract matches what xcsh was built against. Warns (does
- * not fail) on mismatch — a co-built pair stays in lockstep, while a hand-run
- * mismatch degrades gracefully. Falls back to `ping` for an extension that
- * predates the `capabilities` tool.
+ * published capability contract exactly matches what xcsh was built against.
+ * Contract 2 is a prerelease clean break: an absent or mismatched manifest fails
+ * closed instead of falling back to a legacy liveness-only handshake.
  */
 async function handshakeCapabilities(server: BridgeServer): Promise<void> {
-	let liveContractVersion: string | undefined;
-	try {
-		const caps = unwrap(await server.request("capabilities", {}), "capabilities") as {
-			contractVersion?: string;
-		};
-		liveContractVersion = caps?.contractVersion;
-	} catch {
-		// Older extension without the `capabilities` tool — at least confirm liveness.
-		unwrap(await server.request("ping", {}), "ping");
-	}
-	const check = checkContractVersion(liveContractVersion, EXTENSION_CONTRACT_VERSION);
+	const caps = unwrap(await server.request("capabilities", {}), "capabilities") as {
+		contractVersion?: string;
+	};
+	const check = checkContractVersion(caps?.contractVersion, EXTENSION_CONTRACT_VERSION);
 	if (!check.ok) {
-		console.warn(`[xcsh] Chrome extension capability mismatch (${check.severity}): ${check.message}`);
+		throw new Error(`Chrome extension capability mismatch (${check.severity}): ${check.message}`);
 	}
 }
 
@@ -133,27 +120,6 @@ class BridgeExtensionPage implements ExtensionPage {
 
 	async navigate(url: string): Promise<void> {
 		unwrap(await this.#server.request("navigate", { url }), "navigate");
-	}
-
-	async login(
-		email: string,
-		password: string,
-		consoleUrl: string,
-	): Promise<{ loggedIn: boolean; finalUrl: string; steps: string[] }> {
-		// Defense-in-depth: validate the console URL before sending credentials
-		// over the bridge — only https F5 XC console domains are allowed, so a
-		// bad consoleUrl can never carry credentials to a foreign host.
-		const parsed = new URL(consoleUrl); // throws on malformed
-		if (parsed.protocol !== "https:") {
-			throw new Error(`login: consoleUrl must use https, got ${parsed.protocol}`);
-		}
-		if (!/\.volterra\.us$|\.console\.ves\.volterra\.io$/.test(parsed.hostname)) {
-			throw new Error(`login: consoleUrl host "${parsed.hostname}" is not an allowed F5 XC console domain`);
-		}
-		return unwrap(
-			await this.#server.request("login", { email, password, consoleUrl: parsed.toString() }, 90_000),
-			"login",
-		) as { loggedIn: boolean; finalUrl: string; steps: string[] };
 	}
 
 	async readAx(): Promise<AxRefNode> {
@@ -355,18 +321,9 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 
 		const page: ExtensionPage = new BridgeExtensionPage(server);
 
-		// Auto-login: if XCSH_USERNAME + XCSH_CONSOLE_PASSWORD are available (set by
-		// ContextService from the context's env map), login automatically — the login
-		// tool handles "already authenticated" (instant return) so calling it every
-		// time is cheap and guarantees a valid session. Falls back to navigate-only
-		// (co-drive) if credentials aren't available.
-		const email = process.env.XCSH_USERNAME;
-		const password = process.env.XCSH_CONSOLE_PASSWORD;
-		if (email && password) {
-			await page.login(email, password, consoleUrl);
-		} else {
-			unwrap(await server.request("navigate", { url: consoleUrl }), "navigate");
-		}
+		// Authentication remains an operator-owned browser action. The worker never
+		// reads or forwards usernames/passwords across the extension bridge.
+		unwrap(await server.request("navigate", { url: consoleUrl }), "navigate");
 
 		return {
 			page: new ExtensionPageActions(page),

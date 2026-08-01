@@ -164,7 +164,6 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		exitHistory,
 		status,
 		reason,
-		error,
 		provisioning,
 		provisionError,
 		skills,
@@ -180,7 +179,7 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	// search, so current-events answers work out of the box) and sticky until flipped off.
 	const [webSearch, setWebSearch] = useState(true);
 
-	const messages = useMemo(() => turnsToMessages({ turns, status, reason, error }), [turns, status, reason, error]);
+	const messages = useMemo(() => turnsToMessages({ turns, status, reason }), [turns, status, reason]);
 	const streaming = status === "streaming";
 
 	// The "+" categories: photos + file/folder context + the web-search toggle always;

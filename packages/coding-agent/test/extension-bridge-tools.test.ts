@@ -27,9 +27,11 @@ describe("createExtensionBridgeTools", () => {
 	const names = tools.map(t => t.name);
 
 	test("registers the core browser actions as agent tools", () => {
-		for (const n of ["navigate", "click", "read_ax", "type_text", "screenshot", "login", "query_dom", "scroll_to"]) {
+		for (const n of ["navigate", "click", "read_ax", "type_text", "screenshot", "query_dom", "scroll_to"]) {
 			expect(names).toContain(n);
 		}
+		expect(names).not.toContain("login");
+		expect(BROWSER_TOOL_NAMES).not.toContain("login");
 	});
 
 	test("excludes internal/diagnostic plumbing", () => {

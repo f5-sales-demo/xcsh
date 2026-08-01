@@ -70,8 +70,9 @@ describe("configure protocol guards", () => {
 	it("isConfigureAck / isConfigureError narrow correctly", () => {
 		expect(isConfigureAck({ type: "configure_ack", model: "claude-opus-4-8" })).toBe(true);
 		expect(isConfigureAck({ type: "configure_ack" })).toBe(false);
-		expect(isConfigureError({ type: "configure_error", error: "bad key" })).toBe(true);
+		expect(isConfigureError({ type: "configure_error", reason: "configuration-rejected" })).toBe(true);
 		expect(isConfigureError({ type: "configure_error" })).toBe(false);
+		expect(isConfigureError({ type: "configure_error", reason: "unknown" })).toBe(false);
 		expect(isConfigureAck({ type: "chat_done", id: "c-1" })).toBe(false);
 	});
 });
@@ -90,13 +91,13 @@ describe("LoopbackBridgeTransport.configure", () => {
 		const { transport, ws } = await connected();
 		const p = transport.configure({
 			baseUrl: "https://gw.example/anthropic",
-			token: "sk-1",
+			token: "<XC_API_TOKEN>",
 			model: "claude-opus-4-8",
 		});
 		const frame = lastConfigureFrame(ws);
 		expect(frame).toEqual({
 			type: "configure",
-			token: "sk-1",
+			token: "<XC_API_TOKEN>",
 			baseUrl: "https://gw.example/anthropic",
 			model: "claude-opus-4-8",
 		});
@@ -107,9 +108,9 @@ describe("LoopbackBridgeTransport.configure", () => {
 
 	it("omits baseUrl/model when not provided (key-only)", async () => {
 		const { transport, ws } = await connected();
-		const p = transport.configure({ token: "sk-2" });
+		const p = transport.configure({ token: "<XC_API_TOKEN>" });
 		const frame = lastConfigureFrame(ws);
-		expect(frame).toEqual({ type: "configure", token: "sk-2" });
+		expect(frame).toEqual({ type: "configure", token: "<XC_API_TOKEN>" });
 		ws.receive(JSON.stringify({ type: "configure_ack", model: "claude-opus-4-8" }));
 		await p;
 		transport.dispose();
@@ -117,9 +118,9 @@ describe("LoopbackBridgeTransport.configure", () => {
 
 	it("rejects on configure_error", async () => {
 		const { transport, ws } = await connected();
-		const p = transport.configure({ baseUrl: "https://gw.example", token: "bad" });
-		ws.receive(JSON.stringify({ type: "configure_error", error: "invalid api key" }));
-		await expect(p).rejects.toThrow(/invalid api key/);
+		const p = transport.configure({ baseUrl: "https://gw.example", token: "<XC_API_TOKEN>" });
+		ws.receive(JSON.stringify({ type: "configure_error", reason: "configuration-rejected" }));
+		await expect(p).rejects.toThrow("Provider configuration was rejected.");
 		transport.dispose();
 	});
 

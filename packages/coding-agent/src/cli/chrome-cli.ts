@@ -11,7 +11,10 @@ import { homedir } from "node:os";
 import * as path from "node:path";
 import { acquirePage, type BrowserProviderStatus, CdpBrowserProvider } from "../browser";
 import { PORT_RANGE_END, PORT_RANGE_START, resolveForcedPort } from "../browser/extension-bridge";
+import { EXTENSION_ID } from "../browser/extension-identity";
 import { installNativeHost } from "../services/native-host-install";
+
+export * from "../browser/extension-identity";
 
 /** Ask a running manager to step down (control-socket `shutdown` frame). Resolves
  * true if a manager answered the socket, false if none was running. Best-effort. */
@@ -31,8 +34,6 @@ async function requestManagerShutdown(reason: "updated"): Promise<boolean> {
 type Settings = { get(key: string): unknown };
 
 export type ChromeAction = "status" | "relaunch" | "setup" | "install-host" | "recycle";
-
-export const EXTENSION_ID = "klajkjdoehjidngligegnpknogmjjhkc";
 
 /**
  * Baked-in Chrome Web Store URL for the xcsh console-automation extension.

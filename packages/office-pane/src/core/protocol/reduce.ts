@@ -20,7 +20,6 @@ export interface TurnState {
 	readonly text: string;
 	readonly status: "streaming" | "done" | "error";
 	readonly references: readonly ChatRefWire[];
-	readonly error?: string;
 	readonly reason?: ChatErrorReason;
 	/** Highest seq number whose delta has been appended to `text`. Starts at -1. */
 	readonly lastSeq: number;
@@ -98,5 +97,5 @@ export function reduceChatTurn(state: TurnState, msg: ChatStreamMsg): TurnState 
 		lastSeq = next;
 		next++;
 	}
-	return { ...state, text, lastSeq, pending: {}, status: "error", error: msg.error, reason: msg.reason };
+	return { ...state, text, lastSeq, pending: {}, status: "error", reason: msg.reason };
 }

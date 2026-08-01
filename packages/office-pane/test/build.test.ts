@@ -76,11 +76,13 @@ describe("build.ts", () => {
 
 		// The served asset set must land in dist/ (source of truth for the embed).
 		expect(existsSync(join(DIST, "manifest.json"))).toBe(true);
-		expect(existsSync(join(DIST, "assets", "icon-16.png"))).toBe(true);
-		expect(existsSync(join(DIST, "assets", "icon-32.png"))).toBe(true);
-		expect(existsSync(join(DIST, "assets", "icon-80.png"))).toBe(true);
-		expect(existsSync(join(DIST, "assets", "color.png"))).toBe(true);
-		expect(existsSync(join(DIST, "assets", "outline.png"))).toBe(true);
+		for (const asset of ["icon-16.png", "icon-32.png", "icon-80.png", "color.png", "outline.png"]) {
+			const assetPath = join(DIST, "assets", asset);
+			expect(existsSync(assetPath)).toBe(true);
+			// Guards the inherited one-pixel/fully-transparent placeholder files: a
+			// manifest icon must contain an actual rendered xcsh mark.
+			expect(readFileSync(assetPath).byteLength).toBeGreaterThan(128);
+		}
 
 		// The bundled MesloLGS NF fonts must land in dist/fonts/ (relative to the
 		// page), matching the shared injectFontFaces identity resolver's URLs.

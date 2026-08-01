@@ -102,14 +102,18 @@ export class ChatHandler {
 
 	attach(): void {
 		this.#server.onMessage(msg => {
-			if (isChatRequest(msg)) this.#handleChatRequest(msg as unknown as ChatRequest);
+			if (isChatRequest(msg, this.#server.serveKind === "browser" ? "browser" : "transport"))
+				this.#handleChatRequest(msg as unknown as ChatRequest);
 			else if (isChatStop(msg)) this.#handleChatStop(msg as unknown as { id: string });
 			// Host-tool channel (#2046): register client tools, then route the client's
 			// result/update frames back to the correlated pending call in the bridge.
 			else if (isSetHostTools(msg)) this.#handleSetHostTools(msg as unknown as SetHostTools);
-			// Provider configuration channel (#2095): swap the LLM provider/model in
-			// session memory at runtime (never persisted), then ack or nack.
-			else if (isConfigure(msg)) this.#handleConfigure(msg as unknown as Configure);
+			// Office-only provider configuration channel (#2095): swap the LLM
+			// provider/model in session memory at runtime (never persisted), then ack
+			// or nack. Contract-2 Chrome clients cannot configure credentials.
+			else if (this.#server.serveKind === "office" && isConfigure(msg)) {
+				this.#handleConfigure(msg as unknown as Configure);
+			}
 			// Skills enumeration (#2311): the pane asks for the loaded skills to populate
 			// the composer's Skills submenu.
 			else if (isListSkills(msg)) this.#handleListSkills();
@@ -128,7 +132,6 @@ export class ChatHandler {
 				this.#sendTerminal(chat, {
 					type: "chat_error",
 					id: chat.id,
-					error: "bridge disconnected",
 					reason: "bridge-disconnected",
 				});
 				chat.unsubscribe();
@@ -212,7 +215,7 @@ export class ChatHandler {
 			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false, images, serverTools });
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : "unknown error";
-			this.#sendTerminal(chat, { type: "chat_error", id, error: message, reason: classifyChatErrorReason(message) });
+			this.#sendTerminal(chat, { type: "chat_error", id, reason: classifyChatErrorReason(message) });
 		} finally {
 			if (!chat.terminalSent) {
 				this.#sendTerminal(chat, { type: "chat_done", id });
@@ -323,7 +326,6 @@ export class ChatHandler {
 				this.#sendTerminal(chat, {
 					type: "chat_error",
 					id: chat.id,
-					error: errorMsg,
 					reason: classifyChatErrorReason(errorMsg),
 				});
 			} else if (msg.stopReason === "toolUse" || msg.content.some(part => part.type === "toolCall")) {
@@ -421,12 +423,15 @@ export class ChatHandler {
 			await this.#session.setModel(model);
 
 			this.#server.send({ type: "configure_ack", model: model.id } satisfies ConfigureAck);
-		} catch (err) {
+		} catch {
+			// Collapse provider and validation details at the runtime boundary. The
+			// Office pane needs only a stable recovery signal and must never receive
+			// identity-bearing upstream error text.
 			// Nack instead of throwing (set_host_tools parity): a client awaiting
 			// configure_ack would otherwise hang on a bad frame or missing key.
 			this.#server.send({
 				type: "configure_error",
-				error: err instanceof Error ? err.message : String(err),
+				reason: "configuration-rejected",
 			} satisfies ConfigureError);
 		}
 	}
@@ -476,7 +481,6 @@ export class ChatHandler {
 			this.#sendTerminal(chat, {
 				type: "chat_error",
 				id: chat.id,
-				error: "session disposed",
 				reason: "session-disposed",
 			});
 			chat.unsubscribe();
@@ -503,12 +507,10 @@ export function requireHttpsUrl(raw: string): string {
 	return raw;
 }
 
-/** Best-effort classification of an upstream/provider error message into a
- * ChatErrorReason so the panel can pick a distinct, actionable message. Returns
- * undefined for an unclassified error (the panel then shows the raw error text).
- * Token checks run before the generic 4xx check (a 401 is more useful as an
- * expired-token hint than a bare client error). */
-export function classifyChatErrorReason(message: string): ChatErrorReason | undefined {
+/** Classify an upstream/provider error into the closed public reason vocabulary.
+ * Token checks run before the generic 4xx check; unknown failures fail closed to
+ * provider-5xx instead of crossing the runtime boundary as raw text. */
+export function classifyChatErrorReason(message: string): ChatErrorReason {
 	const m = message.toLowerCase();
 	if (/\btoken\b[^.]*\b(expir|invalid)|\b(expir|invalid)[^.]*\btoken\b|aws sso|\/context (create|validate)/.test(m)) {
 		return "token-expired";
@@ -523,7 +525,7 @@ export function classifyChatErrorReason(message: string): ChatErrorReason | unde
 	if (/\b4\d\d\b|forbidden|unauthorized|invalid model|bad request|not found|too many requests|rate limit/.test(m)) {
 		return "provider-4xx";
 	}
-	return undefined;
+	return "provider-5xx";
 }
 
 const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
@@ -661,7 +663,7 @@ function composeBrowserPageContext(parts: string[], context: PageContextSnapshot
 	if (pageState.operation === "login") {
 		parts.push("Page: LOGIN — session expired or first login. The user is on the Keycloak authentication page.");
 		parts.push(
-			"Use the login tool with their email and password to log in. The login tool handles both production and staging Keycloak (including login-staging.volterra.us). Do NOT bypass it or claim it doesn't support staging.",
+			"Ask the user to authenticate directly in the browser. Never request, accept, or enter their username, password, token, or other authentication secret.",
 		);
 	} else if (pageState.resource) {
 		const opLabel = pageState.operation.toUpperCase();

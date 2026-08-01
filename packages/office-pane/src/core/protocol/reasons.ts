@@ -21,8 +21,7 @@ import type { ChatErrorReason, InteractionMode } from "@f5-sales-demo/xcsh/brows
 export type { ChatErrorReason, InteractionMode };
 
 /** Machine-readable causes of a terminal chat_error. Shared vocabulary with xcsh
- * (keep both lists identical). An omitted reason on the wire means an unclassified
- * error — show the raw error text. */
+ * (keep both lists identical). Every terminal error carries one known reason. */
 export const CHAT_ERROR_REASONS = [
 	"bridge-disconnected", // the worker's bridge closed mid-turn
 	"bridge-unresponsive", // the socket looked open but the worker never answered

@@ -28,16 +28,12 @@ export const ERROR_MESSAGES: Record<ChatErrorReason, string> = {
 	"provider-5xx": "The upstream service encountered an error.",
 };
 
-/** Shown when an error has no classified reason and no raw text is available. */
+/** Shown when local state is invalid and has no classified reason. */
 export const GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
-/**
- * The best available message for an errored turn: a mapped message for a
- * classified `reason`, else the raw `error` text, else a generic fallback — so
- * an errored session never renders a silent, empty state.
- */
-export function errorText(reason?: ChatErrorReason, error?: string): string {
-	return reason !== undefined ? ERROR_MESSAGES[reason] : error?.trim() || GENERIC_ERROR_MESSAGE;
+/** Render fixed copy for a classified reason without exposing provider text. */
+export function errorText(reason?: ChatErrorReason): string {
+	return reason !== undefined ? ERROR_MESSAGES[reason] : GENERIC_ERROR_MESSAGE;
 }
 
 /** The session projection the transcript needs (a subset of ChatSessionResult). */
@@ -45,7 +41,6 @@ export interface SessionView {
 	turns: Turn[];
 	status: "idle" | "streaming" | "done" | "error";
 	reason?: ChatErrorReason;
-	error?: string;
 }
 
 /**
@@ -78,7 +73,7 @@ function retryable(reason?: ChatErrorReason): boolean {
  *    perpetual "streaming" turn (the Settings affordance is the recovery path).
  */
 export function turnsToMessages(view: SessionView): ChatMessage[] {
-	const { turns, status, reason, error } = view;
+	const { turns, status, reason } = view;
 	const lastUserText = [...turns].reverse().find((t): t is Extract<Turn, { kind: "user" }> => t.kind === "user")?.text;
 
 	const msgs: ChatMessage[] = turns.flatMap(t => {
@@ -99,7 +94,7 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 			t.state.status === "done" && t.state.references.length > 0 ? [...t.state.references] : undefined;
 		const body: ChatMessage =
 			t.state.status === "error"
-				? { id: t.state.id, role: "assistant", text: errorText(t.state.reason, t.state.error), error: true }
+				? { id: t.state.id, role: "assistant", text: errorText(t.state.reason), error: true }
 				: { id: t.state.id, role: "assistant", text: t.state.text, ...(references ? { references } : {}) };
 		return [...toolRows, body];
 	});
@@ -107,7 +102,7 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 	// A connect-level error isn't reflected in any assistant turn — surface it.
 	const lastIsError = msgs.length > 0 && msgs[msgs.length - 1].error === true;
 	if (status === "error" && !lastIsError) {
-		msgs.push({ id: "session-error", role: "assistant", text: errorText(reason, error), error: true });
+		msgs.push({ id: "session-error", role: "assistant", text: errorText(reason), error: true });
 	}
 
 	// Enable Retry on the last row when it is an error, there is something to
