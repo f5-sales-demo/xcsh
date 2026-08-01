@@ -15,9 +15,9 @@ followed symlinks — so how a path is spelled does not change what is reachable
 - Cross-tenant isolation removes the discovery step. The directory containing the session root cannot
   be enumerated, but a sibling path the operator names directly can still be read, written, or entered.
   An explicit read grant, including `--allow-path <dir>`, restores enumeration for that directory.
-- Cross-session stores and data roots remain denied. Another session's transcripts, memories, internal
-  contexts, and temporary working state are not reachable through tools, nor are unrelated data roots
-  and mounted data volumes.
+- Cross-session stores, other operators' accounts, and data roots remain denied. Another session's
+  transcripts, memories, internal contexts, and temporary working state are not reachable through
+  tools, nor are sibling local accounts, unrelated data roots, and mounted data volumes.
 
 The same boundary answers for every tool. `read`, `write`, `grep`, `find`, `python`, and `bash` consult
 the same rules, so changing tools or spelling a path differently does not widen the session.
@@ -51,7 +51,8 @@ spelling may not be caught.
 
 The intended rules are the same ones a confined session has: parent enumeration is refused while named
 operator access remains available, operator-owned home and configuration stay readable and writable,
-and cross-session stores and unrelated data roots stay denied. Ordinary work remains unrestricted.
+and cross-session stores, other operators' accounts, and unrelated data roots stay denied. Ordinary
+work remains unrestricted.
 
 Treat the boundary as a statement of intent rather than a guarantee, and do not go looking for paths
 outside the session directory on the assumption that something would stop you.

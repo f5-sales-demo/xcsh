@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Denied local account containers and other operators' homes while preserving full access to the current operator's home ([#2788](https://github.com/f5-sales-demo/xcsh/issues/2788))
+
 ## [20.0.4] - 2026-08-01
 
 ### Fixed

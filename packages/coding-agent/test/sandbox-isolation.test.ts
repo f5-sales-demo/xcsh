@@ -214,14 +214,37 @@ describe("two-customer isolation, enforced in the shell", () => {
 	});
 });
 
-/**
- * Other operators' accounts are no longer fenced (#2637).
- *
- * #2624 denied `/Users` and `/home` wholesale and asserted here that listing them failed. That deny took
- * this operator's own home with it, which is what refused `~/git/STYLE_GUIDE.md`, so #2637 removed it. A
- * home directory is 0700 and the filesystem already refuses another account; the fence is not here to
- * re-implement file permissions, and this suite should not claim a protection it no longer provides.
- *
- * What replaced the assertion is the one below it: the customer container inside home, which is the
- * surface that actually matters and is asserted through the kernel above.
- */
+describe("local account isolation, enforced in the shell", () => {
+	it("denies another synthetic account while preserving the operator's home", async () => {
+		const fsRoot = path.join(tmp.absolute(), "account-fixture");
+		const accountRoot = path.join(fsRoot, "Users");
+		const operatorHome = path.join(accountRoot, "operator");
+		const otherHome = path.join(accountRoot, "other-account");
+		const workspace = path.join(operatorHome, "workspace");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(otherHome, { recursive: true });
+		fs.writeFileSync(path.join(otherHome, "synthetic.txt"), "synthetic");
+
+		const fence = buildContainmentFence({ workspace, home: operatorHome, fsRoot });
+		const wire = {
+			allow: [...fence.allow],
+			allowReadOnly: [...fence.allowReadOnly],
+			allowWriteOnly: [...fence.allowWriteOnly],
+			deny: [...fence.deny],
+			denyEnumerate: [...fence.denyEnumerate],
+		};
+		const run = async (command: string) => {
+			const result = (await executeShell({ command, cwd: workspace, fence: wire }, () => {})) as {
+				exitCode?: number;
+			};
+			return result.exitCode ?? -1;
+		};
+
+		expect(await run(`printf operator > ${JSON.stringify(path.join(operatorHome, ".zshrc"))}`)).toBe(0);
+		expect(fs.readFileSync(path.join(operatorHome, ".zshrc"), "utf8")).toBe("operator");
+		if (containmentStatus(true).osEnforced) {
+			expect(await run(`ls ${JSON.stringify(accountRoot)} > /dev/null`)).not.toBe(0);
+			expect(await run(`cd ${JSON.stringify(otherHome)}`)).not.toBe(0);
+		}
+	});
+});
