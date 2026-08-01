@@ -520,6 +520,43 @@ describe("CI verifies the published Homebrew formula end to end", () => {
 		expect(job).toContain('codesign --verify --deep --strict "$binary"');
 		expect(job).toContain('spctl --assess --verbose=4 --type install "$binary"');
 	});
+
+	it("runs the direct-home live-profile matrix against the installed binary", async () => {
+		const job = await loadVerifyHomebrewJob();
+		expect(job).toContain("release-binaries-macos-arm64-signed");
+		expect(job).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
+		expect(job).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+	});
+});
+
+describe("release artifacts run the sandbox matrix before and after publication", () => {
+	async function loadJob(name: string): Promise<string> {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const match = workflow.match(new RegExp(`\\n {2}${name}:\\n[\\s\\S]*?(?=\\n {2}[a-z][a-z-]+:\\n|\\s*$)`));
+		expect(match).not.toBeNull();
+		return match?.[0] ?? "";
+	}
+
+	it("checks the compiled Linux and signed macOS executables", async () => {
+		const linux = await loadJob("build-release");
+		const macos = await loadJob("build-sign-macos");
+		expect(linux).toContain("packages/coding-agent/binaries/xcsh-linux-x64");
+		expect(linux).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
+		expect(macos).toContain("packages/coding-agent/binaries/xcsh-darwin-${{ matrix.arch }}");
+		expect(macos).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+		expect(macos.indexOf("Notarize macOS Binary")).toBeLessThan(
+			macos.indexOf("Verify signed macOS sandbox check in a direct-home live profile"),
+		);
+	});
+
+	it("checks the globally installed npm executable", async () => {
+		const job = await loadJob("verify-npm-install");
+		expect(job).toContain("release-binaries-linux-win");
+		expect(job).toContain('binary="$(command -v xcsh)"');
+		expect(job).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
+		expect(job).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+	});
 });
 
 describe("vim ex-command onUpdate throttle bypass (commit 8f5b630ac)", () => {

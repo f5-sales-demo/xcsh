@@ -21,6 +21,6 @@ export default class Sandbox extends Command {
 	async run(): Promise<void> {
 		const { flags } = await this.parse(Sandbox);
 		const report = await runSandboxCheck({ json: flags.json, verbose: flags.verbose });
-		if (report.summary.failed > 0) process.exitCode = 1;
+		if (report.summary.failed > 0 || report.summary.errors > 0) process.exitCode = 1;
 	}
 }

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Made `xcsh sandbox check` work for sessions rooted directly under the operator home, distinguish harness errors from sandbox failures, and verify this topology against installed release artifacts ([#2807](https://github.com/f5-sales-demo/xcsh/issues/2807))
+
 ## [20.1.1] - 2026-08-01
 
 ### Fixed

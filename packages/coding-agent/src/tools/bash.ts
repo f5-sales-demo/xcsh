@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
+import * as path from "node:path";
 import type {
 	AgentTool,
 	AgentToolContext,
@@ -18,7 +19,12 @@ import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
 import { type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
-import { resolveSessionFence, SANDBOX_OPERATOR_HOME_ENV, SANDBOX_SESSION_ROOT_ENV } from "../sandbox/session-fence";
+import {
+	resolveSessionFence,
+	SANDBOX_CHECK_NAMED_SIBLING_ENV,
+	SANDBOX_OPERATOR_HOME_ENV,
+	SANDBOX_SESSION_ROOT_ENV,
+} from "../sandbox/session-fence";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
 import { renderStatusLine } from "../tui";
@@ -176,6 +182,21 @@ function normalizeBashEnv(env: Record<string, string> | undefined): Record<strin
 		normalized[key] = value;
 	}
 	return normalized;
+}
+
+/** Canonical context resolved by the unfenced host before a child inherits the live profile. */
+async function canonicalizeSandboxContextPath(input: string): Promise<string> {
+	try {
+		return await fs.promises.realpath(input);
+	} catch {
+		// The fence builder already handles an unavailable home conservatively. Keep ordinary bash calls
+		// working in that case; the diagnostic will report the path-specific failure if it is invoked.
+		return input;
+	}
+}
+
+function invokesSandboxCheck(command: string): boolean {
+	return /(?:xcsh(?:-[a-z0-9-]+)?|cli\.ts)["']?\s+["']?sandbox["']?\s+["']?check["']?(?:\s|$)/iu.test(command);
 }
 
 function escapeBashEnvValueForDisplay(value: string): string {
@@ -630,18 +651,25 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// same boundary rather than two that merely agree today.
 		const containmentRoot = this.#containmentRoot();
 		const fence = this.#containmentFence(containmentRoot);
+		const sandboxCheckInvocation = fence !== undefined && invokesSandboxCheck(command);
 		// A nested `xcsh sandbox check` must exercise the grants of this exact live profile. Seatbelt and
 		// Landlock restrictions compose and cannot be relaxed by its subprocess, so the diagnostic needs
 		// the immutable session anchor even when this individual call uses `cwd` or starts with `cd`.
 		// Keep these values host-owned: tool-supplied env cannot replace them.
-		const env =
-			fence === undefined
-				? requestedEnv
-				: {
-						...requestedEnv,
-						[SANDBOX_SESSION_ROOT_ENV]: containmentRoot,
-						[SANDBOX_OPERATOR_HOME_ENV]: os.homedir(),
-					};
+		let env = requestedEnv;
+		let trustedSessionRoot = containmentRoot;
+		if (fence !== undefined) {
+			const [canonicalSessionRoot, trustedOperatorHome] = await Promise.all([
+				canonicalizeSandboxContextPath(containmentRoot),
+				canonicalizeSandboxContextPath(os.homedir()),
+			]);
+			trustedSessionRoot = canonicalSessionRoot;
+			env = {
+				...requestedEnv,
+				[SANDBOX_SESSION_ROOT_ENV]: trustedSessionRoot,
+				[SANDBOX_OPERATOR_HOME_ENV]: trustedOperatorHome,
+			};
+		}
 
 		const localOptions = {
 			getArtifactsDir: this.session.getArtifactsDir,
@@ -684,6 +712,9 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		const obfuscator = this.session.obfuscator;
 		_sessionObfuscator = obfuscator; // Keep module-level ref fresh for renderer
 		const maskSecrets = obfuscator?.hasSecrets() ? (t: string) => obfuscator.obfuscate(t) : undefined;
+		if (asyncRequested && sandboxCheckInvocation) {
+			throw new ToolError("Sandbox check must run synchronously so its synthetic fixtures can be removed.");
+		}
 
 		if (asyncRequested) {
 			if (!this.session.asyncJobManager) {
@@ -704,7 +735,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			return this.#buildBackgroundStartResult(job.jobId, job.label, "", timeoutSec);
 		}
 
-		if (this.#autoBackgroundEnabled && !pty && this.session.asyncJobManager) {
+		if (this.#autoBackgroundEnabled && !pty && this.session.asyncJobManager && !sandboxCheckInvocation) {
 			const autoBackgroundWaitMs = this.#resolveAutoBackgroundWaitMs(timeoutMs);
 			const startBackgrounded = autoBackgroundWaitMs === 0;
 			const job = this.#startManagedBashJob({
@@ -762,41 +793,60 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		const osBackend = containmentStatus(fence !== undefined);
 		const ptyConfinable = !osBackend.osEnforced || osBackend.backend === "seatbelt";
 		const usePty = pty && ptyConfinable && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;
-		const result: BashResult | BashInteractiveResult = usePty
-			? await runInteractiveBashPty(ctx.ui!, {
-					command,
-					cwd: commandCwd,
-					timeoutMs,
-					signal,
-					env,
-					artifactPath,
-					artifactId,
-					maskSecrets,
-					// The same fence that decided `ptyConfinable`, so the gate and the enforcement can
-					// never be looking at different answers.
-					fence,
-				})
-			: await executeBash(command, {
-					cwd: commandCwd,
-					sessionKey: this.session.getSessionId?.() ?? undefined,
-					timeout: timeoutMs,
-					signal,
-					env,
-					artifactPath,
-					artifactId,
-					maskSecrets,
-					fence,
-					onChunk: chunk => {
-						tailBuffer.append(chunk);
-						if (onUpdate) {
-							const preview = maskSecrets ? maskSecrets(tailBuffer.text()) : tailBuffer.text();
-							onUpdate({
-								content: [{ type: "text", text: preview }],
-								details: {},
-							});
-						}
-					},
-				});
+		let sandboxCheckSibling: string | undefined;
+		if (sandboxCheckInvocation) {
+			// Landlock cannot add a newly-created child to an already-applied profile. Prepare the named
+			// sibling before the child is confined so the diagnostic measures reachability, not whether a
+			// nested sandbox can widen itself. The host owns both this path and its cleanup.
+			sandboxCheckSibling = await fs.promises.mkdtemp(
+				path.join(path.dirname(trustedSessionRoot), ".xcsh-sandbox-check-live-sibling-"),
+			);
+			await Bun.write(path.join(sandboxCheckSibling, "named.txt"), "sibling\n");
+			env = { ...env, [SANDBOX_CHECK_NAMED_SIBLING_ENV]: sandboxCheckSibling };
+		}
+
+		let result: BashResult | BashInteractiveResult;
+		try {
+			result = usePty
+				? await runInteractiveBashPty(ctx.ui!, {
+						command,
+						cwd: commandCwd,
+						timeoutMs,
+						signal,
+						env,
+						artifactPath,
+						artifactId,
+						maskSecrets,
+						// The same fence that decided `ptyConfinable`, so the gate and the enforcement can
+						// never be looking at different answers.
+						fence,
+					})
+				: await executeBash(command, {
+						cwd: commandCwd,
+						sessionKey: this.session.getSessionId?.() ?? undefined,
+						timeout: timeoutMs,
+						signal,
+						env,
+						artifactPath,
+						artifactId,
+						maskSecrets,
+						fence,
+						onChunk: chunk => {
+							tailBuffer.append(chunk);
+							if (onUpdate) {
+								const preview = maskSecrets ? maskSecrets(tailBuffer.text()) : tailBuffer.text();
+								onUpdate({
+									content: [{ type: "text", text: preview }],
+									details: {},
+								});
+							}
+						},
+					});
+		} finally {
+			if (sandboxCheckSibling !== undefined) {
+				await fs.promises.rm(sandboxCheckSibling, { recursive: true, force: true });
+			}
+		}
 		if (result.cancelled) {
 			if (signal?.aborted) {
 				throw new ToolAbortError(normalizeResultOutput(result) || "Command aborted");

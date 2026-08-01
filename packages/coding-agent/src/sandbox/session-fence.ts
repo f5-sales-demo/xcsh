@@ -26,6 +26,7 @@ import { buildContainmentFence, type ContainmentFence } from "./containment";
  */
 export const SANDBOX_SESSION_ROOT_ENV = "XCSH_SANDBOX_SESSION_ROOT";
 export const SANDBOX_OPERATOR_HOME_ENV = "XCSH_SANDBOX_OPERATOR_HOME";
+export const SANDBOX_CHECK_NAMED_SIBLING_ENV = "XCSH_SANDBOX_CHECK_NAMED_SIBLING";
 
 /** The slice of `Settings` this needs — supplied explicitly so the caller names its own source. */
 export interface SettingsReader {
