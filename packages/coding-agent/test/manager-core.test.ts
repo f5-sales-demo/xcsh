@@ -30,22 +30,22 @@ const W = (sessionId: string, port: number, lastSeen = 0): WorkerRec => ({
 });
 
 describe("parseControlMsg", () => {
-	test("valid provision/release/status", () => {
+	test("valid provision, release, and status", () => {
 		expect(parseControlMsg({ type: "provision", sessionId: "tab-7", tenant: "example-corp|staging" })).toEqual({
 			type: "provision",
 			sessionId: "tab-7",
 			tenant: "example-corp|staging",
 		});
 		expect(parseControlMsg({ type: "release", sessionId: "tab-7" })).toEqual({ type: "release", sessionId: "tab-7" });
-		expect(parseControlMsg({ type: "status" })).toEqual({ type: "status" });
+		expect(parseControlMsg({ type: "status", sessionId: "tab-7" })).toEqual({
+			type: "status",
+			sessionId: "tab-7",
+		});
 	});
-	// Keepalive-on-chat: a status frame MAY carry the chatting worker's sessionId
-	// so the manager can refresh its lastSeen (chat traffic never reaches the
-	// manager otherwise). An sid-less status stays the legacy no-op sink.
-	test("status carries an optional sessionId", () => {
-		expect(parseControlMsg({ type: "status", sessionId: "tab-7" })).toEqual({ type: "status", sessionId: "tab-7" });
-		expect(parseControlMsg({ type: "status", sessionId: "" })).toEqual({ type: "status" }); // empty → sink
-		expect(parseControlMsg({ type: "status", sessionId: 3 })).toEqual({ type: "status" }); // non-string → sink
+	test("rejects status without the required session identity", () => {
+		expect(parseControlMsg({ type: "status" })).toBeNull();
+		expect(parseControlMsg({ type: "status", sessionId: "" })).toBeNull();
+		expect(parseControlMsg({ type: "status", sessionId: 3 })).toBeNull();
 	});
 	test("rejects junk / missing fields / bad tenant", () => {
 		expect(parseControlMsg({ type: "provision", sessionId: "tab-7" })).toBeNull(); // no tenant

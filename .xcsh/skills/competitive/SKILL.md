@@ -22,21 +22,25 @@ current product documentation before presenting to a customer.
 These are durable advantages rooted in architecture, not features:
 
 ### Global Distributed Cloud Fabric
+
 - F5 XC operates as a distributed cloud platform with a global application delivery network
 - Customer Edge (CE) sites extend the fabric into any environment (on-prem, public cloud, edge)
 - Unlike pure-play CDN or pure-play WAF vendors, F5 XC unifies networking, security, and app delivery on a single control plane
 
 ### Multi-Cloud Networking (MCN)
+
 - Native multi-cloud connectivity without requiring cloud-specific constructs in each provider
 - Encrypted site-to-site mesh across AWS, Azure, GCP, and on-prem
 - Competitors typically require per-cloud VPN gateways, transit hubs, or overlay networks managed separately
 
 ### Integrated Security Stack
+
 - WAAP (WAF, Bot Defense, DDoS, API Security) delivered at the edge or at the customer site
 - Security policy follows the application, not the network perimeter
 - Single policy engine across all deployment locations
 
 ### Platform Extensibility
+
 - Full REST API for every operation (xcsh_api tool provides direct access)
 - Terraform provider for infrastructure-as-code workflows
 - Customer Edge deployable as VM, bare metal, or container
@@ -45,7 +49,7 @@ These are durable advantages rooted in architecture, not features:
 
 When building competitive positioning for a specific deal, use this structure:
 
-### For each competitor in the deal:
+### For each competitor in the deal
 
 1. **Competitor Profile**
    - What they sell (core product, positioning)
@@ -69,24 +73,28 @@ When building competitive positioning for a specific deal, use this structure:
 ## Common Competitive Scenarios
 
 ### vs. Cloudflare
+
 **Their strength:** Developer experience, edge compute, broad CDN footprint, simple onboarding.
 **F5 XC advantage:** Multi-cloud networking (Cloudflare has no MCN story), Customer Edge deployment (Cloudflare is cloud-only edge), deeper WAF customization, enterprise support model.
 **Key objection:** "Cloudflare is simpler to deploy."
 **Response:** Simplicity matters — and for single-origin, single-cloud apps, Cloudflare may be sufficient. When the architecture spans multiple clouds, on-prem sites, or requires private connectivity between sites, F5 XC provides a unified control plane that Cloudflare cannot. Ask: "How many environments does this application span?"
 
 ### vs. Akamai
+
 **Their strength:** Largest CDN footprint, deep media delivery expertise, established enterprise relationships.
 **F5 XC advantage:** Multi-cloud networking, Customer Edge for on-prem workloads, unified security + networking platform (Akamai security is acquired/bolted-on: Guardicore, Linode, separate consoles).
 **Key objection:** "Akamai has more PoPs."
 **Response:** PoP count matters for content delivery. For application security and multi-cloud networking, what matters is where policy enforcement happens — at the application, not just at the edge. F5 XC enforces policy at both the edge AND the customer site.
 
 ### vs. AWS Native (CloudFront + WAF + Transit Gateway)
+
 **Their strength:** Tight AWS integration, pay-as-you-go, no additional vendor.
 **F5 XC advantage:** Multi-cloud (AWS-native tools stop at the AWS boundary), consistent policy across clouds, single control plane for hybrid environments, avoids cloud lock-in.
 **Key objection:** "We're already on AWS, why add another vendor?"
 **Response:** If the environment is 100% single-region AWS with no expansion plans, native tools may suffice. Ask: "Do you have workloads in other clouds, on-prem, or at the edge? Do you anticipate multi-cloud?" If yes, AWS-native networking creates silos that require per-cloud management.
 
 ### vs. Palo Alto / Zscaler (SASE/SSE)
+
 **Their strength:** Strong SASE/SSE positioning, zero-trust network access, user-centric security.
 **F5 XC advantage:** Application-centric (not just user-centric), multi-cloud networking beyond SASE scope, WAAP integrated with network fabric, workload-to-workload security not just user-to-app.
 **Key objection:** "We're standardizing on SASE."

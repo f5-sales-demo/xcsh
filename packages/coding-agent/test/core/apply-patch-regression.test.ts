@@ -1679,7 +1679,7 @@ describe("regression: trailing context lines don't delete file content", () => {
  \tprivate stdinBuffer?: StdinBuffer;
  \tprivate stdinDataHandler?: (data: string) => void;
 +\tprivate dead = false;
- 
+${" "}
  \tget kittyProtocolActive(): boolean {
 
 @@ private safeWrite(data: string): void {

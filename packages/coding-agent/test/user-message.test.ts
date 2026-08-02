@@ -19,12 +19,12 @@ function renderPlain(component: UserMessageComponent, width = 120): string[] {
 }
 
 function fgPrefix(token: Parameters<typeof theme.fg>[0]): string {
-	const SENTINEL = "";
+	const SENTINEL = "\x01";
 	const wrapped = theme.fg(token, SENTINEL);
 	return wrapped.slice(0, wrapped.indexOf(SENTINEL));
 }
 function bgPrefix(token: Parameters<typeof theme.bg>[0]): string {
-	const SENTINEL = "";
+	const SENTINEL = "\x01";
 	const wrapped = theme.bg(token, SENTINEL);
 	return wrapped.slice(0, wrapped.indexOf(SENTINEL));
 }

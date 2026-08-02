@@ -5,7 +5,7 @@
  * agent session bound to this worker's tenant (`XCSH_SESSION_TENANT`, matched to a
  * context by the session-context bootstrap in `createAgentSession`), attaches the
  * chat handler, and blocks until SIGTERM/SIGINT. It mirrors the extension-bridge
- * startup path in `main.ts` (bridge → setSessionInfo → browser-only tool scoping →
+ * startup path in `main.ts` (configured bridge → browser-only tool scoping →
  * createAgentSession → ChatHandler.attach) MINUS the TUI.
  *
  * Unlike the interactive path — whose `hello_ack` tenant is derived purely from the
@@ -34,9 +34,9 @@ import { ContextService } from "../services/xcsh-context";
 import { deriveTenantEnv } from "../services/xcsh-env";
 import { type KeepaliveTransport, ManagerKeepalive } from "./manager-keepalive";
 
-/** Mutable worker identity. Seeded from env at spawn (backward compat); replaced by a
- * late IPC bind on a pre-warmed spare. `null` fields fall back to env, then the "spare"
- * sentinel (a non-`tab-<id>` string the extension registers but never binds to a tab). */
+/** Mutable worker identity. Cold workers receive it in their spawn environment; a
+ * pre-warmed spare receives it through the manager bind. Until then the "spare"
+ * sentinel is registered but never bound to a tab. */
 let boundIdentity: { sessionId: string; tenantKey: string } | null = null;
 
 export function setWorkerIdentity(sessionId: string, tenantKey: string): void {
@@ -146,17 +146,17 @@ export default class Worker extends Command {
 		// session:bridgeListen — time-to-"bridge-ready": the extension can connect and
 		// complete the hello/hello_ack handshake once this resolves (INSTANT-ON path).
 		const bridge = await logger.time("session:bridgeListen", () =>
-			startBridgeServer(undefined, tls ? { tls } : undefined),
+			startBridgeServer(undefined, {
+				serveKind: "browser",
+				sessionInfo: sessionInfoForWorker,
+				...(tls ? { tls } : {}),
+			}),
 		);
 		console.error(
 			`[xcsh worker] extension bridge listening on ws://127.0.0.1:${bridge.port}` +
 				(bridge.wssPort ? ` + wss://${LOCALIP_HOST}:${bridge.wssPort}` : ""),
 		);
-		// This is the Chrome-extension worker: advertise "browser" so the office pane's
-		// serveKind filter never adopts it (explicit; "browser" is also the default).
-		bridge.setServeKind("browser");
 		setSharedBridgeServer(bridge);
-		bridge.setSessionInfo(sessionInfoForWorker);
 		ContextService.onContextChange(() => bridge.broadcastTenantChanged());
 
 		// TTFT Phase 2: buffer the per-session cold-start spans and flush them once a
@@ -218,13 +218,13 @@ export default class Worker extends Command {
 			void (async () => {
 				try {
 					await activateTenantContext(tenant);
-				} catch (err) {
-					console.error(`[xcsh worker] late tenant-bind failed: ${String(err)}`);
+				} catch {
+					console.error("[xcsh worker] late tenant-bind failed");
 				}
 				bridge.broadcastTenantChanged();
-				// Ack adoption complete (identity applied + context activated + re-announced).
-				// The manager ignores it today; the bench uses it to time adoption latency.
-				process.send?.({ type: "bound", sessionId });
+				// The standalone benchmark retains IPC to measure adoption latency. A real
+				// manager disconnects after binding so the worker survives manager handoff.
+				if (process.connected) process.send?.({ type: "bound", sessionId });
 				// TTFT Phase 2: warm adopt cold-start spans (worker_boot = bind -> bound).
 				coldStartBuffer = coldStartSpans(sessionId, false, relayedProvisionMs, Date.now() - bindAt);
 				flushColdStart();
@@ -353,6 +353,6 @@ export default class Worker extends Command {
 		process.on("SIGINT", shutdown);
 
 		// Block until a signal tears us down.
-		await new Promise<never>(() => {});
+		await Promise.withResolvers<never>().promise;
 	}
 }

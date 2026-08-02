@@ -7,6 +7,7 @@ Read the file first. Copy anchors exactly from the latest `read` output. After a
 - `edits` — array of edit entries
 
 **Edit entry**: `{ path, loc, content }` or `{ path, delete: true }` or `{ path, move: "new/path" }`
+
 - `path` — file path
 - `loc` — where to apply the edit (see below)
 - `content` — replacement/inserted lines (array of strings preferred, `null` to delete)
@@ -14,6 +15,7 @@ Read the file first. Copy anchors exactly from the latest `read` output. After a
 - `move` — move/rename the file
 
 **`loc` values**
+
 - `"append"` / `"prepend"` — insert at end/start of file
 - `{ append: "N#ID" }` / `{ prepend: "N#ID" }` — insert after/before anchored line
 - `{ range: { pos: "N#ID", end: "N#ID" } }` — replace inclusive range of lines `pos..end` with new content

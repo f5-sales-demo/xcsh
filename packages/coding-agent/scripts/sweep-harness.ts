@@ -28,6 +28,7 @@ import * as path from "node:path";
 import * as yaml from "yaml";
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
+import { sessionInfoForWorker } from "../src/commands/worker";
 import { formSweepBlockerFor, isScopedOut, paramsFor } from "../src/sweep/sweep-params";
 import {
 	apiCollectionPath,
@@ -136,7 +137,7 @@ async function awaitApiState(
 	for (let i = 0; i < attempts; i++) {
 		last = await apiExists(resource, name);
 		if (last === null || last === expectPresent) return last;
-		await new Promise(r => setTimeout(r, delayMs));
+		await Bun.sleep(delayMs);
 	}
 	return last;
 }
@@ -354,16 +355,16 @@ async function main() {
 	}
 
 	// Own ONE bridge for the whole sweep and inject it so every workflow reuses it.
-	const server = await startBridgeServer();
+	const server = await startBridgeServer(undefined, { serveKind: "browser", sessionInfo: sessionInfoForWorker });
 	bridge = server;
 
 	// Wait for the extension to connect ONCE at startup — eliminates the per-resource
 	// connection race that made the first N resources fail with "did not connect."
-	const probeMs = Number(process.env.XCSH_BRIDGE_PROBE_MS) || 60_000;
-	console.log(`  Waiting for extension to connect (up to ${Math.round(probeMs / 1000)}s)...`);
-	const deadline = Date.now() + probeMs;
+	const bridgeProbeTimeoutMs = Number(process.env.XCSH_BRIDGE_PROBE_MS) || 60_000;
+	console.log(`  Waiting for extension to connect (up to ${Math.round(bridgeProbeTimeoutMs / 1000)}s)...`);
+	const deadline = Date.now() + bridgeProbeTimeoutMs;
 	while (Date.now() < deadline && !server.connected) {
-		await new Promise(r => setTimeout(r, 300));
+		await Bun.sleep(300);
 	}
 	if (!server.connected) {
 		console.error("  ✗ Extension did not connect. Is it installed + reloaded?");

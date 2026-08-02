@@ -88,7 +88,7 @@ export async function fetchCursorUsableModels(
 function buildRequestHeaders(options: CursorModelDiscoveryOptions): Record<string, string> {
 	return {
 		"content-type": "application/proto",
-		te: "trailers",
+		[http2.constants.HTTP2_HEADER_TE]: "trailers",
 		authorization: `Bearer ${options.apiKey}`,
 		"x-ghost-mode": "true",
 		"x-cursor-client-version": options.clientVersion ?? CURSOR_DEFAULT_CLIENT_VERSION,

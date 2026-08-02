@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { type BridgeServer, startBridgeServer } from "../../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../../src/browser/extension-provider";
 import { CdpBrowserProvider, selectProvider } from "../../src/browser/provider";
+import { authenticateBrowserSocket, browserBridgeOptions } from "../helpers/extension-bridge-fixture";
 
 describe("selectProvider", () => {
 	let server: BridgeServer | null = null;
@@ -22,14 +23,15 @@ describe("selectProvider", () => {
 	});
 
 	it("returns ExtensionBrowserProvider when the bridge has a connected client", async () => {
-		server = await startBridgeServer(0, { skipOriginCheck: true });
+		server = await startBridgeServer(0, browserBridgeOptions({ skipOriginCheck: true }));
 
 		// Connect a mock extension client via WebSocket.
 		mockClient = new WebSocket(`ws://127.0.0.1:${server.port}`);
-		await new Promise<void>((resolve, reject) => {
-			mockClient!.onopen = () => resolve();
-			mockClient!.onerror = () => reject(new Error("ws connect failed"));
-		});
+		const connected = Promise.withResolvers<void>();
+		mockClient.onopen = () => connected.resolve();
+		mockClient.onerror = () => connected.reject(new Error("ws connect failed"));
+		await connected.promise;
+		await authenticateBrowserSocket(mockClient);
 		expect(server.connected).toBe(true);
 
 		// Inject the pre-created, pre-connected server into selectProvider.

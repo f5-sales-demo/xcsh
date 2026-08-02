@@ -1,22 +1,19 @@
 import { describe, expect, it } from "bun:test";
-import { isChatRequest, isChatStop } from "../../src/browser/chat-protocol";
+import { isBrowserChatRequest, isChatStop, isTransportChatRequest } from "../../src/browser/chat-protocol";
 
-describe("isChatRequest", () => {
+describe("chat request routing contracts", () => {
 	it("accepts a valid browser chat_request with explicit tab and session routing", () => {
 		expect(
-			isChatRequest(
-				{
-					type: "chat_request",
-					id: "c-abc123",
-					text: "hello",
-					context: null,
-					mode: "educational",
-					tabId: 7,
-					sessionKey: "example-corp|production",
-					history_hint: "conv-1",
-				},
-				"browser",
-			),
+			isBrowserChatRequest({
+				type: "chat_request",
+				id: "c-abc123",
+				text: "hello",
+				context: null,
+				mode: "educational",
+				tabId: 7,
+				sessionKey: "example-corp|production",
+				history_hint: "conv-1",
+			}),
 		).toBe(true);
 	});
 
@@ -30,95 +27,91 @@ describe("isChatRequest", () => {
 			tabId: 7,
 			sessionKey: "example-corp|production",
 		};
-		expect(isChatRequest({ ...request, tabId: undefined }, "browser")).toBe(false);
-		expect(isChatRequest({ ...request, sessionKey: undefined }, "browser")).toBe(false);
+		expect(isBrowserChatRequest({ ...request, tabId: undefined })).toBe(false);
+		expect(isBrowserChatRequest({ ...request, sessionKey: undefined })).toBe(false);
+	});
+
+	it("rejects browser routing fields on a transport-bound Office request", () => {
+		expect(
+			isTransportChatRequest({
+				type: "chat_request",
+				id: "c-abc123",
+				text: "hello",
+				context: null,
+				mode: "educational",
+				tabId: 7,
+				sessionKey: "example-corp|production",
+			}),
+		).toBe(false);
 	});
 
 	it("rejects missing c- prefix", () => {
 		expect(
-			isChatRequest(
-				{
-					type: "chat_request",
-					id: "abc123",
-					text: "hello",
-					context: null,
-					mode: "educational",
-					history_hint: "conv-1",
-				},
-				"transport",
-			),
+			isTransportChatRequest({
+				type: "chat_request",
+				id: "abc123",
+				text: "hello",
+				context: null,
+				mode: "educational",
+				history_hint: "conv-1",
+			}),
 		).toBe(false);
 	});
 
 	it("rejects non-string id", () => {
 		expect(
-			isChatRequest(
-				{
-					type: "chat_request",
-					id: 123,
-					text: "hello",
-					mode: "educational",
-				},
-				"transport",
-			),
+			isTransportChatRequest({
+				type: "chat_request",
+				id: 123,
+				text: "hello",
+				mode: "educational",
+			}),
 		).toBe(false);
 	});
 
 	it("rejects invalid mode", () => {
 		expect(
-			isChatRequest(
-				{
-					type: "chat_request",
-					id: "c-abc",
-					text: "hello",
-					mode: "invalid_mode",
-				},
-				"transport",
-			),
+			isTransportChatRequest({
+				type: "chat_request",
+				id: "c-abc",
+				text: "hello",
+				mode: "invalid_mode",
+			}),
 		).toBe(false);
 	});
 
 	it("rejects wrong type", () => {
 		expect(
-			isChatRequest(
-				{
-					type: "tool_result",
-					id: "c-abc",
-					text: "hello",
-					mode: "educational",
-				},
-				"transport",
-			),
+			isTransportChatRequest({
+				type: "tool_result",
+				id: "c-abc",
+				text: "hello",
+				mode: "educational",
+			}),
 		).toBe(false);
 	});
 
 	it("accepts all valid modes", () => {
 		for (const mode of ["educational", "presentation", "configuration", "screenshot", "annotation"]) {
 			expect(
-				isChatRequest(
-					{
-						type: "chat_request",
-						id: "c-x",
-						text: "hi",
-						mode,
-					},
-					"transport",
-				),
+				isTransportChatRequest({
+					type: "chat_request",
+					id: "c-x",
+					text: "hi",
+					mode,
+				}),
 			).toBe(true);
 		}
 	});
 
 	it("accepts chat_request without history_hint (optional field)", () => {
 		expect(
-			isChatRequest(
-				{
-					type: "chat_request",
-					id: "c-abc",
-					text: "hello",
-					mode: "educational",
-				},
-				"transport",
-			),
+			isTransportChatRequest({
+				type: "chat_request",
+				id: "c-abc",
+				text: "hello",
+				mode: "educational",
+			}),
 		).toBe(true);
 	});
 });

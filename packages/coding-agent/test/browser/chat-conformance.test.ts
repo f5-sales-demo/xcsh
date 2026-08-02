@@ -7,7 +7,7 @@ import { describe, expect, it } from "bun:test";
 import Ajv from "ajv";
 import conformance from "../../src/browser/chat-conformance.json";
 import {
-	isChatRequest,
+	isBrowserChatRequest,
 	isChatStop,
 	isHostToolResult,
 	isHostToolUpdate,
@@ -54,12 +54,12 @@ describe("chat-conformance: invalid examples are rejected by schemas", () => {
 });
 
 describe("chat-conformance: xcsh parsers accept valid examples", () => {
-	it("isChatRequest accepts valid chat_request example", () => {
-		expect(isChatRequest(validExamples.chat_request as Record<string, unknown>, "browser")).toBe(true);
+	it("isBrowserChatRequest accepts valid chat_request example", () => {
+		expect(isBrowserChatRequest(validExamples.chat_request as Record<string, unknown>)).toBe(true);
 	});
 
-	it("isChatRequest accepts valid chat_request_no_context example", () => {
-		expect(isChatRequest(validExamples.chat_request_no_context as Record<string, unknown>, "browser")).toBe(true);
+	it("isBrowserChatRequest accepts valid chat_request_no_context example", () => {
+		expect(isBrowserChatRequest(validExamples.chat_request_no_context as Record<string, unknown>)).toBe(true);
 	});
 
 	it("isChatStop accepts valid chat_stop example", () => {
@@ -70,8 +70,8 @@ describe("chat-conformance: xcsh parsers accept valid examples", () => {
 describe("chat-conformance: xcsh parsers reject invalid examples", () => {
 	for (const { schema: schemaKey, why, value } of invalidExamples) {
 		if (schemaKey === "chat_request") {
-			it(`isChatRequest rejects: ${why}`, () => {
-				expect(isChatRequest(value as Record<string, unknown>, "browser")).toBe(false);
+			it(`isBrowserChatRequest rejects: ${why}`, () => {
+				expect(isBrowserChatRequest(value as Record<string, unknown>)).toBe(false);
 			});
 		}
 		if (schemaKey === "chat_stop") {

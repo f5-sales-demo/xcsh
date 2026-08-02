@@ -1871,12 +1871,12 @@ export class AgentSession {
 		}
 		this.#cancelPostPromptTasks();
 		this.#clearTodoClearTimers();
+		const pythonExecutionsSettled = await this.#preparePythonExecutionsForDispose();
 		const drained = await this.#asyncJobManager?.dispose({ timeoutMs: 3_000 });
 		const deliveryState = this.#asyncJobManager?.getDeliveryState();
 		if (drained === false && deliveryState) {
 			logger.warn("Async job completion deliveries still pending during dispose", { ...deliveryState });
 		}
-		const pythonExecutionsSettled = await this.#preparePythonExecutionsForDispose();
 		if (!pythonExecutionsSettled) {
 			logger.warn(
 				"Detaching retained Python kernel ownership during dispose while Python execution is still active",
@@ -5921,15 +5921,15 @@ export class AgentSession {
 	}
 
 	async #preparePythonExecutionsForDispose(): Promise<boolean> {
-		if (!(await this.#waitForPythonExecutionsToSettle(3_000))) {
-			logger.warn("Aborting active Python execution during dispose before retained kernel cleanup");
-			this.abortPython();
-			if (!(await this.#waitForPythonExecutionsToSettle(1_000))) {
-				logger.warn(
-					"Python execution is still active after dispose aborted all active runs; retained kernel ownership will still be detached",
-				);
-				return false;
-			}
+		if (this.#activePythonExecutions.size === 0) return true;
+
+		logger.warn("Aborting active Python execution during dispose before retained kernel cleanup");
+		this.abortPython();
+		if (!(await this.#waitForPythonExecutionsToSettle(1_000))) {
+			logger.warn(
+				"Python execution is still active after dispose aborted all active runs; retained kernel ownership will still be detached",
+			);
+			return false;
 		}
 		return true;
 	}

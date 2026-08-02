@@ -15,17 +15,17 @@ import { grep, find, PhotonImage, SamplingFilter, ImageFormat } from "@f5-sales-
 
 // Grep for a pattern
 const results = await grep({
-	pattern: "TODO",
-	path: "/path/to/project",
-	glob: "*.ts",
-	context: 2,
+ pattern: "TODO",
+ path: "/path/to/project",
+ glob: "*.ts",
+ context: 2,
 });
 
 // Find files
 const files = await find({
-	pattern: "*.rs",
-	path: "/path/to/project",
-	fileType: "file",
+ pattern: "*.rs",
+ path: "/path/to/project",
+ fileType: "file",
 });
 
 // Image processing

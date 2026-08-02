@@ -3,6 +3,7 @@ import { TempDir } from "@f5-sales-demo/pi-utils";
 import { BridgeServer } from "../src/browser/extension-bridge";
 import { resetWorkerIdentity, sessionInfoForWorker, setWorkerIdentity } from "../src/commands/worker";
 import { ContextService } from "../src/services/xcsh-context";
+import { BROWSER_HELLO, OFFICE_HELLO } from "./helpers/extension-bridge-fixture";
 
 /**
  * Characterization tests for the per-tab extension SESSION contract.
@@ -19,46 +20,42 @@ import { ContextService } from "../src/services/xcsh-context";
 interface HelloAck {
 	type: string;
 	sessionId: string | null;
-	contractVersion: string;
+	contractVersion?: string;
 	tenant: string | null;
 	env: string | null;
-	apiUrl: string | null;
 	contextBound: boolean;
-	host: string | null;
-	serveKind: string;
-	pid: number;
+	host?: string | null;
+	serveKind?: string;
+	version?: string;
 	canConfigureProvider?: boolean;
 }
 
-/** Open a fake client, send `hello` (optionally announcing a client host), resolve
- * the parsed `hello_ack`. */
-function handshake(port: number, timeoutMs = 5_000, host?: string): Promise<HelloAck> {
-	return new Promise<HelloAck>((resolve, reject) => {
-		const ws = new WebSocket(`ws://127.0.0.1:${port}`);
-		const timer = setTimeout(() => {
-			ws.close();
-			reject(new Error("hello_ack timeout"));
-		}, timeoutMs);
-		ws.addEventListener("open", () =>
-			ws.send(JSON.stringify(host === undefined ? { type: "hello" } : { type: "hello", host })),
-		);
-		ws.addEventListener("message", ev => {
-			let msg: HelloAck;
-			try {
-				msg = JSON.parse(String(ev.data));
-			} catch {
-				return;
-			}
-			if (msg.type !== "hello_ack") return;
-			clearTimeout(timer);
-			ws.close();
-			resolve(msg);
-		});
-		ws.addEventListener("error", () => {
-			clearTimeout(timer);
-			reject(new Error("ws error"));
-		});
+/** Open a fake client, send the transport's exact hello, and resolve the parsed acknowledgement. */
+function handshake(port: number, hello: Record<string, unknown> = BROWSER_HELLO): Promise<HelloAck> {
+	const acknowledgement = Promise.withResolvers<HelloAck>();
+	const ws = new WebSocket(`ws://127.0.0.1:${port}`);
+	const timer = setTimeout(() => {
+		ws.close();
+		acknowledgement.reject(new Error("hello_ack timeout"));
+	}, 5_000);
+	ws.addEventListener("open", () => ws.send(JSON.stringify(hello)));
+	ws.addEventListener("message", ev => {
+		let msg: HelloAck;
+		try {
+			msg = JSON.parse(String(ev.data));
+		} catch {
+			return;
+		}
+		if (msg.type !== "hello_ack") return;
+		clearTimeout(timer);
+		ws.close();
+		acknowledgement.resolve(msg);
 	});
+	ws.addEventListener("error", () => {
+		clearTimeout(timer);
+		acknowledgement.reject(new Error("ws error"));
+	});
+	return acknowledgement.promise;
 }
 
 describe("extension session contract", () => {
@@ -144,10 +141,9 @@ describe("extension session contract", () => {
 			process.env.XCSH_SESSION_ID = "tab-7";
 			process.env.XCSH_SESSION_TENANT = "example-corp|staging";
 			delete process.env.XCSH_API_URL;
-			server = new BridgeServer();
+			server = new BridgeServer({ serveKind: "browser", sessionInfo: sessionInfoForWorker });
 			// port 0 = OS-ephemeral; skipOriginCheck so a non-extension client may connect.
 			expect(server.listen(0, { skipOriginCheck: true })).toBe(true);
-			server.setSessionInfo(sessionInfoForWorker);
 		});
 		afterEach(async () => {
 			await server.close();
@@ -167,41 +163,32 @@ describe("extension session contract", () => {
 			expect(ack.env).toBe("staging");
 			expect(ack.contextBound).toBe(false);
 			// The clean-break extension requires contract major 2 to bind and route.
-			expect(Number(ack.contractVersion.split(".")[0])).toBe(2);
-			expect(typeof ack.pid).toBe("number");
+			expect(Number(ack.contractVersion?.split(".")[0])).toBe(2);
+			expect(ack).not.toHaveProperty("pid");
+			expect(ack).not.toHaveProperty("apiUrl");
 		});
 
-		it("defaults host to null when the client announces none (Chrome extension)", async () => {
+		it("does not expose Office identity fields to the Chrome extension", async () => {
 			const ack = await handshake(server.port);
-			expect(ack.host).toBeNull();
+			expect("host" in ack).toBe(false);
+			expect("version" in ack).toBe(false);
 			expect("canConfigureProvider" in ack).toBe(false);
 		});
 
-		it("advertises serveKind 'browser' by default (a bare BridgeServer is the worker path)", async () => {
+		it("does not advertise the Office-only serveKind on a browser bridge", async () => {
 			const ack = await handshake(server.port);
-			expect(ack.serveKind).toBe("browser");
-		});
-
-		it("does not grant Office capabilities from a browser-client host claim", async () => {
-			const ack = await handshake(server.port, 5_000, "excel");
-			expect(ack.host).toBeNull();
-			expect("canConfigureProvider" in ack).toBe(false);
-			expect(server.clientHost).toBeNull();
+			expect("serveKind" in ack).toBe(false);
 		});
 
 		it("echoes a valid announced client host on an Office bridge", async () => {
-			server.setServeKind("office");
-			const ack = await handshake(server.port, 5_000, "excel");
+			await server.close();
+			server = new BridgeServer({ serveKind: "office", sessionInfo: sessionInfoForWorker });
+			expect(server.listen(0, { skipOriginCheck: true })).toBe(true);
+			const ack = await handshake(server.port, OFFICE_HELLO);
 			expect(ack.host).toBe("excel");
 			expect(ack.serveKind).toBe("office");
 			expect(ack.canConfigureProvider).toBe(true);
 			expect(server.clientHost).toBe("excel");
-		});
-
-		it("ignores an invalid announced host (retains null)", async () => {
-			const ack = await handshake(server.port, 5_000, "outlook");
-			expect(ack.host).toBeNull();
-			expect(server.clientHost).toBeNull();
 		});
 
 		// --- Perf guard (catastrophic-regression only; NOT a tight budget) ---

@@ -19,6 +19,7 @@ Produce strict JSON only with this schema — you **MUST NOT** include any other
   ]
 }
 Requirements:
+
 - memory_md: full long-term memory document, curated and readable.
 - memory_summary: compact prompt-time memory guidance.
 - skills: reusable procedural playbooks. Empty array allowed.

@@ -90,7 +90,8 @@ Portez lorsque l'une de ces conditions est vraie :
 
 ### 1) Un `pi_natives.node` obsolète empêche les nouveaux exports
 
-Le loader préfère le binaire taggé par plateforme dans `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` n'active désormais que les diagnostics du loader ; il ne bascule plus vers un nom de fichier d'addon dev séparé. Il existe également un fallback `pi_natives.node`. Les binaires compilés s'extraient vers `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node`. Si l'un d'entre eux est obsolète, les exports ne se mettront pas à jour.
+Le loader préfère le binaire taggé par plateforme dans `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` n'active désormais que les diagnostics du loader ; il ne bascule plus vers un nom de fichier d'addon dev séparé.
+Il existe également un fallback `pi_natives.node`. Les binaires compilés s'extraient vers `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node`. Si l'un d'entre eux est obsolète, les exports ne se mettront pas à jour.
 
 **Correctif :** supprimez le fichier obsolète avant de reconstruire.
 

@@ -4,15 +4,13 @@ import { prompt } from "@f5-sales-demo/pi-utils";
  * Format prompt files (mixed XML + Markdown + Handlebars).
  *
  * Rules:
- * 1. No blank line before list items
- * 2. No blank line after opening XML tag or Handlebars block
- * 3. No blank line before closing XML tag or Handlebars block
- * 4. Strip leading whitespace from top-level closing XML tags (opened at col 0) and Handlebars (lines starting with {{)
- * 5. Compact markdown tables (remove padding)
- * 6. Collapse 2+ blank lines to single blank line
- * 7. Trim trailing whitespace (preserve indentation)
- * 8. Trailing newline at EOF (disk only; runtime omits it)
- * 9. Bold RFC 2119 keywords (MUST, SHOULD, MAY, etc.) in prompt content
+ * 1. Preserve Markdown's single structural blank lines, including around lists and template blocks
+ * 2. Preserve indentation on Handlebars markers
+ * 3. Compact markdown tables (remove padding)
+ * 4. Collapse 2+ blank lines to a single blank line
+ * 5. Trim trailing whitespace (preserve indentation)
+ * 6. Add a trailing newline at EOF (disk only; runtime omits it)
+ * 7. Bold RFC 2119 keywords (MUST, SHOULD, MAY, etc.) in prompt content
  */
 import { Glob } from "bun";
 

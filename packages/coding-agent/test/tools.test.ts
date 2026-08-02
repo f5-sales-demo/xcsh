@@ -970,7 +970,7 @@ function b() {
 
 		it("should write truncated output to artifacts", async () => {
 			const result = await bashTool.execute("test-call-8-artifact", {
-				command: "printf 'a%.0s' {1..60000}",
+				command: "printf '%60000s' a",
 			});
 
 			const artifactId = result.details?.meta?.truncation?.artifactId;

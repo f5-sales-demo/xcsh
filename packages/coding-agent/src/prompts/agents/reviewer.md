@@ -112,6 +112,7 @@ Each `report_finding` requires:
 - `line_start`, `line_end`: Range ≤10 lines, must overlap diff
 
 Final `submit_result` call (payload under `result.data`):
+
 - `result.data.overall_correctness`: "correct" (no bugs/blockers) or "incorrect"
 - `result.data.explanation`: Plain text, 1-3 sentences summarizing verdict. Don't repeat findings (captured via `report_finding`).
 - `result.data.confidence`: 0.0-1.0

@@ -18,6 +18,7 @@ import * as path from "node:path";
 import * as yaml from "yaml";
 import { startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
+import { sessionInfoForWorker } from "../src/commands/worker";
 
 const CONSOLE_ROOT = process.env.CONSOLE_CATALOG_DIR ?? path.resolve(import.meta.dir, "../../../../console");
 const NAMESPACE = process.env.XCSH_NAMESPACE ?? "demo";
@@ -83,17 +84,17 @@ function unwrapJs(content: unknown): unknown {
 }
 
 async function main() {
-	const server = await startBridgeServer();
+	const server = await startBridgeServer(undefined, { serveKind: "browser", sessionInfo: sessionInfoForWorker });
 	const provider = new ExtensionBrowserProvider({ server });
 	console.log(`Acquiring (login) ${BASE_URL} …`);
 	const acquired = await provider.acquire(BASE_URL);
 	try {
 		console.log(`Navigate: ${BASE_URL}${listUrl}`);
 		await server.request("navigate", { url: `${BASE_URL}${listUrl}` }, 30000);
-		await new Promise(r => setTimeout(r, 2500));
+		await Bun.sleep(2500);
 		const clicked = await server.request("javascript_tool", { code: CLICK_ADD }, 15000);
 		console.log(`Open form (${addText}):`, unwrapJs(clicked.content));
-		await new Promise(r => setTimeout(r, 3500));
+		await Bun.sleep(3500);
 		// If the form has an "Add Item" button (datatable), click it to instantiate the row input.
 		const ai = await server.request(
 			"javascript_tool",
@@ -103,7 +104,7 @@ async function main() {
 			15000,
 		);
 		console.log("Add Item:", unwrapJs(ai.content));
-		await new Promise(r => setTimeout(r, 2500));
+		await Bun.sleep(2500);
 		const dump = await server.request("javascript_tool", { code: DUMP }, 15000);
 		const inputs = unwrapJs(dump.content) as Array<Record<string, unknown>>;
 		console.log(`\n=== ${resource}: ${inputs.length} visible inputs ===`);

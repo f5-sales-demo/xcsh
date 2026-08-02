@@ -1,3 +1,4 @@
+---
 name: Setup Rust
 description: Install the repository-pinned Rust toolchain and an optional cross-compilation target
 

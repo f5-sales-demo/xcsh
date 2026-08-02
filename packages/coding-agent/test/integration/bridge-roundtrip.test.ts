@@ -7,6 +7,7 @@
  */
 import { afterEach, describe, expect, it } from "bun:test";
 import { type BridgeServer, startBridgeServer } from "../../src/browser/extension-bridge";
+import { authenticateBrowserSocket, browserBridgeOptions } from "../helpers/extension-bridge-fixture";
 
 describe("BridgeServer round-trip", () => {
 	let server: BridgeServer | null = null;
@@ -20,14 +21,15 @@ describe("BridgeServer round-trip", () => {
 	});
 
 	it("sends a tool_request and receives a tool_result via WebSocket", async () => {
-		server = await startBridgeServer(0, { skipOriginCheck: true });
-		const port = (server as any).port;
+		server = await startBridgeServer(0, browserBridgeOptions({ skipOriginCheck: true }));
+		const port = server.port;
 
 		mockClient = new WebSocket(`ws://127.0.0.1:${port}`);
-		await new Promise<void>((resolve, reject) => {
-			mockClient!.onopen = () => resolve();
-			mockClient!.onerror = () => reject(new Error("ws connect failed"));
-		});
+		const connected = Promise.withResolvers<void>();
+		mockClient.onopen = () => connected.resolve();
+		mockClient.onerror = () => connected.reject(new Error("ws connect failed"));
+		await connected.promise;
+		await authenticateBrowserSocket(mockClient);
 
 		// The mock client echoes any tool_request as a tool_result.
 		mockClient.onmessage = ev => {
@@ -50,15 +52,16 @@ describe("BridgeServer round-trip", () => {
 	});
 
 	it("rejects with timeout when no response arrives", async () => {
-		server = await startBridgeServer(0, { skipOriginCheck: true });
-		const port = (server as any).port;
+		server = await startBridgeServer(0, browserBridgeOptions({ skipOriginCheck: true }));
+		const port = server.port;
 
 		// Connect but never reply.
 		mockClient = new WebSocket(`ws://127.0.0.1:${port}`);
-		await new Promise<void>((resolve, reject) => {
-			mockClient!.onopen = () => resolve();
-			mockClient!.onerror = () => reject(new Error("ws connect failed"));
-		});
+		const connected = Promise.withResolvers<void>();
+		mockClient.onopen = () => connected.resolve();
+		mockClient.onerror = () => connected.reject(new Error("ws connect failed"));
+		await connected.promise;
+		await authenticateBrowserSocket(mockClient);
 
 		await expect(server.request("no_reply", {}, 500)).rejects.toThrow(/timed out/);
 	});

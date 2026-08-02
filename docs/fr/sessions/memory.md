@@ -54,7 +54,8 @@ L'agent peut lire directement les fichiers mémoire en utilisant les URL `memory
 
 Les mémoires sont construites par un pipeline en arrière-plan qui s'exécute au démarrage ou est déclenché manuellement via une commande slash.
 
-**Phase 1 — extraction par session :** Pour chaque session passée ayant changé depuis son dernier traitement, un modèle lit l'historique de la session et extrait le signal durable : décisions techniques, contraintes, échecs résolus, flux de travail récurrents. Les sessions trop récentes, trop anciennes ou actuellement actives sont ignorées. Chaque extraction produit un bloc de mémoire brut et un court synopsis pour cette session.
+**Phase 1 — extraction par session :** Pour chaque session passée ayant changé depuis son dernier traitement, un modèle lit l'historique de la session et extrait le signal durable : décisions techniques, contraintes, échecs résolus, flux de travail récurrents.
+Les sessions trop récentes, trop anciennes ou actuellement actives sont ignorées. Chaque extraction produit un bloc de mémoire brut et un court synopsis pour cette session.
 
 **Phase 2 — consolidation :** Après l'extraction, une seconde passe de modèle lit toutes les extractions par session et produit trois sorties écrites sur le disque :
 

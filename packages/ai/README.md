@@ -95,69 +95,69 @@ const model = getModel("openai", "gpt-4o-mini");
 
 // Define tools with TypeBox schemas for type safety and validation
 const tools: Tool[] = [
-	{
-		name: "get_time",
-		description: "Get the current time",
-		parameters: Type.Object({
-			timezone: Type.Optional(Type.String({ description: "Optional timezone (e.g., America/New_York)" })),
-		}),
-	},
+ {
+  name: "get_time",
+  description: "Get the current time",
+  parameters: Type.Object({
+   timezone: Type.Optional(Type.String({ description: "Optional timezone (e.g., America/New_York)" })),
+  }),
+ },
 ];
 
 // Build a conversation context (easily serializable and transferable between models)
 const context: Context = {
-	systemPrompt: "You are a helpful assistant.",
-	messages: [{ role: "user", content: "What time is it?" }],
-	tools,
+ systemPrompt: "You are a helpful assistant.",
+ messages: [{ role: "user", content: "What time is it?" }],
+ tools,
 };
 
 // Option 1: Streaming with all event types
 const s = stream(model, context);
 
 for await (const event of s) {
-	switch (event.type) {
-		case "start":
-			console.log(`Starting with ${event.partial.model}`);
-			break;
-		case "text_start":
-			console.log("\n[Text started]");
-			break;
-		case "text_delta":
-			process.stdout.write(event.delta);
-			break;
-		case "text_end":
-			console.log("\n[Text ended]");
-			break;
-		case "thinking_start":
-			console.log("[Model is thinking...]");
-			break;
-		case "thinking_delta":
-			process.stdout.write(event.delta);
-			break;
-		case "thinking_end":
-			console.log("[Thinking complete]");
-			break;
-		case "toolcall_start":
-			console.log(`\n[Tool call started: index ${event.contentIndex}]`);
-			break;
-		case "toolcall_delta":
-			// Partial tool arguments are being streamed
-			const partialCall = event.partial.content[event.contentIndex];
-			if (partialCall.type === "toolCall") {
-				console.log(`[Streaming args for ${partialCall.name}]`);
-			}
-			break;
-		case "toolcall_end":
-			console.log(`\nTool called: ${event.toolCall.name}`);
-			console.log(`Arguments: ${JSON.stringify(event.toolCall.arguments)}`);
-			break;
-		case "done":
-			console.log(`\nFinished: ${event.reason}`);
-			break;
-		case "error":
-			console.error(`Error: ${event.error}`);
-			break;
-	}
+ switch (event.type) {
+  case "start":
+   console.log(`Starting with ${event.partial.model}`);
+   break;
+  case "text_start":
+   console.log("\n[Text started]");
+   break;
+  case "text_delta":
+   process.stdout.write(event.delta);
+   break;
+  case "text_end":
+   console.log("\n[Text ended]");
+   break;
+  case "thinking_start":
+   console.log("[Model is thinking...]");
+   break;
+  case "thinking_delta":
+   process.stdout.write(event.delta);
+   break;
+  case "thinking_end":
+   console.log("[Thinking complete]");
+   break;
+  case "toolcall_start":
+   console.log(`\n[Tool call started: index ${event.contentIndex}]`);
+   break;
+  case "toolcall_delta":
+   // Partial tool arguments are being streamed
+   const partialCall = event.partial.content[event.contentIndex];
+   if (partialCall.type === "toolCall") {
+    console.log(`[Streaming args for ${partialCall.name}]`);
+   }
+   break;
+  case "toolcall_end":
+   console.log(`\nTool called: ${event.toolCall.name}`);
+   console.log(`Arguments: ${JSON.stringify(event.toolCall.arguments)}`);
+   break;
+  case "done":
+   console.log(`\nFinished: ${event.reason}`);
+   break;
+  case "error":
+   console.error(`Error: ${event.error}`);
+   break;
+ }
 }
 
 // Get the final message after streaming, add it to the context
@@ -167,32 +167,32 @@ context.messages.push(finalMessage);
 // Handle tool calls if any
 const toolCalls = finalMessage.content.filter((b) => b.type === "toolCall");
 for (const call of toolCalls) {
-	// Execute the tool
-	const result =
-		call.name === "get_time"
-			? new Date().toLocaleString("en-US", {
-					timeZone: call.arguments.timezone || "UTC",
-					dateStyle: "full",
-					timeStyle: "long",
-				})
-			: "Unknown tool";
+ // Execute the tool
+ const result =
+  call.name === "get_time"
+   ? new Date().toLocaleString("en-US", {
+     timeZone: call.arguments.timezone || "UTC",
+     dateStyle: "full",
+     timeStyle: "long",
+    })
+   : "Unknown tool";
 
-	// Add tool result to context (supports text and images)
-	context.messages.push({
-		role: "toolResult",
-		toolCallId: call.id,
-		toolName: call.name,
-		content: [{ type: "text", text: result }],
-		isError: false,
-		timestamp: Date.now(),
-	});
+ // Add tool result to context (supports text and images)
+ context.messages.push({
+  role: "toolResult",
+  toolCallId: call.id,
+  toolName: call.name,
+  content: [{ type: "text", text: result }],
+  isError: false,
+  timestamp: Date.now(),
+ });
 }
 
 // Continue if there were tool calls
 if (toolCalls.length > 0) {
-	const continuation = await complete(model, context);
-	context.messages.push(continuation);
-	console.log("After tool execution:", continuation.content);
+ const continuation = await complete(model, context);
+ context.messages.push(continuation);
+ console.log("After tool execution:", continuation.content);
 }
 
 console.log(`Total tokens: ${finalMessage.usage.input} in, ${finalMessage.usage.output} out`);
@@ -202,11 +202,11 @@ console.log(`Cost: $${finalMessage.usage.cost.total.toFixed(4)}`);
 const response = await complete(model, context);
 
 for (const block of response.content) {
-	if (block.type === "text") {
-		console.log(block.text);
-	} else if (block.type === "toolCall") {
-		console.log(`Tool: ${block.name}(${JSON.stringify(block.arguments)})`);
-	}
+ if (block.type === "text") {
+  console.log(block.text);
+ } else if (block.type === "toolCall") {
+  console.log(`Tool: ${block.name}(${JSON.stringify(block.arguments)})`);
+ }
 }
 ```
 
@@ -221,26 +221,26 @@ import { Type, Tool, StringEnum } from "@f5-sales-demo/pi-ai";
 
 // Define tool parameters with TypeBox
 const weatherTool: Tool = {
-	name: "get_weather",
-	description: "Get current weather for a location",
-	parameters: Type.Object({
-		location: Type.String({ description: "City name or coordinates" }),
-		units: StringEnum(["celsius", "fahrenheit"], { default: "celsius" }),
-	}),
+ name: "get_weather",
+ description: "Get current weather for a location",
+ parameters: Type.Object({
+  location: Type.String({ description: "City name or coordinates" }),
+  units: StringEnum(["celsius", "fahrenheit"], { default: "celsius" }),
+ }),
 };
 
 // Note: For Google API compatibility, use StringEnum helper instead of Type.Enum
 // Type.Enum generates anyOf/const patterns that Google doesn't support
 
 const bookMeetingTool: Tool = {
-	name: "book_meeting",
-	description: "Schedule a meeting",
-	parameters: Type.Object({
-		title: Type.String({ minLength: 1 }),
-		startTime: Type.String({ format: "date-time" }),
-		endTime: Type.String({ format: "date-time" }),
-		attendees: Type.Array(Type.String({ format: "email" }), { minItems: 1 }),
-	}),
+ name: "book_meeting",
+ description: "Schedule a meeting",
+ parameters: Type.Object({
+  title: Type.String({ minLength: 1 }),
+  startTime: Type.String({ format: "date-time" }),
+  endTime: Type.String({ format: "date-time" }),
+  attendees: Type.Array(Type.String({ format: "email" }), { minItems: 1 }),
+ }),
 };
 ```
 
@@ -252,43 +252,43 @@ Tool results use content blocks and can include both text and images:
 import * as fs from "node:fs";
 
 const context: Context = {
-	messages: [{ role: "user", content: "What is the weather in London?" }],
-	tools: [weatherTool],
+ messages: [{ role: "user", content: "What is the weather in London?" }],
+ tools: [weatherTool],
 };
 
 const response = await complete(model, context);
 
 // Check for tool calls in the response
 for (const block of response.content) {
-	if (block.type === "toolCall") {
-		// Execute your tool with the arguments
-		// See "Validating Tool Arguments" section for validation
-		const result = await executeWeatherApi(block.arguments);
+ if (block.type === "toolCall") {
+  // Execute your tool with the arguments
+  // See "Validating Tool Arguments" section for validation
+  const result = await executeWeatherApi(block.arguments);
 
-		// Add tool result with text content
-		context.messages.push({
-			role: "toolResult",
-			toolCallId: block.id,
-			toolName: block.name,
-			content: [{ type: "text", text: JSON.stringify(result) }],
-			isError: false,
-			timestamp: Date.now(),
-		});
-	}
+  // Add tool result with text content
+  context.messages.push({
+   role: "toolResult",
+   toolCallId: block.id,
+   toolName: block.name,
+   content: [{ type: "text", text: JSON.stringify(result) }],
+   isError: false,
+   timestamp: Date.now(),
+  });
+ }
 }
 
 // Tool results can also include images (for vision-capable models)
 const imageBuffer = fs.readFileSync("chart.png");
 context.messages.push({
-	role: "toolResult",
-	toolCallId: "tool_xyz",
-	toolName: "generate_chart",
-	content: [
-		{ type: "text", text: "Generated chart showing temperature trends" },
-		{ type: "image", data: imageBuffer.toBase64(), mimeType: "image/png" },
-	],
-	isError: false,
-	timestamp: Date.now(),
+ role: "toolResult",
+ toolCallId: "tool_xyz",
+ toolName: "generate_chart",
+ content: [
+  { type: "text", text: "Generated chart showing temperature trends" },
+  { type: "image", data: imageBuffer.toBase64(), mimeType: "image/png" },
+ ],
+ isError: false,
+ timestamp: Date.now(),
 });
 ```
 
@@ -300,30 +300,30 @@ During streaming, tool call arguments are progressively parsed as they arrive. T
 const s = stream(model, context);
 
 for await (const event of s) {
-	if (event.type === "toolcall_delta") {
-		const toolCall = event.partial.content[event.contentIndex];
+ if (event.type === "toolcall_delta") {
+  const toolCall = event.partial.content[event.contentIndex];
 
-		// toolCall.arguments contains partially parsed JSON during streaming
-		// This allows for progressive UI updates
-		if (toolCall.type === "toolCall" && toolCall.arguments) {
-			// BE DEFENSIVE: arguments may be incomplete
-			// Example: Show file path being written even before content is complete
-			if (toolCall.name === "write_file" && toolCall.arguments.path) {
-				console.log(`Writing to: ${toolCall.arguments.path}`);
+  // toolCall.arguments contains partially parsed JSON during streaming
+  // This allows for progressive UI updates
+  if (toolCall.type === "toolCall" && toolCall.arguments) {
+   // BE DEFENSIVE: arguments may be incomplete
+   // Example: Show file path being written even before content is complete
+   if (toolCall.name === "write_file" && toolCall.arguments.path) {
+    console.log(`Writing to: ${toolCall.arguments.path}`);
 
-				// Content might be partial or missing
-				if (toolCall.arguments.content) {
-					console.log(`Content preview: ${toolCall.arguments.content.substring(0, 100)}...`);
-				}
-			}
-		}
-	}
+    // Content might be partial or missing
+    if (toolCall.arguments.content) {
+     console.log(`Content preview: ${toolCall.arguments.content.substring(0, 100)}...`);
+    }
+   }
+  }
+ }
 
-	if (event.type === "toolcall_end") {
-		// Here toolCall.arguments is complete (but not yet validated)
-		const toolCall = event.toolCall;
-		console.log(`Tool completed: ${toolCall.name}`, toolCall.arguments);
-	}
+ if (event.type === "toolcall_end") {
+  // Here toolCall.arguments is complete (but not yet validated)
+  const toolCall = event.toolCall;
+  console.log(`Tool completed: ${toolCall.name}`, toolCall.arguments);
+ }
 }
 ```
 
@@ -350,26 +350,26 @@ const tools: Tool[] = [weatherTool, calculatorTool];
 const s = stream(model, { messages, tools });
 
 for await (const event of s) {
-	if (event.type === "toolcall_end") {
-		const toolCall = event.toolCall;
+ if (event.type === "toolcall_end") {
+  const toolCall = event.toolCall;
 
-		try {
-			// Validate arguments against the tool's schema (throws on invalid args)
-			const validatedArgs = validateToolCall(tools, toolCall);
-			const result = await executeMyTool(toolCall.name, validatedArgs);
-			// ... add tool result to context
-		} catch (error) {
-			// Validation failed - return error as tool result so model can retry
-			context.messages.push({
-				role: "toolResult",
-				toolCallId: toolCall.id,
-				toolName: toolCall.name,
-				content: [{ type: "text", text: error.message }],
-				isError: true,
-				timestamp: Date.now(),
-			});
-		}
-	}
+  try {
+   // Validate arguments against the tool's schema (throws on invalid args)
+   const validatedArgs = validateToolCall(tools, toolCall);
+   const result = await executeMyTool(toolCall.name, validatedArgs);
+   // ... add tool result to context
+  } catch (error) {
+   // Validation failed - return error as tool result so model can retry
+   context.messages.push({
+    role: "toolResult",
+    toolCallId: toolCall.id,
+    toolName: toolCall.name,
+    content: [{ type: "text", text: error.message }],
+    isError: true,
+    timestamp: Date.now(),
+   });
+  }
+ }
 }
 ```
 
@@ -404,29 +404,29 @@ const model = getModel("openai", "gpt-4o-mini");
 
 // Check if model supports images
 if (model.input.includes("image")) {
-	console.log("Model supports vision");
+ console.log("Model supports vision");
 }
 
 const imageBuffer = fs.readFileSync("image.png");
 const base64Image = imageBuffer.toBase64();
 
 const response = await complete(model, {
-	messages: [
-		{
-			role: "user",
-			content: [
-				{ type: "text", text: "What is in this image?" },
-				{ type: "image", data: base64Image, mimeType: "image/png" },
-			],
-		},
-	],
+ messages: [
+  {
+   role: "user",
+   content: [
+    { type: "text", text: "What is in this image?" },
+    { type: "image", data: base64Image, mimeType: "image/png" },
+   ],
+  },
+ ],
 });
 
 // Access the response
 for (const block of response.content) {
-	if (block.type === "text") {
-		console.log(block.text);
-	}
+ if (block.type === "text") {
+  console.log(block.text);
+ }
 }
 ```
 
@@ -450,27 +450,27 @@ const model = getModel("anthropic", "claude-sonnet-4-20250514");
 
 // Check if model supports reasoning
 if (model.reasoning) {
-	console.log("Model supports reasoning/thinking");
+ console.log("Model supports reasoning/thinking");
 }
 
 // Use the simplified reasoning option
 const response = await completeSimple(
-	model,
-	{
-		messages: [{ role: "user", content: "Solve: 2x + 5 = 13" }],
-	},
-	{
-		reasoning: "medium", // 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' (xhigh maps to high on non-OpenAI providers)
-	}
+ model,
+ {
+  messages: [{ role: "user", content: "Solve: 2x + 5 = 13" }],
+ },
+ {
+  reasoning: "medium", // 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' (xhigh maps to high on non-OpenAI providers)
+ }
 );
 
 // Access thinking and text blocks
 for (const block of response.content) {
-	if (block.type === "thinking") {
-		console.log("Thinking:", block.thinking);
-	} else if (block.type === "text") {
-		console.log("Response:", block.text);
-	}
+ if (block.type === "thinking") {
+  console.log("Thinking:", block.thinking);
+ } else if (block.type === "text") {
+  console.log("Response:", block.text);
+ }
 }
 ```
 
@@ -484,24 +484,24 @@ import { getModel, complete } from "@f5-sales-demo/pi-ai";
 // OpenAI Reasoning (o1, o3, gpt-5)
 const openaiModel = getModel("openai", "gpt-5-mini");
 await complete(openaiModel, context, {
-	reasoningEffort: "medium",
-	reasoningSummary: "detailed", // OpenAI Responses API only
+ reasoningEffort: "medium",
+ reasoningSummary: "detailed", // OpenAI Responses API only
 });
 
 // Anthropic Thinking (Claude Sonnet 4)
 const anthropicModel = getModel("anthropic", "claude-sonnet-4-20250514");
 await complete(anthropicModel, context, {
-	thinkingEnabled: true,
-	thinkingBudgetTokens: 8192, // Optional token limit
+ thinkingEnabled: true,
+ thinkingBudgetTokens: 8192, // Optional token limit
 });
 
 // Google Gemini Thinking
 const googleModel = getModel("google", "gemini-2.5-flash");
 await complete(googleModel, context, {
-	thinking: {
-		enabled: true,
-		budgetTokens: 8192, // -1 for dynamic, 0 to disable
-	},
+ thinking: {
+  enabled: true,
+  budgetTokens: 8192, // -1 for dynamic, 0 to disable
+ },
 });
 ```
 
@@ -513,17 +513,17 @@ When streaming, thinking content is delivered through specific events:
 const s = streamSimple(model, context, { reasoning: "high" });
 
 for await (const event of s) {
-	switch (event.type) {
-		case "thinking_start":
-			console.log("[Model started thinking]");
-			break;
-		case "thinking_delta":
-			process.stdout.write(event.delta); // Stream thinking content
-			break;
-		case "thinking_end":
-			console.log("\n[Thinking complete]");
-			break;
-	}
+ switch (event.type) {
+  case "thinking_start":
+   console.log("[Model started thinking]");
+   break;
+  case "thinking_delta":
+   process.stdout.write(event.delta); // Stream thinking content
+   break;
+  case "thinking_end":
+   console.log("\n[Thinking complete]");
+   break;
+ }
 }
 ```
 
@@ -544,20 +544,20 @@ When a request ends with an error (including aborts and tool call validation err
 ```typescript
 // In streaming
 for await (const event of stream) {
-	if (event.type === "error") {
-		// event.reason is either "error" or "aborted"
-		// event.error is the AssistantMessage with partial content
-		console.error(`Error (${event.reason}):`, event.error.errorMessage);
-		console.log("Partial content:", event.error.content);
-	}
+ if (event.type === "error") {
+  // event.reason is either "error" or "aborted"
+  // event.error is the AssistantMessage with partial content
+  console.error(`Error (${event.reason}):`, event.error.errorMessage);
+  console.log("Partial content:", event.error.content);
+ }
 }
 
 // The final message will have the error details
 const message = await stream.result();
 if (message.stopReason === "error" || message.stopReason === "aborted") {
-	console.error("Request failed:", message.errorMessage);
-	// message.content contains any partial content received before the error
-	// message.usage contains partial token counts and costs
+ console.error("Request failed:", message.errorMessage);
+ // message.content contains any partial content received before the error
+ // message.usage contains partial token counts and costs
 }
 ```
 
@@ -574,30 +574,30 @@ const model = getModel("openai", "gpt-4o-mini");
 const signal = AbortSignal.timeout(2000);
 
 const s = stream(
-	model,
-	{
-		messages: [{ role: "user", content: "Write a long story" }],
-	},
-	{
-		signal,
-	}
+ model,
+ {
+  messages: [{ role: "user", content: "Write a long story" }],
+ },
+ {
+  signal,
+ }
 );
 
 for await (const event of s) {
-	if (event.type === "text_delta") {
-		process.stdout.write(event.delta);
-	} else if (event.type === "error") {
-		// event.reason tells you if it was "error" or "aborted"
-		console.log(`${event.reason === "aborted" ? "Aborted" : "Error"}:`, event.error.errorMessage);
-	}
+ if (event.type === "text_delta") {
+  process.stdout.write(event.delta);
+ } else if (event.type === "error") {
+  // event.reason tells you if it was "error" or "aborted"
+  console.log(`${event.reason === "aborted" ? "Aborted" : "Error"}:`, event.error.errorMessage);
+ }
 }
 
 // Get results (may be partial if aborted)
 const response = await s.result();
 if (response.stopReason === "aborted") {
-	console.log("Request was aborted:", response.errorMessage);
-	console.log("Partial content received:", response.content);
-	console.log("Tokens used:", response.usage);
+ console.log("Request was aborted:", response.errorMessage);
+ console.log("Partial content received:", response.content);
+ console.log("Tokens used:", response.usage);
 }
 ```
 
@@ -607,7 +607,7 @@ Aborted messages can be added to the conversation context and continued in subse
 
 ```typescript
 const context = {
-	messages: [{ role: "user", content: "Explain quantum computing in detail" }],
+ messages: [{ role: "user", content: "Explain quantum computing in detail" }],
 };
 
 // First request gets aborted after 2 seconds
@@ -638,11 +638,11 @@ Example:
 
 ```typescript
 const response = await complete(model, context, {
-	apiKey: "sk-live",
-	headers: { "X-Debug-Trace": "true" },
-	onPayload: (payload) => {
-		console.log("request payload", payload);
-	},
+ apiKey: "sk-live",
+ headers: { "X-Debug-Trace": "true" },
+ onPayload: (payload) => {
+  console.log("request payload", payload);
+ },
 });
 ```
 
@@ -676,11 +676,11 @@ console.log(providers); // ['openai', 'anthropic', 'google', 'xai', 'groq', ...]
 // Get all models from a provider (fully typed)
 const anthropicModels = getModels("anthropic");
 for (const model of anthropicModels) {
-	console.log(`${model.id}: ${model.name}`);
-	console.log(`  API: ${model.api}`); // 'anthropic-messages'
-	console.log(`  Context: ${model.contextWindow} tokens`);
-	console.log(`  Vision: ${model.input.includes("image")}`);
-	console.log(`  Reasoning: ${model.reasoning}`);
+ console.log(`${model.id}: ${model.name}`);
+ console.log(`  API: ${model.api}`); // 'anthropic-messages'
+ console.log(`  Context: ${model.contextWindow} tokens`);
+ console.log(`  Vision: ${model.input.includes("image")}`);
+ console.log(`  Reasoning: ${model.reasoning}`);
 }
 
 // Get a specific model (both provider and model ID are auto-completed in IDEs)
@@ -698,56 +698,56 @@ import { Model, stream } from "@f5-sales-demo/pi-ai";
 
 // Example: Ollama using OpenAI-compatible API
 const ollamaModel: Model<"openai-completions"> = {
-	id: "llama-3.1-8b",
-	name: "Llama 3.1 8B (Ollama)",
-	api: "openai-completions",
-	provider: "ollama",
-	baseUrl: "http://localhost:11434/v1",
-	reasoning: false,
-	input: ["text"],
-	cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-	contextWindow: 128000,
-	maxTokens: 32000,
+ id: "llama-3.1-8b",
+ name: "Llama 3.1 8B (Ollama)",
+ api: "openai-completions",
+ provider: "ollama",
+ baseUrl: "http://localhost:11434/v1",
+ reasoning: false,
+ input: ["text"],
+ cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+ contextWindow: 128000,
+ maxTokens: 32000,
 };
 
 // Example: LiteLLM proxy with explicit compat settings
 const litellmModel: Model<"openai-completions"> = {
-	id: "gpt-4o",
-	name: "GPT-4o (via LiteLLM)",
-	api: "openai-completions",
-	provider: "litellm",
-	baseUrl: "http://localhost:4000/v1",
-	reasoning: false,
-	input: ["text", "image"],
-	cost: { input: 2.5, output: 10, cacheRead: 0, cacheWrite: 0 },
-	contextWindow: 128000,
-	maxTokens: 16384,
-	compat: {
-		supportsStore: false, // LiteLLM doesn't support the store field
-	},
+ id: "gpt-4o",
+ name: "GPT-4o (via LiteLLM)",
+ api: "openai-completions",
+ provider: "litellm",
+ baseUrl: "http://localhost:4000/v1",
+ reasoning: false,
+ input: ["text", "image"],
+ cost: { input: 2.5, output: 10, cacheRead: 0, cacheWrite: 0 },
+ contextWindow: 128000,
+ maxTokens: 16384,
+ compat: {
+  supportsStore: false, // LiteLLM doesn't support the store field
+ },
 };
 
 // Example: Custom endpoint with headers (bypassing Cloudflare bot detection)
 const proxyModel: Model<"anthropic-messages"> = {
-	id: "claude-sonnet-4",
-	name: "Claude Sonnet 4 (Proxied)",
-	api: "anthropic-messages",
-	provider: "custom-proxy",
-	baseUrl: "https://proxy.example.com/v1",
-	reasoning: true,
-	input: ["text", "image"],
-	cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
-	contextWindow: 200000,
-	maxTokens: 8192,
-	headers: {
-		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-		"X-Custom-Auth": "bearer-token-here",
-	},
+ id: "claude-sonnet-4",
+ name: "Claude Sonnet 4 (Proxied)",
+ api: "anthropic-messages",
+ provider: "custom-proxy",
+ baseUrl: "https://proxy.example.com/v1",
+ reasoning: true,
+ input: ["text", "image"],
+ cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
+ contextWindow: 200000,
+ maxTokens: 8192,
+ headers: {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+  "X-Custom-Auth": "bearer-token-here",
+ },
 };
 
 // Use the custom model
 const response = await stream(ollamaModel, context, {
-	apiKey: process.env.OLLAMA_API_KEY, // Optional; local Ollama usually runs without auth
+ apiKey: process.env.OLLAMA_API_KEY, // Optional; local Ollama usually runs without auth
 });
 ```
 
@@ -757,11 +757,11 @@ The `openai-completions` API is implemented by many providers with minor differe
 
 ```typescript
 interface OpenAICompat {
-	supportsStore?: boolean; // Whether provider supports the `store` field (default: true)
-	supportsDeveloperRole?: boolean; // Whether provider supports `developer` role vs `system` (default: true)
-	supportsReasoningEffort?: boolean; // Whether provider supports `reasoning_effort` (default: true)
-	maxTokensField?: "max_completion_tokens" | "max_tokens"; // Which field name to use (default: max_completion_tokens)
-	extraBody?: Record<string, unknown>; // Extra request-body fields for custom proxy routing or provider-specific options
+ supportsStore?: boolean; // Whether provider supports the `store` field (default: true)
+ supportsDeveloperRole?: boolean; // Whether provider supports `developer` role vs `system` (default: true)
+ supportsReasoningEffort?: boolean; // Whether provider supports `reasoning_effort` (default: true)
+ maxTokensField?: "max_completion_tokens" | "max_tokens"; // Which field name to use (default: max_completion_tokens)
+ extraBody?: Record<string, unknown>; // Extra request-body fields for custom proxy routing or provider-specific options
 }
 ```
 
@@ -781,9 +781,9 @@ const claude = getModel("anthropic", "claude-sonnet-4-20250514");
 
 // So these options are type-checked for AnthropicOptions
 await stream(claude, context, {
-	thinkingEnabled: true, // ✓ Valid for anthropic-messages
-	thinkingBudgetTokens: 2048, // ✓ Valid for anthropic-messages
-	// reasoningEffort: 'high'  // ✗ TypeScript error: not valid for anthropic-messages
+ thinkingEnabled: true, // ✓ Valid for anthropic-messages
+ thinkingBudgetTokens: 2048, // ✓ Valid for anthropic-messages
+ // reasoningEffort: 'high'  // ✗ TypeScript error: not valid for anthropic-messages
 });
 ```
 
@@ -808,12 +808,12 @@ import { getModel, complete, Context } from "@f5-sales-demo/pi-ai";
 // Start with Claude
 const claude = getModel("anthropic", "claude-sonnet-4-20250514");
 const context: Context = {
-	messages: [],
+ messages: [],
 };
 
 context.messages.push({ role: "user", content: "What is 25 * 18?" });
 const claudeResponse = await complete(claude, context, {
-	thinkingEnabled: true,
+ thinkingEnabled: true,
 });
 context.messages.push(claudeResponse);
 
@@ -854,8 +854,8 @@ import { Context, getModel, complete } from "@f5-sales-demo/pi-ai";
 
 // Create and use a context
 const context: Context = {
-	systemPrompt: "You are a helpful assistant.",
-	messages: [{ role: "user", content: "What is TypeScript?" }],
+ systemPrompt: "You are a helpful assistant.",
+ messages: [{ role: "user", content: "What is TypeScript?" }],
 };
 
 const model = getModel("openai", "gpt-4o-mini");
@@ -891,13 +891,13 @@ import { getModel, complete } from "@f5-sales-demo/pi-ai";
 const model = getModel("anthropic", "claude-haiku-4-5-20251001");
 
 const response = await complete(
-	model,
-	{
-		messages: [{ role: "user", content: "Hello!" }],
-	},
-	{
-		apiKey: "your-api-key",
-	}
+ model,
+ {
+  messages: [{ role: "user", content: "Hello!" }],
+ },
+ {
+  apiKey: "your-api-key",
+ }
 );
 ```
 
@@ -970,7 +970,7 @@ const response = await complete(model, context);
 
 // Or override with explicit key
 const response = await complete(model, context, {
-	apiKey: "sk-different-key",
+ apiKey: "sk-different-key",
 });
 ```
 
@@ -1021,14 +1021,14 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
 import { getModel, complete } from "@f5-sales-demo/pi-ai";
 
 (async () => {
-	const model = getModel("google-vertex", "gemini-2.5-flash");
-	const response = await complete(model, {
-		messages: [{ role: "user", content: "Hello from Vertex AI" }],
-	});
+ const model = getModel("google-vertex", "gemini-2.5-flash");
+ const response = await complete(model, {
+  messages: [{ role: "user", content: "Hello from Vertex AI" }],
+ });
 
-	for (const block of response.content) {
-		if (block.type === "text") console.log(block.text);
-	}
+ for (const block of response.content) {
+  if (block.type === "text") console.log(block.text);
+ }
 })().catch(console.error);
 ```
 
@@ -1057,32 +1057,32 @@ The library provides login and token refresh functions. Credential storage is th
 
 ```typescript
 import {
-	// Login functions (return credentials, do not store)
-	loginAnthropic,
-	loginOpenAICodex,
-	loginGitHubCopilot,
-	loginGeminiCli,
-	loginAntigravity,
-	loginCloudflareAiGateway,
-	loginHuggingface,
-	loginLiteLLM,
-	loginMoonshot,
-	loginNvidia,
-	loginNanoGPT,
-	loginQianfan,
-	loginQwenPortal,
-	loginTogether,
-	loginVenice,
-	loginVllm,
-	loginXiaomi,
+ // Login functions (return credentials, do not store)
+ loginAnthropic,
+ loginOpenAICodex,
+ loginGitHubCopilot,
+ loginGeminiCli,
+ loginAntigravity,
+ loginCloudflareAiGateway,
+ loginHuggingface,
+ loginLiteLLM,
+ loginMoonshot,
+ loginNvidia,
+ loginNanoGPT,
+ loginQianfan,
+ loginQwenPortal,
+ loginTogether,
+ loginVenice,
+ loginVllm,
+ loginXiaomi,
 
-	// Token management
-	refreshOAuthToken, // (provider, credentials) => new credentials
-	getOAuthApiKey, // (provider, credentialsMap) => { newCredentials, apiKey } | null
+ // Token management
+ refreshOAuthToken, // (provider, credentials) => new credentials
+ getOAuthApiKey, // (provider, credentialsMap) => { newCredentials, apiKey } | null
 
-	// Types
-	type OAuthProvider, // includes 'anthropic', 'openai-codex', 'github-copilot', 'google-gemini-cli', 'google-antigravity', 'together', 'moonshot', 'qianfan', 'nvidia', 'nanogpt', 'huggingface', 'venice', 'xiaomi', 'vllm', 'litellm', 'cloudflare-ai-gateway', 'qwen-portal', ...
-	type OAuthCredentials,
+ // Types
+ type OAuthProvider, // includes 'anthropic', 'openai-codex', 'github-copilot', 'google-gemini-cli', 'google-antigravity', 'together', 'moonshot', 'qianfan', 'nvidia', 'nanogpt', 'huggingface', 'venice', 'xiaomi', 'vllm', 'litellm', 'cloudflare-ai-gateway', 'qwen-portal', ...
+ type OAuthCredentials,
 } from "@f5-sales-demo/pi-ai";
 ```
 
@@ -1090,8 +1090,8 @@ import {
 
 ```typescript
 await loginOpenAICodex({
-	onAuth: ({ url }) => console.log(url),
-	originator: "my-cli",
+ onAuth: ({ url }) => console.log(url),
+ originator: "my-cli",
 });
 ```
 
@@ -1102,14 +1102,14 @@ import { loginGitHubCopilot } from "@f5-sales-demo/pi-ai";
 import * as fs from "node:fs";
 
 const credentials = await loginGitHubCopilot({
-	onAuth: (url, instructions) => {
-		console.log(`Open: ${url}`);
-		if (instructions) console.log(instructions);
-	},
-	onPrompt: async (prompt) => {
-		return await getUserInput(prompt.message);
-	},
-	onProgress: (message) => console.log(message),
+ onAuth: (url, instructions) => {
+  console.log(`Open: ${url}`);
+  if (instructions) console.log(instructions);
+ },
+ onPrompt: async (prompt) => {
+  return await getUserInput(prompt.message);
+ },
+ onProgress: (message) => console.log(message),
 });
 
 // Store credentials yourself
@@ -1139,11 +1139,11 @@ fs.writeFileSync("credentials.json", JSON.stringify(auth, null, 2));
 // Use the API key
 const model = getModel("github-copilot", "gpt-4o");
 const response = await complete(
-	model,
-	{
-		messages: [{ role: "user", content: "Hello!" }],
-	},
-	{ apiKey: result.apiKey }
+ model,
+ {
+  messages: [{ role: "user", content: "Hello!" }],
+ },
+ { apiKey: result.apiKey }
 );
 ```
 

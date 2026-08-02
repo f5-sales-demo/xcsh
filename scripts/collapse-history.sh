@@ -29,11 +29,11 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
-info()  { printf "${BLUE}[info]${RESET}  %s\n" "$*"; }
-ok()    { printf "${GREEN}[ok]${RESET}    %s\n" "$*"; }
-warn()  { printf "${YELLOW}[warn]${RESET}  %s\n" "$*"; }
-err()   { printf "${RED}[error]${RESET} %s\n" "$*" >&2; }
-header(){ printf "\n${BOLD}${CYAN}═══ %s ═══${RESET}\n\n" "$*"; }
+info() { printf "${BLUE}[info]${RESET}  %s\n" "$*"; }
+ok() { printf "${GREEN}[ok]${RESET}    %s\n" "$*"; }
+warn() { printf "${YELLOW}[warn]${RESET}  %s\n" "$*"; }
+err() { printf "${RED}[error]${RESET} %s\n" "$*" >&2; }
+header() { printf "\n${BOLD}${CYAN}═══ %s ═══${RESET}\n\n" "$*"; }
 
 # ─── Group definitions ────────────────────────────────────────────────────────
 
@@ -41,10 +41,10 @@ header(){ printf "\n${BOLD}${CYAN}═══ %s ═══${RESET}\n\n" "$*"; }
 # Each group has: name, label, commit message
 NUM_GROUPS=6
 
-group_name()    { echo "${GROUP_NAMES[$1]}"; }
-group_label()   { echo "${GROUP_LABELS[$1]}"; }
+group_name() { echo "${GROUP_NAMES[$1]}"; }
+group_label() { echo "${GROUP_LABELS[$1]}"; }
 group_message() { echo "${GROUP_MESSAGES[$1]}"; }
-group_file()    { echo "${WORK_DIR}/group-$(group_name "$1").txt"; }
+group_file() { echo "${WORK_DIR}/group-$(group_name "$1").txt"; }
 
 GROUP_NAMES=(
   "build-ci"
@@ -80,41 +80,98 @@ classify_file() {
 
   # Docs group
   case "$file" in
-    DEVELOPERS.md|CONTRIBUTING.md|AGENTS.md|STAGES.md) echo "docs"; return ;;
-    AUTHENTICATION-*)            echo "docs"; return ;;
-    docs/*|*/DEVELOPMENT.md)     echo "docs"; return ;;
-    *CHANGELOG.md)               echo "docs"; return ;;
+  DEVELOPERS.md | CONTRIBUTING.md | AGENTS.md | STAGES.md)
+    echo "docs"
+    return
+    ;;
+  AUTHENTICATION-*)
+    echo "docs"
+    return
+    ;;
+  docs/* | */DEVELOPMENT.md)
+    echo "docs"
+    return
+    ;;
+  *CHANGELOG.md)
+    echo "docs"
+    return
+    ;;
   esac
 
   # Build & CI group
   case "$file" in
-    .github/*|.githooks/*)       echo "build-ci"; return ;;
-    scripts/*)                   echo "build-ci"; return ;;
-    *codesign*|*notary*)         echo "build-ci"; return ;;
-    rust-toolchain.toml|rustfmt.toml) echo "build-ci"; return ;;
+  .github/* | .githooks/*)
+    echo "build-ci"
+    return
+    ;;
+  scripts/*)
+    echo "build-ci"
+    return
+    ;;
+  *codesign* | *notary*)
+    echo "build-ci"
+    return
+    ;;
+  rust-toolchain.toml | rustfmt.toml)
+    echo "build-ci"
+    return
+    ;;
   esac
 
   # Auth & Profiles group
   case "$file" in
-    *xcsh-*|*xcsh_*)            echo "auth-profiles"; return ;;
-    */secrets/*|*/secrets.ts|*/obfuscator*) echo "auth-profiles"; return ;;
-    */oauth/litellm*|*/oauth/index*) echo "auth-profiles"; return ;;
-    *agent-session-obfuscator*)  echo "auth-profiles"; return ;;
+  *xcsh-* | *xcsh_*)
+    echo "auth-profiles"
+    return
+    ;;
+  */secrets/* | */secrets.ts | */obfuscator*)
+    echo "auth-profiles"
+    return
+    ;;
+  */oauth/litellm* | */oauth/index*)
+    echo "auth-profiles"
+    return
+    ;;
+  *agent-session-obfuscator*)
+    echo "auth-profiles"
+    return
+    ;;
   esac
 
   # UI & Theme group
   case "$file" in
-    */status-line/*|*/status-line.ts|*status-bar*) echo "ui-theme"; return ;;
-    */theme/*|*/theme.ts)        echo "ui-theme"; return ;;
-    */gutter-*|*gutter-block*)   echo "ui-theme"; return ;;
-    */welcome*|*welcome-*)       echo "ui-theme"; return ;;
+  */status-line/* | */status-line.ts | *status-bar*)
+    echo "ui-theme"
+    return
+    ;;
+  */theme/* | */theme.ts)
+    echo "ui-theme"
+    return
+    ;;
+  */gutter-* | *gutter-block*)
+    echo "ui-theme"
+    return
+    ;;
+  */welcome* | *welcome-*)
+    echo "ui-theme"
+    return
+    ;;
   esac
 
   # AI Providers group
   case "$file" in
-    */providers/ollama*|*/providers/*image*) echo "ai-providers"; return ;;
-    */auto-config*|*/model-registry*) echo "ai-providers"; return ;;
-    */oauth-litellm*|*litellm*)  echo "ai-providers"; return ;;
+  */providers/ollama* | */providers/*image*)
+    echo "ai-providers"
+    return
+    ;;
+  */auto-config* | */model-registry*)
+    echo "ai-providers"
+    return
+    ;;
+  */oauth-litellm* | *litellm*)
+    echo "ai-providers"
+    return
+    ;;
   esac
 
   # Core & Misc (default)
@@ -179,17 +236,17 @@ do_analyze() {
 
   # Get file lists
   local upstream_ref="${UPSTREAM_REMOTE}/${UPSTREAM_BRANCH}"
-  git diff --name-only "$MERGE_BASE"..HEAD | sort > "$WORK_DIR/our-files.txt"
-  git diff --name-only "${MERGE_BASE}..${upstream_ref}" | sort > "$WORK_DIR/upstream-files.txt"
+  git diff --name-only "$MERGE_BASE"..HEAD | sort >"$WORK_DIR/our-files.txt"
+  git diff --name-only "${MERGE_BASE}..${upstream_ref}" | sort >"$WORK_DIR/upstream-files.txt"
 
-  comm -12 "$WORK_DIR/our-files.txt" "$WORK_DIR/upstream-files.txt" > "$WORK_DIR/both-files.txt"
-  comm -23 "$WORK_DIR/our-files.txt" "$WORK_DIR/upstream-files.txt" > "$WORK_DIR/our-only-files.txt"
+  comm -12 "$WORK_DIR/our-files.txt" "$WORK_DIR/upstream-files.txt" >"$WORK_DIR/both-files.txt"
+  comm -23 "$WORK_DIR/our-files.txt" "$WORK_DIR/upstream-files.txt" >"$WORK_DIR/our-only-files.txt"
 
   local our_count upstream_count both_count our_only_count
-  our_count=$(wc -l < "$WORK_DIR/our-files.txt" | tr -d ' ')
-  upstream_count=$(wc -l < "$WORK_DIR/upstream-files.txt" | tr -d ' ')
-  both_count=$(wc -l < "$WORK_DIR/both-files.txt" | tr -d ' ')
-  our_only_count=$(wc -l < "$WORK_DIR/our-only-files.txt" | tr -d ' ')
+  our_count=$(wc -l <"$WORK_DIR/our-files.txt" | tr -d ' ')
+  upstream_count=$(wc -l <"$WORK_DIR/upstream-files.txt" | tr -d ' ')
+  both_count=$(wc -l <"$WORK_DIR/both-files.txt" | tr -d ' ')
+  our_only_count=$(wc -l <"$WORK_DIR/our-only-files.txt" | tr -d ' ')
 
   printf "\n"
   info "Files we changed:              $our_count"
@@ -199,7 +256,7 @@ do_analyze() {
 
   # Initialize group files
   for i in $(seq 0 $((NUM_GROUPS - 1))); do
-    : > "$(group_file "$i")"
+    : >"$(group_file "$i")"
   done
 
   # Classify each file
@@ -214,11 +271,11 @@ do_analyze() {
     # Find group index and append to its file
     for i in $(seq 0 $((NUM_GROUPS - 1))); do
       if [ "$(group_name "$i")" = "$group" ]; then
-        echo "$file" >> "$(group_file "$i")"
+        echo "$file" >>"$(group_file "$i")"
         break
       fi
     done
-  done < "$WORK_DIR/our-files.txt"
+  done <"$WORK_DIR/our-files.txt"
 
   # Print report
   printf "%-40s %8s %10s\n" "Group" "Files" "Conflicts"
@@ -231,7 +288,7 @@ do_analyze() {
     local conflict_count=0
 
     if [ -s "$gfile" ]; then
-      file_count=$(wc -l < "$gfile" | tr -d ' ')
+      file_count=$(wc -l <"$gfile" | tr -d ' ')
       conflict_count=$(comm -12 <(sort "$gfile") <(sort "$WORK_DIR/both-files.txt") | wc -l | tr -d ' ')
     fi
 
@@ -260,7 +317,7 @@ do_analyze() {
     cp "$src" "$dst"
     local count=0
     if [ -s "$dst" ]; then
-      count=$(wc -l < "$dst" | tr -d ' ')
+      count=$(wc -l <"$dst" | tr -d ' ')
     fi
     info "Group '${name}': ${count} files -> $dst"
   done
@@ -308,7 +365,7 @@ do_build() {
     msg=$(group_message "$i")
     group_file_path="/tmp/collapse-group-${name}.txt"
 
-    printf "\n%s[%d/%d] %s%s\n" "$BOLD" "$((i+1))" "$NUM_GROUPS" "$label" "$RESET"
+    printf "\n%s[%d/%d] %s%s\n" "$BOLD" "$((i + 1))" "$NUM_GROUPS" "$label" "$RESET"
 
     if [ ! -s "$group_file_path" ]; then
       warn "No files for group '$name', skipping"
@@ -316,7 +373,7 @@ do_build() {
     fi
 
     local file_count
-    file_count=$(wc -l < "$group_file_path" | tr -d ' ')
+    file_count=$(wc -l <"$group_file_path" | tr -d ' ')
     info "Processing $file_count files..."
 
     local applied=0
@@ -338,7 +395,7 @@ do_build() {
         local dir
         dir=$(dirname "$file")
         [ "$dir" != "." ] && mkdir -p "$dir"
-        git show "$ORIGINAL_HEAD:$file" > "$file"
+        git show "$ORIGINAL_HEAD:$file" >"$file"
         # Preserve executable bit from HEAD
         local mode
         mode=$(git ls-tree "$ORIGINAL_HEAD" -- "$file" | awk '{print $1}')
@@ -362,7 +419,7 @@ do_build() {
           applied=$((applied + 1))
         else
           # Fallback: checkout the file directly from HEAD
-          git show "$ORIGINAL_HEAD:$file" > "$file"
+          git show "$ORIGINAL_HEAD:$file" >"$file"
           local fmode
           fmode=$(git ls-tree "$ORIGINAL_HEAD" -- "$file" | awk '{print $1}')
           if [ "$fmode" = "100755" ]; then
@@ -372,7 +429,7 @@ do_build() {
           applied=$((applied + 1))
         fi
       fi
-    done < "$group_file_path"
+    done <"$group_file_path"
 
     if [ "$applied" -gt 0 ]; then
       local body
@@ -397,12 +454,12 @@ do_build() {
   local rename_count=0
   while IFS=$'\t' read -r status old_path _new_path; do
     case "$status" in
-      R*)
-        if git cat-file -t "$REBASE_BRANCH:$old_path" &>/dev/null 2>&1; then
-          git rm --quiet "$old_path" 2>/dev/null || true
-          rename_count=$((rename_count + 1))
-        fi
-        ;;
+    R*)
+      if git cat-file -t "$REBASE_BRANCH:$old_path" &>/dev/null 2>&1; then
+        git rm --quiet "$old_path" 2>/dev/null || true
+        rename_count=$((rename_count + 1))
+      fi
+      ;;
     esac
   done < <(git diff --name-status -M "$MERGE_BASE" "$ORIGINAL_HEAD")
 
@@ -503,13 +560,13 @@ usage() {
 }
 
 case "${1:-}" in
-  analyze) do_analyze ;;
-  build)   do_build ;;
-  preview) do_preview ;;
-  all)
-    do_analyze
-    do_build
-    do_preview
-    ;;
-  *) usage ;;
+analyze) do_analyze ;;
+build) do_build ;;
+preview) do_preview ;;
+all)
+  do_analyze
+  do_build
+  do_preview
+  ;;
+*) usage ;;
 esac

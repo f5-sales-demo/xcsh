@@ -1,0 +1,5 @@
+[018_whitespace_padded_patch_markers/patch.txt]
+trim_trailing_whitespace = false
+
+[020_whitespace_padded_patch_marker_lines/patch.txt]
+trim_trailing_whitespace = false

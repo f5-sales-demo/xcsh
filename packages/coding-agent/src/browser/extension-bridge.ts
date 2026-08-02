@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Server, ServerWebSocket } from "bun";
 import { LOCALIP_HOST } from "./bridge-cert";
+import { EXTENSION_CONTRACT_VERSION } from "./capabilities.generated";
 import { EXTENSION_ID } from "./extension-identity";
 import { type ClientHost, isClientHost } from "./host-profiles";
 
@@ -20,18 +21,13 @@ export class PendingRequests {
 		{
 			resolve: (r: ToolResult) => void;
 			reject: (e: Error) => void;
-			timer: ReturnType<typeof setTimeout>;
+			timer: NodeJS.Timeout;
 		}
 	>();
 
 	create(timeoutMs: number): { id: string; promise: Promise<ToolResult> } {
 		const id = randomUUID();
-		let resolve!: (r: ToolResult) => void;
-		let reject!: (e: Error) => void;
-		const promise = new Promise<ToolResult>((res, rej) => {
-			resolve = res;
-			reject = rej;
-		});
+		const { promise, resolve, reject } = Promise.withResolvers<ToolResult>();
 		const timer = setTimeout(() => {
 			if (this.#m.delete(id)) reject(new Error(`bridge request ${id} timed out`));
 		}, timeoutMs);
@@ -155,6 +151,18 @@ export const OFFICE_PORT_RANGE: PortRange = { start: OFFICE_PORT_RANGE_START, en
  * client's announced host). Echoed in hello_ack so the office pane can filter. */
 export type ServeKind = "office" | "browser";
 
+export interface BridgeSessionInfo {
+	tenant: string | null;
+	env: string | null;
+	contextBound: boolean;
+	sessionId: string | null;
+}
+
+export interface BridgeServerConfig {
+	serveKind: ServeKind;
+	sessionInfo: () => BridgeSessionInfo;
+}
+
 /** Inclusive discovery range for the paired `wss` listeners (ws range + offset). */
 export const WSS_RANGE_START = LAYOUT.wss.start;
 export const WSS_RANGE_END = LAYOUT.wss.end;
@@ -217,6 +225,8 @@ export interface BridgeListenOpts {
 	range?: PortRange;
 }
 
+export type StartBridgeOptions = BridgeListenOpts & BridgeServerConfig;
+
 /** Every port in the given range (default {@link CHROME_PORT_RANGE}), lowest first. */
 export function portCandidates(range: PortRange = CHROME_PORT_RANGE): number[] {
 	const out: number[] = [];
@@ -244,32 +254,25 @@ export class BridgeServer {
 	#server: Server<undefined> | null = null;
 	/** Additive TLS listener on port + {@link WSS_PORT_OFFSET} (null when ws-only). */
 	#wssServer: Server<undefined> | null = null;
-	/** Multi-client: keyed by channelId (default channel = "default"). */
-	#clients = new Map<string, ServerWebSocket<undefined>>();
-	#nextChannelIndex = 0;
+	/** One worker process owns one authenticated extension transport. */
+	#client: ServerWebSocket<undefined> | null = null;
+	/** A newly opened socket that has not yet passed the transport handshake. */
+	#candidate: ServerWebSocket<undefined> | null = null;
 	#onConnected: Array<() => void> = [];
 	#onDisconnected: Array<() => void> = [];
 	/** Consumers of non-RPC frames (chat_delta, tool_result, unhandled) — e.g. the chat handler. */
 	#onMessage: Array<(msg: Record<string, unknown>) => void> = [];
 	/** Heartbeat interval that sends pings to keep the MV3 service worker alive (sweep + chat). */
-	#heartbeat: ReturnType<typeof setInterval> | null = null;
-	/** The client host learned from the `hello` handshake (null until a client
-	 * announces one; the Chrome extension omits it → stays null → chrome profile). */
+	#heartbeat: NodeJS.Timeout | null = null;
+	/** The client host learned from an authenticated Office `hello`. */
 	#clientHost: ClientHost | null = null;
-	/** How THIS bridge was started (its intrinsic scope). Defaults to "browser" (the
-	 * Chrome worker); office-serve calls {@link setServeKind}("office"). Echoed in
-	 * hello_ack so the office pane's discovery filter never adopts a Chrome worker. */
-	#serveKind: ServeKind = "browser";
-	/** Provider of this process's tenant identity, answering the `hello` handshake. */
-	#sessionInfo:
-		| (() => {
-				tenant: string | null;
-				env: string | null;
-				apiUrl: string | null;
-				contextBound: boolean;
-				sessionId: string | null;
-		  })
-		| null = null;
+	readonly #serveKind: ServeKind;
+	readonly #sessionInfo: () => BridgeSessionInfo;
+
+	constructor(config: BridgeServerConfig) {
+		this.#serveKind = config.serveKind;
+		this.#sessionInfo = config.sessionInfo;
+	}
 
 	/** The port the WebSocket server is listening on (0 = not bound). */
 	get port(): number {
@@ -281,9 +284,9 @@ export class BridgeServer {
 		return this.#wssServer?.port ?? 0;
 	}
 
-	/** True when at least one client is connected (backwards compat). */
+	/** True only after the client completes the transport-specific handshake. */
 	get connected(): boolean {
-		return this.#clients.size > 0;
+		return this.#client !== null;
 	}
 
 	/** The client host announced by the connected client's `hello` (null until a
@@ -292,20 +295,9 @@ export class BridgeServer {
 		return this.#clientHost;
 	}
 
-	/** How this bridge was started ("browser" by default; "office" for office-serve). */
+	/** How this bridge was started. Fixed before the listener binds. */
 	get serveKind(): ServeKind {
 		return this.#serveKind;
-	}
-
-	/** Declare this bridge's intrinsic scope. Called once at startup by the host
-	 * bootstrap (office-serve → "office"; the Chrome worker → "browser"). */
-	setServeKind(kind: ServeKind): void {
-		this.#serveKind = kind;
-	}
-
-	/** Number of connected extension clients (channels). */
-	get connectedCount(): number {
-		return this.#clients.size;
 	}
 
 	onConnected(cb: () => void): void {
@@ -321,77 +313,93 @@ export class BridgeServer {
 		this.#onMessage.push(cb);
 	}
 
-	/** Set the tenant-identity provider that answers the extension's `hello`
-	 * handshake with `{ tenant, env, apiUrl }` for THIS xcsh process/context. */
-	setSessionInfo(
-		cb: () => {
-			tenant: string | null;
-			env: string | null;
-			apiUrl: string | null;
-			contextBound: boolean;
-			sessionId: string | null;
-		},
-	): void {
-		this.#sessionInfo = cb;
+	#readIdentity(): BridgeSessionInfo | null {
+		const info = this.#sessionInfo();
+		if (
+			(info.tenant !== null && (typeof info.tenant !== "string" || info.tenant.length === 0)) ||
+			(info.env !== null && info.env !== "production" && info.env !== "staging") ||
+			typeof info.contextBound !== "boolean" ||
+			(info.sessionId !== null && (typeof info.sessionId !== "string" || info.sessionId.length === 0)) ||
+			(info.tenant === null) !== (info.env === null) ||
+			(info.contextBound && info.tenant === null) ||
+			(this.#serveKind === "browser" && info.sessionId === null)
+		) {
+			return null;
+		}
+		return info;
 	}
 
-	/** Push a tenant change to all connected panels (e.g. after `/context activate`). */
-	broadcastTenantChanged(): void {
-		const info = this.#sessionInfo?.() ?? {
-			tenant: null,
-			env: null,
-			apiUrl: null,
-			contextBound: false,
-			sessionId: null,
+	#identityFrame(
+		type: "hello_ack" | "tenant_changed",
+		info: BridgeSessionInfo,
+		clientHost: ClientHost | null = this.#clientHost,
+	): Record<string, unknown> {
+		const common = {
+			type,
+			sessionId: info.sessionId,
+			tenant: info.tenant,
+			env: info.env,
+			contextBound: info.contextBound,
 		};
-		for (const c of this.#clients.values()) {
-			try {
-				// `sessionId` (the tab-correlation key) comes from `info`, matching hello_ack.
-				c.send(JSON.stringify({ type: "tenant_changed", ...info }));
-			} catch {
-				/* client may have dropped */
-			}
+		if (this.#serveKind === "browser") {
+			return { ...common, contractVersion: EXTENSION_CONTRACT_VERSION };
+		}
+		return {
+			...common,
+			version: "1",
+			host: clientHost,
+			serveKind: this.#serveKind,
+			canConfigureProvider: true,
+		};
+	}
+
+	#dropClient(ws: ServerWebSocket<undefined>, closeCode?: number): void {
+		if (this.#client !== ws) return;
+		this.#client = null;
+		this.#clientHost = null;
+		if (this.#heartbeat) {
+			clearInterval(this.#heartbeat);
+			this.#heartbeat = null;
+		}
+		this.#pending.rejectAll(new Error("bridge client disconnected"));
+		if (closeCode !== undefined) ws.close(closeCode, "bridge protocol rejected");
+		for (const cb of this.#onDisconnected) cb();
+	}
+
+	#dropCandidate(ws: ServerWebSocket<undefined>, closeCode?: number): void {
+		if (this.#candidate !== ws) return;
+		this.#candidate = null;
+		if (closeCode !== undefined) ws.close(closeCode, "bridge protocol rejected");
+	}
+
+	/** Push a complete, versioned tenant change to the authenticated client. */
+	broadcastTenantChanged(): void {
+		const client = this.#client;
+		if (!client) return;
+		const info = this.#readIdentity();
+		if (!info) {
+			this.#dropClient(client, 1008);
+			return;
+		}
+		try {
+			client.send(JSON.stringify(this.#identityFrame("tenant_changed", info)));
+		} catch {
+			this.#dropClient(client);
 		}
 	}
 
-	/**
-	 * Resolve the target client for a frame. With an explicit channelId, returns
-	 * that channel; otherwise the "default" channel, falling back to the first
-	 * connected client. The single source of channel resolution (DRY) — used by
-	 * both {@link request} and {@link send}.
-	 */
-	#resolveClient(channelId?: string): ServerWebSocket<undefined> | undefined {
-		return channelId
-			? this.#clients.get(channelId)
-			: (this.#clients.get("default") ?? this.#clients.values().next().value);
-	}
-
-	/** Send a fire-and-forget JSON frame to a connected client (default channel if unspecified). */
-	send(payload: unknown, channelId?: string): void {
-		this.#resolveClient(channelId)?.send(JSON.stringify(payload));
+	/** Send a fire-and-forget JSON frame to the authenticated client. */
+	send(payload: unknown): void {
+		this.#client?.send(JSON.stringify(payload));
 	}
 
 	#onOpen(ws: ServerWebSocket<undefined>): void {
-		// Assign a channel ID to each connection. For backwards compat (single
-		// extension), the first connection gets "default". Additional connections
-		// get "ch-1", "ch-2", etc. — supporting multi-tab parallelism.
-		const channelId = this.#clients.size === 0 ? "default" : `ch-${++this.#nextChannelIndex}`;
-		(ws as unknown as { channelId: string }).channelId = channelId;
-		this.#clients.set(channelId, ws);
-		// Start a heartbeat ping to keep the MV3 service worker alive.
-		// Chrome suspends idle SWs after ~30s; a ping every 15s prevents that.
-		if (!this.#heartbeat) {
-			this.#heartbeat = setInterval(() => {
-				for (const c of this.#clients.values()) {
-					try {
-						c.send(JSON.stringify({ type: "ping" }));
-					} catch {
-						/* client may have dropped */
-					}
-				}
-			}, 15_000);
+		if (this.#candidate) {
+			const previous = this.#candidate;
+			this.#candidate = null;
+			previous.close(1000, "bridge handshake replaced");
 		}
-		for (const cb of this.#onConnected) cb();
+		this.#candidate = ws;
 	}
 
 	/** Try to bind the loopback WS server to `port`. When `opts.tls` is supplied an
@@ -462,11 +470,75 @@ export class BridgeServer {
 	}
 
 	#handleMessage(ws: ServerWebSocket<undefined>, message: string | Buffer): void {
+		if (this.#candidate !== ws && this.#client !== ws) return;
 		const text = typeof message === "string" ? message : message.toString("utf8");
-		let msg: { type?: string; id?: string; content?: unknown; is_error?: boolean; host?: unknown };
+		let msg: Record<string, unknown>;
 		try {
 			msg = JSON.parse(text);
 		} catch {
+			if (this.#candidate === ws) this.#dropCandidate(ws, 1008);
+			else this.#dropClient(ws, 1008);
+			return;
+		}
+		if (!msg || typeof msg !== "object" || Array.isArray(msg)) {
+			if (this.#candidate === ws) this.#dropCandidate(ws, 1008);
+			else this.#dropClient(ws, 1008);
+			return;
+		}
+
+		if (this.#candidate === ws) {
+			const keys = Object.keys(msg);
+			const browserHello =
+				this.#serveKind === "browser" &&
+				keys.length === 3 &&
+				keys.every(key => key === "type" || key === "contractVersion" || key === "extensionId") &&
+				msg.type === "hello" &&
+				typeof msg.contractVersion === "string" &&
+				msg.contractVersion.split(".")[0] === EXTENSION_CONTRACT_VERSION.split(".")[0] &&
+				msg.extensionId === EXTENSION_ID;
+			const officeHello =
+				this.#serveKind === "office" &&
+				keys.every(key => key === "type" || key === "version" || key === "host") &&
+				msg.type === "hello" &&
+				msg.version === "1" &&
+				(msg.host === undefined || isClientHost(msg.host));
+			if (!browserHello && !officeHello) {
+				this.#dropCandidate(ws, 1008);
+				return;
+			}
+			const info = this.#readIdentity();
+			if (!info) {
+				this.#dropCandidate(ws, 1008);
+				return;
+			}
+			const candidateHost = officeHello && isClientHost(msg.host) ? msg.host : null;
+			try {
+				ws.send(JSON.stringify(this.#identityFrame("hello_ack", info, candidateHost)));
+			} catch {
+				this.#dropCandidate(ws);
+				return;
+			}
+			const previous = this.#client;
+			if (previous) {
+				this.#dropClient(previous);
+				previous.close(1000, "bridge transport replaced");
+			}
+			this.#candidate = null;
+			this.#client = ws;
+			this.#clientHost = candidateHost;
+			this.#heartbeat = setInterval(() => {
+				try {
+					if (this.#client === ws) ws.send(JSON.stringify({ type: "ping" }));
+				} catch {
+					this.#dropClient(ws);
+				}
+			}, 15_000);
+			for (const cb of this.#onConnected) cb();
+			return;
+		}
+
+		if (msg.type === "hello") {
+			this.#dropClient(ws, 1008);
 			return;
 		}
 		if (msg.type === "tool_result" && typeof msg.id === "string") {
@@ -476,73 +548,26 @@ export class BridgeServer {
 			});
 		} else if (msg.type === "ping") {
 			ws.send(JSON.stringify({ type: "pong" }));
-		} else if (msg.type === "hello") {
-			// Identity handshake: tell the extension which tenant this process serves.
-			// Record the announced client host only on the server-owned Office bridge.
-			// A browser client cannot gain Office routing or provider configuration by
-			// claiming an Office host in an untrusted hello frame.
-			this.#clientHost = this.#serveKind === "office" && isClientHost(msg.host) ? msg.host : null;
-			const info = this.#sessionInfo?.() ?? {
-				tenant: null,
-				env: null,
-				apiUrl: null,
-				contextBound: false,
-				sessionId: null,
-			};
-			const { EXTENSION_CONTRACT_VERSION } = require("./capabilities.generated");
-			ws.send(
-				JSON.stringify({
-					type: "hello_ack",
-					sessionId: info.sessionId,
-					contractVersion: EXTENSION_CONTRACT_VERSION,
-					tenant: info.tenant,
-					env: info.env,
-					apiUrl: info.apiUrl,
-					contextBound: info.contextBound,
-					host: this.#clientHost,
-					serveKind: this.#serveKind,
-					pid: process.pid,
-					wssPort: this.wssPort,
-					...(this.#serveKind === "office" ? { canConfigureProvider: true } : {}),
-				}),
-			);
 		} else {
-			for (const cb of this.#onMessage) cb(msg as Record<string, unknown>);
+			for (const cb of this.#onMessage) cb(msg);
 		}
 	}
 
 	#onClose(ws: ServerWebSocket<undefined>): void {
-		const channelId = (ws as unknown as { channelId?: string }).channelId;
-		if (channelId && this.#clients.get(channelId) === ws) {
-			this.#clients.delete(channelId);
-		}
-		if (this.#clients.size === 0) {
-			this.#pending.rejectAll(new Error("bridge client disconnected"));
-		}
-		for (const cb of this.#onDisconnected) cb();
+		if (this.#candidate === ws) this.#dropCandidate(ws);
+		else this.#dropClient(ws);
 	}
 
 	/**
-	 * Send a `tool_request` and await its `tool_result`. Routes to a specific channel
-	 * when `channelId` is provided; otherwise uses the default (first) client.
-	 * This enables multi-tab parallelism: each channel targets a different Chrome tab.
+	 * Send a `tool_request` and await its `tool_result` on the authenticated transport.
 	 */
-	request(
-		tool: string,
-		params: unknown,
-		timeoutMs: number = DEFAULT_TIMEOUT_MS,
-		channelId?: string,
-	): Promise<ToolResult> {
-		const client = this.#resolveClient(channelId);
+	request(tool: string, params: unknown, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<ToolResult> {
+		const client = this.connected ? this.#client : null;
 		if (!client) {
-			return Promise.reject(
-				new Error(channelId ? `bridge: channel "${channelId}" not connected` : "bridge: no client connected"),
-			);
+			return Promise.reject(new Error("bridge: no authenticated client connected"));
 		}
 		const { id, promise } = this.#pending.create(timeoutMs);
-		const frame: Record<string, unknown> = { type: "tool_request", id, tool, params };
-		if (channelId) frame.channelId = channelId;
-		client.send(JSON.stringify(frame));
+		client.send(JSON.stringify({ type: "tool_request", id, tool, params }));
 		return promise;
 	}
 
@@ -552,8 +577,11 @@ export class BridgeServer {
 			this.#heartbeat = null;
 		}
 		this.#pending.rejectAll(new Error("bridge server closed"));
-		for (const ws of this.#clients.values()) ws.close();
-		this.#clients.clear();
+		this.#candidate?.close();
+		this.#candidate = null;
+		this.#client?.close();
+		this.#client = null;
+		this.#clientHost = null;
 		this.#server?.stop(true);
 		this.#server = null;
 		this.#wssServer?.stop(true);
@@ -568,8 +596,8 @@ export class BridgeServer {
  * ({@link PORT_RANGE_START}–{@link PORT_RANGE_END}). The WebSocket transport
  * needs no filesystem setup — Chrome connects directly to `ws://127.0.0.1:<port>`.
  */
-export async function startBridgeServer(port?: number, opts?: BridgeListenOpts): Promise<BridgeServer> {
-	const server = new BridgeServer();
+export async function startBridgeServer(port: number | undefined, opts: StartBridgeOptions): Promise<BridgeServer> {
+	const server = new BridgeServer(opts);
 	const forced = resolveForcedPort(port);
 	if (forced !== null) {
 		if (!server.listen(forced, opts)) {
@@ -577,7 +605,7 @@ export async function startBridgeServer(port?: number, opts?: BridgeListenOpts):
 		}
 		return server;
 	}
-	const range = opts?.range ?? CHROME_PORT_RANGE;
+	const range = opts.range ?? CHROME_PORT_RANGE;
 	for (const candidate of portCandidates(range)) {
 		if (server.listen(candidate, opts)) return server;
 	}

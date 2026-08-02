@@ -37,20 +37,20 @@ See [docs/hooks.md](../../docs/hooks.md) for full documentation.
 import type { HookAPI } from "@f5-sales-demo/xcsh";
 
 export default function (pi: HookAPI) {
-	// Subscribe to events
-	pi.on("tool_call", async (event, ctx) => {
-		if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
-			const ok = await ctx.ui.confirm("Dangerous!", "Allow rm -rf?");
-			if (!ok) return { block: true, reason: "Blocked by user" };
-		}
-	});
+ // Subscribe to events
+ pi.on("tool_call", async (event, ctx) => {
+  if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
+   const ok = await ctx.ui.confirm("Dangerous!", "Allow rm -rf?");
+   if (!ok) return { block: true, reason: "Blocked by user" };
+  }
+ });
 
-	// Register custom commands
-	pi.registerCommand("hello", {
-		description: "Say hello",
-		handler: async (args, ctx) => {
-			ctx.ui.notify("Hello!", "info");
-		},
-	});
+ // Register custom commands
+ pi.registerCommand("hello", {
+  description: "Say hello",
+  handler: async (args, ctx) => {
+   ctx.ui.notify("Hello!", "info");
+  },
+ });
 }
 ```

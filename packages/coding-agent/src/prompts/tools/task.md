@@ -1,6 +1,7 @@
 Launches subagents to parallelize workflows.
 
 {{#if asyncEnabled}}
+
 - Use `read jobs://` to inspect state; `read jobs://<job_id>` for detail.
 - Use the `poll` tool to wait until completion. You **MUST NOT** poll `read jobs://` in a loop.
 {{/if}}
@@ -38,6 +39,7 @@ Each task: **at most 3–5 files**. Globs in file paths, "update all", or packag
 |API exports|Callers|Need signatures|
 |Core module|Dependents|Import dependency|
 |Schema/migration|App logic|Schema dependency|
+
 **Safe to parallelize:** independent modules, isolated file-scoped refactors, tests for existing code.
 </parallelization>
 
@@ -89,43 +91,54 @@ Caller runs `bun check:ts` after both tasks complete. Tasks must NOT run it.
 - Non-goals: do not touch callers or tests
 
 ## Change
+
 - Rename `parseConfig` → `loadConfig` (declaration + any JSDoc referencing it)
 - If `src/config/index.ts` re-exports `parseConfig`, update that re-export too
 
 ## Edge Cases
+
 - If the function is overloaded, rename all overload signatures
 - Internal helpers named `_parseConfigValue` or similar: leave untouched — different symbols
 - Do not add a backwards-compat alias
 
 ## Acceptance
+
 - `src/config/parser.ts` exports `loadConfig`; `parseConfig` no longer appears as a top-level export in that file
     </assignment>
   </task>
   <task name="UpdateCallers">
     <description>Update import and call sites in consuming modules</description>
     <assignment>
+
 ## Target
+
 - Files: `src/cli/init.ts`, `src/server/bootstrap.ts`, `src/worker/index.ts`
 - Non-goals: do not touch `src/config/parser.ts` or `src/config/index.ts` — handled by sibling task
 
 ## Change
+
 - In each file: replace `import { parseConfig }` → `import { loadConfig }` from its config path
 - Replace every call site `parseConfig(` → `loadConfig(`
 
 ## Edge Cases
+
 - If a file spreads the import (`import * as cfg from "…"`) and calls `cfg.parseConfig(…)`, update the property access too
 - String literals containing "parseConfig" (log messages, comments) are documentation — leave them
 - If any file re-exports `parseConfig` to an external package boundary, keep the old name via `export { loadConfig as parseConfig }` and add a `// TODO: remove after next major` comment
 
 ## Acceptance
+
 - No bare reference to `parseConfig` (as identifier, not string) remains in the three target files
     </assignment>
   </task>
 </tasks>
+
 </example>
 
 {{#list agents join="\n"}}
+
 ### Agent: {{name}}
+
 **Tools:** {{default (join tools ", ") "All"}}
 {{description}}
 {{/list}}

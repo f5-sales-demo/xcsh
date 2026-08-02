@@ -18,43 +18,50 @@ DROP="$HOME_DIR/drop"
 CANARY="LANDLOCK-CANARY-8801"
 
 mkdir -p "$WORKSPACE/sub" "$SIBLING" "$DROP"
-printf '%s\n' "$CANARY" > "$SIBLING/secret.txt"
-printf 'mine\n' > "$WORKSPACE/own.txt"
-printf '[user]\n' > "$HOME_DIR/.gitconfig"
+printf '%s\n' "$CANARY" >"$SIBLING/secret.txt"
+printf 'mine\n' >"$WORKSPACE/own.txt"
+printf '[user]\n' >"$HOME_DIR/.gitconfig"
 
 # The shape a real fence has: the home tree and the workspace's parent denied, the workspace carved back
 # out, plus one read-only and one write-only root.
 FENCE=$(printf '{"allow":["%s"],"allowReadOnly":["%s"],"allowWriteOnly":["%s"],"deny":["%s","%s"]}' \
-	"$WORKSPACE" "$HOME_DIR/.gitconfig" "$DROP" "$HOME_DIR" "$HOME_DIR/GIT")
+  "$WORKSPACE" "$HOME_DIR/.gitconfig" "$DROP" "$HOME_DIR" "$HOME_DIR/GIT")
 
 pass=0 fail=0
 
 # expect <label> <want: ok|refused> <command...>
 expect() {
-	local label="$1" want="$2"; shift 2
-	local out rc
-	out=$("$BIN" run --fence "$FENCE" --cwd "$WORKSPACE" "$*" 2>&1); rc=$?
-	local got=ok; [ "$rc" -eq 0 ] || got=refused
-	if [ "$got" = "$want" ] && ! grep -q "$CANARY" <<<"$out"; then
-		printf 'PASS  %-52s (%s)\n' "$label" "$got"; pass=$((pass+1))
-	else
-		printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"
-		fail=$((fail+1))
-	fi
+  local label="$1" want="$2"
+  shift 2
+  local out rc
+  out=$("$BIN" run --fence "$FENCE" --cwd "$WORKSPACE" "$*" 2>&1)
+  rc=$?
+  local got=ok
+  [ "$rc" -eq 0 ] || got=refused
+  if [ "$got" = "$want" ] && ! grep -q "$CANARY" <<<"$out"; then
+    printf 'PASS  %-52s (%s)\n' "$label" "$got"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"
+    fail=$((fail + 1))
+  fi
 }
 
 printf '=== backend ===\n'
-"$BIN" status || { printf 'no OS backend here; these results would prove nothing\n'; exit 1; }
+"$BIN" status || {
+  printf 'no OS backend here; these results would prove nothing\n'
+  exit 1
+}
 
 printf '\n=== the boundary holds ===\n'
 # The control first. If this does NOT leak, the fixture is wrong and every refusal below is meaningless.
 control=$("$BIN" run --cwd "$WORKSPACE" "cat $SIBLING/secret.txt" 2>&1)
 if grep -q "$CANARY" <<<"$control"; then
-	printf 'PASS  %-52s (leaks unfenced, as it must)\n' "control: unfenced read of the sibling"
-	pass=$((pass+1))
+  printf 'PASS  %-52s (leaks unfenced, as it must)\n' "control: unfenced read of the sibling"
+  pass=$((pass + 1))
 else
-	printf 'FAIL  %-52s the control did not leak: %s\n' "control: unfenced read of the sibling" "$control"
-	fail=$((fail+1))
+  printf 'FAIL  %-52s the control did not leak: %s\n' "control: unfenced read of the sibling" "$control"
+  fail=$((fail + 1))
 fi
 expect "fenced read of the sibling checkout" refused "cat $SIBLING/secret.txt"
 expect "fenced read via a runtime-assembled path" refused "T=$SIBLING/secret.txt; cat \"\$T\""
@@ -88,7 +95,7 @@ expect "tar roundtrip" ok "mkdir -p t && echo x > t/f && tar czf t.tgz t && rm -
 printf '\n=== exact parent enumeration courtesy ===\n'
 BASE_FENCE="$FENCE"
 FENCE=$(printf '{"allow":["%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":[],"denyEnumerate":["%s"]}' \
-	"$WORKSPACE" "$HOME_DIR/GIT")
+  "$WORKSPACE" "$HOME_DIR/GIT")
 expect "listing the protected parent" refused "ls $HOME_DIR/GIT > /dev/null"
 expect "read a named sibling file" ok "cat $SIBLING/secret.txt > /dev/null && echo named-ok"
 expect "write a named sibling file" ok "printf named > $SIBLING/named.txt && test -f $SIBLING/named.txt"
@@ -107,7 +114,7 @@ printf '\n=== the accepted costs, asserted so they stay known ===\n'
 expect "ls / fails (split directory)" refused "ls / > /dev/null"
 # `landlock_restrict_self` requires PR_SET_NO_NEW_PRIVS, which disables setuid binaries in the child.
 expect "NO_NEW_PRIVS is set in the child" ok \
-	"grep -q 'NoNewPrivs:.*1' /proc/self/status"
+  "grep -q 'NoNewPrivs:.*1' /proc/self/status"
 
 printf '\n=== a fresh home can create its granted config dirs (#2588) ===\n'
 # A Landlock rule attaches to an inode, so a granted directory that does not exist yet cannot carry one:
@@ -119,31 +126,37 @@ printf '\n=== a fresh home can create its granted config dirs (#2588) ===\n'
 FRESH="$ROOT/fresh"
 mkdir -p "$FRESH/w"
 FRESH_FENCE=$(printf '{"allow":["%s","%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
-	"$FRESH/w" "$FRESH/.aws" "$FRESH/.config/gh" "$FRESH")
+  "$FRESH/w" "$FRESH/.aws" "$FRESH/.config/gh" "$FRESH")
 
 fresh_expect() {
-	local label="$1" want="$2"; shift 2
-	local out rc
-	out=$("$BIN" run --fence "$FRESH_FENCE" --cwd "$FRESH/w" "$*" 2>&1); rc=$?
-	local got=ok; [ "$rc" -eq 0 ] || got=refused
-	if [ "$got" = "$want" ]; then
-		printf 'PASS  %-52s (%s)\n' "$label" "$got"; pass=$((pass+1))
-	else
-		printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"
-		fail=$((fail+1))
-	fi
+  local label="$1" want="$2"
+  shift 2
+  local out rc
+  out=$("$BIN" run --fence "$FRESH_FENCE" --cwd "$FRESH/w" "$*" 2>&1)
+  rc=$?
+  local got=ok
+  [ "$rc" -eq 0 ] || got=refused
+  if [ "$got" = "$want" ]; then
+    printf 'PASS  %-52s (%s)\n' "$label" "$got"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"
+    fail=$((fail + 1))
+  fi
 }
 
 # An external command, which is what a CLI is — the grant is prepared while composing it.
 fresh_expect "write into an absent granted dir" ok \
-	"/bin/sh -c 'printf x > $FRESH/.aws/config'"
+  "/bin/sh -c 'printf x > $FRESH/.aws/config'"
 fresh_expect "write into an absent nested granted dir" ok \
-	"/bin/sh -c 'printf y > $FRESH/.config/gh/hosts.yml'"
+  "/bin/sh -c 'printf y > $FRESH/.config/gh/hosts.yml'"
 
 if [ -d "$FRESH/.aws" ] && [ -d "$FRESH/.config/gh" ]; then
-	printf 'PASS  %-52s (created)\n' "the dirs themselves now exist"; pass=$((pass+1))
+  printf 'PASS  %-52s (created)\n' "the dirs themselves now exist"
+  pass=$((pass + 1))
 else
-	printf 'FAIL  %-52s the granted dirs were not created\n' "the dirs themselves now exist"; fail=$((fail+1))
+  printf 'FAIL  %-52s the granted dirs were not created\n' "the dirs themselves now exist"
+  fail=$((fail + 1))
 fi
 
 # Creation must not follow a symlinked ancestor out of the tree: `create_dir_all` would happily do it,
@@ -152,12 +165,14 @@ LINKED="$ROOT/linked"
 mkdir -p "$LINKED/w" "$ROOT/elsewhere"
 ln -s "$ROOT/elsewhere" "$LINKED/.config"
 LINK_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
-	"$LINKED/w" "$LINKED/.config/gh" "$LINKED")
-"$BIN" run --fence "$LINK_FENCE" --cwd "$LINKED/w" "/bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
+  "$LINKED/w" "$LINKED/.config/gh" "$LINKED")
+"$BIN" run --fence "$LINK_FENCE" --cwd "$LINKED/w" "/bin/sh -c 'echo probe'" >/dev/null 2>&1 || true
 if [ -e "$ROOT/elsewhere/gh" ]; then
-	printf 'FAIL  %-52s created through the symlink\n' "creation refuses a symlinked ancestor"; fail=$((fail+1))
+  printf 'FAIL  %-52s created through the symlink\n' "creation refuses a symlinked ancestor"
+  fail=$((fail + 1))
 else
-	printf 'PASS  %-52s (refused)\n' "creation refuses a symlinked ancestor"; pass=$((pass+1))
+  printf 'PASS  %-52s (refused)\n' "creation refuses a symlinked ancestor"
+  pass=$((pass + 1))
 fi
 
 # The guard must inspect EVERY component, not just the deepest existing one. With `.config` a link and
@@ -167,12 +182,14 @@ DEEP="$ROOT/deep"
 mkdir -p "$DEEP/w" "$ROOT/target/gh"
 ln -s "$ROOT/target" "$DEEP/.config"
 DEEP_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
-	"$DEEP/w" "$DEEP/.config/gh/sub" "$DEEP")
-"$BIN" run --fence "$DEEP_FENCE" --cwd "$DEEP/w" "/bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
+  "$DEEP/w" "$DEEP/.config/gh/sub" "$DEEP")
+"$BIN" run --fence "$DEEP_FENCE" --cwd "$DEEP/w" "/bin/sh -c 'echo probe'" >/dev/null 2>&1 || true
 if [ -e "$ROOT/target/gh/sub" ]; then
-	printf 'FAIL  %-52s created through a deeper symlink\n' "every component is checked, not just the last"; fail=$((fail+1))
+  printf 'FAIL  %-52s created through a deeper symlink\n' "every component is checked, not just the last"
+  fail=$((fail + 1))
 else
-	printf 'PASS  %-52s (refused)\n' "every component is checked, not just the last"; pass=$((pass+1))
+  printf 'PASS  %-52s (refused)\n' "every component is checked, not just the last"
+  pass=$((pass + 1))
 fi
 
 # Brush has a `umask` builtin, so the process mask is attacker-influenced from inside the session. A
@@ -180,34 +197,38 @@ fi
 MODE_HOME="$ROOT/mode"
 mkdir -p "$MODE_HOME/w"
 MODE_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
-	"$MODE_HOME/w" "$MODE_HOME/.aws" "$MODE_HOME")
-"$BIN" run --fence "$MODE_FENCE" --cwd "$MODE_HOME/w" "umask 000; /bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
+  "$MODE_HOME/w" "$MODE_HOME/.aws" "$MODE_HOME")
+"$BIN" run --fence "$MODE_FENCE" --cwd "$MODE_HOME/w" "umask 000; /bin/sh -c 'echo probe'" >/dev/null 2>&1 || true
 if [ -d "$MODE_HOME/.aws" ]; then
-	mode=$(stat -c '%a' "$MODE_HOME/.aws" 2>/dev/null || stat -f '%Lp' "$MODE_HOME/.aws")
-	if [ "$mode" = "700" ]; then
-		printf 'PASS  %-52s (0%s)\n' "created dirs ignore the process umask" "$mode"; pass=$((pass+1))
-	else
-		printf 'FAIL  %-52s mode=0%s want=0700\n' "created dirs ignore the process umask" "$mode"; fail=$((fail+1))
-	fi
+  mode=$(stat -c '%a' "$MODE_HOME/.aws" 2>/dev/null || stat -f '%Lp' "$MODE_HOME/.aws")
+  if [ "$mode" = "700" ]; then
+    printf 'PASS  %-52s (0%s)\n' "created dirs ignore the process umask" "$mode"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL  %-52s mode=0%s want=0700\n' "created dirs ignore the process umask" "$mode"
+    fail=$((fail + 1))
+  fi
 else
-	printf 'FAIL  %-52s the dir was not created at all\n' "created dirs ignore the process umask"; fail=$((fail+1))
+  printf 'FAIL  %-52s the dir was not created at all\n' "created dirs ignore the process umask"
+  fail=$((fail + 1))
 fi
 
 # A path the compiler merely *discovered* while enumerating a split directory must never be recreated —
 # it may be the wrong object type, or mid atomic-replace. Only roots the fence names are eligible.
 ENUM_HOME="$ROOT/enum"
 mkdir -p "$ENUM_HOME/w" "$ENUM_HOME/keep"
-printf 'x' > "$ENUM_HOME/keep/afile"
+printf 'x' >"$ENUM_HOME/keep/probe-file"
 ENUM_FENCE=$(printf '{"allow":["%s","%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s"]}' \
-	"$ENUM_HOME/w" "$ENUM_HOME/keep" "$ENUM_HOME")
-rm -f "$ENUM_HOME/keep/afile"   # disappears between compilation and use
-"$BIN" run --fence "$ENUM_FENCE" --cwd "$ENUM_HOME/w" "/bin/sh -c 'echo probe'" > /dev/null 2>&1 || true
-if [ -d "$ENUM_HOME/keep/afile" ]; then
-	printf 'FAIL  %-52s recreated a discovered entry as a directory\n' "only fence-named roots are created"; fail=$((fail+1))
+  "$ENUM_HOME/w" "$ENUM_HOME/keep" "$ENUM_HOME")
+rm -f "$ENUM_HOME/keep/probe-file" # disappears between compilation and use
+"$BIN" run --fence "$ENUM_FENCE" --cwd "$ENUM_HOME/w" "/bin/sh -c 'echo probe'" >/dev/null 2>&1 || true
+if [ -d "$ENUM_HOME/keep/probe-file" ]; then
+  printf 'FAIL  %-52s recreated a discovered entry as a directory\n' "only fence-named roots are created"
+  fail=$((fail + 1))
 else
-	printf 'PASS  %-52s (not recreated)\n' "only fence-named roots are created"; pass=$((pass+1))
+  printf 'PASS  %-52s (not recreated)\n' "only fence-named roots are created"
+  pass=$((pass + 1))
 fi
-
 
 # The production fence shape since #2624: the data roots at depth 1 are denied by name, which makes `/`
 # itself a split directory. That is a materially different plan from the one above — every case so far
@@ -216,19 +237,23 @@ fi
 # ruleset, which is safe but would silently turn every fleet host into scanner-only.
 printf '\n=== top-level data roots denied, as production does (#2624) ===\n'
 TOP_FENCE=$(printf '{"allow":["%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":["%s","%s","/home","/root","/srv","/mnt","/media","/export"]}' \
-	"$WORKSPACE" "$HOME_DIR" "$HOME_DIR/GIT")
+  "$WORKSPACE" "$HOME_DIR" "$HOME_DIR/GIT")
 
 top_expect() {
-	local label="$1" want="$2"; shift 2
-	local out rc
-	out=$("$BIN" run --fence "$TOP_FENCE" --cwd "$WORKSPACE" "$*" 2>&1); rc=$?
-	local got=ok
-	[ "$rc" -ne 0 ] && got=refused
-	if [ "$got" = "$want" ]; then
-		printf 'PASS  %-52s (%s)\n' "$label" "$got"; pass=$((pass+1))
-	else
-		printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"; fail=$((fail+1))
-	fi
+  local label="$1" want="$2"
+  shift 2
+  local out rc
+  out=$("$BIN" run --fence "$TOP_FENCE" --cwd "$WORKSPACE" "$*" 2>&1)
+  rc=$?
+  local got=ok
+  [ "$rc" -ne 0 ] && got=refused
+  if [ "$got" = "$want" ]; then
+    printf 'PASS  %-52s (%s)\n' "$label" "$got"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL  %-52s want=%s got=%s\n      %s\n' "$label" "$want" "$got" "${out//$'\n'/ | }"
+    fail=$((fail + 1))
+  fi
 }
 
 # The positive controls come first and are the point of this block: if the plan collapsed, these fail and

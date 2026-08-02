@@ -169,13 +169,13 @@ print('\n'.join(blocks))
     # Never fabricate the terraform{}/provider blocks — score whether xcsh emitted them itself,
     # so a missing provider block surfaces as a real failure instead of being silently patched.
     if ! find "${ws}" -maxdepth 1 -name "*.tf" -print -quit | grep -q .; then
-      printf '%s\n' "${tf_code}" > "${ws}/main.tf"
+      printf '%s\n' "${tf_code}" >"${ws}/main.tf"
     fi
 
     # terraform fmt -check: is xcsh's output already canonically formatted?
     # No provider/init needed — pure HCL formatting check.
     f_output=$(terraform -chdir="${ws}" fmt -check -diff -no-color 2>&1) && f_score=1 || f_score=0
-    echo "${f_output}" > "${ws}/fmt.out"
+    echo "${f_output}" >"${ws}/fmt.out"
     if [ "${f_score}" -eq 1 ]; then
       fmt_pass=$((fmt_pass + 1))
     else
@@ -200,7 +200,7 @@ print('\n'.join(blocks))
     elif terraform -chdir="${ws}" init -backend=false -input=false -no-color >"${ws}/init.out" 2>&1; then
       # Capture validate output for error classification
       v_output=$(terraform -chdir="${ws}" validate -no-color 2>&1) && v_score=1 || v_score=0
-      echo "${v_output}" > "${ws}/validate.out"
+      echo "${v_output}" >"${ws}/validate.out"
       if [ "${v_score}" -eq 1 ]; then
         validate_pass=$((validate_pass + 1))
       else
@@ -210,7 +210,7 @@ print('\n'.join(blocks))
       # terraform plan (only if API token available)
       if [ -n "${XCSH_API_TOKEN:-}" ] && [ -n "${XCSH_API_URL:-}" ]; then
         p_output=$(terraform -chdir="${ws}" plan -no-color -input=false 2>&1) && p_score=1 || p_score=0
-        echo "${p_output}" > "${ws}/plan.out"
+        echo "${p_output}" >"${ws}/plan.out"
         if [ "${p_score}" -eq 1 ]; then
           plan_pass=$((plan_pass + 1))
         else
@@ -226,7 +226,7 @@ print('\n'.join(blocks))
 
   # Compute phrase score (integer math: multiply by 1000 for 3 decimal precision)
   # 0.4*validate + 0.3*keyword + 0.15*plan + 0.1*fmt + 0.05*min_settings + 0.05*(1/turns)
-  phrase_score_x1000=$(( (400 * v_score) + (3 * keyword_score) + (150 * p_score) + (100 * f_score) + (50 * m_score) + (50 / turns) ))
+  phrase_score_x1000=$(((400 * v_score) + (3 * keyword_score) + (150 * p_score) + (100 * f_score) + (50 * m_score) + (50 / turns)))
   composite_total=$((composite_total + phrase_score_x1000))
 
   # Classify failure and build ASI failure record.
@@ -242,15 +242,15 @@ print('\n'.join(blocks))
 
     # Increment per-repo issue counter
     case "${fix_repo}" in
-      "terraform-provider-xcsh") provider_issues=$((provider_issues + 1)) ;;
-      "api-specs-enriched") spec_issues=$((spec_issues + 1)) ;;
-      *) xcsh_issues=$((xcsh_issues + 1)) ;;
+    "terraform-provider-xcsh") provider_issues=$((provider_issues + 1)) ;;
+    "api-specs-enriched") spec_issues=$((spec_issues + 1)) ;;
+    *) xcsh_issues=$((xcsh_issues + 1)) ;;
     esac
 
     # Append to failures JSON array
     # Truncate error to 200 chars for JSON safety
-    error_short=$(python3 -c "import json,sys; s=sys.stdin.read().strip()[:200]; print(json.dumps(s))" <<< "${combined_error}")
-    phrase_json=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<< "${phrase}")
+    error_short=$(python3 -c "import json,sys; s=sys.stdin.read().strip()[:200]; print(json.dumps(s))" <<<"${combined_error}")
+    phrase_json=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<<"${phrase}")
     failures_json=$(python3 -c "
 import json, sys
 failures = json.loads(sys.argv[1])

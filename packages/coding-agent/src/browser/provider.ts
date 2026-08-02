@@ -9,7 +9,6 @@ import {
 import { ensureAuthenticated } from "./auth";
 import { CdpPageActions } from "./cdp-page-actions";
 import { locateChrome } from "./chrome-locate";
-import { startBridgeServer } from "./extension-bridge";
 import { ExtensionBrowserProvider } from "./extension-provider";
 import type { PageActions } from "./page-actions";
 
@@ -117,10 +116,8 @@ export class CdpBrowserProvider implements BrowserProvider {
 				if (dropPort && relaunched) {
 					try {
 						await this.#lifecycle.restoreDefaultChromeWithoutDebugPort(this.#settings);
-					} catch (error) {
-						logger.warn("Failed to restore Chrome without the debug port", {
-							error: error instanceof Error ? error.message : String(error),
-						});
+					} catch {
+						logger.warn("Failed to restore Chrome without the debug port");
 					}
 				}
 			},
@@ -166,36 +163,34 @@ export async function selectProvider(
 	// Forced-extension default is 45s: the MV3 service worker can suspend between
 	// runs, after which only its ~30s reconnect alarm re-attaches it — a shorter
 	// probe races (and loses to) that alarm. 45s clears the alarm + reconnect.
-	const probeMs =
+	const bridgeProbeTimeoutMs =
 		opts?.probeTimeoutMs ??
 		(Number.isFinite(envProbe) && envProbe > 0 ? envProbe : forced === "extension" ? 45_000 : 5_000);
 
 	if (forced === "cdp") return new CdpBrowserProvider(settings);
 
+	const server = opts?.bridgeServer ?? _sharedBridgeServer;
+	if (!server) {
+		if (forced === "extension") {
+			throw new Error("The extension provider requires a manager-bound bridge.");
+		}
+		return new CdpBrowserProvider(settings);
+	}
+
 	try {
-		const server = opts?.bridgeServer ?? _sharedBridgeServer ?? (await startBridgeServer());
-		const deadline = Date.now() + probeMs;
+		const deadline = Date.now() + bridgeProbeTimeoutMs;
 		while (Date.now() < deadline) {
 			if (server.connected) {
 				return new ExtensionBrowserProvider({ server });
 			}
-			await new Promise(r => setTimeout(r, 300));
+			await Bun.sleep(300);
 		}
 		if (forced === "extension") {
-			// Don't tear down the bridge or fall back — fail with an actionable
-			// install path. A no-connect almost always means the extension itself
-			// isn't installed/enabled (the bridge listens on loopback already).
-			const { WEB_STORE_URL } = await import("../cli/chrome-cli");
-			throw new Error(
-				`The xcsh Chrome extension is not connected, so deterministic console automation cannot run. ` +
-					`Install it from the Chrome Web Store and keep it enabled:\n  ${WEB_STORE_URL}\n` +
-					`Then reload Chrome and retry. (Waited ${probeMs}ms.)`,
-			);
+			throw new Error("The manager-bound Chrome extension bridge did not authenticate before the deadline.");
 		}
-		await server.close();
 	} catch (err) {
 		if (forced === "extension") throw err; // never silently fall back to CDP when extension is required
-		// Bridge server failed to start — fall back silently.
+		// Auto mode may use CDP when the already-configured extension bridge is unavailable.
 	}
 	return new CdpBrowserProvider(settings);
 }

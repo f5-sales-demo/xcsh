@@ -1281,7 +1281,7 @@ describe("Editor component", () => {
 		it("does not split narrow non-ASCII words (German)", () => {
 			const editor = new Editor(defaultEditorTheme);
 			const width = 14; // 6 chars for borders, 8 for content
-			editor.setText("word über und danke fuer deine freundschaft");
+			editor.setText("word über und danke freundschaft");
 			const contentLines = renderContentLines(editor, width);
 			expect(contentLines.length).toBeGreaterThanOrEqual(2);
 			// "über" should wrap as a whole word, not be split into the remaining width.

@@ -13,6 +13,7 @@ The goal is actionable territory intelligence that drives pipeline generation.
 ### 1. Account Overview
 
 Pull from Salesforce (`sf_query`):
+
 - Account name, industry, annual revenue, employee count
 - Current F5 footprint (existing products, contract value, renewal dates)
 - Account team roster (AE, SE, CSM, exec sponsor)
@@ -34,6 +35,7 @@ Map the customer's infrastructure against F5 XC capabilities:
 ### 3. Expansion Opportunities
 
 For existing customers, identify:
+
 - **Upsell**: Additional F5 XC modules on existing deployment
 - **Cross-sell**: New use cases in different business units or regions
 - **Platform expansion**: Move from point solution to platform adoption
@@ -42,6 +44,7 @@ For existing customers, identify:
 ### 4. Competitive Landscape
 
 For each account:
+
 - Incumbent vendors and contract timelines
 - Competitive displacement opportunities (contract renewal windows)
 - Customer satisfaction with current vendors
@@ -64,20 +67,25 @@ For each account:
 When analyzing a territory (not a single account):
 
 ### Pipeline Health
+
 Pull from Salesforce:
+
 - Total pipeline by forecast category
 - Pipeline coverage ratio (pipeline / quota)
 - Average deal size and win rate trends
 - Aging deals (no activity > 30 days)
 
 ### Account Prioritization
+
 Rank accounts by:
+
 1. Revenue potential (ARR opportunity)
 2. Strategic value (logo, reference potential, industry influence)
 3. Win probability (relationship strength, competitive position, timing)
 4. Resource efficiency (SE effort required vs deal size)
 
 ### Territory Gaps
+
 - Industries with no active pipeline
 - Product areas with no current customers
 - Geographic regions underserved

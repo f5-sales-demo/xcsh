@@ -65,7 +65,8 @@ SYSTEM_NS_RESOURCES="k8s_cluster network_firewall fast_acl securemesh_site_v2"
 for resource in ${curl_resources}; do
   # Skip resources flagged skip_curl_test in minimum_configs.yaml (require infra not available in CI)
   # Pass args via sys.argv — never interpolate resource name into Python source string
-  skip_flag=$(python3 - "${resource}" "${API_SPECS_DIR}/config/minimum_configs.yaml" <<'PYEOF' 2>/dev/null || echo "False"
+  skip_flag=$(
+    python3 - "${resource}" "${API_SPECS_DIR}/config/minimum_configs.yaml" <<'PYEOF' 2>/dev/null || echo "False"
 import yaml, sys
 resource_name = sys.argv[1]
 config_path = sys.argv[2]
@@ -73,7 +74,7 @@ with open(config_path) as f:
     mc = yaml.safe_load(f)
 print(str(mc.get('resources', {}).get(resource_name, {}).get('skip_curl_test', False)))
 PYEOF
-)
+  )
   if [ "${skip_flag}" = "True" ]; then
     echo "  SKIP: ${resource} (skip_curl_test=true — requires infra)"
     continue
@@ -89,10 +90,10 @@ PYEOF
   resource_ns="${NAMESPACE}"
   echo "${SYSTEM_NS_RESOURCES}" | grep -qw "${resource}" && resource_ns="system"
 
-  (cd "${API_SPECS_DIR}" && \
+  (cd "${API_SPECS_DIR}" &&
     XCSH_API_URL="${XCSH_API_URL}" \
-    XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
-    "${APISPECS_PYTHON}" scripts/validate_curl_examples.py \
+      XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
+      "${APISPECS_PYTHON}" scripts/validate_curl_examples.py \
       --resource "${resource}" \
       --namespace "${resource_ns}" \
       --output "${output_base}" \
@@ -178,18 +179,18 @@ for resource in ${probe_resources}; do
   dry_flag=""
   [ "${DRY_RUN}" = "true" ] && dry_flag="--dry-run"
 
-  (cd "${API_SPECS_DIR}" && \
+  (cd "${API_SPECS_DIR}" &&
     XCSH_API_URL="${XCSH_API_URL}" \
-    XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
-    XCSH_NAMESPACE="${NAMESPACE}" \
-    "${APISPECS_PYTHON}" -W ignore -m scripts.discovery.constraint_prober \
+      XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
+      XCSH_NAMESPACE="${NAMESPACE}" \
+      "${APISPECS_PYTHON}" -W ignore -m scripts.discovery.constraint_prober \
       --resource "${resource}" \
       --output "${prober_output}" \
       --rate 3.0 \
       ${dry_flag} 2>&1 | grep -v "^INFO:httpx" || true)
 
-  [ -f "${prober_output}" ] || \
-    echo '{"fields":[],"server_default_fields":{}}' > "${prober_output}"
+  [ -f "${prober_output}" ] ||
+    echo '{"fields":[],"server_default_fields":{}}' >"${prober_output}"
 
   result=$(python3 -c "
 import json, yaml, re, sys
@@ -290,7 +291,7 @@ for key in server_defaults.keys():
         })
 
 print(json.dumps({'checks_total': checks_total, 'checks_pass': checks_pass, 'gaps': gaps}))
-" "${resource}" "${prober_output}" "${API_SPECS_DIR}" 2>/dev/null || \
+" "${resource}" "${prober_output}" "${API_SPECS_DIR}" 2>/dev/null ||
     echo '{"checks_total":0,"checks_pass":0,"gaps":[]}')
 
   r_total=$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['checks_total'])" "${result}")
@@ -308,7 +309,6 @@ print(json.dumps(json.loads(sys.argv[1]) + json.loads(sys.argv[2])))
 " "${gaps_json}" "${r_gaps}" 2>/dev/null || echo "${gaps_json}")
 done
 echo ""
-
 
 # ── Score emission ────────────────────────────────────────────────────────────
 probe_count=$(echo "${probe_resources}" | wc -w | tr -d ' ')

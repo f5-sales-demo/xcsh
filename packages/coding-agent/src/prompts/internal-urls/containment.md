@@ -7,6 +7,7 @@ Filesystem isolation is **on**. Enforcement for the `bash` tool: **{{containment
 Your shell is confined by the operating system, not by inspecting the command you wrote. A path is
 checked where it is actually opened, after the shell has expanded variables, resolved aliases and
 followed symlinks — so how a path is spelled does not change what is reachable.
+
 - Ordinary work is unrestricted: system paths, `/tmp`, package caches, the network, and running
   programs are all untouched.
 - The operator's home and configuration belong to the operator. Shell profiles, SSH and GPG state,
@@ -32,6 +33,7 @@ working with, it is not yours to read.
 
 {{#if containment.landlock}}
 Three things behave differently under this backend, and none of them is a bug to work around:
+
 - `ls /` can fail because a kernel rule cannot expose a directory that mixes reachable and denied data
   roots. Listing a specific reachable directory works normally.
 - `sudo` and other setuid programs do not work, because confining a process requires giving up the

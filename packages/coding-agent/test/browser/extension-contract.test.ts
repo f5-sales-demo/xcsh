@@ -136,13 +136,13 @@ describe("ExtensionBrowserProvider contract-2 handshake", () => {
 
 	it("does not fall back to the legacy ping handshake when capabilities is unavailable", async () => {
 		const { server, calls } = fakeServer(name => ({
-			content: name === "capabilities" ? "unsupported" : { ok: true },
+			content: name === "capabilities" ? { providerSubject: "<PROVIDER_SUBJECT>" } : { ok: true },
 			is_error: name === "capabilities",
 		}));
 
 		await expect(
 			new ExtensionBrowserProvider({ server }).acquire("https://tenant.console.ves.volterra.io"),
-		).rejects.toThrow('extension tool "capabilities" failed');
+		).rejects.toThrow(/^extension tool "capabilities" failed$/);
 		expect(calls.map(call => call.name)).toEqual(["capabilities"]);
 	});
 

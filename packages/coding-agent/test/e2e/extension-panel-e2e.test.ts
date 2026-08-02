@@ -88,7 +88,7 @@ async function apiGetOk(path: string, timeoutMs = 120_000): Promise<number> {
 	while (Date.now() < deadline) {
 		({ status } = await api("GET", path));
 		if (status === 200) return status;
-		await new Promise(r => setTimeout(r, 5000));
+		await Bun.sleep(5000);
 	}
 	return status;
 }
@@ -134,7 +134,7 @@ describe.skipIf(!canRun)("Panel-driven E2E (real extension → staging CRUD)", (
 
 	// NOTE: for a clean multi-step turn, run each scenario against a FRESH browser
 	// session (relaunch Chrome + reopen the panel). Reusing one panel accumulates
-	// prior turns, which derails a multi-step turn (the model meta-comments on "the
+	// prior turns, which disrupts a multi-step turn (the model meta-comments on "the
 	// last run" instead of executing). `resetConversation()` exists but clearing
 	// chrome.storage.local mid-session is disruptive (forces a slow re-provision, can
 	// time the next turn out), so we do NOT auto-reset between tests here.

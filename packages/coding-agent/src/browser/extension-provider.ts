@@ -1,7 +1,7 @@
 import { type AxNode, matchNode } from "./ax";
 import { EXTENSION_CONTRACT_VERSION } from "./capabilities.generated";
 import type { PageContextSnapshot } from "./chat-protocol";
-import { type BridgeServer, startBridgeServer, type ToolResult } from "./extension-bridge";
+import type { BridgeServer, ToolResult } from "./extension-bridge";
 import { checkContractVersion } from "./extension-contract";
 import { ExtensionPageActions } from "./extension-page-actions";
 import type { AcquiredBrowser, BrowserProvider, BrowserProviderStatus } from "./provider";
@@ -90,7 +90,7 @@ export interface ExtensionPage {
 /** Unwrap a {@link ToolResult}, throwing on the error flag. */
 function unwrap(result: ToolResult, tool: string): unknown {
 	if (result.is_error) {
-		throw new Error(`extension tool "${tool}" failed: ${JSON.stringify(result.content)}`);
+		throw new Error(`extension tool "${tool}" failed`);
 	}
 	return result.content;
 }
@@ -284,7 +284,7 @@ async function waitForConnection(server: BridgeServer, timeoutMs: number): Promi
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
 		if (server.connected) return;
-		await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+		await Bun.sleep(POLL_INTERVAL_MS);
 	}
 	if (!server.connected) {
 		throw new Error(
@@ -300,10 +300,10 @@ async function waitForConnection(server: BridgeServer, timeoutMs: number): Promi
  */
 export class ExtensionBrowserProvider implements BrowserProvider {
 	readonly name = "extension";
-	#server: BridgeServer | null;
+	readonly #server: BridgeServer;
 
-	constructor(opts?: { server?: BridgeServer }) {
-		this.#server = opts?.server ?? null;
+	constructor(opts: { server: BridgeServer }) {
+		this.#server = opts.server;
 	}
 
 	/**
@@ -314,8 +314,7 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 	 * `Page` behind the shared `PageActions` surface.
 	 */
 	async acquire(consoleUrl: string): Promise<AcquiredBrowser> {
-		const server = this.#server ?? (await startBridgeServer());
-		this.#server = server;
+		const server = this.#server;
 		await waitForConnection(server, CONNECT_TIMEOUT_MS);
 		await handshakeCapabilities(server);
 
@@ -335,7 +334,7 @@ export class ExtensionBrowserProvider implements BrowserProvider {
 	}
 
 	async status(): Promise<BrowserProviderStatus & { extensionConnected: boolean }> {
-		const extensionConnected = this.#server?.connected === true;
+		const extensionConnected = this.#server.connected;
 		let detail: string;
 		if (extensionConnected) {
 			detail = "Chrome extension is connected to the xcsh bridge.";

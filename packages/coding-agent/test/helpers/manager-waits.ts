@@ -16,7 +16,7 @@
  * module reuses its manager census rather than growing a second one.
  */
 import { describeManagerCensus } from "../manager-wait-diagnostics";
-import { PROBE_ORIGIN } from "./bridge-probe";
+import { PROBE_HELLO, PROBE_ORIGIN } from "./bridge-probe";
 
 /** A `span` frame flushed by a worker to its first client. */
 export type SpanFrame = Record<string, unknown>;
@@ -40,55 +40,55 @@ export function missingStages(collected: readonly SpanFrame[], required: readonl
 export async function collectSpans(port: number, required: readonly string[], timeoutMs: number): Promise<SpanFrame[]> {
 	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
-		const result = await new Promise<SpanFrame[] | null>(resolve => {
-			const ws = new WebSocket(`ws://127.0.0.1:${port}`, {
-				headers: { Origin: PROBE_ORIGIN },
-			} as unknown as string[]);
-			const collected: SpanFrame[] = [];
-			let opened = false;
-			const timer = setTimeout(
-				() => {
-					try {
-						ws.close();
-					} catch {}
-					resolve(opened ? collected : null);
-				},
-				Math.max(0, deadline - Date.now()),
-			);
-			ws.onopen = () => {
-				opened = true;
-				ws.send(JSON.stringify({ type: "hello" }));
-			};
-			ws.onmessage = ev => {
-				const m = JSON.parse(String(ev.data)) as SpanFrame;
-				if (m.type !== "span") return;
-				collected.push(m);
-				// Wait on the post-condition — every stage the caller asserts on —
-				// never on a count of spans of any stage (#2364).
-				if (missingStages(collected, required).length > 0) return;
-				clearTimeout(timer);
+		const attempt = Promise.withResolvers<SpanFrame[] | null>();
+		const ws = new WebSocket(`ws://127.0.0.1:${port}`, {
+			headers: { Origin: PROBE_ORIGIN },
+		} as unknown as string[]);
+		const collected: SpanFrame[] = [];
+		let opened = false;
+		const timer = setTimeout(
+			() => {
 				try {
 					ws.close();
 				} catch {}
-				resolve(collected);
-			};
-			ws.onerror = () => {
+				attempt.resolve(opened ? collected : null);
+			},
+			Math.max(0, deadline - Date.now()),
+		);
+		ws.onopen = () => {
+			opened = true;
+			ws.send(JSON.stringify(PROBE_HELLO));
+		};
+		ws.onmessage = ev => {
+			const m = JSON.parse(String(ev.data)) as SpanFrame;
+			if (m.type !== "span") return;
+			collected.push(m);
+			// Wait on the post-condition — every stage the caller asserts on —
+			// never on a count of spans of any stage (#2364).
+			if (missingStages(collected, required).length > 0) return;
+			clearTimeout(timer);
+			try {
+				ws.close();
+			} catch {}
+			attempt.resolve(collected);
+		};
+		ws.onerror = () => {
+			clearTimeout(timer);
+			try {
+				ws.close();
+			} catch {}
+			// If we had already opened (and thus consumed the worker's first-client
+			// flush), return whatever we collected rather than retrying a second
+			// client that would receive nothing; only a never-opened attempt retries.
+			attempt.resolve(opened ? collected : null);
+		};
+		ws.onclose = () => {
+			if (!opened) {
 				clearTimeout(timer);
-				try {
-					ws.close();
-				} catch {}
-				// If we had already opened (and thus consumed the worker's first-client
-				// flush), return whatever we collected rather than retrying a second
-				// client that would receive nothing; only a never-opened attempt retries.
-				resolve(opened ? collected : null);
-			};
-			ws.onclose = () => {
-				if (!opened) {
-					clearTimeout(timer);
-					resolve(null);
-				}
-			};
-		});
+				attempt.resolve(null);
+			}
+		};
+		const result = await attempt.promise;
 		if (result !== null) return result; // opened (first client); return whatever was collected
 		await Bun.sleep(150); // worker not listening yet — retry the connect (no client was established)
 	}

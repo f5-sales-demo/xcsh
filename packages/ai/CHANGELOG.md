@@ -21,6 +21,7 @@
 - Fixed Ollama discovery cache normalization so cached models upgrade to the OpenAI Responses transport after the provider change
 
 ## [14.0.0] - 2026-04-08
+
 ### Breaking Changes
 
 - Removed `coerceNullStrings` function and its automatic null-string coercion behavior from JSON parsing
@@ -43,6 +44,7 @@
 - Fixed Anthropic streaming to suppress transient SDK console errors for malformed SSE keep-alive frames so the TUI only shows surfaced provider errors
 
 - Added environment-based credential fallback for the OpenAI Codex provider.
+
 ## [13.17.6] - 2026-04-01
 
 ### Fixed
@@ -50,6 +52,7 @@
 - Fixed Anthropic first-event timeouts to exclude stream connection setup from the watchdog, preserve timeout-specific retry classification after local aborts, and reset retry state cleanly between attempts
 
 ## [13.17.5] - 2026-04-01
+
 ### Changed
 
 - Increased default first-event timeout from 15s to 45s to better accommodate longer request setup times
@@ -88,6 +91,7 @@
 - Added Vercel AI Gateway to `/login` providers for interactive API key setup
 
 ### Fixed
+
 - Fixed `omp commit` failing with HTTP 400 errors when using reasoning-enabled models on OpenAI-compatible endpoints that don't support the `developer` role (e.g., GitHub Copilot, custom proxies). Now falls back to `system` role when `developer` is unsupported.
 
 ## [13.17.0] - 2026-03-30
@@ -112,6 +116,7 @@
 - Fixed normalizeAnthropicBaseUrl returning empty string instead of undefined when baseUrl is empty
 
 ## [13.16.4] - 2026-03-28
+
 ### Added
 
 - Added support for Groq Compound and Compound Mini models with extended context window (131K tokens) and configurable thinking levels
@@ -132,6 +137,7 @@
 - Updated OpenRouter Claude 3.5 Sonnet pricing: input from 0.45 to 0.42, cache read from 0.225 to 0.21
 
 ## [13.16.3] - 2026-03-28
+
 ### Changed
 
 - Modified OAuth credential saving to preserve unrelated identities instead of replacing all credentials for a provider
@@ -157,6 +163,7 @@
 - Fixed `parseRateLimitReason` not recognizing "usage limit" in Codex error messages, causing incorrect fallback to `UNKNOWN` classification instead of `QUOTA_EXHAUSTED`
 
 ## [13.14.2] - 2026-03-21
+
 ### Changed
 
 - Updated thinking configuration format from `levels` array to `minLevel` and `maxLevel` properties for improved clarity
@@ -179,13 +186,14 @@
 - Added bundled GPT-5.4 mini model metadata for OpenAI, OpenAI Codex, and GitHub Copilot, including low-to-xhigh thinking support and GitHub Copilot premium multiplier metadata
 - Added bundled GPT-5.4 nano model metadata for OpenAI and OpenAI Codex, including low-to-xhigh thinking support
 
-
 ## [13.13.2] - 2026-03-18
+
 ### Changed
 
 - Modified tool result handling for aborted assistant messages to preserve existing tool results when already recorded, instead of always replacing them with synthetic 'aborted' results
 
 ## [13.13.0] - 2026-03-18
+
 ### Changed
 
 - Changed tool argument validation to always normalize optional null values before type coercion, ensuring consistent handling of LLM-generated 'null' strings
@@ -196,6 +204,7 @@
 - Improved type safety of `validateToolCall` and `validateToolArguments` functions by returning properly typed `ToolCall["arguments"]` instead of `any`
 
 ## [13.12.9] - 2026-03-17
+
 ### Changed
 
 - Extracted OpenAI compatibility detection and resolution logic into dedicated `openai-completions-compat` module for improved maintainability and reusability
@@ -245,6 +254,7 @@
 - Fixed auth schema V0-to-V1 migration crash when the V0 table lacks a `disabled` column
 
 ## [13.11.0] - 2026-03-12
+
 ### Added
 
 - Added support for Parallel AI provider with API key authentication
@@ -260,6 +270,7 @@
 - Improved retry logic to handle HTTP/2 stream errors and internal_error responses from Anthropic API
 
 ## [13.9.16] - 2026-03-10
+
 ### Added
 
 - Support for `onPayload` callback to replace provider request payloads before sending, enabling request interception and modification
@@ -282,11 +293,13 @@
 - Fixed handling of malformed JSON messages in websocket streams to trigger immediate fallback to SSE without retry attempts
 
 ## [13.9.13] - 2026-03-10
+
 ### Added
 
 - Added `isSpecialServiceTier` utility function to validate OpenAI service tier values
 
 ## [13.9.12] - 2026-03-09
+
 ### Added
 
 - Added Tavily web search provider support with API key authentication
@@ -319,11 +332,13 @@
 - Fixed auth storage to preserve newer recorded schema versions when opened by older binaries
 
 ## [13.9.8] - 2026-03-08
+
 ### Fixed
 
 - Fixed WebSocket stream fallback logic to safely replay buffered output over SSE when WebSocket fails after partial content has been streamed
 
 ## [13.9.4] - 2026-03-07
+
 ### Changed
 
 - Simplified API key credential storage to always replace existing credentials on re-login instead of accumulating multiple keys
@@ -336,6 +351,7 @@
 - Fixed Cerebras model compatibility by preventing `stream_options` usage requests in chat completions
 
 ## [13.9.3] - 2026-03-07
+
 ### Breaking Changes
 
 - Changed `reasoning` parameter from `ThinkingLevel | undefined` to `Effort | undefined` in `SimpleStreamOptions`; 'off' is no longer valid (omit the field instead)
@@ -944,7 +960,7 @@
 ### Changed
 
 - Updated GLM-4.5, GLM-4.5-Air, GLM-4.5-Flash, GLM-4.5V, GLM-4.6, GLM-4.6V, GLM-4.7, GLM-4.7-Flash, and GLM-5 models to use anthropic-messages API instead of openai-completions
-- Updated GLM models base URL from https://api.z.ai/api/coding/paas/v4 to https://api.z.ai/api/anthropic
+- Updated GLM models base URL from <https://api.z.ai/api/coding/paas/v4> to <https://api.z.ai/api/anthropic>
 - Updated pricing for multiple models including Mistral, Moonshot, and Qwen variants
 - Updated context window and max tokens for several models to reflect accurate specifications
 
@@ -1529,8 +1545,8 @@
 
 ### Changed
 
-- Updated environment variable prefix from PI* to OMP* for better consistency
-- Added automatic migration for legacy PI* environment variables to OMP* equivalents
+- Updated environment variable prefix from PI*to OMP* for better consistency
+- Added automatic migration for legacy PI*environment variables to OMP* equivalents
 - Adjusted Bedrock Claude thinking budgets to reserve output tokens when maxTokens is too low
 
 ### Fixed
@@ -1801,7 +1817,8 @@
 
 ### Fixed
 
-- Vertex AI dummy value for `getEnvApiKey()`: Returns `"<authenticated>"` when Application Default Credentials are configured (`~/.config/gcloud/application_default_credentials.json` exists) and both `GOOGLE_CLOUD_PROJECT` (or `GCLOUD_PROJECT`) and `GOOGLE_CLOUD_LOCATION` are set. This allows `streamSimple()` to work with Vertex AI without explicit `apiKey` option. The ADC credentials file existence check is cached per-process to avoid repeated filesystem access.
+- Vertex AI dummy value for `getEnvApiKey()`: Returns `"<authenticated>"` when Application Default Credentials are configured (`~/.config/gcloud/application_default_credentials.json` exists) and both `GOOGLE_CLOUD_PROJECT` (or `GCLOUD_PROJECT`) and `GOOGLE_CLOUD_LOCATION` are set.
+  This allows `streamSimple()` to work with Vertex AI without explicit `apiKey` option. The ADC credentials file existence check is cached per-process to avoid repeated filesystem access.
 
 ## [0.32.3] - 2026-01-03
 
@@ -1920,7 +1937,7 @@
 
 ## [0.22.1] - 2025-12-15
 
-_Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
+*Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))*
 
 ### Added
 
@@ -1974,7 +1991,8 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
 
 - Added `validateToolCall(tools, toolCall)` helper that finds the tool by name and validates arguments.
 
-- **OpenAI compatibility overrides**: Added `compat` field to `Model` for `openai-completions` API, allowing explicit configuration of provider quirks (`supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`, `maxTokensField`). Falls back to URL-based detection if not set. Useful for LiteLLM, custom proxies, and other non-standard endpoints. ([#133](https://github.com/badlogic/pi-mono/issues/133), thanks @fink-andreas for the initial idea and PR)
+- **OpenAI compatibility overrides**: Added `compat` field to `Model` for `openai-completions` API, allowing explicit configuration of provider quirks (`supportsStore`, `supportsDeveloperRole`, `supportsReasoningEffort`, `maxTokensField`). Falls back to URL-based detection if not set.
+  Useful for LiteLLM, custom proxies, and other non-standard endpoints. ([#133](https://github.com/badlogic/pi-mono/issues/133), thanks @fink-andreas for the initial idea and PR)
 
 - **xhigh reasoning level**: Added `xhigh` to `ReasoningEffort` type for OpenAI codex-max models. For non-OpenAI providers (Anthropic, Google), `xhigh` is automatically mapped to `high`. ([#143](https://github.com/badlogic/pi-mono/issues/143))
 
@@ -2002,7 +2020,7 @@ _Dedicated to Peter's shoulder ([@steipete](https://twitter.com/steipete))_
   - Corrected cache_read: $1.50 → $0.50 per MTok
   - Corrected cache_write: $18.75 → $6.25 per MTok
   - Added manual override in `scripts/generate-models.ts` until upstream fix is merged
-  - Submitted PR to models.dev: https://github.com/sst/models.dev/pull/439
+  - Submitted PR to models.dev: <https://github.com/sst/models.dev/pull/439>
 
 ## [0.9.4] - 2025-11-26
 

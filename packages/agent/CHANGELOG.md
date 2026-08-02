@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ## [14.0.1] - 2026-04-08
+
 ### Added
 
 - Added `onAssistantMessageEvent` callback option to inspect assistant streaming events before they are emitted, enabling abort decisions before buffered events continue flowing
@@ -25,6 +26,7 @@
 - Fixed stale forced toolChoice being passed to provider after tools are refreshed mid-turn
 
 ## [13.9.16] - 2026-03-10
+
 ### Added
 
 - Added `onPayload` option to `AgentOptions` to inspect or replace provider payloads before they are sent
@@ -43,11 +45,13 @@
 - Updated `setThinkingLevel()` method to accept `Effort | undefined` instead of `ThinkingLevel` string
 
 ## [13.4.0] - 2026-03-01
+
 ### Added
 
 - Added `getToolChoice` option to dynamically override tool choice per LLM call
 
 ## [13.3.8] - 2026-02-28
+
 ### Changed
 
 - Changed intent field name from `agent__intent` to `_i` in tool schemas
@@ -55,12 +59,15 @@
 ### Fixed
 
 - Fixed synthetic tool result text formatting so aborted/error tool results no longer emit `Tool execution was aborted.: Request was aborted` style punctuation.
+
 ## [13.3.7] - 2026-02-27
+
 ### Added
 
 - Added `lenientArgValidation` option to tools to allow graceful handling of argument validation errors by passing raw arguments to execute() instead of returning an error to the LLM
 
 ## [13.3.1] - 2026-02-26
+
 ### Added
 
 - Added `topP`, `topK`, `minP`, `presencePenalty`, and `repetitionPenalty` options to `AgentOptions` for fine-grained sampling control
@@ -71,7 +78,9 @@
 ### Changed
 
 - Removed per-tool `agent__intent` field description from injected schema to reduce token usage; intent format is now documented once in the system prompt instead of repeated in every tool definition
+
 ## [12.19.0] - 2026-02-22
+
 ### Changed
 
 - Updated tool result messages to include error details when tool execution fails

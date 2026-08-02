@@ -85,8 +85,6 @@ let certDir: string | undefined;
 // Assigned once the loopback fixture server is listening (beforeAll).
 let CONSOLE_URL = "";
 
-const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
-
 let browser: Browser;
 let server: BridgeServer;
 let worker: WebWorker | null = null;
@@ -124,7 +122,15 @@ describe.skipIf(isCI || !hasExtensionBuild)("Extension E2E (real Chrome via Pupp
 		CONSOLE_URL = `https://${CONSOLE_HOST}/web/namespaces/demo/manage/load_balancers/http_loadbalancers`;
 
 		// 1. Start the bridge server (xcsh side of the native-messaging pipeline).
-		server = await startBridgeServer();
+		server = await startBridgeServer(undefined, {
+			serveKind: "browser",
+			sessionInfo: () => ({
+				tenant: "demo",
+				env: "staging",
+				contextBound: false,
+				sessionId: boundTabId === null ? "spare" : `tab-${boundTabId}`,
+			}),
+		});
 
 		// 2. Launch Chrome with the extension loaded via Puppeteer 24.x API. Map the
 		//    console host onto the local fixture and accept its self-signed cert.
@@ -144,7 +150,7 @@ describe.skipIf(isCI || !hasExtensionBuild)("Extension E2E (real Chrome via Pupp
 		// 4. Wait for the bridge connection (SW → native host → xcsh socket).
 		const deadline = Date.now() + 30_000;
 		while (Date.now() < deadline && !server.connected) {
-			await sleep(500);
+			await Bun.sleep(500);
 		}
 
 		// 5. Bind the bridge session to a real Chrome tab. The extension enforces a
@@ -202,7 +208,7 @@ describe.skipIf(isCI || !hasExtensionBuild)("Extension E2E (real Chrome via Pupp
 			} catch (error) {
 				lastError = error;
 			}
-			await sleep(250);
+			await Bun.sleep(250);
 		}
 		throw new Error(`no evaluable service worker within ${timeoutMs}ms; last error: ${String(lastError)}`);
 	}
@@ -222,19 +228,12 @@ describe.skipIf(isCI || !hasExtensionBuild)("Extension E2E (real Chrome via Pupp
 	// correlates this bridge port to that tab, then wait until a ping round-trips.
 	async function bindToTab(tabId: number): Promise<boolean> {
 		boundTabId = tabId;
-		server.setSessionInfo(() => ({
-			tenant: "demo",
-			env: "staging",
-			apiUrl: null,
-			contextBound: false,
-			sessionId: `tab-${tabId}`,
-		}));
 		server.broadcastTenantChanged();
 		const deadline = Date.now() + 10_000;
 		while (Date.now() < deadline) {
 			const r = await server.request("ping", {}, 4_000).catch(() => null);
 			if (r && !r.is_error) return true;
-			await sleep(250);
+			await Bun.sleep(250);
 		}
 		return false;
 	}
@@ -377,7 +376,7 @@ describe.skipIf(isCI || !hasExtensionBuild)("Extension E2E (real Chrome via Pupp
 			const deadline = Date.now() + 45_000;
 			while (Date.now() < deadline) {
 				if (server.connected) break;
-				await sleep(1000);
+				await Bun.sleep(1000);
 			}
 			expect(server.connected).toBe(true);
 

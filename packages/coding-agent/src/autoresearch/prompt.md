@@ -34,6 +34,7 @@ You are running an autonomous experiment loop. Keep iterating until the user int
 
 Recent runs:
 {{#each recent_results}}
+
 - run `#{{run_number}}`: `{{status}}` `{{metric_display}}` — {{description}}
 {{#if has_asi_summary}}
   ASI: {{asi_summary}}
@@ -185,6 +186,7 @@ Suggested structure:
 - If the user sends another message while a run is in progress, finish the current run and logging cycle first, then address the new input in the next iteration.
 
 {{#if has_autoresearch_md}}
+
 ### Resume mode
 
 `autoresearch.md` already exists at `{{autoresearch_md_path}}`.
@@ -197,6 +199,7 @@ Resume from the existing notes:
 - continue from the most promising unfinished direction on the current protected branch
 
 {{else}}
+
 ### Initial setup
 
 `autoresearch.md` does not exist yet. You decide the benchmark contract, harness, and scope from the user's messages and the repository—do not ask the user to re-type benchmark commands or metric names in a separate UI prompt.
@@ -215,6 +218,7 @@ Until `init_experiment` succeeds, only autoresearch control files (`autoresearch
 
 {{/if}}
 {{#if has_checks}}
+
 ### Backpressure checks
 
 `autoresearch.checks.sh` exists at `{{checks_path}}` and runs automatically after passing benchmark runs.
@@ -227,6 +231,7 @@ Treat failing checks as a failed experiment:
 
 {{/if}}
 {{#if has_ideas}}
+
 ### Ideas backlog
 
 `autoresearch.ideas.md` exists at `{{ideas_path}}`.

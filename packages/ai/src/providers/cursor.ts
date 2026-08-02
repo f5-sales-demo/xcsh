@@ -352,7 +352,7 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 				":path": "/agent.v1.AgentService/Run",
 				"content-type": "application/connect+proto",
 				"connect-protocol-version": "1",
-				te: "trailers",
+				[http2.constants.HTTP2_HEADER_TE]: "trailers",
 				authorization: `Bearer ${apiKey}`,
 				"x-ghost-mode": "true",
 				"x-cursor-client-version": CURSOR_CLIENT_VERSION,
@@ -471,35 +471,35 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 
 			heartbeatTimer = setInterval(sendHeartbeat, 5000);
 
-			await new Promise<void>((resolve, reject) => {
-				resolveH2 = resolve;
+			const h2Completion = Promise.withResolvers<void>();
+			resolveH2 = h2Completion.resolve;
 
-				h2Request!.on("trailers", trailers => {
-					const status = trailers["grpc-status"];
-					const msg = trailers["grpc-message"];
-					if (status && status !== "0") {
-						reject(new Error(`gRPC error ${status}: ${decodeURIComponent(String(msg || ""))}`));
-					}
-				});
-
-				h2Request!.on("end", () => {
-					resolveH2 = undefined;
-					if (endStreamError) {
-						reject(endStreamError);
-						return;
-					}
-					resolve();
-				});
-
-				h2Request!.on("error", reject);
-
-				if (options?.signal) {
-					options.signal.addEventListener("abort", () => {
-						h2Request?.close();
-						reject(new Error("Request was aborted"));
-					});
+			h2Request!.on("trailers", trailers => {
+				const status = trailers["grpc-status"];
+				const msg = trailers["grpc-message"];
+				if (status && status !== "0") {
+					h2Completion.reject(new Error(`gRPC error ${status}: ${decodeURIComponent(String(msg || ""))}`));
 				}
 			});
+
+			h2Request!.on("end", () => {
+				resolveH2 = undefined;
+				if (endStreamError) {
+					h2Completion.reject(endStreamError);
+					return;
+				}
+				h2Completion.resolve();
+			});
+
+			h2Request!.on("error", h2Completion.reject);
+
+			if (options?.signal) {
+				options.signal.addEventListener("abort", () => {
+					h2Request?.close();
+					h2Completion.reject(new Error("Request was aborted"));
+				});
+			}
+			await h2Completion.promise;
 
 			if (state.currentTextBlock) {
 				const idx = output.content.indexOf(state.currentTextBlock);

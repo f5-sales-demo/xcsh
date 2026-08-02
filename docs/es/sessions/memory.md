@@ -54,7 +54,8 @@ El agente puede leer archivos de memoria directamente usando URLs `memory://` co
 
 Las memorias se construyen mediante un pipeline en segundo plano que se ejecuta al inicio o se activa manualmente mediante un comando slash.
 
-**Fase 1 — extracción por sesión:** Para cada sesión pasada que ha cambiado desde que fue procesada por última vez, un modelo lee el historial de la sesión y extrae señal duradera: decisiones técnicas, restricciones, fallos resueltos, flujos de trabajo recurrentes. Las sesiones demasiado recientes, demasiado antiguas o actualmente activas se omiten. Cada extracción produce un bloque de memoria sin procesar y una sinopsis breve para esa sesión.
+**Fase 1 — extracción por sesión:** Para cada sesión pasada que ha cambiado desde que fue procesada por última vez, un modelo lee el historial de la sesión y extrae señal duradera: decisiones técnicas, restricciones, fallos resueltos, flujos de trabajo recurrentes.
+Las sesiones demasiado recientes, demasiado antiguas o actualmente activas se omiten. Cada extracción produce un bloque de memoria sin procesar y una sinopsis breve para esa sesión.
 
 **Fase 2 — consolidación:** Después de la extracción, una segunda pasada del modelo lee todas las extracciones por sesión y produce tres salidas escritas en disco:
 

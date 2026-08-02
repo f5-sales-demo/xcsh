@@ -33,6 +33,8 @@ import { SessionManager } from "../../src/session/session-manager";
  */
 
 class FakeBridgeServer {
+	readonly serveKind = "office" as const;
+	readonly clientHost = "excel" as const;
 	sent: Array<Record<string, unknown>> = [];
 	#onMessage: Array<(m: Record<string, unknown>) => void> = [];
 	#onDisconnected: Array<() => void> = [];

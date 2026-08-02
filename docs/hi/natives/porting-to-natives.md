@@ -90,7 +90,8 @@ i18n:
 
 ### 1) पुराना `pi_natives.node` नए exports को रोकता है
 
-लोडर `packages/natives/native` में प्लेटफॉर्म-टैग्ड बाइनरी (`pi_natives.<platform>-<arch>.node`) को प्राथमिकता देता है। `PI_DEV=1` अब केवल loader diagnostics सक्षम करता है; यह अब एक अलग dev addon फ़ाइलनाम पर स्विच नहीं करता। एक फ़ॉलबैक `pi_natives.node` भी है। संकलित बाइनरी `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node` में extract होती हैं। यदि इनमें से कोई भी पुरानी है, तो exports अपडेट नहीं होंगे।
+लोडर `packages/natives/native` में प्लेटफॉर्म-टैग्ड बाइनरी (`pi_natives.<platform>-<arch>.node`) को प्राथमिकता देता है। `PI_DEV=1` अब केवल loader diagnostics सक्षम करता है; यह अब एक अलग dev addon फ़ाइलनाम पर स्विच नहीं करता।
+एक फ़ॉलबैक `pi_natives.node` भी है। संकलित बाइनरी `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node` में extract होती हैं। यदि इनमें से कोई भी पुरानी है, तो exports अपडेट नहीं होंगे।
 
 **समाधान:** रीबिल्ड करने से पहले पुरानी फ़ाइल हटाएं।
 

@@ -95,11 +95,17 @@ import {
 	WSS_PORT_OFFSET,
 } from "../../src/browser/extension-bridge";
 import { EXTENSION_ID } from "../../src/cli/chrome-cli";
+import {
+	BROWSER_HELLO,
+	browserBridgeOptions,
+	OFFICE_HELLO,
+	officeBridgeOptions,
+} from "../helpers/extension-bridge-fixture";
 
 describe("auto-select bind", () => {
 	test("two servers land on different ports in range", async () => {
-		const a = await startBridgeServer(undefined, { skipOriginCheck: true });
-		const b = await startBridgeServer(undefined, { skipOriginCheck: true });
+		const a = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true }));
+		const b = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true }));
 		try {
 			expect(a.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
 			expect(b.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
@@ -111,9 +117,9 @@ describe("auto-select bind", () => {
 	});
 
 	test("forced port that is taken fails loud", async () => {
-		const a = await startBridgeServer(undefined, { skipOriginCheck: true });
+		const a = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true }));
 		try {
-			await expect(startBridgeServer(a.port, { skipOriginCheck: true })).rejects.toThrow();
+			await expect(startBridgeServer(a.port, browserBridgeOptions({ skipOriginCheck: true }))).rejects.toThrow();
 		} finally {
 			await a.close();
 		}
@@ -155,32 +161,35 @@ function makeFixtureCert(): { cert: string; key: string } {
 }
 
 /** Drive one `hello` → `hello_ack` round-trip over a WebSocket URL, resolving the ack frame. */
-function helloRoundTrip(url: string): Promise<Record<string, unknown>> {
-	return new Promise((resolve, reject) => {
-		const ws = new WebSocket(url);
-		const timer = setTimeout(() => {
-			ws.close();
-			reject(new Error("hello_ack timeout"));
-		}, 5000);
-		ws.addEventListener("open", () => ws.send(JSON.stringify({ type: "hello" })));
-		ws.addEventListener("message", ev => {
-			const msg = JSON.parse(typeof ev.data === "string" ? ev.data : "") as Record<string, unknown>;
-			if (msg.type === "hello_ack") {
-				clearTimeout(timer);
-				ws.close();
-				resolve(msg);
-			}
-		});
-		ws.addEventListener("error", () => {
+function helloRoundTrip(url: string, hello: Record<string, unknown> = BROWSER_HELLO): Promise<Record<string, unknown>> {
+	const acknowledgement = Promise.withResolvers<Record<string, unknown>>();
+	const ws = new WebSocket(url);
+	const timer = setTimeout(() => {
+		ws.close();
+		acknowledgement.reject(new Error("hello_ack timeout"));
+	}, 5000);
+	ws.addEventListener("open", () => ws.send(JSON.stringify(hello)));
+	ws.addEventListener("message", ev => {
+		const msg = JSON.parse(typeof ev.data === "string" ? ev.data : "") as Record<string, unknown>;
+		if (msg.type === "hello_ack") {
 			clearTimeout(timer);
-			reject(new Error("ws error"));
-		});
+			ws.close();
+			acknowledgement.resolve(msg);
+		}
 	});
+	ws.addEventListener("error", () => {
+		clearTimeout(timer);
+		acknowledgement.reject(new Error("ws error"));
+	});
+	return acknowledgement.promise;
 }
 
 describe("dual-listen ws + wss", () => {
 	test("binds ws in range AND wss at port + WSS_PORT_OFFSET", async () => {
-		const server = await startBridgeServer(undefined, { skipOriginCheck: true, tls: makeFixtureCert() });
+		const server = await startBridgeServer(
+			undefined,
+			browserBridgeOptions({ skipOriginCheck: true, tls: makeFixtureCert() }),
+		);
 		try {
 			expect(server.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
 			expect(server.port).toBeLessThanOrEqual(PORT_RANGE_END);
@@ -194,12 +203,18 @@ describe("dual-listen ws + wss", () => {
 	// Regression guard for the Chrome extension path: plain ws:// must keep working
 	// unchanged even with the wss listener enabled.
 	test("plain ws:// hello handshake is unchanged", async () => {
-		const server = await startBridgeServer(undefined, { skipOriginCheck: true, tls: makeFixtureCert() });
+		const server = await startBridgeServer(
+			undefined,
+			browserBridgeOptions({ skipOriginCheck: true, tls: makeFixtureCert() }),
+		);
 		try {
 			const ack = await helloRoundTrip(`ws://127.0.0.1:${server.port}`);
 			expect(ack.type).toBe("hello_ack");
-			expect(ack.pid).toBe(process.pid);
-			expect(ack.wssPort).toBe(server.wssPort);
+			expect(ack.contractVersion).toBe(BROWSER_HELLO.contractVersion);
+			expect(ack.sessionId).toBe("tab-7");
+			expect(ack).not.toHaveProperty("pid");
+			expect(ack).not.toHaveProperty("wssPort");
+			expect(ack).not.toHaveProperty("apiUrl");
 		} finally {
 			await server.close();
 		}
@@ -209,16 +224,16 @@ describe("dual-listen ws + wss", () => {
 	// as its CA must find the wss listener's presented cert `authorized === true`.
 	test("wss listener presents a cert that validates against the injected CA", async () => {
 		const fixture = makeFixtureCert();
-		const server = await startBridgeServer(undefined, { skipOriginCheck: true, tls: fixture });
+		const server = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true, tls: fixture }));
 		try {
-			const authorized = await new Promise<boolean>((resolve, reject) => {
-				const socket = tlsConnect({ host: "127.0.0.1", port: server.wssPort, ca: fixture.cert }, () => {
-					const ok = socket.authorized;
-					socket.end();
-					resolve(ok);
-				});
-				socket.on("error", reject);
+			const authorization = Promise.withResolvers<boolean>();
+			const socket = tlsConnect({ host: "127.0.0.1", port: server.wssPort, ca: fixture.cert }, () => {
+				const ok = socket.authorized;
+				socket.end();
+				authorization.resolve(ok);
 			});
+			socket.on("error", authorization.reject);
+			const authorized = await authorization.promise;
 			expect(authorized).toBe(true);
 		} finally {
 			await server.close();
@@ -227,7 +242,7 @@ describe("dual-listen ws + wss", () => {
 
 	// A bridge started WITHOUT cert material stays ws-only (no wss listener, no crash).
 	test("no tls → ws-only, wssPort is 0", async () => {
-		const server = await startBridgeServer(undefined, { skipOriginCheck: true });
+		const server = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true }));
 		try {
 			expect(server.port).toBeGreaterThanOrEqual(PORT_RANGE_START);
 			expect(server.wssPort).toBe(0);
@@ -238,21 +253,20 @@ describe("dual-listen ws + wss", () => {
 });
 
 describe("serveKind advertise + office range (issue #2201 port collision)", () => {
-	test("hello_ack serveKind defaults to 'browser'", async () => {
-		const server = await startBridgeServer(undefined, { skipOriginCheck: true });
+	test("browser hello_ack omits the Office-only serveKind", async () => {
+		const server = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true }));
 		try {
 			const ack = await helloRoundTrip(`ws://127.0.0.1:${server.port}`);
-			expect(ack.serveKind).toBe("browser");
+			expect(ack).not.toHaveProperty("serveKind");
 		} finally {
 			await server.close();
 		}
 	});
 
-	test("setServeKind('office') is echoed in hello_ack", async () => {
-		const server = await startBridgeServer(undefined, { skipOriginCheck: true });
-		server.setServeKind("office");
+	test("office serveKind is fixed before the listener binds", async () => {
+		const server = await startBridgeServer(undefined, officeBridgeOptions({ skipOriginCheck: true }));
 		try {
-			const ack = await helloRoundTrip(`ws://127.0.0.1:${server.port}`);
+			const ack = await helloRoundTrip(`ws://127.0.0.1:${server.port}`, OFFICE_HELLO);
 			expect(ack.serveKind).toBe("office");
 		} finally {
 			await server.close();
@@ -260,8 +274,11 @@ describe("serveKind advertise + office range (issue #2201 port collision)", () =
 	});
 
 	test("range: office bridge binds in the office range, chrome bridge stays in the chrome range (disjoint)", async () => {
-		const office = await startBridgeServer(undefined, { skipOriginCheck: true, range: OFFICE_PORT_RANGE });
-		const chrome = await startBridgeServer(undefined, { skipOriginCheck: true });
+		const office = await startBridgeServer(
+			undefined,
+			officeBridgeOptions({ skipOriginCheck: true, range: OFFICE_PORT_RANGE }),
+		);
+		const chrome = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true }));
 		try {
 			expect(office.port).toBeGreaterThanOrEqual(OFFICE_PORT_RANGE_START);
 			expect(office.port).toBeLessThanOrEqual(OFFICE_PORT_RANGE_END);
@@ -278,15 +295,16 @@ describe("serveKind advertise + office range (issue #2201 port collision)", () =
 	// bridge stand up side-by-side; each advertises its OWN serveKind so the pane's
 	// discovery filter can adopt the office one and never the browser worker.
 	test("dual bridge: each advertises its own serveKind on its own range", async () => {
-		const office = await startBridgeServer(undefined, { skipOriginCheck: true, range: OFFICE_PORT_RANGE });
-		office.setServeKind("office");
-		const worker = await startBridgeServer(undefined, { skipOriginCheck: true });
-		worker.setServeKind("browser");
+		const office = await startBridgeServer(
+			undefined,
+			officeBridgeOptions({ skipOriginCheck: true, range: OFFICE_PORT_RANGE }),
+		);
+		const worker = await startBridgeServer(undefined, browserBridgeOptions({ skipOriginCheck: true }));
 		try {
-			const officeAck = await helloRoundTrip(`ws://127.0.0.1:${office.port}`);
+			const officeAck = await helloRoundTrip(`ws://127.0.0.1:${office.port}`, OFFICE_HELLO);
 			const workerAck = await helloRoundTrip(`ws://127.0.0.1:${worker.port}`);
 			expect(officeAck.serveKind).toBe("office");
-			expect(workerAck.serveKind).toBe("browser");
+			expect(workerAck).not.toHaveProperty("serveKind");
 		} finally {
 			await office.close();
 			await worker.close();
@@ -339,42 +357,42 @@ interface UpgradeResult {
  * as its CA (explicit `ca`) — NEVER `rejectUnauthorized:false` / any TLS bypass.
  */
 function upgradeHandshake(o: { secure: boolean; port: number; origin?: string; ca?: string }): Promise<UpgradeResult> {
-	return new Promise((resolve, reject) => {
-		const headers: Record<string, string> = {
-			Connection: "Upgrade",
-			Upgrade: "websocket",
-			"Sec-WebSocket-Key": randomBytes(16).toString("base64"),
-			"Sec-WebSocket-Version": "13",
-		};
-		if (o.origin) headers.Origin = o.origin;
-		const common = { host: "127.0.0.1", port: o.port, path: "/", headers };
-		const req = o.secure ? httpsRequest({ ...common, ca: o.ca }) : httpRequest(common);
-		const timer = setTimeout(() => {
-			req.destroy();
-			reject(new Error("upgrade timeout"));
-		}, 5000);
-		req.on("upgrade", (res, socket) => {
-			clearTimeout(timer);
-			socket.destroy();
-			resolve({ status: res.statusCode ?? 0, headers: res.headers });
-		});
-		req.on("response", res => {
-			clearTimeout(timer);
-			res.resume();
-			resolve({ status: res.statusCode ?? 0, headers: res.headers });
-		});
-		req.on("error", err => {
-			clearTimeout(timer);
-			reject(err);
-		});
-		req.end();
+	const upgrade = Promise.withResolvers<UpgradeResult>();
+	const headers: Record<string, string> = {
+		Connection: "Upgrade",
+		Upgrade: "websocket",
+		"Sec-WebSocket-Key": randomBytes(16).toString("base64"),
+		"Sec-WebSocket-Version": "13",
+	};
+	if (o.origin) headers.Origin = o.origin;
+	const common = { host: "127.0.0.1", port: o.port, path: "/", headers };
+	const req = o.secure ? httpsRequest({ ...common, ca: o.ca }) : httpRequest(common);
+	const timer = setTimeout(() => {
+		req.destroy();
+		upgrade.reject(new Error("upgrade timeout"));
+	}, 5000);
+	req.on("upgrade", (res, socket) => {
+		clearTimeout(timer);
+		socket.destroy();
+		upgrade.resolve({ status: res.statusCode ?? 0, headers: res.headers });
 	});
+	req.on("response", res => {
+		clearTimeout(timer);
+		res.resume();
+		upgrade.resolve({ status: res.statusCode ?? 0, headers: res.headers });
+	});
+	req.on("error", err => {
+		clearTimeout(timer);
+		upgrade.reject(err);
+	});
+	req.end();
+	return upgrade.promise;
 }
 
 describe("bridge origin gate (real listeners, gate ENABLED)", () => {
 	test("wss upgrade with an allowed add-in Origin succeeds + carries PNA + scoped ACAO", async () => {
 		const fixture = makeFixtureCert();
-		const server = await startBridgeServer(undefined, { tls: fixture });
+		const server = await startBridgeServer(undefined, officeBridgeOptions({ tls: fixture }));
 		try {
 			const res = await upgradeHandshake({
 				secure: true,
@@ -392,7 +410,7 @@ describe("bridge origin gate (real listeners, gate ENABLED)", () => {
 
 	test("a disallowed Origin is rejected with 403", async () => {
 		const fixture = makeFixtureCert();
-		const server = await startBridgeServer(undefined, { tls: fixture });
+		const server = await startBridgeServer(undefined, officeBridgeOptions({ tls: fixture }));
 		try {
 			const res = await upgradeHandshake({
 				secure: true,
@@ -409,7 +427,7 @@ describe("bridge origin gate (real listeners, gate ENABLED)", () => {
 	// Regression: the Chrome extension origin STILL passes the gate on the ws
 	// listener, and its response behavior is unchanged (no PNA / scoped-ACAO).
 	test("the chrome-extension origin still passes the gate (ws), unchanged response", async () => {
-		const server = await startBridgeServer(undefined, {});
+		const server = await startBridgeServer(undefined, browserBridgeOptions());
 		try {
 			const res = await upgradeHandshake({
 				secure: false,

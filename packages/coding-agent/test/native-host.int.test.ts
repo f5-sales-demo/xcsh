@@ -5,8 +5,8 @@
  * must ENSURE a detached `xcsh manager` is running: if the manager control socket
  * is absent/unreachable it spawns one (detached, long-lived) and connects. This
  * test spawns the host with a temp `XCSH_MANAGER_SOCK`, writes an NM-encoded
- * `provision` frame to its stdin, and asserts the manager socket APPEARS — proof
- * the host auto-spawned the manager.
+ * `provision` frame to its stdin, and completes the manager version handshake —
+ * proof the host auto-spawned a ready manager.
  *
  * The spawned manager is DETACHED (it outlives the host on purpose), so killing
  * the host does NOT reap it. afterEach discovers the manager via `lsof` on the
@@ -18,47 +18,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { encodeNm } from "../src/browser/native-messaging";
+import { CODING_AGENT_CLI, CODING_AGENT_ROOT } from "./helpers/cli-process";
+import { waitForManagerVersion } from "./helpers/manager-socket";
 
 let host: import("bun").Subprocess | undefined;
 let oldMgr: import("bun").Subprocess | undefined;
 let dir = "";
 let sock = "";
-
-/** The version the manager on `target` reports via the hello handshake, or null. */
-async function managerVersion(target: string, timeoutMs = 1500): Promise<string | null> {
-	return await new Promise(resolve => {
-		let buf = "";
-		let done = false;
-		const finish = (v: string | null) => {
-			if (!done) {
-				done = true;
-				resolve(v);
-			}
-		};
-		Bun.connect({
-			unix: target,
-			socket: {
-				open(c) {
-					c.write(`${JSON.stringify({ type: "hello" })}\n`);
-				},
-				data(c, d) {
-					buf += d.toString("utf8");
-					const nl = buf.indexOf("\n");
-					if (nl < 0) return;
-					try {
-						const ack = JSON.parse(buf.slice(0, nl)) as { version?: unknown };
-						finish(typeof ack.version === "string" ? ack.version : null);
-					} catch {
-						finish(null);
-					}
-					c.end();
-				},
-				error: () => finish(null),
-			},
-		}).catch(() => finish(null));
-		setTimeout(() => finish(null), timeoutMs);
-	});
-}
 
 /** PIDs from `pgrep <args>`. Excludes this test process. */
 async function pgrep(...args: string[]): Promise<number[]> {
@@ -133,8 +99,8 @@ afterEach(async () => {
 test("chrome-host ensures the manager and relays a provision frame", async () => {
 	dir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-nmh-"));
 	sock = path.join(dir, "manager.sock");
-	host = Bun.spawn(["bun", "src/cli.ts", "chrome-host"], {
-		cwd: process.cwd(),
+	host = Bun.spawn([process.execPath, CODING_AGENT_CLI, "chrome-host"], {
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
 		stdin: "pipe",
 		stdout: "ignore",
@@ -145,15 +111,7 @@ test("chrome-host ensures the manager and relays a provision frame", async () =>
 	stdin.write(encodeNm({ type: "provision", sessionId: "tab-1", tenant: "example-corp|staging" }));
 	stdin.flush();
 
-	let up = false;
-	for (let i = 0; i < 50; i++) {
-		if (fs.existsSync(sock)) {
-			up = true;
-			break;
-		}
-		await Bun.sleep(100);
-	}
-	expect(up).toBe(true); // manager auto-spawned by the host
+	expect(await waitForManagerVersion(sock, VERSION, 20_000)).toBe(true);
 }, 30_000);
 
 test("chrome-host supersedes an OLDER running manager and takes over (#1874)", async () => {
@@ -161,26 +119,18 @@ test("chrome-host supersedes an OLDER running manager and takes over (#1874)", a
 	sock = path.join(dir, "manager.sock");
 
 	// Stand up an "old" manager (spoofed version) that owns the socket.
-	oldMgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
-		cwd: process.cwd(),
+	oldMgr = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, XCSH_MANAGER_SOCK: sock, XCSH_MANAGER_VERSION: "1.0.0", XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
-	let old = false;
-	for (let i = 0; i < 100; i++) {
-		if ((await managerVersion(sock)) === "1.0.0") {
-			old = true;
-			break;
-		}
-		await Bun.sleep(100);
-	}
-	expect(old).toBe(true); // old manager is the socket owner
+	expect(await waitForManagerVersion(sock, "1.0.0", 20_000)).toBe(true);
 
 	// The host runs at the real VERSION (> 1.0.0) → it must step the old one down
 	// and bind a successor advertising the current version.
-	host = Bun.spawn(["bun", "src/cli.ts", "chrome-host"], {
-		cwd: process.cwd(),
+	host = Bun.spawn([process.execPath, CODING_AGENT_CLI, "chrome-host"], {
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
 		stdin: "pipe",
 		stdout: "ignore",
@@ -190,14 +140,7 @@ test("chrome-host supersedes an OLDER running manager and takes over (#1874)", a
 	stdin.write(encodeNm({ type: "provision", sessionId: "tab-1", tenant: "example-corp|staging" }));
 	stdin.flush();
 
-	let superseded = false;
-	for (let i = 0; i < 150; i++) {
-		if ((await managerVersion(sock)) === VERSION) {
-			superseded = true;
-			break;
-		}
-		await Bun.sleep(100);
-	}
+	const superseded = await waitForManagerVersion(sock, VERSION, 20_000);
 	// Version flip proves the old manager released the socket and a current-version
 	// successor bound it (the single-manager invariant means both can't own it).
 	expect(superseded).toBe(true);

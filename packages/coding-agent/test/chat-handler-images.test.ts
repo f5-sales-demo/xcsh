@@ -2,13 +2,13 @@
  * Photo/image attachments on a chat turn (Office `+` menu → "Add files or photos").
  *
  * Two contracts:
- *  1. `isChatRequest` accepts a well-formed `images` array and rejects malformed ones.
+ *  1. The transport request validator accepts a well-formed `images` array and rejects malformed ones.
  *  2. `ChatHandler` forwards `chat_request.images` to `session.prompt` as
  *     `ImageContent[]` (base64 vision blocks) — the engine already renders those.
  */
 import { expect, test } from "bun:test";
 import { ChatHandler } from "../src/browser/chat-handler";
-import { isChatRequest } from "../src/browser/chat-protocol";
+import { isTransportChatRequest } from "../src/browser/chat-protocol";
 import type { BridgeServer } from "../src/browser/extension-bridge";
 import type { AgentSession, AgentSessionEvent } from "../src/session/agent-session";
 
@@ -53,49 +53,46 @@ function harness() {
 
 const flush = (ms = 20) => Bun.sleep(ms);
 
-test("isChatRequest accepts a valid images array", () => {
+test("isTransportChatRequest accepts a valid images array", () => {
 	expect(
-		isChatRequest(
-			{
-				type: "chat_request",
-				id: "c-1",
-				text: "describe",
-				mode: "educational",
-				images: [{ data: "AAAA", mimeType: "image/png" }],
-			},
-			"transport",
-		),
+		isTransportChatRequest({
+			type: "chat_request",
+			id: "c-1",
+			text: "describe",
+			mode: "educational",
+			images: [{ data: "AAAA", mimeType: "image/png" }],
+		}),
 	).toBe(true);
 });
 
-test("isChatRequest accepts a request with no images (optional field)", () => {
-	expect(isChatRequest({ type: "chat_request", id: "c-1", text: "hi", mode: "educational" }, "transport")).toBe(true);
+test("isTransportChatRequest accepts a request with no images (optional field)", () => {
+	expect(isTransportChatRequest({ type: "chat_request", id: "c-1", text: "hi", mode: "educational" })).toBe(true);
 });
 
-test("isChatRequest rejects malformed images", () => {
+test("isTransportChatRequest rejects malformed images", () => {
 	// Not an array.
 	expect(
-		isChatRequest({ type: "chat_request", id: "c-1", text: "x", mode: "educational", images: "nope" }, "transport"),
+		isTransportChatRequest({ type: "chat_request", id: "c-1", text: "x", mode: "educational", images: "nope" }),
 	).toBe(false);
 	// Missing mimeType.
 	expect(
-		isChatRequest(
-			{ type: "chat_request", id: "c-1", text: "x", mode: "educational", images: [{ data: "AAAA" }] },
-			"transport",
-		),
+		isTransportChatRequest({
+			type: "chat_request",
+			id: "c-1",
+			text: "x",
+			mode: "educational",
+			images: [{ data: "AAAA" }],
+		}),
 	).toBe(false);
 	// Non-string data.
 	expect(
-		isChatRequest(
-			{
-				type: "chat_request",
-				id: "c-1",
-				text: "x",
-				mode: "educational",
-				images: [{ data: 123, mimeType: "image/png" }],
-			},
-			"transport",
-		),
+		isTransportChatRequest({
+			type: "chat_request",
+			id: "c-1",
+			text: "x",
+			mode: "educational",
+			images: [{ data: 123, mimeType: "image/png" }],
+		}),
 	).toBe(false);
 });
 

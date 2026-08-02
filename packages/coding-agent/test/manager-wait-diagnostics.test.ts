@@ -12,7 +12,7 @@
 import { describe, expect, test } from "bun:test";
 import { describePortScan, describeWaitFailure } from "./manager-wait-diagnostics";
 
-const PATTERN = /adopted spare pid \d+ on port (\d+) as tab-7 \(/;
+const PATTERN = /adopted spare pid \d+ on port (\d+)/;
 
 describe("describeWaitFailure", () => {
 	test("names the pattern and the exhausted budget", () => {
@@ -45,13 +45,12 @@ describe("describeWaitFailure", () => {
 		expect(msg).toContain("adoptions logged: 0");
 	});
 
-	test("an adoption for a DIFFERENT session is surfaced rather than looking like no adoption", () => {
-		// The wait is keyed to tab-7; an adoption as tab-999 never matches the pattern,
-		// and reading "adoptions logged: 0" would send the next person hunting the pool.
-		const stderr = "[xcsh manager] adopted spare pid 11 on port 19222 as tab-999 (handoff)";
+	test("an adoption is surfaced without exposing session or tenant identity", () => {
+		const stderr = "[xcsh manager] adopted spare pid 11 on port 19222";
 		const msg = describeWaitFailure({ pattern: PATTERN, tries: 2, intervalMs: 100, stderr });
 		expect(msg).toContain("adoptions logged: 1");
-		expect(msg).toContain("tab-999");
+		expect(msg).not.toContain("tab-");
+		expect(msg).not.toContain("example-corp");
 	});
 
 	test("keeps the tail of stderr, which is where a late line would show", () => {
@@ -70,7 +69,7 @@ describe("describeWaitFailure", () => {
 });
 
 describe("describePortScan (#2463 mode C)", () => {
-	test("names which ports answered and with what tenant, so a wrong tenant is not silence", () => {
+	test("distinguishes expected and different identities without exposing either tenant", () => {
 		// The failure this exists for: the two-tab test asserted a bare `ports.size`
 		// while swallowing every probe error, so `Received: 1` said nothing about
 		// whether the second worker was absent, late, or answering another tenant.
@@ -84,11 +83,13 @@ describe("describePortScan (#2463 mode C)", () => {
 			"example-corp",
 		).join("\n");
 		expect(lines).toContain("19222");
-		expect(lines).toContain("example-corp");
+		expect(lines).toContain("expected identity");
 		expect(lines).toContain("19223");
-		expect(lines).toContain("stale"); // a DIFFERENT tenant is the interesting case
+		expect(lines).toContain("different identity");
+		expect(lines).not.toContain("example-corp");
+		expect(lines).not.toContain("example-stale");
 		expect(lines).toContain("ECONNREFUSED");
-		expect(lines).toContain("matched 1 of 4"); // how many satisfied the wanted tenant
+		expect(lines).toContain("matched expected identity on 1 of 4 ports");
 	});
 
 	test("distinguishes 'nothing listening anywhere' from 'listening but wrong tenant'", () => {
@@ -103,7 +104,9 @@ describe("describePortScan (#2463 mode C)", () => {
 
 		const wrongTenant = describePortScan([{ port: 19222, tenant: "example-other" }], "example-corp").join("\n");
 		expect(wrongTenant).not.toContain("no port answered at all");
-		expect(wrongTenant).toContain("matched 0 of 1");
+		expect(wrongTenant).toContain("matched expected identity on 0 of 1 ports");
+		expect(wrongTenant).not.toContain("example-other");
+		expect(wrongTenant).not.toContain("example-corp");
 	});
 });
 
@@ -113,7 +116,7 @@ describe("describePortScan reports who holds a silent port (#2463)", () => {
 	 * showed both workers provisioned on distinct ports and the FIRST one silent:
 	 *
 	 *     24800: no answer — ws error
-	 *     24801: tenant "example-corp"
+	 *     24801: expected identity
 	 *
 	 * and could go no further, because "no answer" covers two different defects. A dead
 	 * worker means something killed it; a live one that never answers means its bridge
@@ -152,7 +155,8 @@ describe("describePortScan reports who holds a silent port (#2463)", () => {
 		const lines = describePortScan([{ port: 24801, tenant: "example-corp", holders: [13391] }], "example-corp").join(
 			"\n",
 		);
-		expect(lines).toContain('tenant "example-corp"');
+		expect(lines).toContain("expected identity");
+		expect(lines).not.toContain("example-corp");
 		expect(lines).not.toContain("13391"); // it answered; who holds it adds nothing
 	});
 });

@@ -156,7 +156,7 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           target: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2.9.1
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           key: ${{ matrix.target }}${{ matrix.variants }}
           cache-workspace-crates: true
@@ -336,7 +336,7 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - uses: ./.github/actions/setup-rust
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2.9.1
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           cache-workspace-crates: true
       - name: Setup Zig 0.15.2
@@ -439,7 +439,7 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - uses: ./.github/actions/setup-rust
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2.9.1
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
         with:
           cache-workspace-crates: true
       - name: Setup Zig 0.15.2

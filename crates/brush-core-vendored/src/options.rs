@@ -179,7 +179,7 @@ pub struct RuntimeOptions {
 	pub interactive: bool,
 	/// Whether or not the shell is reading commands from standard input.
 	pub read_commands_from_stdin: bool,
-	/// Whether or not the shell is in maximal `sh` compatibility mode.    
+	/// Whether or not the shell is in maximal `sh` compatibility mode.
 	pub sh_mode: bool,
 	/// Maximum function call depth.
 	pub max_function_call_depth: Option<usize>,

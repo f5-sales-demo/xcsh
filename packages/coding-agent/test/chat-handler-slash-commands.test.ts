@@ -38,12 +38,13 @@ function harness(slashCommands: FileSlashCommand[] = []) {
 	const prompts: string[] = [];
 	let onMsg: (m: Record<string, unknown>) => void = () => {};
 	const server = {
+		serveKind: "office",
+		clientHost: "excel",
 		send: (p: unknown) => sent.push(p as Record<string, unknown>),
 		onMessage: (cb: (m: Record<string, unknown>) => void) => {
 			onMsg = cb;
 		},
 		onDisconnected: () => {},
-		clientHost: "excel",
 	} as unknown as BridgeServer;
 	const session = {
 		isStreaming: false,

@@ -3,7 +3,7 @@ import * as path from "node:path";
 
 import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
 import type { AutocompleteItem } from "@f5-sales-demo/pi-tui";
-import { getConfigDirName, t } from "@f5-sales-demo/pi-utils";
+import { getConfigDirName, isEnoent, t } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../capability/fs";
 import type { SettingPath, SettingValue } from "../config/settings";
 import { settings } from "../config/settings";
@@ -20,9 +20,20 @@ import {
 	getPluginsCacheDir,
 	MarketplaceManager,
 } from "../extensibility/plugins/marketplace";
+import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fetcher";
+import { setupTool } from "../extensibility/plugins/marketplace/prerequisites";
 import type { InteractiveModeContext } from "../modes/types";
 import { ContextService } from "../services/xcsh-context";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
+
+async function readOptionalTextFile(filePath: string): Promise<string | undefined> {
+	try {
+		return await Bun.file(filePath).text();
+	} catch (error) {
+		if (isEnoent(error)) return undefined;
+		throw error;
+	}
+}
 
 function tryGetContextService(): ContextService | null {
 	try {
@@ -1198,31 +1209,30 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							: runtime.ctx.sessionManager.getCwd();
 						const catalogPath = path.join(targetPath, ".xcsh-plugin", "marketplace.json");
 						const pluginPath = path.join(targetPath, ".xcsh-plugin", "plugin.json");
-						const { existsSync } = await import("node:fs");
-						if (existsSync(catalogPath)) {
-							const { parseMarketplaceCatalog } = await import("../extensibility/plugins/marketplace/fetcher");
-							const content = await Bun.file(catalogPath).text();
-							const catalog = parseMarketplaceCatalog(content, catalogPath);
+						const catalogContent = await readOptionalTextFile(catalogPath);
+						if (catalogContent !== undefined) {
+							const catalog = parseMarketplaceCatalog(catalogContent, catalogPath);
 							runtime.ctx.showStatus(
 								t("commands.plugin.validate.marketplaceValid", {
 									name: catalog.name,
 									count: catalog.plugins.length,
 								}),
 							);
-						} else if (existsSync(pluginPath)) {
-							const content = await Bun.file(pluginPath).text();
-							const manifest = JSON.parse(content);
+						} else {
+							const pluginContent = await readOptionalTextFile(pluginPath);
+							if (pluginContent === undefined) {
+								runtime.ctx.showStatus(t("commands.plugin.validate.notFound", { path: targetPath }));
+								break;
+							}
+							const manifest = JSON.parse(pluginContent);
 							runtime.ctx.showStatus(
 								t("commands.plugin.validate.pluginValid", { name: manifest.name ?? path.basename(targetPath) }),
 							);
-						} else {
-							runtime.ctx.showStatus(t("commands.plugin.validate.notFound", { path: targetPath }));
 						}
 						break;
 					}
 					// ── Setup (guided recommended plugin install) ──
 					case "setup": {
-						const { setupTool } = await import("../extensibility/plugins/marketplace/prerequisites");
 						const allPlugins = await mgr.listAvailablePlugins();
 						const recommended = allPlugins.filter(p => p.recommended);
 						if (recommended.length === 0) {
@@ -1250,7 +1260,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 
 							// Step 1: Setup prerequisites (detect → install → auth)
 							if (plugin.prerequisites && plugin.prerequisites.length > 0) {
-								let allReady = true;
+								let prerequisitesReady = true;
 								for (const prereq of plugin.prerequisites) {
 									const result = await setupTool(prereq);
 
@@ -1259,7 +1269,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 											`  x ${name} — ${prereq.tool}: ${t("commands.plugin.setup.installFailed")} (${result.error})`,
 										);
 										lines.push(`    Fix: ${prereq.installCmd}`);
-										allReady = false;
+										prerequisitesReady = false;
 										break;
 									}
 
@@ -1280,7 +1290,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 										lines.push(`  ✓ ${name} — ${prereq.tool}: ${t("commands.plugin.setup.ready")}`);
 									}
 								}
-								if (!allReady) {
+								if (!prerequisitesReady) {
 									skippedCount++;
 									continue;
 								}

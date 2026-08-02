@@ -1,8 +1,8 @@
+---
 # SMSv2 Terraform Option Matrix — Natural Language Phrases for T1 Tests
 # Each phrase exercises one oneOf group in xcsh_securemesh_site_v2
 # Benchmark: xcsh generates HCL → terraform validate (PASS/FAIL)
 phrases:
-
   # ── Group 1: node_ha ──────────────────────────────────────────────────────
   - id: "1a"
     option_group: node_ha

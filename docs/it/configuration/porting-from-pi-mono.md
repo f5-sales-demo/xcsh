@@ -140,7 +140,8 @@ Tratta `package.json` come un contratto. Effettua il merge intenzionalmente.
 - Non costruire mai prompt nel codice; i prompt sono file `.md` statici renderizzati con Handlebars.
 - In coding-agent, non usare mai `console.log`/`console.warn`/`console.error`; usa `logger` da `@f5-sales-demo/pi-utils`.
 - Usa `Promise.withResolvers()` invece di `new Promise((resolve, reject) => ...)`.
-- **Nessuna keyword `private`/`protected`/`public` sui campi o metodi delle classi.** Usa i campi privati ES `#` per l'incapsulamento; lascia i membri accessibili senza keyword. L'unica eccezione sono le proprietà dei parametri del costruttore (`constructor(private readonly x: T)`), dove la keyword è richiesta da TypeScript. Quando porti codice upstream che usa `private foo` o `protected bar`, converti in `#foo` (privato) o `bar` senza keyword (accessibile).
+- **Nessuna keyword `private`/`protected`/`public` sui campi o metodi delle classi.** Usa i campi privati ES `#` per l'incapsulamento; lascia i membri accessibili senza keyword.
+  L'unica eccezione sono le proprietà dei parametri del costruttore (`constructor(private readonly x: T)`), dove la keyword è richiesta da TypeScript. Quando porti codice upstream che usa `private foo` o `protected bar`, converti in `#foo` (privato) o `bar` senza keyword (accessibile).
 - Preferisci helper e utilità esistenti rispetto a nuovo codice ad-hoc.
 - Preserva le modifiche infrastrutturali Bun-first già presenti in questo repository:
   - Il runtime è Bun (nessun entry point Node).

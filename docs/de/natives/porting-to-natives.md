@@ -90,7 +90,8 @@ Vermeiden Sie Portierungen, die von JS-exklusivem State oder dynamischen Imports
 
 ### 1) Veraltete `pi_natives.node` verhindert neue Exports
 
-Der Loader bevorzugt die plattform-getaggte Binary in `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` aktiviert jetzt nur Loader-Diagnosen; es wechselt nicht mehr zu einem separaten Dev-Addon-Dateinamen. Es gibt auch ein Fallback `pi_natives.node`. Kompilierte Binaries werden nach `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node` extrahiert. Wenn eine dieser Dateien veraltet ist, werden Exports nicht aktualisiert.
+Der Loader bevorzugt die plattform-getaggte Binary in `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` aktiviert jetzt nur Loader-Diagnosen; es wechselt nicht mehr zu einem separaten Dev-Addon-Dateinamen.
+Es gibt auch ein Fallback `pi_natives.node`. Kompilierte Binaries werden nach `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node` extrahiert. Wenn eine dieser Dateien veraltet ist, werden Exports nicht aktualisiert.
 
 **Lösung:** Entfernen Sie die veraltete Datei vor dem Neubauen.
 

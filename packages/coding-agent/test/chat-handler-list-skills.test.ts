@@ -15,6 +15,8 @@ function harness(skills: Array<{ name: string; description: string }> = []) {
 	const sent: Record<string, unknown>[] = [];
 	let onMsg: (m: Record<string, unknown>) => void = () => {};
 	const server = {
+		serveKind: "office",
+		clientHost: "excel",
 		send: (p: unknown) => sent.push(p as Record<string, unknown>),
 		onMessage: (cb: (m: Record<string, unknown>) => void) => {
 			onMsg = cb;

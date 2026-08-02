@@ -90,7 +90,8 @@ Evitare i porting che dipendono da stato esclusivamente JS o da import dinamici.
 
 ### 1) `pi_natives.node` obsoleto impedisce le nuove esportazioni
 
-Il loader preferisce il binario con tag della piattaforma in `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` ora abilita solo le diagnostiche del loader; non passa più a un nome file addon di sviluppo separato. Esiste anche un fallback `pi_natives.node`. I binari compilati vengono estratti in `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node`. Se uno qualsiasi di questi è obsoleto, le esportazioni non si aggiorneranno.
+Il loader preferisce il binario con tag della piattaforma in `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` ora abilita solo le diagnostiche del loader; non passa più a un nome file addon di sviluppo separato.
+Esiste anche un fallback `pi_natives.node`. I binari compilati vengono estratti in `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node`. Se uno qualsiasi di questi è obsoleto, le esportazioni non si aggiorneranno.
 
 **Soluzione:** rimuovere il file obsoleto prima di ricompilare.
 

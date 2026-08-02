@@ -10,10 +10,17 @@
  * Consumed by both `worker-spawn.int.test.ts` (Task 4) and `manager.int.test.ts`
  * (Task 5); do not inline a copy.
  */
-import { EXTENSION_ID } from "../../src/cli/chrome-cli";
+import { EXTENSION_CONTRACT_VERSION } from "../../src/browser/capabilities.generated";
+import { EXTENSION_ID } from "../../src/browser/extension-identity";
 
 /** The `Origin` header the bridge's origin check expects. */
 export const PROBE_ORIGIN = `chrome-extension://${EXTENSION_ID}`;
+/** The exact browser handshake accepted by the contract-2 bridge. */
+export const PROBE_HELLO = {
+	type: "hello",
+	contractVersion: EXTENSION_CONTRACT_VERSION,
+	extensionId: EXTENSION_ID,
+} as const;
 
 /**
  * Perform ONE `hello` / `hello_ack` handshake against the bridge on `port`.
@@ -33,7 +40,7 @@ export function probe(port: number, timeoutMs = 500): Promise<Record<string, unk
 			}
 			reject(new Error("probe timeout"));
 		}, timeoutMs);
-		ws.onopen = () => ws.send(JSON.stringify({ type: "hello", contractVersion: "1.5.0", extensionId: "probe" }));
+		ws.onopen = () => ws.send(JSON.stringify(PROBE_HELLO));
 		ws.onmessage = e => {
 			// The bridge multiplexes typed frames on this socket: the `hello_ack`
 			// handshake answer plus `type:"span"` TTFT telemetry emitted during a

@@ -1,4 +1,5 @@
 Resolves a pending preview action by either applying or discarding it.
+
 - `action` is required:
   - `"apply"` persists the pending changes.
   - `"discard"` rejects the pending changes.

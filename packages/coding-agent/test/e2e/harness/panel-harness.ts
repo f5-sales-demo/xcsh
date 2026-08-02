@@ -55,8 +55,6 @@ export const PANEL_URL = `chrome-extension://${EXT_ID}/side-panel.html`;
 export const DEFAULT_CONSOLE_URL =
 	"https://example.staging.volterra.us/web/workspaces/web-app-and-api-protection/namespaces/system/manage/load_balancers/http_loadbalancers";
 
-const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
-
 // ── Pure helpers (unit-tested in panel-harness.test.ts) ──────────────────────
 
 /** Minimal structural Document (matches both the browser and a test fake). */
@@ -241,7 +239,7 @@ export async function launchAndConnect(
 				.connect({ browserURL, protocolTimeout: 900_000, defaultViewport: null })
 				.catch(() => undefined);
 			if (browser) break;
-			await sleep(500);
+			await Bun.sleep(500);
 		}
 		if (!browser) {
 			proc.kill();
@@ -316,7 +314,7 @@ async function retryOnNav<T>(fn: () => Promise<T>, fallback: T, tries = 6): Prom
 			return await fn();
 		} catch (e) {
 			if (!/context was destroyed|Cannot find context|navigated|detached/i.test(String(e))) throw e;
-			await sleep(400);
+			await Bun.sleep(400);
 		}
 	}
 	return fallback;
@@ -432,7 +430,7 @@ export async function openConsoleAndLogin(browser: Browser, opts: LoginOptions):
 			// Nudge Chrome's saved-password manager once, then keep polling.
 			await page.evaluate(triggerSavedPasswordExpr()).catch(() => {});
 		}
-		await sleep(1000);
+		await Bun.sleep(1000);
 	}
 	throw new Error(`Timed out after ${timeoutMs}ms waiting for authentication at ${opts.consoleUrl}`);
 }
@@ -506,7 +504,7 @@ export async function findPanel(
 			pages.find(p => p.url().includes("side-panel.html")) ??
 			(await t.page().catch(() => null)) ??
 			(await (typeof t.asPage === "function" ? t.asPage() : Promise.resolve(null)).catch(() => null));
-		if (!pg) await sleep(500);
+		if (!pg) await Bun.sleep(500);
 	}
 	if (!pg) throw new Error("Side panel target found but no Page handle appeared.");
 	await pg.waitForSelector("#input", { timeout: 30_000 }).catch(() => {});
@@ -524,7 +522,7 @@ export async function waitForPanelReady(panel: Page, readyTimeoutMs = 240_000): 
 	// wants a fresh browser session, but this keeps a reused one from wedging.)
 	if (await panel.$("#stop")) {
 		await panel.click("#stop").catch(() => {});
-		await sleep(1500);
+		await Bun.sleep(1500);
 	}
 	const start = Date.now();
 	let nextRetryAt = 45_000;
@@ -544,7 +542,7 @@ export async function waitForPanelReady(panel: Page, readyTimeoutMs = 240_000): 
 				.catch(() => {});
 			nextRetryAt += 45_000;
 		}
-		await sleep(2000);
+		await Bun.sleep(2000);
 	}
 	throw new Error(`Panel never reached ready (send enabled). Activation state: ${await panelDiagnostics(panel)}`);
 }
@@ -561,7 +559,7 @@ export async function setMode(panel: Page, mode = "configuration"): Promise<void
 /**
  * Start a FRESH conversation. The panel has no new-chat control and keys its
  * conversation to the tab (persisted in `chrome.storage.local`), so reusing the
- * panel across turns accumulates prior turns — which derails a later multi-step
+ * panel across turns accumulates prior turns — which disrupts a later multi-step
  * turn (the model starts meta-commenting on "the last run" instead of executing).
  * Clear the stored conversations and reload the panel. Returns the panel page
  * (re-acquired after reload); the caller should re-run waitForPanelReady + setMode.
@@ -665,7 +663,7 @@ export async function waitForTurnDone(panel: Page, timeoutMs = 600_000, settleMs
 			}
 			lastRows = s.rows;
 		}
-		await sleep(500);
+		await Bun.sleep(500);
 	}
 	throw new Error(`waitForTurnDone: turn did not settle (idle for ${settleMs}ms) within ${timeoutMs}ms`);
 }

@@ -15,17 +15,17 @@ import { Agent } from "@f5-sales-demo/pi-agent";
 import { getModel } from "@f5-sales-demo/pi-ai";
 
 const agent = new Agent({
-	initialState: {
-		systemPrompt: "You are a helpful assistant.",
-		model: getModel("anthropic", "claude-sonnet-4-20250514"),
-	},
+ initialState: {
+  systemPrompt: "You are a helpful assistant.",
+  model: getModel("anthropic", "claude-sonnet-4-20250514"),
+ },
 });
 
 agent.subscribe((event) => {
-	if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-		// Stream just the new text chunk
-		process.stdout.write(event.assistantMessageEvent.delta);
-	}
+ if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
+  // Stream just the new text chunk
+  process.stdout.write(event.assistantMessageEvent.delta);
+ }
 });
 
 await agent.prompt("Hello!");
@@ -163,15 +163,15 @@ const agent = new Agent({
 
 ```typescript
 interface AgentState {
-	systemPrompt: string;
-	model: Model;
-	thinkingLevel: ThinkingLevel;
-	tools: AgentTool<any>[];
-	messages: AgentMessage[];
-	isStreaming: boolean;
-	streamMessage: AgentMessage | null; // Current partial during streaming
-	pendingToolCalls: Set<string>;
-	error?: string;
+ systemPrompt: string;
+ model: Model;
+ thinkingLevel: ThinkingLevel;
+ tools: AgentTool<any>[];
+ messages: AgentMessage[];
+ isStreaming: boolean;
+ streamMessage: AgentMessage | null; // Current partial during streaming
+ pendingToolCalls: Set<string>;
+ error?: string;
 }
 ```
 
@@ -219,7 +219,7 @@ await agent.waitForIdle(); // Wait for completion
 
 ```typescript
 const unsubscribe = agent.subscribe((event) => {
-	console.log(event.type);
+ console.log(event.type);
 });
 unsubscribe();
 ```
@@ -234,16 +234,16 @@ agent.setInterruptMode("immediate");
 
 // While agent is running tools
 agent.steer({
-	role: "user",
-	content: "Stop! Do this instead.",
-	timestamp: Date.now(),
+ role: "user",
+ content: "Stop! Do this instead.",
+ timestamp: Date.now(),
 });
 
 // Queue a follow-up to run after the current turn completes
 agent.followUp({
-	role: "user",
-	content: "After that, summarize the changes.",
-	timestamp: Date.now(),
+ role: "user",
+ content: "After that, summarize the changes.",
+ timestamp: Date.now(),
 });
 ```
 
@@ -256,9 +256,9 @@ Extend `AgentMessage` via declaration merging:
 
 ```typescript
 declare module "@f5-sales-demo/pi-agent" {
-	interface CustomAgentMessages {
-		notification: { role: "notification"; text: string; timestamp: number };
-	}
+ interface CustomAgentMessages {
+  notification: { role: "notification"; text: string; timestamp: number };
+ }
 }
 
 // Now valid
@@ -269,11 +269,11 @@ Handle custom types in `convertToLlm`:
 
 ```typescript
 const agent = new Agent({
-	convertToLlm: (messages) =>
-		messages.flatMap((m) => {
-			if (m.role === "notification") return []; // Filter out
-			return [m];
-		}),
+ convertToLlm: (messages) =>
+  messages.flatMap((m) => {
+   if (m.role === "notification") return []; // Filter out
+   return [m];
+  }),
 });
 ```
 
@@ -285,23 +285,23 @@ Define tools using `AgentTool`:
 import { Type } from "@sinclair/typebox";
 
 const readFileTool: AgentTool = {
-	name: "read_file",
-	label: "Read File", // For UI display
-	description: "Read a file's contents",
-	parameters: Type.Object({
-		path: Type.String({ description: "File path" }),
-	}),
-	execute: async (toolCallId, params, signal, onUpdate, context) => {
-		const content = await fs.readFile(params.path, "utf-8");
+ name: "read_file",
+ label: "Read File", // For UI display
+ description: "Read a file's contents",
+ parameters: Type.Object({
+  path: Type.String({ description: "File path" }),
+ }),
+ execute: async (toolCallId, params, signal, onUpdate, context) => {
+  const content = await fs.readFile(params.path, "utf-8");
 
-		// Optional: stream progress
-		onUpdate?.({ content: [{ type: "text", text: "Reading..." }], details: {} });
+  // Optional: stream progress
+  onUpdate?.({ content: [{ type: "text", text: "Reading..." }], details: {} });
 
-		return {
-			content: [{ type: "text", text: content }],
-			details: { path: params.path, size: content.length },
-		};
-	},
+  return {
+   content: [{ type: "text", text: content }],
+   details: { path: params.path, size: content.length },
+  };
+ },
 };
 
 agent.setTools([readFileTool]);
@@ -313,11 +313,11 @@ agent.setTools([readFileTool]);
 
 ```typescript
 execute: async (toolCallId, params, signal, onUpdate) => {
-	if (!fs.existsSync(params.path)) {
-		throw new Error(`File not found: ${params.path}`);
-	}
-	// Return content only on success
-	return { content: [{ type: "text", text: "..." }] };
+ if (!fs.existsSync(params.path)) {
+  throw new Error(`File not found: ${params.path}`);
+ }
+ // Return content only on success
+ return { content: [{ type: "text", text: "..." }] };
 };
 ```
 
@@ -331,12 +331,12 @@ For browser apps that proxy through a backend:
 import { Agent, streamProxy } from "@f5-sales-demo/pi-agent";
 
 const agent = new Agent({
-	streamFn: (model, context, options) =>
-		streamProxy(model, context, {
-			...options,
-			authToken: "...",
-			proxyUrl: "https://your-server.com",
-		}),
+ streamFn: (model, context, options) =>
+  streamProxy(model, context, {
+   ...options,
+   authToken: "...",
+   proxyUrl: "https://your-server.com",
+  }),
 });
 ```
 
@@ -348,25 +348,25 @@ For direct control without the Agent class:
 import { agentLoop, agentLoopContinue } from "@f5-sales-demo/pi-agent";
 
 const context: AgentContext = {
-	systemPrompt: "You are helpful.",
-	messages: [],
-	tools: [],
+ systemPrompt: "You are helpful.",
+ messages: [],
+ tools: [],
 };
 
 const config: AgentLoopConfig = {
-	model: getModel("openai", "gpt-4o"),
-	convertToLlm: (msgs) => msgs.filter((m) => ["user", "assistant", "toolResult"].includes(m.role)),
+ model: getModel("openai", "gpt-4o"),
+ convertToLlm: (msgs) => msgs.filter((m) => ["user", "assistant", "toolResult"].includes(m.role)),
 };
 
 const userMessage = { role: "user", content: "Hello", timestamp: Date.now() };
 
 for await (const event of agentLoop([userMessage], context, config)) {
-	console.log(event.type);
+ console.log(event.type);
 }
 
 // Continue from existing context
 for await (const event of agentLoopContinue(context, config)) {
-	console.log(event.type);
+ console.log(event.type);
 }
 ```
 
