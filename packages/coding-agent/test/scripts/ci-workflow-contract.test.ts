@@ -32,7 +32,7 @@ test("CI installs cross targets into the repository-selected Rust toolchain", as
 	}
 
 	expect(ciWorkflow.match(/uses: \.\/\.github\/actions\/setup-rust/g)).toHaveLength(3);
-	expect(ciWorkflow).toContain("target: ${{ matrix.target }}");
+	expect(ciWorkflow).toContain(`target: \${{ matrix.target }}`);
 	expect(codesignWorkflow.match(/uses: \.\/\.github\/actions\/setup-rust/g)).toHaveLength(1);
 	expect(setupAction).toContain("rustup toolchain install --profile minimal --no-self-update");
 	expect(setupAction).toContain('rustup target add "$RUST_TARGET"');

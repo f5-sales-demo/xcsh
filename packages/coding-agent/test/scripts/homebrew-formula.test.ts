@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { generateFormula } from "../../../../scripts/ci-release-homebrew";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
+import { $ } from "bun";
+import { createArchives, generateFormula } from "../../../../scripts/ci-release-homebrew";
 
 /**
  * Guard for the brew `post_install` recycle hook (#upgrade-recycle).
@@ -32,5 +36,36 @@ describe("homebrew formula post_install recycle", () => {
 	it("still installs the binary for every arch and carries the version", () => {
 		expect(formula.match(/bin\.install "xcsh"/g)?.length).toBe(4); // 2 macOS + 2 linux
 		expect(formula).toContain('version "19.99.0"');
+	});
+});
+
+describe("homebrew release archives", () => {
+	it("creates reproducible zip bytes with the requested source timestamp", async () => {
+		const fixtureDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-homebrew-archive-test-"));
+		const epochSeconds = 1_700_000_000;
+		const archivePath = path.join(fixtureDir, "xcsh-darwin-arm64.zip");
+
+		try {
+			await Bun.write(path.join(fixtureDir, "xcsh-darwin-arm64"), "synthetic xcsh binary\n");
+			const options = {
+				binariesDir: fixtureDir,
+				dryRun: false,
+				sourceDateEpoch: String(epochSeconds),
+			};
+
+			await createArchives(options);
+			const firstArchive = await fs.readFile(archivePath);
+			await createArchives(options);
+			const secondArchive = await fs.readFile(archivePath);
+			expect(secondArchive).toEqual(firstArchive);
+
+			const extractDir = path.join(fixtureDir, "extracted");
+			await fs.mkdir(extractDir);
+			await $`unzip -q ${archivePath} -d ${extractDir}`.quiet();
+			const archivedBinary = await fs.stat(path.join(extractDir, "xcsh"));
+			expect(Math.floor(archivedBinary.mtimeMs / 1000)).toBe(epochSeconds);
+		} finally {
+			await fs.rm(fixtureDir, { recursive: true, force: true });
+		}
 	});
 });

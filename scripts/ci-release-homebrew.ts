@@ -28,6 +28,12 @@ const isDryRun = process.argv.includes("--dry-run");
 const packageOnly = process.argv.includes("--package-only");
 const updateTapOnly = process.argv.includes("--update-tap");
 
+export interface CreateArchivesOptions {
+	binariesDir?: string;
+	dryRun?: boolean;
+	sourceDateEpoch?: string;
+}
+
 function getVersion(): string {
 	const ref = process.env.GITHUB_REF_NAME || "";
 	if (ref.startsWith("v")) return ref.slice(1);
@@ -44,16 +50,27 @@ function getTag(): string {
 	return process.env.GITHUB_REF_NAME || `v${getVersion()}`;
 }
 
-async function createArchives(): Promise<void> {
-	console.log("Creating archives for Homebrew...");
-	const sourceDateEpoch = process.env.SOURCE_DATE_EPOCH;
-	if (!isDryRun && (!sourceDateEpoch || !/^\d+$/.test(sourceDateEpoch))) {
+function parseSourceDateEpoch(value: string | undefined): number {
+	if (!value || !/^\d+$/.test(value)) {
 		throw new Error("SOURCE_DATE_EPOCH is required for deterministic release archives");
 	}
+	const seconds = Number(value);
+	if (!Number.isSafeInteger(seconds)) {
+		throw new Error("SOURCE_DATE_EPOCH must be a safe integer");
+	}
+	return seconds;
+}
+
+export async function createArchives(options: CreateArchivesOptions = {}): Promise<void> {
+	console.log("Creating archives for Homebrew...");
+	const outputDir = options.binariesDir ?? binariesDir;
+	const dryRun = options.dryRun ?? isDryRun;
+	const sourceDateEpoch = options.sourceDateEpoch ?? process.env.SOURCE_DATE_EPOCH;
+	const epochSeconds = dryRun ? undefined : parseSourceDateEpoch(sourceDateEpoch);
 
 	for (const target of archiveTargets) {
-		const binaryPath = path.join(binariesDir, target.binary);
-		const archivePath = path.join(binariesDir, target.archive);
+		const binaryPath = path.join(outputDir, target.binary);
+		const archivePath = path.join(outputDir, target.archive);
 
 		try {
 			await fs.stat(binaryPath);
@@ -70,15 +87,16 @@ async function createArchives(): Promise<void> {
 			const stagedBinary = path.join(tmpDir, "xcsh");
 
 			if (target.format === "zip") {
-				if (isDryRun) {
+				if (dryRun) {
 					console.log(`  DRY RUN: zip -X -j ${archivePath} ${tmpDir}/xcsh`);
 				} else {
-					await $`touch -d ${`@${sourceDateEpoch}`} ${stagedBinary}`;
+					if (epochSeconds === undefined) throw new Error("SOURCE_DATE_EPOCH was not resolved");
+					await fs.utimes(stagedBinary, epochSeconds, epochSeconds);
 					await $`zip -X -j ${archivePath} ${stagedBinary}`;
 					console.log(`  Created ${target.archive}`);
 				}
 			} else {
-				if (isDryRun) {
+				if (dryRun) {
 					console.log(`  DRY RUN: deterministic tar + gzip -n ${archivePath}`);
 				} else {
 					await $`tar --sort=name --mtime=${`@${sourceDateEpoch}`} --owner=0 --group=0 --numeric-owner -cf - -C ${tmpDir} xcsh | gzip -n > ${archivePath}`;
