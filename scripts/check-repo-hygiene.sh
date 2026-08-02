@@ -22,6 +22,7 @@
 #   bash scripts/check-repo-hygiene.sh --include-paths   # also scan for home dirs
 # Exit 0 = clean, Exit 1 = violations found.
 #
+# To allow a deliberate example path, put `repo-hygiene:allow` on the same line.
 set -euo pipefail
 
 VIOLATIONS=0
@@ -42,7 +43,7 @@ for arg in "$@"; do
 done
 
 # Placeholder user names are portable documentation, not a machine-specific path.
-PLACEHOLDERS='you|user|users|username|userid|your-user|your_username|me|example|alice|bob|USERNAME|<[A-Za-z0-9._-]+>|\.\.\.'
+PLACEHOLDERS='you|user|users|username|userid|your-user|your_username|me|example|alice|bob|USERNAME|<user>|<username>|<you>|<your-user>|\.\.\.'
 
 # Any path built from a variable is portable by construction.
 VARIABLE_FORMS='^\$|^\{|\$\{|^%[A-Za-z_]+%$'
@@ -119,11 +120,7 @@ done < <(git ls-files -s -z)
 #    allowed path launder a real one beside it, e.g.
 #    "PATH=/home/runner/bin:/home/alice/bin".
 # ---------------------------------------------------------------------------
-# Require a lexical boundary before the absolute path. Without it, key names
-# such as "page/home/end" are misclassified as a Linux home directory.
-# ERE has no lookbehind, so the boundary is included in each grep match and
-# removed before the candidate is classified.
-CANDIDATE='(^|[^A-Za-z0-9_.-])((/Users/|/home/|[A-Za-z]:\\+Users\\+|\\\\+[A-Za-z0-9._-]+\\+Users\\+)[A-Za-z0-9._${}<>-]+)'
+CANDIDATE='(/Users/|/home/|[A-Za-z]:\\+Users\\+|\\\\+[A-Za-z0-9._-]+\\+Users\\+)[A-Za-z0-9._${}<>-]+'
 
 path_is_allowed() {
   local candidate="$1" user
@@ -148,19 +145,17 @@ if [ "$INCLUDE_PATHS" -eq 1 ]; then
     rest=${hit#*:}
     line=${rest%%:*}
     text=${rest#*:}
-    while IFS= read -r raw_candidate; do
-      [ -n "$raw_candidate" ] || continue
-      candidate=$raw_candidate
-      case "$candidate" in
-      /Users/* | /home/* | [A-Za-z]:\\* | \\\\*) ;;
-      *) candidate=${candidate#?} ;;
-      esac
+    case "$text" in *repo-hygiene:allow*) continue ;; esac
+
+    while IFS= read -r candidate; do
+      [ -n "$candidate" ] || continue
       if path_is_allowed "$candidate"; then
         continue
       fi
       echo "::error file=${file},line=${line}::hardcoded home directory in a tracked file: ${candidate}"
       echo "  ${text}"
       echo "  Use a relative path, an environment variable, or a placeholder such as /Users/you/."
+      echo "  If the literal path is intentional, add repo-hygiene:allow to that line."
       VIOLATIONS=$((VIOLATIONS + 1))
     done < <(printf '%s' "$text" | grep -oE "$CANDIDATE" || true)
   done < <(
