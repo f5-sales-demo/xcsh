@@ -53,6 +53,45 @@ describe("executeBash", () => {
 		}
 	});
 
+	it("preserves command status while evaluating assignment-only commands", async () => {
+		const result = await executeBash(
+			[
+				'false; printf "direct=%s\\n" "$?"',
+				'if false; then printf "if=wrong\\n"; else printf "if=correct\\n"; fi',
+				'false || printf "or=%s\\n" "$?"',
+				'true; zero=$?; printf "zero=%s\\n" "$zero"',
+				'false; one="$?"; printf "one=%s\\n" "$one"',
+				'(exit 3); three=$?; printf "three=%s\\n" "$three"',
+				'(exit 127); one_twenty_seven="$?"; printf "one-twenty-seven=%s\\n" "$one_twenty_seven"',
+				'true | false; pipeline_status=$?; printf "pipeline=%s\\n" "$pipeline_status"',
+				'capture_status() { (exit 9); function_status=$?; printf "function=%s\\n" "$function_status"; }; capture_status',
+				'for iteration in 1; do (exit 8); for_status=$?; printf "for=%s\\n" "$for_status"; done',
+				'iteration=0; while [ "$iteration" -lt 1 ]; do (exit 7); while_status=$?; printf "while=%s\\n" "$while_status"; iteration=$((iteration + 1)); done',
+				'false; first=$? second=$?; printf "multiple=%s,%s status=%s\\n" "$first" "$second" "$?"',
+				'substitution=$(exit 4) after_substitution=$?; printf "substitution=<%s>,%s status=%s\\n" "$substitution" "$after_substitution" "$?"',
+				"final_substitution=$(exit 37)",
+			].join("\n"),
+			{ cwd: tempDir, timeout: 5000 },
+		);
+
+		expect(result.output.trim().split("\n")).toEqual([
+			"direct=1",
+			"if=correct",
+			"or=1",
+			"zero=0",
+			"one=1",
+			"three=3",
+			"one-twenty-seven=127",
+			"pipeline=1",
+			"function=9",
+			"for=8",
+			"while=7",
+			"multiple=1,1 status=0",
+			"substitution=<>,4 status=4",
+		]);
+		expect(result.exitCode).toBe(37);
+	});
+
 	it("honors cwd", async () => {
 		const result = await executeBash("pwd", { cwd: tempDir, timeout: 5000 });
 		expect(result.output.trim()).toBe(fs.realpathSync(tempDir));

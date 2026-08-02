@@ -621,7 +621,7 @@ pub(crate) async fn invoke_command_in_subshell_and_get_output(
 	let cmd_result = cmd_result.map_err(io::Error::other)??;
 
 	// Store the status.
-	*shell.last_exit_status_mut() = cmd_result.exit_code.into();
+	shell.set_last_exit_status(cmd_result.exit_code.into());
 
 	Ok(output_str)
 }
