@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [20.2.4] - 2026-08-02
+
 ### Fixed
 
 - Preserved command exit status while evaluating assignment-only shell commands so canonical captures such as `rc=$?` retain failures ([#2837](https://github.com/f5-sales-demo/xcsh/issues/2837))
