@@ -5,8 +5,7 @@ import { APP_NAME, initI18n, MIN_BUN_VERSION, registerLocales, t, VERSION } from
  * lightweight CLI runner from pi-utils.
  */
 import { type CommandEntry, run } from "@f5-sales-demo/pi-utils/cli";
-import { FlagUsageError } from "./cli/flag-spec";
-import { findPrefixedCommand } from "./cli/root-command-routing";
+import { findPrefixedCommand, launchFlagScopeMessage } from "./cli/root-command-routing";
 import { locales } from "./locales/index";
 
 registerLocales(locales);
@@ -118,10 +117,13 @@ export function runCli(argv: string[]): Promise<void> {
 				help: showHelp,
 			});
 		}
-		const flags = [...new Set(prefixedCommand.prefixFlags)].map(flag => `--${flag}`).join(", ");
 		process.stderr.write(
-			`Error: launch ${prefixedCommand.prefixFlags.length === 1 ? "flag" : "flags"} ${flags} cannot precede the ` +
-				`\`${prefixedCommand.command}\` subcommand. Launch flags configure an agent session; subcommands must come first.\n`,
+			`Error: ${launchFlagScopeMessage(
+				prefixedCommand.prefixFlags,
+				prefixedCommand.command,
+				prefixedCommand.commandArgs,
+				APP_NAME,
+			)}\n`,
 		);
 		process.exitCode = 2;
 		return Promise.resolve();
@@ -152,10 +154,4 @@ if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
 	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
 }
 
-try {
-	await runCli(process.argv.slice(2));
-} catch (error) {
-	if (!(error instanceof FlagUsageError)) throw error;
-	process.stderr.write(`Error: ${error.message}\n`);
-	process.exitCode = 2;
-}
+await runCli(process.argv.slice(2));

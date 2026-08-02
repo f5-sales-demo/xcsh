@@ -13,7 +13,7 @@
  * `cli/args.ts` can both depend on it without a cycle.
  */
 import { THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
-import { type FlagDescriptor, Flags } from "@f5-sales-demo/pi-utils/cli";
+import { CliUsageError, type FlagDescriptor, Flags } from "@f5-sales-demo/pi-utils/cli";
 
 export type FlagArity = "boolean" | "value" | "optional-value" | "repeatable-value";
 
@@ -157,8 +157,6 @@ export interface UnrecognizedFlag {
 	name: string;
 }
 
-export class FlagUsageError extends Error {}
-
 /**
  * Rewrite `--name=value` into `["--name", "value"]` for every flag that takes a value.
  *
@@ -197,7 +195,7 @@ export function normalizeFlagTokens(
 		const spec = flagSpec(name);
 		if (spec) {
 			if (!takesValue(spec)) {
-				throw new FlagUsageError(`--${name} is a boolean flag and does not take a value`);
+				throw new CliUsageError(`--${name} is a boolean flag and does not take a value`);
 			}
 			normalized.push(`--${name}`, value);
 			continue;
@@ -206,7 +204,7 @@ export function normalizeFlagTokens(
 		const extension = extensionFlags?.get(name);
 		if (extension) {
 			if (extension.type === "boolean") {
-				throw new FlagUsageError(`--${name} is a boolean flag and does not take a value`);
+				throw new CliUsageError(`--${name} is a boolean flag and does not take a value`);
 			}
 			normalized.push(`--${name}`, value);
 			continue;
