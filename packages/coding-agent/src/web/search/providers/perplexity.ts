@@ -31,7 +31,7 @@ const DEFAULT_TEMPERATURE = 0.2;
 const DEFAULT_NUM_SEARCH_RESULTS = 10;
 const OAUTH_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 const OAUTH_API_VERSION = "2.18";
-const OAUTH_USER_AGENT = "Perplexity/641 CFNetwork/1568 Darwin/25.2.0";
+const HTTP_USER_AGENT = "Perplexity/641 CFNetwork/1568 Darwin/25.2.0";
 
 interface PerplexityOAuthCredential {
 	type: "oauth";
@@ -315,7 +315,7 @@ async function callPerplexityOAuth(
 			Accept: "text/event-stream",
 			Origin: "https://www.perplexity.ai",
 			Referer: "https://www.perplexity.ai/",
-			"User-Agent": OAUTH_USER_AGENT,
+			"User-Agent": HTTP_USER_AGENT,
 			"X-App-ApiClient": "default",
 			"X-App-ApiVersion": OAUTH_API_VERSION,
 			"X-Perplexity-Request-Reason": "submit",

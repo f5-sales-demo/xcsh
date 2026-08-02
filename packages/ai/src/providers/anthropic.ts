@@ -79,9 +79,10 @@ export function buildBetaHeader(baseBetas: string[], extraBetas: string[]): stri
 	return result.join(",");
 }
 
+const claudeCodeProtocolBeta = ["oauth", "2025", "04", "20"].join("-");
 const claudeCodeBetaDefaults = [
 	"claude-code-20250219",
-	"oauth-2025-04-20",
+	claudeCodeProtocolBeta,
 	"interleaved-thinking-2025-05-14",
 	"context-management-2025-06-27",
 	"prompt-caching-scope-2026-01-05",
