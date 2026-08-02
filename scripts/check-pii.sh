@@ -86,14 +86,25 @@ WORK=$(mktemp -d)
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
 COUNT=0
+OBJECT_COUNT=0
+: >"${WORK}/object-list"
 
 add_blob() {
   local path=$1 oid=$2 mode=${3:-100644}
   [ "$mode" != "120000" ] || return 0
   COUNT=$((COUNT + 1))
+  OBJECT_COUNT=$((OBJECT_COUNT + 1))
   printf '%s' "$path" >"${WORK}/${COUNT}.path"
-  if ! git cat-file blob "$oid" >"${WORK}/${COUNT}.blob"; then
-    echo "PII scan error: cannot read tracked blob $oid" >&2
+  printf '%s' "$oid" >"${WORK}/${COUNT}.oid"
+  printf '%s\n' "$oid" >>"${WORK}/object-list"
+}
+
+materialize_blobs() {
+  [ "$OBJECT_COUNT" -gt 0 ] || return 0
+  if ! git cat-file --batch <"${WORK}/object-list" |
+    python3 "$SCANNER" materialize \
+      --input-dir "$WORK"; then
+    echo "PII scan error: cannot materialize tracked Git blobs" >&2
     exit 2
   fi
 }
@@ -155,7 +166,9 @@ head) materialize_head ;;
 history) materialize_history ;;
 esac
 
-python3 "$SCANNER" \
+materialize_blobs
+
+python3 "$SCANNER" scan \
   --input-dir "$WORK" \
   --scope "$SCOPE" \
   --mode "$MODE" \

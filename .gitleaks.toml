@@ -1,3 +1,0 @@
-[allowlist]
-  description = "Allowlist placeholder values in example files"
-  paths = ["examples/"]

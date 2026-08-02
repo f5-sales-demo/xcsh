@@ -117,8 +117,63 @@ assert_error() {
   fi
 }
 
+install_git_probe() {
+  local fake_bin=$1
+  mkdir -p "$fake_bin"
+  cat >"${fake_bin}/git" <<'EOF'
+#!/usr/bin/env bash
+if [ "${1:-}" = "cat-file" ]; then
+  printf '%s\n' "${2:-}" >>"${GIT_CALL_LOG:?}"
+  if [ "${2:-}" = "--batch" ] && [ "${CORRUPT_GIT_BATCH:-0}" = "1" ]; then
+    while IFS= read -r _; do
+      printf 'malformed batch header\n'
+    done
+    exit 0
+  fi
+fi
+exec "${REAL_GIT:?}" "$@"
+EOF
+  chmod +x "${fake_bin}/git"
+}
+
+assert_batched_materialization() {
+  local label="$1" dir="$2"
+  shift 2
+  local fake_bin="${WORK}/fake-bin" log="${WORK}/git-cat-file-calls" real_git rc
+  real_git=$(command -v git)
+  install_git_probe "$fake_bin"
+  : >"$log"
+  rc=$(GIT_CALL_LOG="$log" REAL_GIT="$real_git" PATH="${fake_bin}:${PATH}" run_scan "$dir" "$@")
+  if [ "$rc" -eq 0 ] && [ "$(wc -l <"$log")" -eq 1 ] && grep -qx -- '--batch' "$log"; then
+    echo "[OK] $label -> one batched Git object stream"
+  else
+    echo "[FAIL] $label — expected one git cat-file --batch invocation"
+    sed 's/^/  /' "$log" "${WORK}/stdout" "${WORK}/stderr"
+    FAIL=1
+  fi
+}
+
+assert_corrupt_batch_rejected() {
+  local label="$1" dir="$2"
+  shift 2
+  local fake_bin="${WORK}/corrupt-git-bin" log="${WORK}/corrupt-git-calls" real_git rc
+  real_git=$(command -v git)
+  install_git_probe "$fake_bin"
+  : >"$log"
+  rc=$(CORRUPT_GIT_BATCH=1 GIT_CALL_LOG="$log" REAL_GIT="$real_git" PATH="${fake_bin}:${PATH}" run_scan "$dir" "$@")
+  if [ "$rc" -eq 2 ]; then
+    echo "[OK] $label -> usage/environment error"
+  else
+    echo "[FAIL] $label — expected scanner error (2), got $rc"
+    sed 's/^/  /' "$log" "${WORK}/stdout" "${WORK}/stderr"
+    FAIL=1
+  fi
+}
+
 repo=$(new_repo clean)
 assert_clean "synthetic baseline" "$repo" --scope head --mode enforce
+assert_batched_materialization "tracked blobs are materialized in one batch" "$repo" --scope head --mode enforce
+assert_corrupt_batch_rejected "malformed Git batch output fails closed" "$repo" --scope head --mode enforce
 
 repo=$(new_repo reserved-values)
 cat >"${repo}/fixture.yaml" <<'EOF'
@@ -353,6 +408,116 @@ EOF
 git -C "$repo" add fixture.yaml
 git -C "$repo" commit -qm whole-placeholders
 assert_clean "whole identity placeholders remain synthetic" "$repo" --scope head --mode enforce
+
+repo=$(new_repo runtime-template-identities)
+cat >"${repo}/fixture.ts" <<'EOF'
+logger.debug(`Account: ${account}`);
+logger.debug(`Tenant: ${session.tenant ?? "unknown"} (${session.name ?? "unknown"} tenant)`);
+logger.debug(`Tenant: ${session.tenant ?? "unknown"} (${session.organization ?? "unknown"} organization)`);
+logger.debug(`Tenant: ${session.tenant ?? "unknown"} (${session.environment ?? "unknown"} environment)`);
+logger.info(`Namespace: ${namespace}. See the documentation for details.`);
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm runtime-template-identities
+assert_clean "runtime template expressions are not literal identities" "$repo" --scope head --mode enforce
+
+repo=$(new_repo runtime-template-literal-suffix)
+cat >"${repo}/fixture.ts" <<'EOF'
+logger.debug(`Tenant: ${tenant}-private-customer`);
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm runtime-template-literal-suffix
+assert_customer_identifier "runtime template expressions cannot hide literal suffixes" "$repo" --scope head --mode enforce
+
+repo=$(new_repo prose-template-identities)
+cat >"${repo}/fixture.md" <<'EOF'
+Use tenant: {{session.tenant}}, namespace: {{session.namespace}}.
+EOF
+git -C "$repo" add fixture.md
+git -C "$repo" commit -qm prose-template-identities
+assert_clean "prose template expressions remain synthetic" "$repo" --scope head --mode enforce
+
+repo=$(new_repo schema-wildcard-identities)
+cat >"${repo}/fixture.md" <<'EOF'
+The namespace: "*" form selects every schema namespace.
+EOF
+git -C "$repo" add fixture.md
+git -C "$repo" commit -qm schema-wildcard-identities
+assert_clean "schema wildcard identities remain synthetic" "$repo" --scope head --mode enforce
+
+repo=$(new_repo generic-topology-identities)
+cat >"${repo}/fixture.yaml" <<'EOF'
+namespace: per-site
+namespace: book-info
+namespace: pipeline-name
+EOF
+git -C "$repo" add fixture.yaml
+git -C "$repo" commit -qm generic-topology-identities
+assert_clean "generic topology identities remain synthetic" "$repo" --scope head --mode enforce
+
+repo=$(new_repo parenthesized-topology-identity)
+cat >"${repo}/fixture.md" <<'EOF'
+Preserve the generated metadata (namespace: pipeline-name).
+EOF
+git -C "$repo" add fixture.md
+git -C "$repo" commit -qm parenthesized-topology-identity
+assert_clean "parenthesized topology identities remain synthetic" "$repo" --scope head --mode enforce
+
+repo=$(new_repo field-ordinal-placeholder)
+cat >"${repo}/fixture.json" <<'EOF'
+{"tenant":"tenant1"}
+EOF
+git -C "$repo" add fixture.json
+git -C "$repo" commit -qm field-ordinal-placeholder
+assert_clean "field-named ordinals remain synthetic" "$repo" --scope head --mode enforce
+
+repo=$(new_repo field-ordinal-literal-suffix)
+cat >"${repo}/fixture.json" <<'EOF'
+{"tenant":"tenant1-private"}
+EOF
+git -C "$repo" add fixture.json
+git -C "$repo" commit -qm field-ordinal-literal-suffix
+assert_customer_identifier "field-named ordinals cannot hide literal suffixes" "$repo" --scope head --mode enforce
+
+repo=$(new_repo serialized-source-identities)
+cat >"${repo}/fixture.ts" <<'EOF'
+const serialized = "{\"namespace\":\"example-corp\",\"display_name\":\"Dana R.\",\"dob\":\"value\"}";
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm serialized-source-identities
+assert_clean "serialized source strings preserve safe identity boundaries" "$repo" --scope head --mode enforce
+
+repo=$(new_repo serialized-source-literal-suffix)
+cat >"${repo}/fixture.ts" <<'EOF'
+const serialized = "{\"namespace\":\"example-corp\\\"private-customer\"}";
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm serialized-source-literal-suffix
+assert_customer_identifier "serialized source escapes cannot hide literal suffixes" "$repo" --scope head --mode enforce
+
+repo=$(new_repo serialized-source-person-suffix)
+cat >"${repo}/fixture.ts" <<'EOF'
+const serialized = "{\"display_name\":\"Dana R.\\\"Private Customer\"}";
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm serialized-source-person-suffix
+assert_violation "serialized source escapes cannot hide literal person suffixes" "$repo" --scope head --mode enforce
+
+repo=$(new_repo serialized-source-personal-record-suffix)
+cat >"${repo}/fixture.ts" <<'EOF'
+const serialized = "{\"dob\":\"value\\\"private-record\"}";
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm serialized-source-personal-record-suffix
+assert_violation "serialized source escapes cannot hide literal personal records" "$repo" --scope head --mode enforce
+
+repo=$(new_repo serialized-source-phone)
+cat >"${repo}/fixture.ts" <<'EOF'
+const serialized = "{\"phone\":\"+1 212 555 1234\"}";
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm serialized-source-phone
+assert_violation "serialized source escapes cannot hide phone fields" "$repo" --scope head --mode enforce
 
 repo=$(new_repo placeholder-comma-suffix)
 cat >"${repo}/fixture.yaml" <<'EOF'
@@ -1709,6 +1874,34 @@ EOF
 git -C "$repo" add fixture.ts
 git -C "$repo" commit -qm comment-expression
 assert_clean "source comments can document identity expressions" "$repo" --scope head --mode enforce
+
+repo=$(new_repo source-private-method-signature)
+cat >"${repo}/fixture.ts" <<'EOF'
+class Client {
+  #fetch(namespace: string): Promise<Map<string, string>> {
+    return Promise.resolve(new Map());
+  }
+}
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm private-method-signature
+assert_clean "source private identifiers are not comment markers" "$repo" --scope head --mode enforce
+
+repo=$(new_repo source-comment-prose-label)
+cat >"${repo}/fixture.ts" <<'EOF'
+// Resource namespace: used when formatting nested multi-tenant output safely.
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm comment-prose-label
+assert_clean "source comment prose labels are not structured identities" "$repo" --scope head --mode enforce
+
+repo=$(new_repo source-comment-expression-continuation)
+cat >"${repo}/fixture.ts" <<'EOF'
+// tenant=input.tenant + namespace=input.namespace; derived at runtime
+EOF
+git -C "$repo" add fixture.ts
+git -C "$repo" commit -qm comment-expression-continuation
+assert_clean "source comment expressions may have prose continuations" "$repo" --scope head --mode enforce
 
 repo=$(new_repo jq-comment-literal)
 cat >"${repo}/filter.jq" <<'EOF'
