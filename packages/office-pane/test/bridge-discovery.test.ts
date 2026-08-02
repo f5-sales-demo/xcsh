@@ -154,7 +154,7 @@ describe("pickBridge()", () => {
 		const b = makeBridge({ port: 19223, tenant: "example-alpha", contextBound: true, lastSeen: 1 });
 		const c = makeBridge({ port: 19224, tenant: "example-beta", contextBound: true, lastSeen: 9999 });
 		const result = pickBridge([a, b, c], { tenant: "example-alpha" });
-		expect(result?.port).toBe(19223); // b: tenant=x + contextBound=true; c excluded
+		expect(result?.port).toBe(19223); // Candidate b matches the tenant and is context-bound; c is excluded.
 	});
 
 	it("(9) null tenant filter includes bridges with null tenant", () => {

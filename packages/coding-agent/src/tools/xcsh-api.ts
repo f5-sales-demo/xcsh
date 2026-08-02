@@ -679,7 +679,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const resolved = isWildcard ? this.#loadListablePaths() : batchPaths;
 			if (resolved.length > 0) {
 				const batchNs = params.params?.namespace ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "";
-				// Wildcard namespace: batch ALL non-system namespaces in one tool call.
+				// A wildcard batches all non-system namespaces in one tool call.
 				// Reduces multi-namespace queries from N+1 batch calls to 1.
 				if (batchNs === "*") {
 					return this.#executeMultiNamespaceBatch(resolved, apiBase, apiToken, signal);
