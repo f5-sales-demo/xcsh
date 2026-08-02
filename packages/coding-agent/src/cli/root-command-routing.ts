@@ -1,9 +1,71 @@
+import type { FlagDescriptor } from "@f5-sales-demo/pi-utils/cli";
 import { flagNameForChar, flagSpec, type LaunchFlagName } from "./flag-spec";
 
 export interface PrefixedCommandRoute {
 	command: string;
 	commandArgs: string[];
 	prefixFlags: LaunchFlagName[];
+}
+
+function uniqueFlags(flags: readonly LaunchFlagName[]): LaunchFlagName[] {
+	return [...new Set(flags)];
+}
+
+/**
+ * Find agent-launch flags in a registered command's argv while preserving that command's own flags.
+ *
+ * `--` ends option parsing. Long and short command flags both take precedence over identically named
+ * launch flags, so `sandbox check -v` remains the sandbox check's verbose mode.
+ */
+export function findCommandLaunchFlags(
+	argv: readonly string[],
+	commandFlags: Readonly<Record<string, FlagDescriptor>>,
+): LaunchFlagName[] {
+	const shortCommandFlags = new Set(
+		Object.values(commandFlags)
+			.map(descriptor => descriptor.char)
+			.filter((char): char is string => char !== undefined),
+	);
+	const found: LaunchFlagName[] = [];
+
+	for (const token of argv) {
+		if (token === "--") break;
+		if (token.startsWith("--")) {
+			const name = token.slice(2).split("=", 1)[0];
+			if (commandFlags[name] !== undefined) continue;
+			if (flagSpec(name) !== undefined) found.push(name as LaunchFlagName);
+			continue;
+		}
+		if (!token.startsWith("-") || token === "-") continue;
+		const char = token.slice(1);
+		if (shortCommandFlags.has(char)) continue;
+		const name = flagNameForChar(char);
+		if (name !== undefined) found.push(name);
+	}
+
+	return uniqueFlags(found);
+}
+
+/** Render the single scope diagnostic used for launch flags on either side of a subcommand. */
+export function launchFlagScopeMessage(
+	flags: readonly LaunchFlagName[],
+	command: string,
+	commandArgs: readonly string[],
+	bin: string,
+): string {
+	const unique = uniqueFlags(flags);
+	const names = unique.map(flag => `--${flag}`).join(", ");
+	const singular = unique.length === 1;
+	if (command === "sandbox" && commandArgs[0] === "check") {
+		return (
+			`Launch ${singular ? "flag" : "flags"} ${names} ${singular ? "applies" : "apply"} to an agent session, not to \`sandbox check\`. ` +
+			`Run \`${bin} sandbox check\` without launch flags; its \`explicit grant restores parent enumeration\` probe verifies grant behavior.`
+		);
+	}
+	return (
+		`Launch ${singular ? "flag" : "flags"} ${names} ${singular ? "applies" : "apply"} to an agent session, not to the ` +
+		`\`${command}\` subcommand. Start an agent session with launch flags before its prompt.`
+	);
 }
 
 function optionalValue(token: string | undefined): token is string {

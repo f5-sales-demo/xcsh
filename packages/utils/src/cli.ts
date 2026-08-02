@@ -98,6 +98,9 @@ export interface ParseOutput<
 	argv: string[];
 }
 
+/** Invalid command-line syntax that callers should report as a usage error. */
+export class CliUsageError extends Error {}
+
 // ---------------------------------------------------------------------------
 // Command base class
 // ---------------------------------------------------------------------------
@@ -173,12 +176,19 @@ export abstract class Command {
 
 		// strict=false when command declares args (positionals must pass through)
 		// or when the command itself opts out
-		const { values: rawValues, positionals } = nodeParseArgs({
-			args: this.argv,
-			options,
-			allowPositionals: true,
-			strict,
-		});
+		const { values: rawValues, positionals } = (() => {
+			try {
+				return nodeParseArgs({
+					args: this.argv,
+					options,
+					allowPositionals: true,
+					strict,
+				});
+			} catch (error) {
+				if (error instanceof TypeError) throw new CliUsageError(error.message);
+				throw error;
+			}
+		})();
 
 		// Convert raw values to proper types and validate
 		const flags: Record<string, unknown> = {};
@@ -190,7 +200,7 @@ export abstract class Command {
 				} else {
 					const n = Number.parseInt(raw as string, 10);
 					if (Number.isNaN(n)) {
-						throw new Error(`Expected integer for --${name}, got "${raw}"`);
+						throw new CliUsageError(`Expected integer for --${name}, got "${raw}"`);
 					}
 					flags[name] = n;
 				}
@@ -203,14 +213,16 @@ export abstract class Command {
 				// Validate options constraint
 				if (val !== undefined && desc.options && !Array.isArray(val)) {
 					if (!desc.options.includes(val as string)) {
-						throw new Error(`Expected --${name} to be one of: ${[...desc.options].join(", ")}; got "${val}"`);
+						throw new CliUsageError(
+							`Expected --${name} to be one of: ${[...desc.options].join(", ")}; got "${val}"`,
+						);
 					}
 				}
 				flags[name] = val;
 			}
 			// Validate required
 			if (desc.required && flags[name] === undefined) {
-				throw new Error(`Missing required flag: --${name}`);
+				throw new CliUsageError(`Missing required flag: --${name}`);
 			}
 		}
 
@@ -229,13 +241,15 @@ export abstract class Command {
 			}
 			// Validate required
 			if (desc.required && args[argName] === undefined) {
-				throw new Error(`Missing required argument: ${argName}`);
+				throw new CliUsageError(`Missing required argument: ${argName}`);
 			}
 			// Validate options constraint
 			const argVal = args[argName];
 			if (argVal !== undefined && desc.options && typeof argVal === "string") {
 				if (!desc.options.includes(argVal)) {
-					throw new Error(`Expected ${argName} to be one of: ${[...desc.options].join(", ")}; got "${argVal}"`);
+					throw new CliUsageError(
+						`Expected ${argName} to be one of: ${[...desc.options].join(", ")}; got "${argVal}"`,
+					);
 				}
 			}
 		}
@@ -418,7 +432,13 @@ export async function run(opts: RunOptions): Promise<void> {
 	const Cmd = await entry.load();
 	const config: CliConfig = { bin, version, commands: new Map([[entry.name, Cmd]]) };
 	const instance = new Cmd(commandArgv, config);
-	await instance.run();
+	try {
+		await instance.run();
+	} catch (error) {
+		if (!(error instanceof CliUsageError)) throw error;
+		process.stderr.write(`Error: ${error.message}\n`);
+		process.exitCode = 2;
+	}
 }
 
 /** Resolve all command loaders for help/alias display. */

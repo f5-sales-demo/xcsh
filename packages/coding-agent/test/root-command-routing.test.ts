@@ -1,7 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import * as path from "node:path";
+import { Flags } from "@f5-sales-demo/pi-utils/cli";
 import { $ } from "bun";
-import { findPrefixedCommand } from "../src/cli/root-command-routing";
+import { findCommandLaunchFlags, findPrefixedCommand } from "../src/cli/root-command-routing";
 
 const commands = new Set(["sandbox", "stats"]);
 const isCommand = (token: string): boolean => commands.has(token);
@@ -54,5 +55,27 @@ describe("root launch flag scope", () => {
 
 	it("does not rewrite an ordinary subcommand invocation", () => {
 		expect(findPrefixedCommand(["sandbox", "check"], isCommand)).toBeUndefined();
+	});
+
+	it("finds launch-only flags after a command without taking over command-local flags", () => {
+		const sandboxFlags = {
+			json: Flags.boolean({ description: "Output JSON" }),
+			verbose: Flags.boolean({ char: "v", description: "Show failure details" }),
+		};
+		expect(
+			findCommandLaunchFlags(
+				["check", "--json", "-v", "--allow-path=/tmp", "--no-sandbox", "--", "--model", "ignored"],
+				sandboxFlags,
+			),
+		).toEqual(["allow-path", "no-sandbox"]);
+	});
+
+	it("reports subcommand parser failures as usage without an exception trace", async () => {
+		const result = await $`${process.execPath} ${cli} sandbox check --not-a-sandbox-flag`.quiet().nothrow();
+		const stderr = result.stderr.toString();
+		expect(result.exitCode).toBe(2);
+		expect(stderr).toContain("Unknown option '--not-a-sandbox-flag'");
+		expect(stderr).not.toContain("Uncaught Exception");
+		expect(stderr).not.toContain("node:util");
 	});
 });

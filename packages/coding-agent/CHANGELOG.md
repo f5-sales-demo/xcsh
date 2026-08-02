@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Made sandbox launch-flag scope errors consistent in either argument position, report usage exit 2 without parser exceptions, and direct operators to the flag-free conformance check ([#2834](https://github.com/f5-sales-demo/xcsh/issues/2834))
+
 ## [20.2.1] - 2026-08-01
 
 ### Fixed
