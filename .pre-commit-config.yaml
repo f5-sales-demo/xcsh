@@ -104,7 +104,9 @@ repos:
         entry: markdownlint-cli2
         language: system
         types: [markdown]
-        exclude: ^packages/[^/]+/test/(?:.*/)?fixtures/
+        # Parser fixtures intentionally contain noncanonical Markdown so the
+        # renderer's full syntax support remains covered.
+        exclude: ^packages/chat-ui/test/markdown/fixtures/
 
   # ===========================================================================
   # Shell formatting — pinned to Super-Linter's SHELL_SHFMT v3.13.1.

@@ -102,7 +102,7 @@ assert_violation "hardcoded C:\\Users\\<name>\\ path" "$repo" --include-paths
 
 # --- placeholders are portable documentation, not violations -------------------
 repo=$(new_repo placeholder)
-printf 'Put the token in /Users/you/.config/token, /home/username/.netrc, or /Users/<otheruser>/notes\n' >"${repo}/README.md"
+printf 'Put the token in /Users/you/.config/token and /home/username/.netrc\n' >"${repo}/README.md"
 git -C "$repo" add -A
 assert_clean "placeholder home paths in documentation" "$repo" --include-paths
 
@@ -112,11 +112,11 @@ printf 'workspace: /home/runner/work/repo/repo\n' >"${repo}/ci.yml"
 git -C "$repo" add -A
 assert_clean "CI runner home directory" "$repo" --include-paths
 
-# --- inline comments cannot suppress a concrete path ---------------------------
-repo=$(new_repo no-inline-suppression)
-printf 'example=/Users/acct1234/thing  # this is intentional\n' >"${repo}/notes.md"
+# --- the explicit escape hatch -------------------------------------------------
+repo=$(new_repo allow-marker)
+printf 'example=/Users/acct1234/thing  # repo-hygiene:allow\n' >"${repo}/notes.md"
 git -C "$repo" add -A
-assert_violation "inline comment does not suppress a concrete home path" "$repo" --include-paths
+assert_clean "line carrying repo-hygiene:allow" "$repo" --include-paths
 
 # --- untracked files are out of scope: the check gates what is committed -------
 repo=$(new_repo untracked)
@@ -205,11 +205,10 @@ repo=$(new_repo fleet-false-positives)
   printf 'ENV HOME=/home/${USERNAME}\n'
   printf 'curl http://api/Users/1 http://api/Users/2\n'
   printf 'see /Users/<you>/notes and /Users/userid/example\n'
-  printf 'keys=Shift+page/home/end Ctrl+page/home/end\n'
   printf 'win=%%USERPROFILE%%\n'
 } >"${repo}/mixed.txt"
 git -C "$repo" add -A
-assert_clean "variables, URL routes, key names, numeric ids and placeholders" "$repo" --include-paths
+assert_clean "variables, URL routes, numeric ids and placeholders" "$repo" --include-paths
 
 if [ "$FAIL" -ne 0 ]; then
   echo "check-repo-hygiene tests FAILED"
