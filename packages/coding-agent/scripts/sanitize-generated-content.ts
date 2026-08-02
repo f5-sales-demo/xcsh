@@ -5,6 +5,7 @@ const SVG_PATH_ATTRIBUTE_RE = /(?:^|\s)d\s*=\s*(['"])/gi;
 const RFC_8555_TERM_RE =
 	/_acme-challenge|\bAutomated Certificate Management Environment\s*\(ACME\)|\bRFC\s*8555\s*\(ACME\)|\bACME\s*\(RFC\s*8555\)|\bACME\s+(?:account|authorization|certificate|challenge|client|directory|nonce|order|protocol|server|service)\b/gi;
 const RFC_8555_TOKEN_RE = /\0RFC8555_([0-9]+)\0/g;
+const SECRET_CONTEXT_TERM_RE = /access|auth|api|credential|creds|key|passw(?:or)?d|secret|token/i;
 
 type Ipv4Address = readonly [number, number, number, number];
 type Ipv4Range = readonly [Ipv4Address, number];
@@ -44,13 +45,17 @@ interface ProtectedRfc8555Terms {
  * Large embedded catalogs used to serialize an entire API specification onto one physical line. Besides making
  * diffs and compiler diagnostics unusable, that joined unrelated prose and the following JSON value into one
  * scanner input line. A description containing a credential-related noun could therefore make the next ordinary
- * string look like an assigned secret. JSON's pretty-printer supplies correct string-aware boundaries, while the
- * fixed continuation prefix keeps adjacent JSON tokens outside scanners' short cross-line separator windows.
+ * string look like an assigned secret. JSON's pretty-printer supplies correct string-aware boundaries. Following
+ * credential-context lines with fixed JSON whitespace keeps the next token outside scanners' short separator
+ * windows without bloating every generated line.
  */
 export function serializeGeneratedValue(value: unknown): string {
 	const serialized = JSON.stringify(value, null, "\t");
 	if (serialized === undefined) throw new TypeError("Generated values must be JSON-serializable");
-	return serialized.replace(/^\t+/gm, "").replace(/\n/g, "\n      ");
+	const lines = serialized.replace(/^\t+/gm, "").split("\n");
+	return lines
+		.map((line, index) => (index > 0 && SECRET_CONTEXT_TERM_RE.test(lines[index - 1]) ? `      ${line}` : line))
+		.join("\n");
 }
 
 function protectRfc8555Terms(text: string): ProtectedRfc8555Terms {

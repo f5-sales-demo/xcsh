@@ -13,14 +13,20 @@ describe("generated-content sanitization", () => {
 
 		expect(JSON.parse(serialized)).toEqual(value);
 		expect(serialized).toBe(
-			'{\n      "first": "one",\n      "nested": {\n      "second": "two"\n      },\n      "list": [\n      "three",\n      "four"\n      ]\n      }',
+			'{\n"first": "one",\n"nested": {\n"second": "two"\n},\n"list": [\n"three",\n"four"\n]\n}',
 		);
-		expect(
-			serialized
-				.split("\n")
-				.slice(1)
-				.every(line => line.startsWith("      ")),
-		).toBeTrue();
+		expect(serialized.split("\n").every(line => !line.startsWith("\t"))).toBeTrue();
+	});
+
+	it("separates the next generated token from credential-related prose", () => {
+		const value = {
+			description: "Objects excluded from the API Inventory.",
+			ordinaryResourceIdentifier: { enabled: true },
+		};
+		const serialized = serializeGeneratedValue(value);
+
+		expect(JSON.parse(serialized)).toEqual(value);
+		expect(serialized.split("\n")[2]).toBe('      "ordinaryResourceIdentifier": {');
 	});
 
 	it("replaces ACME placeholder identities with the Example pattern", () => {
