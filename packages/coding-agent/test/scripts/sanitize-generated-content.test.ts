@@ -3,9 +3,26 @@ import {
 	countAcmePlaceholderOccurrences,
 	sanitizeAcmePlaceholders,
 	sanitizePublicIpv4Examples,
+	serializeGeneratedValue,
 } from "../../scripts/sanitize-generated-content";
 
 describe("generated-content sanitization", () => {
+	it("serializes generated data with compact structural line boundaries", () => {
+		const value = { first: "one", nested: { second: "two" }, list: ["three", "four"] };
+		const serialized = serializeGeneratedValue(value);
+
+		expect(JSON.parse(serialized)).toEqual(value);
+		expect(serialized).toBe(
+			'{\n      "first": "one",\n      "nested": {\n      "second": "two"\n      },\n      "list": [\n      "three",\n      "four"\n      ]\n      }',
+		);
+		expect(
+			serialized
+				.split("\n")
+				.slice(1)
+				.every(line => line.startsWith("      ")),
+		).toBeTrue();
+	});
+
 	it("replaces ACME placeholder identities with the Example pattern", () => {
 		const source = "tenant=ACME company=Acme hostname=acme.internal";
 

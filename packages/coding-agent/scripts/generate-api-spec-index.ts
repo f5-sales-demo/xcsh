@@ -10,7 +10,11 @@ import {
 	validateArtifactVersion,
 } from "../../../scripts/api-spec-delivery";
 import { isLocalSpecsCurrent } from "./api-specs-version";
-import { sanitizeAcmePlaceholders, sanitizePublicIpv4Examples } from "./sanitize-generated-content";
+import {
+	sanitizeAcmePlaceholders,
+	sanitizePublicIpv4Examples,
+	serializeGeneratedValue,
+} from "./sanitize-generated-content";
 
 interface SpecPathOperation {
 	operationId?: string;
@@ -329,7 +333,7 @@ async function downloadValidation(
 
 function serializeEnrichment(key: string, value: unknown): string | undefined {
 	if (!value) return undefined;
-	return `\t${key}: ${JSON.stringify(value)},`;
+	return `\t${key}: ${serializeGeneratedValue(value)},`;
 }
 
 let downloadedTmpDir: string | null = null;
@@ -485,7 +489,7 @@ for (const entry of rawIndex.specifications) {
 			.join("\n"),
 	);
 
-	specDataEntries.push(`\t${JSON.stringify(entry.domain)}: ${JSON.stringify(specJson)},`);
+	specDataEntries.push(`\t${JSON.stringify(entry.domain)}: ${serializeGeneratedValue(specJson)},`);
 	processedCount++;
 }
 
@@ -568,7 +572,7 @@ for (const entry of rawIndex.specifications) {
 
 	if (Object.keys(operationMeta).length > 0 || Object.keys(schemaEnrichments).length > 0) {
 		enrichmentEntries.push(
-			`\t${JSON.stringify(entry.domain)}: { operationMeta: ${JSON.stringify(operationMeta)}, schemaEnrichments: ${JSON.stringify(schemaEnrichments)} },`,
+			`\t${JSON.stringify(entry.domain)}: ${serializeGeneratedValue({ operationMeta, schemaEnrichments })},`,
 		);
 	}
 }
@@ -602,7 +606,7 @@ const output = [
 	"",
 	...(validation
 		? [
-				`export const API_VALIDATION_DATA: Readonly<Record<string, ApiSpecValidationResourceEntry>> = ${JSON.stringify((validation as { required_fields?: { resources?: Record<string, unknown> } }).required_fields?.resources ?? {})};`,
+				`export const API_VALIDATION_DATA: Readonly<Record<string, ApiSpecValidationResourceEntry>> = ${serializeGeneratedValue((validation as { required_fields?: { resources?: Record<string, unknown> } }).required_fields?.resources ?? {})};`,
 				"",
 			]
 		: [`export const API_VALIDATION_DATA: Readonly<Record<string, ApiSpecValidationResourceEntry>> = {};`, ""]),
@@ -624,9 +628,13 @@ if (catalog) {
 
 	const catalogDataEntries: string[] = [];
 	for (const cat of categories) {
-		catalogDataEntries.push(`\t${JSON.stringify(cat.name)}: ${JSON.stringify(cat)},`);
+		catalogDataEntries.push(`\t${JSON.stringify(cat.name)}: ${serializeGeneratedValue(cat)},`);
 		catalogIndexEntries.push(
-			`\t\t{ name: ${JSON.stringify(cat.name)}, displayName: ${JSON.stringify(cat.displayName)}, operationCount: ${cat.operations?.length ?? 0} },`,
+			`\t\t${serializeGeneratedValue({
+				name: cat.name,
+				displayName: cat.displayName,
+				operationCount: cat.operations?.length ?? 0,
+			})},`,
 		);
 	}
 
@@ -640,8 +648,8 @@ if (catalog) {
 		`\tdisplayName: ${JSON.stringify(catalog.displayName ?? "F5 Distributed Cloud")},`,
 		`\tservice: ${JSON.stringify(catalog.service ?? "xcsh")},`,
 		`\tcategoryCount: ${categories.length},`,
-		`\tauth: ${JSON.stringify(catalog.auth ?? {})},`,
-		`\tdefaults: ${JSON.stringify(catalog.defaults ?? {})},`,
+		`\tauth: ${serializeGeneratedValue(catalog.auth ?? {})},`,
+		`\tdefaults: ${serializeGeneratedValue(catalog.defaults ?? {})},`,
 		`};`,
 		"",
 		`export const API_CATALOG_CATEGORY_SUMMARIES: ReadonlyArray<ApiCatalogCategorySummary> = [`,

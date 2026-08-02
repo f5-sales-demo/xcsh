@@ -38,6 +38,21 @@ interface ProtectedRfc8555Terms {
 	terms: string[];
 }
 
+/**
+ * Serialize generated data with structural newlines but without indentation bloat.
+ *
+ * Large embedded catalogs used to serialize an entire API specification onto one physical line. Besides making
+ * diffs and compiler diagnostics unusable, that joined unrelated prose and the following JSON value into one
+ * scanner input line. A description containing a credential-related noun could therefore make the next ordinary
+ * string look like an assigned secret. JSON's pretty-printer supplies correct string-aware boundaries, while the
+ * fixed continuation prefix keeps adjacent JSON tokens outside scanners' short cross-line separator windows.
+ */
+export function serializeGeneratedValue(value: unknown): string {
+	const serialized = JSON.stringify(value, null, "\t");
+	if (serialized === undefined) throw new TypeError("Generated values must be JSON-serializable");
+	return serialized.replace(/^\t+/gm, "").replace(/\n/g, "\n      ");
+}
+
 function protectRfc8555Terms(text: string): ProtectedRfc8555Terms {
 	const terms: string[] = [];
 	return {

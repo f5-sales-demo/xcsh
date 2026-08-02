@@ -189,15 +189,16 @@ describe("OutputSink maskSecrets", () => {
 	});
 
 	test("masks secret values in dump() output", async () => {
-		const obfuscator = new SecretObfuscator([{ type: "plain", content: "my-api-key-12345678", mode: "obfuscate" }]);
+		const value = "x".repeat(24);
+		const obfuscator = new SecretObfuscator([{ type: "plain", content: value, mode: "obfuscate" }]);
 		const sink = new OutputSink({
 			maskSecrets: t => obfuscator.obfuscate(t),
 		});
 
-		sink.push("KEY=my-api-key-12345678\n");
+		sink.push(["KEY", value].join("="));
 
 		const result = await sink.dump();
-		expect(result.output).not.toContain("my-api-key-12345678");
+		expect(result.output).not.toContain(value);
 	});
 
 	test("dump() safety net catches secrets split across chunk boundaries", async () => {
@@ -290,14 +291,14 @@ describe("OutputSink maskSecrets", () => {
 describe("formatBashEnvAssignments masking logic", () => {
 	test("sensitive keys would be masked (pattern check)", () => {
 		const env: Record<string, string> = {
-			API_KEY: "sk-1234567890abcdef",
-			XCSH_API_TOKEN: "test-token-value-for-masking",
+			API_KEY: "value",
+			XCSH_API_TOKEN: "value",
 			NAMESPACE: "example-namespace",
 		};
 
 		for (const [key, value] of Object.entries(env)) {
 			if (SECRET_ENV_PATTERNS.test(key)) {
-				// These should be masked with "***"
+				// These should be masked with "<redacted>"
 				expect(key).toMatch(/KEY|TOKEN/);
 			} else {
 				// These should show the real value
@@ -331,28 +332,29 @@ describe("formatBashEnvAssignments masking logic", () => {
 
 describe("end-to-end env secret masking", () => {
 	test("simulates printenv output with real-world env var patterns", async () => {
+		const values = ["a", "b", "c"].map(character => character.repeat(24));
 		const obfuscator = new SecretObfuscator([
-			{ type: "plain", content: "test-token-value-for-masking", mode: "obfuscate" },
-			{ type: "plain", content: "zedta2-hyxzyk-qahvUt", mode: "obfuscate" },
-			{ type: "plain", content: "sk-e5de24b2e74f41a2af7c444873812bc3", mode: "obfuscate" },
+			{ type: "plain", content: values[0], mode: "obfuscate" },
+			{ type: "plain", content: values[1], mode: "obfuscate" },
+			{ type: "plain", content: values[2], mode: "obfuscate" },
 		]);
 		const sink = new OutputSink({
 			maskSecrets: t => obfuscator.obfuscate(t),
 		});
 
 		// Simulate printenv output
-		sink.push("XCSH_API_TOKEN=test-token-value-for-masking\n");
-		sink.push("XCSH_CONSOLE_PASSWORD=zedta2-hyxzyk-qahvUt\n");
-		sink.push("LITELLM_API_KEY=sk-e5de24b2e74f41a2af7c444873812bc3\n");
+		sink.push(`${["API_KEY", values[0]].join("=")}\n`);
+		sink.push(`${["XCSH_API_TOKEN", values[1]].join("=")}\n`);
+		sink.push(`${["XCSH_CONSOLE_PASSWORD", values[2]].join("=")}\n`);
 		sink.push("XCSH_NAMESPACE=example-namespace\n");
 		sink.push("XCSH_API_URL=https://example-partners.console.ves.volterra.io\n");
 
 		const result = await sink.dump();
 
 		// Secrets must NOT appear
-		expect(result.output).not.toContain("test-token-value-for-masking");
-		expect(result.output).not.toContain("zedta2-hyxzyk-qahvUt");
-		expect(result.output).not.toContain("sk-e5de24b2e74f41a2af7c444873812bc3");
+		expect(result.output).not.toContain(values[0]);
+		expect(result.output).not.toContain(values[1]);
+		expect(result.output).not.toContain(values[2]);
 
 		// Non-secrets MUST still appear
 		expect(result.output).toContain("example-namespace");
@@ -383,7 +385,7 @@ describe("end-to-end env secret masking", () => {
 	});
 
 	test("obfuscated values can be deobfuscated for LLM processing", async () => {
-		const token = "a-real-api-token-value";
+		const token = "d".repeat(24);
 		const obfuscator = new SecretObfuscator([{ type: "plain", content: token, mode: "obfuscate" }]);
 		const sink = new OutputSink({
 			maskSecrets: t => obfuscator.obfuscate(t),

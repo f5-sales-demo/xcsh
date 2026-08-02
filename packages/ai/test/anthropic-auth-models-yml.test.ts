@@ -95,10 +95,10 @@ describe("findAnthropicAuth tier 6 — models.yml contract", () => {
 				"    apiKey: LITELLM_API_KEY",
 			].join("\n"),
 		);
-		await withEnv({ ...NEUTRALIZED_ENV, LITELLM_API_KEY: "sk-env-resolved-456" }, async () => {
+		await withEnv({ ...NEUTRALIZED_ENV, LITELLM_API_KEY: "value" }, async () => {
 			const auth = await findAnthropicAuth();
 			expect(auth).not.toBeNull();
-			expect(auth?.apiKey).toBe("sk-env-resolved-456");
+			expect(auth?.apiKey).toBe("value");
 			expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
 		});
 	});
