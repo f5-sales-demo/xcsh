@@ -120,11 +120,9 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 	const CWD_SENTINEL_END = ":__XCSH_CWD_END__";
 	// Exit-code capture sentinel — the persistent shell's own exit code reflects
 	// the trailing printf (always 0), so the user command's actual exit status
-	// must be captured in-band. `$?` is referenced directly as a printf argument
-	// (see finalCommand below) because a variable-assignment capture like
-	// `_x=$?` resets `$?` to 0 in brush-core before the RHS is evaluated. Without
-	// this sentinel, subprocess failures like `false`, `ls /nonexistent`, or
-	// `(exit 3)` silently report success.
+	// must be captured in-band before another command replaces it. Without this
+	// sentinel, subprocess failures like `false`, `ls /nonexistent`, or `(exit 3)`
+	// silently report success.
 	const EXIT_SENTINEL_START = "__XCSH_EXIT__:";
 	const EXIT_SENTINEL_END = ":__XCSH_EXIT_END__";
 
@@ -167,12 +165,9 @@ export async function executeBash(command: string, options?: BashExecutorOptions
 	}
 
 	// Append CWD + exit-code sentinels only for persistent shell sessions.
-	// `$?` must be referenced DIRECTLY in the printf arguments — using a
-	// variable assignment like `_x=$?` first resets `$?` to 0 in brush-core
-	// before the RHS is evaluated, defeating the capture. The persistent
-	// shell's winner.exitCode always reflects the printf's return (0), so
-	// the EXIT sentinel is the authoritative source for the user command's
-	// actual exit status.
+	// The persistent shell's winner.exitCode reflects the trailing printf's
+	// return (0), so the EXIT sentinel is the authoritative source for the user
+	// command's actual exit status.
 	const finalCommand = shellSession
 		? `${prefixedCommand}\nprintf '${CWD_SENTINEL_START}%s${CWD_SENTINEL_END}\\n${EXIT_SENTINEL_START}%s${EXIT_SENTINEL_END}\\n' "$PWD" "$?"`
 		: prefixedCommand;

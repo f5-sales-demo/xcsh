@@ -258,7 +258,7 @@ impl Execute for ast::Program {
 			}
 		}
 
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 		Ok(result)
 	}
 }
@@ -295,7 +295,7 @@ impl Execute for ast::CompoundList {
 			}
 		}
 
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 		Ok(result)
 	}
 }
@@ -482,7 +482,7 @@ impl Execute for ast::Pipeline {
 		}
 
 		// Update statuses.
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 
 		// If requested, report timing.
 		if let Some(timed) = &self.timed {
@@ -600,12 +600,12 @@ async fn wait_for_pipeline_processes_and_update_status(
 		{
 			ExecutionWaitResult::Completed(current_result) => {
 				result = current_result;
-				*shell.last_exit_status_mut() = result.exit_code.into();
+				shell.set_last_exit_status(result.exit_code.into());
 				shell.last_pipeline_statuses.push(result.exit_code.into());
 			},
 			ExecutionWaitResult::Stopped(child) => {
 				result = ExecutionResult::stopped();
-				*shell.last_exit_status_mut() = result.exit_code.into();
+				shell.set_last_exit_status(result.exit_code.into());
 				shell.last_pipeline_statuses.push(result.exit_code.into());
 
 				stopped_children.push(jobs::JobTask::External(child));
@@ -783,7 +783,7 @@ impl Execute for ast::ForClauseCommand {
 			}
 		}
 
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 		Ok(result)
 	}
 }
@@ -851,7 +851,7 @@ impl Execute for ast::CaseClauseCommand {
 			}
 		}
 
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 
 		Ok(result)
 	}
@@ -900,7 +900,7 @@ impl Execute for ast::IfClauseCommand {
 		}
 
 		let result = ExecutionResult::success();
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 
 		Ok(result)
 	}
@@ -972,7 +972,7 @@ impl Execute for ast::ArithmeticCommand {
 			ExecutionResult::general_error()
 		};
 
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 
 		Ok(result)
 	}
@@ -1017,7 +1017,7 @@ impl Execute for ast::ArithmeticForClauseCommand {
 			}
 		}
 
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 		Ok(result)
 	}
 }
@@ -1032,7 +1032,7 @@ impl Execute for ast::FunctionDefinition {
 		shell.define_func(self.fname.value.clone(), self.clone());
 
 		let result = ExecutionResult::success();
-		*shell.last_exit_status_mut() = result.exit_code.into();
+		shell.set_last_exit_status(result.exit_code.into());
 
 		Ok(result)
 	}
@@ -1060,6 +1060,8 @@ impl ExecuteInPipeline for ast::SimpleCommand {
 		let mut assignments = vec![];
 		let mut args: Vec<CommandArg> = vec![];
 		let mut command_takes_assignments = false;
+		let status_change_count_before_expansion =
+			context.shell.last_exit_status_change_count();
 
 		for item in prefix_iter.chain(cmd_name_items.iter()).chain(suffix_iter) {
 			ensure_not_cancelled(&params)?;
@@ -1162,9 +1164,6 @@ impl ExecuteInPipeline for ast::SimpleCommand {
 				},
 			}
 		} else {
-			// Reset last status.
-			*context.shell.last_exit_status_mut() = 0;
-
 			// No command to run; assignments must be applied to this shell.
 			for assignment in assignments {
 				apply_assignment(
@@ -1176,6 +1175,14 @@ impl ExecuteInPipeline for ast::SimpleCommand {
 					EnvironmentScope::Global,
 				)
 				.await?;
+			}
+
+			// Assignment-only commands succeed unless one of their expansions
+			// produced a status, such as the final command substitution.
+			if status_change_count_before_expansion
+				== context.shell.last_exit_status_change_count()
+			{
+				context.shell.set_last_exit_status(0);
 			}
 
 			// Return the last exit status we have; in some cases, an expansion

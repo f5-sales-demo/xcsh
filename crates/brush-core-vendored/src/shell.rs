@@ -61,6 +61,10 @@ pub struct Shell {
 	/// The status of the last completed command.
 	last_exit_status: u8,
 
+	/// Tracks changes to `last_exit_status` so assignment-only commands can
+	/// distinguish status-producing expansions from ordinary assignments.
+	last_exit_status_change_count: usize,
+
 	/// The status of each of the commands in the last pipeline.
 	pub last_pipeline_statuses: Vec<u8>,
 
@@ -128,6 +132,7 @@ impl Clone for Shell {
 			jobs: jobs::JobManager::new(),
 			aliases: self.aliases.clone(),
 			last_exit_status: self.last_exit_status,
+			last_exit_status_change_count: self.last_exit_status_change_count,
 			last_pipeline_statuses: self.last_pipeline_statuses.clone(),
 			positional_parameters: self.positional_parameters.clone(),
 			shell_name: self.shell_name.clone(),
@@ -362,6 +367,7 @@ impl Shell {
 			jobs: jobs::JobManager::new(),
 			aliases: HashMap::default(),
 			last_exit_status: 0,
+			last_exit_status_change_count: 0,
 			last_pipeline_statuses: vec![0],
 			positional_parameters: vec![],
 			shell_name: options.shell_name,
@@ -437,6 +443,10 @@ impl Shell {
 		self.last_exit_status
 	}
 
+	pub(crate) const fn last_exit_status_change_count(&self) -> usize {
+		self.last_exit_status_change_count
+	}
+
 	/// Returns a reference to the current function call stack for the shell.
 	pub const fn function_call_stack(&self) -> &functions::CallStack {
 		&self.function_call_stack
@@ -447,9 +457,11 @@ impl Shell {
 		&self.script_call_stack
 	}
 
-	/// Returns a mutable reference to the last exit status.
-	pub const fn last_exit_status_mut(&mut self) -> &mut u8 {
-		&mut self.last_exit_status
+	/// Updates the last exit status and records that a command or expansion
+	/// produced a new status.
+	pub const fn set_last_exit_status(&mut self, status: u8) {
+		self.last_exit_status = status;
+		self.last_exit_status_change_count += 1;
 	}
 
 	/// Returns the key bindings helper for the shell.
@@ -965,12 +977,14 @@ impl Shell {
 		params.process_group_policy = ProcessGroupPolicy::SameProcessGroup;
 
 		let orig_last_exit_status = self.last_exit_status;
+		let orig_last_exit_status_change_count = self.last_exit_status_change_count;
 		self.traps.handler_depth += 1;
 
 		let result = self.run_string(handler, &params).await;
 
 		self.traps.handler_depth -= 1;
 		self.last_exit_status = orig_last_exit_status;
+		self.last_exit_status_change_count = orig_last_exit_status_change_count;
 
 		result
 	}
@@ -995,7 +1009,7 @@ impl Shell {
 			Err(err) => {
 				let _ = self.display_error(&mut params.stderr(self), &err).await;
 				let exit_code = ExecutionExitCode::from(&err);
-				*self.last_exit_status_mut() = exit_code.into();
+				self.set_last_exit_status(exit_code.into());
 				Ok(exit_code.into())
 			},
 		}
