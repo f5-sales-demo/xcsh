@@ -17,9 +17,7 @@ const SHUTDOWN_REASONS = new Set<string>(["superseded", "updated", "manual"]);
 export type ControlMsg =
 	| { type: "provision"; sessionId: string; tenant: string }
 	| { type: "release"; sessionId: string }
-	// An sid-less status is the legacy no-op sink; an sid-carrying status is a
-	// keepalive from an actively-chatting worker (see keepaliveFrame/touchLastSeen).
-	| { type: "status"; sessionId?: string }
+	| { type: "status"; sessionId: string }
 	| { type: "hello" }
 	| { type: "shutdown"; reason: ShutdownReason };
 
@@ -44,8 +42,7 @@ function isNonEmpty(v: unknown): v is string {
 export function parseControlMsg(raw: unknown): ControlMsg | null {
 	if (!raw || typeof raw !== "object") return null;
 	const m = raw as Record<string, unknown>;
-	if (m.type === "status")
-		return isNonEmpty(m.sessionId) ? { type: "status", sessionId: m.sessionId } : { type: "status" };
+	if (m.type === "status" && isNonEmpty(m.sessionId)) return { type: "status", sessionId: m.sessionId };
 	if (m.type === "provision" && isNonEmpty(m.sessionId) && isTenant(m.tenant))
 		return { type: "provision", sessionId: m.sessionId, tenant: m.tenant };
 	if (m.type === "release" && isNonEmpty(m.sessionId)) return { type: "release", sessionId: m.sessionId };

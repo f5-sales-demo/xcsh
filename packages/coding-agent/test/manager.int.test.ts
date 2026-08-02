@@ -16,6 +16,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { VERSION } from "@f5-sales-demo/pi-utils";
 import { probe } from "./helpers/bridge-probe";
+import { CODING_AGENT_CLI, CODING_AGENT_ROOT } from "./helpers/cli-process";
 import { requireSpans, SURVIVAL_BUDGET_MS, SURVIVAL_PROBE_INTERVAL_MS } from "./helpers/manager-waits";
 import {
 	type PortReaperDeps,
@@ -170,36 +171,38 @@ async function send(msg: unknown): Promise<void> {
 /** Request/response over the control socket: send a frame, resolve the first
  * reply line (or null on timeout). Used for the `hello` identity handshake. */
 async function request(msg: unknown, timeoutMs = 2000): Promise<Record<string, unknown> | null> {
-	return await new Promise(resolve => {
-		let buf = "";
-		let done = false;
-		const finish = (v: Record<string, unknown> | null) => {
-			if (done) return;
-			done = true;
-			resolve(v);
-		};
-		Bun.connect({
-			unix: sock,
-			socket: {
-				open(c) {
-					c.write(`${JSON.stringify(msg)}\n`);
-				},
-				data(c, chunk) {
-					buf += chunk.toString("utf8");
-					const nl = buf.indexOf("\n");
-					if (nl >= 0) {
-						try {
-							finish(JSON.parse(buf.slice(0, nl)));
-						} catch {
-							finish(null);
-						}
-						c.end();
-					}
-				},
+	const response = Promise.withResolvers<Record<string, unknown> | null>();
+	let buf = "";
+	let done = false;
+	let timer: NodeJS.Timeout | undefined;
+	const finish = (value: Record<string, unknown> | null) => {
+		if (done) return;
+		done = true;
+		if (timer) clearTimeout(timer);
+		response.resolve(value);
+	};
+	timer = setTimeout(() => finish(null), timeoutMs);
+	Bun.connect({
+		unix: sock,
+		socket: {
+			open(c) {
+				c.write(`${JSON.stringify(msg)}\n`);
 			},
-		}).catch(() => finish(null));
-		setTimeout(() => finish(null), timeoutMs);
-	});
+			data(c, chunk) {
+				buf += chunk.toString("utf8");
+				const nl = buf.indexOf("\n");
+				if (nl >= 0) {
+					try {
+						finish(JSON.parse(buf.slice(0, nl)));
+					} catch {
+						finish(null);
+					}
+					c.end();
+				}
+			},
+		},
+	}).catch(() => finish(null));
+	return response.promise;
 }
 
 /** Spawn a fresh manager on a temp socket and wait for it to bind. */
@@ -215,8 +218,8 @@ async function request(msg: unknown, timeoutMs = 2000): Promise<Record<string, u
  */
 async function spawnManager(poolSize: string, extraEnv: Record<string, string> = {}): Promise<() => string> {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	const proc = Bun.spawn(["bun", "src/cli.ts", "manager"], {
-		cwd: process.cwd(),
+	const proc = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: poolSize, ...extraEnv },
 		stdout: "ignore",
 		stderr: "pipe",
@@ -401,8 +404,9 @@ test("adopts a warm spare on provision, then replenishes the pool (XCSH_WORKER_P
 
 	// The provision ADOPTS the warm spare (IPC bind), not a cold-spawn.
 	expect(await waitForStderr(getErr, "adopted spare", 120)).toBe(true);
-	// No cold-spawn fallback happened for this session.
-	expect(getErr()).not.toContain("provisioned tab-7");
+	// Runtime lifecycle logs must not expose the browser session or tenant identity.
+	expect(getErr()).not.toContain("tab-7");
+	expect(getErr()).not.toContain("example-corp");
 	// The consumed spare is replenished → a SECOND pre-warm appears.
 	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
 	expect(count(getErr(), "pre-warmed spare")).toBeGreaterThanOrEqual(2);
@@ -472,7 +476,7 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	// Deterministic: wait for the manager's adopt log instead of a flaky WS bridge
 	// probe (findTenant) that depends on context-activation timing under CI load —
 	// the exact source of the ~50% CI flake at this line.
-	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-7 \(/);
+	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+)/);
 
 	// Handoff reason → the worker's bridge must SURVIVE the manager exit (the
 	// successor will re-adopt it), so its port keeps answering the handshake.
@@ -492,19 +496,20 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 	// activates its tenant context, so the budget is sized against measurement —
 	// see SURVIVAL_BUDGET_MS.
 	let survived = false;
-	let lastProbeErr = "(never attempted)";
-	let lastTenant = "(no ack)";
+	let lastProbeFailed = false;
+	let lastIdentityMatched: boolean | null = null;
 	const survivalAttempts = Math.ceil(SURVIVAL_BUDGET_MS / SURVIVAL_PROBE_INTERVAL_MS);
 	for (let i = 0; i < survivalAttempts; i++) {
 		try {
 			const ack = await probe(port);
-			lastTenant = String(ack.tenant);
+			lastProbeFailed = false;
+			lastIdentityMatched = ack.tenant === "example-corp";
 			if (ack.tenant === "example-corp") {
 				survived = true;
 				break;
 			}
-		} catch (e) {
-			lastProbeErr = e instanceof Error ? e.message : String(e);
+		} catch {
+			lastProbeFailed = true;
 		}
 		await Bun.sleep(SURVIVAL_PROBE_INTERVAL_MS);
 	}
@@ -516,10 +521,10 @@ test("superseded shutdown LEAVES bound workers alive for re-adoption; manual rea
 		const holders = await pidsOnPort(port);
 		throw new Error(
 			[
-				`worker did not outlive its manager: no "example-corp" ack on port ${port} within ${SURVIVAL_BUDGET_MS}ms`,
+				`worker did not outlive its manager: no expected identity acknowledgement on port ${port} within ${SURVIVAL_BUDGET_MS}ms`,
 				`  pids still holding the port: ${holders.length > 0 ? holders.join(", ") : "NONE (the worker is gone)"}`,
-				`  last ack tenant: ${lastTenant}`,
-				`  last probe error: ${lastProbeErr}`,
+				`  last acknowledgement matched expected identity: ${lastIdentityMatched ?? "no acknowledgement"}`,
+				`  last probe failed: ${lastProbeFailed}`,
 				...describeManagerCensus(getErr()),
 			].join("\n"),
 		);
@@ -540,8 +545,8 @@ test("`chrome recycle` steps down the running manager for an upgrade (#1874 Task
 	// Temp HOME so the wrapper refresh writes to a throwaway Chrome dir, not the
 	// developer's real native-host manifest.
 	const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-recycle-home-"));
-	const rc = Bun.spawn(["bun", "src/cli.ts", "chrome", "recycle"], {
-		cwd: process.cwd(),
+	const rc = Bun.spawn([process.execPath, CODING_AGENT_CLI, "chrome", "recycle"], {
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, ...BRIDGE_ENV, HOME: fakeHome, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
@@ -569,7 +574,7 @@ test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=
 	await send({ type: "provision", sessionId: "tab-7", tenant: "example-corp|staging" });
 
 	// With no spare to adopt, the provision cold-spawns (fallback path).
-	expect(await waitForStderr(getErr, "provisioned tab-7", 120)).toBe(true);
+	expect(await waitForStderr(getErr, "provisioned worker", 120)).toBe(true);
 	expect(getErr()).not.toContain("adopted spare");
 
 	await send({ type: "release", sessionId: "tab-7" });
@@ -577,8 +582,8 @@ test("falls back to cold-spawn when the pool is disabled (XCSH_WORKER_POOL_SIZE=
 
 test("provision spawns a worker advertising the tenant; release reaps it", async () => {
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
-		cwd: process.cwd(),
+	mgr = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
+		cwd: CODING_AGENT_ROOT,
 		// Cold-spawn path under test — disable the pre-warm pool (own tests cover it).
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
@@ -650,7 +655,7 @@ test("provision spawns one worker PER sessionId (two same-tenant tabs → two wo
 		for (const p of RANGE) holdersByPort.set(p, await pidsOnPort(p));
 		throw new Error(
 			[
-				`expected 2 distinct range ports advertising "example-corp", saw ${ports.size}`,
+				`expected 2 distinct range ports advertising the expected identity, saw ${ports.size}`,
 				...describePortScan(
 					RANGE.map(p => ({
 						port: p,
@@ -675,8 +680,8 @@ test("an ambient XCSH_API_URL in the manager env does NOT leak into the worker's
 	// "leaktenant" (from the apiUrl), NOT the provisioned XCSH_SESSION_TENANT.
 	// spawnWorker clears XCSH_API_URL/XCSH_API_TOKEN so the tenant key is authoritative.
 	sock = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-mgr-")), "manager.sock");
-	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
-		cwd: process.cwd(),
+	mgr = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
+		cwd: CODING_AGENT_ROOT,
 		env: {
 			...process.env,
 			...BRIDGE_ENV,
@@ -774,18 +779,15 @@ test("a second manager on the same socket detects the live first and self-exits 
 	// discover A is live, and exit(0) WITHOUT unlinking A's socket. Under the old
 	// rm-then-listen startup B would instead clobber A's socket and block forever
 	// as a second live manager, orphaning A.
-	mgrB = Bun.spawn(["bun", "src/cli.ts", "manager"], {
-		cwd: process.cwd(),
+	mgrB = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
 
 	// B must exit quickly (a live manager blocks forever). exitCode 0 = clean bail.
-	const outcome = await Promise.race([
-		mgrB.exited,
-		new Promise<"blocked">(resolve => setTimeout(() => resolve("blocked"), 10_000)),
-	]);
+	const outcome = await Promise.race([mgrB.exited, Bun.sleep(10_000).then(() => "blocked" as const)]);
 	expect(outcome).toBe(0);
 
 	// A is UNHARMED: its socket still accepts control frames and still spawns
@@ -817,17 +819,14 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 	expect(fs.existsSync(sock)).toBe(true); // a crashed manager leaves its socket file behind
 
 	// Successor manager cold-starts on the SAME (now stale) socket path.
-	mgr = Bun.spawn(["bun", "src/cli.ts", "manager"], {
-		cwd: process.cwd(),
+	mgr = Bun.spawn([process.execPath, CODING_AGENT_CLI, "manager"], {
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, ...BRIDGE_ENV, XCSH_MANAGER_SOCK: sock, XCSH_WORKER_POOL_SIZE: "0" },
 		stdout: "ignore",
 		stderr: "ignore",
 	});
 	// A healthy manager blocks forever; a crash-on-EADDRINUSE would exit fast.
-	const outcome = await Promise.race([
-		mgr.exited,
-		new Promise<"alive">(resolve => setTimeout(() => resolve("alive"), 8000)),
-	]);
+	const outcome = await Promise.race([mgr.exited, Bun.sleep(8000).then(() => "alive" as const)]);
 	expect(outcome).toBe("alive");
 
 	// And it actually works: provision spawns a real worker.
@@ -840,7 +839,7 @@ test("a STALE control socket left by a crashed manager is reclaimed on next star
 test("cold spawn emits manager_provision + worker_boot spans with cold=true", async () => {
 	const getErr = await startManagerWithPool("0"); // no spares -> cold spawn
 	await send({ type: "provision", sessionId: "tab-501", tenant: "example-corp|production" });
-	const port = await waitForPort(getErr, /provisioned tab-501 .* on port (\d+)/);
+	const port = await waitForPort(getErr, /provisioned worker pid \d+ on port (\d+)/);
 
 	// Wait for the STAGES asserted below, not for a span count (#2364).
 	const spans = await requireSpans(port, ["manager_provision", "worker_boot"], SPAN_COLLECT_TIMEOUT_MS, getErr);
@@ -857,8 +856,8 @@ test("warm adopt emits worker_boot span with cold=false", async () => {
 
 	// Establish the PRECONDITION before provisioning: the spare must actually be in
 	// the pool. `adoptSpare` does `pool.shift()` and, on an empty pool, the caller
-	// falls back to `spawnWorker` — a cold spawn that logs "provisioned tab-777"
-	// and NEVER logs "adopted spare … as tab-777". A provision racing the pool fill
+	// falls back to `spawnWorker` — a cold spawn that logs "provisioned worker"
+	// and never logs "adopted spare". A provision racing the pool fill
 	// therefore waits out the port budget in full, whatever that budget is: the
 	// awaited line is not late, it does not exist in that run. That is the #2352 /
 	// #2423 flake — failures at 8831-8889ms against an 8s budget and at
@@ -870,7 +869,7 @@ test("warm adopt emits worker_boot span with cold=false", async () => {
 	expect(await waitForStderr(getErr, "pre-warmed spare", 120)).toBe(true);
 
 	await send({ type: "provision", sessionId: "tab-777", tenant: "example-corp|production" });
-	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+) as tab-777/);
+	const port = await waitForPort(getErr, /adopted spare pid \d+ on port (\d+)/);
 
 	// The wait must cover activateTenantContext, which runs inside the bind closure
 	// AFTER the "adopted" log is printed — so the port is known well before the

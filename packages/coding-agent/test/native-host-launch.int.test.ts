@@ -8,17 +8,20 @@
  * This test installs the manifest+wrapper via the real `installNativeHost`, then
  * LAUNCHES the host the way Chrome does: it execs the manifest's `path` (the
  * generated wrapper) with the calling extension's origin as argv — NOT by naming
- * `chrome-host`. It then writes an NM `provision` frame to stdin and asserts the
- * manager control socket APPEARS, proving the wrapper actually reached the relay
- * which ensured the manager. This fails if `path` points at the bare binary.
+ * `chrome-host`. It then writes an NM `provision` frame to stdin and completes the
+ * manager version handshake, proving the wrapper reached the relay and ensured a
+ * ready manager. This fails if `path` points at the bare binary.
  */
 import { afterEach, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { VERSION } from "@f5-sales-demo/pi-utils";
 import { encodeNm } from "../src/browser/native-messaging";
 import { nativeHostLaunchCommand } from "../src/cli/chrome-cli";
 import { installNativeHost } from "../src/services/native-host-install";
+import { CODING_AGENT_CLI, CODING_AGENT_ROOT } from "./helpers/cli-process";
+import { waitForManagerVersion } from "./helpers/manager-socket";
 
 let host: import("bun").Subprocess | undefined;
 let dir = "";
@@ -94,11 +97,7 @@ test("Chrome-style launch of the installed wrapper reaches the relay and ensures
 	// Resolve the DEV launch prefix (bun + abs entry script) deterministically —
 	// force resolveXcshBin to null so we exercise the `bun src/cli.ts` fallback
 	// regardless of whether a compiled `xcsh` happens to be on PATH.
-	const launchCommand = nativeHostLaunchCommand(
-		[process.execPath, path.resolve("src/cli.ts")],
-		process.execPath,
-		() => null,
-	);
+	const launchCommand = nativeHostLaunchCommand([process.execPath, CODING_AGENT_CLI], process.execPath, () => null);
 	const manifestPath = installNativeHost({
 		launchCommand,
 		extensionIds: ["klajkjdoehjidngligegnpknogmjjhkc"],
@@ -110,7 +109,7 @@ test("Chrome-style launch of the installed wrapper reaches the relay and ensures
 	// Launch EXACTLY as Chrome does: exec the manifest `path` (the wrapper) with
 	// the calling extension origin as the first argument — never naming chrome-host.
 	host = Bun.spawn([manifest.path, "chrome-extension://klajkjdoehjidngligegnpknogmjjhkc/"], {
-		cwd: process.cwd(),
+		cwd: CODING_AGENT_ROOT,
 		env: { ...process.env, XCSH_MANAGER_SOCK: sock },
 		stdin: "pipe",
 		stdout: "ignore",
@@ -121,13 +120,5 @@ test("Chrome-style launch of the installed wrapper reaches the relay and ensures
 	stdin.write(encodeNm({ type: "provision", tenantKey: "example-corp|staging" }));
 	stdin.flush();
 
-	let up = false;
-	for (let i = 0; i < 50; i++) {
-		if (fs.existsSync(sock)) {
-			up = true;
-			break;
-		}
-		await Bun.sleep(100);
-	}
-	expect(up).toBe(true); // wrapper → chrome-host → ensured manager (real Chrome path)
+	expect(await waitForManagerVersion(sock, VERSION, 20_000)).toBe(true);
 }, 30_000);

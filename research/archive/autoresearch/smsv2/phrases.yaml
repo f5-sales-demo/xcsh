@@ -1,8 +1,8 @@
+---
 # SMSv2 Option Matrix — Natural Language Phrases for T1 Tests
 # Each phrase exercises one oneOf group in securemesh_site_v2
 # Benchmark: xcsh constructs payload → API accepts (HTTP 200) → PASS
 phrases:
-
   # ── Group 1: node_ha ──────────────────────────────────────────────────────
   - id: "1a"
     option_group: node_ha

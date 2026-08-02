@@ -107,28 +107,28 @@ it("rejects launch flags on either side of the installed sandbox subcommand with
 	const home = fs.realpathSync(os.homedir());
 	const workspace = fs.realpathSync(fs.mkdtempSync(path.join(home, ".xcsh-sandbox-check-prefix-flags-")));
 	try {
-		for (const launchFlags of [["--no-sandbox"], ["--allow-path", fs.realpathSync(os.tmpdir())]]) {
-			const commands = [sandboxCheckCommand([], launchFlags), sandboxCheckCommand(launchFlags)];
-			const messages: string[] = [];
-			for (const command of commands) {
-				const bash = new BashTool(createSession(workspace));
-				let message = "";
-				try {
-					await bash.execute("sandbox-check-invalid-scope", { command });
-				} catch (error) {
-					message = error instanceof Error ? error.message : String(error);
-				}
-				messages.push(message);
-				expect(message).toContain("applies to an agent session, not to `sandbox check`");
-				expect(message).toContain("Run `xcsh sandbox check` without launch flags");
-				expect(message).toContain("explicit grant restores parent enumeration");
-				expect(message).toContain("Command exited with code 2");
-				expect(message).not.toContain("Uncaught Exception");
-				expect(message).not.toContain("realpathSync");
-				expect(message).not.toContain(home);
+		const launchFlags = ["--no-sandbox", "--allow-path", fs.realpathSync(os.tmpdir())];
+		const commands = [sandboxCheckCommand([], launchFlags), sandboxCheckCommand(launchFlags)];
+		const messages: string[] = [];
+		for (const command of commands) {
+			const bash = new BashTool(createSession(workspace));
+			let message = "";
+			try {
+				await bash.execute("sandbox-check-invalid-scope", { command });
+			} catch (error) {
+				message = error instanceof Error ? error.message : String(error);
 			}
-			expect(messages[0]).toBe(messages[1]);
+			messages.push(message);
+			expect(message).toContain("Launch flags --no-sandbox, --allow-path apply to an agent session");
+			expect(message).toContain("not to `sandbox check`");
+			expect(message).toContain("Run `xcsh sandbox check` without launch flags");
+			expect(message).toContain("explicit grant restores parent enumeration");
+			expect(message).toContain("Command exited with code 2");
+			expect(message).not.toContain("Uncaught Exception");
+			expect(message).not.toContain("realpathSync");
+			expect(message).not.toContain(home);
 		}
+		expect(messages[0]).toBe(messages[1]);
 	} finally {
 		_resetShellSessionsForTest();
 		fs.rmSync(workspace, { recursive: true, force: true });

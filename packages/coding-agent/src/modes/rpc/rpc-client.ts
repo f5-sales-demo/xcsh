@@ -196,11 +196,8 @@ export class RpcClient {
 				}
 				this.#handleLine(line);
 			}
-			// Stream ended without ready signal — process exited
-			if (!readySettled) {
-				readySettled = true;
-				readyReject(new Error(`Agent process exited before ready. Stderr: ${this.#process?.peekStderr() ?? ""}`));
-			}
+			// An EOF only means stdout closed. The process-exit path below owns startup
+			// failure reporting so it can wait for ptree's stderr drain before reading it.
 		})().catch((err: Error) => {
 			if (!readySettled) {
 				readySettled = true;
@@ -209,14 +206,22 @@ export class RpcClient {
 		});
 
 		// Also race against process exit (in case stdout closes before we read it)
-		void this.#process.exited.then((exitCode: number) => {
-			if (!readySettled) {
-				readySettled = true;
-				readyReject(
-					new Error(`Agent process exited with code ${exitCode}. Stderr: ${this.#process?.peekStderr() ?? ""}`),
-				);
-			}
-		});
+		void this.#process.exited.then(
+			(exitCode: number) => {
+				if (!readySettled) {
+					readySettled = true;
+					readyReject(
+						new Error(`Agent process exited with code ${exitCode}. Stderr: ${this.#process?.peekStderr() ?? ""}`),
+					);
+				}
+			},
+			(error: Error) => {
+				if (!readySettled) {
+					readySettled = true;
+					readyReject(error);
+				}
+			},
+		);
 
 		// Timeout to prevent hanging forever
 		const readyTimeout = this.#startTimeout(30000, () => {

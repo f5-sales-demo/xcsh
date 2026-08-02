@@ -54,7 +54,8 @@ L'agente può leggere i file di memoria direttamente utilizzando URL `memory://`
 
 Le memorie vengono costruite da una pipeline in background che si esegue all'avvio o manualmente tramite comando slash.
 
-**Fase 1 — estrazione per sessione:** Per ogni sessione passata che è cambiata dall'ultima elaborazione, un modello legge la cronologia della sessione ed estrae segnali duraturi: decisioni tecniche, vincoli, errori risolti, workflow ricorrenti. Le sessioni troppo recenti, troppo vecchie o attualmente attive vengono saltate. Ogni estrazione produce un blocco di memoria grezzo e una breve sinossi per quella sessione.
+**Fase 1 — estrazione per sessione:** Per ogni sessione passata che è cambiata dall'ultima elaborazione, un modello legge la cronologia della sessione ed estrae segnali duraturi: decisioni tecniche, vincoli, errori risolti, workflow ricorrenti.
+Le sessioni troppo recenti, troppo vecchie o attualmente attive vengono saltate. Ogni estrazione produce un blocco di memoria grezzo e una breve sinossi per quella sessione.
 
 **Fase 2 — consolidamento:** Dopo l'estrazione, un secondo passaggio del modello legge tutte le estrazioni per sessione e produce tre output scritti su disco:
 

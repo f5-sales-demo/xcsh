@@ -7,6 +7,7 @@
  */
 import { startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
+import { sessionInfoForWorker } from "../src/commands/worker";
 
 const NAMESPACE = process.env.XCSH_NAMESPACE ?? "demo";
 const BASE_URL = (process.env.XCSH_API_URL ?? "").replace(/\/+$/, "");
@@ -56,11 +57,10 @@ function unwrapJs(content: unknown): unknown {
 }
 
 async function main() {
-	const server = await startBridgeServer();
+	const server = await startBridgeServer(undefined, { serveKind: "browser", sessionInfo: sessionInfoForWorker });
 	const provider = new ExtensionBrowserProvider({ server });
 	const acquired = await provider.acquire(BASE_URL);
 	const js = (code: string) => server.request("javascript_tool", { code }, 15000).then(r => unwrapJs(r.content));
-	const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 	const present = (t: string) =>
 		js(
 			`(()=>{const b=[...document.querySelectorAll('button,a,span')].find(e=>(e.textContent||'').trim().includes(${JSON.stringify(t)}));return b?'YES':'no';})()`,
@@ -68,7 +68,7 @@ async function main() {
 	const waitFor = async (t: string, secs = 25) => {
 		for (let i = 0; i < secs; i++) {
 			if ((await present(t)) === "YES") return true;
-			await sleep(1000);
+			await Bun.sleep(1000);
 		}
 		return false;
 	};
@@ -88,19 +88,19 @@ async function main() {
 		console.log("open:", await js(clickByText("Add IP Prefix Set")));
 		await waitFor("JSON", 15);
 		console.log("json tab:", await js(clickByText("JSON")));
-		await new Promise(r => setTimeout(r, 2000));
+		await Bun.sleep(2000);
 		console.log("set ace:", await js(SET_ACE));
-		await sleep(2000);
+		await Bun.sleep(2000);
 		// Switching to Form COMMITS JSON->model (proven). With a valid schema there's
 		// no error modal, so the model populates and we can save from the Form tab.
 		console.log("form tab:", await js(clickByText("Form")));
-		await sleep(3000);
+		await Bun.sleep(3000);
 		console.log("FORM AFTER COMMIT:", await js(READ_FORM));
 		const SAVE = `(()=>{const btns=[...document.querySelectorAll('button')].filter(x=>x.offsetParent!==null);
 		  const b=btns.find(x=>/save-btn/.test(x.className||'')) || btns.filter(x=>/Add IP Prefix Set/i.test(x.textContent||'')).pop();
 		  if(b){b.click();return 'saved:'+(b.className||b.tagName);}return 'NO_SAVE';})()`;
 		console.log("save:", await js(SAVE));
-		await sleep(6000);
+		await Bun.sleep(6000);
 		console.log("final url:", await js("(()=>location.href)()"));
 	} finally {
 		await acquired.release().catch(() => {});

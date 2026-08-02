@@ -75,9 +75,9 @@ function loadDepGraph(): { edges: Record<string, string[]>; leaves: string[] } {
 /** Topological sort: leaves first, then resources whose deps are all satisfied. */
 function topoSort(resources: string[], edges: Record<string, string[]>): string[] {
 	const deps: Record<string, Set<string>> = {};
-	const resSet = new Set(resources);
+	const resourceSet = new Set(resources);
 	for (const r of resources) {
-		deps[r] = new Set((edges[r] ?? []).filter(d => resSet.has(d)));
+		deps[r] = new Set((edges[r] ?? []).filter(d => resourceSet.has(d)));
 	}
 	const sorted: string[] = [];
 	const visited = new Set<string>();

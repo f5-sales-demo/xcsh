@@ -20,6 +20,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
+import { sessionInfoForWorker } from "../src/commands/worker";
 import {
 	apiDelete,
 	apiGet,
@@ -139,11 +140,14 @@ function cfgFromEnv(args: Args): MatrixConfig {
 
 async function ensureExtensionConnectedAndLogin(cfg: MatrixConfig): Promise<void> {
 	console.log("[console] starting bridge probe (extension must be loaded + xcsh chrome setup done)...");
-	const server: BridgeServer = await startBridgeServer();
+	const server: BridgeServer = await startBridgeServer(undefined, {
+		serveKind: "browser",
+		sessionInfo: sessionInfoForWorker,
+	});
 	try {
 		const deadline = Date.now() + 60_000;
 		while (Date.now() < deadline && !server.connected) {
-			await new Promise(r => setTimeout(r, 2000));
+			await Bun.sleep(2000);
 			process.stdout.write(".");
 		}
 		console.log("");

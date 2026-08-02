@@ -23,7 +23,8 @@ This repo contains multiple packages, but **`packages/coding-agent/`** is the pr
 
 - No `any` types unless absolutely necessary
 - Prefer `export * from "./module"` over named re-export-from blocks, including `export type { ... } from`. In pure `index.ts` barrel files (re-exports only), use star re-exports even for single-specifier cases. If star re-exports create symbol ambiguity, remove the redundant export path instead of keeping duplicate exports.
-- **No `private`/`protected`/`public` keyword on class fields or methods** — use ES native `#` private fields for encapsulation; leave members that need external access as bare (no keyword). The only place `private`/`protected`/`public` is allowed is on **constructor parameter properties** (e.g., `constructor(private readonly session: ToolSession)`), where TypeScript requires the keyword for the implicit field declaration.
+- **No `private`/`protected`/`public` keyword on class fields or methods** — use ES native `#` private fields for encapsulation; leave members that need external access as bare (no keyword).
+  The only place `private`/`protected`/`public` is allowed is on **constructor parameter properties** (e.g., `constructor(private readonly session: ToolSession)`), where TypeScript requires the keyword for the implicit field declaration.
 
   ```typescript
   // BAD: TypeScript keyword privacy
@@ -456,7 +457,8 @@ When adding or changing tests, test the contract the system exposes — not the 
 - Prefer contract-level tests over implementation-detail tests. Avoid asserting internal helper wiring, field assignment, singleton identity, incidental ordering, prompt boilerplate, or passthrough option forwarding unless another component depends on that exact detail as a documented contract.
 - Do not duplicate coverage across abstraction levels. If an integration or public-surface test already proves the behavior, delete or avoid the narrower unit test that only restates it through mocks or internal plumbing.
 - Tests MUST be full-suite safe, not just file-local safe. Do not use long-lived file-wide mutations of globals like `Bun.*`, `process.platform`, `process.env`, or `Bun.env` when a narrower seam exists. Prefer per-test `vi.spyOn(...)`, local fakes, and immediate restoration via `vi.restoreAllMocks()`. A test that passes in isolation but poisons later files is broken.
-- Never use `mock.module()`. Bun's `mock.module()` mutates the global module registry and leaks across test files ([oven-sh/bun#12823](https://github.com/oven-sh/bun/issues/12823)). There is no reliable per-file isolation. Use `spyOn` on the imported module object instead, and restore in `afterEach`. For pass dependencies, import the pass object and spy on its `run` method. For package dependencies, use a namespace import and spy on the exported function.
+- Never use `mock.module()`. Bun's `mock.module()` mutates the global module registry and leaks across test files ([oven-sh/bun#12823](https://github.com/oven-sh/bun/issues/12823)). There is no reliable per-file isolation.
+  Use `spyOn` on the imported module object instead, and restore in `afterEach`. For pass dependencies, import the pass object and spy on its `run` method. For package dependencies, use a namespace import and spy on the exported function.
 - For lifecycle or stateful code, prefer one test per invariant or transition over several tiny tests that each assert one field from the same transition.
 - For error handling, prefer tests that trigger the real failure path and assert the surfaced error contract over tests that directly instantiate error classes or inspect purely internal metadata.
 - Smoke tests are only acceptable when they detect a failure mode narrower tests would miss. A test that only proves a package boots or a command starts is not enough.

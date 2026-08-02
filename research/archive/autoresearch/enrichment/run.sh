@@ -38,18 +38,18 @@ echo ""
 for resource in ${RESOURCES}; do
   output_file="${WORK_DIR}/${resource}.json"
   echo "Probing ${resource}..."
-  (cd "${API_SPECS_DIR}" && \
+  (cd "${API_SPECS_DIR}" &&
     XCSH_API_URL="${XCSH_API_URL}" \
-    XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
-    XCSH_NAMESPACE="example-corp" \
-    python3 -W ignore -m scripts.discovery.constraint_prober \
+      XCSH_API_TOKEN="${XCSH_API_TOKEN}" \
+      XCSH_NAMESPACE="example-corp" \
+      python3 -W ignore -m scripts.discovery.constraint_prober \
       --resource "${resource}" \
       --output "${output_file}" \
-      --rate 3.0 2>&1 | grep -v "^INFO:httpx" || true) \
-    && echo "  ✓ ${resource} probed" \
-    || echo "  ✗ ${resource} probe failed (using empty result)"
+      --rate 3.0 2>&1 | grep -v "^INFO:httpx" || true) &&
+    echo "  ✓ ${resource} probed" ||
+    echo "  ✗ ${resource} probe failed (using empty result)"
   # Create empty result if probe failed
-  [ -f "${output_file}" ] || echo '{"fields_probed":[],"oneof_groups":[]}' > "${output_file}"
+  [ -f "${output_file}" ] || echo '{"fields_probed":[],"oneof_groups":[]}' >"${output_file}"
 done
 
 echo ""
@@ -61,7 +61,7 @@ index_json="${WORK_DIR}/index_extract.json"
 PROVIDER_JSON="${SCRIPT_DIR}/../terraform-provider-xcsh/docs/terraform-llms-index.json"
 if [ ! -f "${PROVIDER_JSON}" ]; then
   echo "WARNING: terraform-llms-index.json not found at ${PROVIDER_JSON}, using empty index" >&2
-  echo '{}' > "${index_json}"
+  echo '{}' >"${index_json}"
 else
   python3 -c "
 import json, sys
@@ -76,11 +76,12 @@ for name, res in resources.items():
         'server_defaults': res.get('server_defaults', []),
     }
 print(json.dumps(output))
-" "${PROVIDER_JSON}" > "${index_json}"
+" "${PROVIDER_JSON}" >"${index_json}"
 fi
 
 # Score: compare probed vs embedded
-results=$(python3 -c "
+results=$(
+  python3 - "${index_json}" "${RESOURCES}" "${WORK_DIR}" <<'PY'
 import json, sys
 
 index = json.load(open(sys.argv[1]))  # flat resource map: {name: {required, oneof_groups, ...}}
@@ -188,7 +189,8 @@ print(json.dumps({
     'mismatches': mismatches,
     'cross_repo': {'xcsh': xcsh_issues, 'terraform-provider-xcsh': provider_issues, 'api-specs-enriched': spec_issues},
 }))
-" "${index_json}" "${RESOURCES}" "${WORK_DIR}")
+PY
+)
 
 # Emit METRIC and ASI lines
 python3 -c "

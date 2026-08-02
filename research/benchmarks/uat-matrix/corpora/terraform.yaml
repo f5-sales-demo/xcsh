@@ -1,3 +1,4 @@
+---
 phrases:
   # === http_loadbalancer (6 phrases) ===
   - phrase: "Create a terraform resource for an HTTP load balancer serving app.example.com with HTTPS auto-cert"

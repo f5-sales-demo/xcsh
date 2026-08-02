@@ -44,7 +44,7 @@ const APP_LEXICON: Record<HostId, RegExp> = {
  * family of identity-rejection phrasings.
  */
 const PUSHBACK_RE =
-	/doesn'?t match my (actual )?purpose|my (actual|real) purpose|i'?m actually (a|an)|the system note|this doesn'?t align|not (really )?an? (excel|word|powerpoint|assistant)/i;
+	/does(?:n't|nt) match my (actual )?purpose|my (actual|real) purpose|i'?m actually (a|an)|the system note|this does(?:n't|nt) align|not (really )?an? (excel|word|powerpoint|assistant)/i;
 
 /**
  * no_cross_host_leak: browser-only terms must not appear in a DOCUMENT host reply;

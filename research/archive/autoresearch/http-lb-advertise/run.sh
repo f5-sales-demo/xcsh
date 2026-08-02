@@ -216,9 +216,9 @@ if where:
     if [ "${check_result}" = "PASS" ]; then
       pass=$((pass + 1))
     else
-      failures=$(echo "${failures}" | \
+      failures=$(echo "${failures}" |
         _id="${id}" _phrase="${phrase}" _error_type="${error_type}" _fix_repo="${fix_repo}" \
-        python3 -c "
+          python3 -c "
 import json,sys,os
 failures=json.load(sys.stdin)
 failures.append({'id':os.environ['_id'],'phrase':os.environ['_phrase'],'error_type':os.environ['_error_type'],'fix_repo':os.environ['_fix_repo']})
@@ -226,7 +226,7 @@ print(json.dumps(failures))
 ")
     fi
     echo ""
-  done <<< "${phrases}"
+  done <<<"${phrases}"
 
   echo "T1 complete: ${pass}/${total} payload tests passed"
   echo ""

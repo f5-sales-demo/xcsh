@@ -38,6 +38,7 @@ Create a todo list when:
 |`abandoned`|Dropped intentionally|
 
 ## Rules
+
 - You **MUST** mark `in_progress` **before** starting work, not after
 - You **MUST** mark `completed` **immediately** — never defer
 - You **MUST** keep exactly **one** task `in_progress`
@@ -47,6 +48,7 @@ Create a todo list when:
 </protocol>
 
 ## Task Anatomy
+
 - `content`: Short label (5-10 words). What is being done, not how.
 - `details`: File paths, implementation steps, edge cases. Shown only when task is active.
 - `notes`: Runtime observations added during execution.

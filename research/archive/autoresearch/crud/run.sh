@@ -28,8 +28,8 @@ cleanup() {
     alert_receivers enhanced_firewall_policys; do
     resources=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/config/namespaces/${NAMESPACE}/${api_path}" 2>/dev/null \
-      | python3 -c "
+      "${API_URL}/api/config/namespaces/${NAMESPACE}/${api_path}" 2>/dev/null |
+      python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
@@ -46,11 +46,11 @@ for i in items:
     done
   done
   # Delete ar-test-* system-namespace resources (securemesh_site_v2, etc.)
-  for api_path in securemesh_site_v2s; do
-    resources=$(curl -sf \
-      -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/config/namespaces/system/${api_path}" 2>/dev/null \
-      | python3 -c "
+  api_path=securemesh_site_v2s
+  resources=$(curl -sf \
+    -H "Authorization: APIToken ${API_TOKEN}" \
+    "${API_URL}/api/config/namespaces/system/${api_path}" 2>/dev/null |
+    python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
@@ -59,12 +59,11 @@ for i in items:
     if name.startswith('ar-test-'):
         print(name)
 " 2>/dev/null || true)
-    for name in ${resources}; do
-      curl -sf -X DELETE \
-        -H "Authorization: APIToken ${API_TOKEN}" \
-        "${API_URL}/api/config/namespaces/system/${api_path}/${name}" \
-        >/dev/null 2>&1 || true
-    done
+  for name in ${resources}; do
+    curl -sf -X DELETE \
+      -H "Authorization: APIToken ${API_TOKEN}" \
+      "${API_URL}/api/config/namespaces/system/${api_path}/${name}" \
+      >/dev/null 2>&1 || true
   done
   # Delete ar-test-ns namespace if it exists
   curl -sf -X DELETE \
@@ -177,48 +176,48 @@ json.dump({
   fix_repo="xcsh"
 
   case "${operation}" in
-    create|update)
-      if [ "${http_code}" = "200" ]; then
-        op_pass=1
-        case "${operation}" in
-          create) create_pass=$((create_pass + 1)) ;;
-          update) update_pass=$((update_pass + 1)) ;;
-        esac
+  create | update)
+    if [ "${http_code}" = "200" ]; then
+      op_pass=1
+      case "${operation}" in
+      create) create_pass=$((create_pass + 1)) ;;
+      update) update_pass=$((update_pass + 1)) ;;
+      esac
+    else
+      if echo "${response}" | grep -qiE "xcsh_api|api call|POST|PUT"; then
+        error_type="API_REJECTED"
+        fix_repo="api-specs-enriched"
+        spec_issues=$((spec_issues + 1))
       else
-        if echo "${response}" | grep -qiE "xcsh_api|api call|POST|PUT"; then
-          error_type="API_REJECTED"
-          fix_repo="api-specs-enriched"
-          spec_issues=$((spec_issues + 1))
-        else
-          error_type="NO_API_CALL"
-          fix_repo="xcsh"
-          xcsh_issues=$((xcsh_issues + 1))
-        fi
-      fi
-      ;;
-    read)
-      if [ "${http_code}" = "200" ]; then
-        op_pass=1
-        read_pass=$((read_pass + 1))
-      else
-        error_type="READ_FAILED"
+        error_type="NO_API_CALL"
         fix_repo="xcsh"
         xcsh_issues=$((xcsh_issues + 1))
       fi
-      ;;
-    delete)
-      # Wait briefly for deletion to propagate
-      sleep 2
-      http_code_after=$(api_get "${verify_path}")
-      if [ "${http_code_after}" = "404" ] || [ "${http_code_after}" = "000" ]; then
-        op_pass=1
-        delete_pass=$((delete_pass + 1))
-      else
-        error_type="DELETE_FAILED"
-        fix_repo="xcsh"
-        xcsh_issues=$((xcsh_issues + 1))
-      fi
-      ;;
+    fi
+    ;;
+  read)
+    if [ "${http_code}" = "200" ]; then
+      op_pass=1
+      read_pass=$((read_pass + 1))
+    else
+      error_type="READ_FAILED"
+      fix_repo="xcsh"
+      xcsh_issues=$((xcsh_issues + 1))
+    fi
+    ;;
+  delete)
+    # Wait briefly for deletion to propagate
+    sleep 2
+    http_code_after=$(api_get "${verify_path}")
+    if [ "${http_code_after}" = "404" ] || [ "${http_code_after}" = "000" ]; then
+      op_pass=1
+      delete_pass=$((delete_pass + 1))
+    else
+      error_type="DELETE_FAILED"
+      fix_repo="xcsh"
+      xcsh_issues=$((xcsh_issues + 1))
+    fi
+    ;;
   esac
 
   status="FAIL"
@@ -226,7 +225,7 @@ json.dump({
   echo "  ${status}: ${operation} http=${http_code} fix=${fix_repo}"
 
   if [ "${op_pass}" -eq 0 ]; then
-    phrase_json=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<< "${phrase}")
+    phrase_json=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<<"${phrase}")
     failures_json=$(python3 -c "
 import json, sys
 failures = json.loads(sys.argv[1])

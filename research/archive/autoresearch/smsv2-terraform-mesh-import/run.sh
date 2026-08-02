@@ -109,16 +109,16 @@ print(json.dumps(d))
 
     # terraform validate
     if TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-       terraform -chdir="${ws}" init -backend=false -input=false -no-color &>/dev/null && \
-       TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-       terraform -chdir="${ws}" validate -no-color &>/dev/null; then
+      terraform -chdir="${ws}" init -backend=false -input=false -no-color &>/dev/null &&
+      TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
+        terraform -chdir="${ws}" validate -no-color &>/dev/null; then
       validate_pass=$((validate_pass + 1))
       echo "  validate: OK"
 
       # terraform plan (needs API creds)
       if TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-         TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
-         terraform -chdir="${ws}" plan -no-color -input=false &>/dev/null; then
+        TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+        terraform -chdir="${ws}" plan -no-color -input=false &>/dev/null; then
         plan_pass=$((plan_pass + 1))
         echo "  plan: OK — PASS"
       else
@@ -140,7 +140,7 @@ print(json.dumps(d))
 ")
     fi
     echo ""
-  done <<< "${phrases}"
+  done <<<"${phrases}"
 
   local t1_score=0.0
   [ "${total}" -gt 0 ] && t1_score=$(python3 -c "print(round(${validate_pass}/${total}*100,1))")
@@ -161,7 +161,8 @@ run_t2() {
 
   if ! command -v az &>/dev/null || ! az account show &>/dev/null 2>&1; then
     echo "SKIP T2: Azure CLI not available or not authenticated"
-    T2_SCORE="skipped"; return 0
+    T2_SCORE="skipped"
+    return 0
   fi
 
   local t2_ws="${WORK_DIR}/t2"
@@ -169,9 +170,7 @@ run_t2() {
 
   # Pre-clean
   echo "  Pre-clean..."
-  for rg in "${RG1_NAME}"; do
-    az group delete --name "${rg}" --yes --no-wait 2>/dev/null || true
-  done
+  az group delete --name "${RG1_NAME}" --yes --no-wait 2>/dev/null || true
   api DELETE "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" &>/dev/null || true
   api DELETE "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" &>/dev/null || true
   api DELETE "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" &>/dev/null || true
@@ -194,7 +193,7 @@ run_t2() {
   done
 
   # Write registration token creator
-  cat > "${t2_ws}/scripts/create_token.py" << 'PYEOF'
+  cat >"${t2_ws}/scripts/create_token.py" <<'PYEOF'
 import json, sys, urllib.request, os
 q = json.load(sys.stdin)
 api_url = q['api_url']; token = q['api_token']; name = q['token_name']
@@ -214,7 +213,7 @@ print(json.dumps({'uid': uid}))
 PYEOF
 
   # Write approval script
-  cat > "${t2_ws}/scripts/approve_registration.sh" << 'SHEOF'
+  cat >"${t2_ws}/scripts/approve_registration.sh" <<'SHEOF'
 #!/usr/bin/env bash
 API_URL="${API_URL}"; API_TOKEN="${API_TOKEN}"; SITE_NAME="${SITE_NAME}"
 deadline=$(($(date +%s) + 1200))
@@ -281,7 +280,7 @@ SHEOF
   chmod +x "${t2_ws}/scripts/approve_registration.sh"
 
   # Write main.tf for T2
-  cat > "${t2_ws}/main.tf" << 'TFEOF'
+  cat >"${t2_ws}/main.tf" <<'TFEOF'
 terraform {
   required_providers {
     f5xc   = { source = "f5-sales-demo/xcsh" }
@@ -521,15 +520,17 @@ TFEOF
   echo "Running T2 terraform apply..."
   cd "${t2_ws}"
   if ! TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-     terraform init -backend=false -input=false -no-color 2>&1 | tee "${WORK_DIR}/t2-init.log" | grep -E "Error|error|installed|Installed" | head -5; then
+    terraform init -backend=false -input=false -no-color 2>&1 | tee "${WORK_DIR}/t2-init.log" | grep -E "Error|error|installed|Installed" | head -5; then
     echo "T2 FAIL: terraform init failed"
     grep -i "error" "${WORK_DIR}/t2-init.log" 2>/dev/null | head -5
-    T2_SCORE=0; cd - >/dev/null; return 0
+    T2_SCORE=0
+    cd - >/dev/null
+    return 0
   fi
 
   if TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-     TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
-     terraform apply -auto-approve -no-color -input=false 2>&1 | tee "${WORK_DIR}/t2-apply.log" | tail -10; then
+    TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+    terraform apply -auto-approve -no-color -input=false 2>&1 | tee "${WORK_DIR}/t2-apply.log" | tail -10; then
     echo "T2 PASS: CE1 deployed, HTTPS LB created"
     T2_SCORE=100
   else
@@ -566,7 +567,8 @@ run_t4() {
 
   if [ "${T2_SCORE}" -ne 100 ] 2>/dev/null; then
     echo "SKIP T4: T2 did not succeed — no resources to import"
-    T4_SCORE="skipped"; return 0
+    T4_SCORE="skipped"
+    return 0
   fi
 
   local t4_ws="${WORK_DIR}/t4"
@@ -581,7 +583,7 @@ run_t4() {
   lb_exists=$(api GET "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('metadata',{}).get('name',''))" 2>/dev/null || echo "")
 
   # Write import config
-  cat > "${t4_ws}/main.tf" << 'TFEOF'
+  cat >"${t4_ws}/main.tf" <<'TFEOF'
 terraform {
   required_providers {
     f5xc = { source = "f5-sales-demo/xcsh" }
@@ -639,7 +641,9 @@ TFEOF
   cd "${t4_ws}"
   if ! TF_CLI_CONFIG_FILE="${TF_DEVRC}" terraform init -backend=false -input=false -no-color &>/dev/null; then
     echo "T4 FAIL: terraform init failed"
-    T4_SCORE=0; cd - >/dev/null; return 0
+    T4_SCORE=0
+    cd - >/dev/null
+    return 0
   fi
 
   # Import each resource and verify no-drift plan
@@ -667,8 +671,8 @@ TFEOF
 
     # Run import
     if ! TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
-       TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-       terraform import -no-color -input=false "${addr}" "${import_id}" &>/dev/null; then
+      TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
+      terraform import -no-color -input=false "${addr}" "${import_id}" &>/dev/null; then
       echo "  FAIL: import command failed"
       failures=$(echo "${failures}" | _addr="${addr}" python3 -c "
 import json,sys,os
@@ -714,37 +718,37 @@ print(json.dumps(d))
     local mutated=0 mutation_desc="" restore_body=""
 
     case "${addr}" in
-      xcsh_securemesh_site_v2.ce1)
-        # Mutation: toggle url_categorization disable→enable (simple flag, no CE restart needed)
-        restore_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"disable_url_categorization":{},"disable_management_network":{}}}'
-        mutate_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"enable_url_categorization":{},"disable_management_network":{}}}'
-        mutation_desc="disable_url_categorization→enable_url_categorization"
-        if api PUT "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" "${mutate_body}" &>/dev/null; then
-          mutated=1
-        fi
-        ;;
-      xcsh_virtual_site.vsite)
-        # Mutation: change site_selector expression to add extra label
-        restore_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')"]}}}'
-        mutate_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')","env=drift-test"]}}}'
-        mutation_desc="site_selector expressions +1"
-        if api PUT "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" "${mutate_body}" &>/dev/null; then
-          mutated=1
-        fi
-        ;;
-      xcsh_http_loadbalancer.lb)
-        # Mutation: add a second domain to the LB
-        restore_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
-        mutate_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com","drift-test.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
-        mutation_desc="domains +1 (drift-test.example.com)"
-        if api PUT "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" "${mutate_body}" &>/dev/null; then
-          mutated=1
-        fi
-        ;;
+    xcsh_securemesh_site_v2.ce1)
+      # Mutation: toggle url_categorization disable→enable (simple flag, no CE restart needed)
+      restore_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"disable_url_categorization":{},"disable_management_network":{}}}'
+      mutate_body='{"metadata":{"name":"'"${CE1_NAME}"'","namespace":"system"},"spec":{"azure":{"not_managed":{}},"disable_ha":{},"block_all_services":{},"no_network_policy":{},"no_forward_proxy":{},"f5_proxy":{},"no_proxy_bypass":{},"logs_streaming_disabled":{},"no_s2s_connectivity_sli":{},"no_s2s_connectivity_slo":{},"enable_url_categorization":{},"disable_management_network":{}}}'
+      mutation_desc="disable_url_categorization→enable_url_categorization"
+      if api PUT "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" "${mutate_body}" &>/dev/null; then
+        mutated=1
+      fi
+      ;;
+    xcsh_virtual_site.vsite)
+      # Mutation: change site_selector expression to add extra label
+      restore_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')"]}}}'
+      mutate_body='{"metadata":{"name":"'"${VS_NAME}"'","namespace":"'"${NS}"'"},"spec":{"site_type":"CUSTOMER_EDGE","site_selector":{"expressions":["ves.io/siteName in ('"${CE1_NAME}"')","env=drift-test"]}}}'
+      mutation_desc="site_selector expressions +1"
+      if api PUT "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" "${mutate_body}" &>/dev/null; then
+        mutated=1
+      fi
+      ;;
+    xcsh_http_loadbalancer.lb)
+      # Mutation: add a second domain to the LB
+      restore_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
+      mutate_body='{"metadata":{"name":"'"${LB_NAME}"'","namespace":"'"${NS}"'"},"spec":{"domains":["'"${LB_NAME}"'.example.com","drift-test.example.com"],"https_auto_cert":{},"advertise_on_public_default_vip":{}}}'
+      mutation_desc="domains +1 (drift-test.example.com)"
+      if api PUT "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" "${mutate_body}" &>/dev/null; then
+        mutated=1
+      fi
+      ;;
     esac
 
     if [ "${mutated}" -eq 1 ]; then
-      sleep 3  # Let API propagate
+      sleep 3 # Let API propagate
       local drift_plan_out
       drift_plan_out=$(TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
         TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
@@ -771,12 +775,15 @@ print(json.dumps(d))
       # Restore original state via API
       api PUT "/api/config/namespaces/${addr#xcsh_*./}" "${restore_body}" &>/dev/null || true
       case "${addr}" in
-        xcsh_securemesh_site_v2.ce1)
-          api PUT "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" "${restore_body}" &>/dev/null || true ;;
-        xcsh_virtual_site.vsite)
-          api PUT "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" "${restore_body}" &>/dev/null || true ;;
-        xcsh_http_loadbalancer.lb)
-          api PUT "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" "${restore_body}" &>/dev/null || true ;;
+      xcsh_securemesh_site_v2.ce1)
+        api PUT "/api/config/namespaces/system/securemesh_site_v2s/${CE1_NAME}" "${restore_body}" &>/dev/null || true
+        ;;
+      xcsh_virtual_site.vsite)
+        api PUT "/api/config/namespaces/${NS}/virtual_sites/${VS_NAME}" "${restore_body}" &>/dev/null || true
+        ;;
+      xcsh_http_loadbalancer.lb)
+        api PUT "/api/config/namespaces/${NS}/http_loadbalancers/${LB_NAME}" "${restore_body}" &>/dev/null || true
+        ;;
       esac
     else
       echo "  SKIP drift test: mutation via API failed for ${addr}"
@@ -810,10 +817,17 @@ print(json.dumps(d))
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-T1_TOTAL=0; T1_VALIDATE_PASS=0; T1_PLAN_PASS=0; T1_SCORE=0; T1_FAILURES="[]"
+T1_TOTAL=0
+T1_VALIDATE_PASS=0
+T1_PLAN_PASS=0
+T1_SCORE=0
+T1_FAILURES="[]"
 T2_SCORE="skipped"
 T3_SCORE="skipped"
-T4_SCORE="skipped"; T4_TOTAL=0; T4_PASS=0; T4_FAILURES="[]"
+T4_SCORE="skipped"
+T4_TOTAL=0
+T4_PASS=0
+T4_FAILURES="[]"
 
 run_t1
 run_t2
@@ -825,7 +839,7 @@ if [ "${T2_SCORE}" = "100" ]; then
 fi
 
 # Score emission
-python3 - "${T2_SCORE}" "${T3_SCORE}" "${T4_SCORE}" "${T4_TOTAL:-0}" "${T4_PASS:-0}" << PYEOF
+python3 - "${T2_SCORE}" "${T3_SCORE}" "${T4_SCORE}" "${T4_TOTAL:-0}" "${T4_PASS:-0}" <<PYEOF
 import sys
 t2 = sys.argv[1]; t3 = sys.argv[2]; t4 = sys.argv[3]
 t4_total = int(sys.argv[4]); t4_pass = int(sys.argv[5])

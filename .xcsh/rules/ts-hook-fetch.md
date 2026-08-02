@@ -20,7 +20,7 @@ Use `hookFetch` from `@f5-sales-demo/pi-utils`. It returns a `Disposable` — us
 import { hookFetch } from "@f5-sales-demo/pi-utils";
 
 using _hook = hookFetch((input, init, next) => {
-	// return a mocked Response, or delegate with next(input, init)
+ // return a mocked Response, or delegate with next(input, init)
 });
 ```
 
@@ -38,10 +38,10 @@ using _hook = hookFetch(() => new Response("ok"));
 
 // RIGHT — conditional mock with passthrough
 using _hook = hookFetch((input, init, next) => {
-	if (String(input).includes("127.0.0.1")) {
-		return new Response(JSON.stringify({ data: [] }));
-	}
-	return next(input, init);
+ if (String(input).includes("127.0.0.1")) {
+  return new Response(JSON.stringify({ data: [] }));
+ }
+ return next(input, init);
 });
 
 // RIGHT — when you need vi.fn() for mock assertions

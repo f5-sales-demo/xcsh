@@ -101,9 +101,9 @@ fi
 
 echo "--- Next steps ---"
 [ "${provider}" -gt 0 ] && echo "1. Fix terraform-provider-xcsh schema → rebuild provider → rerun benchmark"
-[ "${specs}" -gt 0 ]    && echo "2. Fix api-specs-enriched → make pipeline && merge"
+[ "${specs}" -gt 0 ] && echo "2. Fix api-specs-enriched → make pipeline && merge"
 [ "${deploy_fail}" -eq 1 ] && echo "3. Fix T2 terraform deployment → rerun benchmark"
-[ "${mesh_fail}" -eq 1 ]   && echo "4. Fix T3 terraform mesh → rerun benchmark"
+[ "${mesh_fail}" -eq 1 ] && echo "4. Fix T3 terraform mesh → rerun benchmark"
 echo "5. Restart autoresearch after all fixes"
 echo ""
 

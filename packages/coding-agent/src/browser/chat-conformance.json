@@ -349,13 +349,14 @@
     },
     "set_host_tools_error": {
       "type": "object",
-      "required": ["type", "error"],
+      "required": ["type", "reason"],
       "properties": {
         "type": {
           "const": "set_host_tools_error",
           "type": "string"
         },
-        "error": {
+        "reason": {
+          "const": "host-tools-rejected",
           "type": "string"
         }
       }
@@ -718,7 +719,7 @@
       },
       "set_host_tools_error": {
         "type": "set_host_tools_error",
-        "error": "Host tool \"office_read_range\" must provide a non-empty description"
+        "reason": "host-tools-rejected"
       },
       "host_tool_call": {
         "type": "host_tool_call",

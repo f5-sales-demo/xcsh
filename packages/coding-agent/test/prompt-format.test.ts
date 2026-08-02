@@ -34,14 +34,30 @@ describe("prompt.format renderPhase", () => {
 		expect(output).toBe("<root>\n  {{#if ok}}\n    value\n  {{/if}}\n</root>");
 	});
 
-	test("pre-render removes blank line before closing Handlebars block while post-render keeps it", () => {
+	test("preserves the Markdown separator before list items", () => {
+		const input = "## Rules\n\n- first\n- second";
+
+		const output = prompt.format(input, { renderPhase: "pre-render" });
+
+		expect(output).toBe(input);
+	});
+
+	test("preserves a Markdown separator immediately after an opening XML tag", () => {
+		const input = "<rules>\n\n- first\n- second\n</rules>";
+
+		const output = prompt.format(input, { renderPhase: "pre-render" });
+
+		expect(output).toBe(input);
+	});
+
+	test("preserves a blank line before a closing Handlebars block in both phases", () => {
 		const input = "<root>\n{{#if ok}}\nvalue\n\n{{/if}}\n</root>";
 
 		const preRender = prompt.format(input, { renderPhase: "pre-render" });
 		const postRender = prompt.format(input, { renderPhase: "post-render" });
 
-		expect(preRender).toBe("<root>\n{{#if ok}}\nvalue\n{{/if}}\n</root>");
-		expect(postRender).toBe("<root>\n{{#if ok}}\nvalue\n\n{{/if}}\n</root>");
+		expect(preRender).toBe(input);
+		expect(postRender).toBe(input);
 	});
 	test("pre-render compacts table rows and does not duplicate content when replacing ascii", () => {
 		const input =

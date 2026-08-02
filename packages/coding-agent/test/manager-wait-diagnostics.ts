@@ -14,8 +14,8 @@
  *
  *   spares pre-warmed: 0   adoptions logged: 0  → the pool never filled
  *   spares pre-warmed: 2   adoptions logged: 0  → spares exist, adoption never ran
- *   spares pre-warmed: 2   adoptions logged: 1  → adoption ran, for another session
- *                                                 (or later than the budget allowed)
+ *   spares pre-warmed: 2   adoptions logged: 1  → adoption ran, but the awaited
+ *                                                 lifecycle event did not follow
  *
  * Kept as a pure function so it can be tested against synthetic stderr in
  * milliseconds; asserting on it through the real helper would cost a 30s wait per
@@ -24,8 +24,8 @@
 
 /** The manager's pre-warm log: `[xcsh manager] pre-warmed spare → pid 11 on port 19222`. */
 const SPARE_SPAWNED = /pre-warmed spare →/g;
-/** The manager's adoption log: `... adopted spare pid 11 on port 19222 as tab-7 (...)`. */
-const SPARE_ADOPTED = /adopted spare pid \d+ on port \d+ as \S+/g;
+/** The manager's identity-free adoption log: `... adopted spare pid 11 on port 19222`. */
+const SPARE_ADOPTED = /adopted spare pid \d+ on port \d+/g;
 
 /** How many trailing stderr lines to quote. Enough to hold a late line, few enough to read. */
 const TAIL_LINES = 25;
@@ -56,8 +56,8 @@ export function describeManagerCensus(stderr: string): string[] {
 
 	const lines = [`  spares pre-warmed: ${spares}   adoptions logged: ${adoptions.length}`];
 
-	// Quote the adoption lines verbatim: an adoption for a different session id is
-	// invisible in the counts and is otherwise indistinguishable from no adoption.
+	// Quote the identity-free adoption lines verbatim so the port and process remain
+	// actionable without exposing the browser session or tenant.
 	for (const adoption of adoptions) lines.push(`  adopted: ${adoption.trim()}`);
 
 	if (stderr.trim() === "") {
@@ -86,10 +86,10 @@ export function describeWaitFailure({ pattern, tries, intervalMs, stderr }: Wait
 	].join("\n");
 }
 
-/** One port's outcome from a range scan: it answered with a tenant, or it did not. */
+/** One port's outcome from a range scan: it answered with an identity, or it did not. */
 export interface PortProbe {
 	readonly port: number;
-	/** The tenant the bridge advertised, when it answered. */
+	/** The tenant the bridge advertised, used only for an in-memory equality check. */
 	readonly tenant?: string;
 	/** Why it did not answer, when it did not. */
 	readonly error?: string;
@@ -102,7 +102,8 @@ export interface PortProbe {
 }
 
 /**
- * Render a range scan for a wanted tenant (#2463, mode C).
+ * Render a range scan for a wanted tenant (#2463, mode C) without exposing either
+ * the expected or observed tenant values.
  *
  * The two-tab test asserted a bare `ports.size` while its poll swallowed every
  * probe error, so a CI failure read `Expected: 2, Received: 1` and said nothing
@@ -115,10 +116,10 @@ export interface PortProbe {
 export function describePortScan(results: readonly PortProbe[], wantedTenant: string): string[] {
 	const matched = results.filter(r => r.tenant === wantedTenant).length;
 	const answered = results.filter(r => r.tenant !== undefined).length;
-	const lines = [`  port scan — matched ${matched} of ${results.length} for tenant "${wantedTenant}":`];
+	const lines = [`  port scan — matched expected identity on ${matched} of ${results.length} ports:`];
 	for (const r of results) {
 		if (r.tenant !== undefined) {
-			lines.push(`    ${r.port}: tenant "${r.tenant}"`);
+			lines.push(`    ${r.port}: ${r.tenant === wantedTenant ? "expected identity" : "different identity"}`);
 			continue;
 		}
 		// "No answer" spans two different defects, and the difference is the whole

@@ -1,3 +1,4 @@
+---
 phrases:
   # === healthcheck (4 phrases) ===
   - phrase: "Create a healthcheck named ar-test-hc in namespace example-corp that checks /healthz via HTTP every 10 seconds"
@@ -185,7 +186,6 @@ phrases:
     resource: http_loadbalancer
     resource_name: ar-test-lb
     api_path: http_loadbalancers
-
 
   # === tcp_loadbalancer (6 phrases — includes pool setup/teardown) ===
   - phrase: "Create an origin pool named ar-test-tcp-pool in namespace example-corp with one origin server at 10.0.1.30 on port 80"
@@ -664,7 +664,6 @@ phrases:
     resource_name: ar-test-efp
     api_path: enhanced_firewall_policys
     namespace_scoped: true
-
 
   # === securemesh_site_v2 (4 phrases — SMSv2 Azure CE, system namespace) ===
   - phrase: "Create a SecureMesh site v2 named ar-test-smsv2 in namespace system using Azure not_managed provider"

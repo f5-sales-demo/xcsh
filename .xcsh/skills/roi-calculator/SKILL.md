@@ -16,18 +16,21 @@ economic buyer to use in budget approval.
 Quantify the customer's existing costs across these categories:
 
 **Infrastructure costs:**
+
 - Hardware (appliances, load balancers, WAF boxes) — CapEx and maintenance
 - Cloud service costs (per-cloud WAF, CDN, DDoS, networking)
 - Data center rack space, power, cooling for on-prem appliances
 - License renewal costs for existing solutions
 
 **Operational costs:**
+
 - FTE hours for security policy management across multiple consoles
 - FTE hours for network configuration across clouds
 - Incident response time and cost (MTTR x incident frequency x cost per hour)
 - Change management overhead (how long to deploy a new policy?)
 
 **Risk costs:**
+
 - Average cost of a security breach in their industry
 - Compliance penalty exposure
 - Downtime cost per hour (revenue impact + productivity loss)
@@ -36,11 +39,13 @@ Quantify the customer's existing costs across these categories:
 ### 2. F5 XC Projected Costs
 
 **Subscription costs:**
+
 - F5 XC tier pricing (base platform + add-on modules)
 - Estimated consumption-based costs (bandwidth, requests, API calls)
 - Professional services for initial deployment
 
 **Migration costs:**
+
 - Implementation effort (F5 SE + customer team hours)
 - Testing and validation period
 - Training for customer operations team
@@ -49,17 +54,20 @@ Quantify the customer's existing costs across these categories:
 ### 3. Savings Categories
 
 **Direct cost savings:**
+
 - Hardware elimination or reduction
 - License consolidation (N vendor licenses → 1 F5 XC subscription)
 - Cloud networking cost reduction (fewer VPN gateways, transit hubs)
 
 **Operational efficiency:**
+
 - Reduced console count (N consoles → 1 control plane)
 - Faster policy deployment (hours → minutes)
 - Reduced FTE hours for routine operations
 - Lower MTTR through unified visibility
 
 **Risk reduction:**
+
 - Improved security posture (quantified by reduced attack surface)
 - Faster incident response
 - Better compliance posture
@@ -79,6 +87,7 @@ Payback Period = Implementation Cost / (Annual Savings / 12) months
 ### 5. Sensitivity Analysis
 
 Show the business case under different assumptions:
+
 - **Conservative**: Minimum expected savings, maximum costs
 - **Expected**: Most likely scenario
 - **Optimistic**: Maximum savings potential

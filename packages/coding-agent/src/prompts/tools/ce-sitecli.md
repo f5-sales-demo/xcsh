@@ -59,6 +59,7 @@ refuses SSH as shipped. The only remaining route is the Azure Serial Console, wh
 needs a human at a terminal.
 
 ## Reading results
+
 - `health` first. It is cheap and structured, and `state: PROVISIONED` confirms the node
   registered and is configured.
 - Long output is genuinely long: `nh --list` runs to thousands of lines and the flow

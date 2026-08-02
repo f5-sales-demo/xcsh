@@ -28,8 +28,8 @@ fi
 provider=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('terraform-provider-xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 specs=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('api-specs-enriched',0); assert isinstance(v,int); print(v)" "${cross_repo}")
 xcsh=$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); v=d.get('xcsh',0); assert isinstance(v,int); print(v)" "${cross_repo}")
-upstream=$(( provider + specs ))
-total=$(( provider + specs + xcsh ))
+upstream=$((provider + specs))
+total=$((provider + specs + xcsh))
 
 if [ "${upstream}" -eq 0 ]; then
   echo "CHECKS: All ${total} CRUD failures are xcsh-local — autoresearch can continue"

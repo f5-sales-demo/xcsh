@@ -23,6 +23,7 @@ strengthens the deal.
 ## Validation Plan Structure
 
 ### 1. Executive Summary
+
 - Customer name, deal context, validation type (POC/POV)
 - Business problem being validated
 - Expected duration and resource commitment
@@ -34,6 +35,7 @@ Define measurable exit criteria before the validation begins. Both parties
 must agree on these before starting.
 
 **Technical success criteria examples:**
+
 - Application latency through F5 XC < Xms at the 95th percentile
 - WAF blocks Y% of OWASP Top 10 attack patterns with zero false positives on production traffic
 - Multi-cloud connectivity between AWS VPC and Azure VNET established with < Xms added latency
@@ -41,6 +43,7 @@ must agree on these before starting.
 - Bot defense identifies and mitigates automated traffic without impacting legitimate users
 
 **Business success criteria examples:**
+
 - Operational complexity reduced from N consoles to single pane of glass
 - Mean time to deploy new application security policy < X hours (vs current Y hours)
 - Compliance requirements (PCI-DSS, SOC2, HIPAA) met by F5 XC configuration
@@ -71,12 +74,14 @@ Adjust based on complexity. Simple WAF POC: 1-2 weeks. Multi-cloud networking PO
 ### 5. Resource Requirements
 
 **Customer side:**
+
 - Technical point of contact (dedicated 4-8 hrs/week)
 - Environment access (cloud accounts, network access, test applications)
 - Security team involvement for policy review
 - Business stakeholder for success criteria sign-off
 
 **F5 side:**
+
 - SE (primary technical lead)
 - AE (relationship and commercial alignment)
 - F5 support (escalation path for technical blockers)
@@ -85,6 +90,7 @@ Adjust based on complexity. Simple WAF POC: 1-2 weeks. Multi-cloud networking PO
 ### 6. Environment Specification
 
 Document the validation environment:
+
 - Cloud providers and regions
 - Network topology (VPCs, subnets, peering)
 - Applications under test (URLs, protocols, traffic patterns)
@@ -108,6 +114,7 @@ accelerate environment setup.
 ### 8. Exit Criteria and Next Steps
 
 After validation completes:
+
 - **Success path**: Document results, present to business stakeholders, proceed to commercial negotiation
 - **Partial success**: Identify gaps, propose remediation, schedule follow-up validation
 - **Not successful**: Honest assessment of what did not work, lessons learned, determine if resolvable

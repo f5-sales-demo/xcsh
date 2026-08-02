@@ -19,6 +19,8 @@ function harness(opts: { promptMs?: number; promptRejects?: string } = {}) {
 	let onDisc: () => void = () => {};
 	let aborted = false;
 	const server = {
+		serveKind: "office",
+		clientHost: "excel",
 		send: (p: unknown) => sent.push(p as Record<string, unknown>),
 		onMessage: (cb: (m: Record<string, unknown>) => void) => {
 			onMsg = cb;
@@ -74,6 +76,8 @@ function multiTurnHarness(behaviors: Array<(emit: (e: AgentSessionEvent) => void
 	let callIndex = 0;
 
 	const server = {
+		serveKind: "office",
+		clientHost: "excel",
 		send: (p: unknown) => sent.push(p as Record<string, unknown>),
 		onMessage: (cb: (m: Record<string, unknown>) => void) => {
 			onMsg = cb;

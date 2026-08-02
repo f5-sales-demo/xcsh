@@ -28,7 +28,7 @@ pub enum CommandWaitResult {
 pub struct ExecutionContext<'a> {
 	/// The shell in which the command is being executed.
 	pub shell: &'a mut Shell,
-	/// The name of the command being executed.    
+	/// The name of the command being executed.
 	pub command_name: String,
 	/// The parameters for the execution.
 	pub params: ExecutionParameters,

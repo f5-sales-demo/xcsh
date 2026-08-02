@@ -15,6 +15,7 @@ import * as path from "node:path";
 import * as yaml from "yaml";
 import { startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
+import { sessionInfoForWorker } from "../src/commands/worker";
 
 const CONSOLE_ROOT = process.env.CONSOLE_CATALOG_DIR ?? path.resolve(import.meta.dir, "../../../../console");
 const NAMESPACE = process.env.XCSH_NAMESPACE ?? "demo";
@@ -70,23 +71,23 @@ function unwrapJs(content: unknown): unknown {
 }
 
 async function main() {
-	const server = await startBridgeServer();
+	const server = await startBridgeServer(undefined, { serveKind: "browser", sessionInfo: sessionInfoForWorker });
 	const provider = new ExtensionBrowserProvider({ server });
 	console.log(`Acquiring ${BASE_URL} …`);
 	const acquired = await provider.acquire(BASE_URL);
 	try {
 		await server.request("navigate", { url: `${BASE_URL}${listUrl}` }, 30000);
-		await new Promise(r => setTimeout(r, 2500));
+		await Bun.sleep(2500);
 		console.log(
 			"open form:",
 			unwrapJs((await server.request("javascript_tool", { code: clickByText(addText) }, 15000)).content),
 		);
-		await new Promise(r => setTimeout(r, 3000));
+		await Bun.sleep(3000);
 		console.log(
 			"click JSON tab:",
 			unwrapJs((await server.request("javascript_tool", { code: clickByText("JSON") }, 15000)).content),
 		);
-		await new Promise(r => setTimeout(r, 2500));
+		await Bun.sleep(2500);
 		const probe = unwrapJs((await server.request("javascript_tool", { code: PROBE }, 15000)).content);
 		console.log("\n=== JSON editor probe ===");
 		console.log(JSON.stringify(probe, null, 2));

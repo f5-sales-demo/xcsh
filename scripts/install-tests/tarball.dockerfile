@@ -84,10 +84,10 @@ for pkg in "${PACKAGES[@]}"; do
     echo ""
     echo "=== Publishing packages/$pkg ==="
     cd "/repo/packages/$pkg"
-    
+
     # Backup original
     cp package.json package.json.bak
-    
+
     # Resolve workspace:* references
     for dep_name in "${!VERSION_MAP[@]}"; do
         dep_version="${VERSION_MAP[$dep_name]}"
@@ -98,17 +98,17 @@ for pkg in "${PACKAGES[@]}"; do
              (.peerDependencies[$name] // empty) |= (if . == "workspace:*" then $ver else . end)' \
             package.json > package.json.tmp && mv package.json.tmp package.json
     done
-    
+
     # Show what we're publishing
     echo "Dependencies:"
     jq '.dependencies | to_entries[] | select(.value | startswith("@xcsh") or startswith("workspace"))' package.json 2>/dev/null || true
-    
+
     # Publish
     npm publish --registry "$REGISTRY"
-    
+
     # Restore original
     mv package.json.bak package.json
-    
+
     cd /repo
 done
 

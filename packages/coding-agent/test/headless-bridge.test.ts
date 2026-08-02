@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { type BridgeServer, OFFICE_PORT_RANGE, type ServeKind } from "../src/browser/extension-bridge";
+import { type BridgeServer, OFFICE_PORT_RANGE } from "../src/browser/extension-bridge";
 import { BROWSER_TOOL_NAMES, OFFICE_TOOL_NAMES } from "../src/browser/extension-bridge-tools";
 import {
 	type HeadlessBridgeDeps,
@@ -11,17 +11,11 @@ import type { PickResult } from "../src/browser/native-picker";
 /** A minimal BridgeServer double recording the calls the bootstrap makes. */
 function makeFakeBridge() {
 	const calls: string[] = [];
-	const serveKinds: ServeKind[] = [];
 	const sent: Record<string, unknown>[] = [];
 	const msgHandlers: Array<(m: Record<string, unknown>) => void> = [];
 	const fake = {
 		port: 19242,
 		wssPort: 19342,
-		setSessionInfo: () => calls.push("setSessionInfo"),
-		setServeKind: (k: ServeKind) => {
-			calls.push("setServeKind");
-			serveKinds.push(k);
-		},
 		broadcastTenantChanged: () => {},
 		onConnected: () => {},
 		onMessage: (cb: (m: Record<string, unknown>) => void) => msgHandlers.push(cb),
@@ -34,12 +28,12 @@ function makeFakeBridge() {
 	const fire = (m: Record<string, unknown>) => {
 		for (const cb of msgHandlers) cb(m);
 	};
-	return { bridge: fake as unknown as BridgeServer, calls, serveKinds, sent, fire };
+	return { bridge: fake as unknown as BridgeServer, calls, sent, fire };
 }
 
 /** Build injected deps around a fake bridge + fake ChatHandler, recording order. */
 function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean; pick?: PickResult } = {}) {
-	const { bridge, calls, serveKinds, sent, fire } = makeFakeBridge();
+	const { bridge, calls, sent, fire } = makeFakeBridge();
 	const log: string[] = [];
 	const pickCalls: Array<"file" | "folder"> = [];
 	let sessionOpts: Record<string, unknown> | undefined;
@@ -88,7 +82,6 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean; pick?: PickRes
 		deps,
 		bridge,
 		calls,
-		serveKinds,
 		sent,
 		fire,
 		log,
@@ -107,10 +100,13 @@ describe("startHeadlessChatBridge", () => {
 
 		// Bridge started WITH the tls opts AND the dedicated office range, published as
 		// the shared bridge, session info set, and serveKind advertised as "office".
-		expect(h.bridgeOpts()).toEqual({ tls: { key: "k", cert: "c" }, range: OFFICE_PORT_RANGE });
+		expect(h.bridgeOpts()).toMatchObject({
+			tls: { key: "k", cert: "c" },
+			range: OFFICE_PORT_RANGE,
+			serveKind: "office",
+			sessionInfo: expect.any(Function),
+		});
 		expect(h.calls).toContain("setShared:same");
-		expect(h.calls).toContain("setSessionInfo");
-		expect(h.serveKinds).toEqual(["office"]);
 
 		// ONE headless Office session, scoped to the minimal general tool set (NO
 		// browser builtin tools — they'd be hallucinated in a document task pane;
@@ -154,31 +150,33 @@ describe("startHeadlessChatBridge", () => {
 		const h = makeDeps({ tls: undefined });
 		await startHeadlessChatBridge(h.deps);
 		// No tls key, but the office range is always passed (structural isolation).
-		expect(h.bridgeOpts()).toEqual({ range: OFFICE_PORT_RANGE });
+		expect(h.bridgeOpts()).toMatchObject({
+			range: OFFICE_PORT_RANGE,
+			serveKind: "office",
+			sessionInfo: expect.any(Function),
+		});
 	});
 
-	test("starvation guard: office-serve UNCONDITIONALLY advertises serveKind 'office'", async () => {
-		// Even with no tls, setServeKind('office') must be called — otherwise the pane's
-		// requireServeKind:'office' filter would find nothing and starve.
+	test("starvation guard: office-serve fixes serveKind to 'office' before bind", async () => {
 		const h = makeDeps({ tls: undefined });
 		await startHeadlessChatBridge(h.deps);
-		expect(h.serveKinds).toEqual(["office"]);
+		expect(h.bridgeOpts()).toMatchObject({ serveKind: "office" });
 	});
 
 	test("serves pick_path: opens the native picker and replies path_picked with the chosen path", async () => {
-		const h = makeDeps({ tls: { key: "k", cert: "c" }, pick: { ok: true, path: "/Users/me/ctx" } });
+		const h = makeDeps({ tls: { key: "k", cert: "c" }, pick: { ok: true, path: "/tmp/example-context" } });
 		await startHeadlessChatBridge(h.deps);
 		h.fire({ type: "pick_path", mode: "folder" });
-		await new Promise(r => setTimeout(r, 0)); // async pick handler
+		await Bun.sleep(0); // async pick handler
 		expect(h.pickCalls).toEqual(["folder"]);
-		expect(h.sent.find(m => m.type === "path_picked")).toMatchObject({ path: "/Users/me/ctx" });
+		expect(h.sent.find(m => m.type === "path_picked")).toMatchObject({ path: "/tmp/example-context" });
 	});
 
 	test("pick_path cancel replies path_picked with canceled and no path", async () => {
 		const h = makeDeps({ tls: { key: "k", cert: "c" }, pick: { ok: false, canceled: true } });
 		await startHeadlessChatBridge(h.deps);
 		h.fire({ type: "pick_path", mode: "file" });
-		await new Promise(r => setTimeout(r, 0));
+		await Bun.sleep(0);
 		const reply = h.sent.find(m => m.type === "path_picked");
 		expect(reply?.canceled).toBe(true);
 		expect(reply?.path).toBeUndefined();
@@ -189,7 +187,7 @@ describe("startHeadlessChatBridge", () => {
 		const running = await startHeadlessChatBridge(h.deps);
 		await running.dispose();
 		h.fire({ type: "pick_path", mode: "folder" });
-		await new Promise(r => setTimeout(r, 0));
+		await Bun.sleep(0);
 		expect(h.pickCalls).toHaveLength(0);
 		expect(h.sent.find(m => m.type === "path_picked")).toBeUndefined();
 	});

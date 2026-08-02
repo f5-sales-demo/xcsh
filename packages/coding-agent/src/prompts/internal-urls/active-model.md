@@ -1,6 +1,7 @@
 ## Active model
 
 {{#if model}}
+
 - **Model:** `{{model.id}}`{{#if model.name}} ({{model.name}}){{/if}}
 - **Provider:** `{{model.provider}}`
 - **API:** `{{model.api}}`

@@ -24,42 +24,54 @@ LOCALES="en ja ko zh-cn zh-tw fr de es pt-br it ar hi th"
 # Lookup locale display name (bash 3.2 compatible — no associative arrays)
 locale_name() {
   case "$1" in
-    en)    echo "English" ;;
-    ja)    echo "Japanese" ;;
-    ko)    echo "Korean" ;;
-    zh-cn) echo "Chinese (Simplified)" ;;
-    zh-tw) echo "Chinese (Traditional)" ;;
-    fr)    echo "French" ;;
-    de)    echo "German" ;;
-    es)    echo "Spanish" ;;
-    pt-br) echo "Brazilian Portuguese" ;;
-    it)    echo "Italian" ;;
-    ar)    echo "Arabic" ;;
-    hi)    echo "Hindi" ;;
-    th)    echo "Thai" ;;
-    *)     echo "$1" ;;
+  en) echo "English" ;;
+  ja) echo "Japanese" ;;
+  ko) echo "Korean" ;;
+  zh-cn) echo "Chinese (Simplified)" ;;
+  zh-tw) echo "Chinese (Traditional)" ;;
+  fr) echo "French" ;;
+  de) echo "German" ;;
+  es) echo "Spanish" ;;
+  pt-br) echo "Brazilian Portuguese" ;;
+  it) echo "Italian" ;;
+  ar) echo "Arabic" ;;
+  hi) echo "Hindi" ;;
+  th) echo "Thai" ;;
+  *) echo "$1" ;;
   esac
 }
 
 # Per-locale counters stored in files (bash 3.2 compatible)
 counter_file() { echo "${WORK_DIR}/counter_${1}_${2}"; }
-counter_get()  { cat "$(counter_file "$1" "$2")" 2>/dev/null || echo 0; }
-counter_inc()  { local v; v=$(counter_get "$1" "$2"); echo $((v + 1)) > "$(counter_file "$1" "$2")"; }
+counter_get() { cat "$(counter_file "$1" "$2")" 2>/dev/null || echo 0; }
+counter_inc() {
+  local v
+  v=$(counter_get "$1" "$2")
+  echo $((v + 1)) >"$(counter_file "$1" "$2")"
+}
 
 # Parse args
 _prev=""
 for arg in "$@"; do
   case "${_prev}" in
-    --mode)    MODE="${arg}"; _prev=""; continue ;;
-    --locales) LOCALES="${arg}"; _prev=""; continue ;;
+  --mode)
+    MODE="${arg}"
+    _prev=""
+    continue
+    ;;
+  --locales)
+    LOCALES="${arg}"
+    _prev=""
+    continue
+    ;;
   esac
   case "${arg}" in
-    --mode)               _prev="--mode" ;;
-    --locales)            _prev="--locales" ;;
-    t1-regression)        MODE="t1-regression" ;;
-    --generate-translations) MODE="generate-translations" ;;
-    --mode=*)             MODE="${arg#--mode=}" ;;
-    --locales=*)          LOCALES="${arg#--locales=}" ;;
+  --mode) _prev="--mode" ;;
+  --locales) _prev="--locales" ;;
+  t1-regression) MODE="t1-regression" ;;
+  --generate-translations) MODE="generate-translations" ;;
+  --mode=*) MODE="${arg#--mode=}" ;;
+  --locales=*) LOCALES="${arg#--locales=}" ;;
   esac
 done
 unset _prev
@@ -77,7 +89,7 @@ if [ -z "${TF_DEVRC}" ]; then
   local_provider_dir="${HOME}/.terraform.d/plugins/registry.terraform.io/f5-sales-demo/xcsh/0.0.0/darwin_arm64"
   if [ -d "${local_provider_dir}" ]; then
     TF_DEVRC="${WORK_DIR}/.terraformrc"
-    cat > "${TF_DEVRC}" <<EOF
+    cat >"${TF_DEVRC}" <<EOF
 provider_installation {
   dev_overrides {
     "f5-sales-demo/xcsh" = "${local_provider_dir}"
@@ -95,7 +107,7 @@ fi
 xcsh_cmd() {
   local locale="$1" phrase="$2" ws_dir="${3:-.}"
   local _timed_out=0 _elapsed=0
-  (cd "${ws_dir}" && XCSH_LOCALE="${locale}" xcsh --print --no-session -- "${phrase}" > xcsh.out 2>&1) &
+  (cd "${ws_dir}" && XCSH_LOCALE="${locale}" xcsh --print --no-session -- "${phrase}" >xcsh.out 2>&1) &
   local xcsh_pid=$!
   while kill -0 "${xcsh_pid}" 2>/dev/null; do
     sleep 1
@@ -168,32 +180,32 @@ run_tf_checks() {
   tf_file=$(find "${ws}" -maxdepth 1 -name "*.tf" 2>/dev/null | head -1 || true)
 
   if [ -z "${tf_file}" ] || [ ! -f "${tf_file}" ]; then
-    return 1  # NO_TF_OUTPUT
+    return 1 # NO_TF_OUTPUT
   fi
 
   # With dev_overrides set, terraform validate skips init entirely.
   # Without dev_overrides, attempt init first (may fail if no network/registry).
   if [ -n "${TF_DEVRC}" ]; then
     if TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-       terraform -chdir="${ws}" validate -no-color &>/dev/null; then
+      terraform -chdir="${ws}" validate -no-color &>/dev/null; then
       if TF_CLI_CONFIG_FILE="${TF_DEVRC}" \
-         TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
-         terraform -chdir="${ws}" plan -no-color -input=false &>/dev/null; then
-        return 0  # PASS
+        TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
+        terraform -chdir="${ws}" plan -no-color -input=false &>/dev/null; then
+        return 0 # PASS
       fi
-      return 2  # PLAN_FAIL
+      return 2 # PLAN_FAIL
     fi
   else
-    if terraform -chdir="${ws}" init -backend=false -input=false -no-color &>/dev/null && \
-       terraform -chdir="${ws}" validate -no-color &>/dev/null; then
+    if terraform -chdir="${ws}" init -backend=false -input=false -no-color &>/dev/null &&
+      terraform -chdir="${ws}" validate -no-color &>/dev/null; then
       if TF_VAR_api_url="${API_URL}" TF_VAR_api_token="${API_TOKEN}" \
-         terraform -chdir="${ws}" plan -no-color -input=false &>/dev/null; then
-        return 0  # PASS
+        terraform -chdir="${ws}" plan -no-color -input=false &>/dev/null; then
+        return 0 # PASS
       fi
-      return 2  # PLAN_FAIL
+      return 2 # PLAN_FAIL
     fi
   fi
-  return 3  # VALIDATE_FAIL
+  return 3 # VALIDATE_FAIL
 }
 
 # ── Phase 0: --generate-translations ─────────────────────────────────────────
@@ -234,7 +246,7 @@ generate_translations() {
         # Update YAML in-place using python3; pass all values via env vars to
         # avoid embedding LLM output (which may contain quotes) in Python source.
         UPDATED_YAML="${updated_yaml}" PHRASE_ID="${id}" LOCALE_KEY="${locale}" TRANSLATION_VAL="${translation}" \
-        python3 - <<'PYEOF' 2>/dev/null || echo "  WARNING: could not write translation to YAML"
+          python3 - <<'PYEOF' 2>/dev/null || echo "  WARNING: could not write translation to YAML"
 import yaml, sys, os
 _yaml = os.environ['UPDATED_YAML']
 with open(_yaml) as f:
@@ -253,7 +265,7 @@ PYEOF
       fi
     done
     echo ""
-  done <<< "${phrases}"
+  done <<<"${phrases}"
 
   cp "${updated_yaml}" "${PHRASES_FILE}"
   echo "Translations written to ${PHRASES_FILE}"
@@ -293,41 +305,41 @@ run_t1() {
       run_tf_checks "${ws}" || rc=$?
 
       case "${rc}" in
-        0)
-          counter_inc "t1_validate" "${locale}"
-          counter_inc "t1_plan" "${locale}"
-          grand_validate=$((grand_validate + 1))
-          grand_plan=$((grand_plan + 1))
-          echo "  PASS (validate + plan)"
-          ;;
-        1)
-          echo "  FAIL: no HCL generated"
-          all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
+      0)
+        counter_inc "t1_validate" "${locale}"
+        counter_inc "t1_plan" "${locale}"
+        grand_validate=$((grand_validate + 1))
+        grand_plan=$((grand_plan + 1))
+        echo "  PASS (validate + plan)"
+        ;;
+      1)
+        echo "  FAIL: no HCL generated"
+        all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
 d.append({'id':os.environ['_id'],'locale':os.environ['_locale'],'error_type':'NO_TF_OUTPUT','fix_repo':'xcsh'})
 print(json.dumps(d))")
-          ;;
-        2)
-          counter_inc "t1_validate" "${locale}"
-          grand_validate=$((grand_validate + 1))
-          echo "  FAIL: plan failed"
-          all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
+        ;;
+      2)
+        counter_inc "t1_validate" "${locale}"
+        grand_validate=$((grand_validate + 1))
+        echo "  FAIL: plan failed"
+        all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
 d.append({'id':os.environ['_id'],'locale':os.environ['_locale'],'error_type':'PLAN_FAIL','fix_repo':'xcsh'})
 print(json.dumps(d))")
-          ;;
-        3)
-          echo "  FAIL: validate failed"
-          all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
+        ;;
+      3)
+        echo "  FAIL: validate failed"
+        all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
 d.append({'id':os.environ['_id'],'locale':os.environ['_locale'],'error_type':'VALIDATE_FAIL','fix_repo':'xcsh'})
 print(json.dumps(d))")
-          ;;
+        ;;
       esac
-    done <<< "${phrases}"
+    done <<<"${phrases}"
     echo ""
   done
 
@@ -399,34 +411,34 @@ run_t2() {
       run_tf_checks "${ws}" || rc=$?
 
       case "${rc}" in
-        0)
-          counter_inc "t2_validate" "${locale}"
-          grand_validate=$((grand_validate + 1))
-          echo "  PASS"
-          ;;
-        1)
-          echo "  FAIL: no HCL generated"
-          all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
+      0)
+        counter_inc "t2_validate" "${locale}"
+        grand_validate=$((grand_validate + 1))
+        echo "  PASS"
+        ;;
+      1)
+        echo "  FAIL: no HCL generated"
+        all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
 d.append({'id':os.environ['_id'],'locale':os.environ['_locale'],'error_type':'NO_TF_OUTPUT','fix_repo':'xcsh'})
 print(json.dumps(d))")
-          ;;
-        2)
-          counter_inc "t2_validate" "${locale}"
-          grand_validate=$((grand_validate + 1))
-          echo "  PARTIAL: validate OK but plan failed"
-          ;;
-        3)
-          echo "  FAIL: validate failed"
-          all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
+        ;;
+      2)
+        counter_inc "t2_validate" "${locale}"
+        grand_validate=$((grand_validate + 1))
+        echo "  PARTIAL: validate OK but plan failed"
+        ;;
+      3)
+        echo "  FAIL: validate failed"
+        all_failures=$(echo "${all_failures}" | _id="${id}" _locale="${locale}" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
 d.append({'id':os.environ['_id'],'locale':os.environ['_locale'],'error_type':'VALIDATE_FAIL','fix_repo':'xcsh'})
 print(json.dumps(d))")
-          ;;
+        ;;
       esac
-    done <<< "${phrases}"
+    done <<<"${phrases}"
     echo ""
   done
 
@@ -463,24 +475,24 @@ T1_CONSISTENCY="skipped"
 T2_SCORE="skipped"
 
 case "${MODE}" in
-  generate-translations)
-    generate_translations
-    ;;
-  t1-regression)
-    run_t1
-    ;;
-  t2-native)
-    run_t2
-    ;;
-  full)
-    run_t1
-    echo ""
-    run_t2
-    ;;
-  *)
-    echo "ERROR: unknown mode '${MODE}'. Use: full | t1-regression | t2-native | generate-translations" >&2
-    exit 1
-    ;;
+generate-translations)
+  generate_translations
+  ;;
+t1-regression)
+  run_t1
+  ;;
+t2-native)
+  run_t2
+  ;;
+full)
+  run_t1
+  echo ""
+  run_t2
+  ;;
+*)
+  echo "ERROR: unknown mode '${MODE}'. Use: full | t1-regression | t2-native | generate-translations" >&2
+  exit 1
+  ;;
 esac
 
 echo ""

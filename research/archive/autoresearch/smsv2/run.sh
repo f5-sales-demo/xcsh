@@ -43,8 +43,8 @@ api_call() {
   echo "${code}"
 }
 
-api_get()    { api_call GET    "$1"; }
-api_post()   { api_call POST   "$1" "$2"; }
+api_get() { api_call GET "$1"; }
+api_post() { api_call POST "$1" "$2"; }
 api_delete() { api_call DELETE "$1"; }
 
 # ── Cleanup trap ───────────────────────────────────────────────────────────────
@@ -57,11 +57,11 @@ cleanup() {
     api_delete "/api/config/namespaces/system/securemesh_site_v2s/ar-test-smsv2-${code}" >/dev/null 2>&1 || true
   done
   # enhanced_firewall_policys now created in system namespace (not user namespace)
-  for rtype in enhanced_firewall_policys; do
-    resources=$(curl -sf \
-      -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null \
-      | python3 -c "
+  rtype=enhanced_firewall_policys
+  resources=$(curl -sf \
+    -H "Authorization: APIToken ${API_TOKEN}" \
+    "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null |
+    python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
@@ -70,16 +70,15 @@ for i in items:
     if name.startswith('ar-test-smsv2-'):
         print(name)
 " 2>/dev/null || true)
-    for name in ${resources}; do
-      api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
-    done
+  for name in ${resources}; do
+    api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
   done
   # forward_proxy_policys now created in system namespace (same as enhanced_firewall_policys)
-  for rtype in forward_proxy_policys; do
-    resources=$(curl -sf \
-      -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null \
-      | python3 -c "
+  rtype=forward_proxy_policys
+  resources=$(curl -sf \
+    -H "Authorization: APIToken ${API_TOKEN}" \
+    "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null |
+    python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
@@ -88,16 +87,15 @@ for i in items:
     if name.startswith('ar-test-smsv2-'):
         print(name)
 " 2>/dev/null || true)
-    for name in ${resources}; do
-      api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
-    done
+  for name in ${resources}; do
+    api_delete "/api/config/namespaces/system/${rtype}/${name}" >/dev/null 2>&1 || true
   done
   # Prerequisite resources (user namespace)
-  for rtype in global_log_receivers; do
-    resources=$(curl -sf \
-      -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/config/namespaces/${NAMESPACE}/${rtype}" 2>/dev/null \
-      | python3 -c "
+  rtype=global_log_receivers
+  resources=$(curl -sf \
+    -H "Authorization: APIToken ${API_TOKEN}" \
+    "${API_URL}/api/config/namespaces/${NAMESPACE}/${rtype}" 2>/dev/null |
+    python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
@@ -106,16 +104,15 @@ for i in items:
     if name.startswith('ar-test-smsv2-'):
         print(name)
 " 2>/dev/null || true)
-    for name in ${resources}; do
-      api_delete "/api/config/namespaces/${NAMESPACE}/${rtype}/${name}" >/dev/null 2>&1 || true
-    done
+  for name in ${resources}; do
+    api_delete "/api/config/namespaces/${NAMESPACE}/${rtype}/${name}" >/dev/null 2>&1 || true
   done
   # Prerequisite resources (system namespace)
   for rtype in dc_cluster_groups site_mesh_groups; do
     resources=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null \
-      | python3 -c "
+      "${API_URL}/api/config/namespaces/system/${rtype}" 2>/dev/null |
+      python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 items=d.get('items',d.get('objects',[]))
@@ -154,7 +151,7 @@ with open(sys.argv[1]) as f:
     data = yaml.safe_load(f)
 prereqs = data['phrases'][int(sys.argv[2])].get('prerequisites', [])
 json.dump(prereqs, sys.stdout)
-" "${phrases_file}" "${phrase_idx}" > "${WORK_DIR}/prereqs_${phrase_idx}.json"
+" "${phrases_file}" "${phrase_idx}" >"${WORK_DIR}/prereqs_${phrase_idx}.json"
 
   python3 - "${WORK_DIR}/prereqs_${phrase_idx}.json" <<'PYEOF'
 import json, urllib.request, sys, os
@@ -282,7 +279,7 @@ json.dump({
     echo "  ${status}: option=${option_field} http=${http_code} fix=${fix_repo}"
 
     if [ "${op_pass}" -eq 0 ]; then
-      phrase_escaped=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<< "${phrase}")
+      phrase_escaped=$(python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip()))" <<<"${phrase}")
       t1_failures_json=$(python3 -c "
 import json, sys
 failures = json.loads(sys.argv[1])
@@ -326,7 +323,7 @@ run_t2() {
 
   # Write registration finder to a temp file — avoids pipe+heredoc stdin conflict
   # Only scans the LAST 20 items in the list (most recently created) to avoid O(n*timeout)
-  cat > "${WORK_DIR}/find_reg.py" << 'PYEOF'
+  cat >"${WORK_DIR}/find_reg.py" <<'PYEOF'
 import json, sys, os, urllib.request
 site = sys.argv[1]; api = sys.argv[2]; tok = os.environ.get('XCSH_API_TOKEN','')
 d = json.load(sys.stdin)
@@ -379,8 +376,8 @@ PYEOF
     "{\"metadata\":{\"name\":\"${token_name}\",\"namespace\":\"system\"},\"spec\":{}}" >/dev/null 2>&1 || true
   token_uid=$(curl -sf \
     -H "Authorization: APIToken ${API_TOKEN}" \
-    "${API_URL}/api/register/namespaces/system/tokens/${token_name}" 2>/dev/null \
-    | python3 -c "
+    "${API_URL}/api/register/namespaces/system/tokens/${token_name}" 2>/dev/null |
+    python3 -c "
 import json,sys
 d=json.load(sys.stdin)
 uid=d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid','')
@@ -406,7 +403,7 @@ print(uid)
 
   echo "Step 3: Build cloud-init user-data"
   cloud_init="${WORK_DIR}/t2-cloud-init.yaml"
-  cat > "${cloud_init}" << CLOUDINIT
+  cat >"${cloud_init}" <<CLOUDINIT
 #cloud-config
 write_files:
   - path: /etc/vpm/config.yaml
@@ -512,14 +509,14 @@ CLOUDINIT
     # List returns null specs — iterate names and GET each to find cluster match
     reg_name=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | XCSH_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg.py" "${site_name}" "${API_URL}" \
-      2>/dev/null || echo "")
+      "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null |
+      XCSH_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg.py" "${site_name}" "${API_URL}" \
+        2>/dev/null || echo "")
     if [ -n "${reg_name}" ]; then
       echo "  Registration found: ${reg_name}"
       break
     fi
-    echo "  Waiting for registration... ($(( (deadline - $(date +%s)) / 60 ))m left)"
+    echo "  Waiting for registration... ($(((deadline - $(date +%s)) / 60))m left)"
     sleep 30
   done
 
@@ -532,9 +529,9 @@ CLOUDINIT
   echo "Step 6: Approve registration"
   passport=$(curl -sf \
     -H "Authorization: APIToken ${API_TOKEN}" \
-    "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps((d.get('spec') or {}).get('passport') or {}))" \
-    2>/dev/null || echo "{}")
+    "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null |
+    python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps((d.get('spec') or {}).get('passport') or {}))" \
+      2>/dev/null || echo "{}")
   # Approve URL uses singular /registration/ not plural /registrations/
   api_post "/api/register/namespaces/system/registration/${reg_name}/approve" \
     "{\"name\":\"${reg_name}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"PENDING\"}" >/dev/null 2>&1 || true
@@ -550,10 +547,10 @@ CLOUDINIT
     # State is at object.status.current_state (not spec.state)
     reg_state=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" \
-      2>/dev/null || echo "")
-    echo "  State: ${reg_state} ($(( (online_deadline - $(date +%s)) / 60 ))m left)"
+      "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null |
+      python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" \
+        2>/dev/null || echo "")
+    echo "  State: ${reg_state} ($(((online_deadline - $(date +%s)) / 60))m left)"
     [ "${reg_state}" = "ONLINE" ] && break
     sleep 60
   done
@@ -581,7 +578,7 @@ run_t3() {
   echo ""
 
   # Write two-site registration finder to temp file — avoids pipe+heredoc stdin conflict
-  cat > "${WORK_DIR}/find_reg2.py" << 'PYEOF'
+  cat >"${WORK_DIR}/find_reg2.py" <<'PYEOF'
 import json, sys, os, urllib.request
 site_a=sys.argv[1]; site_b=sys.argv[2]; api=sys.argv[3]; tok=os.environ.get('XCSH_API_TOKEN','')
 # Pass optional min_idx to skip already-scanned items
@@ -647,12 +644,12 @@ PYEOF
   done
   token_uid_a=$(curl -sf \
     -H "Authorization: APIToken ${API_TOKEN}" \
-    "${API_URL}/api/register/namespaces/system/tokens/${token_a}" 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
+    "${API_URL}/api/register/namespaces/system/tokens/${token_a}" 2>/dev/null |
+    python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
   token_uid_b=$(curl -sf \
     -H "Authorization: APIToken ${API_TOKEN}" \
-    "${API_URL}/api/register/namespaces/system/tokens/${token_b}" 2>/dev/null \
-    | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
+    "${API_URL}/api/register/namespaces/system/tokens/${token_b}" 2>/dev/null |
+    python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('system_metadata',{}).get('uid','') or d.get('uid','') or d.get('spec',{}).get('uid',''))" 2>/dev/null || echo "")
 
   if [ -z "${token_uid_a}" ] || [ -z "${token_uid_b}" ]; then
     echo "FAIL T3: could not retrieve token UIDs"
@@ -678,7 +675,7 @@ PYEOF
       cluster="${site_b}"
       tok="${token_uid_b}"
     fi
-    cat > "${WORK_DIR}/t3-cloud-init-${suffix}.yaml" << CLOUDINIT
+    cat >"${WORK_DIR}/t3-cloud-init-${suffix}.yaml" <<CLOUDINIT
 #cloud-config
 write_files:
   - path: /etc/vpm/config.yaml
@@ -782,12 +779,12 @@ CLOUDINIT
     # List returns null specs — GET each registration individually to find cluster match
     all_regs=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null \
-      | XCSH_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg2.py" "${site_a}" "${site_b}" "${API_URL}" \
-      2>/dev/null || echo "{}")
+      "${API_URL}/api/register/namespaces/system/registrations" 2>/dev/null |
+      XCSH_API_TOKEN="${API_TOKEN}" python3 "${WORK_DIR}/find_reg2.py" "${site_a}" "${site_b}" "${API_URL}" \
+        2>/dev/null || echo "{}")
     reg_a=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('a',''))" "${all_regs}")
     reg_b=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('b',''))" "${all_regs}")
-    echo "  Registrations: a=${reg_a:-waiting} b=${reg_b:-waiting} ($(( (deadline - $(date +%s)) / 60 ))m left)"
+    echo "  Registrations: a=${reg_a:-waiting} b=${reg_b:-waiting} ($(((deadline - $(date +%s)) / 60))m left)"
     [ -n "${reg_a}" ] && [ -n "${reg_b}" ] && break
     sleep 30
   done
@@ -802,9 +799,9 @@ CLOUDINIT
   for reg_name in "${reg_a}" "${reg_b}"; do
     passport=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps((d.get('spec') or {}).get('passport') or {}))" \
-      2>/dev/null || echo "{}")
+      "${API_URL}/api/register/namespaces/system/registrations/${reg_name}" 2>/dev/null |
+      python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps((d.get('spec') or {}).get('passport') or {}))" \
+        2>/dev/null || echo "{}")
     # Approve URL uses singular /registration/ not plural /registrations/
     api_post "/api/register/namespaces/system/registration/${reg_name}/approve" \
       "{\"name\":\"${reg_name}\",\"namespace\":\"system\",\"passport\":${passport},\"state\":\"PENDING\"}" >/dev/null 2>&1 || true
@@ -821,13 +818,13 @@ CLOUDINIT
     # State is at object.status.current_state (not spec.state)
     state_a=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/register/namespaces/system/registrations/${reg_a}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
+      "${API_URL}/api/register/namespaces/system/registrations/${reg_a}" 2>/dev/null |
+      python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
     state_b=$(curl -sf \
       -H "Authorization: APIToken ${API_TOKEN}" \
-      "${API_URL}/api/register/namespaces/system/registrations/${reg_b}" 2>/dev/null \
-      | python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
-    echo "  States: a=${state_a} b=${state_b} ($(( (online_deadline - $(date +%s)) / 60 ))m left)"
+      "${API_URL}/api/register/namespaces/system/registrations/${reg_b}" 2>/dev/null |
+      python3 -c "import json,sys; d=json.load(sys.stdin); print(((d.get('object') or {}).get('status') or d.get('status') or {}).get('current_state',''))" 2>/dev/null || echo "")
+    echo "  States: a=${state_a} b=${state_b} ($(((online_deadline - $(date +%s)) / 60))m left)"
     [ "${state_a}" = "ONLINE" ] && [ "${state_b}" = "ONLINE" ] && break
     sleep 60
   done
@@ -854,7 +851,7 @@ CLOUDINIT
 run_t3
 
 # ── Score emission ─────────────────────────────────────────────────────────────
-python3 - "${T2_SCORE}" "${T3_SCORE}" << PYEOF
+python3 - "${T2_SCORE}" "${T3_SCORE}" <<PYEOF
 import sys
 t1_total = ${T1_TOTAL}
 t1_pass = ${T1_PASS}

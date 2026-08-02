@@ -19,9 +19,11 @@ If any tool returns **"No GitLab project configured"**, do NOT call `glab_setup(
 Instead, respond with this EXACT message and stop:
 
 > **GitLab project not configured.** Run this one-time setup:
+>
 > ```
 > glab_setup with action save_project and project GROUP/NAMESPACE/REPO
 > ```
+>
 > Replace `GROUP/NAMESPACE/REPO` with your project path (e.g. `f5/volterra/support/zendesk`).
 > Once saved, your project is remembered across all sessions.
 

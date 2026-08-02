@@ -8,6 +8,7 @@
  */
 import { afterEach, describe, expect, it } from "bun:test";
 import { BridgeServer } from "../../src/browser/extension-bridge";
+import { authenticateBrowserSocket, browserBridgeOptions } from "../helpers/extension-bridge-fixture";
 
 describe("Chat bridge round-trip", () => {
 	let server: BridgeServer | null = null;
@@ -21,7 +22,7 @@ describe("Chat bridge round-trip", () => {
 	});
 
 	it("forwards chat_request via onMessage and delivers chat_delta/chat_done via send()", async () => {
-		server = new BridgeServer();
+		server = new BridgeServer(browserBridgeOptions());
 		server.listen(0, { skipOriginCheck: true });
 		const port = (server as any).port;
 
@@ -29,10 +30,11 @@ describe("Chat bridge round-trip", () => {
 		server.onMessage(msg => received.push(msg));
 
 		mockClient = new WebSocket(`ws://127.0.0.1:${port}`);
-		await new Promise<void>((resolve, reject) => {
-			mockClient!.onopen = () => resolve();
-			mockClient!.onerror = () => reject(new Error("ws connect failed"));
-		});
+		const connected = Promise.withResolvers<void>();
+		mockClient.onopen = () => connected.resolve();
+		mockClient.onerror = () => connected.reject(new Error("ws connect failed"));
+		await connected.promise;
+		await authenticateBrowserSocket(mockClient);
 
 		const clientMessages: unknown[] = [];
 		mockClient.onmessage = ev => {
@@ -52,7 +54,7 @@ describe("Chat bridge round-trip", () => {
 		);
 
 		// Wait for the message to be forwarded
-		await new Promise(r => setTimeout(r, 100));
+		await Bun.sleep(100);
 		expect(received.length).toBe(1);
 		expect(received[0].type).toBe("chat_request");
 		expect(received[0].id).toBe("c-test-1");
@@ -63,7 +65,7 @@ describe("Chat bridge round-trip", () => {
 		server.send({ type: "chat_done", id: "c-test-1" });
 
 		// Wait for the client to receive them
-		await new Promise(r => setTimeout(r, 100));
+		await Bun.sleep(100);
 		expect(clientMessages.length).toBe(3);
 		expect(clientMessages[0]).toEqual({ type: "chat_delta", id: "c-test-1", seq: 0, delta: "Hello" });
 		expect(clientMessages[1]).toEqual({ type: "chat_delta", id: "c-test-1", seq: 1, delta: " world" });
@@ -71,7 +73,7 @@ describe("Chat bridge round-trip", () => {
 	});
 
 	it("tool_result is still handled by the built-in router, not forwarded to onMessage", async () => {
-		server = new BridgeServer();
+		server = new BridgeServer(browserBridgeOptions());
 		server.listen(0, { skipOriginCheck: true });
 		const port = (server as any).port;
 
@@ -79,21 +81,22 @@ describe("Chat bridge round-trip", () => {
 		server.onMessage(msg => received.push(msg));
 
 		mockClient = new WebSocket(`ws://127.0.0.1:${port}`);
-		await new Promise<void>((resolve, reject) => {
-			mockClient!.onopen = () => resolve();
-			mockClient!.onerror = () => reject(new Error("ws connect failed"));
-		});
+		const connected = Promise.withResolvers<void>();
+		mockClient.onopen = () => connected.resolve();
+		mockClient.onerror = () => connected.reject(new Error("ws connect failed"));
+		await connected.promise;
+		await authenticateBrowserSocket(mockClient);
 
 		// Start a pending request so tool_result can resolve it
 		const resultPromise = server.request("test_tool", {}, 5000);
 
 		// Wait for the tool_request to be sent
-		const toolRequest = await new Promise<{ id: string }>(resolve => {
-			mockClient!.onmessage = ev => {
-				const msg = JSON.parse(String(ev.data));
-				if (msg.type === "tool_request") resolve(msg);
-			};
-		});
+		const requestReceived = Promise.withResolvers<{ id: string }>();
+		mockClient.onmessage = ev => {
+			const msg = JSON.parse(String(ev.data));
+			if (msg.type === "tool_request") requestReceived.resolve(msg);
+		};
+		const toolRequest = await requestReceived.promise;
 
 		// Send a tool_result (should be handled by the built-in router, not forwarded)
 		mockClient.send(
@@ -109,7 +112,7 @@ describe("Chat bridge round-trip", () => {
 		expect(result.content).toBe("ok");
 
 		// Verify tool_result was NOT forwarded to onMessage
-		await new Promise(r => setTimeout(r, 50));
+		await Bun.sleep(50);
 		expect(received.length).toBe(0);
 	});
 });

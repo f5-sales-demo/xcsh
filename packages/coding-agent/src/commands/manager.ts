@@ -10,7 +10,6 @@
  *        → spawn a worker for that sessionId (idempotent). The registry is keyed
  *          on sessionId, so two tabs of the SAME tenant get two workers.
  *   {"type":"release","sessionId":"tab-7"}  → kill + forget that session's worker
- *   {"type":"status"}                        → accepted; no-op sink
  *   {"type":"status","sessionId":"tab-7"}    → keepalive: refresh that worker's
  *          lastSeen so an actively-chatting session is not idle-reaped
  *
@@ -25,6 +24,7 @@ import { Command } from "@f5-sales-demo/pi-utils/cli";
 // Lean subpath (not the package barrel, which pulls the winston logger graph and
 // slows the manager's cold start — keep the daemon's module graph minimal).
 import { VERSION } from "@f5-sales-demo/pi-utils/dirs";
+import { EXTENSION_CONTRACT_VERSION } from "../browser/capabilities.generated";
 import { portCandidates } from "../browser/extension-bridge";
 import { EXTENSION_ID } from "../browser/extension-identity";
 // Lean standalone fn (compiled-runtime detection) — no heavy graph, safe for the daemon.
@@ -35,6 +35,7 @@ import {
 	needsProvision,
 	parseControlMsg,
 	type Registry,
+	type ShutdownReason,
 	selectSpawnPort,
 	sparesToSpawn,
 	staleKeys,
@@ -116,7 +117,14 @@ function bridgeHello(port: number, timeoutMs = 400): Promise<Record<string, unkn
 			/* already closing */
 		}
 	};
-	ws.onopen = () => ws.send(JSON.stringify({ type: "hello" }));
+	ws.onopen = () =>
+		ws.send(
+			JSON.stringify({
+				type: "hello",
+				contractVersion: EXTENSION_CONTRACT_VERSION,
+				extensionId: EXTENSION_ID,
+			}),
+		);
 	ws.onmessage = event => {
 		try {
 			finish(JSON.parse(String(event.data)) as Record<string, unknown>);
@@ -311,7 +319,7 @@ export default class Manager extends Command {
 					pid: pidListeningOn(port),
 					lastSeen: Date.now(),
 				});
-				console.error(`[xcsh manager] re-adopted worker ${sid} (${tenant}|${env}) on port ${port}`);
+				console.error(`[xcsh manager] re-adopted worker on port ${port}`);
 			}
 		};
 
@@ -327,6 +335,11 @@ export default class Manager extends Command {
 				provisionMs: managerProvisionMs, // TTFT Phase 2: relayed manager_provision (warm)
 				cold: false, // authoritative: warm adopt
 			});
+			// A bound worker must survive a manager handoff. It no longer needs its
+			// pre-warm IPC channel after receiving the immutable session identity, so
+			// release that parent/child lifecycle coupling immediately.
+			rec.proc.disconnect();
+			rec.proc.unref();
 			reg.set(msg.sessionId, {
 				sessionId: msg.sessionId,
 				tenant: msg.tenant,
@@ -339,9 +352,7 @@ export default class Manager extends Command {
 				if (cur && cur.pid === rec.pid) reg.delete(msg.sessionId);
 			});
 			maintainPool(); // replenish the consumed spare
-			console.error(
-				`[xcsh manager] adopted spare pid ${rec.pid} on port ${rec.port} as ${msg.sessionId} (${msg.tenant})`,
-			);
+			console.error(`[xcsh manager] adopted spare pid ${rec.pid} on port ${rec.port}`);
 			return true;
 		};
 
@@ -369,7 +380,7 @@ export default class Manager extends Command {
 		 * so tab sessions survive the swap (zero-downtime, Task 6). Otherwise (manual
 		 * operator SIGTERM — no successor) we SIGTERM them so they drain + exit rather
 		 * than leak. The manager frees the socket immediately either way. */
-		const gracefulShutdown = (reason: string): void => {
+		const gracefulShutdown = (reason: ShutdownReason): void => {
 			if (shuttingDown) return;
 			shuttingDown = true;
 			accepting = false;
@@ -403,7 +414,7 @@ export default class Manager extends Command {
 				isPortFree,
 			);
 			if (port === null) {
-				console.error(`[xcsh manager] port range exhausted; cannot provision ${msg.sessionId}`);
+				console.error("[xcsh manager] port range exhausted; cannot provision a worker");
 				return;
 			}
 			const proc = Bun.spawn([process.execPath, ...workerArgv()], {
@@ -444,7 +455,7 @@ export default class Manager extends Command {
 				const cur = reg.get(msg.sessionId);
 				if (cur && cur.pid === proc.pid) reg.delete(msg.sessionId);
 			});
-			console.error(`[xcsh manager] provisioned ${msg.sessionId} (${msg.tenant}) → pid ${proc.pid} on port ${port}`);
+			console.error(`[xcsh manager] provisioned worker pid ${proc.pid} on port ${port}`);
 		};
 
 		const handleFrame = (line: string, socket: { write(data: string): void }): void => {
@@ -538,17 +549,16 @@ export default class Manager extends Command {
 		// from a crashed/killed manager is reclaimed rather than crashing on
 		// EADDRINUSE. See acquireControlSocket for the full rationale (xcsh #1846).
 		const probeLive = async (p: string): Promise<boolean> => {
+			const { promise: timeout, reject: rejectTimeout } = Promise.withResolvers<never>();
+			const timeoutId = setTimeout(() => rejectTimeout(new Error("manager liveness probe timeout")), 500);
 			try {
-				const probe = await Promise.race([
-					Bun.connect({ unix: p, socket: { data() {} } }),
-					new Promise<never>((_, reject) =>
-						setTimeout(() => reject(new Error("manager liveness probe timeout")), 500),
-					),
-				]);
+				const probe = await Promise.race([Bun.connect({ unix: p, socket: { data() {} } }), timeout]);
 				probe.end();
 				return true;
 			} catch {
 				return false; // nothing accepting → free path, or a stale socket file
+			} finally {
+				clearTimeout(timeoutId);
 			}
 		};
 		const outcome = await acquireControlSocket({
@@ -559,10 +569,10 @@ export default class Manager extends Command {
 			isAddrInUse: err => (err as { code?: string } | null)?.code === "EADDRINUSE",
 		});
 		if (outcome === "already-live") {
-			console.error(`[xcsh manager] another manager already live at ${sockPath}; exiting`);
+			console.error("[xcsh manager] another manager is already live; exiting");
 			process.exit(0);
 		}
-		console.error(`[xcsh manager] control socket listening at ${sockPath}`);
+		console.error("[xcsh manager] control socket listening");
 
 		// Publish our liveness record (#1874) so a newer native-host can see which
 		// version owns the socket (and, if it must supersede us, find our pid).
@@ -589,6 +599,6 @@ export default class Manager extends Command {
 		}, SWEEP_MS);
 
 		// Detached, long-lived: block until the process is torn down.
-		await new Promise<never>(() => {});
+		await Promise.withResolvers<never>().promise;
 	}
 }

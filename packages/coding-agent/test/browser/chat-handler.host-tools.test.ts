@@ -14,6 +14,8 @@ import type { AgentSession } from "../../src/session/agent-session";
  * tool in production — the adapter's `execute` funnels into the bridge).
  */
 class FakeBridgeServer {
+	readonly serveKind = "office" as const;
+	readonly clientHost = "excel" as const;
 	sent: Array<Record<string, unknown>> = [];
 	#onMessage: Array<(m: Record<string, unknown>) => void> = [];
 	#onDisconnected: Array<() => void> = [];
@@ -184,8 +186,7 @@ describe("ChatHandler host-tool wiring (#2046 A3)", () => {
 		expect(server.ofType("set_host_tools_ack")).toHaveLength(0);
 		const errs = server.ofType("set_host_tools_error");
 		expect(errs).toHaveLength(1);
-		expect(typeof errs[0].error).toBe("string");
-		expect(errs[0].error).toMatch(/description/i);
+		expect(errs[0]).toEqual({ type: "set_host_tools_error", reason: "host-tools-rejected" });
 		// Registration never happened, so the prior tool set is untouched.
 		expect(session.refreshedTools).toBeNull();
 	});
@@ -234,7 +235,7 @@ describe("chat_tool_notice ok-flag reflects tool_execution_end.isError", () => {
 		server.emit({ type: "chat_request", id: "c-1", text: "read the workbook", context: null, mode: "configuration" });
 		// Let the async chat_request → prompt() → notice sends settle.
 		for (let i = 0; i < 50 && server.ofType("chat_tool_notice").length < 2; i++) {
-			await new Promise(r => setTimeout(r, 0));
+			await Bun.sleep(0);
 		}
 		// The END notice is the one carrying done/failed (the start says "running…").
 		return server

@@ -1,6 +1,6 @@
 /**
  * Wire protocol types for the Chrome extension chat side window.
- * Contract source of truth: capabilities.json v1.2.0.
+ * Contract source of truth: capabilities.json v2.0.0.
  */
 
 // Import the guards + wire types from the PURE leaf modules (not the `../host-tools`
@@ -76,17 +76,13 @@ export interface ChatImage {
 	mimeType: string;
 }
 
-export interface ChatRequest {
+interface ChatRequestBase {
 	type: "chat_request";
 	id: string;
 	text: string;
 	context: PageContextSnapshot | null;
 	mode: InteractionMode;
 	history_hint?: string;
-	/** Required for the Chrome host, whose side panel routes each turn to an
-	 * explicitly bound tab and tenant session. Office routing is transport-bound. */
-	tabId?: number;
-	sessionKey?: string;
 	/** Optional photo/image attachments, sent to the model as vision blocks. */
 	images?: ChatImage[];
 	/** Absolute local paths (files/folders) the user attached as context. The engine
@@ -97,6 +93,17 @@ export interface ChatRequest {
 	 *  turn's request (the "Search the web" composer toggle). */
 	web_search?: boolean;
 }
+
+/** Chrome contract 2 request. Routing is explicit and cannot be omitted. */
+export interface BrowserChatRequest extends ChatRequestBase {
+	tabId: number;
+	sessionKey: string;
+}
+
+/** Office request. Identity and routing belong to the authenticated transport. */
+export interface TransportChatRequest extends ChatRequestBase {}
+
+export type ChatRequest = BrowserChatRequest | TransportChatRequest;
 
 /** Client → engine: open a native OS file/folder picker on the machine running the
  *  bridge and return the chosen absolute path. */
@@ -201,7 +208,7 @@ export interface ChatError {
 	reason: ChatErrorReason;
 }
 
-/** Liveness signal (contract 1.7.0): the worker is actively working the turn — e.g.
+/** Liveness signal: the worker is actively working the turn — e.g.
  * streaming model thinking — before any visible token. The panel treats it as
  * proof-of-life to re-arm its first-token timer, so a long legitimate think isn't
  * mistaken for a dead worker. Carries no renderable content. */
@@ -211,7 +218,7 @@ export interface ChatKeepalive {
 }
 
 // ---------------------------------------------------------------------------
-// Host-tool channel (contract 1.8.0)
+// Host-tool channel
 //
 // The host-tool channel lets the agent delegate a registered tool's execution
 // to whatever host is driving the WS bridge (the chrome extension, an Office
@@ -258,7 +265,7 @@ export interface SetHostToolsAck {
  * registration gets a clear error rather than hanging (stdio-parity nack). */
 export interface SetHostToolsError {
 	type: "set_host_tools_error";
-	error: string;
+	reason: "host-tools-rejected";
 }
 
 // ---------------------------------------------------------------------------
@@ -316,20 +323,33 @@ function isValidChatImages(v: unknown): boolean {
 	});
 }
 
-export function isChatRequest(msg: Record<string, unknown>, routing: "browser" | "transport"): boolean {
+function isChatRequestBase(msg: unknown): msg is ChatRequestBase {
+	if (!msg || typeof msg !== "object" || Array.isArray(msg)) return false;
+	const candidate = msg as Record<string, unknown>;
 	return (
-		msg.type === "chat_request" &&
-		hasChatIdPrefix(msg.id) &&
-		typeof msg.text === "string" &&
-		typeof msg.mode === "string" &&
-		VALID_MODES.has(msg.mode) &&
-		isValidChatImages(msg.images) &&
-		(routing === "transport" ||
-			(typeof msg.tabId === "number" &&
-				Number.isFinite(msg.tabId) &&
-				typeof msg.sessionKey === "string" &&
-				msg.sessionKey.length > 0))
+		candidate.type === "chat_request" &&
+		hasChatIdPrefix(candidate.id) &&
+		typeof candidate.text === "string" &&
+		typeof candidate.mode === "string" &&
+		VALID_MODES.has(candidate.mode) &&
+		isValidChatImages(candidate.images)
 	);
+}
+
+export function isBrowserChatRequest(msg: unknown): msg is BrowserChatRequest {
+	return (
+		isChatRequestBase(msg) &&
+		"tabId" in msg &&
+		typeof msg.tabId === "number" &&
+		Number.isFinite(msg.tabId) &&
+		"sessionKey" in msg &&
+		typeof msg.sessionKey === "string" &&
+		msg.sessionKey.length > 0
+	);
+}
+
+export function isTransportChatRequest(msg: unknown): msg is TransportChatRequest {
+	return isChatRequestBase(msg) && !("tabId" in msg) && !("sessionKey" in msg);
 }
 
 export function isChatStop(msg: Record<string, unknown>): boolean {

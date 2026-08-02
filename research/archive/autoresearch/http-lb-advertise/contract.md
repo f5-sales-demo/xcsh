@@ -22,7 +22,7 @@
 ## Constraints
 
 - do not modify benchmark scripts
-- all test resources prefixed ar-test-lb-adv-* or ar-test-vs-*
+- all test resources prefixed ar-test-lb-adv-*or ar-test-vs-*
 - test LBs in namespace example-corp
 - virtual sites in namespace example-corp, type CUSTOMER_EDGE
 - origin pool ar-test-lb-adv-pool must exist before T1 runs (created by setup)

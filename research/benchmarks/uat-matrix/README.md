@@ -66,6 +66,7 @@ measure raw router accuracy), `--report-dir`.
 ## Output
 
 `research/benchmarks/uat-matrix/reports/<timestamp>/` (ignored by Git):
+
 - `report.md` — the matrix (modality × resource × operation × phrase-id → status, duration, HTTP, routed, detail), per-modality pass-rate `METRIC` lines, a router-determinism section, and an `ASI failures` block.
 - `report.json` — machine-readable cells + summary.
 - `screenshots/<phrase-id>/step-*.png` — per-step console screenshots.

@@ -5,13 +5,10 @@ import { RpcClient } from "../src/modes/rpc/rpc-client";
 describe("RpcClient.start", () => {
 	test("rejects when RPC process exits immediately", async () => {
 		using client = new RpcClient({
-			cliPath: path.join(import.meta.dir, "..", "src", "cli.ts"),
-			cwd: path.join(import.meta.dir, ".."),
-			provider: "__missing_provider__",
-			model: "claude-sonnet-4-5",
-			env: { PI_NO_TITLE: "1" },
+			cliPath: path.join(import.meta.dir, "fixtures", "rpc-exit-before-ready.ts"),
+			cwd: import.meta.dir,
 		});
 
-		await expect(client.start()).rejects.toThrow(/Unknown provider.*__missing_provider__/);
+		await expect(client.start()).rejects.toThrow(/intentional startup failure/);
 	});
 });

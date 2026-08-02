@@ -456,8 +456,8 @@ function rowToMessageStats(row: any): MessageStats {
 export function getRecentRequests(limit = 100): MessageStats[] {
 	if (!db) return [];
 	const stmt = db.prepare(`
-		SELECT * FROM messages 
-		ORDER BY timestamp DESC 
+		SELECT * FROM messages
+		ORDER BY timestamp DESC
 		LIMIT ?
 	`);
 	return (stmt.all(limit) as any[]).map(rowToMessageStats);
@@ -466,9 +466,9 @@ export function getRecentRequests(limit = 100): MessageStats[] {
 export function getRecentErrors(limit = 100): MessageStats[] {
 	if (!db) return [];
 	const stmt = db.prepare(`
-		SELECT * FROM messages 
+		SELECT * FROM messages
 		WHERE stop_reason = 'error'
-		ORDER BY timestamp DESC 
+		ORDER BY timestamp DESC
 		LIMIT ?
 	`);
 	return (stmt.all(limit) as any[]).map(rowToMessageStats);

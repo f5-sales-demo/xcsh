@@ -111,7 +111,7 @@ ws.onmessage = e => {
 			done = true;
 			break;
 		case "chat_error":
-			chatErr = (m.error as string) ?? "unknown";
+			chatErr = (m.reason as string) ?? "invalid-chat-error";
 			done = true;
 			break;
 	}

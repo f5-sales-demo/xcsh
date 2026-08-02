@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Hardened browser contract 2 diagnostics so tenant, session, socket-path, and extension tool-result data cannot reach logs or user-facing errors, and rejected sessionless manager keepalives instead of retaining prerelease compatibility behavior ([#2802](https://github.com/f5-sales-demo/xcsh/issues/2802))
+
 ## [20.2.4] - 2026-08-02
 
 ### Fixed

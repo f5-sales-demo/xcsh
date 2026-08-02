@@ -11,16 +11,6 @@ export interface PromptFormatOptions {
 	boldRfc2119Keywords?: boolean;
 }
 
-// Opening XML tag (not self-closing, not closing)
-const OPENING_XML = /^<([a-z_-]+)(?:\s+[^>]*)?>$/;
-// Closing XML tag
-const CLOSING_XML = /^<\/([a-z_-]+)>$/;
-// Handlebars block start: {{#if}}, {{#has}}, {{#list}}, etc.
-const OPENING_HBS = /^\{\{#/;
-// Handlebars block end: {{/if}}, {{/has}}, {{/list}}, etc.
-const CLOSING_HBS = /^\{\{\//;
-// List item (- or * or 1.)
-const LIST_ITEM = /^(?:[-*]\s|\d+\.\s)/;
 // Table row
 const TABLE_ROW = /^\|.*\|$/;
 // Table separator (|---|---|)
@@ -93,7 +83,6 @@ export function format(content: string, options: PromptFormatOptions = {}): stri
 	const result: string[] = [];
 	let inCodeBlock = false;
 	let inBoldSpan = false;
-	const topLevelTags: string[] = [];
 
 	for (let i = 0; i < lines.length; i++) {
 		let line = lines[i].trimEnd();
@@ -115,19 +104,7 @@ export function format(content: string, options: PromptFormatOptions = {}): stri
 		trimmedStart = line.trimStart();
 		const trimmed = line.trim();
 
-		const isOpeningXml = OPENING_XML.test(trimmedStart) && !trimmedStart.endsWith("/>");
-		if (isOpeningXml && line.length === trimmedStart.length) {
-			const match = OPENING_XML.exec(trimmedStart);
-			if (match) topLevelTags.push(match[1]);
-		}
-
-		const closingMatch = CLOSING_XML.exec(trimmedStart);
-		if (closingMatch) {
-			const tagName = closingMatch[1];
-			if (topLevelTags.length > 0 && topLevelTags[topLevelTags.length - 1] === tagName) {
-				topLevelTags.pop();
-			}
-		} else if (isPreRender && trimmedStart.startsWith("{{")) {
+		if (isPreRender && trimmedStart.startsWith("{{")) {
 			/* keep indentation as-is in pre-render for Handlebars markers */
 		} else if (TABLE_SEP.test(trimmedStart)) {
 			const leadingWhitespace = line.slice(0, line.length - trimmedStart.length);
@@ -147,29 +124,10 @@ export function format(content: string, options: PromptFormatOptions = {}): stri
 		const isBlank = trimmed === "";
 		if (isBlank) {
 			const prevLine = result[result.length - 1]?.trim() ?? "";
-			const nextLine = lines[i + 1]?.trim() ?? "";
-
-			if (LIST_ITEM.test(nextLine)) {
-				continue;
-			}
-
-			if (OPENING_XML.test(prevLine) || (isPreRender && OPENING_HBS.test(prevLine))) {
-				continue;
-			}
-
-			if (CLOSING_XML.test(nextLine) || (isPreRender && CLOSING_HBS.test(nextLine))) {
-				continue;
-			}
 
 			const prevIsBlank = prevLine === "";
 			if (prevIsBlank) {
 				continue;
-			}
-		}
-
-		if (CLOSING_XML.test(trimmed) || (isPreRender && CLOSING_HBS.test(trimmed))) {
-			while (result.length > 0 && result[result.length - 1].trim() === "") {
-				result.pop();
 			}
 		}
 

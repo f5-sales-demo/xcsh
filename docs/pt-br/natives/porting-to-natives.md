@@ -90,7 +90,8 @@ Evite portar código que dependa de estado exclusivo do JS ou imports dinâmicos
 
 ### 1) `pi_natives.node` desatualizado impede novos exports
 
-O loader prefere o binário com tag de plataforma em `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` agora apenas habilita diagnósticos do loader; não altera mais para um nome de arquivo de addon de desenvolvimento separado. Há também um fallback `pi_natives.node`. Binários compilados são extraídos para `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node`. Se qualquer um destes estiver desatualizado, os exports não serão atualizados.
+O loader prefere o binário com tag de plataforma em `packages/natives/native` (`pi_natives.<platform>-<arch>.node`). `PI_DEV=1` agora apenas habilita diagnósticos do loader; não altera mais para um nome de arquivo de addon de desenvolvimento separado.
+Há também um fallback `pi_natives.node`. Binários compilados são extraídos para `~/.xcsh/natives/<version>/pi_natives.<platform>-<arch>.node`. Se qualquer um destes estiver desatualizado, os exports não serão atualizados.
 
 **Correção:** remova o arquivo desatualizado antes de recompilar.
 

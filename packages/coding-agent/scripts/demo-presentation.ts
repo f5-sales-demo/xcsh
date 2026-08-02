@@ -13,6 +13,7 @@
 import * as path from "node:path";
 import { startBridgeServer } from "../src/browser/extension-bridge";
 import { ExtensionBrowserProvider } from "../src/browser/extension-provider";
+import { sessionInfoForWorker } from "../src/commands/worker";
 import { paramsFor } from "../src/sweep/sweep-params";
 import { apiItemPath } from "../src/sweep/sweep-scoring";
 import { CatalogWorkflowRunnerTool } from "../src/tools/catalog-workflow-runner";
@@ -63,12 +64,12 @@ async function apiExists(resource: string, name: string): Promise<boolean> {
 
 async function main() {
 	console.log(`\n🎬 xcsh automation demo — profile: ${PROFILE} (fingerprint-before-click, highlights, narration)\n`);
-	const server = await startBridgeServer();
+	const server = await startBridgeServer(undefined, { serveKind: "browser", sessionInfo: sessionInfoForWorker });
 	const tool = new CatalogWorkflowRunnerTool({ settings: { get: () => undefined } } as never);
 
 	console.log("  Waiting for the extension to connect (open Chrome with xcsh loaded)…");
 	const deadline = Date.now() + 60_000;
-	while (Date.now() < deadline && !server.connected) await new Promise(r => setTimeout(r, 300));
+	while (Date.now() < deadline && !server.connected) await Bun.sleep(300);
 	if (!server.connected) {
 		console.error("  ✗ Extension did not connect.");
 		await server.close();
@@ -81,7 +82,7 @@ async function main() {
 		const name = sweepName(resource);
 		console.log(`\n▶ Creating ${resource} as "${name}" …`);
 		await apiDelete(resource, name); // clean so the create is real
-		await new Promise(r => setTimeout(r, 1500));
+		await Bun.sleep(1500);
 		try {
 			await tool.execute(`${resource}-create`, {
 				resource,

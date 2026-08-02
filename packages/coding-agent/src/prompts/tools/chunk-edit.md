@@ -1,4 +1,5 @@
 Edits files via syntax-aware chunks. Run `read(path="file.ts")` first.
+
 - `write` rewrites the entire targeted region — best for most edits.
 - `replace` does surgical find-and-replace within a chunk — use when making small changes to a large chunk, or batching multiple substitutions.
 - `insert` adds content before/after a chunk.
@@ -27,7 +28,8 @@ Call format: `{"edits": [{"path": "file:chunk#ID~", "write": "new body"}, …]}`
   ```
   The tool adds the correct base indent automatically, then preserves the tabs/spaces you used inside the snippet. Never manually pad with the chunk's own indentation.
 {{/if}}
-- Region suffixes only apply to container chunks (classes, functions, impl blocks, sections). On leaf chunks (enum variants, fields, single statements, and compound statements like `if`/`for`/`while`/`match`/`try`), `~` and `^` silently fall back to whole-chunk replacement — prefer the unsuffixed form and always supply the complete replacement (condition + body, not just the body) to avoid dropping structural parts.
+- Region suffixes only apply to container chunks (classes, functions, impl blocks, sections). On leaf chunks (enum variants, fields, single statements, and compound statements like `if`/`for`/`while`/`match`/`try`), `~` and `^` silently fall back to whole-chunk replacement.
+  Prefer the unsuffixed form and always supply the complete replacement (condition + body, not just the body) to avoid dropping structural parts.
 - `put`, `find`+`replace`, and `delete` require the current ID. `prepend`/`append` do not.
 - **IDs change after every edit.** The edit response always carries the new IDs — use those for the next call or run `read(path="file", sel="?")` to refresh. Never reuse an ID from before the latest edit.
 </rules>
@@ -35,7 +37,8 @@ Call format: `{"edits": [{"path": "file:chunk#ID~", "write": "new body"}, …]}`
 <critical>
 You **MUST** use the narrowest region that covers your change. Putting without a region overwrites the **entire chunk including leading comments, decorators, and attributes** — omitting them from `content` deletes them.
 
-**`put` is total, not surgical.** The `content` you supply becomes the *complete* new content for the targeted region. Everything in the original region that you omit from `content` is deleted. Before using `put` on any chunk's `~`, verify the chunk does not contain children you intend to keep. If a chunk spans hundreds of lines and your change touches only a few, target a specific child chunk — not the parent.
+**`put` is total, not surgical.** The `content` you supply becomes the *complete* new content for the targeted region. Everything in the original region that you omit from `content` is deleted.
+Before using `put` on any chunk's `~`, verify the chunk does not contain children you intend to keep. If a chunk spans hundreds of lines and your change touches only a few, target a specific child chunk — not the parent.
 
 **Group chunks (`stmts_*`, `imports_*`, `decls_*`) are containers.** They hold many sibling items (test functions, import statements, declarations). `put` on a group chunk's `~` overwrites **all** of its children. To edit one item inside a group, target that item's own chunk path. If no child chunk exists, use the specific child's chunk selector from `read` output — do not `put` the parent group.
 </critical>
@@ -47,9 +50,12 @@ In `read` output, lines marked `^` between the line number and `|` are **head** 
 - `fn_foo#ID` — entire chunk including leading trivia. **You must include doc comments and attributes in `content`; omitting them deletes them.**
 - `chunk~` + `append`/`prepend` inserts *inside* the container. `chunk` + `append`/`prepend` inserts *outside*.
 
-**Note on leading trivia:** whether a decorator/doc comment belongs to `^` depends on the parser. In Rust and Python, attributes and decorators are attached to the function chunk, so `^` covers them. In TypeScript/JavaScript, a `@decorator` + `/** jsdoc */` block immediately above a method often surfaces as a **separate sibling chunk** (shown as `chunk#ID` in the `?` listing) rather than as part of the function's `^`. If you need to rewrite a decorator, check the `?` listing for a sibling `chunk#ID` directly above your target.
+**Note on leading trivia:** whether a decorator/doc comment belongs to `^` depends on the parser. In Rust and Python, attributes and decorators are attached to the function chunk, so `^` covers them.
+In TypeScript/JavaScript, a `@decorator` + `/** jsdoc */` block immediately above a method often surfaces as a **separate sibling chunk** (shown as `chunk#ID` in the `?` listing) rather than as part of the function's `^`. If you need to rewrite a decorator, check the `?` listing for a sibling `chunk#ID` directly above your target.
 
-**Note on non-code formats:** for prose and data formats (markdown, YAML, JSON, fenced code blocks, frontmatter), `^` and `~` fall back to the whole chunk. Always replace the entire chunk and include any delimiter syntax (fence backticks, `---` frontmatter markers, list markers) in your `content` — omitting them deletes them. For markdown sections (`sect_*`), always use unsuffixed whole-chunk replace — `^` and `~` on section containers also fall back to whole-chunk replace. When editing fenced code blocks in markdown, use the exact whitespace from the file (read with `raw` first) — the tool preserves literal indentation inside fenced blocks, but any content you supply is written verbatim. To insert content after a markdown section heading, use `after` on the heading chunk (`sect_*.chunk` or `sect_*.chunk_1`) — not `before`/`prepend` on the section itself, which lands physically before the heading and gets absorbed by the preceding section on reparse.
+**Note on non-code formats:** for prose and data formats (markdown, YAML, JSON, fenced code blocks, frontmatter), `^` and `~` fall back to the whole chunk. Always replace the entire chunk and include any delimiter syntax (fence backticks, `---` frontmatter markers, list markers) in your `content` — omitting them deletes them.
+For markdown sections (`sect_*`), always use unsuffixed whole-chunk replace — `^` and `~` on section containers also fall back to whole-chunk replace. When editing fenced code blocks in markdown, use the exact whitespace from the file (read with `raw` first) — the tool preserves literal indentation inside fenced blocks, but any content you supply is written verbatim.
+To insert content after a markdown section heading, use `after` on the heading chunk (`sect_*.chunk` or `sect_*.chunk_1`) — not `before`/`prepend` on the section itself, which lands physically before the heading and gets absorbed by the preceding section on reparse.
 </regions>
 
 <ops>
@@ -61,6 +67,7 @@ Each edit entry has `path` (`file:selector`) plus **exactly one** operation fiel
 |`write: null`|`file:chunk#ID`|delete the chunk|
 |`replace: {old, new}`|`file:chunk#ID`|find a literal substring in the chunk and replace it|
 |`insert: {loc, body}`|`file:chunk` or `file:chunk~`|insert before/after the chunk (`loc`: `"prepend"` or `"append"`)|
+
 </ops>
 
 <examples>
@@ -76,83 +83,86 @@ Given this `read` output for `counter.rs`:
  4^|#[derive(Debug, Clone)]
  5^|pub struct Counter {
 -@struct_Counte.field_value#MQTW
- 6 |	/// The current value.
- 7 |	value: i32,
+ 6 | /// The current value.
+ 7 | value: i32,
 -@struct_Counte.field_max#HJMQ
- 8 |	/// Maximum allowed value.
- 9 |	max: i32,
+ 8 | /// Maximum allowed value.
+ 9 | max: i32,
 10 |}
    |
 @impl_Counte#VNPP
 12^|impl Counter {
 -@impl_Counte.fn_new#RWZV
-13^|	/// Creates a new counter starting at zero.
-14^|	pub fn new(max: i32) -> Self {
-15 |		Self { value: 0, max }
-16 |	}
+13^| /// Creates a new counter starting at zero.
+14^| pub fn new(max: i32) -> Self {
+15 |  Self { value: 0, max }
+16 | }
 17 |
 -@impl_Counte.fn_increm#MNHV
-18^|	/// Increments the counter by one, clamping at max.
-19^|	pub fn increment(&mut self) {
-20 |		if self.value < self.max {
-21 |			self.value += 1;
-22 |		}
-23 |	}
+18^| /// Increments the counter by one, clamping at max.
+19^| pub fn increment(&mut self) {
+20 |  if self.value < self.max {
+21 |   self.value += 1;
+22 |  }
+23 | }
 24 |
 -@impl_Counte.fn_decrem#TTWB
-25^|	/// Decrements the counter by one, clamping at zero.
-26^|	pub fn decrement(&mut self) {
-27 |		if self.value > 0 {
-28 |			self.value -= 1;
-29 |		}
-30 |	}
+25^| /// Decrements the counter by one, clamping at zero.
+26^| pub fn decrement(&mut self) {
+27 |  if self.value > 0 {
+28 |   self.value -= 1;
+29 |  }
+30 | }
 31 |
 -@impl_Counte.fn_get#PTNT
-32^|	/// Returns the current value.
-33^|	pub fn get(&self) -> i32 {
-34 |		self.value
-35 |	}
+32^| /// Returns the current value.
+33^| pub fn get(&self) -> i32 {
+34 |  self.value
+35 | }
 36 |}
    |
 @impl_Displa#BNJH
 38^|impl fmt::Display for Counter {
 -@impl_Displa.fn_fmt#NKRN
-39^|	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-40 |		write!(f, "Counter({}/{})", self.value, self.max)
-41 |	}
+39^| fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+40 |  write!(f, "Counter({}/{})", self.value, self.max)
+41 | }
 42 |}
    |
 @mod_tests#YWXM
 44^|#[cfg(test)]
 45^|mod tests {
 -@mod_tests.chunk#VSMY
-46 |	use super::*;
+46 | use super::*;
 47 |
 -@mod_tests.fn_test_i#YXQZ
-48^|	#[test]
-49^|	fn test_increment() {
-50 |		let mut c = Counter::new(10);
-51 |		c.increment();
-52 |		assert_eq!(c.get(), 1);
-53 |	}
+48^| #[test]
+49^| fn test_increment() {
+50 |  let mut c = Counter::new(10);
+51 |  c.increment();
+52 |  assert_eq!(c.get(), 1);
+53 | }
 54 |
 -@mod_tests.fn_test_d#XPBQ
-55^|	#[test]
-56^|	fn test_decrement_at_zero() {
-57 |		let mut c = Counter::new(10);
-58 |		c.decrement();
-59 |		assert_eq!(c.get(), 0);
-60 |	}
+55^| #[test]
+56^| fn test_decrement_at_zero() {
+57 |  let mut c = Counter::new(10);
+58 |  c.decrement();
+59 |  assert_eq!(c.get(), 0);
+60 | }
 61 |}
 ```
 
-**Understanding `^` markers in `read` output:** Lines marked with `^` between the line number and `|` (e.g. ` 3^|`) are **head** lines — doc comments, attributes, and the signature. Lines without `^` (e.g. ` 7 |`) are **body** lines. `~` replaces body lines only, keeping head lines intact.
+**Understanding `^` markers in `read` output:** Lines marked with `^` between the line number and `|` (e.g. `3^|`) are **head** lines — doc comments, attributes, and the signature. Lines without `^` (e.g. `7 |`) are **body** lines. `~` replaces body lines only, keeping head lines intact.
 
 **Put body** (`~` — the common case):
+
 ```
 { "path": "counter.rs:impl_Counte.fn_increm#MNHV~", "write": "self.value = (self.value + 1).min(self.max);\n" }
 ```
+
 Result — only the body (non-`^` lines) changes; the doc comment, signature, and closing `}` are all preserved:
+
 ```
     /// Increments the counter by one, clamping at max.
     pub fn increment(&mut self) {
@@ -161,10 +171,13 @@ Result — only the body (non-`^` lines) changes; the doc comment, signature, an
 ```
 
 **Write whole chunk** (rewrite signature + doc comment + body):
+
 ```
 { "path": "counter.rs:impl_Counte.fn_increm#MNHV", "write": "/// Increments by the given step, clamping at max.\npub fn increment(&mut self, step: i32) {\n\tself.value = (self.value + step).min(self.max);\n}\n" }
 ```
+
 Result — **everything** including the doc comment and signature is rewritten. You must include them; omitting them deletes them:
+
 ```
     /// Increments by the given step, clamping at max.
     pub fn increment(&mut self, step: i32) {
@@ -173,10 +186,13 @@ Result — **everything** including the doc comment and signature is rewritten. 
 ```
 
 **Write head** (`^` — attributes, doc comments, signature):
+
 ```
 { "path": "counter.rs:impl_Counte.fn_get#PTNT^", "write": "/// Returns the current counter value.\n#[inline]\npub fn get(&self) -> i32 {\n" }
 ```
+
 Result — the head (all `^` lines + opening brace) changes, body untouched:
+
 ```
     /// Returns the current counter value.
     #[inline]
@@ -186,16 +202,21 @@ Result — the head (all `^` lines + opening brace) changes, body untouched:
 ```
 
 **Find and replace** (surgical edit within a chunk):
+
 ```
 { "path": "counter.rs:impl_Counte.fn_increm#MNHV", "replace": { "old": "self.value += 1;", "new": "self.value = (self.value + 1).min(self.max);" } }
 ```
+
 Result — only the matched substring changes, everything else is preserved.
 
 **Insert before a chunk** (`prepend`):
+
 ```
 { "path": "counter.rs:impl_Counte.fn_get", "insert": { "loc": "prepend", "body": "/// Resets the counter to zero.\npub fn reset(&mut self) {\n\tself.value = 0;\n}\n\n" } }
 ```
+
 Result — a new method is inserted before `fn get`:
+
 ```
     /// Resets the counter to zero.
     pub fn reset(&mut self) {
@@ -207,10 +228,13 @@ Result — a new method is inserted before `fn get`:
 ```
 
 **Insert after a chunk** (`append`):
+
 ```
 { "path": "counter.rs:struct_Counte", "insert": { "loc": "append", "body": "\nimpl Default for Counter {\n\tfn default() -> Self {\n\t\tSelf { value: 0, max: 100 }\n\t}\n}\n" } }
 ```
+
 Result — a new impl block appears after the struct:
+
 ```
 }
 
@@ -224,10 +248,13 @@ impl Counter {
 ```
 
 **Insert at start of container body** (`~` + `prepend`):
+
 ```
 { "path": "counter.rs:impl_Counte~", "insert": { "loc": "prepend", "body": "/// Creates a counter starting at the given value.\npub fn with_value(value: i32, max: i32) -> Self {\n\tSelf { value: value.min(max), max }\n}\n\n" } }
 ```
+
 Result — a new method is added at the top of the impl body, before existing methods:
+
 ```
 impl Counter {
     /// Creates a counter starting at the given value.
@@ -240,10 +267,13 @@ impl Counter {
 ```
 
 **Insert at end of container body** (`~` + `append`):
+
 ```
 { "path": "counter.rs:impl_Counte~", "insert": { "loc": "append", "body": "\n/// Returns true if the counter is at its maximum.\npub fn is_maxed(&self) -> bool {\n\tself.value >= self.max\n}\n" } }
 ```
+
 Result — a new method is added at the end of the impl body, before the closing `}`:
+
 ```
     pub fn get(&self) -> i32 {
         self.value
@@ -257,10 +287,13 @@ Result — a new method is added at the end of the impl body, before the closing
 ```
 
 **Delete a chunk**:
+
 ```
 { "path": "counter.rs:impl_Counte.fn_decrem#TTWB", "write": null }
 ```
+
 Result — the method (including its doc comment and signature) is removed.
+
 - Indentation rules (important):
 {{#if chunkAutoIndent}}
   - Use `\t` for each indent level. The tool converts tabs to the file's actual style (2-space, 4-space, etc.).
@@ -268,7 +301,8 @@ Result — the method (including its doc comment and signature) is removed.
   - Match the file's real indentation characters in your snippet. The tool preserves your literal tabs/spaces after adding the target region's base indent.
 {{/if}}
   - Do NOT include the chunk's base indentation — only indent relative to the region's opening level.
-  - For `~` of a function: write at column 0, and use `\t` for *relative* nesting. Flat body: `"return x;\n"`. Multiple sibling lines: `"print(a)\nprint(b)\nprint(c)\n"` — all at column 0, the tool adds the function's base indent. Nested body: `"if (cond) {\n\treturn x;\n}\n"` — the `if` is at column 0, the `return` is one tab in. Python example — to replace `~` of `def divide(a, b):`, write: `"if b == 0:\n\treturn None\nreturn a / b\n"` — the `if` and `return a / b` are at column 0, `return None` is one `\t` in.
+  - For `~` of a function: write at column 0, and use `\t` for *relative* nesting. Flat body: `"return x;\n"`. Multiple sibling lines: `"print(a)\nprint(b)\nprint(c)\n"` — all at column 0, the tool adds the function's base indent.
+    Nested body: `"if (cond) {\n\treturn x;\n}\n"` — the `if` is at column 0, the `return` is one tab in. Python example — to replace `~` of `def divide(a, b):`, write: `"if b == 0:\n\treturn None\nreturn a / b\n"` — the `if` and `return a / b` are at column 0, `return None` is one `\t` in.
   - For `^`: write at the chunk's own depth. A class member's head uses `"/// doc\n#[attr]\npub fn start() {"`.
 {{#if chunkAutoIndent}}
   - For a top-level item: start at zero indent. Write `"fn foo() {\n\treturn 1;\n}\n"`.

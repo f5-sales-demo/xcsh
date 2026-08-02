@@ -16,6 +16,7 @@ import {
 	APP_NAME,
 	getConfigDirName,
 	getProjectDir,
+	getXCSHConfigDir,
 	logger,
 	postmortem,
 	setProjectDir,
@@ -58,6 +59,8 @@ import { InteractiveMode, runAcpMode, runPrintMode, runRpcMode } from "./modes";
 import { initTheme, stopThemeWatcher } from "./modes/theme/theme";
 import type { SubmittedUserInput } from "./modes/types";
 import { type CreateAgentSessionOptions, createAgentSession, discoverAuthStorage } from "./sdk";
+import { ContextService } from "./services/xcsh-context";
+import { deriveTenantEnv } from "./services/xcsh-env";
 import type { AgentSession } from "./session/agent-session";
 import { resolveResumableSession, type SessionInfo, SessionManager } from "./session/session-manager";
 import { profileDump, profileMark } from "./startup-profile";
@@ -656,8 +659,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// F5 XC context is session-scoped: nothing loads at startup. We still init the
 	// ContextService singleton so /context commands and the session bootstrap work.
 	try {
-		const { ContextService } = await import("./services/xcsh-context");
-		const { getXCSHConfigDir } = await import("@f5-sales-demo/pi-utils");
 		ContextService.init(getXCSHConfigDir());
 	} catch {
 		// ContextService optional (SDK consumers / tests) — continue.
@@ -853,10 +854,32 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	let bridgeServer: BridgeServer | null = null;
 	let sessionReady = false;
 	if (process.env.XCSH_BROWSER_PROVIDER?.toLowerCase() === "extension") {
+		const sessionId = process.env.XCSH_SESSION_ID;
+		if (!sessionId) {
+			throw new Error("The extension bridge requires a manager-bound browser session.");
+		}
+		const readInfo = () => {
+			let apiUrl: string | null = null;
+			let contextBound = false;
+			try {
+				apiUrl = ContextService.instance.activeApiUrl;
+				contextBound = ContextService.instance.getStatus().activeContextName != null;
+			} catch {
+				/* ContextService not initialized */
+			}
+			apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
+			const tenantKey = process.env.XCSH_SESSION_TENANT ?? null;
+			const { tenant, env } = deriveTenantEnv(apiUrl, tenantKey);
+			return { tenant, env, contextBound, sessionId };
+		};
 		// Provision the wss cert before binding (network path is provision-once-cached).
 		// `undefined` (offline / local-ip.sh unreachable) → the bridge starts ws-only.
 		const tls = await resolveBridgeTls();
-		bridgeServer = await startBridgeServer(undefined, tls ? { tls } : undefined);
+		bridgeServer = await startBridgeServer(undefined, {
+			serveKind: "browser",
+			sessionInfo: readInfo,
+			...(tls ? { tls } : {}),
+		});
 		console.error(
 			`[xcsh] extension bridge listening on ws://127.0.0.1:${bridgeServer.port}` +
 				(bridgeServer.wssPort ? ` + wss://${LOCALIP_HOST}:${bridgeServer.wssPort}` : ""),
@@ -864,35 +887,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		// Make the bridge globally available so ALL selectProvider() calls reuse it
 		// (prevents starting a conflicting second bridge on the same port).
 		setSharedBridgeServer(bridgeServer);
-		// Tenant identity for the `hello` handshake — tells the extension which
-		// tenant/env THIS xcsh process serves (one process = one context = one
-		// tenant), so the panel can lock its session and route per tenant.
-		{
-			const { ContextService } = await import("./services/xcsh-context");
-			const { deriveTenantEnv } = await import("./services/xcsh-env");
-			const readInfo = () => {
-				let apiUrl: string | null = null;
-				let contextBound = false;
-				try {
-					apiUrl = ContextService.instance.activeApiUrl;
-					// Context-bound when a stored context is active (not just an env-derived apiUrl).
-					contextBound = ContextService.instance.getStatus().activeContextName != null;
-				} catch {
-					/* ContextService not initialized */
-				}
-				// Fall back to the env override when no context is active (env-only mode).
-				apiUrl = apiUrl ?? process.env.XCSH_API_URL ?? null;
-				// Prefer the apiUrl-derived key; fall back to the assigned tenant key so an
-				// unparseable apiUrl never blanks a known tenant (#1872). Same contract as
-				// the worker path (sessionInfoForWorker).
-				const tenantKey = process.env.XCSH_SESSION_TENANT ?? null;
-				const { tenant, env } = deriveTenantEnv(apiUrl, tenantKey);
-				// Interactive path has no per-tab XCSH_SESSION_ID; workers echo one, this doesn't.
-				return { tenant, env, apiUrl, contextBound, sessionId: null };
-			};
-			bridgeServer.setSessionInfo(readInfo);
-			ContextService.onContextChange(() => bridgeServer?.broadcastTenantChanged());
-		}
+		ContextService.onContextChange(() => bridgeServer?.broadcastTenantChanged());
 		// Warm-up handler: respond to early chat_request before the session loads.
 		// Deactivates once sessionReady=true (the real ChatHandler takes over).
 		bridgeServer.onMessage(msg => {
@@ -901,7 +896,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 				bridgeServer!.send({
 					type: "chat_error",
 					id: msg.id,
-					error: "xcsh starting — initializing plugins…",
+					reason: "session-busy",
 				});
 			}
 		});

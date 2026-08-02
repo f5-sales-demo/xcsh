@@ -372,12 +372,12 @@ describe("partitionByAuthority", () => {
 	});
 
 	it("never lists a repo assigned to an undefined class as authored", () => {
-		// A typo in `repos` must withhold authority, not inherit it from somewhere.
+		// An undefined class in `repos` must withhold authority, not inherit it from somewhere.
 		const part = partitionByAuthority(
 			classesOf({
 				_default: "developer",
 				classes: { content: { authority: "author" } },
-				repos: { mcn: "content", oops: "contnet" },
+				repos: { mcn: "content", oops: "undefined-class" },
 			}),
 		);
 		expect(part.authored).toEqual(["mcn"]);

@@ -142,7 +142,8 @@ const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 - อย่าสร้าง prompts ในโค้ด; prompts เป็นไฟล์ `.md` แบบ static ที่ render ด้วย Handlebars
 - ใน coding-agent อย่าใช้ `console.log`/`console.warn`/`console.error`; ใช้ `logger` จาก `@f5-sales-demo/pi-utils`
 - ใช้ `Promise.withResolvers()` แทน `new Promise((resolve, reject) => ...)`
-- **ไม่ใช้คีย์เวิร์ด `private`/`protected`/`public` บน class fields หรือ methods** ใช้ ES `#` private fields สำหรับการห่อหุ้ม; ปล่อย accessible members ไม่ต้องมีคีย์เวิร์ด ข้อยกเว้นเดียวคือ constructor parameter properties (`constructor(private readonly x: T)`) ซึ่ง TypeScript กำหนดให้ต้องมีคีย์เวิร์ด เมื่อพอร์ตโค้ด upstream ที่ใช้ `private foo` หรือ `protected bar` ให้แปลงเป็น `#foo` (private) หรือ bare `bar` (accessible)
+- **ไม่ใช้คีย์เวิร์ด `private`/`protected`/`public` บน class fields หรือ methods** ใช้ ES `#` private fields สำหรับการห่อหุ้ม; ปล่อย accessible members ไม่ต้องมีคีย์เวิร์ด
+  ข้อยกเว้นเดียวคือ constructor parameter properties (`constructor(private readonly x: T)`) ซึ่ง TypeScript กำหนดให้ต้องมีคีย์เวิร์ด เมื่อพอร์ตโค้ด upstream ที่ใช้ `private foo` หรือ `protected bar` ให้แปลงเป็น `#foo` (private) หรือ bare `bar` (accessible)
 - ใช้ helpers และ utilities ที่มีอยู่แทนโค้ด ad-hoc ใหม่
 - รักษาการเปลี่ยนแปลงโครงสร้างพื้นฐานแบบ Bun-first ที่ทำไว้แล้วใน repo นี้:
   - Runtime คือ Bun (ไม่มี Node entry points)

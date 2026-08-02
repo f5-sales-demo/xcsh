@@ -15,6 +15,7 @@
  */
 import * as fs from "node:fs/promises";
 import { type BridgeServer, startBridgeServer } from "../src/browser/extension-bridge";
+import { sessionInfoForWorker } from "../src/commands/worker";
 
 const BASE = process.env.XCSH_API_URL ?? "https://example.staging.volterra.us";
 const ROUTE = `${BASE}/web/workspaces/web-app-and-api-protection/namespaces/demo/manage/load_balancers/http_loadbalancers`;
@@ -63,7 +64,7 @@ function isUploadedFileMetadata(value: unknown): value is { size: number; type: 
 async function run() {
 	console.log("\n🚀 F5 XC Console Agent — UAT Harness\n");
 	console.log("[0] Starting bridge server...");
-	server = await startBridgeServer();
+	server = await startBridgeServer(undefined, { serveKind: "browser", sessionInfo: sessionInfoForWorker });
 
 	console.log("[0] Waiting for extension to connect (up to 60s)...");
 	const deadline = Date.now() + 60_000;

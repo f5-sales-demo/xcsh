@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/19351a8e-7b03-4338-81be-dd5b6d7e5abc"/>
+  <img src="https://github.com/user-attachments/assets/19351a8e-7b03-4338-81be-dd5b6d7e5abc" alt="Brush shell logo"/>
 </div>
 
 <br/>
@@ -7,18 +7,18 @@
 <!-- Primary badges -->
 <p align="center">
   <!-- crates.io version badge -->
-  <a href="https://crates.io/crates/brush-shell"><img src="https://img.shields.io/crates/v/brush-shell?style=flat-square"/></a>
+  <a href="https://crates.io/crates/brush-shell"><img src="https://img.shields.io/crates/v/brush-shell?style=flat-square" alt="Brush crate version"/></a>
   <!-- msrv badge -->
-  <img src="https://img.shields.io/crates/msrv/brush-shell"/>
+  <img src="https://img.shields.io/crates/msrv/brush-shell" alt="Minimum supported Rust version"/>
   <!-- LoC badge: badge generation seems broken; temporarily disabled -->
-  <!-- <img src="https://tokei.rs/b1/github/reubeno/brush?category=code"/> -->
+  <!-- <img src="https://tokei.rs/b1/github/reubeno/brush?category=code" alt="Brush lines of code"/> -->
   <!-- license badge -->
-  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="MIT license"/>
   <!-- CI status badge -->
-  <a href="https://github.com/reubeno/brush/actions/workflows/ci.yaml"><img src="https://github.com/reubeno/brush/actions/workflows/ci.yaml/badge.svg"/></a>
+  <a href="https://github.com/reubeno/brush/actions/workflows/ci.yaml"><img src="https://github.com/reubeno/brush/actions/workflows/ci.yaml/badge.svg" alt="Continuous integration status"/></a>
   <br/>
   <!-- crates.io download badge -->
-  <a href="https://crates.io/crates/brush-shell"><img src="https://img.shields.io/crates/d/brush-shell?style=flat-square"/></a>
+  <a href="https://crates.io/crates/brush-shell"><img src="https://img.shields.io/crates/d/brush-shell?style=flat-square" alt="Brush crate downloads"/></a>
   <!-- Packaging badges -->
   <a href="https://repology.org/project/brush/versions">
     <img src="https://repology.org/badge/tiny-repos/brush.svg" alt="Packaging status"/>
@@ -34,7 +34,7 @@
 <a href="https://repology.org/project/brush/versions">
 </a>
 
-</p> 
+</p>
 
 <hr/>
 
@@ -44,7 +44,7 @@ in other Rust projects. It's built and tested on Linux, macOS, and WSL. Native W
 support is experimental.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/0e64d1b9-7e4e-43be-8593-6c1b9607ac52" width="80%"/>
+  <img src="https://github.com/user-attachments/assets/0e64d1b9-7e4e-43be-8593-6c1b9607ac52" width="80%" alt="Brush interactive shell"/>
 </p>
 
 `brush` is functional for interactive use as a daily driver! It executes most `sh` and `bash` scripts we've
@@ -86,6 +86,7 @@ After downloading the archive for your platform, you may verify its authenticity
 ```bash
 gh attestation verify brush-x86_64-unknown-linux-gnu.tar.gz --repo reubeno/brush
 ```
+
 </details>
 
 <details open>
@@ -107,6 +108,7 @@ To build from sources, first install a working (and recent) `rust` toolchain; we
 ```bash
 cargo install --locked brush-shell
 ```
+
 </details>
 
 <details>
@@ -117,6 +119,7 @@ If you are a Nix user, you can use the registered version:
 ```bash
 nix run 'github:NixOS/nixpkgs/nixpkgs-unstable#brush' -- --version
 ```
+
 </details>
 
 <details>
@@ -127,6 +130,7 @@ Arch Linux users can install `brush` from the official [extra repository](https:
 ```bash
 pacman -S brush
 ```
+
 </details>
 
 <details>
@@ -137,11 +141,12 @@ Homebrew users can install using [the `brush` formula](https://formulae.brew.sh/
 ```bash
 brew install brush
 ```
+
 </details>
 
 ## 👥 Community
 
-`brush` has a community Discord server, available [here](https://discord.gg/kPRgC9j3Tj).
+Join the [`brush` community Discord server](https://discord.gg/kPRgC9j3Tj).
 
 ## 🔍 Known limitations
 

@@ -133,14 +133,14 @@ ${description}
     if [ "${gap_type}" = "curl_example_fails" ]; then
       ts=$(date +%s)
       branch="fix/autoresearch-curl-${resource}-${ts}"
-      (cd "${API_SPECS_DIR}" && \
-        git checkout -b "${branch}" 2>/dev/null && \
-        echo "# autoresearch gap: ${description}" >> "config/minimum_configs.yaml" && \
-        git add config/minimum_configs.yaml && \
+      (cd "${API_SPECS_DIR}" &&
+        git checkout -b "${branch}" 2>/dev/null &&
+        echo "# autoresearch gap: ${description}" >>"config/minimum_configs.yaml" &&
+        git add config/minimum_configs.yaml &&
         git commit -m "fix(minimum_configs): autoresearch gap in ${resource} curl example
 
-Refs: ${url}" && \
-        git push origin "${branch}" && \
+Refs: ${url}" &&
+        git push origin "${branch}" &&
         gh pr create \
           --repo "${REPO}" \
           --title "fix(minimum_configs): autoresearch gap in ${resource} curl example" \

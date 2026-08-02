@@ -87,9 +87,9 @@ if [ "${mesh_fail}" -eq 1 ]; then
 fi
 
 echo "--- Next steps ---"
-[ "${specs}" -gt 0 ]    && echo "1. Fix api-specs-enriched gaps → make pipeline && merge"
+[ "${specs}" -gt 0 ] && echo "1. Fix api-specs-enriched gaps → make pipeline && merge"
 [ "${deploy_fail}" -eq 1 ] && echo "2. Fix T2 deployment issue → rerun autoresearch-smsv2.sh"
-[ "${mesh_fail}" -eq 1 ]   && echo "3. Fix T3 mesh issue → rerun autoresearch-smsv2.sh"
+[ "${mesh_fail}" -eq 1 ] && echo "3. Fix T3 mesh issue → rerun autoresearch-smsv2.sh"
 echo "4. Restart autoresearch after all fixes"
 echo ""
 

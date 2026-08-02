@@ -26,12 +26,13 @@ import {
 	type HostToolResult,
 	type HostToolUpdate,
 	type InteractionMode,
-	isChatRequest,
+	isBrowserChatRequest,
 	isChatStop,
 	isConfigure,
 	isListCommands,
 	isListSkills,
 	isSetHostTools,
+	isTransportChatRequest,
 	type PageContextSnapshot,
 	type SetHostTools,
 	type SetHostToolsAck,
@@ -102,8 +103,8 @@ export class ChatHandler {
 
 	attach(): void {
 		this.#server.onMessage(msg => {
-			if (isChatRequest(msg, this.#server.serveKind === "browser" ? "browser" : "transport"))
-				this.#handleChatRequest(msg as unknown as ChatRequest);
+			if (this.#server.serveKind === "browser" && isBrowserChatRequest(msg)) this.#handleChatRequest(msg);
+			else if (this.#server.serveKind === "office" && isTransportChatRequest(msg)) this.#handleChatRequest(msg);
 			else if (isChatStop(msg)) this.#handleChatStop(msg as unknown as { id: string });
 			// Host-tool channel (#2046): register client tools, then route the client's
 			// result/update frames back to the correlated pending call in the bridge.
@@ -359,12 +360,12 @@ export class ChatHandler {
 				type: "set_host_tools_ack",
 				toolNames: tools.map(tool => tool.name),
 			} satisfies SetHostToolsAck);
-		} catch (err) {
+		} catch {
 			// Nack instead of throwing (stdio parity — rpc-mode nacks): a client
 			// awaiting set_host_tools_ack would otherwise hang on malformed input.
 			this.#server.send({
 				type: "set_host_tools_error",
-				error: err instanceof Error ? err.message : String(err),
+				reason: "host-tools-rejected",
 			} satisfies SetHostToolsError);
 		}
 	}

@@ -102,7 +102,7 @@ describe("loadWorkflowYaml catalog_path branch", () => {
 	});
 
 	it("throws when workflow file does not exist under catalog_path", () => {
-		// Re-use the tmpDir created in the first test (if it exists), or make one
+		// Reuse the tmpDir created in the first test (if it exists), or make one
 		const base = tmpDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-test-"));
 		if (!tmpDir) tmpDir = base;
 		const workflowsDir = path.join(base, "catalog", "workflows");

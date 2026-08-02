@@ -13,6 +13,7 @@
  */
 import { afterEach, expect, test } from "bun:test";
 import { probe } from "./helpers/bridge-probe";
+import { CODING_AGENT_CLI, CODING_AGENT_ROOT } from "./helpers/cli-process";
 
 let proc: import("bun").Subprocess | undefined;
 afterEach(() => {
@@ -22,8 +23,8 @@ afterEach(() => {
 
 test("xcsh worker binds the forced port and advertises its tenant via hello_ack", async () => {
 	const port = 19239;
-	proc = Bun.spawn(["bun", "src/cli.ts", "worker"], {
-		cwd: process.cwd(),
+	proc = Bun.spawn([process.execPath, CODING_AGENT_CLI, "worker"], {
+		cwd: CODING_AGENT_ROOT,
 		env: {
 			...process.env,
 			XCSH_BROWSER_PROVIDER: "extension",

@@ -53,26 +53,26 @@ import { Text } from "@f5-sales-demo/pi-tui";
 import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
-	name: "my_tool",
-	label: "My Tool",
-	description: "Tool description for LLM",
-	parameters: Type.Object({
-		action: StringEnum(["list", "add"] as const),
-	}),
+ name: "my_tool",
+ label: "My Tool",
+ description: "Tool description for LLM",
+ parameters: Type.Object({
+  action: StringEnum(["list", "add"] as const),
+ }),
 
-	// Called on session start/switch/branch/clear
-	onSession(event) {
-		// Reconstruct state from event.entries
-	},
+ // Called on session start/switch/branch/clear
+ onSession(event) {
+  // Reconstruct state from event.entries
+ },
 
-	async execute(toolCallId, params) {
-		return {
-			content: [{ type: "text", text: "Result" }],
-			details: {
-				/* for rendering and state reconstruction */
-			},
-		};
-	},
+ async execute(toolCallId, params) {
+  return {
+   content: [{ type: "text", text: "Result" }],
+   details: {
+    /* for rendering and state reconstruction */
+   },
+  };
+ },
 });
 
 export default factory;

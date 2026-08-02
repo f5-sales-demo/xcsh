@@ -54,7 +54,8 @@ Der Agent kann Speicherdateien direkt über `memory://`-URLs mit dem `read`-Tool
 
 Speicher werden durch eine Hintergrund-Pipeline aufgebaut, die beim Start oder manuell über einen Slash-Befehl ausgelöst wird.
 
-**Phase 1 — Extraktion pro Sitzung:** Für jede vergangene Sitzung, die sich seit der letzten Verarbeitung geändert hat, liest ein Modell den Sitzungsverlauf und extrahiert dauerhaftes Signal: technische Entscheidungen, Einschränkungen, behobene Fehler, wiederkehrende Arbeitsabläufe. Sitzungen, die zu neu, zu alt oder derzeit aktiv sind, werden übersprungen. Jede Extraktion erzeugt einen rohen Speicherblock und eine kurze Zusammenfassung für diese Sitzung.
+**Phase 1 — Extraktion pro Sitzung:** Für jede vergangene Sitzung, die sich seit der letzten Verarbeitung geändert hat, liest ein Modell den Sitzungsverlauf und extrahiert dauerhaftes Signal: technische Entscheidungen, Einschränkungen, behobene Fehler, wiederkehrende Arbeitsabläufe.
+Sitzungen, die zu neu, zu alt oder derzeit aktiv sind, werden übersprungen. Jede Extraktion erzeugt einen rohen Speicherblock und eine kurze Zusammenfassung für diese Sitzung.
 
 **Phase 2 — Konsolidierung:** Nach der Extraktion liest ein zweiter Modelldurchlauf alle sitzungsbezogenen Extraktionen und erzeugt drei Ausgaben, die auf die Festplatte geschrieben werden:
 

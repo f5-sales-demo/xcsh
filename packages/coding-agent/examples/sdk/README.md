@@ -31,23 +31,23 @@ npx tsx examples/sdk/01-minimal.ts
 ```typescript
 import { getModel } from "@f5-sales-demo/pi-ai";
 import {
-	AuthStorage,
-	createAgentSession,
-	discoverAuthStorage,
-	discoverModels,
-	discoverSkills,
-	discoverHooks,
-	discoverCustomTools,
-	discoverContextFiles,
-	discoverSlashCommands,
-	loadSettings,
-	buildSystemPrompt,
-	ModelRegistry,
-	SessionManager,
-	BUILTIN_TOOLS,
-	HIDDEN_TOOLS,
-	createTools,
-	ResolveTool,
+ AuthStorage,
+ createAgentSession,
+ discoverAuthStorage,
+ discoverModels,
+ discoverSkills,
+ discoverHooks,
+ discoverCustomTools,
+ discoverContextFiles,
+ discoverSlashCommands,
+ loadSettings,
+ buildSystemPrompt,
+ ModelRegistry,
+ SessionManager,
+ BUILTIN_TOOLS,
+ HIDDEN_TOOLS,
+ createTools,
+ ResolveTool,
 } from "@f5-sales-demo/xcsh";
 
 // Auth and models setup
@@ -63,9 +63,9 @@ const { session } = await createAgentSession({ model, thinkingLevel: "high", aut
 
 // Modify prompt
 const { session } = await createAgentSession({
-	systemPrompt: (defaultPrompt) => defaultPrompt + "\n\nBe concise.",
-	authStorage,
-	modelRegistry,
+ systemPrompt: (defaultPrompt) => defaultPrompt + "\n\nBe concise.",
+ authStorage,
+ modelRegistry,
 });
 
 // Read-only tools
@@ -73,9 +73,9 @@ const { session } = await createAgentSession({ toolNames: ["read", "grep", "find
 
 // In-memory
 const { session } = await createAgentSession({
-	sessionManager: SessionManager.inMemory(),
-	authStorage,
-	modelRegistry,
+ sessionManager: SessionManager.inMemory(),
+ authStorage,
+ modelRegistry,
 });
 
 // Full control
@@ -84,24 +84,24 @@ customAuth.setRuntimeApiKey("anthropic", Bun.env.MY_KEY!);
 const customRegistry = new ModelRegistry(customAuth);
 
 const { session } = await createAgentSession({
-	model,
-	authStorage: customAuth,
-	modelRegistry: customRegistry,
-	systemPrompt: "You are helpful.",
-	toolNames: ["read", "bash"],
-	customTools: [{ tool: myTool }],
-	hooks: [{ factory: myHook }],
-	skills: [],
-	contextFiles: [],
-	slashCommands: [],
-	sessionManager: SessionManager.inMemory(),
+ model,
+ authStorage: customAuth,
+ modelRegistry: customRegistry,
+ systemPrompt: "You are helpful.",
+ toolNames: ["read", "bash"],
+ customTools: [{ tool: myTool }],
+ hooks: [{ factory: myHook }],
+ skills: [],
+ contextFiles: [],
+ slashCommands: [],
+ sessionManager: SessionManager.inMemory(),
 });
 
 // Run prompts
 session.subscribe((event) => {
-	if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
-		process.stdout.write(event.assistantMessageEvent.delta);
-	}
+ if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
+  process.stdout.write(event.assistantMessageEvent.delta);
+ }
 });
 await session.prompt("Hello");
 ```
@@ -126,6 +126,7 @@ await resolveTool.execute("call-1", {
   reason: "Preview matches expected replacements",
 });
 ```
+
 ## Options
 
 | Option                      | Default                       | Description                       |
@@ -152,21 +153,21 @@ await resolveTool.execute("call-1", {
 
 ```typescript
 session.subscribe((event) => {
-	switch (event.type) {
-		case "message_update":
-			if (event.assistantMessageEvent.type === "text_delta") {
-				process.stdout.write(event.assistantMessageEvent.delta);
-			}
-			break;
-		case "tool_execution_start":
-			console.log(`Tool: ${event.toolName}`);
-			break;
-		case "tool_execution_end":
-			console.log(`Result: ${event.result}`);
-			break;
-		case "agent_end":
-			console.log("Done");
-			break;
-	}
+ switch (event.type) {
+  case "message_update":
+   if (event.assistantMessageEvent.type === "text_delta") {
+    process.stdout.write(event.assistantMessageEvent.delta);
+   }
+   break;
+  case "tool_execution_start":
+   console.log(`Tool: ${event.toolName}`);
+   break;
+  case "tool_execution_end":
+   console.log(`Result: ${event.result}`);
+   break;
+  case "agent_end":
+   console.log("Done");
+   break;
+ }
 });
 ```

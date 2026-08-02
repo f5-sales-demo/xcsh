@@ -1,3 +1,4 @@
+---
 # Plain-language prompt matrix for plugin-discovery measurement.
 # Format: "<id>: <prompt>" — one line each, single-line prompts, no ": " inside the prompt.
 # Trigger prompts should pull the meddpicc engine; `negative` must NOT (over-surfacing guard).

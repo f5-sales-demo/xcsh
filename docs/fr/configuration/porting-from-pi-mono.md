@@ -142,7 +142,8 @@ Traitez `package.json` comme un contrat. Fusionnez intentionnellement.
 - Ne construisez jamais de prompts dans le code ; les prompts sont des fichiers `.md` statiques rendus avec Handlebars.
 - Dans coding-agent, n'utilisez jamais `console.log`/`console.warn`/`console.error` ; utilisez `logger` depuis `@f5-sales-demo/pi-utils`.
 - Utilisez `Promise.withResolvers()` au lieu de `new Promise((resolve, reject) => ...)`.
-- **Pas de mots-clés `private`/`protected`/`public` sur les champs ou méthodes de classe.** Utilisez les champs privés ES `#` pour l'encapsulation ; laissez les membres accessibles sans mot-clé. La seule exception concerne les propriétés de paramètre de constructeur (`constructor(private readonly x: T)`), où le mot-clé est requis par TypeScript. Lors du portage de code amont utilisant `private foo` ou `protected bar`, convertissez en `#foo` (privé) ou `bar` nu (accessible).
+- **Pas de mots-clés `private`/`protected`/`public` sur les champs ou méthodes de classe.** Utilisez les champs privés ES `#` pour l'encapsulation ; laissez les membres accessibles sans mot-clé.
+  La seule exception concerne les propriétés de paramètre de constructeur (`constructor(private readonly x: T)`), où le mot-clé est requis par TypeScript. Lors du portage de code amont utilisant `private foo` ou `protected bar`, convertissez en `#foo` (privé) ou `bar` nu (accessible).
 - Privilégiez les helpers et utilitaires existants plutôt que du code ad-hoc nouveau.
 - Préservez les modifications d'infrastructure Bun-first déjà réalisées dans ce dépôt :
   - Le runtime est Bun (pas de points d'entrée Node).
