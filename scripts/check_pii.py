@@ -21,11 +21,11 @@ import argparse
 import hashlib
 import ipaddress
 import json
+import os
 import re
 import sys
 import unicodedata
 import urllib.parse
-from bisect import bisect_right
 from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path, PurePosixPath
@@ -34,6 +34,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
     from typing import BinaryIO
+
+GIT_BATCH_FIELD_COUNT = 3
+GIT_MODE_DIGITS = frozenset(b"01234567")
+GIT_MODE_LENGTH = 6
+GIT_OBJECT_ID_DIGITS = frozenset(b"0123456789abcdef")
+GIT_RAW_FIELD_COUNT = 5
 
 EXCLUDED_PATHS = {
     "scripts/check_pii.py",
@@ -120,32 +126,37 @@ HOME_RE = re.compile(
     r"|(?P<winprefix>[A-Za-z]:\\+(?:Users)\\+)(?P<winuser>[A-Za-z0-9._${}<>-]+)"
     r")"
 )
-STRUCTURED_KEY_PREFIX = r"(?:^|[,{\s]|\\+)(?:(?:\\+)?['\"])?"
-STRUCTURED_KEY_CLOSE = r"(?:(?:\\+)?['\"])?"
-STRUCTURED_VALUE_QUOTE = r"(?P<quote>(?:(?:\\+)?['\"`])?)"
 PHONE_FIELD_RE = re.compile(
-    r"(?i)"
-    + STRUCTURED_KEY_PREFIX
-    + r"(?:phone(?:_number)?|mobile|telephone|fax)"
-    + STRUCTURED_KEY_CLOSE
-    + r"\s*[:=]\s*(?:(?:\\+)?['\"])?(?P<value>\+?[0-9][0-9(). \-]{7,}[0-9])"
+    r"(?i)(?:^|[,{\s])['\"]?(?:phone(?:_number)?|mobile|telephone|fax)['\"]?"
+    r"\s*[:=]\s*['\"]?(?P<value>\+?[0-9][0-9(). \-]{7,}[0-9])"
 )
 PERSON_FIELD_RE = re.compile(
-    r"(?i)"
-    + STRUCTURED_KEY_PREFIX
-    + r"(?P<key>full_name|first_name|last_name|given_name|family_name|display_name)"
-    + STRUCTURED_KEY_CLOSE
-    + r"\s*[:=]\s*"
-    + STRUCTURED_VALUE_QUOTE
-    + r"(?P<value>(?:(?!\\[rn])[^'\"`#,\r\n}\]])+)"
+    r"(?i)(?:^|[,{\s])['\"]?"
+    r"(?P<key>full_name|first_name|last_name|given_name|family_name|display_name)"
+    r"['\"]?\s*(?P<separator>[:=])\s*(?P<quote>['\"`]?)"
+    r"(?P<value>(?:(?!\\[rn])[^'\"`#,\r\n}\]])+)"
 )
+LOCALIZATION_BUNDLE_RE = re.compile(
+    r"(?:bundle\.l10n|package\.nls)(?:\.[A-Za-z0-9-]+)?\.json$",
+    re.IGNORECASE,
+)
+VSCODE_WHEN_PROPERTY_RE = re.compile(r'"when"\s*:\s*"(?P<expression>(?:\\.|[^"\\])*)"')
+VSCODE_VIEW_ITEM_TAG_RE = re.compile(
+    r"\bviewItem\s*(?:==|===)\s*"
+    r"(?P<tag>(?P<type>[A-Za-z_][A-Za-z0-9_.-]*):"
+    r"(?P<variant>[A-Za-z_][A-Za-z0-9_.-]*))"
+)
+ENUM_HEADER_RE = re.compile(
+    r"\b(?:const\s+)?enum(?:\s+class)?\s+"
+    r"[A-Za-z_$][A-Za-z0-9_$]*",
+)
+SOURCE_SNIPPET_INDEX_RE = re.compile(r"\$\{[A-Za-z_$][A-Za-z0-9_$]*(?:\+\+|--)?\}")
 IDENTITY_FIELD_RE = re.compile(
     r"(?i)(?P<field_prefix>^|[^A-Za-z0-9_/-])"
-    r"(?P<key_open>(?:(?:\\+)?[*_~`'\"])*)"
+    r"(?P<key_open>[*_~`'\"]*)"
     r"(?P<key>tenant(?:_name|_id)?|customer(?:_name|_id)?|account(?:_name|_id)?|"
     r"subscription(?:_name|_id)|project(?:_name|_id)|namespace)"
-    r"(?P<key_close>(?:(?:\\+)?[*_~`'\"])*)\s*(?P<separator>[:=])\s*"
-    r"(?P<quote>(?:(?:\\+)?['\"`])?)"
+    r"(?P<key_close>[*_~`'\"]*)\s*(?P<separator>[:=])\s*(?P<quote>['\"`]?)"
     r"(?P<value>(?:(?!\\[rn])[^'\"`#,\r\n}\]])+)"
 )
 PROSE_IDENTITY_QUANTIFIER_RE = re.compile(
@@ -206,7 +217,6 @@ ANSI_ESCAPE_RE = re.compile(
     re.DOTALL,
 )
 ZERO_WIDTH_CONTROL_RE = re.compile(r"[\x01-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f\x7f]")
-NON_ASCII_RUN_RE = re.compile(r"[^\x00-\x7f]+")
 YAML_ANCHOR_VALUE_RE = re.compile(r"&(?P<name>[A-Za-z0-9_.-]+)")
 YAML_TAG_CHARACTER = r"(?:%[0-9A-Fa-f]{2}|[!A-Za-z0-9_.:/+@;&=?$~,'()#*-])"
 YAML_TAG_RE = re.compile(rf"!(?:<[^>\r\n]+>|{YAML_TAG_CHARACTER}+)?\s+")
@@ -219,7 +229,7 @@ SAFE_BLOCK_PROSE_RE = re.compile(
     re.IGNORECASE,
 )
 TEMPLATE_PLACEHOLDER_RE = re.compile(
-    r"(?:\$[A-Za-z_][A-Za-z0-9_]*|\$\{[^{}\s]+\}|"
+    r"(?:\$(?:[A-Za-z_][A-Za-z0-9_]*|[0-9]+)|\$\{[^{}\s]+\}|"
     r"\{[A-Za-z_][A-Za-z0-9_.-]*\}|<[A-Za-z_][A-Za-z0-9_.-]*>|"
     r"\{\{\s*[^{}\r\n]+?\s*\}\}|\[%\s*[^%\r\n]+?\s*%\])"
 )
@@ -292,7 +302,7 @@ SOURCE_COMMENT_EXPRESSION_RE = re.compile(
     r"(?:[A-Za-z_$][A-Za-z0-9_$]*(?:\.|::|->))+[A-Za-z_$][A-Za-z0-9_$]*"
     r"|[A-Za-z_$][A-Za-z0-9_$]*\s*\([^\r\n]*\)"
 )
-SOURCE_COMMENT_MARKER_RE = re.compile(r"(?:^|[\s;])(?://|#(?![A-Za-z_$])|/\*|\*)")
+SOURCE_TEMPLATE_STRING_RE = re.compile(r"(?P<quote>['\"])(?P<value>(?:\\.|(?!\1).)*)\1")
 JQ_OPTION_ARITY = {
     "--arg": 2,
     "--argfile": 2,
@@ -303,12 +313,11 @@ JQ_OPTION_ARITY = {
     "-L": 1,
 }
 ADDRESS_FIELD_RE = re.compile(
-    r"(?i)" + STRUCTURED_KEY_PREFIX + r"(?P<key>street_address|postal_address|postal_code|zip_code|date_of_birth|dob|"
+    r"(?i)(?:^|[,{\s])['\"]?"
+    r"(?P<key>street_address|postal_address|postal_code|zip_code|date_of_birth|dob|"
     r"social_security_number|ssn)"
-    + STRUCTURED_KEY_CLOSE
-    + r"\s*[:=]\s*"
-    + STRUCTURED_VALUE_QUOTE
-    + r"(?P<value>(?:(?!\\[rn])[^'\"`#,\r\n}\]])+)"
+    r"['\"]?\s*[:=]\s*(?P<quote>['\"`]?)"
+    r"(?P<value>(?:(?!\\[rn])[^'\"`#,\r\n}\]])+)"
 )
 QUERY_RE = re.compile(
     r"(?i)[?&](?P<key>email|phone|mobile|full_name|first_name|last_name|address|dob|ssn)="
@@ -407,8 +416,8 @@ SAFE_PERSON_NAMES = {
     "rosario l.",
 }
 SCHEMA_SENTINELS = {
-    "0",
     "*",
+    "0",
     "any",
     "boolean",
     "integer",
@@ -441,29 +450,6 @@ DOCUMENTATION_NETWORKS = (
     ipaddress.ip_network("203.0.113.0/24"),
 )
 SAFE_IDENTITY_VALUES_LOWER = {item.lower() for item in SAFE_IDENTITY_VALUES}
-IDENTITY_LABEL_WORDS = {
-    "account",
-    "customer",
-    "namespace",
-    "organization",
-    "project",
-    "subscription",
-    "tenant",
-}
-GENERIC_TOPOLOGY_WORDS = {
-    "app",
-    "book",
-    "cross",
-    "demo",
-    "info",
-    "multi",
-    "name",
-    "per",
-    "pipeline",
-    "service",
-    "single",
-    "site",
-}
 
 
 @dataclass(frozen=True, order=True)
@@ -486,92 +472,18 @@ class JqScope:
     argument: int = 0
 
 
-@dataclass
-class SerializationContext:
-    """Track flow-collection nesting while field matches advance across one line."""
+@dataclass(frozen=True)
+class LineScanContext:
+    """Format-aware state shared by the line-oriented detectors."""
 
-    text: str
-    index: int = 0
-    nesting: int = 0
-    quote: str | None = None
-    escaped: bool = False
-
-    def nesting_at(self, position: int) -> int:
-        """Return nesting before ``position`` without rescanning earlier prefixes."""
-        if position < self.index:
-            self.index = 0
-            self.nesting = 0
-            self.quote = None
-            self.escaped = False
-        while self.index < position:
-            character = self.text[self.index]
-            self.index += 1
-            if self.quote:
-                if character == self.quote and not self.escaped:
-                    self.quote = None
-                self.escaped = character == "\\" and not self.escaped
-                if character != "\\":
-                    self.escaped = False
-            elif character in {"'", '"'}:
-                self.quote = character
-            elif character in "[{":
-                self.nesting += 1
-            elif character in "]}" and self.nesting:
-                self.nesting -= 1
-        return self.nesting
-
-
-def read_exact(stream: BinaryIO, size: int) -> bytes:
-    """Read an exact byte count or reject a truncated Git batch stream."""
-    chunks = bytearray()
-    while len(chunks) < size:
-        chunk = stream.read(size - len(chunks))
-        if not chunk:
-            message = "Git batch stream ended inside a tracked blob"
-            raise OSError(message)
-        chunks.extend(chunk)
-    return bytes(chunks)
-
-
-def materialize_git_batch(input_dir: Path, stream: BinaryIO) -> None:
-    """Materialize one validated ``git cat-file --batch`` stream."""
-    object_files = sorted(input_dir.glob("*.oid"), key=lambda path: int(path.stem))
-    for number, object_file in enumerate(object_files, 1):
-        if int(object_file.stem) != number:
-            message = f"noncontiguous Git object record at materialization record {number}"
-            raise OSError(message)
-        expected_oid = object_file.read_text(encoding="ascii")
-        if not re.fullmatch(r"[0-9a-fA-F]{40,64}", expected_oid):
-            message = f"invalid Git object ID in materialization record {number}"
-            raise OSError(message)
-        header = stream.readline()
-        fields = header.rstrip(b"\n").split(b" ")
-        if len(fields) != 3:
-            message = f"malformed Git batch header for materialization record {number}"
-            raise OSError(message)
-        returned_oid, object_type, raw_size = fields
-        try:
-            size = int(raw_size)
-        except ValueError as error:
-            message = f"invalid Git blob size for materialization record {number}"
-            raise OSError(message) from error
-        if size < 0:
-            message = f"negative Git blob size for materialization record {number}"
-            raise OSError(message)
-        if returned_oid != expected_oid.encode("ascii") or object_type != b"blob":
-            message = f"mismatched Git batch object for materialization record {number}"
-            raise OSError(message)
-        if not (input_dir / f"{number}.path").is_file():
-            message = f"materialized path is missing for record {number}"
-            raise OSError(message)
-        data = read_exact(stream, size)
-        if stream.read(1) != b"\n":
-            message = f"Git batch record {number} has no content terminator"
-            raise OSError(message)
-        (input_dir / f"{number}.blob").write_bytes(data)
-    if stream.read(1):
-        message = "Git batch stream contains an unexpected extra object"
-        raise OSError(message)
+    source_code: bool
+    jq_spans: tuple[tuple[int, int], ...]
+    localization_spans: tuple[tuple[int, int], ...]
+    source_structure: str
+    source_brace_depth: int
+    enum_body_depth: int | None
+    yaml_aliases: dict[str, bool]
+    yaml_alias_events: tuple[tuple[int, str, bool], ...]
 
 
 def input_blobs(input_dir: Path) -> Iterator[tuple[str, bytes]]:
@@ -587,6 +499,203 @@ def input_blobs(input_dir: Path) -> Iterator[tuple[str, bytes]]:
             raise OSError(message)
         path = path_file.read_bytes().decode("utf-8", "surrogateescape")
         yield path, blob_file.read_bytes()
+
+
+def nul_records(path: Path) -> Iterator[bytes]:
+    """Yield NUL-delimited records without loading the inventory into memory."""
+    remainder = b""
+    with path.open("rb") as stream:
+        while chunk := stream.read(1024 * 1024):
+            records = (remainder + chunk).split(b"\0")
+            remainder = records.pop()
+            yield from records
+    if remainder:
+        message = "history inventory is not NUL-terminated"
+        raise ValueError(message)
+
+
+def valid_object_id(value: bytes) -> bool:
+    """Return whether a Git object ID uses a supported hash format."""
+    return len(value) in {40, 64} and set(value) <= GIT_OBJECT_ID_DIGITS
+
+
+def history_diff_associations(
+    diff_inventory: Path,
+) -> Iterator[tuple[bytes, bytes, bytes]]:
+    """Yield validated mode, object, and path tuples from raw Git diffs."""
+    records = iter(nul_records(diff_inventory))
+    while True:
+        try:
+            metadata = next(records)
+        except StopIteration:
+            break
+        try:
+            path = next(records)
+        except StopIteration as error:
+            message = "history diff inventory is incomplete"
+            raise ValueError(message) from error
+        fields = metadata.split()
+        if len(fields) != GIT_RAW_FIELD_COUNT:
+            message = "history diff inventory is malformed"
+            raise ValueError(message)
+        if not fields[0].startswith(b":") or not fields[4].isalpha():
+            message = "history diff inventory is malformed"
+            raise ValueError(message)
+        old_mode = fields[0][1:]
+        new_mode, old_oid, new_oid = fields[1:4]
+        modes_are_octal = set(old_mode + new_mode) <= GIT_MODE_DIGITS
+        if (
+            len(old_mode) != GIT_MODE_LENGTH
+            or len(new_mode) != GIT_MODE_LENGTH
+            or not modes_are_octal
+            or not valid_object_id(old_oid)
+            or not valid_object_id(new_oid)
+        ):
+            message = "history diff inventory metadata is invalid"
+            raise ValueError(message)
+        yield new_mode, new_oid, path
+
+
+def history_tree_associations(
+    tree_inventory: Path,
+) -> Iterator[tuple[bytes, bytes, bytes]]:
+    """Yield validated mode, object, and path tuples from direct tree refs."""
+    for record in nul_records(tree_inventory):
+        try:
+            metadata, path = record.split(b"\t", 1)
+            mode, object_type, oid = metadata.split()
+        except ValueError as error:
+            message = "history tree inventory is malformed"
+            raise ValueError(message) from error
+        if object_type == b"commit" and mode == b"160000":
+            continue
+        if object_type != b"blob":
+            message = "history tree inventory contains a non-blob entry"
+            raise ValueError(message)
+        yield mode, oid, path
+
+
+def write_history_associations(
+    diff_inventory: Path,
+    tree_inventory: Path,
+    output: Path,
+    requests: Path,
+) -> None:
+    """Deduplicate reachable Git path/blob associations from trusted plumbing."""
+    seen: set[tuple[bytes, bytes]] = set()
+    seen_oids: set[bytes] = set()
+
+    def write_association(
+        stream: BinaryIO,
+        request_stream: BinaryIO,
+        mode: bytes,
+        oid: bytes,
+        path: bytes,
+    ) -> None:
+        if not path or not valid_object_id(oid):
+            message = "history inventory contains an invalid association"
+            raise ValueError(message)
+        if mode in {b"000000", b"120000", b"160000"}:
+            return
+        if mode not in {b"100644", b"100755"}:
+            message = "history inventory contains an unsupported mode"
+            raise ValueError(message)
+        association = (path, oid)
+        if association in seen:
+            return
+        seen.add(association)
+        stream.write(mode + b" " + oid + b"\0" + path + b"\0")
+        if oid not in seen_oids:
+            seen_oids.add(oid)
+            request_stream.write(oid + b"\n")
+
+    with output.open("wb") as stream, requests.open("wb") as request_stream:
+        for new_mode, new_oid, path in history_diff_associations(diff_inventory):
+            write_association(stream, request_stream, new_mode, new_oid, path)
+
+        for mode, oid, path in history_tree_associations(tree_inventory):
+            write_association(stream, request_stream, mode, oid, path)
+
+
+def copy_exact(source: BinaryIO, destination: BinaryIO, size: int) -> None:
+    """Copy exactly one Git batch payload without buffering the full blob."""
+    remaining = size
+    while remaining:
+        chunk = source.read(min(remaining, 1024 * 1024))
+        if not chunk:
+            message = "Git returned a truncated blob payload"
+            raise ValueError(message)
+        destination.write(chunk)
+        remaining -= len(chunk)
+
+
+def materialize_history_objects(
+    requests: Path,
+    batch_output: Path,
+    object_dir: Path,
+) -> dict[bytes, Path]:
+    """Validate and materialize each uniquely requested Git blob."""
+    object_dir.mkdir()
+    objects: dict[bytes, Path] = {}
+    requested_oids = requests.read_bytes().splitlines()
+
+    with batch_output.open("rb") as source:
+        for expected_oid in requested_oids:
+            header = source.readline().rstrip(b"\n")
+            fields = header.split()
+            if (
+                len(fields) != GIT_BATCH_FIELD_COUNT
+                or fields[0] != expected_oid
+                or fields[1] != b"blob"
+                or not fields[2].isdigit()
+            ):
+                message = "Git returned an invalid blob header"
+                raise ValueError(message)
+            object_path = object_dir / expected_oid.decode("ascii")
+            with object_path.open("wb") as destination:
+                copy_exact(source, destination, int(fields[2]))
+            if source.read(1) != b"\n":
+                message = "Git returned an unterminated blob payload"
+                raise ValueError(message)
+            objects[expected_oid] = object_path
+        if source.read(1):
+            message = "Git returned unexpected trailing blob data"
+            raise ValueError(message)
+    return objects
+
+
+def materialize_history_associations(
+    associations: Path,
+    requests: Path,
+    batch_output: Path,
+    input_dir: Path,
+    start_index: int,
+) -> int:
+    """Materialize one validated input per path/blob association."""
+    object_dir = input_dir / "history-objects"
+    objects = materialize_history_objects(requests, batch_output, object_dir)
+
+    index = start_index
+    association_records = iter(nul_records(associations))
+    while True:
+        try:
+            metadata = next(association_records)
+        except StopIteration:
+            break
+        try:
+            path = next(association_records)
+            mode, oid = metadata.split()
+            object_path = objects[oid]
+        except (KeyError, StopIteration, ValueError) as error:
+            message = "validated history association is malformed"
+            raise ValueError(message) from error
+        if mode not in {b"100644", b"100755"} or not path:
+            message = "validated history association metadata is invalid"
+            raise ValueError(message)
+        index += 1
+        (input_dir / f"{index}.path").write_bytes(path)
+        os.link(object_path, input_dir / f"{index}.blob")
+    return index
 
 
 def is_legal_attribution_path(path: str) -> bool:
@@ -606,17 +715,6 @@ def invisible_format_character(character: str) -> bool:
     ranges = (first <= codepoint <= last for first, last in DEFAULT_IGNORABLE_RANGES)
     default_ignorable = any(ranges)
     return unicodedata.category(character) == "Cf" or default_ignorable
-
-
-def strip_invisible_format_characters(text: str) -> str:
-    """Remove invisible Unicode controls without iterating over ordinary ASCII."""
-    if text.isascii():
-        return text
-
-    def visible_non_ascii(match: re.Match[str]) -> str:
-        return "".join(character for character in match.group() if not invisible_format_character(character))
-
-    return NON_ASCII_RUN_RE.sub(visible_non_ascii, text)
 
 
 def safe_email(value: str) -> bool:
@@ -649,146 +747,336 @@ def normalized_value(value: str) -> str:
 
 def serialization_nesting(text: str) -> int:
     """Count unmatched flow-collection delimiters outside quoted strings."""
-    return SerializationContext(text).nesting_at(len(text))
-
-
-def template_placeholder_end(text: str, start: int) -> int | None:
-    """Return the end of one placeholder, including balanced template expressions."""
-    if placeholder := TEMPLATE_PLACEHOLDER_RE.match(text, start):
-        return placeholder.end()
-    if text[start : start + 2] != "${":
-        return None
-
-    depth = 1
+    nesting = 0
     quote: str | None = None
     escaped = False
-    index = start + 2
-    while index < len(text):
-        character = text[index]
+    for character in text:
         if quote:
             if character == quote and not escaped:
                 quote = None
             escaped = character == "\\" and not escaped
             if character != "\\":
                 escaped = False
-        elif character in {"'", '"', "`"}:
+        elif character in {"'", '"'}:
             quote = character
-        elif character == "{":
+        elif character in "[{":
+            nesting += 1
+        elif character in "]}" and nesting:
+            nesting -= 1
+    return nesting
+
+
+def balanced_dollar_brace_end(value: str, start: int = 0) -> int | None:
+    """Return the end of one balanced dollar-brace placeholder."""
+    index = start
+    while index < len(value) and value[index] == "\\":
+        index += 1
+    if not value.startswith("${", index):
+        return None
+    depth = 1
+    index += 2
+    while index < len(value):
+        if value.startswith("${", index):
             depth += 1
-        elif character == "}":
+            index += 2
+            continue
+        if value[index] == "{":
+            depth += 1
+        elif value[index] == "}":
             depth -= 1
-            if depth == 0:
+            if not depth:
                 return index + 1
         index += 1
     return None
 
 
-def source_template_annotation_is_schematic(text: str) -> bool:
-    """Return whether a template suffix is only a parenthetical identity label."""
-    candidate = text.lstrip()
-    if not candidate.startswith("("):
-        return False
-    literal: list[str] = []
-    referenced_members: set[str] = set()
-    index = 0
-    while index < len(candidate):
-        if candidate[index] == "`":
-            break
-        placeholder_end = template_placeholder_end(candidate, index)
-        if placeholder_end is not None:
-            if candidate[index : index + 2] == "${":
-                expression = candidate[index + 2 : placeholder_end - 1]
-                referenced_members.update(
-                    member.lower()
-                    for member in re.findall(
-                        r"(?:\.|::|->)([A-Za-z_$][A-Za-z0-9_$]*)",
-                        expression,
-                    )
-                )
-            index = placeholder_end
+def placeholder_token_end(value: str, start: int) -> int | None:
+    """Return the end of a balanced or simple whole placeholder token."""
+    if end := balanced_dollar_brace_end(value, start):
+        return end
+    placeholder = TEMPLATE_PLACEHOLDER_RE.match(value, start)
+    return placeholder.end() if placeholder else None
+
+
+def top_level_character(value: str, target: str) -> int | None:
+    """Locate a character outside nested braces in placeholder content."""
+    depth = 0
+    for index, character in enumerate(value):
+        if character == "{":
+            depth += 1
+        elif character == "}" and depth:
+            depth -= 1
+        elif character == target and not depth:
+            return index
+    return None
+
+
+def vscode_snippet_placeholder_safety(value: str) -> bool | None:
+    """Classify a whole VS Code snippet placeholder and its literal defaults."""
+    candidate = value
+    while candidate.startswith("\\"):
+        candidate = candidate[1:]
+    end = balanced_dollar_brace_end(candidate)
+    result: bool | None = None
+    if end == len(candidate):
+        content = candidate[2:-1]
+        colon = top_level_character(content, ":")
+        choice = top_level_character(content, "|")
+
+        if colon is not None:
+            selector = content[:colon]
+            default = content[colon + 1 :]
+            numeric_selector = bool(re.fullmatch(r"[0-9]+", selector))
+            dynamic_selector = bool(SOURCE_SNIPPET_INDEX_RE.fullmatch(selector))
+            if numeric_selector or dynamic_selector:
+                result = placeholder_value(default)
+        elif choice is not None and content.endswith("|"):
+            selector = content[:choice]
+            if re.fullmatch(r"[0-9]+", selector):
+                choices = content[choice + 1 : -1].split(",")
+                choice_safety = (placeholder_value(item) for item in choices)
+                result = bool(choices) and all(choice_safety)
+        elif re.fullmatch(r"(?:[0-9]+|[A-Z_][A-Z0-9_]*)", content):
+            result = True
+    return result
+
+
+def json_string_end(text: str, start: int) -> int | None:
+    """Return the closing quote for one JSON string token."""
+    index = start + 1
+    while index < len(text):
+        if text[index] == "\\":
+            index += 2
             continue
-        literal.append(candidate[index])
+        if text[index] == '"':
+            return index
         index += 1
-    words = re.findall(r"[A-Za-z]+", "".join(literal).lower())
-    return bool(words) and all(word in IDENTITY_LABEL_WORDS or word in referenced_members for word in words)
+    return None
 
 
-def structured_field_value(
+def localization_top_level_string_spans(
+    path: str,
+    text: str,
+) -> dict[int, tuple[tuple[int, int], ...]]:
+    """Return top-level message-string spans in a valid localization bundle."""
+    if not LOCALIZATION_BUNDLE_RE.fullmatch(PurePosixPath(path).name):
+        return {}
+    try:
+        parsed = json.loads(text)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+
+    spans: dict[int, list[tuple[int, int]]] = {}
+    stack: list[str] = []
+    line_number = 1
+    line_start = 0
+    index = 0
+    while index < len(text):
+        character = text[index]
+        if character == "\n":
+            line_number += 1
+            line_start = index + 1
+            index += 1
+            continue
+        if character == '"':
+            string_line = line_number
+            string_start = index + 1
+            previous = index - 1
+            while previous >= 0 and text[previous] in " \t\r\n":
+                previous -= 1
+            top_level_value = stack == ["{"] and previous >= 0 and text[previous] == ":"
+            string_end = json_string_end(text, index)
+            if string_end is None:
+                return {}
+            cursor = string_end + 1
+            while cursor < len(text) and text[cursor] in " \t\r\n":
+                cursor += 1
+            at_top_level = stack == ["{"]
+            top_level_key = at_top_level and cursor < len(text) and text[cursor] == ":"
+            if top_level_key or top_level_value:
+                line_spans = spans.setdefault(string_line, [])
+                line_spans.append((string_start - line_start, string_end - line_start))
+            index = string_end + 1
+            continue
+        if character in "[{":
+            stack.append(character)
+        elif character in "]}":
+            if not stack:
+                return {}
+            stack.pop()
+        index += 1
+    return {line: tuple(items) for line, items in spans.items()}
+
+
+def source_structure_line(
+    line: str,
+    block_comment: bool,
+    quote: str | None,
+) -> tuple[str, bool, str | None]:
+    """Mask source strings and comments while retaining structural columns."""
+    structure = [" "] * len(line)
+    index = 0
+    while index < len(line):
+        if block_comment:
+            closing = line.find("*/", index)
+            if closing < 0:
+                return "".join(structure), True, quote
+            block_comment = False
+            index = closing + 2
+            continue
+        if quote:
+            if line[index] == "\\":
+                index += 2
+                continue
+            if line[index] == quote:
+                quote = None
+            index += 1
+            continue
+        if line.startswith("//", index):
+            break
+        if line.startswith("/*", index):
+            block_comment = True
+            index += 2
+            continue
+        if line[index] in {"'", '"', "`"}:
+            quote = line[index]
+            index += 1
+            continue
+        structure[index] = line[index]
+        index += 1
+    if quote in {"'", '"'}:
+        quote = None
+    return "".join(structure), block_comment, quote
+
+
+def numeric_enum_member(
+    match: re.Match[str],
+    value: str,
+    context: LineScanContext,
+) -> bool:
+    """Return whether a numeric field-shaped assignment is an enum member."""
+    assignment = context.enum_body_depth is not None and match.group("separator") == "="
+    wrapped = any(match.group(group) for group in ("quote", "key_open", "key_close"))
+    if not assignment or wrapped or not NUMERIC_LITERAL_RE.fullmatch(value):
+        return False
+    prefix = context.source_structure[: match.start("key")]
+    depth_at_key = context.source_brace_depth + prefix.count("{") - prefix.count("}")
+    if depth_at_key != context.enum_body_depth:
+        return False
+    boundary = max(prefix.rfind("{"), prefix.rfind(","))
+    if prefix[boundary + 1 :].strip():
+        return False
+    value_end = match.start("value") + len(value)
+    return bool(re.match(r"\s*(?:,|})", context.source_structure[value_end:]))
+
+
+def is_vscode_view_item_context_tag(
     path: str,
     line: str,
     match: re.Match[str],
-    serialization: SerializationContext | None = None,
+) -> bool:
+    """Return whether a field-shaped token is a typed VS Code context tag."""
+    if PurePosixPath(path).name != "package.json" or match.group("separator") != ":":
+        return False
+    for prop in VSCODE_WHEN_PROPERTY_RE.finditer(line):
+        expression_start = prop.start("expression")
+        expression_end = prop.end("expression")
+        if not expression_start <= match.start("key") < expression_end:
+            continue
+        expression = prop.group("expression")
+        for tag in VSCODE_VIEW_ITEM_TAG_RE.finditer(expression):
+            tag_start = expression_start + tag.start("tag")
+            separator = tag_start + len(tag.group("type"))
+            if (
+                match.start("key") == tag_start
+                and match.start("separator") == separator
+                and tag.group("type").lower() == match.group("key").lower()
+            ):
+                return True
+    return False
+
+
+def quoted_structured_field_value(
+    line: str,
+    start: int,
+    quote: str,
 ) -> str:
+    """Read a quoted structured value through escapes and YAML quote doubling."""
+    index = start
+    while index < len(line):
+        backslashes = 0
+        before = index - 1
+        while before >= start and line[before] == "\\":
+            backslashes += 1
+            before -= 1
+        yaml_single_quote = quote == "'"
+        next_character_is_quote = index + 1 < len(line) and line[index + 1] == quote
+        doubled_yaml_quote = yaml_single_quote and next_character_is_quote
+        if line[index] == quote and doubled_yaml_quote:
+            index += 2
+            continue
+        if line[index] == quote and backslashes % 2 == 0:
+            return line[start:index]
+        index += 1
+    return line[start:]
+
+
+def placeholder_terminates_structured_value(
+    path: str,
+    line: str,
+    placeholder_end: int,
+    flow_context: bool,
+) -> bool:
+    """Return whether a placeholder is the complete structured field value."""
+    raw_remainder = line[placeholder_end:]
+    remainder = raw_remainder.lstrip()
+    if not remainder:
+        return True
+    if raw_remainder != remainder and remainder.startswith("#"):
+        return True
+    if flow_context and remainder[0] in ",}]":
+        return True
+
+    prose = PurePosixPath(path).suffix.lower() in PROSE_DOCUMENT_SUFFIXES
+    if prose and re.fullmatch(r"[).;!?]+", remainder):
+        return True
+    following_identity = IDENTITY_FIELD_RE.match(remainder[1:].lstrip())
+    return prose and remainder.startswith(",") and bool(following_identity)
+
+
+def structured_field_value(path: str, line: str, match: re.Match[str]) -> str:
     """Read one field value without truncating quoted punctuation or YAML scalars."""
     start = match.start("value")
-    raw_quote = match.group("quote")
-    quote = raw_quote[-1:] if raw_quote else ""
+    quote = match.group("quote")
     if quote:
-        opening_backslashes = 0
-        before_opening = match.end("quote") - 2
-        while before_opening >= 0 and line[before_opening] == "\\":
-            opening_backslashes += 1
-            before_opening -= 1
-        escape_unit = opening_backslashes + 1
-        nested_string_encoding = escape_unit & (escape_unit - 1) == 0
-        quote_modulus = 2 * escape_unit if nested_string_encoding else 2
-        index = start
-        while index < len(line):
-            backslashes = 0
-            before = index - 1
-            while before >= start and line[before] == "\\":
-                backslashes += 1
-                before -= 1
-            yaml_single_quote = quote == "'"
-            next_character_is_quote = index + 1 < len(line) and line[index + 1] == quote
-            doubled_yaml_quote = yaml_single_quote and next_character_is_quote
-            if line[index] == quote and doubled_yaml_quote:
-                index += 2
-                continue
-            closes_value = backslashes % quote_modulus == opening_backslashes
-            if line[index] == quote and closes_value:
-                return line[start : index - opening_backslashes]
-            index += 1
-        return line[start:]
+        return quoted_structured_field_value(line, start, quote)
 
-    yaml = PurePosixPath(path).suffix.lower() in {".yaml", ".yml"}
-    nesting = serialization.nesting_at(start) if serialization is not None else serialization_nesting(line[:start])
-    flow_context = nesting > 0
-    placeholder_end = template_placeholder_end(line, start)
-    if placeholder_end is not None:
-        raw_remainder = line[placeholder_end:]
-        remainder = raw_remainder.lstrip()
-        whitespace_comment = raw_remainder != remainder and remainder.startswith("#")
-        flow_delimiter = bool(remainder) and remainder[0] in ",}]"
-        ordinary_delimiter = bool(remainder) and remainder[0] in "`}]"
-        ordinary_delimiter = ordinary_delimiter or (not yaml and bool(remainder) and remainder[0] == ",")
-        prose_boundary = bool(re.match(r"[.;](?:\s|$)", remainder))
-        schematic_annotation = match.groupdict().get("key_open") == "`" and source_template_annotation_is_schematic(
-            remainder
-        )
-        if (
-            not remainder
-            or whitespace_comment
-            or (flow_context and flow_delimiter)
-            or ordinary_delimiter
-            or prose_boundary
-            or schematic_annotation
-        ):
-            return line[start:placeholder_end]
+    suffix = PurePosixPath(path).suffix.lower()
+    yaml = suffix in {".yaml", ".yml"}
+    prose = suffix in PROSE_DOCUMENT_SUFFIXES
+    prefix = line[:start]
+    flow_context = serialization_nesting(prefix) > 0
+    placeholder_end = placeholder_token_end(line, start)
+    if placeholder_end is not None and placeholder_terminates_structured_value(
+        path,
+        line,
+        placeholder_end,
+        flow_context,
+    ):
+        return line[start:placeholder_end]
 
     index = start
     while index < len(line):
-        placeholder_end = template_placeholder_end(line, index)
-        if placeholder_end is not None:
-            index = placeholder_end
-            continue
         character = line[index]
-        if character in ")}]`" or (character == "," and (not yaml or flow_context)):
+        if character in "}]`" or (character == "," and (not yaml or flow_context)):
             break
         if character == "#" and (index == start or line[index - 1].isspace()):
             break
         index += 1
-    return line[start:index]
+    value = line[start:index]
+    return value.rstrip(").;!?") if prose else value
 
 
 def unwrapped_identity_value(value: str) -> str:
@@ -814,6 +1102,9 @@ def placeholder_value(value: str) -> bool:
     value = unwrapped_identity_value(value)
     if not value:
         return True
+    snippet_safety = vscode_snippet_placeholder_safety(value)
+    if snippet_safety is not None:
+        return snippet_safety
     lower = value.lower()
     if (
         lower in SCHEMA_SENTINELS
@@ -832,25 +1123,12 @@ def placeholder_value(value: str) -> bool:
         safe_composite = placeholder_value(first) and placeholder_value(second)
     else:
         safe_composite = False
-    whole_template_placeholder = template_placeholder_end(value, 0) == len(value)
-    topology_words = re.split(r"[-_]", lower)
-    generic_topology = len(topology_words) > 1 and all(word in GENERIC_TOPOLOGY_WORDS for word in topology_words)
     return (
         safe_composite
-        or whole_template_placeholder
-        or generic_topology
         or lower in SAFE_PERSON_NAMES
         or bool(TEMPLATE_PLACEHOLDER_RE.fullmatch(value))
         or bool(re.fullmatch(r"[A-Z][A-Z0-9_]*", value))
     )
-
-
-def structured_placeholder_value(value: str, field_name: str) -> bool:
-    """Return whether a value is schematic, including a field-named ordinal."""
-    if placeholder_value(value):
-        return True
-    normalized = unwrapped_identity_value(value).lower()
-    return bool(re.fullmatch(rf"{re.escape(field_name.lower())}[0-9]", normalized))
 
 
 def is_proven_prose_identity_label(path: str, line: str, match: re.Match[str]) -> bool:
@@ -882,26 +1160,28 @@ def is_proven_prose_identity_label(path: str, line: str, match: re.Match[str]) -
 
 def is_structured_identity_field(path: str, line: str, match: re.Match[str]) -> bool:
     """Return whether an identity-shaped token should be enforced as structured data."""
-    key_open = re.sub(r"\\+", "", match.group("key_open"))
-    key_close = re.sub(r"\\+", "", match.group("key_close"))
+    key_open = match.group("key_open")
+    key_close = match.group("key_close")
     whole_inline_field = key_open == "`" and "`" in line[match.end() :]
     balanced_wrappers = sorted(key_open) == sorted(key_close)
     if not balanced_wrappers and not whole_inline_field:
         return False
     if match.group("field_prefix") == "." and match.group("separator") != "=":
         return False
+    if is_vscode_view_item_context_tag(path, line, match):
+        return False
     return not is_proven_prose_identity_label(path, line, match)
 
 
-def source_comment_ends(line: str) -> tuple[int, ...]:
-    """Index source comment markers once for all field matches on one line."""
-    return tuple(marker.end() for marker in SOURCE_COMMENT_MARKER_RE.finditer(line))
-
-
-def source_comment_end(match: re.Match[str], comment_ends: tuple[int, ...]) -> int | None:
-    """Return the end of the last indexed comment marker before one field."""
-    index = bisect_right(comment_ends, match.start("key")) - 1
-    return comment_ends[index] if index >= 0 else None
+def is_source_comment(line: str, match: re.Match[str]) -> bool:
+    """Return whether a field-shaped token occurs after a source comment marker."""
+    prefix = line[: match.start("key")]
+    prefix = re.sub(
+        r"(^|[\s;])#(?=[A-Za-z_$][A-Za-z0-9_$]*\s*\()",
+        r"\1",
+        prefix,
+    )
+    return bool(re.search(r"(?:^|[\s;])(?://|#|/\*|\*)\s*[^\r\n]*$", prefix))
 
 
 def match_is_in_spans(match: re.Match[str], spans: tuple[tuple[int, int], ...]) -> bool:
@@ -1414,33 +1694,72 @@ def jq_value_is_expression(
     return all(placeholder_value(number) for number in fallback_numbers)
 
 
+def source_template_interpolation(line: str, start: int) -> tuple[str, int] | None:
+    """Read one JavaScript-style template interpolation and its closing brace."""
+    if not line.startswith("${", start):
+        return None
+    depth = 1
+    index = start + 2
+    quote: str | None = None
+    while index < len(line):
+        character = line[index]
+        if quote:
+            if character == "\\":
+                index += 2
+                continue
+            if character == quote:
+                quote = None
+        elif character in {"'", '"'}:
+            quote = character
+        elif character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return line[start + 2 : index], index
+        index += 1
+    return None
+
+
+def source_template_value_is_expression(
+    line: str,
+    match: re.Match[str],
+) -> bool:
+    """Return whether a template field computes a value without literal identity data."""
+    interpolation = source_template_interpolation(line, match.start("value"))
+    if interpolation is None:
+        return False
+    expression, closing = interpolation
+    strings = SOURCE_TEMPLATE_STRING_RE.finditer(expression)
+    if any(not placeholder_value(item.group("value")) for item in strings):
+        return False
+    expression_without_strings = SOURCE_TEMPLATE_STRING_RE.sub("", expression)
+    if not re.search(r"[A-Za-z_$]", expression_without_strings):
+        return False
+    remainder = line[closing + 1 :]
+    closes_template = remainder.startswith("`")
+    starts_sentence = bool(re.match(r"^(?:[.,;!?)]\s|\s+\()", remainder))
+    return closes_template or starts_sentence
+
+
 def is_nonliteral_code_expression(
     line: str,
     match: re.Match[str],
     *,
     source_code: bool,
     jq_spans: tuple[tuple[int, int], ...],
-    comment_ends: tuple[int, ...],
     value_override: str | None = None,
 ) -> bool:
     """Return whether a structured field is executable or type syntax, not data."""
     value = normalized_value(value_override or match.group("value"))
     numeric_literal = bool(NUMERIC_LITERAL_RE.fullmatch(value))
     in_jq_filter = match_is_in_spans(match, jq_spans)
-    comment_end = source_comment_end(match, comment_ends) if source_code or in_jq_filter else None
+    in_source_comment = (source_code or in_jq_filter) and is_source_comment(line, match)
     if numeric_literal:
         return False
-    if comment_end is not None:
-        prose_before_key = line[comment_end : match.start("key")]
-        if any(character.isalnum() for character in prose_before_key):
-            return True
+    if in_source_comment:
         expression = value.rstrip(";").strip()
-        if SOURCE_COMMENT_EXPRESSION_RE.fullmatch(expression):
-            return True
-        expression_prefix = SOURCE_COMMENT_EXPRESSION_RE.match(expression)
-        if expression_prefix and re.match(r"\s+[+?|&;,)]", expression[expression_prefix.end() :]):
-            return True
-        return False
+        return bool(SOURCE_COMMENT_EXPRESSION_RE.fullmatch(expression))
     groups = match.groupdict()
     inline_key_opener = groups.get("key_open") == "`"
     inline_key_closer = bool(groups.get("key_close"))
@@ -1450,7 +1769,8 @@ def is_nonliteral_code_expression(
     if whole_inline_field:
         expression = value.rstrip(";").strip()
         named_expression = bool(SOURCE_COMMENT_EXPRESSION_RE.fullmatch(expression))
-        return expression.startswith(".") or named_expression
+        interpolation = source_template_value_is_expression(line, match)
+        return expression.startswith(".") or named_expression or interpolation
     if in_jq_filter:
         return jq_value_is_expression(line, match, jq_spans)
     return source_code and not bool(match.group("quote"))
@@ -1617,10 +1937,7 @@ def scan_contacts(
     line: str,
     attribution_context: bool,
     findings: set[Finding],
-    *,
-    source_code: bool,
-    jq_spans: tuple[tuple[int, int], ...],
-    comment_ends: tuple[int, ...],
+    context: LineScanContext,
 ) -> None:
     """Scan one line for contact details, home paths, and person names."""
     if not attribution_context:
@@ -1633,36 +1950,37 @@ def scan_contacts(
                     category="email",
                     message="email address does not use a documentation-reserved domain",
                 )
-        person_serialization = SerializationContext(line)
         for match in PERSON_FIELD_RE.finditer(line):
-            if not match.group("quote") and is_nonliteral_code_expression(
-                line,
-                match,
-                source_code=source_code,
-                jq_spans=jq_spans,
-                comment_ends=comment_ends,
-            ):
+            if match_is_in_spans(match, context.localization_spans):
                 continue
-            value = structured_field_value(path, line, match, person_serialization)
+            value = structured_field_value(path, line, match)
             if NUMERIC_LITERAL_RE.fullmatch(value):
                 continue
             if is_nonliteral_code_expression(
                 line,
                 match,
-                source_code=source_code,
-                jq_spans=jq_spans,
-                comment_ends=comment_ends,
+                source_code=context.source_code,
+                jq_spans=context.jq_spans,
                 value_override=value,
             ):
                 continue
-            if not structured_placeholder_value(value, match.group("key")):
-                add_finding(
-                    findings,
-                    path=path,
-                    line=line_number,
-                    category="person-name",
-                    message=f"{match.group('key')} contains a literal person name",
-                )
+            if not placeholder_value(value):
+                if match.group("key").lower() == "display_name":
+                    add_review_finding(
+                        findings,
+                        path=path,
+                        line=line_number,
+                        category="display-name-review",
+                        message="display_name requires manual identity review",
+                    )
+                else:
+                    add_finding(
+                        findings,
+                        path=path,
+                        line=line_number,
+                        category="person-name",
+                        message=f"{match.group('key')} contains a literal person name",
+                    )
 
     for match in HOME_RE.finditer(line):
         user = match.group("user") or match.group("winuser") or ""
@@ -1686,44 +2004,33 @@ def scan_contacts(
             )
 
 
-# pylint: disable-next=too-many-arguments
 def scan_structured_identity(
     path: str,
     line_number: int,
     line: str,
     findings: set[Finding],
-    *,
-    source_code: bool,
-    jq_spans: tuple[tuple[int, int], ...],
-    comment_ends: tuple[int, ...],
-    yaml_aliases: dict[str, bool],
-    yaml_alias_events: tuple[tuple[int, str, bool], ...],
+    context: LineScanContext,
 ) -> None:
     """Scan structured fields for customer identifiers and personal records."""
-    identity_serialization = SerializationContext(line)
     for match in IDENTITY_FIELD_RE.finditer(line):
+        if match_is_in_spans(match, context.localization_spans):
+            continue
         if not is_structured_identity_field(path, line, match):
             continue
-        if not match.group("quote") and is_nonliteral_code_expression(
-            line,
-            match,
-            source_code=source_code,
-            jq_spans=jq_spans,
-            comment_ends=comment_ends,
-        ):
+        value = structured_field_value(path, line, match)
+        if numeric_enum_member(match, value, context):
             continue
-        value = structured_field_value(path, line, match, identity_serialization)
-        jq_literal = match_is_in_spans(match, jq_spans) and not jq_value_is_expression(
+        in_jq_span = match_is_in_spans(match, context.jq_spans)
+        jq_literal = in_jq_span and not jq_value_is_expression(
             line,
             match,
-            jq_spans,
+            context.jq_spans,
         )
         if is_nonliteral_code_expression(
             line,
             match,
-            source_code=source_code,
-            jq_spans=jq_spans,
-            comment_ends=comment_ends,
+            source_code=context.source_code,
+            jq_spans=context.jq_spans,
             value_override=value,
         ):
             continue
@@ -1731,15 +2038,15 @@ def scan_structured_identity(
         if not match.group("quote"):
             alias = re.fullmatch(r"\*([A-Za-z0-9_.-]+)", normalized_value(value))
         if alias:
-            aliases_at_value = yaml_aliases.copy()
-            for position, name, safe in yaml_alias_events:
+            aliases_at_value = context.yaml_aliases.copy()
+            for position, name, safe in context.yaml_alias_events:
                 if position >= match.start("value"):
                     break
                 aliases_at_value[name] = safe
             safe_alias = aliases_at_value.get(alias.group(1), False)
         else:
             safe_alias = None
-        if jq_literal or not (safe_alias if alias else structured_placeholder_value(value, match.group("key"))):
+        if jq_literal or not (safe_alias if alias else placeholder_value(value)):
             add_finding(
                 findings,
                 path=path,
@@ -1748,27 +2055,17 @@ def scan_structured_identity(
                 message=f"{match.group('key')} contains a literal organization identifier",
             )
 
-    address_serialization = SerializationContext(line)
     for match in ADDRESS_FIELD_RE.finditer(line):
-        if not match.group("quote") and is_nonliteral_code_expression(
-            line,
-            match,
-            source_code=source_code,
-            jq_spans=jq_spans,
-            comment_ends=comment_ends,
-        ):
-            continue
-        value = structured_field_value(path, line, match, address_serialization)
+        value = structured_field_value(path, line, match)
         if is_nonliteral_code_expression(
             line,
             match,
-            source_code=source_code,
-            jq_spans=jq_spans,
-            comment_ends=comment_ends,
+            source_code=context.source_code,
+            jq_spans=context.jq_spans,
             value_override=value,
         ):
             continue
-        if not structured_placeholder_value(value, match.group("key")):
+        if not placeholder_value(value):
             add_finding(
                 findings,
                 path=path,
@@ -1901,11 +2198,7 @@ def yaml_value_text(line: str) -> str:
     return "".join(value)
 
 
-def yaml_anchor_value(
-    line: str,
-    start: int,
-    serialization: SerializationContext | None = None,
-) -> str:
+def yaml_anchor_value(line: str, start: int) -> str:
     """Extract the scalar node immediately following a YAML anchor."""
     tail = yaml_value_text(line[start:]).lstrip()
     while tag := YAML_TAG_RE.match(tail):
@@ -1929,8 +2222,7 @@ def yaml_anchor_value(
                     return normalized_value(tail[: index + 1])
             index += 1
         return normalized_value(tail)
-    nesting = serialization.nesting_at(start) if serialization is not None else serialization_nesting(line[:start])
-    flow_context = nesting > 0
+    flow_context = serialization_nesting(line[:start]) > 0
     delimiter = re.search(r"[],}]", tail) if flow_context else None
     return normalized_value(tail[: delimiter.start()] if delimiter else tail)
 
@@ -1942,9 +2234,8 @@ def update_yaml_aliases(
     """Apply scalar anchor declarations in source order within one YAML document."""
     events: list[tuple[int, str, bool]] = []
     syntax = yaml_syntax(line)
-    serialization = SerializationContext(line)
     for anchor in YAML_ANCHOR_VALUE_RE.finditer(syntax):
-        value = yaml_anchor_value(line, anchor.end("name"), serialization)
+        value = yaml_anchor_value(line, anchor.end("name"))
         referenced = re.fullmatch(r"\*([A-Za-z0-9_.-]+)", value)
         if referenced:
             safe = aliases.get(referenced.group(1), False)
@@ -1998,15 +2289,15 @@ def scan_yaml_identity_blocks(path: str, text: str, findings: set[Finding]) -> N
 # pylint: disable-next=too-many-locals,too-many-branches,too-many-statements
 def scan_text(path: str, text: str, findings: set[Finding]) -> None:
     """Apply structured and line-oriented detectors to one text blob."""
-    if ANSI_ESCAPE_RE.search(text):
-        text = ANSI_ESCAPE_RE.sub("", text)
-    if ZERO_WIDTH_CONTROL_RE.search(text):
-        text = ZERO_WIDTH_CONTROL_RE.sub("", text)
-    text = strip_invisible_format_characters(text)
+    text = ANSI_ESCAPE_RE.sub("", text)
+    text = ZERO_WIDTH_CONTROL_RE.sub("", text)
+    visible = (char for char in text if not invisible_format_character(char))
+    text = "".join(visible)
     legal_path = is_legal_attribution_path(path)
     suffix = PurePosixPath(path).suffix.lower()
     yaml = suffix in {".yaml", ".yml"}
     aliases: dict[str, bool] = {}
+    localization_strings = localization_top_level_string_spans(path, text)
     if yaml or suffix in PROSE_DOCUMENT_SUFFIXES:
         scan_yaml_identity_blocks(path, text, findings)
     fence_marker: str | None = None
@@ -2017,8 +2308,13 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
     yaml_block_anchor: str | None = None
     yaml_block_safe = False
     yaml_block_has_content = False
+    source_block_comment = False
+    source_quote: str | None = None
+    source_brace_depth = 0
+    enum_body_depth: int | None = None
+    pending_enum_body = False
     for line_number, raw_line in enumerate(text.splitlines(), 1):
-        line = raw_line
+        line = ANSI_ESCAPE_RE.sub("", raw_line)
         line_aliases = aliases.copy()
         yaml_alias_events: tuple[tuple[int, str, bool], ...] = ()
         if yaml:
@@ -2082,10 +2378,9 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
         if opening_fence and fence:
             fence_marker = fence.group("marker")
             fence_language = parse_fence_language(fence.group("info"))
-            if fence.group("container"):
-                fence_close_column = fence.start("marker") + 3
-            else:
-                fence_close_column = 3
+            fence_container = fence.group("container")
+            container_close_column = fence.start("marker") + 3
+            fence_close_column = container_close_column if fence_container else 3
             active_jq_quote = None
 
         fence_boundary = closing_fence or opening_fence
@@ -2093,6 +2388,47 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
         suffix_is_source = suffix in SOURCE_CODE_SUFFIXES
         fence_is_source = effective_language in SOURCE_FENCE_LANGUAGES
         source_code = suffix_is_source or fence_is_source
+        line_source_brace_depth = source_brace_depth
+        source_structure = ""
+        if source_code:
+            source_state = source_structure_line(
+                line,
+                source_block_comment,
+                source_quote,
+            )
+            source_structure, source_block_comment, source_quote = source_state
+            if enum_body_depth is None:
+                enum_brace: int | None = None
+                if pending_enum_body:
+                    if source_structure.strip():
+                        opening = re.match(r"\s*(?P<brace>\{)", source_structure)
+                        pending_enum_body = False
+                        if opening:
+                            enum_brace = opening.start("brace")
+                else:
+                    header = ENUM_HEADER_RE.search(source_structure)
+                    if header:
+                        tail = source_structure[header.end() :]
+                        opening_offset = tail.find("{")
+                        semicolon_offset = tail.find(";")
+                        brace_precedes_terminator = opening_offset >= 0 and (
+                            semicolon_offset < 0 or opening_offset < semicolon_offset
+                        )
+                        if brace_precedes_terminator:
+                            enum_brace = header.end() + opening_offset
+                        elif not any(character in tail for character in ";={}"):
+                            pending_enum_body = True
+                if enum_brace is not None:
+                    before_brace = source_structure[:enum_brace]
+                    brace_delta = before_brace.count("{") - before_brace.count("}")
+                    enum_body_depth = source_brace_depth + brace_delta + 1
+        else:
+            source_block_comment = False
+            source_quote = None
+            source_brace_depth = 0
+            line_source_brace_depth = 0
+            enum_body_depth = None
+            pending_enum_body = False
         spans: tuple[tuple[int, int], ...]
         if suffix == ".jq" or effective_language == "jq":
             spans = ((0, len(line)),)
@@ -2102,7 +2438,17 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
             active_jq_quote = None
         else:
             spans, active_jq_quote = jq_filter_spans(line, active_jq_quote)
-        comment_ends = source_comment_ends(line) if source_code or spans else ()
+
+        context = LineScanContext(
+            source_code=source_code,
+            jq_spans=spans,
+            localization_spans=localization_strings.get(line_number, ()),
+            source_structure=source_structure,
+            source_brace_depth=line_source_brace_depth,
+            enum_body_depth=enum_body_depth,
+            yaml_aliases=line_aliases,
+            yaml_alias_events=yaml_alias_events,
+        )
 
         is_commit_message = path.startswith("<commit:")
         trailer_match = PROVENANCE_TRAILER_RE.match(line)
@@ -2113,23 +2459,24 @@ def scan_text(path: str, text: str, findings: set[Finding]) -> None:
             line,
             legal_path or provenance_trailer,
             findings,
-            source_code=source_code,
-            jq_spans=spans,
-            comment_ends=comment_ends,
+            context,
         )
         scan_structured_identity(
             path,
             line_number,
             line,
             findings,
-            source_code=source_code,
-            jq_spans=spans,
-            comment_ends=comment_ends,
-            yaml_aliases=line_aliases,
-            yaml_alias_events=yaml_alias_events,
+            context,
         )
         scan_query_parameters(path, line_number, line, findings)
         scan_public_ips(path, line_number, line, findings)
+
+        if source_code:
+            source_brace_depth += source_structure.count("{")
+            source_brace_depth -= source_structure.count("}")
+            source_brace_depth = max(source_brace_depth, 0)
+            if enum_body_depth is not None and source_brace_depth < enum_body_depth:
+                enum_body_depth = None
 
         if closing_fence:
             fence_marker = None
@@ -2258,18 +2605,14 @@ def render_text(findings: Sequence[Finding], *, scope: str, mode: str) -> str:
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     """Parse arguments supplied by the shell wrapper."""
     parser = argparse.ArgumentParser(description=__doc__)
-    commands = parser.add_subparsers(dest="command", required=True)
-    materialize_parser = commands.add_parser("materialize")
-    materialize_parser.add_argument("--input-dir", required=True, type=Path)
-    scan_parser = commands.add_parser("scan")
-    scan_parser.add_argument("--input-dir", required=True, type=Path)
-    scan_parser.add_argument(
+    parser.add_argument("--input-dir", required=True, type=Path)
+    parser.add_argument(
         "--scope",
         choices=("staged", "head", "history"),
         default="head",
     )
-    scan_parser.add_argument("--mode", choices=("audit", "enforce"), default="audit")
-    scan_parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--mode", choices=("audit", "enforce"), default="audit")
+    parser.add_argument("--format", choices=("text", "json"), default="text")
     return parser.parse_args(argv)
 
 
@@ -2283,9 +2626,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 2
     try:
-        if args.command == "materialize":
-            materialize_git_batch(args.input_dir, sys.stdin.buffer)
-            return 0
         findings = selected_findings(scan(args.input_dir), args.mode)
     except OSError as error:
         print(f"PII scan error: {error}", file=sys.stderr)

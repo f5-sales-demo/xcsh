@@ -1,0 +1,4 @@
+title = "Fleet default Gitleaks rules"
+
+[extend]
+useDefault = true
