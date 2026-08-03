@@ -10,6 +10,7 @@ import type { ModelBenchmarkTarget } from "./model-matrix-report";
 import { MODEL_BENCHMARK_SCENARIOS, selectModelBenchmarkScenarios } from "./model-scenario-library";
 import {
 	buildScenarioBenchmarkSample,
+	evaluateScenarioQuality,
 	regradeScenarioBenchmarkReport,
 	summarizeScenarioBenchmarks,
 	type ScenarioBenchmarkReport,
@@ -57,9 +58,10 @@ describe("model scenario library", () => {
 
 	it("grades identity output against the exact selected context", () => {
 		const [scenario] = selectModelBenchmarkScenarios({ ids: ["user-assistance"], contextName: "example.corp" });
-		const criterion = scenario.quality.find(candidate => candidate.id === "active-context");
-		expect(criterion?.responsePattern?.test("Tenant example.corp is active")).toBe(true);
-		expect(criterion?.responsePattern?.test("Tenant exampleXcorp is active")).toBe(false);
+		const matching = evaluateScenarioQuality(scenario, "Tenant EXAMPLE.CORP is active", true);
+		const mismatching = evaluateScenarioQuality(scenario, "Tenant exampleXcorp is active", true);
+		expect(matching.criteria.find(criterion => criterion.id === "active-context")?.passed).toBe(true);
+		expect(mismatching.criteria.find(criterion => criterion.id === "active-context")?.passed).toBe(false);
 	});
 });
 

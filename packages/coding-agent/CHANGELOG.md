@@ -29,6 +29,7 @@
 - Made `plugin upgrade --dry-run` fetch current catalogs without changing marketplace registries, persistent caches, installed plugins, timestamps, manifests, or lockfiles ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 - Migrated generated LiteLLM configuration to schema v4 from literal credentials as well as environment variables while preserving custom API base paths ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 - Stored live benchmark reports under the private xcsh data directory with collision-resistant filenames by default and resolved context-quality criteria from the selected context so concurrent reports cannot overwrite each other and source never hard-codes live tenant identifiers ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Matched selected benchmark context names as case-insensitive literal text so CLI input cannot become an executable regular expression ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 
 ## [20.2.5] - 2026-08-02
 

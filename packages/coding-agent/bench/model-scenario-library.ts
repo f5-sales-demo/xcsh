@@ -31,6 +31,7 @@ export interface ModelScenarioQualityCriterion {
 	label: string;
 	weight: number;
 	responsePattern?: RegExp;
+	responseIncludes?: string;
 	maxVisibleWords?: number;
 	requiresContract?: boolean;
 }
@@ -412,11 +413,10 @@ export function selectModelBenchmarkScenarios(options: {
 	}
 	if (selected.length === 0) throw new Error("No benchmark scenarios selected");
 	if (!options.contextName) return selected;
-	const contextPattern = new RegExp(options.contextName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 	return selected.map(scenario => ({
 		...scenario,
 		quality: scenario.quality.map(criterion =>
-			criterion.id === "active-context" ? { ...criterion, responsePattern: contextPattern } : criterion,
+			criterion.id === "active-context" ? { ...criterion, responseIncludes: options.contextName } : criterion,
 		),
 	}));
 }

@@ -295,9 +295,13 @@ export function evaluateScenarioQuality(
 	transportSucceeded = true,
 ): ScenarioQualityResult {
 	const visibleWords = countVisibleWords(response);
+	const normalizedResponse = response.toLocaleLowerCase("en-US");
 	const criteria = scenario.quality.map(criterion => {
 		const checks: boolean[] = [];
 		if (criterion.responsePattern) checks.push(criterion.responsePattern.test(response));
+		if (criterion.responseIncludes) {
+			checks.push(normalizedResponse.includes(criterion.responseIncludes.toLocaleLowerCase("en-US")));
+		}
 		if (criterion.maxVisibleWords !== undefined) checks.push(visibleWords <= criterion.maxVisibleWords);
 		if (criterion.requiresContract) checks.push(contractPassed);
 		return {
