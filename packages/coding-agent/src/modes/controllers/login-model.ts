@@ -1,12 +1,17 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Model } from "@f5-sales-demo/pi-ai";
 
-export interface LiteLLMLoginModelChoice {
+export interface LoginModelChoice {
 	label: string;
 	description: string;
+	provider: string;
+	modelId: string;
+	thinkingLevel: ThinkingLevel;
+}
+
+export interface LiteLLMLoginModelChoice extends LoginModelChoice {
 	provider: "anthropic" | "litellm";
 	modelId: "claude-opus-5" | "gpt-5.6-sol";
-	thinkingLevel: ThinkingLevel;
 }
 
 export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
@@ -25,6 +30,14 @@ export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
 		thinkingLevel: ThinkingLevel.High,
 	},
 ];
+
+export const GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE: LoginModelChoice = {
+	label: "Gemini 3.6 Flash High",
+	description: "Google Antigravity model with high reasoning",
+	provider: "google-antigravity",
+	modelId: "gemini-3.6-flash-high",
+	thinkingLevel: ThinkingLevel.High,
+};
 
 export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly string[]): LiteLLMLoginModelChoice[] {
 	const available = new Set(availableModelIds);
@@ -50,7 +63,7 @@ interface ModelApplicableSession {
  */
 export async function applyModelAfterLogin(
 	session: ModelApplicableSession,
-	choice: LiteLLMLoginModelChoice,
+	choice: LoginModelChoice,
 ): Promise<boolean> {
 	const resolved = session.modelRegistry
 		.getAll()
@@ -63,4 +76,19 @@ export async function applyModelAfterLogin(
 	});
 	session.setThinkingLevel(choice.thinkingLevel);
 	return true;
+}
+
+/**
+ * Apply a provider's curated model after OAuth login.
+ *
+ * Providers without a curated choice, or registries that do not advertise the
+ * exact preferred model, leave the active and persisted model unchanged.
+ */
+export async function applyOAuthLoginModel(
+	session: ModelApplicableSession,
+	providerId: string,
+): Promise<LoginModelChoice | undefined> {
+	if (providerId !== GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider) return undefined;
+	const applied = await applyModelAfterLogin(session, GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE);
+	return applied ? GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE : undefined;
 }
