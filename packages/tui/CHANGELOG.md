@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+<!-- textlint-disable terminology -->
+
 ## [20.0.0] - 2026-08-01
 
 ### Fixed

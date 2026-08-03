@@ -17,6 +17,9 @@
 
 - Preserved native Gemini finish reasons in Google provider errors instead of reporting an unknown error ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 
+<!-- markdownlint-disable MD024 -->
+<!-- textlint-disable terminology -->
+
 ## [19.105.1] - 2026-07-31
 
 ### Fixed
@@ -101,12 +104,10 @@
 - Fixed Anthropic stream timeout errors to be properly retried by recognizing first-event timeout messages
 - Fixed stream stall detection to distinguish between first-event timeouts and idle timeouts, enabling faster recovery for stuck connections
 
-<!-- markdownlint-disable-next-line MD024 -->
 ### Added
 
 - Added Vercel AI Gateway to `/login` providers for interactive API key setup
 
-<!-- markdownlint-disable-next-line MD024 -->
 ### Fixed
 
 - Fixed `omp commit` failing with HTTP 400 errors when using reasoning-enabled models on OpenAI-compatible endpoints that don't support the `developer` role (e.g., GitHub Copilot, custom proxies). Now falls back to `system` role when `developer` is unsupported.
@@ -2004,7 +2005,6 @@
 
 - Removed provider-level tool argument validation. Validation now happens in `agentLoop` via `executeToolCalls`, allowing models to retry on validation errors. For manual tool execution, use `validateToolCall(tools, toolCall)` or `validateToolArguments(tool, toolCall)`.
 
-<!-- markdownlint-disable-next-line MD024 -->
 ### Added
 
 - Added `validateToolCall(tools, toolCall)` helper that finds the tool by name and validates arguments.
