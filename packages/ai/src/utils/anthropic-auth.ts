@@ -16,13 +16,20 @@ import {
 	buildAnthropicHeaders as buildProviderAnthropicHeaders,
 	normalizeAnthropicBaseUrl,
 } from "../providers/anthropic";
-import { getEnvApiKey } from "../stream";
 
 /** Auth configuration for Anthropic */
 export interface AnthropicAuthConfig {
 	apiKey: string;
 	baseUrl: string;
 	isOAuth: boolean;
+}
+
+export type AnthropicAuthEnvironment = Readonly<Record<string, string | undefined>>;
+
+export interface FindAnthropicAuthOptions {
+	store?: AuthCredentialStore;
+	environment?: AnthropicAuthEnvironment;
+	modelsYmlPath?: string;
 }
 
 /** OAuth credential for Anthropic API access */
@@ -36,8 +43,8 @@ export interface AnthropicOAuthCredential {
 
 const DEFAULT_BASE_URL = "https://api.anthropic.com";
 
-function isFoundryEnabled(): boolean {
-	const value = $env.CLAUDE_CODE_USE_FOUNDRY;
+function isFoundryEnabled(environment: AnthropicAuthEnvironment): boolean {
+	const value = environment.CLAUDE_CODE_USE_FOUNDRY;
 	if (!value) return false;
 	const normalized = value.trim().toLowerCase();
 	return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
@@ -47,13 +54,22 @@ function normalizeBaseUrl(baseUrl: string | undefined): string | undefined {
 	const trimmed = baseUrl?.trim();
 	return trimmed ? trimmed.replace(/\/+$/, "") : undefined;
 }
-function resolveAnthropicBaseUrlFromEnv(): string | undefined {
-	if (isFoundryEnabled()) {
-		const foundryBaseUrl = normalizeBaseUrl($env.FOUNDRY_BASE_URL);
+function resolveAnthropicBaseUrlFromEnv(environment: AnthropicAuthEnvironment): string | undefined {
+	if (isFoundryEnabled(environment)) {
+		const foundryBaseUrl = normalizeBaseUrl(environment.FOUNDRY_BASE_URL);
 		if (foundryBaseUrl) return foundryBaseUrl;
 	}
-	const anthropicBaseUrl = normalizeBaseUrl($env.ANTHROPIC_BASE_URL);
+	const anthropicBaseUrl = normalizeBaseUrl(environment.ANTHROPIC_BASE_URL);
 	return anthropicBaseUrl || undefined;
+}
+
+function resolveGenericAnthropicApiKey(environment: AnthropicAuthEnvironment): string | undefined {
+	if (isFoundryEnabled(environment)) {
+		return (
+			environment.ANTHROPIC_FOUNDRY_API_KEY ?? environment.ANTHROPIC_OAUTH_TOKEN ?? environment.ANTHROPIC_API_KEY
+		);
+	}
+	return environment.ANTHROPIC_OAUTH_TOKEN ?? environment.ANTHROPIC_API_KEY;
 }
 
 /**
@@ -112,14 +128,17 @@ async function readAnthropicOAuthCredentials(store?: AuthCredentialStore): Promi
  * Skips shell-backed secrets, which this tier cannot resolve.
  * @returns AnthropicAuthConfig or null if unavailable
  */
-function readAnthropicAuthFromModelsYml(): AnthropicAuthConfig | null {
-	const block = readProviderFromModelsYml("anthropic");
+function readAnthropicAuthFromModelsYml(
+	environment: AnthropicAuthEnvironment,
+	modelsYmlPath?: string,
+): AnthropicAuthConfig | null {
+	const block = readProviderFromModelsYml("anthropic", modelsYmlPath);
 	if (!block?.baseUrl || !block.apiKey) return null;
 
 	let apiKey: string | undefined;
 	switch (block.apiKey.kind) {
 		case "envVar":
-			apiKey = process.env[block.apiKey.name];
+			apiKey = environment[block.apiKey.name];
 			break;
 		case "literal":
 			apiKey = block.apiKey.value;
@@ -159,13 +178,16 @@ export function normalizeLitellmBase(url: string): string {
  *   5. ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL fallback
  *   6. Anthropic provider credentials from models.yml
  *   7. LiteLLM passthrough (LITELLM_BASE_URL / LITELLM_API_KEY)
- * @param store - Optional credential store (creates one from default db path if not provided)
+ * @param options - Injectable auth inputs. Production callers normally omit this;
+ * tests and embedded callers can provide an isolated environment, models path,
+ * and credential store without mutating process-global state.
  * @returns The first valid auth configuration found, or null if none available
  */
-export async function findAnthropicAuth(store?: AuthCredentialStore): Promise<AnthropicAuthConfig | null> {
+export async function findAnthropicAuth(options: FindAnthropicAuthOptions = {}): Promise<AnthropicAuthConfig | null> {
+	const environment = options.environment ?? $env;
 	// 1. Explicit search-specific env vars
-	const searchApiKey = $env.ANTHROPIC_SEARCH_API_KEY;
-	const searchBaseUrl = $env.ANTHROPIC_SEARCH_BASE_URL;
+	const searchApiKey = environment.ANTHROPIC_SEARCH_API_KEY;
+	const searchBaseUrl = environment.ANTHROPIC_SEARCH_BASE_URL;
 	if (searchApiKey) {
 		return {
 			apiKey: searchApiKey,
@@ -175,11 +197,11 @@ export async function findAnthropicAuth(store?: AuthCredentialStore): Promise<An
 	}
 
 	// 2. Foundry explicit env override
-	const foundryApiKey = isFoundryEnabled() ? $env.ANTHROPIC_FOUNDRY_API_KEY?.trim() : undefined;
+	const foundryApiKey = isFoundryEnabled(environment) ? environment.ANTHROPIC_FOUNDRY_API_KEY?.trim() : undefined;
 	if (foundryApiKey) {
 		return {
 			apiKey: foundryApiKey,
-			baseUrl: resolveAnthropicBaseUrlFromEnv() ?? DEFAULT_BASE_URL,
+			baseUrl: resolveAnthropicBaseUrlFromEnv(environment) ?? DEFAULT_BASE_URL,
 			isOAuth: isOAuthToken(foundryApiKey),
 		};
 	}
@@ -189,8 +211,8 @@ export async function findAnthropicAuth(store?: AuthCredentialStore): Promise<An
 	// env-var fallback tiers from running.
 	let storeError: unknown;
 	try {
-		const ownsStore = !store;
-		const effectiveStore = store ?? (await AuthCredentialStore.open(getAgentDbPath()));
+		const ownsStore = !options.store;
+		const effectiveStore = options.store ?? (await AuthCredentialStore.open(getAgentDbPath()));
 		try {
 			// 3. OAuth credentials in agent.db (with 5-minute expiry buffer)
 			const expiryBuffer = 5 * 60 * 1000; // 5 minutes
@@ -212,7 +234,7 @@ export async function findAnthropicAuth(store?: AuthCredentialStore): Promise<An
 			if (storedApiKey) {
 				return {
 					apiKey: storedApiKey,
-					baseUrl: resolveAnthropicBaseUrlFromEnv() ?? DEFAULT_BASE_URL,
+					baseUrl: resolveAnthropicBaseUrlFromEnv(environment) ?? DEFAULT_BASE_URL,
 					isOAuth: isOAuthToken(storedApiKey),
 				};
 			}
@@ -228,8 +250,8 @@ export async function findAnthropicAuth(store?: AuthCredentialStore): Promise<An
 	}
 
 	// 5. Generic ANTHROPIC_API_KEY fallback
-	const apiKey = getEnvApiKey("anthropic");
-	const baseUrl = resolveAnthropicBaseUrlFromEnv();
+	const apiKey = resolveGenericAnthropicApiKey(environment);
+	const baseUrl = resolveAnthropicBaseUrlFromEnv(environment);
 	if (apiKey) {
 		return {
 			apiKey,
@@ -240,15 +262,15 @@ export async function findAnthropicAuth(store?: AuthCredentialStore): Promise<An
 
 	// 6. Anthropic provider credentials from models.yml
 	try {
-		const modelsYmlAuth = readAnthropicAuthFromModelsYml();
+		const modelsYmlAuth = readAnthropicAuthFromModelsYml(environment, options.modelsYmlPath);
 		if (modelsYmlAuth) return modelsYmlAuth;
 	} catch {
 		/* Best-effort — don't block env-var fallback */
 	}
 
 	// 7. Derive from litellm passthrough credentials
-	const litellmBaseUrl = $env.LITELLM_BASE_URL;
-	const litellmApiKey = $env.LITELLM_API_KEY;
+	const litellmBaseUrl = environment.LITELLM_BASE_URL;
+	const litellmApiKey = environment.LITELLM_API_KEY;
 	if (litellmBaseUrl && litellmApiKey) {
 		return {
 			apiKey: litellmApiKey,

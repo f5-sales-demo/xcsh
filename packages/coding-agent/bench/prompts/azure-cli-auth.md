@@ -1,0 +1,1 @@
+Call the `az_account_show` tool exactly once with `{"action":"show"}`. Do not call any other tools. If the tool succeeds and the current subscription is enabled, reply exactly `Azure CLI authenticated: yes`; otherwise reply exactly `Azure CLI authenticated: no`. Do not include subscription names, subscription IDs, tenant IDs, account names, or tokens.

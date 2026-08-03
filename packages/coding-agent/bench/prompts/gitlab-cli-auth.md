@@ -1,0 +1,1 @@
+Call the `glab_exec` tool exactly once with `{"args":["repo","list","--member","--output","json","--per-page","1"]}`. Do not call any other tools. If the command succeeds, reply exactly `GitLab CLI authenticated: yes`; otherwise reply exactly `GitLab CLI authenticated: no`. Do not include account names, hostnames, project names, tokens, or scopes.

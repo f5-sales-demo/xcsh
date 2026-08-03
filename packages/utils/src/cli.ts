@@ -116,6 +116,18 @@ export interface CommandCtor {
 	args?: Record<string, ArgDescriptor>;
 }
 
+export interface CommandSyntax {
+	strict?: boolean;
+	flags?: Record<string, FlagDescriptor>;
+	args?: Record<string, ArgDescriptor>;
+}
+
+export interface CommandParseResult {
+	flags: Record<string, unknown>;
+	args: Record<string, unknown>;
+	argv: string[];
+}
+
 /** Configuration passed to every command instance and help renderers. */
 export interface CliConfig {
 	bin: string;
@@ -152,110 +164,115 @@ export abstract class Command {
 				: Record<string, ArgDescriptor>
 		>
 	> {
-		const Cmd = _Cmd as CommandCtor;
-		const flagDefs = (Cmd.flags ?? {}) as Record<string, FlagDescriptor>;
-		const argDefs = (Cmd.args ?? {}) as Record<string, ArgDescriptor>;
-		const strict = Cmd.strict !== false;
+		return parseCommandArgv(this.argv, _Cmd) as never;
+	}
+}
 
-		// Build node:util parseArgs options from flag descriptors
-		const options: Record<
-			string,
-			{ type: "string" | "boolean"; short?: string; multiple?: boolean; default?: string | boolean }
-		> = {};
-		for (const [name, desc] of Object.entries(flagDefs)) {
-			const opt: (typeof options)[string] = {
-				type: desc.kind === "boolean" ? "boolean" : "string",
-			};
-			if (desc.char) opt.short = desc.char;
-			if (desc.multiple) opt.multiple = true;
-			if (desc.default !== undefined) {
-				opt.default = desc.kind === "boolean" ? Boolean(desc.default) : String(desc.default);
-			}
-			options[name] = opt;
+/** Parse command argv from lightweight syntax metadata without loading its implementation. */
+export function parseCommandArgv(argv: readonly string[], command: CommandSyntax): CommandParseResult {
+	const Cmd = command;
+	const flagDefs = (Cmd.flags ?? {}) as Record<string, FlagDescriptor>;
+	const argDefs = (Cmd.args ?? {}) as Record<string, ArgDescriptor>;
+	const strict = Cmd.strict !== false;
+
+	// Build node:util parseArgs options from flag descriptors
+	const options: Record<
+		string,
+		{ type: "string" | "boolean"; short?: string; multiple?: boolean; default?: string | boolean }
+	> = {};
+	for (const [name, desc] of Object.entries(flagDefs)) {
+		const opt: (typeof options)[string] = {
+			type: desc.kind === "boolean" ? "boolean" : "string",
+		};
+		if (desc.char) opt.short = desc.char;
+		if (desc.multiple) opt.multiple = true;
+		if (desc.default !== undefined) {
+			opt.default = desc.kind === "boolean" ? Boolean(desc.default) : String(desc.default);
 		}
+		options[name] = opt;
+	}
 
-		// strict=false when command declares args (positionals must pass through)
-		// or when the command itself opts out
-		const { values: rawValues, positionals } = (() => {
-			try {
-				return nodeParseArgs({
-					args: this.argv,
-					options,
-					allowPositionals: true,
-					strict,
-				});
-			} catch (error) {
-				if (error instanceof TypeError) throw new CliUsageError(error.message);
-				throw error;
-			}
-		})();
-
-		// Convert raw values to proper types and validate
-		const flags: Record<string, unknown> = {};
-		for (const [name, desc] of Object.entries(flagDefs)) {
-			const raw = rawValues[name];
-			if (desc.kind === "integer") {
-				if (raw === undefined || typeof raw === "boolean") {
-					flags[name] = desc.default ?? undefined;
-				} else {
-					const n = Number.parseInt(raw as string, 10);
-					if (Number.isNaN(n)) {
-						throw new CliUsageError(`Expected integer for --${name}, got "${raw}"`);
-					}
-					flags[name] = n;
-				}
-			} else if (desc.kind === "boolean") {
-				flags[name] =
-					raw !== undefined ? Boolean(raw) : desc.default !== undefined ? Boolean(desc.default) : undefined;
-			} else {
-				// string
-				const val = raw !== undefined && typeof raw !== "boolean" ? raw : (desc.default ?? undefined);
-				// Validate options constraint
-				if (val !== undefined && desc.options && !Array.isArray(val)) {
-					if (!desc.options.includes(val as string)) {
-						throw new CliUsageError(
-							`Expected --${name} to be one of: ${[...desc.options].join(", ")}; got "${val}"`,
-						);
-					}
-				}
-				flags[name] = val;
-			}
-			// Validate required
-			if (desc.required && flags[name] === undefined) {
-				throw new CliUsageError(`Missing required flag: --${name}`);
-			}
+	// strict=false when command declares args (positionals must pass through)
+	// or when the command itself opts out
+	const { values: rawValues, positionals } = (() => {
+		try {
+			return nodeParseArgs({
+				args: [...argv],
+				options,
+				allowPositionals: true,
+				strict,
+			});
+		} catch (error) {
+			if (error instanceof TypeError) throw new CliUsageError(error.message);
+			throw error;
 		}
+	})();
 
-		// Map positionals to named args in declaration order and validate
-		const args: Record<string, unknown> = {};
-		let posIdx = 0;
-		for (const [argName, desc] of Object.entries(argDefs)) {
-			if (desc.multiple) {
-				const val = positionals.slice(posIdx);
-				args[argName] = val.length > 0 ? val : undefined;
-				posIdx = positionals.length;
+	// Convert raw values to proper types and validate
+	const flags: Record<string, unknown> = {};
+	for (const [name, desc] of Object.entries(flagDefs)) {
+		const raw = rawValues[name];
+		if (desc.kind === "integer") {
+			if (raw === undefined || typeof raw === "boolean") {
+				flags[name] = desc.default ?? undefined;
 			} else {
-				const val = positionals[posIdx];
-				args[argName] = val;
-				posIdx++;
+				const n = Number.parseInt(raw as string, 10);
+				if (Number.isNaN(n)) {
+					throw new CliUsageError(`Expected integer for --${name}, got "${raw}"`);
+				}
+				flags[name] = n;
 			}
-			// Validate required
-			if (desc.required && args[argName] === undefined) {
-				throw new CliUsageError(`Missing required argument: ${argName}`);
-			}
+		} else if (desc.kind === "boolean") {
+			flags[name] =
+				raw !== undefined ? Boolean(raw) : desc.default !== undefined ? Boolean(desc.default) : undefined;
+		} else {
+			// string
+			const val = raw !== undefined && typeof raw !== "boolean" ? raw : (desc.default ?? undefined);
 			// Validate options constraint
-			const argVal = args[argName];
-			if (argVal !== undefined && desc.options && typeof argVal === "string") {
-				if (!desc.options.includes(argVal)) {
+			if (val !== undefined && desc.options && !Array.isArray(val)) {
+				if (!desc.options.includes(val as string)) {
 					throw new CliUsageError(
-						`Expected ${argName} to be one of: ${[...desc.options].join(", ")}; got "${argVal}"`,
+						`Expected --${name} to be one of: ${[...desc.options].join(", ")}; got "${val}"`,
 					);
 				}
 			}
+			flags[name] = val;
 		}
-
-		return { flags, args, argv: positionals } as never;
+		// Validate required
+		if (desc.required && flags[name] === undefined) {
+			throw new CliUsageError(`Missing required flag: --${name}`);
+		}
 	}
+
+	// Map positionals to named args in declaration order and validate
+	const args: Record<string, unknown> = {};
+	let posIdx = 0;
+	for (const [argName, desc] of Object.entries(argDefs)) {
+		if (desc.multiple) {
+			const val = positionals.slice(posIdx);
+			args[argName] = val.length > 0 ? val : undefined;
+			posIdx = positionals.length;
+		} else {
+			const val = positionals[posIdx];
+			args[argName] = val;
+			posIdx++;
+		}
+		// Validate required
+		if (desc.required && args[argName] === undefined) {
+			throw new CliUsageError(`Missing required argument: ${argName}`);
+		}
+		// Validate options constraint
+		const argVal = args[argName];
+		if (argVal !== undefined && desc.options && typeof argVal === "string") {
+			if (!desc.options.includes(argVal)) {
+				throw new CliUsageError(
+					`Expected ${argName} to be one of: ${[...desc.options].join(", ")}; got "${argVal}"`,
+				);
+			}
+		}
+	}
+
+	return { flags, args, argv: positionals };
 }
 
 // ---------------------------------------------------------------------------
@@ -361,6 +378,10 @@ export interface CommandEntry {
 	name: string;
 	load: () => Promise<CommandCtor>;
 	aliases?: string[];
+	/** Optional command-specific validation that runs before generic syntax parsing. */
+	validate?: (argv: readonly string[]) => void;
+	/** Optional leaf metadata used to reject invalid argv before loading a heavy command module. */
+	syntax?: CommandSyntax;
 }
 
 export interface RunOptions {
@@ -429,10 +450,12 @@ export async function run(opts: RunOptions): Promise<void> {
 		return;
 	}
 
-	const Cmd = await entry.load();
-	const config: CliConfig = { bin, version, commands: new Map([[entry.name, Cmd]]) };
-	const instance = new Cmd(commandArgv, config);
 	try {
+		entry.validate?.(commandArgv);
+		if (entry.syntax) parseCommandArgv(commandArgv, entry.syntax);
+		const Cmd = await entry.load();
+		const config: CliConfig = { bin, version, commands: new Map([[entry.name, Cmd]]) };
+		const instance = new Cmd(commandArgv, config);
 		await instance.run();
 	} catch (error) {
 		if (!(error instanceof CliUsageError)) throw error;

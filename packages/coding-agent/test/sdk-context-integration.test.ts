@@ -566,6 +566,57 @@ describe("createAgentSession context tracking", () => {
 		}
 	});
 
+	it("bootstrap: explicit context wins over the resumed context and XCSH_SESSION_TENANT", async () => {
+		for (const name of ["prod", "staging"]) {
+			await ContextService.instance.createContext({
+				name,
+				apiUrl: `https://${name}.console.ves.volterra.io/api`,
+				apiToken: "tok",
+				defaultNamespace: "default",
+			});
+		}
+		const sessionManager = SessionManager.create(cwd, SessionManager.getDefaultSessionDir(cwd, agentDir));
+		sessionManager.appendContextChange("prod", "prod", "default");
+		const { session } = await createAgentSession({
+			cwd,
+			agentDir,
+			settings,
+			sessionManager,
+			contextName: "staging",
+			sessionTenant: "prod|production",
+			disableExtensionDiscovery: true,
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+		try {
+			expect(ContextService.instance.getStatus().activeContextName).toBe("staging");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("bootstrap: invalid explicit context rejects session creation", async () => {
+		await expect(
+			createAgentSession({
+				cwd,
+				agentDir,
+				settings,
+				contextName: "missing",
+				disableExtensionDiscovery: true,
+				skills: [],
+				contextFiles: [],
+				promptTemplates: [],
+				slashCommands: [],
+				enableMCP: false,
+				enableLsp: false,
+			}),
+		).rejects.toThrow("Context 'missing' not found");
+	});
+
 	it("bootstrap: XCSH_SESSION_TENANT with no matching context → contextless (unbound)", async () => {
 		await ContextService.instance.createContext({
 			name: "other",

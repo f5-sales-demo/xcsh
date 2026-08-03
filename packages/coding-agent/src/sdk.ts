@@ -158,6 +158,10 @@ export interface CreateAgentSessionOptions {
 	cwd?: string;
 	/** Global config directory. Default: ~/.omp/agent */
 	agentDir?: string;
+	/** Named F5 XC context to bind explicitly for this session. */
+	contextName?: string;
+	/** Manager-provided tenant binding. Default: XCSH_SESSION_TENANT. */
+	sessionTenant?: string;
 	/** Spawns to allow. Default: "*" */
 	spawns?: string;
 
@@ -245,6 +249,8 @@ export interface CreateAgentSessionOptions {
 
 	/** Settings instance. Default: Settings.init({ cwd, agentDir }) */
 	settings?: Settings;
+	/** Environment values scanned for automatic secret masking. Default: process.env. */
+	secretEnvironment?: Readonly<Record<string, string | undefined>>;
 
 	/** Whether UI is available (enables interactive tools like ask). Default: false */
 	hasUI?: boolean;
@@ -743,6 +749,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// for env vars matching sensitive name patterns.
 		const bashEnv = (settings.get("bash.environment") ?? {}) as Record<string, string>;
 		const envEntries = collectEnvSecrets({
+			environment: options.secretEnvironment,
 			additionalEnv: bashEnv,
 			additionalValues: contextSensitiveValues,
 		});
@@ -812,8 +819,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			})
 		) {
 			const bound = existingSession.activeContextName; // resumed binding, if any
-			const tenantKey = process.env.XCSH_SESSION_TENANT;
-			if (tenantKey) {
+			const tenantKey = options.sessionTenant ?? process.env.XCSH_SESSION_TENANT;
+			if (options.contextName) {
+				await svc.activate(options.contextName); // fires onContextChange → records context_change
+				await svc.validateToken();
+			} else if (tenantKey) {
 				// Extension worker: match a context to this worker's tenant (shared with pool late-bind).
 				try {
 					await activateTenantContext(tenantKey, bound);
@@ -846,7 +856,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				// line and tools already prompt "run /context activate".
 			}
 		}
-	} catch {
+	} catch (error) {
+		if (options.contextName) throw error;
 		// ContextService not initialized (SDK consumers / tests) — skip bootstrap.
 	}
 
@@ -1228,10 +1239,16 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			}
 		}
 
-		// Add Gemini image tools if GEMINI_API_KEY (or GOOGLE_API_KEY) is available
-		const geminiImageTools = await logger.time("getGeminiImageTools", getGeminiImageTools);
-		if (geminiImageTools.length > 0) {
-			customTools.push(...(geminiImageTools as unknown as CustomTool[]));
+		// This is a bundled capability, so an explicit tool scope must govern it just
+		// like createTools() governs the built-ins. In particular, --no-tools passes
+		// an empty list and must not expose generate_image merely because credentials exist.
+		const imageToolRequested =
+			options.toolNames === undefined || options.toolNames.some(name => name.toLowerCase() === "generate_image");
+		if (imageToolRequested) {
+			const geminiImageTools = await logger.time("getGeminiImageTools", getGeminiImageTools);
+			if (geminiImageTools.length > 0) {
+				customTools.push(...(geminiImageTools as unknown as CustomTool[]));
+			}
 		}
 
 		// Add web search tools
@@ -1328,6 +1345,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		// Resolve deferred --model pattern now that extension models are registered.
 		if (!model && options.modelPattern) {
+			await logger.time("awaitExplicitModelDiscovery", () => modelRegistry.awaitBackgroundRefresh());
 			const availableModels = modelRegistry.getAll();
 			const matchPreferences = {
 				usageOrder: settings.getStorage()?.getModelUsageOrder(),
@@ -1699,11 +1717,15 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			];
 		}
 
-		// Custom tools and extension-registered tools are always included regardless of toolNames filter
-		const alwaysInclude: string[] = [
-			...(options.customTools?.map(t => (isCustomTool(t) ? t.name : t.name)) ?? []),
-			...registeredTools.filter(t => !t.definition.defaultInactive).map(t => t.definition.name),
-		];
+		// Without an explicit scope, custom and default-active extension tools join the
+		// built-ins. When toolNames is present, it is authoritative for every tool source.
+		const alwaysInclude: string[] =
+			options.toolNames === undefined
+				? [
+						...(options.customTools?.map(t => (isCustomTool(t) ? t.name : t.name)) ?? []),
+						...registeredTools.filter(t => !t.definition.defaultInactive).map(t => t.definition.name),
+					]
+				: [];
 		for (const name of alwaysInclude) {
 			if (mcpDiscoveryEnabled && name.startsWith("mcp_")) {
 				continue;

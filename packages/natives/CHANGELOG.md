@@ -1,6 +1,12 @@
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 # Changelog
 
 ## [Unreleased]
+
+### Fixed
+
+- Preferred locally built native addons over installed platform packages during development so new native exports are available immediately ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 
 ## [14.1.1] - 2026-04-14
 

@@ -99,6 +99,11 @@ describe("parseArgs", () => {
 			expect(result.provider).toBe("openai");
 		});
 
+		test("parses --context", () => {
+			const result = parseArgs(["--context", "example-corp"]);
+			expect(result.context).toBe("example-corp");
+		});
+
 		test("parses --model", () => {
 			const result = parseArgs(["--model", "gpt-4o"]);
 			expect(result.model).toBe("gpt-4o");
@@ -162,6 +167,13 @@ describe("parseArgs", () => {
 		});
 	});
 
+	describe("--no-memories flag", () => {
+		test("parses --no-memories flag", () => {
+			const result = parseArgs(["--no-memories"]);
+			expect(result.noMemories).toBe(true);
+		});
+	});
+
 	describe("--hook flag", () => {
 		test("parses single --hook", () => {
 			const result = parseArgs(["--hook", "./my-hook.ts"]);
@@ -216,6 +228,11 @@ describe("parseArgs", () => {
 		test("lowercases tool names passed to --tools", () => {
 			const result = parseArgs(["--tools", "Read,Grep"]);
 			expect(result.tools).toEqual(["read", "grep"]);
+		});
+
+		test("preserves extension tool names for post-discovery activation", () => {
+			const result = parseArgs(["--tools", "xcsh_plugin_echo"]);
+			expect(result.tools).toEqual(["xcsh_plugin_echo"]);
 		});
 	});
 
@@ -308,6 +325,7 @@ describe("parseArgs", () => {
 			for (const [name, value] of [
 				["model", "opus"],
 				["provider", "anthropic"],
+				["context", "example-corp"],
 				["thinking", "high"],
 				["mode", "json"],
 				["session-dir", "/tmp/s"],

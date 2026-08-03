@@ -1,4 +1,6 @@
-import { $env } from "@f5-sales-demo/pi-utils";
+import * as os from "node:os";
+import * as path from "node:path";
+import { $env, $which, isEnoent } from "@f5-sales-demo/pi-utils";
 import {
 	type GenerateContentConfig,
 	type GenerateContentParameters,
@@ -6,6 +8,7 @@ import {
 	type ThinkingConfig,
 	ThinkingLevel,
 } from "@google/genai";
+import { $ } from "bun";
 import { calculateCost } from "../models";
 import type {
 	Api,
@@ -39,6 +42,12 @@ export interface GoogleVertexOptions extends StreamOptions {
 	};
 	project?: string;
 	location?: string;
+}
+
+export interface GoogleVertexProjectRuntime {
+	readAdcProject(): Promise<string | undefined>;
+	findGcloud(): string | null;
+	readConfiguredProject(gcloud: string): Promise<string | undefined>;
 }
 
 interface GoogleVertexSamplingConfig extends GenerateContentConfig {
@@ -94,8 +103,8 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 
 		try {
 			const apiKey = resolveApiKey(options);
-			const project = apiKey ? undefined : resolveProject(options);
-			const location = apiKey ? undefined : resolveLocation(options);
+			const project = apiKey ? undefined : await resolveGoogleVertexProject(options);
+			const location = apiKey ? undefined : resolveGoogleVertexLocation(options);
 			const client = apiKey ? createClientWithApiKey(model, apiKey) : createClient(model, project!, location!);
 			const params = buildParams(model, context, options);
 			options?.onPayload?.(params);
@@ -106,7 +115,7 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 				method: "POST",
 				url: apiKey
 					? `https://aiplatform.googleapis.com/${API_VERSION}/publishers/google/models/${model.id}:streamGenerateContent`
-					: `https://${location}-aiplatform.googleapis.com/${API_VERSION}/projects/${project}/locations/${location}/publishers/google/models/${model.id}:streamGenerateContent`,
+					: googleVertexRequestUrl(model.id, project!, location!),
 				body: params,
 			};
 			const googleStream = await client.models.generateContentStream(params);
@@ -212,7 +221,7 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 								type: "toolCall",
 								id: toolCallId,
 								name: part.functionCall.name || "",
-								arguments: part.functionCall.args as Record<string, any>,
+								arguments: (part.functionCall.args ?? {}) as Record<string, unknown>,
 								...(part.thoughtSignature && { thoughtSignature: part.thoughtSignature }),
 							};
 
@@ -230,6 +239,7 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 				}
 
 				if (candidate?.finishReason) {
+					output.rawStopReason = candidate.finishReason;
 					output.stopReason = mapStopReason(candidate.finishReason);
 					if (output.content.some(b => b.type === "toolCall")) {
 						output.stopReason = "toolUse";
@@ -285,7 +295,9 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 			}
 
 			if (output.stopReason === "aborted" || output.stopReason === "error") {
-				throw new Error("An unknown error occurred");
+				throw new Error(
+					output.rawStopReason ? `Gemini stopped with ${output.rawStopReason}` : "An unknown error occurred",
+				);
 			}
 
 			output.duration = Date.now() - startTime;
@@ -345,22 +357,64 @@ function resolveApiKey(options?: GoogleVertexOptions): string | undefined {
 	return realKey || $env.GOOGLE_CLOUD_API_KEY;
 }
 
-function resolveProject(options?: GoogleVertexOptions): string {
+const defaultProjectRuntime: GoogleVertexProjectRuntime = {
+	readAdcProject,
+	findGcloud: () => $which("gcloud"),
+	readConfiguredProject: async gcloud => {
+		const result = await $`${gcloud} config get-value project`.quiet().nothrow();
+		const configuredProject = result.text().trim();
+		if (result.exitCode !== 0 || !configuredProject || configuredProject === "(unset)") {
+			return undefined;
+		}
+		return configuredProject;
+	},
+};
+
+export async function resolveGoogleVertexProject(
+	options?: GoogleVertexOptions,
+	runtime: GoogleVertexProjectRuntime = defaultProjectRuntime,
+): Promise<string> {
 	const project = options?.project || $env.GOOGLE_CLOUD_PROJECT || $env.GCLOUD_PROJECT;
-	if (!project) {
-		throw new Error(
-			"Vertex AI requires a project ID. Set GOOGLE_CLOUD_PROJECT/GCLOUD_PROJECT or pass project in options.",
-		);
+	if (project) return project;
+
+	const adcProject = await runtime.readAdcProject();
+	if (adcProject) return adcProject;
+
+	const gcloud = runtime.findGcloud();
+	if (gcloud) {
+		const configuredProject = await runtime.readConfiguredProject(gcloud);
+		if (configuredProject) return configuredProject;
 	}
-	return project;
+
+	throw new Error(
+		"Vertex AI requires a project ID. Set GOOGLE_CLOUD_PROJECT/GCLOUD_PROJECT, run `gcloud config set project PROJECT_ID`, or pass project in options.",
+	);
 }
 
-function resolveLocation(options?: GoogleVertexOptions): string {
-	const location = options?.location || $env.GOOGLE_CLOUD_LOCATION;
-	if (!location) {
-		throw new Error("Vertex AI requires a location. Set GOOGLE_CLOUD_LOCATION or pass location in options.");
+export function resolveGoogleVertexLocation(options?: GoogleVertexOptions): string {
+	return options?.location || $env.GOOGLE_CLOUD_LOCATION || "global";
+}
+
+async function readAdcProject(): Promise<string | undefined> {
+	const credentialsPath =
+		$env.GOOGLE_APPLICATION_CREDENTIALS ||
+		path.join(os.homedir(), ".config", "gcloud", "application_default_credentials.json");
+	try {
+		const credentials = (await Bun.file(credentialsPath).json()) as {
+			project_id?: unknown;
+		};
+		if (typeof credentials.project_id === "string" && credentials.project_id.length > 0) {
+			return credentials.project_id;
+		}
+	} catch (error) {
+		if (!isEnoent(error)) throw error;
 	}
-	return location;
+	return undefined;
+}
+
+export function googleVertexRequestUrl(modelId: string, project: string, location: string): string {
+	const host = location === "global" ? "aiplatform.googleapis.com" : `${location}-aiplatform.googleapis.com`;
+	return `https://${host}/${API_VERSION}/projects/${project}/locations/${location}/publishers/google/models/${modelId}:streamGenerateContent`;
 }
 
 function buildParams(

@@ -62,6 +62,13 @@ export interface MarketplaceManagerOptions {
 	clearPluginRootsCache?: (extraPaths?: readonly string[]) => void;
 }
 
+export interface PluginUpdate {
+	pluginId: string;
+	scope: "user" | "project" | "local";
+	from: string;
+	to: string;
+}
+
 // ── Manager ──────────────────────────────────────────────────────────────────
 
 export class MarketplaceManager {
@@ -563,15 +570,45 @@ export class MarketplaceManager {
 	// Compare installed plugin versions against their catalog entries.
 	// Returns one entry per (pluginId, scope) pair where the catalog declares a newer version.
 	// Catalog entries without a version field are skipped.
-	async checkForUpdates(opts?: {
-		refresh?: boolean;
-	}): Promise<Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>> {
+	async checkForUpdates(opts?: { refresh?: boolean }): Promise<PluginUpdate[]> {
 		// Explicit upgrade flows pass refresh:true to re-fetch catalogs from source before
 		// comparing, so freshly-published versions are seen. Passive callers (startup notify,
 		// dashboard poll) omit it and rely on the 24h TTL (refreshStaleMarketplaces).
 		if (opts?.refresh) await this.updateAllMarketplaces();
 		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
-		const updates: Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }> = [];
+		return this.#collectUpdates(mktReg);
+	}
+
+	/**
+	 * Fetch current catalogs into a disposable directory and compare them with installed state.
+	 * No registry, persistent cache, installed plugin, or timestamp is changed.
+	 */
+	async previewPluginUpdates(): Promise<PluginUpdate[]> {
+		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const previewDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-plugin-upgrade-preview-"));
+		try {
+			const catalogs = new Map<string, MarketplaceCatalog>();
+			for (const marketplace of mktReg.marketplaces) {
+				const { catalog } = await fetchMarketplace(marketplace.sourceUri, previewDir);
+				if (catalog.name !== marketplace.name) {
+					throw new Error(
+						`Marketplace catalog name changed from "${marketplace.name}" to "${catalog.name}". ` +
+							"Remove and re-add the marketplace to update.",
+					);
+				}
+				catalogs.set(marketplace.name, catalog);
+			}
+			return await this.#collectUpdates(mktReg, catalogs);
+		} finally {
+			await fs.rm(previewDir, { recursive: true, force: true });
+		}
+	}
+
+	async #collectUpdates(
+		mktReg: { marketplaces: MarketplaceRegistryEntry[] },
+		catalogs?: ReadonlyMap<string, MarketplaceCatalog>,
+	): Promise<PluginUpdate[]> {
+		const updates: PluginUpdate[] = [];
 
 		// Keyed by (path, scope) so each scope is checked independently.
 		// A plugin current in user scope but stale in project scope must still appear.
@@ -597,11 +634,15 @@ export class MarketplaceManager {
 				if (!mktEntry) continue;
 
 				let catalogVersion: string | undefined;
-				try {
-					const catalog = await this.#readCatalog(mktEntry);
-					catalogVersion = catalog.plugins.find(p => p.name === parsed.name)?.version;
-				} catch {
-					continue;
+				if (catalogs) {
+					catalogVersion = catalogs.get(mktEntry.name)?.plugins.find(p => p.name === parsed.name)?.version;
+				} else {
+					try {
+						const catalog = await this.#readCatalog(mktEntry);
+						catalogVersion = catalog.plugins.find(p => p.name === parsed.name)?.version;
+					} catch {
+						continue;
+					}
 				}
 
 				if (!catalogVersion || catalogVersion === installed.version) continue;
@@ -698,11 +739,9 @@ export class MarketplaceManager {
 	// Upgrade every (pluginId, scope) pair that checkForUpdates reports as outdated.
 	// Only stale scopes are touched; a current user install is not re-installed when only
 	// the project scope is stale. Per-entry failures are skipped — partial success is returned.
-	async upgradeAllPlugins(opts?: {
-		refresh?: boolean;
-	}): Promise<Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }>> {
+	async upgradeAllPlugins(opts?: { refresh?: boolean }): Promise<PluginUpdate[]> {
 		const updates = await this.checkForUpdates(opts);
-		const results: Array<{ pluginId: string; scope: "user" | "project" | "local"; from: string; to: string }> = [];
+		const results: PluginUpdate[] = [];
 		for (const update of updates) {
 			try {
 				const entry = await this.upgradePlugin(update.pluginId, update.scope);

@@ -19,12 +19,15 @@ interface CapturedRequestBody {
 	};
 }
 
-function createModel(id: string): Model<"google-gemini-cli"> {
+function createModel(
+	id: string,
+	provider: "google-gemini-cli" | "google-antigravity" = "google-gemini-cli",
+): Model<"google-gemini-cli"> {
 	return enrichModelThinking({
 		id,
 		name: id,
 		api: "google-gemini-cli",
-		provider: "google-gemini-cli",
+		provider,
 		baseUrl: "https://cloudcode-pa.googleapis.com",
 		reasoning: true,
 		input: ["text", "image"],
@@ -101,6 +104,24 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 
 		const thinking = extractThinking(requestBody);
 		expect(thinking?.thinkingLevel).toBe("MEDIUM");
+		expect(thinking?.thinkingBudget).toBeUndefined();
+	});
+
+	it("uses thinkingLevel for Antigravity gemini-3.6-flash-high", async () => {
+		let requestBody: string | undefined;
+		using _hook = hookFetch((_input, init) => {
+			requestBody = typeof init?.body === "string" ? init.body : undefined;
+			return new Response('{"error":{"message":"bad request"}}', { status: 400 });
+		});
+
+		const stream = streamSimple(createModel("gemini-3.6-flash-high", "google-antigravity"), context, {
+			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			reasoning: Effort.High,
+		});
+		await stream.result();
+
+		const thinking = extractThinking(requestBody);
+		expect(thinking?.thinkingLevel).toBe("HIGH");
 		expect(thinking?.thinkingBudget).toBeUndefined();
 	});
 

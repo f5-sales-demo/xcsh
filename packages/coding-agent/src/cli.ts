@@ -4,8 +4,10 @@ import { APP_NAME, initI18n, MIN_BUN_VERSION, registerLocales, t, VERSION } from
  * CLI entry point — registers all commands explicitly and delegates to the
  * lightweight CLI runner from pi-utils.
  */
-import { type CommandEntry, run } from "@f5-sales-demo/pi-utils/cli";
+import { CliUsageError, type CommandEntry, run } from "@f5-sales-demo/pi-utils/cli";
+import { validateInlineFlagSyntax } from "./cli/flag-spec";
 import { findPrefixedCommand, launchFlagScopeMessage } from "./cli/root-command-routing";
+import { sandboxArgs, sandboxFlags, validateSandboxInvocation } from "./cli/sandbox-spec";
 import { locales } from "./locales/index";
 
 registerLocales(locales);
@@ -57,7 +59,12 @@ const commands: CommandEntry[] = [
 	{ name: "grep", load: () => import("./commands/grep").then(m => m.default) },
 	{ name: "grievances", load: () => import("./commands/grievances").then(m => m.default) },
 	{ name: "read", load: () => import("./commands/read").then(m => m.default) },
-	{ name: "sandbox", load: () => import("./commands/sandbox").then(m => m.default) },
+	{
+		name: "sandbox",
+		load: () => import("./commands/sandbox").then(m => m.default),
+		validate: argv => validateSandboxInvocation(argv, APP_NAME),
+		syntax: { args: sandboxArgs, flags: sandboxFlags },
+	},
 	{ name: "jupyter", load: () => import("./commands/jupyter").then(m => m.default) },
 	{ name: "manager", load: () => import("./commands/manager").then(m => m.default) },
 	{ name: "office", load: () => import("./commands/office").then(m => m.default) },
@@ -103,6 +110,16 @@ export function runCli(argv: string[]): Promise<void> {
 	// --help and --version are handled by run() directly, don't rewrite those.
 	// Everything else that isn't a known subcommand routes to "launch".
 	const first = argv[0];
+	if (!isSubcommand(first)) {
+		try {
+			validateInlineFlagSyntax(argv);
+		} catch (error) {
+			if (!(error instanceof CliUsageError)) throw error;
+			process.stderr.write(`Error: ${error.message}\n`);
+			process.exitCode = 2;
+			return Promise.resolve();
+		}
+	}
 	const prefixedCommand = findPrefixedCommand(argv, token => isSubcommand(token));
 	if (
 		prefixedCommand !== undefined &&

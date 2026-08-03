@@ -371,6 +371,60 @@ describe("agentLoop with AgentMessage", () => {
 		}
 	});
 
+	it("reports successful tools with empty output explicitly to the next model call", async () => {
+		const toolSchema = Type.Object({});
+		const tool: AgentTool<typeof toolSchema> = {
+			name: "empty_success",
+			label: "Empty success",
+			description: "Succeeds without output",
+			parameters: toolSchema,
+			async execute() {
+				return { content: [] };
+			},
+		};
+		const context: AgentContext = {
+			systemPrompt: "",
+			messages: [],
+			tools: [tool],
+		};
+		let callIndex = 0;
+		let observedResult: ToolResultMessage | undefined;
+		const stream = agentLoop(
+			[createUserMessage("run the tool")],
+			context,
+			{ model: createModel(), convertToLlm: identityConverter },
+			undefined,
+			(_model, llmContext) => {
+				if (callIndex === 1) {
+					observedResult = llmContext.messages.find(
+						(message): message is ToolResultMessage => message.role === "toolResult",
+					);
+				}
+				const assistantStream = new MockAssistantStream();
+				const stopReason = callIndex === 0 ? "toolUse" : "stop";
+				const message =
+					callIndex === 0
+						? createAssistantMessage(
+								[{ type: "toolCall", id: "tool-1", name: "empty_success", arguments: {} }],
+								stopReason,
+							)
+						: createAssistantMessage([{ type: "text", text: "done" }]);
+				callIndex++;
+				queueMicrotask(() => assistantStream.push({ type: "done", reason: stopReason, message }));
+				return assistantStream;
+			},
+		);
+
+		for await (const _ of stream) {
+			// consume
+		}
+
+		expect(observedResult?.isError).toBe(false);
+		expect(observedResult?.content).toEqual([
+			{ type: "text", text: "Tool completed successfully and produced no output." },
+		]);
+	});
+
 	it("injects and strips intent when intent tracing is enabled", async () => {
 		const toolSchema = Type.Object({ value: Type.String() });
 		const executedParams: Record<string, unknown>[] = [];

@@ -858,8 +858,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				};
 			}
 
+			const itemCountSummary = itemCount === undefined ? "" : `\n\nItem count: ${itemCount}`;
 			return {
-				content: [{ type: "text", text: `${statusLine}\n\n${bodyText}` }],
+				content: [{ type: "text", text: `${statusLine}\n\n${bodyText}${itemCountSummary}` }],
 				details: detail,
 				isError: response.status >= 400 || undefined,
 			};

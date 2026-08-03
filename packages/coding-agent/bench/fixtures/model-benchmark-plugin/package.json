@@ -1,0 +1,11 @@
+{
+	"name": "@f5-sales-demo/model-benchmark-plugin",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"xcsh": {
+		"extensions": [
+			"./extensions/probe.ts"
+		]
+	}
+}

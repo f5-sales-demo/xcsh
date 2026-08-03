@@ -56,6 +56,22 @@ describe("readLiteLLMConfig", () => {
 		expect(result).not.toBeUndefined();
 		expect(result?.baseUrl).toBe("https://proxy.example.com");
 		expect(result?.apiKey).toBe("my-literal-key");
+		expect(result?.apiBasePath).toBe("/v1");
+	});
+
+	test("preserves a custom LiteLLM API base path", () => {
+		const yml = [
+			"providers:",
+			"  anthropic:",
+			'    baseUrl: "https://proxy.example.com/anthropic"',
+			'    apiKey: "my-literal-key"',
+			"  litellm:",
+			'    baseUrl: "https://proxy.example.com/api/v1"',
+			'    apiKey: "my-literal-key"',
+		].join("\n");
+		fs.writeFileSync(modelsPath, yml);
+
+		expect(readLiteLLMConfig(modelsPath)?.apiBasePath).toBe("/api/v1");
 	});
 
 	test("strips /anthropic suffix from base URL", () => {

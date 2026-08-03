@@ -53,11 +53,11 @@ const SWEEP_MS = 60_000;
  * forced `XCSH_BRIDGE_PORT` strictly — it throws and exits rather than falling back
  * — so an occupied port must be ruled out before we hand it over.
  *
- * NOTE this is a BINDING probe, not a read: it takes the port and releases it. Only
- * `selectSpawnPort` may call it, and only for ports we have not already handed out;
- * probing one of our own in-flight workers can win the bind and kill it (#2463).
- * Bun.listen binds and throws synchronously, so this stays sync — keeping provision
- * idempotency race-free.
+ * NOTE this is a BINDING probe, not a read: it takes the port and releases it.
+ * `selectSpawnPort` only uses it for unassigned ports. Provision reconciliation may
+ * use it for an assigned port only after that worker has signalled that its bridge
+ * was listening; this prevents a startup probe from stealing the worker's bind
+ * (#2463). Bun.listen throws synchronously, keeping provision idempotency race-free.
  */
 function isPortFree(port: number): boolean {
 	try {
@@ -87,6 +87,44 @@ function pidListeningOn(port: number): number {
 	} catch {
 		return 0; // lsof unavailable — leave unknown
 	}
+}
+
+/** Whether a recorded child PID still exists at the OS level. The subprocess
+ * `exited` promise is delivered through the event loop, so under load there is
+ * a short interval where the OS has reaped a worker but its registry cleanup
+ * callback has not run yet. A provision received in that interval must not
+ * treat the stale record as a live, idempotent match. */
+function pidIsAlive(pid: number): boolean {
+	if (pid <= 0) return true; // unknown re-adopted PID: preserve the record
+	try {
+		process.kill(pid, 0);
+	} catch {
+		return false;
+	}
+	// kill(pid, 0) succeeds for an unreaped zombie. That is exactly the state in
+	// which the worker's port is already gone but Bun has not delivered proc.exited
+	// yet, so inspect the process state before accepting the registry record.
+	try {
+		const status = Bun.spawnSync(["ps", "-o", "state=", "-p", String(pid)], {
+			stdout: "pipe",
+			stderr: "ignore",
+		});
+		if (status.exitCode === 0) return !status.stdout.toString().trimStart().startsWith("Z");
+	} catch {
+		// ps is best-effort; repeat the portable existence probe below.
+	}
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function isWorkerReadyMessage(message: unknown): message is { type: "ready"; sessionId: string } {
+	if (typeof message !== "object" || message === null) return false;
+	if (!("type" in message) || message.type !== "ready") return false;
+	return "sessionId" in message && typeof message.sessionId === "string";
 }
 
 /** Complete the extension `hello` handshake against a bridge port (with the
@@ -219,6 +257,7 @@ export default class Manager extends Command {
 		fs.mkdirSync(dirname(sockPath), { recursive: true });
 
 		const reg: Registry = new Map();
+		const readySessions = new Set<string>();
 		const range = portCandidates();
 
 		// The version this manager advertises (hello ack + manager.json). Overridable
@@ -248,6 +287,8 @@ export default class Manager extends Command {
 			proc: Bun.Subprocess;
 			port: number;
 			pid: number;
+			ready: boolean;
+			boundSessionId?: string;
 		}
 		const pool: SpareRec[] = [];
 
@@ -260,6 +301,7 @@ export default class Manager extends Command {
 				isPortFree,
 			);
 			if (port === null) return; // range full — do not pre-warm
+			let rec: SpareRec | undefined;
 			const proc = Bun.spawn([process.execPath, ...workerArgv()], {
 				env: {
 					...process.env,
@@ -276,11 +318,18 @@ export default class Manager extends Command {
 					XCSH_API_URL: undefined,
 					XCSH_API_TOKEN: undefined,
 				},
-				ipc() {}, // enable Bun parent→child IPC; no worker→manager messages needed today
+				ipc(message) {
+					if (!rec || !isWorkerReadyMessage(message)) return;
+					rec.ready = true;
+					if (!rec.boundSessionId) return;
+					readySessions.add(rec.boundSessionId);
+					rec.proc.disconnect();
+					rec.proc.unref();
+				},
 				stdout: "ignore",
 				stderr: "ignore",
 			});
-			const rec: SpareRec = { proc, port, pid: proc.pid };
+			rec = { proc, port, pid: proc.pid, ready: false };
 			pool.push(rec);
 			proc.exited.then(() => {
 				const i = pool.indexOf(rec);
@@ -319,6 +368,7 @@ export default class Manager extends Command {
 					pid: pidListeningOn(port),
 					lastSeen: Date.now(),
 				});
+				readySessions.add(sid);
 				console.error(`[xcsh manager] re-adopted worker on port ${port}`);
 			}
 		};
@@ -327,6 +377,7 @@ export default class Manager extends Command {
 		const adoptSpare = (msg: { sessionId: string; tenant: string }, managerProvisionMs: number): boolean => {
 			const rec = pool.shift();
 			if (!rec) return false;
+			rec.boundSessionId = msg.sessionId;
 			// `send` exists because the spare was spawned with an `ipc` handler.
 			(rec.proc as { send(m: unknown): void }).send({
 				type: "bind",
@@ -338,8 +389,11 @@ export default class Manager extends Command {
 			// A bound worker must survive a manager handoff. It no longer needs its
 			// pre-warm IPC channel after receiving the immutable session identity, so
 			// release that parent/child lifecycle coupling immediately.
-			rec.proc.disconnect();
-			rec.proc.unref();
+			if (rec.ready) {
+				readySessions.add(msg.sessionId);
+				rec.proc.disconnect();
+				rec.proc.unref();
+			}
 			reg.set(msg.sessionId, {
 				sessionId: msg.sessionId,
 				tenant: msg.tenant,
@@ -349,7 +403,10 @@ export default class Manager extends Command {
 			});
 			rec.proc.exited.then(() => {
 				const cur = reg.get(msg.sessionId);
-				if (cur && cur.pid === rec.pid) reg.delete(msg.sessionId);
+				if (cur && cur.pid === rec.pid) {
+					reg.delete(msg.sessionId);
+					readySessions.delete(msg.sessionId);
+				}
 			});
 			maintainPool(); // replenish the consumed spare
 			console.error(`[xcsh manager] adopted spare pid ${rec.pid} on port ${rec.port}`);
@@ -370,6 +427,7 @@ export default class Manager extends Command {
 			if (!w) return;
 			killPid(w.pid);
 			reg.delete(sessionId);
+			readySessions.delete(sessionId);
 		};
 
 		/** Graceful teardown (#1874): stop accepting, terminate the (session-less)
@@ -417,7 +475,8 @@ export default class Manager extends Command {
 				console.error("[xcsh manager] port range exhausted; cannot provision a worker");
 				return;
 			}
-			const proc = Bun.spawn([process.execPath, ...workerArgv()], {
+			let proc: Bun.Subprocess;
+			proc = Bun.spawn([process.execPath, ...workerArgv()], {
 				env: {
 					...process.env,
 					XCSH_BROWSER_PROVIDER: "extension",
@@ -437,6 +496,14 @@ export default class Manager extends Command {
 					XCSH_TTFT_PROVISION_MS: String(managerProvisionMs),
 					XCSH_TTFT_COLD: "1",
 				},
+				ipc(message) {
+					if (!isWorkerReadyMessage(message) || message.sessionId !== msg.sessionId) return;
+					const current = reg.get(msg.sessionId);
+					if (!current || current.pid !== proc.pid) return;
+					readySessions.add(msg.sessionId);
+					proc.disconnect();
+					proc.unref();
+				},
 				stdout: "ignore",
 				stderr: "ignore",
 			});
@@ -453,7 +520,10 @@ export default class Manager extends Command {
 			// already-respawned entry for the same sessionId is never clobbered.
 			proc.exited.then(() => {
 				const cur = reg.get(msg.sessionId);
-				if (cur && cur.pid === proc.pid) reg.delete(msg.sessionId);
+				if (cur && cur.pid === proc.pid) {
+					reg.delete(msg.sessionId);
+					readySessions.delete(msg.sessionId);
+				}
 			});
 			console.error(`[xcsh manager] provisioned worker pid ${proc.pid} on port ${port}`);
 		};
@@ -489,6 +559,16 @@ export default class Manager extends Command {
 					return;
 				}
 				const provisionReceivedAt = Date.now(); // TTFT Phase 2: start of manager_provision
+				const recordedWorker = reg.get(msg.sessionId);
+				const readyPortIsGone =
+					recordedWorker && readySessions.has(msg.sessionId) && isPortFree(recordedWorker.port);
+				if (recordedWorker && (!pidIsAlive(recordedWorker.pid) || readyPortIsGone)) {
+					// Reconcile synchronously as well as from `proc.exited`: the latter's
+					// callback can lag behind bridge teardown or OS process reaping when the
+					// event loop is busy. A readiness signal makes the bind probe startup-safe.
+					reg.delete(msg.sessionId);
+					readySessions.delete(msg.sessionId);
+				}
 				if (needsProvision(reg, msg.sessionId)) {
 					const managerProvisionMs = Date.now() - provisionReceivedAt;
 					if (!adoptSpare(msg, managerProvisionMs)) spawnWorker(msg, managerProvisionMs); // adopt a warm spare, else cold-spawn (fallback)

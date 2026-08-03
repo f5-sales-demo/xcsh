@@ -5,7 +5,6 @@ import { type Effort, THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
 import { APP_NAME, CONFIG_DIR_NAME, logger } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { parseEffort } from "../thinking";
-import { BUILTIN_TOOLS } from "../tools";
 import {
 	flagNameForChar,
 	flagSpec,
@@ -25,6 +24,7 @@ export interface Args {
 	/** Extra directories the session may read AND write, beyond its CWD subtree (repeatable). */
 	allowPath?: string[];
 	provider?: string;
+	context?: string;
 	model?: string;
 	smol?: string;
 	slow?: string;
@@ -39,6 +39,7 @@ export interface Args {
 	version?: boolean;
 	mode?: Mode;
 	noSession?: boolean;
+	noMemories?: boolean;
 	sessionDir?: string;
 	providerSessionId?: string;
 	fork?: string;
@@ -95,6 +96,9 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 	provider: (r, v) => {
 		r.provider = v as string;
 	},
+	context: (r, v) => {
+		r.context = v as string;
+	},
 	"api-key": (r, v) => {
 		r.apiKey = v as string;
 	},
@@ -138,6 +142,9 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 	"no-session": r => {
 		r.noSession = true;
 	},
+	"no-memories": r => {
+		r.noMemories = true;
+	},
 	"provider-session-id": (r, v) => {
 		r.providerSessionId = v as string;
 	},
@@ -157,22 +164,10 @@ const APPLY: Record<LaunchFlagName, (result: Args, value: string | true) => void
 		r.noPty = true;
 	},
 	tools: (r, v) => {
-		const toolNames = (v as string)
+		r.tools = (v as string)
 			.split(",")
 			.map(s => s.trim().toLowerCase())
 			.filter(Boolean);
-		const validTools: string[] = [];
-		for (const name of toolNames) {
-			if (name in BUILTIN_TOOLS) {
-				validTools.push(name);
-			} else {
-				logger.warn("Unknown tool passed to --tools", {
-					tool: name,
-					validTools: Object.keys(BUILTIN_TOOLS),
-				});
-			}
-		}
-		r.tools = validTools;
 	},
 	thinking: (r, v) => {
 		const thinking = parseEffort(v as string);

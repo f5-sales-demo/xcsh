@@ -35,7 +35,7 @@ function createModel<TApi extends Api>(overrides: {
 }
 
 describe("model thinking metadata", () => {
-	it("bundles GPT-5.6 Sol for LiteLLM with verified high reasoning limits", () => {
+	it("bundles GPT-5.6 Sol for LiteLLM with the live-verified effort range", () => {
 		const model = getBundledModel("litellm", "gpt-5.6-sol");
 
 		expect(model).toMatchObject({
@@ -47,11 +47,11 @@ describe("model thinking metadata", () => {
 			maxTokens: 128000,
 			thinking: {
 				mode: "effort",
-				minLevel: Effort.High,
-				maxLevel: Effort.High,
+				minLevel: Effort.Low,
+				maxLevel: Effort.XHigh,
 			},
 		});
-		expect(getSupportedEfforts(model)).toEqual([Effort.High]);
+		expect(getSupportedEfforts(model)).toEqual([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]);
 	});
 
 	it("stores supported efforts for Codex mini in model metadata", () => {
@@ -68,6 +68,25 @@ describe("model thinking metadata", () => {
 		});
 		expect(() => requireSupportedEffort(model, Effort.Low)).toThrow(/Supported efforts: medium, high/);
 		expect(() => requireSupportedEffort(model, Effort.XHigh)).toThrow(/Supported efforts: medium, high/);
+	});
+
+	it("bundles Gemini 3.6 Flash for Vertex with its live-supported effort range", () => {
+		const model = getBundledModel("google-vertex", "gemini-3.6-flash");
+
+		expect(model).toMatchObject({
+			id: "gemini-3.6-flash",
+			api: "google-vertex",
+			provider: "google-vertex",
+			reasoning: true,
+			contextWindow: 1_048_576,
+			maxTokens: 65_536,
+			thinking: {
+				mode: "google-level",
+				minLevel: Effort.Low,
+				maxLevel: Effort.High,
+			},
+		});
+		expect(getSupportedEfforts(model)).toEqual([Effort.Low, Effort.Medium, Effort.High]);
 	});
 
 	it("stores xhigh support directly in metadata for GPT-5.2", () => {

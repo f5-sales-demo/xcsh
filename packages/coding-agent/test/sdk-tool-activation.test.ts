@@ -97,12 +97,50 @@ describe("createAgentSession defaultInactive tool activation", () => {
 		});
 
 		try {
-			expect(session.getActiveToolNames()).toEqual(
-				expect.arrayContaining(["read", "default_active_tool", "default_inactive_tool"]),
-			);
+			expect(session.getActiveToolNames()).toEqual(expect.arrayContaining(["read", "default_inactive_tool"]));
+			expect(session.getActiveToolNames()).not.toContain("default_active_tool");
 			expect(session.systemPrompt).toContain("default_inactive_tool");
+			expect(session.systemPrompt).not.toContain("default_active_tool");
 		} finally {
 			await session.dispose();
+		}
+	});
+
+	it("does not register the bundled image tool when the explicit tool scope is empty", async () => {
+		const tempDir = path.join(os.tmpdir(), `pi-sdk-tool-activation-${Snowflake.next()}`);
+		tempDirs.push(tempDir);
+		fs.mkdirSync(tempDir, { recursive: true });
+		const savedGeminiApiKey = Bun.env.GEMINI_API_KEY;
+		Bun.env.GEMINI_API_KEY = "benchmark-scope-test";
+
+		try {
+			const { session } = await createAgentSession({
+				cwd: tempDir,
+				agentDir: tempDir,
+				sessionManager: SessionManager.inMemory(),
+				settings: Settings.isolated(),
+				model: getBundledModel("openai", "gpt-4o-mini"),
+				disableExtensionDiscovery: true,
+				skills: [],
+				contextFiles: [],
+				promptTemplates: [],
+				slashCommands: [],
+				enableMCP: false,
+				enableLsp: false,
+				toolNames: [],
+			});
+			try {
+				expect(session.getAllToolNames()).not.toContain("generate_image");
+				expect(session.getActiveToolNames()).not.toContain("generate_image");
+			} finally {
+				await session.dispose();
+			}
+		} finally {
+			if (savedGeminiApiKey === undefined) {
+				delete Bun.env.GEMINI_API_KEY;
+			} else {
+				Bun.env.GEMINI_API_KEY = savedGeminiApiKey;
+			}
 		}
 	});
 });

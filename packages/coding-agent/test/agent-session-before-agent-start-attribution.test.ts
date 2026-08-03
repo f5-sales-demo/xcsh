@@ -40,10 +40,12 @@ describe("AgentSession before_agent_start attribution fallback", () => {
 	let session: AgentSession;
 	let modelRegistry: ModelRegistry;
 	let authStorage: AuthStorage | undefined;
+	let providerMessages: Message[];
 
 	const injectedText = "before-agent-start injected message";
 
 	beforeEach(async () => {
+		providerMessages = [];
 		tempDir = TempDir.createSync("@pi-before-agent-start-attribution-");
 		authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth.db"));
 		authStorage.setRuntimeApiKey("anthropic", "test-key");
@@ -86,7 +88,9 @@ describe("AgentSession before_agent_start attribution fallback", () => {
 				tools: [],
 				messages: [],
 			},
-			streamFn: () => {
+			convertToLlm,
+			streamFn: (_model, context) => {
+				providerMessages = [...context.messages];
 				const stream = new MockAssistantStream();
 				queueMicrotask(() => {
 					stream.push({ type: "start", partial: createAssistantMessage("") });
@@ -127,6 +131,21 @@ describe("AgentSession before_agent_start attribution fallback", () => {
 			return message.content.some(block => block.type === "text" && block.text === text);
 		});
 	}
+
+	it("keeps injected context before the explicit user instruction at the provider boundary", async () => {
+		createSession();
+		const promptText = "Return only the requested sentinel";
+
+		await session.prompt(promptText);
+
+		const textBlocks = providerMessages.flatMap(messageTextBlocks);
+		const injectedIndex = textBlocks.indexOf(injectedText);
+		const promptIndex = textBlocks.indexOf(promptText);
+		expect(injectedIndex).toBeGreaterThanOrEqual(0);
+		expect(promptIndex).toBeGreaterThan(injectedIndex);
+		expect(textBlocks.at(-1)).toBe(promptText);
+	});
+
 	it("defaults before_agent_start message attribution to user for user prompts", async () => {
 		const { emitBeforeAgentStart } = createSession();
 
@@ -196,3 +215,9 @@ describe("AgentSession before_agent_start attribution fallback", () => {
 		expect(inferCopilotInitiator(llmMessages)).toBe("agent");
 	});
 });
+
+function messageTextBlocks(message: Message): string[] {
+	if (message.role === "assistant" || message.role === "toolResult") return [];
+	if (typeof message.content === "string") return [message.content];
+	return message.content.filter(content => content.type === "text").map(content => content.text);
+}

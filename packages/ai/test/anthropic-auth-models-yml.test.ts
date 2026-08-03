@@ -1,7 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
-import { AuthCredentialStore } from "../src/auth-storage";
-import { findAnthropicAuth } from "../src/utils/anthropic-auth";
+import * as os from "node:os";
+import * as path from "node:path";
+import type { AuthCredentialStore } from "../src/auth-storage";
+import {
+	type AnthropicAuthEnvironment,
+	type FindAnthropicAuthOptions,
+	findAnthropicAuth,
+} from "../src/utils/anthropic-auth";
 
 const NEUTRALIZED_ENV: Record<string, string | undefined> = {
 	ANTHROPIC_API_KEY: undefined,
@@ -15,56 +21,34 @@ const NEUTRALIZED_ENV: Record<string, string | undefined> = {
 	LITELLM_API_KEY: undefined,
 };
 
-async function withEnv(overrides: Record<string, string | undefined>, fn: () => void | Promise<void>): Promise<void> {
-	const previous = new Map<string, string | undefined>();
-	for (const key of Object.keys(overrides)) {
-		previous.set(key, Bun.env[key]);
-	}
-	try {
-		for (const [key, value] of Object.entries(overrides)) {
-			if (value === undefined) {
-				delete Bun.env[key];
-			} else {
-				Bun.env[key] = value;
-			}
-		}
-		await fn();
-	} finally {
-		for (const [key, value] of previous.entries()) {
-			if (value === undefined) {
-				delete Bun.env[key];
-			} else {
-				Bun.env[key] = value;
-			}
-		}
-	}
+const emptyStore = {
+	getApiKey: () => undefined,
+	listAuthCredentials: () => [],
+	close: () => {},
+} as unknown as AuthCredentialStore;
+
+let tempDir: string;
+let modelsYmlPath: string;
+
+function authOptions(environment: AnthropicAuthEnvironment): FindAnthropicAuthOptions {
+	return { store: emptyStore, environment, modelsYmlPath };
 }
 
 function stubModelsYml(content: string | null): void {
-	const originalReadFileSync = fs.readFileSync.bind(fs);
-	vi.spyOn(fs, "readFileSync").mockImplementation(((...args: Parameters<typeof fs.readFileSync>) => {
-		if (typeof args[0] === "string" && args[0].endsWith("models.yml")) {
-			if (content === null) {
-				const err = Object.assign(new Error("ENOENT: no such file"), { code: "ENOENT" });
-				throw err;
-			}
-			return content;
-		}
-		return originalReadFileSync(...args);
-	}) as typeof fs.readFileSync);
+	if (content === null) {
+		fs.rmSync(modelsYmlPath, { force: true });
+		return;
+	}
+	fs.writeFileSync(modelsYmlPath, content);
 }
 
 beforeEach(() => {
-	vi.spyOn(AuthCredentialStore, "open").mockResolvedValue({
-		getApiKey: () => undefined,
-		listAuthCredentials: () => [],
-		replaceAuthCredentialsForProvider: () => {},
-		close: () => {},
-	} as unknown as AuthCredentialStore);
+	tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-anthropic-models-yml-"));
+	modelsYmlPath = path.join(tempDir, "models.yml");
 });
 
 afterEach(() => {
-	vi.restoreAllMocks();
+	fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
 describe("findAnthropicAuth tier 6 — models.yml contract", () => {
@@ -77,13 +61,11 @@ describe("findAnthropicAuth tier 6 — models.yml contract", () => {
 				'    apiKey: "sk-literal-test-123"',
 			].join("\n"),
 		);
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).not.toBeNull();
-			expect(auth?.apiKey).toBe("sk-literal-test-123");
-			expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
-			expect(auth?.isOAuth).toBe(false);
-		});
+		const auth = await findAnthropicAuth(authOptions(NEUTRALIZED_ENV));
+		expect(auth).not.toBeNull();
+		expect(auth?.apiKey).toBe("sk-literal-test-123");
+		expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
+		expect(auth?.isOAuth).toBe(false);
 	});
 
 	it("resolves credentials via env-var reference when the referenced env var is set", async () => {
@@ -95,12 +77,10 @@ describe("findAnthropicAuth tier 6 — models.yml contract", () => {
 				"    apiKey: LITELLM_API_KEY",
 			].join("\n"),
 		);
-		await withEnv({ ...NEUTRALIZED_ENV, LITELLM_API_KEY: "value" }, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).not.toBeNull();
-			expect(auth?.apiKey).toBe("value");
-			expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
-		});
+		const auth = await findAnthropicAuth(authOptions({ ...NEUTRALIZED_ENV, LITELLM_API_KEY: "value" }));
+		expect(auth).not.toBeNull();
+		expect(auth?.apiKey).toBe("value");
+		expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
 	});
 
 	it("falls through to tier 7 when env-var referenced by apiKey is unset", async () => {
@@ -112,17 +92,14 @@ describe("findAnthropicAuth tier 6 — models.yml contract", () => {
 				"    apiKey: UNDEFINED_ENV_VAR_XYZ",
 			].join("\n"),
 		);
-		await withEnv(
-			{
+		const auth = await findAnthropicAuth(
+			authOptions({
 				...NEUTRALIZED_ENV,
 				LITELLM_BASE_URL: "https://proxy.example.com",
 				LITELLM_API_KEY: "sk-tier7-fallback",
-			},
-			async () => {
-				const auth = await findAnthropicAuth();
-				expect(auth?.apiKey).toBe("sk-tier7-fallback");
-			},
+			}),
 		);
+		expect(auth?.apiKey).toBe("sk-tier7-fallback");
 	});
 
 	it("skips shell-secret apiKey (tier 6 returns null)", async () => {
@@ -134,52 +111,34 @@ describe("findAnthropicAuth tier 6 — models.yml contract", () => {
 				"    apiKey: !shellSecret get-key",
 			].join("\n"),
 		);
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).toBeNull();
-		});
+		expect(await findAnthropicAuth(authOptions(NEUTRALIZED_ENV))).toBeNull();
 	});
 
 	it("returns null when the anthropic provider block is absent", async () => {
 		stubModelsYml(
 			["providers:", "  openai:", '    baseUrl: "https://openai.example.com"', '    apiKey: "sk-openai"'].join("\n"),
 		);
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).toBeNull();
-		});
+		expect(await findAnthropicAuth(authOptions(NEUTRALIZED_ENV))).toBeNull();
 	});
 
 	it("returns null when models.yml does not exist and does not throw", async () => {
 		stubModelsYml(null);
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).toBeNull();
-		});
+		expect(await findAnthropicAuth(authOptions(NEUTRALIZED_ENV))).toBeNull();
 	});
 
 	it("returns null on malformed YAML without throwing", async () => {
 		stubModelsYml("::: not valid yaml {[broken");
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).toBeNull();
-		});
+		expect(await findAnthropicAuth(authOptions(NEUTRALIZED_ENV))).toBeNull();
 	});
 
 	it("returns null when anthropic block has baseUrl but no apiKey", async () => {
 		stubModelsYml(["providers:", "  anthropic:", '    baseUrl: "https://proxy.example.com/anthropic"'].join("\n"));
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).toBeNull();
-		});
+		expect(await findAnthropicAuth(authOptions(NEUTRALIZED_ENV))).toBeNull();
 	});
 
 	it("returns null when anthropic block has apiKey but no baseUrl", async () => {
 		stubModelsYml(["providers:", "  anthropic:", '    apiKey: "sk-test"'].join("\n"));
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).toBeNull();
-		});
+		expect(await findAnthropicAuth(authOptions(NEUTRALIZED_ENV))).toBeNull();
 	});
 
 	it("tier 6 wins over tier 7 when both are available", async () => {
@@ -191,18 +150,15 @@ describe("findAnthropicAuth tier 6 — models.yml contract", () => {
 				'    apiKey: "sk-models-yml-wins"',
 			].join("\n"),
 		);
-		await withEnv(
-			{
+		const auth = await findAnthropicAuth(
+			authOptions({
 				...NEUTRALIZED_ENV,
 				LITELLM_BASE_URL: "https://secondary.example.com",
 				LITELLM_API_KEY: "sk-tier7-loses",
-			},
-			async () => {
-				const auth = await findAnthropicAuth();
-				expect(auth?.apiKey).toBe("sk-models-yml-wins");
-				expect(auth?.baseUrl).toBe("https://primary.example.com/anthropic");
-			},
+			}),
 		);
+		expect(auth?.apiKey).toBe("sk-models-yml-wins");
+		expect(auth?.baseUrl).toBe("https://primary.example.com/anthropic");
 	});
 
 	it("full-chain integration: only models.yml has credentials, no env, no DB", async () => {
@@ -214,12 +170,10 @@ describe("findAnthropicAuth tier 6 — models.yml contract", () => {
 				'    apiKey: "sk-only-models-yml"',
 			].join("\n"),
 		);
-		await withEnv(NEUTRALIZED_ENV, async () => {
-			const auth = await findAnthropicAuth();
-			expect(auth).not.toBeNull();
-			expect(auth?.apiKey).toBe("sk-only-models-yml");
-			expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
-			expect(auth?.isOAuth).toBe(false);
-		});
+		const auth = await findAnthropicAuth(authOptions(NEUTRALIZED_ENV));
+		expect(auth).not.toBeNull();
+		expect(auth?.apiKey).toBe("sk-only-models-yml");
+		expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
+		expect(auth?.isOAuth).toBe(false);
 	});
 });

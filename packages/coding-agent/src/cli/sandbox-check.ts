@@ -13,7 +13,8 @@ import {
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
 } from "../sandbox/session-fence";
-import { BashTool, type ToolSession } from "../tools";
+import type { ToolSession } from "../tools";
+import { BashTool } from "../tools/bash";
 
 export type SandboxCheckResultStatus = "PASS" | "FAIL" | "SKIP" | "ERROR";
 
