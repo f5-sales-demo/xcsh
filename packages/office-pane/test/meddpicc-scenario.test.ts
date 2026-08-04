@@ -112,13 +112,34 @@ describe("five-step MEDDPICC scenario", () => {
 		);
 	});
 
+	test("step 3 accepts grep as installed-plugin resource access", () => {
+		allPass(
+			3,
+			observation({
+				reply: "Metrics; Economic Buyer; Decision Criteria; Decision Process; Paper Process; Identify Pain; Champion; Competition — schema definitions.",
+				toolNotices: [{ tool: "grep", ok: true, detail: "grep: done" }],
+			}),
+		);
+	});
+
 	test("step 4 proves the three evidence-backed priority gaps without mutation", () => {
 		expect(MEDDPICC_STEPS[3].prompt).toContain("eight MEDDPICC qualification elements");
+		expect(MEDDPICC_STEPS[3].prompt).toContain("In this turn, use a file tool to read example-corp.json again");
 		allPass(
 			4,
 			observation({
 				reply: "Example Corp health review: Paper Process lacks procurement evidence; Decision Process lacks a complete approval path; Competition lacks a differentiation plan.",
 				toolNotices: [{ tool: "read", ok: true, detail: "read: done" }],
+			}),
+		);
+	});
+
+	test("step 4 accepts grep as fresh fixture access", () => {
+		allPass(
+			4,
+			observation({
+				reply: "Example Corp health review: Paper Process lacks procurement evidence; Decision Process lacks a complete approval path; Competition lacks a differentiation plan.",
+				toolNotices: [{ tool: "grep", ok: true, detail: "grep: done" }],
 			}),
 		);
 	});

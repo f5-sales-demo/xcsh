@@ -67,7 +67,7 @@ export const MEDDPICC_STEPS: MeddpiccStep[] = [
 		number: 4,
 		title: "Review the three priority gaps",
 		prompt:
-			"Read example-corp.json and give a read-only Example Corp health review. Within the eight MEDDPICC qualification elements, identify the three most urgent evidence-backed gaps and cite the evidence that makes each a gap. Do not modify anything.",
+			"In this turn, use a file tool to read example-corp.json again; do not rely on content from earlier turns. Then give a read-only Example Corp health review. Within the eight MEDDPICC qualification elements, identify the three most urgent evidence-backed gaps and cite the evidence that makes each a gap. Do not modify anything.",
 		readOnly: true,
 	},
 	{
@@ -176,7 +176,7 @@ export function validateMeddpiccStep(stepNumber: number, observation: ScenarioOb
 				...CANONICAL_ELEMENTS.map(element =>
 					assertion(`reply defines ${element}`, mentionsElement(reply, element)),
 				),
-				assertion("installed plugin resource was read", successfulTool(observation, ["read", "bash"])),
+				assertion("installed plugin resource was read", successfulTool(observation, ["read", "grep", "bash"])),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),
 				assertion("workbook snapshot is unchanged", unchangedWorkbook(observation)),
 			];
@@ -185,7 +185,7 @@ export function validateMeddpiccStep(stepNumber: number, observation: ScenarioOb
 				assertion("reply identifies Paper Process", includes(reply, "Paper Process")),
 				assertion("reply identifies Decision Process", includes(reply, "Decision Process")),
 				assertion("reply identifies Competition", includes(reply, "Competition")),
-				assertion("fixture was read", successfulTool(observation, ["read", "bash"])),
+				assertion("fixture was read", successfulTool(observation, ["read", "grep", "bash"])),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),
 				assertion("workbook snapshot is unchanged", unchangedWorkbook(observation)),
 			];
