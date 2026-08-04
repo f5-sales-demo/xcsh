@@ -174,6 +174,18 @@ describe("private in-place MEDDPICC scenario", () => {
 		expect(results.filter(result => !result.passed)).toEqual([]);
 	});
 
+	test("fixture selection rejects ambiguous top-level JSON files", () => {
+		const files = [
+			{ path: "one.json", sha256: "one-sha", bytes: 10 },
+			{ path: "two.json", sha256: "two-sha", bytes: 20 },
+		];
+		const results = validatePrivateMeddpiccStep(
+			1,
+			observation({ reply: `Current working directory: ${WORKSPACE}`, filesBefore: files, filesAfter: files }),
+		);
+		expect(results.some(result => !result.passed && result.label.includes("unambiguous"))).toBe(true);
+	});
+
 	test("status accepts live engine values without copying a synthetic numeric oracle", () => {
 		const results = validatePrivateMeddpiccStep(
 			2,
