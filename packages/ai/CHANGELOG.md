@@ -17,6 +17,7 @@
 ### Fixed
 
 - Preserved native Gemini finish reasons in Google provider errors instead of reporting an unknown error ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Omitted empty tool arrays from OpenAI-compatible chat-completions requests so vLLM accepts no-tool sessions ([#2942](https://github.com/f5-sales-demo/xcsh/issues/2942))
 
 <!-- markdownlint-disable MD024 -->
 <!-- textlint-disable terminology -->
@@ -432,7 +433,7 @@
 - Removed `UsageCache` and `UsageCacheEntry` interfaces—caching is now handled internally by AuthStorage
 - Removed `google-gemini-cli-usage` export; use new `gemini` usage provider instead
 - Removed `resetInMs` computation from all usage providers
-- Removed cache TTL constants and cache management from usage fetchers (claude, github-copilot, google-antigravity, kimi, openai-codex, zai)
+- Removed cache TTL constants and cache management from usage fetchers (`claude`, `github-copilot`, `google-antigravity`, `kimi`, `openai-codex`, `zai`)
 
 ### Fixed
 
@@ -1293,7 +1294,7 @@
 
 ### Changed
 
-- Updated @anthropic-ai/sdk to ^0.72.1
+- Updated `@anthropic-ai/sdk` to ^0.72.1
 - Updated @aws-sdk/client-bedrock-runtime to ^3.982.0
 - Updated @google/genai to ^1.39.0
 - Updated @smithy/node-http-handler to ^4.4.9

@@ -94,6 +94,19 @@ describe("OpenAI tool strict mode", () => {
 		expect(payload.tools?.[0]?.function?.strict).toBeUndefined();
 	});
 
+	it("omits tools when the context has an empty tools array", async () => {
+		const model: Model<"openai-completions"> = {
+			...getBundledModel("openai", "gpt-4o-mini"),
+			api: "openai-completions",
+		};
+		const context: Context = { ...testContext, tools: [] };
+
+		const payload = (await captureCompletionsPayload(model, context)) as {
+			tools?: unknown[];
+		};
+		expect(payload.tools).toBeUndefined();
+	});
+
 	it("sends strict=true for openai-completions tool schemas on GitHub Copilot", async () => {
 		const model = getBundledModel("github-copilot", "gpt-4o") as Model<"openai-completions">;
 
