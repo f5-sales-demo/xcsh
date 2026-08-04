@@ -16,7 +16,7 @@
     },
     "packages/agent": {
       "name": "@f5-sales-demo/pi-agent-core",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "dependencies": {
         "@f5-sales-demo/pi-ai": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/ai": {
       "name": "@f5-sales-demo/pi-ai",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -74,7 +74,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5-sales-demo/xcsh",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "bin": {
         "xcsh": "src/cli.ts",
       },
@@ -107,17 +107,17 @@
     },
     "packages/natives": {
       "name": "@f5-sales-demo/pi-natives",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "devDependencies": {
         "@napi-rs/cli": "3.7.4",
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5-sales-demo/pi-natives-darwin-arm64": "20.2.7",
-        "@f5-sales-demo/pi-natives-darwin-x64": "20.2.7",
-        "@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.2.7",
-        "@f5-sales-demo/pi-natives-linux-x64-gnu": "20.2.7",
-        "@f5-sales-demo/pi-natives-win32-x64-msvc": "20.2.7",
+        "@f5-sales-demo/pi-natives-darwin-arm64": "20.3.0",
+        "@f5-sales-demo/pi-natives-darwin-x64": "20.3.0",
+        "@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.3.0",
+        "@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.0",
+        "@f5-sales-demo/pi-natives-win32-x64-msvc": "20.3.0",
       },
     },
     "packages/office-pane": {
@@ -144,7 +144,7 @@
     },
     "packages/resource-management": {
       "name": "@f5-sales-demo/pi-resource-management",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "dependencies": {
         "yaml": "2.9.0",
       },
@@ -154,7 +154,7 @@
     },
     "packages/stats": {
       "name": "@f5-sales-demo/xcsh-stats",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -179,7 +179,7 @@
     },
     "packages/tui": {
       "name": "@f5-sales-demo/pi-tui",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "dependencies": {
         "@f5-sales-demo/pi-natives": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -218,7 +218,7 @@
     },
     "packages/utils": {
       "name": "@f5-sales-demo/pi-utils",
-      "version": "20.2.7",
+      "version": "20.3.0",
       "dependencies": {
         "@f5-sales-demo/i18n-core": "^1.0.0",
         "beautiful-mermaid": "^1.1",
@@ -370,16 +370,6 @@
     "@f5-sales-demo/pi-ai": ["@f5-sales-demo/pi-ai@workspace:packages/ai"],
 
     "@f5-sales-demo/pi-natives": ["@f5-sales-demo/pi-natives@workspace:packages/natives"],
-
-    "@f5-sales-demo/pi-natives-darwin-arm64": ["@f5-sales-demo/pi-natives-darwin-arm64@20.2.7", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Seer7fVqZNqW0anY699AZarYGk1859vIDtNQy30pILP5OQg6OjqlzyrED/rfou1bKc/XU1AfLsyIeUL0aba0qA=="],
-
-    "@f5-sales-demo/pi-natives-darwin-x64": ["@f5-sales-demo/pi-natives-darwin-x64@20.2.7", "", { "os": "darwin", "cpu": "x64" }, "sha512-I7ZIQzI9+xAwwSWMsmJzplS1lBGHK5JLrNLe2bPa9QfYrWlQxdlSd+/5hSDGMCJ/ZjyUNCNCQBEL3lpE7VLlqQ=="],
-
-    "@f5-sales-demo/pi-natives-linux-arm64-gnu": ["@f5-sales-demo/pi-natives-linux-arm64-gnu@20.2.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-Dd4LY0SKPjKF5Q4YHHuluD+uNnNYQPsKPclBVyvXBKNXEwBNl/FMBeIDT77HFLw7IX8eGAfOrzT/HxtMcXzCyQ=="],
-
-    "@f5-sales-demo/pi-natives-linux-x64-gnu": ["@f5-sales-demo/pi-natives-linux-x64-gnu@20.2.7", "", { "os": "linux", "cpu": "x64" }, "sha512-exMr3/fAsV5yG/x7pMO5Yy94ytBTBQYyIxSWbQDlnrltDCzyg5udQ5XV/MC3ECPRFKpr1m+yyqux9BF+8EzVgw=="],
-
-    "@f5-sales-demo/pi-natives-win32-x64-msvc": ["@f5-sales-demo/pi-natives-win32-x64-msvc@20.2.7", "", { "os": "win32", "cpu": "x64" }, "sha512-A8/Bru4PnnlwofwuSpbyy7mIRXC6XkjFvzEH2oFwLs/dcEG6k38+H6IQEzC/Q2PN6gRrmSNgtLXEk3KGj6fDVw=="],
 
     "@f5-sales-demo/pi-resource-management": ["@f5-sales-demo/pi-resource-management@workspace:packages/resource-management"],
 
