@@ -30,8 +30,9 @@ function sandboxCheckCommand(flags: string[] = [], prefixFlags: string[] = []): 
 async function runSandboxCheckProcess(
 	flags: string[],
 	env: Record<string, string | undefined> = process.env,
+	cwd = process.cwd(),
 ): Promise<$.ShellOutput> {
-	return await $`${{ raw: sandboxCheckCommand(flags) }}`.env(env).quiet().nothrow();
+	return await $`${{ raw: sandboxCheckCommand(flags) }}`.cwd(cwd).env(env).quiet().nothrow();
 }
 
 function resultText(result: AgentToolResult<BashToolDetails>): string {
@@ -99,6 +100,15 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 
 it("runs the flag-free sandbox check named by launch-flag diagnostics and verifies fixture cleanup", async () => {
 	const result = await runSandboxCheckProcess(["--json"]);
+	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
+
+	expect(result.exitCode).toBe(0);
+	assertHealthyReport(report);
+}, 30_000);
+
+it("reports a healthy matrix when invoked from operator home", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const result = await runSandboxCheckProcess(["--json"], process.env, home);
 	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
 
 	expect(result.exitCode).toBe(0);

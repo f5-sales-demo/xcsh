@@ -12,6 +12,7 @@ import {
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
+	sandboxCheckSiblingRoot,
 } from "../sandbox/session-fence";
 import type { ToolSession } from "../tools";
 import { BashTool } from "../tools/bash";
@@ -381,7 +382,9 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			let liveSibling = inheritedSibling;
 			if (liveSibling === undefined) {
 				try {
-					liveSibling = await fs.mkdtemp(path.join(path.dirname(liveWorkspace), ".xcsh-sandbox-check-sibling-"));
+					liveSibling = await fs.mkdtemp(
+						path.join(sandboxCheckSiblingRoot(liveWorkspace, liveHome), ".xcsh-sandbox-check-sibling-"),
+					);
 					fixturePaths.push(liveSibling);
 					nonEnumerableCleanupDirs.add(liveSibling);
 					redactions.push([liveSibling, displayPath]);
