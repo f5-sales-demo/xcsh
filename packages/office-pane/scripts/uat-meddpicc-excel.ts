@@ -21,22 +21,17 @@ import {
 	waitForOfficeApplicationReady,
 } from "./uat/bridge-client";
 import {
-	extractPrivateStatusOracle,
 	MEDDPICC_STEPS,
 	type MeddpiccStep,
-	PRIVATE_MEDDPICC_STEPS,
-	type PrivateStatusOracle,
 	renderMeddpiccRunbook,
 	type ScenarioAssertion,
 	type ScenarioObservation,
 	validateMeddpiccStep,
-	validatePrivateMeddpiccStep,
-	validatePrivateSummaryAgainstStatus,
 } from "./uat/meddpicc-scenario";
 
 const OFFICE_PANE_PORT = 8444;
-const EXPECTED_FIXTURE_SHA256 = "8394bcd6485adca57e72fd53f2c149f026c3bb9652f7809dfa3614438bd6cd75";
-const EXPECTED_PLUGIN_VERSION = "7.5.3";
+const EXPECTED_FIXTURE_SHA256 = "eb891f2b2588d5b6bafcceaaa9c6923bfd26f87f5e7bdc23971b1c61e657ced8";
+const EXPECTED_PLUGIN_VERSION = "7.5.4";
 const EXPECTED_MODEL = "claude-opus-5";
 const ALTERNATE_MODEL = "gpt-5.6-sol";
 const MODEL_PROBE_MARKER = "OFFICE MODEL READY";
@@ -46,7 +41,6 @@ export interface UatMeddpiccOptions {
 	workspace?: string;
 	fixture?: string;
 	evidence?: string;
-	privateInPlace?: boolean;
 	printPrompts: boolean;
 	help: boolean;
 }
@@ -81,16 +75,6 @@ export interface ScenarioRunEvidence {
 	passed: boolean;
 }
 
-export interface PrivateScenarioRunEvidence {
-	step: number;
-	repeat: number;
-	title: string;
-	ended: "chat_done" | "chat_error";
-	durationMs: number;
-	assertions: Array<Pick<ScenarioAssertion, "label" | "passed">>;
-	passed: boolean;
-}
-
 interface ModelRoundTripEvidence {
 	advertisedModels: string[];
 	initialModel: string;
@@ -104,7 +88,7 @@ interface ModelRoundTripEvidence {
 	restoredTurnDurationMs: number;
 }
 
-interface SyntheticUatEvidence {
+interface UatEvidence {
 	schemaVersion: 1;
 	startedAt: string;
 	finishedAt?: string;
@@ -121,40 +105,16 @@ interface SyntheticUatEvidence {
 	runs: ScenarioRunEvidence[];
 }
 
-interface PrivateUatEvidence {
-	schemaVersion: 2;
-	mode: "private-in-place";
-	startedAt: string;
-	finishedAt?: string;
-	status: "running" | "passed" | "failed";
-	error?: string;
-	binary?: { version: string; sha256: string };
-	gitSha?: string;
-	fixture?: { topLevelJsonFiles: number };
-	plugin?: InstalledPlugin;
-	bridge?: { contractVersion: string | null };
-	modelRoundTrip?: ModelRoundTripEvidence;
-	runs: PrivateScenarioRunEvidence[];
-}
-
-type UatEvidence = SyntheticUatEvidence | PrivateUatEvidence;
-
 const USAGE = `Usage:
   bun run uat:meddpicc-excel --binary <xcsh> --workspace <dir> \\
     --fixture <example-deal.json> --evidence <evidence.json>
-  bun run uat:meddpicc-excel --binary <xcsh> --workspace <private-dir> \\
-    --evidence <evidence.json> --private-in-place
   bun run uat:meddpicc-excel --print-prompts
 
 Required for a live run:
   --binary       Local build or installed xcsh binary to certify
   --workspace    Dedicated folder from which office serve will run
-  --fixture      Canonical MEDDPICC example-deal.json source (synthetic mode)
+  --fixture      Canonical, role-aliased MEDDPICC example-deal.json source
   --evidence     Destination for sanitized JSON evidence
-  --private-in-place
-                 Select one top-level MEDDPICC deal JSON in place. With multiple
-                 JSON files, the canonical meddpicc.json file is required. The Office
-                 session is ephemeral and evidence contains outcomes only.
 
 Environment:
   LITELLM_BASE_URL is the HTTPS gateway root (for example,
@@ -178,10 +138,6 @@ export function parseUatMeddpiccArgs(argv: string[]): UatMeddpiccOptions {
 	const valueFlags = new Set(["binary", "workspace", "fixture", "evidence"]);
 	for (let index = 0; index < argv.length; index++) {
 		const argument = argv[index];
-		if (argument === "--private-in-place") {
-			result.privateInPlace = true;
-			continue;
-		}
 		if (argument === "--print-prompts") {
 			result.printPrompts = true;
 			continue;
@@ -203,9 +159,9 @@ export function parseUatMeddpiccArgs(argv: string[]): UatMeddpiccOptions {
 
 function requiredLiveOptions(
 	options: UatMeddpiccOptions,
-): asserts options is UatMeddpiccOptions & Required<Pick<UatMeddpiccOptions, "binary" | "workspace" | "evidence">> {
-	const missing: string[] = (["binary", "workspace", "evidence"] as const).filter(name => !options[name]);
-	if (!options.privateInPlace && !options.fixture) missing.push("fixture");
+): asserts options is UatMeddpiccOptions &
+	Required<Pick<UatMeddpiccOptions, "binary" | "workspace" | "fixture" | "evidence">> {
+	const missing: string[] = (["binary", "workspace", "fixture", "evidence"] as const).filter(name => !options[name]);
 	if (missing.length > 0)
 		throw new Error(`Missing required option(s): ${missing.map(name => `--${name}`).join(", ")}`);
 }
@@ -265,6 +221,52 @@ function installedMeddpicc(binary: string, workspace: string): InstalledPlugin {
 	throw new Error("meddpicc@f5-sales-demo-marketplace is not installed");
 }
 
+const ROLE_ALIAS = /^<[A-Z][A-Z0-9_]*>$/;
+const OWNED_ROLE_ALIAS = /^<[A-Z][A-Z0-9_]*>(?: \([A-Z][A-Z0-9_-]*\))?$/;
+
+function record(value: unknown): Record<string, unknown> | null {
+	return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+/** Refuse development fixtures whose identity fields are not visibly synthetic role aliases. */
+export function assertSyntheticFixtureUsesRoleAliases(fixture: unknown): void {
+	const deal = record(fixture);
+	const invalid: string[] = [];
+	const requireAlias = (field: string, value: unknown, pattern = ROLE_ALIAS): void => {
+		if (typeof value !== "string" || !pattern.test(value)) invalid.push(field);
+	};
+
+	const metadata = record(deal?.metadata);
+	requireAlias("metadata.reviewer", metadata?.reviewer);
+
+	const stakeholders = Array.isArray(deal?.stakeholders) ? deal.stakeholders : [];
+	for (const [index, value] of stakeholders.entries()) {
+		const stakeholder = record(value);
+		requireAlias(`stakeholders[${index}].name`, stakeholder?.name);
+		requireAlias(`stakeholders[${index}].relationshipOwner`, stakeholder?.relationshipOwner);
+	}
+
+	const closePlan = record(deal?.closePlan);
+	const actions = Array.isArray(closePlan?.criticalActions) ? closePlan.criticalActions : [];
+	for (const [index, value] of actions.entries()) {
+		requireAlias(`closePlan.criticalActions[${index}].owner`, record(value)?.owner, OWNED_ROLE_ALIAS);
+	}
+
+	const team = record(deal?.team);
+	for (const group of ["internal", "partner"] as const) {
+		const members = Array.isArray(team?.[group]) ? team[group] : [];
+		for (const [index, value] of members.entries()) {
+			requireAlias(`team.${group}[${index}].name`, record(value)?.name);
+		}
+	}
+
+	if (invalid.length > 0) {
+		throw new Error(
+			`Synthetic MEDDPICC fixture identity fields must use <ROLE_ALIAS> role aliases: ${invalid.join(", ")}`,
+		);
+	}
+}
+
 async function prepareFixture(workspaceInput: string, fixtureInput: string) {
 	await fs.mkdir(workspaceInput, { recursive: true });
 	const workspace = await fs.realpath(workspaceInput);
@@ -272,6 +274,8 @@ async function prepareFixture(workspaceInput: string, fixtureInput: string) {
 	if (!fixtureSource) throw new Error(`Fixture not found: ${fixtureInput}`);
 	const sourceStat = await fs.stat(fixtureSource);
 	if (!sourceStat.isFile()) throw new Error(`Fixture is not a regular file: ${fixtureSource}`);
+	const fixture = JSON.parse(await fs.readFile(fixtureSource, "utf8")) as unknown;
+	assertSyntheticFixtureUsesRoleAliases(fixture);
 	const sourceSha = await sha256File(fixtureSource);
 	if (sourceSha !== EXPECTED_FIXTURE_SHA256) {
 		throw new Error(`Fixture SHA-256 is ${sourceSha}; expected ${EXPECTED_FIXTURE_SHA256}`);
@@ -291,48 +295,6 @@ async function prepareFixture(workspaceInput: string, fixtureInput: string) {
 	}
 	const targetStat = await fs.stat(target);
 	return { workspace, path: target, sha256: sourceSha, bytes: targetStat.size };
-}
-
-/**
- * Resolve one private deal file without reading, copying, or renaming it. A
- * presentation folder may contain unrelated JSON configuration, so a canonical
- * meddpicc.json disambiguates multiple top-level JSON files. A folder containing
- * one JSON file remains supported regardless of its name.
- */
-export async function discoverPrivateFixture(
-	workspaceInput: string,
-): Promise<{ workspace: string; path: string; topLevelJsonFiles: number }> {
-	const workspace = await fs.realpath(workspaceInput).catch(() => "");
-	if (!workspace) throw new Error("Private workspace was not found");
-	const workspaceStat = await fs.stat(workspace);
-	if (!workspaceStat.isDirectory()) throw new Error("Private workspace is not a directory");
-
-	const entries = await fs.readdir(workspace, { withFileTypes: true });
-	const jsonFiles = entries.filter(entry => entry.isFile() && entry.name.toLocaleLowerCase().endsWith(".json"));
-	if (jsonFiles.length === 0) throw new Error("Private in-place UAT requires a top-level JSON deal file");
-	const selected =
-		jsonFiles.length === 1
-			? jsonFiles[0]
-			: jsonFiles.find(entry => entry.name.toLocaleLowerCase() === "meddpicc.json");
-	if (!selected) {
-		throw new Error("Private in-place UAT requires one canonical meddpicc.json when multiple JSON files exist");
-	}
-	return { workspace, path: path.join(workspace, selected.name), topLevelJsonFiles: jsonFiles.length };
-}
-
-/** Refuse any real or symlinked evidence destination inside the private tree. */
-export async function assertPrivateEvidenceOutsideWorkspace(workspace: string, evidence: string): Promise<string> {
-	const resolvedWorkspace = await fs.realpath(workspace);
-	const evidenceInput = path.resolve(evidence);
-	const resolvedParent = await fs.realpath(path.dirname(evidenceInput)).catch(() => "");
-	if (!resolvedParent) throw new Error("Private UAT evidence directory must already exist");
-	const prospectiveEvidence = path.join(resolvedParent, path.basename(evidenceInput));
-	const resolvedEvidence = await fs.realpath(evidenceInput).catch(() => prospectiveEvidence);
-	const relative = path.relative(resolvedWorkspace, resolvedEvidence);
-	if (relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))) {
-		throw new Error("Private UAT evidence must be written outside the private workspace");
-	}
-	return resolvedEvidence;
 }
 
 async function snapshotFiles(root: string): Promise<ScenarioObservation["filesBefore"]> {
@@ -416,19 +378,6 @@ async function writeEvidence(file: string, evidence: UatEvidence, secrets: strin
 	await fs.mkdir(path.dirname(file), { recursive: true });
 	const sanitized = sanitizeEvidence(evidence, secrets);
 	await Bun.write(file, `${JSON.stringify(sanitized, null, 2)}\n`);
-}
-
-/** Project a live private turn onto an outcome-only, customer-data-free record. */
-export function summarizePrivateRunEvidence(run: ScenarioRunEvidence): PrivateScenarioRunEvidence {
-	return {
-		step: run.step,
-		repeat: run.repeat,
-		title: run.title,
-		ended: run.ended,
-		durationMs: run.durationMs,
-		assertions: run.assertions.map(assertion => ({ label: assertion.label, passed: assertion.passed })),
-		passed: run.passed,
-	};
 }
 
 async function runScenarioStep(
@@ -553,29 +502,19 @@ async function proveModelRoundTrip(
 
 async function runLive(options: UatMeddpiccOptions): Promise<void> {
 	requiredLiveOptions(options);
-	const privateMode = options.privateInPlace === true;
-	let evidencePath = path.resolve(options.evidence);
+	const evidencePath = path.resolve(options.evidence);
 	const secrets = [process.env.LITELLM_API_KEY ?? ""];
-	const evidence: UatEvidence = privateMode
-		? {
-				schemaVersion: 2,
-				mode: "private-in-place",
-				startedAt: new Date().toISOString(),
-				status: "running",
-				runs: [],
-			}
-		: {
-				schemaVersion: 1,
-				startedAt: new Date().toISOString(),
-				status: "running",
-				runs: [],
-			};
+	const evidence: UatEvidence = {
+		schemaVersion: 1,
+		startedAt: new Date().toISOString(),
+		status: "running",
+		runs: [],
+	};
 	let child: ReturnType<typeof Bun.spawn> | null = null;
 	let bridge: UatBridgeClient | null = null;
 	let dispatcher: ReturnType<typeof wireExcelHostTools>["dispatcher"] | null = null;
 	let stdoutPromise: Promise<string> | null = null;
 	let stderrPromise: Promise<string> | null = null;
-	let privateStage = "startup validation";
 	let failure: unknown = null;
 
 	try {
@@ -584,42 +523,23 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		if (!baseUrlInput.trim() || !token) throw new Error("LITELLM_BASE_URL and LITELLM_API_KEY are required");
 		const baseUrl = requireGatewayRootUrl(baseUrlInput);
 
-		privateStage = "fixture discovery";
-		const prepared = privateMode
-			? await discoverPrivateFixture(path.resolve(options.workspace))
-			: await prepareFixture(path.resolve(options.workspace), path.resolve(options.fixture ?? ""));
-		if ("mode" in evidence) {
-			evidencePath = await assertPrivateEvidenceOutsideWorkspace(prepared.workspace, evidencePath);
-			evidence.fixture = { topLevelJsonFiles: prepared.topLevelJsonFiles };
-		} else {
-			if (
-				!("sha256" in prepared) ||
-				typeof prepared.sha256 !== "string" ||
-				!("bytes" in prepared) ||
-				typeof prepared.bytes !== "number"
-			) {
-				throw new Error("Synthetic fixture preparation did not return its checksum");
-			}
-			evidence.cwd = prepared.workspace;
-			evidence.fixture = { path: prepared.path, sha256: prepared.sha256, bytes: prepared.bytes };
-		}
+		const prepared = await prepareFixture(path.resolve(options.workspace), path.resolve(options.fixture));
+		evidence.cwd = prepared.workspace;
+		evidence.fixture = { path: prepared.path, sha256: prepared.sha256, bytes: prepared.bytes };
 
-		privateStage = "binary verification";
 		const binary = await resolveBinary(options.binary);
 		const version = requireSuccessfulCommand(
 			runCommand([binary.path, "--version"], prepared.workspace),
 			"xcsh --version",
 		);
 		const binarySha256 = await sha256File(binary.realPath);
-		evidence.binary =
-			"mode" in evidence ? { version, sha256: binarySha256 } : { ...binary, version, sha256: binarySha256 };
+		evidence.binary = { ...binary, version, sha256: binarySha256 };
 		const repoRoot = path.resolve(import.meta.dir, "../../..");
 		evidence.gitSha = requireSuccessfulCommand(
 			runCommand(["git", "rev-parse", "HEAD"], repoRoot),
 			"git rev-parse HEAD",
 		);
 
-		privateStage = "plugin verification";
 		const plugin = installedMeddpicc(binary.path, prepared.workspace);
 		if (plugin.version !== EXPECTED_PLUGIN_VERSION) {
 			throw new Error(`Installed MEDDPICC is ${plugin.version}; ${EXPECTED_PLUGIN_VERSION} is required`);
@@ -639,12 +559,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			}
 		}
 
-		console.log(
-			privateMode
-				? "Starting private in-place Office UAT"
-				: `Starting ${binary.path} office serve in ${prepared.workspace}`,
-		);
-		privateStage = "Office server startup";
+		console.log(`Starting ${binary.path} office serve in ${prepared.workspace}`);
 		const spawned = Bun.spawn([binary.path, "office", "serve"], {
 			cwd: prepared.workspace,
 			env: process.env,
@@ -657,26 +572,20 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		stderrPromise = new Response(spawned.stderr).text();
 
 		bridge = await discoverOfficeBridge({ attempts: 30, retryDelayMs: 500 });
-		evidence.bridge =
-			"mode" in evidence
-				? { contractVersion: bridge.ack.contractVersion ?? null }
-				: { port: bridge.port, pid: child.pid, contractVersion: bridge.ack.contractVersion ?? null };
+		evidence.bridge = { port: bridge.port, pid: child.pid, contractVersion: bridge.ack.contractVersion ?? null };
 		if (!bridge.canConfigureProvider) throw new Error("Office bridge did not advertise provider configuration");
 		await waitForOfficeApplicationReady(bridge);
 
 		// Deliberately omit model. This is the end-to-end proof that the binary owns
 		// anthropic/claude-opus-5:high as the vision-capable production default.
-		privateStage = "default model configuration";
 		const acknowledgement = await bridge.configure({ baseUrl, token });
 		if (acknowledgement !== EXPECTED_MODEL) {
 			throw new Error(`Office configure selected ${acknowledgement}; expected ${EXPECTED_MODEL}`);
 		}
-		if (!("mode" in evidence)) evidence.configure = { modelOmitted: true, acknowledgement };
+		evidence.configure = { modelOmitted: true, acknowledgement };
 
-		privateStage = "model compatibility round trip";
 		evidence.modelRoundTrip = await proveModelRoundTrip(bridge, baseUrl, token);
 
-		privateStage = "Excel host-tool registration";
 		const workbook = fakeExcel({}, { Start: { "A1:B1": [["sentinel", "keep"]] } });
 		const wired = wireExcelHostTools(bridge, workbook);
 		dispatcher = wired.dispatcher;
@@ -688,31 +597,17 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		const registrationFrame = await registration;
 		if (registrationFrame.type !== "set_host_tools_ack") throw new Error("Excel host-tool registration was rejected");
 
-		const steps = privateMode ? PRIVATE_MEDDPICC_STEPS : MEDDPICC_STEPS;
-		const validate = privateMode ? validatePrivateMeddpiccStep : validateMeddpiccStep;
-		let privateStatus: PrivateStatusOracle | null = null;
-		privateStage = "MEDDPICC scenario";
+		const steps = MEDDPICC_STEPS;
 		for (let index = 0; index < steps.length; index++) {
 			console.log(`Step ${index + 1}/5: ${steps[index].title}`);
-			const run = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validate, index, 1);
-			if (privateMode && steps[index].number === 2) privateStatus = extractPrivateStatusOracle(run.reply);
-			if (privateMode && steps[index].number === 5) {
-				run.assertions.push(validatePrivateSummaryAgainstStatus(run.hostToolCalls, privateStatus));
-				run.passed = run.assertions.every(assertion => assertion.passed);
-			}
-			if ("mode" in evidence) evidence.runs.push(summarizePrivateRunEvidence(run));
-			else evidence.runs.push(run);
+			const run = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validateMeddpiccStep, index, 1);
+			evidence.runs.push(run);
 			console.log(`  ${run.passed ? "PASS" : "FAIL"} (${run.durationMs} ms)`);
 		}
 
 		console.log("Step 5 idempotency rerun");
-		const rerun = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validate, 4, 2);
-		if (privateMode) {
-			rerun.assertions.push(validatePrivateSummaryAgainstStatus(rerun.hostToolCalls, privateStatus));
-			rerun.passed = rerun.assertions.every(assertion => assertion.passed);
-		}
-		if ("mode" in evidence) evidence.runs.push(summarizePrivateRunEvidence(rerun));
-		else evidence.runs.push(rerun);
+		const rerun = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validateMeddpiccStep, 4, 2);
+		evidence.runs.push(rerun);
 		console.log(`  ${rerun.passed ? "PASS" : "FAIL"} (${rerun.durationMs} ms)`);
 
 		const failures = evidence.runs.flatMap(run =>
@@ -724,19 +619,14 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		evidence.status = "passed";
 	} catch (error) {
 		evidence.status = "failed";
-		if ("mode" in evidence) {
-			evidence.error = `Private MEDDPICC UAT failed during ${privateStage}`;
-			failure = new Error(evidence.error);
-		} else {
-			evidence.error = error instanceof Error ? error.message : String(error);
-			failure = error;
-		}
+		evidence.error = error instanceof Error ? error.message : String(error);
+		failure = error;
 	} finally {
 		dispatcher?.dispose();
 		bridge?.dispose();
 		if (child) await stopSpawnedChild(child);
 		evidence.finishedAt = new Date().toISOString();
-		if (child && evidence.status === "failed" && !("mode" in evidence)) {
+		if (child && evidence.status === "failed") {
 			const [stdout, stderr] = await Promise.all([stdoutPromise ?? "", stderrPromise ?? ""]);
 			const tail = `${stdout}\n${stderr}`.trim().slice(-2_000);
 			if (tail && evidence.error && !evidence.error.includes("port 8444")) {
@@ -748,10 +638,10 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			await writeEvidence(evidencePath, evidence, secrets);
 			evidenceWritten = true;
 		} catch (error) {
-			failure = "mode" in evidence ? new Error("Private UAT evidence could not be written") : error;
+			failure = error;
 		}
 		if (evidenceWritten) {
-			console.log("mode" in evidence ? "Private outcome evidence written." : `Evidence: ${evidencePath}`);
+			console.log(`Evidence: ${evidencePath}`);
 		}
 	}
 	if (failure) throw failure;

@@ -119,7 +119,7 @@ workflow.
 
 Prerequisites:
 
-1. Install `meddpicc@f5-sales-demo-marketplace` version 7.5.3.
+1. Install `meddpicc@f5-sales-demo-marketplace` version 7.5.4.
 2. Export `LITELLM_BASE_URL` as the HTTPS gateway root (for example,
    `https://gateway.example.com`) and export `LITELLM_API_KEY`. xcsh derives the
    provider-specific API path from the selected model. Legacy values that include a
@@ -144,30 +144,13 @@ bun packages/office-pane/scripts/uat-meddpicc-excel.ts \
 ```
 
 For the published gate, use the exact Homebrew binary and a separate evidence file.
-The script copies the canonical fixture into the workspace as `example-corp.json`,
-checks its SHA-256, checks the plugin version, runs all five steps, reruns step 5 for
-idempotency, and stops only the `office serve` child it spawned. This synthetic mode
-records responses, tool traffic, timings, assertions, and before/after workbook
+The fixture must be synthetic and represent every person with a reserved role alias
+such as `<CHAMPION>` or `<ACCOUNT_EXECUTIVE>`. The harness refuses other identity
+values before starting Office, copies the canonical fixture into the workspace as
+`example-corp.json`, checks its SHA-256 and plugin version, runs all five steps,
+reruns step 5 for idempotency, and stops only the `office serve` child it spawned.
+It records responses, tool traffic, timings, assertions, and before/after workbook
 snapshots alongside the build identifiers.
-
-Use private in-place mode only for an authorized local presentation folder. The
-folder may contain one top-level JSON deal file. If unrelated top-level JSON files
-coexist, name the intended deal file `meddpicc.json` so preflight and the model select
-the same input. Keep the evidence destination outside that folder:
-
-```sh
-bun packages/office-pane/scripts/uat-meddpicc-excel.ts \
-  --binary "$PWD/packages/coding-agent/dist/xcsh" \
-  --workspace "<AUTHORIZED_PRIVATE_FOLDER>" \
-  --evidence /tmp/xcsh-meddpicc-private.json \
-  --private-in-place
-```
-
-Private mode does not copy or rename the deal file. The Office agent session is
-in-memory, and the evidence contains build identifiers, model acknowledgements,
-durations, and assertion outcomes only. It excludes the working path, filename,
-file hashes, prompts, replies, tool arguments, and workbook values. Do not capture
-screenshots, terminal output, or recordings that show private deal values.
 
 In desktop Excel, begin with a sheet named `Start` containing a sentinel value. Save
 the LiteLLM URL and token with the model field blank, then send the printed prompts.
