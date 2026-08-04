@@ -70,14 +70,14 @@
                     {
                       "id": "xcshTaskpaneButton",
                       "type": "button",
-                      "label": "Open xcsh",
+                      "label": "xcsh",
                       "icons": [
                         { "size": 16, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png" },
                         { "size": 32, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-32.png" },
                         { "size": 80, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-80.png" }
                       ],
                       "supertip": {
-                        "title": "Open xcsh",
+                        "title": "xcsh",
                         "description": "Open the xcsh chat task pane."
                       },
                       "actionId": "ShowTaskpane"

@@ -63,6 +63,14 @@ describe("handleAssetRequest", () => {
 		expect(res.headers.get("content-type") ?? "").toContain("javascript");
 	});
 
+	it("prevents Excel's WebView from reusing pane assets across xcsh builds", async () => {
+		for (const pathname of ["/taskpane.html", "/taskpane.js", "/assets/icon-16.png"]) {
+			const res = await handleAssetRequest(pathname, dir);
+			expect(res.status).toBe(200);
+			expect(res.headers.get("cache-control"), pathname).toBe("no-store");
+		}
+	});
+
 	it("serves /manifest.json with an application/json content-type", async () => {
 		const res = await handleAssetRequest("/manifest.json", dir);
 		expect(res.status).toBe(200);

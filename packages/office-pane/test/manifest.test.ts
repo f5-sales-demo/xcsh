@@ -13,6 +13,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { inflateSync } from "node:zlib";
 
 /**
  * Single documented constant for the task-pane listener port. The manifest's
@@ -35,6 +36,72 @@ type Manifest = any;
 async function loadManifest(): Promise<Manifest> {
 	const raw = await readFile(MANIFEST_PATH, "utf8");
 	return JSON.parse(raw);
+}
+
+interface RgbaPng {
+	width: number;
+	height: number;
+	bitDepth: number;
+	colorType: number;
+	pixels: Uint8Array;
+}
+
+/** Decode the non-interlaced 8-bit RGBA subset used by the shipped ribbon icons. */
+function decodeRgbaPng(bytes: Buffer): RgbaPng {
+	expect(bytes.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+	let offset = 8;
+	let width = 0;
+	let height = 0;
+	let bitDepth = 0;
+	let colorType = 0;
+	const compressed: Buffer[] = [];
+	while (offset < bytes.length) {
+		const length = bytes.readUInt32BE(offset);
+		const type = bytes.toString("ascii", offset + 4, offset + 8);
+		const data = bytes.subarray(offset + 8, offset + 8 + length);
+		if (type === "IHDR") {
+			width = data.readUInt32BE(0);
+			height = data.readUInt32BE(4);
+			bitDepth = data[8];
+			colorType = data[9];
+			expect(data[12], "ribbon icons must be non-interlaced PNGs").toBe(0);
+		} else if (type === "IDAT") {
+			compressed.push(data);
+		} else if (type === "IEND") {
+			break;
+		}
+		offset += length + 12;
+	}
+	expect(bitDepth, "ribbon icons must use broadly compatible 8-bit channels").toBe(8);
+	expect(colorType, "ribbon icons must be RGBA PNGs").toBe(6);
+
+	const raw = inflateSync(Buffer.concat(compressed));
+	const stride = width * 4;
+	const pixels = new Uint8Array(stride * height);
+	let source = 0;
+	for (let y = 0; y < height; y += 1) {
+		const filter = raw[source++];
+		expect([0, 1, 2, 3, 4], "unsupported PNG row filter").toContain(filter);
+		for (let x = 0; x < stride; x += 1) {
+			const encoded = raw[source++];
+			const left = x >= 4 ? pixels[y * stride + x - 4] : 0;
+			const above = y > 0 ? pixels[(y - 1) * stride + x] : 0;
+			const upperLeft = y > 0 && x >= 4 ? pixels[(y - 1) * stride + x - 4] : 0;
+			let prediction = 0;
+			if (filter === 1) prediction = left;
+			else if (filter === 2) prediction = above;
+			else if (filter === 3) prediction = Math.floor((left + above) / 2);
+			else if (filter === 4) {
+				const p = left + above - upperLeft;
+				const pa = Math.abs(p - left);
+				const pb = Math.abs(p - above);
+				const pc = Math.abs(p - upperLeft);
+				prediction = pa <= pb && pa <= pc ? left : pb <= pc ? above : upperLeft;
+			}
+			pixels[y * stride + x] = (encoded + prediction) & 0xff;
+		}
+	}
+	return { width, height, bitDepth, colorType, pixels };
 }
 
 const GUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
@@ -113,6 +180,39 @@ test("a ribbon button opens the task pane via a runtime openPage action", async 
 	}
 	const opener = buttons.find(c => c.type === "button" && c.actionId && openPageActionIds.has(c.actionId));
 	expect(opener).toBeDefined();
+});
+
+test("the ribbon command uses the concise xcsh product label", async () => {
+	const m = await loadManifest();
+	const controls = m.extensions[0].ribbons.flatMap((ribbon: Manifest) =>
+		ribbon.tabs.flatMap((tab: Manifest) => tab.groups.flatMap((group: Manifest) => group.controls ?? [])),
+	);
+	const opener = controls.find((control: Manifest) => control.actionId === "ShowTaskpane");
+	expect(opener?.label).toBe("xcsh");
+});
+
+test("every ribbon icon is a full pixelated F5 mark, not a tiny placeholder", async () => {
+	for (const [file, size] of [
+		["icon-16.png", 16],
+		["icon-32.png", 32],
+		["icon-80.png", 80],
+	] as const) {
+		const png = decodeRgbaPng(await readFile(join(MANIFEST_DIR, "assets", file)));
+		expect([png.width, png.height]).toEqual([size, size]);
+		let red = 0;
+		let white = 0;
+		let transparent = 0;
+		for (let i = 0; i < png.pixels.length; i += 4) {
+			const [r, g, b, a] = png.pixels.subarray(i, i + 4);
+			if (a < 16) transparent += 1;
+			if (a > 192 && r > 180 && g < 80 && b < 80) red += 1;
+			if (a > 192 && r > 220 && g > 220 && b > 220) white += 1;
+		}
+		const pixelCount = size * size;
+		expect(red, `${file} must visibly carry the red F5 field`).toBeGreaterThan(pixelCount * 0.08);
+		expect(white, `${file} must visibly carry the white F5 glyph`).toBeGreaterThan(pixelCount * 0.08);
+		expect(transparent, `${file} must retain a transparent surround`).toBeGreaterThan(pixelCount * 0.08);
+	}
 });
 
 test("validDomains includes the local-ip.sh host", async () => {
