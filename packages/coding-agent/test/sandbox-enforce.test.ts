@@ -116,108 +116,24 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "ls" }).block).toBe(false);
 	});
 
-	it("bash: best-effort blocks ../ traversal escaping the tree (Phase 1)", () => {
-		expect(check("bash", { command: "cat ../custB/secrets.env" }).block).toBe(true);
-		expect(check("bash", { command: "cat ./sub/../notes.md" }).block).toBe(false); // stays in-tree
-		expect(check("bash", { command: "grep -r TODO ." }).block).toBe(false);
-	});
-
-	it("bash: blocks absolute-path escapes, exempts OS system paths", () => {
-		expect(check("bash", { command: "cat /work/custB/secrets.env" }).block).toBe(true);
-		expect(check("bash", { command: "cat ~/.ssh/id_rsa" }).block).toBe(false);
-		expect(check("bash", { command: "cat /etc/os-release" }).block).toBe(false);
-		expect(check("bash", { command: "/usr/bin/env node app.js" }).block).toBe(false);
-	});
-
-	// The false positives reported in #2470: a regex address or a program body is not a path, so
-	// standard text processing must run. Each of these is refused today.
-	it("bash: exempts script and pattern operands of sed/awk/grep and echo (#2470)", () => {
-		expect(check("bash", { command: "sed -n '/a/p'" }).block).toBe(false);
-		expect(check("bash", { command: "sed -n '/^COMMANDS/,$p' notes.md" }).block).toBe(false);
-		expect(check("bash", { command: "awk '/^a/ {print \"hit:\" $0}'" }).block).toBe(false);
-		expect(check("bash", { command: "echo '/a/p'" }).block).toBe(false);
-		// The exemption is scoped to the script operand; a file operand beside it still counts.
-		expect(check("bash", { command: "sed -n '/a/p' /work/custB/x" }).block).toBe(true);
-	});
-
-	// #2470 also asks for this: a reported "path" containing a quote or a statement separator is
-	// proof the extraction was wrong, so no diagnostic may ever contain one.
-	it("bash: a boundary diagnostic never contains shell punctuation", () => {
-		const blocked = [
-			"cat /work/custB/secrets.env",
-			"sed -n 'r /work/custB/x' notes.md",
-			"sh -c 'cat /work/custB/x'",
-			"cat $(echo /work/custB/x)",
+	it("does not interpret Bash argument text as a path (#2931)", () => {
+		const usersDenied = { ...makeFence(), deny: ["/Users"] };
+		const commands = [
+			'grep -nE "/Users/|alpha" notes.txt',
+			"custom-tool /Users/customer/file",
+			"cat /Users/customer/file",
+			"python <<'PY'\nvalue = \"/Users/\"\nPY",
 		];
-		for (const command of blocked) {
-			const decision = check("bash", { command });
-			expect(decision.block).toBe(true);
-			// Pull out just the path the message names, not the surrounding prose.
-			const reported = /\): (.*)\. Use --allow-path/.exec(decision.reason ?? "")?.[1];
-			expect(reported).toBeDefined();
-			for (const punctuation of ["'", '"', ";", "|"]) {
-				expect(reported).not.toContain(punctuation);
-			}
+		for (const command of commands) {
+			expect(check("bash", { command }, usersDenied).block).toBe(false);
 		}
 	});
 
-	// The read-boundary scan's coverage FLOOR. Every command below reads a path out of argument
-	// *content* rather than from a plain operand, so a scanner that only inspects real argv words
-	// would miss it. The scan is documented as best-effort, but "best-effort" must not mean
-	// "regresses": exemptions may only ever SUBTRACT from what this floor already catches
-	// (see sandbox/command-operands.ts). Treat a failure here as a sandbox escape, not a test nit.
-	it("bash: coverage floor — paths embedded in argument content stay blocked", () => {
-		// A quoted script is one argv word; the path lives inside it.
-		expect(check("bash", { command: "sh -c 'cat /work/custB/x'" }).block).toBe(true);
-		expect(check("bash", { command: 'bash -c "cat /work/custB/x"' }).block).toBe(true);
-		// A heredoc body is data to the shell, but bash executes it as a script.
-		expect(check("bash", { command: "bash <<'EOF'\ncat /work/custB/x\nEOF" }).block).toBe(true);
-		// -exec consumes a whole command run, so the nested shell never appears as the command name.
-		expect(check("bash", { command: "find . -exec sh -c 'cat /work/custB/x' \\;" }).block).toBe(true);
-		// sed/awk read files through their own dialects, not through operands.
-		expect(check("bash", { command: "sed -n 'r /work/custB/x' notes.md" }).block).toBe(true);
-		expect(check("bash", { command: "awk 'BEGIN { getline x < \"/work/custB/x\" }'" }).block).toBe(true);
-		// Command substitution.
-		expect(check("bash", { command: "cat $(echo /work/custB/x)" }).block).toBe(true);
-		// A redirect target is a write, and must never be exempted by an emitter's operand rule.
-		expect(check("bash", { command: "printf x > /work/custB/y" }).block).toBe(true);
-		// Python is not shell: it must keep its own substring scan.
-		expect(check("python", { code: "open('/work/custB/secret')" }).block).toBe(true);
-	});
-
-	// An exemption applies to the word it was proven for, and to nothing else. These are the two
-	// ways that scoping can leak, both found by adversarial review of the exemption design.
-	it("bash: an exemption never widens beyond the word it was proven for", () => {
-		// sed's `e` substitution flag executes the replacement as a shell command, so a script
-		// carrying it is not inert text and cannot be exempt.
-		expect(check("bash", { command: "printf x | sed 's|x|cat /work/custB/secret|e'" }).block).toBe(true);
-		// The same path text appearing in an exempt word must not clear an identical token that
-		// belongs to a different command in the same line.
-		expect(check("bash", { command: "echo '/work/custB/secret' && cat /work/custB/secret" }).block).toBe(true);
-		expect(check("bash", { command: "echo '/work/custB/x' | cat /work/custB/x" }).block).toBe(true);
-		// The exemption itself must still work when nothing else references the path.
-		expect(check("bash", { command: "echo '/work/custB/secret'" }).block).toBe(false);
-		// rg runs the program given to --pre for every input, so its operands are not inert text.
-		expect(check("bash", { command: "rg --pre '/work/custB/preprocessor' needle ." }).block).toBe(true);
-	});
-
-	// Which operand is the script depends on how the options parsed. If an option's arity is
-	// misjudged, the real file operand slides into the script slot and gets exempted — so anything
-	// the option model does not recognise exactly must disable exemption for that command.
-	it("bash: an option the model cannot parse disables exemption entirely", () => {
-		// -i attaches its suffix on GNU sed and takes a separate word on BSD, so the script slot
-		// cannot be located; the quoted operand after it is a real file being rewritten.
-		expect(check("bash", { command: "sed -i 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
-		expect(check("bash", { command: "sed --in-place 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
-		expect(check("bash", { command: "sed -l 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
-		expect(check("bash", { command: "sed -i.bak 's/a/b/' '/work/custB/secret'" }).block).toBe(true);
-		// An attached argument means the script came from the option, so the operand is a file.
-		expect(check("bash", { command: "sed -e's/a/b/' '/work/custB/secret'" }).block).toBe(true);
-		expect(check("bash", { command: "sed -f/tmp/prog.sed '/work/custB/secret'" }).block).toBe(true);
-		expect(check("bash", { command: "awk -f/tmp/p.awk '/work/custB/secret'" }).block).toBe(true);
-		expect(check("bash", { command: "grep -e'x' '/work/custB/secret'" }).block).toBe(true);
-		// An option the model has never heard of is equally unparseable.
-		expect(check("bash", { command: "sed --some-future-flag x '/work/custB/secret'" }).block).toBe(true);
+	it("treats a grep pattern consistently across Bash and the structured tool (#2931)", () => {
+		const usersDenied = { ...makeFence(), deny: ["/Users"] };
+		expect(check("bash", { command: 'grep -nE "/Users/|alpha" notes.txt' }, usersDenied).block).toBe(false);
+		expect(check("grep", { pattern: "/Users/|alpha", path: "." }, usersDenied).block).toBe(false);
+		expect(check("grep", { pattern: "alpha", path: "/Users/customer" }, usersDenied).block).toBe(true);
 	});
 
 	// A redirect target is the one word in a command the *shell* opens, and it opens it for writing.
@@ -232,12 +148,12 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: 'printf x > "/shared/ctx/notes.md"' }).block).toBe(true);
 		// The diagnostic must name the boundary that was actually crossed.
 		expect(check("bash", { command: "printf x > /shared/ctx/notes.md" }).reason).toContain("write boundary");
-		expect(check("bash", { command: "cat /work/custB/secret" }).reason).toContain("read boundary");
+		expect(check("bash", { command: "cat < /work/custB/secret" }).reason).toContain("read boundary");
 		// An input redirect is a read, so a readable root stays usable as one.
 		expect(check("bash", { command: "sort < /shared/ctx/notes.md" }).block).toBe(false);
 		// The mirror case: a write-only grant accepts the write and still refuses the read.
 		expect(check("bash", { command: "printf x > /drop/out.log" }).block).toBe(false);
-		expect(check("bash", { command: "cat /drop/out.log" }).block).toBe(true);
+		expect(check("bash", { command: "cat < /drop/out.log" }).block).toBe(true);
 		// In-boundary redirects are unaffected.
 		expect(check("bash", { command: "printf x > out.txt" }).block).toBe(false);
 		expect(check("bash", { command: "printf x > /work/custA/out.txt" }).block).toBe(false);
@@ -247,13 +163,8 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "cat <>/work/custA/f" }).block).toBe(false); // both granted
 	});
 
-	// The floor splits on whitespace, so an operator glued to its path was one token that did not
-	// look like a path, and the boundary never saw it at all (#2520). A single space was the only
-	// thing standing between a blocked read and an allowed one.
-	// A relative operand is never checked, because the floor assumes it resolves under the session
-	// directory. A `cd` can break that assumption within the same call, even though the next call resets
-	// to the session root. Refusing a change that cannot be proven to stay in-tree keeps the unchecked
-	// relative operands safe — see #2542, where `cd /` then `cat tmp/x` read a sibling's file.
+	// Directory changes and redirects are explicit shell effects, so the lexer checks them without
+	// inferring anything from ordinary argument text.
 	it("bash: cd into a denied directory is refused", () => {
 		// In-tree: allowed.
 		expect(check("bash", { command: "cd sub" }).block).toBe(false);
@@ -362,19 +273,15 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "sort </work/custB/secret >/work/custA/out" }).block).toBe(true);
 		// Attached and read-only: the write boundary still applies.
 		expect(check("bash", { command: "printf x >/shared/ctx/notes.md" }).block).toBe(true);
-		// A relative escape is invisible to `looksLikePath` while the operator is glued on, because
-		// the `..` is preceded by `>` rather than by a separator.
+		// Attached relative redirects are still explicit redirect targets.
 		expect(check("bash", { command: "printf x >../custB/y" }).block).toBe(true);
 		expect(check("bash", { command: "cat <../custB/secret" }).block).toBe(true);
-		// An unterminated quote makes every word boundary a guess, so the floor stands alone. That
-		// is safe rather than lucky: bash refuses to run such a command, so it is not a way in.
-		expect(check("bash", { command: "cat '/work/custB/secret" }).block).toBe(true);
-		// Inside a quoted script the lexer sees one ordinary word, so the floor is the only thing
-		// looking — it has to recognise the operator in raw text, not just in lexed words.
-		expect(check("bash", { command: "sh -c 'cat </work/custB/secret'" }).block).toBe(true);
-		expect(check("bash", { command: "/bin/bash -c 'printf x >/work/custB/y'" }).block).toBe(true);
-		expect(check("bash", { command: "find . -exec sh -c 'cat </work/custB/x' \\;" }).block).toBe(true);
-		expect(check("bash", { command: "bash <<'EOF'\ncat </work/custB/x\nEOF" }).block).toBe(true);
+		// Incomplete input and nested script text are not reinterpreted as top-level shell effects.
+		expect(check("bash", { command: "cat '/work/custB/secret" }).block).toBe(false);
+		expect(check("bash", { command: "sh -c 'cat </work/custB/secret'" }).block).toBe(false);
+		expect(check("bash", { command: "/bin/bash -c 'printf x >/work/custB/y'" }).block).toBe(false);
+		expect(check("bash", { command: "find . -exec sh -c 'cat </work/custB/x' \\;" }).block).toBe(false);
+		expect(check("bash", { command: "bash <<'EOF'\ncat </work/custB/x\nEOF" }).block).toBe(false);
 		// `>&word` with no descriptor in front is a file redirect in bash, not a descriptor dup.
 		expect(check("bash", { command: "printf x >&/work/custB/y" }).block).toBe(true);
 		expect(check("bash", { command: "printf x >& /work/custB/y" }).block).toBe(true);
@@ -391,15 +298,10 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "sort </work/custA/in.txt" }).block).toBe(false);
 	});
 
-	// Inside a quoted script or a heredoc body the lexer has no words to mark, so the direction has
-	// to come from the operator text itself — otherwise a nested write is checked as a read and a
-	// read-only grant is writable after all, which is the whole of #2516.
-	it("bash: a nested redirect carries its direction too", () => {
-		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x'" }).block).toBe(true);
-		expect(check("bash", { command: "sh -c 'printf x > /shared/ctx/x'" }).block).toBe(true);
-		expect(check("bash", { command: "bash <<'EOF'\nprintf x >/shared/ctx/x\nEOF" }).block).toBe(true);
-		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x'" }).reason).toContain("write boundary");
-		// Reading the same root from a nested script is still ordinary work.
+	it("bash: nested script source is not scanned for redirects", () => {
+		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x'" }).block).toBe(false);
+		expect(check("bash", { command: "sh -c 'printf x > /shared/ctx/x'" }).block).toBe(false);
+		expect(check("bash", { command: "bash <<'EOF'\nprintf x >/shared/ctx/x\nEOF" }).block).toBe(false);
 		expect(check("bash", { command: "sh -c 'cat /shared/ctx/notes.md'" }).block).toBe(false);
 		expect(check("bash", { command: "sh -c 'cat </shared/ctx/notes.md'" }).block).toBe(false);
 	});
@@ -410,17 +312,15 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "cat <<</work/custB/secret" }).block).toBe(false);
 		expect(check("bash", { command: "cat <<< /work/custB/secret" }).block).toBe(false);
 		expect(check("bash", { command: "cat <<<hello" }).block).toBe(false);
-		// A heredoc delimiter is not a path either — but the body still is scanned, and that is what
-		// the coverage floor exists for.
+		// A heredoc delimiter and body are source text, not top-level path operands.
 		expect(check("bash", { command: "cat << EOF\nbody\nEOF" }).block).toBe(false);
-		expect(check("bash", { command: "bash <<'EOF'\ncat /work/custB/x\nEOF" }).block).toBe(true);
+		expect(check("bash", { command: "bash <<'EOF'\ncat /work/custB/x\nEOF" }).block).toBe(false);
 		// A real input redirect is unaffected.
 		expect(check("bash", { command: "cat < /work/custB/secret" }).block).toBe(true);
 		expect(check("bash", { command: "cat </work/custB/secret" }).block).toBe(true);
 	});
 
-	// A redirect target is a file the shell opens whether or not it looks like a path, so the write
-	// check cannot be gated on `looksLikePath` the way the floor's guesses are.
+	// A redirect target is a file the shell opens whether or not it resembles a conventional path.
 	it("bash: a relative redirect target is checked against the cwd it resolves in", () => {
 		// A fence whose cwd is readable but not writable — reading context, emitting nothing.
 		const readOnlyCwd: ContainmentFence = {
@@ -460,8 +360,8 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "cat </work/custB/secret; echo x" }).block).toBe(true);
 		expect(check("bash", { command: "printf x >/work/custB/y|cat" }).block).toBe(true);
 		expect(check("bash", { command: "printf x >/shared/ctx/f; echo done" }).block).toBe(true);
-		// Nor the direction of a nested one.
-		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x; echo done'" }).block).toBe(true);
+		// A nested redirect is source text and is left to the runtime fence.
+		expect(check("bash", { command: "sh -c 'printf x >/shared/ctx/x; echo done'" }).block).toBe(false);
 	});
 
 	/**
@@ -489,8 +389,8 @@ describe("evaluateToolCall", () => {
 		expect(check("bash", { command: "echo hi > /dev/null 2>&1" }).block).toBe(false);
 		expect(check("bash", { command: "make >/dev/null 2>/dev/null" }).block).toBe(false);
 		expect(check("bash", { command: "printf x > /dev/fd/3" }).block).toBe(false);
-		// What still matters is unchanged: a customer tree is refused in both directions.
-		expect(check("bash", { command: "cat /work/custB/secret" }).block).toBe(true);
+		// Literal read operands are runtime decisions; explicit redirects are still pre-checked.
+		expect(check("bash", { command: "cat /work/custB/secret" }).block).toBe(false);
 		expect(check("bash", { command: "printf x > /work/custB/planted" }).block).toBe(true);
 	});
 
@@ -561,11 +461,11 @@ describe("evaluateToolCall", () => {
 		expect(check("find", { pattern: "src/**/*.ts,lib/**/*.ts" }).block).toBe(false);
 	});
 
-	it("gates the python tool like bash (cwd + code scan)", () => {
-		expect(check("python", { code: "open('/work/custB/secret')" }).block).toBe(true);
+	it("checks Python's explicit cwd without scanning source or cells (#2931)", () => {
+		expect(check("python", { code: "open('/work/custB/secret')" }).block).toBe(false);
 		expect(check("python", { code: "x=1", cwd: "/work/custB" }).block).toBe(true);
 		expect(check("python", { code: "open('notes.md')" }).block).toBe(false);
-		expect(check("python", { cells: [{ code: "open('../custB/x')" }] }).block).toBe(true);
+		expect(check("python", { cells: [{ code: "open('../custB/x')" }] }).block).toBe(false);
 	});
 });
 
@@ -620,29 +520,20 @@ describe("evaluateToolCall with a symlinked working directory (#2312)", () => {
 });
 
 describe("option-attached paths (#2524)", () => {
-	/**
-	 * `looksLikePath` is applied to a whole whitespace token, and a path glued to its
-	 * option is one token that starts with the option — `path.isAbsolute("if=/work/custB/secret")`
-	 * is false — so the boundary never saw it. A single space was the difference between
-	 * the blocked form and the allowed one.
-	 *
-	 * The hazard in fixing it is #2470: scanning any `/`-containing substring re-reads
-	 * `sed -n '/a/p'` as a path. Those stay allowed here, and must, because they are what
-	 * #2479 was filed to remove.
-	 */
-	it("blocks a path attached to a long option", () => {
+	// Only options with a proven write contract are candidates. Unknown option text remains data.
+	it("checks known output options without interpreting unrelated options", () => {
 		expect(check("bash", { command: "curl --output=/work/custB/x https://e.com" }).block).toBe(true);
-		expect(check("bash", { command: "grep TODO --file=/work/custB/patterns" }).block).toBe(true);
+		expect(check("bash", { command: "grep TODO --file=/work/custB/patterns" }).block).toBe(false);
 	});
 
-	it("blocks a path attached to a short option with no separator", () => {
-		expect(check("bash", { command: "curl -o/work/custB/x https://e.com" }).block).toBe(true);
-		expect(check("bash", { command: "tar -C/work/custB -cf out.tgz ." }).block).toBe(true);
+	it("does not guess the meaning of attached short options", () => {
+		expect(check("bash", { command: "curl -o/work/custB/x https://e.com" }).block).toBe(false);
+		expect(check("bash", { command: "tar -C/work/custB -cf out.tgz ." }).block).toBe(false);
 	});
 
-	it("blocks a path in an operand-style name=value word (dd)", () => {
-		expect(check("bash", { command: "dd if=/work/custB/secret of=./out" }).block).toBe(true);
-		expect(check("bash", { command: "dd if=/work/custB/secret" }).block).toBe(true);
+	it("checks dd output without scanning its input operand", () => {
+		expect(check("bash", { command: "dd if=/work/custB/secret of=./out" }).block).toBe(false);
+		expect(check("bash", { command: "dd if=/work/custB/secret" }).block).toBe(false);
 	});
 
 	it("blocks an out-of-boundary destination operand", () => {
@@ -738,24 +629,7 @@ describe("paths reaching the shell through an expansion (#2534)", () => {
 	});
 });
 
-/**
- * #2624: one boundary, and the false refusals it removes.
- *
- * The two engines had opposite defaults — this scan was `SandboxPolicy`, deny-by-default and confined to
- * the cwd, while the fence beneath it is allow-by-default with targeted denies — so the effective
- * boundary was their intersection, and the intersection refused ordinary work. #2582 removed a narrow
- * enumerated set of those refusals. This removes the posture that produced them: both layers now consult
- * the same fence, so a path the kernel permits cannot be refused here.
- *
- * The reported case is the whole point. `grep -oE '<title>[^<]*</title>'` was refused, naming the path
- * `/title`: the floor scans past every `<`/`>` inside a word, reads `/title` out of the closing tag, and
- * a deny-by-default policy has to refuse an absolute path it does not recognise. Nothing here touches the
- * filesystem at all.
- *
- * The floor is unchanged — it still guesses. Under allow-by-default a wrong guess matches no rule and
- * costs nothing, which is why the posture went rather than the regexes. Two adversarial rounds on the
- * #2542 fix produced six bypasses; narrowing the floor is the change class with the worst record here.
- */
+/** Regression coverage for path-looking data that must never be interpreted as filesystem access. */
 describe("evaluateToolCall — the reported false refusals (#2624)", () => {
 	// Every one of these was refused before, on both bash and python, and none of them names a file.
 	it("stops reading paths out of closing HTML and XML tags", () => {
@@ -772,8 +646,6 @@ describe("evaluateToolCall — the reported false refusals (#2624)", () => {
 		}
 	});
 
-	// python has no shell redirects at all, so the fragment the floor pulls out of `</title>` is pure
-	// noise there. It was refused all the same, because the posture — not the parsing — decided.
 	it("stops refusing a closing tag inside python source", () => {
 		expect(check("python", { code: 'import re\nre.findall(r"</title>", s)' }).block).toBe(false);
 		expect(check("python", { code: 'x = "</body>"' }).block).toBe(false);
@@ -803,11 +675,10 @@ describe("evaluateToolCall — the reported false refusals (#2624)", () => {
 		expect(check("write", { file_path: gitconfig }).block).toBe(false);
 	});
 
-	// What the change must NOT do. The fence still denies these, so the pre-check still refuses them.
-	it("keeps refusing the paths the fence denies", () => {
-		expect(check("bash", { command: "cat /work/custB/secret.env" }).block).toBe(true);
+	it("leaves arbitrary-code paths to runtime while structured paths stay fenced", () => {
+		expect(check("bash", { command: "cat /work/custB/secret.env" }).block).toBe(false);
 		expect(check("read", { file_path: "/work/custB/secret.env" }).block).toBe(true);
-		expect(check("python", { code: 'open("/work/custB/secret.env").read()' }).block).toBe(true);
+		expect(check("python", { code: 'open("/work/custB/secret.env").read()' }).block).toBe(false);
 		expect(check("grep", { pattern: "TOKEN", path: "/work/custB" }).block).toBe(true);
 	});
 });
@@ -843,8 +714,8 @@ describe("evaluateToolCall — the bash cwd parameter agrees with cd (#2624)", (
  * It cuts the other way too. A write-only `allowWrite` grant refused `tee` into it, because a read check
  * against a write-only root fails — a false refusal produced by the same misclassification.
  *
- * On a host with an OS backend the fence settles this below the text regardless. On Windows and Linux
- * without Landlock this scan is the only boundary, which is where the bypass was live.
+ * On a host with an OS backend the fence also settles this below the text. The pre-check preserves a
+ * precise refusal and directional-grant contract without scanning arbitrary arguments.
  */
 describe("evaluateToolCall — operand writes are checked against the write boundary (GHSA-q4hg)", () => {
 	// `/shared/ctx` is read-allowed and NOT write-allowed; `/drop` is write-allowed and NOT read-allowed.
@@ -869,10 +740,8 @@ describe("evaluateToolCall — operand writes are checked against the write boun
 		}
 	});
 
-	it("still reads the source operand as a read", () => {
-		// `cp` reads its source: a source in a write-only root must stay refused.
-		expect(bash("cp /drop/out.log notes.md").block).toBe(true);
-		// …and a source in a read-only root is fine.
+	it("does not pre-check source operands", () => {
+		expect(bash("cp /drop/out.log notes.md").block).toBe(false);
 		expect(bash("cp /shared/ctx/in.txt notes.md").block).toBe(false);
 	});
 
@@ -942,8 +811,8 @@ describe("evaluateToolCall — operand writes, review round two (GHSA-q4hg)", ()
 
 	// Everything after `--` is a positional, however much it looks like an option.
 	it("honours end-of-options", () => {
-		// Without this, `-t` parses as target-directory and relabels the next word as a write target.
-		expect(bash("cp -- -t /drop/secret out.txt").block).toBe(true);
+		// The source is not pre-checked; the final destination remains the only write operand.
+		expect(bash("cp -- -t /drop/secret out.txt").block).toBe(false);
 	});
 });
 

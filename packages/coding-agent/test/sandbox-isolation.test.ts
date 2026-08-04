@@ -214,8 +214,8 @@ describe("two-customer isolation, enforced in the shell", () => {
 	});
 });
 
-describe("local account isolation, enforced in the shell", () => {
-	it("denies another synthetic account while preserving the operator's home", async () => {
+describe("local account discovery isolation, enforced in the shell", () => {
+	it("denies account enumeration while preserving named account access", async () => {
 		const fsRoot = path.join(tmp.absolute(), "account-fixture");
 		const accountRoot = path.join(fsRoot, "Users");
 		const operatorHome = path.join(accountRoot, "operator");
@@ -244,7 +244,8 @@ describe("local account isolation, enforced in the shell", () => {
 		expect(fs.readFileSync(path.join(operatorHome, ".zshrc"), "utf8")).toBe("operator");
 		if (containmentStatus(true).osEnforced) {
 			expect(await run(`ls ${JSON.stringify(accountRoot)} > /dev/null`)).not.toBe(0);
-			expect(await run(`cd ${JSON.stringify(otherHome)}`)).not.toBe(0);
+			expect(await run(`cd ${JSON.stringify(otherHome)}`)).toBe(0);
+			expect(await run(`cat ${JSON.stringify(path.join(otherHome, "synthetic.txt"))} > /dev/null`)).toBe(0);
 		}
 	});
 });

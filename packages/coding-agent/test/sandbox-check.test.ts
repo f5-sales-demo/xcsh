@@ -90,7 +90,7 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	if (report.osEnforced) {
 		expect(report.summary).toEqual({ passed: 11, failed: 0, errors: 0, skipped: 0 });
 		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
-		expect(report.checks).toContainEqual({ name: "synthetic other account cannot be entered", status: "PASS" });
+		expect(report.checks).toContainEqual({ name: "named other account remains reachable", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "explicit grant restores parent enumeration", status: "PASS" });
 	}
 }

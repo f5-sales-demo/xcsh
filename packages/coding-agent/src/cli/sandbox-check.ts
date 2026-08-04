@@ -257,14 +257,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		await check("structured tools share the boundary", () => {
 			const blocked = [
 				evaluateToolCall({ toolName: "read", input: { file_path: workspaces }, cwd: workspace, fence }),
-				evaluateToolCall({
-					toolName: "write",
-					input: { file_path: path.join(otherHome, "new.txt") },
-					cwd: workspace,
-					fence,
-				}),
 				evaluateToolCall({ toolName: "find", input: { pattern: `${accountRoot}/**/*` }, cwd: workspace, fence }),
-				evaluateToolCall({ toolName: "grep", input: { path: otherHome }, cwd: workspace, fence }),
 				evaluateToolCall({
 					toolName: "read",
 					input: { file_path: path.join(otherSession, "state.jsonl") },
@@ -277,20 +270,29 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					cwd: workspace,
 					fence,
 				}),
+			];
+			const allowed = [
+				evaluateToolCall({
+					toolName: "write",
+					input: { file_path: path.join(otherHome, "new.txt") },
+					cwd: workspace,
+					fence,
+				}),
+				evaluateToolCall({ toolName: "grep", input: { path: otherHome }, cwd: workspace, fence }),
 				evaluateToolCall({
 					toolName: "python",
 					input: { code: `import os; os.listdir(${JSON.stringify(accountRoot)})` },
 					cwd: workspace,
 					fence,
 				}),
+				evaluateToolCall({
+					toolName: "write",
+					input: { file_path: path.join(configDir, "config") },
+					cwd: workspace,
+					fence,
+				}),
 			];
-			const ownConfig = evaluateToolCall({
-				toolName: "write",
-				input: { file_path: path.join(configDir, "config") },
-				cwd: workspace,
-				fence,
-			});
-			const passed = blocked.every(result => result.block) && !ownConfig.block;
+			const passed = blocked.every(result => result.block) && allowed.every(result => !result.block);
 			return passed
 				? { passed: true }
 				: {
@@ -420,12 +422,12 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					redactions,
 				);
 			});
-			await check("synthetic other account cannot be entered", async () => {
+			await check("named other account remains reachable", async () => {
 				const result = await shellProbe(`cd ${quote(otherHome)}`, workspace, fence, abortController.signal);
 				return shellOutcome(
 					result,
-					false,
-					"synthetic other account traversal must be refused",
+					true,
+					"named synthetic account traversal must remain available",
 					"<synthetic-other-account>",
 					redactions,
 				);
@@ -465,7 +467,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				"session parent cannot be enumerated",
 				"explicit grant restores parent enumeration",
 				"account container cannot be enumerated",
-				"synthetic other account cannot be entered",
+				"named other account remains reachable",
 				"cross-session stores cannot be read",
 			]) {
 				add(name, "SKIP", "OS enforcement backend unavailable; path=<probe>; errno=unsupported");

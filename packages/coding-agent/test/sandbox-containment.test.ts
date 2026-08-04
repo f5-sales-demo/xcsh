@@ -156,6 +156,34 @@ describe("buildContainmentFence", () => {
 		expect(fenceVerdict(fence, path.join(sessions, "other.jsonl"), "write")).toBe("deny");
 	});
 
+	it("lets explicit grants override private roots without widening their direction", () => {
+		const home = realTmp("private-grants");
+		const workspace = path.join(home, "w");
+		const privateParent = path.join(home, ".xcsh", "agent");
+		const sessions = path.join(privateParent, "sessions");
+		const candidate = path.join(sessions, "other.jsonl");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(sessions, { recursive: true });
+
+		const defaultFence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
+		const full = buildContainmentFence({ workspace, home, leakRoots: [sessions], extraRoots: [privateParent] });
+		const readOnly = buildContainmentFence({ workspace, home, leakRoots: [sessions], readOnlyRoots: [sessions] });
+		const writeOnly = buildContainmentFence({
+			workspace,
+			home,
+			leakRoots: [sessions],
+			writeOnlyRoots: [privateParent],
+		});
+
+		expect(fenceVerdict(defaultFence, candidate, "read")).toBe("deny");
+		expect(fenceVerdict(full, candidate, "read")).toBe("allow");
+		expect(fenceVerdict(full, candidate, "write")).toBe("allow");
+		expect(fenceVerdict(readOnly, candidate, "read")).toBe("allow");
+		expect(fenceVerdict(readOnly, candidate, "write")).toBe("deny");
+		expect(fenceVerdict(writeOnly, candidate, "read")).toBe("deny");
+		expect(fenceVerdict(writeOnly, candidate, "write")).toBe("allow");
+	});
+
 	it("grants extra roots from --allow-path for both directions", () => {
 		const home = realTmp("home7");
 		const workspace = path.join(home, "w");
@@ -414,17 +442,8 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 		expect(fenceVerdict(fence, path.join(shared, "ref.csv"), "write")).toBe("deny");
 	});
 
-	/**
-	 * A workspace's filesystem root is the only one enumerated, so on Windows a second drive matched no
-	 * rule and was allowed — and Windows has no kernel backend, so the text scan is the whole boundary
-	 * there. Deny-by-default used to refuse `D:\customerB`; allow-by-default does not.
-	 *
-	 * The list is injectable because the enumeration it replaces cannot run here: probing `A:`–`Z:` needs
-	 * a Windows host. This asserts the part that decides — that a named sibling root is denied and the
-	 * workspace's own is not — and the enumeration itself is stated as unverified rather than implied to
-	 * be tested.
-	 */
-	it("denies other filesystem roots, as a second Windows drive would be", () => {
+	/** The injectable list exercises the second-drive shape that cannot be discovered on this host. */
+	it("protects enumeration of other filesystem roots while allowing named paths", () => {
 		const home = realTmp("otherroots");
 		const workspace = path.join(home, "w");
 		const otherRoot = realTmp("drive-d");
@@ -433,10 +452,10 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 
 		const fence = buildContainmentFence({ workspace, home, otherRoots: [otherRoot] });
 
-		expect(fence.deny).toContain(otherRoot);
-		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "secret.tf"), "read")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "secret.tf"), "write")).toBe("deny");
-		// The workspace's own tree is untouched, or the deny was simply too broad.
+		expect(fence.denyEnumerate).toContain(otherRoot);
+		expect(fenceVerdict(fence, otherRoot, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "secret.tf"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "secret.tf"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
 	});
 
@@ -451,7 +470,7 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 	 * `/` is the only value on this platform that reproduces the shape. Nonsense as a real configuration —
 	 * which is the point: this asserts the list is not silently filtered, not that anyone should pass it.
 	 */
-	it("does not let the never-deny-a-root rule filter the other-roots list", () => {
+	it("does not let the broad-root guard filter the other-roots list", () => {
 		const container = realTmp("rootfilter");
 		const workspace = path.join(container, "w");
 		fs.mkdirSync(workspace, { recursive: true });
@@ -468,7 +487,7 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 			otherRoots: [otherRoot],
 		});
 
-		expect(fence.deny).toContain(otherRoot);
+		expect(fence.denyEnumerate).toContain(otherRoot);
 	});
 
 	// …but the root the workspace actually lives on is never denied, however it arrives.
@@ -485,12 +504,11 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 		});
 
 		expect(fence.deny).not.toContain(container);
+		expect(fence.denyEnumerate).not.toContain(container);
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
 	});
 
-	// …and the operator can still open one deliberately, which is the escape hatch for a toolchain that
-	// lives on another drive.
-	it("lets a granted root override an other-root deny", () => {
+	it("keeps a named granted tree usable under a protected other root", () => {
 		const home = realTmp("otherrootsgrant");
 		const workspace = path.join(home, "w");
 		const otherRoot = realTmp("driveE");
@@ -501,12 +519,11 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 		const fence = buildContainmentFence({ workspace, home, otherRoots: [otherRoot], extraRoots: [tools] });
 
 		expect(fenceVerdict(fence, path.join(tools, "bin", "cc"), "read")).toBe("allow");
-		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "x"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, otherRoot, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(otherRoot, "customerB", "x"), "read")).toBe("allow");
 	});
 
-	// `--allow-path <dir>` for a directory that does not exist yet was dropped, so the grant could not
-	// authorize creating it. Harmless while an unnamed path defaulted to allow; now that unknown top-level
-	// roots are denied, the drop turns the flag into a refusal.
+	// `--allow-path <dir>` for a directory that does not exist yet must retain its directional contract.
 	it("honours a granted root that does not exist yet", () => {
 		const home = realTmp("absentgrant");
 		const workspace = path.join(home, "w");
@@ -885,20 +902,7 @@ describe("buildContainmentFence — the ancestor walk never denies a temp root",
 	});
 });
 
-/**
- * Data roots that are neither the workspace nor operational (#2624).
- *
- * The home deny and the ancestor walk together cover the realistic case — customer checkouts under
- * `~`. They cover nothing under an unrelated root: measured with the workspace at
- * `~/MEDDPICC/CUSTOMER-A`, the fence allowed `/Users/<otheruser>/…`, `/Volumes/Backup/…`, `/data/globex`
- * and `/srv/tenantZ`, read and write. The command-text scan was refusing those on the way in, so the
- * composite looked right while the fence alone did not — and that scan is what #2624 stops using as a
- * boundary, so this has to hold on its own now.
- *
- * The rule is one readdir of the filesystem root: an entry whose name is not operational holds data
- * rather than tools, and is denied. Nothing operational is touched, which is the property that
- * separates this from a deny-by-default profile.
- */
+/** Data containers lose casual discovery without restricting explicitly named paths (#2931). */
 describe("buildContainmentFence — data roots outside the workspace", () => {
 	/** A synthetic filesystem root, so an assertion never depends on what this machine mounts. */
 	function syntheticRoot(suffix: string, entries: readonly string[]): string {
@@ -907,7 +911,7 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 		return root;
 	}
 
-	it("denies unrelated data roots while leaving every operational root alone", () => {
+	it("protects container enumeration while leaving named and operational paths alone", () => {
 		const fsRoot = syntheticRoot("fsdata", ["usr", "bin", "etc", "opt", "var", "Users", "data", "srv", "Volumes"]);
 		const home = path.join(fsRoot, "Users", "me");
 		const workspace = path.join(home, "MEDDPICC", "CUSTOMER-A");
@@ -918,15 +922,15 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 
 		const fence = buildContainmentFence({ workspace, home, fsRoot });
 
-		// The account container is denied, with only this operator's canonical home allowed back at greater
-		// depth. This keeps all of the operator-rights fix from #2637 without exposing another local account.
+		// The account container cannot be listed, but a named account remains under normal OS authority.
 		const accountRoot = path.join(fsRoot, "Users");
 		const otherHome = path.join(accountRoot, "otheruser");
-		expect(fence.deny).toContain(accountRoot);
+		expect(fence.deny).not.toContain(accountRoot);
+		expect(fence.denyEnumerate).toContain(accountRoot);
 		expect(fence.allow).toContain(home);
 		expect(fenceVerdict(fence, accountRoot, "enumerate")).toBe("deny");
 		for (const access of ["read", "write", "enumerate"] as const) {
-			expect(fenceVerdict(fence, path.join(otherHome, "workspace"), access)).toBe("deny");
+			expect(fenceVerdict(fence, path.join(otherHome, "workspace"), access)).toBe("allow");
 			expect(fenceVerdict(fence, path.join(home, ".config", "tool"), access)).toBe("allow");
 		}
 
@@ -935,29 +939,25 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 		expect(fenceVerdict(granted, path.join(otherHome, "named-file"), "read")).toBe("allow");
 		expect(fenceVerdict(granted, path.join(otherHome, "named-file"), "write")).toBe("allow");
 
-		// The unrelated data roots, still denied — these were measured reachable before #2624.
-		for (const leak of [
-			path.join("data", "globex", "secrets.tf"),
-			path.join("srv", "tenantZ", "notes.md"),
-			path.join("Volumes", "Backup", "customerY"),
-		]) {
-			const candidate = path.join(fsRoot, leak);
-			expect(fenceVerdict(fence, candidate, "read")).toBe("deny");
-			expect(fenceVerdict(fence, candidate, "write")).toBe("deny");
+		for (const root of ["data", "srv", "Volumes"].map(name => path.join(fsRoot, name))) {
+			expect(fence.denyEnumerate).toContain(root);
+			expect(fenceVerdict(fence, root, "enumerate")).toBe("deny");
+		}
+		for (const named of ["data/globex/secrets.tf", "srv/tenantZ/notes.md", "Volumes/Backup/customerY"]) {
+			const candidate = path.join(fsRoot, named);
+			expect(fenceVerdict(fence, candidate, "read")).toBe("allow");
+			expect(fenceVerdict(fence, candidate, "write")).toBe("allow");
 		}
 
 		// …and nothing a tool needs. This fence restricts no operation; that is what makes it gentle.
 		for (const operational of ["usr/bin/env", "bin/sh", "etc/hosts", "opt/homebrew/bin/bun", "var/log/x"]) {
 			expect(fenceVerdict(fence, path.join(fsRoot, operational), "read")).toBe("allow");
 		}
-		// The workspace still wins inside its denied ancestors.
+		// The workspace remains fully usable inside a protected container.
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
 	});
 
-	// Enumeration only sees what exists when the fence is built, so a known data root that does not
-	// exist yet has to be denied by name — otherwise `mkdir /data` mid-session would open it. Seatbelt
-	// matches a `(subpath …)` prefix whether or not the path is there, so the rule costs nothing.
-	it("denies a known data root that does not exist yet", () => {
+	it("protects a known data container that does not exist yet", () => {
 		const fsRoot = syntheticRoot("fsabsent", ["usr", "Users"]);
 		const home = path.join(fsRoot, "Users", "me");
 		const workspace = path.join(home, "w");
@@ -966,8 +966,9 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 
 		const fence = buildContainmentFence({ workspace, home, fsRoot });
 
-		expect(fence.deny).toContain(path.join(fsRoot, "srv"));
-		expect(fenceVerdict(fence, path.join(fsRoot, "srv", "tenantZ", "x"), "read")).toBe("deny");
+		expect(fence.denyEnumerate).toContain(path.join(fsRoot, "srv"));
+		expect(fenceVerdict(fence, path.join(fsRoot, "srv"), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(fsRoot, "srv", "tenantZ", "x"), "read")).toBe("allow");
 	});
 
 	// A deny beats an allow at EQUAL depth, so denying a root that is itself the workspace would not
@@ -979,6 +980,7 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 		const fence = buildContainmentFence({ workspace, home: path.join(fsRoot, "Users", "me"), fsRoot });
 
 		expect(fence.deny).not.toContain(workspace);
+		expect(fence.denyEnumerate).not.toContain(workspace);
 		expect(fenceVerdict(fence, path.join(workspace, "src", "main.ts"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(workspace, "src", "main.ts"), "write")).toBe("allow");
 	});
@@ -1003,20 +1005,25 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 		expect(fenceVerdict(fence, path.join(fsRoot, "shared", "x"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(fsRoot, "readonly", "x"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(fsRoot, "readonly", "x"), "write")).toBe("deny");
-		// An ungranted data root beside them is still denied, or the carve-out proved nothing.
-		expect(fenceVerdict(fence, path.join(fsRoot, "data", "x"), "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(fsRoot, "shared"), "enumerate")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fsRoot, "readonly"), "enumerate")).toBe("allow");
+		// An ungranted data container beside them still cannot be enumerated.
+		expect(fenceVerdict(fence, path.join(fsRoot, "data"), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(fsRoot, "data", "x"), "read")).toBe("allow");
 	});
 
 	// The synthetic root proves the rule; this proves it is wired to the real filesystem, which is the
 	// part that actually ships. Asserted on the emitted roots, because that is what the backend compiles.
-	it("denies the real home container on this machine and no operational root", () => {
+	it("protects the real home container on this machine and no operational root", () => {
 		const fence = buildContainmentFence({ workspace: fs.realpathSync(process.cwd()) });
 
 		const accountRoot = path.join(
 			path.parse(fs.realpathSync(process.cwd())).root,
 			process.platform === "linux" ? "home" : "Users",
 		);
-		expect(fence.deny).toContain(accountRoot);
+		expect(fence.deny).not.toContain(accountRoot);
+		expect(fence.denyEnumerate).toContain(accountRoot);
+		expect(fenceVerdict(fence, accountRoot, "enumerate")).toBe("deny");
 		expect(fence.allow).toContain(fs.realpathSync(os.homedir()));
 		expect(fenceVerdict(fence, fs.realpathSync(os.homedir()), "write")).toBe("allow");
 		// Only what this platform actually has: `/private` is macOS-only, and `realpathSync` on an absent

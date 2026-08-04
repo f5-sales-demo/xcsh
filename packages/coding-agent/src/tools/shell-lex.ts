@@ -1,23 +1,21 @@
 /**
  * Shell-aware tokenizer for bash command strings.
  *
- * Two subsystems used to scan raw command text with regexes and got argument *data* wrong in
- * opposite directions: internal-URL expansion rewrote `xcsh://` tokens sitting inside quoted
- * strings (#2468), and the sandbox read-boundary check reported `sed` regex addresses as
- * filesystem paths (#2470). Both need to know where a shell *word* starts and ends.
+ * Raw command-text regexes get argument *data* wrong. Internal-URL expansion rewrote `xcsh://`
+ * tokens sitting inside quoted strings (#2468), while sandbox enforcement needs to identify only
+ * explicit redirections, write operands, and directory changes. Both need to know where a shell
+ * *word* starts and ends.
  *
  * This module answers only that question. It deliberately does NOT decide anything:
  *
  * - #2468 uses `text` plus `start`/`end` to tell "this whole word is the URL" from "the URL is
  *   mentioned inside this word", and to splice a replacement over the exact source span.
- * - #2470 uses `name` and `operandStart` to *locate* a script operand it may exempt, and to
- *   report a real word instead of a fragment like `` /a/p'; ``. The sandbox's safety still rests
- *   on its own coverage floor, never on this lexer being complete — see
- *   `sandbox/command-operands.ts`.
+ * - Sandbox enforcement uses `name`, `operandStart`, and redirect metadata only for filesystem
+ *   effects whose meaning is known without interpreting arbitrary argument text.
  *
  * Scope: enough POSIX shell to describe the commands an agent actually writes. Heredoc bodies are
- * consumed as data and never re-lexed, which is shell-correct but means a `bash <<EOF` body is
- * invisible here; that is exactly why the sandbox keeps a floor rather than trusting these words.
+ * consumed as data and never re-lexed, which is shell-correct: source and heredoc text are left to
+ * the runtime fence rather than scanned for path-looking strings.
  */
 
 /** How a word was quoted. `mixed` when built from differently-quoted segments, as in `a"b"'c'`. */
