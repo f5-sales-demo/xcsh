@@ -13,6 +13,10 @@
 - Added `--no-memories` for hermetic sessions that must not load or maintain persisted project memory ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 - Allowed `--tools` to select plugin and extension tools after runtime discovery ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 
+### Changed
+
+- Changed the binary production default to LiteLLM GPT-5.6 Sol with High reasoning, including Low and High effort role defaults for lightweight and thinking work ([#2886](https://github.com/f5-sales-demo/xcsh/issues/2886))
+
 ### Fixed
 
 - Rejected invalid lazy-command syntax before loading heavy command implementations while preserving command-specific launch-flag diagnostics ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
