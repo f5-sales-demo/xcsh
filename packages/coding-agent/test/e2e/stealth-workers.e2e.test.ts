@@ -28,6 +28,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import type { Browser } from "puppeteer";
+import { locateChrome } from "../../src/browser/chrome-locate";
 import { buildStealthBundle } from "../../src/tools/browser-stealth";
 import { deriveUserAgentOverride } from "../../src/tools/browser-user-agent";
 
@@ -98,7 +99,7 @@ describe.skipIf(isCI)("Workers under the stealth bundle (real Chrome via Puppete
 
 	beforeAll(async () => {
 		const puppeteer = (await import("puppeteer")).default;
-		browser = await puppeteer.launch({ headless: true });
+		browser = await puppeteer.launch({ headless: true, executablePath: locateChrome()?.path });
 	}, 180_000);
 
 	afterAll(async () => {
