@@ -12,6 +12,7 @@ import {
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
+	sandboxCheckSiblingRoot,
 } from "../sandbox/session-fence";
 import type { ToolSession } from "../tools";
 import { BashTool } from "../tools/bash";
@@ -220,7 +221,15 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		redactions.push([liveWorkspace, "<workspace>"], [liveHome, "<operator-home>"]);
 		if (inheritedSibling !== undefined) redactions.push([inheritedSibling, "<session-parent>/<synthetic-sibling>"]);
 
-		const fixtureBase = inheritedProfile ? liveWorkspace : await fs.realpath(os.tmpdir());
+		// A home-rooted Landlock profile must split the home grant around protected session stores. The
+		// kernel can grant an existing named child but cannot grant future children of that split root
+		// without also reopening the protected stores. BashTool therefore prepares one host-owned child
+		// before confinement; keep all exact-home live fixtures beneath that already-granted directory.
+		const liveWritableRoot =
+			inheritedProfile && liveWorkspace === liveHome && inheritedSibling !== undefined
+				? inheritedSibling
+				: liveWorkspace;
+		const fixtureBase = inheritedProfile ? liveWritableRoot : await fs.realpath(os.tmpdir());
 		fixtureRoot = await fs.mkdtemp(path.join(fixtureBase, ".xcsh-sandbox-check-policy-"));
 		fixturePaths.push(fixtureRoot);
 		redactions.push([fixtureRoot, "<synthetic-root>"]);
@@ -355,7 +364,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			const displayPath = "<workspace>/<synthetic-fixture>";
 			let liveFixture: string;
 			try {
-				liveFixture = await fs.mkdtemp(path.join(liveWorkspace, ".xcsh-sandbox-check-workspace-"));
+				liveFixture = await fs.mkdtemp(path.join(liveWritableRoot, ".xcsh-sandbox-check-workspace-"));
 				fixturePaths.push(liveFixture);
 				redactions.push([liveFixture, displayPath]);
 				await fs.mkdir(path.join(liveFixture, "nested"));
@@ -381,7 +390,9 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			let liveSibling = inheritedSibling;
 			if (liveSibling === undefined) {
 				try {
-					liveSibling = await fs.mkdtemp(path.join(path.dirname(liveWorkspace), ".xcsh-sandbox-check-sibling-"));
+					liveSibling = await fs.mkdtemp(
+						path.join(sandboxCheckSiblingRoot(liveWorkspace, liveHome), ".xcsh-sandbox-check-sibling-"),
+					);
 					fixturePaths.push(liveSibling);
 					nonEnumerableCleanupDirs.add(liveSibling);
 					redactions.push([liveSibling, displayPath]);

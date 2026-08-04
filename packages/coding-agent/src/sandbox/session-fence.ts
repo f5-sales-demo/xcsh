@@ -14,6 +14,7 @@
  * allow-by-default with targeted denies, so the effective boundary was their intersection and the
  * intersection refused ordinary work. One object means the pre-check and the kernel cannot disagree.
  */
+import * as path from "node:path";
 import { buildContainmentFence, type ContainmentFence } from "./containment";
 
 /**
@@ -27,6 +28,12 @@ import { buildContainmentFence, type ContainmentFence } from "./containment";
 export const SANDBOX_SESSION_ROOT_ENV = "XCSH_SANDBOX_SESSION_ROOT";
 export const SANDBOX_OPERATOR_HOME_ENV = "XCSH_SANDBOX_OPERATOR_HOME";
 export const SANDBOX_CHECK_NAMED_SIBLING_ENV = "XCSH_SANDBOX_CHECK_NAMED_SIBLING";
+
+/** Choose a writable root for the live named-path probe without escaping an operator-home session. */
+export function sandboxCheckSiblingRoot(workspace: string, operatorHome: string): string {
+	const parent = path.dirname(workspace);
+	return workspace === operatorHome || parent === workspace ? workspace : parent;
+}
 
 /** The slice of `Settings` this needs — supplied explicitly so the caller names its own source. */
 export interface SettingsReader {

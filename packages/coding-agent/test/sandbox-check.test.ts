@@ -30,8 +30,9 @@ function sandboxCheckCommand(flags: string[] = [], prefixFlags: string[] = []): 
 async function runSandboxCheckProcess(
 	flags: string[],
 	env: Record<string, string | undefined> = process.env,
+	cwd = process.cwd(),
 ): Promise<$.ShellOutput> {
-	return await $`${{ raw: sandboxCheckCommand(flags) }}`.env(env).quiet().nothrow();
+	return await $`${{ raw: sandboxCheckCommand(flags) }}`.cwd(cwd).env(env).quiet().nothrow();
 }
 
 function resultText(result: AgentToolResult<BashToolDetails>): string {
@@ -105,6 +106,15 @@ it("runs the flag-free sandbox check named by launch-flag diagnostics and verifi
 	assertHealthyReport(report);
 }, 30_000);
 
+it("reports a healthy matrix when invoked from operator home", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const result = await runSandboxCheckProcess(["--json"], process.env, home);
+	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
+
+	expect(result.exitCode).toBe(0);
+	assertHealthyReport(report);
+}, 30_000);
+
 it("rejects launch flags on either side of the installed sandbox subcommand with one scope diagnostic", async () => {
 	const home = fs.realpathSync(os.homedir());
 	const workspace = fs.realpathSync(fs.mkdtempSync(path.join(home, ".xcsh-sandbox-check-prefix-flags-")));
@@ -161,7 +171,22 @@ it("reports a healthy matrix when invoked inside the live bash profile", async (
 	}
 }, 30_000);
 
-it("reports a healthy matrix for a live session rooted directly under operator home", async () => {
+it("reports a healthy matrix for a live session rooted at operator home", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const liveSiblingPrefix = ".xcsh-sandbox-check-live-sibling-";
+	const liveSiblingCount = (): number =>
+		fs.readdirSync(home).filter(entry => entry.startsWith(liveSiblingPrefix)).length;
+	const liveSiblingCountBefore = liveSiblingCount();
+
+	try {
+		assertHealthyReport(await runInsideLiveProfile(home));
+	} finally {
+		_resetShellSessionsForTest();
+		expect(liveSiblingCount()).toBe(liveSiblingCountBefore);
+	}
+}, 30_000);
+
+it("reports a healthy matrix for a live session rooted directly inside operator home", async () => {
 	const home = fs.realpathSync(os.homedir());
 	const fixturePaths: string[] = [];
 	const liveSiblingPrefix = ".xcsh-sandbox-check-live-sibling-";

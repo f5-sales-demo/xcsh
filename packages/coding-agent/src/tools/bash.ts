@@ -24,6 +24,7 @@ import {
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
+	sandboxCheckSiblingRoot,
 } from "../sandbox/session-fence";
 import { SECRET_ENV_PATTERNS, type SecretObfuscator } from "../secrets";
 import { DEFAULT_MAX_BYTES, TailBuffer } from "../session/streaming-output";
@@ -658,12 +659,14 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// Keep these values host-owned: tool-supplied env cannot replace them.
 		let env = requestedEnv;
 		let trustedSessionRoot = containmentRoot;
+		let trustedOperatorHome = os.homedir();
 		if (fence !== undefined) {
-			const [canonicalSessionRoot, trustedOperatorHome] = await Promise.all([
+			const [canonicalSessionRoot, canonicalOperatorHome] = await Promise.all([
 				canonicalizeSandboxContextPath(containmentRoot),
-				canonicalizeSandboxContextPath(os.homedir()),
+				canonicalizeSandboxContextPath(trustedOperatorHome),
 			]);
 			trustedSessionRoot = canonicalSessionRoot;
+			trustedOperatorHome = canonicalOperatorHome;
 			env = {
 				...requestedEnv,
 				[SANDBOX_SESSION_ROOT_ENV]: trustedSessionRoot,
@@ -799,7 +802,10 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 			// sibling before the child is confined so the diagnostic measures reachability, not whether a
 			// nested sandbox can widen itself. The host owns both this path and its cleanup.
 			sandboxCheckSibling = await fs.promises.mkdtemp(
-				path.join(path.dirname(trustedSessionRoot), ".xcsh-sandbox-check-live-sibling-"),
+				path.join(
+					sandboxCheckSiblingRoot(trustedSessionRoot, trustedOperatorHome),
+					".xcsh-sandbox-check-live-sibling-",
+				),
 			);
 			await Bun.write(path.join(sandboxCheckSibling, "named.txt"), "sibling\n");
 			env = { ...env, [SANDBOX_CHECK_NAMED_SIBLING_ENV]: sandboxCheckSibling };
