@@ -11,45 +11,18 @@
  * base directory. We split the same way and check EVERY token's base, so a
  * multi-path input cannot smuggle a sibling directory past the gate.
  *
- * Arbitrary-code tools (`bash`, `python`) cannot be fully contained in-process: this
- * checks the `cwd` argument precisely and scans the command/code for path tokens
- * (bare, quoted, `~`, `..`, absolute) that escape the tree. OS system paths are exempt.
- *
- * **This scan is no longer the boundary for `bash` on macOS.** Containment now runs below the command
- * text (`sandbox/containment.ts`, #2554): the shell's own `cd` and redirections are checked where they
- * act, and spawned children are confined by a seatbelt profile. A path is therefore decided after
- * expansion, alias resolution and symlink following, which is what closed the escapes this scan kept
- * leaking — #2470, #2516, #2520, #2524, #2540, #2542, #2553, and GHSA-q4hg.
- *
- * What remains this file's job:
- *  - every structured file tool (`read`/`write`/`edit`/`grep`/…), which has no subprocess to confine
- *  - `python`, whose kernel is a shared, lock-protected gateway reused across sessions, so it can never
- *    carry a per-session fence and this is the only thing deciding for it
- *  - `bash` on a platform with no backend, where this is again the only layer and `xcsh://about` says so
- *  - a fast pre-check that produces a readable refusal before a command runs
- *
- * So: keep it, and do not extend it. Another spelling caught here buys little now, and the pattern of
- * adding one has a poor record — two adversarial rounds on the #2542 fix alone produced six bypasses.
- *
- * **One policy, asked at two places (#2624.)** This used to consult `SandboxPolicy`, which was
- * deny-by-default and confined to the cwd, while the fence below it is allow-by-default with targeted
- * denies. Running both made the effective boundary their intersection, and the intersection refused
- * ordinary work: `grep -oE '<title>[^<]*</title>'` was rejected because the floor reads the fragment
- * `/title` out of the closing tag and a deny-by-default policy has to refuse an unrecognised absolute
- * path. So were `</h1>`, `</td>`, `--pretty=format:'%h </%an>'`, `cd "$DEST"`, `read /etc/hosts` and a
- * `/tmp` write — none of which has anything to do with reaching another customer's files.
- *
- * The floor is unchanged, because the floor was never the problem. It guesses which fragments of a
- * command might be paths, and under allow-by-default a wrong guess matches no rule and costs nothing.
- * Deny-by-default is what turned each wrong guess into a refusal, so the posture went rather than the
- * guessing — which also means this file no longer needs to know about system roots, temp directories or
- * which backend is running. The fence answers all of that, and it is the same answer the kernel gives.
+ * Arbitrary-code tools are intentionally different. Their source text is data, not a reliable account
+ * of what the program will open, and scanning it caused false refusals such as #2931. `bash` therefore
+ * pre-checks only filesystem effects the shell lexer proves: an explicit `cwd`, literal redirections,
+ * known write operands, and literal directory changes. The OS backend remains the boundary for spawned
+ * processes. The shared `python` kernel cannot carry a per-session OS fence, so only its explicit `cwd`
+ * is checked; source and cell text are never scanned.
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
 import { lexShellCommand, type ShellSimpleCommand } from "../tools/shell-lex";
-import { provenExemptWords, writtenOperandWords } from "./command-operands";
+import { writtenOperandWords } from "./command-operands";
 import { type ContainmentFence, type FenceAccess, fenceVerdict } from "./containment";
 
 /** The two access directions, named as the fence names them. */
@@ -123,12 +96,6 @@ const SEARCH_TOOLS: Record<string, SearchSpec> = {
 	ast_edit: { key: "path", base: token => parseSearchPath(token).basePath, access: "write" },
 };
 
-/** Arbitrary-code tools whose command/code strings are scanned best-effort. */
-const CODE_FIELDS: Record<string, string[]> = {
-	bash: ["command"],
-	python: ["code"],
-};
-
 function firstString(input: Record<string, unknown>, keys: string[]): string | undefined {
 	for (const key of keys) {
 		const value = input[key];
@@ -155,43 +122,6 @@ function deny(cwd: string, resolved: string, access: SandboxAccess): ToolCallDec
 	};
 }
 
-/**
- * `$HOME` and `${HOME}` are spellings of `~`, which `looksLikePath` already treats as a path (#2534).
- * Rewriting to `~` means detection and resolution answer consistently whether the resulting home path
- * is allowed or denied by an explicit rule.
- *
- * `\b` keeps `$HOMEBREW_PREFIX` and friends out of it.
- */
-const HOME_EXPANSION = /^\$(?:HOME\b|\{HOME\})/;
-
-function normalizeHomeExpansion(token: string): string {
-	return HOME_EXPANSION.test(token) ? token.replace(HOME_EXPANSION, "~") : token;
-}
-
-function looksLikePath(token: string): boolean {
-	return path.isAbsolute(token) || token.startsWith("~") || /(^|[/\\])\.\.([/\\]|$)/.test(token);
-}
-
-/** A path-like token found by the floor, with where it was found. */
-interface PathOccurrence {
-	token: string;
-	/** Offset of the token's first character — past any opening quote — in the scanned string. */
-	at: number;
-	/** Set when a redirection operator in the raw text says what the shell will do with it. */
-	access?: SandboxAccess;
-}
-
-/**
- * What a redirection operator does to the operand that follows it. `skip` is a here-string or a
- * heredoc delimiter: that operand is literal data the shell never opens — verified against bash,
- * where `cat <<</tmp/f` prints the string `/tmp/f` rather than the contents of that file.
- */
-function operandAccess(operator: string): SandboxAccess | "skip" {
-	if (operator.includes("<<")) return "skip";
-	// `<>` opens for both; the write side is the one a read-only grant must not license.
-	return operator.includes(">") ? "write" : "read";
-}
-
 /** A path to check, and the boundary to check it against. */
 interface PathCandidate {
 	token: string;
@@ -207,142 +137,6 @@ interface PathCandidate {
 /** Write first, so a `<>` denial names the stricter boundary the caller is most likely missing. */
 const WRITE_AND_READ = ["write", "read"] as const satisfies readonly SandboxAccess[];
 
-/** A redirection operator, with its optional file-descriptor prefix. Longest forms first. */
-const REDIRECT_OPERATOR = /[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)/g;
-
-/** A whitespace token that is only a redirection operator, so the next token is its operand. */
-const BARE_REDIRECT = /^[0-9]*(?:&>>|&>|<<<|<<-|<<|>>|>\||<>|>&|<&|>|<)$/;
-
-/** Where a shell word ends inside a whitespace token: an operator, separator, or grouping. */
-const METACHARACTER = /[;&|<>()]/;
-
-/**
- * A path glued to its option, as one shell word (#2524).
- *
- * `path.isAbsolute("if=/work/custB/secret")` is false, so the floor's whole-token test
- * never saw these — a single space was the difference between the blocked form and the
- * allowed one.
- *
- * Only the option's VALUE is captured, never an arbitrary `/`-containing substring. That
- * distinction is what keeps #2470 shut: scanning any slash-bearing fragment would read
- * `sed -n '/a/p'` as a path again, which is the false positive #2479 exists to remove.
- * The captured value still has to satisfy `looksLikePath`, so `--output=./out` stays
- * allowed while `--output=/work/custB/x` does not.
- *
- * The short-option form additionally requires its value to begin with `/` or `~`. Without
- * that, `-la` and friends would be read as an option carrying a relative path.
- */
-const OPTION_VALUE_FORMS: readonly RegExp[] = [
-	/^-{1,2}[A-Za-z0-9][^=]*=(.+)$/, // --output=/p, -o=/p
-	/^[A-Za-z_][A-Za-z0-9_]*=(.+)$/, // if=/p, of=/p (operand style)
-	/^-[A-Za-z0-9]+([/~].*)$/, // -o/p, -C/p (no separator)
-];
-
-/**
- * Path-like tokens in a command/code string: bare (whitespace-split) and quoted.
- *
- * Indiscriminate by design, and that is the point: because it never asks what a command *means*, it
- * also catches paths hidden inside quoted scripts, heredoc bodies, `-exec` runs and substitutions.
- * This is the coverage floor for both bash and python. Do not narrow it.
- *
- * Offsets come along so a caller can tell one occurrence of a token from another. Nothing else about
- * what this finds has changed: the two passes and `looksLikePath` are the floor.
- */
-function codePathOccurrences(command: string): PathOccurrence[] {
-	const found: PathOccurrence[] = [];
-	const add = (raw: string, at: number, access?: SandboxAccess): void => {
-		const token = normalizeHomeExpansion(raw);
-		if (token.length > 0 && looksLikePath(token)) found.push({ token, at, access });
-	};
-	// Set when the previous token was nothing but a redirection operator, so this one is its operand.
-	let carried: SandboxAccess | "skip" | undefined;
-	for (const match of command.matchAll(/\S+/g)) {
-		const raw = match[0];
-		const operand = carried;
-		carried = undefined;
-
-		if (BARE_REDIRECT.test(raw)) {
-			carried = operandAccess(raw);
-			continue;
-		}
-
-		const stripped = raw.replace(/^["']|["']$/g, "");
-		const openingQuote = raw.length !== stripped.length && (raw[0] === '"' || raw[0] === "'") ? 1 : 0;
-		if (operand !== "skip") add(stripped, match.index + openingQuote, operand);
-		// An operator glued to its operand is one whitespace token, and `>/work/x` is not absolute.
-		// The lexer resolves this for words it can see, but not for text inside a quoted script or a
-		// heredoc body — where the floor is the only thing looking — so scan past the operator here
-		// too, anywhere it appears in the token: `echo a>/work/x` is one token as well. The operator
-		// is also the only thing that says which boundary a nested redirect crosses.
-		for (const operator of stripped.matchAll(REDIRECT_OPERATOR)) {
-			const access = operandAccess(operator[0]);
-			if (access === "skip") continue;
-			const from = operator.index + operator[0].length;
-			// The operand ends at the first shell metacharacter, not at the end of the whitespace
-			// token. `>/dev/null; echo x` is one token, and taking all of it produced the "path"
-			// `/dev/null;`, which matched no write sink and refused a completely ordinary command
-			// (#2540). Truncating only ever shortens a candidate, so nothing blocked becomes allowed.
-			const rest = stripped.slice(from);
-			const stop = rest.search(METACHARACTER);
-			add(
-				(stop === -1 ? rest : rest.slice(0, stop)).replace(/^["']|["']$/g, ""),
-				match.index + openingQuote + from,
-				access,
-			);
-		}
-
-		// An option glued to its value is one word too, and the lexer cannot help: it
-		// correctly reports `if=/work/custB/secret` as a single word, because that is what
-		// it is. Which options introduce a filename is command-specific knowledge the floor
-		// deliberately does not have, so scan the value and let `looksLikePath` decide.
-		//
-		// Skipped after a here-string or heredoc delimiter for the same reason the whole
-		// token is: that operand is literal data the shell never opens, so `cat <<<if=/tmp/f`
-		// prints the text rather than reading the file.
-		if (operand !== "skip") {
-			for (const form of OPTION_VALUE_FORMS) {
-				const optionValue = stripped.match(form);
-				if (!optionValue?.[1]) continue;
-				const from = stripped.length - optionValue[1].length;
-				add(optionValue[1].replace(/^["']|["']$/g, ""), match.index + openingQuote + from, operand);
-				break; // the forms overlap; the first that matches has already captured the value
-			}
-		}
-	}
-	for (const match of command.matchAll(/["']([^"']+)["']/g)) add(match[1], match.index + 1);
-	return found;
-}
-
-/** The floor as plain read candidates — what a non-shell language gets. */
-function codePathCandidates(command: string): PathCandidate[] {
-	return codePathOccurrences(command).map(({ token }) => ({ token, access: "read" as const }));
-}
-
-/**
- * Path candidates of a *bash* command. Three things happen here, and only the first narrows:
- *
- * 1. **Exempt words are blanked.** Words the invoked command provably treats as a script or pattern
- *    rather than a filename stop being scanned (issue #2470: `sed -n '/a/p'` was refused because
- *    `/a/p` looks absolute, though sed never opens it). Implemented by blanking the exempt spans and
- *    re-running the floor over what remains, rather than by subtracting a set of token strings. Set
- *    subtraction loses which *occurrence* a token came from, so `echo '/elsewhere/x' && cat
- *    /elsewhere/x` would exempt the echo operand and thereby clear the identical token belonging to
- *    `cat`. Blanking is positional and cannot leak that way.
- *
- * 2. **A word the shell opens for writing is checked against the write boundary** (issue #2516).
- *    Every candidate used to be checked as a read, so a path granted read access but not write was
- *    writable through `>`. Marking is by span, for the same occurrence-identity reason as blanking:
- *    in `cat /shared/x && printf y > /shared/x` only the second occurrence is the write.
- *
- * 3. **Redirect targets are added as candidates** (issue #2520). The floor splits on whitespace, so
- *    an operator glued to its path — `cat </work/custB/secret` — was one token that did not look
- *    like a path and was never checked at all. The lexer parses those correctly, so its redirect
- *    targets go in on top of the floor. This only ever adds candidates.
- *
- * The floor's reach is unchanged: text the lexer never turns into a word — a heredoc body, an
- * `-exec` run — is not blanked, so it is still scanned. When the command cannot be lexed
- * confidently, the floor stands alone.
- */
 /**
  * A `cd` whose target this layer cannot resolve — `cd "$DEST"`, `cd $(git rev-parse …)`, `cd -` — is
  * **not** refused (#2624).
@@ -395,8 +189,8 @@ const DIRECTORY_CHANGE_TOKEN = /(^|[\s;&|(])(cd|pushd)([\s;&|)]|$)/;
 /**
  * Literal targets of a directory change, as candidates that must resolve in-tree.
  *
- * This gate exists because a relative operand is never a candidate — the floor assumes it resolves
- * under the session directory. `cd` is what breaks that assumption: the bash tool runs one
+ * This gate exists because ordinary relative operands are runtime decisions. `cd` changes where
+ * those operands resolve: the bash tool runs one
  * persistent brush-core shell in the agent's own process, so a directory change outlives the call
  * that made it and afterwards `cat tmp/x` reads somewhere else entirely (#2542).
  *
@@ -459,38 +253,14 @@ function directoryChangeTargets(commands: readonly ShellSimpleCommand[], depth =
 
 function shellPathCandidates(command: string): ShellScan {
 	const lexed = lexShellCommand(command);
-	// Unbalanced quotes mean every word boundary is a guess: neither the blanking nor the write
-	// marking below can be trusted, so fall back to the floor, checked as reads.
-	if (lexed.unterminated) return { candidates: codePathCandidates(command) };
+	// An unfinished command has no filesystem effect, and treating partial words as paths is exactly
+	// the source-text guessing this layer avoids.
+	if (lexed.unterminated) return { candidates: [] };
 
-	const exemptSpans = lexed.commands.flatMap(simpleCommand => provenExemptWords(simpleCommand));
-	let scanned = command;
-	// Replace each exempt word with equivalent-length whitespace, so surrounding offsets and word
-	// boundaries are preserved and only that word's own text stops being scanned.
-	for (const word of exemptSpans) {
-		scanned = scanned.slice(0, word.start) + " ".repeat(word.end - word.start) + scanned.slice(word.end);
-	}
+	const candidates: PathCandidate[] = [];
 
-	// `<>` opens for both, so it stays a read here and picks up its write below: a floor occurrence
-	// may carry only one access, and read is the one the floor would have used anyway.
-	const writeTargets = lexed.words.filter(word => word.redirect === "write");
-	// Plus the operands the invoked program writes itself — `tee FILE`, `dd of=FILE`, `cp SRC DST`.
-	// Those had no direction signal and defaulted to a read check, so a write into an allowRead-only
-	// root passed and a write into an allowWrite-only root was refused (GHSA-q4hg).
-	const writtenOperands = lexed.commands.flatMap(simpleCommand => writtenOperandWords(simpleCommand));
-	const inWriteTarget = (at: number): boolean =>
-		[...writeTargets, ...writtenOperands].some(word => at >= word.start && at < word.end);
-
-	// A floor occurrence takes the access its own operator gave it; failing that, the span of a
-	// lexed write target it sits inside; failing that, read.
-	const candidates: PathCandidate[] = codePathOccurrences(scanned).map(({ token, at, access }) => ({
-		token,
-		access: access ?? (inWriteTarget(at) ? "write" : "read"),
-	}));
-
-	// Not gated on `looksLikePath`: that test is for the floor's *guesses* about which fragments of a
-	// command might be filenames. A redirect target is one the shell will certainly open, so a bare
-	// `out.txt` is checked too — it resolves under the cwd, which a read-only cwd does not license.
+	// A redirect target is one the shell will certainly open, so a bare `out.txt` is checked too — it
+	// resolves under the cwd, which a read-only cwd does not license.
 	for (const word of lexed.words) {
 		if (word.redirect === undefined || word.redirect === "here-string") continue;
 		for (const access of word.redirect === "read-write" ? WRITE_AND_READ : [word.redirect]) {
@@ -499,6 +269,13 @@ function shellPathCandidates(command: string): ShellScan {
 			// in-tree shell (#2552). The shell resolves it below the text instead.
 			if (word.literal) candidates.push({ token: word.text, access });
 		}
+	}
+
+	// Known program operands that are written — `tee FILE`, `dd of=FILE`, `cp SRC DST` — are as
+	// explicit as redirects. Ordinary read operands are deliberately absent: only the process that
+	// opens them can decide whether path-looking argument text is a filename, a pattern, or data.
+	for (const word of lexed.commands.flatMap(simpleCommand => writtenOperandWords(simpleCommand))) {
+		if (word.literal) candidates.push({ token: word.text, access: "write" });
 	}
 
 	candidates.push(...directoryChangeTargets(lexed.commands));
@@ -521,7 +298,7 @@ function searchBases(raw: string, base: (token: string) => string): string[] {
 	return [...tokens];
 }
 
-function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean): ToolCallDecision {
+function evaluateCodeTool(check: ToolCallCheck, shell: boolean): ToolCallDecision {
 	const { input, cwd } = check;
 
 	const rawCwd = typeof input.cwd === "string" ? input.cwd : undefined;
@@ -533,38 +310,26 @@ function evaluateCodeTool(check: ToolCallCheck, fields: string[], shell: boolean
 		return { block: true, reason: describeDirectoryChange(cwd, base) };
 	}
 
-	const commands: string[] = [];
-	for (const field of fields) {
-		if (typeof input[field] === "string") commands.push(input[field] as string);
-	}
-	// python also accepts a `cells` array of { code }.
-	if (Array.isArray(input.cells)) {
-		for (const cell of input.cells) {
-			const code = (cell as { code?: unknown })?.code;
-			if (typeof code === "string") commands.push(code);
-		}
-	}
+	// Python's persistent shared kernel has no per-session OS fence. Scanning source cannot fix that:
+	// path-like strings may be inert data while computed paths never appear in source at all. Keep the
+	// explicit cwd contract and otherwise let Python run without a heuristic pre-check (#2931).
+	if (!shell || typeof input.command !== "string") return ALLOW;
 
-	for (const command of commands) {
-		// Only bash gets the shell-aware treatment. Python is not shell: lexing `open('/x')` as
-		// shell yields one non-absolute word and would lose the check entirely, and it has no
-		// redirects, so every candidate it produces is a read.
-		const scan: ShellScan = shell ? shellPathCandidates(command) : { candidates: codePathCandidates(command) };
-		const seen = new Set<string>();
-		for (const { token, access, mustBeInTree } of scan.candidates) {
-			if (!seen.add(`${access}\0${mustBeInTree ? "cd\0" : ""}${token}`)) continue;
-			if (mustBeInTree) {
-				// `path.resolve`, not `resolveToCwd`: the latter maps an all-slashes path to the cwd,
-				// which would read `cd /` as `cd .` and let the shell walk out. Both directions,
-				// because relative paths go unchecked wherever the shell is standing.
-				const moved = path.resolve(base, expandPath(token));
-				if (permits(check, moved, "read") && permits(check, moved, "write")) continue;
-				return { block: true, reason: describeDirectoryChange(cwd, moved) };
-			}
-			const resolved = resolveToCwd(token, base);
-			if (permits(check, resolved, access)) continue;
-			return deny(cwd, resolved, access);
+	const scan = shellPathCandidates(input.command);
+	const seen = new Set<string>();
+	for (const { token, access, mustBeInTree } of scan.candidates) {
+		if (!seen.add(`${access}\0${mustBeInTree ? "cd\0" : ""}${token}`)) continue;
+		if (mustBeInTree) {
+			// `path.resolve`, not `resolveToCwd`: the latter maps an all-slashes path to the cwd,
+			// which would read `cd /` as `cd .` and let the shell walk out. Both directions,
+			// because relative paths go unchecked wherever the shell is standing.
+			const moved = path.resolve(base, expandPath(token));
+			if (permits(check, moved, "read") && permits(check, moved, "write")) continue;
+			return { block: true, reason: describeDirectoryChange(cwd, moved) };
 		}
+		const resolved = resolveToCwd(token, base);
+		if (permits(check, resolved, access)) continue;
+		return deny(cwd, resolved, access);
 	}
 
 	return ALLOW;
@@ -695,8 +460,8 @@ function evaluateReadTool(check: ToolCallCheck): ToolCallDecision {
 export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	const { toolName, input, cwd } = check;
 
-	const codeFields = CODE_FIELDS[toolName];
-	if (codeFields) return evaluateCodeTool(check, codeFields, toolName === "bash");
+	if (toolName === "bash") return evaluateCodeTool(check, true);
+	if (toolName === "python") return evaluateCodeTool(check, false);
 
 	if (toolName === "edit") return evaluateEdit(check);
 	if (toolName === "read") return evaluateReadTool(check);

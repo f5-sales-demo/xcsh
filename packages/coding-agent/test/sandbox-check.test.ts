@@ -83,14 +83,16 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	expect(["seatbelt", "landlock", "scanner-only"]).toContain(report.backend);
 	expect(report.summary.failed).toBe(0);
 	expect(report.summary.errors).toBe(0);
-	expect(report.checks).toHaveLength(11);
+	expect(report.checks).toHaveLength(13);
 	expect(report.checks).toContainEqual({ name: "structured tools share the boundary", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "Bash grep pattern remains data (#2931)", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "Bash Python heredoc remains data (#2931)", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "cwd resets across tool calls", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
 	if (report.osEnforced) {
-		expect(report.summary).toEqual({ passed: 11, failed: 0, errors: 0, skipped: 0 });
+		expect(report.summary).toEqual({ passed: 13, failed: 0, errors: 0, skipped: 0 });
 		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
-		expect(report.checks).toContainEqual({ name: "synthetic other account cannot be entered", status: "PASS" });
+		expect(report.checks).toContainEqual({ name: "named other account remains reachable", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "explicit grant restores parent enumeration", status: "PASS" });
 	}
 }

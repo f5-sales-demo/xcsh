@@ -7,9 +7,9 @@
  * profile could not even `execvp /bin/cat`.
  *
  * So the fence is gentle. It leaves `/usr`, `/tmp`, package caches, the network and process execution
- * alone. Its cross-tenant courtesy removes the discovery step — enumerating the session root's parent —
- * while keeping named operator access. Other operators' accounts, explicit data roots and cross-session
- * state remain denied where the model has no legitimate reason to wander (#2554).
+ * alone. Its cross-tenant courtesy removes discovery by enumerating session, account, and data
+ * containers while keeping named operator access. Xcsh-private cross-session state remains denied
+ * recursively unless the operator grants it explicitly (#2931).
  *
  * Produced declaratively rather than as an ordered rule list, because the two backends disagree about
  * order: seatbelt evaluates rules in sequence with the last match winning, while Landlock only grants
@@ -257,10 +257,8 @@ function canonicalThroughExisting(target: string): string {
  * otherwise deny `/`, `/usr` or `/tmp` — refusing exactly the work this fence is supposed to leave
  * alone.
  *
- * `/Users` and `/home` were here too, and deliberately are no longer: those hold other operators'
- * accounts, so denying them is the point rather than the accident (#2624). The workspace, the caches
- * and the tool config dirs all match at greater depth, and home is denied anyway, so nothing inside
- * the current account changes.
+ * `/Users` and `/home` are deliberately absent: their exact listings are protected separately while
+ * named account paths remain available (#2931).
  */
 function tooBroadToDeny(candidate: string, fsRoot: string): boolean {
 	if (candidate === path.parse(candidate).root) return true;
@@ -348,14 +346,12 @@ function resolveGrants(roots: readonly string[] | undefined, home: string): Set<
  * Filesystem roots other than the one the workspace is on.
  *
  * On POSIX there is one root and this is empty. On Windows every drive letter is its own root, so a
- * workspace on `C:` left `D:\customerB` and any mapped share matching no rule at all — and Windows has
- * no kernel backend, so the command-text scan is the entire boundary there. While that scan was
- * deny-by-default it refused those paths incidentally; making it agree with the fence (#2624) removed
- * the cover and exposed the gap. Found by adversarial review.
+ * workspace on `C:` otherwise leaves the `D:\` account/data container discoverable. Windows has no
+ * kernel backend, so this exact-enumeration rule is enforced for structured tools but cannot confine a
+ * Bash child process.
  *
  * **Unverified on Windows.** The probe below cannot run on the platforms this fleet uses, so what is
- * tested is the denying, not the discovery — see the test, which injects the list. A drive holding a
- * toolchain is opened again with `--allow-path`, which grants at greater depth.
+ * tested is the exact-enumeration protection, not discovery — see the test, which injects the list.
  *
  * UNC paths (`\\server\share`) have no enumerable root and are not covered.
  */
@@ -446,10 +442,12 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// Through `resolveGrants` like the allow-lists, so a session temp dir or artifacts dir that does not
 	// exist yet is still granted rather than silently dropped.
 	const tildeHome = canonical(options.homeForTilde ?? options.home ?? os.homedir()) ?? os.homedir();
-	for (const root of resolveGrants(
-		[options.sessionTmp, ...(options.extraRoots ?? [])].filter((r): r is string => r !== undefined),
+	const sessionTmpResolved = resolveGrants(
+		options.sessionTmp === undefined ? undefined : [options.sessionTmp],
 		tildeHome,
-	)) {
+	);
+	const extraResolved = resolveGrants(options.extraRoots, tildeHome);
+	for (const root of [...sessionTmpResolved, ...extraResolved]) {
 		allow.add(root);
 	}
 	// Kept distinct. Merging them into one read+write list made a folder shared for reading writable,
@@ -474,15 +472,17 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// posture is intentionally not enough: it keeps named access working, while this one exact directory
 	// still cannot be scanned. `--allow-path` appears in both settings lists, so it reaches this branch via
 	// `readOnlyResolved`; a write-only grant does not imply permission to learn directory entries.
-	const parentExplicitlyReadable = [...readOnlyResolved].some(root => pathIsWithin(root, parentToProtect));
+	const parentExplicitlyReadable = [...extraResolved, ...readOnlyResolved].some(root =>
+		pathIsWithin(root, parentToProtect),
+	);
 	if (!tooBroadToDeny(parentToProtect, fsRoot) && !parentExplicitlyReadable) {
 		denyEnumerate.add(parentToProtect);
 	}
 
 	if (home !== undefined) {
 		// The account container is a data root, but this operator's whole home belongs to them (#2637).
-		// A deeper full allow preserves their normal filesystem rights while leaving sibling accounts under
-		// the broader deny. Cross-session stores are denied again at still greater depth below.
+		// A deeper full allow preserves their normal filesystem rights. The account container loses only
+		// enumeration, and cross-session stores are denied again at still greater depth below.
 		allow.add(home);
 
 		// Granted whether or not they exist yet. `~/.bun` has to be writable *before* the first
@@ -493,21 +493,17 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		}
 	}
 
-	// Top-level directories that hold somebody's files. Without these the fence covered only home and
-	// the workspace's ancestors, so with the workspace at `~/MEDDPICC/CUSTOMER-A` another operator's
-	// account, an external volume and `/data/globex` were all readable AND writable — measured. The
-	// command-text scan was refusing them on the way in, which is exactly why that scan could not
-	// simply be stood down (#2624).
+	// Top-level directories that hold somebody's files lose only their own directory listing. Named
+	// descendants remain available with the operator's normal filesystem rights: this fence removes
+	// casual discovery, not professional access to a path the operator already knows (#2931).
 	//
 	// Two sources, and the static one is not redundant: enumeration is a single `readdir` that can
 	// fail, and coverage that evaporates with it would be worse than no claim at all. So the known data
-	// roots are denied by name, and enumeration adds whatever this machine has that the list does not
-	// foresee.
+	// roots are protected by name, and enumeration adds whatever this machine has that the list does
+	// not foresee.
 	//
 	// The known roots are resolved through their existing ancestors rather than dropped when absent, so
-	// a `/data` created *after* the session starts is already denied. Seatbelt matches a `(subpath …)`
-	// prefix whether or not the path exists; Landlock cannot attach a rule to an absent inode, but its
-	// plan never grants a path `readdir` did not see either, so nothing is lost there.
+	// a `/data` created *after* the session starts already has its exact listing protected.
 	const known = DATA_ROOTS.map(name => canonicalThroughExisting(path.join(fsRoot, path.basename(name))));
 	const accountRoots = new Set(["Users", "home"].map(name => canonicalThroughExisting(path.join(fsRoot, name))));
 	const found = dataRootEntries(fsRoot).map(entry => canonical(entry) ?? entry);
@@ -525,17 +521,15 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		// e.g. /Volumes/Macintosh HD -> /. Skipped for the whole-root list, per the note above.
 		if (!rootScoped.has(resolved) && tooBroadToDeny(resolved, fsRoot)) continue;
 		if (resolved === fsRoot) continue; // never the root the workspace lives on
-		// A directory containing home is normally too broad to deny because it would revoke the operator's
-		// own files (#2637). Account containers are the deliberate exception: they are denied here and the
-		// canonical home allow above wins at greater depth, isolating sibling accounts without hobbling the
-		// operator (#2788).
+		// A directory containing home is normally too broad to protect because it would hide unrelated
+		// operational entries. Account containers are the deliberate exception: their listing is the
+		// discovery surface, while every named account remains reachable (#2788, #2931).
 		if (home !== undefined && pathIsWithin(resolved, home) && !accountRoots.has(resolved)) continue;
-		// A deny beats an allow at EQUAL depth, so denying a root that IS the workspace or IS something
-		// the operator granted would not be redundant — it would silently revoke the grant. Deeper is
-		// fine and intended: an ancestor deny with the workspace allowed inside it is the normal shape.
+		// The session workspace and explicit read/full grants retain enumeration. A write-only grant does
+		// not imply permission to learn directory entries.
 		if (resolved === workspace) continue;
-		if (allow.has(resolved) || allowReadOnly.has(resolved) || allowWriteOnly.has(resolved)) continue;
-		deny.add(resolved);
+		if ([...extraResolved, ...readOnlyResolved].some(root => pathIsWithin(root, resolved))) continue;
+		denyEnumerate.add(resolved);
 	}
 
 	// Cross-session leak roots. These may sit *under* an allowed root — the agent dir is inside home,
@@ -550,8 +544,13 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		getXCSHContextsDir(),
 		...sharedTempLeakRoots(),
 	];
+	const explicitGrants = [...extraResolved, ...readOnlyResolved, ...writeOnlyResolved];
 	for (const leak of leaks) {
-		deny.add(canonicalThroughExisting(leak));
+		const resolved = canonicalThroughExisting(leak);
+		// A grant at or above a private root is an explicit operator override. Directional grants stay
+		// directional because their allowReadOnly/allowWriteOnly rule remains the deepest matching rule.
+		if (explicitGrants.some(root => pathIsWithin(root, resolved))) continue;
+		deny.add(resolved);
 	}
 
 	return {
@@ -601,7 +600,7 @@ export type ContainmentBackend = "seatbelt" | "landlock" | "scanner-only" | "dis
 export interface ContainmentStatus {
 	readonly enabled: boolean;
 	readonly backend: ContainmentBackend;
-	/** True when the kernel enforces it, false when only the command-text scan does. */
+	/** True when the kernel enforces it, false when only precise tool-call pre-checks run. */
 	readonly osEnforced: boolean;
 	/**
 	 * Set when the backend enforces reads and writes but cannot govern truncation.
@@ -621,8 +620,8 @@ export interface ContainmentStatus {
  *
  * Reported so an operator can tell a confined session from an unconfined one. The distinction is not
  * cosmetic: with a backend, a path is checked where it is opened and the spelling cannot matter;
- * without one, the only check reads the command text and is best-effort by construction. Two sessions
- * that look identical can offer very different guarantees, and `xcsh://about` is where that is stated.
+ * without one, only explicit tool-call effects can be checked before execution. Two sessions that look
+ * identical can offer very different guarantees, and `xcsh://about` is where that is stated.
  *
  * Deliberately not surfaced at startup or anywhere in the TUI — the operator asked for no UI change.
  */

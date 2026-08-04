@@ -15,6 +15,7 @@
 ### Fixed
 
 - Prevalidated manifest batches before mutation, preserved strict create and update semantics, rejected unsupported server dry-run, and returned automation-grade exit codes for resource operations ([#2930](https://github.com/f5-sales-demo/xcsh/issues/2930))
+- Prevented sandbox false refusals from path-like Bash and Python source text while limiting account and data containers to discovery protection and preserving xcsh-private runtime isolation ([#2931](https://github.com/f5-sales-demo/xcsh/issues/2931))
 
 ## [20.3.0] - 2026-08-04
 

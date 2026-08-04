@@ -107,11 +107,11 @@ describe("containment fence: TypeScript and Rust agree", () => {
 		expect(fencePermits(wire, sibling, false, false)).toBe(true);
 	});
 
-	it("agrees that the operator's home is allowed inside a denied account container", () => {
+	it("agrees that account enumeration is denied while named accounts remain reachable", () => {
 		expect(fenceVerdict(fence, accountRoot, "enumerate")).toBe("deny");
 		expect(fencePermits(wire, accountRoot, false, true)).toBe(false);
-		expect(fenceVerdict(fence, path.join(otherHome, "workspace"), "read")).toBe("deny");
-		expect(fencePermits(wire, path.join(otherHome, "workspace"), false, false)).toBe(false);
+		expect(fenceVerdict(fence, path.join(otherHome, "workspace"), "read")).toBe("allow");
+		expect(fencePermits(wire, path.join(otherHome, "workspace"), false, false)).toBe(true);
 		expect(fenceVerdict(fence, path.join(home, ".zshrc"), "write")).toBe("allow");
 		expect(fencePermits(wire, path.join(home, ".zshrc"), true, false)).toBe(true);
 	});
