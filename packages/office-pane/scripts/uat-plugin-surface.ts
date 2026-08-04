@@ -26,126 +26,7 @@
  * process is already inside the trust boundary the gate assumes, so presenting the origin
  * here is identifying the caller, not defeating a check.
  */
-
-/**
- * `xcsh office serve` binds ws in a dedicated sub-range, disjoint from the Chrome
- * worker's, and its paired wss listeners sit at +100. Mirrors
- * `src/core/transport/bridge-discovery.ts`; this script scans the ws side.
- */
-const OFFICE_WS_RANGE_START = 19242;
-const OFFICE_WS_RANGE_END = 19261;
-
-/** The pane's own origin — see the Origin-gate note in the header. */
-const PANE_ORIGIN = "https://127-0-0-1.local-ip.sh:8444";
-
-/** How long to give one port before deciding nothing is listening. */
-const PROBE_TIMEOUT_MS = 700;
-/** A real turn can think for a while before its first token. */
-const TURN_TIMEOUT_MS = 180_000;
-
-interface Frame {
-	type?: string;
-	[key: string]: unknown;
-}
-
-interface Bridge {
-	port: number;
-	ws: WebSocket;
-	ack: Frame;
-}
-
-/** Open a port and complete the hello handshake, or resolve null if nothing answers. */
-function probe(port: number): Promise<Bridge | null> {
-	return new Promise(resolve => {
-		let ws: WebSocket;
-		try {
-			ws = new WebSocket(`ws://127.0.0.1:${port}`, { headers: { Origin: PANE_ORIGIN } });
-		} catch {
-			resolve(null);
-			return;
-		}
-		let settled = false;
-		const give_up = (): void => {
-			if (settled) return;
-			settled = true;
-			try {
-				ws.close();
-			} catch {
-				/* already closing */
-			}
-			resolve(null);
-		};
-		const timer = setTimeout(give_up, PROBE_TIMEOUT_MS);
-		ws.addEventListener("open", () => ws.send(JSON.stringify({ type: "hello", host: "excel" })));
-		ws.addEventListener("message", ev => {
-			const msg = JSON.parse(String(ev.data)) as Frame;
-			if (msg.type !== "hello_ack" || settled) return;
-			settled = true;
-			clearTimeout(timer);
-			resolve({ port, ws, ack: msg });
-		});
-		ws.addEventListener("error", give_up);
-		ws.addEventListener("close", give_up);
-	});
-}
-
-/**
- * Find the office-serve bridge. Filters on `serveKind === "office"` for the same reason
- * the pane's own discovery does: a Chrome worker must never be adopted, even if one
- * somehow answers inside this range.
- */
-async function discover(): Promise<Bridge> {
-	for (let port = OFFICE_WS_RANGE_START; port <= OFFICE_WS_RANGE_END; port++) {
-		const bridge = await probe(port);
-		if (!bridge) continue;
-		if (bridge.ack.serveKind === "office") return bridge;
-		bridge.ws.close();
-	}
-	throw new Error(
-		`No 'xcsh office serve' bridge answered on ws://127.0.0.1:${OFFICE_WS_RANGE_START}-${OFFICE_WS_RANGE_END}.\n` +
-			"Start one first:  cd <your folder> && xcsh office sideload excel",
-	);
-}
-
-/** Send a frame and wait for the first reply of `expect`. */
-function request(ws: WebSocket, send: Frame, expect: string, timeoutMs: number): Promise<Frame> {
-	return new Promise((resolve, reject) => {
-		const timer = setTimeout(() => {
-			ws.removeEventListener("message", onMessage);
-			reject(new Error(`timed out after ${timeoutMs}ms waiting for a '${expect}' frame`));
-		}, timeoutMs);
-		function onMessage(ev: MessageEvent): void {
-			const msg = JSON.parse(String(ev.data)) as Frame;
-			if (msg.type !== expect) return;
-			clearTimeout(timer);
-			ws.removeEventListener("message", onMessage);
-			resolve(msg);
-		}
-		ws.addEventListener("message", onMessage);
-		ws.send(JSON.stringify(send));
-	});
-}
-
-/** Stream one turn, returning the assistant's text and how it ended. */
-function turn(ws: WebSocket, text: string): Promise<{ reply: string; ended: string; reason?: string }> {
-	return new Promise((resolve, reject) => {
-		let reply = "";
-		const timer = setTimeout(() => {
-			ws.removeEventListener("message", onMessage);
-			reject(new Error(`turn did not finish within ${TURN_TIMEOUT_MS}ms`));
-		}, TURN_TIMEOUT_MS);
-		function onMessage(ev: MessageEvent): void {
-			const msg = JSON.parse(String(ev.data)) as Frame;
-			if (msg.type === "chat_delta") reply += String(msg.delta ?? "");
-			if (msg.type !== "chat_done" && msg.type !== "chat_error") return;
-			clearTimeout(timer);
-			ws.removeEventListener("message", onMessage);
-			resolve({ reply, ended: String(msg.type), reason: msg.reason ? String(msg.reason) : undefined });
-		}
-		ws.addEventListener("message", onMessage);
-		ws.send(JSON.stringify({ type: "chat_request", id: "c-uat-1", text, mode: "educational" }));
-	});
-}
+import { discoverOfficeBridge } from "./uat/bridge-client";
 
 const failures: string[] = [];
 function check(ok: boolean, label: string, detail = ""): void {
@@ -161,15 +42,15 @@ if (!plugin) {
 	process.exit(2);
 }
 
-const bridge = await discover();
-console.log(`Bridge: ws://127.0.0.1:${bridge.port} (serveKind=${bridge.ack.serveKind}, pid=${bridge.ack.pid})`);
+const bridge = await discoverOfficeBridge();
+console.log(`Bridge: ws://127.0.0.1:${bridge.port} (serveKind=${bridge.ack.serveKind})`);
 console.log(`Contract: ${bridge.ack.contractVersion}\n`);
 
 console.log(`P2 — skills from "${plugin}"`);
 const skills = (
-	await request(bridge.ws, { type: "list_skills" }, "skills", 10_000).then(
-		m => m.skills as Array<{ name: string; description: string }>,
-	)
+	await bridge
+		.request({ type: "list_skills" }, "skills", 10_000)
+		.then(m => m.skills as Array<{ name: string; description: string }>)
 ).filter(s => s.name.startsWith(`${plugin}:`));
 for (const s of skills) console.log(`      ${s.name}`);
 check(skills.length > 0, "the plugin's skills load", `${skills.length} found`);
@@ -180,9 +61,9 @@ check(
 
 console.log(`\nP1 — slash commands from "${plugin}"`);
 const commands = (
-	await request(bridge.ws, { type: "list_commands" }, "commands", 10_000).then(
-		m => m.commands as Array<{ name: string; description: string }>,
-	)
+	await bridge
+		.request({ type: "list_commands" }, "commands", 10_000)
+		.then(m => m.commands as Array<{ name: string; description: string }>)
 ).filter(c => c.name.startsWith(`${plugin}:`));
 for (const c of commands) console.log(`      /${c.name} — ${c.description.slice(0, 66)}`);
 check(commands.length > 0, "the plugin's slash commands are enumerable", `${commands.length} found`);
@@ -202,7 +83,7 @@ if (!withTurn) {
 } else {
 	const target = commands.find(c => c.name.endsWith(":meddpicc-status")) ?? commands[0];
 	console.log(`\nP3 — invoking /${target.name}`);
-	const t = await turn(bridge.ws, `/${target.name}`);
+	const t = await bridge.turn(`/${target.name}`, "c-uat-plugin-1");
 	check(t.ended === "chat_done", "the turn completed", t.reason ?? "");
 	// If expansion did not happen the model receives the literal "/name" and tends to
 	// echo or question it, so a reply that quotes the command back is the failure mode.
@@ -218,6 +99,6 @@ if (!withTurn) {
 	);
 }
 
-bridge.ws.close();
+bridge.dispose();
 console.log(`\n${failures.length === 0 ? "ALL CHECKS PASSED" : `${failures.length} FAILED: ${failures.join("; ")}`}`);
 process.exit(failures.length === 0 ? 0 : 1);

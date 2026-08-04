@@ -56,6 +56,18 @@ describe("makeBuildTransport", () => {
 		expect(stub.config()).toEqual({ baseUrl: "https://gw/anthropic", token: "t", model: "m" });
 	});
 
+	test("a blank model is omitted so xcsh selects its binary-baked default", async () => {
+		const stub = makeStub();
+		const config: GatewayConfig = { baseUrl: "https://gw.example/v1", token: "t" };
+		const built = makeBuildTransport("Excel", {
+			createTransport: () => stub.transport,
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(config);
+		await built.provision?.();
+		expect(stub.config()).toEqual({ baseUrl: "https://gw.example/v1", token: "t" });
+		expect(stub.config()).not.toHaveProperty("model");
+	});
+
 	test("provision runs BEFORE host tools are advertised (the panel sequences provision → onConnected)", async () => {
 		const stub = makeStub();
 		const built = build("Word", stub);

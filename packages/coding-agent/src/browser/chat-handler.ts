@@ -405,6 +405,7 @@ export class ChatHandler {
 				// baseUrl + apiKey, no models[] → sets the in-memory runtime API key AND
 				// overrides the existing provider models' baseUrl/headers (reusing their
 				// metadata). Nothing is persisted to disk.
+				registry.authStorage.setRuntimeApiKey(provider, msg.token);
 				registry.registerProvider(
 					provider,
 					{

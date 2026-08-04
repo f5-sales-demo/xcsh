@@ -56,7 +56,6 @@ export interface GatewayGateProps<T> {
 	 * `initial` when omitted.
 	 */
 	configToDraft?: (config: T) => Partial<GatewayConfigDraft>;
-	defaultModel?: string;
 }
 
 export function GatewayGate<T>({
@@ -67,7 +66,6 @@ export function GatewayGate<T>({
 	optional = false,
 	initial,
 	configToDraft,
-	defaultModel,
 }: GatewayGateProps<T>) {
 	const [editing, setEditing] = useState(false);
 	const reconfigure = useCallback(() => setEditing(true), []);
@@ -82,7 +80,6 @@ export function GatewayGate<T>({
 			<GatewayConfigForm<T>
 				validate={validate}
 				initial={prefill}
-				defaultModel={defaultModel}
 				onSave={cfg => {
 					onSaveConfig(cfg);
 					setEditing(false);

@@ -19,6 +19,8 @@
 
 ### Fixed
 
+- Made Office gateway configuration defer a blank model to xcsh's GPT-5.6 Sol default, preserve OpenAI-compatible URL paths, and ignore legacy Anthropic-era saved settings ([#2890](https://github.com/f5-sales-demo/xcsh/issues/2890))
+- Added a deterministic five-step MEDDPICC Office/Excel certification harness with live-model, plugin, filesystem, host-tool, workbook, and idempotency evidence ([#2890](https://github.com/f5-sales-demo/xcsh/issues/2890))
 - Rejected invalid lazy-command syntax before loading heavy command implementations while preserving command-specific launch-flag diagnostics ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 - Added dependency-install verification and automatic repair so stale workspace links and release-bumped lock entries cannot silently load SDK versions older than manifests, and aligned development with Bun 1.3.14 ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 - Reconciled out-of-band worker bridge shutdowns even while the process is still draining or unreaped, so immediate reprovisioning cannot retain a dead session ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))

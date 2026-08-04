@@ -31,7 +31,8 @@
 		"lint": "biome lint .",
 		"fix": "biome check --write --unsafe .",
 		"fmt": "biome format --write .",
-		"uat:plugin-surface": "bun scripts/uat-plugin-surface.ts"
+		"uat:plugin-surface": "bun scripts/uat-plugin-surface.ts",
+		"uat:meddpicc-excel": "bun scripts/uat-meddpicc-excel.ts"
 	},
 	"dependencies": {
 		"@f5-sales-demo/pi-agent-core": "workspace:*",

@@ -1,7 +1,6 @@
 // Gateway config surface (single-engine provider-configure flow)
 export type { GatewayConfig, GatewayConfigInput, GatewayConfigStore } from "./gateway/config";
 export {
-	DEFAULT_GATEWAY_MODEL,
 	GatewayConfigError,
 	MemoryGatewayConfigStore,
 	normalizeGatewayConfig,

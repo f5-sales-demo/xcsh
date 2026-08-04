@@ -19,13 +19,11 @@ export interface GatewayConfigFormProps<T> {
 	onSave: (config: T) => void;
 	/** Optional prefill (an existing config being edited, or a manifest default). */
 	initial?: Partial<GatewayConfigDraft>;
-	/** Shown as the Model field hint / placeholder. */
-	defaultModel?: string;
 	/** When provided, renders a Cancel button. */
 	onCancel?: () => void;
 }
 
-export function GatewayConfigForm<T>({ validate, onSave, initial, defaultModel, onCancel }: GatewayConfigFormProps<T>) {
+export function GatewayConfigForm<T>({ validate, onSave, initial, onCancel }: GatewayConfigFormProps<T>) {
 	const [baseUrl, setBaseUrl] = useState(initial?.baseUrl ?? "");
 	const [token, setToken] = useState(initial?.token ?? "");
 	const [model, setModel] = useState(initial?.model ?? "");
@@ -49,7 +47,7 @@ export function GatewayConfigForm<T>({ validate, onSave, initial, defaultModel, 
 					id="gateway-url"
 					type="url"
 					value={baseUrl}
-					placeholder="https://127-0-0-1.local-ip.sh:8443/anthropic"
+					placeholder="https://gateway.example.com/v1"
 					onChange={e => setBaseUrl(e.currentTarget.value)}
 				/>
 			</div>
@@ -62,10 +60,10 @@ export function GatewayConfigForm<T>({ validate, onSave, initial, defaultModel, 
 				<input
 					id="gateway-model"
 					value={model}
-					placeholder={defaultModel ?? ""}
+					placeholder="Optional model override"
 					onChange={e => setModel(e.currentTarget.value)}
 				/>
-				{defaultModel && <span className="gateway-hint">Optional — defaults to {defaultModel}</span>}
+				<span className="gateway-hint">Optional — blank uses xcsh's configured default</span>
 			</div>
 			{error && (
 				<div role="alert" className="gateway-error">

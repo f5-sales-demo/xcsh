@@ -107,6 +107,52 @@ sideload from that folder.
 | P6 | During P4/P5, watch for a new worksheet | A sheet named after the deal is created and populated; the sheet you started on is not overwritten. Re-running overwrites that sheet rather than adding a duplicate tab. | #2476 |
 | P7 | Ask "show me the meddpicc schema" | The assistant reads it via `xcsh://plugin/meddpicc/schema` and does not claim plugin resources are unavailable. | #2476 |
 
+## GPT-5.6 Sol MEDDPICC certification
+
+The release-certification harness runs the same five prompts used in the team
+presentation against a real `xcsh office serve` bridge and the production Excel
+tool definitions. It uses a stateful workbook fake for the automated gate; repeat
+the printed prompts in desktop Excel for the final Office.js and WebView check.
+
+Prerequisites:
+
+1. Install `meddpicc@f5-sales-demo-marketplace` version 7.5.3.
+2. Export `LITELLM_BASE_URL` as the full HTTPS OpenAI-compatible API base URL,
+   including its path (for example, `https://gateway.example.com/v1`), and export
+   `LITELLM_API_KEY`. A proxy root URL without `/v1` or the gateway's equivalent
+   API path is not sufficient.
+3. Build xcsh, or choose the exact installed release binary to certify.
+4. Ensure port 8444 is free. The harness refuses to supersede a server it did not start.
+
+Print the presentation runbook without starting a server:
+
+```sh
+bun run --cwd packages/office-pane uat:meddpicc-excel --print-prompts
+```
+
+Run the automated local-build gate from the repository root:
+
+```sh
+bun packages/office-pane/scripts/uat-meddpicc-excel.ts \
+  --binary "$PWD/packages/coding-agent/dist/xcsh" \
+  --workspace /tmp/xcsh-meddpicc-demo \
+  --fixture "$PWD/../marketplace/plugins/meddpicc/schema/example-deal.json" \
+  --evidence /tmp/xcsh-meddpicc-local.json
+```
+
+For the published gate, use the exact Homebrew binary and a separate evidence file.
+The script copies the canonical fixture into the workspace as `example-corp.json`,
+checks its SHA-256, checks the plugin version, runs all five steps, reruns step 5 for
+idempotency, and stops only the `office serve` child it spawned. A passing evidence
+file includes the binary version and SHA, source Git SHA, configure acknowledgement,
+responses, tool traffic, timings, assertions, and before/after workbook snapshots.
+
+In desktop Excel, begin with a sheet named `Start` containing a sentinel value. Save
+the LiteLLM URL and token with the model field blank, then send the printed prompts.
+Confirm the exact `MEDDPICC — Example Corp` A1:B7 summary, one summary tab after a
+second step-5 run, an unchanged and still-active `Start` sheet, and successful task-pane
+activity cards. Capture one screenshot per step with the version and pass/fail record.
+
 ## Coverage notes
 
 - Excel `get_workbook_info` (E1), the pane tool-activity rows, the New-chat control,
