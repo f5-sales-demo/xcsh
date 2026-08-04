@@ -17,7 +17,15 @@ describe("writtenOperandWords", () => {
 	it("distinguishes destinations from read-only source operands", () => {
 		expect(written("cp source.txt destination.txt")).toEqual(["destination.txt"]);
 		expect(written("cp -t destination source-a source-b")).toEqual(["destination"]);
+		expect(written("cp --target-directory=destination source-a source-b")).toEqual(["destination"]);
 		expect(written("mv source.txt destination.txt")).toEqual(["source.txt", "destination.txt"]);
+	});
+
+	it("does not misclassify non-path option values as destinations", () => {
+		expect(written("install -m 0755 -o root source.txt destination.txt")).toEqual(["destination.txt"]);
+		expect(written("cp -S .backup source.txt destination.txt")).toEqual(["destination.txt"]);
+		expect(written("cp -S -backup source.txt destination.txt")).toEqual(["destination.txt"]);
+		expect(written("sort -k 2 -S 1M -o output.txt input.txt")).toEqual(["output.txt"]);
 	});
 
 	it("abandons positional inference when an option is unknown", () => {

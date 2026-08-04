@@ -124,8 +124,8 @@ interface WriteOperandSpec {
 	writesAllPositional?: boolean;
 	/** The final positional operand is written (`cp src dst`). */
 	writesLastPositional?: boolean;
-	/** With this option present the destination moves into it, so positional slots stop being writes. */
-	destinationOption?: string;
+	/** Options that move the destination into their value, so positional slots stop being writes. */
+	destinationOptions?: readonly string[];
 	/** Positional operands that are not paths at all — `chmod 644 f`, `chown me f`. */
 	skipLeadingPositional?: number;
 	/** Every positional is written once this option appears (`install -d a b c`). */
@@ -152,7 +152,7 @@ const WRITE_OPERAND_SPECS: Record<string, WriteOperandSpec> = {
 		valueOptions: ["-S", "--suffix", "-t", "--target-directory"],
 		booleanOptions: COPY_BOOLEAN_OPTIONS,
 		writesLastPositional: true,
-		destinationOption: "-t",
+		destinationOptions: ["-t", "--target-directory"],
 	},
 	// `mv` also REMOVES its sources, so a source in a read-only root is a mutation of that root.
 	// Marking only the destination let `mv /shared/ctx/file .` delete from a read-allowed grant.
@@ -161,13 +161,13 @@ const WRITE_OPERAND_SPECS: Record<string, WriteOperandSpec> = {
 		booleanOptions: ["-f", "--force", "-i", "--interactive", "-n", "--no-clobber", "-v", "--verbose", "-u"],
 		writesLastPositional: true,
 		writesSourcesToo: true,
-		destinationOption: "-t",
+		destinationOptions: ["-t", "--target-directory"],
 	},
 	install: {
 		valueOptions: ["-m", "--mode", "-o", "--owner", "-g", "--group", "-t", "--target-directory", "-S", "--suffix"],
 		booleanOptions: ["-b", "-c", "-C", "-d", "-D", "-p", "-s", "-v", "--verbose", "--backup"],
 		writesLastPositional: true,
-		destinationOption: "-t",
+		destinationOptions: ["-t", "--target-directory"],
 		// `install -d a b c` creates every operand as a directory rather than copying into the last.
 		allPositionalOption: "-d",
 	},
@@ -193,7 +193,7 @@ const WRITE_OPERAND_SPECS: Record<string, WriteOperandSpec> = {
 		valueOptions: ["-S", "--suffix", "-t", "--target-directory"],
 		booleanOptions: ["-b", "-f", "--force", "-i", "-L", "-n", "-P", "-r", "-s", "--symbolic", "-v"],
 		writesLastPositional: true,
-		destinationOption: "-t",
+		destinationOptions: ["-t", "--target-directory"],
 	},
 	shred: {
 		valueOptions: ["-n", "--iterations", "-s", "--size"],
@@ -266,7 +266,8 @@ export function writtenOperandWords(cmd: ShellSimpleCommand): ShellWord[] {
 	// literally named `-t` makes `cp -- -t /drop/secret out/` read as a target-directory option and
 	// relabels a source as a write target.
 	let sawEndOfOptions = false;
-	for (const word of operandWords) {
+	for (let index = 0; index < operandWords.length; index += 1) {
+		const word = operandWords[index];
 		if (word.text === "--") {
 			sawEndOfOptions = true;
 			continue;
@@ -274,7 +275,10 @@ export function writtenOperandWords(cmd: ShellSimpleCommand): ShellWord[] {
 		if (sawEndOfOptions) continue;
 		const option = optionName(word.text);
 		if (option === undefined) continue;
-		if (isOutputOption(spec, option) || spec.valueOptions.includes(option)) continue;
+		if (isOutputOption(spec, option) || spec.valueOptions.includes(option)) {
+			if (!word.text.includes("=")) index += 1;
+			continue;
+		}
 		if (spec.booleanOptions.includes(option)) continue;
 		if (matchesAllPositionalOption(spec, option)) continue;
 		if (bundledBooleans(option, spec) !== undefined) continue;
@@ -311,13 +315,11 @@ export function writtenOperandWords(cmd: ShellSimpleCommand): ShellWord[] {
 				continue;
 			}
 			if (spec.valueOptions.includes(option)) {
-				if (option === spec.destinationOption) destinationMoved = true;
-				if (!attached) {
-					const target = operandWords[index + 1];
-					index += 1;
+				const target = attached ? valueAfterEquals(word) : operandWords[index + 1];
+				if (!attached) index += 1;
+				if (spec.destinationOptions?.includes(option)) {
+					destinationMoved = true;
 					if (target?.literal) written.push(target);
-				} else if (word.literal) {
-					written.push(word);
 				}
 			}
 			continue;

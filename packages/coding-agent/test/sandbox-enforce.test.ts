@@ -120,8 +120,8 @@ describe("evaluateToolCall", () => {
 		const usersDenied = { ...makeFence(), deny: ["/Users"] };
 		const commands = [
 			'grep -nE "/Users/|alpha" notes.txt',
-			"custom-tool /Users/customer/file",
-			"cat /Users/customer/file",
+			"custom-tool /Users/example/file",
+			"cat /Users/example/file",
 			"python <<'PY'\nvalue = \"/Users/\"\nPY",
 		];
 		for (const command of commands) {
@@ -133,7 +133,7 @@ describe("evaluateToolCall", () => {
 		const usersDenied = { ...makeFence(), deny: ["/Users"] };
 		expect(check("bash", { command: 'grep -nE "/Users/|alpha" notes.txt' }, usersDenied).block).toBe(false);
 		expect(check("grep", { pattern: "/Users/|alpha", path: "." }, usersDenied).block).toBe(false);
-		expect(check("grep", { pattern: "alpha", path: "/Users/customer" }, usersDenied).block).toBe(true);
+		expect(check("grep", { pattern: "alpha", path: "/Users/example" }, usersDenied).block).toBe(true);
 	});
 
 	// A redirect target is the one word in a command the *shell* opens, and it opens it for writing.

@@ -301,6 +301,56 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					};
 		});
 
+		// Use a recursive synthetic deny here. The production account root is discovery-only, so testing
+		// against that fence alone would pass even if arbitrary source scanning were accidentally restored.
+		const sourceTextFence: ContainmentFence = {
+			...fence,
+			deny: [...fence.deny, accountRoot],
+		};
+		const pathLikePattern = `${accountRoot}${path.sep}|alpha`;
+		await check("Bash grep pattern remains data (#2931)", () => {
+			const bashResult = evaluateToolCall({
+				toolName: "bash",
+				input: { command: `grep -nE ${JSON.stringify(pathLikePattern)} own.txt` },
+				cwd: workspace,
+				fence: sourceTextFence,
+			});
+			const grepResult = evaluateToolCall({
+				toolName: "grep",
+				input: { pattern: pathLikePattern, path: workspace },
+				cwd: workspace,
+				fence: sourceTextFence,
+			});
+			return !bashResult.block && !grepResult.block
+				? { passed: true }
+				: {
+						passed: false,
+						detail:
+							"Bash and structured grep disagreed on path-like pattern data; path=<synthetic-root>; errno=none",
+					};
+		});
+		await check("Bash Python heredoc remains data (#2931)", () => {
+			const command = [
+				"python3 - <<'PY'",
+				`patterns = {"home path": ${JSON.stringify(`${accountRoot}${path.sep}`)}}`,
+				'print("  scanned for:", list(patterns.values()))',
+				"PY",
+			].join("\n");
+			const result = evaluateToolCall({
+				toolName: "bash",
+				input: { command },
+				cwd: workspace,
+				fence: sourceTextFence,
+			});
+			return !result.block
+				? { passed: true }
+				: {
+						passed: false,
+						detail:
+							"Bash pre-check interpreted Python heredoc source as a path; path=<synthetic-root>; errno=none",
+					};
+		});
+
 		await check("workspace read, write, glob, and recursion", async () => {
 			const displayPath = "<workspace>/<synthetic-fixture>";
 			let liveFixture: string;
