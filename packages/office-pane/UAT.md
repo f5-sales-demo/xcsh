@@ -29,7 +29,7 @@ that points at a cell range, one defined name that points at a constant or formu
 and one empty sheet.
 
 | # | Action / prompt | Expected | Fix |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | E1 | "summarize the structure of this workbook" | Activity shows "Reading workbook structure ✓"; the answer lists sheets, Tables, and named ranges. No "get_workbook_info errored / falling back" message. | #2260 |
 | E2 | "read the `<TableName>` table" | Returns the Table's **data rows only** — the first returned row is real data, not the column headers (headers are returned separately as column names); no totals row leaks in. | #2267 |
 | E3 | "read the named range `<rangeName>`" (a real cell range) | Returns the range's values and address. | Excel tools |
@@ -48,7 +48,7 @@ Fixture: a document with at least one comment and one tracked change (an inserti
 several styled paragraphs, and a text selection.
 
 | # | Action / prompt | Expected | Fix |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | W1 | "read the tracked changes" | Each revision shows its text, an author (populated, not blank), and a type of `Added` / `Deleted` / `Formatted` — never `Inserted`. | #2264 |
 | W2 | "read the comments" | Each comment's text and author. | Word tools |
 | W3 | "outline the document structure" | Section count, heading outline, word count, and whether comments / tracked changes exist. | Word tools |
@@ -62,7 +62,7 @@ Fixture: a deck where at least one slide contains a **table or an image** alongs
 normal text shapes.
 
 | # | Action / prompt | Expected | Fix |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | P1 | "read all the slides" | Text from text-bearing shapes is returned; the deck with a table / image does **not** crash ("read_slides errored"). | #2266 |
 | P2 | "read the shapes on slide 1" | Every shape is listed with its name, type, and geometry; text-bearing shapes include their text; the table / image is listed without text and without error. | #2266 |
 | P3 | "set the text of the table shape to 'x'" | A friendly "can't hold text" message — not a raw `InvalidArgument`. | #2266 |
@@ -73,7 +73,7 @@ normal text shapes.
 ## Pane UI (any surface)
 
 | # | Action | Expected | Fix |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | U1 | Ask a question whose answer contains a long code block or a long URL | Text wraps within the pane; nothing is clipped at the right margin. | #2272 |
 | U2 | Trigger a tool that fails (for example, on a deck with a table, try P3's edit) | The activity row shows a ✗ and "failed" — not a ✓. | #2275 |
 | U3 | Watch a reply as it streams | A blinking caret follows the streaming text; it stops when the answer settles. | #2244 |
@@ -83,7 +83,7 @@ normal text shapes.
 ## Server reliability
 
 | # | Action | Expected | Fix |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | S1 | With a server already running, run `xcsh office serve` again | The new one reports it superseded the previous server and binds; no "port 8444 in use" error. | #2241 |
 | S2 | Run `xcsh office serve` from a large directory (for example the home directory) | It comes up quickly, with no "system prompt preparation timed out" warning. | #2246 |
 | S3 | `brew upgrade` while a server is running | The upgrade's post-install step recycles the running server. | #2241 |
@@ -98,7 +98,7 @@ Requires an installed plugin that ships commands, skills and a schema. These row
 sideload from that folder.
 
 | # | Action / prompt | Expected | Fix |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | P1 | Open the composer's `/` menu | Lists the plugin's slash commands with their descriptions (`/meddpicc:qualify-deal`, `/meddpicc:deal-review`, …), not an empty menu and not a missing button. | #2480 |
 | P2 | Open `+` → Skills | Lists the plugin's skills (`meddpicc:coach`, `meddpicc:deal-review`, …). | #2473 |
 | P3 | Send `/meddpicc:meddpicc-status` | The assistant follows the COMMAND — reports schema readiness and inventories the deal files in the working directory. It must not answer *about* the literal string. | #2480 |
