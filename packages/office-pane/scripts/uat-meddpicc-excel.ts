@@ -21,23 +21,32 @@ import {
 	waitForOfficeApplicationReady,
 } from "./uat/bridge-client";
 import {
+	extractPrivateStatusOracle,
 	MEDDPICC_STEPS,
+	type MeddpiccStep,
+	PRIVATE_MEDDPICC_STEPS,
+	type PrivateStatusOracle,
 	renderMeddpiccRunbook,
 	type ScenarioAssertion,
 	type ScenarioObservation,
 	validateMeddpiccStep,
+	validatePrivateMeddpiccStep,
+	validatePrivateSummaryAgainstStatus,
 } from "./uat/meddpicc-scenario";
 
 const OFFICE_PANE_PORT = 8444;
 const EXPECTED_FIXTURE_SHA256 = "8394bcd6485adca57e72fd53f2c149f026c3bb9652f7809dfa3614438bd6cd75";
 const EXPECTED_PLUGIN_VERSION = "7.5.3";
-const EXPECTED_MODEL = "gpt-5.6-sol";
+const EXPECTED_MODEL = "claude-opus-5";
+const ALTERNATE_MODEL = "gpt-5.6-sol";
+const MODEL_PROBE_MARKER = "OFFICE MODEL READY";
 
 export interface UatMeddpiccOptions {
 	binary?: string;
 	workspace?: string;
 	fixture?: string;
 	evidence?: string;
+	privateInPlace?: boolean;
 	printPrompts: boolean;
 	help: boolean;
 }
@@ -53,7 +62,7 @@ interface InstalledPlugin {
 	version: string;
 }
 
-interface ScenarioRunEvidence {
+export interface ScenarioRunEvidence {
 	step: number;
 	repeat: number;
 	title: string;
@@ -72,7 +81,30 @@ interface ScenarioRunEvidence {
 	passed: boolean;
 }
 
-interface UatEvidence {
+export interface PrivateScenarioRunEvidence {
+	step: number;
+	repeat: number;
+	title: string;
+	ended: "chat_done" | "chat_error";
+	durationMs: number;
+	assertions: Array<Pick<ScenarioAssertion, "label" | "passed">>;
+	passed: boolean;
+}
+
+interface ModelRoundTripEvidence {
+	advertisedModels: string[];
+	initialModel: string;
+	initialTurnPassed: boolean;
+	initialTurnDurationMs: number;
+	alternateModel: string;
+	alternateTurnPassed: boolean;
+	alternateTurnDurationMs: number;
+	restoredModel: string;
+	restoredTurnPassed: boolean;
+	restoredTurnDurationMs: number;
+}
+
+interface SyntheticUatEvidence {
 	schemaVersion: 1;
 	startedAt: string;
 	finishedAt?: string;
@@ -85,39 +117,59 @@ interface UatEvidence {
 	plugin?: InstalledPlugin;
 	bridge?: { port: number; pid: number; contractVersion: string | null };
 	configure?: { modelOmitted: true; acknowledgement: string };
+	modelRoundTrip?: ModelRoundTripEvidence;
 	runs: ScenarioRunEvidence[];
 }
+
+interface PrivateUatEvidence {
+	schemaVersion: 2;
+	mode: "private-in-place";
+	startedAt: string;
+	finishedAt?: string;
+	status: "running" | "passed" | "failed";
+	error?: string;
+	binary?: { version: string; sha256: string };
+	gitSha?: string;
+	fixture?: { topLevelJsonFiles: 1 };
+	plugin?: InstalledPlugin;
+	bridge?: { contractVersion: string | null };
+	modelRoundTrip?: ModelRoundTripEvidence;
+	runs: PrivateScenarioRunEvidence[];
+}
+
+type UatEvidence = SyntheticUatEvidence | PrivateUatEvidence;
 
 const USAGE = `Usage:
   bun run uat:meddpicc-excel --binary <xcsh> --workspace <dir> \\
     --fixture <example-deal.json> --evidence <evidence.json>
+  bun run uat:meddpicc-excel --binary <xcsh> --workspace <private-dir> \\
+    --evidence <evidence.json> --private-in-place
   bun run uat:meddpicc-excel --print-prompts
 
 Required for a live run:
   --binary       Local build or installed xcsh binary to certify
   --workspace    Dedicated folder from which office serve will run
-  --fixture      Canonical MEDDPICC example-deal.json source
+  --fixture      Canonical MEDDPICC example-deal.json source (synthetic mode)
   --evidence     Destination for sanitized JSON evidence
+  --private-in-place
+                 Read exactly one top-level JSON deal file in place. The Office
+                 session is ephemeral and evidence contains outcomes only.
 
 Environment:
-  LITELLM_BASE_URL must be the full HTTPS OpenAI-compatible API base, including
-  its path (for example, https://gateway.example.com/v1), and LITELLM_API_KEY
-  must be set. The configure frame omits model so the binary must select its
-  baked litellm/gpt-5.6-sol:high default.`;
+  LITELLM_BASE_URL is the HTTPS gateway root (for example,
+  https://gateway.example.com), and LITELLM_API_KEY must be set. Legacy provider
+  paths are normalized to the root. xcsh derives the provider path from the
+  selected model and the UAT proves Claude Opus 5 -> GPT-5.6 Sol -> Claude Opus 5.`;
 
-export function requireGatewayApiBaseUrl(raw: string): string {
-	const normalized = raw.trim().replace(/\/+$/, "");
+export function requireGatewayRootUrl(raw: string): string {
 	let parsed: URL;
 	try {
-		parsed = new URL(normalized);
+		parsed = new URL(raw.trim());
 	} catch {
 		throw new Error("LITELLM_BASE_URL must be a valid https:// URL");
 	}
 	if (parsed.protocol !== "https:") throw new Error("LITELLM_BASE_URL must use https://");
-	if (parsed.pathname === "/") {
-		throw new Error("LITELLM_BASE_URL must include the OpenAI-compatible API base path, such as /v1 or /api/v1");
-	}
-	return normalized;
+	return parsed.origin;
 }
 
 export function parseUatMeddpiccArgs(argv: string[]): UatMeddpiccOptions {
@@ -125,6 +177,10 @@ export function parseUatMeddpiccArgs(argv: string[]): UatMeddpiccOptions {
 	const valueFlags = new Set(["binary", "workspace", "fixture", "evidence"]);
 	for (let index = 0; index < argv.length; index++) {
 		const argument = argv[index];
+		if (argument === "--private-in-place") {
+			result.privateInPlace = true;
+			continue;
+		}
 		if (argument === "--print-prompts") {
 			result.printPrompts = true;
 			continue;
@@ -146,9 +202,9 @@ export function parseUatMeddpiccArgs(argv: string[]): UatMeddpiccOptions {
 
 function requiredLiveOptions(
 	options: UatMeddpiccOptions,
-): asserts options is UatMeddpiccOptions &
-	Required<Pick<UatMeddpiccOptions, "binary" | "workspace" | "fixture" | "evidence">> {
-	const missing = (["binary", "workspace", "fixture", "evidence"] as const).filter(name => !options[name]);
+): asserts options is UatMeddpiccOptions & Required<Pick<UatMeddpiccOptions, "binary" | "workspace" | "evidence">> {
+	const missing: string[] = (["binary", "workspace", "evidence"] as const).filter(name => !options[name]);
+	if (!options.privateInPlace && !options.fixture) missing.push("fixture");
 	if (missing.length > 0)
 		throw new Error(`Missing required option(s): ${missing.map(name => `--${name}`).join(", ")}`);
 }
@@ -236,6 +292,36 @@ async function prepareFixture(workspaceInput: string, fixtureInput: string) {
 	return { workspace, path: target, sha256: sourceSha, bytes: targetStat.size };
 }
 
+/** Resolve the one private deal file without reading, copying, or renaming it. */
+export async function discoverPrivateFixture(workspaceInput: string): Promise<{ workspace: string; path: string }> {
+	const workspace = await fs.realpath(workspaceInput).catch(() => "");
+	if (!workspace) throw new Error("Private workspace was not found");
+	const workspaceStat = await fs.stat(workspace);
+	if (!workspaceStat.isDirectory()) throw new Error("Private workspace is not a directory");
+
+	const entries = await fs.readdir(workspace, { withFileTypes: true });
+	const jsonFiles = entries.filter(entry => entry.isFile() && entry.name.toLocaleLowerCase().endsWith(".json"));
+	if (jsonFiles.length !== 1) {
+		throw new Error("Private in-place UAT requires exactly one top-level JSON file");
+	}
+	return { workspace, path: path.join(workspace, jsonFiles[0].name) };
+}
+
+/** Refuse any real or symlinked evidence destination inside the private tree. */
+export async function assertPrivateEvidenceOutsideWorkspace(workspace: string, evidence: string): Promise<string> {
+	const resolvedWorkspace = await fs.realpath(workspace);
+	const evidenceInput = path.resolve(evidence);
+	const resolvedParent = await fs.realpath(path.dirname(evidenceInput)).catch(() => "");
+	if (!resolvedParent) throw new Error("Private UAT evidence directory must already exist");
+	const prospectiveEvidence = path.join(resolvedParent, path.basename(evidenceInput));
+	const resolvedEvidence = await fs.realpath(evidenceInput).catch(() => prospectiveEvidence);
+	const relative = path.relative(resolvedWorkspace, resolvedEvidence);
+	if (relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative))) {
+		throw new Error("Private UAT evidence must be written outside the private workspace");
+	}
+	return resolvedEvidence;
+}
+
 async function snapshotFiles(root: string): Promise<ScenarioObservation["filesBefore"]> {
 	const entries: ScenarioObservation["filesBefore"] = [];
 	async function visit(directory: string): Promise<void> {
@@ -319,14 +405,29 @@ async function writeEvidence(file: string, evidence: UatEvidence, secrets: strin
 	await Bun.write(file, `${JSON.stringify(sanitized, null, 2)}\n`);
 }
 
+/** Project a live private turn onto an outcome-only, customer-data-free record. */
+export function summarizePrivateRunEvidence(run: ScenarioRunEvidence): PrivateScenarioRunEvidence {
+	return {
+		step: run.step,
+		repeat: run.repeat,
+		title: run.title,
+		ended: run.ended,
+		durationMs: run.durationMs,
+		assertions: run.assertions.map(assertion => ({ label: assertion.label, passed: assertion.passed })),
+		passed: run.passed,
+	};
+}
+
 async function runScenarioStep(
 	bridge: UatBridgeClient,
 	workspace: string,
 	workbook: ReturnType<typeof fakeExcel>,
+	steps: readonly MeddpiccStep[],
+	validate: (stepNumber: number, observation: ScenarioObservation) => ScenarioAssertion[],
 	stepIndex: number,
 	repeat: number,
 ): Promise<ScenarioRunEvidence> {
-	const step = MEDDPICC_STEPS[stepIndex];
+	const step = steps[stepIndex];
 	const filesBefore = await snapshotFiles(workspace);
 	const workbookBefore = workbook.snapshot();
 	const turn = await bridge.turn(step.prompt, `c-uat-meddpicc-${step.number}-${repeat}`);
@@ -348,7 +449,7 @@ async function runScenarioStep(
 			label: "every reported tool completed successfully",
 			passed: turn.toolNotices.every(notice => notice.ok),
 		},
-		...validateMeddpiccStep(step.number, observation),
+		...validate(step.number, observation),
 	].map(value => ({
 		label: value.label,
 		passed: value.passed,
@@ -374,48 +475,138 @@ async function runScenarioStep(
 	};
 }
 
+function modelList(frame: { type?: string; [key: string]: unknown }): { current: string; models: string[] } {
+	if (frame.type !== "models" || typeof frame.current !== "string" || !Array.isArray(frame.models)) {
+		throw new Error("Office bridge returned an invalid model list");
+	}
+	const models = frame.models
+		.map(value =>
+			value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string"
+				? (value as { id: string }).id
+				: null,
+		)
+		.filter((value): value is string => value !== null);
+	if (!models.includes(EXPECTED_MODEL) || !models.includes(ALTERNATE_MODEL)) {
+		throw new Error("Office bridge did not advertise both presentation models");
+	}
+	return { current: frame.current, models };
+}
+
+async function probeModel(bridge: UatBridgeClient, id: string): Promise<{ passed: true; durationMs: number }> {
+	const turn = await bridge.turn(`Reply with exactly ${MODEL_PROBE_MARKER}. Do not use tools.`, `c-uat-model-${id}`);
+	const passed =
+		turn.ended === "chat_done" &&
+		turn.reply.includes(MODEL_PROBE_MARKER) &&
+		turn.toolNotices.every(notice => notice.ok) &&
+		turn.hostToolCalls.length === 0;
+	if (!passed) throw new Error("Office model inference probe failed");
+	return { passed: true, durationMs: turn.durationMs };
+}
+
+async function proveModelRoundTrip(
+	bridge: UatBridgeClient,
+	baseUrl: string,
+	token: string,
+): Promise<ModelRoundTripEvidence> {
+	const initialList = modelList(await bridge.request({ type: "list_models" }, "models"));
+	if (initialList.current !== EXPECTED_MODEL)
+		throw new Error("Office bridge default model did not match Claude Opus 5");
+	const initial = await probeModel(bridge, "initial");
+
+	const alternateModel = await bridge.configure({ baseUrl, token, model: ALTERNATE_MODEL });
+	if (alternateModel !== ALTERNATE_MODEL) throw new Error("Office bridge did not select GPT-5.6 Sol");
+	const alternate = await probeModel(bridge, "alternate");
+
+	const restoredModel = await bridge.configure({ baseUrl, token, model: EXPECTED_MODEL });
+	if (restoredModel !== EXPECTED_MODEL) throw new Error("Office bridge did not restore Claude Opus 5");
+	const restored = await probeModel(bridge, "restored");
+	const restoredList = modelList(await bridge.request({ type: "list_models" }, "models"));
+	if (restoredList.current !== EXPECTED_MODEL)
+		throw new Error("Office bridge model list did not reflect the restored model");
+
+	return {
+		advertisedModels: initialList.models,
+		initialModel: initialList.current,
+		initialTurnPassed: initial.passed,
+		initialTurnDurationMs: initial.durationMs,
+		alternateModel,
+		alternateTurnPassed: alternate.passed,
+		alternateTurnDurationMs: alternate.durationMs,
+		restoredModel,
+		restoredTurnPassed: restored.passed,
+		restoredTurnDurationMs: restored.durationMs,
+	};
+}
+
 async function runLive(options: UatMeddpiccOptions): Promise<void> {
 	requiredLiveOptions(options);
-	const evidencePath = path.resolve(options.evidence);
+	const privateMode = options.privateInPlace === true;
+	let evidencePath = path.resolve(options.evidence);
 	const secrets = [process.env.LITELLM_API_KEY ?? ""];
-	const evidence: UatEvidence = {
-		schemaVersion: 1,
-		startedAt: new Date().toISOString(),
-		status: "running",
-		runs: [],
-	};
+	const evidence: UatEvidence = privateMode
+		? {
+				schemaVersion: 2,
+				mode: "private-in-place",
+				startedAt: new Date().toISOString(),
+				status: "running",
+				runs: [],
+			}
+		: {
+				schemaVersion: 1,
+				startedAt: new Date().toISOString(),
+				status: "running",
+				runs: [],
+			};
 	let child: ReturnType<typeof Bun.spawn> | null = null;
 	let bridge: UatBridgeClient | null = null;
 	let dispatcher: ReturnType<typeof wireExcelHostTools>["dispatcher"] | null = null;
 	let stdoutPromise: Promise<string> | null = null;
 	let stderrPromise: Promise<string> | null = null;
+	let privateStage = "startup validation";
+	let failure: unknown = null;
 
 	try {
 		const baseUrlInput = process.env.LITELLM_BASE_URL ?? "";
 		const token = process.env.LITELLM_API_KEY?.trim() ?? "";
 		if (!baseUrlInput.trim() || !token) throw new Error("LITELLM_BASE_URL and LITELLM_API_KEY are required");
-		const baseUrl = requireGatewayApiBaseUrl(baseUrlInput);
+		const baseUrl = requireGatewayRootUrl(baseUrlInput);
 
-		const prepared = await prepareFixture(path.resolve(options.workspace), path.resolve(options.fixture));
-		evidence.cwd = prepared.workspace;
-		evidence.fixture = { path: prepared.path, sha256: prepared.sha256, bytes: prepared.bytes };
+		privateStage = "fixture discovery";
+		const prepared = privateMode
+			? await discoverPrivateFixture(path.resolve(options.workspace))
+			: await prepareFixture(path.resolve(options.workspace), path.resolve(options.fixture ?? ""));
+		if ("mode" in evidence) {
+			evidencePath = await assertPrivateEvidenceOutsideWorkspace(prepared.workspace, evidencePath);
+			evidence.fixture = { topLevelJsonFiles: 1 };
+		} else {
+			if (
+				!("sha256" in prepared) ||
+				typeof prepared.sha256 !== "string" ||
+				!("bytes" in prepared) ||
+				typeof prepared.bytes !== "number"
+			) {
+				throw new Error("Synthetic fixture preparation did not return its checksum");
+			}
+			evidence.cwd = prepared.workspace;
+			evidence.fixture = { path: prepared.path, sha256: prepared.sha256, bytes: prepared.bytes };
+		}
 
+		privateStage = "binary verification";
 		const binary = await resolveBinary(options.binary);
 		const version = requireSuccessfulCommand(
 			runCommand([binary.path, "--version"], prepared.workspace),
 			"xcsh --version",
 		);
-		evidence.binary = {
-			...binary,
-			version,
-			sha256: await sha256File(binary.realPath),
-		};
+		const binarySha256 = await sha256File(binary.realPath);
+		evidence.binary =
+			"mode" in evidence ? { version, sha256: binarySha256 } : { ...binary, version, sha256: binarySha256 };
 		const repoRoot = path.resolve(import.meta.dir, "../../..");
 		evidence.gitSha = requireSuccessfulCommand(
 			runCommand(["git", "rev-parse", "HEAD"], repoRoot),
 			"git rev-parse HEAD",
 		);
 
+		privateStage = "plugin verification";
 		const plugin = installedMeddpicc(binary.path, prepared.workspace);
 		if (plugin.version !== EXPECTED_PLUGIN_VERSION) {
 			throw new Error(`Installed MEDDPICC is ${plugin.version}; ${EXPECTED_PLUGIN_VERSION} is required`);
@@ -435,7 +626,12 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			}
 		}
 
-		console.log(`Starting ${binary.path} office serve in ${prepared.workspace}`);
+		console.log(
+			privateMode
+				? "Starting private in-place Office UAT"
+				: `Starting ${binary.path} office serve in ${prepared.workspace}`,
+		);
+		privateStage = "Office server startup";
 		const spawned = Bun.spawn([binary.path, "office", "serve"], {
 			cwd: prepared.workspace,
 			env: process.env,
@@ -448,22 +644,26 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		stderrPromise = new Response(spawned.stderr).text();
 
 		bridge = await discoverOfficeBridge({ attempts: 30, retryDelayMs: 500 });
-		evidence.bridge = {
-			port: bridge.port,
-			pid: child.pid,
-			contractVersion: bridge.ack.contractVersion ?? null,
-		};
+		evidence.bridge =
+			"mode" in evidence
+				? { contractVersion: bridge.ack.contractVersion ?? null }
+				: { port: bridge.port, pid: child.pid, contractVersion: bridge.ack.contractVersion ?? null };
 		if (!bridge.canConfigureProvider) throw new Error("Office bridge did not advertise provider configuration");
 		await waitForOfficeApplicationReady(bridge);
 
 		// Deliberately omit model. This is the end-to-end proof that the binary owns
-		// litellm/gpt-5.6-sol:high as the single production default.
+		// anthropic/claude-opus-5:high as the vision-capable production default.
+		privateStage = "default model configuration";
 		const acknowledgement = await bridge.configure({ baseUrl, token });
 		if (acknowledgement !== EXPECTED_MODEL) {
 			throw new Error(`Office configure selected ${acknowledgement}; expected ${EXPECTED_MODEL}`);
 		}
-		evidence.configure = { modelOmitted: true, acknowledgement };
+		if (!("mode" in evidence)) evidence.configure = { modelOmitted: true, acknowledgement };
 
+		privateStage = "model compatibility round trip";
+		evidence.modelRoundTrip = await proveModelRoundTrip(bridge, baseUrl, token);
+
+		privateStage = "Excel host-tool registration";
 		const workbook = fakeExcel({}, { Start: { "A1:B1": [["sentinel", "keep"]] } });
 		const wired = wireExcelHostTools(bridge, workbook);
 		dispatcher = wired.dispatcher;
@@ -475,16 +675,31 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		const registrationFrame = await registration;
 		if (registrationFrame.type !== "set_host_tools_ack") throw new Error("Excel host-tool registration was rejected");
 
-		for (let index = 0; index < MEDDPICC_STEPS.length; index++) {
-			console.log(`Step ${index + 1}/5: ${MEDDPICC_STEPS[index].title}`);
-			const run = await runScenarioStep(bridge, prepared.workspace, workbook, index, 1);
-			evidence.runs.push(run);
+		const steps = privateMode ? PRIVATE_MEDDPICC_STEPS : MEDDPICC_STEPS;
+		const validate = privateMode ? validatePrivateMeddpiccStep : validateMeddpiccStep;
+		let privateStatus: PrivateStatusOracle | null = null;
+		privateStage = "MEDDPICC scenario";
+		for (let index = 0; index < steps.length; index++) {
+			console.log(`Step ${index + 1}/5: ${steps[index].title}`);
+			const run = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validate, index, 1);
+			if (privateMode && steps[index].number === 2) privateStatus = extractPrivateStatusOracle(run.reply);
+			if (privateMode && steps[index].number === 5) {
+				run.assertions.push(validatePrivateSummaryAgainstStatus(run.hostToolCalls, privateStatus));
+				run.passed = run.assertions.every(assertion => assertion.passed);
+			}
+			if ("mode" in evidence) evidence.runs.push(summarizePrivateRunEvidence(run));
+			else evidence.runs.push(run);
 			console.log(`  ${run.passed ? "PASS" : "FAIL"} (${run.durationMs} ms)`);
 		}
 
 		console.log("Step 5 idempotency rerun");
-		const rerun = await runScenarioStep(bridge, prepared.workspace, workbook, 4, 2);
-		evidence.runs.push(rerun);
+		const rerun = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validate, 4, 2);
+		if (privateMode) {
+			rerun.assertions.push(validatePrivateSummaryAgainstStatus(rerun.hostToolCalls, privateStatus));
+			rerun.passed = rerun.assertions.every(assertion => assertion.passed);
+		}
+		if ("mode" in evidence) evidence.runs.push(summarizePrivateRunEvidence(rerun));
+		else evidence.runs.push(rerun);
 		console.log(`  ${rerun.passed ? "PASS" : "FAIL"} (${rerun.durationMs} ms)`);
 
 		const failures = evidence.runs.flatMap(run =>
@@ -496,23 +711,37 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		evidence.status = "passed";
 	} catch (error) {
 		evidence.status = "failed";
-		evidence.error = error instanceof Error ? error.message : String(error);
-		throw error;
+		if ("mode" in evidence) {
+			evidence.error = `Private MEDDPICC UAT failed during ${privateStage}`;
+			failure = new Error(evidence.error);
+		} else {
+			evidence.error = error instanceof Error ? error.message : String(error);
+			failure = error;
+		}
 	} finally {
 		dispatcher?.dispose();
 		bridge?.dispose();
 		if (child) await stopSpawnedChild(child);
 		evidence.finishedAt = new Date().toISOString();
-		if (child && evidence.status === "failed") {
+		if (child && evidence.status === "failed" && !("mode" in evidence)) {
 			const [stdout, stderr] = await Promise.all([stdoutPromise ?? "", stderrPromise ?? ""]);
 			const tail = `${stdout}\n${stderr}`.trim().slice(-2_000);
 			if (tail && evidence.error && !evidence.error.includes("port 8444")) {
 				evidence.error = `${evidence.error}\noffice serve tail:\n${tail}`;
 			}
 		}
-		await writeEvidence(evidencePath, evidence, secrets);
-		console.log(`Evidence: ${evidencePath}`);
+		let evidenceWritten = false;
+		try {
+			await writeEvidence(evidencePath, evidence, secrets);
+			evidenceWritten = true;
+		} catch (error) {
+			failure = "mode" in evidence ? new Error("Private UAT evidence could not be written") : error;
+		}
+		if (evidenceWritten) {
+			console.log("mode" in evidence ? "Private outcome evidence written." : `Evidence: ${evidencePath}`);
+		}
 	}
+	if (failure) throw failure;
 }
 
 async function main(): Promise<void> {

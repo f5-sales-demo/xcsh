@@ -93,7 +93,10 @@ describe("build.ts", () => {
 
 		// The copied manifest must still parse and keep the local-ip.sh page URL.
 		const manifest = JSON.parse(readFileSync(join(DIST, "manifest.json"), "utf8"));
-		expect(manifest.extensions[0].runtimes[0].code.page).toBe("https://127-0-0-1.local-ip.sh:8444/taskpane.html");
+		expect(manifest.extensions[0].runtimes[0].code.page).toBe(
+			`https://127-0-0-1.local-ip.sh:8444/taskpane.html?v=${manifest.version}`,
+		);
+		expect(html).toContain(`./taskpane.js?v=${manifest.version}`);
 
 		// Browser bundle must not import node:* builtins (src/ is browser-safe).
 		// build.ts already asserts this and exits non-zero otherwise; re-assert here.

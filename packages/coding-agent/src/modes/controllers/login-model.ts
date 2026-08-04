@@ -16,17 +16,17 @@ export interface LiteLLMLoginModelChoice extends LoginModelChoice {
 
 export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
 	{
-		label: "GPT-5.6 Sol",
-		description: "OpenAI-compatible model with high reasoning",
-		provider: "litellm",
-		modelId: "gpt-5.6-sol",
-		thinkingLevel: ThinkingLevel.High,
-	},
-	{
 		label: "Claude Opus 5",
 		description: "Anthropic Messages model with high reasoning",
 		provider: "anthropic",
 		modelId: "claude-opus-5",
+		thinkingLevel: ThinkingLevel.High,
+	},
+	{
+		label: "GPT-5.6 Sol",
+		description: "OpenAI-compatible model with high reasoning",
+		provider: "litellm",
+		modelId: "gpt-5.6-sol",
 		thinkingLevel: ThinkingLevel.High,
 	},
 ];

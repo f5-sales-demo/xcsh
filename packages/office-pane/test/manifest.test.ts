@@ -27,6 +27,7 @@ const TASKPANE_URL = `https://127-0-0-1.local-ip.sh:${PORT}/taskpane.html`;
 const LOCAL_IP_HOST = "127-0-0-1.local-ip.sh";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const PACKAGE_PATH = resolve(HERE, "..", "package.json");
 const MANIFEST_DIR = resolve(HERE, "..", "manifest");
 const MANIFEST_PATH = join(MANIFEST_DIR, "manifest.json");
 
@@ -132,6 +133,27 @@ test("required unified-manifest base properties are present and well-formed", as
 	expect(typeof m.icons.outline).toBe("string");
 });
 
+test("the package version cache-busts the pane page and every ribbon icon", async () => {
+	const m = await loadManifest();
+	const pkg = JSON.parse(await readFile(PACKAGE_PATH, "utf8"));
+	expect(m.version).toBe(pkg.version);
+
+	const urls = [m.extensions[0].runtimes[0].code.page];
+	for (const ribbon of m.extensions[0].ribbons) {
+		for (const tab of ribbon.tabs) {
+			for (const group of tab.groups) {
+				for (const icon of group.icons ?? []) urls.push(icon.url);
+				for (const control of group.controls ?? []) {
+					for (const icon of control.icons ?? []) urls.push(icon.url);
+				}
+			}
+		}
+	}
+	for (const url of urls) {
+		expect(new URL(url).searchParams.get("v"), url).toBe(m.version);
+	}
+});
+
 test("extension declares the Excel (workbook), PowerPoint (presentation), and Word (document) scopes", async () => {
 	const m = await loadManifest();
 	const ext = m.extensions[0];
@@ -145,9 +167,9 @@ test("the task-pane runtime page URL is the local-ip.sh taskpane.html (not an IP
 	const runtimes = m.extensions[0].runtimes;
 	const pages = runtimes.map((r: { code?: { page?: string } }) => r.code?.page);
 
-	expect(pages).toContain(TASKPANE_URL);
+	expect(pages.some((page: string | undefined) => page?.startsWith(`${TASKPANE_URL}?`))).toBe(true);
 	// Guard the trusted-origin invariant explicitly.
-	const page = pages.find((p: string | undefined) => p === TASKPANE_URL);
+	const page = pages.find((p: string | undefined) => p?.startsWith(`${TASKPANE_URL}?`));
 	expect(page).toContain(LOCAL_IP_HOST);
 	expect(page).not.toMatch(/localhost/);
 	expect(page).not.toMatch(/\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}[:/]/); // no bare IPv4 host
@@ -268,7 +290,7 @@ test("ribbon icon URLs are absolute https on the listener host and back real ass
 	expect(urls.length).toBeGreaterThan(0);
 	for (const url of urls) {
 		expect(url).toMatch(new RegExp(`^https://${LOCAL_IP_HOST.replace(/\./g, "\\.")}:${PORT}/assets/`));
-		const file = url.split("/assets/")[1];
+		const file = new URL(url).pathname.split("/assets/")[1];
 		expect(existsSync(join(MANIFEST_DIR, "assets", file))).toBe(true);
 	}
 });

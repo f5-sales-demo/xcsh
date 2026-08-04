@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
 	EXPECTED_SUMMARY,
+	extractPrivateStatusOracle,
 	MEDDPICC_STEPS,
+	PRIVATE_MEDDPICC_STEPS,
 	renderMeddpiccRunbook,
 	type ScenarioObservation,
 	SUMMARY_RANGE,
 	validateMeddpiccStep,
+	validatePrivateMeddpiccStep,
+	validatePrivateSummaryAgainstStatus,
 } from "../scripts/uat/meddpicc-scenario";
 
 const WORKSPACE = "/tmp/xcsh-meddpicc-demo";
@@ -145,5 +149,124 @@ describe("five-step MEDDPICC scenario", () => {
 	test("fails closed when a required status value is missing", () => {
 		const results = validateMeddpiccStep(2, observation({ reply: "Example Corp is Yellow." }));
 		expect(results.some(result => !result.passed && result.label.includes("21/32"))).toBe(true);
+	});
+});
+
+describe("private in-place MEDDPICC scenario", () => {
+	test("prompts never embed a customer filename or account name", () => {
+		expect(PRIVATE_MEDDPICC_STEPS).toHaveLength(5);
+		const prompts = PRIVATE_MEDDPICC_STEPS.map(step => step.prompt).join("\n");
+		expect(prompts).not.toContain("example-corp.json");
+		expect(prompts).not.toContain("Example Corp");
+		expect(prompts).toContain("single top-level JSON");
+	});
+
+	test("status accepts live engine values without copying a synthetic numeric oracle", () => {
+		const results = validatePrivateMeddpiccStep(
+			2,
+			observation({
+				reply: "Schema valid. Score 25/32, completion 78.1%, rating Green. Next section: Paper Process.",
+				toolNotices: [{ tool: "bash", ok: true, detail: "bash: done" }],
+			}),
+		);
+		expect(results.filter(result => !result.passed)).toEqual([]);
+	});
+
+	test("health review requires three MEDDPICC elements and a fixture read", () => {
+		const results = validatePrivateMeddpiccStep(
+			4,
+			observation({
+				reply: "Paper Process lacks dates; Champion lacks evidence; Competition lacks differentiation.",
+				toolNotices: [{ tool: "read", ok: true, detail: "read: done" }],
+			}),
+		);
+		expect(results.filter(result => !result.passed)).toEqual([]);
+	});
+
+	test("Excel round trip validates live values structurally and remains idempotent", () => {
+		const values = [
+			["Metric", "Value"],
+			["Account", "Private account"],
+			["Score", "25/32"],
+			["Completion", "78.1%"],
+			["Rating", "Green"],
+			["Next section", "Paper Process"],
+			["Priority gaps", "Paper Process; Champion; Competition"],
+		];
+		const sheet = "MEDDPICC — Presentation";
+		const range = `'${sheet}'!A1:B7`;
+		const results = validatePrivateMeddpiccStep(
+			5,
+			observation({
+				reply: "Read back A1:B7 successfully.",
+				hostToolCalls: [
+					{ toolName: "add_sheet", arguments: { name: sheet } },
+					{ toolName: "write_range", arguments: { address: range, values } },
+					{ toolName: "read_range", arguments: { address: range } },
+				],
+				workbookAfter: {
+					activeSheet: "Start",
+					sheets: { Start: { "A1:B1": [["sentinel", "keep"]] }, [sheet]: { "A1:B7": values } },
+				},
+			}),
+		);
+		expect(results.filter(result => !result.passed)).toEqual([]);
+	});
+
+	test("Excel summary score, completion, and rating must match the engine-backed status turn", () => {
+		const status = extractPrivateStatusOracle(
+			"Schema valid. Score 25 / 32, completion 78.1%, rating Green. Next section: Paper Process.",
+		);
+		expect(status).toEqual({ score: "25/32", completion: "78.1%", rating: "green" });
+		const values = [
+			["Metric", "Value"],
+			["Account", "Private account"],
+			["Score", "25/32"],
+			["Completion", "78.1%"],
+			["Rating", "Green"],
+			["Next section", "Paper Process"],
+			["Priority gaps", "Paper Process; Champion; Competition"],
+		];
+		const matching = validatePrivateSummaryAgainstStatus(
+			[{ toolName: "write_range", arguments: { values } }],
+			status,
+		);
+		expect(matching.passed).toBe(true);
+
+		values[2][1] = "24/32";
+		const mismatched = validatePrivateSummaryAgainstStatus(
+			[{ toolName: "write_range", arguments: { values } }],
+			status,
+		);
+		expect(mismatched.passed).toBe(false);
+	});
+
+	test("private Excel summary fails closed unless it contains exactly three priority gaps", () => {
+		const values = [
+			["Metric", "Value"],
+			["Account", "Private account"],
+			["Score", "25/32"],
+			["Completion", "78.1%"],
+			["Rating", "Green"],
+			["Next section", "Paper Process"],
+			["Priority gaps", "Paper Process; Champion"],
+		];
+		const sheet = "MEDDPICC — Presentation";
+		const results = validatePrivateMeddpiccStep(
+			5,
+			observation({
+				reply: "Read back A1:B7 successfully.",
+				hostToolCalls: [
+					{ toolName: "add_sheet", arguments: { name: sheet } },
+					{ toolName: "write_range", arguments: { address: `'${sheet}'!A1:B7`, values } },
+					{ toolName: "read_range", arguments: { address: `'${sheet}'!A1:B7` } },
+				],
+				workbookAfter: {
+					activeSheet: "Start",
+					sheets: { Start: { "A1:B1": [["sentinel", "keep"]] }, [sheet]: { "A1:B7": values } },
+				},
+			}),
+		);
+		expect(results.some(result => !result.passed && result.label.includes("three priority gaps"))).toBe(true);
 	});
 });
