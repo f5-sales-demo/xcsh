@@ -49,19 +49,19 @@ pub enum WrapperSignature {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WrapperTransform {
-	pub kind:             Option<ChunkKind>,
-	pub name_style:       Option<NameStyle>,
+	pub kind: Option<ChunkKind>,
+	pub name_style: Option<NameStyle>,
 	pub clear_identifier: bool,
-	pub signature:        WrapperSignature,
+	pub signature: WrapperSignature,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct SemanticRule {
-	pub ts_kind:    &'static str,
+	pub ts_kind: &'static str,
 	pub chunk_kind: ChunkKind,
-	pub style:      RuleStyle,
-	pub naming:     NamingMode,
-	pub recurse:    RecurseMode,
+	pub style: RuleStyle,
+	pub naming: NamingMode,
+	pub recurse: RecurseMode,
 }
 
 pub const fn semantic_rule(
@@ -76,20 +76,20 @@ pub const fn semantic_rule(
 
 #[derive(Clone, Copy, Debug)]
 pub struct StructuralOverrides {
-	pub extra_trivia:            &'static [&'static str],
-	pub preserved_trivia:        &'static [&'static str],
-	pub extra_root_wrappers:     &'static [&'static str],
+	pub extra_trivia: &'static [&'static str],
+	pub preserved_trivia: &'static [&'static str],
+	pub extra_root_wrappers: &'static [&'static str],
 	pub preserved_root_wrappers: &'static [&'static str],
-	pub absorbable_attrs:        &'static [&'static str],
+	pub absorbable_attrs: &'static [&'static str],
 }
 
 impl StructuralOverrides {
 	pub const EMPTY: Self = Self {
-		extra_trivia:            &[],
-		preserved_trivia:        &[],
-		extra_root_wrappers:     &[],
+		extra_trivia: &[],
+		preserved_trivia: &[],
+		extra_root_wrappers: &[],
 		preserved_root_wrappers: &[],
-		absorbable_attrs:        &[],
+		absorbable_attrs: &[],
 	};
 
 	pub fn is_extra_trivia(&self, kind: &str) -> bool {
@@ -115,16 +115,16 @@ impl StructuralOverrides {
 
 #[derive(Clone, Copy, Debug)]
 pub struct ClassifierTables {
-	pub root:                 &'static [SemanticRule],
-	pub class:                &'static [SemanticRule],
-	pub function:             &'static [SemanticRule],
+	pub root: &'static [SemanticRule],
+	pub class: &'static [SemanticRule],
+	pub function: &'static [SemanticRule],
 	pub structural_overrides: StructuralOverrides,
 }
 
 pub const EMPTY_CLASSIFIER_TABLES: ClassifierTables = ClassifierTables {
-	root:                 &[],
-	class:                &[],
-	function:             &[],
+	root: &[],
+	class: &[],
+	function: &[],
 	structural_overrides: StructuralOverrides::EMPTY,
 };
 

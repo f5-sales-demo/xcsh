@@ -155,9 +155,9 @@ const C_CPP_ROOT_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const C_CPP_TABLES: ClassifierTables = ClassifierTables {
-	root:                 C_CPP_ROOT_RULES,
-	class:                &[],
-	function:             &[],
+	root: C_CPP_ROOT_RULES,
+	class: &[],
+	function: &[],
 	structural_overrides: StructuralOverrides::EMPTY,
 };
 

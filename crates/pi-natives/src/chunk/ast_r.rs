@@ -11,9 +11,9 @@ use super::{
 pub struct RClassifier;
 
 static R_TABLES: ClassifierTables = ClassifierTables {
-	root:                 &[],
-	class:                &[],
-	function:             &[],
+	root: &[],
+	class: &[],
+	function: &[],
 	structural_overrides: super::classify::StructuralOverrides::EMPTY,
 };
 
@@ -150,9 +150,12 @@ fn is_import_call(node: Node<'_>, source: &str) -> bool {
 }
 
 fn recurse_if(node: Node<'_>) -> Option<RecurseSpec<'_>> {
-	recurse_into(node, ChunkContext::FunctionBody, &["consequence", "alternative"], &[
-		"braced_expression",
-	])
+	recurse_into(
+		node,
+		ChunkContext::FunctionBody,
+		&["consequence", "alternative"],
+		&["braced_expression"],
+	)
 }
 
 fn recurse_loop(node: Node<'_>) -> Option<RecurseSpec<'_>> {

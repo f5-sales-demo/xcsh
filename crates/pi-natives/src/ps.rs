@@ -133,16 +133,16 @@ mod platform {
 	#[repr(C)]
 	#[allow(non_snake_case, reason = "Windows PROCESSENTRY32W field names must match Win32 ABI")]
 	struct PROCESSENTRY32W {
-		dwSize:              u32,
-		cntUsage:            u32,
-		th32ProcessID:       u32,
-		th32DefaultHeapID:   usize,
-		th32ModuleID:        u32,
-		cntThreads:          u32,
+		dwSize: u32,
+		cntUsage: u32,
+		th32ProcessID: u32,
+		th32DefaultHeapID: usize,
+		th32ModuleID: u32,
+		cntThreads: u32,
 		th32ParentProcessID: u32,
-		pcPriClassBase:      i32,
-		dwFlags:             u32,
-		szExeFile:           [u16; 260],
+		pcPriClassBase: i32,
+		dwFlags: u32,
+		szExeFile: [u16; 260],
 	}
 
 	type Handle = *mut std::ffi::c_void;

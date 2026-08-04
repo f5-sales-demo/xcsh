@@ -11,15 +11,15 @@ use super::{
 pub struct NixHclClassifier;
 
 const NIX_HCL_TABLES: ClassifierTables = ClassifierTables {
-	root:                 &[],
-	class:                &[],
-	function:             &[],
+	root: &[],
+	class: &[],
+	function: &[],
 	structural_overrides: StructuralOverrides {
-		extra_trivia:            &[],
-		preserved_trivia:        &[],
-		extra_root_wrappers:     &["body"],
+		extra_trivia: &[],
+		preserved_trivia: &[],
+		extra_root_wrappers: &["body"],
 		preserved_root_wrappers: &[],
-		absorbable_attrs:        &[],
+		absorbable_attrs: &[],
 	},
 };
 

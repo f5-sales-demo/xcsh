@@ -33,9 +33,9 @@ use crate::{env_uint, task};
 #[napi]
 pub enum FileType {
 	/// Regular file.
-	File    = 1,
+	File = 1,
 	/// Directory.
-	Dir     = 2,
+	Dir = 2,
 	/// Symbolic link.
 	Symlink = 3,
 }
@@ -45,12 +45,12 @@ pub enum FileType {
 #[napi(object)]
 pub struct GlobMatch {
 	/// Relative path from the search root, using forward slashes.
-	pub path:      String,
+	pub path: String,
 	/// Resolved filesystem type for the match.
 	pub file_type: FileType,
 	/// Modification time in milliseconds since Unix epoch (from
 	/// `symlink_metadata`).
-	pub mtime:     Option<f64>,
+	pub mtime: Option<f64>,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -84,23 +84,23 @@ pub fn max_cache_entries() -> usize {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 struct CacheKey {
-	root:              PathBuf,
-	include_hidden:    bool,
-	use_gitignore:     bool,
+	root: PathBuf,
+	include_hidden: bool,
+	use_gitignore: bool,
 	skip_node_modules: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct ScanOptions {
-	pub include_hidden:    bool,
-	pub use_gitignore:     bool,
+	pub include_hidden: bool,
+	pub use_gitignore: bool,
 	pub skip_node_modules: bool,
 }
 
 #[derive(Clone)]
 struct CacheEntry {
 	created_at: Instant,
-	entries:    Vec<GlobMatch>,
+	entries: Vec<GlobMatch>,
 }
 
 static FS_CACHE: LazyLock<DashMap<CacheKey, CacheEntry>> = LazyLock::new(DashMap::new);
@@ -108,7 +108,7 @@ static FS_CACHE: LazyLock<DashMap<CacheKey, CacheEntry>> = LazyLock::new(DashMap
 /// Result of a cache-aware scan, including the age of the cached data.
 pub struct ScanResult {
 	/// Scanned filesystem entries.
-	pub entries:      Vec<GlobMatch>,
+	pub entries: Vec<GlobMatch>,
 	/// How old the cached data is in milliseconds (0 = freshly scanned).
 	pub cache_age_ms: u64,
 }
@@ -313,9 +313,9 @@ pub fn get_or_scan(
 	}
 
 	let key = CacheKey {
-		root:              root.to_path_buf(),
-		include_hidden:    options.include_hidden,
-		use_gitignore:     options.use_gitignore,
+		root: root.to_path_buf(),
+		include_hidden: options.include_hidden,
+		use_gitignore: options.use_gitignore,
 		skip_node_modules: options.skip_node_modules,
 	};
 
@@ -324,7 +324,7 @@ pub fn get_or_scan(
 		let age = now.duration_since(entry.created_at);
 		if age < Duration::from_millis(ttl) {
 			return Ok(ScanResult {
-				entries:      entry.entries.clone(),
+				entries: entry.entries.clone(),
 				cache_age_ms: age.as_millis() as u64,
 			});
 		}
@@ -350,9 +350,9 @@ pub fn force_rescan(
 	ct: &task::CancelToken,
 ) -> Result<Vec<GlobMatch>> {
 	let key = CacheKey {
-		root:              root.to_path_buf(),
-		include_hidden:    options.include_hidden,
-		use_gitignore:     options.use_gitignore,
+		root: root.to_path_buf(),
+		include_hidden: options.include_hidden,
+		use_gitignore: options.use_gitignore,
 		skip_node_modules: options.skip_node_modules,
 	};
 	FS_CACHE.remove(&key);
@@ -546,11 +546,7 @@ mod tests {
 		let ct = crate::task::CancelToken::default();
 		let entries = super::collect_entries(
 			root.path(),
-			super::ScanOptions {
-				include_hidden:    true,
-				use_gitignore:     false,
-				skip_node_modules: true,
-			},
+			super::ScanOptions { include_hidden: true, use_gitignore: false, skip_node_modules: true },
 			&ct,
 		)
 		.unwrap();
@@ -578,11 +574,7 @@ mod tests {
 		// With skip: should only get app.js
 		let entries = super::force_rescan(
 			root.path(),
-			super::ScanOptions {
-				include_hidden:    true,
-				use_gitignore:     false,
-				skip_node_modules: true,
-			},
+			super::ScanOptions { include_hidden: true, use_gitignore: false, skip_node_modules: true },
 			false,
 			&ct,
 		)
@@ -594,8 +586,8 @@ mod tests {
 		let entries = super::force_rescan(
 			root.path(),
 			super::ScanOptions {
-				include_hidden:    true,
-				use_gitignore:     false,
+				include_hidden: true,
+				use_gitignore: false,
 				skip_node_modules: false,
 			},
 			false,

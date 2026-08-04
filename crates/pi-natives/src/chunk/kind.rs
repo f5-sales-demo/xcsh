@@ -165,23 +165,23 @@ pub enum SummaryStyle {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ChunkTraits {
-	pub groupable:                bool,
-	pub packed:                   bool,
-	pub addressable_leaf:         bool,
+	pub groupable: bool,
+	pub packed: bool,
+	pub addressable_leaf: bool,
 	pub always_preserve_children: bool,
-	pub has_addressable_members:  bool,
-	pub summary:                  SummaryStyle,
-	pub container:                bool,
+	pub has_addressable_members: bool,
+	pub summary: SummaryStyle,
+	pub container: bool,
 }
 
 const DEFAULT_TRAITS: ChunkTraits = ChunkTraits {
-	groupable:                false,
-	packed:                   false,
-	addressable_leaf:         false,
+	groupable: false,
+	packed: false,
+	addressable_leaf: false,
 	always_preserve_children: false,
-	has_addressable_members:  false,
-	summary:                  SummaryStyle::Default,
-	container:                false,
+	has_addressable_members: false,
+	summary: SummaryStyle::Default,
+	container: false,
 };
 
 const GROUP_TRAITS: ChunkTraits = ChunkTraits { groupable: true, ..DEFAULT_TRAITS };

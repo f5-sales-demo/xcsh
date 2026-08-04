@@ -41,37 +41,37 @@ pub enum NameStyle {
 
 #[derive(Clone, Copy, Debug)]
 pub struct RecurseSpec<'tree> {
-	pub node:    Node<'tree>,
+	pub node: Node<'tree>,
 	pub context: ChunkContext,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct InjectedChunkSpec<'tree> {
-	pub language:     SupportLang,
+	pub language: SupportLang,
 	pub content_node: Node<'tree>,
 }
 
 #[derive(Clone, Debug)]
 pub struct RawChunkCandidate<'tree> {
-	pub identifier:          Option<String>,
-	pub kind:                ChunkKind,
-	pub name_style:          NameStyle,
-	pub range_start_byte:    usize,
-	pub range_end_byte:      usize,
+	pub identifier: Option<String>,
+	pub kind: ChunkKind,
+	pub name_style: NameStyle,
+	pub range_start_byte: usize,
+	pub range_end_byte: usize,
 	/// Start byte for `chunk_checksum`; stays at the primary node's start while
 	/// `range_start_byte` may be extended backward to include leading
 	/// attributes/comments.
 	pub checksum_start_byte: usize,
-	pub range_start_line:    usize,
-	pub range_end_line:      usize,
-	pub signature:           Option<String>,
-	pub error:               bool,
-	pub groupable:           bool,
+	pub range_start_line: usize,
+	pub range_end_line: usize,
+	pub signature: Option<String>,
+	pub error: bool,
+	pub groupable: bool,
 	pub has_leading_comment: bool,
-	pub force_recurse:       bool,
-	pub region_node:         Option<Node<'tree>>,
-	pub injected:            Option<InjectedChunkSpec<'tree>>,
-	pub recurse:             Option<RecurseSpec<'tree>>,
+	pub force_recurse: bool,
+	pub region_node: Option<Node<'tree>>,
+	pub injected: Option<InjectedChunkSpec<'tree>>,
+	pub recurse: Option<RecurseSpec<'tree>>,
 }
 
 #[derive(Default)]

@@ -18,9 +18,9 @@ pub struct IniClassifier;
 impl LangClassifier for IniClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: super::classify::StructuralOverrides::EMPTY,
 		};
 		&TABLES

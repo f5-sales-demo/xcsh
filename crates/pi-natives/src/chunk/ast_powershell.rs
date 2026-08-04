@@ -14,7 +14,7 @@ use super::{
 pub struct PowershellClassifier;
 
 static POWERSHELL_TABLES: ClassifierTables = ClassifierTables {
-	root:                 &[
+	root: &[
 		semantic_rule(
 			"param_block",
 			ChunkKind::Parameters,
@@ -30,8 +30,8 @@ static POWERSHELL_TABLES: ClassifierTables = ClassifierTables {
 			RecurseMode::None,
 		),
 	],
-	class:                &[],
-	function:             &[
+	class: &[],
+	function: &[
 		semantic_rule(
 			"class_method_parameter_list",
 			ChunkKind::Parameters,
@@ -55,16 +55,11 @@ static POWERSHELL_TABLES: ClassifierTables = ClassifierTables {
 		),
 	],
 	structural_overrides: StructuralOverrides {
-		extra_trivia:            &[
-			"function_name",
-			"simple_name",
-			"type_literal",
-			"switch_condition",
-		],
-		preserved_trivia:        &[],
-		extra_root_wrappers:     &[],
+		extra_trivia: &["function_name", "simple_name", "type_literal", "switch_condition"],
+		preserved_trivia: &[],
+		extra_root_wrappers: &[],
 		preserved_root_wrappers: &[],
-		absorbable_attrs:        &[],
+		absorbable_attrs: &[],
 	},
 };
 
@@ -261,13 +256,11 @@ fn block_kind_for_parent(node: Node<'_>) -> ChunkKind {
 }
 
 fn powershell_name(node: Node<'_>, source: &str) -> Option<String> {
-	find_named_text(node, source, &[
-		"function_name",
-		"simple_name",
-		"member_name",
-		"type_identifier",
-		"variable",
-	])
+	find_named_text(
+		node,
+		source,
+		&["function_name", "simple_name", "member_name", "type_identifier", "variable"],
+	)
 	.and_then(|text| sanitize_identifier(text.trim_start_matches('$')))
 }
 

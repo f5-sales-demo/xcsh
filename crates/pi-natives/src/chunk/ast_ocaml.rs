@@ -13,9 +13,9 @@ pub struct OcamlClassifier;
 impl LangClassifier for OcamlClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: StructuralOverrides::EMPTY,
 		};
 		&TABLES
@@ -209,11 +209,12 @@ fn ocaml_class_type_recurse(node: Node<'_>) -> Option<RecurseSpec<'_>> {
 }
 
 fn ocaml_method_recurse(node: Node<'_>) -> Option<RecurseSpec<'_>> {
-	recurse_into(node, ChunkContext::FunctionBody, &["body"], &[
-		"function_expression",
-		"match_expression",
-		"let_expression",
-	])
+	recurse_into(
+		node,
+		ChunkContext::FunctionBody,
+		&["body"],
+		&["function_expression", "match_expression", "let_expression"],
+	)
 }
 
 fn ocaml_value_recurse(node: Node<'_>) -> Option<RecurseSpec<'_>> {

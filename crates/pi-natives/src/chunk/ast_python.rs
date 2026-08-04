@@ -184,9 +184,9 @@ const FUNCTION_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const PYTHON_TABLES: ClassifierTables = ClassifierTables {
-	root:                 ROOT_RULES,
-	class:                CLASS_RULES,
-	function:             FUNCTION_RULES,
+	root: ROOT_RULES,
+	class: CLASS_RULES,
+	function: FUNCTION_RULES,
 	structural_overrides: super::classify::StructuralOverrides::EMPTY,
 };
 
@@ -203,10 +203,16 @@ impl LangClassifier for PythonClassifier {
 	) -> Option<RawChunkCandidate<'t>> {
 		match context {
 			ChunkContext::Root | ChunkContext::ClassBody if node.kind() == "decorated_definition" => {
-				promote_wrapper_candidate(self, context, node, source, WrapperTransform {
-					signature: WrapperSignature::Wrapper,
-					..WrapperTransform::default()
-				})
+				promote_wrapper_candidate(
+					self,
+					context,
+					node,
+					source,
+					WrapperTransform {
+						signature: WrapperSignature::Wrapper,
+						..WrapperTransform::default()
+					},
+				)
 				.or_else(|| Some(positional_candidate(node, ChunkKind::Block, source)))
 			},
 			ChunkContext::ClassBody if node.kind() == "function_definition" => {

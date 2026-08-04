@@ -9,7 +9,7 @@ const CHECKSUM_ALPHABET: &str = "ZPMQVRWSNKTXJBYH";
 
 pub struct ResolvedChunk<'a> {
 	pub chunk: &'a ChunkNode,
-	pub crc:   Option<String>,
+	pub crc: Option<String>,
 }
 
 fn parse_region_name(value: &str) -> Option<ChunkRegion> {
@@ -38,8 +38,8 @@ pub fn split_region_suffix(selector: &str) -> (&str, bool, Option<ChunkRegion>) 
 
 pub struct ParsedSelector {
 	pub selector: Option<String>,
-	pub crc:      Option<String>,
-	pub region:   Option<ChunkRegion>,
+	pub crc: Option<String>,
+	pub region: Option<ChunkRegion>,
 }
 
 pub fn split_selector_crc_and_region(
@@ -921,38 +921,48 @@ mod tests {
 	}
 
 	fn state_for_resolution() -> ChunkStateInner {
-		ChunkStateInner::new(String::new(), "typescript".to_owned(), ChunkTree {
-			language:          "typescript".to_owned(),
-			checksum:          "ROOT".to_owned(),
-			line_count:        1,
-			parse_errors:      0,
-			parse_error_lines: Vec::new(),
-			fallback:          false,
-			root_path:         String::new(),
-			root_children:     vec!["fn_handleTerraform".to_owned()],
-			chunks:            vec![
-				chunk("", "ROOT", None, vec!["fn_handleTerraform"]),
-				chunk("fn_handleTerraform", "HVJB", Some(""), vec!["fn_handleTerraform.try"]),
-				chunk("fn_handleTerraform.try", "RQPB", Some("fn_handleTerraform"), vec![
-					"fn_handleTerraform.try.if_2",
-				]),
-				chunk("fn_handleTerraform.try.if_2", "PKPV", Some("fn_handleTerraform.try"), vec![
-					"fn_handleTerraform.try.if_2.loop",
-				]),
-				chunk(
-					"fn_handleTerraform.try.if_2.loop",
-					"MZRS",
-					Some("fn_handleTerraform.try.if_2"),
-					vec!["fn_handleTerraform.try.if_2.loop.if_2"],
-				),
-				chunk(
-					"fn_handleTerraform.try.if_2.loop.if_2",
-					"QKJY",
-					Some("fn_handleTerraform.try.if_2.loop"),
-					vec![],
-				),
-			],
-		})
+		ChunkStateInner::new(
+			String::new(),
+			"typescript".to_owned(),
+			ChunkTree {
+				language: "typescript".to_owned(),
+				checksum: "ROOT".to_owned(),
+				line_count: 1,
+				parse_errors: 0,
+				parse_error_lines: Vec::new(),
+				fallback: false,
+				root_path: String::new(),
+				root_children: vec!["fn_handleTerraform".to_owned()],
+				chunks: vec![
+					chunk("", "ROOT", None, vec!["fn_handleTerraform"]),
+					chunk("fn_handleTerraform", "HVJB", Some(""), vec!["fn_handleTerraform.try"]),
+					chunk(
+						"fn_handleTerraform.try",
+						"RQPB",
+						Some("fn_handleTerraform"),
+						vec!["fn_handleTerraform.try.if_2"],
+					),
+					chunk(
+						"fn_handleTerraform.try.if_2",
+						"PKPV",
+						Some("fn_handleTerraform.try"),
+						vec!["fn_handleTerraform.try.if_2.loop"],
+					),
+					chunk(
+						"fn_handleTerraform.try.if_2.loop",
+						"MZRS",
+						Some("fn_handleTerraform.try.if_2"),
+						vec!["fn_handleTerraform.try.if_2.loop.if_2"],
+					),
+					chunk(
+						"fn_handleTerraform.try.if_2.loop.if_2",
+						"QKJY",
+						Some("fn_handleTerraform.try.if_2.loop"),
+						vec![],
+					),
+				],
+			},
+		)
 	}
 
 	#[test]
@@ -978,22 +988,31 @@ mod tests {
 
 	#[test]
 	fn resolves_stale_selector_by_same_parent_checksum() {
-		let state = ChunkStateInner::new(String::new(), "typescript".to_owned(), ChunkTree {
-			language:          "typescript".to_owned(),
-			checksum:          "ROOT".to_owned(),
-			line_count:        1,
-			parse_errors:      0,
-			parse_error_lines: Vec::new(),
-			fallback:          false,
-			root_path:         String::new(),
-			root_children:     vec!["fn_run".to_owned()],
-			chunks:            vec![
-				chunk("", "ROOT", None, vec!["fn_run"]),
-				chunk("fn_run", "CCCC", Some(""), vec!["fn_run.var_effect_1", "fn_run.var_effect_2"]),
-				chunk("fn_run.var_effect_1", "AAAA", Some("fn_run"), vec![]),
-				chunk("fn_run.var_effect_2", "BBBB", Some("fn_run"), vec![]),
-			],
-		});
+		let state = ChunkStateInner::new(
+			String::new(),
+			"typescript".to_owned(),
+			ChunkTree {
+				language: "typescript".to_owned(),
+				checksum: "ROOT".to_owned(),
+				line_count: 1,
+				parse_errors: 0,
+				parse_error_lines: Vec::new(),
+				fallback: false,
+				root_path: String::new(),
+				root_children: vec!["fn_run".to_owned()],
+				chunks: vec![
+					chunk("", "ROOT", None, vec!["fn_run"]),
+					chunk(
+						"fn_run",
+						"CCCC",
+						Some(""),
+						vec!["fn_run.var_effect_1", "fn_run.var_effect_2"],
+					),
+					chunk("fn_run.var_effect_1", "AAAA", Some("fn_run"), vec![]),
+					chunk("fn_run.var_effect_2", "BBBB", Some("fn_run"), vec![]),
+				],
+			},
+		);
 		let mut warnings = Vec::new();
 		let resolved =
 			resolve_chunk_with_crc(&state, Some("fn_run.var_effect"), Some("BBBB"), &mut warnings)
@@ -1008,22 +1027,26 @@ mod tests {
 
 	#[test]
 	fn stale_selector_prefers_best_leaf_name_when_crc_matches_multiple_siblings() {
-		let state = ChunkStateInner::new(String::new(), "typescript".to_owned(), ChunkTree {
-			language:          "typescript".to_owned(),
-			checksum:          "ROOT".to_owned(),
-			line_count:        1,
-			parse_errors:      0,
-			parse_error_lines: Vec::new(),
-			fallback:          false,
-			root_path:         String::new(),
-			root_children:     vec!["fn_run".to_owned()],
-			chunks:            vec![
-				chunk("", "ROOT", None, vec!["fn_run"]),
-				chunk("fn_run", "CCCC", Some(""), vec!["fn_run.var_other", "fn_run.var_effect_1"]),
-				chunk("fn_run.var_other", "BBBB", Some("fn_run"), vec![]),
-				chunk("fn_run.var_effect_1", "BBBB", Some("fn_run"), vec![]),
-			],
-		});
+		let state = ChunkStateInner::new(
+			String::new(),
+			"typescript".to_owned(),
+			ChunkTree {
+				language: "typescript".to_owned(),
+				checksum: "ROOT".to_owned(),
+				line_count: 1,
+				parse_errors: 0,
+				parse_error_lines: Vec::new(),
+				fallback: false,
+				root_path: String::new(),
+				root_children: vec!["fn_run".to_owned()],
+				chunks: vec![
+					chunk("", "ROOT", None, vec!["fn_run"]),
+					chunk("fn_run", "CCCC", Some(""), vec!["fn_run.var_other", "fn_run.var_effect_1"]),
+					chunk("fn_run.var_other", "BBBB", Some("fn_run"), vec![]),
+					chunk("fn_run.var_effect_1", "BBBB", Some("fn_run"), vec![]),
+				],
+			},
+		);
 		let mut warnings = Vec::new();
 		let resolved =
 			resolve_chunk_with_crc(&state, Some("fn_run.var_effect"), Some("BBBB"), &mut warnings)
@@ -1033,22 +1056,31 @@ mod tests {
 
 	#[test]
 	fn stale_selector_fails_closed_when_same_parent_crc_matches_are_ambiguous() {
-		let state = ChunkStateInner::new(String::new(), "typescript".to_owned(), ChunkTree {
-			language:          "typescript".to_owned(),
-			checksum:          "ROOT".to_owned(),
-			line_count:        1,
-			parse_errors:      0,
-			parse_error_lines: Vec::new(),
-			fallback:          false,
-			root_path:         String::new(),
-			root_children:     vec!["fn_run".to_owned()],
-			chunks:            vec![
-				chunk("", "ROOT", None, vec!["fn_run"]),
-				chunk("fn_run", "CCCC", Some(""), vec!["fn_run.var_effect_1", "fn_run.var_effect_2"]),
-				chunk("fn_run.var_effect_1", "BBBB", Some("fn_run"), vec![]),
-				chunk("fn_run.var_effect_2", "BBBB", Some("fn_run"), vec![]),
-			],
-		});
+		let state = ChunkStateInner::new(
+			String::new(),
+			"typescript".to_owned(),
+			ChunkTree {
+				language: "typescript".to_owned(),
+				checksum: "ROOT".to_owned(),
+				line_count: 1,
+				parse_errors: 0,
+				parse_error_lines: Vec::new(),
+				fallback: false,
+				root_path: String::new(),
+				root_children: vec!["fn_run".to_owned()],
+				chunks: vec![
+					chunk("", "ROOT", None, vec!["fn_run"]),
+					chunk(
+						"fn_run",
+						"CCCC",
+						Some(""),
+						vec!["fn_run.var_effect_1", "fn_run.var_effect_2"],
+					),
+					chunk("fn_run.var_effect_1", "BBBB", Some("fn_run"), vec![]),
+					chunk("fn_run.var_effect_2", "BBBB", Some("fn_run"), vec![]),
+				],
+			},
+		);
 		let mut warnings = Vec::new();
 		let Err(err) =
 			resolve_chunk_with_crc(&state, Some("fn_run.var_effect"), Some("BBBB"), &mut warnings)
@@ -1060,21 +1092,25 @@ mod tests {
 
 	#[test]
 	fn resolves_full_untruncated_identifier_paths() {
-		let state = ChunkStateInner::new(String::new(), "typescript".to_owned(), ChunkTree {
-			language:          "typescript".to_owned(),
-			checksum:          "ROOT".to_owned(),
-			line_count:        1,
-			parse_errors:      0,
-			parse_error_lines: Vec::new(),
-			fallback:          false,
-			root_path:         String::new(),
-			root_children:     vec!["class_Server".to_owned()],
-			chunks:            vec![
-				chunk("", "ROOT", None, vec!["class_Server"]),
-				chunk("class_Server", "CLSS", Some(""), vec!["class_Server.fn_handle"]),
-				chunk("class_Server.fn_handle", "ABCD", Some("class_Server"), vec![]),
-			],
-		});
+		let state = ChunkStateInner::new(
+			String::new(),
+			"typescript".to_owned(),
+			ChunkTree {
+				language: "typescript".to_owned(),
+				checksum: "ROOT".to_owned(),
+				line_count: 1,
+				parse_errors: 0,
+				parse_error_lines: Vec::new(),
+				fallback: false,
+				root_path: String::new(),
+				root_children: vec!["class_Server".to_owned()],
+				chunks: vec![
+					chunk("", "ROOT", None, vec!["class_Server"]),
+					chunk("class_Server", "CLSS", Some(""), vec!["class_Server.fn_handle"]),
+					chunk("class_Server.fn_handle", "ABCD", Some("class_Server"), vec![]),
+				],
+			},
+		);
 		let mut warnings = Vec::new();
 		let resolved = resolve_chunk_with_crc(
 			&state,

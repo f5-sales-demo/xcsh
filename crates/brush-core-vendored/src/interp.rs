@@ -1060,8 +1060,7 @@ impl ExecuteInPipeline for ast::SimpleCommand {
 		let mut assignments = vec![];
 		let mut args: Vec<CommandArg> = vec![];
 		let mut command_takes_assignments = false;
-		let status_change_count_before_expansion =
-			context.shell.last_exit_status_change_count();
+		let status_change_count_before_expansion = context.shell.last_exit_status_change_count();
 
 		for item in prefix_iter.chain(cmd_name_items.iter()).chain(suffix_iter) {
 			ensure_not_cancelled(&params)?;
@@ -1179,9 +1178,7 @@ impl ExecuteInPipeline for ast::SimpleCommand {
 
 			// Assignment-only commands succeed unless one of their expansions
 			// produced a status, such as the final command substitution.
-			if status_change_count_before_expansion
-				== context.shell.last_exit_status_change_count()
-			{
+			if status_change_count_before_expansion == context.shell.last_exit_status_change_count() {
 				context.shell.set_last_exit_status(0);
 			}
 
@@ -1504,7 +1501,12 @@ pub(crate) async fn setup_redirect(
 				.append(*append);
 
 			let stdout_file = shell
-				.open_file(&file_options, &expanded_file_path, params, crate::containment::FenceAccess::Write)
+				.open_file(
+					&file_options,
+					&expanded_file_path,
+					params,
+					crate::containment::FenceAccess::Write,
+				)
 				.map_err(|err| {
 					error::ErrorKind::RedirectionFailure(
 						expanded_file_path.to_string_lossy().to_string(),

@@ -14,9 +14,9 @@ use super::{
 pub struct DataFormatsClassifier;
 
 const DATA_FORMAT_STRUCTURAL_OVERRIDES: StructuralOverrides = StructuralOverrides {
-	extra_trivia:            &["bare_key", "quoted_key", "dotted_key"],
-	preserved_trivia:        &[],
-	extra_root_wrappers:     &[
+	extra_trivia: &["bare_key", "quoted_key", "dotted_key"],
+	preserved_trivia: &[],
+	extra_root_wrappers: &[
 		"array",
 		"block_mapping",
 		"block_node",
@@ -29,7 +29,7 @@ const DATA_FORMAT_STRUCTURAL_OVERRIDES: StructuralOverrides = StructuralOverride
 		"stream",
 	],
 	preserved_root_wrappers: &[],
-	absorbable_attrs:        &[],
+	absorbable_attrs: &[],
 };
 
 const DATA_FORMAT_ROOT_RULES: &[super::classify::SemanticRule] = &[
@@ -158,9 +158,9 @@ const DATA_FORMAT_CLASS_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const DATA_FORMAT_TABLES: ClassifierTables = ClassifierTables {
-	root:                 DATA_FORMAT_ROOT_RULES,
-	class:                DATA_FORMAT_CLASS_RULES,
-	function:             &[],
+	root: DATA_FORMAT_ROOT_RULES,
+	class: DATA_FORMAT_CLASS_RULES,
+	function: &[],
 	structural_overrides: DATA_FORMAT_STRUCTURAL_OVERRIDES,
 };
 

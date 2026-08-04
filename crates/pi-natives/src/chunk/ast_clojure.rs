@@ -58,9 +58,9 @@ fn classify_form<'t>(node: Node<'t>, source: &str, at_root: bool) -> RawChunkCan
 impl LangClassifier for ClojureClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: super::classify::StructuralOverrides::EMPTY,
 		};
 		&TABLES

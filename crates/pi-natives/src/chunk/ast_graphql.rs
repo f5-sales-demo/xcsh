@@ -13,13 +13,13 @@ pub struct GraphqlClassifier;
 impl LangClassifier for GraphqlClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &["comma"],
-				preserved_trivia:        &[],
-				extra_root_wrappers:     &[
+				extra_trivia: &["comma"],
+				preserved_trivia: &[],
+				extra_root_wrappers: &[
 					"document",
 					"definition",
 					"type_system_definition",
@@ -27,7 +27,7 @@ impl LangClassifier for GraphqlClassifier {
 					"executable_definition",
 				],
 				preserved_root_wrappers: &[],
-				absorbable_attrs:        &[],
+				absorbable_attrs: &[],
 			},
 		};
 		&TABLES

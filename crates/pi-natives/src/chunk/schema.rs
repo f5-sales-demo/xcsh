@@ -9,11 +9,11 @@ struct GeneratedSchema {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct NodeTypeSchema {
-	pub identifier_fields:       Vec<String>,
-	pub body_fields:             Vec<String>,
-	pub promotion_fields:        Vec<String>,
-	pub container_child_kinds:   Vec<String>,
-	pub is_supertype:            bool,
+	pub identifier_fields: Vec<String>,
+	pub body_fields: Vec<String>,
+	pub promotion_fields: Vec<String>,
+	pub container_child_kinds: Vec<String>,
+	pub is_supertype: bool,
 	pub has_structural_children: bool,
 }
 

@@ -81,7 +81,9 @@ impl builtins::Command for CdCommand {
 			target_dir = context.shell.absolute_path(target_dir).canonicalize()?;
 		}
 
-		context.shell.change_working_dir(&target_dir, &context.params)?;
+		context
+			.shell
+			.change_working_dir(&target_dir, &context.params)?;
 
 		// Bash compatibility
 		// https://www.gnu.org/software/bash/manual/bash.html#index-cd

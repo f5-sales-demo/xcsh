@@ -10,7 +10,7 @@ use napi_derive::napi;
 #[napi(object, js_name = "MacOSPowerAssertionOptions")]
 pub struct MacOSPowerAssertionOptions {
 	/// Human-readable reason shown in macOS power diagnostics.
-	pub reason:  Option<String>,
+	pub reason: Option<String>,
 	/// Keep the display awake in addition to preventing idle system sleep.
 	pub display: Option<bool>,
 }

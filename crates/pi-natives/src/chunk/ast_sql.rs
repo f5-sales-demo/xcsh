@@ -13,15 +13,15 @@ pub struct SqlClassifier;
 impl LangClassifier for SqlClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &["empty_statement", "dollar_quote", "keyword_from"],
-				preserved_trivia:        &[],
-				extra_root_wrappers:     &[],
+				extra_trivia: &["empty_statement", "dollar_quote", "keyword_from"],
+				preserved_trivia: &[],
+				extra_root_wrappers: &[],
 				preserved_root_wrappers: &[],
-				absorbable_attrs:        &[],
+				absorbable_attrs: &[],
 			},
 		};
 		&TABLES
