@@ -715,7 +715,7 @@ function buildParams(
 		params.service_tier = options.serviceTier;
 	}
 
-	if (context.tools) {
+	if (context.tools && context.tools.length > 0) {
 		const builtTools = convertTools(context.tools, compat, toolStrictModeOverride);
 		params.tools = builtTools.tools;
 		toolStrictMode = builtTools.toolStrictMode;
