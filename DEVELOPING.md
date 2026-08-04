@@ -28,12 +28,12 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 
 ## Prerequisites
 
-| Tool  | Minimum Version | Verify                |
-|-------|-----------------|-----------------------|
-| bun   | 1.3.12          | `bun --version`       |
-| git   | 2.x             | `git --version`       |
-| gh    | 2.x             | `gh auth status`      |
-| cargo | nightly         | `cargo --version`     |
+| Tool  | Minimum Version | Verify            |
+| ----- | --------------- | ----------------- |
+| bun   | 1.3.12          | `bun --version`   |
+| git   | 2.x             | `git --version`   |
+| gh    | 2.x             | `gh auth status`  |
+| cargo | nightly         | `cargo --version` |
 
 > **Package manager: bun only.** This monorepo uses bun workspaces. Never use `npm`, `yarn`, or `pnpm` — they cannot resolve `workspace:` protocol references and will produce broken `node_modules` in worktrees.
 
@@ -91,7 +91,7 @@ src/
 Every change starts with a GitHub issue. Map work type to commit prefix:
 
 | Work Type     | Prefix     | Label           |
-|---------------|------------|-----------------|
+| ------------- | ---------- | --------------- |
 | New feature   | `feat`     | `enhancement`   |
 | Bug fix       | `fix`      | `bug`           |
 | Maintenance   | `chore`    | `chore`         |
@@ -133,22 +133,22 @@ bun run test 2>&1 | tee .worktree-test-baseline.txt
 
 **What each step does:**
 
-| Step | Purpose |
-|------|---------|
-| `bun install` | Resolves `workspace:` package references, installs all deps, runs `prepare` script (git hooks + docs index generation) |
+| Step           | Purpose                                                                                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun install`  | Resolves `workspace:` package references, installs all deps, runs `prepare` script (git hooks + docs index generation)                                    |
 | `bun run test` | Runs workspace-aware TypeScript tests with bounded concurrency plus the Rust suite; native modules compile on-demand during the first run (~2-3 min cold) |
 
 > **OOM warning:** Use `bun run test` for the full suite; it preserves workspace preloads and bounds TypeScript concurrency. Add `--max-concurrency 2` to direct `bun test` commands. See [Resource-constrained environments](#resource-constrained-environments) for tuning.
 
 #### Worktree troubleshooting
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `Cannot find module '@f5-sales-demo/pi-*'` | `npm install` was used instead of `bun install` | `rm -rf node_modules && bun install` |
-| `Cannot find package 'linkedom'` | Stale `node_modules` from main repo | `rm -rf node_modules && bun install` |
-| Tests OOM-killed (SIGKILL) | Concurrency too high | Halve `--max-concurrency` value |
-| `check:rs` fails in worktree | Cargo resolves paths relative to repo root | Run `bun run check:rs` from `/workspace/xcsh` instead |
-| Flaky test on first run, passes on retry | Native module cold-compile race | Ignore; baseline file captures the stable result |
+| Symptom                                    | Cause                                           | Fix                                                    |
+| ------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------ |
+| `Cannot find module '@f5-sales-demo/pi-*'` | `npm install` was used instead of `bun install` | `rm -rf node_modules && bun install`                   |
+| `Cannot find package 'linkedom'`           | Stale `node_modules` from main repo             | `rm -rf node_modules && bun install`                   |
+| Tests OOM-killed (SIGKILL)                 | Concurrency too high                            | Halve `--max-concurrency` value                        |
+| `check:rs` fails in worktree               | Cargo resolves paths relative to repo root      | Run `bun run check:rs` from `/workspace/xcsh` instead  |
+| First run fails and a retry passes         | Undiagnosed order, timing, or state leak        | Reproduce in the original order and fix the root cause |
 
 ---
 
@@ -163,15 +163,15 @@ All feature and bug-fix work follows strict TDD:
 #    packages/<package>/test/<feature>.test.ts
 
 # 2. Confirm it fails
-bun test --cwd packages/<package> --filter <test-file>
+bun test --cwd packages/<package> --filter <test-file> --max-concurrency 2
 
 # 3. Write minimum implementation to pass
 
 # 4. Confirm it passes
-bun test --cwd packages/<package> --filter <test-file>
+bun test --cwd packages/<package> --filter <test-file> --max-concurrency 2
 
 # 5. Run full package tests
-bun test --cwd packages/<package>
+bun test --cwd packages/<package> --max-concurrency 2
 
 # 6. Lint + type-check (see "Linting and Formatting")
 bun run check:ts
@@ -193,17 +193,17 @@ bun run check:ts
 
 ### Biome v2 configuration (`biome.json`)
 
-| Setting          | Value      |
-|------------------|------------|
-| Indent style     | Tabs       |
-| Indent width     | 3          |
-| Line width       | 120        |
-| Line ending      | LF         |
-| Quotes           | Double     |
-| Semicolons       | Always     |
-| Trailing commas  | All        |
-| Arrow parens     | asNeeded   |
-| Bracket spacing  | true       |
+| Setting         | Value    |
+| --------------- | -------- |
+| Indent style    | Tabs     |
+| Indent width    | 3        |
+| Line width      | 120      |
+| Line ending     | LF       |
+| Quotes          | Double   |
+| Semicolons      | Always   |
+| Trailing commas | All      |
+| Arrow parens    | asNeeded |
+| Bracket spacing | true     |
 
 ### Pre-commit hook
 
@@ -212,8 +212,8 @@ A pre-commit hook runs automatically via `bunx lint-staged` (configured in `.git
 ### Commands
 
 | Command         | Effect                                        |
-|-----------------|-----------------------------------------------|
-| `bun run check` | Biome check + `tsgo` type-check (read-only)  |
+| --------------- | --------------------------------------------- |
+| `bun run check` | Biome check + `tsgo` type-check (read-only)   |
 | `bun run lint`  | Biome lint only (read-only)                   |
 | `bun run fmt`   | Biome format (writes files)                   |
 | `bun run fix`   | Biome check + auto-fix (writes files, unsafe) |
@@ -237,22 +237,22 @@ bun run check:rs
 
 ### Runner
 
-Tests use Bun's built-in test runner (`bun test`). The full suite has ~3200 tests.
+Tests use Bun's built-in test runner (`bun test`). The full suite has about 6,900 tests.
 
 ### Root scripts
 
-| Command        | What it runs                                        |
-|----------------|-----------------------------------------------------|
-| `bun run test` | `bun run --parallel test:ts test:rs` (all tests)   |
+| Command           | What it runs                                                      |
+| ----------------- | ----------------------------------------------------------------- |
+| `bun run test`    | `bun run --parallel test:ts test:rs` (all tests)                  |
 | `bun run test:ts` | Workspace test scripts with `--only-failures --max-concurrency 2` |
-| `bun run test:rs` | Rust tests via `scripts/run-rs-task.ts`          |
+| `bun run test:rs` | Rust tests via `scripts/run-rs-task.ts`                           |
 
 ### Targeted tests (preferred)
 
 ```bash
-bun test --filter "profile"                           # keyword match
-bun test test/xcsh-profile-service.test.ts            # specific file
-bun test --cwd packages/coding-agent --filter <name>  # scoped to package
+bun test --filter "profile" --max-concurrency 2                           # keyword match
+bun test test/xcsh-profile-service.test.ts --max-concurrency 2            # specific file
+bun test --cwd packages/coding-agent --filter <name> --max-concurrency 2  # scoped to package
 ```
 
 ### Resource-constrained environments
@@ -304,11 +304,11 @@ fi
 
 ### TDD validation loop (fast, for constrained environments)
 
-```
-1. tsgo -p tsconfig.json --noEmit          # Type check (~2s)
-2. biome check . --no-errors-on-unmatched  # Lint + format (<1s)
-3. bun test --filter "<area>"              # Targeted tests (~3-5s)
-4. bun run test                            # full workspace-aware suite
+```text
+1. tsgo -p tsconfig.json --noEmit                              # Type check (~2s)
+2. biome check . --no-errors-on-unmatched                      # Lint + format (<1s)
+3. bun test --filter "<area>" --max-concurrency 2              # Targeted tests (~3-5s)
+4. bun run test                                                # full workspace-aware suite
 ```
 
 ---
@@ -319,7 +319,7 @@ The project uses [Conventional Commits](https://www.conventionalcommits.org/).
 
 ### Format
 
-```
+```text
 <type>(<scope>): <imperative description>
 
 <body: explain WHY, not WHAT>
@@ -329,15 +329,15 @@ Closes #<N>
 
 ### Types
 
-| Type       | When                                             |
-|------------|--------------------------------------------------|
-| `feat`     | New feature or user-visible functionality        |
-| `fix`      | Bug fix                                          |
-| `chore`    | Maintenance, dependency updates, CI              |
-| `refactor` | Code restructuring, no behaviour change          |
-| `style`    | Formatting, whitespace, lint fixes only          |
-| `test`     | Adding or updating tests only                    |
-| `docs`     | Documentation changes only                       |
+| Type       | When                                      |
+| ---------- | ----------------------------------------- |
+| `feat`     | New feature or user-visible functionality |
+| `fix`      | Bug fix                                   |
+| `chore`    | Maintenance, dependency updates, CI       |
+| `refactor` | Code restructuring, no behaviour change   |
+| `style`    | Formatting, whitespace, lint fixes only   |
+| `test`     | Adding or updating tests only             |
+| `docs`     | Documentation changes only                |
 
 ### Scope
 
@@ -353,7 +353,7 @@ Always include `Closes #N` to auto-close the linked issue. Use `Refs #N` if the 
 
 ### Examples
 
-```
+```text
 feat(ai): add F5 XC multi-profile token rotation
 
 Support multiple F5 XC authentication profiles with automatic
@@ -363,7 +363,7 @@ and selected via the --profile flag.
 Closes #42
 ```
 
-```
+```text
 fix(tui): prevent null crash when theme file is missing
 
 The theme loader assumed the config directory always existed.
@@ -412,7 +412,7 @@ Closes #<N>
 ---
 
 - [x] \`bun run check\` passes
-- [x] \`bun test\` -- no new failures vs baseline
+- [x] \`bun run test\` passes with zero failures
 - [ ] CHANGELOG updated (if user-facing)
 - [x] Issue linked via \`Closes #N\`"
 ```
@@ -622,13 +622,13 @@ Event groups: session lifecycle, agent/turn lifecycle, automation, tool hooks.
 
 All claims about code state must be backed by terminal output:
 
-| Claim               | Required Evidence                                         |
-|---------------------|-----------------------------------------------------------|
-| "This bug exists"   | Failing test output showing the bug                       |
-| "This bug is fixed" | Previously failing test now passes                        |
-| "Tests pass"        | `bun test` output at or below baseline failure count      |
-| "Linting is clean"  | `bun run check` output showing zero errors                |
-| "PR is ready"       | All of the above + PR checklist completed                 |
+| Claim               | Required Evidence                           |
+| ------------------- | ------------------------------------------- |
+| "This bug exists"   | Failing test output showing the bug         |
+| "This bug is fixed" | Previously failing test now passes          |
+| "Tests pass"        | `bun run test` output showing zero failures |
+| "Linting is clean"  | `bun run check` output showing zero errors  |
+| "PR is ready"       | All of the above + PR checklist completed   |
 
 No assertions without output. No skipping steps. No ignoring new failures.
 
@@ -645,9 +645,9 @@ bun install
 bun run test 2>&1 | tee .worktree-test-baseline.txt
 
 # --- TDD Cycle ---
-bun test --cwd packages/<pkg> --filter <test>    # red
+bun test --cwd packages/<pkg> --filter <test> --max-concurrency 2    # red
 # ... implement ...
-bun test --cwd packages/<pkg> --filter <test>    # green
+bun test --cwd packages/<pkg> --filter <test> --max-concurrency 2    # green
 bun run check:ts                                  # lint + types
 
 # --- Commit ---
