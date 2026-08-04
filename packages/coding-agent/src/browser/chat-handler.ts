@@ -87,6 +87,11 @@ export class ChatHandler {
 	// Only one pending request at a time (newest wins — a third prompt while one is
 	// queued replaces it, so the user's latest intent always runs next).
 	#pendingRequest: ChatRequest | null = null;
+	// A request can arrive after chat_done but before AgentSession clears its short
+	// prompt-in-flight tail. There is then no active chat whose finally block can
+	// replay the queue, so that orphaned queue needs its own idle drain.
+	#pendingReplayScheduled = false;
+	#disposed = false;
 	// Transport-neutral host-tool bridge (A1): maps `set_host_tools` definitions to
 	// AgentTools whose execute() round-trips a `host_tool_call` back to the WS client
 	// and awaits the correlated `host_tool_result`. Reused verbatim from the stdio RPC
@@ -133,6 +138,7 @@ export class ChatHandler {
 		});
 
 		this.#server.onDisconnected(() => {
+			this.#disposed = true;
 			this.#pendingRequest = null; // abandon any queued prompt — the bridge is gone
 			// Fail any in-flight host-tool call — the client that would answer it is gone.
 			this.#hostToolBridge.rejectAllPending("bridge disconnected before host tool completed");
@@ -164,6 +170,7 @@ export class ChatHandler {
 				ok: true,
 				detail: "xcsh is finishing the current request — yours is queued and will run next.",
 			});
+			this.#scheduleOrphanedPendingReplay();
 			return;
 		}
 
@@ -238,6 +245,43 @@ export class ChatHandler {
 				void this.#handleChatRequest(pending);
 			}
 		}
+	}
+
+	/**
+	 * Drain a queue created during AgentSession's terminal streaming tail. Normal
+	 * mid-turn queues are replayed by the active chat's finally block; this path is
+	 * only scheduled when no active chat exists to own that replay.
+	 */
+	#scheduleOrphanedPendingReplay(): void {
+		if (this.#pendingReplayScheduled || this.#disposed || !this.#pendingRequest || this.#activeChats.size > 0) {
+			return;
+		}
+		this.#pendingReplayScheduled = true;
+		void this.#replayPendingAfterIdle();
+	}
+
+	async #replayPendingAfterIdle(): Promise<void> {
+		try {
+			await this.#session.waitForIdle();
+			// waitForIdle can resolve in AgentSession's prompt finally just before its
+			// prompt-in-flight counter is decremented. Yield one task so isStreaming is
+			// the settled state rather than that terminal edge.
+			await new Promise<void>(resolve => setTimeout(resolve, 0));
+		} catch {
+			// A disposing session can reject its idle wait. Teardown owns any terminal
+			// frame and clears the pending request; never replay into that session.
+			this.#pendingReplayScheduled = false;
+			return;
+		}
+		this.#pendingReplayScheduled = false;
+		if (this.#disposed || !this.#pendingRequest || this.#activeChats.size > 0) return;
+		if (this.#session.isStreaming) {
+			this.#scheduleOrphanedPendingReplay();
+			return;
+		}
+		const pending = this.#pendingRequest;
+		this.#pendingRequest = null;
+		void this.#handleChatRequest(pending);
 	}
 
 	#handleSessionEvent(chat: ActiveChat, event: AgentSessionEvent): void {
@@ -520,6 +564,7 @@ export class ChatHandler {
 	}
 
 	dispose(): void {
+		this.#disposed = true;
 		this.#pendingRequest = null; // abandon any queued prompt — don't replay into a dead session
 		// Fail any in-flight host-tool call — the session is going away.
 		this.#hostToolBridge.rejectAllPending("bridge disconnected before host tool completed");
