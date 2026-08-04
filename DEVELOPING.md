@@ -118,27 +118,27 @@ BRANCH="<type>/issue-<N>-<short-description>"
 
 # Create worktree from latest origin/main
 git fetch origin
-git worktree add ".worktrees/${BRANCH}" -b "${BRANCH}" origin/main
+git worktree add --no-track ".worktrees/${BRANCH}" -b "${BRANCH}" origin/main
 cd ".worktrees/${BRANCH}"
 
 # Install dependencies (MUST use bun — see Prerequisites)
 # Runs the prepare script automatically: configures git hooks + generates docs index
 bun install
 
-# Capture test baseline (MUST include --max-concurrency to avoid OOM)
-bun test --max-concurrency 2 2>&1 | tee .worktree-test-baseline.txt
+# Capture the workspace-aware, resource-bounded test baseline
+bun run test 2>&1 | tee .worktree-test-baseline.txt
 ```
 
-**Expected result:** ~3500 tests pass, 0 failures. If any tests fail, they are pre-existing — record them and move on. Your work must never increase the failure count beyond this baseline.
+**Expected result:** 0 failures. Any failure is a blocker: diagnose and fix its root cause before feature work.
 
 **What each step does:**
 
 | Step | Purpose |
 |------|---------|
 | `bun install` | Resolves `workspace:` package references, installs all deps, runs `prepare` script (git hooks + docs index generation) |
-| `bun test --max-concurrency 2` | Runs TypeScript and Rust test suites with bounded concurrency; native Rust modules compile on-demand during the first test run (~2-3 min cold) |
+| `bun run test` | Runs workspace-aware TypeScript tests with bounded concurrency plus the Rust suite; native modules compile on-demand during the first run (~2-3 min cold) |
 
-> **OOM warning:** Never run `bun test` without `--max-concurrency`. The default concurrency (20) exhausts container RAM and CPU. Use `--max-concurrency 2` as the safe default. See [Resource-constrained environments](#resource-constrained-environments) for tuning.
+> **OOM warning:** Use `bun run test` for the full suite; it preserves workspace preloads and bounds TypeScript concurrency. Add `--max-concurrency 2` to direct `bun test` commands. See [Resource-constrained environments](#resource-constrained-environments) for tuning.
 
 #### Worktree troubleshooting
 
@@ -244,7 +244,7 @@ Tests use Bun's built-in test runner (`bun test`). The full suite has ~3200 test
 | Command        | What it runs                                        |
 |----------------|-----------------------------------------------------|
 | `bun run test` | `bun run --parallel test:ts test:rs` (all tests)   |
-| `bun run test:ts` | `bun run --workspaces --if-present test -- --only-failures` |
+| `bun run test:ts` | Workspace test scripts with `--only-failures --max-concurrency 2` |
 | `bun run test:rs` | Rust tests via `scripts/run-rs-task.ts`          |
 
 ### Targeted tests (preferred)
@@ -257,8 +257,8 @@ bun test --cwd packages/coding-agent --filter <name>  # scoped to package
 
 ### Resource-constrained environments
 
-Bun defaults to 20 concurrent tests, which can spike RAM past 10 GB and OOM-kill
-the container (no swap is configured). Always limit concurrency:
+Direct `bun test` defaults to 20 concurrent tests, which can spike RAM past 10 GB and OOM-kill
+the container (no swap is configured). The full `bun run test` path is bounded; always limit direct runs:
 
 ```bash
 # Recommended defaults by available RAM
@@ -278,8 +278,7 @@ bun test --max-concurrency 2 --bail 1
 
 **Rules for AI agents and CI:**
 
-- Never run `bun test` without `--max-concurrency`. The default of 20 will crash
-  containers with less than 16 GB RAM.
+- Use `bun run test` for the full suite. Never run direct `bun test` without `--max-concurrency`.
 - Prefer targeted tests (`--filter` or `--cwd`) over full-suite runs.
 - Use `--bail 1` during development to fail fast.
 - Use `--smol` when running the full suite in memory-constrained environments.
@@ -288,7 +287,7 @@ bun test --max-concurrency 2 --bail 1
 ### Comparing against baseline
 
 ```bash
-bun test --max-concurrency 2 2>&1 | tee /tmp/current-test-results.txt
+bun run test 2>&1 | tee /tmp/current-test-results.txt
 
 BASELINE_FAILS=$(grep -o '[0-9]* fail' .worktree-test-baseline.txt | grep -o '[0-9]*' || echo 0)
 CURRENT_FAILS=$(grep -o '[0-9]* fail' /tmp/current-test-results.txt | grep -o '[0-9]*' || echo 0)
@@ -309,7 +308,7 @@ fi
 1. tsgo -p tsconfig.json --noEmit          # Type check (~2s)
 2. biome check . --no-errors-on-unmatched  # Lint + format (<1s)
 3. bun test --filter "<area>"              # Targeted tests (~3-5s)
-4. Full suite runs in CI after push        # ~90s
+4. bun run test                            # full workspace-aware suite
 ```
 
 ---
@@ -640,10 +639,10 @@ No assertions without output. No skipping steps. No ignoring new failures.
 gh issue create --title "<type>: <desc>" --label "<label>"
 BRANCH="<type>/issue-<N>-<desc>"
 git fetch origin
-git worktree add ".worktrees/${BRANCH}" -b "${BRANCH}" origin/main
+git worktree add --no-track ".worktrees/${BRANCH}" -b "${BRANCH}" origin/main
 cd ".worktrees/${BRANCH}"
 bun install
-bun test --max-concurrency 2 2>&1 | tee .worktree-test-baseline.txt
+bun run test 2>&1 | tee .worktree-test-baseline.txt
 
 # --- TDD Cycle ---
 bun test --cwd packages/<pkg> --filter <test>    # red

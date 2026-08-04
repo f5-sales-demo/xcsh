@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "bun:test";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { RenderResultOptions } from "@f5-sales-demo/pi-agent-core";
@@ -21,6 +21,10 @@ import { getThemeByName } from "../../src/modes/theme/theme";
 import { clampTimeout } from "../../src/tools/tool-timeouts";
 
 describe("lsp regressions", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
 	it("detects bracket-style glob patterns", () => {
 		expect(hasGlobPattern("src/[ab].ts")).toBe(true);
 		expect(hasGlobPattern("src/**/*.ts")).toBe(true);
