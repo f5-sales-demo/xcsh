@@ -6707,6 +6707,31 @@
 				"maxLevel": "high"
 			}
 		},
+		"gemini-3.6-flash-high": {
+			"id": "gemini-3.6-flash-high",
+			"name": "Gemini 3.6 Flash (High) (Antigravity)",
+			"api": "google-gemini-cli",
+			"provider": "google-antigravity",
+			"baseUrl": "https://daily-cloudcode-pa.sandbox.googleapis.com",
+			"reasoning": true,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 0,
+				"output": 0,
+				"cacheRead": 0,
+				"cacheWrite": 0
+			},
+			"contextWindow": 1048576,
+			"maxTokens": 65536,
+			"thinking": {
+				"mode": "google-level",
+				"minLevel": "minimal",
+				"maxLevel": "high"
+			}
+		},
 		"gemini-3-pro-high": {
 			"id": "gemini-3-pro-high",
 			"name": "Gemini 3 Pro (High) (Antigravity)",

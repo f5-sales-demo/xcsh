@@ -61,7 +61,12 @@ import { ToolExecutionComponent } from "../components/tool-execution";
 import { TreeSelectorComponent } from "../components/tree-selector";
 import { UserMessageSelectorComponent } from "../components/user-message-selector";
 import type { SessionObserverRegistry } from "../session-observer-registry";
-import { applyModelAfterLogin, getAvailableLiteLLMLoginModelChoices, LITELLM_LOGIN_MODEL_CHOICES } from "./login-model";
+import {
+	applyModelAfterLogin,
+	applyOAuthLoginModel,
+	getAvailableLiteLLMLoginModelChoices,
+	LITELLM_LOGIN_MODEL_CHOICES,
+} from "./login-model";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
@@ -1085,11 +1090,25 @@ export class SelectorController {
 				onManualCodeInput: useManualInput ? () => manualInput.waitForInput(providerId) : undefined,
 			});
 			await this.ctx.session.modelRegistry.refresh();
+			const loginModelChoice = await applyOAuthLoginModel(this.ctx.session, providerId);
+			if (loginModelChoice) {
+				this.ctx.statusLine.invalidate();
+				this.ctx.updateEditorBorderColor();
+			}
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(
 				new Text(theme.fg("success", `${theme.status.success} Successfully logged in to ${providerId}`), 1, 0),
 			);
 			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `Credentials saved to ${getAgentDbPath()}`), 1, 0));
+			if (loginModelChoice) {
+				this.ctx.chatContainer.addChild(
+					new Text(
+						theme.fg("success", `Default model: ${loginModelChoice.provider}/${loginModelChoice.modelId}`),
+						1,
+						0,
+					),
+				);
+			}
 			this.ctx.ui.requestRender();
 		} catch (error: unknown) {
 			this.ctx.showError(`Login failed: ${error instanceof Error ? error.message : String(error)}`);

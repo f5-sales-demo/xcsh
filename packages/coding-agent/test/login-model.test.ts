@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "bun:test";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import {
 	applyModelAfterLogin,
+	applyOAuthLoginModel,
+	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	getAvailableLiteLLMLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
 } from "../src/modes/controllers/login-model";
@@ -77,5 +79,48 @@ describe("getAvailableLiteLLMLoginModelChoices", () => {
 
 	it("returns no choices when neither curated model is advertised", () => {
 		expect(getAvailableLiteLLMLoginModelChoices(["gpt-5.6-terra"])).toEqual([]);
+	});
+});
+
+describe("applyOAuthLoginModel", () => {
+	it("persists Gemini 3.6 Flash High after Google Antigravity login", async () => {
+		const { session, setModel, setThinkingLevel } = makeSession({
+			model: M("gpt-5.6-sol"),
+			models: [M("gemini-3.6-flash-high", "google-antigravity")],
+		});
+
+		const applied = await applyOAuthLoginModel(session as never, "google-antigravity");
+
+		expect(applied).toEqual(GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE);
+		expect(setModel).toHaveBeenCalledWith(M("gemini-3.6-flash-high", "google-antigravity"), "default", {
+			selector: "google-antigravity/gemini-3.6-flash-high",
+			thinkingLevel: ThinkingLevel.High,
+		});
+		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+	});
+
+	it("does not replace the current model when the preferred provider model is unavailable", async () => {
+		const { session, setModel, setThinkingLevel } = makeSession({
+			model: M("gpt-5.6-sol"),
+			models: [M("gemini-3-flash", "google-antigravity")],
+		});
+
+		const applied = await applyOAuthLoginModel(session as never, "google-antigravity");
+
+		expect(applied).toBeUndefined();
+		expect(setModel).not.toHaveBeenCalled();
+		expect(setThinkingLevel).not.toHaveBeenCalled();
+	});
+
+	it("does not change models for OAuth providers without a preferred login model", async () => {
+		const { session, setModel } = makeSession({
+			model: M("gpt-5.6-sol"),
+			models: [M("claude-opus-5", "anthropic")],
+		});
+
+		const applied = await applyOAuthLoginModel(session as never, "anthropic");
+
+		expect(applied).toBeUndefined();
+		expect(setModel).not.toHaveBeenCalled();
 	});
 });
