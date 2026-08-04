@@ -90,16 +90,27 @@ export function makeBuildTransport(
 			// Provision only when there IS a config to apply AND the bridge can
 			// configure; a rejection propagates (the panel surfaces it) rather than
 			// being swallowed here. No config → chat over xcsh's existing provider.
-			provision:
-				config && transport.canConfigureProvider
-					? async () => {
-							await transport.configure({
-								baseUrl: config.baseUrl,
-								token: config.token,
-								...(config.model ? { model: config.model } : {}),
-							});
-						}
-					: undefined,
+			provision: config
+				? async () => {
+						// hello_ack populates this capability during connect, after the
+						// transport factory has already returned.
+						if (!transport.canConfigureProvider) return;
+						await transport.configure({
+							baseUrl: config.baseUrl,
+							token: config.token,
+							...(config.model ? { model: config.model } : {}),
+						});
+					}
+				: undefined,
+			selectModel: async model => {
+				if (!transport.canConfigureProvider) {
+					throw new Error("The connected xcsh bridge does not support model selection");
+				}
+				return transport.configure({
+					...(config ? { baseUrl: config.baseUrl, token: config.token } : {}),
+					model,
+				});
+			},
 			onConnected: () => wired.onConnected(),
 		};
 	};

@@ -12,8 +12,8 @@
 /** A validated, normalized gateway connection. */
 export interface GatewayConfig {
 	/**
-	 * Gateway base URL: scheme + host + optional OpenAI-compatible path, with no
-	 * trailing slash (for example `https://gateway.example.com/v1`).
+	 * Gateway root URL: scheme + host (and optional port), with no provider path
+	 * (for example `https://gateway.example.com`).
 	 */
 	baseUrl: string;
 	/** Gateway API key / token. */
@@ -47,26 +47,27 @@ export function normalizeGatewayConfig(input: GatewayConfigInput): GatewayConfig
 		throw new GatewayConfigError("A gateway token is required.");
 	}
 
-	let baseUrl = (input.baseUrl ?? "").trim();
-	if (!baseUrl) {
+	const rawBaseUrl = (input.baseUrl ?? "").trim();
+	if (!rawBaseUrl) {
 		throw new GatewayConfigError("A gateway base URL is required.");
 	}
-	// Trim only trailing slashes. OpenAI-compatible gateways commonly require `/v1`,
-	// and provider-specific prefixes are part of the endpoint rather than decoration.
-	baseUrl = baseUrl.replace(/\/+$/, "");
 
 	let parsed: URL;
 	try {
-		parsed = new URL(baseUrl);
+		parsed = new URL(rawBaseUrl);
 	} catch {
-		throw new GatewayConfigError(`Gateway base URL is not a valid URL: ${baseUrl}`);
+		throw new GatewayConfigError(`Gateway base URL is not a valid URL: ${rawBaseUrl}`);
 	}
 	if (parsed.protocol !== "https:") {
 		throw new GatewayConfigError("Gateway base URL must use https:// (the WebView blocks mixed content).");
 	}
 	if (!parsed.hostname) {
-		throw new GatewayConfigError(`Gateway base URL is missing a host: ${baseUrl}`);
+		throw new GatewayConfigError(`Gateway base URL is missing a host: ${rawBaseUrl}`);
 	}
+	// Saved v2 configs may contain /v1, /api/v1, /openai/v1, or /anthropic.
+	// Keep them working by recovering the gateway origin. xcsh derives the active
+	// provider's path from the selected model instead of trusting this legacy path.
+	const baseUrl = parsed.origin;
 
 	const model = (input.model ?? "").trim();
 

@@ -37,7 +37,10 @@ import type {
 	HostToolResult,
 	HostToolUpdate,
 	ListCommands,
+	ListModels,
 	ListSkills,
+	ModelInfo,
+	ModelsList,
 	PathPicked,
 	PickPath,
 	SetHostTools,
@@ -73,7 +76,10 @@ export type {
 	HostToolUpdate,
 	HostToolUpdate as HostToolUpdateMsg,
 	ListCommands as ListCommandsMsg,
+	ListModels as ListModelsMsg,
 	ListSkills as ListSkillsMsg,
+	ModelInfo,
+	ModelsList as ModelsListMsg,
 	PathPicked as PathPickedMsg,
 	PickPath as PickPathMsg,
 	SetHostTools,
@@ -118,6 +124,7 @@ export type ChatInboundMsg =
 	| ConfigureAck
 	| ConfigureError
 	| SkillsList
+	| ModelsList
 	| SlashCommandsList
 	| PathPicked;
 
@@ -178,6 +185,11 @@ export function isConfigureError(msg: unknown): msg is ConfigureError {
 /** Inbound guard: xcsh replied to `list_skills` with the loaded skills. */
 export function isSkillsList(msg: unknown): msg is SkillsList {
 	return isObj(msg) && msg.type === "skills" && Array.isArray(msg.skills);
+}
+
+/** Inbound guard: xcsh replied to `list_models` with choices and active id. */
+export function isModelsList(msg: unknown): msg is ModelsList {
+	return isObj(msg) && msg.type === "models" && typeof msg.current === "string" && Array.isArray(msg.models);
 }
 
 /** Inbound guard: xcsh replied to `list_commands` with the loaded slash commands. */

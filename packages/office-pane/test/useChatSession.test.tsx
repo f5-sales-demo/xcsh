@@ -345,6 +345,42 @@ test("requests list_skills on connect and exposes the skills reply", async () =>
 	expect(result.current.skills).toEqual([{ name: "competitive", description: "battlecards" }]);
 });
 
+test("requests available models and switches through the configured engine callback", async () => {
+	const mock = new MockTransport();
+	const selected: string[] = [];
+	const { result } = renderHook(() =>
+		useChatSession(mock, {
+			selectModel: async id => {
+				selected.push(id);
+				return id;
+			},
+		}),
+	);
+	await act(async () => {
+		await new Promise(r => setTimeout(r, 0));
+	});
+	expect(mock.sent.some(message => message.type === "list_models")).toBe(true);
+
+	await act(async () => {
+		mock.emit({
+			type: "models",
+			current: "gpt-5.6-sol",
+			models: [
+				{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
+				{ id: "claude-opus-5", label: "Claude Opus 5" },
+			],
+		} as never);
+	});
+	expect(result.current.model).toBe("gpt-5.6-sol");
+	expect(result.current.models).toHaveLength(2);
+
+	await act(async () => {
+		await result.current.selectModel("claude-opus-5");
+	});
+	expect(selected).toEqual(["claude-opus-5"]);
+	expect(result.current.model).toBe("claude-opus-5");
+});
+
 test("pickPath sends a pick_path frame and resolves with the path_picked reply", async () => {
 	const mock = new MockTransport();
 	const { result } = renderHook(() => useChatSession(mock));

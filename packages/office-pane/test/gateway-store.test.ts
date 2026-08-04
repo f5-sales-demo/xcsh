@@ -76,9 +76,9 @@ describe("createLocalStorageGatewayStore", () => {
 
 	test("a stored value is re-normalized on load (defends against tampering)", () => {
 		const backing = new FakeStorage();
-		// A valid-but-unnormalized baseUrl proves re-normalization runs (trailing slash stripped).
+		// A legacy provider path proves re-normalization runs and recovers the gateway root.
 		backing.setItem(GATEWAY_STORE_KEY, JSON.stringify({ baseUrl: "https://gw.example/v1/", token: "t" }));
-		expect(createLocalStorageGatewayStore(backing).load()).toEqual({ baseUrl: "https://gw.example/v1", token: "t" });
+		expect(createLocalStorageGatewayStore(backing).load()).toEqual({ baseUrl: "https://gw.example", token: "t" });
 	});
 
 	test("a null storage (blocked/partitioned WebKit) degrades gracefully — no throws", () => {

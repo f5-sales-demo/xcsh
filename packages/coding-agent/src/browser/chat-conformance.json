@@ -246,6 +246,10 @@
               "type": "string"
             },
             {
+              "const": "provider-auth",
+              "type": "string"
+            },
+            {
               "const": "provider-4xx",
               "type": "string"
             },

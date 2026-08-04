@@ -13,7 +13,7 @@
  * straight into chat over xcsh's already-configured provider (no forced login),
  * with the gateway form demoted to Settings. A stored config additionally points
  * xcsh's provider at that gateway (the `configure` round-trip). If a turn fails
- * because the provider rejected us (`provider-4xx`), the config form auto-opens.
+ * because the provider rejected its credential (`provider-auth`), the config form auto-opens.
  *
  * Browser-safe: no node:* imports, no Office.js.
  */
@@ -44,6 +44,8 @@ export interface BuiltTransport {
 	 * bridge did not advertise the capability (nothing to configure).
 	 */
 	provision?: () => Promise<void>;
+	/** Select a model after connect, reusing saved or xcsh-owned credentials. */
+	selectModel?: (model: string) => Promise<string>;
 	/** Advertise host tools once provisioning succeeds (needs an open socket). */
 	onConnected?: () => void;
 }
@@ -106,6 +108,7 @@ export function GatewayGate({ store, buildTransport, initial }: GatewayGateProps
 				<ChatPanel
 					transport={built.transport}
 					provision={built.provision}
+					selectModel={built.selectModel}
 					onConnected={built.onConnected}
 					onReconfigure={reconfigure}
 					onProviderConfigError={reconfigure}

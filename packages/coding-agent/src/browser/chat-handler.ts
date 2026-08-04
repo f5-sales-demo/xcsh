@@ -12,6 +12,7 @@ import {
 	normalizeHostToolDefinitions,
 	RpcHostToolBridge,
 } from "../host-tools";
+import { LITELLM_LOGIN_MODEL_CHOICES } from "../modes/controllers/login-model";
 import { extractReferences } from "../references";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import {
@@ -31,9 +32,11 @@ import {
 	isChatStop,
 	isConfigure,
 	isListCommands,
+	isListModels,
 	isListSkills,
 	isSetHostTools,
 	isTransportChatRequest,
+	type ModelsList,
 	type PageContextSnapshot,
 	type SetHostTools,
 	type SetHostToolsAck,
@@ -119,6 +122,9 @@ export class ChatHandler {
 			// Skills enumeration (#2311): the pane asks for the loaded skills to populate
 			// the composer's Skills submenu.
 			else if (isListSkills(msg)) this.#handleListSkills();
+			// Model enumeration is separate from credential configuration: the pane can
+			// select among models xcsh already knows without asking for another token.
+			else if (isListModels(msg)) this.#handleListModels();
 			// Slash-command enumeration: the pane asks for the session's file-based
 			// commands to populate the composer's `/` menu.
 			else if (isListCommands(msg)) this.#handleListCommands();
@@ -205,14 +211,14 @@ export class ChatHandler {
 			data: img.data,
 			mimeType: img.mimeType,
 		}));
-		// "Search the web" toggle → add Anthropic's server-side web-search tool for this
-		// turn only. The gateway executes it and returns cited results; source URLs the
-		// model writes inline flow to the pane's Sources chips via extractReferences.
-		const serverTools = req.web_search
-			? [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }]
-			: undefined;
-
 		try {
+			// Select the native provider-side descriptor from the ACTIVE model on every
+			// turn. This must happen after a model switch and before prompt() transmits a
+			// payload; an unsupported API is rejected locally instead of receiving another
+			// provider's raw tool shape.
+			const serverTools = req.web_search
+				? officeWebSearchServerTools(this.#session.model?.api ?? "unconfigured")
+				: undefined;
 			chat.promptAt = Date.now();
 			await this.#session.prompt(prompt, { expandPromptTemplates: false, synthetic: false, images, serverTools });
 		} catch (err: unknown) {
@@ -377,8 +383,8 @@ export class ChatHandler {
 	 * SQLite credential store. Mirrors #handleSetHostTools's try/ack-or-nack shape;
 	 * never throws out of the handler (a nack keeps a waiting client from hanging).
 	 *
-	 * The baked production role identifies the concrete provider, model, and effort,
-	 * so the bridge follows the same LiteLLM default as every other xcsh entry point. */
+	 * A curated model route identifies the concrete provider, model, effort, and
+	 * provider-specific gateway path. The pane supplies only a gateway root. */
 	async #handleConfigure(msg: Configure): Promise<void> {
 		try {
 			const registry = this.#session.modelRegistry;
@@ -386,9 +392,21 @@ export class ChatHandler {
 			if (!defaultModel) {
 				throw new Error("Invalid baked default model selector");
 			}
-			const { provider, id: defaultModelId, thinkingLevel } = defaultModel;
+			const currentChoice = LITELLM_LOGIN_MODEL_CHOICES.find(
+				choice => choice.provider === this.#session.model?.provider && choice.modelId === this.#session.model.id,
+			);
+			const modelId = msg.model ?? currentChoice?.modelId ?? defaultModel.id;
+			const choice = LITELLM_LOGIN_MODEL_CHOICES.find(candidate => candidate.modelId === modelId);
+			const matchingProviders = (["anthropic", "litellm"] as const).filter(candidate =>
+				registry.find(candidate, modelId),
+			);
+			const provider = choice?.provider ?? (matchingProviders.length === 1 ? matchingProviders[0] : undefined);
+			if (!provider) {
+				throw new Error(`No unambiguous Office model route for ${modelId}`);
+			}
+			const thinkingLevel = choice?.thinkingLevel ?? defaultModel.thinkingLevel;
 
-			if (msg.baseUrl) {
+			if (msg.baseUrl && msg.token) {
 				// SSRF guard: only an `https:` gateway URL may be dialed. Validate BEFORE
 				// registerProvider so a bad URL becomes a configure_error nack (never a
 				// silently-ignored frame that hangs the client). We deliberately do NOT
@@ -400,7 +418,8 @@ export class ChatHandler {
 				// THEIR OWN gateway with THEIR OWN token over a loopback-only, TLS,
 				// Origin-checked bridge (extension-bridge `isAllowedBridgeOrigin`), https is
 				// enforced here, and the token is session-only (never persisted to disk).
-				const baseUrl = requireHttpsUrl(msg.baseUrl);
+				const gatewayRoot = requireHttpsUrl(msg.baseUrl);
+				const baseUrl = providerGatewayBaseUrl(gatewayRoot, provider);
 
 				// baseUrl + apiKey, no models[] → sets the in-memory runtime API key AND
 				// overrides the existing provider models' baseUrl/headers (reusing their
@@ -414,14 +433,11 @@ export class ChatHandler {
 					},
 					"office-configure",
 				);
-			} else {
+			} else if (msg.token) {
 				// Key-only: reuse the baked F5 gateway; set just the non-persistent runtime key.
 				registry.authStorage.setRuntimeApiKey(provider, msg.token);
 			}
 
-			const currentDefaultModelId =
-				this.#session.model?.provider === provider ? this.#session.model.id : defaultModelId;
-			const modelId = msg.model ?? currentDefaultModelId;
 			const model = registry.find(provider, modelId);
 			if (!model) {
 				throw new Error(`No model ${provider}/${modelId} available`);
@@ -464,6 +480,23 @@ export class ChatHandler {
 		this.#server.send({ type: "skills", skills: toSkillSummaries(this.#session.skills) } satisfies SkillsList);
 	}
 
+	/** Reply with the curated Office models that resolve in the live registry. */
+	#handleListModels(): void {
+		const models = LITELLM_LOGIN_MODEL_CHOICES.filter(choice =>
+			this.#session.modelRegistry.find(choice.provider, choice.modelId),
+		).map(choice => ({ id: choice.modelId, label: choice.label }));
+		const current = this.#session.model?.id;
+		// A ready Office session normally always has an active model. During an
+		// unconfigured startup there is no truthful `current` value to advertise, so
+		// leave the selector empty until the next connection instead of inventing one.
+		if (!current) return;
+		this.#server.send({
+			type: "models",
+			current,
+			models,
+		} satisfies ModelsList);
+	}
+
 	/** Reply to `list_commands` with the session's file-based slash commands (name +
 	 *  description) so the pane can populate the composer's `/` menu. Pure read — the
 	 *  commands are already discovered; the template bodies never cross the wire. */
@@ -502,11 +535,37 @@ export class ChatHandler {
 	}
 }
 
-/** SSRF guard for the `configure` frame's optional gateway `baseUrl`: the URL must
- * parse and use `https:`. Returns the ORIGINAL string unchanged on success (no
- * normalization — the operator's exact gateway path is preserved); throws (→ becomes
- * a `configure_error` nack) for a malformed or non-https URL. Loopback/private hosts
- * are intentionally NOT blocked — the target is an operator-chosen internal gateway. */
+/** Native provider-side web-search descriptors supported by the Office surface.
+ * Ordinary xcsh and Office host tools do not use this seam; they remain function
+ * tools and are preserved by the agent's payload composer. */
+export function officeWebSearchServerTools(modelApi: string): Record<string, unknown>[] {
+	switch (modelApi) {
+		case "anthropic-messages":
+			return [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }];
+		case "openai-completions":
+			return [{ type: "web_search_preview" }];
+		default:
+			throw new Error(`Office web search is unsupported for model API ${modelApi}`);
+	}
+}
+
+const OFFICE_GATEWAY_PROVIDER_PATHS = {
+	anthropic: "/anthropic",
+	litellm: "/api/v1",
+} as const;
+
+/** Derive the selected provider's API base from a normalized gateway root. */
+export function providerGatewayBaseUrl(
+	gatewayRoot: string,
+	provider: keyof typeof OFFICE_GATEWAY_PROVIDER_PATHS,
+): string {
+	return `${gatewayRoot}${OFFICE_GATEWAY_PROVIDER_PATHS[provider]}`;
+}
+
+/** SSRF guard and backward-compatible root normalizer for the `configure` frame's
+ * optional gateway URL. Saved full-path URLs are reduced to their HTTPS origin;
+ * the selected model then determines the provider path. Loopback/private hosts are
+ * intentionally allowed because the target is an operator-chosen internal gateway. */
 export function requireHttpsUrl(raw: string): string {
 	let parsed: URL;
 	try {
@@ -517,7 +576,7 @@ export function requireHttpsUrl(raw: string): string {
 	if (parsed.protocol !== "https:") {
 		throw new Error(`configure baseUrl must use https (got "${parsed.protocol}")`);
 	}
-	return raw;
+	return parsed.origin;
 }
 
 /** Classify an upstream/provider error into the closed public reason vocabulary.
@@ -534,6 +593,9 @@ export function classifyChatErrorReason(message: string): ChatErrorReason {
 		)
 	) {
 		return "provider-5xx";
+	}
+	if (/\b(?:401|403)\b|\bunauthorized\b|\bforbidden\b|\bapi key\b|\bauthentication\b|\bcredentials?\b/.test(m)) {
+		return "provider-auth";
 	}
 	if (/\b4\d\d\b|forbidden|unauthorized|invalid model|bad request|not found|too many requests|rate limit/.test(m)) {
 		return "provider-4xx";

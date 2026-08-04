@@ -52,7 +52,7 @@ test("shows the config form when unconfigured, then the chat after a save", () =
 	expect(screen.getByRole("button", { name: /save|connect/i })).toBeDefined();
 	expect(screen.queryByText(/chat over/)).toBeNull();
 
-	fireEvent.change(screen.getByLabelText(/gateway url/i), { target: { value: "https://gw/anthropic" } });
+	fireEvent.change(screen.getByLabelText(/gateway.*url/i), { target: { value: "https://gw/anthropic" } });
 	fireEvent.change(screen.getByLabelText(/token/i), { target: { value: "t" } });
 	fireEvent.click(screen.getByRole("button", { name: /save|connect/i }));
 
@@ -98,7 +98,7 @@ test("configToDraft prefills the form from the current config when reopened via 
 		</GatewayGate>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
-	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw/anthropic");
+	expect((screen.getByLabelText(/gateway.*url/i) as HTMLInputElement).value).toBe("https://gw/anthropic");
 });
 
 test("without configToDraft the reopened form is blank (falls back to initial)", () => {
@@ -109,7 +109,7 @@ test("without configToDraft the reopened form is blank (falls back to initial)",
 		</GatewayGate>,
 	);
 	fireEvent.click(screen.getByRole("button", { name: /settings/i }));
-	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("");
+	expect((screen.getByLabelText(/gateway.*url/i) as HTMLInputElement).value).toBe("");
 });
 
 test("children get a reconfigure() that reopens the PREFILLED form (recovery path for a bad config)", () => {
@@ -129,7 +129,7 @@ test("children get a reconfigure() that reopens the PREFILLED form (recovery pat
 	// The child (e.g. a configure-error banner) drives reconfigure itself — not the
 	// generic Settings button — and lands on the prefilled form.
 	fireEvent.click(screen.getByRole("button", { name: /fix gateway/i }));
-	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw/anthropic");
+	expect((screen.getByLabelText(/gateway.*url/i) as HTMLInputElement).value).toBe("https://gw/anthropic");
 });
 
 test("optional (chat-first): with NO config, renders the chat (config null) — not the form", () => {

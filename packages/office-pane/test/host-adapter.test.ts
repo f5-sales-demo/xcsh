@@ -140,5 +140,5 @@ test("mountGate with a stored config renders the chat over the built transport",
 	const scope = within(container);
 	expect(scope.getByRole("textbox", { name: /message input/i })).toBeDefined();
 	expect(built).toHaveLength(1);
-	expect(built[0]?.baseUrl).toBe("https://gw.example/anthropic");
+	expect(built[0]?.baseUrl).toBe("https://gw.example");
 });

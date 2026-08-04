@@ -37,6 +37,34 @@ test("renders the terminal shell: pinned control row, transcript live region, an
 	expect(container.querySelector(".gateway-settings-btn")).toBeNull();
 });
 
+test("renders engine models in the composer and switches only after configure_ack", async () => {
+	const mock = new MockTransport();
+	let resolveSelection: (model: string) => void = () => {};
+	const selectModel = (model: string) =>
+		new Promise<string>(resolve => {
+			resolveSelection = resolve;
+		});
+	const { container } = render(<ChatPanel transport={mock} selectModel={selectModel} />);
+	const scope = within(container);
+	await settle();
+	await act(async () => {
+		mock.emit({
+			type: "models",
+			current: "gpt-5.6-sol",
+			models: [
+				{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
+				{ id: "claude-opus-5", label: "Claude Opus 5" },
+			],
+		} as never);
+	});
+
+	fireEvent.click(scope.getByRole("button", { name: /model: gpt-5.6 sol/i }));
+	fireEvent.click(scope.getByRole("menuitem", { name: /claude opus 5/i }));
+	expect(scope.getByRole("button", { name: /model: gpt-5.6 sol/i })).toBeDefined();
+	await act(async () => resolveSelection("claude-opus-5"));
+	expect(scope.getByRole("button", { name: /model: claude opus 5/i })).toBeDefined();
+});
+
 test("the ⋯ menu carries Settings, wired to the host's reconfigure action", async () => {
 	let reconfigured = 0;
 	const { container } = render(<ChatPanel transport={new MockTransport()} onReconfigure={() => (reconfigured += 1)} />);
@@ -329,7 +357,7 @@ test("Settings stays reachable from the first-run onboarding view (no bridge at 
 	expect(reconfigured).toBe(1);
 });
 
-test("auto-opens the gateway config when a turn fails with provider-4xx (bad gateway token)", async () => {
+test("auto-opens the gateway config only for an authentication rejection", async () => {
 	const mock = new MockTransport();
 	let opened = 0;
 	const { container } = render(<ChatPanel transport={mock} onProviderConfigError={() => (opened += 1)} />);
@@ -342,12 +370,28 @@ test("auto-opens the gateway config when a turn fails with provider-4xx (bad gat
 	const req = mock.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
 	if (!req) throw new Error("expected a chat_request to have been sent");
 
-	// The worker rejects the turn because the configured provider said 4xx.
+	// The worker rejects the configured credential.
 	await act(async () => {
-		mock.emit({ type: "chat_error", id: req.id, reason: "provider-4xx" });
+		mock.emit({ type: "chat_error", id: req.id, reason: "provider-auth" } as never);
 	});
 
 	expect(opened).toBe(1);
+});
+
+test("an ordinary provider-4xx stays in chat and does not imply the token is invalid", async () => {
+	const mock = new MockTransport();
+	let opened = 0;
+	const { container } = render(<ChatPanel transport={mock} onProviderConfigError={() => (opened += 1)} />);
+	const scope = within(container);
+	await settle();
+	fireEvent.click(scope.getByRole("button", { name: /summarize/i }));
+	fireEvent.click(scope.getByRole("button", { name: /send/i }));
+	const req = mock.sent.find((message): message is ChatRequestMsg => message.type === "chat_request");
+	if (!req) throw new Error("expected a chat_request to have been sent");
+	await act(async () => {
+		mock.emit({ type: "chat_error", id: req.id, reason: "provider-4xx" });
+	});
+	expect(opened).toBe(0);
 });
 
 test("the + menu offers 'Add files or photos'", async () => {

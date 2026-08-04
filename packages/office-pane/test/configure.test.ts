@@ -116,6 +116,15 @@ describe("LoopbackBridgeTransport.configure", () => {
 		transport.dispose();
 	});
 
+	it("sends a model-only configure frame so xcsh can reuse its own credentials", async () => {
+		const { transport, ws } = await connected();
+		const p = transport.configure({ model: "claude-opus-5" });
+		expect(lastConfigureFrame(ws)).toEqual({ type: "configure", model: "claude-opus-5" });
+		ws.receive(JSON.stringify({ type: "configure_ack", model: "claude-opus-5" }));
+		await expect(p).resolves.toBe("claude-opus-5");
+		transport.dispose();
+	});
+
 	it("rejects on configure_error", async () => {
 		const { transport, ws } = await connected();
 		const p = transport.configure({ baseUrl: "https://gw.example", token: "<XC_API_TOKEN>" });
@@ -135,9 +144,9 @@ describe("LoopbackBridgeTransport.configure", () => {
 		transport.dispose();
 	});
 
-	it("rejects an empty token without sending a frame", async () => {
+	it("rejects a frame with neither a token nor a model", async () => {
 		const { transport, ws } = await connected();
-		await expect(transport.configure({ token: "   " })).rejects.toThrow(/token/);
+		await expect(transport.configure({ token: "   " })).rejects.toThrow(/token|model/);
 		expect(lastConfigureFrame(ws)).toBeUndefined();
 		transport.dispose();
 	});
