@@ -64,6 +64,13 @@ describe("PluginResolver", () => {
 		expect(r.content).toContain("hi");
 	});
 
+	test("file/<relpath> resolves a plugin directory for bash operands", async () => {
+		const r = await resolver().resolve(u("xcsh://plugin/demo/file/schema/"));
+		expect(r.contentType).toBe("application/json");
+		expect(JSON.parse(r.content)).toEqual({ directory: true });
+		expect(r.sourcePath).toBe(path.join(root, "schema"));
+	});
+
 	test("engine returns the resolved entry path", async () => {
 		const r = await resolver().resolve(u("xcsh://plugin/demo/engine"));
 		const body = JSON.parse(r.content);
