@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { $ } from "bun";
+import { $, Glob } from "bun";
 import * as path from "node:path";
 
 type LockWorkspace = {
@@ -25,6 +25,7 @@ export type DependencyInstallMismatch = {
 };
 
 const repoRoot = path.join(import.meta.dir, "..");
+const prepublicationPackageJsonGlob = new Glob("packages/natives/npm/*/package.json");
 
 if (import.meta.main) {
 	const repair = process.argv.includes("--repair");
@@ -86,6 +87,7 @@ export async function inspectDependencyInstall(
 	lock: BunLockFile,
 ): Promise<DependencyInstallMismatch[]> {
 	const lockedVersions = indexLockedVersions(lock.packages);
+	const prepublicationVersions = await indexPrepublicationPackageVersions(root);
 	const mismatches: DependencyInstallMismatch[] = [];
 
 	for (const [workspace, config] of Object.entries(lock.workspaces).sort(([left], [right]) =>
@@ -107,6 +109,21 @@ export async function inspectDependencyInstall(
 			);
 			const installedVersion = await readInstalledVersion(root, workspace, name);
 			if (!required && installedVersion === undefined && candidates.length > 0) continue;
+			// A release branch bumps these optional package manifests before publishing
+			// them, so a registry lock entry cannot exist yet. Accept only an optional
+			// dependency backed by a satisfying in-repo package version and either no
+			// installed link or that exact staged version; stale installed links and
+			// mismatched manifests must still fail this check.
+			const prepublicationVersion = prepublicationVersions.get(name);
+			if (
+				!required &&
+				candidates.length === 0 &&
+				prepublicationVersion !== undefined &&
+				Bun.semver.satisfies(prepublicationVersion, requested) &&
+				(installedVersion === undefined || installedVersion === prepublicationVersion)
+			) {
+				continue;
+			}
 			if (installedVersion === undefined || !candidates.includes(installedVersion)) {
 				mismatches.push({
 					workspace,
@@ -120,6 +137,20 @@ export async function inspectDependencyInstall(
 	}
 
 	return mismatches;
+}
+
+async function indexPrepublicationPackageVersions(root: string): Promise<Map<string, string>> {
+	const versions = new Map<string, string>();
+	for await (const manifestPath of prepublicationPackageJsonGlob.scan({ cwd: root, onlyFiles: true })) {
+		const manifest = (await Bun.file(path.join(root, manifestPath)).json()) as {
+			name?: unknown;
+			version?: unknown;
+		};
+		if (typeof manifest.name === "string" && typeof manifest.version === "string") {
+			versions.set(manifest.name, manifest.version);
+		}
+	}
+	return versions;
 }
 
 export function formatDependencyInstallMismatches(mismatches: DependencyInstallMismatch[]): string {

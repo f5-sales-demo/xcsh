@@ -117,11 +117,60 @@ describe("installed dependency state", () => {
 			await fs.rm(root, { recursive: true, force: true });
 		}
 	});
+
+	it("accepts only matching in-repo prepublication optional package versions", async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-dependency-install-"));
+		const prepublicationLock: BunLockFile = {
+			workspaces: {
+				"packages/natives": {
+					optionalDependencies: {
+						"@f5-sales-demo/pi-natives-darwin-arm64": "20.3.0",
+						"@f5-sales-demo/pi-natives-darwin-x64": "20.3.0",
+						"@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.0",
+					},
+				},
+			},
+			packages: {},
+		};
+		try {
+			await writePackageVersion(root, "darwin-arm64", "@f5-sales-demo/pi-natives-darwin-arm64", "20.3.0");
+			await writePackageVersion(root, "darwin-x64", "@f5-sales-demo/pi-natives-darwin-x64", "20.3.0");
+			await writePackageVersion(root, "linux-x64-gnu", "@f5-sales-demo/pi-natives-linux-x64-gnu", "20.2.7");
+			await writeInstalledVersion(root, "packages/natives", "@f5-sales-demo/pi-natives-darwin-arm64", "20.3.0");
+			await writeInstalledVersion(root, "packages/natives", "@f5-sales-demo/pi-natives-darwin-x64", "20.2.7");
+
+			expect(await inspectDependencyInstall(root, prepublicationLock)).toEqual([
+				{
+					workspace: "packages/natives",
+					name: "@f5-sales-demo/pi-natives-darwin-x64",
+					requested: "20.3.0",
+					lockedVersions: [],
+					installedVersion: "20.2.7",
+				},
+				{
+					workspace: "packages/natives",
+					name: "@f5-sales-demo/pi-natives-linux-x64-gnu",
+					requested: "20.3.0",
+					lockedVersions: [],
+					installedVersion: undefined,
+				},
+			]);
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	});
 });
 
 async function writeInstalledVersion(root: string, workspace: string, name: string, version: string): Promise<void> {
 	await Bun.write(
 		path.join(root, workspace, "node_modules", ...name.split("/"), "package.json"),
 		JSON.stringify({ version }),
+	);
+}
+
+async function writePackageVersion(root: string, directory: string, name: string, version: string): Promise<void> {
+	await Bun.write(
+		path.join(root, "packages/natives/npm", directory, "package.json"),
+		JSON.stringify({ name, version }),
 	);
 }
