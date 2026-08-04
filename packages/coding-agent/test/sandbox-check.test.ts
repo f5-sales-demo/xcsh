@@ -171,7 +171,22 @@ it("reports a healthy matrix when invoked inside the live bash profile", async (
 	}
 }, 30_000);
 
-it("reports a healthy matrix for a live session rooted directly under operator home", async () => {
+it("reports a healthy matrix for a live session rooted at operator home", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const liveSiblingPrefix = ".xcsh-sandbox-check-live-sibling-";
+	const liveSiblingCount = (): number =>
+		fs.readdirSync(home).filter(entry => entry.startsWith(liveSiblingPrefix)).length;
+	const liveSiblingCountBefore = liveSiblingCount();
+
+	try {
+		assertHealthyReport(await runInsideLiveProfile(home));
+	} finally {
+		_resetShellSessionsForTest();
+		expect(liveSiblingCount()).toBe(liveSiblingCountBefore);
+	}
+}, 30_000);
+
+it("reports a healthy matrix for a live session rooted directly inside operator home", async () => {
 	const home = fs.realpathSync(os.homedir());
 	const fixturePaths: string[] = [];
 	const liveSiblingPrefix = ".xcsh-sandbox-check-live-sibling-";
