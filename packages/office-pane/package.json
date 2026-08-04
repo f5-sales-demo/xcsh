@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "@f5-sales-demo/xcsh-office-pane",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"private": true,
 	"description": "Browser task-pane UI + bridge transport + Office.js host tools for the xcsh agent",
 	"homepage": "https://github.com/f5-sales-demo/xcsh",
