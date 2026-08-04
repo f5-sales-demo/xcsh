@@ -20,8 +20,8 @@ function makeSession(opts: { model?: { id: string; provider: string }; models: {
 	return { session, setModel, setThinkingLevel };
 }
 const M = (id: string, provider = "litellm") => ({ id, provider });
-const GPT_CHOICE = LITELLM_LOGIN_MODEL_CHOICES[0]!;
-const OPUS_CHOICE = LITELLM_LOGIN_MODEL_CHOICES[1]!;
+const GPT_CHOICE = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "gpt-5.6-sol")!;
+const OPUS_CHOICE = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "claude-opus-5")!;
 
 describe("applyModelAfterLogin", () => {
 	it("persists the selected model and high thinking", async () => {
@@ -72,9 +72,9 @@ describe("getAvailableLiteLLMLoginModelChoices", () => {
 		expect(choices).toEqual([GPT_CHOICE]);
 	});
 
-	it("returns both curated choices in their stable display order", () => {
+	it("puts the vision-capable production default first in the stable display order", () => {
 		const choices = getAvailableLiteLLMLoginModelChoices(["claude-opus-5", "gpt-5.6-sol"]);
-		expect(choices).toEqual([GPT_CHOICE, OPUS_CHOICE]);
+		expect(choices).toEqual([OPUS_CHOICE, GPT_CHOICE]);
 	});
 
 	it("returns no choices when neither curated model is advertised", () => {

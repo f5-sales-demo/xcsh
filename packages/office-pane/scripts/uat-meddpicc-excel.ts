@@ -10,6 +10,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as net from "node:net";
+import * as os from "node:os";
 import * as path from "node:path";
 import { wireExcelHostTools } from "../src/office/excel-tools";
 import { fakeExcel } from "../test/support/fake-excel";
@@ -22,6 +23,7 @@ import {
 } from "./uat/bridge-client";
 import {
 	MEDDPICC_STEPS,
+	type MeddpiccStep,
 	renderMeddpiccRunbook,
 	type ScenarioAssertion,
 	type ScenarioObservation,
@@ -29,9 +31,11 @@ import {
 } from "./uat/meddpicc-scenario";
 
 const OFFICE_PANE_PORT = 8444;
-const EXPECTED_FIXTURE_SHA256 = "8394bcd6485adca57e72fd53f2c149f026c3bb9652f7809dfa3614438bd6cd75";
-const EXPECTED_PLUGIN_VERSION = "7.5.3";
-const EXPECTED_MODEL = "gpt-5.6-sol";
+const EXPECTED_FIXTURE_SHA256 = "eb891f2b2588d5b6bafcceaaa9c6923bfd26f87f5e7bdc23971b1c61e657ced8";
+const EXPECTED_PLUGIN_VERSION = "7.5.4";
+const EXPECTED_MODEL = "claude-opus-5";
+const ALTERNATE_MODEL = "gpt-5.6-sol";
+const MODEL_PROBE_MARKER = "OFFICE MODEL READY";
 
 export interface UatMeddpiccOptions {
 	binary?: string;
@@ -53,7 +57,7 @@ interface InstalledPlugin {
 	version: string;
 }
 
-interface ScenarioRunEvidence {
+export interface ScenarioRunEvidence {
 	step: number;
 	repeat: number;
 	title: string;
@@ -72,6 +76,19 @@ interface ScenarioRunEvidence {
 	passed: boolean;
 }
 
+interface ModelRoundTripEvidence {
+	advertisedModels: string[];
+	initialModel: string;
+	initialTurnPassed: boolean;
+	initialTurnDurationMs: number;
+	alternateModel: string;
+	alternateTurnPassed: boolean;
+	alternateTurnDurationMs: number;
+	restoredModel: string;
+	restoredTurnPassed: boolean;
+	restoredTurnDurationMs: number;
+}
+
 interface UatEvidence {
 	schemaVersion: 1;
 	startedAt: string;
@@ -85,6 +102,7 @@ interface UatEvidence {
 	plugin?: InstalledPlugin;
 	bridge?: { port: number; pid: number; contractVersion: string | null };
 	configure?: { modelOmitted: true; acknowledgement: string };
+	modelRoundTrip?: ModelRoundTripEvidence;
 	runs: ScenarioRunEvidence[];
 }
 
@@ -96,28 +114,24 @@ const USAGE = `Usage:
 Required for a live run:
   --binary       Local build or installed xcsh binary to certify
   --workspace    Dedicated folder from which office serve will run
-  --fixture      Canonical MEDDPICC example-deal.json source
+  --fixture      Canonical, role-aliased MEDDPICC example-deal.json source
   --evidence     Destination for sanitized JSON evidence
 
 Environment:
-  LITELLM_BASE_URL must be the full HTTPS OpenAI-compatible API base, including
-  its path (for example, https://gateway.example.com/v1), and LITELLM_API_KEY
-  must be set. The configure frame omits model so the binary must select its
-  baked litellm/gpt-5.6-sol:high default.`;
+  LITELLM_BASE_URL is the HTTPS gateway root (for example,
+  https://gateway.example.com), and LITELLM_API_KEY must be set. Legacy provider
+  paths are normalized to the root. xcsh derives the provider path from the
+  selected model and the UAT proves Claude Opus 5 -> GPT-5.6 Sol -> Claude Opus 5.`;
 
-export function requireGatewayApiBaseUrl(raw: string): string {
-	const normalized = raw.trim().replace(/\/+$/, "");
+export function requireGatewayRootUrl(raw: string): string {
 	let parsed: URL;
 	try {
-		parsed = new URL(normalized);
+		parsed = new URL(raw.trim());
 	} catch {
 		throw new Error("LITELLM_BASE_URL must be a valid https:// URL");
 	}
 	if (parsed.protocol !== "https:") throw new Error("LITELLM_BASE_URL must use https://");
-	if (parsed.pathname === "/") {
-		throw new Error("LITELLM_BASE_URL must include the OpenAI-compatible API base path, such as /v1 or /api/v1");
-	}
-	return normalized;
+	return parsed.origin;
 }
 
 export function parseUatMeddpiccArgs(argv: string[]): UatMeddpiccOptions {
@@ -148,7 +162,7 @@ function requiredLiveOptions(
 	options: UatMeddpiccOptions,
 ): asserts options is UatMeddpiccOptions &
 	Required<Pick<UatMeddpiccOptions, "binary" | "workspace" | "fixture" | "evidence">> {
-	const missing = (["binary", "workspace", "fixture", "evidence"] as const).filter(name => !options[name]);
+	const missing: string[] = (["binary", "workspace", "fixture", "evidence"] as const).filter(name => !options[name]);
 	if (missing.length > 0)
 		throw new Error(`Missing required option(s): ${missing.map(name => `--${name}`).join(", ")}`);
 }
@@ -208,6 +222,52 @@ function installedMeddpicc(binary: string, workspace: string): InstalledPlugin {
 	throw new Error("meddpicc@f5-sales-demo-marketplace is not installed");
 }
 
+const ROLE_ALIAS = /^<[A-Z][A-Z0-9_]*>$/;
+const OWNED_ROLE_ALIAS = /^<[A-Z][A-Z0-9_]*>(?: \([A-Z][A-Z0-9_-]*\))?$/;
+
+function record(value: unknown): Record<string, unknown> | null {
+	return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+/** Refuse development fixtures whose identity fields are not visibly synthetic role aliases. */
+export function assertSyntheticFixtureUsesRoleAliases(fixture: unknown): void {
+	const deal = record(fixture);
+	const invalid: string[] = [];
+	const requireAlias = (field: string, value: unknown, pattern = ROLE_ALIAS): void => {
+		if (typeof value !== "string" || !pattern.test(value)) invalid.push(field);
+	};
+
+	const metadata = record(deal?.metadata);
+	requireAlias("metadata.reviewer", metadata?.reviewer);
+
+	const stakeholders = Array.isArray(deal?.stakeholders) ? deal.stakeholders : [];
+	for (const [index, value] of stakeholders.entries()) {
+		const stakeholder = record(value);
+		requireAlias(`stakeholders[${index}].name`, stakeholder?.name);
+		requireAlias(`stakeholders[${index}].relationshipOwner`, stakeholder?.relationshipOwner);
+	}
+
+	const closePlan = record(deal?.closePlan);
+	const actions = Array.isArray(closePlan?.criticalActions) ? closePlan.criticalActions : [];
+	for (const [index, value] of actions.entries()) {
+		requireAlias(`closePlan.criticalActions[${index}].owner`, record(value)?.owner, OWNED_ROLE_ALIAS);
+	}
+
+	const team = record(deal?.team);
+	for (const group of ["internal", "partner"] as const) {
+		const members = Array.isArray(team?.[group]) ? team[group] : [];
+		for (const [index, value] of members.entries()) {
+			requireAlias(`team.${group}[${index}].name`, record(value)?.name);
+		}
+	}
+
+	if (invalid.length > 0) {
+		throw new Error(
+			`Synthetic MEDDPICC fixture identity fields must use <ROLE_ALIAS> role aliases: ${invalid.join(", ")}`,
+		);
+	}
+}
+
 async function prepareFixture(workspaceInput: string, fixtureInput: string) {
 	await fs.mkdir(workspaceInput, { recursive: true });
 	const workspace = await fs.realpath(workspaceInput);
@@ -215,6 +275,8 @@ async function prepareFixture(workspaceInput: string, fixtureInput: string) {
 	if (!fixtureSource) throw new Error(`Fixture not found: ${fixtureInput}`);
 	const sourceStat = await fs.stat(fixtureSource);
 	if (!sourceStat.isFile()) throw new Error(`Fixture is not a regular file: ${fixtureSource}`);
+	const fixture = JSON.parse(await fs.readFile(fixtureSource, "utf8")) as unknown;
+	assertSyntheticFixtureUsesRoleAliases(fixture);
 	const sourceSha = await sha256File(fixtureSource);
 	if (sourceSha !== EXPECTED_FIXTURE_SHA256) {
 		throw new Error(`Fixture SHA-256 is ${sourceSha}; expected ${EXPECTED_FIXTURE_SHA256}`);
@@ -289,11 +351,12 @@ async function stopSpawnedChild(child: ReturnType<typeof Bun.spawn>): Promise<vo
 	}
 }
 
-function redactText(text: string, secrets: string[]): string {
+function redactText(text: string, secrets: string[], homeDirectory: string = os.homedir()): string {
 	let redacted = text;
 	for (const secret of secrets) {
 		if (secret) redacted = redacted.replaceAll(secret, "[REDACTED]");
 	}
+	if (homeDirectory) redacted = redacted.replaceAll(homeDirectory, "<HOME>");
 	return redacted
 		.replace(/\bBearer\s+[^\s"']+/gi, "Bearer [REDACTED]")
 		.replace(/\b(?:api[_-]?key|token|secret)\s*[:=]\s*[^\s,;"']+/gi, match => {
@@ -302,12 +365,12 @@ function redactText(text: string, secrets: string[]): string {
 		});
 }
 
-function sanitizeEvidence<T>(value: T, secrets: string[]): T {
-	if (typeof value === "string") return redactText(value, secrets) as T;
-	if (Array.isArray(value)) return value.map(item => sanitizeEvidence(item, secrets)) as T;
+export function sanitizeEvidence<T>(value: T, secrets: string[], homeDirectory: string = os.homedir()): T {
+	if (typeof value === "string") return redactText(value, secrets, homeDirectory) as T;
+	if (Array.isArray(value)) return value.map(item => sanitizeEvidence(item, secrets, homeDirectory)) as T;
 	if (value && typeof value === "object") {
 		return Object.fromEntries(
-			Object.entries(value).map(([key, item]) => [key, sanitizeEvidence(item, secrets)]),
+			Object.entries(value).map(([key, item]) => [key, sanitizeEvidence(item, secrets, homeDirectory)]),
 		) as T;
 	}
 	return value;
@@ -323,10 +386,12 @@ async function runScenarioStep(
 	bridge: UatBridgeClient,
 	workspace: string,
 	workbook: ReturnType<typeof fakeExcel>,
+	steps: readonly MeddpiccStep[],
+	validate: (stepNumber: number, observation: ScenarioObservation) => ScenarioAssertion[],
 	stepIndex: number,
 	repeat: number,
 ): Promise<ScenarioRunEvidence> {
-	const step = MEDDPICC_STEPS[stepIndex];
+	const step = steps[stepIndex];
 	const filesBefore = await snapshotFiles(workspace);
 	const workbookBefore = workbook.snapshot();
 	const turn = await bridge.turn(step.prompt, `c-uat-meddpicc-${step.number}-${repeat}`);
@@ -348,7 +413,7 @@ async function runScenarioStep(
 			label: "every reported tool completed successfully",
 			passed: turn.toolNotices.every(notice => notice.ok),
 		},
-		...validateMeddpiccStep(step.number, observation),
+		...validate(step.number, observation),
 	].map(value => ({
 		label: value.label,
 		passed: value.passed,
@@ -374,6 +439,69 @@ async function runScenarioStep(
 	};
 }
 
+function modelList(frame: { type?: string; [key: string]: unknown }): { current: string; models: string[] } {
+	if (frame.type !== "models" || typeof frame.current !== "string" || !Array.isArray(frame.models)) {
+		throw new Error("Office bridge returned an invalid model list");
+	}
+	const models = frame.models
+		.map(value =>
+			value && typeof value === "object" && typeof (value as { id?: unknown }).id === "string"
+				? (value as { id: string }).id
+				: null,
+		)
+		.filter((value): value is string => value !== null);
+	if (!models.includes(EXPECTED_MODEL) || !models.includes(ALTERNATE_MODEL)) {
+		throw new Error("Office bridge did not advertise both presentation models");
+	}
+	return { current: frame.current, models };
+}
+
+async function probeModel(bridge: UatBridgeClient, id: string): Promise<{ passed: true; durationMs: number }> {
+	const turn = await bridge.turn(`Reply with exactly ${MODEL_PROBE_MARKER}. Do not use tools.`, `c-uat-model-${id}`);
+	const passed =
+		turn.ended === "chat_done" &&
+		turn.reply.includes(MODEL_PROBE_MARKER) &&
+		turn.toolNotices.every(notice => notice.ok) &&
+		turn.hostToolCalls.length === 0;
+	if (!passed) throw new Error("Office model inference probe failed");
+	return { passed: true, durationMs: turn.durationMs };
+}
+
+async function proveModelRoundTrip(
+	bridge: UatBridgeClient,
+	baseUrl: string,
+	token: string,
+): Promise<ModelRoundTripEvidence> {
+	const initialList = modelList(await bridge.request({ type: "list_models" }, "models"));
+	if (initialList.current !== EXPECTED_MODEL)
+		throw new Error("Office bridge default model did not match Claude Opus 5");
+	const initial = await probeModel(bridge, "initial");
+
+	const alternateModel = await bridge.configure({ baseUrl, token, model: ALTERNATE_MODEL });
+	if (alternateModel !== ALTERNATE_MODEL) throw new Error("Office bridge did not select GPT-5.6 Sol");
+	const alternate = await probeModel(bridge, "alternate");
+
+	const restoredModel = await bridge.configure({ baseUrl, token, model: EXPECTED_MODEL });
+	if (restoredModel !== EXPECTED_MODEL) throw new Error("Office bridge did not restore Claude Opus 5");
+	const restored = await probeModel(bridge, "restored");
+	const restoredList = modelList(await bridge.request({ type: "list_models" }, "models"));
+	if (restoredList.current !== EXPECTED_MODEL)
+		throw new Error("Office bridge model list did not reflect the restored model");
+
+	return {
+		advertisedModels: initialList.models,
+		initialModel: initialList.current,
+		initialTurnPassed: initial.passed,
+		initialTurnDurationMs: initial.durationMs,
+		alternateModel,
+		alternateTurnPassed: alternate.passed,
+		alternateTurnDurationMs: alternate.durationMs,
+		restoredModel,
+		restoredTurnPassed: restored.passed,
+		restoredTurnDurationMs: restored.durationMs,
+	};
+}
+
 async function runLive(options: UatMeddpiccOptions): Promise<void> {
 	requiredLiveOptions(options);
 	const evidencePath = path.resolve(options.evidence);
@@ -389,12 +517,13 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 	let dispatcher: ReturnType<typeof wireExcelHostTools>["dispatcher"] | null = null;
 	let stdoutPromise: Promise<string> | null = null;
 	let stderrPromise: Promise<string> | null = null;
+	let failure: unknown = null;
 
 	try {
 		const baseUrlInput = process.env.LITELLM_BASE_URL ?? "";
 		const token = process.env.LITELLM_API_KEY?.trim() ?? "";
 		if (!baseUrlInput.trim() || !token) throw new Error("LITELLM_BASE_URL and LITELLM_API_KEY are required");
-		const baseUrl = requireGatewayApiBaseUrl(baseUrlInput);
+		const baseUrl = requireGatewayRootUrl(baseUrlInput);
 
 		const prepared = await prepareFixture(path.resolve(options.workspace), path.resolve(options.fixture));
 		evidence.cwd = prepared.workspace;
@@ -405,11 +534,8 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			runCommand([binary.path, "--version"], prepared.workspace),
 			"xcsh --version",
 		);
-		evidence.binary = {
-			...binary,
-			version,
-			sha256: await sha256File(binary.realPath),
-		};
+		const binarySha256 = await sha256File(binary.realPath);
+		evidence.binary = { ...binary, version, sha256: binarySha256 };
 		const repoRoot = path.resolve(import.meta.dir, "../../..");
 		evidence.gitSha = requireSuccessfulCommand(
 			runCommand(["git", "rev-parse", "HEAD"], repoRoot),
@@ -435,7 +561,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			}
 		}
 
-		console.log(`Starting ${binary.path} office serve in ${prepared.workspace}`);
+		console.log(redactText(`Starting ${binary.path} office serve in ${prepared.workspace}`, secrets));
 		const spawned = Bun.spawn([binary.path, "office", "serve"], {
 			cwd: prepared.workspace,
 			env: process.env,
@@ -448,21 +574,19 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		stderrPromise = new Response(spawned.stderr).text();
 
 		bridge = await discoverOfficeBridge({ attempts: 30, retryDelayMs: 500 });
-		evidence.bridge = {
-			port: bridge.port,
-			pid: child.pid,
-			contractVersion: bridge.ack.contractVersion ?? null,
-		};
+		evidence.bridge = { port: bridge.port, pid: child.pid, contractVersion: bridge.ack.contractVersion ?? null };
 		if (!bridge.canConfigureProvider) throw new Error("Office bridge did not advertise provider configuration");
 		await waitForOfficeApplicationReady(bridge);
 
 		// Deliberately omit model. This is the end-to-end proof that the binary owns
-		// litellm/gpt-5.6-sol:high as the single production default.
+		// anthropic/claude-opus-5:high as the vision-capable production default.
 		const acknowledgement = await bridge.configure({ baseUrl, token });
 		if (acknowledgement !== EXPECTED_MODEL) {
 			throw new Error(`Office configure selected ${acknowledgement}; expected ${EXPECTED_MODEL}`);
 		}
 		evidence.configure = { modelOmitted: true, acknowledgement };
+
+		evidence.modelRoundTrip = await proveModelRoundTrip(bridge, baseUrl, token);
 
 		const workbook = fakeExcel({}, { Start: { "A1:B1": [["sentinel", "keep"]] } });
 		const wired = wireExcelHostTools(bridge, workbook);
@@ -475,15 +599,16 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		const registrationFrame = await registration;
 		if (registrationFrame.type !== "set_host_tools_ack") throw new Error("Excel host-tool registration was rejected");
 
-		for (let index = 0; index < MEDDPICC_STEPS.length; index++) {
-			console.log(`Step ${index + 1}/5: ${MEDDPICC_STEPS[index].title}`);
-			const run = await runScenarioStep(bridge, prepared.workspace, workbook, index, 1);
+		const steps = MEDDPICC_STEPS;
+		for (let index = 0; index < steps.length; index++) {
+			console.log(`Step ${index + 1}/5: ${steps[index].title}`);
+			const run = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validateMeddpiccStep, index, 1);
 			evidence.runs.push(run);
 			console.log(`  ${run.passed ? "PASS" : "FAIL"} (${run.durationMs} ms)`);
 		}
 
 		console.log("Step 5 idempotency rerun");
-		const rerun = await runScenarioStep(bridge, prepared.workspace, workbook, 4, 2);
+		const rerun = await runScenarioStep(bridge, prepared.workspace, workbook, steps, validateMeddpiccStep, 4, 2);
 		evidence.runs.push(rerun);
 		console.log(`  ${rerun.passed ? "PASS" : "FAIL"} (${rerun.durationMs} ms)`);
 
@@ -497,7 +622,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 	} catch (error) {
 		evidence.status = "failed";
 		evidence.error = error instanceof Error ? error.message : String(error);
-		throw error;
+		failure = error;
 	} finally {
 		dispatcher?.dispose();
 		bridge?.dispose();
@@ -510,9 +635,18 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 				evidence.error = `${evidence.error}\noffice serve tail:\n${tail}`;
 			}
 		}
-		await writeEvidence(evidencePath, evidence, secrets);
-		console.log(`Evidence: ${evidencePath}`);
+		let evidenceWritten = false;
+		try {
+			await writeEvidence(evidencePath, evidence, secrets);
+			evidenceWritten = true;
+		} catch (error) {
+			failure = error;
+		}
+		if (evidenceWritten) {
+			console.log(redactText(`Evidence: ${evidencePath}`, secrets));
+		}
 	}
+	if (failure) throw failure;
 }
 
 async function main(): Promise<void> {

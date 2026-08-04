@@ -22,6 +22,7 @@ const SRC = path.join(HERE, "src");
 const DIST = path.join(HERE, "dist");
 const MANIFEST_DIR = path.join(HERE, "manifest");
 const ASSETS_DIR = path.join(HERE, "assets");
+const PACKAGE_JSON = path.join(HERE, "package.json");
 
 /**
  * The Node core builtins. A browser bundle that imports any of these — with or
@@ -173,9 +174,10 @@ export async function build(): Promise<void> {
 	assertGzBudget(bundleJs, "taskpane.js");
 
 	// Copy the page shell, pinning the module script to the built bundle name.
+	const packageVersion = ((await Bun.file(PACKAGE_JSON).json()) as { version: string }).version;
 	const html = (await Bun.file(path.join(SRC, "taskpane.html")).text()).replace(
 		/(<script\b[^>]*\bsrc=")[^"]*taskpane[^"]*("[^>]*><\/script>)/,
-		"$1./taskpane.js$2",
+		`$1./taskpane.js?v=${packageVersion}$2`,
 	);
 	await Bun.write(path.join(DIST, "taskpane.html"), html);
 

@@ -129,6 +129,13 @@ describe("startHeadlessChatBridge", () => {
 		// The bundled filesystem sandbox loads even though discovery is disabled —
 		// the CLI's safety net for the now-enabled bash/read/write tools.
 		expect(o?.bundledExtensions).toEqual(["sandbox-guard"]);
+		// Office prompts and replies can contain document/customer data. The headless
+		// pane session must never inherit the SDK's file-backed default.
+		const sessionManager = o?.sessionManager as
+			| { isPersisted(): boolean; getSessionFile(): string | undefined }
+			| undefined;
+		expect(sessionManager?.isPersisted()).toBe(false);
+		expect(sessionManager?.getSessionFile()).toBeUndefined();
 
 		// ChatHandler constructed with (bridge, session) and attached.
 		expect(h.chatCtor()?.bridge).toBe(h.bridge);

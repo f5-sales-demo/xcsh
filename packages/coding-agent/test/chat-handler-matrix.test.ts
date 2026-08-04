@@ -13,11 +13,12 @@ import type { AgentSession, AgentSessionEvent } from "../src/session/agent-sessi
 
 // Enhanced harness: prompt resolution is controllable (resolve/reject on demand)
 // so we can simulate slow turns, provider errors, and timing-dependent scenarios.
-function harness(opts: { promptMs?: number; promptRejects?: string } = {}) {
+function harness(opts: { promptMs?: number; promptRejects?: string; initialStreamingTailMs?: number } = {}) {
 	const sent: Record<string, unknown>[] = [];
 	let onMsg: (m: Record<string, unknown>) => void = () => {};
 	let onDisc: () => void = () => {};
 	let aborted = false;
+	let isStreaming = (opts.initialStreamingTailMs ?? 0) > 0;
 	const server = {
 		serveKind: "office",
 		clientHost: "excel",
@@ -30,7 +31,14 @@ function harness(opts: { promptMs?: number; promptRejects?: string } = {}) {
 		},
 	} as unknown as BridgeServer;
 	const session = {
-		isStreaming: false,
+		get isStreaming() {
+			return isStreaming;
+		},
+		waitForIdle: async () => {
+			if (opts.initialStreamingTailMs)
+				await new Promise(resolve => setTimeout(resolve, opts.initialStreamingTailMs));
+			isStreaming = false;
+		},
 		// The handler reads this to expand a `/name` before composing the prompt; a fake
 		// that omits it is lying about AgentSession's shape (the cast hides it from tsc).
 		slashCommands: [],
@@ -167,6 +175,19 @@ describe("ChatHandler turn matrix", () => {
 		expect(doneIds).toContain("c-1"); // first completed
 		expect(doneIds).toContain("c-3"); // newest replayed
 		expect(doneIds).not.toContain("c-2"); // replaced, never ran
+	});
+
+	it("4a. request queued during the terminal streaming tail self-drains without an active chat", async () => {
+		const h = harness({ initialStreamingTailMs: 10 });
+		new ChatHandler(h.server, h.session).attach();
+		h.fire(req("c-tail"));
+		await flush(5);
+		expect(h.notices().some(notice => notice.type === "chat_tool_notice" && notice.tool === "queue")).toBe(true);
+		expect(h.dones().map(done => done.id)).not.toContain("c-tail");
+
+		await flush(40);
+		expect(h.dones().map(done => done.id)).toContain("c-tail");
+		expect(h.errors()).toEqual([]);
 	});
 
 	// ── Error conditions ────────────────────────────────────────────────────────

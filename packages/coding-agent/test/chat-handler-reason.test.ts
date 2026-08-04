@@ -47,7 +47,11 @@ describe("classifyChatErrorReason", () => {
 	});
 	it("maps 4xx / bad-model to provider-4xx", () => {
 		expect(classifyChatErrorReason("HTTP 400 Invalid model name")).toBe("provider-4xx");
-		expect(classifyChatErrorReason("403 forbidden")).toBe("provider-4xx");
+	});
+	it("maps authentication rejections separately from ordinary provider 4xx errors", () => {
+		expect(classifyChatErrorReason("401 unauthorized")).toBe("provider-auth");
+		expect(classifyChatErrorReason("403 forbidden")).toBe("provider-auth");
+		expect(classifyChatErrorReason("Invalid API key")).toBe("provider-auth");
 	});
 	it("fails closed to provider-5xx for an unclassified error", () => {
 		expect(classifyChatErrorReason("something weird happened")).toBe("provider-5xx");

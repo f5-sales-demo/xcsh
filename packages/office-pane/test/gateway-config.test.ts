@@ -4,18 +4,24 @@ import { GatewayConfigError, MemoryGatewayConfigStore, normalizeGatewayConfig } 
 describe("normalizeGatewayConfig", () => {
 	test("accepts a minimal valid input and leaves model selection to xcsh", () => {
 		const cfg = normalizeGatewayConfig({ baseUrl: "https://gateway.example.com/v1", token: "sk-abc" });
-		expect(cfg.baseUrl).toBe("https://gateway.example.com/v1");
+		expect(cfg.baseUrl).toBe("https://gateway.example.com");
 		expect(cfg.token).toBe("sk-abc");
 		expect(cfg).not.toHaveProperty("model");
 	});
 
-	test("trims whitespace and trailing slashes while preserving OpenAI-compatible paths", () => {
+	test("normalizes provider-specific paths to the gateway root", () => {
 		expect(normalizeGatewayConfig({ baseUrl: "  https://gw.example/v1/  ", token: " t " }).baseUrl).toBe(
-			"https://gw.example/v1",
+			"https://gw.example",
 		);
 		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example/openai/v1", token: "t" }).baseUrl).toBe(
-			"https://gw.example/openai/v1",
+			"https://gw.example",
 		);
+		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example/anthropic", token: "t" }).baseUrl).toBe(
+			"https://gw.example",
+		);
+		expect(
+			normalizeGatewayConfig({ baseUrl: "https://gw.example:8443/api/v1?legacy=true#old", token: "t" }).baseUrl,
+		).toBe("https://gw.example:8443");
 		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example", token: "  tok  " }).token).toBe("tok");
 	});
 

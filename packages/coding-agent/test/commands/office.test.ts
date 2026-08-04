@@ -2,7 +2,7 @@
  * `xcsh office` command tests.
  *
  *  - `manifest` (via the `writeManifest` seam) writes a valid, parseable manifest
- *    that keeps the local-ip.sh task-pane page URL;
+ *    that keeps the versioned local-ip.sh task-pane page URL;
  *  - the positional `action` arg rejects unknown subcommands (framework `options`
  *    constraint), and accepts the three real ones.
  */
@@ -30,14 +30,16 @@ beforeAll(() => {
 });
 
 describe("office manifest", () => {
-	it("writes a valid manifest that keeps the local-ip.sh task-pane URL", async () => {
+	it("writes a valid manifest that keeps the versioned local-ip.sh task-pane URL", async () => {
 		const dir = mkdtempSync(join(tmpdir(), "office-cmd-test-"));
 		try {
 			const out = join(dir, "manifest.json");
 			const text = await writeManifest(out);
 
 			const written = await Bun.file(out).json();
-			expect(written.extensions[0].runtimes[0].code.page).toBe("https://127-0-0-1.local-ip.sh:8444/taskpane.html");
+			expect(written.extensions[0].runtimes[0].code.page).toBe(
+				`https://127-0-0-1.local-ip.sh:8444/taskpane.html?v=${written.version}`,
+			);
 			expect(written.extensions[0].requirements.scopes).toContain("document");
 			// The returned text is the same JSON.
 			expect(JSON.parse(text).id).toBe(written.id);

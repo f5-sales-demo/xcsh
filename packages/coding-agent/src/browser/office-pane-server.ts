@@ -299,7 +299,10 @@ export async function getOfficePaneDir(): Promise<string> {
 /**
  * Pure request handler: map a URL pathname to a file under `dir` and return it
  * with the content-type inferred from its extension, or a 404. `/` maps to
- * `taskpane.html`. Path-traversal is rejected before any filesystem access.
+ * `taskpane.html`. Successful assets are `no-store`: every compiled build uses
+ * the same stable URLs, and Excel's WebView otherwise reuses an older pane bundle
+ * after a new xcsh binary is sideloaded. Path-traversal is rejected before any
+ * filesystem access.
  */
 export async function handleAssetRequest(pathname: string, dir: string): Promise<Response> {
 	const requested = pathname === "/" ? "taskpane.html" : pathname.replace(/^\/+/, "");
@@ -313,7 +316,14 @@ export async function handleAssetRequest(pathname: string, dir: string): Promise
 	}
 
 	const file = Bun.file(fullPath);
-	if (await file.exists()) return new Response(file);
+	if (await file.exists()) {
+		return new Response(file, {
+			headers: {
+				"Cache-Control": "no-store",
+				"Content-Type": file.type,
+			},
+		});
+	}
 	return new Response("Not Found", { status: 404 });
 }
 

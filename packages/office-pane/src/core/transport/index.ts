@@ -11,6 +11,7 @@ import type {
 	HostToolResultMsg,
 	HostToolUpdateMsg,
 	ListCommandsMsg,
+	ListModelsMsg,
 	ListSkillsMsg,
 	PickPathMsg,
 	SetHostToolsMsg,
@@ -31,6 +32,7 @@ export type ChatOutbound =
 	| ConfigureMsg
 	| ListSkillsMsg
 	| ListCommandsMsg
+	| ListModelsMsg
 	| PickPathMsg;
 
 /**
@@ -62,7 +64,7 @@ export interface Transport {
 /** Config the pane sends to xcsh's `configure` frame (base URL + token + model). */
 export interface ProviderConfigure {
 	baseUrl?: string;
-	token: string;
+	token?: string;
 	model?: string;
 }
 

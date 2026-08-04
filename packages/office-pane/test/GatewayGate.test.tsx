@@ -10,7 +10,7 @@
  * CHAT-FIRST (#2171): the pane runs the shared gate in `optional` mode — an
  * unconfigured pane opens straight into chat over xcsh's existing provider, with
  * the gateway form demoted to Settings. A stored config additionally configures
- * xcsh's provider; a `provider-4xx` turn error auto-opens the form.
+ * xcsh's provider; a `provider-auth` turn error auto-opens the form.
  */
 import { expect, test } from "bun:test";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -65,7 +65,7 @@ test("chat-first: with NO stored config, opens the chat directly (not the form),
 	await settle();
 	// Chat-first: message input shown, NO forced gateway form.
 	expect(screen.getByLabelText(/message input/i)).toBeDefined();
-	expect(screen.queryByLabelText(/gateway url/i)).toBeNull();
+	expect(screen.queryByLabelText(/gateway.*url/i)).toBeNull();
 	// Transport built with a null config — chat runs over xcsh's existing provider.
 	expect(built).toEqual([null]);
 	// Config is still reachable — through the header's "⋯" menu, not a floating button.
@@ -88,7 +88,7 @@ test("saving a config via Settings persists it and rebuilds the transport from i
 
 	// Chat-first opens on chat → open Settings to reach the form.
 	await openSettings();
-	fill(/gateway url/i, "https://gw.example/anthropic");
+	fill(/gateway.*url/i, "https://gw.example/anthropic");
 	fill(/token/i, "<XC_API_TOKEN>");
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: /save|connect/i }));
@@ -98,7 +98,7 @@ test("saving a config via Settings persists it and rebuilds the transport from i
 	// null for chat-first, then with the config).
 	expect(store.load()?.token).toBe("<XC_API_TOKEN>");
 	expect(built[0]).toBeNull();
-	expect(built[built.length - 1]?.baseUrl).toBe("https://gw.example/anthropic");
+	expect(built[built.length - 1]?.baseUrl).toBe("https://gw.example");
 	expect(screen.getByLabelText(/message input/i)).toBeDefined();
 });
 
@@ -117,7 +117,7 @@ test("with a stored config, renders the chat and builds the transport from it", 
 	);
 	await settle();
 	expect(screen.getByLabelText(/message input/i)).toBeDefined();
-	expect(screen.queryByLabelText(/gateway url/i)).toBeNull();
+	expect(screen.queryByLabelText(/gateway.*url/i)).toBeNull();
 	expect(built).toEqual([CONFIG]);
 });
 
@@ -154,7 +154,7 @@ test("the Settings affordance reopens the form prefilled, and Cancel returns to 
 
 	await openSettings();
 	// Form is shown, prefilled with the stored base URL.
-	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw.example/anthropic");
+	expect((screen.getByLabelText(/gateway.*url/i) as HTMLInputElement).value).toBe("https://gw.example");
 
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
@@ -182,7 +182,7 @@ test("reconfiguring via Settings disposes the superseded transport (no socket le
 
 	// Settings → change the gateway → Save a NEW config.
 	await openSettings();
-	fill(/gateway url/i, "https://gw2.example/anthropic");
+	fill(/gateway.*url/i, "https://gw2.example/anthropic");
 	fill(/token/i, "t2");
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: /save|connect/i }));
@@ -217,10 +217,10 @@ test("a failed provider configure surfaces the error and Reconfigure reopens the
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: /reconfigure/i }));
 	});
-	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw.example/anthropic");
+	expect((screen.getByLabelText(/gateway.*url/i) as HTMLInputElement).value).toBe("https://gw.example");
 });
 
-test("a provider-4xx turn error auto-opens the gateway config form (#2171 auth recovery)", async () => {
+test("a provider-auth turn error auto-opens the gateway config form (#2171 auth recovery)", async () => {
 	const store = new MemoryGatewayConfigStore();
 	store.save(CONFIG);
 	let mock: MockTransport | undefined;
@@ -237,17 +237,17 @@ test("a provider-4xx turn error auto-opens the gateway config form (#2171 auth r
 	await settle();
 	expect(screen.getByLabelText(/message input/i)).toBeDefined();
 
-	// Send a turn, then the provider rejects it with a 4xx (bad gateway token).
+	// Send a turn, then the provider rejects the gateway token.
 	fireEvent.click(screen.getByRole("button", { name: /summarize/i }));
 	fireEvent.click(screen.getByRole("button", { name: /send/i }));
 	const req = mock?.sent.find((m): m is ChatRequestMsg => m.type === "chat_request");
 	if (!req) throw new Error("expected a chat_request to have been sent");
 	await act(async () => {
-		mock?.emit({ type: "chat_error", id: req.id, reason: "provider-4xx" });
+		mock?.emit({ type: "chat_error", id: req.id, reason: "provider-auth" } as never);
 	});
 
 	// The gateway config form auto-opened, prefilled from the stored config.
-	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).value).toBe("https://gw.example/anthropic");
+	expect((screen.getByLabelText(/gateway.*url/i) as HTMLInputElement).value).toBe("https://gw.example");
 });
 
 // A validation failure keeps the form up and surfaces the actionable message.
@@ -257,7 +257,7 @@ test("an invalid config surfaces the validator error and stays on the form", asy
 
 	// Chat-first → open Settings to reach the form.
 	await openSettings();
-	fill(/gateway url/i, "http://insecure.example/anthropic");
+	fill(/gateway.*url/i, "http://insecure.example/anthropic");
 	fill(/token/i, "<XC_API_TOKEN>");
 	await act(async () => {
 		fireEvent.click(screen.getByRole("button", { name: /save|connect/i }));
@@ -265,5 +265,5 @@ test("an invalid config surfaces the validator error and stays on the form", asy
 
 	expect(within(screen.getByRole("alert")).getByText(/https/i)).toBeDefined();
 	expect(store.load()).toBeNull();
-	expect(screen.getByLabelText(/gateway url/i)).toBeDefined();
+	expect(screen.getByLabelText(/gateway.*url/i)).toBeDefined();
 });

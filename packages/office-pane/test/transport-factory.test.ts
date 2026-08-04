@@ -4,7 +4,7 @@ import type { ConfigurableTransport, GatewayConfig, ProviderConfigure } from "..
 import type { OfficeHost } from "../src/office/host-adapter";
 import { makeBuildTransport, officeHostToClientHost } from "../src/office/transport-factory";
 
-const CONFIG: GatewayConfig = { baseUrl: "https://gw/anthropic", token: "t", model: "m" };
+const CONFIG: GatewayConfig = { baseUrl: "https://gw.example", token: "t", model: "m" };
 
 /**
  * A ConfigurableTransport stub that records a shared call-order log (so ordering
@@ -13,9 +13,12 @@ const CONFIG: GatewayConfig = { baseUrl: "https://gw/anthropic", token: "t", mod
 function makeStub(opts: { canConfigure?: boolean; configureRejects?: boolean } = {}) {
 	const calls: string[] = [];
 	let received: ProviderConfigure | undefined;
+	let canConfigure = opts.canConfigure ?? true;
 	const transport: ConfigurableTransport = {
 		state: "open",
-		canConfigureProvider: opts.canConfigure ?? true,
+		get canConfigureProvider() {
+			return canConfigure;
+		},
 		connect: () => Promise.resolve(),
 		send: () => {},
 		onMessage: () => () => {},
@@ -27,7 +30,7 @@ function makeStub(opts: { canConfigure?: boolean; configureRejects?: boolean } =
 			return opts.configureRejects ? Promise.reject(new Error("configure_error")) : Promise.resolve("model-x");
 		},
 	};
-	return { transport, calls, config: () => received };
+	return { transport, calls, config: () => received, setCanConfigure: (value: boolean) => (canConfigure = value) };
 }
 
 function build(host: OfficeHost, stub: ReturnType<typeof makeStub>) {
@@ -53,7 +56,7 @@ describe("makeBuildTransport", () => {
 		const built = build("Excel", stub);
 		await built.provision?.();
 		expect(stub.calls).toEqual(["configure"]);
-		expect(stub.config()).toEqual({ baseUrl: "https://gw/anthropic", token: "t", model: "m" });
+		expect(stub.config()).toEqual({ baseUrl: "https://gw.example", token: "t", model: "m" });
 	});
 
 	test("a blank model is omitted so xcsh selects its binary-baked default", async () => {
@@ -86,10 +89,41 @@ describe("makeBuildTransport", () => {
 		expect(stub.calls).toEqual(["configure"]);
 	});
 
-	test("provision is undefined when the bridge did not advertise the capability (xcsh keeps its default)", () => {
+	test("provision checks capability after connect, when hello_ack has populated it", async () => {
 		const stub = makeStub({ canConfigure: false });
 		const built = build("PowerPoint", stub);
-		expect(built.provision).toBeUndefined();
+		expect(built.provision).toBeDefined();
+		stub.setCanConfigure(true);
+		await built.provision?.();
+		expect(stub.config()).toEqual(CONFIG);
+	});
+
+	test("provision is a no-op when the connected bridge does not advertise configuration", async () => {
+		const stub = makeStub({ canConfigure: false });
+		const built = build("PowerPoint", stub);
+		await built.provision?.();
+		expect(stub.calls).toEqual([]);
+	});
+
+	test("model selection reuses a saved gateway root and token", async () => {
+		const stub = makeStub();
+		const built = build("Excel", stub);
+		await expect(built.selectModel?.("claude-opus-5")).resolves.toBe("model-x");
+		expect(stub.config()).toEqual({
+			baseUrl: "https://gw.example",
+			token: "t",
+			model: "claude-opus-5",
+		});
+	});
+
+	test("model selection without pane settings reuses xcsh's own credentials", async () => {
+		const stub = makeStub();
+		const built = makeBuildTransport("Excel", {
+			createTransport: () => stub.transport,
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(null);
+		await built.selectModel?.("claude-opus-5");
+		expect(stub.config()).toEqual({ model: "claude-opus-5" });
 	});
 
 	test("onConnected advertises the host-appropriate document tools", () => {

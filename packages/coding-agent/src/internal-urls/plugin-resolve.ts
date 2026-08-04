@@ -11,7 +11,7 @@
  * - xcsh://plugin/<name>/contract       -> the manifest verbatim
  * - xcsh://plugin/<name>/schema         -> file at manifest key "schema"
  * - xcsh://plugin/<name>/engine         -> manifest engine block, entry resolved to abs path
- * - xcsh://plugin/<name>/file/<relpath> -> any root-relative file
+ * - xcsh://plugin/<name>/file/<relpath> -> any root-relative file or directory
  *
  * Text resources resolve to their CONTENTS. A declared binary resource (a .xlsx
  * template, an image) resolves to its LOCATION — `{binary, path, bytes}` — because a
@@ -210,15 +210,32 @@ export class PluginResolver {
 	}
 
 	/**
-	 * Resolve one on-disk file, as contents for text and as a locator for binary.
+	 * Resolve one on-disk path, as contents for text and as a locator for binary
+	 * files or directories.
 	 * Shared by the `file/<relpath>` route and the named-key route so the two cannot
 	 * disagree about what a `.xlsx` is.
 	 */
 	async #resource(url: InternalUrl, target: string): Promise<InternalResource> {
+		let stat: Awaited<ReturnType<typeof fs.stat>>;
+		try {
+			stat = await fs.stat(target);
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`File not found: ${target}`);
+			throw error;
+		}
+		if (stat.isDirectory()) {
+			const body = JSON.stringify({ directory: true });
+			return {
+				url: url.href,
+				content: body,
+				contentType: "application/json",
+				size: Buffer.byteLength(body, "utf-8"),
+				sourcePath: target,
+				notes: ["Directory resource: this is its location. Inspect it with a filesystem tool."],
+			};
+		}
 		if (isBinaryResource(target)) {
-			const file = Bun.file(target);
-			if (!(await file.exists())) throw new Error(`File not found: ${target}`);
-			const body = JSON.stringify({ binary: true, path: target, bytes: file.size });
+			const body = JSON.stringify({ binary: true, path: target, bytes: stat.size });
 			return {
 				url: url.href,
 				content: body,

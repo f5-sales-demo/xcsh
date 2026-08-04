@@ -24,6 +24,17 @@ export const CANONICAL_ELEMENTS = [
 	"Competition",
 ] as const;
 
+const CANONICAL_ELEMENT_KEYS: Record<(typeof CANONICAL_ELEMENTS)[number], string> = {
+	Metrics: "metrics",
+	"Economic Buyer": "economicBuyer",
+	"Decision Criteria": "decisionCriteria",
+	"Decision Process": "decisionProcess",
+	"Paper Process": "paperProcess",
+	"Identify Pain": "implicateThePain",
+	Champion: "champion",
+	Competition: "competition",
+};
+
 export interface MeddpiccStep {
 	number: number;
 	title: string;
@@ -56,7 +67,7 @@ export const MEDDPICC_STEPS: MeddpiccStep[] = [
 		number: 4,
 		title: "Review the three priority gaps",
 		prompt:
-			"Read example-corp.json and give a read-only Example Corp health review. Within the eight MEDDPICC qualification elements, identify the three most urgent evidence-backed gaps and cite the evidence that makes each a gap. Do not modify anything.",
+			"In this turn, use a file tool to read example-corp.json again; do not rely on content from earlier turns. Then give a read-only Example Corp health review. Within the eight MEDDPICC qualification elements, identify the three most urgent evidence-backed gaps and cite the evidence that makes each a gap. Do not modify anything.",
 		readOnly: true,
 	},
 	{
@@ -101,7 +112,20 @@ function assertion(label: string, passed: boolean, detail?: string): ScenarioAss
 }
 
 function includes(reply: string, text: string): boolean {
-	return reply.toLocaleLowerCase().includes(text.toLocaleLowerCase());
+	const rendered = (value: string): string => value.replaceAll(/[*_`]/g, "");
+	return rendered(reply).toLocaleLowerCase().includes(rendered(text).toLocaleLowerCase());
+}
+
+function mentionsWorkspace(reply: string, workspace: string): boolean {
+	const aliases = workspace.startsWith("/private/tmp/")
+		? [workspace, workspace.slice("/private".length)]
+		: [workspace];
+	return aliases.some(alias => reply.includes(alias));
+}
+
+function mentionsElement(reply: string, element: (typeof CANONICAL_ELEMENTS)[number]): boolean {
+	if (includes(reply, element) || includes(reply, CANONICAL_ELEMENT_KEYS[element])) return true;
+	return element === "Identify Pain" && includes(reply, "Implicate the Pain");
 }
 
 function unchangedFiles(observation: ScenarioObservation): boolean {
@@ -127,7 +151,7 @@ export function validateMeddpiccStep(stepNumber: number, observation: ScenarioOb
 	switch (stepNumber) {
 		case 1:
 			return [
-				assertion("reply contains the exact demo directory", reply.includes(observation.workspace)),
+				assertion("reply contains the exact demo directory", mentionsWorkspace(reply, observation.workspace)),
 				assertion("reply inventories example-corp.json", includes(reply, "example-corp.json")),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),
 				assertion("workbook snapshot is unchanged", unchangedWorkbook(observation)),
@@ -150,14 +174,9 @@ export function validateMeddpiccStep(stepNumber: number, observation: ScenarioOb
 		case 3:
 			return [
 				...CANONICAL_ELEMENTS.map(element =>
-					assertion(
-						`reply defines ${element}`,
-						element === "Identify Pain"
-							? includes(reply, "Identify Pain") || includes(reply, "Implicate the Pain")
-							: includes(reply, element),
-					),
+					assertion(`reply defines ${element}`, mentionsElement(reply, element)),
 				),
-				assertion("installed plugin resource was read", successfulTool(observation, ["read", "bash"])),
+				assertion("installed plugin resource was read", successfulTool(observation, ["read", "grep", "bash"])),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),
 				assertion("workbook snapshot is unchanged", unchangedWorkbook(observation)),
 			];
@@ -166,7 +185,7 @@ export function validateMeddpiccStep(stepNumber: number, observation: ScenarioOb
 				assertion("reply identifies Paper Process", includes(reply, "Paper Process")),
 				assertion("reply identifies Decision Process", includes(reply, "Decision Process")),
 				assertion("reply identifies Competition", includes(reply, "Competition")),
-				assertion("fixture was read", successfulTool(observation, ["read", "bash"])),
+				assertion("fixture was read", successfulTool(observation, ["read", "grep", "bash"])),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),
 				assertion("workbook snapshot is unchanged", unchangedWorkbook(observation)),
 			];

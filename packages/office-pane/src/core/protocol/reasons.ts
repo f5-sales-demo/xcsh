@@ -30,6 +30,7 @@ export const CHAT_ERROR_REASONS = [
 	"session-disposed", // the worker session was torn down
 	"token-expired", // F5 XC API token expired
 	"token-expiring", // F5 XC API token is about to expire
+	"provider-auth", // upstream provider rejected its credential
 	"provider-4xx", // upstream provider rejected the request (client error)
 	"provider-5xx", // upstream provider failed (server error) — retryable
 ] as const satisfies readonly ChatErrorReason[];

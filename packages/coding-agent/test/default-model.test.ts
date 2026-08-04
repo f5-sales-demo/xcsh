@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Effort } from "@f5-sales-demo/pi-ai";
+import { Effort, getBundledModel } from "@f5-sales-demo/pi-ai";
 import { DEFAULT_MODEL_ROLE_VALUE, generateConfigYml, healConfigYmlModelRoles } from "../src/config/auto-config";
 import { Settings } from "../src/config/settings";
 import { DEFAULT_MODEL_ROLE } from "../src/config/settings-schema";
@@ -22,24 +22,25 @@ describe("xcsh production model defaults", () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	test("bakes LiteLLM GPT-5.6 Sol High as the production default", () => {
-		expect(DEFAULT_MODEL_ROLE).toBe("litellm/gpt-5.6-sol:high");
+	test("bakes vision-capable Claude Opus 5 High as the production default", () => {
+		expect(DEFAULT_MODEL_ROLE).toBe("anthropic/claude-opus-5:high");
 		expect(DEFAULT_MODEL_ROLE_VALUE).toBe(DEFAULT_MODEL_ROLE);
 		const settings = Settings.isolated();
 		expect(settings.getModelRole("default")).toBe(DEFAULT_MODEL_ROLE);
 		expect(settings.get("defaultThinkingLevel")).toBe(Effort.High);
+		expect(getBundledModel("anthropic", "claude-opus-5")?.input).toContain("image");
 	});
 
-	test("uses GPT-5.6 Sol Low for fast work and restores High for thinking work", () => {
+	test("uses GPT-5.6 Sol Low for fast work and restores Claude Opus 5 for thinking work", () => {
 		const settings = Settings.isolated();
 		expect(settings.getModelRole("smol")).toBe("litellm/gpt-5.6-sol:low");
-		expect(settings.getModelRole("slow")).toBe("litellm/gpt-5.6-sol:high");
+		expect(settings.getModelRole("slow")).toBe("anthropic/claude-opus-5:high");
 	});
 
 	test("does not persist the binary model default in generated config", () => {
 		const yml = generateConfigYml();
 		expect(yml).not.toContain("modelRoles:");
-		expect(yml).not.toContain("gpt-5.6-sol");
+		expect(yml).not.toContain("claude-opus-5");
 		expect(yml).toContain("providers:");
 	});
 
@@ -48,7 +49,7 @@ describe("xcsh production model defaults", () => {
 		fs.writeFileSync(cfg, "modelRoles:\n  default: bench-instant/bench-instant\nproviders:\n  image: openai\n");
 		healConfigYmlModelRoles(cfg);
 		const out = fs.readFileSync(cfg, "utf-8");
-		expect(out).toContain("default: litellm/gpt-5.6-sol:high");
+		expect(out).toContain("default: anthropic/claude-opus-5:high");
 		expect(out).not.toContain("bench-instant");
 		expect(out).toContain("providers:");
 	});

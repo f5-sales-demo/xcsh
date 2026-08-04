@@ -18,6 +18,7 @@ import { getProjectDir, getXCSHConfigDir } from "@f5-sales-demo/pi-utils";
 import { createAgentSession } from "../sdk";
 import { ContextService } from "../services/xcsh-context";
 import { deriveTenantEnv } from "../services/xcsh-env";
+import { SessionManager } from "../session/session-manager";
 import { resolveBridgeTls } from "./bridge-cert";
 import { ChatHandler } from "./chat-handler";
 import { isPickPath, type PathPicked } from "./chat-protocol";
@@ -147,6 +148,10 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 		const { session } = await deps.createAgentSession({
 			cwd,
 			hasUI: false,
+			// Office conversations can contain private workbook and working-directory
+			// data. Keep the entire headless session ephemeral instead of inheriting
+			// createAgentSession's file-backed default.
+			sessionManager: SessionManager.inMemory(cwd),
 			toolNames: [...OFFICE_TOOL_NAMES],
 			customTools: [],
 			// Headless: no MCP/LSP/extension discovery — lean, no network/blocking prompts.

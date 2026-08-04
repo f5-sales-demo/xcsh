@@ -47,7 +47,7 @@ const FOLDER_CATEGORY: AttachCategory = {
 	description: "Pick a local folder as context",
 };
 const SKILLS_CATEGORY: AttachCategory = { id: "skills", label: "Skills", description: "Run a workspace skill" };
-/** A toggle category: enables Anthropic server-side web search for the next turns. */
+/** A toggle category: enables the active model API's server-side web search. */
 const WEB_SEARCH_CATEGORY = { id: "web_search", label: "Search the web", toggle: true } as const;
 
 /** Last path segment, for a compact chip label (handles trailing-slash-free paths). */
@@ -97,11 +97,13 @@ export interface ChatPanelProps {
 	provision?: () => Promise<void>;
 	/** Fired once after provisioning succeeds — e.g. to advertise host tools. */
 	onConnected?: () => void;
+	/** Select an engine model; resolves with the acknowledged model id. */
+	selectModel?: (model: string) => Promise<string>;
 	/** Recovery action for a configure failure — reopens the gateway config form. */
 	onReconfigure?: () => void;
 	/**
 	 * Fired once per error episode when a chat turn fails because the configured
-	 * provider rejected the request (`provider-4xx` — a bad/absent gateway token),
+	 * provider rejected the configured credential (`provider-auth`),
 	 * so the host can auto-open the gateway config. Distinct from `onReconfigure`
 	 * (a connect-time `configure` rejection).
 	 */
@@ -151,7 +153,14 @@ const PROVISIONING_PLACEHOLDER: Record<string, string> = {
  *  collide with a real entry id (those are the engine's `conv-N` boundaries). */
 const LIVE_CHAT_ITEM = "__current__";
 
-export function ChatPanel({ transport, provision, onConnected, onReconfigure, onProviderConfigError }: ChatPanelProps) {
+export function ChatPanel({
+	transport,
+	provision,
+	onConnected,
+	selectModel: selectEngineModel,
+	onReconfigure,
+	onProviderConfigError,
+}: ChatPanelProps) {
 	const {
 		turns,
 		send,
@@ -168,15 +177,18 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 		provisionError,
 		skills,
 		slashCommands,
+		models,
+		model,
+		selectModel,
 		pickPath,
-	} = useChatSession(transport, { provision, onConnected });
+	} = useChatSession(transport, { provision, onConnected, selectModel: selectEngineModel });
 	const composerRef = useRef<ComposerHandle>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	// Photo/image attachments staged for the next send. The host owns this state and
 	// clears it in onSend (per the shared Composer's host-maps-its-own-state contract).
 	const [attachments, setAttachments] = useState<Attachment[]>([]);
-	// "Search the web" toggle — ON by default (the gateway runs Anthropic's server-side
-	// search, so current-events answers work out of the box) and sticky until flipped off.
+	// "Search the web" toggle — ON by default (the gateway runs the active provider's
+	// native search, so current-events answers work out of the box) and sticky until flipped off.
 	const [webSearch, setWebSearch] = useState(true);
 
 	const messages = useMemo(() => turnsToMessages({ turns, status, reason }), [turns, status, reason]);
@@ -321,10 +333,11 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 	);
 
 	// Auto-open the gateway config when a turn fails because the configured provider
-	// rejected us (provider-4xx = bad/absent gateway token). Fire once per episode;
+	// rejected its credential. Fire once per episode; an ordinary provider-4xx is
+	// a request problem and must stay in chat rather than implying the token is bad.
 	// a subsequent retry (status leaves 'error') re-arms it. Never while reading an
 	// archive: that failure is history, and popping the form over it is a false alarm.
-	const providerRejected = !viewingId && status === "error" && reason === "provider-4xx";
+	const providerRejected = !viewingId && status === "error" && reason === "provider-auth";
 	const promptedRef = useRef(false);
 	useEffect(() => {
 		if (providerRejected && !promptedRef.current) {
@@ -490,6 +503,9 @@ export function ChatPanel({ transport, provision, onConnected, onReconfigure, on
 				onSkillSelect={handleSkillSelect}
 				slashCommands={slashMenuItems}
 				onSlashSelect={handleSlashSelect}
+				models={models}
+				model={model ?? undefined}
+				onModelChange={model ? id => void selectModel(id) : undefined}
 			/>
 		</>
 	);

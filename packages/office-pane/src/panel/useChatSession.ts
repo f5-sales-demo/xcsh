@@ -12,9 +12,11 @@ import {
 	type ChatImageMsg,
 	type InteractionMode,
 	initTurn,
+	isModelsList,
 	isPathPicked,
 	isSkillsList,
 	isSlashCommandsList,
+	type ModelInfo,
 	type PathPickedMsg,
 	reduceChatTurn,
 	type SkillInfo,
@@ -45,6 +47,7 @@ export const DEFAULT_INTERACTION_MODE: InteractionMode = "educational";
 export interface ChatSessionHooks {
 	provision?: () => Promise<void>;
 	onConnected?: () => void;
+	selectModel?: (model: string) => Promise<string>;
 }
 
 /**
@@ -176,6 +179,11 @@ export interface ChatSessionResult {
 	 *  composer's `/` menu. Includes an installed plugin's commands, prefixed
 	 *  `<plugin>:<name>`. Empty until the `commands` reply arrives. */
 	slashCommands: SlashCommandInfo[];
+	/** Models reported by xcsh and the active model id. */
+	models: ModelInfo[];
+	model: string | null;
+	/** Select a model and update the displayed id only after xcsh acknowledges it. */
+	selectModel(model: string): Promise<void>;
 	/** Open a native OS file/folder picker on the bridge machine and resolve the
 	 *  chosen path (or a canceled/unsupported result). Backs the "Add a file/folder"
 	 *  composer categories. */
@@ -205,6 +213,8 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const [provisionError, setProvisionError] = useState<string | undefined>(undefined);
 	const [skills, setSkills] = useState<SkillInfo[]>([]);
 	const [slashCommands, setSlashCommands] = useState<SlashCommandInfo[]>([]);
+	const [models, setModels] = useState<ModelInfo[]>([]);
+	const [model, setModel] = useState<string | null>(null);
 	// Resolver for an in-flight pickPath() — settled by the next `path_picked` frame.
 	const pendingPickRef = useRef<((r: PathPickedMsg) => void) | null>(null);
 	const counterRef = useRef(0);
@@ -225,6 +235,8 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		setConnectErr(null);
 		setProvisioning("connecting");
 		setProvisionError(undefined);
+		setModels([]);
+		setModel(null);
 		transport
 			.connect()
 			.then(async () => {
@@ -253,6 +265,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 					transport.send({ type: "list_skills" });
 					// …and for its slash commands, which populate the composer's `/` menu.
 					transport.send({ type: "list_commands" });
+					transport.send({ type: "list_models" });
 				} catch {
 					/* transport already gone — skip; the submenu stays empty */
 				}
@@ -283,6 +296,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			} else if (isSlashCommandsList(msg)) {
 				// The engine's slash commands — cache them for the composer's `/` menu.
 				setSlashCommands(msg.commands);
+			} else if (isModelsList(msg)) {
+				setModels(msg.models);
+				setModel(msg.current);
 			} else if (isPathPicked(msg)) {
 				// Settle the in-flight pickPath() with the picker result.
 				pendingPickRef.current?.(msg);
@@ -375,6 +391,13 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			transport.stop(activeTurnIdRef.current);
 		}
 	}, [transport]);
+
+	const selectModel = useCallback(async (modelId: string): Promise<void> => {
+		const select = hooksRef.current?.selectModel;
+		if (!select) return;
+		const selected = await select(modelId);
+		setModel(selected);
+	}, []);
 
 	const pickPath = useCallback(
 		(mode: "file" | "folder") =>
@@ -492,6 +515,9 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		provisionError,
 		skills,
 		slashCommands,
+		models,
+		model,
+		selectModel,
 		pickPath,
 	};
 }

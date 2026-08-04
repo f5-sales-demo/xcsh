@@ -188,16 +188,20 @@ export class LoopbackBridgeTransport implements ConfigurableTransport {
 			return Promise.reject(new Error("A configure is already in flight"));
 		}
 		const token = config.token?.trim();
-		if (!token) {
-			return Promise.reject(new Error("configure requires a non-empty token"));
+		const model = config.model?.trim();
+		if (!token && !model) {
+			return Promise.reject(new Error("configure requires a non-empty token or model"));
+		}
+		if (config.baseUrl && !token) {
+			return Promise.reject(new Error("configure requires a token with a gateway root"));
 		}
 		const { promise, resolve, reject } = Promise.withResolvers<string>();
 		this._pendingConfigure = { resolve, reject };
 		this.send({
 			type: "configure",
-			token,
+			...(token ? { token } : {}),
 			...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
-			...(config.model ? { model: config.model } : {}),
+			...(model ? { model } : {}),
 		});
 		return promise;
 	}

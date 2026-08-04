@@ -24,6 +24,7 @@ export const ERROR_MESSAGES: Record<ChatErrorReason, string> = {
 	"session-disposed": "The assistant session was closed.",
 	"token-expired": "Your session token has expired. Please sign in again.",
 	"token-expiring": "Your session token is about to expire.",
+	"provider-auth": "The upstream service rejected the configured credential.",
 	"provider-4xx": "The request was rejected by the upstream service.",
 	"provider-5xx": "The upstream service encountered an error.",
 };

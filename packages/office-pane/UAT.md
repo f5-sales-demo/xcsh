@@ -107,20 +107,23 @@ sideload from that folder.
 | P6 | During P4/P5, watch for a new worksheet | A sheet named after the deal is created and populated; the sheet you started on is not overwritten. Re-running overwrites that sheet rather than adding a duplicate tab. | #2476 |
 | P7 | Ask "show me the meddpicc schema" | The assistant reads it via `xcsh://plugin/meddpicc/schema` and does not claim plugin resources are unavailable. | #2476 |
 
-## GPT-5.6 Sol MEDDPICC certification
+## Multi-model MEDDPICC certification
 
 The release-certification harness runs the same five prompts used in the team
 presentation against a real `xcsh office serve` bridge and the production Excel
 tool definitions. It uses a stateful workbook fake for the automated gate; repeat
-the printed prompts in desktop Excel for the final Office.js and WebView check.
+the printed prompts in desktop Excel for the final Office.js and WebView check. The
+harness also proves live inference through the default Claude Opus 5, switches to
+GPT-5.6 Sol, and switches back to Claude Opus 5 before it exercises the deal
+workflow.
 
 Prerequisites:
 
-1. Install `meddpicc@f5-sales-demo-marketplace` version 7.5.3.
-2. Export `LITELLM_BASE_URL` as the full HTTPS OpenAI-compatible API base URL,
-   including its path (for example, `https://gateway.example.com/v1`), and export
-   `LITELLM_API_KEY`. A proxy root URL without `/v1` or the gateway's equivalent
-   API path is not sufficient.
+1. Install `meddpicc@f5-sales-demo-marketplace` version 7.5.4.
+2. Export `LITELLM_BASE_URL` as the HTTPS gateway root (for example,
+   `https://gateway.example.com`) and export `LITELLM_API_KEY`. xcsh derives the
+   provider-specific API path from the selected model. Legacy values that include a
+   provider path are reduced to the same gateway root.
 3. Build xcsh, or choose the exact installed release binary to certify.
 4. Ensure port 8444 is free. The harness refuses to supersede a server it did not start.
 
@@ -141,11 +144,13 @@ bun packages/office-pane/scripts/uat-meddpicc-excel.ts \
 ```
 
 For the published gate, use the exact Homebrew binary and a separate evidence file.
-The script copies the canonical fixture into the workspace as `example-corp.json`,
-checks its SHA-256, checks the plugin version, runs all five steps, reruns step 5 for
-idempotency, and stops only the `office serve` child it spawned. A passing evidence
-file includes the binary version and SHA, source Git SHA, configure acknowledgement,
-responses, tool traffic, timings, assertions, and before/after workbook snapshots.
+The fixture must be synthetic and represent every person with a reserved role alias
+such as `<CHAMPION>` or `<ACCOUNT_EXECUTIVE>`. The harness refuses other identity
+values before starting Office, copies the canonical fixture into the workspace as
+`example-corp.json`, checks its SHA-256 and plugin version, runs all five steps,
+reruns step 5 for idempotency, and stops only the `office serve` child it spawned.
+It records responses, tool traffic, timings, assertions, and before/after workbook
+snapshots alongside the build identifiers.
 
 In desktop Excel, begin with a sheet named `Start` containing a sentinel value. Save
 the LiteLLM URL and token with the model field blank, then send the printed prompts.

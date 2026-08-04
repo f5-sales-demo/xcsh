@@ -2,7 +2,7 @@
   "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
   "manifestVersion": "devPreview",
   "id": "6d3b8a41-2f5c-4e7a-9b0d-1c2e3f4a5b6c",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "name": {
     "short": "xcsh",
     "full": "xcsh — Office task pane"
@@ -38,7 +38,7 @@
           "id": "TaskPaneRuntime",
           "type": "general",
           "code": {
-            "page": "https://127-0-0-1.local-ip.sh:8444/taskpane.html"
+            "page": "https://127-0-0-1.local-ip.sh:8444/taskpane.html?v=0.1.2"
           },
           "lifetime": "short",
           "actions": [
@@ -62,22 +62,22 @@
                   "id": "xcshGroup",
                   "label": "xcsh",
                   "icons": [
-                    { "size": 16, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png" },
-                    { "size": 32, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-32.png" },
-                    { "size": 80, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-80.png" }
+                    { "size": 16, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png?v=0.1.2" },
+                    { "size": 32, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-32.png?v=0.1.2" },
+                    { "size": 80, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-80.png?v=0.1.2" }
                   ],
                   "controls": [
                     {
                       "id": "xcshTaskpaneButton",
                       "type": "button",
-                      "label": "Open xcsh",
+                      "label": "xcsh",
                       "icons": [
-                        { "size": 16, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png" },
-                        { "size": 32, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-32.png" },
-                        { "size": 80, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-80.png" }
+                        { "size": 16, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-16.png?v=0.1.2" },
+                        { "size": 32, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-32.png?v=0.1.2" },
+                        { "size": 80, "url": "https://127-0-0-1.local-ip.sh:8444/assets/icon-80.png?v=0.1.2" }
                       ],
                       "supertip": {
-                        "title": "Open xcsh",
+                        "title": "xcsh",
                         "description": "Open the xcsh chat task pane."
                       },
                       "actionId": "ShowTaskpane"

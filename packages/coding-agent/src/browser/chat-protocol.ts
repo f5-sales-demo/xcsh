@@ -89,8 +89,8 @@ interface ChatRequestBase {
 	 *  grants them to the filesystem sandbox for the session and tells the model they
 	 *  are available to read on demand. */
 	contextPaths?: string[];
-	/** When true, the engine adds Anthropic's server-side web-search tool to this
-	 *  turn's request (the "Search the web" composer toggle). */
+	/** When true, the engine adds the active model API's native server-side
+	 *  web-search tool to this turn (the "Search the web" composer toggle). */
 	web_search?: boolean;
 }
 
@@ -126,6 +126,24 @@ export interface PathPicked {
  *  Skills submenu. Sent once after the pane connects. */
 export interface ListSkills {
 	type: "list_skills";
+}
+
+/** Client → engine: enumerate the curated models available to the Office pane. */
+export interface ListModels {
+	type: "list_models";
+}
+
+/** One model option surfaced in the Office composer's model selector. */
+export interface ModelInfo {
+	id: string;
+	label: string;
+}
+
+/** Engine → client: available Office models and the active model id. */
+export interface ModelsList {
+	type: "models";
+	current: string;
+	models: ModelInfo[];
 }
 
 /** One skill surfaced to the pane's Skills submenu (name + human description). */
@@ -196,6 +214,7 @@ export const CHAT_ERROR_REASONS = [
 	"session-disposed", // the worker session was torn down
 	"token-expired", // F5 XC API token expired
 	"token-expiring", // F5 XC API token is about to expire
+	"provider-auth", // upstream provider rejected its credential
 	"provider-4xx", // upstream provider rejected the request (client error)
 	"provider-5xx", // upstream provider failed (server error) — retryable
 ] as const;
@@ -278,15 +297,14 @@ export interface SetHostToolsError {
 // field. Mirrors the set_host_tools ack/nack shape exactly.
 // ---------------------------------------------------------------------------
 
-/** Inbound: the client configures the LLM provider. `token` is required and
- * non-empty. `baseUrl` (optional) is an OpenAI-compatible LiteLLM API base; when
- * omitted, the baked LiteLLM gateway is reused and only the runtime API key is set.
- * `model` (optional) selects the model id; when omitted, the session default is
- * kept. The token lives in session/runtime memory only — never written to disk. */
+/** Inbound: the client configures credentials, selects a model, or both.
+ * `baseUrl` is a gateway root and requires a non-empty `token`; xcsh derives its
+ * provider path from `model`. A model-only frame reuses xcsh's existing provider
+ * credentials. Runtime credentials are never written to disk. */
 export interface Configure {
 	type: "configure";
 	baseUrl?: string;
-	token: string;
+	token?: string;
 	model?: string;
 }
 
@@ -372,15 +390,22 @@ export function isSetHostTools(msg: Record<string, unknown>): boolean {
 	return msg.type === "set_host_tools" && Array.isArray(msg.tools);
 }
 
-/** True for a well-formed `configure` frame: a non-empty string `token` is required;
- * `baseUrl`/`model`, when present, must be strings. */
+export function isListModels(msg: Record<string, unknown>): boolean {
+	return msg.type === "list_models";
+}
+
+/** True for a well-formed `configure` frame. At least a non-empty token or model is
+ * required, and a gateway root may never be sent without its token. */
 export function isConfigure(msg: Record<string, unknown>): boolean {
+	const hasToken = typeof msg.token === "string" && msg.token.trim().length > 0;
+	const hasModel = typeof msg.model === "string" && msg.model.trim().length > 0;
 	return (
 		msg.type === "configure" &&
-		typeof msg.token === "string" &&
-		msg.token.length > 0 &&
+		(hasToken || hasModel) &&
+		(msg.token === undefined || typeof msg.token === "string") &&
 		(msg.baseUrl === undefined || typeof msg.baseUrl === "string") &&
-		(msg.model === undefined || typeof msg.model === "string")
+		(msg.model === undefined || typeof msg.model === "string") &&
+		(msg.baseUrl === undefined || hasToken)
 	);
 }
 
