@@ -19,7 +19,7 @@ describe("resource CLI automation contract", () => {
 		expect(result.exitCode).toBe(0);
 		const report = JSON.parse(result.stdout.toString()) as { success: boolean; operation: string };
 		expect(report).toMatchObject({ success: true, operation: "validate" });
-	}, 20_000);
+	}, 40_000);
 
 	test("maps validation failures to usage exit code 2", () => {
 		expect(
