@@ -2,7 +2,14 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { getOAuthProviders, loginLiteLLM, type OAuthProvider } from "@f5-sales-demo/pi-ai";
+import {
+	type AuthCredential,
+	getOAuthProviders,
+	loginLiteLLM,
+	loginVllm,
+	type OAuthPrompt,
+	type OAuthProvider,
+} from "@f5-sales-demo/pi-ai";
 import type { Component } from "@f5-sales-demo/pi-tui";
 import { Input, Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir, t } from "@f5-sales-demo/pi-utils";
@@ -19,6 +26,12 @@ import {
 import { getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
 import { settings } from "../../config/settings";
+import {
+	probeVllmConnection,
+	readVllmConfig,
+	VLLM_DEFAULT_TOOL_NAMES,
+	writeVllmModelsConfig,
+} from "../../config/vllm-config";
 import { DebugSelectorComponent } from "../../debug";
 import { disableProvider, enableProvider } from "../../discovery";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../discovery/helpers";
@@ -48,7 +61,7 @@ import { AssistantMessageComponent } from "../components/assistant-message";
 import { ExtensionDashboard } from "../components/extensions";
 import { GutterBlock } from "../components/gutter-block";
 import { HistorySearchComponent } from "../components/history-search";
-import { LiteLLMModelSelectorComponent } from "../components/litellm-model-selector";
+import { LoginModelSelectorComponent } from "../components/login-model-selector";
 import { ModelSelectorComponent } from "../components/model-selector";
 import { OAuthSelectorComponent } from "../components/oauth-selector";
 import { PluginSelectorComponent } from "../components/plugin-selector";
@@ -65,7 +78,9 @@ import {
 	applyModelAfterLogin,
 	applyOAuthLoginModel,
 	getAvailableLiteLLMLoginModelChoices,
+	getAvailableVllmLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
+	type LoginModelChoice,
 } from "./login-model";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
@@ -480,6 +495,46 @@ export class SelectorController {
 		});
 	}
 
+	async #showLoginModelSelector(choices: readonly LoginModelChoice[]): Promise<LoginModelChoice | undefined> {
+		const { promise, resolve } = Promise.withResolvers<LoginModelChoice | undefined>();
+		let applying = false;
+		this.showSelector(done => {
+			const selector = new LoginModelSelectorComponent(
+				choices,
+				choice => {
+					if (applying) return;
+					applying = true;
+					void (async () => {
+						try {
+							const applied = await applyModelAfterLogin(this.ctx.session, choice);
+							if (!applied) {
+								this.ctx.showError(`Model unavailable after refresh: ${choice.provider}/${choice.modelId}`);
+								applying = false;
+								return;
+							}
+							this.ctx.statusLine.invalidate();
+							this.ctx.updateEditorBorderColor();
+							done();
+							resolve(choice);
+							this.ctx.ui.requestRender();
+						} catch (error) {
+							this.ctx.showError(error instanceof Error ? error.message : String(error));
+							applying = false;
+						}
+					})();
+				},
+				() => {
+					if (applying) return;
+					done();
+					resolve(undefined);
+					this.ctx.ui.requestRender();
+				},
+			);
+			return { component: selector, focus: selector.getSelectList() };
+		});
+		return promise;
+	}
+
 	async #showLiteLLMLoginModelSelector(availableModelIds: readonly string[]): Promise<boolean> {
 		const choices = getAvailableLiteLLMLoginModelChoices(availableModelIds);
 		const available = new Set(choices.map(choice => choice.modelId));
@@ -497,50 +552,11 @@ export class SelectorController {
 				),
 			);
 		}
-
 		if (choices.length === 0) {
 			this.ctx.showError("LiteLLM login succeeded, but neither GPT-5.6 Sol nor Claude Opus 5 is available.");
 			return false;
 		}
-
-		const { promise, resolve } = Promise.withResolvers<boolean>();
-		let applying = false;
-		this.showSelector(done => {
-			const selector = new LiteLLMModelSelectorComponent(
-				choices,
-				choice => {
-					if (applying) return;
-					applying = true;
-					void (async () => {
-						try {
-							const applied = await applyModelAfterLogin(this.ctx.session, choice);
-							if (!applied) {
-								this.ctx.showError(`Model unavailable after refresh: ${choice.provider}/${choice.modelId}`);
-								applying = false;
-								return;
-							}
-							this.ctx.statusLine.invalidate();
-							this.ctx.updateEditorBorderColor();
-							done();
-							resolve(true);
-							this.ctx.ui.requestRender();
-						} catch (error) {
-							this.ctx.showError(error instanceof Error ? error.message : String(error));
-							applying = false;
-						}
-					})();
-				},
-				() => {
-					if (applying) return;
-					done();
-					resolve(false);
-					this.ctx.ui.requestRender();
-				},
-			);
-			return { component: selector, focus: selector.getSelectList() };
-		});
-
-		return promise;
+		return (await this.#showLoginModelSelector(choices)) !== undefined;
 	}
 
 	async showPluginSelector(mode: "install" | "uninstall" = "install"): Promise<void> {
@@ -934,6 +950,47 @@ export class SelectorController {
 		await this.showSessionSelector();
 	}
 
+	async #promptOAuthValue(prompt: OAuthPrompt): Promise<string> {
+		this.ctx.chatContainer.addChild(new Spacer(1));
+		this.ctx.chatContainer.addChild(new Text(theme.fg("text", prompt.message), 1, 0));
+		if (prompt.placeholder) {
+			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `e.g., ${prompt.placeholder}`), 1, 0));
+		}
+		this.ctx.ui.requestRender();
+
+		const { promise, resolve, reject } = Promise.withResolvers<string>();
+		const input = new Input();
+		if (prompt.initialValue !== undefined) {
+			input.setValue(prompt.initialValue);
+			input.handleInput("\x05"); // Ctrl+E: edit prefilled values from the end.
+		}
+		if (prompt.masked) input.setMasked(true);
+		let settled = false;
+		const restoreEditor = () => {
+			this.ctx.editorContainer.clear();
+			this.ctx.editorContainer.addChild(this.ctx.editor);
+			this.ctx.ui.setFocus(this.ctx.editor);
+		};
+		input.onSubmit = () => {
+			if (settled) return;
+			settled = true;
+			const value = input.getValue();
+			restoreEditor();
+			resolve(value);
+		};
+		input.onEscape = () => {
+			if (settled) return;
+			settled = true;
+			restoreEditor();
+			reject(new Error("Login cancelled"));
+		};
+		this.ctx.editorContainer.clear();
+		this.ctx.editorContainer.addChild(input);
+		this.ctx.ui.setFocus(input);
+		this.ctx.ui.requestRender();
+		return promise;
+	}
+
 	async #handleLiteLLMLogin(): Promise<void> {
 		this.ctx.showStatus("Configuring LiteLLM proxy…");
 
@@ -945,28 +1002,7 @@ export class SelectorController {
 			// Sequential prompts for base URL + API key
 			const result = await loginLiteLLM({
 				defaults: existing,
-				onPrompt: async prompt => {
-					this.ctx.chatContainer.addChild(new Spacer(1));
-					this.ctx.chatContainer.addChild(new Text(theme.fg("text", prompt.message), 1, 0));
-					if (prompt.placeholder) {
-						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `e.g., ${prompt.placeholder}`), 1, 0));
-					}
-					this.ctx.ui.requestRender();
-
-					const { promise, resolve } = Promise.withResolvers<string>();
-					const codeInput = new Input();
-					codeInput.onSubmit = () => {
-						const value = codeInput.getValue();
-						this.ctx.editorContainer.clear();
-						this.ctx.editorContainer.addChild(this.ctx.editor);
-						this.ctx.ui.setFocus(this.ctx.editor);
-						resolve(value);
-					};
-					this.ctx.editorContainer.clear();
-					this.ctx.editorContainer.addChild(codeInput);
-					this.ctx.ui.setFocus(codeInput);
-					return promise;
-				},
+				onPrompt: prompt => this.#promptOAuthValue(prompt),
 			});
 
 			// Verification
@@ -1034,10 +1070,113 @@ export class SelectorController {
 		}
 	}
 
+	async #handleVllmLogin(): Promise<void> {
+		this.ctx.showStatus("Configuring vLLM endpoint…");
+		const modelsPath = path.join(getAgentDir(), "models.yml");
+		const authStorage = this.ctx.session.modelRegistry.authStorage;
+
+		try {
+			const existingConfig = readVllmConfig(modelsPath);
+			const previousCredential: AuthCredential | undefined = authStorage.get("vllm");
+			const existingApiKey = previousCredential?.type === "api_key" ? previousCredential.key : undefined;
+			const result = await loginVllm({
+				defaults: { baseUrl: existingConfig?.baseUrl, apiKey: existingApiKey },
+				onPrompt: prompt => this.#promptOAuthValue(prompt),
+			});
+
+			this.ctx.chatContainer.addChild(new Spacer(1));
+			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `Connecting to ${result.baseUrl}/models…`), 1, 0));
+			this.ctx.ui.requestRender();
+			const probe = await probeVllmConnection(result.baseUrl, result.apiKey);
+			this.ctx.chatContainer.addChild(
+				new Text(theme.fg("success", `${theme.status.success} OK — ${probe.models.length} models available`), 1, 0),
+			);
+
+			if (result.apiKey) {
+				await authStorage.set("vllm", { type: "api_key", key: result.apiKey });
+			} else {
+				await authStorage.remove("vllm");
+			}
+			try {
+				await writeVllmModelsConfig(modelsPath, result.baseUrl, { authenticated: !!result.apiKey });
+			} catch (writeError) {
+				try {
+					if (previousCredential) {
+						await authStorage.set("vllm", previousCredential);
+					} else {
+						await authStorage.remove("vllm");
+					}
+				} catch (rollbackError) {
+					throw new AggregateError(
+						[writeError, rollbackError],
+						"Failed to save the vLLM endpoint and restore the previous credential",
+					);
+				}
+				throw writeError;
+			}
+
+			await this.ctx.session.modelRegistry.refreshProvider("vllm", "online");
+			const choices = getAvailableVllmLoginModelChoices(this.ctx.session.modelRegistry.getAll(), probe.models);
+			if (choices.length === 0) {
+				throw new Error("vLLM models were discovered, but none resolved after the provider refresh");
+			}
+
+			let selectedChoice: LoginModelChoice | undefined;
+			if (choices.length === 1) {
+				if (!(await applyModelAfterLogin(this.ctx.session, choices[0]!))) {
+					throw new Error(`Model unavailable after refresh: vllm/${choices[0]!.modelId}`);
+				}
+				selectedChoice = choices[0];
+				this.ctx.statusLine.invalidate();
+				this.ctx.updateEditorBorderColor();
+			} else {
+				selectedChoice = await this.#showLoginModelSelector(choices);
+			}
+			if (selectedChoice) {
+				await this.ctx.session.setActiveToolsByName([...VLLM_DEFAULT_TOOL_NAMES]);
+			}
+
+			this.ctx.chatContainer.addChild(new Spacer(1));
+			this.ctx.chatContainer.addChild(
+				new Text(theme.fg("success", `${theme.status.success} Successfully logged in to vllm`), 1, 0),
+			);
+			this.ctx.chatContainer.addChild(
+				new Text(theme.fg("success", `vLLM configuration saved to ${modelsPath}`), 1, 0),
+			);
+			this.ctx.chatContainer.addChild(
+				new Text(
+					theme.fg(
+						"dim",
+						result.apiKey
+							? `Credentials saved to ${getAgentDbPath()}`
+							: "No API key stored; this endpoint will be used without authentication.",
+					),
+					1,
+					0,
+				),
+			);
+			if (selectedChoice) {
+				this.ctx.chatContainer.addChild(
+					new Text(
+						theme.fg("success", `Default model: ${selectedChoice.provider}/${selectedChoice.modelId}`),
+						1,
+						0,
+					),
+				);
+			}
+			this.ctx.ui.requestRender();
+		} catch (error: unknown) {
+			this.ctx.showError(`vLLM login failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
 	async #handleOAuthLogin(providerId: string): Promise<void> {
 		// LiteLLM has its own flow with config persistence
 		if (providerId === "litellm") {
 			return this.#handleLiteLLMLogin();
+		}
+		if (providerId === "vllm") {
+			return this.#handleVllmLogin();
 		}
 
 		this.ctx.showStatus(`Logging in to ${providerId}…`);
@@ -1061,28 +1200,7 @@ export class SelectorController {
 					this.ctx.ui.requestRender();
 					this.ctx.openInBrowser(info.url);
 				},
-				onPrompt: async (prompt: { message: string; placeholder?: string }) => {
-					this.ctx.chatContainer.addChild(new Spacer(1));
-					this.ctx.chatContainer.addChild(new Text(theme.fg("warning", prompt.message), 1, 0));
-					if (prompt.placeholder) {
-						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", prompt.placeholder), 1, 0));
-					}
-					this.ctx.ui.requestRender();
-					const { promise, resolve } = Promise.withResolvers<string>();
-					const codeInput = new Input();
-					codeInput.onSubmit = () => {
-						const code = codeInput.getValue();
-						this.ctx.editorContainer.clear();
-						this.ctx.editorContainer.addChild(this.ctx.editor);
-						this.ctx.ui.setFocus(this.ctx.editor);
-						resolve(code);
-					};
-					this.ctx.editorContainer.clear();
-					this.ctx.editorContainer.addChild(codeInput);
-					this.ctx.ui.setFocus(codeInput);
-					this.ctx.ui.requestRender();
-					return promise;
-				},
+				onPrompt: prompt => this.#promptOAuthValue(prompt),
 				onProgress: (message: string) => {
 					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", message), 1, 0));
 					this.ctx.ui.requestRender();
@@ -1122,7 +1240,11 @@ export class SelectorController {
 	async #handleOAuthLogout(providerId: string): Promise<void> {
 		try {
 			await this.ctx.session.modelRegistry.authStorage.logout(providerId);
-			await this.ctx.session.modelRegistry.refresh();
+			if (providerId === "vllm") {
+				await this.ctx.session.modelRegistry.refreshProvider("vllm", "online");
+			} else {
+				await this.ctx.session.modelRegistry.refresh();
+			}
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(
 				new Text(theme.fg("success", `${theme.status.success} Successfully logged out of ${providerId}`), 1, 0),

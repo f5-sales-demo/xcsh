@@ -2,12 +2,32 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getBundledModel } from "@f5-sales-demo/pi-ai";
+import { getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { Settings } from "../src/config/settings";
-import { createAgentSession, type ExtensionFactory } from "../src/sdk";
+import { VLLM_DEFAULT_TOOL_NAMES } from "../src/config/vllm-config";
+import { createAgentSession, type ExtensionFactory, resolveSessionToolNames } from "../src/sdk";
 import { SessionManager } from "../src/session/session-manager";
+
+const bundledModel = getBundledModel("openai", "gpt-4o-mini");
+if (!bundledModel) throw new Error("Expected bundled OpenAI model");
+const vllmModel: Model = { ...bundledModel, provider: "vllm" };
+
+describe("resolveSessionToolNames", () => {
+	it("uses the core tool set when vLLM tools are omitted", () => {
+		expect(resolveSessionToolNames(vllmModel, undefined)).toEqual([...VLLM_DEFAULT_TOOL_NAMES]);
+	});
+
+	it("preserves explicit vLLM tool selections", () => {
+		expect(resolveSessionToolNames(vllmModel, ["read", "web_search"])).toEqual(["read", "web_search"]);
+		expect(resolveSessionToolNames(vllmModel, [])).toEqual([]);
+	});
+
+	it("leaves omitted tools unconstrained for other providers", () => {
+		expect(resolveSessionToolNames(bundledModel, undefined)).toBeUndefined();
+	});
+});
 
 const toolActivationExtension: ExtensionFactory = pi => {
 	pi.registerTool({

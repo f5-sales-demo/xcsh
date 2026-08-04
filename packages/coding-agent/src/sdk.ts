@@ -41,6 +41,7 @@ import {
 } from "./config/model-resolver";
 import { loadPromptTemplates as loadPromptTemplatesInternal, type PromptTemplate } from "./config/prompt-templates";
 import { Settings, type SkillsSettings } from "./config/settings";
+import { VLLM_DEFAULT_TOOL_NAMES } from "./config/vllm-config";
 import { CursorExecHandlers } from "./cursor";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
@@ -151,6 +152,17 @@ import { wrapToolWithMetaNotice } from "./tools/output-meta";
 import { queueResolveHandler } from "./tools/resolve";
 import { EventBus } from "./utils/event-bus";
 import { buildNamedToolChoice } from "./utils/tool-choice";
+
+export function resolveSessionToolNames(
+	model: Model | undefined,
+	requested: string[] | undefined,
+): string[] | undefined {
+	if (requested !== undefined) return requested;
+	if (model?.provider === "vllm") {
+		return [...VLLM_DEFAULT_TOOL_NAMES];
+	}
+	return undefined;
+}
 
 // Types
 export interface CreateAgentSessionOptions {
@@ -938,6 +950,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			resolveThinkingLevelForModel(resolvedModel, thinkingLevel),
 		);
 	}
+	const effectiveToolNames = resolveSessionToolNames(model, options.toolNames);
 
 	let skills: Skill[];
 	let skillWarnings: SkillWarning[];
@@ -1067,8 +1080,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			hasUI: options.hasUI ?? false,
 			enableLsp,
 			get hasEditTool() {
-				const requestedToolNames = options.toolNames
-					? [...new Set(options.toolNames.map(name => name.toLowerCase()))]
+				const requestedToolNames = effectiveToolNames
+					? [...new Set(effectiveToolNames.map(name => name.toLowerCase()))]
 					: undefined;
 				return !requestedToolNames || requestedToolNames.includes("edit");
 			},
@@ -1196,7 +1209,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		);
 
 		// Create built-in tools (already wrapped with meta notice formatting)
-		const builtinTools = await logger.time("createAllTools", createTools, toolSession, options.toolNames);
+		const builtinTools = await logger.time("createAllTools", createTools, toolSession, effectiveToolNames);
 
 		// Discover MCP tools from .mcp.json files
 		let mcpManager: MCPManager | undefined;
@@ -1243,7 +1256,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// like createTools() governs the built-ins. In particular, --no-tools passes
 		// an empty list and must not expose generate_image merely because credentials exist.
 		const imageToolRequested =
-			options.toolNames === undefined || options.toolNames.some(name => name.toLowerCase() === "generate_image");
+			effectiveToolNames === undefined || effectiveToolNames.some(name => name.toLowerCase() === "generate_image");
 		if (imageToolRequested) {
 			const geminiImageTools = await logger.time("getGeminiImageTools", getGeminiImageTools);
 			if (geminiImageTools.length > 0) {
@@ -1252,7 +1265,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		}
 
 		// Add web search tools
-		if (options.toolNames?.includes("web_search")) {
+		if (effectiveToolNames?.includes("web_search")) {
 			customTools.push(...getSearchTools());
 		}
 
@@ -1670,7 +1683,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		const toolNamesFromRegistry = Array.from(toolRegistry.keys());
 		const requestedToolNames =
-			(options.toolNames ? [...new Set(options.toolNames.map(name => name.toLowerCase()))] : undefined) ??
+			(effectiveToolNames ? [...new Set(effectiveToolNames.map(name => name.toLowerCase()))] : undefined) ??
 			toolNamesFromRegistry;
 		const normalizedRequested = requestedToolNames.filter(name => toolRegistry.has(name));
 		const includeExitPlanMode = requestedToolNames.includes("exit_plan_mode");
@@ -1681,10 +1694,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const requestedActiveToolNames = includeExitPlanMode
 			? normalizedRequested
 			: normalizedRequested.filter(name => name !== "exit_plan_mode");
-		const initialRequestedActiveToolNames = options.toolNames
+		const initialRequestedActiveToolNames = effectiveToolNames
 			? requestedActiveToolNames
 			: requestedActiveToolNames.filter(name => !defaultInactiveToolNames.has(name));
-		const explicitlyRequestedMCPToolNames = options.toolNames
+		const explicitlyRequestedMCPToolNames = effectiveToolNames
 			? requestedActiveToolNames.filter(name => name.startsWith("mcp_"))
 			: [];
 		const discoveryDefaultServers = new Set(
@@ -1720,7 +1733,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// Without an explicit scope, custom and default-active extension tools join the
 		// built-ins. When toolNames is present, it is authoritative for every tool source.
 		const alwaysInclude: string[] =
-			options.toolNames === undefined
+			effectiveToolNames === undefined
 				? [
 						...(options.customTools?.map(t => (isCustomTool(t) ? t.name : t.name)) ?? []),
 						...registeredTools.filter(t => !t.definition.defaultInactive).map(t => t.definition.name),

@@ -60,7 +60,13 @@ import { loginQwenPortal } from "./utils/oauth/qwen-portal";
 import { loginSynthetic } from "./utils/oauth/synthetic";
 import { loginTavily } from "./utils/oauth/tavily";
 import { loginTogether } from "./utils/oauth/together";
-import type { OAuthController, OAuthCredentials, OAuthProvider, OAuthProviderId } from "./utils/oauth/types";
+import type {
+	OAuthController,
+	OAuthCredentials,
+	OAuthPrompt,
+	OAuthProvider,
+	OAuthProviderId,
+} from "./utils/oauth/types";
 import { loginVenice } from "./utils/oauth/venice";
 import { loginVercelAiGateway } from "./utils/oauth/vercel-ai-gateway";
 import { loginVllm } from "./utils/oauth/vllm";
@@ -741,8 +747,8 @@ export class AuthStorage {
 		ctrl: OAuthController & {
 			/** onAuth is required by auth-storage but optional in OAuthController */
 			onAuth: (info: { url: string; instructions?: string }) => void;
-			/** onPrompt is required for some providers (github-copilot, openai-codex) */
-			onPrompt: (prompt: { message: string; placeholder?: string }) => Promise<string>;
+			/** onPrompt is required for interactive provider setup. */
+			onPrompt: (prompt: OAuthPrompt) => Promise<string>;
 		},
 	): Promise<void> {
 		let credentials: OAuthCredentials;
@@ -910,8 +916,12 @@ export class AuthStorage {
 				return;
 			}
 			case "vllm": {
-				const apiKey = await loginVllm(ctrl);
-				await saveApiKeyCredential(apiKey);
+				const result = await loginVllm(ctrl);
+				if (result.apiKey) {
+					await saveApiKeyCredential(result.apiKey);
+				} else {
+					await this.remove(provider);
+				}
 				return;
 			}
 			case "parallel": {

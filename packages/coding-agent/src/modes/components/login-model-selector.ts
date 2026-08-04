@@ -1,14 +1,14 @@
 import { Container, type SelectItem, SelectList, Spacer, Text } from "@f5-sales-demo/pi-tui";
-import type { LiteLLMLoginModelChoice } from "../controllers/login-model";
+import type { LoginModelChoice } from "../controllers/login-model";
 import { getSelectListTheme } from "../theme/theme";
 import { DynamicBorder } from "./dynamic-border";
 
-export class LiteLLMModelSelectorComponent extends Container {
+export class LoginModelSelectorComponent extends Container {
 	#selectList: SelectList;
 
 	constructor(
-		choices: readonly LiteLLMLoginModelChoice[],
-		onSelect: (choice: LiteLLMLoginModelChoice) => void,
+		choices: readonly LoginModelChoice[],
+		onSelect: (choice: LoginModelChoice) => void,
 		onCancel: () => void,
 	) {
 		super();

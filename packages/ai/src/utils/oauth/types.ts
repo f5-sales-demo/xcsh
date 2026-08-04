@@ -53,6 +53,10 @@ export type OAuthPrompt = {
 	message: string;
 	placeholder?: string;
 	allowEmpty?: boolean;
+	/** Value placed in the input before it is shown. */
+	initialValue?: string;
+	/** Obscure the rendered input while preserving the submitted value. */
+	masked?: boolean;
 };
 
 export type OAuthAuthInfo = {

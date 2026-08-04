@@ -14,6 +14,10 @@ export interface LiteLLMLoginModelChoice extends LoginModelChoice {
 	modelId: "claude-opus-5" | "gpt-5.6-sol";
 }
 
+export interface VllmLoginModelChoice extends LoginModelChoice {
+	provider: "vllm";
+}
+
 export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
 	{
 		label: "Claude Opus 5",
@@ -42,6 +46,28 @@ export const GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly string[]): LiteLLMLoginModelChoice[] {
 	const available = new Set(availableModelIds);
 	return LITELLM_LOGIN_MODEL_CHOICES.filter(choice => available.has(choice.modelId));
+}
+
+export function getAvailableVllmLoginModelChoices(
+	models: readonly Model[],
+	availableModelIds: readonly string[],
+): VllmLoginModelChoice[] {
+	const available = new Set(availableModelIds);
+	const seen = new Set<string>();
+	return models
+		.filter(model => {
+			if (model.provider !== "vllm" || !available.has(model.id) || seen.has(model.id)) return false;
+			seen.add(model.id);
+			return true;
+		})
+		.map(model => ({
+			label: model.name || model.id,
+			description: "Local OpenAI-compatible model",
+			provider: "vllm" as const,
+			modelId: model.id,
+			thinkingLevel: ThinkingLevel.Off,
+		}))
+		.sort((left, right) => left.label.localeCompare(right.label) || left.modelId.localeCompare(right.modelId));
 }
 
 /**

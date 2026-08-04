@@ -121,8 +121,15 @@ export * from "./types";
 export { loginVenice } from "./venice";
 // Vercel AI Gateway (API key)
 export { loginVercelAiGateway } from "./vercel-ai-gateway";
-// vLLM (API key)
-export { loginVllm } from "./vllm";
+// vLLM (optional API key)
+export {
+	DEFAULT_VLLM_BASE_URL,
+	loginVllm,
+	normalizeVllmBaseUrl,
+	type VllmLoginDefaults,
+	type VllmLoginOptions,
+	type VllmLoginResult,
+} from "./vllm";
 // Xiaomi MiMo (API key)
 export { loginXiaomi } from "./xiaomi";
 // Z.AI (API key)

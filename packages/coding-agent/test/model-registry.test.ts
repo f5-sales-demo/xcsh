@@ -1920,6 +1920,32 @@ describe("ModelRegistry", () => {
 			expect(registry.find("litellm", "claude-3.5-sonnet")).toBeDefined();
 			expect(registry.find("litellm", "gpt-4o")).toBeDefined();
 		});
+
+		test("openai-compat discovery uses vLLM context metadata with a safe output budget", async () => {
+			writeRawModelsJson({
+				vllm: {
+					baseUrl: "http://127.0.0.1:8000/v1",
+					api: "openai-completions",
+					auth: "none",
+					discovery: { type: "openai-compat" },
+				},
+			});
+			using _hook = hookFetch(input => {
+				const requestUrl = String(input);
+				if (requestUrl === "http://127.0.0.1:8000/v1/models") {
+					return Response.json({ data: [{ id: "local-tool-model", max_model_len: 18432 }] });
+				}
+				throw new Error(`Unexpected URL: ${requestUrl}`);
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			await registry.refreshProvider("vllm", "online");
+
+			expect(registry.find("vllm", "local-tool-model")).toMatchObject({
+				contextWindow: 18432,
+				maxTokens: 1152,
+			});
+		});
 	});
 });
 

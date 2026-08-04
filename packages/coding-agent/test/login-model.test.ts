@@ -5,6 +5,7 @@ import {
 	applyOAuthLoginModel,
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	getAvailableLiteLLMLoginModelChoices,
+	getAvailableVllmLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
 } from "../src/modes/controllers/login-model";
 
@@ -79,6 +80,41 @@ describe("getAvailableLiteLLMLoginModelChoices", () => {
 
 	it("returns no choices when neither curated model is advertised", () => {
 		expect(getAvailableLiteLLMLoginModelChoices(["gpt-5.6-terra"])).toEqual([]);
+	});
+});
+
+describe("getAvailableVllmLoginModelChoices", () => {
+	it("filters the refreshed registry by provider and probed catalog", () => {
+		const choices = getAvailableVllmLoginModelChoices(
+			[
+				{ ...M("model-b", "vllm"), name: "Model B" },
+				{ ...M("model-a", "vllm"), name: "Model A" },
+				{ ...M("not-probed", "vllm"), name: "Not Probed" },
+				{ ...M("model-a", "other"), name: "Wrong Provider" },
+			] as never,
+			["model-b", "model-a"],
+		);
+
+		expect(choices.map(choice => `${choice.label}:${choice.modelId}`)).toEqual([
+			"Model A:model-a",
+			"Model B:model-b",
+		]);
+		expect(choices.every(choice => choice.provider === "vllm")).toBe(true);
+		expect(choices.every(choice => choice.thinkingLevel === ThinkingLevel.Off)).toBe(true);
+	});
+
+	it("builds a single choice that can be applied as the default model", async () => {
+		const model = { ...M("local-tool-model", "vllm"), name: "Local Tool Model" };
+		const [choice] = getAvailableVllmLoginModelChoices([model] as never, [model.id]);
+		const { session, setModel, setThinkingLevel } = makeSession({ models: [model] });
+
+		expect(choice).toBeDefined();
+		expect(await applyModelAfterLogin(session as never, choice!)).toBe(true);
+		expect(setModel).toHaveBeenCalledWith(model, "default", {
+			selector: "vllm/local-tool-model",
+			thinkingLevel: ThinkingLevel.Off,
+		});
+		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.Off);
 	});
 });
 

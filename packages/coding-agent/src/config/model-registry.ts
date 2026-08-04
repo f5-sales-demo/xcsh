@@ -495,6 +495,31 @@ function toPositiveNumberOrUndefined(value: unknown): number | undefined {
 	return undefined;
 }
 
+function extractOpenAICompatibleContextWindow(model: Record<string, unknown>): number | undefined {
+	return (
+		toPositiveNumberOrUndefined(model.max_model_len) ??
+		toPositiveNumberOrUndefined(model.context_length) ??
+		toPositiveNumberOrUndefined(model.context_window) ??
+		toPositiveNumberOrUndefined(model.max_context_length)
+	);
+}
+
+function extractOpenAICompatibleMaxTokens(
+	model: Record<string, unknown>,
+	contextWindow: number | undefined,
+): number | undefined {
+	const advertised =
+		toPositiveNumberOrUndefined(model.max_completion_tokens) ?? toPositiveNumberOrUndefined(model.max_output_tokens);
+	if (advertised !== undefined) {
+		return contextWindow === undefined ? advertised : Math.min(advertised, contextWindow);
+	}
+	if (contextWindow === undefined) return undefined;
+	// vLLM advertises the shared prompt + completion limit as max_model_len.
+	// Reserve most of it for xcsh's system prompt and tool definitions instead
+	// of requesting the full context window as completion tokens.
+	return Math.max(1, Math.min(4096, Math.floor(contextWindow / 16)));
+}
+
 function extractOllamaContextWindow(payload: Record<string, unknown>): number | undefined {
 	const modelInfo = payload.model_info;
 	if (isRecord(modelInfo)) {
@@ -1718,12 +1743,14 @@ export class ModelRegistry {
 		if (!response.ok) {
 			throw new Error(`HTTP ${response.status} from ${modelsUrl}`);
 		}
-		const payload = (await response.json()) as { data?: Array<{ id: string }> };
+		const payload = (await response.json()) as { data?: Array<Record<string, unknown>> };
 		const items = payload.data ?? [];
 		const discovered: Model<Api>[] = [];
 		for (const item of items) {
-			const id = item.id;
+			const id = typeof item.id === "string" ? item.id.trim() : "";
 			if (!id) continue;
+			const advertisedContextWindow = extractOpenAICompatibleContextWindow(item);
+			const contextWindow = advertisedContextWindow ?? 128000;
 			discovered.push(
 				enrichModelThinking({
 					id,
@@ -1734,8 +1761,8 @@ export class ModelRegistry {
 					reasoning: false,
 					input: ["text"],
 					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-					contextWindow: 128000,
-					maxTokens: 8192,
+					contextWindow,
+					maxTokens: extractOpenAICompatibleMaxTokens(item, advertisedContextWindow) ?? 8192,
 					headers,
 				}),
 			);
