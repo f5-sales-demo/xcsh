@@ -3,6 +3,7 @@ import {
 	assertSyntheticFixtureUsesRoleAliases,
 	parseUatMeddpiccArgs,
 	requireGatewayRootUrl,
+	sanitizeEvidence,
 } from "../scripts/uat-meddpicc-excel";
 
 describe("MEDDPICC Excel UAT CLI", () => {
@@ -56,5 +57,22 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		expect(requireGatewayRootUrl(" https://gateway.example.com/api/v1/ ")).toBe("https://gateway.example.com");
 		expect(requireGatewayRootUrl("https://gateway.example.com/anthropic")).toBe("https://gateway.example.com");
 		expect(() => requireGatewayRootUrl("http://gateway.example.com/v1")).toThrow("https://");
+	});
+
+	test("redacts the local home directory and credentials from evidence", () => {
+		const homeDirectory = "/Users/<DEVELOPER>";
+		expect(
+			sanitizeEvidence(
+				{
+					binary: { path: `${homeDirectory}/repo/xcsh` },
+					detail: "token=<SYNTHETIC_SECRET>",
+				},
+				["<SYNTHETIC_SECRET>"],
+				homeDirectory,
+			),
+		).toEqual({
+			binary: { path: "<HOME>/repo/xcsh" },
+			detail: "token=[REDACTED]",
+		});
 	});
 });

@@ -10,6 +10,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as net from "node:net";
+import * as os from "node:os";
 import * as path from "node:path";
 import { wireExcelHostTools } from "../src/office/excel-tools";
 import { fakeExcel } from "../test/support/fake-excel";
@@ -350,11 +351,12 @@ async function stopSpawnedChild(child: ReturnType<typeof Bun.spawn>): Promise<vo
 	}
 }
 
-function redactText(text: string, secrets: string[]): string {
+function redactText(text: string, secrets: string[], homeDirectory: string = os.homedir()): string {
 	let redacted = text;
 	for (const secret of secrets) {
 		if (secret) redacted = redacted.replaceAll(secret, "[REDACTED]");
 	}
+	if (homeDirectory) redacted = redacted.replaceAll(homeDirectory, "<HOME>");
 	return redacted
 		.replace(/\bBearer\s+[^\s"']+/gi, "Bearer [REDACTED]")
 		.replace(/\b(?:api[_-]?key|token|secret)\s*[:=]\s*[^\s,;"']+/gi, match => {
@@ -363,12 +365,12 @@ function redactText(text: string, secrets: string[]): string {
 		});
 }
 
-function sanitizeEvidence<T>(value: T, secrets: string[]): T {
-	if (typeof value === "string") return redactText(value, secrets) as T;
-	if (Array.isArray(value)) return value.map(item => sanitizeEvidence(item, secrets)) as T;
+export function sanitizeEvidence<T>(value: T, secrets: string[], homeDirectory: string = os.homedir()): T {
+	if (typeof value === "string") return redactText(value, secrets, homeDirectory) as T;
+	if (Array.isArray(value)) return value.map(item => sanitizeEvidence(item, secrets, homeDirectory)) as T;
 	if (value && typeof value === "object") {
 		return Object.fromEntries(
-			Object.entries(value).map(([key, item]) => [key, sanitizeEvidence(item, secrets)]),
+			Object.entries(value).map(([key, item]) => [key, sanitizeEvidence(item, secrets, homeDirectory)]),
 		) as T;
 	}
 	return value;
@@ -559,7 +561,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			}
 		}
 
-		console.log(`Starting ${binary.path} office serve in ${prepared.workspace}`);
+		console.log(redactText(`Starting ${binary.path} office serve in ${prepared.workspace}`, secrets));
 		const spawned = Bun.spawn([binary.path, "office", "serve"], {
 			cwd: prepared.workspace,
 			env: process.env,
@@ -641,7 +643,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			failure = error;
 		}
 		if (evidenceWritten) {
-			console.log(`Evidence: ${evidencePath}`);
+			console.log(redactText(`Evidence: ${evidencePath}`, secrets));
 		}
 	}
 	if (failure) throw failure;
