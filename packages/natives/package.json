@@ -56,11 +56,11 @@
 		}
 	},
 	"optionalDependencies": {
-		"@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.2",
-		"@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.3.2",
-		"@f5-sales-demo/pi-natives-darwin-x64": "20.3.2",
-		"@f5-sales-demo/pi-natives-darwin-arm64": "20.3.2",
-		"@f5-sales-demo/pi-natives-win32-x64-msvc": "20.3.2"
+		"@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.1",
+		"@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.3.1",
+		"@f5-sales-demo/pi-natives-darwin-x64": "20.3.1",
+		"@f5-sales-demo/pi-natives-darwin-arm64": "20.3.1",
+		"@f5-sales-demo/pi-natives-win32-x64-msvc": "20.3.1"
 	},
 	"files": [
 		"native",

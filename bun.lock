@@ -113,11 +113,11 @@
         "@types/bun": "^1.3",
       },
       "optionalDependencies": {
-        "@f5-sales-demo/pi-natives-darwin-arm64": "20.3.2",
-        "@f5-sales-demo/pi-natives-darwin-x64": "20.3.2",
-        "@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.3.2",
-        "@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.2",
-        "@f5-sales-demo/pi-natives-win32-x64-msvc": "20.3.2",
+        "@f5-sales-demo/pi-natives-darwin-arm64": "20.3.1",
+        "@f5-sales-demo/pi-natives-darwin-x64": "20.3.1",
+        "@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.3.1",
+        "@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.1",
+        "@f5-sales-demo/pi-natives-win32-x64-msvc": "20.3.1",
       },
     },
     "packages/office-pane": {
@@ -370,6 +370,16 @@
     "@f5-sales-demo/pi-ai": ["@f5-sales-demo/pi-ai@workspace:packages/ai"],
 
     "@f5-sales-demo/pi-natives": ["@f5-sales-demo/pi-natives@workspace:packages/natives"],
+
+    "@f5-sales-demo/pi-natives-darwin-arm64": ["@f5-sales-demo/pi-natives-darwin-arm64@20.3.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-2AOBgP/gRBny5y4VnzfdY5etr1zisPqhm178LJzcFI63ogvEbGF7OG+CWYfFYFuCsKtdeudwjGFQJnmIFRul1g=="],
+
+    "@f5-sales-demo/pi-natives-darwin-x64": ["@f5-sales-demo/pi-natives-darwin-x64@20.3.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-1V5g6dOicmf7KGhdyZJ0ZzWgt6ZJTZv/KUb9r54Z9gQgqV91d5Auo1t39VrtH4uknZqLS7UolXICeko7Wqj1zg=="],
+
+    "@f5-sales-demo/pi-natives-linux-arm64-gnu": ["@f5-sales-demo/pi-natives-linux-arm64-gnu@20.3.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-e4MCWzWtccNVOxMOUTPNoO8hiLy0HvXUluVxr4rtl51Gqol06mR6JdfUjeVrRpfQCRgM+NWAOL+fj/igcEztCQ=="],
+
+    "@f5-sales-demo/pi-natives-linux-x64-gnu": ["@f5-sales-demo/pi-natives-linux-x64-gnu@20.3.1", "", { "os": "linux", "cpu": "x64" }, "sha512-cgEk1+am8SkTk81zjiHwJx2BAK6ciGwaigEqBoHo/yoFrUvqWB7KFN+/P+Z28ltJxpNMUm+Fe1FQ7BQk4QLhew=="],
+
+    "@f5-sales-demo/pi-natives-win32-x64-msvc": ["@f5-sales-demo/pi-natives-win32-x64-msvc@20.3.1", "", { "os": "win32", "cpu": "x64" }, "sha512-pGVMWqz9cLTn8+crBlESvccqtI07IRRzGIOAKUHTRuCJPcO/sU3LPowq1JpCP+qq5xjqf6P8fe33BSdn5Ga4hQ=="],
 
     "@f5-sales-demo/pi-resource-management": ["@f5-sales-demo/pi-resource-management@workspace:packages/resource-management"],
 
