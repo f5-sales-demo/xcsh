@@ -2,6 +2,20 @@
 
 # Changelog
 
+## [Unreleased]
+
+### Breaking Changes
+
+- Renamed the executable updater from `xcsh update` to `xcsh self-update`; `xcsh update -f` now performs strict manifest-based resource updates ([#2930](https://github.com/f5-sales-demo/xcsh/issues/2930))
+
+### Added
+
+- Added deterministic, headless `apply`, `create`, `update`, `get`, `delete`, `diff`, `export`, and `validate` commands with file/stdin/directory manifests, reusable exports, stable aggregate JSON reports, and direct environment-based F5 XC authentication without an LLM turn ([#2930](https://github.com/f5-sales-demo/xcsh/issues/2930))
+
+### Fixed
+
+- Prevalidated manifest batches before mutation, preserved strict create and update semantics, rejected unsupported server dry-run, and returned automation-grade exit codes for resource operations ([#2930](https://github.com/f5-sales-demo/xcsh/issues/2930))
+
 ## [20.3.0] - 2026-08-04
 
 ### Added

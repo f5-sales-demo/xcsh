@@ -2,7 +2,7 @@ import type { ParsedExportArgs, ParsedResourceArgs } from "./types";
 
 const VALID_OUTPUT_FORMATS = new Set(["json", "yaml", "table", "wide"]);
 const VALID_EXPORT_FORMATS = new Set(["json", "yaml"]);
-const VALID_DRY_RUN_MODES = new Set(["client", "server"]);
+const VALID_DRY_RUN_MODES = new Set(["client"]);
 
 export function parseResourceArgs(argsString: string): ParsedResourceArgs | { error: string } {
 	const tokens = argsString.split(/\s+/).filter(Boolean);
@@ -11,7 +11,6 @@ export function parseResourceArgs(argsString: string): ParsedResourceArgs | { er
 	let outputFormat: ParsedResourceArgs["outputFormat"] = "table";
 	let dryRun: ParsedResourceArgs["dryRun"];
 	let recursive = false;
-	let force = false;
 	const positionals: string[] = [];
 
 	for (let i = 0; i < tokens.length; i++) {
@@ -44,7 +43,7 @@ export function parseResourceArgs(argsString: string): ParsedResourceArgs | { er
 			if (token.includes("=")) {
 				const mode = token.split("=")[1];
 				if (!VALID_DRY_RUN_MODES.has(mode)) {
-					return { error: `Invalid --dry-run mode: "${mode}". Must be "client" or "server".` };
+					return { error: `Invalid --dry-run mode: "${mode}". Must be "client".` };
 				}
 				dryRun = mode as ParsedResourceArgs["dryRun"];
 			} else {
@@ -52,8 +51,6 @@ export function parseResourceArgs(argsString: string): ParsedResourceArgs | { er
 			}
 		} else if (token === "-R" || token === "--recursive") {
 			recursive = true;
-		} else if (token === "--force") {
-			force = true;
 		} else if (token.startsWith("-")) {
 			return { error: `Unknown flag: "${token}".` };
 		} else {
@@ -67,7 +64,6 @@ export function parseResourceArgs(argsString: string): ParsedResourceArgs | { er
 		outputFormat,
 		dryRun,
 		recursive,
-		force,
 		kind: positionals[0],
 		name: positionals[1],
 	};

@@ -9,6 +9,8 @@ export type { ExportedManifest, ManifestOutputFormat, MinimalExportFilter } from
 export { applyMinimalExportFilter, formatManifestOutput, toManifest, toManifestList } from "./manifest-export";
 export { ManifestParseError, parseManifests } from "./manifest-parser";
 export { formatValidationErrors, validateManifest, validateManifests } from "./manifest-validator";
+export type { RunResourceOperationOptions } from "./operation-runner";
+export { formatResourceOperationReport, readManifestInputs, runResourceOperation } from "./operation-runner";
 export {
 	formatMultiOperationSummary,
 	formatOperationResult,
@@ -26,6 +28,7 @@ export type {
 	HttpTransportRequest,
 	HttpTransportResponse,
 	KindResolver,
+	ManifestOperationInput,
 	ManifestValidationResult,
 	OperationResult,
 	ParsedExportArgs,
@@ -36,6 +39,10 @@ export type {
 	ResourceError,
 	ResourceErrorKind,
 	ResourceManifest,
+	ResourceOperation,
+	ResourceOperationCounts,
+	ResourceOperationItem,
+	ResourceOperationReport,
 	ValidationError,
 	ValidationErrorCode,
 	ValidationWarning,

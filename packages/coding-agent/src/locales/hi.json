@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "मॉडल प्रदाता",
 	"welcome.plugins": "प्लगइन",
 	"welcome.pluginSetupHint": "चलाएँ: /plugin setup",
-	"welcome.updateHint": "चलाएँ: xcsh update",
+	"welcome.updateHint": "चलाएँ: xcsh self-update",
 	"welcome.newVersion": "नया संस्करण",
 	"welcome.connectionFailed": "— कनेक्शन विफल",
 	"welcome.runLoginReconnect": "पुनः कनेक्ट करने के लिए /login चलाएँ",

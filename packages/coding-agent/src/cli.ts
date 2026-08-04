@@ -50,9 +50,15 @@ if (Bun.stringWidth("\x1b[0m\x1b]8;;\x07") !== 0) {
 process.title = APP_NAME;
 
 const commands: CommandEntry[] = [
+	{ name: "apply", load: () => import("./commands/apply").then(m => m.default) },
 	{ name: "launch", load: () => import("./commands/launch").then(m => m.default) },
 	{ name: "agents", load: () => import("./commands/agents").then(m => m.default) },
 	{ name: "commit", load: () => import("./commands/commit").then(m => m.default) },
+	{ name: "create", load: () => import("./commands/create").then(m => m.default) },
+	{ name: "delete", load: () => import("./commands/delete").then(m => m.default) },
+	{ name: "diff", load: () => import("./commands/diff").then(m => m.default) },
+	{ name: "export", load: () => import("./commands/export").then(m => m.default) },
+	{ name: "get", load: () => import("./commands/get").then(m => m.default) },
 	{ name: "config", load: () => import("./commands/config").then(m => m.default) },
 	{ name: "chrome", load: () => import("./commands/chrome").then(m => m.default) },
 	{ name: "chrome-host", load: () => import("./commands/native-host").then(m => m.default) },
@@ -76,6 +82,8 @@ const commands: CommandEntry[] = [
 	{ name: "update", load: () => import("./commands/update").then(m => m.default) },
 	{ name: "worker", load: () => import("./commands/worker").then(m => m.default) },
 	{ name: "search", load: () => import("./commands/web-search").then(m => m.default), aliases: ["q"] },
+	{ name: "self-update", load: () => import("./commands/self-update").then(m => m.default) },
+	{ name: "validate", load: () => import("./commands/validate").then(m => m.default) },
 ];
 
 async function showHelp(config: import("@f5-sales-demo/pi-utils/cli").CliConfig): Promise<void> {

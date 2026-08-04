@@ -1,20 +1,19 @@
 import { Command } from "@f5-sales-demo/pi-utils/cli";
 import { runResourceCli } from "../cli/resource-cli";
-import { manifestResourceFlags } from "./resource-flags";
+import { manifestInputFlags } from "./resource-flags";
 
-export default class Update extends Command {
-	static description = "Update existing resources from manifests";
-	static flags = manifestResourceFlags;
+export default class Diff extends Command {
+	static description = "Compare manifests with live resources without mutation";
+	static flags = manifestInputFlags;
 
 	async run(): Promise<void> {
-		const { flags } = await this.parse(Update);
+		const { flags } = await this.parse(Diff);
 		await runResourceCli({
-			operation: "update",
+			operation: "diff",
 			filenames: flags.filename,
 			namespace: flags.namespace,
 			outputFormat: flags.output as "json" | "yaml" | "table" | "wide",
 			recursive: flags.recursive,
-			dryRun: flags["dry-run"] as "client" | undefined,
 			resultFile: flags["result-file"],
 		});
 	}

@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "مزود النموذج",
 	"welcome.plugins": "الإضافات",
 	"welcome.pluginSetupHint": "شغّل: /plugin setup",
-	"welcome.updateHint": "شغّل: xcsh update",
+	"welcome.updateHint": "شغّل: xcsh self-update",
 	"welcome.newVersion": "إصدار جديد",
 	"welcome.connectionFailed": "— فشل الاتصال",
 	"welcome.runLoginReconnect": "شغّل /login لإعادة الاتصال",

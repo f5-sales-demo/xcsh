@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "Modellanbieter",
 	"welcome.plugins": "Plugins",
 	"welcome.pluginSetupHint": "ausführen: /plugin setup",
-	"welcome.updateHint": "ausführen: xcsh update",
+	"welcome.updateHint": "ausführen: xcsh self-update",
 	"welcome.newVersion": "neue Version",
 	"welcome.connectionFailed": "— Verbindung fehlgeschlagen",
 	"welcome.runLoginReconnect": "Führen Sie /login aus, um die Verbindung wiederherzustellen",
