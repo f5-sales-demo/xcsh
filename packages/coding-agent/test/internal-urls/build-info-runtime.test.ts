@@ -542,8 +542,8 @@ describe("renderAboutDoc active model section", () => {
 
 /**
  * Two sessions can look identical and offer very different guarantees: with an OS backend a path is
- * checked where it is opened and the spelling cannot matter, while without one the only check reads
- * the command text. `xcsh://about` is the only place an operator can tell which they have — the
+ * checked where it is opened and the spelling cannot matter, while without one arbitrary child-process
+ * reads cannot be confined. `xcsh://about` is the only place an operator can tell which they have — the
  * maintainer asked for no UI change, so there is no banner and no startup line.
  */
 describe("renderAboutDoc containment section", () => {
@@ -559,21 +559,22 @@ describe("renderAboutDoc containment section", () => {
 		// The contract distinguishes operator rights from session-context isolation.
 		expect(doc).toContain("home and configuration belong to the operator");
 		expect(doc).toContain("readable and writable");
-		expect(doc).toContain("directory containing the session root cannot");
-		expect(doc).toContain("sibling path the operator names directly");
-		expect(doc).toContain("Cross-session stores, other operators' accounts, and data roots remain denied");
+		expect(doc).toContain("session container, local-account containers");
+		expect(doc).toContain("descendant path the operator");
+		expect(doc).toContain("Xcsh-private cross-session stores remain denied recursively");
 		// Ordinary work remains available and an operator can deliberately restore discovery.
-		expect(doc).toContain("--allow-path");
+		expect(doc).toContain("An explicit read grant restores enumeration");
 	});
 
-	it("says plainly that the boundary is best-effort where no backend exists", () => {
+	it("says plainly that the boundary is intent rather than a guarantee where no backend exists", () => {
 		const doc = renderAboutDoc(fakeBuildInfo(), null, null, {
 			enabled: true,
 			backend: "scanner-only",
 			osEnforced: false,
 		});
 		expect(doc).toContain("no OS-level backend");
-		expect(doc).toContain("best-effort");
+		expect(doc).toContain("statement of intent rather than a guarantee");
+		expect(doc).toContain("Command and source text are never scanned");
 		// Must NOT claim the stronger guarantee it does not have.
 		expect(doc).not.toContain("how a path is spelled does not change what is reachable");
 	});
