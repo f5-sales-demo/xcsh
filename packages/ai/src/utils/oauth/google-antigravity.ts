@@ -2,6 +2,7 @@
  * Antigravity OAuth flow (Gemini 3, Claude, GPT-OSS via Google Cloud)
  * Uses different OAuth credentials than google-gemini-cli for access to additional models.
  */
+import { $env } from "@f5-sales-demo/pi-utils";
 import { getAntigravityAuthHeaders } from "../../providers/google-gemini-cli";
 import { OAuthCallbackFlow } from "./callback-server";
 import type { OAuthController, OAuthCredentials } from "./types";
@@ -48,6 +49,24 @@ export const ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA = Object.freeze({
 	pluginType: "GEMINI",
 });
 
+interface AntigravityProjectRequest {
+	cloudaicompanionProject?: string;
+	metadata: typeof ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA & { duetProject?: string };
+}
+
+function buildProjectRequest(configuredProjectId: string | undefined): AntigravityProjectRequest {
+	if (!configuredProjectId) {
+		return { metadata: ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA };
+	}
+	return {
+		cloudaicompanionProject: configuredProjectId,
+		metadata: {
+			...ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA,
+			duetProject: configuredProjectId,
+		},
+	};
+}
+
 function readProjectId(value: string | { id?: string } | undefined): string | undefined {
 	if (typeof value === "string" && value.length > 0) {
 		return value;
@@ -72,7 +91,7 @@ function getDefaultTierId(allowedTiers?: Array<{ id?: string; isDefault?: boolea
 async function onboardProjectWithRetries(
 	endpoint: string,
 	headers: Record<string, string>,
-	onboardBody: { tierId: string; metadata: typeof ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA },
+	onboardBody: { tierId: string } & AntigravityProjectRequest,
 	onProgress?: (message: string) => void,
 ): Promise<string> {
 	for (let attempt = 1; attempt <= PROJECT_ONBOARD_MAX_ATTEMPTS; attempt += 1) {
@@ -109,6 +128,8 @@ async function onboardProjectWithRetries(
 }
 
 async function discoverProject(accessToken: string, onProgress?: (message: string) => void): Promise<string> {
+	const configuredProjectId = $env.GOOGLE_CLOUD_PROJECT || $env.GOOGLE_CLOUD_PROJECT_ID;
+	const projectRequest = buildProjectRequest(configuredProjectId);
 	const headers = {
 		Authorization: `Bearer ${accessToken}`,
 		"Content-Type": "application/json",
@@ -121,9 +142,7 @@ async function discoverProject(accessToken: string, onProgress?: (message: strin
 		const loadResponse = await fetch(`${endpoint}/v1internal:loadCodeAssist`, {
 			method: "POST",
 			headers,
-			body: JSON.stringify({
-				metadata: ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA,
-			}),
+			body: JSON.stringify(projectRequest),
 		});
 
 		if (!loadResponse.ok) {
@@ -134,17 +153,17 @@ async function discoverProject(accessToken: string, onProgress?: (message: strin
 		const loadPayload = (await loadResponse.json()) as LoadCodeAssistPayload;
 		const existingProject = readProjectId(loadPayload.cloudaicompanionProject);
 		if (existingProject) {
-			return existingProject;
+			return configuredProjectId ?? existingProject;
 		}
 
 		const tierId = getDefaultTierId(loadPayload.allowedTiers);
 		onProgress?.("Provisioning project...");
 		const onboardBody = {
 			tierId,
-			metadata: ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA,
+			...projectRequest,
 		};
 		const provisionedProject = await onboardProjectWithRetries(endpoint, headers, onboardBody, onProgress);
-		return provisionedProject;
+		return configuredProjectId ?? provisionedProject;
 	} catch (error) {
 		throw new Error(
 			`Could not discover or provision an Antigravity project. ${error instanceof Error ? error.message : String(error)}`,
