@@ -8,7 +8,7 @@ describe("Super-Linter workflow", () => {
 		const source = await Bun.file(SUPER_LINTER_WORKFLOW).text();
 
 		expect(source).toContain(
-			"uses: f5-sales-demo/docs-control/.github/workflows/super-linter.yml@d75d315e83d9947b658f8e86b21654512fd437f6",
+			"uses: f5-sales-demo/docs-control/.github/workflows/super-linter.yml@a334c5f84fb36d486209be1e331b11c99d05830c",
 		);
 		expect(source).toContain('rust_edition: "2024"');
 	});
