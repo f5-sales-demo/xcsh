@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
 import { getBundledModel } from "../src/models";
 import { getAntigravityAuthHeaders } from "../src/providers/google-gemini-cli";
-import { ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA, loginAntigravity } from "../src/utils/oauth/google-antigravity";
+import {
+	ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA,
+	type AntigravityProjectSources,
+	loginAntigravity,
+} from "../src/utils/oauth/google-antigravity";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const USER_INFO_URL = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json";
@@ -13,6 +17,9 @@ interface RecordedRequest {
 	url: string;
 	body: Record<string, unknown>;
 }
+
+const NO_EXTERNAL_PROJECT_SOURCES: Pick<AntigravityProjectSources, "readAntigravityProjectId" | "readGcloudProjectId"> =
+	{ readAntigravityProjectId: async () => undefined, readGcloudProjectId: async () => undefined };
 
 function jsonResponse(payload: unknown): Response {
 	return new Response(JSON.stringify(payload), {
@@ -45,6 +52,7 @@ async function withProjectEnvironment(
 async function runLogin(
 	loadPayload: unknown,
 	onboardPayload?: unknown,
+	projectSources: AntigravityProjectSources = {},
 ): Promise<{ projectId: string | undefined; requests: RecordedRequest[] }> {
 	const requests: RecordedRequest[] = [];
 	global.fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
@@ -64,9 +72,17 @@ async function runLogin(
 		throw new Error(`Unexpected URL: ${url}`);
 	}) as unknown as typeof fetch;
 
-	const credentials = await loginAntigravity({
-		onManualCodeInput: async () => "authorization-code",
-	});
+	const credentials = await loginAntigravity(
+		{
+			onManualCodeInput: async () => "authorization-code",
+		},
+		{
+			projectSources: {
+				...NO_EXTERNAL_PROJECT_SOURCES,
+				...projectSources,
+			},
+		},
+	);
 	return { projectId: credentials.projectId, requests };
 }
 
@@ -146,6 +162,30 @@ describe("Google Antigravity auth alignment", () => {
 					},
 				},
 			});
+		});
+	});
+
+	it("passes the Antigravity CLI enterprise project through discovery and returned credentials", async () => {
+		await withProjectEnvironment(undefined, undefined, async () => {
+			const { projectId, requests } = await runLogin(
+				{ cloudaicompanionProject: "generated-free-tier-project" },
+				undefined,
+				{ readAntigravityProjectId: async () => "metadata-enterprise-project" },
+			);
+
+			expect(projectId).toBe("metadata-enterprise-project");
+			expect(requests).toEqual([
+				{
+					url: LOAD_CODE_ASSIST_URL,
+					body: {
+						cloudaicompanionProject: "metadata-enterprise-project",
+						metadata: {
+							...ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA,
+							duetProject: "metadata-enterprise-project",
+						},
+					},
+				},
+			]);
 		});
 	});
 
