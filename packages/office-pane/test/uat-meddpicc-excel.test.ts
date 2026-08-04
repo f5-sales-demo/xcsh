@@ -66,6 +66,7 @@ describe("MEDDPICC Excel UAT CLI", () => {
 				{
 					binary: { path: `${homeDirectory}/repo/xcsh` },
 					detail: "token=<SYNTHETIC_SECRET>",
+					files: [`${homeDirectory}/workspace/example-corp.json`],
 				},
 				["<SYNTHETIC_SECRET>"],
 				homeDirectory,
@@ -73,6 +74,7 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		).toEqual({
 			binary: { path: "<HOME>/repo/xcsh" },
 			detail: "token=[REDACTED]",
+			files: ["<HOME>/workspace/example-corp.json"],
 		});
 	});
 });
