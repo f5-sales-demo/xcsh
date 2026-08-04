@@ -178,6 +178,36 @@ describe("XcshApiTool", () => {
 		}
 	});
 
+	it("appends a model-visible item count to list responses", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async () => {
+			return new Response(JSON.stringify({ items: [{ name: "one" }, { name: "two" }, { name: "three" }] }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			});
+		}) as unknown as typeof fetch;
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		process.env.XCSH_API_URL = "https://test.console.ves.volterra.io";
+		process.env.XCSH_API_TOKEN = "test-token";
+		try {
+			const tool = new XcshApiTool(mockSession());
+			const result = await tool.execute("call-list-count", {
+				method: "GET",
+				path: "/api/web/namespaces",
+			});
+			const text = result.content.find(content => content.type === "text")?.text ?? "";
+			expect(text).toEndWith("Item count: 3");
+			expect(result.details?.itemCount).toBe(3);
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
+		}
+	});
+
 	it("includes X-Request-ID header and requestId in details", async () => {
 		let capturedHeaders: Record<string, string> = {};
 		const originalFetch = globalThis.fetch;

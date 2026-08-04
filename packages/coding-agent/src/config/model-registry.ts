@@ -1426,13 +1426,15 @@ export class ModelRegistry {
 				},
 			},
 		];
-		// Use peekApiKey to avoid OAuth token refresh during discovery.
-		// The token is only needed if the dynamic fetch fires (cache miss),
-		// and failures there are handled gracefully.
 		const peekKey = (descriptor: { providerId: string }) => this.#peekApiKeyForProvider(descriptor.providerId);
+		// Special providers discover entitlement-scoped models through OAuth. Refresh their
+		// credentials before discovery: an expired access token otherwise removes newly
+		// entitled models from explicit CLI resolution before a request can refresh it.
+		const resolveSpecialKey = (descriptor: { providerId: string }) =>
+			this.getApiKeyForProvider(descriptor.providerId);
 		const [standardProviderKeys, specialKeys] = await Promise.all([
 			Promise.all(PROVIDER_DESCRIPTORS.map(peekKey)),
-			Promise.all(specialProviderDescriptors.map(peekKey)),
+			Promise.all(specialProviderDescriptors.map(resolveSpecialKey)),
 		]);
 		const options: ModelManagerOptions<Api>[] = [];
 		for (let i = 0; i < PROVIDER_DESCRIPTORS.length; i++) {

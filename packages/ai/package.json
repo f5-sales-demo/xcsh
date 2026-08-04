@@ -32,9 +32,11 @@
 		"pi-ai": "./src/cli.ts"
 	},
 	"scripts": {
+		"precheck": "bun ../../scripts/check-installed-dependencies.ts",
 		"check": "biome check . && bun run check:types",
 		"check:types": "tsgo -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
+		"pretest": "bun ../../scripts/check-installed-dependencies.ts",
 		"test": "bun test",
 		"fix": "biome check --write --unsafe .",
 		"fmt": "biome format --write .",
@@ -44,8 +46,8 @@
 		"@anthropic-ai/sdk": "^0.115",
 		"@aws-sdk/client-bedrock-runtime": "^3",
 		"@bufbuild/protobuf": "^2.11",
-		"@google/genai": "^2.13",
 		"@f5-sales-demo/pi-utils": "workspace:*",
+		"@google/genai": "^2.15",
 		"@sinclair/typebox": "^0.34",
 		"@smithy/node-http-handler": "^4.4",
 		"ajv": "^8.20",

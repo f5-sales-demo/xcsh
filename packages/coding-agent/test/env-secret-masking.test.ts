@@ -3,13 +3,13 @@
  *
  * Covers:
  * - SECRET_ENV_PATTERNS matching (positive and negative)
- * - collectEnvSecrets() collecting values from process.env
+ * - collectEnvSecrets() collecting values from an environment record
  * - OutputSink maskSecrets callback in push() and dump()
  * - Cross-chunk boundary safety net in dump()
  * - formatBashEnvAssignments() masking sensitive env var display
  */
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { collectEnvSecrets, SECRET_ENV_PATTERNS, SecretObfuscator } from "../src/secrets";
 import { OutputSink } from "../src/session/streaming-output";
 
@@ -76,58 +76,37 @@ describe("SECRET_ENV_PATTERNS", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("collectEnvSecrets", () => {
-	let savedEnv: Record<string, string | undefined>;
-
-	beforeEach(() => {
-		savedEnv = { ...process.env };
-	});
-
-	afterEach(() => {
-		// Restore original env
-		for (const key of Object.keys(process.env)) {
-			if (!(key in savedEnv)) {
-				delete process.env[key];
-			}
-		}
-		for (const [key, value] of Object.entries(savedEnv)) {
-			if (value !== undefined) {
-				process.env[key] = value;
-			}
-		}
-	});
-
 	test("collects values of env vars matching sensitive patterns", () => {
-		process.env.TEST_SECRET_TOKEN = "my-secret-value-12345";
-		const entries = collectEnvSecrets();
+		const entries = collectEnvSecrets({ environment: { TEST_SECRET_TOKEN: "my-secret-value-12345" } });
 		const values = entries.map(e => e.content);
 		expect(values).toContain("my-secret-value-12345");
 	});
 
 	test("ignores env vars with short values (< 8 chars)", () => {
-		process.env.TEST_API_KEY = "short";
-		const entries = collectEnvSecrets();
+		const entries = collectEnvSecrets({ environment: { TEST_API_KEY: "short" } });
 		const values = entries.map(e => e.content);
 		expect(values).not.toContain("short");
 	});
 
 	test("ignores non-sensitive env vars", () => {
-		process.env.TEST_HARMLESS_VAR = "this-is-not-a-secret-value";
-		const entries = collectEnvSecrets();
+		const entries = collectEnvSecrets({ environment: { TEST_HARMLESS_VAR: "this-is-not-a-secret-value" } });
 		const values = entries.map(e => e.content);
 		expect(values).not.toContain("this-is-not-a-secret-value");
 	});
 
 	test("deduplicates identical values across multiple sensitive vars", () => {
-		process.env.TEST_API_KEY = "duplicate-secret-value";
-		process.env.TEST_AUTH_TOKEN = "duplicate-secret-value";
-		const entries = collectEnvSecrets();
+		const entries = collectEnvSecrets({
+			environment: {
+				TEST_API_KEY: "duplicate-secret-value",
+				TEST_AUTH_TOKEN: "duplicate-secret-value",
+			},
+		});
 		const matchingEntries = entries.filter(e => e.content === "duplicate-secret-value");
 		expect(matchingEntries.length).toBe(1);
 	});
 
 	test("entries have type=plain and mode=obfuscate", () => {
-		process.env.TEST_SECRET_KEY = "a-valid-secret-value";
-		const entries = collectEnvSecrets();
+		const entries = collectEnvSecrets({ environment: { TEST_SECRET_KEY: "a-valid-secret-value" } });
 		const entry = entries.find(e => e.content === "a-valid-secret-value");
 		expect(entry).toBeDefined();
 		expect(entry!.type).toBe("plain");
@@ -136,6 +115,7 @@ describe("collectEnvSecrets", () => {
 
 	test("scans additionalEnv for sensitive patterns", () => {
 		const entries = collectEnvSecrets({
+			environment: {},
 			additionalEnv: {
 				XCSH_API_TOKEN: "context-token-value-xyz",
 				XCSH_NAMESPACE: "example-namespace",
@@ -148,15 +128,16 @@ describe("collectEnvSecrets", () => {
 
 	test("includes additionalValues regardless of name pattern", () => {
 		const entries = collectEnvSecrets({
+			environment: {},
 			additionalValues: ["user-email-from-profile"],
 		});
 		const values = entries.map(e => e.content);
 		expect(values).toContain("user-email-from-profile");
 	});
 
-	test("deduplicates across process.env, additionalEnv, and additionalValues", () => {
-		process.env.TEST_API_KEY = "shared-secret-value-99";
+	test("deduplicates across environment, additionalEnv, and additionalValues", () => {
 		const entries = collectEnvSecrets({
+			environment: { TEST_API_KEY: "shared-secret-value-99" },
 			additionalEnv: { ANOTHER_API_KEY: "shared-secret-value-99" },
 			additionalValues: ["shared-secret-value-99"],
 		});

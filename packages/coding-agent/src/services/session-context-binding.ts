@@ -57,7 +57,9 @@ export type SessionContextChoice = { activate: string } | { needsSelection: true
 export function chooseSessionContext(
 	boundContextName: string | undefined,
 	autoBind: AutoBindResult,
+	explicitContextName?: string,
 ): SessionContextChoice {
+	if (explicitContextName) return { activate: explicitContextName };
 	if (boundContextName) return { activate: boundContextName };
 	if (autoBind.kind === "bind") return { activate: autoBind.contextName };
 	if (autoBind.kind === "needsSelection") return { needsSelection: true };

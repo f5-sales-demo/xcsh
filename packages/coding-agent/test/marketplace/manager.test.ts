@@ -455,6 +455,49 @@ describe("MarketplaceManager", () => {
 			});
 		});
 
+		it("previewPluginUpdates fetches current catalogs without mutating plugin state", async () => {
+			const sourceDir = path.join(ctx.tmpDir, "preview-source-marketplace");
+			fs.cpSync(FIXTURE_DIR, sourceDir, { recursive: true });
+			await ctx.manager.addMarketplace(sourceDir);
+			const installedEntry = await ctx.manager.installPlugin("hello-plugin", "test-marketplace");
+			const marketplaceEntry = (await ctx.manager.listMarketplaces())[0];
+			const marketplaceRegistryPath = path.join(ctx.tmpDir, "marketplaces.json");
+			const installedRegistryPath = path.join(ctx.tmpDir, "installed_plugins.json");
+			const before = {
+				marketplaceRegistry: fs.readFileSync(marketplaceRegistryPath, "utf-8"),
+				installedRegistry: fs.readFileSync(installedRegistryPath, "utf-8"),
+				cachedCatalog: fs.readFileSync(marketplaceEntry.catalogPath, "utf-8"),
+				installedManifest: fs.readFileSync(
+					path.join(installedEntry.installPath, ".xcsh-plugin", "plugin.json"),
+					"utf-8",
+				),
+				clearCount: ctx.clearCount(),
+			};
+
+			const sourceCatalogPath = path.join(sourceDir, ".xcsh-plugin", "marketplace.json");
+			const sourceCatalog = JSON.parse(fs.readFileSync(sourceCatalogPath, "utf-8")) as {
+				plugins: Array<Record<string, unknown>>;
+			};
+			sourceCatalog.plugins[0] = { ...sourceCatalog.plugins[0], version: "2.0.0" };
+			fs.writeFileSync(sourceCatalogPath, JSON.stringify(sourceCatalog, null, 2));
+
+			expect(await ctx.manager.previewPluginUpdates()).toEqual([
+				{
+					pluginId: "hello-plugin@test-marketplace",
+					scope: "user",
+					from: "1.0.0",
+					to: "2.0.0",
+				},
+			]);
+			expect(fs.readFileSync(marketplaceRegistryPath, "utf-8")).toBe(before.marketplaceRegistry);
+			expect(fs.readFileSync(installedRegistryPath, "utf-8")).toBe(before.installedRegistry);
+			expect(fs.readFileSync(marketplaceEntry.catalogPath, "utf-8")).toBe(before.cachedCatalog);
+			expect(fs.readFileSync(path.join(installedEntry.installPath, ".xcsh-plugin", "plugin.json"), "utf-8")).toBe(
+				before.installedManifest,
+			);
+			expect(ctx.clearCount()).toBe(before.clearCount);
+		});
+
 		it("checkForUpdates returns empty when up to date", async () => {
 			await ctx.manager.addMarketplace(FIXTURE_DIR);
 			await ctx.manager.installPlugin("hello-plugin", "test-marketplace");

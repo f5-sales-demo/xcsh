@@ -1,0 +1,1 @@
+Read the `meddpicc:coach` skill at `skill://meddpicc:coach` exactly once. Do not read any reference files or call any other tools. Reply with exactly `MEDDPICC operating principle: Evidence over hope` and nothing else.

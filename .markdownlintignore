@@ -1,0 +1,5 @@
+# These Markdown files are executable model inputs, not documentation. Their
+# exact bytes are validated by prompt formatters and contract tests.
+packages/*/src/prompts/**/*.md
+packages/coding-agent/bench/prompts/**/*.md
+packages/coding-agent/bench/fixtures/model-benchmark-plugin/skills/**/proof.md

@@ -80,6 +80,51 @@ describe("createAgentSession deferred model pattern resolution", () => {
 		expect(modelFallbackMessage).toBeUndefined();
 	});
 
+	test("waits for runtime discovery before resolving an explicit modelPattern", async () => {
+		const authStorage = await AuthStorage.create(path.join(tempDir, "discovery-auth.db"));
+		const modelRegistry = new ModelRegistry(authStorage, path.join(tempDir, "models.yml"));
+		const awaitDiscovery = vi.spyOn(modelRegistry, "awaitBackgroundRefresh").mockImplementation(async () => {
+			modelRegistry.registerProvider(
+				"discovery-provider",
+				{
+					baseUrl: "https://discovery.example.com/v1",
+					apiKey: "DISCOVERY_KEY",
+					api: "openai-completions",
+					models: [
+						{
+							id: "discovered-model",
+							name: "Discovered Model",
+							reasoning: false,
+							input: ["text"],
+							cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+							contextWindow: 128000,
+							maxTokens: 8192,
+						},
+					],
+				},
+				"discovery",
+			);
+		});
+
+		try {
+			const { session, modelFallbackMessage } = await createAgentSession({
+				...buildSessionOptions("discovery-provider/discovered-model"),
+				authStorage,
+				modelRegistry,
+				extensions: [],
+			});
+			try {
+				expect(awaitDiscovery).toHaveBeenCalledTimes(1);
+				expect(session.model).toMatchObject({ provider: "discovery-provider", id: "discovered-model" });
+				expect(modelFallbackMessage).toBeUndefined();
+			} finally {
+				await session.dispose();
+			}
+		} finally {
+			authStorage.close();
+		}
+	});
+
 	test("does not silently fallback when explicit modelPattern is unresolved", async () => {
 		const { session, modelFallbackMessage } = await createAgentSession(
 			buildSessionOptions("missing-provider/missing-model"),

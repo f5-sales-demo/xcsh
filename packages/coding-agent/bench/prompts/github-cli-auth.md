@@ -1,0 +1,1 @@
+Call the `gh_exec` tool exactly once with `{"args":["auth","status"]}`. Do not call any other tools. If the command succeeds, reply exactly `GitHub CLI authenticated: yes`; otherwise reply exactly `GitHub CLI authenticated: no`. Do not include account names, hostnames, tokens, or scopes.

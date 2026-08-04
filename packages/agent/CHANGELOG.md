@@ -1,6 +1,12 @@
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 # Changelog
 
 ## [Unreleased]
+
+### Fixed
+
+- Fixed successful tools with empty output being indistinguishable from missing results to the model ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 
 ## [14.0.1] - 2026-04-08
 

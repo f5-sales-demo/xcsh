@@ -401,6 +401,7 @@ async function buildSessionOptions(
 ): Promise<{ options: CreateAgentSessionOptions }> {
 	const options: CreateAgentSessionOptions = {
 		cwd: parsed.cwd ?? getProjectDir(),
+		contextName: parsed.context,
 	};
 
 	// Auto-discover SYSTEM.md if no CLI system prompt provided
@@ -425,12 +426,21 @@ async function buildSessionOptions(
 	if (parsed.model) {
 		// Both branches below originate from --model, including the deferred modelPattern path.
 		options.modelResolutionSource = "launch-flag";
-		const resolved = resolveCliModel({
+		let resolved = resolveCliModel({
 			cliProvider: parsed.provider,
 			cliModel: parsed.model,
 			modelRegistry,
 			preferences: modelMatchPreferences,
 		});
+		if (resolved.error) {
+			await logger.time("awaitExplicitModelDiscovery", () => modelRegistry.awaitBackgroundRefresh());
+			resolved = resolveCliModel({
+				cliProvider: parsed.provider,
+				cliModel: parsed.model,
+				modelRegistry,
+				preferences: modelMatchPreferences,
+			});
+		}
 		if (resolved.warning) {
 			process.stderr.write(`${chalk.yellow(`Warning: ${resolved.warning}`)}\n`);
 		}
@@ -647,6 +657,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	const cwd = getProjectDir();
 	const sandboxOverrides: Partial<Record<SettingPath, unknown>> = {};
 	if (parsedArgs.noSandbox) sandboxOverrides["sandbox.enabled"] = false;
+	if (parsedArgs.noMemories) sandboxOverrides["memories.enabled"] = false;
 	if (parsedArgs.allowPath?.length) {
 		sandboxOverrides["sandbox.allowRead"] = parsedArgs.allowPath;
 		sandboxOverrides["sandbox.allowWrite"] = parsedArgs.allowPath;
@@ -659,9 +670,17 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// F5 XC context is session-scoped: nothing loads at startup. We still init the
 	// ContextService singleton so /context commands and the session bootstrap work.
 	try {
-		ContextService.init(getXCSHConfigDir());
-	} catch {
-		// ContextService optional (SDK consumers / tests) — continue.
+		const contextService = ContextService.init(getXCSHConfigDir());
+		if (parsedArgs.context) {
+			await contextService.activate(parsedArgs.context);
+		}
+	} catch (error) {
+		if (parsedArgs.context) {
+			const message = error instanceof Error ? error.message : String(error);
+			process.stderr.write(`${chalk.red(`Error: ${message}`)}\n`);
+			process.exit(1);
+		}
+		// ContextService remains optional for SDK consumers and tests.
 	}
 
 	if (parsedArgs.mode === "rpc") {

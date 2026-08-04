@@ -1348,6 +1348,55 @@ describe("ModelRegistry", () => {
 		});
 	});
 
+	describe("entitlement-scoped OAuth discovery", () => {
+		test("refreshes expired Antigravity credentials before discovering models", async () => {
+			await authStorage.set("google-antigravity", {
+				type: "oauth",
+				access: "expired-access-token",
+				refresh: "refresh-token",
+				expires: Date.now() - 60_000,
+				projectId: "project-id",
+			});
+
+			const requestedUrls: string[] = [];
+			using _hook = hookFetch((input: string | URL | Request, init?: RequestInit) => {
+				const url = input instanceof Request ? input.url : String(input);
+				requestedUrls.push(url);
+				if (url === "https://oauth2.googleapis.com/token") {
+					return Response.json({ access_token: "fresh-access-token", expires_in: 3600 });
+				}
+				if (url === "https://daily-cloudcode-pa.sandbox.googleapis.com/v1internal:fetchAvailableModels") {
+					const authorization =
+						input instanceof Request
+							? input.headers.get("Authorization")
+							: new Headers(init?.headers).get("Authorization");
+					expect(authorization).toBe("Bearer fresh-access-token");
+					return Response.json({
+						models: {
+							"gemini-3.6-flash-high": {
+								displayName: "Gemini 3.6 Flash High",
+								maxTokens: 1_000_000,
+								maxOutputTokens: 65_536,
+								supportsThinking: true,
+							},
+						},
+					});
+				}
+				throw new Error(`Unexpected URL: ${url}`);
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			await registry.refreshProvider("google-antigravity", "online");
+
+			expect(requestedUrls).toContain("https://oauth2.googleapis.com/token");
+			expect(registry.find("google-antigravity", "gemini-3.6-flash-high")).toMatchObject({
+				contextWindow: 1_000_000,
+				maxTokens: 65_536,
+				reasoning: true,
+			});
+		});
+	});
+
 	describe("disabled provider filtering", () => {
 		test("getAvailable and getDiscoverableProviders exclude disabled providers from settings", async () => {
 			writeRawModelsJson({
@@ -1803,7 +1852,7 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
-		test("generated config preserves GPT-5.6 Sol High reasoning metadata after discovery", async () => {
+		test("generated config preserves GPT-5.6 Sol effort metadata after discovery", async () => {
 			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
 			const previousApiKey = Bun.env.LITELLM_API_KEY;
 			try {
@@ -1828,7 +1877,7 @@ describe("ModelRegistry", () => {
 				const model = registry.find("litellm", "gpt-5.6-sol");
 				expect(model).toMatchObject({
 					reasoning: true,
-					thinking: { mode: "effort", minLevel: Effort.High, maxLevel: Effort.High },
+					thinking: { mode: "effort", minLevel: Effort.Low, maxLevel: Effort.XHigh },
 					contextWindow: 1_050_000,
 					maxTokens: 128_000,
 					compat: { supportsTemperature: false },

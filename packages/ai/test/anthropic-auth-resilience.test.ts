@@ -1,56 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
-import * as fs from "node:fs";
-import { AuthCredentialStore } from "../src/auth-storage";
-import { findAnthropicAuth } from "../src/utils/anthropic-auth";
+import { describe, expect, it } from "bun:test";
+import * as os from "node:os";
+import * as path from "node:path";
+import type { AuthCredentialStore } from "../src/auth-storage";
+import { type AnthropicAuthEnvironment, findAnthropicAuth } from "../src/utils/anthropic-auth";
 
-async function withEnv(overrides: Record<string, string | undefined>, fn: () => void | Promise<void>): Promise<void> {
-	const previous = new Map<string, string | undefined>();
-	for (const key of Object.keys(overrides)) {
-		previous.set(key, Bun.env[key]);
-	}
-	try {
-		for (const [key, value] of Object.entries(overrides)) {
-			if (value === undefined) {
-				delete Bun.env[key];
-			} else {
-				Bun.env[key] = value;
-			}
-		}
-		await fn();
-	} finally {
-		for (const [key, value] of previous.entries()) {
-			if (value === undefined) {
-				delete Bun.env[key];
-			} else {
-				Bun.env[key] = value;
-			}
-		}
-	}
+async function withEnv(
+	overrides: AnthropicAuthEnvironment,
+	fn: (environment: AnthropicAuthEnvironment) => void | Promise<void>,
+): Promise<void> {
+	await fn(overrides);
 }
 
-beforeEach(() => {
-	// Stub fs.readFileSync so tier 6 (models.yml) never fires during these tests.
-	// Without this, a developer with real models.yml on disk would have tier 6
-	// resolve before the litellm/error tiers are tested.
-	const originalReadFileSync = fs.readFileSync.bind(fs);
-	// Cast is required because `mockImplementation` expects the overload union of
-	// `fs.readFileSync`, which no single function signature can express.
-	vi.spyOn(fs, "readFileSync").mockImplementation(((...args: Parameters<typeof fs.readFileSync>) => {
-		if (typeof args[0] === "string" && args[0].endsWith("models.yml")) {
-			throw new Error("ENOENT: mocked for test isolation");
-		}
-		return originalReadFileSync(...args);
-	}) as typeof fs.readFileSync);
-});
+const brokenStore = {
+	listAuthCredentials: () => {
+		throw new Error("DB corrupted");
+	},
+	close: () => {},
+} as unknown as AuthCredentialStore;
 
-afterEach(() => {
-	vi.restoreAllMocks();
-});
+const missingModelsYmlPath = path.join(os.tmpdir(), `pi-anthropic-resilience-missing-${process.pid}.yml`);
 
 describe("findAnthropicAuth resilience", () => {
 	it("falls back to ANTHROPIC_API_KEY when AuthCredentialStore.open throws", async () => {
-		vi.spyOn(AuthCredentialStore, "open").mockRejectedValue(new Error("DB corrupted"));
-
 		await withEnv(
 			{
 				ANTHROPIC_API_KEY: "sk-ant-fallback-key",
@@ -61,8 +32,12 @@ describe("findAnthropicAuth resilience", () => {
 				ANTHROPIC_FOUNDRY_API_KEY: undefined,
 				CLAUDE_CODE_USE_FOUNDRY: undefined,
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth({
+					store: brokenStore,
+					environment,
+					modelsYmlPath: missingModelsYmlPath,
+				});
 				expect(auth).not.toBeNull();
 				expect(auth?.apiKey).toBe("sk-ant-fallback-key");
 				expect(auth?.baseUrl).toBe("https://api.anthropic.com");
@@ -71,8 +46,6 @@ describe("findAnthropicAuth resilience", () => {
 	});
 
 	it("falls back to litellm credentials when AuthCredentialStore.open throws and no ANTHROPIC_API_KEY", async () => {
-		vi.spyOn(AuthCredentialStore, "open").mockRejectedValue(new Error("DB corrupted"));
-
 		await withEnv(
 			{
 				ANTHROPIC_API_KEY: undefined,
@@ -85,8 +58,12 @@ describe("findAnthropicAuth resilience", () => {
 				LITELLM_BASE_URL: "https://litellm.example.com",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth({
+					store: brokenStore,
+					environment,
+					modelsYmlPath: missingModelsYmlPath,
+				});
 				expect(auth).not.toBeNull();
 				expect(auth?.apiKey).toBe("sk-litellm-test-key");
 				expect(auth?.baseUrl).toBe("https://litellm.example.com/anthropic");
@@ -97,8 +74,6 @@ describe("findAnthropicAuth resilience", () => {
 	it("re-throws store error when no later auth tier can succeed", async () => {
 		// If the DB is the only possible auth source and it fails, the error
 		// should be surfaced so the user knows why auth isn't working.
-		vi.spyOn(AuthCredentialStore, "open").mockRejectedValue(new Error("DB corrupted"));
-
 		await withEnv(
 			{
 				ANTHROPIC_API_KEY: undefined,
@@ -111,8 +86,10 @@ describe("findAnthropicAuth resilience", () => {
 				LITELLM_BASE_URL: undefined,
 				LITELLM_API_KEY: undefined,
 			},
-			async () => {
-				await expect(findAnthropicAuth()).rejects.toThrow("DB corrupted");
+			async environment => {
+				await expect(
+					findAnthropicAuth({ store: brokenStore, environment, modelsYmlPath: missingModelsYmlPath }),
+				).rejects.toThrow("DB corrupted");
 			},
 		);
 	});

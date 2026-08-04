@@ -1,6 +1,10 @@
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 # Changelog
 
 ## [Unreleased]
+
+<!-- textlint-disable terminology -->
 
 ## [20.0.0] - 2026-08-01
 

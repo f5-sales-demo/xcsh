@@ -192,7 +192,7 @@ export const streamGoogle: StreamFunction<"google-generative-ai"> = (
 								type: "toolCall",
 								id: toolCallId,
 								name: part.functionCall.name || "",
-								arguments: (part.functionCall.args ?? {}) as Record<string, any>,
+								arguments: (part.functionCall.args ?? {}) as Record<string, unknown>,
 								...(part.thoughtSignature && { thoughtSignature: part.thoughtSignature }),
 							};
 
@@ -210,6 +210,7 @@ export const streamGoogle: StreamFunction<"google-generative-ai"> = (
 				}
 
 				if (candidate?.finishReason) {
+					output.rawStopReason = candidate.finishReason;
 					output.stopReason = mapStopReason(candidate.finishReason);
 					if (output.content.some(b => b.type === "toolCall")) {
 						output.stopReason = "toolUse";
@@ -265,7 +266,9 @@ export const streamGoogle: StreamFunction<"google-generative-ai"> = (
 			}
 
 			if (output.stopReason === "aborted" || output.stopReason === "error") {
-				throw new Error("An unknown error occurred");
+				throw new Error(
+					output.rawStopReason ? `Gemini stopped with ${output.rawStopReason}` : "An unknown error occurred",
+				);
 			}
 
 			output.duration = Date.now() - startTime;

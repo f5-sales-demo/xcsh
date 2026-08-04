@@ -7030,6 +7030,31 @@
 		}
 	},
 	"google-vertex": {
+		"gemini-3.6-flash": {
+			"id": "gemini-3.6-flash",
+			"name": "Gemini 3.6 Flash",
+			"api": "google-vertex",
+			"provider": "google-vertex",
+			"baseUrl": "https://{location}-aiplatform.googleapis.com",
+			"reasoning": true,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 0,
+				"output": 0,
+				"cacheRead": 0,
+				"cacheWrite": 0
+			},
+			"contextWindow": 1048576,
+			"maxTokens": 65536,
+			"thinking": {
+				"mode": "google-level",
+				"minLevel": "low",
+				"maxLevel": "high"
+			}
+		},
 		"gemini-1.5-flash": {
 			"id": "gemini-1.5-flash",
 			"name": "Gemini 1.5 Flash",
@@ -16586,8 +16611,8 @@
 			"maxTokens": 128000,
 			"thinking": {
 				"mode": "effort",
-				"minLevel": "high",
-				"maxLevel": "high"
+				"minLevel": "low",
+				"maxLevel": "xhigh"
 			},
 			"compat": {
 				"supportsTemperature": false

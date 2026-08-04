@@ -778,9 +778,10 @@ function resolveExactCanonicalScopePattern(
  */
 export async function resolveModelScope(
 	patterns: string[],
-	modelRegistry: Pick<ModelRegistry, "getAvailable" | "getCanonicalVariants">,
+	modelRegistry: Pick<ModelRegistry, "awaitBackgroundRefresh" | "getAvailable" | "getCanonicalVariants">,
 	preferences?: ModelMatchPreferences,
 ): Promise<ScopedModel[]> {
+	await modelRegistry.awaitBackgroundRefresh();
 	const availableModels = modelRegistry.getAvailable();
 	const context = buildPreferenceContext(availableModels, preferences);
 	const scopedModels: ScopedModel[] = [];

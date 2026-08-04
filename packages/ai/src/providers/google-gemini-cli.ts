@@ -76,7 +76,7 @@ export function getGeminiCliUserAgent(modelId = "gemini-3.1-pro-preview"): strin
 }
 
 const ANTIGRAVITY_USER_AGENT = (() => {
-	const DEFAULT_ANTIGRAVITY_VERSION = "1.104.0";
+	const DEFAULT_ANTIGRAVITY_VERSION = "2.4.3";
 	const version = process.env.PI_AI_ANTIGRAVITY_VERSION || DEFAULT_ANTIGRAVITY_VERSION;
 	// Map Node.js platform/arch to Antigravity's expected format.
 	// Verified against Antigravity source: _qn() and wqn() in main.js.
@@ -646,6 +646,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 				};
 				output.stopReason = "stop";
 				output.errorMessage = undefined;
+				output.rawStopReason = undefined;
 				output.timestamp = Date.now();
 				started = false;
 			};
@@ -794,6 +795,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 					}
 
 					if (candidate?.finishReason) {
+						output.rawStopReason = candidate.finishReason;
 						output.stopReason = mapStopReasonString(candidate.finishReason);
 						if (output.content.some(b => b.type === "toolCall")) {
 							output.stopReason = "toolUse";
@@ -902,7 +904,9 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 			}
 
 			if (output.stopReason === "aborted" || output.stopReason === "error") {
-				throw new Error("An unknown error occurred");
+				throw new Error(
+					output.rawStopReason ? `Gemini stopped with ${output.rawStopReason}` : "An unknown error occurred",
+				);
 			}
 
 			output.duration = Date.now() - startTime;

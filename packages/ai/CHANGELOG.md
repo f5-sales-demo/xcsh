@@ -1,6 +1,24 @@
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 # Changelog
 
 ## [Unreleased]
+
+### Changed
+
+- Updated the default Antigravity client version to 2.4.3 for current Google Cloud Code Assist compatibility ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Updated the Google GenAI SDK to 2.15.0 ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+
+### Added
+
+- Added Gemini 3.6 Flash through Google Vertex AI with ADC project discovery, gcloud project fallback, and a global location default ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+
+### Fixed
+
+- Preserved native Gemini finish reasons in Google provider errors instead of reporting an unknown error ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+
+<!-- markdownlint-disable MD024 -->
+<!-- textlint-disable terminology -->
 
 ## [19.105.1] - 2026-07-31
 

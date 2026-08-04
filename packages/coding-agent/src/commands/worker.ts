@@ -156,6 +156,9 @@ export default class Worker extends Command {
 			`[xcsh worker] extension bridge listening on ws://127.0.0.1:${bridge.port}` +
 				(bridge.wssPort ? ` + wss://${LOCALIP_HOST}:${bridge.wssPort}` : ""),
 		);
+		if (process.connected) {
+			process.send?.({ type: "ready", sessionId: sessionInfoForWorker().sessionId });
+		}
 		setSharedBridgeServer(bridge);
 		ContextService.onContextChange(() => bridge.broadcastTenantChanged());
 
