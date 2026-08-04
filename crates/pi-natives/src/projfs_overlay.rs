@@ -13,7 +13,7 @@ pub struct ProjfsOverlayProbeResult {
 	pub available: bool,
 	/// Human-readable reason when `available` is false (e.g. wrong OS or missing
 	/// DLL).
-	pub reason:    Option<String>,
+	pub reason: Option<String>,
 }
 
 /// Probe whether `ProjFS` overlay virtualization can be started on this system.
@@ -226,28 +226,28 @@ mod imp {
 	}
 
 	struct DirectoryEntry {
-		name_wide:  Vec<u16>,
+		name_wide: Vec<u16>,
 		basic_info: PRJ_FILE_BASIC_INFO,
 	}
 
 	#[derive(Default)]
 	struct DirectoryEnumeration {
-		entries:           Vec<DirectoryEntry>,
-		cursor:            usize,
+		entries: Vec<DirectoryEntry>,
+		cursor: usize,
 		search_expression: Option<Vec<u16>>,
 	}
 
 	struct ProviderContext {
-		lower_root:   PathBuf,
-		api:          Arc<ProjfsApi>,
+		lower_root: PathBuf,
+		api: Arc<ProjfsApi>,
 		enumerations: Mutex<BTreeMap<u128, DirectoryEnumeration>>,
 	}
 
 	struct ProjfsSession {
 		virtualization_context: PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT,
-		provider_context:       *mut ProviderContext,
-		callbacks:              Box<PRJ_CALLBACKS>,
-		api_handle:             Arc<ProjfsApi>,
+		provider_context: *mut ProviderContext,
+		callbacks: Box<PRJ_CALLBACKS>,
+		api_handle: Arc<ProjfsApi>,
 	}
 
 	// SAFETY: Session ownership is synchronized through `PROJFS_SESSIONS`; raw
@@ -312,8 +312,8 @@ mod imp {
 		}
 
 		let provider_context = Box::new(ProviderContext {
-			lower_root:   lower_root_path,
-			api:          api.clone(),
+			lower_root: lower_root_path,
+			api: api.clone(),
 			enumerations: Mutex::new(BTreeMap::new()),
 		});
 		let provider_context_ptr = Box::into_raw(provider_context);
@@ -423,11 +423,10 @@ mod imp {
 		};
 
 		let mut enumerations = context.enumerations.lock();
-		enumerations.insert(guid_to_u128(unsafe { &*enumeration_id }), DirectoryEnumeration {
-			entries,
-			cursor: 0,
-			search_expression: None,
-		});
+		enumerations.insert(
+			guid_to_u128(unsafe { &*enumeration_id }),
+			DirectoryEnumeration { entries, cursor: 0, search_expression: None },
+		);
 		0
 	}
 
@@ -667,7 +666,7 @@ mod imp {
 				continue;
 			}
 			entries.push(DirectoryEntry {
-				name_wide:  {
+				name_wide: {
 					name_wide.shrink_to_fit();
 					name_wide
 				},
@@ -686,12 +685,12 @@ mod imp {
 
 	fn to_basic_info(metadata: &fs::Metadata) -> PRJ_FILE_BASIC_INFO {
 		PRJ_FILE_BASIC_INFO {
-			IsDirectory:    metadata.is_dir(),
-			FileSize:       metadata.file_size() as i64,
-			CreationTime:   metadata.creation_time() as i64,
+			IsDirectory: metadata.is_dir(),
+			FileSize: metadata.file_size() as i64,
+			CreationTime: metadata.creation_time() as i64,
 			LastAccessTime: metadata.last_access_time() as i64,
-			LastWriteTime:  metadata.last_write_time() as i64,
-			ChangeTime:     metadata.last_write_time() as i64,
+			LastWriteTime: metadata.last_write_time() as i64,
+			ChangeTime: metadata.last_write_time() as i64,
 			FileAttributes: metadata.file_attributes(),
 		}
 	}

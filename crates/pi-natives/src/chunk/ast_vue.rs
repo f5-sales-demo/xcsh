@@ -14,15 +14,15 @@ pub struct VueClassifier;
 impl LangClassifier for VueClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &[],
-				preserved_trivia:        &[],
-				extra_root_wrappers:     &["document"],
+				extra_trivia: &[],
+				preserved_trivia: &[],
+				extra_root_wrappers: &["document"],
 				preserved_root_wrappers: &[],
-				absorbable_attrs:        &[],
+				absorbable_attrs: &[],
 			},
 		};
 		&TABLES

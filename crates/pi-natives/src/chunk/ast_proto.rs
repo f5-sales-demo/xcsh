@@ -57,9 +57,9 @@ const PROTO_CLASS_RULES: &[super::classify::SemanticRule] = &[semantic_rule(
 )];
 
 const PROTO_TABLES: ClassifierTables = ClassifierTables {
-	root:                 PROTO_ROOT_RULES,
-	class:                PROTO_CLASS_RULES,
-	function:             &[],
+	root: PROTO_ROOT_RULES,
+	class: PROTO_CLASS_RULES,
+	function: &[],
 	structural_overrides: super::classify::StructuralOverrides::EMPTY,
 };
 

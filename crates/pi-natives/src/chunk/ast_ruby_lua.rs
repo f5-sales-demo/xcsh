@@ -198,15 +198,15 @@ const RUBY_LUA_FUNCTION_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const RUBY_LUA_TABLES: ClassifierTables = ClassifierTables {
-	root:                 RUBY_LUA_ROOT_RULES,
-	class:                RUBY_LUA_CLASS_RULES,
-	function:             RUBY_LUA_FUNCTION_RULES,
+	root: RUBY_LUA_ROOT_RULES,
+	class: RUBY_LUA_CLASS_RULES,
+	function: RUBY_LUA_FUNCTION_RULES,
 	structural_overrides: StructuralOverrides {
-		extra_trivia:            &[],
-		preserved_trivia:        &[],
-		extra_root_wrappers:     &[],
+		extra_trivia: &[],
+		preserved_trivia: &[],
+		extra_root_wrappers: &[],
 		preserved_root_wrappers: &["module"],
-		absorbable_attrs:        &[],
+		absorbable_attrs: &[],
 	},
 };
 

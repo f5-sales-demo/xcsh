@@ -64,9 +64,9 @@ impl MarkupClassifier {
 impl LangClassifier for MarkupClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: super::classify::StructuralOverrides::EMPTY,
 		};
 		&TABLES

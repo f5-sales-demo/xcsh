@@ -23,25 +23,25 @@ use clap::{Parser, Subcommand};
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct FenceJson {
 	#[serde(default)]
-	allow:            Vec<PathBuf>,
+	allow: Vec<PathBuf>,
 	#[serde(default)]
-	allow_read_only:  Vec<PathBuf>,
+	allow_read_only: Vec<PathBuf>,
 	#[serde(default)]
 	allow_write_only: Vec<PathBuf>,
 	#[serde(default)]
-	deny:             Vec<PathBuf>,
+	deny: Vec<PathBuf>,
 	#[serde(default)]
-	deny_enumerate:   Vec<PathBuf>,
+	deny_enumerate: Vec<PathBuf>,
 }
 
 impl From<FenceJson> for ContainmentFence {
 	fn from(json: FenceJson) -> Self {
 		Self {
-			allow:            json.allow,
-			allow_read_only:  json.allow_read_only,
+			allow: json.allow,
+			allow_read_only: json.allow_read_only,
 			allow_write_only: json.allow_write_only,
-			deny:             json.deny,
-			deny_enumerate:   json.deny_enumerate,
+			deny: json.deny,
+			deny_enumerate: json.deny_enumerate,
 		}
 	}
 }
@@ -75,10 +75,10 @@ enum Command {
 	Run {
 		/// The fence, as JSON. Omit to run unfenced — the control case.
 		#[arg(long)]
-		fence:   Option<String>,
+		fence: Option<String>,
 		/// Working directory for the command.
 		#[arg(long)]
-		cwd:     Option<PathBuf>,
+		cwd: Option<PathBuf>,
 		/// The command line to run.
 		command: String,
 	},

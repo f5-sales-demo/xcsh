@@ -94,21 +94,21 @@ fn realistic() -> (FakeFs, ContainmentFence) {
 		"/home/alice/GIT/custA/.xcsh/sessions/other.jsonl",
 	]);
 	let fence = ContainmentFence {
-		allow:            vec![
+		allow: vec![
 			PathBuf::from("/home/alice/GIT/custA"),
 			PathBuf::from("/home/alice/.cargo/registry"),
 		],
-		allow_read_only:  vec![PathBuf::from("/home/alice/.gitconfig"), PathBuf::from("/opt/shared")],
+		allow_read_only: vec![PathBuf::from("/home/alice/.gitconfig"), PathBuf::from("/opt/shared")],
 		allow_write_only: vec![PathBuf::from("/drop")],
 		// `/home/alice/GIT` nested inside `/home/alice` exercises deny-inside-deny; the
 		// `.xcsh/sessions` root is a deny inside an allow inside a deny, which is the case
 		// seatbelt handles by rule order and Landlock cannot.
-		deny:             vec![
+		deny: vec![
 			PathBuf::from("/home/alice"),
 			PathBuf::from("/home/alice/GIT"),
 			PathBuf::from("/home/alice/GIT/custA/.xcsh/sessions"),
 		],
-		deny_enumerate:   Vec::new(),
+		deny_enumerate: Vec::new(),
 	};
 	(fs, fence)
 }

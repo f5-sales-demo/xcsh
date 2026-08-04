@@ -22,28 +22,28 @@ use crate::task;
 #[napi]
 pub enum ImageFormat {
 	/// PNG encoded bytes.
-	PNG  = 0,
+	PNG = 0,
 	/// JPEG encoded bytes.
 	JPEG = 1,
 	/// WebP encoded bytes.
 	WEBP = 2,
 	/// GIF encoded bytes.
-	GIF  = 3,
+	GIF = 3,
 }
 
 /// Sampling filter for resize operations.
 #[napi]
 pub enum SamplingFilter {
 	/// Nearest-neighbor sampling (fast, low quality).
-	Nearest    = 1,
+	Nearest = 1,
 	/// Triangle filter (linear interpolation).
-	Triangle   = 2,
+	Triangle = 2,
 	/// Catmull-Rom filter with sharper edges.
 	CatmullRom = 3,
 	/// Gaussian filter for smoother results.
-	Gaussian   = 4,
+	Gaussian = 4,
 	/// Lanczos3 filter for high-quality downscaling.
-	Lanczos3   = 5,
+	Lanczos3 = 5,
 }
 
 impl From<SamplingFilter> for FilterType {

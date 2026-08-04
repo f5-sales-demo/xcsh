@@ -160,7 +160,11 @@ pub fn compose_std_command<S: AsRef<OsStr>>(
 	// it, so a fenced command cannot present a custom argv[0] (as a login shell's `-bash` would).
 	// Nothing in this agent's use depends on that, and the alternative is no confinement at all.
 	#[cfg(target_os = "macos")]
-	let sandboxed = context.params.containment.as_ref().map(|fence| fence.to_seatbelt_profile());
+	let sandboxed = context
+		.params
+		.containment
+		.as_ref()
+		.map(|fence| fence.to_seatbelt_profile());
 	#[cfg(target_os = "macos")]
 	let mut cmd = match sandboxed.as_deref() {
 		Some(profile) => {

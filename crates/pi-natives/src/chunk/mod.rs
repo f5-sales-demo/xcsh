@@ -131,29 +131,32 @@ pub(crate) fn build_chunk_tree(source: &str, language: &str) -> Result<ChunkTree
 
 	insert_preamble_chunk(source, &mut acc.chunks, &mut root_children);
 
-	acc.chunks.insert(0, ChunkNode {
-		path:                String::new(),
-		identifier:          None,
-		kind:                ChunkKind::Root,
-		leaf:                false,
-		virtual_content:     None,
-		parent_path:         None,
-		children:            root_children.clone(),
-		signature:           None,
-		start_line:          u32::from(total_lines != 0),
-		end_line:            total_lines as u32,
-		line_count:          total_lines as u32,
-		start_byte:          0,
-		end_byte:            source.len() as u32,
-		checksum_start_byte: 0,
-		prologue_end_byte:   Some(0),
-		epilogue_start_byte: Some(source.len() as u32),
-		checksum:            root_checksum.clone(),
-		error:               false,
-		indent:              0,
-		indent_char:         String::new(),
-		group:               false,
-	});
+	acc.chunks.insert(
+		0,
+		ChunkNode {
+			path: String::new(),
+			identifier: None,
+			kind: ChunkKind::Root,
+			leaf: false,
+			virtual_content: None,
+			parent_path: None,
+			children: root_children.clone(),
+			signature: None,
+			start_line: u32::from(total_lines != 0),
+			end_line: total_lines as u32,
+			line_count: total_lines as u32,
+			start_byte: 0,
+			end_byte: source.len() as u32,
+			checksum_start_byte: 0,
+			prologue_end_byte: Some(0),
+			epilogue_start_byte: Some(source.len() as u32),
+			checksum: root_checksum.clone(),
+			error: false,
+			indent: 0,
+			indent_char: String::new(),
+			group: false,
+		},
+	);
 
 	Ok(ChunkTree {
 		language: normalized_language,
@@ -212,27 +215,27 @@ fn build_blank_line_tree(
 	checksum: String,
 ) -> ChunkTree {
 	let mut chunks = vec![ChunkNode {
-		path:                String::new(),
-		identifier:          None,
-		kind:                ChunkKind::Root,
-		leaf:                false,
-		virtual_content:     None,
-		parent_path:         None,
-		children:            Vec::new(),
-		signature:           None,
-		start_line:          u32::from(total_lines != 0),
-		end_line:            total_lines as u32,
-		line_count:          total_lines as u32,
-		start_byte:          0,
-		end_byte:            source.len() as u32,
+		path: String::new(),
+		identifier: None,
+		kind: ChunkKind::Root,
+		leaf: false,
+		virtual_content: None,
+		parent_path: None,
+		children: Vec::new(),
+		signature: None,
+		start_line: u32::from(total_lines != 0),
+		end_line: total_lines as u32,
+		line_count: total_lines as u32,
+		start_byte: 0,
+		end_byte: source.len() as u32,
 		checksum_start_byte: 0,
-		prologue_end_byte:   Some(0),
+		prologue_end_byte: Some(0),
 		epilogue_start_byte: Some(source.len() as u32),
-		checksum:            checksum.clone(),
-		error:               false,
-		indent:              0,
-		indent_char:         String::new(),
-		group:               false,
+		checksum: checksum.clone(),
+		error: false,
+		indent: 0,
+		indent_char: String::new(),
+		group: false,
 	}];
 	let line_starts = line_start_offsets(source);
 	let mut root_children = Vec::new();
@@ -262,32 +265,32 @@ fn build_blank_line_tree(
 		let end_byte = line_end_offset(source, &line_starts, end_line);
 		root_children.push(name.clone());
 		chunks.push(ChunkNode {
-			path:                name.clone(),
-			identifier:          Some(name.clone()),
-			kind:                ChunkKind::Chunk,
-			leaf:                true,
-			virtual_content:     None,
-			parent_path:         Some(String::new()),
-			children:            Vec::new(),
-			signature:           None,
-			start_line:          (start_line + 1) as u32,
-			end_line:            (end_line + 1) as u32,
-			line_count:          (end_line - start_line + 1) as u32,
-			start_byte:          start_byte as u32,
-			end_byte:            end_byte as u32,
+			path: name.clone(),
+			identifier: Some(name.clone()),
+			kind: ChunkKind::Chunk,
+			leaf: true,
+			virtual_content: None,
+			parent_path: Some(String::new()),
+			children: Vec::new(),
+			signature: None,
+			start_line: (start_line + 1) as u32,
+			end_line: (end_line + 1) as u32,
+			line_count: (end_line - start_line + 1) as u32,
+			start_byte: start_byte as u32,
+			end_byte: end_byte as u32,
 			checksum_start_byte: start_byte as u32,
-			prologue_end_byte:   None,
+			prologue_end_byte: None,
 			epilogue_start_byte: None,
-			checksum:            chunk_checksum(
+			checksum: chunk_checksum(
 				source
 					.as_bytes()
 					.get(start_byte..end_byte)
 					.unwrap_or_default(),
 			),
-			error:               false,
-			indent:              0,
-			indent_char:         String::new(),
-			group:               false,
+			error: false,
+			indent: 0,
+			indent_char: String::new(),
+			group: false,
 		});
 		start_line = end_line + 1;
 	}
@@ -457,33 +460,33 @@ fn translate_injected_subtree(
 			.map(|child| format!("{parent_path}.{child}"))
 			.collect();
 		acc.chunks.push(ChunkNode {
-			path:                translated_path,
-			identifier:          sub_chunk.identifier,
-			kind:                sub_chunk.kind,
-			leaf:                sub_chunk.leaf,
-			virtual_content:     sub_chunk.virtual_content,
-			parent_path:         translated_parent,
-			children:            translated_children,
-			signature:           sub_chunk.signature,
-			start_line:          sub_chunk.start_line.saturating_add(content_line_shift),
-			end_line:            sub_chunk.end_line.saturating_add(content_line_shift),
-			line_count:          sub_chunk.line_count,
-			start_byte:          sub_chunk.start_byte.saturating_add(content_start as u32),
-			end_byte:            sub_chunk.end_byte.saturating_add(content_start as u32),
+			path: translated_path,
+			identifier: sub_chunk.identifier,
+			kind: sub_chunk.kind,
+			leaf: sub_chunk.leaf,
+			virtual_content: sub_chunk.virtual_content,
+			parent_path: translated_parent,
+			children: translated_children,
+			signature: sub_chunk.signature,
+			start_line: sub_chunk.start_line.saturating_add(content_line_shift),
+			end_line: sub_chunk.end_line.saturating_add(content_line_shift),
+			line_count: sub_chunk.line_count,
+			start_byte: sub_chunk.start_byte.saturating_add(content_start as u32),
+			end_byte: sub_chunk.end_byte.saturating_add(content_start as u32),
 			checksum_start_byte: sub_chunk
 				.checksum_start_byte
 				.saturating_add(content_start as u32),
-			prologue_end_byte:   sub_chunk
+			prologue_end_byte: sub_chunk
 				.prologue_end_byte
 				.map(|byte| byte.saturating_add(content_start as u32)),
 			epilogue_start_byte: sub_chunk
 				.epilogue_start_byte
 				.map(|byte| byte.saturating_add(content_start as u32)),
-			checksum:            sub_chunk.checksum,
-			error:               sub_chunk.error,
-			indent:              sub_chunk.indent,
-			indent_char:         sub_chunk.indent_char,
-			group:               sub_chunk.group,
+			checksum: sub_chunk.checksum,
+			error: sub_chunk.error,
+			indent: sub_chunk.indent,
+			indent_char: sub_chunk.indent_char,
+			group: sub_chunk.group,
 		});
 	}
 
@@ -2182,14 +2185,14 @@ impl Config {
 		for selector in selectors {
 			let result = state
 				.render_read(ReadRenderParams {
-					read_path:           selector.clone(),
-					display_path:        "sample.ts".to_string(),
-					language_tag:        Some("ts".to_string()),
-					omit_checksum:       false,
-					anchor_style:        Some(ChunkAnchorStyle::Full),
+					read_path: selector.clone(),
+					display_path: "sample.ts".to_string(),
+					language_tag: Some("ts".to_string()),
+					omit_checksum: false,
+					anchor_style: Some(ChunkAnchorStyle::Full),
 					absolute_line_range: None,
-					tab_replacement:     Some("    ".to_string()),
-					normalize_indent:    Some(true),
+					tab_replacement: Some("    ".to_string()),
+					normalize_indent: Some(true),
 				})
 				.unwrap_or_else(|err| panic!("selector {selector} should resolve: {err}"));
 			let resolved = result
@@ -2206,14 +2209,14 @@ impl Config {
 			.expect("state should parse");
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "sample.ts:?".to_string(),
-				display_path:        "sample.ts".to_string(),
-				language_tag:        Some("ts".to_string()),
-				omit_checksum:       false,
-				anchor_style:        Some(ChunkAnchorStyle::Full),
+				read_path: "sample.ts:?".to_string(),
+				display_path: "sample.ts".to_string(),
+				language_tag: Some("ts".to_string()),
+				omit_checksum: false,
+				anchor_style: Some(ChunkAnchorStyle::Full),
 				absolute_line_range: None,
-				tab_replacement:     Some("    ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("    ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("listing should succeed");
 		assert!(result.text.contains("sample.ts chunks"), "{}", result.text);
@@ -2234,14 +2237,14 @@ impl Config {
 			.expect("state should parse");
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "sample.ts".to_string(),
-				display_path:        "sample.ts".to_string(),
-				language_tag:        Some("ts".to_string()),
-				omit_checksum:       false,
-				anchor_style:        Some(ChunkAnchorStyle::Full),
+				read_path: "sample.ts".to_string(),
+				display_path: "sample.ts".to_string(),
+				language_tag: Some("ts".to_string()),
+				omit_checksum: false,
+				anchor_style: Some(ChunkAnchorStyle::Full),
 				absolute_line_range: None,
-				tab_replacement:     Some("    ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("    ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("root read should succeed");
 		assert!(result.text.contains("class_Worker.fn_run#"), "{}", result.text);
@@ -2261,14 +2264,14 @@ impl Config {
 		let state = ChunkState::parse(source, "typescript".to_string()).expect("state should parse");
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "sample.ts:fn_loadSk.try_2".to_string(),
-				display_path:        "sample.ts".to_string(),
-				language_tag:        Some("ts".to_string()),
-				omit_checksum:       false,
-				anchor_style:        Some(ChunkAnchorStyle::Full),
+				read_path: "sample.ts:fn_loadSk.try_2".to_string(),
+				display_path: "sample.ts".to_string(),
+				language_tag: Some("ts".to_string()),
+				omit_checksum: false,
+				anchor_style: Some(ChunkAnchorStyle::Full),
 				absolute_line_range: None,
-				tab_replacement:     Some("    ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("    ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("render_read should succeed");
 
@@ -2288,14 +2291,14 @@ impl Config {
 			.expect("state should parse");
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "sample.ts:fn_run@unknown".to_string(),
-				display_path:        "sample.ts".to_string(),
-				language_tag:        Some("ts".to_string()),
-				omit_checksum:       false,
-				anchor_style:        Some(ChunkAnchorStyle::Full),
+				read_path: "sample.ts:fn_run@unknown".to_string(),
+				display_path: "sample.ts".to_string(),
+				language_tag: Some("ts".to_string()),
+				omit_checksum: false,
+				anchor_style: Some(ChunkAnchorStyle::Full),
 				absolute_line_range: None,
-				tab_replacement:     Some("    ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("    ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("render_read should succeed");
 
@@ -2312,14 +2315,14 @@ impl Config {
 			.expect("state should parse");
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "sample.ts:fn_run~".to_string(),
-				display_path:        "sample.ts".to_string(),
-				language_tag:        Some("ts".to_string()),
-				omit_checksum:       false,
-				anchor_style:        Some(ChunkAnchorStyle::Full),
+				read_path: "sample.ts:fn_run~".to_string(),
+				display_path: "sample.ts".to_string(),
+				language_tag: Some("ts".to_string()),
+				omit_checksum: false,
+				anchor_style: Some(ChunkAnchorStyle::Full),
 				absolute_line_range: None,
-				tab_replacement:     Some("    ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("    ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("render_read should succeed");
 
@@ -2349,14 +2352,14 @@ impl Config {
 			ChunkState::parse(source.to_string(), "python".to_string()).expect("state should parse");
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "test.py:class_Server.fn_addres^".to_string(),
-				display_path:        "test.py".to_string(),
-				language_tag:        Some("py".to_string()),
-				omit_checksum:       false,
-				anchor_style:        Some(ChunkAnchorStyle::Full),
+				read_path: "test.py:class_Server.fn_addres^".to_string(),
+				display_path: "test.py".to_string(),
+				language_tag: Some("py".to_string()),
+				omit_checksum: false,
+				anchor_style: Some(ChunkAnchorStyle::Full),
 				absolute_line_range: None,
-				tab_replacement:     Some("    ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("    ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("render_read should succeed");
 
@@ -2867,8 +2870,7 @@ end
 	fn python_region_boundaries_correct_for_class() {
 		use super::{resolve::chunk_region_range, types::ChunkRegion};
 
-		let source =
-			"class Server:\n    def start(self) -> None:\n        self.running = True\n        \
+		let source = "class Server:\n    def start(self) -> None:\n        self.running = True\n        \
 			 print('ok')\n\n    def stop(self):\n        pass\n";
 		let tree = build_chunk_tree(source, "python").expect("tree should build");
 		let class_chunk = tree
@@ -2955,8 +2957,7 @@ end
 	fn python_class_body_replace_does_not_corrupt() {
 		use super::{resolve::chunk_region_range, types::ChunkRegion};
 
-		let source =
-			"class Server:\n    def __init__(self, host: str, port: int):\n        self.host = \
+		let source = "class Server:\n    def __init__(self, host: str, port: int):\n        self.host = \
 			 host\n        self.port = port\n\n    def start(self) -> None:\n        if \
 			 self.running:\n            raise RuntimeError(\"already running\")\n        \
 			 self.running = True\n        print(f\"Started on {self.host}:{self.port}\")\n\n    \
@@ -3096,14 +3097,14 @@ end
 		// Read only lines 3-7 — the function spans L1-L11, so it should be clipped.
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "test.ts:L3-L7".to_string(),
-				display_path:        "test.ts".to_string(),
-				language_tag:        Some("ts".to_string()),
-				omit_checksum:       true,
-				anchor_style:        Some(ChunkAnchorStyle::FullOmit),
+				read_path: "test.ts:L3-L7".to_string(),
+				display_path: "test.ts".to_string(),
+				language_tag: Some("ts".to_string()),
+				omit_checksum: true,
+				anchor_style: Some(ChunkAnchorStyle::FullOmit),
 				absolute_line_range: None,
-				tab_replacement:     Some("  ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("  ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("render_read should succeed");
 
@@ -3146,14 +3147,14 @@ end
 
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "test.ts:L1-L2".to_string(),
-				display_path:        "test.ts".to_string(),
-				language_tag:        Some("ts".to_string()),
-				omit_checksum:       true,
-				anchor_style:        Some(ChunkAnchorStyle::FullOmit),
+				read_path: "test.ts:L1-L2".to_string(),
+				display_path: "test.ts".to_string(),
+				language_tag: Some("ts".to_string()),
+				omit_checksum: true,
+				anchor_style: Some(ChunkAnchorStyle::FullOmit),
 				absolute_line_range: None,
-				tab_replacement:     Some("  ".to_string()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("  ".to_string()),
+				normalize_indent: Some(true),
 			})
 			.expect("render_read should succeed");
 
@@ -3256,14 +3257,14 @@ end
 			ChunkState::parse(source.to_owned(), "markdown".to_owned()).expect("state should parse");
 		let result = state
 			.render_read(ReadRenderParams {
-				read_path:           "sample.md".to_owned(),
-				display_path:        "sample.md".to_owned(),
-				language_tag:        Some("md".to_owned()),
-				omit_checksum:       false,
-				anchor_style:        Some(ChunkAnchorStyle::Full),
+				read_path: "sample.md".to_owned(),
+				display_path: "sample.md".to_owned(),
+				language_tag: Some("md".to_owned()),
+				omit_checksum: false,
+				anchor_style: Some(ChunkAnchorStyle::Full),
 				absolute_line_range: None,
-				tab_replacement:     Some("    ".to_owned()),
-				normalize_indent:    Some(true),
+				tab_replacement: Some("    ".to_owned()),
+				normalize_indent: Some(true),
 			})
 			.expect("render_read should succeed");
 

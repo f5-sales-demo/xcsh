@@ -6,21 +6,21 @@ use crate::chunk::{kind::ChunkKind, state::ChunkState};
 
 #[derive(Clone)]
 pub struct ChunkNode {
-	pub path:                String,
-	pub identifier:          Option<String>,
-	pub kind:                ChunkKind,
-	pub leaf:                bool,
+	pub path: String,
+	pub identifier: Option<String>,
+	pub kind: ChunkKind,
+	pub leaf: bool,
 	/// For virtual chunks (for example `theirs` branches in conflicts), content
 	/// that is rendered instead of slicing `source`.
-	pub virtual_content:     Option<String>,
-	pub parent_path:         Option<String>,
-	pub children:            Vec<String>,
-	pub signature:           Option<String>,
-	pub start_line:          u32,
-	pub end_line:            u32,
-	pub line_count:          u32,
-	pub start_byte:          u32,
-	pub end_byte:            u32,
+	pub virtual_content: Option<String>,
+	pub parent_path: Option<String>,
+	pub children: Vec<String>,
+	pub signature: Option<String>,
+	pub start_line: u32,
+	pub end_line: u32,
+	pub line_count: u32,
+	pub start_byte: u32,
+	pub end_byte: u32,
 	/// Start byte of the semantic declaration used for checksums. This can be
 	/// later than `start_byte` when the chunk absorbs attached leading trivia
 	/// such as doc comments or attributes.
@@ -28,35 +28,35 @@ pub struct ChunkNode {
 
 	/// End byte of the prologue region. `None` means the chunk does not expose
 	/// regions.
-	pub prologue_end_byte:   Option<u32>,
+	pub prologue_end_byte: Option<u32>,
 	/// Start byte of the epilogue region. `None` means the chunk does not expose
 	/// regions.
 	pub epilogue_start_byte: Option<u32>,
 
-	pub checksum:    String,
-	pub error:       bool,
-	pub indent:      u32,
+	pub checksum: String,
+	pub error: bool,
+	pub indent: u32,
 	pub indent_char: String,
 	/// True for group-candidate chunks (e.g. `stmts`, `imports`, `decls`) that
 	/// represent an ordered list of similar items. Append/prepend is valid on
 	/// these even when they are leaf nodes.
-	pub group:       bool,
+	pub group: bool,
 }
 
 #[derive(Clone)]
 pub struct ChunkTree {
-	pub language:          String,
-	pub checksum:          String,
-	pub line_count:        u32,
-	pub parse_errors:      u32,
+	pub language: String,
+	pub checksum: String,
+	pub line_count: u32,
+	pub parse_errors: u32,
 	/// 1-indexed line numbers of tree-sitter ERROR / MISSING nodes surfaced
 	/// during parsing. Used to focus error messages around failure locations
 	/// when an edit introduces a parse error far from the edit target.
 	pub parse_error_lines: Vec<u32>,
-	pub fallback:          bool,
-	pub root_path:         String,
-	pub root_children:     Vec<String>,
-	pub chunks:            Vec<ChunkNode>,
+	pub fallback: bool,
+	pub root_path: String,
+	pub root_children: Vec<String>,
+	pub chunks: Vec<ChunkNode>,
 }
 
 /// Summary of a single chunk node for tool output and navigation.
@@ -64,17 +64,17 @@ pub struct ChunkTree {
 #[napi(object)]
 pub struct ChunkInfo {
 	/// Chunk selector path within the tree.
-	pub path:       String,
+	pub path: String,
 	/// Bare chunk identifier (without kind prefix), if available.
 	pub identifier: Option<String>,
 	/// Stable checksum anchor for this chunk.
-	pub checksum:   String,
+	pub checksum: String,
 	/// 1-based start line in the source file (inclusive).
 	pub start_line: u32,
 	/// 1-based end line in the source file (inclusive).
-	pub end_line:   u32,
+	pub end_line: u32,
 	/// Whether this node is a leaf (no child chunks).
-	pub leaf:       bool,
+	pub leaf: bool,
 }
 
 /// Result of resolving a chunk read request against the tree.
@@ -156,7 +156,7 @@ impl ChunkEditOp {
 #[napi(object)]
 pub struct ChunkReadTarget {
 	/// Whether the selector matched.
-	pub status:   ChunkReadStatus,
+	pub status: ChunkReadStatus,
 	/// Sanitized selector string that was applied.
 	pub selector: String,
 }
@@ -169,7 +169,7 @@ pub struct VisibleLineRange {
 	/// First line to include.
 	pub start_line: u32,
 	/// Last line to include.
-	pub end_line:   u32,
+	pub end_line: u32,
 }
 
 /// How chunk anchors are formatted in rendered output (name and checksum
@@ -278,25 +278,25 @@ pub struct FocusedPath {
 #[napi(object)]
 pub struct RenderParams {
 	/// Path of the chunk to render; `None` uses the tree root.
-	pub chunk_path:           Option<String>,
+	pub chunk_path: Option<String>,
 	/// Title line shown above the tree (often the file path).
-	pub title:                String,
+	pub title: String,
 	/// Optional language label for the header block.
-	pub language_tag:         Option<String>,
+	pub language_tag: Option<String>,
 	/// Restrict output to an inclusive line range of the file.
-	pub visible_range:        Option<VisibleLineRange>,
+	pub visible_range: Option<VisibleLineRange>,
 	/// When true, list only direct children instead of a full subtree.
 	pub render_children_only: bool,
 	/// Hide checksums in anchors when true.
-	pub omit_checksum:        bool,
+	pub omit_checksum: bool,
 	/// Anchor formatting style for chunk headers.
-	pub anchor_style:         Option<ChunkAnchorStyle>,
+	pub anchor_style: Option<ChunkAnchorStyle>,
 	/// Include a one-line preview for leaf chunks.
-	pub show_leaf_preview:    bool,
+	pub show_leaf_preview: bool,
 	/// Replace tab characters in displayed previews (e.g. two spaces).
-	pub tab_replacement:      Option<String>,
+	pub tab_replacement: Option<String>,
 	/// When true, normalize displayed indentation to canonical tabs.
-	pub normalize_indent:     Option<bool>,
+	pub normalize_indent: Option<bool>,
 
 	/// When set, restrict rendering to these chunks with their specified focus
 	/// modes. Everything not in this list is skipped.
@@ -309,21 +309,21 @@ pub struct RenderParams {
 #[napi(object)]
 pub struct ReadRenderParams {
 	/// Read selector (`sel=...` path, line range, or empty for whole tree).
-	pub read_path:           String,
+	pub read_path: String,
 	/// Path shown in titles and error messages (often the file path).
-	pub display_path:        String,
+	pub display_path: String,
 	/// Optional language label for the rendered block.
-	pub language_tag:        Option<String>,
+	pub language_tag: Option<String>,
 	/// Hide checksums in rendered anchors.
-	pub omit_checksum:       bool,
+	pub omit_checksum: bool,
 	/// Anchor formatting style.
-	pub anchor_style:        Option<ChunkAnchorStyle>,
+	pub anchor_style: Option<ChunkAnchorStyle>,
 	/// Optional absolute file line range to intersect with the resolved chunk.
 	pub absolute_line_range: Option<VisibleLineRange>,
 	/// Replace tabs in embedded previews.
-	pub tab_replacement:     Option<String>,
+	pub tab_replacement: Option<String>,
 	/// When true, normalize displayed indentation to canonical tabs.
-	pub normalize_indent:    Option<bool>,
+	pub normalize_indent: Option<bool>,
 }
 
 /// Rendered chunk text plus optional resolution metadata for the read request.
@@ -331,7 +331,7 @@ pub struct ReadRenderParams {
 #[napi(object)]
 pub struct ReadResult {
 	/// Rendered UTF-8 text (chunk tree, notice, or error message).
-	pub text:  String,
+	pub text: String,
 	/// When a selector was used, whether it matched and which selector applied.
 	pub chunk: Option<ChunkReadTarget>,
 }
@@ -342,20 +342,20 @@ pub struct ReadResult {
 #[napi(object)]
 pub struct EditOperation {
 	/// Edit kind (replace, delete, insert relative to anchor).
-	pub op:      ChunkEditOp,
+	pub op: ChunkEditOp,
 	/// Chunk selector path; falls back to `EditParams.defaultSelector` when
 	/// omitted.
-	pub sel:     Option<String>,
+	pub sel: Option<String>,
 	/// Optional checksum anchor; falls back to `EditParams.defaultCrc` when
 	/// omitted.
-	pub crc:     Option<String>,
+	pub crc: Option<String>,
 	/// Region to target. When omitted, targets the full chunk.
-	pub region:  Option<ChunkRegion>,
+	pub region: Option<ChunkRegion>,
 	/// Replacement or inserted text (meaning depends on `op`).
 	pub content: Option<String>,
 	/// For `replace` op: literal substring to find inside the target chunk.
 	/// Must match exactly once.
-	pub find:    Option<String>,
+	pub find: Option<String>,
 }
 
 /// Arguments for applying a batch of chunk edits to a file.
@@ -363,20 +363,20 @@ pub struct EditOperation {
 #[napi(object)]
 pub struct EditParams {
 	/// Edits to apply in order.
-	pub operations:       Vec<EditOperation>,
+	pub operations: Vec<EditOperation>,
 	/// When true, normalize indentation for response rendering and inserted
 	/// content. When false, preserve literal tabs/spaces.
 	pub normalize_indent: Option<bool>,
 	/// Default chunk selector when an `EditOperation` omits `sel`.
 	pub default_selector: Option<String>,
 	/// Default checksum when an `EditOperation` omits `crc`.
-	pub default_crc:      Option<String>,
+	pub default_crc: Option<String>,
 	/// Anchor formatting for rendered response text.
-	pub anchor_style:     Option<ChunkAnchorStyle>,
+	pub anchor_style: Option<ChunkAnchorStyle>,
 	/// Working directory used to resolve `filePath` and display paths.
-	pub cwd:              String,
+	pub cwd: String,
 	/// Path to the source file to edit (often relative to `cwd`).
-	pub file_path:        String,
+	pub file_path: String,
 }
 
 /// Result of applying edits: new parse state plus before/after source and
@@ -385,19 +385,19 @@ pub struct EditParams {
 #[napi(object, object_from_js = false)]
 pub struct EditResult {
 	/// Chunk tree state after applying edits and re-parsing.
-	pub state:         ChunkState,
+	pub state: ChunkState,
 	/// Full file text before edits.
-	pub diff_before:   String,
+	pub diff_before: String,
 	/// Full file text after edits.
-	pub diff_after:    String,
+	pub diff_after: String,
 	/// Rendered summary for tooling (hunks, anchors), driven by `anchorStyle`.
 	pub response_text: String,
 	/// Whether the on-disk source changed.
-	pub changed:       bool,
+	pub changed: bool,
 	/// Whether the updated source re-parsed without fatal issues.
-	pub parse_valid:   bool,
+	pub parse_valid: bool,
 	/// Absolute or normalized paths that were written or touched.
 	pub touched_paths: Vec<String>,
 	/// Non-fatal issues (e.g. selector warnings) collected during apply.
-	pub warnings:      Vec<String>,
+	pub warnings: Vec<String>,
 }

@@ -27,26 +27,26 @@ use crate::{shell::ContainmentFenceOptions, task};
 #[napi(object)]
 pub struct PtyStartOptions<'env> {
 	/// Command string to execute.
-	pub command:    String,
+	pub command: String,
 	/// Working directory for command execution.
-	pub cwd:        Option<String>,
+	pub cwd: Option<String>,
 	/// Environment variables for this command.
-	pub env:        Option<HashMap<String, String>>,
+	pub env: Option<HashMap<String, String>>,
 	/// Timeout in milliseconds before cancelling.
 	pub timeout_ms: Option<u32>,
 	/// Abort signal for cancelling the operation.
-	pub signal:     Option<Unknown<'env>>,
+	pub signal: Option<Unknown<'env>>,
 	/// PTY column count.
-	pub cols:       Option<u16>,
+	pub cols: Option<u16>,
 	/// PTY row count.
-	pub rows:       Option<u16>,
+	pub rows: Option<u16>,
 	/// Filesystem boundary for this command; absent means unrestricted.
 	///
 	/// This path never runs brush-core — it spawns the system `sh`, so the
 	/// in-process checks that confine the non-PTY path do not apply here and
 	/// the OS is the only available enforcement. Without this the boundary was
 	/// opt-out by a tool parameter the model itself supplies.
-	pub fence:      Option<ContainmentFenceOptions>,
+	pub fence: Option<ContainmentFenceOptions>,
 }
 
 /// Result of a PTY command run.
@@ -62,11 +62,11 @@ pub struct PtyRunResult {
 
 #[derive(Clone)]
 struct PtyRunConfig {
-	command:          String,
-	cwd:              Option<String>,
-	env:              Option<HashMap<String, String>>,
-	cols:             u16,
-	rows:             u16,
+	command: String,
+	cwd: Option<String>,
+	env: Option<HashMap<String, String>>,
+	cols: u16,
+	rows: u16,
 	/// Compiled seatbelt profile, present only when a fence was supplied.
 	///
 	/// The profile is compiled here rather than carried as a fence because this
@@ -263,12 +263,7 @@ fn run_pty_sync(
 ) -> Result<PtyRunResult> {
 	let pty_system = native_pty_system();
 	let pair = pty_system
-		.openpty(PtySize {
-			rows:         config.rows,
-			cols:         config.cols,
-			pixel_width:  0,
-			pixel_height: 0,
-		})
+		.openpty(PtySize { rows: config.rows, cols: config.cols, pixel_width: 0, pixel_height: 0 })
 		.map_err(|err| Error::from_reason(format!("Failed to open PTY: {err}")))?;
 
 	// The fence, when present, has to be applied by the OS: this spawns the system

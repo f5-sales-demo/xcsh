@@ -26,7 +26,7 @@ pub struct TlaplusClassifier;
 impl LangClassifier for TlaplusClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[
+			root: &[
 				semantic_rule(
 					"variable_declaration",
 					ChunkKind::Declarations,
@@ -49,14 +49,14 @@ impl LangClassifier for TlaplusClassifier {
 					RecurseMode::None,
 				),
 			],
-			class:                &[semantic_rule(
+			class: &[semantic_rule(
 				"pcal_var_decls",
 				ChunkKind::Declarations,
 				RuleStyle::Group,
 				NamingMode::None,
 				RecurseMode::None,
 			)],
-			function:             &[
+			function: &[
 				semantic_rule(
 					"pcal_if",
 					ChunkKind::If,
@@ -94,16 +94,11 @@ impl LangClassifier for TlaplusClassifier {
 				),
 			],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &[
-					"header_line",
-					"double_line",
-					"extends",
-					"pcal_algorithm_start",
-				],
-				preserved_trivia:        &["block_comment"],
-				extra_root_wrappers:     &[],
+				extra_trivia: &["header_line", "double_line", "extends", "pcal_algorithm_start"],
+				preserved_trivia: &["block_comment"],
+				extra_root_wrappers: &[],
 				preserved_root_wrappers: &["module"],
-				absorbable_attrs:        &[],
+				absorbable_attrs: &[],
 			},
 		};
 		&TABLES
@@ -274,7 +269,7 @@ fn recurse_child<'tree>(
 #[derive(Clone, Copy)]
 struct TranslationRange {
 	start_line: u32,
-	end_line:   u32,
+	end_line: u32,
 }
 
 fn translation_ranges(source: &str) -> Vec<TranslationRange> {

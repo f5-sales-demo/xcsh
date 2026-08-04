@@ -51,8 +51,8 @@ use crate::prof::profile_region;
 pub enum AbortReason {
 	Unknown = 1,
 	Timeout = 2,
-	Signal  = 3,
-	User    = 4,
+	Signal = 3,
+	User = 4,
 }
 
 impl TryFrom<u8> for AbortReason {
@@ -71,7 +71,7 @@ impl TryFrom<u8> for AbortReason {
 
 #[derive(Default)]
 struct Flag {
-	reason:   AtomicU8,
+	reason: AtomicU8,
 	notifier: Notify,
 }
 
@@ -107,7 +107,7 @@ impl Flag {
 #[derive(Clone, Default)]
 pub struct CancelToken {
 	deadline: Option<Instant>,
-	flag:     Option<Arc<Flag>>,
+	flag: Option<Arc<Flag>>,
 }
 
 impl From<()> for CancelToken {
@@ -244,9 +244,9 @@ pub struct Blocking<T>
 where
 	T: Send + 'static,
 {
-	tag:          &'static str,
+	tag: &'static str,
 	cancel_token: CancelToken,
-	work:         Option<Box<dyn FnOnce(CancelToken) -> Result<T> + Send>>,
+	work: Option<Box<dyn FnOnce(CancelToken) -> Result<T> + Send>>,
 }
 
 impl<T> Task for Blocking<T>

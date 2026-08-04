@@ -28,66 +28,66 @@ struct ScopeMatchers {
 	comment: Scope,
 
 	// String (index 4)
-	string:                    Scope,
-	constant_character:        Scope,
+	string: Scope,
+	constant_character: Scope,
 	constant_character_escape: Scope,
-	meta_string:               Scope,
+	meta_string: Scope,
 
 	// Number (index 5)
 	constant_numeric: Scope,
 	constant_integer: Scope,
-	constant:         Scope,
+	constant: Scope,
 
 	// Keyword (index 1)
-	keyword:           Scope,
+	keyword: Scope,
 	constant_language: Scope,
 	variable_language: Scope,
-	entity_name_tag:   Scope,
-	storage_type:      Scope,
-	storage_modifier:  Scope,
+	entity_name_tag: Scope,
+	storage_type: Scope,
+	storage_modifier: Scope,
 
 	// Control flow keyword (index 11)
 	keyword_control: Scope,
 
 	// Function (index 2)
 	entity_name_function: Scope,
-	support_function:     Scope,
-	meta_function_call:   Scope,
-	variable_function:    Scope,
+	support_function: Scope,
+	meta_function_call: Scope,
+	variable_function: Scope,
 
 	// Type (index 6)
-	entity_name_type:      Scope,
-	support_type:          Scope,
-	support_class:         Scope,
-	entity_name_class:     Scope,
-	entity_name_struct:    Scope,
-	entity_name_enum:      Scope,
+	entity_name_type: Scope,
+	support_type: Scope,
+	support_class: Scope,
+	entity_name_class: Scope,
+	entity_name_struct: Scope,
+	entity_name_enum: Scope,
 	entity_name_interface: Scope,
-	entity_name_trait:     Scope,
+	entity_name_trait: Scope,
 
 	// Operator (index 7)
-	keyword_operator:     Scope,
+	keyword_operator: Scope,
 	punctuation_accessor: Scope,
 
 	// Punctuation (index 8)
 	punctuation: Scope,
 
 	// Variable (index 3)
-	variable:    Scope,
+	variable: Scope,
 	entity_name: Scope,
-	meta_path:   Scope,
+	meta_path: Scope,
 
 	// Diff (indices 9, 10)
-	markup_inserted:  Scope,
-	markup_deleted:   Scope,
+	markup_inserted: Scope,
+	markup_deleted: Scope,
 	meta_diff_header: Scope,
-	meta_diff_range:  Scope,
+	meta_diff_range: Scope,
 
 	// Property/attribute names → variable (index 3)
 	entity_other_attribute_name: Scope, /* HTML/XML/Astro attribute names
 	                                     * (entity.other.attribute-name.*) */
-	meta_structure_dict_key:     Scope, /* JSON / YAML dictionary keys
-	                                     * (meta.structure.dictionary.key.*) */
+	meta_structure_dict_key: Scope, /* JSON / YAML dictionary keys
+	                                 * (meta.structure.dictionary.key.*) */
 
 	// YAML mapping keys → variable (index 3); must precede generic entity.name.tag → keyword
 	entity_name_tag_yaml: Scope,
@@ -99,10 +99,10 @@ struct ScopeMatchers {
 	entity_name_section: Scope,
 
 	// Markdown rich text → appropriate semantic colors
-	markup_bold:   Scope, // bold text  → keyword (index 1)
+	markup_bold: Scope,   // bold text  → keyword (index 1)
 	markup_italic: Scope, // italic text → keyword (index 1)
-	markup_quote:  Scope, // blockquotes → comment (index 0)
-	markup_raw:    Scope, // inline code → string  (index 4)
+	markup_quote: Scope,  // blockquotes → comment (index 0)
+	markup_raw: Scope,    // inline code → string  (index 4)
 
 	// Ruby / Elixir / Crystal symbols → string (index 4); must precede generic constant → number
 	constant_other_symbol: Scope,
@@ -177,30 +177,30 @@ fn get_scope_matchers() -> &'static ScopeMatchers {
 #[napi(object)]
 pub struct HighlightColors {
 	/// ANSI color for comments.
-	pub comment:     String,
+	pub comment: String,
 	/// ANSI color for keywords.
-	pub keyword:     String,
+	pub keyword: String,
 	/// ANSI color for function names.
-	pub function:    String,
+	pub function: String,
 	/// ANSI color for variables and identifiers.
-	pub variable:    String,
+	pub variable: String,
 	/// ANSI color for string literals.
-	pub string:      String,
+	pub string: String,
 	/// ANSI color for numeric literals.
-	pub number:      String,
+	pub number: String,
 	/// ANSI color for type identifiers.
-	pub r#type:      String,
+	pub r#type: String,
 	/// ANSI color for operators.
-	pub operator:    String,
+	pub operator: String,
 	/// ANSI color for punctuation tokens.
 	pub punctuation: String,
 	/// ANSI color for control flow keywords (if, else, for, while, return,
 	/// import).
-	pub control:     Option<String>,
+	pub control: Option<String>,
 	/// ANSI color for diff inserted lines.
-	pub inserted:    Option<String>,
+	pub inserted: Option<String>,
 	/// ANSI color for diff deleted lines.
-	pub deleted:     Option<String>,
+	pub deleted: Option<String>,
 }
 
 /// Language alias mappings: (aliases, target syntax name).

@@ -645,7 +645,9 @@ impl<'a> WordExpander<'a> {
 			Some(fence) => pattern
 				.expand(
 					self.shell.working_dir(),
-					Some(&|path: &std::path::Path| fence.permits(path, crate::containment::FenceAccess::Read)),
+					Some(&|path: &std::path::Path| {
+						fence.permits(path, crate::containment::FenceAccess::Read)
+					}),
 					Some(&|path: &std::path::Path| {
 						fence.permits(path, crate::containment::FenceAccess::Enumerate)
 					}),

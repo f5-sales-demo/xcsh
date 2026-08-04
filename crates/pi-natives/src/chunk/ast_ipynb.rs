@@ -61,14 +61,14 @@ fn format_marker(index: usize, cell_type: &str) -> String {
 /// is preserved verbatim for JSON round-tripping.
 #[derive(Clone)]
 pub struct NotebookCell {
-	pub cell_type:         String,
-	pub source:            String,
-	pub metadata:          Value,
-	pub outputs:           Option<Value>,
-	pub execution_count:   Option<Value>,
+	pub cell_type: String,
+	pub source: String,
+	pub metadata: Value,
+	pub outputs: Option<Value>,
+	pub execution_count: Option<Value>,
 	/// Additional fields on the cell object (`id`, `attachments`, …) so we
 	/// emit the same keys we consumed.
-	pub other:             Map<String, Value>,
+	pub other: Map<String, Value>,
 	/// Whether the original cell used `"source"` as a string (`true`) or an
 	/// array of lines (`false`). Preserved so round-trips stay byte-identical
 	/// when only metadata or unrelated cells change.
@@ -79,22 +79,22 @@ pub struct NotebookCell {
 #[derive(Clone)]
 pub struct NotebookContext {
 	/// Cells in document order.
-	pub cells:            Vec<NotebookCell>,
+	pub cells: Vec<NotebookCell>,
 	/// Top-level notebook fields other than `cells`, in original key order.
-	pub top_fields:       Map<String, Value>,
+	pub top_fields: Map<String, Value>,
 	/// Indent string detected from the original JSON (typically `" "`).
-	pub indent:           String,
+	pub indent: String,
 	/// Whether the original file ended with a trailing `\n`.
 	pub trailing_newline: bool,
 	/// Normalized kernel language used for code cells (e.g. `python`).
-	pub kernel_language:  String,
+	pub kernel_language: String,
 }
 
 /// Result of a notebook parse: the virtual source ready for chunking plus
 /// the context needed to rebuild the JSON later.
 pub struct NotebookParse {
 	pub virtual_source: String,
-	pub context:        NotebookContext,
+	pub context: NotebookContext,
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -294,15 +294,15 @@ pub fn build_virtual_source(ctx: &NotebookContext) -> String {
 /// `content_start_line_1based`,
 ///  `content_end_line_1based_inclusive_or_zero_if_empty`)
 struct CellRegion {
-	cell_num:         usize,
-	cell_type:        String,
-	marker_start:     usize, // byte offset of the `#` starting the marker line
-	content_start:    usize, // byte offset of the first byte of the cell body
-	content_end:      usize, // byte offset one past the last byte of the cell body
-	marker_line:      u32,   // 1-based line number of the marker
-	content_line:     u32,   // 1-based line number of the first body line (or marker_line + 1)
-	content_end_line: u32,   /* 1-based line number of the last body line (== content_line - 1
-	                          * for empty bodies) */
+	cell_num: usize,
+	cell_type: String,
+	marker_start: usize,  // byte offset of the `#` starting the marker line
+	content_start: usize, // byte offset of the first byte of the cell body
+	content_end: usize,   // byte offset one past the last byte of the cell body
+	marker_line: u32,     // 1-based line number of the marker
+	content_line: u32,    // 1-based line number of the first body line (or marker_line + 1)
+	content_end_line: u32, /* 1-based line number of the last body line (== content_line - 1
+	                       * for empty bodies) */
 }
 
 /// Scan a virtual source text for cell markers and return the list of
@@ -396,27 +396,27 @@ pub fn build_notebook_tree_from_virtual(
 	// Accumulated chunk nodes. Index 0 is reserved for the synthetic root.
 	let mut chunks: Vec<ChunkNode> = Vec::with_capacity(1 + regions.len() * 2);
 	chunks.push(ChunkNode {
-		path:                String::new(),
-		identifier:          None,
-		kind:                ChunkKind::Root,
-		leaf:                false,
-		virtual_content:     None,
-		parent_path:         None,
-		children:            Vec::new(),
-		signature:           None,
-		start_line:          u32::from(total_lines != 0),
-		end_line:            total_lines as u32,
-		line_count:          total_lines as u32,
-		start_byte:          0,
-		end_byte:            virtual_source.len() as u32,
+		path: String::new(),
+		identifier: None,
+		kind: ChunkKind::Root,
+		leaf: false,
+		virtual_content: None,
+		parent_path: None,
+		children: Vec::new(),
+		signature: None,
+		start_line: u32::from(total_lines != 0),
+		end_line: total_lines as u32,
+		line_count: total_lines as u32,
+		start_byte: 0,
+		end_byte: virtual_source.len() as u32,
 		checksum_start_byte: 0,
-		prologue_end_byte:   Some(0),
+		prologue_end_byte: Some(0),
 		epilogue_start_byte: Some(virtual_source.len() as u32),
-		checksum:            root_checksum.clone(),
-		error:               false,
-		indent:              0,
-		indent_char:         String::new(),
-		group:               false,
+		checksum: root_checksum.clone(),
+		error: false,
+		indent: 0,
+		indent_char: String::new(),
+		group: false,
 	});
 
 	let mut root_children: Vec<String> = Vec::with_capacity(regions.len());
@@ -460,33 +460,33 @@ pub fn build_notebook_tree_from_virtual(
 					.saturating_add(region.content_start as u32);
 				let line_shift = region.content_line.saturating_sub(1);
 				chunks.push(ChunkNode {
-					path:                translated_path.clone(),
-					identifier:          sub_chunk.identifier,
-					kind:                sub_chunk.kind,
-					leaf:                sub_chunk.leaf,
-					virtual_content:     sub_chunk.virtual_content,
-					parent_path:         translated_parent,
-					children:            translated_children,
-					signature:           sub_chunk.signature,
-					start_line:          sub_chunk.start_line.saturating_add(line_shift),
-					end_line:            sub_chunk.end_line.saturating_add(line_shift),
-					line_count:          sub_chunk.line_count,
-					start_byte:          shifted_start_byte,
-					end_byte:            shifted_end_byte,
+					path: translated_path.clone(),
+					identifier: sub_chunk.identifier,
+					kind: sub_chunk.kind,
+					leaf: sub_chunk.leaf,
+					virtual_content: sub_chunk.virtual_content,
+					parent_path: translated_parent,
+					children: translated_children,
+					signature: sub_chunk.signature,
+					start_line: sub_chunk.start_line.saturating_add(line_shift),
+					end_line: sub_chunk.end_line.saturating_add(line_shift),
+					line_count: sub_chunk.line_count,
+					start_byte: shifted_start_byte,
+					end_byte: shifted_end_byte,
 					checksum_start_byte: sub_chunk
 						.checksum_start_byte
 						.saturating_add(region.content_start as u32),
-					prologue_end_byte:   sub_chunk
+					prologue_end_byte: sub_chunk
 						.prologue_end_byte
 						.map(|b| b.saturating_add(region.content_start as u32)),
 					epilogue_start_byte: sub_chunk
 						.epilogue_start_byte
 						.map(|b| b.saturating_add(region.content_start as u32)),
-					checksum:            sub_chunk.checksum,
-					error:               sub_chunk.error,
-					indent:              sub_chunk.indent,
-					indent_char:         sub_chunk.indent_char,
-					group:               false,
+					checksum: sub_chunk.checksum,
+					error: sub_chunk.error,
+					indent: sub_chunk.indent,
+					indent_char: sub_chunk.indent_char,
+					group: false,
 				});
 			}
 			for sub_path in sub_tree.root_children {
@@ -509,27 +509,27 @@ pub fn build_notebook_tree_from_virtual(
 		let cell_end_line = region.marker_line + cell_line_count.saturating_sub(1);
 		let cell_leaf = cell_children_paths.is_empty();
 		chunks.push(ChunkNode {
-			path:                cell_path.clone(),
-			identifier:          Some(cell_path.clone()),
-			kind:                ChunkKind::Cell,
-			leaf:                cell_leaf,
-			virtual_content:     None,
-			parent_path:         Some(String::new()),
-			children:            cell_children_paths,
-			signature:           Some(format!("cell_{} ({})", region.cell_num, region.cell_type)),
-			start_line:          region.marker_line,
-			end_line:            cell_end_line,
-			line_count:          cell_line_count,
-			start_byte:          region.marker_start as u32,
-			end_byte:            region.content_end as u32,
+			path: cell_path.clone(),
+			identifier: Some(cell_path.clone()),
+			kind: ChunkKind::Cell,
+			leaf: cell_leaf,
+			virtual_content: None,
+			parent_path: Some(String::new()),
+			children: cell_children_paths,
+			signature: Some(format!("cell_{} ({})", region.cell_num, region.cell_type)),
+			start_line: region.marker_line,
+			end_line: cell_end_line,
+			line_count: cell_line_count,
+			start_byte: region.marker_start as u32,
+			end_byte: region.content_end as u32,
 			checksum_start_byte: region.content_start as u32,
-			prologue_end_byte:   Some(region.content_start as u32),
+			prologue_end_byte: Some(region.content_start as u32),
 			epilogue_start_byte: Some(region.content_end as u32),
-			checksum:            cell_checksum,
-			error:               false,
-			indent:              0,
-			indent_char:         String::new(),
-			group:               false,
+			checksum: cell_checksum,
+			error: false,
+			indent: 0,
+			indent_char: String::new(),
+			group: false,
 		});
 		root_children.push(cell_path);
 	}
@@ -629,18 +629,18 @@ pub fn notebook_to_json(
 				cell
 			},
 			None => NotebookCell {
-				cell_type:         region.cell_type.clone(),
-				source:            body.to_string(),
-				metadata:          Value::Object(Map::new()),
-				outputs:           match region.cell_type.as_str() {
+				cell_type: region.cell_type.clone(),
+				source: body.to_string(),
+				metadata: Value::Object(Map::new()),
+				outputs: match region.cell_type.as_str() {
 					"code" => Some(Value::Array(Vec::new())),
 					_ => None,
 				},
-				execution_count:   match region.cell_type.as_str() {
+				execution_count: match region.cell_type.as_str() {
 					"code" => Some(Value::Null),
 					_ => None,
 				},
-				other:             Map::new(),
+				other: Map::new(),
 				source_was_string: false,
 			},
 		};

@@ -168,9 +168,9 @@ const FUNCTION_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const GO_TABLES: ClassifierTables = ClassifierTables {
-	root:                 ROOT_RULES,
-	class:                CLASS_RULES,
-	function:             FUNCTION_RULES,
+	root: ROOT_RULES,
+	class: CLASS_RULES,
+	function: FUNCTION_RULES,
 	structural_overrides: StructuralOverrides::EMPTY,
 };
 

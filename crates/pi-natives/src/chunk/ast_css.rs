@@ -31,15 +31,15 @@ const CSS_SHARED_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const CSS_TABLES: ClassifierTables = ClassifierTables {
-	root:                 CSS_SHARED_RULES,
-	class:                CSS_SHARED_RULES,
-	function:             &[],
+	root: CSS_SHARED_RULES,
+	class: CSS_SHARED_RULES,
+	function: &[],
 	structural_overrides: StructuralOverrides {
-		extra_trivia:            &[],
-		preserved_trivia:        &[],
-		extra_root_wrappers:     &["stylesheet"],
+		extra_trivia: &[],
+		preserved_trivia: &[],
+		extra_root_wrappers: &["stylesheet"],
 		preserved_root_wrappers: &[],
-		absorbable_attrs:        &[],
+		absorbable_attrs: &[],
 	},
 };
 
