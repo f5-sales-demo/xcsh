@@ -216,7 +216,7 @@ export const PROVIDER_DESCRIPTORS: readonly ProviderDescriptor[] = [
 	),
 	catalogDescriptor(
 		"litellm",
-		"claude-opus-4-6",
+		"gpt-5.6-sol",
 		config => litellmModelManagerOptions(config),
 		catalog("LiteLLM", ["LITELLM_API_KEY"], { allowUnauthenticated: true }),
 	),

@@ -51,10 +51,10 @@ interface RegisterProviderCall {
 class FakeModelRegistry {
 	registerProviderCalls: RegisterProviderCall[] = [];
 	runtimeApiKeys: Array<{ provider: string; apiKey: string }> = [];
-	// The models this registry can resolve; provider "anthropic" is the baked F5 default.
+	// The models this registry can resolve; provider "litellm" is the baked xcsh default.
 	models: Array<{ provider: string; id: string }> = [
-		{ provider: "anthropic", id: "claude-opus-4-8" },
-		{ provider: "anthropic", id: "claude-sonnet-4-5" },
+		{ provider: "litellm", id: "gpt-5.6-sol" },
+		{ provider: "litellm", id: "gpt-5.6-terra" },
 	];
 
 	authStorage = {
@@ -74,13 +74,14 @@ class FakeModelRegistry {
 
 class FakeAgentSession {
 	setModelCalls: Array<{ provider: string; id: string }> = [];
+	setThinkingLevelCalls: string[] = [];
 	isStreaming = false;
 	// Read by the handler to expand a `/name` before composing; the `as unknown as
 	// AgentSession` cast means tsc cannot flag its absence.
 	readonly slashCommands = [];
 	modelRegistry = new FakeModelRegistry();
 	// Current default model (used when `configure` omits `model`).
-	model = { provider: "anthropic", id: "claude-opus-4-8" };
+	model = { provider: "litellm", id: "gpt-5.6-sol" };
 	agent = {
 		abort(): void {},
 		replaceMessages(): void {},
@@ -95,6 +96,9 @@ class FakeAgentSession {
 	async setModel(model: { provider: string; id: string }): Promise<void> {
 		if (this.setModelError) throw this.setModelError;
 		this.setModelCalls.push(model);
+	}
+	setThinkingLevel(level: string): void {
+		this.setThinkingLevelCalls.push(level);
 	}
 }
 
@@ -132,27 +136,28 @@ describe("ChatHandler configure frame (#2095)", () => {
 		const { server, session } = makeHandler();
 		server.emit({
 			type: "configure",
-			baseUrl: "https://f5ai.pd.f5net.com/anthropic",
+			baseUrl: "https://f5ai.pd.f5net.com/v1",
 			token: "<XC_API_TOKEN>",
-			model: "claude-sonnet-4-5",
+			model: "gpt-5.6-terra",
 		});
 		await flush();
 
 		expect(session.modelRegistry.registerProviderCalls).toHaveLength(1);
 		const call = session.modelRegistry.registerProviderCalls[0];
-		expect(call.providerName).toBe("anthropic");
-		expect(call.config.baseUrl).toBe("https://f5ai.pd.f5net.com/anthropic");
+		expect(call.providerName).toBe("litellm");
+		expect(call.config.baseUrl).toBe("https://f5ai.pd.f5net.com/v1");
 		expect(call.config.apiKey).toBe("<XC_API_TOKEN>");
-		expect(call.config.headers).toEqual({ "anthropic-beta": "context-1m-2025-08-07" });
+		expect(call.config.headers).toBeUndefined();
 		expect(call.sourceId).toBe("office-configure");
-		// No models[] → registerProvider overrides the existing anthropic models, not persisted.
+		// No models[] → registerProvider overrides the existing LiteLLM models, not persisted.
 		expect(call.config.models).toBeUndefined();
 
-		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-sonnet-4-5" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-terra" }]);
+		expect(session.setThinkingLevelCalls).toEqual(["high"]);
 
 		const acks = server.ofType("configure_ack");
 		expect(acks).toHaveLength(1);
-		expect(acks[0].model).toBe("claude-sonnet-4-5");
+		expect(acks[0].model).toBe("gpt-5.6-terra");
 		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
@@ -160,29 +165,40 @@ describe("ChatHandler configure frame (#2095)", () => {
 		const { server, session } = makeHandler();
 		server.emit({
 			type: "configure",
-			baseUrl: "https://f5ai.pd.f5net.com/anthropic",
+			baseUrl: "https://f5ai.pd.f5net.com/v1",
 			token: "<XC_API_TOKEN>",
 		});
 		await flush();
 
-		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-opus-4-8" }]);
-		expect(server.ofType("configure_ack")[0].model).toBe("claude-opus-4-8");
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
+		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-sol");
+	});
+
+	it("model omitted after another provider was active → restores the baked LiteLLM default", async () => {
+		const { server, session } = makeHandler();
+		session.model = { provider: "google-vertex", id: "gemini-3.6-flash" };
+		server.emit({ type: "configure", token: "<XC_API_TOKEN>" });
+		await flush();
+
+		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
+		expect(session.setThinkingLevelCalls).toEqual(["high"]);
 	});
 
 	it("(b) key-only (no baseUrl) → setRuntimeApiKey path, no registerProvider", async () => {
 		const { server, session } = makeHandler();
-		server.emit({ type: "configure", token: "<XC_API_TOKEN>", model: "claude-opus-4-8" });
+		server.emit({ type: "configure", token: "<XC_API_TOKEN>", model: "gpt-5.6-sol" });
 		await flush();
 
 		expect(session.modelRegistry.registerProviderCalls).toHaveLength(0);
-		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "anthropic", apiKey: "<XC_API_TOKEN>" }]);
-		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-opus-4-8" }]);
-		expect(server.ofType("configure_ack")[0].model).toBe("claude-opus-4-8");
+		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
+		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-sol");
 	});
 
 	it("(c) setModel throws (missing key) → configure_error, no throw escapes, no ack", async () => {
 		const { server, session } = makeHandler();
-		session.setModelError = new Error("No API key for anthropic/claude-opus-4-8");
+		session.setModelError = new Error("No API key for litellm/gpt-5.6-sol");
 		// Must not throw synchronously or asynchronously out of the handler.
 		expect(() => server.emit({ type: "configure", token: "<XC_API_TOKEN>" })).not.toThrow();
 		await flush();
@@ -210,7 +226,7 @@ describe("ChatHandler configure frame (#2095)", () => {
 		expect(() =>
 			server.emit({
 				type: "configure",
-				baseUrl: "http://gateway.example.internal/anthropic",
+				baseUrl: "http://gateway.example.internal/v1",
 				token: "<XC_API_TOKEN>",
 			}),
 		).not.toThrow();
@@ -241,22 +257,22 @@ describe("ChatHandler configure frame (#2095)", () => {
 		// hosts must NOT be blocked.
 		server.emit({
 			type: "configure",
-			baseUrl: "https://127-0-0-1.local-ip.sh:8443/anthropic",
+			baseUrl: "https://127-0-0-1.local-ip.sh:8443/v1",
 			token: "<XC_API_TOKEN>",
-			model: "claude-opus-4-8",
+			model: "gpt-5.6-sol",
 		});
 		await flush();
 
 		expect(session.modelRegistry.registerProviderCalls).toHaveLength(1);
 		expect(session.modelRegistry.registerProviderCalls[0].config.baseUrl).toBe(
-			"https://127-0-0-1.local-ip.sh:8443/anthropic",
+			"https://127-0-0-1.local-ip.sh:8443/v1",
 		);
-		expect(server.ofType("configure_ack")[0].model).toBe("claude-opus-4-8");
+		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-sol");
 	});
 
 	it("(d) missing/empty token → frame rejected (no ack, no error, no side effects)", async () => {
 		const { server, session } = makeHandler();
-		server.emit({ type: "configure", baseUrl: "https://f5ai.pd.f5net.com/anthropic" }); // no token
+		server.emit({ type: "configure", baseUrl: "https://f5ai.pd.f5net.com/v1" }); // no token
 		server.emit({ type: "configure", token: "" }); // empty token
 		await flush();
 

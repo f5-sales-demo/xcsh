@@ -157,18 +157,16 @@ const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
 /**
  * Binary-baked default model role. Ships in the binary so a fresh install needs
  * NO `~/.xcsh/agent/config.yml` — `/login` only supplies the (PII) proxy URL + key.
- * The gateway serves the id `claude-opus-5` (1,000,000 in / 128,000 out, verified via
- * `GET /openai/model/info`); its catalog entry carries the `context-1m-2025-08-07`
- * beta. Note: no `[1m]` suffix — that is a Claude-Code client convention, and the
- * literal id is rejected by the gateway with `400 Invalid model name`.
+ * GPT-5.6 Sol High is the benchmark-selected production default through LiteLLM.
+ * Keep the effort explicit in the role so returning from a lower-effort role cannot
+ * inherit that role's effort.
  */
-export const DEFAULT_MODEL_ROLE = "anthropic/claude-opus-5";
+export const DEFAULT_MODEL_ROLE = "litellm/gpt-5.6-sol:high";
 /** Fast role for lightweight work (commit messages, titles, memory summaries). */
-const SMOL_MODEL_ROLE = "anthropic/claude-sonnet-5";
+const SMOL_MODEL_ROLE = "litellm/gpt-5.6-sol:low";
 /**
- * Baked role map. `smol` ("Fast") may be cheaper, but `slow` ("Thinking") is pinned to
- * the same model as `default` so the smol→default→slow cycle stays monotonic — the
- * high-reasoning role must never resolve to something weaker than the default.
+ * Baked role map. All default roles use the selected LiteLLM model; `smol` lowers
+ * effort for latency-sensitive work and both `default` and `slow` restore High.
  */
 const DEFAULT_MODEL_ROLES: Record<string, string> = {
 	default: DEFAULT_MODEL_ROLE,
@@ -507,7 +505,7 @@ export const SETTINGS_SCHEMA = {
 		// schema to match so programmatic callers and config.yml can set it without a type hole.
 		// The /settings UI dropdown intentionally still shows only the 5 efforts.
 		values: ["off", ...THINKING_EFFORTS] as const,
-		default: "xhigh",
+		default: "high",
 		ui: {
 			tab: "model",
 			label: "Thinking Level",

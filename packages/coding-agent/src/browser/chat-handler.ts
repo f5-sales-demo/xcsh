@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
+import { parseModelString } from "../config/model-resolver";
 import { settings } from "../config/settings";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import { toSkillSummaries } from "../extensibility/skills";
@@ -376,13 +377,16 @@ export class ChatHandler {
 	 * SQLite credential store. Mirrors #handleSetHostTools's try/ack-or-nack shape;
 	 * never throws out of the handler (a nack keeps a waiting client from hanging).
 	 *
-	 * The baked F5 gateway registers its models under the "anthropic" provider
-	 * (DEFAULT_MODEL_ROLE = "anthropic/claude-opus-5"), so that is the provider we
-	 * (re)configure here. */
+	 * The baked production role identifies the concrete provider, model, and effort,
+	 * so the bridge follows the same LiteLLM default as every other xcsh entry point. */
 	async #handleConfigure(msg: Configure): Promise<void> {
 		try {
 			const registry = this.#session.modelRegistry;
-			const [provider, defaultModelId] = DEFAULT_MODEL_ROLE.split("/");
+			const defaultModel = parseModelString(DEFAULT_MODEL_ROLE);
+			if (!defaultModel) {
+				throw new Error("Invalid baked default model selector");
+			}
+			const { provider, id: defaultModelId, thinkingLevel } = defaultModel;
 
 			if (msg.baseUrl) {
 				// SSRF guard: only an `https:` gateway URL may be dialed. Validate BEFORE
@@ -406,7 +410,6 @@ export class ChatHandler {
 					{
 						baseUrl,
 						apiKey: msg.token,
-						headers: { "anthropic-beta": "context-1m-2025-08-07" },
 					},
 					"office-configure",
 				);
@@ -415,13 +418,21 @@ export class ChatHandler {
 				registry.authStorage.setRuntimeApiKey(provider, msg.token);
 			}
 
-			const modelId = msg.model ?? this.#session.model?.id ?? defaultModelId;
+			const currentDefaultModelId =
+				this.#session.model?.provider === provider ? this.#session.model.id : defaultModelId;
+			const modelId = msg.model ?? currentDefaultModelId;
 			const model = registry.find(provider, modelId);
 			if (!model) {
 				throw new Error(`No model ${provider}/${modelId} available`);
 			}
 			// setModel validates the API key and throws if missing → becomes configure_error.
-			await this.#session.setModel(model);
+			await this.#session.setModel(model, "default", {
+				selector: `${provider}/${modelId}`,
+				thinkingLevel,
+			});
+			if (thinkingLevel) {
+				this.#session.setThinkingLevel(thinkingLevel);
+			}
 
 			this.#server.send({ type: "configure_ack", model: model.id } satisfies ConfigureAck);
 		} catch {

@@ -5,12 +5,17 @@ sales-engineering coworkers. It measures native XC Application Programming Inter
 calling, safe configuration lifecycle management, evidence-based troubleshooting, and MEDDPICC
 discovery discipline. It does not measure coding performance.
 
-The benchmark has two artifacts:
+The original live-operator benchmark has two artifacts:
 
 - [`corpus.yaml`](corpus.yaml) defines the prompts, tool contracts, safety gates, independent
   postconditions, and scoring rubric.
 - [`baseline-2026-07-31.md`](baseline-2026-07-31.md) records a sanitized single-run comparison of
   GPT-5.6 Sol High and Claude Opus 5 High.
+
+The broader three-model performance and output-quality matrix is published in
+[`../model-matrix/three-model-full-capability-effort-2026-08-03.analysis.md`](../model-matrix/three-model-full-capability-effort-2026-08-03.analysis.md).
+That later matrix selects LiteLLM GPT-5.6 Sol High as the xcsh production default because it ranked
+first for balanced performance and speed at every requested effort.
 
 ## Prerequisites
 

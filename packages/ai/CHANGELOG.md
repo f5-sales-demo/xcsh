@@ -6,6 +6,7 @@
 
 ### Changed
 
+- Changed the LiteLLM provider fallback default to GPT-5.6 Sol ([#2886](https://github.com/f5-sales-demo/xcsh/issues/2886))
 - Updated the default Antigravity client version to 2.4.3 for current Google Cloud Code Assist compatibility ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 - Updated the Google GenAI SDK to 2.15.0 ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 

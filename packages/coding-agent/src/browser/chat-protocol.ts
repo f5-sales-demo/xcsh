@@ -279,8 +279,8 @@ export interface SetHostToolsError {
 // ---------------------------------------------------------------------------
 
 /** Inbound: the client configures the LLM provider. `token` is required and
- * non-empty. `baseUrl` (optional) is an Anthropic-compatible gateway base; when
- * omitted, the baked F5 gateway is reused and only the runtime API key is set.
+ * non-empty. `baseUrl` (optional) is an OpenAI-compatible LiteLLM API base; when
+ * omitted, the baked LiteLLM gateway is reused and only the runtime API key is set.
  * `model` (optional) selects the model id; when omitted, the session default is
  * kept. The token lives in session/runtime memory only — never written to disk. */
 export interface Configure {
