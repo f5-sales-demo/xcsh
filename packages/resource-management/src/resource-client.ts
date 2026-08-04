@@ -117,7 +117,7 @@ export class ResourceClient {
 		manifest: ResourceManifest,
 		resolved: ResolvedKind,
 		namespaceOverride?: string,
-		dryRun?: "client" | "server",
+		dryRun?: "client",
 	): Promise<OperationResult> {
 		const namespace = this.#resolveNamespace(manifest, namespaceOverride);
 		const name = manifest.metadata.name;
@@ -147,7 +147,7 @@ export class ResourceClient {
 		manifest: ResourceManifest,
 		resolved: ResolvedKind,
 		namespaceOverride?: string,
-		dryRun?: "client" | "server",
+		dryRun?: "client",
 	): Promise<OperationResult> {
 		if (dryRun) return { status: "dry-run", action: "create" };
 
@@ -156,12 +156,35 @@ export class ResourceClient {
 		return this.#createResource(manifest, resolved, namespace, startMs);
 	}
 
+	async update(
+		manifest: ResourceManifest,
+		resolved: ResolvedKind,
+		namespaceOverride?: string,
+		dryRun?: "client",
+	): Promise<OperationResult> {
+		const namespace = this.#resolveNamespace(manifest, namespaceOverride);
+		const name = manifest.metadata.name;
+		const getUrl = this.#buildUrl(resolved.paths.get, namespace, name);
+		const startMs = performance.now();
+		const existing = await this.#fetchResource(getUrl);
+
+		if (existing.error) return { status: "error", error: existing.error };
+
+		const diff = this.#computeManifestDiff(existing.body!, manifest);
+		if (!diff.hasDifferences) return { status: "unchanged", resource: existing.body! };
+		if (dryRun) return { status: "dry-run", action: "update", diff };
+		return this.#updateResource(manifest, resolved, namespace, diff, startMs);
+	}
+
 	async delete(
 		kind: string,
 		name: string,
 		resolved: ResolvedKind,
 		namespaceOverride?: string,
+		dryRun?: "client",
 	): Promise<OperationResult> {
+		if (dryRun) return { status: "dry-run", action: "delete" };
+
 		const namespace = namespaceOverride ?? this.#defaultNamespace;
 		const url = this.#buildUrl(resolved.paths.delete, namespace, name);
 
@@ -306,12 +329,7 @@ export class ResourceClient {
 		const result = await this.#fetch(url, "POST", body);
 		const durationMs = Math.round(performance.now() - startMs);
 
-		if (result.error) {
-			if (result.error.httpStatus === 409) {
-				return this.#updateResource(manifest, resolved, namespace, undefined, startMs);
-			}
-			return { status: "error", error: result.error };
-		}
+		if (result.error) return { status: "error", error: result.error };
 
 		return { status: "created", resource: result.body ?? {}, durationMs };
 	}

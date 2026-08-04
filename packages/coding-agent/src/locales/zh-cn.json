@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "模型提供商",
 	"welcome.plugins": "插件",
 	"welcome.pluginSetupHint": "运行：/plugin setup",
-	"welcome.updateHint": "运行：xcsh update",
+	"welcome.updateHint": "运行：xcsh self-update",
 	"welcome.newVersion": "新版本",
 	"welcome.connectionFailed": "— 连接失败",
 	"welcome.runLoginReconnect": "运行 /login 重新连接",

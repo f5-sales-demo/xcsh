@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "모델 프로바이더",
 	"welcome.plugins": "플러그인",
 	"welcome.pluginSetupHint": "실행: /plugin setup",
-	"welcome.updateHint": "실행: xcsh update",
+	"welcome.updateHint": "실행: xcsh self-update",
 	"welcome.newVersion": "새 버전",
 	"welcome.connectionFailed": "— 연결 실패",
 	"welcome.runLoginReconnect": "/login을 실행하여 재연결하세요",

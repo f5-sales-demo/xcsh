@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "ผู้ให้บริการโมเดล",
 	"welcome.plugins": "ปลั๊กอิน",
 	"welcome.pluginSetupHint": "รัน: /plugin setup",
-	"welcome.updateHint": "รัน: xcsh update",
+	"welcome.updateHint": "รัน: xcsh self-update",
 	"welcome.newVersion": "เวอร์ชันใหม่",
 	"welcome.connectionFailed": "— การเชื่อมต่อล้มเหลว",
 	"welcome.runLoginReconnect": "รัน /login เพื่อเชื่อมต่อใหม่",

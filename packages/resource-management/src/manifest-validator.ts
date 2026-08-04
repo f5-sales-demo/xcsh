@@ -12,6 +12,7 @@ export function validateManifest(
 	manifest: ResourceManifest,
 	resolver: KindResolver,
 	namespaceOverride?: string,
+	options: { operation?: "create" | "update" | "identity" } = {},
 ): { result: ManifestValidationResult; resolved?: ResolvedKind } {
 	const errors: ValidationError[] = [];
 	const warnings: ValidationWarning[] = [];
@@ -53,15 +54,18 @@ export function validateManifest(
 		}
 	}
 
-	if (resolved?.validation) {
-		const requiredFields = resolved.validation.create ?? resolved.validation.minimum_config ?? [];
+	if (resolved?.validation && options.operation !== "identity") {
+		const requiredFields =
+			options.operation === "update"
+				? (resolved.validation.update ?? resolved.validation.minimum_config ?? [])
+				: (resolved.validation.create ?? resolved.validation.minimum_config ?? []);
 		for (const fieldPath of requiredFields) {
 			if (fieldPath.startsWith("metadata.")) continue;
 			const value = getNestedValue(manifest.rawObject, fieldPath);
 			if (value === undefined || value === null) {
 				errors.push({
 					path: fieldPath,
-					message: `Required field "${fieldPath}" is missing for ${manifest.kind} creation.`,
+					message: `Required field "${fieldPath}" is missing for ${manifest.kind} ${options.operation ?? "create"}.`,
 					code: "MISSING_FIELD",
 				});
 			}
@@ -75,11 +79,12 @@ export function validateManifests(
 	manifests: ResourceManifest[],
 	resolver: KindResolver,
 	namespaceOverride?: string,
+	options: { operation?: "create" | "update" | "identity" } = {},
 ): { results: ManifestValidationResult[]; resolved: (ResolvedKind | undefined)[] } {
 	const results: ManifestValidationResult[] = [];
 	const resolved: (ResolvedKind | undefined)[] = [];
 	for (const manifest of manifests) {
-		const v = validateManifest(manifest, resolver, namespaceOverride);
+		const v = validateManifest(manifest, resolver, namespaceOverride, options);
 		results.push(v.result);
 		resolved.push(v.resolved);
 	}
