@@ -213,16 +213,9 @@ async function applyVersionBumpToFiles(version: string): Promise<void> {
 		await Bun.write(pkgPath, content.replace(/"version": "[^"]+"/, `"version": "${version}"`));
 	}
 
-	// Update optionalDependencies versions in pi-natives package
-	const nativesPkgPath = "packages/natives/package.json";
-	const nativesPkgContent = await Bun.file(nativesPkgPath).text();
-	await Bun.write(
-		nativesPkgPath,
-		nativesPkgContent.replace(
-			/"@f5-sales-demo\/pi-natives-[^"]+": "[^"]+"/g,
-			(match) => match.replace(/: "[^"]+"/, `: "${version}"`),
-		),
-	);
+	// Keep pi-natives optional dependencies on the last published platform
+	// packages while the release PR is tested. Publishing aligns them to the
+	// new version only after those platform packages have been published.
 
 	// Verify
 	console.log("  Verifying versions:");

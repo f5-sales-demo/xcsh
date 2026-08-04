@@ -552,13 +552,10 @@ pub fn unquote_text(text: &str) -> String {
 }
 
 pub fn sanitize_node_kind(kind: &str) -> &str {
-	let kind_stripped = kind
-		.trim_suffix("_instruction")
-		.trim_suffix("_statement")
-		.trim_suffix("_declaration")
-		.trim_suffix("_definition")
-		.trim_suffix("_item")
-		.trim_suffix("ession"); // _expression -> _expr
+	let mut kind_stripped = kind;
+	for suffix in ["_instruction", "_statement", "_declaration", "_definition", "_item", "ession"] {
+		kind_stripped = kind_stripped.trim_end_matches(suffix);
+	}
 	if kind_stripped.is_empty() {
 		kind
 	} else {
@@ -823,7 +820,16 @@ pub fn first_scalar_child(node: Node<'_>) -> Option<Node<'_>> {
 
 #[cfg(test)]
 mod tests {
-	use super::compute_body_inner_boundaries;
+	use super::{compute_body_inner_boundaries, sanitize_node_kind};
+
+	#[test]
+	fn sanitize_node_kind_normalizes_suffixes_on_stable_rust() {
+		assert_eq!(sanitize_node_kind("run_instruction"), "run");
+		assert_eq!(sanitize_node_kind("expression_statement"), "expr");
+		assert_eq!(sanitize_node_kind("decorated_definition"), "decorated");
+		assert_eq!(sanitize_node_kind("custom_kind"), "custom_kind");
+		assert_eq!(sanitize_node_kind("_statement"), "_statement");
+	}
 
 	#[test]
 	fn compute_body_inner_boundaries_handles_brace_and_indent_bodies() {

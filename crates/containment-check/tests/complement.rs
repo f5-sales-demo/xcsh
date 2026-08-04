@@ -186,7 +186,7 @@ fn split_directories_are_only_ever_stricter() {
 	for dir in &plan.split_dirs {
 		for access in [FenceAccess::Read, FenceAccess::Write, FenceAccess::Enumerate] {
 			assert!(
-				!(plan.permits(dir, access) && !fence.permits_resolved(dir, access)),
+				!plan.permits(dir, access) || fence.permits_resolved(dir, access),
 				"split dir {} is laxer than the fence for {access:?}",
 				dir.display()
 			);
@@ -395,7 +395,7 @@ fn deny_wins_when_two_lists_name_the_same_root() {
 	let plan = fence.compile_grant_plan(&fs);
 	let path = PathBuf::from("/work/shared/f");
 
-	assert_eq!(fence.permits_resolved(&path, FenceAccess::Read), false, "oracle: deny wins the tie");
+	assert!(!fence.permits_resolved(&path, FenceAccess::Read), "oracle: deny wins the tie");
 	assert!(!plan.permits(&path, FenceAccess::Read), "plan must agree that deny wins");
 }
 

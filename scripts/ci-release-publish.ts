@@ -8,7 +8,8 @@ interface PublishPackage {
 	dir: string;
 }
 
-interface PackageJson {
+export interface PackageJson {
+	name?: string;
 	private?: boolean;
 	version?: string;
 	dependencies?: Record<string, string>;
@@ -52,9 +53,27 @@ async function readPackageJson(packageDir: string): Promise<PackageJson> {
 	return (await Bun.file(path.join(repoRoot, packageDir, "package.json")).json()) as PackageJson;
 }
 
-function resolveWorkspaceRefs(pkgJsonPath: string): (() => void) | null {
+export function alignNativeOptionalDependencies(packageJson: PackageJson): boolean {
+	if (
+		packageJson.name !== "@f5-sales-demo/pi-natives" ||
+		typeof packageJson.version !== "string" ||
+		packageJson.optionalDependencies === undefined
+	) {
+		return false;
+	}
+
+	let changed = false;
+	for (const [name, version] of Object.entries(packageJson.optionalDependencies)) {
+		if (name.startsWith("@f5-sales-demo/pi-natives-") && version !== packageJson.version) {
+			packageJson.optionalDependencies[name] = packageJson.version;
+			changed = true;
+		}
+	}
+	return changed;
+}
+
+function resolvePublishDependencies(pkgJsonPath: string): (() => void) | null {
 	const raw = fs.readFileSync(pkgJsonPath, "utf-8");
-	if (!raw.includes("workspace:")) return null;
 	const pkg = JSON.parse(raw) as PackageJson;
 	let changed = false;
 	for (const depKey of ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"] as const) {
@@ -71,6 +90,7 @@ function resolveWorkspaceRefs(pkgJsonPath: string): (() => void) | null {
 			}
 		}
 	}
+	changed = alignNativeOptionalDependencies(pkg) || changed;
 	if (!changed) return null;
 	fs.writeFileSync(pkgJsonPath, JSON.stringify(pkg, null, "\t") + "\n");
 	return () => fs.writeFileSync(pkgJsonPath, raw);
@@ -102,8 +122,8 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 	}
 
 	const pkgJsonPath = path.join(repoRoot, pkg.dir, "package.json");
-	const restore = resolveWorkspaceRefs(pkgJsonPath);
-	if (restore) console.log(`  Resolved workspace:* references for ${packageName}`);
+	const restore = resolvePublishDependencies(pkgJsonPath);
+	if (restore) console.log(`  Prepared publish dependencies for ${packageName}`);
 
 	try {
 		const maxAttempts = 5;
@@ -149,4 +169,4 @@ async function main(): Promise<void> {
 	}
 }
 
-await main();
+if (import.meta.main) await main();
