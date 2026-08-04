@@ -94,7 +94,7 @@ struct RulesetAttr {
 #[repr(C, packed)]
 struct PathBeneathAttr {
 	allowed_access: u64,
-	parent_fd:      i32,
+	parent_fd: i32,
 }
 
 /// Why Landlock cannot be used on this machine.
@@ -271,7 +271,7 @@ fn components_are_link_free(path: &Path) -> Option<bool> {
 					// not something to attempt.
 					return Some(false);
 				}
-			}
+			},
 			// Absent from here down, which is the ordinary case for the tail being created.
 			Err(error) if error.kind() == io::ErrorKind::NotFound => return Some(true),
 			Err(_) => return None,

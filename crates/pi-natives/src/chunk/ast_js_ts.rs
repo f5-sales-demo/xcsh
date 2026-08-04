@@ -19,7 +19,7 @@ fn recurse_internal_module(node: Node<'_>) -> Option<RecurseSpec<'_>> {
 }
 
 static JSTS_TABLES: ClassifierTables = ClassifierTables {
-	root:                 &[
+	root: &[
 		semantic_rule(
 			"import_statement",
 			ChunkKind::Imports,
@@ -119,7 +119,7 @@ static JSTS_TABLES: ClassifierTables = ClassifierTables {
 			RecurseMode::None,
 		),
 	],
-	class:                &[
+	class: &[
 		semantic_rule(
 			"constructor",
 			ChunkKind::Constructor,
@@ -142,7 +142,7 @@ static JSTS_TABLES: ClassifierTables = ClassifierTables {
 			RecurseMode::None,
 		),
 	],
-	function:             &[],
+	function: &[],
 	structural_overrides: super::classify::StructuralOverrides::EMPTY,
 };
 
@@ -533,13 +533,18 @@ fn classify_export_statement<'t>(
 	let header = normalized_header(source, node.start_byte(), node.end_byte());
 	let is_default = header.starts_with("export default");
 
-	if let Some(candidate) =
-		promote_wrapper_candidate(&JsTsClassifier, context, node, source, WrapperTransform {
+	if let Some(candidate) = promote_wrapper_candidate(
+		&JsTsClassifier,
+		context,
+		node,
+		source,
+		WrapperTransform {
 			kind: is_default.then_some(ChunkKind::DefaultExport),
 			name_style: is_default.then_some(NameStyle::Named),
 			clear_identifier: is_default,
 			..WrapperTransform::default()
-		}) {
+		},
+	) {
 		return candidate;
 	}
 

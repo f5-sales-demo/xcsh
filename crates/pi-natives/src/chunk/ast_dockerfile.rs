@@ -96,9 +96,9 @@ const DOCKERFILE_FUNCTION_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const DOCKERFILE_TABLES: ClassifierTables = ClassifierTables {
-	root:                 DOCKERFILE_ROOT_RULES,
-	class:                &[],
-	function:             DOCKERFILE_FUNCTION_RULES,
+	root: DOCKERFILE_ROOT_RULES,
+	class: &[],
+	function: DOCKERFILE_FUNCTION_RULES,
 	structural_overrides: super::classify::StructuralOverrides::EMPTY,
 };
 

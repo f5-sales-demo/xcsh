@@ -408,9 +408,12 @@ impl Shell {
 				let mut options = std::fs::File::options();
 				options.read(true);
 
-				if let Ok(history_file) =
-					shell.open_file(&options, history_path, &shell.default_exec_params(), crate::containment::FenceAccess::Read)
-				{
+				if let Ok(history_file) = shell.open_file(
+					&options,
+					history_path,
+					&shell.default_exec_params(),
+					crate::containment::FenceAccess::Read,
+				) {
 					shell.history = Some(history::History::import(history_file)?);
 				}
 			}
@@ -1439,7 +1442,9 @@ impl Shell {
 				));
 			}
 			let cleared = crate::containment::FileIdentity::of_path(&resolved);
-			let cleared_parent = resolved.parent().and_then(crate::containment::FileIdentity::of_path);
+			let cleared_parent = resolved
+				.parent()
+				.and_then(crate::containment::FileIdentity::of_path);
 			let opened = options.open(&resolved)?;
 			// Ask the kernel what was actually opened and check *that* against the fence. Re-walking
 			// the path cannot settle it: a swap landing before the pre-open stat makes the stat and the
@@ -1453,10 +1458,15 @@ impl Shell {
 				// created, so its directory had to be there and hold still. Weaker, and the reason the
 				// fd check is preferred wherever it exists.
 				None => match cleared {
-					Some(cleared) => crate::containment::FileIdentity::of_handle(&opened) != Some(cleared),
+					Some(cleared) => {
+						crate::containment::FileIdentity::of_handle(&opened) != Some(cleared)
+					},
 					None => {
 						cleared_parent.is_none()
-							|| resolved.parent().and_then(crate::containment::FileIdentity::of_path) != cleared_parent
+							|| resolved
+								.parent()
+								.and_then(crate::containment::FileIdentity::of_path)
+								!= cleared_parent
 					},
 				},
 			};
@@ -1504,9 +1514,11 @@ impl Shell {
 			// resolved path: checking `target_dir` and then storing `target_dir` lets a symlink change
 			// underneath between the two, leaving the shell standing somewhere it was never cleared for
 			// — and every later relative path would resolve from there.
-			let destination = crate::containment::canonicalize_for_fence(&self.absolute_path(target_dir.as_ref()));
+			let destination =
+				crate::containment::canonicalize_for_fence(&self.absolute_path(target_dir.as_ref()));
 			let readable = fence.permits_resolved(&destination, crate::containment::FenceAccess::Read);
-			let writable = fence.permits_resolved(&destination, crate::containment::FenceAccess::Write);
+			let writable =
+				fence.permits_resolved(&destination, crate::containment::FenceAccess::Write);
 			if !readable || !writable {
 				return Err(error::ErrorKind::OutsideBoundary(destination).into());
 			}

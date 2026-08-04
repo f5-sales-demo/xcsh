@@ -29,7 +29,7 @@ use std::path::{Component, Path, PathBuf};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct FileIdentity {
 	device: u64,
-	inode:  u64,
+	inode: u64,
 }
 
 impl FileIdentity {
@@ -39,7 +39,10 @@ impl FileIdentity {
 	/// to be created. The caller distinguishes the two, and must not read `None` as "unchanged".
 	#[must_use]
 	pub fn of_path(path: &Path) -> Option<Self> {
-		std::fs::metadata(path).ok().as_ref().map(Self::from_metadata)
+		std::fs::metadata(path)
+			.ok()
+			.as_ref()
+			.map(Self::from_metadata)
 	}
 
 	/// The identity of the object an open handle refers to.
@@ -66,7 +69,7 @@ impl FileIdentity {
 		use std::os::windows::fs::MetadataExt;
 		Self {
 			device: metadata.volume_serial_number().unwrap_or(0).into(),
-			inode:  metadata.file_index().unwrap_or(0),
+			inode: metadata.file_index().unwrap_or(0),
 		}
 	}
 }
@@ -130,7 +133,10 @@ pub struct ContainmentFence {
 
 /// How specific a matching root is. Deeper wins, so a nested rule beats the root it sits inside.
 fn depth(root: &Path) -> usize {
-	root.components().filter(|c| matches!(c, Component::Normal(_))).count()
+	root
+		.components()
+		.filter(|c| matches!(c, Component::Normal(_)))
+		.count()
 }
 
 /// The deepest root in `roots` that contains `candidate`, with its depth.
@@ -210,7 +216,8 @@ impl ContainmentFence {
 			return true;
 		}
 
-		if access == FenceAccess::Enumerate && self.deny_enumerate.iter().any(|root| root == resolved) {
+		if access == FenceAccess::Enumerate && self.deny_enumerate.iter().any(|root| root == resolved)
+		{
 			return false;
 		}
 
@@ -273,7 +280,7 @@ impl DirLister for RealFs {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct GrantRights {
 	/// Files in the subtree may be read.
-	pub read:  bool,
+	pub read: bool,
 	/// The subtree may be written.
 	pub write: bool,
 	/// Directories in the subtree may be enumerated.
@@ -337,7 +344,7 @@ impl Node {
 #[derive(Clone, Debug, Default)]
 pub struct GrantPlan {
 	/// Subtrees to grant, and in which directions.
-	pub grants:       Vec<(PathBuf, GrantRights)>,
+	pub grants: Vec<(PathBuf, GrantRights)>,
 	/// Directories that lost a right on their own inode because their children are not uniform.
 	///
 	/// A Landlock rule always covers a whole subtree, so a directory holding both granted and denied
@@ -345,7 +352,7 @@ pub struct GrantPlan {
 	/// loses that right: `ls` of it fails, and a file created directly in it afterwards is unreachable.
 	/// Reported rather than hidden, because the caller must refuse to claim OS enforcement when the
 	/// session's own workspace lands here.
-	pub split_dirs:   Vec<PathBuf>,
+	pub split_dirs: Vec<PathBuf>,
 	/// Directories that had to be enumerated but could not be, so nothing under them was granted.
 	pub unenumerable: Vec<PathBuf>,
 }
@@ -537,7 +544,8 @@ fn walk_for_access(
 /// command fail with "Operation not permitted" and no usable explanation. SBPL accepts `\n` in a
 /// string literal — verified — so the escape both parses and keeps the rule meaningful.
 fn escape_for_profile(path: &Path) -> String {
-	path.to_string_lossy()
+	path
+		.to_string_lossy()
 		.replace('\\', "\\\\")
 		.replace('"', "\\\"")
 		.replace('\n', "\\n")
@@ -608,7 +616,7 @@ impl ContainmentFence {
 				// denied — so a sibling's name is still not discoverable, only that the parent exists.
 				Rule::Metadata(root) => profile.push_str(&format!(
 					"(allow file-read-metadata (subpath \"{}\"))\n",
-					 escape_for_profile(root)
+					escape_for_profile(root)
 				)),
 				// A literal `file-read-data` denial prevents `readdir` on this directory but does not
 				// cover a named child. Traversal, metadata, and reads below a known child stay allowed.
@@ -634,5 +642,4 @@ impl ContainmentFence {
 		}
 		profile
 	}
-
 }

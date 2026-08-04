@@ -135,21 +135,21 @@ fn classify_if_child<'t>(node: Node<'t>, source: &str) -> Option<RawChunkCandida
 impl LangClassifier for CMakeClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &[
+				extra_trivia: &[
 					"endif_command",
 					"endforeach_command",
 					"endwhile_command",
 					"endfunction_command",
 					"endmacro_command",
 				],
-				preserved_trivia:        &[],
-				extra_root_wrappers:     &[],
+				preserved_trivia: &[],
+				extra_root_wrappers: &[],
 				preserved_root_wrappers: &[],
-				absorbable_attrs:        &[],
+				absorbable_attrs: &[],
 			},
 		};
 		&TABLES

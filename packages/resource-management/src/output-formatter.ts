@@ -24,6 +24,9 @@ export function formatOperationResult(
 			if (result.action === "create") {
 				return `${manifest.kind}/${manifest.metadata.name} would be created (dry-run)`;
 			}
+			if (result.action === "delete") {
+				return `${manifest.kind}/${manifest.metadata.name} would be deleted (dry-run)`;
+			}
 			if (result.diff) {
 				return `${manifest.kind}/${manifest.metadata.name} would be updated (dry-run)\n${formatDiff(result.diff, manifest.kind, manifest.metadata.name)}`;
 			}

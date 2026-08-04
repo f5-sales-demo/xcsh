@@ -22,9 +22,9 @@ const HTML_XML_SHARED_RULES: &[super::classify::SemanticRule] = &[semantic_rule(
 )];
 
 const HTML_XML_TABLES: ClassifierTables = ClassifierTables {
-	root:                 HTML_XML_SHARED_RULES,
-	class:                HTML_XML_SHARED_RULES,
-	function:             &[],
+	root: HTML_XML_SHARED_RULES,
+	class: HTML_XML_SHARED_RULES,
+	function: &[],
 	structural_overrides: super::classify::StructuralOverrides::EMPTY,
 };
 

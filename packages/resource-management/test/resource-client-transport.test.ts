@@ -136,6 +136,107 @@ describe("ResourceClient with custom transport", () => {
 		expect(transport.calls[0].body).toBeDefined();
 	});
 
+	test("create preserves a 409 conflict instead of updating", async () => {
+		const transport = new MockTransport();
+		transport.response = { httpStatus: 409, body: { message: "Already exists" } };
+		const client = new ResourceClient({
+			apiUrl: "https://test.xcsh.com/api",
+			apiToken: "test-token",
+			namespace: "default",
+			transport,
+		});
+		const manifest = {
+			kind: "http_loadbalancer",
+			metadata: { name: "existing-lb" },
+			spec: {},
+			rawObject: { kind: "http_loadbalancer", metadata: { name: "existing-lb" }, spec: {} },
+		};
+
+		const result = await client.create(manifest, dummyResolvedKind);
+
+		expect(result.status).toBe("error");
+		expect(result.status === "error" ? result.error.kind : undefined).toBe("conflict");
+		expect(transport.calls.map(call => call.method)).toEqual(["POST"]);
+	});
+
+	test("strict update fails when the resource does not exist", async () => {
+		const transport = new MockTransport();
+		transport.response = { httpStatus: 404, body: { message: "Not found" } };
+		const client = new ResourceClient({
+			apiUrl: "https://test.xcsh.com/api",
+			apiToken: "test-token",
+			namespace: "default",
+			transport,
+		});
+		const manifest = {
+			kind: "http_loadbalancer",
+			metadata: { name: "missing-lb" },
+			spec: {},
+			rawObject: { kind: "http_loadbalancer", metadata: { name: "missing-lb" }, spec: {} },
+		};
+
+		const result = await client.update(manifest, dummyResolvedKind);
+
+		expect(result.status).toBe("error");
+		expect(result.status === "error" ? result.error.kind : undefined).toBe("not_found");
+		expect(transport.calls.map(call => call.method)).toEqual(["GET"]);
+	});
+
+	test("strict update compares the live resource before sending PUT", async () => {
+		const transport = new MockTransport();
+		let callCount = 0;
+		transport.request = async req => {
+			transport.calls.push(req);
+			callCount++;
+			if (callCount === 1) {
+				return {
+					httpStatus: 200,
+					body: { metadata: { name: "existing-lb" }, spec: { domains: ["old.example.com"] } },
+				};
+			}
+			return {
+				httpStatus: 200,
+				body: { metadata: { name: "existing-lb" }, spec: { domains: ["new.example.com"] } },
+			};
+		};
+		const client = new ResourceClient({
+			apiUrl: "https://test.xcsh.com/api",
+			apiToken: "test-token",
+			namespace: "default",
+			transport,
+		});
+		const manifest = {
+			kind: "http_loadbalancer",
+			metadata: { name: "existing-lb" },
+			spec: { domains: ["new.example.com"] },
+			rawObject: {
+				kind: "http_loadbalancer",
+				metadata: { name: "existing-lb" },
+				spec: { domains: ["new.example.com"] },
+			},
+		};
+
+		const result = await client.update(manifest, dummyResolvedKind);
+
+		expect(result.status).toBe("updated");
+		expect(transport.calls.map(call => call.method)).toEqual(["GET", "PUT"]);
+	});
+
+	test("delete client dry-run does not call the transport", async () => {
+		const transport = new MockTransport();
+		const client = new ResourceClient({
+			apiUrl: "https://test.xcsh.com/api",
+			apiToken: "test-token",
+			namespace: "default",
+			transport,
+		});
+
+		const result = await client.delete("http_loadbalancer", "example-lb", dummyResolvedKind, undefined, "client");
+
+		expect(result).toEqual({ status: "dry-run", action: "delete" });
+		expect(transport.calls).toHaveLength(0);
+	});
+
 	test("falls back to FetchTransport when no transport provided", () => {
 		const client = new ResourceClient({
 			apiUrl: "https://test.xcsh.com/api",

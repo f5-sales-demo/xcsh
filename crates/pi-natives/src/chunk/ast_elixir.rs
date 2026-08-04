@@ -134,15 +134,15 @@ fn call_name(node: Node<'_>, source: &str) -> Option<String> {
 impl LangClassifier for ElixirClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[],
-			class:                &[],
-			function:             &[],
+			root: &[],
+			class: &[],
+			function: &[],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &["unary_operator"],
-				preserved_trivia:        &[],
-				extra_root_wrappers:     &[],
+				extra_trivia: &["unary_operator"],
+				preserved_trivia: &[],
+				extra_root_wrappers: &[],
 				preserved_root_wrappers: &[],
-				absorbable_attrs:        &[],
+				absorbable_attrs: &[],
 			},
 		};
 		&TABLES

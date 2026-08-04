@@ -923,9 +923,9 @@ const MISC_FUNCTION_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const MISC_TABLES: ClassifierTables = ClassifierTables {
-	root:                 MISC_ROOT_RULES,
-	class:                MISC_CLASS_RULES,
-	function:             MISC_FUNCTION_RULES,
+	root: MISC_ROOT_RULES,
+	class: MISC_CLASS_RULES,
+	function: MISC_FUNCTION_RULES,
 	structural_overrides: StructuralOverrides::EMPTY,
 };
 
@@ -957,12 +957,12 @@ fn classify_root_override<'t>(node: Node<'t>, source: &str) -> Option<RawChunkCa
 	};
 	let module_recurse = || {
 		recurse_class(node).or_else(|| {
-			recurse_into(node, ChunkContext::ClassBody, &["body"], &[
-				"compound_statement",
-				"statement_block",
-				"declaration_list",
-				"block",
-			])
+			recurse_into(
+				node,
+				ChunkContext::ClassBody,
+				&["body"],
+				&["compound_statement", "statement_block", "declaration_list", "block"],
+			)
 		})
 	};
 	Some(match node.kind() {

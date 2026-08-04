@@ -60,7 +60,7 @@ fn recurse_clause_body(node: Node<'_>) -> Option<RecurseSpec<'_>> {
 impl LangClassifier for ErlangClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[
+			root: &[
 				semantic_rule(
 					"export_attribute",
 					ChunkKind::Exports,
@@ -97,14 +97,14 @@ impl LangClassifier for ErlangClassifier {
 					RecurseMode::None,
 				),
 			],
-			class:                &[],
-			function:             &[],
+			class: &[],
+			function: &[],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &[],
-				preserved_trivia:        &[],
-				extra_root_wrappers:     &[],
+				extra_trivia: &[],
+				preserved_trivia: &[],
+				extra_root_wrappers: &[],
 				preserved_root_wrappers: &[],
-				absorbable_attrs:        &["spec"],
+				absorbable_attrs: &["spec"],
 			},
 		};
 		&TABLES

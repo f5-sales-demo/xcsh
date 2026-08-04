@@ -45,15 +45,15 @@ const PERL_SHARED_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const PERL_TABLES: ClassifierTables = ClassifierTables {
-	root:                 PERL_SHARED_RULES,
-	class:                &[],
-	function:             PERL_SHARED_RULES,
+	root: PERL_SHARED_RULES,
+	class: &[],
+	function: PERL_SHARED_RULES,
 	structural_overrides: StructuralOverrides {
-		extra_trivia:            &[],
-		preserved_trivia:        &[],
-		extra_root_wrappers:     &["statement_list"],
+		extra_trivia: &[],
+		preserved_trivia: &[],
+		extra_root_wrappers: &["statement_list"],
 		preserved_root_wrappers: &[],
-		absorbable_attrs:        &[],
+		absorbable_attrs: &[],
 	},
 };
 

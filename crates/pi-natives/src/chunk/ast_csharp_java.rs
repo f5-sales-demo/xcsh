@@ -219,9 +219,9 @@ const CSHARP_JAVA_CLASS_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const CSHARP_JAVA_TABLES: ClassifierTables = ClassifierTables {
-	root:                 CSHARP_JAVA_ROOT_RULES,
-	class:                CSHARP_JAVA_CLASS_RULES,
-	function:             &[],
+	root: CSHARP_JAVA_ROOT_RULES,
+	class: CSHARP_JAVA_CLASS_RULES,
+	function: &[],
 	structural_overrides: StructuralOverrides::EMPTY,
 };
 

@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "モデルプロバイダー",
 	"welcome.plugins": "プラグイン",
 	"welcome.pluginSetupHint": "実行: /plugin setup",
-	"welcome.updateHint": "実行: xcsh update",
+	"welcome.updateHint": "実行: xcsh self-update",
 	"welcome.newVersion": "新しいバージョン",
 	"welcome.connectionFailed": "— 接続に失敗しました",
 	"welcome.runLoginReconnect": "/login を実行して再接続してください",

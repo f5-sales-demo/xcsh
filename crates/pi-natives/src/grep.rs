@@ -59,66 +59,66 @@ enum OutputMode {
 #[napi(object)]
 pub struct SearchOptions {
 	/// Regex pattern to search for.
-	pub pattern:        String,
+	pub pattern: String,
 	/// Case-insensitive search.
-	pub ignore_case:    Option<bool>,
+	pub ignore_case: Option<bool>,
 	/// Enable multiline matching.
-	pub multiline:      Option<bool>,
+	pub multiline: Option<bool>,
 	/// Maximum number of matches to return.
-	pub max_count:      Option<u32>,
+	pub max_count: Option<u32>,
 	/// Skip first N matches.
-	pub offset:         Option<u32>,
+	pub offset: Option<u32>,
 	/// Lines of context before matches.
 	pub context_before: Option<u32>,
 	/// Lines of context after matches.
-	pub context_after:  Option<u32>,
+	pub context_after: Option<u32>,
 	/// Lines of context before/after matches (legacy).
-	pub context:        Option<u32>,
+	pub context: Option<u32>,
 	/// Truncate lines longer than this (characters).
-	pub max_columns:    Option<u32>,
+	pub max_columns: Option<u32>,
 	/// Output mode (content or count).
-	pub mode:           Option<GrepOutputMode>,
+	pub mode: Option<GrepOutputMode>,
 }
 
 /// Options for searching files on disk.
 #[napi(object)]
 pub struct GrepOptions<'env> {
 	/// Regex pattern to search for.
-	pub pattern:        String,
+	pub pattern: String,
 	/// Directory or file to search.
-	pub path:           String,
+	pub path: String,
 	/// Glob filter for filenames (e.g., "*.ts").
-	pub glob:           Option<String>,
+	pub glob: Option<String>,
 	/// Filter by file type (e.g., "js", "py", "rust").
-	pub r#type:         Option<String>,
+	pub r#type: Option<String>,
 	/// Case-insensitive search.
-	pub ignore_case:    Option<bool>,
+	pub ignore_case: Option<bool>,
 	/// Enable multiline matching.
-	pub multiline:      Option<bool>,
+	pub multiline: Option<bool>,
 	/// Include hidden files (default: true).
-	pub hidden:         Option<bool>,
+	pub hidden: Option<bool>,
 	/// Respect .gitignore files (default: true).
-	pub gitignore:      Option<bool>,
+	pub gitignore: Option<bool>,
 	/// Enable shared filesystem scan cache (default: false).
-	pub cache:          Option<bool>,
+	pub cache: Option<bool>,
 	/// Maximum number of matches to return.
-	pub max_count:      Option<u32>,
+	pub max_count: Option<u32>,
 	/// Skip first N matches.
-	pub offset:         Option<u32>,
+	pub offset: Option<u32>,
 	/// Lines of context before matches.
 	pub context_before: Option<u32>,
 	/// Lines of context after matches.
-	pub context_after:  Option<u32>,
+	pub context_after: Option<u32>,
 	/// Lines of context before/after matches (legacy).
-	pub context:        Option<u32>,
+	pub context: Option<u32>,
 	/// Truncate lines longer than this (characters).
-	pub max_columns:    Option<u32>,
+	pub max_columns: Option<u32>,
 	/// Output mode (content, filesWithMatches, or count).
-	pub mode:           Option<GrepOutputMode>,
+	pub mode: Option<GrepOutputMode>,
 	/// Abort signal for cancelling the operation.
-	pub signal:         Option<Unknown<'env>>,
+	pub signal: Option<Unknown<'env>>,
 	/// Timeout in milliseconds for the operation.
-	pub timeout_ms:     Option<u32>,
+	pub timeout_ms: Option<u32>,
 }
 
 /// A context line (before or after a match).
@@ -128,35 +128,35 @@ pub struct ContextLine {
 	/// 1-indexed line number in the source file.
 	pub line_number: u32,
 	/// Raw line content (trimmed line ending).
-	pub line:        String,
+	pub line: String,
 }
 
 /// A single match in the content.
 #[napi(object)]
 pub struct Match {
 	/// 1-indexed line number.
-	pub line_number:    u32,
+	pub line_number: u32,
 	/// The matched line content.
-	pub line:           String,
+	pub line: String,
 	/// Context lines before the match.
 	pub context_before: Option<Vec<ContextLine>>,
 	/// Context lines after the match.
-	pub context_after:  Option<Vec<ContextLine>>,
+	pub context_after: Option<Vec<ContextLine>>,
 	/// Whether the line was truncated.
-	pub truncated:      Option<bool>,
+	pub truncated: Option<bool>,
 }
 
 /// Result of searching content.
 #[napi(object)]
 pub struct SearchResult {
 	/// All matches found.
-	pub matches:       Vec<Match>,
+	pub matches: Vec<Match>,
 	/// Total number of matches (may exceed `matches.len()` due to offset/limit).
-	pub match_count:   u32,
+	pub match_count: u32,
 	/// Whether the limit was reached.
 	pub limit_reached: bool,
 	/// Error message, if any.
-	pub error:         Option<String>,
+	pub error: Option<String>,
 }
 
 /// A single match in a grep result.
@@ -164,34 +164,34 @@ pub struct SearchResult {
 #[napi(object)]
 pub struct GrepMatch {
 	/// File path for the match (relative for directory searches).
-	pub path:           String,
+	pub path: String,
 	/// 1-indexed line number (0 for count-only entries).
-	pub line_number:    u32,
+	pub line_number: u32,
 	/// The matched line content (empty for count-only entries).
-	pub line:           String,
+	pub line: String,
 	/// Context lines before the match.
 	pub context_before: Option<Vec<ContextLine>>,
 	/// Context lines after the match.
-	pub context_after:  Option<Vec<ContextLine>>,
+	pub context_after: Option<Vec<ContextLine>>,
 	/// Whether the line was truncated.
-	pub truncated:      Option<bool>,
+	pub truncated: Option<bool>,
 	/// Per-file match count (count mode only).
-	pub match_count:    Option<u32>,
+	pub match_count: Option<u32>,
 }
 
 /// Result of searching files.
 #[napi(object)]
 pub struct GrepResult {
 	/// Matches or per-file counts, depending on output mode.
-	pub matches:            Vec<GrepMatch>,
+	pub matches: Vec<GrepMatch>,
 	/// Total matches across all files.
-	pub total_matches:      u32,
+	pub total_matches: u32,
 	/// Number of files with at least one match.
 	pub files_with_matches: u32,
 	/// Number of files searched.
-	pub files_searched:     u32,
+	pub files_searched: u32,
 	/// Whether the limit/offset stopped the search early.
-	pub limit_reached:      Option<bool>,
+	pub limit_reached: Option<bool>,
 }
 
 enum TypeFilter {
@@ -220,42 +220,42 @@ impl TypeFilter {
 // ---------------------------------------------------------------------------
 
 struct MatchCollector {
-	matches:         Vec<CollectedMatch>,
-	match_count:     u64,
+	matches: Vec<CollectedMatch>,
+	match_count: u64,
 	collected_count: u64,
-	max_count:       Option<u64>,
-	offset:          u64,
-	skipped:         u64,
-	limit_reached:   bool,
-	max_columns:     Option<usize>,
+	max_count: Option<u64>,
+	offset: u64,
+	skipped: u64,
+	limit_reached: bool,
+	max_columns: Option<usize>,
 	collect_matches: bool,
-	context_before:  SmallVec<[ContextLine; 8]>,
+	context_before: SmallVec<[ContextLine; 8]>,
 }
 
 struct CollectedMatch {
-	line_number:    u64,
-	line:           String,
+	line_number: u64,
+	line: String,
 	context_before: SmallVec<[ContextLine; 8]>,
-	context_after:  SmallVec<[ContextLine; 8]>,
-	truncated:      bool,
+	context_after: SmallVec<[ContextLine; 8]>,
+	truncated: bool,
 }
 
 struct SearchResultInternal {
-	matches:       Vec<CollectedMatch>,
-	match_count:   u64,
-	collected:     u64,
+	matches: Vec<CollectedMatch>,
+	match_count: u64,
+	collected: u64,
 	limit_reached: bool,
 }
 
 struct FileEntry {
-	path:          PathBuf,
+	path: PathBuf,
 	relative_path: String,
 }
 
 struct FileSearchResult {
 	relative_path: String,
-	matches:       Vec<CollectedMatch>,
-	match_count:   u64,
+	matches: Vec<CollectedMatch>,
+	match_count: u64,
 }
 
 enum FileBytes {
@@ -499,11 +499,11 @@ fn resolve_context(
 #[derive(Clone, Copy)]
 struct SearchParams {
 	context_before: u32,
-	context_after:  u32,
-	max_columns:    Option<u32>,
-	mode:           OutputMode,
-	max_count:      Option<u64>,
-	offset:         u64,
+	context_after: u32,
+	max_columns: Option<u32>,
+	mode: OutputMode,
+	max_count: Option<u64>,
+	offset: u64,
 }
 
 fn run_search(
@@ -539,9 +539,9 @@ fn run_search_reader<R: Read>(
 	);
 	searcher.search_reader(matcher, reader, &mut collector)?;
 	Ok(SearchResultInternal {
-		matches:       collector.matches,
-		match_count:   collector.match_count,
-		collected:     collector.collected_count,
+		matches: collector.matches,
+		match_count: collector.match_count,
+		collected: collector.collected_count,
 		limit_reached: collector.limit_reached,
 	})
 }
@@ -647,22 +647,22 @@ const fn empty_search_result(error: Option<String>) -> SearchResult {
 
 /// Internal configuration for grep, extracted from options.
 struct GrepConfig {
-	pattern:        String,
-	path:           String,
-	glob:           Option<String>,
-	type_filter:    Option<String>,
-	ignore_case:    Option<bool>,
-	multiline:      Option<bool>,
-	hidden:         Option<bool>,
-	gitignore:      Option<bool>,
-	cache:          Option<bool>,
-	max_count:      Option<u32>,
-	offset:         Option<u32>,
+	pattern: String,
+	path: String,
+	glob: Option<String>,
+	type_filter: Option<String>,
+	ignore_case: Option<bool>,
+	multiline: Option<bool>,
+	hidden: Option<bool>,
+	gitignore: Option<bool>,
+	cache: Option<bool>,
+	max_count: Option<u32>,
+	offset: Option<u32>,
 	context_before: Option<u32>,
-	context_after:  Option<u32>,
-	context:        Option<u32>,
-	max_columns:    Option<u32>,
-	mode:           Option<GrepOutputMode>,
+	context_after: Option<u32>,
+	context: Option<u32>,
+	max_columns: Option<u32>,
+	mode: Option<GrepOutputMode>,
 }
 
 fn collect_files(
@@ -937,22 +937,22 @@ mod tests {
 	#[cfg(unix)]
 	fn base_grep_config(path: &Path) -> GrepConfig {
 		GrepConfig {
-			pattern:        "needle".to_string(),
-			path:           path.to_string_lossy().into_owned(),
-			glob:           None,
-			type_filter:    None,
-			ignore_case:    None,
-			multiline:      None,
-			hidden:         None,
-			gitignore:      Some(false),
-			cache:          Some(false),
-			max_count:      None,
-			offset:         None,
+			pattern: "needle".to_string(),
+			path: path.to_string_lossy().into_owned(),
+			glob: None,
+			type_filter: None,
+			ignore_case: None,
+			multiline: None,
+			hidden: None,
+			gitignore: Some(false),
+			cache: Some(false),
+			max_count: None,
+			offset: None,
 			context_before: None,
-			context_after:  None,
-			context:        None,
-			max_columns:    None,
-			mode:           None,
+			context_after: None,
+			context: None,
+			max_columns: None,
+			mode: None,
 		}
 	}
 
@@ -1074,8 +1074,8 @@ fn run_parallel_search(
 				let search = run_search(matcher, bytes.as_slice(), file_params).ok()?;
 				Some(FileSearchResult {
 					relative_path: entry.relative_path.clone(),
-					matches:       search.matches,
-					match_count:   search.match_count,
+					matches: search.matches,
+					match_count: search.match_count,
 				})
 			},
 		)
@@ -1139,24 +1139,24 @@ fn run_sequential_search(
 			},
 			OutputMode::Count => {
 				matches.push(GrepMatch {
-					path:           entry.relative_path.clone(),
-					line_number:    0,
-					line:           String::new(),
+					path: entry.relative_path.clone(),
+					line_number: 0,
+					line: String::new(),
 					context_before: None,
-					context_after:  None,
-					truncated:      None,
-					match_count:    Some(crate::utils::clamp_u32(search.match_count)),
+					context_after: None,
+					truncated: None,
+					match_count: Some(crate::utils::clamp_u32(search.match_count)),
 				});
 			},
 			OutputMode::FilesWithMatches => {
 				matches.push(GrepMatch {
-					path:           entry.relative_path.clone(),
-					line_number:    0,
-					line:           String::new(),
+					path: entry.relative_path.clone(),
+					line_number: 0,
+					line: String::new(),
 					context_before: None,
-					context_after:  None,
-					truncated:      None,
-					match_count:    None,
+					context_after: None,
+					truncated: None,
+					match_count: None,
 				});
 			},
 		}
@@ -1195,10 +1195,10 @@ fn search_sync(content: &[u8], options: SearchOptions) -> SearchResult {
 	};
 
 	SearchResult {
-		matches:       result.matches.into_iter().map(to_public_match).collect(),
-		match_count:   crate::utils::clamp_u32(result.match_count),
+		matches: result.matches.into_iter().map(to_public_match).collect(),
+		match_count: crate::utils::clamp_u32(result.match_count),
 		limit_reached: result.limit_reached,
-		error:         None,
+		error: None,
 	}
 }
 
@@ -1242,11 +1242,11 @@ fn grep_sync(
 
 	if !metadata.is_file() && !metadata.is_dir() {
 		return Ok(GrepResult {
-			matches:            Vec::new(),
-			total_matches:      0,
+			matches: Vec::new(),
+			total_matches: 0,
 			files_with_matches: 0,
-			files_searched:     0,
-			limit_reached:      None,
+			files_searched: 0,
+			limit_reached: None,
 		});
 	}
 
@@ -1255,21 +1255,21 @@ fn grep_sync(
 			&& !matches_type_filter(&search_path, filter)
 		{
 			return Ok(GrepResult {
-				matches:            Vec::new(),
-				total_matches:      0,
+				matches: Vec::new(),
+				total_matches: 0,
 				files_with_matches: 0,
-				files_searched:     0,
-				limit_reached:      None,
+				files_searched: 0,
+				limit_reached: None,
 			});
 		}
 
 		let Ok(Some(bytes)) = read_file_bytes(&search_path) else {
 			return Ok(GrepResult {
-				matches:            Vec::new(),
-				total_matches:      0,
+				matches: Vec::new(),
+				total_matches: 0,
 				files_with_matches: 0,
-				files_searched:     0,
-				limit_reached:      None,
+				files_searched: 0,
+				limit_reached: None,
 			});
 		};
 
@@ -1278,11 +1278,11 @@ fn grep_sync(
 
 		if search.match_count == 0 {
 			return Ok(GrepResult {
-				matches:            Vec::new(),
-				total_matches:      0,
+				matches: Vec::new(),
+				total_matches: 0,
 				files_with_matches: 0,
-				files_searched:     1,
-				limit_reached:      None,
+				files_searched: 1,
+				limit_reached: None,
 			});
 		}
 
@@ -1296,24 +1296,24 @@ fn grep_sync(
 			},
 			OutputMode::Count => {
 				matches.push(GrepMatch {
-					path:           path_string,
-					line_number:    0,
-					line:           String::new(),
+					path: path_string,
+					line_number: 0,
+					line: String::new(),
 					context_before: None,
-					context_after:  None,
-					truncated:      None,
-					match_count:    Some(crate::utils::clamp_u32(search.match_count)),
+					context_after: None,
+					truncated: None,
+					match_count: Some(crate::utils::clamp_u32(search.match_count)),
 				});
 			},
 			OutputMode::FilesWithMatches => {
 				matches.push(GrepMatch {
-					path:           path_string,
-					line_number:    0,
-					line:           String::new(),
+					path: path_string,
+					line_number: 0,
+					line: String::new(),
 					context_before: None,
-					context_after:  None,
-					truncated:      None,
-					match_count:    None,
+					context_after: None,
+					truncated: None,
+					match_count: None,
 				});
 			},
 		}
@@ -1356,11 +1356,11 @@ fn grep_sync(
 	ct.heartbeat()?;
 	if entries.is_empty() {
 		return Ok(GrepResult {
-			matches:            Vec::new(),
-			total_matches:      0,
+			matches: Vec::new(),
+			total_matches: 0,
 			files_with_matches: 0,
-			files_searched:     0,
-			limit_reached:      None,
+			files_searched: 0,
+			limit_reached: None,
 		});
 	}
 
@@ -1391,13 +1391,13 @@ fn grep_sync(
 				},
 				OutputMode::Count => {
 					let grep_match = GrepMatch {
-						path:           result.relative_path.clone(),
-						line_number:    0,
-						line:           String::new(),
+						path: result.relative_path.clone(),
+						line_number: 0,
+						line: String::new(),
 						context_before: None,
-						context_after:  None,
-						truncated:      None,
-						match_count:    Some(crate::utils::clamp_u32(result.match_count)),
+						context_after: None,
+						truncated: None,
+						match_count: Some(crate::utils::clamp_u32(result.match_count)),
 					};
 					if let Some(callback) = on_match {
 						callback.call(Ok(grep_match.clone()), ThreadsafeFunctionCallMode::NonBlocking);
@@ -1406,13 +1406,13 @@ fn grep_sync(
 				},
 				OutputMode::FilesWithMatches => {
 					let grep_match = GrepMatch {
-						path:           result.relative_path.clone(),
-						line_number:    0,
-						line:           String::new(),
+						path: result.relative_path.clone(),
+						line_number: 0,
+						line: String::new(),
 						context_before: None,
-						context_after:  None,
-						truncated:      None,
-						match_count:    None,
+						context_after: None,
+						truncated: None,
+						match_count: None,
 					};
 					if let Some(callback) = on_match {
 						callback.call(Ok(grep_match.clone()), ThreadsafeFunctionCallMode::NonBlocking);

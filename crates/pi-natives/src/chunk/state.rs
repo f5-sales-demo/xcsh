@@ -35,26 +35,26 @@ static TLAPLUS_END_TRANSLATION_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConflictMeta {
-	pub theirs_content:  String,
-	pub ours_label:      String,
-	pub theirs_label:    String,
-	pub base_content:    Option<String>,
-	pub base_label:      Option<String>,
+	pub theirs_content: String,
+	pub ours_label: String,
+	pub theirs_label: String,
+	pub base_content: Option<String>,
+	pub base_label: Option<String>,
 	pub ours_start_byte: usize,
-	pub ours_end_byte:   usize,
+	pub ours_end_byte: usize,
 }
 
 #[derive(Clone)]
 pub struct ChunkStateInner {
-	pub(crate) source:        String,
-	pub(crate) language:      String,
-	pub(crate) tree:          ChunkTree,
-	pub(crate) notebook:      Option<crate::chunk::ast_ipynb::SharedNotebookContext>,
+	pub(crate) source: String,
+	pub(crate) language: String,
+	pub(crate) tree: ChunkTree,
+	pub(crate) notebook: Option<crate::chunk::ast_ipynb::SharedNotebookContext>,
 	pub(crate) conflict_meta: HashMap<String, ConflictMeta>,
-	lookup:                   HashMap<String, usize>,
-	checksum_lookup:          HashMap<String, Vec<usize>>,
-	leaf_lookup:              HashMap<String, Vec<usize>>,
-	suffix_lookup:            HashMap<String, Vec<usize>>,
+	lookup: HashMap<String, usize>,
+	checksum_lookup: HashMap<String, Vec<usize>>,
+	leaf_lookup: HashMap<String, Vec<usize>>,
+	suffix_lookup: HashMap<String, Vec<usize>>,
 }
 
 impl ChunkStateInner {
@@ -371,9 +371,9 @@ impl ChunkState {
 				Ok(parsed) => parsed,
 				Err(err) => {
 					return Ok(ReadResult {
-						text:  format!("{}\n\n{}", params.display_path, err),
+						text: format!("{}\n\n{}", params.display_path, err),
 						chunk: Some(ChunkReadTarget {
-							status:   ChunkReadStatus::UnsupportedRegion,
+							status: ChunkReadStatus::UnsupportedRegion,
 							selector: params.read_path.clone(),
 						}),
 					});
@@ -382,7 +382,7 @@ impl ChunkState {
 		let visible_range = selector.as_deref().and_then(parse_visible_line_range);
 		let Some(root) = self.inner.root() else {
 			return Ok(ReadResult {
-				text:  format!("{}\n\n[Chunk tree root missing]", params.display_path),
+				text: format!("{}\n\n[Chunk tree root missing]", params.display_path),
 				chunk: None,
 			});
 		};
@@ -398,7 +398,7 @@ impl ChunkState {
 					)
 				};
 				return Ok(ReadResult {
-					text:  format!(
+					text: format!(
 						"Line {} is beyond end of file ({} lines total). {suggestion}",
 						visible_range.start_line,
 						self.inner.tree().line_count,
@@ -409,7 +409,7 @@ impl ChunkState {
 
 			let clamped_range = VisibleLineRange {
 				start_line: visible_range.start_line,
-				end_line:   visible_range.end_line.min(self.inner.tree().line_count),
+				end_line: visible_range.end_line.min(self.inner.tree().line_count),
 			};
 			let notice = format!(
 				"[Notice: chunk view scoped to requested lines L{}-L{}; clipped chunks keep head/tail \
@@ -417,35 +417,35 @@ impl ChunkState {
 				clamped_range.start_line, clamped_range.end_line
 			);
 			let text = self.render(RenderParams {
-				chunk_path:           Some(root.path.clone()),
-				title:                params.display_path.clone(),
-				language_tag:         params.language_tag.clone(),
-				visible_range:        Some(clamped_range),
+				chunk_path: Some(root.path.clone()),
+				title: params.display_path.clone(),
+				language_tag: params.language_tag.clone(),
+				visible_range: Some(clamped_range),
 				render_children_only: true,
-				omit_checksum:        params.omit_checksum,
-				anchor_style:         params.anchor_style,
-				show_leaf_preview:    true,
-				tab_replacement:      params.tab_replacement,
-				normalize_indent:     params.normalize_indent,
-				focused_paths:        None,
+				omit_checksum: params.omit_checksum,
+				anchor_style: params.anchor_style,
+				show_leaf_preview: true,
+				tab_replacement: params.tab_replacement,
+				normalize_indent: params.normalize_indent,
+				focused_paths: None,
 			});
 			return Ok(ReadResult { text: format!("{notice}\n\n{text}"), chunk: None });
 		}
 
 		if selector.as_deref().is_none_or(str::is_empty) && crc.is_none() && region.is_none() {
 			return Ok(ReadResult {
-				text:  self.render(RenderParams {
-					chunk_path:           Some(root.path.clone()),
-					title:                params.display_path.clone(),
-					language_tag:         params.language_tag.clone(),
-					visible_range:        None,
+				text: self.render(RenderParams {
+					chunk_path: Some(root.path.clone()),
+					title: params.display_path.clone(),
+					language_tag: params.language_tag.clone(),
+					visible_range: None,
 					render_children_only: true,
-					omit_checksum:        params.omit_checksum,
-					anchor_style:         params.anchor_style,
-					show_leaf_preview:    true,
-					tab_replacement:      params.tab_replacement,
-					normalize_indent:     params.normalize_indent,
-					focused_paths:        None,
+					omit_checksum: params.omit_checksum,
+					anchor_style: params.anchor_style,
+					show_leaf_preview: true,
+					tab_replacement: params.tab_replacement,
+					normalize_indent: params.normalize_indent,
+					focused_paths: None,
 				}),
 				chunk: None,
 			});
@@ -472,7 +472,7 @@ impl ChunkState {
 			Err(err) => {
 				let sel = selector.unwrap_or_default();
 				return Ok(ReadResult {
-					text:  format!("{}:{}\n\n{}", params.display_path, sel, err),
+					text: format!("{}:{}\n\n{}", params.display_path, sel, err),
 					chunk: Some(ChunkReadTarget { status: ChunkReadStatus::NotFound, selector: sel }),
 				});
 			},
@@ -507,14 +507,11 @@ impl ChunkState {
 					format!("L{req_start}-L{req_end}")
 				};
 				return Ok(ReadResult {
-					text:  format!(
+					text: format!(
 						"Requested range {requested} does not overlap {}:{} (lines {}-{}).",
 						params.display_path, chunk.path, chunk.start_line, chunk.end_line
 					),
-					chunk: Some(ChunkReadTarget {
-						status:   ChunkReadStatus::Ok,
-						selector: selector_ref,
-					}),
+					chunk: Some(ChunkReadTarget { status: ChunkReadStatus::Ok, selector: selector_ref }),
 				});
 			}
 		}
@@ -559,18 +556,18 @@ impl ChunkState {
 		}
 
 		Ok(ReadResult {
-			text:  self.render(RenderParams {
-				chunk_path:           Some(chunk.path.clone()),
-				title:                format!("{}:{}", params.display_path, chunk.path),
-				language_tag:         params.language_tag.clone(),
-				visible_range:        None,
+			text: self.render(RenderParams {
+				chunk_path: Some(chunk.path.clone()),
+				title: format!("{}:{}", params.display_path, chunk.path),
+				language_tag: params.language_tag.clone(),
+				visible_range: None,
 				render_children_only: false,
-				omit_checksum:        params.omit_checksum,
-				anchor_style:         params.anchor_style,
-				show_leaf_preview:    true,
-				tab_replacement:      params.tab_replacement,
-				normalize_indent:     params.normalize_indent,
-				focused_paths:        None,
+				omit_checksum: params.omit_checksum,
+				anchor_style: params.anchor_style,
+				show_leaf_preview: true,
+				tab_replacement: params.tab_replacement,
+				normalize_indent: params.normalize_indent,
+				focused_paths: None,
 			}),
 			chunk: Some(ChunkReadTarget { status: ChunkReadStatus::Ok, selector: selector_ref }),
 		})
@@ -605,8 +602,8 @@ impl ChunkState {
 #[derive(Clone)]
 struct ParsedChunkReadPath {
 	selector: Option<String>,
-	crc:      Option<String>,
-	region:   Option<ChunkRegion>,
+	crc: Option<String>,
+	region: Option<ChunkRegion>,
 }
 
 fn normalize_language(language: &str) -> String {
@@ -615,12 +612,12 @@ fn normalize_language(language: &str) -> String {
 
 fn chunk_info(chunk: &ChunkNode) -> ChunkInfo {
 	ChunkInfo {
-		path:       chunk.path.clone(),
+		path: chunk.path.clone(),
 		identifier: chunk.identifier.clone(),
-		checksum:   chunk.checksum.clone(),
+		checksum: chunk.checksum.clone(),
 		start_line: chunk.start_line,
-		end_line:   chunk.end_line,
-		leaf:       chunk.leaf,
+		end_line: chunk.end_line,
+		leaf: chunk.leaf,
 	}
 }
 

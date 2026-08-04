@@ -145,9 +145,9 @@ const HASKELL_SCALA_FUNCTION_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const HASKELL_SCALA_TABLES: ClassifierTables = ClassifierTables {
-	root:                 HASKELL_SCALA_ROOT_RULES,
-	class:                &[],
-	function:             HASKELL_SCALA_FUNCTION_RULES,
+	root: HASKELL_SCALA_ROOT_RULES,
+	class: &[],
+	function: HASKELL_SCALA_FUNCTION_RULES,
 	structural_overrides: super::classify::StructuralOverrides::EMPTY,
 };
 

@@ -81,7 +81,7 @@ impl ShellBuildClassifier {
 impl LangClassifier for ShellBuildClassifier {
 	fn tables(&self) -> &'static ClassifierTables {
 		static TABLES: ClassifierTables = ClassifierTables {
-			root:                 &[
+			root: &[
 				semantic_rule(
 					"conditional",
 					ChunkKind::If,
@@ -146,14 +146,14 @@ impl LangClassifier for ShellBuildClassifier {
 					RecurseMode::None,
 				),
 			],
-			class:                &[semantic_rule(
+			class: &[semantic_rule(
 				"hunk",
 				ChunkKind::Hunk,
 				RuleStyle::Positional,
 				NamingMode::None,
 				RecurseMode::None,
 			)],
-			function:             &[
+			function: &[
 				semantic_rule(
 					"if_statement",
 					ChunkKind::If,
@@ -205,11 +205,11 @@ impl LangClassifier for ShellBuildClassifier {
 				),
 			],
 			structural_overrides: StructuralOverrides {
-				extra_trivia:            &[],
-				preserved_trivia:        &[],
-				extra_root_wrappers:     &["makefile"],
+				extra_trivia: &[],
+				preserved_trivia: &[],
+				extra_root_wrappers: &["makefile"],
 				preserved_root_wrappers: &[],
-				absorbable_attrs:        &[],
+				absorbable_attrs: &[],
 			},
 		};
 		&TABLES

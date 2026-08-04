@@ -1,21 +1,21 @@
-/**
- * Check for and install updates.
- */
-import { Command, Flags } from "@f5-sales-demo/pi-utils/cli";
-import { runUpdateCommand } from "../cli/update-cli";
-import { initTheme } from "../modes/theme/theme";
+import { Command } from "@f5-sales-demo/pi-utils/cli";
+import { runResourceCli } from "../cli/resource-cli";
+import { manifestResourceFlags } from "./resource-flags";
 
 export default class Update extends Command {
-	static description = "Check for and install updates";
-
-	static flags = {
-		force: Flags.boolean({ char: "f", description: "Force update", default: false }),
-		check: Flags.boolean({ char: "c", description: "Check for updates without installing", default: false }),
-	};
+	static description = "Update existing resources from manifests";
+	static flags = manifestResourceFlags;
 
 	async run(): Promise<void> {
 		const { flags } = await this.parse(Update);
-		await initTheme();
-		await runUpdateCommand({ force: flags.force, check: flags.check });
+		await runResourceCli({
+			operation: "update",
+			filenames: flags.filename,
+			namespace: flags.namespace,
+			outputFormat: flags.output as "json" | "yaml" | "table" | "wide",
+			recursive: flags.recursive,
+			dryRun: flags["dry-run"] as "client" | undefined,
+			resultFile: flags["result-file"],
+		});
 	}
 }

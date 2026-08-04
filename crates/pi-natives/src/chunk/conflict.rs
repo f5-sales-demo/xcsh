@@ -11,39 +11,39 @@ use super::{
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConflictRegion {
-	pub ours_start_line:   usize,
-	pub ours_end_line:     usize,
+	pub ours_start_line: usize,
+	pub ours_end_line: usize,
 	pub theirs_start_line: usize,
-	pub theirs_end_line:   usize,
+	pub theirs_end_line: usize,
 	pub marker_start_line: usize,
-	pub marker_end_line:   usize,
-	pub ours_content:      String,
-	pub theirs_content:    String,
-	pub base_content:      Option<String>,
-	pub base_label:        Option<String>,
-	pub ours_label:        String,
-	pub theirs_label:      String,
+	pub marker_end_line: usize,
+	pub ours_content: String,
+	pub theirs_content: String,
+	pub base_content: Option<String>,
+	pub base_label: Option<String>,
+	pub ours_label: String,
+	pub theirs_label: String,
 }
 
 #[derive(Clone, Debug)]
 pub struct CleanResult {
-	pub source:           String,
-	pub conflicts:        Vec<ConflictRegion>,
+	pub source: String,
+	pub conflicts: Vec<ConflictRegion>,
 	pub ours_byte_ranges: Vec<(usize, usize)>,
 }
 
 #[derive(Clone)]
 struct PendingConflict {
-	path:            Option<String>,
-	parent_path:     Option<String>,
+	path: Option<String>,
+	parent_path: Option<String>,
 	ours_start_byte: usize,
-	ours_end_byte:   usize,
-	ours_content:    String,
-	theirs_content:  String,
-	base_content:    Option<String>,
-	base_label:      Option<String>,
-	ours_label:      String,
-	theirs_label:    String,
+	ours_end_byte: usize,
+	ours_content: String,
+	theirs_content: String,
+	base_content: Option<String>,
+	base_label: Option<String>,
+	ours_label: String,
+	theirs_label: String,
 }
 
 pub fn has_conflict_markers(source: &str) -> bool {
@@ -137,8 +137,8 @@ pub fn detect_conflicts(source: &str) -> Vec<ConflictRegion> {
 pub fn accept_ours(source: &str, conflicts: &[ConflictRegion]) -> CleanResult {
 	if conflicts.is_empty() {
 		return CleanResult {
-			source:           source.to_owned(),
-			conflicts:        Vec::new(),
+			source: source.to_owned(),
+			conflicts: Vec::new(),
 			ours_byte_ranges: Vec::new(),
 		};
 	}
@@ -250,19 +250,19 @@ pub fn reinject_conflict_chunks(
 	let mut pending = conflict_meta
 		.iter()
 		.map(|(path, meta)| PendingConflict {
-			path:            Some(path.clone()),
-			parent_path:     conflict_parent_path(path),
+			path: Some(path.clone()),
+			parent_path: conflict_parent_path(path),
 			ours_start_byte: meta.ours_start_byte,
-			ours_end_byte:   meta.ours_end_byte,
-			ours_content:    source
+			ours_end_byte: meta.ours_end_byte,
+			ours_content: source
 				.get(meta.ours_start_byte..meta.ours_end_byte)
 				.unwrap_or_default()
 				.to_owned(),
-			theirs_content:  meta.theirs_content.clone(),
-			base_content:    meta.base_content.clone(),
-			base_label:      meta.base_label.clone(),
-			ours_label:      meta.ours_label.clone(),
-			theirs_label:    meta.theirs_label.clone(),
+			theirs_content: meta.theirs_content.clone(),
+			base_content: meta.base_content.clone(),
+			base_label: meta.base_label.clone(),
+			ours_label: meta.ours_label.clone(),
+			theirs_label: meta.theirs_label.clone(),
 		})
 		.collect::<Vec<_>>();
 	pending.sort_unstable_by_key(|conflict| conflict.ours_start_byte);
@@ -436,15 +436,18 @@ fn inject_pending_conflicts(
 			pending_conflict.ours_end_byte,
 		);
 
-		conflict_meta.insert(conflict_path, ConflictMeta {
-			theirs_content:  pending_conflict.theirs_content,
-			ours_label:      pending_conflict.ours_label,
-			theirs_label:    pending_conflict.theirs_label,
-			base_content:    pending_conflict.base_content,
-			base_label:      pending_conflict.base_label,
-			ours_start_byte: pending_conflict.ours_start_byte,
-			ours_end_byte:   pending_conflict.ours_end_byte,
-		});
+		conflict_meta.insert(
+			conflict_path,
+			ConflictMeta {
+				theirs_content: pending_conflict.theirs_content,
+				ours_label: pending_conflict.ours_label,
+				theirs_label: pending_conflict.theirs_label,
+				base_content: pending_conflict.base_content,
+				base_label: pending_conflict.base_label,
+				ours_start_byte: pending_conflict.ours_start_byte,
+				ours_end_byte: pending_conflict.ours_end_byte,
+			},
+		);
 	}
 
 	conflict_meta
@@ -670,15 +673,18 @@ fn a() {\n<<<<<<< HEAD\n\treturn foo();\n=======\n\treturn bar();\n>>>>>>> topic
 	fn reconstructs_conflict_markers_from_clean_source() {
 		let clean_source = "fn a() {\n\treturn foo();\n}\n";
 		let mut conflict_meta = HashMap::new();
-		conflict_meta.insert("fn_a.conflict_1".to_owned(), ConflictMeta {
-			theirs_content:  "\treturn bar();\n".to_owned(),
-			ours_label:      "HEAD".to_owned(),
-			theirs_label:    "topic".to_owned(),
-			base_content:    Some("\treturn baz();\n".to_owned()),
-			base_label:      Some("base".to_owned()),
-			ours_start_byte: 9,
-			ours_end_byte:   24,
-		});
+		conflict_meta.insert(
+			"fn_a.conflict_1".to_owned(),
+			ConflictMeta {
+				theirs_content: "\treturn bar();\n".to_owned(),
+				ours_label: "HEAD".to_owned(),
+				theirs_label: "topic".to_owned(),
+				base_content: Some("\treturn baz();\n".to_owned()),
+				base_label: Some("base".to_owned()),
+				ours_start_byte: 9,
+				ours_end_byte: 24,
+			},
+		);
 
 		let reconstructed = reconstruct_markers(clean_source, &conflict_meta);
 		assert_eq!(

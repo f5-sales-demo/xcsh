@@ -16,7 +16,7 @@ type ChunkLookup<'a> = HashMap<&'a str, &'a ChunkNode>;
 #[derive(Clone)]
 pub struct InlineHunkLine {
 	/// Fully indented line text ready to push as a meta line.
-	pub text:   String,
+	pub text: String,
 	/// Optional gutter marker (`*`, `-`, etc.) for the rendered meta line.
 	pub marker: Option<char>,
 }
@@ -220,10 +220,15 @@ fn render_state_impl(
 		let children =
 			visible_children_for_chunk(tree, chunk, &lookup, params.visible_range.as_ref(), focus_ref);
 		for (index, child) in children.iter().enumerate() {
-			emit_chunk_subtree(&mut ctx, child, 0, ChunkSubtreeOptions {
-				is_first_top_level:            index == 0,
-				between_top_level_definitions: true,
-			});
+			emit_chunk_subtree(
+				&mut ctx,
+				child,
+				0,
+				ChunkSubtreeOptions {
+					is_first_top_level: index == 0,
+					between_top_level_definitions: true,
+				},
+			);
 		}
 		emit_inline_hunks_for(&mut ctx, "");
 		return ctx.out;
@@ -233,18 +238,22 @@ fn render_state_impl(
 		if params.show_leaf_preview
 			&& intersect_visible_span(chunk, params.visible_range.as_ref()).is_some()
 		{
-			emit_chunk_subtree(&mut ctx, chunk, 0, ChunkSubtreeOptions {
-				is_first_top_level:            true,
-				between_top_level_definitions: false,
-			});
+			emit_chunk_subtree(
+				&mut ctx,
+				chunk,
+				0,
+				ChunkSubtreeOptions { is_first_top_level: true, between_top_level_definitions: false },
+			);
 		}
 		return ctx.out;
 	}
 
-	emit_chunk_subtree(&mut ctx, chunk, 0, ChunkSubtreeOptions {
-		is_first_top_level:            true,
-		between_top_level_definitions: false,
-	});
+	emit_chunk_subtree(
+		&mut ctx,
+		chunk,
+		0,
+		ChunkSubtreeOptions { is_first_top_level: true, between_top_level_definitions: false },
+	);
 	ctx.out
 }
 
@@ -429,13 +438,13 @@ fn chunk_head_body_lines(source: &str, chunk: &ChunkNode) -> (u32, u32) {
 #[derive(Clone, Copy)]
 struct VisibleSpan {
 	start: u32,
-	end:   u32,
+	end: u32,
 }
 
 #[derive(Clone, Copy)]
 struct LineSegment {
 	start: u32,
-	end:   u32,
+	end: u32,
 }
 
 fn intersect_visible_span(
@@ -545,7 +554,7 @@ fn build_leaf_entries(
 		};
 		LeafEntry::Line {
 			abs_line: line,
-			text:     source_lines
+			text: source_lines
 				.get(line.saturating_sub(1) as usize)
 				.map_or(String::new(), |text| {
 					normalize_rendered_line(text, normalize, tab_replacement)
@@ -841,27 +850,27 @@ fn compute_rendered_line_count(
 }
 
 struct RenderCtx<'a> {
-	out:                    String,
-	tree:                   &'a ChunkTree,
-	lookup:                 &'a ChunkLookup<'a>,
-	source:                 &'a str,
-	source_lines:           &'a [&'a str],
-	num_width:              usize,
-	visible_range:          Option<&'a VisibleLineRange>,
-	omit_checksum:          bool,
-	anchor_style:           ChunkAnchorStyle,
-	show_leaf_preview:      bool,
-	last_was_blank_meta:    bool,
+	out: String,
+	tree: &'a ChunkTree,
+	lookup: &'a ChunkLookup<'a>,
+	source: &'a str,
+	source_lines: &'a [&'a str],
+	num_width: usize,
+	visible_range: Option<&'a VisibleLineRange>,
+	omit_checksum: bool,
+	anchor_style: ChunkAnchorStyle,
+	show_leaf_preview: bool,
+	last_was_blank_meta: bool,
 	full_display_threshold: usize,
-	preview_head_lines:     usize,
-	preview_tail_lines:     usize,
-	tab_replacement:        &'a str,
-	normalize_indent:       Option<(char, usize)>,
-	fenced_lines:           HashSet<u32>,
-	focus:                  Option<HashMap<&'a str, ChunkFocusMode>>,
-	inline_hunks:           HashMap<String, Vec<InlineHunk>>,
-	compact_meta:           bool,
-	changed_anchor_paths:   HashSet<String>,
+	preview_head_lines: usize,
+	preview_tail_lines: usize,
+	tab_replacement: &'a str,
+	normalize_indent: Option<(char, usize)>,
+	fenced_lines: HashSet<u32>,
+	focus: Option<HashMap<&'a str, ChunkFocusMode>>,
+	inline_hunks: HashMap<String, Vec<InlineHunk>>,
+	compact_meta: bool,
+	changed_anchor_paths: HashSet<String>,
 }
 
 fn push_line(out: &mut String, line: String) {
@@ -1105,7 +1114,7 @@ fn emit_inline_hunks_for(ctx: &mut RenderCtx<'_>, chunk_path: &str) {
 }
 
 struct ChunkSubtreeOptions {
-	is_first_top_level:            bool,
+	is_first_top_level: bool,
 	between_top_level_definitions: bool,
 }
 
@@ -1197,10 +1206,12 @@ fn emit_chunk_subtree(
 					}
 				}
 			}
-			emit_chunk_subtree(ctx, child, depth + 1, ChunkSubtreeOptions {
-				is_first_top_level:            false,
-				between_top_level_definitions: false,
-			});
+			emit_chunk_subtree(
+				ctx,
+				child,
+				depth + 1,
+				ChunkSubtreeOptions { is_first_top_level: false, between_top_level_definitions: false },
+			);
 			cursor = cursor.max(child.end_line.saturating_add(1));
 		}
 		if cursor <= span.end && !is_container {
@@ -1213,10 +1224,15 @@ fn emit_chunk_subtree(
 		return;
 	}
 	for (index, child) in children.iter().enumerate() {
-		emit_chunk_subtree(ctx, child, depth + 1, ChunkSubtreeOptions {
-			is_first_top_level:            index == 0,
-			between_top_level_definitions: true,
-		});
+		emit_chunk_subtree(
+			ctx,
+			child,
+			depth + 1,
+			ChunkSubtreeOptions {
+				is_first_top_level: index == 0,
+				between_top_level_definitions: true,
+			},
+		);
 	}
 }
 

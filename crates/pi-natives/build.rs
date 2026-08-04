@@ -26,15 +26,15 @@ const PROMOTION_FIELD_PRIORITY: &[&str] = &["definition", "declaration", "item",
 
 #[derive(Clone, Copy)]
 struct GrammarSpec {
-	language:       &'static str,
-	package:        &'static str,
+	language: &'static str,
+	package: &'static str,
 	node_types_rel: &'static str,
 }
 
 #[derive(Deserialize)]
 struct RawTypeRef {
 	#[serde(rename = "type")]
-	kind:  Option<String>,
+	kind: Option<String>,
 	named: bool,
 }
 
@@ -43,14 +43,14 @@ struct RawFieldSpec {
 	#[serde(default)]
 	multiple: bool,
 	#[serde(default)]
-	types:    Vec<RawTypeRef>,
+	types: Vec<RawTypeRef>,
 }
 
 #[derive(Deserialize)]
 struct RawNodeType {
 	#[serde(rename = "type")]
-	kind:     Option<String>,
-	fields:   Option<BTreeMap<String, RawFieldSpec>>,
+	kind: Option<String>,
+	fields: Option<BTreeMap<String, RawFieldSpec>>,
 	children: Option<RawFieldSpec>,
 	subtypes: Option<Vec<RawTypeRef>>,
 }
@@ -62,293 +62,281 @@ struct GeneratedSchema {
 
 #[derive(serde::Serialize)]
 struct GeneratedNodeTypeSchema {
-	identifier_fields:       Vec<String>,
-	body_fields:             Vec<String>,
-	promotion_fields:        Vec<String>,
-	container_child_kinds:   Vec<String>,
-	is_supertype:            bool,
+	identifier_fields: Vec<String>,
+	body_fields: Vec<String>,
+	promotion_fields: Vec<String>,
+	container_child_kinds: Vec<String>,
+	is_supertype: bool,
 	has_structural_children: bool,
 }
 
 const GRAMMARS: &[GrammarSpec] = &[
 	GrammarSpec {
-		language:       "astro",
-		package:        "tree-sitter-astro-next",
+		language: "astro",
+		package: "tree-sitter-astro-next",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "bash",
-		package:        "tree-sitter-bash",
+		language: "bash",
+		package: "tree-sitter-bash",
+		node_types_rel: "src/node-types.json",
+	},
+	GrammarSpec { language: "c", package: "tree-sitter-c", node_types_rel: "src/node-types.json" },
+	GrammarSpec {
+		language: "clojure",
+		package: "tree-sitter-clojure",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "c",
-		package:        "tree-sitter-c",
+		language: "cmake",
+		package: "tree-sitter-cmake",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "clojure",
-		package:        "tree-sitter-clojure",
+		language: "cpp",
+		package: "tree-sitter-cpp",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "cmake",
-		package:        "tree-sitter-cmake",
+		language: "csharp",
+		package: "tree-sitter-c-sharp",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "cpp",
-		package:        "tree-sitter-cpp",
+		language: "css",
+		package: "tree-sitter-css",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "csharp",
-		package:        "tree-sitter-c-sharp",
+		language: "diff",
+		package: "tree-sitter-diff",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "css",
-		package:        "tree-sitter-css",
+		language: "dockerfile",
+		package: "tree-sitter-dockerfile-updated",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "diff",
-		package:        "tree-sitter-diff",
+		language: "elixir",
+		package: "tree-sitter-elixir",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "dockerfile",
-		package:        "tree-sitter-dockerfile-updated",
+		language: "erlang",
+		package: "tree-sitter-erlang",
+		node_types_rel: "src/node-types.json",
+	},
+	GrammarSpec { language: "go", package: "tree-sitter-go", node_types_rel: "src/node-types.json" },
+	GrammarSpec {
+		language: "graphql",
+		package: "tree-sitter-graphql",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "elixir",
-		package:        "tree-sitter-elixir",
+		language: "handlebars",
+		package: "tree-sitter-glimmer",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "erlang",
-		package:        "tree-sitter-erlang",
+		language: "haskell",
+		package: "tree-sitter-haskell",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "go",
-		package:        "tree-sitter-go",
+		language: "hcl",
+		package: "tree-sitter-hcl",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "graphql",
-		package:        "tree-sitter-graphql",
+		language: "html",
+		package: "tree-sitter-html",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "handlebars",
-		package:        "tree-sitter-glimmer",
+		language: "ini",
+		package: "tree-sitter-ini",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "haskell",
-		package:        "tree-sitter-haskell",
+		language: "java",
+		package: "tree-sitter-java",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "hcl",
-		package:        "tree-sitter-hcl",
+		language: "javascript",
+		package: "tree-sitter-javascript",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "html",
-		package:        "tree-sitter-html",
+		language: "json",
+		package: "tree-sitter-json",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "ini",
-		package:        "tree-sitter-ini",
+		language: "toml",
+		package: "tree-sitter-toml-ng",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "java",
-		package:        "tree-sitter-java",
+		language: "just",
+		package: "tree-sitter-just",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "javascript",
-		package:        "tree-sitter-javascript",
+		language: "julia",
+		package: "tree-sitter-julia",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "json",
-		package:        "tree-sitter-json",
+		language: "kotlin",
+		package: "tree-sitter-kotlin-sg",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "toml",
-		package:        "tree-sitter-toml-ng",
+		language: "lua",
+		package: "tree-sitter-lua",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "just",
-		package:        "tree-sitter-just",
+		language: "make",
+		package: "tree-sitter-make",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "julia",
-		package:        "tree-sitter-julia",
-		node_types_rel: "src/node-types.json",
-	},
-	GrammarSpec {
-		language:       "kotlin",
-		package:        "tree-sitter-kotlin-sg",
-		node_types_rel: "src/node-types.json",
-	},
-	GrammarSpec {
-		language:       "lua",
-		package:        "tree-sitter-lua",
-		node_types_rel: "src/node-types.json",
-	},
-	GrammarSpec {
-		language:       "make",
-		package:        "tree-sitter-make",
-		node_types_rel: "src/node-types.json",
-	},
-	GrammarSpec {
-		language:       "markdown",
-		package:        "tree-sitter-md",
+		language: "markdown",
+		package: "tree-sitter-md",
 		node_types_rel: "tree-sitter-markdown/src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "nix",
-		package:        "tree-sitter-nix",
+		language: "nix",
+		package: "tree-sitter-nix",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "objc",
-		package:        "tree-sitter-objc",
+		language: "objc",
+		package: "tree-sitter-objc",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "odin",
-		package:        "tree-sitter-odin",
+		language: "odin",
+		package: "tree-sitter-odin",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "perl",
-		package:        "tree-sitter-perl-next",
+		language: "perl",
+		package: "tree-sitter-perl-next",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "php",
-		package:        "tree-sitter-php",
+		language: "php",
+		package: "tree-sitter-php",
 		node_types_rel: "php/src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "powershell",
-		package:        "tree-sitter-powershell",
+		language: "powershell",
+		package: "tree-sitter-powershell",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "protobuf",
-		package:        "tree-sitter-proto",
+		language: "protobuf",
+		package: "tree-sitter-proto",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "python",
-		package:        "tree-sitter-python",
+		language: "python",
+		package: "tree-sitter-python",
+		node_types_rel: "src/node-types.json",
+	},
+	GrammarSpec { language: "r", package: "tree-sitter-r", node_types_rel: "src/node-types.json" },
+	GrammarSpec {
+		language: "regex",
+		package: "tree-sitter-regex",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "r",
-		package:        "tree-sitter-r",
+		language: "ruby",
+		package: "tree-sitter-ruby",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "regex",
-		package:        "tree-sitter-regex",
+		language: "rust",
+		package: "tree-sitter-rust",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "ruby",
-		package:        "tree-sitter-ruby",
+		language: "scala",
+		package: "tree-sitter-scala",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "rust",
-		package:        "tree-sitter-rust",
+		language: "solidity",
+		package: "tree-sitter-solidity",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "scala",
-		package:        "tree-sitter-scala",
+		language: "sql",
+		package: "tree-sitter-sequel",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "solidity",
-		package:        "tree-sitter-solidity",
+		language: "starlark",
+		package: "tree-sitter-starlark",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "sql",
-		package:        "tree-sitter-sequel",
+		language: "svelte",
+		package: "tree-sitter-svelte-next",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "starlark",
-		package:        "tree-sitter-starlark",
+		language: "swift",
+		package: "tree-sitter-swift",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "svelte",
-		package:        "tree-sitter-svelte-next",
+		language: "toml",
+		package: "tree-sitter-toml-ng",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "swift",
-		package:        "tree-sitter-swift",
+		language: "tlaplus",
+		package: "tree-sitter-tlaplus",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "toml",
-		package:        "tree-sitter-toml-ng",
-		node_types_rel: "src/node-types.json",
-	},
-	GrammarSpec {
-		language:       "tlaplus",
-		package:        "tree-sitter-tlaplus",
-		node_types_rel: "src/node-types.json",
-	},
-	GrammarSpec {
-		language:       "tsx",
-		package:        "tree-sitter-typescript",
+		language: "tsx",
+		package: "tree-sitter-typescript",
 		node_types_rel: "tsx/src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "typescript",
-		package:        "tree-sitter-typescript",
+		language: "typescript",
+		package: "tree-sitter-typescript",
 		node_types_rel: "typescript/src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "verilog",
-		package:        "tree-sitter-verilog",
+		language: "verilog",
+		package: "tree-sitter-verilog",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "vue",
-		package:        "tree-sitter-vue-next",
+		language: "vue",
+		package: "tree-sitter-vue-next",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "xml",
-		package:        "tree-sitter-xml",
+		language: "xml",
+		package: "tree-sitter-xml",
 		node_types_rel: "xml/src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "yaml",
-		package:        "tree-sitter-yaml",
+		language: "yaml",
+		package: "tree-sitter-yaml",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {
-		language:       "zig",
-		package:        "tree-sitter-zig",
+		language: "zig",
+		package: "tree-sitter-zig",
 		node_types_rel: "src/node-types.json",
 	},
 ];
@@ -431,14 +419,17 @@ fn build_language_schema(raw_nodes: Vec<RawNodeType>) -> BTreeMap<String, Genera
 			continue;
 		}
 
-		out.insert(kind.clone(), GeneratedNodeTypeSchema {
-			identifier_fields,
-			body_fields,
-			promotion_fields,
-			container_child_kinds,
-			is_supertype,
-			has_structural_children,
-		});
+		out.insert(
+			kind.clone(),
+			GeneratedNodeTypeSchema {
+				identifier_fields,
+				body_fields,
+				promotion_fields,
+				container_child_kinds,
+				is_supertype,
+				has_structural_children,
+			},
+		);
 	}
 
 	out
@@ -526,7 +517,7 @@ fn collect_promotion_fields(
 
 #[derive(Clone, Copy, Default)]
 struct StructuralState {
-	is_structural:           bool,
+	is_structural: bool,
 	has_structural_children: bool,
 }
 
@@ -545,10 +536,10 @@ fn compute_structural_state(
 			let base_structural = is_supertype(raw)
 				|| raw.fields.as_ref().is_some_and(|fields| !fields.is_empty())
 				|| !named_child_type_kinds(raw).is_empty();
-			(kind.clone(), StructuralState {
-				is_structural:           base_structural,
-				has_structural_children: false,
-			})
+			(
+				kind.clone(),
+				StructuralState { is_structural: base_structural, has_structural_children: false },
+			)
 		})
 		.collect::<HashMap<_, _>>();
 

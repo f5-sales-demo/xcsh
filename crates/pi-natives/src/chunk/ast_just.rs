@@ -31,15 +31,15 @@ const JUST_FUNCTION_RULES: &[super::classify::SemanticRule] = &[
 ];
 
 const JUST_TABLES: ClassifierTables = ClassifierTables {
-	root:                 &[],
-	class:                &[],
-	function:             JUST_FUNCTION_RULES,
+	root: &[],
+	class: &[],
+	function: JUST_FUNCTION_RULES,
 	structural_overrides: StructuralOverrides {
-		extra_trivia:            &[],
-		preserved_trivia:        &[],
-		extra_root_wrappers:     &["source_file"],
+		extra_trivia: &[],
+		preserved_trivia: &[],
+		extra_root_wrappers: &["source_file"],
 		preserved_root_wrappers: &[],
-		absorbable_attrs:        &[],
+		absorbable_attrs: &[],
 	},
 };
 

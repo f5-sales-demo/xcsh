@@ -83,7 +83,7 @@ impl ShellAbortState {
 
 #[derive(Clone)]
 struct ShellConfig {
-	session_env:   Option<HashMap<String, String>>,
+	session_env: Option<HashMap<String, String>>,
 	snapshot_path: Option<String>,
 }
 
@@ -95,25 +95,25 @@ struct ShellConfig {
 #[napi(object)]
 pub struct ContainmentFenceOptions {
 	/// Roots the shell may read and write.
-	pub allow:            Vec<String>,
+	pub allow: Vec<String>,
 	/// Roots the shell may read but not write.
-	pub allow_read_only:  Vec<String>,
+	pub allow_read_only: Vec<String>,
 	/// Roots the shell may write but not read.
 	pub allow_write_only: Vec<String>,
 	/// Roots denied in both directions, winning over any allow they sit inside.
-	pub deny:             Vec<String>,
+	pub deny: Vec<String>,
 	/// Exact directories whose entries may not be enumerated.
-	pub deny_enumerate:   Vec<String>,
+	pub deny_enumerate: Vec<String>,
 }
 
 impl From<&ContainmentFenceOptions> for ContainmentFence {
 	fn from(options: &ContainmentFenceOptions) -> Self {
 		Self {
-			allow:            options.allow.iter().map(PathBuf::from).collect(),
-			allow_read_only:  options.allow_read_only.iter().map(PathBuf::from).collect(),
+			allow: options.allow.iter().map(PathBuf::from).collect(),
+			allow_read_only: options.allow_read_only.iter().map(PathBuf::from).collect(),
 			allow_write_only: options.allow_write_only.iter().map(PathBuf::from).collect(),
-			deny:             options.deny.iter().map(PathBuf::from).collect(),
-			deny_enumerate:   options.deny_enumerate.iter().map(PathBuf::from).collect(),
+			deny: options.deny.iter().map(PathBuf::from).collect(),
+			deny_enumerate: options.deny_enumerate.iter().map(PathBuf::from).collect(),
 		}
 	}
 }
@@ -142,11 +142,11 @@ pub fn fence_permits(
 #[napi(object)]
 pub struct ContainmentBackendInfo {
 	/// `"landlock"`, `"seatbelt"`, or `"scanner-only"` when the OS cannot help.
-	pub backend:          String,
+	pub backend: String,
 	/// Landlock ABI version, when that is the backend.
-	pub abi:              Option<u32>,
+	pub abi: Option<u32>,
 	/// Why there is no OS backend, when there is none.
-	pub reason:           Option<String>,
+	pub reason: Option<String>,
 	/// Whether truncation is governed. False on Landlock ABI 2, which is a real
 	/// if narrow gap.
 	pub truncate_handled: bool,
@@ -168,15 +168,15 @@ pub fn containment_backend() -> ContainmentBackendInfo {
 
 		match availability() {
 			Availability::Available(abi) => ContainmentBackendInfo {
-				backend:          "landlock".to_owned(),
-				abi:              Some(abi),
-				reason:           None,
+				backend: "landlock".to_owned(),
+				abi: Some(abi),
+				reason: None,
 				truncate_handled: truncate_handled(abi),
 			},
 			Availability::Unavailable(reason) => ContainmentBackendInfo {
-				backend:          "scanner-only".to_owned(),
-				abi:              None,
-				reason:           Some(reason.reason().to_owned()),
+				backend: "scanner-only".to_owned(),
+				abi: None,
+				reason: Some(reason.reason().to_owned()),
 				truncate_handled: false,
 			},
 		}
@@ -184,18 +184,18 @@ pub fn containment_backend() -> ContainmentBackendInfo {
 	#[cfg(target_os = "macos")]
 	{
 		ContainmentBackendInfo {
-			backend:          "seatbelt".to_owned(),
-			abi:              None,
-			reason:           None,
+			backend: "seatbelt".to_owned(),
+			abi: None,
+			reason: None,
 			truncate_handled: true,
 		}
 	}
 	#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 	{
 		ContainmentBackendInfo {
-			backend:          "scanner-only".to_owned(),
-			abi:              None,
-			reason:           Some("no OS containment backend exists for this platform".to_owned()),
+			backend: "scanner-only".to_owned(),
+			abi: None,
+			reason: Some("no OS containment backend exists for this platform".to_owned()),
 			truncate_handled: false,
 		}
 	}
@@ -205,7 +205,7 @@ pub fn containment_backend() -> ContainmentBackendInfo {
 #[napi(object)]
 pub struct ShellOptions {
 	/// Environment variables to apply once per session.
-	pub session_env:   Option<HashMap<String, String>>,
+	pub session_env: Option<HashMap<String, String>>,
 	/// Optional snapshot file to source on session creation.
 	pub snapshot_path: Option<String>,
 }
@@ -215,28 +215,28 @@ struct ShellRunConfig {
 	/// Command string to execute in the shell.
 	command: String,
 	/// Working directory for the command.
-	cwd:     Option<String>,
+	cwd: Option<String>,
 	/// Environment variables to apply for this command only.
-	env:     Option<HashMap<String, String>>,
+	env: Option<HashMap<String, String>>,
 	/// Which paths this command may reach. `None` is unrestricted.
-	fence:   Option<Arc<ContainmentFence>>,
+	fence: Option<Arc<ContainmentFence>>,
 }
 
 /// Options for running a shell command.
 #[napi(object)]
 pub struct ShellRunOptions<'env> {
 	/// Command string to execute in the shell.
-	pub command:    String,
+	pub command: String,
 	/// Working directory for the command.
-	pub cwd:        Option<String>,
+	pub cwd: Option<String>,
 	/// Environment variables to apply for this command only.
-	pub env:        Option<HashMap<String, String>>,
+	pub env: Option<HashMap<String, String>>,
 	/// Timeout in milliseconds before cancelling the command.
 	pub timeout_ms: Option<u32>,
 	/// Abort signal for cancelling the operation.
-	pub signal:     Option<Unknown<'env>>,
+	pub signal: Option<Unknown<'env>>,
 	/// Which paths this command may reach. Absent means unrestricted.
-	pub fence:      Option<ContainmentFenceOptions>,
+	pub fence: Option<ContainmentFenceOptions>,
 }
 
 /// Result of running a shell command.
@@ -253,9 +253,9 @@ pub struct ShellRunResult {
 /// Persistent brush-core shell session.
 #[napi]
 pub struct Shell {
-	session:     Arc<TokioMutex<Option<ShellSessionCore>>>,
+	session: Arc<TokioMutex<Option<ShellSessionCore>>>,
 	abort_state: ShellAbortState,
-	config:      ShellConfig,
+	config: ShellConfig,
 }
 
 #[napi]
@@ -296,9 +296,9 @@ impl Shell {
 
 		let run_config = ShellRunConfig {
 			command: options.command,
-			cwd:     options.cwd,
-			env:     options.env,
-			fence:   options
+			cwd: options.cwd,
+			env: options.env,
+			fence: options
 				.fence
 				.as_ref()
 				.map(|f| Arc::new(ContainmentFence::from(f))),
@@ -385,21 +385,21 @@ async fn run_shell_session(
 #[napi(object)]
 pub struct ShellExecuteOptions<'env> {
 	/// Command string to execute in the shell.
-	pub command:       String,
+	pub command: String,
 	/// Working directory for the command.
-	pub cwd:           Option<String>,
+	pub cwd: Option<String>,
 	/// Environment variables to apply for this command only.
-	pub env:           Option<HashMap<String, String>>,
+	pub env: Option<HashMap<String, String>>,
 	/// Environment variables to apply once per session.
-	pub session_env:   Option<HashMap<String, String>>,
+	pub session_env: Option<HashMap<String, String>>,
 	/// Timeout in milliseconds before cancelling the command.
-	pub timeout_ms:    Option<u32>,
+	pub timeout_ms: Option<u32>,
 	/// Optional snapshot file to source on session creation.
 	pub snapshot_path: Option<String>,
 	/// Abort signal for cancelling the operation.
-	pub signal:        Option<Unknown<'env>>,
+	pub signal: Option<Unknown<'env>>,
 	/// Which paths this command may reach. Absent means unrestricted.
-	pub fence:         Option<ContainmentFenceOptions>,
+	pub fence: Option<ContainmentFenceOptions>,
 }
 
 /// Result of executing a shell command via brush-core.
@@ -429,9 +429,9 @@ pub fn execute_shell<'env>(
 		ShellConfig { session_env: options.session_env, snapshot_path: options.snapshot_path };
 	let run_config = ShellRunConfig {
 		command: options.command,
-		cwd:     options.cwd,
-		env:     options.env,
-		fence:   options
+		cwd: options.cwd,
+		env: options.env,
+		fence: options
 			.fence
 			.as_ref()
 			.map(|f| Arc::new(ContainmentFence::from(f))),
@@ -1157,7 +1157,7 @@ struct TimeoutCommand {
 	#[arg(required = true)]
 	duration: String,
 	#[arg(required = true, num_args = 1.., trailing_var_arg = true)]
-	command:  Vec<String>,
+	command: Vec<String>,
 }
 
 impl builtins::Command for TimeoutCommand {

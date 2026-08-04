@@ -267,7 +267,7 @@
 	"welcome.modelProvider": "模型供應商",
 	"welcome.plugins": "外掛程式",
 	"welcome.pluginSetupHint": "執行：/plugin setup",
-	"welcome.updateHint": "執行：xcsh update",
+	"welcome.updateHint": "執行：xcsh self-update",
 	"welcome.newVersion": "新版本",
 	"welcome.connectionFailed": "— 連線失敗",
 	"welcome.runLoginReconnect": "執行 /login 重新連線",

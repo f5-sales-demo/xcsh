@@ -1,7 +1,7 @@
 /**
  * Update CLI command handler.
  *
- * Handles `xcsh update` to check for and install updates.
+ * Handles `xcsh self-update` to check for and install executable updates.
  * Auto-detects the installation method (npm, brew, bun, or standalone binary)
  * and updates through the appropriate channel.
  */
