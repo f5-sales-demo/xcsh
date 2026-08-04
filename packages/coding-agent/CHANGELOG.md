@@ -2,7 +2,7 @@
 
 # Changelog
 
-## [Unreleased]
+## [20.4.0] - 2026-08-04
 
 ### Breaking Changes
 
