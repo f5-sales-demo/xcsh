@@ -134,16 +134,16 @@ describe("Antigravity project sources", () => {
 				metadataPath,
 				JSON.stringify({
 					auth_method: "oauth",
-					project_id: "metadata-enterprise-project",
+					project_id: "123456789012",
 					region: "",
 					token: "credential-sentinel-must-not-leak",
 				}),
 				{ mode: 0o600 },
 			);
 
-			expect(await readAntigravityCliProjectId(metadataPath)).toBe("metadata-enterprise-project");
+			expect(await readAntigravityCliProjectId(metadataPath)).toBe("123456789012");
 
-			await fs.writeFile(metadataPath, '{"project_id": "invalid", "token": "credential-sentinel');
+			await fs.writeFile(metadataPath, '{"project_id": "123456789012", "token": "credential-sentinel');
 			expect(await readAntigravityCliProjectId(metadataPath)).toBeUndefined();
 		} finally {
 			await fs.rm(tempDirectory, { recursive: true, force: true });

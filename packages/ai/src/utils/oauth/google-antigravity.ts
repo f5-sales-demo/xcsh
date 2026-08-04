@@ -33,6 +33,7 @@ const TIER_LEGACY = "legacy-tier";
 const PROJECT_ONBOARD_MAX_ATTEMPTS = 5;
 const PROJECT_ONBOARD_INTERVAL_MS = 2000;
 const PROJECT_ID_PATTERN = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
+const PROJECT_NUMBER_PATTERN = /^\d{12}$/;
 const ANTIGRAVITY_CLI_TOKEN_PATH = join(homedir(), ".gemini", "antigravity-cli", "antigravity-oauth-token");
 
 interface LoadCodeAssistPayload {
@@ -84,7 +85,7 @@ export interface AntigravityLoginOptions {
 function normalizeProjectId(value: unknown): string | undefined {
 	if (typeof value !== "string") return undefined;
 	const projectId = value.trim();
-	return PROJECT_ID_PATTERN.test(projectId) ? projectId : undefined;
+	return PROJECT_ID_PATTERN.test(projectId) || PROJECT_NUMBER_PATTERN.test(projectId) ? projectId : undefined;
 }
 
 export async function readAntigravityCliProjectId(
@@ -167,7 +168,9 @@ export async function resolveAntigravityProjectId(
 	if (!input.trim()) return undefined;
 	const promptedProjectId = normalizeProjectId(input);
 	if (!promptedProjectId) {
-		throw new Error("Invalid Google Cloud project ID. Use 6-30 lowercase letters, digits, or hyphens.");
+		throw new Error(
+			"Invalid Google Cloud project. Use a 6-30 character lowercase project ID or a 12-digit project number.",
+		);
 	}
 	return promptedProjectId;
 }
