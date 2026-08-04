@@ -24,6 +24,17 @@ export const CANONICAL_ELEMENTS = [
 	"Competition",
 ] as const;
 
+const CANONICAL_ELEMENT_KEYS: Record<(typeof CANONICAL_ELEMENTS)[number], string> = {
+	Metrics: "metrics",
+	"Economic Buyer": "economicBuyer",
+	"Decision Criteria": "decisionCriteria",
+	"Decision Process": "decisionProcess",
+	"Paper Process": "paperProcess",
+	"Identify Pain": "implicateThePain",
+	Champion: "champion",
+	Competition: "competition",
+};
+
 export interface MeddpiccStep {
 	number: number;
 	title: string;
@@ -112,6 +123,11 @@ function mentionsWorkspace(reply: string, workspace: string): boolean {
 	return aliases.some(alias => reply.includes(alias));
 }
 
+function mentionsElement(reply: string, element: (typeof CANONICAL_ELEMENTS)[number]): boolean {
+	if (includes(reply, element) || includes(reply, CANONICAL_ELEMENT_KEYS[element])) return true;
+	return element === "Identify Pain" && includes(reply, "Implicate the Pain");
+}
+
 function unchangedFiles(observation: ScenarioObservation): boolean {
 	return JSON.stringify(observation.filesBefore) === JSON.stringify(observation.filesAfter);
 }
@@ -158,12 +174,7 @@ export function validateMeddpiccStep(stepNumber: number, observation: ScenarioOb
 		case 3:
 			return [
 				...CANONICAL_ELEMENTS.map(element =>
-					assertion(
-						`reply defines ${element}`,
-						element === "Identify Pain"
-							? includes(reply, "Identify Pain") || includes(reply, "Implicate the Pain")
-							: includes(reply, element),
-					),
+					assertion(`reply defines ${element}`, mentionsElement(reply, element)),
 				),
 				assertion("installed plugin resource was read", successfulTool(observation, ["read", "bash"])),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),

@@ -102,6 +102,16 @@ describe("five-step MEDDPICC scenario", () => {
 		);
 	});
 
+	test("step 3 accepts canonical schema keys", () => {
+		allPass(
+			3,
+			observation({
+				reply: "metrics; economicBuyer; decisionCriteria; decisionProcess; paperProcess; implicateThePain; champion; competition — schema definitions.",
+				toolNotices: [{ tool: "read", ok: true, detail: "read: done" }],
+			}),
+		);
+	});
+
 	test("step 4 proves the three evidence-backed priority gaps without mutation", () => {
 		expect(MEDDPICC_STEPS[3].prompt).toContain("eight MEDDPICC qualification elements");
 		allPass(
