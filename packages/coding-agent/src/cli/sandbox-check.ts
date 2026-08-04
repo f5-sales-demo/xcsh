@@ -12,6 +12,7 @@ import {
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
+	sandboxCheckSiblingRoot,
 } from "../sandbox/session-fence";
 import type { ToolSession } from "../tools";
 import { BashTool } from "../tools/bash";
@@ -220,7 +221,15 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		redactions.push([liveWorkspace, "<workspace>"], [liveHome, "<operator-home>"]);
 		if (inheritedSibling !== undefined) redactions.push([inheritedSibling, "<session-parent>/<synthetic-sibling>"]);
 
-		const fixtureBase = inheritedProfile ? liveWorkspace : await fs.realpath(os.tmpdir());
+		// A home-rooted Landlock profile must split the home grant around protected session stores. The
+		// kernel can grant an existing named child but cannot grant future children of that split root
+		// without also reopening the protected stores. BashTool therefore prepares one host-owned child
+		// before confinement; keep all exact-home live fixtures beneath that already-granted directory.
+		const liveWritableRoot =
+			inheritedProfile && liveWorkspace === liveHome && inheritedSibling !== undefined
+				? inheritedSibling
+				: liveWorkspace;
+		const fixtureBase = inheritedProfile ? liveWritableRoot : await fs.realpath(os.tmpdir());
 		fixtureRoot = await fs.mkdtemp(path.join(fixtureBase, ".xcsh-sandbox-check-policy-"));
 		fixturePaths.push(fixtureRoot);
 		redactions.push([fixtureRoot, "<synthetic-root>"]);
@@ -257,14 +266,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		await check("structured tools share the boundary", () => {
 			const blocked = [
 				evaluateToolCall({ toolName: "read", input: { file_path: workspaces }, cwd: workspace, fence }),
-				evaluateToolCall({
-					toolName: "write",
-					input: { file_path: path.join(otherHome, "new.txt") },
-					cwd: workspace,
-					fence,
-				}),
 				evaluateToolCall({ toolName: "find", input: { pattern: `${accountRoot}/**/*` }, cwd: workspace, fence }),
-				evaluateToolCall({ toolName: "grep", input: { path: otherHome }, cwd: workspace, fence }),
 				evaluateToolCall({
 					toolName: "read",
 					input: { file_path: path.join(otherSession, "state.jsonl") },
@@ -277,20 +279,29 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					cwd: workspace,
 					fence,
 				}),
+			];
+			const allowed = [
+				evaluateToolCall({
+					toolName: "write",
+					input: { file_path: path.join(otherHome, "new.txt") },
+					cwd: workspace,
+					fence,
+				}),
+				evaluateToolCall({ toolName: "grep", input: { path: otherHome }, cwd: workspace, fence }),
 				evaluateToolCall({
 					toolName: "python",
 					input: { code: `import os; os.listdir(${JSON.stringify(accountRoot)})` },
 					cwd: workspace,
 					fence,
 				}),
+				evaluateToolCall({
+					toolName: "write",
+					input: { file_path: path.join(configDir, "config") },
+					cwd: workspace,
+					fence,
+				}),
 			];
-			const ownConfig = evaluateToolCall({
-				toolName: "write",
-				input: { file_path: path.join(configDir, "config") },
-				cwd: workspace,
-				fence,
-			});
-			const passed = blocked.every(result => result.block) && !ownConfig.block;
+			const passed = blocked.every(result => result.block) && allowed.every(result => !result.block);
 			return passed
 				? { passed: true }
 				: {
@@ -299,11 +310,61 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					};
 		});
 
+		// Use a recursive synthetic deny here. The production account root is discovery-only, so testing
+		// against that fence alone would pass even if arbitrary source scanning were accidentally restored.
+		const sourceTextFence: ContainmentFence = {
+			...fence,
+			deny: [...fence.deny, accountRoot],
+		};
+		const pathLikePattern = `${accountRoot}${path.sep}|alpha`;
+		await check("Bash grep pattern remains data (#2931)", () => {
+			const bashResult = evaluateToolCall({
+				toolName: "bash",
+				input: { command: `grep -nE ${JSON.stringify(pathLikePattern)} own.txt` },
+				cwd: workspace,
+				fence: sourceTextFence,
+			});
+			const grepResult = evaluateToolCall({
+				toolName: "grep",
+				input: { pattern: pathLikePattern, path: workspace },
+				cwd: workspace,
+				fence: sourceTextFence,
+			});
+			return !bashResult.block && !grepResult.block
+				? { passed: true }
+				: {
+						passed: false,
+						detail:
+							"Bash and structured grep disagreed on path-like pattern data; path=<synthetic-root>; errno=none",
+					};
+		});
+		await check("Bash Python heredoc remains data (#2931)", () => {
+			const command = [
+				"python3 - <<'PY'",
+				`patterns = {"home path": ${JSON.stringify(`${accountRoot}${path.sep}`)}}`,
+				'print("  scanned for:", list(patterns.values()))',
+				"PY",
+			].join("\n");
+			const result = evaluateToolCall({
+				toolName: "bash",
+				input: { command },
+				cwd: workspace,
+				fence: sourceTextFence,
+			});
+			return !result.block
+				? { passed: true }
+				: {
+						passed: false,
+						detail:
+							"Bash pre-check interpreted Python heredoc source as a path; path=<synthetic-root>; errno=none",
+					};
+		});
+
 		await check("workspace read, write, glob, and recursion", async () => {
 			const displayPath = "<workspace>/<synthetic-fixture>";
 			let liveFixture: string;
 			try {
-				liveFixture = await fs.mkdtemp(path.join(liveWorkspace, ".xcsh-sandbox-check-workspace-"));
+				liveFixture = await fs.mkdtemp(path.join(liveWritableRoot, ".xcsh-sandbox-check-workspace-"));
 				fixturePaths.push(liveFixture);
 				redactions.push([liveFixture, displayPath]);
 				await fs.mkdir(path.join(liveFixture, "nested"));
@@ -329,7 +390,9 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			let liveSibling = inheritedSibling;
 			if (liveSibling === undefined) {
 				try {
-					liveSibling = await fs.mkdtemp(path.join(path.dirname(liveWorkspace), ".xcsh-sandbox-check-sibling-"));
+					liveSibling = await fs.mkdtemp(
+						path.join(sandboxCheckSiblingRoot(liveWorkspace, liveHome), ".xcsh-sandbox-check-sibling-"),
+					);
 					fixturePaths.push(liveSibling);
 					nonEnumerableCleanupDirs.add(liveSibling);
 					redactions.push([liveSibling, displayPath]);
@@ -420,12 +483,12 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					redactions,
 				);
 			});
-			await check("synthetic other account cannot be entered", async () => {
+			await check("named other account remains reachable", async () => {
 				const result = await shellProbe(`cd ${quote(otherHome)}`, workspace, fence, abortController.signal);
 				return shellOutcome(
 					result,
-					false,
-					"synthetic other account traversal must be refused",
+					true,
+					"named synthetic account traversal must remain available",
 					"<synthetic-other-account>",
 					redactions,
 				);
@@ -465,7 +528,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				"session parent cannot be enumerated",
 				"explicit grant restores parent enumeration",
 				"account container cannot be enumerated",
-				"synthetic other account cannot be entered",
+				"named other account remains reachable",
 				"cross-session stores cannot be read",
 			]) {
 				add(name, "SKIP", "OS enforcement backend unavailable; path=<probe>; errno=unsupported");

@@ -13,19 +13,20 @@ followed symlinks — so how a path is spelled does not change what is reachable
 - The operator's home and configuration belong to the operator. Shell profiles, SSH and GPG state,
   Git and cloud CLI configuration, xcsh settings, plugins, and skills are readable and writable with
   the operator's normal filesystem rights.
-- Cross-tenant isolation removes the discovery step. The directory containing the session root cannot
-  be enumerated, but a sibling path the operator names directly can still be read, written, or entered.
-  An explicit read grant, including `--allow-path <dir>`, restores enumeration for that directory.
-- Cross-session stores, other operators' accounts, and data roots remain denied. Another session's
-  transcripts, memories, internal contexts, and temporary working state are not reachable through
-  tools, nor are sibling local accounts, unrelated data roots, and mounted data volumes.
+- Cross-tenant isolation removes the discovery step. The session container, local-account containers,
+  data roots, and mounted-data containers cannot be enumerated, but a descendant path the operator
+  names directly can still be read, written, or entered. An explicit read grant restores enumeration.
+- Xcsh-private cross-session stores remain denied recursively. Another session's transcripts, memories,
+  internal contexts, credentials, and temporary working state are not reachable unless the operator
+  explicitly grants the relevant root.
 
-The same boundary answers for every tool. `read`, `write`, `grep`, `find`, `python`, and `bash` consult
-the same rules, so changing tools or spelling a path differently does not widen the session.
+Structured filesystem tools and the `bash` runtime consult the same fence. Bash command text is not
+scanned for path-looking strings; the operating system decides when a process actually opens a path.
+The persistent `python` kernel cannot carry a per-session runtime fence, so only an explicit Python
+`cwd` is checked. Python source and cell text are not scanned.
 
 If parent enumeration is refused, use a known path or ask the operator for an explicit read grant. If
-a cross-session or data-root path is refused, do not try to reach it another way. Say what you needed
-and why.
+an xcsh-private cross-session path is refused, say what you needed and why.
 
 This sandbox is a courtesy for session-context isolation, not a privilege boundary against xcsh or the
 operator. The rule of thumb is that if a file belongs to someone other than the operator you are
@@ -47,14 +48,12 @@ Three things behave differently under this backend, and none of them is a bug to
 {{/if}}
 {{else}}
 On this platform there is **no OS-level backend**, so for `bash` the boundary is enforced only by
-scanning the command text before it runs. That check is best-effort by construction: it reads what you
-wrote rather than what the shell will do, so a path assembled at runtime or reached through an unusual
-spelling may not be caught.
+precise pre-checks for an explicit `cwd`, literal redirections, known write operands, and literal
+directory changes. Command and source text are never scanned for path-looking strings.
 
-The intended rules are the same ones a confined session has: parent enumeration is refused while named
-operator access remains available, operator-owned home and configuration stay readable and writable,
-and cross-session stores, other operators' accounts, and unrelated data roots stay denied. Ordinary
-work remains unrestricted.
+Without a runtime backend, Bash child-process reads cannot enforce protected-container enumeration or
+xcsh-private-root denial. Structured tools still enforce those rules, and ordinary work remains
+unrestricted. The persistent `python` kernel is likewise unfenced beyond its explicit `cwd` check.
 
 Treat the boundary as a statement of intent rather than a guarantee, and do not go looking for paths
 outside the session directory on the assumption that something would stop you.

@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getSessionsDir } from "@f5-sales-demo/pi-utils";
 import { fenceVerdict } from "../src/sandbox/containment";
 import { resolveSessionFence, type SettingsReader } from "../src/sandbox/session-fence";
 
@@ -119,7 +120,9 @@ describe("resolveSessionFence", () => {
 	// is what let the two disagree before. A different extras value must not be served from cache.
 	it("keys the cache on extra roots too", () => {
 		const { mine } = tenants("extras");
-		const artifacts = path.join(path.parse(mine).root, "srv", "xcsh-artifacts-test");
+		// A private session-store descendant is denied without the explicit runtime grant and opened by it.
+		// Unlike `/srv`, this is a recursive deny, so the assertion proves the extra root changed the fence.
+		const artifacts = path.join(getSessionsDir(), "xcsh-artifacts-test");
 		const without = resolveSessionFence(mine, reader({}))!;
 		const with_ = resolveSessionFence(mine, reader({}), { extraRoots: [artifacts] })!;
 		expect(without).not.toBe(with_);

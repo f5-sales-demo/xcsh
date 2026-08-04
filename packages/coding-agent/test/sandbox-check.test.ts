@@ -30,8 +30,9 @@ function sandboxCheckCommand(flags: string[] = [], prefixFlags: string[] = []): 
 async function runSandboxCheckProcess(
 	flags: string[],
 	env: Record<string, string | undefined> = process.env,
+	cwd = process.cwd(),
 ): Promise<$.ShellOutput> {
-	return await $`${{ raw: sandboxCheckCommand(flags) }}`.env(env).quiet().nothrow();
+	return await $`${{ raw: sandboxCheckCommand(flags) }}`.cwd(cwd).env(env).quiet().nothrow();
 }
 
 function resultText(result: AgentToolResult<BashToolDetails>): string {
@@ -83,20 +84,31 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	expect(["seatbelt", "landlock", "scanner-only"]).toContain(report.backend);
 	expect(report.summary.failed).toBe(0);
 	expect(report.summary.errors).toBe(0);
-	expect(report.checks).toHaveLength(11);
+	expect(report.checks).toHaveLength(13);
 	expect(report.checks).toContainEqual({ name: "structured tools share the boundary", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "Bash grep pattern remains data (#2931)", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "Bash Python heredoc remains data (#2931)", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "cwd resets across tool calls", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
 	if (report.osEnforced) {
-		expect(report.summary).toEqual({ passed: 11, failed: 0, errors: 0, skipped: 0 });
+		expect(report.summary).toEqual({ passed: 13, failed: 0, errors: 0, skipped: 0 });
 		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
-		expect(report.checks).toContainEqual({ name: "synthetic other account cannot be entered", status: "PASS" });
+		expect(report.checks).toContainEqual({ name: "named other account remains reachable", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "explicit grant restores parent enumeration", status: "PASS" });
 	}
 }
 
 it("runs the flag-free sandbox check named by launch-flag diagnostics and verifies fixture cleanup", async () => {
 	const result = await runSandboxCheckProcess(["--json"]);
+	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
+
+	expect(result.exitCode).toBe(0);
+	assertHealthyReport(report);
+}, 30_000);
+
+it("reports a healthy matrix when invoked from operator home", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const result = await runSandboxCheckProcess(["--json"], process.env, home);
 	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
 
 	expect(result.exitCode).toBe(0);
@@ -159,7 +171,22 @@ it("reports a healthy matrix when invoked inside the live bash profile", async (
 	}
 }, 30_000);
 
-it("reports a healthy matrix for a live session rooted directly under operator home", async () => {
+it("reports a healthy matrix for a live session rooted at operator home", async () => {
+	const home = fs.realpathSync(os.homedir());
+	const liveSiblingPrefix = ".xcsh-sandbox-check-live-sibling-";
+	const liveSiblingCount = (): number =>
+		fs.readdirSync(home).filter(entry => entry.startsWith(liveSiblingPrefix)).length;
+	const liveSiblingCountBefore = liveSiblingCount();
+
+	try {
+		assertHealthyReport(await runInsideLiveProfile(home));
+	} finally {
+		_resetShellSessionsForTest();
+		expect(liveSiblingCount()).toBe(liveSiblingCountBefore);
+	}
+}, 30_000);
+
+it("reports a healthy matrix for a live session rooted directly inside operator home", async () => {
 	const home = fs.realpathSync(os.homedir());
 	const fixturePaths: string[] = [];
 	const liveSiblingPrefix = ".xcsh-sandbox-check-live-sibling-";

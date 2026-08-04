@@ -134,13 +134,14 @@ describe("sandbox-guard bundled extension", () => {
 			expect(await call(handler, "write", { file_path: path.join(OTHER, "planted") })).toBeUndefined();
 		});
 
-		// Cross-session state remains a real deny, independent of the discovery-only sibling courtesy.
-		it("refuses another session's state through bash, python and the file tools", async () => {
+		// The extension checks structured paths. Arbitrary source text stays data and the OS runtime fence
+		// enforces its recursive cross-session deny without reintroducing source-scanning false positives.
+		it("refuses structured cross-session paths without scanning Bash or Python source", async () => {
 			await initSandbox(true);
 			const handler = captureHandler()!;
 			const secret = path.join(getSessionsDir(), "other-session.jsonl");
-			expect(await call(handler, "bash", { command: `cat ${secret}` })).toMatchObject({ block: true });
-			expect(await call(handler, "python", { code: `open("${secret}").read()` })).toMatchObject({ block: true });
+			expect(await call(handler, "bash", { command: `cat ${secret}` })).toBeUndefined();
+			expect(await call(handler, "python", { code: `open("${secret}").read()` })).toBeUndefined();
 			expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
 			expect(
 				await call(handler, "write", { file_path: path.join(getSessionsDir(), "planted.jsonl") }),
