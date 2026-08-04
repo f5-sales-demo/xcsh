@@ -21,8 +21,11 @@
  */
 import { type GatewayConfig, type GatewayConfigStore, normalizeGatewayConfig } from "../core";
 
-/** localStorage key under which the gateway config is persisted. */
-export const GATEWAY_STORE_KEY = "xcsh-office-pane.gateway";
+/**
+ * localStorage key under which the gateway config is persisted. The v2 namespace
+ * intentionally does not read or migrate Anthropic-era entries from the legacy key.
+ */
+export const GATEWAY_STORE_KEY = "xcsh-office-pane.gateway.v2";
 
 /** Resolve the page-global `localStorage`, or `null` if it's absent/blocked. */
 function safeLocalStorage(): Storage | null {

@@ -36,7 +36,6 @@ import {
 	CHAT_ERROR_REASONS,
 	// version
 	CORE_CONTRACT_VERSION,
-	DEFAULT_GATEWAY_MODEL,
 	// gateway config
 	GatewayConfigError,
 	INTERACTION_MODES,
@@ -101,7 +100,6 @@ describe("core public API exports (src/core/index.ts)", () => {
 	test("gateway config + configure guards are exported and functional", () => {
 		expect(typeof normalizeGatewayConfig).toBe("function");
 		expect(typeof GatewayConfigError).toBe("function");
-		expect(typeof DEFAULT_GATEWAY_MODEL).toBe("string");
 		expect(typeof isConfigureAck).toBe("function");
 		expect(typeof isConfigureError).toBe("function");
 		expect(new MemoryGatewayConfigStore().load()).toBeNull();

@@ -23,7 +23,6 @@ import { GatewayGate as SharedGatewayGate } from "@f5-sales-demo/xcsh-chat-ui";
 import { useEffect, useMemo, useState } from "react";
 
 import {
-	DEFAULT_GATEWAY_MODEL,
 	type GatewayConfig,
 	GatewayConfigError,
 	type GatewayConfigInput,
@@ -102,7 +101,6 @@ export function GatewayGate({ store, buildTransport, initial }: GatewayGateProps
 			initial={initial}
 			// GatewayConfig is a superset of the draft — reopen Settings prefilled.
 			configToDraft={cfg => cfg}
-			defaultModel={DEFAULT_GATEWAY_MODEL}
 		>
 			{(_cfg, { reconfigure }) => (
 				<ChatPanel

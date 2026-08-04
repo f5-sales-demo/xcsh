@@ -93,7 +93,11 @@ export function makeBuildTransport(
 			provision:
 				config && transport.canConfigureProvider
 					? async () => {
-							await transport.configure({ baseUrl: config.baseUrl, token: config.token, model: config.model });
+							await transport.configure({
+								baseUrl: config.baseUrl,
+								token: config.token,
+								...(config.model ? { model: config.model } : {}),
+							});
 						}
 					: undefined,
 			onConnected: () => wired.onConnected(),

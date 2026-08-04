@@ -1,36 +1,34 @@
 import { describe, expect, test } from "bun:test";
-import {
-	DEFAULT_GATEWAY_MODEL,
-	GatewayConfigError,
-	MemoryGatewayConfigStore,
-	normalizeGatewayConfig,
-} from "../src/core/gateway/config";
+import { GatewayConfigError, MemoryGatewayConfigStore, normalizeGatewayConfig } from "../src/core/gateway/config";
 
 describe("normalizeGatewayConfig", () => {
-	test("accepts a minimal valid input and applies the default model", () => {
-		const cfg = normalizeGatewayConfig({ baseUrl: "https://f5ai.pd.f5net.com/anthropic", token: "sk-abc" });
-		expect(cfg.baseUrl).toBe("https://f5ai.pd.f5net.com/anthropic");
+	test("accepts a minimal valid input and leaves model selection to xcsh", () => {
+		const cfg = normalizeGatewayConfig({ baseUrl: "https://gateway.example.com/v1", token: "sk-abc" });
+		expect(cfg.baseUrl).toBe("https://gateway.example.com/v1");
 		expect(cfg.token).toBe("sk-abc");
-		expect(cfg.model).toBe(DEFAULT_GATEWAY_MODEL);
+		expect(cfg).not.toHaveProperty("model");
 	});
 
-	test("trims whitespace and strips a trailing slash / stray /v1[/messages]", () => {
-		expect(normalizeGatewayConfig({ baseUrl: "  https://gw.example/anthropic/  ", token: " t " }).baseUrl).toBe(
-			"https://gw.example/anthropic",
+	test("trims whitespace and trailing slashes while preserving OpenAI-compatible paths", () => {
+		expect(normalizeGatewayConfig({ baseUrl: "  https://gw.example/v1/  ", token: " t " }).baseUrl).toBe(
+			"https://gw.example/v1",
 		);
-		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example/anthropic/v1", token: "t" }).baseUrl).toBe(
-			"https://gw.example/anthropic",
-		);
-		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example/anthropic/v1/messages", token: "t" }).baseUrl).toBe(
-			"https://gw.example/anthropic",
+		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example/openai/v1", token: "t" }).baseUrl).toBe(
+			"https://gw.example/openai/v1",
 		);
 		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example", token: "  tok  " }).token).toBe("tok");
 	});
 
 	test("honours an explicit model", () => {
 		expect(
-			normalizeGatewayConfig({ baseUrl: "https://gw.example", token: "t", model: "claude-sonnet-5" }).model,
-		).toBe("claude-sonnet-5");
+			normalizeGatewayConfig({ baseUrl: "https://gw.example/v1", token: "t", model: " custom/model " }).model,
+		).toBe("custom/model");
+	});
+
+	test("treats a whitespace-only model as omitted", () => {
+		expect(normalizeGatewayConfig({ baseUrl: "https://gw.example/v1", token: "t", model: "   " })).not.toHaveProperty(
+			"model",
+		);
 	});
 
 	test("rejects non-https, empty, or malformed input", () => {

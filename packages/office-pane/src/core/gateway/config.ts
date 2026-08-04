@@ -1,11 +1,10 @@
 /**
  * Gateway connection config for the single-engine provider-configure flow.
  *
- * The pane collects an Anthropic-compatible gateway base URL + token (+ optional
- * model) — mirroring Claude for Office's "Gateway" box — and sends it to xcsh
- * over the bridge's `configure` frame so xcsh points at that gateway. xcsh
- * remains the intelligence engine; this is just the validated shape of what the
- * user enters.
+ * The pane collects an OpenAI-compatible gateway base URL + token (+ optional
+ * model override) and sends it to xcsh over the bridge's `configure` frame.
+ * xcsh remains the intelligence engine and owns the production model default;
+ * this is just the validated shape of what the user enters.
  *
  * Browser-safe: no node:* imports, no Office.js, no runtime @f5-sales-demo/* deps.
  */
@@ -13,14 +12,14 @@
 /** A validated, normalized gateway connection. */
 export interface GatewayConfig {
 	/**
-	 * Gateway base URL: scheme + host + optional path, NO trailing slash and NOT
-	 * including `/v1` (e.g. `https://f5ai.pd.f5net.com/anthropic`).
+	 * Gateway base URL: scheme + host + optional OpenAI-compatible path, with no
+	 * trailing slash (for example `https://gateway.example.com/v1`).
 	 */
 	baseUrl: string;
 	/** Gateway API key / token. */
 	token: string;
-	/** Model id (e.g. `claude-opus-5`). */
-	model: string;
+	/** Optional model id override. Omitted means xcsh uses its configured default. */
+	model?: string;
 }
 
 /** User-supplied gateway settings before normalization/validation. */
@@ -29,9 +28,6 @@ export interface GatewayConfigInput {
 	token: string;
 	model?: string;
 }
-
-/** Default model, matching the xcsh binary-baked default. */
-export const DEFAULT_GATEWAY_MODEL = "claude-opus-5";
 
 /** Thrown when {@link normalizeGatewayConfig} rejects invalid user input. */
 export class GatewayConfigError extends Error {
@@ -55,10 +51,8 @@ export function normalizeGatewayConfig(input: GatewayConfigInput): GatewayConfig
 	if (!baseUrl) {
 		throw new GatewayConfigError("A gateway base URL is required.");
 	}
-	// Strip a trailing slash and a mistakenly-included Anthropic path suffix so the
-	// operator can paste either `.../anthropic` or `.../anthropic/v1[/messages]`.
-	baseUrl = baseUrl.replace(/\/+$/, "");
-	baseUrl = baseUrl.replace(/\/v1(?:\/messages)?$/, "");
+	// Trim only trailing slashes. OpenAI-compatible gateways commonly require `/v1`,
+	// and provider-specific prefixes are part of the endpoint rather than decoration.
 	baseUrl = baseUrl.replace(/\/+$/, "");
 
 	let parsed: URL;
@@ -74,9 +68,9 @@ export function normalizeGatewayConfig(input: GatewayConfigInput): GatewayConfig
 		throw new GatewayConfigError(`Gateway base URL is missing a host: ${baseUrl}`);
 	}
 
-	const model = (input.model ?? "").trim() || DEFAULT_GATEWAY_MODEL;
+	const model = (input.model ?? "").trim();
 
-	return { baseUrl, token, model };
+	return model ? { baseUrl, token, model } : { baseUrl, token };
 }
 
 /**

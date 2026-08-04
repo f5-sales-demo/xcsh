@@ -20,11 +20,15 @@ function fill(label: RegExp, value: string): void {
 	fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
-test("renders base URL, token, and model fields plus a Save button", () => {
-	render(<GatewayConfigForm validate={validate} onSave={() => {}} defaultModel="claude-opus-4-8" />);
+test("renders OpenAI-compatible gateway, token, and optional model fields plus a Save button", () => {
+	render(<GatewayConfigForm validate={validate} onSave={() => {}} />);
 	expect(screen.getByLabelText(/gateway url/i)).toBeDefined();
 	expect(screen.getByLabelText(/token/i)).toBeDefined();
 	expect(screen.getByLabelText(/model/i)).toBeDefined();
+	expect((screen.getByLabelText(/gateway url/i) as HTMLInputElement).placeholder).toBe(
+		"https://gateway.example.com/v1",
+	);
+	expect(screen.getByText(/blank uses xcsh's configured default/i)).toBeDefined();
 	expect(screen.getByRole("button", { name: /save|connect/i })).toBeDefined();
 });
 
@@ -35,7 +39,7 @@ test("the token field is a masked password input", () => {
 
 test("saving a valid URL + token calls onSave with the validated config", () => {
 	let saved: Cfg | null = null;
-	render(<GatewayConfigForm validate={validate} onSave={c => (saved = c)} defaultModel="claude-opus-4-8" />);
+	render(<GatewayConfigForm validate={validate} onSave={c => (saved = c)} />);
 	fill(/gateway url/i, "https://gw.example/anthropic/");
 	fill(/token/i, "sk-secret");
 	fireEvent.click(screen.getByRole("button", { name: /save|connect/i }));

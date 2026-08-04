@@ -25,7 +25,7 @@ class FakeStorage implements Storage {
 	}
 }
 
-const CONFIG = normalizeGatewayConfig({ baseUrl: "https://gw.example/anthropic", token: "sk-1" });
+const CONFIG = normalizeGatewayConfig({ baseUrl: "https://gw.example/v1", token: "sk-1" });
 
 describe("createLocalStorageGatewayStore", () => {
 	test("load returns null when nothing is stored", () => {
@@ -52,6 +52,14 @@ describe("createLocalStorageGatewayStore", () => {
 		const backing = new FakeStorage();
 		createLocalStorageGatewayStore(backing).save(CONFIG);
 		expect(backing.getItem(GATEWAY_STORE_KEY)).toBeTruthy();
+		expect(GATEWAY_STORE_KEY).toBe("xcsh-office-pane.gateway.v2");
+	});
+
+	test("ignores the legacy key instead of migrating it", () => {
+		const backing = new FakeStorage();
+		backing.setItem("xcsh-office-pane.gateway", JSON.stringify(CONFIG));
+		expect(createLocalStorageGatewayStore(backing).load()).toBeNull();
+		expect(backing.getItem("xcsh-office-pane.gateway")).toBeTruthy();
 	});
 
 	test("corrupt stored JSON is treated as no config (does not throw)", () => {
@@ -69,8 +77,8 @@ describe("createLocalStorageGatewayStore", () => {
 	test("a stored value is re-normalized on load (defends against tampering)", () => {
 		const backing = new FakeStorage();
 		// A valid-but-unnormalized baseUrl proves re-normalization runs (trailing slash stripped).
-		backing.setItem(GATEWAY_STORE_KEY, JSON.stringify({ baseUrl: "https://gw.example/anthropic/", token: "t" }));
-		expect(createLocalStorageGatewayStore(backing).load()?.baseUrl).toBe("https://gw.example/anthropic");
+		backing.setItem(GATEWAY_STORE_KEY, JSON.stringify({ baseUrl: "https://gw.example/v1/", token: "t" }));
+		expect(createLocalStorageGatewayStore(backing).load()).toEqual({ baseUrl: "https://gw.example/v1", token: "t" });
 	});
 
 	test("a null storage (blocked/partitioned WebKit) degrades gracefully — no throws", () => {

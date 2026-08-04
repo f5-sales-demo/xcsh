@@ -88,6 +88,8 @@ class FakeAgentSession {
 	};
 	/** When set, setModel rejects — simulates a missing/invalid API key. */
 	setModelError: Error | null = null;
+	/** Simulates a fresh process where model resolution requires the runtime key first. */
+	requireRuntimeApiKeyBeforeSetModel = false;
 
 	subscribe(): () => void {
 		return () => {};
@@ -95,6 +97,12 @@ class FakeAgentSession {
 	async prompt(): Promise<void> {}
 	async setModel(model: { provider: string; id: string }): Promise<void> {
 		if (this.setModelError) throw this.setModelError;
+		if (
+			this.requireRuntimeApiKeyBeforeSetModel &&
+			!this.modelRegistry.runtimeApiKeys.some(({ provider }) => provider === model.provider)
+		) {
+			throw new Error(`No runtime API key for ${model.provider}`);
+		}
 		this.setModelCalls.push(model);
 	}
 	setThinkingLevel(level: string): void {
@@ -161,8 +169,9 @@ describe("ChatHandler configure frame (#2095)", () => {
 		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
-	it("(a2) model omitted → selects the session's current default model id", async () => {
+	it("(a2) fresh baseUrl configuration installs the runtime key before selecting the default model", async () => {
 		const { server, session } = makeHandler();
+		session.requireRuntimeApiKeyBeforeSetModel = true;
 		server.emit({
 			type: "configure",
 			baseUrl: "https://f5ai.pd.f5net.com/v1",
@@ -170,8 +179,10 @@ describe("ChatHandler configure frame (#2095)", () => {
 		});
 		await flush();
 
+		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
 		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
 		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-sol");
+		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
 	it("model omitted after another provider was active → restores the baked LiteLLM default", async () => {
