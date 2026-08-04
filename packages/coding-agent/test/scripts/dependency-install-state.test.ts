@@ -126,6 +126,7 @@ describe("installed dependency state", () => {
 					optionalDependencies: {
 						"@f5-sales-demo/pi-natives-darwin-arm64": "20.3.0",
 						"@f5-sales-demo/pi-natives-darwin-x64": "20.3.0",
+						"@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.3.0",
 						"@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.0",
 					},
 				},
@@ -134,7 +135,10 @@ describe("installed dependency state", () => {
 		};
 		try {
 			await writePackageVersion(root, "darwin-arm64", "@f5-sales-demo/pi-natives-darwin-arm64", "20.3.0");
+			await writePackagePayload(root, "darwin-arm64");
 			await writePackageVersion(root, "darwin-x64", "@f5-sales-demo/pi-natives-darwin-x64", "20.3.0");
+			await writePackageVersion(root, "linux-arm64-gnu", "@f5-sales-demo/pi-natives-linux-arm64-gnu", "20.3.0");
+			await writePackagePayload(root, "linux-arm64-gnu");
 			await writePackageVersion(root, "linux-x64-gnu", "@f5-sales-demo/pi-natives-linux-x64-gnu", "20.2.7");
 			await writeInstalledVersion(root, "packages/natives", "@f5-sales-demo/pi-natives-darwin-arm64", "20.3.0");
 			await writeInstalledVersion(root, "packages/natives", "@f5-sales-demo/pi-natives-darwin-x64", "20.2.7");
@@ -159,6 +163,46 @@ describe("installed dependency state", () => {
 			await fs.rm(root, { recursive: true, force: true });
 		}
 	});
+
+	it("rejects a manifest-only prepublication optional package", async () => {
+		const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-dependency-install-"));
+		const prepublicationLock: BunLockFile = {
+			workspaces: {
+				"packages/natives": {
+					optionalDependencies: {
+						"@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.0",
+					},
+				},
+			},
+			packages: {},
+		};
+		try {
+			await writePackageVersion(root, "linux-x64-gnu", "@f5-sales-demo/pi-natives-linux-x64-gnu", "20.3.0");
+
+			expect(await inspectDependencyInstall(root, prepublicationLock)).toEqual([
+				{
+					workspace: "packages/natives",
+					name: "@f5-sales-demo/pi-natives-linux-x64-gnu",
+					requested: "20.3.0",
+					lockedVersions: [],
+					installedVersion: undefined,
+				},
+			]);
+		} finally {
+			await fs.rm(root, { recursive: true, force: true });
+		}
+	});
+
+	it("runs workspace tests with bounded concurrency from the root script", async () => {
+		const repoRoot = path.join(import.meta.dir, "../../../..");
+		const manifest = (await Bun.file(path.join(repoRoot, "package.json")).json()) as {
+			scripts?: Record<string, string>;
+		};
+
+		expect(manifest.scripts?.["test:ts"]).toBe(
+			"bun run ensure:dependencies && bun run --workspaces --if-present test -- --only-failures --max-concurrency 2",
+		);
+	});
 });
 
 async function writeInstalledVersion(root: string, workspace: string, name: string, version: string): Promise<void> {
@@ -171,6 +215,10 @@ async function writeInstalledVersion(root: string, workspace: string, name: stri
 async function writePackageVersion(root: string, directory: string, name: string, version: string): Promise<void> {
 	await Bun.write(
 		path.join(root, "packages/natives/npm", directory, "package.json"),
-		JSON.stringify({ name, version }),
+		JSON.stringify({ name, version, main: "native.node" }),
 	);
+}
+
+async function writePackagePayload(root: string, directory: string): Promise<void> {
+	await Bun.write(path.join(root, "packages/natives/npm", directory, "native.node"), "test native payload");
 }

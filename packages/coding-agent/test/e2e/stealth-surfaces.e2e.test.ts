@@ -22,6 +22,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import type { Browser, Page } from "puppeteer";
+import { locateChrome } from "../../src/browser/chrome-locate";
 import { buildStealthBundle } from "../../src/tools/browser-stealth";
 
 // See extension-e2e.test.ts: never process.exit() from a test module.
@@ -131,7 +132,7 @@ describe.skipIf(isCI)("Stealth injected surfaces (real Chrome via Puppeteer)", (
 				}),
 		});
 		fixtureUrl = `http://127.0.0.1:${server.port}/`;
-		browser = await puppeteer.launch({ headless: true });
+		browser = await puppeteer.launch({ headless: true, executablePath: locateChrome()?.path });
 
 		const barePage = await browser.newPage();
 		await barePage.goto(fixtureUrl);

@@ -145,8 +145,14 @@ async function indexPrepublicationPackageVersions(root: string): Promise<Map<str
 		const manifest = (await Bun.file(path.join(root, manifestPath)).json()) as {
 			name?: unknown;
 			version?: unknown;
+			main?: unknown;
 		};
-		if (typeof manifest.name === "string" && typeof manifest.version === "string") {
+		if (
+			typeof manifest.name === "string" &&
+			typeof manifest.version === "string" &&
+			typeof manifest.main === "string" &&
+			(await Bun.file(path.join(root, path.dirname(manifestPath), manifest.main)).exists())
+		) {
 			versions.set(manifest.name, manifest.version);
 		}
 	}

@@ -1,6 +1,6 @@
 /**
  * Level 3 E2E — asserts the derived stealth user-agent override actually LANDS
- * on a page in the Chrome that puppeteer currently bundles.
+ * on a page in the Chrome resolved for the host.
  *
  * Why this exists separately from the pure unit test:
  * `test/browser/user-agent-override.test.ts` proves the derivation computes the
@@ -28,6 +28,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import type { Browser, Page } from "puppeteer";
+import { locateChrome } from "../../src/browser/chrome-locate";
 import { deriveUserAgentOverride, type UserAgentOverride } from "../../src/tools/browser-user-agent";
 
 // See the note in extension-e2e.test.ts: never process.exit() from a test module.
@@ -102,7 +103,7 @@ describe.skipIf(isCI)("Stealth user-agent override (real Chrome via Puppeteer)",
 				}),
 		});
 		fixtureUrl = `http://127.0.0.1:${server.port}/`;
-		browser = await puppeteer.launch({ headless: true });
+		browser = await puppeteer.launch({ headless: true, executablePath: locateChrome()?.path });
 		rawUserAgent = await browser.userAgent();
 		browserVersion = await browser.version();
 	}, 120_000);
@@ -171,8 +172,8 @@ describe.skipIf(isCI)("Stealth user-agent override (real Chrome via Puppeteer)",
 		}
 	});
 
-	it("agrees with the Chrome major version puppeteer actually bundles", async () => {
-		// Guards the coupling directly: if a future bump moves the bundled major,
+	it("agrees with the Chrome major version the host actually runs", async () => {
+		// Guards the coupling directly: if a future browser update moves the major,
 		// the brand ordering changes and this pins that they move together.
 		const major = Number.parseInt(browserVersion.match(/\/(\d+)/)?.[1] ?? "0", 10);
 		expect(major).toBeGreaterThan(0);
