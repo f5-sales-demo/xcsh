@@ -150,9 +150,10 @@ idempotency, and stops only the `office serve` child it spawned. This synthetic 
 records responses, tool traffic, timings, assertions, and before/after workbook
 snapshots alongside the build identifiers.
 
-Use private in-place mode only for an authorized local presentation folder that
-contains exactly one top-level JSON deal file. Keep the evidence destination outside
-that folder:
+Use private in-place mode only for an authorized local presentation folder. The
+folder may contain one top-level JSON deal file. If unrelated top-level JSON files
+coexist, name the intended deal file `meddpicc.json` so preflight and the model select
+the same input. Keep the evidence destination outside that folder:
 
 ```sh
 bun packages/office-pane/scripts/uat-meddpicc-excel.ts \

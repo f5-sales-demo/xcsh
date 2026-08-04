@@ -73,16 +73,16 @@ export const PRIVATE_SUMMARY_RANGE = `'${PRIVATE_SUMMARY_SHEET}'!A1:B7`;
 const PRIVATE_SUMMARY_LABELS = ["Metric", "Account", "Score", "Completion", "Rating", "Next section", "Priority gaps"];
 
 /**
- * Customer-data UAT prompts intentionally identify the input by role, never by
- * filename or account. The model may read the one in-place deal file, while the
- * checked-in scenario remains free of customer identifiers.
+ * Customer-data UAT prompts identify the input by role and the generic canonical
+ * filename, never by a customer-specific filename or account. When unrelated JSON
+ * files coexist, preflight and the model both select top-level meddpicc.json.
  */
 export const PRIVATE_MEDDPICC_STEPS: MeddpiccStep[] = [
 	{
 		number: 1,
-		title: "Prove the private working folder and fixture count",
+		title: "Prove the private working folder and fixture selection",
 		prompt:
-			"Report your current working directory. Confirm that this folder contains exactly one top-level JSON deal file without repeating its filename or any customer values. Do not modify anything.",
+			"Report your current working directory. Confirm that this folder exposes one unambiguous MEDDPICC deal JSON: use its only top-level JSON file, or top-level meddpicc.json when unrelated JSON files coexist. Do not repeat customer values or modify anything.",
 		readOnly: true,
 	},
 	{
@@ -102,14 +102,14 @@ export const PRIVATE_MEDDPICC_STEPS: MeddpiccStep[] = [
 		number: 4,
 		title: "Review three priority gaps from the private deal",
 		prompt:
-			"Read the single top-level JSON deal file and give a read-only health review. Within the eight MEDDPICC qualification elements, identify the three most urgent evidence-backed gaps and cite the deal evidence that makes each a gap. Do not repeat the filename and do not modify anything.",
+			"Read the selected top-level MEDDPICC deal JSON (the only JSON file, or meddpicc.json when others coexist) and give a read-only health review. Within the eight MEDDPICC qualification elements, identify the three most urgent evidence-backed gaps and cite the deal evidence that makes each a gap. Do not repeat customer-specific filenames and do not modify anything.",
 		readOnly: true,
 	},
 	{
 		number: 5,
 		title: "Create and verify the private Excel summary",
 		prompt:
-			"Read the single top-level JSON deal file and the installed MEDDPICC engine status. Create or update a worksheet named MEDDPICC — Presentation. Call add_sheet with that name on every run; the tool is idempotent. Write a two-column executive summary to A1:B7 with these exact row labels: Metric/Value, Account, Score, Completion, Rating, Next section, Priority gaps. Populate the values from the deal and engine result, with exactly three semicolon-separated priority gaps. Read A1:B7 back and report the successful read-back. Reuse the sheet if it exists and do not modify any other sheet or any file.",
+			"Read the selected top-level MEDDPICC deal JSON (the only JSON file, or meddpicc.json when others coexist) and the installed MEDDPICC engine status. Create or update a worksheet named MEDDPICC — Presentation. Call add_sheet with that name on every run; the tool is idempotent. Write a two-column executive summary to A1:B7 with these exact row labels: Metric/Value, Account, Score, Completion, Rating, Next section, Priority gaps. Populate the values from the deal and engine result, with exactly three semicolon-separated priority gaps. Read A1:B7 back and report the successful read-back. Reuse the sheet if it exists and do not modify any other sheet or any file.",
 		readOnly: false,
 	},
 ];
@@ -300,18 +300,21 @@ export function validatePrivateSummaryAgainstStatus(
 export function validatePrivateMeddpiccStep(stepNumber: number, observation: ScenarioObservation): ScenarioAssertion[] {
 	const reply = observation.reply;
 	switch (stepNumber) {
-		case 1:
+		case 1: {
+			const topLevelJson = observation.filesBefore.filter(
+				file => !file.path.includes("/") && file.path.toLowerCase().endsWith(".json"),
+			);
 			return [
 				assertion("reply contains the exact private working directory", reply.includes(observation.workspace)),
 				assertion(
-					"workspace has exactly one top-level JSON fixture",
-					observation.filesBefore.filter(
-						file => !file.path.includes("/") && file.path.toLowerCase().endsWith(".json"),
-					).length === 1,
+					"workspace exposes one unambiguous MEDDPICC fixture",
+					topLevelJson.length === 1 ||
+						topLevelJson.filter(file => file.path.toLowerCase() === "meddpicc.json").length === 1,
 				),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),
 				assertion("workbook snapshot is unchanged", unchangedWorkbook(observation)),
 			];
+		}
 		case 2:
 			return [
 				assertion("reply reports a valid schema", includes(reply, "schema") && includes(reply, "valid")),

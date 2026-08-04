@@ -158,7 +158,20 @@ describe("private in-place MEDDPICC scenario", () => {
 		const prompts = PRIVATE_MEDDPICC_STEPS.map(step => step.prompt).join("\n");
 		expect(prompts).not.toContain("example-corp.json");
 		expect(prompts).not.toContain("Example Corp");
-		expect(prompts).toContain("single top-level JSON");
+		expect(prompts).toContain("meddpicc.json");
+	});
+
+	test("fixture selection accepts canonical meddpicc.json alongside unrelated JSON files", () => {
+		const files = [
+			{ path: "meddpicc.json", sha256: "deal-sha", bytes: 123 },
+			{ path: "notes.json", sha256: "notes-sha", bytes: 10 },
+			{ path: "settings.JSON", sha256: "settings-sha", bytes: 20 },
+		];
+		const results = validatePrivateMeddpiccStep(
+			1,
+			observation({ reply: `Current working directory: ${WORKSPACE}`, filesBefore: files, filesAfter: files }),
+		);
+		expect(results.filter(result => !result.passed)).toEqual([]);
 	});
 
 	test("status accepts live engine values without copying a synthetic numeric oracle", () => {

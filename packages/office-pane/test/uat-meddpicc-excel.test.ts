@@ -55,7 +55,7 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		expect(() => parseUatMeddpiccArgs(["--binary", "--workspace", "/tmp/demo"])).toThrow("--binary requires a value");
 	});
 
-	test("private discovery accepts exactly one top-level JSON file without copying it", async () => {
+	test("private discovery accepts one top-level JSON file without copying it", async () => {
 		const workspace = await mkdtemp(join(tmpdir(), "xcsh-private-uat-"));
 		await mkdir(join(workspace, "nested"));
 		await writeFile(join(workspace, "private-deal.json"), "{}\n");
@@ -64,14 +64,26 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		const resolvedWorkspace = await realpath(workspace);
 		expect(fixture.workspace).toBe(resolvedWorkspace);
 		expect(fixture.path).toBe(join(resolvedWorkspace, "private-deal.json"));
+		expect(fixture.topLevelJsonFiles).toBe(1);
 	});
 
-	test("private discovery fails closed for zero or multiple top-level JSON files", async () => {
+	test("private discovery selects canonical meddpicc.json among unrelated top-level JSON files", async () => {
+		const workspace = await mkdtemp(join(tmpdir(), "xcsh-private-uat-multiple-"));
+		await writeFile(join(workspace, "notes.json"), "{}\n");
+		await writeFile(join(workspace, "meddpicc.json"), "{}\n");
+		await writeFile(join(workspace, "settings.JSON"), "{}\n");
+		const fixture = await discoverPrivateFixture(workspace);
+		const resolvedWorkspace = await realpath(workspace);
+		expect(fixture.path).toBe(join(resolvedWorkspace, "meddpicc.json"));
+		expect(fixture.topLevelJsonFiles).toBe(3);
+	});
+
+	test("private discovery fails closed for zero or ambiguous top-level JSON files", async () => {
 		const empty = await mkdtemp(join(tmpdir(), "xcsh-private-uat-empty-"));
-		await expect(discoverPrivateFixture(empty)).rejects.toThrow("exactly one top-level JSON");
+		await expect(discoverPrivateFixture(empty)).rejects.toThrow("top-level JSON deal file");
 		await writeFile(join(empty, "one.json"), "{}\n");
 		await writeFile(join(empty, "two.json"), "{}\n");
-		await expect(discoverPrivateFixture(empty)).rejects.toThrow("exactly one top-level JSON");
+		await expect(discoverPrivateFixture(empty)).rejects.toThrow("canonical meddpicc.json");
 	});
 
 	test("keeps private evidence outside the customer workspace, including through symlinks", async () => {

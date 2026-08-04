@@ -130,7 +130,7 @@ interface PrivateUatEvidence {
 	error?: string;
 	binary?: { version: string; sha256: string };
 	gitSha?: string;
-	fixture?: { topLevelJsonFiles: 1 };
+	fixture?: { topLevelJsonFiles: number };
 	plugin?: InstalledPlugin;
 	bridge?: { contractVersion: string | null };
 	modelRoundTrip?: ModelRoundTripEvidence;
@@ -152,7 +152,8 @@ Required for a live run:
   --fixture      Canonical MEDDPICC example-deal.json source (synthetic mode)
   --evidence     Destination for sanitized JSON evidence
   --private-in-place
-                 Read exactly one top-level JSON deal file in place. The Office
+                 Select one top-level MEDDPICC deal JSON in place. With multiple
+                 JSON files, the canonical meddpicc.json file is required. The Office
                  session is ephemeral and evidence contains outcomes only.
 
 Environment:
@@ -292,8 +293,15 @@ async function prepareFixture(workspaceInput: string, fixtureInput: string) {
 	return { workspace, path: target, sha256: sourceSha, bytes: targetStat.size };
 }
 
-/** Resolve the one private deal file without reading, copying, or renaming it. */
-export async function discoverPrivateFixture(workspaceInput: string): Promise<{ workspace: string; path: string }> {
+/**
+ * Resolve one private deal file without reading, copying, or renaming it. A
+ * presentation folder may contain unrelated JSON configuration, so a canonical
+ * meddpicc.json disambiguates multiple top-level JSON files. A folder containing
+ * one JSON file remains supported regardless of its name.
+ */
+export async function discoverPrivateFixture(
+	workspaceInput: string,
+): Promise<{ workspace: string; path: string; topLevelJsonFiles: number }> {
 	const workspace = await fs.realpath(workspaceInput).catch(() => "");
 	if (!workspace) throw new Error("Private workspace was not found");
 	const workspaceStat = await fs.stat(workspace);
@@ -301,10 +309,15 @@ export async function discoverPrivateFixture(workspaceInput: string): Promise<{ 
 
 	const entries = await fs.readdir(workspace, { withFileTypes: true });
 	const jsonFiles = entries.filter(entry => entry.isFile() && entry.name.toLocaleLowerCase().endsWith(".json"));
-	if (jsonFiles.length !== 1) {
-		throw new Error("Private in-place UAT requires exactly one top-level JSON file");
+	if (jsonFiles.length === 0) throw new Error("Private in-place UAT requires a top-level JSON deal file");
+	const selected =
+		jsonFiles.length === 1
+			? jsonFiles[0]
+			: jsonFiles.find(entry => entry.name.toLocaleLowerCase() === "meddpicc.json");
+	if (!selected) {
+		throw new Error("Private in-place UAT requires one canonical meddpicc.json when multiple JSON files exist");
 	}
-	return { workspace, path: path.join(workspace, jsonFiles[0].name) };
+	return { workspace, path: path.join(workspace, selected.name), topLevelJsonFiles: jsonFiles.length };
 }
 
 /** Refuse any real or symlinked evidence destination inside the private tree. */
@@ -577,7 +590,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 			: await prepareFixture(path.resolve(options.workspace), path.resolve(options.fixture ?? ""));
 		if ("mode" in evidence) {
 			evidencePath = await assertPrivateEvidenceOutsideWorkspace(prepared.workspace, evidencePath);
-			evidence.fixture = { topLevelJsonFiles: 1 };
+			evidence.fixture = { topLevelJsonFiles: prepared.topLevelJsonFiles };
 		} else {
 			if (
 				!("sha256" in prepared) ||
