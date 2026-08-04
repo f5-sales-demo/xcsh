@@ -42,6 +42,16 @@ describe("five-step MEDDPICC scenario", () => {
 		allPass(1, observation({ reply: `Current working directory: ${WORKSPACE}\n- example-corp.json (MEDDPICC)` }));
 	});
 
+	test("step 1 accepts the equivalent macOS /tmp spelling", () => {
+		allPass(
+			1,
+			observation({
+				workspace: "/private/tmp/xcsh-meddpicc-demo",
+				reply: "Current working directory: /tmp/xcsh-meddpicc-demo\n- example-corp.json (MEDDPICC)",
+			}),
+		);
+	});
+
 	test("step 2 proves the deterministic status contract", () => {
 		allPass(
 			2,
@@ -77,6 +87,16 @@ describe("five-step MEDDPICC scenario", () => {
 			3,
 			observation({
 				reply: "Metrics; Economic Buyer; Decision Criteria; Decision Process; Paper Process; Implicate the Pain; Champion; Competition — definitions from the installed plugin engine.",
+				toolNotices: [{ tool: "bash", ok: true, detail: "bash: done" }],
+			}),
+		);
+	});
+
+	test("step 3 compares rendered Markdown text", () => {
+		allPass(
+			3,
+			observation({
+				reply: "**M**etrics; **E**conomic Buyer; **D**ecision Criteria; **D**ecision Process; **P**aper Process; **I**mplicate the Pain; **C**hampion; **C**ompetition — schema definitions.",
 				toolNotices: [{ tool: "bash", ok: true, detail: "bash: done" }],
 			}),
 		);

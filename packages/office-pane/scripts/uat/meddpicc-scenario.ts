@@ -101,7 +101,15 @@ function assertion(label: string, passed: boolean, detail?: string): ScenarioAss
 }
 
 function includes(reply: string, text: string): boolean {
-	return reply.toLocaleLowerCase().includes(text.toLocaleLowerCase());
+	const rendered = (value: string): string => value.replaceAll(/[*_`]/g, "");
+	return rendered(reply).toLocaleLowerCase().includes(rendered(text).toLocaleLowerCase());
+}
+
+function mentionsWorkspace(reply: string, workspace: string): boolean {
+	const aliases = workspace.startsWith("/private/tmp/")
+		? [workspace, workspace.slice("/private".length)]
+		: [workspace];
+	return aliases.some(alias => reply.includes(alias));
 }
 
 function unchangedFiles(observation: ScenarioObservation): boolean {
@@ -127,7 +135,7 @@ export function validateMeddpiccStep(stepNumber: number, observation: ScenarioOb
 	switch (stepNumber) {
 		case 1:
 			return [
-				assertion("reply contains the exact demo directory", reply.includes(observation.workspace)),
+				assertion("reply contains the exact demo directory", mentionsWorkspace(reply, observation.workspace)),
 				assertion("reply inventories example-corp.json", includes(reply, "example-corp.json")),
 				assertion("workspace snapshot is unchanged", unchangedFiles(observation)),
 				assertion("workbook snapshot is unchanged", unchangedWorkbook(observation)),
