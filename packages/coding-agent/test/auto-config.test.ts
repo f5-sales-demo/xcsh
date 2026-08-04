@@ -154,6 +154,29 @@ describe("generateModelsYml()", () => {
 		},
 	);
 
+	test("startupHealthCheck upgrades generated literal-key config without environment credentials", () => {
+		clearEnv();
+		fs.writeFileSync(
+			modelsPath,
+			generateModelsYml("https://proxy.example.com", {
+				apiBasePath: "/api/v1",
+				apiKeyLiteral: "literal-test-key",
+			}).replace(`configVersion: ${CURRENT_CONFIG_VERSION}`, "configVersion: 3"),
+		);
+
+		expect(
+			startupHealthCheck("ok", modelsPath, {
+				anthropic: { baseUrl: "https://proxy.example.com/anthropic" },
+			}),
+		).toBe(true);
+		const content = fs.readFileSync(modelsPath, "utf-8");
+		expect(content).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
+		expect(content).toContain('apiKey: "literal-test-key"');
+		expect(content).toContain('baseUrl: "https://proxy.example.com/api/v1"');
+		expect(content).toContain("minLevel: low");
+		expect(content).toContain("maxLevel: xhigh");
+	});
+
 	test("generates valid YAML with anthropic and litellm providers", () => {
 		const yml = generateModelsYml("https://proxy.example.com");
 		expect(yml).toContain("providers:");
@@ -993,7 +1016,8 @@ describe("config schema versioning", () => {
 			const content = fs.readFileSync(modelsPath, "utf-8");
 			expect(content).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
 			expect(content).toContain("gpt-5.6-sol:");
-			expect(content).toContain("minLevel: high");
+			expect(content).toContain("minLevel: low");
+			expect(content).toContain("maxLevel: xhigh");
 			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
 			expect(fs.statSync(`${modelsPath}.bak`).mode & 0o777).toBe(0o600);
 		},

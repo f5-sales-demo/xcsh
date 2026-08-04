@@ -12,7 +12,7 @@
  * A leaf module on purpose — it imports only the thinking-effort list, so `commands/launch.ts` and
  * `cli/args.ts` can both depend on it without a cycle.
  */
-import { THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
+import { THINKING_EFFORTS } from "@f5-sales-demo/pi-ai/model-thinking";
 import { CliUsageError, type FlagDescriptor, Flags } from "@f5-sales-demo/pi-utils/cli";
 
 export type FlagArity = "boolean" | "value" | "optional-value" | "repeatable-value";
@@ -46,6 +46,7 @@ export const LAUNCH_FLAGS = defineFlags({
 	slow: { arity: "value", description: "Slow/reasoning model for thorough analysis (or PI_SLOW_MODEL env)" },
 	plan: { arity: "value", description: "Plan model for architectural planning (or PI_PLAN_MODEL env)" },
 	provider: { arity: "value", description: "Provider to use (legacy; prefer --model)" },
+	context: { arity: "value", description: "Bind this session to a named F5 XC context" },
 	"api-key": { arity: "value", description: "API key (defaults to env vars)" },
 	"system-prompt": { arity: "value", description: "System prompt (default: coding assistant prompt)" },
 	"append-system-prompt": { arity: "value", description: "Append text or file contents to the system prompt" },
@@ -74,6 +75,7 @@ export const LAUNCH_FLAGS = defineFlags({
 	fork: { arity: "value", description: "Fork an existing session by ID prefix or path" },
 	"session-dir": { arity: "value", description: "Directory for session storage and lookup" },
 	"no-session": { arity: "boolean", description: "Don't save session (ephemeral)" },
+	"no-memories": { arity: "boolean", description: "Disable project memory loading and maintenance" },
 	"provider-session-id": { arity: "value", description: "Resume a provider-side session", hidden: true },
 	models: { arity: "value", description: "Comma-separated model patterns for Ctrl+P cycling" },
 	"no-tools": { arity: "boolean", description: "Disable all built-in tools" },
@@ -157,6 +159,29 @@ export interface UnrecognizedFlag {
 	name: string;
 }
 
+type ExtensionFlagSpec = ReadonlyMap<string, { type: "boolean" | "string" }>;
+
+function inlineFlag(arg: string): { name: string; value: string } | undefined {
+	const match = /^--([^=]+)=([\s\S]*)$/.exec(arg);
+	if (!match) return undefined;
+	return { name: match[1], value: match[2] };
+}
+
+/** Reject inline values for known boolean flags without loading the agent command. */
+export function validateInlineFlagSyntax(args: readonly string[], extensionFlags?: ExtensionFlagSpec): void {
+	for (const arg of args) {
+		if (arg === "--") return;
+		const inline = inlineFlag(arg);
+		if (!inline) continue;
+
+		const spec = flagSpec(inline.name);
+		const isBoolean = spec?.arity === "boolean" || extensionFlags?.get(inline.name)?.type === "boolean";
+		if (isBoolean) {
+			throw new CliUsageError(`--${inline.name} is a boolean flag and does not take a value`);
+		}
+	}
+}
+
 /**
  * Rewrite `--name=value` into `["--name", "value"]` for every flag that takes a value.
  *
@@ -167,10 +192,8 @@ export interface UnrecognizedFlag {
  *
  * Short forms are untouched: no shell convention makes `-p=x` mean `-p x`.
  */
-export function normalizeFlagTokens(
-	args: readonly string[],
-	extensionFlags?: ReadonlyMap<string, { type: "boolean" | "string" }>,
-): string[] {
+export function normalizeFlagTokens(args: readonly string[], extensionFlags?: ExtensionFlagSpec): string[] {
+	validateInlineFlagSyntax(args, extensionFlags);
 	const normalized: string[] = [];
 	let afterTerminator = false;
 
@@ -185,27 +208,21 @@ export function normalizeFlagTokens(
 			continue;
 		}
 
-		const match = /^--([^=]+)=([\s\S]*)$/.exec(arg);
-		if (!match) {
+		const inline = inlineFlag(arg);
+		if (!inline) {
 			normalized.push(arg);
 			continue;
 		}
 
-		const [, name, value] = match;
+		const { name, value } = inline;
 		const spec = flagSpec(name);
 		if (spec) {
-			if (!takesValue(spec)) {
-				throw new CliUsageError(`--${name} is a boolean flag and does not take a value`);
-			}
 			normalized.push(`--${name}`, value);
 			continue;
 		}
 
 		const extension = extensionFlags?.get(name);
 		if (extension) {
-			if (extension.type === "boolean") {
-				throw new CliUsageError(`--${name} is a boolean flag and does not take a value`);
-			}
 			normalized.push(`--${name}`, value);
 			continue;
 		}

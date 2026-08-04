@@ -102,10 +102,7 @@ const serviceProviderMap: Record<string, KeyResolver> = {
 		if ($env.GOOGLE_CLOUD_API_KEY) {
 			return $env.GOOGLE_CLOUD_API_KEY;
 		}
-		const hasCredentials = hasVertexAdcCredentials();
-		const hasProject = !!($env.GOOGLE_CLOUD_PROJECT || $env.GCLOUD_PROJECT);
-		const hasLocation = !!$env.GOOGLE_CLOUD_LOCATION;
-		if (hasCredentials && hasProject && hasLocation) {
+		if (hasVertexAdcCredentials()) {
 			return "<authenticated>";
 		}
 	},

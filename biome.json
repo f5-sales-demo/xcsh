@@ -55,6 +55,7 @@
 			"!**/api-spec-index.generated.ts",
 			"!**/capabilities.generated.ts",
 			"!**/gen/agent_pb.ts",
+			"!.claude/worktrees/**/*",
 			"!.worktrees/**/*",
 			"!.wt/**/*"
 		]

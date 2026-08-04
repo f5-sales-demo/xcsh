@@ -142,11 +142,11 @@ function resolvePlatformPackageCandidates() {
 
 const platformPackageCandidates = resolvePlatformPackageCandidates();
 const baseReleaseCandidates = [
-	...platformPackageCandidates,
 	...addonFilenames.flatMap(filename => [
 		path.join(nativeDir, filename),
 		path.join(execDir, filename),
 	]),
+	...platformPackageCandidates,
 ];
 const compiledCandidates = addonFilenames.flatMap(filename => [
 	path.join(versionedDir, filename),

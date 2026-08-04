@@ -11,6 +11,7 @@ import {
 	validateToolArguments,
 } from "@f5-sales-demo/pi-ai";
 import { logger } from "@f5-sales-demo/pi-utils";
+import emptyToolSuccess from "./prompts/empty-tool-success.md" with { type: "text" };
 import type {
 	AgentContext,
 	AgentEvent,
@@ -500,6 +501,7 @@ async function executeToolCalls(
 
 	const emitToolResult = (record: (typeof records)[number], result: AgentToolResult<any>, isError: boolean): void => {
 		if (record.resultEmitted) return;
+		const normalizedResult = normalizeToolResult(result, isError);
 		const { toolCall } = record;
 		if (!record.started) {
 			stream.push({
@@ -510,12 +512,12 @@ async function executeToolCalls(
 				intent: toolCall.intent,
 			});
 		}
-		const isWarning = Boolean(result.isWarning);
+		const isWarning = Boolean(normalizedResult.isWarning);
 		stream.push({
 			type: "tool_execution_end",
 			toolCallId: toolCall.id,
 			toolName: toolCall.name,
-			result,
+			result: normalizedResult,
 			isError,
 			isWarning,
 		});
@@ -524,13 +526,13 @@ async function executeToolCalls(
 			role: "toolResult",
 			toolCallId: toolCall.id,
 			toolName: toolCall.name,
-			content: result.content,
-			details: result.details,
+			content: normalizedResult.content,
+			details: normalizedResult.details,
 			isError,
 			isWarning,
 			timestamp: Date.now(),
 		};
-		record.result = result;
+		record.result = normalizedResult;
 		record.isError = isError;
 		record.toolResultMessage = toolResultMessage;
 		record.resultEmitted = true;
@@ -703,5 +705,16 @@ function createSkippedToolResult(): AgentToolResult<any> {
 	return {
 		content: [{ type: "text", text: "Skipped due to queued user message." }],
 		details: {},
+	};
+}
+
+function normalizeToolResult<T>(result: AgentToolResult<T>, isError: boolean): AgentToolResult<T> {
+	if (isError || result.content.some(content => content.type !== "text" || content.text.trim().length > 0)) {
+		return result;
+	}
+
+	return {
+		...result,
+		content: [{ type: "text", text: emptyToolSuccess.trim() }],
 	};
 }

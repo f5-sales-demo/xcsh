@@ -32,10 +32,12 @@ const MIN_ENV_VALUE_LENGTH = 8;
 
 /**
  * Collect environment variable values that look like secrets.
+ * @param options.environment Environment record to scan. Defaults to process.env.
  * @param options.additionalEnv Extra env records to scan (e.g. bash.environment settings from profile).
  * @param options.additionalValues Extra values to include unconditionally (e.g. profile sensitiveKeys).
  */
 export function collectEnvSecrets(options?: {
+	environment?: Readonly<Record<string, string | undefined>>;
 	additionalEnv?: Record<string, string>;
 	additionalValues?: string[];
 }): SecretEntry[] {
@@ -43,7 +45,7 @@ export function collectEnvSecrets(options?: {
 	const seen = new Set<string>();
 
 	// Scan process.env for sensitive patterns
-	for (const [name, value] of Object.entries(process.env)) {
+	for (const [name, value] of Object.entries(options?.environment ?? process.env)) {
 		if (!value || value.length < MIN_ENV_VALUE_LENGTH) continue;
 		if (!SECRET_ENV_PATTERNS.test(name)) continue;
 		if (seen.has(value)) continue;

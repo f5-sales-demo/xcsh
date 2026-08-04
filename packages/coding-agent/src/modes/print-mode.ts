@@ -5,8 +5,9 @@
  * - `xcsh -p "prompt"` - text output
  * - `xcsh --mode json "prompt"` - JSON event stream
  */
+import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent, Model } from "@f5-sales-demo/pi-ai";
-import type { AgentSession } from "../session/agent-session";
+import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import type { SessionHeader } from "../session/session-manager";
 
 /**
@@ -37,10 +38,34 @@ export interface PrintModeOptions {
  * deliberately untouched: adding fields there would bump the session version and require a migration
  * for a value already recoverable from the log.
  */
-export function buildJsonSessionHeaderLine(header: SessionHeader | null, model: Model | undefined): string | undefined {
+export function buildJsonSessionHeaderLine(
+	header: SessionHeader | null,
+	model: Model | undefined,
+	thinkingLevel?: ThinkingLevel,
+): string | undefined {
 	if (!header) return undefined;
-	const wireHeader = { ...header, model: model?.id ?? null, provider: model ? String(model.provider) : null };
+	const wireHeader = {
+		...header,
+		model: model?.id ?? null,
+		provider: model ? String(model.provider) : null,
+		thinking: thinkingLevel ?? null,
+	};
 	return `${JSON.stringify(wireHeader)}\n`;
+}
+
+function isHiddenContextMessage(message: AgentMessage): boolean {
+	return (message.role === "custom" || message.role === "hookMessage") && message.display === false;
+}
+
+export function buildJsonAgentEventLine(event: AgentSessionEvent): string | undefined {
+	if ((event.type === "message_start" || event.type === "message_end") && isHiddenContextMessage(event.message)) {
+		return undefined;
+	}
+	const publicEvent =
+		event.type === "agent_end"
+			? { ...event, messages: event.messages.filter(message => !isHiddenContextMessage(message)) }
+			: event;
+	return `${JSON.stringify(publicEvent)}\n`;
 }
 
 export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<void> {
@@ -48,7 +73,7 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 
 	// Emit session header for JSON mode.
 	if (mode === "json") {
-		const line = buildJsonSessionHeaderLine(session.sessionManager.getHeader(), session.model);
+		const line = buildJsonSessionHeaderLine(session.sessionManager.getHeader(), session.model, session.thinkingLevel);
 		if (line) process.stdout.write(line);
 	}
 	// Set up extensions for print mode (no UI, no command context)
@@ -159,9 +184,9 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 
 	// Always subscribe to enable session persistence via _handleAgentEvent
 	session.subscribe(event => {
-		// In JSON mode, output all events
 		if (mode === "json") {
-			process.stdout.write(`${JSON.stringify(event)}\n`);
+			const line = buildJsonAgentEventLine(event);
+			if (line) process.stdout.write(line);
 		}
 	});
 
@@ -200,12 +225,12 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 
 	// Ensure stdout is fully flushed before returning
 	// This prevents race conditions where the process exits before all output is written
-	await new Promise<void>((resolve, reject) => {
-		process.stdout.write("", err => {
-			if (err) reject(err);
-			else resolve();
-		});
+	const { promise, resolve, reject } = Promise.withResolvers<void>();
+	process.stdout.write("", err => {
+		if (err) reject(err);
+		else resolve();
 	});
+	await promise;
 
 	await session.dispose();
 }

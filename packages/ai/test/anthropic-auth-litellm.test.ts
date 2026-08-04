@@ -1,60 +1,40 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
-import { AuthCredentialStore } from "../src/auth-storage";
-import { buildAnthropicUrl, findAnthropicAuth } from "../src/utils/anthropic-auth";
+import * as os from "node:os";
+import * as path from "node:path";
+import type { AuthCredentialStore } from "../src/auth-storage";
+import {
+	type AnthropicAuthEnvironment,
+	buildAnthropicUrl,
+	type FindAnthropicAuthOptions,
+	findAnthropicAuth,
+} from "../src/utils/anthropic-auth";
 
-async function withEnv(overrides: Record<string, string | undefined>, fn: () => void | Promise<void>): Promise<void> {
-	const previous = new Map<string, string | undefined>();
-	for (const key of Object.keys(overrides)) {
-		previous.set(key, Bun.env[key]);
-	}
-	try {
-		for (const [key, value] of Object.entries(overrides)) {
-			if (value === undefined) {
-				delete Bun.env[key];
-			} else {
-				Bun.env[key] = value;
-			}
-		}
-		await fn();
-	} finally {
-		for (const [key, value] of previous.entries()) {
-			if (value === undefined) {
-				delete Bun.env[key];
-			} else {
-				Bun.env[key] = value;
-			}
-		}
-	}
+async function withEnv(
+	overrides: AnthropicAuthEnvironment,
+	fn: (environment: AnthropicAuthEnvironment) => void | Promise<void>,
+): Promise<void> {
+	await fn(overrides);
+}
+
+const emptyStore = {
+	getApiKey: () => undefined,
+	listAuthCredentials: () => [],
+	close: () => {},
+} as unknown as AuthCredentialStore;
+
+let tempDir: string;
+
+function authOptions(environment: AnthropicAuthEnvironment): FindAnthropicAuthOptions {
+	return { store: emptyStore, environment, modelsYmlPath: path.join(tempDir, "models.yml") };
 }
 
 beforeEach(() => {
-	// Stub the credential store so tiers 3-4 never fire during these tests.
-	// Without this, a developer with real Anthropic credentials in agent.db
-	// would have tiers 3/4 win before the litellm tier (tier 7) is reached.
-	vi.spyOn(AuthCredentialStore, "open").mockResolvedValue({
-		getApiKey: () => undefined,
-		listAuthCredentials: () => [],
-		replaceAuthCredentialsForProvider: () => {},
-		close: () => {},
-	} as unknown as AuthCredentialStore);
-
-	// Stub fs.readFileSync so tier 6 (models.yml) never fires during these tests.
-	// Without this, a developer with real models.yml on disk would have tier 6
-	// win before the litellm tier (tier 7) is reached.
-	const originalReadFileSync = fs.readFileSync.bind(fs);
-	// Cast is required because `mockImplementation` expects the overload union of
-	// `fs.readFileSync`, which no single function signature can express.
-	vi.spyOn(fs, "readFileSync").mockImplementation(((...args: Parameters<typeof fs.readFileSync>) => {
-		if (typeof args[0] === "string" && args[0].endsWith("models.yml")) {
-			throw new Error("ENOENT: mocked for test isolation");
-		}
-		return originalReadFileSync(...args);
-	}) as typeof fs.readFileSync);
+	tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-anthropic-litellm-"));
 });
 
 afterEach(() => {
-	vi.restoreAllMocks();
+	fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
 describe("findAnthropicAuth litellm passthrough", () => {
@@ -71,8 +51,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://litellm.example.com",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth).not.toBeNull();
 				expect(auth?.apiKey).toBe("sk-litellm-test-key");
 				expect(auth?.baseUrl).toBe("https://litellm.example.com/anthropic");
@@ -95,8 +75,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://litellm.example.com",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth).not.toBeNull();
 				expect(auth?.apiKey).toBe("sk-ant-direct-key");
 				expect(auth?.baseUrl).toBe("https://api.anthropic.com");
@@ -117,8 +97,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: undefined,
 				LITELLM_API_KEY: undefined,
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth).toBeNull();
 			},
 		);
@@ -137,8 +117,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://litellm.example.com/",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth).not.toBeNull();
 				expect(auth?.baseUrl).toBe("https://litellm.example.com/anthropic");
 			},
@@ -158,8 +138,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://litellm.example.com/anthropic",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth).not.toBeNull();
 				expect(auth?.baseUrl).toBe("https://litellm.example.com/anthropic");
 			},
@@ -179,8 +159,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://proxy.example.com/api/v1",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
 			},
 		);
@@ -199,8 +179,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://proxy.example.com/anthropic/v1",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
 			},
 		);
@@ -219,8 +199,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://proxy.example.com/v1/anthropic/v1",
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth?.baseUrl).toBe("https://proxy.example.com/anthropic");
 			},
 		);
@@ -240,8 +220,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: "https://litellm.example.com",
 				LITELLM_API_KEY: undefined,
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth).toBeNull();
 			},
 		);
@@ -259,8 +239,8 @@ describe("findAnthropicAuth litellm passthrough", () => {
 				LITELLM_BASE_URL: undefined,
 				LITELLM_API_KEY: "sk-litellm-test-key",
 			},
-			async () => {
-				const auth = await findAnthropicAuth();
+			async environment => {
+				const auth = await findAnthropicAuth(authOptions(environment));
 				expect(auth).toBeNull();
 			},
 		);

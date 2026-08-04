@@ -37,7 +37,7 @@
         "@aws-sdk/client-bedrock-runtime": "^3",
         "@bufbuild/protobuf": "^2.11",
         "@f5-sales-demo/pi-utils": "workspace:*",
-        "@google/genai": "^2.13",
+        "@google/genai": "^2.15",
         "@sinclair/typebox": "^0.34",
         "@smithy/node-http-handler": "^4.4",
         "ajv": "^8.20",
@@ -371,6 +371,16 @@
 
     "@f5-sales-demo/pi-natives": ["@f5-sales-demo/pi-natives@workspace:packages/natives"],
 
+    "@f5-sales-demo/pi-natives-darwin-arm64": ["@f5-sales-demo/pi-natives-darwin-arm64@20.2.7", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Seer7fVqZNqW0anY699AZarYGk1859vIDtNQy30pILP5OQg6OjqlzyrED/rfou1bKc/XU1AfLsyIeUL0aba0qA=="],
+
+    "@f5-sales-demo/pi-natives-darwin-x64": ["@f5-sales-demo/pi-natives-darwin-x64@20.2.7", "", { "os": "darwin", "cpu": "x64" }, "sha512-I7ZIQzI9+xAwwSWMsmJzplS1lBGHK5JLrNLe2bPa9QfYrWlQxdlSd+/5hSDGMCJ/ZjyUNCNCQBEL3lpE7VLlqQ=="],
+
+    "@f5-sales-demo/pi-natives-linux-arm64-gnu": ["@f5-sales-demo/pi-natives-linux-arm64-gnu@20.2.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-Dd4LY0SKPjKF5Q4YHHuluD+uNnNYQPsKPclBVyvXBKNXEwBNl/FMBeIDT77HFLw7IX8eGAfOrzT/HxtMcXzCyQ=="],
+
+    "@f5-sales-demo/pi-natives-linux-x64-gnu": ["@f5-sales-demo/pi-natives-linux-x64-gnu@20.2.7", "", { "os": "linux", "cpu": "x64" }, "sha512-exMr3/fAsV5yG/x7pMO5Yy94ytBTBQYyIxSWbQDlnrltDCzyg5udQ5XV/MC3ECPRFKpr1m+yyqux9BF+8EzVgw=="],
+
+    "@f5-sales-demo/pi-natives-win32-x64-msvc": ["@f5-sales-demo/pi-natives-win32-x64-msvc@20.2.7", "", { "os": "win32", "cpu": "x64" }, "sha512-A8/Bru4PnnlwofwuSpbyy7mIRXC6XkjFvzEH2oFwLs/dcEG6k38+H6IQEzC/Q2PN6gRrmSNgtLXEk3KGj6fDVw=="],
+
     "@f5-sales-demo/pi-resource-management": ["@f5-sales-demo/pi-resource-management@workspace:packages/resource-management"],
 
     "@f5-sales-demo/pi-tui": ["@f5-sales-demo/pi-tui@workspace:packages/tui"],
@@ -387,7 +397,7 @@
 
     "@f5-sales-demo/xcsh-stats": ["@f5-sales-demo/xcsh-stats@workspace:packages/stats"],
 
-    "@google/genai": ["@google/genai@2.13.0", "", { "dependencies": { "google-auth-library": "^10.3.0", "p-retry": "^4.6.2", "protobufjs": "^7.5.4", "ws": "^8.18.0" }, "peerDependencies": { "@modelcontextprotocol/sdk": "^1.25.2" }, "optionalPeers": ["@modelcontextprotocol/sdk"] }, "sha512-GM7C8Kaomvjz05x5JEO6+l3d/pciL9LxAG9dUjJLD7nTPZ9X0Cfsf2Z7eET6UjgWyUmxXCHtYnQoQ77F9+ZIOQ=="],
+    "@google/genai": ["@google/genai@2.15.0", "", { "dependencies": { "google-auth-library": "^10.3.0", "p-retry": "^4.6.2", "protobufjs": "^7.5.4", "ws": "^8.18.0" }, "peerDependencies": { "@modelcontextprotocol/sdk": "^1.25.2" }, "optionalPeers": ["@modelcontextprotocol/sdk"] }, "sha512-Q41TvqwBQ9NcmWdh6qxY5qrpg+0FaVHD7febQoH007pykxzco4ohScBUP4BBBy+Q8j5D8euIBSRIBDfWuNVCKA=="],
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@20.11.1", "", { "dependencies": { "@types/node": ">=20.0.0", "happy-dom": "^20.11.1" } }, "sha512-1C0wwHiyMlEdsbrJqff5ORE2PwaXBOam5rMqkZVOReAezd5nt6Tl/WGg28UAo75Ziuwchs0KaF8lvnn2oAtvJA=="],
 

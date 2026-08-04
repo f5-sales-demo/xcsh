@@ -744,8 +744,9 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 	expect(pids.length).toBeGreaterThan(0); // lsof must resolve the worker pid on macOS
 	for (const pid of pids) process.kill(pid);
 
-	// Confirm the worker is actually dead (port goes silent) before re-provisioning;
-	// this also guarantees the manager's `proc.exited` handler has run.
+	// Confirm the worker is actually dead (port goes silent) before re-provisioning.
+	// This does NOT guarantee the manager's `proc.exited` callback has run: under
+	// event-loop load the OS process can be gone while that callback is still queued.
 	let dead = false;
 	for (let i = 0; i < 40; i++) {
 		try {
@@ -757,10 +758,9 @@ test("a worker that dies out of band is reconciled so the next provision respawn
 		await Bun.sleep(250);
 	}
 	expect(dead).toBe(true);
-	await Bun.sleep(250); // let the exit handler drop the zombie registry entry
 
-	// Re-provision the SAME tenant. Only possible to come back up if needsProvision
-	// flipped true — i.e. the dead worker was reconciled out of the registry.
+	// Re-provision immediately, deliberately racing the queued exit callback. The
+	// manager must reconcile the OS-dead PID synchronously and respawn.
 	await send({ type: "provision", sessionId: "tab-revive", tenant: "example-revive|staging" });
 	const second = await findTenant("example-revive", 80);
 	expect(second).not.toBeNull();

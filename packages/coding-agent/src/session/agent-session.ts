@@ -2698,7 +2698,8 @@ export class AgentSession {
 				await this.#checkCompaction(lastAssistant, false);
 			}
 
-			// Build messages array (session context, eager todo prelude, then active prompt message)
+			// Build context messages first. The active prompt is appended only after every
+			// hidden/context injection so it remains the final instruction to the model.
 			const messages: AgentMessage[] = await logger.ttftAttr("ttft.build-context", async () => {
 				const built: AgentMessage[] = [];
 				const planReferenceMessage = await this.#buildPlanReferenceMessage?.();
@@ -2712,8 +2713,6 @@ export class AgentSession {
 				if (options?.prependMessages) {
 					built.push(...options.prependMessages);
 				}
-
-				built.push(message);
 				return built;
 			});
 
@@ -2773,6 +2772,8 @@ export class AgentSession {
 			if (this.#promptGeneration !== generation) {
 				return;
 			}
+
+			messages.push(message);
 
 			const agentPromptOptions =
 				options?.toolChoice || options?.serverTools

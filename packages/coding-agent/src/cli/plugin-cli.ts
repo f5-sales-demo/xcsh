@@ -309,6 +309,41 @@ async function handleUpgrade(args: string[], flags: PluginCommandArgs["flags"]):
 	const manager = await makeMarketplaceManager();
 	const pluginId = args[0];
 	try {
+		if (flags.dryRun) {
+			const installed = pluginId
+				? (await manager.listInstalledPlugins()).filter(entry => entry.id === pluginId)
+				: [];
+			if (pluginId && installed.length === 0) {
+				throw new Error(`Plugin "${pluginId}" is not installed`);
+			}
+			if (pluginId && flags.scope && !installed.some(entry => entry.scope === flags.scope)) {
+				throw new Error(`Plugin "${pluginId}" is not installed in ${flags.scope} scope`);
+			}
+
+			const available = await manager.previewPluginUpdates();
+			const updates = available.filter(
+				update =>
+					(pluginId === undefined || update.pluginId === pluginId) &&
+					(flags.scope === undefined || update.scope === flags.scope),
+			);
+			if (flags.json) {
+				process.stdout.write(`${JSON.stringify({ dryRun: true, updates }, null, 2)}\n`);
+			} else if (updates.length === 0) {
+				process.stdout.write(
+					`${pluginId ? `${pluginId} is up to date.` : "All marketplace plugins are up to date."}\n`,
+				);
+			} else {
+				for (const update of updates) {
+					process.stdout.write(
+						`${chalk.dim(
+							`[dry-run] Would upgrade ${update.pluginId} (${update.scope}): ${update.from} -> ${update.to}`,
+						)}\n`,
+					);
+				}
+			}
+			return;
+		}
+
 		if (pluginId) {
 			if (flags.scope) {
 				const result = await manager.upgradePlugin(pluginId, flags.scope, { refresh: true });

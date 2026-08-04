@@ -15,6 +15,17 @@ async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
 }
 
 describe("buildMemoryToolDeveloperInstructions", () => {
+	it("does not load persisted project memory when memories are disabled", async () => {
+		await withTempDir(async agentDir => {
+			const settings = Settings.isolated({ "memories.enabled": false });
+			const memoryRoot = getMemoryRoot(agentDir, settings.getCwd());
+			await fs.mkdir(memoryRoot, { recursive: true });
+			await Bun.write(path.join(memoryRoot, "memory_summary.md"), "This must not enter the prompt.");
+
+			expect(await buildMemoryToolDeveloperInstructions(agentDir, settings)).toBeUndefined();
+		});
+	});
+
 	it("uses memory:// URLs and does not expose raw memory root paths", async () => {
 		await withTempDir(async agentDir => {
 			const settings = Settings.isolated({ "memories.enabled": true });

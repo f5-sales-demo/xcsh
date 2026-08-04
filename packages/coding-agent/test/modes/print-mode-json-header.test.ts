@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { buildJsonSessionHeaderLine } from "../../src/modes/print-mode";
 import { CURRENT_SESSION_VERSION, type SessionHeader } from "../../src/session/session-manager";
@@ -27,6 +28,12 @@ describe("json mode session header", () => {
 		expect(parsed.type).toBe("session");
 		expect(parsed.model).toBe("claude-opus-5");
 		expect(parsed.provider).toBe("anthropic");
+		expect(parsed.thinking).toBeNull();
+	});
+
+	it("carries the effective thinking level used by the session", () => {
+		const line = buildJsonSessionHeaderLine(header, model, ThinkingLevel.XHigh);
+		expect(JSON.parse(line ?? "{}").thinking).toBe("xhigh");
 	});
 
 	it("keeps every field of the persisted header, at the current version", () => {

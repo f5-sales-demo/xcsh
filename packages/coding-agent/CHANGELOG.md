@@ -1,6 +1,35 @@
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 # Changelog
 
 ## [Unreleased]
+
+### Added
+
+- Added a live rotating model benchmark matrix for xcsh TTFT, completion timing, token usage, throughput, correctness, and failure capture ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Added a progressive three-model scenario library for identity, built-in tools, plugin skills and tools, authenticated F5 XC context, and read-only GitHub, Azure, GitLab, Salesforce, and MEDDPICC contracts ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Added per-effort benchmark matrices for low, medium, high, xhigh, and max reasoning, including requested-to-effective effort reporting, provider-error fail-fast capture, deterministic output grading, and explicit unavailability instead of ranking failed providers ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Added explicit `--context <name>` launch selection for reproducible non-interactive and benchmark sessions ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Added `--no-memories` for hermetic sessions that must not load or maintain persisted project memory ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Allowed `--tools` to select plugin and extension tools after runtime discovery ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+
+### Fixed
+
+- Rejected invalid lazy-command syntax before loading heavy command implementations while preserving command-specific launch-flag diagnostics ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Added dependency-install verification and automatic repair so stale workspace links and release-bumped lock entries cannot silently load SDK versions older than manifests, and aligned development with Bun 1.3.14 ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Reconciled out-of-band worker bridge shutdowns even while the process is still draining or unreaped, so immediate reprovisioning cannot retain a dead session ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Isolated live model benchmarks from persisted project memory so unrelated mandatory reads cannot contaminate tool-compliance results ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Refreshed entitlement-scoped OAuth credentials before model discovery so newly available Antigravity models remain resolvable after access-token expiry ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Kept extension-injected and hidden context before the active prompt so the user's explicit instruction remains the final provider input ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Waited for runtime model discovery before resolving explicit model selectors and model scopes ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Preserved the launch directory for `bun run dev` and excluded non-display extension context from JSON output ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Made explicit tool scopes, including `--no-tools`, exclude the bundled image-generation tool even when image credentials are configured ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Made explicit tool scopes authoritative for built-in, custom, and extension-provided tools ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Preserved exact collection counts in model-visible `xcsh_api` output even when large response bodies are truncated ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Made `plugin upgrade --dry-run` fetch current catalogs without changing marketplace registries, persistent caches, installed plugins, timestamps, manifests, or lockfiles ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Migrated generated LiteLLM configuration to schema v4 from literal credentials as well as environment variables while preserving custom API base paths ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Stored live benchmark reports under the private xcsh data directory with collision-resistant filenames by default and resolved context-quality criteria from the selected context so concurrent reports cannot overwrite each other and source never hard-codes live tenant identifiers ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Matched selected benchmark context names as case-insensitive literal text so CLI input cannot become an executable regular expression ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
 
 ## [20.2.5] - 2026-08-02
 
@@ -228,6 +257,7 @@
 
 - Autoresearch subsystem code quality: -513 lines (18.8% reduction), ~13% faster type checking. Un-exported internal symbols, relocated types, consolidated duplicate patterns, replaced manual deep copies with `structuredClone`, replaced `while(exec)` with `matchAll`, compressed control flow, extracted shared interfaces ([#734](https://github.com/f5-sales-demo/xcsh/pull/734))
 
+<!-- markdownlint-disable-next-line MD024 -->
 ## [18.53.0] - 2026-05-09
 
 ### Fixed
@@ -637,6 +667,7 @@ Refs: #173.
 - `/autoresearch` toggles like `/plan` when empty; slash completion no longer suggests `off`/`clear` on an empty prefix after the command
 - Chunk-mode read/edit edge cases (zero-width gap replaces, stale batch diagnostics, grouped Go receivers, line-count headers, parse error locations)
 
+<!-- markdownlint-disable-next-line MD024 -->
 ### Added
 
 - `/review` command now accepts inline args as custom instructions appended to the generated prompt for all structured review modes (PR-style, uncommitted, specific commit). When inline args are provided, option 4 (editor) is suppressed from the menu. The no-UI (Task tool) path forwards args as a focus hint.
@@ -1044,10 +1075,12 @@ Refs: #173.
 - Fixed autoresearch logging to require durable ASI metadata (hypothesis, rollback_reason, next_action_hint) for every run including rollback context for discarded, crashed, and checks-failed experiments
 - Fixed autoresearch logging to require durable ASI metadata for every run, including rollback context for discarded, crashed, and checks-failed experiments
 
+<!-- markdownlint-disable-next-line MD024 -->
 ### Fixed
 
 - Fixed resumed and session-switched GitHub Copilot/OpenAI Responses conversations replaying stale assistant native history from older saved sessions by sanitizing persisted assistant replay metadata on rehydration and resetting provider session state across live session boundaries ([#505](https://github.com/can1357/oh-my-pi/issues/505))
 
+<!-- markdownlint-disable-next-line MD024 -->
 ### Added
 
 - Session observer overlay (`Ctrl+S`): view running subagent sessions with a picker and read-only transcript showing thinking, text, tool calls, and results
@@ -1278,6 +1311,7 @@ Refs: #173.
 
 - Path resolution on Linux redirects to XDG locations when `XDG_DATA_HOME` / `XDG_STATE_HOME` / `XDG_CACHE_HOME` environment variables are set
 
+<!-- markdownlint-disable-next-line MD024 -->
 ### Changed
 
 - Changed TTSR interrupt logic to respect per-rule `interruptMode` settings, falling back to global `ttsr.interruptMode` when rule-level override is not specified
@@ -5453,6 +5487,7 @@ Refs: #173.
 
 - Removed `submit_review` tool - reviewers now finish via `complete` tool with structured output
 
+<!-- markdownlint-disable-next-line MD024 -->
 ### Fixed
 
 - Fixed session persistence to call fsync before renaming temp file for durability
@@ -5564,6 +5599,7 @@ Refs: #173.
 - Added support for file-based slash commands from `commands/` directories
 - Added `$ARGUMENTS` placeholder for slash command argument substitution, aligning with Claude and Codex conventions
 
+<!-- markdownlint-disable-next-line MD024 -->
 ### Changed
 
 - Refactored tool renderers to be colocated with their respective tool implementations for improved code organization

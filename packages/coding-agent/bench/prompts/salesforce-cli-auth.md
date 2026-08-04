@@ -1,0 +1,1 @@
+Call the `sf_org_display` tool exactly once with an empty object. Do not call any other tools. If the tool reports a connected Salesforce org, reply exactly `Salesforce CLI authenticated: yes`; otherwise reply exactly `Salesforce CLI authenticated: no`. Do not include usernames, aliases, org IDs, instance URLs, tokens, or credentials.

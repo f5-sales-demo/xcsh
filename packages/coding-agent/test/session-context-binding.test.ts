@@ -63,6 +63,9 @@ describe("resolveAutoBind — extension", () => {
 
 describe("chooseSessionContext", () => {
 	const bindA: AutoBindResult = { kind: "bind", contextName: "a" };
+	test("explicit launch context wins over resumed and auto-bound contexts", () => {
+		expect(chooseSessionContext("resumed", bindA, "explicit")).toEqual({ activate: "explicit" });
+	});
 	test("resume: bound name wins over auto-bind", () => {
 		expect(chooseSessionContext("resumed", bindA)).toEqual({ activate: "resumed" });
 	});
