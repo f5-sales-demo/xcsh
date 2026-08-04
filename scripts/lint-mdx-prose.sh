@@ -36,7 +36,6 @@ REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 # Note the tool family: Super-Linter runs markdownlint-cli, not markdownlint-cli2.
 MARKDOWNLINT_PKG="markdownlint-cli@0.49.1"
 TEXTLINT_PKG="textlint@15.7.0"
-TEXTLINT_FILTER_PKG="textlint-filter-rule-comments@1.3.0"
 TEXTLINT_PLUGIN_PKG="textlint-plugin-mdx@1.0.1"
 TEXTLINT_RULE_PKG="textlint-rule-terminology@5.2.16"
 
@@ -118,14 +117,7 @@ main() {
   if [ -n "$TEXTLINT_BIN" ]; then
     textlint_cmd=("$TEXTLINT_BIN")
   else
-    textlint_cmd=(
-      npx --yes
-      -p "$TEXTLINT_PKG"
-      -p "$TEXTLINT_FILTER_PKG"
-      -p "$TEXTLINT_RULE_PKG"
-      -p "$TEXTLINT_PLUGIN_PKG"
-      textlint
-    )
+    textlint_cmd=(npx --yes -p "$TEXTLINT_PKG" -p "$TEXTLINT_RULE_PKG" -p "$TEXTLINT_PLUGIN_PKG" textlint)
   fi
   local -a textlint_args=(--plugin mdx -f compact)
   [ -f "${REPO_ROOT}/.textlintrc" ] && textlint_args+=(-c "${REPO_ROOT}/.textlintrc")
