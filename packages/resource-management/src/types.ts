@@ -58,9 +58,8 @@ export interface ParsedResourceArgs {
 	filenames: string[];
 	namespace?: string;
 	outputFormat: "json" | "yaml" | "table" | "wide";
-	dryRun?: "client" | "server";
+	dryRun?: "client";
 	recursive: boolean;
-	force: boolean;
 	kind?: string;
 	name?: string;
 }
@@ -141,7 +140,7 @@ export type OperationResult =
 	| { status: "unchanged"; resource: Record<string, unknown> }
 	| { status: "deleted"; name: string; kind: string; durationMs: number }
 	| { status: "error"; error: ResourceError }
-	| { status: "dry-run"; action: "create" | "update"; diff?: ResourceDiff };
+	| { status: "dry-run"; action: "create" | "update" | "delete"; diff?: ResourceDiff };
 
 export interface HttpTransportRequest {
 	method: "GET" | "POST" | "PUT" | "DELETE";
@@ -163,9 +162,51 @@ export interface ResourceClientOptions {
 	apiUrl: string;
 	apiToken: string;
 	namespace: string;
-	dryRun?: "client" | "server";
+	dryRun?: "client";
 	resolvePayloadVars?: (json: string) => string;
 	transport?: HttpTransport;
+}
+
+export type ResourceOperation = "apply" | "create" | "update" | "get" | "delete" | "diff" | "export" | "validate";
+
+export interface ManifestOperationInput {
+	index: number;
+	sourcePath: string;
+	manifest: ResourceManifest;
+}
+
+export interface ResourceOperationItem {
+	index: number;
+	sourcePath?: string;
+	kind?: string;
+	name?: string;
+	namespace?: string;
+	status: string;
+	action?: "create" | "update" | "delete";
+	durationMs?: number;
+	resource?: Record<string, unknown>;
+	items?: Record<string, unknown>[];
+	manifest?: { kind: string; metadata: Record<string, unknown>; spec: Record<string, unknown> };
+	manifests?: Array<{ kind: string; metadata: Record<string, unknown>; spec: Record<string, unknown> }>;
+	diff?: ResourceDiff;
+	isNew?: boolean;
+	validation?: ManifestValidationResult;
+	error?: ResourceError;
+}
+
+export interface ResourceOperationCounts {
+	total: number;
+	succeeded: number;
+	failed: number;
+	[status: string]: number;
+}
+
+export interface ResourceOperationReport {
+	schemaVersion: 1;
+	operation: ResourceOperation;
+	success: boolean;
+	counts: ResourceOperationCounts;
+	results: ResourceOperationItem[];
 }
 
 export interface KindResolver {

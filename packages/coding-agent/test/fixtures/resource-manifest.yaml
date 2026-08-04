@@ -1,0 +1,9 @@
+kind: http_loadbalancer
+metadata:
+  name: example-load-balancer
+  namespace: example-namespace
+spec:
+  domains:
+    - app.example.com
+  routes: []
+  origin_pools: []

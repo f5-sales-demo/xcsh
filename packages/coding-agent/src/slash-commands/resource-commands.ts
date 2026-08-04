@@ -33,19 +33,16 @@ export async function handleResourceCommand(
 	const {
 		parseResourceArgs,
 		ResourceClient,
-		readManifestFiles,
+		readManifestInputs,
+		runResourceOperation,
+		formatResourceOperationReport,
 		ManifestFileError,
-		parseManifests,
 		ManifestParseError,
 		KindResolutionError,
-		validateManifest,
-		formatValidationErrors,
-		formatOperationResult,
 		formatResourceList,
 		formatResourceDetail,
-		formatMultiOperationSummary,
-		formatDiff,
 	} = await import("@f5-sales-demo/pi-resource-management");
+	type ManifestOperationInput = import("@f5-sales-demo/pi-resource-management").ManifestOperationInput;
 	const { kindResolver } = await import("../resource-management/index");
 
 	const parsed = parseResourceArgs(command.args);
@@ -85,83 +82,62 @@ export async function handleResourceCommand(
 	const client = new ResourceClient({
 		apiUrl,
 		apiToken,
-		namespace: parsed.namespace ?? defaultNamespace,
+		namespace: defaultNamespace,
 		resolvePayloadVars: (json: string) => contextEnv.resolvePayloadVars(json),
 	});
 
-	const ns = parsed.namespace ?? defaultNamespace;
+	const runBatch = async (
+		operation: "apply" | "create" | "delete" | "diff",
+		inputs: ManifestOperationInput[],
+	): Promise<void> => {
+		const report = await runResourceOperation({
+			operation,
+			inputs,
+			kindResolver,
+			client,
+			namespaceOverride: parsed.namespace,
+			defaultNamespace,
+			dryRun: parsed.dryRun,
+		});
+		ctx.showStatus(formatResourceOperationReport(report, parsed.outputFormat));
+	};
 
 	try {
 		switch (commandName) {
 			case "apply":
 			case "create": {
 				if (parsed.filenames.length === 0) {
-					ctx.showStatus(
-						`Usage: /${commandName} -f <file.json|file.yaml|dir/> [-n namespace] [--dry-run=client|server]`,
-					);
+					ctx.showStatus(`Usage: /${commandName} -f <file.json|file.yaml|dir/> [-n namespace] [--dry-run=client]`);
 					return;
 				}
-				const fileResults = await readManifestFiles(parsed.filenames, parsed.recursive);
-				const allObjects = fileResults.flatMap(r => r.objects);
-				if (allObjects.length === 0) {
+				const inputs = await readManifestInputs(parsed.filenames, parsed.recursive);
+				if (inputs.length === 0) {
 					ctx.showStatus("No resources found in the specified file(s).");
 					return;
 				}
-				const manifests = parseManifests(allObjects, fileResults[0]?.sourcePath ?? "input");
-				const results = [];
-				for (const manifest of manifests) {
-					const { result: valResult, resolved } = validateManifest(manifest, kindResolver, ns);
-					if (!valResult.valid) {
-						ctx.showStatus(formatValidationErrors(manifest, valResult));
-						results.push({
-							status: "error" as const,
-							error: { kind: "validation" as const, message: "Validation failed" },
-						});
-						continue;
-					}
-					if (!resolved) continue;
-
-					const opResult =
-						commandName === "apply"
-							? await client.apply(manifest, resolved, ns, parsed.dryRun)
-							: await client.create(manifest, resolved, ns, parsed.dryRun);
-
-					results.push(opResult);
-					ctx.showStatus(formatOperationResult(opResult, manifest, parsed.outputFormat));
-				}
-
-				if (manifests.length > 1) {
-					ctx.showStatus(formatMultiOperationSummary(results as any, manifests));
-				}
+				await runBatch(commandName, inputs);
 				break;
 			}
 
 			case "delete": {
-				let deleteTargets: { kind: string; name: string }[] = [];
-
+				let inputs: ManifestOperationInput[];
 				if (parsed.filenames.length > 0) {
-					const fileResults = await readManifestFiles(parsed.filenames, parsed.recursive);
-					const allObjects = fileResults.flatMap(r => r.objects);
-					const manifests = parseManifests(allObjects, fileResults[0]?.sourcePath ?? "input");
-					deleteTargets = manifests.map(m => ({ kind: m.kind, name: m.metadata.name }));
+					inputs = await readManifestInputs(parsed.filenames, parsed.recursive);
 				} else if (parsed.kind && parsed.name) {
-					deleteTargets = [{ kind: parsed.kind, name: parsed.name }];
+					const namespace = parsed.namespace ?? defaultNamespace;
+					const rawObject = { kind: parsed.kind, metadata: { name: parsed.name, namespace }, spec: {} };
+					inputs = [
+						{
+							index: 0,
+							sourcePath: "command-line",
+							manifest: { kind: parsed.kind, metadata: { name: parsed.name, namespace }, spec: {}, rawObject },
+						},
+					];
 				} else {
-					ctx.showStatus("Usage: /delete -f <file> or /delete <kind> <name> [-n namespace] [--force]");
+					ctx.showStatus("Usage: /delete -f <file> or /delete <kind> <name> [-n namespace]");
 					return;
 				}
-
-				for (const target of deleteTargets) {
-					const resolved = kindResolver.resolveKind(target.kind);
-					const result = await client.delete(target.kind, target.name, resolved, ns);
-					ctx.showStatus(
-						formatOperationResult(
-							result,
-							{ kind: target.kind, metadata: { name: target.name }, spec: {}, rawObject: {} } as any,
-							parsed.outputFormat,
-						),
-					);
-				}
+				await runBatch("delete", inputs);
 				break;
 			}
 
@@ -176,13 +152,21 @@ export async function handleResourceCommand(
 					ctx.showStatus("Usage: /describe <kind> <name> [-n namespace] [-o json|yaml]");
 					return;
 				}
-				const resolved = kindResolver.resolveKind(kind);
-				const result = await client.get(resolved, name, ns);
-				if (result.error) {
+				const report = await runResourceOperation({
+					operation: "get",
+					kind,
+					name,
+					kindResolver,
+					client,
+					namespaceOverride: parsed.namespace,
+					defaultNamespace,
+				});
+				const result = report.results[0];
+				if (result?.error) {
 					ctx.showStatus(`Error: ${result.error.message}`);
 					return;
 				}
-				if (result.resource) {
+				if (result?.resource) {
 					ctx.showStatus(formatResourceDetail(result.resource, kind, parsed.outputFormat));
 				}
 				break;
@@ -193,29 +177,7 @@ export async function handleResourceCommand(
 					ctx.showStatus("Usage: /diff -f <file.json|file.yaml> [-n namespace]");
 					return;
 				}
-				const fileResults = await readManifestFiles(parsed.filenames, parsed.recursive);
-				const allObjects = fileResults.flatMap(r => r.objects);
-				const manifests = parseManifests(allObjects, fileResults[0]?.sourcePath ?? "input");
-
-				for (const manifest of manifests) {
-					const { result: valResult, resolved } = validateManifest(manifest, kindResolver, ns);
-					if (!valResult.valid || !resolved) {
-						ctx.showStatus(formatValidationErrors(manifest, valResult));
-						continue;
-					}
-					const diffResult = await client.diff(manifest, resolved, ns);
-					if (diffResult.error) {
-						ctx.showStatus(`Error: ${diffResult.error.message}`);
-						continue;
-					}
-					if (diffResult.isNew) {
-						ctx.showStatus(`${manifest.kind}/${manifest.metadata.name} does not exist yet — will be created.`);
-						continue;
-					}
-					if (diffResult.diff) {
-						ctx.showStatus(formatDiff(diffResult.diff, manifest.kind, manifest.metadata.name));
-					}
-				}
+				await runBatch("diff", await readManifestInputs(parsed.filenames, parsed.recursive));
 				break;
 			}
 
@@ -224,15 +186,23 @@ export async function handleResourceCommand(
 					ctx.showStatus("Usage: /get <kind> [name] [-n namespace] [-o json|yaml|table]");
 					return;
 				}
-				const resolved = kindResolver.resolveKind(parsed.kind);
-				const result = await client.get(resolved, parsed.name, ns);
-				if (result.error) {
+				const report = await runResourceOperation({
+					operation: "get",
+					kind: parsed.kind,
+					name: parsed.name,
+					kindResolver,
+					client,
+					namespaceOverride: parsed.namespace,
+					defaultNamespace,
+				});
+				const result = report.results[0];
+				if (result?.error) {
 					ctx.showStatus(`Error: ${result.error.message}`);
 					return;
 				}
-				if (result.items) {
+				if (result?.items) {
 					ctx.showStatus(formatResourceList(result.items, parsed.kind, parsed.outputFormat));
-				} else if (result.resource) {
+				} else if (result?.resource) {
 					ctx.showStatus(formatResourceDetail(result.resource, parsed.kind, parsed.outputFormat));
 				}
 				break;

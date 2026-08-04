@@ -66,11 +66,11 @@ describe("parseResourceArgs", () => {
 		}
 	});
 
-	it("parses --dry-run=server", () => {
+	it("rejects unsupported --dry-run=server", () => {
 		const result = parseResourceArgs("-f lb.json --dry-run=server");
-		expect("error" in result).toBe(false);
-		if (!("error" in result)) {
-			expect(result.dryRun).toBe("server");
+		expect("error" in result).toBe(true);
+		if ("error" in result) {
+			expect(result.error).toContain('Must be "client"');
 		}
 	});
 
@@ -90,14 +90,9 @@ describe("parseResourceArgs", () => {
 		}
 	});
 
-	it("parses --force flag", () => {
+	it("rejects the removed resource --force flag", () => {
 		const result = parseResourceArgs("http_loadbalancer my-lb --force");
-		expect("error" in result).toBe(false);
-		if (!("error" in result)) {
-			expect(result.force).toBe(true);
-			expect(result.kind).toBe("http_loadbalancer");
-			expect(result.name).toBe("my-lb");
-		}
+		expect("error" in result).toBe(true);
 	});
 
 	it("parses positional kind and name", () => {
@@ -109,25 +104,24 @@ describe("parseResourceArgs", () => {
 		}
 	});
 
-	it("defaults to table format, no recursive, no force", () => {
+	it("defaults to table format and no recursive traversal", () => {
 		const result = parseResourceArgs("-f lb.json");
 		expect("error" in result).toBe(false);
 		if (!("error" in result)) {
 			expect(result.outputFormat).toBe("table");
 			expect(result.recursive).toBe(false);
-			expect(result.force).toBe(false);
 			expect(result.dryRun).toBeUndefined();
 		}
 	});
 
 	it("parses combined flags", () => {
-		const result = parseResourceArgs("-f lb.json -n prod -o yaml --dry-run=server -R");
+		const result = parseResourceArgs("-f lb.json -n prod -o yaml --dry-run=client -R");
 		expect("error" in result).toBe(false);
 		if (!("error" in result)) {
 			expect(result.filenames).toEqual(["lb.json"]);
 			expect(result.namespace).toBe("prod");
 			expect(result.outputFormat).toBe("yaml");
-			expect(result.dryRun).toBe("server");
+			expect(result.dryRun).toBe("client");
 			expect(result.recursive).toBe(true);
 		}
 	});
