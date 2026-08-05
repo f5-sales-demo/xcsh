@@ -7,6 +7,10 @@ verify each tool's API *shape* against a faithful mock — this checklist verifi
 real behavior in the app. Re-run the relevant section after any release that touches
 the pane, the host tools, or the chat engine.
 
+For workstation dependencies, architecture, focused test commands, synthetic-data
+rules, build and sideload procedures, release verification, and troubleshooting, use
+the [Office add-in development guide](DEVELOPING.md).
+
 ## Setup
 
 1. Install the build under test (`brew upgrade xcsh`; confirm `xcsh --version`).

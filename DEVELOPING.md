@@ -19,10 +19,11 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 4. [Development Workflow](#development-workflow)
 5. [Linting and Formatting](#linting-and-formatting)
 6. [Testing](#testing)
-7. [Commit Conventions](#commit-conventions)
-8. [Pull Requests](#pull-requests)
-9. [Architecture Overview](#architecture-overview)
-10. [Extension Playbooks](#extension-playbooks)
+7. [Office add-in](#office-add-in)
+8. [Commit Conventions](#commit-conventions)
+9. [Pull Requests](#pull-requests)
+10. [Architecture Overview](#architecture-overview)
+11. [Extension Playbooks](#extension-playbooks)
 
 ---
 
@@ -47,6 +48,7 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 xcsh/
 ├── packages/
 │   ├── coding-agent/    # Main CLI agent (TypeScript)
+│   ├── office-pane/     # Office task pane, Office.js host tools, and acceptance harnesses
 │   ├── ai/              # AI provider abstractions
 │   ├── tui/             # Terminal UI primitives
 │   ├── agent/           # Core agent runtime
@@ -310,6 +312,15 @@ fi
 3. bun test --filter "<area>" --max-concurrency 2              # Targeted tests (~3-5s)
 4. bun run test                                                # full workspace-aware suite
 ```
+
+---
+
+## Office add-in
+
+Use the [Office add-in development guide](packages/office-pane/DEVELOPING.md) for the Office-specific
+architecture, dependencies, test-driven development matrix, build and sideload procedures, synthetic-data
+rules, automated and desktop user acceptance testing, installed-artifact verification, and troubleshooting.
+The acceptance inventory remains in the separate [Office pane UAT checklist](packages/office-pane/UAT.md).
 
 ---
 
