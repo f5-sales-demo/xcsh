@@ -81,4 +81,18 @@ describe("Office UAT bridge handshake", () => {
 
 		expect(JSON.parse(ws.sent[0] ?? "{}")).not.toHaveProperty("images");
 	});
+
+	test("omits an explicitly empty image list from a UAT turn", async () => {
+		const ws = new FakeWebSocket();
+		const client = new UatBridgeClient(ws as unknown as WebSocket, {
+			port: 19242,
+			ack: { type: "hello_ack", serveKind: "office" },
+		});
+
+		const pending = client.turn("No image payload", "c-empty-images", []);
+		ws.emit({ type: "chat_done", id: "c-empty-images" });
+		await pending;
+
+		expect(JSON.parse(ws.sent[0] ?? "{}")).not.toHaveProperty("images");
+	});
 });

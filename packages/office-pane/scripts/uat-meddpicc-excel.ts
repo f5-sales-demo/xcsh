@@ -63,7 +63,7 @@ export interface SyntheticVisionProbe {
 	sha256: string;
 }
 
-interface VisionProbeEvidence {
+export interface VisionProbeEvidence {
 	image: { fileName: string; mimeType: "image/png"; bytes: number; sha256: string };
 	directAttachmentPassed: boolean;
 	directAttachmentDurationMs: number;
@@ -124,8 +124,7 @@ export function createSyntheticVisionProbe(code?: string): SyntheticVisionProbe 
 	const startX = Math.floor((width - textWidth) / 2);
 	const startY = Math.floor((height - 7 * scale) / 2);
 	for (const [characterIndex, character] of [...resolvedCode].entries()) {
-		const glyph = VISION_GLYPHS[character];
-		if (!glyph) throw new Error(`No synthetic vision glyph for ${character}`);
+		const glyph = VISION_GLYPHS[character]!;
 		for (const [row, pixels] of glyph.entries()) {
 			for (const [column, pixel] of [...pixels].entries()) {
 				if (pixel === "1")
@@ -190,6 +189,11 @@ export function summarizeVisionProbe(
 		fileInspectionDurationMs: inspected.durationMs,
 		inspectImageToolObserved,
 	};
+}
+
+export function assertVisionProbePassed(summary: VisionProbeEvidence): void {
+	if (!summary.directAttachmentPassed) throw new Error("GPT-5.6 Sol direct image attachment probe failed");
+	if (!summary.fileInspectionPassed) throw new Error("GPT-5.6 Sol inspect_image probe failed");
 }
 
 export interface UatMeddpiccOptions {
@@ -666,8 +670,7 @@ async function proveVisionInput(bridge: UatBridgeClient, workspace: string): Pro
 	]);
 	const inspected = await bridge.turn(fileVisionProbePrompt(probe.fileName), "c-uat-vision-file");
 	const summary = summarizeVisionProbe(probe, direct, inspected);
-	if (!summary.directAttachmentPassed) throw new Error("GPT-5.6 Sol direct image attachment probe failed");
-	if (!summary.fileInspectionPassed) throw new Error("GPT-5.6 Sol inspect_image probe failed");
+	assertVisionProbePassed(summary);
 	return summary;
 }
 

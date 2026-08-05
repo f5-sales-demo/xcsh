@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { inflateSync } from "node:zlib";
 import {
 	assertSyntheticFixtureUsesRoleAliases,
+	assertVisionProbePassed,
 	createSyntheticVisionProbe,
 	directVisionProbePrompt,
 	fileVisionProbePrompt,
@@ -157,6 +158,9 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		expect(summarizeVisionProbe(probe, direct, inspected).directAttachmentPassed).toBe(true);
 		expect(summarizeVisionProbe(probe, direct, inspected).fileInspectionPassed).toBe(true);
 		expect(summarizeVisionProbe(probe, { ...direct, reply: "WRONG" }, inspected).directAttachmentPassed).toBe(false);
+		expect(summarizeVisionProbe(probe, { ...direct, ended: "chat_error" }, inspected).directAttachmentPassed).toBe(
+			false,
+		);
 		expect(
 			summarizeVisionProbe(
 				probe,
@@ -169,12 +173,34 @@ describe("MEDDPICC Excel UAT CLI", () => {
 				.directAttachmentPassed,
 		).toBe(false);
 		expect(summarizeVisionProbe(probe, direct, { ...inspected, reply: "WRONG" }).fileInspectionPassed).toBe(false);
+		expect(summarizeVisionProbe(probe, direct, { ...inspected, ended: "chat_error" }).fileInspectionPassed).toBe(
+			false,
+		);
 		expect(summarizeVisionProbe(probe, direct, { ...inspected, toolNotices: [] }).fileInspectionPassed).toBe(false);
 		expect(
 			summarizeVisionProbe(probe, direct, {
 				...inspected,
-				toolNotices: [{ tool: "inspect_image", ok: false }],
+				toolNotices: [
+					{ tool: "inspect_image", ok: true },
+					{ tool: "read", ok: false },
+				],
 			}).fileInspectionPassed,
 		).toBe(false);
+	});
+
+	test("rejects either failed live vision certification before MEDDPICC runs", () => {
+		const passed = {
+			image: { fileName: "synthetic.png", mimeType: "image/png" as const, bytes: 400, sha256: "abc" },
+			directAttachmentPassed: true,
+			directAttachmentDurationMs: 10,
+			fileInspectionPassed: true,
+			fileInspectionDurationMs: 20,
+			inspectImageToolObserved: true,
+		};
+		expect(() => assertVisionProbePassed(passed)).not.toThrow();
+		expect(() => assertVisionProbePassed({ ...passed, directAttachmentPassed: false })).toThrow(
+			"direct image attachment",
+		);
+		expect(() => assertVisionProbePassed({ ...passed, fileInspectionPassed: false })).toThrow("inspect_image");
 	});
 });
