@@ -8,6 +8,7 @@ import {
 	fileVisionProbePrompt,
 	parseUatMeddpiccArgs,
 	requireGatewayRootUrl,
+	requireMeddpiccScenarioModel,
 	sanitizeEvidence,
 	summarizeVisionProbe,
 } from "../scripts/uat-meddpicc-excel";
@@ -177,6 +178,12 @@ describe("MEDDPICC Excel UAT CLI", () => {
 			false,
 		);
 		expect(summarizeVisionProbe(probe, direct, { ...inspected, toolNotices: [] }).fileInspectionPassed).toBe(false);
+		const failedInspect = summarizeVisionProbe(probe, direct, {
+			...inspected,
+			toolNotices: [{ tool: "inspect_image", ok: false }],
+		});
+		expect(failedInspect.inspectImageToolObserved).toBe(false);
+		expect(failedInspect.fileInspectionPassed).toBe(false);
 		expect(
 			summarizeVisionProbe(probe, direct, {
 				...inspected,
@@ -202,5 +209,10 @@ describe("MEDDPICC Excel UAT CLI", () => {
 			"direct image attachment",
 		);
 		expect(() => assertVisionProbePassed({ ...passed, fileInspectionPassed: false })).toThrow("inspect_image");
+	});
+
+	test("requires the restored GPT model before the MEDDPICC scenario", () => {
+		expect(requireMeddpiccScenarioModel("gpt-5.6-sol")).toBe("gpt-5.6-sol");
+		expect(() => requireMeddpiccScenarioModel("claude-opus-5")).toThrow("did not start under GPT-5.6 Sol");
 	});
 });

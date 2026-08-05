@@ -196,6 +196,11 @@ export function assertVisionProbePassed(summary: VisionProbeEvidence): void {
 	if (!summary.fileInspectionPassed) throw new Error("GPT-5.6 Sol inspect_image probe failed");
 }
 
+export function requireMeddpiccScenarioModel(currentModel: string): string {
+	if (currentModel !== EXPECTED_MODEL) throw new Error("MEDDPICC scenario did not start under GPT-5.6 Sol");
+	return currentModel;
+}
+
 export interface UatMeddpiccOptions {
 	binary?: string;
 	workspace?: string;
@@ -761,8 +766,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		evidence.modelRoundTrip = await proveModelRoundTrip(bridge, baseUrl, token);
 		evidence.visionProbe = await proveVisionInput(bridge, prepared.workspace);
 		const scenarioList = modelList(await bridge.request({ type: "list_models" }, "models"));
-		if (scenarioList.current !== EXPECTED_MODEL) throw new Error("MEDDPICC scenario did not start under GPT-5.6 Sol");
-		evidence.scenarioModel = scenarioList.current;
+		evidence.scenarioModel = requireMeddpiccScenarioModel(scenarioList.current);
 
 		const workbook = fakeExcel({}, { Start: { "A1:B1": [["sentinel", "keep"]] } });
 		const wired = wireExcelHostTools(bridge, workbook);
