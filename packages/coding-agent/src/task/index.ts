@@ -24,7 +24,7 @@ import type { Theme } from "../modes/theme/theme";
 import planModeSubagentPrompt from "../prompts/system/plan-mode-subagent.md" with { type: "text" };
 import taskDescriptionTemplate from "../prompts/tools/task.md" with { type: "text" };
 import taskSummaryTemplate from "../prompts/tools/task-summary.md" with { type: "text" };
-import { formatBytes, formatDuration } from "../tools/render-utils";
+import { formatDuration } from "../tools/render-utils";
 // Import review tools for side effects (registers subagent tool handlers)
 import "../tools/review";
 import { generateCommitMessage } from "../utils/commit-message-generator";
@@ -35,6 +35,7 @@ import { resolveIsolationBackendForTaskExecution } from "./isolation-backend";
 import { AgentOutputManager } from "./output-manager";
 import { mapWithConcurrencyLimit, Semaphore } from "./parallel";
 import { renderCall, renderResult } from "./render";
+import { buildTaskOutputSummaries } from "./summary";
 import { renderTemplate } from "./template";
 import {
 	type AgentDefinition,
@@ -108,6 +109,7 @@ export { loadBundledAgents as BUNDLED_AGENTS } from "./agents";
 export { discoverCommands, expandCommand, getCommand } from "./commands";
 export { discoverAgents, getAgent } from "./discovery";
 export { AgentOutputManager } from "./output-manager";
+export { buildTaskOutputSummaries, type TaskOutputSummary } from "./summary";
 export type {
 	AgentDefinition,
 	AgentProgress,
@@ -1123,41 +1125,8 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 			const successCount = results.filter(r => r.exitCode === 0 && !r.error && !r.aborted).length;
 			const totalDuration = Date.now() - startTime;
 
-			const summaries = results.map(r => {
-				const status = r.aborted
-					? "cancelled"
-					: r.exitCode === 0 && r.error
-						? "merge failed"
-						: r.exitCode === 0
-							? "completed"
-							: `failed (exit ${r.exitCode})`;
-				const output = r.output.trim() || r.stderr.trim() || "(no output)";
-				const outputCharCount = r.outputMeta?.charCount ?? output.length;
-				const fullOutputThreshold = 5000;
-				let preview = output;
-				let truncated = false;
-				if (outputCharCount > fullOutputThreshold) {
-					const slice = output.slice(0, fullOutputThreshold);
-					const lastNewline = slice.lastIndexOf("\n");
-					preview = lastNewline >= 0 ? slice.slice(0, lastNewline) : slice;
-					truncated = true;
-				}
-				return {
-					agent: r.agent,
-					status,
-					id: r.id,
-					preview,
-					truncated,
-					meta: r.outputMeta
-						? {
-								lineCount: r.outputMeta.lineCount,
-								charSize: formatBytes(r.outputMeta.charCount),
-							}
-						: undefined,
-				};
-			});
+			const summaries = buildTaskOutputSummaries(results, artifactsDir !== null);
 
-			const outputIds = results.filter(r => !r.aborted || r.output.trim()).map(r => `agent://${r.id}`);
 			const backendSummaryPrefix = isolationBackendWarning ? `\n\n${isolationBackendWarning}` : "";
 			const summary = prompt.render(taskSummaryTemplate, {
 				successCount,
@@ -1166,7 +1135,6 @@ export class TaskTool implements AgentTool<TaskSchema, TaskToolDetails, Theme> {
 				hasCancelledNote: aborted && cancelledCount > 0,
 				duration: formatDuration(totalDuration),
 				summaries,
-				outputIds,
 				agentName,
 				mergeSummary: `${backendSummaryPrefix}${mergeSummary}`,
 			});
