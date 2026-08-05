@@ -46,7 +46,6 @@ describe("Git SOPs & Content Creator Repository Progressive Hints", () => {
 		const promptText = await buildSystemPrompt({
 			tools: new Map(),
 			cwd: "/fake/demo-resources",
-			providedSkills: [],
 			providedContextFiles: [],
 			startFolder: { kind: "github", slug: "f5-sales-demo/demo-resources" },
 		});
@@ -63,7 +62,6 @@ describe("Git SOPs & Content Creator Repository Progressive Hints", () => {
 		const promptText = await buildSystemPrompt({
 			tools: new Map(),
 			cwd: "/fake/plain-folder",
-			providedSkills: [],
 			providedContextFiles: [],
 			startFolder: { kind: "plain" },
 		});
