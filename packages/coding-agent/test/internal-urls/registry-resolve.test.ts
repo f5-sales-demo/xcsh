@@ -1,18 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { parseInternalUrl } from "../../src/internal-urls/parse";
 import { createRegistryResolver } from "../../src/internal-urls/registry-resolve";
 
 describe("createRegistryResolver", () => {
 	const resolver = createRegistryResolver();
 
 	test("resolves provider URL into internal resource", async () => {
-		const resource = await resolver.resolve({
-			href: "xcsh://registry/provider/hashicorp/aws",
-			protocol: "xcsh:",
-			hostname: "registry",
-			pathname: "/provider/hashicorp/aws",
-			rawHost: "registry",
-			rawPathname: "/provider/hashicorp/aws",
-		});
+		const url = parseInternalUrl("xcsh://registry/provider/hashicorp/aws");
+		const resource = await resolver.resolve(url);
 
 		expect(resource.url).toBe("xcsh://registry/provider/hashicorp/aws");
 		expect(resource.contentType).toBe("text/markdown");
@@ -20,14 +15,8 @@ describe("createRegistryResolver", () => {
 	});
 
 	test("resolves module URL into internal resource", async () => {
-		const resource = await resolver.resolve({
-			href: "xcsh://registry/module/terraform-aws-modules/vpc/aws",
-			protocol: "xcsh:",
-			hostname: "registry",
-			pathname: "/module/terraform-aws-modules/vpc/aws",
-			rawHost: "registry",
-			rawPathname: "/module/terraform-aws-modules/vpc/aws",
-		});
+		const url = parseInternalUrl("xcsh://registry/module/terraform-aws-modules/vpc/aws");
+		const resource = await resolver.resolve(url);
 
 		expect(resource.url).toBe("xcsh://registry/module/terraform-aws-modules/vpc/aws");
 		expect(resource.contentType).toBe("text/markdown");
