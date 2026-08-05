@@ -17,6 +17,7 @@
 ### Fixed
 
 - Preserved native Gemini finish reasons in Google provider errors instead of reporting an unknown error ([#2874](https://github.com/f5-sales-demo/xcsh/issues/2874))
+- Resolved Vertex AI projects directly from the active gcloud configuration before invoking gcloud, so Gemini authentication remains usable when the local gcloud Python launcher is broken ([#2996](https://github.com/f5-sales-demo/xcsh/issues/2996))
 
 <!-- markdownlint-disable MD024 -->
 <!-- textlint-disable terminology -->

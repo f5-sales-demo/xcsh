@@ -312,14 +312,25 @@ export interface ProbeResult {
 	apiBasePath?: string;
 }
 
-/** Candidate paths to probe for the models endpoint (tried in order). */
-const MODELS_ENDPOINT_PATHS = ["/v1/models", "/api/v1/models"];
+/** Candidate OpenAI-compatible API base paths, tried in order. */
+const API_BASE_PATHS = ["/v1", "/api", "/api/v1"];
+
+/**
+ * A route probe deliberately omits the required model and messages. OpenAI-compatible
+ * servers reject that payload before inference with 400 or 422. A 2xx response is also
+ * accepted for permissive proxies; 404/405 and server/auth failures reject the route.
+ */
+function acceptsChatCompletionPost(status: number): boolean {
+	return (status >= 200 && status < 300) || status === 400 || status === 422;
+}
 
 /**
  * Probe a LiteLLM proxy to validate connectivity and discover available models.
  *
- * Tries multiple endpoint paths in order (/v1/models, then /api/v1/models) to
- * handle deployments where a frontend like Open WebUI intercepts /v1/*.
+ * A models GET alone is not enough: Open WebUI also exposes management endpoints such
+ * as /api/v1/models that do not share an inference route. Each candidate must return an
+ * OpenAI-shaped model catalog and accept POST at the matching /chat/completions path.
+ * The POST carries an empty JSON object, so validation happens before model inference.
  *
  * Returns the list of model IDs on success, or an error on failure.
  * Uses a 3-second timeout per endpoint to avoid blocking startup.
@@ -333,11 +344,11 @@ export async function probeLiteLLMConnection(
 	const normalizedUrl = baseUrl.replace(/\/+$/, "");
 	let lastError = "";
 
-	for (const endpointPath of MODELS_ENDPOINT_PATHS) {
-		const url = `${normalizedUrl}${endpointPath}`;
+	for (const apiBasePath of API_BASE_PATHS) {
+		const modelsUrl = `${normalizedUrl}${apiBasePath}/models`;
 		let response: Response;
 		try {
-			response = await fetchImpl(url, {
+			response = await fetchImpl(modelsUrl, {
 				method: "GET",
 				headers: {
 					Accept: "application/json",
@@ -351,7 +362,7 @@ export async function probeLiteLLMConnection(
 		}
 
 		if (!response.ok) {
-			lastError = `HTTP ${response.status} ${response.statusText} from ${url}`;
+			lastError = `HTTP ${response.status} ${response.statusText} from ${modelsUrl}`;
 			continue;
 		}
 
@@ -359,7 +370,7 @@ export async function probeLiteLLMConnection(
 		try {
 			payload = await response.json();
 		} catch {
-			lastError = `Non-JSON response from ${url}`;
+			lastError = `Non-JSON response from ${modelsUrl}`;
 			continue;
 		}
 
@@ -378,13 +389,35 @@ export async function probeLiteLLMConnection(
 			}
 		}
 
-		if (models.length > 0) {
-			// Derive the API base path from the endpoint that worked
-			const apiBasePath = endpointPath.replace(/\/models$/, "");
-			return { reachable: true, models, apiBasePath };
+		if (models.length === 0) {
+			lastError = `No models in response from ${modelsUrl}`;
+			continue;
 		}
 
-		lastError = `No models in response from ${url}`;
+		const chatUrl = `${normalizedUrl}${apiBasePath}/chat/completions`;
+		let chatResponse: Response;
+		try {
+			chatResponse = await fetchImpl(chatUrl, {
+				method: "POST",
+				headers: {
+					Accept: "application/json",
+					Authorization: `Bearer ${apiKey}`,
+					"Content-Type": "application/json",
+				},
+				body: "{}",
+				signal: options?.signal ?? AbortSignal.timeout(3000),
+			});
+		} catch (err) {
+			lastError = err instanceof Error ? err.message : String(err);
+			continue;
+		}
+		await chatResponse.body?.cancel();
+		if (!acceptsChatCompletionPost(chatResponse.status)) {
+			lastError = `HTTP ${chatResponse.status} ${chatResponse.statusText} from ${chatUrl}`;
+			continue;
+		}
+
+		return { reachable: true, models, apiBasePath };
 	}
 
 	return { reachable: false, models: [], error: lastError };

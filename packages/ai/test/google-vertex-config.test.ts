@@ -5,6 +5,7 @@ import * as path from "node:path";
 import {
 	type GoogleVertexProjectRuntime,
 	googleVertexRequestUrl,
+	readConfiguredGcloudProject,
 	resolveGoogleVertexLocation,
 	resolveGoogleVertexProject,
 } from "../src/providers/google-vertex";
@@ -62,6 +63,40 @@ describe("Google Vertex runtime configuration", () => {
 
 			expect(await resolveGoogleVertexProject(undefined, runtime)).toBe("gcloud-project");
 			expect(requestedExecutables).toEqual(["/test/bin/gcloud"]);
+		});
+	});
+
+	it("reads the active project directly from the gcloud configuration", async () => {
+		const configDirectory = await fs.mkdtemp(path.join(os.tmpdir(), "pi-ai-gcloud-config-"));
+		try {
+			await fs.mkdir(path.join(configDirectory, "configurations"), { recursive: true });
+			await Bun.write(path.join(configDirectory, "active_config"), "enterprise\n");
+			await Bun.write(
+				path.join(configDirectory, "configurations", "config_enterprise"),
+				"[core]\naccount = user@example.com\nproject = enterprise-vertex-project\n[compute]\nregion = us-east1\n",
+			);
+
+			expect(await readConfiguredGcloudProject(configDirectory)).toBe("enterprise-vertex-project");
+		} finally {
+			await fs.rm(configDirectory, { recursive: true, force: true });
+		}
+	});
+
+	it("uses the local gcloud configuration before invoking the gcloud executable", async () => {
+		await withoutProjectEnvironment(async () => {
+			let executableLookupCalled = false;
+			const runtime: GoogleVertexProjectRuntime = {
+				readAdcProject: async () => undefined,
+				readLocalConfigProject: async () => "local-config-project",
+				findGcloud: () => {
+					executableLookupCalled = true;
+					return "/test/bin/gcloud";
+				},
+				readConfiguredProject: async () => "cli-project",
+			};
+
+			expect(await resolveGoogleVertexProject(undefined, runtime)).toBe("local-config-project");
+			expect(executableLookupCalled).toBe(false);
 		});
 	});
 
