@@ -1,3 +1,4 @@
+import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { $env, $which, isEnoent } from "@f5-sales-demo/pi-utils";
@@ -46,6 +47,7 @@ export interface GoogleVertexOptions extends StreamOptions {
 
 export interface GoogleVertexProjectRuntime {
 	readAdcProject(): Promise<string | undefined>;
+	readLocalConfigProject?(): Promise<string | undefined>;
 	findGcloud(): string | null;
 	readConfiguredProject(gcloud: string): Promise<string | undefined>;
 }
@@ -359,6 +361,7 @@ function resolveApiKey(options?: GoogleVertexOptions): string | undefined {
 
 const defaultProjectRuntime: GoogleVertexProjectRuntime = {
 	readAdcProject,
+	readLocalConfigProject: readConfiguredGcloudProject,
 	findGcloud: () => $which("gcloud"),
 	readConfiguredProject: async gcloud => {
 		const result = await $`${gcloud} config get-value project`.quiet().nothrow();
@@ -370,6 +373,50 @@ const defaultProjectRuntime: GoogleVertexProjectRuntime = {
 	},
 };
 
+function parseGcloudCoreProject(content: string): string | undefined {
+	let inCoreSection = false;
+	for (const rawLine of content.split(/\r?\n/)) {
+		const line = rawLine.trim();
+		if (!line || line.startsWith("#") || line.startsWith(";")) continue;
+		const section = line.match(/^\[([^\]]+)]$/);
+		if (section) {
+			inCoreSection = section[1].trim() === "core";
+			continue;
+		}
+		if (!inCoreSection) continue;
+		const property = line.match(/^project\s*=\s*(.+)$/);
+		if (!property) continue;
+		const project = property[1].trim();
+		return project && project !== "(unset)" ? project : undefined;
+	}
+	return undefined;
+}
+
+/** Read the active gcloud project's INI file without requiring gcloud's Python launcher. */
+export async function readConfiguredGcloudProject(
+	configDirectory: string = $env.CLOUDSDK_CONFIG || path.join(os.homedir(), ".config", "gcloud"),
+): Promise<string | undefined> {
+	let configurationName = $env.CLOUDSDK_ACTIVE_CONFIG_NAME?.trim();
+	if (!configurationName) {
+		try {
+			configurationName = (await fs.readFile(path.join(configDirectory, "active_config"), "utf8")).trim();
+		} catch {
+			configurationName = "default";
+		}
+	}
+	if (!/^[A-Za-z0-9_-]+$/.test(configurationName)) return undefined;
+
+	try {
+		const content = await fs.readFile(
+			path.join(configDirectory, "configurations", `config_${configurationName}`),
+			"utf8",
+		);
+		return parseGcloudCoreProject(content);
+	} catch {
+		return undefined;
+	}
+}
+
 export async function resolveGoogleVertexProject(
 	options?: GoogleVertexOptions,
 	runtime: GoogleVertexProjectRuntime = defaultProjectRuntime,
@@ -379,6 +426,9 @@ export async function resolveGoogleVertexProject(
 
 	const adcProject = await runtime.readAdcProject();
 	if (adcProject) return adcProject;
+
+	const localConfigProject = await runtime.readLocalConfigProject?.();
+	if (localConfigProject) return localConfigProject;
 
 	const gcloud = runtime.findGcloud();
 	if (gcloud) {

@@ -1078,8 +1078,13 @@ describe("config schema versioning", () => {
 
 describe("probeLiteLLMConnection()", () => {
 	test("returns model list on successful probe at /v1/models", async () => {
-		const mockFetch = async (_url: string, init?: RequestInit) => {
+		const calls: Array<{ body: RequestInit["body"]; method: string; url: string }> = [];
+		const mockFetch = async (url: string, init?: RequestInit) => {
 			expect(init?.headers).toHaveProperty("Authorization", "Bearer sk-test123");
+			calls.push({ body: init?.body, method: init?.method ?? "GET", url });
+			if (init?.method === "POST") {
+				return new Response(JSON.stringify({ detail: "model is required" }), { status: 422 });
+			}
 			return new Response(
 				JSON.stringify({
 					data: [
@@ -1098,14 +1103,24 @@ describe("probeLiteLLMConnection()", () => {
 		expect(result.models).toContain("gpt-5.4");
 		expect(result.apiBasePath).toBe("/v1");
 		expect(result.error).toBeUndefined();
+		expect(calls).toEqual([
+			{ body: undefined, method: "GET", url: "https://proxy.example.com/v1/models" },
+			{ body: "{}", method: "POST", url: "https://proxy.example.com/v1/chat/completions" },
+		]);
 	});
 
-	test("falls back to /api/v1/models when /v1/models returns HTML", async () => {
-		const mockFetch = async (url: string) => {
-			if (url.includes("/api/v1/models")) {
+	test("selects the Open WebUI /api route only after its chat endpoint accepts POST", async () => {
+		const calls: Array<{ method: string; url: string }> = [];
+		const mockFetch = async (url: string, init?: RequestInit) => {
+			const method = init?.method ?? "GET";
+			calls.push({ method, url });
+			if (url.endsWith("/api/models") && method === "GET") {
 				return new Response(JSON.stringify({ data: [{ id: "claude-sonnet-4-6" }] }), { status: 200 });
 			}
-			// Open WebUI returns HTML for /v1/models
+			if (url.endsWith("/api/chat/completions") && method === "POST") {
+				return new Response(JSON.stringify({ detail: "model is required" }), { status: 422 });
+			}
+			// The web frontend returns HTML for /v1/*.
 			return new Response("<!doctype html><html>...</html>", { status: 200 });
 		};
 		const result = await probeLiteLLMConnection("https://proxy.example.com", "sk-test123", {
@@ -1113,7 +1128,46 @@ describe("probeLiteLLMConnection()", () => {
 		});
 		expect(result.reachable).toBe(true);
 		expect(result.models).toContain("claude-sonnet-4-6");
-		expect(result.apiBasePath).toBe("/api/v1");
+		expect(result.apiBasePath).toBe("/api");
+		expect(calls).toContainEqual({ method: "POST", url: "https://proxy.example.com/api/chat/completions" });
+	});
+
+	test("rejects a models-only /api/v1 management route whose chat endpoint returns 405", async () => {
+		const mockFetch = async (url: string, init?: RequestInit) => {
+			const method = init?.method ?? "GET";
+			if (url.endsWith("/api/v1/models") && method === "GET") {
+				return new Response(JSON.stringify({ data: [{ id: "managed-model-record" }] }), { status: 200 });
+			}
+			if (url.endsWith("/api/v1/chat/completions") && method === "POST") {
+				return new Response(JSON.stringify({ detail: "Method Not Allowed" }), { status: 405 });
+			}
+			return new Response("Not Found", { status: 404 });
+		};
+		const result = await probeLiteLLMConnection("https://proxy.example.com", "sk-test123", {
+			fetch: mockFetch as unknown as typeof globalThis.fetch,
+		});
+		expect(result.reachable).toBe(false);
+		expect(result.models).toHaveLength(0);
+		expect(result.error).toContain("405");
+	});
+
+	test("retains a matching /api/v1 route when both model listing and chat POST are supported", async () => {
+		const mockFetch = async (url: string, init?: RequestInit) => {
+			const method = init?.method ?? "GET";
+			if (url.endsWith("/api/v1/models") && method === "GET") {
+				return new Response(JSON.stringify({ data: [{ id: "private-model" }] }), { status: 200 });
+			}
+			if (url.endsWith("/api/v1/chat/completions") && method === "POST") {
+				return new Response(JSON.stringify({ detail: "messages are required" }), { status: 400 });
+			}
+			return new Response("Not Found", { status: 404 });
+		};
+
+		const result = await probeLiteLLMConnection("https://proxy.example.com", "sk-test123", {
+			fetch: mockFetch as unknown as typeof globalThis.fetch,
+		});
+
+		expect(result).toEqual({ reachable: true, models: ["private-model"], apiBasePath: "/api/v1" });
 	});
 
 	test("returns unreachable when all endpoints fail", async () => {
@@ -1150,7 +1204,7 @@ describe("probeLiteLLMConnection()", () => {
 
 	test("tries fallback when first endpoint returns empty data array", async () => {
 		const mockFetch = async (url: string) => {
-			if (url.includes("/api/v1/models")) {
+			if (url.includes("/api/models")) {
 				return new Response(JSON.stringify({ data: [{ id: "gpt-5.4" }] }), { status: 200 });
 			}
 			return new Response(JSON.stringify({ data: [] }), { status: 200 });
@@ -1160,12 +1214,12 @@ describe("probeLiteLLMConnection()", () => {
 		});
 		expect(result.reachable).toBe(true);
 		expect(result.models).toContain("gpt-5.4");
-		expect(result.apiBasePath).toBe("/api/v1");
+		expect(result.apiBasePath).toBe("/api");
 	});
 
 	test("handles malformed JSON response by trying fallback", async () => {
 		const mockFetch = async (url: string) => {
-			if (url.includes("/api/v1/models")) {
+			if (url.includes("/api/models")) {
 				return new Response(JSON.stringify({ data: [{ id: "claude-sonnet-4-6" }] }), { status: 200 });
 			}
 			return new Response("not json", { status: 200 });
@@ -1174,7 +1228,7 @@ describe("probeLiteLLMConnection()", () => {
 			fetch: mockFetch as unknown as typeof globalThis.fetch,
 		});
 		expect(result.reachable).toBe(true);
-		expect(result.apiBasePath).toBe("/api/v1");
+		expect(result.apiBasePath).toBe("/api");
 	});
 });
 
@@ -1247,7 +1301,7 @@ describe("probeAndUpgradeLiteLLMConfig()", () => {
 		expect(fs.existsSync(`${modelsPath}.bak`)).toBe(true);
 	});
 
-	test("fixes wrong base path when probe discovers /api/v1 works", async () => {
+	test("fixes wrong base path when probe discovers /api works", async () => {
 		setEnv("https://proxy.example.com", "sk-abc123");
 		fs.mkdirSync(path.dirname(modelsPath), { recursive: true });
 
@@ -1255,7 +1309,7 @@ describe("probeAndUpgradeLiteLLMConfig()", () => {
 		fs.writeFileSync(modelsPath, generateModelsYml("https://proxy.example.com"));
 
 		const mockFetch = async (url: string) => {
-			if (url.includes("/api/v1/models")) {
+			if (url.includes("/api/models")) {
 				return new Response(JSON.stringify({ data: [{ id: "claude-sonnet-4-6" }] }), { status: 200 });
 			}
 			// Open WebUI intercepts /v1/models — returns HTML
@@ -1268,7 +1322,7 @@ describe("probeAndUpgradeLiteLLMConfig()", () => {
 		expect(upgraded).toBe(true);
 
 		const afterContent = fs.readFileSync(modelsPath, "utf-8");
-		expect(afterContent).toContain('baseUrl: "https://proxy.example.com/api/v1"');
+		expect(afterContent).toContain('baseUrl: "https://proxy.example.com/api"');
 	});
 
 	test("no-ops when discovery is already configured with correct base path", async () => {

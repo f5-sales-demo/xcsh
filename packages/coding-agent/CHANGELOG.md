@@ -16,6 +16,8 @@
 
 - Prevalidated manifest batches before mutation, preserved strict create and update semantics, rejected unsupported server dry-run, and returned automation-grade exit codes for resource operations ([#2930](https://github.com/f5-sales-demo/xcsh/issues/2930))
 - Prevented sandbox false refusals from path-like Bash and Python source text while limiting account and data containers to discovery protection and preserving xcsh-private runtime isolation ([#2931](https://github.com/f5-sales-demo/xcsh/issues/2931))
+- Validated matching chat-completion POST routes during LiteLLM discovery so Open WebUI model-management endpoints cannot be mistaken for inference endpoints ([#2996](https://github.com/f5-sales-demo/xcsh/issues/2996))
+- Returned non-zero status from headless text and JSON sessions when the model turn fails or is aborted, while disposing each session exactly once ([#2996](https://github.com/f5-sales-demo/xcsh/issues/2996))
 
 ## [20.3.0] - 2026-08-04
 

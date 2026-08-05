@@ -1083,7 +1083,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		// Non-interactive (--print, piped, --mode json): force temperature=0 for
 		// deterministic HCL generation. Interactive mode keeps its configured value.
 		session.agent.temperature = 0;
-		await runPrintMode(session, {
+		const exitCode = await runPrintMode(session, {
 			mode,
 			messages: parsedArgs.messages,
 			initialMessage,
@@ -1091,7 +1091,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		});
 		await session.dispose();
 		stopThemeWatcher();
-		await postmortem.quit(0);
+		await postmortem.quit(exitCode);
 	}
 }
 

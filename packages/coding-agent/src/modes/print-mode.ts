@@ -68,7 +68,7 @@ export function buildJsonAgentEventLine(event: AgentSessionEvent): string | unde
 	return `${JSON.stringify(publicEvent)}\n`;
 }
 
-export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<void> {
+export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<0 | 1> {
 	const { mode, messages = [], initialMessage, initialImages } = options;
 
 	// Emit session header for JSON mode.
@@ -200,21 +200,16 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 		await session.prompt(message);
 	}
 
-	// In text mode, output final response
-	if (mode === "text") {
-		const state = session.state;
-		const lastMessage = state.messages[state.messages.length - 1];
+	const state = session.state;
+	const lastMessage = state.messages[state.messages.length - 1];
+	const assistantMsg = lastMessage?.role === "assistant" ? (lastMessage as AssistantMessage) : undefined;
+	const failed = assistantMsg?.stopReason === "error" || assistantMsg?.stopReason === "aborted";
 
-		if (lastMessage?.role === "assistant") {
-			const assistantMsg = lastMessage as AssistantMessage;
-
-			// Check for error/aborted
-			if (assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted") {
-				process.stderr.write(`${assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`}\n`);
-				process.exit(1);
-			}
-
-			// Output text content
+	// In text mode, output final response or the terminal model error.
+	if (mode === "text" && assistantMsg) {
+		if (failed) {
+			process.stderr.write(`${assistantMsg.errorMessage || `Request ${assistantMsg.stopReason}`}\n`);
+		} else {
 			for (const content of assistantMsg.content) {
 				if (content.type === "text") {
 					process.stdout.write(`${content.text}\n`);
@@ -232,5 +227,5 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 	});
 	await promise;
 
-	await session.dispose();
+	return failed ? 1 : 0;
 }
