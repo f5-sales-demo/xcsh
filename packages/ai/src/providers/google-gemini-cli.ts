@@ -1,7 +1,7 @@
 /**
  * Google Gemini CLI / Antigravity provider.
  * Shared implementation for both google-gemini-cli and google-antigravity providers.
- * Uses the Cloud Code Assist API endpoint to access Gemini and Claude models.
+ * Uses Cloud Code Assist plus explicit enterprise Vertex routes for supported Antigravity models.
  */
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { abortableSleep, readSseJson } from "@f5-sales-demo/pi-utils";
@@ -62,6 +62,9 @@ const DEFAULT_ENDPOINT = "https://cloudcode-pa.googleapis.com";
 const ANTIGRAVITY_DAILY_ENDPOINT = "https://daily-cloudcode-pa.googleapis.com";
 const ANTIGRAVITY_SANDBOX_ENDPOINT = "https://daily-cloudcode-pa.sandbox.googleapis.com";
 const ANTIGRAVITY_ENDPOINT_FALLBACKS = [ANTIGRAVITY_DAILY_ENDPOINT, ANTIGRAVITY_SANDBOX_ENDPOINT] as const;
+const ANTIGRAVITY_VERTEX_MODELS: Readonly<Record<string, string>> = Object.freeze({
+	"gemini-3.1-pro-high-vertex": "gemini-3.1-pro-preview",
+});
 
 /**
  * Build a User-Agent string that identifies as Gemini CLI to unlock higher rate limits.
@@ -421,34 +424,36 @@ interface CloudCodeAssistRequest {
 	requestId?: string;
 }
 
-interface CloudCodeAssistResponseChunk {
-	response?: {
-		candidates?: Array<{
-			content?: {
-				role: string;
-				parts?: Array<{
-					text?: string;
-					thought?: boolean;
-					thoughtSignature?: string;
-					functionCall?: {
-						name: string;
-						args: Record<string, unknown>;
-						id?: string;
-					};
-				}>;
-			};
-			finishReason?: string;
-		}>;
-		usageMetadata?: {
-			promptTokenCount?: number;
-			candidatesTokenCount?: number;
-			thoughtsTokenCount?: number;
-			totalTokenCount?: number;
-			cachedContentTokenCount?: number;
+interface GeminiGenerateContentResponse {
+	candidates?: Array<{
+		content?: {
+			role: string;
+			parts?: Array<{
+				text?: string;
+				thought?: boolean;
+				thoughtSignature?: string;
+				functionCall?: {
+					name: string;
+					args: Record<string, unknown>;
+					id?: string;
+				};
+			}>;
 		};
-		modelVersion?: string;
-		responseId?: string;
+		finishReason?: string;
+	}>;
+	usageMetadata?: {
+		promptTokenCount?: number;
+		candidatesTokenCount?: number;
+		thoughtsTokenCount?: number;
+		totalTokenCount?: number;
+		cachedContentTokenCount?: number;
 	};
+	modelVersion?: string;
+	responseId?: string;
+}
+
+interface CloudCodeAssistResponseChunk extends GeminiGenerateContentResponse {
+	response?: GeminiGenerateContentResponse;
 	traceId?: string;
 }
 
@@ -492,11 +497,16 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 			const parsedCredentials = parseGeminiCliCredentials(apiKeyRaw);
 			const activeCredentials = await refreshGeminiCliCredentialsIfNeeded(parsedCredentials, isAntigravity);
 			const { accessToken, projectId } = activeCredentials;
+			const vertexModelId = isAntigravity ? ANTIGRAVITY_VERTEX_MODELS[model.id] : undefined;
+			const serviceName = vertexModelId ? "Vertex AI" : "Cloud Code Assist";
 
 			const baseUrl = model.baseUrl?.trim();
 			const endpoints = baseUrl ? [baseUrl] : isAntigravity ? ANTIGRAVITY_ENDPOINT_FALLBACKS : [DEFAULT_ENDPOINT];
 
-			let requestBody = buildRequest(model, context, projectId, options, isAntigravity);
+			const cloudCodeRequest = buildRequest(model, context, projectId, options, isAntigravity);
+			let requestBody: CloudCodeAssistRequest | CloudCodeAssistRequest["request"] = vertexModelId
+				? cloudCodeRequest.request
+				: cloudCodeRequest;
 			const replacementPayload = await options?.onPayload?.(requestBody, model);
 			if (replacementPayload !== undefined) {
 				requestBody = replacementPayload as typeof requestBody;
@@ -534,7 +544,9 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 
 				try {
 					const endpoint = endpoints[Math.min(attempt, endpoints.length - 1)];
-					requestUrl = `${endpoint}/v1internal:streamGenerateContent?alt=sse`;
+					requestUrl = vertexModelId
+						? `${endpoint}/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/${encodeURIComponent(vertexModelId)}:streamGenerateContent?alt=sse`
+						: `${endpoint}/v1internal:streamGenerateContent?alt=sse`;
 					response = await fetch(requestUrl, {
 						method: "POST",
 						headers: requestHeaders,
@@ -552,7 +564,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 					if (response.status === 429) {
 						if (/quota|exhausted/i.test(errorText)) {
 							throw withHttpStatus(
-								new Error(`Cloud Code Assist API error (429): ${extractErrorMessage(errorText)}`),
+								new Error(`${serviceName} API error (429): ${extractErrorMessage(errorText)}`),
 								429,
 							);
 						}
@@ -590,7 +602,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 
 					// Not retryable or budget exceeded
 					throw withHttpStatus(
-						new Error(`Cloud Code Assist API error (${response.status}): ${extractErrorMessage(errorText)}`),
+						new Error(`${serviceName} API error (${response.status}): ${extractErrorMessage(errorText)}`),
 						response.status,
 					);
 				} catch (error) {
@@ -665,8 +677,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 					activeResponse.body!,
 					options?.signal,
 				)) {
-					const responseData = chunk.response;
-					if (!responseData) continue;
+					const responseData = chunk.response ?? chunk;
 
 					const candidate = responseData.candidates?.[0];
 					if (candidate?.content?.parts) {
@@ -878,7 +889,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 					if (!currentResponse.ok) {
 						const retryErrorText = await currentResponse.text();
 						throw withHttpStatus(
-							new Error(`Cloud Code Assist API error (${currentResponse.status}): ${retryErrorText}`),
+							new Error(`${serviceName} API error (${currentResponse.status}): ${retryErrorText}`),
 							currentResponse.status,
 						);
 					}
@@ -896,7 +907,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 			}
 
 			if (!receivedContent) {
-				throw new Error("Cloud Code Assist API returned an empty response");
+				throw new Error(`${serviceName} API returned an empty response`);
 			}
 
 			if (options?.signal?.aborted) {

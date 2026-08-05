@@ -8,6 +8,13 @@ const DEFAULT_ANTIGRAVITY_DISCOVERY_ENDPOINTS = [
 	"https://daily-cloudcode-pa.sandbox.googleapis.com",
 ] as const;
 const FETCH_AVAILABLE_MODELS_PATH = "/v1internal:fetchAvailableModels";
+const ANTIGRAVITY_VERTEX_ENDPOINT = "https://aiplatform.googleapis.com";
+const ANTIGRAVITY_VERTEX_VARIANTS: Readonly<Record<string, { id: string; name: string }>> = Object.freeze({
+	"gemini-3.1-pro-high": {
+		id: "gemini-3.1-pro-high-vertex",
+		name: "Gemini 3.1 Pro High (Vertex, Antigravity)",
+	},
+});
 
 const DEFAULT_CONTEXT_WINDOW = 200_000;
 const DEFAULT_MAX_TOKENS = 64_000;
@@ -222,12 +229,13 @@ export async function fetchAntigravityDiscoveryModels(
 			}
 
 			const supportsImages = model.supportsImages === true;
+			const vertexVariant = ANTIGRAVITY_VERTEX_VARIANTS[modelId];
 			models.push({
-				id: modelId,
-				name: model.displayName ? `${model.displayName} (Antigravity)` : modelId,
+				id: vertexVariant?.id ?? modelId,
+				name: vertexVariant?.name ?? (model.displayName ? `${model.displayName} (Antigravity)` : modelId),
 				api: "google-gemini-cli",
 				provider: "google-antigravity",
-				baseUrl: endpoint,
+				baseUrl: vertexVariant ? ANTIGRAVITY_VERTEX_ENDPOINT : endpoint,
 				reasoning: model.supportsThinking === true,
 				input: supportsImages ? ["text", "image"] : ["text"],
 				cost: {
