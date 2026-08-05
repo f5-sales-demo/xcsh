@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { type Mode, parseArgs } from "../../src/cli/args";
+import { getExtraHelpText, type Mode, parseArgs } from "../../src/cli/args";
 import { buildCliFlags, flagSpec, LAUNCH_FLAGS, normalizeFlagTokens, takesValue } from "../../src/cli/flag-spec";
 import Index from "../../src/commands/launch";
 
@@ -39,6 +39,18 @@ describe("help and parser cannot drift", () => {
 			if (spec.arity !== "repeatable-value" || "hidden" in spec) continue;
 			expect(flags[name].multiple, `--${name} should be multiple`).toBe(true);
 		}
+	});
+
+	test("sandbox help describes discovery rather than CWD access grants", () => {
+		const noSandbox = LAUNCH_FLAGS["no-sandbox"].description;
+		const allowPath = LAUNCH_FLAGS["allow-path"].description;
+		const extraHelp = getExtraHelpText();
+
+		expect(noSandbox).toMatch(/discovery guard/i);
+		expect(allowPath).toMatch(/directory discovery/i);
+		expect(extraHelp).toContain(noSandbox);
+		expect(extraHelp).toContain(allowPath);
+		expect(`${noSandbox}\n${allowPath}\n${extraHelp}`).not.toMatch(/access outside the CWD|read\+write access/i);
 	});
 
 	test("hidden flags are parsed but not advertised", () => {

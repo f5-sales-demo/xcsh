@@ -95,7 +95,11 @@ describe("evaluateToolCall", () => {
 			const evaluate = (toolName: string, input: Record<string, unknown>) =>
 				evaluateToolCall({ toolName, input, cwd: workspace, fence });
 
-			expect(evaluate("read", { file_path: parent }).block).toBe(true);
+			const directoryRead = evaluate("read", { file_path: parent });
+			expect(directoryRead.block).toBe(true);
+			expect(directoryRead.reason).toContain("enumerate boundary");
+			expect(directoryRead.reason).toMatch(/listing names, not general filesystem access/i);
+			expect(directoryRead.reason).toMatch(/exact path.*task names directly/i);
 			expect(evaluate("read", { file_path: path.join(workspace, "parent-link") }).block).toBe(true);
 			expect(evaluate("read", { file_path: namedFile }).block).toBe(false);
 			expect(evaluate("grep", { pattern: "context", path: parent }).block).toBe(true);

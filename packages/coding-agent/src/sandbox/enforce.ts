@@ -110,10 +110,20 @@ function permits(check: ToolCallCheck, resolved: string, access: SandboxAccess):
 }
 
 /**
- * The refusal the model sees. Wording preserved from the policy this replaced, because the bash prompt
- * and the skill-URL boundary both tell the model to expect it.
+ * The refusal the model sees. Read/write wording stays compatible with the directional policy this
+ * replaced; enumeration gets the discovery-specific recovery that matches the ordinary session fence.
  */
 function deny(cwd: string, resolved: string, access: SandboxAccess): ToolCallDecision {
+	if (access === "enumerate") {
+		return {
+			block: true,
+			reason:
+				`Directory discovery is outside this session's enumerate boundary (working directory: ${cwd}): ${resolved}. ` +
+				"This refusal is about listing names, not general filesystem access. Use the exact path the task names directly. " +
+				"If the directory must be listed, use --allow-path or the sandbox.allow* settings to grant discovery, " +
+				"or --no-sandbox to disable the discovery guard.",
+		};
+	}
 	return {
 		block: true,
 		reason:
