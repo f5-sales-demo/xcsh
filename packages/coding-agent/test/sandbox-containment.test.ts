@@ -142,18 +142,36 @@ describe("buildContainmentFence", () => {
 		}
 	});
 
-	it("denies the cross-session leak roots even nested under an allowed root", () => {
+	it("hides cross-session root listings even when nested under an allowed root", () => {
 		const home = realTmp("home6");
 		// The pathological case: the workspace IS the agent dir's parent, so the leak roots sit
-		// inside something the fence allows. Deny must win regardless of nesting depth.
+		// inside something the fence allows. The exact enumeration deny must still win.
 		const workspace = path.join(home, ".xcsh");
 		const sessions = path.join(workspace, "agent", "sessions");
 		fs.mkdirSync(sessions, { recursive: true });
 		const fence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
 
 		expect(fenceVerdict(fence, path.join(workspace, "config.yml"), "read")).toBe("allow");
-		expect(fenceVerdict(fence, path.join(sessions, "other.jsonl"), "read")).toBe("deny");
-		expect(fenceVerdict(fence, path.join(sessions, "other.jsonl"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, sessions, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(sessions, "other.jsonl"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(sessions, "other.jsonl"), "write")).toBe("allow");
+	});
+
+	it("isolates cross-session roots without splitting their writable parent", () => {
+		const home = realTmp("operator-rights");
+		const workspace = path.join(home, "work");
+		const sessions = path.join(home, ".xcsh", "agent", "sessions");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(sessions, { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
+
+		expect(fence.deny).not.toContain(sessions);
+		expect(fence.denyEnumerate).toContain(sessions);
+		expect(fenceVerdict(fence, sessions, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(sessions, "known-session.jsonl"), "read")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(home, "created-directly"), "write")).toBe("allow");
+		expect(fenceVerdict(fence, path.join(fs.realpathSync(os.tmpdir()), "created-directly"), "write")).toBe("allow");
 	});
 
 	it("lets explicit grants override private roots without widening their direction", () => {
@@ -175,13 +193,17 @@ describe("buildContainmentFence", () => {
 			writeOnlyRoots: [privateParent],
 		});
 
-		expect(fenceVerdict(defaultFence, candidate, "read")).toBe("deny");
+		expect(fenceVerdict(defaultFence, sessions, "enumerate")).toBe("deny");
+		expect(fenceVerdict(defaultFence, candidate, "read")).toBe("allow");
+		expect(fenceVerdict(defaultFence, candidate, "write")).toBe("allow");
 		expect(fenceVerdict(full, candidate, "read")).toBe("allow");
 		expect(fenceVerdict(full, candidate, "write")).toBe("allow");
+		expect(fenceVerdict(full, sessions, "enumerate")).toBe("allow");
 		expect(fenceVerdict(readOnly, candidate, "read")).toBe("allow");
 		expect(fenceVerdict(readOnly, candidate, "write")).toBe("deny");
 		expect(fenceVerdict(writeOnly, candidate, "read")).toBe("deny");
 		expect(fenceVerdict(writeOnly, candidate, "write")).toBe("allow");
+		expect(fenceVerdict(writeOnly, sessions, "enumerate")).toBe("deny");
 	});
 
 	it("grants extra roots from --allow-path for both directions", () => {
@@ -323,12 +345,7 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		expect(fenceVerdict(fence, path.join(home, "git", "STYLE_GUIDE.md"), "read")).toBe("allow");
 	});
 
-	/**
-	 * A session whose folder is a direct child of home protects the home listing, not home contents.
-	 *
-	 * The sibling remains reachable by name because the operator's home is theirs. What the session cannot
-	 * do accidentally is list home and discover which sibling names exist.
-	 */
+	/** A session whose folder is a direct child of home must not change normal home navigation. */
 	it("does not fence home when the session folder sits directly in it", () => {
 		const home = realTmp("inhome");
 		const workspace = path.join(home, "custA");
@@ -341,11 +358,12 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		const fence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
 
 		expect(fence.deny).not.toContain(home);
-		expect(fenceVerdict(fence, home, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, home, "enumerate")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "read")).toBe("allow");
-		// The cross-SESSION surfaces are still closed, because those are the agent's own state rather
-		// than the operator's layout.
-		expect(fenceVerdict(fence, path.join(sessions, "x.jsonl"), "read")).toBe("deny");
+		// Xcsh-private state follows the same operator-rights rule: its listing is hidden, while a path
+		// the operator names directly remains available.
+		expect(fenceVerdict(fence, sessions, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(sessions, "x.jsonl"), "read")).toBe("allow");
 	});
 });
 
@@ -353,8 +371,8 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 	// The shared temp root holds per-session state: `local://` content at `<tmp>/xcsh-local/<sessionId>`
 	// (local-protocol.ts:118) and task artifacts at `<tmp>/xcsh-tasks/<id>` (task/index.ts). Both are
 	// exactly the cross-session channel the leak roots exist to close, and classifying `tmp` as
-	// operational made every session's copy readable and writable by every other session.
-	it("denies other sessions' local roots under the shared temp dir", () => {
+	// operational made every session's copy discoverable by every other session.
+	it("hides other sessions' local roots without splitting the shared temp dir", () => {
 		const home = realTmp("leaktmp");
 		const workspace = path.join(home, "w");
 		fs.mkdirSync(workspace, { recursive: true });
@@ -363,10 +381,11 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 		const fence = buildContainmentFence({ workspace, home });
 
 		const otherLocal = path.join(sharedTmp, "xcsh-local", "other-session", "handoff.json");
-		expect(fenceVerdict(fence, otherLocal, "read")).toBe("deny");
-		expect(fenceVerdict(fence, otherLocal, "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(sharedTmp, "xcsh-local"), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, otherLocal, "read")).toBe("allow");
+		expect(fenceVerdict(fence, otherLocal, "write")).toBe("allow");
 		// Ordinary scratch beside it stays reachable — `xcsh://about` promises `/tmp`, and the refusal of
-		// it was one of the false refusals #2582 removed. Only the agent's own per-session trees are shut.
+		// it was one of the false refusals #2582 removed. Only the private-container listings are shut.
 		expect(fenceVerdict(fence, path.join(sharedTmp, "scratch.txt"), "write")).toBe("allow");
 	});
 
@@ -407,9 +426,8 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 		expect(scanned).toEqual([home]);
 	});
 
-	// …and the session's own local root must stay reachable, or `local://` breaks for everyone. Granted
-	// through `extraRoots`, at greater depth than the deny.
-	it("keeps the session's own local root reachable inside that deny", () => {
+	// …and the session's own known local root must stay reachable, or `local://` breaks for everyone.
+	it("keeps the session's own local root reachable inside the hidden container", () => {
 		const home = realTmp("ownlocal");
 		const workspace = path.join(home, "w");
 		fs.mkdirSync(workspace, { recursive: true });
@@ -420,9 +438,11 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 
 		expect(fenceVerdict(fence, path.join(mine, "handoff.json"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(mine, "handoff.json"), "write")).toBe("allow");
-		// A different session's, under the same parent, is still refused.
+		// A different session is not discoverable by listing the shared parent, but a path the operator
+		// already knows keeps ordinary named access.
 		const theirs = path.join(fs.realpathSync(os.tmpdir()), "xcsh-local", "their-session", "x");
-		expect(fenceVerdict(fence, theirs, "read")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(fs.realpathSync(os.tmpdir()), "xcsh-local"), "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, theirs, "read")).toBe("allow");
 	});
 
 	// `sandbox.allowRead: ["~/shared"]` was passed straight to `realpathSync`, which does not expand `~`,
@@ -713,8 +733,9 @@ describe("buildContainmentFence — review findings", () => {
 		expect(fenceVerdict(fence, path.join(home, "GIT"), "enumerate")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(home, "GIT/custB/secrets.tf"), "read")).toBe("allow");
 		const otherSession = path.join(home, ".xcsh/agent/sessions/other.jsonl");
-		expect(fenceVerdict(fence, otherSession, "read")).toBe("deny");
-		expect(fenceVerdict(fence, otherSession, "write")).toBe("deny");
+		expect(fenceVerdict(fence, sessions, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, otherSession, "read")).toBe("allow");
+		expect(fenceVerdict(fence, otherSession, "write")).toBe("allow");
 		// The operator's own private files are not withheld from them. Asserted rather than left implicit,
 		// so anyone auditing what this fence protects sees the choice.
 		for (const own of [".ssh/id_ed25519", ".gnupg/secring.gpg", "Documents/contract.pdf"]) {
@@ -769,6 +790,27 @@ describe("containmentStatus", () => {
 			backend: "landlock",
 			osEnforced: true,
 		});
+	});
+
+	it("does not arm Landlock for a discovery-only fence that would remove ancestor listings", () => {
+		const home = realTmp("status-discovery-home");
+		const workspace = path.join(home, "workspaces", "customer-a");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+		let probed = false;
+
+		expect(
+			containmentStatus(
+				true,
+				"linux",
+				() => {
+					probed = true;
+					return landlock();
+				},
+				fence,
+			),
+		).toEqual({ enabled: true, backend: "scanner-only", osEnforced: false, discoveryOnly: true });
+		expect(probed).toBe(false);
 	});
 
 	// The case that must not over-claim: a Linux box where Landlock is absent or too old.
@@ -1053,12 +1095,12 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 		}
 	});
 
-	// A leak root inside the granted plugins tree must still win, and it must win while ABSENT — the
+	// A leak root inside the granted plugins tree must still hide its listing while ABSENT — the
 	// case that used to fall through, because `canonical` drops a path that does not exist yet and the
 	// home deny was quietly covering for it. Passed explicitly rather than read from the environment:
 	// the ambient dirs depend on whether an earlier test relocated the agent dir, which is not a
 	// property this test is about.
-	it("denies a cross-session leak root nested inside a grant, even before it exists", () => {
+	it("hides a cross-session leak root nested inside a grant, even before it exists", () => {
 		const home = realTmp("leaknest");
 		const workspace = path.join(home, "w");
 		const plugins = path.join(home, ".xcsh", "plugins");
@@ -1069,7 +1111,9 @@ describe("buildContainmentFence — data roots outside the workspace", () => {
 
 		const fence = buildContainmentFence({ workspace, home, leakRoots: [leak] });
 
-		expect(fence.deny).toContain(leak);
-		expect(fenceVerdict(fence, path.join(leak, "other-session.json"), "read")).toBe("deny");
+		expect(fence.deny).not.toContain(leak);
+		expect(fence.denyEnumerate).toContain(leak);
+		expect(fenceVerdict(fence, leak, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(leak, "other-session.json"), "read")).toBe("allow");
 	});
 });

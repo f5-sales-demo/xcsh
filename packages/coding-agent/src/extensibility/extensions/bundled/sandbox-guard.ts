@@ -6,15 +6,13 @@ import { resolveSessionFence } from "../../../sandbox/session-fence";
 /**
  * Session filesystem sandbox (bundled, default-on).
  *
- * Confines the model-invoked file tools (read/write/edit/find/grep) and the Bash
- * working directory to the session's CWD subtree plus a curated global allowlist, so
- * concurrent sessions in different customer folders cannot read or write each other's
- * files, secrets, or memory. Enforcement is a `tool_call` gate: the extension wrapper
+ * Removes casual cross-session discovery from model-invoked filesystem tools while preserving the
+ * operator's normal rights on every named path. Enforcement is a `tool_call` gate: the extension wrapper
  * blocks the tool when this returns `{ block: true }`, and fails safe (a thrown handler
  * also blocks).
  *
  * The boundary is derived from `ctx.cwd` (always the live session's directory) plus the
- * `sandbox.*` settings. Controlled by `sandbox.enabled` (default true); widened per run
+ * `sandbox.*` settings. Controlled by `sandbox.enabled` (default true); discovery is widened per run
  * with `--allow-path` / `--no-sandbox` or the `sandbox.allow*` settings.
  */
 export default function sandboxGuard(pi: ExtensionAPI): void {

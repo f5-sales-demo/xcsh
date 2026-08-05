@@ -382,6 +382,63 @@ fn an_exact_enumeration_deny_keeps_named_descendants_reachable() {
 	assert!(plan.permits(&sibling_dir, FenceAccess::Enumerate));
 }
 
+#[test]
+fn production_enumeration_isolation_preserves_direct_parent_creation() {
+	let fs = FakeFs::new(&[
+		"/tmp/existing",
+		"/tmp/xcsh-local/other-session/state.json",
+		"/tmp/xcsh-tasks/other-task/artifact",
+		"/home/alice/existing",
+		"/home/alice/.xcsh/agent/sessions/other.jsonl",
+	]);
+	let fence = ContainmentFence {
+		allow: vec![PathBuf::from("/home/alice")],
+		deny_enumerate: vec![
+			PathBuf::from("/tmp/xcsh-local"),
+			PathBuf::from("/tmp/xcsh-tasks"),
+			PathBuf::from("/home/alice/.xcsh/agent/sessions"),
+		],
+		..ContainmentFence::default()
+	};
+	let plan = fence.compile_grant_plan(&fs);
+
+	for direct_child in ["/tmp/terraform-provider-new", "/home/alice/new-config"] {
+		assert!(
+			plan.permits(Path::new(direct_child), FenceAccess::Write),
+			"{} must remain directly creatable",
+			direct_child
+		);
+	}
+	for private_root in ["/tmp/xcsh-local", "/tmp/xcsh-tasks", "/home/alice/.xcsh/agent/sessions"] {
+		assert!(!plan.permits(Path::new(private_root), FenceAccess::Enumerate));
+	}
+	assert!(
+		plan.permits(Path::new("/home/alice/.xcsh/agent/sessions/other.jsonl"), FenceAccess::Read)
+	);
+}
+
+#[test]
+fn discovery_only_fences_do_not_require_landlock() {
+	let discovery_only = ContainmentFence {
+		allow: vec![PathBuf::from("/home/alice")],
+		deny_enumerate: vec![PathBuf::from("/home/alice/customers")],
+		..ContainmentFence::default()
+	};
+	assert!(!discovery_only.requires_landlock());
+
+	let recursive = ContainmentFence {
+		deny: vec![PathBuf::from("/home/alice/customers")],
+		..ContainmentFence::default()
+	};
+	assert!(recursive.requires_landlock());
+
+	let directional = ContainmentFence {
+		allow_read_only: vec![PathBuf::from("/shared")],
+		..ContainmentFence::default()
+	};
+	assert!(directional.requires_landlock());
+}
+
 /// Two lists naming the same path must resolve the way `permits_resolved` does:
 /// deny wins.
 #[test]

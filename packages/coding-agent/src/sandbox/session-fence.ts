@@ -67,7 +67,7 @@ export interface SessionFenceExtras {
  * The session's fence for `workspace`, or undefined when sandboxing is off.
  *
  * Cached on the full effective configuration — the workspace plus the resolved enable flag, both
- * allow-lists and any extra roots — not on the workspace alone. Keying on the allow-lists is what lets
+ * discovery-grant lists and any extra roots — not on the workspace alone. Keying on the lists is what lets
  * a mid-session `settings.override("sandbox.allowRead", …)` take effect, as when the Office pane grants
  * a user-picked folder; a workspace-only key would keep serving the stale fence and block the path that
  * was just granted. The key only ever triggers more rebuilds, never fewer restrictions.
@@ -94,15 +94,15 @@ export function resolveSessionFence(
 	const cached = cache.get(signature);
 	if (cached) return cached;
 
-	// The three grants stay distinct. Merging allowRead and allowWrite into one read+write list made a
-	// folder shared for reading writable, undoing the split built for #2516. A root in *both* lists is
-	// the deliberate exception the fence itself handles, because that is what `--allow-path` produces.
+	// Session settings restore discovery; they do not reduce the operator's normal rights. The fence is a
+	// cross-context courtesy, not a read-only/write-only privilege boundary. Treat either historical
+	// allow-list as a full named-path grant so an old `sandbox.allowRead` entry cannot make a professional
+	// tool fail when it writes credentials, state, or build output there. The low-level fence keeps
+	// directional roots for specialized callers and tests, but ordinary xcsh sessions never emit them.
 	const fence = buildContainmentFence({
 		workspace,
 		sessionTmp: extras.sessionTmp,
-		extraRoots: extras.extraRoots,
-		readOnlyRoots: allowRead,
-		writeOnlyRoots: allowWrite,
+		extraRoots: [...(extras.extraRoots ?? []), ...allowRead, ...allowWrite],
 	});
 	if (cache.size >= CACHE_LIMIT) {
 		const oldest = cache.keys().next();

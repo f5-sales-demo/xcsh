@@ -81,23 +81,23 @@ describe("resolveSessionFence", () => {
 		}
 	});
 
-	it("honours the allow-lists", () => {
+	it("treats the allow-lists as discovery grants, not operator-rights restrictions", () => {
 		const { mine, shared } = tenants("lists");
 		const fence = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
 		expect(fenceVerdict(fence, path.join(shared, "file.md"), "read")).toBe("allow");
-		expect(fenceVerdict(fence, path.join(shared, "file.md"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(shared, "file.md"), "write")).toBe("allow");
 	});
 
 	// Two sessions can share a cwd and differ in sandbox settings — createAgentSession accepts an
 	// isolated Settings instance. A cwd-keyed cache would hand one session the other's boundary.
 	it("distinguishes same-cwd sessions whose settings differ", () => {
 		const { mine, shared } = tenants("samecwd");
-		const readOnly = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
+		const readGranted = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
 		const ordinary = resolveSessionFence(mine, reader({}))!;
 
-		expect(fenceVerdict(readOnly, path.join(shared, "file.md"), "write")).toBe("deny");
+		expect(fenceVerdict(readGranted, path.join(shared, "file.md"), "write")).toBe("allow");
 		expect(fenceVerdict(ordinary, path.join(shared, "file.md"), "write")).toBe("allow");
-		expect(readOnly).not.toBe(ordinary);
+		expect(readGranted).not.toBe(ordinary);
 	});
 
 	it("reuses the fence for an identical configuration", () => {
@@ -120,13 +120,15 @@ describe("resolveSessionFence", () => {
 	// is what let the two disagree before. A different extras value must not be served from cache.
 	it("keys the cache on extra roots too", () => {
 		const { mine } = tenants("extras");
-		// A private session-store descendant is denied without the explicit runtime grant and opened by it.
-		// Unlike `/srv`, this is a recursive deny, so the assertion proves the extra root changed the fence.
+		// Named private-store descendants already retain operator access. The runtime grant still belongs in
+		// the cache key because it records the session-owned artifact root explicitly.
 		const artifacts = path.join(getSessionsDir(), "xcsh-artifacts-test");
 		const without = resolveSessionFence(mine, reader({}))!;
 		const with_ = resolveSessionFence(mine, reader({}), { extraRoots: [artifacts] })!;
 		expect(without).not.toBe(with_);
-		expect(fenceVerdict(without, path.join(artifacts, "out.txt"), "write")).toBe("deny");
+		expect(without.allow).not.toContain(artifacts);
+		expect(with_.allow).toContain(artifacts);
+		expect(fenceVerdict(without, path.join(artifacts, "out.txt"), "write")).toBe("allow");
 		expect(fenceVerdict(with_, path.join(artifacts, "out.txt"), "write")).toBe("allow");
 	});
 });

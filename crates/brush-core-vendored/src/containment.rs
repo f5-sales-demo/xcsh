@@ -7,8 +7,10 @@
 //!
 //! It is deliberately permissive. Anything matched by no root is outside the fence and allowed, so
 //! `/usr`, `/tmp`, package caches, the network and process execution are untouched. Cross-tenant
-//! isolation removes accidental parent enumeration while preserving named operator access; explicit
-//! data-root and cross-session state denies remain recursive.
+//! isolation removes accidental parent enumeration while preserving named operator access. Recursive
+//! denies remain available for explicit policies, but the production session fence does not use one
+//! beneath an operator-writable parent: Landlock cannot subtract that child without preventing direct
+//! creation in its parent.
 //!
 //! The fence is per-invocation and absent by default: only the model's `bash` tool supplies one.
 //! Host-driven shell use — credential helpers, the interactive `xcsh shell`, snapshot sourcing —
@@ -183,6 +185,17 @@ pub fn canonicalize_for_fence(candidate: &Path) -> PathBuf {
 }
 
 impl ContainmentFence {
+	/// Whether this fence needs Linux Landlock rather than the in-process shell checks alone.
+	///
+	/// Landlock cannot express an exact directory-enumeration deny without also removing READ_DIR from
+	/// every ancestor. The production discovery-only fence therefore stays in-process on Linux: arming
+	/// Landlock for it broke `ls ~`, `ls /tmp`, `ls /`, PTYs, and setuid tools while buying no faithful
+	/// enforcement. Recursive and directional low-level policies still need the kernel backend.
+	#[must_use]
+	pub fn requires_landlock(&self) -> bool {
+		!self.deny.is_empty() || !self.allow_read_only.is_empty() || !self.allow_write_only.is_empty()
+	}
+
 	/// Whether `candidate` may be accessed for `access`.
 	///
 	/// Deepest match wins and a deny beats an allow at equal depth, matching the host policy's

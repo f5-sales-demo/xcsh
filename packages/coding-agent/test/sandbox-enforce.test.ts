@@ -80,16 +80,18 @@ describe("evaluateToolCall", () => {
 	});
 
 	it("blocks parent enumeration without blocking a named sibling file", () => {
-		const parent = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-enumerate-")));
+		const home = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-enumerate-")));
+		const parent = path.join(home, "customers");
 		const workspace = path.join(parent, "example-a");
 		const sibling = path.join(parent, "example-b");
+		fs.mkdirSync(parent);
 		fs.mkdirSync(workspace);
 		fs.mkdirSync(sibling);
 		fs.symlinkSync("..", path.join(workspace, "parent-link"));
 		const namedFile = path.join(sibling, "context.md");
 		fs.writeFileSync(namedFile, "context");
 		try {
-			const fence = buildContainmentFence({ workspace, home: parent });
+			const fence = buildContainmentFence({ workspace, home });
 			const evaluate = (toolName: string, input: Record<string, unknown>) =>
 				evaluateToolCall({ toolName, input, cwd: workspace, fence });
 
@@ -99,7 +101,7 @@ describe("evaluateToolCall", () => {
 			expect(evaluate("grep", { pattern: "context", path: parent }).block).toBe(true);
 			expect(evaluate("ast_edit", { path: parent }).block).toBe(true);
 		} finally {
-			fs.rmSync(parent, { recursive: true, force: true });
+			fs.rmSync(home, { recursive: true, force: true });
 		}
 	});
 

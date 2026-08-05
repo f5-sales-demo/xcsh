@@ -92,14 +92,22 @@ expect "truncate a file in the workspace" ok ": > own.txt && test ! -s own.txt"
 expect "pipeline with grep and sed" ok "printf 'a\\nb\\n' > p.txt && sed -n 2p p.txt | grep b"
 expect "tar roundtrip" ok "mkdir -p t && echo x > t/f && tar czf t.tgz t && rm -rf t && tar xzf t.tgz && cat t/f"
 
-printf '\n=== exact parent enumeration courtesy ===\n'
+printf '\n=== discovery-only courtesy stays out of Landlock ===\n'
 BASE_FENCE="$FENCE"
 FENCE=$(printf '{"allow":["%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":[],"denyEnumerate":["%s"]}' \
   "$WORKSPACE" "$HOME_DIR/GIT")
-expect "listing the protected parent" refused "ls $HOME_DIR/GIT > /dev/null"
+# Landlock cannot hide this one listing without also breaking every ancestor listing. Production keeps
+# this courtesy in the structured-tool/brush checks, so an external child retains normal operator rights
+# and, critically, does not inherit no_new_privs.
+expect "external listing keeps operator rights" ok "ls $HOME_DIR/GIT > /dev/null"
 expect "read a named sibling file" ok "cat $SIBLING/secret.txt > /dev/null && echo named-ok"
 expect "write a named sibling file" ok "printf named > $SIBLING/named.txt && test -f $SIBLING/named.txt"
 expect "list below a named sibling" ok "ls $SIBLING > /dev/null && echo child-ok"
+expect "operator home remains enumerable" ok "ls $HOME_DIR > /dev/null"
+expect "system temp remains enumerable" ok "ls /tmp > /dev/null"
+expect "filesystem root remains enumerable" ok "ls / > /dev/null"
+expect "discovery-only child keeps privilege capability" ok \
+  "grep -q 'NoNewPrivs:.*0' /proc/self/status"
 FENCE="$BASE_FENCE"
 
 printf '\n=== directional roots keep their direction ===\n'

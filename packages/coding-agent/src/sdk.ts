@@ -1167,7 +1167,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				},
 				// Read live rather than captured, for the same reason as the model: `--no-sandbox` and
 				// `sandbox.enabled` are per-session, so the answer must reflect this session (#2554).
-				getContainment: () => containmentStatus(resolveSessionFence(process.cwd(), settings) !== undefined),
+				getContainment: () => {
+					const fence = resolveSessionFence(process.cwd(), settings);
+					return containmentStatus(fence !== undefined, process.platform, undefined, fence);
+				},
 				// Read live rather than captured: `session.model` is a read-through to agent state, so a
 				// mid-session Ctrl+P switch shows up on the next xcsh://about read (#2459).
 				getActiveModel: () =>

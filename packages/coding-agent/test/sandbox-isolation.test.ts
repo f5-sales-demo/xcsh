@@ -3,7 +3,14 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell } from "@f5-sales-demo/pi-natives";
-import { getAgentDir, getConfigRootDir, getPluginsDir, TempDir } from "@f5-sales-demo/pi-utils";
+import {
+	getAgentDir,
+	getConfigRootDir,
+	getMemoriesDir,
+	getPluginsDir,
+	setAgentDir,
+	TempDir,
+} from "@f5-sales-demo/pi-utils";
 import { discoverAndLoadExtensions } from "../src/extensibility/extensions/loader";
 import { getMemoryRoot } from "../src/memories";
 import { buildContainmentFence, containmentStatus } from "../src/sandbox/containment";
@@ -15,6 +22,8 @@ let home: string;
 let parent: string;
 let custA: string;
 let custB: string;
+let originalAgentDir: string;
+let originalAgentDirOverride: string | undefined;
 
 beforeAll(() => {
 	tmp = TempDir.createSync("xcsh-sbx-iso-");
@@ -30,9 +39,18 @@ beforeAll(() => {
 	fs.mkdirSync(custB, { recursive: true });
 	fs.writeFileSync(path.join(custA, "notes.md"), "a");
 	fs.writeFileSync(path.join(custB, "secret.env"), "TOKEN=b");
+	originalAgentDir = getAgentDir();
+	originalAgentDirOverride = process.env.PI_CODING_AGENT_DIR;
+	setAgentDir(path.join(home, ".xcsh", "agent"));
+	fs.mkdirSync(getMemoriesDir(), { recursive: true });
 });
 
-afterAll(() => tmp.removeSync());
+afterAll(() => {
+	setAgentDir(originalAgentDir);
+	if (originalAgentDirOverride === undefined) delete process.env.PI_CODING_AGENT_DIR;
+	else process.env.PI_CODING_AGENT_DIR = originalAgentDirOverride;
+	tmp.removeSync();
+});
 
 /** Whether the `read` tool would be refused — the same fence the shell is confined by (#2624). */
 function reads(cwd: string, filePath: string): boolean {
@@ -110,11 +128,10 @@ describe("memory isolation (belt-and-suspenders)", () => {
 		expect(getMemoryRoot(getAgentDir(), custA)).not.toBe(getMemoryRoot(getAgentDir(), custB));
 	});
 
-	it("does not expose any session's raw memory store to the file tools", () => {
-		// The memory pipeline is an internal subsystem that bypasses the file-tool
-		// boundary; the model-invoked tools cannot read the raw store for any cwd.
-		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custB), "MEMORY.md"))).toBe(true);
-		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custA), "MEMORY.md"))).toBe(true);
+	it("hides the memory-store listing while preserving named operator access", () => {
+		expect(reads(custA, getMemoriesDir())).toBe(true);
+		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custB), "MEMORY.md"))).toBe(false);
+		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custA), "MEMORY.md"))).toBe(false);
 	});
 });
 
@@ -134,12 +151,12 @@ describe("bundled registration", () => {
  * asked the scanner would have passed throughout every escape in #2542 and #2553.
  */
 describe("two-customer isolation, enforced in the shell", () => {
-	// Taken from the product, not from a platform check written here, so this and `xcsh://about` cannot
-	// disagree about which platforms actually confine a spawned child.
-	const OS_ENFORCED = containmentStatus(true).osEnforced;
+	function productFenceFor(cwd: string) {
+		return buildContainmentFence({ workspace: cwd, home });
+	}
 
 	function fenceFor(cwd: string) {
-		const fence = buildContainmentFence({ workspace: cwd, home });
+		const fence = productFenceFor(cwd);
 		return {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
@@ -195,9 +212,10 @@ describe("two-customer isolation, enforced in the shell", () => {
 		}
 	});
 
-	it(`a spawned parent listing ${OS_ENFORCED ? "is" : "is not"} OS-confined`, async () => {
+	it("reports a spawned parent listing according to the actual fence backend", async () => {
+		const osEnforced = containmentStatus(true, process.platform, undefined, productFenceFor(custA)).osEnforced;
 		const { text } = await shell(custA, "ls ..");
-		if (OS_ENFORCED) expect(text).not.toContain("custB");
+		if (osEnforced) expect(text).not.toContain("custB");
 		else expect(text).toContain("custB");
 	});
 
@@ -215,7 +233,7 @@ describe("two-customer isolation, enforced in the shell", () => {
 });
 
 describe("local account discovery isolation, enforced in the shell", () => {
-	it("denies account enumeration while preserving named account access", async () => {
+	it("aligns account enumeration with the actual fence backend and preserves named access", async () => {
 		const fsRoot = path.join(tmp.absolute(), "account-fixture");
 		const accountRoot = path.join(fsRoot, "Users");
 		const operatorHome = path.join(accountRoot, "operator");
@@ -242,10 +260,10 @@ describe("local account discovery isolation, enforced in the shell", () => {
 
 		expect(await run(`printf operator > ${JSON.stringify(path.join(operatorHome, ".zshrc"))}`)).toBe(0);
 		expect(fs.readFileSync(path.join(operatorHome, ".zshrc"), "utf8")).toBe("operator");
-		if (containmentStatus(true).osEnforced) {
-			expect(await run(`ls ${JSON.stringify(accountRoot)} > /dev/null`)).not.toBe(0);
-			expect(await run(`cd ${JSON.stringify(otherHome)}`)).toBe(0);
-			expect(await run(`cat ${JSON.stringify(path.join(otherHome, "synthetic.txt"))} > /dev/null`)).toBe(0);
-		}
+		const osEnforced = containmentStatus(true, process.platform, undefined, fence).osEnforced;
+		const accountListing = await run(`ls ${JSON.stringify(accountRoot)} > /dev/null`);
+		expect(accountListing === 0).toBe(!osEnforced);
+		expect(await run(`cd ${JSON.stringify(otherHome)}`)).toBe(0);
+		expect(await run(`cat ${JSON.stringify(path.join(otherHome, "synthetic.txt"))} > /dev/null`)).toBe(0);
 	});
 });

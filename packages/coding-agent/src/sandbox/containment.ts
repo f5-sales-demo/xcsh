@@ -7,9 +7,8 @@
  * profile could not even `execvp /bin/cat`.
  *
  * So the fence is gentle. It leaves `/usr`, `/tmp`, package caches, the network and process execution
- * alone. Its cross-tenant courtesy removes discovery by enumerating session, account, and data
- * containers while keeping named operator access. Xcsh-private cross-session state remains denied
- * recursively unless the operator grants it explicitly (#2931).
+ * alone. Its cross-tenant courtesy removes discovery by enumerating session, account, data, and
+ * xcsh-private containers while keeping named operator access (#2931, #2952).
  *
  * Produced declaratively rather than as an ordered rule list, because the two backends disagree about
  * order: seatbelt evaluates rules in sequence with the last match winning, while Landlock only grants
@@ -375,12 +374,14 @@ function otherFilesystemRoots(fsRoot: string): string[] {
  *
  * `local://` content lands at `<tmp>/xcsh-local/<sessionId>` (`internal-urls/local-protocol.ts`) and a
  * task's artifacts at `<tmp>/xcsh-tasks/<id>` (`task/index.ts`) whenever no session artifacts dir is
- * configured. Those are the same class as `~/.xcsh/agent/sessions` — one session reading another's
- * working notes — so they belong in the leak roots rather than being covered incidentally.
+ * configured. Those are the same class as `~/.xcsh/agent/sessions` — another session's working notes —
+ * so their parent listings belong in the leak roots rather than being covered incidentally.
  *
  * Nothing else in the temp dir is touched: `xcsh://about` promises `/tmp` is reachable, and refusing it
- * wholesale is the false refusal #2582 removed. The session's OWN local root is granted back through
- * `extraRoots` at greater depth, so `local://` keeps working.
+ * wholesale is the false refusal #2582 removed. These roots lose enumeration only. A recursive deny
+ * beneath `/tmp` makes Landlock split that writable parent, which prevents ordinary programs from
+ * creating a direct child there (#2952). Named access therefore keeps the operator's normal rights,
+ * while the session's own local root remains discoverable through its known path.
  *
  * **Two fixed parents, deliberately never enumerated.** The first version listed the temp dir looking for
  * `xcsh-task-*` siblings, which cost 15ms of a 25-42ms fence build on a 17k-entry temp directory — per
@@ -475,7 +476,10 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	const parentExplicitlyReadable = [...extraResolved, ...readOnlyResolved].some(root =>
 		pathIsWithin(root, parentToProtect),
 	);
-	if (!tooBroadToDeny(parentToProtect, fsRoot) && !parentExplicitlyReadable) {
+	// Home itself is an operator workspace, not a customer-container boundary. Hiding its listing when a
+	// project is a direct child made ordinary shell navigation fail even on Seatbelt. Deeper project
+	// containers are still protected, but the operator always retains a normal `ls ~` experience.
+	if (parentToProtect !== home && !tooBroadToDeny(parentToProtect, fsRoot) && !parentExplicitlyReadable) {
 		denyEnumerate.add(parentToProtect);
 	}
 
@@ -532,25 +536,27 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		denyEnumerate.add(resolved);
 	}
 
-	// Cross-session leak roots. These may sit *under* an allowed root — the agent dir is inside home,
-	// and a session whose workspace is the agent dir would otherwise re-expose every other session's
-	// transcript. `fenceVerdict` resolves that by depth, so nesting is safe rather than accidental.
+	// Cross-session leak roots lose their exact directory listing, just like sibling workspace and
+	// account containers. Named descendants keep the operator's normal filesystem rights. This is
+	// deliberate rather than a weaker approximation: Landlock is allow-only, so recursively denying a
+	// child of `/tmp` or home prevents creating any new direct child in that parent (#2952). A professional
+	// tool must not require TMPDIR workarounds or a pre-created home subdirectory merely to run.
 	//
-	// Emitted even when absent: a rule that appears only once the directory does is one nobody can rely
-	// on, and creating it would otherwise be the way around it. This also covers relocated agent state.
+	// Emitted even when absent: a root created after the session starts must already have its listing
+	// protected. This also covers relocated agent state without enumerating home or the OS temp dir.
 	const leaks = options.leakRoots ?? [
 		getMemoriesDir(),
 		getSessionsDir(),
 		getXCSHContextsDir(),
 		...sharedTempLeakRoots(),
 	];
-	const explicitGrants = [...extraResolved, ...readOnlyResolved, ...writeOnlyResolved];
+	const explicitlyReadable = [...extraResolved, ...readOnlyResolved];
 	for (const leak of leaks) {
 		const resolved = canonicalThroughExisting(leak);
-		// A grant at or above a private root is an explicit operator override. Directional grants stay
-		// directional because their allowReadOnly/allowWriteOnly rule remains the deepest matching rule.
-		if (explicitGrants.some(root => pathIsWithin(root, resolved))) continue;
-		deny.add(resolved);
+		// A full or read grant at or above a private root explicitly restores its listing. A write-only
+		// grant does not imply permission to discover entries, so it leaves this exact protection intact.
+		if (explicitlyReadable.some(root => pathIsWithin(root, resolved))) continue;
+		denyEnumerate.add(resolved);
 	}
 
 	return {
@@ -602,6 +608,8 @@ export interface ContainmentStatus {
 	readonly backend: ContainmentBackend;
 	/** True when the kernel enforces it, false when only precise tool-call pre-checks run. */
 	readonly osEnforced: boolean;
+	/** Linux discovery-only profiles stay scanner-only so Landlock cannot remove ordinary ancestor listings. */
+	readonly discoveryOnly?: true;
 	/**
 	 * Set when the backend enforces reads and writes but cannot govern truncation.
 	 *
@@ -625,14 +633,34 @@ export interface ContainmentStatus {
  *
  * Deliberately not surfaced at startup or anywhere in the TUI — the operator asked for no UI change.
  */
+/**
+ * Whether Linux needs to arm Landlock for this fence.
+ *
+ * Exact enumeration denies are the production session courtesy, but Landlock cannot express one without
+ * also removing READ_DIR from every ancestor. Arming it made `ls ~`, `ls /tmp`, and `ls /` fail and also
+ * set `no_new_privs`, disabling sudo. Keep those checks in brush and the structured-tool gate. Recursive
+ * or directional low-level policies still require the kernel backend and retain their stricter contract.
+ */
+export function requiresLandlock(fence: ContainmentFence): boolean {
+	return fence.deny.length > 0 || fence.allowReadOnly.length > 0 || fence.allowWriteOnly.length > 0;
+}
+
 export function containmentStatus(
 	enabled: boolean,
 	platform: string = process.platform,
 	probe: () => { backend: string; truncateHandled?: boolean } | undefined = probeNativeBackend,
+	fence?: ContainmentFence,
 ): ContainmentStatus {
 	if (!enabled) return { enabled: false, backend: "disabled", osEnforced: false };
 	// macOS always has seatbelt, so there is nothing to ask.
 	if (platform === "darwin") return { enabled: true, backend: "seatbelt", osEnforced: true };
+	// Landlock is subtree-based. Applying it to an exact-listing-only courtesy removes normal access to
+	// ancestor listings and sets no_new_privs even though it cannot faithfully enforce the intended rule.
+	// Do not even probe in this common path: avoiding the syscall is part of keeping the sandbox off the
+	// command's latency path.
+	if (platform === "linux" && fence !== undefined && !requiresLandlock(fence)) {
+		return { enabled: true, backend: "scanner-only", osEnforced: false, discoveryOnly: true };
+	}
 	// Everywhere else the answer cannot be inferred from the platform name. Landlock can be compiled
 	// out of the kernel, left out of its boot-time LSM list, or too old to allow cross-directory
 	// rename — and none of that is visible from `process.platform`. Asking the native layer is the

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getSessionsDir, getShellPwd, setShellPwd } from "@f5-sales-demo/pi-utils";
+import { getShellPwd, setShellPwd } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../src/config/settings";
 import { _resetShellSessionsForTest } from "../src/exec/bash-executor";
 import { evaluateToolCall } from "../src/sandbox/enforce";
@@ -95,8 +95,8 @@ describe("the containment boundary cannot be relocated by the model", () => {
 
 		const fence = resolveSessionFence(session.cwd, session.settings)!;
 		const diagnostic = evaluateToolCall({
-			toolName: "write",
-			input: { file_path: path.join(getSessionsDir(), "diagnostic.txt") },
+			toolName: "read",
+			input: { file_path: work },
 			cwd: session.cwd,
 			fence,
 		});
@@ -125,9 +125,9 @@ describe("the containment boundary cannot be relocated by the model", () => {
 	});
 
 	it("keeps the original parent non-enumerable after a cd out of the tree", async () => {
-		// Control: the parent cannot be scanned before relocation. Both children exist, so an ordinary
-		// listing would necessarily disclose these synthetic workspace names.
-		const before = await run(`ls ${work}`);
+		// Brush expands the glob in-process, where the exact enumeration fence applies on every platform.
+		// External Linux commands deliberately keep the operator's ordinary listing rights (#2952).
+		const before = await run(`printf '%s\\n' ${work}/*`);
 		expect(before).not.toContain("custA");
 		expect(before).not.toContain("custB");
 
@@ -136,7 +136,7 @@ describe("the containment boundary cannot be relocated by the model", () => {
 		await run("c=cd; $c /usr");
 
 		// The actual property: the boundary did not travel with the shell.
-		const after = await run(`ls ${work}`);
+		const after = await run(`printf '%s\\n' ${work}/*`);
 		expect(after).not.toContain("custA");
 		expect(after).not.toContain("custB");
 	}, 120_000);

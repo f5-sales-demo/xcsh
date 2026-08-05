@@ -46,12 +46,12 @@ describe("containment enforced inside the shell", () => {
 		fs.writeFileSync(path.join(sibling, "secret.txt"), "CUSTB-CANARY-9001\n");
 		// Keep a recursive deny in this suite so it continues exercising read/write enforcement. The
 		// production sibling policy is enumeration-only and is covered in the glob and isolation suites.
-		const fence = buildContainmentFence({ workspace, home, leakRoots: [sibling] });
+		const fence = buildContainmentFence({ workspace, home });
 		wire = {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
-			deny: [...fence.deny],
+			deny: [...fence.deny, sibling],
 			denyEnumerate: [...fence.denyEnumerate],
 		};
 	});
@@ -189,12 +189,12 @@ describe("containment enforced inside the shell", () => {
 	it("survives a workspace path containing shell-hostile characters", async () => {
 		const odd = path.join(workspace, 'we"ird\nname');
 		fs.mkdirSync(odd, { recursive: true });
-		const oddFence = buildContainmentFence({ workspace: odd, home, leakRoots: [sibling] });
+		const oddFence = buildContainmentFence({ workspace: odd, home });
 		const oddWire = {
 			allow: [...oddFence.allow],
 			allowReadOnly: [...oddFence.allowReadOnly],
 			allowWriteOnly: [...oddFence.allowWriteOnly],
-			deny: [...oddFence.deny],
+			deny: [...oddFence.deny, sibling],
 			denyEnumerate: [...oddFence.denyEnumerate],
 		};
 		let out = "";
