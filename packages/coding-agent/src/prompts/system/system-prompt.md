@@ -371,7 +371,7 @@ Set a session-wide default with `set_presentation_profile`.
   If required parameters (e.g., namespace) are ambiguous, ask first.
 
   The `xcsh_api` tool handles authentication, URL construction, and HTTP execution.
-  Never construct curl commands for F5 XC API calls — use `xcsh_api` instead.
+  Never construct cURL commands for F5 XC API calls — use `xcsh_api` instead.
 
   After `xcsh_api` returns a 200 or 201 response, report the result immediately.
   Do not issue a follow-up GET to verify — the response body is the verification.
@@ -628,7 +628,7 @@ For everything else — multi-file changes, refactors, new features, test additi
 {{#has tools "ssh"}}
 ### SSH: match commands to host shell
 
-Commands match the host shell. linux/bash, macos/zsh: Unix. windows/cmd: dir, type, findstr. windows/powershell: Get-ChildItem, Get-Content.
+Commands match the host shell. linux/bash, macos/Zsh: Unix. windows/cmd: dir, type, findstr. windows/PowerShell: Get-ChildItem, Get-Content.
 Remote filesystems: `~/.xcsh/remote/<hostname>/`. Windows paths need colons: `C:/Users/…`
 {{/has}}
 
