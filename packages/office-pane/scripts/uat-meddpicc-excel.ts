@@ -38,26 +38,11 @@ export const EXPECTED_PLUGIN_VERSION = "7.5.6";
 const EXPECTED_MODEL = "gpt-5.6-sol";
 const ALTERNATE_MODEL = "claude-opus-5";
 const MODEL_PROBE_MARKER = "OFFICE MODEL READY";
-const VISION_CODE_DIGITS = ["1", "2", "3", "4", "7"] as const;
-
-const VISION_GLYPHS: Readonly<Record<string, readonly string[]>> = {
-	"-": ["00000", "00000", "00000", "11111", "00000", "00000", "00000"],
-	"0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
-	"1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
-	"2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
-	"3": ["11110", "00001", "00001", "01110", "00001", "00001", "11110"],
-	"4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
-	"5": ["11111", "10000", "10000", "11110", "00001", "00001", "11110"],
-	"6": ["01110", "10000", "10000", "11110", "10001", "10001", "01110"],
-	"7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
-	"8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
-	"9": ["01110", "10001", "10001", "01111", "00001", "00001", "01110"],
-	C: ["01111", "10000", "10000", "10000", "10000", "10000", "01111"],
-	X: ["10001", "10001", "01010", "00100", "01010", "10001", "10001"],
-};
+const VISION_ANSWERS = ["TWO", "THREE", "FOUR", "FIVE"] as const;
+type VisionAnswer = (typeof VISION_ANSWERS)[number];
 
 export interface SyntheticVisionProbe {
-	code: string;
+	answer: VisionAnswer;
 	fileName: string;
 	mimeType: "image/png";
 	bytes: Uint8Array;
@@ -68,14 +53,16 @@ export interface VisionProbeEvidence {
 	image: { fileName: string; mimeType: "image/png"; bytes: number; sha256: string };
 	directAttachment: {
 		ended: UatTurnResult["ended"];
-		codeMatched: boolean;
+		answerMatched: boolean;
 		failedToolNotices: number;
+		failedToolNames: string[];
 		hostToolCalls: number;
 	};
 	fileInspection: {
 		ended: UatTurnResult["ended"];
-		codeMatched: boolean;
+		answerMatched: boolean;
 		failedToolNotices: number;
+		failedToolNames: string[];
 	};
 	directAttachmentPassed: boolean;
 	directAttachmentDurationMs: number;
@@ -103,19 +90,24 @@ function pngChunk(type: string, data: Uint8Array): Buffer {
 	return chunk;
 }
 
-/** Build a generated, high-contrast PNG so live vision UAT never needs customer-derived media. */
-export function syntheticVisionCode(randomBytes: Uint8Array): string {
-	if (randomBytes.length !== 5) throw new Error("Synthetic vision code requires exactly five random bytes");
-	return `XC-${Array.from(randomBytes, value => VISION_CODE_DIGITS[value % VISION_CODE_DIGITS.length]).join("")}`;
+/** Map one random byte to the small shape-count range used by the live vision oracle. */
+export function syntheticVisionAnswer(randomByte: number): VisionAnswer {
+	if (!Number.isInteger(randomByte) || randomByte < 0 || randomByte > 255) {
+		throw new Error("Synthetic vision random value must be one byte");
+	}
+	return VISION_ANSWERS[randomByte % VISION_ANSWERS.length]!;
 }
 
-export function createSyntheticVisionProbe(code?: string): SyntheticVisionProbe {
-	const resolvedCode = code ?? syntheticVisionCode(crypto.getRandomValues(new Uint8Array(5)));
-	if (!/^XC-\d{5}$/.test(resolvedCode)) throw new Error("Synthetic vision code must match XC-00000");
+/** Build a generated, high-contrast PNG so live vision UAT never needs customer-derived media. */
+export function createSyntheticVisionProbe(answer?: string): SyntheticVisionProbe {
+	const resolvedAnswer = answer ?? syntheticVisionAnswer(crypto.getRandomValues(new Uint8Array(1))[0]!);
+	if (!VISION_ANSWERS.includes(resolvedAnswer as VisionAnswer)) {
+		throw new Error("Synthetic vision answer must be TWO, THREE, FOUR, or FIVE");
+	}
+	const shapeCount = VISION_ANSWERS.indexOf(resolvedAnswer as VisionAnswer) + 2;
 
 	const width = 800;
-	const height = 180;
-	const scale = 14;
+	const height = 220;
 	const stride = 1 + width * 3;
 	const raw = Buffer.alloc(stride * height, 0xff);
 	for (let y = 0; y < height; y++) raw[y * stride] = 0;
@@ -131,22 +123,13 @@ export function createSyntheticVisionProbe(code?: string): SyntheticVisionProbe 
 		}
 	};
 
-	fillBlack(12, 12, width - 24, 4);
-	fillBlack(12, height - 16, width - 24, 4);
-	fillBlack(12, 12, 4, height - 24);
-	fillBlack(width - 16, 12, 4, height - 24);
-	const advance = 6 * scale;
-	const textWidth = resolvedCode.length * advance - scale;
-	const startX = Math.floor((width - textWidth) / 2);
-	const startY = Math.floor((height - 7 * scale) / 2);
-	for (const [characterIndex, character] of [...resolvedCode].entries()) {
-		const glyph = VISION_GLYPHS[character]!;
-		for (const [row, pixels] of glyph.entries()) {
-			for (const [column, pixel] of [...pixels].entries()) {
-				if (pixel === "1")
-					fillBlack(startX + characterIndex * advance + column * scale, startY + row * scale, scale, scale);
-			}
-		}
+	const shapeSize = 112;
+	const shapeGap = 36;
+	const shapesWidth = shapeCount * shapeSize + (shapeCount - 1) * shapeGap;
+	const startX = Math.floor((width - shapesWidth) / 2);
+	const startY = Math.floor((height - shapeSize) / 2);
+	for (let shape = 0; shape < shapeCount; shape++) {
+		fillBlack(startX + shape * (shapeSize + shapeGap), startY, shapeSize, shapeSize);
 	}
 	const ihdr = Buffer.alloc(13);
 	ihdr.writeUInt32BE(width, 0);
@@ -160,7 +143,7 @@ export function createSyntheticVisionProbe(code?: string): SyntheticVisionProbe 
 		pngChunk("IEND", new Uint8Array()),
 	]);
 	return {
-		code: resolvedCode,
+		answer: resolvedAnswer as VisionAnswer,
 		fileName: `synthetic-vision-probe-${crypto.randomUUID()}.png`,
 		mimeType: "image/png",
 		bytes,
@@ -169,19 +152,19 @@ export function createSyntheticVisionProbe(code?: string): SyntheticVisionProbe 
 }
 
 export function directVisionProbePrompt(): string {
-	return "Read the exact uppercase code in the attached synthetic image. Reply with the code only. Do not use tools.";
+	return "Count the separate solid black squares on the white background in the attached synthetic image. Reply with the count as one uppercase English word only. Do not use tools.";
 }
 
 export function fileVisionProbePrompt(fileName: string): string {
-	return `Use inspect_image on ${fileName} to read the exact uppercase code. Reply with the code only.`;
+	return `Use inspect_image on ${fileName} to count the separate solid black squares on its white background. Reply with the count as one uppercase English word only.`;
 }
 
-function turnContainsCode(turn: UatTurnResult, code: string): boolean {
-	return turn.reply.toUpperCase().includes(code);
+function turnContainsAnswer(turn: UatTurnResult, answer: string): boolean {
+	return turn.reply.toUpperCase().includes(answer);
 }
 
-function turnReadCode(turn: UatTurnResult, code: string): boolean {
-	return turn.ended === "chat_done" && turnContainsCode(turn, code);
+function turnReadAnswer(turn: UatTurnResult, answer: string): boolean {
+	return turn.ended === "chat_done" && turnContainsAnswer(turn, answer);
 }
 
 export function summarizeVisionProbe(
@@ -199,22 +182,24 @@ export function summarizeVisionProbe(
 		},
 		directAttachment: {
 			ended: direct.ended,
-			codeMatched: turnContainsCode(direct, probe.code),
+			answerMatched: turnContainsAnswer(direct, probe.answer),
 			failedToolNotices: direct.toolNotices.filter(notice => !notice.ok).length,
+			failedToolNames: direct.toolNotices.filter(notice => !notice.ok).map(notice => notice.tool),
 			hostToolCalls: direct.hostToolCalls.length,
 		},
 		fileInspection: {
 			ended: inspected.ended,
-			codeMatched: turnContainsCode(inspected, probe.code),
+			answerMatched: turnContainsAnswer(inspected, probe.answer),
 			failedToolNotices: inspected.toolNotices.filter(notice => !notice.ok).length,
+			failedToolNames: inspected.toolNotices.filter(notice => !notice.ok).map(notice => notice.tool),
 		},
 		directAttachmentPassed:
-			turnReadCode(direct, probe.code) &&
+			turnReadAnswer(direct, probe.answer) &&
 			direct.toolNotices.every(notice => notice.ok) &&
 			direct.hostToolCalls.length === 0,
 		directAttachmentDurationMs: direct.durationMs,
 		fileInspectionPassed:
-			turnReadCode(inspected, probe.code) &&
+			turnReadAnswer(inspected, probe.answer) &&
 			inspectImageToolObserved &&
 			inspected.toolNotices.every(notice => notice.ok),
 		fileInspectionDurationMs: inspected.durationMs,
@@ -591,7 +576,12 @@ async function runScenarioStep(
 	const step = steps[stepIndex];
 	const filesBefore = await snapshotFiles(workspace);
 	const workbookBefore = workbook.snapshot();
-	const turn = await bridge.turn(step.prompt, `c-uat-meddpicc-${step.number}-${repeat}`);
+	const turn = await bridge.turn(
+		step.prompt,
+		`c-uat-meddpicc-${step.number}-${repeat}`,
+		undefined,
+		"uat-meddpicc-scenario",
+	);
 	const filesAfter = await snapshotFiles(workspace);
 	const workbookAfter = workbook.snapshot();
 	const observation: ScenarioObservation = {
@@ -654,7 +644,12 @@ function modelList(frame: { type?: string; [key: string]: unknown }): { current:
 }
 
 async function probeModel(bridge: UatBridgeClient, id: string): Promise<{ passed: true; durationMs: number }> {
-	const turn = await bridge.turn(`Reply with exactly ${MODEL_PROBE_MARKER}. Do not use tools.`, `c-uat-model-${id}`);
+	const turn = await bridge.turn(
+		`Reply with exactly ${MODEL_PROBE_MARKER}. Do not use tools.`,
+		`c-uat-model-${id}`,
+		undefined,
+		`uat-model-${id}`,
+	);
 	const passed =
 		turn.ended === "chat_done" &&
 		turn.reply.includes(MODEL_PROBE_MARKER) &&
@@ -701,10 +696,18 @@ async function proveModelRoundTrip(
 async function proveVisionInput(bridge: UatBridgeClient, workspace: string): Promise<VisionProbeEvidence> {
 	const probe = createSyntheticVisionProbe();
 	await fs.writeFile(path.join(workspace, probe.fileName), probe.bytes, { flag: "wx" });
-	const direct = await bridge.turn(directVisionProbePrompt(), "c-uat-vision-direct", [
-		{ data: Buffer.from(probe.bytes).toString("base64"), mimeType: probe.mimeType },
-	]);
-	const inspected = await bridge.turn(fileVisionProbePrompt(probe.fileName), "c-uat-vision-file");
+	const direct = await bridge.turn(
+		directVisionProbePrompt(),
+		"c-uat-vision-direct",
+		[{ data: Buffer.from(probe.bytes).toString("base64"), mimeType: probe.mimeType }],
+		"uat-vision-direct",
+	);
+	const inspected = await bridge.turn(
+		fileVisionProbePrompt(probe.fileName),
+		"c-uat-vision-file",
+		undefined,
+		"uat-vision-file",
+	);
 	return summarizeVisionProbe(probe, direct, inspected);
 }
 

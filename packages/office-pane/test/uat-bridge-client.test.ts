@@ -68,6 +68,24 @@ describe("Office UAT bridge handshake", () => {
 		});
 	});
 
+	test("forwards a history hint that isolates independent live probes", async () => {
+		const ws = new FakeWebSocket();
+		const client = new UatBridgeClient(ws as unknown as WebSocket, {
+			port: 19242,
+			ack: { type: "hello_ack", serveKind: "office" },
+		});
+
+		const pending = client.turn("Count the synthetic shapes.", "c-isolated", undefined, "uat-vision-file");
+		ws.emit({ type: "chat_done", id: "c-isolated" });
+		await pending;
+
+		expect(JSON.parse(ws.sent[0] ?? "{}")).toMatchObject({
+			type: "chat_request",
+			id: "c-isolated",
+			history_hint: "uat-vision-file",
+		});
+	});
+
 	test("keeps an image-free UAT turn free of an empty images field", async () => {
 		const ws = new FakeWebSocket();
 		const client = new UatBridgeClient(ws as unknown as WebSocket, {

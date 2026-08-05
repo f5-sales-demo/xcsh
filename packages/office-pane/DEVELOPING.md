@@ -328,14 +328,17 @@ The harness fails closed unless all of these conditions hold:
 - The binary reports its version and has a stable file digest.
 - Omitting the model selects GPT-5.6 Sol.
 - Live inference succeeds on GPT-5.6 Sol, Claude Opus 5, then GPT-5.6 Sol again.
-- A generated high-contrast Portable Network Graphics (PNG) image succeeds as a direct Office attachment and
-  through file-based `inspect_image` under GPT-5.6 Sol.
+- GPT-5.6 Sol correctly counts the randomized, high-contrast squares in a generated Portable Network Graphics
+  (PNG) image both as a direct Office attachment and through file-based `inspect_image`.
+- Each independent model, attachment, file-tool, and scenario phase starts with the intended conversation
+  history instead of inheriting an earlier probe answer.
 - The MEDDPICC scenario starts under the restored GPT-5.6 Sol model.
 - All five scenario steps pass against the real bridge and production Excel tool definitions.
 - The second worksheet-generation run reuses one sheet and preserves the `Start` sheet.
 - Only the server child started by the harness is stopped.
-- The JavaScript Object Notation (JSON) evidence excludes image payloads, probe codes, model replies, and
-  credentials; configured secrets and local user paths are redacted from the remaining fields.
+- The JavaScript Object Notation (JSON) evidence excludes image payloads, expected answers, model replies, and
+  credentials; configured secrets and local user paths are redacted from the remaining fields. Failed tool
+  names remain available for diagnosis without recording tool arguments or outputs.
 
 ### Complete the desktop Office check
 
@@ -420,8 +423,10 @@ bun -e 'import { getBundledModel } from "./packages/ai/src/models.ts"; console.l
 ```
 
 The output must include `text` and `image`. Run the GPT-5.6 image-capability row in the change-to-test matrix,
-then run the multi-model UAT. If the bundled model is correct but the live turn fails, inspect the generated
-`models.yml` override and model discovery merge before changing the provider or model.
+then run the multi-model UAT. If the bundled model is correct but a direct attachment fails, inspect the
+generated `models.yml` override and model discovery merge before changing the provider or model. If direct
+attachments pass but the Office agent never calls `inspect_image`, confirm that `OFFICE_TOOL_NAMES` in
+`packages/coding-agent/src/browser/extension-bridge-tools.ts` registers it in the headless Office session.
 
 ### The pane opens in the wrong folder
 

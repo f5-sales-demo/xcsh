@@ -12,7 +12,7 @@ import {
 	requireMeddpiccScenarioModel,
 	sanitizeEvidence,
 	summarizeVisionProbe,
-	syntheticVisionCode,
+	syntheticVisionAnswer,
 } from "../scripts/uat-meddpicc-excel";
 
 describe("MEDDPICC Excel UAT CLI", () => {
@@ -91,8 +91,8 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		});
 	});
 
-	test("generates a high-contrast synthetic PNG whose code is absent from both prompts", () => {
-		const probe = createSyntheticVisionProbe("XC-48271");
+	test("generates a high-contrast synthetic PNG whose answer is absent from both prompts", () => {
+		const probe = createSyntheticVisionProbe("FOUR");
 		const header = Buffer.from(probe.bytes.subarray(0, 24));
 		const png = Buffer.from(probe.bytes);
 		const idat: Buffer[] = [];
@@ -112,24 +112,40 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		expect(probe.bytes.length).toBeGreaterThan(300);
 		expect(pixels.includes(0x00)).toBe(true);
 		expect(pixels.includes(0xff)).toBe(true);
-		expect(directVisionProbePrompt()).not.toContain(probe.code);
-		expect(fileVisionProbePrompt(probe.fileName)).not.toContain(probe.code);
+
+		const width = header.readUInt32BE(16);
+		const height = header.readUInt32BE(20);
+		const centerRow = pixels.subarray(
+			Math.floor(height / 2) * (1 + width * 3) + 1,
+			(Math.floor(height / 2) + 1) * (1 + width * 3),
+		);
+		let blackRuns = 0;
+		let previousWasBlack = false;
+		for (let x = 0; x < width; x++) {
+			const isBlack = centerRow[x * 3] === 0;
+			if (isBlack && !previousWasBlack) blackRuns++;
+			previousWasBlack = isBlack;
+		}
+		expect(blackRuns).toBe(4);
+		expect(directVisionProbePrompt()).not.toContain(probe.answer);
+		expect(fileVisionProbePrompt(probe.fileName)).not.toContain(probe.answer);
 	});
 
-	test("maps random bytes to glyphs that remain unambiguous under vision resizing", () => {
-		expect(syntheticVisionCode(new Uint8Array([0, 1, 2, 3, 4]))).toBe("XC-12347");
-		expect(syntheticVisionCode(new Uint8Array([5, 6, 7, 8, 9]))).toBe("XC-12347");
+	test("maps random bytes to a bounded synthetic square count", () => {
+		expect([0, 1, 2, 3, 4].map(syntheticVisionAnswer)).toEqual(["TWO", "THREE", "FOUR", "FIVE", "TWO"]);
+		expect(() => syntheticVisionAnswer(-1)).toThrow("byte");
+		expect(() => syntheticVisionAnswer(256)).toThrow("byte");
 	});
 
-	test("rejects a synthetic vision code the bitmap font cannot render", () => {
-		expect(() => createSyntheticVisionProbe("customer-code")).toThrow("XC-00000");
+	test("rejects a synthetic vision answer outside the generated square range", () => {
+		expect(() => createSyntheticVisionProbe("SIX")).toThrow("TWO, THREE, FOUR, or FIVE");
 	});
 
-	test("records image certification without base64, prompt secrets, codes, or replies", () => {
-		const probe = createSyntheticVisionProbe("XC-48271");
+	test("records image certification without base64, prompt secrets, expected answers, or replies", () => {
+		const probe = createSyntheticVisionProbe("FOUR");
 		const direct = {
 			id: "direct",
-			reply: probe.code,
+			reply: probe.answer,
 			ended: "chat_done" as const,
 			durationMs: 10,
 			toolNotices: [],
@@ -146,17 +162,19 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		const json = JSON.stringify(summary);
 		expect(summary.directAttachment).toEqual({
 			ended: "chat_done",
-			codeMatched: true,
+			answerMatched: true,
 			failedToolNotices: 0,
+			failedToolNames: [],
 			hostToolCalls: 0,
 		});
 		expect(summary.fileInspection).toEqual({
 			ended: "chat_done",
-			codeMatched: true,
+			answerMatched: true,
 			failedToolNotices: 0,
+			failedToolNames: [],
 		});
 		expect(json).not.toContain(Buffer.from(probe.bytes).toString("base64"));
-		expect(json).not.toContain(probe.code);
+		expect(json).not.toContain(probe.answer);
 		expect(json).not.toContain("reply");
 		expect(json).not.toContain("token");
 		expect(json).toContain(probe.sha256);
@@ -164,10 +182,10 @@ describe("MEDDPICC Excel UAT CLI", () => {
 	});
 
 	test("fails each direct and inspect-image oracle independently", () => {
-		const probe = createSyntheticVisionProbe("XC-48271");
+		const probe = createSyntheticVisionProbe("FOUR");
 		const direct = {
 			id: "direct",
-			reply: probe.code,
+			reply: probe.answer,
 			ended: "chat_done" as const,
 			durationMs: 10,
 			toolNotices: [],

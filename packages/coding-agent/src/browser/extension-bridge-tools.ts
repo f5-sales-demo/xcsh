@@ -104,9 +104,10 @@ export const BROWSER_TOOL_NAMES: readonly string[] = [
  * local xcsh agent, so it gets the same general-purpose native tools the CLI has —
  * `bash` (so it can shell out to `az`, `gh`, terraform, git, …), the file tools
  * (`read`/`write`/`edit`), search (`grep`), plus planning (`todo_write`,
- * `task`) and `calc`. (File-finding is covered by `bash`; the builtin `find`
- * tool is omitted because its name collides with a browser tool.) The document's own Excel/PowerPoint/Word tools arrive at
- * runtime over the bridge via `set_host_tools`.
+ * `task`), `calc`, and image analysis (`inspect_image`). (File-finding is covered
+ * by `bash`; the builtin `find` tool is omitted because its name collides with a
+ * browser tool.) The document's own Excel/PowerPoint/Word tools arrive at runtime
+ * over the bridge via `set_host_tools`.
  *
  * DELIBERATELY EXCLUDED:
  *  - Every {@link BROWSER_TOOL_NAMES} entry — there is no browser to drive in a
@@ -143,4 +144,5 @@ export const OFFICE_TOOL_NAMES: readonly string[] = [
 	"todo_write",
 	"task",
 	"calc",
+	"inspect_image",
 ];

@@ -220,6 +220,7 @@ export class UatBridgeClient implements ConfigurableTransport {
 		text: string,
 		id: string,
 		images?: ChatImageMsg[],
+		historyHint?: string,
 		timeoutMs: number = DEFAULT_TURN_TIMEOUT_MS,
 	): Promise<UatTurnResult> {
 		return new Promise((resolve, reject) => {
@@ -271,6 +272,7 @@ export class UatBridgeClient implements ConfigurableTransport {
 				text,
 				mode: "educational",
 				context: null,
+				...(historyHint ? { history_hint: historyHint } : {}),
 				...(images && images.length > 0 ? { images } : {}),
 			});
 		});

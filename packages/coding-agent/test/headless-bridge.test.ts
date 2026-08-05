@@ -121,7 +121,7 @@ describe("startHeadlessChatBridge", () => {
 		expect(o?.customTools).toEqual([]);
 		expect(o?.toolNames).toEqual([...OFFICE_TOOL_NAMES]);
 		// Full CLI-parity tools ARE scoped in (bash/read/write for az/gh + file work).
-		for (const name of ["bash", "read", "write", "edit"]) {
+		for (const name of ["bash", "read", "write", "edit", "inspect_image"]) {
 			expect(o?.toolNames as string[]).toContain(name);
 		}
 		// No browser builtin tool leaks into the Office session.
