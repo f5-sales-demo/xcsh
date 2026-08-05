@@ -2,6 +2,7 @@ import * as path from "node:path";
 import {
 	type Api,
 	type AssistantMessageEventStream,
+	applyGeneratedModelPolicies,
 	type Context,
 	createModelManager,
 	DEFAULT_LOCAL_TOKEN,
@@ -1811,6 +1812,10 @@ export class ModelRegistry {
 		});
 	}
 	#applyHardcodedModelPolicies(models: Model<Api>[]): Model<Api>[] {
+		// Discovery caches contain provider-advertised metadata, which can lag the
+		// bundled corrections. Reapply generated-model policy before a cached entry
+		// replaces its bundled peer; explicit user overrides still run afterward.
+		applyGeneratedModelPolicies(models);
 		return models.map(model => {
 			if (model.id !== "gpt-5.4" || model.provider === "github-copilot") {
 				return model;

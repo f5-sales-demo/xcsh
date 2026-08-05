@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Effort, type Model, type OpenAICompat, type ThinkingConfig, writeModelCache } from "@f5-sales-demo/pi-ai";
+import {
+	Effort,
+	getBundledModel,
+	type Model,
+	type OpenAICompat,
+	type ThinkingConfig,
+	writeModelCache,
+} from "@f5-sales-demo/pi-ai";
 import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
 import { CURRENT_CONFIG_VERSION, generateModelsYml } from "../src/config/auto-config";
 import {
@@ -1852,6 +1859,24 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
+		test("a text-only discovery cache cannot erase bundled GPT-5.6 vision at startup", () => {
+			const cached = { ...getBundledModel("litellm", "gpt-5.6-sol"), input: ["text"] as const };
+			writeModelCache("litellm", Date.now(), [cached], true, cacheDbPath);
+			writeRawModelsJson({
+				litellm: {
+					baseUrl: "https://proxy.example.com/api/v1",
+					apiKey: "test-key",
+					api: "openai-completions",
+					discovery: { type: "openai-compat" },
+				},
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+
+			expect(registry.getProviderDiscoveryState("litellm")?.status).toBe("cached");
+			expect(registry.find("litellm", "gpt-5.6-sol")?.input).toEqual(["text", "image"]);
+		});
+
 		test("existing generated config keeps GPT-5.6 image input through discovery without migration", async () => {
 			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
 			const previousApiKey = Bun.env.LITELLM_API_KEY;
