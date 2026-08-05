@@ -1,7 +1,7 @@
 ---
 name: terraform-provider
 description: |
-  Generate F5 XC Terraform HCL code. Activate ONLY when the user explicitly asks for Terraform, HCL, .tf files, infrastructure-as-code, or terraform import/plan/apply/destroy. Do NOT activate for direct CRUD operations (create, read, update, delete a resource by name) — those use the xcsh_api tool, not Terraform.
+  Generate F5 XC Terraform HCL code. Activate ONLY when the user explicitly asks for "Terraform", "HCL", ".tf" files, "infrastructure-as-code", or terraform import/plan/apply/destroy. NEVER activate for generic resource keywords or un-specified infrastructure requests — those default to native XC-API (`xcsh_api`) and JSON manifests (`{kind, metadata, spec}`).
   Provider: f5-sales-demo/xcsh (NEVER volterraedge/volterra). Read skill://terraform-provider for templates.
 ---
 
