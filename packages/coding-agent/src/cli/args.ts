@@ -8,6 +8,7 @@ import { parseEffort } from "../thinking";
 import {
 	flagNameForChar,
 	flagSpec,
+	LAUNCH_FLAGS,
 	type LaunchFlagName,
 	normalizeFlagTokens,
 	takesValue,
@@ -19,9 +20,9 @@ export type Mode = "text" | "json" | "rpc" | "acp";
 export interface Args {
 	cwd?: string;
 	allowHome?: boolean;
-	/** Disable the session filesystem sandbox (widen to unrestricted access). */
+	/** Disable the session filesystem discovery guard; OS-user permissions are unchanged. */
 	noSandbox?: boolean;
-	/** Extra directories the session may read AND write, beyond its CWD subtree (repeatable). */
+	/** Extra directories whose entries the session may discover (repeatable). */
 	allowPath?: string[];
 	provider?: string;
 	context?: string;
@@ -375,8 +376,8 @@ ${chalk.bold("Available Tools (default-enabled unless noted):")}
   ask           - Ask user questions (interactive mode only)
 
 ${chalk.bold("Sandbox Options:")}
-  --no-sandbox               Disable session filesystem isolation (allow access outside the CWD)
-  --allow-path <path>        Grant read+write access to an extra directory (repeatable)
+  --no-sandbox               ${LAUNCH_FLAGS["no-sandbox"].description}
+  --allow-path <path>        ${LAUNCH_FLAGS["allow-path"].description}
 
 ${chalk.bold("Plugin Options:")}
   --plugin-dir <path>        Load plugin from directory (repeatable)

@@ -59,6 +59,19 @@ describe("system prompt workspace boundary", () => {
 		expect(boundary).toBeLessThan(nextSection);
 	});
 
+	it("states the operator-rights model without implying privilege escalation", () => {
+		expect(flat()).toMatch(/same filesystem rights as the human who launched xcsh/i);
+		expect(flat()).toMatch(/does not grant root or administrator privileges/i);
+	});
+
+	it("explains that the sandbox guards discovery rather than known-path access", () => {
+		expect(flat()).toMatch(/discovery guard, not a privilege boundary/i);
+		expect(flat()).toMatch(/enumerate boundary.*names cannot be discovered/i);
+		expect(flat()).toMatch(/directly named path.*ordinary operating-system rights/i);
+		expect(flat()).toMatch(/task supplies an exact path.*MUST\*{0,2} use it directly/i);
+		expect(flat()).toMatch(/directory listing is required.*explicit discovery grant/i);
+	});
+
 	// The one thing the fence cannot do. Where the working directory holds several
 	// tenants, they are all inside the allowed subtree, so separating them is
 	// judgment and nothing else.
@@ -115,6 +128,9 @@ describe("system prompt workspace boundary", () => {
 	it("does not prohibit reading paths the fence allows", () => {
 		expect(flat()).not.toMatch(/range across the filesystem/i);
 		expect(flat()).not.toMatch(/never widen/i);
+		expect(flat()).not.toMatch(
+			/access (?:is|stays) (?:limited|confined|restricted) to the (?:cwd|working directory)/i,
+		);
 	});
 
 	// A custom system prompt (--system-prompt, or an auto-discovered project/global

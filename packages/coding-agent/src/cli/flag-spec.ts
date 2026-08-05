@@ -53,11 +53,11 @@ export const LAUNCH_FLAGS = defineFlags({
 	"allow-home": { arity: "boolean", description: "Allow starting in ~ without auto-switching to a temp dir" },
 	"no-sandbox": {
 		arity: "boolean",
-		description: "Disable session filesystem isolation (allow access outside the CWD)",
+		description: "Disable the session filesystem discovery guard",
 	},
 	"allow-path": {
 		arity: "repeatable-value",
-		description: "Grant read+write access to an extra directory (repeatable)",
+		description: "Allow directory discovery at an additional path (repeatable)",
 	},
 	mode: {
 		arity: "value",
