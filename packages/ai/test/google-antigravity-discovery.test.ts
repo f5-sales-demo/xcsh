@@ -29,6 +29,11 @@ describe("Google Antigravity model discovery", () => {
 							supportsImages: true,
 							supportsThinking: true,
 						},
+						"gemini-3.1-pro-high": {
+							displayName: "Gemini 3.1 Pro High",
+							supportsImages: true,
+							supportsThinking: true,
+						},
 					},
 				}),
 			);
@@ -40,6 +45,7 @@ describe("Google Antigravity model discovery", () => {
 		expect(requestHeaders?.get("Authorization")).toBe("Bearer access-token");
 		expect(requestHeaders?.get("User-Agent")).toMatch(/^antigravity\/2\.4\.3 /);
 		expect(models?.map(model => model.id).sort()).toEqual([
+			"gemini-3.1-pro-high-vertex",
 			"gemini-3.6-flash-high",
 			"gemini-3.6-flash-low",
 			"gemini-3.6-flash-medium",
@@ -51,6 +57,13 @@ describe("Google Antigravity model discovery", () => {
 			input: ["text", "image"],
 			contextWindow: 1_048_576,
 			maxTokens: 65_536,
+		});
+		expect(models?.find(model => model.id === "gemini-3.1-pro-high-vertex")).toMatchObject({
+			id: "gemini-3.1-pro-high-vertex",
+			name: "Gemini 3.1 Pro High (Vertex, Antigravity)",
+			api: "google-gemini-cli",
+			provider: "google-antigravity",
+			baseUrl: "https://aiplatform.googleapis.com",
 		});
 	});
 });

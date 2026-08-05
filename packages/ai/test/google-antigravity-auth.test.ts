@@ -123,10 +123,11 @@ describe("Google Antigravity auth alignment", () => {
 		});
 	});
 
-	it("prefers GOOGLE_CLOUD_PROJECT and retains it when discovery returns another project", async () => {
+	it("prefers GOOGLE_CLOUD_PROJECT when it already has a standard-tier binding", async () => {
 		await withProjectEnvironment("primary-enterprise-project", "fallback-enterprise-project", async () => {
 			const { projectId, requests } = await runLogin({
-				cloudaicompanionProject: { id: "generated-free-tier-project" },
+				cloudaicompanionProject: { id: "primary-enterprise-project" },
+				currentTier: { id: "standard-tier" },
 			});
 
 			expect(projectId).toBe("primary-enterprise-project");
@@ -148,7 +149,8 @@ describe("Google Antigravity auth alignment", () => {
 	it("uses GOOGLE_CLOUD_PROJECT_ID when the primary project variable is absent", async () => {
 		await withProjectEnvironment(undefined, "fallback-enterprise-project", async () => {
 			const { projectId, requests } = await runLogin({
-				cloudaicompanionProject: "generated-free-tier-project",
+				cloudaicompanionProject: "fallback-enterprise-project",
+				currentTier: { id: "standard-tier" },
 			});
 
 			expect(projectId).toBe("fallback-enterprise-project");
@@ -168,7 +170,10 @@ describe("Google Antigravity auth alignment", () => {
 	it("passes the Antigravity CLI enterprise project through discovery and returned credentials", async () => {
 		await withProjectEnvironment(undefined, undefined, async () => {
 			const { projectId, requests } = await runLogin(
-				{ cloudaicompanionProject: "generated-free-tier-project" },
+				{
+					cloudaicompanionProject: "metadata-enterprise-project",
+					currentTier: { id: "standard-tier" },
+				},
 				undefined,
 				{ readAntigravityProjectId: async () => "metadata-enterprise-project" },
 			);
@@ -189,15 +194,17 @@ describe("Google Antigravity auth alignment", () => {
 		});
 	});
 
-	it("includes the configured enterprise project when onboarding is required", async () => {
+	it("accepts successful enterprise onboarding when load metadata remains stale", async () => {
 		await withProjectEnvironment("primary-enterprise-project", undefined, async () => {
 			const { projectId, requests } = await runLogin(
 				{
-					allowedTiers: [{ id: "standard-tier", isDefault: true }],
+					cloudaicompanionProject: { id: "generated-free-tier-project" },
+					currentTier: { id: "free-tier" },
+					allowedTiers: [{ id: "free-tier", isDefault: true }, { id: "standard-tier" }],
 				},
 				{
 					done: true,
-					response: { cloudaicompanionProject: { id: "generated-free-tier-project" } },
+					response: { cloudaicompanionProject: { id: "primary-enterprise-project" } },
 				},
 			);
 
@@ -223,6 +230,53 @@ describe("Google Antigravity auth alignment", () => {
 							duetProject: "primary-enterprise-project",
 						},
 					},
+				},
+			]);
+		});
+	});
+
+	it("rejects a configured enterprise project when standard-tier is unavailable", async () => {
+		await withProjectEnvironment("primary-enterprise-project", undefined, async () => {
+			await expect(
+				runLogin({
+					cloudaicompanionProject: "generated-free-tier-project",
+					currentTier: { id: "free-tier" },
+					allowedTiers: [{ id: "free-tier", isDefault: true }],
+				}),
+			).rejects.toThrow("standard-tier is not available");
+		});
+	});
+
+	it("rejects onboarding that provisions a different project", async () => {
+		await withProjectEnvironment("primary-enterprise-project", undefined, async () => {
+			await expect(
+				runLogin(
+					{
+						currentTier: { id: "free-tier" },
+						allowedTiers: [{ id: "standard-tier" }],
+					},
+					{
+						done: true,
+						response: { cloudaicompanionProject: "wrong-project" },
+					},
+				),
+			).rejects.toThrow("onboardUser returned project wrong-project instead of primary-enterprise-project");
+		});
+	});
+
+	it("preserves an existing individual project when no enterprise project is configured", async () => {
+		await withProjectEnvironment(undefined, undefined, async () => {
+			const { projectId, requests } = await runLogin({
+				cloudaicompanionProject: "generated-free-tier-project",
+				currentTier: { id: "free-tier" },
+				allowedTiers: [{ id: "free-tier", isDefault: true }],
+			});
+
+			expect(projectId).toBe("generated-free-tier-project");
+			expect(requests).toEqual([
+				{
+					url: LOAD_CODE_ASSIST_URL,
+					body: { metadata: ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA },
 				},
 			]);
 		});
