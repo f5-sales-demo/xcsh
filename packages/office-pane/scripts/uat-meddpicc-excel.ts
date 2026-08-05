@@ -34,7 +34,7 @@ import {
 
 const OFFICE_PANE_PORT = 8444;
 const EXPECTED_FIXTURE_SHA256 = "eb891f2b2588d5b6bafcceaaa9c6923bfd26f87f5e7bdc23971b1c61e657ced8";
-const EXPECTED_PLUGIN_VERSION = "7.5.4";
+export const EXPECTED_PLUGIN_VERSION = "7.5.6";
 const EXPECTED_MODEL = "gpt-5.6-sol";
 const ALTERNATE_MODEL = "claude-opus-5";
 const MODEL_PROBE_MARKER = "OFFICE MODEL READY";

@@ -5,6 +5,7 @@ import {
 	assertVisionProbePassed,
 	createSyntheticVisionProbe,
 	directVisionProbePrompt,
+	EXPECTED_PLUGIN_VERSION,
 	fileVisionProbePrompt,
 	parseUatMeddpiccArgs,
 	requireGatewayRootUrl,
@@ -14,6 +15,10 @@ import {
 } from "../scripts/uat-meddpicc-excel";
 
 describe("MEDDPICC Excel UAT CLI", () => {
+	test("pins the current synthetic MEDDPICC release", () => {
+		expect(EXPECTED_PLUGIN_VERSION).toBe("7.5.6");
+	});
+
 	test("parses the four live-run paths and prompt flag", () => {
 		expect(
 			parseUatMeddpiccArgs([

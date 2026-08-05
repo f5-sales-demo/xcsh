@@ -124,7 +124,7 @@ as an Office attachment and then through file-based `inspect_image`.
 
 Prerequisites:
 
-1. Install `meddpicc@f5-sales-demo-marketplace` version 7.5.4.
+1. Install `meddpicc@f5-sales-demo-marketplace` version 7.5.6.
 2. Export `LITELLM_BASE_URL` as the HTTPS gateway root (for example,
    `https://gateway.example.com`) and export `LITELLM_API_KEY`. xcsh derives the
    provider-specific API path from the selected model. Legacy values that include a
