@@ -345,12 +345,7 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		expect(fenceVerdict(fence, path.join(home, "git", "STYLE_GUIDE.md"), "read")).toBe("allow");
 	});
 
-	/**
-	 * A session whose folder is a direct child of home protects the home listing, not home contents.
-	 *
-	 * The sibling remains reachable by name because the operator's home is theirs. What the session cannot
-	 * do accidentally is list home and discover which sibling names exist.
-	 */
+	/** A session whose folder is a direct child of home must not change normal home navigation. */
 	it("does not fence home when the session folder sits directly in it", () => {
 		const home = realTmp("inhome");
 		const workspace = path.join(home, "custA");
@@ -363,7 +358,7 @@ describe("buildContainmentFence — the operator's home is theirs (#2637)", () =
 		const fence = buildContainmentFence({ workspace, home, leakRoots: [sessions] });
 
 		expect(fence.deny).not.toContain(home);
-		expect(fenceVerdict(fence, home, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, home, "enumerate")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(sibling, "notes.md"), "read")).toBe("allow");
 		// Xcsh-private state follows the same operator-rights rule: its listing is hidden, while a path
 		// the operator names directly remains available.
@@ -795,6 +790,27 @@ describe("containmentStatus", () => {
 			backend: "landlock",
 			osEnforced: true,
 		});
+	});
+
+	it("does not arm Landlock for a discovery-only fence that would remove ancestor listings", () => {
+		const home = realTmp("status-discovery-home");
+		const workspace = path.join(home, "workspaces", "customer-a");
+		fs.mkdirSync(workspace, { recursive: true });
+		const fence = buildContainmentFence({ workspace, home });
+		let probed = false;
+
+		expect(
+			containmentStatus(
+				true,
+				"linux",
+				() => {
+					probed = true;
+					return landlock();
+				},
+				fence,
+			),
+		).toEqual({ enabled: true, backend: "scanner-only", osEnforced: false, discoveryOnly: true });
+		expect(probed).toBe(false);
 	});
 
 	// The case that must not over-claim: a Linux box where Landlock is absent or too old.

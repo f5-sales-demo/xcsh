@@ -84,16 +84,19 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	expect(["seatbelt", "landlock", "scanner-only"]).toContain(report.backend);
 	expect(report.summary.failed).toBe(0);
 	expect(report.summary.errors).toBe(0);
-	expect(report.checks).toHaveLength(14);
+	expect(report.checks).toHaveLength(17);
 	expect(report.checks).toContainEqual({ name: "structured tools share the boundary", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "Bash grep pattern remains data (#2931)", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "Bash Python heredoc remains data (#2931)", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "cwd resets across tool calls", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "system temp supports direct file creation", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "system temp remains enumerable", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "operator home remains enumerable", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "filesystem root remains enumerable", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "operator home supports direct file creation", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
 	if (report.osEnforced) {
-		expect(report.summary).toEqual({ passed: 14, failed: 0, errors: 0, skipped: 0 });
+		expect(report.summary).toEqual({ passed: 17, failed: 0, errors: 0, skipped: 0 });
 		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "named other account remains reachable", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "explicit grant restores parent enumeration", status: "PASS" });
@@ -209,7 +212,8 @@ it("reports a healthy matrix for a live session rooted directly inside operator 
 		const bash = new BashTool(createSession(workspace));
 
 		// The context variables are host-owned; model-supplied replacements must not move the probes.
-		assertHealthyReport(await runInsideLiveProfile(workspace, true));
+		const liveReport = await runInsideLiveProfile(workspace, true);
+		assertHealthyReport(liveReport);
 
 		await bash.execute("sandbox-check-workspace-capability", {
 			command: "printf own > own.txt && printf '%s\\n' ./* > /dev/null && find . -type f > /dev/null",
@@ -236,7 +240,7 @@ it("reports a healthy matrix for a live session rooted directly inside operator 
 		} catch {
 			parentEnumerationDenied = true;
 		}
-		expect(parentEnumerationDenied).toBe(true);
+		expect(parentEnumerationDenied).toBe(false);
 	} finally {
 		_resetShellSessionsForTest();
 		expect(liveSiblingCount()).toBe(liveSiblingCountBefore);

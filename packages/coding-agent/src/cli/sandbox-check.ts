@@ -168,7 +168,7 @@ function renderReport(report: SandboxCheckReport, json: boolean, verbose: boolea
 
 /** Run the conformance matrix and report only after every synthetic fixture has been removed. */
 export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promise<SandboxCheckReport> {
-	const backend = containmentStatus(true);
+	let backend = containmentStatus(true);
 	const checks: SandboxCheckResult[] = [];
 	const fixturePaths: string[] = [];
 	const knownCleanupLeaves: string[] = [];
@@ -265,6 +265,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			leakRoots: [sessionStore, memoryStore],
 		});
 		const liveFence = buildContainmentFence({ workspace: liveWorkspace, home: liveHome });
+		backend = containmentStatus(true, process.platform, undefined, liveFence);
 
 		await check("structured tools share the boundary", () => {
 			const blocked = [
@@ -412,6 +413,55 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			);
 		});
 
+		await check("system temp remains enumerable", async () => {
+			const result = await shellProbe(
+				`ls ${quote(liveSystemTmp)} > /dev/null`,
+				liveWorkspace,
+				inheritedProfile ? undefined : liveFence,
+				abortController.signal,
+			);
+			return shellOutcome(
+				result,
+				true,
+				"live profile must preserve normal system-temp enumeration",
+				"<system-temp>",
+				redactions,
+			);
+		});
+
+		await check("operator home remains enumerable", async () => {
+			const result = await shellProbe(
+				`ls ${quote(liveHome)} > /dev/null`,
+				liveWorkspace,
+				inheritedProfile ? undefined : liveFence,
+				abortController.signal,
+			);
+			return shellOutcome(
+				result,
+				true,
+				"live profile must preserve normal operator-home enumeration",
+				"<operator-home>",
+				redactions,
+			);
+		});
+
+		await check("filesystem root remains enumerable", async () => {
+			const filesystemRoot = path.parse(liveWorkspace).root;
+			const result = await shellProbe(
+				`ls ${quote(filesystemRoot)} > /dev/null`,
+				liveWorkspace,
+				inheritedProfile ? undefined : liveFence,
+				abortController.signal,
+			);
+			return shellOutcome(
+				result,
+				true,
+				"live profile must preserve normal filesystem-root enumeration",
+				"<filesystem-root>",
+				redactions,
+			);
+		});
+
 		await check("named sibling remains reachable", async () => {
 			const displayPath = "<session-parent>/<synthetic-sibling>";
 			let liveSibling = inheritedSibling;
@@ -440,8 +490,9 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		});
 
 		if (backend.osEnforced) {
-			await check("session parent cannot be enumerated", async () => {
+			await check("session parent discovery respects operator home", async () => {
 				const probeParent = inheritedProfile ? liveSessionParent : workspaces;
+				const parentIsOperatorHome = probeParent === liveHome;
 				const result = await shellProbe(
 					`ls ${quote(probeParent)} > /dev/null`,
 					workspace,
@@ -450,8 +501,10 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				);
 				return shellOutcome(
 					result,
-					false,
-					"synthetic session parent enumeration must be refused",
+					parentIsOperatorHome,
+					parentIsOperatorHome
+						? "operator home must remain enumerable when it is the session parent"
+						: "synthetic session parent enumeration must be refused",
 					"<synthetic-session-parent>",
 					redactions,
 				);
@@ -583,7 +636,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			});
 		} else {
 			for (const name of [
-				"session parent cannot be enumerated",
+				"session parent discovery respects operator home",
 				"explicit grant restores parent enumeration",
 				"account container cannot be enumerated",
 				"named other account remains reachable",

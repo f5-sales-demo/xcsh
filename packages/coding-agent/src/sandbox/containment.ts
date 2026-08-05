@@ -476,7 +476,10 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	const parentExplicitlyReadable = [...extraResolved, ...readOnlyResolved].some(root =>
 		pathIsWithin(root, parentToProtect),
 	);
-	if (!tooBroadToDeny(parentToProtect, fsRoot) && !parentExplicitlyReadable) {
+	// Home itself is an operator workspace, not a customer-container boundary. Hiding its listing when a
+	// project is a direct child made ordinary shell navigation fail even on Seatbelt. Deeper project
+	// containers are still protected, but the operator always retains a normal `ls ~` experience.
+	if (parentToProtect !== home && !tooBroadToDeny(parentToProtect, fsRoot) && !parentExplicitlyReadable) {
 		denyEnumerate.add(parentToProtect);
 	}
 
@@ -605,6 +608,8 @@ export interface ContainmentStatus {
 	readonly backend: ContainmentBackend;
 	/** True when the kernel enforces it, false when only precise tool-call pre-checks run. */
 	readonly osEnforced: boolean;
+	/** Linux discovery-only profiles stay scanner-only so Landlock cannot remove ordinary ancestor listings. */
+	readonly discoveryOnly?: true;
 	/**
 	 * Set when the backend enforces reads and writes but cannot govern truncation.
 	 *
@@ -628,14 +633,34 @@ export interface ContainmentStatus {
  *
  * Deliberately not surfaced at startup or anywhere in the TUI — the operator asked for no UI change.
  */
+/**
+ * Whether Linux needs to arm Landlock for this fence.
+ *
+ * Exact enumeration denies are the production session courtesy, but Landlock cannot express one without
+ * also removing READ_DIR from every ancestor. Arming it made `ls ~`, `ls /tmp`, and `ls /` fail and also
+ * set `no_new_privs`, disabling sudo. Keep those checks in brush and the structured-tool gate. Recursive
+ * or directional low-level policies still require the kernel backend and retain their stricter contract.
+ */
+export function requiresLandlock(fence: ContainmentFence): boolean {
+	return fence.deny.length > 0 || fence.allowReadOnly.length > 0 || fence.allowWriteOnly.length > 0;
+}
+
 export function containmentStatus(
 	enabled: boolean,
 	platform: string = process.platform,
 	probe: () => { backend: string; truncateHandled?: boolean } | undefined = probeNativeBackend,
+	fence?: ContainmentFence,
 ): ContainmentStatus {
 	if (!enabled) return { enabled: false, backend: "disabled", osEnforced: false };
 	// macOS always has seatbelt, so there is nothing to ask.
 	if (platform === "darwin") return { enabled: true, backend: "seatbelt", osEnforced: true };
+	// Landlock is subtree-based. Applying it to an exact-listing-only courtesy removes normal access to
+	// ancestor listings and sets no_new_privs even though it cannot faithfully enforce the intended rule.
+	// Do not even probe in this common path: avoiding the syscall is part of keeping the sandbox off the
+	// command's latency path.
+	if (platform === "linux" && fence !== undefined && !requiresLandlock(fence)) {
+		return { enabled: true, backend: "scanner-only", osEnforced: false, discoveryOnly: true };
+	}
 	// Everywhere else the answer cannot be inferred from the platform name. Landlock can be compiled
 	// out of the kernel, left out of its boot-time LSM list, or too old to allow cross-directory
 	// rename — and none of that is visible from `process.platform`. Asking the native layer is the

@@ -47,7 +47,15 @@ Three things behave differently under this backend, and none is a bug to work ar
 {{/if}}
 {{/if}}
 {{else}}
-On this platform there is **no OS-level backend**, so for `bash` the boundary is enforced only by
+{{#if containment.discoveryOnly}}
+This Linux session deliberately does **not** arm Landlock for its discovery-only profile. Landlock
+cannot hide one nested directory listing without also breaking ordinary ancestor listings such as
+`ls ~`, `ls /tmp`, and `ls /`; arming it also disables PTYs and setuid tools such as `sudo`. Those
+costs would turn a cross-context courtesy into a user-rights control.
+
+{{else}}
+This session is **not using an OS-level backend**, so for `bash` the boundary is enforced only by
+{{/if}}
 precise pre-checks for an explicit `cwd`, literal redirections, known write operands, and literal
 directory changes. Command and source text are never scanned for path-looking strings.
 

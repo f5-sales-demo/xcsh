@@ -81,23 +81,23 @@ describe("resolveSessionFence", () => {
 		}
 	});
 
-	it("honours the allow-lists", () => {
+	it("treats the allow-lists as discovery grants, not operator-rights restrictions", () => {
 		const { mine, shared } = tenants("lists");
 		const fence = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
 		expect(fenceVerdict(fence, path.join(shared, "file.md"), "read")).toBe("allow");
-		expect(fenceVerdict(fence, path.join(shared, "file.md"), "write")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(shared, "file.md"), "write")).toBe("allow");
 	});
 
 	// Two sessions can share a cwd and differ in sandbox settings — createAgentSession accepts an
 	// isolated Settings instance. A cwd-keyed cache would hand one session the other's boundary.
 	it("distinguishes same-cwd sessions whose settings differ", () => {
 		const { mine, shared } = tenants("samecwd");
-		const readOnly = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
+		const readGranted = resolveSessionFence(mine, reader({ "sandbox.allowRead": [shared] }))!;
 		const ordinary = resolveSessionFence(mine, reader({}))!;
 
-		expect(fenceVerdict(readOnly, path.join(shared, "file.md"), "write")).toBe("deny");
+		expect(fenceVerdict(readGranted, path.join(shared, "file.md"), "write")).toBe("allow");
 		expect(fenceVerdict(ordinary, path.join(shared, "file.md"), "write")).toBe("allow");
-		expect(readOnly).not.toBe(ordinary);
+		expect(readGranted).not.toBe(ordinary);
 	});
 
 	it("reuses the fence for an identical configuration", () => {

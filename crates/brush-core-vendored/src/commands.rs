@@ -192,7 +192,12 @@ pub fn compose_std_command<S: AsRef<OsStr>>(
 	// The ruleset is built here, before `fork`, and the child only has to apply it — see
 	// `sys::landlock::arm` for why the split matters and why this registration must come first.
 	#[cfg(target_os = "linux")]
-	if let Some(fence) = context.params.containment.as_ref() {
+	if let Some(fence) = context
+		.params
+		.containment
+		.as_ref()
+		.filter(|fence| fence.requires_landlock())
+	{
 		if let sys::landlock::Availability::Available(abi) = sys::landlock::availability() {
 			let plan = fence.compile_grant_plan(&crate::containment::RealFs);
 			// Only the roots the operator's policy names may be created if absent — never a path the

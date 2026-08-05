@@ -793,7 +793,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// Only worth giving up when there is an OS backend for the non-PTY path to use and none for this
 		// one. Where no backend exists — Linux without Landlock, Windows — both paths are scanner-only,
 		// so disabling PTY would remove interactive terminals and improve containment by nothing.
-		const osBackend = containmentStatus(fence !== undefined);
+		const osBackend = containmentStatus(fence !== undefined, process.platform, undefined, fence);
 		const ptyConfinable = !osBackend.osEnforced || osBackend.backend === "seatbelt";
 		const usePty = pty && ptyConfinable && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;
 		let sandboxCheckSibling: string | undefined;

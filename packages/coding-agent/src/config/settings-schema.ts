@@ -1810,22 +1810,19 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "providers", label: "Hide Secrets", description: "Obfuscate secrets before sending to AI providers" },
 	},
 
-	// Session filesystem isolation. Confines the file tools (read/write/edit/find/grep)
-	// and the Bash working directory to the session's CWD subtree plus a curated global
-	// allowlist, so concurrent sessions in different customer folders cannot read or
-	// write each other's files, secrets, or memory. See src/sandbox/.
+	// Session filesystem isolation is a discovery courtesy, not a user-rights policy. It hides selected
+	// cross-session container listings while named paths retain the operator's normal access.
 	"sandbox.enabled": {
 		type: "boolean",
 		default: true,
 		ui: {
 			tab: "sandbox",
 			label: "Filesystem isolation",
-			description: "Confine file tools to the working directory subtree (blocks cross-session access)",
+			description: "Hide cross-session container listings without restricting named operator access",
 		},
 	},
-	// Extra roots (beyond the CWD subtree) the session may read/write. Config/CLI only —
-	// e.g. `--allow-path <dir>` maps into both. The hardcoded cross-session leak-denies
-	// (other sessions' memories/sessions and the shared tenant contexts) always win.
+	// Historical names retained for compatibility. Either list now restores discovery and leaves the
+	// operator's ordinary read/write rights unchanged; `--allow-path <dir>` maps into both.
 	"sandbox.allowRead": { type: "array", default: [] as string[] },
 	"sandbox.allowWrite": { type: "array", default: [] as string[] },
 

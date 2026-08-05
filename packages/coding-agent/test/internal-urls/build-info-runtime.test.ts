@@ -572,11 +572,24 @@ describe("renderAboutDoc containment section", () => {
 			backend: "scanner-only",
 			osEnforced: false,
 		});
-		expect(doc).toContain("no OS-level backend");
+		expect(doc).toContain("not using an OS-level backend");
 		expect(doc).toContain("statement of intent rather than a guarantee");
 		expect(doc).toContain("Command and source text are never scanned");
 		// Must NOT claim the stronger guarantee it does not have.
 		expect(doc).not.toContain("how a path is spelled does not change what is reachable");
+	});
+
+	it("explains why a Linux discovery-only session preserves operator capabilities", () => {
+		const doc = renderAboutDoc(fakeBuildInfo(), null, null, {
+			enabled: true,
+			backend: "scanner-only",
+			osEnforced: false,
+			discoveryOnly: true,
+		});
+		expect(doc).toContain("does **not** arm Landlock");
+		expect(doc).toContain("`ls ~`, `ls /tmp`, and `ls /`");
+		expect(doc).toContain("PTYs and setuid tools such as `sudo`");
+		expect(doc).toContain("user-rights control");
 	});
 
 	/**

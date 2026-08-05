@@ -185,6 +185,17 @@ pub fn canonicalize_for_fence(candidate: &Path) -> PathBuf {
 }
 
 impl ContainmentFence {
+	/// Whether this fence needs Linux Landlock rather than the in-process shell checks alone.
+	///
+	/// Landlock cannot express an exact directory-enumeration deny without also removing READ_DIR from
+	/// every ancestor. The production discovery-only fence therefore stays in-process on Linux: arming
+	/// Landlock for it broke `ls ~`, `ls /tmp`, `ls /`, PTYs, and setuid tools while buying no faithful
+	/// enforcement. Recursive and directional low-level policies still need the kernel backend.
+	#[must_use]
+	pub fn requires_landlock(&self) -> bool {
+		!self.deny.is_empty() || !self.allow_read_only.is_empty() || !self.allow_write_only.is_empty()
+	}
+
 	/// Whether `candidate` may be accessed for `access`.
 	///
 	/// Deepest match wins and a deny beats an allow at equal depth, matching the host policy's

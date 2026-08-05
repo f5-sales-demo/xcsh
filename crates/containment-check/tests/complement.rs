@@ -417,6 +417,28 @@ fn production_enumeration_isolation_preserves_direct_parent_creation() {
 	);
 }
 
+#[test]
+fn discovery_only_fences_do_not_require_landlock() {
+	let discovery_only = ContainmentFence {
+		allow: vec![PathBuf::from("/home/alice")],
+		deny_enumerate: vec![PathBuf::from("/home/alice/customers")],
+		..ContainmentFence::default()
+	};
+	assert!(!discovery_only.requires_landlock());
+
+	let recursive = ContainmentFence {
+		deny: vec![PathBuf::from("/home/alice/customers")],
+		..ContainmentFence::default()
+	};
+	assert!(recursive.requires_landlock());
+
+	let directional = ContainmentFence {
+		allow_read_only: vec![PathBuf::from("/shared")],
+		..ContainmentFence::default()
+	};
+	assert!(directional.requires_landlock());
+}
+
 /// Two lists naming the same path must resolve the way `permits_resolved` does:
 /// deny wins.
 #[test]
