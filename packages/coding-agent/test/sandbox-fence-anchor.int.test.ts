@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getSessionsDir, getShellPwd, setShellPwd } from "@f5-sales-demo/pi-utils";
+import { getShellPwd, setShellPwd } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../src/config/settings";
 import { _resetShellSessionsForTest } from "../src/exec/bash-executor";
 import { evaluateToolCall } from "../src/sandbox/enforce";
@@ -96,7 +96,7 @@ describe("the containment boundary cannot be relocated by the model", () => {
 		const fence = resolveSessionFence(session.cwd, session.settings)!;
 		const diagnostic = evaluateToolCall({
 			toolName: "read",
-			input: { file_path: getSessionsDir() },
+			input: { file_path: work },
 			cwd: session.cwd,
 			fence,
 		});
