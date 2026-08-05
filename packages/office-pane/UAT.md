@@ -156,8 +156,9 @@ values before starting Office, copies the canonical fixture into the workspace a
 reruns step 5 for idempotency, and stops only the `office serve` child it spawned.
 It records responses, tool traffic, timings, assertions, and before/after workbook
 snapshots alongside the build identifiers. Vision evidence records only the PNG
-hash, size, MIME type, timings, and pass/fail state; it excludes image payloads,
-probe codes, replies, and credentials.
+hash, size, Multipurpose Internet Mail Extensions (MIME) type, terminal state,
+boolean code match, tool counts, timings, and pass/fail state; it excludes image
+payloads, probe codes, replies, and credentials.
 
 In desktop Excel, begin with a sheet named `Start` containing a sentinel value. Save
 the LiteLLM URL and token with the model field blank, then send the printed prompts.

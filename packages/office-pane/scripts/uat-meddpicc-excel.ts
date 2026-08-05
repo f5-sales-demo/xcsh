@@ -38,6 +38,7 @@ export const EXPECTED_PLUGIN_VERSION = "7.5.6";
 const EXPECTED_MODEL = "gpt-5.6-sol";
 const ALTERNATE_MODEL = "claude-opus-5";
 const MODEL_PROBE_MARKER = "OFFICE MODEL READY";
+const VISION_CODE_DIGITS = ["1", "2", "3", "4", "7"] as const;
 
 const VISION_GLYPHS: Readonly<Record<string, readonly string[]>> = {
 	"-": ["00000", "00000", "00000", "11111", "00000", "00000", "00000"],
@@ -65,6 +66,17 @@ export interface SyntheticVisionProbe {
 
 export interface VisionProbeEvidence {
 	image: { fileName: string; mimeType: "image/png"; bytes: number; sha256: string };
+	directAttachment: {
+		ended: UatTurnResult["ended"];
+		codeMatched: boolean;
+		failedToolNotices: number;
+		hostToolCalls: number;
+	};
+	fileInspection: {
+		ended: UatTurnResult["ended"];
+		codeMatched: boolean;
+		failedToolNotices: number;
+	};
 	directAttachmentPassed: boolean;
 	directAttachmentDurationMs: number;
 	fileInspectionPassed: boolean;
@@ -92,9 +104,13 @@ function pngChunk(type: string, data: Uint8Array): Buffer {
 }
 
 /** Build a generated, high-contrast PNG so live vision UAT never needs customer-derived media. */
+export function syntheticVisionCode(randomBytes: Uint8Array): string {
+	if (randomBytes.length !== 5) throw new Error("Synthetic vision code requires exactly five random bytes");
+	return `XC-${Array.from(randomBytes, value => VISION_CODE_DIGITS[value % VISION_CODE_DIGITS.length]).join("")}`;
+}
+
 export function createSyntheticVisionProbe(code?: string): SyntheticVisionProbe {
-	const resolvedCode =
-		code ?? `XC-${Array.from(crypto.getRandomValues(new Uint8Array(5)), value => value % 10).join("")}`;
+	const resolvedCode = code ?? syntheticVisionCode(crypto.getRandomValues(new Uint8Array(5)));
 	if (!/^XC-\d{5}$/.test(resolvedCode)) throw new Error("Synthetic vision code must match XC-00000");
 
 	const width = 800;
@@ -160,8 +176,12 @@ export function fileVisionProbePrompt(fileName: string): string {
 	return `Use inspect_image on ${fileName} to read the exact uppercase code. Reply with the code only.`;
 }
 
+function turnContainsCode(turn: UatTurnResult, code: string): boolean {
+	return turn.reply.toUpperCase().includes(code);
+}
+
 function turnReadCode(turn: UatTurnResult, code: string): boolean {
-	return turn.ended === "chat_done" && turn.reply.toUpperCase().includes(code);
+	return turn.ended === "chat_done" && turnContainsCode(turn, code);
 }
 
 export function summarizeVisionProbe(
@@ -176,6 +196,17 @@ export function summarizeVisionProbe(
 			mimeType: probe.mimeType,
 			bytes: probe.bytes.length,
 			sha256: probe.sha256,
+		},
+		directAttachment: {
+			ended: direct.ended,
+			codeMatched: turnContainsCode(direct, probe.code),
+			failedToolNotices: direct.toolNotices.filter(notice => !notice.ok).length,
+			hostToolCalls: direct.hostToolCalls.length,
+		},
+		fileInspection: {
+			ended: inspected.ended,
+			codeMatched: turnContainsCode(inspected, probe.code),
+			failedToolNotices: inspected.toolNotices.filter(notice => !notice.ok).length,
 		},
 		directAttachmentPassed:
 			turnReadCode(direct, probe.code) &&
@@ -674,9 +705,7 @@ async function proveVisionInput(bridge: UatBridgeClient, workspace: string): Pro
 		{ data: Buffer.from(probe.bytes).toString("base64"), mimeType: probe.mimeType },
 	]);
 	const inspected = await bridge.turn(fileVisionProbePrompt(probe.fileName), "c-uat-vision-file");
-	const summary = summarizeVisionProbe(probe, direct, inspected);
-	assertVisionProbePassed(summary);
-	return summary;
+	return summarizeVisionProbe(probe, direct, inspected);
 }
 
 async function runLive(options: UatMeddpiccOptions): Promise<void> {
@@ -765,6 +794,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 
 		evidence.modelRoundTrip = await proveModelRoundTrip(bridge, baseUrl, token);
 		evidence.visionProbe = await proveVisionInput(bridge, prepared.workspace);
+		assertVisionProbePassed(evidence.visionProbe);
 		const scenarioList = modelList(await bridge.request({ type: "list_models" }, "models"));
 		evidence.scenarioModel = requireMeddpiccScenarioModel(scenarioList.current);
 

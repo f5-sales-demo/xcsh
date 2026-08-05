@@ -12,6 +12,7 @@ import {
 	requireMeddpiccScenarioModel,
 	sanitizeEvidence,
 	summarizeVisionProbe,
+	syntheticVisionCode,
 } from "../scripts/uat-meddpicc-excel";
 
 describe("MEDDPICC Excel UAT CLI", () => {
@@ -115,6 +116,11 @@ describe("MEDDPICC Excel UAT CLI", () => {
 		expect(fileVisionProbePrompt(probe.fileName)).not.toContain(probe.code);
 	});
 
+	test("maps random bytes to glyphs that remain unambiguous under vision resizing", () => {
+		expect(syntheticVisionCode(new Uint8Array([0, 1, 2, 3, 4]))).toBe("XC-12347");
+		expect(syntheticVisionCode(new Uint8Array([5, 6, 7, 8, 9]))).toBe("XC-12347");
+	});
+
 	test("rejects a synthetic vision code the bitmap font cannot render", () => {
 		expect(() => createSyntheticVisionProbe("customer-code")).toThrow("XC-00000");
 	});
@@ -136,7 +142,19 @@ describe("MEDDPICC Excel UAT CLI", () => {
 			toolNotices: [{ tool: "inspect_image", ok: true }],
 		};
 
-		const json = JSON.stringify(summarizeVisionProbe(probe, direct, inspected));
+		const summary = summarizeVisionProbe(probe, direct, inspected);
+		const json = JSON.stringify(summary);
+		expect(summary.directAttachment).toEqual({
+			ended: "chat_done",
+			codeMatched: true,
+			failedToolNotices: 0,
+			hostToolCalls: 0,
+		});
+		expect(summary.fileInspection).toEqual({
+			ended: "chat_done",
+			codeMatched: true,
+			failedToolNotices: 0,
+		});
 		expect(json).not.toContain(Buffer.from(probe.bytes).toString("base64"));
 		expect(json).not.toContain(probe.code);
 		expect(json).not.toContain("reply");
