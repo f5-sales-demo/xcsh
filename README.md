@@ -23,7 +23,7 @@ AI-powered development environment and CLI tool
 
 ## Documentation
 
-Full documentation is available at **[https://f5-sales-demo.github.io/xcsh/](https://f5-sales-demo.github.io/xcsh/)**.
+Full documentation is available at __[https://f5-sales-demo.github.io/xcsh/](https://f5-sales-demo.github.io/xcsh/)__.
 
 ## Contributing
 
