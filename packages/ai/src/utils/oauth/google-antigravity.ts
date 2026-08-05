@@ -30,6 +30,7 @@ const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const CLOUD_CODE_ENDPOINT = "https://cloudcode-pa.googleapis.com";
 const TIER_LEGACY = "legacy-tier";
+const TIER_STANDARD = "standard-tier";
 const PROJECT_ONBOARD_MAX_ATTEMPTS = 5;
 const PROJECT_ONBOARD_INTERVAL_MS = 2000;
 const PROJECT_ID_PATTERN = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
@@ -248,6 +249,25 @@ async function onboardProjectWithRetries(
 	);
 }
 
+async function loadCodeAssist(
+	endpoint: string,
+	headers: Record<string, string>,
+	projectRequest: AntigravityProjectRequest,
+): Promise<LoadCodeAssistPayload> {
+	const response = await fetch(`${endpoint}/v1internal:loadCodeAssist`, {
+		method: "POST",
+		headers,
+		body: JSON.stringify(projectRequest),
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		throw new Error(`loadCodeAssist failed: ${response.status} ${response.statusText}: ${errorText}`);
+	}
+
+	return (await response.json()) as LoadCodeAssistPayload;
+}
+
 async function discoverProject(
 	accessToken: string,
 	configuredProjectId: string | undefined,
@@ -263,31 +283,42 @@ async function discoverProject(
 	onProgress?.("Checking for existing project...");
 	const endpoint = CLOUD_CODE_ENDPOINT;
 	try {
-		const loadResponse = await fetch(`${endpoint}/v1internal:loadCodeAssist`, {
-			method: "POST",
-			headers,
-			body: JSON.stringify(projectRequest),
-		});
-
-		if (!loadResponse.ok) {
-			const errorText = await loadResponse.text();
-			throw new Error(`loadCodeAssist failed: ${loadResponse.status} ${loadResponse.statusText}: ${errorText}`);
-		}
-
-		const loadPayload = (await loadResponse.json()) as LoadCodeAssistPayload;
+		const loadPayload = await loadCodeAssist(endpoint, headers, projectRequest);
 		const existingProject = readProjectId(loadPayload.cloudaicompanionProject);
-		if (existingProject) {
-			return configuredProjectId ?? existingProject;
+
+		if (!configuredProjectId) {
+			if (existingProject) {
+				return existingProject;
+			}
+
+			const tierId = getDefaultTierId(loadPayload.allowedTiers);
+			onProgress?.("Provisioning project...");
+			const onboardBody = {
+				tierId,
+				...projectRequest,
+			};
+			return await onboardProjectWithRetries(endpoint, headers, onboardBody, onProgress);
 		}
 
-		const tierId = getDefaultTierId(loadPayload.allowedTiers);
+		if (existingProject === configuredProjectId && loadPayload.currentTier?.id === TIER_STANDARD) {
+			return configuredProjectId;
+		}
+
+		const standardTierAvailable = loadPayload.allowedTiers?.some(tier => tier.id === TIER_STANDARD) ?? false;
+		if (!standardTierAvailable) {
+			throw new Error(`standard-tier is not available for configured project ${configuredProjectId}`);
+		}
+
 		onProgress?.("Provisioning project...");
 		const onboardBody = {
-			tierId,
+			tierId: TIER_STANDARD,
 			...projectRequest,
 		};
 		const provisionedProject = await onboardProjectWithRetries(endpoint, headers, onboardBody, onProgress);
-		return configuredProjectId ?? provisionedProject;
+		if (provisionedProject !== configuredProjectId) {
+			throw new Error(`onboardUser returned project ${provisionedProject} instead of ${configuredProjectId}`);
+		}
+		return configuredProjectId;
 	} catch (error) {
 		throw new Error(
 			`Could not discover or provision an Antigravity project. ${error instanceof Error ? error.message : String(error)}`,
