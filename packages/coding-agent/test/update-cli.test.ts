@@ -1,8 +1,51 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { _resolveUpdateMethodForTest } from "../src/cli/update-cli";
+import { renderCommandHelp } from "@f5-sales-demo/pi-utils/cli";
+import { _resolveUpdateMethodForTest, parseUpdateArgs } from "../src/cli/update-cli";
+import SelfUpdate from "../src/commands/self-update";
+import Update from "../src/commands/update";
+
+describe("update command boundary", () => {
+	it("recognizes only self-update as the executable updater", () => {
+		expect(parseUpdateArgs(["self-update", "--check"])).toEqual({ force: false, check: true });
+		expect(parseUpdateArgs(["self-update", "--force"])).toEqual({ force: true, check: false });
+	});
+
+	it("never interprets manifest update flags as executable updater flags", () => {
+		expect(parseUpdateArgs(["update", "-f", "manifest.yaml"])).toBeUndefined();
+	});
+
+	it("exposes distinct public CLI contracts for update and self-update", () => {
+		const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+		try {
+			renderCommandHelp("xcsh", "update", Update);
+			const manifestUpdate = write.mock.calls.map(([chunk]) => String(chunk)).join("");
+			write.mockClear();
+			renderCommandHelp("xcsh", "self-update", SelfUpdate);
+			const executableUpdate = write.mock.calls.map(([chunk]) => String(chunk)).join("");
+
+			expect(manifestUpdate).toContain("Update existing resources from manifests");
+			expect(manifestUpdate).toContain("--filename=<value>");
+			expect(executableUpdate).toContain("Check for and install xcsh executable updates");
+			expect(executableUpdate).toContain("--check");
+		} finally {
+			write.mockRestore();
+		}
+	});
+
+	it("directs both English update notices to self-update", () => {
+		const mainSource = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
+		const messages = JSON.parse(
+			fs.readFileSync(new URL("../src/locales/en.json", import.meta.url), "utf8"),
+		) as Record<string, string>;
+
+		expect(mainSource).toContain("run: xcsh self-update");
+		expect(mainSource).not.toContain("run: xcsh update`");
+		expect(messages["welcome.updateHint"]).toBe("run: xcsh self-update");
+	});
+});
 
 describe("update-cli install target detection", () => {
 	// --- Existing tests (bun and binary) ---
