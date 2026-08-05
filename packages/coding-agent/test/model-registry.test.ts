@@ -1852,24 +1852,29 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
-		test("existing generated config inherits GPT-5.6 image input without a config migration", () => {
+		test("existing generated config keeps GPT-5.6 image input through discovery without migration", async () => {
 			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
 			const previousApiKey = Bun.env.LITELLM_API_KEY;
 			try {
 				delete Bun.env.LITELLM_BASE_URL;
 				delete Bun.env.LITELLM_API_KEY;
+				const legacyModelsPath = path.join(tempDir, "legacy-models.yml");
 				const legacyGenerated = generateModelsYml("https://proxy.example.com", {
 					apiBasePath: "/api/v1",
 					apiKeyLiteral: "test-key",
 				}).replace(/\n {8}input:\n {10}- text\n {10}- image/, "");
 				expect(legacyGenerated).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
 				expect(legacyGenerated).not.toContain("        input:");
-				fs.writeFileSync(modelsJsonPath, legacyGenerated);
+				fs.writeFileSync(legacyModelsPath, legacyGenerated);
 
-				const registry = new ModelRegistry(authStorage, modelsJsonPath);
+				const registry = new ModelRegistry(authStorage, legacyModelsPath);
 
 				expect(registry.find("litellm", "gpt-5.6-sol")?.input).toEqual(["text", "image"]);
-				expect(fs.readFileSync(modelsJsonPath, "utf8")).toBe(legacyGenerated);
+				using _hook = mockOpenAiCompatibleModels("https://proxy.example.com/api/v1/models", ["gpt-5.6-sol"]);
+				await registry.refreshProvider("litellm", "online");
+				expect(registry.getProviderDiscoveryState("litellm")?.status).toBe("ok");
+				expect(registry.find("litellm", "gpt-5.6-sol")?.input).toEqual(["text", "image"]);
+				expect(fs.readFileSync(legacyModelsPath, "utf8")).toBe(legacyGenerated);
 			} finally {
 				if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
 				else Bun.env.LITELLM_BASE_URL = previousBaseUrl;

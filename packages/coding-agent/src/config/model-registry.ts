@@ -1227,6 +1227,7 @@ export class ModelRegistry {
 					return {
 						...model,
 						baseUrl: existing.baseUrl,
+						input: existing.input.includes("image") ? ["text", "image"] : model.input,
 						headers: existing.headers ? { ...existing.headers, ...model.headers } : model.headers,
 					};
 				}
