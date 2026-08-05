@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import type { completeSimple, Model } from "@f5-sales-demo/pi-ai";
+import { type Api, type completeSimple, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
 import { Value } from "@sinclair/typebox/value";
 import { Settings } from "../../src/config/settings";
@@ -35,8 +35,8 @@ const textOnlyModel: Model<"openai-responses"> = {
 };
 
 interface CreateSessionOptions {
-	availableModels?: Model<"openai-responses">[];
-	activeModel?: Model<"openai-responses">;
+	availableModels?: Model<Api>[];
+	activeModel?: Model<Api>;
 	configureVisionRole?: boolean;
 }
 
@@ -47,7 +47,7 @@ interface CompleteSimpleStub {
 
 function createSession(
 	cwd: string,
-	model: Model<"openai-responses">,
+	model: Model<Api>,
 	apiKey: string | undefined = "test-key",
 	settings = Settings.isolated(),
 	options: CreateSessionOptions = {},
@@ -144,6 +144,23 @@ describe("InspectImageTool", () => {
 		const contentParts = (Array.isArray(content) ? content : []) as Array<{ type: string; text?: string }>;
 		expect(contentParts[0]?.type).toBe("image");
 		expect(contentParts[1]).toEqual({ type: "text", text: "Extract visible UI labels." });
+	});
+
+	it("reaches completeSimple with the bundled LiteLLM GPT-5.6 Sol metadata", async () => {
+		const imagePath = path.join(testDir, "synthetic-code.png");
+		fs.writeFileSync(imagePath, Buffer.from(TINY_PNG_BASE64, "base64"));
+		const model = getBundledModel("litellm", "gpt-5.6-sol");
+		const stub = createCompleteSimpleSuccessStub("Synthetic code detected");
+		const tool = new InspectImageTool(createSession(testDir, model), stub.fn);
+
+		const result = await tool.execute("call-gpt56", {
+			path: imagePath,
+			question: "Read the synthetic code.",
+		});
+
+		expect(result.details?.model).toBe("litellm/gpt-5.6-sol");
+		expect(stub.calls).toHaveLength(1);
+		expect(stub.calls[0]?.[0]).toBe(model);
 	});
 
 	it("sends question text unchanged", async () => {

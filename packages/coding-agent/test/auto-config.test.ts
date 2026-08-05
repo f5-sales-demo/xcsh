@@ -186,6 +186,7 @@ describe("generateModelsYml()", () => {
 		expect(yml).toContain('baseUrl: "https://proxy.example.com/v1"');
 		expect(yml).toContain("type: openai-compat");
 		expect(yml).toContain("apiKey: LITELLM_API_KEY");
+		expect(yml).toContain("        input:\n          - text\n          - image");
 	});
 
 	test("strips trailing slashes from baseUrl", () => {

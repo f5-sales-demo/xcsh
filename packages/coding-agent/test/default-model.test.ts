@@ -22,25 +22,25 @@ describe("xcsh production model defaults", () => {
 		fs.rmSync(dir, { recursive: true, force: true });
 	});
 
-	test("bakes vision-capable Claude Opus 5 High as the production default", () => {
-		expect(DEFAULT_MODEL_ROLE).toBe("anthropic/claude-opus-5:high");
+	test("bakes vision-capable GPT-5.6 Sol High as the production default", () => {
+		expect(DEFAULT_MODEL_ROLE).toBe("litellm/gpt-5.6-sol:high");
 		expect(DEFAULT_MODEL_ROLE_VALUE).toBe(DEFAULT_MODEL_ROLE);
 		const settings = Settings.isolated();
 		expect(settings.getModelRole("default")).toBe(DEFAULT_MODEL_ROLE);
 		expect(settings.get("defaultThinkingLevel")).toBe(Effort.High);
-		expect(getBundledModel("anthropic", "claude-opus-5")?.input).toContain("image");
+		expect(getBundledModel("litellm", "gpt-5.6-sol")?.input).toContain("image");
 	});
 
-	test("uses GPT-5.6 Sol Low for fast work and restores Claude Opus 5 for thinking work", () => {
+	test("uses GPT-5.6 Sol Low for fast work and High for thinking work", () => {
 		const settings = Settings.isolated();
 		expect(settings.getModelRole("smol")).toBe("litellm/gpt-5.6-sol:low");
-		expect(settings.getModelRole("slow")).toBe("anthropic/claude-opus-5:high");
+		expect(settings.getModelRole("slow")).toBe("litellm/gpt-5.6-sol:high");
 	});
 
 	test("does not persist the binary model default in generated config", () => {
 		const yml = generateConfigYml();
 		expect(yml).not.toContain("modelRoles:");
-		expect(yml).not.toContain("claude-opus-5");
+		expect(yml).not.toContain("gpt-5.6-sol");
 		expect(yml).toContain("providers:");
 	});
 
@@ -49,7 +49,7 @@ describe("xcsh production model defaults", () => {
 		fs.writeFileSync(cfg, "modelRoles:\n  default: bench-instant/bench-instant\nproviders:\n  image: openai\n");
 		healConfigYmlModelRoles(cfg);
 		const out = fs.readFileSync(cfg, "utf-8");
-		expect(out).toContain("default: anthropic/claude-opus-5:high");
+		expect(out).toContain("default: litellm/gpt-5.6-sol:high");
 		expect(out).not.toContain("bench-instant");
 		expect(out).toContain("providers:");
 	});

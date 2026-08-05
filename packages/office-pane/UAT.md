@@ -117,9 +117,10 @@ The release-certification harness runs the same five prompts used in the team
 presentation against a real `xcsh office serve` bridge and the production Excel
 tool definitions. It uses a stateful workbook fake for the automated gate; repeat
 the printed prompts in desktop Excel for the final Office.js and WebView check. The
-harness also proves live inference through the default Claude Opus 5, switches to
-GPT-5.6 Sol, and switches back to Claude Opus 5 before it exercises the deal
-workflow.
+harness also proves live inference through the default GPT-5.6 Sol, switches to
+Claude Opus 5, and switches back to GPT-5.6 Sol before it exercises the deal
+workflow. Under the restored GPT model, it reads a generated synthetic PNG first
+as an Office attachment and then through file-based `inspect_image`.
 
 Prerequisites:
 
@@ -133,13 +134,13 @@ Prerequisites:
 
 Print the presentation runbook without starting a server:
 
-```sh
+```bash
 bun run --cwd packages/office-pane uat:meddpicc-excel --print-prompts
 ```
 
 Run the automated local-build gate from the repository root:
 
-```sh
+```bash
 bun packages/office-pane/scripts/uat-meddpicc-excel.ts \
   --binary "$PWD/packages/coding-agent/dist/xcsh" \
   --workspace /tmp/xcsh-meddpicc-demo \
@@ -154,7 +155,9 @@ values before starting Office, copies the canonical fixture into the workspace a
 `example-corp.json`, checks its SHA-256 and plugin version, runs all five steps,
 reruns step 5 for idempotency, and stops only the `office serve` child it spawned.
 It records responses, tool traffic, timings, assertions, and before/after workbook
-snapshots alongside the build identifiers.
+snapshots alongside the build identifiers. Vision evidence records only the PNG
+hash, size, MIME type, timings, and pass/fail state; it excludes image payloads,
+probe codes, replies, and credentials.
 
 In desktop Excel, begin with a sheet named `Start` containing a sentinel value. Save
 the LiteLLM URL and token with the model field blank, then send the printed prompts.

@@ -362,6 +362,13 @@ function applyAnthropicCatalogPolicy(model: ApiModel<Api>, parsedModel: Anthropi
 }
 
 function applyOpenAICatalogPolicy(model: ApiModel<Api>, parsedModel: OpenAIModel): void {
+	// LiteLLM's GPT-5.6 Sol route accepts image input, but upstream catalog
+	// metadata currently reports text only. Keep this correction exact so other
+	// providers and GPT-5.6 variants retain their advertised capabilities.
+	if (model.provider === "litellm" && model.id === "gpt-5.6-sol") {
+		model.input = ["text", "image"];
+	}
+
 	// Codex models: 400K figure includes output budget; input window is 272K.
 	if (parsedModel.variant.startsWith("codex") && parsedModel.variant !== "codex-spark") {
 		model.contextWindow = 272000;
