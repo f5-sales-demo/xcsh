@@ -1,62 +1,92 @@
 ---
 name: terraform-provider
 description: |
-  Generate F5 XC Terraform HCL code. Activate ONLY when the user explicitly asks for "Terraform", "HCL", ".tf" files, "infrastructure-as-code", or terraform import/plan/apply/destroy. NEVER activate for generic resource keywords or un-specified infrastructure requests — those default to native XC-API (`xcsh_api`) and JSON manifests (`{kind, metadata, spec}`).
-  Provider: f5-sales-demo/xcsh (NEVER volterraedge/volterra). Read skill://terraform-provider for templates.
+  Senior DevOps Terraform & IaC capability for F5 XC and ecosystem providers.
+  Activate ONLY when the user explicitly asks for "Terraform", "HCL", ".tf" files, "infrastructure-as-code", or terraform import/plan/apply/destroy.
+  Provider: f5-sales-demo/xcsh (NEVER volterraedge/volterra). Read skill://terraform-provider for templates and operational best practices.
 ---
 
-# F5 XC Terraform Provider
+# F5 XC Senior DevOps Terraform Guide
 
-Every response MUST include a ```terraform code block. Output code first, then write it to a `.tf` file with `xcsh_write_file`.
+Every response MUST include a ```terraform code block. Output clean code first, then write to file.
 
-MINIMUM-SETTINGS (match the JSON/YAML export style): emit ONLY fields that change behavior — the required skeleton,
-required fields, and any value the user explicitly asks to set. OMIT fields the server applies by default unless the
-user wants a non-default value. Examples to omit at their defaults: `origin_pool` `loadbalancer_algorithm =
-"ROUND_ROBIN"` and `endpoint_selection = "DISTRIBUTED"`; `healthcheck` default
-`timeout`/`interval`/`unhealthy_threshold`/`healthy_threshold`; empty server-default oneof variants (`round_robin {}`,
-`same_as_endpoint_port {}`) when they are the default choice. Fields documented "Server applies default when omitted"
-are safe to omit. Keep configs small and default-free.
+## Proactive Registry Lookup Rule
+BEFORE writing any `required_providers` block or external module invocation:
+1. Query `xcsh://registry/provider/{namespace}/{type}` or search the HashiCorp Provider Registry to discover the latest provider version constraint (e.g. `~> 1.2.0`).
+2. Query `xcsh://registry/module/{namespace}/{name}/{provider}` for module inputs/outputs.
+3. NEVER guess provider versions or invent non-existent module arguments.
 
-WRITE-AND-VERIFY (when asked to write/generate Terraform — the default): after writing the file, verify it WITHOUT mutating the tenant:
+## Senior DevOps Engineering Standards
 
-1. `terraform fmt` the file (canonical formatting; needs no provider/init).
-2. `terraform init` (best-effort), then `terraform validate` (syntax + provider-schema check). If `init` fails (e.g. a `dev_overrides` setup in `~/.terraformrc`, or offline), DO NOT abort — still run `terraform validate` (it works under `dev_overrides` without init) and report both results plainly. `validate` is the "verified working" signal.
-3. Stop. Report the file path and the fmt/validate result. Writing a plan is NOT running it.
-NEVER run `terraform apply` unless the user clearly asks to create/CRUD a resource (and CRUD-by-name uses the `xcsh_api` tool, not Terraform). NEVER auto-run `terraform plan` — run it only when the user explicitly asks to plan/preview/diff. `terraform destroy` only on explicit request.
+### 1. Required Provider & Source Skeleton
+Every `.tf` entrypoint MUST include the required providers block and provider block:
+```hcl
+terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    xcsh = {
+      source  = "f5-sales-demo/xcsh"
+      version = "~> 0.1.0"
+    }
+  }
+}
 
-REQUIRED skeleton — every `.tf` MUST contain BOTH the `terraform {}` block AND a `provider "xcsh" {}` block, not just resource snippets. Omitting the provider block makes `terraform plan` fail with "Provider requires explicit configuration. Add a provider block":
-terraform { required_providers { f5xc = { source = "f5-sales-demo/xcsh" } } }
 provider "xcsh" {}
-Auth comes from env vars (set ONE): XCSH_API_TOKEN | XCSH_P12_FILE+XCSH_P12_PASSWORD | XCSH_CERT+XCSH_KEY; tenant URL via XCSH_API_URL. Keep the provider block empty unless asked to hardcode credentials.
+```
+Auth comes from env vars (set ONE): `XCSH_API_TOKEN` | `XCSH_P12_FILE`+`XCSH_P12_PASSWORD` | `XCSH_CERT`+`XCSH_KEY`; tenant URL via `XCSH_API_URL`. Keep provider configuration clean and environment-driven.
 
-Templates (adapt name/namespace/fields per request):
+### 2. Variable & Output Engineering (`variables.tf` & `outputs.tf`)
+- ALWAYS specify explicit `type` constraints for variables (`type = string`, `type = list(string)`).
+- Include `description` and `validation` blocks with human-readable error messages for variable constraints.
+- Mark sensitive parameters (passwords, tokens, private keys) with `sensitive = true`.
+- Document all outputs with `description` and mark sensitive outputs appropriately.
 
-http_loadbalancer: resource "xcsh_http_loadbalancer" "example" { name="example" namespace="default" domains=["app.example.com"] advertise_on_public_default_vip {} http { port=80 } default_route_pools { pool { name="origin-pool-name" namespace="default" } weight=1 priority=1 } }
-Pool ref: set pool.name to existing origin pool name in same namespace. HTTPS: replace http { port=80 } with https_auto_cert { http_redirect=true default_header {} tls_config { default_security {} } no_mtls {} }. WAF: add disable_waf {} or app_firewall { name="waf" namespace="example-namespace" }. Import: terraform import xcsh_http_loadbalancer.example example-namespace/name
+Example:
+```hcl
+variable "namespace" {
+  type        = string
+  description = "Target F5 XC namespace for resources"
+  default     = "default"
 
-origin_pool: resource "xcsh_origin_pool" "example" { name="example" namespace="default" port=8080 origin_servers { public_ip { ip="10.0.1.10" } } loadbalancer_algorithm="ROUND_ROBIN" endpoint_selection="LOCAL_PREFERRED" }
-Healthcheck ref: add healthcheck { name="hc" namespace="example-namespace" }. Import: terraform import xcsh_origin_pool.example example-namespace/name
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.namespace))
+    error_message = "Namespace must consist of lowercase alphanumeric characters and hyphens."
+  }
+}
 
-healthcheck: resource "xcsh_healthcheck" "example" { name="example" namespace="default" http_health_check { path="/healthz" } timeout=3 interval=10 unhealthy_threshold=3 healthy_threshold=3 }
-TCP: replace http_health_check with tcp_health_check {}. Import: terraform import xcsh_healthcheck.example ns/name
+output "loadbalancer_domains" {
+  type        = list(string)
+  description = "Configured public domains for the HTTP load balancer"
+  value       = xcsh_http_loadbalancer.example.domains
+}
+```
 
-app_firewall: resource "xcsh_app_firewall" "example" { name="example" namespace="default" blocking {} }
-Import: terraform import xcsh_app_firewall.example ns/name
+### 3. Minimum Settings & Default Hygiene
+Emit ONLY parameters that change operational behavior or are explicitly required by the user. OMIT fields that the server/provider applies by default (e.g. `loadbalancer_algorithm = "ROUND_ROBIN"`, `endpoint_selection = "DISTRIBUTED"`).
 
-service_policy: resource "xcsh_service_policy" "example" { name="example" namespace="default" allow_all_requests {} any_server {} }
-Deny all: replace allow_all_requests {} with deny_all_requests {}. Custom rules: use rule_list { rules { metadata { name="rule" } spec { action="ALLOW" any_client {} any_ip {} } } }. Import: terraform import xcsh_service_policy.example ns/name
+### 4. Modular & Portable Architecture
+- Keep root modules lean. Separate concerns into `main.tf`, `variables.tf`, `outputs.tf`, and `terraform.tfvars.example`.
+- Enforce environment independence — never hardcode tenant URLs, passwords, or hardcoded IP addresses.
 
-certificate: resource "xcsh_certificate" "example" { name="example" namespace="default" certificate_url="string:///BASE64_CERT" private_key { blindfold_secret_info { location="string:///BASE64_KEY" } } }
-Import: terraform import xcsh_certificate.example ns/name
+### 5. Automated Testing (`*.tftest.hcl`)
+When creating production infrastructure code, include a native `terraform test` file:
+```hcl
+run "verify_loadbalancer_name" {
+  command = plan
 
-rate_limiter_policy: resource "xcsh_rate_limiter_policy" "example" { name="example" namespace="default" any_server {} }
-Import: terraform import xcsh_rate_limiter_policy.example ns/name
+  assert {
+    condition     = xcsh_http_loadbalancer.example.name == "app-lb"
+    error_message = "HTTP Load Balancer name must match app-lb"
+  }
+}
+```
 
-api_definition: resource "xcsh_api_definition" "example" { name="example" namespace="default" swagger_specs=["string:///BASE64_SPEC"] }
-Import: terraform import xcsh_api_definition.example ns/name
+### 6. Write-and-Verify Lifecycle
+1. `terraform fmt` for canonical formatting.
+2. `terraform init` (best effort), followed by `terraform validate`. Report syntax and provider validation status plainly.
+3. NEVER run `terraform apply` or `terraform destroy` without explicit user instruction.
 
-xcsh_namespace: resource "xcsh_namespace" "example" { name="example-staging" }
-Labels: add labels = { env="prod" }. Import: terraform import xcsh_namespace.example name
-
-Troubleshoot: "one of X must be set" = add empty block. "unsupported argument" = check template. Output corrected resource block.
-Destroy: terraform destroy -target=xcsh_{type}.{label}
+### 7. Troubleshooting Playbook
+- **Missing OneOf block**: Error `"one of X must be set"` -> supply explicit empty block `field {}`.
+- **Unsupported argument**: Verify parameter against Level 2 schema (`xcsh://terraform/{category}/{resource}`).
+- **State lock error**: Resolve via `terraform force-unlock <lock-id>` when instructed.
