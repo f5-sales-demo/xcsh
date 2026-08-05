@@ -168,7 +168,7 @@ install_via_bun() {
       exit 1
     fi
 
-    bun install -g "$TMP_DIR/packages/coding-agent" || {
+    (cd "$TMP_DIR" && bun install && bun --cwd=packages/coding-agent link) || {
       echo "Failed to install from source"
       exit 1
     }
