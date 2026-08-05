@@ -1860,7 +1860,10 @@ describe("ModelRegistry", () => {
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
 		test("a text-only discovery cache cannot erase bundled GPT-5.6 vision at startup", () => {
-			const cached = { ...getBundledModel("litellm", "gpt-5.6-sol"), input: ["text"] as const };
+			const cached = {
+				...getBundledModel("litellm", "gpt-5.6-sol"),
+				input: ["text"] as Array<"text" | "image">,
+			};
 			writeModelCache("litellm", Date.now(), [cached], true, cacheDbPath);
 			writeRawModelsJson({
 				litellm: {
