@@ -46,6 +46,7 @@ import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import extensionApiContent from "./extension-api.md" with { type: "text" };
 import { createFleetResolver, type FleetDeps, type FleetResolver } from "./fleet-resolve";
 import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
+import { createRegistryResolver, type RegistryResolver } from "./registry-resolve";
 import { createSourceResolver, type SourceResolver } from "./source-resolve";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
@@ -57,6 +58,7 @@ const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
 const BRANDING_HOST = "branding";
 const TERRAFORM_HOST = "terraform";
+const REGISTRY_HOST = "registry";
 const CONSOLE_HOST = "console";
 const EXTENSION_HOST = "extension";
 const PLUGIN_HOST = "plugin";
@@ -327,6 +329,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
 	#terraformResolver: TerraformResolver | null;
+	#registryResolver: RegistryResolver | null = null;
 	#consoleResolver: ConsoleResolver | null = null;
 	#pluginResolver: PluginResolver | null = null;
 	#changesResolver: ChangesResolver | null = null;
@@ -379,6 +382,13 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			this.#terraformResolver = createTerraformResolver(loadTerraformIndex());
 		}
 		return this.#terraformResolver;
+	}
+
+	#getRegistryResolver(): RegistryResolver {
+		if (!this.#registryResolver) {
+			this.#registryResolver = createRegistryResolver();
+		}
+		return this.#registryResolver;
 	}
 
 	#getConsoleResolver(): ConsoleResolver {
@@ -434,6 +444,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === TERRAFORM_HOST) {
 			return this.#getTerraformResolver().resolve(url);
+		}
+
+		if (host === REGISTRY_HOST) {
+			return this.#getRegistryResolver().resolve(url);
 		}
 
 		if (host === PLUGIN_HOST) {
