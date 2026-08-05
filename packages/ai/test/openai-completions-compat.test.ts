@@ -61,6 +61,35 @@ function baseContext(): Context {
 }
 
 describe("openai-completions compatibility", () => {
+	it("serializes image input for the bundled LiteLLM GPT-5.6 Sol model", () => {
+		const bundled = getBundledModel("litellm", "gpt-5.6-sol");
+		if (bundled.api !== "openai-completions") throw new Error("GPT-5.6 Sol must use Chat Completions");
+		const model = bundled as Model<"openai-completions">;
+		const messages = convertMessages(
+			model,
+			{
+				messages: [
+					{
+						role: "user",
+						content: [
+							{ type: "image", data: "c3ludGhldGljLWltYWdl", mimeType: "image/png" },
+							{ type: "text", text: "Read the synthetic code." },
+						],
+						timestamp: Date.now(),
+					},
+				],
+			},
+			detectCompat(model),
+		);
+
+		const user = messages.find(message => message.role === "user");
+		expect(Array.isArray(user?.content)).toBe(true);
+		expect(user?.content).toContainEqual({
+			type: "image_url",
+			image_url: { url: "data:image/png;base64,c3ludGhldGljLWltYWdl" },
+		});
+	});
+
 	it("serializes assistant text content as a plain string", () => {
 		const model: Model<"openai-completions"> = {
 			...getBundledModel("openai", "gpt-4o-mini"),

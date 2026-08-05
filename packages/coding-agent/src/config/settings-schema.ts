@@ -157,16 +157,16 @@ const DEFAULT_CYCLE_ORDER: string[] = ["smol", "default", "slow"];
 /**
  * Binary-baked default model role. Ships in the binary so a fresh install needs
  * NO `~/.xcsh/agent/config.yml` — `/login` only supplies the (PII) proxy URL + key.
- * Claude Opus 5 High is the vision-capable production default through the
- * Anthropic route on LiteLLM. Keep the effort explicit in the role so returning
+ * GPT-5.6 Sol High is the vision-capable production default through the OpenAI
+ * Chat Completions route on LiteLLM. Keep the effort explicit in the role so returning
  * from a lower-effort role cannot inherit that role's effort.
  */
-export const DEFAULT_MODEL_ROLE = "anthropic/claude-opus-5:high";
+export const DEFAULT_MODEL_ROLE = "litellm/gpt-5.6-sol:high";
 /** Fast role for lightweight work (commit messages, titles, memory summaries). */
 const SMOL_MODEL_ROLE = "litellm/gpt-5.6-sol:low";
 /**
  * Baked role map. `smol` keeps GPT-5.6 Sol at low effort for latency-sensitive
- * work; both `default` and `slow` restore vision-capable Claude Opus 5 High.
+ * work; both `default` and `slow` restore vision-capable GPT-5.6 Sol High.
  */
 const DEFAULT_MODEL_ROLES: Record<string, string> = {
 	default: DEFAULT_MODEL_ROLE,

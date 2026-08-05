@@ -71,7 +71,7 @@ describe("createExtensionBridgeTools", () => {
 
 describe("OFFICE_TOOL_NAMES (full CLI-parity tool set)", () => {
 	test("includes the general native tools so the pane matches the CLI (bash/az/gh, file, search)", () => {
-		for (const n of ["read", "write", "edit", "bash", "grep", "todo_write", "task", "calc"]) {
+		for (const n of ["read", "write", "edit", "bash", "grep", "todo_write", "task", "calc", "inspect_image"]) {
 			expect(OFFICE_TOOL_NAMES).toContain(n);
 		}
 	});

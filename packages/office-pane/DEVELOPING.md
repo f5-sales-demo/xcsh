@@ -91,9 +91,10 @@ to the xcsh runtime in memory and does not write it to the xcsh credential store
 for example `https://gateway.example.com`. The pane removes legacy paths such as `/v1`, `/openai/v1`, and
 `/anthropic`; xcsh adds the route required by the selected model.
 
-The binary owns the default model. Claude Opus 5 is the vision-capable default, while GPT-5.6 Sol is the
-alternate text-model certification route. Use Claude Opus 5 for image turns unless the alternate model's
-advertised capabilities change and corresponding tests prove image support.
+The binary owns the default model. GPT-5.6 Sol High is the vision-capable default and slow role; the smol role
+uses the same model at Low effort. Claude Opus 5 remains the alternate model-switch certification route. The
+GPT route uses OpenAI Chat Completions, and its bundled and generated metadata must advertise both text and
+image input so Office attachments and `inspect_image` reach the provider.
 
 ## Set up a development worktree
 
@@ -201,6 +202,7 @@ Run the focused command in the last column, then run the package and repository 
 | Pane transport or shared protocol | Frame guards, conformance, bridge discovery, and disconnect behavior | `bun run --cwd packages/office-pane test -- test/conformance.test.ts test/loopback.test.ts test/bridge-discovery.test.ts --max-concurrency 2` |
 | Office CLI, server, lifecycle, or embedded bundle | Command parsing, complete-pane checks, port ownership, and manifest output | `bun test --cwd packages/coding-agent test/office-cli.test.ts test/commands/office.test.ts test/browser/office-pane-server.test.ts test/browser/office-serve-lifecycle.test.ts --max-concurrency 2` |
 | Provider, model, web search, or runtime configuration | Provider route, model list/switch, server-tool shape, and default model | `bun test --cwd packages/coding-agent test/browser/chat-handler.configure.test.ts test/chat-handler-list-models.test.ts test/chat-handler-web-search.test.ts test/default-model.test.ts test/login-model.test.ts --max-concurrency 2` |
+| GPT-5.6 image capability | Capability metadata, Chat Completions, `inspect_image`, and Office UAT transport | `bun test packages/ai/test/model-thinking.test.ts packages/ai/test/openai-completions-compat.test.ts packages/coding-agent/test/model-registry.test.ts packages/coding-agent/test/tools/inspect-image.test.ts packages/office-pane/test/uat-bridge-client.test.ts --max-concurrency 2` |
 | Plugin discovery, commands, skills, or resources | Resolver tests, bridge enumeration, and plugin-surface UAT | `bun test --cwd packages/coding-agent test/internal-urls/plugin-resolve.test.ts test/chat-handler-list-skills.test.ts test/chat-handler-slash-commands.test.ts --max-concurrency 2` |
 | MEDDPICC scenario or worksheet output | Scenario oracle, UAT argument guards, stateful workbook, and live certification | `bun run --cwd packages/office-pane test -- test/meddpicc-scenario.test.ts test/uat-meddpicc-excel.test.ts --max-concurrency 2` |
 
@@ -312,7 +314,9 @@ bun run --cwd packages/office-pane uat:meddpicc-excel \
   --fixture "$XCSH_MARKETPLACE_REPO/plugins/meddpicc/schema/example-deal.json" \
   --evidence "$XCSH_UAT_EVIDENCE"
 
-jq -e '.status == "passed" and ([.runs[].passed] | all)' \
+jq -e '.status == "passed" and .scenarioModel == "gpt-5.6-sol" and
+  .visionProbe.directAttachmentPassed and .visionProbe.fileInspectionPassed and
+  ([.runs[].passed] | all)' \
   "$XCSH_UAT_EVIDENCE"
 ```
 
@@ -322,12 +326,19 @@ The harness fails closed unless all of these conditions hold:
 - The exact pinned MEDDPICC plugin is installed.
 - Port 8444 and Office bridge ports 19242 through 19261 are free before startup.
 - The binary reports its version and has a stable file digest.
-- Omitting the model selects Claude Opus 5.
-- Live inference succeeds on Claude Opus 5, GPT-5.6 Sol, then Claude Opus 5 again.
+- Omitting the model selects GPT-5.6 Sol.
+- Live inference succeeds on GPT-5.6 Sol, Claude Opus 5, then GPT-5.6 Sol again.
+- GPT-5.6 Sol correctly counts the randomized, high-contrast squares in a generated Portable Network Graphics
+  (PNG) image both as a direct Office attachment and through file-based `inspect_image`.
+- Each independent model, attachment, file-tool, and scenario phase starts with the intended conversation
+  history instead of inheriting an earlier probe answer.
+- The MEDDPICC scenario starts under the restored GPT-5.6 Sol model.
 - All five scenario steps pass against the real bridge and production Excel tool definitions.
 - The second worksheet-generation run reuses one sheet and preserves the `Start` sheet.
 - Only the server child started by the harness is stopped.
-- The JavaScript Object Notation (JSON) evidence is written with configured secrets and local user paths redacted.
+- The JavaScript Object Notation (JSON) evidence excludes image payloads, expected answers, model replies, and
+  credentials; configured secrets and local user paths are redacted from the remaining fields. Failed tool
+  names remain available for diagnosis without recording tool arguments or outputs.
 
 ### Complete the desktop Office check
 
@@ -405,9 +416,17 @@ returns the classified `provider-auth` reason. Do not assume that the token expi
 
 ### Image inspection reports an unsupported model
 
-Select Claude Opus 5 and retry. The current GPT-5.6 Sol route is certified for text inference, not image input.
-If a model is expected to gain image support, update its capability metadata and add a failing capability test
-before changing this guidance.
+Treat this message for GPT-5.6 Sol as stale or incorrect capability metadata. Confirm the bundled model first:
+
+```bash
+bun -e 'import { getBundledModel } from "./packages/ai/src/models.ts"; console.log(getBundledModel("litellm", "gpt-5.6-sol")?.input)'
+```
+
+The output must include `text` and `image`. Run the GPT-5.6 image-capability row in the change-to-test matrix,
+then run the multi-model UAT. If the bundled model is correct but a direct attachment fails, inspect the
+generated `models.yml` override and model discovery merge before changing the provider or model. If direct
+attachments pass but the Office agent never calls `inspect_image`, confirm that `OFFICE_TOOL_NAMES` in
+`packages/coding-agent/src/browser/extension-bridge-tools.ts` registers it in the headless Office session.
 
 ### The pane opens in the wrong folder
 

@@ -12,6 +12,7 @@ import * as fs from "node:fs/promises";
 import * as net from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
+import { deflateSync } from "node:zlib";
 import { wireExcelHostTools } from "../src/office/excel-tools";
 import { fakeExcel } from "../test/support/fake-excel";
 import {
@@ -19,6 +20,7 @@ import {
 	OFFICE_WS_RANGE_END,
 	OFFICE_WS_RANGE_START,
 	type UatBridgeClient,
+	type UatTurnResult,
 	waitForOfficeApplicationReady,
 } from "./uat/bridge-client";
 import {
@@ -32,10 +34,188 @@ import {
 
 const OFFICE_PANE_PORT = 8444;
 const EXPECTED_FIXTURE_SHA256 = "eb891f2b2588d5b6bafcceaaa9c6923bfd26f87f5e7bdc23971b1c61e657ced8";
-const EXPECTED_PLUGIN_VERSION = "7.5.4";
-const EXPECTED_MODEL = "claude-opus-5";
-const ALTERNATE_MODEL = "gpt-5.6-sol";
+export const EXPECTED_PLUGIN_VERSION = "7.5.6";
+const EXPECTED_MODEL = "gpt-5.6-sol";
+const ALTERNATE_MODEL = "claude-opus-5";
 const MODEL_PROBE_MARKER = "OFFICE MODEL READY";
+const VISION_ANSWERS = ["TWO", "THREE", "FOUR", "FIVE"] as const;
+type VisionAnswer = (typeof VISION_ANSWERS)[number];
+
+export interface SyntheticVisionProbe {
+	answer: VisionAnswer;
+	fileName: string;
+	mimeType: "image/png";
+	bytes: Uint8Array;
+	sha256: string;
+}
+
+export interface VisionProbeEvidence {
+	image: { fileName: string; mimeType: "image/png"; bytes: number; sha256: string };
+	directAttachment: {
+		ended: UatTurnResult["ended"];
+		answerMatched: boolean;
+		failedToolNotices: number;
+		failedToolNames: string[];
+		hostToolCalls: number;
+	};
+	fileInspection: {
+		ended: UatTurnResult["ended"];
+		answerMatched: boolean;
+		failedToolNotices: number;
+		failedToolNames: string[];
+	};
+	directAttachmentPassed: boolean;
+	directAttachmentDurationMs: number;
+	fileInspectionPassed: boolean;
+	fileInspectionDurationMs: number;
+	inspectImageToolObserved: boolean;
+}
+
+function crc32(bytes: Uint8Array): number {
+	let crc = 0xffffffff;
+	for (const byte of bytes) {
+		crc ^= byte;
+		for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+	}
+	return (crc ^ 0xffffffff) >>> 0;
+}
+
+function pngChunk(type: string, data: Uint8Array): Buffer {
+	const typeBytes = Buffer.from(type, "ascii");
+	const chunk = Buffer.alloc(12 + data.length);
+	chunk.writeUInt32BE(data.length, 0);
+	typeBytes.copy(chunk, 4);
+	Buffer.from(data).copy(chunk, 8);
+	chunk.writeUInt32BE(crc32(Buffer.concat([typeBytes, Buffer.from(data)])), 8 + data.length);
+	return chunk;
+}
+
+/** Map one random byte to the small shape-count range used by the live vision oracle. */
+export function syntheticVisionAnswer(randomByte: number): VisionAnswer {
+	if (!Number.isInteger(randomByte) || randomByte < 0 || randomByte > 255) {
+		throw new Error("Synthetic vision random value must be one byte");
+	}
+	return VISION_ANSWERS[randomByte % VISION_ANSWERS.length]!;
+}
+
+/** Build a generated, high-contrast PNG so live vision UAT never needs customer-derived media. */
+export function createSyntheticVisionProbe(answer?: string): SyntheticVisionProbe {
+	const resolvedAnswer = answer ?? syntheticVisionAnswer(crypto.getRandomValues(new Uint8Array(1))[0]!);
+	if (!VISION_ANSWERS.includes(resolvedAnswer as VisionAnswer)) {
+		throw new Error("Synthetic vision answer must be TWO, THREE, FOUR, or FIVE");
+	}
+	const shapeCount = VISION_ANSWERS.indexOf(resolvedAnswer as VisionAnswer) + 2;
+
+	const width = 800;
+	const height = 220;
+	const stride = 1 + width * 3;
+	const raw = Buffer.alloc(stride * height, 0xff);
+	for (let y = 0; y < height; y++) raw[y * stride] = 0;
+	const setBlack = (x: number, y: number): void => {
+		const offset = y * stride + 1 + x * 3;
+		raw[offset] = 0;
+		raw[offset + 1] = 0;
+		raw[offset + 2] = 0;
+	};
+	const fillBlack = (x: number, y: number, blockWidth: number, blockHeight: number): void => {
+		for (let row = y; row < y + blockHeight; row++) {
+			for (let column = x; column < x + blockWidth; column++) setBlack(column, row);
+		}
+	};
+
+	const shapeSize = 112;
+	const shapeGap = 36;
+	const shapesWidth = shapeCount * shapeSize + (shapeCount - 1) * shapeGap;
+	const startX = Math.floor((width - shapesWidth) / 2);
+	const startY = Math.floor((height - shapeSize) / 2);
+	for (let shape = 0; shape < shapeCount; shape++) {
+		fillBlack(startX + shape * (shapeSize + shapeGap), startY, shapeSize, shapeSize);
+	}
+	const ihdr = Buffer.alloc(13);
+	ihdr.writeUInt32BE(width, 0);
+	ihdr.writeUInt32BE(height, 4);
+	ihdr[8] = 8;
+	ihdr[9] = 2;
+	const bytes = Buffer.concat([
+		Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+		pngChunk("IHDR", ihdr),
+		pngChunk("IDAT", deflateSync(raw, { level: 9 })),
+		pngChunk("IEND", new Uint8Array()),
+	]);
+	return {
+		answer: resolvedAnswer as VisionAnswer,
+		fileName: `synthetic-vision-probe-${crypto.randomUUID()}.png`,
+		mimeType: "image/png",
+		bytes,
+		sha256: sha256Bytes(bytes),
+	};
+}
+
+export function directVisionProbePrompt(): string {
+	return "Count the separate solid black squares on the white background in the attached synthetic image. Reply with the count as one uppercase English word only. Do not use tools.";
+}
+
+export function fileVisionProbePrompt(fileName: string): string {
+	return `Use inspect_image on ${fileName} to count the separate solid black squares on its white background. Reply with the count as one uppercase English word only.`;
+}
+
+function turnContainsAnswer(turn: UatTurnResult, answer: string): boolean {
+	return turn.reply.toUpperCase().includes(answer);
+}
+
+function turnReadAnswer(turn: UatTurnResult, answer: string): boolean {
+	return turn.ended === "chat_done" && turnContainsAnswer(turn, answer);
+}
+
+export function summarizeVisionProbe(
+	probe: SyntheticVisionProbe,
+	direct: UatTurnResult,
+	inspected: UatTurnResult,
+): VisionProbeEvidence {
+	const inspectImageToolObserved = inspected.toolNotices.some(notice => notice.tool === "inspect_image" && notice.ok);
+	return {
+		image: {
+			fileName: probe.fileName,
+			mimeType: probe.mimeType,
+			bytes: probe.bytes.length,
+			sha256: probe.sha256,
+		},
+		directAttachment: {
+			ended: direct.ended,
+			answerMatched: turnContainsAnswer(direct, probe.answer),
+			failedToolNotices: direct.toolNotices.filter(notice => !notice.ok).length,
+			failedToolNames: direct.toolNotices.filter(notice => !notice.ok).map(notice => notice.tool),
+			hostToolCalls: direct.hostToolCalls.length,
+		},
+		fileInspection: {
+			ended: inspected.ended,
+			answerMatched: turnContainsAnswer(inspected, probe.answer),
+			failedToolNotices: inspected.toolNotices.filter(notice => !notice.ok).length,
+			failedToolNames: inspected.toolNotices.filter(notice => !notice.ok).map(notice => notice.tool),
+		},
+		directAttachmentPassed:
+			turnReadAnswer(direct, probe.answer) &&
+			direct.toolNotices.every(notice => notice.ok) &&
+			direct.hostToolCalls.length === 0,
+		directAttachmentDurationMs: direct.durationMs,
+		fileInspectionPassed:
+			turnReadAnswer(inspected, probe.answer) &&
+			inspectImageToolObserved &&
+			inspected.toolNotices.every(notice => notice.ok),
+		fileInspectionDurationMs: inspected.durationMs,
+		inspectImageToolObserved,
+	};
+}
+
+export function assertVisionProbePassed(summary: VisionProbeEvidence): void {
+	if (!summary.directAttachmentPassed) throw new Error("GPT-5.6 Sol direct image attachment probe failed");
+	if (!summary.fileInspectionPassed) throw new Error("GPT-5.6 Sol inspect_image probe failed");
+}
+
+export function requireMeddpiccScenarioModel(currentModel: string): string {
+	if (currentModel !== EXPECTED_MODEL) throw new Error("MEDDPICC scenario did not start under GPT-5.6 Sol");
+	return currentModel;
+}
 
 export interface UatMeddpiccOptions {
 	binary?: string;
@@ -103,6 +283,8 @@ interface UatEvidence {
 	bridge?: { port: number; pid: number; contractVersion: string | null };
 	configure?: { modelOmitted: true; acknowledgement: string };
 	modelRoundTrip?: ModelRoundTripEvidence;
+	visionProbe?: VisionProbeEvidence;
+	scenarioModel?: string;
 	runs: ScenarioRunEvidence[];
 }
 
@@ -121,7 +303,7 @@ Environment:
   LITELLM_BASE_URL is the HTTPS gateway root (for example,
   https://gateway.example.com), and LITELLM_API_KEY must be set. Legacy provider
   paths are normalized to the root. xcsh derives the provider path from the
-  selected model and the UAT proves Claude Opus 5 -> GPT-5.6 Sol -> Claude Opus 5.`;
+  selected model and the UAT proves GPT-5.6 Sol -> Claude Opus 5 -> GPT-5.6 Sol.`;
 
 export function requireGatewayRootUrl(raw: string): string {
 	let parsed: URL;
@@ -394,7 +576,12 @@ async function runScenarioStep(
 	const step = steps[stepIndex];
 	const filesBefore = await snapshotFiles(workspace);
 	const workbookBefore = workbook.snapshot();
-	const turn = await bridge.turn(step.prompt, `c-uat-meddpicc-${step.number}-${repeat}`);
+	const turn = await bridge.turn(
+		step.prompt,
+		`c-uat-meddpicc-${step.number}-${repeat}`,
+		undefined,
+		"uat-meddpicc-scenario",
+	);
 	const filesAfter = await snapshotFiles(workspace);
 	const workbookAfter = workbook.snapshot();
 	const observation: ScenarioObservation = {
@@ -457,7 +644,12 @@ function modelList(frame: { type?: string; [key: string]: unknown }): { current:
 }
 
 async function probeModel(bridge: UatBridgeClient, id: string): Promise<{ passed: true; durationMs: number }> {
-	const turn = await bridge.turn(`Reply with exactly ${MODEL_PROBE_MARKER}. Do not use tools.`, `c-uat-model-${id}`);
+	const turn = await bridge.turn(
+		`Reply with exactly ${MODEL_PROBE_MARKER}. Do not use tools.`,
+		`c-uat-model-${id}`,
+		undefined,
+		`uat-model-${id}`,
+	);
 	const passed =
 		turn.ended === "chat_done" &&
 		turn.reply.includes(MODEL_PROBE_MARKER) &&
@@ -473,16 +665,15 @@ async function proveModelRoundTrip(
 	token: string,
 ): Promise<ModelRoundTripEvidence> {
 	const initialList = modelList(await bridge.request({ type: "list_models" }, "models"));
-	if (initialList.current !== EXPECTED_MODEL)
-		throw new Error("Office bridge default model did not match Claude Opus 5");
+	if (initialList.current !== EXPECTED_MODEL) throw new Error("Office bridge default model did not match GPT-5.6 Sol");
 	const initial = await probeModel(bridge, "initial");
 
 	const alternateModel = await bridge.configure({ baseUrl, token, model: ALTERNATE_MODEL });
-	if (alternateModel !== ALTERNATE_MODEL) throw new Error("Office bridge did not select GPT-5.6 Sol");
+	if (alternateModel !== ALTERNATE_MODEL) throw new Error("Office bridge did not select Claude Opus 5");
 	const alternate = await probeModel(bridge, "alternate");
 
 	const restoredModel = await bridge.configure({ baseUrl, token, model: EXPECTED_MODEL });
-	if (restoredModel !== EXPECTED_MODEL) throw new Error("Office bridge did not restore Claude Opus 5");
+	if (restoredModel !== EXPECTED_MODEL) throw new Error("Office bridge did not restore GPT-5.6 Sol");
 	const restored = await probeModel(bridge, "restored");
 	const restoredList = modelList(await bridge.request({ type: "list_models" }, "models"));
 	if (restoredList.current !== EXPECTED_MODEL)
@@ -500,6 +691,24 @@ async function proveModelRoundTrip(
 		restoredTurnPassed: restored.passed,
 		restoredTurnDurationMs: restored.durationMs,
 	};
+}
+
+async function proveVisionInput(bridge: UatBridgeClient, workspace: string): Promise<VisionProbeEvidence> {
+	const probe = createSyntheticVisionProbe();
+	await fs.writeFile(path.join(workspace, probe.fileName), probe.bytes, { flag: "wx" });
+	const direct = await bridge.turn(
+		directVisionProbePrompt(),
+		"c-uat-vision-direct",
+		[{ data: Buffer.from(probe.bytes).toString("base64"), mimeType: probe.mimeType }],
+		"uat-vision-direct",
+	);
+	const inspected = await bridge.turn(
+		fileVisionProbePrompt(probe.fileName),
+		"c-uat-vision-file",
+		undefined,
+		"uat-vision-file",
+	);
+	return summarizeVisionProbe(probe, direct, inspected);
 }
 
 async function runLive(options: UatMeddpiccOptions): Promise<void> {
@@ -579,7 +788,7 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		await waitForOfficeApplicationReady(bridge);
 
 		// Deliberately omit model. This is the end-to-end proof that the binary owns
-		// anthropic/claude-opus-5:high as the vision-capable production default.
+		// litellm/gpt-5.6-sol:high as the vision-capable production default.
 		const acknowledgement = await bridge.configure({ baseUrl, token });
 		if (acknowledgement !== EXPECTED_MODEL) {
 			throw new Error(`Office configure selected ${acknowledgement}; expected ${EXPECTED_MODEL}`);
@@ -587,6 +796,10 @@ async function runLive(options: UatMeddpiccOptions): Promise<void> {
 		evidence.configure = { modelOmitted: true, acknowledgement };
 
 		evidence.modelRoundTrip = await proveModelRoundTrip(bridge, baseUrl, token);
+		evidence.visionProbe = await proveVisionInput(bridge, prepared.workspace);
+		assertVisionProbePassed(evidence.visionProbe);
+		const scenarioList = modelList(await bridge.request({ type: "list_models" }, "models"));
+		evidence.scenarioModel = requireMeddpiccScenarioModel(scenarioList.current);
 
 		const workbook = fakeExcel({}, { Start: { "A1:B1": [["sentinel", "keep"]] } });
 		const wired = wireExcelHostTools(bridge, workbook);

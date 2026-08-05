@@ -1,4 +1,4 @@
-import type { ChatInbound, ChatOutbound, ConfigurableTransport, ProviderConfigure } from "../../src/core";
+import type { ChatImageMsg, ChatInbound, ChatOutbound, ConfigurableTransport, ProviderConfigure } from "../../src/core";
 
 /** Dedicated plain-WebSocket range used by `xcsh office serve`. */
 export const OFFICE_WS_RANGE_START = 19242;
@@ -216,7 +216,13 @@ export class UatBridgeClient implements ConfigurableTransport {
 		return frame.model;
 	}
 
-	turn(text: string, id: string, timeoutMs: number = DEFAULT_TURN_TIMEOUT_MS): Promise<UatTurnResult> {
+	turn(
+		text: string,
+		id: string,
+		images?: ChatImageMsg[],
+		historyHint?: string,
+		timeoutMs: number = DEFAULT_TURN_TIMEOUT_MS,
+	): Promise<UatTurnResult> {
 		return new Promise((resolve, reject) => {
 			const startedAt = Date.now();
 			let reply = "";
@@ -260,7 +266,15 @@ export class UatBridgeClient implements ConfigurableTransport {
 					hostToolCalls,
 				});
 			});
-			this.send({ type: "chat_request", id, text, mode: "educational", context: null });
+			this.send({
+				type: "chat_request",
+				id,
+				text,
+				mode: "educational",
+				context: null,
+				...(historyHint ? { history_hint: historyHint } : {}),
+				...(images && images.length > 0 ? { images } : {}),
+			});
 		});
 	}
 }

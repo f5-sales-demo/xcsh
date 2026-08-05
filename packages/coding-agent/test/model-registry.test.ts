@@ -2,9 +2,16 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { Effort, type Model, type OpenAICompat, type ThinkingConfig, writeModelCache } from "@f5-sales-demo/pi-ai";
+import {
+	Effort,
+	getBundledModel,
+	type Model,
+	type OpenAICompat,
+	type ThinkingConfig,
+	writeModelCache,
+} from "@f5-sales-demo/pi-ai";
 import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
-import { generateModelsYml } from "../src/config/auto-config";
+import { CURRENT_CONFIG_VERSION, generateModelsYml } from "../src/config/auto-config";
 import {
 	kNoAuth,
 	MODEL_ROLES,
@@ -1852,6 +1859,58 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
+		test("a text-only discovery cache cannot erase bundled GPT-5.6 vision at startup", () => {
+			const cached = {
+				...getBundledModel("litellm", "gpt-5.6-sol"),
+				input: ["text"] as Array<"text" | "image">,
+			};
+			writeModelCache("litellm", Date.now(), [cached], true, cacheDbPath);
+			writeRawModelsJson({
+				litellm: {
+					baseUrl: "https://proxy.example.com/api/v1",
+					apiKey: "test-key",
+					api: "openai-completions",
+					discovery: { type: "openai-compat" },
+				},
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+
+			expect(registry.getProviderDiscoveryState("litellm")?.status).toBe("cached");
+			expect(registry.find("litellm", "gpt-5.6-sol")?.input).toEqual(["text", "image"]);
+		});
+
+		test("existing generated config keeps GPT-5.6 image input through discovery without migration", async () => {
+			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
+			const previousApiKey = Bun.env.LITELLM_API_KEY;
+			try {
+				delete Bun.env.LITELLM_BASE_URL;
+				delete Bun.env.LITELLM_API_KEY;
+				const legacyModelsPath = path.join(tempDir, "legacy-models.yml");
+				const legacyGenerated = generateModelsYml("https://proxy.example.com", {
+					apiBasePath: "/api/v1",
+					apiKeyLiteral: "test-key",
+				}).replace(/\n {8}input:\n {10}- text\n {10}- image/, "");
+				expect(legacyGenerated).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
+				expect(legacyGenerated).not.toContain("        input:");
+				fs.writeFileSync(legacyModelsPath, legacyGenerated);
+
+				const registry = new ModelRegistry(authStorage, legacyModelsPath);
+
+				expect(registry.find("litellm", "gpt-5.6-sol")?.input).toEqual(["text", "image"]);
+				using _hook = mockOpenAiCompatibleModels("https://proxy.example.com/api/v1/models", ["gpt-5.6-sol"]);
+				await registry.refreshProvider("litellm", "online");
+				expect(registry.getProviderDiscoveryState("litellm")?.status).toBe("ok");
+				expect(registry.find("litellm", "gpt-5.6-sol")?.input).toEqual(["text", "image"]);
+				expect(fs.readFileSync(legacyModelsPath, "utf8")).toBe(legacyGenerated);
+			} finally {
+				if (previousBaseUrl === undefined) delete Bun.env.LITELLM_BASE_URL;
+				else Bun.env.LITELLM_BASE_URL = previousBaseUrl;
+				if (previousApiKey === undefined) delete Bun.env.LITELLM_API_KEY;
+				else Bun.env.LITELLM_API_KEY = previousApiKey;
+			}
+		});
+
 		test("generated config preserves GPT-5.6 Sol effort metadata after discovery", async () => {
 			const previousBaseUrl = Bun.env.LITELLM_BASE_URL;
 			const previousApiKey = Bun.env.LITELLM_API_KEY;
@@ -1877,6 +1936,7 @@ describe("ModelRegistry", () => {
 				const model = registry.find("litellm", "gpt-5.6-sol");
 				expect(model).toMatchObject({
 					reasoning: true,
+					input: ["text", "image"],
 					thinking: { mode: "effort", minLevel: Effort.Low, maxLevel: Effort.XHigh },
 					contextWindow: 1_050_000,
 					maxTokens: 128_000,
@@ -1889,6 +1949,19 @@ describe("ModelRegistry", () => {
 				if (previousApiKey === undefined) delete Bun.env.LITELLM_API_KEY;
 				else Bun.env.LITELLM_API_KEY = previousApiKey;
 			}
+		});
+
+		test("an explicit user model override can restrict GPT-5.6 Sol to text", () => {
+			writeRawModelsJson({
+				litellm: {
+					modelOverrides: {
+						"gpt-5.6-sol": { input: ["text"] },
+					},
+				},
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			expect(registry.find("litellm", "gpt-5.6-sol")?.input).toEqual(["text"]);
 		});
 
 		test("config with discovery.type openai-compat loads without schema error", () => {

@@ -43,6 +43,7 @@ describe("model thinking metadata", () => {
 			api: "openai-completions",
 			provider: "litellm",
 			reasoning: true,
+			input: ["text", "image"],
 			contextWindow: 1050000,
 			maxTokens: 128000,
 			thinking: {
@@ -52,6 +53,20 @@ describe("model thinking metadata", () => {
 			},
 		});
 		expect(getSupportedEfforts(model)).toEqual([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]);
+	});
+
+	it("corrects image input only for the generated LiteLLM GPT-5.6 Sol entry", () => {
+		const models: Model<Api>[] = [
+			createModel({ id: "gpt-5.6-sol", api: "openai-completions", provider: "litellm" }),
+			createModel({ id: "gpt-5.6-sol", api: "openai-completions", provider: "custom" }),
+			createModel({ id: "gpt-5.6-terra", api: "openai-completions", provider: "litellm" }),
+		];
+
+		applyGeneratedModelPolicies(models);
+
+		expect(models[0]?.input).toEqual(["text", "image"]);
+		expect(models[1]?.input).toEqual(["text"]);
+		expect(models[2]?.input).toEqual(["text"]);
 	});
 
 	it("stores supported efforts for Codex mini in model metadata", () => {

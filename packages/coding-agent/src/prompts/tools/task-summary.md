@@ -6,7 +6,11 @@
 <status>{{status}}</status>
 {{#if meta}}<meta lines="{{meta.lineCount}}" size="{{meta.charSize}}" />{{/if}}
 {{#if truncated}}
-<preview full-path="agent://{{id}}">
+{{#if fullOutputUrl}}
+<preview full-path="{{fullOutputUrl}}">
+{{else}}
+<preview>
+{{/if}}
 {{preview}}
 </preview>
 {{else}}

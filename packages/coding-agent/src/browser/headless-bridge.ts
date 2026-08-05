@@ -142,7 +142,7 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 	// the rethrow as a non-fatal "pane only" fallback.
 	try {
 		// Create ONE headless Office session with the full CLI-parity builtin set
-		// (OFFICE_TOOL_NAMES: bash/read/write/edit/grep/find/… — NO browser tools, which
+		// (OFFICE_TOOL_NAMES: bash/read/write/edit/grep/inspect_image/… — NO browser tools, which
 		// would be hallucinated in a document task pane). The document's own tools
 		// (Excel/Word/PowerPoint) arrive at runtime via set_host_tools.
 		const { session } = await deps.createAgentSession({
