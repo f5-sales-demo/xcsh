@@ -239,6 +239,19 @@ describe("MEDDPICC Excel UAT CLI", () => {
 	test("rejects either failed live vision certification before MEDDPICC runs", () => {
 		const passed = {
 			image: { fileName: "synthetic.png", mimeType: "image/png" as const, bytes: 400, sha256: "abc" },
+			directAttachment: {
+				ended: "chat_done" as const,
+				answerMatched: true,
+				failedToolNotices: 0,
+				failedToolNames: [],
+				hostToolCalls: 0,
+			},
+			fileInspection: {
+				ended: "chat_done" as const,
+				answerMatched: true,
+				failedToolNotices: 0,
+				failedToolNames: [],
+			},
 			directAttachmentPassed: true,
 			directAttachmentDurationMs: 10,
 			fileInspectionPassed: true,
