@@ -241,11 +241,15 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("live knowledge index");
 		expect(template).toContain("## Routing discipline");
 		expect(template).toContain("MUST NOT** web-search for F5 XC product information");
-		expect(template).toContain("strip the trailing `/`, append `.md`");
-		expect(template).toContain("Stop at the lowest tier that answers the question");
-		expect(template).toContain("Multi-product questions");
-		expect(template).toContain("If 404, try appending `/index.md`");
-		expect(template).toContain("Web search re-entry");
+		expect(template).toContain("rule://llms-search");
+
+		const rulePath = path.resolve(import.meta.dir, "../../../.xcsh/rules/llms-search.md");
+		const ruleText = await Bun.file(rulePath).text();
+		expect(ruleText).toContain("strip the trailing `/`, append `.md`");
+		expect(ruleText).toContain("Stop at the lowest tier that answers the question");
+		expect(ruleText).toContain("Multi-product questions");
+		expect(ruleText).toContain("If 404, try appending `/index.md`");
+		expect(ruleText).toContain("Web search re-entry");
 	});
 
 	test("system-prompt carries epistemic-integrity clause against sycophantic reversal", async () => {
@@ -266,7 +270,7 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("diplomatically honest rather than dishonestly diplomatic");
 		expect(template).toContain("Epistemic cowardice");
 		expect(template).toContain("fails the operator twice");
-		expect(template).toContain("let the specific evidence shape the opening");
+		expect(template).toContain("rule://epistemic-integrity");
 	});
 
 	test("system-prompt renders MCP discovery hint when enabled", async () => {
@@ -501,8 +505,8 @@ describe("system Handlebars prompt templates", () => {
 	});
 
 	test("epistemic-integrity swaps sea-color example for SE-domain bot-defense example (P5)", async () => {
-		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
-		const template = await Bun.file(templatePath).text();
+		const rulePath = path.resolve(import.meta.dir, "../../../.xcsh/rules/epistemic-integrity.md");
+		const template = await Bun.file(rulePath).text();
 		// New example content
 		expect(template).toContain("bot defense is a separate SKU above the base WAAP tier");
 		expect(template).toContain("that's a contract question — not a product question");
