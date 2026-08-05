@@ -61,8 +61,11 @@ export interface GoogleGeminiCliOptions extends StreamOptions {
 const DEFAULT_ENDPOINT = "https://cloudcode-pa.googleapis.com";
 const ANTIGRAVITY_DAILY_ENDPOINT = "https://daily-cloudcode-pa.googleapis.com";
 const ANTIGRAVITY_SANDBOX_ENDPOINT = "https://daily-cloudcode-pa.sandbox.googleapis.com";
+const ANTIGRAVITY_VERTEX_ENDPOINT = "https://aiplatform.googleapis.com";
 const ANTIGRAVITY_ENDPOINT_FALLBACKS = [ANTIGRAVITY_DAILY_ENDPOINT, ANTIGRAVITY_SANDBOX_ENDPOINT] as const;
 const ANTIGRAVITY_VERTEX_MODELS: Readonly<Record<string, string>> = Object.freeze({
+	"gemini-3.6-flash-high": "gemini-3.6-flash",
+	"gemini-3.1-pro-high": "gemini-3.1-pro-preview",
 	"gemini-3.1-pro-high-vertex": "gemini-3.1-pro-preview",
 });
 
@@ -501,7 +504,13 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 			const serviceName = vertexModelId ? "Vertex AI" : "Cloud Code Assist";
 
 			const baseUrl = model.baseUrl?.trim();
-			const endpoints = baseUrl ? [baseUrl] : isAntigravity ? ANTIGRAVITY_ENDPOINT_FALLBACKS : [DEFAULT_ENDPOINT];
+			const endpoints = vertexModelId
+				? [ANTIGRAVITY_VERTEX_ENDPOINT]
+				: baseUrl
+					? [baseUrl]
+					: isAntigravity
+						? ANTIGRAVITY_ENDPOINT_FALLBACKS
+						: [DEFAULT_ENDPOINT];
 
 			const cloudCodeRequest = buildRequest(model, context, projectId, options, isAntigravity);
 			let requestBody: CloudCodeAssistRequest | CloudCodeAssistRequest["request"] = vertexModelId

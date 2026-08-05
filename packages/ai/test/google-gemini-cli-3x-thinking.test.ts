@@ -12,6 +12,9 @@ interface GeminiCliThinkingConfig {
 }
 
 interface CapturedRequestBody {
+	generationConfig?: {
+		thinkingConfig?: GeminiCliThinkingConfig;
+	};
 	request?: {
 		generationConfig?: {
 			thinkingConfig?: GeminiCliThinkingConfig;
@@ -44,7 +47,7 @@ const context: Context = {
 function extractThinking(bodyText: string | undefined): GeminiCliThinkingConfig | undefined {
 	if (!bodyText) return undefined;
 	const parsed = JSON.parse(bodyText) as CapturedRequestBody;
-	return parsed.request?.generationConfig?.thinkingConfig;
+	return parsed.generationConfig?.thinkingConfig ?? parsed.request?.generationConfig?.thinkingConfig;
 }
 
 describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
