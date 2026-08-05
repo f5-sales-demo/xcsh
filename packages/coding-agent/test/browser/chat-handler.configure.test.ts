@@ -51,7 +51,7 @@ interface RegisterProviderCall {
 class FakeModelRegistry {
 	registerProviderCalls: RegisterProviderCall[] = [];
 	runtimeApiKeys: Array<{ provider: string; apiKey: string }> = [];
-	// The models this registry can resolve; Anthropic Opus is the baked xcsh default.
+	// The models this registry can resolve; GPT-5.6 Sol is the baked xcsh default.
 	models: Array<{ provider: string; id: string }> = [
 		{ provider: "litellm", id: "gpt-5.6-sol" },
 		{ provider: "litellm", id: "gpt-5.6-terra" },
@@ -82,7 +82,7 @@ class FakeAgentSession {
 	readonly slashCommands = [];
 	modelRegistry = new FakeModelRegistry();
 	// Current default model (used when `configure` omits `model`).
-	model = { provider: "anthropic", id: "claude-opus-5" };
+	model = { provider: "litellm", id: "gpt-5.6-sol" };
 	agent = {
 		abort(): void {},
 		replaceMessages(): void {},
@@ -232,9 +232,9 @@ describe("ChatHandler configure frame (#2095)", () => {
 		});
 		await flush();
 
-		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "anthropic", apiKey: "<XC_API_TOKEN>" }]);
-		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-opus-5" }]);
-		expect(server.ofType("configure_ack")[0].model).toBe("claude-opus-5");
+		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
+		expect(server.ofType("configure_ack")[0].model).toBe("gpt-5.6-sol");
 		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
@@ -244,8 +244,8 @@ describe("ChatHandler configure frame (#2095)", () => {
 		server.emit({ type: "configure", token: "<XC_API_TOKEN>" });
 		await flush();
 
-		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "anthropic", apiKey: "<XC_API_TOKEN>" }]);
-		expect(session.setModelCalls).toEqual([{ provider: "anthropic", id: "claude-opus-5" }]);
+		expect(session.modelRegistry.runtimeApiKeys).toEqual([{ provider: "litellm", apiKey: "<XC_API_TOKEN>" }]);
+		expect(session.setModelCalls).toEqual([{ provider: "litellm", id: "gpt-5.6-sol" }]);
 		expect(session.setThinkingLevelCalls).toEqual(["high"]);
 	});
 
