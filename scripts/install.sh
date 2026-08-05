@@ -234,6 +234,7 @@ install_binary() {
   # Download binary
   BINARY_URL="https://github.com/${REPO}/releases/download/${LATEST}/${BINARY}"
   echo "Downloading ${BINARY}..."
+  rm -f "${INSTALL_DIR}/xcsh"
   curl -fsSL "$BINARY_URL" -o "${INSTALL_DIR}/xcsh"
   chmod +x "${INSTALL_DIR}/xcsh"
   downloaded_native=0
@@ -242,6 +243,7 @@ install_binary() {
       NATIVE_ADDON="pi_natives.${PLATFORM}-${ARCH}-${variant}.node"
       NATIVE_URL="https://github.com/${REPO}/releases/download/${LATEST}/${NATIVE_ADDON}"
       echo "Downloading ${NATIVE_ADDON}..."
+      rm -f "${INSTALL_DIR}/${NATIVE_ADDON}"
       curl -fsSL "$NATIVE_URL" -o "${INSTALL_DIR}/${NATIVE_ADDON}" || {
         echo "Failed to download ${NATIVE_ADDON}"
         exit 1
@@ -252,6 +254,7 @@ install_binary() {
     NATIVE_ADDON="pi_natives.${PLATFORM}-${ARCH}.node"
     NATIVE_URL="https://github.com/${REPO}/releases/download/${LATEST}/${NATIVE_ADDON}"
     echo "Downloading ${NATIVE_ADDON}..."
+    rm -f "${INSTALL_DIR}/${NATIVE_ADDON}"
     curl -fsSL "$NATIVE_URL" -o "${INSTALL_DIR}/${NATIVE_ADDON}"
     downloaded_native=1
   fi
