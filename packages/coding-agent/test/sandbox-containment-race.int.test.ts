@@ -82,14 +82,14 @@ describe("containment holds while the path is being swapped underneath it", () =
 			].join("\n"),
 		);
 
-		// The race contract still needs a recursively denied target. Production sibling paths are named
-		// access now, so classify this synthetic target as a cross-session leak root for the test.
-		const fence = buildContainmentFence({ workspace, home, leakRoots: [sibling] });
+		// The race contract still needs a recursively denied target. Production sibling and private-store
+		// paths preserve named access now, so append a synthetic deny to the wire contract explicitly.
+		const fence = buildContainmentFence({ workspace, home });
 		wire = {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
-			deny: [...fence.deny],
+			deny: [...fence.deny, sibling],
 			denyEnumerate: [...fence.denyEnumerate],
 		};
 	});

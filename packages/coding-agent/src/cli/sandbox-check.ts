@@ -218,18 +218,20 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		// session parent — which is the operator home for a `~/<workspace>` layout (#2807).
 		const liveWorkspace = inheritedWorkspace ?? (await fs.realpath(workspaceInput));
 		const liveHome = inheritedHome ?? (await fs.realpath(homeInput));
-		redactions.push([liveWorkspace, "<workspace>"], [liveHome, "<operator-home>"]);
+		const liveSystemTmp = await fs.realpath(os.tmpdir());
+		const liveSessionParent = path.dirname(liveWorkspace);
+		const liveAccountRoot = path.dirname(liveHome);
+		redactions.push(
+			[liveWorkspace, "<workspace>"],
+			[liveHome, "<operator-home>"],
+			[liveSystemTmp, "<system-temp>"],
+			[liveSessionParent, "<session-parent>"],
+			[liveAccountRoot, "<account-container>"],
+		);
 		if (inheritedSibling !== undefined) redactions.push([inheritedSibling, "<session-parent>/<synthetic-sibling>"]);
 
-		// A home-rooted Landlock profile must split the home grant around protected session stores. The
-		// kernel can grant an existing named child but cannot grant future children of that split root
-		// without also reopening the protected stores. BashTool therefore prepares one host-owned child
-		// before confinement; keep all exact-home live fixtures beneath that already-granted directory.
-		const liveWritableRoot =
-			inheritedProfile && liveWorkspace === liveHome && inheritedSibling !== undefined
-				? inheritedSibling
-				: liveWorkspace;
-		const fixtureBase = inheritedProfile ? liveWritableRoot : await fs.realpath(os.tmpdir());
+		const liveWritableRoot = liveWorkspace;
+		const fixtureBase = inheritedProfile ? liveWritableRoot : liveSystemTmp;
 		fixtureRoot = await fs.mkdtemp(path.join(fixtureBase, ".xcsh-sandbox-check-policy-"));
 		fixturePaths.push(fixtureRoot);
 		redactions.push([fixtureRoot, "<synthetic-root>"]);
@@ -262,23 +264,14 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			fsRoot: fixtureRoot,
 			leakRoots: [sessionStore, memoryStore],
 		});
+		const liveFence = buildContainmentFence({ workspace: liveWorkspace, home: liveHome });
 
 		await check("structured tools share the boundary", () => {
 			const blocked = [
 				evaluateToolCall({ toolName: "read", input: { file_path: workspaces }, cwd: workspace, fence }),
 				evaluateToolCall({ toolName: "find", input: { pattern: `${accountRoot}/**/*` }, cwd: workspace, fence }),
-				evaluateToolCall({
-					toolName: "read",
-					input: { file_path: path.join(otherSession, "state.jsonl") },
-					cwd: workspace,
-					fence,
-				}),
-				evaluateToolCall({
-					toolName: "read",
-					input: { file_path: path.join(otherMemory, "MEMORY.md") },
-					cwd: workspace,
-					fence,
-				}),
+				evaluateToolCall({ toolName: "read", input: { file_path: sessionStore }, cwd: workspace, fence }),
+				evaluateToolCall({ toolName: "find", input: { pattern: `${memoryStore}/**/*` }, cwd: workspace, fence }),
 			];
 			const allowed = [
 				evaluateToolCall({
@@ -297,6 +290,18 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				evaluateToolCall({
 					toolName: "write",
 					input: { file_path: path.join(configDir, "config") },
+					cwd: workspace,
+					fence,
+				}),
+				evaluateToolCall({
+					toolName: "read",
+					input: { file_path: path.join(otherSession, "state.jsonl") },
+					cwd: workspace,
+					fence,
+				}),
+				evaluateToolCall({
+					toolName: "read",
+					input: { file_path: path.join(otherMemory, "MEMORY.md") },
 					cwd: workspace,
 					fence,
 				}),
@@ -385,6 +390,28 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			);
 		});
 
+		await check("system temp supports direct file creation", async () => {
+			const displayPath = "<system-temp>/<synthetic-fixture>";
+			const template = path.join(liveSystemTmp, ".xcsh-sandbox-check-tmp-XXXXXX");
+			const command =
+				`probe=$(mktemp ${quote(template)}) || exit $?; ` +
+				`trap 'rm -f "$probe"' EXIT; printf temporary > "$probe" && ` +
+				`test "$(cat "$probe")" = temporary && rm "$probe"`;
+			const result = await shellProbe(
+				command,
+				liveWorkspace,
+				inheritedProfile ? undefined : liveFence,
+				abortController.signal,
+			);
+			return shellOutcome(
+				result,
+				true,
+				"live profile must allow direct system-temp creation and removal",
+				displayPath,
+				redactions,
+			);
+		});
+
 		await check("named sibling remains reachable", async () => {
 			const displayPath = "<session-parent>/<synthetic-sibling>";
 			let liveSibling = inheritedSibling;
@@ -414,10 +441,11 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 
 		if (backend.osEnforced) {
 			await check("session parent cannot be enumerated", async () => {
+				const probeParent = inheritedProfile ? liveSessionParent : workspaces;
 				const result = await shellProbe(
-					`ls ${quote(workspaces)} > /dev/null`,
+					`ls ${quote(probeParent)} > /dev/null`,
 					workspace,
-					fence,
+					inheritedProfile ? undefined : fence,
 					abortController.signal,
 				);
 				return shellOutcome(
@@ -469,10 +497,11 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				);
 			});
 			await check("account container cannot be enumerated", async () => {
+				const probeAccountRoot = inheritedProfile ? liveAccountRoot : accountRoot;
 				const result = await shellProbe(
-					`ls ${quote(accountRoot)} > /dev/null`,
+					`ls ${quote(probeAccountRoot)} > /dev/null`,
 					workspace,
-					fence,
+					inheritedProfile ? undefined : fence,
 					abortController.signal,
 				);
 				return shellOutcome(
@@ -493,33 +522,62 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					redactions,
 				);
 			});
-			await check("cross-session stores cannot be read", async () => {
-				const sessionRead = await shellProbe(
-					`cat ${quote(path.join(otherSession, "state.jsonl"))} > /dev/null`,
+			await check("cross-session stores hide listings and keep named access", async () => {
+				let probeStore = sessionStore;
+				let knownPaths = [path.join(otherSession, "state.jsonl"), path.join(otherMemory, "MEMORY.md")];
+				let probeFence: ContainmentFence | undefined = fence;
+				if (inheritedProfile) {
+					const livePrivateContainer = path.join(liveSystemTmp, "xcsh-local");
+					try {
+						await fs.mkdir(livePrivateContainer, { recursive: true });
+						const livePrivateFixture = await fs.mkdtemp(
+							path.join(livePrivateContainer, ".xcsh-sandbox-check-private-"),
+						);
+						fixturePaths.push(livePrivateFixture);
+						redactions.push(
+							[livePrivateContainer, "<live-private-container>"],
+							[livePrivateFixture, "<live-private-container>/<synthetic-session>"],
+						);
+						const knownState = path.join(livePrivateFixture, "state.jsonl");
+						await Bun.write(knownState, "synthetic\n");
+						probeStore = livePrivateContainer;
+						knownPaths = [knownState];
+						probeFence = undefined;
+					} catch (error) {
+						return exceptionOutcome(
+							"create a known path in the live private temp container",
+							"<live-private-container>/<synthetic-session>",
+							error,
+							redactions,
+						);
+					}
+				}
+				const sessionListing = await shellProbe(
+					`ls ${quote(probeStore)} > /dev/null`,
 					workspace,
-					fence,
+					probeFence,
 					abortController.signal,
 				);
 				const sessionOutcome = shellOutcome(
-					sessionRead,
+					sessionListing,
 					false,
-					"synthetic other session read must be refused",
-					"<synthetic-session-store>/<synthetic-session>",
+					"synthetic session-store listing must be refused",
+					"<synthetic-session-store>",
 					redactions,
 				);
 				if (!sessionOutcome.passed) return sessionOutcome;
 
-				const memoryRead = await shellProbe(
-					`cat ${quote(path.join(otherMemory, "MEMORY.md"))} > /dev/null`,
+				const namedReads = await shellProbe(
+					`cat ${knownPaths.map(quote).join(" ")} > /dev/null`,
 					workspace,
-					fence,
+					probeFence,
 					abortController.signal,
 				);
 				return shellOutcome(
-					memoryRead,
-					false,
-					"synthetic other memory read must be refused",
-					"<synthetic-memory-store>/<synthetic-memory>",
+					namedReads,
+					true,
+					"known synthetic cross-session paths must keep operator access",
+					"<synthetic-session-store>/<known-path>",
 					redactions,
 				);
 			});
@@ -529,38 +587,29 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				"explicit grant restores parent enumeration",
 				"account container cannot be enumerated",
 				"named other account remains reachable",
-				"cross-session stores cannot be read",
+				"cross-session stores hide listings and keep named access",
 			]) {
 				add(name, "SKIP", "OS enforcement backend unavailable; path=<probe>; errno=unsupported");
 			}
 		}
 
-		await check("operator home configuration is writable", async () => {
+		await check("operator home supports direct file creation", async () => {
 			const displayPath = "<operator-home>/<synthetic-fixture>";
-			let liveConfig: string;
-			try {
-				// Landlock cannot grant creation on a split directory without also granting every
-				// denied descendant. The live fence therefore grants operator-owned CLI config roots
-				// explicitly; use one of those when another Landlock profile is already inherited.
-				// Standalone and Seatbelt checks retain the direct-home probe.
-				const configBase =
-					inheritedProfile && backend.backend === "landlock" ? path.join(liveHome, ".config", "gh") : liveHome;
-				liveConfig = await fs.mkdtemp(path.join(configBase, ".xcsh-sandbox-check-home-"));
-				fixturePaths.push(liveConfig);
-				redactions.push([liveConfig, displayPath]);
-			} catch (error) {
-				return exceptionOutcome("create operator-home fixture", displayPath, error, redactions);
-			}
+			const template = path.join(liveHome, ".xcsh-sandbox-check-home-XXXXXX");
+			const command =
+				`probe=$(mktemp ${quote(template)}) || exit $?; ` +
+				`trap 'rm -f "$probe"' EXIT; printf operator > "$probe" && ` +
+				`test "$(cat "$probe")" = operator && rm "$probe"`;
 			const result = await shellProbe(
-				'printf operator > config && test "$(cat config)" = operator',
-				liveConfig,
-				undefined,
+				command,
+				liveWorkspace,
+				inheritedProfile ? undefined : liveFence,
 				abortController.signal,
 			);
 			return shellOutcome(
 				result,
 				true,
-				"live profile must allow operator-home configuration writes",
+				"live profile must allow direct operator-home creation and removal",
 				displayPath,
 				redactions,
 			);

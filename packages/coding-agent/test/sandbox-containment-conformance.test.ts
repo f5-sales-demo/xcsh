@@ -62,7 +62,7 @@ describe("containment fence: TypeScript and Rust agree", () => {
 		path.join(home, ".bun", "install", "cache", "pkg"),
 		path.join(home, ".cargo", "registry", "x"), // absent on purpose
 		path.join(home, ".gitconfig"),
-		// nested deny under an allowed root
+		// nested discovery boundary under an allowed root
 		path.join(leak, "other-session.jsonl"),
 		// explicit grant
 		path.join(shared, "handoff.md"),
@@ -89,14 +89,14 @@ describe("containment fence: TypeScript and Rust agree", () => {
 	// Both must resolve the symlink, or the pre-check and the enforcement disagree about the one
 	// case an attacker would reach for.
 	it("agrees when the path arrives through a symlink", () => {
-		// Points at the cross-session leak root. Named sibling paths are deliberately reachable now; the
-		// courtesy prevents discovering them by enumerating the shared parent.
+		// Points at the cross-session leak root. Known paths remain deliberately reachable; the courtesy
+		// prevents discovering them by enumerating the private container.
 		const pivot = path.join(workspace, "pivot");
 		fs.symlinkSync(leak, pivot);
 		const viaLink = path.join(pivot, "secrets.tf");
 
-		expect(fenceVerdict(fence, viaLink, "read")).toBe("deny");
-		expect(fencePermits(wire, viaLink, false, false)).toBe(false);
+		expect(fenceVerdict(fence, viaLink, "read")).toBe("allow");
+		expect(fencePermits(wire, viaLink, false, false)).toBe(true);
 	});
 
 	it("agrees that only the shared parent loses enumeration", () => {

@@ -84,14 +84,16 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	expect(["seatbelt", "landlock", "scanner-only"]).toContain(report.backend);
 	expect(report.summary.failed).toBe(0);
 	expect(report.summary.errors).toBe(0);
-	expect(report.checks).toHaveLength(13);
+	expect(report.checks).toHaveLength(14);
 	expect(report.checks).toContainEqual({ name: "structured tools share the boundary", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "Bash grep pattern remains data (#2931)", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "Bash Python heredoc remains data (#2931)", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "cwd resets across tool calls", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "system temp supports direct file creation", status: "PASS" });
+	expect(report.checks).toContainEqual({ name: "operator home supports direct file creation", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
 	if (report.osEnforced) {
-		expect(report.summary).toEqual({ passed: 13, failed: 0, errors: 0, skipped: 0 });
+		expect(report.summary).toEqual({ passed: 14, failed: 0, errors: 0, skipped: 0 });
 		expect(report.checks).toContainEqual({ name: "account container cannot be enumerated", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "named other account remains reachable", status: "PASS" });
 		expect(report.checks).toContainEqual({ name: "explicit grant restores parent enumeration", status: "PASS" });
@@ -295,11 +297,11 @@ it("reports generalized assertion, path, and errno details for a failed probe", 
 	try {
 		const jsonResult = await runSandboxCheckProcess(["--json"], env);
 		const report = JSON.parse(jsonResult.stdout.toString()) as SandboxCheckReport;
-		const failure = report.checks.find(check => check.name === "operator home configuration is writable");
+		const failure = report.checks.find(check => check.name === "operator home supports direct file creation");
 
 		expect(jsonResult.exitCode).toBe(1);
 		expect(failure?.status).toBe("FAIL");
-		expect(failure?.detail).toContain("create operator-home fixture");
+		expect(failure?.detail).toContain("direct operator-home creation");
 		expect(failure?.detail).toContain("path=<operator-home>/<synthetic-fixture>");
 		expect(failure?.detail).toContain("errno=ENOTDIR");
 		expect(failure?.detail).not.toContain(invalidHome);

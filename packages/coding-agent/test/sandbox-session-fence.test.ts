@@ -120,13 +120,15 @@ describe("resolveSessionFence", () => {
 	// is what let the two disagree before. A different extras value must not be served from cache.
 	it("keys the cache on extra roots too", () => {
 		const { mine } = tenants("extras");
-		// A private session-store descendant is denied without the explicit runtime grant and opened by it.
-		// Unlike `/srv`, this is a recursive deny, so the assertion proves the extra root changed the fence.
+		// Named private-store descendants already retain operator access. The runtime grant still belongs in
+		// the cache key because it records the session-owned artifact root explicitly.
 		const artifacts = path.join(getSessionsDir(), "xcsh-artifacts-test");
 		const without = resolveSessionFence(mine, reader({}))!;
 		const with_ = resolveSessionFence(mine, reader({}), { extraRoots: [artifacts] })!;
 		expect(without).not.toBe(with_);
-		expect(fenceVerdict(without, path.join(artifacts, "out.txt"), "write")).toBe("deny");
+		expect(without.allow).not.toContain(artifacts);
+		expect(with_.allow).toContain(artifacts);
+		expect(fenceVerdict(without, path.join(artifacts, "out.txt"), "write")).toBe("allow");
 		expect(fenceVerdict(with_, path.join(artifacts, "out.txt"), "write")).toBe("allow");
 	});
 });

@@ -134,18 +134,19 @@ describe("sandbox-guard bundled extension", () => {
 			expect(await call(handler, "write", { file_path: path.join(OTHER, "planted") })).toBeUndefined();
 		});
 
-		// The extension checks structured paths. Arbitrary source text stays data and the OS runtime fence
-		// enforces its recursive cross-session deny without reintroducing source-scanning false positives.
-		it("refuses structured cross-session paths without scanning Bash or Python source", async () => {
+		// The extension checks structured enumeration while arbitrary source text and named paths retain
+		// operator access. This keeps every interface on the same discovery-only boundary.
+		it("hides cross-session listings without scanning source or blocking named paths", async () => {
 			await initSandbox(true);
 			const handler = captureHandler()!;
 			const secret = path.join(getSessionsDir(), "other-session.jsonl");
 			expect(await call(handler, "bash", { command: `cat ${secret}` })).toBeUndefined();
 			expect(await call(handler, "python", { code: `open("${secret}").read()` })).toBeUndefined();
-			expect(await call(handler, "read", { file_path: secret })).toMatchObject({ block: true });
+			expect(await call(handler, "read", { file_path: getSessionsDir() })).toMatchObject({ block: true });
+			expect(await call(handler, "read", { file_path: secret })).toBeUndefined();
 			expect(
 				await call(handler, "write", { file_path: path.join(getSessionsDir(), "planted.jsonl") }),
-			).toMatchObject({ block: true });
+			).toBeUndefined();
 		});
 	});
 });

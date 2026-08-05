@@ -287,11 +287,11 @@ describe("expandInternalUrls — resolution failures", () => {
 });
 
 // #2468 item 6: the expander and the sandbox disagreed about what was reachable, so bash was handed
-// paths the read tool refuses. Tested against the REAL default policy: a permissive stub would hide
-// the production failure this check exists to prevent.
+// paths the read tool refuses. Tested against the real default policy so URL expansion and file tools
+// continue to agree as the production boundary evolves.
 describe("expandInternalUrls — session read boundary", () => {
 	// Nested in a container so the real policy has a concrete parent on which to apply its enumeration
-	// courtesy. The refused path cases below use the policy's explicit cross-session roots.
+	// courtesy. Named cross-session paths retain the operator's normal rights.
 	const container = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-boundary-")));
 	const cwd = path.join(container, "session");
 	fs.mkdirSync(cwd, { recursive: true });
@@ -310,29 +310,22 @@ describe("expandInternalUrls — session read boundary", () => {
 		).resolves.toBe(`cat ${shellEscape(inside)}`);
 	});
 
-	it("refuses a cross-session path, naming the scheme and the boundary", async () => {
+	it("allows a named cross-session path under the operator-rights policy", async () => {
 		const outside = path.join(getMemoriesDir(), "other-session", "secret.md");
 		const router = createInternalRouter({ "artifact://2": { sourcePath: outside } });
-		const attempt = expandInternalUrls("cat artifact://2", {
-			skills: [],
-			internalRouter: router,
-			readBoundary: policy,
-		});
-		await expect(attempt).rejects.toThrow("artifact://");
-		await expect(attempt).rejects.toThrow("outside this session's read boundary");
+		await expect(
+			expandInternalUrls("cat artifact://2", { skills: [], internalRouter: router, readBoundary: policy }),
+		).resolves.toBe(`cat ${shellEscape(outside)}`);
 	});
 
-	// The default policy deny-lists cross-session stores, and a session's own artifact root
-	// lives under it — so artifact:// and local:// would break without this carve-out.
-	it("allows a path under a session-owned root even when the policy denies its parent", async () => {
+	it("keeps a session-owned root explicit even though named access is already allowed", async () => {
 		const ownedRoot = path.join(getMemoriesDir(), `owned-${path.basename(container)}`);
 		const owned = path.join(ownedRoot, "12.bash.log");
 		const router = createInternalRouter({ "artifact://12": { sourcePath: owned } });
 
-		// Without the carve-out this is outside the boundary.
 		await expect(
 			expandInternalUrls("cat artifact://12", { skills: [], internalRouter: router, readBoundary: policy }),
-		).rejects.toThrow("outside this session's read boundary");
+		).resolves.toBe(`cat ${shellEscape(owned)}`);
 
 		await expect(
 			expandInternalUrls("cat artifact://12", {
@@ -344,11 +337,9 @@ describe("expandInternalUrls — session read boundary", () => {
 		).resolves.toBe(`cat ${shellEscape(owned)}`);
 	});
 
-	// Containment is canonicalized, so a symlink planted under an owned root cannot smuggle a path
-	// back out of the boundary.
-	it("refuses a symlink under an owned root that points outside it", async () => {
-		// Both sit under the shared cross-session temp root, which the default fence denies. The owned
-		// subtree is carved back out, but a symlink cannot carry that authority into its sibling.
+	it("preserves named access through a symlink into another private-store path", async () => {
+		// Both sit under the shared cross-session temp root. Its listing is hidden, but a target the
+		// operator names explicitly remains reachable.
 		const sharedRoot = path.join(fs.realpathSync(os.tmpdir()), "xcsh-local");
 		fs.mkdirSync(sharedRoot, { recursive: true });
 		const ownedRoot = fs.realpathSync(fs.mkdtempSync(path.join(sharedRoot, "xcsh-owned-")));
@@ -365,26 +356,30 @@ describe("expandInternalUrls — session read boundary", () => {
 				readBoundary: policy,
 				sessionOwnedRoots: () => [ownedRoot],
 			}),
-		).rejects.toThrow("outside this session's read boundary");
+		).resolves.toBe(`cat ${shellEscape(path.join(link, "secret.md"))}`);
 	});
 
-	// The concrete #2468 item-6 case: memory:// resolved under ~/.xcsh, which the same session's
-	// sandbox refuses to read. Refusing at expansion time is what makes the two agree.
-	it("refuses memory:// because the default policy deny-lists the memories directory", async () => {
+	it("allows a named memory:// path with the operator's normal rights", async () => {
 		const memoryPath = path.join(getMemoriesDir(), "--work--", "memory_summary.md");
 		const router = createInternalRouter({ "memory://root": { sourcePath: memoryPath } });
 		await expect(
 			expandInternalUrls("cat memory://root", { skills: [], internalRouter: router, readBoundary: policy }),
-		).rejects.toThrow("outside this session's read boundary");
+		).resolves.toBe(`cat ${shellEscape(memoryPath)}`);
 	});
 
-	it("does not create parent directories for a refused local:// URL", async () => {
-		const outsideArtifacts = path.join(getMemoriesDir(), `refused-${path.basename(container)}`);
+	it("creates parent directories for a named local:// path", async () => {
+		const outsideArtifacts = path.join(
+			fs.realpathSync(os.tmpdir()),
+			"xcsh-local",
+			`allowed-${path.basename(container)}`,
+		);
+		cleanup.push(outsideArtifacts);
 		const localOptions = {
 			getArtifactsDir: () => outsideArtifacts,
 			getSessionId: () => "session-1",
 		};
 
+		const expected = resolveLocalUrlToPath("local://handoffs/new.json", localOptions);
 		await expect(
 			expandInternalUrls("cp x local://handoffs/new.json", {
 				skills: [],
@@ -392,9 +387,8 @@ describe("expandInternalUrls — session read boundary", () => {
 				ensureLocalParentDirs: true,
 				readBoundary: policy,
 			}),
-		).rejects.toThrow("outside this session's read boundary");
+		).resolves.toBe(`cp x ${shellEscape(expected)}`);
 
-		// The directory must not have been created before the refusal.
-		expect(fs.existsSync(path.join(outsideArtifacts, "local", "handoffs"))).toBe(false);
+		expect(fs.existsSync(path.join(outsideArtifacts, "local", "handoffs"))).toBe(true);
 	});
 });

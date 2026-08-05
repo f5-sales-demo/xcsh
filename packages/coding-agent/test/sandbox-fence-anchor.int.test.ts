@@ -95,8 +95,8 @@ describe("the containment boundary cannot be relocated by the model", () => {
 
 		const fence = resolveSessionFence(session.cwd, session.settings)!;
 		const diagnostic = evaluateToolCall({
-			toolName: "write",
-			input: { file_path: path.join(getSessionsDir(), "diagnostic.txt") },
+			toolName: "read",
+			input: { file_path: getSessionsDir() },
 			cwd: session.cwd,
 			fence,
 		});

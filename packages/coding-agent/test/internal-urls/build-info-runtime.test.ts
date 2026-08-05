@@ -561,7 +561,7 @@ describe("renderAboutDoc containment section", () => {
 		expect(doc).toContain("readable and writable");
 		expect(doc).toContain("session container, local-account containers");
 		expect(doc).toContain("descendant path the operator");
-		expect(doc).toContain("Xcsh-private cross-session stores remain denied recursively");
+		expect(doc).toContain("Xcsh-private cross-session stores follow the same discovery boundary");
 		// Ordinary work remains available and an operator can deliberately restore discovery.
 		expect(doc).toContain("An explicit read grant restores enumeration");
 	});

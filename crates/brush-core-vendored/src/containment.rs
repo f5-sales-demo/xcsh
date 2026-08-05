@@ -7,8 +7,10 @@
 //!
 //! It is deliberately permissive. Anything matched by no root is outside the fence and allowed, so
 //! `/usr`, `/tmp`, package caches, the network and process execution are untouched. Cross-tenant
-//! isolation removes accidental parent enumeration while preserving named operator access; explicit
-//! data-root and cross-session state denies remain recursive.
+//! isolation removes accidental parent enumeration while preserving named operator access. Recursive
+//! denies remain available for explicit policies, but the production session fence does not use one
+//! beneath an operator-writable parent: Landlock cannot subtract that child without preventing direct
+//! creation in its parent.
 //!
 //! The fence is per-invocation and absent by default: only the model's `bash` tool supplies one.
 //! Host-driven shell use — credential helpers, the interactive `xcsh shell`, snapshot sourcing —

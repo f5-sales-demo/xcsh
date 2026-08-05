@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell } from "@f5-sales-demo/pi-natives";
-import { getAgentDir, getConfigRootDir, getPluginsDir, TempDir } from "@f5-sales-demo/pi-utils";
+import { getAgentDir, getConfigRootDir, getMemoriesDir, getPluginsDir, TempDir } from "@f5-sales-demo/pi-utils";
 import { discoverAndLoadExtensions } from "../src/extensibility/extensions/loader";
 import { getMemoryRoot } from "../src/memories";
 import { buildContainmentFence, containmentStatus } from "../src/sandbox/containment";
@@ -110,11 +110,10 @@ describe("memory isolation (belt-and-suspenders)", () => {
 		expect(getMemoryRoot(getAgentDir(), custA)).not.toBe(getMemoryRoot(getAgentDir(), custB));
 	});
 
-	it("does not expose any session's raw memory store to the file tools", () => {
-		// The memory pipeline is an internal subsystem that bypasses the file-tool
-		// boundary; the model-invoked tools cannot read the raw store for any cwd.
-		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custB), "MEMORY.md"))).toBe(true);
-		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custA), "MEMORY.md"))).toBe(true);
+	it("hides the memory-store listing while preserving named operator access", () => {
+		expect(reads(custA, getMemoriesDir())).toBe(true);
+		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custB), "MEMORY.md"))).toBe(false);
+		expect(reads(custA, path.join(getMemoryRoot(getAgentDir(), custA), "MEMORY.md"))).toBe(false);
 	});
 });
 

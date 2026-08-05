@@ -172,10 +172,10 @@ function shellEscape(p: string): string {
 /**
  * Refuse a resolved path the session is not allowed to read.
  *
- * Without this the expander and the sandbox disagreed: bash was handed paths under `~/.xcsh` that
- * the same session's `read` tool refuses. The carve-out for session-owned roots is what keeps
- * `artifact://`, `agent://` and `local://` working, since the default policy deny-lists the whole
- * sessions directory and a session's own artifact root lives inside it.
+ * Without this the expander and the sandbox can disagree when an operator configures an explicit
+ * directional or recursive boundary. Session-owned roots are still carved out so `artifact://`,
+ * `agent://` and `local://` keep working under those opt-in policies. The default production fence
+ * preserves named operator access and therefore reaches this check only for enumeration attempts.
  */
 function enforceReadBoundary(scheme: SupportedInternalScheme, resolved: string, options: InternalUrlExpansionOptions) {
 	const boundary = options.readBoundary;

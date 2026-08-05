@@ -54,12 +54,14 @@ describe("containment covers the PTY path, not just the in-process shell", () =>
 		fs.mkdirSync(workspace, { recursive: true });
 		fs.mkdirSync(sibling, { recursive: true });
 		fs.writeFileSync(path.join(sibling, "secret.txt"), "PTY-CANARY-7734\n");
-		const fence = buildContainmentFence({ workspace, home, leakRoots: [sibling] });
+		// PTY confinement still needs an explicit recursive-deny fixture even though the production
+		// session policy preserves named access outside hidden container listings.
+		const fence = buildContainmentFence({ workspace, home });
 		wire = {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
-			deny: [...fence.deny],
+			deny: [...fence.deny, sibling],
 			denyEnumerate: [...fence.denyEnumerate],
 		};
 	});
