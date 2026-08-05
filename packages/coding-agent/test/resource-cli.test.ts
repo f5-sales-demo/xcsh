@@ -21,6 +21,41 @@ describe("resource CLI automation contract", () => {
 		expect(report).toMatchObject({ success: true, operation: "validate" });
 	}, 40_000);
 
+	test("routes manifest update through the public CLI without starting an agent", () => {
+		const result = Bun.spawnSync(
+			[
+				"bun",
+				"src/cli.ts",
+				"update",
+				"-f",
+				"test/fixtures/resource-manifest.yaml",
+				"--dry-run",
+				"client",
+				"-o",
+				"json",
+			],
+			{
+				cwd: import.meta.dir.replace(/\/test$/, ""),
+				env: { ...process.env, XCSH_API_URL: "", XCSH_API_TOKEN: "", XCSH_NAMESPACE: "" },
+				stdout: "pipe",
+				stderr: "pipe",
+			},
+		);
+		expect(result.exitCode).toBe(2);
+		const report = JSON.parse(result.stdout.toString()) as {
+			success: boolean;
+			operation: string;
+			counts: Record<string, number>;
+			results: Array<{ error?: { kind?: string; message?: string } }>;
+		};
+		expect(report).toMatchObject({
+			success: false,
+			operation: "update",
+			counts: { total: 1, succeeded: 0, failed: 1, error: 1 },
+			results: [{ error: { kind: "validation", message: "API credentials are required for this operation." } }],
+		});
+	}, 40_000);
+
 	test("maps validation failures to usage exit code 2", () => {
 		expect(
 			exitCodeForResourceReport({

@@ -23,10 +23,10 @@ interface ReleaseInfo {
 
 /**
  * Parse update subcommand arguments.
- * Returns undefined if not an update command.
+ * Returns undefined if not a self-update command.
  */
 export function parseUpdateArgs(args: string[]): { force: boolean; check: boolean } | undefined {
-	if (args.length === 0 || args[0] !== "update") {
+	if (args.length === 0 || args[0] !== "self-update") {
 		return undefined;
 	}
 
