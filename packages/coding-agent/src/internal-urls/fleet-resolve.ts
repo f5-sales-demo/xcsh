@@ -335,8 +335,12 @@ function authorityGuidance(authority: string): string[] {
 			return [
 				"**Authority: author.** Create, update and delete content here directly — documentation,",
 				"Terraform plans, howtos, diagrams, demo and traffic-generation scripts. You do not need to",
-				"ask permission to author; you do need to follow the governed path:",
-				"linked issue → branch → pull request → CI → auto-merge. Never commit to `main`.",
+				"ask permission to author; you do need to follow the governed path (Git SOPs):",
+				"1. **Comprehensive Issue First**: Always create a detailed GitHub issue before developing content.",
+				"2. **Feature Branch / Worktree**: Work in a dedicated `feature/`, `fix/`, `docs/`, or `chore/` branch or worktree. Never commit directly to `main`.",
+				"3. **PR & Linking**: Open a PR with explicit `Closes #N` issue linking.",
+				"4. **CI & Merge**: Poll CI until green, then squash merge.",
+				"5. **Post-Merge Hygiene**: Clean up local and remote feature branches, remove merged worktrees, and run `git fetch --prune`.",
 			];
 		case AUTHORITY_DELEGATE:
 			return [
