@@ -238,9 +238,9 @@ describe("ChatHandler configure frame (#2095)", () => {
 		expect(server.ofType("configure_error")).toHaveLength(0);
 	});
 
-	it("model omitted after another provider was active → restores the baked vision-capable default", async () => {
+	it("model omitted after Opus was active → restores the baked GPT-5.6 Sol default", async () => {
 		const { server, session } = makeHandler();
-		session.model = { provider: "google-vertex", id: "gemini-3.6-flash" };
+		session.model = { provider: "anthropic", id: "claude-opus-5" };
 		server.emit({ type: "configure", token: "<XC_API_TOKEN>" });
 		await flush();
 

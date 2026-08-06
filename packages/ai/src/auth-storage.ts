@@ -60,7 +60,14 @@ import { loginQwenPortal } from "./utils/oauth/qwen-portal";
 import { loginSynthetic } from "./utils/oauth/synthetic";
 import { loginTavily } from "./utils/oauth/tavily";
 import { loginTogether } from "./utils/oauth/together";
-import type { OAuthController, OAuthCredentials, OAuthProvider, OAuthProviderId } from "./utils/oauth/types";
+import type {
+	OAuthController,
+	OAuthCredentials,
+	OAuthPrompt,
+	OAuthProvider,
+	OAuthProviderId,
+} from "./utils/oauth/types";
+import { canonicalizeOAuthProviderId } from "./utils/oauth/types";
 import { loginVenice } from "./utils/oauth/venice";
 import { loginVercelAiGateway } from "./utils/oauth/vercel-ai-gateway";
 import { loginVllm } from "./utils/oauth/vllm";
@@ -337,14 +344,14 @@ export class AuthStorage {
 	 * Used for CLI --api-key flag.
 	 */
 	setRuntimeApiKey(provider: string, apiKey: string): void {
-		this.#runtimeOverrides.set(provider, apiKey);
+		this.#runtimeOverrides.set(canonicalizeOAuthProviderId(provider), apiKey);
 	}
 
 	/**
 	 * Remove a runtime API key override.
 	 */
 	removeRuntimeApiKey(provider: string): void {
-		this.#runtimeOverrides.delete(provider);
+		this.#runtimeOverrides.delete(canonicalizeOAuthProviderId(provider));
 	}
 
 	/**
@@ -640,13 +647,14 @@ export class AuthStorage {
 	 * Get credential for a provider (first entry if multiple).
 	 */
 	get(provider: string): AuthCredential | undefined {
-		return this.#getCredentialsForProvider(provider)[0];
+		return this.#getCredentialsForProvider(canonicalizeOAuthProviderId(provider))[0];
 	}
 
 	/**
 	 * Set credential for a provider.
 	 */
 	async set(provider: string, credential: AuthCredentialEntry): Promise<void> {
+		provider = canonicalizeOAuthProviderId(provider);
 		const normalized = Array.isArray(credential) ? credential : [credential];
 		const deduped = this.#dedupeOAuthCredentials(provider, normalized);
 		const stored = this.#store.replaceAuthCredentialsForProvider(provider, deduped);
@@ -670,6 +678,7 @@ export class AuthStorage {
 	 * Remove credential for a provider.
 	 */
 	async remove(provider: string): Promise<void> {
+		provider = canonicalizeOAuthProviderId(provider);
 		this.#store.deleteAuthCredentialsForProvider(provider, "deleted by user");
 		this.#data.delete(provider);
 		this.#resetProviderAssignments(provider);
@@ -686,7 +695,7 @@ export class AuthStorage {
 	 * Check if credentials exist for a provider in storage.
 	 */
 	has(provider: string): boolean {
-		return this.#getCredentialsForProvider(provider).length > 0;
+		return this.#getCredentialsForProvider(canonicalizeOAuthProviderId(provider)).length > 0;
 	}
 
 	/**
@@ -694,6 +703,7 @@ export class AuthStorage {
 	 * Unlike getApiKey(), this doesn't refresh OAuth tokens.
 	 */
 	hasAuth(provider: string): boolean {
+		provider = canonicalizeOAuthProviderId(provider);
 		if (this.#runtimeOverrides.has(provider)) return true;
 		if (this.#getCredentialsForProvider(provider).length > 0) return true;
 		if (getEnvApiKey(provider)) return true;
@@ -705,14 +715,16 @@ export class AuthStorage {
 	 * Check if OAuth credentials are configured for a provider.
 	 */
 	hasOAuth(provider: string): boolean {
-		return this.#getCredentialsForProvider(provider).some(credential => credential.type === "oauth");
+		return this.#getCredentialsForProvider(canonicalizeOAuthProviderId(provider)).some(
+			credential => credential.type === "oauth",
+		);
 	}
 
 	/**
 	 * Get OAuth credentials for a provider.
 	 */
 	getOAuthCredential(provider: string): OAuthCredential | undefined {
-		return this.#getCredentialsForProvider(provider).find(
+		return this.#getCredentialsForProvider(canonicalizeOAuthProviderId(provider)).find(
 			(credential): credential is OAuthCredential => credential.type === "oauth",
 		);
 	}
@@ -742,13 +754,14 @@ export class AuthStorage {
 			/** onAuth is required by auth-storage but optional in OAuthController */
 			onAuth: (info: { url: string; instructions?: string }) => void;
 			/** onPrompt is required for some providers (github-copilot, openai-codex) */
-			onPrompt: (prompt: { message: string; placeholder?: string }) => Promise<string>;
+			onPrompt: (prompt: OAuthPrompt) => Promise<string>;
 		},
 	): Promise<void> {
 		let credentials: OAuthCredentials;
+		const credentialProvider = canonicalizeOAuthProviderId(provider);
 		const saveApiKeyCredential = async (apiKey: string): Promise<void> => {
 			const newCredential: ApiKeyCredential = { type: "api_key", key: apiKey };
-			await this.set(provider, newCredential);
+			await this.set(credentialProvider, newCredential);
 		};
 		const manualCodeInput = () => ctrl.onPrompt({ message: "Paste the authorization code (or full redirect URL):" });
 		switch (provider) {
@@ -782,6 +795,22 @@ export class AuthStorage {
 					...ctrl,
 					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
 				});
+				break;
+			case "google-antigravity-enterprise":
+				credentials = await loginAntigravity(
+					{
+						...ctrl,
+						onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
+					},
+					{
+						enterpriseRequired: true,
+						projectSources: {
+							environment: {},
+							readAntigravityProjectId: async () => undefined,
+							readGcloudProjectId: async () => undefined,
+						},
+					},
+				);
 				break;
 			case "openai-codex":
 				credentials = await loginOpenAICodex({
@@ -960,7 +989,7 @@ export class AuthStorage {
 			}
 		}
 		const newCredential: OAuthCredential = { type: "oauth", ...credentials };
-		await this.#upsertOAuthCredential(provider, newCredential);
+		await this.#upsertOAuthCredential(credentialProvider, newCredential);
 	}
 
 	/**
@@ -983,6 +1012,7 @@ export class AuthStorage {
 			expiresAt: credential.expires,
 			accountId: credential.accountId,
 			projectId: credential.projectId,
+			tierId: credential.tierId,
 			email: credential.email,
 			enterpriseUrl: credential.enterpriseUrl,
 		};
@@ -1057,6 +1087,7 @@ export class AuthStorage {
 			expires: credential.expiresAt,
 			accountId: credential.accountId,
 			projectId: credential.projectId,
+			tierId: credential.tierId,
 			email: credential.email,
 			enterpriseUrl: credential.enterpriseUrl,
 		};
@@ -1070,6 +1101,7 @@ export class AuthStorage {
 			expiresAt: refreshed.expires,
 			accountId: refreshed.accountId ?? credential.accountId,
 			projectId: refreshed.projectId ?? credential.projectId,
+			tierId: refreshed.tierId ?? credential.tierId,
 			email: refreshed.email ?? credential.email,
 			enterpriseUrl: refreshed.enterpriseUrl ?? credential.enterpriseUrl,
 		};
@@ -1097,6 +1129,7 @@ export class AuthStorage {
 			expires: next.expiresAt ?? existing.expires,
 			accountId: next.accountId,
 			projectId: next.projectId,
+			tierId: next.tierId ?? existing.tierId,
 			email: next.email,
 			enterpriseUrl: next.enterpriseUrl,
 		});
@@ -1826,6 +1859,7 @@ export class AuthStorage {
 				accountId: result.newCredentials.accountId ?? selection.credential.accountId,
 				email: result.newCredentials.email ?? selection.credential.email,
 				projectId: result.newCredentials.projectId ?? selection.credential.projectId,
+				tierId: result.newCredentials.tierId ?? selection.credential.tierId,
 				enterpriseUrl: result.newCredentials.enterpriseUrl ?? selection.credential.enterpriseUrl,
 			};
 			this.#replaceCredentialAt(provider, selection.index, updated);
@@ -1886,6 +1920,7 @@ export class AuthStorage {
 	 * routing metadata so discovery can hit the correct host.
 	 */
 	async peekApiKey(provider: string): Promise<string | undefined> {
+		provider = canonicalizeOAuthProviderId(provider);
 		const runtimeKey = this.#runtimeOverrides.get(provider);
 		if (runtimeKey) {
 			return runtimeKey;
@@ -1927,6 +1962,7 @@ export class AuthStorage {
 	 * 5. Fallback resolver (models.json custom providers)
 	 */
 	async getApiKey(provider: string, sessionId?: string, options?: AuthApiKeyOptions): Promise<string | undefined> {
+		provider = canonicalizeOAuthProviderId(provider);
 		// Runtime override takes highest priority
 		const runtimeKey = this.#runtimeOverrides.get(provider);
 		if (runtimeKey) {

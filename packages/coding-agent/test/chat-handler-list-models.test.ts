@@ -54,8 +54,8 @@ test("list_models reports the active model and only available curated provider/m
 		type: "models",
 		current: "claude-opus-5",
 		models: [
-			{ id: "claude-opus-5", label: "Claude Opus 5" },
 			{ id: "gpt-5.6-sol", label: "GPT-5.6 Sol" },
+			{ id: "claude-opus-5", label: "Claude Opus 5" },
 		],
 	});
 });

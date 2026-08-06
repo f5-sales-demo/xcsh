@@ -15,6 +15,8 @@
  * NOT browser-safe (node/bun): runs inside the full xcsh binary, never the pane.
  */
 import { getProjectDir, getXCSHConfigDir } from "@f5-sales-demo/pi-utils";
+import { parseModelString } from "../config/model-resolver";
+import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import { createAgentSession } from "../sdk";
 import { ContextService } from "../services/xcsh-context";
 import { deriveTenantEnv } from "../services/xcsh-env";
@@ -141,6 +143,10 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 	// selectProvider() reuses a dead bridge. The caller (startOfficeServe) treats
 	// the rethrow as a non-fatal "pane only" fallback.
 	try {
+		const officeDefault = parseModelString(DEFAULT_MODEL_ROLE);
+		if (!officeDefault) {
+			throw new Error("Invalid baked Office default model selector");
+		}
 		// Create ONE headless Office session with the full CLI-parity builtin set
 		// (OFFICE_TOOL_NAMES: bash/read/write/edit/grep/inspect_image/… — NO browser tools, which
 		// would be hallucinated in a document task pane). The document's own tools
@@ -148,6 +154,11 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 		const { session } = await deps.createAgentSession({
 			cwd,
 			hasUI: false,
+			// Office must open on the production GPT profile regardless of a stale
+			// global/default role or resumable session. A saved pane model is applied
+			// afterward by its explicit configure frame and remains authoritative.
+			modelPattern: DEFAULT_MODEL_ROLE,
+			thinkingLevel: officeDefault.thinkingLevel,
 			// Office conversations can contain private workbook and working-directory
 			// data. Keep the entire headless session ephemeral instead of inheriting
 			// createAgentSession's file-backed default.

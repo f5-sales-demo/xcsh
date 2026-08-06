@@ -187,6 +187,13 @@ const builtInOAuthProviders: OAuthProviderInfo[] = [
 		available: true,
 	},
 	{
+		id: "google-antigravity-enterprise",
+		name: "Google Antigravity Enterprise (Gemini 3.6 Flash High)",
+		available: true,
+		canonicalId: "google-antigravity",
+		loginOnly: true,
+	},
+	{
 		id: "cursor",
 		name: "Cursor (Claude, GPT, etc.)",
 		available: true,

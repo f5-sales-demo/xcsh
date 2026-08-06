@@ -81,6 +81,11 @@ export interface AntigravityProjectSources {
 
 export interface AntigravityLoginOptions {
 	projectSources?: AntigravityProjectSources;
+	enterpriseRequired?: boolean;
+}
+
+export interface AntigravityProjectPolicy {
+	enterpriseRequired?: boolean;
 }
 
 function normalizeProjectId(value: unknown): string | undefined {
@@ -134,6 +139,7 @@ async function readExternalProjectId(source: () => Promise<string | undefined>):
 export async function resolveAntigravityProjectId(
 	ctrl: OAuthController,
 	sources: AntigravityProjectSources = {},
+	policy: AntigravityProjectPolicy = {},
 ): Promise<string | undefined> {
 	const environment = sources.environment ?? {
 		GOOGLE_CLOUD_PROJECT: $env.GOOGLE_CLOUD_PROJECT,
@@ -160,13 +166,22 @@ export async function resolveAntigravityProjectId(
 		return gcloudProjectId;
 	}
 
-	if (!ctrl.onPrompt) return undefined;
+	const enterpriseError = "Enterprise authentication requires an explicit Google Cloud project";
+	if (!ctrl.onPrompt) {
+		if (policy.enterpriseRequired) throw new Error(enterpriseError);
+		return undefined;
+	}
 	const input = await ctrl.onPrompt({
-		message: "Google Cloud project ID (leave blank to use individual-tier discovery):",
+		message: policy.enterpriseRequired
+			? "Enterprise Google Cloud project ID (required; individual/free tier is disabled):"
+			: "Google Cloud project ID (leave blank to use individual-tier discovery):",
 		placeholder: "my-enterprise-project",
-		allowEmpty: true,
+		allowEmpty: !policy.enterpriseRequired,
 	});
-	if (!input.trim()) return undefined;
+	if (!input.trim()) {
+		if (policy.enterpriseRequired) throw new Error(enterpriseError);
+		return undefined;
+	}
 	const promptedProjectId = normalizeProjectId(input);
 	if (!promptedProjectId) {
 		throw new Error(
@@ -404,6 +419,7 @@ class AntigravityOAuthFlow extends OAuthCallbackFlow {
 			access: tokenData.access_token,
 			expires: Date.now() + tokenData.expires_in * 1000 - 5 * 60 * 1000,
 			projectId,
+			...(this.#configuredProjectId ? { tierId: TIER_STANDARD } : {}),
 			email,
 		};
 	}
@@ -416,7 +432,9 @@ export async function loginAntigravity(
 	ctrl: OAuthController,
 	options: AntigravityLoginOptions = {},
 ): Promise<OAuthCredentials> {
-	const configuredProjectId = await resolveAntigravityProjectId(ctrl, options.projectSources);
+	const configuredProjectId = await resolveAntigravityProjectId(ctrl, options.projectSources, {
+		enterpriseRequired: options.enterpriseRequired,
+	});
 	const flow = new AntigravityOAuthFlow(ctrl, configuredProjectId);
 	return flow.login();
 }

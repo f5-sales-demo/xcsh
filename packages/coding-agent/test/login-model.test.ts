@@ -74,7 +74,7 @@ describe("getAvailableLiteLLMLoginModelChoices", () => {
 
 	it("puts the vision-capable production default first in the stable display order", () => {
 		const choices = getAvailableLiteLLMLoginModelChoices(["claude-opus-5", "gpt-5.6-sol"]);
-		expect(choices).toEqual([OPUS_CHOICE, GPT_CHOICE]);
+		expect(choices).toEqual([GPT_CHOICE, OPUS_CHOICE]);
 	});
 
 	it("returns no choices when neither curated model is advertised", () => {
@@ -90,6 +90,22 @@ describe("applyOAuthLoginModel", () => {
 		});
 
 		const applied = await applyOAuthLoginModel(session as never, "google-antigravity");
+
+		expect(applied).toEqual(GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE);
+		expect(setModel).toHaveBeenCalledWith(M("gemini-3.6-flash-high", "google-antigravity"), "default", {
+			selector: "google-antigravity/gemini-3.6-flash-high",
+			thinkingLevel: ThinkingLevel.High,
+		});
+		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+	});
+
+	it("applies the canonical Gemini profile after enterprise alias login", async () => {
+		const { session, setModel, setThinkingLevel } = makeSession({
+			model: M("gpt-5.6-sol"),
+			models: [M("gemini-3.6-flash-high", "google-antigravity")],
+		});
+
+		const applied = await applyOAuthLoginModel(session as never, "google-antigravity-enterprise");
 
 		expect(applied).toEqual(GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE);
 		expect(setModel).toHaveBeenCalledWith(M("gemini-3.6-flash-high", "google-antigravity"), "default", {

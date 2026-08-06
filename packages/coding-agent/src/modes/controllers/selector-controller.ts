@@ -1,21 +1,12 @@
-import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { getOAuthProviders, loginLiteLLM, type OAuthProvider } from "@f5-sales-demo/pi-ai";
+import { getOAuthProviders, loginLiteLLM, type OAuthPrompt, type OAuthProvider } from "@f5-sales-demo/pi-ai";
 import type { Component } from "@f5-sales-demo/pi-tui";
-import { Input, Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
+import { Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir, t } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../../capability/fs";
-import { writeAgentConfigFileSync } from "../../config/agent-config-file";
-import {
-	generateConfigYml,
-	generateModelsYml,
-	healConfigYmlModelRoles,
-	probeLiteLLMConnection,
-	readLiteLLMConfig,
-	writeLiteLLMModelsYml,
-} from "../../config/auto-config";
+import { probeLiteLLMConnection, readLiteLLMConfig } from "../../config/auto-config";
 import { getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
 import { settings } from "../../config/settings";
@@ -48,7 +39,9 @@ import { AssistantMessageComponent } from "../components/assistant-message";
 import { ExtensionDashboard } from "../components/extensions";
 import { GutterBlock } from "../components/gutter-block";
 import { HistorySearchComponent } from "../components/history-search";
+import { HookSelectorComponent } from "../components/hook-selector";
 import { LiteLLMModelSelectorComponent } from "../components/litellm-model-selector";
+import { createLoginPromptInput } from "../components/login-prompt-input";
 import { ModelSelectorComponent } from "../components/model-selector";
 import { OAuthSelectorComponent } from "../components/oauth-selector";
 import { PluginSelectorComponent } from "../components/plugin-selector";
@@ -61,11 +54,19 @@ import { ToolExecutionComponent } from "../components/tool-execution";
 import { TreeSelectorComponent } from "../components/tree-selector";
 import { UserMessageSelectorComponent } from "../components/user-message-selector";
 import type { SessionObserverRegistry } from "../session-observer-registry";
+import { runEnterpriseOAuthLoginFlow } from "./enterprise-oauth-login-flow";
 import {
-	applyModelAfterLogin,
+	captureEnterpriseOAuthLoginState,
+	restoreEnterpriseOAuthLoginState,
+} from "./enterprise-oauth-login-transaction";
+import { type LoginRecoveryAction, type LoginRecoveryRequest, runLiteLLMLoginFlow } from "./litellm-login-flow";
+import { commitLiteLLMLogin } from "./litellm-login-transaction";
+import {
 	applyOAuthLoginModel,
+	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	getAvailableLiteLLMLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
+	type LiteLLMLoginModelChoice,
 } from "./login-model";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
@@ -74,15 +75,18 @@ const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"gitlab-duo",
 	"google-gemini-cli",
 	"google-antigravity",
+	"google-antigravity-enterprise",
 ]);
 
 const MANUAL_LOGIN_TIP = "Tip: You can complete pairing with /login <redirect URL>.";
+
+class LoginPromptCancelled extends Error {}
 
 export class SelectorController {
 	constructor(private ctx: InteractiveModeContext) {}
 
 	async #refreshOAuthProviderAuthState(): Promise<void> {
-		const oauthProviders = getOAuthProviders();
+		const oauthProviders = getOAuthProviders().filter(provider => !provider.loginOnly);
 		await Promise.all(
 			oauthProviders.map(provider =>
 				this.ctx.session.modelRegistry
@@ -480,8 +484,9 @@ export class SelectorController {
 		});
 	}
 
-	async #showLiteLLMLoginModelSelector(availableModelIds: readonly string[]): Promise<boolean> {
-		const choices = getAvailableLiteLLMLoginModelChoices(availableModelIds);
+	async #showLiteLLMLoginModelSelector(
+		choices: readonly LiteLLMLoginModelChoice[],
+	): Promise<LiteLLMLoginModelChoice | null> {
 		const available = new Set(choices.map(choice => choice.modelId));
 		const unavailable = LITELLM_LOGIN_MODEL_CHOICES.filter(choice => !available.has(choice.modelId));
 
@@ -498,48 +503,52 @@ export class SelectorController {
 			);
 		}
 
-		if (choices.length === 0) {
-			this.ctx.showError("LiteLLM login succeeded, but neither GPT-5.6 Sol nor Claude Opus 5 is available.");
-			return false;
-		}
-
-		const { promise, resolve } = Promise.withResolvers<boolean>();
-		let applying = false;
+		const { promise, resolve } = Promise.withResolvers<LiteLLMLoginModelChoice | null>();
 		this.showSelector(done => {
 			const selector = new LiteLLMModelSelectorComponent(
 				choices,
 				choice => {
-					if (applying) return;
-					applying = true;
-					void (async () => {
-						try {
-							const applied = await applyModelAfterLogin(this.ctx.session, choice);
-							if (!applied) {
-								this.ctx.showError(`Model unavailable after refresh: ${choice.provider}/${choice.modelId}`);
-								applying = false;
-								return;
-							}
-							this.ctx.statusLine.invalidate();
-							this.ctx.updateEditorBorderColor();
-							done();
-							resolve(true);
-							this.ctx.ui.requestRender();
-						} catch (error) {
-							this.ctx.showError(error instanceof Error ? error.message : String(error));
-							applying = false;
-						}
-					})();
+					done();
+					resolve(choice);
+					this.ctx.ui.requestRender();
 				},
 				() => {
-					if (applying) return;
 					done();
-					resolve(false);
+					resolve(null);
 					this.ctx.ui.requestRender();
 				},
 			);
 			return { component: selector, focus: selector.getSelectList() };
 		});
 
+		return promise;
+	}
+
+	async #showLoginRecovery(
+		request: LoginRecoveryRequest | { stage: string; error: string; canEdit: boolean },
+		flowLabel = "LiteLLM",
+		editLabel = "Edit connection",
+	): Promise<LoginRecoveryAction> {
+		const options = request.canEdit ? ["Retry", editLabel, "Cancel"] : ["Retry", "Cancel"];
+		const { promise, resolve } = Promise.withResolvers<LoginRecoveryAction>();
+		this.showSelector(done => {
+			const selector = new HookSelectorComponent(
+				`${flowLabel} ${request.stage} failed\n\n${request.error}`,
+				options,
+				option => {
+					done();
+					resolve(option === "Retry" ? "retry" : option === editLabel ? "edit" : "cancel");
+					this.ctx.ui.requestRender();
+				},
+				() => {
+					done();
+					resolve("cancel");
+					this.ctx.ui.requestRender();
+				},
+				{ maxVisible: 3, helpText: "up/down navigate  enter select  esc cancel" },
+			);
+			return { component: selector, focus: selector };
+		});
 		return promise;
 	}
 
@@ -936,97 +945,106 @@ export class SelectorController {
 
 	async #handleLiteLLMLogin(): Promise<void> {
 		this.ctx.showStatus("Configuring LiteLLM proxy…");
-
-		// Read existing config for idempotent defaults
 		const modelsPath = path.join(getAgentDir(), "models.yml");
+		const configPath = path.join(path.dirname(modelsPath), "config.yml");
+		let defaults = readLiteLLMConfig(modelsPath);
 
 		try {
-			const existing = readLiteLLMConfig(modelsPath);
-			// Sequential prompts for base URL + API key
-			const result = await loginLiteLLM({
-				defaults: existing,
-				onPrompt: async prompt => {
-					this.ctx.chatContainer.addChild(new Spacer(1));
-					this.ctx.chatContainer.addChild(new Text(theme.fg("text", prompt.message), 1, 0));
-					if (prompt.placeholder) {
-						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `e.g., ${prompt.placeholder}`), 1, 0));
-					}
-					this.ctx.ui.requestRender();
+			const flowResult = await runLiteLLMLoginFlow({
+				collectCredentials: async () => {
+					try {
+						const credentials = await loginLiteLLM({
+							defaults,
+							onPrompt: async prompt => {
+								this.ctx.chatContainer.addChild(new Spacer(1));
+								this.ctx.chatContainer.addChild(new Text(theme.fg("text", prompt.message), 1, 0));
+								if (prompt.placeholder) {
+									this.ctx.chatContainer.addChild(
+										new Text(theme.fg("dim", `e.g., ${prompt.placeholder}`), 1, 0),
+									);
+								}
+								this.ctx.ui.requestRender();
 
-					const { promise, resolve } = Promise.withResolvers<string>();
-					const codeInput = new Input();
-					codeInput.onSubmit = () => {
-						const value = codeInput.getValue();
-						this.ctx.editorContainer.clear();
-						this.ctx.editorContainer.addChild(this.ctx.editor);
-						this.ctx.ui.setFocus(this.ctx.editor);
-						resolve(value);
-					};
-					this.ctx.editorContainer.clear();
-					this.ctx.editorContainer.addChild(codeInput);
-					this.ctx.ui.setFocus(codeInput);
-					return promise;
+								const { promise, resolve, reject } = Promise.withResolvers<string>();
+								const codeInput = createLoginPromptInput(prompt);
+								const closeInput = () => {
+									this.ctx.editorContainer.clear();
+									this.ctx.editorContainer.addChild(this.ctx.editor);
+									this.ctx.ui.setFocus(this.ctx.editor);
+								};
+								codeInput.onSubmit = () => {
+									const value = codeInput.getValue();
+									closeInput();
+									resolve(value);
+								};
+								codeInput.onEscape = () => {
+									closeInput();
+									reject(new LoginPromptCancelled());
+								};
+								this.ctx.editorContainer.clear();
+								this.ctx.editorContainer.addChild(codeInput);
+								this.ctx.ui.setFocus(codeInput);
+								this.ctx.ui.requestRender();
+								return promise;
+							},
+						});
+						defaults = credentials;
+						return credentials;
+					} catch (error) {
+						if (error instanceof LoginPromptCancelled) return null;
+						throw error;
+					}
 				},
+				probe: async credentials => {
+					this.ctx.chatContainer.addChild(new Spacer(1));
+					this.ctx.chatContainer.addChild(
+						new Text(theme.fg("dim", `Connecting to ${credentials.baseUrl}…`), 1, 0),
+					);
+					this.ctx.ui.requestRender();
+					const probe = await probeLiteLLMConnection(credentials.baseUrl, credentials.apiKey);
+					if (probe.reachable) {
+						this.ctx.chatContainer.addChild(
+							new Text(
+								theme.fg("success", `${theme.status.success} OK — ${probe.models.length} models available`),
+								1,
+								0,
+							),
+						);
+						this.ctx.ui.requestRender();
+					}
+					return probe;
+				},
+				selectModel: choices => this.#showLiteLLMLoginModelSelector(choices),
+				commit: input =>
+					commitLiteLLMLogin({
+						...input,
+						modelsPath,
+						configPath,
+						session: this.ctx.session,
+					}),
+				recover: request => this.#showLoginRecovery(request),
 			});
 
-			// Verification
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `Connecting to ${result.baseUrl}…`), 1, 0));
-			this.ctx.ui.requestRender();
-
-			const probe = await probeLiteLLMConnection(result.baseUrl, result.apiKey);
-
-			if (probe.reachable) {
-				this.ctx.chatContainer.addChild(
-					new Text(
-						theme.fg("success", `${theme.status.success} OK — ${probe.models.length} models available`),
-						1,
-						0,
-					),
-				);
-			} else {
-				this.ctx.chatContainer.addChild(
-					new Text(theme.fg("error", `${theme.status.error} FAIL — ${probe.error ?? "connection failed"}`), 1, 0),
-				);
-				this.ctx.ui.requestRender();
+			if (flowResult.status === "cancelled") {
+				this.ctx.showStatus("LiteLLM login cancelled. Existing configuration unchanged.");
 				return;
 			}
 
-			// Write models.yml with the literal API key so both providers work
-			// without requiring the LITELLM_API_KEY env var to be set
-			const yml = generateModelsYml(result.baseUrl, {
-				apiBasePath: probe.apiBasePath,
-				apiKeyLiteral: result.apiKey,
-			});
-			await writeLiteLLMModelsYml(modelsPath, yml);
-
-			// Create/heal config.yml for model defaults
-			const configPath = path.join(path.dirname(modelsPath), "config.yml");
-			if (!fs.existsSync(configPath)) {
-				writeAgentConfigFileSync(configPath, generateConfigYml());
-			}
-			healConfigYmlModelRoles(configPath);
-
-			// Force online refresh so the registry re-probes the new proxy
-			// instead of serving stale data from the in-process SQLite cache.
-			await this.ctx.session.modelRegistry.refresh("online");
-			const modelSelected = await this.#showLiteLLMLoginModelSelector(probe.models);
-
+			this.ctx.statusLine.invalidate();
+			this.ctx.updateEditorBorderColor();
 			this.ctx.chatContainer.addChild(new Spacer(1));
 			this.ctx.chatContainer.addChild(
 				new Text(theme.fg("success", `LiteLLM configuration saved to ${modelsPath}`), 1, 0),
 			);
 			this.ctx.chatContainer.addChild(
 				new Text(
-					theme.fg(
-						modelSelected ? "dim" : "warning",
-						modelSelected
-							? "Use /model to switch models without logging in again."
-							: "No model selected. Use /model to choose one without logging in again.",
-					),
+					theme.fg("success", `Default model: ${flowResult.choice.provider}/${flowResult.choice.modelId} (high)`),
 					1,
 					0,
 				),
+			);
+			this.ctx.chatContainer.addChild(
+				new Text(theme.fg("dim", "Use /model to switch models without logging in again."), 1, 0),
 			);
 			this.ctx.ui.requestRender();
 		} catch (error: unknown) {
@@ -1043,54 +1061,89 @@ export class SelectorController {
 		this.ctx.showStatus(`Logging in to ${providerId}…`);
 		const manualInput = this.ctx.oauthManualInput;
 		const useManualInput = CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider);
-		try {
-			await this.ctx.session.modelRegistry.authStorage.login(providerId as OAuthProvider, {
-				onAuth: (info: { url: string; instructions?: string }) => {
+		const loginCallbacks = {
+			onAuth: (info: { url: string; instructions?: string }) => {
+				this.ctx.chatContainer.addChild(new Spacer(1));
+				this.ctx.chatContainer.addChild(new Text(theme.fg("dim", info.url), 1, 0));
+				const hyperlink = `\x1b]8;;${info.url}\x07Click here to login\x1b]8;;\x07`;
+				this.ctx.chatContainer.addChild(new Text(theme.fg("accent", hyperlink), 1, 0));
+				if (info.instructions) {
 					this.ctx.chatContainer.addChild(new Spacer(1));
-					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", info.url), 1, 0));
-					const hyperlink = `\x1b]8;;${info.url}\x07Click here to login\x1b]8;;\x07`;
-					this.ctx.chatContainer.addChild(new Text(theme.fg("accent", hyperlink), 1, 0));
-					if (info.instructions) {
-						this.ctx.chatContainer.addChild(new Spacer(1));
-						this.ctx.chatContainer.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
-					}
-					if (useManualInput) {
-						this.ctx.chatContainer.addChild(new Spacer(1));
-						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 1, 0));
-					}
-					this.ctx.ui.requestRender();
-					this.ctx.openInBrowser(info.url);
-				},
-				onPrompt: async (prompt: { message: string; placeholder?: string }) => {
+					this.ctx.chatContainer.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
+				}
+				if (useManualInput) {
 					this.ctx.chatContainer.addChild(new Spacer(1));
-					this.ctx.chatContainer.addChild(new Text(theme.fg("warning", prompt.message), 1, 0));
-					if (prompt.placeholder) {
-						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", prompt.placeholder), 1, 0));
-					}
-					this.ctx.ui.requestRender();
-					const { promise, resolve } = Promise.withResolvers<string>();
-					const codeInput = new Input();
-					codeInput.onSubmit = () => {
-						const code = codeInput.getValue();
-						this.ctx.editorContainer.clear();
-						this.ctx.editorContainer.addChild(this.ctx.editor);
-						this.ctx.ui.setFocus(this.ctx.editor);
-						resolve(code);
-					};
+					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 1, 0));
+				}
+				this.ctx.ui.requestRender();
+				this.ctx.openInBrowser(info.url);
+			},
+			onPrompt: async (prompt: OAuthPrompt) => {
+				this.ctx.chatContainer.addChild(new Spacer(1));
+				this.ctx.chatContainer.addChild(new Text(theme.fg("warning", prompt.message), 1, 0));
+				if (prompt.placeholder) {
+					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", prompt.placeholder), 1, 0));
+				}
+				this.ctx.ui.requestRender();
+				const { promise, resolve, reject } = Promise.withResolvers<string>();
+				const codeInput = createLoginPromptInput(prompt);
+				const closeInput = () => {
 					this.ctx.editorContainer.clear();
-					this.ctx.editorContainer.addChild(codeInput);
-					this.ctx.ui.setFocus(codeInput);
-					this.ctx.ui.requestRender();
-					return promise;
-				},
-				onProgress: (message: string) => {
-					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", message), 1, 0));
-					this.ctx.ui.requestRender();
-				},
-				onManualCodeInput: useManualInput ? () => manualInput.waitForInput(providerId) : undefined,
-			});
-			await this.ctx.session.modelRegistry.refresh();
-			const loginModelChoice = await applyOAuthLoginModel(this.ctx.session, providerId);
+					this.ctx.editorContainer.addChild(this.ctx.editor);
+					this.ctx.ui.setFocus(this.ctx.editor);
+				};
+				codeInput.onSubmit = () => {
+					const code = codeInput.getValue();
+					closeInput();
+					resolve(code);
+				};
+				codeInput.onEscape = () => {
+					closeInput();
+					reject(new LoginPromptCancelled("Login cancelled"));
+				};
+				this.ctx.editorContainer.clear();
+				this.ctx.editorContainer.addChild(codeInput);
+				this.ctx.ui.setFocus(codeInput);
+				this.ctx.ui.requestRender();
+				return promise;
+			},
+			onProgress: (message: string) => {
+				this.ctx.chatContainer.addChild(new Text(theme.fg("dim", message), 1, 0));
+				this.ctx.ui.requestRender();
+			},
+			onManualCodeInput: useManualInput ? () => manualInput.waitForInput(providerId) : undefined,
+		};
+		try {
+			let loginModelChoice: Awaited<ReturnType<typeof applyOAuthLoginModel>>;
+			if (providerId === "google-antigravity-enterprise") {
+				const result = await runEnterpriseOAuthLoginFlow({
+					capture: () => captureEnterpriseOAuthLoginState(this.ctx.session),
+					authenticate: async action => {
+						this.ctx.showStatus(
+							action === "edit"
+								? "Editing Google Antigravity Enterprise project and sign-in…"
+								: "Authenticating Google Antigravity Enterprise…",
+						);
+						await this.ctx.session.modelRegistry.authStorage.login(providerId, loginCallbacks);
+					},
+					applyModel: async () => {
+						await this.ctx.session.modelRegistry.refresh("online");
+						return Boolean(await applyOAuthLoginModel(this.ctx.session, providerId));
+					},
+					restore: snapshot => restoreEnterpriseOAuthLoginState(this.ctx.session, snapshot),
+					recover: request =>
+						this.#showLoginRecovery(request, "Google Antigravity Enterprise", "Edit project / sign-in"),
+				});
+				if (result.status === "cancelled") {
+					this.ctx.showStatus("Google Antigravity Enterprise login cancelled. Existing configuration unchanged.");
+					return;
+				}
+				loginModelChoice = GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE;
+			} else {
+				await this.ctx.session.modelRegistry.authStorage.login(providerId as OAuthProvider, loginCallbacks);
+				await this.ctx.session.modelRegistry.refresh();
+				loginModelChoice = await applyOAuthLoginModel(this.ctx.session, providerId);
+			}
 			if (loginModelChoice) {
 				this.ctx.statusLine.invalidate();
 				this.ctx.updateEditorBorderColor();
@@ -1141,9 +1194,9 @@ export class SelectorController {
 
 		// Prompt helper: renders label + hint + input together in the editor
 		// container so they're always visible below the welcome branding.
-		const promptInput = async (message: string, placeholder?: string): Promise<string | null> => {
+		const promptInput = async (message: string, placeholder?: string, secret = false): Promise<string | null> => {
 			const { promise, resolve } = Promise.withResolvers<string | null>();
-			const input = new Input();
+			const input = createLoginPromptInput({ secret });
 			input.onSubmit = () => {
 				const raw = input.getValue();
 				const value = raw.replace(/\x1b\[\d{3}~/g, "").replace(/\x1b[[\]()][^\x1b]*/g, "");
@@ -1221,7 +1274,11 @@ export class SelectorController {
 
 			while (!probeSuccess) {
 				if (!apiKey) {
-					const keyInput = await promptInput(t("login.wizard.apiKeyPrompt"), t("login.wizard.apiKeyPlaceholder"));
+					const keyInput = await promptInput(
+						t("login.wizard.apiKeyPrompt"),
+						t("login.wizard.apiKeyPlaceholder"),
+						true,
+					);
 					if (keyInput === null) return;
 					const trimmedKey = keyInput.trim();
 					if (!trimmedKey) continue;
@@ -1245,27 +1302,21 @@ export class SelectorController {
 				}
 
 				if (probe.reachable) {
-					// Save config
-					const yml = generateModelsYml(baseUrl, {
-						apiBasePath: probe.apiBasePath,
-						apiKeyLiteral: apiKey,
-					});
-					await writeLiteLLMModelsYml(modelsPath, yml);
-
-					const configPath = path.join(path.dirname(modelsPath), "config.yml");
-					if (!fs.existsSync(configPath)) {
-						writeAgentConfigFileSync(configPath, generateConfigYml());
-					}
-					healConfigYmlModelRoles(configPath);
-
-					await this.ctx.session.modelRegistry.refresh("online");
-					const modelSelected = await this.#showLiteLLMLoginModelSelector(probe.models);
-					await this.ctx.refreshWelcomeAfterLogin();
-					this.ctx.showStatus(
-						modelSelected
-							? "LiteLLM configured. Use /model to switch models without logging in again."
-							: "LiteLLM configured. Use /model to select a model.",
+					const choice = await this.#showLiteLLMLoginModelSelector(
+						getAvailableLiteLLMLoginModelChoices(probe.models),
 					);
+					if (!choice) return;
+					const configPath = path.join(path.dirname(modelsPath), "config.yml");
+					await commitLiteLLMLogin({
+						modelsPath,
+						configPath,
+						credentials: { baseUrl, apiKey },
+						probe,
+						choice,
+						session: this.ctx.session,
+					});
+					await this.ctx.refreshWelcomeAfterLogin();
+					this.ctx.showStatus("LiteLLM configured. Use /model to switch models without logging in again.");
 					probeSuccess = true;
 				} else {
 					const errorMsg = probe.error ?? "connection failed";
@@ -1305,7 +1356,7 @@ export class SelectorController {
 
 		if (mode === "logout") {
 			await this.#refreshOAuthProviderAuthState();
-			const oauthProviders = getOAuthProviders();
+			const oauthProviders = getOAuthProviders().filter(provider => !provider.loginOnly);
 			const loggedInProviders = oauthProviders.filter(provider =>
 				this.ctx.session.modelRegistry.authStorage.hasAuth(provider.id),
 			);

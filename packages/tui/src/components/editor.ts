@@ -1462,6 +1462,7 @@ export class Editor implements Component, Focusable {
 	setText(text: string): void {
 		this.#historyIndex = -1; // Exit history browsing mode
 		this.#resetKillSequence();
+		this.#cancelAutocomplete();
 		this.#setTextInternal(text);
 	}
 

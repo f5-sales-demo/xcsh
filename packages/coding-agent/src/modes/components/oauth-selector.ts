@@ -1,5 +1,5 @@
 import { getOAuthProviders, type OAuthProviderInfo } from "@f5-sales-demo/pi-ai";
-import { Container, matchesKey, Spacer, TruncatedText } from "@f5-sales-demo/pi-tui";
+import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
 import { matchesSelectCancel } from "../../modes/utils/keybinding-matchers";
 import type { AuthStorage } from "../../session/auth-storage";
@@ -8,8 +8,12 @@ import { DynamicBorder } from "./dynamic-border";
  * Component that renders an OAuth provider selector.
  */
 export class OAuthSelectorComponent extends Container {
+	static readonly MAX_VISIBLE_PROVIDERS = 10;
+
 	#listContainer: Container;
 	#allProviders: OAuthProviderInfo[] = [];
+	#filteredProviders: OAuthProviderInfo[] = [];
+	#searchInput: Input;
 	#selectedIndex: number = 0;
 	#mode: "login" | "logout";
 	#authStorage: AuthStorage;
@@ -47,6 +51,10 @@ export class OAuthSelectorComponent extends Container {
 		const title = mode === "login" ? "Select provider to login:" : "Select provider to logout:";
 		this.addChild(new TruncatedText(theme.bold(title)));
 		this.addChild(new Spacer(1));
+		this.addChild(new Text(theme.fg("muted", "Type to filter providers:"), 0, 0));
+		this.#searchInput = new Input();
+		this.addChild(this.#searchInput);
+		this.addChild(new Spacer(1));
 		// Create list container
 		this.#listContainer = new Container();
 		this.addChild(this.#listContainer);
@@ -63,7 +71,20 @@ export class OAuthSelectorComponent extends Container {
 		this.#stopSpinner();
 	}
 	#loadProviders(): void {
-		this.#allProviders = getOAuthProviders();
+		this.#allProviders = getOAuthProviders().filter(provider => this.#mode === "login" || !provider.loginOnly);
+		this.#filteredProviders = this.#allProviders;
+	}
+
+	#filterProviders(query: string): void {
+		const normalizedQuery = query.trim().toLowerCase();
+		this.#filteredProviders = normalizedQuery
+			? this.#allProviders.filter(provider =>
+					`${provider.name} ${provider.id}`.toLowerCase().includes(normalizedQuery),
+				)
+			: this.#allProviders;
+		this.#selectedIndex = 0;
+		this.#statusMessage = undefined;
+		this.#updateList();
 	}
 
 	#startValidation(): void {
@@ -143,8 +164,15 @@ export class OAuthSelectorComponent extends Container {
 	}
 	#updateList(): void {
 		this.#listContainer.clear();
-		for (let i = 0; i < this.#allProviders.length; i++) {
-			const provider = this.#allProviders[i];
+		const maxVisible = OAuthSelectorComponent.MAX_VISIBLE_PROVIDERS;
+		const startIndex = Math.max(
+			0,
+			Math.min(this.#selectedIndex - maxVisible + 1, this.#filteredProviders.length - maxVisible),
+		);
+		const endIndex = Math.min(startIndex + maxVisible, this.#filteredProviders.length);
+
+		for (let i = startIndex; i < endIndex; i++) {
+			const provider = this.#filteredProviders[i];
 			if (!provider) continue;
 			const isSelected = i === this.#selectedIndex;
 			const isAvailable = provider.available;
@@ -167,32 +195,90 @@ export class OAuthSelectorComponent extends Container {
 			const message =
 				this.#mode === "login" ? "No OAuth providers available" : "No OAuth providers logged in. Use /login first.";
 			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", `  ${message}`), 0, 0));
+		} else if (this.#filteredProviders.length === 0) {
+			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", "  No matching providers"), 0, 0));
+			this.#listContainer.addChild(
+				new TruncatedText(theme.fg("muted", `  0 matches (${this.#allProviders.length} total)`), 0, 0),
+			);
+		} else if (this.#searchInput.getValue()) {
+			const matchLabel = this.#filteredProviders.length === 1 ? "match" : "matches";
+			this.#listContainer.addChild(
+				new TruncatedText(
+					theme.fg(
+						"muted",
+						`  ${this.#filteredProviders.length} ${matchLabel} (${this.#allProviders.length} total)`,
+					),
+					0,
+					0,
+				),
+			);
+		} else {
+			this.#listContainer.addChild(
+				new TruncatedText(
+					theme.fg("muted", `  Showing ${startIndex + 1}-${endIndex} of ${this.#filteredProviders.length}`),
+					0,
+					0,
+				),
+			);
 		}
 		if (this.#statusMessage) {
 			this.#listContainer.addChild(new Spacer(1));
 			this.#listContainer.addChild(new TruncatedText(theme.fg("warning", `  ${this.#statusMessage}`), 0, 0));
 		}
+		this.#listContainer.addChild(new Spacer(1));
+		this.#listContainer.addChild(
+			new TruncatedText(theme.fg("muted", "  Type to filter providers · Enter: select · Esc: clear/cancel"), 0, 0),
+		);
 	}
 	handleInput(keyData: string): void {
 		// Up arrow
 		if (matchesKey(keyData, "up")) {
-			if (this.#allProviders.length > 0) {
-				this.#selectedIndex = this.#selectedIndex === 0 ? this.#allProviders.length - 1 : this.#selectedIndex - 1;
+			if (this.#filteredProviders.length > 0) {
+				this.#selectedIndex =
+					this.#selectedIndex === 0 ? this.#filteredProviders.length - 1 : this.#selectedIndex - 1;
 			}
 			this.#statusMessage = undefined;
 			this.#updateList();
 		}
 		// Down arrow
 		else if (matchesKey(keyData, "down")) {
-			if (this.#allProviders.length > 0) {
-				this.#selectedIndex = this.#selectedIndex === this.#allProviders.length - 1 ? 0 : this.#selectedIndex + 1;
+			if (this.#filteredProviders.length > 0) {
+				this.#selectedIndex =
+					this.#selectedIndex === this.#filteredProviders.length - 1 ? 0 : this.#selectedIndex + 1;
 			}
+			this.#statusMessage = undefined;
+			this.#updateList();
+		}
+		// Page up
+		else if (matchesKey(keyData, "pageUp")) {
+			this.#selectedIndex = Math.max(0, this.#selectedIndex - OAuthSelectorComponent.MAX_VISIBLE_PROVIDERS);
+			this.#statusMessage = undefined;
+			this.#updateList();
+		}
+		// Page down
+		else if (matchesKey(keyData, "pageDown")) {
+			this.#selectedIndex = Math.min(
+				Math.max(0, this.#filteredProviders.length - 1),
+				this.#selectedIndex + OAuthSelectorComponent.MAX_VISIBLE_PROVIDERS,
+			);
+			this.#statusMessage = undefined;
+			this.#updateList();
+		}
+		// Home
+		else if (matchesKey(keyData, "home")) {
+			this.#selectedIndex = 0;
+			this.#statusMessage = undefined;
+			this.#updateList();
+		}
+		// End
+		else if (matchesKey(keyData, "end")) {
+			this.#selectedIndex = Math.max(0, this.#filteredProviders.length - 1);
 			this.#statusMessage = undefined;
 			this.#updateList();
 		}
 		// Enter
 		else if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
-			const selectedProvider = this.#allProviders[this.#selectedIndex];
+			const selectedProvider = this.#filteredProviders[this.#selectedIndex];
 			if (selectedProvider?.available) {
 				this.#statusMessage = undefined;
 				this.stopValidation();
@@ -204,8 +290,20 @@ export class OAuthSelectorComponent extends Container {
 		}
 		// Escape or Ctrl+C
 		else if (matchesSelectCancel(keyData)) {
+			if (this.#searchInput.getValue()) {
+				this.#searchInput.setValue("");
+				this.#filterProviders("");
+				return;
+			}
 			this.stopValidation();
 			this.#onCancelCallback();
+		}
+		// Everything else edits the provider filter.
+		else {
+			const previousQuery = this.#searchInput.getValue();
+			this.#searchInput.handleInput(keyData);
+			const nextQuery = this.#searchInput.getValue();
+			if (nextQuery !== previousQuery) this.#filterProviders(nextQuery);
 		}
 	}
 }

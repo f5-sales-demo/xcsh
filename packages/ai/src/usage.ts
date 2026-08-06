@@ -87,6 +87,7 @@ export interface UsageCredential {
 	expiresAt?: number;
 	accountId?: string;
 	projectId?: string;
+	tierId?: string;
 	email?: string;
 	enterpriseUrl?: string;
 	metadata?: Record<string, unknown>;

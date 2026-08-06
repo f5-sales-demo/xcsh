@@ -30,6 +30,8 @@ type RpcCommandBody = DistributiveOmit<RpcCommand, "id">;
 export interface RpcClientOptions {
 	/** Path to the CLI entry point (default: searches for dist/cli.js) */
 	cliPath?: string;
+	/** How to launch the CLI (default: through Bun) */
+	launchMode?: "bun" | "native";
 	/** Working directory for the agent */
 	cwd?: string;
 	/** Environment variables */
@@ -175,7 +177,9 @@ export class RpcClient {
 			args.push(...this.options.args);
 		}
 
-		this.#process = ptree.spawn([bunExecPath, cliPath, ...args], {
+		const command = this.options.launchMode === "native" ? [cliPath, ...args] : [bunExecPath, cliPath, ...args];
+
+		this.#process = ptree.spawn(command, {
 			cwd: this.options.cwd,
 			env: { ...Bun.env, ...this.options.env },
 			stdin: "pipe",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { loginLiteLLM, maskApiKey } from "../src/utils/oauth/litellm";
+import type { OAuthPrompt } from "../src/utils/oauth/types";
 
 describe("loginLiteLLM", () => {
 	it("returns baseUrl and apiKey from sequential prompts", async () => {
@@ -31,6 +32,19 @@ describe("loginLiteLLM", () => {
 
 		expect(result.baseUrl).toBe("https://default.example.com");
 		expect(result.apiKey).toBe("sk-default-key");
+	});
+
+	it("marks only the API key prompt as secret input", async () => {
+		const prompts: OAuthPrompt[] = [];
+		await loginLiteLLM({
+			onPrompt: async prompt => {
+				prompts.push(prompt);
+				return prompts.length === 1 ? "https://my-litellm.example.com" : "sk-my-api-key";
+			},
+		});
+
+		expect(prompts[0]?.secret).not.toBe(true);
+		expect(prompts[1]?.secret).toBe(true);
 	});
 
 	it("trims whitespace from inputs", async () => {
