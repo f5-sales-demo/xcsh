@@ -2,222 +2,222 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { hookFetch } from "@f5-sales-demo/pi-utils";
 import { KnowledgeService, parseLlmsTxt } from "../src/services/xcsh-knowledge";
 
-const SAMPLE_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
+const CATEGORIZED_LLMS_TXT = `# F5 Distributed Cloud Sales Demos
 
 > Demo guides and runbooks for F5 Distributed Cloud sales engineering.
 
 ## Documentation Sets
 
-- [Abridged documentation](https://f5-sales-demo.github.io/docs/llms-small.txt): a compact version
-- [Complete documentation](https://f5-sales-demo.github.io/docs/llms-full.txt): the full documentation
+- [Abridged documentation](https://f5-sales-demo.github.io/docs/llms-small.txt): compact portal docs
+- [Complete documentation](https://f5-sales-demo.github.io/docs/llms-full.txt): complete portal docs
 
-## Federated Sites
+## Sections
+
+- [Sales Demos](https://f5-sales-demo.github.io/docs/_llms-txt/en.txt): portal content
+
+## Product Features
 
 - [WAF](https://f5-sales-demo.github.io/waf/llms.txt): F5 XC web application firewall
-- [DDoS](https://f5-sales-demo.github.io/ddos/llms.txt): F5 XC DDoS protection
-- [xcsh Docs Builder](https://f5-sales-demo.github.io/docs-builder/llms.txt): Containerized Astro build system
-- [Dev Container](https://f5-sales-demo.github.io/devcontainer/llms.txt): Isolated development environment
-- [xcsh](https://f5-sales-demo.github.io/xcsh/llms.txt): AI-powered development CLI
-- [F5 XC Docs](https://f5-sales-demo.github.io/docs/llms.txt): Organization landing page
-- [CDN Simulator](https://f5-sales-demo.github.io/cdn-simulator/llms.txt): NGINX-based CDN edge node simulator
+
+## Developer Tools
+
+- [xcsh GitHub Action](https://f5-sales-demo.github.io/xcsh-action/llms.txt): GitHub Marketplace Action for deterministic manifest operations
+- [xcsh](https://f5-sales-demo.github.io/xcsh/llms.txt): AI-powered development environment and CLI tool
+
+## Lab Infrastructure
+
 - [Origin Server](https://f5-sales-demo.github.io/origin-server/llms.txt): Ubuntu origin server
-- [Docs Icons](https://f5-sales-demo.github.io/docs-icons/llms.txt): NPM icon packages
-- [XC Docs Theme](https://f5-sales-demo.github.io/docs-theme/llms.txt): Shared branding and styling
+
+## Documentation Portal
+
+- [F5 XC Docs](https://f5-sales-demo.github.io/docs/llms.txt): Organization landing page
+
+## Translations
+
+- [Français](https://f5-sales-demo.github.io/docs/fr/llms.txt): French portal index
 `;
 
-const NOW = new Date("2026-04-27T12:00:00.000Z");
+const NOW = new Date("2026-08-06T12:00:00.000Z");
 
 describe("parseLlmsTxt", () => {
-	it("parses title and description", () => {
-		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
+	it("parses categorized federation entries as documentation topics", () => {
+		const result = parseLlmsTxt(CATEGORIZED_LLMS_TXT, NOW);
+
+		expect(result.schemaVersion).toBe(2);
 		expect(result.title).toBe("F5 Distributed Cloud Sales Demos");
 		expect(result.description).toBe("Demo guides and runbooks for F5 Distributed Cloud sales engineering.");
-	});
-
-	it("extracts products from Federated Sites section only", () => {
-		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
-		const names = result.products.map(p => p.name);
-		expect(names).toContain("WAF");
-		expect(names).toContain("DDoS");
-	});
-
-	it("skips Documentation Sets entries", () => {
-		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
-		const urls = result.products.map(p => p.url);
-		expect(urls.every(u => !u.includes("llms-small.txt") && !u.includes("llms-full.txt"))).toBe(true);
-	});
-
-	it("filters non-product sites by slug (portal, build-platform, lab-infrastructure)", () => {
-		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
-		const names = result.products.map(p => p.name);
-		expect(names).not.toContain("xcsh Docs Builder");
-		expect(names).not.toContain("Dev Container");
-		expect(names).not.toContain("xcsh");
-		expect(names).not.toContain("F5 XC Docs");
-		expect(names).not.toContain("CDN Simulator");
-		expect(names).not.toContain("Origin Server");
-		expect(names).not.toContain("Docs Icons");
-		expect(names).not.toContain("XC Docs Theme");
-	});
-
-	it("keeps only product sites after filtering", () => {
-		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
-		expect(result.products).toEqual([
+		expect(result.topics).toEqual([
 			{
 				name: "WAF",
 				description: "F5 XC web application firewall",
 				url: "https://f5-sales-demo.github.io/waf/llms.txt",
+				category: "Product Features",
 			},
-			{ name: "DDoS", description: "F5 XC DDoS protection", url: "https://f5-sales-demo.github.io/ddos/llms.txt" },
+			{
+				name: "xcsh GitHub Action",
+				description: "GitHub Marketplace Action for deterministic manifest operations",
+				url: "https://f5-sales-demo.github.io/xcsh-action/llms.txt",
+				category: "Developer Tools",
+			},
+			{
+				name: "xcsh",
+				description: "AI-powered development environment and CLI tool",
+				url: "https://f5-sales-demo.github.io/xcsh/llms.txt",
+				category: "Developer Tools",
+			},
+			{
+				name: "Origin Server",
+				description: "Ubuntu origin server",
+				url: "https://f5-sales-demo.github.io/origin-server/llms.txt",
+				category: "Lab Infrastructure",
+			},
 		]);
+		expect(result.fetchedAt).toBe("2026-08-06T12:00:00.000Z");
 	});
 
-	it("sets fetchedAt from provided timestamp", () => {
-		const result = parseLlmsTxt(SAMPLE_LLMS_TXT, NOW);
-		expect(result.fetchedAt).toBe("2026-04-27T12:00:00.000Z");
+	it("excludes documentation sets, section bundles, translations, and the portal self-link", () => {
+		const result = parseLlmsTxt(CATEGORIZED_LLMS_TXT, NOW);
+		const urls = result.topics.map(topic => topic.url);
+
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/llms-small.txt");
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/_llms-txt/en.txt");
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/fr/llms.txt");
+		expect(urls).not.toContain("https://f5-sales-demo.github.io/docs/llms.txt");
 	});
 
-	it("handles empty input", () => {
-		const result = parseLlmsTxt("", NOW);
-		expect(result.title).toBe("");
-		expect(result.description).toBe("");
-		expect(result.products).toEqual([]);
-	});
-
-	it("handles malformed lines gracefully", () => {
-		const input = `# Title
-> Desc
-
-## Federated Sites
-
-- not a valid entry
-- [Valid](https://f5-sales-demo.github.io/waf/llms.txt): WAF docs
-- [Missing colon](https://example.com/llms.txt)
-`;
+	it("supports the legacy Federated Sites heading without a hardcoded category allowlist", () => {
+		const input = `# Index\n> Docs\n\n## Federated Sites\n\n- [Future Tool](https://example.com/future-tool/llms.txt): Future docs\n`;
 		const result = parseLlmsTxt(input, NOW);
-		expect(result.products).toEqual([
-			{ name: "Valid", description: "WAF docs", url: "https://f5-sales-demo.github.io/waf/llms.txt" },
+
+		expect(result.topics).toEqual([
+			{
+				name: "Future Tool",
+				description: "Future docs",
+				url: "https://example.com/future-tool/llms.txt",
+				category: "Federated Sites",
+			},
 		]);
+	});
+
+	it("ignores malformed and duplicate entries", () => {
+		const input = `# Index\n> Docs\n\n## Developer Tools\n\n- not a valid entry\n- [Action](https://example.com/action/llms.txt): Action docs\n- [Action duplicate](https://example.com/action/llms.txt): Duplicate\n- [Missing colon](https://example.com/missing/llms.txt)\n`;
+		const result = parseLlmsTxt(input, NOW);
+
+		expect(result.topics).toHaveLength(1);
+		expect(result.topics[0]?.name).toBe("Action");
+	});
+
+	it("returns an empty versioned index for empty input", () => {
+		const result = parseLlmsTxt("", NOW);
+		expect(result).toEqual({
+			schemaVersion: 2,
+			title: "",
+			description: "",
+			topics: [],
+			fetchedAt: "2026-08-06T12:00:00.000Z",
+		});
 	});
 });
 
-const MOCK_LLMS_RESPONSE = `# Product Index
-> Product docs
-
-## Federated Sites
-
-- [WAF](https://f5-sales-demo.github.io/waf/llms.txt): Web firewall
-- [DDoS](https://f5-sales-demo.github.io/ddos/llms.txt): DDoS protection
-`;
-
 describe("KnowledgeService", () => {
 	let testDir: string;
-	let savedFetch: typeof globalThis.fetch;
 
 	beforeEach(() => {
 		KnowledgeService._resetForTest();
-		testDir = path.join(os.tmpdir(), `test-knowledge-${Date.now()}`);
-		fs.mkdirSync(testDir, { recursive: true });
-		savedFetch = globalThis.fetch;
+		testDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-test-knowledge-"));
 	});
 
 	afterEach(() => {
 		KnowledgeService._resetForTest();
-		globalThis.fetch = savedFetch;
-		if (fs.existsSync(testDir)) {
-			fs.rmSync(testDir, { recursive: true });
-		}
+		fs.rmSync(testDir, { recursive: true, force: true });
 	});
 
-	it("disk cache round-trip preserves LlmsIndex", () => {
+	it("round-trips a versioned categorized cache", () => {
 		const service = KnowledgeService.init(testDir);
-		const index = parseLlmsTxt(MOCK_LLMS_RESPONSE);
-		service.saveCache(index);
+		service.saveCache(parseLlmsTxt(CATEGORIZED_LLMS_TXT, NOW));
 
 		KnowledgeService._resetForTest();
-		const service2 = KnowledgeService.init(testDir);
-		service2.loadCache();
-		const loaded = service2.getIndex();
-		expect(loaded).not.toBeNull();
-		expect(loaded!.products.length).toBe(2);
-		expect(loaded!.products[0].name).toBe("WAF");
+		const restored = KnowledgeService.init(testDir);
+		restored.loadCache();
+
+		expect(restored.getIndex()?.schemaVersion).toBe(2);
+		expect(restored.getIndex()?.topics.map(topic => topic.name)).toContain("xcsh GitHub Action");
 	});
 
-	it("refreshIndex fetches and parses", async () => {
-		globalThis.fetch = (async () => {
-			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
-		}) as unknown as typeof globalThis.fetch;
-
+	it("invalidates legacy and empty caches", () => {
 		const service = KnowledgeService.init(testDir);
+		fs.writeFileSync(service.cachePath, JSON.stringify({ fetchedAt: NOW.toISOString(), products: [] }));
+		service.loadCache();
+		expect(service.getIndex()).toBeNull();
+
+		fs.writeFileSync(
+			service.cachePath,
+			JSON.stringify({
+				schemaVersion: 2,
+				title: "Index",
+				description: "Docs",
+				topics: [],
+				fetchedAt: NOW.toISOString(),
+			}),
+		);
+		service.loadCache();
+		expect(service.getIndex()).toBeNull();
+	});
+
+	it("refreshes and exposes sorted topic names", async () => {
+		using _hook = hookFetch(() => new Response(CATEGORIZED_LLMS_TXT, { status: 200 }));
+		const service = KnowledgeService.init(testDir);
+
 		const index = await service.refreshIndex();
-		expect(index.products.length).toBe(2);
-		expect(index.title).toBe("Product Index");
+
+		expect(index.topics).toHaveLength(4);
+		expect(service.getTopicNames()).toEqual(["Origin Server", "WAF", "xcsh", "xcsh GitHub Action"]);
+		expect(service.getTopicSummary()).toBe(
+			"Developer Tools: xcsh, xcsh GitHub Action; Lab Infrastructure: Origin Server; Product Features: WAF",
+		);
 	});
 
-	it("getOrRefreshIndex returns cached within TTL", async () => {
-		globalThis.fetch = (async () => {
-			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
-		}) as unknown as typeof globalThis.fetch;
-
+	it("returns a fresh cache without fetching", async () => {
 		const service = KnowledgeService.init(testDir);
-		await service.refreshIndex();
-
+		service.saveCache(parseLlmsTxt(CATEGORIZED_LLMS_TXT));
+		service.loadCache();
 		let fetchCalled = false;
-		globalThis.fetch = (async () => {
+		using _hook = hookFetch(() => {
 			fetchCalled = true;
-			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
-		}) as unknown as typeof globalThis.fetch;
+			return new Response(CATEGORIZED_LLMS_TXT, { status: 200 });
+		});
 
 		const result = await service.getOrRefreshIndex();
-		expect(result).not.toBeNull();
+
+		expect(result?.topics).toHaveLength(4);
 		expect(fetchCalled).toBe(false);
 	});
 
-	it("getOrRefreshIndex refreshes when TTL expired", async () => {
-		globalThis.fetch = (async () => {
-			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
-		}) as unknown as typeof globalThis.fetch;
-
+	it("keeps stale topics when a refresh returns no federation entries", async () => {
 		const service = KnowledgeService.init(testDir);
-		await service.refreshIndex();
-
-		let fetchCalled = false;
-		globalThis.fetch = (async () => {
-			fetchCalled = true;
-			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
-		}) as unknown as typeof globalThis.fetch;
+		service.saveCache(parseLlmsTxt(CATEGORIZED_LLMS_TXT, new Date(0)));
+		service.loadCache();
+		using _hook = hookFetch(() => new Response("# Empty portal\n\n> No entries", { status: 200 }));
 
 		const result = await service.getOrRefreshIndex(0);
-		expect(result).not.toBeNull();
-		expect(fetchCalled).toBe(true);
+
+		expect(result?.topics.map(topic => topic.name)).toContain("xcsh GitHub Action");
+		expect(service.getIndex()?.topics).toHaveLength(4);
 	});
 
-	it("getOrRefreshIndex returns stale on network error", async () => {
-		globalThis.fetch = (async () => {
-			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
-		}) as unknown as typeof globalThis.fetch;
-
+	it("keeps stale topics when the network fails", async () => {
 		const service = KnowledgeService.init(testDir);
-		await service.refreshIndex();
-
-		globalThis.fetch = (async () => {
+		service.saveCache(parseLlmsTxt(CATEGORIZED_LLMS_TXT, new Date(0)));
+		service.loadCache();
+		using _hook = hookFetch(() => {
 			throw new Error("network down");
-		}) as unknown as typeof globalThis.fetch;
+		});
 
 		const result = await service.getOrRefreshIndex(0);
-		expect(result).not.toBeNull();
-		expect(result!.products.length).toBe(2);
-	});
 
-	it("getProductNames returns sorted names", async () => {
-		globalThis.fetch = (async () => {
-			return new Response(MOCK_LLMS_RESPONSE, { status: 200 });
-		}) as unknown as typeof globalThis.fetch;
-
-		const service = KnowledgeService.init(testDir);
-		await service.refreshIndex();
-		expect(service.getProductNames()).toEqual(["DDoS", "WAF"]);
+		expect(result?.topics).toHaveLength(4);
 	});
 });

@@ -2,65 +2,78 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { logger } from "@f5-sales-demo/pi-utils";
 
-export interface LlmsProduct {
+export const KNOWLEDGE_CACHE_SCHEMA_VERSION = 2 as const;
+
+export interface LlmsTopic {
 	name: string;
 	description: string;
 	url: string;
+	category: string;
 }
 
 export interface LlmsIndex {
+	schemaVersion: typeof KNOWLEDGE_CACHE_SCHEMA_VERSION;
 	title: string;
 	description: string;
-	products: LlmsProduct[];
+	topics: LlmsTopic[];
 	fetchedAt: string;
 }
 
-/**
- * Federated sites that are not F5 XC *product* documentation, and so do not belong
- * in the product list this module feeds to the system prompt.
- *
- * Deliberately NOT the `repo_classes` authority classification from
- * `xcsh://fleet`. The two answer different questions and disagree: `docs`,
- * `cdn-simulator` and `origin-server` are all authority `content` — xcsh does author
- * their documentation and Terraform — while being the documentation portal and two
- * lab-infrastructure repositories rather than products. Driving this filter off
- * authority would advertise all three as F5 XC products.
- *
- * The concern this tracks is the `llms-federated-sites.json` category in the `docs`
- * repository: everything here is `build-platform`, `developer-tools`, `portal` or
- * `lab-infrastructure`, and everything kept is `product-features` or
- * `api-specifications`. That file is not synced into clones, so the list is
- * maintained here.
- */
-const NON_PRODUCT_SLUGS = new Set([
-	"docs-builder",
-	"docs-theme",
-	"docs-icons",
-	"devcontainer",
-	"xcsh",
-	"docs",
-	"cdn-simulator",
-	"origin-server",
-]);
-
 const ENTRY_PATTERN = /^- \[([^\]]+)\]\(([^)]+)\):\s*(.+)$/;
+const ROOT_LLMS_FILE = "llms.txt";
+const PORTAL_SLUG = "docs";
 
-function extractSlug(url: string): string | null {
+function extractRootLlmsSlug(url: string): string | null {
 	try {
-		const pathname = new URL(url).pathname;
-		const segments = pathname.split("/").filter(Boolean);
+		const segments = new URL(url).pathname.split("/").filter(Boolean);
+		if (segments.length !== 2 || segments[1] !== ROOT_LLMS_FILE) return null;
 		return segments[0] ?? null;
 	} catch {
 		return null;
 	}
 }
 
+function isTopic(value: unknown): value is LlmsTopic {
+	if (!value || typeof value !== "object") return false;
+	const topic = value as Partial<LlmsTopic>;
+	return (
+		typeof topic.name === "string" &&
+		typeof topic.description === "string" &&
+		typeof topic.url === "string" &&
+		typeof topic.category === "string"
+	);
+}
+
+function isValidIndex(value: unknown): value is LlmsIndex {
+	if (!value || typeof value !== "object") return false;
+	const index = value as Partial<LlmsIndex>;
+	return (
+		index.schemaVersion === KNOWLEDGE_CACHE_SCHEMA_VERSION &&
+		typeof index.title === "string" &&
+		typeof index.description === "string" &&
+		typeof index.fetchedAt === "string" &&
+		!Number.isNaN(new Date(index.fetchedAt).getTime()) &&
+		Array.isArray(index.topics) &&
+		index.topics.length > 0 &&
+		index.topics.every(isTopic)
+	);
+}
+
+/**
+ * Parse the root llms.txt portal into categorized documentation topics.
+ *
+ * Federation category headings are intentionally open-ended. A list entry is a
+ * topic when it links to a sibling site's root /{slug}/llms.txt endpoint; this
+ * excludes documentation sets, locale indexes, and tiered content without
+ * hardcoding today's category names.
+ */
 export function parseLlmsTxt(content: string, now?: Date): LlmsIndex {
 	const lines = content.split("\n");
 	let title = "";
 	let description = "";
-	const products: LlmsProduct[] = [];
-	let inFederatedSites = false;
+	let category = "";
+	const topics: LlmsTopic[] = [];
+	const seenUrls = new Set<string>();
 
 	for (const line of lines) {
 		const trimmed = line.trim();
@@ -76,26 +89,26 @@ export function parseLlmsTxt(content: string, now?: Date): LlmsIndex {
 		}
 
 		if (trimmed.startsWith("## ")) {
-			inFederatedSites = trimmed === "## Federated Sites";
+			category = trimmed.slice(3).trim();
 			continue;
 		}
 
-		if (!inFederatedSites) continue;
-
 		const match = ENTRY_PATTERN.exec(trimmed);
-		if (!match) continue;
+		if (!match || !category) continue;
 
-		const [, name, url, desc] = match;
-		const slug = extractSlug(url);
-		if (slug && NON_PRODUCT_SLUGS.has(slug)) continue;
+		const [, name, url, topicDescription] = match;
+		const slug = extractRootLlmsSlug(url);
+		if (!slug || slug === PORTAL_SLUG || seenUrls.has(url)) continue;
 
-		products.push({ name, description: desc, url });
+		seenUrls.add(url);
+		topics.push({ name, description: topicDescription, url, category });
 	}
 
 	return {
+		schemaVersion: KNOWLEDGE_CACHE_SCHEMA_VERSION,
 		title,
 		description,
-		products,
+		topics,
 		fetchedAt: (now ?? new Date()).toISOString(),
 	};
 }
@@ -140,14 +153,15 @@ export class KnowledgeService {
 	loadCache(): void {
 		try {
 			if (!fs.existsSync(this.cachePath)) return;
-			const raw = fs.readFileSync(this.cachePath, "utf-8");
-			this.#index = JSON.parse(raw) as LlmsIndex;
+			const parsed: unknown = JSON.parse(fs.readFileSync(this.cachePath, "utf-8"));
+			this.#index = isValidIndex(parsed) ? parsed : null;
 		} catch {
 			this.#index = null;
 		}
 	}
 
 	saveCache(index: LlmsIndex): void {
+		if (!isValidIndex(index)) return;
 		try {
 			fs.mkdirSync(this.#configDir, { recursive: true });
 			fs.writeFileSync(this.cachePath, JSON.stringify(index, null, 2));
@@ -167,8 +181,10 @@ export class KnowledgeService {
 		if (!response.ok) {
 			throw new Error(`Failed to fetch llms.txt: HTTP ${response.status}`);
 		}
-		const content = await response.text();
-		const index = parseLlmsTxt(content);
+		const index = parseLlmsTxt(await response.text());
+		if (index.topics.length === 0) {
+			throw new Error("Failed to parse llms.txt: no federated documentation topics found");
+		}
 		this.#index = index;
 		this.saveCache(index);
 		return index;
@@ -187,8 +203,22 @@ export class KnowledgeService {
 		}
 	}
 
-	getProductNames(): string[] {
+	getTopicNames(): string[] {
 		if (!this.#index) return [];
-		return this.#index.products.map(p => p.name).sort();
+		return this.#index.topics.map(topic => topic.name).sort();
+	}
+
+	getTopicSummary(): string {
+		if (!this.#index) return "";
+		const topicsByCategory = new Map<string, string[]>();
+		for (const topic of this.#index.topics) {
+			const names = topicsByCategory.get(topic.category) ?? [];
+			names.push(topic.name);
+			topicsByCategory.set(topic.category, names);
+		}
+		return [...topicsByCategory]
+			.sort(([left], [right]) => left.localeCompare(right))
+			.map(([category, names]) => `${category}: ${names.sort().join(", ")}`)
+			.join("; ");
 	}
 }

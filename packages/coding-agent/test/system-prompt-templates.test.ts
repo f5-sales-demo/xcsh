@@ -232,23 +232,28 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("not an assumed set");
 	});
 
-	test("system-prompt routes F5 XC product questions to the llms.txt index", async () => {
+	test("system-prompt routes F5 XC product and ecosystem questions through the llms.txt hierarchy", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
-		expect(template).toContain("# Product knowledge");
+		expect(template).toContain("# Product and ecosystem knowledge");
 		expect(template).toContain("https://f5-sales-demo.github.io/docs/llms.txt");
-		expect(template).toContain("F5 Distributed Cloud product questions");
+		expect(template).toContain("F5 Distributed Cloud product and ecosystem questions");
+		expect(template).toContain("developer tooling, GitHub Actions, automation, and CI/CD");
 		expect(template).toContain("live knowledge index");
+		expect(template).toContain("https://f5-sales-demo.github.io/xcsh-action/llms.txt");
+		expect(template).toContain("prefer\n`f5-sales-demo/xcsh-action`");
+		expect(template).toContain("direct xcsh CLI shell commands");
 		expect(template).toContain("## Routing discipline");
-		expect(template).toContain("MUST NOT** web-search for F5 XC product information");
+		expect(template).toContain("MUST NOT** web-search for F5 XC product or ecosystem information");
 		expect(template).toContain("rule://llms-search");
 
-		const rulePath = path.resolve(import.meta.dir, "../../../.xcsh/rules/llms-search.md");
+		const rulePath = path.resolve(import.meta.dir, "../src/prompts/rules/llms-search.md");
 		const ruleText = await Bun.file(rulePath).text();
-		expect(ruleText).toContain("strip the trailing `/`, append `.md`");
-		expect(ruleText).toContain("Stop at the lowest tier that answers the question");
-		expect(ruleText).toContain("Multi-product questions");
-		expect(ruleText).toContain("If 404, try appending `/index.md`");
+		expect(ruleText).toContain("Follow `## Contents` links recursively");
+		expect(ruleText).toContain("Stop at the narrowest source that answers the question");
+		expect(ruleText).toContain("Multi-site questions");
+		expect(ruleText).toContain("xcsh-action");
+		expect(ruleText).toContain("fall back to English and disclose that fallback");
 		expect(ruleText).toContain("Web search re-entry");
 	});
 
@@ -505,7 +510,7 @@ describe("system Handlebars prompt templates", () => {
 	});
 
 	test("epistemic-integrity swaps sea-color example for SE-domain bot-defense example (P5)", async () => {
-		const rulePath = path.resolve(import.meta.dir, "../../../.xcsh/rules/epistemic-integrity.md");
+		const rulePath = path.resolve(import.meta.dir, "../src/prompts/rules/epistemic-integrity.md");
 		const template = await Bun.file(rulePath).text();
 		// New example content
 		expect(template).toContain("bot defense is a separate SKU above the base WAAP tier");

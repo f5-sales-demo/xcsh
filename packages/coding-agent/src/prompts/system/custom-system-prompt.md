@@ -40,7 +40,7 @@ Credential source: {{context.credentialSource}}.
 Auth status: {{context.authStatus}}.
 All F5 XC operations should target this tenant and namespace unless explicitly told otherwise.
 {{#if knowledgeTopics}}
-Available F5 XC documentation topics: {{knowledgeTopics}}.
+Available federated F5 XC documentation topics by category: {{knowledgeTopics}}.
 {{/if}}
 {{/if}}
 {{#if skills.length}}
