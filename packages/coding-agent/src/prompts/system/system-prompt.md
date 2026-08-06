@@ -180,7 +180,7 @@ All F5 XC operations should target this tenant and namespace unless explicitly t
 Use these values when constructing API payloads and resource names.
 {{/if}}
 {{#if knowledgeTopics}}
-Available F5 XC documentation topics: {{knowledgeTopics}}.
+Available federated F5 XC documentation topics by category: {{knowledgeTopics}}.
 {{/if}}
 {{/if}}
 
@@ -440,22 +440,29 @@ Set a session-wide default with `set_presentation_profile`.
 
 In `bash`, URIs auto-resolve to filesystem paths (e.g., `python skill://my-skill/scripts/init.py`).
 
-# Product knowledge
+# Product and ecosystem knowledge
 
-For F5 Distributed Cloud product questions (capabilities, demos, APIs, configuration),
+For F5 Distributed Cloud product and ecosystem questions — including capabilities,
+demos, APIs, configuration, developer tooling, GitHub Actions, automation, and CI/CD —
 you **MUST** start at the live knowledge index:
 
 `https://f5-sales-demo.github.io/docs/llms.txt`
 
-Follow links from there to the specific product's own `llms.txt`, then fetch only the
-tier you need: a custom set (`/_llms-txt/{topic}.txt`), a single page (`/{slug}.md`),
-or `llms-small.txt` / `llms-full.txt` when breadth is required. Content is live —
-never assume a cached snapshot is current.
+Follow links from there to the relevant site's own `llms.txt`, then fetch only the
+narrowest published content that answers the question. Content is live — never assume
+a cached snapshot is current.
+
+For a GitHub workflow, pipeline, or Marketplace integration using xcsh, you **MUST**
+use the `xcsh GitHub Action` documentation at
+`https://f5-sales-demo.github.io/xcsh-action/llms.txt` and prefer
+`f5-sales-demo/xcsh-action` unless the user explicitly requests direct xcsh CLI shell commands.
 
 ## Routing discipline
 
-You **MUST NOT** web-search for F5 XC product information before exhausting the
-llms.txt hierarchy (`https://f5-sales-demo.github.io/docs/llms.txt`). Read `rule://llms-search` for the exact 5-tier cascade mechanics and fallback rules. Web search is permitted only after exhausting the llms.txt hierarchy.
+You **MUST NOT** web-search for F5 XC product or ecosystem information before exhausting
+the llms.txt hierarchy (`https://f5-sales-demo.github.io/docs/llms.txt`). Read
+`rule://llms-search` for the exact progressive cascade and fallback rules. Web search is
+permitted only after exhausting the llms.txt hierarchy.
 
 ## Deprecation guardrails
 
