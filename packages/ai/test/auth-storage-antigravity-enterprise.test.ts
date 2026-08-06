@@ -11,7 +11,7 @@ const CREDENTIALS = {
 	expires: Date.now() + 60_000,
 	projectId: "enterprise-project",
 	tierId: "standard-tier",
-	email: "developer@example.test",
+	email: "developer@example.com",
 };
 
 describe("AuthStorage Antigravity enterprise alias", () => {
