@@ -68,6 +68,7 @@ export async function loginLiteLLM(options: LiteLLMLoginOptions): Promise<LiteLL
 	const rawKey = await options.onPrompt({
 		message: `LiteLLM API Key${defaultKeyHint}`,
 		placeholder: "sk-...",
+		secret: true,
 	});
 
 	if (options.signal?.aborted) throw new Error("Login cancelled");

@@ -276,6 +276,26 @@ describe("Editor component", () => {
 	});
 
 	describe("autocomplete triggers", () => {
+		it("dismisses stale suggestions when a command clears the editor programmatically", async () => {
+			const editor = new Editor(defaultEditorTheme);
+			editor.setAutocompleteProvider({
+				async getSuggestions() {
+					return { items: [{ label: "/login", value: "/login" }], prefix: "/" };
+				},
+				applyCompletion(lines, cursorLine, cursorCol) {
+					return { lines, cursorLine, cursorCol };
+				},
+			});
+
+			editor.handleInput("/");
+			await Bun.sleep(0);
+			expect(editor.isShowingAutocomplete()).toBe(true);
+
+			editor.setText("");
+
+			expect(editor.isShowingAutocomplete()).toBe(false);
+		});
+
 		it("triggers slash-command autocomplete when typing slash", async () => {
 			const editor = new Editor(defaultEditorTheme);
 			const { promise, resolve } = Promise.withResolvers<string>();

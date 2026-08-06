@@ -1,5 +1,5 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import type { Model } from "@f5-sales-demo/pi-ai";
+import { canonicalizeOAuthProviderId, type Model } from "@f5-sales-demo/pi-ai";
 
 export interface LoginModelChoice {
 	label: string;
@@ -16,17 +16,17 @@ export interface LiteLLMLoginModelChoice extends LoginModelChoice {
 
 export const LITELLM_LOGIN_MODEL_CHOICES: readonly LiteLLMLoginModelChoice[] = [
 	{
-		label: "Claude Opus 5",
-		description: "Anthropic Messages model with high reasoning",
-		provider: "anthropic",
-		modelId: "claude-opus-5",
-		thinkingLevel: ThinkingLevel.High,
-	},
-	{
 		label: "GPT-5.6 Sol",
 		description: "OpenAI-compatible model with high reasoning",
 		provider: "litellm",
 		modelId: "gpt-5.6-sol",
+		thinkingLevel: ThinkingLevel.High,
+	},
+	{
+		label: "Claude Opus 5",
+		description: "Anthropic Messages model with high reasoning",
+		provider: "anthropic",
+		modelId: "claude-opus-5",
 		thinkingLevel: ThinkingLevel.High,
 	},
 ];
@@ -88,7 +88,7 @@ export async function applyOAuthLoginModel(
 	session: ModelApplicableSession,
 	providerId: string,
 ): Promise<LoginModelChoice | undefined> {
-	if (providerId !== GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider) return undefined;
+	if (canonicalizeOAuthProviderId(providerId) !== GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider) return undefined;
 	const applied = await applyModelAfterLogin(session, GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE);
 	return applied ? GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE : undefined;
 }

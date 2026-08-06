@@ -113,6 +113,11 @@ describe("startHeadlessChatBridge", () => {
 		// document tools arrive at runtime via set_host_tools), no MCP/LSP/discovery.
 		const o = h.sessionOpts();
 		expect(o?.hasUI).toBe(false);
+		// Sideload is deterministic even when the operator's global default or last
+		// interactive model differs. Explicit pane selections arrive later over
+		// configure and are intentionally not encoded in this bootstrap default.
+		expect(o?.modelPattern).toBe("litellm/gpt-5.6-sol:high");
+		expect(o?.thinkingLevel).toBe("high");
 		expect(o?.enableMCP).toBe(false);
 		expect(o?.enableLsp).toBe(false);
 		expect(o?.disableExtensionDiscovery).toBe(true);

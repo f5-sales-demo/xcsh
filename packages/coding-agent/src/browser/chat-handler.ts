@@ -436,10 +436,10 @@ export class ChatHandler {
 			if (!defaultModel) {
 				throw new Error("Invalid baked default model selector");
 			}
-			const currentChoice = LITELLM_LOGIN_MODEL_CHOICES.find(
-				choice => choice.provider === this.#session.model?.provider && choice.modelId === this.#session.model.id,
-			);
-			const modelId = msg.model ?? currentChoice?.modelId ?? defaultModel.id;
+			// An omitted model means the baked Office default, never whichever model a
+			// previous CLI/global session happened to leave active. An explicit pane
+			// selection still wins through msg.model.
+			const modelId = msg.model ?? defaultModel.id;
 			const choice = LITELLM_LOGIN_MODEL_CHOICES.find(candidate => candidate.modelId === modelId);
 			const matchingProviders = (["anthropic", "litellm"] as const).filter(candidate =>
 				registry.find(candidate, modelId),

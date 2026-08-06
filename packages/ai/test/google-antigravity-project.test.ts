@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getOAuthProviders } from "../src/utils/oauth";
 import {
 	type AntigravityProjectSources,
 	readAntigravityCliProjectId,
@@ -16,6 +17,18 @@ const NO_PROJECT_SOURCES: AntigravityProjectSources = {
 };
 
 describe("Antigravity enterprise project resolution", () => {
+	it("registers a distinct login-only enterprise provider", () => {
+		const provider = getOAuthProviders().find(item => item.id === "google-antigravity-enterprise");
+
+		expect(provider).toMatchObject({
+			id: "google-antigravity-enterprise",
+			name: "Google Antigravity Enterprise (Gemini 3.6 Flash High)",
+			available: true,
+			canonicalId: "google-antigravity",
+			loginOnly: true,
+		});
+	});
+
 	it("prefers GOOGLE_CLOUD_PROJECT before every external source", async () => {
 		const readAntigravityProjectId = vi.fn(async () => "metadata-enterprise-project");
 		const readGcloudProjectId = vi.fn(async () => "gcloud-enterprise-project");
@@ -99,6 +112,18 @@ describe("Antigravity enterprise project resolution", () => {
 
 	it("keeps noninteractive no-project login on individual-tier discovery", async () => {
 		expect(await resolveAntigravityProjectId({}, NO_PROJECT_SOURCES)).toBeUndefined();
+	});
+
+	it("rejects a blank project when enterprise authentication is required", async () => {
+		await expect(
+			resolveAntigravityProjectId({ onPrompt: async () => "   " }, NO_PROJECT_SOURCES, { enterpriseRequired: true }),
+		).rejects.toThrow("Enterprise authentication requires an explicit Google Cloud project");
+	});
+
+	it("rejects noninteractive enterprise authentication instead of discovering an individual tier", async () => {
+		await expect(resolveAntigravityProjectId({}, NO_PROJECT_SOURCES, { enterpriseRequired: true })).rejects.toThrow(
+			"Enterprise authentication requires an explicit Google Cloud project",
+		);
 	});
 
 	it("does not expose external-source errors while falling through", async () => {
