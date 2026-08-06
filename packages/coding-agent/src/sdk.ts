@@ -28,6 +28,7 @@ import {
 } from "@f5-sales-demo/pi-utils";
 import { AsyncJobManager, isBackgroundJobSupportEnabled } from "./async";
 import { createAutoresearchExtension } from "./autoresearch";
+import { getBundledRules } from "./bundled-rules";
 import { loadCapability } from "./capability";
 import { type Rule, ruleCapability } from "./capability/rule";
 import { hasLiteLLMEnv } from "./config/auto-config";
@@ -1152,7 +1153,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		);
 		internalRouter.register(
 			new RuleProtocolHandler({
-				getRules: () => [...rulebookRules, ...alwaysApplyRules],
+				getRules: () => [...getBundledRules(), ...rulebookRules, ...alwaysApplyRules],
 			}),
 		);
 		internalRouter.register(
@@ -1565,11 +1566,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					} else {
 						void svc.getOrRefreshIndex();
 					}
-					if (cached && cached.products.length > 0) {
-						knowledgeTopics = cached.products
-							.map(p => p.name)
-							.sort()
-							.join(", ");
+					if (cached) {
+						knowledgeTopics = svc.getTopicSummary() || undefined;
 					}
 				}
 			} catch {
