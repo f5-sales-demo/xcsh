@@ -2707,7 +2707,7 @@ export class AgentSession {
 					.getAvailable()
 					.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
 				if (targetModel) {
-					await this.setModel(targetModel);
+					await this.setModel(targetModel, "default", { source: "routing" });
 				}
 			}
 		}
@@ -3630,7 +3630,7 @@ export class AgentSession {
 	async setModel(
 		model: Model,
 		role: string = "default",
-		options?: { selector?: string; thinkingLevel?: ThinkingLevel },
+		options?: { selector?: string; thinkingLevel?: ThinkingLevel; source?: "user" | "routing" },
 	): Promise<void> {
 		const previousEditMode = this.#resolveActiveEditMode();
 		const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
@@ -3640,7 +3640,9 @@ export class AgentSession {
 
 		this.#clearActiveRetryFallback();
 		this.#setModelWithProviderSessionReset(model);
-		this.#routingCoordinator.getStateMachine().setManualPin(`${model.provider}/${model.id}`);
+		if (options?.source !== "routing") {
+			this.#routingCoordinator.getStateMachine().setManualPin(`${model.provider}/${model.id}`);
+		}
 		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, role);
 		this.settings.setModelRole(
 			role,
