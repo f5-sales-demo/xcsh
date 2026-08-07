@@ -69,8 +69,8 @@ describe("normalizePluginDisplayName", () => {
 			expect(normalizePluginDisplayName("xcsh-meddpicc")).toBe("meddpicc");
 		});
 
-		it("handles xcsh-github-ops", () => {
-			expect(normalizePluginDisplayName("xcsh-github-ops")).toBe("github-ops");
+		it("handles xcsh-github", () => {
+			expect(normalizePluginDisplayName("xcsh-github")).toBe("github");
 		});
 	});
 });
