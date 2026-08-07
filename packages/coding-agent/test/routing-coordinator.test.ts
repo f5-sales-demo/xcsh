@@ -79,4 +79,20 @@ describe("Routing Coordinator (I01)", () => {
 		expect(decision.selectedModel).toBe("openai/o3-mini");
 		expect(decision.reasons).toContain("user_model_pin");
 	});
+
+	it("should defer state machine mutations until pool resolution is verified non-degraded", async () => {
+		const sm = new RoutingStateMachine({ currentTier: "frontier", downshiftStreak: 1 });
+		const coordinator = new RoutingCoordinator({ stateMachine: sm });
+
+		// Degraded availability (0 available models) causes tier resolution to fail
+		await coordinator.evaluateTurn({
+			anchorModel: "openai/gpt-4o",
+			mode: "auto",
+			prompt: "Simple task", // Drives desired utility -> triggering downshift calculation
+			availableModels: [],
+		});
+
+		// The active state machine should remain untouched
+		expect(sm.getState().downshiftStreak).toBe(1);
+	});
 });

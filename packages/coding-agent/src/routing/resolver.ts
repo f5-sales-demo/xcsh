@@ -1,3 +1,4 @@
+import { checkCandidateContextEligible } from "./context-filter";
 import type { RoutingPoolConfig, RoutingTier } from "./types";
 
 export interface ResolveTierResult {
@@ -5,6 +6,11 @@ export interface ResolveTierResult {
 	effectiveTier?: RoutingTier;
 	degraded: boolean;
 	availableTiersCount: number;
+}
+
+export interface ResolveTierOptions {
+	contextEstimate?: { usedTokens: number; contextWindow: number };
+	getModelContextWindow?: (modelId: string) => number;
 }
 
 const TIER_ORDER: RoutingTier[] = ["utility", "balanced", "frontier"];
@@ -18,18 +24,53 @@ export function resolveTierModel(
 	pool: RoutingPoolConfig | undefined,
 	desiredTier: RoutingTier,
 	availableModels: string[],
+	options?: ResolveTierOptions,
 ): ResolveTierResult {
 	if (!pool) {
 		return { degraded: false, availableTiersCount: 0 };
 	}
 
 	const isAvailable = (selector: string): boolean => {
-		if (availableModels.includes(selector)) return true;
 		if (pool.provider) {
 			const qualified = selector.includes("/") ? selector : `${pool.provider}/${selector}`;
-			return availableModels.includes(qualified);
+			const inAvailable = availableModels.includes(qualified) || availableModels.includes(selector);
+			if (!inAvailable) return false;
+
+			if (options?.contextEstimate && options?.getModelContextWindow) {
+				const candidateWin = options.getModelContextWindow(qualified) || options.getModelContextWindow(selector);
+				if (
+					candidateWin > 0 &&
+					!checkCandidateContextEligible({
+						estimatedInputTokens: options.contextEstimate.usedTokens,
+						candidateContextWindow: candidateWin,
+					})
+				) {
+					return false;
+				}
+			}
+			return true;
 		}
-		return availableModels.some(m => m === selector || (m.includes("/") && m.split("/")[1] === selector));
+
+		const inAvailable =
+			availableModels.includes(selector) ||
+			availableModels.some(m => m === selector || (m.includes("/") && m.split("/")[1] === selector));
+
+		if (!inAvailable) return false;
+
+		if (options?.contextEstimate && options?.getModelContextWindow) {
+			const candidateWin = options.getModelContextWindow(selector);
+			if (
+				candidateWin > 0 &&
+				!checkCandidateContextEligible({
+					estimatedInputTokens: options.contextEstimate.usedTokens,
+					candidateContextWindow: candidateWin,
+				})
+			) {
+				return false;
+			}
+		}
+
+		return true;
 	};
 
 	const utilityAvailable = isAvailable(pool.tiers.utility);

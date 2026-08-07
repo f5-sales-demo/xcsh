@@ -46,6 +46,15 @@ describe("Routing Presets (R03)", () => {
 		expect(matched?.id).toBe("my-openai");
 	});
 
+	it("should skip custom pools without tiers and not throw TypeError", () => {
+		const customPools = {
+			"untiered-pool": { id: "untiered-pool", provider: "openai" } as any,
+		};
+		const pool = resolveModelPool("openai/gpt-4o", customPools);
+		expect(pool).toBeDefined();
+		expect(pool?.id).toBe("openai/gpt-5.6");
+	});
+
 	it("should NOT infer tiers from arbitrary unknown model names", () => {
 		const unknownPool = resolveModelPool("my-custom-provider/unknown-model-xyz", {});
 		expect(unknownPool).toBeUndefined();

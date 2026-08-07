@@ -59,6 +59,7 @@ export function resolveModelPool(
 
 	// 2. Check custom pools first
 	for (const [_poolId, pool] of Object.entries(customPools)) {
+		if (!pool?.tiers) continue;
 		if (provider && pool.provider && pool.provider !== provider && pool.id !== anchorModel) {
 			continue;
 		}

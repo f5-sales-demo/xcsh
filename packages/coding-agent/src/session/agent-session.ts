@@ -43,6 +43,7 @@ import type {
 } from "@f5-sales-demo/pi-ai";
 import {
 	calculateRateLimitBackoffMs,
+	completeSimple,
 	getSupportedEfforts,
 	isContextOverflow,
 	isUsageLimitError,
@@ -630,6 +631,12 @@ export class AgentSession {
 			this.sessionManager.getSessionFile(),
 			this.#getConfiguredDefaultSelectedMCPToolNames(),
 		);
+		const lastRoutingEntry = (this.sessionManager.getBranch() as any[]).findLast(
+			e => e.type === "custom" && e.customType === "routing_state",
+		);
+		if (lastRoutingEntry?.data) {
+			this.#routingCoordinator.restoreState(lastRoutingEntry.data);
+		}
 		this.#ttsrManager = config.ttsrManager;
 		this.#obfuscator = config.obfuscator;
 		this.agent.setAssistantMessageEventInterceptor((message, assistantMessageEvent) => {
@@ -2688,8 +2695,41 @@ export class AgentSession {
 					),
 					contextWindow: this.model.contextWindow ?? 128000,
 				},
+				getModelContextWindow: (modelId: string) => {
+					const found = this.#modelRegistry
+						.getAvailable()
+						.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
+					return found?.contextWindow ?? 128000;
+				},
+				mockClassifierRunner: async (utilityModel: string, promptText: string) => {
+					try {
+						const resolved = this.#modelRegistry
+							.getAvailable()
+							.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
+						if (!resolved) return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
+						const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
+						if (!apiKey) return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
+						const res = await completeSimple(
+							resolved,
+							{
+								messages: [
+									{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() },
+								],
+							},
+							{ apiKey },
+						);
+						return res.content
+							.filter(c => c.type === "text")
+							.map(c => (c as TextContent).text)
+							.join("");
+					} catch {
+						return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
+					}
+				},
 				downshiftAfterTurns: (settings.get("routing.downshiftAfterTurns") as number) ?? 2,
 			});
+
+			this.sessionManager.appendCustomEntry("routing_state", this.#routingCoordinator.getState());
 
 			this.#emitSessionEvent({
 				type: decision.applied ? "routing_applied" : "routing_decision",

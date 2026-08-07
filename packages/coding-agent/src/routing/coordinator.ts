@@ -23,6 +23,7 @@ export interface EvaluateTurnOptions {
 	customPools?: Record<string, RoutingPoolConfig>;
 	profilerMode?: "rules" | "hybrid";
 	downshiftAfterTurns?: number;
+	getModelContextWindow?: (modelId: string) => number;
 	mockClassifierRunner?: (utilityModel: string, prompt: string) => Promise<string>;
 }
 
@@ -98,13 +99,16 @@ export class RoutingCoordinator {
 			mockClassifierRunner: options.mockClassifierRunner,
 		});
 
-		// 5. State machine hysteresis & floor (evaluate on clone in shadow mode to prevent active state mutation)
-		const isShadow = options.mode === "shadow";
-		const targetSm = isShadow ? new RoutingStateMachine(this.stateMachine.getState()) : this.stateMachine;
+		// 5. Speculative state machine evaluation (do NOT mutate operational state until resolution is verified)
+		const targetSm = new RoutingStateMachine(this.stateMachine.getState());
 		const { effectiveTier } = targetSm.evaluateNextTurn(taskProfile.desiredTier, options.downshiftAfterTurns ?? 2);
 
-		// 6. Resolve pool tier model
-		const resolved = resolveTierModel(pool, effectiveTier, options.availableModels);
+		// 6. Resolve pool tier model with context window eligibility
+		const resolved = resolveTierModel(pool, effectiveTier, options.availableModels, {
+			contextEstimate: options.contextEstimate,
+			getModelContextWindow: options.getModelContextWindow,
+		});
+
 		if (resolved.degraded || !resolved.selectedModel) {
 			return {
 				epochId,
@@ -117,6 +121,12 @@ export class RoutingCoordinator {
 				applied: false,
 				reasons: [...taskProfile.reasons, "pool_single_tier"],
 			};
+		}
+
+		const isShadow = options.mode === "shadow";
+		if (!isShadow) {
+			// Commit state machine transition only on successful non-degraded resolution
+			this.stateMachine.restoreState(targetSm.getState());
 		}
 
 		const applied = !isShadow;
