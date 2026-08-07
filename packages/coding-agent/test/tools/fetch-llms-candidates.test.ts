@@ -47,6 +47,21 @@ describe("buildLlmEndpointCandidates", () => {
 		expect(candidates).toEqual([`${origin}/mcn/llms.txt`, `${origin}/mcn/llms.md`]);
 	});
 
+	it("prioritizes French locale index before root index for localized portal pages", () => {
+		const candidates = buildLlmEndpointCandidates(`${origin}/docs/fr/waf/overview/`);
+		expect(candidates[0]).toBe(`${origin}/docs/fr/waf/overview/llms.txt`);
+		expect(candidates).toContain(`${origin}/docs/fr/llms.txt`);
+		expect(candidates.indexOf(`${origin}/docs/fr/llms.txt`)).toBeLessThan(
+			candidates.indexOf(`${origin}/docs/llms.txt`),
+		);
+	});
+
+	it("returns deduplicated unique candidates for redundant paths", () => {
+		const candidates = buildLlmEndpointCandidates(`${origin}/docs/llms.txt`);
+		const unique = new Set(candidates);
+		expect(candidates.length).toBe(unique.size);
+	});
+
 	it("returns nothing for an unparseable URL", () => {
 		expect(buildLlmEndpointCandidates("not a url")).toEqual([]);
 	});

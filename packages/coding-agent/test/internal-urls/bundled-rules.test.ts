@@ -15,6 +15,28 @@ describe("bundled system rules", () => {
 		expect(names).toContain("epistemic-integrity");
 	});
 
+	it("contains an embedded rule definition for every rule:// referenced in prompt templates", async () => {
+		const promptsDir = path.resolve(__dirname, "../../src/prompts");
+		const systemPromptPath = path.join(promptsDir, "system/system-prompt.md");
+		const customPromptPath = path.join(promptsDir, "system/custom-system-prompt.md");
+
+		const systemPrompt = fs.readFileSync(systemPromptPath, "utf-8");
+		const customPrompt = fs.readFileSync(customPromptPath, "utf-8");
+
+		const ruleMatches = [
+			...systemPrompt.matchAll(/rule:\/\/([a-zA-Z0-9_-]+)/g),
+			...customPrompt.matchAll(/rule:\/\/([a-zA-Z0-9_-]+)/g),
+		];
+
+		const referencedRules = new Set(ruleMatches.map(m => m[1] as string));
+		const bundledNames = new Set(getBundledRules().map(r => r.name));
+
+		expect(referencedRules.size).toBeGreaterThan(0);
+		for (const ruleName of referencedRules) {
+			expect(bundledNames.has(ruleName)).toBe(true);
+		}
+	});
+
 	it("resolves llms-search without project or user rule discovery", async () => {
 		const router = new InternalUrlRouter();
 		router.register(new RuleProtocolHandler({ getRules: getBundledRules }));

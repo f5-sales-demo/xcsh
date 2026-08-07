@@ -167,6 +167,41 @@ describe("KnowledgeService", () => {
 		expect(service.getIndex()).toBeNull();
 	});
 
+	it("handles corrupt, future-versioned, or malformed cache files gracefully", () => {
+		const service = KnowledgeService.init(testDir);
+
+		// Future schema version
+		fs.writeFileSync(
+			service.cachePath,
+			JSON.stringify({
+				schemaVersion: 99,
+				title: "Future",
+				topics: [{ name: "t", url: "https://example.com/llms.txt" }],
+				fetchedAt: NOW.toISOString(),
+			}),
+		);
+		service.loadCache();
+		expect(service.getIndex()).toBeNull();
+
+		// Malformed JSON
+		fs.writeFileSync(service.cachePath, "{ malformed json: ");
+		service.loadCache();
+		expect(service.getIndex()).toBeNull();
+
+		// Non-array topics field
+		fs.writeFileSync(
+			service.cachePath,
+			JSON.stringify({
+				schemaVersion: 2,
+				title: "Index",
+				topics: "not-an-array",
+				fetchedAt: NOW.toISOString(),
+			}),
+		);
+		service.loadCache();
+		expect(service.getIndex()).toBeNull();
+	});
+
 	it("refreshes and exposes sorted topic names", async () => {
 		using _hook = hookFetch(() => new Response(CATEGORIZED_LLMS_TXT, { status: 200 }));
 		const service = KnowledgeService.init(testDir);
