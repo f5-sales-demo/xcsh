@@ -1211,6 +1211,10 @@ export class AgentSession {
 		this.#resolvePostPromptTasks();
 	}
 
+	public get routingCoordinator(): RoutingCoordinator {
+		return this.#routingCoordinator;
+	}
+
 	/**
 	 * Get current dynamic routing status.
 	 */
@@ -2648,6 +2652,41 @@ export class AgentSession {
 			this.#toolChoiceQueue.pushOnce(eagerTodoPrelude.toolChoice, {
 				label: "eager-todo",
 			});
+		}
+
+		// Evaluate dynamic model routing if enabled
+		const routingMode = (settings.get("routing.mode") as RoutingMode) ?? "off";
+		if (routingMode !== "off" && this.model) {
+			const anchorModel = `${this.model.provider}/${this.model.id}`;
+			const availableModels = this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
+			const decision = await this.#routingCoordinator.evaluateTurn({
+				anchorModel,
+				mode: routingMode,
+				prompt: expandedText,
+				hasImages: options?.images && options.images.length > 0,
+				availableModels,
+				downshiftAfterTurns: (settings.get("routing.downshiftAfterTurns") as number) ?? 2,
+			});
+
+			this.#emitSessionEvent({
+				type: decision.applied ? "routing_applied" : "routing_decision",
+				epochId: decision.epochId,
+				mode: decision.mode,
+				provider: this.model.provider,
+				poolId: decision.poolId,
+				effectiveTier: decision.effectiveTier,
+				selectedModel: decision.selectedModel,
+				reasons: decision.reasons,
+			} as any).catch(() => {});
+
+			if (decision.applied && decision.selectedModel && decision.selectedModel !== anchorModel) {
+				const targetModel = this.#modelRegistry
+					.getAvailable()
+					.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
+				if (targetModel) {
+					await this.setModel(targetModel);
+				}
+			}
 		}
 
 		try {

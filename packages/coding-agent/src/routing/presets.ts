@@ -48,25 +48,35 @@ export function resolveModelPool(
 	anchorModel: string,
 	customPools: Record<string, RoutingPoolConfig> = {},
 ): RoutingPoolConfig | undefined {
-	// 1. Check custom pools first
-	for (const [_poolId, pool] of Object.entries(customPools)) {
-		if (
-			pool.id === anchorModel ||
-			pool.tiers.utility === anchorModel ||
-			pool.tiers.balanced === anchorModel ||
-			pool.tiers.frontier === anchorModel
-		) {
-			return pool;
-		}
-	}
-
-	// 2. Extract provider and model name
+	// 1. Extract provider and model name
 	let provider = "";
 	let modelName = anchorModel;
 	if (anchorModel.includes("/")) {
 		const parts = anchorModel.split("/");
 		provider = parts[0];
 		modelName = parts.slice(1).join("/");
+	}
+
+	// 2. Check custom pools first
+	for (const [_poolId, pool] of Object.entries(customPools)) {
+		if (provider && pool.provider && pool.provider !== provider && pool.id !== anchorModel) {
+			continue;
+		}
+
+		if (
+			pool.id === anchorModel ||
+			pool.tiers.utility === anchorModel ||
+			pool.tiers.balanced === anchorModel ||
+			pool.tiers.frontier === anchorModel ||
+			pool.tiers.utility === modelName ||
+			pool.tiers.balanced === modelName ||
+			pool.tiers.frontier === modelName ||
+			`${pool.provider ?? provider}/${pool.tiers.utility}` === anchorModel ||
+			`${pool.provider ?? provider}/${pool.tiers.balanced}` === anchorModel ||
+			`${pool.provider ?? provider}/${pool.tiers.frontier}` === anchorModel
+		) {
+			return pool;
+		}
 	}
 
 	// 3. Match against built-in presets (enforcing provider prefix match if present)

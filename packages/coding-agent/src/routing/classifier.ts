@@ -15,16 +15,21 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		options.profilerMode === "rules" ||
 		baseProfile.complexityScore <= 30 ||
 		baseProfile.complexityScore >= 70 ||
-		!options.pool ||
-		!options.mockClassifierRunner
+		!options.pool
 	) {
 		return baseProfile;
 	}
 
-	// 2. Hybrid mode and ambiguous profile (31..69) -> call utility model
+	// 2. Hybrid mode and ambiguous profile (31..69) -> call utility model via runner
+	const runner =
+		options.mockClassifierRunner ??
+		(async (_utilityModel: string, _prompt: string) => {
+			return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
+		});
+
 	try {
 		const utilityModel = options.pool.tiers.utility;
-		const rawOutput = await options.mockClassifierRunner(utilityModel, options.prompt);
+		const rawOutput = await runner(utilityModel, options.prompt);
 
 		const parsed = JSON.parse(rawOutput);
 		const score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;

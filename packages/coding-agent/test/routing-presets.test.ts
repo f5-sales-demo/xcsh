@@ -29,6 +29,23 @@ describe("Routing Presets (R03)", () => {
 		expect(litellmClaudePool?.provider).toBe("litellm");
 	});
 
+	it("should match custom pools when anchor model has provider prefix", () => {
+		const customPools = {
+			"my-openai": {
+				id: "my-openai",
+				provider: "openai",
+				tiers: {
+					utility: "gpt-4o-mini",
+					balanced: "gpt-4o",
+					frontier: "o3-mini",
+				},
+			},
+		};
+		const matched = resolveModelPool("openai/gpt-4o", customPools);
+		expect(matched).toBeDefined();
+		expect(matched?.id).toBe("my-openai");
+	});
+
 	it("should NOT infer tiers from arbitrary unknown model names", () => {
 		const unknownPool = resolveModelPool("my-custom-provider/unknown-model-xyz", {});
 		expect(unknownPool).toBeUndefined();
