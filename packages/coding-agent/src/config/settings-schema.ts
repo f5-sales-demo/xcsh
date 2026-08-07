@@ -1,4 +1,5 @@
 import { THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
+import type { RoutingSettings } from "../routing/types";
 
 /** Unified settings schema - single source of truth for all settings.
  * Unified settings schema - single source of truth for all settings.
@@ -528,6 +529,96 @@ export const SETTINGS_SCHEMA = {
 			label: "Repeat Tool Descriptions",
 			description: "Render full tool descriptions in the system prompt instead of a tool name list",
 		},
+	},
+
+	// Dynamic routing
+	"routing.mode": {
+		type: "enum",
+		values: ["off", "shadow", "auto"] as const,
+		default: "off",
+		ui: {
+			tab: "model",
+			label: "Routing Mode",
+			description: "Dynamic model routing mode (off, shadow, auto)",
+			submenu: true,
+		},
+	},
+
+	"routing.profiler": {
+		type: "enum",
+		values: ["rules", "hybrid"] as const,
+		default: "hybrid",
+		ui: {
+			tab: "model",
+			label: "Routing Profiler",
+			description: "Task complexity profiling method (rules or hybrid)",
+			submenu: true,
+		},
+	},
+
+	"routing.familyPolicy": {
+		type: "enum",
+		values: ["sticky", "configured-mixed"] as const,
+		default: "sticky",
+		ui: {
+			tab: "model",
+			label: "Family Policy",
+			description: "Provider family policy (sticky or configured-mixed)",
+			submenu: true,
+		},
+	},
+
+	"routing.delegation": {
+		type: "enum",
+		values: ["off", "read-only"] as const,
+		default: "read-only",
+		ui: {
+			tab: "model",
+			label: "Autonomous Delegation",
+			description: "Autonomous delegation mode for subtasks",
+			submenu: true,
+		},
+	},
+
+	"routing.delegationMaxTasks": {
+		type: "number",
+		default: 3,
+		ui: {
+			tab: "model",
+			label: "Delegation Max Subtasks",
+			description: "Maximum subtasks for autonomous delegation (1-3)",
+			submenu: true,
+		},
+	},
+
+	"routing.downshiftAfterTurns": {
+		type: "number",
+		default: 2,
+		ui: {
+			tab: "model",
+			label: "Downshift Hysteresis Turns",
+			description: "Consecutive turns required before downshifting model tier",
+			submenu: true,
+		},
+	},
+
+	"routing.tierEffort": {
+		type: "record",
+		default: {
+			utility: "low",
+			balanced: "medium",
+			frontier: "high",
+		},
+	},
+
+	"routing.pools": {
+		type: "record",
+		default: {},
+	},
+
+	"routing.disabledPresets": {
+		type: "array",
+		default: [],
 	},
 
 	// Sampling
@@ -2203,6 +2294,7 @@ export interface GroupTypeMap {
 	modelRoles: Record<string, string>;
 	modelTags: ModelTagsSettings;
 	cycleOrder: string[];
+	routing: RoutingSettings;
 }
 
 export type GroupPrefix = keyof GroupTypeMap;

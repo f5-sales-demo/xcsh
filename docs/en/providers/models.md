@@ -16,7 +16,8 @@ Primary implementation files:
 
 - `src/config/model-registry.ts` — loads built-in + custom models, provider overrides, runtime discovery, auth integration
 - `src/config/model-resolver.ts` — parses model patterns and selects initial/smol/slow models
-- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, provider transport preferences)
+- `src/routing/` — provider-agnostic dynamic model routing coordinator, profiler, presets, and state machine
+- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, `routing.*`, provider transport preferences)
 - `src/session/auth-storage.ts` — API key + OAuth resolution order
 - `packages/ai/src/models.ts` and `packages/ai/src/types.ts` — built-in providers/models and `Model`/`compat` types
 
