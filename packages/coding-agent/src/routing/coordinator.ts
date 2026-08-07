@@ -22,6 +22,7 @@ export interface EvaluateTurnOptions {
 	availableModels: string[];
 	customPools?: Record<string, RoutingPoolConfig>;
 	profilerMode?: "rules" | "hybrid";
+	downshiftAfterTurns?: number;
 	mockClassifierRunner?: (utilityModel: string, prompt: string) => Promise<string>;
 }
 
@@ -89,8 +90,10 @@ export class RoutingCoordinator {
 			mockClassifierRunner: options.mockClassifierRunner,
 		});
 
-		// 5. State machine hysteresis & floor
-		const { effectiveTier } = this.stateMachine.evaluateNextTurn(taskProfile.desiredTier, 2);
+		// 5. State machine hysteresis & floor (evaluate on clone in shadow mode to prevent active state mutation)
+		const isShadow = options.mode === "shadow";
+		const targetSm = isShadow ? new RoutingStateMachine(this.stateMachine.getState()) : this.stateMachine;
+		const { effectiveTier } = targetSm.evaluateNextTurn(taskProfile.desiredTier, options.downshiftAfterTurns ?? 2);
 
 		// 6. Resolve pool tier model
 		const resolved = resolveTierModel(pool, effectiveTier, options.availableModels);
@@ -108,7 +111,6 @@ export class RoutingCoordinator {
 			};
 		}
 
-		const isShadow = options.mode === "shadow";
 		const applied = !isShadow;
 		const reasons: RoutingReasonCode[] = [...taskProfile.reasons];
 		if (isShadow) {

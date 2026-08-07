@@ -49,6 +49,13 @@ export function resolveTierModel(
 		return { degraded: true, availableTiersCount: availableCount };
 	}
 
+	const formatModel = (selector: string): string => {
+		if (pool.provider && !selector.includes("/")) {
+			return `${pool.provider}/${selector}`;
+		}
+		return selector;
+	};
+
 	const desiredIndex = TIER_ORDER.indexOf(desiredTier);
 
 	// Search desired tier, then higher tiers
@@ -56,7 +63,7 @@ export function resolveTierModel(
 		const tier = TIER_ORDER[i];
 		if (availableTiers[tier]) {
 			return {
-				selectedModel: pool.tiers[tier],
+				selectedModel: formatModel(pool.tiers[tier]),
 				effectiveTier: tier,
 				degraded: false,
 				availableTiersCount: availableCount,
@@ -64,12 +71,12 @@ export function resolveTierModel(
 		}
 	}
 
-	// Fallback to highest available tier if no higher tier found (should not happen if count >= 2)
+	// Fallback to highest available tier if no higher tier found
 	for (let i = TIER_ORDER.length - 1; i >= 0; i--) {
 		const tier = TIER_ORDER[i];
 		if (availableTiers[tier]) {
 			return {
-				selectedModel: pool.tiers[tier],
+				selectedModel: formatModel(pool.tiers[tier]),
 				effectiveTier: tier,
 				degraded: false,
 				availableTiersCount: availableCount,

@@ -16,7 +16,7 @@ describe("Routing Pool Resolver (R05)", () => {
 	it("should select exact model when desired tier is available", () => {
 		const available = ["gpt-4o-mini", "gpt-4o", "o3-mini"];
 		const result = resolveTierModel(samplePool, "utility", available);
-		expect(result.selectedModel).toBe("gpt-4o-mini");
+		expect(result.selectedModel).toBe("openai/gpt-4o-mini");
 		expect(result.effectiveTier).toBe("utility");
 		expect(result.degraded).toBe(false);
 	});
@@ -24,7 +24,7 @@ describe("Routing Pool Resolver (R05)", () => {
 	it("should promote to next higher tier if desired tier model is missing/unavailable", () => {
 		const available = ["gpt-4o", "o3-mini"]; // utility missing!
 		const result = resolveTierModel(samplePool, "utility", available);
-		expect(result.selectedModel).toBe("gpt-4o");
+		expect(result.selectedModel).toBe("openai/gpt-4o");
 		expect(result.effectiveTier).toBe("balanced");
 	});
 

@@ -22,6 +22,13 @@ describe("Routing Presets (R03)", () => {
 		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-5.6-sol");
 	});
 
+	it("should NOT cross provider families when anchor model has explicit provider prefix", () => {
+		const litellmClaudePool = resolveModelPool("litellm/claude-3-5-sonnet-latest", {});
+		expect(litellmClaudePool).toBeDefined();
+		expect(litellmClaudePool?.id).toBe("litellm/anthropic");
+		expect(litellmClaudePool?.provider).toBe("litellm");
+	});
+
 	it("should NOT infer tiers from arbitrary unknown model names", () => {
 		const unknownPool = resolveModelPool("my-custom-provider/unknown-model-xyz", {});
 		expect(unknownPool).toBeUndefined();

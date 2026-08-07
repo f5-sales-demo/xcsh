@@ -61,16 +61,20 @@ export function resolveModelPool(
 	}
 
 	// 2. Extract provider and model name
-	let _provider = "";
+	let provider = "";
 	let modelName = anchorModel;
 	if (anchorModel.includes("/")) {
 		const parts = anchorModel.split("/");
-		_provider = parts[0];
+		provider = parts[0];
 		modelName = parts.slice(1).join("/");
 	}
 
-	// 3. Match against built-in presets
+	// 3. Match against built-in presets (enforcing provider prefix match if present)
 	for (const [presetId, pool] of Object.entries(BUILTIN_ROUTING_PRESETS)) {
+		if (provider && pool.provider && pool.provider !== provider && presetId !== anchorModel) {
+			continue; // Provider mismatch!
+		}
+
 		if (
 			presetId === anchorModel ||
 			pool.tiers.utility === modelName ||

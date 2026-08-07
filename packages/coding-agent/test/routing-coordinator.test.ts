@@ -22,35 +22,26 @@ describe("Routing Coordinator (I01)", () => {
 		expect(decision.reasons).toContain("mode_off");
 	});
 
-	it("should calculate decision but NOT apply switch when routing mode is 'shadow'", async () => {
+	it("should calculate decision but NOT apply switch or mutate state machine in 'shadow' mode", async () => {
 		const sm = new RoutingStateMachine({ currentTier: "balanced" });
 		const coordinator = new RoutingCoordinator({ stateMachine: sm });
 
-		// Turn 1: desired = utility -> streak = 1, effective = balanced
-		const decision1 = await coordinator.evaluateTurn({
+		const decision = await coordinator.evaluateTurn({
 			anchorModel: "openai/gpt-4o",
 			mode: "shadow",
 			prompt: "Summarize README.md", // simple read -> utility
 			availableModels: available,
 		});
 
-		expect(decision1.mode).toBe("shadow");
-		expect(decision1.applied).toBe(false);
-		expect(decision1.desiredTier).toBe("utility");
-		expect(decision1.effectiveTier).toBe("balanced");
+		expect(decision.mode).toBe("shadow");
+		expect(decision.applied).toBe(false);
+		expect(decision.desiredTier).toBe("utility");
+		expect(decision.effectiveTier).toBe("balanced");
+		expect(decision.reasons).toContain("mode_shadow");
 
-		// Turn 2: desired = utility -> streak = 2 -> downshifts to utility
-		const decision2 = await coordinator.evaluateTurn({
-			anchorModel: "openai/gpt-4o",
-			mode: "shadow",
-			prompt: "Summarize README.md",
-			availableModels: available,
-		});
-
-		expect(decision2.desiredTier).toBe("utility");
-		expect(decision2.effectiveTier).toBe("utility");
-		expect(decision2.selectedModel).toBe("gpt-4o-mini");
-		expect(decision2.reasons).toContain("mode_shadow");
+		// State machine operational state remains unmutated!
+		expect(sm.getState().currentTier).toBe("balanced");
+		expect(sm.getState().downshiftStreak).toBe(0);
 	});
 
 	it("should apply temporary model switch when routing mode is 'auto'", async () => {
@@ -68,7 +59,7 @@ describe("Routing Coordinator (I01)", () => {
 		expect(decision.applied).toBe(true);
 		expect(decision.desiredTier).toBe("utility");
 		expect(decision.effectiveTier).toBe("utility");
-		expect(decision.selectedModel).toBe("gpt-4o-mini");
+		expect(decision.selectedModel).toBe("openai/gpt-4o-mini");
 	});
 
 	it("should respect manual pin until cleared", async () => {

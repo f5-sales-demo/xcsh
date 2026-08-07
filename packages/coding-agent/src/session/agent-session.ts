@@ -71,7 +71,7 @@ import {
 	resolveModelRoleValue,
 } from "../config/model-resolver";
 import { expandPromptTemplate, type PromptTemplate } from "../config/prompt-templates";
-import type { Settings, SkillsSettings } from "../config/settings";
+import { type Settings, type SkillsSettings, settings } from "../config/settings";
 import { normalizeDiff, normalizeToLF, ParseError, previewPatch, stripBom } from "../edit";
 import { type BashResult, executeBash as executeBashCommand } from "../exec/bash-executor";
 import { exportSessionToHtml } from "../export/html";
@@ -127,6 +127,7 @@ import planModeToolDecisionReminderPrompt from "../prompts/system/plan-mode-tool
 	type: "text",
 };
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
+import { RoutingCoordinator, type RoutingMode, type RoutingOutcome, type RoutingTier } from "../routing";
 import { deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
 import { resolveThinkingLevelForModel, toReasoningEffort } from "../thinking";
 import { assertEditableFile } from "../tools/auto-generated-guard";
@@ -549,6 +550,7 @@ export class AgentSession {
 	#pendingRewindReport: string | undefined = undefined;
 	#promptGeneration = 0;
 	#providerSessionState = new Map<string, ProviderSessionState>();
+	#routingCoordinator = new RoutingCoordinator();
 
 	#startPowerAssertion(): void {
 		if (process.platform !== "darwin") {
@@ -1207,6 +1209,52 @@ export class AgentSession {
 		this.#postPromptTasksAbortController = new AbortController();
 		this.#postPromptTaskIds.clear();
 		this.#resolvePostPromptTasks();
+	}
+
+	/**
+	 * Get current dynamic routing status.
+	 */
+	public getRoutingStatus(): {
+		mode: RoutingMode;
+		currentTier?: RoutingTier;
+		downshiftStreak: number;
+		manualPin?: string;
+		escalationFloor?: RoutingTier;
+	} {
+		const mode = (settings.get("routing.mode") as RoutingMode) ?? "off";
+		const state = this.#routingCoordinator.getStateMachine().getState();
+		return {
+			mode,
+			currentTier: state.currentTier,
+			downshiftStreak: state.downshiftStreak,
+			manualPin: state.manualPin,
+			escalationFloor: state.escalationFloor,
+		};
+	}
+
+	/**
+	 * Set dynamic routing mode (off, shadow, auto).
+	 */
+	public setRoutingMode(mode: RoutingMode): void {
+		settings.set("routing.mode", mode);
+	}
+
+	/**
+	 * Clear manual model pin.
+	 */
+	public clearRoutingPin(): void {
+		this.#routingCoordinator.getStateMachine().clearManualPin();
+	}
+
+	/**
+	 * Record validated turn outcome (accepted or rejected) for escalation tracking.
+	 */
+	public recordRoutingOutcome(outcome: RoutingOutcome): void {
+		if (outcome.status === "rejected") {
+			this.#routingCoordinator.getStateMachine().setEscalationFloor("frontier");
+		} else {
+			this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+		}
 	}
 	/**
 	 * Wait for retry, TTSR resume, and any background continuation to settle.
