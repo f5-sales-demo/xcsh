@@ -38,3 +38,25 @@ export function validateDelegationPlan(plan: ReadOnlyDelegationPlan, maxTasks = 
 
 	return { valid: true };
 }
+
+export async function executeReadOnlyDelegationPlan(
+	plan: ReadOnlyDelegationPlan,
+	executor: (subtaskPrompt: string) => Promise<string>,
+	maxTasks = 3,
+): Promise<Array<{ id: string; result: string }>> {
+	const validation = validateDelegationPlan(plan, maxTasks);
+	if (!validation.valid) {
+		return [];
+	}
+
+	const results: Array<{ id: string; result: string }> = [];
+	for (const task of plan.subtasks.slice(0, maxTasks)) {
+		try {
+			const res = await executor(task.title);
+			results.push({ id: task.id, result: res });
+		} catch (err) {
+			results.push({ id: task.id, result: `Failed: ${String(err)}` });
+		}
+	}
+	return results;
+}

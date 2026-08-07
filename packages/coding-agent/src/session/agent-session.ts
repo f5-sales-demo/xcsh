@@ -3640,6 +3640,7 @@ export class AgentSession {
 
 		this.#clearActiveRetryFallback();
 		this.#setModelWithProviderSessionReset(model);
+		this.#routingCoordinator.getStateMachine().setManualPin(`${model.provider}/${model.id}`);
 		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, role);
 		this.settings.setModelRole(
 			role,
