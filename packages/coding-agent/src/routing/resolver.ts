@@ -26,11 +26,10 @@ export function resolveTierModel(
 	const isAvailable = (selector: string): boolean => {
 		if (availableModels.includes(selector)) return true;
 		if (pool.provider) {
-			const qualified = `${pool.provider}/${selector}`;
-			if (availableModels.includes(qualified)) return true;
+			const qualified = selector.includes("/") ? selector : `${pool.provider}/${selector}`;
+			return availableModels.includes(qualified);
 		}
-		// Also check if selector is prefixed
-		return availableModels.some(m => m === selector || m.endsWith(`/${selector}`));
+		return availableModels.some(m => m === selector || (m.includes("/") && m.split("/")[1] === selector));
 	};
 
 	const utilityAvailable = isAvailable(pool.tiers.utility);

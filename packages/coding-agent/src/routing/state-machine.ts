@@ -29,6 +29,13 @@ export class RoutingStateMachine {
 		return { ...this.state };
 	}
 
+	public restoreState(state: Partial<RoutingState>): void {
+		if (state.currentTier) this.state.currentTier = state.currentTier;
+		if (typeof state.downshiftStreak === "number") this.state.downshiftStreak = state.downshiftStreak;
+		this.state.escalationFloor = state.escalationFloor;
+		this.state.manualPin = state.manualPin;
+	}
+
 	public setManualPin(model: string | undefined): void {
 		this.state.manualPin = model;
 	}

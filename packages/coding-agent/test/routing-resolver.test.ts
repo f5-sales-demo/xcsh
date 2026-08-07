@@ -35,6 +35,22 @@ describe("Routing Pool Resolver (R05)", () => {
 		expect(result.selectedModel).toBeUndefined();
 	});
 
+	it("should NOT match models from other providers when pool has explicit provider", () => {
+		const pool: RoutingPoolConfig = {
+			id: "openai/gpt-5.6",
+			provider: "openai",
+			tiers: {
+				utility: "gpt-4o-mini",
+				balanced: "gpt-4o",
+				frontier: "o3-mini",
+			},
+		};
+		// openai/gpt-4o is missing, but litellm/gpt-4o is available
+		const available = ["litellm/gpt-4o-mini", "litellm/gpt-4o", "litellm/o3-mini"];
+		const result = resolveTierModel(pool, "balanced", available);
+		expect(result.degraded).toBe(true);
+	});
+
 	it("should pass through when pool is null or undefined", () => {
 		const result = resolveTierModel(undefined, "frontier", ["some-model"]);
 		expect(result.selectedModel).toBeUndefined();

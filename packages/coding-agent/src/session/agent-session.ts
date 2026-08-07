@@ -127,7 +127,13 @@ import planModeToolDecisionReminderPrompt from "../prompts/system/plan-mode-tool
 	type: "text",
 };
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
-import { RoutingCoordinator, type RoutingMode, type RoutingOutcome, type RoutingTier } from "../routing";
+import {
+	RoutingCoordinator,
+	type RoutingMode,
+	type RoutingOutcome,
+	type RoutingState,
+	type RoutingTier,
+} from "../routing";
 import { deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
 import { resolveThinkingLevelForModel, toReasoningEffort } from "../thinking";
 import { assertEditableFile } from "../tools/auto-generated-guard";
@@ -1250,9 +1256,13 @@ export class AgentSession {
 		this.#routingCoordinator.getStateMachine().clearManualPin();
 	}
 
-	/**
-	 * Record validated turn outcome (accepted or rejected) for escalation tracking.
-	 */
+	public getRoutingState(): RoutingState {
+		return this.#routingCoordinator.getState();
+	}
+
+	public restoreRoutingState(state: Partial<RoutingState>): void {
+		this.#routingCoordinator.restoreState(state);
+	}
 	public recordRoutingOutcome(outcome: RoutingOutcome): void {
 		if (outcome.status === "rejected") {
 			this.#routingCoordinator.getStateMachine().setEscalationFloor("frontier");
@@ -2665,6 +2675,19 @@ export class AgentSession {
 				prompt: expandedText,
 				hasImages: options?.images && options.images.length > 0,
 				availableModels,
+				customPools: (settings.get("routing.pools") as any) ?? {},
+				profilerMode: (settings.get("routing.profiler") as any) ?? "hybrid",
+				contextEstimate: {
+					usedTokens: Math.round(
+						this.messages.reduce((acc, m) => {
+							if ("content" in m && typeof m.content === "string") {
+								return acc + m.content.length;
+							}
+							return acc;
+						}, 0) / 4,
+					),
+					contextWindow: this.model.contextWindow ?? 128000,
+				},
 				downshiftAfterTurns: (settings.get("routing.downshiftAfterTurns") as number) ?? 2,
 			});
 

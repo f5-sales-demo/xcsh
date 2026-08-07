@@ -36,10 +36,7 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
 
 		if (confidence < 0.75) {
-			return {
-				...baseProfile,
-				reasons: [...baseProfile.reasons, "classifier_ambiguous_resolved"],
-			};
+			return baseProfile;
 		}
 
 		let desiredTier: RoutingTier = "balanced";

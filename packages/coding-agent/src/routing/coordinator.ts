@@ -1,7 +1,7 @@
 import { classifyTaskHybrid } from "./classifier";
 import { resolveModelPool } from "./presets";
 import { resolveTierModel } from "./resolver";
-import { RoutingStateMachine } from "./state-machine";
+import { type RoutingState, RoutingStateMachine } from "./state-machine";
 import type { RoutingDecision, RoutingMode, RoutingPoolConfig, RoutingReasonCode } from "./types";
 
 export interface CoordinatorOptions {
@@ -35,6 +35,14 @@ export class RoutingCoordinator {
 
 	public getStateMachine(): RoutingStateMachine {
 		return this.stateMachine;
+	}
+
+	public getState(): RoutingState {
+		return this.stateMachine.getState();
+	}
+
+	public restoreState(state: Partial<RoutingState>): void {
+		this.stateMachine.restoreState(state);
 	}
 
 	public async evaluateTurn(options: EvaluateTurnOptions): Promise<RoutingDecision> {
