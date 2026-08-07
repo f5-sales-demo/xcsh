@@ -257,6 +257,28 @@ describe("system Handlebars prompt templates", () => {
 		expect(ruleText).toContain("Web search re-entry");
 	});
 
+	test("system-prompt and custom-system-prompt conditionally render knowledgeTopics when present", async () => {
+		const sampleTopics = "Developer Tools: xcsh, xcsh GitHub Action; Product Features: WAF";
+
+		for (const fileName of ["system-prompt.md", "custom-system-prompt.md"]) {
+			const templatePath = path.join(systemPromptsDir, fileName);
+			const template = await Bun.file(templatePath).text();
+
+			const renderedWith = prompt.render(template, {
+				...baseRenderContext,
+				knowledgeTopics: sampleTopics,
+			});
+			expect(renderedWith).toContain("Available federated F5 XC documentation topics by category:");
+			expect(renderedWith).toContain(sampleTopics);
+
+			const renderedWithout = prompt.render(template, {
+				...baseRenderContext,
+				knowledgeTopics: undefined,
+			});
+			expect(renderedWithout).not.toContain("Available federated F5 XC documentation topics by category:");
+		}
+	});
+
 	test("system-prompt carries epistemic-integrity clause against sycophantic reversal", async () => {
 		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
 		const template = await Bun.file(templatePath).text();
