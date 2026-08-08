@@ -154,6 +154,7 @@ export class RoutingCoordinator {
 			applied,
 			reasons,
 			delegation: taskProfile.delegation,
+			routingUsage: taskProfile.routingUsage,
 		};
 	}
 }

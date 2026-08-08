@@ -34,9 +34,11 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		const parsed = JSON.parse(rawOutput);
 		const score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;
 		const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
+		const delegation = Array.isArray(parsed.delegation) ? parsed.delegation : undefined;
+		const routingUsage = typeof parsed.routingUsage === "number" ? parsed.routingUsage : undefined;
 
 		if (confidence < 0.75) {
-			return baseProfile;
+			return { ...baseProfile, routingUsage };
 		}
 
 		let desiredTier: RoutingTier = "balanced";
@@ -51,15 +53,17 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 			complexityScore: score,
 			desiredTier,
 			confidence,
+			delegation,
+			routingUsage,
 			reasons: [...baseProfile.reasons, "classifier_ambiguous_resolved"],
 		};
 	} catch (err: unknown) {
-		if (err instanceof Error && err.name === "AbortError") {
-			throw err;
+		if (err instanceof SyntaxError) {
+			return {
+				...baseProfile,
+				reasons: [...baseProfile.reasons, "classifier_fallback_malformed"],
+			};
 		}
-		return {
-			...baseProfile,
-			reasons: [...baseProfile.reasons, "classifier_fallback_malformed"],
-		};
+		throw err;
 	}
 }

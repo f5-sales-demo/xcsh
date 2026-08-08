@@ -856,6 +856,16 @@ export class AgentSession {
 						this.#ttsrAbortPending = true;
 						this.#ensureTtsrResumePromise();
 						this.agent.abort();
+						// Record routing outcome for the test failure
+						this.recordRoutingOutcome({
+							status: "rejected",
+							evidence: [
+								{
+									kind: "test_failure",
+									summary: `TTSR matched rule(s): ${matches.map(m => m.name).join(", ")}`,
+								},
+							],
+						});
 						// Notify extensions (fire-and-forget, does not block abort)
 						this.#emitSessionEvent({ type: "ttsr_triggered", rules: matches }).catch(() => {});
 						// Schedule retry after a short delay
@@ -2721,8 +2731,12 @@ export class AgentSession {
 
 					const jsonMatch = rawText.match(/\{[\s\S]*\}/);
 					if (jsonMatch) {
-						JSON.parse(jsonMatch[0]); // Check validity
-						return jsonMatch[0];
+						const parsed = JSON.parse(jsonMatch[0]); // Check validity
+						if (res.usage) {
+							this.settings.getStorage()?.recordModelUsage(`${resolved.provider}/${resolved.id}`);
+							parsed.routingUsage = (res.usage as any).totalTokens ?? (res.usage as any).total ?? 0;
+						}
+						return JSON.stringify(parsed);
 					}
 					throw new Error("Classifier returned malformed JSON");
 				},
@@ -2746,6 +2760,7 @@ export class AgentSession {
 					r => r === "context_capacity_promotion" || r === "escalation_floor_active",
 				),
 				contextTokens: contextEstimate.usedTokens,
+				routingUsage: decision.routingUsage,
 				durationMs,
 			} as any).catch(() => {});
 
@@ -5636,6 +5651,12 @@ export class AgentSession {
 		} else {
 			this.#activeRetryFallback.lastAppliedFallbackThinkingLevel = nextThinkingLevel;
 		}
+
+		this.recordRoutingOutcome({
+			status: "rejected",
+			evidence: [{ kind: "test_failure", summary: `Fallback applied from ${currentSelector} to ${selector.raw}` }],
+		});
+
 		await this.#emitSessionEvent({
 			type: "retry_fallback_applied",
 			from: currentSelector,
@@ -6984,9 +7005,7 @@ export function calculateUsedTokens(messages: any[]): number {
 			return content.reduce((sum: number, block: any) => sum + countTextLength(block), 0);
 		}
 		if (content && typeof content === "object") {
-			if (content.type === "text" && typeof content.text === "string") {
-				return content.text.length;
-			}
+			return Object.values(content).reduce((sum: number, val: any) => sum + countTextLength(val), 0);
 		}
 		return 0;
 	};

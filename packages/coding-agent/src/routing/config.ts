@@ -74,6 +74,21 @@ export function parseRoutingPoolConfig(raw: unknown): ParsePoolResult {
 	};
 }
 
-export function validateRoutingConfig(_raw: unknown): { valid: boolean; errors: string[] } {
-	return { valid: true, errors: [] };
+export function validateRoutingConfig(raw: unknown): { valid: boolean; errors: string[] } {
+	const errors: string[] = [];
+	if (!raw || typeof raw !== "object") {
+		return { valid: false, errors: ["Routing config must be an object"] };
+	}
+
+	const config = raw as any;
+	if (config.pools && typeof config.pools === "object") {
+		for (const [id, poolRaw] of Object.entries(config.pools)) {
+			const parsed = parseRoutingPoolConfig({ id, ...(poolRaw as object) });
+			if (!parsed.valid) {
+				errors.push(...parsed.errors);
+			}
+		}
+	}
+
+	return { valid: errors.length === 0, errors };
 }

@@ -48,6 +48,7 @@ export interface TaskProfile {
 		minimumContextTokens: number;
 	};
 	delegation?: ReadOnlyDelegationPlan;
+	routingUsage?: number;
 }
 
 export interface RoutingPoolTiers {
@@ -75,6 +76,7 @@ export interface RoutingDecision {
 	applied: boolean;
 	reasons: RoutingReasonCode[];
 	delegation?: ReadOnlyDelegationPlan;
+	routingUsage?: number;
 }
 
 export interface RoutingOutcomeEvidence {
@@ -83,7 +85,7 @@ export interface RoutingOutcomeEvidence {
 }
 
 export interface RoutingOutcome {
-	epochId: string;
+	epochId?: string;
 	status: "accepted" | "rejected";
 	evidence: RoutingOutcomeEvidence[];
 	safeToContinue?: boolean;

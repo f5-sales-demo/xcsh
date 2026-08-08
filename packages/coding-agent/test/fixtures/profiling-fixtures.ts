@@ -61,7 +61,7 @@ export const PROFILING_FIXTURES: ProfilingFixture[] = [
 		priorRejection: true,
 		expectedScoreMin: 55,
 		expectedScoreMax: 100,
-		expectedTier: "balanced",
+		expectedTier: "frontier",
 		expectedReasons: ["prior_rejection"],
 	},
 	{

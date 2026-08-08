@@ -12,18 +12,18 @@ describe("Routing Presets (R03)", () => {
 	it("should resolve pool from explicit selector or anchor model", () => {
 		const openaiPool = resolveModelPool("openai/gpt-5.6", {});
 		expect(openaiPool).toBeDefined();
-		expect(openaiPool?.tiers.utility).toBe("gpt-5.6-luna");
-		expect(openaiPool?.tiers.balanced).toBe("gpt-5.6-terra");
+		expect(openaiPool?.tiers.utility).toBe("gpt-4.1-mini");
+		expect(openaiPool?.tiers.balanced).toBe("gpt-4.1");
 
-		const litellmOpenaiPool = resolveModelPool("litellm/gpt-5.6-terra", {});
+		const litellmOpenaiPool = resolveModelPool("litellm/openai", {});
 		expect(litellmOpenaiPool).toBeDefined();
-		expect(litellmOpenaiPool?.tiers.utility).toBe("gpt-5.6-luna");
-		expect(litellmOpenaiPool?.tiers.balanced).toBe("gpt-5.6-terra");
-		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-5.6-sol");
+		expect(litellmOpenaiPool?.tiers.utility).toBe("gpt-4.1-mini");
+		expect(litellmOpenaiPool?.tiers.balanced).toBe("gpt-4.1");
+		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-5-pro");
 	});
 
 	it("should NOT cross provider families when anchor model has explicit provider prefix", () => {
-		const litellmClaudePool = resolveModelPool("litellm/claude-3-5-sonnet-latest", {});
+		const litellmClaudePool = resolveModelPool("litellm/claude-3.5-sonnet", {});
 		expect(litellmClaudePool).toBeDefined();
 		expect(litellmClaudePool?.id).toBe("litellm/anthropic");
 		expect(litellmClaudePool?.provider).toBe("litellm");
@@ -35,13 +35,13 @@ describe("Routing Presets (R03)", () => {
 				id: "my-openai",
 				provider: "openai",
 				tiers: {
-					utility: "gpt-4o-mini",
-					balanced: "gpt-4o",
-					frontier: "o3-mini",
+					utility: "gpt-4.1-mini",
+					balanced: "gpt-4.1",
+					frontier: "gpt-5-pro",
 				},
 			},
 		};
-		const matched = resolveModelPool("openai/gpt-4o", customPools);
+		const matched = resolveModelPool("openai/gpt-5-pro", customPools);
 		expect(matched).toBeDefined();
 		expect(matched?.id).toBe("my-openai");
 	});
@@ -73,7 +73,7 @@ describe("Routing Presets (R03)", () => {
 			},
 		};
 		// Disabled custom pool -> falls back to builtin
-		const disabledCustom = resolveModelPool("openai/gpt-5.6-terra", customPools, ["my-openai"]);
+		const disabledCustom = resolveModelPool("openai/gpt-4.1", customPools, ["my-openai"]);
 		expect(disabledCustom?.id).toBe("openai/gpt-5.6");
 
 		// Disabled builtin pool -> falls back to undefined

@@ -89,6 +89,13 @@ export function profileTaskDeterministic(input: ProfilerInput): TaskProfile {
 		desiredTier = "frontier";
 	}
 
+	if (input.hasImages && desiredTier === "utility") {
+		desiredTier = "balanced";
+	}
+	if (input.priorRejection) {
+		desiredTier = "frontier";
+	}
+
 	return {
 		complexityScore: score,
 		desiredTier,

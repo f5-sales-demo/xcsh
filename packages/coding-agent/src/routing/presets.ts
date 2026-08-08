@@ -5,36 +5,36 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 		id: "openai/gpt-5.6",
 		provider: "openai",
 		tiers: {
-			utility: "gpt-5.6-luna",
-			balanced: "gpt-5.6-terra",
-			frontier: "gpt-5.6-sol",
+			utility: "gpt-4.1-mini",
+			balanced: "gpt-4.1",
+			frontier: "gpt-5-pro",
 		},
 	},
 	"anthropic/claude": {
 		id: "anthropic/claude",
 		provider: "anthropic",
 		tiers: {
-			utility: "claude-3-5-haiku-latest",
-			balanced: "claude-3-5-sonnet-latest",
-			frontier: "claude-3-opus-latest",
+			utility: "claude-3.5-haiku",
+			balanced: "claude-3.5-sonnet",
+			frontier: "claude-3.7-sonnet",
 		},
 	},
 	"litellm/openai": {
 		id: "litellm/openai",
 		provider: "litellm",
 		tiers: {
-			utility: "gpt-5.6-luna",
-			balanced: "gpt-5.6-terra",
-			frontier: "gpt-5.6-sol",
+			utility: "gpt-4.1-mini",
+			balanced: "gpt-4.1",
+			frontier: "gpt-5-pro",
 		},
 	},
 	"litellm/anthropic": {
 		id: "litellm/anthropic",
 		provider: "litellm",
 		tiers: {
-			utility: "claude-3-5-haiku-latest",
-			balanced: "claude-3-5-sonnet-latest",
-			frontier: "claude-3-opus-latest",
+			utility: "claude-3.5-haiku",
+			balanced: "claude-3.5-sonnet",
+			frontier: "claude-3.7-sonnet",
 		},
 	},
 };
@@ -57,6 +57,14 @@ export function validateCustomPools(pools: any): Record<string, RoutingPoolConfi
 		if (typeof p.tiers.frontier !== "string") continue;
 
 		if (seenIds.has(p.id)) continue;
+
+		if (
+			p.tiers.utility === p.tiers.balanced ||
+			p.tiers.utility === p.tiers.frontier ||
+			p.tiers.balanced === p.tiers.frontier
+		) {
+			continue;
+		}
 
 		const allowMixed = typeof p.allowMixed === "boolean" ? p.allowMixed : false;
 		if (!allowMixed) {
