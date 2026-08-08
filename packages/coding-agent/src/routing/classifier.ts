@@ -58,12 +58,10 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 			reasons: [...baseProfile.reasons, "classifier_ambiguous_resolved"],
 		};
 	} catch (err: unknown) {
-		if (err instanceof SyntaxError) {
-			return {
-				...baseProfile,
-				reasons: [...baseProfile.reasons, "classifier_fallback_malformed"],
-			};
-		}
-		throw err;
+		const isSyntax = err instanceof SyntaxError;
+		return {
+			...baseProfile,
+			reasons: [...baseProfile.reasons, isSyntax ? "classifier_fallback_malformed" : "classifier_fallback_timeout"],
+		};
 	}
 }

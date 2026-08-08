@@ -102,4 +102,20 @@ describe("Routing Presets (R03)", () => {
 		const mixed = resolveModelPool("mixed-pool", customPools, [], "configured-mixed");
 		expect(mixed?.id).toBe("mixed-pool");
 	});
+
+	it("should reject custom pool configurations with duplicate selectors in validateCustomPools", () => {
+		const { validateCustomPools } = require("../src/routing/presets");
+		const badPools = {
+			"bad-pool": {
+				id: "bad-pool",
+				tiers: {
+					utility: "gpt-4.1",
+					balanced: "gpt-4.1",
+					frontier: "gpt-5-pro",
+				},
+			},
+		};
+
+		expect(() => validateCustomPools(badPools)).toThrow("Duplicate tier selectors found in pool bad-pool");
+	});
 });

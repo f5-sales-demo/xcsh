@@ -63,7 +63,7 @@ export function validateCustomPools(pools: any): Record<string, RoutingPoolConfi
 			p.tiers.utility === p.tiers.frontier ||
 			p.tiers.balanced === p.tiers.frontier
 		) {
-			continue;
+			throw new Error(`Duplicate tier selectors found in pool ${p.id}`);
 		}
 
 		const allowMixed = typeof p.allowMixed === "boolean" ? p.allowMixed : false;

@@ -64,4 +64,20 @@ describe("Hybrid Classifier (P04)", () => {
 
 		expect(profile.desiredTier).toBe("balanced");
 	});
+
+	it("should fall back safely to baseProfile on any Error", async () => {
+		const mockRunnerError = async () => {
+			throw new Error("Network timeout");
+		};
+
+		const profile = await classifyTaskHybrid({
+			prompt: "Add formatting helper",
+			pool: samplePool,
+			profilerMode: "hybrid",
+			runRoutingClassifier: mockRunnerError,
+		});
+
+		expect(profile.desiredTier).toBe("balanced");
+		expect(profile.reasons).toContain("classifier_fallback_timeout");
+	});
 });
