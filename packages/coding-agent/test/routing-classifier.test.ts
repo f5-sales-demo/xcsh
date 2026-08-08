@@ -80,4 +80,32 @@ describe("Hybrid Classifier (P04)", () => {
 		expect(profile.desiredTier).toBe("balanced");
 		expect(profile.reasons).toContain("classifier_fallback_timeout");
 	});
+
+	it("should not allow classifier score to bypass hasImages or priorRejection floors", async () => {
+		const mockRunnerUtility = async () => {
+			return JSON.stringify({ complexityScore: 10, confidence: 0.9 }); // lowest score
+		};
+
+		const profileWithImage = await classifyTaskHybrid({
+			prompt: "Describe this image",
+			pool: samplePool,
+			profilerMode: "hybrid",
+			hasImages: true,
+			runRoutingClassifier: mockRunnerUtility,
+		});
+
+		// hasImages should bump utility to balanced
+		expect(profileWithImage.desiredTier).toBe("balanced");
+
+		const profileWithPriorRejection = await classifyTaskHybrid({
+			prompt: "Fix the test failure",
+			pool: samplePool,
+			profilerMode: "hybrid",
+			priorRejection: true,
+			runRoutingClassifier: mockRunnerUtility,
+		});
+
+		// priorRejection should bump to frontier
+		expect(profileWithPriorRejection.desiredTier).toBe("frontier");
+	});
 });

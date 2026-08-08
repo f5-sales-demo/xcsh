@@ -36,6 +36,15 @@ export class RoutingStateMachine {
 		this.state.manualPin = state.manualPin;
 	}
 
+	public reset(): void {
+		this.state = {
+			currentTier: "balanced",
+			downshiftStreak: 0,
+			escalationFloor: undefined,
+			manualPin: undefined,
+		};
+	}
+
 	public setManualPin(model: string | undefined): void {
 		this.state.manualPin = model;
 	}

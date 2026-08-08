@@ -130,7 +130,7 @@ import planModeToolDecisionReminderPrompt from "../prompts/system/plan-mode-tool
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
 import type { RoutingState, RoutingTier } from "../routing";
 import { RoutingCoordinator } from "../routing/coordinator";
-import { executeReadOnlyDelegationPlan } from "../routing/delegation";
+import { executeReadOnlyDelegationPlan, isDelegationAllowedTool } from "../routing/delegation";
 import { validateCustomPools } from "../routing/presets";
 import type { RoutingMode, RoutingOutcome } from "../routing/types";
 import { deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
@@ -629,12 +629,7 @@ export class AgentSession {
 			this.sessionManager.getSessionFile(),
 			this.#getConfiguredDefaultSelectedMCPToolNames(),
 		);
-		const lastRoutingEntry = (this.sessionManager.getBranch() as any[]).findLast(
-			e => e.type === "custom" && e.customType === "routing_state",
-		);
-		if (lastRoutingEntry?.data) {
-			this.#routingCoordinator.restoreState(lastRoutingEntry.data);
-		}
+		this.#syncRoutingStateFromBranch();
 		this.#ttsrManager = config.ttsrManager;
 		this.#obfuscator = config.obfuscator;
 		this.agent.setAssistantMessageEventInterceptor((message, assistantMessageEvent) => {
@@ -2791,22 +2786,39 @@ export class AgentSession {
 									.find(m => `${m.provider}/${m.id}` === utilityModelId || m.id === utilityModelId)
 							: this.model;
 						if (!resolvedUtility) return "Delegation failed: no model.";
-						const apiKey = await this.#modelRegistry.getApiKey(resolvedUtility, this.sessionId);
-						if (!apiKey) return "Delegation failed: no API key.";
 
-						const res = await completeSimple(
-							resolvedUtility,
-							{
-								messages: [
-									{ role: "user", content: [{ type: "text", text: subtaskPrompt }], timestamp: Date.now() },
-								],
-							},
-							{ apiKey },
-						);
-						return res.content
-							.filter(c => c.type === "text")
-							.map(c => (c as TextContent).text)
-							.join("");
+						const { createAgentSession } = await import("../sdk");
+						const { SessionManager: SDKSessionManager } = await import("./session-manager");
+						const { session: childSession } = await createAgentSession({
+							model: resolvedUtility,
+							sessionManager: SDKSessionManager.inMemory(),
+							settings: this.settings,
+							authStorage: this.#modelRegistry.authStorage,
+							modelRegistry: this.#modelRegistry,
+							toolNames: Array.from(this.#toolRegistry.values())
+								.map(t => t.name)
+								.filter(isDelegationAllowedTool),
+							enableLsp: false,
+							enableMCP: false,
+						});
+
+						try {
+							await childSession.prompt(subtaskPrompt);
+							return childSession
+								.buildDisplaySessionContext()
+								.messages.filter(m => m.role === "assistant")
+								.map(m =>
+									m.content
+										.filter((c: any) => c.type === "text")
+										.map((c: any) => c.text)
+										.join(""),
+								)
+								.join("\n");
+						} catch (err) {
+							return `Delegation failed: ${String(err)}`;
+						} finally {
+							await childSession.dispose();
+						}
 					},
 					maxTasks,
 				);
@@ -6307,6 +6319,7 @@ export class AgentSession {
 
 			this.agent.replaceMessages(sessionContext.messages);
 			this.#syncTodoPhasesFromBranch();
+			this.#syncRoutingStateFromBranch();
 			if (switchingToDifferentSession) {
 				this.#closeAllProviderSessions("session switch");
 			} else if (didReloadConversationChange) {
@@ -6399,6 +6412,17 @@ export class AgentSession {
 				throw restoreMcpError;
 			}
 			throw error;
+		}
+	}
+
+	#syncRoutingStateFromBranch() {
+		const lastRoutingEntry = (this.sessionManager.getBranch() as any[]).findLast(
+			e => e.type === "custom" && e.customType === "routing_state",
+		);
+		if (lastRoutingEntry?.data) {
+			this.#routingCoordinator.restoreState(lastRoutingEntry.data);
+		} else {
+			this.#routingCoordinator.reset();
 		}
 	}
 
@@ -7005,7 +7029,13 @@ export function calculateUsedTokens(messages: any[]): number {
 			return content.reduce((sum: number, block: any) => sum + countTextLength(block), 0);
 		}
 		if (content && typeof content === "object") {
-			return Object.values(content).reduce((sum: number, val: any) => sum + countTextLength(val), 0);
+			if (content.type === "text" && typeof content.text === "string") {
+				return content.text.length;
+			}
+			// For any other object type (image, tool_use, tool_result, structural metadata),
+			// we skip text length counting to avoid massive overestimation from base64 payloads
+			// or JSON-stringified code ASTs.
+			return 0;
 		}
 		return 0;
 	};

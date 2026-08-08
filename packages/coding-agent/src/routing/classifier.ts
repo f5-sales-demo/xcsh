@@ -48,6 +48,13 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 			desiredTier = "frontier";
 		}
 
+		if (options.hasImages && desiredTier === "utility") {
+			desiredTier = "balanced";
+		}
+		if (options.priorRejection) {
+			desiredTier = "frontier";
+		}
+
 		return {
 			...baseProfile,
 			complexityScore: score,
@@ -58,7 +65,7 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 			reasons: [...baseProfile.reasons, "classifier_ambiguous_resolved"],
 		};
 	} catch (err: unknown) {
-		const isSyntax = err instanceof SyntaxError;
+		const isSyntax = err instanceof SyntaxError || (err instanceof Error && err.message.includes("malformed"));
 		return {
 			...baseProfile,
 			reasons: [...baseProfile.reasons, isSyntax ? "classifier_fallback_malformed" : "classifier_fallback_timeout"],

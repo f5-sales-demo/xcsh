@@ -48,6 +48,10 @@ export class RoutingCoordinator {
 		this.stateMachine.restoreState(state);
 	}
 
+	public reset(): void {
+		this.stateMachine.reset();
+	}
+
 	public async evaluateTurn(options: EvaluateTurnOptions): Promise<RoutingDecision> {
 		const epochId = `route-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 		const state = this.stateMachine.getState();

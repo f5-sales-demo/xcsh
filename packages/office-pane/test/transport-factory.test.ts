@@ -1,0 +1,179 @@
+import { describe, expect, test } from "bun:test";
+import type { ClientHost } from "@f5-sales-demo/xcsh/browser/chat-protocol";
+import type { ConfigurableTransport, GatewayConfig, ProviderConfigure } from "../src/core";
+import type { OfficeHost } from "../src/office/host-adapter";
+import { makeBuildTransport, officeHostToClientHost } from "../src/office/transport-factory";
+
+const CONFIG: GatewayConfig = { baseUrl: "https://gw.example", token: "t", model: "m" };
+
+/**
+ * A ConfigurableTransport stub that records a shared call-order log (so ordering
+ * vs. host-tool advertisement is observable) and the config it was given.
+ */
+function makeStub(opts: { canConfigure?: boolean; configureRejects?: boolean } = {}) {
+	const calls: string[] = [];
+	let received: ProviderConfigure | undefined;
+	let canConfigure = opts.canConfigure ?? true;
+	const transport: ConfigurableTransport = {
+		state: "open",
+		get canConfigureProvider() {
+			return canConfigure;
+		},
+		connect: () => Promise.resolve(),
+		send: () => {},
+		onMessage: () => () => {},
+		stop: () => {},
+		dispose: () => {},
+		configure: (c: ProviderConfigure) => {
+			calls.push("configure");
+			received = c;
+			return opts.configureRejects ? Promise.reject(new Error("configure_error")) : Promise.resolve("model-x");
+		},
+	};
+	return { transport, calls, config: () => received, setCanConfigure: (value: boolean) => (canConfigure = value) };
+}
+
+function build(host: OfficeHost, stub: ReturnType<typeof makeStub>) {
+	return makeBuildTransport(host, {
+		createTransport: () => stub.transport,
+		wireHostTools: () => ({ onConnected: () => stub.calls.push("advertise") }),
+	})(CONFIG);
+}
+
+describe("officeHostToClientHost", () => {
+	test("maps Office hosts to lowercase wire values, omitting hosts without a profile", () => {
+		expect(officeHostToClientHost("Excel")).toBe("excel");
+		expect(officeHostToClientHost("PowerPoint")).toBe("powerpoint");
+		expect(officeHostToClientHost("Word")).toBe("word");
+		expect(officeHostToClientHost("Outlook")).toBeUndefined();
+		expect(officeHostToClientHost("unknown")).toBeUndefined();
+	});
+});
+
+describe("makeBuildTransport", () => {
+	test("provision() configures xcsh's provider with the saved config, resolving on ack", async () => {
+		const stub = makeStub();
+		const built = build("Excel", stub);
+		await built.provision?.();
+		expect(stub.calls).toEqual(["configure"]);
+		expect(stub.config()).toEqual({ baseUrl: "https://gw.example", token: "t", model: "m" });
+	});
+
+	test("a blank model is omitted so xcsh selects its binary-baked default", async () => {
+		const stub = makeStub();
+		const config: GatewayConfig = { baseUrl: "https://gw.example/v1", token: "t" };
+		const built = makeBuildTransport("Excel", {
+			createTransport: () => stub.transport,
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(config);
+		await built.provision?.();
+		expect(stub.config()).toEqual({ baseUrl: "https://gw.example/v1", token: "t" });
+		expect(stub.config()).not.toHaveProperty("model");
+	});
+
+	test("provision runs BEFORE host tools are advertised (the panel sequences provision → onConnected)", async () => {
+		const stub = makeStub();
+		const built = build("Word", stub);
+		// The panel awaits provision() then calls onConnected(); replicate that order here.
+		await built.provision?.();
+		built.onConnected?.();
+		expect(stub.calls).toEqual(["configure", "advertise"]);
+	});
+
+	test("a rejected configure PROPAGATES from provision() (not swallowed) so the panel can surface it", async () => {
+		const stub = makeStub({ configureRejects: true });
+		const built = build("Word", stub);
+		expect(built.provision).toBeDefined();
+		await expect(built.provision?.()).rejects.toThrow(/configure_error/);
+		// Host tools are NOT advertised as a side effect of provision failing.
+		expect(stub.calls).toEqual(["configure"]);
+	});
+
+	test("provision checks capability after connect, when hello_ack has populated it", async () => {
+		const stub = makeStub({ canConfigure: false });
+		const built = build("PowerPoint", stub);
+		expect(built.provision).toBeDefined();
+		stub.setCanConfigure(true);
+		await built.provision?.();
+		expect(stub.config()).toEqual(CONFIG);
+	});
+
+	test("provision is a no-op when the connected bridge does not advertise configuration", async () => {
+		const stub = makeStub({ canConfigure: false });
+		const built = build("PowerPoint", stub);
+		await built.provision?.();
+		expect(stub.calls).toEqual([]);
+	});
+
+	test("model selection reuses a saved gateway root and token", async () => {
+		const stub = makeStub();
+		const built = build("Excel", stub);
+		await expect(built.selectModel?.("claude-opus-5")).resolves.toBe("model-x");
+		expect(stub.config()).toEqual({
+			baseUrl: "https://gw.example",
+			token: "t",
+			model: "claude-opus-5",
+		});
+	});
+
+	test("model selection without pane settings reuses xcsh's own credentials", async () => {
+		const stub = makeStub();
+		const built = makeBuildTransport("Excel", {
+			createTransport: () => stub.transport,
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(null);
+		await built.selectModel?.("claude-opus-5");
+		expect(stub.config()).toEqual({ model: "claude-opus-5" });
+	});
+
+	test("onConnected advertises the host-appropriate document tools", () => {
+		const stub = makeStub();
+		build("Excel", stub).onConnected?.();
+		expect(stub.calls).toEqual(["advertise"]);
+	});
+
+	test("passes the created transport straight through as the built transport", () => {
+		const stub = makeStub();
+		const built = build("Excel", stub);
+		expect(built.transport).toBe(stub.transport);
+	});
+
+	test("passes the mapped client host to createTransport so the bridge learns the Office app", () => {
+		const seen: (ClientHost | undefined)[] = [];
+		const stub = makeStub();
+		makeBuildTransport("PowerPoint", {
+			createTransport: (clientHost?: ClientHost) => {
+				seen.push(clientHost);
+				return stub.transport;
+			},
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(CONFIG);
+		expect(seen).toEqual(["powerpoint"]);
+	});
+
+	test("passes undefined to createTransport for a host without a profile (Outlook)", () => {
+		const seen: (ClientHost | undefined)[] = [];
+		const stub = makeStub();
+		makeBuildTransport("Outlook", {
+			createTransport: (clientHost?: ClientHost) => {
+				seen.push(clientHost);
+				return stub.transport;
+			},
+			wireHostTools: () => ({ onConnected: () => {} }),
+		})(CONFIG);
+		expect(seen).toEqual([undefined]);
+	});
+
+	test("a NULL config (chat-first default) builds a transport with NO provision (uses xcsh's provider)", () => {
+		const stub = makeStub();
+		const built = makeBuildTransport("Excel", {
+			createTransport: () => stub.transport,
+			wireHostTools: () => ({ onConnected: () => stub.calls.push("advertise") }),
+		})(null);
+		expect(built.transport).toBe(stub.transport);
+		expect(built.provision).toBeUndefined();
+		// Host tools are still advertised on connect.
+		built.onConnected?.();
+		expect(stub.calls).toEqual(["advertise"]);
+	});
+});

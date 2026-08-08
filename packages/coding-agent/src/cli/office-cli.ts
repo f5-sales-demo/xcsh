@@ -260,7 +260,7 @@ export async function runOfficeCommand(
 		// with its stack intact, because swallowing a real failure here is how the original silent
 		// 404 survived.
 		if (!(err instanceof OfficePaneUnavailableError)) throw err;
-		console.error(err.message);
+		console.error(err instanceof Error ? err.message : String(err));
 		process.exitCode = 1;
 	}
 }

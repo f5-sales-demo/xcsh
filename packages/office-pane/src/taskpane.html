@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>xcsh — Office task pane</title>
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+      /* Bootstrap the terminal look before the runtime theme (tokens + PANEL_CSS)
+         injects, so there is no white flash. The full palette + layout arrive via
+         injectTheme() in taskpane.tsx. */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+      body {
+        background: #151820;
+        color: #f5f7fa;
+        font: 13px/1.5 "MesloLGS NF", "JetBrains Mono", ui-monospace, Menlo, monospace;
+      }
+      #root {
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./taskpane.js"></script>
+  </body>
+</html>

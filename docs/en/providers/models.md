@@ -4,9 +4,7 @@ description: Model registry and provider configuration via models.yml with routi
 sidebar:
   order: 1
   label: Models & providers
----
-
-# Model and Provider Configuration (`models.yml`)
+------
 
 This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
 
@@ -535,7 +533,7 @@ A default `config.yml` is also generated with sensible image provider settings.
 On every startup, `startupHealthCheck()` in the model registry runs the following checks:
 
 | Condition | Action |
-|-----------|--------|
+| --- | --- |
 | `models.yml` missing | Auto-generate from env vars |
 | `models.yml` corrupt or unparseable | Backup to `.bak`, regenerate |
 | `baseUrl` doesn't match `LITELLM_BASE_URL` | Backup to `.bak`, regenerate with new URL |
