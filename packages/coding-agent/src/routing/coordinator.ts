@@ -2,7 +2,7 @@ import { classifyTaskHybrid } from "./classifier";
 import { resolveModelPool } from "./presets";
 import { resolveTierModel } from "./resolver";
 import { type RoutingState, RoutingStateMachine } from "./state-machine";
-import type { RoutingDecision, RoutingMode, RoutingPoolConfig, RoutingReasonCode } from "./types";
+import type { RoutingDecision, RoutingMode, RoutingPoolConfig, RoutingReasonCode, RoutingTier } from "./types";
 
 export interface CoordinatorOptions {
 	stateMachine?: RoutingStateMachine;
@@ -23,7 +23,7 @@ export interface EvaluateTurnOptions {
 	profilerMode?: "rules" | "hybrid";
 	disabledPresets?: readonly string[];
 	familyPolicy?: "sticky" | "configured-mixed";
-	fileTargetsCount?: number;
+
 	downshiftAfterTurns?: number;
 	getModelContextWindow?: (modelId: string) => number;
 	runRoutingClassifier?: (utilityModel: string, prompt: string) => Promise<string>;
@@ -104,7 +104,7 @@ export class RoutingCoordinator {
 			contextEstimate: options.contextEstimate,
 			hasImages: options.hasImages,
 			priorRejection: options.priorRejection,
-			fileTargetsCount: options.fileTargetsCount,
+
 			pool,
 			profilerMode: options.profilerMode ?? "hybrid",
 			runRoutingClassifier: options.runRoutingClassifier,
@@ -138,22 +138,11 @@ export class RoutingCoordinator {
 			anchorTier = "balanced";
 		}
 
-		if (this.stateMachine.getState().currentTier === undefined || !this.stateMachine.getState().currentTier) {
-			this.stateMachine.restoreState({ currentTier: anchorTier });
-		} else if (
-			this.stateMachine.getState().currentTier !== anchorTier &&
-			this.stateMachine.getState().downshiftStreak === 0 &&
-			!this.stateMachine.getState().manualPin
-		) {
-			// If anchor model changed externally and we're not mid-streak, sync it.
-			// Actually, just always ensure the current tier aligns if this is the first evaluation of this anchor.
-			// The caller creates a new Coordinator per session, but anchor can change via settings.
-			// For now, let's just forcefully set the current tier if it's undefined, wait, it defaults to 'balanced' in constructor!
-			// We need a way to detect initial state.
-		}
-
 		// 5. Speculative state machine evaluation (do NOT mutate operational state until resolution is verified)
 		const targetSm = new RoutingStateMachine(this.stateMachine.getState());
+		if (targetSm.getState().currentTier === undefined || !targetSm.getState().currentTier) {
+			targetSm.restoreState({ currentTier: anchorTier });
+		}
 		const { effectiveTier } = targetSm.evaluateNextTurn(taskProfile.desiredTier, options.downshiftAfterTurns ?? 2);
 
 		// 6. Resolve pool tier model with context window eligibility

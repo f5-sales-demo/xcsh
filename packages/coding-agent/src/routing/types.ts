@@ -19,7 +19,11 @@ export type RoutingReasonCode =
 	| "simple_operation"
 	| "classifier_ambiguous_resolved"
 	| "classifier_fallback_timeout"
+	| "classifier_fallback_error"
 	| "classifier_fallback_malformed"
+	| "test_failure"
+	| "build_failure"
+	| "lint_failure"
 	| "context_capacity_promotion"
 	| "downshift_hysteresis_pending"
 	| "escalation_floor_active";
@@ -98,11 +102,7 @@ export interface RoutingSettings {
 	delegation: "off" | "read-only";
 	delegationMaxTasks: number;
 	downshiftAfterTurns: number;
-	tierEffort: {
-		utility: "low" | "medium";
-		balanced: "low" | "medium" | "high";
-		frontier: "medium" | "high" | "xhigh";
-	};
+
 	pools: Record<string, RoutingPoolConfig>;
 	disabledPresets: string[];
 }
