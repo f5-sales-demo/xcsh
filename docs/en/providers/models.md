@@ -553,7 +553,7 @@ xcsh setup litellm --check --json  # Machine-readable validation output
 ### Required environment variables
 
 | Variable | Purpose |
-|----------|---------|
+| --- | --- |
 | `LITELLM_BASE_URL` | LiteLLM proxy URL (e.g. `https://your-proxy.example.com`). Must start with `http://` or `https://`. |
 | `LITELLM_API_KEY` | API key for the proxy. Referenced by name in generated config, resolved at runtime. |
 
