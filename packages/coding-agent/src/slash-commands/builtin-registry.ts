@@ -1578,6 +1578,36 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			await controller.handle(command);
 		},
 	},
+	{
+		name: "route",
+		description: "Display or configure provider-agnostic dynamic model routing",
+		allowArgs: true,
+		subcommands: [
+			{ name: "status", description: "Display dynamic routing status and active tier" },
+			{ name: "off", description: "Disable dynamic model routing" },
+			{ name: "shadow", description: "Record dynamic model routing decisions speculatively without switching" },
+			{ name: "auto", description: "Enable dynamic model routing and clear manual model pins" },
+		],
+		handle: async (command, runtime) => {
+			runtime.ctx.editor.addToHistory(command.text);
+			runtime.ctx.editor.setText("");
+			const { handleRouteCommand } = await import("../routing/commands");
+			const args = command.args ? command.args.split(/\s+/) : ["status"];
+			const status = runtime.ctx.session.getRoutingStatus();
+			const currentModel = runtime.ctx.session.model
+				? `${runtime.ctx.session.model.provider}/${runtime.ctx.session.model.id}`
+				: "unknown";
+			const res = await handleRouteCommand(args, {
+				coordinator: (runtime.ctx.session as any).routingCoordinator,
+				currentModel,
+				mode: status.mode,
+			});
+			if (res.newMode) {
+				runtime.ctx.session.setRoutingMode(res.newMode);
+			}
+			(runtime.ctx.ui as any).notify?.(res.output, "info");
+		},
+	},
 ];
 
 const BUILTIN_SLASH_COMMAND_LOOKUP = new Map<string, BuiltinSlashCommandSpec>();

@@ -43,6 +43,7 @@ import type {
 } from "@f5-sales-demo/pi-ai";
 import {
 	calculateRateLimitBackoffMs,
+	completeSimple,
 	getSupportedEfforts,
 	isContextOverflow,
 	isUsageLimitError,
@@ -127,6 +128,11 @@ import planModeToolDecisionReminderPrompt from "../prompts/system/plan-mode-tool
 	type: "text",
 };
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
+import type { RoutingState, RoutingTier } from "../routing";
+import { RoutingCoordinator } from "../routing/coordinator";
+import { executeReadOnlyDelegationPlan, isDelegationAllowedTool } from "../routing/delegation";
+import { validateCustomPools } from "../routing/presets";
+import type { RoutingMode, RoutingOutcome } from "../routing/types";
 import { deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
 import { resolveThinkingLevelForModel, toReasoningEffort } from "../thinking";
 import { assertEditableFile } from "../tools/auto-generated-guard";
@@ -549,6 +555,7 @@ export class AgentSession {
 	#pendingRewindReport: string | undefined = undefined;
 	#promptGeneration = 0;
 	#providerSessionState = new Map<string, ProviderSessionState>();
+	#routingCoordinator = new RoutingCoordinator();
 
 	#startPowerAssertion(): void {
 		if (process.platform !== "darwin") {
@@ -622,6 +629,7 @@ export class AgentSession {
 			this.sessionManager.getSessionFile(),
 			this.#getConfiguredDefaultSelectedMCPToolNames(),
 		);
+		this.#syncRoutingStateFromBranch();
 		this.#ttsrManager = config.ttsrManager;
 		this.#obfuscator = config.obfuscator;
 		this.agent.setAssistantMessageEventInterceptor((message, assistantMessageEvent) => {
@@ -843,6 +851,16 @@ export class AgentSession {
 						this.#ttsrAbortPending = true;
 						this.#ensureTtsrResumePromise();
 						this.agent.abort();
+						// Record routing outcome for the test failure
+						this.recordRoutingOutcome({
+							status: "rejected",
+							evidence: [
+								{
+									kind: "test_failure",
+									summary: `TTSR matched rule(s): ${matches.map(m => m.name).join(", ")}`,
+								},
+							],
+						});
 						// Notify extensions (fire-and-forget, does not block abort)
 						this.#emitSessionEvent({ type: "ttsr_triggered", rules: matches }).catch(() => {});
 						// Schedule retry after a short delay
@@ -1207,6 +1225,60 @@ export class AgentSession {
 		this.#postPromptTasksAbortController = new AbortController();
 		this.#postPromptTaskIds.clear();
 		this.#resolvePostPromptTasks();
+	}
+
+	public get routingCoordinator(): RoutingCoordinator {
+		return this.#routingCoordinator;
+	}
+
+	/**
+	 * Get current dynamic routing status.
+	 */
+	public getRoutingStatus(): {
+		mode: RoutingMode;
+		currentTier?: RoutingTier;
+		downshiftStreak: number;
+		manualPin?: string;
+		escalationFloor?: RoutingTier;
+	} {
+		const mode = (this.settings.get("routing.mode") as RoutingMode) ?? "off";
+		const state = this.#routingCoordinator.getStateMachine().getState();
+		return {
+			mode,
+			currentTier: state.currentTier,
+			downshiftStreak: state.downshiftStreak,
+			manualPin: state.manualPin,
+			escalationFloor: state.escalationFloor,
+		};
+	}
+
+	/**
+	 * Set dynamic routing mode (off, shadow, auto).
+	 */
+	public setRoutingMode(mode: RoutingMode): void {
+		this.settings.set("routing.mode", mode);
+	}
+
+	/**
+	 * Clear manual model pin.
+	 */
+	public clearRoutingPin(): void {
+		this.#routingCoordinator.getStateMachine().clearManualPin();
+	}
+
+	public getRoutingState(): RoutingState {
+		return this.#routingCoordinator.getState();
+	}
+
+	public restoreRoutingState(state: Partial<RoutingState>): void {
+		this.#routingCoordinator.restoreState(state);
+	}
+	public recordRoutingOutcome(outcome: RoutingOutcome): void {
+		if (outcome.status === "rejected") {
+			this.#routingCoordinator.getStateMachine().setEscalationFloor("frontier");
+		} else {
+			this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+		}
 	}
 	/**
 	 * Wait for retry, TTSR resume, and any background continuation to settle.
@@ -2566,7 +2638,7 @@ export class AgentSession {
 		}
 
 		// Expand file-based prompt templates if requested
-		const expandedText = expandPromptTemplates ? expandPromptTemplate(text, [...this.#promptTemplates]) : text;
+		let expandedText = expandPromptTemplates ? expandPromptTemplate(text, [...this.#promptTemplates]) : text;
 
 		// If streaming, queue via steer() or followUp() based on option
 		if (this.isStreaming) {
@@ -2600,6 +2672,171 @@ export class AgentSession {
 			this.#toolChoiceQueue.pushOnce(eagerTodoPrelude.toolChoice, {
 				label: "eager-todo",
 			});
+		}
+
+		// Evaluate dynamic model routing if enabled
+		const routingMode = (this.settings.get("routing.mode") as RoutingMode) ?? "off";
+		if (routingMode !== "off" && this.model) {
+			const anchorModel = `${this.model.provider}/${this.model.id}`;
+			const availableModels = this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
+			const startTime = Date.now();
+			const contextEstimate = {
+				usedTokens: calculateUsedTokens(this.messages),
+				contextWindow: this.model.contextWindow ?? 128000,
+			};
+			const decision = await this.#routingCoordinator.evaluateTurn({
+				anchorModel,
+				mode: routingMode,
+				prompt: expandedText,
+				hasImages: options?.images && options.images.length > 0,
+				availableModels,
+				customPools: validateCustomPools(this.settings.get("routing.pools")),
+				disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
+				familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
+				profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
+				contextEstimate,
+				getModelContextWindow: (modelId: string) => {
+					const found = this.#modelRegistry
+						.getAvailable()
+						.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
+					return found?.contextWindow ?? 128000;
+				},
+				runRoutingClassifier: async (utilityModel: string, promptText: string) => {
+					const resolved = this.#modelRegistry
+						.getAvailable()
+						.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
+					if (!resolved) throw new Error("Classifier model not found");
+					const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
+					if (!apiKey) throw new Error("No API key for classifier model");
+
+					const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
+
+					const res = await completeSimple(
+						resolved,
+						{
+							systemPrompt: systemInstruction,
+							messages: [{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() }],
+						},
+						{ apiKey },
+					);
+					const rawText = res.content
+						.filter(c => c.type === "text")
+						.map(c => (c as TextContent).text)
+						.join("");
+
+					const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+					if (jsonMatch) {
+						const parsed = JSON.parse(jsonMatch[0]); // Check validity
+						if (res.usage) {
+							this.settings.getStorage()?.recordModelUsage(`${resolved.provider}/${resolved.id}`);
+							parsed.routingUsage = (res.usage as any).totalTokens ?? (res.usage as any).total ?? 0;
+						}
+						return JSON.stringify(parsed);
+					}
+					throw new Error("Classifier returned malformed JSON");
+				},
+				downshiftAfterTurns: (this.settings.get("routing.downshiftAfterTurns") as number) ?? 2,
+			});
+			const durationMs = Date.now() - startTime;
+
+			this.sessionManager.appendCustomEntry("routing_state", this.#routingCoordinator.getState());
+
+			this.#emitSessionEvent({
+				type: decision.applied ? "routing_applied" : "routing_decision",
+				epochId: decision.epochId,
+				mode: decision.mode,
+				provider: this.model.provider,
+				poolId: decision.poolId,
+				effectiveTier: decision.effectiveTier,
+				selectedModel: decision.selectedModel,
+				reasons: decision.reasons,
+				delegated: !!decision.delegation,
+				escalated: decision.reasons.some(
+					r => r === "context_capacity_promotion" || r === "escalation_floor_active",
+				),
+				contextTokens: contextEstimate.usedTokens,
+				routingUsage: decision.routingUsage,
+				durationMs,
+			} as any).catch(() => {});
+
+			if (decision.applied && decision.selectedModel && decision.selectedModel !== anchorModel) {
+				const targetModel = this.#modelRegistry
+					.getAvailable()
+					.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
+				if (targetModel) {
+					await this.setModelRoutingSwitch(targetModel);
+				}
+			}
+
+			if (
+				decision.applied &&
+				decision.delegation &&
+				(this.settings.get("routing.delegation") as string) === "read-only"
+			) {
+				const maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
+				const results = await executeReadOnlyDelegationPlan(
+					decision.delegation,
+					async subtaskPrompt => {
+						const utilityModelId = decision.poolId
+							? (this.settings.get("routing.pools") as any)?.[decision.poolId]?.tiers?.utility
+							: undefined;
+						const resolvedUtility = utilityModelId
+							? this.#modelRegistry
+									.getAvailable()
+									.find(m => `${m.provider}/${m.id}` === utilityModelId || m.id === utilityModelId)
+							: this.model;
+						if (!resolvedUtility) return "Delegation failed: no model.";
+
+						const { createAgentSession } = await import("../sdk");
+						const { SessionManager: SDKSessionManager } = await import("./session-manager");
+						const { session: childSession } = await createAgentSession({
+							model: resolvedUtility,
+							sessionManager: SDKSessionManager.inMemory(),
+							settings: this.settings,
+							authStorage: this.#modelRegistry.authStorage,
+							modelRegistry: this.#modelRegistry,
+							toolNames: Array.from(this.#toolRegistry.values())
+								.map(t => t.name)
+								.filter(isDelegationAllowedTool),
+							enableLsp: false,
+							enableMCP: false,
+						});
+
+						try {
+							await childSession.prompt(subtaskPrompt);
+							return childSession
+								.buildDisplaySessionContext()
+								.messages.filter(m => m.role === "assistant")
+								.map(m =>
+									m.content
+										.filter((c: any) => c.type === "text")
+										.map((c: any) => c.text)
+										.join(""),
+								)
+								.join("\n");
+						} catch (err) {
+							return `Delegation failed: ${String(err)}`;
+						} finally {
+							await childSession.dispose();
+						}
+					},
+					maxTasks,
+				);
+
+				if (results.length > 0) {
+					const delegationOutput = `\n\n<delegation_results>\n${JSON.stringify(results, null, 2)}\n</delegation_results>`;
+					expandedText += delegationOutput;
+					const textBlock = userContent.find(c => c.type === "text") as Extract<
+						(typeof userContent)[0],
+						{ type: "text" }
+					>;
+					if (textBlock) {
+						textBlock.text += delegationOutput;
+					} else {
+						userContent.push({ type: "text", text: delegationOutput });
+					}
+				}
+			}
 		}
 
 		try {
@@ -3520,7 +3757,7 @@ export class AgentSession {
 	async setModel(
 		model: Model,
 		role: string = "default",
-		options?: { selector?: string; thinkingLevel?: ThinkingLevel },
+		options?: { selector?: string; thinkingLevel?: ThinkingLevel; source?: "user" | "routing" },
 	): Promise<void> {
 		const previousEditMode = this.#resolveActiveEditMode();
 		const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
@@ -3530,6 +3767,9 @@ export class AgentSession {
 
 		this.#clearActiveRetryFallback();
 		this.#setModelWithProviderSessionReset(model);
+		if (options?.source !== "routing") {
+			this.#routingCoordinator.getStateMachine().setManualPin(`${model.provider}/${model.id}`);
+		}
 		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, role);
 		this.settings.setModelRole(
 			role,
@@ -3561,6 +3801,26 @@ export class AgentSession {
 
 		// Apply explicit thinking level, or re-clamp current level to new model's capabilities
 		this.setThinkingLevel(thinkingLevel ?? this.thinkingLevel);
+		await this.#syncEditToolModeAfterModelChange(previousEditMode);
+	}
+
+	/**
+	 * Temporarily set model from automated routing, preserving original manual model state.
+	 * Does NOT overwrite manual pin or retry fallback original selector.
+	 */
+	async setModelRoutingSwitch(model: Model): Promise<void> {
+		const previousEditMode = this.#resolveActiveEditMode();
+		const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+		if (!apiKey) {
+			throw new Error(`No API key for ${model.provider}/${model.id}`);
+		}
+
+		// DO NOT clear active retry fallback - routing is a transient optimization
+		this.#setModelWithProviderSessionReset(model, "runtime-switch");
+		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, "routing_switch");
+		this.settings.getStorage()?.recordModelUsage(`${model.provider}/${model.id}`);
+
+		this.setThinkingLevel(this.thinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 	}
 
@@ -5403,6 +5663,12 @@ export class AgentSession {
 		} else {
 			this.#activeRetryFallback.lastAppliedFallbackThinkingLevel = nextThinkingLevel;
 		}
+
+		this.recordRoutingOutcome({
+			status: "rejected",
+			evidence: [{ kind: "test_failure", summary: `Fallback applied from ${currentSelector} to ${selector.raw}` }],
+		});
+
 		await this.#emitSessionEvent({
 			type: "retry_fallback_applied",
 			from: currentSelector,
@@ -6053,6 +6319,7 @@ export class AgentSession {
 
 			this.agent.replaceMessages(sessionContext.messages);
 			this.#syncTodoPhasesFromBranch();
+			this.#syncRoutingStateFromBranch();
 			if (switchingToDifferentSession) {
 				this.#closeAllProviderSessions("session switch");
 			} else if (didReloadConversationChange) {
@@ -6145,6 +6412,17 @@ export class AgentSession {
 				throw restoreMcpError;
 			}
 			throw error;
+		}
+	}
+
+	#syncRoutingStateFromBranch() {
+		const lastRoutingEntry = (this.sessionManager.getBranch() as any[]).findLast(
+			e => e.type === "custom" && e.customType === "routing_state",
+		);
+		if (lastRoutingEntry?.data) {
+			this.#routingCoordinator.restoreState(lastRoutingEntry.data);
+		} else {
+			this.#routingCoordinator.reset();
 		}
 	}
 
@@ -6736,4 +7014,36 @@ export class AgentSession {
 	get extensionRunner(): ExtensionRunner | undefined {
 		return this.#extensionRunner;
 	}
+}
+
+/**
+ * Calculates a rough estimate of tokens used in a message array.
+ * @internal
+ */
+export function calculateUsedTokens(messages: any[]): number {
+	const countTextLength = (content: any): number => {
+		if (typeof content === "string") {
+			return content.length;
+		}
+		if (Array.isArray(content)) {
+			return content.reduce((sum: number, block: any) => sum + countTextLength(block), 0);
+		}
+		if (content && typeof content === "object") {
+			if (content.type === "text" && typeof content.text === "string") {
+				return content.text.length;
+			}
+			// For any other object type (image, tool_use, tool_result, structural metadata),
+			// we skip text length counting to avoid massive overestimation from base64 payloads
+			// or JSON-stringified code ASTs.
+			return 0;
+		}
+		return 0;
+	};
+
+	return Math.round(
+		messages.reduce((acc: number, m: any) => {
+			if (!("content" in m) || !m.content) return acc;
+			return acc + countTextLength(m.content);
+		}, 0) / 4,
+	);
 }

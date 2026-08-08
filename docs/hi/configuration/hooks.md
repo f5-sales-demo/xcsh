@@ -1,39 +1,40 @@
 ---
-title: हुक्स
-description: कोडिंग एजेंट जीवनचक्र में प्री/पोस्ट इवेंट स्वचालन के लिए हुक सिस्टम।
+title: Hooks
+description: Hook system for pre/post event automation in the coding agent lifecycle.
 sidebar:
   order: 4
-  label: हुक्स
+  label: Hooks
+
 i18n:
-  sourceHash: cdbec10bc405
-  translator: machine
+  sourceHash: "afa30d336bec"
+  translator: "machine"
 ---
 
-# हुक्स
+# Hooks
 
-यह दस्तावेज़ `src/extensibility/hooks/*` में **वर्तमान हुक सबसिस्टम कोड** का वर्णन करता है।
+This document describes the **current hook subsystem code** in `src/extensibility/hooks/*`.
 
-## रनटाइम में वर्तमान स्थिति
+## Current status in runtime
 
-हुक पैकेज (`src/extensibility/hooks/`) अभी भी एक API सतह के रूप में निर्यातित और उपयोग योग्य है, लेकिन डिफ़ॉल्ट CLI रनटाइम अब **एक्सटेंशन रनर** पथ को प्रारंभ करता है। वर्तमान स्टार्टअप प्रवाह में:
+The hook package (`src/extensibility/hooks/`) is still exported and usable as an API surface, but the default CLI runtime now initializes the **extension runner** path. In current startup flow:
 
-- `--hook` को `--extension` के लिए एक उपनाम के रूप में माना जाता है (CLI पथ `additionalExtensionPaths` में मर्ज किए जाते हैं)
-- उपकरण `HookToolWrapper` से नहीं, बल्कि `ExtensionToolWrapper` द्वारा लपेटे जाते हैं
-- संदर्भ रूपांतरण और जीवनचक्र उत्सर्जन `ExtensionRunner` के माध्यम से होते हैं
+- `--hook` is treated as an alias for `--extension` (CLI paths are merged into `additionalExtensionPaths`)
+- tools are wrapped by `ExtensionToolWrapper`, not `HookToolWrapper`
+- context transforms and lifecycle emissions go through `ExtensionRunner`
 
-अतः यह फ़ाइल हुक सबसिस्टम कार्यान्वयन (types/loader/runner/wrapper) का दस्तावेज़ीकरण करती है, जिसमें लीगेसी व्यवहार और बाधाएं शामिल हैं।
+So this file documents the hook subsystem implementation itself (types/loader/runner/wrapper), including legacy behavior and constraints.
 
-## मुख्य फ़ाइलें
+## Key files
 
-- `src/extensibility/hooks/types.ts` — हुक संदर्भ, इवेंट प्रकार, और परिणाम अनुबंध
-- `src/extensibility/hooks/loader.ts` — मॉड्यूल लोडिंग और हुक डिस्कवरी ब्रिज
-- `src/extensibility/hooks/runner.ts` — इवेंट डिस्पैच, कमांड लुकअप, एरर सिग्नलिंग
-- `src/extensibility/hooks/tool-wrapper.ts` — प्री/पोस्ट टूल इंटरसेप्शन रैपर
-- `src/extensibility/hooks/index.ts` — निर्यात/पुनः-निर्यात
+- `src/extensibility/hooks/types.ts` — hook context, event types, and result contracts
+- `src/extensibility/hooks/loader.ts` — module loading and hook discovery bridge
+- `src/extensibility/hooks/runner.ts` — event dispatch, command lookup, error signaling
+- `src/extensibility/hooks/tool-wrapper.ts` — pre/post tool interception wrapper
+- `src/extensibility/hooks/index.ts` — exports/re-exports
 
-## हुक मॉड्यूल क्या होता है
+## What a hook module is
 
-एक हुक मॉड्यूल को एक फ़ैक्टरी डिफ़ॉल्ट-एक्सपोर्ट करनी होती है:
+A hook module must default-export a factory:
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -47,61 +48,61 @@ export default function hook(pi: HookAPI): void {
 }
 ```
 
-फ़ैक्टरी यह कर सकती है:
+The factory can:
 
-- `pi.on(...)` के साथ इवेंट हैंडलर पंजीकृत करना
-- `pi.sendMessage(...)` से स्थायी कस्टम संदेश भेजना
-- `pi.appendEntry(...)` से गैर-LLM स्थिति बनाए रखना
-- `pi.registerCommand(...)` के माध्यम से स्लैश कमांड पंजीकृत करना
-- `pi.registerMessageRenderer(...)` के माध्यम से कस्टम संदेश रेंडरर पंजीकृत करना
-- `pi.exec(...)` के माध्यम से शेल कमांड चलाना
+- register event handlers with `pi.on(...)`
+- send persistent custom messages with `pi.sendMessage(...)`
+- persist non-LLM state with `pi.appendEntry(...)`
+- register slash commands via `pi.registerCommand(...)`
+- register custom message renderers via `pi.registerMessageRenderer(...)`
+- run shell commands via `pi.exec(...)`
 
-## डिस्कवरी और लोडिंग
+## Discovery and loading
 
-`discoverAndLoadHooks(configuredPaths, cwd)` निम्नलिखित करता है:
+`discoverAndLoadHooks(configuredPaths, cwd)` does:
 
-1. क्षमता रजिस्ट्री से खोजे गए हुक लोड करता है (`loadCapability("hooks")`)
-2. स्पष्ट रूप से कॉन्फ़िगर किए गए पथ जोड़ता है (पूर्ण पथ द्वारा डीडुप्ड)
-3. `loadHooks(allPaths, cwd)` को कॉल करता है
+1. Load discovered hooks from capability registry (`loadCapability("hooks")`)
+2. Append explicitly configured paths (deduped by absolute path)
+3. Call `loadHooks(allPaths, cwd)`
 
-`loadHooks` फिर प्रत्येक पथ को आयात करता है और एक `default` फ़ंक्शन की अपेक्षा करता है।
+`loadHooks` then imports each path and expects a `default` function.
 
-### पथ समाधान
+### Path resolution
 
-`loader.ts` हुक पथों को इस प्रकार हल करता है:
+`loader.ts` resolves hook paths as:
 
-- पूर्ण पथ: जैसा है वैसा उपयोग किया जाता है
-- `~` पथ: विस्तारित किया जाता है
-- सापेक्ष पथ: `cwd` के सापेक्ष हल किया जाता है
+- absolute path: used as-is
+- `~` path: expanded
+- relative path: resolved against `cwd`
 
-### महत्वपूर्ण लीगेसी बेमेल
+### Important legacy mismatch
 
-`hookCapability` के लिए डिस्कवरी प्रोवाइडर अभी भी प्री/पोस्ट शेल-स्टाइल हुक फ़ाइलों को मॉडल करते हैं (उदाहरण के लिए `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`)।
+Discovery providers for `hookCapability` still model pre/post shell-style hook files (for example `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
 
-यहाँ हुक लोडर डायनामिक मॉड्यूल इम्पोर्ट का उपयोग करता है और एक डिफ़ॉल्ट JS/TS हुक फ़ैक्टरी की आवश्यकता होती है। यदि कोई खोजा गया हुक पथ मॉड्यूल के रूप में आयात योग्य नहीं है, तो लोड विफल हो जाता है और `LoadHooksResult.errors` में रिपोर्ट किया जाता है।
+The hook loader here uses dynamic module import and requires a default JS/TS hook factory. If a discovered hook path is not importable as a module, load fails and is reported in `LoadHooksResult.errors`.
 
-## इवेंट सतहें
+## Event surfaces
 
-हुक इवेंट `types.ts` में दृढ़ता से टाइप किए गए हैं।
+Hook events are strongly typed in `types.ts`.
 
-### सत्र इवेंट
+### Session events
 
 - `session_start`
-- `session_before_switch` → `{ cancel?: boolean }` लौटा सकता है
+- `session_before_switch` → can return `{ cancel?: boolean }`
 - `session_switch`
-- `session_before_branch` → `{ cancel?: boolean; skipConversationRestore?: boolean }` लौटा सकता है
+- `session_before_branch` → can return `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_branch`
-- `session_before_compact` → `{ cancel?: boolean; compaction?: CompactionResult }` लौटा सकता है
-- `session.compacting` → `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }` लौटा सकता है
+- `session_before_compact` → can return `{ cancel?: boolean; compaction?: CompactionResult }`
+- `session.compacting` → can return `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
 - `session_compact`
-- `session_before_tree` → `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }` लौटा सकता है
+- `session_before_tree` → can return `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 - `session_tree`
 - `session_shutdown`
 
-### एजेंट/संदर्भ इवेंट
+### Agent/context events
 
-- `context` → `{ messages?: Message[] }` लौटा सकता है
-- `before_agent_start` → `{ message?: { customType; content; display; details } }` लौटा सकता है
+- `context` → can return `{ messages?: Message[] }`
+- `before_agent_start` → can return `{ message?: { customType; content; display; details } }`
 - `agent_start`
 - `agent_end`
 - `turn_start`
@@ -113,12 +114,12 @@ export default function hook(pi: HookAPI): void {
 - `ttsr_triggered`
 - `todo_reminder`
 
-### टूल इवेंट (प्री/पोस्ट मॉडल)
+### Tool events (pre/post model)
 
-- `tool_call` (पूर्व-निष्पादन) → `{ block?: boolean; reason?: string }` लौटा सकता है
-- `tool_result` (पश्च-निष्पादन) → `{ content?; details?; isError? }` लौटा सकता है
+- `tool_call` (pre-execution) → can return `{ block?: boolean; reason?: string }`
+- `tool_result` (post-execution) → can return `{ content?; details?; isError? }`
 
-यह हुक सबसिस्टम का मूल प्री/पोस्ट इंटरसेप्शन मॉडल है।
+This is the hook subsystem’s core pre/post interception model.
 
 ```text
 Hook tool interception flow
@@ -137,129 +138,129 @@ tool_call handlers
       └─ error   ──> emit tool_result(isError=true) then rethrow original error
 ```
 
-## निष्पादन मॉडल और म्यूटेशन सिमेंटिक्स
+## Execution model and mutation semantics
 
-### 1) पूर्व-निष्पादन: `tool_call`
+### 1) Pre-execution: `tool_call`
 
-`HookToolWrapper.execute()` टूल निष्पादन से पहले `tool_call` उत्सर्जित करता है।
+`HookToolWrapper.execute()` emits `tool_call` before tool execution.
 
-- यदि कोई भी हैंडलर `{ block: true }` लौटाता है, तो निष्पादन रुक जाता है
-- यदि हैंडलर थ्रो करता है, तो रैपर विफल हो जाता है और निष्पादन को ब्लॉक करता है
-- लौटाया गया `reason` थ्रो किए गए एरर टेक्स्ट बन जाता है
+- if any handler returns `{ block: true }`, execution stops
+- if handler throws, wrapper fails closed and blocks execution
+- returned `reason` becomes the thrown error text
 
-### 2) टूल निष्पादन
+### 2) Tool execution
 
-यदि ब्लॉक नहीं किया गया है तो अंतर्निहित टूल सामान्य रूप से निष्पादित होता है।
+Underlying tool executes normally if not blocked.
 
-### 3) पश्च-निष्पादन: `tool_result`
+### 3) Post-execution: `tool_result`
 
-सफलता के बाद, रैपर `tool_result` उत्सर्जित करता है:
+After success, wrapper emits `tool_result` with:
 
 - `toolName`, `toolCallId`, `input`
 - `content`
 - `details`
 - `isError: false`
 
-यदि हैंडलर ओवरराइड लौटाता है:
+If handler returns overrides:
 
-- `content` परिणाम सामग्री को प्रतिस्थापित कर सकता है
-- `details` परिणाम विवरण को प्रतिस्थापित कर सकता है
+- `content` can replace result content
+- `details` can replace result details
 
-टूल विफलता पर, रैपर `isError: true` और एरर टेक्स्ट सामग्री के साथ `tool_result` उत्सर्जित करता है, फिर मूल एरर को पुनः थ्रो करता है।
+On tool failure, wrapper emits `tool_result` with `isError: true` and error text content, then rethrows original error.
 
-### हुक क्या म्यूटेट कर सकते हैं
+### What hooks can mutate
 
-- `context` के माध्यम से एकल कॉल के लिए LLM संदर्भ (`messages` प्रतिस्थापन श्रृंखला)
-- सफल टूल कॉल पर टूल आउटपुट content/details (`tool_result` पथ)
-- `before_agent_start` के माध्यम से प्री-एजेंट इंजेक्टेड संदेश
-- `session_before_*` और `session.compacting` के माध्यम से रद्दीकरण/कस्टम कॉम्पैक्शन/ट्री व्यवहार
+- LLM context for a single call via `context` (`messages` replacement chain)
+- tool output content/details on successful tool calls (`tool_result` path)
+- pre-agent injected message via `before_agent_start`
+- cancellation/custom compaction/tree behavior via `session_before_*` and `session.compacting`
 
-### इस कार्यान्वयन में हुक क्या म्यूटेट नहीं कर सकते
+### What hooks cannot mutate in this implementation
 
-- कच्चे टूल इनपुट पैरामीटर इन-प्लेस (केवल `tool_call` पर ब्लॉक/अनुमति)
-- थ्रो किए गए टूल एरर के बाद निष्पादन जारी रखना (एरर पथ पुनः थ्रो करता है)
-- रैपर व्यवहार में अंतिम सफलता/एरर स्थिति (लौटाया गया `isError` टाइप किया गया है लेकिन `HookToolWrapper` द्वारा लागू नहीं किया जाता)
+- raw tool input parameters in-place (only block/allow on `tool_call`)
+- execution continuation after thrown tool errors (error path rethrows)
+- final success/error status in wrapper behavior (returned `isError` is typed but not applied by `HookToolWrapper`)
 
-## क्रम और टकराव व्यवहार
+## Ordering and conflict behavior
 
-### डिस्कवरी-स्तर क्रम
+### Discovery-level ordering
 
-क्षमता प्रोवाइडर प्राथमिकता-क्रमबद्ध होते हैं (पहले उच्च)। डीडुप्लीकेशन क्षमता कुंजी द्वारा होती है, पहले वाला जीतता है।
+Capability providers are priority-sorted (higher first). Dedupe is by capability key, first wins.
 
-`hooks` के लिए, क्षमता कुंजी `${type}:${tool}:${name}` है। निम्न-प्राथमिकता प्रोवाइडरों से छाया किए गए डुप्लीकेट चिह्नित किए जाते हैं और प्रभावी खोजी गई सूची से बाहर किए जाते हैं।
+For `hooks`, capability key is `${type}:${tool}:${name}`. Shadowed duplicates from lower-priority providers are marked and excluded from effective discovered list.
 
-### लोड क्रम
+### Load order
 
-`discoverAndLoadHooks` एक फ्लैट `allPaths` सूची बनाता है, हल किए गए पूर्ण पथ द्वारा डीडुप्ड, फिर `loadHooks` उस क्रम में पुनरावृत्त करता है।
-प्रत्येक खोजी गई डायरेक्टरी के भीतर फ़ाइल क्रम `readdir` आउटपुट पर निर्भर करता है; हुक लोडर अतिरिक्त सॉर्टिंग नहीं करता।
+`discoverAndLoadHooks` builds a flat `allPaths` list, deduped by resolved absolute path, then `loadHooks` iterates in that order.
+File order within each discovered directory depends on `readdir` output; the hook loader does not perform an additional sort.
 
-### रनटाइम हैंडलर क्रम
+### Runtime handler order
 
-`HookRunner` के अंदर, क्रम पंजीकरण अनुक्रम द्वारा निर्धारक होता है:
+Inside `HookRunner`, order is deterministic by registration sequence:
 
-1. हुक्स सरणी क्रम
-2. हुक/इवेंट प्रति हैंडलर पंजीकरण क्रम
+1. hooks array order
+2. handler registration order per hook/event
 
-इवेंट प्रकार के अनुसार टकराव व्यवहार:
+Conflict behavior by event type:
 
-- `tool_call`: अंतिम लौटाया गया परिणाम जीतता है जब तक कोई हैंडलर ब्लॉक न करे; पहला ब्लॉक शॉर्ट-सर्किट करता है
-- `tool_result`: अंतिम लौटाया गया ओवरराइड जीतता है (कोई शॉर्ट-सर्किट नहीं)
-- `context`: श्रृंखलाबद्ध; प्रत्येक हैंडलर पूर्व हैंडलर का संदेश आउटपुट प्राप्त करता है
-- `before_agent_start`: पहला लौटाया गया संदेश रखा जाता है; बाद के संदेश अनदेखे किए जाते हैं
-- `session_before_*`: नवीनतम लौटाया गया परिणाम ट्रैक किया जाता है; `cancel: true` तुरंत शॉर्ट-सर्किट करता है
-- `session.compacting`: नवीनतम लौटाया गया परिणाम जीतता है
+- `tool_call`: last returned result wins unless a handler blocks; first block short-circuits
+- `tool_result`: last returned override wins (no short-circuit)
+- `context`: chained; each handler receives prior handler’s message output
+- `before_agent_start`: first returned message is kept; later messages ignored
+- `session_before_*`: latest returned result is tracked; `cancel: true` short-circuits immediately
+- `session.compacting`: latest returned result wins
 
-कमांड/रेंडरर टकराव:
+Command/renderer conflicts:
 
-- `getCommand(name)` हुक्स में पहला मेल लौटाता है (पहले लोड किया गया जीतता है)
-- `getMessageRenderer(customType)` पहला मेल लौटाता है
-- `getRegisteredCommands()` सभी कमांड लौटाता है (कोई डीडुप्लीकेशन नहीं)
+- `getCommand(name)` returns first match across hooks (first loaded wins)
+- `getMessageRenderer(customType)` returns first match
+- `getRegisteredCommands()` returns all commands (no dedupe)
 
-## UI इंटरेक्शन (`HookContext.ui`)
+## UI interactions (`HookContext.ui`)
 
-`HookUIContext` में शामिल हैं:
+`HookUIContext` includes:
 
 - `select`, `confirm`, `input`, `editor`
 - `notify`
 - `setStatus`
 - `custom`
 - `setEditorText`, `getEditorText`
-- `theme` गेटर
+- `theme` getter
 
-`ctx.hasUI` इंगित करता है कि इंटरैक्टिव UI उपलब्ध है या नहीं।
+`ctx.hasUI` indicates whether interactive UI is available.
 
-बिना UI के चलाते समय, डिफ़ॉल्ट नो-ऑप संदर्भ व्यवहार है:
+When running with no UI, the default no-op context behavior is:
 
-- `select/input/editor` `undefined` लौटाते हैं
-- `confirm` `false` लौटाता है
-- `notify`, `setStatus`, `setEditorText` नो-ऑप हैं
-- `getEditorText` `""` लौटाता है
+- `select/input/editor` return `undefined`
+- `confirm` returns `false`
+- `notify`, `setStatus`, `setEditorText` are no-ops
+- `getEditorText` returns `""`
 
-### स्टेटस लाइन व्यवहार
+### Status line behavior
 
-`ctx.ui.setStatus(key, text)` के माध्यम से सेट किया गया हुक स्टेटस टेक्स्ट:
+Hook status text set via `ctx.ui.setStatus(key, text)` is:
 
-- प्रति कुंजी संग्रहीत होता है
-- कुंजी नाम द्वारा क्रमबद्ध होता है
-- सैनिटाइज़ किया जाता है (`\r`, `\n`, `\t` → स्पेस; बार-बार आने वाले स्पेस संकुचित होते हैं)
-- प्रदर्शन के लिए जोड़ा और चौड़ाई-छंटनी किया जाता है
+- stored per key
+- sorted by key name
+- sanitized (`\r`, `\n`, `\t` → spaces; repeated spaces collapsed)
+- joined and width-truncated for display
 
-## एरर प्रसार और फ़ॉलबैक
+## Error propagation and fallback
 
-### लोड-समय
+### Load-time
 
-- अमान्य मॉड्यूल या गुम डिफ़ॉल्ट एक्सपोर्ट → `LoadHooksResult.errors` में कैप्चर किया जाता है
-- अन्य हुक्स के लिए लोडिंग जारी रहती है
+- invalid module or missing default export → captured in `LoadHooksResult.errors`
+- loading continues for other hooks
 
-### इवेंट-समय
+### Event-time
 
-`HookRunner.emit(...)` अधिकांश इवेंट के लिए हैंडलर एरर को पकड़ता है और श्रोताओं को `HookError` (`hookPath`, `event`, `error`) उत्सर्जित करता है, फिर जारी रहता है।
+`HookRunner.emit(...)` catches handler errors for most events and emits `HookError` to listeners (`hookPath`, `event`, `error`), then continues.
 
-`emitToolCall(...)` अधिक सख्त है: हैंडलर एरर वहाँ निगले नहीं जाते; वे कॉलर तक प्रसारित होते हैं। `HookToolWrapper` में, यह टूल कॉल को ब्लॉक करता है (फेल-सेफ)।
+`emitToolCall(...)` is stricter: handler errors are not swallowed there; they propagate to caller. In `HookToolWrapper`, this blocks the tool call (fail-safe).
 
-## वास्तविक API उदाहरण
+## Realistic API examples
 
-### असुरक्षित बैश कमांड ब्लॉक करें
+### Block unsafe bash commands
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -277,7 +278,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### पश्च-निष्पादन पर टूल आउटपुट रिडैक्ट करें
+### Redact tool output on post-execution
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -296,7 +297,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### प्रति LLM कॉल मॉडल संदर्भ संशोधित करें
+### Modify model context per LLM call
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -309,7 +310,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### कमांड-सेफ संदर्भ विधियों के साथ स्लैश कमांड पंजीकृत करें
+### Register slash command with command-safe context methods
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -334,13 +335,13 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-## निर्यात सतह
+## Export surface
 
-`src/extensibility/hooks/index.ts` निर्यात करता है:
+`src/extensibility/hooks/index.ts` exports:
 
-- लोडिंग API (`discoverAndLoadHooks`, `loadHooks`)
-- रनर और रैपर (`HookRunner`, `HookToolWrapper`)
-- सभी हुक प्रकार
-- `execCommand` पुनः-निर्यात
+- loading APIs (`discoverAndLoadHooks`, `loadHooks`)
+- runner and wrapper (`HookRunner`, `HookToolWrapper`)
+- all hook types
+- `execCommand` re-export
 
-और पैकेज रूट (`src/index.ts`) लीगेसी संगतता सतह के रूप में हुक **प्रकार** पुनः-निर्यात करता है।
+And package root (`src/index.ts`) re-exports hook **types** as a legacy compatibility surface.

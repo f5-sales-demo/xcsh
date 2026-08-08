@@ -1,25 +1,23 @@
 ---
-title: F5 XC Contexts
-description: >-
-  เชื่อมต่อ xcsh กับ F5 Distributed Cloud tenants -- สร้าง สลับ และจัดการ
-  authentication contexts
+title: "F5 XC Contexts"
+description: Connect xcsh to F5 Distributed Cloud tenants -- create, switch, and manage authentication contexts.
 sidebar:
   order: 1
   label: F5 XC Contexts
 i18n:
-  sourceHash: a9cccbc338f0
-  translator: machine
+  sourceHash: "7754a8acfa0b"
+  translator: "machine"
 ---
 
 # F5 XC Contexts
 
-xcsh เชื่อมต่อกับ F5 Distributed Cloud ผ่าน **contexts** -- ชุดข้อมูลรับรองที่มีชื่อซึ่งผูก tenant URL, API token และ namespace เข้าด้วยกัน หากคุณเคยใช้ `kubectl config use-context` หรือ `kubectx` มาก่อน workflow จะเหมือนกันทุกประการ: สร้าง context, สลับระหว่างกันด้วยชื่อ และใช้ `-` เพื่อสลับกลับ
+xcsh connects to F5 Distributed Cloud through **contexts** -- named credential sets that bind a tenant URL, API token, and namespace. If you've used `kubectl config use-context` or `kubectx`, the workflow is identical: create a context, switch between them by name, and use `-` to flip back.
 
-## เริ่มต้นใช้งาน
+## Getting started
 
-### 1. สร้าง context แรกของคุณ
+### 1. Create your first context
 
-คุณต้องการข้อมูลสามอย่างจาก F5 XC คอนโซล ของคุณ: tenant URL, API token และ namespace (ไม่บังคับ)
+You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
 /context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
@@ -29,13 +27,13 @@ xcsh เชื่อมต่อกับ F5 Distributed Cloud ผ่าน **co
 Context 'production' created. Use /context activate production to switch to it.
 ```
 
-หรือใช้ guided wizard หากคุณต้องการคำแนะนำทีละขั้นตอน:
+Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 /context wizard
 ```
 
-### 2. เปิดใช้งาน
+### 2. Activate it
 
 ```
 /context production
@@ -52,29 +50,29 @@ Context 'production' created. Use /context activate production to switch to it.
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-เมื่อเปิดใช้งานแล้ว xcsh จะฉีด tenant credentials เข้าไปในเซสชันของคุณ agent สามารถเรียกใช้ F5 XC API ได้แล้ว และแถบสถานะจะแสดง context ที่ใช้งานอยู่
+Once activated, xcsh injects the tenant credentials into your session. The agent can now make F5 XC API calls, and the status line shows the active context.
 
-### 3. เพิ่ม contexts เพิ่มเติมและสลับระหว่างกัน
+### 3. Add more contexts and switch between them
 
 ```
 /context create staging https://staging.console.ves.volterra.io p12k3-staging-token
 ```
 
-สลับด้วยชื่อ -- ไม่จำเป็นต้องใช้คำสั่งย่อย:
+Switch by name -- no subcommand verb needed:
 
 ```
 /context staging
 ```
 
-สลับกลับไปยัง context ก่อนหน้า (สไตล์ `cd -`):
+Switch back to the previous context (`cd -` style):
 
 ```
 /context -
 ```
 
-การเรียก `/context -` สองครั้งจะพาคุณกลับไปยังจุดเริ่มต้น
+Calling `/context -` twice returns you to where you started.
 
-### 4. ดูสิ่งที่คุณมี
+### 4. See what you have
 
 ```
 /context
@@ -85,43 +83,43 @@ Context 'production' created. Use /context activate production to switch to it.
 * staging              https://staging.console.ves.volterra.io
 ```
 
-`*` แสดง context ที่ใช้งานอยู่
+The `*` marks the active context.
 
-## คำสั่งที่ใช้บ่อย
+## Everyday commands
 
-| คำสั่ง | หน้าที่ |
+| Command | What it does |
 |---|---|
-| `/context` | แสดงรายการ contexts ทั้งหมด |
-| `/context <name>` | สลับไปยัง context |
-| `/context -` | สลับไปยัง context ก่อนหน้า |
-| `/context show` | แสดงรายละเอียด context ที่ใช้งานอยู่ (ซ่อน tokens) |
-| `/context status` | แสดงสถานะการตรวจสอบสิทธิ์ปัจจุบัน |
+| `/context` | List all contexts |
+| `/context <name>` | Switch to a context |
+| `/context -` | Switch to the previous context |
+| `/context show` | Show active context details (tokens masked) |
+| `/context status` | Show current auth status |
 
-## วงจรชีวิตของ Context
+## Context lifecycle
 
-| คำสั่ง | หน้าที่ |
+| Command | What it does |
 |---|---|
-| `/context create <name> <url> <token> [namespace]` | สร้าง context |
-| `/context delete <name> --confirm` | ลบ context (ต้องใช้ `--confirm`) |
-| `/context rename <old> <new>` | เปลี่ยนชื่อ context |
-| `/context validate <name>` | ทดสอบข้อมูลรับรองโดยไม่สลับ |
-| `/context export [name] [--include-token]` | ส่งออกเป็น JSON (ซ่อน tokens ตามค่าเริ่มต้น) |
-| `/context import <path-or-json> [--overwrite]` | นำเข้าจากไฟล์หรือ inline JSON |
-| `/context wizard` | การตั้งค่าแบบโต้ตอบที่มีคำแนะนำ |
+| `/context create <name> <url> <token> [namespace]` | Create a context |
+| `/context delete <name> --confirm` | Delete a context (requires `--confirm`) |
+| `/context rename <old> <new>` | Rename a context |
+| `/context validate <name>` | Test credentials without switching |
+| `/context export [name] [--include-token]` | Export as JSON (tokens masked by default) |
+| `/context import <path-or-json> [--overwrite]` | Import from file or inline JSON |
+| `/context wizard` | Guided interactive setup |
 
-## การสลับ Namespaces
+## Switching namespaces
 
-แต่ละ context มี namespace เริ่มต้น สลับโดยไม่ต้องเปลี่ยน context:
+Each context has a default namespace. Switch it without changing the context:
 
 ```
 /context namespace system
 ```
 
-Tab completion จะแสดงชื่อ namespace จาก tenant ที่ใช้งานอยู่
+Tab completion offers namespace names from the active tenant.
 
-## Environment variables บน Contexts
+## Environment variables on contexts
 
-Contexts สามารถพกพา environment variables เพิ่มเติมที่จะถูกฉีดเข้าไปในเซสชันของคุณเมื่อเปิดใช้งาน มีประโยชน์สำหรับการกำหนดค่าต่อ tenant ที่ไม่ได้เป็นส่วนหนึ่งของชุดข้อมูลรับรอง
+Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
 /context set CUSTOM_HEADER=x-example-corp-trace
@@ -130,25 +128,25 @@ Contexts สามารถพกพา environment variables เพิ่มเ
 /context unset LOG_LEVEL
 ```
 
-Aliases: `add` = `set`, `remove`/`clear` = `unset`
+Aliases: `add` = `set`, `remove`/`clear` = `unset`.
 
-## Tab Completion
+## Tab completion
 
-พิมพ์ `/context` แล้วกด Tab dropdown จะแสดง:
+Type `/context` and press Tab. The dropdown shows:
 
-1. **ชื่อ Context** -- พร้อม hints ของ tenant URL เพื่อให้คุณแยกแยะ tenants ได้
-2. **`-`** -- ปรากฏเมื่อคุณเคยสลับมาก่อน แสดง context ที่คุณจะสลับไป
-3. **Subcommands** -- `list`, `create`, `delete` เป็นต้น
+1. **Context names** -- with tenant URL hints, so you can tell tenants apart
+2. **`-`** -- appears when you've switched before, shows which context you'd flip to
+3. **Subcommands** -- `list`, `create`, `delete`, etc.
 
-ชื่อ context ปรากฏก่อนเนื่องจากการสลับเป็นการกระทำที่ใช้บ่อยที่สุด
+Context names appear first because switching is the most common action.
 
-Subcommand-level completions ก็ใช้งานได้เช่นกัน: `/context activate <Tab>` สำเร็จรูปชื่อ context, `/context namespace <Tab>` สำเร็จรูป namespaces, `/context unset <Tab>` สำเร็จรูป env var keys ที่รู้จัก
+Subcommand-level completions also work: `/context activate <Tab>` completes context names, `/context namespace <Tab>` completes namespaces, `/context unset <Tab>` completes known env var keys.
 
-## กฎการตั้งชื่อ
+## Naming rules
 
-ชื่อ context ต้องมี 1-64 ตัวอักษร: ตัวอักษร, ตัวเลข, ยัติภังค์, เครื่องหมายขีดล่าง
+Context names must be 1-64 characters: letters, digits, hyphens, underscores.
 
-ชื่อที่ชนกับ subcommands จะถูกปฏิเสธ:
+Names that collide with subcommands are rejected:
 
 ```
 /context create list https://example.com tok
@@ -158,25 +156,25 @@ Subcommand-level completions ก็ใช้งานได้เช่นกั
 Error: Context name 'list' conflicts with a /context subcommand. Choose a different name.
 ```
 
-ชุดที่สงวนไว้ทั้งหมด: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help` การเปรียบเทียบไม่คำนึงถึงตัวพิมพ์เล็ก-ใหญ่
+The full reserved set: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. Comparison is case-insensitive.
 
-## การแทนที่ด้วย Environment Variable
+## Environment variable override
 
-หาก `XCSH_API_URL` และ `XCSH_API_TOKEN` ถูกตั้งค่าใน shell environment ของคุณก่อนเปิด xcsh ค่าเหล่านั้นจะมีความสำคัญเหนือกว่า context ใดๆ ซึ่งมีประโยชน์สำหรับ CI/CD pipelines หรือเซสชันชั่วคราวที่คุณไม่ต้องการสร้าง context ถาวร
+If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in your shell environment before launching xcsh, they take precedence over any context. This is useful for CI/CD pipelines or one-off sessions where you don't want to create a persistent context.
 
-เมื่อทำงานในโหมดนี้ `/context` จะแสดงข้อมูลรับรองที่มาจาก environment พร้อมป้ายกำกับ `(via env vars)`
+When running in this mode, `/context` shows the environment-sourced credentials with a `(via env vars)` label.
 
-## พฤติกรรมของ Context ก่อนหน้า
+## Previous context behavior
 
-- **กำหนดขอบเขตเซสชัน**: context ก่อนหน้าจะรีเซ็ตเมื่อคุณรีสตาร์ท xcsh และไม่ถูกบันทึกลงดิสก์
-- **Ping-pong**: `/context -` สองครั้งจะพาคุณกลับไปยังจุดเริ่มต้น
-- **ปลอดภัยเมื่อมีการเปลี่ยนแปลง**: หากคุณลบ context ก่อนหน้า ตัวชี้จะถูกล้าง หากคุณเปลี่ยนชื่อ ตัวชี้จะติดตามชื่อใหม่
-- **การเปิดใช้งานซ้ำไม่มีผล**: `/context production` เมื่ออยู่บน `production` อยู่แล้วจะไม่รีเซ็ตตัวชี้ก่อนหน้า
+- **Session-scoped**: the previous context resets when you restart xcsh. It is not persisted to disk.
+- **Ping-pong**: `/context -` twice returns you to where you started.
+- **Safe across mutations**: if you delete the previous context, the pointer is cleared. If you rename it, the pointer follows the new name.
+- **Re-activation is a no-op**: `/context production` when already on `production` does not reset the previous pointer.
 
-## แนวทางการออกแบบ
+## Design conventions
 
-UX ของ `/context` ปฏิบัติตาม:
+The `/context` UX follows:
 
-- **kubectx**: `kubectx <name>` สำหรับการสลับ, `kubectx -` สำหรับก่อนหน้า, `kubectx` เปล่าสำหรับการแสดงรายการ
-- **kubectl**: `kubectl config use-context` สำหรับรูปแบบที่ชัดเจน
-- **Shell**: `cd -` / `OLDPWD` สำหรับการติดตาม previous-directory
+- **kubectx**: `kubectx <name>` for switching, `kubectx -` for previous, bare `kubectx` for listing
+- **kubectl**: `kubectl config use-context` for the explicit form
+- **Shell**: `cd -` / `OLDPWD` for previous-directory tracking

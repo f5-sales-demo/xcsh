@@ -1,32 +1,33 @@
 ---
 title: SDK
-description: SDK สำหรับสร้าง agent และการผสานรวมแบบกำหนดเองบนรันไทม์ coding agent ของ xcsh
+description: SDK for building custom agents and integrations on top of the xcsh coding agent runtime.
 sidebar:
   order: 6
   label: SDK
+
 i18n:
-  sourceHash: 80f3a4374241
-  translator: machine
+  sourceHash: "955010e30dde"
+  translator: "machine"
 ---
 
 # SDK
 
-SDK คือพื้นผิวการผสานรวมแบบ in-process สำหรับ `@f5-sales-demo/xcsh`
-ใช้งานเมื่อคุณต้องการเข้าถึงสถานะ agent, การสตรีมเหตุการณ์, การเชื่อมต่อเครื่องมือ และการควบคุม session โดยตรงจากกระบวนการ Bun/Node ของคุณเอง
+The SDK is the in-process integration surface for `@f5-sales-demo/xcsh`.
+Use it when you want direct access to agent state, event streaming, tool wiring, and session control from your own Bun/Node process.
 
-หากคุณต้องการการแยกข้ามภาษา/กระบวนการ ให้ใช้โหมด RPC แทน
+If you need cross-language/process isolation, use RPC mode instead.
 
-## การติดตั้ง
+## Installation
 
 ```bash
 bun add @f5-sales-demo/xcsh
 ```
 
-## จุดเข้าถึง
+## Entry points
 
-`@f5-sales-demo/xcsh` ส่งออก SDK APIs จาก root ของแพ็กเกจ
+`@f5-sales-demo/xcsh` exports the SDK APIs from the package root.
 
-การส่งออกหลักสำหรับผู้ฝัง:
+Core exports for embedders:
 
 - `createAgentSession`
 - `SessionManager`
@@ -34,10 +35,10 @@ bun add @f5-sales-demo/xcsh
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- ตัวช่วยค้นหา (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
-- พื้นผิว tool factory (`createTools`, `BUILTIN_TOOLS`, คลาส tool)
+- Discovery helpers (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- Tool factory surface (`createTools`, `BUILTIN_TOOLS`, tool classes)
 
-## เริ่มต้นอย่างรวดเร็ว (ค่าเริ่มต้นแบบค้นหาอัตโนมัติ)
+## Quick start (auto-discovery defaults)
 
 ```ts
 import { createAgentSession } from "@f5-sales-demo/xcsh";
@@ -59,39 +60,39 @@ unsubscribe();
 await session.dispose();
 ```
 
-## สิ่งที่ `createAgentSession()` ค้นหาโดยค่าเริ่มต้น
+## What `createAgentSession()` discovers by default
 
-`createAgentSession()` ทำตามหลักการ "ให้ค่าเพื่อแทนที่ ละเว้นเพื่อค้นหา"
+`createAgentSession()` follows “provide to override, omit to discover”.
 
-หากละเว้น จะแก้ไขค่าดังนี้:
+If omitted, it resolves:
 
 - `cwd`: `getProjectDir()`
-- `agentDir`: `~/.xcsh/agent` (ผ่าน `getAgentDir()`)
+- `agentDir`: `~/.xcsh/agent` (via `getAgentDir()`)
 - `authStorage`: `discoverAuthStorage(agentDir)`
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
-- `sessionManager`: `SessionManager.create(cwd)` (รองรับไฟล์)
+- `sessionManager`: `SessionManager.create(cwd)` (file-backed)
 - skills/context files/prompt templates/slash commands/extensions/custom TS commands
-- เครื่องมือในตัวผ่าน `createTools(...)`
-- เครื่องมือ MCP (เปิดใช้งานโดยค่าเริ่มต้น)
-- การผสานรวม LSP (เปิดใช้งานโดยค่าเริ่มต้น)
+- built-in tools via `createTools(...)`
+- MCP tools (enabled by default)
+- LSP integration (enabled by default)
 
-### ข้อมูลนำเข้าที่จำเป็นและเป็นทางเลือก
+### Required vs optional inputs
 
-โดยทั่วไปคุณต้องระบุเฉพาะสิ่งที่คุณต้องการควบคุม:
+Typically you must provide only what you want to control:
 
-- **ต้องระบุ**: ไม่มีสำหรับ session ขั้นต่ำ
-- **มักระบุอย่างชัดเจน** ในผู้ฝัง:
-    - `sessionManager` (หากคุณต้องการ in-memory หรือตำแหน่งที่กำหนดเอง)
-    - `authStorage` + `modelRegistry` (หากคุณเป็นเจ้าของวงจรชีวิตของ credential/model)
-    - `model` หรือ `modelPattern` (หากการเลือก model แบบกำหนดตายตัวมีความสำคัญ)
-    - `settings` (หากคุณต้องการการกำหนดค่าแบบแยกหรือสำหรับทดสอบ)
+- **Must provide**: nothing for a minimal session
+- **Usually provide explicitly** in embedders:
+    - `sessionManager` (if you need in-memory or custom location)
+    - `authStorage` + `modelRegistry` (if you own credential/model lifecycle)
+    - `model` or `modelPattern` (if deterministic model selection matters)
+    - `settings` (if you need isolated/test config)
 
-## พฤติกรรมของ session manager (แบบถาวร vs in-memory)
+## Session manager behavior (persistent vs in-memory)
 
-`AgentSession` ใช้ `SessionManager` เสมอ; พฤติกรรมขึ้นอยู่กับ factory ที่คุณใช้
+`AgentSession` always uses a `SessionManager`; behavior depends on which factory you use.
 
-### รองรับไฟล์ (ค่าเริ่มต้น)
+### File-backed (default)
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
@@ -103,9 +104,9 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // absolute .jsonl path
 ```
 
-- บันทึกการสนทนา/ข้อความ/เดลต้าสถานะไปยังไฟล์ session
-- รองรับเวิร์กโฟลว์การกลับมาใช้ต่อ/เปิด/แสดงรายการ/fork
-- `session.sessionFile` มีการกำหนดค่าไว้
+- Persists conversation/messages/state deltas to session files.
+- Supports resume/open/list/fork workflows.
+- `session.sessionFile` is defined.
 
 ### In-memory
 
@@ -119,11 +120,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- ไม่มีการบันทึกลงระบบไฟล์
-- เหมาะสำหรับการทดสอบ, งานชั่วคราว, agent ที่กำหนดขอบเขตตาม request
-- เมธอด session ยังคงทำงานได้ แต่พฤติกรรมเฉพาะการบันทึก (เส้นทางการกลับมาใช้ต่อ/fork จากไฟล์) มีข้อจำกัดตามธรรมชาติ
+- No filesystem persistence.
+- Useful for tests, ephemeral workers, request-scoped agents.
+- Session methods still work, but persistence-specific behaviors (file resume/fork paths) are naturally limited.
 
-### ตัวช่วย Resume/open/list
+### Resume/open/list helpers
 
 ```ts
 import { SessionManager } from "@f5-sales-demo/xcsh";
@@ -133,11 +134,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## การเชื่อมต่อ model และ auth
+## Model and auth wiring
 
-`createAgentSession()` ใช้ `ModelRegistry` + `AuthStorage` สำหรับการเลือก model และการแก้ไข API key
+`createAgentSession()` uses `ModelRegistry` + `AuthStorage` for model selection and API key resolution.
 
-### การเชื่อมต่ออย่างชัดเจน
+### Explicit wiring
 
 ```ts
 import {
@@ -163,28 +164,28 @@ const { session } = await createAgentSession({
 });
 ```
 
-### ลำดับการเลือกเมื่อละเว้น `model`
+### Selection order when `model` is omitted
 
-เมื่อไม่มีการระบุ `model`/`modelPattern` อย่างชัดเจน:
+When no explicit `model`/`modelPattern` is provided:
 
-1. กู้คืน model จาก session ที่มีอยู่ (หากสามารถกู้คืนได้ + key พร้อมใช้งาน)
-2. บทบาท model เริ่มต้นจากการตั้งค่า (`default`)
-3. model แรกที่พร้อมใช้งานซึ่งมี auth ที่ถูกต้อง
+1. restore model from existing session (if restorable + key available)
+2. settings default model role (`default`)
+3. first available model with valid auth
 
-หากการกู้คืนล้มเหลว `modelFallbackMessage` จะอธิบายการ fallback
+If restore fails, `modelFallbackMessage` explains fallback.
 
-### ลำดับความสำคัญของ Auth
+### Auth priority
 
-`AuthStorage.getApiKey(...)` แก้ไขในลำดับนี้:
+`AuthStorage.getApiKey(...)` resolves in this order:
 
-1. การแทนที่รันไทม์ (`setRuntimeApiKey`)
-2. ข้อมูลประจำตัวที่จัดเก็บใน `agent.db`
-3. ตัวแปรสภาพแวดล้อมของผู้ให้บริการ
-4. การ fallback ตัวแก้ไข custom-provider (หากกำหนดค่าไว้)
+1. runtime override (`setRuntimeApiKey`)
+2. stored credentials in `agent.db`
+3. provider environment variables
+4. custom-provider resolver fallback (if configured)
 
-## โมเดลการสมัครรับเหตุการณ์
+## Event subscription model
 
-สมัครรับด้วย `session.subscribe(listener)`; จะคืนฟังก์ชัน unsubscribe
+Subscribe with `session.subscribe(listener)`; it returns an unsubscribe function.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -202,29 +203,29 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` ประกอบด้วย `AgentEvent` หลักบวกกับเหตุการณ์ระดับ session:
+`AgentSessionEvent` includes core `AgentEvent` plus session-level events:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-## วงจรชีวิตของ Prompt
+## Prompt lifecycle
 
-`session.prompt(text, options?)` คือจุดเข้าถึงหลัก
+`session.prompt(text, options?)` is the primary entry point.
 
-พฤติกรรม:
+Behavior:
 
-1. การขยายคำสั่ง/template ที่เป็นทางเลือก (คำสั่ง `/`, คำสั่งกำหนดเอง, คำสั่ง slash จากไฟล์, prompt templates)
-2. หากกำลังสตรีมอยู่:
-    - ต้องการ `streamingBehavior: "steer" | "followUp"`
-    - จัดคิวแทนที่จะทิ้งงาน
-3. หากไม่ได้ใช้งาน:
-    - ตรวจสอบ model + API key
-    - เพิ่มข้อความผู้ใช้
-    - เริ่ม agent turn
+1. optional command/template expansion (`/` commands, custom commands, file slash commands, prompt templates)
+2. if currently streaming:
+    - requires `streamingBehavior: "steer" | "followUp"`
+    - queues instead of throwing work away
+3. if idle:
+    - validates model + API key
+    - appends user message
+    - starts agent turn
 
-API ที่เกี่ยวข้อง:
+Related APIs:
 
 - `sendUserMessage(content, { deliverAs? })`
 - `steer(text, images?)`
@@ -232,14 +233,14 @@ API ที่เกี่ยวข้อง:
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## การผสานรวมเครื่องมือและส่วนขยาย
+## Tools and extension integration
 
-### เครื่องมือในตัวและการกรอง
+### Built-ins and filtering
 
-- เครื่องมือในตัวมาจาก `createTools(...)` และ `BUILTIN_TOOLS`
-- `toolNames` ทำหน้าที่เป็น allowlist สำหรับเครื่องมือในตัว
-- `customTools` และเครื่องมือที่ลงทะเบียนผ่านส่วนขยายยังคงรวมอยู่
-- เครื่องมือที่ซ่อนอยู่ (เช่น `submit_result`) ต้องเปิดใช้งานอย่างชัดเจน เว้นแต่จะถูกกำหนดโดย options
+- Built-ins come from `createTools(...)` and `BUILTIN_TOOLS`.
+- `toolNames` acts as an allowlist for built-ins.
+- `customTools` and extension-registered tools are still included.
+- Hidden tools (for example `submit_result`) are opt-in unless required by options.
 
 ```ts
 const { session } = await createAgentSession({
@@ -248,27 +249,27 @@ const { session } = await createAgentSession({
 });
 ```
 
-### ส่วนขยาย
+### Extensions
 
-- `extensions`: `ExtensionFactory[]` แบบ inline
-- `additionalExtensionPaths`: โหลดไฟล์ส่วนขยายเพิ่มเติม
-- `disableExtensionDiscovery`: ปิดการสแกนส่วนขยายอัตโนมัติ
-- `preloadedExtensions`: ใช้ชุดส่วนขยายที่โหลดไว้แล้วซ้ำ
+- `extensions`: inline `ExtensionFactory[]`
+- `additionalExtensionPaths`: load extra extension files
+- `disableExtensionDiscovery`: disable automatic extension scanning
+- `preloadedExtensions`: reuse already loaded extension set
 
-### การเปลี่ยนแปลงชุดเครื่องมือรันไทม์
+### Runtime tool set changes
 
-`AgentSession` รองรับการอัปเดตการเปิดใช้งานรันไทม์:
+`AgentSession` supports runtime activation updates:
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-System prompt จะถูกสร้างใหม่เพื่อสะท้อนการเปลี่ยนแปลงเครื่องมือที่ใช้งานอยู่
+System prompt is rebuilt to reflect active tool changes.
 
-## ตัวช่วยค้นหา
+## Discovery helpers
 
-ใช้สิ่งเหล่านี้เมื่อคุณต้องการการควบคุมบางส่วนโดยไม่ต้องสร้างตรรกะการค้นหาภายในใหม่:
+Use these when you want partial control without recreating internal discovery logic:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -280,18 +281,18 @@ System prompt จะถูกสร้างใหม่เพื่อสะท
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## ตัวเลือกสำหรับ Subagent
+## Subagent-oriented options
 
-สำหรับผู้บริโภค SDK ที่สร้าง orchestrator (คล้ายกับโฟลว์ตัวดำเนินการงาน):
+For SDK consumers building orchestrators (similar to task executor flow):
 
-- `outputSchema`: ส่งความคาดหวังผลลัพธ์แบบมีโครงสร้างเข้าไปใน tool context
-- `requireSubmitResultTool`: บังคับให้รวมเครื่องมือ `submit_result`
-- `taskDepth`: บริบทความลึกของการเรียกซ้ำสำหรับ session งานที่ซ้อนกัน
-- `parentTaskPrefix`: คำนำหน้าการตั้งชื่อ artifact สำหรับผลลัพธ์งานที่ซ้อนกัน
+- `outputSchema`: passes structured output expectation into tool context
+- `requireSubmitResultTool`: forces `submit_result` tool inclusion
+- `taskDepth`: recursion-depth context for nested task sessions
+- `parentTaskPrefix`: artifact naming prefix for nested task outputs
 
-สิ่งเหล่านี้เป็นทางเลือกสำหรับการฝัง single-agent ปกติ
+These are optional for normal single-agent embedding.
 
-## ค่าที่ส่งคืนของ `createAgentSession()`
+## `createAgentSession()` return value
 
 ```ts
 type CreateAgentSessionResult = {
@@ -304,9 +305,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-ใช้ `setToolUIContext(...)` เฉพาะเมื่อผู้ฝังของคุณมีความสามารถด้าน UI ที่เครื่องมือ/ส่วนขยายควรเรียกใช้
+Use `setToolUIContext(...)` only if your embedder provides UI capabilities that tools/extensions should call into.
 
-## ตัวอย่างการฝังแบบควบคุมขั้นต่ำ
+## Minimal controlled embed example
 
 ```ts
 import {

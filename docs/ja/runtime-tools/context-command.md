@@ -1,23 +1,23 @@
 ---
-title: F5 XC コンテキスト
-description: xcsh を F5 Distributed Cloud テナントに接続 -- 認証コンテキストの作成、切り替え、管理。
+title: "F5 XC Contexts"
+description: Connect xcsh to F5 Distributed Cloud tenants -- create, switch, and manage authentication contexts.
 sidebar:
   order: 1
-  label: F5 XC コンテキスト
+  label: F5 XC Contexts
 i18n:
-  sourceHash: a9cccbc338f0
-  translator: machine
+  sourceHash: "7754a8acfa0b"
+  translator: "machine"
 ---
 
-# F5 XC コンテキスト
+# F5 XC Contexts
 
-xcsh は **コンテキスト** を通じて F5 Distributed Cloud に接続します。コンテキストとは、テナント URL、API トークン、およびネームスペースを紐づけた名前付きの認証情報セットです。`kubectl config use-context` や `kubectx` を使ったことがあれば、ワークフローは同じです。コンテキストを作成し、名前で切り替え、`-` で前のコンテキストに戻ります。
+xcsh connects to F5 Distributed Cloud through **contexts** -- named credential sets that bind a tenant URL, API token, and namespace. If you've used `kubectl config use-context` or `kubectx`, the workflow is identical: create a context, switch between them by name, and use `-` to flip back.
 
-## はじめに
+## Getting started
 
-### 1. 最初のコンテキストを作成する
+### 1. Create your first context
 
-F5 XC コンソールから次の3つの情報が必要です：テナント URL、API トークン、およびオプションでネームスペース。
+You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
 /context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
@@ -27,13 +27,13 @@ F5 XC コンソールから次の3つの情報が必要です：テナント URL
 Context 'production' created. Use /context activate production to switch to it.
 ```
 
-ステップバイステップのプロンプトを好む場合は、ガイド付きウィザードを使用できます：
+Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 /context wizard
 ```
 
-### 2. コンテキストをアクティブにする
+### 2. Activate it
 
 ```
 /context production
@@ -50,29 +50,29 @@ Context 'production' created. Use /context activate production to switch to it.
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-アクティブにすると、xcsh はテナントの認証情報をセッションに注入します。エージェントは F5 XC API 呼び出しを行えるようになり、ステータスラインにアクティブなコンテキストが表示されます。
+Once activated, xcsh injects the tenant credentials into your session. The agent can now make F5 XC API calls, and the status line shows the active context.
 
-### 3. コンテキストを追加して切り替える
+### 3. Add more contexts and switch between them
 
 ```
 /context create staging https://staging.console.ves.volterra.io p12k3-staging-token
 ```
 
-名前で切り替えます -- サブコマンド動詞は不要です：
+Switch by name -- no subcommand verb needed:
 
 ```
 /context staging
 ```
 
-前のコンテキストに戻ります（`cd -` スタイル）：
+Switch back to the previous context (`cd -` style):
 
 ```
 /context -
 ```
 
-`/context -` を2回呼び出すと、元の場所に戻ります。
+Calling `/context -` twice returns you to where you started.
 
-### 4. 現在の状態を確認する
+### 4. See what you have
 
 ```
 /context
@@ -83,43 +83,43 @@ Context 'production' created. Use /context activate production to switch to it.
 * staging              https://staging.console.ves.volterra.io
 ```
 
-`*` がアクティブなコンテキストを示します。
+The `*` marks the active context.
 
-## 日常的なコマンド
+## Everyday commands
 
-| コマンド | 動作 |
+| Command | What it does |
 |---|---|
-| `/context` | すべてのコンテキストを一覧表示 |
-| `/context <name>` | コンテキストを切り替え |
-| `/context -` | 前のコンテキストに切り替え |
-| `/context show` | アクティブなコンテキストの詳細を表示（トークンはマスク） |
-| `/context status` | 現在の認証ステータスを表示 |
+| `/context` | List all contexts |
+| `/context <name>` | Switch to a context |
+| `/context -` | Switch to the previous context |
+| `/context show` | Show active context details (tokens masked) |
+| `/context status` | Show current auth status |
 
-## コンテキストのライフサイクル
+## Context lifecycle
 
-| コマンド | 動作 |
+| Command | What it does |
 |---|---|
-| `/context create <name> <url> <token> [namespace]` | コンテキストを作成 |
-| `/context delete <name> --confirm` | コンテキストを削除（`--confirm` が必要） |
-| `/context rename <old> <new>` | コンテキストの名前を変更 |
-| `/context validate <name>` | 切り替えずに認証情報をテスト |
-| `/context export [name] [--include-token]` | JSON としてエクスポート（デフォルトでトークンはマスク） |
-| `/context import <path-or-json> [--overwrite]` | ファイルまたはインライン JSON からインポート |
-| `/context wizard` | ガイド付きインタラクティブセットアップ |
+| `/context create <name> <url> <token> [namespace]` | Create a context |
+| `/context delete <name> --confirm` | Delete a context (requires `--confirm`) |
+| `/context rename <old> <new>` | Rename a context |
+| `/context validate <name>` | Test credentials without switching |
+| `/context export [name] [--include-token]` | Export as JSON (tokens masked by default) |
+| `/context import <path-or-json> [--overwrite]` | Import from file or inline JSON |
+| `/context wizard` | Guided interactive setup |
 
-## ネームスペースの切り替え
+## Switching namespaces
 
-各コンテキストにはデフォルトのネームスペースがあります。コンテキストを変更せずにネームスペースを切り替えます：
+Each context has a default namespace. Switch it without changing the context:
 
 ```
 /context namespace system
 ```
 
-タブ補完でアクティブなテナントのネームスペース名が候補として表示されます。
+Tab completion offers namespace names from the active tenant.
 
-## コンテキストの環境変数
+## Environment variables on contexts
 
-コンテキストには追加の環境変数を設定でき、アクティブ化時にセッションに注入されます。認証情報セットには含まれないテナント固有の設定に便利です。
+Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
 /context set CUSTOM_HEADER=x-example-corp-trace
@@ -128,25 +128,25 @@ Context 'production' created. Use /context activate production to switch to it.
 /context unset LOG_LEVEL
 ```
 
-エイリアス：`add` = `set`、`remove`/`clear` = `unset`。
+Aliases: `add` = `set`, `remove`/`clear` = `unset`.
 
-## タブ補完
+## Tab completion
 
-`/context` と入力して Tab キーを押します。ドロップダウンに以下が表示されます：
+Type `/context` and press Tab. The dropdown shows:
 
-1. **コンテキスト名** -- テナント URL のヒント付きで、テナントを区別できます
-2. **`-`** -- 以前に切り替えたことがある場合に表示され、どのコンテキストに戻るかを示します
-3. **サブコマンド** -- `list`、`create`、`delete` など
+1. **Context names** -- with tenant URL hints, so you can tell tenants apart
+2. **`-`** -- appears when you've switched before, shows which context you'd flip to
+3. **Subcommands** -- `list`, `create`, `delete`, etc.
 
-切り替えが最も一般的な操作であるため、コンテキスト名が最初に表示されます。
+Context names appear first because switching is the most common action.
 
-サブコマンドレベルの補完も動作します：`/context activate <Tab>` でコンテキスト名を補完、`/context namespace <Tab>` でネームスペースを補完、`/context unset <Tab>` で既知の環境変数キーを補完します。
+Subcommand-level completions also work: `/context activate <Tab>` completes context names, `/context namespace <Tab>` completes namespaces, `/context unset <Tab>` completes known env var keys.
 
-## 命名規則
+## Naming rules
 
-コンテキスト名は1〜64文字で、英字、数字、ハイフン、アンダースコアが使用できます。
+Context names must be 1-64 characters: letters, digits, hyphens, underscores.
 
-サブコマンドと衝突する名前は拒否されます：
+Names that collide with subcommands are rejected:
 
 ```
 /context create list https://example.com tok
@@ -156,25 +156,25 @@ Context 'production' created. Use /context activate production to switch to it.
 Error: Context name 'list' conflicts with a /context subcommand. Choose a different name.
 ```
 
-予約語の完全なセット：`list`、`show`、`status`、`create`、`delete`、`rename`、`namespace`、`env`、`set`、`unset`、`add`、`remove`、`clear`、`activate`、`validate`、`export`、`import`、`wizard`、`help`。比較は大文字小文字を区別しません。
+The full reserved set: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. Comparison is case-insensitive.
 
-## 環境変数によるオーバーライド
+## Environment variable override
 
-xcsh 起動前にシェル環境で `XCSH_API_URL` と `XCSH_API_TOKEN` が設定されている場合、それらはすべてのコンテキストより優先されます。これは CI/CD パイプラインや、永続的なコンテキストを作成したくない一回限りのセッションに便利です。
+If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in your shell environment before launching xcsh, they take precedence over any context. This is useful for CI/CD pipelines or one-off sessions where you don't want to create a persistent context.
 
-このモードで実行している場合、`/context` は環境変数から取得した認証情報を `(via env vars)` ラベル付きで表示します。
+When running in this mode, `/context` shows the environment-sourced credentials with a `(via env vars)` label.
 
-## 前のコンテキストの動作
+## Previous context behavior
 
-- **セッションスコープ**：前のコンテキストは xcsh の再起動時にリセットされます。ディスクには永続化されません。
-- **ピンポン**：`/context -` を2回実行すると、元の場所に戻ります。
-- **変更に対して安全**：前のコンテキストを削除すると、ポインタはクリアされます。名前を変更すると、ポインタは新しい名前に追従します。
-- **再アクティブ化はノーオペレーション**：すでに `production` にいるときに `/context production` を実行しても、前のポインタはリセットされません。
+- **Session-scoped**: the previous context resets when you restart xcsh. It is not persisted to disk.
+- **Ping-pong**: `/context -` twice returns you to where you started.
+- **Safe across mutations**: if you delete the previous context, the pointer is cleared. If you rename it, the pointer follows the new name.
+- **Re-activation is a no-op**: `/context production` when already on `production` does not reset the previous pointer.
 
-## デザイン規約
+## Design conventions
 
-`/context` の UX は以下に準拠しています：
+The `/context` UX follows:
 
-- **kubectx**：`kubectx <name>` で切り替え、`kubectx -` で前に戻る、引数なしの `kubectx` で一覧表示
-- **kubectl**：`kubectl config use-context` による明示的な形式
-- **シェル**：`cd -` / `OLDPWD` による前のディレクトリ追跡
+- **kubectx**: `kubectx <name>` for switching, `kubectx -` for previous, bare `kubectx` for listing
+- **kubectl**: `kubectl config use-context` for the explicit form
+- **Shell**: `cd -` / `OLDPWD` for previous-directory tracking

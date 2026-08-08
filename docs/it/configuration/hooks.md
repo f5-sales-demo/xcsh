@@ -1,41 +1,40 @@
 ---
-title: Hook
-description: >-
-  Sistema di hook per l'automazione di eventi pre/post nel ciclo di vita
-  dell'agente di codifica.
+title: Hooks
+description: Hook system for pre/post event automation in the coding agent lifecycle.
 sidebar:
   order: 4
-  label: Hook
+  label: Hooks
+
 i18n:
-  sourceHash: cdbec10bc405
-  translator: machine
+  sourceHash: "afa30d336bec"
+  translator: "machine"
 ---
 
-# Hook
+# Hooks
 
-Questo documento descrive il **codice corrente del sottosistema hook** in `src/extensibility/hooks/*`.
+This document describes the **current hook subsystem code** in `src/extensibility/hooks/*`.
 
-## Stato attuale nel runtime
+## Current status in runtime
 
-Il pacchetto hook (`src/extensibility/hooks/`) è ancora esportato e utilizzabile come superficie API, ma il runtime CLI predefinito ora inizializza il percorso dell'**extension runner**. Nel flusso di avvio attuale:
+The hook package (`src/extensibility/hooks/`) is still exported and usable as an API surface, but the default CLI runtime now initializes the **extension runner** path. In current startup flow:
 
-- `--hook` è trattato come alias di `--extension` (i percorsi CLI vengono uniti in `additionalExtensionPaths`)
-- gli strumenti sono avvolti da `ExtensionToolWrapper`, non da `HookToolWrapper`
-- le trasformazioni di contesto e le emissioni del ciclo di vita passano attraverso `ExtensionRunner`
+- `--hook` is treated as an alias for `--extension` (CLI paths are merged into `additionalExtensionPaths`)
+- tools are wrapped by `ExtensionToolWrapper`, not `HookToolWrapper`
+- context transforms and lifecycle emissions go through `ExtensionRunner`
 
-Questo file documenta quindi l'implementazione del sottosistema hook (tipi/loader/runner/wrapper), inclusi il comportamento legacy e i vincoli.
+So this file documents the hook subsystem implementation itself (types/loader/runner/wrapper), including legacy behavior and constraints.
 
-## File principali
+## Key files
 
-- `src/extensibility/hooks/types.ts` — contesto hook, tipi di evento e contratti di risultato
-- `src/extensibility/hooks/loader.ts` — caricamento dei moduli e bridge per la scoperta degli hook
-- `src/extensibility/hooks/runner.ts` — dispatch degli eventi, ricerca dei comandi e segnalazione degli errori
-- `src/extensibility/hooks/tool-wrapper.ts` — wrapper di intercettazione pre/post degli strumenti
-- `src/extensibility/hooks/index.ts` — esportazioni/riesportazioni
+- `src/extensibility/hooks/types.ts` — hook context, event types, and result contracts
+- `src/extensibility/hooks/loader.ts` — module loading and hook discovery bridge
+- `src/extensibility/hooks/runner.ts` — event dispatch, command lookup, error signaling
+- `src/extensibility/hooks/tool-wrapper.ts` — pre/post tool interception wrapper
+- `src/extensibility/hooks/index.ts` — exports/re-exports
 
-## Cos'è un modulo hook
+## What a hook module is
 
-Un modulo hook deve esportare di default una factory:
+A hook module must default-export a factory:
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -49,61 +48,61 @@ export default function hook(pi: HookAPI): void {
 }
 ```
 
-La factory può:
+The factory can:
 
-- registrare gestori di eventi con `pi.on(...)`
-- inviare messaggi personalizzati persistenti con `pi.sendMessage(...)`
-- persistere stato non-LLM con `pi.appendEntry(...)`
-- registrare comandi slash tramite `pi.registerCommand(...)`
-- registrare renderer personalizzati dei messaggi tramite `pi.registerMessageRenderer(...)`
-- eseguire comandi shell tramite `pi.exec(...)`
+- register event handlers with `pi.on(...)`
+- send persistent custom messages with `pi.sendMessage(...)`
+- persist non-LLM state with `pi.appendEntry(...)`
+- register slash commands via `pi.registerCommand(...)`
+- register custom message renderers via `pi.registerMessageRenderer(...)`
+- run shell commands via `pi.exec(...)`
 
-## Scoperta e caricamento
+## Discovery and loading
 
-`discoverAndLoadHooks(configuredPaths, cwd)` esegue:
+`discoverAndLoadHooks(configuredPaths, cwd)` does:
 
-1. Carica gli hook scoperti dal registro delle capability (`loadCapability("hooks")`)
-2. Aggiunge i percorsi configurati esplicitamente (deduplicati per percorso assoluto)
-3. Chiama `loadHooks(allPaths, cwd)`
+1. Load discovered hooks from capability registry (`loadCapability("hooks")`)
+2. Append explicitly configured paths (deduped by absolute path)
+3. Call `loadHooks(allPaths, cwd)`
 
-`loadHooks` importa quindi ciascun percorso e si aspetta una funzione `default`.
+`loadHooks` then imports each path and expects a `default` function.
 
-### Risoluzione dei percorsi
+### Path resolution
 
-`loader.ts` risolve i percorsi degli hook come segue:
+`loader.ts` resolves hook paths as:
 
-- percorso assoluto: utilizzato così com'è
-- percorso con `~`: espanso
-- percorso relativo: risolto rispetto a `cwd`
+- absolute path: used as-is
+- `~` path: expanded
+- relative path: resolved against `cwd`
 
-### Importante discrepanza legacy
+### Important legacy mismatch
 
-I provider di scoperta per `hookCapability` modellano ancora file hook shell-style pre/post (ad esempio `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
+Discovery providers for `hookCapability` still model pre/post shell-style hook files (for example `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
 
-Il loader degli hook qui utilizza l'importazione dinamica dei moduli e richiede una factory hook JS/TS di default. Se un percorso hook scoperto non è importabile come modulo, il caricamento fallisce e viene riportato in `LoadHooksResult.errors`.
+The hook loader here uses dynamic module import and requires a default JS/TS hook factory. If a discovered hook path is not importable as a module, load fails and is reported in `LoadHooksResult.errors`.
 
-## Superfici degli eventi
+## Event surfaces
 
-Gli eventi hook sono fortemente tipizzati in `types.ts`.
+Hook events are strongly typed in `types.ts`.
 
-### Eventi di sessione
+### Session events
 
 - `session_start`
-- `session_before_switch` → può restituire `{ cancel?: boolean }`
+- `session_before_switch` → can return `{ cancel?: boolean }`
 - `session_switch`
-- `session_before_branch` → può restituire `{ cancel?: boolean; skipConversationRestore?: boolean }`
+- `session_before_branch` → can return `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_branch`
-- `session_before_compact` → può restituire `{ cancel?: boolean; compaction?: CompactionResult }`
-- `session.compacting` → può restituire `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
+- `session_before_compact` → can return `{ cancel?: boolean; compaction?: CompactionResult }`
+- `session.compacting` → can return `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
 - `session_compact`
-- `session_before_tree` → può restituire `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
+- `session_before_tree` → can return `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 - `session_tree`
 - `session_shutdown`
 
-### Eventi agente/contesto
+### Agent/context events
 
-- `context` → può restituire `{ messages?: Message[] }`
-- `before_agent_start` → può restituire `{ message?: { customType; content; display; details } }`
+- `context` → can return `{ messages?: Message[] }`
+- `before_agent_start` → can return `{ message?: { customType; content; display; details } }`
 - `agent_start`
 - `agent_end`
 - `turn_start`
@@ -115,153 +114,153 @@ Gli eventi hook sono fortemente tipizzati in `types.ts`.
 - `ttsr_triggered`
 - `todo_reminder`
 
-### Eventi degli strumenti (modello pre/post)
+### Tool events (pre/post model)
 
-- `tool_call` (pre-esecuzione) → può restituire `{ block?: boolean; reason?: string }`
-- `tool_result` (post-esecuzione) → può restituire `{ content?; details?; isError? }`
+- `tool_call` (pre-execution) → can return `{ block?: boolean; reason?: string }`
+- `tool_result` (post-execution) → can return `{ content?; details?; isError? }`
 
-Questo è il modello di intercettazione pre/post centrale del sottosistema hook.
+This is the hook subsystem’s core pre/post interception model.
 
 ```text
-Flusso di intercettazione degli strumenti hook
+Hook tool interception flow
 
-gestori tool_call
+tool_call handlers
    │
-   ├─ qualcuno restituisce { block: true }? ── sì ──> throw (strumento bloccato)
+   ├─ any { block: true }? ── yes ──> throw (tool blocked)
    │
    └─ no
       │
       ▼
-   esecuzione dello strumento sottostante
+   execute underlying tool
       │
-      ├─ successo ──> i gestori tool_result possono sovrascrivere { content, details }
+      ├─ success ──> tool_result handlers can override { content, details }
       │
-      └─ errore   ──> emette tool_result(isError=true) poi rilancia l'errore originale
+      └─ error   ──> emit tool_result(isError=true) then rethrow original error
 ```
 
-## Modello di esecuzione e semantica delle mutazioni
+## Execution model and mutation semantics
 
-### 1) Pre-esecuzione: `tool_call`
+### 1) Pre-execution: `tool_call`
 
-`HookToolWrapper.execute()` emette `tool_call` prima dell'esecuzione dello strumento.
+`HookToolWrapper.execute()` emits `tool_call` before tool execution.
 
-- se un qualsiasi gestore restituisce `{ block: true }`, l'esecuzione si interrompe
-- se un gestore lancia un'eccezione, il wrapper fallisce in modo sicuro e blocca l'esecuzione
-- il `reason` restituito diventa il testo dell'errore lanciato
+- if any handler returns `{ block: true }`, execution stops
+- if handler throws, wrapper fails closed and blocks execution
+- returned `reason` becomes the thrown error text
 
-### 2) Esecuzione dello strumento
+### 2) Tool execution
 
-Lo strumento sottostante viene eseguito normalmente se non bloccato.
+Underlying tool executes normally if not blocked.
 
-### 3) Post-esecuzione: `tool_result`
+### 3) Post-execution: `tool_result`
 
-Dopo il successo, il wrapper emette `tool_result` con:
+After success, wrapper emits `tool_result` with:
 
 - `toolName`, `toolCallId`, `input`
 - `content`
 - `details`
 - `isError: false`
 
-Se un gestore restituisce delle sovrascritture:
+If handler returns overrides:
 
-- `content` può sostituire il contenuto del risultato
-- `details` può sostituire i dettagli del risultato
+- `content` can replace result content
+- `details` can replace result details
 
-In caso di fallimento dello strumento, il wrapper emette `tool_result` con `isError: true` e il contenuto del testo di errore, poi rilancia l'errore originale.
+On tool failure, wrapper emits `tool_result` with `isError: true` and error text content, then rethrows original error.
 
-### Cosa possono mutare gli hook
+### What hooks can mutate
 
-- il contesto LLM per una singola chiamata tramite `context` (catena di sostituzione dei `messages`)
-- il contenuto/i dettagli dell'output degli strumenti per le chiamate riuscite (percorso `tool_result`)
-- il messaggio iniettato prima dell'agente tramite `before_agent_start`
-- il comportamento di cancellazione/compattazione personalizzata/tree tramite `session_before_*` e `session.compacting`
+- LLM context for a single call via `context` (`messages` replacement chain)
+- tool output content/details on successful tool calls (`tool_result` path)
+- pre-agent injected message via `before_agent_start`
+- cancellation/custom compaction/tree behavior via `session_before_*` and `session.compacting`
 
-### Cosa non possono mutare gli hook in questa implementazione
+### What hooks cannot mutate in this implementation
 
-- i parametri di input raw degli strumenti in-place (solo block/allow su `tool_call`)
-- la continuazione dell'esecuzione dopo errori degli strumenti lanciati (il percorso di errore rilancia)
-- lo stato finale di successo/errore nel comportamento del wrapper (il `isError` restituito è tipizzato ma non applicato da `HookToolWrapper`)
+- raw tool input parameters in-place (only block/allow on `tool_call`)
+- execution continuation after thrown tool errors (error path rethrows)
+- final success/error status in wrapper behavior (returned `isError` is typed but not applied by `HookToolWrapper`)
 
-## Ordinamento e comportamento in caso di conflitto
+## Ordering and conflict behavior
 
-### Ordinamento a livello di scoperta
+### Discovery-level ordering
 
-I provider di capability sono ordinati per priorità (dalla più alta). La deduplicazione avviene per chiave di capability, vince il primo.
+Capability providers are priority-sorted (higher first). Dedupe is by capability key, first wins.
 
-Per `hooks`, la chiave di capability è `${type}:${tool}:${name}`. I duplicati oscurati da provider a priorità inferiore vengono contrassegnati ed esclusi dalla lista di scoperta effettiva.
+For `hooks`, capability key is `${type}:${tool}:${name}`. Shadowed duplicates from lower-priority providers are marked and excluded from effective discovered list.
 
-### Ordine di caricamento
+### Load order
 
-`discoverAndLoadHooks` costruisce una lista `allPaths` piatta, deduplicata per percorso assoluto risolto, poi `loadHooks` itera in quell'ordine.
-L'ordine dei file all'interno di ciascuna directory scoperta dipende dall'output di `readdir`; il loader degli hook non esegue un ordinamento aggiuntivo.
+`discoverAndLoadHooks` builds a flat `allPaths` list, deduped by resolved absolute path, then `loadHooks` iterates in that order.
+File order within each discovered directory depends on `readdir` output; the hook loader does not perform an additional sort.
 
-### Ordine dei gestori a runtime
+### Runtime handler order
 
-All'interno di `HookRunner`, l'ordine è deterministico per sequenza di registrazione:
+Inside `HookRunner`, order is deterministic by registration sequence:
 
-1. ordine dell'array degli hook
-2. ordine di registrazione dei gestori per hook/evento
+1. hooks array order
+2. handler registration order per hook/event
 
-Comportamento in caso di conflitto per tipo di evento:
+Conflict behavior by event type:
 
-- `tool_call`: vince l'ultimo risultato restituito a meno che un gestore blocchi; il primo blocco causa un cortocircuito
-- `tool_result`: vince l'ultima sovrascrittura restituita (nessun cortocircuito)
-- `context`: concatenato; ciascun gestore riceve l'output dei messaggi del gestore precedente
-- `before_agent_start`: viene mantenuto il primo messaggio restituito; i messaggi successivi vengono ignorati
-- `session_before_*`: viene tracciato l'ultimo risultato restituito; `cancel: true` causa un cortocircuito immediato
-- `session.compacting`: vince l'ultimo risultato restituito
+- `tool_call`: last returned result wins unless a handler blocks; first block short-circuits
+- `tool_result`: last returned override wins (no short-circuit)
+- `context`: chained; each handler receives prior handler’s message output
+- `before_agent_start`: first returned message is kept; later messages ignored
+- `session_before_*`: latest returned result is tracked; `cancel: true` short-circuits immediately
+- `session.compacting`: latest returned result wins
 
-Conflitti di comandi/renderer:
+Command/renderer conflicts:
 
-- `getCommand(name)` restituisce la prima corrispondenza tra gli hook (vince il primo caricato)
-- `getMessageRenderer(customType)` restituisce la prima corrispondenza
-- `getRegisteredCommands()` restituisce tutti i comandi (senza deduplicazione)
+- `getCommand(name)` returns first match across hooks (first loaded wins)
+- `getMessageRenderer(customType)` returns first match
+- `getRegisteredCommands()` returns all commands (no dedupe)
 
-## Interazioni con l'interfaccia utente (`HookContext.ui`)
+## UI interactions (`HookContext.ui`)
 
-`HookUIContext` include:
+`HookUIContext` includes:
 
 - `select`, `confirm`, `input`, `editor`
 - `notify`
 - `setStatus`
 - `custom`
 - `setEditorText`, `getEditorText`
-- getter `theme`
+- `theme` getter
 
-`ctx.hasUI` indica se l'interfaccia utente interattiva è disponibile.
+`ctx.hasUI` indicates whether interactive UI is available.
 
-Quando si esegue senza interfaccia utente, il comportamento predefinito del contesto no-op è:
+When running with no UI, the default no-op context behavior is:
 
-- `select/input/editor` restituiscono `undefined`
-- `confirm` restituisce `false`
-- `notify`, `setStatus`, `setEditorText` sono no-op
-- `getEditorText` restituisce `""`
+- `select/input/editor` return `undefined`
+- `confirm` returns `false`
+- `notify`, `setStatus`, `setEditorText` are no-ops
+- `getEditorText` returns `""`
 
-### Comportamento della riga di stato
+### Status line behavior
 
-Il testo di stato hook impostato tramite `ctx.ui.setStatus(key, text)` è:
+Hook status text set via `ctx.ui.setStatus(key, text)` is:
 
-- memorizzato per chiave
-- ordinato per nome della chiave
-- sanificato (`\r`, `\n`, `\t` → spazi; spazi ripetuti compressi)
-- unito e troncato in larghezza per la visualizzazione
+- stored per key
+- sorted by key name
+- sanitized (`\r`, `\n`, `\t` → spaces; repeated spaces collapsed)
+- joined and width-truncated for display
 
-## Propagazione degli errori e fallback
+## Error propagation and fallback
 
-### In fase di caricamento
+### Load-time
 
-- modulo non valido o export default mancante → catturato in `LoadHooksResult.errors`
-- il caricamento continua per gli altri hook
+- invalid module or missing default export → captured in `LoadHooksResult.errors`
+- loading continues for other hooks
 
-### In fase di evento
+### Event-time
 
-`HookRunner.emit(...)` cattura gli errori dei gestori per la maggior parte degli eventi ed emette `HookError` ai listener (`hookPath`, `event`, `error`), poi continua.
+`HookRunner.emit(...)` catches handler errors for most events and emits `HookError` to listeners (`hookPath`, `event`, `error`), then continues.
 
-`emitToolCall(...)` è più rigoroso: gli errori dei gestori non vengono inghiottiti; si propagano al chiamante. In `HookToolWrapper`, questo blocca la chiamata allo strumento (fail-safe).
+`emitToolCall(...)` is stricter: handler errors are not swallowed there; they propagate to caller. In `HookToolWrapper`, this blocks the tool call (fail-safe).
 
-## Esempi API realistici
+## Realistic API examples
 
-### Bloccare comandi bash non sicuri
+### Block unsafe bash commands
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -279,7 +278,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### Oscurare l'output degli strumenti in post-esecuzione
+### Redact tool output on post-execution
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -298,7 +297,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### Modificare il contesto del modello per ogni chiamata LLM
+### Modify model context per LLM call
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -311,7 +310,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### Registrare un comando slash con metodi di contesto sicuri per i comandi
+### Register slash command with command-safe context methods
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -336,13 +335,13 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-## Superficie di esportazione
+## Export surface
 
-`src/extensibility/hooks/index.ts` esporta:
+`src/extensibility/hooks/index.ts` exports:
 
-- API di caricamento (`discoverAndLoadHooks`, `loadHooks`)
-- runner e wrapper (`HookRunner`, `HookToolWrapper`)
-- tutti i tipi hook
-- riesportazione di `execCommand`
+- loading APIs (`discoverAndLoadHooks`, `loadHooks`)
+- runner and wrapper (`HookRunner`, `HookToolWrapper`)
+- all hook types
+- `execCommand` re-export
 
-E il root del pacchetto (`src/index.ts`) riesporta i **tipi** hook come superficie di compatibilità legacy.
+And package root (`src/index.ts`) re-exports hook **types** as a legacy compatibility surface.

@@ -1,39 +1,40 @@
 ---
 title: Hooks
-description: ระบบ Hook สำหรับการทำงานอัตโนมัติก่อน/หลังเหตุการณ์ในวงจรชีวิตของ coding agent
+description: Hook system for pre/post event automation in the coding agent lifecycle.
 sidebar:
   order: 4
   label: Hooks
+
 i18n:
-  sourceHash: cdbec10bc405
-  translator: machine
+  sourceHash: "afa30d336bec"
+  translator: "machine"
 ---
 
 # Hooks
 
-เอกสารนี้อธิบาย **โค้ดระบบย่อย hook ปัจจุบัน** ใน `src/extensibility/hooks/*`
+This document describes the **current hook subsystem code** in `src/extensibility/hooks/*`.
 
-## สถานะปัจจุบันใน runtime
+## Current status in runtime
 
-แพ็กเกจ hook (`src/extensibility/hooks/`) ยังคงถูก export และใช้งานได้ในฐานะพื้นผิว API แต่ CLI runtime เริ่มต้นปัจจุบันจะเริ่มต้นใช้เส้นทาง **extension runner** แทน ในขั้นตอนการเริ่มต้นปัจจุบัน:
+The hook package (`src/extensibility/hooks/`) is still exported and usable as an API surface, but the default CLI runtime now initializes the **extension runner** path. In current startup flow:
 
-- `--hook` ถูกใช้เป็น alias ของ `--extension` (เส้นทาง CLI จะถูกรวมเข้าใน `additionalExtensionPaths`)
-- เครื่องมือถูกห่อหุ้มด้วย `ExtensionToolWrapper` ไม่ใช่ `HookToolWrapper`
-- การแปลงบริบทและการส่งสัญญาณวงจรชีวิตผ่าน `ExtensionRunner`
+- `--hook` is treated as an alias for `--extension` (CLI paths are merged into `additionalExtensionPaths`)
+- tools are wrapped by `ExtensionToolWrapper`, not `HookToolWrapper`
+- context transforms and lifecycle emissions go through `ExtensionRunner`
 
-ดังนั้นไฟล์นี้จึงจัดทำเอกสารการใช้งานระบบย่อย hook (types/loader/runner/wrapper) รวมถึงพฤติกรรมเดิมและข้อจำกัด
+So this file documents the hook subsystem implementation itself (types/loader/runner/wrapper), including legacy behavior and constraints.
 
-## ไฟล์หลัก
+## Key files
 
-- `src/extensibility/hooks/types.ts` — บริบท hook, ประเภทเหตุการณ์, และสัญญาของผลลัพธ์
-- `src/extensibility/hooks/loader.ts` — การโหลดโมดูลและสะพานเชื่อมการค้นพบ hook
-- `src/extensibility/hooks/runner.ts` — การส่งเหตุการณ์, การค้นหาคำสั่ง, การส่งสัญญาณข้อผิดพลาด
-- `src/extensibility/hooks/tool-wrapper.ts` — wrapper สกัดกั้นเครื่องมือก่อน/หลัง
+- `src/extensibility/hooks/types.ts` — hook context, event types, and result contracts
+- `src/extensibility/hooks/loader.ts` — module loading and hook discovery bridge
+- `src/extensibility/hooks/runner.ts` — event dispatch, command lookup, error signaling
+- `src/extensibility/hooks/tool-wrapper.ts` — pre/post tool interception wrapper
 - `src/extensibility/hooks/index.ts` — exports/re-exports
 
-## Hook module คืออะไร
+## What a hook module is
 
-hook module ต้อง default-export ฟังก์ชัน factory:
+A hook module must default-export a factory:
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -47,61 +48,61 @@ export default function hook(pi: HookAPI): void {
 }
 ```
 
-factory สามารถ:
+The factory can:
 
-- ลงทะเบียน event handler ด้วย `pi.on(...)`
-- ส่งข้อความกำหนดเองที่ถาวรด้วย `pi.sendMessage(...)`
-- จัดเก็บสถานะที่ไม่ใช่ LLM ด้วย `pi.appendEntry(...)`
-- ลงทะเบียนคำสั่ง slash ผ่าน `pi.registerCommand(...)`
-- ลงทะเบียน renderer ข้อความกำหนดเองผ่าน `pi.registerMessageRenderer(...)`
-- รันคำสั่ง shell ผ่าน `pi.exec(...)`
+- register event handlers with `pi.on(...)`
+- send persistent custom messages with `pi.sendMessage(...)`
+- persist non-LLM state with `pi.appendEntry(...)`
+- register slash commands via `pi.registerCommand(...)`
+- register custom message renderers via `pi.registerMessageRenderer(...)`
+- run shell commands via `pi.exec(...)`
 
-## การค้นพบและการโหลด
+## Discovery and loading
 
-`discoverAndLoadHooks(configuredPaths, cwd)` ทำดังนี้:
+`discoverAndLoadHooks(configuredPaths, cwd)` does:
 
-1. โหลด hook ที่ค้นพบจาก capability registry (`loadCapability("hooks")`)
-2. เพิ่มเส้นทางที่กำหนดค่าไว้อย่างชัดเจน (ตัดรายการซ้ำตามเส้นทางสัมบูรณ์)
-3. เรียก `loadHooks(allPaths, cwd)`
+1. Load discovered hooks from capability registry (`loadCapability("hooks")`)
+2. Append explicitly configured paths (deduped by absolute path)
+3. Call `loadHooks(allPaths, cwd)`
 
-จากนั้น `loadHooks` จะ import แต่ละเส้นทางและคาดว่าจะมีฟังก์ชัน `default`
+`loadHooks` then imports each path and expects a `default` function.
 
-### การระบุเส้นทาง
+### Path resolution
 
-`loader.ts` ระบุเส้นทาง hook ดังนี้:
+`loader.ts` resolves hook paths as:
 
-- เส้นทางสัมบูรณ์: ใช้ตามที่เป็น
-- เส้นทาง `~`: ขยายให้ครบถ้วน
-- เส้นทางสัมพัทธ์: ระบุตาม `cwd`
+- absolute path: used as-is
+- `~` path: expanded
+- relative path: resolved against `cwd`
 
-### ความไม่ตรงกันของ legacy ที่สำคัญ
+### Important legacy mismatch
 
-ผู้ให้บริการการค้นพบสำหรับ `hookCapability` ยังคงจำลองไฟล์ hook สไตล์ shell แบบ pre/post (เช่น `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`)
+Discovery providers for `hookCapability` still model pre/post shell-style hook files (for example `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
 
-hook loader ที่นี่ใช้การ import โมดูลแบบ dynamic และต้องการ factory JS/TS ที่เป็น default หากเส้นทาง hook ที่ค้นพบไม่สามารถ import เป็นโมดูลได้ การโหลดจะล้มเหลวและรายงานใน `LoadHooksResult.errors`
+The hook loader here uses dynamic module import and requires a default JS/TS hook factory. If a discovered hook path is not importable as a module, load fails and is reported in `LoadHooksResult.errors`.
 
-## พื้นผิวเหตุการณ์
+## Event surfaces
 
-เหตุการณ์ hook มีการกำหนดประเภทอย่างเข้มงวดใน `types.ts`
+Hook events are strongly typed in `types.ts`.
 
-### เหตุการณ์ Session
+### Session events
 
 - `session_start`
-- `session_before_switch` → สามารถคืนค่า `{ cancel?: boolean }`
+- `session_before_switch` → can return `{ cancel?: boolean }`
 - `session_switch`
-- `session_before_branch` → สามารถคืนค่า `{ cancel?: boolean; skipConversationRestore?: boolean }`
+- `session_before_branch` → can return `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_branch`
-- `session_before_compact` → สามารถคืนค่า `{ cancel?: boolean; compaction?: CompactionResult }`
-- `session.compacting` → สามารถคืนค่า `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
+- `session_before_compact` → can return `{ cancel?: boolean; compaction?: CompactionResult }`
+- `session.compacting` → can return `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
 - `session_compact`
-- `session_before_tree` → สามารถคืนค่า `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
+- `session_before_tree` → can return `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 - `session_tree`
 - `session_shutdown`
 
-### เหตุการณ์ Agent/บริบท
+### Agent/context events
 
-- `context` → สามารถคืนค่า `{ messages?: Message[] }`
-- `before_agent_start` → สามารถคืนค่า `{ message?: { customType; content; display; details } }`
+- `context` → can return `{ messages?: Message[] }`
+- `before_agent_start` → can return `{ message?: { customType; content; display; details } }`
 - `agent_start`
 - `agent_end`
 - `turn_start`
@@ -113,12 +114,12 @@ hook loader ที่นี่ใช้การ import โมดูลแบบ
 - `ttsr_triggered`
 - `todo_reminder`
 
-### เหตุการณ์เครื่องมือ (โมเดล pre/post)
+### Tool events (pre/post model)
 
-- `tool_call` (ก่อนการประมวลผล) → สามารถคืนค่า `{ block?: boolean; reason?: string }`
-- `tool_result` (หลังการประมวลผล) → สามารถคืนค่า `{ content?; details?; isError? }`
+- `tool_call` (pre-execution) → can return `{ block?: boolean; reason?: string }`
+- `tool_result` (post-execution) → can return `{ content?; details?; isError? }`
 
-นี่คือโมเดลสกัดกั้นก่อน/หลังหลักของระบบย่อย hook
+This is the hook subsystem’s core pre/post interception model.
 
 ```text
 Hook tool interception flow
@@ -137,129 +138,129 @@ tool_call handlers
       └─ error   ──> emit tool_result(isError=true) then rethrow original error
 ```
 
-## โมเดลการประมวลผลและความหมายของการ mutate
+## Execution model and mutation semantics
 
-### 1) ก่อนการประมวลผล: `tool_call`
+### 1) Pre-execution: `tool_call`
 
-`HookToolWrapper.execute()` ส่งสัญญาณ `tool_call` ก่อนการประมวลผลเครื่องมือ
+`HookToolWrapper.execute()` emits `tool_call` before tool execution.
 
-- หากตัวจัดการใดคืนค่า `{ block: true }` การประมวลผลจะหยุด
-- หาก handler throw เกิดขึ้น wrapper จะล้มเหลวแบบปิดและบล็อกการประมวลผล
-- `reason` ที่คืนค่ากลับมาจะกลายเป็นข้อความข้อผิดพลาดที่ throw
+- if any handler returns `{ block: true }`, execution stops
+- if handler throws, wrapper fails closed and blocks execution
+- returned `reason` becomes the thrown error text
 
-### 2) การประมวลผลเครื่องมือ
+### 2) Tool execution
 
-เครื่องมือพื้นฐานจะประมวลผลตามปกติหากไม่ถูกบล็อก
+Underlying tool executes normally if not blocked.
 
-### 3) หลังการประมวลผล: `tool_result`
+### 3) Post-execution: `tool_result`
 
-หลังจากสำเร็จ wrapper จะส่งสัญญาณ `tool_result` พร้อมด้วย:
+After success, wrapper emits `tool_result` with:
 
 - `toolName`, `toolCallId`, `input`
 - `content`
 - `details`
 - `isError: false`
 
-หาก handler คืนค่า overrides:
+If handler returns overrides:
 
-- `content` สามารถแทนที่เนื้อหาผลลัพธ์ได้
-- `details` สามารถแทนที่รายละเอียดผลลัพธ์ได้
+- `content` can replace result content
+- `details` can replace result details
 
-เมื่อเครื่องมือล้มเหลว wrapper จะส่งสัญญาณ `tool_result` พร้อม `isError: true` และเนื้อหาข้อความข้อผิดพลาด จากนั้น rethrow ข้อผิดพลาดดั้งเดิม
+On tool failure, wrapper emits `tool_result` with `isError: true` and error text content, then rethrows original error.
 
-### สิ่งที่ hook สามารถ mutate ได้
+### What hooks can mutate
 
-- บริบท LLM สำหรับการเรียกครั้งเดียวผ่าน `context` (ห่วงโซ่การแทนที่ `messages`)
-- เนื้อหา/รายละเอียดเอาต์พุตของเครื่องมือเมื่อเรียกเครื่องมือสำเร็จ (เส้นทาง `tool_result`)
-- ข้อความที่แทรกก่อน agent ผ่าน `before_agent_start`
-- พฤติกรรมการยกเลิก/การบีบอัดกำหนดเอง/tree ผ่าน `session_before_*` และ `session.compacting`
+- LLM context for a single call via `context` (`messages` replacement chain)
+- tool output content/details on successful tool calls (`tool_result` path)
+- pre-agent injected message via `before_agent_start`
+- cancellation/custom compaction/tree behavior via `session_before_*` and `session.compacting`
 
-### สิ่งที่ hook ไม่สามารถ mutate ได้ในการใช้งานนี้
+### What hooks cannot mutate in this implementation
 
-- พารามิเตอร์ input ของเครื่องมือโดยตรง (เฉพาะบล็อก/อนุญาตใน `tool_call` เท่านั้น)
-- การดำเนินการต่อหลังจากเกิดข้อผิดพลาดของเครื่องมือ (เส้นทางข้อผิดพลาด rethrow)
-- สถานะสำเร็จ/ข้อผิดพลาดสุดท้ายในพฤติกรรม wrapper (ค่า `isError` ที่คืนกลับมามีประเภทกำหนดไว้แต่ไม่ถูกนำไปใช้โดย `HookToolWrapper`)
+- raw tool input parameters in-place (only block/allow on `tool_call`)
+- execution continuation after thrown tool errors (error path rethrows)
+- final success/error status in wrapper behavior (returned `isError` is typed but not applied by `HookToolWrapper`)
 
-## ลำดับและพฤติกรรมความขัดแย้ง
+## Ordering and conflict behavior
 
-### ลำดับระดับการค้นพบ
+### Discovery-level ordering
 
-ผู้ให้บริการ capability จะถูกเรียงลำดับตามลำดับความสำคัญ (สูงกว่าก่อน) การตัดรายการซ้ำตาม capability key โดย first wins
+Capability providers are priority-sorted (higher first). Dedupe is by capability key, first wins.
 
-สำหรับ `hooks` capability key คือ `${type}:${tool}:${name}` รายการซ้ำที่ถูกแทนที่จากผู้ให้บริการที่มีลำดับความสำคัญต่ำกว่าจะถูกทำเครื่องหมายและแยกออกจากรายการที่ค้นพบที่มีผล
+For `hooks`, capability key is `${type}:${tool}:${name}`. Shadowed duplicates from lower-priority providers are marked and excluded from effective discovered list.
 
-### ลำดับการโหลด
+### Load order
 
-`discoverAndLoadHooks` สร้างรายการ `allPaths` แบบแบน ตัดรายการซ้ำตามเส้นทางสัมบูรณ์ที่ระบุ จากนั้น `loadHooks` จะวนซ้ำตามลำดับนั้น
-ลำดับไฟล์ภายในแต่ละไดเรกทอรีที่ค้นพบขึ้นอยู่กับเอาต์พุตของ `readdir`; hook loader ไม่ได้ทำการเรียงลำดับเพิ่มเติม
+`discoverAndLoadHooks` builds a flat `allPaths` list, deduped by resolved absolute path, then `loadHooks` iterates in that order.
+File order within each discovered directory depends on `readdir` output; the hook loader does not perform an additional sort.
 
-### ลำดับ handler ขณะ runtime
+### Runtime handler order
 
-ภายใน `HookRunner` ลำดับจะกำหนดชัดเจนตามลำดับการลงทะเบียน:
+Inside `HookRunner`, order is deterministic by registration sequence:
 
-1. ลำดับอาร์เรย์ hooks
-2. ลำดับการลงทะเบียน handler ต่อ hook/event
+1. hooks array order
+2. handler registration order per hook/event
 
-พฤติกรรมความขัดแย้งตามประเภทเหตุการณ์:
+Conflict behavior by event type:
 
-- `tool_call`: ผลลัพธ์ที่คืนมาล่าสุดชนะ ยกเว้น handler บล็อก; การบล็อกครั้งแรก short-circuits
-- `tool_result`: override ที่คืนมาล่าสุดชนะ (ไม่มี short-circuit)
-- `context`: ต่อเชื่อมกัน; handler แต่ละตัวจะได้รับเอาต์พุตข้อความของ handler ก่อนหน้า
-- `before_agent_start`: ข้อความแรกที่คืนมาจะถูกเก็บไว้; ข้อความถัดไปจะถูกละเว้น
-- `session_before_*`: ผลลัพธ์ล่าสุดที่คืนมาจะถูกติดตาม; `cancel: true` short-circuits ทันที
-- `session.compacting`: ผลลัพธ์ล่าสุดที่คืนมาชนะ
+- `tool_call`: last returned result wins unless a handler blocks; first block short-circuits
+- `tool_result`: last returned override wins (no short-circuit)
+- `context`: chained; each handler receives prior handler’s message output
+- `before_agent_start`: first returned message is kept; later messages ignored
+- `session_before_*`: latest returned result is tracked; `cancel: true` short-circuits immediately
+- `session.compacting`: latest returned result wins
 
-ความขัดแย้งของคำสั่ง/renderer:
+Command/renderer conflicts:
 
-- `getCommand(name)` คืนค่าการจับคู่แรกในทุก hook (โหลดครั้งแรกชนะ)
-- `getMessageRenderer(customType)` คืนค่าการจับคู่แรก
-- `getRegisteredCommands()` คืนค่าคำสั่งทั้งหมด (ไม่มีการตัดรายการซ้ำ)
+- `getCommand(name)` returns first match across hooks (first loaded wins)
+- `getMessageRenderer(customType)` returns first match
+- `getRegisteredCommands()` returns all commands (no dedupe)
 
-## การโต้ตอบกับ UI (`HookContext.ui`)
+## UI interactions (`HookContext.ui`)
 
-`HookUIContext` รวมถึง:
+`HookUIContext` includes:
 
 - `select`, `confirm`, `input`, `editor`
 - `notify`
 - `setStatus`
 - `custom`
 - `setEditorText`, `getEditorText`
-- getter ของ `theme`
+- `theme` getter
 
-`ctx.hasUI` ระบุว่ามี UI แบบโต้ตอบให้ใช้งานหรือไม่
+`ctx.hasUI` indicates whether interactive UI is available.
 
-เมื่อรันโดยไม่มี UI พฤติกรรมบริบท no-op เริ่มต้นคือ:
+When running with no UI, the default no-op context behavior is:
 
-- `select/input/editor` คืนค่า `undefined`
-- `confirm` คืนค่า `false`
-- `notify`, `setStatus`, `setEditorText` เป็น no-op
-- `getEditorText` คืนค่า `""`
+- `select/input/editor` return `undefined`
+- `confirm` returns `false`
+- `notify`, `setStatus`, `setEditorText` are no-ops
+- `getEditorText` returns `""`
 
-### พฤติกรรมบรรทัดสถานะ
+### Status line behavior
 
-ข้อความสถานะ hook ที่กำหนดผ่าน `ctx.ui.setStatus(key, text)` จะ:
+Hook status text set via `ctx.ui.setStatus(key, text)` is:
 
-- จัดเก็บตาม key
-- เรียงลำดับตามชื่อ key
-- ทำความสะอาด (`\r`, `\n`, `\t` → spaces; ช่องว่างซ้ำจะถูกรวม)
-- รวมและตัดความกว้างสำหรับการแสดงผล
+- stored per key
+- sorted by key name
+- sanitized (`\r`, `\n`, `\t` → spaces; repeated spaces collapsed)
+- joined and width-truncated for display
 
-## การส่งต่อข้อผิดพลาดและ fallback
+## Error propagation and fallback
 
-### ขณะโหลด
+### Load-time
 
-- โมดูลไม่ถูกต้องหรือไม่มี default export → ถูกบันทึกใน `LoadHooksResult.errors`
-- การโหลดดำเนินต่อสำหรับ hook อื่นๆ
+- invalid module or missing default export → captured in `LoadHooksResult.errors`
+- loading continues for other hooks
 
-### ขณะเกิดเหตุการณ์
+### Event-time
 
-`HookRunner.emit(...)` จับข้อผิดพลาดของ handler สำหรับเหตุการณ์ส่วนใหญ่และส่ง `HookError` ไปยัง listener (`hookPath`, `event`, `error`) จากนั้นดำเนินต่อ
+`HookRunner.emit(...)` catches handler errors for most events and emits `HookError` to listeners (`hookPath`, `event`, `error`), then continues.
 
-`emitToolCall(...)` เข้มงวดกว่า: ข้อผิดพลาดของ handler ไม่ถูกกลืนที่นั่น; มันถูกส่งต่อไปยังผู้เรียก ใน `HookToolWrapper` สิ่งนี้จะบล็อกการเรียกเครื่องมือ (fail-safe)
+`emitToolCall(...)` is stricter: handler errors are not swallowed there; they propagate to caller. In `HookToolWrapper`, this blocks the tool call (fail-safe).
 
-## ตัวอย่าง API จริง
+## Realistic API examples
 
-### บล็อกคำสั่ง bash ที่ไม่ปลอดภัย
+### Block unsafe bash commands
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -277,7 +278,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### ปิดบังเอาต์พุตเครื่องมือหลังการประมวลผล
+### Redact tool output on post-execution
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -296,7 +297,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### แก้ไขบริบทโมเดลต่อการเรียก LLM
+### Modify model context per LLM call
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -309,7 +310,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### ลงทะเบียนคำสั่ง slash พร้อม context methods ที่ปลอดภัยสำหรับคำสั่ง
+### Register slash command with command-safe context methods
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -334,13 +335,13 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-## พื้นผิวการ export
+## Export surface
 
-`src/extensibility/hooks/index.ts` export:
+`src/extensibility/hooks/index.ts` exports:
 
 - loading APIs (`discoverAndLoadHooks`, `loadHooks`)
-- runner และ wrapper (`HookRunner`, `HookToolWrapper`)
-- ประเภท hook ทั้งหมด
+- runner and wrapper (`HookRunner`, `HookToolWrapper`)
+- all hook types
 - `execCommand` re-export
 
-และ package root (`src/index.ts`) re-export **ประเภท** hook เป็นพื้นผิวความเข้ากันได้แบบ legacy
+And package root (`src/index.ts`) re-exports hook **types** as a legacy compatibility surface.

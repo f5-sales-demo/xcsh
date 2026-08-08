@@ -1,42 +1,40 @@
 ---
-title: मॉडल और प्रोवाइडर कॉन्फ़िगरेशन
-description: >-
-  रूटिंग, फ़ॉलबैक और मूल्य निर्धारण के साथ models.yml के माध्यम से मॉडल
-  रजिस्ट्री और प्रोवाइडर कॉन्फ़िगरेशन।
+title: मॉडल और प्रदाता कॉन्फ़िगरेशन
+description: रूटिंग, फ़ॉलबैक और मूल्य निर्धारण के साथ models.yml के माध्यम से मॉडल रजिस्ट्री और प्रदाता कॉन्फ़िगरेशन।
 sidebar:
   order: 1
-  label: मॉडल और प्रोवाइडर
+  label: मॉडल और प्रदाता
 i18n:
-  sourceHash: 8053df967ff6
-  translator: machine
+  sourceHash: "8053df967ff6"
+  translator: "machine"
 ---
 
-# मॉडल और प्रोवाइडर कॉन्फ़िगरेशन (`models.yml`)
+# मॉडल और प्रदाता कॉन्फ़िगरेशन (`models.yml`)
 
-यह दस्तावेज़ बताता है कि coding-agent वर्तमान में मॉडल कैसे लोड करता है, ओवरराइड लागू करता है, क्रेडेंशियल रिज़ॉल्व करता है, और रनटाइम पर मॉडल चुनता है।
+यह दस्तावेज़ वर्णन करता है कि कोडिंग-एजेंट वर्तमान में मॉडल को कैसे लोड करता है, ओवरराइड लागू करता है, क्रेडेंशियल्स को हल करता है, और रनटाइम पर मॉडल चुनता है।
 
-## मॉडल व्यवहार को क्या नियंत्रित करता है
+## मॉडल के व्यवहार को क्या नियंत्रित करता है
 
 प्राथमिक कार्यान्वयन फ़ाइलें:
 
-- `src/config/model-registry.ts` — बिल्ट-इन + कस्टम मॉडल, प्रोवाइडर ओवरराइड, रनटाइम डिस्कवरी, auth इंटीग्रेशन लोड करता है
-- `src/config/model-resolver.ts` — मॉडल पैटर्न पार्स करता है और initial/smol/slow मॉडल चुनता है
-- `src/config/settings-schema.ts` — मॉडल-संबंधित सेटिंग्स (`modelRoles`, प्रोवाइडर ट्रांसपोर्ट प्राथमिकताएं)
-- `src/session/auth-storage.ts` — API key + OAuth रिज़ॉल्यूशन क्रम
-- `packages/ai/src/models.ts` और `packages/ai/src/types.ts` — बिल्ट-इन प्रोवाइडर/मॉडल और `Model`/`compat` टाइप
+- `src/config/model-registry.ts` — अंतर्निहित + कस्टम मॉडल, प्रदाता ओवरराइड, रनटाइम खोज, प्रमाणीकरण एकीकरण लोड करता है
+- `src/config/model-resolver.ts` — मॉडल पैटर्न को पार्स करता है और प्रारंभिक/smol/slow मॉडल का चयन करता है
+- `src/config/settings-schema.ts` — मॉडल से संबंधित सेटिंग्स (`modelRoles`, प्रदाता परिवहन प्राथमिकताएँ)
+- `src/session/auth-storage.ts` — API कुंजी + OAuth रिज़ॉल्यूशन क्रम
+- `packages/ai/src/models.ts` और `packages/ai/src/types.ts` — अंतर्निहित प्रदाता/मॉडल और `Model`/`compat` प्रकार
 
-## कॉन्फ़िग फ़ाइल स्थान और लेगेसी व्यवहार
+## कॉन्फ़िग फ़ाइल का स्थान और विरासत व्यवहार (legacy behavior)
 
-डिफ़ॉल्ट कॉन्फ़िग पाथ:
+डिफ़ॉल्ट कॉन्फ़िग पथ:
 
 - `~/.xcsh/agent/models.yml`
 
-लेगेसी व्यवहार अभी भी मौजूद है:
+विरासत व्यवहार अभी भी मौजूद है:
 
-- यदि `models.yml` अनुपस्थित है और उसी स्थान पर `models.json` मौजूद है, तो इसे `models.yml` में माइग्रेट किया जाता है।
-- स्पष्ट `.json` / `.jsonc` कॉन्फ़िग पाथ अभी भी समर्थित हैं जब `ModelRegistry` को प्रोग्रामेटिक रूप से पास किए जाएं।
+- यदि `models.yml` गायब है और `models.json` उसी स्थान पर मौजूद है, तो इसे `models.yml` में माइग्रेट कर दिया जाता है।
+- स्पष्ट `.json` / `.jsonc` कॉन्फ़िग पथ अभी भी समर्थित हैं जब उन्हें प्रोग्रामेटिक रूप से `ModelRegistry` में पास किया जाता है।
 
-## `models.yml` संरचना
+## `models.yml` का आकार (shape)
 
 ```yaml
 configVersion: 1  # optional — written by auto-config, used for migration detection
@@ -50,16 +48,16 @@ equivalence:
     - <provider-id>/<model-id>
 ```
 
-`configVersion` एक वैकल्पिक integer है जो auto-config सिस्टम द्वारा लिखा जाता है। जब मौजूद हो, xcsh इसका उपयोग पुराने कॉन्फ़िग का पता लगाने और उन्हें ऑटो-अपग्रेड करने के लिए करता है।
+`configVersion` ऑटो-कॉन्फ़िग सिस्टम द्वारा लिखा गया एक वैकल्पिक पूर्णांक है। मौजूद होने पर, `xcsh` इसका उपयोग पुरानी कॉन्फ़िग का पता लगाने और उन्हें ऑटो-अपग्रेड करने के लिए करता है।
 
-`provider-id` वह canonical प्रोवाइडर की है जो चयन और auth लुकअप में उपयोग होती है।
+`provider-id` एक विहित (canonical) प्रदाता कुंजी है जिसका उपयोग चयन और प्रमाणीकरण लुकअप के लिए किया जाता है।
 
-`equivalence` वैकल्पिक है और concrete प्रोवाइडर मॉडल के ऊपर canonical मॉडल ग्रुपिंग कॉन्फ़िगर करता है:
+`equivalence` वैकल्पिक है और ठोस प्रदाता मॉडल के ऊपर विहित मॉडल समूहीकरण को कॉन्फ़िगर करता है:
 
-- `overrides` एक exact concrete selector (`provider/modelId`) को आधिकारिक upstream canonical id से मैप करता है
-- `exclude` एक concrete selector को canonical ग्रुपिंग से बाहर करता है
+- `overrides` एक सटीक ठोस चयनकर्ता (`provider/modelId`) को एक आधिकारिक अपस्ट्रीम विहित आईडी में मैप करता है
+- `exclude` एक ठोस चयनकर्ता को विहित समूहीकरण से बाहर रखता है
 
-## प्रोवाइडर-स्तरीय फ़ील्ड
+## प्रदाता-स्तर के फ़ील्ड
 
 ```yaml
 providers:
@@ -105,7 +103,7 @@ providers:
             controller: mlx
 ```
 
-### अनुमत प्रोवाइडर/मॉडल `api` मान
+### अनुमत प्रदाता/मॉडल `api` मान
 
 - `openai-completions`
 - `openai-responses`
@@ -115,62 +113,62 @@ providers:
 - `google-generative-ai`
 - `google-vertex`
 
-### अनुमत auth/discovery मान
+### अनुमत प्रमाणीकरण/खोज मान
 
 - `auth`: `apiKey` (डिफ़ॉल्ट) या `none`
 - `discovery.type`: `ollama`
 
 ## सत्यापन नियम (वर्तमान)
 
-### पूर्ण कस्टम प्रोवाइडर (`models` non-empty है)
+### पूर्ण कस्टम प्रदाता (`models` खाली नहीं है)
 
 आवश्यक:
 
 - `baseUrl`
-- `apiKey` जब तक `auth: none` न हो
-- `api` प्रोवाइडर स्तर पर या प्रत्येक मॉडल में
+- `apiKey` जब तक कि `auth: none` न हो
+- प्रदाता स्तर या प्रत्येक मॉडल पर `api`
 
-### केवल-ओवरराइड प्रोवाइडर (`models` अनुपस्थित या empty)
+### केवल ओवरराइड प्रदाता (`models` गायब या खाली है)
 
-निम्न में से कम से कम एक परिभाषित होना चाहिए:
+कम से कम एक को परिभाषित करना चाहिए:
 
 - `baseUrl`
 - `modelOverrides`
 - `discovery`
 
-### डिस्कवरी
+### खोज (Discovery)
 
-- `discovery` के लिए प्रोवाइडर-स्तरीय `api` आवश्यक है।
+- `discovery` के लिए प्रदाता-स्तर के `api` की आवश्यकता होती है।
 
-### मॉडल मान जांच
+### मॉडल मान की जाँच
 
 - `id` आवश्यक है
-- `contextWindow` और `maxTokens` यदि प्रदान किए गए हों तो सकारात्मक होने चाहिए
+- यदि प्रदान किया गया है तो `contextWindow` और `maxTokens` सकारात्मक होना चाहिए
 
-## मर्ज और ओवरराइड क्रम
+## मर्ज और ओवरराइड का क्रम
 
-ModelRegistry पाइपलाइन (रिफ्रेश पर):
+ModelRegistry पाइपलाइन (रीफ्रेश पर):
 
-1. `@f5-sales-demo/pi-ai` से बिल्ट-इन प्रोवाइडर/मॉडल लोड करें।
-2. `models.yml` कस्टम कॉन्फ़िग लोड करें।
-3. बिल्ट-इन मॉडलों पर प्रोवाइडर ओवरराइड (`baseUrl`, `headers`) लागू करें।
-4. `modelOverrides` (प्रति प्रोवाइडर + मॉडल id) लागू करें।
-5. कस्टम `models` मर्ज करें:
-   - समान `provider + id` मौजूदा को बदलता है
-   - अन्यथा जोड़ें
-6. रनटाइम-डिस्कवर्ड मॉडल (वर्तमान में Ollama और LM Studio) लागू करें, फिर मॉडल ओवरराइड पुनः लागू करें।
+1. `@f5-sales-demo/pi-ai` से अंतर्निहित प्रदाताओं/मॉडलों को लोड करें।
+2. `models.yml` कस्टम कॉन्फ़िग को लोड करें।
+3. अंतर्निहित मॉडलों पर प्रदाता ओवरराइड (`baseUrl`, `headers`) लागू करें।
+4. `modelOverrides` लागू करें (प्रति प्रदाता + मॉडल आईडी)।
+5. कस्टम `models` को मर्ज करें:
+   - समान `provider + id` मौजूदा को बदल देता है
+   - अन्यथा संलग्न (append) करें
+6. रनटाइम-खोजे गए मॉडल (वर्तमान में `Ollama` और `LM Studio`) लागू करें, फिर मॉडल ओवरराइड को फिर से लागू करें।
 
-## Canonical मॉडल समतुल्यता और कोलेसिंग
+## विहित (Canonical) मॉडल तुल्यता और एकत्रीकरण (coalescing)
 
-रजिस्ट्री हर concrete प्रोवाइडर मॉडल को रखती है और फिर उनके ऊपर एक canonical लेयर बनाती है।
+रजिस्ट्री प्रत्येक ठोस प्रदाता मॉडल को रखती है और फिर उनके ऊपर एक विहित परत बनाती है।
 
-Canonical ids केवल आधिकारिक upstream ids हैं, उदाहरण के लिए:
+विहित आईडी केवल आधिकारिक अपस्ट्रीम आईडी हैं, उदाहरण के लिए:
 
 - `claude-opus-4-6`
 - `claude-haiku-4-5`
 - `gpt-5.3-codex`
 
-### `models.yml` equivalence कॉन्फ़िग
+### `models.yml` तुल्यता (equivalence) कॉन्फ़िग
 
 उदाहरण:
 
@@ -201,77 +199,77 @@ equivalence:
     - demo/codex-preview
 ```
 
-Canonical ग्रुपिंग के लिए बिल्ड क्रम:
+विहित समूहीकरण के लिए निर्माण क्रम:
 
-1. `equivalence.overrides` से exact यूज़र ओवरराइड
-2. बिल्ट-इन मॉडल मेटाडेटा से बंडल्ड official-id मिलान
-3. gateway/provider वेरिएंट के लिए conservative heuristic normalization
-4. concrete मॉडल की अपनी id पर फ़ॉलबैक
+1. `equivalence.overrides` से सटीक उपयोगकर्ता ओवरराइड
+2. अंतर्निहित मॉडल मेटाडेटा से बंडल किए गए आधिकारिक-आईडी मिलान
+3. गेटवे/प्रदाता वेरिएंट के लिए रूढ़िवादी अनुमानी सामान्यीकरण
+4. ठोस मॉडल की अपनी आईडी पर फ़ॉलबैक
 
-वर्तमान heuristics जानबूझकर संकीर्ण हैं:
+वर्तमान अनुमान (heuristics) जानबूझकर संकीर्ण हैं:
 
-- एम्बेडेड upstream प्रीफ़िक्स जब मौजूद हों तो हटाए जा सकते हैं, उदाहरण के लिए `anthropic/...` या `openai/...`
-- डॉटेड और डैश्ड वर्शन वेरिएंट केवल तब normalize हो सकते हैं जब वे किसी मौजूदा official id से मैप होते हों, उदाहरण के लिए `4.6 -> 4-6`
-- अस्पष्ट families या versions को बंडल्ड मिलान या explicit ओवरराइड के बिना मर्ज नहीं किया जाता
+- मौजूद होने पर एम्बेडेड अपस्ट्रीम उपसर्गों को हटाया जा सकता है, उदाहरण के लिए `anthropic/...` या `openai/...`
+- बिंदीदार और धराशायी संस्करण वेरिएंट केवल तभी सामान्य हो सकते हैं जब वे किसी मौजूदा आधिकारिक आईडी से मैप करते हों, उदाहरण के लिए `4.6 -> 4-6`
+- अस्पष्ट परिवारों या संस्करणों को बिना किसी बंडल मिलान या स्पष्ट ओवरराइड के मर्ज नहीं किया जाता है
 
-### Canonical रिज़ॉल्यूशन व्यवहार
+### विहित रिज़ॉल्यूशन व्यवहार
 
-जब कई concrete वेरिएंट एक canonical id साझा करते हैं, तो रिज़ॉल्यूशन उपयोग करता है:
+जब एकाधिक ठोस वेरिएंट एक विहित आईडी साझा करते हैं, तो रिज़ॉल्यूशन उपयोग करता है:
 
-1. उपलब्धता और auth
+1. उपलब्धता और प्रमाणीकरण
 2. `config.yml` `modelProviderOrder`
-3. यदि `modelProviderOrder` अनसेट है तो मौजूदा रजिस्ट्री/प्रोवाइडर क्रम
+3. यदि `modelProviderOrder` सेट नहीं है तो मौजूदा रजिस्ट्री/प्रदाता क्रम
 
-अक्षम या अनअथेंटिकेटेड प्रोवाइडर को छोड़ दिया जाता है।
+अक्षम या अप्रमाणित प्रदाताओं को छोड़ दिया जाता है।
 
-सेशन स्थिति और ट्रांसक्रिप्ट concrete प्रोवाइडर/मॉडल को रिकॉर्ड करते रहते हैं जिसने वास्तव में टर्न निष्पादित किया।
+सत्र की स्थिति और टेप उस ठोस प्रदाता/मॉडल को रिकॉर्ड करना जारी रखते हैं जिसने वास्तव में टर्न निष्पादित किया था।
 
-प्रोवाइडर डिफ़ॉल्ट बनाम प्रति-मॉडल ओवरराइड:
+प्रदाता डिफ़ॉल्ट बनाम प्रति-मॉडल ओवरराइड:
 
-- प्रोवाइडर `headers` बेसलाइन हैं।
-- मॉडल `headers` प्रोवाइडर हेडर की को ओवरराइड करते हैं।
-- `modelOverrides` मॉडल मेटाडेटा (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`) ओवरराइड कर सकते हैं।
-- `compat` nested रूटिंग ब्लॉक (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`) के लिए deep-merged होता है।
+- प्रदाता `headers` आधारभूत (baseline) हैं।
+- मॉडल `headers` प्रदाता हेडर कुंजियों को ओवरराइड करते हैं।
+- `modelOverrides` मॉडल मेटाडेटा को ओवरराइड कर सकता है (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`)।
+- नेस्टेड रूटिंग ब्लॉक के लिए `compat` को गहराई से मर्ज किया जाता है (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`)।
 
-## रनटाइम डिस्कवरी इंटीग्रेशन
+## रनटाइम खोज एकीकरण
 
-### Implicit Ollama डिस्कवरी
+### अंतर्निहित (Implicit) `Ollama` खोज
 
-यदि `ollama` स्पष्ट रूप से कॉन्फ़िगर नहीं है, तो रजिस्ट्री एक implicit discoverable प्रोवाइडर जोड़ती है:
+यदि `ollama` को स्पष्ट रूप से कॉन्फ़िगर नहीं किया गया है, तो रजिस्ट्री एक अंतर्निहित खोजने योग्य प्रदाता जोड़ती है:
 
-- प्रोवाइडर: `ollama`
+- प्रदाता: `ollama`
 - api: `openai-completions`
 - बेस URL: `OLLAMA_BASE_URL` या `http://127.0.0.1:11434`
-- auth मोड: keyless (`auth: none` व्यवहार)
+- प्रमाणीकरण मोड: कुंजी रहित (`auth: none` व्यवहार)
 
-रनटाइम डिस्कवरी Ollama पर `GET /api/tags` कॉल करती है और local डिफ़ॉल्ट के साथ मॉडल एंट्री synthesize करती है।
+रनटाइम खोज `Ollama` पर `GET /api/tags` कॉल करती है और स्थानीय डिफ़ॉल्ट के साथ मॉडल प्रविष्टियों को संश्लेषित करती है।
 
-### Implicit llama.cpp डिस्कवरी
+### अंतर्निहित (Implicit) `llama.cpp` खोज
 
-यदि `llama.cpp` स्पष्ट रूप से कॉन्फ़िगर नहीं है, तो रजिस्ट्री एक implicit discoverable प्रोवाइडर जोड़ती है:
-नोट: यह openai-completions के बजाय नई anthropic messages api का उपयोग कर रहा है।
+यदि `llama.cpp` को स्पष्ट रूप से कॉन्फ़िगर नहीं किया गया है, तो रजिस्ट्री एक अंतर्निहित खोजने योग्य प्रदाता जोड़ती है:
+नोट: यह `openai-completions` के बजाय नए `anthropic-messages` एपीआई का उपयोग कर रहा है।
 
-- प्रोवाइडर: `llama.cpp`
+- प्रदाता: `llama.cpp`
 - api: `openai-responses`
 - बेस URL: `LLAMA_CPP_BASE_URL` या `http://127.0.0.1:8080`
-- auth मोड: keyless (`auth: none` व्यवहार)
+- प्रमाणीकरण मोड: कुंजी रहित (`auth: none` व्यवहार)
 
-रनटाइम डिस्कवरी llama.cpp पर `GET models` कॉल करती है और local डिफ़ॉल्ट के साथ मॉडल एंट्री synthesize करती है।
+रनटाइम खोज `llama.cpp` पर `GET models` कॉल करती है और स्थानीय डिफ़ॉल्ट के साथ मॉडल प्रविष्टियों को संश्लेषित करती है।
 
-### Implicit LM Studio डिस्कवरी
+### अंतर्निहित (Implicit) `LM Studio` खोज
 
-यदि `lm-studio` स्पष्ट रूप से कॉन्फ़िगर नहीं है, तो रजिस्ट्री एक implicit discoverable प्रोवाइडर जोड़ती है:
+यदि `lm-studio` को स्पष्ट रूप से कॉन्फ़िगर नहीं किया गया है, तो रजिस्ट्री एक अंतर्निहित खोजने योग्य प्रदाता जोड़ती है:
 
-- प्रोवाइडर: `lm-studio`
+- प्रदाता: `lm-studio`
 - api: `openai-completions`
 - बेस URL: `LM_STUDIO_BASE_URL` या `http://127.0.0.1:1234/v1`
-- auth मोड: keyless (`auth: none` व्यवहार)
+- प्रमाणीकरण मोड: कुंजी रहित (`auth: none` व्यवहार)
 
-रनटाइम डिस्कवरी मॉडल फ़ेच करती है (`GET /models`) और local डिफ़ॉल्ट के साथ मॉडल एंट्री synthesize करती है।
+रनटाइम खोज मॉडल प्राप्त करती है (`GET /models`) और स्थानीय डिफ़ॉल्ट के साथ मॉडल प्रविष्टियों को संश्लेषित करती है।
 
-### स्पष्ट प्रोवाइडर डिस्कवरी
+### स्पष्ट प्रदाता खोज
 
-आप डिस्कवरी स्वयं कॉन्फ़िगर कर सकते हैं:
+आप खोज को स्वयं कॉन्फ़िगर कर सकते हैं:
 
 ```yaml
 providers:
@@ -290,44 +288,44 @@ providers:
       type: llama.cpp
 ```
 
-### एक्सटेंशन प्रोवाइडर पंजीकरण
+### एक्सटेंशन प्रदाता पंजीकरण
 
-एक्सटेंशन रनटाइम पर प्रोवाइडर रजिस्टर कर सकते हैं (`pi.registerProvider(...)`), जिनमें शामिल हैं:
+एक्सटेंशन रनटाइम पर प्रदाताओं को पंजीकृत कर सकते हैं (`pi.registerProvider(...)`), जिनमें शामिल हैं:
 
-- किसी प्रोवाइडर के लिए मॉडल प्रतिस्थापन/जोड़
-- नए API IDs के लिए कस्टम स्ट्रीम हैंडलर पंजीकरण
-- कस्टम OAuth प्रोवाइडर पंजीकरण
+- किसी प्रदाता के लिए मॉडल प्रतिस्थापन/संलग्न करना
+- नए एपीआई आईडी के लिए कस्टम स्ट्रीम हैंडलर पंजीकरण
+- कस्टम OAuth प्रदाता पंजीकरण
 
-## Auth और API key रिज़ॉल्यूशन क्रम
+## प्रमाणीकरण और API कुंजी रिज़ॉल्यूशन क्रम
 
-किसी प्रोवाइडर के लिए key अनुरोध करते समय, प्रभावी क्रम है:
+किसी प्रदाता के लिए कुंजी का अनुरोध करते समय, प्रभावी क्रम है:
 
 1. रनटाइम ओवरराइड (CLI `--api-key`)
-2. `agent.db` में स्टोर्ड API key क्रेडेंशियल
-3. `agent.db` में स्टोर्ड OAuth क्रेडेंशियल (रिफ्रेश के साथ)
-4. एनवायरनमेंट वेरिएबल मैपिंग (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, आदि)
-5. ModelRegistry फ़ॉलबैक रिज़ॉल्वर (प्रोवाइडर `apiKey` `models.yml` से, env-name-or-literal semantics)
+2. `agent.db` में संग्रहीत API कुंजी क्रेडेंशियल
+3. `agent.db` में संग्रहीत OAuth क्रेडेंशियल (रीफ्रेश के साथ)
+4. पर्यावरण चर मानचित्रण (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, आदि)
+5. `ModelRegistry` फ़ॉलबैक रिज़ॉल्वर (`models.yml` से प्रदाता `apiKey`, env-name-or-literal शब्दार्थ)
 
-`models.yml` `apiKey` व्यवहार:
+`models.yml` में `apiKey` व्यवहार:
 
-- मान को पहले एनवायरनमेंट वेरिएबल नाम के रूप में ट्रीट किया जाता है।
-- यदि कोई env var मौजूद नहीं है, तो literal string को टोकन के रूप में उपयोग किया जाता है।
+- मान को पहले पर्यावरण चर नाम के रूप में माना जाता है।
+- यदि कोई पर्यावरण चर मौजूद नहीं है, तो शाब्दिक स्ट्रिंग का उपयोग टोकन के रूप में किया जाता है।
 
-यदि `authHeader: true` और प्रोवाइडर `apiKey` सेट है, तो मॉडलों को मिलता है:
+यदि `authHeader: true` है और प्रदाता `apiKey` सेट है, तो मॉडल प्राप्त करते हैं:
 
-- `Authorization: Bearer <resolved-key>` हेडर इंजेक्ट।
+- `Authorization: Bearer <resolved-key>` हेडर इंजेक्ट किया गया।
 
-Keyless प्रोवाइडर:
+कुंजी रहित प्रदाता:
 
-- `auth: none` चिह्नित प्रोवाइडर को बिना क्रेडेंशियल के उपलब्ध माना जाता है।
+- `auth: none` के रूप में चिह्नित प्रदाताओं को क्रेडेंशियल्स के बिना उपलब्ध माना जाता है।
 - `getApiKey*` उनके लिए `kNoAuth` लौटाता है।
 
 ## मॉडल उपलब्धता बनाम सभी मॉडल
 
-- `getAll()` लोडेड मॉडल रजिस्ट्री (बिल्ट-इन + मर्ज्ड कस्टम + डिस्कवर्ड) लौटाता है।
-- `getAvailable()` उन मॉडलों तक फ़िल्टर करता है जो keyless हैं या जिनका auth रिज़ॉल्व हो सकता है।
+- `getAll()` लोड की गई मॉडल रजिस्ट्री (अंतर्निहित + मर्ज किए गए कस्टम + खोजे गए) को लौटाता है।
+- `getAvailable()` उन मॉडलों को फ़िल्टर करता है जो कुंजी रहित हैं या जिनमें हल करने योग्य प्रमाणीकरण है।
 
-इसलिए एक मॉडल रजिस्ट्री में मौजूद हो सकता है लेकिन auth उपलब्ध होने तक चयन योग्य नहीं होगा।
+इसलिए एक मॉडल रजिस्ट्री में मौजूद हो सकता है लेकिन जब तक प्रमाणीकरण उपलब्ध न हो तब तक वह चयन योग्य नहीं हो सकता है।
 
 ## रनटाइम मॉडल रिज़ॉल्यूशन
 
@@ -335,114 +333,114 @@ Keyless प्रोवाइडर:
 
 `model-resolver.ts` समर्थन करता है:
 
-- exact `provider/modelId`
-- exact canonical मॉडल id
-- exact मॉडल id (प्रोवाइडर अनुमानित)
-- fuzzy/substring मिलान
-- `--models` में glob स्कोप पैटर्न (जैसे `openai/*`, `*sonnet*`)
-- वैकल्पिक `:thinkingLevel` suffix (`off|minimal|low|medium|high|xhigh`)
+- सटीक `provider/modelId`
+- सटीक विहित मॉडल आईडी
+- सटीक मॉडल आईडी (प्रदाता अनुमानित)
+- फज़ी/सबस्ट्रिंग मिलान
+- `--models` में ग्लोब स्कोप पैटर्न (उदा. `openai/*`, `*sonnet*`)
+- वैकल्पिक `:thinkingLevel` प्रत्यय (`off|minimal|low|medium|high|xhigh`)
 
-`--provider` लेगेसी है; `--model` प्राथमिक है।
+`--provider` विरासत (legacy) है; `--model` को प्राथमिकता दी जाती है।
 
-Exact selectors के लिए रिज़ॉल्यूशन प्राथमिकता:
+सटीक चयनकर्ताओं के लिए रिज़ॉल्यूशन प्राथमिकता:
 
-1. exact `provider/modelId` coalescing को bypass करता है
-2. exact canonical id canonical इंडेक्स के माध्यम से रिज़ॉल्व होता है
-3. exact bare concrete id अभी भी काम करता है
-4. fuzzy और glob मिलान exact पाथ के बाद चलते हैं
+1. सटीक `provider/modelId` एकत्रीकरण को बायपास करता है
+2. सटीक विहित आईडी विहित अनुक्रमणिका के माध्यम से हल होती है
+3. सटीक नंगी (bare) ठोस आईडी अभी भी काम करती है
+4. फज़ी और ग्लोब मिलान सटीक पथों के बाद चलते हैं
 
-### Initial मॉडल चयन प्राथमिकता
+### प्रारंभिक मॉडल चयन प्राथमिकता
 
 `findInitialModel(...)` इस क्रम का उपयोग करता है:
 
-1. explicit CLI provider+model
-2. पहला scoped मॉडल (यदि resume नहीं हो रहा)
-3. सेव्ड डिफ़ॉल्ट provider/model
-4. उपलब्ध मॉडलों में ज्ञात प्रोवाइडर डिफ़ॉल्ट (जैसे OpenAI/Anthropic/आदि)
+1. स्पष्ट CLI प्रदाता+मॉडल
+2. पहला स्कोप्ड मॉडल (यदि फिर से शुरू नहीं हो रहा है)
+3. सहेजा गया डिफ़ॉल्ट प्रदाता/मॉडल
+4. उपलब्ध मॉडलों में ज्ञात प्रदाता डिफ़ॉल्ट (उदा. `OpenAI`/`Anthropic`/आदि)
 5. पहला उपलब्ध मॉडल
 
-### Role aliases और सेटिंग्स
+### भूमिका उपनाम और सेटिंग्स
 
-समर्थित मॉडल roles:
+समर्थित मॉडल भूमिकाएँ:
 
 - `default`, `smol`, `slow`, `plan`, `commit`
 
-`pi/smol` जैसे Role aliases `settings.modelRoles` के माध्यम से expand होते हैं। प्रत्येक role मान `:minimal`, `:low`, `:medium`, या `:high` जैसा thinking selector भी जोड़ सकता है।
+`pi/smol` जैसे भूमिका उपनाम `settings.modelRoles` के माध्यम से विस्तारित होते हैं। प्रत्येक भूमिका मान एक थिंकिंग चयनकर्ता जैसे `:minimal`, `:low`, `:medium`, या `:high` को भी संलग्न कर सकता है।
 
-यदि कोई role किसी अन्य role की ओर इंगित करता है, तो लक्ष्य मॉडल सामान्य रूप से inherit करता है और referring role पर कोई explicit suffix उस role-specific उपयोग के लिए जीतता है।
+यदि कोई भूमिका किसी अन्य भूमिका को इंगित करती है, तो लक्ष्य मॉडल अभी भी सामान्य रूप से विरासत में मिलता है और संदर्भित भूमिका पर कोई भी स्पष्ट प्रत्यय उस भूमिका-विशिष्ट उपयोग के लिए जीतता है।
 
 संबंधित सेटिंग्स:
 
-- `modelRoles` (record)
-- `enabledModels` (scoped pattern list)
-- `modelProviderOrder` (global canonical-provider precedence)
-- `providers.kimiApiFormat` (`openai` या `anthropic` request format)
-- `providers.openaiWebsockets` (OpenAI Codex transport के लिए `auto|off|on` websocket प्राथमिकता)
+- `modelRoles` (रिकॉर्ड)
+- `enabledModels` (स्कोप्ड पैटर्न सूची)
+- `modelProviderOrder` (वैश्विक विहित-प्रदाता प्राथमिकता)
+- `providers.kimiApiFormat` (`openai` या `anthropic` अनुरोध प्रारूप)
+- `providers.openaiWebsockets` (`OpenAI Codex` ट्रांसपोर्ट के लिए `auto|off|on` वेबसॉकेट प्राथमिकता)
 
-`modelRoles` निम्न में से कोई एक स्टोर कर सकता है:
+`modelRoles` इनमें से किसी एक को संग्रहीत कर सकता है:
 
-- `provider/modelId` किसी concrete प्रोवाइडर वेरिएंट को पिन करने के लिए
-- `gpt-5.3-codex` जैसी canonical id जो provider coalescing की अनुमति देती है
+- एक ठोस प्रदाता संस्करण को पिन करने के लिए `provider/modelId`
+- प्रदाता एकत्रीकरण की अनुमति देने के लिए एक विहित आईडी जैसे `gpt-5.3-codex`
 
 `enabledModels` और CLI `--models` के लिए:
 
-- exact canonical ids उस canonical समूह में सभी concrete वेरिएंट तक expand होती हैं
-- explicit `provider/modelId` एंट्री exact रहती हैं
-- globs और fuzzy मिलान अभी भी concrete मॉडलों पर काम करते हैं
+- सटीक विहित आईडी उस विहित समूह के सभी ठोस वेरिएंट में विस्तारित होती हैं
+- स्पष्ट `provider/modelId` प्रविष्टियां सटीक रहती हैं
+- ग्लोब्स और फ़ज़ी मैच अभी भी ठोस मॉडल पर काम करते हैं
 
 ## `/model` और `--list-models`
 
-दोनों सतहें provider-prefixed मॉडलों को दृश्यमान और चयन योग्य रखती हैं।
+दोनों सतहें प्रदाता-उपसर्ग वाले मॉडलों को दृश्यमान और चयन योग्य रखती हैं।
 
-अब वे canonical/coalesced मॉडलों को भी expose करती हैं:
+वे अब विहित/एकत्रित मॉडलों को भी उजागर करते हैं:
 
-- `/model` प्रोवाइडर tabs के साथ canonical दृश्य शामिल करता है
-- `--list-models` concrete प्रोवाइडर rows के साथ एक canonical section प्रिंट करता है
+- `/model` में प्रदाता टैब के साथ एक विहित दृश्य शामिल है
+- `--list-models` एक विहित अनुभाग और ठोस प्रदाता पंक्तियाँ प्रिंट करता है
 
-Canonical एंट्री चुनने पर canonical selector स्टोर होता है। प्रोवाइडर row चुनने पर explicit `provider/modelId` स्टोर होता है।
+एक विहित प्रविष्टि का चयन विहित चयनकर्ता को संग्रहीत करता है। एक प्रदाता पंक्ति का चयन स्पष्ट `provider/modelId` को संग्रहीत करता है।
 
-## Context promotion (मॉडल-स्तरीय फ़ॉलबैक चेन)
+## संदर्भ पदोन्नति (मॉडल-स्तरीय फ़ॉलबैक श्रृंखलाएं)
 
-Context promotion छोटे-context वेरिएंट (उदाहरण के लिए `*-spark`) के लिए एक overflow recovery mechanism है जो स्वचालित रूप से एक बड़े-context sibling पर promote करता है जब API context length error के साथ request reject करता है।
+संदर्भ पदोन्नति (Context promotion) छोटे-संदर्भ वेरिएंट (उदाहरण के लिए `*-spark`) के लिए एक अतिप्रवाह पुनर्प्राप्ति तंत्र है जो एपीआई द्वारा संदर्भ लंबाई त्रुटि के साथ किसी अनुरोध को अस्वीकार करने पर स्वचालित रूप से बड़े-संदर्भ वाले भाई-बहन (sibling) को बढ़ावा देता है।
 
 ### ट्रिगर और क्रम
 
-जब कोई टर्न context overflow error (जैसे `context_length_exceeded`) के साथ विफल होता है, `AgentSession` compaction से पहले promotion का प्रयास करता है **पहले**:
+जब कोई टर्न संदर्भ अतिप्रवाह त्रुटि (उदा. `context_length_exceeded`) के साथ विफल हो जाता है, तो `AgentSession` संघनन (compaction) पर वापस आने से **पहले** पदोन्नति का प्रयास करता है:
 
-1. यदि `contextPromotion.enabled` true है, तो promotion target रिज़ॉल्व करें (नीचे देखें)।
-2. यदि target मिलता है, उस पर switch करें और request retry करें — कोई compaction की आवश्यकता नहीं।
-3. यदि कोई target उपलब्ध नहीं है, तो current मॉडल पर auto-compaction पर fall through करें।
+1. यदि `contextPromotion.enabled` सत्य है, तो पदोन्नति लक्ष्य को हल करें (नीचे देखें)।
+2. यदि कोई लक्ष्य मिल जाता है, तो उस पर स्विच करें और अनुरोध का पुनः प्रयास करें — किसी संघनन की आवश्यकता नहीं है।
+3. यदि कोई लक्ष्य उपलब्ध नहीं है, तो वर्तमान मॉडल पर ऑटो-संघनन (auto-compaction) पर जाएं।
 
-### Target चयन
+### लक्ष्य का चयन
 
-चयन मॉडल-driven है, role-driven नहीं:
+चयन मॉडल-संचालित है, भूमिका-संचालित नहीं:
 
-1. `currentModel.contextPromotionTarget` (यदि कॉन्फ़िगर किया गया हो)
-2. समान प्रोवाइडर + API पर सबसे छोटा बड़े-context वाला मॉडल
+1. `currentModel.contextPromotionTarget` (if configured)`
+2. उसी प्रदाता + एपीआई पर सबसे छोटा बड़े-संदर्भ वाला मॉडल
 
-उम्मीदवारों को नज़रअंदाज़ किया जाता है जब तक क्रेडेंशियल रिज़ॉल्व न हों (`ModelRegistry.getApiKey(...)`)।
+जब तक क्रेडेंशियल हल नहीं हो जाते (`ModelRegistry.getApiKey(...)`), उम्मीदवारों को अनदेखा कर दिया जाता है।
 
-### OpenAI Codex websocket handoff
+### `OpenAI Codex` वेबसॉकेट हैंडऑफ़
 
-यदि `openai-codex-responses` से/से switch हो रहा है, तो मॉडल switch से पहले session provider state key `openai-codex-responses` बंद हो जाती है। यह websocket transport state को drop करता है ताकि अगला टर्न promoted मॉडल पर clean शुरू हो।
+यदि `openai-codex-responses` से/में स्विच कर रहे हैं, तो मॉडल स्विच से पहले सत्र प्रदाता स्थिति कुंजी `openai-codex-responses` बंद कर दी जाती है। यह वेबसॉकेट परिवहन स्थिति को छोड़ देता है ताकि अगला टर्न प्रचारित मॉडल पर साफ तौर पर शुरू हो सके।
 
-### Persistence व्यवहार
+### दृढ़ता (Persistence) व्यवहार
 
-Promotion temporary switching (`setModelTemporary`) का उपयोग करता है:
+पदोन्नति अस्थायी स्विचिंग (`setModelTemporary`) का उपयोग करती है:
 
-- session history में temporary `model_change` के रूप में रिकॉर्ड
-- सेव्ड role mapping को पुनर्लेखित नहीं करता
+- सत्र इतिहास में अस्थायी `model_change` के रूप में दर्ज किया गया
+- सहेजे गए भूमिका मानचित्रण को फिर से नहीं लिखता है
 
-### Explicit फ़ॉलबैक चेन कॉन्फ़िगर करना
+### स्पष्ट फ़ॉलबैक श्रृंखलाओं को कॉन्फ़िगर करना
 
 `contextPromotionTarget` के माध्यम से मॉडल मेटाडेटा में सीधे फ़ॉलबैक कॉन्फ़िगर करें।
 
-`contextPromotionTarget` निम्न में से कोई एक स्वीकार करता है:
+`contextPromotionTarget` इनमें से किसी एक को स्वीकार करता है:
 
-- `provider/model-id` (explicit)
-- `model-id` (current प्रोवाइडर के भीतर रिज़ॉल्व)
+- `provider/model-id` (स्पष्ट)
+- `model-id` (वर्तमान प्रदाता के भीतर हल किया गया)
 
-उदाहरण (`models.yml`) समान प्रोवाइडर पर Spark -> non-Spark के लिए:
+समान प्रदाता पर स्पार्क (Spark) -> गैर-स्पार्क (non-Spark) के लिए उदाहरण (`models.yml`):
 
 ```yaml
 providers:
@@ -452,24 +450,24 @@ providers:
         contextPromotionTarget: openai-codex/gpt-5.3-codex
 ```
 
-बिल्ट-इन मॉडल generator `*-spark` मॉडलों के लिए इसे स्वचालित रूप से तब assign करता है जब same-provider base मॉडल मौजूद हो।
+जब समान-प्रदाता बेस मॉडल मौजूद होता है तो अंतर्निहित मॉडल जनरेटर इसे स्वचालित रूप से `*-spark` मॉडल के लिए निर्दिष्ट करता है।
 
-## Compatibility और routing फ़ील्ड
+## संगतता और रूटिंग फ़ील्ड
 
-`models.yml` यह `compat` subset समर्थन करता है:
+`models.yml` इस `compat` उपसमुच्चय (subset) का समर्थन करता है:
 
 - `supportsStore`
 - `supportsDeveloperRole`
 - `supportsReasoningEffort`
-- `maxTokensField` (`max_completion_tokens` या `max_tokens`)
+- `maxTokensField` (`max_completion_tokens` or `max_tokens`)
 - `openRouterRouting.only` / `openRouterRouting.order`
 - `vercelGatewayRouting.only` / `vercelGatewayRouting.order`
 
-इन्हें OpenAI-completions transport logic द्वारा उपभोग किया जाता है और URL-based auto-detection के साथ संयुक्त किया जाता है।
+इनका उपभोग `OpenAI-completions` परिवहन तर्क द्वारा किया जाता है और URL-आधारित ऑटो-डिटेक्शन के साथ जोड़ा जाता है।
 
 ## व्यावहारिक उदाहरण
 
-### Local OpenAI-compatible endpoint (बिना auth)
+### स्थानीय `OpenAI`-संगत एंडपॉइंट (कोई प्रमाणीकरण नहीं)
 
 ```yaml
 providers:
@@ -482,7 +480,7 @@ providers:
         name: Qwen 2.5 Coder 32B (local)
 ```
 
-### Env-based key के साथ hosted proxy
+### पर्यावरण-आधारित कुंजी के साथ होस्ट किया गया प्रॉक्सी
 
 ```yaml
 providers:
@@ -498,7 +496,7 @@ providers:
         input: [text, image]
 ```
 
-### बिल्ट-इन प्रोवाइडर route + मॉडल मेटाडेटा ओवरराइड
+### अंतर्निहित प्रदाता मार्ग + मॉडल मेटाडेटा को ओवरराइड करें
 
 ```yaml
 providers:
@@ -514,13 +512,13 @@ providers:
             only: [anthropic]
 ```
 
-## LiteLLM proxy ऑटो-कॉन्फ़िगरेशन
+## LiteLLM प्रॉक्सी ऑटो-कॉन्फ़िगरेशन
 
-जब `LITELLM_BASE_URL` और `LITELLM_API_KEY` दोनों एनवायरनमेंट वेरिएबल सेट हों, xcsh LiteLLM proxy के लिए `models.yml` कॉन्फ़िगरेशन स्वचालित रूप से प्रबंधित करता है।
+जब `LITELLM_BASE_URL` और `LITELLM_API_KEY` पर्यावरण चर दोनों सेट होते हैं, तो `xcsh` स्वचालित रूप से LiteLLM प्रॉक्सी के लिए `models.yml` कॉन्फ़िगरेशन का प्रबंधन करता है।
 
-### पहली-बार ऑटो-जनरेशन
+### प्रथम-रन ऑटो-जेनरेशन
 
-यदि `models.yml` मौजूद नहीं है और LiteLLM env vars का पता चलता है, xcsh इसे स्वचालित रूप से generate करता है:
+यदि `models.yml` मौजूद नहीं है और LiteLLM env चर का पता चलता है, तो `xcsh` इसे स्वचालित रूप से उत्पन्न करता है:
 
 ```yaml
 # Auto-generated by xcsh for LiteLLM proxy
@@ -532,21 +530,21 @@ providers:
     apiKey: LITELLM_API_KEY
 ```
 
-एक डिफ़ॉल्ट `config.yml` भी sensible image provider settings के साथ generate होता है।
+एक डिफ़ॉल्ट `config.yml` भी समझदार छवि प्रदाता सेटिंग्स के साथ उत्पन्न होता है।
 
-### Startup self-healing
+### स्टार्टअप सेल्फ-हीलिंग
 
-हर startup पर, model registry में `startupHealthCheck()` निम्न जांचें चलाता है:
+प्रत्येक स्टार्टअप पर, मॉडल रजिस्ट्री में `startupHealthCheck()` निम्नलिखित जाँच चलाता है:
 
-| शर्त | कार्रवाई |
+| स्थिति | कार्रवाई |
 |-----------|--------|
-| `models.yml` अनुपस्थित | env vars से ऑटो-generate करें |
-| `models.yml` corrupt या parse न हो सके | `.bak` पर backup, regenerate |
-| `baseUrl` `LITELLM_BASE_URL` से मेल नहीं खाता | `.bak` पर backup, नए URL के साथ regenerate |
-| `configVersion` अनुपस्थित या पुराना | `.bak` पर backup, current version के साथ regenerate |
-| कॉन्फ़िग healthy है | कोई कार्रवाई नहीं |
+| `models.yml` गायब | env vars से ऑटो-जेनरेट करें |
+| `models.yml` भ्रष्ट या अनपार्स योग्य | `.bak` में बैकअप लें, पुनर्जीवित करें |
+| `baseUrl`, `LITELLM_BASE_URL` से मेल नहीं खाता है | `.bak` में बैकअप लें, नए URL के साथ पुनर्जीवित करें |
+| `configVersion` गायब या पुराना | `.bak` में बैकअप लें, वर्तमान संस्करण के साथ पुनर्जीवित करें |
+| कॉन्फ़िग स्वस्थ है | कोई कार्रवाई नहीं |
 
-सभी मरम्मत ओवरराइट से पहले `.bak` backup बनाते हैं। सभी ऑपरेशन idempotent हैं।
+सभी मरम्मत अधिलेखित (overwriting) करने से पहले `.bak` बैकअप बनाते हैं। सभी संचालन इडेम्पोटेंट (idempotent) हैं।
 
 ### CLI कमांड
 
@@ -556,31 +554,31 @@ xcsh setup litellm --check      # Validate without writing
 xcsh setup litellm --check --json  # Machine-readable validation output
 ```
 
-### आवश्यक एनवायरनमेंट वेरिएबल
+### आवश्यक पर्यावरण चर
 
-| वेरिएबल | उद्देश्य |
+| चर | उद्देश्य |
 |----------|---------|
-| `LITELLM_BASE_URL` | LiteLLM proxy URL (जैसे `https://your-proxy.example.com`)। `http://` या `https://` से शुरू होना चाहिए। |
-| `LITELLM_API_KEY` | proxy के लिए API key। generated config में नाम से referenced, रनटाइम पर रिज़ॉल्व। |
+| `LITELLM_BASE_URL` | LiteLLM प्रॉक्सी URL (उदा. `https://your-proxy.example.com`)। `http://` या `https://` से शुरू होना चाहिए। |
+| `LITELLM_API_KEY` | प्रॉक्सी के लिए API कुंजी। जेनरेट किए गए कॉन्फ़िग में नाम से संदर्भित, रनटाइम पर हल किया गया। |
 
-यदि कोई भी वेरिएबल unset है, तो ऑटो-कॉन्फ़िगरेशन silently skip हो जाता है।
+यदि कोई भी चर सेट नहीं है, तो ऑटो-कॉन्फ़िगरेशन चुपचाप छोड़ दिया जाता है।
 
-### कॉन्फ़िग versioning
+### कॉन्फ़िग वर्ज़निंग
 
-Generated configs में `configVersion` फ़ील्ड शामिल होता है। जब भविष्य के releases में generated format बदलता है, xcsh पुराने configs का पता लगाता है और उन्हें स्वचालित रूप से upgrade करता है (backup के साथ)।
+उत्पन्न कॉन्फ़िग में एक `configVersion` फ़ील्ड शामिल होता है। जब भविष्य के रिलीज़ में उत्पन्न प्रारूप बदलता है, तो `xcsh` पुरानी कॉन्फ़िग का पता लगाता है और स्वचालित रूप से उन्हें अपग्रेड करता है (बैकअप के साथ)।
 
-## लेगेसी consumer सावधानी
+## विरासत (Legacy) उपभोक्ता चेतावनी
 
-अधिकांश मॉडल कॉन्फ़िगरेशन अब `ModelRegistry` के माध्यम से `models.yml` से होकर जाता है।
+अधिकांश मॉडल कॉन्फ़िगरेशन अब `ModelRegistry` के माध्यम से `models.yml` से प्रवाहित होता है।
 
-एक उल्लेखनीय लेगेसी पाथ बना हुआ है: web-search Anthropic auth resolution अभी भी `src/web/search/auth.ts` में सीधे `~/.xcsh/agent/models.json` पढ़ता है।
+एक उल्लेखनीय विरासत पथ बना हुआ है: वेब-खोज Anthropic प्रमाणीकरण रिज़ॉल्यूशन अभी भी सीधे `src/web/search/auth.ts` में `~/.xcsh/agent/models.json` पढ़ता है।
 
-यदि आप उस specific पाथ पर निर्भर हैं, तो JSON compatibility को ध्यान में रखें जब तक वह module माइग्रेट नहीं हो जाता।
+यदि आप उस विशिष्ट पथ पर भरोसा करते हैं, तो उस मॉड्यूल के माइग्रेट होने तक JSON संगतता को ध्यान में रखें।
 
-## विफलता मोड
+## विफलता मोड (Failure mode)
 
-यदि `models.yml` schema या validation जांच में विफल होता है:
+यदि `models.yml` स्कीमा या सत्यापन जांच में विफल रहता है:
 
-- यदि `LITELLM_BASE_URL` और `LITELLM_API_KEY` सेट हैं, तो startup health check ऑटो-मरम्मत का प्रयास करता है (corrupt फ़ाइल backup करें, env vars से regenerate करें)। यदि मरम्मत सफल हो, तो रजिस्ट्री fixed config को reload करती है।
-- यदि ऑटो-मरम्मत संभव नहीं है (env vars unset, write विफलता), तो रजिस्ट्री बिल्ट-इन मॉडलों के साथ काम करती रहती है।
-- Error `ModelRegistry.getError()` के माध्यम से expose होती है और UI/notifications में दिखाई जाती है।
+- यदि `LITELLM_BASE_URL` और `LITELLM_API_KEY` सेट हैं, तो स्टार्टअप हेल्थ चेक ऑटो-रिपेयर का प्रयास करता है (भ्रष्ट फ़ाइल का बैकअप लें, env vars से पुनर्जीवित करें)। यदि मरम्मत सफल होती है, तो रजिस्ट्री निश्चित कॉन्फ़िग को फिर से लोड करती है।
+- यदि ऑटो-रिपेयर संभव नहीं है (env vars अनसेट, विफलता लिखना), तो रजिस्ट्री अंतर्निहित मॉडलों के साथ काम करती रहती है।
+- त्रुटि को `ModelRegistry.getError()` के माध्यम से उजागर किया जाता है और UI/अधिसूचनाओं में सामने लाया जाता है।

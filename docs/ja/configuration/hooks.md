@@ -1,39 +1,40 @@
 ---
-title: フック
-description: コーディングエージェントライフサイクルにおけるイベント前後の自動化のためのフックシステム。
+title: Hooks
+description: Hook system for pre/post event automation in the coding agent lifecycle.
 sidebar:
   order: 4
-  label: フック
+  label: Hooks
+
 i18n:
-  sourceHash: cdbec10bc405
-  translator: machine
+  sourceHash: "afa30d336bec"
+  translator: "machine"
 ---
 
-# フック
+# Hooks
 
-このドキュメントでは、`src/extensibility/hooks/*` にある**現在のフックサブシステムのコード**について説明します。
+This document describes the **current hook subsystem code** in `src/extensibility/hooks/*`.
 
-## ランタイムにおける現在の状態
+## Current status in runtime
 
-フックパッケージ（`src/extensibility/hooks/`）はAPIサーフェスとして引き続きエクスポートされ使用可能ですが、デフォルトのCLIランタイムは現在**拡張ランナー**のパスを初期化します。現在の起動フローでは：
+The hook package (`src/extensibility/hooks/`) is still exported and usable as an API surface, but the default CLI runtime now initializes the **extension runner** path. In current startup flow:
 
-- `--hook` は `--extension` のエイリアスとして扱われます（CLIパスは `additionalExtensionPaths` にマージされます）
-- ツールは `HookToolWrapper` ではなく `ExtensionToolWrapper` によってラップされます
-- コンテキスト変換とライフサイクルのエミッションは `ExtensionRunner` を通じて処理されます
+- `--hook` is treated as an alias for `--extension` (CLI paths are merged into `additionalExtensionPaths`)
+- tools are wrapped by `ExtensionToolWrapper`, not `HookToolWrapper`
+- context transforms and lifecycle emissions go through `ExtensionRunner`
 
-このため、このファイルは、レガシーの動作と制約を含む、フックサブシステムの実装自体（型/ローダー/ランナー/ラッパー）についてドキュメント化します。
+So this file documents the hook subsystem implementation itself (types/loader/runner/wrapper), including legacy behavior and constraints.
 
-## 主要なファイル
+## Key files
 
-- `src/extensibility/hooks/types.ts` — フックコンテキスト、イベント型、および結果コントラクト
-- `src/extensibility/hooks/loader.ts` — モジュールの読み込みとフック検出ブリッジ
-- `src/extensibility/hooks/runner.ts` — イベントディスパッチ、コマンドルックアップ、エラーシグナリング
-- `src/extensibility/hooks/tool-wrapper.ts` — ツールの前後インターセプトラッパー
-- `src/extensibility/hooks/index.ts` — エクスポート/再エクスポート
+- `src/extensibility/hooks/types.ts` — hook context, event types, and result contracts
+- `src/extensibility/hooks/loader.ts` — module loading and hook discovery bridge
+- `src/extensibility/hooks/runner.ts` — event dispatch, command lookup, error signaling
+- `src/extensibility/hooks/tool-wrapper.ts` — pre/post tool interception wrapper
+- `src/extensibility/hooks/index.ts` — exports/re-exports
 
-## フックモジュールとは
+## What a hook module is
 
-フックモジュールはファクトリーをデフォルトエクスポートする必要があります：
+A hook module must default-export a factory:
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -47,61 +48,61 @@ export default function hook(pi: HookAPI): void {
 }
 ```
 
-ファクトリーは以下のことが可能です：
+The factory can:
 
-- `pi.on(...)` でイベントハンドラーを登録する
-- `pi.sendMessage(...)` で永続的なカスタムメッセージを送信する
-- `pi.appendEntry(...)` で非LLM状態を永続化する
-- `pi.registerCommand(...)` でスラッシュコマンドを登録する
-- `pi.registerMessageRenderer(...)` でカスタムメッセージレンダラーを登録する
-- `pi.exec(...)` でシェルコマンドを実行する
+- register event handlers with `pi.on(...)`
+- send persistent custom messages with `pi.sendMessage(...)`
+- persist non-LLM state with `pi.appendEntry(...)`
+- register slash commands via `pi.registerCommand(...)`
+- register custom message renderers via `pi.registerMessageRenderer(...)`
+- run shell commands via `pi.exec(...)`
 
-## 検出と読み込み
+## Discovery and loading
 
-`discoverAndLoadHooks(configuredPaths, cwd)` は以下を実行します：
+`discoverAndLoadHooks(configuredPaths, cwd)` does:
 
-1. ケイパビリティレジストリからフックを検出して読み込む（`loadCapability("hooks")`）
-2. 明示的に設定されたパスを追加する（絶対パスで重複排除）
-3. `loadHooks(allPaths, cwd)` を呼び出す
+1. Load discovered hooks from capability registry (`loadCapability("hooks")`)
+2. Append explicitly configured paths (deduped by absolute path)
+3. Call `loadHooks(allPaths, cwd)`
 
-その後、`loadHooks` は各パスをインポートし、`default` 関数を期待します。
+`loadHooks` then imports each path and expects a `default` function.
 
-### パス解決
+### Path resolution
 
-`loader.ts` はフックパスを以下のように解決します：
+`loader.ts` resolves hook paths as:
 
-- 絶対パス：そのまま使用
-- `~` パス：展開される
-- 相対パス：`cwd` に対して解決される
+- absolute path: used as-is
+- `~` path: expanded
+- relative path: resolved against `cwd`
 
-### 重要なレガシーの不一致
+### Important legacy mismatch
 
-`hookCapability` の検出プロバイダーは、依然として前後のシェルスタイルのフックファイル（例：`.claude/hooks/pre/*`、`.xcsh/.../hooks/pre/*`）をモデル化しています。
+Discovery providers for `hookCapability` still model pre/post shell-style hook files (for example `.claude/hooks/pre/*`, `.xcsh/.../hooks/pre/*`).
 
-ここのフックローダーは動的モジュールインポートを使用し、デフォルトのJS/TSフックファクトリーを必要とします。検出されたフックパスがモジュールとしてインポートできない場合、読み込みは失敗し `LoadHooksResult.errors` に報告されます。
+The hook loader here uses dynamic module import and requires a default JS/TS hook factory. If a discovered hook path is not importable as a module, load fails and is reported in `LoadHooksResult.errors`.
 
-## イベントサーフェス
+## Event surfaces
 
-フックイベントは `types.ts` で厳密に型付けされています。
+Hook events are strongly typed in `types.ts`.
 
-### セッションイベント
+### Session events
 
 - `session_start`
-- `session_before_switch` → `{ cancel?: boolean }` を返すことができる
+- `session_before_switch` → can return `{ cancel?: boolean }`
 - `session_switch`
-- `session_before_branch` → `{ cancel?: boolean; skipConversationRestore?: boolean }` を返すことができる
+- `session_before_branch` → can return `{ cancel?: boolean; skipConversationRestore?: boolean }`
 - `session_branch`
-- `session_before_compact` → `{ cancel?: boolean; compaction?: CompactionResult }` を返すことができる
-- `session.compacting` → `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }` を返すことができる
+- `session_before_compact` → can return `{ cancel?: boolean; compaction?: CompactionResult }`
+- `session.compacting` → can return `{ context?: string[]; prompt?: string; preserveData?: Record<string, unknown> }`
 - `session_compact`
-- `session_before_tree` → `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }` を返すことができる
+- `session_before_tree` → can return `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
 - `session_tree`
 - `session_shutdown`
 
-### エージェント/コンテキストイベント
+### Agent/context events
 
-- `context` → `{ messages?: Message[] }` を返すことができる
-- `before_agent_start` → `{ message?: { customType; content; display; details } }` を返すことができる
+- `context` → can return `{ messages?: Message[] }`
+- `before_agent_start` → can return `{ message?: { customType; content; display; details } }`
 - `agent_start`
 - `agent_end`
 - `turn_start`
@@ -113,153 +114,153 @@ export default function hook(pi: HookAPI): void {
 - `ttsr_triggered`
 - `todo_reminder`
 
-### ツールイベント（前後モデル）
+### Tool events (pre/post model)
 
-- `tool_call`（実行前）→ `{ block?: boolean; reason?: string }` を返すことができる
-- `tool_result`（実行後）→ `{ content?; details?; isError? }` を返すことができる
+- `tool_call` (pre-execution) → can return `{ block?: boolean; reason?: string }`
+- `tool_result` (post-execution) → can return `{ content?; details?; isError? }`
 
-これはフックサブシステムのコアとなる前後インターセプトモデルです。
+This is the hook subsystem’s core pre/post interception model.
 
 ```text
-フックツールインターセプトフロー
+Hook tool interception flow
 
-tool_call ハンドラー
+tool_call handlers
    │
-   ├─ { block: true } が返された場合? ── はい ──> スロー（ツールブロック）
+   ├─ any { block: true }? ── yes ──> throw (tool blocked)
    │
-   └─ いいえ
+   └─ no
       │
       ▼
-   基盤となるツールを実行
+   execute underlying tool
       │
-      ├─ 成功 ──> tool_result ハンドラーが { content, details } をオーバーライド可能
+      ├─ success ──> tool_result handlers can override { content, details }
       │
-      └─ エラー   ──> tool_result(isError=true) をエミットし、元のエラーを再スロー
+      └─ error   ──> emit tool_result(isError=true) then rethrow original error
 ```
 
-## 実行モデルとミューテーションのセマンティクス
+## Execution model and mutation semantics
 
-### 1) 実行前：`tool_call`
+### 1) Pre-execution: `tool_call`
 
-`HookToolWrapper.execute()` はツール実行前に `tool_call` をエミットします。
+`HookToolWrapper.execute()` emits `tool_call` before tool execution.
 
-- いずれかのハンドラーが `{ block: true }` を返すと、実行が停止する
-- ハンドラーがスローした場合、ラッパーはフェイルクローズで実行をブロックする
-- 返された `reason` がスローされたエラーテキストになる
+- if any handler returns `{ block: true }`, execution stops
+- if handler throws, wrapper fails closed and blocks execution
+- returned `reason` becomes the thrown error text
 
-### 2) ツール実行
+### 2) Tool execution
 
-ブロックされていない場合、基盤となるツールが通常通り実行されます。
+Underlying tool executes normally if not blocked.
 
-### 3) 実行後：`tool_result`
+### 3) Post-execution: `tool_result`
 
-成功後、ラッパーは以下を含む `tool_result` をエミットします：
+After success, wrapper emits `tool_result` with:
 
-- `toolName`、`toolCallId`、`input`
+- `toolName`, `toolCallId`, `input`
 - `content`
 - `details`
 - `isError: false`
 
-ハンドラーがオーバーライドを返した場合：
+If handler returns overrides:
 
-- `content` は結果コンテンツを置き換えることができる
-- `details` は結果の詳細を置き換えることができる
+- `content` can replace result content
+- `details` can replace result details
 
-ツールの失敗時、ラッパーは `isError: true` とエラーテキストコンテンツを含む `tool_result` をエミットし、元のエラーを再スローします。
+On tool failure, wrapper emits `tool_result` with `isError: true` and error text content, then rethrows original error.
 
-### フックがミューテート可能なもの
+### What hooks can mutate
 
-- `context` による単一呼び出しのLLMコンテキスト（`messages` 置換チェーン）
-- 成功したツール呼び出しのツール出力コンテンツ/詳細（`tool_result` パス）
-- `before_agent_start` によるエージェント起動前の注入メッセージ
-- `session_before_*` および `session.compacting` によるキャンセル/カスタムコンパクション/ツリー動作
+- LLM context for a single call via `context` (`messages` replacement chain)
+- tool output content/details on successful tool calls (`tool_result` path)
+- pre-agent injected message via `before_agent_start`
+- cancellation/custom compaction/tree behavior via `session_before_*` and `session.compacting`
 
-### この実装においてフックがミューテート不可能なもの
+### What hooks cannot mutate in this implementation
 
-- ツールの入力パラメーターをインプレースで変更（`tool_call` ではブロック/許可のみ）
-- スローされたツールエラー後の実行継続（エラーパスは再スローする）
-- ラッパー動作における最終的な成功/エラーステータス（返された `isError` は型付けされているが `HookToolWrapper` では適用されない）
+- raw tool input parameters in-place (only block/allow on `tool_call`)
+- execution continuation after thrown tool errors (error path rethrows)
+- final success/error status in wrapper behavior (returned `isError` is typed but not applied by `HookToolWrapper`)
 
-## 順序と競合の動作
+## Ordering and conflict behavior
 
-### 検出レベルの順序
+### Discovery-level ordering
 
-ケイパビリティプロバイダーは優先度順にソートされます（高いものが優先）。重複排除はケイパビリティキーで行われ、最初のものが優先されます。
+Capability providers are priority-sorted (higher first). Dedupe is by capability key, first wins.
 
-`hooks` の場合、ケイパビリティキーは `${type}:${tool}:${name}` です。低優先度のプロバイダーからの重複は、シャドーされたものとしてマークされ、有効な検出リストから除外されます。
+For `hooks`, capability key is `${type}:${tool}:${name}`. Shadowed duplicates from lower-priority providers are marked and excluded from effective discovered list.
 
-### 読み込み順序
+### Load order
 
-`discoverAndLoadHooks` は解決された絶対パスで重複排除されたフラットな `allPaths` リストを作成し、その後 `loadHooks` がその順序で繰り返し処理します。
-各検出ディレクトリ内のファイル順は `readdir` の出力に依存し、フックローダーは追加のソートを実行しません。
+`discoverAndLoadHooks` builds a flat `allPaths` list, deduped by resolved absolute path, then `loadHooks` iterates in that order.
+File order within each discovered directory depends on `readdir` output; the hook loader does not perform an additional sort.
 
-### ランタイムハンドラーの順序
+### Runtime handler order
 
-`HookRunner` 内では、順序は登録シーケンスによって決定論的に決まります：
+Inside `HookRunner`, order is deterministic by registration sequence:
 
-1. フック配列の順序
-2. フック/イベントごとのハンドラー登録順序
+1. hooks array order
+2. handler registration order per hook/event
 
-イベント型による競合の動作：
+Conflict behavior by event type:
 
-- `tool_call`：ハンドラーがブロックしない限り最後に返された結果が優先され、最初のブロックで短絡する
-- `tool_result`：最後に返されたオーバーライドが優先（短絡なし）
-- `context`：チェーン化され、各ハンドラーは前のハンドラーのメッセージ出力を受け取る
-- `before_agent_start`：最初に返されたメッセージが保持され、以降のメッセージは無視される
-- `session_before_*`：最後に返された結果が追跡され、`cancel: true` は即座に短絡する
-- `session.compacting`：最後に返された結果が優先
+- `tool_call`: last returned result wins unless a handler blocks; first block short-circuits
+- `tool_result`: last returned override wins (no short-circuit)
+- `context`: chained; each handler receives prior handler’s message output
+- `before_agent_start`: first returned message is kept; later messages ignored
+- `session_before_*`: latest returned result is tracked; `cancel: true` short-circuits immediately
+- `session.compacting`: latest returned result wins
 
-コマンド/レンダラーの競合：
+Command/renderer conflicts:
 
-- `getCommand(name)` はフック全体で最初の一致を返す（最初に読み込まれたものが優先）
-- `getMessageRenderer(customType)` は最初の一致を返す
-- `getRegisteredCommands()` はすべてのコマンドを返す（重複排除なし）
+- `getCommand(name)` returns first match across hooks (first loaded wins)
+- `getMessageRenderer(customType)` returns first match
+- `getRegisteredCommands()` returns all commands (no dedupe)
 
-## UIインタラクション（`HookContext.ui`）
+## UI interactions (`HookContext.ui`)
 
-`HookUIContext` には以下が含まれます：
+`HookUIContext` includes:
 
-- `select`、`confirm`、`input`、`editor`
+- `select`, `confirm`, `input`, `editor`
 - `notify`
 - `setStatus`
 - `custom`
-- `setEditorText`、`getEditorText`
-- `theme` ゲッター
+- `setEditorText`, `getEditorText`
+- `theme` getter
 
-`ctx.hasUI` はインタラクティブなUIが使用可能かどうかを示します。
+`ctx.hasUI` indicates whether interactive UI is available.
 
-UIなしで実行する場合、デフォルトのno-opコンテキスト動作は以下の通りです：
+When running with no UI, the default no-op context behavior is:
 
-- `select/input/editor` は `undefined` を返す
-- `confirm` は `false` を返す
-- `notify`、`setStatus`、`setEditorText` はno-opである
-- `getEditorText` は `""` を返す
+- `select/input/editor` return `undefined`
+- `confirm` returns `false`
+- `notify`, `setStatus`, `setEditorText` are no-ops
+- `getEditorText` returns `""`
 
-### ステータスラインの動作
+### Status line behavior
 
-`ctx.ui.setStatus(key, text)` で設定されたフックステータステキストは：
+Hook status text set via `ctx.ui.setStatus(key, text)` is:
 
-- キーごとに保存される
-- キー名でソートされる
-- サニタイズされる（`\r`、`\n`、`\t` → スペース；連続するスペースは縮小される）
-- 表示のために結合され幅が切り詰められる
+- stored per key
+- sorted by key name
+- sanitized (`\r`, `\n`, `\t` → spaces; repeated spaces collapsed)
+- joined and width-truncated for display
 
-## エラーの伝播とフォールバック
+## Error propagation and fallback
 
-### 読み込み時
+### Load-time
 
-- 無効なモジュールまたはデフォルトエクスポートの欠如 → `LoadHooksResult.errors` に記録される
-- 他のフックの読み込みは継続される
+- invalid module or missing default export → captured in `LoadHooksResult.errors`
+- loading continues for other hooks
 
-### イベント時
+### Event-time
 
-`HookRunner.emit(...)` はほとんどのイベントのハンドラーエラーをキャッチし、`HookError` をリスナーにエミット（`hookPath`、`event`、`error`）してから継続します。
+`HookRunner.emit(...)` catches handler errors for most events and emits `HookError` to listeners (`hookPath`, `event`, `error`), then continues.
 
-`emitToolCall(...)` はより厳格です：ハンドラーエラーはそこでは飲み込まれず、呼び出し元に伝播します。`HookToolWrapper` では、これによりツール呼び出しがブロックされます（フェイルセーフ）。
+`emitToolCall(...)` is stricter: handler errors are not swallowed there; they propagate to caller. In `HookToolWrapper`, this blocks the tool call (fail-safe).
 
-## 実際のAPIの例
+## Realistic API examples
 
-### 安全でないbashコマンドをブロックする
+### Block unsafe bash commands
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -277,7 +278,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### 実行後にツール出力を編集する
+### Redact tool output on post-execution
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -296,7 +297,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### LLM呼び出しごとにモデルコンテキストを変更する
+### Modify model context per LLM call
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -309,7 +310,7 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-### コマンドセーフなコンテキストメソッドでスラッシュコマンドを登録する
+### Register slash command with command-safe context methods
 
 ```ts
 import type { HookAPI } from "@f5-sales-demo/xcsh";
@@ -334,13 +335,13 @@ export default function (pi: HookAPI): void {
 }
 ```
 
-## エクスポートサーフェス
+## Export surface
 
-`src/extensibility/hooks/index.ts` がエクスポートするもの：
+`src/extensibility/hooks/index.ts` exports:
 
-- 読み込みAPI（`discoverAndLoadHooks`、`loadHooks`）
-- ランナーとラッパー（`HookRunner`、`HookToolWrapper`）
-- すべてのフック型
-- `execCommand` の再エクスポート
+- loading APIs (`discoverAndLoadHooks`, `loadHooks`)
+- runner and wrapper (`HookRunner`, `HookToolWrapper`)
+- all hook types
+- `execCommand` re-export
 
-パッケージルート（`src/index.ts`）はレガシー互換性サーフェスとしてフック**型**を再エクスポートします。
+And package root (`src/index.ts`) re-exports hook **types** as a legacy compatibility surface.

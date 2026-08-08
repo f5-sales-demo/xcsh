@@ -1,34 +1,33 @@
 ---
 title: SDK
-description: >-
-  SDK per la creazione di agenti personalizzati e integrazioni sul runtime
-  dell'agente di codifica xcsh.
+description: SDK for building custom agents and integrations on top of the xcsh coding agent runtime.
 sidebar:
   order: 6
   label: SDK
+
 i18n:
-  sourceHash: 80f3a4374241
-  translator: machine
+  sourceHash: "955010e30dde"
+  translator: "machine"
 ---
 
 # SDK
 
-L'SDK è la superficie di integrazione in-process per `@f5-sales-demo/xcsh`.
-Utilizzarlo quando si desidera accesso diretto allo stato dell'agente, allo streaming di eventi, al collegamento degli strumenti e al controllo della sessione dal proprio processo Bun/Node.
+The SDK is the in-process integration surface for `@f5-sales-demo/xcsh`.
+Use it when you want direct access to agent state, event streaming, tool wiring, and session control from your own Bun/Node process.
 
-Se è necessario l'isolamento cross-linguaggio/processo, utilizzare invece la modalità RPC.
+If you need cross-language/process isolation, use RPC mode instead.
 
-## Installazione
+## Installation
 
 ```bash
 bun add @f5-sales-demo/xcsh
 ```
 
-## Punti di ingresso
+## Entry points
 
-`@f5-sales-demo/xcsh` esporta le API dell'SDK dalla radice del pacchetto.
+`@f5-sales-demo/xcsh` exports the SDK APIs from the package root.
 
-Esportazioni principali per gli embedder:
+Core exports for embedders:
 
 - `createAgentSession`
 - `SessionManager`
@@ -36,10 +35,10 @@ Esportazioni principali per gli embedder:
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- Helper di discovery (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
-- Superficie factory degli strumenti (`createTools`, `BUILTIN_TOOLS`, classi di strumenti)
+- Discovery helpers (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- Tool factory surface (`createTools`, `BUILTIN_TOOLS`, tool classes)
 
-## Avvio rapido (impostazioni predefinite di auto-discovery)
+## Quick start (auto-discovery defaults)
 
 ```ts
 import { createAgentSession } from "@f5-sales-demo/xcsh";
@@ -61,39 +60,39 @@ unsubscribe();
 await session.dispose();
 ```
 
-## Cosa scopre `createAgentSession()` per impostazione predefinita
+## What `createAgentSession()` discovers by default
 
-`createAgentSession()` segue il principio "fornire per sovrascrivere, omettere per scoprire".
+`createAgentSession()` follows “provide to override, omit to discover”.
 
-Se omesso, risolve:
+If omitted, it resolves:
 
 - `cwd`: `getProjectDir()`
-- `agentDir`: `~/.xcsh/agent` (tramite `getAgentDir()`)
+- `agentDir`: `~/.xcsh/agent` (via `getAgentDir()`)
 - `authStorage`: `discoverAuthStorage(agentDir)`
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
-- `sessionManager`: `SessionManager.create(cwd)` (basato su file)
-- skills/file di contesto/template di prompt/comandi slash/estensioni/comandi TS personalizzati
-- strumenti integrati tramite `createTools(...)`
-- strumenti MCP (abilitati per impostazione predefinita)
-- integrazione LSP (abilitata per impostazione predefinita)
+- `sessionManager`: `SessionManager.create(cwd)` (file-backed)
+- skills/context files/prompt templates/slash commands/extensions/custom TS commands
+- built-in tools via `createTools(...)`
+- MCP tools (enabled by default)
+- LSP integration (enabled by default)
 
-### Input obbligatori vs opzionali
+### Required vs optional inputs
 
-In genere è necessario fornire solo ciò che si desidera controllare:
+Typically you must provide only what you want to control:
 
-- **Da fornire obbligatoriamente**: niente per una sessione minimale
-- **Di solito forniti esplicitamente** negli embedder:
-    - `sessionManager` (se si necessita di in-memory o di una posizione personalizzata)
-    - `authStorage` + `modelRegistry` (se si gestisce il ciclo di vita delle credenziali/modelli)
-    - `model` o `modelPattern` (se la selezione deterministica del modello è importante)
-    - `settings` (se si necessita di una configurazione isolata/di test)
+- **Must provide**: nothing for a minimal session
+- **Usually provide explicitly** in embedders:
+    - `sessionManager` (if you need in-memory or custom location)
+    - `authStorage` + `modelRegistry` (if you own credential/model lifecycle)
+    - `model` or `modelPattern` (if deterministic model selection matters)
+    - `settings` (if you need isolated/test config)
 
-## Comportamento del gestore di sessione (persistente vs in-memory)
+## Session manager behavior (persistent vs in-memory)
 
-`AgentSession` utilizza sempre un `SessionManager`; il comportamento dipende dalla factory utilizzata.
+`AgentSession` always uses a `SessionManager`; behavior depends on which factory you use.
 
-### Basato su file (predefinito)
+### File-backed (default)
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
@@ -102,12 +101,12 @@ const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
 });
 
-console.log(session.sessionFile); // percorso assoluto .jsonl
+console.log(session.sessionFile); // absolute .jsonl path
 ```
 
-- Persiste conversazioni/messaggi/delta di stato nei file di sessione.
-- Supporta i flussi di lavoro di ripristino/apertura/elenco/fork.
-- `session.sessionFile` è definito.
+- Persists conversation/messages/state deltas to session files.
+- Supports resume/open/list/fork workflows.
+- `session.sessionFile` is defined.
 
 ### In-memory
 
@@ -121,11 +120,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- Nessuna persistenza nel filesystem.
-- Utile per test, worker effimeri, agenti con scope di richiesta.
-- I metodi di sessione funzionano ancora, ma i comportamenti specifici della persistenza (percorsi di ripristino/fork su file) sono naturalmente limitati.
+- No filesystem persistence.
+- Useful for tests, ephemeral workers, request-scoped agents.
+- Session methods still work, but persistence-specific behaviors (file resume/fork paths) are naturally limited.
 
-### Helper di ripristino/apertura/elenco
+### Resume/open/list helpers
 
 ```ts
 import { SessionManager } from "@f5-sales-demo/xcsh";
@@ -135,11 +134,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## Collegamento di modello e autenticazione
+## Model and auth wiring
 
-`createAgentSession()` utilizza `ModelRegistry` + `AuthStorage` per la selezione del modello e la risoluzione della chiave API.
+`createAgentSession()` uses `ModelRegistry` + `AuthStorage` for model selection and API key resolution.
 
-### Collegamento esplicito
+### Explicit wiring
 
 ```ts
 import {
@@ -165,28 +164,28 @@ const { session } = await createAgentSession({
 });
 ```
 
-### Ordine di selezione quando `model` è omesso
+### Selection order when `model` is omitted
 
-Quando non viene fornito un `model`/`modelPattern` esplicito:
+When no explicit `model`/`modelPattern` is provided:
 
-1. ripristino del modello dalla sessione esistente (se ripristinabile + chiave disponibile)
-2. ruolo del modello predefinito nelle impostazioni (`default`)
-3. primo modello disponibile con autenticazione valida
+1. restore model from existing session (if restorable + key available)
+2. settings default model role (`default`)
+3. first available model with valid auth
 
-Se il ripristino fallisce, `modelFallbackMessage` spiega il fallback.
+If restore fails, `modelFallbackMessage` explains fallback.
 
-### Priorità di autenticazione
+### Auth priority
 
-`AuthStorage.getApiKey(...)` risolve in questo ordine:
+`AuthStorage.getApiKey(...)` resolves in this order:
 
-1. override di runtime (`setRuntimeApiKey`)
-2. credenziali memorizzate in `agent.db`
-3. variabili d'ambiente del provider
-4. fallback del resolver custom-provider (se configurato)
+1. runtime override (`setRuntimeApiKey`)
+2. stored credentials in `agent.db`
+3. provider environment variables
+4. custom-provider resolver fallback (if configured)
 
-## Modello di sottoscrizione agli eventi
+## Event subscription model
 
-Sottoscrivere con `session.subscribe(listener)`; restituisce una funzione di annullamento della sottoscrizione.
+Subscribe with `session.subscribe(listener)`; it returns an unsubscribe function.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -204,29 +203,29 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` include gli `AgentEvent` principali più gli eventi a livello di sessione:
+`AgentSessionEvent` includes core `AgentEvent` plus session-level events:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-## Ciclo di vita del prompt
+## Prompt lifecycle
 
-`session.prompt(text, options?)` è il punto di ingresso principale.
+`session.prompt(text, options?)` is the primary entry point.
 
-Comportamento:
+Behavior:
 
-1. espansione opzionale di comandi/template (comandi `/`, comandi personalizzati, comandi slash da file, template di prompt)
-2. se attualmente in streaming:
-    - richiede `streamingBehavior: "steer" | "followUp"`
-    - mette in coda invece di scartare il lavoro
-3. se inattivo:
-    - valida il modello + la chiave API
-    - aggiunge il messaggio utente
-    - avvia il turno dell'agente
+1. optional command/template expansion (`/` commands, custom commands, file slash commands, prompt templates)
+2. if currently streaming:
+    - requires `streamingBehavior: "steer" | "followUp"`
+    - queues instead of throwing work away
+3. if idle:
+    - validates model + API key
+    - appends user message
+    - starts agent turn
 
-API correlate:
+Related APIs:
 
 - `sendUserMessage(content, { deliverAs? })`
 - `steer(text, images?)`
@@ -234,14 +233,14 @@ API correlate:
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## Strumenti e integrazione delle estensioni
+## Tools and extension integration
 
-### Integrati e filtraggio
+### Built-ins and filtering
 
-- Gli integrati provengono da `createTools(...)` e `BUILTIN_TOOLS`.
-- `toolNames` funge da allowlist per gli integrati.
-- Gli strumenti `customTools` e quelli registrati dalle estensioni sono comunque inclusi.
-- Gli strumenti nascosti (ad esempio `submit_result`) sono opt-in a meno che non siano richiesti dalle opzioni.
+- Built-ins come from `createTools(...)` and `BUILTIN_TOOLS`.
+- `toolNames` acts as an allowlist for built-ins.
+- `customTools` and extension-registered tools are still included.
+- Hidden tools (for example `submit_result`) are opt-in unless required by options.
 
 ```ts
 const { session } = await createAgentSession({
@@ -250,27 +249,27 @@ const { session } = await createAgentSession({
 });
 ```
 
-### Estensioni
+### Extensions
 
-- `extensions`: `ExtensionFactory[]` inline
-- `additionalExtensionPaths`: carica file di estensione aggiuntivi
-- `disableExtensionDiscovery`: disabilita la scansione automatica delle estensioni
-- `preloadedExtensions`: riutilizza un set di estensioni già caricato
+- `extensions`: inline `ExtensionFactory[]`
+- `additionalExtensionPaths`: load extra extension files
+- `disableExtensionDiscovery`: disable automatic extension scanning
+- `preloadedExtensions`: reuse already loaded extension set
 
-### Modifiche al set di strumenti a runtime
+### Runtime tool set changes
 
-`AgentSession` supporta aggiornamenti di attivazione a runtime:
+`AgentSession` supports runtime activation updates:
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-Il prompt di sistema viene ricostruito per riflettere le modifiche agli strumenti attivi.
+System prompt is rebuilt to reflect active tool changes.
 
-## Helper di discovery
+## Discovery helpers
 
-Utilizzarli quando si desidera un controllo parziale senza ricreare la logica di discovery interna:
+Use these when you want partial control without recreating internal discovery logic:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -282,18 +281,18 @@ Utilizzarli quando si desidera un controllo parziale senza ricreare la logica di
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## Opzioni orientate ai subagent
+## Subagent-oriented options
 
-Per i consumatori dell'SDK che costruiscono orchestratori (simile al flusso dell'esecutore di task):
+For SDK consumers building orchestrators (similar to task executor flow):
 
-- `outputSchema`: trasmette l'aspettativa di output strutturato nel contesto dello strumento
-- `requireSubmitResultTool`: forza l'inclusione dello strumento `submit_result`
-- `taskDepth`: contesto di profondità di ricorsione per sessioni di task annidate
-- `parentTaskPrefix`: prefisso di denominazione degli artefatti per gli output di task annidate
+- `outputSchema`: passes structured output expectation into tool context
+- `requireSubmitResultTool`: forces `submit_result` tool inclusion
+- `taskDepth`: recursion-depth context for nested task sessions
+- `parentTaskPrefix`: artifact naming prefix for nested task outputs
 
-Questi sono opzionali per il normale embedding a singolo agente.
+These are optional for normal single-agent embedding.
 
-## Valore di ritorno di `createAgentSession()`
+## `createAgentSession()` return value
 
 ```ts
 type CreateAgentSessionResult = {
@@ -306,9 +305,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-Utilizzare `setToolUIContext(...)` solo se il proprio embedder fornisce capacità UI che gli strumenti/le estensioni devono richiamare.
+Use `setToolUIContext(...)` only if your embedder provides UI capabilities that tools/extensions should call into.
 
-## Esempio minimale di embed controllato
+## Minimal controlled embed example
 
 ```ts
 import {

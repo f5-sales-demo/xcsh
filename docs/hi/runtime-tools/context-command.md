@@ -1,25 +1,23 @@
 ---
-title: F5 XC संदर्भ
-description: >-
-  xcsh को F5 Distributed Cloud टेनेंट से कनेक्ट करें -- प्रमाणीकरण संदर्भ बनाएं,
-  स्विच करें और प्रबंधित करें।
+title: "F5 XC Contexts"
+description: Connect xcsh to F5 Distributed Cloud tenants -- create, switch, and manage authentication contexts.
 sidebar:
   order: 1
-  label: F5 XC संदर्भ
+  label: F5 XC Contexts
 i18n:
-  sourceHash: a9cccbc338f0
-  translator: machine
+  sourceHash: "7754a8acfa0b"
+  translator: "machine"
 ---
 
-# F5 XC संदर्भ
+# F5 XC Contexts
 
-xcsh **संदर्भों (contexts)** के माध्यम से F5 Distributed Cloud से जुड़ता है -- ये नामित क्रेडेंशियल सेट हैं जो एक टेनेंट URL, API टोकन और नेमस्पेस को बाइंड करते हैं। यदि आपने `kubectl config use-context` या `kubectx` का उपयोग किया है, तो कार्यप्रवाह समान है: एक संदर्भ बनाएं, नाम से उनके बीच स्विच करें, और वापस पलटने के लिए `-` का उपयोग करें।
+xcsh connects to F5 Distributed Cloud through **contexts** -- named credential sets that bind a tenant URL, API token, and namespace. If you've used `kubectl config use-context` or `kubectx`, the workflow is identical: create a context, switch between them by name, and use `-` to flip back.
 
-## शुरुआत करना
+## Getting started
 
-### 1. अपना पहला संदर्भ बनाएं
+### 1. Create your first context
 
-आपको अपने F5 XC कंसोल से तीन चीज़ों की आवश्यकता है: टेनेंट URL, एक API टोकन, और वैकल्पिक रूप से एक नेमस्पेस।
+You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
 /context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
@@ -29,13 +27,13 @@ xcsh **संदर्भों (contexts)** के माध्यम से F5
 Context 'production' created. Use /context activate production to switch to it.
 ```
 
-या यदि आप चरण-दर-चरण प्रॉम्प्ट पसंद करते हैं तो गाइडेड विज़ार्ड का उपयोग करें:
+Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 /context wizard
 ```
 
-### 2. इसे सक्रिय करें
+### 2. Activate it
 
 ```
 /context production
@@ -52,29 +50,29 @@ Context 'production' created. Use /context activate production to switch to it.
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-सक्रिय होने पर, xcsh आपके सत्र में टेनेंट क्रेडेंशियल्स इंजेक्ट करता है। एजेंट अब F5 XC API कॉल कर सकता है, और स्टेटस लाइन सक्रिय संदर्भ दिखाती है।
+Once activated, xcsh injects the tenant credentials into your session. The agent can now make F5 XC API calls, and the status line shows the active context.
 
-### 3. और संदर्भ जोड़ें और उनके बीच स्विच करें
+### 3. Add more contexts and switch between them
 
 ```
 /context create staging https://staging.console.ves.volterra.io p12k3-staging-token
 ```
 
-नाम से स्विच करें -- किसी सबकमांड क्रिया की आवश्यकता नहीं:
+Switch by name -- no subcommand verb needed:
 
 ```
 /context staging
 ```
 
-पिछले संदर्भ पर वापस जाएं (`cd -` शैली):
+Switch back to the previous context (`cd -` style):
 
 ```
 /context -
 ```
 
-`/context -` को दो बार कॉल करने से आप वापस वहीं पहुंच जाते हैं जहां से आपने शुरू किया था।
+Calling `/context -` twice returns you to where you started.
 
-### 4. देखें आपके पास क्या है
+### 4. See what you have
 
 ```
 /context
@@ -85,43 +83,43 @@ Context 'production' created. Use /context activate production to switch to it.
 * staging              https://staging.console.ves.volterra.io
 ```
 
-`*` सक्रिय संदर्भ को चिह्नित करता है।
+The `*` marks the active context.
 
-## दैनिक कमांड
+## Everyday commands
 
-| कमांड | यह क्या करता है |
+| Command | What it does |
 |---|---|
-| `/context` | सभी संदर्भों की सूची दिखाएं |
-| `/context <name>` | किसी संदर्भ पर स्विच करें |
-| `/context -` | पिछले संदर्भ पर स्विच करें |
-| `/context show` | सक्रिय संदर्भ का विवरण दिखाएं (टोकन छिपे हुए) |
-| `/context status` | वर्तमान प्रमाणीकरण स्थिति दिखाएं |
+| `/context` | List all contexts |
+| `/context <name>` | Switch to a context |
+| `/context -` | Switch to the previous context |
+| `/context show` | Show active context details (tokens masked) |
+| `/context status` | Show current auth status |
 
-## संदर्भ जीवनचक्र
+## Context lifecycle
 
-| कमांड | यह क्या करता है |
+| Command | What it does |
 |---|---|
-| `/context create <name> <url> <token> [namespace]` | एक संदर्भ बनाएं |
-| `/context delete <name> --confirm` | एक संदर्भ हटाएं (`--confirm` आवश्यक) |
-| `/context rename <old> <new>` | एक संदर्भ का नाम बदलें |
-| `/context validate <name>` | स्विच किए बिना क्रेडेंशियल्स का परीक्षण करें |
-| `/context export [name] [--include-token]` | JSON के रूप में निर्यात करें (टोकन डिफ़ॉल्ट रूप से छिपे हुए) |
-| `/context import <path-or-json> [--overwrite]` | फ़ाइल या इनलाइन JSON से आयात करें |
-| `/context wizard` | गाइडेड इंटरैक्टिव सेटअप |
+| `/context create <name> <url> <token> [namespace]` | Create a context |
+| `/context delete <name> --confirm` | Delete a context (requires `--confirm`) |
+| `/context rename <old> <new>` | Rename a context |
+| `/context validate <name>` | Test credentials without switching |
+| `/context export [name] [--include-token]` | Export as JSON (tokens masked by default) |
+| `/context import <path-or-json> [--overwrite]` | Import from file or inline JSON |
+| `/context wizard` | Guided interactive setup |
 
-## नेमस्पेस स्विच करना
+## Switching namespaces
 
-प्रत्येक संदर्भ में एक डिफ़ॉल्ट नेमस्पेस होता है। संदर्भ बदले बिना इसे स्विच करें:
+Each context has a default namespace. Switch it without changing the context:
 
 ```
 /context namespace system
 ```
 
-टैब कंप्लीशन सक्रिय टेनेंट से नेमस्पेस नाम प्रदान करता है।
+Tab completion offers namespace names from the active tenant.
 
-## संदर्भों पर एनवायरनमेंट वेरिएबल
+## Environment variables on contexts
 
-संदर्भ अतिरिक्त एनवायरनमेंट वेरिएबल ले जा सकते हैं जो सक्रियण पर आपके सत्र में इंजेक्ट किए जाते हैं। प्रति-टेनेंट कॉन्फ़िगरेशन के लिए उपयोगी जो क्रेडेंशियल सेट का हिस्सा नहीं है।
+Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
 /context set CUSTOM_HEADER=x-example-corp-trace
@@ -130,25 +128,25 @@ Context 'production' created. Use /context activate production to switch to it.
 /context unset LOG_LEVEL
 ```
 
-उपनाम: `add` = `set`, `remove`/`clear` = `unset`।
+Aliases: `add` = `set`, `remove`/`clear` = `unset`.
 
-## टैब कंप्लीशन
+## Tab completion
 
-`/context` टाइप करें और Tab दबाएं। ड्रॉपडाउन दिखाता है:
+Type `/context` and press Tab. The dropdown shows:
 
-1. **संदर्भ नाम** -- टेनेंट URL संकेतों के साथ, ताकि आप टेनेंट्स को अलग-अलग पहचान सकें
-2. **`-`** -- तब दिखाई देता है जब आपने पहले स्विच किया हो, दिखाता है कि आप किस संदर्भ पर पलटेंगे
-3. **सबकमांड** -- `list`, `create`, `delete`, आदि।
+1. **Context names** -- with tenant URL hints, so you can tell tenants apart
+2. **`-`** -- appears when you've switched before, shows which context you'd flip to
+3. **Subcommands** -- `list`, `create`, `delete`, etc.
 
-संदर्भ नाम पहले दिखाई देते हैं क्योंकि स्विच करना सबसे आम क्रिया है।
+Context names appear first because switching is the most common action.
 
-सबकमांड-स्तरीय कंप्लीशन भी काम करते हैं: `/context activate <Tab>` संदर्भ नाम पूर्ण करता है, `/context namespace <Tab>` नेमस्पेस पूर्ण करता है, `/context unset <Tab>` ज्ञात env var कुंजियों को पूर्ण करता है।
+Subcommand-level completions also work: `/context activate <Tab>` completes context names, `/context namespace <Tab>` completes namespaces, `/context unset <Tab>` completes known env var keys.
 
-## नामकरण नियम
+## Naming rules
 
-संदर्भ नाम 1-64 अक्षरों के होने चाहिए: अक्षर, अंक, हाइफ़न, अंडरस्कोर।
+Context names must be 1-64 characters: letters, digits, hyphens, underscores.
 
-सबकमांड से टकराने वाले नाम अस्वीकार कर दिए जाते हैं:
+Names that collide with subcommands are rejected:
 
 ```
 /context create list https://example.com tok
@@ -158,25 +156,25 @@ Context 'production' created. Use /context activate production to switch to it.
 Error: Context name 'list' conflicts with a /context subcommand. Choose a different name.
 ```
 
-पूर्ण आरक्षित सेट: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`। तुलना केस-असंवेदनशील है।
+The full reserved set: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. Comparison is case-insensitive.
 
-## एनवायरनमेंट वेरिएबल ओवरराइड
+## Environment variable override
 
-यदि xcsh लॉन्च करने से पहले आपके शेल एनवायरनमेंट में `XCSH_API_URL` और `XCSH_API_TOKEN` सेट हैं, तो वे किसी भी संदर्भ पर प्राथमिकता लेते हैं। यह CI/CD पाइपलाइनों या एकबारगी सत्रों के लिए उपयोगी है जहां आप स्थायी संदर्भ बनाना नहीं चाहते।
+If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in your shell environment before launching xcsh, they take precedence over any context. This is useful for CI/CD pipelines or one-off sessions where you don't want to create a persistent context.
 
-इस मोड में चलते समय, `/context` एनवायरनमेंट-स्रोत क्रेडेंशियल्स को `(via env vars)` लेबल के साथ दिखाता है।
+When running in this mode, `/context` shows the environment-sourced credentials with a `(via env vars)` label.
 
-## पिछले संदर्भ का व्यवहार
+## Previous context behavior
 
-- **सत्र-स्कोप्ड**: जब आप xcsh पुनः आरंभ करते हैं तो पिछला संदर्भ रीसेट हो जाता है। यह डिस्क पर स्थायी नहीं होता।
-- **पिंग-पोंग**: `/context -` दो बार करने से आप वापस वहीं पहुंच जाते हैं जहां से शुरू किया था।
-- **म्यूटेशन के प्रति सुरक्षित**: यदि आप पिछले संदर्भ को हटाते हैं, तो पॉइंटर साफ़ हो जाता है। यदि आप इसका नाम बदलते हैं, तो पॉइंटर नए नाम का अनुसरण करता है।
-- **पुनः-सक्रियण एक नो-ऑप है**: जब आप पहले से `production` पर हैं तो `/context production` पिछले पॉइंटर को रीसेट नहीं करता।
+- **Session-scoped**: the previous context resets when you restart xcsh. It is not persisted to disk.
+- **Ping-pong**: `/context -` twice returns you to where you started.
+- **Safe across mutations**: if you delete the previous context, the pointer is cleared. If you rename it, the pointer follows the new name.
+- **Re-activation is a no-op**: `/context production` when already on `production` does not reset the previous pointer.
 
-## डिज़ाइन सम्मेलन
+## Design conventions
 
-`/context` UX इनका अनुसरण करता है:
+The `/context` UX follows:
 
-- **kubectx**: स्विच करने के लिए `kubectx <name>`, पिछले के लिए `kubectx -`, सूचीबद्ध करने के लिए बिना तर्क `kubectx`
-- **kubectl**: स्पष्ट रूप के लिए `kubectl config use-context`
-- **शेल**: पिछली-निर्देशिका ट्रैकिंग के लिए `cd -` / `OLDPWD`
+- **kubectx**: `kubectx <name>` for switching, `kubectx -` for previous, bare `kubectx` for listing
+- **kubectl**: `kubectl config use-context` for the explicit form
+- **Shell**: `cd -` / `OLDPWD` for previous-directory tracking

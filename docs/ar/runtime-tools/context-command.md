@@ -1,25 +1,23 @@
 ---
-title: سياقات F5 XC
-description: >-
-  ربط xcsh بمستأجري F5 Distributed Cloud -- إنشاء سياقات المصادقة والتبديل بينها
-  وإدارتها.
+title: "F5 XC Contexts"
+description: Connect xcsh to F5 Distributed Cloud tenants -- create, switch, and manage authentication contexts.
 sidebar:
   order: 1
-  label: سياقات F5 XC
+  label: F5 XC Contexts
 i18n:
-  sourceHash: a9cccbc338f0
-  translator: machine
+  sourceHash: "7754a8acfa0b"
+  translator: "machine"
 ---
 
-# سياقات F5 XC
+# F5 XC Contexts
 
-يتصل xcsh بخدمة F5 Distributed Cloud من خلال **السياقات** -- وهي مجموعات بيانات اعتماد مسمّاة تربط عنوان URL للمستأجر ورمز API ومساحة الأسماء. إذا كنت قد استخدمت `kubectl config use-context` أو `kubectx` من قبل، فسير العمل مطابق تماماً: أنشئ سياقاً، وتبديل بين السياقات بالاسم، واستخدم `-` للعودة السريعة.
+xcsh connects to F5 Distributed Cloud through **contexts** -- named credential sets that bind a tenant URL, API token, and namespace. If you've used `kubectl config use-context` or `kubectx`, the workflow is identical: create a context, switch between them by name, and use `-` to flip back.
 
-## البدء
+## Getting started
 
-### 1. إنشاء أول سياق
+### 1. Create your first context
 
-تحتاج إلى ثلاثة أشياء من وحدة تحكم F5 XC الخاصة بك: عنوان URL للمستأجر، ورمز API، واختيارياً مساحة أسماء.
+You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
 /context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
@@ -29,13 +27,13 @@ i18n:
 Context 'production' created. Use /context activate production to switch to it.
 ```
 
-أو استخدم المعالج الإرشادي إذا كنت تفضل المطالبات التفاعلية خطوة بخطوة:
+Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 /context wizard
 ```
 
-### 2. تفعيله
+### 2. Activate it
 
 ```
 /context production
@@ -52,29 +50,29 @@ Context 'production' created. Use /context activate production to switch to it.
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-بمجرد التفعيل، يحقن xcsh بيانات اعتماد المستأجر في جلستك. يمكن للوكيل الآن إجراء استدعاءات API لـ F5 XC، ويعرض شريط الحالة السياق النشط.
+Once activated, xcsh injects the tenant credentials into your session. The agent can now make F5 XC API calls, and the status line shows the active context.
 
-### 3. إضافة المزيد من السياقات والتبديل بينها
+### 3. Add more contexts and switch between them
 
 ```
 /context create staging https://staging.console.ves.volterra.io p12k3-staging-token
 ```
 
-التبديل بالاسم -- لا حاجة لأمر فرعي:
+Switch by name -- no subcommand verb needed:
 
 ```
 /context staging
 ```
 
-العودة إلى السياق السابق (بأسلوب `cd -`):
+Switch back to the previous context (`cd -` style):
 
 ```
 /context -
 ```
 
-استدعاء `/context -` مرتين يعيدك إلى نقطة البداية.
+Calling `/context -` twice returns you to where you started.
 
-### 4. عرض ما لديك
+### 4. See what you have
 
 ```
 /context
@@ -85,43 +83,43 @@ Context 'production' created. Use /context activate production to switch to it.
 * staging              https://staging.console.ves.volterra.io
 ```
 
-علامة `*` تشير إلى السياق النشط.
+The `*` marks the active context.
 
-## الأوامر اليومية
+## Everyday commands
 
-| الأمر | ما يفعله |
+| Command | What it does |
 |---|---|
-| `/context` | عرض قائمة بجميع السياقات |
-| `/context <name>` | التبديل إلى سياق معين |
-| `/context -` | التبديل إلى السياق السابق |
-| `/context show` | عرض تفاصيل السياق النشط (مع إخفاء الرموز) |
-| `/context status` | عرض حالة المصادقة الحالية |
+| `/context` | List all contexts |
+| `/context <name>` | Switch to a context |
+| `/context -` | Switch to the previous context |
+| `/context show` | Show active context details (tokens masked) |
+| `/context status` | Show current auth status |
 
-## دورة حياة السياق
+## Context lifecycle
 
-| الأمر | ما يفعله |
+| Command | What it does |
 |---|---|
-| `/context create <name> <url> <token> [namespace]` | إنشاء سياق |
-| `/context delete <name> --confirm` | حذف سياق (يتطلب `--confirm`) |
-| `/context rename <old> <new>` | إعادة تسمية سياق |
-| `/context validate <name>` | اختبار بيانات الاعتماد دون التبديل |
-| `/context export [name] [--include-token]` | التصدير بتنسيق JSON (الرموز مخفية افتراضياً) |
-| `/context import <path-or-json> [--overwrite]` | الاستيراد من ملف أو JSON مضمّن |
-| `/context wizard` | إعداد تفاعلي إرشادي |
+| `/context create <name> <url> <token> [namespace]` | Create a context |
+| `/context delete <name> --confirm` | Delete a context (requires `--confirm`) |
+| `/context rename <old> <new>` | Rename a context |
+| `/context validate <name>` | Test credentials without switching |
+| `/context export [name] [--include-token]` | Export as JSON (tokens masked by default) |
+| `/context import <path-or-json> [--overwrite]` | Import from file or inline JSON |
+| `/context wizard` | Guided interactive setup |
 
-## تبديل مساحات الأسماء
+## Switching namespaces
 
-لكل سياق مساحة أسماء افتراضية. يمكنك تبديلها دون تغيير السياق:
+Each context has a default namespace. Switch it without changing the context:
 
 ```
 /context namespace system
 ```
 
-يوفر الإكمال التلقائي بالتاب أسماء مساحات الأسماء من المستأجر النشط.
+Tab completion offers namespace names from the active tenant.
 
-## متغيرات البيئة على السياقات
+## Environment variables on contexts
 
-يمكن أن تحمل السياقات متغيرات بيئة إضافية تُحقن في جلستك عند التفعيل. مفيدة للتكوينات الخاصة بكل مستأجر والتي ليست جزءاً من مجموعة بيانات الاعتماد.
+Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
 /context set CUSTOM_HEADER=x-example-corp-trace
@@ -130,25 +128,25 @@ Context 'production' created. Use /context activate production to switch to it.
 /context unset LOG_LEVEL
 ```
 
-الأسماء البديلة: `add` = `set`، `remove`/`clear` = `unset`.
+Aliases: `add` = `set`, `remove`/`clear` = `unset`.
 
-## الإكمال التلقائي بالتاب
+## Tab completion
 
-اكتب `/context` واضغط Tab. تعرض القائمة المنسدلة:
+Type `/context` and press Tab. The dropdown shows:
 
-1. **أسماء السياقات** -- مع تلميحات عنوان URL للمستأجر، حتى تتمكن من التمييز بين المستأجرين
-2. **`-`** -- يظهر عندما تكون قد بدّلت سابقاً، ويعرض السياق الذي ستنتقل إليه
-3. **الأوامر الفرعية** -- `list`، `create`، `delete`، إلخ.
+1. **Context names** -- with tenant URL hints, so you can tell tenants apart
+2. **`-`** -- appears when you've switched before, shows which context you'd flip to
+3. **Subcommands** -- `list`, `create`, `delete`, etc.
 
-تظهر أسماء السياقات أولاً لأن التبديل هو الإجراء الأكثر شيوعاً.
+Context names appear first because switching is the most common action.
 
-يعمل الإكمال التلقائي على مستوى الأوامر الفرعية أيضاً: `/context activate <Tab>` يُكمل أسماء السياقات، `/context namespace <Tab>` يُكمل مساحات الأسماء، `/context unset <Tab>` يُكمل مفاتيح متغيرات البيئة المعروفة.
+Subcommand-level completions also work: `/context activate <Tab>` completes context names, `/context namespace <Tab>` completes namespaces, `/context unset <Tab>` completes known env var keys.
 
-## قواعد التسمية
+## Naming rules
 
-يجب أن تتكون أسماء السياقات من 1 إلى 64 حرفاً: أحرف، أرقام، شرطات، شرطات سفلية.
+Context names must be 1-64 characters: letters, digits, hyphens, underscores.
 
-تُرفض الأسماء التي تتعارض مع الأوامر الفرعية:
+Names that collide with subcommands are rejected:
 
 ```
 /context create list https://example.com tok
@@ -158,25 +156,25 @@ Context 'production' created. Use /context activate production to switch to it.
 Error: Context name 'list' conflicts with a /context subcommand. Choose a different name.
 ```
 
-مجموعة الأسماء المحجوزة الكاملة: `list`، `show`، `status`، `create`، `delete`، `rename`، `namespace`، `env`، `set`، `unset`، `add`، `remove`، `clear`، `activate`، `validate`، `export`، `import`، `wizard`، `help`. المقارنة غير حساسة لحالة الأحرف.
+The full reserved set: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. Comparison is case-insensitive.
 
-## تجاوز متغيرات البيئة
+## Environment variable override
 
-إذا كان `XCSH_API_URL` و `XCSH_API_TOKEN` معيّنين في بيئة الصدفة الخاصة بك قبل تشغيل xcsh، فإنهما يأخذان الأولوية على أي سياق. هذا مفيد لأنابيب CI/CD أو الجلسات لمرة واحدة حيث لا تريد إنشاء سياق دائم.
+If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in your shell environment before launching xcsh, they take precedence over any context. This is useful for CI/CD pipelines or one-off sessions where you don't want to create a persistent context.
 
-عند التشغيل في هذا الوضع، يعرض `/context` بيانات الاعتماد المأخوذة من البيئة مع تسمية `(via env vars)`.
+When running in this mode, `/context` shows the environment-sourced credentials with a `(via env vars)` label.
 
-## سلوك السياق السابق
+## Previous context behavior
 
-- **محدود بالجلسة**: يُعاد تعيين السياق السابق عند إعادة تشغيل xcsh. ولا يُحفظ على القرص.
-- **التبديل المتبادل**: `/context -` مرتين يعيدك إلى نقطة البداية.
-- **آمن عبر التعديلات**: إذا حذفت السياق السابق، يُمسح المؤشر. إذا أعدت تسميته، يتبع المؤشر الاسم الجديد.
-- **إعادة التفعيل لا تفعل شيئاً**: `/context production` عندما تكون بالفعل على `production` لا يُعيد تعيين مؤشر السياق السابق.
+- **Session-scoped**: the previous context resets when you restart xcsh. It is not persisted to disk.
+- **Ping-pong**: `/context -` twice returns you to where you started.
+- **Safe across mutations**: if you delete the previous context, the pointer is cleared. If you rename it, the pointer follows the new name.
+- **Re-activation is a no-op**: `/context production` when already on `production` does not reset the previous pointer.
 
-## اصطلاحات التصميم
+## Design conventions
 
-تتبع تجربة المستخدم لـ `/context`:
+The `/context` UX follows:
 
-- **kubectx**: `kubectx <name>` للتبديل، `kubectx -` للسابق، `kubectx` بدون معاملات للعرض
-- **kubectl**: `kubectl config use-context` للصيغة الصريحة
-- **الصدفة**: `cd -` / `OLDPWD` لتتبع المجلد السابق
+- **kubectx**: `kubectx <name>` for switching, `kubectx -` for previous, bare `kubectx` for listing
+- **kubectl**: `kubectl config use-context` for the explicit form
+- **Shell**: `cd -` / `OLDPWD` for previous-directory tracking

@@ -1,25 +1,23 @@
 ---
-title: Contextes F5 XC
-description: >-
-  Connectez xcsh aux tenants F5 Distributed Cloud -- créez, basculez et gérez
-  les contextes d'authentification.
+title: "F5 XC Contexts"
+description: Connect xcsh to F5 Distributed Cloud tenants -- create, switch, and manage authentication contexts.
 sidebar:
   order: 1
-  label: Contextes F5 XC
+  label: F5 XC Contexts
 i18n:
-  sourceHash: a9cccbc338f0
-  translator: machine
+  sourceHash: "7754a8acfa0b"
+  translator: "machine"
 ---
 
-# Contextes F5 XC
+# F5 XC Contexts
 
-xcsh se connecte à F5 Distributed Cloud via des **contextes** -- des jeux d'identifiants nommés qui associent une URL de tenant, un jeton API et un namespace. Si vous avez déjà utilisé `kubectl config use-context` ou `kubectx`, le flux de travail est identique : créez un contexte, basculez entre eux par nom, et utilisez `-` pour revenir au précédent.
+xcsh connects to F5 Distributed Cloud through **contexts** -- named credential sets that bind a tenant URL, API token, and namespace. If you've used `kubectl config use-context` or `kubectx`, the workflow is identical: create a context, switch between them by name, and use `-` to flip back.
 
-## Pour commencer
+## Getting started
 
-### 1. Créez votre premier contexte
+### 1. Create your first context
 
-Vous avez besoin de trois éléments depuis votre console F5 XC : l'URL du tenant, un jeton API, et optionnellement un namespace.
+You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
 /context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
@@ -29,13 +27,13 @@ Vous avez besoin de trois éléments depuis votre console F5 XC : l'URL du tenan
 Context 'production' created. Use /context activate production to switch to it.
 ```
 
-Ou utilisez l'assistant guidé si vous préférez des invites étape par étape :
+Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 /context wizard
 ```
 
-### 2. Activez-le
+### 2. Activate it
 
 ```
 /context production
@@ -52,29 +50,29 @@ Ou utilisez l'assistant guidé si vous préférez des invites étape par étape 
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-Une fois activé, xcsh injecte les identifiants du tenant dans votre session. L'agent peut désormais effectuer des appels à l'API F5 XC, et la barre d'état affiche le contexte actif.
+Once activated, xcsh injects the tenant credentials into your session. The agent can now make F5 XC API calls, and the status line shows the active context.
 
-### 3. Ajoutez d'autres contextes et basculez entre eux
+### 3. Add more contexts and switch between them
 
 ```
 /context create staging https://staging.console.ves.volterra.io p12k3-staging-token
 ```
 
-Basculez par nom -- aucun verbe de sous-commande nécessaire :
+Switch by name -- no subcommand verb needed:
 
 ```
 /context staging
 ```
 
-Revenez au contexte précédent (style `cd -`) :
+Switch back to the previous context (`cd -` style):
 
 ```
 /context -
 ```
 
-Appeler `/context -` deux fois vous ramène à votre point de départ.
+Calling `/context -` twice returns you to where you started.
 
-### 4. Voyez ce que vous avez
+### 4. See what you have
 
 ```
 /context
@@ -85,43 +83,43 @@ Appeler `/context -` deux fois vous ramène à votre point de départ.
 * staging              https://staging.console.ves.volterra.io
 ```
 
-Le `*` marque le contexte actif.
+The `*` marks the active context.
 
-## Commandes courantes
+## Everyday commands
 
-| Commande | Ce qu'elle fait |
+| Command | What it does |
 |---|---|
-| `/context` | Lister tous les contextes |
-| `/context <name>` | Basculer vers un contexte |
-| `/context -` | Basculer vers le contexte précédent |
-| `/context show` | Afficher les détails du contexte actif (jetons masqués) |
-| `/context status` | Afficher l'état actuel de l'authentification |
+| `/context` | List all contexts |
+| `/context <name>` | Switch to a context |
+| `/context -` | Switch to the previous context |
+| `/context show` | Show active context details (tokens masked) |
+| `/context status` | Show current auth status |
 
-## Cycle de vie des contextes
+## Context lifecycle
 
-| Commande | Ce qu'elle fait |
+| Command | What it does |
 |---|---|
-| `/context create <name> <url> <token> [namespace]` | Créer un contexte |
-| `/context delete <name> --confirm` | Supprimer un contexte (nécessite `--confirm`) |
-| `/context rename <old> <new>` | Renommer un contexte |
-| `/context validate <name>` | Tester les identifiants sans basculer |
-| `/context export [name] [--include-token]` | Exporter en JSON (jetons masqués par défaut) |
-| `/context import <path-or-json> [--overwrite]` | Importer depuis un fichier ou du JSON en ligne |
-| `/context wizard` | Configuration interactive guidée |
+| `/context create <name> <url> <token> [namespace]` | Create a context |
+| `/context delete <name> --confirm` | Delete a context (requires `--confirm`) |
+| `/context rename <old> <new>` | Rename a context |
+| `/context validate <name>` | Test credentials without switching |
+| `/context export [name] [--include-token]` | Export as JSON (tokens masked by default) |
+| `/context import <path-or-json> [--overwrite]` | Import from file or inline JSON |
+| `/context wizard` | Guided interactive setup |
 
-## Changer de namespace
+## Switching namespaces
 
-Chaque contexte possède un namespace par défaut. Changez-le sans modifier le contexte :
+Each context has a default namespace. Switch it without changing the context:
 
 ```
 /context namespace system
 ```
 
-L'autocomplétion par tabulation propose les noms de namespace du tenant actif.
+Tab completion offers namespace names from the active tenant.
 
-## Variables d'environnement sur les contextes
+## Environment variables on contexts
 
-Les contextes peuvent contenir des variables d'environnement supplémentaires qui sont injectées dans votre session lors de l'activation. Utile pour une configuration propre à chaque tenant qui ne fait pas partie du jeu d'identifiants.
+Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
 /context set CUSTOM_HEADER=x-example-corp-trace
@@ -130,25 +128,25 @@ Les contextes peuvent contenir des variables d'environnement supplémentaires qu
 /context unset LOG_LEVEL
 ```
 
-Alias : `add` = `set`, `remove`/`clear` = `unset`.
+Aliases: `add` = `set`, `remove`/`clear` = `unset`.
 
-## Autocomplétion par tabulation
+## Tab completion
 
-Tapez `/context` et appuyez sur Tab. Le menu déroulant affiche :
+Type `/context` and press Tab. The dropdown shows:
 
-1. **Noms de contextes** -- avec des indications d'URL de tenant, pour distinguer les tenants
-2. **`-`** -- apparaît lorsque vous avez déjà basculé, indique vers quel contexte vous reviendriez
-3. **Sous-commandes** -- `list`, `create`, `delete`, etc.
+1. **Context names** -- with tenant URL hints, so you can tell tenants apart
+2. **`-`** -- appears when you've switched before, shows which context you'd flip to
+3. **Subcommands** -- `list`, `create`, `delete`, etc.
 
-Les noms de contextes apparaissent en premier car le basculement est l'action la plus courante.
+Context names appear first because switching is the most common action.
 
-Les complétions au niveau des sous-commandes fonctionnent également : `/context activate <Tab>` complète les noms de contextes, `/context namespace <Tab>` complète les namespaces, `/context unset <Tab>` complète les clés de variables d'environnement connues.
+Subcommand-level completions also work: `/context activate <Tab>` completes context names, `/context namespace <Tab>` completes namespaces, `/context unset <Tab>` completes known env var keys.
 
-## Règles de nommage
+## Naming rules
 
-Les noms de contextes doivent comporter entre 1 et 64 caractères : lettres, chiffres, tirets, underscores.
+Context names must be 1-64 characters: letters, digits, hyphens, underscores.
 
-Les noms qui entrent en conflit avec les sous-commandes sont rejetés :
+Names that collide with subcommands are rejected:
 
 ```
 /context create list https://example.com tok
@@ -158,25 +156,25 @@ Les noms qui entrent en conflit avec les sous-commandes sont rejetés :
 Error: Context name 'list' conflicts with a /context subcommand. Choose a different name.
 ```
 
-L'ensemble complet des noms réservés : `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. La comparaison est insensible à la casse.
+The full reserved set: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. Comparison is case-insensitive.
 
-## Substitution par variables d'environnement
+## Environment variable override
 
-Si `XCSH_API_URL` et `XCSH_API_TOKEN` sont définies dans votre environnement shell avant de lancer xcsh, elles prennent le pas sur tout contexte. Ceci est utile pour les pipelines CI/CD ou les sessions ponctuelles où vous ne souhaitez pas créer un contexte persistant.
+If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in your shell environment before launching xcsh, they take precedence over any context. This is useful for CI/CD pipelines or one-off sessions where you don't want to create a persistent context.
 
-Dans ce mode, `/context` affiche les identifiants issus de l'environnement avec l'étiquette `(via env vars)`.
+When running in this mode, `/context` shows the environment-sourced credentials with a `(via env vars)` label.
 
-## Comportement du contexte précédent
+## Previous context behavior
 
-- **Portée de session** : le contexte précédent est réinitialisé au redémarrage de xcsh. Il n'est pas persisté sur disque.
-- **Ping-pong** : `/context -` deux fois vous ramène à votre point de départ.
-- **Sûr face aux mutations** : si vous supprimez le contexte précédent, le pointeur est effacé. Si vous le renommez, le pointeur suit le nouveau nom.
-- **La réactivation est un no-op** : `/context production` lorsque vous êtes déjà sur `production` ne réinitialise pas le pointeur précédent.
+- **Session-scoped**: the previous context resets when you restart xcsh. It is not persisted to disk.
+- **Ping-pong**: `/context -` twice returns you to where you started.
+- **Safe across mutations**: if you delete the previous context, the pointer is cleared. If you rename it, the pointer follows the new name.
+- **Re-activation is a no-op**: `/context production` when already on `production` does not reset the previous pointer.
 
-## Conventions de conception
+## Design conventions
 
-L'expérience utilisateur de `/context` s'inspire de :
+The `/context` UX follows:
 
-- **kubectx** : `kubectx <name>` pour basculer, `kubectx -` pour le précédent, `kubectx` seul pour lister
-- **kubectl** : `kubectl config use-context` pour la forme explicite
-- **Shell** : `cd -` / `OLDPWD` pour le suivi du répertoire précédent
+- **kubectx**: `kubectx <name>` for switching, `kubectx -` for previous, bare `kubectx` for listing
+- **kubectl**: `kubectl config use-context` for the explicit form
+- **Shell**: `cd -` / `OLDPWD` for previous-directory tracking

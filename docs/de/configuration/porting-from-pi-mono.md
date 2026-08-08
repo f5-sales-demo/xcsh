@@ -1,96 +1,96 @@
 ---
-title: 'Portierung von pi-mono: Ein praktischer Merge-Leitfaden'
-description: >-
-  Praktischer Leitfaden für die Migration von Code aus dem pi-mono-Monorepo in
-  die xcsh-Codebasis.
+title: "Porting From pi-mono: A Practical Merge Guide"
+description: Practical guide for migrating code from the pi-mono monorepo into the xcsh codebase.
 sidebar:
   order: 9
-  label: Portierung von pi-mono
+  label: Porting from pi-mono
+
 i18n:
-  sourceHash: fd4e8c09303d
-  translator: machine
+  sourceHash: "f93fbb10a575"
+  translator: "machine"
 ---
 
-# Portierung von pi-mono: Ein praktischer Merge-Leitfaden
+# Porting From pi-mono: A Practical Merge Guide
 
-Dieser Leitfaden ist eine wiederholbare Checkliste für die Portierung von Änderungen aus pi-mono in dieses Repository.
-Verwenden Sie ihn für jeden Merge: einzelne Datei, Feature-Branch oder vollständiger Release-Sync.
+This guide is a repeatable checklist for porting changes from pi-mono into this repo.
+Use it for any merge: single file, feature branch, or full release sync.
 
-## Letzter Synchronisationspunkt
+## Last Sync Point
 
 **Commit:** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
-**Datum:** 2026-03-22
+**Date:** 2026-03-22
 
-Aktualisieren Sie diesen Abschnitt nach jeder Synchronisation; verwenden Sie nicht den vorherigen Bereich erneut.
+Update this section after each sync; do not reuse the previous range.
 
-Wenn Sie eine neue Synchronisation starten, generieren Sie Patches ab diesem Commit:
+When starting a new sync, generate patches from this commit forward:
 
 ```bash
 git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > changes.patch
 ```
 
-## 0) Umfang definieren
+## 0) Define the scope
 
-- Identifizieren Sie die Upstream-Referenz (Commit, Tag oder PR).
-- Listen Sie die Pakete oder Ordner auf, die Sie bearbeiten möchten.
-- Entscheiden Sie, welche Features im Umfang enthalten sind und welche absichtlich übersprungen werden.
+- Identify the upstream reference (commit, tag, or PR).
+- List the packages or folders you plan to touch.
+- Decide which features are in-scope and which are intentionally skipped.
 
-## 1) Code sicher übernehmen
+## 1) Bring code over safely
 
-- Bevorzugen Sie ein sauberes, fokussiertes Diff anstelle einer Kopie des gesamten Inhalts.
-- Vermeiden Sie das Kopieren von Build-Artefakten oder generierten Dateien.
-- Wenn Upstream neue Dateien hinzugefügt hat, fügen Sie diese explizit hinzu und überprüfen Sie den Inhalt.
+- Prefer a clean, focused diff rather than a wholesale copy.
+- Avoid copying built artifacts or generated files.
+- If upstream added new files, add them explicitly and review contents.
 
-## 2) Import-Erweiterungskonventionen einhalten
+## 2) Match import extension conventions
 
-Die meisten Runtime-TypeScript-Quellen lassen `.js` bei internen Imports weg, aber einige Test-/Bench-Einstiegspunkte behalten `.js` für ESM-Runtime-Kompatibilität bei. Folgen Sie dem bestehenden Stil des lokalen Pakets; entfernen Sie nicht pauschal Erweiterungen.
+Most runtime TypeScript sources omit `.js` in internal imports, but some test/bench entrypoints keep `.js` for ESM
+runtime compatibility. Follow the local package’s existing style; do not blanket-strip extensions.
 
-- In `packages/coding-agent`-Runtime-Quellen interne Imports ohne Erweiterung belassen, es sei denn, Nicht-TS-Assets werden importiert.
-- In `packages/tui/test` und `packages/natives/bench` `.js` beibehalten, wo umgebende Dateien es bereits verwenden.
-- Echte Dateierweiterungen beibehalten, wenn sie vom Tooling benötigt werden (z. B. `.json`, `.css`, `.md`-Text-Einbettungen).
-- Beispiel: `import { x } from "./foo.js";` → `import { x } from "./foo";` (nur wenn die Paketkonvention erweiterungslos ist).
+- In `packages/coding-agent` runtime sources, keep internal imports extensionless unless importing non-TS assets.
+- In `packages/tui/test` and `packages/natives/bench`, keep `.js` where surrounding files already use it.
+- Keep real file extensions when required by tooling (e.g., `.json`, `.css`, `.md` text embeds).
+- Example: `import { x } from "./foo.js";` → `import { x } from "./foo";` (only when the package convention is extensionless).
 
-## 3) Import-Scopes ersetzen
+## 3) Replace import scopes
 
-Upstream verwendet andere Paket-Scopes. Ersetzen Sie diese konsistent.
+Upstream uses different package scopes. Replace them consistently.
 
-- Ersetzen Sie alte Scopes durch den hier verwendeten lokalen Scope.
-- Beispiele (an die tatsächlich portierten Pakete anpassen):
+- Replace old scopes with the local scope used here.
+- Examples (adjust to match the actual packages you are porting):
   - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
   - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
   - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
   - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
-## 4) Bun-APIs verwenden, wo sie Node verbessern
+## 4) Use Bun APIs where they improve on Node
 
-Wir laufen auf Bun. Ersetzen Sie Node-APIs nur, wenn Bun eine bessere Alternative bietet.
+We run on Bun. Replace Node APIs only when Bun provides a better alternative.
 
-**Ersetzen:**
+**DO replace:**
 
-- Prozess-Spawning: `child_process.spawn` → Bun Shell `$` für einfache Befehle, `Bun.spawn`/`Bun.spawnSync` für Streaming oder lang laufende Arbeiten
-- Datei-I/O: `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
-- HTTP-Clients: `node-fetch`, `axios` → natives `fetch`
-- Krypto-Hashing: `node:crypto` → Web Crypto oder `Bun.hash`
+- Process spawning: `child_process.spawn` → Bun Shell `$` for simple commands, `Bun.spawn`/`Bun.spawnSync` for streaming or long-running work
+- File I/O: `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
+- HTTP clients: `node-fetch`, `axios` → native `fetch`
+- Crypto hashing: `node:crypto` → Web Crypto or `Bun.hash`
 - SQLite: `better-sqlite3` → `bun:sqlite`
-- Env-Laden: `dotenv` → Bun lädt `.env` automatisch
+- Env loading: `dotenv` → Bun loads `.env` automatically
 
-**NICHT ersetzen (diese funktionieren in Bun einwandfrei):**
+**DO NOT replace (these work fine in Bun):**
 
-- `os.homedir()` — NICHT ersetzen durch `Bun.env.HOME`, `Bun.env.HOME` oder wörtliches `"~"`
-- `os.tmpdir()` — NICHT ersetzen durch `Bun.env.TMPDIR || "/tmp"` oder hartcodierte Pfade
-- `fs.mkdtempSync()` — NICHT ersetzen durch manuelle Pfadkonstruktion
-- `path.join()`, `path.resolve()`, usw. — diese sind in Ordnung
+- `os.homedir()` — do NOT replace with `Bun.env.HOME`, `Bun.env.HOME`, or literal `"~"`
+- `os.tmpdir()` — do NOT replace with `Bun.env.TMPDIR || "/tmp"` or hardcoded paths
+- `fs.mkdtempSync()` — do NOT replace with manual path construction
+- `path.join()`, `path.resolve()`, etc. — these are fine
 
-**Import-Stil:** Verwenden Sie das `node:`-Präfix nur mit Namespace-Imports (keine benannten Imports aus `node:fs` oder `node:path`).
+**Import style:** Use the `node:` prefix with namespace imports only (no named imports from `node:fs` or `node:path`).
 
-**Zusätzliche Bun-Konventionen:**
+**Additional Bun conventions:**
 
-- Bevorzugen Sie Bun Shell `$` für kurze, nicht-streamende Befehle; verwenden Sie `Bun.spawn` nur, wenn Sie Streaming-I/O oder Prozesskontrolle benötigen.
-- Verwenden Sie `Bun.file()`/`Bun.write()` für Dateien und `node:fs/promises` für Verzeichnisse.
-- Vermeiden Sie `Bun.file().exists()`-Prüfungen; verwenden Sie `isEnoent`-Behandlung in try/catch.
-- Bevorzugen Sie `Bun.sleep(ms)` gegenüber `setTimeout`-Wrappern.
+- Prefer Bun Shell `$` for short, non-streaming commands; use `Bun.spawn` only when you need streaming I/O or process control.
+- Use `Bun.file()`/`Bun.write()` for files and `node:fs/promises` for directories.
+- Avoid `Bun.file().exists()` checks; use `isEnoent` handling in try/catch.
+- Prefer `Bun.sleep(ms)` over `setTimeout` wrappers.
 
-**Falsch:**
+**Wrong:**
 
 ```typescript
 // BROKEN: env vars may be undefined, "~" is not expanded
@@ -98,7 +98,7 @@ const home = Bun.env.HOME || "~";
 const tmp = Bun.env.TMPDIR || "/tmp";
 ```
 
-**Korrekt:**
+**Correct:**
 
 ```typescript
 import * as os from "node:os";
@@ -109,134 +109,134 @@ const configDir = path.join(os.homedir(), ".config", "myapp");
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 ```
 
-## 5) Bun-Einbettungen bevorzugen (kein Kopieren)
+## 5) Prefer Bun embeds (no copying)
 
-Kopieren Sie keine Runtime-Assets oder Vendor-Dateien zur Build-Zeit.
+Do not copy runtime assets or vendor files at build time.
 
-- Wenn Upstream Assets in einen dist-Ordner kopiert, ersetzen Sie dies durch Bun-freundliche Einbettungen.
-- Prompts sind statische `.md`-Dateien; verwenden Sie Bun-Text-Imports (`with { type: "text" }`) und Handlebars anstelle von Inline-Prompt-Strings.
-- Verwenden Sie `import.meta.dir` + `Bun.file` zum Laden benachbarter Nicht-Text-Ressourcen.
-- Behalten Sie Assets im Repository und lassen Sie den Bundler sie einschließen.
-- Eliminieren Sie Kopier-Skripte, es sei denn, der Benutzer fordert sie explizit an.
-- Wenn Upstream eine gebündelte Fallback-Datei zur Laufzeit liest, ersetzen Sie Dateisystem-Reads durch einen Bun-Text-Einbettungs-Import.
-  - Beispiel (Codex-Anweisungen-Fallback):
-    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> entfernt
+- If upstream copies assets into a dist folder, replace with Bun-friendly embeds.
+- Prompts are static `.md` files; use Bun text imports (`with { type: "text" }`) and Handlebars instead of inline prompt strings.
+- Use `import.meta.dir` + `Bun.file` to load adjacent non-text resources.
+- Keep assets in-repo and let the bundler include them.
+- Eliminate copy scripts unless the user explicitly requests them.
+- If upstream reads a bundled fallback file at runtime, replace filesystem reads with a Bun text embed import.
+  - Example (Codex instructions fallback):
+    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> removed
     - `import FALLBACK_INSTRUCTIONS from "./codex-instructions.md" with { type: "text" };`
-    - Verwenden Sie `return FALLBACK_INSTRUCTIONS;` anstelle von `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
+    - Use `return FALLBACK_INSTRUCTIONS;` instead of `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
 
-## 6) `package.json` sorgfältig portieren
+## 6) Port `package.json` carefully
 
-Behandeln Sie `package.json` als Vertrag. Mergen Sie bewusst.
+Treat `package.json` as a contract. Merge intentionally.
 
-- Behalten Sie bestehende `name`, `version`, `type`, `exports` und `bin` bei, es sei denn, die Portierung erfordert Änderungen.
-- Ersetzen Sie npm/node-Skripte durch Bun-Äquivalente (z. B. `bun check`, `bun test`).
-- Stellen Sie sicher, dass Abhängigkeiten den korrekten Scope verwenden.
-- Downgraden Sie keine Abhängigkeiten, um Typfehler zu beheben; upgraden Sie stattdessen.
-- Validieren Sie Workspace-Paketlinks und `peerDependencies`.
+- Keep existing `name`, `version`, `type`, `exports`, and `bin` unless the port requires changes.
+- Replace npm/node scripts with Bun equivalents (e.g., `bun check`, `bun test`).
+- Ensure dependencies use the correct scope.
+- Do not downgrade dependencies to fix type errors; upgrade instead.
+- Validate workspace package links and `peerDependencies`.
 
-## 7) Code-Stil und Tooling angleichen
+## 7) Align code style and tooling
 
-- Behalten Sie bestehende Formatierungskonventionen bei.
-- Führen Sie kein `any` ein, es sei denn, es ist erforderlich.
-- Vermeiden Sie dynamische Imports und Inline-Typ-Imports; verwenden Sie nur Top-Level-Imports.
-- Erstellen Sie Prompts niemals im Code; Prompts sind statische `.md`-Dateien, die mit Handlebars gerendert werden.
-- Im coding-agent niemals `console.log`/`console.warn`/`console.error` verwenden; verwenden Sie `logger` aus `@f5-sales-demo/pi-utils`.
-- Verwenden Sie `Promise.withResolvers()` anstelle von `new Promise((resolve, reject) => ...)`.
-- **Keine `private`/`protected`/`public`-Schlüsselwörter bei Klassenfeldern oder -methoden.** Verwenden Sie ES `#`-private-Felder für Kapselung; lassen Sie zugängliche Member ohne Schlüsselwort (bare).
-  Die einzige Ausnahme sind Constructor-Parameter-Properties (`constructor(private readonly x: T)`), wo das Schlüsselwort von TypeScript verlangt wird. Wenn Sie Upstream-Code portieren, der `private foo` oder `protected bar` verwendet, konvertieren Sie zu `#foo` (privat) oder bare `bar` (zugänglich).
-- Bevorzugen Sie vorhandene Helfer und Utilities gegenüber neuem Ad-hoc-Code.
-- Bewahren Sie die bereits in diesem Repository vorgenommenen Bun-first-Infrastrukturänderungen:
-  - Runtime ist Bun (keine Node-Einstiegspunkte).
-  - Paketmanager ist Bun (keine npm-Lockfiles).
-  - Schwere Node-APIs (`child_process`, `readline`) sind durch Bun-Äquivalente ersetzt.
-  - Leichtgewichtige Node-APIs (`os.homedir`, `os.tmpdir`, `fs.mkdtempSync`, `path.*`) werden beibehalten.
-  - CLI-Shebangs verwenden `bun` (nicht `node`, nicht `tsx`).
-  - Pakete verwenden Quelldateien direkt (kein TypeScript-Build-Schritt).
-  - CI-Workflows verwenden Bun für Install/Check/Test.
+- Keep existing formatting conventions.
+- Do not introduce `any` unless required.
+- Avoid dynamic imports and inline type imports; use top-level imports only.
+- Never build prompts in code; prompts are static `.md` files rendered with Handlebars.
+- In coding-agent, never use `console.log`/`console.warn`/`console.error`; use `logger` from `@f5-sales-demo/pi-utils`.
+- Use `Promise.withResolvers()` instead of `new Promise((resolve, reject) => ...)`.
+- **No `private`/`protected`/`public` keywords on class fields or methods.** Use ES `#` private fields for encapsulation; leave accessible members bare (no keyword).
+  The only exception is constructor parameter properties (`constructor(private readonly x: T)`), where the keyword is required by TypeScript. When porting upstream code that uses `private foo` or `protected bar`, convert to `#foo` (private) or bare `bar` (accessible).
+- Prefer existing helpers and utilities over new ad-hoc code.
+- Preserve Bun-first infrastructure changes already made in this repo:
+  - Runtime is Bun (no Node entry points).
+  - Package manager is Bun (no npm lockfiles).
+  - Heavy Node APIs (`child_process`, `readline`) are replaced with Bun equivalents.
+  - Lightweight Node APIs (`os.homedir`, `os.tmpdir`, `fs.mkdtempSync`, `path.*`) are kept.
+  - CLI shebangs use `bun` (not `node`, not `tsx`).
+  - Packages use source files directly (no TypeScript build step).
+  - CI workflows run Bun for install/check/test.
 
-## 8) Alte Kompatibilitätsschichten entfernen
+## 8) Remove old compatibility layers
 
-Sofern nicht angefordert, entfernen Sie Upstream-Kompatibilitäts-Shims.
+Unless requested, remove upstream compatibility shims.
 
-- Löschen Sie alte APIs, die ersetzt wurden.
-- Aktualisieren Sie alle Aufrufstellen direkt auf die neue API.
-- Behalten Sie keine `*_v2` oder parallelen Versionen bei.
+- Delete old APIs that were replaced.
+- Update all call sites to the new API directly.
+- Do not keep `*_v2` or parallel versions.
 
-## 9) Dokumentation und Referenzen aktualisieren
+## 9) Update docs and references
 
-- Ersetzen Sie pi-mono-Repository-Links, wo angemessen.
-- Aktualisieren Sie Beispiele zur Verwendung von Bun und korrekten Paket-Scopes.
-- Stellen Sie sicher, dass README-Anweisungen noch dem aktuellen Repository-Verhalten entsprechen.
+- Replace pi-mono repo links where appropriate.
+- Update examples to use Bun and correct package scopes.
+- Ensure README instructions still match the current repo behavior.
 
-## 10) Die Portierung validieren
+## 10) Validate the port
 
-Führen Sie die Standardprüfungen nach Änderungen durch:
+Run the standard checks after changes:
 
 - `bun check`
 
-Wenn das Repository bereits fehlschlagende Prüfungen hat, die nichts mit Ihren Änderungen zu tun haben, weisen Sie darauf hin.
-Tests verwenden Buns Runner (nicht Vitest), aber führen Sie `bun test` nur aus, wenn explizit angefordert.
+If the repo already has failing checks unrelated to your changes, call that out.
+Tests use Bun's runner (not Vitest), but only run `bun test` when explicitly requested.
 
-## 11) Verbesserte Features schützen (Regressions-Fallen-Liste)
+## 11) Protect improved features (regression trap list)
 
-Wenn Sie das Verhalten lokal bereits verbessert haben, behandeln Sie dies als **nicht verhandelbar**. Notieren Sie vor der Portierung
-die Verbesserungen und fügen Sie explizite Prüfungen hinzu, damit sie beim Merge nicht verloren gehen.
+If you already improved behavior locally, treat those as **non‑negotiable**. Before porting, write down
+the improvements and add explicit checks so they don’t get lost in the merge.
 
-- **Erwartetes Verhalten einfrieren**: Fügen Sie für jede Verbesserung eine kurze "Vorher/Nachher"-Notiz hinzu (Eingaben, Ausgaben,
-  Standardwerte, Grenzfälle). Dies verhindert stilles Zurückrollen.
-- **Alt → Neu-APIs abbilden**: Wenn Upstream Konzepte umbenannt hat (Hooks → Extensions, Custom Tools → Tools, usw.),
-  stellen Sie sicher, dass jeder alte Einstiegspunkt weiterhin durchgereicht wird. Ein verpasstes Flag oder Export bedeutet verlorene Funktionalität.
-- **Exports überprüfen**: Prüfen Sie `package.json` `exports`, öffentliche Typen und Barrel-Dateien. Upstream-Portierungen
-  vergessen oft, lokale Ergänzungen erneut zu exportieren.
-- **Nicht-Happy-Paths abdecken**: Wenn Sie Fehlerbehandlung, Timeouts oder Fallback-Logik behoben haben, fügen Sie einen Test oder
-  zumindest eine manuelle Checkliste hinzu, die diese Pfade durchläuft.
-- **Standardwerte und Config-Merge-Reihenfolge prüfen**: Verbesserungen leben oft in Standardwerten. Bestätigen Sie, dass neue Standardwerte
-  nicht zurückgesetzt wurden (z. B. neue Config-Priorität, deaktivierte Features, Tool-Listen).
-- **Env/Shell-Verhalten auditieren**: Wenn Sie Ausführung oder Sandboxing behoben haben, überprüfen Sie, ob der neue Pfad weiterhin Ihre
-  bereinigten Umgebungsvariablen verwendet und keine Alias/Funktions-Überschreibungen erneut einführt.
-- **Gezielte Beispiele erneut ausführen**: Behalten Sie einen minimalen Satz von "known good"-Beispielen und führen Sie diese nach der Portierung aus
-  (CLI-Flags, Extension-Registrierung, Tool-Ausführung).
+- **Freeze the expected behavior**: add a short “before/after” note for each improvement (inputs, outputs,
+  defaults, edge cases). This prevents silent rollback.
+- **Map old → new APIs**: if upstream renamed concepts (hooks → extensions, custom tools → tools, etc.),
+  ensure every old entry point still wires through. One missed flag or export equals lost functionality.
+- **Verify exports**: check `package.json` `exports`, public types, and barrel files. Upstream ports often
+  forget to re-export local additions.
+- **Cover non‑happy paths**: if you fixed error handling, timeouts, or fallback logic, add a test or at
+  least a manual checklist that exercises those paths.
+- **Check defaults and config merge order**: improvements often live in defaults. Confirm new defaults
+  didn’t revert (e.g., new config precedence, disabled features, tool lists).
+- **Audit env/shell behavior**: if you fixed execution or sandboxing, verify the new path still uses your
+  sanitized env and does not reintroduce alias/function overrides.
+- **Re-run targeted samples**: keep a minimal set of "known good" examples and run them after the port
+  (CLI flags, extension registration, tool execution).
 
-## 12) Überarbeiteten Code erkennen und behandeln
+## 12) Detect and handle reworked code
 
-Prüfen Sie vor der Portierung einer Datei, ob Upstream sie signifikant refaktoriert hat:
+Before porting a file, check if upstream significantly refactored it:
 
 ```bash
 # Compare the file you're about to port against what you have locally
 git diff HEAD upstream/main -- path/to/file.ts
 ```
 
-Wenn das Diff zeigt, dass die Datei **überarbeitet** wurde (nicht nur gepatcht):
+If the diff shows the file was **reworked** (not just patched):
 
-- Neue Abstraktionen, umbenannte Konzepte, zusammengeführte Module, geänderter Datenfluss
+- New abstractions, renamed concepts, merged modules, changed data flow
 
-Dann müssen Sie **die neue Implementierung gründlich lesen**, bevor Sie portieren. Blindes Mergen von überarbeitetem Code verliert Funktionalität, weil:
+Then you must **read the new implementation thoroughly** before porting. Blind merging of reworked code loses functionality because:
 
-Hinweis: Der interaktive Modus wurde kürzlich in Controllers/Utils/Types aufgeteilt. Wenn Sie verwandte Änderungen zurückportieren, portieren Sie Updates in die einzelnen Dateien, die wir erstellt haben, und stellen Sie sicher, dass die `interactive-mode.ts`-Verdrahtung synchron bleibt.
+Note: interactive mode was recently split into controllers/utils/types. When backporting related changes, port updates into the individual files we created and ensure `interactive-mode.ts` wiring stays in sync.
 
-1. **Standardwerte ändern sich stillschweigend** - Eine neue Variable `defaultFoo = [a, b]` kann ein altes `getAllFoo()` ersetzen, das `[a, b, c, d, e]` zurückgab.
+1. **Defaults change silently** - A new variable `defaultFoo = [a, b]` may replace an old `getAllFoo()` that returned `[a, b, c, d, e]`.
 
-2. **API-Optionen gehen verloren** - Wenn Systeme zusammengeführt werden (z. B. `hooks` + `customTools` → `extensions`), werden alte Optionen möglicherweise nicht zur neuen Implementierung durchgereicht.
+2. **API options get dropped** - When systems merge (e.g., `hooks` + `customTools` → `extensions`), old options may not wire through to the new implementation.
 
-3. **Code-Pfade werden veraltet** - Ein umbenanntes Konzept (z. B. `hookMessage` → `custom`) erfordert Aktualisierungen in jedem Switch-Statement, Type Guard und Handler — nicht nur in der Definition.
+3. **Code paths go stale** - A renamed concept (e.g., `hookMessage` → `custom`) needs updates in every switch statement, type guard, and handler—not just the definition.
 
-4. **Kontext/Fähigkeiten schrumpfen** - Alte APIs haben möglicherweise `{ logger, typebox, pi }` exponiert, was neue APIs vergessen haben einzuschließen.
+4. **Context/capabilities shrink** - Old APIs may have exposed `{ logger, typebox, pi }` that new APIs forgot to include.
 
-### Semantischer Portierungsprozess
+### Semantic porting process
 
-Wenn Upstream ein Modul überarbeitet hat:
+When upstream reworked a module:
 
-1. **Die alte Implementierung lesen** - Verstehen Sie, was sie tat, welche Optionen sie akzeptierte, was sie exponierte.
+1. **Read the old implementation** - Understand what it did, what options it accepted, what it exposed.
 
-2. **Die neue Implementierung lesen** - Verstehen Sie die neuen Abstraktionen und wie sie auf altes Verhalten abgebildet werden.
+2. **Read the new implementation** - Understand the new abstractions and how they map to old behavior.
 
-3. **Feature-Parität überprüfen** - Bestätigen Sie für jede Fähigkeit im alten Code, dass der neue Code sie beibehält oder explizit entfernt.
+3. **Verify feature parity** - For each capability in the old code, confirm the new code preserves it or explicitly removes it.
 
-4. **Nach Überbleibseln suchen** - Suchen Sie nach alten Namen/Konzepten, die möglicherweise in Switch-Statements, Handlern, UI-Komponenten übersehen wurden.
+4. **Grep for stragglers** - Search for old names/concepts that may have been missed in switch statements, handlers, UI components.
 
-5. **Die Grenzen testen** - CLI-Flags, SDK-Optionen, Event-Handler, Standardwerte — hier verstecken sich Regressionen.
+5. **Test the boundaries** - CLI flags, SDK options, event handlers, default values—these are where regressions hide.
 
-### Schnelle Prüfungen
+### Quick checks
 
 ```bash
 # Find all uses of an old concept that may need updating
@@ -249,23 +249,24 @@ git show upstream/main:path/to/file.ts | rg "default|DEFAULT"
 rg "case \"" path/to/file.ts
 ```
 
-## 13) Schnelle Audit-Checkliste
+## 13) Quick audit checklist
 
-Verwenden Sie dies als letzten Durchgang, bevor Sie fertig sind:
+Use this as a final pass before you finish:
 
-- [ ] Import-Erweiterungen folgen der lokalen Paketkonvention (kein pauschales `.js`-Entfernen)
-- [ ] Keine Node-only-APIs in neuem/portiertem Code
-- [ ] Alle Paket-Scopes aktualisiert
-- [ ] `package.json`-Skripte verwenden Bun
-- [ ] Prompts sind `.md`-Text-Imports (keine Inline-Prompt-Strings)
-- [ ] Kein `console.*` im coding-agent (verwenden Sie `logger`)
-- [ ] Assets laden über Bun-Einbettungsmuster (keine Kopier-Skripte)
-- [ ] Tests oder Prüfungen laufen (oder sind explizit als blockiert markiert)
-- [ ] Keine Funktionalitätsregressionen (siehe Abschnitte 11-12)
+- [ ] Import extensions follow the local package convention (no blanket `.js` stripping)
+- [ ] No Node-only APIs in new/ported code
+- [ ] All package scopes updated
+- [ ] `package.json` scripts use Bun
+- [ ] Prompts are `.md` text imports (no inline prompt strings)
+- [ ] No `console.*` in coding-agent (use `logger`)
+- [ ] Assets load via Bun embed patterns (no copy scripts)
+- [ ] Tests or checks run (or explicitly noted as blocked)
+- [ ] No functionality regressions (see sections 11-12)
 
-## 14) Commit-Nachricht-Format
+## 14) Commit message format
 
-Wenn Sie einen Backport committen, folgen Sie dem Repository-Format `<type>(scope): <Beschreibung in Vergangenheitsform>` und behalten Sie den Commit-Bereich im Titel bei.
+When committing a backport, follow the repo format `<type>(scope): <past-tense description>` and keep the commit
+range in the title.
 
 ```
 fix(coding-agent): backported pi-mono changes (<from>..<to>)
@@ -278,7 +279,7 @@ packages/<other-package>:
 - <type>: <description>
 ```
 
-**Beispiel:**
+**Example:**
 
 ```
 fix(coding-agent): backported pi-mono changes (9f3eef65f..52532c7c0)
@@ -300,95 +301,95 @@ packages/coding-agent:
 - fix: resolve macOS NFD and curly quote variants in file paths
 ```
 
-**Regeln:**
+**Rules:**
 
-- Änderungen nach Paket gruppieren
-- Konventionelle Commit-Typen verwenden (`fix`, `feat`, `refactor`, `perf`, `docs`)
-- Upstream-Issue/PR-Nummern und Contributor-Zuordnung für externe Beiträge einschließen
-- Der Commit-Bereich im Titel hilft beim Tracking von Synchronisationspunkten
+- Group changes by package
+- Use conventional commit types (`fix`, `feat`, `refactor`, `perf`, `docs`)
+- Include upstream issue/PR numbers and contributor attribution for external contributions
+- The commit range in the title helps track sync points
 
-## 15) Beabsichtigte Abweichungen
+## 15) Intentional Divergences
 
-Unser Fork hat architektonische Entscheidungen, die von Upstream abweichen. **Portieren Sie diese Upstream-Muster nicht:**
+Our fork has architectural decisions that differ from upstream. **Do not port these upstream patterns:**
 
-### UI-Architektur
+### UI Architecture
 
-| Upstream                                    | Unser Fork                                                | Grund                                                                 |
+| Upstream                                    | Our Fork                                                  | Reason                                                                |
 | ------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `FooterDataProvider`-Klasse                 | `StatusLineComponent`                                     | Einfachere, integrierte Statuszeile                                   |
-| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub in Nicht-TUI-Modi                                    | Implementiert in TUI, No-Op anderswo                                  |
-| `ctx.ui.setEditorComponent()`               | Stub in Nicht-TUI-Modi                                    | Implementiert in TUI, No-Op anderswo                                  |
-| `InteractiveModeOptions`-Options-Objekt     | Positionsbasierte Constructor-Args (Options-Typ weiterhin exportiert) | Constructor-Signatur beibehalten; Typ aktualisieren, wenn Upstream Felder hinzufügt |
+| `FooterDataProvider` class                  | `StatusLineComponent`                                     | Simpler, integrated status line                                       |
+| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `ctx.ui.setEditorComponent()`               | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `InteractiveModeOptions` options object     | Positional constructor args (options type still exported) | Keep constructor signature; update the type when upstream adds fields |
 
-### Komponentenbenennung
+### Component Naming
 
-| Upstream                     | Unser Fork              |
+| Upstream                     | Our Fork                |
 | ---------------------------- | ----------------------- |
 | `extension-input.ts`         | `hook-input.ts`         |
 | `extension-selector.ts`      | `hook-selector.ts`      |
 | `ExtensionInputComponent`    | `HookInputComponent`    |
 | `ExtensionSelectorComponent` | `HookSelectorComponent` |
 
-### API-Benennung
+### API Naming
 
-| Upstream                                 | Unser Fork                               | Anmerkungen                               |
+| Upstream                                 | Our Fork                                 | Notes                                     |
 | ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | Wir verwenden durchgehend `sessionName`   |
-| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | Gleich (wir haben vereinheitlicht, um mit Upstreams RPC übereinzustimmen) |
-| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Gleich                                    |
+| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | We use `sessionName` throughout           |
+| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | Same (we unified to match upstream's RPC) |
+| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Same                                      |
 
-### Dateikonsolidierung
+### File Consolidation
 
-| Upstream                                           | Unser Fork                              | Grund                                   |
+| Upstream                                           | Our Fork                                | Reason                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (Tool-Dateien) | `@f5-sales-demo/pi-natives` Clipboard-Modul | In N-API-native Implementierung zusammengeführt |
+| `clipboard.ts` + `clipboard-image.ts` (tool files) | `@f5-sales-demo/pi-natives` clipboard module | Merged into N-API native implementation |
 
-### Test-Framework
+### Test Framework
 
-| Upstream                  | Unser Fork                    |
+| Upstream                  | Our Fork                      |
 | ------------------------- | ----------------------------- |
-| `vitest` mit `vi.mock()`  | `bun:test` mit `vi` von Bun   |
-| `node:test`-Assertions    | `expect()`-Matcher            |
+| `vitest` with `vi.mock()` | `bun:test` with `vi` from bun |
+| `node:test` assertions    | `expect()` matchers           |
 
-### Tool-Architektur
+### Tool Architecture
 
-| Upstream                            | Unser Fork                                                        | Anmerkungen                                               |
+| Upstream                            | Our Fork                                                          | Notes                                                     |
 | ----------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
-| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS`-Registry  | Tool-Factories akzeptieren `ToolSession` und können `null` zurückgeben |
-| Per-Tool `*Operations`-Interfaces   | Per-Tool-Interfaces bleiben (`FindOperations`, `GrepOperations`)  | Verwendet für SSH/Remote-Überschreibungen                 |
-| Node.js `fs/promises` überall       | `Bun.file()`/`Bun.write()` für Dateien; `node:fs/promises` für Verzeichnisse | Bun-APIs bevorzugen, wenn sie vereinfachen               |
+| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS` registry  | Tool factories accept `ToolSession` and can return `null` |
+| Per-tool `*Operations` interfaces   | Per-tool interfaces remain (`FindOperations`, `GrepOperations`)   | Used for SSH/remote overrides                             |
+| Node.js `fs/promises` everywhere    | `Bun.file()`/`Bun.write()` for files; `node:fs/promises` for dirs | Prefer Bun APIs when they simplify                        |
 
-### Auth-Speicherung
+### Auth Storage
 
-| Upstream                        | Unser Fork                                  | Anmerkungen                                  |
+| Upstream                        | Our Fork                                    | Notes                                        |
 | ------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | Anmeldedaten ausschließlich in `agent.db` gespeichert |
-| Einzelne Anmeldedaten pro Provider | Multi-Credential mit Round-Robin-Auswahl   | Session-Affinität und Backoff-Logik beibehalten |
+| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | Credentials stored exclusively in `agent.db` |
+| Single credential per provider  | Multi-credential with round-robin selection | Session affinity and backoff logic preserved |
 
 ### Extensions
 
-| Upstream                      | Unser Fork                                 |
+| Upstream                      | Our Fork                                   |
 | ----------------------------- | ------------------------------------------ |
-| `jiti` für TypeScript-Laden   | Natives Bun `import()`                     |
-| `pkg.pi`-Manifest-Feld        | `pkg.xcsh ?? pkg.pi` (unser Namespace bevorzugt) |
+| `jiti` for TypeScript loading | Native Bun `import()`                      |
+| `pkg.pi` manifest field       | `pkg.xcsh ?? pkg.pi` (prefer our namespace) |
 
-### Diese Upstream-Features überspringen
+### Skip These Upstream Features
 
-Beim Portieren diese Dateien/Features **vollständig überspringen**:
+When porting, **skip** these files/features entirely:
 
-- `footer-data-provider.ts` — wir verwenden StatusLineComponent
-- `clipboard-image.ts` — Clipboard ist im `@f5-sales-demo/pi-natives` N-API-Modul
-- GitHub-Workflow-Dateien — wir haben unsere eigene CI
-- `models.generated.ts` — automatisch generiert, lokal neu generieren (als models.json stattdessen)
+- `footer-data-provider.ts` — we use StatusLineComponent
+- `clipboard-image.ts` — clipboard is in `@f5-sales-demo/pi-natives` N-API module
+- GitHub workflow files — we have our own CI
+- `models.generated.ts` — auto-generated, regenerate locally (as models.json instead)
 
-### Features, die wir hinzugefügt haben (diese bewahren)
+### Features We Added (Preserve These)
 
-Diese existieren in unserem Fork, aber nicht in Upstream. **Niemals überschreiben:**
+These exist in our fork but not upstream. **Never overwrite:**
 
-- `StatusLineComponent` im interaktiven Modus
-- Multi-Credential-Auth mit Session-Affinität
-- Fähigkeitsbasiertes Discovery-System (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`, usw.)
-- MCP/Exa/SSH-Integrationen
-- LSP-Writethrough für Format-on-Save
-- Bash-Interception (`checkBashInterception`)
-- Fuzzy-Pfadvorschläge im Read-Tool
+- `StatusLineComponent` in interactive mode
+- Multi-credential auth with session affinity
+- Capability-based discovery system (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`, etc.)
+- MCP/Exa/SSH integrations
+- LSP writethrough for format-on-save
+- Bash interception (`checkBashInterception`)
+- Fuzzy path suggestions in read tool
