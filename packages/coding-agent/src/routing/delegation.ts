@@ -58,6 +58,7 @@ export async function executeReadOnlyDelegationPlan(
 				task.targetFilesOrPaths && task.targetFilesOrPaths.length > 0
 					? `Target Files: ${task.targetFilesOrPaths.join(", ")}`
 					: "",
+				`Allowed Tools: ${Array.from(ALLOWED_READ_ONLY_TOOLS).join(", ")}. Do not attempt to use any other tools.`,
 			]
 				.filter(Boolean)
 				.join("\n");

@@ -34,7 +34,10 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		const parsed = JSON.parse(rawOutput);
 		const score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;
 		const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
-		const delegation = Array.isArray(parsed.delegation) ? parsed.delegation : undefined;
+		const delegation =
+			typeof parsed.delegation === "object" && parsed.delegation !== null && !Array.isArray(parsed.delegation)
+				? parsed.delegation
+				: undefined;
 		const routingUsage = typeof parsed.routingUsage === "number" ? parsed.routingUsage : undefined;
 
 		if (confidence < 0.75) {
@@ -65,6 +68,9 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 			reasons: [...baseProfile.reasons, "classifier_ambiguous_resolved"],
 		};
 	} catch (err: unknown) {
+		if (err instanceof Error && err.name === "AbortError") {
+			throw err;
+		}
 		const isSyntax = err instanceof SyntaxError || (err instanceof Error && err.message.includes("malformed"));
 		return {
 			...baseProfile,

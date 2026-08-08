@@ -2689,6 +2689,7 @@ export class AgentSession {
 				mode: routingMode,
 				prompt: expandedText,
 				hasImages: options?.images && options.images.length > 0,
+				priorRejection: this.#routingCoordinator.getState().escalationFloor !== undefined,
 				availableModels,
 				customPools: validateCustomPools(this.settings.get("routing.pools")),
 				disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],

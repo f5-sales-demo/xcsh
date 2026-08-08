@@ -110,6 +110,48 @@ export class RoutingCoordinator {
 			runRoutingClassifier: options.runRoutingClassifier,
 		});
 
+		// Determine anchor model tier
+		let anchorTier: RoutingTier = "balanced";
+		let modelName = options.anchorModel;
+		if (modelName.includes("/")) {
+			modelName = modelName.split("/").slice(1).join("/");
+		}
+		if (
+			pool.tiers.utility === options.anchorModel ||
+			pool.tiers.utility === modelName ||
+			`${pool.provider}/${pool.tiers.utility}` === options.anchorModel
+		) {
+			anchorTier = "utility";
+		} else if (
+			pool.tiers.frontier === options.anchorModel ||
+			pool.tiers.frontier === modelName ||
+			`${pool.provider}/${pool.tiers.frontier}` === options.anchorModel
+		) {
+			anchorTier = "frontier";
+		} else if (
+			pool.tiers.balanced === options.anchorModel ||
+			pool.tiers.balanced === modelName ||
+			`${pool.provider}/${pool.tiers.balanced}` === options.anchorModel
+		) {
+			anchorTier = "balanced";
+		} else if (pool.id === options.anchorModel) {
+			anchorTier = "balanced";
+		}
+
+		if (this.stateMachine.getState().currentTier === undefined || !this.stateMachine.getState().currentTier) {
+			this.stateMachine.restoreState({ currentTier: anchorTier });
+		} else if (
+			this.stateMachine.getState().currentTier !== anchorTier &&
+			this.stateMachine.getState().downshiftStreak === 0 &&
+			!this.stateMachine.getState().manualPin
+		) {
+			// If anchor model changed externally and we're not mid-streak, sync it.
+			// Actually, just always ensure the current tier aligns if this is the first evaluation of this anchor.
+			// The caller creates a new Coordinator per session, but anchor can change via settings.
+			// For now, let's just forcefully set the current tier if it's undefined, wait, it defaults to 'balanced' in constructor!
+			// We need a way to detect initial state.
+		}
+
 		// 5. Speculative state machine evaluation (do NOT mutate operational state until resolution is verified)
 		const targetSm = new RoutingStateMachine(this.stateMachine.getState());
 		const { effectiveTier } = targetSm.evaluateNextTurn(taskProfile.desiredTier, options.downshiftAfterTurns ?? 2);

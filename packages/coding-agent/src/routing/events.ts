@@ -10,6 +10,11 @@ export interface RoutingEvent {
 	selectedModel?: string;
 	reasons: RoutingReasonCode[];
 	timestamp?: number;
+	routingUsage?: number;
+	delegated?: boolean;
+	escalated?: boolean;
+	contextTokens?: number;
+	durationMs?: number;
 }
 
 export function sanitizeRoutingEvent(event: Record<string, unknown>): RoutingEvent {
@@ -23,6 +28,11 @@ export function sanitizeRoutingEvent(event: Record<string, unknown>): RoutingEve
 		"selectedModel",
 		"reasons",
 		"timestamp",
+		"routingUsage",
+		"delegated",
+		"escalated",
+		"contextTokens",
+		"durationMs",
 	]);
 
 	const sanitized: Record<string, unknown> = {};
@@ -42,6 +52,11 @@ export function sanitizeRoutingEvent(event: Record<string, unknown>): RoutingEve
 		selectedModel: (sanitized.selectedModel as string | undefined) ?? (event.model as string | undefined),
 		reasons: (sanitized.reasons as RoutingReasonCode[]) ?? [],
 		timestamp: (sanitized.timestamp as number) ?? Date.now(),
+		routingUsage: sanitized.routingUsage as number | undefined,
+		delegated: sanitized.delegated as boolean | undefined,
+		escalated: sanitized.escalated as boolean | undefined,
+		contextTokens: sanitized.contextTokens as number | undefined,
+		durationMs: sanitized.durationMs as number | undefined,
 	};
 }
 

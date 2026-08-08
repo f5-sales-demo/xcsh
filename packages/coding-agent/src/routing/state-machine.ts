@@ -18,7 +18,7 @@ export class RoutingStateMachine {
 
 	constructor(initialState?: Partial<RoutingState>) {
 		this.state = {
-			currentTier: initialState?.currentTier ?? "balanced",
+			currentTier: initialState?.currentTier,
 			downshiftStreak: initialState?.downshiftStreak ?? 0,
 			escalationFloor: initialState?.escalationFloor,
 			manualPin: initialState?.manualPin,
@@ -38,7 +38,7 @@ export class RoutingStateMachine {
 
 	public reset(): void {
 		this.state = {
-			currentTier: "balanced",
+			currentTier: undefined,
 			downshiftStreak: 0,
 			escalationFloor: undefined,
 			manualPin: undefined,
