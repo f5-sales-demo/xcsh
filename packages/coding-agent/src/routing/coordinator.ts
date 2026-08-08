@@ -18,13 +18,15 @@ export interface EvaluateTurnOptions {
 	};
 	hasImages?: boolean;
 	priorRejection?: boolean;
-	fileTargetsCount?: number;
 	availableModels: string[];
 	customPools?: Record<string, RoutingPoolConfig>;
 	profilerMode?: "rules" | "hybrid";
+	disabledPresets?: readonly string[];
+	familyPolicy?: "sticky" | "configured-mixed";
+	fileTargetsCount?: number;
 	downshiftAfterTurns?: number;
 	getModelContextWindow?: (modelId: string) => number;
-	mockClassifierRunner?: (utilityModel: string, prompt: string) => Promise<string>;
+	runRoutingClassifier?: (utilityModel: string, prompt: string) => Promise<string>;
 }
 
 export class RoutingCoordinator {
@@ -75,7 +77,12 @@ export class RoutingCoordinator {
 		}
 
 		// 3. Pool lookup
-		const pool = resolveModelPool(options.anchorModel, options.customPools ?? {});
+		const pool = resolveModelPool(
+			options.anchorModel,
+			options.customPools ?? {},
+			options.disabledPresets ?? [],
+			options.familyPolicy,
+		);
 		if (!pool) {
 			return {
 				epochId,
@@ -96,7 +103,7 @@ export class RoutingCoordinator {
 			fileTargetsCount: options.fileTargetsCount,
 			pool,
 			profilerMode: options.profilerMode ?? "hybrid",
-			mockClassifierRunner: options.mockClassifierRunner,
+			runRoutingClassifier: options.runRoutingClassifier,
 		});
 
 		// 5. Speculative state machine evaluation (do NOT mutate operational state until resolution is verified)
@@ -146,6 +153,7 @@ export class RoutingCoordinator {
 			source: options.profilerMode === "rules" ? "rules" : "hybrid",
 			applied,
 			reasons,
+			delegation: taskProfile.delegation,
 		};
 	}
 }

@@ -72,7 +72,7 @@ import {
 	resolveModelRoleValue,
 } from "../config/model-resolver";
 import { expandPromptTemplate, type PromptTemplate } from "../config/prompt-templates";
-import { type Settings, type SkillsSettings, settings } from "../config/settings";
+import type { Settings, SkillsSettings } from "../config/settings";
 import { normalizeDiff, normalizeToLF, ParseError, previewPatch, stripBom } from "../edit";
 import { type BashResult, executeBash as executeBashCommand } from "../exec/bash-executor";
 import { exportSessionToHtml } from "../export/html";
@@ -128,13 +128,11 @@ import planModeToolDecisionReminderPrompt from "../prompts/system/plan-mode-tool
 	type: "text",
 };
 import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { type: "text" };
-import {
-	RoutingCoordinator,
-	type RoutingMode,
-	type RoutingOutcome,
-	type RoutingState,
-	type RoutingTier,
-} from "../routing";
+import type { RoutingState, RoutingTier } from "../routing";
+import { RoutingCoordinator } from "../routing/coordinator";
+import { executeReadOnlyDelegationPlan } from "../routing/delegation";
+import { validateCustomPools } from "../routing/presets";
+import type { RoutingMode, RoutingOutcome } from "../routing/types";
 import { deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
 import { resolveThinkingLevelForModel, toReasoningEffort } from "../thinking";
 import { assertEditableFile } from "../tools/auto-generated-guard";
@@ -1238,7 +1236,7 @@ export class AgentSession {
 		manualPin?: string;
 		escalationFloor?: RoutingTier;
 	} {
-		const mode = (settings.get("routing.mode") as RoutingMode) ?? "off";
+		const mode = (this.settings.get("routing.mode") as RoutingMode) ?? "off";
 		const state = this.#routingCoordinator.getStateMachine().getState();
 		return {
 			mode,
@@ -1253,7 +1251,7 @@ export class AgentSession {
 	 * Set dynamic routing mode (off, shadow, auto).
 	 */
 	public setRoutingMode(mode: RoutingMode): void {
-		settings.set("routing.mode", mode);
+		this.settings.set("routing.mode", mode);
 	}
 
 	/**
@@ -2635,7 +2633,7 @@ export class AgentSession {
 		}
 
 		// Expand file-based prompt templates if requested
-		const expandedText = expandPromptTemplates ? expandPromptTemplate(text, [...this.#promptTemplates]) : text;
+		let expandedText = expandPromptTemplates ? expandPromptTemplate(text, [...this.#promptTemplates]) : text;
 
 		// If streaming, queue via steer() or followUp() based on option
 		if (this.isStreaming) {
@@ -2672,62 +2670,65 @@ export class AgentSession {
 		}
 
 		// Evaluate dynamic model routing if enabled
-		const routingMode = (settings.get("routing.mode") as RoutingMode) ?? "off";
+		const routingMode = (this.settings.get("routing.mode") as RoutingMode) ?? "off";
 		if (routingMode !== "off" && this.model) {
 			const anchorModel = `${this.model.provider}/${this.model.id}`;
 			const availableModels = this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
+			const startTime = Date.now();
+			const contextEstimate = {
+				usedTokens: calculateUsedTokens(this.messages),
+				contextWindow: this.model.contextWindow ?? 128000,
+			};
 			const decision = await this.#routingCoordinator.evaluateTurn({
 				anchorModel,
 				mode: routingMode,
 				prompt: expandedText,
 				hasImages: options?.images && options.images.length > 0,
 				availableModels,
-				customPools: (settings.get("routing.pools") as any) ?? {},
-				profilerMode: (settings.get("routing.profiler") as any) ?? "hybrid",
-				contextEstimate: {
-					usedTokens: Math.round(
-						this.messages.reduce((acc, m) => {
-							if ("content" in m && typeof m.content === "string") {
-								return acc + m.content.length;
-							}
-							return acc;
-						}, 0) / 4,
-					),
-					contextWindow: this.model.contextWindow ?? 128000,
-				},
+				customPools: validateCustomPools(this.settings.get("routing.pools")),
+				disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
+				familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
+				profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
+				contextEstimate,
 				getModelContextWindow: (modelId: string) => {
 					const found = this.#modelRegistry
 						.getAvailable()
 						.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
 					return found?.contextWindow ?? 128000;
 				},
-				mockClassifierRunner: async (utilityModel: string, promptText: string) => {
-					try {
-						const resolved = this.#modelRegistry
-							.getAvailable()
-							.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
-						if (!resolved) return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
-						const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
-						if (!apiKey) return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
-						const res = await completeSimple(
-							resolved,
-							{
-								messages: [
-									{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() },
-								],
-							},
-							{ apiKey },
-						);
-						return res.content
-							.filter(c => c.type === "text")
-							.map(c => (c as TextContent).text)
-							.join("");
-					} catch {
-						return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
+				runRoutingClassifier: async (utilityModel: string, promptText: string) => {
+					const resolved = this.#modelRegistry
+						.getAvailable()
+						.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
+					if (!resolved) throw new Error("Classifier model not found");
+					const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
+					if (!apiKey) throw new Error("No API key for classifier model");
+
+					const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
+
+					const res = await completeSimple(
+						resolved,
+						{
+							systemPrompt: systemInstruction,
+							messages: [{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() }],
+						},
+						{ apiKey },
+					);
+					const rawText = res.content
+						.filter(c => c.type === "text")
+						.map(c => (c as TextContent).text)
+						.join("");
+
+					const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+					if (jsonMatch) {
+						JSON.parse(jsonMatch[0]); // Check validity
+						return jsonMatch[0];
 					}
+					throw new Error("Classifier returned malformed JSON");
 				},
-				downshiftAfterTurns: (settings.get("routing.downshiftAfterTurns") as number) ?? 2,
+				downshiftAfterTurns: (this.settings.get("routing.downshiftAfterTurns") as number) ?? 2,
 			});
+			const durationMs = Date.now() - startTime;
 
 			this.sessionManager.appendCustomEntry("routing_state", this.#routingCoordinator.getState());
 
@@ -2740,6 +2741,12 @@ export class AgentSession {
 				effectiveTier: decision.effectiveTier,
 				selectedModel: decision.selectedModel,
 				reasons: decision.reasons,
+				delegated: !!decision.delegation,
+				escalated: decision.reasons.some(
+					r => r === "context_capacity_promotion" || r === "escalation_floor_active",
+				),
+				contextTokens: contextEstimate.usedTokens,
+				durationMs,
 			} as any).catch(() => {});
 
 			if (decision.applied && decision.selectedModel && decision.selectedModel !== anchorModel) {
@@ -2747,7 +2754,60 @@ export class AgentSession {
 					.getAvailable()
 					.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
 				if (targetModel) {
-					await this.setModel(targetModel, "default", { source: "routing" });
+					await this.setModelRoutingSwitch(targetModel);
+				}
+			}
+
+			if (
+				decision.applied &&
+				decision.delegation &&
+				(this.settings.get("routing.delegation") as string) === "read-only"
+			) {
+				const maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
+				const results = await executeReadOnlyDelegationPlan(
+					decision.delegation,
+					async subtaskPrompt => {
+						const utilityModelId = decision.poolId
+							? (this.settings.get("routing.pools") as any)?.[decision.poolId]?.tiers?.utility
+							: undefined;
+						const resolvedUtility = utilityModelId
+							? this.#modelRegistry
+									.getAvailable()
+									.find(m => `${m.provider}/${m.id}` === utilityModelId || m.id === utilityModelId)
+							: this.model;
+						if (!resolvedUtility) return "Delegation failed: no model.";
+						const apiKey = await this.#modelRegistry.getApiKey(resolvedUtility, this.sessionId);
+						if (!apiKey) return "Delegation failed: no API key.";
+
+						const res = await completeSimple(
+							resolvedUtility,
+							{
+								messages: [
+									{ role: "user", content: [{ type: "text", text: subtaskPrompt }], timestamp: Date.now() },
+								],
+							},
+							{ apiKey },
+						);
+						return res.content
+							.filter(c => c.type === "text")
+							.map(c => (c as TextContent).text)
+							.join("");
+					},
+					maxTasks,
+				);
+
+				if (results.length > 0) {
+					const delegationOutput = `\n\n<delegation_results>\n${JSON.stringify(results, null, 2)}\n</delegation_results>`;
+					expandedText += delegationOutput;
+					const textBlock = userContent.find(c => c.type === "text") as Extract<
+						(typeof userContent)[0],
+						{ type: "text" }
+					>;
+					if (textBlock) {
+						textBlock.text += delegationOutput;
+					} else {
+						userContent.push({ type: "text", text: delegationOutput });
+					}
 				}
 			}
 		}
@@ -3714,6 +3774,26 @@ export class AgentSession {
 
 		// Apply explicit thinking level, or re-clamp current level to new model's capabilities
 		this.setThinkingLevel(thinkingLevel ?? this.thinkingLevel);
+		await this.#syncEditToolModeAfterModelChange(previousEditMode);
+	}
+
+	/**
+	 * Temporarily set model from automated routing, preserving original manual model state.
+	 * Does NOT overwrite manual pin or retry fallback original selector.
+	 */
+	async setModelRoutingSwitch(model: Model): Promise<void> {
+		const previousEditMode = this.#resolveActiveEditMode();
+		const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+		if (!apiKey) {
+			throw new Error(`No API key for ${model.provider}/${model.id}`);
+		}
+
+		// DO NOT clear active retry fallback - routing is a transient optimization
+		this.#setModelWithProviderSessionReset(model, "runtime-switch");
+		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, "routing_switch");
+		this.settings.getStorage()?.recordModelUsage(`${model.provider}/${model.id}`);
+
+		this.setThinkingLevel(this.thinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 	}
 
@@ -6889,4 +6969,32 @@ export class AgentSession {
 	get extensionRunner(): ExtensionRunner | undefined {
 		return this.#extensionRunner;
 	}
+}
+
+/**
+ * Calculates a rough estimate of tokens used in a message array.
+ * @internal
+ */
+export function calculateUsedTokens(messages: any[]): number {
+	const countTextLength = (content: any): number => {
+		if (typeof content === "string") {
+			return content.length;
+		}
+		if (Array.isArray(content)) {
+			return content.reduce((sum: number, block: any) => sum + countTextLength(block), 0);
+		}
+		if (content && typeof content === "object") {
+			if (content.type === "text" && typeof content.text === "string") {
+				return content.text.length;
+			}
+		}
+		return 0;
+	};
+
+	return Math.round(
+		messages.reduce((acc: number, m: any) => {
+			if (!("content" in m) || !m.content) return acc;
+			return acc + countTextLength(m.content);
+		}, 0) / 4,
+	);
 }

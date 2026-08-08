@@ -74,6 +74,7 @@ export interface RoutingDecision {
 	source?: RoutingDecisionSource;
 	applied: boolean;
 	reasons: RoutingReasonCode[];
+	delegation?: ReadOnlyDelegationPlan;
 }
 
 export interface RoutingOutcomeEvidence {

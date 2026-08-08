@@ -52,7 +52,16 @@ export async function executeReadOnlyDelegationPlan(
 	const results: Array<{ id: string; result: string }> = [];
 	for (const task of plan.subtasks.slice(0, maxTasks)) {
 		try {
-			const res = await executor(task.title);
+			const promptPayload = [
+				`Task: ${task.title}`,
+				task.description ? `Description: ${task.description}` : "",
+				task.targetFilesOrPaths && task.targetFilesOrPaths.length > 0
+					? `Target Files: ${task.targetFilesOrPaths.join(", ")}`
+					: "",
+			]
+				.filter(Boolean)
+				.join("\n");
+			const res = await executor(promptPayload);
 			results.push({ id: task.id, result: res });
 		} catch (err) {
 			results.push({ id: task.id, result: `Failed: ${String(err)}` });

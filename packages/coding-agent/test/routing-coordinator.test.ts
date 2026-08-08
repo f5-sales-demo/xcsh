@@ -3,14 +3,14 @@ import { RoutingCoordinator } from "../src/routing/coordinator";
 import { RoutingStateMachine } from "../src/routing/state-machine";
 
 describe("Routing Coordinator (I01)", () => {
-	const available = ["gpt-4o-mini", "gpt-4o", "o3-mini"];
+	const available = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"];
 
 	it("should pass through unchanged when routing mode is 'off'", async () => {
 		const sm = new RoutingStateMachine();
 		const coordinator = new RoutingCoordinator({ stateMachine: sm });
 
 		const decision = await coordinator.evaluateTurn({
-			anchorModel: "openai/gpt-4o",
+			anchorModel: "openai/gpt-5.6",
 			mode: "off",
 			prompt: "Summarize file",
 			availableModels: available,
@@ -18,7 +18,7 @@ describe("Routing Coordinator (I01)", () => {
 
 		expect(decision.mode).toBe("off");
 		expect(decision.applied).toBe(false);
-		expect(decision.selectedModel).toBe("openai/gpt-4o");
+		expect(decision.selectedModel).toBe("openai/gpt-5.6");
 		expect(decision.reasons).toContain("mode_off");
 	});
 
@@ -27,7 +27,7 @@ describe("Routing Coordinator (I01)", () => {
 		const coordinator = new RoutingCoordinator({ stateMachine: sm });
 
 		const decision = await coordinator.evaluateTurn({
-			anchorModel: "openai/gpt-4o",
+			anchorModel: "openai/gpt-5.6",
 			mode: "shadow",
 			prompt: "Summarize README.md", // simple read -> utility
 			availableModels: available,
@@ -49,7 +49,7 @@ describe("Routing Coordinator (I01)", () => {
 		const coordinator = new RoutingCoordinator({ stateMachine: sm });
 
 		const decision = await coordinator.evaluateTurn({
-			anchorModel: "openai/gpt-4o",
+			anchorModel: "openai/gpt-5.6",
 			mode: "auto",
 			prompt: "Summarize README.md", // simple read -> utility
 			availableModels: available,
@@ -59,7 +59,7 @@ describe("Routing Coordinator (I01)", () => {
 		expect(decision.applied).toBe(true);
 		expect(decision.desiredTier).toBe("utility");
 		expect(decision.effectiveTier).toBe("utility");
-		expect(decision.selectedModel).toBe("openai/gpt-4o-mini");
+		expect(decision.selectedModel).toBe("openai/gpt-5.6-luna");
 	});
 
 	it("should respect manual pin until cleared", async () => {
@@ -69,7 +69,7 @@ describe("Routing Coordinator (I01)", () => {
 		const coordinator = new RoutingCoordinator({ stateMachine: sm });
 
 		const decision = await coordinator.evaluateTurn({
-			anchorModel: "openai/gpt-4o",
+			anchorModel: "openai/gpt-5.6",
 			mode: "auto",
 			prompt: "Summarize README.md",
 			availableModels: available,
@@ -86,7 +86,7 @@ describe("Routing Coordinator (I01)", () => {
 
 		// Degraded availability (0 available models) causes tier resolution to fail
 		await coordinator.evaluateTurn({
-			anchorModel: "openai/gpt-4o",
+			anchorModel: "openai/gpt-5.6",
 			mode: "auto",
 			prompt: "Simple task", // Drives desired utility -> triggering downshift calculation
 			availableModels: [],

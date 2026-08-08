@@ -4,7 +4,7 @@ import type { RoutingPoolConfig, RoutingTier, TaskProfile } from "./types";
 export interface HybridClassifierOptions extends ProfilerInput {
 	pool?: RoutingPoolConfig;
 	profilerMode?: "rules" | "hybrid";
-	mockClassifierRunner?: (utilityModel: string, prompt: string) => Promise<string>;
+	runRoutingClassifier?: (utilityModel: string, prompt: string) => Promise<string>;
 }
 
 export async function classifyTaskHybrid(options: HybridClassifierOptions): Promise<TaskProfile> {
@@ -22,7 +22,7 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 
 	// 2. Hybrid mode and ambiguous profile (31..69) -> call utility model via runner
 	const runner =
-		options.mockClassifierRunner ??
+		options.runRoutingClassifier ??
 		(async (_utilityModel: string, _prompt: string) => {
 			return JSON.stringify({ complexityScore: 50, confidence: 0.8 });
 		});
@@ -53,7 +53,10 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 			confidence,
 			reasons: [...baseProfile.reasons, "classifier_ambiguous_resolved"],
 		};
-	} catch (_err) {
+	} catch (err: unknown) {
+		if (err instanceof Error && err.name === "AbortError") {
+			throw err;
+		}
 		return {
 			...baseProfile,
 			reasons: [...baseProfile.reasons, "classifier_fallback_malformed"],

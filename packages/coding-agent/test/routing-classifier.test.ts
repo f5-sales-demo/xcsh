@@ -24,7 +24,7 @@ describe("Hybrid Classifier (P04)", () => {
 			prompt: "Add formatting helper",
 			pool: samplePool,
 			profilerMode: "rules",
-			mockClassifierRunner: mockRunner,
+			runRoutingClassifier: mockRunner,
 		});
 
 		expect(called).toBe(false);
@@ -42,7 +42,7 @@ describe("Hybrid Classifier (P04)", () => {
 			prompt: "Add a new formatting helper to utils",
 			pool: samplePool,
 			profilerMode: "hybrid",
-			mockClassifierRunner: mockRunner,
+			runRoutingClassifier: mockRunner,
 		});
 
 		expect(called).toBe(true);
@@ -59,7 +59,7 @@ describe("Hybrid Classifier (P04)", () => {
 			prompt: "Add formatting helper",
 			pool: samplePool,
 			profilerMode: "hybrid",
-			mockClassifierRunner: mockRunnerLowConfidence,
+			runRoutingClassifier: mockRunnerLowConfidence,
 		});
 
 		expect(profile.desiredTier).toBe("balanced");

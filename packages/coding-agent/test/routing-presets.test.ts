@@ -10,10 +10,10 @@ describe("Routing Presets (R03)", () => {
 	});
 
 	it("should resolve pool from explicit selector or anchor model", () => {
-		const openaiPool = resolveModelPool("openai/gpt-4o", {});
+		const openaiPool = resolveModelPool("openai/gpt-5.6", {});
 		expect(openaiPool).toBeDefined();
-		expect(openaiPool?.tiers.utility).toBe("gpt-4o-mini");
-		expect(openaiPool?.tiers.balanced).toBe("gpt-4o");
+		expect(openaiPool?.tiers.utility).toBe("gpt-5.6-luna");
+		expect(openaiPool?.tiers.balanced).toBe("gpt-5.6-terra");
 
 		const litellmOpenaiPool = resolveModelPool("litellm/gpt-5.6-terra", {});
 		expect(litellmOpenaiPool).toBeDefined();
@@ -50,7 +50,7 @@ describe("Routing Presets (R03)", () => {
 		const customPools = {
 			"untiered-pool": { id: "untiered-pool", provider: "openai" } as any,
 		};
-		const pool = resolveModelPool("openai/gpt-4o", customPools);
+		const pool = resolveModelPool("openai/gpt-5.6", customPools);
 		expect(pool).toBeDefined();
 		expect(pool?.id).toBe("openai/gpt-5.6");
 	});
@@ -58,5 +58,48 @@ describe("Routing Presets (R03)", () => {
 	it("should NOT infer tiers from arbitrary unknown model names", () => {
 		const unknownPool = resolveModelPool("my-custom-provider/unknown-model-xyz", {});
 		expect(unknownPool).toBeUndefined();
+	});
+
+	it("should filter out pools in disabledPresets list", () => {
+		const customPools = {
+			"my-openai": {
+				id: "my-openai",
+				provider: "openai",
+				tiers: {
+					utility: "gpt-4o-mini",
+					balanced: "gpt-4o",
+					frontier: "o3-mini",
+				},
+			},
+		};
+		// Disabled custom pool -> falls back to builtin
+		const disabledCustom = resolveModelPool("openai/gpt-5.6-terra", customPools, ["my-openai"]);
+		expect(disabledCustom?.id).toBe("openai/gpt-5.6");
+
+		// Disabled builtin pool -> falls back to undefined
+		const disabledBuiltin = resolveModelPool("openai/gpt-5.6", {}, ["openai/gpt-5.6"]);
+		expect(disabledBuiltin).toBeUndefined();
+	});
+
+	it("should skip mixed pools when familyPolicy is sticky", () => {
+		const customPools = {
+			"mixed-pool": {
+				id: "mixed-pool",
+				provider: "openai",
+				allowMixed: true,
+				tiers: {
+					utility: "gpt-4o-mini",
+					balanced: "claude-3-5-sonnet",
+					frontier: "o3-mini",
+				},
+			},
+		};
+		// sticky policy skips allowMixed=true pool
+		const sticky = resolveModelPool("mixed-pool", customPools, [], "sticky");
+		expect(sticky?.id).not.toBe("mixed-pool");
+
+		// configured-mixed policy matches the allowMixed=true pool
+		const mixed = resolveModelPool("mixed-pool", customPools, [], "configured-mixed");
+		expect(mixed?.id).toBe("mixed-pool");
 	});
 });

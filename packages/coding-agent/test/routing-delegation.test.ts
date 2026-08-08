@@ -36,4 +36,34 @@ describe("Autonomous Delegation Policy (D01)", () => {
 		expect(validation.valid).toBe(false);
 		expect(validation.error).toContain("Exceeds max delegation subtasks");
 	});
+
+	it("should execute read-only delegation plan and format results", async () => {
+		const plan = {
+			reason: "Test",
+			subtasks: [
+				{
+					id: "test1",
+					title: "Read a file",
+					description: "Find the auth token",
+					targetFilesOrPaths: ["src/auth.ts"],
+				},
+			],
+		};
+
+		let executedPrompt = "";
+
+		const mockPerform = async (prompt: string) => {
+			executedPrompt = prompt;
+			return "Auth token is in line 5";
+		};
+
+		const { executeReadOnlyDelegationPlan } = await import("../src/routing/delegation");
+		const results = await executeReadOnlyDelegationPlan(plan, mockPerform);
+
+		expect(results).toHaveLength(1);
+		expect(results[0].id).toBe("test1");
+		expect(results[0].result).toBe("Auth token is in line 5");
+		expect(executedPrompt).toContain("Find the auth token");
+		expect(executedPrompt).toContain("src/auth.ts");
+	});
 });

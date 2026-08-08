@@ -5,9 +5,9 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 		id: "openai/gpt-5.6",
 		provider: "openai",
 		tiers: {
-			utility: "gpt-4o-mini",
-			balanced: "gpt-4o",
-			frontier: "o3-mini",
+			utility: "gpt-5.6-luna",
+			balanced: "gpt-5.6-terra",
+			frontier: "gpt-5.6-sol",
 		},
 	},
 	"anthropic/claude": {
@@ -40,6 +40,53 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 };
 
 /**
+ * Validate custom routing pools from settings.
+ */
+export function validateCustomPools(pools: any): Record<string, RoutingPoolConfig> {
+	if (typeof pools !== "object" || pools === null) return {};
+	const validPools: Record<string, RoutingPoolConfig> = {};
+	const seenIds = new Set<string>();
+
+	for (const [key, pool] of Object.entries(pools)) {
+		if (typeof pool !== "object" || pool === null) continue;
+		const p = pool as any;
+		if (typeof p.id !== "string") continue;
+		if (typeof p.tiers !== "object" || p.tiers === null) continue;
+		if (typeof p.tiers.utility !== "string") continue;
+		if (typeof p.tiers.balanced !== "string") continue;
+		if (typeof p.tiers.frontier !== "string") continue;
+
+		if (seenIds.has(p.id)) continue;
+
+		const allowMixed = typeof p.allowMixed === "boolean" ? p.allowMixed : false;
+		if (!allowMixed) {
+			const getPrefix = (model: string) => (model.includes("/") ? model.split("/")[0] : "");
+			const uPrefix = getPrefix(p.tiers.utility);
+			const bPrefix = getPrefix(p.tiers.balanced);
+			const fPrefix = getPrefix(p.tiers.frontier);
+
+			const prefixes = new Set([uPrefix, bPrefix, fPrefix].filter(Boolean));
+			if (prefixes.size > 1) {
+				continue;
+			}
+		}
+
+		seenIds.add(p.id);
+		validPools[key] = {
+			id: p.id,
+			provider: typeof p.provider === "string" ? p.provider : undefined,
+			allowMixed: typeof p.allowMixed === "boolean" ? p.allowMixed : undefined,
+			tiers: {
+				utility: p.tiers.utility,
+				balanced: p.tiers.balanced,
+				frontier: p.tiers.frontier,
+			},
+		};
+	}
+	return validPools;
+}
+
+/**
  * Resolve active pool for an anchor model string (e.g. "openai/gpt-4o" or "litellm/gpt-5.6-terra").
  * Custom overrides take precedence over built-in presets.
  * Returns undefined if model/provider is untiered or unknown.
@@ -47,6 +94,8 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 export function resolveModelPool(
 	anchorModel: string,
 	customPools: Record<string, RoutingPoolConfig> = {},
+	disabledPresets: readonly string[] = [],
+	familyPolicy: "sticky" | "configured-mixed" = "sticky",
 ): RoutingPoolConfig | undefined {
 	// 1. Extract provider and model name
 	let provider = "";
@@ -58,8 +107,10 @@ export function resolveModelPool(
 	}
 
 	// 2. Check custom pools first
-	for (const [_poolId, pool] of Object.entries(customPools)) {
+	for (const [poolId, pool] of Object.entries(customPools)) {
 		if (!pool?.tiers) continue;
+		if (disabledPresets.includes(poolId) || disabledPresets.includes(pool.id)) continue;
+		if (familyPolicy === "sticky" && pool.allowMixed) continue;
 		if (provider && pool.provider && pool.provider !== provider && pool.id !== anchorModel) {
 			continue;
 		}
@@ -82,6 +133,7 @@ export function resolveModelPool(
 
 	// 3. Match against built-in presets (enforcing provider prefix match if present)
 	for (const [presetId, pool] of Object.entries(BUILTIN_ROUTING_PRESETS)) {
+		if (disabledPresets.includes(presetId) || disabledPresets.includes(pool.id)) continue;
 		if (provider && pool.provider && pool.provider !== provider && presetId !== anchorModel) {
 			continue; // Provider mismatch!
 		}
