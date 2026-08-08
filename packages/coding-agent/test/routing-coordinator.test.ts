@@ -3,7 +3,7 @@ import { RoutingCoordinator } from "../src/routing/coordinator";
 import { RoutingStateMachine } from "../src/routing/state-machine";
 
 describe("Routing Coordinator (I01)", () => {
-	const available = ["gpt-4.1-mini", "gpt-4.1", "gpt-5-pro"];
+	const available = ["gpt-5.4-mini", "gpt-5.4", "gpt-5.6-sol"];
 
 	it("should pass through unchanged when routing mode is 'off'", async () => {
 		const sm = new RoutingStateMachine();
@@ -59,7 +59,7 @@ describe("Routing Coordinator (I01)", () => {
 		expect(decision.applied).toBe(true);
 		expect(decision.desiredTier).toBe("utility");
 		expect(decision.effectiveTier).toBe("utility");
-		expect(decision.selectedModel).toBe("openai/gpt-4.1-mini");
+		expect(decision.selectedModel).toBe("openai/gpt-5.4-mini");
 	});
 
 	it("should respect manual pin until cleared", async () => {
