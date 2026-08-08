@@ -8,6 +8,7 @@
  * - skill://<name>/<path> - Reads relative path within skill's baseDir
  */
 import * as path from "node:path";
+import { resolveSkillFromPath } from "../extensibility/skill-resolution";
 import type { Skill } from "../extensibility/skills";
 import type { InternalResource, InternalUrl, ProtocolHandler } from "./types";
 
@@ -54,39 +55,37 @@ export class SkillProtocolHandler implements ProtocolHandler {
 	async resolve(url: InternalUrl): Promise<InternalResource> {
 		const skills = this.options.getSkills();
 
-		// Extract skill name from host
-		const skillName = url.rawHost || url.hostname;
-		if (!skillName) {
+		const rawHost = url.rawHost || url.hostname || "";
+		const rawPathname = url.rawPathname || url.pathname || "";
+
+		if (!rawHost && !rawPathname) {
 			throw new Error("skill:// URL requires a skill name: skill://<name>");
 		}
 
-		// Find the skill
-		const skill = skills.find(s => s.name === skillName);
-		if (!skill) {
+		// Resolve skill using resilient matcher (handles exact, colon line-ranges, slash notation, aliases)
+		const match = resolveSkillFromPath(rawHost, rawPathname, skills);
+		if (!match) {
 			const available = skills.map(s => s.name);
 			const availableStr = available.length > 0 ? available.join(", ") : "none";
-			throw new Error(`Unknown skill: ${skillName}\nAvailable: ${availableStr}`);
+			const requested = rawHost + (rawPathname ? rawPathname : "");
+			throw new Error(`Unknown skill: ${requested}\nAvailable: ${availableStr}`);
 		}
 
-		// Determine the file to read
+		const { skill, relativePath } = match;
 		let targetPath: string;
-		const urlPath = url.pathname;
-		const hasRelativePath = urlPath && urlPath !== "/" && urlPath !== "";
 
-		if (hasRelativePath) {
-			// Read relative path within skill's baseDir
-			const relativePath = decodeURIComponent(urlPath.slice(1)); // Remove leading /
-			validateRelativePath(relativePath);
-			targetPath = path.join(skill.baseDir, relativePath);
+		if (relativePath) {
+			const decoded = decodeURIComponent(relativePath);
+			validateRelativePath(decoded);
+			targetPath = path.join(skill.baseDir, decoded);
 
-			// Verify the resolved path is still within baseDir
+			// Verify resolved path stays within skill baseDir
 			const resolvedPath = path.resolve(targetPath);
 			const resolvedBaseDir = path.resolve(skill.baseDir);
 			if (!resolvedPath.startsWith(resolvedBaseDir + path.sep) && resolvedPath !== resolvedBaseDir) {
 				throw new Error("Path traversal is not allowed");
 			}
 		} else {
-			// Read SKILL.md
 			targetPath = skill.filePath;
 		}
 
