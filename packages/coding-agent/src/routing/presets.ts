@@ -16,7 +16,7 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 		tiers: {
 			utility: "claude-3.5-haiku",
 			balanced: "claude-3.5-sonnet",
-			frontier: "claude-3.7-sonnet",
+			frontier: "claude-3-opus-20240229",
 		},
 	},
 	"litellm/openai": {

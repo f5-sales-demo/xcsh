@@ -41,8 +41,9 @@ export function validateDelegationPlan(plan: ReadOnlyDelegationPlan, maxTasks = 
 
 export async function executeReadOnlyDelegationPlan(
 	plan: ReadOnlyDelegationPlan,
-	executor: (subtaskPrompt: string) => Promise<string>,
+	executor: (subtaskPrompt: string, signal?: AbortSignal) => Promise<string>,
 	maxTasks = 3,
+	options?: { signal?: AbortSignal },
 ): Promise<Array<{ id: string; result: string }>> {
 	const validation = validateDelegationPlan(plan, maxTasks);
 	if (!validation.valid) {
@@ -51,6 +52,10 @@ export async function executeReadOnlyDelegationPlan(
 
 	const results: Array<{ id: string; result: string }> = [];
 	for (const task of plan.subtasks.slice(0, maxTasks)) {
+		if (options?.signal?.aborted) {
+			results.push({ id: task.id, result: "Failed: Aborted" });
+			continue;
+		}
 		try {
 			const promptPayload = [
 				`Task: ${task.title}`,
@@ -62,7 +67,7 @@ export async function executeReadOnlyDelegationPlan(
 			]
 				.filter(Boolean)
 				.join("\n");
-			const res = await executor(promptPayload);
+			const res = await executor(promptPayload, options?.signal);
 			results.push({ id: task.id, result: res });
 		} catch (err) {
 			results.push({ id: task.id, result: `Failed: ${String(err)}` });

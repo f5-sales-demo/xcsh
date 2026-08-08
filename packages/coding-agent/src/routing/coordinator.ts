@@ -15,6 +15,7 @@ export interface EvaluateTurnOptions {
 	contextEstimate?: {
 		usedTokens: number;
 		contextWindow: number;
+		reserveTokens?: number;
 	};
 	hasImages?: boolean;
 	priorRejection?: boolean;

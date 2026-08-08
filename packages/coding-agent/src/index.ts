@@ -38,6 +38,7 @@ export * from "./modes";
 export * from "./modes/components";
 // Theme utilities for custom tools
 export * from "./modes/theme/theme";
+export type { RoutingTier } from "./routing/types";
 // SDK for programmatic usage
 export * from "./sdk";
 export * from "./session/agent-session";
