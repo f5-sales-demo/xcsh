@@ -11,9 +11,9 @@ Key decisions:
 - Routing applies to any provider with an explicit tier-pool definition.
 - Ship reviewed presets; never infer tiers from arbitrary model names.
 - Initial presets:
-    - OpenAI: Luna → utility, Terra → balanced, Sol → frontier.
-    - Anthropic: Haiku → utility, Sonnet → balanced, Opus → frontier.
-    - LiteLLM: separate OpenAI and Anthropic pools under the same litellm provider.
+  - OpenAI: Luna → utility, Terra → balanced, Sol → frontier.
+  - Anthropic: Haiku → utility, Sonnet → balanced, Opus → frontier.
+  - LiteLLM: separate OpenAI and Anthropic pools under the same litellm provider.
 
 - Direct OpenAI and Anthropic use the same router through provider-specific pools.
 - Untiered providers and models outside a pool pass through unchanged.
