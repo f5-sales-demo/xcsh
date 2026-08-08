@@ -10,20 +10,20 @@ describe("Routing Presets (R03)", () => {
 	});
 
 	it("should resolve pool from explicit selector or anchor model", () => {
-		const openaiPool = resolveModelPool("openai/gpt-5.6", {});
+		const openaiPool = resolveModelPool("openai/gpt-4.1", {});
 		expect(openaiPool).toBeDefined();
 		expect(openaiPool?.tiers.utility).toBe("gpt-4.1-mini");
 		expect(openaiPool?.tiers.balanced).toBe("gpt-4.1");
 
 		const litellmOpenaiPool = resolveModelPool("litellm/openai", {});
 		expect(litellmOpenaiPool).toBeDefined();
-		expect(litellmOpenaiPool?.tiers.utility).toBe("gpt-4.1-mini");
-		expect(litellmOpenaiPool?.tiers.balanced).toBe("gpt-4.1");
-		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-5-pro");
+		expect(litellmOpenaiPool?.tiers.utility).toBe("luna");
+		expect(litellmOpenaiPool?.tiers.balanced).toBe("terra");
+		expect(litellmOpenaiPool?.tiers.frontier).toBe("sol");
 	});
 
 	it("should NOT cross provider families when anchor model has explicit provider prefix", () => {
-		const litellmClaudePool = resolveModelPool("litellm/claude-3.5-sonnet", {});
+		const litellmClaudePool = resolveModelPool("litellm/claude-3-7-sonnet", {});
 		expect(litellmClaudePool).toBeDefined();
 		expect(litellmClaudePool?.id).toBe("litellm/anthropic");
 		expect(litellmClaudePool?.provider).toBe("litellm");

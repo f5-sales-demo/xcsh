@@ -23,18 +23,18 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 		id: "litellm/openai",
 		provider: "litellm",
 		tiers: {
-			utility: "gpt-4.1-mini",
-			balanced: "gpt-4.1",
-			frontier: "gpt-5-pro",
+			utility: "luna",
+			balanced: "terra",
+			frontier: "sol",
 		},
 	},
 	"litellm/anthropic": {
 		id: "litellm/anthropic",
 		provider: "litellm",
 		tiers: {
-			utility: "claude-3.5-haiku",
-			balanced: "claude-3.5-sonnet",
-			frontier: "claude-3.7-sonnet",
+			utility: "claude-3-5-haiku",
+			balanced: "claude-3-7-sonnet",
+			frontier: "claude-opus-4-5",
 		},
 	},
 };

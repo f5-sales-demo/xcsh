@@ -111,18 +111,5 @@ export function resolveTierModel(
 		}
 	}
 
-	// Fallback to highest available tier if no higher tier found
-	for (let i = TIER_ORDER.length - 1; i >= 0; i--) {
-		const tier = TIER_ORDER[i];
-		if (availableTiers[tier]) {
-			return {
-				selectedModel: formatModel(pool.tiers[tier]),
-				effectiveTier: tier,
-				degraded: false,
-				availableTiersCount: availableCount,
-			};
-		}
-	}
-
 	return { degraded: true, availableTiersCount: 0 };
 }

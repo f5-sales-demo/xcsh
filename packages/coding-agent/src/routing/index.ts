@@ -1,6 +1,6 @@
 export * from "./classifier";
 export * from "./commands";
-export * from "./config";
+
 export * from "./context-filter";
 export * from "./coordinator";
 export * from "./delegation";
