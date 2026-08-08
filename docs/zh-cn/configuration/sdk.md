@@ -1,32 +1,33 @@
 ---
 title: SDK
-description: 用于在 xcsh 编码智能体运行时之上构建自定义智能体和集成的 SDK。
+description: SDK for building custom agents and integrations on top of the xcsh coding agent runtime.
 sidebar:
   order: 6
   label: SDK
+
 i18n:
-  sourceHash: 80f3a4374241
-  translator: machine
+  sourceHash: "955010e30dde"
+  translator: "machine"
 ---
 
 # SDK
 
-SDK 是 `@f5-sales-demo/xcsh` 的进程内集成接口。
-当您希望从自己的 Bun/Node 进程直接访问智能体状态、事件流、工具连接和会话控制时，请使用它。
+The SDK is the in-process integration surface for `@f5-sales-demo/xcsh`.
+Use it when you want direct access to agent state, event streaming, tool wiring, and session control from your own Bun/Node process.
 
-如果您需要跨语言/进程隔离，请改用 RPC 模式。
+If you need cross-language/process isolation, use RPC mode instead.
 
-## 安装
+## Installation
 
 ```bash
 bun add @f5-sales-demo/xcsh
 ```
 
-## 入口点
+## Entry points
 
-`@f5-sales-demo/xcsh` 从包根目录（以及通过 `@f5-sales-demo/xcsh`）导出 SDK API。
+`@f5-sales-demo/xcsh` exports the SDK APIs from the package root.
 
-嵌入方的核心导出：
+Core exports for embedders:
 
 - `createAgentSession`
 - `SessionManager`
@@ -34,10 +35,10 @@ bun add @f5-sales-demo/xcsh
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- 发现辅助函数（`discoverExtensions`、`discoverSkills`、`discoverContextFiles`、`discoverPromptTemplates`、`discoverSlashCommands`、`discoverCustomTSCommands`、`discoverMCPServers`）
-- 工具工厂接口（`createTools`、`BUILTIN_TOOLS`、工具类）
+- Discovery helpers (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- Tool factory surface (`createTools`, `BUILTIN_TOOLS`, tool classes)
 
-## 快速入门（自动发现默认值）
+## Quick start (auto-discovery defaults)
 
 ```ts
 import { createAgentSession } from "@f5-sales-demo/xcsh";
@@ -59,39 +60,39 @@ unsubscribe();
 await session.dispose();
 ```
 
-## `createAgentSession()` 默认发现的内容
+## What `createAgentSession()` discovers by default
 
-`createAgentSession()` 遵循"提供则覆盖，省略则自动发现"的原则。
+`createAgentSession()` follows “provide to override, omit to discover”.
 
-如果省略，它将解析：
+If omitted, it resolves:
 
-- `cwd`：`getProjectDir()`
-- `agentDir`：`~/.xcsh/agent`（通过 `getAgentDir()`）
-- `authStorage`：`discoverAuthStorage(agentDir)`
-- `modelRegistry`：`new ModelRegistry(authStorage)` + `await refresh()`
-- `settings`：`await Settings.init({ cwd, agentDir })`
-- `sessionManager`：`SessionManager.create(cwd)`（基于文件）
-- 技能/上下文文件/提示模板/斜杠命令/扩展/自定义 TS 命令
-- 通过 `createTools(...)` 获取内置工具
-- MCP 工具（默认启用）
-- LSP 集成（默认启用）
+- `cwd`: `getProjectDir()`
+- `agentDir`: `~/.xcsh/agent` (via `getAgentDir()`)
+- `authStorage`: `discoverAuthStorage(agentDir)`
+- `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
+- `settings`: `await Settings.init({ cwd, agentDir })`
+- `sessionManager`: `SessionManager.create(cwd)` (file-backed)
+- skills/context files/prompt templates/slash commands/extensions/custom TS commands
+- built-in tools via `createTools(...)`
+- MCP tools (enabled by default)
+- LSP integration (enabled by default)
 
-### 必填与可选输入
+### Required vs optional inputs
 
-通常您只需提供想要控制的部分：
+Typically you must provide only what you want to control:
 
-- **必须提供**：最小会话无需提供任何内容
-- **嵌入方通常显式提供**：
-    - `sessionManager`（如果您需要内存存储或自定义位置）
-    - `authStorage` + `modelRegistry`（如果您自行管理凭据/模型生命周期）
-    - `model` 或 `modelPattern`（如果需要确定性的模型选择）
-    - `settings`（如果您需要隔离/测试配置）
+- **Must provide**: nothing for a minimal session
+- **Usually provide explicitly** in embedders:
+    - `sessionManager` (if you need in-memory or custom location)
+    - `authStorage` + `modelRegistry` (if you own credential/model lifecycle)
+    - `model` or `modelPattern` (if deterministic model selection matters)
+    - `settings` (if you need isolated/test config)
 
-## 会话管理器行为（持久化与内存）
+## Session manager behavior (persistent vs in-memory)
 
-`AgentSession` 始终使用 `SessionManager`；行为取决于您使用的工厂方法。
+`AgentSession` always uses a `SessionManager`; behavior depends on which factory you use.
 
-### 基于文件（默认）
+### File-backed (default)
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
@@ -100,14 +101,14 @@ const { session } = await createAgentSession({
  sessionManager: SessionManager.create(process.cwd()),
 });
 
-console.log(session.sessionFile); // 绝对 .jsonl 路径
+console.log(session.sessionFile); // absolute .jsonl path
 ```
 
-- 将对话/消息/状态增量持久化到会话文件中。
-- 支持恢复/打开/列出/分叉工作流。
-- `session.sessionFile` 已定义。
+- Persists conversation/messages/state deltas to session files.
+- Supports resume/open/list/fork workflows.
+- `session.sessionFile` is defined.
 
-### 内存存储
+### In-memory
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
@@ -119,11 +120,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- 不进行文件系统持久化。
-- 适用于测试、短暂的工作进程、请求范围的智能体。
-- 会话方法仍然有效，但持久化相关行为（文件恢复/分叉路径）自然受到限制。
+- No filesystem persistence.
+- Useful for tests, ephemeral workers, request-scoped agents.
+- Session methods still work, but persistence-specific behaviors (file resume/fork paths) are naturally limited.
 
-### 恢复/打开/列出辅助函数
+### Resume/open/list helpers
 
 ```ts
 import { SessionManager } from "@f5-sales-demo/xcsh";
@@ -133,11 +134,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## 模型与认证连接
+## Model and auth wiring
 
-`createAgentSession()` 使用 `ModelRegistry` + `AuthStorage` 进行模型选择和 API 密钥解析。
+`createAgentSession()` uses `ModelRegistry` + `AuthStorage` for model selection and API key resolution.
 
-### 显式连接
+### Explicit wiring
 
 ```ts
 import {
@@ -163,28 +164,28 @@ const { session } = await createAgentSession({
 });
 ```
 
-### 省略 `model` 时的选择顺序
+### Selection order when `model` is omitted
 
-当未提供显式 `model`/`modelPattern` 时：
+When no explicit `model`/`modelPattern` is provided:
 
-1. 从现有会话中恢复模型（如果可恢复且密钥可用）
-2. 设置中的默认模型角色（`default`）
-3. 第一个具有有效认证的可用模型
+1. restore model from existing session (if restorable + key available)
+2. settings default model role (`default`)
+3. first available model with valid auth
 
-如果恢复失败，`modelFallbackMessage` 将解释回退原因。
+If restore fails, `modelFallbackMessage` explains fallback.
 
-### 认证优先级
+### Auth priority
 
-`AuthStorage.getApiKey(...)` 按以下顺序解析：
+`AuthStorage.getApiKey(...)` resolves in this order:
 
-1. 运行时覆盖（`setRuntimeApiKey`）
-2. `agent.db` 中存储的凭据
-3. 提供方环境变量
-4. 自定义提供方解析器回退（如果已配置）
+1. runtime override (`setRuntimeApiKey`)
+2. stored credentials in `agent.db`
+3. provider environment variables
+4. custom-provider resolver fallback (if configured)
 
-## 事件订阅模型
+## Event subscription model
 
-使用 `session.subscribe(listener)` 订阅；它返回一个取消订阅函数。
+Subscribe with `session.subscribe(listener)`; it returns an unsubscribe function.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -202,29 +203,29 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent` 包含核心 `AgentEvent` 以及会话级事件：
+`AgentSessionEvent` includes core `AgentEvent` plus session-level events:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-## 提示生命周期
+## Prompt lifecycle
 
-`session.prompt(text, options?)` 是主要入口点。
+`session.prompt(text, options?)` is the primary entry point.
 
-行为：
+Behavior:
 
-1. 可选的命令/模板展开（`/` 命令、自定义命令、文件斜杠命令、提示模板）
-2. 如果当前正在流式传输：
-    - 需要 `streamingBehavior: "steer" | "followUp"`
-    - 入队而不是丢弃工作
-3. 如果空闲：
-    - 验证模型 + API 密钥
-    - 追加用户消息
-    - 启动智能体轮次
+1. optional command/template expansion (`/` commands, custom commands, file slash commands, prompt templates)
+2. if currently streaming:
+    - requires `streamingBehavior: "steer" | "followUp"`
+    - queues instead of throwing work away
+3. if idle:
+    - validates model + API key
+    - appends user message
+    - starts agent turn
 
-相关 API：
+Related APIs:
 
 - `sendUserMessage(content, { deliverAs? })`
 - `steer(text, images?)`
@@ -232,14 +233,14 @@ const unsubscribe = session.subscribe(event => {
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## 工具与扩展集成
+## Tools and extension integration
 
-### 内置工具与过滤
+### Built-ins and filtering
 
-- 内置工具来自 `createTools(...)` 和 `BUILTIN_TOOLS`。
-- `toolNames` 作为内置工具的允许列表。
-- `customTools` 和扩展注册的工具仍会包含在内。
-- 隐藏工具（例如 `submit_result`）需要显式选择启用，除非选项中要求。
+- Built-ins come from `createTools(...)` and `BUILTIN_TOOLS`.
+- `toolNames` acts as an allowlist for built-ins.
+- `customTools` and extension-registered tools are still included.
+- Hidden tools (for example `submit_result`) are opt-in unless required by options.
 
 ```ts
 const { session } = await createAgentSession({
@@ -248,27 +249,27 @@ const { session } = await createAgentSession({
 });
 ```
 
-### 扩展
+### Extensions
 
-- `extensions`：内联 `ExtensionFactory[]`
-- `additionalExtensionPaths`：加载额外的扩展文件
-- `disableExtensionDiscovery`：禁用自动扩展扫描
-- `preloadedExtensions`：复用已加载的扩展集
+- `extensions`: inline `ExtensionFactory[]`
+- `additionalExtensionPaths`: load extra extension files
+- `disableExtensionDiscovery`: disable automatic extension scanning
+- `preloadedExtensions`: reuse already loaded extension set
 
-### 运行时工具集变更
+### Runtime tool set changes
 
-`AgentSession` 支持运行时激活更新：
+`AgentSession` supports runtime activation updates:
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-系统提示将重新构建以反映活动工具的变化。
+System prompt is rebuilt to reflect active tool changes.
 
-## 发现辅助函数
+## Discovery helpers
 
-当您希望进行部分控制而无需重新创建内部发现逻辑时，请使用这些函数：
+Use these when you want partial control without recreating internal discovery logic:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -280,18 +281,18 @@ const { session } = await createAgentSession({
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## 子智能体相关选项
+## Subagent-oriented options
 
-适用于构建编排器的 SDK 使用方（类似于任务执行器流程）：
+For SDK consumers building orchestrators (similar to task executor flow):
 
-- `outputSchema`：将结构化输出期望传递到工具上下文中
-- `requireSubmitResultTool`：强制包含 `submit_result` 工具
-- `taskDepth`：嵌套任务会话的递归深度上下文
-- `parentTaskPrefix`：嵌套任务输出的制品命名前缀
+- `outputSchema`: passes structured output expectation into tool context
+- `requireSubmitResultTool`: forces `submit_result` tool inclusion
+- `taskDepth`: recursion-depth context for nested task sessions
+- `parentTaskPrefix`: artifact naming prefix for nested task outputs
 
-这些对于普通的单智能体嵌入是可选的。
+These are optional for normal single-agent embedding.
 
-## `createAgentSession()` 返回值
+## `createAgentSession()` return value
 
 ```ts
 type CreateAgentSessionResult = {
@@ -304,9 +305,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-仅当您的嵌入方提供工具/扩展应调用的 UI 能力时，才使用 `setToolUIContext(...)`。
+Use `setToolUIContext(...)` only if your embedder provides UI capabilities that tools/extensions should call into.
 
-## 最小受控嵌入示例
+## Minimal controlled embed example
 
 ```ts
 import {

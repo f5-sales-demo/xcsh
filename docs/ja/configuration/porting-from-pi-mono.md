@@ -1,94 +1,96 @@
 ---
-title: pi-mono からの移植：実践的マージガイド
-description: pi-mono モノリポからの xcsh コードベースへのコード移行に関する実践的ガイドです。
+title: "Porting From pi-mono: A Practical Merge Guide"
+description: Practical guide for migrating code from the pi-mono monorepo into the xcsh codebase.
 sidebar:
   order: 9
-  label: pi-mono からの移植
+  label: Porting from pi-mono
+
 i18n:
-  sourceHash: fd4e8c09303d
-  translator: machine
+  sourceHash: "f93fbb10a575"
+  translator: "machine"
 ---
 
-# pi-mono からの移植：実践的マージガイド
+# Porting From pi-mono: A Practical Merge Guide
 
-このガイドは、pi-mono からこのリポジトリへ変更を移植するための再利用可能なチェックリストです。
-単一ファイル、フィーチャーブランチ、フルリリース同期など、あらゆるマージに使用してください。
+This guide is a repeatable checklist for porting changes from pi-mono into this repo.
+Use it for any merge: single file, feature branch, or full release sync.
 
-## 最終同期ポイント
+## Last Sync Point
 
-**コミット:** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
-**日付:** 2026-03-22
+**Commit:** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
+**Date:** 2026-03-22
 
-各同期の後にこのセクションを更新してください。前回の範囲を再利用しないでください。
+Update this section after each sync; do not reuse the previous range.
 
-新しい同期を開始する際は、このコミットから先のパッチを生成します：
+When starting a new sync, generate patches from this commit forward:
 
 ```bash
 git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > changes.patch
 ```
 
-## 0) スコープを定義する
+## 0) Define the scope
 
-- アップストリームの参照（コミット、タグ、または PR）を特定する。
-- 変更を予定しているパッケージやフォルダをリストアップする。
-- どの機能がスコープ内で、どの機能を意図的にスキップするかを決定する。
+- Identify the upstream reference (commit, tag, or PR).
+- List the packages or folders you plan to touch.
+- Decide which features are in-scope and which are intentionally skipped.
 
-## 1) コードを安全に持ち込む
+## 1) Bring code over safely
 
-- 丸ごとコピーではなく、クリーンで焦点を絞った diff を優先する。
-- ビルド成果物や生成ファイルのコピーを避ける。
-- アップストリームが新しいファイルを追加した場合は、明示的に追加し内容をレビューする。
+- Prefer a clean, focused diff rather than a wholesale copy.
+- Avoid copying built artifacts or generated files.
+- If upstream added new files, add them explicitly and review contents.
 
-## 2) インポート拡張子の規約に合わせる
+## 2) Match import extension conventions
 
-ほとんどのランタイム TypeScript ソースは内部インポートで `.js` を省略しますが、一部の test/bench エントリーポイントは ESM ランタイム互換性のために `.js` を保持しています。ローカルパッケージの既存スタイルに従い、拡張子を一括で除去しないでください。
+Most runtime TypeScript sources omit `.js` in internal imports, but some test/bench entrypoints keep `.js` for ESM
+runtime compatibility. Follow the local package’s existing style; do not blanket-strip extensions.
 
-- `packages/coding-agent` のランタイムソースでは、非 TS アセットのインポートでない限り、内部インポートは拡張子なしにする。
-- `packages/tui/test` と `packages/natives/bench` では、周囲のファイルが既に使用している場合は `.js` を保持する。
-- ツールが要求する場合は実際のファイル拡張子を保持する（例：`.json`、`.css`、`.md` テキスト埋め込み）。
-- 例：`import { x } from "./foo.js";` → `import { x } from "./foo";`（パッケージの規約が拡張子なしの場合のみ）。
+- In `packages/coding-agent` runtime sources, keep internal imports extensionless unless importing non-TS assets.
+- In `packages/tui/test` and `packages/natives/bench`, keep `.js` where surrounding files already use it.
+- Keep real file extensions when required by tooling (e.g., `.json`, `.css`, `.md` text embeds).
+- Example: `import { x } from "./foo.js";` → `import { x } from "./foo";` (only when the package convention is extensionless).
 
-## 3) インポートスコープを置換する
+## 3) Replace import scopes
 
-アップストリームは異なるパッケージスコープを使用しています。一貫して置換してください。
+Upstream uses different package scopes. Replace them consistently.
 
-- 古いスコープをここで使用されているローカルスコープに置換する。
-- 例（移植する実際のパッケージに合わせて調整してください）：
+- Replace old scopes with the local scope used here.
+- Examples (adjust to match the actual packages you are porting):
   - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
   - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
   - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
   - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
-## 4) Bun API が Node より優れている場合は Bun API を使用する
+## 4) Use Bun APIs where they improve on Node
 
-Bun 上で実行します。Bun がより良い代替手段を提供する場合にのみ Node API を置換してください。
+We run on Bun. Replace Node APIs only when Bun provides a better alternative.
 
-**置換するもの：**
+**DO replace:**
 
-- プロセス生成：`child_process.spawn` → 簡単なコマンドには Bun Shell `$`、ストリーミングや長時間実行には `Bun.spawn`/`Bun.spawnSync`
-- ファイル I/O：`fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
-- HTTP クライアント：`node-fetch`、`axios` → ネイティブ `fetch`
-- 暗号ハッシュ：`node:crypto` → Web Crypto または `Bun.hash`
-- SQLite：`better-sqlite3` → `bun:sqlite`
-- Env 読み込み：`dotenv` → Bun は `.env` を自動的に読み込む
+- Process spawning: `child_process.spawn` → Bun Shell `$` for simple commands, `Bun.spawn`/`Bun.spawnSync` for streaming or long-running work
+- File I/O: `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
+- HTTP clients: `node-fetch`, `axios` → native `fetch`
+- Crypto hashing: `node:crypto` → Web Crypto or `Bun.hash`
+- SQLite: `better-sqlite3` → `bun:sqlite`
+- Env loading: `dotenv` → Bun loads `.env` automatically
 
-**置換しないもの（Bun でも問題なく動作します）：**
+**DO NOT replace (these work fine in Bun):**
 
-- `os.homedir()` — `Bun.env.HOME`、`Bun.env.HOME`、またはリテラル `"~"` に置換しない
-- `os.tmpdir()` — `Bun.env.TMPDIR || "/tmp"` やハードコードされたパスに置換しない
-- `fs.mkdtempSync()` — 手動パス構築に置換しない
-- `path.join()`、`path.resolve()` など — これらは問題ない
+- `os.homedir()` — do NOT replace with `Bun.env.HOME`, `Bun.env.HOME`, or literal `"~"`
+- `os.tmpdir()` — do NOT replace with `Bun.env.TMPDIR || "/tmp"` or hardcoded paths
+- `fs.mkdtempSync()` — do NOT replace with manual path construction
+- `path.join()`, `path.resolve()`, etc. — these are fine
 
-**インポートスタイル：** `node:` プレフィックスを名前空間インポートでのみ使用する（`node:fs` や `node:path` からの名前付きインポートは使わない）。
+**Import style:** Use the `node:` prefix with namespace imports only (no named imports from `node:fs` or `node:path`).
 
-**追加の Bun 規約：**
+**Additional Bun conventions:**
 
-- 短い非ストリーミングコマンドには Bun Shell `$` を優先する。ストリーミング I/O やプロセス制御が必要な場合にのみ `Bun.spawn` を使用する。
-- ファイルには `Bun.file()`/`Bun.write()` を、ディレクトリには `node:fs/promises` を使用する。
-- `Bun.file().exists()` チェックを避ける。try/catch で `isEnoent` ハンドリングを使用する。
-- `setTimeout` ラッパーより `Bun.sleep(ms)` を優先する。
+- Prefer Bun Shell `$` for short, non-streaming commands; use `Bun.spawn` only when you need streaming I/O or process control.
+- Use `Bun.file()`/`Bun.write()` for files and `node:fs/promises` for directories.
+- Avoid `Bun.file().exists()` checks; use `isEnoent` handling in try/catch.
+- Prefer `Bun.sleep(ms)` over `setTimeout` wrappers.
 
-**誤り：**
+**Wrong:**
 
 ```typescript
 // BROKEN: env vars may be undefined, "~" is not expanded
@@ -96,7 +98,7 @@ const home = Bun.env.HOME || "~";
 const tmp = Bun.env.TMPDIR || "/tmp";
 ```
 
-**正しい：**
+**Correct:**
 
 ```typescript
 import * as os from "node:os";
@@ -107,125 +109,134 @@ const configDir = path.join(os.homedir(), ".config", "myapp");
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 ```
 
-## 5) Bun エンベッドを優先する（コピーしない）
+## 5) Prefer Bun embeds (no copying)
 
-ビルド時にランタイムアセットやベンダーファイルをコピーしないでください。
+Do not copy runtime assets or vendor files at build time.
 
-- アップストリームがアセットを dist フォルダにコピーしている場合、Bun フレンドリーなエンベッドに置換する。
-- プロンプトは静的な `.md` ファイルです。インラインプロンプト文字列の代わりに Bun テキストインポート（`with { type: "text" }`）と Handlebars を使用する。
-- 隣接する非テキストリソースの読み込みには `import.meta.dir` + `Bun.file` を使用する。
-- アセットをリポジトリ内に保持し、バンドラーに含めさせる。
-- ユーザーが明示的に要求しない限り、コピースクリプトを排除する。
-- アップストリームが実行時にバンドルされたフォールバックファイルを読み込んでいる場合、ファイルシステム読み込みを Bun テキストエンベッドインポートに置換する。
-  - 例（Codex instructions フォールバック）：
-    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` → 削除
+- If upstream copies assets into a dist folder, replace with Bun-friendly embeds.
+- Prompts are static `.md` files; use Bun text imports (`with { type: "text" }`) and Handlebars instead of inline prompt strings.
+- Use `import.meta.dir` + `Bun.file` to load adjacent non-text resources.
+- Keep assets in-repo and let the bundler include them.
+- Eliminate copy scripts unless the user explicitly requests them.
+- If upstream reads a bundled fallback file at runtime, replace filesystem reads with a Bun text embed import.
+  - Example (Codex instructions fallback):
+    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> removed
     - `import FALLBACK_INSTRUCTIONS from "./codex-instructions.md" with { type: "text" };`
-    - `readFileSync(FALLBACK_PROMPT_PATH, "utf8")` の代わりに `return FALLBACK_INSTRUCTIONS;` を使用
+    - Use `return FALLBACK_INSTRUCTIONS;` instead of `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
 
-## 6) `package.json` を慎重に移植する
+## 6) Port `package.json` carefully
 
-`package.json` はコントラクトとして扱います。意図的にマージしてください。
+Treat `package.json` as a contract. Merge intentionally.
 
-- 移植で変更が必要な場合を除き、既存の `name`、`version`、`type`、`exports`、`bin` を保持する。
-- npm/node スクリプトを Bun 同等のものに置換する（例：`bun check`、`bun test`）。
-- 依存関係が正しいスコープを使用していることを確認する。
-- 型エラーを修正するために依存関係をダウングレードしない。代わりにアップグレードする。
-- ワークスペースパッケージリンクと `peerDependencies` を検証する。
+- Keep existing `name`, `version`, `type`, `exports`, and `bin` unless the port requires changes.
+- Replace npm/node scripts with Bun equivalents (e.g., `bun check`, `bun test`).
+- Ensure dependencies use the correct scope.
+- Do not downgrade dependencies to fix type errors; upgrade instead.
+- Validate workspace package links and `peerDependencies`.
 
-## 7) コードスタイルとツールを揃える
+## 7) Align code style and tooling
 
-- 既存のフォーマット規約を保持する。
-- 必要でない限り `any` を導入しない。
-- 動的インポートやインライン型インポートを避ける。トップレベルインポートのみを使用する。
-- コード内でプロンプトを構築しない。プロンプトは Handlebars でレンダリングされる静的な `.md` ファイルです。
-- coding-agent では `console.log`/`console.warn`/`console.error` を使用しない。`@f5-sales-demo/pi-utils` の `logger` を使用する。
-- `new Promise((resolve, reject) => ...)` の代わりに `Promise.withResolvers()` を使用する。
-- **クラスフィールドやメソッドに `private`/`protected`/`public` キーワードを使用しない。** カプセル化には ES `#` プライベートフィールドを使用し、アクセス可能なメンバーはキーワードなし（bare）にする。唯一の例外はコンストラクタパラメータプロパティ（`constructor(private readonly x: T)`）で、TypeScript が要求するためキーワードが必要です。アップストリームコードで `private foo` や `protected bar` を使用している場合、`#foo`（プライベート）または bare `bar`（アクセス可能）に変換する。
-- 新しいアドホックコードよりも既存のヘルパーやユーティリティを優先する。
-- このリポジトリで既に行われた Bun ファーストのインフラ変更を維持する：
-  - ランタイムは Bun（Node エントリーポイントなし）。
-  - パッケージマネージャーは Bun（npm ロックファイルなし）。
-  - 重い Node API（`child_process`、`readline`）は Bun 同等のものに置換済み。
-  - 軽量な Node API（`os.homedir`、`os.tmpdir`、`fs.mkdtempSync`、`path.*`）は保持。
-  - CLI の shebang は `bun` を使用（`node` でも `tsx` でもない）。
-  - パッケージはソースファイルを直接使用（TypeScript ビルドステップなし）。
-  - CI ワークフローはインストール/チェック/テストに Bun を実行。
+- Keep existing formatting conventions.
+- Do not introduce `any` unless required.
+- Avoid dynamic imports and inline type imports; use top-level imports only.
+- Never build prompts in code; prompts are static `.md` files rendered with Handlebars.
+- In coding-agent, never use `console.log`/`console.warn`/`console.error`; use `logger` from `@f5-sales-demo/pi-utils`.
+- Use `Promise.withResolvers()` instead of `new Promise((resolve, reject) => ...)`.
+- **No `private`/`protected`/`public` keywords on class fields or methods.** Use ES `#` private fields for encapsulation; leave accessible members bare (no keyword).
+  The only exception is constructor parameter properties (`constructor(private readonly x: T)`), where the keyword is required by TypeScript. When porting upstream code that uses `private foo` or `protected bar`, convert to `#foo` (private) or bare `bar` (accessible).
+- Prefer existing helpers and utilities over new ad-hoc code.
+- Preserve Bun-first infrastructure changes already made in this repo:
+  - Runtime is Bun (no Node entry points).
+  - Package manager is Bun (no npm lockfiles).
+  - Heavy Node APIs (`child_process`, `readline`) are replaced with Bun equivalents.
+  - Lightweight Node APIs (`os.homedir`, `os.tmpdir`, `fs.mkdtempSync`, `path.*`) are kept.
+  - CLI shebangs use `bun` (not `node`, not `tsx`).
+  - Packages use source files directly (no TypeScript build step).
+  - CI workflows run Bun for install/check/test.
 
-## 8) 古い互換性レイヤーを削除する
+## 8) Remove old compatibility layers
 
-要求されない限り、アップストリームの互換性シムを削除してください。
+Unless requested, remove upstream compatibility shims.
 
-- 置換された古い API を削除する。
-- すべての呼び出し箇所を新しい API に直接更新する。
-- `*_v2` や並列バージョンを保持しない。
+- Delete old APIs that were replaced.
+- Update all call sites to the new API directly.
+- Do not keep `*_v2` or parallel versions.
 
-## 9) ドキュメントと参照を更新する
+## 9) Update docs and references
 
-- 適切な箇所で pi-mono リポジトリのリンクを置換する。
-- サンプルを Bun と正しいパッケージスコープを使用するように更新する。
-- README の手順が現在のリポジトリの動作と一致していることを確認する。
+- Replace pi-mono repo links where appropriate.
+- Update examples to use Bun and correct package scopes.
+- Ensure README instructions still match the current repo behavior.
 
-## 10) 移植を検証する
+## 10) Validate the port
 
-変更後に標準チェックを実行する：
+Run the standard checks after changes:
 
 - `bun check`
 
-変更に関係のない既存の失敗チェックがある場合は、それを明示的に指摘してください。
-テストは Bun のランナーを使用します（Vitest ではありません）が、明示的に要求された場合にのみ `bun test` を実行してください。
+If the repo already has failing checks unrelated to your changes, call that out.
+Tests use Bun's runner (not Vitest), but only run `bun test` when explicitly requested.
 
-## 11) 改善された機能を保護する（リグレッショントラップリスト）
+## 11) Protect improved features (regression trap list)
 
-ローカルで既に動作を改善している場合、それらを**交渉不可**として扱ってください。移植前に改善点を書き出し、マージで失われないように明示的なチェックを追加してください。
+If you already improved behavior locally, treat those as **non‑negotiable**. Before porting, write down
+the improvements and add explicit checks so they don’t get lost in the merge.
 
-- **期待される動作を凍結する**：各改善点について短い「移植前/移植後」のメモを追加する（入力、出力、デフォルト値、エッジケース）。これにより暗黙のロールバックを防止します。
-- **旧 → 新 API をマッピングする**：アップストリームが概念名を変更した場合（hooks → extensions、custom tools → tools など）、すべての古いエントリーポイントが正しく接続されていることを確認する。1 つのフラグやエクスポートの見落としが機能喪失を意味します。
-- **エクスポートを検証する**：`package.json` の `exports`、公開型、バレルファイルを確認する。アップストリームからの移植では、ローカルの追加機能の再エクスポートを忘れがちです。
-- **非ハッピーパスをカバーする**：エラーハンドリング、タイムアウト、フォールバックロジックを修正した場合、テストまたは少なくともそれらのパスを実行する手動チェックリストを追加する。
-- **デフォルト値と設定マージ順序を確認する**：改善はデフォルト値に存在することが多い。新しいデフォルトが元に戻っていないことを確認する（例：新しい設定の優先順位、無効化された機能、ツールリスト）。
-- **env/shell 動作を監査する**：実行やサンドボックスを修正した場合、新しいパスが依然としてサニタイズされた env を使用し、エイリアス/関数オーバーライドを再導入していないことを確認する。
-- **対象サンプルを再実行する**：「正常動作確認済み」のサンプルの最小セットを保持し、移植後にそれらを実行する（CLI フラグ、拡張機能の登録、ツールの実行）。
+- **Freeze the expected behavior**: add a short “before/after” note for each improvement (inputs, outputs,
+  defaults, edge cases). This prevents silent rollback.
+- **Map old → new APIs**: if upstream renamed concepts (hooks → extensions, custom tools → tools, etc.),
+  ensure every old entry point still wires through. One missed flag or export equals lost functionality.
+- **Verify exports**: check `package.json` `exports`, public types, and barrel files. Upstream ports often
+  forget to re-export local additions.
+- **Cover non‑happy paths**: if you fixed error handling, timeouts, or fallback logic, add a test or at
+  least a manual checklist that exercises those paths.
+- **Check defaults and config merge order**: improvements often live in defaults. Confirm new defaults
+  didn’t revert (e.g., new config precedence, disabled features, tool lists).
+- **Audit env/shell behavior**: if you fixed execution or sandboxing, verify the new path still uses your
+  sanitized env and does not reintroduce alias/function overrides.
+- **Re-run targeted samples**: keep a minimal set of "known good" examples and run them after the port
+  (CLI flags, extension registration, tool execution).
 
-## 12) リワークされたコードを検出して対処する
+## 12) Detect and handle reworked code
 
-ファイルを移植する前に、アップストリームが大幅にリファクタリングしたかどうかを確認してください：
+Before porting a file, check if upstream significantly refactored it:
 
 ```bash
 # Compare the file you're about to port against what you have locally
 git diff HEAD upstream/main -- path/to/file.ts
 ```
 
-diff がファイルが**リワーク**された（単なるパッチではない）ことを示している場合：
+If the diff shows the file was **reworked** (not just patched):
 
-- 新しい抽象化、名前変更された概念、統合されたモジュール、変更されたデータフロー
+- New abstractions, renamed concepts, merged modules, changed data flow
 
-移植前に**新しい実装を徹底的に読む**必要があります。リワークされたコードのブラインドマージは機能を失います。理由は以下の通りです：
+Then you must **read the new implementation thoroughly** before porting. Blind merging of reworked code loses functionality because:
 
-注意：インタラクティブモードは最近 controllers/utils/types に分割されました。関連する変更をバックポートする際は、作成した個別ファイルに更新を移植し、`interactive-mode.ts` の配線が同期していることを確認してください。
+Note: interactive mode was recently split into controllers/utils/types. When backporting related changes, port updates into the individual files we created and ensure `interactive-mode.ts` wiring stays in sync.
 
-1. **デフォルトが暗黙的に変更される** - 新しい変数 `defaultFoo = [a, b]` が、`[a, b, c, d, e]` を返していた古い `getAllFoo()` を置換する可能性があります。
+1. **Defaults change silently** - A new variable `defaultFoo = [a, b]` may replace an old `getAllFoo()` that returned `[a, b, c, d, e]`.
 
-2. **API オプションが欠落する** - システムが統合される場合（例：`hooks` + `customTools` → `extensions`）、古いオプションが新しい実装に接続されない可能性があります。
+2. **API options get dropped** - When systems merge (e.g., `hooks` + `customTools` → `extensions`), old options may not wire through to the new implementation.
 
-3. **コードパスが陳腐化する** - 名前変更された概念（例：`hookMessage` → `custom`）は、定義だけでなく、すべての switch 文、型ガード、ハンドラーでの更新が必要です。
+3. **Code paths go stale** - A renamed concept (e.g., `hookMessage` → `custom`) needs updates in every switch statement, type guard, and handler—not just the definition.
 
-4. **コンテキスト/ケイパビリティが縮小する** - 古い API が公開していた `{ logger, typebox, pi }` を新しい API が含め忘れている可能性があります。
+4. **Context/capabilities shrink** - Old APIs may have exposed `{ logger, typebox, pi }` that new APIs forgot to include.
 
-### セマンティック移植プロセス
+### Semantic porting process
 
-アップストリームがモジュールをリワークした場合：
+When upstream reworked a module:
 
-1. **古い実装を読む** - 何をしていたか、どのオプションを受け入れていたか、何を公開していたかを理解する。
+1. **Read the old implementation** - Understand what it did, what options it accepted, what it exposed.
 
-2. **新しい実装を読む** - 新しい抽象化と、それが古い動作にどのようにマッピングされるかを理解する。
+2. **Read the new implementation** - Understand the new abstractions and how they map to old behavior.
 
-3. **機能パリティを検証する** - 古いコードの各ケイパビリティについて、新しいコードがそれを保持しているか、明示的に削除しているかを確認する。
+3. **Verify feature parity** - For each capability in the old code, confirm the new code preserves it or explicitly removes it.
 
-4. **残存を grep する** - switch 文、ハンドラー、UI コンポーネントで見落とされた可能性のある古い名前/概念を検索する。
+4. **Grep for stragglers** - Search for old names/concepts that may have been missed in switch statements, handlers, UI components.
 
-5. **境界をテストする** - CLI フラグ、SDK オプション、イベントハンドラー、デフォルト値 — これらがリグレッションの潜伏場所です。
+5. **Test the boundaries** - CLI flags, SDK options, event handlers, default values—these are where regressions hide.
 
-### クイックチェック
+### Quick checks
 
 ```bash
 # Find all uses of an old concept that may need updating
@@ -238,23 +249,24 @@ git show upstream/main:path/to/file.ts | rg "default|DEFAULT"
 rg "case \"" path/to/file.ts
 ```
 
-## 13) クイック監査チェックリスト
+## 13) Quick audit checklist
 
-完了前の最終パスとして使用してください：
+Use this as a final pass before you finish:
 
-- [ ] インポート拡張子がローカルパッケージの規約に従っている（`.js` の一括除去なし）
-- [ ] 新規/移植コードに Node 専用 API がない
-- [ ] すべてのパッケージスコープが更新されている
-- [ ] `package.json` スクリプトが Bun を使用している
-- [ ] プロンプトが `.md` テキストインポートである（インラインプロンプト文字列なし）
-- [ ] coding-agent に `console.*` がない（`logger` を使用）
-- [ ] アセットが Bun エンベッドパターンで読み込まれている（コピースクリプトなし）
-- [ ] テストまたはチェックが実行される（またはブロックされていることが明示的に記載されている）
-- [ ] 機能リグレッションがない（セクション 11-12 を参照）
+- [ ] Import extensions follow the local package convention (no blanket `.js` stripping)
+- [ ] No Node-only APIs in new/ported code
+- [ ] All package scopes updated
+- [ ] `package.json` scripts use Bun
+- [ ] Prompts are `.md` text imports (no inline prompt strings)
+- [ ] No `console.*` in coding-agent (use `logger`)
+- [ ] Assets load via Bun embed patterns (no copy scripts)
+- [ ] Tests or checks run (or explicitly noted as blocked)
+- [ ] No functionality regressions (see sections 11-12)
 
-## 14) コミットメッセージフォーマット
+## 14) Commit message format
 
-バックポートをコミットする際は、リポジトリフォーマット `<type>(scope): <past-tense description>` に従い、コミット範囲をタイトルに含めてください。
+When committing a backport, follow the repo format `<type>(scope): <past-tense description>` and keep the commit
+range in the title.
 
 ```
 fix(coding-agent): backported pi-mono changes (<from>..<to>)
@@ -267,7 +279,7 @@ packages/<other-package>:
 - <type>: <description>
 ```
 
-**例：**
+**Example:**
 
 ```
 fix(coding-agent): backported pi-mono changes (9f3eef65f..52532c7c0)
@@ -289,95 +301,95 @@ packages/coding-agent:
 - fix: resolve macOS NFD and curly quote variants in file paths
 ```
 
-**ルール：**
+**Rules:**
 
-- パッケージごとに変更をグループ化する
-- Conventional Commit のタイプを使用する（`fix`、`feat`、`refactor`、`perf`、`docs`）
-- 外部コントリビューションにはアップストリームの issue/PR 番号とコントリビューターの帰属を含める
-- タイトルのコミット範囲は同期ポイントの追跡に役立つ
+- Group changes by package
+- Use conventional commit types (`fix`, `feat`, `refactor`, `perf`, `docs`)
+- Include upstream issue/PR numbers and contributor attribution for external contributions
+- The commit range in the title helps track sync points
 
-## 15) 意図的な分岐
+## 15) Intentional Divergences
 
-当フォークにはアップストリームと異なるアーキテクチャ上の決定があります。**以下のアップストリームパターンは移植しないでください：**
+Our fork has architectural decisions that differ from upstream. **Do not port these upstream patterns:**
 
-### UI アーキテクチャ
+### UI Architecture
 
-| アップストリーム                                    | 当フォーク                                                  | 理由                                                                |
+| Upstream                                    | Our Fork                                                  | Reason                                                                |
 | ------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `FooterDataProvider` クラス                  | `StatusLineComponent`                                     | よりシンプルで統合されたステータスライン                                       |
-| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | 非 TUI モードではスタブ                                     | TUI で実装済み、それ以外では no-op                                   |
-| `ctx.ui.setEditorComponent()`               | 非 TUI モードではスタブ                                     | TUI で実装済み、それ以外では no-op                                   |
-| `InteractiveModeOptions` オプションオブジェクト     | 位置引数コンストラクタ（options 型はエクスポート維持） | コンストラクタシグネチャを維持。アップストリームがフィールド追加時に型を更新 |
+| `FooterDataProvider` class                  | `StatusLineComponent`                                     | Simpler, integrated status line                                       |
+| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `ctx.ui.setEditorComponent()`               | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `InteractiveModeOptions` options object     | Positional constructor args (options type still exported) | Keep constructor signature; update the type when upstream adds fields |
 
-### コンポーネント命名
+### Component Naming
 
-| アップストリーム                     | 当フォーク                |
+| Upstream                     | Our Fork                |
 | ---------------------------- | ----------------------- |
 | `extension-input.ts`         | `hook-input.ts`         |
 | `extension-selector.ts`      | `hook-selector.ts`      |
 | `ExtensionInputComponent`    | `HookInputComponent`    |
 | `ExtensionSelectorComponent` | `HookSelectorComponent` |
 
-### API 命名
+### API Naming
 
-| アップストリーム                                 | 当フォーク                                 | 備考                                     |
+| Upstream                                 | Our Fork                                 | Notes                                     |
 | ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | 全体で `sessionName` を使用           |
-| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | 同じ（アップストリームの RPC に合わせて統一済み） |
-| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | 同じ                                      |
+| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | We use `sessionName` throughout           |
+| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | Same (we unified to match upstream's RPC) |
+| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Same                                      |
 
-### ファイル統合
+### File Consolidation
 
-| アップストリーム                                           | 当フォーク                                | 理由                                  |
+| Upstream                                           | Our Fork                                | Reason                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts`（ツールファイル） | `@f5-sales-demo/pi-natives` clipboard モジュール | N-API ネイティブ実装に統合 |
+| `clipboard.ts` + `clipboard-image.ts` (tool files) | `@f5-sales-demo/pi-natives` clipboard module | Merged into N-API native implementation |
 
-### テストフレームワーク
+### Test Framework
 
-| アップストリーム                  | 当フォーク                      |
+| Upstream                  | Our Fork                      |
 | ------------------------- | ----------------------------- |
-| `vitest` と `vi.mock()` | `bun:test` と bun の `vi` |
-| `node:test` アサーション    | `expect()` マッチャー           |
+| `vitest` with `vi.mock()` | `bun:test` with `vi` from bun |
+| `node:test` assertions    | `expect()` matchers           |
 
-### ツールアーキテクチャ
+### Tool Architecture
 
-| アップストリーム                            | 当フォーク                                                          | 備考                                                     |
+| Upstream                            | Our Fork                                                          | Notes                                                     |
 | ----------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
-| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS` レジストリ  | ツールファクトリは `ToolSession` を受け取り `null` を返せる |
-| ツールごとの `*Operations` インターフェース   | ツールごとのインターフェースは維持（`FindOperations`、`GrepOperations`）   | SSH/リモートオーバーライドに使用                             |
-| Node.js `fs/promises` を全面使用    | ファイルには `Bun.file()`/`Bun.write()`、ディレクトリには `node:fs/promises` | 簡素化できる場合は Bun API を優先                        |
+| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS` registry  | Tool factories accept `ToolSession` and can return `null` |
+| Per-tool `*Operations` interfaces   | Per-tool interfaces remain (`FindOperations`, `GrepOperations`)   | Used for SSH/remote overrides                             |
+| Node.js `fs/promises` everywhere    | `Bun.file()`/`Bun.write()` for files; `node:fs/promises` for dirs | Prefer Bun APIs when they simplify                        |
 
-### 認証ストレージ
+### Auth Storage
 
-| アップストリーム                        | 当フォーク                                    | 備考                                        |
+| Upstream                        | Our Fork                                    | Notes                                        |
 | ------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | 認証情報は `agent.db` に排他的に保存 |
-| プロバイダーごとに単一認証情報  | ラウンドロビン選択による複数認証情報 | セッションアフィニティとバックオフロジックは維持 |
+| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | Credentials stored exclusively in `agent.db` |
+| Single credential per provider  | Multi-credential with round-robin selection | Session affinity and backoff logic preserved |
 
-### エクステンション
+### Extensions
 
-| アップストリーム                      | 当フォーク                                   |
+| Upstream                      | Our Fork                                   |
 | ----------------------------- | ------------------------------------------ |
-| TypeScript 読み込みに `jiti` | ネイティブ Bun `import()`                      |
-| `pkg.pi` マニフェストフィールド       | `pkg.xcsh ?? pkg.pi`（当名前空間を優先） |
+| `jiti` for TypeScript loading | Native Bun `import()`                      |
+| `pkg.pi` manifest field       | `pkg.xcsh ?? pkg.pi` (prefer our namespace) |
 
-### スキップすべきアップストリーム機能
+### Skip These Upstream Features
 
-移植時に、以下のファイル/機能は**完全にスキップ**してください：
+When porting, **skip** these files/features entirely:
 
-- `footer-data-provider.ts` — StatusLineComponent を使用しています
-- `clipboard-image.ts` — clipboard は `@f5-sales-demo/pi-natives` N-API モジュールにあります
-- GitHub ワークフローファイル — 独自の CI があります
-- `models.generated.ts` — 自動生成のため、ローカルで再生成（代わりに models.json として）
+- `footer-data-provider.ts` — we use StatusLineComponent
+- `clipboard-image.ts` — clipboard is in `@f5-sales-demo/pi-natives` N-API module
+- GitHub workflow files — we have our own CI
+- `models.generated.ts` — auto-generated, regenerate locally (as models.json instead)
 
-### 当フォークで追加した機能（これらを保持する）
+### Features We Added (Preserve These)
 
-以下は当フォークに存在しますがアップストリームには存在しません。**絶対に上書きしないでください：**
+These exist in our fork but not upstream. **Never overwrite:**
 
-- インタラクティブモードの `StatusLineComponent`
-- セッションアフィニティ付き複数認証情報
-- ケイパビリティベースのディスカバリシステム（`defineCapability`、`registerProvider`、`loadCapability`、`skillCapability` など）
-- MCP/Exa/SSH 統合
-- フォーマット・オン・セーブの LSP ライトスルー
-- Bash インターセプション（`checkBashInterception`）
-- read ツールでのファジーパスサジェスチョン
+- `StatusLineComponent` in interactive mode
+- Multi-credential auth with session affinity
+- Capability-based discovery system (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`, etc.)
+- MCP/Exa/SSH integrations
+- LSP writethrough for format-on-save
+- Bash interception (`checkBashInterception`)
+- Fuzzy path suggestions in read tool

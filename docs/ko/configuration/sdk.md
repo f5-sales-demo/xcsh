@@ -1,32 +1,33 @@
 ---
 title: SDK
-description: xcsh 코딩 에이전트 런타임 위에 커스텀 에이전트 및 통합을 구축하기 위한 SDK입니다.
+description: SDK for building custom agents and integrations on top of the xcsh coding agent runtime.
 sidebar:
   order: 6
   label: SDK
+
 i18n:
-  sourceHash: 80f3a4374241
-  translator: machine
+  sourceHash: "955010e30dde"
+  translator: "machine"
 ---
 
 # SDK
 
-SDK는 `@f5-sales-demo/xcsh`의 인프로세스 통합 인터페이스입니다.
-에이전트 상태, 이벤트 스트리밍, 도구 연결, 세션 제어에 자체 Bun/Node 프로세스에서 직접 접근하려는 경우에 사용하십시오.
+The SDK is the in-process integration surface for `@f5-sales-demo/xcsh`.
+Use it when you want direct access to agent state, event streaming, tool wiring, and session control from your own Bun/Node process.
 
-크로스 언어/프로세스 격리가 필요한 경우 RPC 모드를 대신 사용하십시오.
+If you need cross-language/process isolation, use RPC mode instead.
 
-## 설치
+## Installation
 
 ```bash
 bun add @f5-sales-demo/xcsh
 ```
 
-## 진입점
+## Entry points
 
-`@f5-sales-demo/xcsh`는 패키지 루트에서 SDK API를 내보냅니다.
+`@f5-sales-demo/xcsh` exports the SDK APIs from the package root.
 
-임베더를 위한 핵심 내보내기:
+Core exports for embedders:
 
 - `createAgentSession`
 - `SessionManager`
@@ -34,10 +35,10 @@ bun add @f5-sales-demo/xcsh
 - `AuthStorage`
 - `ModelRegistry`
 - `discoverAuthStorage`
-- 디스커버리 헬퍼 (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
-- 도구 팩토리 인터페이스 (`createTools`, `BUILTIN_TOOLS`, 도구 클래스)
+- Discovery helpers (`discoverExtensions`, `discoverSkills`, `discoverContextFiles`, `discoverPromptTemplates`, `discoverSlashCommands`, `discoverCustomTSCommands`, `discoverMCPServers`)
+- Tool factory surface (`createTools`, `BUILTIN_TOOLS`, tool classes)
 
-## 빠른 시작 (자동 디스커버리 기본값)
+## Quick start (auto-discovery defaults)
 
 ```ts
 import { createAgentSession } from "@f5-sales-demo/xcsh";
@@ -59,39 +60,39 @@ unsubscribe();
 await session.dispose();
 ```
 
-## `createAgentSession()`이 기본으로 디스커버리하는 항목
+## What `createAgentSession()` discovers by default
 
-`createAgentSession()`은 "제공하면 재정의, 생략하면 디스커버리" 원칙을 따릅니다.
+`createAgentSession()` follows “provide to override, omit to discover”.
 
-생략된 경우 다음을 해결합니다:
+If omitted, it resolves:
 
 - `cwd`: `getProjectDir()`
-- `agentDir`: `~/.xcsh/agent` (`getAgentDir()` 경유)
+- `agentDir`: `~/.xcsh/agent` (via `getAgentDir()`)
 - `authStorage`: `discoverAuthStorage(agentDir)`
 - `modelRegistry`: `new ModelRegistry(authStorage)` + `await refresh()`
 - `settings`: `await Settings.init({ cwd, agentDir })`
-- `sessionManager`: `SessionManager.create(cwd)` (파일 백업)
-- 스킬/컨텍스트 파일/프롬프트 템플릿/슬래시 명령어/익스텐션/커스텀 TS 명령어
-- `createTools(...)`를 통한 내장 도구
-- MCP 도구 (기본적으로 활성화)
-- LSP 통합 (기본적으로 활성화)
+- `sessionManager`: `SessionManager.create(cwd)` (file-backed)
+- skills/context files/prompt templates/slash commands/extensions/custom TS commands
+- built-in tools via `createTools(...)`
+- MCP tools (enabled by default)
+- LSP integration (enabled by default)
 
-### 필수 vs 선택적 입력
+### Required vs optional inputs
 
-일반적으로 제어하려는 항목만 제공하면 됩니다:
+Typically you must provide only what you want to control:
 
-- **반드시 제공**: 최소 세션에는 아무것도 필요 없음
-- **임베더에서 일반적으로 명시적으로 제공**:
-    - `sessionManager` (인메모리 또는 커스텀 위치가 필요한 경우)
-    - `authStorage` + `modelRegistry` (자격증명/모델 라이프사이클을 직접 관리하는 경우)
-    - `model` 또는 `modelPattern` (결정론적 모델 선택이 중요한 경우)
-    - `settings` (격리/테스트 설정이 필요한 경우)
+- **Must provide**: nothing for a minimal session
+- **Usually provide explicitly** in embedders:
+    - `sessionManager` (if you need in-memory or custom location)
+    - `authStorage` + `modelRegistry` (if you own credential/model lifecycle)
+    - `model` or `modelPattern` (if deterministic model selection matters)
+    - `settings` (if you need isolated/test config)
 
-## 세션 매니저 동작 (지속적 vs 인메모리)
+## Session manager behavior (persistent vs in-memory)
 
-`AgentSession`은 항상 `SessionManager`를 사용하며, 사용하는 팩토리에 따라 동작이 달라집니다.
+`AgentSession` always uses a `SessionManager`; behavior depends on which factory you use.
 
-### 파일 백업 (기본값)
+### File-backed (default)
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
@@ -103,11 +104,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // absolute .jsonl path
 ```
 
-- 대화/메시지/상태 델타를 세션 파일에 지속적으로 저장합니다.
-- 재개/열기/목록/포크 워크플로우를 지원합니다.
-- `session.sessionFile`이 정의됩니다.
+- Persists conversation/messages/state deltas to session files.
+- Supports resume/open/list/fork workflows.
+- `session.sessionFile` is defined.
 
-### 인메모리
+### In-memory
 
 ```ts
 import { createAgentSession, SessionManager } from "@f5-sales-demo/xcsh";
@@ -119,11 +120,11 @@ const { session } = await createAgentSession({
 console.log(session.sessionFile); // undefined
 ```
 
-- 파일 시스템 지속성이 없습니다.
-- 테스트, 임시 워커, 요청 범위 에이전트에 유용합니다.
-- 세션 메서드는 여전히 동작하지만, 지속성 관련 동작(파일 재개/포크 경로)은 자연스럽게 제한됩니다.
+- No filesystem persistence.
+- Useful for tests, ephemeral workers, request-scoped agents.
+- Session methods still work, but persistence-specific behaviors (file resume/fork paths) are naturally limited.
 
-### 재개/열기/목록 헬퍼
+### Resume/open/list helpers
 
 ```ts
 import { SessionManager } from "@f5-sales-demo/xcsh";
@@ -133,11 +134,11 @@ const listed = await SessionManager.list(process.cwd());
 const opened = listed[0] ? await SessionManager.open(listed[0].path) : null;
 ```
 
-## 모델 및 인증 연결
+## Model and auth wiring
 
-`createAgentSession()`은 모델 선택 및 API 키 해결을 위해 `ModelRegistry` + `AuthStorage`를 사용합니다.
+`createAgentSession()` uses `ModelRegistry` + `AuthStorage` for model selection and API key resolution.
 
-### 명시적 연결
+### Explicit wiring
 
 ```ts
 import {
@@ -163,28 +164,28 @@ const { session } = await createAgentSession({
 });
 ```
 
-### `model` 생략 시 선택 순서
+### Selection order when `model` is omitted
 
-명시적인 `model`/`modelPattern`이 제공되지 않은 경우:
+When no explicit `model`/`modelPattern` is provided:
 
-1. 기존 세션에서 모델 복원 (복원 가능 + 키 사용 가능한 경우)
-2. 설정 기본 모델 역할 (`default`)
-3. 유효한 인증이 있는 첫 번째 사용 가능한 모델
+1. restore model from existing session (if restorable + key available)
+2. settings default model role (`default`)
+3. first available model with valid auth
 
-복원에 실패하면 `modelFallbackMessage`가 대체 이유를 설명합니다.
+If restore fails, `modelFallbackMessage` explains fallback.
 
-### 인증 우선순위
+### Auth priority
 
-`AuthStorage.getApiKey(...)`는 다음 순서로 해결합니다:
+`AuthStorage.getApiKey(...)` resolves in this order:
 
-1. 런타임 재정의 (`setRuntimeApiKey`)
-2. `agent.db`에 저장된 자격증명
-3. 공급자 환경 변수
-4. 커스텀 공급자 리졸버 폴백 (설정된 경우)
+1. runtime override (`setRuntimeApiKey`)
+2. stored credentials in `agent.db`
+3. provider environment variables
+4. custom-provider resolver fallback (if configured)
 
-## 이벤트 구독 모델
+## Event subscription model
 
-`session.subscribe(listener)`로 구독하면 구독 해제 함수가 반환됩니다.
+Subscribe with `session.subscribe(listener)`; it returns an unsubscribe function.
 
 ```ts
 const unsubscribe = session.subscribe(event => {
@@ -202,29 +203,29 @@ const unsubscribe = session.subscribe(event => {
 });
 ```
 
-`AgentSessionEvent`는 핵심 `AgentEvent`와 세션 레벨 이벤트를 포함합니다:
+`AgentSessionEvent` includes core `AgentEvent` plus session-level events:
 
 - `auto_compaction_start` / `auto_compaction_end`
 - `auto_retry_start` / `auto_retry_end`
 - `ttsr_triggered`
 - `todo_reminder`
 
-## 프롬프트 라이프사이클
+## Prompt lifecycle
 
-`session.prompt(text, options?)`가 기본 진입점입니다.
+`session.prompt(text, options?)` is the primary entry point.
 
-동작:
+Behavior:
 
-1. 선택적 명령어/템플릿 확장 (`/` 명령어, 커스텀 명령어, 파일 슬래시 명령어, 프롬프트 템플릿)
-2. 현재 스트리밍 중인 경우:
-    - `streamingBehavior: "steer" | "followUp"` 필요
-    - 작업을 버리지 않고 큐에 추가
-3. 유휴 상태인 경우:
-    - 모델 + API 키 유효성 검사
-    - 사용자 메시지 추가
-    - 에이전트 턴 시작
+1. optional command/template expansion (`/` commands, custom commands, file slash commands, prompt templates)
+2. if currently streaming:
+    - requires `streamingBehavior: "steer" | "followUp"`
+    - queues instead of throwing work away
+3. if idle:
+    - validates model + API key
+    - appends user message
+    - starts agent turn
 
-관련 API:
+Related APIs:
 
 - `sendUserMessage(content, { deliverAs? })`
 - `steer(text, images?)`
@@ -232,14 +233,14 @@ const unsubscribe = session.subscribe(event => {
 - `sendCustomMessage({ customType, content, ... }, { deliverAs?, triggerTurn? })`
 - `abort()`
 
-## 도구 및 익스텐션 통합
+## Tools and extension integration
 
-### 내장 도구 및 필터링
+### Built-ins and filtering
 
-- 내장 도구는 `createTools(...)`와 `BUILTIN_TOOLS`에서 제공됩니다.
-- `toolNames`는 내장 도구의 허용 목록 역할을 합니다.
-- `customTools` 및 익스텐션 등록 도구는 여전히 포함됩니다.
-- 숨겨진 도구(예: `submit_result`)는 옵션에서 요구하지 않는 한 옵트인 방식입니다.
+- Built-ins come from `createTools(...)` and `BUILTIN_TOOLS`.
+- `toolNames` acts as an allowlist for built-ins.
+- `customTools` and extension-registered tools are still included.
+- Hidden tools (for example `submit_result`) are opt-in unless required by options.
 
 ```ts
 const { session } = await createAgentSession({
@@ -248,27 +249,27 @@ const { session } = await createAgentSession({
 });
 ```
 
-### 익스텐션
+### Extensions
 
-- `extensions`: 인라인 `ExtensionFactory[]`
-- `additionalExtensionPaths`: 추가 익스텐션 파일 로드
-- `disableExtensionDiscovery`: 자동 익스텐션 스캔 비활성화
-- `preloadedExtensions`: 이미 로드된 익스텐션 세트 재사용
+- `extensions`: inline `ExtensionFactory[]`
+- `additionalExtensionPaths`: load extra extension files
+- `disableExtensionDiscovery`: disable automatic extension scanning
+- `preloadedExtensions`: reuse already loaded extension set
 
-### 런타임 도구 세트 변경
+### Runtime tool set changes
 
-`AgentSession`은 런타임 활성화 업데이트를 지원합니다:
+`AgentSession` supports runtime activation updates:
 
 - `getActiveToolNames()`
 - `getAllToolNames()`
 - `setActiveToolsByName(names)`
 - `refreshMCPTools(mcpTools)`
 
-활성 도구 변경 사항을 반영하기 위해 시스템 프롬프트가 재구성됩니다.
+System prompt is rebuilt to reflect active tool changes.
 
-## 디스커버리 헬퍼
+## Discovery helpers
 
-내부 디스커버리 로직을 재구현하지 않고 부분적인 제어가 필요할 때 사용하십시오:
+Use these when you want partial control without recreating internal discovery logic:
 
 - `discoverAuthStorage(agentDir?)`
 - `discoverExtensions(cwd?)`
@@ -280,18 +281,18 @@ const { session } = await createAgentSession({
 - `discoverMCPServers(cwd?)`
 - `buildSystemPrompt(options?)`
 
-## 서브에이전트 지향 옵션
+## Subagent-oriented options
 
-오케스트레이터를 구축하는 SDK 소비자를 위한 옵션입니다 (태스크 실행기 흐름과 유사):
+For SDK consumers building orchestrators (similar to task executor flow):
 
-- `outputSchema`: 도구 컨텍스트에 구조화된 출력 기대값을 전달
-- `requireSubmitResultTool`: `submit_result` 도구 포함 강제
-- `taskDepth`: 중첩 태스크 세션의 재귀 깊이 컨텍스트
-- `parentTaskPrefix`: 중첩 태스크 출력을 위한 아티팩트 명명 접두사
+- `outputSchema`: passes structured output expectation into tool context
+- `requireSubmitResultTool`: forces `submit_result` tool inclusion
+- `taskDepth`: recursion-depth context for nested task sessions
+- `parentTaskPrefix`: artifact naming prefix for nested task outputs
 
-이 옵션들은 일반적인 단일 에이전트 임베딩에서는 선택 사항입니다.
+These are optional for normal single-agent embedding.
 
-## `createAgentSession()` 반환값
+## `createAgentSession()` return value
 
 ```ts
 type CreateAgentSessionResult = {
@@ -304,9 +305,9 @@ type CreateAgentSessionResult = {
 };
 ```
 
-임베더가 도구/익스텐션에서 호출해야 하는 UI 기능을 제공하는 경우에만 `setToolUIContext(...)`를 사용하십시오.
+Use `setToolUIContext(...)` only if your embedder provides UI capabilities that tools/extensions should call into.
 
-## 최소 제어 임베드 예제
+## Minimal controlled embed example
 
 ```ts
 import {

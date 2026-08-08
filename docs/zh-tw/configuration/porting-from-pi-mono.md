@@ -1,95 +1,96 @@
 ---
-title: 從 pi-mono 移植：實務合併指南
-description: 將程式碼從 pi-mono monorepo 遷移至 xcsh 程式碼庫的實務指南。
+title: "Porting From pi-mono: A Practical Merge Guide"
+description: Practical guide for migrating code from the pi-mono monorepo into the xcsh codebase.
 sidebar:
   order: 9
-  label: 從 pi-mono 移植
+  label: Porting from pi-mono
+
 i18n:
-  sourceHash: fd4e8c09303d
-  translator: machine
+  sourceHash: "f93fbb10a575"
+  translator: "machine"
 ---
 
-# 從 pi-mono 移植：實務合併指南
+# Porting From pi-mono: A Practical Merge Guide
 
-本指南是一份可重複使用的檢查清單，用於將 pi-mono 的變更移植到本儲存庫。
-適用於任何合併情境：單一檔案、功能分支或完整的版本同步。
+This guide is a repeatable checklist for porting changes from pi-mono into this repo.
+Use it for any merge: single file, feature branch, or full release sync.
 
-## 最後同步點
+## Last Sync Point
 
-**提交：** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
-**日期：** 2026-03-22
+**Commit:** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
+**Date:** 2026-03-22
 
-每次同步後更新此區段；不要重複使用先前的範圍。
+Update this section after each sync; do not reuse the previous range.
 
-開始新的同步時，從此提交開始產生補丁：
+When starting a new sync, generate patches from this commit forward:
 
 ```bash
 git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > changes.patch
 ```
 
-## 0) 定義範圍
+## 0) Define the scope
 
-- 確認上游參考（提交、標籤或 PR）。
-- 列出您計劃涉及的套件或資料夾。
-- 決定哪些功能在範圍內，哪些是有意跳過的。
+- Identify the upstream reference (commit, tag, or PR).
+- List the packages or folders you plan to touch.
+- Decide which features are in-scope and which are intentionally skipped.
 
-## 1) 安全地搬移程式碼
+## 1) Bring code over safely
 
-- 優先選擇乾淨、聚焦的差異，而非整批複製。
-- 避免複製建置產物或自動產生的檔案。
-- 如果上游新增了檔案，請明確加入並審閱內容。
+- Prefer a clean, focused diff rather than a wholesale copy.
+- Avoid copying built artifacts or generated files.
+- If upstream added new files, add them explicitly and review contents.
 
-## 2) 匹配匯入副檔名慣例
+## 2) Match import extension conventions
 
-大多數執行時期 TypeScript 原始碼在內部匯入中省略 `.js`，但某些測試/效能測試入口點保留 `.js` 以確保 ESM
-執行時期相容性。請遵循本地套件的現有風格；不要全面移除副檔名。
+Most runtime TypeScript sources omit `.js` in internal imports, but some test/bench entrypoints keep `.js` for ESM
+runtime compatibility. Follow the local package’s existing style; do not blanket-strip extensions.
 
-- 在 `packages/coding-agent` 執行時期原始碼中，除非匯入非 TS 資源，否則保持內部匯入無副檔名。
-- 在 `packages/tui/test` 和 `packages/natives/bench` 中，如果周圍檔案已使用 `.js`，則保留。
-- 當工具要求時保留實際副檔名（例如 `.json`、`.css`、`.md` 文字嵌入）。
-- 範例：`import { x } from "./foo.js";` → `import { x } from "./foo";`（僅當套件慣例為無副檔名時）。
+- In `packages/coding-agent` runtime sources, keep internal imports extensionless unless importing non-TS assets.
+- In `packages/tui/test` and `packages/natives/bench`, keep `.js` where surrounding files already use it.
+- Keep real file extensions when required by tooling (e.g., `.json`, `.css`, `.md` text embeds).
+- Example: `import { x } from "./foo.js";` → `import { x } from "./foo";` (only when the package convention is extensionless).
 
-## 3) 替換匯入範圍
+## 3) Replace import scopes
 
-上游使用不同的套件範圍。請一致地替換它們。
+Upstream uses different package scopes. Replace them consistently.
 
-- 將舊範圍替換為此處使用的本地範圍。
-- 範例（根據您實際移植的套件進行調整）：
+- Replace old scopes with the local scope used here.
+- Examples (adjust to match the actual packages you are porting):
   - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
   - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
   - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
   - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
-## 4) 在 Bun API 優於 Node 時使用 Bun API
+## 4) Use Bun APIs where they improve on Node
 
-我們在 Bun 上執行。僅在 Bun 提供更好替代方案時才替換 Node API。
+We run on Bun. Replace Node APIs only when Bun provides a better alternative.
 
-**應該替換：**
+**DO replace:**
 
-- 程序產生：`child_process.spawn` → Bun Shell `$` 用於簡單命令，`Bun.spawn`/`Bun.spawnSync` 用於串流或長時間執行的工作
-- 檔案 I/O：`fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
-- HTTP 客戶端：`node-fetch`、`axios` → 原生 `fetch`
-- 加密雜湊：`node:crypto` → Web Crypto 或 `Bun.hash`
-- SQLite：`better-sqlite3` → `bun:sqlite`
-- 環境變數載入：`dotenv` → Bun 自動載入 `.env`
+- Process spawning: `child_process.spawn` → Bun Shell `$` for simple commands, `Bun.spawn`/`Bun.spawnSync` for streaming or long-running work
+- File I/O: `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
+- HTTP clients: `node-fetch`, `axios` → native `fetch`
+- Crypto hashing: `node:crypto` → Web Crypto or `Bun.hash`
+- SQLite: `better-sqlite3` → `bun:sqlite`
+- Env loading: `dotenv` → Bun loads `.env` automatically
 
-**不應該替換（這些在 Bun 中運作正常）：**
+**DO NOT replace (these work fine in Bun):**
 
-- `os.homedir()` — 不要替換為 `Bun.env.HOME`、`Bun.env.HOME` 或字面值 `"~"`
-- `os.tmpdir()` — 不要替換為 `Bun.env.TMPDIR || "/tmp"` 或硬編碼路徑
-- `fs.mkdtempSync()` — 不要替換為手動路徑建構
-- `path.join()`、`path.resolve()` 等 — 這些沒問題
+- `os.homedir()` — do NOT replace with `Bun.env.HOME`, `Bun.env.HOME`, or literal `"~"`
+- `os.tmpdir()` — do NOT replace with `Bun.env.TMPDIR || "/tmp"` or hardcoded paths
+- `fs.mkdtempSync()` — do NOT replace with manual path construction
+- `path.join()`, `path.resolve()`, etc. — these are fine
 
-**匯入風格：** 使用 `node:` 前綴搭配命名空間匯入（不要從 `node:fs` 或 `node:path` 使用具名匯入）。
+**Import style:** Use the `node:` prefix with namespace imports only (no named imports from `node:fs` or `node:path`).
 
-**額外的 Bun 慣例：**
+**Additional Bun conventions:**
 
-- 對於短的非串流命令，優先使用 Bun Shell `$`；僅在需要串流 I/O 或程序控制時使用 `Bun.spawn`。
-- 檔案使用 `Bun.file()`/`Bun.write()`，目錄使用 `node:fs/promises`。
-- 避免 `Bun.file().exists()` 檢查；在 try/catch 中使用 `isEnoent` 處理。
-- 優先使用 `Bun.sleep(ms)` 而非 `setTimeout` 包裝。
+- Prefer Bun Shell `$` for short, non-streaming commands; use `Bun.spawn` only when you need streaming I/O or process control.
+- Use `Bun.file()`/`Bun.write()` for files and `node:fs/promises` for directories.
+- Avoid `Bun.file().exists()` checks; use `isEnoent` handling in try/catch.
+- Prefer `Bun.sleep(ms)` over `setTimeout` wrappers.
 
-**錯誤：**
+**Wrong:**
 
 ```typescript
 // BROKEN: env vars may be undefined, "~" is not expanded
@@ -97,7 +98,7 @@ const home = Bun.env.HOME || "~";
 const tmp = Bun.env.TMPDIR || "/tmp";
 ```
 
-**正確：**
+**Correct:**
 
 ```typescript
 import * as os from "node:os";
@@ -108,133 +109,134 @@ const configDir = path.join(os.homedir(), ".config", "myapp");
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 ```
 
-## 5) 優先使用 Bun 嵌入（不複製）
+## 5) Prefer Bun embeds (no copying)
 
-不要在建置時複製執行時期資源或供應商檔案。
+Do not copy runtime assets or vendor files at build time.
 
-- 如果上游將資源複製到 dist 資料夾，請替換為 Bun 友善的嵌入方式。
-- 提示詞是靜態 `.md` 檔案；使用 Bun 文字匯入（`with { type: "text" }`）和 Handlebars，而非內嵌提示詞字串。
-- 使用 `import.meta.dir` + `Bun.file` 載入相鄰的非文字資源。
-- 將資源保留在儲存庫中，讓打包器包含它們。
-- 除非使用者明確要求，否則消除複製腳本。
-- 如果上游在執行時期讀取打包的備用檔案，請用 Bun 文字嵌入匯入替換檔案系統讀取。
-  - 範例（Codex 指令備用）：
-    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> 移除
+- If upstream copies assets into a dist folder, replace with Bun-friendly embeds.
+- Prompts are static `.md` files; use Bun text imports (`with { type: "text" }`) and Handlebars instead of inline prompt strings.
+- Use `import.meta.dir` + `Bun.file` to load adjacent non-text resources.
+- Keep assets in-repo and let the bundler include them.
+- Eliminate copy scripts unless the user explicitly requests them.
+- If upstream reads a bundled fallback file at runtime, replace filesystem reads with a Bun text embed import.
+  - Example (Codex instructions fallback):
+    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> removed
     - `import FALLBACK_INSTRUCTIONS from "./codex-instructions.md" with { type: "text" };`
-    - 使用 `return FALLBACK_INSTRUCTIONS;` 而非 `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
+    - Use `return FALLBACK_INSTRUCTIONS;` instead of `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
 
-## 6) 謹慎移植 `package.json`
+## 6) Port `package.json` carefully
 
-將 `package.json` 視為合約。有意圖地合併。
+Treat `package.json` as a contract. Merge intentionally.
 
-- 除非移植需要變更，否則保留現有的 `name`、`version`、`type`、`exports` 和 `bin`。
-- 將 npm/node 腳本替換為 Bun 等效項（例如 `bun check`、`bun test`）。
-- 確保依賴項使用正確的範圍。
-- 不要為修復型別錯誤而降級依賴項；應該升級。
-- 驗證工作區套件連結和 `peerDependencies`。
+- Keep existing `name`, `version`, `type`, `exports`, and `bin` unless the port requires changes.
+- Replace npm/node scripts with Bun equivalents (e.g., `bun check`, `bun test`).
+- Ensure dependencies use the correct scope.
+- Do not downgrade dependencies to fix type errors; upgrade instead.
+- Validate workspace package links and `peerDependencies`.
 
-## 7) 對齊程式碼風格和工具
+## 7) Align code style and tooling
 
-- 保持現有的格式化慣例。
-- 除非必要，不要引入 `any`。
-- 避免動態匯入和內嵌型別匯入；僅使用頂層匯入。
-- 永遠不要在程式碼中建構提示詞；提示詞是靜態 `.md` 檔案，使用 Handlebars 渲染。
-- 在 coding-agent 中，永遠不要使用 `console.log`/`console.warn`/`console.error`；使用來自 `@f5-sales-demo/pi-utils` 的 `logger`。
-- 使用 `Promise.withResolvers()` 而非 `new Promise((resolve, reject) => ...)`。
-- **不要在類別欄位或方法上使用 `private`/`protected`/`public` 關鍵字。** 使用 ES `#` 私有欄位進行封裝；可存取的成員保持不加關鍵字。唯一的例外是建構子參數屬性（`constructor(private readonly x: T)`），TypeScript 要求使用關鍵字。移植使用 `private foo` 或 `protected bar` 的上游程式碼時，轉換為 `#foo`（私有）或裸 `bar`（可存取）。
-- 優先使用現有的輔助函式和工具，而非新的臨時程式碼。
-- 保留本儲存庫中已做的 Bun 優先基礎設施變更：
-  - 執行時期為 Bun（沒有 Node 入口點）。
-  - 套件管理器為 Bun（沒有 npm 鎖定檔）。
-  - 重量級 Node API（`child_process`、`readline`）已替換為 Bun 等效項。
-  - 輕量級 Node API（`os.homedir`、`os.tmpdir`、`fs.mkdtempSync`、`path.*`）保留。
-  - CLI shebang 使用 `bun`（不是 `node`，不是 `tsx`）。
-  - 套件直接使用原始碼檔案（沒有 TypeScript 建置步驟）。
-  - CI 工作流程使用 Bun 進行安裝/檢查/測試。
+- Keep existing formatting conventions.
+- Do not introduce `any` unless required.
+- Avoid dynamic imports and inline type imports; use top-level imports only.
+- Never build prompts in code; prompts are static `.md` files rendered with Handlebars.
+- In coding-agent, never use `console.log`/`console.warn`/`console.error`; use `logger` from `@f5-sales-demo/pi-utils`.
+- Use `Promise.withResolvers()` instead of `new Promise((resolve, reject) => ...)`.
+- **No `private`/`protected`/`public` keywords on class fields or methods.** Use ES `#` private fields for encapsulation; leave accessible members bare (no keyword).
+  The only exception is constructor parameter properties (`constructor(private readonly x: T)`), where the keyword is required by TypeScript. When porting upstream code that uses `private foo` or `protected bar`, convert to `#foo` (private) or bare `bar` (accessible).
+- Prefer existing helpers and utilities over new ad-hoc code.
+- Preserve Bun-first infrastructure changes already made in this repo:
+  - Runtime is Bun (no Node entry points).
+  - Package manager is Bun (no npm lockfiles).
+  - Heavy Node APIs (`child_process`, `readline`) are replaced with Bun equivalents.
+  - Lightweight Node APIs (`os.homedir`, `os.tmpdir`, `fs.mkdtempSync`, `path.*`) are kept.
+  - CLI shebangs use `bun` (not `node`, not `tsx`).
+  - Packages use source files directly (no TypeScript build step).
+  - CI workflows run Bun for install/check/test.
 
-## 8) 移除舊的相容性層
+## 8) Remove old compatibility layers
 
-除非有要求，否則移除上游的相容性墊片。
+Unless requested, remove upstream compatibility shims.
 
-- 刪除已被替換的舊 API。
-- 直接更新所有呼叫端使用新 API。
-- 不要保留 `*_v2` 或並行版本。
+- Delete old APIs that were replaced.
+- Update all call sites to the new API directly.
+- Do not keep `*_v2` or parallel versions.
 
-## 9) 更新文件和參考
+## 9) Update docs and references
 
-- 適當替換 pi-mono 儲存庫連結。
-- 更新範例以使用 Bun 和正確的套件範圍。
-- 確保 README 說明仍與當前儲存庫行為一致。
+- Replace pi-mono repo links where appropriate.
+- Update examples to use Bun and correct package scopes.
+- Ensure README instructions still match the current repo behavior.
 
-## 10) 驗證移植結果
+## 10) Validate the port
 
-變更後執行標準檢查：
+Run the standard checks after changes:
 
 - `bun check`
 
-如果儲存庫已有與您的變更無關的失敗檢查，請指出。
-測試使用 Bun 的執行器（不是 Vitest），但僅在明確要求時才執行 `bun test`。
+If the repo already has failing checks unrelated to your changes, call that out.
+Tests use Bun's runner (not Vitest), but only run `bun test` when explicitly requested.
 
-## 11) 保護已改善的功能（回歸陷阱清單）
+## 11) Protect improved features (regression trap list)
 
-如果您已在本地改善了行為，請將這些視為**不可妥協的**。移植前，記錄下
-改善之處並添加明確檢查，以免在合併中遺失。
+If you already improved behavior locally, treat those as **non‑negotiable**. Before porting, write down
+the improvements and add explicit checks so they don’t get lost in the merge.
 
-- **凍結預期行為**：為每項改善添加簡短的「前/後」備註（輸入、輸出、
-  預設值、邊界情況）。這可防止無聲回退。
-- **映射舊 → 新 API**：如果上游重新命名了概念（hooks → extensions、custom tools → tools 等），
-  確保每個舊入口點仍正確連接。遺漏一個旗標或匯出就等於失去功能。
-- **驗證匯出**：檢查 `package.json` 的 `exports`、公開型別和桶形檔案。上游移植經常
-  忘記重新匯出本地新增項目。
-- **涵蓋非正常路徑**：如果您修復了錯誤處理、逾時或備用邏輯，請添加測試或
-  至少一份手動檢查清單來驗證這些路徑。
-- **檢查預設值和配置合併順序**：改善通常存在於預設值中。確認新的預設值
-  沒有回退（例如新的配置優先順序、停用的功能、工具清單）。
-- **審核環境/shell 行為**：如果您修復了執行或沙箱化，驗證新路徑仍使用您的
-  清理過的環境，且沒有重新引入別名/函式覆蓋。
-- **重新執行目標範例**：保留一組最小的「已知良好」範例，並在移植後執行
-  （CLI 旗標、擴充套件註冊、工具執行）。
+- **Freeze the expected behavior**: add a short “before/after” note for each improvement (inputs, outputs,
+  defaults, edge cases). This prevents silent rollback.
+- **Map old → new APIs**: if upstream renamed concepts (hooks → extensions, custom tools → tools, etc.),
+  ensure every old entry point still wires through. One missed flag or export equals lost functionality.
+- **Verify exports**: check `package.json` `exports`, public types, and barrel files. Upstream ports often
+  forget to re-export local additions.
+- **Cover non‑happy paths**: if you fixed error handling, timeouts, or fallback logic, add a test or at
+  least a manual checklist that exercises those paths.
+- **Check defaults and config merge order**: improvements often live in defaults. Confirm new defaults
+  didn’t revert (e.g., new config precedence, disabled features, tool lists).
+- **Audit env/shell behavior**: if you fixed execution or sandboxing, verify the new path still uses your
+  sanitized env and does not reintroduce alias/function overrides.
+- **Re-run targeted samples**: keep a minimal set of "known good" examples and run them after the port
+  (CLI flags, extension registration, tool execution).
 
-## 12) 偵測並處理重構過的程式碼
+## 12) Detect and handle reworked code
 
-移植檔案前，檢查上游是否進行了大幅重構：
+Before porting a file, check if upstream significantly refactored it:
 
 ```bash
 # Compare the file you're about to port against what you have locally
 git diff HEAD upstream/main -- path/to/file.ts
 ```
 
-如果差異顯示檔案被**重構**（不僅僅是修補）：
+If the diff shows the file was **reworked** (not just patched):
 
-- 新的抽象、重新命名的概念、合併的模組、變更的資料流
+- New abstractions, renamed concepts, merged modules, changed data flow
 
-那麼您必須在移植前**徹底閱讀新的實作**。盲目合併重構程式碼會導致功能遺失，因為：
+Then you must **read the new implementation thoroughly** before porting. Blind merging of reworked code loses functionality because:
 
-注意：互動模式最近被拆分為 controllers/utils/types。回移相關變更時，請將更新移植到我們建立的個別檔案中，並確保 `interactive-mode.ts` 的串接保持同步。
+Note: interactive mode was recently split into controllers/utils/types. When backporting related changes, port updates into the individual files we created and ensure `interactive-mode.ts` wiring stays in sync.
 
-1. **預設值無聲變更** - 新變數 `defaultFoo = [a, b]` 可能取代了原本回傳 `[a, b, c, d, e]` 的舊 `getAllFoo()`。
+1. **Defaults change silently** - A new variable `defaultFoo = [a, b]` may replace an old `getAllFoo()` that returned `[a, b, c, d, e]`.
 
-2. **API 選項被丟棄** - 當系統合併時（例如 `hooks` + `customTools` → `extensions`），舊選項可能無法正確連接到新實作。
+2. **API options get dropped** - When systems merge (e.g., `hooks` + `customTools` → `extensions`), old options may not wire through to the new implementation.
 
-3. **程式碼路徑變得陳舊** - 重新命名的概念（例如 `hookMessage` → `custom`）需要在每個 switch 陳述式、型別守衛和處理器中更新——不僅僅是定義處。
+3. **Code paths go stale** - A renamed concept (e.g., `hookMessage` → `custom`) needs updates in every switch statement, type guard, and handler—not just the definition.
 
-4. **上下文/能力縮減** - 舊 API 可能暴露了 `{ logger, typebox, pi }`，而新 API 忘記包含。
+4. **Context/capabilities shrink** - Old APIs may have exposed `{ logger, typebox, pi }` that new APIs forgot to include.
 
-### 語義化移植流程
+### Semantic porting process
 
-當上游重構了一個模組時：
+When upstream reworked a module:
 
-1. **閱讀舊實作** - 了解它做了什麼、接受哪些選項、暴露了什麼。
+1. **Read the old implementation** - Understand what it did, what options it accepted, what it exposed.
 
-2. **閱讀新實作** - 了解新的抽象以及它們如何對映到舊行為。
+2. **Read the new implementation** - Understand the new abstractions and how they map to old behavior.
 
-3. **驗證功能對等** - 對於舊程式碼中的每項能力，確認新程式碼保留了它或明確移除了它。
+3. **Verify feature parity** - For each capability in the old code, confirm the new code preserves it or explicitly removes it.
 
-4. **搜尋遺漏** - 搜尋可能在 switch 陳述式、處理器、UI 元件中遺漏的舊名稱/概念。
+4. **Grep for stragglers** - Search for old names/concepts that may have been missed in switch statements, handlers, UI components.
 
-5. **測試邊界** - CLI 旗標、SDK 選項、事件處理器、預設值——這些是回歸藏身之處。
+5. **Test the boundaries** - CLI flags, SDK options, event handlers, default values—these are where regressions hide.
 
-### 快速檢查
+### Quick checks
 
 ```bash
 # Find all uses of an old concept that may need updating
@@ -247,23 +249,24 @@ git show upstream/main:path/to/file.ts | rg "default|DEFAULT"
 rg "case \"" path/to/file.ts
 ```
 
-## 13) 快速審核檢查清單
+## 13) Quick audit checklist
 
-在完成前用此作為最後一輪檢查：
+Use this as a final pass before you finish:
 
-- [ ] 匯入副檔名遵循本地套件慣例（不全面移除 `.js`）
-- [ ] 新的/移植的程式碼中沒有 Node 專用 API
-- [ ] 所有套件範圍已更新
-- [ ] `package.json` 腳本使用 Bun
-- [ ] 提示詞為 `.md` 文字匯入（沒有內嵌提示詞字串）
-- [ ] coding-agent 中沒有 `console.*`（使用 `logger`）
-- [ ] 資源透過 Bun 嵌入模式載入（沒有複製腳本）
-- [ ] 測試或檢查可執行（或明確註記為被阻擋）
-- [ ] 沒有功能回歸（見第 11-12 節）
+- [ ] Import extensions follow the local package convention (no blanket `.js` stripping)
+- [ ] No Node-only APIs in new/ported code
+- [ ] All package scopes updated
+- [ ] `package.json` scripts use Bun
+- [ ] Prompts are `.md` text imports (no inline prompt strings)
+- [ ] No `console.*` in coding-agent (use `logger`)
+- [ ] Assets load via Bun embed patterns (no copy scripts)
+- [ ] Tests or checks run (or explicitly noted as blocked)
+- [ ] No functionality regressions (see sections 11-12)
 
-## 14) 提交訊息格式
+## 14) Commit message format
 
-提交回移時，遵循儲存庫格式 `<type>(scope): <past-tense description>` 並在標題中保留提交範圍。
+When committing a backport, follow the repo format `<type>(scope): <past-tense description>` and keep the commit
+range in the title.
 
 ```
 fix(coding-agent): backported pi-mono changes (<from>..<to>)
@@ -276,7 +279,7 @@ packages/<other-package>:
 - <type>: <description>
 ```
 
-**範例：**
+**Example:**
 
 ```
 fix(coding-agent): backported pi-mono changes (9f3eef65f..52532c7c0)
@@ -298,95 +301,95 @@ packages/coding-agent:
 - fix: resolve macOS NFD and curly quote variants in file paths
 ```
 
-**規則：**
+**Rules:**
 
-- 按套件分組變更
-- 使用慣例提交類型（`fix`、`feat`、`refactor`、`perf`、`docs`）
-- 對外部貢獻包含上游 issue/PR 編號和貢獻者歸屬
-- 標題中的提交範圍有助於追蹤同步點
+- Group changes by package
+- Use conventional commit types (`fix`, `feat`, `refactor`, `perf`, `docs`)
+- Include upstream issue/PR numbers and contributor attribution for external contributions
+- The commit range in the title helps track sync points
 
-## 15) 刻意的分歧
+## 15) Intentional Divergences
 
-我們的分支有與上游不同的架構決策。**不要移植以下上游模式：**
+Our fork has architectural decisions that differ from upstream. **Do not port these upstream patterns:**
 
-### UI 架構
+### UI Architecture
 
-| 上游                                        | 我們的分支                                                | 原因                                                                  |
+| Upstream                                    | Our Fork                                                  | Reason                                                                |
 | ------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `FooterDataProvider` 類別                   | `StatusLineComponent`                                     | 更簡單、整合的狀態列                                                  |
-| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | 非 TUI 模式中為存根                                       | 在 TUI 中實作，其他地方為無操作                                       |
-| `ctx.ui.setEditorComponent()`               | 非 TUI 模式中為存根                                       | 在 TUI 中實作，其他地方為無操作                                       |
-| `InteractiveModeOptions` 選項物件           | 位置建構子參數（選項型別仍匯出）                          | 保持建構子簽名；上游新增欄位時更新型別                                |
+| `FooterDataProvider` class                  | `StatusLineComponent`                                     | Simpler, integrated status line                                       |
+| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `ctx.ui.setEditorComponent()`               | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `InteractiveModeOptions` options object     | Positional constructor args (options type still exported) | Keep constructor signature; update the type when upstream adds fields |
 
-### 元件命名
+### Component Naming
 
-| 上游                         | 我們的分支              |
+| Upstream                     | Our Fork                |
 | ---------------------------- | ----------------------- |
 | `extension-input.ts`         | `hook-input.ts`         |
 | `extension-selector.ts`      | `hook-selector.ts`      |
 | `ExtensionInputComponent`    | `HookInputComponent`    |
 | `ExtensionSelectorComponent` | `HookSelectorComponent` |
 
-### API 命名
+### API Naming
 
-| 上游                                     | 我們的分支                               | 備註                                      |
+| Upstream                                 | Our Fork                                 | Notes                                     |
 | ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | 我們全面使用 `sessionName`                |
-| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | 相同（我們統一以匹配上游的 RPC）          |
-| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | 相同                                      |
+| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | We use `sessionName` throughout           |
+| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | Same (we unified to match upstream's RPC) |
+| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Same                                      |
 
-### 檔案合併
+### File Consolidation
 
-| 上游                                               | 我們的分支                              | 原因                                    |
+| Upstream                                           | Our Fork                                | Reason                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts`（工具檔案）   | `@f5-sales-demo/pi-natives` 剪貼簿模組 | 合併至 N-API 原生實作                   |
+| `clipboard.ts` + `clipboard-image.ts` (tool files) | `@f5-sales-demo/pi-natives` clipboard module | Merged into N-API native implementation |
 
-### 測試框架
+### Test Framework
 
-| 上游                      | 我們的分支                    |
+| Upstream                  | Our Fork                      |
 | ------------------------- | ----------------------------- |
-| `vitest` 搭配 `vi.mock()` | `bun:test` 搭配 bun 的 `vi`  |
-| `node:test` 斷言          | `expect()` 匹配器            |
+| `vitest` with `vi.mock()` | `bun:test` with `vi` from bun |
+| `node:test` assertions    | `expect()` matchers           |
 
-### 工具架構
+### Tool Architecture
 
-| 上游                                | 我們的分支                                                        | 備註                                                      |
+| Upstream                            | Our Fork                                                          | Notes                                                     |
 | ----------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
-| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` 透過 `BUILTIN_TOOLS` 註冊表   | 工具工廠接受 `ToolSession` 且可回傳 `null`                |
-| 每個工具的 `*Operations` 介面       | 每個工具的介面保留（`FindOperations`、`GrepOperations`）           | 用於 SSH/遠端覆蓋                                         |
-| 到處使用 Node.js `fs/promises`      | 檔案用 `Bun.file()`/`Bun.write()`；目錄用 `node:fs/promises`     | 當 Bun API 能簡化時優先使用                               |
+| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS` registry  | Tool factories accept `ToolSession` and can return `null` |
+| Per-tool `*Operations` interfaces   | Per-tool interfaces remain (`FindOperations`, `GrepOperations`)   | Used for SSH/remote overrides                             |
+| Node.js `fs/promises` everywhere    | `Bun.file()`/`Bun.write()` for files; `node:fs/promises` for dirs | Prefer Bun APIs when they simplify                        |
 
-### 認證儲存
+### Auth Storage
 
-| 上游                            | 我們的分支                                  | 備註                                         |
+| Upstream                        | Our Fork                                    | Notes                                        |
 | ------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| `proper-lockfile` + `auth.json` | `agent.db`（bun:sqlite）                    | 憑證專門儲存在 `agent.db` 中                 |
-| 每個提供者單一憑證              | 多憑證搭配輪詢選取                          | 保留工作階段親和性和退避邏輯                 |
+| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | Credentials stored exclusively in `agent.db` |
+| Single credential per provider  | Multi-credential with round-robin selection | Session affinity and backoff logic preserved |
 
-### 擴充套件
+### Extensions
 
-| 上游                          | 我們的分支                                 |
+| Upstream                      | Our Fork                                   |
 | ----------------------------- | ------------------------------------------ |
-| `jiti` 用於 TypeScript 載入   | 原生 Bun `import()`                        |
-| `pkg.pi` 清單欄位             | `pkg.xcsh ?? pkg.pi`（優先使用我們的命名空間） |
+| `jiti` for TypeScript loading | Native Bun `import()`                      |
+| `pkg.pi` manifest field       | `pkg.xcsh ?? pkg.pi` (prefer our namespace) |
 
-### 跳過這些上游功能
+### Skip These Upstream Features
 
-移植時，**完全跳過**這些檔案/功能：
+When porting, **skip** these files/features entirely:
 
-- `footer-data-provider.ts` — 我們使用 StatusLineComponent
-- `clipboard-image.ts` — 剪貼簿在 `@f5-sales-demo/pi-natives` N-API 模組中
-- GitHub 工作流程檔案 — 我們有自己的 CI
-- `models.generated.ts` — 自動產生的，在本地重新產生（改為 models.json）
+- `footer-data-provider.ts` — we use StatusLineComponent
+- `clipboard-image.ts` — clipboard is in `@f5-sales-demo/pi-natives` N-API module
+- GitHub workflow files — we have our own CI
+- `models.generated.ts` — auto-generated, regenerate locally (as models.json instead)
 
-### 我們新增的功能（保留這些）
+### Features We Added (Preserve These)
 
-這些存在於我們的分支中但不在上游。**永遠不要覆蓋：**
+These exist in our fork but not upstream. **Never overwrite:**
 
-- 互動模式中的 `StatusLineComponent`
-- 帶工作階段親和性的多憑證認證
-- 基於能力的探索系統（`defineCapability`、`registerProvider`、`loadCapability`、`skillCapability` 等）
-- MCP/Exa/SSH 整合
-- LSP 寫入穿透用於儲存時格式化
-- Bash 攔截（`checkBashInterception`）
-- 讀取工具中的模糊路徑建議
+- `StatusLineComponent` in interactive mode
+- Multi-credential auth with session affinity
+- Capability-based discovery system (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`, etc.)
+- MCP/Exa/SSH integrations
+- LSP writethrough for format-on-save
+- Bash interception (`checkBashInterception`)
+- Fuzzy path suggestions in read tool

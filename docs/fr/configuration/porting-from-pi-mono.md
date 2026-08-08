@@ -1,104 +1,104 @@
 ---
-title: 'Portage depuis pi-mono : Guide pratique de fusion'
-description: >-
-  Guide pratique pour migrer du code depuis le monorepo pi-mono vers la base de
-  code xcsh.
+title: "Porting From pi-mono: A Practical Merge Guide"
+description: Practical guide for migrating code from the pi-mono monorepo into the xcsh codebase.
 sidebar:
   order: 9
-  label: Portage depuis pi-mono
+  label: Porting from pi-mono
+
 i18n:
-  sourceHash: fd4e8c09303d
-  translator: machine
+  sourceHash: "f93fbb10a575"
+  translator: "machine"
 ---
 
-# Portage depuis pi-mono : Guide pratique de fusion
+# Porting From pi-mono: A Practical Merge Guide
 
-Ce guide est une liste de vérification reproductible pour porter des modifications de pi-mono vers ce dépôt.
-Utilisez-le pour toute fusion : fichier unique, branche de fonctionnalité ou synchronisation complète d'une version.
+This guide is a repeatable checklist for porting changes from pi-mono into this repo.
+Use it for any merge: single file, feature branch, or full release sync.
 
-## Dernier point de synchronisation
+## Last Sync Point
 
-**Commit :** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
-**Date :** 2026-03-22
+**Commit:** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
+**Date:** 2026-03-22
 
-Mettez à jour cette section après chaque synchronisation ; ne réutilisez pas la plage précédente.
+Update this section after each sync; do not reuse the previous range.
 
-Lorsque vous démarrez une nouvelle synchronisation, générez les patches depuis ce commit :
+When starting a new sync, generate patches from this commit forward:
 
 ```bash
 git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > changes.patch
 ```
 
-## 0) Définir le périmètre
+## 0) Define the scope
 
-- Identifiez la référence amont (commit, tag ou PR).
-- Listez les packages ou dossiers que vous prévoyez de modifier.
-- Décidez quelles fonctionnalités sont dans le périmètre et lesquelles sont intentionnellement exclues.
+- Identify the upstream reference (commit, tag, or PR).
+- List the packages or folders you plan to touch.
+- Decide which features are in-scope and which are intentionally skipped.
 
-## 1) Importer le code en toute sécurité
+## 1) Bring code over safely
 
-- Privilégiez un diff propre et ciblé plutôt qu'une copie en bloc.
-- Évitez de copier les artéfacts de build ou les fichiers générés.
-- Si l'amont a ajouté de nouveaux fichiers, ajoutez-les explicitement et vérifiez leur contenu.
+- Prefer a clean, focused diff rather than a wholesale copy.
+- Avoid copying built artifacts or generated files.
+- If upstream added new files, add them explicitly and review contents.
 
-## 2) Respecter les conventions d'extensions d'import
+## 2) Match import extension conventions
 
-La plupart des sources TypeScript de production omettent `.js` dans les imports internes, mais certains points d'entrée de test/benchmark conservent `.js` pour la compatibilité ESM à l'exécution. Suivez le style existant du package local ; ne supprimez pas systématiquement les extensions.
+Most runtime TypeScript sources omit `.js` in internal imports, but some test/bench entrypoints keep `.js` for ESM
+runtime compatibility. Follow the local package’s existing style; do not blanket-strip extensions.
 
-- Dans les sources de production de `packages/coding-agent`, gardez les imports internes sans extension sauf pour l'import d'assets non-TS.
-- Dans `packages/tui/test` et `packages/natives/bench`, conservez `.js` là où les fichiers environnants l'utilisent déjà.
-- Conservez les vraies extensions de fichier lorsque l'outillage l'exige (par ex. `.json`, `.css`, intégrations de texte `.md`).
-- Exemple : `import { x } from "./foo.js";` → `import { x } from "./foo";` (uniquement lorsque la convention du package est sans extension).
+- In `packages/coding-agent` runtime sources, keep internal imports extensionless unless importing non-TS assets.
+- In `packages/tui/test` and `packages/natives/bench`, keep `.js` where surrounding files already use it.
+- Keep real file extensions when required by tooling (e.g., `.json`, `.css`, `.md` text embeds).
+- Example: `import { x } from "./foo.js";` → `import { x } from "./foo";` (only when the package convention is extensionless).
 
-## 3) Remplacer les scopes d'import
+## 3) Replace import scopes
 
-L'amont utilise des scopes de package différents. Remplacez-les de manière cohérente.
+Upstream uses different package scopes. Replace them consistently.
 
-- Remplacez les anciens scopes par le scope local utilisé ici.
-- Exemples (ajustez en fonction des packages réellement portés) :
+- Replace old scopes with the local scope used here.
+- Examples (adjust to match the actual packages you are porting):
   - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
   - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
   - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
   - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
 
-## 4) Utiliser les API Bun lorsqu'elles améliorent celles de Node
+## 4) Use Bun APIs where they improve on Node
 
-Nous fonctionnons sur Bun. Remplacez les API Node uniquement lorsque Bun fournit une meilleure alternative.
+We run on Bun. Replace Node APIs only when Bun provides a better alternative.
 
-**À REMPLACER :**
+**DO replace:**
 
-- Lancement de processus : `child_process.spawn` → Bun Shell `$` pour les commandes simples, `Bun.spawn`/`Bun.spawnSync` pour le streaming ou les tâches longues
-- E/S fichier : `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
-- Clients HTTP : `node-fetch`, `axios` → `fetch` natif
-- Hachage crypto : `node:crypto` → Web Crypto ou `Bun.hash`
-- SQLite : `better-sqlite3` → `bun:sqlite`
-- Chargement d'env : `dotenv` → Bun charge `.env` automatiquement
+- Process spawning: `child_process.spawn` → Bun Shell `$` for simple commands, `Bun.spawn`/`Bun.spawnSync` for streaming or long-running work
+- File I/O: `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
+- HTTP clients: `node-fetch`, `axios` → native `fetch`
+- Crypto hashing: `node:crypto` → Web Crypto or `Bun.hash`
+- SQLite: `better-sqlite3` → `bun:sqlite`
+- Env loading: `dotenv` → Bun loads `.env` automatically
 
-**NE PAS REMPLACER (ces API fonctionnent correctement dans Bun) :**
+**DO NOT replace (these work fine in Bun):**
 
-- `os.homedir()` — NE PAS remplacer par `Bun.env.HOME`, `Bun.env.HOME`, ou le littéral `"~"`
-- `os.tmpdir()` — NE PAS remplacer par `Bun.env.TMPDIR || "/tmp"` ou des chemins codés en dur
-- `fs.mkdtempSync()` — NE PAS remplacer par une construction manuelle de chemin
-- `path.join()`, `path.resolve()`, etc. — ces fonctions conviennent
+- `os.homedir()` — do NOT replace with `Bun.env.HOME`, `Bun.env.HOME`, or literal `"~"`
+- `os.tmpdir()` — do NOT replace with `Bun.env.TMPDIR || "/tmp"` or hardcoded paths
+- `fs.mkdtempSync()` — do NOT replace with manual path construction
+- `path.join()`, `path.resolve()`, etc. — these are fine
 
-**Style d'import :** Utilisez le préfixe `node:` avec des imports de namespace uniquement (pas d'imports nommés depuis `node:fs` ou `node:path`).
+**Import style:** Use the `node:` prefix with namespace imports only (no named imports from `node:fs` or `node:path`).
 
-**Conventions Bun supplémentaires :**
+**Additional Bun conventions:**
 
-- Privilégiez Bun Shell `$` pour les commandes courtes sans streaming ; utilisez `Bun.spawn` uniquement lorsque vous avez besoin d'E/S en streaming ou de contrôle du processus.
-- Utilisez `Bun.file()`/`Bun.write()` pour les fichiers et `node:fs/promises` pour les répertoires.
-- Évitez les vérifications `Bun.file().exists()` ; utilisez la gestion `isEnoent` dans un try/catch.
-- Préférez `Bun.sleep(ms)` aux wrappers `setTimeout`.
+- Prefer Bun Shell `$` for short, non-streaming commands; use `Bun.spawn` only when you need streaming I/O or process control.
+- Use `Bun.file()`/`Bun.write()` for files and `node:fs/promises` for directories.
+- Avoid `Bun.file().exists()` checks; use `isEnoent` handling in try/catch.
+- Prefer `Bun.sleep(ms)` over `setTimeout` wrappers.
 
-**Incorrect :**
+**Wrong:**
 
 ```typescript
-// CASSÉ : les variables d'env peuvent être undefined, "~" n'est pas résolu
+// BROKEN: env vars may be undefined, "~" is not expanded
 const home = Bun.env.HOME || "~";
 const tmp = Bun.env.TMPDIR || "/tmp";
 ```
 
-**Correct :**
+**Correct:**
 
 ```typescript
 import * as os from "node:os";
@@ -109,164 +109,164 @@ const configDir = path.join(os.homedir(), ".config", "myapp");
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 ```
 
-## 5) Privilégier les intégrations Bun (pas de copie)
+## 5) Prefer Bun embeds (no copying)
 
-Ne copiez pas les assets d'exécution ni les fichiers vendors au moment du build.
+Do not copy runtime assets or vendor files at build time.
 
-- Si l'amont copie des assets dans un dossier dist, remplacez par des intégrations compatibles Bun.
-- Les prompts sont des fichiers `.md` statiques ; utilisez les imports texte Bun (`with { type: "text" }`) et Handlebars au lieu de chaînes de prompt inline.
-- Utilisez `import.meta.dir` + `Bun.file` pour charger les ressources non-texte adjacentes.
-- Gardez les assets dans le dépôt et laissez le bundler les inclure.
-- Éliminez les scripts de copie sauf si l'utilisateur les demande explicitement.
-- Si l'amont lit un fichier de repli bundlé à l'exécution, remplacez les lectures du système de fichiers par un import d'intégration texte Bun.
-  - Exemple (repli des instructions Codex) :
-    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> supprimé
+- If upstream copies assets into a dist folder, replace with Bun-friendly embeds.
+- Prompts are static `.md` files; use Bun text imports (`with { type: "text" }`) and Handlebars instead of inline prompt strings.
+- Use `import.meta.dir` + `Bun.file` to load adjacent non-text resources.
+- Keep assets in-repo and let the bundler include them.
+- Eliminate copy scripts unless the user explicitly requests them.
+- If upstream reads a bundled fallback file at runtime, replace filesystem reads with a Bun text embed import.
+  - Example (Codex instructions fallback):
+    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> removed
     - `import FALLBACK_INSTRUCTIONS from "./codex-instructions.md" with { type: "text" };`
-    - Utilisez `return FALLBACK_INSTRUCTIONS;` au lieu de `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
+    - Use `return FALLBACK_INSTRUCTIONS;` instead of `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
 
-## 6) Porter `package.json` avec précaution
+## 6) Port `package.json` carefully
 
-Traitez `package.json` comme un contrat. Fusionnez intentionnellement.
+Treat `package.json` as a contract. Merge intentionally.
 
-- Conservez les `name`, `version`, `type`, `exports` et `bin` existants sauf si le portage nécessite des modifications.
-- Remplacez les scripts npm/node par des équivalents Bun (par ex. `bun check`, `bun test`).
-- Assurez-vous que les dépendances utilisent le bon scope.
-- Ne rétrogradez pas les dépendances pour corriger des erreurs de type ; mettez à jour à la place.
-- Validez les liens de packages workspace et les `peerDependencies`.
+- Keep existing `name`, `version`, `type`, `exports`, and `bin` unless the port requires changes.
+- Replace npm/node scripts with Bun equivalents (e.g., `bun check`, `bun test`).
+- Ensure dependencies use the correct scope.
+- Do not downgrade dependencies to fix type errors; upgrade instead.
+- Validate workspace package links and `peerDependencies`.
 
-## 7) Aligner le style de code et l'outillage
+## 7) Align code style and tooling
 
-- Conservez les conventions de formatage existantes.
-- N'introduisez pas de `any` sauf si nécessaire.
-- Évitez les imports dynamiques et les imports de type inline ; utilisez uniquement des imports de premier niveau.
-- Ne construisez jamais de prompts dans le code ; les prompts sont des fichiers `.md` statiques rendus avec Handlebars.
-- Dans coding-agent, n'utilisez jamais `console.log`/`console.warn`/`console.error` ; utilisez `logger` depuis `@f5-sales-demo/pi-utils`.
-- Utilisez `Promise.withResolvers()` au lieu de `new Promise((resolve, reject) => ...)`.
-- **Pas de mots-clés `private`/`protected`/`public` sur les champs ou méthodes de classe.** Utilisez les champs privés ES `#` pour l'encapsulation ; laissez les membres accessibles sans mot-clé.
-  La seule exception concerne les propriétés de paramètre de constructeur (`constructor(private readonly x: T)`), où le mot-clé est requis par TypeScript. Lors du portage de code amont utilisant `private foo` ou `protected bar`, convertissez en `#foo` (privé) ou `bar` nu (accessible).
-- Privilégiez les helpers et utilitaires existants plutôt que du code ad-hoc nouveau.
-- Préservez les modifications d'infrastructure Bun-first déjà réalisées dans ce dépôt :
-  - Le runtime est Bun (pas de points d'entrée Node).
-  - Le gestionnaire de packages est Bun (pas de lockfiles npm).
-  - Les API Node lourdes (`child_process`, `readline`) sont remplacées par des équivalents Bun.
-  - Les API Node légères (`os.homedir`, `os.tmpdir`, `fs.mkdtempSync`, `path.*`) sont conservées.
-  - Les shebangs CLI utilisent `bun` (ni `node`, ni `tsx`).
-  - Les packages utilisent directement les fichiers sources (pas d'étape de build TypeScript).
-  - Les workflows CI exécutent Bun pour install/check/test.
+- Keep existing formatting conventions.
+- Do not introduce `any` unless required.
+- Avoid dynamic imports and inline type imports; use top-level imports only.
+- Never build prompts in code; prompts are static `.md` files rendered with Handlebars.
+- In coding-agent, never use `console.log`/`console.warn`/`console.error`; use `logger` from `@f5-sales-demo/pi-utils`.
+- Use `Promise.withResolvers()` instead of `new Promise((resolve, reject) => ...)`.
+- **No `private`/`protected`/`public` keywords on class fields or methods.** Use ES `#` private fields for encapsulation; leave accessible members bare (no keyword).
+  The only exception is constructor parameter properties (`constructor(private readonly x: T)`), where the keyword is required by TypeScript. When porting upstream code that uses `private foo` or `protected bar`, convert to `#foo` (private) or bare `bar` (accessible).
+- Prefer existing helpers and utilities over new ad-hoc code.
+- Preserve Bun-first infrastructure changes already made in this repo:
+  - Runtime is Bun (no Node entry points).
+  - Package manager is Bun (no npm lockfiles).
+  - Heavy Node APIs (`child_process`, `readline`) are replaced with Bun equivalents.
+  - Lightweight Node APIs (`os.homedir`, `os.tmpdir`, `fs.mkdtempSync`, `path.*`) are kept.
+  - CLI shebangs use `bun` (not `node`, not `tsx`).
+  - Packages use source files directly (no TypeScript build step).
+  - CI workflows run Bun for install/check/test.
 
-## 8) Supprimer les anciennes couches de compatibilité
+## 8) Remove old compatibility layers
 
-Sauf demande contraire, supprimez les shims de compatibilité amont.
+Unless requested, remove upstream compatibility shims.
 
-- Supprimez les anciennes API qui ont été remplacées.
-- Mettez à jour tous les sites d'appel vers la nouvelle API directement.
-- Ne conservez pas de versions `*_v2` ou parallèles.
+- Delete old APIs that were replaced.
+- Update all call sites to the new API directly.
+- Do not keep `*_v2` or parallel versions.
 
-## 9) Mettre à jour la documentation et les références
+## 9) Update docs and references
 
-- Remplacez les liens vers le dépôt pi-mono là où c'est approprié.
-- Mettez à jour les exemples pour utiliser Bun et les bons scopes de package.
-- Assurez-vous que les instructions du README correspondent toujours au comportement actuel du dépôt.
+- Replace pi-mono repo links where appropriate.
+- Update examples to use Bun and correct package scopes.
+- Ensure README instructions still match the current repo behavior.
 
-## 10) Valider le portage
+## 10) Validate the port
 
-Exécutez les vérifications standard après les modifications :
+Run the standard checks after changes:
 
 - `bun check`
 
-Si le dépôt a déjà des vérifications en échec sans rapport avec vos modifications, signalez-le.
-Les tests utilisent le runner de Bun (pas Vitest), mais n'exécutez `bun test` que sur demande explicite.
+If the repo already has failing checks unrelated to your changes, call that out.
+Tests use Bun's runner (not Vitest), but only run `bun test` when explicitly requested.
 
-## 11) Protéger les fonctionnalités améliorées (liste des pièges de régression)
+## 11) Protect improved features (regression trap list)
 
-Si vous avez déjà amélioré un comportement localement, traitez ces améliorations comme **non négociables**. Avant le portage, notez
-les améliorations et ajoutez des vérifications explicites pour qu'elles ne se perdent pas dans la fusion.
+If you already improved behavior locally, treat those as **non‑negotiable**. Before porting, write down
+the improvements and add explicit checks so they don’t get lost in the merge.
 
-- **Figez le comportement attendu** : ajoutez une note courte « avant/après » pour chaque amélioration (entrées, sorties,
-  valeurs par défaut, cas limites). Cela empêche un retour arrière silencieux.
-- **Mappez ancien → nouveau API** : si l'amont a renommé des concepts (hooks → extensions, custom tools → tools, etc.),
-  assurez-vous que chaque ancien point d'entrée est toujours connecté. Un flag ou export manqué équivaut à une fonctionnalité perdue.
-- **Vérifiez les exports** : contrôlez les `exports` de `package.json`, les types publics et les fichiers barrel. Les portages amont
-  oublient souvent de ré-exporter les ajouts locaux.
-- **Couvrez les chemins non nominaux** : si vous avez corrigé la gestion d'erreurs, les timeouts ou la logique de repli, ajoutez un test ou au
-  moins une checklist manuelle qui exerce ces chemins.
-- **Vérifiez les valeurs par défaut et l'ordre de fusion des configurations** : les améliorations résident souvent dans les valeurs par défaut. Confirmez que les nouvelles valeurs par défaut
-  n'ont pas été rétablies (par ex. nouvelle préséance de configuration, fonctionnalités désactivées, listes d'outils).
-- **Auditez le comportement env/shell** : si vous avez corrigé l'exécution ou le sandboxing, vérifiez que le nouveau chemin utilise toujours votre
-  environnement assaini et ne réintroduit pas de surcharges d'alias/fonctions.
-- **Ré-exécutez des exemples ciblés** : gardez un ensemble minimal d'exemples « connus comme bons » et exécutez-les après le portage
-  (flags CLI, enregistrement d'extensions, exécution d'outils).
+- **Freeze the expected behavior**: add a short “before/after” note for each improvement (inputs, outputs,
+  defaults, edge cases). This prevents silent rollback.
+- **Map old → new APIs**: if upstream renamed concepts (hooks → extensions, custom tools → tools, etc.),
+  ensure every old entry point still wires through. One missed flag or export equals lost functionality.
+- **Verify exports**: check `package.json` `exports`, public types, and barrel files. Upstream ports often
+  forget to re-export local additions.
+- **Cover non‑happy paths**: if you fixed error handling, timeouts, or fallback logic, add a test or at
+  least a manual checklist that exercises those paths.
+- **Check defaults and config merge order**: improvements often live in defaults. Confirm new defaults
+  didn’t revert (e.g., new config precedence, disabled features, tool lists).
+- **Audit env/shell behavior**: if you fixed execution or sandboxing, verify the new path still uses your
+  sanitized env and does not reintroduce alias/function overrides.
+- **Re-run targeted samples**: keep a minimal set of "known good" examples and run them after the port
+  (CLI flags, extension registration, tool execution).
 
-## 12) Détecter et gérer le code remanié
+## 12) Detect and handle reworked code
 
-Avant de porter un fichier, vérifiez si l'amont l'a significativement refactorisé :
+Before porting a file, check if upstream significantly refactored it:
 
 ```bash
-# Comparez le fichier que vous êtes sur le point de porter avec ce que vous avez localement
+# Compare the file you're about to port against what you have locally
 git diff HEAD upstream/main -- path/to/file.ts
 ```
 
-Si le diff montre que le fichier a été **remanié** (pas simplement corrigé) :
+If the diff shows the file was **reworked** (not just patched):
 
-- Nouvelles abstractions, concepts renommés, modules fusionnés, flux de données modifié
+- New abstractions, renamed concepts, merged modules, changed data flow
 
-Alors vous devez **lire la nouvelle implémentation en détail** avant de porter. La fusion aveugle de code remanié fait perdre des fonctionnalités car :
+Then you must **read the new implementation thoroughly** before porting. Blind merging of reworked code loses functionality because:
 
-Note : le mode interactif a récemment été découpé en controllers/utils/types. Lors du rétro-portage de modifications associées, portez les mises à jour dans les fichiers individuels que nous avons créés et assurez-vous que le câblage de `interactive-mode.ts` reste synchronisé.
+Note: interactive mode was recently split into controllers/utils/types. When backporting related changes, port updates into the individual files we created and ensure `interactive-mode.ts` wiring stays in sync.
 
-1. **Les valeurs par défaut changent silencieusement** - Une nouvelle variable `defaultFoo = [a, b]` peut remplacer un ancien `getAllFoo()` qui retournait `[a, b, c, d, e]`.
+1. **Defaults change silently** - A new variable `defaultFoo = [a, b]` may replace an old `getAllFoo()` that returned `[a, b, c, d, e]`.
 
-2. **Les options d'API sont supprimées** - Lorsque des systèmes fusionnent (par ex. `hooks` + `customTools` → `extensions`), les anciennes options peuvent ne pas être connectées à la nouvelle implémentation.
+2. **API options get dropped** - When systems merge (e.g., `hooks` + `customTools` → `extensions`), old options may not wire through to the new implementation.
 
-3. **Des chemins de code deviennent obsolètes** - Un concept renommé (par ex. `hookMessage` → `custom`) nécessite des mises à jour dans chaque instruction switch, garde de type et gestionnaire — pas seulement dans la définition.
+3. **Code paths go stale** - A renamed concept (e.g., `hookMessage` → `custom`) needs updates in every switch statement, type guard, and handler—not just the definition.
 
-4. **Le contexte/les capacités se réduisent** - Les anciennes API pouvaient exposer `{ logger, typebox, pi }` que les nouvelles API ont oublié d'inclure.
+4. **Context/capabilities shrink** - Old APIs may have exposed `{ logger, typebox, pi }` that new APIs forgot to include.
 
-### Processus de portage sémantique
+### Semantic porting process
 
-Lorsque l'amont a remanié un module :
+When upstream reworked a module:
 
-1. **Lisez l'ancienne implémentation** - Comprenez ce qu'elle faisait, quelles options elle acceptait, ce qu'elle exposait.
+1. **Read the old implementation** - Understand what it did, what options it accepted, what it exposed.
 
-2. **Lisez la nouvelle implémentation** - Comprenez les nouvelles abstractions et comment elles correspondent à l'ancien comportement.
+2. **Read the new implementation** - Understand the new abstractions and how they map to old behavior.
 
-3. **Vérifiez la parité fonctionnelle** - Pour chaque capacité de l'ancien code, confirmez que le nouveau code la préserve ou la supprime explicitement.
+3. **Verify feature parity** - For each capability in the old code, confirm the new code preserves it or explicitly removes it.
 
-4. **Cherchez les oublis** - Recherchez les anciens noms/concepts qui ont pu être manqués dans les instructions switch, gestionnaires, composants UI.
+4. **Grep for stragglers** - Search for old names/concepts that may have been missed in switch statements, handlers, UI components.
 
-5. **Testez les frontières** - Flags CLI, options SDK, gestionnaires d'événements, valeurs par défaut — c'est là que les régressions se cachent.
+5. **Test the boundaries** - CLI flags, SDK options, event handlers, default values—these are where regressions hide.
 
-### Vérifications rapides
+### Quick checks
 
 ```bash
-# Trouver toutes les utilisations d'un ancien concept qui pourrait nécessiter une mise à jour
+# Find all uses of an old concept that may need updating
 rg "oldConceptName" --type ts
 
-# Comparer les valeurs par défaut entre les versions
+# Compare default values between versions
 git show upstream/main:path/to/file.ts | rg "default|DEFAULT"
 
-# Vérifier si toutes les valeurs d'enum/union ont des gestionnaires
+# Check if all enum/union values have handlers
 rg "case \"" path/to/file.ts
 ```
 
-## 13) Checklist d'audit rapide
+## 13) Quick audit checklist
 
-Utilisez ceci comme passe finale avant de terminer :
+Use this as a final pass before you finish:
 
-- [ ] Les extensions d'import suivent la convention du package local (pas de suppression systématique de `.js`)
-- [ ] Pas d'API exclusives à Node dans le code nouveau/porté
-- [ ] Tous les scopes de package mis à jour
-- [ ] Les scripts de `package.json` utilisent Bun
-- [ ] Les prompts sont des imports texte `.md` (pas de chaînes de prompt inline)
-- [ ] Pas de `console.*` dans coding-agent (utiliser `logger`)
-- [ ] Les assets sont chargés via les patterns d'intégration Bun (pas de scripts de copie)
-- [ ] Les tests ou vérifications s'exécutent (ou sont explicitement signalés comme bloqués)
-- [ ] Pas de régressions fonctionnelles (voir sections 11-12)
+- [ ] Import extensions follow the local package convention (no blanket `.js` stripping)
+- [ ] No Node-only APIs in new/ported code
+- [ ] All package scopes updated
+- [ ] `package.json` scripts use Bun
+- [ ] Prompts are `.md` text imports (no inline prompt strings)
+- [ ] No `console.*` in coding-agent (use `logger`)
+- [ ] Assets load via Bun embed patterns (no copy scripts)
+- [ ] Tests or checks run (or explicitly noted as blocked)
+- [ ] No functionality regressions (see sections 11-12)
 
-## 14) Format des messages de commit
+## 14) Commit message format
 
-Lors du commit d'un rétro-portage, suivez le format du dépôt `<type>(scope): <description au passé>` et conservez la plage de commits
-dans le titre.
+When committing a backport, follow the repo format `<type>(scope): <past-tense description>` and keep the commit
+range in the title.
 
 ```
 fix(coding-agent): backported pi-mono changes (<from>..<to>)
@@ -279,7 +279,7 @@ packages/<other-package>:
 - <type>: <description>
 ```
 
-**Exemple :**
+**Example:**
 
 ```
 fix(coding-agent): backported pi-mono changes (9f3eef65f..52532c7c0)
@@ -301,95 +301,95 @@ packages/coding-agent:
 - fix: resolve macOS NFD and curly quote variants in file paths
 ```
 
-**Règles :**
+**Rules:**
 
-- Regroupez les modifications par package
-- Utilisez les types de commit conventionnels (`fix`, `feat`, `refactor`, `perf`, `docs`)
-- Incluez les numéros d'issue/PR amont et l'attribution des contributeurs pour les contributions externes
-- La plage de commits dans le titre aide à suivre les points de synchronisation
+- Group changes by package
+- Use conventional commit types (`fix`, `feat`, `refactor`, `perf`, `docs`)
+- Include upstream issue/PR numbers and contributor attribution for external contributions
+- The commit range in the title helps track sync points
 
-## 15) Divergences intentionnelles
+## 15) Intentional Divergences
 
-Notre fork a des décisions architecturales qui diffèrent de l'amont. **Ne portez pas ces patterns amont :**
+Our fork has architectural decisions that differ from upstream. **Do not port these upstream patterns:**
 
-### Architecture UI
+### UI Architecture
 
-| Amont                                       | Notre fork                                                | Raison                                                                |
+| Upstream                                    | Our Fork                                                  | Reason                                                                |
 | ------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| Classe `FooterDataProvider`                 | `StatusLineComponent`                                     | Ligne de statut plus simple et intégrée                               |
-| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub en modes non-TUI                                     | Implémenté dans TUI, no-op ailleurs                                   |
-| `ctx.ui.setEditorComponent()`               | Stub en modes non-TUI                                     | Implémenté dans TUI, no-op ailleurs                                   |
-| Objet d'options `InteractiveModeOptions`    | Arguments positionnels de constructeur (le type d'options reste exporté) | Conserver la signature du constructeur ; mettre à jour le type lorsque l'amont ajoute des champs |
+| `FooterDataProvider` class                  | `StatusLineComponent`                                     | Simpler, integrated status line                                       |
+| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `ctx.ui.setEditorComponent()`               | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
+| `InteractiveModeOptions` options object     | Positional constructor args (options type still exported) | Keep constructor signature; update the type when upstream adds fields |
 
-### Nommage des composants
+### Component Naming
 
-| Amont                        | Notre fork              |
+| Upstream                     | Our Fork                |
 | ---------------------------- | ----------------------- |
 | `extension-input.ts`         | `hook-input.ts`         |
 | `extension-selector.ts`      | `hook-selector.ts`      |
 | `ExtensionInputComponent`    | `HookInputComponent`    |
 | `ExtensionSelectorComponent` | `HookSelectorComponent` |
 
-### Nommage des API
+### API Naming
 
-| Amont                                    | Notre fork                               | Notes                                     |
+| Upstream                                 | Our Fork                                 | Notes                                     |
 | ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | Nous utilisons `sessionName` partout      |
-| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | Identique (nous avons unifié pour correspondre au RPC de l'amont) |
-| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Identique                                 |
+| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | We use `sessionName` throughout           |
+| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | Same (we unified to match upstream's RPC) |
+| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Same                                      |
 
-### Consolidation de fichiers
+### File Consolidation
 
-| Amont                                              | Notre fork                              | Raison                                  |
+| Upstream                                           | Our Fork                                | Reason                                  |
 | -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (fichiers d'outils) | Module clipboard de `@f5-sales-demo/pi-natives` | Fusionné dans l'implémentation native N-API |
+| `clipboard.ts` + `clipboard-image.ts` (tool files) | `@f5-sales-demo/pi-natives` clipboard module | Merged into N-API native implementation |
 
-### Framework de test
+### Test Framework
 
-| Amont                     | Notre fork                    |
+| Upstream                  | Our Fork                      |
 | ------------------------- | ----------------------------- |
-| `vitest` avec `vi.mock()` | `bun:test` avec `vi` de bun  |
-| Assertions `node:test`    | Matchers `expect()`           |
+| `vitest` with `vi.mock()` | `bun:test` with `vi` from bun |
+| `node:test` assertions    | `expect()` matchers           |
 
-### Architecture des outils
+### Tool Architecture
 
-| Amont                               | Notre fork                                                        | Notes                                                     |
+| Upstream                            | Our Fork                                                          | Notes                                                     |
 | ----------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
-| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via le registre `BUILTIN_TOOLS` | Les factories d'outils acceptent `ToolSession` et peuvent retourner `null` |
-| Interfaces `*Operations` par outil  | Les interfaces par outil restent (`FindOperations`, `GrepOperations`) | Utilisées pour les surcharges SSH/distantes              |
-| `fs/promises` Node.js partout       | `Bun.file()`/`Bun.write()` pour les fichiers ; `node:fs/promises` pour les répertoires | Privilégier les API Bun quand elles simplifient          |
+| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS` registry  | Tool factories accept `ToolSession` and can return `null` |
+| Per-tool `*Operations` interfaces   | Per-tool interfaces remain (`FindOperations`, `GrepOperations`)   | Used for SSH/remote overrides                             |
+| Node.js `fs/promises` everywhere    | `Bun.file()`/`Bun.write()` for files; `node:fs/promises` for dirs | Prefer Bun APIs when they simplify                        |
 
-### Stockage de l'authentification
+### Auth Storage
 
-| Amont                           | Notre fork                                  | Notes                                        |
+| Upstream                        | Our Fork                                    | Notes                                        |
 | ------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | Identifiants stockés exclusivement dans `agent.db` |
-| Un seul identifiant par fournisseur | Multi-identifiants avec sélection round-robin | Affinité de session et logique de backoff préservées |
+| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | Credentials stored exclusively in `agent.db` |
+| Single credential per provider  | Multi-credential with round-robin selection | Session affinity and backoff logic preserved |
 
 ### Extensions
 
-| Amont                             | Notre fork                                 |
-| --------------------------------- | ------------------------------------------ |
-| `jiti` pour le chargement TypeScript | `import()` natif de Bun                   |
-| Champ de manifeste `pkg.pi`       | `pkg.xcsh ?? pkg.pi` (privilégier notre namespace) |
+| Upstream                      | Our Fork                                   |
+| ----------------------------- | ------------------------------------------ |
+| `jiti` for TypeScript loading | Native Bun `import()`                      |
+| `pkg.pi` manifest field       | `pkg.xcsh ?? pkg.pi` (prefer our namespace) |
 
-### Ignorer ces fonctionnalités amont
+### Skip These Upstream Features
 
-Lors du portage, **ignorez** ces fichiers/fonctionnalités entièrement :
+When porting, **skip** these files/features entirely:
 
-- `footer-data-provider.ts` — nous utilisons StatusLineComponent
-- `clipboard-image.ts` — le clipboard est dans le module N-API `@f5-sales-demo/pi-natives`
-- Fichiers de workflow GitHub — nous avons notre propre CI
-- `models.generated.ts` — auto-généré, regénérer localement (sous forme de models.json à la place)
+- `footer-data-provider.ts` — we use StatusLineComponent
+- `clipboard-image.ts` — clipboard is in `@f5-sales-demo/pi-natives` N-API module
+- GitHub workflow files — we have our own CI
+- `models.generated.ts` — auto-generated, regenerate locally (as models.json instead)
 
-### Fonctionnalités que nous avons ajoutées (à préserver)
+### Features We Added (Preserve These)
 
-Celles-ci existent dans notre fork mais pas dans l'amont. **Ne jamais écraser :**
+These exist in our fork but not upstream. **Never overwrite:**
 
-- `StatusLineComponent` en mode interactif
-- Authentification multi-identifiants avec affinité de session
-- Système de découverte basé sur les capacités (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`, etc.)
-- Intégrations MCP/Exa/SSH
-- Writethrough LSP pour le formatage à la sauvegarde
-- Interception Bash (`checkBashInterception`)
-- Suggestions de chemin floues dans l'outil de lecture
+- `StatusLineComponent` in interactive mode
+- Multi-credential auth with session affinity
+- Capability-based discovery system (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`, etc.)
+- MCP/Exa/SSH integrations
+- LSP writethrough for format-on-save
+- Bash interception (`checkBashInterception`)
+- Fuzzy path suggestions in read tool
