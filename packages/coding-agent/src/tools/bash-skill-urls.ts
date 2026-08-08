@@ -43,6 +43,8 @@ export interface InternalUrlExpansionOptions {
 	sessionOwnedRoots?: () => readonly string[];
 }
 
+import { resolveSkillFromPath } from "../extensibility/skill-resolution";
+
 /**
  * Resolve a single skill:// URL to its absolute filesystem path.
  * Does NOT read file content or verify existence.
@@ -54,49 +56,45 @@ export function resolveSkillUrlToPath(url: string, skills: readonly Skill[]): st
 		throw new ToolError(`Invalid skill:// URL: ${url}`);
 	}
 
-	let rawSkillSegment = parsed[1];
-	if (!rawSkillSegment) {
+	let rawHost = parsed[1];
+	if (!rawHost) {
 		throw new ToolError(`skill:// URL requires a skill name: ${url}`);
 	}
-	// Decode percent-encoded colons (%3A) used for namespaced skill names
 	try {
-		rawSkillSegment = decodeURIComponent(rawSkillSegment);
+		rawHost = decodeURIComponent(rawHost);
 	} catch {
 		// Leave as-is if decoding fails
 	}
 
-	// Resolve skill name by longest-prefix match against registered skills.
-	// This handles namespaced skills ("plugin:skill") where the URI may also
-	// carry a colon-delimited suffix (e.g., ":1-5" line range).
-	const { skill, suffix } = matchSkillName(rawSkillSegment, skills);
-	if (!skill) {
+	const rawPathname = parsed[2] ?? "";
+	const match = resolveSkillFromPath(rawHost, rawPathname, skills);
+	if (!match) {
 		const available = skills.map(s => s.name);
 		const availableStr = available.length > 0 ? available.join(", ") : "none";
-		throw new ToolError(`Unknown skill: ${rawSkillSegment}. Available: ${availableStr}`);
+		const requested = rawHost;
+		throw new ToolError(`Unknown skill: ${requested}. Available: ${availableStr}`);
 	}
 
-	// Combine any colon suffix (line range like ":1-5") with the path segment
-	const rawPath = (parsed[2] ?? "") + (suffix ? `/${suffix}` : "");
-	const hasRelativePath = rawPath !== "" && rawPath !== "/";
-
-	if (!hasRelativePath) {
+	const { skill, relativePath } = match;
+	if (!relativePath) {
 		return path.resolve(skill.filePath);
 	}
 
-	let relativePath: string;
+	let decodedRelative: string;
 	try {
-		relativePath = decodeURIComponent(rawPath.slice(1));
+		decodedRelative = decodeURIComponent(relativePath);
 	} catch {
 		throw new ToolError(`Invalid skill:// URL path encoding: ${url}`);
 	}
+
 	try {
-		validateRelativePath(relativePath);
+		validateRelativePath(decodedRelative);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
 		throw new ToolError(message);
 	}
 
-	const targetPath = path.join(skill.baseDir, relativePath);
+	const targetPath = path.join(skill.baseDir, decodedRelative);
 	const resolvedPath = path.resolve(targetPath);
 	const resolvedBaseDir = path.resolve(skill.baseDir);
 	if (!resolvedPath.startsWith(resolvedBaseDir + path.sep) && resolvedPath !== resolvedBaseDir) {
@@ -104,39 +102,6 @@ export function resolveSkillUrlToPath(url: string, skills: readonly Skill[]): st
 	}
 
 	return resolvedPath;
-}
-
-/**
- * Match a raw skill segment against registered skills using longest-prefix match.
- * Handles colons in both skill names (namespacing) and suffixes (line ranges).
- *
- * For "superpowers:brainstorming:1-5" with skill "superpowers:brainstorming":
- *   -> skill = superpowers:brainstorming, suffix = "1-5"
- * For "brainstorming" with skill "brainstorming":
- *   -> skill = brainstorming, suffix = undefined
- */
-function matchSkillName(
-	rawSegment: string,
-	skills: readonly Skill[],
-): { skill: Skill | undefined; suffix: string | undefined } {
-	// Exact match first (most common case)
-	const exact = skills.find(s => s.name === rawSegment);
-	if (exact) return { skill: exact, suffix: undefined };
-
-	// Try stripping colon-delimited suffixes from the right
-	let candidate = rawSegment;
-	while (true) {
-		const lastColon = candidate.lastIndexOf(":");
-		if (lastColon <= 0) break;
-		candidate = candidate.slice(0, lastColon);
-		const match = skills.find(s => s.name === candidate);
-		if (match) {
-			const suffix = rawSegment.slice(lastColon + 1);
-			return { skill: match, suffix };
-		}
-	}
-
-	return { skill: undefined, suffix: undefined };
 }
 
 function extractScheme(url: string): SupportedInternalScheme | undefined {
