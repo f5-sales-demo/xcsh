@@ -1,42 +1,39 @@
 ---
-title: Configuration des modèles et des fournisseurs
-description: >-
-  Registre de modèles et configuration des fournisseurs via models.yml avec
-  routage, fallback et tarification.
+title: Model and Provider Configuration
+description: Model registry and provider configuration via models.yml with routing, fallback, and pricing.
 sidebar:
   order: 1
-  label: Modèles et fournisseurs
+  label: Models & providers
 i18n:
-  sourceHash: 8053df967ff6
-  translator: machine
+  sourceHash: "26d427f98a58"
+  translator: "machine"
 ---
 
-# Configuration des modèles et des fournisseurs (`models.yml`)
+This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
 
-Ce document décrit comment le coding-agent charge actuellement les modèles, applique les surcharges, résout les identifiants et choisit les modèles à l'exécution.
+## What controls model behavior
 
-## Ce qui contrôle le comportement des modèles
+Primary implementation files:
 
-Fichiers d'implémentation principaux :
+- `src/config/model-registry.ts` — loads built-in + custom models, provider overrides, runtime discovery, auth integration
+- `src/config/model-resolver.ts` — parses model patterns and selects initial/smol/slow models
+- `src/routing/` — provider-agnostic dynamic model routing coordinator, profiler, presets, and state machine
+- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, `routing.*`, provider transport preferences)
+- `src/session/auth-storage.ts` — API key + OAuth resolution order
+- `packages/ai/src/models.ts` and `packages/ai/src/types.ts` — built-in providers/models and `Model`/`compat` types
 
-- `src/config/model-registry.ts` — charge les modèles intégrés + personnalisés, les surcharges de fournisseurs, la découverte à l'exécution, l'intégration de l'authentification
-- `src/config/model-resolver.ts` — analyse les patterns de modèles et sélectionne les modèles initial/smol/slow
-- `src/config/settings-schema.ts` — paramètres liés aux modèles (`modelRoles`, préférences de transport des fournisseurs)
-- `src/session/auth-storage.ts` — ordre de résolution des clés API + OAuth
-- `packages/ai/src/models.ts` et `packages/ai/src/types.ts` — fournisseurs/modèles intégrés et types `Model`/`compat`
+## Config file location and legacy behavior
 
-## Emplacement du fichier de configuration et comportement hérité
-
-Chemin de configuration par défaut :
+Default config path:
 
 - `~/.xcsh/agent/models.yml`
 
-Comportement hérité toujours présent :
+Legacy behavior still present:
 
-- Si `models.yml` est absent et que `models.json` existe au même emplacement, il est migré vers `models.yml`.
-- Les chemins de configuration explicites en `.json` / `.jsonc` sont toujours pris en charge lorsqu'ils sont passés programmatiquement à `ModelRegistry`.
+- If `models.yml` is missing and `models.json` exists at the same location, it is migrated to `models.yml`.
+- Explicit `.json` / `.jsonc` config paths are still supported when passed programmatically to `ModelRegistry`.
 
-## Structure de `models.yml`
+## `models.yml` shape
 
 ```yaml
 configVersion: 1  # optional — written by auto-config, used for migration detection
@@ -50,16 +47,16 @@ equivalence:
     - <provider-id>/<model-id>
 ```
 
-`configVersion` est un entier optionnel écrit par le système de configuration automatique. Lorsqu'il est présent, xcsh l'utilise pour détecter les configurations obsolètes et les mettre à jour automatiquement.
+`configVersion` is an optional integer written by the auto-config system. When present, xcsh uses it to detect outdated configs and auto-upgrade them.
 
-`provider-id` est la clé canonique du fournisseur utilisée pour la sélection et la recherche d'authentification.
+`provider-id` is the canonical provider key used across selection and auth lookup.
 
-`equivalence` est optionnel et configure le regroupement canonique des modèles au-dessus des modèles concrets des fournisseurs :
+`equivalence` is optional and configures canonical model grouping on top of concrete provider models:
 
-- `overrides` associe un sélecteur concret exact (`provider/modelId`) à un identifiant canonique officiel en amont
-- `exclude` exclut un sélecteur concret du regroupement canonique
+- `overrides` maps an exact concrete selector (`provider/modelId`) to an official upstream canonical id
+- `exclude` opts a concrete selector out of canonical grouping
 
-## Champs au niveau du fournisseur
+## Provider-level fields
 
 ```yaml
 providers:
@@ -105,7 +102,7 @@ providers:
             controller: mlx
 ```
 
-### Valeurs `api` autorisées pour les fournisseurs/modèles
+### Allowed provider/model `api` values
 
 - `openai-completions`
 - `openai-responses`
@@ -115,64 +112,64 @@ providers:
 - `google-generative-ai`
 - `google-vertex`
 
-### Valeurs autorisées pour auth/discovery
+### Allowed auth/discovery values
 
-- `auth` : `apiKey` (par défaut) ou `none`
-- `discovery.type` : `ollama`
+- `auth`: `apiKey` (default) or `none`
+- `discovery.type`: `ollama`
 
-## Règles de validation (actuelles)
+## Validation rules (current)
 
-### Fournisseur personnalisé complet (`models` non vide)
+### Full custom provider (`models` is non-empty)
 
-Requis :
+Required:
 
 - `baseUrl`
-- `apiKey` sauf si `auth: none`
-- `api` au niveau du fournisseur ou pour chaque modèle
+- `apiKey` unless `auth: none`
+- `api` at provider level or each model
 
-### Fournisseur en surcharge uniquement (`models` absent ou vide)
+### Override-only provider (`models` missing or empty)
 
-Doit définir au moins l'un des éléments suivants :
+Must define at least one of:
 
 - `baseUrl`
 - `modelOverrides`
 - `discovery`
 
-### Découverte
+### Discovery
 
-- `discovery` nécessite `api` au niveau du fournisseur.
+- `discovery` requires provider-level `api`.
 
-### Vérifications des valeurs des modèles
+### Model value checks
 
-- `id` requis
-- `contextWindow` et `maxTokens` doivent être positifs s'ils sont fournis
+- `id` required
+- `contextWindow` and `maxTokens` must be positive if provided
 
-## Ordre de fusion et de surcharge
+## Merge and override order
 
-Pipeline de ModelRegistry (lors du rafraîchissement) :
+ModelRegistry pipeline (on refresh):
 
-1. Charger les fournisseurs/modèles intégrés depuis `@f5-sales-demo/pi-ai`.
-2. Charger la configuration personnalisée `models.yml`.
-3. Appliquer les surcharges de fournisseurs (`baseUrl`, `headers`) aux modèles intégrés.
-4. Appliquer les `modelOverrides` (par fournisseur + identifiant de modèle).
-5. Fusionner les `models` personnalisés :
-   - même `provider + id` remplace l'existant
-   - sinon, ajouter à la suite
-6. Appliquer les modèles découverts à l'exécution (actuellement Ollama et LM Studio), puis réappliquer les surcharges de modèles.
+1. Load built-in providers/models from `@f5-sales-demo/pi-ai`.
+2. Load `models.yml` custom config.
+3. Apply provider overrides (`baseUrl`, `headers`) to built-in models.
+4. Apply `modelOverrides` (per provider + model id).
+5. Merge custom `models`:
+   - same `provider + id` replaces existing
+   - otherwise append
+6. Apply runtime-discovered models (currently Ollama and LM Studio), then re-apply model overrides.
 
-## Équivalence canonique des modèles et coalescence
+## Canonical model equivalence and coalescing
 
-Le registre conserve chaque modèle concret de fournisseur puis construit une couche canonique au-dessus.
+The registry keeps every concrete provider model and then builds a canonical layer above them.
 
-Les identifiants canoniques sont uniquement des identifiants officiels en amont, par exemple :
+Canonical ids are official upstream ids only, for example:
 
 - `claude-opus-4-6`
 - `claude-haiku-4-5`
 - `gpt-5.3-codex`
 
-### Configuration d'équivalence dans `models.yml`
+### `models.yml` equivalence config
 
-Exemple :
+Example:
 
 ```yaml
 providers:
@@ -201,77 +198,77 @@ equivalence:
     - demo/codex-preview
 ```
 
-Ordre de construction pour le regroupement canonique :
+Build order for canonical grouping:
 
-1. surcharge utilisateur exacte depuis `equivalence.overrides`
-2. correspondances d'identifiants officiels groupés depuis les métadonnées des modèles intégrés
-3. normalisation heuristique conservatrice pour les variantes de passerelle/fournisseur
-4. repli sur l'identifiant propre du modèle concret
+1. exact user override from `equivalence.overrides`
+2. bundled official-id matches from built-in model metadata
+3. conservative heuristic normalization for gateway/provider variants
+4. fallback to the concrete model's own id
 
-Les heuristiques actuelles sont intentionnellement restrictives :
+Current heuristics are intentionally narrow:
 
-- les préfixes amont intégrés peuvent être supprimés lorsqu'ils sont présents, par exemple `anthropic/...` ou `openai/...`
-- les variantes de version avec points et tirets ne peuvent être normalisées que lorsqu'elles correspondent à un identifiant officiel existant, par exemple `4.6 -> 4-6`
-- les familles ou versions ambiguës ne sont pas fusionnées sans correspondance groupée ou surcharge explicite
+- embedded upstream prefixes can be stripped when present, for example `anthropic/...` or `openai/...`
+- dotted and dashed version variants can normalize only when they map to an existing official id, for example `4.6 -> 4-6`
+- ambiguous families or versions are not merged without a bundled match or explicit override
 
-### Comportement de la résolution canonique
+### Canonical resolution behavior
 
-Lorsque plusieurs variantes concrètes partagent un identifiant canonique, la résolution utilise :
+When multiple concrete variants share a canonical id, resolution uses:
 
-1. disponibilité et authentification
-2. `modelProviderOrder` dans `config.yml`
-3. ordre existant du registre/fournisseur si `modelProviderOrder` n'est pas défini
+1. availability and auth
+2. `config.yml` `modelProviderOrder`
+3. existing registry/provider order if `modelProviderOrder` is unset
 
-Les fournisseurs désactivés ou non authentifiés sont ignorés.
+Disabled or unauthenticated providers are skipped.
 
-L'état de session et les transcriptions continuent d'enregistrer le fournisseur/modèle concret qui a réellement exécuté le tour.
+Session state and transcripts continue to record the concrete provider/model that actually executed the turn.
 
-Valeurs par défaut du fournisseur vs surcharges par modèle :
+Provider defaults vs per-model overrides:
 
-- Les `headers` du fournisseur constituent la base.
-- Les `headers` du modèle surchargent les clés d'en-tête du fournisseur.
-- Les `modelOverrides` peuvent surcharger les métadonnées du modèle (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`).
-- `compat` est fusionné en profondeur pour les blocs de routage imbriqués (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`).
+- Provider `headers` are baseline.
+- Model `headers` override provider header keys.
+- `modelOverrides` can override model metadata (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`).
+- `compat` is deep-merged for nested routing blocks (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`).
 
-## Intégration de la découverte à l'exécution
+## Runtime discovery integration
 
-### Découverte implicite d'Ollama
+### Implicit Ollama discovery
 
-Si `ollama` n'est pas explicitement configuré, le registre ajoute un fournisseur découvrable implicite :
+If `ollama` is not explicitly configured, registry adds an implicit discoverable provider:
 
-- fournisseur : `ollama`
-- api : `openai-completions`
-- URL de base : `OLLAMA_BASE_URL` ou `http://127.0.0.1:11434`
-- mode d'authentification : sans clé (comportement `auth: none`)
+- provider: `ollama`
+- api: `openai-completions`
+- base URL: `OLLAMA_BASE_URL` or `http://127.0.0.1:11434`
+- auth mode: keyless (`auth: none` behavior)
 
-La découverte à l'exécution appelle `GET /api/tags` sur Ollama et synthétise des entrées de modèle avec les valeurs par défaut locales.
+Runtime discovery calls `GET /api/tags` on Ollama and synthesizes model entries with local defaults.
 
-### Découverte implicite de llama.cpp
+### Implicit llama.cpp discovery
 
-Si `llama.cpp` n'est pas explicitement configuré, le registre ajoute un fournisseur découvrable implicite :
-Note : il utilise la nouvelle API anthropic messages au lieu de openai-completions.
+If `llama.cpp` is not explicitly configured, registry adds an implicit discoverable provider:
+Note: it's using the newer antropic messages api instead of the openai-competions.
 
-- fournisseur : `llama.cpp`
-- api : `openai-responses`
-- URL de base : `LLAMA_CPP_BASE_URL` ou `http://127.0.0.1:8080`
-- mode d'authentification : sans clé (comportement `auth: none`)
+- provider: `llama.cpp`
+- api: `openai-responses`
+- base URL: `LLAMA_CPP_BASE_URL` or `http://127.0.0.1:8080`
+- auth mode: keyless (`auth: none` behavior)
 
-La découverte à l'exécution appelle `GET models` sur llama.cpp et synthétise des entrées de modèle avec les valeurs par défaut locales.
+Runtime discovery calls `GET models` on llama.cpp and synthesizes model entries with local defaults.
 
-### Découverte implicite de LM Studio
+### Implicit LM Studio discovery
 
-Si `lm-studio` n'est pas explicitement configuré, le registre ajoute un fournisseur découvrable implicite :
+If `lm-studio` is not explicitly configured, registry adds an implicit discoverable provider:
 
-- fournisseur : `lm-studio`
-- api : `openai-completions`
-- URL de base : `LM_STUDIO_BASE_URL` ou `http://127.0.0.1:1234/v1`
-- mode d'authentification : sans clé (comportement `auth: none`)
+- provider: `lm-studio`
+- api: `openai-completions`
+- base URL: `LM_STUDIO_BASE_URL` or `http://127.0.0.1:1234/v1`
+- auth mode: keyless (`auth: none` behavior)
 
-La découverte à l'exécution récupère les modèles (`GET /models`) et synthétise des entrées de modèle avec les valeurs par défaut locales.
+Runtime discovery fetches models (`GET /models`) and synthesizes model entries with local defaults.
 
-### Découverte explicite de fournisseur
+### Explicit provider discovery
 
-Vous pouvez configurer la découverte vous-même :
+You can configure discovery yourself:
 
 ```yaml
 providers:
@@ -290,159 +287,159 @@ providers:
       type: llama.cpp
 ```
 
-### Enregistrement de fournisseur par extension
+### Extension provider registration
 
-Les extensions peuvent enregistrer des fournisseurs à l'exécution (`pi.registerProvider(...)`), incluant :
+Extensions can register providers at runtime (`pi.registerProvider(...)`), including:
 
-- remplacement/ajout de modèle pour un fournisseur
-- enregistrement de gestionnaire de flux personnalisé pour de nouveaux identifiants d'API
-- enregistrement de fournisseur OAuth personnalisé
+- model replacement/append for a provider
+- custom stream handler registration for new API IDs
+- custom OAuth provider registration
 
-## Ordre de résolution de l'authentification et des clés API
+## Auth and API key resolution order
 
-Lors de la demande d'une clé pour un fournisseur, l'ordre effectif est :
+When requesting a key for a provider, effective order is:
 
-1. Surcharge à l'exécution (CLI `--api-key`)
-2. Identifiant de clé API stocké dans `agent.db`
-3. Identifiant OAuth stocké dans `agent.db` (avec rafraîchissement)
-4. Correspondance de variable d'environnement (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
-5. Résolveur de repli de ModelRegistry (`apiKey` du fournisseur depuis `models.yml`, sémantique nom-d'env-ou-littéral)
+1. Runtime override (CLI `--api-key`)
+2. Stored API key credential in `agent.db`
+3. Stored OAuth credential in `agent.db` (with refresh)
+4. Environment variable mapping (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
+5. ModelRegistry fallback resolver (provider `apiKey` from `models.yml`, env-name-or-literal semantics)
 
-Comportement de `apiKey` dans `models.yml` :
+`models.yml` `apiKey` behavior:
 
-- La valeur est d'abord traitée comme un nom de variable d'environnement.
-- Si aucune variable d'environnement n'existe, la chaîne littérale est utilisée comme jeton.
+- Value is first treated as an environment variable name.
+- If no env var exists, the literal string is used as the token.
 
-Si `authHeader: true` et que `apiKey` du fournisseur est défini, les modèles reçoivent :
+If `authHeader: true` and provider `apiKey` is set, models get:
 
-- Un en-tête `Authorization: Bearer <clé-résolue>` injecté.
+- `Authorization: Bearer <resolved-key>` header injected.
 
-Fournisseurs sans clé :
+Keyless providers:
 
-- Les fournisseurs marqués `auth: none` sont considérés comme disponibles sans identifiants.
-- `getApiKey*` retourne `kNoAuth` pour ceux-ci.
+- Providers marked `auth: none` are treated as available without credentials.
+- `getApiKey*` returns `kNoAuth` for them.
 
-## Disponibilité des modèles vs tous les modèles
+## Model availability vs all models
 
-- `getAll()` retourne le registre de modèles chargé (intégrés + personnalisés fusionnés + découverts).
-- `getAvailable()` filtre pour ne garder que les modèles sans clé ou avec une authentification résolvable.
+- `getAll()` returns the loaded model registry (built-in + merged custom + discovered).
+- `getAvailable()` filters to models that are keyless or have resolvable auth.
 
-Ainsi, un modèle peut exister dans le registre mais ne pas être sélectionnable tant que l'authentification n'est pas disponible.
+So a model can exist in registry but not be selectable until auth is available.
 
-## Résolution des modèles à l'exécution
+## Runtime model resolution
 
-### CLI et analyse de patterns
+### CLI and pattern parsing
 
-`model-resolver.ts` prend en charge :
+`model-resolver.ts` supports:
 
-- `provider/modelId` exact
-- identifiant canonique de modèle exact
-- identifiant de modèle exact (fournisseur déduit)
-- correspondance floue/par sous-chaîne
-- patterns glob dans `--models` (par ex. `openai/*`, `*sonnet*`)
-- suffixe optionnel `:thinkingLevel` (`off|minimal|low|medium|high|xhigh`)
+- exact `provider/modelId`
+- exact canonical model id
+- exact model id (provider inferred)
+- fuzzy/substring matching
+- glob scope patterns in `--models` (e.g. `openai/*`, `*sonnet*`)
+- optional `:thinkingLevel` suffix (`off|minimal|low|medium|high|xhigh`)
 
-`--provider` est hérité ; `--model` est préféré.
+`--provider` is legacy; `--model` is preferred.
 
-Ordre de précédence pour les sélecteurs exacts :
+Resolution precedence for exact selectors:
 
-1. `provider/modelId` exact contourne la coalescence
-2. l'identifiant canonique exact est résolu via l'index canonique
-3. l'identifiant concret nu exact fonctionne toujours
-4. la correspondance floue et glob s'exécute après les chemins exacts
+1. exact `provider/modelId` bypasses coalescing
+2. exact canonical id resolves through the canonical index
+3. exact bare concrete id still works
+4. fuzzy and glob matching run after the exact paths
 
-### Priorité de sélection du modèle initial
+### Initial model selection priority
 
-`findInitialModel(...)` utilise cet ordre :
+`findInitialModel(...)` uses this order:
 
-1. fournisseur+modèle explicite en CLI
-2. premier modèle dans la portée (si pas en reprise de session)
-3. fournisseur/modèle par défaut sauvegardé
-4. valeurs par défaut de fournisseurs connus (par ex. OpenAI/Anthropic/etc.) parmi les modèles disponibles
-5. premier modèle disponible
+1. explicit CLI provider+model
+2. first scoped model (if not resuming)
+3. saved default provider/model
+4. known provider defaults (e.g. OpenAI/Anthropic/etc.) among available models
+5. first available model
 
-### Alias de rôles et paramètres
+### Role aliases and settings
 
-Rôles de modèle pris en charge :
+Supported model roles:
 
 - `default`, `smol`, `slow`, `plan`, `commit`
 
-Les alias de rôle comme `pi/smol` sont développés via `settings.modelRoles`. Chaque valeur de rôle peut également ajouter un sélecteur de réflexion tel que `:minimal`, `:low`, `:medium` ou `:high`.
+Role aliases like `pi/smol` expand through `settings.modelRoles`. Each role value can also append a thinking selector such as `:minimal`, `:low`, `:medium`, or `:high`.
 
-Si un rôle pointe vers un autre rôle, le modèle cible hérite normalement et tout suffixe explicite sur le rôle référent l'emporte pour cette utilisation spécifique au rôle.
+If a role points at another role, the target model still inherits normally and any explicit suffix on the referring role wins for that role-specific use.
 
-Paramètres associés :
+Related settings:
 
-- `modelRoles` (enregistrement)
-- `enabledModels` (liste de patterns avec portée)
-- `modelProviderOrder` (précédence globale fournisseur canonique)
-- `providers.kimiApiFormat` (format de requête `openai` ou `anthropic`)
-- `providers.openaiWebsockets` (préférence websocket `auto|off|on` pour le transport OpenAI Codex)
+- `modelRoles` (record)
+- `enabledModels` (scoped pattern list)
+- `modelProviderOrder` (global canonical-provider precedence)
+- `providers.kimiApiFormat` (`openai` or `anthropic` request format)
+- `providers.openaiWebsockets` (`auto|off|on` websocket preference for OpenAI Codex transport)
 
-`modelRoles` peut stocker soit :
+`modelRoles` may store either:
 
-- `provider/modelId` pour épingler une variante de fournisseur concrète
-- un identifiant canonique tel que `gpt-5.3-codex` pour permettre la coalescence des fournisseurs
+- `provider/modelId` to pin a concrete provider variant
+- a canonical id such as `gpt-5.3-codex` to allow provider coalescing
 
-Pour `enabledModels` et `--models` en CLI :
+For `enabledModels` and CLI `--models`:
 
-- les identifiants canoniques exacts sont développés vers toutes les variantes concrètes de ce groupe canonique
-- les entrées explicites `provider/modelId` restent exactes
-- les globs et correspondances floues opèrent toujours sur les modèles concrets
+- exact canonical ids expand to all concrete variants in that canonical group
+- explicit `provider/modelId` entries stay exact
+- globs and fuzzy matches still operate on concrete models
 
-## `/model` et `--list-models`
+## `/model` and `--list-models`
 
-Les deux interfaces gardent les modèles préfixés par le fournisseur visibles et sélectionnables.
+Both surfaces keep provider-prefixed models visible and selectable.
 
-Elles exposent désormais également les modèles canoniques/coalescés :
+They now also expose canonical/coalesced models:
 
-- `/model` inclut une vue canonique aux côtés des onglets par fournisseur
-- `--list-models` affiche une section canonique plus les lignes concrètes par fournisseur
+- `/model` includes a canonical view alongside provider tabs
+- `--list-models` prints a canonical section plus the concrete provider rows
 
-Sélectionner une entrée canonique stocke le sélecteur canonique. Sélectionner une ligne de fournisseur stocke le `provider/modelId` explicite.
+Selecting a canonical entry stores the canonical selector. Selecting a provider row stores the explicit `provider/modelId`.
 
-## Promotion de contexte (chaînes de repli au niveau du modèle)
+## Context promotion (model-level fallback chains)
 
-La promotion de contexte est un mécanisme de récupération de dépassement pour les variantes à petit contexte (par exemple `*-spark`) qui promeut automatiquement vers un modèle frère à plus grand contexte lorsque l'API rejette une requête avec une erreur de longueur de contexte.
+Context promotion is an overflow recovery mechanism for small-context variants (for example `*-spark`) that automatically promotes to a larger-context sibling when the API rejects a request with a context length error.
 
-### Déclenchement et ordre
+### Trigger and order
 
-Lorsqu'un tour échoue avec une erreur de dépassement de contexte (par ex. `context_length_exceeded`), `AgentSession` tente la promotion **avant** de recourir à la compaction :
+When a turn fails with a context overflow error (e.g. `context_length_exceeded`), `AgentSession` attempts promotion **before** falling back to compaction:
 
-1. Si `contextPromotion.enabled` est vrai, résoudre une cible de promotion (voir ci-dessous).
-2. Si une cible est trouvée, basculer vers elle et réessayer la requête — aucune compaction nécessaire.
-3. Si aucune cible n'est disponible, passer à la compaction automatique sur le modèle actuel.
+1. If `contextPromotion.enabled` is true, resolve a promotion target (see below).
+2. If a target is found, switch to it and retry the request — no compaction needed.
+3. If no target is available, fall through to auto-compaction on the current model.
 
-### Sélection de la cible
+### Target selection
 
-La sélection est pilotée par le modèle, pas par le rôle :
+Selection is model-driven, not role-driven:
 
-1. `currentModel.contextPromotionTarget` (si configuré)
-2. plus petit modèle à plus grand contexte sur le même fournisseur + API
+1. `currentModel.contextPromotionTarget` (if configured)
+2. smallest larger-context model on the same provider + API
 
-Les candidats sont ignorés à moins que les identifiants ne soient résolus (`ModelRegistry.getApiKey(...)`).
+Candidates are ignored unless credentials resolve (`ModelRegistry.getApiKey(...)`).
 
-### Transfert websocket OpenAI Codex
+### OpenAI Codex websocket handoff
 
-Si le basculement se fait depuis/vers `openai-codex-responses`, la clé d'état du fournisseur de session `openai-codex-responses` est fermée avant le changement de modèle. Cela supprime l'état du transport websocket afin que le prochain tour démarre proprement sur le modèle promu.
+If switching from/to `openai-codex-responses`, session provider state key `openai-codex-responses` is closed before model switch. This drops websocket transport state so the next turn starts clean on the promoted model.
 
-### Comportement de persistance
+### Persistence behavior
 
-La promotion utilise un basculement temporaire (`setModelTemporary`) :
+Promotion uses temporary switching (`setModelTemporary`):
 
-- enregistré comme un `model_change` temporaire dans l'historique de session
-- ne réécrit pas la correspondance de rôle sauvegardée
+- recorded as a temporary `model_change` in session history
+- does not rewrite saved role mapping
 
-### Configuration de chaînes de repli explicites
+### Configuring explicit fallback chains
 
-Configurez le repli directement dans les métadonnées du modèle via `contextPromotionTarget`.
+Configure fallback directly in model metadata via `contextPromotionTarget`.
 
-`contextPromotionTarget` accepte soit :
+`contextPromotionTarget` accepts either:
 
-- `provider/model-id` (explicite)
-- `model-id` (résolu au sein du fournisseur actuel)
+- `provider/model-id` (explicit)
+- `model-id` (resolved within current provider)
 
-Exemple (`models.yml`) pour Spark -> non-Spark sur le même fournisseur :
+Example (`models.yml`) for Spark -> non-Spark on the same provider:
 
 ```yaml
 providers:
@@ -452,24 +449,24 @@ providers:
         contextPromotionTarget: openai-codex/gpt-5.3-codex
 ```
 
-Le générateur de modèles intégré attribue également ceci automatiquement pour les modèles `*-spark` lorsqu'un modèle de base du même fournisseur existe.
+The built-in model generator also assigns this automatically for `*-spark` models when a same-provider base model exists.
 
-## Champs de compatibilité et de routage
+## Compatibility and routing fields
 
-`models.yml` prend en charge ce sous-ensemble `compat` :
+`models.yml` supports this `compat` subset:
 
 - `supportsStore`
 - `supportsDeveloperRole`
 - `supportsReasoningEffort`
-- `maxTokensField` (`max_completion_tokens` ou `max_tokens`)
+- `maxTokensField` (`max_completion_tokens` or `max_tokens`)
 - `openRouterRouting.only` / `openRouterRouting.order`
 - `vercelGatewayRouting.only` / `vercelGatewayRouting.order`
 
-Ceux-ci sont consommés par la logique de transport OpenAI-completions et combinés avec la détection automatique basée sur l'URL.
+These are consumed by the OpenAI-completions transport logic and combined with URL-based auto-detection.
 
-## Exemples pratiques
+## Practical examples
 
-### Point de terminaison local compatible OpenAI (sans authentification)
+### Local OpenAI-compatible endpoint (no auth)
 
 ```yaml
 providers:
@@ -482,7 +479,7 @@ providers:
         name: Qwen 2.5 Coder 32B (local)
 ```
 
-### Proxy hébergé avec clé basée sur une variable d'environnement
+### Hosted proxy with env-based key
 
 ```yaml
 providers:
@@ -498,7 +495,7 @@ providers:
         input: [text, image]
 ```
 
-### Surcharger la route d'un fournisseur intégré + métadonnées du modèle
+### Override built-in provider route + model metadata
 
 ```yaml
 providers:
@@ -514,13 +511,13 @@ providers:
             only: [anthropic]
 ```
 
-## Configuration automatique du proxy LiteLLM
+## LiteLLM proxy auto-configuration
 
-Lorsque les deux variables d'environnement `LITELLM_BASE_URL` et `LITELLM_API_KEY` sont définies, xcsh gère automatiquement la configuration de `models.yml` pour le proxy LiteLLM.
+When both `LITELLM_BASE_URL` and `LITELLM_API_KEY` environment variables are set, xcsh automatically manages `models.yml` configuration for the LiteLLM proxy.
 
-### Génération automatique au premier lancement
+### First-run auto-generation
 
-Si `models.yml` n'existe pas et que les variables d'environnement LiteLLM sont détectées, xcsh le génère automatiquement :
+If `models.yml` does not exist and LiteLLM env vars are detected, xcsh generates it automatically:
 
 ```yaml
 # Auto-generated by xcsh for LiteLLM proxy
@@ -532,23 +529,23 @@ providers:
     apiKey: LITELLM_API_KEY
 ```
 
-Un `config.yml` par défaut est également généré avec des paramètres de fournisseur d'images appropriés.
+A default `config.yml` is also generated with sensible image provider settings.
 
-### Auto-réparation au démarrage
+### Startup self-healing
 
-À chaque démarrage, `startupHealthCheck()` dans le registre des modèles effectue les vérifications suivantes :
+On every startup, `startupHealthCheck()` in the model registry runs the following checks:
 
 | Condition | Action |
-|-----------|--------|
-| `models.yml` absent | Génération automatique à partir des variables d'environnement |
-| `models.yml` corrompu ou non analysable | Sauvegarde en `.bak`, régénération |
-| `baseUrl` ne correspond pas à `LITELLM_BASE_URL` | Sauvegarde en `.bak`, régénération avec la nouvelle URL |
-| `configVersion` absent ou obsolète | Sauvegarde en `.bak`, régénération avec la version actuelle |
-| Configuration saine | Aucune action |
+| --- | --- |
+| `models.yml` missing | Auto-generate from env vars |
+| `models.yml` corrupt or unparseable | Backup to `.bak`, regenerate |
+| `baseUrl` doesn't match `LITELLM_BASE_URL` | Backup to `.bak`, regenerate with new URL |
+| `configVersion` missing or outdated | Backup to `.bak`, regenerate with current version |
+| Config is healthy | No action |
 
-Toutes les réparations créent des sauvegardes `.bak` avant l'écrasement. Toutes les opérations sont idempotentes.
+All repairs create `.bak` backups before overwriting. All operations are idempotent.
 
-### Commande CLI
+### CLI command
 
 ```bash
 xcsh setup litellm              # Generate or fix LiteLLM config
@@ -556,31 +553,31 @@ xcsh setup litellm --check      # Validate without writing
 xcsh setup litellm --check --json  # Machine-readable validation output
 ```
 
-### Variables d'environnement requises
+### Required environment variables
 
-| Variable | Objectif |
+| Variable | Purpose |
 |----------|---------|
-| `LITELLM_BASE_URL` | URL du proxy LiteLLM (par ex. `https://your-proxy.example.com`). Doit commencer par `http://` ou `https://`. |
-| `LITELLM_API_KEY` | Clé API pour le proxy. Référencée par nom dans la configuration générée, résolue à l'exécution. |
+| `LITELLM_BASE_URL` | LiteLLM proxy URL (e.g. `https://your-proxy.example.com`). Must start with `http://` or `https://`. |
+| `LITELLM_API_KEY` | API key for the proxy. Referenced by name in generated config, resolved at runtime. |
 
-Si l'une des variables n'est pas définie, la configuration automatique est silencieusement ignorée.
+If either variable is unset, auto-configuration is silently skipped.
 
-### Versionnement de la configuration
+### Config versioning
 
-Les configurations générées incluent un champ `configVersion`. Lorsque le format généré change dans les versions futures, xcsh détecte les configurations obsolètes et les met à jour automatiquement (avec sauvegarde).
+Generated configs include a `configVersion` field. When the generated format changes in future releases, xcsh detects outdated configs and automatically upgrades them (with backup).
 
-## Avertissement concernant les consommateurs hérités
+## Legacy consumer caveat
 
-La plupart de la configuration des modèles passe maintenant par `models.yml` via `ModelRegistry`.
+Most model configuration now flows through `models.yml` via `ModelRegistry`.
 
-Un chemin hérité notable subsiste : la résolution d'authentification Anthropic pour la recherche web lit toujours `~/.xcsh/agent/models.json` directement dans `src/web/search/auth.ts`.
+One notable legacy path remains: web-search Anthropic auth resolution still reads `~/.xcsh/agent/models.json` directly in `src/web/search/auth.ts`.
 
-Si vous dépendez de ce chemin spécifique, gardez la compatibilité JSON à l'esprit jusqu'à ce que ce module soit migré.
+If you rely on that specific path, keep JSON compatibility in mind until that module is migrated.
 
-## Mode d'échec
+## Failure mode
 
-Si `models.yml` échoue aux vérifications de schéma ou de validation :
+If `models.yml` fails schema or validation checks:
 
-- Si `LITELLM_BASE_URL` et `LITELLM_API_KEY` sont définies, la vérification de santé au démarrage tente une auto-réparation (sauvegarde du fichier corrompu, régénération à partir des variables d'environnement). Si la réparation réussit, le registre recharge la configuration corrigée.
-- Si l'auto-réparation n'est pas possible (variables d'environnement non définies, échec d'écriture), le registre continue de fonctionner avec les modèles intégrés.
-- L'erreur est exposée via `ModelRegistry.getError()` et affichée dans l'interface/les notifications.
+- If `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set, the startup health check attempts auto-repair (backup corrupt file, regenerate from env vars). If repair succeeds, the registry reloads the fixed config.
+- If auto-repair is not possible (env vars unset, write failure), the registry keeps operating with built-in models.
+- Error is exposed via `ModelRegistry.getError()` and surfaced in UI/notifications.

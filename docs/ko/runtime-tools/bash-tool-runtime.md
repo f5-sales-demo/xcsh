@@ -1,284 +1,331 @@
 ---
-title: Bash 도구 런타임
-description: '셸 프로세스 관리, 샌드박싱, 타임아웃, 출력 스트리밍을 지원하는 Bash 도구 런타임.'
+title: Bash Tool Runtime
+description: Bash tool runtime with shell process management, sandboxing, timeout, and output streaming.
 sidebar:
   order: 1
-  label: Bash 도구
+  label: Bash tool
 i18n:
-  sourceHash: a544cc180905
-  translator: machine
+  sourceHash: "2fa41f972e58"
+  translator: "machine"
 ---
 
-# Bash 도구 런타임
+# Bash tool runtime
 
-이 문서는 에이전트 도구 호출에서 사용되는 **`bash` 도구** 런타임 경로를 설명합니다. 명령어 정규화부터 실행, 잘라내기/아티팩트, 렌더링까지 다룹니다.
+This document describes the **`bash` tool** runtime path used by agent tool calls, from command normalization to execution, truncation/artifacts, and rendering.
 
-또한 대화형 TUI, 출력 모드, RPC 모드, 사용자 주도 뱅(`!`) 셸 실행에서 동작이 달라지는 부분도 설명합니다.
+It also calls out where behavior diverges in interactive TUI, print mode, RPC mode, and user-initiated bang (`!`) shell execution.
 
-## 범위와 런타임 실행 표면
+## Scope and runtime surfaces
 
-coding-agent에는 두 가지 서로 다른 bash 실행 표면이 있습니다:
+There are two different bash execution surfaces in coding-agent:
 
-1. **도구 호출 표면** (`toolName: "bash"`): 모델이 bash 도구를 호출할 때 사용됩니다.
-   - 진입점: `BashTool.execute()`.
-2. **사용자 뱅 명령어 표면** (대화형 입력에서 `!cmd` 또는 RPC `bash` 명령): 세션 수준 헬퍼 경로입니다.
-   - 진입점: `AgentSession.executeBash()`.
+1. **Tool-call surface** (`toolName: "bash"`): used when the model calls the bash tool.
+   - Entry point: `BashTool.execute()`.
+2. **User bang-command surface** (`!cmd` from interactive input or RPC `bash` command): session-level helper path.
+   - Entry point: `AgentSession.executeBash()`.
 
-두 경로 모두 결국 비-PTY 실행을 위해 `src/exec/bash-executor.ts`의 `executeBash()`를 사용하지만, 도구 호출 경로만 정규화/차단 및 도구 렌더러 로직을 실행합니다.
+Both eventually use `executeBash()` in `src/exec/bash-executor.ts` for non-PTY execution, but only the tool-call path runs normalization/interception and tool renderer logic.
 
-## 도구 호출 엔드투엔드 파이프라인
+## End-to-end tool-call pipeline
 
-## 1) 입력 정규화 및 매개변수 병합
+## 1) Input normalization and parameter merge
 
-`BashTool.execute()`는 먼저 `normalizeBashCommand()`를 통해 원시 명령어를 정규화합니다:
+`BashTool.execute()` first normalizes the raw command via `normalizeBashCommand()`:
 
-- 후행 `| head -n N`, `| head -N`, `| tail -n N`, `| tail -N`을 구조화된 제한값으로 추출합니다,
-- 후행/선행 공백을 제거합니다,
-- 내부 공백은 유지합니다.
+- extracts trailing `| head -n N`, `| head -N`, `| tail -n N`, `| tail -N` into structured limits,
+- trims trailing/leading whitespace,
+- keeps internal whitespace intact.
 
-그런 다음 추출된 제한값을 명시적 도구 인수와 병합합니다:
+Then it merges extracted limits with explicit tool args:
 
-- 명시적 `head`/`tail` 인수가 추출된 값을 재정의합니다,
-- 추출된 값은 대체값으로만 사용됩니다.
+- explicit `head`/`tail` args override extracted values,
+- extracted values are fallback only.
 
-### 주의사항
+### Caveat
 
-`bash-normalize.ts` 주석에서는 `2>&1` 제거를 언급하지만, 현재 구현에서는 실제로 이를 제거하지 않습니다. 런타임 동작은 여전히 올바르지만(stdout/stderr가 이미 병합되어 있음), 정규화 동작은 주석이 시사하는 것보다 범위가 좁습니다.
+`bash-normalize.ts` comments mention stripping `2>&1`, but current implementation does not remove it. Runtime behavior is still correct (stdout/stderr are already merged), but the normalization behavior is narrower than comments suggest.
 
-## 2) 선택적 차단 (차단 명령어 경로)
+## 2) Optional interception (blocked-command path)
 
-`bashInterceptor.enabled`가 true이면, `BashTool`은 설정에서 규칙을 로드하고 정규화된 명령어에 대해 `checkBashInterception()`을 실행합니다.
+If `bashInterceptor.enabled` is true, `BashTool` loads rules from settings and runs `checkBashInterception()` against the normalized command.
 
-차단 동작:
+Interception behavior:
 
-- 명령어가 차단되는 경우는 **다음 조건이 모두 충족될 때만**입니다:
-  - 정규식 규칙이 일치하고,
-  - 제안된 도구가 `ctx.toolNames`에 존재할 때.
-- 유효하지 않은 정규식 규칙은 조용히 건너뜁니다.
-- 차단 시, `BashTool`은 다음 메시지와 함께 `ToolError`를 던집니다:
+- command is blocked **only** when:
+  - regex rule matches, and
+  - the suggested tool is present in `ctx.toolNames`.
+- invalid regex rules are silently skipped.
+- on block, `BashTool` throws `ToolError` with message:
   - `Blocked: ...`
-  - 원본 명령어 포함.
+  - original command included.
 
-기본 규칙 패턴(코드에 정의됨)은 일반적인 오용을 대상으로 합니다:
+Default rule patterns (defined in code) target common misuses:
 
-- 파일 읽기 도구 (`cat`, `head`, `tail`, ...)
-- 검색 도구 (`grep`, `rg`, ...)
-- 파일 찾기 도구 (`find`, `fd`, ...)
-- 인플레이스 편집기 (`sed -i`, `perl -i`, `awk -i inplace`)
-- 셸 리디렉션 쓰기 (`echo ... > file`, heredoc 리디렉션)
+- file readers (`cat`, `head`, `tail`, ...)
+- search tools (`grep`, `rg`, ...)
+- file finders (`find`, `fd`, ...)
+- in-place editors (`sed -i`, `perl -i`, `awk -i inplace`)
+- shell redirection writes (`echo ... > file`, heredoc redirection)
 
-### 주의사항
+### Caveat
 
-`InterceptionResult`에는 `suggestedTool`이 포함되어 있지만, `BashTool`은 현재 메시지 텍스트만 표시합니다(`details`에 구조화된 제안 도구 필드 없음).
+`InterceptionResult` includes `suggestedTool`, but `BashTool` currently surfaces only the message text (no structured suggested-tool field in `details`).
 
-## 3) CWD 유효성 검사 및 타임아웃 클램핑
+## 3) CWD validation and timeout clamping
 
-`cwd`는 세션 cwd(`resolveToCwd`) 기준으로 해석된 후, `stat`를 통해 유효성이 검증됩니다:
+`cwd` is resolved relative to session cwd (`resolveToCwd`), then validated via `stat`:
 
-- 경로가 없는 경우 -> `ToolError("Working directory does not exist: ...")`
-- 디렉터리가 아닌 경우 -> `ToolError("Working directory is not a directory: ...")`
+- missing path -> `ToolError("Working directory does not exist: ...")`
+- non-directory -> `ToolError("Working directory is not a directory: ...")`
 
-타임아웃은 `[1, 3600]`초로 클램핑되어 밀리초로 변환됩니다.
+Timeout is clamped to `[1, 3600]` seconds and converted to milliseconds.
 
-## 4) 아티팩트 할당
+## 4) Artifact allocation
 
-실행 전에 도구는 잘라낸 출력 저장을 위한 아티팩트 경로/ID를 최선 노력(best-effort)으로 할당합니다.
+Before execution, the tool allocates an artifact path/id (best-effort) for truncated output storage.
 
-- 아티팩트 할당 실패는 치명적이지 않습니다(아티팩트 스필 파일 없이 실행이 계속됩니다),
-- 아티팩트 ID/경로는 잘라내기 시 전체 출력 영속을 위해 실행 경로에 전달됩니다.
+- artifact allocation failure is non-fatal (execution continues without artifact spill file),
+- artifact id/path are passed into execution path for full-output persistence on truncation.
 
-## 5) PTY vs 비-PTY 실행 선택
+## 5) PTY vs non-PTY execution selection
 
-`BashTool`은 다음 조건이 모두 참일 때만 PTY 실행을 선택합니다:
+`BashTool` chooses PTY execution only when all are true:
 
 - `bash.virtualTerminal === "on"`
 - `PI_NO_PTY !== "1"`
-- 도구 컨텍스트에 UI가 있을 때 (`ctx.hasUI === true`이고 `ctx.ui`가 설정됨)
+- tool context has UI (`ctx.hasUI === true` and `ctx.ui` set)
 
-그렇지 않으면 비대화형 `executeBash()`를 사용합니다.
+Otherwise it uses non-interactive `executeBash()`.
 
-즉, 출력 모드와 비-UI RPC/도구 컨텍스트는 항상 비-PTY를 사용합니다.
+That means print mode and non-UI RPC/tool contexts always use non-PTY.
 
-## 비대화형 실행 엔진 (`executeBash`)
+## Non-interactive execution engine (`executeBash`)
 
-## 셸 세션 재사용 모델
+## Shell session reuse model
 
-`executeBash()`는 다음 키로 구성된 프로세스 전역 맵에 네이티브 `Shell` 인스턴스를 캐시합니다:
+`executeBash()` caches native `Shell` instances in a process-global map keyed by:
 
-- 셸 경로,
-- 설정된 명령어 접두사,
-- 스냅샷 경로,
-- 직렬화된 셸 환경 변수,
-- 선택적 에이전트 세션 키.
+- shell path,
+- configured command prefix,
+- snapshot path,
+- serialized shell env,
+- optional agent session key.
 
-세션 수준 실행의 경우, `AgentSession.executeBash()`는 `sessionKey: this.sessionId`를 전달하여 세션별로 재사용을 격리합니다.
+For session-level executions, `AgentSession.executeBash()` passes `sessionKey: this.sessionId`, isolating reuse per session.
 
-도구 호출 경로는 `sessionKey`를 전달하지 **않으므로**, 재사용 범위는 셸 설정/스냅샷/환경 변수에 기반합니다.
+Tool-call path does **not** pass `sessionKey`, so reuse scope is based on shell config/snapshot/env.
 
-## 셸 설정 및 스냅샷 동작
+## Shell config and snapshot behavior
 
-각 호출마다 실행기는 설정의 셸 구성(`shell`, `env`, 선택적 `prefix`)을 로드합니다.
+At each call, executor loads settings shell config (`shell`, `env`, optional `prefix`).
 
-선택한 셸이 `bash`를 포함하는 경우, `getOrCreateSnapshot()` 시도합니다:
+If selected shell includes `bash`, it attempts `getOrCreateSnapshot()`:
 
-- 스냅샷은 사용자 rc의 별칭/함수/옵션을 캡처합니다,
-- 스냅샷 생성은 최선 노력(best-effort)입니다,
-- 실패 시 스냅샷 없이 대체됩니다.
+- snapshot captures aliases/functions/options from user rc,
+- snapshot creation is best-effort,
+- failure falls back to no snapshot.
 
-`prefix`가 설정된 경우, 명령어는 다음과 같이 됩니다:
+If `prefix` is configured, command becomes:
 
 ```text
 <prefix> <command>
 ```
 
-## 스트리밍 및 취소
+## Streaming and cancellation
 
-`Shell.run()`은 청크를 콜백으로 스트리밍합니다. 실행기는 각 청크를 `OutputSink`와 선택적 `onChunk` 콜백으로 파이프합니다.
+`Shell.run()` streams chunks to callback. Executor pipes each chunk into `OutputSink` and optional `onChunk` callback.
 
-취소:
+Cancellation:
 
-- 중단 신호가 발생하면 `shellSession.abort(...)`를 트리거합니다,
-- 네이티브 결과의 타임아웃은 `cancelled: true` + 주석 텍스트로 매핑됩니다,
-- 명시적 취소도 마찬가지로 `cancelled: true` + 주석을 반환합니다.
+- aborted signal triggers `shellSession.abort(...)`,
+- timeout from native result is mapped to `cancelled: true` + annotation text,
+- explicit cancellation similarly returns `cancelled: true` + annotation.
 
-타임아웃/취소에 대해 실행기 내부에서는 예외가 던져지지 않습니다; 구조화된 `BashResult`를 반환하고 호출자가 오류 의미를 매핑하도록 합니다.
+No exception is thrown inside executor for timeout/cancel; it returns structured `BashResult` and lets caller map error semantics.
 
-## 대화형 PTY 경로 (`runInteractiveBashPty`)
+## Interactive PTY path (`runInteractiveBashPty`)
 
-PTY가 활성화되면, 도구는 오버레이 콘솔 컴포넌트를 열고 네이티브 `PtySession`을 구동하는 `runInteractiveBashPty()`를 실행합니다.
+When PTY is enabled, tool runs `runInteractiveBashPty()` which opens an overlay console component and drives a native `PtySession`.
 
-주요 동작:
+Behavior highlights:
 
-- xterm-headless 가상 터미널이 오버레이에서 뷰포트를 렌더링합니다,
-- 키보드 입력이 정규화됩니다(Kitty 시퀀스 및 애플리케이션 커서 모드 처리 포함),
-- 실행 중 `esc`를 누르면 PTY 세션이 종료됩니다,
-- 터미널 크기 변경이 PTY에 전파됩니다(`session.resize(cols, rows)`).
+- xterm-headless virtual terminal renders viewport in overlay,
+- keyboard input is normalized (including Kitty sequences and application cursor mode handling),
+- `esc` while running kills the PTY session,
+- terminal resize propagates to PTY (`session.resize(cols, rows)`).
 
-무인 실행을 위해 환경 강화 기본값이 주입됩니다:
+Environment hardening defaults are injected for unattended runs:
 
-- 페이저 비활성화 (`PAGER=cat`, `GIT_PAGER=cat` 등),
-- 편집기 프롬프트 비활성화 (`GIT_EDITOR=true`, `EDITOR=true`, ...),
-- 터미널/인증 프롬프트 축소 (`GIT_TERMINAL_PROMPT=0`, `SSH_ASKPASS=/usr/bin/false`, `CI=1`),
-- 비대화형 동작을 위한 패키지 관리자/도구 자동화 플래그.
+- pagers disabled (`PAGER=cat`, `GIT_PAGER=cat`, etc.),
+- editor prompts disabled (`GIT_EDITOR=true`, `EDITOR=true`, ...),
+- terminal/auth prompts reduced (`GIT_TERMINAL_PROMPT=0`, `SSH_ASKPASS=/usr/bin/false`, `CI=1`),
+- package-manager/tool automation flags for non-interactive behavior.
 
-PTY 출력은 정규화(`CRLF`/`CR`을 `LF`로, `sanitizeText`)되어 아티팩트 스필 지원을 포함하여 `OutputSink`에 기록됩니다.
+PTY output is normalized (`CRLF`/`CR` to `LF`, `sanitizeText`) and written into `OutputSink`, including artifact spill support.
 
-PTY 시작/런타임 오류 시, 싱크는 `PTY error: ...` 라인을 수신하고 명령어는 정의되지 않은 종료 코드로 완료됩니다.
+On PTY startup/runtime error, sink receives `PTY error: ...` line and command finalizes with undefined exit code.
 
-## 출력 처리: 스트리밍, 잘라내기, 아티팩트 스필
+## Output handling: streaming, truncation, artifact spill
 
-PTY와 비-PTY 경로 모두 `OutputSink`를 사용합니다.
+Both PTY and non-PTY paths use `OutputSink`.
 
-## OutputSink 의미론
+## OutputSink semantics
 
-- 메모리 내 UTF-8 안전 테일 버퍼를 유지합니다(`DEFAULT_MAX_BYTES`, 현재 50KB),
-- 확인된 총 바이트/라인 수를 추적합니다,
-- 아티팩트 경로가 존재하고 출력이 오버플로되면(또는 파일이 이미 활성 상태이면), 전체 스트림을 아티팩트 파일에 기록합니다,
-- 메모리 임계값이 오버플로되면, 메모리 내 버퍼를 테일로 트리밍합니다(UTF-8 경계 안전),
-- 오버플로/파일 스필이 발생하면 `truncated`로 표시합니다.
+- keeps an in-memory UTF-8-safe tail buffer (`DEFAULT_MAX_BYTES`, currently 50KB),
+- tracks total bytes/lines seen,
+- if artifact path exists and output overflows (or file already active), writes full stream to artifact file,
+- when memory threshold overflows, trims in-memory buffer to tail (UTF-8 boundary safe),
+- marks `truncated` when overflow/file spill occurs.
 
-`dump()`는 다음을 반환합니다:
+`dump()` returns:
 
-- `output` (가능한 주석 접두사 포함),
+- `output` (possibly annotated prefix),
 - `truncated`,
 - `totalLines/totalBytes`,
 - `outputLines/outputBytes`,
-- 아티팩트 파일이 활성인 경우 `artifactId`.
+- `artifactId` if artifact file was active.
 
-### 긴 출력 주의사항
+### Long-output caveat
 
-런타임 잘라내기는 `OutputSink`에서 바이트 임계값 기반입니다(기본 50KB). 이 코드 경로에서는 하드 2000라인 제한을 적용하지 않습니다.
+Runtime truncation is byte-threshold based in `OutputSink` (50KB default). It does not enforce a hard 2000-line cap in this code path.
 
-## 실시간 도구 업데이트
+## Live tool updates
 
-비-PTY 실행의 경우, `BashTool`은 부분 업데이트를 위한 별도의 `TailBuffer`를 사용하고 명령어 실행 중에 `onUpdate` 스냅샷을 발행합니다.
+For non-PTY execution, `BashTool` uses a separate `TailBuffer` for partial updates and emits `onUpdate` snapshots while command is running.
 
-PTY 실행의 경우, 실시간 렌더링은 `onUpdate` 텍스트 청크가 아닌 커스텀 UI 오버레이에 의해 처리됩니다.
+For PTY execution, live rendering is handled by custom UI overlay, not by `onUpdate` text chunks.
 
-## 결과 형성, 메타데이터 및 오류 매핑
+## Result shaping, metadata, and error mapping
 
-실행 후:
+After execution:
 
-1. `cancelled` 처리:
-   - 중단 신호가 중단된 경우 -> `ToolAbortError` 던지기 (중단 의미론),
-   - 그렇지 않으면 -> `ToolError` 던지기 (도구 실패로 처리).
-2. PTY `timedOut` -> `ToolError` 던지기.
-3. 최종 출력 텍스트에 head/tail 필터 적용 (`applyHeadTail`, head 먼저 그 다음 tail).
-4. 빈 출력은 `(no output)`이 됩니다.
-5. `toolResult(...).truncationFromSummary(result, { direction: "tail" })`를 통해 잘라내기 메타데이터 첨부.
-6. 종료 코드 매핑:
-   - 종료 코드 없음 -> `ToolError("... missing exit status")`
-   - 0이 아닌 종료 -> `ToolError("... Command exited with code N")`
-   - 0 종료 -> 성공 결과.
+1. `cancelled` handling:
+   - if abort signal is aborted -> throw `ToolAbortError` (abort semantics),
+   - else -> throw `ToolError` (treated as tool failure).
+2. PTY `timedOut` -> throw `ToolError`.
+3. apply head/tail filters to final output text (`applyHeadTail`, head then tail).
+4. empty output becomes `(no output)`.
+5. attach truncation metadata via `toolResult(...).truncationFromSummary(result, { direction: "tail" })`.
+6. exit-code mapping:
+   - missing exit code -> `ToolError("... missing exit status")`
+   - non-zero exit -> `ToolError("... Command exited with code N")`
+   - zero exit -> success result.
 
-성공 페이로드 구조:
+Success payload structure:
 
-- `content`: 텍스트 출력,
-- 잘라내기 시 `details.meta.truncation`, 포함 내용:
-  - `direction`, `truncatedBy`, 총/출력 라인+바이트 수,
+- `content`: text output,
+- `details.meta.truncation` when truncated, including:
+  - `direction`, `truncatedBy`, total/output line+byte counts,
   - `shownRange`,
-  - 사용 가능한 경우 `artifactId`.
+  - `artifactId` when available.
 
-내장 도구는 `wrapToolWithMetaNotice()`로 래핑되므로, 잘라내기 알림 텍스트가 최종 텍스트 콘텐츠에 자동으로 추가됩니다(예: `Full: artifact://<id>`).
+Because built-in tools are wrapped with `wrapToolWithMetaNotice()`, truncation notice text is appended to final text content automatically (for example: `Full: artifact://<id>`).
 
-## 렌더링 경로
+## Rendering paths
 
-## 도구 호출 렌더러 (`bashToolRenderer`)
+## Tool-call renderer (`bashToolRenderer`)
 
-`bashToolRenderer`는 도구 호출 메시지(`toolCall` / `toolResult`)에 사용됩니다:
+`bashToolRenderer` is used for tool-call messages (`toolCall` / `toolResult`):
 
-- 축소 모드에서는 시각적 라인이 잘라낸 미리보기를 보여줍니다,
-- 확장 모드에서는 현재 사용 가능한 모든 출력 텍스트를 보여줍니다,
-- 경고 라인에는 잘라내기 사유와 잘라내기 시 `artifact://<id>`가 포함됩니다,
-- 타임아웃 값(인수에서)이 하단 메타데이터 라인에 표시됩니다.
+- collapsed mode shows visual-line-truncated preview,
+- expanded mode shows all currently available output text,
+- warning line includes truncation reason and `artifact://<id>` when truncated,
+- timeout value (from args) is shown in footer metadata line.
 
-### 주의사항: 전체 아티팩트 확장
+### Caveat: full artifact expansion
 
-`BashRenderContext`에는 `isFullOutput`이 있지만, 현재 렌더러 컨텍스트 빌더는 bash 도구 결과에 대해 이를 설정하지 않습니다. 확장 뷰는 다른 호출자가 전체 아티팩트 콘텐츠를 제공하지 않는 한 결과 콘텐츠에 이미 있는 텍스트(테일/잘라낸 출력)를 사용합니다.
+`BashRenderContext` has `isFullOutput`, but current renderer context builder does not set it for bash tool results. Expanded view still uses the text already in result content (tail/truncated output) unless another caller provides full artifact content.
 
-## 사용자 뱅 명령어 컴포넌트 (`BashExecutionComponent`)
+## User bang-command component (`BashExecutionComponent`)
 
-`BashExecutionComponent`는 대화형 모드에서 사용자 `!` 명령어를 위한 것입니다(모델 도구 호출이 아님):
+`BashExecutionComponent` is for user `!` commands in interactive mode (not model tool calls):
 
-- 청크를 실시간으로 스트리밍합니다,
-- 축소 미리보기는 마지막 20개 논리 라인을 유지합니다,
-- 라인당 4000자에서 라인 클램프합니다,
-- 메타데이터가 존재할 때 잘라내기 + 아티팩트 경고를 표시합니다,
-- 취소/오류/종료 상태를 별도로 표시합니다.
+- streams chunks live,
+- collapsed preview keeps last 20 logical lines,
+- line clamp at 4000 chars per line,
+- shows truncation + artifact warnings when metadata is present,
+- marks cancelled/error/exit state separately.
 
-이 컴포넌트는 `CommandController.handleBashCommand()`에 의해 연결되며 `AgentSession.executeBash()`에서 데이터를 받습니다.
+This component is wired by `CommandController.handleBashCommand()` and fed from `AgentSession.executeBash()`.
 
-## 모드별 동작 차이
+## Mode-specific behavior differences
 
-| 표면                            | 진입 경로                                              | PTY 사용 가능 여부                                                     | 실시간 출력 UX                                                             | 오류 표시                                         |
+| Surface                        | Entry path                                            | PTY eligible                                                         | Live output UX                                                           | Error surfacing                                  |
 | ------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ |
-| 대화형 도구 호출                  | `BashTool.execute`                                    | 예, `bash.virtualTerminal=on`이고 UI가 존재하며 `PI_NO_PTY!=1`일 때     | PTY 오버레이 (대화형) 또는 스트리밍 테일 업데이트                              | 도구 오류가 `toolResult.isError`로 변환됨           |
-| 출력 모드 도구 호출               | `BashTool.execute`                                    | 아니오 (UI 컨텍스트 없음)                                               | TUI 오버레이 없음; 이벤트 스트림/최종 어시스턴트 텍스트 흐름에 출력 표시         | 동일한 도구 오류 매핑                               |
-| RPC 도구 호출 (에이전트 도구)      | `BashTool.execute`                                    | 보통 UI 없음 -> 비-PTY                                                 | 구조화된 도구 이벤트/결과                                                   | 동일한 도구 오류 매핑                               |
-| 대화형 뱅 명령어 (`!`)            | `AgentSession.executeBash` + `BashExecutionComponent` | 아니오 (실행기 직접 사용)                                                | 전용 bash 실행 컴포넌트                                                    | 컨트롤러가 예외를 잡아 UI 오류 표시                  |
-| RPC `bash` 명령어                | `rpc-mode` -> `session.executeBash`                   | 아니오                                                                 | `BashResult`를 직접 반환                                                   | 소비자가 반환된 필드를 처리                          |
+| Interactive tool call          | `BashTool.execute`                                    | Yes, when `bash.virtualTerminal=on` and UI exists and `PI_NO_PTY!=1` | PTY overlay (interactive) or streamed tail updates                       | Tool errors become `toolResult.isError`          |
+| Print mode tool call           | `BashTool.execute`                                    | No (no UI context)                                                   | No TUI overlay; output appears in event stream/final assistant text flow | Same tool error mapping                          |
+| RPC tool call (agent tooling)  | `BashTool.execute`                                    | Usually no UI -> non-PTY                                             | Structured tool events/results                                           | Same tool error mapping                          |
+| Interactive bang command (`!`) | `AgentSession.executeBash` + `BashExecutionComponent` | No (uses executor directly)                                          | Dedicated bash execution component                                       | Controller catches exceptions and shows UI error |
+| RPC `bash` command             | `rpc-mode` -> `session.executeBash`                   | No                                                                   | Returns `BashResult` directly                                            | Consumer handles returned fields                 |
 
-## 운영 주의사항
+## Filesystem containment: what enforces it, and where
 
-- 인터셉터는 제안된 도구가 현재 컨텍스트에서 사용 가능한 경우에만 명령어를 차단합니다.
-- 아티팩트 할당이 실패하면 잘라내기는 여전히 발생하지만 `artifact://` 역참조를 사용할 수 없습니다.
-- 셸 세션 캐시에는 이 모듈에서 명시적 퇴거(eviction)가 없습니다; 수명은 프로세스 범위입니다.
-- PTY와 비-PTY 타임아웃 표면이 다릅니다:
-  - PTY는 명시적 `timedOut` 결과 필드를 노출합니다,
-  - 비-PTY는 타임아웃을 `cancelled + annotation` 요약으로 매핑합니다.
+The bash tool's filesystem boundary is enforced below the command text — the shell's own `cd` and
+redirections are checked where they act, and spawned children are confined by the operating system. Which
+OS mechanism does that depends on the host, and on one host family there is **no OS mechanism at all**.
 
-## 구현 파일
+`xcsh://about` reports the active backend for the machine you are on. This table is for planning a fleet
+before you get there.
 
-- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — 도구 진입점, 정규화/차단, PTY/비-PTY 선택, 결과/오류 매핑, bash 도구 렌더러.
-- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — 명령어 정규화 및 실행 후 head/tail 필터링.
-- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — 인터셉터 규칙 매칭 및 차단 명령어 메시지.
-- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — 비-PTY 실행기, 셸 세션 재사용, 취소 연결, 출력 싱크 통합.
-- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY 런타임, 오버레이 UI, 입력 정규화, 비대화형 환경 기본값.
-- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 잘라내기/아티팩트 스필 및 요약 메타데이터.
-- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — 아티팩트 할당 헬퍼 및 스트리밍 테일 버퍼.
-- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — 잘라내기 메타데이터 형태 + 알림 주입 래퍼.
-- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — 세션 수준 `executeBash`, 메시지 기록, 중단 수명 주기.
-- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — 대화형 `!` 명령어 실행 컴포넌트.
-- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — 대화형 `!` 명령어 UI 스트림/업데이트 완료를 위한 연결.
-- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` 및 `abort_bash` 명령어 표면.
-- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` 해석.
+| Host | Kernel | Landlock ABI | Backend | Boundary |
+| ---- | ------ | ------------ | ------- | -------- |
+| macOS | — | — | `seatbelt` | OS-enforced |
+| RHEL 9 and derivatives | 5.14 | 1 | `scanner-only` | **command-text scan only** |
+| Ubuntu 22.04, stock GA kernel | 5.15 | 1 | `scanner-only` | **command-text scan only** |
+| Debian 12 | 6.1 | 2 | `landlock` | OS-enforced; `truncate(2)` ungoverned |
+| Ubuntu 22.04 HWE, Ubuntu 24.04 | 6.8 | 4 | `landlock` | OS-enforced |
+| Fedora current | 6.1x–7.x | 6–9 | `landlock` | OS-enforced |
+
+ABI numbers are anchored on two measured hosts: kernel 6.8.0-azure reports ABI 4, kernel 7.1.3 reports
+ABI 9. The rest follow the kernel-to-ABI mapping.
+
+### Why ABI 1 gets no OS boundary
+
+`LANDLOCK_ACCESS_FS_REFER` does not exist before ABI 2, and the kernel denies cross-directory `rename` and
+`link` whenever a ruleset handles *any* filesystem right. On ABI 1 there is therefore no way to permit
+`mv a/x b/x`, and no way for `git` to do its write-tmp-then-rename. Confining on ABI 1 would break ordinary
+work, which this boundary's design forbids, so it is refused rather than degraded.
+
+That is a deliberate trade and not a bug to work around: the alternative is a boundary that breaks `git`.
+
+### What scanner-only means in practice
+
+The command-text scan is still there and still refuses out-of-tree paths, but it reads what was *written*
+rather than what the shell will *do*. A path assembled at runtime — `P=/other/customer/secrets; cat "$P"`
+— is not caught. Treat it as a statement of intent, not a guarantee.
+
+**If sessions on an ABI 1 host handle more than one customer's data, that is a materially weaker posture
+than the macOS default**, and the remedy is operational rather than a code change: run a newer kernel
+(Ubuntu 22.04 HWE is the smallest step), or run those sessions in a container on a newer host.
+
+### Debian 12 / ABI 2
+
+Landlock confines every read and every write, but `LANDLOCK_ACCESS_FS_TRUNCATE` only exists from ABI 3, so
+`truncate(2)` on a path outside the boundary is not governed. It destroys rather than discloses, and is
+unreachable through `>`. `containmentStatus` reports this as `truncationUngoverned` and `xcsh://about`
+states it, so the session knows.
+
+## Operational caveats
+
+- Interceptor only blocks commands when suggested tool is currently available in context.
+- If artifact allocation fails, truncation still occurs but no `artifact://` back-reference is available.
+- Shell session cache has no explicit eviction in this module; lifetime is process-scoped.
+- PTY and non-PTY timeout surfaces differ:
+  - PTY exposes explicit `timedOut` result field,
+  - non-PTY maps timeout into `cancelled + annotation` summary.
+
+## Implementation files
+
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — tool entrypoint, normalization/interception, PTY/non-PTY selection, result/error mapping, bash tool renderer.
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — command normalization and post-run head/tail filtering.
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — interceptor rule matching and blocked-command messages.
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — non-PTY executor, shell session reuse, cancellation wiring, output sink integration.
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY runtime, overlay UI, input normalization, non-interactive env defaults.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/artifact spill and summary metadata.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — artifact allocation helpers and streaming tail buffer.
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — truncation metadata shape + notice injection wrapper.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — session-level `executeBash`, message recording, abort lifecycle.
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — interactive `!` command execution component.
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — wiring for interactive `!` command UI stream/update completion.
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` and `abort_bash` command surface.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` resolution.

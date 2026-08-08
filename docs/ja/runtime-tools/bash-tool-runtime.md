@@ -1,286 +1,331 @@
 ---
-title: Bash ツールランタイム
-description: >-
-  Bash tool runtime with shell process management, sandboxing, timeout, and
-  output streaming.
+title: Bash Tool Runtime
+description: Bash tool runtime with shell process management, sandboxing, timeout, and output streaming.
 sidebar:
   order: 1
-  label: Bash ツール
+  label: Bash tool
 i18n:
-  sourceHash: a544cc180905
-  translator: machine
+  sourceHash: "2fa41f972e58"
+  translator: "machine"
 ---
 
-# Bash ツールランタイム
+# Bash tool runtime
 
-このドキュメントでは、エージェントのツール呼び出しで使用される **`bash` ツール** のランタイムパスについて、コマンドの正規化から実行、切り詰め/アーティファクト、レンダリングまでを説明します。
+This document describes the **`bash` tool** runtime path used by agent tool calls, from command normalization to execution, truncation/artifacts, and rendering.
 
-また、インタラクティブ TUI、プリントモード、RPC モード、およびユーザーが開始するバン（`!`）シェル実行において動作が異なる箇所も示しています。
+It also calls out where behavior diverges in interactive TUI, print mode, RPC mode, and user-initiated bang (`!`) shell execution.
 
-## スコープとランタイムサーフェス
+## Scope and runtime surfaces
 
-coding-agent には2つの異なる bash 実行サーフェスがあります：
+There are two different bash execution surfaces in coding-agent:
 
-1. **ツール呼び出しサーフェス**（`toolName: "bash"`）：モデルが bash ツールを呼び出す際に使用されます。
-   - エントリポイント：`BashTool.execute()`
-2. **ユーザーバンコマンドサーフェス**（インタラクティブ入力からの `!cmd` または RPC `bash` コマンド）：セッションレベルのヘルパーパスです。
-   - エントリポイント：`AgentSession.executeBash()`
+1. **Tool-call surface** (`toolName: "bash"`): used when the model calls the bash tool.
+   - Entry point: `BashTool.execute()`.
+2. **User bang-command surface** (`!cmd` from interactive input or RPC `bash` command): session-level helper path.
+   - Entry point: `AgentSession.executeBash()`.
 
-どちらも最終的には `src/exec/bash-executor.ts` の `executeBash()` を非 PTY 実行に使用しますが、ツール呼び出しパスのみが正規化/インターセプションとツールレンダラーのロジックを実行します。
+Both eventually use `executeBash()` in `src/exec/bash-executor.ts` for non-PTY execution, but only the tool-call path runs normalization/interception and tool renderer logic.
 
-## エンドツーエンドのツール呼び出しパイプライン
+## End-to-end tool-call pipeline
 
-## 1) 入力の正規化とパラメータマージ
+## 1) Input normalization and parameter merge
 
-`BashTool.execute()` はまず `normalizeBashCommand()` を通じて生のコマンドを正規化します：
+`BashTool.execute()` first normalizes the raw command via `normalizeBashCommand()`:
 
-- 末尾の `| head -n N`、`| head -N`、`| tail -n N`、`| tail -N` を構造化されたリミットとして抽出します
-- 末尾/先頭の空白をトリムします
-- 内部の空白はそのまま保持します
+- extracts trailing `| head -n N`, `| head -N`, `| tail -n N`, `| tail -N` into structured limits,
+- trims trailing/leading whitespace,
+- keeps internal whitespace intact.
 
-次に、抽出されたリミットを明示的なツール引数とマージします：
+Then it merges extracted limits with explicit tool args:
 
-- 明示的な `head`/`tail` 引数は抽出された値をオーバーライドします
-- 抽出された値はフォールバックとしてのみ使用されます
+- explicit `head`/`tail` args override extracted values,
+- extracted values are fallback only.
 
-### 注意事項
+### Caveat
 
-`bash-normalize.ts` のコメントには `2>&1` の除去について言及がありますが、現在の実装ではそれを削除しません。ランタイムの動作は依然として正しいですが（stdout/stderr は既にマージされています）、正規化の動作はコメントが示唆するよりも狭い範囲です。
+`bash-normalize.ts` comments mention stripping `2>&1`, but current implementation does not remove it. Runtime behavior is still correct (stdout/stderr are already merged), but the normalization behavior is narrower than comments suggest.
 
-## 2) オプショナルインターセプション（ブロックコマンドパス）
+## 2) Optional interception (blocked-command path)
 
-`bashInterceptor.enabled` が true の場合、`BashTool` は設定からルールを読み込み、正規化されたコマンドに対して `checkBashInterception()` を実行します。
+If `bashInterceptor.enabled` is true, `BashTool` loads rules from settings and runs `checkBashInterception()` against the normalized command.
 
-インターセプションの動作：
+Interception behavior:
 
-- コマンドがブロックされるのは以下の **両方** が満たされた場合のみ：
-  - 正規表現ルールがマッチする、かつ
-  - 提案されたツールが `ctx.toolNames` に存在する
-- 無効な正規表現ルールは暗黙的にスキップされます
-- ブロック時、`BashTool` は以下のメッセージで `ToolError` をスローします：
+- command is blocked **only** when:
+  - regex rule matches, and
+  - the suggested tool is present in `ctx.toolNames`.
+- invalid regex rules are silently skipped.
+- on block, `BashTool` throws `ToolError` with message:
   - `Blocked: ...`
-  - 元のコマンドが含まれます
+  - original command included.
 
-デフォルトのルールパターン（コードで定義）は一般的な誤用を対象としています：
+Default rule patterns (defined in code) target common misuses:
 
-- ファイルリーダー（`cat`、`head`、`tail`、...）
-- 検索ツール（`grep`、`rg`、...）
-- ファイルファインダー（`find`、`fd`、...）
-- インプレースエディタ（`sed -i`、`perl -i`、`awk -i inplace`）
-- シェルリダイレクト書き込み（`echo ... > file`、ヒアドキュメントリダイレクション）
+- file readers (`cat`, `head`, `tail`, ...)
+- search tools (`grep`, `rg`, ...)
+- file finders (`find`, `fd`, ...)
+- in-place editors (`sed -i`, `perl -i`, `awk -i inplace`)
+- shell redirection writes (`echo ... > file`, heredoc redirection)
 
-### 注意事項
+### Caveat
 
-`InterceptionResult` には `suggestedTool` が含まれていますが、`BashTool` は現在メッセージテキストのみを表面化しています（`details` に構造化された提案ツールフィールドはありません）。
+`InterceptionResult` includes `suggestedTool`, but `BashTool` currently surfaces only the message text (no structured suggested-tool field in `details`).
 
-## 3) CWD の検証とタイムアウトのクランプ
+## 3) CWD validation and timeout clamping
 
-`cwd` はセッションの cwd（`resolveToCwd`）に対して相対的に解決され、その後 `stat` で検証されます：
+`cwd` is resolved relative to session cwd (`resolveToCwd`), then validated via `stat`:
 
-- パスが存在しない -> `ToolError("Working directory does not exist: ...")`
-- ディレクトリではない -> `ToolError("Working directory is not a directory: ...")`
+- missing path -> `ToolError("Working directory does not exist: ...")`
+- non-directory -> `ToolError("Working directory is not a directory: ...")`
 
-タイムアウトは `[1, 3600]` 秒にクランプされ、ミリ秒に変換されます。
+Timeout is clamped to `[1, 3600]` seconds and converted to milliseconds.
 
-## 4) アーティファクトの割り当て
+## 4) Artifact allocation
 
-実行前に、ツールは切り詰められた出力の保存用にアーティファクトのパス/ID を（ベストエフォートで）割り当てます。
+Before execution, the tool allocates an artifact path/id (best-effort) for truncated output storage.
 
-- アーティファクトの割り当て失敗は致命的ではありません（アーティファクトスピルファイルなしで実行が続行されます）
-- アーティファクトの ID/パスは、切り詰め時の完全な出力の永続化のために実行パスに渡されます
+- artifact allocation failure is non-fatal (execution continues without artifact spill file),
+- artifact id/path are passed into execution path for full-output persistence on truncation.
 
-## 5) PTY vs 非 PTY 実行の選択
+## 5) PTY vs non-PTY execution selection
 
-`BashTool` は以下のすべてが true の場合にのみ PTY 実行を選択します：
+`BashTool` chooses PTY execution only when all are true:
 
 - `bash.virtualTerminal === "on"`
 - `PI_NO_PTY !== "1"`
-- ツールコンテキストに UI がある（`ctx.hasUI === true` かつ `ctx.ui` が設定されている）
+- tool context has UI (`ctx.hasUI === true` and `ctx.ui` set)
 
-それ以外の場合は非インタラクティブな `executeBash()` を使用します。
+Otherwise it uses non-interactive `executeBash()`.
 
-つまり、プリントモードと非 UI の RPC/ツールコンテキストは常に非 PTY を使用します。
+That means print mode and non-UI RPC/tool contexts always use non-PTY.
 
-## 非インタラクティブ実行エンジン（`executeBash`）
+## Non-interactive execution engine (`executeBash`)
 
-## シェルセッション再利用モデル
+## Shell session reuse model
 
-`executeBash()` はネイティブの `Shell` インスタンスを以下でキーイングされたプロセスグローバルマップにキャッシュします：
+`executeBash()` caches native `Shell` instances in a process-global map keyed by:
 
-- シェルパス
-- 設定されたコマンドプレフィックス
-- スナップショットパス
-- シリアライズされたシェル環境変数
-- オプショナルなエージェントセッションキー
+- shell path,
+- configured command prefix,
+- snapshot path,
+- serialized shell env,
+- optional agent session key.
 
-セッションレベルの実行では、`AgentSession.executeBash()` が `sessionKey: this.sessionId` を渡し、セッションごとに再利用を分離します。
+For session-level executions, `AgentSession.executeBash()` passes `sessionKey: this.sessionId`, isolating reuse per session.
 
-ツール呼び出しパスは `sessionKey` を渡さ **ない** ため、再利用スコープはシェル設定/スナップショット/環境変数に基づきます。
+Tool-call path does **not** pass `sessionKey`, so reuse scope is based on shell config/snapshot/env.
 
-## シェル設定とスナップショットの動作
+## Shell config and snapshot behavior
 
-各呼び出し時に、エグゼキュータは設定のシェル構成（`shell`、`env`、オプショナルな `prefix`）を読み込みます。
+At each call, executor loads settings shell config (`shell`, `env`, optional `prefix`).
 
-選択されたシェルに `bash` が含まれる場合、`getOrCreateSnapshot()` を試行します：
+If selected shell includes `bash`, it attempts `getOrCreateSnapshot()`:
 
-- スナップショットはユーザー rc からのエイリアス/関数/オプションをキャプチャします
-- スナップショットの作成はベストエフォートです
-- 失敗した場合はスナップショットなしにフォールバックします
+- snapshot captures aliases/functions/options from user rc,
+- snapshot creation is best-effort,
+- failure falls back to no snapshot.
 
-`prefix` が設定されている場合、コマンドは以下のようになります：
+If `prefix` is configured, command becomes:
 
 ```text
 <prefix> <command>
 ```
 
-## ストリーミングとキャンセル
+## Streaming and cancellation
 
-`Shell.run()` はチャンクをコールバックにストリーミングします。エグゼキュータは各チャンクを `OutputSink` とオプショナルな `onChunk` コールバックにパイプします。
+`Shell.run()` streams chunks to callback. Executor pipes each chunk into `OutputSink` and optional `onChunk` callback.
 
-キャンセル：
+Cancellation:
 
-- 中止シグナルは `shellSession.abort(...)` をトリガーします
-- ネイティブ結果からのタイムアウトは `cancelled: true` + アノテーションテキストにマッピングされます
-- 明示的なキャンセルも同様に `cancelled: true` + アノテーションを返します
+- aborted signal triggers `shellSession.abort(...)`,
+- timeout from native result is mapped to `cancelled: true` + annotation text,
+- explicit cancellation similarly returns `cancelled: true` + annotation.
 
-タイムアウト/キャンセル時にエグゼキュータ内で例外はスローされません。構造化された `BashResult` を返し、呼び出し元にエラーセマンティクスのマッピングを委ねます。
+No exception is thrown inside executor for timeout/cancel; it returns structured `BashResult` and lets caller map error semantics.
 
-## インタラクティブ PTY パス（`runInteractiveBashPty`）
+## Interactive PTY path (`runInteractiveBashPty`)
 
-PTY が有効な場合、ツールは `runInteractiveBashPty()` を実行し、オーバーレイコンソールコンポーネントを開いてネイティブの `PtySession` を駆動します。
+When PTY is enabled, tool runs `runInteractiveBashPty()` which opens an overlay console component and drives a native `PtySession`.
 
-動作のハイライト：
+Behavior highlights:
 
-- xterm-headless 仮想ターミナルがオーバーレイにビューポートをレンダリングします
-- キーボード入力は正規化されます（Kitty シーケンスやアプリケーションカーソルモードの処理を含む）
-- 実行中の `esc` は PTY セッションを終了します
-- ターミナルのリサイズは PTY に伝播されます（`session.resize(cols, rows)`）
+- xterm-headless virtual terminal renders viewport in overlay,
+- keyboard input is normalized (including Kitty sequences and application cursor mode handling),
+- `esc` while running kills the PTY session,
+- terminal resize propagates to PTY (`session.resize(cols, rows)`).
 
-無人実行のための環境ハードニングデフォルトが注入されます：
+Environment hardening defaults are injected for unattended runs:
 
-- ページャー無効化（`PAGER=cat`、`GIT_PAGER=cat` など）
-- エディタプロンプト無効化（`GIT_EDITOR=true`、`EDITOR=true`、...）
-- ターミナル/認証プロンプトの削減（`GIT_TERMINAL_PROMPT=0`、`SSH_ASKPASS=/usr/bin/false`、`CI=1`）
-- 非インタラクティブ動作のためのパッケージマネージャー/ツール自動化フラグ
+- pagers disabled (`PAGER=cat`, `GIT_PAGER=cat`, etc.),
+- editor prompts disabled (`GIT_EDITOR=true`, `EDITOR=true`, ...),
+- terminal/auth prompts reduced (`GIT_TERMINAL_PROMPT=0`, `SSH_ASKPASS=/usr/bin/false`, `CI=1`),
+- package-manager/tool automation flags for non-interactive behavior.
 
-PTY 出力は正規化され（`CRLF`/`CR` を `LF` に、`sanitizeText`）、アーティファクトスピルサポートを含めて `OutputSink` に書き込まれます。
+PTY output is normalized (`CRLF`/`CR` to `LF`, `sanitizeText`) and written into `OutputSink`, including artifact spill support.
 
-PTY の起動/ランタイムエラー時、シンクは `PTY error: ...` 行を受け取り、コマンドは未定義の終了コードで完了します。
+On PTY startup/runtime error, sink receives `PTY error: ...` line and command finalizes with undefined exit code.
 
-## 出力処理：ストリーミング、切り詰め、アーティファクトスピル
+## Output handling: streaming, truncation, artifact spill
 
-PTY パスと非 PTY パスの両方が `OutputSink` を使用します。
+Both PTY and non-PTY paths use `OutputSink`.
 
-## OutputSink のセマンティクス
+## OutputSink semantics
 
-- インメモリの UTF-8 セーフなテールバッファを保持します（`DEFAULT_MAX_BYTES`、現在 50KB）
-- 総バイト数/行数を追跡します
-- アーティファクトパスが存在し、出力がオーバーフローした場合（またはファイルが既にアクティブな場合）、完全なストリームをアーティファクトファイルに書き込みます
-- メモリしきい値がオーバーフローした場合、インメモリバッファをテール（UTF-8 境界セーフ）にトリムします
-- オーバーフロー/ファイルスピルが発生した場合に `truncated` をマークします
+- keeps an in-memory UTF-8-safe tail buffer (`DEFAULT_MAX_BYTES`, currently 50KB),
+- tracks total bytes/lines seen,
+- if artifact path exists and output overflows (or file already active), writes full stream to artifact file,
+- when memory threshold overflows, trims in-memory buffer to tail (UTF-8 boundary safe),
+- marks `truncated` when overflow/file spill occurs.
 
-`dump()` は以下を返します：
+`dump()` returns:
 
-- `output`（アノテーション付きプレフィックスの可能性あり）
-- `truncated`
-- `totalLines/totalBytes`
-- `outputLines/outputBytes`
-- アーティファクトファイルがアクティブな場合は `artifactId`
+- `output` (possibly annotated prefix),
+- `truncated`,
+- `totalLines/totalBytes`,
+- `outputLines/outputBytes`,
+- `artifactId` if artifact file was active.
 
-### 長い出力に関する注意事項
+### Long-output caveat
 
-ランタイムの切り詰めは `OutputSink` のバイトしきい値ベースです（デフォルト 50KB）。このコードパスでは、ハードな 2000 行の制限は強制されません。
+Runtime truncation is byte-threshold based in `OutputSink` (50KB default). It does not enforce a hard 2000-line cap in this code path.
 
-## ライブツール更新
+## Live tool updates
 
-非 PTY 実行の場合、`BashTool` は部分更新用に別の `TailBuffer` を使用し、コマンド実行中に `onUpdate` スナップショットを発行します。
+For non-PTY execution, `BashTool` uses a separate `TailBuffer` for partial updates and emits `onUpdate` snapshots while command is running.
 
-PTY 実行の場合、ライブレンダリングは `onUpdate` テキストチャンクではなく、カスタム UI オーバーレイによって処理されます。
+For PTY execution, live rendering is handled by custom UI overlay, not by `onUpdate` text chunks.
 
-## 結果の整形、メタデータ、エラーマッピング
+## Result shaping, metadata, and error mapping
 
-実行後：
+After execution:
 
-1. `cancelled` の処理：
-   - 中止シグナルが中止されている場合 -> `ToolAbortError` をスロー（中止セマンティクス）
-   - それ以外 -> `ToolError` をスロー（ツール失敗として扱われます）
-2. PTY の `timedOut` -> `ToolError` をスロー
-3. 最終出力テキストに head/tail フィルターを適用（`applyHeadTail`、head が先で tail が後）
-4. 空の出力は `(no output)` になります
-5. `toolResult(...).truncationFromSummary(result, { direction: "tail" })` を通じて切り詰めメタデータを付加
-6. 終了コードのマッピング：
-   - 終了コードが欠落 -> `ToolError("... missing exit status")`
-   - 非ゼロ終了 -> `ToolError("... Command exited with code N")`
-   - ゼロ終了 -> 成功結果
+1. `cancelled` handling:
+   - if abort signal is aborted -> throw `ToolAbortError` (abort semantics),
+   - else -> throw `ToolError` (treated as tool failure).
+2. PTY `timedOut` -> throw `ToolError`.
+3. apply head/tail filters to final output text (`applyHeadTail`, head then tail).
+4. empty output becomes `(no output)`.
+5. attach truncation metadata via `toolResult(...).truncationFromSummary(result, { direction: "tail" })`.
+6. exit-code mapping:
+   - missing exit code -> `ToolError("... missing exit status")`
+   - non-zero exit -> `ToolError("... Command exited with code N")`
+   - zero exit -> success result.
 
-成功ペイロードの構造：
+Success payload structure:
 
-- `content`：テキスト出力
-- 切り詰め時の `details.meta.truncation`。以下を含みます：
-  - `direction`、`truncatedBy`、総/出力の行数+バイト数
-  - `shownRange`
-  - 利用可能な場合は `artifactId`
+- `content`: text output,
+- `details.meta.truncation` when truncated, including:
+  - `direction`, `truncatedBy`, total/output line+byte counts,
+  - `shownRange`,
+  - `artifactId` when available.
 
-ビルトインツールは `wrapToolWithMetaNotice()` でラップされているため、切り詰め通知テキストは最終テキストコンテンツに自動的に追加されます（例：`Full: artifact://<id>`）。
+Because built-in tools are wrapped with `wrapToolWithMetaNotice()`, truncation notice text is appended to final text content automatically (for example: `Full: artifact://<id>`).
 
-## レンダリングパス
+## Rendering paths
 
-## ツール呼び出しレンダラー（`bashToolRenderer`）
+## Tool-call renderer (`bashToolRenderer`)
 
-`bashToolRenderer` はツール呼び出しメッセージ（`toolCall` / `toolResult`）に使用されます：
+`bashToolRenderer` is used for tool-call messages (`toolCall` / `toolResult`):
 
-- 折りたたみモードでは視覚的な行切り詰めプレビューを表示します
-- 展開モードでは現在利用可能なすべての出力テキストを表示します
-- 警告行には切り詰め理由と、切り詰め時の `artifact://<id>` が含まれます
-- タイムアウト値（引数から）はフッターのメタデータ行に表示されます
+- collapsed mode shows visual-line-truncated preview,
+- expanded mode shows all currently available output text,
+- warning line includes truncation reason and `artifact://<id>` when truncated,
+- timeout value (from args) is shown in footer metadata line.
 
-### 注意事項：完全なアーティファクト展開
+### Caveat: full artifact expansion
 
-`BashRenderContext` には `isFullOutput` がありますが、現在のレンダラーコンテキストビルダーは bash ツール結果に対してそれを設定しません。展開ビューは、別の呼び出し元が完全なアーティファクトコンテンツを提供しない限り、結果コンテンツ内のテキスト（テール/切り詰められた出力）を依然として使用します。
+`BashRenderContext` has `isFullOutput`, but current renderer context builder does not set it for bash tool results. Expanded view still uses the text already in result content (tail/truncated output) unless another caller provides full artifact content.
 
-## ユーザーバンコマンドコンポーネント（`BashExecutionComponent`）
+## User bang-command component (`BashExecutionComponent`)
 
-`BashExecutionComponent` はインタラクティブモードでのユーザーの `!` コマンド用です（モデルのツール呼び出しではありません）：
+`BashExecutionComponent` is for user `!` commands in interactive mode (not model tool calls):
 
-- チャンクをライブストリーミングします
-- 折りたたみプレビューは最後の 20 論理行を保持します
-- 1行あたり 4000 文字で行クランプします
-- メタデータが存在する場合、切り詰め + アーティファクト警告を表示します
-- キャンセル/エラー/終了状態を個別にマークします
+- streams chunks live,
+- collapsed preview keeps last 20 logical lines,
+- line clamp at 4000 chars per line,
+- shows truncation + artifact warnings when metadata is present,
+- marks cancelled/error/exit state separately.
 
-このコンポーネントは `CommandController.handleBashCommand()` によって配線され、`AgentSession.executeBash()` からデータが供給されます。
+This component is wired by `CommandController.handleBashCommand()` and fed from `AgentSession.executeBash()`.
 
-## モード固有の動作の違い
+## Mode-specific behavior differences
 
-| サーフェス                        | エントリパス                                            | PTY 対象                                                         | ライブ出力 UX                                                           | エラーの表面化                                  |
+| Surface                        | Entry path                                            | PTY eligible                                                         | Live output UX                                                           | Error surfacing                                  |
 | ------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ |
-| インタラクティブツール呼び出し          | `BashTool.execute`                                    | はい、`bash.virtualTerminal=on` かつ UI が存在し `PI_NO_PTY!=1` の場合 | PTY オーバーレイ（インタラクティブ）またはストリーミングテール更新                       | ツールエラーは `toolResult.isError` になります          |
-| プリントモードツール呼び出し           | `BashTool.execute`                                    | いいえ（UI コンテキストなし）                                                   | TUI オーバーレイなし；出力はイベントストリーム/最終アシスタントテキストフローに表示 | 同じツールエラーマッピング                          |
-| RPC ツール呼び出し（エージェントツーリング）  | `BashTool.execute`                                    | 通常 UI なし -> 非 PTY                                             | 構造化されたツールイベント/結果                                           | 同じツールエラーマッピング                          |
-| インタラクティブバンコマンド（`!`） | `AgentSession.executeBash` + `BashExecutionComponent` | いいえ（エグゼキュータを直接使用）                                          | 専用の bash 実行コンポーネント                                       | コントローラーが例外をキャッチし UI エラーを表示 |
-| RPC `bash` コマンド             | `rpc-mode` -> `session.executeBash`                   | いいえ                                                                   | `BashResult` を直接返します                                            | コンシューマーが返されたフィールドを処理                 |
+| Interactive tool call          | `BashTool.execute`                                    | Yes, when `bash.virtualTerminal=on` and UI exists and `PI_NO_PTY!=1` | PTY overlay (interactive) or streamed tail updates                       | Tool errors become `toolResult.isError`          |
+| Print mode tool call           | `BashTool.execute`                                    | No (no UI context)                                                   | No TUI overlay; output appears in event stream/final assistant text flow | Same tool error mapping                          |
+| RPC tool call (agent tooling)  | `BashTool.execute`                                    | Usually no UI -> non-PTY                                             | Structured tool events/results                                           | Same tool error mapping                          |
+| Interactive bang command (`!`) | `AgentSession.executeBash` + `BashExecutionComponent` | No (uses executor directly)                                          | Dedicated bash execution component                                       | Controller catches exceptions and shows UI error |
+| RPC `bash` command             | `rpc-mode` -> `session.executeBash`                   | No                                                                   | Returns `BashResult` directly                                            | Consumer handles returned fields                 |
 
-## 運用上の注意事項
+## Filesystem containment: what enforces it, and where
 
-- インターセプターは、提案されたツールが現在のコンテキストで利用可能な場合にのみコマンドをブロックします。
-- アーティファクトの割り当てが失敗した場合、切り詰めは依然として発生しますが、`artifact://` の逆参照は利用できません。
-- シェルセッションキャッシュはこのモジュールに明示的なエビクションがありません。ライフタイムはプロセススコープです。
-- PTY と非 PTY のタイムアウトサーフェスは異なります：
-  - PTY は明示的な `timedOut` 結果フィールドを公開します
-  - 非 PTY はタイムアウトを `cancelled + annotation` サマリーにマッピングします
+The bash tool's filesystem boundary is enforced below the command text — the shell's own `cd` and
+redirections are checked where they act, and spawned children are confined by the operating system. Which
+OS mechanism does that depends on the host, and on one host family there is **no OS mechanism at all**.
 
-## 実装ファイル
+`xcsh://about` reports the active backend for the machine you are on. This table is for planning a fleet
+before you get there.
 
-- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — ツールエントリポイント、正規化/インターセプション、PTY/非 PTY 選択、結果/エラーマッピング、bash ツールレンダラー。
-- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — コマンドの正規化と実行後の head/tail フィルタリング。
-- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — インターセプタールールのマッチングとブロックコマンドメッセージ。
-- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — 非 PTY エグゼキュータ、シェルセッション再利用、キャンセル配線、出力シンク統合。
-- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY ランタイム、オーバーレイ UI、入力正規化、非インタラクティブ環境デフォルト。
-- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` 切り詰め/アーティファクトスピルとサマリーメタデータ。
-- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — アーティファクト割り当てヘルパーとストリーミングテールバッファ。
-- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — 切り詰めメタデータの形状 + 通知注入ラッパー。
-- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — セッションレベルの `executeBash`、メッセージ記録、中止ライフサイクル。
-- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — インタラクティブ `!` コマンド実行コンポーネント。
-- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — インタラクティブ `!` コマンド UI ストリーム/更新完了の配線。
-- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` および `abort_bash` コマンドサーフェス。
-- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` の解決。
+| Host | Kernel | Landlock ABI | Backend | Boundary |
+| ---- | ------ | ------------ | ------- | -------- |
+| macOS | — | — | `seatbelt` | OS-enforced |
+| RHEL 9 and derivatives | 5.14 | 1 | `scanner-only` | **command-text scan only** |
+| Ubuntu 22.04, stock GA kernel | 5.15 | 1 | `scanner-only` | **command-text scan only** |
+| Debian 12 | 6.1 | 2 | `landlock` | OS-enforced; `truncate(2)` ungoverned |
+| Ubuntu 22.04 HWE, Ubuntu 24.04 | 6.8 | 4 | `landlock` | OS-enforced |
+| Fedora current | 6.1x–7.x | 6–9 | `landlock` | OS-enforced |
+
+ABI numbers are anchored on two measured hosts: kernel 6.8.0-azure reports ABI 4, kernel 7.1.3 reports
+ABI 9. The rest follow the kernel-to-ABI mapping.
+
+### Why ABI 1 gets no OS boundary
+
+`LANDLOCK_ACCESS_FS_REFER` does not exist before ABI 2, and the kernel denies cross-directory `rename` and
+`link` whenever a ruleset handles *any* filesystem right. On ABI 1 there is therefore no way to permit
+`mv a/x b/x`, and no way for `git` to do its write-tmp-then-rename. Confining on ABI 1 would break ordinary
+work, which this boundary's design forbids, so it is refused rather than degraded.
+
+That is a deliberate trade and not a bug to work around: the alternative is a boundary that breaks `git`.
+
+### What scanner-only means in practice
+
+The command-text scan is still there and still refuses out-of-tree paths, but it reads what was *written*
+rather than what the shell will *do*. A path assembled at runtime — `P=/other/customer/secrets; cat "$P"`
+— is not caught. Treat it as a statement of intent, not a guarantee.
+
+**If sessions on an ABI 1 host handle more than one customer's data, that is a materially weaker posture
+than the macOS default**, and the remedy is operational rather than a code change: run a newer kernel
+(Ubuntu 22.04 HWE is the smallest step), or run those sessions in a container on a newer host.
+
+### Debian 12 / ABI 2
+
+Landlock confines every read and every write, but `LANDLOCK_ACCESS_FS_TRUNCATE` only exists from ABI 3, so
+`truncate(2)` on a path outside the boundary is not governed. It destroys rather than discloses, and is
+unreachable through `>`. `containmentStatus` reports this as `truncationUngoverned` and `xcsh://about`
+states it, so the session knows.
+
+## Operational caveats
+
+- Interceptor only blocks commands when suggested tool is currently available in context.
+- If artifact allocation fails, truncation still occurs but no `artifact://` back-reference is available.
+- Shell session cache has no explicit eviction in this module; lifetime is process-scoped.
+- PTY and non-PTY timeout surfaces differ:
+  - PTY exposes explicit `timedOut` result field,
+  - non-PTY maps timeout into `cancelled + annotation` summary.
+
+## Implementation files
+
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — tool entrypoint, normalization/interception, PTY/non-PTY selection, result/error mapping, bash tool renderer.
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — command normalization and post-run head/tail filtering.
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — interceptor rule matching and blocked-command messages.
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — non-PTY executor, shell session reuse, cancellation wiring, output sink integration.
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY runtime, overlay UI, input normalization, non-interactive env defaults.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/artifact spill and summary metadata.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — artifact allocation helpers and streaming tail buffer.
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — truncation metadata shape + notice injection wrapper.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — session-level `executeBash`, message recording, abort lifecycle.
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — interactive `!` command execution component.
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — wiring for interactive `!` command UI stream/update completion.
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` and `abort_bash` command surface.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` resolution.

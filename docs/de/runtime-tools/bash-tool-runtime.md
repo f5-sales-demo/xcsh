@@ -1,286 +1,331 @@
 ---
-title: Bash-Tool-Laufzeitumgebung
-description: >-
-  Bash-Tool-Laufzeitumgebung mit Shell-Prozessverwaltung, Sandboxing, Timeout
-  und Ausgabe-Streaming.
+title: Bash Tool Runtime
+description: Bash tool runtime with shell process management, sandboxing, timeout, and output streaming.
 sidebar:
   order: 1
-  label: Bash-Tool
+  label: Bash tool
 i18n:
-  sourceHash: a544cc180905
-  translator: machine
+  sourceHash: "2fa41f972e58"
+  translator: "machine"
 ---
 
-# Bash-Tool-Laufzeitumgebung
+# Bash tool runtime
 
-Dieses Dokument beschreibt den Laufzeitpfad des **`bash`-Tools**, der von Agent-Tool-Aufrufen verwendet wird – von der Befehlsnormalisierung über die Ausführung, Trunkierung/Artefakte bis hin zum Rendering.
+This document describes the **`bash` tool** runtime path used by agent tool calls, from command normalization to execution, truncation/artifacts, and rendering.
 
-Es weist zudem auf Verhaltensunterschiede im interaktiven TUI, im Print-Modus, im RPC-Modus und bei der vom Benutzer initiierten Bang-(`!`)-Shell-Ausführung hin.
+It also calls out where behavior diverges in interactive TUI, print mode, RPC mode, and user-initiated bang (`!`) shell execution.
 
-## Geltungsbereich und Laufzeitoberflächen
+## Scope and runtime surfaces
 
-Es gibt zwei verschiedene Bash-Ausführungsoberflächen in coding-agent:
+There are two different bash execution surfaces in coding-agent:
 
-1. **Tool-Aufruf-Oberfläche** (`toolName: "bash"`): wird verwendet, wenn das Modell das Bash-Tool aufruft.
-   - Einstiegspunkt: `BashTool.execute()`.
-2. **Benutzer-Bang-Befehl-Oberfläche** (`!cmd` aus interaktiver Eingabe oder RPC-`bash`-Befehl): Hilfspfad auf Session-Ebene.
-   - Einstiegspunkt: `AgentSession.executeBash()`.
+1. **Tool-call surface** (`toolName: "bash"`): used when the model calls the bash tool.
+   - Entry point: `BashTool.execute()`.
+2. **User bang-command surface** (`!cmd` from interactive input or RPC `bash` command): session-level helper path.
+   - Entry point: `AgentSession.executeBash()`.
 
-Beide verwenden letztendlich `executeBash()` in `src/exec/bash-executor.ts` für die Nicht-PTY-Ausführung, aber nur der Tool-Aufruf-Pfad führt Normalisierung/Interception und Tool-Renderer-Logik aus.
+Both eventually use `executeBash()` in `src/exec/bash-executor.ts` for non-PTY execution, but only the tool-call path runs normalization/interception and tool renderer logic.
 
-## End-to-End-Tool-Aufruf-Pipeline
+## End-to-end tool-call pipeline
 
-## 1) Eingabenormalisierung und Parameter-Zusammenführung
+## 1) Input normalization and parameter merge
 
-`BashTool.execute()` normalisiert zunächst den Rohbefehl über `normalizeBashCommand()`:
+`BashTool.execute()` first normalizes the raw command via `normalizeBashCommand()`:
 
-- extrahiert nachgestelltes `| head -n N`, `| head -N`, `| tail -n N`, `| tail -N` in strukturierte Limits,
-- entfernt führende/nachgestellte Leerzeichen,
-- behält interne Leerzeichen bei.
+- extracts trailing `| head -n N`, `| head -N`, `| tail -n N`, `| tail -N` into structured limits,
+- trims trailing/leading whitespace,
+- keeps internal whitespace intact.
 
-Anschließend werden extrahierte Limits mit expliziten Tool-Argumenten zusammengeführt:
+Then it merges extracted limits with explicit tool args:
 
-- explizite `head`/`tail`-Argumente überschreiben extrahierte Werte,
-- extrahierte Werte dienen nur als Fallback.
+- explicit `head`/`tail` args override extracted values,
+- extracted values are fallback only.
 
-### Einschränkung
+### Caveat
 
-Kommentare in `bash-normalize.ts` erwähnen das Entfernen von `2>&1`, aber die aktuelle Implementierung entfernt es nicht. Das Laufzeitverhalten ist dennoch korrekt (stdout/stderr werden bereits zusammengeführt), aber das Normalisierungsverhalten ist enger als die Kommentare vermuten lassen.
+`bash-normalize.ts` comments mention stripping `2>&1`, but current implementation does not remove it. Runtime behavior is still correct (stdout/stderr are already merged), but the normalization behavior is narrower than comments suggest.
 
-## 2) Optionale Interception (Blockierte-Befehle-Pfad)
+## 2) Optional interception (blocked-command path)
 
-Wenn `bashInterceptor.enabled` aktiv ist, lädt `BashTool` Regeln aus den Einstellungen und führt `checkBashInterception()` gegen den normalisierten Befehl aus.
+If `bashInterceptor.enabled` is true, `BashTool` loads rules from settings and runs `checkBashInterception()` against the normalized command.
 
-Interception-Verhalten:
+Interception behavior:
 
-- ein Befehl wird **nur dann** blockiert, wenn:
-  - eine Regex-Regel übereinstimmt, und
-  - das vorgeschlagene Tool in `ctx.toolNames` vorhanden ist.
-- ungültige Regex-Regeln werden stillschweigend übersprungen.
-- bei Blockierung wirft `BashTool` einen `ToolError` mit der Nachricht:
+- command is blocked **only** when:
+  - regex rule matches, and
+  - the suggested tool is present in `ctx.toolNames`.
+- invalid regex rules are silently skipped.
+- on block, `BashTool` throws `ToolError` with message:
   - `Blocked: ...`
-  - der ursprüngliche Befehl ist enthalten.
+  - original command included.
 
-Standard-Regelmuster (im Code definiert) zielen auf häufige Fehlverwendungen ab:
+Default rule patterns (defined in code) target common misuses:
 
-- Dateileser (`cat`, `head`, `tail`, ...)
-- Suchwerkzeuge (`grep`, `rg`, ...)
-- Dateifinder (`find`, `fd`, ...)
-- In-Place-Editoren (`sed -i`, `perl -i`, `awk -i inplace`)
-- Shell-Umleitungsschreibvorgänge (`echo ... > file`, Heredoc-Umleitung)
+- file readers (`cat`, `head`, `tail`, ...)
+- search tools (`grep`, `rg`, ...)
+- file finders (`find`, `fd`, ...)
+- in-place editors (`sed -i`, `perl -i`, `awk -i inplace`)
+- shell redirection writes (`echo ... > file`, heredoc redirection)
 
-### Einschränkung
+### Caveat
 
-`InterceptionResult` enthält `suggestedTool`, aber `BashTool` gibt derzeit nur den Nachrichtentext aus (kein strukturiertes Suggested-Tool-Feld in `details`).
+`InterceptionResult` includes `suggestedTool`, but `BashTool` currently surfaces only the message text (no structured suggested-tool field in `details`).
 
-## 3) CWD-Validierung und Timeout-Begrenzung
+## 3) CWD validation and timeout clamping
 
-`cwd` wird relativ zum Session-cwd aufgelöst (`resolveToCwd`) und dann über `stat` validiert:
+`cwd` is resolved relative to session cwd (`resolveToCwd`), then validated via `stat`:
 
-- fehlender Pfad -> `ToolError("Working directory does not exist: ...")`
-- kein Verzeichnis -> `ToolError("Working directory is not a directory: ...")`
+- missing path -> `ToolError("Working directory does not exist: ...")`
+- non-directory -> `ToolError("Working directory is not a directory: ...")`
 
-Der Timeout wird auf `[1, 3600]` Sekunden begrenzt und in Millisekunden umgerechnet.
+Timeout is clamped to `[1, 3600]` seconds and converted to milliseconds.
 
-## 4) Artefakt-Zuweisung
+## 4) Artifact allocation
 
-Vor der Ausführung weist das Tool einen Artefaktpfad/-ID (Best-Effort) für die Speicherung trunkierter Ausgaben zu.
+Before execution, the tool allocates an artifact path/id (best-effort) for truncated output storage.
 
-- ein Fehler bei der Artefakt-Zuweisung ist nicht-fatal (die Ausführung wird ohne Artefakt-Spilldatei fortgesetzt),
-- Artefakt-ID/Pfad werden in den Ausführungspfad übergeben, um die vollständige Ausgabe bei Trunkierung zu persistieren.
+- artifact allocation failure is non-fatal (execution continues without artifact spill file),
+- artifact id/path are passed into execution path for full-output persistence on truncation.
 
-## 5) PTY- vs. Nicht-PTY-Ausführungsauswahl
+## 5) PTY vs non-PTY execution selection
 
-`BashTool` wählt PTY-Ausführung nur, wenn alle Bedingungen erfüllt sind:
+`BashTool` chooses PTY execution only when all are true:
 
 - `bash.virtualTerminal === "on"`
 - `PI_NO_PTY !== "1"`
-- der Tool-Kontext hat eine UI (`ctx.hasUI === true` und `ctx.ui` gesetzt)
+- tool context has UI (`ctx.hasUI === true` and `ctx.ui` set)
 
-Andernfalls wird die nicht-interaktive `executeBash()`-Funktion verwendet.
+Otherwise it uses non-interactive `executeBash()`.
 
-Das bedeutet, dass der Print-Modus und Nicht-UI-RPC/Tool-Kontexte immer Nicht-PTY verwenden.
+That means print mode and non-UI RPC/tool contexts always use non-PTY.
 
-## Nicht-interaktive Ausführungs-Engine (`executeBash`)
+## Non-interactive execution engine (`executeBash`)
 
-## Shell-Session-Wiederverwendungsmodell
+## Shell session reuse model
 
-`executeBash()` cached native `Shell`-Instanzen in einer prozessglobalen Map, die anhand folgender Schlüssel indiziert wird:
+`executeBash()` caches native `Shell` instances in a process-global map keyed by:
 
-- Shell-Pfad,
-- konfiguriertes Befehlspräfix,
-- Snapshot-Pfad,
-- serialisierte Shell-Umgebung,
-- optionaler Agent-Session-Schlüssel.
+- shell path,
+- configured command prefix,
+- snapshot path,
+- serialized shell env,
+- optional agent session key.
 
-Für Ausführungen auf Session-Ebene übergibt `AgentSession.executeBash()` den Parameter `sessionKey: this.sessionId`, wodurch die Wiederverwendung pro Session isoliert wird.
+For session-level executions, `AgentSession.executeBash()` passes `sessionKey: this.sessionId`, isolating reuse per session.
 
-Der Tool-Aufruf-Pfad übergibt **keinen** `sessionKey`, sodass der Wiederverwendungsbereich auf Shell-Konfiguration/Snapshot/Umgebung basiert.
+Tool-call path does **not** pass `sessionKey`, so reuse scope is based on shell config/snapshot/env.
 
-## Shell-Konfiguration und Snapshot-Verhalten
+## Shell config and snapshot behavior
 
-Bei jedem Aufruf lädt der Executor die Shell-Konfiguration aus den Einstellungen (`shell`, `env`, optionales `prefix`).
+At each call, executor loads settings shell config (`shell`, `env`, optional `prefix`).
 
-Wenn die ausgewählte Shell `bash` enthält, wird `getOrCreateSnapshot()` versucht:
+If selected shell includes `bash`, it attempts `getOrCreateSnapshot()`:
 
-- der Snapshot erfasst Aliase/Funktionen/Optionen aus der Benutzer-RC,
-- die Snapshot-Erstellung erfolgt nach dem Best-Effort-Prinzip,
-- bei Fehler wird auf keinen Snapshot zurückgefallen.
+- snapshot captures aliases/functions/options from user rc,
+- snapshot creation is best-effort,
+- failure falls back to no snapshot.
 
-Wenn `prefix` konfiguriert ist, wird der Befehl zu:
+If `prefix` is configured, command becomes:
 
 ```text
 <prefix> <command>
 ```
 
-## Streaming und Abbruch
+## Streaming and cancellation
 
-`Shell.run()` streamt Chunks an einen Callback. Der Executor leitet jeden Chunk an `OutputSink` und einen optionalen `onChunk`-Callback weiter.
+`Shell.run()` streams chunks to callback. Executor pipes each chunk into `OutputSink` and optional `onChunk` callback.
 
-Abbruch:
+Cancellation:
 
-- ein abgebrochenes Signal löst `shellSession.abort(...)` aus,
-- ein Timeout aus dem nativen Ergebnis wird auf `cancelled: true` + Annotationstext abgebildet,
-- ein expliziter Abbruch gibt ebenfalls `cancelled: true` + Annotation zurück.
+- aborted signal triggers `shellSession.abort(...)`,
+- timeout from native result is mapped to `cancelled: true` + annotation text,
+- explicit cancellation similarly returns `cancelled: true` + annotation.
 
-Innerhalb des Executors wird bei Timeout/Abbruch keine Exception geworfen; er gibt ein strukturiertes `BashResult` zurück und überlässt dem Aufrufer die Fehlersemantik.
+No exception is thrown inside executor for timeout/cancel; it returns structured `BashResult` and lets caller map error semantics.
 
-## Interaktiver PTY-Pfad (`runInteractiveBashPty`)
+## Interactive PTY path (`runInteractiveBashPty`)
 
-Wenn PTY aktiviert ist, führt das Tool `runInteractiveBashPty()` aus, das eine Overlay-Konsolen-Komponente öffnet und eine native `PtySession` steuert.
+When PTY is enabled, tool runs `runInteractiveBashPty()` which opens an overlay console component and drives a native `PtySession`.
 
-Verhaltens-Highlights:
+Behavior highlights:
 
-- xterm-headless virtuelles Terminal rendert den Viewport im Overlay,
-- Tastatureingaben werden normalisiert (einschließlich Kitty-Sequenzen und Application-Cursor-Modus-Behandlung),
-- `esc` während der Ausführung beendet die PTY-Session,
-- Terminal-Größenänderungen werden an das PTY weitergegeben (`session.resize(cols, rows)`).
+- xterm-headless virtual terminal renders viewport in overlay,
+- keyboard input is normalized (including Kitty sequences and application cursor mode handling),
+- `esc` while running kills the PTY session,
+- terminal resize propagates to PTY (`session.resize(cols, rows)`).
 
-Standardmäßige Umgebungs-Härtungen werden für unbeaufsichtigte Ausführungen injiziert:
+Environment hardening defaults are injected for unattended runs:
 
-- Pager deaktiviert (`PAGER=cat`, `GIT_PAGER=cat`, etc.),
-- Editor-Eingabeaufforderungen deaktiviert (`GIT_EDITOR=true`, `EDITOR=true`, ...),
-- Terminal-/Authentifizierungs-Eingabeaufforderungen reduziert (`GIT_TERMINAL_PROMPT=0`, `SSH_ASKPASS=/usr/bin/false`, `CI=1`),
-- Paketmanager-/Tool-Automatisierungsflags für nicht-interaktives Verhalten.
+- pagers disabled (`PAGER=cat`, `GIT_PAGER=cat`, etc.),
+- editor prompts disabled (`GIT_EDITOR=true`, `EDITOR=true`, ...),
+- terminal/auth prompts reduced (`GIT_TERMINAL_PROMPT=0`, `SSH_ASKPASS=/usr/bin/false`, `CI=1`),
+- package-manager/tool automation flags for non-interactive behavior.
 
-PTY-Ausgaben werden normalisiert (`CRLF`/`CR` zu `LF`, `sanitizeText`) und in `OutputSink` geschrieben, einschließlich Artefakt-Spill-Unterstützung.
+PTY output is normalized (`CRLF`/`CR` to `LF`, `sanitizeText`) and written into `OutputSink`, including artifact spill support.
 
-Bei PTY-Start-/Laufzeitfehlern erhält der Sink eine `PTY error: ...`-Zeile und der Befehl wird mit undefiniertem Exit-Code finalisiert.
+On PTY startup/runtime error, sink receives `PTY error: ...` line and command finalizes with undefined exit code.
 
-## Ausgabebehandlung: Streaming, Trunkierung, Artefakt-Spill
+## Output handling: streaming, truncation, artifact spill
 
-Sowohl PTY- als auch Nicht-PTY-Pfade verwenden `OutputSink`.
+Both PTY and non-PTY paths use `OutputSink`.
 
-## OutputSink-Semantik
+## OutputSink semantics
 
-- hält einen In-Memory-UTF-8-sicheren Tail-Puffer (`DEFAULT_MAX_BYTES`, derzeit 50KB),
-- verfolgt die insgesamt gesehenen Bytes/Zeilen,
-- wenn ein Artefaktpfad existiert und die Ausgabe überläuft (oder die Datei bereits aktiv ist), wird der vollständige Stream in die Artefaktdatei geschrieben,
-- wenn der Speicherschwellenwert überschritten wird, wird der In-Memory-Puffer auf den Tail gekürzt (UTF-8-Grenz-sicher),
-- markiert `truncated`, wenn ein Überlauf/Datei-Spill auftritt.
+- keeps an in-memory UTF-8-safe tail buffer (`DEFAULT_MAX_BYTES`, currently 50KB),
+- tracks total bytes/lines seen,
+- if artifact path exists and output overflows (or file already active), writes full stream to artifact file,
+- when memory threshold overflows, trims in-memory buffer to tail (UTF-8 boundary safe),
+- marks `truncated` when overflow/file spill occurs.
 
-`dump()` gibt zurück:
+`dump()` returns:
 
-- `output` (möglicherweise mit annotiertem Präfix),
+- `output` (possibly annotated prefix),
 - `truncated`,
 - `totalLines/totalBytes`,
 - `outputLines/outputBytes`,
-- `artifactId`, falls eine Artefaktdatei aktiv war.
+- `artifactId` if artifact file was active.
 
-### Einschränkung bei langer Ausgabe
+### Long-output caveat
 
-Die Laufzeit-Trunkierung basiert auf dem Byte-Schwellenwert in `OutputSink` (standardmäßig 50KB). In diesem Codepfad wird kein hartes 2000-Zeilen-Limit erzwungen.
+Runtime truncation is byte-threshold based in `OutputSink` (50KB default). It does not enforce a hard 2000-line cap in this code path.
 
-## Live-Tool-Updates
+## Live tool updates
 
-Für die Nicht-PTY-Ausführung verwendet `BashTool` einen separaten `TailBuffer` für partielle Updates und gibt `onUpdate`-Snapshots aus, während der Befehl läuft.
+For non-PTY execution, `BashTool` uses a separate `TailBuffer` for partial updates and emits `onUpdate` snapshots while command is running.
 
-Für die PTY-Ausführung wird das Live-Rendering durch ein benutzerdefiniertes UI-Overlay gehandhabt, nicht durch `onUpdate`-Text-Chunks.
+For PTY execution, live rendering is handled by custom UI overlay, not by `onUpdate` text chunks.
 
-## Ergebnisformung, Metadaten und Fehlerzuordnung
+## Result shaping, metadata, and error mapping
 
-Nach der Ausführung:
+After execution:
 
-1. `cancelled`-Behandlung:
-   - wenn das Abort-Signal abgebrochen ist -> wirft `ToolAbortError` (Abbruch-Semantik),
-   - andernfalls -> wirft `ToolError` (wird als Tool-Fehler behandelt).
-2. PTY `timedOut` -> wirft `ToolError`.
-3. Head/Tail-Filter auf den finalen Ausgabetext anwenden (`applyHeadTail`, Head dann Tail).
-4. leere Ausgabe wird zu `(no output)`.
-5. Trunkierungs-Metadaten über `toolResult(...).truncationFromSummary(result, { direction: "tail" })` anhängen.
-6. Exit-Code-Zuordnung:
-   - fehlender Exit-Code -> `ToolError("... missing exit status")`
-   - Exit-Code ungleich Null -> `ToolError("... Command exited with code N")`
-   - Exit-Code Null -> Erfolgsergebnis.
+1. `cancelled` handling:
+   - if abort signal is aborted -> throw `ToolAbortError` (abort semantics),
+   - else -> throw `ToolError` (treated as tool failure).
+2. PTY `timedOut` -> throw `ToolError`.
+3. apply head/tail filters to final output text (`applyHeadTail`, head then tail).
+4. empty output becomes `(no output)`.
+5. attach truncation metadata via `toolResult(...).truncationFromSummary(result, { direction: "tail" })`.
+6. exit-code mapping:
+   - missing exit code -> `ToolError("... missing exit status")`
+   - non-zero exit -> `ToolError("... Command exited with code N")`
+   - zero exit -> success result.
 
-Erfolgs-Payload-Struktur:
+Success payload structure:
 
-- `content`: Textausgabe,
-- `details.meta.truncation` bei Trunkierung, einschließlich:
-  - `direction`, `truncatedBy`, Gesamt-/Ausgabe-Zeilen+Byte-Zähler,
+- `content`: text output,
+- `details.meta.truncation` when truncated, including:
+  - `direction`, `truncatedBy`, total/output line+byte counts,
   - `shownRange`,
-  - `artifactId` wenn verfügbar.
+  - `artifactId` when available.
 
-Da integrierte Tools mit `wrapToolWithMetaNotice()` umschlossen werden, wird der Trunkierungshinweis-Text automatisch an den finalen Textinhalt angehängt (zum Beispiel: `Full: artifact://<id>`).
+Because built-in tools are wrapped with `wrapToolWithMetaNotice()`, truncation notice text is appended to final text content automatically (for example: `Full: artifact://<id>`).
 
-## Rendering-Pfade
+## Rendering paths
 
-## Tool-Aufruf-Renderer (`bashToolRenderer`)
+## Tool-call renderer (`bashToolRenderer`)
 
-`bashToolRenderer` wird für Tool-Aufruf-Nachrichten (`toolCall` / `toolResult`) verwendet:
+`bashToolRenderer` is used for tool-call messages (`toolCall` / `toolResult`):
 
-- der eingeklappte Modus zeigt eine visuell zeilentrunkierte Vorschau,
-- der ausgeklappte Modus zeigt den gesamten derzeit verfügbaren Ausgabetext,
-- die Warnzeile enthält den Trunkierungsgrund und `artifact://<id>` bei Trunkierung,
-- der Timeout-Wert (aus den Argumenten) wird in der Fußzeilen-Metadatenzeile angezeigt.
+- collapsed mode shows visual-line-truncated preview,
+- expanded mode shows all currently available output text,
+- warning line includes truncation reason and `artifact://<id>` when truncated,
+- timeout value (from args) is shown in footer metadata line.
 
-### Einschränkung: Vollständige Artefakt-Erweiterung
+### Caveat: full artifact expansion
 
-`BashRenderContext` hat `isFullOutput`, aber der aktuelle Renderer-Kontext-Builder setzt es nicht für Bash-Tool-Ergebnisse. Die erweiterte Ansicht verwendet weiterhin den bereits im Ergebnisinhalt vorhandenen Text (Tail-/trunkierte Ausgabe), es sei denn, ein anderer Aufrufer stellt den vollständigen Artefaktinhalt bereit.
+`BashRenderContext` has `isFullOutput`, but current renderer context builder does not set it for bash tool results. Expanded view still uses the text already in result content (tail/truncated output) unless another caller provides full artifact content.
 
-## Benutzer-Bang-Befehl-Komponente (`BashExecutionComponent`)
+## User bang-command component (`BashExecutionComponent`)
 
-`BashExecutionComponent` ist für Benutzer-`!`-Befehle im interaktiven Modus gedacht (nicht für Modell-Tool-Aufrufe):
+`BashExecutionComponent` is for user `!` commands in interactive mode (not model tool calls):
 
-- streamt Chunks live,
-- die eingeklappte Vorschau behält die letzten 20 logischen Zeilen,
-- Zeilenbegrenzung bei 4000 Zeichen pro Zeile,
-- zeigt Trunkierungs- und Artefaktwarnungen an, wenn Metadaten vorhanden sind,
-- markiert abgebrochene/Fehler-/Exit-Zustände separat.
+- streams chunks live,
+- collapsed preview keeps last 20 logical lines,
+- line clamp at 4000 chars per line,
+- shows truncation + artifact warnings when metadata is present,
+- marks cancelled/error/exit state separately.
 
-Diese Komponente wird von `CommandController.handleBashCommand()` verdrahtet und von `AgentSession.executeBash()` gespeist.
+This component is wired by `CommandController.handleBashCommand()` and fed from `AgentSession.executeBash()`.
 
-## Modusspezifische Verhaltensunterschiede
+## Mode-specific behavior differences
 
-| Oberfläche                       | Einstiegspfad                                         | PTY-fähig                                                            | Live-Ausgabe-UX                                                                | Fehlermeldung                                           |
-| -------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------- |
-| Interaktiver Tool-Aufruf         | `BashTool.execute`                                    | Ja, wenn `bash.virtualTerminal=on` und UI vorhanden und `PI_NO_PTY!=1` | PTY-Overlay (interaktiv) oder gestreamte Tail-Updates                          | Tool-Fehler werden zu `toolResult.isError`              |
-| Print-Modus Tool-Aufruf          | `BashTool.execute`                                    | Nein (kein UI-Kontext)                                               | Kein TUI-Overlay; Ausgabe erscheint im Event-Stream/finalen Assistenten-Textfluss | Gleiche Tool-Fehler-Zuordnung                           |
-| RPC Tool-Aufruf (Agent-Tooling)  | `BashTool.execute`                                    | Üblicherweise keine UI -> Nicht-PTY                                  | Strukturierte Tool-Events/Ergebnisse                                           | Gleiche Tool-Fehler-Zuordnung                           |
-| Interaktiver Bang-Befehl (`!`)   | `AgentSession.executeBash` + `BashExecutionComponent` | Nein (verwendet Executor direkt)                                     | Dedizierte Bash-Ausführungskomponente                                          | Controller fängt Exceptions ab und zeigt UI-Fehler      |
-| RPC-`bash`-Befehl                | `rpc-mode` -> `session.executeBash`                   | Nein                                                                 | Gibt `BashResult` direkt zurück                                                | Consumer behandelt zurückgegebene Felder                |
+| Surface                        | Entry path                                            | PTY eligible                                                         | Live output UX                                                           | Error surfacing                                  |
+| ------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------ |
+| Interactive tool call          | `BashTool.execute`                                    | Yes, when `bash.virtualTerminal=on` and UI exists and `PI_NO_PTY!=1` | PTY overlay (interactive) or streamed tail updates                       | Tool errors become `toolResult.isError`          |
+| Print mode tool call           | `BashTool.execute`                                    | No (no UI context)                                                   | No TUI overlay; output appears in event stream/final assistant text flow | Same tool error mapping                          |
+| RPC tool call (agent tooling)  | `BashTool.execute`                                    | Usually no UI -> non-PTY                                             | Structured tool events/results                                           | Same tool error mapping                          |
+| Interactive bang command (`!`) | `AgentSession.executeBash` + `BashExecutionComponent` | No (uses executor directly)                                          | Dedicated bash execution component                                       | Controller catches exceptions and shows UI error |
+| RPC `bash` command             | `rpc-mode` -> `session.executeBash`                   | No                                                                   | Returns `BashResult` directly                                            | Consumer handles returned fields                 |
 
-## Operationelle Einschränkungen
+## Filesystem containment: what enforces it, and where
 
-- Der Interceptor blockiert Befehle nur, wenn das vorgeschlagene Tool derzeit im Kontext verfügbar ist.
-- Wenn die Artefakt-Zuweisung fehlschlägt, findet die Trunkierung trotzdem statt, aber es ist keine `artifact://`-Rückreferenz verfügbar.
-- Der Shell-Session-Cache hat in diesem Modul keine explizite Bereinigung; die Lebensdauer ist prozessbezogen.
-- PTY- und Nicht-PTY-Timeout-Oberflächen unterscheiden sich:
-  - PTY stellt ein explizites `timedOut`-Ergebnisfeld bereit,
-  - Nicht-PTY bildet Timeout auf `cancelled + Annotation`-Zusammenfassung ab.
+The bash tool's filesystem boundary is enforced below the command text — the shell's own `cd` and
+redirections are checked where they act, and spawned children are confined by the operating system. Which
+OS mechanism does that depends on the host, and on one host family there is **no OS mechanism at all**.
 
-## Implementierungsdateien
+`xcsh://about` reports the active backend for the machine you are on. This table is for planning a fleet
+before you get there.
 
-- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — Tool-Einstiegspunkt, Normalisierung/Interception, PTY/Nicht-PTY-Auswahl, Ergebnis-/Fehlerzuordnung, Bash-Tool-Renderer.
-- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — Befehlsnormalisierung und Head/Tail-Filterung nach der Ausführung.
-- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — Interceptor-Regelabgleich und Blockierte-Befehle-Nachrichten.
-- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — Nicht-PTY-Executor, Shell-Session-Wiederverwendung, Abbruch-Verdrahtung, Output-Sink-Integration.
-- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY-Laufzeitumgebung, Overlay-UI, Eingabenormalisierung, nicht-interaktive Umgebungs-Standardwerte.
-- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink`-Trunkierung/Artefakt-Spill und Zusammenfassungs-Metadaten.
-- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — Artefakt-Zuweisungs-Hilfsfunktionen und Streaming-Tail-Puffer.
-- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — Trunkierungs-Metadaten-Struktur + Hinweis-Injektions-Wrapper.
-- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `executeBash` auf Session-Ebene, Nachrichtenaufzeichnung, Abbruch-Lebenszyklus.
-- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — Interaktive `!`-Befehlsausführungskomponente.
-- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — Verdrahtung für interaktiven `!`-Befehl-UI-Stream/Update-Abschluss.
-- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC-`bash`- und `abort_bash`-Befehlsoberfläche.
-- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>`-Auflösung.
+| Host | Kernel | Landlock ABI | Backend | Boundary |
+| ---- | ------ | ------------ | ------- | -------- |
+| macOS | — | — | `seatbelt` | OS-enforced |
+| RHEL 9 and derivatives | 5.14 | 1 | `scanner-only` | **command-text scan only** |
+| Ubuntu 22.04, stock GA kernel | 5.15 | 1 | `scanner-only` | **command-text scan only** |
+| Debian 12 | 6.1 | 2 | `landlock` | OS-enforced; `truncate(2)` ungoverned |
+| Ubuntu 22.04 HWE, Ubuntu 24.04 | 6.8 | 4 | `landlock` | OS-enforced |
+| Fedora current | 6.1x–7.x | 6–9 | `landlock` | OS-enforced |
+
+ABI numbers are anchored on two measured hosts: kernel 6.8.0-azure reports ABI 4, kernel 7.1.3 reports
+ABI 9. The rest follow the kernel-to-ABI mapping.
+
+### Why ABI 1 gets no OS boundary
+
+`LANDLOCK_ACCESS_FS_REFER` does not exist before ABI 2, and the kernel denies cross-directory `rename` and
+`link` whenever a ruleset handles *any* filesystem right. On ABI 1 there is therefore no way to permit
+`mv a/x b/x`, and no way for `git` to do its write-tmp-then-rename. Confining on ABI 1 would break ordinary
+work, which this boundary's design forbids, so it is refused rather than degraded.
+
+That is a deliberate trade and not a bug to work around: the alternative is a boundary that breaks `git`.
+
+### What scanner-only means in practice
+
+The command-text scan is still there and still refuses out-of-tree paths, but it reads what was *written*
+rather than what the shell will *do*. A path assembled at runtime — `P=/other/customer/secrets; cat "$P"`
+— is not caught. Treat it as a statement of intent, not a guarantee.
+
+**If sessions on an ABI 1 host handle more than one customer's data, that is a materially weaker posture
+than the macOS default**, and the remedy is operational rather than a code change: run a newer kernel
+(Ubuntu 22.04 HWE is the smallest step), or run those sessions in a container on a newer host.
+
+### Debian 12 / ABI 2
+
+Landlock confines every read and every write, but `LANDLOCK_ACCESS_FS_TRUNCATE` only exists from ABI 3, so
+`truncate(2)` on a path outside the boundary is not governed. It destroys rather than discloses, and is
+unreachable through `>`. `containmentStatus` reports this as `truncationUngoverned` and `xcsh://about`
+states it, so the session knows.
+
+## Operational caveats
+
+- Interceptor only blocks commands when suggested tool is currently available in context.
+- If artifact allocation fails, truncation still occurs but no `artifact://` back-reference is available.
+- Shell session cache has no explicit eviction in this module; lifetime is process-scoped.
+- PTY and non-PTY timeout surfaces differ:
+  - PTY exposes explicit `timedOut` result field,
+  - non-PTY maps timeout into `cancelled + annotation` summary.
+
+## Implementation files
+
+- [`src/tools/bash.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash.ts) — tool entrypoint, normalization/interception, PTY/non-PTY selection, result/error mapping, bash tool renderer.
+- [`src/tools/bash-normalize.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-normalize.ts) — command normalization and post-run head/tail filtering.
+- [`src/tools/bash-interceptor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interceptor.ts) — interceptor rule matching and blocked-command messages.
+- [`src/exec/bash-executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/exec/bash-executor.ts) — non-PTY executor, shell session reuse, cancellation wiring, output sink integration.
+- [`src/tools/bash-interactive.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/bash-interactive.ts) — PTY runtime, overlay UI, input normalization, non-interactive env defaults.
+- [`src/session/streaming-output.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/streaming-output.ts) — `OutputSink` truncation/artifact spill and summary metadata.
+- [`src/tools/output-utils.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-utils.ts) — artifact allocation helpers and streaming tail buffer.
+- [`src/tools/output-meta.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/output-meta.ts) — truncation metadata shape + notice injection wrapper.
+- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — session-level `executeBash`, message recording, abort lifecycle.
+- [`src/modes/components/bash-execution.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/components/bash-execution.ts) — interactive `!` command execution component.
+- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts) — wiring for interactive `!` command UI stream/update completion.
+- [`src/modes/rpc/rpc-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/rpc/rpc-mode.ts) — RPC `bash` and `abort_bash` command surface.
+- [`src/internal-urls/artifact-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/artifact-protocol.ts) — `artifact://<id>` resolution.

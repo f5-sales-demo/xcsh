@@ -1,48 +1,45 @@
 ---
-title: تكوين النماذج والموفرين
-description: >-
-  سجل النماذج وتكوين الموفرين عبر models.yml مع التوجيه والتحويل الاحتياطي
-  والتسعير.
+title: Model and Provider Configuration
+description: Model registry and provider configuration via models.yml with routing, fallback, and pricing.
 sidebar:
   order: 1
-  label: النماذج والموفرون
+  label: Models & providers
 i18n:
-  sourceHash: 8053df967ff6
-  translator: machine
+  sourceHash: "26d427f98a58"
+  translator: "machine"
 ---
 
-# تكوين النماذج والموفرين (`models.yml`)
+This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
 
-يصف هذا المستند كيفية تحميل وكيل الترميز للنماذج حالياً، وتطبيق التجاوزات، وحل بيانات الاعتماد، واختيار النماذج في وقت التشغيل.
+## What controls model behavior
 
-## ما يتحكم في سلوك النماذج
+Primary implementation files:
 
-ملفات التنفيذ الأساسية:
+- `src/config/model-registry.ts` — loads built-in + custom models, provider overrides, runtime discovery, auth integration
+- `src/config/model-resolver.ts` — parses model patterns and selects initial/smol/slow models
+- `src/routing/` — provider-agnostic dynamic model routing coordinator, profiler, presets, and state machine
+- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, `routing.*`, provider transport preferences)
+- `src/session/auth-storage.ts` — API key + OAuth resolution order
+- `packages/ai/src/models.ts` and `packages/ai/src/types.ts` — built-in providers/models and `Model`/`compat` types
 
-- `src/config/model-registry.ts` — يحمّل النماذج المدمجة والمخصصة، وتجاوزات الموفر، والاكتشاف في وقت التشغيل، وتكامل المصادقة
-- `src/config/model-resolver.ts` — يحلّل أنماط النماذج ويختار النماذج الأولية/المصغّرة/البطيئة
-- `src/config/settings-schema.ts` — الإعدادات المتعلقة بالنماذج (`modelRoles`، وتفضيلات نقل الموفر)
-- `src/session/auth-storage.ts` — ترتيب حل مفتاح API ومصادقة OAuth
-- `packages/ai/src/models.ts` و`packages/ai/src/types.ts` — الموفرون/النماذج المدمجون وأنواع `Model`/`compat`
+## Config file location and legacy behavior
 
-## موقع ملف التكوين والسلوك القديم
-
-مسار التكوين الافتراضي:
+Default config path:
 
 - `~/.xcsh/agent/models.yml`
 
-السلوك القديم لا يزال موجوداً:
+Legacy behavior still present:
 
-- إذا كان `models.yml` مفقوداً وكان `models.json` موجوداً في نفس الموقع، يتم ترحيله إلى `models.yml`.
-- مسارات التكوين الصريحة بصيغة `.json` / `.jsonc` لا تزال مدعومة عند تمريرها برمجياً إلى `ModelRegistry`.
+- If `models.yml` is missing and `models.json` exists at the same location, it is migrated to `models.yml`.
+- Explicit `.json` / `.jsonc` config paths are still supported when passed programmatically to `ModelRegistry`.
 
-## شكل `models.yml`
+## `models.yml` shape
 
 ```yaml
-configVersion: 1  # اختياري — يُكتب بواسطة الضبط التلقائي، يُستخدم لاكتشاف الترحيل
+configVersion: 1  # optional — written by auto-config, used for migration detection
 providers:
   <provider-id>:
-    # تكوين على مستوى الموفر
+    # provider-level config
 equivalence:
   overrides:
     <provider-id>/<model-id>: <canonical-model-id>
@@ -50,16 +47,16 @@ equivalence:
     - <provider-id>/<model-id>
 ```
 
-`configVersion` هو عدد صحيح اختياري يُكتب بواسطة نظام الضبط التلقائي. عند وجوده، يستخدمه xcsh لاكتشاف التكوينات القديمة وترقيتها تلقائياً.
+`configVersion` is an optional integer written by the auto-config system. When present, xcsh uses it to detect outdated configs and auto-upgrade them.
 
-`provider-id` هو مفتاح الموفر المعياري المستخدم عبر الاختيار وبحث المصادقة.
+`provider-id` is the canonical provider key used across selection and auth lookup.
 
-`equivalence` اختياري ويُكوّن تجميع النماذج المعيارية فوق نماذج الموفر الملموسة:
+`equivalence` is optional and configures canonical model grouping on top of concrete provider models:
 
-- `overrides` يعيّن محدداً ملموساً دقيقاً (`provider/modelId`) إلى معرّف معياري رسمي من المصدر الأعلى
-- `exclude` يُخرج محدداً ملموساً من التجميع المعياري
+- `overrides` maps an exact concrete selector (`provider/modelId`) to an official upstream canonical id
+- `exclude` opts a concrete selector out of canonical grouping
 
-## حقول مستوى الموفر
+## Provider-level fields
 
 ```yaml
 providers:
@@ -105,7 +102,7 @@ providers:
             controller: mlx
 ```
 
-### قيم `api` المسموح بها للموفر/النموذج
+### Allowed provider/model `api` values
 
 - `openai-completions`
 - `openai-responses`
@@ -115,64 +112,64 @@ providers:
 - `google-generative-ai`
 - `google-vertex`
 
-### قيم المصادقة/الاكتشاف المسموح بها
+### Allowed auth/discovery values
 
-- `auth`: `apiKey` (افتراضي) أو `none`
+- `auth`: `apiKey` (default) or `none`
 - `discovery.type`: `ollama`
 
-## قواعد التحقق (الحالية)
+## Validation rules (current)
 
-### موفر مخصص كامل (`models` غير فارغة)
+### Full custom provider (`models` is non-empty)
 
-المطلوب:
+Required:
 
 - `baseUrl`
-- `apiKey` ما لم يكن `auth: none`
-- `api` على مستوى الموفر أو لكل نموذج
+- `apiKey` unless `auth: none`
+- `api` at provider level or each model
 
-### موفر للتجاوز فقط (`models` مفقودة أو فارغة)
+### Override-only provider (`models` missing or empty)
 
-يجب تعريف واحد على الأقل من:
+Must define at least one of:
 
 - `baseUrl`
 - `modelOverrides`
 - `discovery`
 
-### الاكتشاف
+### Discovery
 
-- يتطلب `discovery` وجود `api` على مستوى الموفر.
+- `discovery` requires provider-level `api`.
 
-### فحوصات قيم النموذج
+### Model value checks
 
-- `id` مطلوب
-- يجب أن يكون `contextWindow` و`maxTokens` موجبَين إذا تم توفيرهما
+- `id` required
+- `contextWindow` and `maxTokens` must be positive if provided
 
-## ترتيب الدمج والتجاوز
+## Merge and override order
 
-خط أنابيب ModelRegistry (عند التحديث):
+ModelRegistry pipeline (on refresh):
 
-1. تحميل الموفرين/النماذج المدمجة من `@f5-sales-demo/pi-ai`.
-2. تحميل تكوين `models.yml` المخصص.
-3. تطبيق تجاوزات الموفر (`baseUrl`، `headers`) على النماذج المدمجة.
-4. تطبيق `modelOverrides` (لكل موفر ومعرّف نموذج).
-5. دمج `models` المخصصة:
-   - نفس `provider + id` يستبدل الموجود
-   - وإلا يُضاف
-6. تطبيق النماذج المكتشفة في وقت التشغيل (Ollama وLM Studio حالياً)، ثم إعادة تطبيق تجاوزات النموذج.
+1. Load built-in providers/models from `@f5-sales-demo/pi-ai`.
+2. Load `models.yml` custom config.
+3. Apply provider overrides (`baseUrl`, `headers`) to built-in models.
+4. Apply `modelOverrides` (per provider + model id).
+5. Merge custom `models`:
+   - same `provider + id` replaces existing
+   - otherwise append
+6. Apply runtime-discovered models (currently Ollama and LM Studio), then re-apply model overrides.
 
-## التكافؤ المعياري للنماذج والتجميع
+## Canonical model equivalence and coalescing
 
-يحتفظ السجل بكل نموذج موفر ملموس ثم يبني طبقة معيارية فوقها.
+The registry keeps every concrete provider model and then builds a canonical layer above them.
 
-المعرّفات المعيارية هي معرّفات رسمية من المصدر الأعلى فقط، على سبيل المثال:
+Canonical ids are official upstream ids only, for example:
 
 - `claude-opus-4-6`
 - `claude-haiku-4-5`
 - `gpt-5.3-codex`
 
-### تكوين التكافؤ في `models.yml`
+### `models.yml` equivalence config
 
-مثال:
+Example:
 
 ```yaml
 providers:
@@ -201,77 +198,77 @@ equivalence:
     - demo/codex-preview
 ```
 
-ترتيب البناء للتجميع المعياري:
+Build order for canonical grouping:
 
-1. التجاوز الصريح من المستخدم من `equivalence.overrides`
-2. تطابقات المعرّف الرسمي المجمّعة من بيانات وصف النموذج المدمجة
-3. تطبيع اكتشافي محافظ لمتغيرات البوابة/الموفر
-4. الرجوع إلى معرّف النموذج الملموس الخاص به
+1. exact user override from `equivalence.overrides`
+2. bundled official-id matches from built-in model metadata
+3. conservative heuristic normalization for gateway/provider variants
+4. fallback to the concrete model's own id
 
-الاكتشافات الحالية ضيّقة عمداً:
+Current heuristics are intentionally narrow:
 
-- يمكن حذف بادئات المصدر الأعلى المضمّنة عند وجودها، مثلاً `anthropic/...` أو `openai/...`
-- يمكن تطبيع متغيرات الإصدار بنقطة وشرطة فقط عندما تعيّن إلى معرّف رسمي موجود، مثلاً `4.6 -> 4-6`
-- لا يتم دمج العائلات أو الإصدارات الغامضة بدون تطابق مجمّع أو تجاوز صريح
+- embedded upstream prefixes can be stripped when present, for example `anthropic/...` or `openai/...`
+- dotted and dashed version variants can normalize only when they map to an existing official id, for example `4.6 -> 4-6`
+- ambiguous families or versions are not merged without a bundled match or explicit override
 
-### سلوك الحل المعياري
+### Canonical resolution behavior
 
-عندما تشترك متغيرات ملموسة متعددة في معرّف معياري، يستخدم الحل:
+When multiple concrete variants share a canonical id, resolution uses:
 
-1. التوافر والمصادقة
-2. `modelProviderOrder` في `config.yml`
-3. ترتيب السجل/الموفر الحالي إذا كان `modelProviderOrder` غير محدد
+1. availability and auth
+2. `config.yml` `modelProviderOrder`
+3. existing registry/provider order if `modelProviderOrder` is unset
 
-يتم تجاهل الموفرين المعطّلين أو غير الموثّقين.
+Disabled or unauthenticated providers are skipped.
 
-تواصل حالة الجلسة والسجلات التاريخية تسجيل الموفر/النموذج الملموس الذي نفّذ الدور فعلياً.
+Session state and transcripts continue to record the concrete provider/model that actually executed the turn.
 
-افتراضيات الموفر مقابل تجاوزات لكل نموذج:
+Provider defaults vs per-model overrides:
 
-- `headers` الموفر هي خط الأساس.
-- `headers` النموذج تتجاوز مفاتيح رأس الموفر.
-- يمكن لـ `modelOverrides` تجاوز بيانات وصف النموذج (`name`، `reasoning`، `input`، `cost`، `contextWindow`، `maxTokens`، `headers`، `compat`، `contextPromotionTarget`).
-- يتم الدمج العميق لـ `compat` لكتل التوجيه المتداخلة (`openRouterRouting`، `vercelGatewayRouting`، `extraBody`).
+- Provider `headers` are baseline.
+- Model `headers` override provider header keys.
+- `modelOverrides` can override model metadata (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`).
+- `compat` is deep-merged for nested routing blocks (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`).
 
-## تكامل الاكتشاف في وقت التشغيل
+## Runtime discovery integration
 
-### اكتشاف Ollama الضمني
+### Implicit Ollama discovery
 
-إذا لم يكن `ollama` مُكوَّناً صراحةً، يضيف السجل موفراً قابلاً للاكتشاف ضمنياً:
+If `ollama` is not explicitly configured, registry adds an implicit discoverable provider:
 
-- الموفر: `ollama`
+- provider: `ollama`
 - api: `openai-completions`
-- عنوان URL الأساسي: `OLLAMA_BASE_URL` أو `http://127.0.0.1:11434`
-- وضع المصادقة: بدون مفتاح (سلوك `auth: none`)
+- base URL: `OLLAMA_BASE_URL` or `http://127.0.0.1:11434`
+- auth mode: keyless (`auth: none` behavior)
 
-يستدعي الاكتشاف في وقت التشغيل `GET /api/tags` على Ollama ويُنشئ إدخالات نموذج بقيم افتراضية محلية.
+Runtime discovery calls `GET /api/tags` on Ollama and synthesizes model entries with local defaults.
 
-### اكتشاف llama.cpp الضمني
+### Implicit llama.cpp discovery
 
-إذا لم يكن `llama.cpp` مُكوَّناً صراحةً، يضيف السجل موفراً قابلاً للاكتشاف ضمنياً:
-ملاحظة: يستخدم واجهة برمجة تطبيقات رسائل anthropic الأحدث بدلاً من openai-completions.
+If `llama.cpp` is not explicitly configured, registry adds an implicit discoverable provider:
+Note: it's using the newer antropic messages api instead of the openai-competions.
 
-- الموفر: `llama.cpp`
+- provider: `llama.cpp`
 - api: `openai-responses`
-- عنوان URL الأساسي: `LLAMA_CPP_BASE_URL` أو `http://127.0.0.1:8080`
-- وضع المصادقة: بدون مفتاح (سلوك `auth: none`)
+- base URL: `LLAMA_CPP_BASE_URL` or `http://127.0.0.1:8080`
+- auth mode: keyless (`auth: none` behavior)
 
-يستدعي الاكتشاف في وقت التشغيل `GET models` على llama.cpp ويُنشئ إدخالات نموذج بقيم افتراضية محلية.
+Runtime discovery calls `GET models` on llama.cpp and synthesizes model entries with local defaults.
 
-### اكتشاف LM Studio الضمني
+### Implicit LM Studio discovery
 
-إذا لم يكن `lm-studio` مُكوَّناً صراحةً، يضيف السجل موفراً قابلاً للاكتشاف ضمنياً:
+If `lm-studio` is not explicitly configured, registry adds an implicit discoverable provider:
 
-- الموفر: `lm-studio`
+- provider: `lm-studio`
 - api: `openai-completions`
-- عنوان URL الأساسي: `LM_STUDIO_BASE_URL` أو `http://127.0.0.1:1234/v1`
-- وضع المصادقة: بدون مفتاح (سلوك `auth: none`)
+- base URL: `LM_STUDIO_BASE_URL` or `http://127.0.0.1:1234/v1`
+- auth mode: keyless (`auth: none` behavior)
 
-يجلب الاكتشاف في وقت التشغيل النماذج (`GET /models`) ويُنشئ إدخالات نموذج بقيم افتراضية محلية.
+Runtime discovery fetches models (`GET /models`) and synthesizes model entries with local defaults.
 
-### اكتشاف الموفر الصريح
+### Explicit provider discovery
 
-يمكنك تكوين الاكتشاف بنفسك:
+You can configure discovery yourself:
 
 ```yaml
 providers:
@@ -290,159 +287,159 @@ providers:
       type: llama.cpp
 ```
 
-### تسجيل موفر الامتداد
+### Extension provider registration
 
-يمكن للامتدادات تسجيل موفرين في وقت التشغيل (`pi.registerProvider(...)`), بما في ذلك:
+Extensions can register providers at runtime (`pi.registerProvider(...)`), including:
 
-- استبدال النماذج/إضافتها لموفر
-- تسجيل معالج بث مخصص لمعرّفات API جديدة
-- تسجيل موفر OAuth مخصص
+- model replacement/append for a provider
+- custom stream handler registration for new API IDs
+- custom OAuth provider registration
 
-## ترتيب حل المصادقة ومفتاح API
+## Auth and API key resolution order
 
-عند طلب مفتاح لموفر، يكون الترتيب الفعّال:
+When requesting a key for a provider, effective order is:
 
-1. التجاوز في وقت التشغيل (CLI `--api-key`)
-2. بيانات اعتماد مفتاح API المخزّنة في `agent.db`
-3. بيانات اعتماد OAuth المخزّنة في `agent.db` (مع التحديث)
-4. تعيين متغير البيئة (`OPENAI_API_KEY`، `ANTHROPIC_API_KEY`، إلخ)
-5. محلّل الرجوع في ModelRegistry (موفر `apiKey` من `models.yml`، بدلالات اسم البيئة أو القيمة الحرفية)
+1. Runtime override (CLI `--api-key`)
+2. Stored API key credential in `agent.db`
+3. Stored OAuth credential in `agent.db` (with refresh)
+4. Environment variable mapping (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
+5. ModelRegistry fallback resolver (provider `apiKey` from `models.yml`, env-name-or-literal semantics)
 
-سلوك `apiKey` في `models.yml`:
+`models.yml` `apiKey` behavior:
 
-- تُعامَل القيمة أولاً كاسم متغير بيئة.
-- إذا لم يكن متغير البيئة موجوداً، تُستخدم السلسلة الحرفية كرمز مميز.
+- Value is first treated as an environment variable name.
+- If no env var exists, the literal string is used as the token.
 
-إذا كان `authHeader: true` وكان `apiKey` الموفر محدداً، تحصل النماذج على:
+If `authHeader: true` and provider `apiKey` is set, models get:
 
-- رأس `Authorization: Bearer <resolved-key>` مُحقَن.
+- `Authorization: Bearer <resolved-key>` header injected.
 
-الموفرون بدون مفتاح:
+Keyless providers:
 
-- يُعامَل الموفرون المُعلَّمون بـ `auth: none` على أنهم متاحون بدون بيانات اعتماد.
-- يُعيد `getApiKey*` القيمة `kNoAuth` لهم.
+- Providers marked `auth: none` are treated as available without credentials.
+- `getApiKey*` returns `kNoAuth` for them.
 
-## توافر النموذج مقابل جميع النماذج
+## Model availability vs all models
 
-- يُعيد `getAll()` سجل النماذج المُحمَّل (المدمجة + المخصصة المدموجة + المكتشفة).
-- يُصفّي `getAvailable()` للنماذج التي لا تحتاج مفتاحاً أو لها مصادقة قابلة للحل.
+- `getAll()` returns the loaded model registry (built-in + merged custom + discovered).
+- `getAvailable()` filters to models that are keyless or have resolvable auth.
 
-لذا يمكن أن يوجد نموذج في السجل لكن لا يكون قابلاً للاختيار حتى تتوفر المصادقة.
+So a model can exist in registry but not be selectable until auth is available.
 
-## حل النموذج في وقت التشغيل
+## Runtime model resolution
 
-### CLI وتحليل الأنماط
+### CLI and pattern parsing
 
-يدعم `model-resolver.ts`:
+`model-resolver.ts` supports:
 
-- `provider/modelId` الدقيق
-- معرّف النموذج المعياري الدقيق
-- معرّف النموذج الدقيق (يُستنتج الموفر)
-- المطابقة الغامضة/بالسلسلة الجزئية
-- أنماط النطاق العام في `--models` (مثلاً `openai/*`، `*sonnet*`)
-- لاحقة اختيارية `:thinkingLevel` (`off|minimal|low|medium|high|xhigh`)
+- exact `provider/modelId`
+- exact canonical model id
+- exact model id (provider inferred)
+- fuzzy/substring matching
+- glob scope patterns in `--models` (e.g. `openai/*`, `*sonnet*`)
+- optional `:thinkingLevel` suffix (`off|minimal|low|medium|high|xhigh`)
 
-`--provider` موروث؛ `--model` مفضّل.
+`--provider` is legacy; `--model` is preferred.
 
-أولوية الحل للمحددات الدقيقة:
+Resolution precedence for exact selectors:
 
-1. `provider/modelId` الدقيق يتجاوز التجميع
-2. المعرّف المعياري الدقيق يُحلّ عبر الفهرس المعياري
-3. معرّف ملموس مجرّد دقيق لا يزال يعمل
-4. المطابقة الغامضة والعام تعمل بعد المسارات الدقيقة
+1. exact `provider/modelId` bypasses coalescing
+2. exact canonical id resolves through the canonical index
+3. exact bare concrete id still works
+4. fuzzy and glob matching run after the exact paths
 
-### أولوية اختيار النموذج الأولي
+### Initial model selection priority
 
-يستخدم `findInitialModel(...)` هذا الترتيب:
+`findInitialModel(...)` uses this order:
 
-1. موفر+نموذج CLI صريح
-2. أول نموذج في النطاق (إذا لم يكن استئنافاً)
-3. الموفر/النموذج الافتراضي المحفوظ
-4. افتراضيات الموفر المعروفة (مثلاً OpenAI/Anthropic/إلخ) بين النماذج المتاحة
-5. أول نموذج متاح
+1. explicit CLI provider+model
+2. first scoped model (if not resuming)
+3. saved default provider/model
+4. known provider defaults (e.g. OpenAI/Anthropic/etc.) among available models
+5. first available model
 
-### أدوار الأسماء المستعارة والإعدادات
+### Role aliases and settings
 
-أدوار النماذج المدعومة:
+Supported model roles:
 
-- `default`، `smol`، `slow`، `plan`، `commit`
+- `default`, `smol`, `slow`, `plan`, `commit`
 
-أسماء الأدوار المستعارة مثل `pi/smol` تُوسَّع عبر `settings.modelRoles`. يمكن لكل قيمة دور أيضاً إلحاق محدد تفكير مثل `:minimal`، `:low`، `:medium`، أو `:high`.
+Role aliases like `pi/smol` expand through `settings.modelRoles`. Each role value can also append a thinking selector such as `:minimal`, `:low`, `:medium`, or `:high`.
 
-إذا كان الدور يشير إلى دور آخر، فإن النموذج المستهدف لا يزال يرث بصورة طبيعية وأي لاحقة صريحة على الدور المُحيل تفوز لذلك الاستخدام الخاص بالدور.
+If a role points at another role, the target model still inherits normally and any explicit suffix on the referring role wins for that role-specific use.
 
-الإعدادات ذات الصلة:
+Related settings:
 
-- `modelRoles` (سجل)
-- `enabledModels` (قائمة أنماط النطاق)
-- `modelProviderOrder` (أولوية الموفر المعياري العامة)
-- `providers.kimiApiFormat` (تنسيق طلب `openai` أو `anthropic`)
-- `providers.openaiWebsockets` (تفضيل WebSocket بـ `auto|off|on` لنقل OpenAI Codex)
+- `modelRoles` (record)
+- `enabledModels` (scoped pattern list)
+- `modelProviderOrder` (global canonical-provider precedence)
+- `providers.kimiApiFormat` (`openai` or `anthropic` request format)
+- `providers.openaiWebsockets` (`auto|off|on` websocket preference for OpenAI Codex transport)
 
-قد يخزّن `modelRoles` إما:
+`modelRoles` may store either:
 
-- `provider/modelId` لتثبيت متغير موفر ملموس
-- معرّفاً معيارياً مثل `gpt-5.3-codex` للسماح بتجميع الموفرين
+- `provider/modelId` to pin a concrete provider variant
+- a canonical id such as `gpt-5.3-codex` to allow provider coalescing
 
-بالنسبة لـ `enabledModels` وـ `--models` في CLI:
+For `enabledModels` and CLI `--models`:
 
-- تُوسَّع المعرّفات المعيارية الدقيقة إلى جميع المتغيرات الملموسة في تلك المجموعة المعيارية
-- إدخالات `provider/modelId` الصريحة تبقى دقيقة
-- العام والمطابقة الغامضة لا تزال تعمل على النماذج الملموسة
+- exact canonical ids expand to all concrete variants in that canonical group
+- explicit `provider/modelId` entries stay exact
+- globs and fuzzy matches still operate on concrete models
 
-## `/model` و`--list-models`
+## `/model` and `--list-models`
 
-تُبقي كلتا الواجهتين النماذج ذات البادئة المتعلقة بالموفر مرئية وقابلة للاختيار.
+Both surfaces keep provider-prefixed models visible and selectable.
 
-تكشفان الآن أيضاً النماذج المعيارية/المجمّعة:
+They now also expose canonical/coalesced models:
 
-- يتضمن `/model` عرضاً معيارياً جانباً بتبويبات الموفر
-- يطبع `--list-models` قسماً معيارياً بالإضافة إلى صفوف الموفر الملموسة
+- `/model` includes a canonical view alongside provider tabs
+- `--list-models` prints a canonical section plus the concrete provider rows
 
-يخزّن اختيار إدخال معياري المحدد المعياري. يخزّن اختيار صف موفر `provider/modelId` الصريح.
+Selecting a canonical entry stores the canonical selector. Selecting a provider row stores the explicit `provider/modelId`.
 
-## ترقية السياق (سلاسل الرجوع على مستوى النموذج)
+## Context promotion (model-level fallback chains)
 
-ترقية السياق هي آلية استرداد من الفيض لمتغيرات السياق الصغيرة (مثلاً `*-spark`) التي تُرقّي تلقائياً إلى نسخة ذات سياق أكبر عندما يرفض API الطلب بخطأ طول سياق.
+Context promotion is an overflow recovery mechanism for small-context variants (for example `*-spark`) that automatically promotes to a larger-context sibling when the API rejects a request with a context length error.
 
-### المشغّل والترتيب
+### Trigger and order
 
-عندما يفشل دور بخطأ فيض سياق (مثلاً `context_length_exceeded`)، يحاول `AgentSession` الترقية **قبل** الرجوع إلى الضغط:
+When a turn fails with a context overflow error (e.g. `context_length_exceeded`), `AgentSession` attempts promotion **before** falling back to compaction:
 
-1. إذا كان `contextPromotion.enabled` صحيحاً، يُحلّ هدف الترقية (انظر أدناه).
-2. إذا وُجد هدف، يتم التبديل إليه وإعادة محاولة الطلب — لا حاجة للضغط.
-3. إذا لم يتوفر هدف، يتم الرجوع إلى الضغط التلقائي على النموذج الحالي.
+1. If `contextPromotion.enabled` is true, resolve a promotion target (see below).
+2. If a target is found, switch to it and retry the request — no compaction needed.
+3. If no target is available, fall through to auto-compaction on the current model.
 
-### اختيار الهدف
+### Target selection
 
-الاختيار مُوجَّه بالنموذج، لا بالدور:
+Selection is model-driven, not role-driven:
 
-1. `currentModel.contextPromotionTarget` (إذا كان مُكوَّناً)
-2. أصغر نموذج بسياق أكبر لدى نفس الموفر + API
+1. `currentModel.contextPromotionTarget` (if configured)
+2. smallest larger-context model on the same provider + API
 
-يتم تجاهل المرشّحين ما لم تُحلّ بيانات الاعتماد (`ModelRegistry.getApiKey(...)`).
+Candidates are ignored unless credentials resolve (`ModelRegistry.getApiKey(...)`).
 
-### تسليم WebSocket لـ OpenAI Codex
+### OpenAI Codex websocket handoff
 
-عند التبديل من/إلى `openai-codex-responses`، يُغلَق مفتاح حالة موفر الجلسة `openai-codex-responses` قبل تبديل النموذج. هذا يُسقط حالة نقل WebSocket حتى يبدأ الدور التالي نظيفاً على النموذج المُرقَّى.
+If switching from/to `openai-codex-responses`, session provider state key `openai-codex-responses` is closed before model switch. This drops websocket transport state so the next turn starts clean on the promoted model.
 
-### سلوك الاستمرارية
+### Persistence behavior
 
-تستخدم الترقية التبديل المؤقت (`setModelTemporary`):
+Promotion uses temporary switching (`setModelTemporary`):
 
-- يُسجَّل كـ `model_change` مؤقت في تاريخ الجلسة
-- لا يعيد كتابة تعيين الدور المحفوظ
+- recorded as a temporary `model_change` in session history
+- does not rewrite saved role mapping
 
-### تكوين سلاسل الرجوع الصريحة
+### Configuring explicit fallback chains
 
-قم بتكوين الرجوع مباشرةً في بيانات وصف النموذج عبر `contextPromotionTarget`.
+Configure fallback directly in model metadata via `contextPromotionTarget`.
 
-يقبل `contextPromotionTarget` إما:
+`contextPromotionTarget` accepts either:
 
-- `provider/model-id` (صريح)
-- `model-id` (يُحلّ داخل الموفر الحالي)
+- `provider/model-id` (explicit)
+- `model-id` (resolved within current provider)
 
-مثال (`models.yml`) لـ Spark -> غير Spark على نفس الموفر:
+Example (`models.yml`) for Spark -> non-Spark on the same provider:
 
 ```yaml
 providers:
@@ -452,24 +449,24 @@ providers:
         contextPromotionTarget: openai-codex/gpt-5.3-codex
 ```
 
-يُعيّن مولّد النماذج المدمج هذا أيضاً تلقائياً لنماذج `*-spark` عندما يوجد نموذج أساسي على نفس الموفر.
+The built-in model generator also assigns this automatically for `*-spark` models when a same-provider base model exists.
 
-## حقول التوافق والتوجيه
+## Compatibility and routing fields
 
-يدعم `models.yml` هذه المجموعة الفرعية من `compat`:
+`models.yml` supports this `compat` subset:
 
 - `supportsStore`
 - `supportsDeveloperRole`
 - `supportsReasoningEffort`
-- `maxTokensField` (`max_completion_tokens` أو `max_tokens`)
+- `maxTokensField` (`max_completion_tokens` or `max_tokens`)
 - `openRouterRouting.only` / `openRouterRouting.order`
 - `vercelGatewayRouting.only` / `vercelGatewayRouting.order`
 
-تُستهلك هذه الحقول بواسطة منطق نقل OpenAI-completions وتُجمَع مع الكشف التلقائي القائم على URL.
+These are consumed by the OpenAI-completions transport logic and combined with URL-based auto-detection.
 
-## أمثلة عملية
+## Practical examples
 
-### نقطة نهاية متوافقة مع OpenAI محلية (بدون مصادقة)
+### Local OpenAI-compatible endpoint (no auth)
 
 ```yaml
 providers:
@@ -482,7 +479,7 @@ providers:
         name: Qwen 2.5 Coder 32B (local)
 ```
 
-### وكيل مستضاف بمفتاح مستند إلى متغير البيئة
+### Hosted proxy with env-based key
 
 ```yaml
 providers:
@@ -498,7 +495,7 @@ providers:
         input: [text, image]
 ```
 
-### تجاوز مسار الموفر المدمج + بيانات وصف النموذج
+### Override built-in provider route + model metadata
 
 ```yaml
 providers:
@@ -514,13 +511,13 @@ providers:
             only: [anthropic]
 ```
 
-## الضبط التلقائي لـ LiteLLM proxy
+## LiteLLM proxy auto-configuration
 
-عند تعيين متغيري البيئة `LITELLM_BASE_URL` و`LITELLM_API_KEY` معاً، يدير xcsh تلقائياً تكوين `models.yml` لـ LiteLLM proxy.
+When both `LITELLM_BASE_URL` and `LITELLM_API_KEY` environment variables are set, xcsh automatically manages `models.yml` configuration for the LiteLLM proxy.
 
-### التوليد التلقائي عند أول تشغيل
+### First-run auto-generation
 
-إذا لم يكن `models.yml` موجوداً واكتُشف متغيرا بيئة LiteLLM، يُنشئه xcsh تلقائياً:
+If `models.yml` does not exist and LiteLLM env vars are detected, xcsh generates it automatically:
 
 ```yaml
 # Auto-generated by xcsh for LiteLLM proxy
@@ -532,55 +529,55 @@ providers:
     apiKey: LITELLM_API_KEY
 ```
 
-يُنشأ أيضاً `config.yml` افتراضي بإعدادات موفر الصور المعقولة.
+A default `config.yml` is also generated with sensible image provider settings.
 
-### الإصلاح الذاتي عند بدء التشغيل
+### Startup self-healing
 
-عند كل بدء تشغيل، يُشغّل `startupHealthCheck()` في سجل النماذج الفحوصات التالية:
+On every startup, `startupHealthCheck()` in the model registry runs the following checks:
 
-| الحالة | الإجراء |
-|-----------|--------|
-| `models.yml` مفقود | التوليد التلقائي من متغيرات البيئة |
-| `models.yml` تالف أو غير قابل للتحليل | نسخ احتياطي بـ `.bak`، إعادة التوليد |
-| `baseUrl` لا يتطابق مع `LITELLM_BASE_URL` | نسخ احتياطي بـ `.bak`، إعادة التوليد بعنوان URL الجديد |
-| `configVersion` مفقود أو قديم | نسخ احتياطي بـ `.bak`، إعادة التوليد بالإصدار الحالي |
-| التكوين سليم | لا إجراء |
+| Condition | Action |
+| --- | --- |
+| `models.yml` missing | Auto-generate from env vars |
+| `models.yml` corrupt or unparseable | Backup to `.bak`, regenerate |
+| `baseUrl` doesn't match `LITELLM_BASE_URL` | Backup to `.bak`, regenerate with new URL |
+| `configVersion` missing or outdated | Backup to `.bak`, regenerate with current version |
+| Config is healthy | No action |
 
-تُنشئ جميع الإصلاحات نسخاً احتياطية بـ `.bak` قبل الكتابة فوقها. جميع العمليات غير قابلة للتأثير المتكرر.
+All repairs create `.bak` backups before overwriting. All operations are idempotent.
 
-### أمر CLI
+### CLI command
 
 ```bash
-xcsh setup litellm              # إنشاء أو إصلاح تكوين LiteLLM
-xcsh setup litellm --check      # التحقق بدون كتابة
-xcsh setup litellm --check --json  # إخراج التحقق قابل للقراءة آلياً
+xcsh setup litellm              # Generate or fix LiteLLM config
+xcsh setup litellm --check      # Validate without writing
+xcsh setup litellm --check --json  # Machine-readable validation output
 ```
 
-### متغيرات البيئة المطلوبة
+### Required environment variables
 
-| المتغير | الغرض |
+| Variable | Purpose |
 |----------|---------|
-| `LITELLM_BASE_URL` | عنوان URL لـ LiteLLM proxy (مثلاً `https://your-proxy.example.com`). يجب أن يبدأ بـ `http://` أو `https://`. |
-| `LITELLM_API_KEY` | مفتاح API للوكيل. يُشار إليه بالاسم في التكوين المُولَّد ويُحلّ في وقت التشغيل. |
+| `LITELLM_BASE_URL` | LiteLLM proxy URL (e.g. `https://your-proxy.example.com`). Must start with `http://` or `https://`. |
+| `LITELLM_API_KEY` | API key for the proxy. Referenced by name in generated config, resolved at runtime. |
 
-إذا لم يكن أي من المتغيرين محدداً، يتم تخطي الضبط التلقائي بصمت.
+If either variable is unset, auto-configuration is silently skipped.
 
-### إصدار التكوين
+### Config versioning
 
-تتضمن التكوينات المُولَّدة حقل `configVersion`. عندما يتغير تنسيق التوليد في الإصدارات المستقبلية، يكتشف xcsh التكوينات القديمة ويُرقّيها تلقائياً (مع نسخ احتياطي).
+Generated configs include a `configVersion` field. When the generated format changes in future releases, xcsh detects outdated configs and automatically upgrades them (with backup).
 
-## تحفّظ المستهلك القديم
+## Legacy consumer caveat
 
-يتدفق معظم تكوين النماذج الآن عبر `models.yml` عبر `ModelRegistry`.
+Most model configuration now flows through `models.yml` via `ModelRegistry`.
 
-يبقى مسار موروث واحد ملحوظ: لا يزال حل مصادقة Anthropic للبحث على الويب يقرأ `~/.xcsh/agent/models.json` مباشرةً في `src/web/search/auth.ts`.
+One notable legacy path remains: web-search Anthropic auth resolution still reads `~/.xcsh/agent/models.json` directly in `src/web/search/auth.ts`.
 
-إذا كنت تعتمد على ذلك المسار المحدد، ضع في اعتبارك التوافق مع JSON حتى يُرحَّل ذلك الوحدة.
+If you rely on that specific path, keep JSON compatibility in mind until that module is migrated.
 
-## وضع الفشل
+## Failure mode
 
-إذا فشل `models.yml` في فحوصات المخطط أو التحقق:
+If `models.yml` fails schema or validation checks:
 
-- إذا كان `LITELLM_BASE_URL` و`LITELLM_API_KEY` محدّدَين، يحاول فحص صحة بدء التشغيل الإصلاح التلقائي (نسخ الملف التالف احتياطياً، وإعادة التوليد من متغيرات البيئة). إذا نجح الإصلاح، يُعيد السجل تحميل التكوين المُصلَح.
-- إذا لم يكن الإصلاح التلقائي ممكناً (متغيرات البيئة غير محدّدة، فشل الكتابة)، يستمر السجل في العمل بالنماذج المدمجة.
-- يُكشف الخطأ عبر `ModelRegistry.getError()` ويُعرض في واجهة المستخدم/الإشعارات.
+- If `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set, the startup health check attempts auto-repair (backup corrupt file, regenerate from env vars). If repair succeeds, the registry reloads the fixed config.
+- If auto-repair is not possible (env vars unset, write failure), the registry keeps operating with built-in models.
+- Error is exposed via `ModelRegistry.getError()` and surfaced in UI/notifications.

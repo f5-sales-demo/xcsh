@@ -1,40 +1,39 @@
 ---
-title: モデルおよびプロバイダー設定
-description: models.yml によるモデルレジストリとプロバイダー設定（ルーティング、フォールバック、料金を含む）。
+title: Model and Provider Configuration
+description: Model registry and provider configuration via models.yml with routing, fallback, and pricing.
 sidebar:
   order: 1
-  label: モデルとプロバイダー
+  label: Models & providers
 i18n:
-  sourceHash: 8053df967ff6
-  translator: machine
+  sourceHash: "26d427f98a58"
+  translator: "machine"
 ---
 
-# モデルおよびプロバイダー設定 (`models.yml`)
+This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
 
-このドキュメントでは、コーディングエージェントが現在モデルを読み込む方法、オーバーライドを適用する方法、認証情報を解決する方法、および実行時にモデルを選択する方法について説明します。
+## What controls model behavior
 
-## モデルの動作を制御するもの
+Primary implementation files:
 
-主要な実装ファイル:
+- `src/config/model-registry.ts` — loads built-in + custom models, provider overrides, runtime discovery, auth integration
+- `src/config/model-resolver.ts` — parses model patterns and selects initial/smol/slow models
+- `src/routing/` — provider-agnostic dynamic model routing coordinator, profiler, presets, and state machine
+- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, `routing.*`, provider transport preferences)
+- `src/session/auth-storage.ts` — API key + OAuth resolution order
+- `packages/ai/src/models.ts` and `packages/ai/src/types.ts` — built-in providers/models and `Model`/`compat` types
 
-- `src/config/model-registry.ts` — 組み込みモデルとカスタムモデルの読み込み、プロバイダーオーバーライド、実行時探索、認証統合
-- `src/config/model-resolver.ts` — モデルパターンの解析と initial/smol/slow モデルの選択
-- `src/config/settings-schema.ts` — モデル関連設定（`modelRoles`、プロバイダートランスポート設定）
-- `src/session/auth-storage.ts` — API キーと OAuth の解決順序
-- `packages/ai/src/models.ts` と `packages/ai/src/types.ts` — 組み込みプロバイダー/モデルと `Model`/`compat` 型
+## Config file location and legacy behavior
 
-## 設定ファイルの場所とレガシー動作
-
-デフォルトの設定パス:
+Default config path:
 
 - `~/.xcsh/agent/models.yml`
 
-引き続き存在するレガシー動作:
+Legacy behavior still present:
 
-- `models.yml` が存在せず、同じ場所に `models.json` が存在する場合、`models.yml` に移行されます。
-- 明示的な `.json` / `.jsonc` 設定パスは、`ModelRegistry` にプログラム的に渡す場合も引き続きサポートされます。
+- If `models.yml` is missing and `models.json` exists at the same location, it is migrated to `models.yml`.
+- Explicit `.json` / `.jsonc` config paths are still supported when passed programmatically to `ModelRegistry`.
 
-## `models.yml` の構造
+## `models.yml` shape
 
 ```yaml
 configVersion: 1  # optional — written by auto-config, used for migration detection
@@ -48,16 +47,16 @@ equivalence:
     - <provider-id>/<model-id>
 ```
 
-`configVersion` は、自動設定システムによって書き込まれるオプションの整数です。存在する場合、xcsh はこれを使用して古い設定を検出し、自動的にアップグレードします。
+`configVersion` is an optional integer written by the auto-config system. When present, xcsh uses it to detect outdated configs and auto-upgrade them.
 
-`provider-id` は、選択と認証ルックアップ全体で使用される標準的なプロバイダーキーです。
+`provider-id` is the canonical provider key used across selection and auth lookup.
 
-`equivalence` はオプションであり、具体的なプロバイダーモデルの上に標準的なモデルグループを設定します:
+`equivalence` is optional and configures canonical model grouping on top of concrete provider models:
 
-- `overrides` は正確な具体的セレクター（`provider/modelId`）を公式のアップストリーム標準 id にマッピングします
-- `exclude` は具体的なセレクターを標準グループから除外します
+- `overrides` maps an exact concrete selector (`provider/modelId`) to an official upstream canonical id
+- `exclude` opts a concrete selector out of canonical grouping
 
-## プロバイダーレベルのフィールド
+## Provider-level fields
 
 ```yaml
 providers:
@@ -103,7 +102,7 @@ providers:
             controller: mlx
 ```
 
-### 使用可能なプロバイダー/モデルの `api` 値
+### Allowed provider/model `api` values
 
 - `openai-completions`
 - `openai-responses`
@@ -113,24 +112,24 @@ providers:
 - `google-generative-ai`
 - `google-vertex`
 
-### 使用可能な auth/discovery 値
+### Allowed auth/discovery values
 
-- `auth`: `apiKey`（デフォルト）または `none`
+- `auth`: `apiKey` (default) or `none`
 - `discovery.type`: `ollama`
 
-## 検証ルール（現在）
+## Validation rules (current)
 
-### 完全なカスタムプロバイダー（`models` が空でない場合）
+### Full custom provider (`models` is non-empty)
 
-必須:
+Required:
 
 - `baseUrl`
-- `auth: none` でない限り `apiKey`
-- プロバイダーレベルまたは各モデルに `api`
+- `apiKey` unless `auth: none`
+- `api` at provider level or each model
 
-### オーバーライドのみのプロバイダー（`models` が欠落または空の場合）
+### Override-only provider (`models` missing or empty)
 
-以下のうち少なくとも1つを定義する必要があります:
+Must define at least one of:
 
 - `baseUrl`
 - `modelOverrides`
@@ -138,39 +137,39 @@ providers:
 
 ### Discovery
 
-- `discovery` にはプロバイダーレベルの `api` が必要です。
+- `discovery` requires provider-level `api`.
 
-### モデル値のチェック
+### Model value checks
 
-- `id` は必須
-- `contextWindow` と `maxTokens` は、指定する場合は正の値である必要があります
+- `id` required
+- `contextWindow` and `maxTokens` must be positive if provided
 
-## マージとオーバーライドの順序
+## Merge and override order
 
-ModelRegistry パイプライン（更新時）:
+ModelRegistry pipeline (on refresh):
 
-1. `@f5-sales-demo/pi-ai` から組み込みプロバイダー/モデルを読み込む。
-2. `models.yml` カスタム設定を読み込む。
-3. プロバイダーオーバーライド（`baseUrl`、`headers`）を組み込みモデルに適用する。
-4. `modelOverrides`（プロバイダー + モデル id ごと）を適用する。
-5. カスタム `models` をマージする:
-   - 同じ `provider + id` は既存のものを置き換える
-   - それ以外の場合は追加
-6. 実行時に発見されたモデル（現在は Ollama と LM Studio）を適用し、モデルオーバーライドを再適用する。
+1. Load built-in providers/models from `@f5-sales-demo/pi-ai`.
+2. Load `models.yml` custom config.
+3. Apply provider overrides (`baseUrl`, `headers`) to built-in models.
+4. Apply `modelOverrides` (per provider + model id).
+5. Merge custom `models`:
+   - same `provider + id` replaces existing
+   - otherwise append
+6. Apply runtime-discovered models (currently Ollama and LM Studio), then re-apply model overrides.
 
-## 標準モデルの等価性とまとめ
+## Canonical model equivalence and coalescing
 
-レジストリはすべての具体的なプロバイダーモデルを保持し、その上に標準レイヤーを構築します。
+The registry keeps every concrete provider model and then builds a canonical layer above them.
 
-標準 id は公式のアップストリーム id のみです。例:
+Canonical ids are official upstream ids only, for example:
 
 - `claude-opus-4-6`
 - `claude-haiku-4-5`
 - `gpt-5.3-codex`
 
-### `models.yml` の equivalence 設定
+### `models.yml` equivalence config
 
-例:
+Example:
 
 ```yaml
 providers:
@@ -199,77 +198,77 @@ equivalence:
     - demo/codex-preview
 ```
 
-標準グループのビルド順序:
+Build order for canonical grouping:
 
-1. `equivalence.overrides` からの正確なユーザーオーバーライド
-2. 組み込みモデルメタデータからのバンドルされた公式 id との一致
-3. ゲートウェイ/プロバイダーバリアントの保守的なヒューリスティック正規化
-4. 具体的なモデル自身の id へのフォールバック
+1. exact user override from `equivalence.overrides`
+2. bundled official-id matches from built-in model metadata
+3. conservative heuristic normalization for gateway/provider variants
+4. fallback to the concrete model's own id
 
-現在のヒューリスティックは意図的に狭い範囲に限定されています:
+Current heuristics are intentionally narrow:
 
-- 埋め込まれたアップストリームプレフィックスは、存在する場合に削除できます（例: `anthropic/...` または `openai/...`）
-- ドット区切りおよびダッシュ区切りのバージョンバリアントは、既存の公式 id にマッピングされる場合にのみ正規化できます（例: `4.6 -> 4-6`）
-- 曖昧なファミリーやバージョンは、バンドルされた一致または明示的なオーバーライドなしにはマージされません
+- embedded upstream prefixes can be stripped when present, for example `anthropic/...` or `openai/...`
+- dotted and dashed version variants can normalize only when they map to an existing official id, for example `4.6 -> 4-6`
+- ambiguous families or versions are not merged without a bundled match or explicit override
 
-### 標準解決の動作
+### Canonical resolution behavior
 
-複数の具体的なバリアントが標準 id を共有する場合、解決には以下が使用されます:
+When multiple concrete variants share a canonical id, resolution uses:
 
-1. 可用性と認証
-2. `config.yml` の `modelProviderOrder`
-3. `modelProviderOrder` が設定されていない場合は既存のレジストリ/プロバイダーの順序
+1. availability and auth
+2. `config.yml` `modelProviderOrder`
+3. existing registry/provider order if `modelProviderOrder` is unset
 
-無効または未認証のプロバイダーはスキップされます。
+Disabled or unauthenticated providers are skipped.
 
-セッション状態とトランスクリプトは、実際にターンを実行した具体的なプロバイダー/モデルを引き続き記録します。
+Session state and transcripts continue to record the concrete provider/model that actually executed the turn.
 
-プロバイダーデフォルトとモデルごとのオーバーライド:
+Provider defaults vs per-model overrides:
 
-- プロバイダーの `headers` はベースラインです。
-- モデルの `headers` はプロバイダーのヘッダーキーをオーバーライドします。
-- `modelOverrides` はモデルメタデータ（`name`、`reasoning`、`input`、`cost`、`contextWindow`、`maxTokens`、`headers`、`compat`、`contextPromotionTarget`）をオーバーライドできます。
-- `compat` はネストされたルーティングブロック（`openRouterRouting`、`vercelGatewayRouting`、`extraBody`）に対してディープマージされます。
+- Provider `headers` are baseline.
+- Model `headers` override provider header keys.
+- `modelOverrides` can override model metadata (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`).
+- `compat` is deep-merged for nested routing blocks (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`).
 
-## 実行時探索の統合
+## Runtime discovery integration
 
-### 暗黙的な Ollama 探索
+### Implicit Ollama discovery
 
-`ollama` が明示的に設定されていない場合、レジストリは暗黙的な探索可能プロバイダーを追加します:
+If `ollama` is not explicitly configured, registry adds an implicit discoverable provider:
 
-- プロバイダー: `ollama`
+- provider: `ollama`
 - api: `openai-completions`
-- ベース URL: `OLLAMA_BASE_URL` または `http://127.0.0.1:11434`
-- 認証モード: キーなし（`auth: none` の動作）
+- base URL: `OLLAMA_BASE_URL` or `http://127.0.0.1:11434`
+- auth mode: keyless (`auth: none` behavior)
 
-実行時探索は Ollama の `GET /api/tags` を呼び出し、ローカルのデフォルトでモデルエントリーを合成します。
+Runtime discovery calls `GET /api/tags` on Ollama and synthesizes model entries with local defaults.
 
-### 暗黙的な llama.cpp 探索
+### Implicit llama.cpp discovery
 
-`llama.cpp` が明示的に設定されていない場合、レジストリは暗黙的な探索可能プロバイダーを追加します:
-注意: openai-completions の代わりに新しい anthropic messages api を使用しています。
+If `llama.cpp` is not explicitly configured, registry adds an implicit discoverable provider:
+Note: it's using the newer antropic messages api instead of the openai-competions.
 
-- プロバイダー: `llama.cpp`
+- provider: `llama.cpp`
 - api: `openai-responses`
-- ベース URL: `LLAMA_CPP_BASE_URL` または `http://127.0.0.1:8080`
-- 認証モード: キーなし（`auth: none` の動作）
+- base URL: `LLAMA_CPP_BASE_URL` or `http://127.0.0.1:8080`
+- auth mode: keyless (`auth: none` behavior)
 
-実行時探索は llama.cpp の `GET models` を呼び出し、ローカルのデフォルトでモデルエントリーを合成します。
+Runtime discovery calls `GET models` on llama.cpp and synthesizes model entries with local defaults.
 
-### 暗黙的な LM Studio 探索
+### Implicit LM Studio discovery
 
-`lm-studio` が明示的に設定されていない場合、レジストリは暗黙的な探索可能プロバイダーを追加します:
+If `lm-studio` is not explicitly configured, registry adds an implicit discoverable provider:
 
-- プロバイダー: `lm-studio`
+- provider: `lm-studio`
 - api: `openai-completions`
-- ベース URL: `LM_STUDIO_BASE_URL` または `http://127.0.0.1:1234/v1`
-- 認証モード: キーなし（`auth: none` の動作）
+- base URL: `LM_STUDIO_BASE_URL` or `http://127.0.0.1:1234/v1`
+- auth mode: keyless (`auth: none` behavior)
 
-実行時探索はモデルを取得し（`GET /models`）、ローカルのデフォルトでモデルエントリーを合成します。
+Runtime discovery fetches models (`GET /models`) and synthesizes model entries with local defaults.
 
-### 明示的なプロバイダー探索
+### Explicit provider discovery
 
-探索を自分で設定できます:
+You can configure discovery yourself:
 
 ```yaml
 providers:
@@ -288,159 +287,159 @@ providers:
       type: llama.cpp
 ```
 
-### 拡張プロバイダーの登録
+### Extension provider registration
 
-拡張機能は実行時にプロバイダーを登録できます（`pi.registerProvider(...)`）。以下を含みます:
+Extensions can register providers at runtime (`pi.registerProvider(...)`), including:
 
-- プロバイダーのモデル置換/追加
-- 新しい API ID のカスタムストリームハンドラー登録
-- カスタム OAuth プロバイダーの登録
+- model replacement/append for a provider
+- custom stream handler registration for new API IDs
+- custom OAuth provider registration
 
-## 認証と API キーの解決順序
+## Auth and API key resolution order
 
-プロバイダーのキーを要求する際の有効な順序:
+When requesting a key for a provider, effective order is:
 
-1. 実行時オーバーライド（CLI `--api-key`）
-2. `agent.db` に保存された API キー認証情報
-3. `agent.db` に保存された OAuth 認証情報（更新あり）
-4. 環境変数マッピング（`OPENAI_API_KEY`、`ANTHROPIC_API_KEY` など）
-5. ModelRegistry フォールバックリゾルバー（`models.yml` のプロバイダー `apiKey`、環境変数名またはリテラルのセマンティクス）
+1. Runtime override (CLI `--api-key`)
+2. Stored API key credential in `agent.db`
+3. Stored OAuth credential in `agent.db` (with refresh)
+4. Environment variable mapping (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
+5. ModelRegistry fallback resolver (provider `apiKey` from `models.yml`, env-name-or-literal semantics)
 
-`models.yml` の `apiKey` の動作:
+`models.yml` `apiKey` behavior:
 
-- 値は最初に環境変数名として処理されます。
-- 環境変数が存在しない場合、リテラル文字列がトークンとして使用されます。
+- Value is first treated as an environment variable name.
+- If no env var exists, the literal string is used as the token.
 
-`authHeader: true` でプロバイダーの `apiKey` が設定されている場合、モデルは以下を受け取ります:
+If `authHeader: true` and provider `apiKey` is set, models get:
 
-- `Authorization: Bearer <resolved-key>` ヘッダーが注入されます。
+- `Authorization: Bearer <resolved-key>` header injected.
 
-キーなしプロバイダー:
+Keyless providers:
 
-- `auth: none` でマークされたプロバイダーは、認証情報なしで利用可能として扱われます。
-- `getApiKey*` はそれらに対して `kNoAuth` を返します。
+- Providers marked `auth: none` are treated as available without credentials.
+- `getApiKey*` returns `kNoAuth` for them.
 
-## モデルの可用性とすべてのモデル
+## Model availability vs all models
 
-- `getAll()` は読み込まれたモデルレジストリ（組み込み + マージされたカスタム + 探索済み）を返します。
-- `getAvailable()` は、キーなしまたは解決可能な認証を持つモデルにフィルタリングします。
+- `getAll()` returns the loaded model registry (built-in + merged custom + discovered).
+- `getAvailable()` filters to models that are keyless or have resolvable auth.
 
-したがって、モデルはレジストリに存在していても、認証が利用可能になるまで選択できない場合があります。
+So a model can exist in registry but not be selectable until auth is available.
 
-## 実行時モデル解決
+## Runtime model resolution
 
-### CLI とパターン解析
+### CLI and pattern parsing
 
-`model-resolver.ts` がサポートするもの:
+`model-resolver.ts` supports:
 
-- 正確な `provider/modelId`
-- 正確な標準モデル id
-- 正確なモデル id（プロバイダーは推論される）
-- ファジー/部分文字列マッチング
-- `--models` のグロブスコープパターン（例: `openai/*`、`*sonnet*`）
-- オプションの `:thinkingLevel` サフィックス（`off|minimal|low|medium|high|xhigh`）
+- exact `provider/modelId`
+- exact canonical model id
+- exact model id (provider inferred)
+- fuzzy/substring matching
+- glob scope patterns in `--models` (e.g. `openai/*`, `*sonnet*`)
+- optional `:thinkingLevel` suffix (`off|minimal|low|medium|high|xhigh`)
 
-`--provider` はレガシーです。`--model` が推奨されます。
+`--provider` is legacy; `--model` is preferred.
 
-正確なセレクターの解決優先度:
+Resolution precedence for exact selectors:
 
-1. 正確な `provider/modelId` はまとめをバイパスします
-2. 正確な標準 id は標準インデックスを通じて解決されます
-3. 正確なベアの具体的 id も機能します
-4. ファジーとグロブマッチングは正確なパスの後に実行されます
+1. exact `provider/modelId` bypasses coalescing
+2. exact canonical id resolves through the canonical index
+3. exact bare concrete id still works
+4. fuzzy and glob matching run after the exact paths
 
-### 初期モデル選択の優先度
+### Initial model selection priority
 
-`findInitialModel(...)` は次の順序を使用します:
+`findInitialModel(...)` uses this order:
 
-1. 明示的な CLI プロバイダー + モデル
-2. 最初のスコープ付きモデル（再開しない場合）
-3. 保存されたデフォルトのプロバイダー/モデル
-4. 利用可能なモデルの中の既知のプロバイダーデフォルト（例: OpenAI/Anthropic など）
-5. 最初の利用可能なモデル
+1. explicit CLI provider+model
+2. first scoped model (if not resuming)
+3. saved default provider/model
+4. known provider defaults (e.g. OpenAI/Anthropic/etc.) among available models
+5. first available model
 
-### ロールエイリアスと設定
+### Role aliases and settings
 
-サポートされているモデルロール:
+Supported model roles:
 
-- `default`、`smol`、`slow`、`plan`、`commit`
+- `default`, `smol`, `slow`, `plan`, `commit`
 
-`pi/smol` などのロールエイリアスは `settings.modelRoles` を通じて展開されます。各ロール値には、`:minimal`、`:low`、`:medium`、`:high` などのシンキングセレクターを追加することもできます。
+Role aliases like `pi/smol` expand through `settings.modelRoles`. Each role value can also append a thinking selector such as `:minimal`, `:low`, `:medium`, or `:high`.
 
-ロールが別のロールを指している場合、ターゲットモデルは通常通り継承され、参照するロールの明示的なサフィックスがそのロール固有の使用に勝ちます。
+If a role points at another role, the target model still inherits normally and any explicit suffix on the referring role wins for that role-specific use.
 
-関連する設定:
+Related settings:
 
-- `modelRoles`（レコード）
-- `enabledModels`（スコープ付きパターンリスト）
-- `modelProviderOrder`（グローバルな標準プロバイダー優先度）
-- `providers.kimiApiFormat`（`openai` または `anthropic` リクエスト形式）
-- `providers.openaiWebsockets`（OpenAI Codex トランスポートの `auto|off|on` WebSocket 設定）
+- `modelRoles` (record)
+- `enabledModels` (scoped pattern list)
+- `modelProviderOrder` (global canonical-provider precedence)
+- `providers.kimiApiFormat` (`openai` or `anthropic` request format)
+- `providers.openaiWebsockets` (`auto|off|on` websocket preference for OpenAI Codex transport)
 
-`modelRoles` には以下のどちらかを格納できます:
+`modelRoles` may store either:
 
-- 具体的なプロバイダーバリアントを固定する `provider/modelId`
-- プロバイダーのまとめを許可する `gpt-5.3-codex` などの標準 id
+- `provider/modelId` to pin a concrete provider variant
+- a canonical id such as `gpt-5.3-codex` to allow provider coalescing
 
-`enabledModels` と CLI の `--models` の場合:
+For `enabledModels` and CLI `--models`:
 
-- 正確な標準 id はその標準グループ内のすべての具体的なバリアントに展開されます
-- 明示的な `provider/modelId` エントリーは正確なまま維持されます
-- グロブとファジーマッチングは具体的なモデルに対して引き続き機能します
+- exact canonical ids expand to all concrete variants in that canonical group
+- explicit `provider/modelId` entries stay exact
+- globs and fuzzy matches still operate on concrete models
 
-## `/model` と `--list-models`
+## `/model` and `--list-models`
 
-両方のサーフェスでプロバイダープレフィックス付きモデルが表示可能で選択可能な状態を維持します。
+Both surfaces keep provider-prefixed models visible and selectable.
 
-また、標準/まとめられたモデルも公開されるようになりました:
+They now also expose canonical/coalesced models:
 
-- `/model` はプロバイダータブの横に標準ビューを含みます
-- `--list-models` は標準セクションと具体的なプロバイダー行を印刷します
+- `/model` includes a canonical view alongside provider tabs
+- `--list-models` prints a canonical section plus the concrete provider rows
 
-標準エントリーを選択すると標準セレクターが保存されます。プロバイダー行を選択すると明示的な `provider/modelId` が保存されます。
+Selecting a canonical entry stores the canonical selector. Selecting a provider row stores the explicit `provider/modelId`.
 
-## コンテキストプロモーション（モデルレベルのフォールバックチェーン）
+## Context promotion (model-level fallback chains)
 
-コンテキストプロモーションは、API がコンテキスト長エラーでリクエストを拒否した場合に、より大きなコンテキストの兄弟モデルに自動的に昇格する、小さなコンテキストバリアント（例: `*-spark`）のオーバーフロー回復メカニズムです。
+Context promotion is an overflow recovery mechanism for small-context variants (for example `*-spark`) that automatically promotes to a larger-context sibling when the API rejects a request with a context length error.
 
-### トリガーと順序
+### Trigger and order
 
-コンテキストオーバーフローエラー（例: `context_length_exceeded`）でターンが失敗した場合、`AgentSession` はコンパクションにフォールバックする**前に**プロモーションを試みます:
+When a turn fails with a context overflow error (e.g. `context_length_exceeded`), `AgentSession` attempts promotion **before** falling back to compaction:
 
-1. `contextPromotion.enabled` が true の場合、プロモーションターゲットを解決します（以下を参照）。
-2. ターゲットが見つかった場合、それに切り替えてリクエストを再試行します — コンパクションは不要です。
-3. ターゲットが利用できない場合、現在のモデルで自動コンパクションにフォールスルーします。
+1. If `contextPromotion.enabled` is true, resolve a promotion target (see below).
+2. If a target is found, switch to it and retry the request — no compaction needed.
+3. If no target is available, fall through to auto-compaction on the current model.
 
-### ターゲット選択
+### Target selection
 
-選択はロール駆動ではなくモデル駆動です:
+Selection is model-driven, not role-driven:
 
-1. `currentModel.contextPromotionTarget`（設定されている場合）
-2. 同じプロバイダー + API 上の最小の大きなコンテキストモデル
+1. `currentModel.contextPromotionTarget` (if configured)
+2. smallest larger-context model on the same provider + API
 
-認証情報が解決しない場合（`ModelRegistry.getApiKey(...)`）、候補は無視されます。
+Candidates are ignored unless credentials resolve (`ModelRegistry.getApiKey(...)`).
 
-### OpenAI Codex WebSocket ハンドオフ
+### OpenAI Codex websocket handoff
 
-`openai-codex-responses` との間で切り替える場合、セッションプロバイダーの状態キー `openai-codex-responses` がモデル切り替え前に閉じられます。これにより WebSocket トランスポートの状態がドロップされ、次のターンがプロモートされたモデルでクリーンな状態で開始されます。
+If switching from/to `openai-codex-responses`, session provider state key `openai-codex-responses` is closed before model switch. This drops websocket transport state so the next turn starts clean on the promoted model.
 
-### 永続性の動作
+### Persistence behavior
 
-プロモーションは一時的な切り替えを使用します（`setModelTemporary`）:
+Promotion uses temporary switching (`setModelTemporary`):
 
-- セッション履歴に一時的な `model_change` として記録されます
-- 保存されたロールマッピングは書き換えられません
+- recorded as a temporary `model_change` in session history
+- does not rewrite saved role mapping
 
-### 明示的なフォールバックチェーンの設定
+### Configuring explicit fallback chains
 
-`contextPromotionTarget` を通じてモデルメタデータに直接フォールバックを設定します。
+Configure fallback directly in model metadata via `contextPromotionTarget`.
 
-`contextPromotionTarget` には以下のどちらかを指定できます:
+`contextPromotionTarget` accepts either:
 
-- `provider/model-id`（明示的）
-- `model-id`（現在のプロバイダー内で解決）
+- `provider/model-id` (explicit)
+- `model-id` (resolved within current provider)
 
-Spark -> 同じプロバイダーの非 Spark への例（`models.yml`）:
+Example (`models.yml`) for Spark -> non-Spark on the same provider:
 
 ```yaml
 providers:
@@ -450,24 +449,24 @@ providers:
         contextPromotionTarget: openai-codex/gpt-5.3-codex
 ```
 
-組み込みモデルジェネレーターも、同じプロバイダーのベースモデルが存在する場合、`*-spark` モデルに対して自動的にこれを割り当てます。
+The built-in model generator also assigns this automatically for `*-spark` models when a same-provider base model exists.
 
-## 互換性とルーティングフィールド
+## Compatibility and routing fields
 
-`models.yml` は以下の `compat` サブセットをサポートしています:
+`models.yml` supports this `compat` subset:
 
 - `supportsStore`
 - `supportsDeveloperRole`
 - `supportsReasoningEffort`
-- `maxTokensField`（`max_completion_tokens` または `max_tokens`）
+- `maxTokensField` (`max_completion_tokens` or `max_tokens`)
 - `openRouterRouting.only` / `openRouterRouting.order`
 - `vercelGatewayRouting.only` / `vercelGatewayRouting.order`
 
-これらは OpenAI 完了トランスポートロジックによって消費され、URL ベースの自動検出と組み合わされます。
+These are consumed by the OpenAI-completions transport logic and combined with URL-based auto-detection.
 
-## 実践的な例
+## Practical examples
 
-### ローカルの OpenAI 互換エンドポイント（認証なし）
+### Local OpenAI-compatible endpoint (no auth)
 
 ```yaml
 providers:
@@ -480,7 +479,7 @@ providers:
         name: Qwen 2.5 Coder 32B (local)
 ```
 
-### 環境変数ベースのキーを持つホステッドプロキシ
+### Hosted proxy with env-based key
 
 ```yaml
 providers:
@@ -496,7 +495,7 @@ providers:
         input: [text, image]
 ```
 
-### 組み込みプロバイダールート + モデルメタデータのオーバーライド
+### Override built-in provider route + model metadata
 
 ```yaml
 providers:
@@ -512,13 +511,13 @@ providers:
             only: [anthropic]
 ```
 
-## LiteLLM プロキシの自動設定
+## LiteLLM proxy auto-configuration
 
-`LITELLM_BASE_URL` と `LITELLM_API_KEY` の両方の環境変数が設定されている場合、xcsh は LiteLLM プロキシの `models.yml` 設定を自動的に管理します。
+When both `LITELLM_BASE_URL` and `LITELLM_API_KEY` environment variables are set, xcsh automatically manages `models.yml` configuration for the LiteLLM proxy.
 
-### 初回実行時の自動生成
+### First-run auto-generation
 
-`models.yml` が存在せず、LiteLLM 環境変数が検出された場合、xcsh は自動的に生成します:
+If `models.yml` does not exist and LiteLLM env vars are detected, xcsh generates it automatically:
 
 ```yaml
 # Auto-generated by xcsh for LiteLLM proxy
@@ -530,23 +529,23 @@ providers:
     apiKey: LITELLM_API_KEY
 ```
 
-デフォルトの `config.yml` も適切なイメージプロバイダー設定で生成されます。
+A default `config.yml` is also generated with sensible image provider settings.
 
-### 起動時の自己修復
+### Startup self-healing
 
-起動ごとに、モデルレジストリの `startupHealthCheck()` が以下のチェックを実行します:
+On every startup, `startupHealthCheck()` in the model registry runs the following checks:
 
-| 条件 | アクション |
-|-----------|--------|
-| `models.yml` が存在しない | 環境変数から自動生成 |
-| `models.yml` が破損または解析不能 | `.bak` にバックアップし、再生成 |
-| `baseUrl` が `LITELLM_BASE_URL` と一致しない | `.bak` にバックアップし、新しい URL で再生成 |
-| `configVersion` が欠落または古い | `.bak` にバックアップし、現在のバージョンで再生成 |
-| 設定が正常 | アクションなし |
+| Condition | Action |
+| --- | --- |
+| `models.yml` missing | Auto-generate from env vars |
+| `models.yml` corrupt or unparseable | Backup to `.bak`, regenerate |
+| `baseUrl` doesn't match `LITELLM_BASE_URL` | Backup to `.bak`, regenerate with new URL |
+| `configVersion` missing or outdated | Backup to `.bak`, regenerate with current version |
+| Config is healthy | No action |
 
-すべての修復は上書き前に `.bak` バックアップを作成します。すべての操作は冪等です。
+All repairs create `.bak` backups before overwriting. All operations are idempotent.
 
-### CLI コマンド
+### CLI command
 
 ```bash
 xcsh setup litellm              # Generate or fix LiteLLM config
@@ -554,31 +553,31 @@ xcsh setup litellm --check      # Validate without writing
 xcsh setup litellm --check --json  # Machine-readable validation output
 ```
 
-### 必須環境変数
+### Required environment variables
 
-| 変数 | 目的 |
+| Variable | Purpose |
 |----------|---------|
-| `LITELLM_BASE_URL` | LiteLLM プロキシ URL（例: `https://your-proxy.example.com`）。`http://` または `https://` で始まる必要があります。 |
-| `LITELLM_API_KEY` | プロキシの API キー。生成された設定では名前で参照され、実行時に解決されます。 |
+| `LITELLM_BASE_URL` | LiteLLM proxy URL (e.g. `https://your-proxy.example.com`). Must start with `http://` or `https://`. |
+| `LITELLM_API_KEY` | API key for the proxy. Referenced by name in generated config, resolved at runtime. |
 
-いずれかの変数が設定されていない場合、自動設定は静かにスキップされます。
+If either variable is unset, auto-configuration is silently skipped.
 
-### 設定バージョン管理
+### Config versioning
 
-生成された設定には `configVersion` フィールドが含まれます。将来のリリースで生成形式が変更された場合、xcsh は古い設定を検出し、自動的にアップグレードします（バックアップあり）。
+Generated configs include a `configVersion` field. When the generated format changes in future releases, xcsh detects outdated configs and automatically upgrades them (with backup).
 
-## レガシーコンシューマーの注意事項
+## Legacy consumer caveat
 
-ほとんどのモデル設定は、`ModelRegistry` を通じて `models.yml` を経由するようになりました。
+Most model configuration now flows through `models.yml` via `ModelRegistry`.
 
-注目すべきレガシーパスが1つ残っています: Web 検索の Anthropic 認証解決は、`src/web/search/auth.ts` で `~/.xcsh/agent/models.json` を直接読み取ります。
+One notable legacy path remains: web-search Anthropic auth resolution still reads `~/.xcsh/agent/models.json` directly in `src/web/search/auth.ts`.
 
-この特定のパスに依存している場合は、そのモジュールが移行されるまで JSON 互換性を念頭に置いてください。
+If you rely on that specific path, keep JSON compatibility in mind until that module is migrated.
 
-## 失敗モード
+## Failure mode
 
-`models.yml` がスキーマまたは検証チェックに失敗した場合:
+If `models.yml` fails schema or validation checks:
 
-- `LITELLM_BASE_URL` と `LITELLM_API_KEY` が設定されている場合、起動時ヘルスチェックが自動修復を試みます（破損したファイルをバックアップし、環境変数から再生成）。修復が成功した場合、レジストリは修正された設定を再読み込みします。
-- 自動修復が不可能な場合（環境変数が未設定、書き込み失敗）、レジストリは組み込みモデルで動作し続けます。
-- エラーは `ModelRegistry.getError()` を通じて公開され、UI/通知に表示されます。
+- If `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set, the startup health check attempts auto-repair (backup corrupt file, regenerate from env vars). If repair succeeds, the registry reloads the fixed config.
+- If auto-repair is not possible (env vars unset, write failure), the registry keeps operating with built-in models.
+- Error is exposed via `ModelRegistry.getError()` and surfaced in UI/notifications.

@@ -1,23 +1,23 @@
 ---
-title: F5 XC 컨텍스트
-description: 'xcsh를 F5 Distributed Cloud 테넌트에 연결 -- 인증 컨텍스트를 생성, 전환 및 관리합니다.'
+title: "F5 XC Contexts"
+description: Connect xcsh to F5 Distributed Cloud tenants -- create, switch, and manage authentication contexts.
 sidebar:
   order: 1
-  label: F5 XC 컨텍스트
+  label: F5 XC Contexts
 i18n:
-  sourceHash: a9cccbc338f0
-  translator: machine
+  sourceHash: "7754a8acfa0b"
+  translator: "machine"
 ---
 
-# F5 XC 컨텍스트
+# F5 XC Contexts
 
-xcsh는 **컨텍스트**를 통해 F5 Distributed Cloud에 연결합니다 -- 컨텍스트는 테넌트 URL, API 토큰, 네임스페이스를 바인딩하는 이름이 지정된 자격 증명 세트입니다. `kubectl config use-context` 또는 `kubectx`를 사용해 본 적이 있다면 워크플로는 동일합니다: 컨텍스트를 생성하고, 이름으로 전환하며, `-`를 사용하여 이전 컨텍스트로 돌아갑니다.
+xcsh connects to F5 Distributed Cloud through **contexts** -- named credential sets that bind a tenant URL, API token, and namespace. If you've used `kubectl config use-context` or `kubectx`, the workflow is identical: create a context, switch between them by name, and use `-` to flip back.
 
-## 시작하기
+## Getting started
 
-### 1. 첫 번째 컨텍스트 생성
+### 1. Create your first context
 
-F5 XC 콘솔에서 세 가지가 필요합니다: 테넌트 URL, API 토큰, 그리고 선택적으로 네임스페이스입니다.
+You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
 /context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
@@ -27,13 +27,13 @@ F5 XC 콘솔에서 세 가지가 필요합니다: 테넌트 URL, API 토큰, 그
 Context 'production' created. Use /context activate production to switch to it.
 ```
 
-단계별 프롬프트를 선호한다면 가이드 마법사를 사용할 수도 있습니다:
+Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 /context wizard
 ```
 
-### 2. 활성화
+### 2. Activate it
 
 ```
 /context production
@@ -50,29 +50,29 @@ Context 'production' created. Use /context activate production to switch to it.
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-활성화되면 xcsh가 테넌트 자격 증명을 세션에 주입합니다. 이제 에이전트가 F5 XC API 호출을 수행할 수 있으며, 상태 표시줄에 활성 컨텍스트가 표시됩니다.
+Once activated, xcsh injects the tenant credentials into your session. The agent can now make F5 XC API calls, and the status line shows the active context.
 
-### 3. 컨텍스트 추가 및 전환
+### 3. Add more contexts and switch between them
 
 ```
 /context create staging https://staging.console.ves.volterra.io p12k3-staging-token
 ```
 
-이름으로 전환 -- 하위 명령 동사가 필요 없습니다:
+Switch by name -- no subcommand verb needed:
 
 ```
 /context staging
 ```
 
-이전 컨텍스트로 돌아가기 (`cd -` 스타일):
+Switch back to the previous context (`cd -` style):
 
 ```
 /context -
 ```
 
-`/context -`를 두 번 호출하면 시작했던 곳으로 돌아갑니다.
+Calling `/context -` twice returns you to where you started.
 
-### 4. 현재 상태 확인
+### 4. See what you have
 
 ```
 /context
@@ -83,43 +83,43 @@ Context 'production' created. Use /context activate production to switch to it.
 * staging              https://staging.console.ves.volterra.io
 ```
 
-`*`는 활성 컨텍스트를 표시합니다.
+The `*` marks the active context.
 
-## 일상적인 명령어
+## Everyday commands
 
-| 명령어 | 설명 |
+| Command | What it does |
 |---|---|
-| `/context` | 모든 컨텍스트 나열 |
-| `/context <name>` | 해당 컨텍스트로 전환 |
-| `/context -` | 이전 컨텍스트로 전환 |
-| `/context show` | 활성 컨텍스트 세부 정보 표시 (토큰 마스킹) |
-| `/context status` | 현재 인증 상태 표시 |
+| `/context` | List all contexts |
+| `/context <name>` | Switch to a context |
+| `/context -` | Switch to the previous context |
+| `/context show` | Show active context details (tokens masked) |
+| `/context status` | Show current auth status |
 
-## 컨텍스트 수명주기
+## Context lifecycle
 
-| 명령어 | 설명 |
+| Command | What it does |
 |---|---|
-| `/context create <name> <url> <token> [namespace]` | 컨텍스트 생성 |
-| `/context delete <name> --confirm` | 컨텍스트 삭제 (`--confirm` 필요) |
-| `/context rename <old> <new>` | 컨텍스트 이름 변경 |
-| `/context validate <name>` | 전환하지 않고 자격 증명 테스트 |
-| `/context export [name] [--include-token]` | JSON으로 내보내기 (기본적으로 토큰 마스킹) |
-| `/context import <path-or-json> [--overwrite]` | 파일 또는 인라인 JSON에서 가져오기 |
-| `/context wizard` | 가이드 대화형 설정 |
+| `/context create <name> <url> <token> [namespace]` | Create a context |
+| `/context delete <name> --confirm` | Delete a context (requires `--confirm`) |
+| `/context rename <old> <new>` | Rename a context |
+| `/context validate <name>` | Test credentials without switching |
+| `/context export [name] [--include-token]` | Export as JSON (tokens masked by default) |
+| `/context import <path-or-json> [--overwrite]` | Import from file or inline JSON |
+| `/context wizard` | Guided interactive setup |
 
-## 네임스페이스 전환
+## Switching namespaces
 
-각 컨텍스트에는 기본 네임스페이스가 있습니다. 컨텍스트를 변경하지 않고 네임스페이스만 전환할 수 있습니다:
+Each context has a default namespace. Switch it without changing the context:
 
 ```
 /context namespace system
 ```
 
-탭 완성은 활성 테넌트의 네임스페이스 이름을 제공합니다.
+Tab completion offers namespace names from the active tenant.
 
-## 컨텍스트의 환경 변수
+## Environment variables on contexts
 
-컨텍스트는 활성화 시 세션에 주입되는 추가 환경 변수를 포함할 수 있습니다. 자격 증명 세트에 포함되지 않는 테넌트별 구성에 유용합니다.
+Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
 /context set CUSTOM_HEADER=x-example-corp-trace
@@ -128,25 +128,25 @@ Context 'production' created. Use /context activate production to switch to it.
 /context unset LOG_LEVEL
 ```
 
-별칭: `add` = `set`, `remove`/`clear` = `unset`.
+Aliases: `add` = `set`, `remove`/`clear` = `unset`.
 
-## 탭 완성
+## Tab completion
 
-`/context`를 입력하고 Tab을 누르세요. 드롭다운에 다음이 표시됩니다:
+Type `/context` and press Tab. The dropdown shows:
 
-1. **컨텍스트 이름** -- 테넌트 URL 힌트가 포함되어 테넌트를 구분할 수 있습니다
-2. **`-`** -- 이전에 전환한 적이 있을 때 표시되며, 어떤 컨텍스트로 전환될지 보여줍니다
-3. **하위 명령** -- `list`, `create`, `delete` 등
+1. **Context names** -- with tenant URL hints, so you can tell tenants apart
+2. **`-`** -- appears when you've switched before, shows which context you'd flip to
+3. **Subcommands** -- `list`, `create`, `delete`, etc.
 
-전환이 가장 일반적인 작업이므로 컨텍스트 이름이 먼저 표시됩니다.
+Context names appear first because switching is the most common action.
 
-하위 명령 수준의 완성도 작동합니다: `/context activate <Tab>`은 컨텍스트 이름을 완성하고, `/context namespace <Tab>`은 네임스페이스를 완성하며, `/context unset <Tab>`은 알려진 환경 변수 키를 완성합니다.
+Subcommand-level completions also work: `/context activate <Tab>` completes context names, `/context namespace <Tab>` completes namespaces, `/context unset <Tab>` completes known env var keys.
 
-## 이름 규칙
+## Naming rules
 
-컨텍스트 이름은 1-64자여야 합니다: 문자, 숫자, 하이픈, 밑줄.
+Context names must be 1-64 characters: letters, digits, hyphens, underscores.
 
-하위 명령과 충돌하는 이름은 거부됩니다:
+Names that collide with subcommands are rejected:
 
 ```
 /context create list https://example.com tok
@@ -156,25 +156,25 @@ Context 'production' created. Use /context activate production to switch to it.
 Error: Context name 'list' conflicts with a /context subcommand. Choose a different name.
 ```
 
-전체 예약어 세트: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. 비교는 대소문자를 구분하지 않습니다.
+The full reserved set: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. Comparison is case-insensitive.
 
-## 환경 변수 오버라이드
+## Environment variable override
 
-xcsh를 실행하기 전에 셸 환경에 `XCSH_API_URL`과 `XCSH_API_TOKEN`이 설정되어 있으면 모든 컨텍스트보다 우선합니다. 이는 영구 컨텍스트를 생성하지 않으려는 CI/CD 파이프라인이나 일회성 세션에 유용합니다.
+If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in your shell environment before launching xcsh, they take precedence over any context. This is useful for CI/CD pipelines or one-off sessions where you don't want to create a persistent context.
 
-이 모드에서 실행할 때 `/context`는 환경 변수에서 가져온 자격 증명을 `(via env vars)` 레이블과 함께 표시합니다.
+When running in this mode, `/context` shows the environment-sourced credentials with a `(via env vars)` label.
 
-## 이전 컨텍스트 동작
+## Previous context behavior
 
-- **세션 범위**: 이전 컨텍스트는 xcsh를 재시작하면 초기화됩니다. 디스크에 저장되지 않습니다.
-- **핑퐁**: `/context -`를 두 번 실행하면 시작했던 곳으로 돌아갑니다.
-- **변경에 안전**: 이전 컨텍스트를 삭제하면 포인터가 제거됩니다. 이름을 변경하면 포인터가 새 이름을 따라갑니다.
-- **재활성화는 무연산**: 이미 `production`에 있을 때 `/context production`을 실행하면 이전 포인터가 재설정되지 않습니다.
+- **Session-scoped**: the previous context resets when you restart xcsh. It is not persisted to disk.
+- **Ping-pong**: `/context -` twice returns you to where you started.
+- **Safe across mutations**: if you delete the previous context, the pointer is cleared. If you rename it, the pointer follows the new name.
+- **Re-activation is a no-op**: `/context production` when already on `production` does not reset the previous pointer.
 
-## 설계 규칙
+## Design conventions
 
-`/context` UX는 다음을 따릅니다:
+The `/context` UX follows:
 
-- **kubectx**: 전환에 `kubectx <name>`, 이전으로 `kubectx -`, 나열에 `kubectx` 단독 사용
-- **kubectl**: 명시적 형식으로 `kubectl config use-context`
-- **셸**: 이전 디렉토리 추적을 위한 `cd -` / `OLDPWD`
+- **kubectx**: `kubectx <name>` for switching, `kubectx -` for previous, bare `kubectx` for listing
+- **kubectl**: `kubectl config use-context` for the explicit form
+- **Shell**: `cd -` / `OLDPWD` for previous-directory tracking

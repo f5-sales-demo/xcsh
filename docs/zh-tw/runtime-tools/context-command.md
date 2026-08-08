@@ -1,23 +1,23 @@
 ---
-title: F5 XC 環境上下文
-description: 將 xcsh 連線至 F5 Distributed Cloud 租戶——建立、切換及管理驗證環境上下文。
+title: "F5 XC Contexts"
+description: Connect xcsh to F5 Distributed Cloud tenants -- create, switch, and manage authentication contexts.
 sidebar:
   order: 1
-  label: F5 XC 環境上下文
+  label: F5 XC Contexts
 i18n:
-  sourceHash: a9cccbc338f0
-  translator: machine
+  sourceHash: "7754a8acfa0b"
+  translator: "machine"
 ---
 
-# F5 XC 環境上下文
+# F5 XC Contexts
 
-xcsh 透過**環境上下文（contexts）**連線至 F5 Distributed Cloud——環境上下文是具名的憑證集合，將租戶 URL、API 令牌和命名空間繫結在一起。如果您曾使用過 `kubectl config use-context` 或 `kubectx`，其工作流程完全相同：建立環境上下文、透過名稱在它們之間切換，並使用 `-` 快速切回上一個。
+xcsh connects to F5 Distributed Cloud through **contexts** -- named credential sets that bind a tenant URL, API token, and namespace. If you've used `kubectl config use-context` or `kubectx`, the workflow is identical: create a context, switch between them by name, and use `-` to flip back.
 
-## 入門指南
+## Getting started
 
-### 1. 建立您的第一個環境上下文
+### 1. Create your first context
 
-您需要從 F5 XC 控制台取得三項資訊：租戶 URL、API 令牌，以及選擇性的命名空間。
+You need three things from your F5 XC console: the tenant URL, an API token, and optionally a namespace.
 
 ```
 /context create production https://example-corp.console.ves.volterra.io p12k3-your-api-token
@@ -27,13 +27,13 @@ xcsh 透過**環境上下文（contexts）**連線至 F5 Distributed Cloud——
 Context 'production' created. Use /context activate production to switch to it.
 ```
 
-如果您偏好逐步引導提示，也可以使用引導式精靈：
+Or use the guided wizard if you prefer step-by-step prompts:
 
 ```
 /context wizard
 ```
 
-### 2. 啟用環境上下文
+### 2. Activate it
 
 ```
 /context production
@@ -50,29 +50,29 @@ Context 'production' created. Use /context activate production to switch to it.
 ╰──────────────────────────────────────────────────────────────╯
 ```
 
-啟用後，xcsh 會將租戶憑證注入您的工作階段。代理程式現在可以進行 F5 XC API 呼叫，狀態列會顯示目前使用中的環境上下文。
+Once activated, xcsh injects the tenant credentials into your session. The agent can now make F5 XC API calls, and the status line shows the active context.
 
-### 3. 新增更多環境上下文並在它們之間切換
+### 3. Add more contexts and switch between them
 
 ```
 /context create staging https://staging.console.ves.volterra.io p12k3-staging-token
 ```
 
-透過名稱切換——不需要子命令動詞：
+Switch by name -- no subcommand verb needed:
 
 ```
 /context staging
 ```
 
-切回上一個環境上下文（`cd -` 風格）：
+Switch back to the previous context (`cd -` style):
 
 ```
 /context -
 ```
 
-呼叫 `/context -` 兩次會讓您回到起始位置。
+Calling `/context -` twice returns you to where you started.
 
-### 4. 檢視現有的環境上下文
+### 4. See what you have
 
 ```
 /context
@@ -83,43 +83,43 @@ Context 'production' created. Use /context activate production to switch to it.
 * staging              https://staging.console.ves.volterra.io
 ```
 
-`*` 標記目前使用中的環境上下文。
+The `*` marks the active context.
 
-## 日常命令
+## Everyday commands
 
-| 命令 | 功能說明 |
+| Command | What it does |
 |---|---|
-| `/context` | 列出所有環境上下文 |
-| `/context <name>` | 切換至指定的環境上下文 |
-| `/context -` | 切換至上一個環境上下文 |
-| `/context show` | 顯示目前使用中的環境上下文詳細資訊（令牌已遮蔽） |
-| `/context status` | 顯示目前的驗證狀態 |
+| `/context` | List all contexts |
+| `/context <name>` | Switch to a context |
+| `/context -` | Switch to the previous context |
+| `/context show` | Show active context details (tokens masked) |
+| `/context status` | Show current auth status |
 
-## 環境上下文生命週期
+## Context lifecycle
 
-| 命令 | 功能說明 |
+| Command | What it does |
 |---|---|
-| `/context create <name> <url> <token> [namespace]` | 建立環境上下文 |
-| `/context delete <name> --confirm` | 刪除環境上下文（需要 `--confirm`） |
-| `/context rename <old> <new>` | 重新命名環境上下文 |
-| `/context validate <name>` | 測試憑證但不切換 |
-| `/context export [name] [--include-token]` | 匯出為 JSON（預設遮蔽令牌） |
-| `/context import <path-or-json> [--overwrite]` | 從檔案或行內 JSON 匯入 |
-| `/context wizard` | 引導式互動設定 |
+| `/context create <name> <url> <token> [namespace]` | Create a context |
+| `/context delete <name> --confirm` | Delete a context (requires `--confirm`) |
+| `/context rename <old> <new>` | Rename a context |
+| `/context validate <name>` | Test credentials without switching |
+| `/context export [name] [--include-token]` | Export as JSON (tokens masked by default) |
+| `/context import <path-or-json> [--overwrite]` | Import from file or inline JSON |
+| `/context wizard` | Guided interactive setup |
 
-## 切換命名空間
+## Switching namespaces
 
-每個環境上下文都有一個預設命名空間。無需變更環境上下文即可切換命名空間：
+Each context has a default namespace. Switch it without changing the context:
 
 ```
 /context namespace system
 ```
 
-Tab 自動補全會提供來自使用中租戶的命名空間名稱。
+Tab completion offers namespace names from the active tenant.
 
-## 環境上下文上的環境變數
+## Environment variables on contexts
 
-環境上下文可以攜帶額外的環境變數，這些變數會在啟用時注入您的工作階段。這對於不屬於憑證集合一部分的租戶專屬設定非常有用。
+Contexts can carry extra environment variables that are injected into your session on activation. Useful for per-tenant configuration that isn't part of the credential set.
 
 ```
 /context set CUSTOM_HEADER=x-example-corp-trace
@@ -128,25 +128,25 @@ Tab 自動補全會提供來自使用中租戶的命名空間名稱。
 /context unset LOG_LEVEL
 ```
 
-別名：`add` = `set`，`remove`/`clear` = `unset`。
+Aliases: `add` = `set`, `remove`/`clear` = `unset`.
 
-## Tab 自動補全
+## Tab completion
 
-輸入 `/context` 後按下 Tab 鍵。下拉選單會顯示：
+Type `/context` and press Tab. The dropdown shows:
 
-1. **環境上下文名稱**——附帶租戶 URL 提示，讓您能區分不同租戶
-2. **`-`**——當您之前有切換過時出現，顯示您將切換至哪個環境上下文
-3. **子命令**——`list`、`create`、`delete` 等
+1. **Context names** -- with tenant URL hints, so you can tell tenants apart
+2. **`-`** -- appears when you've switched before, shows which context you'd flip to
+3. **Subcommands** -- `list`, `create`, `delete`, etc.
 
-環境上下文名稱會優先顯示，因為切換是最常見的操作。
+Context names appear first because switching is the most common action.
 
-子命令層級的補全同樣有效：`/context activate <Tab>` 會補全環境上下文名稱，`/context namespace <Tab>` 會補全命名空間，`/context unset <Tab>` 會補全已知的環境變數鍵。
+Subcommand-level completions also work: `/context activate <Tab>` completes context names, `/context namespace <Tab>` completes namespaces, `/context unset <Tab>` completes known env var keys.
 
-## 命名規則
+## Naming rules
 
-環境上下文名稱必須為 1-64 個字元：字母、數字、連字號、底線。
+Context names must be 1-64 characters: letters, digits, hyphens, underscores.
 
-與子命令衝突的名稱會被拒絕：
+Names that collide with subcommands are rejected:
 
 ```
 /context create list https://example.com tok
@@ -156,25 +156,25 @@ Tab 自動補全會提供來自使用中租戶的命名空間名稱。
 Error: Context name 'list' conflicts with a /context subcommand. Choose a different name.
 ```
 
-完整的保留字集合：`list`、`show`、`status`、`create`、`delete`、`rename`、`namespace`、`env`、`set`、`unset`、`add`、`remove`、`clear`、`activate`、`validate`、`export`、`import`、`wizard`、`help`。比較時不區分大小寫。
+The full reserved set: `list`, `show`, `status`, `create`, `delete`, `rename`, `namespace`, `env`, `set`, `unset`, `add`, `remove`, `clear`, `activate`, `validate`, `export`, `import`, `wizard`, `help`. Comparison is case-insensitive.
 
-## 環境變數覆寫
+## Environment variable override
 
-如果在啟動 xcsh 之前，您的 shell 環境中已設定了 `XCSH_API_URL` 和 `XCSH_API_TOKEN`，它們將優先於任何環境上下文。這在 CI/CD 流水線或一次性工作階段中非常有用，讓您無需建立持久性的環境上下文。
+If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in your shell environment before launching xcsh, they take precedence over any context. This is useful for CI/CD pipelines or one-off sessions where you don't want to create a persistent context.
 
-在此模式下執行時，`/context` 會以 `(via env vars)` 標籤顯示來源為環境變數的憑證。
+When running in this mode, `/context` shows the environment-sourced credentials with a `(via env vars)` label.
 
-## 上一個環境上下文的行為
+## Previous context behavior
 
-- **工作階段範圍**：上一個環境上下文會在您重新啟動 xcsh 時重設，不會持久化到磁碟。
-- **來回切換**：`/context -` 執行兩次會讓您回到起始位置。
-- **安全應對變更操作**：如果您刪除了上一個環境上下文，指標會被清除。如果您重新命名它，指標會跟隨新名稱。
-- **重複啟用為無操作**：當已在 `production` 上時執行 `/context production` 不會重設上一個環境上下文的指標。
+- **Session-scoped**: the previous context resets when you restart xcsh. It is not persisted to disk.
+- **Ping-pong**: `/context -` twice returns you to where you started.
+- **Safe across mutations**: if you delete the previous context, the pointer is cleared. If you rename it, the pointer follows the new name.
+- **Re-activation is a no-op**: `/context production` when already on `production` does not reset the previous pointer.
 
-## 設計慣例
+## Design conventions
 
-`/context` 的使用者體驗遵循：
+The `/context` UX follows:
 
-- **kubectx**：`kubectx <name>` 用於切換，`kubectx -` 用於切回上一個，單獨的 `kubectx` 用於列出
-- **kubectl**：`kubectl config use-context` 用於明確形式
-- **Shell**：`cd -` / `OLDPWD` 用於上一個目錄追蹤
+- **kubectx**: `kubectx <name>` for switching, `kubectx -` for previous, bare `kubectx` for listing
+- **kubectl**: `kubectl config use-context` for the explicit form
+- **Shell**: `cd -` / `OLDPWD` for previous-directory tracking

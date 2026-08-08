@@ -4,7 +4,7 @@ description: Model registry and provider configuration via models.yml with routi
 sidebar:
   order: 1
   label: Models & providers
-------
+---
 
 This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
 
