@@ -9,7 +9,7 @@ export interface ResolveTierResult {
 }
 
 export interface ResolveTierOptions {
-	contextEstimate?: { usedTokens: number; contextWindow: number };
+	contextEstimate?: { usedTokens: number; contextWindow: number; reserveTokens?: number };
 	getModelContextWindow?: (modelId: string) => number;
 }
 
@@ -43,6 +43,7 @@ export function resolveTierModel(
 					!checkCandidateContextEligible({
 						estimatedInputTokens: options.contextEstimate.usedTokens,
 						candidateContextWindow: candidateWin,
+						reserveTokens: options.contextEstimate.reserveTokens,
 					})
 				) {
 					return false;
@@ -64,6 +65,7 @@ export function resolveTierModel(
 				!checkCandidateContextEligible({
 					estimatedInputTokens: options.contextEstimate.usedTokens,
 					candidateContextWindow: candidateWin,
+					reserveTokens: options.contextEstimate.reserveTokens,
 				})
 			) {
 				return false;

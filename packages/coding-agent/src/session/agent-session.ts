@@ -1286,34 +1286,47 @@ export class AgentSession {
 		this.#routingCoordinator.restoreState(state);
 	}
 	public recordRoutingOutcome(outcome: RoutingOutcome): void {
+		const routingMode = this.settings.get("routing.mode") as import("../routing/types").RoutingMode;
 		if (outcome.status === "rejected") {
 			const hasUserFeedback = outcome.evidence.some(e => e.kind === "user_feedback");
 			const hasTestFailure = outcome.evidence.some(e => e.kind === "test_failure");
 			const hasBuildFailure = outcome.evidence.some(e => e.kind === "build_failure");
 			const hasLintFailure = outcome.evidence.some(e => e.kind === "lint_failure");
+			const hasRetryFallback = outcome.evidence.some(e => e.kind === "retry_fallback");
 
 			const reasons: import("../routing/types").RoutingReasonCode[] = [];
 			if (hasUserFeedback) reasons.push("prior_rejection");
 			if (hasTestFailure) reasons.push("test_failure");
 			if (hasBuildFailure) reasons.push("build_failure");
 			if (hasLintFailure) reasons.push("lint_failure");
-
-			this.#routingCoordinator.getStateMachine().setEscalationFloor("frontier");
+			if (hasRetryFallback) reasons.push("retry_fallback");
 
 			const routingState = this.#routingCoordinator.getState();
-			this.#emitSessionEvent(
-				sanitizeRoutingEvent({
-					type: "routing_escalated",
-					epochId: outcome.epochId,
-					reasons: reasons,
-					mode: this.settings.get("routing.mode") as import("../routing/types").RoutingMode,
-					effectiveTier: routingState.currentTier,
-					selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
-					escalated: true,
-				}),
-			).catch(() => {});
+			let targetTier: import("../routing/types").RoutingTier = "frontier";
+			if (outcome.safeToContinue) {
+				if (routingState.currentTier === "utility") targetTier = "balanced";
+				else if (routingState.currentTier === "balanced") targetTier = "frontier";
+			}
+
+			if (routingMode === "auto") {
+				this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
+
+				this.#emitSessionEvent(
+					sanitizeRoutingEvent({
+						type: "routing_escalated",
+						epochId: outcome.epochId,
+						reasons: reasons,
+						mode: routingMode,
+						effectiveTier: targetTier,
+						selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
+						escalated: true,
+					}),
+				).catch(() => {});
+			}
 		} else {
-			this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+			if (routingMode === "auto") {
+				this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+			}
 		}
 	}
 	/**
@@ -2816,39 +2829,62 @@ export class AgentSession {
 					durationMs,
 				} as any).catch(() => {});
 
-				if (decision.applied && decision.selectedModel && decision.selectedModel !== anchorModel) {
+				if (decision.selectedModel && decision.applied) {
 					const targetModel = this.#modelRegistry
 						.getAvailable()
 						.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
 					if (targetModel) {
 						await this.setModelRoutingSwitch(targetModel);
+						if (decision.effectiveTier) {
+							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+							const { mapTierToEffort } = await import("../routing/effort");
+							const effort = mapTierToEffort(decision.effectiveTier, effortMap);
+							this.setThinkingLevel(effort as any);
+						}
 					}
 				}
 
 				if (
 					decision.applied &&
 					decision.delegation &&
+					decision.delegation.subtasks.length > 1 &&
 					(this.settings.get("routing.delegation") as string) === "read-only"
 				) {
-					const maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
+					let maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
+					maxTasks = Math.min(Math.max(1, maxTasks), 3);
+
 					const results = await executeReadOnlyDelegationPlan(
 						decision.delegation,
 						async (subtaskPrompt, signal) => {
 							if (signal?.aborted) return "Delegation failed: Aborted";
-							const utilityModelId = decision.poolId
-								? (this.settings.get("routing.pools") as any)?.[decision.poolId]?.tiers?.utility
-								: undefined;
-							const resolvedUtility = utilityModelId
-								? this.#modelRegistry
-										.getAvailable()
-										.find(m => `${m.provider}/${m.id}` === utilityModelId || m.id === utilityModelId)
-								: this.model;
+
+							const { resolveModelPool } = await import("../routing/presets");
+							const pool = resolveModelPool(
+								decision.poolId ?? (this.model ? `${this.model.provider}/${this.model.id}` : ""),
+								this.settings.get("routing.pools") as any,
+								this.settings.get("routing.disabledPresets") as string[],
+								this.settings.get("routing.familyPolicy") as any,
+							);
+
+							let resolvedUtility = this.model;
+							if (pool?.tiers?.utility) {
+								const uId = pool.tiers.utility;
+								const found = this.#modelRegistry
+									.getAvailable()
+									.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
+								if (found) resolvedUtility = found;
+							}
+
 							if (!resolvedUtility) return "Delegation failed: no model.";
 
 							const { createAgentSession } = await import("../sdk");
 							const { SessionManager: SDKSessionManager } = await import("./session-manager");
 							const childSettings = await this.settings.cloneForCwd(process.cwd());
 							childSettings.set("routing.delegation", "off");
+
+							// Fix abort race by checking right before creation
+							if (signal?.aborted) return "Delegation failed: Aborted";
+
 							const { session: childSession } = await createAgentSession({
 								model: resolvedUtility,
 								sessionManager: SDKSessionManager.inMemory(),
@@ -2865,6 +2901,10 @@ export class AgentSession {
 							try {
 								const onAbort = () => childSession.agent.abort();
 								signal?.addEventListener("abort", onAbort);
+								if (signal?.aborted) {
+									onAbort();
+									return "Delegation failed: Aborted";
+								}
 								try {
 									await childSession.prompt(subtaskPrompt);
 									if (signal?.aborted) return "Delegation failed: Aborted";
@@ -2893,7 +2933,11 @@ export class AgentSession {
 					);
 
 					if (results.length > 0) {
-						const delegationOutput = `\n\n<delegation_results>\n${JSON.stringify(results, null, 2)}\n</delegation_results>`;
+						let resultsString = JSON.stringify(results, null, 2);
+						if (resultsString.length > 8000) {
+							resultsString = `${resultsString.substring(0, 8000)}\n...[truncated]`;
+						}
+						const delegationOutput = `\n\n<delegation_results>\n${resultsString}\n</delegation_results>`;
 						expandedText += delegationOutput;
 						const textBlock = userContent.find(c => c.type === "text") as Extract<
 							(typeof userContent)[0],
@@ -2904,6 +2948,13 @@ export class AgentSession {
 						} else {
 							userContent.push({ type: "text", text: delegationOutput });
 						}
+
+						this.#emitSessionEvent({
+							type: "routing_delegated",
+							epochId: decision.epochId,
+							tasks: decision.delegation.subtasks.length,
+							completed: results.length,
+						} as any).catch(() => {});
 					}
 				}
 			}

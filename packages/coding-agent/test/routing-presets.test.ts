@@ -10,20 +10,20 @@ describe("Routing Presets (R03)", () => {
 	});
 
 	it("should resolve pool from explicit selector or anchor model", () => {
-		const openaiPool = resolveModelPool("openai/gpt-4.1", {});
+		const openaiPool = resolveModelPool("openai/gpt-5.4", {});
 		expect(openaiPool).toBeDefined();
-		expect(openaiPool?.tiers.utility).toBe("gpt-4.1-mini");
-		expect(openaiPool?.tiers.balanced).toBe("gpt-4.1");
+		expect(openaiPool?.tiers.utility).toBe("gpt-5.4-mini");
+		expect(openaiPool?.tiers.balanced).toBe("gpt-5.4");
 
 		const litellmOpenaiPool = resolveModelPool("litellm/openai", {});
 		expect(litellmOpenaiPool).toBeDefined();
-		expect(litellmOpenaiPool?.tiers.utility).toBe("luna");
-		expect(litellmOpenaiPool?.tiers.balanced).toBe("terra");
-		expect(litellmOpenaiPool?.tiers.frontier).toBe("sol");
+		expect(litellmOpenaiPool?.tiers.utility).toBe("gpt-5.4-mini");
+		expect(litellmOpenaiPool?.tiers.balanced).toBe("gpt-5.4");
+		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-5.6-sol");
 	});
 
 	it("should NOT cross provider families when anchor model has explicit provider prefix", () => {
-		const litellmClaudePool = resolveModelPool("litellm/claude-3-7-sonnet", {});
+		const litellmClaudePool = resolveModelPool("litellm/claude-3-5-sonnet-20241022", {});
 		expect(litellmClaudePool).toBeDefined();
 		expect(litellmClaudePool?.id).toBe("litellm/anthropic");
 		expect(litellmClaudePool?.provider).toBe("litellm");
@@ -73,7 +73,7 @@ describe("Routing Presets (R03)", () => {
 			},
 		};
 		// Disabled custom pool -> falls back to builtin
-		const disabledCustom = resolveModelPool("openai/gpt-4.1", customPools, ["my-openai"]);
+		const disabledCustom = resolveModelPool("openai/gpt-5.4", customPools, ["my-openai"]);
 		expect(disabledCustom?.id).toBe("openai/gpt-5.6");
 
 		// Disabled builtin pool -> falls back to undefined

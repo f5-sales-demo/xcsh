@@ -602,6 +602,21 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"routing.tierEffort": {
+		type: "object",
+		default: {
+			utility: "low",
+			balanced: "medium",
+			frontier: "high",
+		},
+		ui: {
+			tab: "model",
+			label: "Tier Effort Mapping",
+			description: "Map routing tiers to thinking effort levels",
+			submenu: true,
+		},
+	},
+
 	"routing.pools": {
 		type: "record",
 		default: {},
