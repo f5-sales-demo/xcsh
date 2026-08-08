@@ -2,7 +2,7 @@ import { classifyTaskHybrid } from "./classifier";
 import { resolveModelPool } from "./presets";
 import { resolveTierModel } from "./resolver";
 import { type RoutingState, RoutingStateMachine } from "./state-machine";
-import type { RoutingDecision, RoutingMode, RoutingPoolConfig, RoutingReasonCode } from "./types";
+import type { RoutingDecision, RoutingMode, RoutingPoolConfig, RoutingReasonCode, RoutingTier } from "./types";
 
 export interface CoordinatorOptions {
 	stateMachine?: RoutingStateMachine;
@@ -23,7 +23,7 @@ export interface EvaluateTurnOptions {
 	profilerMode?: "rules" | "hybrid";
 	disabledPresets?: readonly string[];
 	familyPolicy?: "sticky" | "configured-mixed";
-	fileTargetsCount?: number;
+
 	downshiftAfterTurns?: number;
 	getModelContextWindow?: (modelId: string) => number;
 	runRoutingClassifier?: (utilityModel: string, prompt: string) => Promise<string>;
@@ -104,14 +104,45 @@ export class RoutingCoordinator {
 			contextEstimate: options.contextEstimate,
 			hasImages: options.hasImages,
 			priorRejection: options.priorRejection,
-			fileTargetsCount: options.fileTargetsCount,
+
 			pool,
 			profilerMode: options.profilerMode ?? "hybrid",
 			runRoutingClassifier: options.runRoutingClassifier,
 		});
 
+		// Determine anchor model tier
+		let anchorTier: RoutingTier = "balanced";
+		let modelName = options.anchorModel;
+		if (modelName.includes("/")) {
+			modelName = modelName.split("/").slice(1).join("/");
+		}
+		if (
+			pool.tiers.utility === options.anchorModel ||
+			pool.tiers.utility === modelName ||
+			`${pool.provider}/${pool.tiers.utility}` === options.anchorModel
+		) {
+			anchorTier = "utility";
+		} else if (
+			pool.tiers.frontier === options.anchorModel ||
+			pool.tiers.frontier === modelName ||
+			`${pool.provider}/${pool.tiers.frontier}` === options.anchorModel
+		) {
+			anchorTier = "frontier";
+		} else if (
+			pool.tiers.balanced === options.anchorModel ||
+			pool.tiers.balanced === modelName ||
+			`${pool.provider}/${pool.tiers.balanced}` === options.anchorModel
+		) {
+			anchorTier = "balanced";
+		} else if (pool.id === options.anchorModel) {
+			anchorTier = "balanced";
+		}
+
 		// 5. Speculative state machine evaluation (do NOT mutate operational state until resolution is verified)
 		const targetSm = new RoutingStateMachine(this.stateMachine.getState());
+		if (targetSm.getState().currentTier === undefined || !targetSm.getState().currentTier) {
+			targetSm.restoreState({ currentTier: anchorTier });
+		}
 		const { effectiveTier } = targetSm.evaluateNextTurn(taskProfile.desiredTier, options.downshiftAfterTurns ?? 2);
 
 		// 6. Resolve pool tier model with context window eligibility

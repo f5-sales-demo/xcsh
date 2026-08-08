@@ -131,6 +131,7 @@ import ttsrInterruptTemplate from "../prompts/system/ttsr-interrupt.md" with { t
 import type { RoutingState, RoutingTier } from "../routing";
 import { RoutingCoordinator } from "../routing/coordinator";
 import { executeReadOnlyDelegationPlan, isDelegationAllowedTool } from "../routing/delegation";
+import { type RoutingEvent, sanitizeRoutingEvent } from "../routing/events";
 import { validateCustomPools } from "../routing/presets";
 import type { RoutingMode, RoutingOutcome } from "../routing/types";
 import { deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
@@ -183,6 +184,7 @@ import { ToolChoiceQueue } from "./tool-choice-queue";
 /** Session-specific events that extend the core AgentEvent */
 export type AgentSessionEvent =
 	| AgentEvent
+	| RoutingEvent
 	| { type: "auto_compaction_start"; reason: "threshold" | "overflow" | "idle"; action: "context-full" | "handoff" }
 	| {
 			type: "auto_compaction_end";
@@ -826,6 +828,14 @@ export class AgentSession {
 			await this.#applyRewind(report);
 		}
 
+		// Clear escalation floor on successful turn completion
+		if (event.type === "turn_end") {
+			const msg = event.message as AssistantMessage;
+			if (msg.stopReason !== "aborted" && msg.stopReason !== "error") {
+				this.recordRoutingOutcome({ status: "accepted", evidence: [] });
+			}
+		}
+
 		// TTSR: Check for pattern matches on assistant text/thinking and tool argument deltas
 		if (event.type === "message_update" && this.#ttsrManager?.hasRules()) {
 			const assistantEvent = event.assistantMessageEvent;
@@ -1275,7 +1285,31 @@ export class AgentSession {
 	}
 	public recordRoutingOutcome(outcome: RoutingOutcome): void {
 		if (outcome.status === "rejected") {
+			const hasUserFeedback = outcome.evidence.some(e => e.kind === "user_feedback");
+			const hasTestFailure = outcome.evidence.some(e => e.kind === "test_failure");
+			const hasBuildFailure = outcome.evidence.some(e => e.kind === "build_failure");
+			const hasLintFailure = outcome.evidence.some(e => e.kind === "lint_failure");
+
+			const reasons: import("../routing/types").RoutingReasonCode[] = [];
+			if (hasUserFeedback) reasons.push("prior_rejection");
+			if (hasTestFailure) reasons.push("test_failure");
+			if (hasBuildFailure) reasons.push("build_failure");
+			if (hasLintFailure) reasons.push("lint_failure");
+
 			this.#routingCoordinator.getStateMachine().setEscalationFloor("frontier");
+
+			const routingState = this.#routingCoordinator.getState();
+			this.#emitSessionEvent(
+				sanitizeRoutingEvent({
+					type: "routing_escalated",
+					epochId: outcome.epochId,
+					reasons: reasons,
+					mode: this.settings.get("routing.mode") as import("../routing/types").RoutingMode,
+					effectiveTier: routingState.currentTier,
+					selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
+					escalated: true,
+				}),
+			).catch(() => {});
 		} else {
 			this.#routingCoordinator.getStateMachine().clearEscalationFloor();
 		}
@@ -2674,14 +2708,22 @@ export class AgentSession {
 			});
 		}
 
+		await this.#maybeRestoreRetryFallbackPrimary();
+
 		// Evaluate dynamic model routing if enabled
 		const routingMode = (this.settings.get("routing.mode") as RoutingMode) ?? "off";
 		if (routingMode !== "off" && this.model) {
 			const anchorModel = `${this.model.provider}/${this.model.id}`;
 			const availableModels = this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
 			const startTime = Date.now();
+			const systemTokens = Math.round((this.systemPrompt?.length ?? 0) / 4);
+			const promptTokens = Math.round(expandedText.length / 4);
+			const toolsStr = JSON.stringify(Array.from(this.#toolRegistry.values()));
+			const toolsTokens = Math.round(toolsStr.length / 4);
+			const reserveTokens = (this.settings.get("compaction.reserveTokens") as number) ?? 0;
 			const contextEstimate = {
-				usedTokens: calculateUsedTokens(this.messages),
+				usedTokens: calculateUsedTokens(this.messages) + systemTokens + promptTokens + toolsTokens,
+				reserveTokens,
 				contextWindow: this.model.contextWindow ?? 128000,
 			};
 			const decision = await this.#routingCoordinator.evaluateTurn({
@@ -2689,6 +2731,7 @@ export class AgentSession {
 				mode: routingMode,
 				prompt: expandedText,
 				hasImages: options?.images && options.images.length > 0,
+				priorRejection: this.#routingCoordinator.getState().escalationFloor !== undefined,
 				availableModels,
 				customPools: validateCustomPools(this.settings.get("routing.pools")),
 				disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
@@ -2697,19 +2740,19 @@ export class AgentSession {
 				contextEstimate,
 				getModelContextWindow: (modelId: string) => {
 					const found = this.#modelRegistry
-						.getAvailable()
+						.getAll()
 						.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
 					return found?.contextWindow ?? 128000;
 				},
 				runRoutingClassifier: async (utilityModel: string, promptText: string) => {
 					const resolved = this.#modelRegistry
-						.getAvailable()
+						.getAll()
 						.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
 					if (!resolved) throw new Error("Classifier model not found");
 					const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
 					if (!apiKey) throw new Error("No API key for classifier model");
 
-					const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
+					const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number, "delegation"?: { "reason": string, "subtasks": { "id": string, "title": string, "description": string, "targetFilesOrPaths": string[], "desiredTier"?: string }[] } }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
 
 					const res = await completeSimple(
 						resolved,
@@ -2789,10 +2832,12 @@ export class AgentSession {
 
 						const { createAgentSession } = await import("../sdk");
 						const { SessionManager: SDKSessionManager } = await import("./session-manager");
+						const childSettings = await this.settings.cloneForCwd(process.cwd());
+						childSettings.set("routing.delegation", "off");
 						const { session: childSession } = await createAgentSession({
 							model: resolvedUtility,
 							sessionManager: SDKSessionManager.inMemory(),
-							settings: this.settings,
+							settings: childSettings,
 							authStorage: this.#modelRegistry.authStorage,
 							modelRegistry: this.#modelRegistry,
 							toolNames: Array.from(this.#toolRegistry.values())
@@ -2904,8 +2949,6 @@ export class AgentSession {
 
 			// Reset todo reminder count on new user prompt
 			this.#todoReminderCount = 0;
-
-			await this.#maybeRestoreRetryFallbackPrimary();
 
 			// Validate model
 			if (!this.model) {

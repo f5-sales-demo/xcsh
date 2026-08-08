@@ -602,15 +602,6 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
-	"routing.tierEffort": {
-		type: "record",
-		default: {
-			utility: "low",
-			balanced: "medium",
-			frontier: "high",
-		},
-	},
-
 	"routing.pools": {
 		type: "record",
 		default: {},

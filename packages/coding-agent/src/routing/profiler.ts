@@ -8,7 +8,6 @@ export interface ProfilerInput {
 	};
 	hasImages?: boolean;
 	priorRejection?: boolean;
-	fileTargetsCount?: number;
 }
 
 const COMPLEX_KEYWORDS = [
@@ -74,7 +73,7 @@ export function profileTaskDeterministic(input: ProfilerInput): TaskProfile {
 	}
 
 	// Multi-target mutation (+15)
-	if ((input.fileTargetsCount && input.fileTargetsCount >= 3) || promptLower.includes("across multiple")) {
+	if (promptLower.includes("across multiple")) {
 		score += 15;
 		reasons.push("multi_target_mutation");
 	}
