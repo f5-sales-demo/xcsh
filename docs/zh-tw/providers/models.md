@@ -1,39 +1,40 @@
 ---
-title: Model and Provider Configuration
-description: Model registry and provider configuration via models.yml with routing, fallback, and pricing.
+title: 模型與提供者設定
+description: 透過 models.yml 進行模型註冊與提供者設定，包含路由、備援與定價功能。
 sidebar:
   order: 1
-  label: Models & providers
+  label: 模型與提供者
 i18n:
-  sourceHash: "26d427f98a58"
+  sourceHash: "8053df967ff6"
   translator: "machine"
 ---
 
-This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
+# 模型與提供者設定 (`models.yml`)
 
-## What controls model behavior
+本文件說明 coding-agent 目前如何載入模型、套用覆寫、解析憑證，以及在執行階段選擇模型。
 
-Primary implementation files:
+## 決定模型行為的因素
 
-- `src/config/model-registry.ts` — loads built-in + custom models, provider overrides, runtime discovery, auth integration
-- `src/config/model-resolver.ts` — parses model patterns and selects initial/smol/slow models
-- `src/routing/` — provider-agnostic dynamic model routing coordinator, profiler, presets, and state machine
-- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, `routing.*`, provider transport preferences)
-- `src/session/auth-storage.ts` — API key + OAuth resolution order
-- `packages/ai/src/models.ts` and `packages/ai/src/types.ts` — built-in providers/models and `Model`/`compat` types
+主要實作檔案：
 
-## Config file location and legacy behavior
+- `src/config/model-registry.ts` — 載入內建與自訂模型、提供者覆寫、執行階段探索與身分驗證整合
+- `src/config/model-resolver.ts` — 解析模型模式並選擇初始 / smol / slow 模型
+- `src/config/settings-schema.ts` — 模型相關設定 (`modelRoles`、提供者傳輸偏好)
+- `src/session/auth-storage.ts` — API 金鑰與 OAuth 解析順序
+- `packages/ai/src/models.ts` 及 `packages/ai/src/types.ts` — 內建提供者/模型與 `Model`/`compat` 類型
 
-Default config path:
+## 設定檔位置與傳統行為
+
+預設設定檔路徑：
 
 - `~/.xcsh/agent/models.yml`
 
-Legacy behavior still present:
+目前仍保留的傳統行為：
 
-- If `models.yml` is missing and `models.json` exists at the same location, it is migrated to `models.yml`.
-- Explicit `.json` / `.jsonc` config paths are still supported when passed programmatically to `ModelRegistry`.
+- 如果缺少 `models.yml` 但同一位置存在 `models.json`，則會將其移轉至 `models.yml`。
+- 透過程式傳遞給 `ModelRegistry` 時，仍然支援明確的 `.json` / `.jsonc` 設定檔路徑。
 
-## `models.yml` shape
+## `models.yml` 結構
 
 ```yaml
 configVersion: 1  # optional — written by auto-config, used for migration detection
@@ -47,16 +48,16 @@ equivalence:
     - <provider-id>/<model-id>
 ```
 
-`configVersion` is an optional integer written by the auto-config system. When present, xcsh uses it to detect outdated configs and auto-upgrade them.
+`configVersion` 為選填整數，由自動設定系統寫入。當存在此欄位時，xcsh 會使用它來偵測過時的設定檔並自動升級。
 
-`provider-id` is the canonical provider key used across selection and auth lookup.
+`provider-id` 是標準的提供者金鑰，用於跨選擇和身分驗證查詢。
 
-`equivalence` is optional and configures canonical model grouping on top of concrete provider models:
+`equivalence` 為選填項目，可在具體的提供者模型之上設定標準模型群組：
 
-- `overrides` maps an exact concrete selector (`provider/modelId`) to an official upstream canonical id
-- `exclude` opts a concrete selector out of canonical grouping
+- `overrides` 將確切的具體選擇器 (`provider/modelId`) 對應到官方上游的標準 ID
+- `exclude` 將具體選擇器排除在標準群組之外
 
-## Provider-level fields
+## 提供者層級欄位
 
 ```yaml
 providers:
@@ -102,7 +103,7 @@ providers:
             controller: mlx
 ```
 
-### Allowed provider/model `api` values
+### 允許的提供者/模型 `api` 值
 
 - `openai-completions`
 - `openai-responses`
@@ -112,64 +113,64 @@ providers:
 - `google-generative-ai`
 - `google-vertex`
 
-### Allowed auth/discovery values
+### 允許的 auth/discovery 值
 
-- `auth`: `apiKey` (default) or `none`
+- `auth`: `apiKey` (預設) 或 `none`
 - `discovery.type`: `ollama`
 
-## Validation rules (current)
+## 驗證規則 (現行)
 
-### Full custom provider (`models` is non-empty)
+### 完整自訂提供者 (`models` 不為空)
 
-Required:
+必要欄位：
 
 - `baseUrl`
-- `apiKey` unless `auth: none`
-- `api` at provider level or each model
+- `apiKey` 除非 `auth: none`
+- `api` 位於提供者層級或每個模型中
 
-### Override-only provider (`models` missing or empty)
+### 僅覆寫的提供者 (`models` 遺失或為空)
 
-Must define at least one of:
+必須至少定義以下其中之一：
 
 - `baseUrl`
 - `modelOverrides`
 - `discovery`
 
-### Discovery
+### 探索 (Discovery)
 
-- `discovery` requires provider-level `api`.
+- `discovery` 需要提供者層級的 `api`。
 
-### Model value checks
+### 模型值檢查
 
-- `id` required
-- `contextWindow` and `maxTokens` must be positive if provided
+- `id` 為必填
+- 如果提供，`contextWindow` 和 `maxTokens` 必須為正數
 
-## Merge and override order
+## 合併與覆寫順序
 
-ModelRegistry pipeline (on refresh):
+ModelRegistry 流程 (在重新整理時)：
 
-1. Load built-in providers/models from `@f5-sales-demo/pi-ai`.
-2. Load `models.yml` custom config.
-3. Apply provider overrides (`baseUrl`, `headers`) to built-in models.
-4. Apply `modelOverrides` (per provider + model id).
-5. Merge custom `models`:
-   - same `provider + id` replaces existing
-   - otherwise append
-6. Apply runtime-discovered models (currently Ollama and LM Studio), then re-apply model overrides.
+1. 從 `@f5-sales-demo/pi-ai` 載入內建提供者/模型。
+2. 載入 `models.yml` 自訂設定。
+3. 將提供者覆寫 (`baseUrl`, `headers`) 套用到內建模型。
+4. 套用 `modelOverrides` (針對每個提供者 + 模型 ID)。
+5. 合併自訂的 `models`：
+   - 相同的 `provider + id` 會取代現有設定
+   - 否則進行附加 (append)
+6. 套用在執行階段探索到的模型 (目前為 Ollama 及 LM Studio)，接著重新套用模型覆寫。
 
-## Canonical model equivalence and coalescing
+## 標準模型等效性與合併
 
-The registry keeps every concrete provider model and then builds a canonical layer above them.
+註冊表保留每一個具體的提供者模型，並在它們之上建立標準層。
 
-Canonical ids are official upstream ids only, for example:
+標準 ID 僅限於官方上游 ID，例如：
 
 - `claude-opus-4-6`
 - `claude-haiku-4-5`
 - `gpt-5.3-codex`
 
-### `models.yml` equivalence config
+### `models.yml` 等效性設定
 
-Example:
+範例：
 
 ```yaml
 providers:
@@ -198,77 +199,77 @@ equivalence:
     - demo/codex-preview
 ```
 
-Build order for canonical grouping:
+建立標準群組的順序：
 
-1. exact user override from `equivalence.overrides`
-2. bundled official-id matches from built-in model metadata
-3. conservative heuristic normalization for gateway/provider variants
-4. fallback to the concrete model's own id
+1. 來自 `equivalence.overrides` 的確切使用者覆寫
+2. 從內建模型中繼資料中綑綁的官方 ID 匹配
+3. 針對閘道器/提供者變體的保守啟發式標準化
+4. 備援至具體模型本身的 ID
 
-Current heuristics are intentionally narrow:
+目前的啟發式規則刻意設定得較窄：
 
-- embedded upstream prefixes can be stripped when present, for example `anthropic/...` or `openai/...`
-- dotted and dashed version variants can normalize only when they map to an existing official id, for example `4.6 -> 4-6`
-- ambiguous families or versions are not merged without a bundled match or explicit override
+- 存在時可剝除嵌入的上游前綴，例如 `anthropic/...` 或 `openai/...`
+- 使用小數點和破折號的版本變體僅在它們對應到現有的官方 ID 時才進行標準化，例如 `4.6 -> 4-6`
+- 模糊的家族或版本在沒有綑綁匹配或明確覆寫的情況下不會合併
 
-### Canonical resolution behavior
+### 標準解析行為
 
-When multiple concrete variants share a canonical id, resolution uses:
+當多個具體變體共用一個標準 ID 時，解析會使用：
 
-1. availability and auth
+1. 可用性與身分驗證
 2. `config.yml` `modelProviderOrder`
-3. existing registry/provider order if `modelProviderOrder` is unset
+3. 如果未設定 `modelProviderOrder`，則使用現有的註冊表/提供者順序
 
-Disabled or unauthenticated providers are skipped.
+會跳過已停用或未驗證的提供者。
 
-Session state and transcripts continue to record the concrete provider/model that actually executed the turn.
+工作階段狀態和逐字稿會繼續記錄實際執行回合的具體提供者/模型。
 
-Provider defaults vs per-model overrides:
+提供者預設值 vs 個別模型覆寫：
 
-- Provider `headers` are baseline.
-- Model `headers` override provider header keys.
-- `modelOverrides` can override model metadata (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`).
-- `compat` is deep-merged for nested routing blocks (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`).
+- 提供者的 `headers` 為基準。
+- 模型 `headers` 覆寫提供者的標頭金鑰。
+- `modelOverrides` 可覆寫模型中繼資料 (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`)。
+- `compat` 會對巢狀路由區塊進行深層合併 (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`)。
 
-## Runtime discovery integration
+## 執行階段探索整合
 
-### Implicit Ollama discovery
+### 隱含的 Ollama 探索
 
-If `ollama` is not explicitly configured, registry adds an implicit discoverable provider:
+如果沒有明確設定 `ollama`，註冊表會加入一個隱含的可探索提供者：
 
 - provider: `ollama`
 - api: `openai-completions`
-- base URL: `OLLAMA_BASE_URL` or `http://127.0.0.1:11434`
-- auth mode: keyless (`auth: none` behavior)
+- base URL: `OLLAMA_BASE_URL` 或 `http://127.0.0.1:11434`
+- auth mode: 無金鑰 (`auth: none` 行為)
 
-Runtime discovery calls `GET /api/tags` on Ollama and synthesizes model entries with local defaults.
+執行階段探索在 Ollama 呼叫 `GET /api/tags`，並與本機預設值合成模型項目。
 
-### Implicit llama.cpp discovery
+### 隱含的 llama.cpp 探索
 
-If `llama.cpp` is not explicitly configured, registry adds an implicit discoverable provider:
-Note: it's using the newer antropic messages api instead of the openai-competions.
+如果沒有明確設定 `llama.cpp`，註冊表會加入一個隱含的可探索提供者：
+備註：這使用了較新的 antropic messages API，而非 openai-competions。
 
 - provider: `llama.cpp`
 - api: `openai-responses`
-- base URL: `LLAMA_CPP_BASE_URL` or `http://127.0.0.1:8080`
-- auth mode: keyless (`auth: none` behavior)
+- base URL: `LLAMA_CPP_BASE_URL` 或 `http://127.0.0.1:8080`
+- auth mode: 無金鑰 (`auth: none` 行為)
 
-Runtime discovery calls `GET models` on llama.cpp and synthesizes model entries with local defaults.
+執行階段探索在 llama.cpp 呼叫 `GET models`，並與本機預設值合成模型項目。
 
-### Implicit LM Studio discovery
+### 隱含的 LM Studio 探索
 
-If `lm-studio` is not explicitly configured, registry adds an implicit discoverable provider:
+如果沒有明確設定 `lm-studio`，註冊表會加入一個隱含的可探索提供者：
 
 - provider: `lm-studio`
 - api: `openai-completions`
-- base URL: `LM_STUDIO_BASE_URL` or `http://127.0.0.1:1234/v1`
-- auth mode: keyless (`auth: none` behavior)
+- base URL: `LM_STUDIO_BASE_URL` 或 `http://127.0.0.1:1234/v1`
+- auth mode: 無金鑰 (`auth: none` 行為)
 
-Runtime discovery fetches models (`GET /models`) and synthesizes model entries with local defaults.
+執行階段探索取得模型 (`GET /models`)，並與本機預設值合成模型項目。
 
-### Explicit provider discovery
+### 明確的提供者探索
 
-You can configure discovery yourself:
+你可以自行設定探索：
 
 ```yaml
 providers:
@@ -287,159 +288,159 @@ providers:
       type: llama.cpp
 ```
 
-### Extension provider registration
+### 擴充套件提供者註冊
 
-Extensions can register providers at runtime (`pi.registerProvider(...)`), including:
+擴充套件可以在執行階段註冊提供者 (`pi.registerProvider(...)`)，包括：
 
-- model replacement/append for a provider
-- custom stream handler registration for new API IDs
-- custom OAuth provider registration
+- 提供者的模型取代/附加
+- 針對新 API ID 的自訂串流處理常式註冊
+- 自訂 OAuth 提供者註冊
 
-## Auth and API key resolution order
+## 身分驗證與 API 金鑰解析順序
 
-When requesting a key for a provider, effective order is:
+在請求提供者的金鑰時，實際的順序為：
 
-1. Runtime override (CLI `--api-key`)
-2. Stored API key credential in `agent.db`
-3. Stored OAuth credential in `agent.db` (with refresh)
-4. Environment variable mapping (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
-5. ModelRegistry fallback resolver (provider `apiKey` from `models.yml`, env-name-or-literal semantics)
+1. 執行階段覆寫 (CLI `--api-key`)
+2. `agent.db` 中儲存的 API 金鑰憑證
+3. `agent.db` 中儲存的 OAuth 憑證 (包含重新整理)
+4. 環境變數對應 (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY` 等)
+5. ModelRegistry 備援解析器 (來自 `models.yml` 的提供者 `apiKey`，使用環境變數名稱或常值語意)
 
-`models.yml` `apiKey` behavior:
+`models.yml` `apiKey` 行為：
 
-- Value is first treated as an environment variable name.
-- If no env var exists, the literal string is used as the token.
+- 該值首先被視為環境變數名稱。
+- 如果不存在該環境變數，則常值字串會作為權杖使用。
 
-If `authHeader: true` and provider `apiKey` is set, models get:
+如果 `authHeader: true` 且提供者的 `apiKey` 已設定，模型會取得：
 
-- `Authorization: Bearer <resolved-key>` header injected.
+- 注入 `Authorization: Bearer <resolved-key>` 標頭。
 
-Keyless providers:
+無金鑰提供者：
 
-- Providers marked `auth: none` are treated as available without credentials.
-- `getApiKey*` returns `kNoAuth` for them.
+- 標記為 `auth: none` 的提供者將被視為無需憑證即可使用。
+- `getApiKey*` 會對其傳回 `kNoAuth`。
 
-## Model availability vs all models
+## 模型可用性與所有模型
 
-- `getAll()` returns the loaded model registry (built-in + merged custom + discovered).
-- `getAvailable()` filters to models that are keyless or have resolvable auth.
+- `getAll()` 傳回已載入的模型註冊表 (內建 + 合併自訂 + 探索到的)。
+- `getAvailable()` 過濾出無金鑰或具有可解析身分驗證的模型。
 
-So a model can exist in registry but not be selectable until auth is available.
+因此模型可以存在於註冊表中，但在取得驗證之前是不可選擇的。
 
-## Runtime model resolution
+## 執行階段模型解析
 
-### CLI and pattern parsing
+### CLI 與模式解析
 
-`model-resolver.ts` supports:
+`model-resolver.ts` 支援：
 
-- exact `provider/modelId`
-- exact canonical model id
-- exact model id (provider inferred)
-- fuzzy/substring matching
-- glob scope patterns in `--models` (e.g. `openai/*`, `*sonnet*`)
-- optional `:thinkingLevel` suffix (`off|minimal|low|medium|high|xhigh`)
+- 確切的 `provider/modelId`
+- 確切的標準模型 ID
+- 確切的模型 ID (推斷出提供者)
+- 模糊/子字串匹配
+- `--models` 中的 glob 範圍模式 (例如 `openai/*`, `*sonnet*`)
+- 選擇性的 `:thinkingLevel` 後綴 (`off|minimal|low|medium|high|xhigh`)
 
-`--provider` is legacy; `--model` is preferred.
+`--provider` 是舊用法；建議使用 `--model`。
 
-Resolution precedence for exact selectors:
+確切選擇器的解析優先順序：
 
-1. exact `provider/modelId` bypasses coalescing
-2. exact canonical id resolves through the canonical index
-3. exact bare concrete id still works
-4. fuzzy and glob matching run after the exact paths
+1. 確切的 `provider/modelId` 繞過合併
+2. 確切的標準 ID 透過標準索引解析
+3. 確切的純具體 ID 仍然有效
+4. 在確切路徑之後執行模糊與 glob 匹配
 
-### Initial model selection priority
+### 初始模型選擇優先順序
 
-`findInitialModel(...)` uses this order:
+`findInitialModel(...)` 使用以下順序：
 
-1. explicit CLI provider+model
-2. first scoped model (if not resuming)
-3. saved default provider/model
-4. known provider defaults (e.g. OpenAI/Anthropic/etc.) among available models
-5. first available model
+1. 明確的 CLI 提供者+模型
+2. 第一個範圍內模型 (如果不處於還原狀態)
+3. 儲存的預設提供者/模型
+4. 已知提供者預設值 (例如可用模型中的 OpenAI/Anthropic 等)
+5. 第一個可用的模型
 
-### Role aliases and settings
+### 角色別名與設定
 
-Supported model roles:
+支援的模型角色：
 
 - `default`, `smol`, `slow`, `plan`, `commit`
 
-Role aliases like `pi/smol` expand through `settings.modelRoles`. Each role value can also append a thinking selector such as `:minimal`, `:low`, `:medium`, or `:high`.
+類似 `pi/smol` 的角色別名可透過 `settings.modelRoles` 展開。每個角色值也可以附加一個思考選擇器，例如 `:minimal`、`:low`、`:medium` 或 `:high`。
 
-If a role points at another role, the target model still inherits normally and any explicit suffix on the referring role wins for that role-specific use.
+如果一個角色指向另一個角色，目標模型仍然會正常繼承，並且參考角色上的任何明確後綴會勝出，套用於該特定角色的使用情境。
 
-Related settings:
+相關設定：
 
 - `modelRoles` (record)
 - `enabledModels` (scoped pattern list)
 - `modelProviderOrder` (global canonical-provider precedence)
-- `providers.kimiApiFormat` (`openai` or `anthropic` request format)
-- `providers.openaiWebsockets` (`auto|off|on` websocket preference for OpenAI Codex transport)
+- `providers.kimiApiFormat` (`openai` 或 `anthropic` 請求格式)
+- `providers.openaiWebsockets` (OpenAI Codex 傳輸的 `auto|off|on` websocket 偏好)
 
-`modelRoles` may store either:
+`modelRoles` 可儲存為：
 
-- `provider/modelId` to pin a concrete provider variant
-- a canonical id such as `gpt-5.3-codex` to allow provider coalescing
+- `provider/modelId` 來固定具體提供者變體
+- 一個標準 ID (例如 `gpt-5.3-codex`) 以允許提供者合併
 
-For `enabledModels` and CLI `--models`:
+對於 `enabledModels` 與 CLI `--models`：
 
-- exact canonical ids expand to all concrete variants in that canonical group
-- explicit `provider/modelId` entries stay exact
-- globs and fuzzy matches still operate on concrete models
+- 確切的標準 ID 會展開為該標準群組內所有的具體變體
+- 明確的 `provider/modelId` 項目保持不變
+- globs 和模糊匹配仍然在具體模型上運作
 
-## `/model` and `--list-models`
+## `/model` 與 `--list-models`
 
-Both surfaces keep provider-prefixed models visible and selectable.
+這兩個介面都讓帶有提供者前綴的模型保持可見且可選。
 
-They now also expose canonical/coalesced models:
+它們現在還會公開標準/合併模型：
 
-- `/model` includes a canonical view alongside provider tabs
-- `--list-models` prints a canonical section plus the concrete provider rows
+- `/model` 在提供者索引標籤旁包含了一個標準檢視
+- `--list-models` 列印了一個標準區塊以及具體的提供者列
 
-Selecting a canonical entry stores the canonical selector. Selecting a provider row stores the explicit `provider/modelId`.
+選擇一個標準項目會儲存標準選擇器。選擇一個提供者列會儲存明確的 `provider/modelId`。
 
-## Context promotion (model-level fallback chains)
+## 內容升級 (Context promotion) (模型級別備援鏈)
 
-Context promotion is an overflow recovery mechanism for small-context variants (for example `*-spark`) that automatically promotes to a larger-context sibling when the API rejects a request with a context length error.
+內容升級是一種針對小情境變體 (例如 `*-spark`) 的溢位復原機制，當 API 拒絕因情境長度錯誤而發出的請求時，會自動升級到同系列中情境更大的模型。
 
-### Trigger and order
+### 觸發條件與順序
 
-When a turn fails with a context overflow error (e.g. `context_length_exceeded`), `AgentSession` attempts promotion **before** falling back to compaction:
+當某個回合因情境溢位錯誤失敗時 (例如 `context_length_exceeded`)，`AgentSession` 會在退回使用資料壓縮**之前**嘗試升級：
 
-1. If `contextPromotion.enabled` is true, resolve a promotion target (see below).
-2. If a target is found, switch to it and retry the request — no compaction needed.
-3. If no target is available, fall through to auto-compaction on the current model.
+1. 如果 `contextPromotion.enabled` 為真，則解析一個升級目標 (詳見下方)。
+2. 如果找到目標，切換到該目標並重新嘗試請求 — 不需要壓縮。
+3. 如果沒有可用目標，則落入當前模型的自動壓縮處理。
 
-### Target selection
+### 目標選擇
 
-Selection is model-driven, not role-driven:
+選擇是由模型驅動，而不是角色驅動：
 
-1. `currentModel.contextPromotionTarget` (if configured)
-2. smallest larger-context model on the same provider + API
+1. `currentModel.contextPromotionTarget` (如果有設定)
+2. 同一個提供者 + API 上情境較大但最小的模型
 
-Candidates are ignored unless credentials resolve (`ModelRegistry.getApiKey(...)`).
+除非憑證解析成功 (`ModelRegistry.getApiKey(...)`)，否則會忽略候選項目。
 
-### OpenAI Codex websocket handoff
+### OpenAI Codex websocket 切換
 
-If switching from/to `openai-codex-responses`, session provider state key `openai-codex-responses` is closed before model switch. This drops websocket transport state so the next turn starts clean on the promoted model.
+如果從/切換到 `openai-codex-responses`，在模型切換前會關閉工作階段提供者狀態金鑰 `openai-codex-responses`。這會捨棄 websocket 傳輸狀態，讓升級後模型的下一回合能重新開始。
 
-### Persistence behavior
+### 儲存行為
 
-Promotion uses temporary switching (`setModelTemporary`):
+升級使用臨時切換 (`setModelTemporary`)：
 
-- recorded as a temporary `model_change` in session history
-- does not rewrite saved role mapping
+- 在工作階段歷史記錄中記為臨時的 `model_change`
+- 不會覆寫儲存的角色對應
 
-### Configuring explicit fallback chains
+### 設定明確的備援鏈
 
-Configure fallback directly in model metadata via `contextPromotionTarget`.
+透過模型中繼資料中的 `contextPromotionTarget` 直接設定備援。
 
-`contextPromotionTarget` accepts either:
+`contextPromotionTarget` 接受以下兩者之一：
 
-- `provider/model-id` (explicit)
-- `model-id` (resolved within current provider)
+- `provider/model-id` (明確的)
+- `model-id` (在目前提供者內解析)
 
-Example (`models.yml`) for Spark -> non-Spark on the same provider:
+相同提供者上 Spark -> 非 Spark 的範例 (`models.yml`)：
 
 ```yaml
 providers:
@@ -449,24 +450,24 @@ providers:
         contextPromotionTarget: openai-codex/gpt-5.3-codex
 ```
 
-The built-in model generator also assigns this automatically for `*-spark` models when a same-provider base model exists.
+當同提供者基礎模型存在時，內建模型產生器也會自動為 `*-spark` 模型分配此設定。
 
-## Compatibility and routing fields
+## 相容性與路由欄位
 
-`models.yml` supports this `compat` subset:
+`models.yml` 支援以下 `compat` 子集：
 
 - `supportsStore`
 - `supportsDeveloperRole`
 - `supportsReasoningEffort`
-- `maxTokensField` (`max_completion_tokens` or `max_tokens`)
+- `maxTokensField` (`max_completion_tokens` 或 `max_tokens`)
 - `openRouterRouting.only` / `openRouterRouting.order`
 - `vercelGatewayRouting.only` / `vercelGatewayRouting.order`
 
-These are consumed by the OpenAI-completions transport logic and combined with URL-based auto-detection.
+這些會由 OpenAI-completions 傳輸邏輯消耗，並與基於 URL 的自動偵測相結合。
 
-## Practical examples
+## 實用範例
 
-### Local OpenAI-compatible endpoint (no auth)
+### 本機相容 OpenAI 的端點 (無驗證)
 
 ```yaml
 providers:
@@ -479,7 +480,7 @@ providers:
         name: Qwen 2.5 Coder 32B (local)
 ```
 
-### Hosted proxy with env-based key
+### 具有環境變數金鑰的代管代理
 
 ```yaml
 providers:
@@ -495,7 +496,7 @@ providers:
         input: [text, image]
 ```
 
-### Override built-in provider route + model metadata
+### 覆寫內建提供者路由與模型中繼資料
 
 ```yaml
 providers:
@@ -511,13 +512,13 @@ providers:
             only: [anthropic]
 ```
 
-## LiteLLM proxy auto-configuration
+## LiteLLM 代理自動設定
 
-When both `LITELLM_BASE_URL` and `LITELLM_API_KEY` environment variables are set, xcsh automatically manages `models.yml` configuration for the LiteLLM proxy.
+當設定了 `LITELLM_BASE_URL` 和 `LITELLM_API_KEY` 環境變數時，xcsh 會自動管理 LiteLLM 代理的 `models.yml` 設定。
 
-### First-run auto-generation
+### 首次執行自動產生
 
-If `models.yml` does not exist and LiteLLM env vars are detected, xcsh generates it automatically:
+如果 `models.yml` 不存在且偵測到 LiteLLM 環境變數，xcsh 會自動產生它：
 
 ```yaml
 # Auto-generated by xcsh for LiteLLM proxy
@@ -529,23 +530,23 @@ providers:
     apiKey: LITELLM_API_KEY
 ```
 
-A default `config.yml` is also generated with sensible image provider settings.
+也會使用合理的影像提供者設定來產生預設的 `config.yml`。
 
-### Startup self-healing
+### 啟動自我修復
 
-On every startup, `startupHealthCheck()` in the model registry runs the following checks:
+每次啟動時，模型註冊表中的 `startupHealthCheck()` 會執行以下檢查：
 
-| Condition | Action |
-| --- | --- |
-| `models.yml` missing | Auto-generate from env vars |
-| `models.yml` corrupt or unparseable | Backup to `.bak`, regenerate |
-| `baseUrl` doesn't match `LITELLM_BASE_URL` | Backup to `.bak`, regenerate with new URL |
-| `configVersion` missing or outdated | Backup to `.bak`, regenerate with current version |
-| Config is healthy | No action |
+| 條件 | 動作 |
+|-----------|--------|
+| `models.yml` 遺失 | 從環境變數自動產生 |
+| `models.yml` 損毀或無法解析 | 備份到 `.bak` 並重新產生 |
+| `baseUrl` 與 `LITELLM_BASE_URL` 不匹配 | 備份到 `.bak`，並使用新 URL 重新產生 |
+| `configVersion` 遺失或過時 | 備份到 `.bak`，並使用目前版本重新產生 |
+| 設定檔狀態健康 | 不執行動作 |
 
-All repairs create `.bak` backups before overwriting. All operations are idempotent.
+所有修復作業會在覆寫前建立 `.bak` 備份。所有操作都是冪等的。
 
-### CLI command
+### CLI 指令
 
 ```bash
 xcsh setup litellm              # Generate or fix LiteLLM config
@@ -553,31 +554,31 @@ xcsh setup litellm --check      # Validate without writing
 xcsh setup litellm --check --json  # Machine-readable validation output
 ```
 
-### Required environment variables
+### 必要的環境變數
 
-| Variable | Purpose |
+| 變數 | 目的 |
 |----------|---------|
-| `LITELLM_BASE_URL` | LiteLLM proxy URL (e.g. `https://your-proxy.example.com`). Must start with `http://` or `https://`. |
-| `LITELLM_API_KEY` | API key for the proxy. Referenced by name in generated config, resolved at runtime. |
+| `LITELLM_BASE_URL` | LiteLLM 代理 URL (例如 `https://your-proxy.example.com`)。必須以 `http://` 或 `https://` 開頭。 |
+| `LITELLM_API_KEY` | 代理的 API 金鑰。在產生的設定檔中透過名稱參考，於執行階段解析。 |
 
-If either variable is unset, auto-configuration is silently skipped.
+如果上述任一變數未設定，自動設定會靜默跳過。
 
-### Config versioning
+### 設定檔版本控制
 
-Generated configs include a `configVersion` field. When the generated format changes in future releases, xcsh detects outdated configs and automatically upgrades them (with backup).
+產生的設定檔包含一個 `configVersion` 欄位。當未來版本中產生格式有變更時，xcsh 會偵測過時的設定檔並自動將其升級 (附帶備份)。
 
-## Legacy consumer caveat
+## 傳統使用者注意事項
 
-Most model configuration now flows through `models.yml` via `ModelRegistry`.
+大部分模型設定現在透過 `ModelRegistry` 進入 `models.yml`。
 
-One notable legacy path remains: web-search Anthropic auth resolution still reads `~/.xcsh/agent/models.json` directly in `src/web/search/auth.ts`.
+還有一個顯著的傳統路徑仍然保留：網路搜尋的 Anthropic 身分驗證解析仍會在 `src/web/search/auth.ts` 中直接讀取 `~/.xcsh/agent/models.json`。
 
-If you rely on that specific path, keep JSON compatibility in mind until that module is migrated.
+如果你依賴那個特定的路徑，請記住 JSON 相容性，直到該模組被移轉為止。
 
-## Failure mode
+## 失敗模式
 
-If `models.yml` fails schema or validation checks:
+如果 `models.yml` 未通過結構或驗證檢查：
 
-- If `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set, the startup health check attempts auto-repair (backup corrupt file, regenerate from env vars). If repair succeeds, the registry reloads the fixed config.
-- If auto-repair is not possible (env vars unset, write failure), the registry keeps operating with built-in models.
-- Error is exposed via `ModelRegistry.getError()` and surfaced in UI/notifications.
+- 如果設定了 `LITELLM_BASE_URL` 和 `LITELLM_API_KEY`，啟動健康檢查會嘗試自動修復 (備份損毀檔案，並從環境變數重新產生)。如果修復成功，註冊表會重新載入修復後的設定。
+- 如果無法自動修復 (環境變數未設定、寫入失敗)，註冊表會繼續使用內建模型運作。
+- 錯誤可透過 `ModelRegistry.getError()` 取得，並顯示在 UI/通知中。

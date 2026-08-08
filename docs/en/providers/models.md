@@ -6,6 +6,8 @@ sidebar:
   label: Models & providers
 ---
 
+# Model and Provider Configuration (`models.yml`)
+
 This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
 
 ## What controls model behavior
@@ -14,8 +16,7 @@ Primary implementation files:
 
 - `src/config/model-registry.ts` — loads built-in + custom models, provider overrides, runtime discovery, auth integration
 - `src/config/model-resolver.ts` — parses model patterns and selects initial/smol/slow models
-- `src/routing/` — provider-agnostic dynamic model routing coordinator, profiler, presets, and state machine
-- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, `routing.*`, provider transport preferences)
+- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, provider transport preferences)
 - `src/session/auth-storage.ts` — API key + OAuth resolution order
 - `packages/ai/src/models.ts` and `packages/ai/src/types.ts` — built-in providers/models and `Model`/`compat` types
 
@@ -533,7 +534,7 @@ A default `config.yml` is also generated with sensible image provider settings.
 On every startup, `startupHealthCheck()` in the model registry runs the following checks:
 
 | Condition | Action |
-| --- | --- |
+|-----------|--------|
 | `models.yml` missing | Auto-generate from env vars |
 | `models.yml` corrupt or unparseable | Backup to `.bak`, regenerate |
 | `baseUrl` doesn't match `LITELLM_BASE_URL` | Backup to `.bak`, regenerate with new URL |
@@ -553,7 +554,7 @@ xcsh setup litellm --check --json  # Machine-readable validation output
 ### Required environment variables
 
 | Variable | Purpose |
-| --- | --- |
+|----------|---------|
 | `LITELLM_BASE_URL` | LiteLLM proxy URL (e.g. `https://your-proxy.example.com`). Must start with `http://` or `https://`. |
 | `LITELLM_API_KEY` | API key for the proxy. Referenced by name in generated config, resolved at runtime. |
 

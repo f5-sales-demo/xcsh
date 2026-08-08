@@ -1,45 +1,46 @@
 ---
-title: Model and Provider Configuration
-description: Model registry and provider configuration via models.yml with routing, fallback, and pricing.
+title: การกำหนดค่าโมเดลและผู้ให้บริการ
+description: รีจิสทรีโมเดลและการกำหนดค่าผู้ให้บริการผ่าน models.yml พร้อมการกำหนดเส้นทาง การสำรอง และการกำหนดราคา
 sidebar:
   order: 1
-  label: Models & providers
+  label: โมเดลและผู้ให้บริการ
 i18n:
-  sourceHash: "26d427f98a58"
+  sourceHash: "8053df967ff6"
   translator: "machine"
 ---
 
-This document describes how the coding-agent currently loads models, applies overrides, resolves credentials, and chooses models at runtime.
+# Model and Provider Configuration (`models.yml`)
+
+เอกสารนี้อธิบายวิธีที่ coding-agent ในปัจจุบันโหลดโมเดล นำการแทนที่ (overrides) ไปใช้ ตรวจสอบข้อมูลประจำตัว และเลือกโมเดลขณะทำงาน (runtime)
 
 ## What controls model behavior
 
-Primary implementation files:
+ไฟล์การนำไปใช้งาน (implementation files) หลัก:
 
-- `src/config/model-registry.ts` — loads built-in + custom models, provider overrides, runtime discovery, auth integration
-- `src/config/model-resolver.ts` — parses model patterns and selects initial/smol/slow models
-- `src/routing/` — provider-agnostic dynamic model routing coordinator, profiler, presets, and state machine
-- `src/config/settings-schema.ts` — model-related settings (`modelRoles`, `routing.*`, provider transport preferences)
-- `src/session/auth-storage.ts` — API key + OAuth resolution order
-- `packages/ai/src/models.ts` and `packages/ai/src/types.ts` — built-in providers/models and `Model`/`compat` types
+- `src/config/model-registry.ts` — โหลดโมเดลที่มีมาให้ (built-in) + แบบกำหนดเอง (custom), การแทนที่ของผู้ให้บริการ, การค้นพบขณะทำงาน (runtime discovery), และการทำงานร่วมกับการตรวจสอบสิทธิ์ (auth integration)
+- `src/config/model-resolver.ts` — วิเคราะห์รูปแบบโมเดลและเลือกโมเดล initial/smol/slow
+- `src/config/settings-schema.ts` — การตั้งค่าที่เกี่ยวข้องกับโมเดล (`modelRoles`, ค่ากำหนดในการส่งผ่านของผู้ให้บริการ)
+- `src/session/auth-storage.ts` — ลำดับการตรวจสอบ API key + OAuth
+- `packages/ai/src/models.ts` และ `packages/ai/src/types.ts` — ผู้ให้บริการ/โมเดลที่มีมาให้ และประเภท `Model`/`compat`
 
 ## Config file location and legacy behavior
 
-Default config path:
+เส้นทางไฟล์กำหนดค่า (config path) เริ่มต้น:
 
 - `~/.xcsh/agent/models.yml`
 
-Legacy behavior still present:
+พฤติกรรมแบบดั้งเดิมที่ยังมีอยู่:
 
-- If `models.yml` is missing and `models.json` exists at the same location, it is migrated to `models.yml`.
-- Explicit `.json` / `.jsonc` config paths are still supported when passed programmatically to `ModelRegistry`.
+- หากไม่มี `models.yml` และมี `models.json` อยู่ในตำแหน่งเดียวกัน ไฟล์นั้นจะถูกโอนย้าย (migrated) ไปเป็น `models.yml`
+- เส้นทางไฟล์กำหนดค่า `.json` / `.jsonc` แบบชัดเจนยังคงได้รับการรองรับเมื่อถูกส่งผ่านทางโปรแกรมไปยัง `ModelRegistry`
 
 ## `models.yml` shape
 
 ```yaml
-configVersion: 1  # optional — written by auto-config, used for migration detection
+configVersion: 1  # ทางเลือกเสริม — เขียนโดย auto-config, ใช้เพื่อการตรวจสอบการอัปเกรด
 providers:
   <provider-id>:
-    # provider-level config
+    # การตั้งค่าระดับผู้ให้บริการ
 equivalence:
   overrides:
     <provider-id>/<model-id>: <canonical-model-id>
@@ -47,14 +48,14 @@ equivalence:
     - <provider-id>/<model-id>
 ```
 
-`configVersion` is an optional integer written by the auto-config system. When present, xcsh uses it to detect outdated configs and auto-upgrade them.
+`configVersion` เป็นจำนวนเต็มเสริม (optional) ที่เขียนโดยระบบ auto-config เมื่อมีค่านี้ `xcsh` จะใช้เพื่อตรวจหาไฟล์กำหนดค่าที่ล้าสมัยและอัปเกรดอัตโนมัติ
 
-`provider-id` is the canonical provider key used across selection and auth lookup.
+`provider-id` คือคีย์ประจำตัว (canonical key) ของผู้ให้บริการที่ใช้ตลอดการเลือกและการค้นหาการตรวจสอบสิทธิ์
 
-`equivalence` is optional and configures canonical model grouping on top of concrete provider models:
+`equivalence` เป็นตัวเลือกเสริมและใช้กำหนดกลุ่มของโมเดลตามรูปแบบมาตรฐาน (canonical model) ที่อยู่เหนือโมเดลของผู้ให้บริการจริง (concrete provider models):
 
-- `overrides` maps an exact concrete selector (`provider/modelId`) to an official upstream canonical id
-- `exclude` opts a concrete selector out of canonical grouping
+- `overrides` จะจับคู่ตัวเลือกที่เป็นรูปธรรมแบบตรงตัว (`provider/modelId`) ไปยัง ID มาตรฐานที่ใช้อย่างเป็นทางการต้นน้ำ (official upstream canonical id)
+- `exclude` เลือกระบุว่าตัวเลือกที่เป็นรูปธรรมใดที่จะไม่รวมอยู่ในกลุ่มมาตรฐาน (canonical grouping)
 
 ## Provider-level fields
 
@@ -114,22 +115,22 @@ providers:
 
 ### Allowed auth/discovery values
 
-- `auth`: `apiKey` (default) or `none`
+- `auth`: `apiKey` (ค่าเริ่มต้น) หรือ `none`
 - `discovery.type`: `ollama`
 
 ## Validation rules (current)
 
 ### Full custom provider (`models` is non-empty)
 
-Required:
+สิ่งที่ต้องมี:
 
 - `baseUrl`
-- `apiKey` unless `auth: none`
-- `api` at provider level or each model
+- `apiKey` ยกเว้นตั้งค่า `auth: none`
+- `api` ที่ระดับผู้ให้บริการหรือในแต่ละโมเดล
 
 ### Override-only provider (`models` missing or empty)
 
-Must define at least one of:
+ต้องกำหนดอย่างน้อยหนึ่งค่าดังนี้:
 
 - `baseUrl`
 - `modelOverrides`
@@ -137,31 +138,31 @@ Must define at least one of:
 
 ### Discovery
 
-- `discovery` requires provider-level `api`.
+- `discovery` จำเป็นต้องมี `api` ระดับผู้ให้บริการ
 
 ### Model value checks
 
-- `id` required
-- `contextWindow` and `maxTokens` must be positive if provided
+- ต้องมี `id`
+- `contextWindow` และ `maxTokens` ต้องเป็นค่าบวกหากมีการกำหนดไว้
 
 ## Merge and override order
 
-ModelRegistry pipeline (on refresh):
+ขั้นตอนการทำงานของ ModelRegistry (เมื่อรีเฟรช):
 
-1. Load built-in providers/models from `@f5-sales-demo/pi-ai`.
-2. Load `models.yml` custom config.
-3. Apply provider overrides (`baseUrl`, `headers`) to built-in models.
-4. Apply `modelOverrides` (per provider + model id).
-5. Merge custom `models`:
-   - same `provider + id` replaces existing
-   - otherwise append
-6. Apply runtime-discovered models (currently Ollama and LM Studio), then re-apply model overrides.
+1. โหลดผู้ให้บริการ/โมเดลที่มีมาให้จาก `@f5-sales-demo/pi-ai`
+2. โหลดไฟล์กำหนดค่าแบบกำหนดเอง `models.yml`
+3. นำการแทนที่ของผู้ให้บริการ (`baseUrl`, `headers`) ไปใช้กับโมเดลที่มีมาให้
+4. นำ `modelOverrides` ไปใช้ (แยกตามผู้ให้บริการ + รหัสโมเดล)
+5. รวม `models` แบบกำหนดเอง:
+   - `provider + id` เดียวกันจะแทนที่ของเดิมที่มีอยู่
+   - มิฉะนั้นจะเพิ่มต่อท้าย
+6. นำโมเดลที่ค้นพบขณะทำงานไปใช้ (ปัจจุบันคือ Ollama และ LM Studio) จากนั้นนำการแทนที่ของโมเดลไปใช้อีกครั้ง
 
 ## Canonical model equivalence and coalescing
 
-The registry keeps every concrete provider model and then builds a canonical layer above them.
+รีจิสทรีจะเก็บโมเดลของผู้ให้บริการจริง (concrete provider model) ทุกตัวไว้ จากนั้นจึงสร้างเลเยอร์มาตรฐาน (canonical layer) ครอบไว้ด้านบน
 
-Canonical ids are official upstream ids only, for example:
+ID มาตรฐาน (Canonical ids) เป็น ID ที่เป็นทางการของต้นน้ำเท่านั้น ตัวอย่างเช่น:
 
 - `claude-opus-4-6`
 - `claude-haiku-4-5`
@@ -169,7 +170,7 @@ Canonical ids are official upstream ids only, for example:
 
 ### `models.yml` equivalence config
 
-Example:
+ตัวอย่าง:
 
 ```yaml
 providers:
@@ -198,77 +199,77 @@ equivalence:
     - demo/codex-preview
 ```
 
-Build order for canonical grouping:
+ลำดับการสร้างการจัดกลุ่มมาตรฐาน:
 
-1. exact user override from `equivalence.overrides`
-2. bundled official-id matches from built-in model metadata
-3. conservative heuristic normalization for gateway/provider variants
-4. fallback to the concrete model's own id
+1. การแทนที่โดยผู้ใช้แบบตรงตัวจาก `equivalence.overrides`
+2. การจับคู่ official-id แบบแนบมากับข้อมูลโมเดล (built-in model metadata)
+3. การทำ normalization ด้วยฮิวริสติกแบบระมัดระวัง (conservative heuristic) สำหรับสายพันธุ์รูปแบบเกตเวย์/ผู้ให้บริการ (gateway/provider variants)
+4. กรณีสำรอง (fallback) ไปใช้ ID ของโมเดลจริง (concrete model)
 
-Current heuristics are intentionally narrow:
+ฮิวริสติกปัจจุบันได้รับการตั้งใจให้มีความแคบ:
 
-- embedded upstream prefixes can be stripped when present, for example `anthropic/...` or `openai/...`
-- dotted and dashed version variants can normalize only when they map to an existing official id, for example `4.6 -> 4-6`
-- ambiguous families or versions are not merged without a bundled match or explicit override
+- คำนำหน้าจากต้นน้ำ (upstream prefixes) ที่ฝังอยู่สามารถถูกตัดออกได้เมื่อมีอยู่ เช่น `anthropic/...` หรือ `openai/...`
+- รูปแบบเวอร์ชันที่มีจุดและขีด (dotted and dashed) สามารถถูกทำ normalize ได้ก็ต่อเมื่อจับคู่กับ official id ที่มีอยู่เท่านั้น เช่น `4.6 -> 4-6`
+- กลุ่ม (families) หรือเวอร์ชันที่กำกวมจะไม่ถูกนำมารวมหากไม่มีการจับคู่ที่มีมาให้ (bundled match) หรือการแทนที่อย่างชัดเจน
 
 ### Canonical resolution behavior
 
-When multiple concrete variants share a canonical id, resolution uses:
+เมื่อหลายโมเดลจริงใช้ canonical id ร่วมกัน การแก้ปัญหาจะใช้:
 
-1. availability and auth
-2. `config.yml` `modelProviderOrder`
-3. existing registry/provider order if `modelProviderOrder` is unset
+1. ความพร้อมใช้งาน (availability) และการตรวจสอบสิทธิ์ (auth)
+2. `modelProviderOrder` ใน `config.yml`
+3. ลำดับของรีจิสทรี/ผู้ให้บริการที่มีอยู่เดิมหากไม่มีการตั้งค่า `modelProviderOrder`
 
-Disabled or unauthenticated providers are skipped.
+ผู้ให้บริการที่ถูกปิดการใช้งานหรือไม่ผ่านการตรวจสอบสิทธิ์จะถูกข้าม
 
-Session state and transcripts continue to record the concrete provider/model that actually executed the turn.
+สถานะเซสชันและบันทึกประวัติ (transcripts) จะยังคงบันทึกข้อมูลของผู้ให้บริการ/โมเดลจริงที่รันงานในรอบนั้นๆ
 
-Provider defaults vs per-model overrides:
+ค่าเริ่มต้นของผู้ให้บริการ (Provider defaults) เทียบกับการแทนที่แต่ละโมเดล (per-model overrides):
 
-- Provider `headers` are baseline.
-- Model `headers` override provider header keys.
-- `modelOverrides` can override model metadata (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`).
-- `compat` is deep-merged for nested routing blocks (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`).
+- `headers` ของผู้ให้บริการถือเป็นค่าพื้นฐาน (baseline)
+- `headers` ของโมเดลจะแทนที่คีย์ header ของผู้ให้บริการ
+- `modelOverrides` สามารถแทนที่ข้อมูล metadata ของโมเดลได้ (`name`, `reasoning`, `input`, `cost`, `contextWindow`, `maxTokens`, `headers`, `compat`, `contextPromotionTarget`)
+- `compat` จะถูกควบรวมลึก (deep-merged) สำหรับบล็อกที่ทำหน้าที่กำหนดเส้นทางแบบซ้อน (nested routing blocks) เช่น (`openRouterRouting`, `vercelGatewayRouting`, `extraBody`)
 
 ## Runtime discovery integration
 
 ### Implicit Ollama discovery
 
-If `ollama` is not explicitly configured, registry adds an implicit discoverable provider:
+หากไม่มีการตั้งค่า `ollama` ไว้โดยตรง รีจิสทรีจะเพิ่มผู้ให้บริการที่สามารถค้นพบได้แบบโดยนัย (implicit discoverable provider) เข้าไป:
 
-- provider: `ollama`
+- ผู้ให้บริการ: `ollama`
 - api: `openai-completions`
-- base URL: `OLLAMA_BASE_URL` or `http://127.0.0.1:11434`
-- auth mode: keyless (`auth: none` behavior)
+- URL ฐาน: `OLLAMA_BASE_URL` หรือ `http://127.0.0.1:11434`
+- โหมดการตรวจสอบสิทธิ์: ไม่ใช้คีย์ (พฤติกรรมแบบ `auth: none`)
 
-Runtime discovery calls `GET /api/tags` on Ollama and synthesizes model entries with local defaults.
+การค้นพบขณะทำงานจะเรียก API `GET /api/tags` บน Ollama และสังเคราะห์รายการโมเดลด้วยค่าเริ่มต้นระดับโลคัล
 
 ### Implicit llama.cpp discovery
 
-If `llama.cpp` is not explicitly configured, registry adds an implicit discoverable provider:
-Note: it's using the newer antropic messages api instead of the openai-competions.
+หากไม่มีการตั้งค่า `llama.cpp` ไว้โดยตรง รีจิสทรีจะเพิ่มผู้ให้บริการที่สามารถค้นพบได้แบบโดยนัยเข้าไป:
+หมายเหตุ: ส่วนนี้ใช้ API ใหม่ anthropic messages แทนที่จะเป็น openai-completions
 
-- provider: `llama.cpp`
+- ผู้ให้บริการ: `llama.cpp`
 - api: `openai-responses`
-- base URL: `LLAMA_CPP_BASE_URL` or `http://127.0.0.1:8080`
-- auth mode: keyless (`auth: none` behavior)
+- URL ฐาน: `LLAMA_CPP_BASE_URL` หรือ `http://127.0.0.1:8080`
+- โหมดการตรวจสอบสิทธิ์: ไม่ใช้คีย์ (พฤติกรรมแบบ `auth: none`)
 
-Runtime discovery calls `GET models` on llama.cpp and synthesizes model entries with local defaults.
+การค้นพบขณะทำงานจะเรียก `GET models` บน llama.cpp และสังเคราะห์รายการโมเดลด้วยค่าเริ่มต้นระดับโลคัล
 
 ### Implicit LM Studio discovery
 
-If `lm-studio` is not explicitly configured, registry adds an implicit discoverable provider:
+หากไม่มีการตั้งค่า `lm-studio` ไว้โดยตรง รีจิสทรีจะเพิ่มผู้ให้บริการที่สามารถค้นพบได้แบบโดยนัยเข้าไป:
 
-- provider: `lm-studio`
+- ผู้ให้บริการ: `lm-studio`
 - api: `openai-completions`
-- base URL: `LM_STUDIO_BASE_URL` or `http://127.0.0.1:1234/v1`
-- auth mode: keyless (`auth: none` behavior)
+- URL ฐาน: `LM_STUDIO_BASE_URL` หรือ `http://127.0.0.1:1234/v1`
+- โหมดการตรวจสอบสิทธิ์: ไม่ใช้คีย์ (พฤติกรรมแบบ `auth: none`)
 
-Runtime discovery fetches models (`GET /models`) and synthesizes model entries with local defaults.
+การค้นพบขณะทำงานจะดึงรายชื่อโมเดล (`GET /models`) และสังเคราะห์รายการโมเดลด้วยค่าเริ่มต้นระดับโลคัล
 
 ### Explicit provider discovery
 
-You can configure discovery yourself:
+คุณสามารถกำหนดค่าการค้นพบได้เอง:
 
 ```yaml
 providers:
@@ -289,157 +290,157 @@ providers:
 
 ### Extension provider registration
 
-Extensions can register providers at runtime (`pi.registerProvider(...)`), including:
+ส่วนขยายสามารถลงทะเบียนผู้ให้บริการขณะทำงาน (runtime) ได้ (`pi.registerProvider(...)`) ซึ่งรวมถึง:
 
-- model replacement/append for a provider
-- custom stream handler registration for new API IDs
-- custom OAuth provider registration
+- การแทนที่/การเพิ่มโมเดลสำหรับผู้ให้บริการ
+- การลงทะเบียนตัวจัดการสตรีมแบบกำหนดเอง (custom stream handler) สำหรับ API ID ใหม่ๆ
+- การลงทะเบียนผู้ให้บริการ OAuth แบบกำหนดเอง
 
 ## Auth and API key resolution order
 
-When requesting a key for a provider, effective order is:
+เมื่อมีการขอคีย์สำหรับผู้ให้บริการ ลำดับการทำงานที่มีผลใช้งานคือ:
 
-1. Runtime override (CLI `--api-key`)
-2. Stored API key credential in `agent.db`
-3. Stored OAuth credential in `agent.db` (with refresh)
-4. Environment variable mapping (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
-5. ModelRegistry fallback resolver (provider `apiKey` from `models.yml`, env-name-or-literal semantics)
+1. การแทนที่ขณะทำงาน (Runtime override) (ใช้งานผ่าน CLI `--api-key`)
+2. ข้อมูลประจำตัว API key ที่จัดเก็บไว้ใน `agent.db`
+3. ข้อมูลประจำตัว OAuth ที่จัดเก็บไว้ใน `agent.db` (พร้อมกับการรีเฟรช)
+4. การจับคู่ตัวแปรสภาพแวดล้อม (Environment variable mapping) (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, เป็นต้น)
+5. ตัวจัดการการสำรอง (fallback resolver) ของ ModelRegistry (`apiKey` ของผู้ให้บริการจาก `models.yml`, รองรับเชิงความหมายแบบ env-name-or-literal)
 
-`models.yml` `apiKey` behavior:
+พฤติกรรมของ `apiKey` ใน `models.yml`:
 
-- Value is first treated as an environment variable name.
-- If no env var exists, the literal string is used as the token.
+- ค่าจะถูกประเมินเป็นชื่อของตัวแปรสภาพแวดล้อมเป็นอันดับแรก
+- หากไม่มีตัวแปรสภาพแวดล้อมอยู่ ระบบจะใช้สตริงที่มีค่าตรงตัว (literal string) นั้นเป็นโทเค็น
 
-If `authHeader: true` and provider `apiKey` is set, models get:
+หากตั้งค่า `authHeader: true` และมีการกำหนด `apiKey` ของผู้ให้บริการ โมเดลจะได้รับ:
 
-- `Authorization: Bearer <resolved-key>` header injected.
+- การแทรก header `Authorization: Bearer <resolved-key>`
 
-Keyless providers:
+ผู้ให้บริการที่ไม่ต้องใช้คีย์ (Keyless providers):
 
-- Providers marked `auth: none` are treated as available without credentials.
-- `getApiKey*` returns `kNoAuth` for them.
+- ผู้ให้บริการที่มีการระบุ `auth: none` จะถือว่าพร้อมใช้งานโดยไม่ต้องมีข้อมูลประจำตัว (credentials)
+- การเรียก `getApiKey*` จะส่งคืน `kNoAuth` สำหรับกลุ่มเหล่านี้
 
 ## Model availability vs all models
 
-- `getAll()` returns the loaded model registry (built-in + merged custom + discovered).
-- `getAvailable()` filters to models that are keyless or have resolvable auth.
+- `getAll()` ส่งคืนรีจิสทรีของโมเดลที่โหลดไว้ทั้งหมด (โมเดลที่มีมาให้ + ที่กำหนดเองและรวมแล้ว + ที่ค้นพบ)
+- `getAvailable()` กรองเฉพาะโมเดลที่ไม่ต้องใช้คีย์ (keyless) หรือมีการตรวจสอบสิทธิ์ที่สามารถหาค่าคีย์ได้ (resolvable auth)
 
-So a model can exist in registry but not be selectable until auth is available.
+ดังนั้น โมเดลสามารถอยู่ในรีจิสทรีได้ แต่จะไม่สามารถเลือกใช้ได้จนกว่าการตรวจสอบสิทธิ์จะพร้อมใช้งาน
 
 ## Runtime model resolution
 
 ### CLI and pattern parsing
 
-`model-resolver.ts` supports:
+`model-resolver.ts` รองรับ:
 
-- exact `provider/modelId`
-- exact canonical model id
-- exact model id (provider inferred)
-- fuzzy/substring matching
-- glob scope patterns in `--models` (e.g. `openai/*`, `*sonnet*`)
-- optional `:thinkingLevel` suffix (`off|minimal|low|medium|high|xhigh`)
+- รูปแบบ `provider/modelId` แบบแม่นยำ (exact)
+- รูปแบบ canonical model id แบบแม่นยำ
+- รูปแบบ model id แบบแม่นยำ (โดยที่ผู้ให้บริการจะถูกอนุมาน)
+- การจับคู่แบบคลุมเครือ/บางส่วน (fuzzy/substring matching)
+- รูปแบบ glob scope ใน `--models` (เช่น `openai/*`, `*sonnet*`)
+- คำต่อท้าย (suffix) ทางเลือก `:thinkingLevel` (`off|minimal|low|medium|high|xhigh`)
 
-`--provider` is legacy; `--model` is preferred.
+`--provider` เป็นแบบดั้งเดิม ควรใช้ `--model` มากกว่า
 
-Resolution precedence for exact selectors:
+ลำดับความสำคัญ (precedence) การวิเคราะห์สำหรับตัวเลือกแบบแม่นยำ:
 
-1. exact `provider/modelId` bypasses coalescing
-2. exact canonical id resolves through the canonical index
-3. exact bare concrete id still works
-4. fuzzy and glob matching run after the exact paths
+1. รูปแบบ `provider/modelId` แบบแม่นยำจะข้ามกระบวนการรวมเข้าด้วยกัน (coalescing)
+2. รูปแบบ canonical id แบบแม่นยำจะวิเคราะห์ผ่าน canonical index
+3. รูปแบบ ID ตรงตัวที่ไม่ระบุผู้ให้บริการ (bare concrete id) ยังคงใช้งานได้
+4. การจับคู่แบบ fuzzy และ glob จะทำงานหลังจากเส้นทางแบบแม่นยำ
 
 ### Initial model selection priority
 
-`findInitialModel(...)` uses this order:
+`findInitialModel(...)` ใช้ลำดับต่อไปนี้:
 
-1. explicit CLI provider+model
-2. first scoped model (if not resuming)
-3. saved default provider/model
-4. known provider defaults (e.g. OpenAI/Anthropic/etc.) among available models
-5. first available model
+1. การระบุ provider+model แบบชัดเจนผ่าน CLI
+2. โมเดลแรกในขอบเขต (หากไม่ใช่การทำงานต่อ)
+3. โมเดล/ผู้ให้บริการเริ่มต้นที่บันทึกไว้
+4. ค่าเริ่มต้นของผู้ให้บริการที่เป็นที่รู้จัก (เช่น OpenAI/Anthropic/เป็นต้น) จากกลุ่มโมเดลที่พร้อมใช้งาน
+5. โมเดลตัวแรกที่พร้อมใช้งาน
 
 ### Role aliases and settings
 
-Supported model roles:
+บทบาทของโมเดลที่รองรับ:
 
 - `default`, `smol`, `slow`, `plan`, `commit`
 
-Role aliases like `pi/smol` expand through `settings.modelRoles`. Each role value can also append a thinking selector such as `:minimal`, `:low`, `:medium`, or `:high`.
+นามแฝงของบทบาท (Role aliases) เช่น `pi/smol` จะถูกขยายผ่าน `settings.modelRoles` ค่าของบทบาทแต่ละตัวยังสามารถต่อท้ายด้วยตัวเลือกระดับความคิด (thinking selector) ได้ เช่น `:minimal`, `:low`, `:medium`, หรือ `:high`
 
-If a role points at another role, the target model still inherits normally and any explicit suffix on the referring role wins for that role-specific use.
+หากบทบาทชี้ไปยังอีกบทบาทหนึ่ง โมเดลปลายทางยังคงสืบทอด (inherits) ตามปกติ และการใส่คำต่อท้ายที่ระบุชัดเจนบนบทบาทที่อ้างถึง จะมีความสำคัญเหนือกว่าสำหรับการใช้งานเฉพาะบทบาทนั้น
 
-Related settings:
+การตั้งค่าที่เกี่ยวข้อง:
 
-- `modelRoles` (record)
-- `enabledModels` (scoped pattern list)
-- `modelProviderOrder` (global canonical-provider precedence)
-- `providers.kimiApiFormat` (`openai` or `anthropic` request format)
-- `providers.openaiWebsockets` (`auto|off|on` websocket preference for OpenAI Codex transport)
+- `modelRoles` (บันทึกข้อมูล)
+- `enabledModels` (รายการของรูปแบบขอบเขต)
+- `modelProviderOrder` (ลำดับความสำคัญของ canonical-provider ระดับโกลบอล)
+- `providers.kimiApiFormat` (รูปแบบคำขอ `openai` หรือ `anthropic`)
+- `providers.openaiWebsockets` (การตั้งค่า `auto|off|on` สำหรับ websocket ของ OpenAI Codex transport)
 
-`modelRoles` may store either:
+`modelRoles` อาจเก็บค่าเป็นอย่างใดอย่างหนึ่งระหว่าง:
 
-- `provider/modelId` to pin a concrete provider variant
-- a canonical id such as `gpt-5.3-codex` to allow provider coalescing
+- `provider/modelId` เพื่อปักหมุดที่สายพันธุ์โมเดลแบบเจาะจง
+- canonical id เช่น `gpt-5.3-codex` เพื่ออนุญาตให้เกิดการรวมแบบผู้ให้บริการหลายราย
 
-For `enabledModels` and CLI `--models`:
+สำหรับ `enabledModels` และ CLI `--models`:
 
-- exact canonical ids expand to all concrete variants in that canonical group
-- explicit `provider/modelId` entries stay exact
-- globs and fuzzy matches still operate on concrete models
+- canonical id แบบแม่นยำจะขยายไปยังสายพันธุ์โมเดลเจาะจง (concrete variants) ทั้งหมดในกลุ่ม canonical นั้น
+- รายการ `provider/modelId` แบบชัดเจนจะยังคงความแม่นยำไว้
+- การจับคู่แบบ globs และ fuzzy ยังคงทำงานบนโมเดลที่เจาะจง
 
 ## `/model` and `--list-models`
 
-Both surfaces keep provider-prefixed models visible and selectable.
+ทั้งสองช่องทาง (surfaces) จะแสดงโมเดลที่มีคำนำหน้าเป็นชื่อผู้ให้บริการ (provider-prefixed) และสามารถเลือกได้
 
-They now also expose canonical/coalesced models:
+ทั้งสองช่องทางตอนนี้จะแสดงข้อมูลโมเดลแบบ canonical/coalesced ด้วย:
 
-- `/model` includes a canonical view alongside provider tabs
-- `--list-models` prints a canonical section plus the concrete provider rows
+- `/model` มีมุมมองรูปแบบ canonical ควบคู่ไปกับแท็บผู้ให้บริการ (provider tabs)
+- `--list-models` แสดงส่วนที่เป็น canonical ตามด้วยแถวแสดงผู้ให้บริการที่เจาะจง
 
-Selecting a canonical entry stores the canonical selector. Selecting a provider row stores the explicit `provider/modelId`.
+การเลือกรายการแบบ canonical จะเป็นการบันทึก canonical selector แต่ถ้าเลือกที่แถวแบบผู้ให้บริการ จะเป็นการบันทึก `provider/modelId` แบบชัดเจน
 
 ## Context promotion (model-level fallback chains)
 
-Context promotion is an overflow recovery mechanism for small-context variants (for example `*-spark`) that automatically promotes to a larger-context sibling when the API rejects a request with a context length error.
+การเลื่อนระดับบริบทคือกลไกการกู้คืนเมื่อข้อมูลล้น (overflow recovery mechanism) สำหรับโมเดลสายพันธุ์ที่ใช้บริบทน้อย (ตัวอย่างเช่น `*-spark`) ซึ่งจะเลื่อนระดับโดยอัตโนมัติไปยังพี่น้อง (sibling) ที่รองรับบริบทได้ใหญ่กว่า เมื่อ API ปฏิเสธคำขอจากข้อผิดพลาดความยาวบริบทที่เกิน (context length error)
 
 ### Trigger and order
 
-When a turn fails with a context overflow error (e.g. `context_length_exceeded`), `AgentSession` attempts promotion **before** falling back to compaction:
+เมื่อการทำงานล้มเหลวเนื่องจากข้อผิดพลาดบริบทล้น (เช่น `context_length_exceeded`) ตัว `AgentSession` จะพยายามทำการเลื่อนระดับ **ก่อน** ที่จะสลับไปใช้งานการบีบอัด (compaction):
 
-1. If `contextPromotion.enabled` is true, resolve a promotion target (see below).
-2. If a target is found, switch to it and retry the request — no compaction needed.
-3. If no target is available, fall through to auto-compaction on the current model.
+1. หาก `contextPromotion.enabled` เป็นจริง (true) ระบบจะค้นหาเป้าหมายการเลื่อนระดับ (ดูด้านล่าง)
+2. หากพบเป้าหมาย จะสลับไปใช้เป้าหมายนั้นแล้วลองส่งคำขออีกครั้ง — ไม่ต้องมีการบีบอัด
+3. หากไม่มีเป้าหมายที่พร้อมใช้งาน ให้ข้ามไปยังการบีบอัดอัตโนมัติ (auto-compaction) ในโมเดลปัจจุบัน
 
 ### Target selection
 
-Selection is model-driven, not role-driven:
+การเลือกนี้ขับเคลื่อนโดยโมเดล (model-driven) ไม่ใช่โดยบทบาท (role-driven):
 
-1. `currentModel.contextPromotionTarget` (if configured)
-2. smallest larger-context model on the same provider + API
+1. `currentModel.contextPromotionTarget` (หากได้ตั้งค่าไว้)
+2. โมเดลที่มีบริบทใหญ่กว่า แต่มีขนาดเล็กที่สุดของผู้ให้บริการและ API รายเดียวกัน
 
-Candidates are ignored unless credentials resolve (`ModelRegistry.getApiKey(...)`).
+ตัวเลือกที่เป็นไปได้จะถูกข้าม (ignored) ไป เว้นแต่ว่าจะสามารถตรวจสอบข้อมูลประจำตัวได้ (`ModelRegistry.getApiKey(...)`)
 
 ### OpenAI Codex websocket handoff
 
-If switching from/to `openai-codex-responses`, session provider state key `openai-codex-responses` is closed before model switch. This drops websocket transport state so the next turn starts clean on the promoted model.
+หากสลับไปมาจาก `openai-codex-responses` สถานะคีย์ (state key) ผู้ให้บริการของเซสชันสำหรับ `openai-codex-responses` จะถูกปิดก่อนสลับโมเดล ซึ่งจะยกเลิกสถานะการส่งผ่าน websocket (websocket transport state) ดังนั้นรอบถัดไปจะเริ่มทำงานอย่างสะอาดหมดจดบนโมเดลใหม่ที่ได้รับการเลื่อนระดับ
 
 ### Persistence behavior
 
-Promotion uses temporary switching (`setModelTemporary`):
+การเลื่อนระดับใช้การสลับชั่วคราว (`setModelTemporary`):
 
-- recorded as a temporary `model_change` in session history
-- does not rewrite saved role mapping
+- ถูกบันทึกไว้ในฐานะของ `model_change` แบบชั่วคราวในประวัติเซสชัน
+- ไม่เขียนทับการแมปบทบาทที่บันทึกไว้
 
 ### Configuring explicit fallback chains
 
-Configure fallback directly in model metadata via `contextPromotionTarget`.
+กำหนดค่าการสำรองโดยตรงที่ข้อมูล metadata ของโมเดลผ่าน `contextPromotionTarget`
 
-`contextPromotionTarget` accepts either:
+`contextPromotionTarget` รองรับรูปแบบใดรูปแบบหนึ่งดังนี้:
 
-- `provider/model-id` (explicit)
-- `model-id` (resolved within current provider)
+- `provider/model-id` (แบบชัดเจน)
+- `model-id` (จะถูกตรวจสอบหา (resolved) ภายในผู้ให้บริการปัจจุบัน)
 
-Example (`models.yml`) for Spark -> non-Spark on the same provider:
+ตัวอย่าง (`models.yml`) สำหรับ Spark -> ไม่ใช่-Spark (non-Spark) กับผู้ให้บริการเดียวกัน:
 
 ```yaml
 providers:
@@ -449,20 +450,20 @@ providers:
         contextPromotionTarget: openai-codex/gpt-5.3-codex
 ```
 
-The built-in model generator also assigns this automatically for `*-spark` models when a same-provider base model exists.
+ระบบจำลองรูปแบบ (model generator) ที่มากับระบบจะกำหนดค่านี้ให้โดยอัตโนมัติสำหรับโมเดลจำพวก `*-spark` เมื่อมีโมเดลหลัก (base model) จากผู้ให้บริการเดียวกันอยู่
 
 ## Compatibility and routing fields
 
-`models.yml` supports this `compat` subset:
+`models.yml` รองรับเซ็ตย่อย `compat` (compatibility) เหล่านี้:
 
 - `supportsStore`
 - `supportsDeveloperRole`
 - `supportsReasoningEffort`
-- `maxTokensField` (`max_completion_tokens` or `max_tokens`)
+- `maxTokensField` (`max_completion_tokens` หรือ `max_tokens`)
 - `openRouterRouting.only` / `openRouterRouting.order`
 - `vercelGatewayRouting.only` / `vercelGatewayRouting.order`
 
-These are consumed by the OpenAI-completions transport logic and combined with URL-based auto-detection.
+สิ่งเหล่านี้จะถูกนำไปใช้โดยตรรกะการส่งผ่าน (transport logic) แบบ OpenAI-completions และรวมเข้ากับการตรวจหาอัตโนมัติโดยอิงจาก URL (URL-based auto-detection)
 
 ## Practical examples
 
@@ -513,15 +514,15 @@ providers:
 
 ## LiteLLM proxy auto-configuration
 
-When both `LITELLM_BASE_URL` and `LITELLM_API_KEY` environment variables are set, xcsh automatically manages `models.yml` configuration for the LiteLLM proxy.
+เมื่อตัวแปรสภาพแวดล้อมทั้ง `LITELLM_BASE_URL` และ `LITELLM_API_KEY` มีการถูกตั้งค่า ตัว `xcsh` จะจัดการคอนฟิกของ `models.yml` สำหรับพร็อกซี LiteLLM แบบอัตโนมัติ
 
 ### First-run auto-generation
 
-If `models.yml` does not exist and LiteLLM env vars are detected, xcsh generates it automatically:
+หากไม่มี `models.yml` และตรวจพบตัวแปรสภาพแวดล้อมสำหรับ LiteLLM ตัว `xcsh` จะสร้างมันให้โดยอัตโนมัติ:
 
 ```yaml
-# Auto-generated by xcsh for LiteLLM proxy
-# API key resolved from LITELLM_API_KEY env var at runtime
+# สร้างโดยอัตโนมัติโดย xcsh สำหรับพร็อกซี LiteLLM
+# แก้ไข API key จากตัวแปรสภาพแวดล้อม LITELLM_API_KEY ในขณะทำงาน (runtime)
 configVersion: 1
 providers:
   anthropic:
@@ -529,55 +530,55 @@ providers:
     apiKey: LITELLM_API_KEY
 ```
 
-A default `config.yml` is also generated with sensible image provider settings.
+ไฟล์ `config.yml` ค่าเริ่มต้นก็จะถูกสร้างขึ้นมาเช่นกันพร้อมกับการตั้งค่าที่เหมาะสมสำหรับผู้ให้บริการรูปภาพ (image provider)
 
 ### Startup self-healing
 
-On every startup, `startupHealthCheck()` in the model registry runs the following checks:
+ในการเริ่มต้นระบบทุกครั้ง ฟังก์ชัน `startupHealthCheck()` ในระบบลงทะเบียนโมเดลจะรันการตรวจสอบดังต่อไปนี้:
 
 | Condition | Action |
-| --- | --- |
-| `models.yml` missing | Auto-generate from env vars |
-| `models.yml` corrupt or unparseable | Backup to `.bak`, regenerate |
-| `baseUrl` doesn't match `LITELLM_BASE_URL` | Backup to `.bak`, regenerate with new URL |
-| `configVersion` missing or outdated | Backup to `.bak`, regenerate with current version |
-| Config is healthy | No action |
+|-----------|--------|
+| `models.yml` missing | สร้างโดยอัตโนมัติ (Auto-generate) จากตัวแปรสภาพแวดล้อม (env vars) |
+| `models.yml` corrupt or unparseable | สำรองไฟล์ (Backup) เป็น `.bak`, จากนั้นสร้างขึ้นใหม่ |
+| `baseUrl` doesn't match `LITELLM_BASE_URL` | สำรองไฟล์เป็น `.bak`, สร้างขึ้นใหม่ด้วย URL ใหม่ |
+| `configVersion` missing or outdated | สำรองไฟล์เป็น `.bak`, สร้างขึ้นใหม่ด้วยเวอร์ชันล่าสุด |
+| Config is healthy | ไม่ดำเนินการใดๆ |
 
-All repairs create `.bak` backups before overwriting. All operations are idempotent.
+การซ่อมแซมทั้งหมดจะทำการสำรองเป็นไฟล์ `.bak` ก่อนทำการเขียนทับ การดำเนินการทั้งหมดเป็นแบบ idempotent (การทำซ้ำให้ผลเหมือนเดิม)
 
 ### CLI command
 
 ```bash
-xcsh setup litellm              # Generate or fix LiteLLM config
-xcsh setup litellm --check      # Validate without writing
-xcsh setup litellm --check --json  # Machine-readable validation output
+xcsh setup litellm              # สร้างหรือแก้ไขการตั้งค่า LiteLLM
+xcsh setup litellm --check      # ตรวจสอบความถูกต้องโดยไม่มีการเขียน
+xcsh setup litellm --check --json  # ผลลัพธ์การตรวจสอบแบบเครื่องอ่านได้ (Machine-readable)
 ```
 
 ### Required environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `LITELLM_BASE_URL` | LiteLLM proxy URL (e.g. `https://your-proxy.example.com`). Must start with `http://` or `https://`. |
-| `LITELLM_API_KEY` | API key for the proxy. Referenced by name in generated config, resolved at runtime. |
+| `LITELLM_BASE_URL` | URL ของพร็อกซี LiteLLM (เช่น `https://your-proxy.example.com`) ต้องขึ้นต้นด้วย `http://` หรือ `https://` |
+| `LITELLM_API_KEY` | API key สำหรับพร็อกซี จะถูกอ้างอิงตามชื่อที่ปรากฏในการกำหนดค่าที่สร้างขึ้น ซึ่งจะถูกค้นหาที่ runtime |
 
-If either variable is unset, auto-configuration is silently skipped.
+หากไม่พบตัวแปรตัวใดตัวหนึ่ง ระบบการกำหนดค่าอัตโนมัติจะถูกข้ามไปอย่างเงียบๆ
 
 ### Config versioning
 
-Generated configs include a `configVersion` field. When the generated format changes in future releases, xcsh detects outdated configs and automatically upgrades them (with backup).
+การกำหนดค่าที่สร้างขึ้นมาจะรวมฟิลด์ `configVersion` ไว้ด้วย เมื่อรูปแบบที่ใช้เปลี่ยนไปในอนาคต `xcsh` จะตรวจหาไฟล์กำหนดค่าที่ล้าสมัยและอัปเกรดมันโดยอัตโนมัติ (พร้อมการสำรองข้อมูล)
 
 ## Legacy consumer caveat
 
-Most model configuration now flows through `models.yml` via `ModelRegistry`.
+ขณะนี้การกำหนดค่าโมเดลส่วนใหญ่ถูกควบคุมและจัดการผ่าน `models.yml` ด้วย `ModelRegistry`
 
-One notable legacy path remains: web-search Anthropic auth resolution still reads `~/.xcsh/agent/models.json` directly in `src/web/search/auth.ts`.
+มีกระบวนการเก่าอยู่ 1 ส่วนที่ยังคงไว้: การตรวจสอบสิทธิ์ Anthropic ของระบบค้นหาเว็บ (web-search) ที่ยังคงอ่าน `~/.xcsh/agent/models.json` โดยตรงใน `src/web/search/auth.ts`
 
-If you rely on that specific path, keep JSON compatibility in mind until that module is migrated.
+หากคุณยังพึ่งพากระบวนการส่วนนั้นอยู่ โปรดระวังความเข้ากันได้แบบ JSON ไว้จนกว่าจะมีการปรับปรุงระบบสำหรับมอดูล (module) นั้น
 
 ## Failure mode
 
-If `models.yml` fails schema or validation checks:
+หาก `models.yml` ไม่ผ่านกระบวนการโครงสร้าง (schema) หรือกระบวนการตรวจสอบความถูกต้อง (validation checks):
 
-- If `LITELLM_BASE_URL` and `LITELLM_API_KEY` are set, the startup health check attempts auto-repair (backup corrupt file, regenerate from env vars). If repair succeeds, the registry reloads the fixed config.
-- If auto-repair is not possible (env vars unset, write failure), the registry keeps operating with built-in models.
-- Error is exposed via `ModelRegistry.getError()` and surfaced in UI/notifications.
+- หากมีตัวแปร `LITELLM_BASE_URL` และ `LITELLM_API_KEY` ถูกตั้งค่า การตรวจสอบระบบ (startup health check) จะพยายามซ่อมแซมให้โดยอัตโนมัติ (สำรองไฟล์เสีย สร้างไฟล์ขึ้นใหม่ด้วยค่าจากตัวแปร) ถ้าระบบซ่อมได้สำเร็จ ตัวรีจิสทรีก็จะรีโหลดคอนฟิกใหม่นั้น
+- แต่หากซ่อมไม่ได้ (เพราะตัวแปรสภาพแวดล้อมไม่ได้ถูกเซ็ต หรือเกิดปัญหาระหว่างเขียนข้อมูล) ตัวรีจิสทรีก็จะคงการดำเนินการไว้โดยใช้โมเดลแบบ built-in
+- ข้อผิดพลาดจะถูกแสดงออกมาผ่าน `ModelRegistry.getError()` และจะแจ้งไปที่หน้าจอการแสดงผลแบบ UI หรือในการแจ้งเตือน (notifications)
