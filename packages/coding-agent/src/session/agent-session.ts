@@ -1354,6 +1354,7 @@ export class AgentSession {
 
 						const previousTier = this.#routingCoordinator.getState().currentTier;
 						const previousFloor = this.#routingCoordinator.getState().escalationFloor;
+						const previousModel = this.model;
 
 						try {
 							this.agent.abort();
@@ -1386,6 +1387,13 @@ export class AgentSession {
 								this.#routingCoordinator.getStateMachine().setEscalationFloor(previousFloor);
 							} else {
 								this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+							}
+							if (previousModel) {
+								this.#setModelWithProviderSessionReset(previousModel, "runtime-switch");
+								this.sessionManager.appendModelChange(
+									`${previousModel.provider}/${previousModel.id}`,
+									"routing_switch_rollback",
+								);
 							}
 						} finally {
 							this.#scheduleAgentContinue({ delayMs: 10 });
