@@ -1328,33 +1328,40 @@ export class AgentSession {
 					this.agent.abort();
 					this.#routingCoordinator.restoreState({ currentTier: targetTier });
 					const performEscalationModelSwap = async () => {
-						const { resolveModelPool } = await import("../routing/presets");
-						const poolId = this.settings.get("routing.pools") as any;
-						const disabledPresets = this.settings.get("routing.disabledPresets") as readonly string[];
-						const familyPolicy = this.settings.get("routing.familyPolicy") as any;
-						const pool = resolveModelPool(
-							this.model ? `${this.model.provider}/${this.model.id}` : "",
-							poolId,
-							disabledPresets,
-							familyPolicy,
-						);
-						if (!pool) return;
-						const modelId = pool.tiers[targetTier];
-						if (!modelId) return;
-						const uId = modelId.includes("/") ? modelId : `${pool.provider}/${modelId}`;
-						const targetModel = this.#modelRegistry
-							.getAvailable()
-							.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
-						if (targetModel) {
-							await this.setModelRoutingSwitch(targetModel);
-							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
-							const { mapTierToEffort } = await import("../routing/effort");
-							const effort = mapTierToEffort(targetTier, effortMap);
-							this.setThinkingLevel(effort as any);
+						try {
+							const { resolveModelPool } = await import("../routing/presets");
+							const poolId = this.settings.get("routing.pools") as any;
+							const disabledPresets = this.settings.get("routing.disabledPresets") as readonly string[];
+							const familyPolicy = this.settings.get("routing.familyPolicy") as any;
+							const pool = resolveModelPool(
+								this.model ? `${this.model.provider}/${this.model.id}` : "",
+								poolId,
+								disabledPresets,
+								familyPolicy,
+							);
+							if (!pool) return;
+							const modelId = pool.tiers[targetTier];
+							if (!modelId) return;
+							const uId = modelId.includes("/") ? modelId : `${pool.provider}/${modelId}`;
+							const targetModel = this.#modelRegistry
+								.getAvailable()
+								.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
+							if (targetModel) {
+								await this.setModelRoutingSwitch(targetModel);
+								const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+								const { mapTierToEffort } = await import("../routing/effort");
+								const effort = mapTierToEffort(targetTier, effortMap);
+								this.setThinkingLevel(effort as any);
+							} else {
+								console.warn(`Escalation aborted: target model ${uId} not available in registry.`);
+							}
+						} catch (err) {
+							console.error("Escalation model swap failed", err);
+						} finally {
 							this.#scheduleAgentContinue({ delayMs: 10 });
 						}
 					};
-					performEscalationModelSwap().catch(err => console.error("Escalation model swap failed", err));
+					this.#trackPostPromptTask(performEscalationModelSwap());
 				}
 
 				this.#emitSessionEvent(

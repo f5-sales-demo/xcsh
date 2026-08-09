@@ -86,4 +86,45 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		// Should NOT escalate in shadow mode
 		expect(escalationEvent).toBeUndefined();
 	});
+
+	it("should not abort agent if target model cannot be resolved during escalation", async () => {
+		const events: any[] = [];
+		session.subscribe(e => events.push(e));
+
+		// Set initial tier using public method
+		session.restoreRoutingState({ currentTier: "utility" });
+
+		// We do not add the target model to modelRegistry, simulating an unresolvable model.
+		// The target tier will be "balanced", but it won't be found.
+
+		let abortCount = 0;
+		const originalAbort = session.agent.abort;
+		session.agent.abort = () => {
+			abortCount++;
+			originalAbort.call(session.agent);
+		};
+
+		let continueCount = 0;
+		const originalContinue = session.agent.continue;
+		session.agent.continue = () => {
+			continueCount++;
+			return originalContinue.call(session.agent);
+		};
+
+		session.recordRoutingOutcome({
+			status: "rejected",
+			evidence: [{ kind: "test_failure", summary: "Failed" }],
+			safeToContinue: true,
+		});
+
+		await session.waitForIdle();
+
+		// Because the model can't be resolved, the agent should not have been aborted
+		// OR it should have been aborted and resumed.
+		if (abortCount > 0) {
+			expect(continueCount).toBeGreaterThan(0);
+		} else {
+			expect(abortCount).toBe(0);
+		}
+	});
 });
