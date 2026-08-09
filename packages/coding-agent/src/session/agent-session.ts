@@ -1322,60 +1322,67 @@ export class AgentSession {
 			}
 
 			if (routingMode === "auto") {
-				this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
-
 				if (outcome.safeToContinue) {
 					this.agent.abort();
-					this.#routingCoordinator.restoreState({ currentTier: targetTier });
-					const performEscalationModelSwap = async () => {
-						try {
-							const { resolveModelPool } = await import("../routing/presets");
-							const poolId = this.settings.get("routing.pools") as any;
-							const disabledPresets = this.settings.get("routing.disabledPresets") as readonly string[];
-							const familyPolicy = this.settings.get("routing.familyPolicy") as any;
-							const pool = resolveModelPool(
-								this.model ? `${this.model.provider}/${this.model.id}` : "",
-								poolId,
-								disabledPresets,
-								familyPolicy,
-							);
-							if (!pool) return;
-							const modelId = pool.tiers[targetTier];
-							if (!modelId) return;
-							const uId = modelId.includes("/") ? modelId : `${pool.provider}/${modelId}`;
-							const targetModel = this.#modelRegistry
-								.getAvailable()
-								.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
-							if (targetModel) {
-								await this.setModelRoutingSwitch(targetModel);
-								const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
-								const { mapTierToEffort } = await import("../routing/effort");
-								const effort = mapTierToEffort(targetTier, effortMap);
-								this.setThinkingLevel(effort as any);
-							} else {
-								console.warn(`Escalation aborted: target model ${uId} not available in registry.`);
-							}
-						} catch (err) {
-							console.error("Escalation model swap failed", err);
-						} finally {
-							this.#scheduleAgentContinue({ delayMs: 10 });
-						}
-					};
-					this.#trackPostPromptTask(performEscalationModelSwap());
 				}
 
-				this.#emitSessionEvent(
-					sanitizeRoutingEvent({
-						type: "routing_escalated",
-						epochId: `route-${Date.now()}-esc`,
-						reasons: reasons,
-						mode: routingMode,
-						effectiveTier: targetTier,
-						state: this.#routingCoordinator.getState(),
-						selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
-						escalated: true,
-					}),
-				).catch(() => {});
+				const performEscalationModelSwap = async () => {
+					try {
+						const { resolveModelPool } = await import("../routing/presets");
+						const poolId = this.settings.get("routing.pools") as any;
+						const disabledPresets = this.settings.get("routing.disabledPresets") as readonly string[];
+						const familyPolicy = this.settings.get("routing.familyPolicy") as any;
+						const pool = resolveModelPool(
+							this.model ? `${this.model.provider}/${this.model.id}` : "",
+							poolId,
+							disabledPresets,
+							familyPolicy,
+						);
+						if (!pool) return;
+						const modelId = pool.tiers[targetTier];
+						if (!modelId) return;
+						const uId = modelId.includes("/") ? modelId : `${pool.provider}/${modelId}`;
+						const targetModel = this.#modelRegistry
+							.getAvailable()
+							.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
+
+						if (!targetModel) {
+							console.warn(`Escalation aborted: target model ${uId} not available in registry.`);
+							return;
+						}
+
+						this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
+						if (outcome.safeToContinue) {
+							this.#routingCoordinator.restoreState({ currentTier: targetTier });
+						}
+
+						await this.setModelRoutingSwitch(targetModel);
+						const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+						const { mapTierToEffort } = await import("../routing/effort");
+						const effort = mapTierToEffort(targetTier, effortMap);
+						this.setThinkingLevel(effort as any);
+
+						this.#emitSessionEvent(
+							sanitizeRoutingEvent({
+								type: "routing_escalated",
+								epochId: `route-${Date.now()}-esc`,
+								reasons: reasons,
+								mode: routingMode,
+								effectiveTier: targetTier,
+								state: this.#routingCoordinator.getState(),
+								selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
+								escalated: true,
+							}),
+						).catch(() => {});
+					} catch (err) {
+						console.error("Escalation model swap failed", err);
+					} finally {
+						if (outcome.safeToContinue) {
+							this.#scheduleAgentContinue({ delayMs: 10 });
+						}
+					}
+				};
+				this.#trackPostPromptTask(performEscalationModelSwap());
 			}
 		} else {
 			if (routingMode === "auto") {
