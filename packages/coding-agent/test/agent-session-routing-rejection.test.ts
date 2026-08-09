@@ -117,8 +117,8 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 
 		await session.waitForIdle();
 
-		expect(abortCount).toBe(1);
-		expect(continueCount).toBe(1);
+		expect(abortCount).toBe(0);
+		expect(continueCount).toBe(0);
 
 		expect(emitCount).toBe(0);
 		expect(session.getRoutingState().currentTier).toBe("utility");

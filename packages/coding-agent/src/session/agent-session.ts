@@ -1322,10 +1322,6 @@ export class AgentSession {
 			}
 
 			if (routingMode === "auto") {
-				if (outcome.safeToContinue) {
-					this.agent.abort();
-				}
-
 				const performEscalationModelSwap = async () => {
 					try {
 						const { resolveModelPool } = await import("../routing/presets");
@@ -1351,6 +1347,10 @@ export class AgentSession {
 							return;
 						}
 
+						if (outcome.safeToContinue) {
+							this.agent.abort();
+						}
+
 						this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
 						if (outcome.safeToContinue) {
 							this.#routingCoordinator.restoreState({ currentTier: targetTier });
@@ -1374,12 +1374,12 @@ export class AgentSession {
 								escalated: true,
 							}),
 						).catch(() => {});
-					} catch (err) {
-						console.error("Escalation model swap failed", err);
-					} finally {
+
 						if (outcome.safeToContinue) {
 							this.#scheduleAgentContinue({ delayMs: 10 });
 						}
+					} catch (err) {
+						console.error("Escalation model swap failed", err);
 					}
 				};
 				this.#trackPostPromptTask(performEscalationModelSwap());
