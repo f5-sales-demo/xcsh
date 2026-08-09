@@ -123,4 +123,56 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		expect(emitCount).toBe(0);
 		expect(session.getRoutingState().currentTier).toBe("utility");
 	});
+	it("should revert state and resume agent if target exists but switch/authentication fails", async () => {
+		modelRegistry.getAvailable = () => [{ provider: "openai", id: "gpt-5.4" }] as any;
+		session.setModelRoutingSwitch = async () => {
+			throw new Error("Simulated auth failure");
+		};
+
+		session.restoreRoutingState({ currentTier: "utility" });
+
+		let abortCount = 0;
+		session.agent.abort = () => {
+			abortCount++;
+		};
+
+		let continueCount = 0;
+		session.agent.continue = () => {
+			continueCount++;
+			return Promise.resolve();
+		};
+
+		session.recordRoutingOutcome({
+			status: "rejected",
+			evidence: [{ kind: "test_failure", summary: "Failed" }],
+			safeToContinue: true,
+		});
+
+		await session.waitForIdle();
+
+		expect(abortCount).toBe(1);
+		expect(continueCount).toBe(1);
+		expect(session.getRoutingState().currentTier).toBe("utility");
+	});
+
+	it("should not immediately switch model if outcome is unsafe to continue", async () => {
+		modelRegistry.getAvailable = () => [{ provider: "openai", id: "gpt-5.4" }] as any;
+
+		let switchCount = 0;
+		session.setModelRoutingSwitch = async () => {
+			switchCount++;
+		};
+
+		session.restoreRoutingState({ currentTier: "utility" });
+
+		session.recordRoutingOutcome({
+			status: "rejected",
+			evidence: [{ kind: "test_failure", summary: "Failed" }],
+			safeToContinue: false,
+		});
+
+		await session.waitForIdle();
+
+		expect(switchCount).toBe(0);
+	});
 });
