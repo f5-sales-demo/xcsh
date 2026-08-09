@@ -294,6 +294,8 @@ export interface PromptOptions {
 	 * the provider `onPayload` seam (per-turn, no client-side tool registration).
 	 */
 	serverTools?: Record<string, unknown>[];
+	/** Optional abort signal for early cancellation */
+	signal?: AbortSignal;
 }
 
 /** Result from cycleModel() */
@@ -756,6 +758,17 @@ export class AgentSession {
 			void this.#queueExtensionEvent(event);
 			return;
 		}
+
+		if (
+			event.type === "routing_decision" ||
+			event.type === "routing_applied" ||
+			event.type === "routing_escalated" ||
+			event.type === "routing_skipped" ||
+			(event.type as string) === "routing_floor_cleared"
+		) {
+			this.sessionManager.appendCustomEntry("routing_event", event);
+		}
+
 		await this.#emitExtensionEvent(event);
 		this.#emit(event);
 	}
@@ -1284,34 +1297,98 @@ export class AgentSession {
 		this.#routingCoordinator.restoreState(state);
 	}
 	public recordRoutingOutcome(outcome: RoutingOutcome): void {
+		const routingMode = this.settings.get("routing.mode") as import("../routing/types").RoutingMode;
 		if (outcome.status === "rejected") {
 			const hasUserFeedback = outcome.evidence.some(e => e.kind === "user_feedback");
 			const hasTestFailure = outcome.evidence.some(e => e.kind === "test_failure");
 			const hasBuildFailure = outcome.evidence.some(e => e.kind === "build_failure");
 			const hasLintFailure = outcome.evidence.some(e => e.kind === "lint_failure");
+			const hasRetryFallback = outcome.evidence.some(e => e.kind === "retry_fallback");
 
 			const reasons: import("../routing/types").RoutingReasonCode[] = [];
 			if (hasUserFeedback) reasons.push("prior_rejection");
 			if (hasTestFailure) reasons.push("test_failure");
 			if (hasBuildFailure) reasons.push("build_failure");
 			if (hasLintFailure) reasons.push("lint_failure");
+			if (hasRetryFallback) reasons.push("retry_fallback");
 
-			this.#routingCoordinator.getStateMachine().setEscalationFloor("frontier");
+			if (reasons.length === 0) return;
 
 			const routingState = this.#routingCoordinator.getState();
-			this.#emitSessionEvent(
-				sanitizeRoutingEvent({
-					type: "routing_escalated",
-					epochId: outcome.epochId,
-					reasons: reasons,
-					mode: this.settings.get("routing.mode") as import("../routing/types").RoutingMode,
-					effectiveTier: routingState.currentTier,
-					selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
-					escalated: true,
-				}),
-			).catch(() => {});
+			let targetTier: import("../routing/types").RoutingTier = "frontier";
+			if (outcome.safeToContinue) {
+				if (routingState.currentTier === "utility") targetTier = "balanced";
+				else if (routingState.currentTier === "balanced") targetTier = "frontier";
+			}
+
+			if (routingMode === "auto") {
+				const performEscalationModelSwap = async () => {
+					try {
+						const { resolveModelPool } = await import("../routing/presets");
+						const poolId = this.settings.get("routing.pools") as any;
+						const disabledPresets = this.settings.get("routing.disabledPresets") as readonly string[];
+						const familyPolicy = this.settings.get("routing.familyPolicy") as any;
+						const pool = resolveModelPool(
+							this.model ? `${this.model.provider}/${this.model.id}` : "",
+							poolId,
+							disabledPresets,
+							familyPolicy,
+						);
+						if (!pool) return;
+						const modelId = pool.tiers[targetTier];
+						if (!modelId) return;
+						const uId = modelId.includes("/") ? modelId : `${pool.provider}/${modelId}`;
+						const targetModel = this.#modelRegistry
+							.getAvailable()
+							.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
+
+						if (!targetModel) {
+							console.warn(`Escalation aborted: target model ${uId} not available in registry.`);
+							return;
+						}
+
+						if (outcome.safeToContinue) {
+							this.agent.abort();
+						}
+
+						this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
+						if (outcome.safeToContinue) {
+							this.#routingCoordinator.restoreState({ currentTier: targetTier });
+						}
+
+						await this.setModelRoutingSwitch(targetModel);
+						const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+						const { mapTierToEffort } = await import("../routing/effort");
+						const effort = mapTierToEffort(targetTier, effortMap);
+						this.setThinkingLevel(effort as any);
+
+						this.#emitSessionEvent(
+							sanitizeRoutingEvent({
+								type: "routing_escalated",
+								epochId: `route-${Date.now()}-esc`,
+								reasons: reasons,
+								mode: routingMode,
+								effectiveTier: targetTier,
+								state: this.#routingCoordinator.getState(),
+								selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
+								escalated: true,
+							}),
+						).catch(() => {});
+
+						if (outcome.safeToContinue) {
+							this.#scheduleAgentContinue({ delayMs: 10 });
+						}
+					} catch (err) {
+						console.error("Escalation model swap failed", err);
+					}
+				};
+				this.#trackPostPromptTask(performEscalationModelSwap());
+			}
 		} else {
-			this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+			if (routingMode === "auto") {
+				this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+				this.#emitSessionEvent({ type: "routing_floor_cleared" } as any).catch(() => {});
+			}
 		}
 	}
 	/**
@@ -2405,7 +2482,9 @@ export class AgentSession {
 	}
 
 	buildDisplaySessionContext(): SessionContext {
-		return deobfuscateSessionContext(this.sessionManager.buildSessionContext(), this.#obfuscator);
+		const context = deobfuscateSessionContext(this.sessionManager.buildSessionContext(), this.#obfuscator);
+		context.usedTokens = calculateUsedTokens(context.messages);
+		return context;
 	}
 
 	/** Convert session messages using the same pre-LLM pipeline as the active session. */
@@ -2713,172 +2792,242 @@ export class AgentSession {
 		// Evaluate dynamic model routing if enabled
 		const routingMode = (this.settings.get("routing.mode") as RoutingMode) ?? "off";
 		if (routingMode !== "off" && this.model) {
-			const anchorModel = `${this.model.provider}/${this.model.id}`;
-			const availableModels = this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
-			const startTime = Date.now();
-			const systemTokens = Math.round((this.systemPrompt?.length ?? 0) / 4);
-			const promptTokens = Math.round(expandedText.length / 4);
-			const toolsStr = JSON.stringify(Array.from(this.#toolRegistry.values()));
-			const toolsTokens = Math.round(toolsStr.length / 4);
-			const reserveTokens = (this.settings.get("compaction.reserveTokens") as number) ?? 0;
-			const contextEstimate = {
-				usedTokens: calculateUsedTokens(this.messages) + systemTokens + promptTokens + toolsTokens,
-				reserveTokens,
-				contextWindow: this.model.contextWindow ?? 128000,
-			};
-			const decision = await this.#routingCoordinator.evaluateTurn({
-				anchorModel,
-				mode: routingMode,
-				prompt: expandedText,
-				hasImages: options?.images && options.images.length > 0,
-				priorRejection: this.#routingCoordinator.getState().escalationFloor !== undefined,
-				availableModels,
-				customPools: validateCustomPools(this.settings.get("routing.pools")),
-				disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
-				familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
-				profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
-				contextEstimate,
-				getModelContextWindow: (modelId: string) => {
-					const found = this.#modelRegistry
-						.getAll()
-						.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
-					return found?.contextWindow ?? 128000;
-				},
-				runRoutingClassifier: async (utilityModel: string, promptText: string) => {
-					const resolved = this.#modelRegistry
-						.getAll()
-						.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
-					if (!resolved) throw new Error("Classifier model not found");
-					const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
-					if (!apiKey) throw new Error("No API key for classifier model");
-
-					const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number, "delegation"?: { "reason": string, "subtasks": { "id": string, "title": string, "description": string, "targetFilesOrPaths": string[], "desiredTier"?: string }[] } }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
-
-					const res = await completeSimple(
-						resolved,
-						{
-							systemPrompt: systemInstruction,
-							messages: [{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() }],
-						},
-						{ apiKey },
-					);
-					const rawText = res.content
-						.filter(c => c.type === "text")
-						.map(c => (c as TextContent).text)
-						.join("");
-
-					const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-					if (jsonMatch) {
-						const parsed = JSON.parse(jsonMatch[0]); // Check validity
-						if (res.usage) {
-							this.settings.getStorage()?.recordModelUsage(`${resolved.provider}/${resolved.id}`);
-							parsed.routingUsage = (res.usage as any).totalTokens ?? (res.usage as any).total ?? 0;
-						}
-						return JSON.stringify(parsed);
-					}
-					throw new Error("Classifier returned malformed JSON");
-				},
-				downshiftAfterTurns: (this.settings.get("routing.downshiftAfterTurns") as number) ?? 2,
-			});
-			const durationMs = Date.now() - startTime;
-
-			this.sessionManager.appendCustomEntry("routing_state", this.#routingCoordinator.getState());
-
-			this.#emitSessionEvent({
-				type: decision.applied ? "routing_applied" : "routing_decision",
-				epochId: decision.epochId,
-				mode: decision.mode,
-				provider: this.model.provider,
-				poolId: decision.poolId,
-				effectiveTier: decision.effectiveTier,
-				selectedModel: decision.selectedModel,
-				reasons: decision.reasons,
-				delegated: !!decision.delegation,
-				escalated: decision.reasons.some(
-					r => r === "context_capacity_promotion" || r === "escalation_floor_active",
-				),
-				contextTokens: contextEstimate.usedTokens,
-				routingUsage: decision.routingUsage,
-				durationMs,
-			} as any).catch(() => {});
-
-			if (decision.applied && decision.selectedModel && decision.selectedModel !== anchorModel) {
-				const targetModel = this.#modelRegistry
-					.getAvailable()
-					.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
-				if (targetModel) {
-					await this.setModelRoutingSwitch(targetModel);
-				}
-			}
-
-			if (
-				decision.applied &&
-				decision.delegation &&
-				(this.settings.get("routing.delegation") as string) === "read-only"
-			) {
-				const maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
-				const results = await executeReadOnlyDelegationPlan(
-					decision.delegation,
-					async subtaskPrompt => {
-						const utilityModelId = decision.poolId
-							? (this.settings.get("routing.pools") as any)?.[decision.poolId]?.tiers?.utility
-							: undefined;
-						const resolvedUtility = utilityModelId
-							? this.#modelRegistry
-									.getAvailable()
-									.find(m => `${m.provider}/${m.id}` === utilityModelId || m.id === utilityModelId)
-							: this.model;
-						if (!resolvedUtility) return "Delegation failed: no model.";
-
-						const { createAgentSession } = await import("../sdk");
-						const { SessionManager: SDKSessionManager } = await import("./session-manager");
-						const childSettings = await this.settings.cloneForCwd(process.cwd());
-						childSettings.set("routing.delegation", "off");
-						const { session: childSession } = await createAgentSession({
-							model: resolvedUtility,
-							sessionManager: SDKSessionManager.inMemory(),
-							settings: childSettings,
-							authStorage: this.#modelRegistry.authStorage,
-							modelRegistry: this.#modelRegistry,
-							toolNames: Array.from(this.#toolRegistry.values())
-								.map(t => t.name)
-								.filter(isDelegationAllowedTool),
-							enableLsp: false,
-							enableMCP: false,
-						});
-
-						try {
-							await childSession.prompt(subtaskPrompt);
-							return childSession
-								.buildDisplaySessionContext()
-								.messages.filter(m => m.role === "assistant")
-								.map(m =>
-									m.content
-										.filter((c: any) => c.type === "text")
-										.map((c: any) => c.text)
-										.join(""),
-								)
-								.join("\n");
-						} catch (err) {
-							return `Delegation failed: ${String(err)}`;
-						} finally {
-							await childSession.dispose();
-						}
+			if (this.#activeRetryFallback) {
+				this.#emitSessionEvent({
+					type: "routing_skipped",
+					epochId: `skip-${Date.now()}`,
+					reasons: ["retry_fallback"],
+				} as any).catch(() => {});
+			} else {
+				const anchorModel = `${this.model.provider}/${this.model.id}`;
+				const availableModels =
+					this.#scopedModels.length > 0
+						? this.#scopedModels.map(sm => `${sm.model.provider}/${sm.model.id}`)
+						: this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
+				const startTime = Date.now();
+				const systemTokens = Math.round((this.systemPrompt?.length ?? 0) / 4);
+				const promptTokens = Math.round(expandedText.length / 4);
+				const toolsStr = JSON.stringify(Array.from(this.#toolRegistry.values()));
+				const toolsTokens = Math.round(toolsStr.length / 4);
+				const reserveTokens = (this.settings.get("compaction.reserveTokens") as number) ?? 0;
+				const contextEstimate = {
+					usedTokens: calculateUsedTokens(this.messages) + systemTokens + promptTokens + toolsTokens,
+					reserveTokens,
+					contextWindow: this.model.contextWindow ?? 128000,
+				};
+				const decision = await this.#routingCoordinator.evaluateTurn({
+					anchorModel,
+					mode: routingMode,
+					prompt: expandedText,
+					hasImages: options?.images && options.images.length > 0,
+					priorRejection: this.#routingCoordinator.getState().escalationFloor !== undefined,
+					availableModels,
+					customPools: validateCustomPools(this.settings.get("routing.pools")),
+					disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
+					familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
+					profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
+					contextEstimate,
+					getModelContextWindow: (modelId: string) => {
+						const found = this.#modelRegistry
+							.getAll()
+							.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
+						return found?.contextWindow ?? 128000;
 					},
-					maxTasks,
-				);
+					runRoutingClassifier: async (utilityModel: string, promptText: string) => {
+						const resolved = this.#modelRegistry
+							.getAll()
+							.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
+						if (!resolved) throw new Error("Classifier model not found");
+						const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
+						if (!apiKey) throw new Error("No API key for classifier model");
 
-				if (results.length > 0) {
-					const delegationOutput = `\n\n<delegation_results>\n${JSON.stringify(results, null, 2)}\n</delegation_results>`;
-					expandedText += delegationOutput;
-					const textBlock = userContent.find(c => c.type === "text") as Extract<
-						(typeof userContent)[0],
-						{ type: "text" }
-					>;
-					if (textBlock) {
-						textBlock.text += delegationOutput;
-					} else {
-						userContent.push({ type: "text", text: delegationOutput });
+						const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number, "delegation"?: { "reason": string, "subtasks": { "id": string, "title": string, "description": string, "targetFilesOrPaths": string[], "desiredTier"?: string }[] } }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
+
+						const res = await completeSimple(
+							resolved,
+							{
+								systemPrompt: systemInstruction,
+								messages: [
+									{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() },
+								],
+							},
+							{ apiKey, signal: AbortSignal.timeout(15000) },
+						);
+						const rawText = res.content
+							.filter(c => c.type === "text")
+							.map(c => (c as TextContent).text)
+							.join("");
+
+						const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+						if (jsonMatch) {
+							const parsed = JSON.parse(jsonMatch[0]); // Check validity
+							if (res.usage) {
+								this.settings.getStorage()?.recordModelUsage(`${resolved.provider}/${resolved.id}`);
+								parsed.routingUsage = (res.usage as any).totalTokens ?? (res.usage as any).total ?? 0;
+							}
+							return JSON.stringify(parsed);
+						}
+						throw new Error("Classifier returned malformed JSON");
+					},
+					downshiftAfterTurns: (this.settings.get("routing.downshiftAfterTurns") as number) ?? 2,
+				});
+				const durationMs = Date.now() - startTime;
+
+				this.#emitSessionEvent({
+					type: decision.applied ? "routing_applied" : "routing_decision",
+					epochId: decision.epochId,
+					mode: decision.mode,
+					provider: this.model.provider,
+					poolId: decision.poolId,
+					effectiveTier: decision.effectiveTier,
+					selectedModel: decision.selectedModel,
+					reasons: decision.reasons,
+					delegated: !!decision.delegation,
+					escalated: decision.reasons.some(
+						r => r === "context_capacity_promotion" || r === "escalation_floor_active",
+					),
+					contextTokens: contextEstimate.usedTokens,
+					routingUsage: decision.routingUsage,
+					durationMs,
+					state: this.#routingCoordinator.getState(),
+				} as any).catch(() => {});
+
+				if (decision.selectedModel && decision.applied) {
+					const targetModel = this.#modelRegistry
+						.getAvailable()
+						.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
+					if (targetModel) {
+						const currentModelId = this.model ? `${this.model.provider}/${this.model.id}` : undefined;
+						const targetModelId = `${targetModel.provider}/${targetModel.id}`;
+						if (currentModelId !== targetModelId) {
+							await this.setModelRoutingSwitch(targetModel);
+						}
+						if (decision.effectiveTier) {
+							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+							const { mapTierToEffort } = await import("../routing/effort");
+							const effort = mapTierToEffort(decision.effectiveTier, effortMap);
+							this.setThinkingLevel(effort as any);
+						}
+					}
+				}
+
+				if (
+					decision.applied &&
+					decision.delegation &&
+					decision.delegation.subtasks.length > 1 &&
+					(this.settings.get("routing.delegation") as string) === "read-only"
+				) {
+					let maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
+					maxTasks = Math.min(Math.max(1, maxTasks), 3);
+
+					const { results, tokensUsed } = await executeReadOnlyDelegationPlan(
+						decision.delegation,
+						async (subtaskPrompt, signal) => {
+							if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+
+							const { resolveModelPool } = await import("../routing/presets");
+							const pool = resolveModelPool(
+								decision.poolId ?? (this.model ? `${this.model.provider}/${this.model.id}` : ""),
+								this.settings.get("routing.pools") as any,
+								this.settings.get("routing.disabledPresets") as readonly string[],
+								this.settings.get("routing.familyPolicy") as any,
+							);
+
+							let resolvedUtility = this.model;
+							if (pool?.tiers?.utility) {
+								let uId = pool.tiers.utility;
+								if (!uId.includes("/") && pool.provider) {
+									uId = `${pool.provider}/${uId}`;
+								}
+								const found = this.#modelRegistry
+									.getAvailable()
+									.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
+								if (found) resolvedUtility = found;
+							}
+
+							if (!resolvedUtility) return { result: "Delegation failed: no model.", tokens: 0 };
+
+							const { createAgentSession } = await import("../sdk");
+							const { SessionManager: SDKSessionManager } = await import("./session-manager");
+							const childSettings = await this.settings.cloneForCwd(process.cwd());
+							childSettings.set("routing.delegation", "off");
+
+							// Fix abort race by checking right before creation
+							if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+
+							const { session: childSession } = await createAgentSession({
+								model: resolvedUtility,
+								sessionManager: SDKSessionManager.inMemory(),
+								settings: childSettings,
+								authStorage: this.#modelRegistry.authStorage,
+								modelRegistry: this.#modelRegistry,
+								toolNames: Array.from(this.#toolRegistry.values())
+									.map(t => t.name)
+									.filter(isDelegationAllowedTool),
+								enableLsp: false,
+								enableMCP: false,
+							});
+
+							try {
+								const onAbort = () => childSession.agent.abort();
+								signal?.addEventListener("abort", onAbort);
+								if (signal?.aborted) {
+									onAbort();
+									return { result: "Delegation failed: Aborted", tokens: 0 };
+								}
+								try {
+									await childSession.prompt(subtaskPrompt);
+									if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+									const resultStr = childSession
+										.buildDisplaySessionContext()
+										.messages.filter(m => m.role === "assistant")
+										.map(m =>
+											m.content
+												.filter((c: any) => c.type === "text")
+												.map((c: any) => c.text)
+												.join(""),
+										)
+										.join("\n");
+									const tokens = childSession.buildDisplaySessionContext().usedTokens || 0;
+									return { result: resultStr, tokens };
+								} finally {
+									signal?.removeEventListener("abort", onAbort);
+								}
+							} catch (err) {
+								if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+								return { result: `Delegation failed: ${String(err)}`, tokens: 0 };
+							} finally {
+								await childSession.dispose();
+							}
+						},
+						maxTasks,
+						{ signal: options?.signal },
+					);
+
+					if (results.length > 0) {
+						let resultsString = JSON.stringify(results, null, 2);
+						if (resultsString.length > 8000) {
+							resultsString = `${resultsString.substring(0, 8000)}\n...[truncated]`;
+						}
+						const delegationOutput = `\n\n<delegation_results>\n${resultsString}\n</delegation_results>`;
+						expandedText += delegationOutput;
+						const textBlock = userContent.find(c => c.type === "text") as Extract<
+							(typeof userContent)[0],
+							{ type: "text" }
+						>;
+						if (textBlock) {
+							textBlock.text += delegationOutput;
+						} else {
+							userContent.push({ type: "text", text: delegationOutput });
+						}
+
+						this.#emitSessionEvent({
+							type: "routing_delegated",
+							epochId: decision.epochId,
+							tasks: decision.delegation.subtasks.length,
+							completed: results.length,
+							tokensUsed,
+						} as any).catch(() => {});
 					}
 				}
 			}
@@ -5707,11 +5856,6 @@ export class AgentSession {
 			this.#activeRetryFallback.lastAppliedFallbackThinkingLevel = nextThinkingLevel;
 		}
 
-		this.recordRoutingOutcome({
-			status: "rejected",
-			evidence: [{ kind: "test_failure", summary: `Fallback applied from ${currentSelector} to ${selector.raw}` }],
-		});
-
 		await this.#emitSessionEvent({
 			type: "retry_fallback_applied",
 			from: currentSelector,
@@ -6459,13 +6603,27 @@ export class AgentSession {
 	}
 
 	#syncRoutingStateFromBranch() {
-		const lastRoutingEntry = (this.sessionManager.getBranch() as any[]).findLast(
-			e => e.type === "custom" && e.customType === "routing_state",
-		);
-		if (lastRoutingEntry?.data) {
-			this.#routingCoordinator.restoreState(lastRoutingEntry.data);
-		} else {
-			this.#routingCoordinator.reset();
+		this.#routingCoordinator.reset();
+		const entries = this.sessionManager.getBranch();
+		for (const entry of entries) {
+			if (entry.type === "custom" && entry.customType === "routing_event") {
+				const event = entry.data as any;
+				if (event.state) {
+					this.#routingCoordinator.restoreState(event.state);
+				} else {
+					if (event.type === "routing_escalated") {
+						if (event.effectiveTier) {
+							this.#routingCoordinator.getStateMachine().setEscalationFloor(event.effectiveTier);
+						}
+					} else if (event.type === "routing_floor_cleared") {
+						this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+					} else if (event.type === "routing_applied" || event.type === "routing_decision") {
+						if (event.effectiveTier) {
+							this.#routingCoordinator.restoreState({ currentTier: event.effectiveTier });
+						}
+					}
+				}
+			}
 		}
 	}
 

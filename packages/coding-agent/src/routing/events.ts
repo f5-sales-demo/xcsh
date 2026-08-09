@@ -15,6 +15,7 @@ export interface RoutingEvent {
 	escalated?: boolean;
 	contextTokens?: number;
 	durationMs?: number;
+	state?: Partial<import("./state-machine").RoutingState>;
 }
 
 export function sanitizeRoutingEvent(event: Record<string, unknown>): RoutingEvent {
@@ -33,6 +34,7 @@ export function sanitizeRoutingEvent(event: Record<string, unknown>): RoutingEve
 		"escalated",
 		"contextTokens",
 		"durationMs",
+		"state",
 	]);
 
 	const sanitized: Record<string, unknown> = {};
@@ -57,6 +59,7 @@ export function sanitizeRoutingEvent(event: Record<string, unknown>): RoutingEve
 		escalated: sanitized.escalated as boolean | undefined,
 		contextTokens: sanitized.contextTokens as number | undefined,
 		durationMs: sanitized.durationMs as number | undefined,
+		state: sanitized.state as Partial<import("./state-machine").RoutingState> | undefined,
 	};
 }
 

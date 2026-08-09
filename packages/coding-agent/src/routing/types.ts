@@ -26,7 +26,8 @@ export type RoutingReasonCode =
 	| "lint_failure"
 	| "context_capacity_promotion"
 	| "downshift_hysteresis_pending"
-	| "escalation_floor_active";
+	| "escalation_floor_active"
+	| "retry_fallback";
 
 export interface ReadOnlyDelegationSubtask {
 	id: string;
@@ -84,7 +85,7 @@ export interface RoutingDecision {
 }
 
 export interface RoutingOutcomeEvidence {
-	kind: "test_failure" | "build_failure" | "lint_failure" | "user_feedback";
+	kind: "test_failure" | "build_failure" | "lint_failure" | "user_feedback" | "retry_fallback";
 	summary: string;
 }
 
@@ -105,4 +106,5 @@ export interface RoutingSettings {
 
 	pools: Record<string, RoutingPoolConfig>;
 	disabledPresets: string[];
+	tierEffort?: Record<string, string>;
 }

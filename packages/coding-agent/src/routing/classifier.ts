@@ -28,16 +28,31 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		});
 
 	try {
-		const utilityModel = options.pool.tiers.utility;
+		let utilityModel = options.pool.tiers.utility;
+		if (!utilityModel.includes("/") && options.pool.provider) {
+			utilityModel = `${options.pool.provider}/${utilityModel}`;
+		}
 		const rawOutput = await runner(utilityModel, options.prompt);
 
 		const parsed = JSON.parse(rawOutput);
-		const score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;
+		let score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;
+		// Enforce hard capability and validated outcome floors computed by deterministic rules
+		score = Math.max(score, baseProfile.complexityScore);
 		const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
-		const delegation =
-			typeof parsed.delegation === "object" && parsed.delegation !== null && !Array.isArray(parsed.delegation)
-				? parsed.delegation
-				: undefined;
+		let delegation = parsed.delegation;
+		if (Array.isArray(delegation)) {
+			delegation = { subtasks: delegation };
+		}
+		if (
+			delegation &&
+			typeof delegation === "object" &&
+			Array.isArray(delegation.subtasks) &&
+			delegation.subtasks.length > 0
+		) {
+			// keep delegation
+		} else {
+			delegation = undefined;
+		}
 		const routingUsage = typeof parsed.routingUsage === "number" ? parsed.routingUsage : undefined;
 
 		if (confidence < 0.75) {

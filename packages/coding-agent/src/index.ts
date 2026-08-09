@@ -38,6 +38,13 @@ export * from "./modes";
 export * from "./modes/components";
 // Theme utilities for custom tools
 export * from "./modes/theme/theme";
+export * from "./routing/classifier";
+export * from "./routing/coordinator";
+export * from "./routing/delegation";
+export * from "./routing/presets";
+export * from "./routing/profiler";
+export * from "./routing/state-machine";
+export type * from "./routing/types";
 // SDK for programmatic usage
 export * from "./sdk";
 export * from "./session/agent-session";

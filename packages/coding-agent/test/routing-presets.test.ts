@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import * as os from "node:os";
+import * as path from "node:path";
+import { ModelRegistry } from "../src/config/model-registry";
 import { BUILTIN_ROUTING_PRESETS, resolveModelPool } from "../src/routing/presets";
+import { AuthStorage } from "../src/session/auth-storage";
 
 describe("Routing Presets (R03)", () => {
 	it("should contain standard reviewed presets for OpenAI, Anthropic, and LiteLLM", () => {
@@ -9,21 +13,36 @@ describe("Routing Presets (R03)", () => {
 		expect(BUILTIN_ROUTING_PRESETS["litellm/anthropic"]).toBeDefined();
 	});
 
+	it("should validate all built-in preset models exist in the registry", async () => {
+		const authStorage = await AuthStorage.create(path.join(os.tmpdir(), `testauth-${Date.now()}.db`));
+		const registry = new ModelRegistry(authStorage);
+		// The registry automatically loads models.json, so we can check against its inventory.
+		const available = registry.getAll().map(m => `${m.provider}/${m.id}`);
+
+		for (const pool of Object.values(BUILTIN_ROUTING_PRESETS)) {
+			const p = pool.provider ? `${pool.provider}/` : "";
+			expect(available).toContain(`${p}${pool.tiers.utility}`);
+			expect(available).toContain(`${p}${pool.tiers.balanced}`);
+			expect(available).toContain(`${p}${pool.tiers.frontier}`);
+		}
+	});
+
 	it("should resolve pool from explicit selector or anchor model", () => {
-		const openaiPool = resolveModelPool("openai/gpt-4.1", {});
+		const openaiPool = resolveModelPool("openai/gpt-5.6", {});
 		expect(openaiPool).toBeDefined();
-		expect(openaiPool?.tiers.utility).toBe("gpt-4.1-mini");
-		expect(openaiPool?.tiers.balanced).toBe("gpt-4.1");
+		expect(openaiPool?.tiers.utility).toBe("gpt-5.4-mini");
+		expect(openaiPool?.tiers.balanced).toBe("gpt-5.4");
+		expect(openaiPool?.tiers.frontier).toBe("gpt-5.6-sol");
 
 		const litellmOpenaiPool = resolveModelPool("litellm/openai", {});
 		expect(litellmOpenaiPool).toBeDefined();
-		expect(litellmOpenaiPool?.tiers.utility).toBe("luna");
-		expect(litellmOpenaiPool?.tiers.balanced).toBe("terra");
-		expect(litellmOpenaiPool?.tiers.frontier).toBe("sol");
+		expect(litellmOpenaiPool?.tiers.utility).toBe("gpt-5.4-mini");
+		expect(litellmOpenaiPool?.tiers.balanced).toBe("gpt-5.4");
+		expect(litellmOpenaiPool?.tiers.frontier).toBe("gpt-5.6-sol");
 	});
 
 	it("should NOT cross provider families when anchor model has explicit provider prefix", () => {
-		const litellmClaudePool = resolveModelPool("litellm/claude-3-7-sonnet", {});
+		const litellmClaudePool = resolveModelPool("litellm/claude-3-5-sonnet-20241022", {});
 		expect(litellmClaudePool).toBeDefined();
 		expect(litellmClaudePool?.id).toBe("litellm/anthropic");
 		expect(litellmClaudePool?.provider).toBe("litellm");
@@ -73,7 +92,7 @@ describe("Routing Presets (R03)", () => {
 			},
 		};
 		// Disabled custom pool -> falls back to builtin
-		const disabledCustom = resolveModelPool("openai/gpt-4.1", customPools, ["my-openai"]);
+		const disabledCustom = resolveModelPool("openai/gpt-5.4", customPools, ["my-openai"]);
 		expect(disabledCustom?.id).toBe("openai/gpt-5.6");
 
 		// Disabled builtin pool -> falls back to undefined

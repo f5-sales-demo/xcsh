@@ -11,13 +11,13 @@ describe("AgentSession Turn Routing Evaluation (I02)", () => {
 			anchorModel: "openai/gpt-5.6",
 			mode: "auto",
 			prompt: "Fix typo in line 5", // simple operation -> utility
-			availableModels: ["gpt-4.1-mini", "gpt-4.1", "gpt-5-pro"],
+			availableModels: ["gpt-5.4-mini", "gpt-5.4", "gpt-5.6-sol"],
 		});
 
 		expect(decision.mode).toBe("auto");
 		expect(decision.applied).toBe(true);
 		expect(decision.effectiveTier).toBe("utility");
-		expect(decision.selectedModel).toBe("openai/gpt-4.1-mini");
+		expect(decision.selectedModel).toBe("openai/gpt-5.4-mini");
 	});
 
 	it("should calculate used tokens correctly including deep array content blocks", async () => {

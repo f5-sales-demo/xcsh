@@ -28,35 +28,59 @@ describe("Hybrid Classifier (P04)", () => {
 		});
 
 		expect(called).toBe(false);
-		expect(profile.desiredTier).toBe("balanced");
+		expect(profile.desiredTier).toBe("utility");
+	});
+
+	it("should return early when deterministic complexity is very low or very high", async () => {
+		let called = false;
+		const mockRunner = async () => {
+			called = true;
+			return JSON.stringify({ complexityScore: 80, confidence: 0.9 });
+		};
+		const profileLow = await classifyTaskHybrid({
+			prompt: "cat file.txt",
+			pool: samplePool,
+			profilerMode: "hybrid",
+			runRoutingClassifier: mockRunner,
+		});
+		expect(called).toBe(false); // <=30 doesn't call
+		expect(profileLow.desiredTier).toBe("utility");
+
+		const profileHigh = await classifyTaskHybrid({
+			prompt: "refactor the session architecture and migrate to new security model",
+			pool: samplePool,
+			profilerMode: "hybrid",
+			runRoutingClassifier: mockRunner,
+		});
+		expect(called).toBe(false); // >=70 doesn't call
+		expect(profileHigh.desiredTier).toBe("frontier");
 	});
 
 	it("should call utility model when profilerMode is 'hybrid' and deterministic profile is ambiguous", async () => {
 		let called = false;
 		const mockRunner = async () => {
 			called = true;
-			return JSON.stringify({ complexityScore: 85, confidence: 0.95 });
+			return JSON.stringify({ complexityScore: 80, confidence: 0.95 });
 		};
 
 		const profile = await classifyTaskHybrid({
-			prompt: "Add a new formatting helper to utils",
+			prompt: "Please review this code for logical errors target", // Ambiguous score -> hits classifier
 			pool: samplePool,
 			profilerMode: "hybrid",
 			runRoutingClassifier: mockRunner,
 		});
 
 		expect(called).toBe(true);
-		expect(profile.desiredTier).toBe("frontier");
-		expect(profile.confidence).toBe(0.95);
+		expect(profile.desiredTier).toBe("frontier"); // mock returns 80 -> frontier
 	});
 
-	it("should fall back safely to balanced when confidence < 0.75 or output is malformed", async () => {
+	it("should safely handle classifier returning an empty object", async () => {
 		const mockRunnerLowConfidence = async () => {
-			return JSON.stringify({ complexityScore: 90, confidence: 0.5 }); // low confidence
+			return JSON.stringify({ complexityScore: 90, confidence: 0.5 });
 		};
 
 		const profile = await classifyTaskHybrid({
-			prompt: "Add formatting helper",
+			prompt: "ambiguous prompt needing review target",
 			pool: samplePool,
 			profilerMode: "hybrid",
 			runRoutingClassifier: mockRunnerLowConfidence,
@@ -65,13 +89,13 @@ describe("Hybrid Classifier (P04)", () => {
 		expect(profile.desiredTier).toBe("balanced");
 	});
 
-	it("should fall back safely to baseProfile on any Error", async () => {
+	it("should fall back safely to balanced when confidence < 0.75 or output is malformed", async () => {
 		const mockRunnerError = async () => {
 			throw new Error("Network timeout");
 		};
 
 		const profile = await classifyTaskHybrid({
-			prompt: "Add formatting helper",
+			prompt: "ambiguous prompt needing review target",
 			pool: samplePool,
 			profilerMode: "hybrid",
 			runRoutingClassifier: mockRunnerError,

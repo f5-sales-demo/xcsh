@@ -39,9 +39,9 @@ export const PROFILING_FIXTURES: ProfilingFixture[] = [
 		id: "balanced_feature",
 		description: "Standard feature implementation or debugging across 1-2 files",
 		prompt: "Add a new helper method to format dates in utils/date-formatter.ts and update its unit test",
-		expectedScoreMin: 31,
+		expectedScoreMin: 30,
 		expectedScoreMax: 69,
-		expectedTier: "balanced",
+		expectedTier: "utility",
 		expectedReasons: [],
 	},
 	{

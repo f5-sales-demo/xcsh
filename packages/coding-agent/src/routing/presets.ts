@@ -5,36 +5,36 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 		id: "openai/gpt-5.6",
 		provider: "openai",
 		tiers: {
-			utility: "gpt-4.1-mini",
-			balanced: "gpt-4.1",
-			frontier: "gpt-5-pro",
+			utility: "gpt-5.4-mini",
+			balanced: "gpt-5.4",
+			frontier: "gpt-5.6-sol",
 		},
 	},
 	"anthropic/claude": {
 		id: "anthropic/claude",
 		provider: "anthropic",
 		tiers: {
-			utility: "claude-3.5-haiku",
-			balanced: "claude-3.5-sonnet",
-			frontier: "claude-3.7-sonnet",
+			utility: "claude-3-haiku-20240307",
+			balanced: "claude-3-5-sonnet-20241022",
+			frontier: "claude-opus-4-0",
 		},
 	},
 	"litellm/openai": {
 		id: "litellm/openai",
 		provider: "litellm",
 		tiers: {
-			utility: "luna",
-			balanced: "terra",
-			frontier: "sol",
+			utility: "gpt-5.4-mini",
+			balanced: "gpt-5.4",
+			frontier: "gpt-5.6-sol",
 		},
 	},
 	"litellm/anthropic": {
 		id: "litellm/anthropic",
 		provider: "litellm",
 		tiers: {
-			utility: "claude-3-5-haiku",
-			balanced: "claude-3-7-sonnet",
-			frontier: "claude-opus-4-5",
+			utility: "claude-3-5-haiku-20241022",
+			balanced: "claude-3-5-sonnet-20241022",
+			frontier: "claude-opus-4-0",
 		},
 	},
 };
@@ -68,7 +68,8 @@ export function validateCustomPools(pools: any): Record<string, RoutingPoolConfi
 
 		const allowMixed = typeof p.allowMixed === "boolean" ? p.allowMixed : false;
 		if (!allowMixed) {
-			const getPrefix = (model: string) => (model.includes("/") ? model.split("/")[0] : "");
+			const getPrefix = (model: string) =>
+				model.includes("/") ? model.split("/")[0] : typeof p.provider === "string" ? p.provider : "";
 			const uPrefix = getPrefix(p.tiers.utility);
 			const bPrefix = getPrefix(p.tiers.balanced);
 			const fPrefix = getPrefix(p.tiers.frontier);
@@ -118,10 +119,23 @@ export function resolveModelPool(
 	for (const [poolId, pool] of Object.entries(customPools)) {
 		if (!pool?.tiers) continue;
 		if (disabledPresets.includes(poolId) || disabledPresets.includes(pool.id)) continue;
-		if (familyPolicy === "sticky" && pool.allowMixed) continue;
+		if (familyPolicy === "sticky") {
+			if (pool.allowMixed) continue;
+			if (provider) {
+				const pProv = pool.provider ?? provider;
+				const uProv = pool.tiers.utility.includes("/") ? pool.tiers.utility.split("/")[0] : pProv;
+				const bProv = pool.tiers.balanced.includes("/") ? pool.tiers.balanced.split("/")[0] : pProv;
+				const fProv = pool.tiers.frontier.includes("/") ? pool.tiers.frontier.split("/")[0] : pProv;
+				if (uProv !== provider || bProv !== provider || fProv !== provider) {
+					continue;
+				}
+			}
+		}
 		if (provider && pool.provider && pool.provider !== provider && pool.id !== anchorModel) {
 			continue;
 		}
+
+		const qualify = (tier: string) => (tier.includes("/") ? tier : `${pool.provider ?? provider}/${tier}`);
 
 		if (
 			pool.id === anchorModel ||
@@ -131,9 +145,9 @@ export function resolveModelPool(
 			pool.tiers.utility === modelName ||
 			pool.tiers.balanced === modelName ||
 			pool.tiers.frontier === modelName ||
-			`${pool.provider ?? provider}/${pool.tiers.utility}` === anchorModel ||
-			`${pool.provider ?? provider}/${pool.tiers.balanced}` === anchorModel ||
-			`${pool.provider ?? provider}/${pool.tiers.frontier}` === anchorModel
+			qualify(pool.tiers.utility) === anchorModel ||
+			qualify(pool.tiers.balanced) === anchorModel ||
+			qualify(pool.tiers.frontier) === anchorModel
 		) {
 			return pool;
 		}
@@ -146,14 +160,16 @@ export function resolveModelPool(
 			continue; // Provider mismatch!
 		}
 
+		const qualify = (tier: string) => (tier.includes("/") ? tier : `${pool.provider}/${tier}`);
+
 		if (
 			presetId === anchorModel ||
 			pool.tiers.utility === modelName ||
 			pool.tiers.balanced === modelName ||
 			pool.tiers.frontier === modelName ||
-			`${pool.provider}/${pool.tiers.utility}` === anchorModel ||
-			`${pool.provider}/${pool.tiers.balanced}` === anchorModel ||
-			`${pool.provider}/${pool.tiers.frontier}` === anchorModel
+			qualify(pool.tiers.utility) === anchorModel ||
+			qualify(pool.tiers.balanced) === anchorModel ||
+			qualify(pool.tiers.frontier) === anchorModel
 		) {
 			return pool;
 		}

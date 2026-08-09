@@ -261,6 +261,8 @@ export interface SessionContext {
 	mode: string;
 	/** Mode-specific data from the last mode_change entry */
 	modeData?: Record<string, unknown>;
+	/** Number of tokens used across all provider requests on this branch */
+	usedTokens: number;
 }
 
 export interface SessionInfo {
@@ -532,6 +534,7 @@ export function buildSessionContext(
 			selectedMCPToolNames: [],
 			hasPersistedMCPToolSelection: false,
 			mode: "none",
+			usedTokens: 0,
 		};
 	}
 	if (leafId) {
@@ -552,6 +555,7 @@ export function buildSessionContext(
 			selectedMCPToolNames: [],
 			hasPersistedMCPToolSelection: false,
 			mode: "none",
+			usedTokens: 0,
 		};
 	}
 
@@ -704,6 +708,7 @@ export function buildSessionContext(
 		hasPersistedMCPToolSelection,
 		mode,
 		modeData,
+		usedTokens: 0, // Will be computed by the session object later
 	};
 }
 
