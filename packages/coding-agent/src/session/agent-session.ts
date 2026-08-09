@@ -1347,39 +1347,51 @@ export class AgentSession {
 							return;
 						}
 
-						if (outcome.safeToContinue) {
+						if (!outcome.safeToContinue) {
+							this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
+							return;
+						}
+
+						const previousTier = this.#routingCoordinator.getState().currentTier;
+						const previousFloor = this.#routingCoordinator.getState().escalationFloor;
+
+						try {
 							this.agent.abort();
-						}
 
-						this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
-						if (outcome.safeToContinue) {
+							this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
 							this.#routingCoordinator.restoreState({ currentTier: targetTier });
-						}
 
-						await this.setModelRoutingSwitch(targetModel);
-						const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
-						const { mapTierToEffort } = await import("../routing/effort");
-						const effort = mapTierToEffort(targetTier, effortMap);
-						this.setThinkingLevel(effort as any);
+							await this.setModelRoutingSwitch(targetModel);
+							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+							const { mapTierToEffort } = await import("../routing/effort");
+							const effort = mapTierToEffort(targetTier, effortMap);
+							this.setThinkingLevel(effort as any);
 
-						this.#emitSessionEvent(
-							sanitizeRoutingEvent({
-								type: "routing_escalated",
-								epochId: `route-${Date.now()}-esc`,
-								reasons: reasons,
-								mode: routingMode,
-								effectiveTier: targetTier,
-								state: this.#routingCoordinator.getState(),
-								selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
-								escalated: true,
-							}),
-						).catch(() => {});
-
-						if (outcome.safeToContinue) {
+							this.#emitSessionEvent(
+								sanitizeRoutingEvent({
+									type: "routing_escalated",
+									epochId: `route-${Date.now()}-esc`,
+									reasons: reasons,
+									mode: routingMode,
+									effectiveTier: targetTier,
+									state: this.#routingCoordinator.getState(),
+									selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
+									escalated: true,
+								}),
+							).catch(() => {});
+						} catch (err) {
+							console.error("Escalation model swap failed", err);
+							this.#routingCoordinator.restoreState({ currentTier: previousTier });
+							if (previousFloor) {
+								this.#routingCoordinator.getStateMachine().setEscalationFloor(previousFloor);
+							} else {
+								this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+							}
+						} finally {
 							this.#scheduleAgentContinue({ delayMs: 10 });
 						}
 					} catch (err) {
-						console.error("Escalation model swap failed", err);
+						console.error("Escalation setup failed", err);
 					}
 				};
 				this.#trackPostPromptTask(performEscalationModelSwap());
