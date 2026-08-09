@@ -32,7 +32,7 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 		id: "litellm/anthropic",
 		provider: "litellm",
 		tiers: {
-			utility: "claude-3-haiku-20240307",
+			utility: "claude-3-5-haiku-20241022",
 			balanced: "claude-3-5-sonnet-20241022",
 			frontier: "claude-opus-4-0",
 		},
@@ -119,7 +119,18 @@ export function resolveModelPool(
 	for (const [poolId, pool] of Object.entries(customPools)) {
 		if (!pool?.tiers) continue;
 		if (disabledPresets.includes(poolId) || disabledPresets.includes(pool.id)) continue;
-		if (familyPolicy === "sticky" && pool.allowMixed) continue;
+		if (familyPolicy === "sticky") {
+			if (pool.allowMixed) continue;
+			if (provider) {
+				const pProv = pool.provider ?? provider;
+				const uProv = pool.tiers.utility.includes("/") ? pool.tiers.utility.split("/")[0] : pProv;
+				const bProv = pool.tiers.balanced.includes("/") ? pool.tiers.balanced.split("/")[0] : pProv;
+				const fProv = pool.tiers.frontier.includes("/") ? pool.tiers.frontier.split("/")[0] : pProv;
+				if (uProv !== provider || bProv !== provider || fProv !== provider) {
+					continue;
+				}
+			}
+		}
 		if (provider && pool.provider && pool.provider !== provider && pool.id !== anchorModel) {
 			continue;
 		}

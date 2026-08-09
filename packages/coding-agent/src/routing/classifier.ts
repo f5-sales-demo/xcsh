@@ -37,10 +37,20 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		const parsed = JSON.parse(rawOutput);
 		const score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;
 		const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
-		const delegation =
-			typeof parsed.delegation === "object" && parsed.delegation !== null && !Array.isArray(parsed.delegation)
-				? parsed.delegation
-				: undefined;
+		let delegation = parsed.delegation;
+		if (Array.isArray(delegation)) {
+			delegation = { subtasks: delegation };
+		}
+		if (
+			delegation &&
+			typeof delegation === "object" &&
+			Array.isArray(delegation.subtasks) &&
+			delegation.subtasks.length > 0
+		) {
+			// keep delegation
+		} else {
+			delegation = undefined;
+		}
 		const routingUsage = typeof parsed.routingUsage === "number" ? parsed.routingUsage : undefined;
 
 		if (confidence < 0.75) {

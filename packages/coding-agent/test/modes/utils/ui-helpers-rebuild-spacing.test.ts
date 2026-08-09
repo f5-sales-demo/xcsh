@@ -30,7 +30,8 @@ function emptySessionContext(messages: AgentMessage[]): SessionContext {
 		injectedTtsrRules: [],
 		selectedMCPToolNames: [],
 		hasPersistedMCPToolSelection: false,
-		mode: "none",
+		mode: "plan",
+		usedTokens: 0,
 	} as SessionContext;
 }
 

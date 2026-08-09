@@ -1325,6 +1325,7 @@ export class AgentSession {
 				this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
 
 				if (outcome.safeToContinue) {
+					this.agent.abort();
 					this.#routingCoordinator.restoreState({ currentTier: targetTier });
 					const performEscalationModelSwap = async () => {
 						const { resolveModelPool } = await import("../routing/presets");
@@ -1350,6 +1351,7 @@ export class AgentSession {
 							const { mapTierToEffort } = await import("../routing/effort");
 							const effort = mapTierToEffort(targetTier, effortMap);
 							this.setThinkingLevel(effort as any);
+							this.#scheduleAgentContinue({ delayMs: 10 });
 						}
 					};
 					performEscalationModelSwap().catch(err => console.error("Escalation model swap failed", err));
@@ -1358,10 +1360,11 @@ export class AgentSession {
 				this.#emitSessionEvent(
 					sanitizeRoutingEvent({
 						type: "routing_escalated",
-						epochId: outcome.epochId,
+						epochId: `route-${Date.now()}-esc`,
 						reasons: reasons,
 						mode: routingMode,
 						effectiveTier: targetTier,
+						state: this.#routingCoordinator.getState(),
 						selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
 						escalated: true,
 					}),
@@ -2465,7 +2468,9 @@ export class AgentSession {
 	}
 
 	buildDisplaySessionContext(): SessionContext {
-		return deobfuscateSessionContext(this.sessionManager.buildSessionContext(), this.#obfuscator);
+		const context = deobfuscateSessionContext(this.sessionManager.buildSessionContext(), this.#obfuscator);
+		context.usedTokens = calculateUsedTokens(context.messages);
+		return context;
 	}
 
 	/** Convert session messages using the same pre-LLM pipeline as the active session. */
@@ -2870,6 +2875,7 @@ export class AgentSession {
 					contextTokens: contextEstimate.usedTokens,
 					routingUsage: decision.routingUsage,
 					durationMs,
+					state: this.#routingCoordinator.getState(),
 				} as any).catch(() => {});
 
 				if (decision.selectedModel && decision.applied) {
@@ -2877,7 +2883,11 @@ export class AgentSession {
 						.getAvailable()
 						.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
 					if (targetModel) {
-						await this.setModelRoutingSwitch(targetModel);
+						const currentModelId = this.model ? `${this.model.provider}/${this.model.id}` : undefined;
+						const targetModelId = `${targetModel.provider}/${targetModel.id}`;
+						if (currentModelId !== targetModelId) {
+							await this.setModelRoutingSwitch(targetModel);
+						}
 						if (decision.effectiveTier) {
 							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
 							const { mapTierToEffort } = await import("../routing/effort");
@@ -6584,15 +6594,19 @@ export class AgentSession {
 		for (const entry of entries) {
 			if (entry.type === "custom" && entry.customType === "routing_event") {
 				const event = entry.data as any;
-				if (event.type === "routing_escalated") {
-					if (event.effectiveTier) {
-						this.#routingCoordinator.getStateMachine().setEscalationFloor(event.effectiveTier);
-					}
-				} else if (event.type === "routing_floor_cleared") {
-					this.#routingCoordinator.getStateMachine().clearEscalationFloor();
-				} else if (event.type === "routing_applied" || event.type === "routing_decision") {
-					if (event.effectiveTier) {
-						this.#routingCoordinator.restoreState({ currentTier: event.effectiveTier });
+				if (event.state) {
+					this.#routingCoordinator.restoreState(event.state);
+				} else {
+					if (event.type === "routing_escalated") {
+						if (event.effectiveTier) {
+							this.#routingCoordinator.getStateMachine().setEscalationFloor(event.effectiveTier);
+						}
+					} else if (event.type === "routing_floor_cleared") {
+						this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+					} else if (event.type === "routing_applied" || event.type === "routing_decision") {
+						if (event.effectiveTier) {
+							this.#routingCoordinator.restoreState({ currentTier: event.effectiveTier });
+						}
 					}
 				}
 			}

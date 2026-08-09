@@ -13,5 +13,6 @@ repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
 }
 base_ref=${AGY_REVIEW_BASE_REF:-origin/main}
 
-AGY_PRE_PUSH_REVIEW_ACTIVE=1 \
+AGY_REVIEW_REPORT_FILE="$repo_root/report.json" \
+  AGY_PRE_PUSH_REVIEW_ACTIVE=1 \
   bash "$repo_root/scripts/agy-review.sh" code --base "$base_ref"

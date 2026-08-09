@@ -19,13 +19,15 @@ const COMPLEX_KEYWORDS = [
 	"refactor the session",
 	"multi-region",
 	"system design",
+	"ambiguity",
+	"target",
 ];
 
 const SIMPLE_READ_PATTERNS = [/^(summarize|read|cat|view|explain)\b/i, /\bfix typo\b/i, /\btypo in line\b/i];
 
 export function profileTaskDeterministic(input: ProfilerInput): TaskProfile {
 	const reasons: RoutingReasonCode[] = [];
-	let score = 40; // base score (default balanced)
+	let score = 30; // base score (default balanced)
 
 	const promptLower = input.prompt.toLowerCase().trim();
 

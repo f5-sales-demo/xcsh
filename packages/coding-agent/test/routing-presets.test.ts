@@ -28,10 +28,11 @@ describe("Routing Presets (R03)", () => {
 	});
 
 	it("should resolve pool from explicit selector or anchor model", () => {
-		const openaiPool = resolveModelPool("openai/gpt-5.4", {});
+		const openaiPool = resolveModelPool("openai/gpt-5.6", {});
 		expect(openaiPool).toBeDefined();
 		expect(openaiPool?.tiers.utility).toBe("gpt-5.4-mini");
 		expect(openaiPool?.tiers.balanced).toBe("gpt-5.4");
+		expect(openaiPool?.tiers.frontier).toBe("gpt-5.6-sol");
 
 		const litellmOpenaiPool = resolveModelPool("litellm/openai", {});
 		expect(litellmOpenaiPool).toBeDefined();
