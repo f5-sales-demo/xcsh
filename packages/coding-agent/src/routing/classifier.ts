@@ -35,7 +35,9 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		const rawOutput = await runner(utilityModel, options.prompt);
 
 		const parsed = JSON.parse(rawOutput);
-		const score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;
+		let score = typeof parsed.complexityScore === "number" ? parsed.complexityScore : 40;
+		// Enforce hard capability and validated outcome floors computed by deterministic rules
+		score = Math.max(score, baseProfile.complexityScore);
 		const confidence = typeof parsed.confidence === "number" ? parsed.confidence : 0;
 		let delegation = parsed.delegation;
 		if (Array.isArray(delegation)) {

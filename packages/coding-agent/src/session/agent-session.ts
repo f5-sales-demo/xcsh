@@ -2851,7 +2851,7 @@ export class AgentSession {
 									{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() },
 								],
 							},
-							{ apiKey },
+							{ apiKey, signal: AbortSignal.timeout(15000) },
 						);
 						const rawText = res.content
 							.filter(c => c.type === "text")
