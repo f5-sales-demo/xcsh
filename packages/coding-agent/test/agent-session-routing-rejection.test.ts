@@ -182,24 +182,26 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 
 	it("should restore model state if escalation swap fails", async () => {
 		modelRegistry.getAvailable = () => [{ provider: "openai", id: "gpt-5.4" }] as any;
-		session.setModelRoutingSwitch = async () => {
+		modelRegistry.getApiKey = async () => "mock-key";
+
+		const originalSetModel = session.setModelRoutingSwitch.bind(session);
+		session.setModelRoutingSwitch = async model => {
+			await originalSetModel(model);
 			throw new Error("Simulated swap failure");
 		};
 
 		session.restoreRoutingState({ currentTier: "utility" });
-		Object.defineProperty(session, "model", {
-			get: () => ({ provider: "openai", id: "gpt-5.4-mini" }),
-			configurable: true,
-		});
 
 		let appendedModelId = "";
 		let appendedRole = "";
-		(session as any).sessionManager = {
-			appendModelChange: (modelId: string, role: string) => {
+		const originalAppend = session.sessionManager.appendModelChange.bind(session.sessionManager);
+		(session.sessionManager as any).appendModelChange = (modelId: string, role: string) => {
+			if (role === "routing_switch_rollback") {
 				appendedModelId = modelId;
 				appendedRole = role;
-			},
-		} as any;
+			}
+			originalAppend(modelId, role);
+		};
 
 		session.recordRoutingOutcome({
 			status: "rejected",
@@ -209,8 +211,8 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 
 		await session.waitForIdle();
 
-		expect(session.model?.id).toBe("gpt-5.4-mini");
-		expect(appendedModelId).toBe("openai/gpt-5.4-mini");
+		expect(session.model?.id).toBe("gpt-5.6");
+		expect(appendedModelId).toBe("openai/gpt-5.6");
 		expect(appendedRole).toBe("routing_switch_rollback");
 	});
 });
