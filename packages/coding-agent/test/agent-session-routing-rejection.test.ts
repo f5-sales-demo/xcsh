@@ -19,20 +19,19 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 
 	beforeEach(async () => {
 		tempDir = TempDir.createSync("xcsh-test-rejection");
-		settings = new Settings();
+		settings = Settings.isolated();
 		settings.set("routing.mode", "auto");
 		authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth.db"));
 		modelRegistry = new ModelRegistry(authStorage);
-		sessionManager = new SessionManager({
-			appDataDir: tempDir.path(),
-			cwd: tempDir.path(),
-			modelRegistry,
-		});
+		sessionManager = SessionManager.inMemory();
 
 		const agent = new Agent({
-			systemPrompt: "You are a test agent",
-			model: getBundledModel("openai/gpt-4o-mini")!,
-			toolRegistry: [],
+			getApiKey: () => "test-key",
+			initialState: {
+				systemPrompt: "You are a test agent",
+				model: getBundledModel("openai", "gpt-4o-mini")!,
+				tools: [],
+			},
 		});
 
 		session = new AgentSession({
@@ -40,18 +39,6 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			settings,
 			modelRegistry,
 			sessionManager,
-			authStorage,
-			sessionId: "test-session",
-			systemPrompt: "System",
-			initialState: {
-				cwd: tempDir.path(),
-				username: "test",
-				homeDir: tempDir.path(),
-				hostInfo: "TestOS",
-				appDataDir: tempDir.path(),
-				shell: "bash",
-				version: "1.0",
-			},
 		});
 	});
 

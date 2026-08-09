@@ -28,7 +28,10 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		});
 
 	try {
-		const utilityModel = options.pool.tiers.utility;
+		let utilityModel = options.pool.tiers.utility;
+		if (!utilityModel.includes("/") && options.pool.provider) {
+			utilityModel = `${options.pool.provider}/${utilityModel}`;
+		}
 		const rawOutput = await runner(utilityModel, options.prompt);
 
 		const parsed = JSON.parse(rawOutput);

@@ -15532,6 +15532,66 @@
 		}
 	},
 	"litellm": {
+		"claude-3-haiku-20240307": {
+			"id": "claude-3-haiku-20240307",
+			"name": "Claude 3 Haiku",
+			"api": "openai-responses",
+			"provider": "litellm",
+			"baseUrl": "https://api.litellm.ai/v1",
+			"reasoning": false,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 0,
+				"output": 0,
+				"cacheRead": 0,
+				"cacheWrite": 0
+			},
+			"contextWindow": 200000,
+			"maxTokens": 4096
+		},
+		"claude-3-5-sonnet-20241022": {
+			"id": "claude-3-5-sonnet-20241022",
+			"name": "Claude 3.5 Sonnet",
+			"api": "openai-responses",
+			"provider": "litellm",
+			"baseUrl": "https://api.litellm.ai/v1",
+			"reasoning": false,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 0,
+				"output": 0,
+				"cacheRead": 0,
+				"cacheWrite": 0
+			},
+			"contextWindow": 200000,
+			"maxTokens": 8192
+		},
+		"claude-opus-4-0": {
+			"id": "claude-opus-4-0",
+			"name": "Claude Opus 4.0",
+			"api": "openai-responses",
+			"provider": "litellm",
+			"baseUrl": "https://api.litellm.ai/v1",
+			"reasoning": true,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 0,
+				"output": 0,
+				"cacheRead": 0,
+				"cacheWrite": 0
+			},
+			"contextWindow": 200000,
+			"maxTokens": 8192
+		},
 		"claude-3-5-haiku": {
 			"id": "claude-3-5-haiku",
 			"name": "Claude Haiku 3.5",
@@ -31338,6 +31398,31 @@
 		}
 	},
 	"openai": {
+		"gpt-5.6-sol": {
+			"id": "gpt-5.6-sol",
+			"name": "GPT-5.6 Sol",
+			"api": "openai-responses",
+			"provider": "openai",
+			"baseUrl": "https://api.openai.com/v1",
+			"reasoning": true,
+			"input": [
+				"text",
+				"image"
+			],
+			"cost": {
+				"input": 0,
+				"output": 0,
+				"cacheRead": 0,
+				"cacheWrite": 0
+			},
+			"contextWindow": 128000,
+			"maxTokens": 16384,
+			"thinking": {
+				"mode": "effort",
+				"minLevel": "minimal",
+				"maxLevel": "high"
+			}
+		},
 		"codex-mini-latest": {
 			"id": "codex-mini-latest",
 			"name": "Codex Mini",

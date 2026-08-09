@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import * as os from "node:os";
+import * as path from "node:path";
+import { ModelRegistry } from "../src/config/model-registry";
 import { BUILTIN_ROUTING_PRESETS, resolveModelPool } from "../src/routing/presets";
+import { AuthStorage } from "../src/session/auth-storage";
 
 describe("Routing Presets (R03)", () => {
 	it("should contain standard reviewed presets for OpenAI, Anthropic, and LiteLLM", () => {
@@ -7,6 +11,20 @@ describe("Routing Presets (R03)", () => {
 		expect(BUILTIN_ROUTING_PRESETS["anthropic/claude"]).toBeDefined();
 		expect(BUILTIN_ROUTING_PRESETS["litellm/openai"]).toBeDefined();
 		expect(BUILTIN_ROUTING_PRESETS["litellm/anthropic"]).toBeDefined();
+	});
+
+	it("should validate all built-in preset models exist in the registry", async () => {
+		const authStorage = await AuthStorage.create(path.join(os.tmpdir(), `testauth-${Date.now()}.db`));
+		const registry = new ModelRegistry(authStorage);
+		// The registry automatically loads models.json, so we can check against its inventory.
+		const available = registry.getAll().map(m => `${m.provider}/${m.id}`);
+
+		for (const pool of Object.values(BUILTIN_ROUTING_PRESETS)) {
+			const p = pool.provider ? `${pool.provider}/` : "";
+			expect(available).toContain(`${p}${pool.tiers.utility}`);
+			expect(available).toContain(`${p}${pool.tiers.balanced}`);
+			expect(available).toContain(`${p}${pool.tiers.frontier}`);
+		}
 	});
 
 	it("should resolve pool from explicit selector or anchor model", () => {

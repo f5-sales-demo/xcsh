@@ -22,8 +22,8 @@ export function validateDelegationPlan(plan: ReadOnlyDelegationPlan, maxTasks = 
 		return { valid: false, error: "Invalid plan: missing subtasks array" };
 	}
 
-	if (plan.subtasks.length === 0) {
-		return { valid: false, error: "Plan has 0 subtasks" };
+	if (plan.subtasks.length <= 1) {
+		return { valid: false, error: "Plan requires >1 subtasks for delegation" };
 	}
 
 	if (plan.subtasks.length > maxTasks) {
@@ -41,20 +41,18 @@ export function validateDelegationPlan(plan: ReadOnlyDelegationPlan, maxTasks = 
 
 export async function executeReadOnlyDelegationPlan(
 	plan: ReadOnlyDelegationPlan,
-	executor: (subtaskPrompt: string, signal?: AbortSignal) => Promise<string>,
+	executor: (subtaskPrompt: string, signal?: AbortSignal) => Promise<{ result: string; tokens: number }>,
 	maxTasks = 3,
 	options?: { signal?: AbortSignal },
-): Promise<Array<{ id: string; result: string }>> {
+): Promise<{ results: Array<{ id: string; result: string }>; tokensUsed: number }> {
 	const validation = validateDelegationPlan(plan, maxTasks);
 	if (!validation.valid) {
-		return [];
+		return { results: [], tokensUsed: 0 };
 	}
 
-	const results: Array<{ id: string; result: string }> = [];
-	for (const task of plan.subtasks.slice(0, maxTasks)) {
+	const tasks = plan.subtasks.slice(0, maxTasks).map(async task => {
 		if (options?.signal?.aborted) {
-			results.push({ id: task.id, result: "Failed: Aborted" });
-			continue;
+			return { id: task.id, result: "Failed: Aborted", tokens: 0 };
 		}
 		try {
 			const promptPayload = [
@@ -67,11 +65,19 @@ export async function executeReadOnlyDelegationPlan(
 			]
 				.filter(Boolean)
 				.join("\n");
-			const res = await executor(promptPayload, options?.signal);
-			results.push({ id: task.id, result: res });
+			const { result, tokens } = await executor(promptPayload, options?.signal);
+			return { id: task.id, result, tokens };
 		} catch (err) {
-			results.push({ id: task.id, result: `Failed: ${String(err)}` });
+			return { id: task.id, result: `Failed: ${String(err)}`, tokens: 0 };
 		}
-	}
-	return results;
+	});
+
+	const settled = await Promise.all(tasks);
+	let tokensUsed = 0;
+	const results = settled.map(s => {
+		tokensUsed += s.tokens;
+		return { id: s.id, result: s.result };
+	});
+
+	return { results, tokensUsed };
 }

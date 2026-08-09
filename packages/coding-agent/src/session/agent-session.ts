@@ -758,6 +758,17 @@ export class AgentSession {
 			void this.#queueExtensionEvent(event);
 			return;
 		}
+
+		if (
+			event.type === "routing_decision" ||
+			event.type === "routing_applied" ||
+			event.type === "routing_escalated" ||
+			event.type === "routing_skipped" ||
+			(event.type as string) === "routing_floor_cleared"
+		) {
+			this.sessionManager.appendCustomEntry("routing_event", event);
+		}
+
 		await this.#emitExtensionEvent(event);
 		this.#emit(event);
 	}
@@ -1301,6 +1312,8 @@ export class AgentSession {
 			if (hasLintFailure) reasons.push("lint_failure");
 			if (hasRetryFallback) reasons.push("retry_fallback");
 
+			if (reasons.length === 0) return;
+
 			const routingState = this.#routingCoordinator.getState();
 			let targetTier: import("../routing/types").RoutingTier = "frontier";
 			if (outcome.safeToContinue) {
@@ -1310,6 +1323,37 @@ export class AgentSession {
 
 			if (routingMode === "auto") {
 				this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
+
+				if (outcome.safeToContinue) {
+					this.#routingCoordinator.restoreState({ currentTier: targetTier });
+					const performEscalationModelSwap = async () => {
+						const { resolveModelPool } = await import("../routing/presets");
+						const poolId = this.settings.get("routing.pools") as any;
+						const disabledPresets = this.settings.get("routing.disabledPresets") as readonly string[];
+						const familyPolicy = this.settings.get("routing.familyPolicy") as any;
+						const pool = resolveModelPool(
+							this.model ? `${this.model.provider}/${this.model.id}` : "",
+							poolId,
+							disabledPresets,
+							familyPolicy,
+						);
+						if (!pool) return;
+						const modelId = pool.tiers[targetTier];
+						if (!modelId) return;
+						const uId = modelId.includes("/") ? modelId : `${pool.provider}/${modelId}`;
+						const targetModel = this.#modelRegistry
+							.getAvailable()
+							.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
+						if (targetModel) {
+							await this.setModelRoutingSwitch(targetModel);
+							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+							const { mapTierToEffort } = await import("../routing/effort");
+							const effort = mapTierToEffort(targetTier, effortMap);
+							this.setThinkingLevel(effort as any);
+						}
+					};
+					performEscalationModelSwap().catch(err => console.error("Escalation model swap failed", err));
+				}
 
 				this.#emitSessionEvent(
 					sanitizeRoutingEvent({
@@ -1326,6 +1370,7 @@ export class AgentSession {
 		} else {
 			if (routingMode === "auto") {
 				this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+				this.#emitSessionEvent({ type: "routing_floor_cleared" } as any).catch(() => {});
 			}
 		}
 	}
@@ -2809,8 +2854,6 @@ export class AgentSession {
 				});
 				const durationMs = Date.now() - startTime;
 
-				this.sessionManager.appendCustomEntry("routing_state", this.#routingCoordinator.getState());
-
 				this.#emitSessionEvent({
 					type: decision.applied ? "routing_applied" : "routing_decision",
 					epochId: decision.epochId,
@@ -2853,29 +2896,32 @@ export class AgentSession {
 					let maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
 					maxTasks = Math.min(Math.max(1, maxTasks), 3);
 
-					const results = await executeReadOnlyDelegationPlan(
+					const { results, tokensUsed } = await executeReadOnlyDelegationPlan(
 						decision.delegation,
 						async (subtaskPrompt, signal) => {
-							if (signal?.aborted) return "Delegation failed: Aborted";
+							if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
 
 							const { resolveModelPool } = await import("../routing/presets");
 							const pool = resolveModelPool(
 								decision.poolId ?? (this.model ? `${this.model.provider}/${this.model.id}` : ""),
 								this.settings.get("routing.pools") as any,
-								this.settings.get("routing.disabledPresets") as string[],
+								this.settings.get("routing.disabledPresets") as readonly string[],
 								this.settings.get("routing.familyPolicy") as any,
 							);
 
 							let resolvedUtility = this.model;
 							if (pool?.tiers?.utility) {
-								const uId = pool.tiers.utility;
+								let uId = pool.tiers.utility;
+								if (!uId.includes("/") && pool.provider) {
+									uId = `${pool.provider}/${uId}`;
+								}
 								const found = this.#modelRegistry
 									.getAvailable()
 									.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
 								if (found) resolvedUtility = found;
 							}
 
-							if (!resolvedUtility) return "Delegation failed: no model.";
+							if (!resolvedUtility) return { result: "Delegation failed: no model.", tokens: 0 };
 
 							const { createAgentSession } = await import("../sdk");
 							const { SessionManager: SDKSessionManager } = await import("./session-manager");
@@ -2883,7 +2929,7 @@ export class AgentSession {
 							childSettings.set("routing.delegation", "off");
 
 							// Fix abort race by checking right before creation
-							if (signal?.aborted) return "Delegation failed: Aborted";
+							if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
 
 							const { session: childSession } = await createAgentSession({
 								model: resolvedUtility,
@@ -2903,12 +2949,12 @@ export class AgentSession {
 								signal?.addEventListener("abort", onAbort);
 								if (signal?.aborted) {
 									onAbort();
-									return "Delegation failed: Aborted";
+									return { result: "Delegation failed: Aborted", tokens: 0 };
 								}
 								try {
 									await childSession.prompt(subtaskPrompt);
-									if (signal?.aborted) return "Delegation failed: Aborted";
-									return childSession
+									if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+									const resultStr = childSession
 										.buildDisplaySessionContext()
 										.messages.filter(m => m.role === "assistant")
 										.map(m =>
@@ -2918,12 +2964,14 @@ export class AgentSession {
 												.join(""),
 										)
 										.join("\n");
+									const tokens = childSession.buildDisplaySessionContext().usedTokens || 0;
+									return { result: resultStr, tokens };
 								} finally {
 									signal?.removeEventListener("abort", onAbort);
 								}
 							} catch (err) {
-								if (signal?.aborted) return "Delegation failed: Aborted";
-								return `Delegation failed: ${String(err)}`;
+								if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+								return { result: `Delegation failed: ${String(err)}`, tokens: 0 };
 							} finally {
 								await childSession.dispose();
 							}
@@ -2954,6 +3002,7 @@ export class AgentSession {
 							epochId: decision.epochId,
 							tasks: decision.delegation.subtasks.length,
 							completed: results.length,
+							tokensUsed,
 						} as any).catch(() => {});
 					}
 				}
@@ -5783,11 +5832,6 @@ export class AgentSession {
 			this.#activeRetryFallback.lastAppliedFallbackThinkingLevel = nextThinkingLevel;
 		}
 
-		this.recordRoutingOutcome({
-			status: "rejected",
-			evidence: [{ kind: "retry_fallback", summary: `Fallback applied from ${currentSelector} to ${selector.raw}` }],
-		});
-
 		await this.#emitSessionEvent({
 			type: "retry_fallback_applied",
 			from: currentSelector,
@@ -6535,13 +6579,23 @@ export class AgentSession {
 	}
 
 	#syncRoutingStateFromBranch() {
-		const lastRoutingEntry = (this.sessionManager.getBranch() as any[]).findLast(
-			e => e.type === "custom" && e.customType === "routing_state",
-		);
-		if (lastRoutingEntry?.data) {
-			this.#routingCoordinator.restoreState(lastRoutingEntry.data);
-		} else {
-			this.#routingCoordinator.reset();
+		this.#routingCoordinator.reset();
+		const entries = this.sessionManager.getBranch();
+		for (const entry of entries) {
+			if (entry.type === "custom" && entry.customType === "routing_event") {
+				const event = entry.data as any;
+				if (event.type === "routing_escalated") {
+					if (event.effectiveTier) {
+						this.#routingCoordinator.getStateMachine().setEscalationFloor(event.effectiveTier);
+					}
+				} else if (event.type === "routing_floor_cleared") {
+					this.#routingCoordinator.getStateMachine().clearEscalationFloor();
+				} else if (event.type === "routing_applied" || event.type === "routing_decision") {
+					if (event.effectiveTier) {
+						this.#routingCoordinator.restoreState({ currentTier: event.effectiveTier });
+					}
+				}
+			}
 		}
 	}
 

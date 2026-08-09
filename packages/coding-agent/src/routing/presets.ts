@@ -124,6 +124,8 @@ export function resolveModelPool(
 			continue;
 		}
 
+		const qualify = (tier: string) => (tier.includes("/") ? tier : `${pool.provider ?? provider}/${tier}`);
+
 		if (
 			pool.id === anchorModel ||
 			pool.tiers.utility === anchorModel ||
@@ -132,9 +134,9 @@ export function resolveModelPool(
 			pool.tiers.utility === modelName ||
 			pool.tiers.balanced === modelName ||
 			pool.tiers.frontier === modelName ||
-			`${pool.provider ?? provider}/${pool.tiers.utility}` === anchorModel ||
-			`${pool.provider ?? provider}/${pool.tiers.balanced}` === anchorModel ||
-			`${pool.provider ?? provider}/${pool.tiers.frontier}` === anchorModel
+			qualify(pool.tiers.utility) === anchorModel ||
+			qualify(pool.tiers.balanced) === anchorModel ||
+			qualify(pool.tiers.frontier) === anchorModel
 		) {
 			return pool;
 		}
@@ -147,14 +149,16 @@ export function resolveModelPool(
 			continue; // Provider mismatch!
 		}
 
+		const qualify = (tier: string) => (tier.includes("/") ? tier : `${pool.provider}/${tier}`);
+
 		if (
 			presetId === anchorModel ||
 			pool.tiers.utility === modelName ||
 			pool.tiers.balanced === modelName ||
 			pool.tiers.frontier === modelName ||
-			`${pool.provider}/${pool.tiers.utility}` === anchorModel ||
-			`${pool.provider}/${pool.tiers.balanced}` === anchorModel ||
-			`${pool.provider}/${pool.tiers.frontier}` === anchorModel
+			qualify(pool.tiers.utility) === anchorModel ||
+			qualify(pool.tiers.balanced) === anchorModel ||
+			qualify(pool.tiers.frontier) === anchorModel
 		) {
 			return pool;
 		}

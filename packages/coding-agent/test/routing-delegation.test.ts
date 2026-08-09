@@ -47,23 +47,32 @@ describe("Autonomous Delegation Policy (D01)", () => {
 					description: "Find the auth token",
 					targetFilesOrPaths: ["src/auth.ts"],
 				},
+				{
+					id: "test2",
+					title: "Read another file",
+					description: "Find the DB connection",
+					targetFilesOrPaths: ["src/db.ts"],
+				},
 			],
 		};
 
-		let executedPrompt = "";
+		const executedPrompts: string[] = [];
 
 		const mockPerform = async (prompt: string) => {
-			executedPrompt = prompt;
-			return "Auth token is in line 5";
+			executedPrompts.push(prompt);
+			return { result: "Auth token is in line 5", tokens: 10 };
 		};
 
 		const { executeReadOnlyDelegationPlan } = await import("../src/routing/delegation");
-		const results = await executeReadOnlyDelegationPlan(plan, mockPerform);
+		const { results, tokensUsed } = await executeReadOnlyDelegationPlan(plan, mockPerform);
 
-		expect(results).toHaveLength(1);
+		expect(results).toHaveLength(2);
 		expect(results[0].id).toBe("test1");
 		expect(results[0].result).toBe("Auth token is in line 5");
-		expect(executedPrompt).toContain("Find the auth token");
-		expect(executedPrompt).toContain("src/auth.ts");
+		expect(executedPrompts.some(p => p.includes("Find the auth token"))).toBe(true);
+		expect(executedPrompts.some(p => p.includes("src/auth.ts"))).toBe(true);
+		expect(executedPrompts.some(p => p.includes("Find the DB connection"))).toBe(true);
+		expect(executedPrompts.some(p => p.includes("src/db.ts"))).toBe(true);
+		expect(tokensUsed).toBe(20);
 	});
 });

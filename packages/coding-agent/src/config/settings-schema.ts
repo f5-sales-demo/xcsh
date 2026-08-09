@@ -603,7 +603,7 @@ export const SETTINGS_SCHEMA = {
 	},
 
 	"routing.tierEffort": {
-		type: "object",
+		type: "record",
 		default: {
 			utility: "low",
 			balanced: "medium",
