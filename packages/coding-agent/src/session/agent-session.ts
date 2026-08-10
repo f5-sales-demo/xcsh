@@ -2858,13 +2858,30 @@ export class AgentSession {
 							.getAll()
 							.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
 						if (!resolved) throw new Error("Classifier model not found");
-						const apiKey = await this.#modelRegistry.getApiKey(resolved, this.sessionId);
+
+						let targetModel = resolved;
+						if (
+							resolved.provider === "openai" ||
+							(resolved.provider === "litellm" && resolved.id.includes("openai"))
+						) {
+							const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
+							if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
+						} else if (
+							resolved.provider === "anthropic" ||
+							(resolved.provider === "litellm" &&
+								(resolved.id.includes("anthropic") || resolved.id.includes("claude")))
+						) {
+							const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
+							if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
+						}
+
+						const apiKey = await this.#modelRegistry.getApiKey(targetModel, this.sessionId);
 						if (!apiKey) throw new Error("No API key for classifier model");
 
 						const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number, "delegation"?: { "reason": string, "subtasks": { "id": string, "title": string, "description": string, "targetFilesOrPaths": string[], "desiredTier"?: string }[] } }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
 
 						const res = await completeSimple(
-							resolved,
+							targetModel,
 							{
 								systemPrompt: systemInstruction,
 								messages: [
@@ -3562,6 +3579,37 @@ export class AgentSession {
 
 		if (options?.deliverAs === "nextTurn") {
 			if (options?.triggerTurn) {
+				const routingMode = this.settings.get("routing.mode") as import("../routing/types").RoutingMode;
+				if (routingMode !== "off" && this.model) {
+					let promptText = "";
+					if (typeof message.content === "string") promptText = message.content;
+					else if (Array.isArray(message.content)) {
+						promptText = message.content
+							.filter(c => c.type === "text")
+							.map(c => (c as any).text)
+							.join("");
+					}
+					const context = {
+						prompt: promptText,
+						mode: routingMode,
+						anchorModel: `${this.model.provider}/${this.model.id}`,
+						availableModels: this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`),
+						hasImages: Array.isArray(message.content) && message.content.some(c => c.type === "image"),
+					};
+					const decision = await this.#routingCoordinator.evaluateTurn(context);
+					if (decision.selectedModel && decision.applied) {
+						const targetModel = this.#modelRegistry
+							.getAvailable()
+							.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
+						if (targetModel) {
+							const currentModelId = `${this.model.provider}/${this.model.id}`;
+							const targetModelId = `${targetModel.provider}/${targetModel.id}`;
+							if (currentModelId !== targetModelId) {
+								await this.setModelRoutingSwitch(targetModel);
+							}
+						}
+					}
+				}
 				await this.agent.prompt(appMessage);
 				return;
 			}
@@ -3577,6 +3625,37 @@ export class AgentSession {
 		}
 
 		if (options?.triggerTurn) {
+			const routingMode = this.settings.get("routing.mode") as import("../routing/types").RoutingMode;
+			if (routingMode !== "off" && this.model) {
+				let promptText = "";
+				if (typeof message.content === "string") promptText = message.content;
+				else if (Array.isArray(message.content)) {
+					promptText = message.content
+						.filter(c => c.type === "text")
+						.map(c => (c as any).text)
+						.join("");
+				}
+				const context = {
+					prompt: promptText,
+					mode: routingMode,
+					anchorModel: `${this.model.provider}/${this.model.id}`,
+					availableModels: this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`),
+					hasImages: Array.isArray(message.content) && message.content.some(c => c.type === "image"),
+				};
+				const decision = await this.#routingCoordinator.evaluateTurn(context);
+				if (decision.selectedModel && decision.applied) {
+					const targetModel = this.#modelRegistry
+						.getAvailable()
+						.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
+					if (targetModel) {
+						const currentModelId = `${this.model.provider}/${this.model.id}`;
+						const targetModelId = `${targetModel.provider}/${targetModel.id}`;
+						if (currentModelId !== targetModelId) {
+							await this.setModelRoutingSwitch(targetModel);
+						}
+					}
+				}
+			}
 			await this.agent.prompt(appMessage);
 			return;
 		}
@@ -4022,15 +4101,28 @@ export class AgentSession {
 	 */
 	async setModelRoutingSwitch(model: Model): Promise<void> {
 		const previousEditMode = this.#resolveActiveEditMode();
-		const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+
+		let targetModel = model;
+		if (model.provider === "openai" || (model.provider === "litellm" && model.id.includes("openai"))) {
+			const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
+			if (internalUrl) targetModel = { ...model, baseUrl: internalUrl };
+		} else if (
+			model.provider === "anthropic" ||
+			(model.provider === "litellm" && (model.id.includes("anthropic") || model.id.includes("claude")))
+		) {
+			const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
+			if (internalUrl) targetModel = { ...model, baseUrl: internalUrl };
+		}
+
+		const apiKey = await this.#modelRegistry.getApiKey(targetModel, this.sessionId);
 		if (!apiKey) {
-			throw new Error(`No API key for ${model.provider}/${model.id}`);
+			throw new Error(`No API key for ${targetModel.provider}/${targetModel.id}`);
 		}
 
 		// DO NOT clear active retry fallback - routing is a transient optimization
-		this.#setModelWithProviderSessionReset(model, "runtime-switch");
-		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, "routing_switch");
-		this.settings.getStorage()?.recordModelUsage(`${model.provider}/${model.id}`);
+		this.#setModelWithProviderSessionReset(targetModel, "runtime-switch");
+		this.sessionManager.appendModelChange(`${targetModel.provider}/${targetModel.id}`, "routing_switch");
+		this.settings.getStorage()?.recordModelUsage(`${targetModel.provider}/${targetModel.id}`);
 
 		this.setThinkingLevel(this.thinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
