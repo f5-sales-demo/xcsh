@@ -37,4 +37,46 @@ describe("AgentSession Turn Routing Evaluation (I02)", () => {
 		// 11 + 20 = 31 total chars -> 31 / 4 = 7.75 -> round to 8
 		expect(calculateUsedTokens(messages)).toBe(8);
 	});
+
+	it("should ignore base64 images when estimating tokens in strings", async () => {
+		const { calculateUsedTokens } = await import("../src/session/agent-session");
+		const messages = [
+			{ role: "user", content: "data:image/jpeg;base64,massivebase64stringthatshouldbeignoredentirely" },
+			{ role: "assistant", content: "Normal text" }, // length 11
+		];
+		// 11 chars -> 11/4 = 2.75 -> 3
+		expect(calculateUsedTokens(messages)).toBe(3);
+	});
+
+	it("should reset session-level routing state completely when branch lacks custom routing entries", async () => {
+		const { createAgentSession } = await import("../src/sdk");
+		const { SessionManager } = await import("../src/session/session-manager");
+
+		const sm = SessionManager.inMemory();
+		sm.appendMessage({ role: "user", content: "hello", timestamp: Date.now() } as any);
+
+		const { session } = await createAgentSession({
+			model: { provider: "test", id: "model-1", name: "test model", contextWindow: 8000, api: "anthropic" } as any,
+			sessionManager: sm,
+			modelRegistry: {
+				getAvailable: () => [],
+				getApiKey: async () => "key",
+				getApiKeyForProvider: async () => "key",
+				syncExtensionSources: () => {},
+				clearSourceRegistrations: () => {},
+			} as any,
+			enableLsp: false,
+			enableMCP: false,
+		});
+
+		// Force mutate the state to pretend we were in a routed state
+		session.agent.serviceTier = "frontier" as any;
+
+		// Rewind to first message, which has no routing events before it
+		const entries = session.sessionManager.getBranch();
+		await session.branch(entries[0].id);
+
+		expect(session.modelResolutionSource).toBe("config");
+		expect(session.agent.serviceTier).toBeUndefined();
+	});
 });

@@ -58,8 +58,14 @@ describe("Autonomous Delegation Policy (D01)", () => {
 
 		const executedPrompts: string[] = [];
 
-		const mockPerform = async (prompt: string) => {
+		const mockPerform = async (
+			prompt: string,
+			options?: { signal?: AbortSignal; allowedTools?: (toolName: string) => boolean },
+		) => {
 			executedPrompts.push(prompt);
+			expect(options?.allowedTools).toBeDefined();
+			expect(options?.allowedTools?.("read")).toBe(true);
+			expect(options?.allowedTools?.("write")).toBe(false);
 			return { result: "Auth token is in line 5", tokens: 10 };
 		};
 

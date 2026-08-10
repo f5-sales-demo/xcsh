@@ -41,7 +41,10 @@ export function validateDelegationPlan(plan: ReadOnlyDelegationPlan, maxTasks = 
 
 export async function executeReadOnlyDelegationPlan(
 	plan: ReadOnlyDelegationPlan,
-	executor: (subtaskPrompt: string, signal?: AbortSignal) => Promise<{ result: string; tokens: number }>,
+	executor: (
+		subtaskPrompt: string,
+		options?: { signal?: AbortSignal; allowedTools?: (toolName: string) => boolean },
+	) => Promise<{ result: string; tokens: number }>,
 	maxTasks = 3,
 	options?: { signal?: AbortSignal },
 ): Promise<{ results: Array<{ id: string; result: string }>; tokensUsed: number }> {
@@ -65,7 +68,10 @@ export async function executeReadOnlyDelegationPlan(
 			]
 				.filter(Boolean)
 				.join("\n");
-			const { result, tokens } = await executor(promptPayload, options?.signal);
+			const { result, tokens } = await executor(promptPayload, {
+				signal: options?.signal,
+				allowedTools: isDelegationAllowedTool,
+			});
 			return { id: task.id, result, tokens };
 		} catch (err) {
 			return { id: task.id, result: `Failed: ${String(err)}`, tokens: 0 };
