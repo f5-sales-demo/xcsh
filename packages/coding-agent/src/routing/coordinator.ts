@@ -28,6 +28,8 @@ export interface EvaluateTurnOptions {
 	downshiftAfterTurns?: number;
 	getModelContextWindow?: (modelId: string) => number;
 	runRoutingClassifier?: (utilityModel: string, prompt: string) => Promise<string>;
+	signal?: AbortSignal;
+	ttftStartNs?: number;
 }
 
 export class RoutingCoordinator {

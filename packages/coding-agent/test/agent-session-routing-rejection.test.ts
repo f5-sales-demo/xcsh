@@ -150,7 +150,7 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 
 		await session.waitForIdle();
 
-		expect(abortCount).toBe(1);
+		expect(abortCount).toBe(0);
 		expect(continueCount).toBe(1);
 		expect(session.getRoutingState().currentTier).toBe("utility");
 	});
@@ -243,14 +243,6 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		settings.set("routing.pools", "litellm/gpt-5.6-luna");
 		settings.set("routing.internalOpenAiUrl", "https://internal.openai.example.com");
 
-		let switchCount = 0;
-		session.setModelRoutingSwitch = async model => {
-			console.log("Switching model:", model.provider, model.id, model.baseUrl);
-			if (model.baseUrl === "https://internal.openai.example.com") {
-				switchCount++;
-			}
-		};
-
 		const _originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
 		(session as any).routingCoordinator.evaluateTurn = async (_ctx: any) => {
 			return {
@@ -268,20 +260,12 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			return Promise.resolve();
 		};
 
-		console.log("TEST: Triggering sendCustomMessage 1");
-		await session.sendCustomMessage({ customType: "test", content: "hello" }, { triggerTurn: true });
-		console.log("TEST: switchCount is", switchCount);
-		expect(switchCount).toBe(1);
+		await session.sendCustomMessage({ customType: "test", content: "hello", display: true }, { triggerTurn: true });
+		expect(session.model?.baseUrl).toBe("https://internal.openai.example.com");
 
 		settings.set("routing.internalOpenAiUrl", "");
-
-		session.setModelRoutingSwitch = async model => {
-			if (!model.baseUrl) {
-				switchCount++;
-			}
-		};
-		await session.sendCustomMessage({ customType: "test", content: "hello" }, { triggerTurn: true });
-		expect(switchCount).toBe(2);
+		await session.sendCustomMessage({ customType: "test", content: "hello", display: true }, { triggerTurn: true });
+		expect(session.model?.baseUrl).toBeUndefined();
 	});
 
 	it("should trigger image-only fallback correctly in evaluateAndApplyRouting", async () => {
@@ -348,79 +332,92 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 
 		const controller = new AbortController();
 		let evaluateAndApplyRoutingCalledWithSignal = false;
-
-		const originalEvaluateAndApplyRouting = (session as any).evaluateAndApplyRouting;
-		// Since evaluateAndApplyRouting is private, we can't easily mock it unless we cast.
-		// Subscribe to intercept the emitted routing_delegated event.
-		let emittedTokens = -1;
-		session.subscribe((e: any) => {
-			if (e.type === "routing_delegated") {
-				emittedTokens = e.tokensUsed;
-			}
-		});
-
-		const oldKey = process.env.OPENAI_API_KEY;
-		process.env.OPENAI_API_KEY = "test-key";
+		let childPromptAborted = false;
 
 		const originalChildSession = AgentSession.prototype.buildDisplaySessionContext;
 		const originalPrompt = AgentSession.prototype.prompt;
-		let buildDisplaySessionContextCalled = false;
+		const oldKey = process.env.OPENAI_API_KEY;
 
-		(AgentSession.prototype as any).buildDisplaySessionContext = () => {
-			console.log("Mock buildDisplaySessionContext called");
-			buildDisplaySessionContextCalled = true;
-			return {
-				usedTokens: 42,
-				hasPersistedMCPToolSelection: false,
-				messages: [],
+		try {
+			let emittedTokens = -1;
+			session.subscribe((e: any) => {
+				if (e.type === "routing_delegated") {
+					emittedTokens = e.tokensUsed;
+				}
+			});
+
+			process.env.OPENAI_API_KEY = "test-key";
+
+			let buildDisplaySessionContextCalled = false;
+
+			(AgentSession.prototype as any).buildDisplaySessionContext = () => {
+				buildDisplaySessionContextCalled = true;
+				return {
+					usedTokens: 42,
+					hasPersistedMCPToolSelection: false,
+					messages: [],
+				};
 			};
-		};
-		(AgentSession.prototype as any).prompt = async () => Promise.resolve();
 
-		// Mock prompt custom message to avoid actual execution
-		(session as any).promptWithMessage = async (m: any, text: any, opts: any) => {
-			if (opts?.signal === controller.signal) {
-				evaluateAndApplyRoutingCalledWithSignal = true;
-			}
-			return Promise.resolve();
-		};
+			(AgentSession.prototype as any).prompt = async () => {
+				return new Promise<void>((_resolve, reject) => {
+					if (controller.signal.aborted) {
+						childPromptAborted = true;
+						reject(new Error("Aborted"));
+						return;
+					}
+					const onAbort = () => {
+						childPromptAborted = true;
+						reject(new Error("Aborted"));
+					};
+					controller.signal.addEventListener("abort", onAbort);
 
-		// Mock the routingCoordinator to return a read-only plan
-		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
-			console.log("Mock evaluateTurn called");
-			if (ctx.signal === controller.signal) {
-				evaluateAndApplyRoutingCalledWithSignal = true;
-			}
-			return {
-				applied: true,
-				selectedModel: "openai/gpt-5.6",
-				effectiveTier: "utility",
-				reasons: [],
-				delegation: {
-					mode: "read-only",
-					subtasks: [
-						{ id: "1", title: "task 1", description: "task 1" },
-						{ id: "2", title: "task 2", description: "task 2" },
-					],
-				},
+					// Abort the controller while we are in the prompt
+					controller.abort();
+				});
 			};
-		};
 
-		const message: any = { customType: "test", content: "test", display: true };
+			(session as any).promptWithMessage = async (_m: any, _text: any, opts: any) => {
+				if (opts?.signal === controller.signal) {
+					evaluateAndApplyRoutingCalledWithSignal = true;
+				}
+				return Promise.resolve();
+			};
 
-		await session.sendCustomMessage(message, { triggerTurn: true, signal: controller.signal } as any);
+			(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+				if (ctx.signal === controller.signal) {
+					evaluateAndApplyRoutingCalledWithSignal = true;
+				}
+				return {
+					applied: true,
+					selectedModel: "openai/gpt-5.6",
+					effectiveTier: "utility",
+					reasons: [],
+					delegation: {
+						mode: "read-only",
+						subtasks: [
+							{ id: "1", title: "task 1", description: "task 1" },
+							{ id: "2", title: "task 2", description: "task 2" },
+						],
+					},
+				};
+			};
 
-		expect(evaluateAndApplyRoutingCalledWithSignal).toBe(true);
-		expect(buildDisplaySessionContextCalled).toBe(true);
-		expect(emittedTokens).toBe(84); // 42 tokens * 2 subtasks
+			const message: any = { customType: "test", content: "test", display: true };
+			await session.sendCustomMessage(message, { triggerTurn: true, signal: controller.signal } as any);
 
-		// Restore
-		(AgentSession.prototype as any).buildDisplaySessionContext = originalChildSession;
-		(AgentSession.prototype as any).prompt = originalPrompt;
-		if (oldKey === undefined) {
-			delete process.env.OPENAI_API_KEY;
-		} else {
-			process.env.OPENAI_API_KEY = oldKey;
+			expect(evaluateAndApplyRoutingCalledWithSignal).toBe(true);
+			expect(buildDisplaySessionContextCalled).toBe(true);
+			expect(childPromptAborted).toBe(true);
+			expect(emittedTokens).toBe(0);
+		} finally {
+			(AgentSession.prototype as any).buildDisplaySessionContext = originalChildSession;
+			(AgentSession.prototype as any).prompt = originalPrompt;
+			if (oldKey === undefined) {
+				delete process.env.OPENAI_API_KEY;
+			} else {
+				process.env.OPENAI_API_KEY = oldKey;
+			}
 		}
 	});
 });

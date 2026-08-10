@@ -43,7 +43,6 @@ import type {
 } from "@f5-sales-demo/pi-ai";
 import {
 	calculateRateLimitBackoffMs,
-	completeSimple,
 	getSupportedEfforts,
 	isContextOverflow,
 	isUsageLimitError,
@@ -1348,7 +1347,6 @@ export class AgentSession {
 						}
 
 						if (!outcome.safeToContinue) {
-							this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
 							return;
 						}
 
@@ -1357,12 +1355,11 @@ export class AgentSession {
 						const previousModel = this.model;
 
 						try {
+							await this.setModelRoutingSwitch(targetModel);
 							this.agent.abort();
 
 							this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
 							this.#routingCoordinator.restoreState({ currentTier: targetTier });
-
-							await this.setModelRoutingSwitch(targetModel);
 							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
 							const { mapTierToEffort } = await import("../routing/effort");
 							const effort = mapTierToEffort(targetTier, effortMap);
@@ -2949,58 +2946,6 @@ export class AgentSession {
 					.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
 				return m?.contextWindow ?? 128000;
 			},
-			runRoutingClassifier: async (utilityModel: string, promptText: string) => {
-				const resolved = this.#modelRegistry
-					.getAvailable()
-					.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
-				if (!resolved) throw new Error("Classifier model not found");
-
-				let targetModel = resolved;
-				if (
-					resolved.provider === "openai" ||
-					(resolved.provider === "litellm" && (resolved.id.includes("openai") || /gpt-/.test(resolved.id)))
-				) {
-					const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
-					if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
-				} else if (
-					resolved.provider === "anthropic" ||
-					(resolved.provider === "litellm" &&
-						(resolved.id.includes("anthropic") || resolved.id.includes("claude")))
-				) {
-					const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
-					if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
-				}
-
-				const apiKey = await this.#modelRegistry.getApiKey(targetModel, this.sessionId);
-				if (!apiKey) throw new Error("No API key for classifier model");
-
-				const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number, "delegation"?: { "reason": string, "subtasks": { "id": string, "title": string, "description": string, "targetFilesOrPaths": string[], "desiredTier"?: string }[] } }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
-
-				const res = await completeSimple(
-					targetModel,
-					{
-						systemPrompt: systemInstruction,
-						messages: [{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() }],
-					},
-					{ apiKey, signal: AbortSignal.timeout(15000) },
-				);
-				const rawText = res.content
-					.filter(c => c.type === "text")
-					.map(c => (c as TextContent).text)
-					.join("");
-
-				const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-				if (jsonMatch) {
-					const parsed = JSON.parse(jsonMatch[0]);
-					if (res.usage) {
-						this.settings.getStorage()?.recordModelUsage(`${resolved.provider}/${resolved.id}`);
-						parsed.routingUsage = (res.usage as any).totalTokens ?? (res.usage as any).total ?? 0;
-					}
-					return JSON.stringify(parsed);
-				}
-				throw new Error("Classifier returned malformed JSON");
-			},
-			downshiftAfterTurns: (this.settings.get("routing.downshiftAfterTurns") as number) ?? 2,
 		});
 
 		this.#emitSessionEvent({
@@ -3016,33 +2961,37 @@ export class AgentSession {
 		} as any).catch(() => {});
 
 		if (decision.selectedModel && decision.applied) {
-			let targetModel = this.#modelRegistry
+			const targetModel = this.#modelRegistry
 				.getAvailable()
 				.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
 			if (targetModel) {
 				const currentModelId = `${this.model.provider}/${this.model.id}`;
 				const targetModelId = `${targetModel.provider}/${targetModel.id}`;
 
-				if (
-					targetModel.provider === "openai" ||
-					(targetModel.provider === "litellm" &&
-						(targetModel.id.includes("openai") || /gpt-/.test(targetModel.id)))
-				) {
-					const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
-					if (internalUrl) targetModel = { ...targetModel, baseUrl: internalUrl } as any;
-				} else if (
-					targetModel.provider === "anthropic" ||
-					(targetModel.provider === "litellm" &&
-						(targetModel.id.includes("anthropic") || targetModel.id.includes("claude")))
-				) {
-					const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
-					if (internalUrl) targetModel = { ...targetModel, baseUrl: internalUrl } as any;
+				let needsSwitch = currentModelId !== targetModelId;
+
+				// Force switch if the current model is the same but needs an internal URL override
+				if (!needsSwitch) {
+					if (
+						targetModel.provider === "openai" ||
+						(targetModel.provider === "litellm" &&
+							(targetModel.id.includes("openai") || /gpt-/.test(targetModel.id)))
+					) {
+						const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
+						if ((internalUrl || undefined) !== this.model.baseUrl) {
+							needsSwitch = true;
+						}
+					} else if (
+						targetModel.provider === "anthropic" ||
+						(targetModel.provider === "litellm" &&
+							(targetModel.id.includes("anthropic") || targetModel.id.includes("claude")))
+					) {
+						const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
+						if ((internalUrl || undefined) !== this.model.baseUrl) {
+							needsSwitch = true;
+						}
+					}
 				}
-
-				const currentBaseUrl = this.model.baseUrl;
-				const targetBaseUrl = targetModel.baseUrl;
-
-				const needsSwitch = currentModelId !== targetModelId || currentBaseUrl !== targetBaseUrl;
 
 				if (needsSwitch) {
 					await this.setModelRoutingSwitch(targetModel);
