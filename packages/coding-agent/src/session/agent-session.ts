@@ -444,6 +444,7 @@ export class AgentSession {
 	 * distinguishable from launch configuration (#2459). Defaults to "config": settings, a remembered
 	 * role, or a resumed session are all config, and only --model or a live switch is not.
 	 */
+	#initialModelResolutionSource: ModelResolutionSource = "config";
 	#modelResolutionSource: ModelResolutionSource = "config";
 	#promptTemplates: PromptTemplate[];
 	#slashCommands: FileSlashCommand[];
@@ -595,7 +596,8 @@ export class AgentSession {
 		this.#pythonKernelOwnerId = config.pythonKernelOwnerId ?? `agent-session:${Snowflake.next()}`;
 		this.#scopedModels = config.scopedModels ?? [];
 		this.#thinkingLevel = config.thinkingLevel;
-		this.#modelResolutionSource = config.modelResolutionSource ?? "config";
+		this.#initialModelResolutionSource = config.modelResolutionSource ?? "config";
+		this.#modelResolutionSource = this.#initialModelResolutionSource;
 		this.#promptTemplates = config.promptTemplates ?? [];
 		this.#slashCommands = config.slashCommands ?? [];
 		this.#extensionRunner = config.extensionRunner;
@@ -6767,8 +6769,14 @@ export class AgentSession {
 			}
 		}
 		if (!foundRoutingState) {
-			this.#modelResolutionSource = "config";
-			this.agent.serviceTier = undefined;
+			this.#modelResolutionSource = this.#initialModelResolutionSource;
+			const hasServiceTierEntry = this.sessionManager
+				.getBranch()
+				.some(entry => entry.type === "service_tier_change");
+			if (!hasServiceTierEntry) {
+				const configuredServiceTier = this.settings?.get("serviceTier");
+				this.agent.serviceTier = configuredServiceTier === "none" ? undefined : configuredServiceTier;
+			}
 		}
 	}
 
