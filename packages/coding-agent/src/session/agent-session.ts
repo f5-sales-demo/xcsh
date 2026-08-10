@@ -3105,17 +3105,34 @@ export class AgentSession {
 			return;
 		}
 
+		const clonedContent = Array.isArray(message.content)
+			? message.content.map((c: any) => ({ ...c }))
+			: message.content;
+
 		const customMessage: CustomMessage<T> = {
 			role: "custom",
 			customType: message.customType,
-			content: message.content,
+			content: clonedContent,
 			display: message.display,
 			details: message.details,
 			attribution: message.attribution ?? "agent",
 			timestamp: Date.now(),
 		};
 
-		await this.#promptWithMessage(customMessage, textContent, options);
+		const delegationOutput = await this.#evaluateAndApplyRouting(
+			textContent,
+			Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
+		);
+		if (delegationOutput) {
+			if (typeof customMessage.content === "string") {
+				customMessage.content += delegationOutput;
+			} else if (Array.isArray(customMessage.content)) {
+				const textBlock = customMessage.content.find((c: any) => c.type === "text") as any;
+				if (textBlock) textBlock.text += delegationOutput;
+			}
+		}
+
+		await this.#promptWithMessage(customMessage, textContent + (delegationOutput || ""), options);
 	}
 
 	async #evaluateAndApplyRouting(
@@ -3255,38 +3272,67 @@ export class AgentSession {
 						if (found) resolvedUtility = found;
 					}
 
-					const childSessionId = `${this.sessionId}-task-${Math.random().toString(36).substring(2, 9)}`;
-					const childSession = await (this.sessionManager as any).createDelegationChild(
-						childSessionId,
-						resolvedUtility!,
-					);
+					if (!resolvedUtility) return { result: "Delegation failed: Model not resolved", tokens: 0 };
+
+					if (
+						resolvedUtility.provider === "openai" ||
+						(resolvedUtility.provider === "litellm" && resolvedUtility.id.includes("openai"))
+					) {
+						const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
+						if (internalUrl) resolvedUtility = { ...resolvedUtility, baseUrl: internalUrl } as any;
+					} else if (
+						resolvedUtility.provider === "anthropic" ||
+						(resolvedUtility.provider === "litellm" &&
+							(resolvedUtility.id.includes("anthropic") || resolvedUtility.id.includes("claude")))
+					) {
+						const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
+						if (internalUrl) resolvedUtility = { ...resolvedUtility, baseUrl: internalUrl } as any;
+					}
+
+					const { createAgentSession } = await import("../sdk");
+					const { SessionManager: SDKSessionManager } = await import("./session-manager");
+					const childSettings = await this.settings.cloneForCwd(process.cwd());
+					childSettings.set("routing.delegation", "off");
+
+					if (options?.signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+
+					const { session: childSession } = await createAgentSession({
+						model: resolvedUtility!,
+						sessionManager: SDKSessionManager.inMemory(),
+						settings: childSettings,
+						authStorage: this.#modelRegistry.authStorage,
+						modelRegistry: this.#modelRegistry,
+						toolNames: Array.from(this.#toolRegistry.values())
+							.map(t => t.name)
+							.filter(isDelegationAllowedTool),
+						enableLsp: false,
+						enableMCP: false,
+					});
 
 					try {
-						await childSession.start();
-						let resultText = "";
-						const abort = new AbortController();
-						if (signal) {
-							signal.addEventListener("abort", () => abort.abort());
+						const onAbort = () => childSession.agent.abort();
+						signal?.addEventListener("abort", onAbort);
+						if (signal?.aborted) {
+							onAbort();
+							return { result: "Delegation failed: Aborted", tokens: 0 };
 						}
 						try {
-							const response = await childSession.agent.prompt(
-								{
-									role: "user",
-									content: subtaskPrompt,
-								},
-								{ signal: abort.signal },
-							);
-							resultText =
-								typeof response.content === "string"
-									? response.content
-									: response.content.map((c: any) => c.text || "").join("");
-							const tUsage = (childSession as any).agent?.lastUsage?.totalTokens ?? 0;
-							return { result: resultText, tokens: tUsage };
-						} catch (err) {
-							if (abort.signal.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
-							throw err;
+							await childSession.prompt(subtaskPrompt);
+							if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+							const resultStr = childSession
+								.buildDisplaySessionContext()
+								.messages.filter((m: any) => m.role === "assistant")
+								.map((m: any) =>
+									m.content
+										.filter((c: any) => c.type === "text")
+										.map((c: any) => c.text)
+										.join(""),
+								)
+								.join("\n");
+							const tUsage = ((childSession as any).agent?.lastUsage?.totalTokens ?? 0) as number;
+							return { result: resultStr || "No output", tokens: tUsage };
 						} finally {
-							signal?.removeEventListener("abort", abort.abort);
+							signal?.removeEventListener("abort", onAbort);
 						}
 					} catch (err) {
 						if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
@@ -3707,8 +3753,21 @@ export class AgentSession {
 
 		const prependMessages = queuedMessages.slice(0, -1);
 		const textContent = this.#getCustomMessageTextContent(message);
+		const delegationOutput = await this.#evaluateAndApplyRouting(
+			textContent,
+			Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
+		);
+		if (delegationOutput) {
+			if (typeof message.content === "string") {
+				message.content += delegationOutput;
+			} else if (Array.isArray(message.content)) {
+				const textBlock = message.content.find((c: any) => c.type === "text") as any;
+				if (textBlock) textBlock.text += delegationOutput;
+			}
+		}
+
 		try {
-			await this.#promptWithMessage(message, textContent, {
+			await this.#promptWithMessage(message, textContent + (delegationOutput || ""), {
 				prependMessages,
 				skipPostPromptRecoveryWait: true,
 			});
@@ -3757,10 +3816,14 @@ export class AgentSession {
 		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
 		options?: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn" },
 	): Promise<void> {
+		const clonedContent = Array.isArray(message.content)
+			? message.content.map((c: any) => ({ ...c }))
+			: message.content;
+
 		const appMessage: CustomMessage<T> = {
 			role: "custom",
 			customType: message.customType,
-			content: message.content,
+			content: clonedContent,
 			display: message.display,
 			details: message.details,
 			attribution: message.attribution ?? "agent",
