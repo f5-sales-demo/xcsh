@@ -4174,7 +4174,10 @@ export class AgentSession {
 		const previousEditMode = this.#resolveActiveEditMode();
 
 		let targetModel = model;
-		if (model.provider === "openai" || (model.provider === "litellm" && model.id.includes("openai"))) {
+		if (
+			model.provider === "openai" ||
+			(model.provider === "litellm" && (model.id.includes("openai") || /gpt-/.test(model.id)))
+		) {
 			const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
 			if (internalUrl) targetModel = { ...model, baseUrl: internalUrl };
 		} else if (

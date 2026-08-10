@@ -222,8 +222,8 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 
 		let routingEvaluated = false;
 		// Spy on routingCoordinator.evaluateTurn
-		const originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
-		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+		const _originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
+		(session as any).routingCoordinator.evaluateTurn = async (_ctx: any) => {
 			routingEvaluated = true;
 			throw new Error("routing evaluated stop");
 		};
@@ -251,8 +251,8 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			}
 		};
 
-		const originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
-		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+		const _originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
+		(session as any).routingCoordinator.evaluateTurn = async (_ctx: any) => {
 			return {
 				applied: true,
 				selectedModel: "litellm/gpt-5.6-luna",
@@ -260,8 +260,8 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			};
 		};
 
-		let appendedContent: any;
-		(session as any).promptWithMessage = async (m: any, text: any, opts: any) => {
+		let _appendedContent: any;
+		(session as any).promptWithMessage = async (_m: any, _text: any, _opts: any) => {
 			return Promise.resolve();
 		};
 		session.agent.prompt = async () => {
@@ -290,8 +290,8 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		modelRegistry.getApiKey = async () => "mock-key";
 		settings.set("routing.mode", "auto");
 		settings.set("routing.delegation", "read-only");
-		const originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
-		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+		const _originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
+		(session as any).routingCoordinator.evaluateTurn = async (_ctx: any) => {
 			return {
 				applied: true,
 				selectedModel: "openai/gpt-5.6",
@@ -325,5 +325,20 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		const textBlock = appendedContent.find((c: any) => c.type === "text");
 		expect(textBlock).toBeDefined();
 		expect(textBlock.text).toContain("<delegation_results>");
+	});
+
+	it("should apply routing.internalOpenAiUrl to LiteLLM GPT models in setModelRoutingSwitch", async () => {
+		settings.set("routing.internalOpenAiUrl", "https://internal-openai.example.com");
+		modelRegistry.getApiKey = async () => "mock-key";
+
+		const litellmGptModel = { provider: "litellm", id: "gpt-5.6-luna", api: "openai-responses" } as any;
+
+		await session.setModelRoutingSwitch(litellmGptModel);
+
+		const activeModel = session.model;
+		expect(activeModel).toBeDefined();
+		expect(activeModel?.provider).toBe("litellm");
+		expect(activeModel?.id).toBe("gpt-5.6-luna");
+		expect(activeModel?.baseUrl).toBe("https://internal-openai.example.com");
 	});
 });

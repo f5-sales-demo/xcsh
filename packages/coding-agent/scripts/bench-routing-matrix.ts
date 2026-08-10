@@ -1,10 +1,9 @@
 import * as path from "node:path";
 import { RoutingCoordinator } from "../src/routing/coordinator";
-import type { RoutingState, RoutingStateStorage } from "../src/routing/types";
 
 async function main() {
 	console.log("Running routing matrix benchmarks...");
-	const modelRegistry: any = {
+	const _modelRegistry: any = {
 		getAvailable: () => [
 			{ provider: "openai", id: "gpt-5.6" },
 			{ provider: "litellm", id: "gpt-5.6-luna" },
@@ -19,29 +18,7 @@ async function main() {
 		],
 	};
 
-	let currentState: RoutingState = {
-		currentTier: "utility",
-		escalationFloor: "utility",
-		downshiftStreak: 0,
-		activePool: undefined,
-		activeDelegation: undefined,
-		pinnedModel: undefined,
-	};
-	const store: RoutingStateStorage = {
-		read: async () => currentState,
-		write: async state => {
-			currentState = state;
-		},
-		isShared: true,
-	};
-
-	const coordinator = new RoutingCoordinator({
-		modelRegistry,
-		store,
-		mode: "auto",
-		defaultTier: "utility",
-	});
-
+	const coordinator = new RoutingCoordinator();
 	const scenarios = [
 		{ name: "Greeting", prompt: "Hello, how are you?", expectedTier: "utility" },
 		{
@@ -63,6 +40,7 @@ async function main() {
 		console.log(`Evaluating scenario: ${scenario.name}`);
 		const result = await coordinator.evaluateTurn({
 			anchorModel: "openai/gpt-5.6",
+			mode: "auto",
 			prompt: scenario.prompt,
 			hasImages: scenario.hasImages || false,
 			availableModels: [
@@ -75,7 +53,10 @@ async function main() {
 			signal: AbortSignal.timeout(10000),
 		});
 
-		const success = true; // In a real harness we'd verify the result.selectedModel tier matches expectedTier.
+		const isUtility =
+			result.selectedModel === "openai/gpt-5.6" || result.selectedModel === "google-vertex/gemini-3.6-flash";
+		const resolvedTier = isUtility ? "utility" : "frontier";
+		const success = resolvedTier === scenario.expectedTier;
 		if (success) passed++;
 
 		report.results.push({
