@@ -36,7 +36,7 @@ jobs:
   reconcile:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           # Tags are the input to this check; a shallow clone has none, and the
           # script treats an empty tag list as unknown rather than clean.
