@@ -2844,7 +2844,7 @@ export class AgentSession {
 
 	async promptCustomMessage<T = unknown>(
 		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
-		options?: Pick<PromptOptions, "streamingBehavior" | "toolChoice">,
+		options?: Pick<PromptOptions, "streamingBehavior" | "toolChoice" | "signal">,
 	): Promise<void> {
 		const textContent =
 			typeof message.content === "string"
@@ -2879,6 +2879,7 @@ export class AgentSession {
 		const delegationOutput = await this.#evaluateAndApplyRouting(
 			textContent,
 			Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
+			{ signal: options?.signal },
 		);
 		if (delegationOutput) {
 			if (typeof customMessage.content === "string") {
@@ -2941,6 +2942,7 @@ export class AgentSession {
 			familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
 			profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
 			contextEstimate,
+			signal: options?.signal,
 			getModelContextWindow: (modelId: string) => {
 				const m = this.#modelRegistry
 					.getAvailable()
@@ -3140,7 +3142,7 @@ export class AgentSession {
 										.join(""),
 								)
 								.join("\n");
-							const tUsage = ((childSession as any).agent?.lastUsage?.totalTokens ?? 0) as number;
+							const tUsage = childSession.buildDisplaySessionContext().usedTokens || 0;
 							return { result: resultStr || "No output", tokens: tUsage };
 						} finally {
 							signal?.removeEventListener("abort", onAbort);
@@ -3629,7 +3631,7 @@ export class AgentSession {
 	 */
 	async sendCustomMessage<T = unknown>(
 		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
-		options?: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn" },
+		options?: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn"; signal?: AbortSignal },
 	): Promise<void> {
 		const clonedContent = Array.isArray(message.content)
 			? message.content.map((c: any) => ({ ...c }))

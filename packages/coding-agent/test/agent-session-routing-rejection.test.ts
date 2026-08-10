@@ -341,4 +341,86 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		expect(activeModel?.id).toBe("gpt-5.6-luna");
 		expect(activeModel?.baseUrl).toBe("https://internal-openai.example.com");
 	});
+
+	it("should calculate correct delegation tokens and pass AbortSignal", async () => {
+		settings.set("routing.mode", "auto");
+		settings.set("routing.delegation", "read-only");
+
+		const controller = new AbortController();
+		let evaluateAndApplyRoutingCalledWithSignal = false;
+
+		const originalEvaluateAndApplyRouting = (session as any).evaluateAndApplyRouting;
+		// Since evaluateAndApplyRouting is private, we can't easily mock it unless we cast.
+		// Subscribe to intercept the emitted routing_delegated event.
+		let emittedTokens = -1;
+		session.subscribe((e: any) => {
+			if (e.type === "routing_delegated") {
+				emittedTokens = e.tokensUsed;
+			}
+		});
+
+		const oldKey = process.env.OPENAI_API_KEY;
+		process.env.OPENAI_API_KEY = "test-key";
+
+		const originalChildSession = AgentSession.prototype.buildDisplaySessionContext;
+		const originalPrompt = AgentSession.prototype.prompt;
+		let buildDisplaySessionContextCalled = false;
+
+		(AgentSession.prototype as any).buildDisplaySessionContext = () => {
+			console.log("Mock buildDisplaySessionContext called");
+			buildDisplaySessionContextCalled = true;
+			return {
+				usedTokens: 42,
+				hasPersistedMCPToolSelection: false,
+				messages: [],
+			};
+		};
+		(AgentSession.prototype as any).prompt = async () => Promise.resolve();
+
+		// Mock prompt custom message to avoid actual execution
+		(session as any).promptWithMessage = async (m: any, text: any, opts: any) => {
+			if (opts?.signal === controller.signal) {
+				evaluateAndApplyRoutingCalledWithSignal = true;
+			}
+			return Promise.resolve();
+		};
+
+		// Mock the routingCoordinator to return a read-only plan
+		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+			console.log("Mock evaluateTurn called");
+			if (ctx.signal === controller.signal) {
+				evaluateAndApplyRoutingCalledWithSignal = true;
+			}
+			return {
+				applied: true,
+				selectedModel: "openai/gpt-5.6",
+				effectiveTier: "utility",
+				reasons: [],
+				delegation: {
+					mode: "read-only",
+					subtasks: [
+						{ id: "1", title: "task 1", description: "task 1" },
+						{ id: "2", title: "task 2", description: "task 2" },
+					],
+				},
+			};
+		};
+
+		const message: any = { customType: "test", content: "test", display: true };
+
+		await session.sendCustomMessage(message, { triggerTurn: true, signal: controller.signal } as any);
+
+		expect(evaluateAndApplyRoutingCalledWithSignal).toBe(true);
+		expect(buildDisplaySessionContextCalled).toBe(true);
+		expect(emittedTokens).toBe(84); // 42 tokens * 2 subtasks
+
+		// Restore
+		(AgentSession.prototype as any).buildDisplaySessionContext = originalChildSession;
+		(AgentSession.prototype as any).prompt = originalPrompt;
+		if (oldKey === undefined) {
+			delete process.env.OPENAI_API_KEY;
+		} else {
+			process.env.OPENAI_API_KEY = oldKey;
+		}
+	});
 });
