@@ -1,0 +1,84 @@
+# Multi-stage Alpine Dockerfile for xcsh with Marketplace CLI Tools & Non-Root Security Best Practices
+
+# Stage 1: Download external standalone CLI binaries
+FROM alpine:3.20 AS tools-downloader
+RUN apk add --no-cache curl unzip tar
+
+# Google Cloud SDK
+RUN curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz && \
+    tar -xf google-cloud-cli-linux-x86_64.tar.gz -C /opt
+
+# Stage 2: Build xcsh with Bun & Rust
+FROM alpine:3.20 AS xcsh-builder
+RUN apk add --no-cache curl unzip tar bash build-base rust cargo git
+
+# Install Bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
+
+WORKDIR /app
+COPY . .
+RUN bun install
+# Build native binaries if applicable / build project
+RUN bun run build || true
+
+# Stage 3: Runtime image (Non-Root Execution)
+FROM alpine:3.20 AS runtime
+
+# Arguments for User/Group ID inheritance
+ARG USER_NAME=xcsh
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+# System dependencies & native CLI tools from apk
+RUN apk add --no-cache \
+    bash \
+    git \
+    curl \
+    wget \
+    jq \
+    yq \
+    python3 \
+    py3-pip \
+    nodejs \
+    npm \
+    docker-cli \
+    github-cli \
+    glab \
+    bind-tools \
+    whois \
+    nmap \
+    ca-certificates
+
+# Python CLI tools
+RUN pip3 install --break-system-packages --no-cache-dir azure-cli awscli
+
+# NPM CLI tools
+RUN npm install -g @salesforce/cli
+
+# Create non-root group and user
+RUN addgroup -g ${USER_GID} ${USER_NAME} && \
+    adduser -D -u ${USER_UID} -G ${USER_NAME} -h /home/${USER_NAME} -s /bin/bash ${USER_NAME}
+
+# Copy Google Cloud SDK from Stage 1
+COPY --from=tools-downloader /opt/google-cloud-sdk /opt/google-cloud-sdk
+ENV PATH="/opt/google-cloud-sdk/bin:${PATH}"
+
+# Copy Bun and xcsh build output from Stage 2 with proper non-root user ownership
+COPY --from=xcsh-builder --chown=${USER_UID}:${USER_GID} /root/.bun /home/${USER_NAME}/.bun
+COPY --from=xcsh-builder --chown=${USER_UID}:${USER_GID} /app /app/xcsh
+
+# Environment and PATH for non-root user
+ENV HOME="/home/${USER_NAME}"
+ENV PATH="/home/${USER_NAME}/.bun/bin:${PATH}"
+
+# Set ownership permissions on workspace and user home
+RUN chown -R ${USER_UID}:${USER_GID} /app/xcsh /home/${USER_NAME}
+
+WORKDIR /app/xcsh
+
+# Switch to non-root user for security best practices
+USER ${USER_NAME}
+
+ENTRYPOINT ["bun", "run"]
+CMD ["start"]

@@ -17,6 +17,7 @@ packaging targeting Linux, macOS, and Windows.
 
 - **[F5 XC Contexts](runtime-tools/context-command)** — connect to F5 Distributed Cloud
   tenants. Create contexts, switch between them, manage namespaces and credentials.
+- **[Alpine Container Deployment](container/alpine-deployment)** — run `xcsh` inside security-hardened Alpine containers with multi-cloud CLI tool integration.
 - **Configuration** — how xcsh discovers, resolves, and layers configuration.
 - **Runtime & Tools** — the bash / notebook / resolve tool runtimes and the
   slash-command surface.

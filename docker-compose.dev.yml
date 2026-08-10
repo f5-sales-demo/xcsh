@@ -1,0 +1,37 @@
+services:
+  xcsh-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+      target: runtime
+      args:
+        USER_NAME: xcsh
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+    container_name: xcsh-dev
+    user: "${UID:-1000}:${GID:-1000}"
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - .:/app/xcsh
+      - /data/robin-GIT/marketplace:/app/marketplace
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Multi-Cloud CLI Credential Mounts for Non-Root User
+      - ~/.config/gcloud:/home/xcsh/.config/gcloud:ro
+      - ~/.azure:/home/xcsh/.azure:ro
+      - ~/.aws:/home/xcsh/.aws:ro
+      - ~/.config/gh:/home/xcsh/.config/gh:ro
+      - ~/.sfdx:/home/xcsh/.sfdx:ro
+      - ./.secrets:/app/xcsh/.secrets:ro
+    working_dir: /app/xcsh
+    environment:
+      - NODE_ENV=development
+      - HOME=/home/xcsh
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-3.1-pro-preview}
+      - GEMINI_FLASH_MODEL=${GEMINI_FLASH_MODEL:-gemini-3.6-flash-high}
+      - VERTEX_AI_PROJECT=${VERTEX_AI_PROJECT:-}
+      - VERTEX_AI_LOCATION=${VERTEX_AI_LOCATION:-us-central1}
+      - REQUIRE_ENTERPRISE_AUTH=true
+      - AZURE_CONFIG_DIR=/home/xcsh/.azure
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/xcsh/.secrets/gcp-sa.json
+    command: tail -f /dev/null
