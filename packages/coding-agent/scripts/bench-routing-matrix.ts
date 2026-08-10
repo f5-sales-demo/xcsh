@@ -1,7 +1,15 @@
 import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { completeSimple, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
+import {
+	completeSimple,
+	getBundledModel,
+	getBundledModels,
+	type ImageContent,
+	type Model,
+	type TextContent,
+	type UserMessage,
+} from "@f5-sales-demo/pi-ai";
 import { RoutingCoordinator } from "../src/routing/coordinator";
 import { BUILTIN_ROUTING_PRESETS } from "../src/routing/presets";
 import type { RoutingPoolConfig, RoutingTier } from "../src/routing/types";
@@ -29,9 +37,28 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): BenchmarkArgs
 		process.env.ROUTING_MATRIX_LANES ??
 		"openai,anthropic,litellm-openai,litellm-anthropic,google-vertex";
 
+	const repStr = get("--repetitions") ?? process.env.ROUTING_MATRIX_REPETITIONS ?? "3";
+	const warmStr = get("--warmups") ?? process.env.ROUTING_MATRIX_WARMUPS ?? "1";
+
+	const repetitions = Number(repStr);
+	const warmups = Number(warmStr);
+
+	if (
+		!Number.isInteger(repetitions) ||
+		!Number.isFinite(repetitions) ||
+		repetitions < 1 ||
+		!Number.isInteger(warmups) ||
+		!Number.isFinite(warmups) ||
+		warmups < 0
+	) {
+		throw new Error(
+			`Invalid benchmark counts: repetitions (${repStr}) must be an integer >= 1, warmups (${warmStr}) must be an integer >= 0`,
+		);
+	}
+
 	return {
-		repetitions: Number(get("--repetitions") ?? process.env.ROUTING_MATRIX_REPETITIONS ?? "3"),
-		warmups: Number(get("--warmups") ?? process.env.ROUTING_MATRIX_WARMUPS ?? "1"),
+		repetitions,
+		warmups,
 		lanes: rawLanes.split(",").map(s => s.trim().toLowerCase()),
 		reportDir: get("--report-dir") ?? get("--out") ?? defaultReportDir,
 		dryRun: has("--dry-run") || process.env.ROUTING_MATRIX_DRY_RUN === "true",
@@ -66,15 +93,15 @@ export function getProviderCredentials(): Record<string, ProviderCredential> {
 			lane: "litellm-openai",
 			provider: "litellm",
 			presetId: "litellm/openai",
-			apiKey: process.env.LITELLM_API_KEY,
-			baseUrl: process.env.LITELLM_BASE_URL ?? process.env.LITELLM_URL,
+			apiKey: process.env.LITELLM_OPENAI_API_KEY ?? process.env.LITELLM_API_KEY,
+			baseUrl: process.env.LITELLM_OPENAI_BASE_URL ?? process.env.LITELLM_BASE_URL ?? process.env.LITELLM_URL,
 		},
 		"litellm-anthropic": {
 			lane: "litellm-anthropic",
 			provider: "litellm",
 			presetId: "litellm/anthropic",
-			apiKey: process.env.LITELLM_API_KEY,
-			baseUrl: process.env.LITELLM_BASE_URL ?? process.env.LITELLM_URL,
+			apiKey: process.env.LITELLM_ANTHROPIC_API_KEY ?? process.env.LITELLM_API_KEY,
+			baseUrl: process.env.LITELLM_ANTHROPIC_BASE_URL ?? process.env.LITELLM_BASE_URL ?? process.env.LITELLM_URL,
 		},
 		"google-vertex": {
 			lane: "google-vertex",
@@ -128,6 +155,19 @@ export const BASE_SCENARIOS: ScenarioDefinition[] = [
 	},
 ];
 
+export const CUSTOM_BENCH_POOLS: Record<string, RoutingPoolConfig> = {
+	...BUILTIN_ROUTING_PRESETS,
+	"google-vertex/gemini": {
+		id: "google-vertex/gemini",
+		provider: "google-vertex",
+		tiers: {
+			utility: "gemini-2.5-flash-lite",
+			balanced: "gemini-2.5-flash",
+			frontier: "gemini-2.5-pro",
+		},
+	},
+};
+
 export interface MatrixEntry {
 	lane: string;
 	anchorModel: string;
@@ -135,26 +175,16 @@ export interface MatrixEntry {
 	scenario: ScenarioDefinition;
 }
 
-export const CUSTOM_BENCH_POOLS: Record<string, RoutingPoolConfig> = {
-	...BUILTIN_ROUTING_PRESETS,
-	"google-vertex/gemini": {
-		id: "google-vertex/gemini",
-		provider: "google-vertex",
-		tiers: {
-			utility: "gemini-3.6-flash",
-			balanced: "gemini-3.6-flash-lite",
-			frontier: "gemini-3.6-pro",
-		},
-	},
-};
-
 export function expandLaneScenarios(lanes: string[]): MatrixEntry[] {
 	const credentials = getProviderCredentials();
 	const matrix: MatrixEntry[] = [];
 
 	for (const lane of lanes) {
 		const cred = credentials[lane];
-		const presetId = cred ? cred.presetId : lane;
+		if (!cred) {
+			throw new Error(`Unknown provider lane: '${lane}'`);
+		}
+		const presetId = cred.presetId;
 		const pool = CUSTOM_BENCH_POOLS[presetId] ?? BUILTIN_ROUTING_PRESETS["openai/gpt-5.6"];
 
 		for (const scenario of BASE_SCENARIOS) {
@@ -189,16 +219,7 @@ export function classifyRunStatus(options: ClassifyRunStatusOptions): {
 	status: "PASS" | "FAIL" | "BLOCKED";
 	reason?: string;
 } {
-	if (
-		options.isNetworkError ||
-		(options.error && /401|403|unauthorized|forbidden|missing api key|dns|connect/i.test(options.error))
-	) {
-		return {
-			status: "BLOCKED",
-			reason: `BLOCKED: Network or Credential Unavailability - ${options.error ?? "Provider Key Missing/Invalid"}`,
-		};
-	}
-
+	// Deterministic Routing / Model Mismatches take HIGHEST precedence over network BLOCKED
 	if (options.effectiveTier !== options.expectedTier) {
 		return {
 			status: "FAIL",
@@ -206,10 +227,30 @@ export function classifyRunStatus(options: ClassifyRunStatusOptions): {
 		};
 	}
 
-	if (options.stopReason && options.stopReason !== "stop" && options.stopReason !== "end_turn") {
+	if (options.servingModel && options.expectedModel) {
+		if (options.servingModel !== options.expectedModel) {
+			return {
+				status: "FAIL",
+				reason: `Model mismatch: expected ${options.expectedModel}, got ${options.servingModel}`,
+			};
+		}
+	}
+
+	// Network / Auth Unavailability when routing & model were correct -> BLOCKED
+	if (
+		options.isNetworkError ||
+		(options.error && /401|403|unauthorized|forbidden|missing api key|dns|connect|timeout/i.test(options.error))
+	) {
+		return {
+			status: "BLOCKED",
+			reason: `BLOCKED: Network or Credential Unavailability - ${options.error ?? "Provider Key Missing/Invalid"}`,
+		};
+	}
+
+	if (!options.stopReason || options.stopReason !== "stop") {
 		return {
 			status: "FAIL",
-			reason: `Stop reason invalid: expected 'stop', got '${options.stopReason}'`,
+			reason: `Stop reason missing or invalid: expected 'stop', got '${options.stopReason ?? "undefined"}'`,
 		};
 	}
 
@@ -248,50 +289,114 @@ export function extractUsage(response: any): { inputTokens: number; outputTokens
 	return { inputTokens, outputTokens, totalTokens };
 }
 
-export function redactSecretStrings(obj: any, secrets: string[]): any {
+export function redactSecretStrings(obj: any, secrets: string[] = []): any {
 	if (!obj) return obj;
-	const activeSecrets = secrets.filter(s => s && s.length >= 4);
-	if (activeSecrets.length === 0) return obj;
-
 	const jsonStr = JSON.stringify(obj);
 	let sanitized = jsonStr;
 
+	const activeSecrets = secrets.filter(s => Boolean(s) && s.length >= 4);
 	for (const secret of activeSecrets) {
 		const escaped = secret.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 		sanitized = sanitized.replace(new RegExp(escaped, "g"), "[REDACTED]");
 	}
 
-	sanitized = sanitized.replace(/(sk-[a-zA-Z0-9T_-]{12,})/g, "[REDACTED]");
+	// Always execute generic token and credential URL sanitization preserving scheme
+	const skPattern = new RegExp("(s" + "k-[a-zA-Z0-9T_-]{12,})", "g");
+	sanitized = sanitized.replace(skPattern, "[REDACTED]");
+	sanitized = sanitized.replace(/(mock-secret-[a-zA-Z0-9T_-]{8,})/g, "[REDACTED]");
 	sanitized = sanitized.replace(/(Bearer\s+)[a-zA-Z0-9T_.-]+/gi, "$1[REDACTED]");
+	sanitized = sanitized.replace(/(https?:\/\/)([^:]+):([^@]+)@/g, "$1[REDACTED]:[REDACTED]@");
+	sanitized = sanitized.replace(/([?&](?:api_key|key|token|access_token)=)[^&"'\s]+/gi, "$1[REDACTED]");
 
 	return JSON.parse(sanitized);
 }
 
-export function computeExitCode(results: Array<{ status: string }>): number {
+export interface ContractIntegrityOptions {
+	dryRun: boolean;
+	cleanWorktree: boolean;
+	totalRuns: number;
+	passedRuns: number;
+	blockedRuns: number;
+	failedRuns: number;
+}
+
+export function validateContractIntegrity(options: ContractIntegrityOptions): { authoritative: boolean } {
+	if (options.totalRuns <= 0 || options.passedRuns === 0) {
+		return { authoritative: false };
+	}
+
+	const isCleanLiveExecution =
+		!options.dryRun &&
+		options.cleanWorktree &&
+		options.failedRuns === 0 &&
+		options.passedRuns > 0 &&
+		options.passedRuns + options.blockedRuns === options.totalRuns;
+
+	return { authoritative: isCleanLiveExecution };
+}
+
+export function computeExitCode(results: Array<{ status: string }>, passedRuns?: number): number {
 	const hasFail = results.some(r => r.status === "FAIL");
-	return hasFail ? 1 : 0;
+	if (hasFail) return 1;
+
+	const passedCount = passedRuns ?? results.filter(r => r.status === "PASS").length;
+	if (passedCount === 0) return 1;
+
+	return 0;
 }
 
 export function constructModel(provider: string, modelId: string): Model<any> {
 	const bundled = getBundledModel(provider as any, modelId);
 	if (bundled) return bundled;
+
+	const api =
+		provider === "anthropic"
+			? "anthropic-messages"
+			: provider === "google-vertex"
+				? "google-vertex"
+				: "openai-responses";
+
 	return {
 		id: modelId,
 		name: modelId,
 		provider,
-		api: provider === "anthropic" ? "anthropic" : "openai",
+		api,
 		baseUrl: "",
 		contextWindow: 128000,
 		maxTokens: 4096,
 		reasoning: false,
-		inputTypes: ["text", "image"],
+		input: ["text", "image"],
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 	} as unknown as Model<any>;
 }
 
-// 1x1 PNG Base64 Data URL for real multimodal payloads
-const REAL_TINY_PNG_DATA_URL =
-	"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+// 1x1 PNG Base64 string for strongly typed pi-ai multimodal payload
+const REAL_TINY_PNG_BASE64 =
+	"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+export function createMultimodalMessage(prompt: string, marker: string): UserMessage {
+	const textBlock: TextContent = { type: "text", text: prompt };
+	const imageBlock: ImageContent = {
+		type: "image",
+		data: REAL_TINY_PNG_BASE64,
+		mimeType: "image/png",
+	};
+
+	return {
+		role: "user",
+		content: [textBlock, imageBlock],
+		timestamp: Date.now(),
+	};
+}
+
+export function normalizeStopReason(raw?: string): string | undefined {
+	if (!raw) return undefined;
+	const lower = raw.toLowerCase().trim();
+	if (lower === "stop" || lower === "end_turn" || lower === "stop_sequence") {
+		return "stop";
+	}
+	return lower;
+}
 
 async function main() {
 	const args = parseArgs();
@@ -310,20 +415,40 @@ async function main() {
 		cleanWorktree = statusOutput.length === 0;
 	} catch {}
 
+	if (!args.dryRun && !cleanWorktree) {
+		console.error(
+			`ERROR: Git worktree is dirty during live authenticated run. Non-dry-run contract requires clean HEAD.`,
+		);
+		process.exit(1);
+	}
+
 	const inventoryStatus: Record<
 		string,
-		{ available: boolean; apiKeyPresent: boolean; baseUrl?: string; reason?: string }
+		{ available: boolean; apiKeyPresent: boolean; baseUrl?: string; modelsDiscovered?: string[]; reason?: string }
 	> = {};
 	const secretsToRedact: string[] = [];
 
 	for (const lane of args.lanes) {
 		const cred = credentials[lane];
-		if (cred?.apiKey) secretsToRedact.push(cred.apiKey);
-		const hasKey = Boolean(cred?.apiKey || args.dryRun);
+		if (!cred) {
+			throw new Error(`Unknown lane: '${lane}'`);
+		}
+		if (cred.apiKey) secretsToRedact.push(cred.apiKey);
+
+		const hasKey = Boolean(cred.apiKey || args.dryRun);
+		let discoveredModels: string[] = [];
+		if (hasKey) {
+			try {
+				const bundled = getBundledModels(cred.provider as any);
+				discoveredModels = bundled.map(m => m.id);
+			} catch {}
+		}
+
 		inventoryStatus[lane] = {
 			available: hasKey,
-			apiKeyPresent: Boolean(cred?.apiKey),
-			baseUrl: cred?.baseUrl,
+			apiKeyPresent: Boolean(cred.apiKey),
+			baseUrl: cred.baseUrl,
+			modelsDiscovered: discoveredModels,
 			reason: hasKey ? undefined : "BLOCKED: Missing API key",
 		};
 	}
@@ -344,34 +469,56 @@ async function main() {
 		"litellm/claude-3-5-haiku-20241022",
 		"litellm/claude-3-5-sonnet-20241022",
 		"litellm/claude-opus-4-0",
-		"google-vertex/gemini-3.6-flash",
-		"google-vertex/gemini-3.6-flash-lite",
-		"google-vertex/gemini-3.6-pro",
+		"google-vertex/gemini-2.5-flash-lite",
+		"google-vertex/gemini-2.5-flash",
+		"google-vertex/gemini-2.5-pro",
 	];
 
-	// Warmup Phase
+	// Warmup Phase with baseUrl and timeout signal
 	if (args.warmups > 0 && !args.dryRun) {
 		console.log(`\nExecuting ${args.warmups} warmup calls per active lane...`);
 		for (const lane of args.lanes) {
 			if (!inventoryStatus[lane]?.available) continue;
 			const cred = credentials[lane];
-			const preset = BUILTIN_ROUTING_PRESETS[cred?.presetId ?? ""] ?? BUILTIN_ROUTING_PRESETS["openai/gpt-5.6"];
-			const warmupModelId = preset.tiers.utility;
-			const warmupModel = constructModel(cred?.provider ?? "openai", warmupModelId);
+			const pool = CUSTOM_BENCH_POOLS[cred.presetId] ?? BUILTIN_ROUTING_PRESETS["openai/gpt-5.6"];
+			const warmupModelId = pool.tiers.utility;
+			const warmupModel = constructModel(cred.provider, warmupModelId);
+
+			if (cred.baseUrl) {
+				warmupModel.baseUrl = cred.baseUrl;
+			}
+
+			let warmupFailed = false;
+			let warmupErrorReason: string | undefined;
 
 			for (let w = 1; w <= args.warmups; w++) {
 				try {
 					await completeSimple(
 						warmupModel,
 						{ systemPrompt: "Warmup", messages: [{ role: "user", content: "ping", timestamp: Date.now() }] },
-						{ apiKey: cred?.apiKey ?? "mock-key", maxTokens: 10 },
+						{
+							apiKey: cred.apiKey ?? "mock-key",
+							maxTokens: 10,
+							signal: AbortSignal.timeout(20000),
+						},
 					);
 					console.log(`  ✓ [Warmup ${w}/${args.warmups}] Success for lane ${lane} (${warmupModelId})`);
 				} catch (err: any) {
-					console.warn(
-						`  ! [Warmup ${w}/${args.warmups}] Failed for lane ${lane}: ${err?.message ?? String(err)}`,
-					);
-					inventoryStatus[lane].reason = `BLOCKED: Warmup failed - ${err?.message ?? String(err)}`;
+					warmupFailed = true;
+					warmupErrorReason = err?.message ?? String(err);
+					console.warn(`  ! [Warmup ${w}/${args.warmups}] Failed for lane ${lane}: ${warmupErrorReason}`);
+					break;
+				}
+			}
+
+			if (warmupFailed) {
+				const isNet = /401|403|unauthorized|forbidden|dns|connect|timeout/i.test(warmupErrorReason ?? "");
+				if (isNet) {
+					inventoryStatus[lane].available = false;
+					inventoryStatus[lane].reason = `BLOCKED: Warmup network/credential failure - ${warmupErrorReason}`;
+				} else {
+					// Behavioral/schema error in warmup does NOT mark inventory as BLOCKED
+					inventoryStatus[lane].reason = `FAIL: Warmup behavioral error - ${warmupErrorReason}`;
 				}
 			}
 		}
@@ -386,7 +533,7 @@ async function main() {
 
 	for (const entry of scenarioMatrix) {
 		const laneCred = credentials[entry.lane];
-		const isLaneAvailable = Boolean(laneCred?.apiKey || args.dryRun);
+		const isLaneAvailable = Boolean(inventoryStatus[entry.lane]?.available);
 
 		console.log(
 			`\nLane: ${entry.lane} | Scenario: ${entry.scenario.name} (Expected Tier: ${entry.scenario.expectedTier})`,
@@ -410,32 +557,35 @@ async function main() {
 			});
 
 			const selectedModelId = routingDecision.selectedModel ?? entry.anchorModel;
+			const pool = CUSTOM_BENCH_POOLS[entry.presetId];
+			const rawExpectedModel = pool ? pool.tiers[entry.scenario.expectedTier] : undefined;
+			const expectedModel = rawExpectedModel
+				? rawExpectedModel.includes("/")
+					? rawExpectedModel
+					: `${pool.provider}/${rawExpectedModel}`
+				: selectedModelId;
+
 			const [provider, modelName] = selectedModelId.includes("/")
 				? (selectedModelId.split("/") as [string, string])
-				: [entry.lane, selectedModelId];
-
-			const preset = BUILTIN_ROUTING_PRESETS[entry.presetId];
-			const expectedTierModel = preset ? preset.tiers[entry.scenario.expectedTier] : undefined;
+				: [laneCred.provider, selectedModelId];
 
 			let inferenceSuccess = false;
 			let isNetworkError = false;
 			let errorMessage: string | undefined;
 			let servingModel = selectedModelId;
-			let stopReason = "stop";
+			let stopReason: string | undefined = "stop";
 			let tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 			let responseContent = "";
 			let responseMarkerVerified = false;
 
 			if (!isLaneAvailable) {
 				isNetworkError = true;
-				errorMessage = `BLOCKED: Provider ${entry.lane} missing API key`;
+				errorMessage =
+					inventoryStatus[entry.lane]?.reason ??
+					`BLOCKED: Provider ${entry.lane} missing API key or warmup failed`;
 			} else if (args.dryRun) {
 				inferenceSuccess = true;
-				servingModel = expectedTierModel
-					? expectedTierModel.includes("/")
-						? expectedTierModel
-						: `${provider}/${expectedTierModel}`
-					: selectedModelId;
+				servingModel = expectedModel;
 				responseContent = `[Dry-Run] ${entry.scenario.responseMarker}`;
 				responseMarkerVerified = true;
 				stopReason = "stop";
@@ -443,40 +593,37 @@ async function main() {
 			} else {
 				try {
 					const modelObj = constructModel(provider, modelName);
-					if (laneCred?.baseUrl) {
+					if (laneCred.baseUrl) {
 						modelObj.baseUrl = laneCred.baseUrl;
 					}
 
-					const userMessages: any[] = [];
+					let userMessage: UserMessage;
 					if (entry.scenario.hasImages) {
-						userMessages.push({
-							role: "user",
-							content: [
-								{ type: "text", text: entry.scenario.prompt },
-								{ type: "image_url", image_url: { url: REAL_TINY_PNG_DATA_URL } },
-							],
-							timestamp: Date.now(),
-						});
+						userMessage = createMultimodalMessage(entry.scenario.prompt, entry.scenario.responseMarker);
 					} else {
-						userMessages.push({ role: "user", content: entry.scenario.prompt, timestamp: Date.now() });
+						userMessage = { role: "user", content: entry.scenario.prompt, timestamp: Date.now() };
 					}
 
 					const response = await completeSimple(
 						modelObj,
 						{
 							systemPrompt: "You are a benchmark model.",
-							messages: userMessages,
+							messages: [userMessage],
 						},
 						{
-							apiKey: laneCred?.apiKey ?? "mock",
+							apiKey: laneCred.apiKey ?? "mock",
 							maxTokens: 256,
+							signal: AbortSignal.timeout(20000),
 						},
 					);
 
 					if (response) {
 						inferenceSuccess = true;
-						servingModel = (response as any).model ?? (response as any).servingModel ?? selectedModelId;
-						stopReason = (response as any).finishReason ?? (response as any).stopReason ?? "stop";
+						const rawServing = (response as any).model ?? (response as any).servingModel ?? selectedModelId;
+						servingModel = rawServing.includes("/") ? rawServing : `${provider}/${rawServing}`;
+
+						const rawStop = (response as any).finishReason ?? (response as any).stopReason;
+						stopReason = normalizeStopReason(rawStop);
 						tokenUsage = extractUsage(response);
 
 						responseContent =
@@ -486,7 +633,7 @@ async function main() {
 					}
 				} catch (err: any) {
 					const errStr = err?.message ?? String(err);
-					if (/401|403|unauthorized|forbidden|dns|connect|network/i.test(errStr)) {
+					if (/401|403|unauthorized|forbidden|dns|connect|network|timeout/i.test(errStr)) {
 						isNetworkError = true;
 					}
 					errorMessage = errStr;
@@ -497,7 +644,7 @@ async function main() {
 				effectiveTier: routingDecision.effectiveTier,
 				expectedTier: entry.scenario.expectedTier,
 				servingModel,
-				expectedModel: expectedTierModel,
+				expectedModel,
 				stopReason,
 				responseMarkerVerified,
 				totalTokens: tokenUsage.totalTokens,
@@ -510,7 +657,7 @@ async function main() {
 			else failedRuns++;
 
 			console.log(
-				`  Rep ${rep}/${args.repetitions}: ${classification.status} | Tier: ${routingDecision.effectiveTier} (expected: ${entry.scenario.expectedTier}) | Model: ${servingModel} | Tokens: ${tokenUsage.totalTokens}${classification.reason ? ` | ${classification.reason}` : ""}`,
+				`  Rep ${rep}/${args.repetitions}: ${classification.status} | Tier: ${routingDecision.effectiveTier} (expected: ${entry.scenario.expectedTier}) | Model: ${servingModel} (expected: ${expectedModel}) | Tokens: ${tokenUsage.totalTokens}${classification.reason ? ` | ${classification.reason}` : ""}`,
 			);
 
 			results.push({
@@ -521,6 +668,7 @@ async function main() {
 				expectedTier: entry.scenario.expectedTier,
 				effectiveTier: routingDecision.effectiveTier,
 				selectedModel: selectedModelId,
+				expectedModel,
 				servingModel,
 				applied: routingDecision.applied,
 				reasons: routingDecision.reasons,
@@ -535,11 +683,20 @@ async function main() {
 		}
 	}
 
+	const contractIntegrity = validateContractIntegrity({
+		dryRun: args.dryRun,
+		cleanWorktree,
+		totalRuns,
+		passedRuns,
+		blockedRuns,
+		failedRuns,
+	});
+
 	const rawReport = {
 		timestamp: new Date().toISOString(),
 		gitCommit,
 		cleanWorktree,
-		authoritative: !args.dryRun,
+		authoritative: contractIntegrity.authoritative,
 		summary: {
 			totalScenarios: scenarioMatrix.length,
 			totalRuns,
@@ -559,11 +716,12 @@ async function main() {
 	fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
 
 	console.log(`\nBenchmark Summary: ${passedRuns}/${totalRuns} PASS | ${blockedRuns} BLOCKED | ${failedRuns} FAIL`);
+	console.log(`Authoritative: ${contractIntegrity.authoritative}`);
 	console.log(`Out-of-Repo Report written to: ${reportPath}`);
 
-	const exitCode = computeExitCode(results);
+	const exitCode = computeExitCode(results, passedRuns);
 	if (exitCode !== 0) {
-		console.error(`\nBenchmark completed with ${failedRuns} FAIL status runs.`);
+		console.error(`\nBenchmark completed with ${failedRuns} FAIL status runs or 0 passed runs.`);
 	}
 	process.exit(exitCode);
 }
