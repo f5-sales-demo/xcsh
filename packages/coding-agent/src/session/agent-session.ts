@@ -3118,6 +3118,209 @@ export class AgentSession {
 		await this.#promptWithMessage(customMessage, textContent, options);
 	}
 
+	async #evaluateAndApplyRouting(
+		promptText: string,
+		hasImages: boolean,
+		options?: { signal?: AbortSignal } | any,
+	): Promise<string | undefined> {
+		const routingMode = (this.settings.get("routing.mode") as import("../routing/types").RoutingMode) ?? "off";
+		if (routingMode === "off" || !this.model) return undefined;
+
+		if (this.#activeRetryFallback) {
+			this.#emitSessionEvent({
+				type: "routing_skipped",
+				epochId: `skip-${Date.now()}`,
+				reasons: ["retry_fallback"],
+			} as any).catch(() => {});
+			return undefined;
+		}
+
+		const anchorModel = `${this.model.provider}/${this.model.id}`;
+		const availableModels =
+			this.#scopedModels.length > 0
+				? this.#scopedModels.map(sm => `${sm.model.provider}/${sm.model.id}`)
+				: this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
+		const startTime = Date.now();
+		const systemTokens = Math.round((this.systemPrompt?.length ?? 0) / 4);
+		const promptTokens = Math.round(promptText.length / 4);
+		const toolsStr = JSON.stringify(Array.from(this.#toolRegistry.values()));
+		const toolsTokens = Math.round(toolsStr.length / 4);
+		const reserveTokens = (this.settings.get("compaction.reserveTokens") as number) ?? 0;
+		const contextEstimate = {
+			usedTokens: calculateUsedTokens(this.messages) + systemTokens + promptTokens + toolsTokens,
+			reserveTokens,
+			contextWindow: this.model.contextWindow ?? 128000,
+		};
+		const decision = await this.#routingCoordinator.evaluateTurn({
+			anchorModel,
+			mode: routingMode,
+			prompt: promptText,
+			hasImages,
+			priorRejection: this.#routingCoordinator.getState().escalationFloor !== undefined,
+			availableModels,
+			customPools: validateCustomPools(this.settings.get("routing.pools")),
+			disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
+			familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
+			profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
+			contextEstimate,
+			getModelContextWindow: (modelId: string) => {
+				const m = this.#modelRegistry
+					.getAvailable()
+					.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
+				return m?.contextWindow ?? 128000;
+			},
+		});
+
+		this.#emitSessionEvent({
+			type: "routing_evaluated",
+			epochId: decision.epochId,
+			profiler: {
+				latencyMs: Date.now() - startTime,
+				...(decision as any).profiler,
+			},
+			applied: decision.applied,
+			decision: decision.selectedModel,
+			delegation: decision.delegation,
+		} as any).catch(() => {});
+
+		if (decision.selectedModel && decision.applied) {
+			const targetModel = this.#modelRegistry
+				.getAvailable()
+				.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
+			if (targetModel) {
+				const currentModelId = `${this.model.provider}/${this.model.id}`;
+				const targetModelId = `${targetModel.provider}/${targetModel.id}`;
+
+				let needsSwitch = currentModelId !== targetModelId;
+
+				// Force switch if the current model is the same but needs an internal URL override
+				if (!needsSwitch) {
+					if (
+						targetModel.provider === "openai" ||
+						(targetModel.provider === "litellm" && targetModel.id.includes("openai"))
+					) {
+						const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
+						if (internalUrl && this.model.baseUrl !== internalUrl) {
+							needsSwitch = true;
+						}
+					} else if (
+						targetModel.provider === "anthropic" ||
+						(targetModel.provider === "litellm" &&
+							(targetModel.id.includes("anthropic") || targetModel.id.includes("claude")))
+					) {
+						const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
+						if (internalUrl && this.model.baseUrl !== internalUrl) {
+							needsSwitch = true;
+						}
+					}
+				}
+
+				if (needsSwitch) {
+					await this.setModelRoutingSwitch(targetModel);
+				}
+			}
+		}
+
+		if (
+			decision.applied &&
+			decision.delegation &&
+			decision.delegation.subtasks.length > 1 &&
+			(this.settings.get("routing.delegation") as string) === "read-only"
+		) {
+			let maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
+			maxTasks = Math.min(Math.max(1, maxTasks), 3);
+
+			const { results, tokensUsed } = await executeReadOnlyDelegationPlan(
+				decision.delegation,
+				async (subtaskPrompt, signal) => {
+					if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+
+					const { resolveModelPool } = await import("../routing/presets");
+					const pool = resolveModelPool(
+						decision.poolId ?? (this.model ? `${this.model.provider}/${this.model.id}` : ""),
+						this.settings.get("routing.pools") as any,
+						this.settings.get("routing.disabledPresets") as readonly string[],
+						this.settings.get("routing.familyPolicy") as any,
+					);
+
+					let resolvedUtility = this.model;
+					if (pool?.tiers?.utility) {
+						let uId = pool.tiers.utility;
+						if (!uId.includes("/") && pool.provider) {
+							uId = `${pool.provider}/${uId}`;
+						}
+						const found = this.#modelRegistry
+							.getAvailable()
+							.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
+						if (found) resolvedUtility = found;
+					}
+
+					const childSessionId = `${this.sessionId}-task-${Math.random().toString(36).substring(2, 9)}`;
+					const childSession = await (this.sessionManager as any).createDelegationChild(
+						childSessionId,
+						resolvedUtility!,
+					);
+
+					try {
+						await childSession.start();
+						let resultText = "";
+						const abort = new AbortController();
+						if (signal) {
+							signal.addEventListener("abort", () => abort.abort());
+						}
+						try {
+							const response = await childSession.agent.prompt(
+								{
+									role: "user",
+									content: subtaskPrompt,
+								},
+								{ signal: abort.signal },
+							);
+							resultText =
+								typeof response.content === "string"
+									? response.content
+									: response.content.map((c: any) => c.text || "").join("");
+							const tUsage = (childSession as any).agent?.lastUsage?.totalTokens ?? 0;
+							return { result: resultText, tokens: tUsage };
+						} catch (err) {
+							if (abort.signal.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+							throw err;
+						} finally {
+							signal?.removeEventListener("abort", abort.abort);
+						}
+					} catch (err) {
+						if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
+						return { result: `Delegation failed: ${String(err)}`, tokens: 0 };
+					} finally {
+						await childSession.dispose();
+					}
+				},
+				maxTasks,
+				{ signal: options?.signal },
+			);
+
+			if (results.length > 0) {
+				let resultsString = JSON.stringify(results, null, 2);
+				if (resultsString.length > 8000) {
+					resultsString = `${resultsString.substring(0, 8000)}\n...[truncated]`;
+				}
+				const delegationOutput = `\n\n<delegation_results>\n${resultsString}\n</delegation_results>`;
+
+				this.#emitSessionEvent({
+					type: "routing_delegated",
+					epochId: decision.epochId,
+					tasks: decision.delegation.subtasks.length,
+					completed: results.length,
+					tokensUsed,
+				} as any).catch(() => {});
+
+				return delegationOutput;
+			}
+		}
+
+		return undefined;
+	}
+
 	async #promptWithMessage(
 		message: AgentMessage,
 		expandedText: string,
@@ -3579,38 +3782,33 @@ export class AgentSession {
 
 		if (options?.deliverAs === "nextTurn") {
 			if (options?.triggerTurn) {
-				const routingMode = this.settings.get("routing.mode") as import("../routing/types").RoutingMode;
-				if (routingMode !== "off" && this.model) {
-					let promptText = "";
-					if (typeof message.content === "string") promptText = message.content;
-					else if (Array.isArray(message.content)) {
-						promptText = message.content
-							.filter(c => c.type === "text")
-							.map(c => (c as any).text)
-							.join("");
-					}
-					const context = {
-						prompt: promptText,
-						mode: routingMode,
-						anchorModel: `${this.model.provider}/${this.model.id}`,
-						availableModels: this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`),
-						hasImages: Array.isArray(message.content) && message.content.some(c => c.type === "image"),
-					};
-					const decision = await this.#routingCoordinator.evaluateTurn(context);
-					if (decision.selectedModel && decision.applied) {
-						const targetModel = this.#modelRegistry
-							.getAvailable()
-							.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
-						if (targetModel) {
-							const currentModelId = `${this.model.provider}/${this.model.id}`;
-							const targetModelId = `${targetModel.provider}/${targetModel.id}`;
-							if (currentModelId !== targetModelId) {
-								await this.setModelRoutingSwitch(targetModel);
-							}
+				let promptText = "";
+				if (typeof message.content === "string") promptText = message.content;
+				else if (Array.isArray(message.content)) {
+					promptText = message.content
+						.filter(c => c.type === "text")
+						.map((c: any) => c.text)
+						.join("");
+				}
+				const delegationOutput = await this.#evaluateAndApplyRouting(
+					promptText,
+					Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
+					options,
+				);
+				if (delegationOutput) {
+					promptText += delegationOutput;
+					if (typeof appMessage.content === "string") {
+						appMessage.content += delegationOutput;
+					} else if (Array.isArray(appMessage.content)) {
+						const textBlock = appMessage.content.find(c => c.type === "text") as any;
+						if (textBlock) {
+							textBlock.text += delegationOutput;
+						} else {
+							appMessage.content.push({ type: "text", text: delegationOutput });
 						}
 					}
 				}
-				await this.agent.prompt(appMessage);
+				await this.#promptWithMessage(appMessage, promptText, options as any);
 				return;
 			}
 			this.agent.appendMessage(appMessage);
@@ -3625,38 +3823,33 @@ export class AgentSession {
 		}
 
 		if (options?.triggerTurn) {
-			const routingMode = this.settings.get("routing.mode") as import("../routing/types").RoutingMode;
-			if (routingMode !== "off" && this.model) {
-				let promptText = "";
-				if (typeof message.content === "string") promptText = message.content;
-				else if (Array.isArray(message.content)) {
-					promptText = message.content
-						.filter(c => c.type === "text")
-						.map(c => (c as any).text)
-						.join("");
-				}
-				const context = {
-					prompt: promptText,
-					mode: routingMode,
-					anchorModel: `${this.model.provider}/${this.model.id}`,
-					availableModels: this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`),
-					hasImages: Array.isArray(message.content) && message.content.some(c => c.type === "image"),
-				};
-				const decision = await this.#routingCoordinator.evaluateTurn(context);
-				if (decision.selectedModel && decision.applied) {
-					const targetModel = this.#modelRegistry
-						.getAvailable()
-						.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
-					if (targetModel) {
-						const currentModelId = `${this.model.provider}/${this.model.id}`;
-						const targetModelId = `${targetModel.provider}/${targetModel.id}`;
-						if (currentModelId !== targetModelId) {
-							await this.setModelRoutingSwitch(targetModel);
-						}
+			let promptText = "";
+			if (typeof message.content === "string") promptText = message.content;
+			else if (Array.isArray(message.content)) {
+				promptText = message.content
+					.filter(c => c.type === "text")
+					.map((c: any) => c.text)
+					.join("");
+			}
+			const delegationOutput = await this.#evaluateAndApplyRouting(
+				promptText,
+				Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
+				options,
+			);
+			if (delegationOutput) {
+				promptText += delegationOutput;
+				if (typeof appMessage.content === "string") {
+					appMessage.content += delegationOutput;
+				} else if (Array.isArray(appMessage.content)) {
+					const textBlock = appMessage.content.find(c => c.type === "text") as any;
+					if (textBlock) {
+						textBlock.text += delegationOutput;
+					} else {
+						appMessage.content.push({ type: "text", text: delegationOutput });
 					}
 				}
 			}
-			await this.agent.prompt(appMessage);
+			await this.#promptWithMessage(appMessage, promptText, options as any);
 			return;
 		}
 

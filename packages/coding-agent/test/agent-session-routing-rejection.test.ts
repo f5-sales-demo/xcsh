@@ -216,7 +216,7 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		expect(appendedRole).toBe("routing_switch_rollback");
 	});
 
-	it("direct session.agent.prompt() should not bypass routing evaluation", async () => {
+	it("sendCustomMessage() turn trigger should not bypass routing evaluation", async () => {
 		session.settings.set("routing.mode", "auto");
 		session.settings.set("routing.pools", "litellm/openai");
 
@@ -225,15 +225,12 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		const originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
 		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
 			routingEvaluated = true;
-			return originalEvaluateTurn.call((session as any).routingCoordinator, ctx);
+			throw new Error("routing evaluated stop");
 		};
 
-		// Prevent actual AI execution
-		session.agent.prompt = async () => {};
-
-		// The goal is to ensure that even if someone uses session.agent.prompt directly
-		// (e.g., via sendCustomMessage), it does not silently bypass the routing coordinator.
-		await session.sendCustomMessage({ customType: "test", content: "hello", display: true }, { triggerTurn: true });
+		await expect(
+			session.sendCustomMessage({ customType: "test", content: "hello", display: true }, { triggerTurn: true }),
+		).rejects.toThrow("routing evaluated stop");
 
 		expect(routingEvaluated).toBe(true);
 	});
