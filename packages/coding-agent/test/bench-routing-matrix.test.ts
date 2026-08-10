@@ -2,19 +2,21 @@ import { describe, expect, it } from "bun:test";
 import {
 	classifyRunStatus,
 	computeExitCode,
+	createMultimodalMessage,
 	expandLaneScenarios,
 	extractUsage,
 	parseArgs,
 	redactSecretStrings,
+	validateContractIntegrity,
 } from "../scripts/bench-routing-matrix";
 
 describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
-	it("parseArgs correctly parses CLI flags and environment defaults", () => {
+	it("parseArgs validates integer counts and rejects NaN, fractions, and negative values", () => {
 		const parsed = parseArgs([
 			"--repetitions",
-			"5",
+			"3",
 			"--warmups",
-			"2",
+			"1",
 			"--lanes",
 			"openai,litellm-anthropic",
 			"--report-dir",
@@ -22,24 +24,26 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 			"--dry-run",
 		]);
 
-		expect(parsed.repetitions).toBe(5);
-		expect(parsed.warmups).toBe(2);
+		expect(parsed.repetitions).toBe(3);
+		expect(parsed.warmups).toBe(1);
 		expect(parsed.lanes).toEqual(["openai", "litellm-anthropic"]);
-		expect(parsed.reportDir).toBe("/tmp/test-reports");
-		expect(parsed.dryRun).toBe(true);
+
+		expect(() => parseArgs(["--repetitions", "2.5"])).toThrow(/Invalid benchmark counts/);
+		expect(() => parseArgs(["--warmups", "NaN"])).toThrow(/Invalid benchmark counts/);
+		expect(() => parseArgs(["--repetitions", "-1"])).toThrow(/Invalid benchmark counts/);
 	});
 
 	it("expandLaneScenarios expands all requested lanes into scenario matrix entries", () => {
-		const scenarios = expandLaneScenarios(["openai", "litellm-anthropic"]);
+		const scenarios = expandLaneScenarios(["openai", "google-vertex"]);
 		// 2 lanes * 4 scenario types (utility, balanced, frontier, multimodal) = 8 matrix entries
 		expect(scenarios.length).toBe(8);
 		expect(scenarios[0].lane).toBe("openai");
 		expect(scenarios[0].anchorModel).toBe("openai/gpt-5.4-mini");
-		expect(scenarios[4].lane).toBe("litellm-anthropic");
-		expect(scenarios[4].anchorModel).toBe("litellm/claude-3-5-haiku-20241022");
+		expect(scenarios[4].lane).toBe("google-vertex");
+		expect(scenarios[4].anchorModel).toBe("google-vertex/gemini-2.5-flash-lite");
 	});
 
-	it("classifyRunStatus identifies PASS, FAIL, and BLOCKED correctly", () => {
+	it("classifyRunStatus enforces full provider/model matching and strict FAIL/BLOCKED criteria", () => {
 		// 1. PASS case
 		const passResult = classifyRunStatus({
 			effectiveTier: "utility",
@@ -53,8 +57,36 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 		});
 		expect(passResult.status).toBe("PASS");
 
-		// 2. FAIL case (effectiveTier !== expectedTier)
-		const failTier = classifyRunStatus({
+		// 2. FAIL: Provider mismatch (e.g. anthropic/gpt-5.4-mini vs openai/gpt-5.4-mini)
+		const failProvider = classifyRunStatus({
+			effectiveTier: "utility",
+			expectedTier: "utility",
+			servingModel: "openai/gpt-5.4-mini",
+			expectedModel: "anthropic/gpt-5.4-mini",
+			stopReason: "stop",
+			responseMarkerVerified: true,
+			totalTokens: 50,
+			isNetworkError: false,
+		});
+		expect(failProvider.status).toBe("FAIL");
+		expect(failProvider.reason).toContain("Model mismatch");
+
+		// 3. FAIL: Missing stopReason (undefined or empty)
+		const failMissingStop = classifyRunStatus({
+			effectiveTier: "utility",
+			expectedTier: "utility",
+			servingModel: "openai/gpt-5.4-mini",
+			expectedModel: "openai/gpt-5.4-mini",
+			stopReason: undefined,
+			responseMarkerVerified: true,
+			totalTokens: 50,
+			isNetworkError: false,
+		});
+		expect(failMissingStop.status).toBe("FAIL");
+		expect(failMissingStop.reason).toContain("Stop reason missing");
+
+		// 4. FAIL: Tier mismatch takes precedence over network error
+		const failTierPrecedence = classifyRunStatus({
 			effectiveTier: "balanced",
 			expectedTier: "utility",
 			servingModel: "openai/gpt-5.4",
@@ -62,33 +94,21 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 			stopReason: "stop",
 			responseMarkerVerified: true,
 			totalTokens: 50,
-			isNetworkError: false,
+			isNetworkError: true,
+			error: "HTTP 401 Unauthorized",
 		});
-		expect(failTier.status).toBe("FAIL");
-		expect(failTier.reason).toContain("Tier mismatch");
+		expect(failTierPrecedence.status).toBe("FAIL");
+		expect(failTierPrecedence.reason).toContain("Tier mismatch");
 
-		// 3. FAIL case (stopReason !== 'stop')
-		const failStop = classifyRunStatus({
-			effectiveTier: "utility",
-			expectedTier: "utility",
-			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "openai/gpt-5.4-mini",
-			stopReason: "length",
-			responseMarkerVerified: true,
-			totalTokens: 50,
-			isNetworkError: false,
-		});
-		expect(failStop.status).toBe("FAIL");
-
-		// 4. BLOCKED case (Network or Auth Unavailability)
+		// 5. BLOCKED: Network or Credential Unavailability when routing was correct
 		const blockedAuth = classifyRunStatus({
 			effectiveTier: "utility",
 			expectedTier: "utility",
 			servingModel: "openai/gpt-5.4-mini",
 			expectedModel: "openai/gpt-5.4-mini",
 			stopReason: "stop",
-			responseMarkerVerified: false,
-			totalTokens: 0,
+			responseMarkerVerified: true,
+			totalTokens: 50,
 			isNetworkError: true,
 			error: "HTTP 401 Unauthorized",
 		});
@@ -96,35 +116,92 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 		expect(blockedAuth.reason).toContain("BLOCKED");
 	});
 
-	it("extractUsage handles usage.input, usage.output, usage.totalTokens schema correctly", () => {
-		const usage = extractUsage({
-			usage: {
-				input: 120,
-				output: 45,
-				totalTokens: 165,
-			},
-		});
-		expect(usage.inputTokens).toBe(120);
-		expect(usage.outputTokens).toBe(45);
-		expect(usage.totalTokens).toBe(165);
-	});
-
-	it("redactSecretStrings recursively masks API keys and sensitive tokens in report objects", () => {
-		const secretKey = "mock-secret-key-123456789";
-		const inputObj = {
-			inventory: {
-				openai: { apiKey: secretKey, status: `Connected with key ${secretKey}` },
-			},
-			results: [{ model: "openai/gpt-5.6", rawResponse: `auth: Bearer ${secretKey}` }],
+	it("redactSecretStrings sanitizes query credentials, Bearer tokens, mock secret keys, and preserves http/https schemes", () => {
+		const rawReport = {
+			httpEndpoint:
+				"http://user:demopassword@gateway.example.com/v1/models?api_key=mock-secret-key-alpha-bravo-charlie",
+			httpsEndpoint: "https://user:demopassword@gateway.example.com/v1/models?key=demokey-delta-echo-foxtrot",
+			header: "Bearer demo-token-golf-hotel-india",
+			key: "mock-secret-key-juliet-kilo-lima",
 		};
 
-		const redacted = redactSecretStrings(inputObj, [secretKey]);
-		expect(JSON.stringify(redacted)).not.toContain(secretKey);
-		expect(JSON.stringify(redacted)).toContain("[REDACTED]");
+		const redacted = redactSecretStrings(rawReport, []);
+		const str = JSON.stringify(redacted);
+
+		expect(str).not.toContain("demopassword");
+		expect(str).not.toContain("mock-secret-key-alpha-bravo-charlie");
+		expect(str).not.toContain("demokey-delta-echo-foxtrot");
+		expect(str).not.toContain("demo-token-golf-hotel-india");
+		expect(str).not.toContain("mock-secret-key-juliet-kilo-lima");
+
+		expect(redacted.httpEndpoint).toContain("http://");
+		expect(redacted.httpsEndpoint).toContain("https://");
+		expect(str).toContain("[REDACTED]");
 	});
 
-	it("computeExitCode returns 1 if any scenario run produced a FAIL status", () => {
-		expect(computeExitCode([{ status: "PASS" }, { status: "BLOCKED" }])).toBe(0);
-		expect(computeExitCode([{ status: "PASS" }, { status: "FAIL" }])).toBe(1);
+	it("extractUsage handles usage.input, usage.output, usage.totalTokens correctly", () => {
+		const usage = extractUsage({
+			usage: {
+				input: 100,
+				output: 40,
+				totalTokens: 140,
+			},
+		});
+		expect(usage.inputTokens).toBe(100);
+		expect(usage.outputTokens).toBe(40);
+		expect(usage.totalTokens).toBe(140);
+	});
+
+	it("createMultimodalMessage builds strongly typed pi-ai image payload content blocks", () => {
+		const msg = createMultimodalMessage("Describe this image", "RESPOND_VISUAL_OK");
+		expect(msg.role).toBe("user");
+		expect(Array.isArray(msg.content)).toBe(true);
+
+		const imageBlock = (msg.content as any[]).find(b => b.type === "image");
+		expect(imageBlock).toBeDefined();
+		expect(imageBlock.type).toBe("image");
+		expect(typeof imageBlock.data).toBe("string");
+		expect(imageBlock.mimeType).toBe("image/png");
+	});
+
+	it("validateContractIntegrity enforces authoritative requirements and rejects zero passed runs", () => {
+		// Dry run is never authoritative
+		const dryRunContract = validateContractIntegrity({
+			dryRun: true,
+			cleanWorktree: true,
+			totalRuns: 60,
+			passedRuns: 60,
+			blockedRuns: 0,
+			failedRuns: 0,
+		});
+		expect(dryRunContract.authoritative).toBe(false);
+
+		// All BLOCKED runs (passedRuns === 0) is never authoritative
+		const allBlockedContract = validateContractIntegrity({
+			dryRun: false,
+			cleanWorktree: true,
+			totalRuns: 60,
+			passedRuns: 0,
+			blockedRuns: 60,
+			failedRuns: 0,
+		});
+		expect(allBlockedContract.authoritative).toBe(false);
+
+		// Clean live execution with > 0 passed runs and 0 failures is authoritative
+		const cleanContract = validateContractIntegrity({
+			dryRun: false,
+			cleanWorktree: true,
+			totalRuns: 60,
+			passedRuns: 60,
+			blockedRuns: 0,
+			failedRuns: 0,
+		});
+		expect(cleanContract.authoritative).toBe(true);
+	});
+
+	it("computeExitCode returns 1 if any run produced a FAIL status or if passedRuns === 0", () => {
+		expect(computeExitCode([{ status: "PASS" }], 1)).toBe(0);
+		expect(computeExitCode([{ status: "PASS" }, { status: "FAIL" }], 1)).toBe(1);
+		expect(computeExitCode([{ status: "BLOCKED" }], 0)).toBe(1); // zero passed runs must exit 1
 	});
 });
