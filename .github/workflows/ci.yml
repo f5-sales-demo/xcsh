@@ -115,9 +115,9 @@ jobs:
     name: Test Alpine Docker Container & Security Options
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@c47758b77c9710f44868053a9771a3198fc3b684 # v3.8.0
       - name: Run Docker TDD Unit Test Suite
         run: bash ./scripts/tdd-docker.sh
 
