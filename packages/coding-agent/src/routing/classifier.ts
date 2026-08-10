@@ -86,7 +86,12 @@ export async function classifyTaskHybrid(options: HybridClassifierOptions): Prom
 		if (err instanceof Error && err.name === "AbortError") {
 			throw err;
 		}
-		const isSyntax = err instanceof SyntaxError || (err instanceof Error && err.message.includes("malformed"));
+		const isSyntax =
+			err instanceof SyntaxError ||
+			(err instanceof Error &&
+				(err.message.includes("malformed") ||
+					err.message.includes("JSON") ||
+					err.message.includes("Unexpected token")));
 		return {
 			...baseProfile,
 			reasons: [...baseProfile.reasons, isSyntax ? "classifier_fallback_malformed" : "classifier_fallback_timeout"],

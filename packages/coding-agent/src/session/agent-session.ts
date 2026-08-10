@@ -3010,7 +3010,9 @@ export class AgentSession {
 
 			const { results, tokensUsed } = await executeReadOnlyDelegationPlan(
 				decision.delegation,
-				async (subtaskPrompt, signal) => {
+				async (subtaskPrompt, options) => {
+					const signal = options?.signal;
+					const allowedTools = options?.allowedTools ?? isDelegationAllowedTool;
 					if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
 
 					const { resolveModelPool } = await import("../routing/presets");
@@ -3066,7 +3068,7 @@ export class AgentSession {
 						modelRegistry: this.#modelRegistry,
 						toolNames: Array.from(this.#toolRegistry.values())
 							.map(t => t.name)
-							.filter(isDelegationAllowedTool),
+							.filter(allowedTools),
 						enableLsp: false,
 						enableMCP: false,
 					});
@@ -6742,8 +6744,10 @@ export class AgentSession {
 	#syncRoutingStateFromBranch() {
 		this.#routingCoordinator.reset();
 		const entries = this.sessionManager.getBranch();
+		let foundRoutingState = false;
 		for (const entry of entries) {
 			if (entry.type === "custom" && entry.customType === "routing_event") {
+				foundRoutingState = true;
 				const event = entry.data as any;
 				if (event.state) {
 					this.#routingCoordinator.restoreState(event.state);
@@ -6761,6 +6765,10 @@ export class AgentSession {
 					}
 				}
 			}
+		}
+		if (!foundRoutingState) {
+			this.#modelResolutionSource = "config";
+			this.agent.serviceTier = undefined;
 		}
 	}
 
@@ -6815,6 +6823,7 @@ export class AgentSession {
 			this.sessionManager.createBranchedSession(selectedEntry.parentId);
 		}
 		this.#syncTodoPhasesFromBranch();
+		this.#syncRoutingStateFromBranch();
 		this.agent.sessionId = this.sessionManager.getSessionId();
 
 		// Reload messages from entries (works for both file and in-memory mode)
@@ -7361,6 +7370,9 @@ export class AgentSession {
 export function calculateUsedTokens(messages: any[]): number {
 	const countTextLength = (content: any): number => {
 		if (typeof content === "string") {
+			if (content.startsWith("data:image/") || content.startsWith("base64,")) {
+				return 0;
+			}
 			return content.length;
 		}
 		if (Array.isArray(content)) {

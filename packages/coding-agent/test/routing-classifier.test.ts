@@ -105,6 +105,21 @@ describe("Hybrid Classifier (P04)", () => {
 		expect(profile.reasons).toContain("classifier_fallback_timeout");
 	});
 
+	it("should report malformed JSON error as classifier_fallback_malformed instead of timeout", async () => {
+		const mockRunnerError = async () => {
+			throw new Error("Unexpected token 'o', \"oops\" is not valid JSON");
+		};
+
+		const profile = await classifyTaskHybrid({
+			prompt: "ambiguous prompt needing review target",
+			pool: samplePool,
+			profilerMode: "hybrid",
+			runRoutingClassifier: mockRunnerError,
+		});
+
+		expect(profile.reasons).toContain("classifier_fallback_malformed");
+	});
+
 	it("should not allow classifier score to bypass hasImages or priorRejection floors", async () => {
 		const mockRunnerUtility = async () => {
 			return JSON.stringify({ complexityScore: 10, confidence: 0.9 }); // lowest score
