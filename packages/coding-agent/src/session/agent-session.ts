@@ -3128,7 +3128,11 @@ export class AgentSession {
 				customMessage.content += delegationOutput;
 			} else if (Array.isArray(customMessage.content)) {
 				const textBlock = customMessage.content.find((c: any) => c.type === "text") as any;
-				if (textBlock) textBlock.text += delegationOutput;
+				if (textBlock) {
+					textBlock.text += delegationOutput;
+				} else {
+					customMessage.content.push({ type: "text", text: delegationOutput });
+				}
 			}
 		}
 
@@ -3217,7 +3221,7 @@ export class AgentSession {
 						(targetModel.provider === "litellm" && targetModel.id.includes("openai"))
 					) {
 						const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
-						if (internalUrl && this.model.baseUrl !== internalUrl) {
+						if ((internalUrl || undefined) !== this.model.baseUrl) {
 							needsSwitch = true;
 						}
 					} else if (
@@ -3226,7 +3230,7 @@ export class AgentSession {
 							(targetModel.id.includes("anthropic") || targetModel.id.includes("claude")))
 					) {
 						const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
-						if (internalUrl && this.model.baseUrl !== internalUrl) {
+						if ((internalUrl || undefined) !== this.model.baseUrl) {
 							needsSwitch = true;
 						}
 					}
@@ -3761,8 +3765,12 @@ export class AgentSession {
 			if (typeof message.content === "string") {
 				message.content += delegationOutput;
 			} else if (Array.isArray(message.content)) {
-				const textBlock = message.content.find((c: any) => c.type === "text") as any;
-				if (textBlock) textBlock.text += delegationOutput;
+				const textBlock = message.content.find((c: any) => c.type === "text");
+				if (textBlock) {
+					(textBlock as any).text += delegationOutput;
+				} else {
+					message.content.push({ type: "text", text: delegationOutput });
+				}
 			}
 		}
 
