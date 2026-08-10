@@ -627,6 +627,28 @@ export const SETTINGS_SCHEMA = {
 		default: [],
 	},
 
+	"routing.internalOpenAiUrl": {
+		type: "string",
+		default: "",
+		ui: {
+			tab: "model",
+			label: "Internal OpenAI URL",
+			description: "Internal FQDN for OpenAI routing lane",
+			submenu: true,
+		},
+	},
+
+	"routing.internalAnthropicUrl": {
+		type: "string",
+		default: "",
+		ui: {
+			tab: "model",
+			label: "Internal Anthropic URL",
+			description: "Internal FQDN for Anthropic routing lane",
+			submenu: true,
+		},
+	},
+
 	// Sampling
 	temperature: {
 		type: "number",

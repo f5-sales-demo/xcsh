@@ -107,4 +107,7 @@ export interface RoutingSettings {
 	pools: Record<string, RoutingPoolConfig>;
 	disabledPresets: string[];
 	tierEffort?: Record<string, string>;
+
+	internalOpenAiUrl?: string;
+	internalAnthropicUrl?: string;
 }

@@ -215,4 +215,23 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		expect(appendedModelId).toBe("openai/gpt-5.6");
 		expect(appendedRole).toBe("routing_switch_rollback");
 	});
+
+	it("sendCustomMessage() turn trigger should not bypass routing evaluation", async () => {
+		session.settings.set("routing.mode", "auto");
+		session.settings.set("routing.pools", "litellm/openai");
+
+		let routingEvaluated = false;
+		// Spy on routingCoordinator.evaluateTurn
+		const originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
+		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+			routingEvaluated = true;
+			throw new Error("routing evaluated stop");
+		};
+
+		await expect(
+			session.sendCustomMessage({ customType: "test", content: "hello", display: true }, { triggerTurn: true }),
+		).rejects.toThrow("routing evaluated stop");
+
+		expect(routingEvaluated).toBe(true);
+	});
 });
