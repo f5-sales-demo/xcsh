@@ -3,8 +3,6 @@ title: Alpine container deployment and multi-cloud authentication
 description: Complete guide for configuring environment variables, running xcsh securely inside Alpine containers, and integrating multi-cloud Command Line Interface (CLI) credentials.
 ---
 
-# Alpine container deployment and multi-cloud authentication
-
 `xcsh` is distributed as a security-hardened, multi-stage Alpine Linux container image published automatically to GitHub Container Registry (GHCR) at `ghcr.io`.
 
 It ships pre-packaged with all required marketplace Command Line Interface (CLI) tools—including Google Cloud SDK (`gcloud`), Azure CLI (`az`), AWS CLI (`aws`), GitHub CLI (`gh`), Salesforce CLI (`sf`), and Bun—allowing seamless cloud shell execution from any container host.
