@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { completeSimple, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import { RoutingCoordinator } from "../src/routing/coordinator";
 import { BUILTIN_ROUTING_PRESETS } from "../src/routing/presets";
-import type { RoutingTier } from "../src/routing/types";
+import type { RoutingPoolConfig, RoutingTier } from "../src/routing/types";
 
 export interface BenchmarkArgs {
 	repetitions: number;
