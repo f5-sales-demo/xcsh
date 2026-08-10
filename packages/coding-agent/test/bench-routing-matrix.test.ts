@@ -110,7 +110,7 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 	});
 
 	it("redactSecretStrings recursively masks API keys and sensitive tokens in report objects", () => {
-		const secretKey = "sk-proj-secret-123456789";
+		const secretKey = "mock-secret-key-123456789";
 		const inputObj = {
 			inventory: {
 				openai: { apiKey: secretKey, status: `Connected with key ${secretKey}` },
