@@ -2809,264 +2809,21 @@ export class AgentSession {
 
 		await this.#maybeRestoreRetryFallbackPrimary();
 
-		// Evaluate dynamic model routing if enabled
-		const routingMode = (this.settings.get("routing.mode") as RoutingMode) ?? "off";
-		if (routingMode !== "off" && this.model) {
-			if (this.#activeRetryFallback) {
-				this.#emitSessionEvent({
-					type: "routing_skipped",
-					epochId: `skip-${Date.now()}`,
-					reasons: ["retry_fallback"],
-				} as any).catch(() => {});
+		const delegationOutput = await this.#evaluateAndApplyRouting(
+			expandedText,
+			options?.images ? options.images.length > 0 : false,
+			{ signal: options?.signal },
+		);
+		if (delegationOutput) {
+			expandedText += delegationOutput;
+			const textBlock = userContent.find(c => c.type === "text") as Extract<
+				(typeof userContent)[0],
+				{ type: "text" }
+			>;
+			if (textBlock) {
+				textBlock.text += delegationOutput;
 			} else {
-				const anchorModel = `${this.model.provider}/${this.model.id}`;
-				const availableModels =
-					this.#scopedModels.length > 0
-						? this.#scopedModels.map(sm => `${sm.model.provider}/${sm.model.id}`)
-						: this.#modelRegistry.getAvailable().map(m => `${m.provider}/${m.id}`);
-				const startTime = Date.now();
-				const systemTokens = Math.round((this.systemPrompt?.length ?? 0) / 4);
-				const promptTokens = Math.round(expandedText.length / 4);
-				const toolsStr = JSON.stringify(Array.from(this.#toolRegistry.values()));
-				const toolsTokens = Math.round(toolsStr.length / 4);
-				const reserveTokens = (this.settings.get("compaction.reserveTokens") as number) ?? 0;
-				const contextEstimate = {
-					usedTokens: calculateUsedTokens(this.messages) + systemTokens + promptTokens + toolsTokens,
-					reserveTokens,
-					contextWindow: this.model.contextWindow ?? 128000,
-				};
-				const decision = await this.#routingCoordinator.evaluateTurn({
-					anchorModel,
-					mode: routingMode,
-					prompt: expandedText,
-					hasImages: options?.images && options.images.length > 0,
-					priorRejection: this.#routingCoordinator.getState().escalationFloor !== undefined,
-					availableModels,
-					customPools: validateCustomPools(this.settings.get("routing.pools")),
-					disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
-					familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
-					profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
-					contextEstimate,
-					getModelContextWindow: (modelId: string) => {
-						const found = this.#modelRegistry
-							.getAll()
-							.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
-						return found?.contextWindow ?? 128000;
-					},
-					runRoutingClassifier: async (utilityModel: string, promptText: string) => {
-						const resolved = this.#modelRegistry
-							.getAll()
-							.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
-						if (!resolved) throw new Error("Classifier model not found");
-
-						let targetModel = resolved;
-						if (
-							resolved.provider === "openai" ||
-							(resolved.provider === "litellm" && resolved.id.includes("openai"))
-						) {
-							const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
-							if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
-						} else if (
-							resolved.provider === "anthropic" ||
-							(resolved.provider === "litellm" &&
-								(resolved.id.includes("anthropic") || resolved.id.includes("claude")))
-						) {
-							const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
-							if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
-						}
-
-						const apiKey = await this.#modelRegistry.getApiKey(targetModel, this.sessionId);
-						if (!apiKey) throw new Error("No API key for classifier model");
-
-						const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number, "delegation"?: { "reason": string, "subtasks": { "id": string, "title": string, "description": string, "targetFilesOrPaths": string[], "desiredTier"?: string }[] } }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
-
-						const res = await completeSimple(
-							targetModel,
-							{
-								systemPrompt: systemInstruction,
-								messages: [
-									{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() },
-								],
-							},
-							{ apiKey, signal: AbortSignal.timeout(15000) },
-						);
-						const rawText = res.content
-							.filter(c => c.type === "text")
-							.map(c => (c as TextContent).text)
-							.join("");
-
-						const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-						if (jsonMatch) {
-							const parsed = JSON.parse(jsonMatch[0]); // Check validity
-							if (res.usage) {
-								this.settings.getStorage()?.recordModelUsage(`${resolved.provider}/${resolved.id}`);
-								parsed.routingUsage = (res.usage as any).totalTokens ?? (res.usage as any).total ?? 0;
-							}
-							return JSON.stringify(parsed);
-						}
-						throw new Error("Classifier returned malformed JSON");
-					},
-					downshiftAfterTurns: (this.settings.get("routing.downshiftAfterTurns") as number) ?? 2,
-				});
-				const durationMs = Date.now() - startTime;
-
-				this.#emitSessionEvent({
-					type: decision.applied ? "routing_applied" : "routing_decision",
-					epochId: decision.epochId,
-					mode: decision.mode,
-					provider: this.model.provider,
-					poolId: decision.poolId,
-					effectiveTier: decision.effectiveTier,
-					selectedModel: decision.selectedModel,
-					reasons: decision.reasons,
-					delegated: !!decision.delegation,
-					escalated: decision.reasons.some(
-						r => r === "context_capacity_promotion" || r === "escalation_floor_active",
-					),
-					contextTokens: contextEstimate.usedTokens,
-					routingUsage: decision.routingUsage,
-					durationMs,
-					state: this.#routingCoordinator.getState(),
-				} as any).catch(() => {});
-
-				if (decision.selectedModel && decision.applied) {
-					const targetModel = this.#modelRegistry
-						.getAvailable()
-						.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
-					if (targetModel) {
-						const currentModelId = this.model ? `${this.model.provider}/${this.model.id}` : undefined;
-						const targetModelId = `${targetModel.provider}/${targetModel.id}`;
-						if (currentModelId !== targetModelId) {
-							await this.setModelRoutingSwitch(targetModel);
-						}
-						if (decision.effectiveTier) {
-							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
-							const { mapTierToEffort } = await import("../routing/effort");
-							const effort = mapTierToEffort(decision.effectiveTier, effortMap);
-							this.setThinkingLevel(effort as any);
-						}
-					}
-				}
-
-				if (
-					decision.applied &&
-					decision.delegation &&
-					decision.delegation.subtasks.length > 1 &&
-					(this.settings.get("routing.delegation") as string) === "read-only"
-				) {
-					let maxTasks = (this.settings.get("routing.delegationMaxTasks") as number) ?? 3;
-					maxTasks = Math.min(Math.max(1, maxTasks), 3);
-
-					const { results, tokensUsed } = await executeReadOnlyDelegationPlan(
-						decision.delegation,
-						async (subtaskPrompt, signal) => {
-							if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
-
-							const { resolveModelPool } = await import("../routing/presets");
-							const pool = resolveModelPool(
-								decision.poolId ?? (this.model ? `${this.model.provider}/${this.model.id}` : ""),
-								this.settings.get("routing.pools") as any,
-								this.settings.get("routing.disabledPresets") as readonly string[],
-								this.settings.get("routing.familyPolicy") as any,
-							);
-
-							let resolvedUtility = this.model;
-							if (pool?.tiers?.utility) {
-								let uId = pool.tiers.utility;
-								if (!uId.includes("/") && pool.provider) {
-									uId = `${pool.provider}/${uId}`;
-								}
-								const found = this.#modelRegistry
-									.getAvailable()
-									.find(m => `${m.provider}/${m.id}` === uId || m.id === uId);
-								if (found) resolvedUtility = found;
-							}
-
-							if (!resolvedUtility) return { result: "Delegation failed: no model.", tokens: 0 };
-
-							const { createAgentSession } = await import("../sdk");
-							const { SessionManager: SDKSessionManager } = await import("./session-manager");
-							const childSettings = await this.settings.cloneForCwd(process.cwd());
-							childSettings.set("routing.delegation", "off");
-
-							// Fix abort race by checking right before creation
-							if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
-
-							const { session: childSession } = await createAgentSession({
-								model: resolvedUtility,
-								sessionManager: SDKSessionManager.inMemory(),
-								settings: childSettings,
-								authStorage: this.#modelRegistry.authStorage,
-								modelRegistry: this.#modelRegistry,
-								toolNames: Array.from(this.#toolRegistry.values())
-									.map(t => t.name)
-									.filter(isDelegationAllowedTool),
-								enableLsp: false,
-								enableMCP: false,
-							});
-
-							try {
-								const onAbort = () => childSession.agent.abort();
-								signal?.addEventListener("abort", onAbort);
-								if (signal?.aborted) {
-									onAbort();
-									return { result: "Delegation failed: Aborted", tokens: 0 };
-								}
-								try {
-									await childSession.prompt(subtaskPrompt);
-									if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
-									const resultStr = childSession
-										.buildDisplaySessionContext()
-										.messages.filter(m => m.role === "assistant")
-										.map(m =>
-											m.content
-												.filter((c: any) => c.type === "text")
-												.map((c: any) => c.text)
-												.join(""),
-										)
-										.join("\n");
-									const tokens = childSession.buildDisplaySessionContext().usedTokens || 0;
-									return { result: resultStr, tokens };
-								} finally {
-									signal?.removeEventListener("abort", onAbort);
-								}
-							} catch (err) {
-								if (signal?.aborted) return { result: "Delegation failed: Aborted", tokens: 0 };
-								return { result: `Delegation failed: ${String(err)}`, tokens: 0 };
-							} finally {
-								await childSession.dispose();
-							}
-						},
-						maxTasks,
-						{ signal: options?.signal },
-					);
-
-					if (results.length > 0) {
-						let resultsString = JSON.stringify(results, null, 2);
-						if (resultsString.length > 8000) {
-							resultsString = `${resultsString.substring(0, 8000)}\n...[truncated]`;
-						}
-						const delegationOutput = `\n\n<delegation_results>\n${resultsString}\n</delegation_results>`;
-						expandedText += delegationOutput;
-						const textBlock = userContent.find(c => c.type === "text") as Extract<
-							(typeof userContent)[0],
-							{ type: "text" }
-						>;
-						if (textBlock) {
-							textBlock.text += delegationOutput;
-						} else {
-							userContent.push({ type: "text", text: delegationOutput });
-						}
-
-						this.#emitSessionEvent({
-							type: "routing_delegated",
-							epochId: decision.epochId,
-							tasks: decision.delegation.subtasks.length,
-							completed: results.length,
-							tokensUsed,
-						} as any).catch(() => {});
-					}
-				}
+				userContent.push({ type: "text", text: delegationOutput });
 			}
 		}
 
@@ -3190,6 +2947,58 @@ export class AgentSession {
 					.find(m => `${m.provider}/${m.id}` === modelId || m.id === modelId);
 				return m?.contextWindow ?? 128000;
 			},
+			runRoutingClassifier: async (utilityModel: string, promptText: string) => {
+				const resolved = this.#modelRegistry
+					.getAvailable()
+					.find(m => `${m.provider}/${m.id}` === utilityModel || m.id === utilityModel);
+				if (!resolved) throw new Error("Classifier model not found");
+
+				let targetModel = resolved;
+				if (
+					resolved.provider === "openai" ||
+					(resolved.provider === "litellm" && (resolved.id.includes("openai") || /gpt-/.test(resolved.id)))
+				) {
+					const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
+					if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
+				} else if (
+					resolved.provider === "anthropic" ||
+					(resolved.provider === "litellm" &&
+						(resolved.id.includes("anthropic") || resolved.id.includes("claude")))
+				) {
+					const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
+					if (internalUrl) targetModel = { ...resolved, baseUrl: internalUrl };
+				}
+
+				const apiKey = await this.#modelRegistry.getApiKey(targetModel, this.sessionId);
+				if (!apiKey) throw new Error("No API key for classifier model");
+
+				const systemInstruction = `You are a routing classifier. Analyze the user's prompt and output a JSON object: { "complexityScore": number, "confidence": number, "delegation"?: { "reason": string, "subtasks": { "id": string, "title": string, "description": string, "targetFilesOrPaths": string[], "desiredTier"?: string }[] } }. Score complexity from 0 to 100 based on required reasoning, context width, and coding effort. Return ONLY valid JSON without markdown blocks.`;
+
+				const res = await completeSimple(
+					targetModel,
+					{
+						systemPrompt: systemInstruction,
+						messages: [{ role: "user", content: [{ type: "text", text: promptText }], timestamp: Date.now() }],
+					},
+					{ apiKey, signal: AbortSignal.timeout(15000) },
+				);
+				const rawText = res.content
+					.filter(c => c.type === "text")
+					.map(c => (c as TextContent).text)
+					.join("");
+
+				const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+				if (jsonMatch) {
+					const parsed = JSON.parse(jsonMatch[0]);
+					if (res.usage) {
+						this.settings.getStorage()?.recordModelUsage(`${resolved.provider}/${resolved.id}`);
+						parsed.routingUsage = (res.usage as any).totalTokens ?? (res.usage as any).total ?? 0;
+					}
+					return JSON.stringify(parsed);
+				}
+				throw new Error("Classifier returned malformed JSON");
+			},
+			downshiftAfterTurns: (this.settings.get("routing.downshiftAfterTurns") as number) ?? 2,
 		});
 
 		this.#emitSessionEvent({
@@ -3205,36 +3014,33 @@ export class AgentSession {
 		} as any).catch(() => {});
 
 		if (decision.selectedModel && decision.applied) {
-			const targetModel = this.#modelRegistry
+			let targetModel = this.#modelRegistry
 				.getAvailable()
 				.find(m => `${m.provider}/${m.id}` === decision.selectedModel || m.id === decision.selectedModel);
 			if (targetModel) {
 				const currentModelId = `${this.model.provider}/${this.model.id}`;
 				const targetModelId = `${targetModel.provider}/${targetModel.id}`;
 
-				let needsSwitch = currentModelId !== targetModelId;
-
-				// Force switch if the current model is the same but needs an internal URL override
-				if (!needsSwitch) {
-					if (
-						targetModel.provider === "openai" ||
-						(targetModel.provider === "litellm" && targetModel.id.includes("openai"))
-					) {
-						const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
-						if ((internalUrl || undefined) !== this.model.baseUrl) {
-							needsSwitch = true;
-						}
-					} else if (
-						targetModel.provider === "anthropic" ||
-						(targetModel.provider === "litellm" &&
-							(targetModel.id.includes("anthropic") || targetModel.id.includes("claude")))
-					) {
-						const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
-						if ((internalUrl || undefined) !== this.model.baseUrl) {
-							needsSwitch = true;
-						}
-					}
+				if (
+					targetModel.provider === "openai" ||
+					(targetModel.provider === "litellm" &&
+						(targetModel.id.includes("openai") || /gpt-/.test(targetModel.id)))
+				) {
+					const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
+					if (internalUrl) targetModel = { ...targetModel, baseUrl: internalUrl } as any;
+				} else if (
+					targetModel.provider === "anthropic" ||
+					(targetModel.provider === "litellm" &&
+						(targetModel.id.includes("anthropic") || targetModel.id.includes("claude")))
+				) {
+					const internalUrl = this.settings.get("routing.internalAnthropicUrl") as string | undefined;
+					if (internalUrl) targetModel = { ...targetModel, baseUrl: internalUrl } as any;
 				}
+
+				const currentBaseUrl = this.model.baseUrl;
+				const targetBaseUrl = targetModel.baseUrl;
+
+				const needsSwitch = currentModelId !== targetModelId || currentBaseUrl !== targetBaseUrl;
 
 				if (needsSwitch) {
 					await this.setModelRoutingSwitch(targetModel);
@@ -3280,7 +3086,8 @@ export class AgentSession {
 
 					if (
 						resolvedUtility.provider === "openai" ||
-						(resolvedUtility.provider === "litellm" && resolvedUtility.id.includes("openai"))
+						(resolvedUtility.provider === "litellm" &&
+							(resolvedUtility.id.includes("openai") || /gpt-/.test(resolvedUtility.id)))
 					) {
 						const internalUrl = this.settings.get("routing.internalOpenAiUrl") as string | undefined;
 						if (internalUrl) resolvedUtility = { ...resolvedUtility, baseUrl: internalUrl } as any;

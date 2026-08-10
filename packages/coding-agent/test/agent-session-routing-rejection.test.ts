@@ -28,7 +28,7 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 			getApiKey: () => "test-key",
 			initialState: {
 				systemPrompt: "You are a test agent",
-				model: { provider: "openai", id: "gpt-5.6" } as any,
+				model: { provider: "openai", id: "gpt-5.6", api: "openai-responses" } as any,
 				tools: [],
 			},
 		});
@@ -233,5 +233,97 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		).rejects.toThrow("routing evaluated stop");
 
 		expect(routingEvaluated).toBe(true);
+	});
+
+	it("should clear internal URLs when routing to LiteLLM gpt-5.6-luna", async () => {
+		modelRegistry.getAvailable = () => [{ provider: "litellm", id: "gpt-5.6-luna", contextWindow: 128000 }] as any;
+		modelRegistry.getApiKeyForProvider = async () => "mock-key";
+		modelRegistry.getApiKey = async () => "mock-key";
+		settings.set("routing.mode", "auto");
+		settings.set("routing.pools", "litellm/gpt-5.6-luna");
+		settings.set("routing.internalOpenAiUrl", "https://internal.openai.example.com");
+
+		let switchCount = 0;
+		session.setModelRoutingSwitch = async model => {
+			console.log("Switching model:", model.provider, model.id, model.baseUrl);
+			if (model.baseUrl === "https://internal.openai.example.com") {
+				switchCount++;
+			}
+		};
+
+		const originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
+		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+			return {
+				applied: true,
+				selectedModel: "litellm/gpt-5.6-luna",
+				reasons: ["mock"],
+			};
+		};
+
+		let appendedContent: any;
+		(session as any).promptWithMessage = async (m: any, text: any, opts: any) => {
+			return Promise.resolve();
+		};
+		session.agent.prompt = async () => {
+			return Promise.resolve();
+		};
+
+		console.log("TEST: Triggering sendCustomMessage 1");
+		await session.sendCustomMessage({ customType: "test", content: "hello" }, { triggerTurn: true });
+		console.log("TEST: switchCount is", switchCount);
+		expect(switchCount).toBe(1);
+
+		settings.set("routing.internalOpenAiUrl", "");
+
+		session.setModelRoutingSwitch = async model => {
+			if (!model.baseUrl) {
+				switchCount++;
+			}
+		};
+		await session.sendCustomMessage({ customType: "test", content: "hello" }, { triggerTurn: true });
+		expect(switchCount).toBe(2);
+	});
+
+	it("should trigger image-only fallback correctly in evaluateAndApplyRouting", async () => {
+		modelRegistry.getAvailable = () => [{ provider: "openai", id: "gpt-5.6", api: "openai-responses" }] as any;
+		modelRegistry.getApiKeyForProvider = async () => "mock-key";
+		modelRegistry.getApiKey = async () => "mock-key";
+		settings.set("routing.mode", "auto");
+		settings.set("routing.delegation", "read-only");
+		const originalEvaluateTurn = (session as any).routingCoordinator.evaluateTurn;
+		(session as any).routingCoordinator.evaluateTurn = async (ctx: any) => {
+			return {
+				applied: true,
+				selectedModel: "openai/gpt-5.6",
+				delegation: {
+					subtasks: [
+						{ id: "1", title: "task 1", description: "task 1" },
+						{ id: "2", title: "task 2", description: "task 2" },
+					],
+				},
+			};
+		};
+
+		const message: any = {
+			customType: "test",
+			content: [{ type: "image", mimeType: "image/png", data: "fake" }],
+			display: true,
+		};
+
+		let appendedContent: any;
+		session.agent.prompt = async (messages: any) => {
+			console.log("agent.prompt called");
+			const lastMessage = messages[messages.length - 1];
+			appendedContent = lastMessage.content;
+			return Promise.resolve();
+		};
+
+		console.log("TEST: Triggering sendCustomMessage 2");
+		await session.sendCustomMessage(message, { triggerTurn: true });
+		console.log("TEST: Finished sendCustomMessage 2");
+
+		const textBlock = appendedContent.find((c: any) => c.type === "text");
+		expect(textBlock).toBeDefined();
+		expect(textBlock.text).toContain("<delegation_results>");
 	});
 });
