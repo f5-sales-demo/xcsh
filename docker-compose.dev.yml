@@ -16,12 +16,12 @@ services:
       - .:/app/xcsh
       - /data/robin-GIT/marketplace:/app/marketplace
       - /var/run/docker.sock:/var/run/docker.sock
-      # Multi-Cloud CLI Credential Mounts for Non-Root User
-      - ~/.config/gcloud:/home/xcsh/.config/gcloud:ro
-      - ~/.azure:/home/xcsh/.azure:ro
-      - ~/.aws:/home/xcsh/.aws:ro
-      - ~/.config/gh:/home/xcsh/.config/gh:ro
-      - ~/.sfdx:/home/xcsh/.sfdx:ro
+      # Host Read-Only Credential Mounts
+      - ~/.config/gcloud:/home/xcsh/.config/gcloud-host:ro
+      - ~/.azure:/home/xcsh/.azure-host:ro
+      - ~/.aws:/home/xcsh/.aws-host:ro
+      - ~/.config/gh:/home/xcsh/.config/gh-host:ro
+      - ~/.sfdx:/home/xcsh/.sfdx-host:ro
       - ./.secrets:/app/xcsh/.secrets:ro
     working_dir: /app/xcsh
     environment:
@@ -32,6 +32,7 @@ services:
       - VERTEX_AI_PROJECT=${VERTEX_AI_PROJECT:-}
       - VERTEX_AI_LOCATION=${VERTEX_AI_LOCATION:-us-central1}
       - REQUIRE_ENTERPRISE_AUTH=true
-      - AZURE_CONFIG_DIR=/home/xcsh/.azure
+      - AZURE_CONFIG_DIR=/tmp/.azure
+      - CLOUDSDK_CONFIG=/tmp/.config/gcloud
       - GOOGLE_APPLICATION_CREDENTIALS=/app/xcsh/.secrets/gcp-sa.json
     command: tail -f /dev/null

@@ -1,6 +1,7 @@
 # Industry Security Best Practices Audit Report: `xcsh` Containerization
 
 ## Executive Summary
+
 This security audit evaluates the `xcsh` Alpine containerization (`Dockerfile.alpine` and `docker-compose.dev.yml`) against industry standards, including the **CIS Docker Benchmark (v1.6.0)**, **OWASP Container Security Verification Standard (CSVS)**, and **NIST SP 800-190 (Application Container Security Guide)**.
 
 Overall, the `xcsh` container architecture achieves a **High Security Readiness Rating (Grade: A)** by strictly adhering to non-root execution, read-only credential volume mounts, dynamic enterprise authentication, and zero hardcoded secret leakage.
@@ -23,8 +24,10 @@ Overall, the `xcsh` container architecture achieves a **High Security Readiness 
 ## Detailed Compliance & Hardening Verification
 
 ### Pillar 1: Non-Root Execution & UID/GID Inheritance (CIS 4.1)
+
 - **Finding**: Running container processes as `root` creates catastrophic container breakout risks.
 - **Implementation**:
+
   ```dockerfile
   ARG USER_NAME=xcsh
   ARG USER_UID=1000
@@ -33,24 +36,29 @@ Overall, the `xcsh` container architecture achieves a **High Security Readiness 
       adduser -D -u ${USER_UID} -G ${USER_NAME} -h /home/${USER_NAME} -s /bin/bash ${USER_NAME}
   USER xcsh
   ```
+
 - **Verification**: `docker exec xcsh-dev id` returns `uid=1000(xcsh) gid=1000(xcsh)`.
 
 ---
 
 ### Pillar 2: Process Privilege Escalation Control (CIS 5.25)
+
 - **Finding**: Linux processes can acquire elevated privileges via `setuid` binaries unless restricted.
 - **Hardening Applied in `docker-compose.dev.yml`**:
+
   ```yaml
   services:
     xcsh-dev:
       security_opt:
         - no-new-privileges:true
   ```
+
 - **Verification**: Prevents escalation vulnerabilities inside the Alpine container runtime.
 
 ---
 
 ### Pillar 3: Secret Handling & Volume Protection (OWASP CSVS)
+
 - **Finding**: Storing tokens in image layers or environment variables leads to secret leakage in `docker inspect` and CI logs.
 - **Implementation**:
   - All host cloud credentials (`~/.azure`, `~/.config/gcloud`, `~/.aws`, `~/.config/gh`, `~/.sfdx`) are mounted **read-only (`:ro`)** under the non-root home directory `/home/xcsh/`.
@@ -59,6 +67,7 @@ Overall, the `xcsh` container architecture achieves a **High Security Readiness 
 ---
 
 ### Pillar 4: Static Vulnerability & SAST Linting
+
 - **Finding**: Automated scanners should continuously audit Dockerfiles and manifests.
 - **Existing Repository Tools**:
   - **Trivy** (`trivy.yaml`): Scans container images for CVEs and misconfigurations.

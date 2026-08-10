@@ -12,6 +12,7 @@ It ships pre-packaged with all required marketplace Command Line Interface (CLI)
 ## Prerequisites
 
 Before starting this deployment, ensure you have:
+
 - Docker Engine installed and running on your host machine.
 - Local cloud CLI credentials initialized on your host (for example, `~/.config/gcloud`, `~/.aws`, `~/.azure`).
 - Access to pull images from `ghcr.io/example-corp/xcsh`.
@@ -169,7 +170,7 @@ docker compose -f docker-compose.dev.yml down
 
 ## Automated CI translation pipeline
 
-All user-facing documentation is authored in English under `docs/en/`. 
+All user-facing documentation is authored in English under `docs/en/`.
 
 When changes are committed to `docs/en/**/*.md`, GitHub Actions (`.github/workflows/antigravity-translate.yml`) automatically orchestrates Continuous Integration (CI) translation into 12 target locales:
 

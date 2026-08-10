@@ -3,6 +3,17 @@ set -e
 
 echo "=== Gemini Enterprise Auth UAT Test (Strict Enterprise Enforcement) ==="
 
+# Stage read-only host credentials into writeable session directory if mounted
+if [ -d "$HOME/.config/gcloud-host" ] || [ -d "$HOME/.config/gcloud" ]; then
+  mkdir -p /tmp/.config/gcloud
+  if [ -d "$HOME/.config/gcloud-host" ]; then
+    cp -r "$HOME/.config/gcloud-host/"* /tmp/.config/gcloud/ 2>/dev/null || true
+  elif [ -d "$HOME/.config/gcloud" ]; then
+    cp -r "$HOME/.config/gcloud/"* /tmp/.config/gcloud/ 2>/dev/null || true
+  fi
+  export CLOUDSDK_CONFIG="/tmp/.config/gcloud"
+fi
+
 MODEL="${GEMINI_MODEL:-gemini-3.1-pro-preview}"
 LOCATION="${VERTEX_AI_LOCATION:-us-central1}"
 REQUIRE_ENTERPRISE="${REQUIRE_ENTERPRISE_AUTH:-true}"
@@ -10,18 +21,18 @@ REQUIRE_ENTERPRISE="${REQUIRE_ENTERPRISE_AUTH:-true}"
 # Dynamically discover active project ID from environment or gcloud config
 PROJECT="${VERTEX_AI_PROJECT:-}"
 if [ -z "$PROJECT" ]; then
-    PROJECT=$(gcloud config get-value project 2>/dev/null || echo "")
+  PROJECT=$(gcloud config get-value project 2>/dev/null || echo "")
 fi
 
 # Extract active access token from filesystem credentials
 TOKEN=$(gcloud auth print-access-token 2>/dev/null || echo "")
 
 if [ -z "$TOKEN" ] || [ -z "$PROJECT" ]; then
-    echo "ERROR: No active Google Cloud OAuth token or Project ID found on filesystem!"
-    if [ "$REQUIRE_ENTERPRISE" = "true" ]; then
-        echo "Strict Enterprise Policy Violation: Free-tier fallback is prohibited."
-        exit 1
-    fi
+  echo "ERROR: No active Google Cloud OAuth token or Project ID found on filesystem!"
+  if [ "$REQUIRE_ENTERPRISE" = "true" ]; then
+    echo "Strict Enterprise Policy Violation: Free-tier fallback is prohibited."
+    exit 1
+  fi
 fi
 
 echo "Found active Google Cloud Access Token from filesystem credentials."
@@ -32,24 +43,24 @@ echo "Enterprise Project: $PROJECT | Location: $LOCATION"
 ENDPOINT="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent"
 
 RESPONSE=$(curl -s -X POST "$ENDPOINT" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"contents":[{"role":"user","parts":[{"text":"Say hello"}]}]}')
+
+if echo "$RESPONSE" | grep -q "error"; then
+  # Try alternate model name alias if model version is gemini-3.1-pro-preview or gemini-2.5-pro
+  ALT_ENDPOINT="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/gemini-2.5-pro:generateContent"
+  RESPONSE=$(curl -s -X POST "$ALT_ENDPOINT" \
     -H "Authorization: Bearer ${TOKEN}" \
     -H "Content-Type: application/json" \
     -d '{"contents":[{"role":"user","parts":[{"text":"Say hello"}]}]}')
-
-if echo "$RESPONSE" | grep -q "error"; then
-    # Try alternate model name alias if model version is gemini-3.1-pro-preview or gemini-2.5-pro
-    ALT_ENDPOINT="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/gemini-2.5-pro:generateContent"
-    RESPONSE=$(curl -s -X POST "$ALT_ENDPOINT" \
-        -H "Authorization: Bearer ${TOKEN}" \
-        -H "Content-Type: application/json" \
-        -d '{"contents":[{"role":"user","parts":[{"text":"Say hello"}]}]}')
 fi
 
 echo "$RESPONSE" | jq .
 
 if echo "$RESPONSE" | grep -q "error"; then
-    echo "ERROR: Enterprise authentication failed."
-    exit 1
+  echo "ERROR: Enterprise authentication failed."
+  exit 1
 else
-    echo "=== Gemini Pro Enterprise Auth UAT Test Succeeded (Corporate Enterprise Verified) ==="
+  echo "=== Gemini Pro Enterprise Auth UAT Test Succeeded (Corporate Enterprise Verified) ==="
 fi
