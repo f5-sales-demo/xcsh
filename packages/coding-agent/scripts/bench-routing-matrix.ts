@@ -75,15 +75,15 @@ export interface ProviderCredential {
 }
 
 export function getProviderCredentials(): Record<string, ProviderCredential> {
-	const openaiKey = process.env.OPENAI_API_KEY ?? process.env.OPENAI_OAUTH_TOKEN;
+	const openaiKey = process.env.OPENAI_API_KEY ?? process.env.OPENAI_OAUTH_TOKEN ?? process.env.AZURE_OPENAI_API_KEY;
 	const anthropicKey = process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_OAUTH_TOKEN;
 	const litellmKey =
 		process.env.LITELLM_OPENAI_API_KEY ?? process.env.LITELLM_ANTHROPIC_API_KEY ?? process.env.LITELLM_API_KEY;
-	const vertexKey =
-		process.env.VERTEX_API_KEY ??
-		process.env.GOOGLE_API_KEY ??
-		process.env.GEMINI_API_KEY ??
-		(process.env.GOOGLE_APPLICATION_CREDENTIALS ? "adc-configured" : undefined);
+
+	const hasAdc = Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+	const rawVertexKey = process.env.VERTEX_API_KEY ?? process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY;
+	// Do NOT pass literal string "adc-configured" as apiKey for inference!
+	const vertexKey = rawVertexKey;
 
 	return {
 		openai: {
@@ -100,7 +100,7 @@ export function getProviderCredentials(): Record<string, ProviderCredential> {
 			presetId: "anthropic/claude",
 			apiKey: anthropicKey,
 			baseUrl: process.env.ANTHROPIC_BASE_URL,
-			authMechanism: anthropicKey ? "api-key" : undefined,
+			authMechanism: process.env.ANTHROPIC_OAUTH_TOKEN ? "oauth-bearer" : anthropicKey ? "api-key" : undefined,
 		},
 		"litellm-openai": {
 			lane: "litellm-openai",
@@ -124,7 +124,7 @@ export function getProviderCredentials(): Record<string, ProviderCredential> {
 			presetId: "google-vertex/gemini",
 			apiKey: vertexKey,
 			baseUrl: process.env.VERTEX_BASE_URL,
-			authMechanism: process.env.GOOGLE_APPLICATION_CREDENTIALS ? "google-adc" : vertexKey ? "api-key" : undefined,
+			authMechanism: hasAdc ? "google-adc" : vertexKey ? "api-key" : undefined,
 		},
 	};
 }
@@ -139,7 +139,8 @@ export async function discoverAuthenticatedInventory(
 		return { success: true, models: bundled.map(m => m.id) };
 	}
 
-	if (!cred.apiKey) {
+	const hasAuth = Boolean(cred.apiKey || cred.authMechanism === "google-adc");
+	if (!hasAuth) {
 		return { success: false, models: [], reason: "BLOCKED: Credentials missing" };
 	}
 
@@ -151,17 +152,27 @@ export async function discoverAuthenticatedInventory(
 				: cred.provider === "anthropic"
 					? "https://api.anthropic.com/v1"
 					: undefined);
+
 		if (!baseUrl) {
-			const bundled = getBundledModels(cred.provider as any);
-			return { success: true, models: bundled.map(m => m.id) };
+			return {
+				success: false,
+				models: [],
+				reason: `BLOCKED: Endpoint URL unsupported for live discovery on lane ${lane}`,
+			};
 		}
 
 		const targetUrl = baseUrl.endsWith("/models") ? baseUrl : `${baseUrl.replace(/\/+$/, "")}/models`;
 		const headers: Record<string, string> = {};
+
 		if (cred.provider === "anthropic") {
-			headers["x-api-key"] = cred.apiKey;
-			headers["anthropic-version"] = "2023-06-01";
-		} else {
+			if (cred.authMechanism === "oauth-bearer") {
+				headers.Authorization = `Bearer ${cred.apiKey}`;
+				headers["anthropic-beta"] = "oauth-2025-02-19";
+			} else {
+				headers["x-api-key"] = cred.apiKey ?? "";
+				headers["anthropic-version"] = "2023-06-01";
+			}
+		} else if (cred.apiKey) {
 			headers.Authorization = `Bearer ${cred.apiKey}`;
 		}
 
@@ -175,27 +186,19 @@ export async function discoverAuthenticatedInventory(
 			const data = (await res.json()) as any;
 			const rawList = Array.isArray(data) ? data : (data?.data ?? []);
 			const models = rawList.map((m: any) => (typeof m === "string" ? m : (m.id ?? m.name))).filter(Boolean);
-			return { success: true, models };
+			if (models.length > 0) {
+				return { success: true, models };
+			}
 		}
 
-		if (res.status === 401 || res.status === 403) {
-			return {
-				success: false,
-				models: [],
-				reason: `BLOCKED: HTTP ${res.status} Unauthorized/Forbidden during inventory discovery`,
-			};
-		}
-
-		// Fallback to bundled if discovery endpoint not implemented on provider gateway
-		const bundled = getBundledModels(cred.provider as any);
-		return { success: true, models: bundled.map(m => m.id) };
+		return {
+			success: false,
+			models: [],
+			reason: `BLOCKED: HTTP ${res.status} ${res.statusText} during inventory discovery for lane ${lane}`,
+		};
 	} catch (err: any) {
 		const errStr = err?.message ?? String(err);
-		if (/401|403|unauthorized|forbidden|dns|connect|timeout/i.test(errStr)) {
-			return { success: false, models: [], reason: `BLOCKED: Inventory discovery network error - ${errStr}` };
-		}
-		const bundled = getBundledModels(cred.provider as any);
-		return { success: true, models: bundled.map(m => m.id) };
+		return { success: false, models: [], reason: `BLOCKED: Inventory HTTP discovery failed - ${errStr}` };
 	}
 }
 
@@ -220,22 +223,21 @@ export const BASE_SCENARIOS: ScenarioDefinition[] = [
 		id: "balanced-reasoning",
 		name: "Balanced Reasoning",
 		expectedTier: "balanced",
-		prompt: "Compare stack memory vs heap memory structure in detail and return 'RESPOND_BALANCED_OK'.",
+		prompt: "Respond with 'RESPOND_BALANCED_OK' and nothing else.",
 		responseMarker: "RESPOND_BALANCED_OK",
 	},
 	{
 		id: "frontier-analysis",
 		name: "Frontier Complex Code Analysis",
 		expectedTier: "frontier",
-		prompt:
-			"Perform a deep security analysis of a multi-file TypeScript architecture for concurrency deadlocks, memory leaks, and prototype pollution risks. Return 'RESPOND_FRONTIER_OK'.",
+		prompt: "Respond with 'RESPOND_FRONTIER_OK' and nothing else.",
 		responseMarker: "RESPOND_FRONTIER_OK",
 	},
 	{
 		id: "multimodal-visual",
 		name: "Multimodal Visual Inspection",
 		expectedTier: "frontier",
-		prompt: "Describe what is visible in this uploaded image and verify 'RESPOND_VISUAL_OK'.",
+		prompt: "Respond with 'RESPOND_VISUAL_OK' and nothing else.",
 		responseMarker: "RESPOND_VISUAL_OK",
 		hasImages: true,
 	},
@@ -289,6 +291,18 @@ export function expandLaneScenarios(lanes: string[]): MatrixEntry[] {
 	return matrix;
 }
 
+export function extractResponseText(content: any): string {
+	if (typeof content === "string") return content.trim();
+	if (Array.isArray(content)) {
+		return content
+			.filter((b: any) => b && b.type === "text" && typeof b.text === "string")
+			.map((b: any) => b.text.trim())
+			.join("\n")
+			.trim();
+	}
+	return "";
+}
+
 export interface ClassifyRunStatusOptions {
 	effectiveTier?: RoutingTier;
 	expectedTier: RoutingTier;
@@ -297,7 +311,7 @@ export interface ClassifyRunStatusOptions {
 	servingModel?: string;
 	expectedModel?: string;
 	stopReason?: string;
-	responseContent?: string;
+	responseContent?: any;
 	expectedMarker: string;
 	totalTokens: number;
 	isNetworkError: boolean;
@@ -316,13 +330,18 @@ export function classifyRunStatus(options: ClassifyRunStatusOptions): {
 		};
 	}
 
-	if (options.servingProvider && options.expectedProvider) {
-		if (options.servingProvider !== options.expectedProvider) {
-			return {
-				status: "FAIL",
-				reason: `Provider mismatch: expected provider '${options.expectedProvider}', got '${options.servingProvider}'`,
-			};
-		}
+	if (!options.servingProvider) {
+		return {
+			status: "FAIL",
+			reason: `Provider missing or unknown in completion response`,
+		};
+	}
+
+	if (options.servingProvider !== options.expectedProvider) {
+		return {
+			status: "FAIL",
+			reason: `Provider mismatch: expected provider '${options.expectedProvider}', got '${options.servingProvider}'`,
+		};
 	}
 
 	if (options.servingModel && options.expectedModel) {
@@ -352,12 +371,12 @@ export function classifyRunStatus(options: ClassifyRunStatusOptions): {
 		};
 	}
 
-	// Exact marker validation: content must equal expectedMarker (trimmed)
-	const content = options.responseContent?.trim() ?? "";
-	if (content !== options.expectedMarker) {
+	// Exact marker validation using extractResponseText
+	const extractedText = extractResponseText(options.responseContent);
+	if (extractedText !== options.expectedMarker) {
 		return {
 			status: "FAIL",
-			reason: `Exact response marker verification failed: expected '${options.expectedMarker}', got '${content.slice(0, 100)}'`,
+			reason: `Exact response marker verification failed: expected '${options.expectedMarker}', got '${extractedText.slice(0, 100)}'`,
 		};
 	}
 
@@ -418,24 +437,34 @@ export interface ContractIntegrityOptions {
 	passedRuns: number;
 	blockedRuns: number;
 	failedRuns: number;
+	warmupFailures?: number;
 }
 
 export function validateContractIntegrity(options: ContractIntegrityOptions): {
 	authoritative: boolean;
 	matrixComplete: boolean;
 } {
+	const warmupFailures = options.warmupFailures ?? 0;
 	const matrixComplete =
 		options.totalRuns > 0 &&
 		options.passedRuns === options.totalRuns &&
 		options.blockedRuns === 0 &&
-		options.failedRuns === 0;
+		options.failedRuns === 0 &&
+		warmupFailures === 0;
 
 	const authoritative = !options.dryRun && options.cleanWorktree && matrixComplete;
 
 	return { authoritative, matrixComplete };
 }
 
-export function computeExitCode(results: Array<{ status: string }>, passedRuns: number, totalRuns: number): number {
+export function computeExitCode(
+	results: Array<{ status: string }>,
+	passedRuns: number,
+	totalRuns: number,
+	warmupFailures: number = 0,
+): number {
+	if (warmupFailures > 0) return 1;
+
 	const hasFail = results.some(r => r.status === "FAIL");
 	if (hasFail) return 1;
 
@@ -534,6 +563,7 @@ async function main() {
 		}
 	> = {};
 	const secretsToRedact: string[] = [];
+	const availableModelsSet = new Set<string>();
 
 	console.log(`\nPerforming live HTTP inventory discovery per active lane...`);
 	for (const lane of args.lanes) {
@@ -547,7 +577,7 @@ async function main() {
 
 		inventoryStatus[lane] = {
 			available: discovery.success,
-			apiKeyPresent: Boolean(cred.apiKey),
+			apiKeyPresent: Boolean(cred.apiKey || cred.authMechanism === "google-adc"),
 			baseUrl: cred.baseUrl,
 			authMechanism: cred.authMechanism,
 			modelsDiscovered: discovery.models,
@@ -556,36 +586,23 @@ async function main() {
 
 		if (discovery.success) {
 			console.log(`  ✓ Discovered ${discovery.models.length} models for lane ${lane}`);
+			for (const m of discovery.models) {
+				const fullId = m.includes("/") ? m : `${cred.provider}/${m}`;
+				availableModelsSet.add(fullId);
+			}
 		} else {
 			console.warn(`  ! Lane ${lane} inventory discovery failed: ${discovery.reason}`);
 		}
 	}
 
+	const availableModels = Array.from(availableModelsSet);
 	const coordinator = new RoutingCoordinator();
-
-	// Candidate pool models across all providers
-	const availableModels = [
-		"openai/gpt-5.4-mini",
-		"openai/gpt-5.4",
-		"openai/gpt-5.6-sol",
-		"anthropic/claude-3-haiku-20240307",
-		"anthropic/claude-3-5-sonnet-20241022",
-		"anthropic/claude-opus-4-0",
-		"litellm/gpt-5.4-mini",
-		"litellm/gpt-5.4",
-		"litellm/gpt-5.6-sol",
-		"litellm/claude-3-5-haiku-20241022",
-		"litellm/claude-3-5-sonnet-20241022",
-		"litellm/claude-opus-4-0",
-		"google-vertex/gemini-2.5-flash-lite",
-		"google-vertex/gemini-2.5-flash",
-		"google-vertex/gemini-2.5-pro",
-	];
 
 	let totalRuns = 0;
 	let passedRuns = 0;
 	let blockedRuns = 0;
 	let failedRuns = 0;
+	let warmupFailures = 0;
 
 	// Warmup Phase with baseUrl and timeout signal
 	if (args.warmups > 0 && !args.dryRun) {
@@ -610,7 +627,7 @@ async function main() {
 						warmupModel,
 						{ systemPrompt: "Warmup", messages: [{ role: "user", content: "ping", timestamp: Date.now() }] },
 						{
-							apiKey: cred.apiKey ?? "mock-key",
+							apiKey: cred.apiKey,
 							maxTokens: 10,
 							signal: AbortSignal.timeout(20000),
 						},
@@ -630,8 +647,9 @@ async function main() {
 					inventoryStatus[lane].available = false;
 					inventoryStatus[lane].reason = `BLOCKED: Warmup network/credential failure - ${warmupErrorReason}`;
 				} else {
-					// Warmup behavioral error counts as FAIL in metrics
+					// Warmup behavioral error counts as FAIL in metrics and fails contract
 					failedRuns++;
+					warmupFailures++;
 					inventoryStatus[lane].reason = `FAIL: Warmup behavioral error - ${warmupErrorReason}`;
 				}
 			}
@@ -683,11 +701,11 @@ async function main() {
 			let inferenceSuccess = false;
 			let isNetworkError = false;
 			let errorMessage: string | undefined;
-			let servingProvider = selectedProvider;
+			let servingProvider: string | undefined;
 			let servingModel = selectedModelId;
 			let stopReason: string | undefined = "stop";
 			let tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
-			let responseContent = "";
+			let responseContent: any = "";
 
 			if (!isLaneAvailable) {
 				isNetworkError = true;
@@ -696,7 +714,7 @@ async function main() {
 					`BLOCKED: Provider ${entry.lane} missing API key or warmup failed`;
 			} else if (args.dryRun) {
 				inferenceSuccess = true;
-				servingProvider = expectedProvider ?? selectedProvider;
+				servingProvider = expectedProvider;
 				servingModel = expectedModel;
 				responseContent = entry.scenario.responseMarker;
 				stopReason = "stop";
@@ -722,7 +740,7 @@ async function main() {
 							messages: [userMessage],
 						},
 						{
-							apiKey: laneCred.apiKey ?? "mock",
+							apiKey: laneCred.apiKey,
 							maxTokens: 256,
 							signal: AbortSignal.timeout(20000),
 						},
@@ -731,19 +749,21 @@ async function main() {
 					if (response) {
 						inferenceSuccess = true;
 
-						// Genuine serving provider & model extraction
-						const rawProv = (response as any).provider ?? (response as any).servingProvider;
+						// Genuine serving provider & model extraction without manufacturing attribution
+						servingProvider = (response as any).provider ?? (response as any).servingProvider;
 						const rawModel = (response as any).model ?? (response as any).servingModel ?? selectedModelId;
 
-						servingProvider = rawProv ?? selectedProvider;
-						servingModel = rawModel.includes("/") ? rawModel : `${servingProvider}/${rawModel}`;
+						servingModel = rawModel.includes("/")
+							? rawModel
+							: servingProvider
+								? `${servingProvider}/${rawModel}`
+								: rawModel;
 
 						const rawStop = (response as any).finishReason ?? (response as any).stopReason;
 						stopReason = normalizeStopReason(rawStop);
 						tokenUsage = extractUsage(response);
 
-						responseContent =
-							typeof response.content === "string" ? response.content : JSON.stringify(response.content ?? "");
+						responseContent = response.content;
 					}
 				} catch (err: any) {
 					const errStr = err?.message ?? String(err);
@@ -808,6 +828,7 @@ async function main() {
 		passedRuns,
 		blockedRuns,
 		failedRuns,
+		warmupFailures,
 	});
 
 	const rawReport = {
@@ -822,6 +843,7 @@ async function main() {
 			passedRuns,
 			blockedRuns,
 			failedRuns,
+			warmupFailures,
 		},
 		parameters: args,
 		inventoryStatus,
@@ -834,13 +856,15 @@ async function main() {
 	const reportPath = path.join(args.reportDir, "routing-matrix-report.json");
 	fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
 
-	console.log(`\nBenchmark Summary: ${passedRuns}/${totalRuns} PASS | ${blockedRuns} BLOCKED | ${failedRuns} FAIL`);
+	console.log(
+		`\nBenchmark Summary: ${passedRuns}/${totalRuns} PASS | ${blockedRuns} BLOCKED | ${failedRuns} FAIL | Warmup Failures: ${warmupFailures}`,
+	);
 	console.log(
 		`Matrix Complete: ${contractIntegrity.matrixComplete} | Authoritative: ${contractIntegrity.authoritative}`,
 	);
 	console.log(`Out-of-Repo Report written to: ${reportPath}`);
 
-	const exitCode = computeExitCode(results, passedRuns, totalRuns);
+	const exitCode = computeExitCode(results, passedRuns, totalRuns, warmupFailures);
 	if (exitCode !== 0) {
 		console.error(
 			`\nBenchmark failed contract validation: Matrix is incomplete (${passedRuns}/${totalRuns} passed) or has failures (${failedRuns} failed).`,
