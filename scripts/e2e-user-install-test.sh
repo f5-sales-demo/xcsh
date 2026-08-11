@@ -40,10 +40,10 @@ container_id=$("${compose[@]}" ps -q xcsh-dev)
   exit 1
 }
 docker inspect "$container_id" --format '{{json .HostConfig.CapDrop}}' | grep -Fq 'ALL'
-docker inspect "$container_id" --format '{{json .HostConfig.SecurityOpt}}' \
-  | grep -Fq 'no-new-privileges:true'
-if docker inspect "$container_id" --format '{{range .Mounts}}{{println .Destination}}{{end}}' \
-  | grep -Fxq /var/run/docker.sock; then
+docker inspect "$container_id" --format '{{json .HostConfig.SecurityOpt}}' |
+  grep -Fq 'no-new-privileges:true'
+if docker inspect "$container_id" --format '{{range .Mounts}}{{println .Destination}}{{end}}' |
+  grep -Fxq /var/run/docker.sock; then
   echo "ERROR: The Docker socket must not be mounted." >&2
   exit 1
 fi

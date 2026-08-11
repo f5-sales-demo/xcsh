@@ -9,7 +9,7 @@ PROMPTS_FILE=${1:-scripts/uat-prompts.json}
 MODEL=${GEMINI_MODEL:-gemini-3.1-pro-preview}
 LOCATION=${VERTEX_AI_LOCATION:-us-central1}
 [ -f "$PROMPTS_FILE" ] || uat_die "The synthesized prompt fixture is unavailable."
-jq -e 'type == "array" and length > 0' "$PROMPTS_FILE" >/dev/null || \
+jq -e 'type == "array" and length > 0' "$PROMPTS_FILE" >/dev/null ||
   uat_die "The synthesized prompt fixture must be a non-empty array."
 
 session_dir=$(uat_make_session prompts)
@@ -58,8 +58,8 @@ for ((index = 0; index < total; index++)); do
     uat_die "Vertex AI request failed for synthesized prompt ${test_id}."
   fi
 
-  if ! jq -er '.candidates[0].content.parts[0].text // empty' "$response_file" \
-    | grep -Fqi -- "$expected"; then
+  if ! jq -er '.candidates[0].content.parts[0].text // empty' "$response_file" |
+    grep -Fqi -- "$expected"; then
     unset token
     uat_die "Synthesized prompt ${test_id} did not satisfy its expected assertion."
   fi
