@@ -1,111 +1,71 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "=== xcsh Gemini Enterprise Synthesized Prompts UAT Suite ==="
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=scripts/uat-common.sh
+source "${SCRIPT_DIR}/uat-common.sh"
 
-# Stage read-only host credentials into writeable session directory if mounted
-if [ -d "$HOME/.config/gcloud-host" ] || [ -d "$HOME/.config/gcloud" ]; then
-  mkdir -p /tmp/.config/gcloud
-  if [ -d "$HOME/.config/gcloud-host" ]; then
-    cp -r "$HOME/.config/gcloud-host/"* /tmp/.config/gcloud/ 2>/dev/null || true
-  elif [ -d "$HOME/.config/gcloud" ]; then
-    cp -r "$HOME/.config/gcloud/"* /tmp/.config/gcloud/ 2>/dev/null || true
-  fi
-  export CLOUDSDK_CONFIG="/tmp/.config/gcloud"
+PROMPTS_FILE=${1:-scripts/uat-prompts.json}
+MODEL=${GEMINI_MODEL:-gemini-3.1-pro-preview}
+LOCATION=${VERTEX_AI_LOCATION:-us-central1}
+[ -f "$PROMPTS_FILE" ] || uat_die "The synthesized prompt fixture is unavailable."
+jq -e 'type == "array" and length > 0' "$PROMPTS_FILE" >/dev/null || \
+  uat_die "The synthesized prompt fixture must be a non-empty array."
+
+session_dir=$(uat_make_session prompts)
+trap 'uat_cleanup_session "$session_dir"' EXIT
+uat_stage_credentials "${HOME}/.config/gcloud-host" "${session_dir}/config"
+export CLOUDSDK_CONFIG="${session_dir}/config"
+
+project=${VERTEX_AI_PROJECT:-}
+if [ -z "$project" ]; then
+  project=$(gcloud config get-value project 2>/dev/null || true)
+fi
+if [ -z "$project" ] || [ "$project" = "(unset)" ]; then
+  uat_die "No Vertex AI project is configured."
 fi
 
-PROMPTS_FILE="${1:-scripts/uat-prompts.json}"
-MODEL="${GEMINI_MODEL:-gemini-3.1-pro-preview}"
-FLASH_MODEL="${GEMINI_FLASH_MODEL:-gemini-3.6-flash-high}"
-LOCATION="${VERTEX_AI_LOCATION:-us-central1}"
-REQUIRE_ENTERPRISE="${REQUIRE_ENTERPRISE_AUTH:-true}"
+token=$(gcloud auth print-access-token 2>/dev/null || true)
+[ -n "$token" ] || uat_die "No active Google Cloud access token is available."
 
-# Dynamically discover active project ID from environment or gcloud config
-PROJECT="${VERTEX_AI_PROJECT:-}"
-if [ -z "$PROJECT" ]; then
-  PROJECT=$(gcloud config get-value project 2>/dev/null || echo "")
-fi
+endpoint="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${project}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent"
+total=$(jq 'length' "$PROMPTS_FILE")
+passed=0
 
-# Extract active access token from filesystem credentials
-TOKEN=$(gcloud auth print-access-token 2>/dev/null || echo "")
+for ((index = 0; index < total; index++)); do
+  test_id=$(jq -r ".[${index}].id" "$PROMPTS_FILE")
+  expected=$(jq -r ".[${index}].expected_keyword" "$PROMPTS_FILE")
+  payload_file="${session_dir}/request.json"
+  response_file="${session_dir}/response.json"
 
-if [ -z "$TOKEN" ] || [ -z "$PROJECT" ]; then
-  if [ "$REQUIRE_ENTERPRISE" = "true" ]; then
-    echo "ERROR: No active Google Cloud OAuth token or Project ID found on filesystem!"
-    echo "Strict Enterprise Policy Violation: Free-tier fallback is prohibited."
-    exit 1
-  fi
-fi
-
-if [ ! -f "$PROMPTS_FILE" ]; then
-  echo "Error: Prompts file $PROMPTS_FILE not found."
-  exit 1
-fi
-
-TOTAL_TESTS=$(jq '. | length' "$PROMPTS_FILE")
-echo "Loaded $TOTAL_TESTS synthesized test prompts from $PROMPTS_FILE."
-echo "Target Enterprise Models: Pro ($MODEL) | Flash ($FLASH_MODEL)"
-echo "Enterprise Project: $PROJECT | Location: $LOCATION"
-
-PASSED=0
-FAILED=0
-
-for i in $(seq 0 $((TOTAL_TESTS - 1))); do
-  ID=$(jq -r ".[$i].id" "$PROMPTS_FILE")
-  DOMAIN=$(jq -r ".[$i].domain" "$PROMPTS_FILE")
-  DESC=$(jq -r ".[$i].description" "$PROMPTS_FILE")
-  PROMPT=$(jq -r ".[$i].prompt" "$PROMPTS_FILE")
-  SYS_INST=$(jq -r ".[$i].system_instruction" "$PROMPTS_FILE")
-  EXPECTED=$(jq -r ".[$i].expected_keyword" "$PROMPTS_FILE")
-
-  echo "---------------------------------------------------"
-  echo "Running Test [$((i + 1))/$TOTAL_TESTS]: $ID ($DOMAIN)"
-  echo "Description: $DESC"
-  echo "Prompt: \"$PROMPT\""
-
-  PAYLOAD=$(jq -n \
-    --arg prompt "$PROMPT" \
-    --arg sys_inst "$SYS_INST" \
+  jq -n \
+    --arg prompt "$(jq -r ".[${index}].prompt" "$PROMPTS_FILE")" \
+    --arg instruction "$(jq -r ".[${index}].system_instruction" "$PROMPTS_FILE")" \
     '{
-            systemInstruction: { parts: [{ text: $sys_inst }] },
-            contents: [{ role: "user", parts: [{ text: $prompt }] }]
-        }')
+      systemInstruction: {parts: [{text: $instruction}]},
+      contents: [{role: "user", parts: [{text: $prompt}]}]
+    }' >"$payload_file"
 
-  # Send request to Enterprise Vertex AI Endpoint
-  ENDPOINT="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent"
-  RESPONSE=$(curl -s -X POST "$ENDPOINT" \
-    -H "Authorization: Bearer ${TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d "$PAYLOAD")
-
-  if echo "$RESPONSE" | grep -q "error"; then
-    # Try alternate model name alias if model version is gemini-3.1-pro-preview or gemini-2.5-pro
-    ALT_ENDPOINT="https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${LOCATION}/publishers/google/models/gemini-2.5-pro:generateContent"
-    RESPONSE=$(curl -s -X POST "$ALT_ENDPOINT" \
-      -H "Authorization: Bearer ${TOKEN}" \
-      -H "Content-Type: application/json" \
-      -d "$PAYLOAD")
+  echo "Running synthesized prompt ${test_id}..."
+  if ! curl --fail-with-body --silent --show-error \
+    --connect-timeout 15 --max-time 120 \
+    --request POST "$endpoint" \
+    --header "Authorization: Bearer ${token}" \
+    --header "Content-Type: application/json" \
+    --data-binary "@${payload_file}" \
+    --output "$response_file" 2>/dev/null; then
+    unset token
+    uat_die "Vertex AI request failed for synthesized prompt ${test_id}."
   fi
 
-  TEXT=$(echo "$RESPONSE" | jq -r '.candidates[0].content.parts[0].text // empty')
-
-  if echo "$TEXT" | grep -iq "$EXPECTED"; then
-    echo "[PASS] Corporate Enterprise Response contains expected keyword: '$EXPECTED'"
-    echo "Response text: $TEXT"
-    PASSED=$((PASSED + 1))
-  else
-    echo "[FAIL] Expected '$EXPECTED' not found in response."
-    echo "Raw response: $RESPONSE"
-    FAILED=$((FAILED + 1))
+  if ! jq -er '.candidates[0].content.parts[0].text // empty' "$response_file" \
+    | grep -Fqi -- "$expected"; then
+    unset token
+    uat_die "Synthesized prompt ${test_id} did not satisfy its expected assertion."
   fi
+  passed=$((passed + 1))
+  echo "PASS: ${test_id}"
 done
 
-echo "================================-------------------"
-echo "UAT Execution Summary: $PASSED Passed, $FAILED Failed out of $TOTAL_TESTS total."
-
-if [ "$FAILED" -gt 0 ]; then
-  exit 1
-else
-  echo "=== All Synthesized Prompts Enterprise UAT Tests Passed Successfully! ==="
-  exit 0
-fi
+unset token
+echo "PASS: ${passed}/${total} synthesized prompts passed; response data was not logged."

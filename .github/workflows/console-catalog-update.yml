@@ -23,13 +23,13 @@ jobs:
       pull-requests: write
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
 
       - name: Check out the console repo (source of truth) at latest main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: f5-sales-demo/console
           ref: main

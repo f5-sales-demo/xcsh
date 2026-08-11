@@ -1,37 +1,19 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "=== Azure CLI Credential UAT Test ==="
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=scripts/uat-common.sh
+source "${SCRIPT_DIR}/uat-common.sh"
 
-# Stage read-only host credentials into writeable session directory if mounted
-if [ -d "$HOME/.azure-host" ] || [ -d "$HOME/.azure" ]; then
-  mkdir -p /tmp/.azure
-  if [ -d "$HOME/.azure-host" ]; then
-    cp -r "$HOME/.azure-host/"* /tmp/.azure/ 2>/dev/null || true
-  elif [ -d "$HOME/.azure" ]; then
-    cp -r "$HOME/.azure/"* /tmp/.azure/ 2>/dev/null || true
-  fi
-  export AZURE_CONFIG_DIR="/tmp/.azure"
+session_dir=$(uat_make_session azure)
+trap 'uat_cleanup_session "$session_dir"' EXIT
+
+uat_stage_credentials "${HOME}/.azure-host" "${session_dir}/config"
+export AZURE_CONFIG_DIR="${session_dir}/config"
+
+echo "Verifying the mounted Azure CLI session..."
+if ! az account show --query id --output tsv >/dev/null 2>&1; then
+  uat_die "Azure CLI authentication could not be verified."
 fi
 
-# Execute az account show to verify active authentication
-echo "Querying active Azure account context..."
-AZ_OUTPUT=$(az account show 2>&1 || echo "AZ_FAIL")
-
-if echo "$AZ_OUTPUT" | grep -q "AZ_FAIL" || echo "$AZ_OUTPUT" | grep -q "Please run 'az login'"; then
-  echo "ERROR: Azure CLI is not authenticated inside the container."
-  exit 1
-fi
-
-RAW_USER=$(echo "$AZ_OUTPUT" | jq -r '.user.name // "unknown"')
-RAW_SUB=$(echo "$AZ_OUTPUT" | jq -r '.name // "unknown"')
-RAW_TENANT=$(echo "$AZ_OUTPUT" | jq -r '.tenantDisplayName // "unknown"')
-
-# Mask user email, domain, and subscription for complete PII & corporate privacy
-MASKED_USER=$(echo "$RAW_USER" | sed -E 's/(.{2}).*@.*/\1***@***.***/')
-MASKED_SUB=$(echo "$RAW_SUB" | sed -E 's/(.{3}).*/\1***/')
-
-echo "=== Azure CLI Authentication Verified Successfully ==="
-echo "Account User: $MASKED_USER"
-echo "Subscription: $MASKED_SUB"
-echo "Tenant: $RAW_TENANT"
+echo "PASS: Azure CLI authentication is active; account identifiers were not logged."

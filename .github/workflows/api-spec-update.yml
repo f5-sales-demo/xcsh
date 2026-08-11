@@ -19,7 +19,7 @@ jobs:
     permissions: {}
     steps:
       - name: Check out fresh main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0

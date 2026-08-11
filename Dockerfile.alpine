@@ -1,84 +1,155 @@
-# Multi-stage Alpine Dockerfile for xcsh with Marketplace CLI Tools & Non-Root Security Best Practices
+# syntax=docker/dockerfile:1.12
 
-# Stage 1: Download external standalone CLI binaries
-FROM alpine:3.20 AS tools-downloader
-RUN apk add --no-cache curl unzip tar
+ARG ALPINE_IMAGE=alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+ARG BUILDER_IMAGE=debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
 
-# Google Cloud SDK
-RUN curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz && \
-    tar -xf google-cloud-cli-linux-x86_64.tar.gz -C /opt
+FROM ${ALPINE_IMAGE} AS tools
 
-# Stage 2: Build xcsh with Bun & Rust
-FROM alpine:3.20 AS xcsh-builder
-RUN apk add --no-cache curl unzip tar bash build-base rust cargo git
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-# Install Bun
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
+ARG BUN_VERSION=1.3.14
+ARG BUN_SHA256=951ee2aee855f08595aeec6225226a298d3fea83a3dcd6465c09cbccdf7e848f
+ARG GCLOUD_VERSION=579.0.0
+ARG GCLOUD_SHA256=a9a7fbe51cda37cf6142b1bbcff12227550e60a6c67e8cf84644fb301371c4de
+ARG ZIG_VERSION=0.15.2
+ARG ZIG_SHA256=02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239
 
-WORKDIR /app
+# hadolint ignore=DL3018
+RUN apk add --no-cache ca-certificates curl tar unzip xz
+
+WORKDIR /tmp/downloads
+
+RUN curl --fail --silent --show-error --location \
+      --output bun.zip \
+      "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip" && \
+    echo "${BUN_SHA256}  bun.zip" | sha256sum -c - && \
+    unzip -q bun.zip && \
+    install -D -m 0755 bun-linux-x64/bun /opt/bun/bin/bun
+
+RUN curl --fail --silent --show-error --location \
+      --output gcloud.tar.gz \
+      "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_VERSION}-linux-x86_64.tar.gz" && \
+    echo "${GCLOUD_SHA256}  gcloud.tar.gz" | sha256sum -c - && \
+    mkdir -p /opt && \
+    tar -xzf gcloud.tar.gz -C /opt
+
+RUN curl --fail --silent --show-error --location \
+      --output zig.tar.xz \
+      "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" && \
+    echo "${ZIG_SHA256}  zig.tar.xz" | sha256sum -c - && \
+    mkdir -p /opt/zig && \
+    tar -xJf zig.tar.xz --strip-components=1 -C /opt/zig
+
+FROM ${BUILDER_IMAGE} AS builder
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ARG RUST_TOOLCHAIN=nightly-2026-06-06
+ARG RUSTUP_INIT_SHA256=4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10
+
+# hadolint ignore=DL3008
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      build-essential ca-certificates curl git libstdc++6 python3 && \
+    rm -rf /var/lib/apt/lists/* && \
+    curl --fail --silent --show-error --location \
+      --output /tmp/rustup-init \
+      https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
+    echo "${RUSTUP_INIT_SHA256}  /tmp/rustup-init" | sha256sum -c - && \
+    chmod 0755 /tmp/rustup-init && \
+    /tmp/rustup-init -y \
+      --profile minimal \
+      --default-host x86_64-unknown-linux-gnu \
+      --default-toolchain "${RUST_TOOLCHAIN}" && \
+    rm /tmp/rustup-init
+
+COPY --from=tools /opt/bun /opt/bun
+COPY --from=tools /opt/zig /opt/zig
+
+ENV CARGO_HOME=/root/.cargo \
+    RUSTUP_HOME=/root/.rustup \
+    RUSTUP_TOOLCHAIN=nightly-2026-06-06-x86_64-unknown-linux-gnu \
+    PATH="/root/.cargo/bin:/opt/bun/bin:/opt/zig:${PATH}"
+WORKDIR /src
 COPY . .
-RUN bun install
-# Build native binaries if applicable / build project
-RUN bun run build || true
 
-# Stage 3: Runtime image (Non-Root Execution)
-FROM alpine:3.20 AS runtime
+ARG XCSH_BUILD_COMMIT=""
+ARG XCSH_BUILD_BRANCH=""
+ARG XCSH_BUILD_TAG=""
+ENV XCSH_BUILD_COMMIT=${XCSH_BUILD_COMMIT} \
+    XCSH_BUILD_BRANCH=${XCSH_BUILD_BRANCH} \
+    XCSH_BUILD_TAG=${XCSH_BUILD_TAG}
 
-# Arguments for User/Group ID inheritance
+RUN bun install --frozen-lockfile --ignore-scripts && \
+    bun --cwd=packages/coding-agent run generate-docs-index && \
+    bun --cwd=packages/natives run build
+
+RUN bun --cwd=packages/coding-agent run build && \
+    test -x packages/coding-agent/dist/xcsh
+
+FROM ${ALPINE_IMAGE} AS runtime
+
 ARG USER_NAME=xcsh
 ARG USER_UID=1000
 ARG USER_GID=1000
+ARG AZURE_CLI_VERSION=2.89.0
+ARG AWS_CLI_VERSION=1.46.0
+ARG SALESFORCE_CLI_VERSION=2.146.3
 
-# System dependencies & native CLI tools from apk
+SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
+
+# hadolint ignore=DL3018
 RUN apk add --no-cache \
-    bash \
-    git \
-    curl \
-    wget \
-    jq \
-    yq \
-    python3 \
-    py3-pip \
-    nodejs \
-    npm \
-    docker-cli \
-    github-cli \
-    glab \
-    bind-tools \
-    whois \
-    nmap \
-    ca-certificates
+      bash \
+      ca-certificates \
+      coreutils-env \
+      curl \
+      git \
+      github-cli \
+      jq \
+      libstdc++ \
+      nodejs \
+      npm \
+      py3-pip \
+      python3 && \
+    python3 -m venv /opt/cloud-cli && \
+    /opt/cloud-cli/bin/pip install --no-cache-dir \
+      "awscli==${AWS_CLI_VERSION}" \
+      "azure-cli==${AZURE_CLI_VERSION}" && \
+    npm install --global "@salesforce/cli@${SALESFORCE_CLI_VERSION}" && \
+    npm cache clean --force && \
+    addgroup -g "${USER_GID}" "${USER_NAME}" && \
+    adduser -D -u "${USER_UID}" -G "${USER_NAME}" \
+      -h "/home/${USER_NAME}" -s /bin/bash "${USER_NAME}" && \
+    install -d -o "${USER_UID}" -g "${USER_GID}" \
+      "/home/${USER_NAME}/.azure-host" \
+      "/home/${USER_NAME}/.aws-host" \
+      "/home/${USER_NAME}/.config/gcloud-host" \
+      "/home/${USER_NAME}/.config/gh-host" \
+      "/home/${USER_NAME}/.sfdx-host"
 
-# Python CLI tools
-RUN pip3 install --break-system-packages --no-cache-dir azure-cli awscli
+# Bun and the embedded N-API addon use glibc. Keep their pinned loader and
+# shared libraries isolated from Alpine's musl search paths.
+COPY --from=builder /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
+COPY --from=builder /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
+COPY --from=builder /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
+COPY --from=builder /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
 
-# NPM CLI tools
-RUN npm install -g @salesforce/cli
+COPY --from=tools /opt/bun /opt/bun
+COPY --from=tools /opt/google-cloud-sdk /opt/google-cloud-sdk
+COPY --from=tools /opt/zig /opt/zig
+COPY --from=builder /src/packages/coding-agent/dist/xcsh /usr/local/bin/xcsh
 
-# Create non-root group and user
-RUN addgroup -g ${USER_GID} ${USER_NAME} && \
-    adduser -D -u ${USER_UID} -G ${USER_NAME} -h /home/${USER_NAME} -s /bin/bash ${USER_NAME}
+ENV CLOUDSDK_PYTHON=/usr/bin/python3 \
+    HOME=/home/xcsh \
+    PATH="/opt/cloud-cli/bin:/opt/google-cloud-sdk/bin:/opt/bun/bin:/opt/zig:${PATH}"
 
-# Copy Google Cloud SDK from Stage 1
-COPY --from=tools-downloader /opt/google-cloud-sdk /opt/google-cloud-sdk
-ENV PATH="/opt/google-cloud-sdk/bin:${PATH}"
-
-# Copy Bun and xcsh build output from Stage 2 with proper non-root user ownership
-COPY --from=xcsh-builder --chown=${USER_UID}:${USER_GID} /root/.bun /home/${USER_NAME}/.bun
-COPY --from=xcsh-builder --chown=${USER_UID}:${USER_GID} /app /app/xcsh
-
-# Environment and PATH for non-root user
-ENV HOME="/home/${USER_NAME}"
-ENV PATH="/home/${USER_NAME}/.bun/bin:${PATH}"
-
-# Set ownership permissions on workspace and user home
-RUN chown -R ${USER_UID}:${USER_GID} /app/xcsh /home/${USER_NAME}
-
-WORKDIR /app/xcsh
-
-# Switch to non-root user for security best practices
+WORKDIR /workspace
 USER ${USER_NAME}
 
-ENTRYPOINT ["bun", "run"]
-CMD ["start"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD ["xcsh", "--version"]
+
+ENTRYPOINT ["xcsh"]

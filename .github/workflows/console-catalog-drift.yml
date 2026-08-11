@@ -27,7 +27,7 @@ jobs:
   drift-guard:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Read the console version the committed catalog records
         id: ver
@@ -58,7 +58,7 @@ jobs:
 
       - name: Check out the console repo at the recorded version
         if: steps.ver.outputs.checkable == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: f5-sales-demo/console
           ref: ${{ steps.ver.outputs.ref }}

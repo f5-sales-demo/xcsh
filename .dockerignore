@@ -1,0 +1,14 @@
+.git
+.github/workflows/*.log
+.secrets
+.worktrees
+**/.cache
+**/dist
+**/node_modules
+**/target
+*.core
+core
+.env
+.env.*
+research
+release

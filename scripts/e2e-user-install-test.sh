@@ -1,45 +1,62 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "=== xcsh End-to-End User Installation & Execution Verification ==="
-echo "Simulating a human user following published instructions in docs/en/container/alpine-deployment.md..."
+live_arg=()
+if [ "${1:-}" = "--live" ]; then
+  live_arg=(--live)
+  shift
+fi
+if [ "$#" -ne 0 ]; then
+  echo "Usage: $0 [--live]" >&2
+  exit 2
+fi
 
-echo ""
-echo "[Step 1/5] Building & starting container stack with production security settings..."
-docker compose -f docker-compose.dev.yml up -d --build
+compose_project="xcsh-e2e-${PPID}-$$"
+compose=(docker compose --project-name "$compose_project" -f docker-compose.dev.yml)
 
-echo ""
-echo "[Step 2/5] Verifying non-root user identity (UID 1000, GID 1000)..."
-USER_ID=$(docker exec xcsh-dev id -u)
-USER_NAME=$(docker exec xcsh-dev whoami)
+cleanup() {
+  "${compose[@]}" down --remove-orphans >/dev/null 2>&1 || true
+}
+trap cleanup EXIT INT TERM
 
-if [ "$USER_ID" -ne 1000 ] || [ "$USER_NAME" != "xcsh" ]; then
-  echo "ERROR: Security violation! Container is running as '$USER_NAME' ($USER_ID), expected 'xcsh' (1000)."
-  docker compose -f docker-compose.dev.yml down
+echo "[1/5] Build and start the documented Compose service."
+XCSH_BUILD_COMMIT=$(git rev-parse HEAD) \
+XCSH_BUILD_BRANCH=$(git branch --show-current) \
+  "${compose[@]}" up -d --build
+
+echo "[2/5] Verify the non-root runtime identity."
+user_id=$("${compose[@]}" exec -T xcsh-dev id -u)
+group_id=$("${compose[@]}" exec -T xcsh-dev id -g)
+user_name=$("${compose[@]}" exec -T xcsh-dev whoami)
+if [ "$user_id" != "1000" ] || [ "$group_id" != "1000" ] || [ "$user_name" != "xcsh" ]; then
+  echo "ERROR: Expected xcsh UID/GID 1000, received ${user_name} ${user_id}:${group_id}." >&2
   exit 1
 fi
-echo "PASS: Container running as non-root user '$USER_NAME' (UID: $USER_ID)."
 
-echo ""
-echo "[Step 3/5] Verifying multi-cloud CLI tool availability inside container..."
-docker exec xcsh-dev bash -c "
-    echo 'Checking gcloud:' && gcloud --version | head -n 1 && \
-    echo 'Checking az:' && az --version | head -n 1 && \
-    echo 'Checking aws:' && aws --version | head -n 1 && \
-    echo 'Checking gh:' && gh --version | head -n 1 && \
-    echo 'Checking bun:' && bun --version
-"
-echo "PASS: All marketplace CLI tools verified inside container."
+echo "[3/5] Verify runtime hardening."
+container_id=$("${compose[@]}" ps -q xcsh-dev)
+[ -n "$container_id" ] || {
+  echo "ERROR: Compose did not return the xcsh container ID." >&2
+  exit 1
+}
+docker inspect "$container_id" --format '{{json .HostConfig.CapDrop}}' | grep -Fq 'ALL'
+docker inspect "$container_id" --format '{{json .HostConfig.SecurityOpt}}' \
+  | grep -Fq 'no-new-privileges:true'
+if docker inspect "$container_id" --format '{{range .Mounts}}{{println .Destination}}{{end}}' \
+  | grep -Fxq /var/run/docker.sock; then
+  echo "ERROR: The Docker socket must not be mounted." >&2
+  exit 1
+fi
 
-echo ""
-echo "[Step 4/5] Executing automated Master Container UAT Test Suite..."
-docker exec xcsh-dev bash ./scripts/uat-all.sh
+echo "[4/5] Run deterministic container verification."
+"${compose[@]}" exec -T xcsh-dev ./scripts/uat-all.sh "${live_arg[@]}"
 
-echo ""
-echo "[Step 5/5] Cleaning up container environment..."
-docker compose -f docker-compose.dev.yml down
+echo "[5/5] Tear down the Compose service."
+cleanup
+trap - EXIT INT TERM
 
-echo ""
-echo "========================================================================="
-echo "=== End-to-End User Perspective Installation & Verification PASSED! ==="
-echo "========================================================================="
+if [ -e core ]; then
+  echo "ERROR: Container execution created a core dump in the checkout." >&2
+  exit 1
+fi
+echo "PASS: End-to-end container installation and verification completed."

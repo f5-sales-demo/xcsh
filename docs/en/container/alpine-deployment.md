@@ -1,179 +1,165 @@
 ---
-title: Alpine container deployment and multi-cloud authentication
-description: Complete guide for configuring environment variables, running xcsh securely inside Alpine containers, and integrating multi-cloud Command Line Interface (CLI) credentials.
+title: Run xcsh in an Alpine container
+description: Build or run the non-root xcsh Alpine image and optionally verify mounted cloud CLI sessions.
 ---
 
-`xcsh` is distributed as a security-hardened, multi-stage Alpine Linux container image published automatically to GitHub Container Registry (GHCR) at `ghcr.io`.
+Tagged xcsh releases publish an image to GitHub Container Registry (GHCR) as
+`ghcr.io/f5-sales-demo/xcsh`. The first package becomes available when a `v*`
+release tag runs the container workflow from the default branch. The image runs
+as the unprivileged `xcsh` user and includes the xcsh, Google Cloud, Azure,
+Amazon Web Services (AWS), GitHub, Salesforce, Bun, and Zig command-line
+interfaces (CLIs).
 
-It ships pre-packaged with all required marketplace Command Line Interface (CLI) tools—including Google Cloud SDK (`gcloud`), Azure CLI (`az`), AWS CLI (`aws`), GitHub CLI (`gh`), Salesforce CLI (`sf`), and Bun—allowing seamless cloud shell execution from any container host.
+The image currently supports `linux/amd64` hosts.
 
 ## Prerequisites
 
-Before starting this deployment, ensure you have:
+Before you begin, install Docker Engine with the Compose plugin. To run the
+optional live tests, authenticate the Google Cloud and Azure CLIs on your host.
+Use only F5-owned labs or customer demo environments covered by an engagement.
 
-- Docker Engine installed and running on your host machine.
-- Local cloud CLI credentials initialized on your host (for example, `~/.config/gcloud`, `~/.aws`, `~/.azure`).
-- Access to pull images from `ghcr.io/example-corp/xcsh`.
-- Estimated time to complete: **10 minutes**.
+Allow about 10 minutes for the first local build. The cloud CLIs make the image
+substantially larger than a minimal xcsh-only runtime.
 
-## Quickstart
+## Pull a release image
 
-### Pull the container image from GHCR
-
-The latest container image is built and published automatically on every release:
+After a tagged release finishes, pull the most recent stable image:
 
 ```bash
-docker pull ghcr.io/example-corp/xcsh:latest
+docker pull ghcr.io/f5-sales-demo/xcsh:latest
 ```
 
-### Run with Docker Compose
+Releases also publish immutable `vX.Y.Z` tags and moving `X.Y` tags. Prefer a
+published immutable tag when reproducibility matters, for example
+`ghcr.io/f5-sales-demo/xcsh:vX.Y.Z` after replacing `X.Y.Z` with a release
+version.
 
-Use `docker-compose.dev.yml` to launch `xcsh` with mounted cloud CLI credentials:
+Run a non-interactive command through the image entrypoint:
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d
+docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
+docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --help
 ```
 
-To execute interactive shell sessions inside the container:
+Override the entrypoint when you need a shell:
 
 ```bash
+docker run --rm -it \
+  --entrypoint /bin/bash \
+  ghcr.io/f5-sales-demo/xcsh:latest
+```
+
+## Build the development service
+
+From an xcsh repository checkout, build and start the hardened development
+service:
+
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+The service idles without invoking xcsh, mounts the checkout read-only at
+`/workspace`, and lets you run commands explicitly:
+
+```bash
+docker compose -f docker-compose.dev.yml exec xcsh-dev xcsh --help
 docker compose -f docker-compose.dev.yml exec xcsh-dev bash
 ```
 
-## Environment variables reference
+The Compose service applies these controls:
 
-`xcsh` supports granular environment variable configuration for Enterprise AI routing, cloud project resolution, and container paths:
+- User and group IDs default to `1000`.
+- All Linux capabilities are dropped.
+- `no-new-privileges` blocks privilege escalation.
+- The image filesystem and source checkout are read-only. The `/tmp`, xcsh,
+  and Salesforce state paths use writable, ephemeral temporary filesystems.
+  The xcsh state mount permits executable mappings because xcsh extracts its
+  embedded native module there.
+- The Docker socket and static service-account keys are not mounted.
+- Host CLI configuration directories are mounted read-only under `*-host` paths.
 
-| Environment Variable | Default Value | Description / Purpose |
-| :--- | :--- | :--- |
-| `GEMINI_MODEL` | `gemini-3.1-pro-preview` | Primary Enterprise Pro model for complex reasoning and planning. |
-| `GEMINI_FLASH_MODEL` | `gemini-3.6-flash-high` | Primary Enterprise Flash model for fast tool execution and terminal tasks. |
-| `VERTEX_AI_PROJECT` | *(Dynamically Resolved)* | Google Cloud Project ID hosting Vertex AI endpoints. Automatically fetched via `gcloud config` if omitted. |
-| `VERTEX_AI_LOCATION` | `us-central1` | Google Cloud region for Vertex AI Enterprise API requests. |
-| `REQUIRE_ENTERPRISE_AUTH` | `true` | Enforces corporate Enterprise quota. Fails fast if free-tier fallback is attempted. |
-| `AZURE_CONFIG_DIR` | `/home/xcsh/.azure` | Directory path inside the container for mounted Azure CLI credentials. |
-| `GOOGLE_APPLICATION_CREDENTIALS` | `/app/xcsh/.secrets/gcp-sa.json` | Path to Google Service Account JSON key if using explicit Application Default Credentials (ADC). |
-| `HOME` | `/home/xcsh` | Home directory path for non-root execution user `xcsh`. |
-| `NODE_ENV` | `development` | Runtime execution environment mode. |
+Read-only credentials can still be read by processes in the container. Mount
+them only into images and source trees you trust.
 
-## How to run the container securely
+## Configure the environment
 
-Running AI coding containers securely requires restricting container process privileges, preventing setuid escalation, and safeguarding host cloud credentials.
+The development and live user acceptance testing (UAT) scripts use these
+variables:
 
-### Enforce non-root execution
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `UID` | `1000` | Runtime user ID used by Compose. |
+| `GID` | `1000` | Runtime group ID used by Compose. |
+| `GEMINI_MODEL` | `gemini-3.1-pro-preview` | Vertex AI model tested by live UAT. |
+| `VERTEX_AI_PROJECT` | Active gcloud project | Vertex AI project tested by live UAT. |
+| `VERTEX_AI_LOCATION` | `us-central1` | Vertex AI location tested by live UAT. |
+| `AZURE_CONFIG_DIR` | `/tmp/xcsh-azure` | Writable Azure CLI session directory inside Compose. |
+| `CLOUDSDK_CONFIG` | `/tmp/xcsh-gcloud` | Writable Google Cloud CLI session directory inside Compose. |
 
-By default, `xcsh` runs as non-root user `xcsh` (User ID (UID) `1000`, Group ID (GID) `1000`). When running with `docker run` or `docker compose`, pass your host UID and GID so generated files match host user permissions:
+Compose mounts host configuration into these read-only source paths:
+
+| CLI | Host path | Container source path |
+| --- | --- | --- |
+| Google Cloud | `~/.config/gcloud` | `/home/xcsh/.config/gcloud-host` |
+| Azure | `~/.azure` | `/home/xcsh/.azure-host` |
+| AWS | `~/.aws` | `/home/xcsh/.aws-host` |
+| GitHub | `~/.config/gh` | `/home/xcsh/.config/gh-host` |
+| Salesforce | `~/.sfdx` | `/home/xcsh/.sfdx-host` |
+
+The live tests copy only the required Google Cloud and Azure configuration into
+private temporary directories. They delete those copies on exit and never write
+session state into the host mounts.
+
+## Run verification
+
+Run the deterministic end-to-end test without cloud credentials:
 
 ```bash
-docker run -it --user 1000:1000 ghcr.io/example-corp/xcsh:latest bash
+./scripts/e2e-user-install-test.sh
 ```
 
-### Prevent privilege escalation
+This path builds the image, verifies the non-root identity and hardening
+settings, checks every bundled CLI, and tears down the service. It does not call
+Azure or Vertex AI.
 
-Block container processes from gaining elevated privileges via `setuid` binaries by setting `security_opt`:
+To test already-authorized F5 lab credentials, opt in explicitly:
 
 ```bash
-docker run -it \
-  --user 1000:1000 \
-  --security-opt no-new-privileges:true \
-  ghcr.io/example-corp/xcsh:latest bash
+./scripts/e2e-user-install-test.sh --live
 ```
 
-### Mount credentials read-only
-
-Mount local host CLI credentials read-only to prevent the container from corrupting or modifying host auth state:
-
-```bash
-docker run -it \
-  --user 1000:1000 \
-  --security-opt no-new-privileges:true \
-  -v ~/.config/gcloud:/home/xcsh/.config/gcloud:ro \
-  -v ~/.azure:/home/xcsh/.azure:ro \
-  -v ~/.aws:/home/xcsh/.aws:ro \
-  -v ~/.config/gh:/home/xcsh/.config/gh:ro \
-  -v ~/.sfdx:/home/xcsh/.sfdx:ro \
-  ghcr.io/example-corp/xcsh:latest bash
-```
-
-### Production security-hardened compose pattern
-
-```yaml
-services:
-  xcsh-dev:
-    image: ghcr.io/example-corp/xcsh:latest
-    container_name: xcsh-dev
-    user: "${UID:-1000}:${GID:-1000}"
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - .:/app/xcsh
-      # Read-only multi-cloud credential mounts
-      - ~/.config/gcloud:/home/xcsh/.config/gcloud:ro
-      - ~/.azure:/home/xcsh/.azure:ro
-      - ~/.aws:/home/xcsh/.aws:ro
-      - ~/.config/gh:/home/xcsh/.config/gh:ro
-      - ~/.sfdx:/home/xcsh/.sfdx:ro
-    environment:
-      - HOME=/home/xcsh
-      - GEMINI_MODEL=gemini-3.1-pro-preview
-      - GEMINI_FLASH_MODEL=gemini-3.6-flash-high
-      - REQUIRE_ENTERPRISE_AUTH=true
-      - AZURE_CONFIG_DIR=/home/xcsh/.azure
-    command: tail -f /dev/null
-```
-
-## Multi-cloud CLI credential integration
-
-`xcsh` automatically inherits authenticated contexts from your local host machine without storing static credentials in image layers or environment variables:
-
-| Cloud Platform | Local Host Path | Container Mount Path | Verification Command |
-| :--- | :--- | :--- | :--- |
-| Google Cloud / Gemini | `~/.config/gcloud` | `/home/xcsh/.config/gcloud` | `gcloud auth print-access-token` |
-| Microsoft Azure | `~/.azure` | `/home/xcsh/.azure` | `az account show` |
-| Amazon Web Services | `~/.aws` | `/home/xcsh/.aws` | `aws sts get-caller-identity` |
-| GitHub CLI | `~/.config/gh` | `/home/xcsh/.config/gh` | `gh auth status` |
-| Salesforce CLI | `~/.sfdx` | `/home/xcsh/.sfdx` | `sf org list` |
-
-## Enterprise AI routing and privacy guarantees
-
-`xcsh` connects directly to Enterprise Vertex AI endpoints (`gemini-3.1-pro-preview` and `gemini-3.6-flash-high`):
-
-- **Zero Data Retention (ZDR)**: Enterprise data and prompts are never stored or used for model training.
-- **Strict Policy Enforcement**: Free-tier model fallbacks are explicitly disabled (`REQUIRE_ENTERPRISE_AUTH=true`).
-- **Personally Identifiable Information (PII) Redaction**: Email usernames and domain names are automatically masked (`us***@***.***`) in all terminal logging outputs.
+The live path verifies Azure CLI and Vertex AI access. It reports only pass or
+fail status; it does not print tokens, account identities, tenant or subscription
+names, project IDs, prompts, or model responses.
 
 ## Verify
 
-To confirm that your container environment is running securely with active cloud authentication:
-
-Run the master container UAT test suite inside the container:
+Inspect the running service directly when troubleshooting:
 
 ```bash
-bash ./scripts/uat-all.sh
+docker compose -f docker-compose.dev.yml exec xcsh-dev id
+docker compose -f docker-compose.dev.yml exec xcsh-dev xcsh --version
+docker compose -f docker-compose.dev.yml exec xcsh-dev gcloud --version
+docker compose -f docker-compose.dev.yml exec xcsh-dev az version
 ```
 
-Expected output confirms clean authentication and prompt translation:
-
-```text
-=== All Container UAT Verification Tests Passed! ===
-```
+The identity output must show user and group ID `1000`. The xcsh and cloud CLI
+commands must exit successfully.
 
 ## Clean up
 
-To remove the container and tear down the environment:
+Remove the development service and network:
 
 ```bash
-docker compose -f docker-compose.dev.yml down
+docker compose -f docker-compose.dev.yml down --remove-orphans
 ```
 
-## Automated CI translation pipeline
+The test scripts perform the same teardown automatically on success, failure,
+or interruption.
 
-All user-facing documentation is authored in English under `docs/en/`.
+## Localized documentation
 
-When changes are committed to `docs/en/**/*.md`, GitHub Actions (`.github/workflows/antigravity-translate.yml`) automatically orchestrates Continuous Integration (CI) translation into 12 target locales:
-
-- French (`fr`), Spanish (`es`), German (`de`), Portuguese (`pt-br`)
-- Japanese (`ja`), Korean (`ko`), Chinese Simplified (`zh-cn`), Chinese Traditional (`zh-tw`)
-- Arabic (`ar`), Italian (`it`), Hindi (`hi`), Thai (`th`)
-
-Each translated document maintains a cryptographic source hash (`i18n.sourceHash`) to guarantee translations remain perfectly synchronized with English source updates.
+Author container documentation in English under `docs/en/`. Localized files are
+managed automation output and are refreshed only for an eligible major release
+unless an exceptional translation run is explicitly requested. Expected locale
+drift during ordinary English development is not a blocking failure.
