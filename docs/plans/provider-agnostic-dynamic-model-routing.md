@@ -97,7 +97,9 @@ The utility, balanced, and frontier prompts contain deterministic profiler signa
 
 ## TDD and staged UAT
 
-Every behavior is introduced with a failing focused test, minimal implementation, focused green run, coding-agent suite, type check, lint, and dry run. Mocked HTTP coverage includes successful provider schemas, empty inventory, missing tiers, 401, 403, 404, 429, 500, malformed JSON, DNS/network failure, timeout/abort, ADC, OAuth/API-key headers, no bundled fallback, redaction, attribution gaps, warmup failures, and partial/all-BLOCKED contracts.
+Every behavior is introduced with a failing focused test, minimal implementation, focused green run, coding-agent suite, type check, lint, and dry run.
+
+Mocked HTTP coverage includes successful provider schemas, empty inventory, missing tiers, 401, 403, 404, 429, 500, malformed JSON, DNS/network failure, timeout/abort, ADC, OAuth/API-key headers, no bundled fallback, redaction, attribution gaps, warmup failures, and partial/all-BLOCKED contracts.
 
 Paid UAT is staged:
 
