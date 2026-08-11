@@ -71,46 +71,132 @@ export interface ProviderCredential {
 	presetId: string;
 	apiKey?: string;
 	baseUrl?: string;
+	authMechanism?: string;
 }
 
 export function getProviderCredentials(): Record<string, ProviderCredential> {
+	const openaiKey = process.env.OPENAI_API_KEY ?? process.env.OPENAI_OAUTH_TOKEN;
+	const anthropicKey = process.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_OAUTH_TOKEN;
+	const litellmKey =
+		process.env.LITELLM_OPENAI_API_KEY ?? process.env.LITELLM_ANTHROPIC_API_KEY ?? process.env.LITELLM_API_KEY;
+	const vertexKey =
+		process.env.VERTEX_API_KEY ??
+		process.env.GOOGLE_API_KEY ??
+		process.env.GEMINI_API_KEY ??
+		(process.env.GOOGLE_APPLICATION_CREDENTIALS ? "adc-configured" : undefined);
+
 	return {
 		openai: {
 			lane: "openai",
 			provider: "openai",
 			presetId: "openai/gpt-5.6",
-			apiKey: process.env.OPENAI_API_KEY,
+			apiKey: openaiKey,
 			baseUrl: process.env.OPENAI_BASE_URL,
+			authMechanism: openaiKey ? "api-key" : undefined,
 		},
 		anthropic: {
 			lane: "anthropic",
 			provider: "anthropic",
 			presetId: "anthropic/claude",
-			apiKey: process.env.ANTHROPIC_API_KEY,
+			apiKey: anthropicKey,
 			baseUrl: process.env.ANTHROPIC_BASE_URL,
+			authMechanism: anthropicKey ? "api-key" : undefined,
 		},
 		"litellm-openai": {
 			lane: "litellm-openai",
 			provider: "litellm",
 			presetId: "litellm/openai",
-			apiKey: process.env.LITELLM_OPENAI_API_KEY ?? process.env.LITELLM_API_KEY,
+			apiKey: litellmKey,
 			baseUrl: process.env.LITELLM_OPENAI_BASE_URL ?? process.env.LITELLM_BASE_URL ?? process.env.LITELLM_URL,
+			authMechanism: litellmKey ? "api-key" : undefined,
 		},
 		"litellm-anthropic": {
 			lane: "litellm-anthropic",
 			provider: "litellm",
 			presetId: "litellm/anthropic",
-			apiKey: process.env.LITELLM_ANTHROPIC_API_KEY ?? process.env.LITELLM_API_KEY,
+			apiKey: litellmKey,
 			baseUrl: process.env.LITELLM_ANTHROPIC_BASE_URL ?? process.env.LITELLM_BASE_URL ?? process.env.LITELLM_URL,
+			authMechanism: litellmKey ? "api-key" : undefined,
 		},
 		"google-vertex": {
 			lane: "google-vertex",
 			provider: "google-vertex",
 			presetId: "google-vertex/gemini",
-			apiKey: process.env.VERTEX_API_KEY ?? process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY,
+			apiKey: vertexKey,
 			baseUrl: process.env.VERTEX_BASE_URL,
+			authMechanism: process.env.GOOGLE_APPLICATION_CREDENTIALS ? "google-adc" : vertexKey ? "api-key" : undefined,
 		},
 	};
+}
+
+export async function discoverAuthenticatedInventory(
+	lane: string,
+	cred: ProviderCredential,
+	dryRun: boolean,
+): Promise<{ success: boolean; models: string[]; reason?: string }> {
+	if (dryRun) {
+		const bundled = getBundledModels(cred.provider as any);
+		return { success: true, models: bundled.map(m => m.id) };
+	}
+
+	if (!cred.apiKey) {
+		return { success: false, models: [], reason: "BLOCKED: Credentials missing" };
+	}
+
+	try {
+		const baseUrl =
+			cred.baseUrl ??
+			(cred.provider === "openai"
+				? "https://api.openai.com/v1"
+				: cred.provider === "anthropic"
+					? "https://api.anthropic.com/v1"
+					: undefined);
+		if (!baseUrl) {
+			const bundled = getBundledModels(cred.provider as any);
+			return { success: true, models: bundled.map(m => m.id) };
+		}
+
+		const targetUrl = baseUrl.endsWith("/models") ? baseUrl : `${baseUrl.replace(/\/+$/, "")}/models`;
+		const headers: Record<string, string> = {};
+		if (cred.provider === "anthropic") {
+			headers["x-api-key"] = cred.apiKey;
+			headers["anthropic-version"] = "2023-06-01";
+		} else {
+			headers.Authorization = `Bearer ${cred.apiKey}`;
+		}
+
+		const res = await fetch(targetUrl, {
+			method: "GET",
+			headers,
+			signal: AbortSignal.timeout(10000),
+		});
+
+		if (res.ok) {
+			const data = (await res.json()) as any;
+			const rawList = Array.isArray(data) ? data : (data?.data ?? []);
+			const models = rawList.map((m: any) => (typeof m === "string" ? m : (m.id ?? m.name))).filter(Boolean);
+			return { success: true, models };
+		}
+
+		if (res.status === 401 || res.status === 403) {
+			return {
+				success: false,
+				models: [],
+				reason: `BLOCKED: HTTP ${res.status} Unauthorized/Forbidden during inventory discovery`,
+			};
+		}
+
+		// Fallback to bundled if discovery endpoint not implemented on provider gateway
+		const bundled = getBundledModels(cred.provider as any);
+		return { success: true, models: bundled.map(m => m.id) };
+	} catch (err: any) {
+		const errStr = err?.message ?? String(err);
+		if (/401|403|unauthorized|forbidden|dns|connect|timeout/i.test(errStr)) {
+			return { success: false, models: [], reason: `BLOCKED: Inventory discovery network error - ${errStr}` };
+		}
+		const bundled = getBundledModels(cred.provider as any);
+		return { success: true, models: bundled.map(m => m.id) };
+	}
 }
 
 export interface ScenarioDefinition {
@@ -206,10 +292,13 @@ export function expandLaneScenarios(lanes: string[]): MatrixEntry[] {
 export interface ClassifyRunStatusOptions {
 	effectiveTier?: RoutingTier;
 	expectedTier: RoutingTier;
+	servingProvider?: string;
+	expectedProvider?: string;
 	servingModel?: string;
 	expectedModel?: string;
 	stopReason?: string;
-	responseMarkerVerified: boolean;
+	responseContent?: string;
+	expectedMarker: string;
 	totalTokens: number;
 	isNetworkError: boolean;
 	error?: string;
@@ -225,6 +314,15 @@ export function classifyRunStatus(options: ClassifyRunStatusOptions): {
 			status: "FAIL",
 			reason: `Tier mismatch: expected ${options.expectedTier}, got ${options.effectiveTier ?? "none"}`,
 		};
+	}
+
+	if (options.servingProvider && options.expectedProvider) {
+		if (options.servingProvider !== options.expectedProvider) {
+			return {
+				status: "FAIL",
+				reason: `Provider mismatch: expected provider '${options.expectedProvider}', got '${options.servingProvider}'`,
+			};
+		}
 	}
 
 	if (options.servingModel && options.expectedModel) {
@@ -254,10 +352,12 @@ export function classifyRunStatus(options: ClassifyRunStatusOptions): {
 		};
 	}
 
-	if (!options.responseMarkerVerified) {
+	// Exact marker validation: content must equal expectedMarker (trimmed)
+	const content = options.responseContent?.trim() ?? "";
+	if (content !== options.expectedMarker) {
 		return {
 			status: "FAIL",
-			reason: `Response marker verification failed`,
+			reason: `Exact response marker verification failed: expected '${options.expectedMarker}', got '${content.slice(0, 100)}'`,
 		};
 	}
 
@@ -320,27 +420,27 @@ export interface ContractIntegrityOptions {
 	failedRuns: number;
 }
 
-export function validateContractIntegrity(options: ContractIntegrityOptions): { authoritative: boolean } {
-	if (options.totalRuns <= 0 || options.passedRuns === 0) {
-		return { authoritative: false };
-	}
+export function validateContractIntegrity(options: ContractIntegrityOptions): {
+	authoritative: boolean;
+	matrixComplete: boolean;
+} {
+	const matrixComplete =
+		options.totalRuns > 0 &&
+		options.passedRuns === options.totalRuns &&
+		options.blockedRuns === 0 &&
+		options.failedRuns === 0;
 
-	const isCleanLiveExecution =
-		!options.dryRun &&
-		options.cleanWorktree &&
-		options.failedRuns === 0 &&
-		options.passedRuns > 0 &&
-		options.passedRuns + options.blockedRuns === options.totalRuns;
+	const authoritative = !options.dryRun && options.cleanWorktree && matrixComplete;
 
-	return { authoritative: isCleanLiveExecution };
+	return { authoritative, matrixComplete };
 }
 
-export function computeExitCode(results: Array<{ status: string }>, passedRuns?: number): number {
+export function computeExitCode(results: Array<{ status: string }>, passedRuns: number, totalRuns: number): number {
 	const hasFail = results.some(r => r.status === "FAIL");
 	if (hasFail) return 1;
 
-	const passedCount = passedRuns ?? results.filter(r => r.status === "PASS").length;
-	if (passedCount === 0) return 1;
+	// Partial-BLOCKED executions (passedRuns < totalRuns) do NOT establish a complete matrix and must exit 1
+	if (passedRuns < totalRuns || totalRuns === 0) return 1;
 
 	return 0;
 }
@@ -424,10 +524,18 @@ async function main() {
 
 	const inventoryStatus: Record<
 		string,
-		{ available: boolean; apiKeyPresent: boolean; baseUrl?: string; modelsDiscovered?: string[]; reason?: string }
+		{
+			available: boolean;
+			apiKeyPresent: boolean;
+			baseUrl?: string;
+			authMechanism?: string;
+			modelsDiscovered?: string[];
+			reason?: string;
+		}
 	> = {};
 	const secretsToRedact: string[] = [];
 
+	console.log(`\nPerforming live HTTP inventory discovery per active lane...`);
 	for (const lane of args.lanes) {
 		const cred = credentials[lane];
 		if (!cred) {
@@ -435,22 +543,22 @@ async function main() {
 		}
 		if (cred.apiKey) secretsToRedact.push(cred.apiKey);
 
-		const hasKey = Boolean(cred.apiKey || args.dryRun);
-		let discoveredModels: string[] = [];
-		if (hasKey) {
-			try {
-				const bundled = getBundledModels(cred.provider as any);
-				discoveredModels = bundled.map(m => m.id);
-			} catch {}
-		}
+		const discovery = await discoverAuthenticatedInventory(lane, cred, args.dryRun);
 
 		inventoryStatus[lane] = {
-			available: hasKey,
+			available: discovery.success,
 			apiKeyPresent: Boolean(cred.apiKey),
 			baseUrl: cred.baseUrl,
-			modelsDiscovered: discoveredModels,
-			reason: hasKey ? undefined : "BLOCKED: Missing API key",
+			authMechanism: cred.authMechanism,
+			modelsDiscovered: discovery.models,
+			reason: discovery.success ? undefined : discovery.reason,
 		};
+
+		if (discovery.success) {
+			console.log(`  ✓ Discovered ${discovery.models.length} models for lane ${lane}`);
+		} else {
+			console.warn(`  ! Lane ${lane} inventory discovery failed: ${discovery.reason}`);
+		}
 	}
 
 	const coordinator = new RoutingCoordinator();
@@ -473,6 +581,11 @@ async function main() {
 		"google-vertex/gemini-2.5-flash",
 		"google-vertex/gemini-2.5-pro",
 	];
+
+	let totalRuns = 0;
+	let passedRuns = 0;
+	let blockedRuns = 0;
+	let failedRuns = 0;
 
 	// Warmup Phase with baseUrl and timeout signal
 	if (args.warmups > 0 && !args.dryRun) {
@@ -517,7 +630,8 @@ async function main() {
 					inventoryStatus[lane].available = false;
 					inventoryStatus[lane].reason = `BLOCKED: Warmup network/credential failure - ${warmupErrorReason}`;
 				} else {
-					// Behavioral/schema error in warmup does NOT mark inventory as BLOCKED
+					// Warmup behavioral error counts as FAIL in metrics
+					failedRuns++;
 					inventoryStatus[lane].reason = `FAIL: Warmup behavioral error - ${warmupErrorReason}`;
 				}
 			}
@@ -526,10 +640,6 @@ async function main() {
 
 	const scenarioMatrix = expandLaneScenarios(args.lanes);
 	const results: any[] = [];
-	let totalRuns = 0;
-	let passedRuns = 0;
-	let blockedRuns = 0;
-	let failedRuns = 0;
 
 	for (const entry of scenarioMatrix) {
 		const laneCred = credentials[entry.lane];
@@ -559,24 +669,25 @@ async function main() {
 			const selectedModelId = routingDecision.selectedModel ?? entry.anchorModel;
 			const pool = CUSTOM_BENCH_POOLS[entry.presetId];
 			const rawExpectedModel = pool ? pool.tiers[entry.scenario.expectedTier] : undefined;
+			const expectedProvider = pool ? pool.provider : laneCred.provider;
 			const expectedModel = rawExpectedModel
 				? rawExpectedModel.includes("/")
 					? rawExpectedModel
-					: `${pool.provider}/${rawExpectedModel}`
+					: `${expectedProvider}/${rawExpectedModel}`
 				: selectedModelId;
 
-			const [provider, modelName] = selectedModelId.includes("/")
+			const [selectedProvider, modelName] = selectedModelId.includes("/")
 				? (selectedModelId.split("/") as [string, string])
 				: [laneCred.provider, selectedModelId];
 
 			let inferenceSuccess = false;
 			let isNetworkError = false;
 			let errorMessage: string | undefined;
+			let servingProvider = selectedProvider;
 			let servingModel = selectedModelId;
 			let stopReason: string | undefined = "stop";
 			let tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 			let responseContent = "";
-			let responseMarkerVerified = false;
 
 			if (!isLaneAvailable) {
 				isNetworkError = true;
@@ -585,14 +696,14 @@ async function main() {
 					`BLOCKED: Provider ${entry.lane} missing API key or warmup failed`;
 			} else if (args.dryRun) {
 				inferenceSuccess = true;
+				servingProvider = expectedProvider ?? selectedProvider;
 				servingModel = expectedModel;
-				responseContent = `[Dry-Run] ${entry.scenario.responseMarker}`;
-				responseMarkerVerified = true;
+				responseContent = entry.scenario.responseMarker;
 				stopReason = "stop";
 				tokenUsage = { inputTokens: 20, outputTokens: 15, totalTokens: 35 };
 			} else {
 				try {
-					const modelObj = constructModel(provider, modelName);
+					const modelObj = constructModel(selectedProvider, modelName);
 					if (laneCred.baseUrl) {
 						modelObj.baseUrl = laneCred.baseUrl;
 					}
@@ -619,8 +730,13 @@ async function main() {
 
 					if (response) {
 						inferenceSuccess = true;
-						const rawServing = (response as any).model ?? (response as any).servingModel ?? selectedModelId;
-						servingModel = rawServing.includes("/") ? rawServing : `${provider}/${rawServing}`;
+
+						// Genuine serving provider & model extraction
+						const rawProv = (response as any).provider ?? (response as any).servingProvider;
+						const rawModel = (response as any).model ?? (response as any).servingModel ?? selectedModelId;
+
+						servingProvider = rawProv ?? selectedProvider;
+						servingModel = rawModel.includes("/") ? rawModel : `${servingProvider}/${rawModel}`;
 
 						const rawStop = (response as any).finishReason ?? (response as any).stopReason;
 						stopReason = normalizeStopReason(rawStop);
@@ -628,8 +744,6 @@ async function main() {
 
 						responseContent =
 							typeof response.content === "string" ? response.content : JSON.stringify(response.content ?? "");
-						responseMarkerVerified =
-							responseContent.length > 0 && responseContent.includes(entry.scenario.responseMarker);
 					}
 				} catch (err: any) {
 					const errStr = err?.message ?? String(err);
@@ -643,10 +757,13 @@ async function main() {
 			const classification = classifyRunStatus({
 				effectiveTier: routingDecision.effectiveTier,
 				expectedTier: entry.scenario.expectedTier,
+				servingProvider,
+				expectedProvider,
 				servingModel,
 				expectedModel,
 				stopReason,
-				responseMarkerVerified,
+				responseContent,
+				expectedMarker: entry.scenario.responseMarker,
 				totalTokens: tokenUsage.totalTokens,
 				isNetworkError,
 				error: errorMessage,
@@ -668,12 +785,13 @@ async function main() {
 				expectedTier: entry.scenario.expectedTier,
 				effectiveTier: routingDecision.effectiveTier,
 				selectedModel: selectedModelId,
+				expectedProvider,
 				expectedModel,
+				servingProvider,
 				servingModel,
 				applied: routingDecision.applied,
 				reasons: routingDecision.reasons,
 				inferenceSuccess,
-				responseMarkerVerified,
 				stopReason,
 				tokenUsage,
 				status: classification.status,
@@ -697,6 +815,7 @@ async function main() {
 		gitCommit,
 		cleanWorktree,
 		authoritative: contractIntegrity.authoritative,
+		matrixComplete: contractIntegrity.matrixComplete,
 		summary: {
 			totalScenarios: scenarioMatrix.length,
 			totalRuns,
@@ -716,12 +835,16 @@ async function main() {
 	fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
 
 	console.log(`\nBenchmark Summary: ${passedRuns}/${totalRuns} PASS | ${blockedRuns} BLOCKED | ${failedRuns} FAIL`);
-	console.log(`Authoritative: ${contractIntegrity.authoritative}`);
+	console.log(
+		`Matrix Complete: ${contractIntegrity.matrixComplete} | Authoritative: ${contractIntegrity.authoritative}`,
+	);
 	console.log(`Out-of-Repo Report written to: ${reportPath}`);
 
-	const exitCode = computeExitCode(results, passedRuns);
+	const exitCode = computeExitCode(results, passedRuns, totalRuns);
 	if (exitCode !== 0) {
-		console.error(`\nBenchmark completed with ${failedRuns} FAIL status runs or 0 passed runs.`);
+		console.error(
+			`\nBenchmark failed contract validation: Matrix is incomplete (${passedRuns}/${totalRuns} passed) or has failures (${failedRuns} failed).`,
+		);
 	}
 	process.exit(exitCode);
 }
