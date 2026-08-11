@@ -289,7 +289,7 @@ describe("contract, schema, and recursive security", () => {
 			{
 				nested: [{ authorization: "Bearer super-secret-token" }],
 				url: "https://user:password@example.test/v1?api_key=query-secret",
-				adcPath: "/home/person/secret-service-account.json",
+				adcPath: "/home/example/secret-service-account.json",
 				literal: "known-secret",
 			},
 			["known-secret"],
