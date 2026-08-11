@@ -61,6 +61,7 @@ function createTextSuccessEvents(text: string): MockAnthropicEvent[] {
 			type: "message_start",
 			message: {
 				id: "msg_text_success",
+				model: "claude-served-model",
 				usage: {
 					input_tokens: 12,
 					output_tokens: 0,
@@ -150,6 +151,11 @@ describe("anthropic stream envelope handling", () => {
 		expect(countEvents(events, "done")).toBe(1);
 		expect(result.stopReason).toBe("stop");
 		expect(result.responseId).toBe("msg_text_success");
+		expect(result.responseAttribution).toEqual({
+			requestedModel: "claude-sonnet-4-5",
+			responseModel: "claude-served-model",
+			responseModelSource: "response-body",
+		});
 		expect(result.content).toEqual([{ type: "text", text: "hello" }]);
 	});
 

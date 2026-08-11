@@ -1,0 +1,50 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Authenticated Routing Matrix Report",
+	"type": "object",
+	"required": ["schemaVersion", "git", "parameters", "inventory", "warmups", "measured", "summary", "security"],
+	"properties": {
+		"schemaVersion": { "const": 2 },
+		"startedAt": { "type": "string" },
+		"finishedAt": { "type": "string" },
+		"git": {
+			"type": "object",
+			"required": ["commit", "clean", "exactHead"],
+			"properties": {
+				"commit": { "type": "string", "minLength": 1 },
+				"clean": { "type": "boolean" },
+				"exactHead": { "type": "boolean" }
+			}
+		},
+		"parameters": {
+			"type": "object",
+			"required": ["dryRun", "repetitions", "warmups", "lanes"],
+			"properties": {
+				"dryRun": { "type": "boolean" },
+				"repetitions": { "type": "integer", "minimum": 1 },
+				"warmups": { "type": "integer", "minimum": 0 },
+				"lanes": { "type": "array", "items": { "type": "string" } }
+			}
+		},
+		"capabilities": { "type": "array" },
+		"inventory": { "type": "array" },
+		"warmups": { "type": "array" },
+		"measured": { "type": "array" },
+		"summary": {
+			"type": "object",
+			"required": ["matrixComplete", "authoritative"],
+			"properties": {
+				"matrixComplete": { "type": "boolean" },
+				"authoritative": { "type": "boolean" }
+			}
+		},
+		"security": {
+			"type": "object",
+			"required": ["redacted", "secretScanPassed"],
+			"properties": {
+				"redacted": { "const": true },
+				"secretScanPassed": { "type": "boolean" }
+			}
+		}
+	}
+}
