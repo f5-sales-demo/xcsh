@@ -3,6 +3,7 @@ import {
 	classifyRunStatus,
 	computeExitCode,
 	createMultimodalMessage,
+	discoverAuthenticatedInventory,
 	expandLaneScenarios,
 	extractUsage,
 	parseArgs,
@@ -43,77 +44,91 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 		expect(scenarios[4].anchorModel).toBe("google-vertex/gemini-2.5-flash-lite");
 	});
 
-	it("classifyRunStatus enforces full provider/model matching and strict FAIL/BLOCKED criteria", () => {
+	it("classifyRunStatus enforces exact marker matching and strict provider/model FAIL criteria", () => {
 		// 1. PASS case
 		const passResult = classifyRunStatus({
 			effectiveTier: "utility",
 			expectedTier: "utility",
+			servingProvider: "openai",
+			expectedProvider: "openai",
 			servingModel: "openai/gpt-5.4-mini",
 			expectedModel: "openai/gpt-5.4-mini",
 			stopReason: "stop",
-			responseMarkerVerified: true,
+			responseContent: "RESPOND_UTILITY_OK",
+			expectedMarker: "RESPOND_UTILITY_OK",
 			totalTokens: 50,
 			isNetworkError: false,
 		});
 		expect(passResult.status).toBe("PASS");
 
-		// 2. FAIL: Provider mismatch (e.g. anthropic/gpt-5.4-mini vs openai/gpt-5.4-mini)
+		// 2. FAIL: Provider mismatch (e.g. anthropic vs openai)
 		const failProvider = classifyRunStatus({
 			effectiveTier: "utility",
 			expectedTier: "utility",
+			servingProvider: "openai",
+			expectedProvider: "anthropic",
 			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "anthropic/gpt-5.4-mini",
+			expectedModel: "anthropic/claude-3-haiku-20240307",
 			stopReason: "stop",
-			responseMarkerVerified: true,
+			responseContent: "RESPOND_UTILITY_OK",
+			expectedMarker: "RESPOND_UTILITY_OK",
 			totalTokens: 50,
 			isNetworkError: false,
 		});
 		expect(failProvider.status).toBe("FAIL");
-		expect(failProvider.reason).toContain("Model mismatch");
+		expect(failProvider.reason).toContain("Provider mismatch");
 
-		// 3. FAIL: Missing stopReason (undefined or empty)
+		// 3. FAIL: Exact marker mismatch (extra text or missing marker)
+		const failMarker = classifyRunStatus({
+			effectiveTier: "utility",
+			expectedTier: "utility",
+			servingProvider: "openai",
+			expectedProvider: "openai",
+			servingModel: "openai/gpt-5.4-mini",
+			expectedModel: "openai/gpt-5.4-mini",
+			stopReason: "stop",
+			responseContent: "Hello world! Extra preamble before RESPOND_UTILITY_OK",
+			expectedMarker: "RESPOND_UTILITY_OK",
+			totalTokens: 50,
+			isNetworkError: false,
+		});
+		expect(failMarker.status).toBe("FAIL");
+		expect(failMarker.reason).toContain("Exact response marker verification failed");
+
+		// 4. FAIL: Missing stopReason (undefined or empty)
 		const failMissingStop = classifyRunStatus({
 			effectiveTier: "utility",
 			expectedTier: "utility",
+			servingProvider: "openai",
+			expectedProvider: "openai",
 			servingModel: "openai/gpt-5.4-mini",
 			expectedModel: "openai/gpt-5.4-mini",
 			stopReason: undefined,
-			responseMarkerVerified: true,
+			responseContent: "RESPOND_UTILITY_OK",
+			expectedMarker: "RESPOND_UTILITY_OK",
 			totalTokens: 50,
 			isNetworkError: false,
 		});
 		expect(failMissingStop.status).toBe("FAIL");
 		expect(failMissingStop.reason).toContain("Stop reason missing");
 
-		// 4. FAIL: Tier mismatch takes precedence over network error
+		// 5. FAIL: Tier mismatch takes precedence over network error
 		const failTierPrecedence = classifyRunStatus({
 			effectiveTier: "balanced",
 			expectedTier: "utility",
+			servingProvider: "openai",
+			expectedProvider: "openai",
 			servingModel: "openai/gpt-5.4",
 			expectedModel: "openai/gpt-5.4-mini",
 			stopReason: "stop",
-			responseMarkerVerified: true,
+			responseContent: "RESPOND_UTILITY_OK",
+			expectedMarker: "RESPOND_UTILITY_OK",
 			totalTokens: 50,
 			isNetworkError: true,
 			error: "HTTP 401 Unauthorized",
 		});
 		expect(failTierPrecedence.status).toBe("FAIL");
 		expect(failTierPrecedence.reason).toContain("Tier mismatch");
-
-		// 5. BLOCKED: Network or Credential Unavailability when routing was correct
-		const blockedAuth = classifyRunStatus({
-			effectiveTier: "utility",
-			expectedTier: "utility",
-			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "openai/gpt-5.4-mini",
-			stopReason: "stop",
-			responseMarkerVerified: true,
-			totalTokens: 50,
-			isNetworkError: true,
-			error: "HTTP 401 Unauthorized",
-		});
-		expect(blockedAuth.status).toBe("BLOCKED");
-		expect(blockedAuth.reason).toContain("BLOCKED");
 	});
 
 	it("redactSecretStrings sanitizes query credentials, Bearer tokens, mock secret keys, and preserves http/https schemes", () => {
@@ -164,7 +179,7 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 		expect(imageBlock.mimeType).toBe("image/png");
 	});
 
-	it("validateContractIntegrity enforces authoritative requirements and rejects zero passed runs", () => {
+	it("validateContractIntegrity distinguishes complete validated matrix from partial-BLOCKED execution", () => {
 		// Dry run is never authoritative
 		const dryRunContract = validateContractIntegrity({
 			dryRun: true,
@@ -175,19 +190,21 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 			failedRuns: 0,
 		});
 		expect(dryRunContract.authoritative).toBe(false);
+		expect(dryRunContract.matrixComplete).toBe(true);
 
-		// All BLOCKED runs (passedRuns === 0) is never authoritative
-		const allBlockedContract = validateContractIntegrity({
+		// Partial-BLOCKED run (1 PASS + 59 BLOCKED) is NOT authoritative and NOT complete
+		const partialBlockedContract = validateContractIntegrity({
 			dryRun: false,
 			cleanWorktree: true,
 			totalRuns: 60,
-			passedRuns: 0,
-			blockedRuns: 60,
+			passedRuns: 1,
+			blockedRuns: 59,
 			failedRuns: 0,
 		});
-		expect(allBlockedContract.authoritative).toBe(false);
+		expect(partialBlockedContract.authoritative).toBe(false);
+		expect(partialBlockedContract.matrixComplete).toBe(false);
 
-		// Clean live execution with > 0 passed runs and 0 failures is authoritative
+		// Complete live execution (60/60 PASS) is authoritative and matrixComplete
 		const cleanContract = validateContractIntegrity({
 			dryRun: false,
 			cleanWorktree: true,
@@ -197,11 +214,27 @@ describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
 			failedRuns: 0,
 		});
 		expect(cleanContract.authoritative).toBe(true);
+		expect(cleanContract.matrixComplete).toBe(true);
 	});
 
-	it("computeExitCode returns 1 if any run produced a FAIL status or if passedRuns === 0", () => {
-		expect(computeExitCode([{ status: "PASS" }], 1)).toBe(0);
-		expect(computeExitCode([{ status: "PASS" }, { status: "FAIL" }], 1)).toBe(1);
-		expect(computeExitCode([{ status: "BLOCKED" }], 0)).toBe(1); // zero passed runs must exit 1
+	it("computeExitCode returns 1 for partial-BLOCKED executions, failures, or incomplete matrix runs", () => {
+		expect(computeExitCode([{ status: "PASS" }], 1, 1)).toBe(0);
+		expect(computeExitCode([{ status: "PASS" }, { status: "FAIL" }], 1, 2)).toBe(1);
+		expect(computeExitCode([{ status: "PASS" }, { status: "BLOCKED" }], 1, 2)).toBe(1); // partial-BLOCKED must exit 1
+	});
+
+	it("discoverAuthenticatedInventory handles mock discovery gracefully", async () => {
+		const discovery = await discoverAuthenticatedInventory(
+			"openai",
+			{
+				lane: "openai",
+				provider: "openai",
+				presetId: "openai/gpt-5.6",
+				apiKey: "mock-key",
+			},
+			true, // dryRun
+		);
+		expect(discovery.success).toBe(true);
+		expect(discovery.models.length).toBeGreaterThan(0);
 	});
 });
