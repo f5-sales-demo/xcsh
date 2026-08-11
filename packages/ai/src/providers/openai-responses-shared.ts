@@ -242,6 +242,13 @@ export async function processResponsesStream<TApi extends Api>(
 	for await (const event of openaiStream) {
 		if (event.type === "response.created") {
 			output.responseId = event.response.id;
+			if (event.response.model) {
+				output.responseAttribution = {
+					...(output.responseAttribution ?? { requestedModel: model.id }),
+					responseModel: event.response.model,
+					responseModelSource: "response-body",
+				};
+			}
 		} else if (event.type === "response.output_item.added") {
 			if (!sawFirstToken) {
 				sawFirstToken = true;
@@ -397,6 +404,13 @@ export async function processResponsesStream<TApi extends Api>(
 			}
 		} else if (event.type === "response.completed") {
 			const response = event.response;
+			if (response?.model) {
+				output.responseAttribution = {
+					...(output.responseAttribution ?? { requestedModel: model.id }),
+					responseModel: response.model,
+					responseModelSource: "response-body",
+				};
+			}
 			if (response?.id) {
 				output.responseId = response.id;
 			}

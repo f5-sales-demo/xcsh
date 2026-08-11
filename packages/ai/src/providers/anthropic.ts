@@ -689,6 +689,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 			api: model.api as Api,
 			provider: model.provider,
 			model: model.id,
+			responseAttribution: { requestedModel: model.id },
 			usage: createEmptyUsage(copilotDynamicHeaders?.premiumRequests),
 			stopReason: "stop",
 			timestamp: Date.now(),
@@ -789,6 +790,13 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 							}
 							sawMessageStart = true;
 							output.responseId = event.message.id;
+							if (event.message.model) {
+								output.responseAttribution = {
+									...(output.responseAttribution ?? { requestedModel: model.id }),
+									responseModel: event.message.model,
+									responseModelSource: "response-body",
+								};
+							}
 							output.usage.input = event.message.usage.input_tokens || 0;
 							output.usage.output = event.message.usage.output_tokens || 0;
 							output.usage.cacheRead = event.message.usage.cache_read_input_tokens || 0;

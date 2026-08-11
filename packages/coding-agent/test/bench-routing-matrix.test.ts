@@ -1,256 +1,334 @@
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import {
-	classifyRunStatus,
+	BASE_SCENARIOS,
+	classifyMeasuredRun,
 	computeExitCode,
 	createMultimodalMessage,
-	discoverAuthenticatedInventory,
+	discoverLaneInventory,
 	expandLaneScenarios,
 	extractResponseText,
-	extractUsage,
-	parseArgs,
+	LANE_CAPABILITIES,
+	reconcileLaneInventory,
 	redactSecretStrings,
 	validateContractIntegrity,
+	validateRoutingMatrixReport,
 } from "../scripts/bench-routing-matrix";
+import { profileTaskDeterministic } from "../src/routing/profiler";
 
-describe("Routing Matrix Benchmark Harness Helper Unit Tests", () => {
-	it("parseArgs validates integer counts and rejects NaN, fractions, and negative values", () => {
-		const parsed = parseArgs([
-			"--repetitions",
-			"3",
-			"--warmups",
-			"1",
-			"--lanes",
-			"openai,litellm-anthropic",
-			"--report-dir",
-			"/tmp/test-reports",
-			"--dry-run",
-		]);
+const originalFetch = globalThis.fetch;
+afterEach(() => {
+	globalThis.fetch = originalFetch;
+});
 
-		expect(parsed.repetitions).toBe(3);
-		expect(parsed.warmups).toBe(1);
-		expect(parsed.lanes).toEqual(["openai", "litellm-anthropic"]);
-
-		expect(() => parseArgs(["--repetitions", "2.5"])).toThrow(/Invalid benchmark counts/);
-		expect(() => parseArgs(["--warmups", "NaN"])).toThrow(/Invalid benchmark counts/);
-		expect(() => parseArgs(["--repetitions", "-1"])).toThrow(/Invalid benchmark counts/);
+function response(body: unknown, status = 200): Response {
+	return new Response(JSON.stringify(body), {
+		status,
+		headers: { "content-type": "application/json" },
 	});
+}
 
-	it("expandLaneScenarios expands all requested lanes into scenario matrix entries", () => {
-		const scenarios = expandLaneScenarios(["openai", "google-vertex"]);
-		// 2 lanes * 4 scenario types (utility, balanced, frontier, multimodal) = 8 matrix entries
-		expect(scenarios.length).toBe(8);
-		expect(scenarios[0].lane).toBe("openai");
-		expect(scenarios[0].anchorModel).toBe("openai/gpt-5.4-mini");
-		expect(scenarios[4].lane).toBe("google-vertex");
-		expect(scenarios[4].anchorModel).toBe("google-vertex/gemini-2.5-flash-lite");
-	});
+function capturedRequest(input: string | URL | Request, init?: RequestInit): Request {
+	return input instanceof Request ? new Request(input, init) : new Request(input.toString(), init);
+}
 
-	it("extractResponseText parses string or pi-ai content block arrays into clean text", () => {
-		expect(extractResponseText("  RESPOND_UTILITY_OK  ")).toBe("RESPOND_UTILITY_OK");
-		expect(
-			extractResponseText([
-				{ type: "text", text: "RESPOND_BALANCED_OK" },
-				{ type: "image", data: "..." },
-			]),
-		).toBe("RESPOND_BALANCED_OK");
-		expect(extractResponseText(null)).toBe("");
-		expect(extractResponseText([])).toBe("");
-	});
-
-	it("classifyRunStatus enforces exact marker matching and strict provider/model FAIL criteria", () => {
-		// 1. PASS case
-		const passResult = classifyRunStatus({
-			effectiveTier: "utility",
-			expectedTier: "utility",
-			servingProvider: "openai",
-			expectedProvider: "openai",
-			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "openai/gpt-5.4-mini",
-			stopReason: "stop",
-			responseContent: "RESPOND_UTILITY_OK",
-			expectedMarker: "RESPOND_UTILITY_OK",
-			totalTokens: 50,
-			isNetworkError: false,
-		});
-		expect(passResult.status).toBe("PASS");
-
-		// 2. FAIL: Missing or unknown serving provider
-		const failMissingProvider = classifyRunStatus({
-			effectiveTier: "utility",
-			expectedTier: "utility",
-			servingProvider: undefined,
-			expectedProvider: "openai",
-			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "openai/gpt-5.4-mini",
-			stopReason: "stop",
-			responseContent: "RESPOND_UTILITY_OK",
-			expectedMarker: "RESPOND_UTILITY_OK",
-			totalTokens: 50,
-			isNetworkError: false,
-		});
-		expect(failMissingProvider.status).toBe("FAIL");
-		expect(failMissingProvider.reason).toContain("Provider missing or unknown");
-
-		// 3. FAIL: Provider mismatch (e.g. openai vs anthropic)
-		const failProvider = classifyRunStatus({
-			effectiveTier: "utility",
-			expectedTier: "utility",
-			servingProvider: "openai",
-			expectedProvider: "anthropic",
-			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "anthropic/claude-3-haiku-20240307",
-			stopReason: "stop",
-			responseContent: "RESPOND_UTILITY_OK",
-			expectedMarker: "RESPOND_UTILITY_OK",
-			totalTokens: 50,
-			isNetworkError: false,
-		});
-		expect(failProvider.status).toBe("FAIL");
-		expect(failProvider.reason).toContain("Provider mismatch");
-
-		// 4. FAIL: Exact marker mismatch (extra text or missing marker)
-		const failMarker = classifyRunStatus({
-			effectiveTier: "utility",
-			expectedTier: "utility",
-			servingProvider: "openai",
-			expectedProvider: "openai",
-			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "openai/gpt-5.4-mini",
-			stopReason: "stop",
-			responseContent: "Hello world! Extra preamble before RESPOND_UTILITY_OK",
-			expectedMarker: "RESPOND_UTILITY_OK",
-			totalTokens: 50,
-			isNetworkError: false,
-		});
-		expect(failMarker.status).toBe("FAIL");
-		expect(failMarker.reason).toContain("Exact response marker verification failed");
-
-		// 5. FAIL: Missing stopReason (undefined or empty)
-		const failMissingStop = classifyRunStatus({
-			effectiveTier: "utility",
-			expectedTier: "utility",
-			servingProvider: "openai",
-			expectedProvider: "openai",
-			servingModel: "openai/gpt-5.4-mini",
-			expectedModel: "openai/gpt-5.4-mini",
-			stopReason: undefined,
-			responseContent: "RESPOND_UTILITY_OK",
-			expectedMarker: "RESPOND_UTILITY_OK",
-			totalTokens: 50,
-			isNetworkError: false,
-		});
-		expect(failMissingStop.status).toBe("FAIL");
-		expect(failMissingStop.reason).toContain("Stop reason missing");
-	});
-
-	it("redactSecretStrings sanitizes query credentials, Bearer tokens, mock secret keys, and preserves http/https schemes", () => {
-		const rawReport = {
-			httpEndpoint:
-				"http://user:demopassword@gateway.example.com/v1/models?api_key=mock-secret-key-alpha-bravo-charlie",
-			httpsEndpoint: "https://user:demopassword@gateway.example.com/v1/models?key=demokey-delta-echo-foxtrot",
-			header: "Bearer demo-token-golf-hotel-india",
-			key: "mock-secret-key-juliet-kilo-lima",
-		};
-
-		const redacted = redactSecretStrings(rawReport, []);
-		const str = JSON.stringify(redacted);
-
-		expect(str).not.toContain("demopassword");
-		expect(str).not.toContain("mock-secret-key-alpha-bravo-charlie");
-		expect(str).not.toContain("demokey-delta-echo-foxtrot");
-		expect(str).not.toContain("demo-token-golf-hotel-india");
-		expect(str).not.toContain("mock-secret-key-juliet-kilo-lima");
-
-		expect(redacted.httpEndpoint).toContain("http://");
-		expect(redacted.httpsEndpoint).toContain("https://");
-		expect(str).toContain("[REDACTED]");
-	});
-
-	it("extractUsage handles usage.input, usage.output, usage.totalTokens correctly", () => {
-		const usage = extractUsage({
-			usage: {
-				input: 100,
-				output: 40,
-				totalTokens: 140,
-			},
-		});
-		expect(usage.inputTokens).toBe(100);
-		expect(usage.outputTokens).toBe(40);
-		expect(usage.totalTokens).toBe(140);
-	});
-
-	it("createMultimodalMessage builds strongly typed pi-ai image payload content blocks", () => {
-		const msg = createMultimodalMessage("Describe this image", "RESPOND_VISUAL_OK");
-		expect(msg.role).toBe("user");
-		expect(Array.isArray(msg.content)).toBe(true);
-
-		const imageBlock = (msg.content as any[]).find(b => b.type === "image");
-		expect(imageBlock).toBeDefined();
-		expect(imageBlock.type).toBe("image");
-		expect(typeof imageBlock.data).toBe("string");
-		expect(imageBlock.mimeType).toBe("image/png");
-	});
-
-	it("validateContractIntegrity distinguishes complete validated matrix from partial-BLOCKED execution", () => {
-		// Dry run is never authoritative
-		const dryRunContract = validateContractIntegrity({
-			dryRun: true,
-			cleanWorktree: true,
-			totalRuns: 60,
-			passedRuns: 60,
-			blockedRuns: 0,
-			failedRuns: 0,
-			warmupFailures: 0,
-		});
-		expect(dryRunContract.authoritative).toBe(false);
-		expect(dryRunContract.matrixComplete).toBe(true);
-
-		// Warmup behavioral failure invalidates completeness
-		const warmupFailContract = validateContractIntegrity({
-			dryRun: false,
-			cleanWorktree: true,
-			totalRuns: 60,
-			passedRuns: 60,
-			blockedRuns: 0,
-			failedRuns: 1,
-			warmupFailures: 1,
-		});
-		expect(warmupFailContract.authoritative).toBe(false);
-		expect(warmupFailContract.matrixComplete).toBe(false);
-
-		// Complete live execution (60/60 PASS) is authoritative and matrixComplete
-		const cleanContract = validateContractIntegrity({
-			dryRun: false,
-			cleanWorktree: true,
-			totalRuns: 60,
-			passedRuns: 60,
-			blockedRuns: 0,
-			failedRuns: 0,
-			warmupFailures: 0,
-		});
-		expect(cleanContract.authoritative).toBe(true);
-		expect(cleanContract.matrixComplete).toBe(true);
-	});
-
-	it("computeExitCode returns 1 for warmup failures, partial-BLOCKED executions, or incomplete matrix runs", () => {
-		expect(computeExitCode([{ status: "PASS" }], 1, 1, 0)).toBe(0);
-		expect(computeExitCode([{ status: "PASS" }], 1, 1, 1)).toBe(1); // warmup failure must exit 1
-		expect(computeExitCode([{ status: "PASS" }, { status: "FAIL" }], 1, 2, 0)).toBe(1);
-		expect(computeExitCode([{ status: "PASS" }, { status: "BLOCKED" }], 1, 2, 0)).toBe(1);
-	});
-
-	it("discoverAuthenticatedInventory fails without silent static fallback when live discovery fails in live mode", async () => {
-		const discovery = await discoverAuthenticatedInventory(
+describe("routing matrix capability and scenario contract", () => {
+	it("declares five distinct required lanes and transports", () => {
+		expect(Object.keys(LANE_CAPABILITIES)).toEqual([
 			"openai",
-			{
-				lane: "openai",
-				provider: "openai",
-				presetId: "openai/gpt-5.6",
-				apiKey: undefined,
-			},
-			false, // live mode (not dryRun)
-		);
-		expect(discovery.success).toBe(false);
-		expect(discovery.reason).toContain("BLOCKED: Credentials missing");
+			"anthropic",
+			"litellm-openai",
+			"litellm-anthropic",
+			"google-vertex",
+		]);
+		expect(LANE_CAPABILITIES.anthropic.clientProvider).toBe("anthropic");
+		expect(LANE_CAPABILITIES["litellm-anthropic"].clientProvider).toBe("anthropic");
+		expect(LANE_CAPABILITIES.anthropic.endpointKind).toBe("direct");
+		expect(LANE_CAPABILITIES["litellm-anthropic"].endpointKind).toBe("gateway");
+		expect(Object.values(LANE_CAPABILITIES).every(lane => lane.required)).toBe(true);
+	});
+
+	it("expands the canonical contract to 60 measured rows", () => {
+		const rows = expandLaneScenarios(Object.keys(LANE_CAPABILITIES), 3);
+		expect(rows).toHaveLength(60);
+	});
+
+	it("profiles every scenario to its declared tier", () => {
+		for (const scenario of BASE_SCENARIOS) {
+			const profile = profileTaskDeterministic({
+				prompt: scenario.prompt,
+				hasImages: scenario.hasImages,
+			});
+			expect(profile.desiredTier).toBe(scenario.expectedTier);
+		}
+	});
+
+	it("uses an image-derived marker that is absent from the prompt", () => {
+		const scenario = BASE_SCENARIOS.find(item => item.id === "multimodal-visual")!;
+		expect(scenario.prompt).not.toContain(scenario.responseMarker);
+		const message = createMultimodalMessage(scenario.prompt);
+		expect(Array.isArray(message.content)).toBe(true);
+		const image = (message.content as any[]).find(block => block.type === "image");
+		expect(image.data.length).toBeGreaterThan(100);
+		expect(image.mimeType).toBe("image/png");
 	});
 });
+
+describe("provider-specific authenticated inventory", () => {
+	it("uses OpenAI bearer auth and parses data records", async () => {
+		let request: Request | undefined;
+		const result = await discoverLaneInventory(
+			LANE_CAPABILITIES.openai,
+			{ apiKey: "openai-secret", authMechanism: "bearer", baseUrl: "https://openai.example/v1" },
+			async (input, init) => {
+				request = capturedRequest(input, init);
+				return response({ data: [{ id: "gpt-5.4-mini" }, { id: "gpt-5.4" }, { id: "gpt-5.6-sol" }] });
+			},
+		);
+		expect(result.state).toBe("AVAILABLE");
+		expect(request?.url).toBe("https://openai.example/v1/models");
+		expect(request?.headers.get("authorization")).toBe("Bearer openai-secret");
+	});
+
+	it("uses Anthropic API-key and OAuth header variants", async () => {
+		for (const credential of [
+			{ apiKey: "api-secret", authMechanism: "api-key" as const },
+			{ apiKey: "oauth-secret", authMechanism: "oauth-bearer" as const },
+		]) {
+			let request: Request | undefined;
+			const result = await discoverLaneInventory(
+				LANE_CAPABILITIES.anthropic,
+				{ ...credential, baseUrl: "https://anthropic.example/v1" },
+				async (input, init) => {
+					request = capturedRequest(input, init);
+					return response({ data: [{ id: "claude-3-haiku-20240307" }] });
+				},
+			);
+			expect(result.state).toBe("AVAILABLE");
+			if (credential.authMechanism === "api-key") {
+				expect(request?.headers.get("x-api-key")).toBe("api-secret");
+				expect(request?.headers.get("authorization")).toBeNull();
+			} else {
+				expect(request?.headers.get("authorization")).toBe("Bearer oauth-secret");
+				expect(request?.headers.get("x-api-key")).toBeNull();
+			}
+		}
+	});
+
+	it("keeps separate LiteLLM endpoint inventories", async () => {
+		const seen: string[] = [];
+		const fetchMock = async (input: string | URL | Request): Promise<Response> => {
+			const url = capturedRequest(input).url;
+			seen.push(url);
+			return url.includes("openai-gateway")
+				? response({ data: [{ id: "gpt-5.4-mini" }] })
+				: response({ data: [{ id: "claude-3-5-haiku-20241022" }] });
+		};
+		const openai = await discoverLaneInventory(
+			LANE_CAPABILITIES["litellm-openai"],
+			{ apiKey: "secret", authMechanism: "bearer", baseUrl: "https://openai-gateway/v1" },
+			fetchMock,
+		);
+		const anthropic = await discoverLaneInventory(
+			LANE_CAPABILITIES["litellm-anthropic"],
+			{ apiKey: "secret", authMechanism: "bearer", baseUrl: "https://anthropic-gateway/v1" },
+			fetchMock,
+		);
+		expect(openai.models).toEqual(["gpt-5.4-mini"]);
+		expect(anthropic.models).toEqual(["claude-3-5-haiku-20241022"]);
+		expect(new Set(seen).size).toBe(2);
+	});
+
+	it("uses the Vertex Model Garden adapter with an ADC access token", async () => {
+		let request: Request | undefined;
+		const result = await discoverLaneInventory(
+			LANE_CAPABILITIES["google-vertex"],
+			{
+				apiKey: "adc-access-token",
+				authMechanism: "google-adc",
+				baseUrl: "https://us-central1-aiplatform.googleapis.com/v1beta1",
+			},
+			async (input, init) => {
+				request = capturedRequest(input, init);
+				return response({ publisherModels: [{ name: "publishers/google/models/gemini-2.5-pro" }] });
+			},
+		);
+		expect(result.models).toEqual(["gemini-2.5-pro"]);
+		expect(request?.url).toContain("/publishers/google/models");
+		expect(request?.headers.get("authorization")).toBe("Bearer adc-access-token");
+	});
+
+	it.each([
+		[401, "BLOCKED_AUTH"],
+		[403, "BLOCKED_AUTH"],
+		[404, "UNSUPPORTED_DISCOVERY"],
+		[429, "BLOCKED_RATE_LIMIT"],
+		[500, "BLOCKED_NETWORK"],
+	] as const)("maps HTTP %s to %s without bundled fallback", async (status, state) => {
+		const result = await discoverLaneInventory(
+			LANE_CAPABILITIES.openai,
+			{ apiKey: "secret", authMechanism: "bearer", baseUrl: "https://example.test/v1" },
+			async () => response({ error: "failure" }, status),
+		);
+		expect(result.state).toBe(state);
+		expect(result.models).toEqual([]);
+	});
+
+	it("distinguishes malformed, empty, network, and abort failures", async () => {
+		const credential = { apiKey: "secret", authMechanism: "bearer" as const, baseUrl: "https://example.test/v1" };
+		const malformed = await discoverLaneInventory(
+			LANE_CAPABILITIES.openai,
+			credential,
+			async () => new Response("not-json", { status: 200 }),
+		);
+		const empty = await discoverLaneInventory(LANE_CAPABILITIES.openai, credential, async () =>
+			response({ data: [] }),
+		);
+		const network = await discoverLaneInventory(LANE_CAPABILITIES.openai, credential, async () => {
+			throw new TypeError("DNS failed");
+		});
+		const abort = await discoverLaneInventory(LANE_CAPABILITIES.openai, credential, async () => {
+			throw new DOMException("timed out", "AbortError");
+		});
+		expect(malformed.state).toBe("FAIL_SCHEMA");
+		expect(empty.state).toBe("FAIL_EMPTY_INVENTORY");
+		expect(network.state).toBe("BLOCKED_NETWORK");
+		expect(abort.state).toBe("BLOCKED_NETWORK");
+	});
+
+	it("fails missing credentials before performing HTTP", async () => {
+		let called = false;
+		const result = await discoverLaneInventory(LANE_CAPABILITIES.openai, {}, async () => {
+			called = true;
+			return response({ data: [] });
+		});
+		expect(result.state).toBe("BLOCKED_AUTH");
+		expect(called).toBe(false);
+	});
+});
+
+describe("inventory reconciliation and evidence", () => {
+	it("requires every configured tier and returns lane-local qualified candidates", () => {
+		const capability = LANE_CAPABILITIES["litellm-openai"];
+		const missing = reconcileLaneInventory(capability, ["gpt-5.4-mini", "gpt-5.4"]);
+		expect(missing.state).toBe("FAIL_MISSING_TIERS");
+		expect(missing.missingTiers).toEqual(["gpt-5.6-sol"]);
+		const complete = reconcileLaneInventory(capability, ["gpt-5.4-mini", "gpt-5.4", "gpt-5.6-sol"]);
+		expect(complete.state).toBe("AVAILABLE");
+		expect(complete.eligibleCandidates).toEqual(["litellm/gpt-5.4-mini", "litellm/gpt-5.4", "litellm/gpt-5.6-sol"]);
+	});
+
+	it("extracts text deterministically and rejects unexpected blocks", () => {
+		expect(
+			extractResponseText([
+				{ type: "text", text: " A " },
+				{ type: "text", text: "B" },
+			]),
+		).toEqual({
+			ok: true,
+			text: "A\nB",
+		});
+		expect(extractResponseText([{ type: "toolCall", name: "x" }]).ok).toBe(false);
+		expect(extractResponseText([{ type: "error", error: "secret" }]).ok).toBe(false);
+	});
+
+	it("never substitutes requested values for missing response attribution", () => {
+		const missing = classifyMeasuredRun({
+			effectiveTier: "utility",
+			expectedTier: "utility",
+			requestedModel: "openai/gpt-5.4-mini",
+			responseModel: undefined,
+			clientProvider: "openai",
+			expectedClientProvider: "openai",
+			responseContent: [{ type: "text", text: "RESPOND_UTILITY_OK" }],
+			expectedMarker: "RESPOND_UTILITY_OK",
+			stopReason: "stop",
+			totalTokens: 10,
+			requireResponseModel: true,
+		});
+		expect(missing.status).toBe("FAIL");
+		expect(missing.reasonCode).toBe("missing_response_model");
+	});
+});
+
+describe("contract, schema, and recursive security", () => {
+	it("requires every inventory, warmup, and measured row", () => {
+		const complete = validateContractIntegrity({
+			dryRun: false,
+			cleanWorktree: true,
+			exactHead: true,
+			secretScanPassed: true,
+			expectedWarmups: 5,
+			expectedMeasured: 60,
+			inventories: Array.from({ length: 5 }, () => ({ state: "AVAILABLE" as const })),
+			warmups: Array.from({ length: 5 }, () => ({ status: "PASS" as const })),
+			measured: Array.from({ length: 60 }, () => ({ status: "PASS" as const })),
+		});
+		expect(complete).toEqual({ matrixComplete: true, authoritative: true });
+
+		const warmupBlocked = validateContractIntegrity({
+			...completeInput(),
+			warmups: [{ status: "BLOCKED" }, ...Array.from({ length: 4 }, () => ({ status: "PASS" as const }))],
+		});
+		expect(warmupBlocked.authoritative).toBe(false);
+		expect(computeExitCode({ hasFailure: false, hasBlocked: true, invalidCli: false })).toBe(2);
+	});
+
+	it("dry runs are simulated, non-complete, non-authoritative, and can exit zero", () => {
+		const result = validateContractIntegrity({
+			...completeInput(),
+			dryRun: true,
+			warmups: Array.from({ length: 5 }, () => ({ status: "SIMULATED" as const })),
+			measured: Array.from({ length: 60 }, () => ({ status: "SIMULATED" as const })),
+		});
+		expect(result).toEqual({ matrixComplete: false, authoritative: false });
+		expect(computeExitCode({ hasFailure: false, hasBlocked: false, invalidCli: false })).toBe(0);
+	});
+
+	it("redacts nested secrets, headers, URLs, query tokens, and ADC paths", () => {
+		const redacted = redactSecretStrings(
+			{
+				nested: [{ authorization: "Bearer super-secret-token" }],
+				url: "https://user:password@example.test/v1?api_key=query-secret",
+				adcPath: "/home/person/secret-service-account.json",
+				literal: "known-secret",
+			},
+			["known-secret"],
+		);
+		const serialized = JSON.stringify(redacted);
+		expect(serialized).not.toContain("super-secret-token");
+		expect(serialized).not.toContain("password");
+		expect(serialized).not.toContain("query-secret");
+		expect(serialized).not.toContain("secret-service-account.json");
+		expect(serialized).not.toContain("known-secret");
+	});
+
+	it("validates the versioned report shape", () => {
+		expect(validateRoutingMatrixReport({ schemaVersion: 1 }).valid).toBe(false);
+		expect(
+			validateRoutingMatrixReport({
+				schemaVersion: 2,
+				git: { commit: "abc", clean: true, exactHead: true },
+				parameters: { dryRun: false, repetitions: 3, warmups: 1, lanes: Object.keys(LANE_CAPABILITIES) },
+				inventory: [],
+				warmups: [],
+				measured: [],
+				summary: { matrixComplete: false, authoritative: false },
+				security: { redacted: true, secretScanPassed: false },
+			}).valid,
+		).toBe(true);
+	});
+});
+
+function completeInput() {
+	return {
+		dryRun: false,
+		cleanWorktree: true,
+		exactHead: true,
+		secretScanPassed: true,
+		expectedWarmups: 5,
+		expectedMeasured: 60,
+		inventories: Array.from({ length: 5 }, () => ({ state: "AVAILABLE" as const })),
+		warmups: Array.from({ length: 5 }, () => ({ status: "PASS" as const })),
+		measured: Array.from({ length: 60 }, () => ({ status: "PASS" as const })),
+	};
+}
