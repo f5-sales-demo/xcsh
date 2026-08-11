@@ -1,0 +1,42 @@
+[
+  {
+    "id": "tc-001-aws-cli",
+    "domain": "aws",
+    "description": "Translate natural language to AWS CLI command for S3 list",
+    "prompt": "Use AWS CLI to list all objects in the s3 bucket named my-data-bucket",
+    "system_instruction": "You are a cloud shell assistant for xcsh. Return a JSON object with 'command' and 'explanation' fields.",
+    "expected_keyword": "s3 ls"
+  },
+  {
+    "id": "tc-002-azure-cli",
+    "domain": "azure",
+    "description": "Translate natural language to Azure CLI command to create a resource group",
+    "prompt": "Create an Azure resource group named my-rg in eastus",
+    "system_instruction": "You are a cloud shell assistant for xcsh. Return a JSON object with 'command' and 'explanation' fields.",
+    "expected_keyword": "az group create"
+  },
+  {
+    "id": "tc-003-gcloud-cli",
+    "domain": "gcloud",
+    "description": "Translate natural language to gcloud compute instances list command",
+    "prompt": "List all active Google Cloud compute instances in project my-gcp-proj",
+    "system_instruction": "You are a cloud shell assistant for xcsh. Return a JSON object with 'command' and 'explanation' fields.",
+    "expected_keyword": "gcloud compute instances list"
+  },
+  {
+    "id": "tc-004-github-cli",
+    "domain": "github",
+    "description": "Translate natural language to gh pr list command",
+    "prompt": "Use gh CLI to show open pull requests for the current repository",
+    "system_instruction": "You are a cloud shell assistant for xcsh. Return a JSON object with 'command' and 'explanation' fields.",
+    "expected_keyword": "gh pr list"
+  },
+  {
+    "id": "tc-005-marketplace-shell",
+    "domain": "shell",
+    "description": "Generate command using curl to fetch API content",
+    "prompt": "Use curl to fetch content from https://api.github.com/zen and print it",
+    "system_instruction": "You are a cloud shell assistant for xcsh. Return a JSON object with 'command' and 'explanation' fields.",
+    "expected_keyword": "curl"
+  }
+]

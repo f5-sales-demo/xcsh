@@ -1,0 +1,44 @@
+services:
+  xcsh-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.alpine
+      target: runtime
+      args:
+        USER_NAME: xcsh
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+        XCSH_BUILD_COMMIT: ${XCSH_BUILD_COMMIT:-}
+        XCSH_BUILD_BRANCH: ${XCSH_BUILD_BRANCH:-}
+        XCSH_BUILD_TAG: ${XCSH_BUILD_TAG:-}
+    init: true
+    user: "${UID:-1000}:${GID:-1000}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    entrypoint:
+      - /bin/sh
+      - -c
+      - exec sleep infinity
+    working_dir: /workspace
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=1g,mode=1777
+      - /home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=0700,uid=${UID:-1000},gid=${GID:-1000}
+      - /home/xcsh/.sf:rw,nosuid,nodev,size=64m,mode=0700,uid=${UID:-1000},gid=${GID:-1000}
+      - /home/xcsh/.sfdx:rw,nosuid,nodev,size=64m,mode=0700,uid=${UID:-1000},gid=${GID:-1000}
+    volumes:
+      - .:/workspace:ro
+      - ~/.config/gcloud:/home/xcsh/.config/gcloud-host:ro
+      - ~/.azure:/home/xcsh/.azure-host:ro
+      - ~/.aws:/home/xcsh/.aws-host:ro
+      - ~/.config/gh:/home/xcsh/.config/gh-host:ro
+      - ~/.sfdx:/home/xcsh/.sfdx-host:ro
+    environment:
+      HOME: /home/xcsh
+      AZURE_CONFIG_DIR: /tmp/xcsh-azure
+      CLOUDSDK_CONFIG: /tmp/xcsh-gcloud
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.1-pro-preview}
+      VERTEX_AI_LOCATION: ${VERTEX_AI_LOCATION:-us-central1}
+      VERTEX_AI_PROJECT: ${VERTEX_AI_PROJECT:-}
