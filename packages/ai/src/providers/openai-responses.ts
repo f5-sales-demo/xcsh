@@ -153,6 +153,7 @@ export const streamOpenAIResponses: StreamFunction<"openai-responses"> = (
 			api: "openai-responses" as Api,
 			provider: model.provider,
 			model: model.id,
+			responseAttribution: { requestedModel: model.id },
 			usage: {
 				input: 0,
 				output: 0,

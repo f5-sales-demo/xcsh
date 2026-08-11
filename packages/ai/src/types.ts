@@ -362,6 +362,17 @@ export interface AssistantMessage {
 	api: Api;
 	provider: Provider;
 	model: string;
+	/**
+	 * Transport evidence reported by the server. Unlike `provider` and `model`,
+	 * these optional fields must never be populated from the request.
+	 */
+	responseAttribution?: {
+		requestedModel: string;
+		responseModel?: string;
+		responseModelSource?: "response-body" | "response-header";
+		upstreamProvider?: string;
+		upstreamProviderSource?: "response-body" | "response-header";
+	};
 	responseId?: string; // Provider-specific response/message identifier when the upstream API exposes one
 	usage: Usage;
 	stopReason: StopReason;
