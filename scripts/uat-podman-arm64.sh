@@ -197,7 +197,7 @@ base_run_options=(
   --cap-drop all
   --security-opt=no-new-privileges
   --tmpfs "/tmp:rw,nosuid,nodev,size=1g,mode=1777"
-  --tmpfs "/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=0700,uid=1000,gid=1000"
+  --tmpfs "/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=1777"
 )
 if [ "$custom_ca" = true ]; then
   base_run_options+=(

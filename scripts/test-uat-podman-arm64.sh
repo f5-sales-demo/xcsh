@@ -136,6 +136,11 @@ jq -e '
 ' "$test_root/happy.json" >/dev/null
 test "$(grep -c -- '--model' "$test_root/podman.log")" = 8
 grep -Fq -- '--timeout 120' "$test_root/podman.log"
+if grep -Eq -- '--tmpfs [^ ]*(uid|gid)=' "$test_root/podman.log"; then
+  echo "Podman-incompatible tmpfs ownership option detected." >&2
+  exit 1
+fi
+grep -Fq -- '/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=1777' "$test_root/podman.log"
 if grep -Fq 'test-secret-never-log' "$test_root/podman.log" "$test_root/happy.json"; then
   echo "Credential leaked into logs or report." >&2
   exit 1
