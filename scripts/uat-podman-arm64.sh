@@ -201,7 +201,7 @@ base_run_options=(
 )
 if [ "$custom_ca" = true ]; then
   base_run_options+=(
-    --volume "$ca_cert:/etc/xcsh/uat-ca.pem:ro"
+    --volume "/etc/pki/ca-trust/source/anchors/xcsh-uat.pem:/etc/xcsh/uat-ca.pem:ro"
     --env NODE_EXTRA_CA_CERTS=/etc/xcsh/uat-ca.pem
   )
 fi
