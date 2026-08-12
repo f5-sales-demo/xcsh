@@ -27,7 +27,7 @@ Options:
   --warmups N             Warmup runs per model (default: 1)
   --timeout-seconds N     Maximum seconds for each model invocation (default: 120)
   --report FILE           Secret-free JSON report path (default: $TMPDIR)
-  --ca-cert FILE         Trust an additional PEM CA in the Podman VM and test containers
+  --ca-cert FILE         Trust an additional PEM CA for registry access in the Podman VM
   --model LABEL=SELECTOR  Add a model target; repeatable
   -h, --help              Show this help
 
@@ -199,11 +199,6 @@ base_run_options=(
   --tmpfs "/tmp:rw,nosuid,nodev,size=1g,mode=1777"
   --tmpfs "/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=1777"
 )
-if [ "$custom_ca" = true ]; then
-  base_run_options+=(
-    --volume "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/certs/ca-certificates.crt:ro"
-  )
-fi
 
 runtime_machine=$(podman "${base_run_options[@]}" --entrypoint uname "$image" -m)
 [ "$runtime_machine" = "aarch64" ] ||
