@@ -48,7 +48,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       startsWith(github.event.head_commit.message, 'chore: bump version to v')
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     permissions: {}
     steps:
       - name: Checkout

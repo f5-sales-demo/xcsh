@@ -25,7 +25,7 @@ jobs:
   update-console-catalog:
     name: Update console catalog
     environment: release
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     permissions:
       contents: write # required to push the generated catalog branch
       pull-requests: write # required to open the catalog refresh PR

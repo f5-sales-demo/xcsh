@@ -15,21 +15,9 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
-  container-build:
-    name: container-build (${{ matrix.architecture }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - architecture: amd64
-            expected_machine: x86_64
-            platform: linux/amd64
-            runner: ubuntu-22.04
-          - architecture: arm64
-            expected_machine: aarch64
-            platform: linux/arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+  container-build-amd64:
+    name: container-build (amd64)
+    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 60
     permissions:
       contents: read
@@ -44,15 +32,38 @@ jobs:
 
       - name: Test Alpine container
         env:
-          XCSH_EXPECTED_MACHINE: ${{ matrix.expected_machine }}
-          XCSH_TEST_PLATFORM: ${{ matrix.platform }}
+          XCSH_EXPECTED_MACHINE: x86_64
+          XCSH_TEST_PLATFORM: linux/amd64
+        run: |
+          test "$(uname -m)" = "$XCSH_EXPECTED_MACHINE"
+          bash ./scripts/tdd-docker.sh
+
+  container-build-arm64:
+    name: container-build (arm64)
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Test Alpine container
+        env:
+          XCSH_EXPECTED_MACHINE: aarch64
+          XCSH_TEST_PLATFORM: linux/arm64
         run: |
           test "$(uname -m)" = "$XCSH_EXPECTED_MACHINE"
           bash ./scripts/tdd-docker.sh
 
   podman-uat-harness:
     name: podman-uat-harness
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -68,23 +79,25 @@ jobs:
   container-test:
     name: container-test
     if: always()
-    needs: [container-build, podman-uat-harness]
-    runs-on: ubuntu-22.04
+    needs: [container-build-amd64, container-build-arm64, podman-uat-harness]
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     timeout-minutes: 5
     steps:
       - name: Require architecture and harness tests
         env:
-          CONTAINER_BUILD_RESULT: ${{ needs.container-build.result }}
+          CONTAINER_BUILD_AMD64_RESULT: ${{ needs.container-build-amd64.result }}
+          CONTAINER_BUILD_ARM64_RESULT: ${{ needs.container-build-arm64.result }}
           PODMAN_HARNESS_RESULT: ${{ needs.podman-uat-harness.result }}
         run: |
-          test "$CONTAINER_BUILD_RESULT" = success
+          test "$CONTAINER_BUILD_AMD64_RESULT" = success
+          test "$CONTAINER_BUILD_ARM64_RESULT" = success
           test "$PODMAN_HARNESS_RESULT" = success
 
   publish-ghcr:
     name: publish-ghcr
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [container-test]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 180
     permissions:
       contents: read

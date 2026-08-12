@@ -41,7 +41,7 @@ jobs:
   # Fast lint + type check (no Rust, no native build needed)
   check:
     name: check
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -114,13 +114,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bun run ci:check:full
 
-  setup-zig:
-    name: Verify Zig (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-22.04, macos-15-intel, macos-14, windows-latest]
-    runs-on: ${{ matrix.os }}
+  setup-zig-linux:
+    name: Verify Zig (Linux)
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -131,25 +127,181 @@ jobs:
         shell: bash
         run: zig version
 
-  native:
+
+  setup-zig-native:
+    name: Verify Zig (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Zig 0.15.2
+        uses: ./.github/actions/setup-zig
+      - name: Verify Zig
+        shell: bash
+        run: zig version
+  native-linux:
     name: Native build (${{ matrix.os }}, ${{ matrix.arch }})
-    needs: setup-zig
+    needs: setup-zig-linux
     strategy:
       fail-fast: false
       matrix:
         include: ${{ startsWith(github.ref, 'refs/tags/v') && fromJSON('[
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"modern"},
-          {"os":"ubuntu-22.04","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
-          {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"baseline"},
-          {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"modern"},
-          {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true},
-          {"os":"windows-latest","platform":"win32","arch":"x64","variants":"baseline"},
-          {"os":"windows-latest","platform":"win32","arch":"x64","variants":"modern"}
+          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"baseline","target":"x86_64-unknown-linux-gnu","rust_checks":true,"sandbox_check":true},
+          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"modern","target":"x86_64-unknown-linux-gnu","rust_checks":false,"sandbox_check":false},
+          {"os":"ubuntu-22.04","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu","rust_checks":false,"sandbox_check":false}
           ]') || fromJSON('[
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"modern"},
-          {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}
+          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"baseline","target":"x86_64-unknown-linux-gnu","rust_checks":true,"sandbox_check":true},
+          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"modern","target":"x86_64-unknown-linux-gnu","rust_checks":false,"sandbox_check":false}
+          ]') }}
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
+    env:
+      RUST_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: ./.github/actions/setup-rust
+        with:
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          lookup-only: true
+          key: ${{ matrix.target }}${{ matrix.variants }}
+          cache-workspace-crates: true
+      - name: Setup Bun 1.3
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        id: setup-bun
+        continue-on-error: true
+        with:
+          no-cache: true
+          bun-version: "1.3"
+      - name: Retry Bun setup on failure
+        if: steps.setup-bun.outcome == 'failure'
+        shell: bash
+        run: |
+          BUN_VERSION=$(curl -sSf "https://api.github.com/repos/oven-sh/bun/releases" \
+            -H "Accept: application/vnd.github+json" \
+            | grep -o '"tag_name": "bun-v1\.3\.[0-9]*"' \
+            | head -1 \
+            | grep -o '1\.3\.[0-9]*') || true
+          if [ -z "$BUN_VERSION" ]; then
+            echo "::warning::Could not resolve latest 1.3.x, falling back to 1.3.13"
+            BUN_VERSION=1.3.13
+          fi
+          echo "Resolved Bun version: $BUN_VERSION"
+          case "$RUNNER_OS" in
+            Linux)  PLATFORM="linux-x64" ;;
+            macOS)
+              case "$RUNNER_ARCH" in
+                ARM64) PLATFORM="darwin-aarch64" ;;
+                *)     PLATFORM="darwin-x64" ;;
+              esac ;;
+            Windows) PLATFORM="windows-x64" ;;
+          esac
+          URL="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-${PLATFORM}.zip"
+          OUTFILE="bun-download.zip"
+          echo "::warning::setup-bun action failed, retrying manual download from $URL"
+          MAX_RETRIES=3
+          DELAY=15
+          for attempt in $(seq 1 $MAX_RETRIES); do
+            if curl -sSfL --connect-timeout 15 --max-time 120 "$URL" -o "$OUTFILE"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Failed to download Bun after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            echo "Download attempt $attempt/$MAX_RETRIES failed, retrying in ${DELAY}s..."
+            sleep $DELAY
+            DELAY=$((DELAY * 2))
+          done
+          unzip -q "$OUTFILE"
+          rm -f "$OUTFILE"
+          BUN_DIR="$PWD/bun-${PLATFORM}"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            BUN_DIR=$(cygpath -w "$BUN_DIR")
+          fi
+          echo "$BUN_DIR" >> "$GITHUB_PATH"
+          bun --version
+      - name: Setup Zig 0.15.2
+        uses: ./.github/actions/setup-zig
+      - run: bun install --frozen-lockfile
+      - name: Install cross-compilation toolchain
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Rust checks
+        if: matrix.rust_checks
+        run: bun run check:rs
+      # The containment fence's Landlock compiler. `crates/brush-core-vendored` is excluded from the
+      # workspace so `cargo test -p brush-core` refuses to run; this crate is a member and reaches that
+      # code by path, so it is the only place the compiler is covered. Pure logic — no kernel needed.
+      - name: Containment fence tests
+        if: matrix.rust_checks
+        run: cargo test -p containment-check
+      # Real enforcement, asserted — not a print and not a skip.
+      #
+      # This started as a diagnostic because I did not know whether this runner had Landlock in its LSM
+      # list (Ubuntu only added it to the default list in 24.04). It reported
+      # `lockdown,capability,landlock,yama,apparmor` on kernel 6.8-azure, so the answer is yes and the leg
+      # can assert. Worth having measured rather than guessed: I expected the opposite.
+      #
+      # `status` exits non-zero when there is no backend, which is deliberate. If this runner image ever
+      # loses Landlock, this step must fail loudly rather than quietly stop testing the boundary — a
+      # security check that skips reads exactly like one that passed.
+      - name: Landlock enforcement
+        if: matrix.rust_checks
+        run: |
+          echo "LSM list: $(cat /sys/kernel/security/lsm 2>/dev/null || echo unavailable)"
+          echo "kernel: $(uname -r)"
+          cargo build -p containment-check
+          cargo run -q -p containment-check -- status
+          bash crates/containment-check/landlock-e2e.sh target/debug/containment-check
+      - name: Build native addon(s)
+        env:
+          CROSS_TARGET: ${{ matrix.target }}
+          TARGET_PLATFORM: ${{ matrix.platform }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          TARGET_VARIANTS: ${{ matrix.variants }}
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        shell: bash
+        run: |
+          bun run ci:build:native
+      # Run the diagnostic from inside the same fenced BashTool profile operators use. The standalone
+      # install smoke did not reproduce nested Seatbelt/Landlock composition, which is how #2800
+      # shipped 10/10 in CI and reported 7/10 in a healthy session.
+      - name: Sandbox self-test inside live bash profile
+        if: matrix.sandbox_check
+        run: bun test packages/coding-agent/test/sandbox-check.test.ts
+      - name: Upload native addon(s)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pi-natives-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.variants && format('-{0}', matrix.variants) || '' }}
+          path: packages/natives/native/pi_natives.${{ matrix.platform }}-${{ matrix.arch }}*.node
+          if-no-files-found: error
+
+
+  native-nonlinux:
+    name: Native build (${{ matrix.os }}, ${{ matrix.arch }})
+    needs: setup-zig-native
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ startsWith(github.ref, 'refs/tags/v') && fromJSON('[
+          {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"baseline","target":"x86_64-apple-darwin","rust_checks":false,"sandbox_check":false},
+          {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"modern","target":"x86_64-apple-darwin","rust_checks":false,"sandbox_check":false},
+          {"os":"macos-14","platform":"darwin","arch":"arm64","target":"aarch64-apple-darwin","rust_checks":false,"sandbox_check":true},
+          {"os":"windows-latest","platform":"win32","arch":"x64","variants":"baseline","target":"x86_64-pc-windows-msvc","rust_checks":false,"sandbox_check":false},
+          {"os":"windows-latest","platform":"win32","arch":"x64","variants":"modern","target":"x86_64-pc-windows-msvc","rust_checks":false,"sandbox_check":false}
+          ]') || fromJSON('[
+          {"os":"macos-14","platform":"darwin","arch":"arm64","target":"aarch64-apple-darwin","rust_checks":false,"sandbox_check":true}
           ]') }}
     runs-on: ${{ matrix.os }}
     env:
@@ -279,10 +431,9 @@ jobs:
           name: pi-natives-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.variants && format('-{0}', matrix.variants) || '' }}
           path: packages/natives/native/pi_natives.${{ matrix.platform }}-${{ matrix.arch }}*.node
           if-no-files-found: error
-
   test:
     name: test
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -391,7 +542,7 @@ jobs:
 
   install_methods:
     name: Test installation methods
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -481,7 +632,7 @@ jobs:
     environment: release
     name: Invalidate stale release pull requests
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     timeout-minutes: 5
     permissions: {}
     steps:
@@ -503,8 +654,8 @@ jobs:
     environment: release
     name: Prepare automatic release
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
-    needs: [check, native, test, install_methods]
-    runs-on: ubuntu-22.04
+    needs: [check, native-linux, native-nonlinux, test, install_methods]
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -592,8 +743,8 @@ jobs:
     environment: release
     name: Build Linux and Windows release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [check, native, test, install_methods]
-    runs-on: ubuntu-22.04
+    needs: [check, native-linux, native-nonlinux, test, install_methods]
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -693,7 +844,7 @@ jobs:
     environment: release
     name: Build and sign macOS (${{ matrix.arch }})
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [check, native, test, install_methods]
+    needs: [check, native-linux, native-nonlinux, test, install_methods]
     strategy:
       fail-fast: false
       matrix:
@@ -1035,7 +1186,7 @@ jobs:
     name: Publish immutable GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-release, build-sign-macos]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1098,7 +1249,7 @@ jobs:
     name: Publish Homebrew formula
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [create-release]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1258,7 +1409,7 @@ jobs:
     name: Publish npm packages
     if: startsWith(github.ref, 'refs/tags/v') && !inputs.skip_npm
     needs: [create-release]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     env:
       XCSH_BUILD_BRANCH: main
     permissions:
@@ -1366,7 +1517,7 @@ jobs:
     name: Verify npm installation
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [publish-npm]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
