@@ -145,4 +145,33 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 		expect(thinking?.thinkingLevel).toBeUndefined();
 		expect(thinking?.thinkingBudget).toBeDefined();
 	});
+
+	it("retains server-reported model and response identifiers as transport evidence", async () => {
+		using _hook = hookFetch(
+			() =>
+				new Response(
+					`data: ${JSON.stringify({
+						response: {
+							candidates: [{ content: { role: "model", parts: [{ text: "ok" }] }, finishReason: "STOP" }],
+							usageMetadata: { promptTokenCount: 2, candidatesTokenCount: 1, totalTokenCount: 3 },
+							modelVersion: "gemini-3.6-flash",
+							responseId: "response-123",
+						},
+					})}\n\n`,
+					{ status: 200, headers: { "content-type": "text/event-stream" } },
+				),
+		);
+
+		const message = await streamSimple(createModel("gemini-3.6-flash-high", "google-antigravity"), context, {
+			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			reasoning: Effort.High,
+		}).result();
+
+		expect(message.responseAttribution).toEqual({
+			requestedModel: "gemini-3.6-flash-high",
+			responseModel: "gemini-3.6-flash",
+			responseModelSource: "response-body",
+		});
+		expect(message.responseId).toBe("response-123");
+	});
 });

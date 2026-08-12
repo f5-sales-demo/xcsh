@@ -1587,6 +1587,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			{ name: "off", description: "Disable dynamic model routing" },
 			{ name: "shadow", description: "Record dynamic model routing decisions speculatively without switching" },
 			{ name: "auto", description: "Enable dynamic model routing and clear manual model pins" },
+			{ name: "profile", description: "Select a provider-sticky subscription routing profile" },
 		],
 		handle: async (command, runtime) => {
 			runtime.ctx.editor.addToHistory(command.text);
@@ -1601,9 +1602,16 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 				coordinator: (runtime.ctx.session as any).routingCoordinator,
 				currentModel,
 				mode: status.mode,
+				profile: status.profile,
 			});
 			if (res.newMode) {
 				runtime.ctx.session.setRoutingMode(res.newMode);
+			}
+			if (res.newProfile) {
+				const applied = await runtime.ctx.session.applyRoutingProfile(res.newProfile);
+				if (!applied.applied) {
+					res.output = `Routing profile ${res.newProfile} unavailable: ${applied.missingModels.join(", ")}`;
+				}
 			}
 			(runtime.ctx.ui as any).notify?.(res.output, "info");
 		},

@@ -4,7 +4,7 @@
 	"type": "object",
 	"required": ["schemaVersion", "git", "parameters", "inventory", "warmups", "measured", "summary", "security"],
 	"properties": {
-		"schemaVersion": { "const": 2 },
+		"schemaVersion": { "const": 3 },
 		"startedAt": { "type": "string" },
 		"finishedAt": { "type": "string" },
 		"git": {
@@ -18,12 +18,16 @@
 		},
 		"parameters": {
 			"type": "object",
-			"required": ["dryRun", "repetitions", "warmups", "lanes"],
+			"required": ["profile", "dryRun", "repetitions", "warmups", "lanes", "scenarios", "timeoutMs"],
 			"properties": {
+				"profile": { "enum": ["canonical", "subscription"] },
 				"dryRun": { "type": "boolean" },
 				"repetitions": { "type": "integer", "minimum": 1 },
 				"warmups": { "type": "integer", "minimum": 0 },
-				"lanes": { "type": "array", "items": { "type": "string" } }
+				"lanes": { "type": "array", "items": { "type": "string" } },
+				"scenarios": { "type": "array", "items": { "type": "string" } },
+				"timeoutMs": { "type": "integer", "minimum": 1 },
+				"reportDir": { "type": "string" }
 			}
 		},
 		"capabilities": { "type": "array" },

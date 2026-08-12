@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
+import { Effort } from "@f5-sales-demo/pi-ai";
 import { TempDir } from "@f5-sales-demo/pi-utils";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
@@ -315,15 +316,22 @@ describe("AgentSession Routing Rejection Escalation (TDD)", () => {
 		settings.set("routing.internalOpenAiUrl", "https://internal-openai.example.com");
 		modelRegistry.getApiKey = async () => "mock-key";
 
-		const litellmGptModel = { provider: "litellm", id: "gpt-5.6-luna", api: "openai-responses" } as any;
+		const litellmGptModel = {
+			provider: "litellm",
+			id: "gpt-5.6-luna",
+			api: "openai-responses",
+			reasoning: true,
+			thinking: { mode: "effort", minLevel: Effort.Low, maxLevel: Effort.XHigh },
+		} as any;
 
-		await session.setModelRoutingSwitch(litellmGptModel);
+		await session.setModelRoutingSwitch(litellmGptModel, "low" as any);
 
 		const activeModel = session.model;
 		expect(activeModel).toBeDefined();
 		expect(activeModel?.provider).toBe("litellm");
 		expect(activeModel?.id).toBe("gpt-5.6-luna");
 		expect(activeModel?.baseUrl).toBe("https://internal-openai.example.com");
+		expect(session.thinkingLevel).toBe(Effort.Low);
 	});
 
 	it("should calculate correct delegation tokens and pass AbortSignal", async () => {

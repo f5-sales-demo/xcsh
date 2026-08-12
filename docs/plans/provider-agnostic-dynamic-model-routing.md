@@ -4,13 +4,22 @@
 
 The production router is implemented at the `AgentSession` boundary. It supports explicit provider-qualified pools, utility/balanced/frontier tiers, off/shadow/auto modes, deterministic and hybrid classification, context eligibility, hysteresis, manual pins, escalation and rollback, read-only delegation, persistence, telemetry, and route commands.
 
-The authenticated routing-matrix harness has been redesigned under issue #3114. Its deterministic and mocked-network evidence is authoritative for code paths, but the project is not empirically complete until a clean exact-`origin/main` report proves all five required lanes through real authenticated inference.
+The authenticated routing-matrix harness was redesigned under issue #3114 and extended for subscription routing under issue #3129.
+The implementation now has provider-sticky Google Antigravity and OpenAI Codex profiles, entitlement-scoped inventory discovery
+through xcsh's existing OAuth storage, tier-specific reasoning effort, and response-body attribution for both transports. Its
+deterministic and mocked-network evidence is authoritative for code paths, but this iteration is not empirically complete until
+a clean exact-`origin/main` report proves the two subscription lanes through real authenticated inference.
 
 CI, unit tests, dry runs, bundled catalog entries, missing-credential BLOCKED results, and completion-auditor statements are not live acceptance evidence.
 
 ## Scope and non-goals
 
-The canonical profile requires direct OpenAI, direct Anthropic, LiteLLM OpenAI-family, LiteLLM Anthropic-family, and an explicitly configured Google Vertex pool. Four scenarios and three repetitions produce 60 measured rows; one warmup per lane produces five warmup rows.
+The legacy `canonical` benchmark profile retains direct OpenAI, direct Anthropic, LiteLLM OpenAI-family, LiteLLM Anthropic-family, and explicitly configured Google Vertex lanes. The `subscription` profile is the scope of issue #3129 and contains only Google Antigravity and OpenAI Codex. LiteLLM inference is explicitly out of scope for this iteration and must not be run as part of its UAT.
+
+The Google profile maps `smol` and `default` to `google-antigravity/gemini-3.6-flash-high:high`, and `slow` and `plan` to
+`google-antigravity/gemini-3.1-pro-high-vertex:high`. The Codex profile maps utility to Luna/low, balanced to Terra/medium,
+and frontier to Sol/high, with Sol/xhigh for a prior rejection or a complexity score of at least 90. Both profiles are
+provider-sticky and apply atomically only when every required model appears in fresh authenticated entitlement inventory.
 
 Other providers may opt in only through explicit capability and tier-pool configuration. Untiered providers remain on their selected model. Model names never imply tiers.
 
@@ -57,6 +66,8 @@ CLI profile
 | `litellm-openai` | OpenAI-compatible | OpenAI | `litellm/openai` | Its own authenticated LiteLLM endpoint | Lane-specific key/base URL, then xcsh LiteLLM resolver | Endpoint, request, client, raw response model; upstream provider may be unproven |
 | `litellm-anthropic` | Anthropic Messages-compatible | Anthropic | `litellm/anthropic` | Its own authenticated LiteLLM endpoint | Separate Anthropic-compatible base URL and LiteLLM credential | Endpoint, request, client, raw response model; upstream provider may be unproven |
 | `google-vertex` | Vertex | Google | `google-vertex/gemini` | Authenticated Model Garden publisher list | Real ADC access token and project/location | Endpoint, request, and client; the current SDK stream does not expose a response-reported model |
+| `google-antigravity` | Gemini CLI/Antigravity | Google | Flash for normal work, Pro for planning | Fresh authenticated Antigravity entitlement discovery | Existing xcsh OAuth credential resolver | Endpoint, requested alias, client, and response-reported Vertex model version; upstream infrastructure is not inferred |
+| `openai-codex` | ChatGPT Codex Responses | OpenAI | `openai-codex/gpt-5.6` | Fresh authenticated Codex entitlement discovery | Existing xcsh OAuth credential and account resolver | Endpoint, requested model, client, and response-body model; upstream infrastructure is not inferred |
 
 Lane identity is independent of provider name. This keeps direct Anthropic and Anthropic-over-LiteLLM distinct.
 
@@ -71,7 +82,9 @@ Four inventories remain distinct:
 3. Models returned by the lane's authenticated live endpoint.
 4. Eligible candidates: configured tiers intersected with that same lane's live inventory and runtime constraints.
 
-All three tiers must exist for every canonical lane. Candidate inventories are never combined across endpoints.
+All configured models must exist for every active lane. Google intentionally maps both utility and balanced tiers to the same Flash entitlement; this is one explicit relationship, not a fabricated third model. Candidate inventories are never combined across endpoints.
+
+Subscription discovery uses the existing `ModelRegistry` provider adapters. Only `status: ok`, `stale: false` entitlement responses satisfy live acceptance. Cached data, bundled models, partial model metadata, unsupported adapters, and failed refreshes remain BLOCKED or FAIL and cannot make a configured model eligible.
 
 Inventory states are `AVAILABLE`, `BLOCKED_AUTH`, `BLOCKED_NETWORK`, `BLOCKED_RATE_LIMIT`, `UNSUPPORTED_DISCOVERY`, `FAIL_SCHEMA`, `FAIL_EMPTY_INVENTORY`, and `FAIL_MISSING_TIERS`. Dry-run inventory is `SIMULATED`. No failed live state falls back to bundled success.
 
@@ -89,7 +102,10 @@ Statuses:
 - `SKIPPED_UNTIERED`: optional provider has no configured pool; illegal for canonical required lanes.
 - `SIMULATED`: dry-run row; never counted as PASS.
 
-Default counts are five warmups and 60 measured rows. `matrixComplete` requires exact counts and every live inventory, warmup, and measured row PASS. `authoritative` additionally requires non-dry execution, clean exact final HEAD, positive usage, declared response attribution, schema validation, recursive redaction, and secret-scan success.
+The canonical defaults remain five warmups and 60 measured rows. The subscription profile defaults to two warmups and
+24 measured rows (two lanes × four scenarios × three repetitions). `matrixComplete` requires exact counts and every live
+inventory, warmup, and measured row PASS. `authoritative` additionally requires non-dry execution, clean exact final HEAD,
+positive usage, declared response attribution, schema validation, recursive redaction, and secret-scan success.
 
 Exit codes are 0 for successful requested-mode execution, 1 for behavior/schema/security failure, 2 for an environmentally BLOCKED or incomplete required matrix, and 64 for invalid CLI configuration. A successful dry run may exit 0 but remains non-complete and non-authoritative.
 
@@ -101,18 +117,18 @@ Every behavior is introduced with a failing focused test, minimal implementation
 
 Mocked HTTP coverage includes successful provider schemas, empty inventory, missing tiers, 401, 403, 404, 429, 500, malformed JSON, DNS/network failure, timeout/abort, ADC, OAuth/API-key headers, no bundled fallback, redaction, attribution gaps, warmup failures, and partial/all-BLOCKED contracts.
 
-Paid UAT is staged:
+Authenticated UAT is staged to isolate failures even when usage is not budget-constrained:
 
 1. Stage A: unit tests, mocked HTTP, type/lint checks, dry run, schema validation, and secret tests.
-2. Stage B: LiteLLM OpenAI utility with one warmup and one repetition; then balanced/frontier only after success.
-3. Stage C: both LiteLLM lanes, one warmup and one repetition per scenario.
-4. Stage D: final clean `origin/main`, all five lanes, five warmups, 60 measured rows, recursive scan.
+2. Stage B: Google Antigravity utility with one warmup and one repetition, followed by its frontier planning scenario.
+3. Stage C: OpenAI Codex utility, balanced, and frontier scenarios with one warmup and one repetition; confirm low/medium/high and a separate xhigh escalation test.
+4. Stage D: both subscription lanes on clean exact `origin/main`, two warmups, 24 measured rows, schema validation, and recursive scan.
 
-The complete paid matrix is never used as a debugging loop.
+The complete authenticated matrix is not used as a debugging loop. No LiteLLM lane is invoked in this iteration.
 
 ## Reporting, security, and rollout
 
-Schema-v2 reports record Git state, parameters, capability declarations, sanitized endpoint fingerprints, inventory reconciliation, first-class warmups and measurements, timestamps, durations, usage, attribution sources, counts, authority, and security state. Reports are written outside the repository with mode 0600.
+Schema-v3 reports record the selected benchmark profile, Git state, parameters, capability declarations, sanitized endpoint fingerprints, inventory reconciliation, first-class warmups and measurements, selected effort and reason, timestamps, durations, usage, attribution sources, counts, authority, and security state. Reports are written outside the repository with mode 0600.
 
 The writer recursively redacts resolved secrets, credential-shaped fields, authorization values, URL credentials, query tokens, and credential paths. It validates the final candidate against the checked-in schema, scans the exact bytes with Gitleaks, atomically publishes unchanged bytes, and writes a SHA-256 receipt. Scan failure publishes no report and exits 1.
 
@@ -183,42 +199,70 @@ Operational rollout remains off by default, then shadow, then per-lane automatic
   - Required artifact: command logs and dry-run report.
   - Completion claim: Stage A is green before any paid call is attempted.
   - Reviewer evidence: coding-agent 6,529 pass/559 skip/0 fail; AI package and focused suites pass; check and dry run exit zero.
-- [ ] RM-10 Stage B authenticated LiteLLM OpenAI smoke
-  - Implementation target: `litellm-openai`, one warmup, utility at one repetition, then balanced/frontier only after utility passes.
-  - Failing test: the first authenticated smoke must expose any endpoint, inventory, attribution, or inference defect.
-  - Verification command: `bun run bench:routing-matrix --lanes litellm-openai --scenarios utility-greeting --warmups 1 --repetitions 1`.
-  - Required artifact: clean, redacted smoke report outside the repository.
-  - Completion claim: live inventory, warmup, and utility measurement all PASS with valid usage and required attribution.
-  - Reviewer evidence: blocked on 2026-08-11 because neither LiteLLM endpoint nor credential is configured; no paid call was made.
-- [ ] RM-11 Stage C two-family LiteLLM matrix
-  - Implementation target: both LiteLLM lanes, all required scenarios, one warmup and one repetition.
-  - Failing test: cross-family pool/model selection, independent inventory, marker, or attribution mismatch fails its row.
-  - Verification command: `bun run bench:routing-matrix --lanes litellm-openai,litellm-anthropic --warmups 1 --repetitions 1`.
-  - Required artifact: redacted two-lane report and hash receipt.
-  - Completion claim: 2/2 warmups and 8/8 measured rows PASS with no FAIL/BLOCKED.
-  - Reviewer evidence: pending RM-10 and authorized credentials.
-- [ ] RM-12 Stage D authoritative five-lane matrix
-  - Implementation target: all canonical required lanes, one warmup, four scenarios, and three measured repetitions.
-  - Failing test: any missing inventory tier, warmup, row, usage, required attribution, or scan makes the run non-authoritative.
-  - Verification command: `bun run bench:routing-matrix` on clean current `origin/main`.
-  - Required artifact: redacted exact-head report with five warmups, 60 measurements, and hash receipt.
-  - Completion claim: `passedWarmups === 5`, `passedMeasured === 60`, `matrixComplete === true`, `authoritative === true`, exit 0.
-  - Reviewer evidence: pending RM-10/RM-11, all five authorized credentials, and merge to current main.
-- [ ] RM-13 final exact-head empirical review
-  - Implementation target: independently compare report SHA, Git SHA/cleanliness, schema, counts, evidence limitations, and recursive secret scan.
-  - Failing test: any mismatch between report claims and current main rejects completion.
-  - Verification command: schema validation, `sha256sum -c`, Gitleaks directory scan, and GitHub required-check review.
-  - Required artifact: reviewer acceptance linked to the exact authoritative report.
-  - Completion claim: project is empirically complete only after the reviewer accepts the clean exact-head authenticated evidence.
-  - Reviewer evidence: pending RM-12.
+- [x] SR-01 DRY subscription profile registry and role reuse
+  - Implementation target: one shared profile registry used by OAuth login, routing commands, and session application; reuse the common role-model resolver for slow/smol/commit selection.
+  - Failing test: atomic profile application, missing entitlement, canonical alias, and role-resolution cases.
+  - Verification command: `bun test test/subscription-routing-profiles.test.ts test/login-model.test.ts test/model-resolver.test.ts --max-concurrency 1`.
+  - Required artifact: focused test log and source diff showing no duplicated model-selection loop.
+  - Completion claim: Google and Codex role mappings have one source of truth and cannot partially apply.
+  - Reviewer evidence: focused subscription and login cases pass; final PR diff review remains required.
+- [x] SR-02 provider-sticky Codex tier and effort routing
+  - Implementation target: Luna/low, Terra/medium, Sol/high, and Sol/xhigh on rejection or complexity score ≥90.
+  - Failing test: normal balanced selection and independent frontier effort escalation.
+  - Verification command: `bun test test/routing-effort.test.ts test/routing-coordinator.test.ts test/agent-session-routing-rejection.test.ts --max-concurrency 1`.
+  - Required artifact: routing decision assertions for selected model, selected effort, and reason.
+  - Completion claim: model tier and reasoning effort are resolved independently without crossing providers.
+  - Reviewer evidence: focused coordinator and rejection tests pass.
+- [x] SR-03 Google planner/normal high-reasoning routing
+  - Implementation target: Flash High for `default`/`smol`, Pro High for `plan`/`slow`, including enterprise alias canonicalization.
+  - Failing test: login applies all four roles and preserves unrelated roles; stale inventory refuses application.
+  - Verification command: `bun test test/login-model.test.ts test/subscription-routing-profiles.test.ts --max-concurrency 1`.
+  - Required artifact: atomic role and active-model assertions.
+  - Completion claim: normal and planner paths both request high reasoning from fresh entitled models.
+  - Reviewer evidence: focused login/profile tests pass.
+- [x] SR-04 OAuth entitlement inventory and credential reuse
+  - Implementation target: reuse `AuthStorage` and `ModelRegistry` provider managers for Google Antigravity and OpenAI Codex; never inspect database rows or expose raw tokens.
+  - Failing test: fresh, stale, empty, missing-metadata, unavailable, and missing-credential entitlement states.
+  - Verification command: `bun test test/bench-routing-matrix.test.ts --max-concurrency 1`.
+  - Required artifact: sanitized inventory rows and mocked resolver evidence.
+  - Completion claim: only fresh provider-reported entitlement inventory constructs live candidates and runtime models.
+  - Reviewer evidence: focused entitlement and no-fallback tests pass.
+- [x] SR-05 subscription transport attribution and schema-v3 reporting
+  - Implementation target: capture Google model version and Codex response-body model/response ID; record requested effort and reason in schema-v3 reports.
+  - Failing test: actual content-block extraction, missing attribution, Google SSE attribution, and Codex SSE attribution.
+  - Verification command: `bun test test/google-gemini-cli-3x-thinking.test.ts test/openai-codex-stream.test.ts --max-concurrency 1` in `packages/ai`, plus the benchmark test.
+  - Required artifact: transport assertions and a schema-valid redacted dry-run report.
+  - Completion claim: request metadata is never manufactured as response evidence; known provider aliases are compared to their response-reported serving model.
+  - Reviewer evidence: focused transport tests pass; schema-v3 subscription dry-run and xhigh escalation dry-run reports passed validation and Gitleaks under `/tmp/routing-matrix-reports/`.
+- [ ] SR-06 deterministic Stage A and merged PR
+  - Implementation target: format, typecheck, focused suites, full workspace suite, both benchmark-profile dry runs, secret scan, review diff, and complete issue #3129 through CI and squash merge.
+  - Failing test: any source, test, schema, formatting, or CI failure keeps the task open.
+  - Verification command: repository-required checks, `bun run test`, and `bun run bench:routing-matrix --profile subscription --dry-run`.
+  - Required artifact: green command logs, dry-run receipt, merged linked PR, and clean Git state.
+  - Completion claim: all deterministic gates are green on the merged implementation.
+  - Reviewer evidence: `bun run check` and the full workspace test run pass (coding-agent: 6,541 pass, 559 skip, 0 fail); PR lifecycle remains pending.
+- [ ] SR-07 staged authenticated subscription smoke
+  - Implementation target: Google utility then frontier; Codex utility then balanced/frontier; one warmup and one repetition per requested scenario.
+  - Failing test: any entitlement, model, effort, marker, usage, stop, or attribution mismatch stops progression to the next stage.
+  - Verification command: `bun run bench:routing-matrix --profile subscription --lanes <lane> --scenarios <scenario> --warmups 1 --repetitions 1`.
+  - Required artifact: one redacted out-of-repository report and receipt per stage.
+  - Completion claim: both subscription transports prove their reviewed models through authenticated inference without invoking LiteLLM.
+  - Reviewer evidence: pending SR-06 and exact merged HEAD.
+- [ ] SR-08 authoritative two-lane matrix and exact-head review
+  - Implementation target: both subscription lanes, one warmup, four scenarios, three repetitions, clean exact `origin/main`, schema validation, recursive secret scan, and receipt verification.
+  - Failing test: any missing entitlement, warmup, row, usage, required response attribution, scan, Git, or count makes the result non-authoritative.
+  - Verification command: `bun run bench:routing-matrix --profile subscription` on clean current `origin/main`.
+  - Required artifact: redacted report with 2/2 warmups, 24/24 measurements, `matrixComplete: true`, `authoritative: true`, exit 0, and a matching SHA-256 receipt.
+  - Completion claim: the reviewer accepts the exact-head authenticated subscription matrix and its documented attribution limits.
+  - Reviewer evidence: pending SR-07.
 
-The unchecked items require configured authorized credentials and real inference. Until they pass, the project remains implemented but empirically incomplete.
+The legacy LiteLLM and five-lane canonical live matrices remain deferred, not silently accepted. They are outside issue #3129 and must not be run in this subscription-focused session. Until SR-06 through SR-08 pass, this iteration remains implemented but empirically incomplete.
 
 ## Risks and unresolved product decisions
 
-- Canonical availability risk: any configured tier absent from a live inventory blocks that entire required lane; changing the canonical tier is a reviewed product decision, not a harness fallback.
-- Attribution limitation: LiteLLM may not expose its true upstream provider and the current Vertex SDK stream does not report a serving model. Authority is therefore capability-relative and must retain these explicit omissions.
-- Credential topology: the two LiteLLM families require independently addressable inventory/inference configuration even if an installation chooses to share one key.
-- Vertex inventory compatibility: Model Garden permissions and regional availability may differ from inference permissions; authenticated UAT must confirm the chosen project/location.
-- Cost control: Stage D is prohibited as a debugging loop and remains gated on successful Stages B and C.
-- Final product decision: reviewers must explicitly accept capability-relative attribution, or require gateway/SDK changes that expose stronger upstream evidence before declaring RM-13 complete.
+- Entitlement risk: the reviewed GPT-5.6 and Gemini aliases are accepted only if the current authenticated account advertises them. Bundled catalog presence is insufficient.
+- Google alias risk: Antigravity request aliases can map to Vertex serving versions. The transport records both rather than demanding literal alias equality.
+- Attribution limitation: neither subscription gateway proves its internal upstream infrastructure. Authority is capability-relative to authenticated endpoint, request, client transport, and response-reported model.
+- Effort availability risk: the current Codex entitlement metadata caps supported effort at xhigh. A future max effort is not inferred or requested until entitlement and transport metadata advertise it.
+- Rollout decision: automatic Codex routing should move from shadow to per-profile auto after SR-08. Google normal/planner role routing may roll out independently; cross-provider fallback remains prohibited.
+- Legacy validation: LiteLLM and direct-provider canonical UAT still require a separate authorized iteration and must not be conflated with subscription acceptance.

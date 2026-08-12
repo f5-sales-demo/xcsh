@@ -10,9 +10,12 @@ import {
 	type TextContent,
 	type UserMessage,
 } from "@f5-sales-demo/pi-ai";
+import { resolveAntigravityServingModelId } from "@f5-sales-demo/pi-ai/providers/google-gemini-cli";
 import Ajv2020 from "ajv/dist/2020";
 import { GoogleAuth } from "google-auth-library";
+import { ModelRegistry, type ProviderDiscoveryState } from "../src/config/model-registry";
 import { RoutingCoordinator } from "../src/routing/coordinator";
+import { OPENAI_CODEX_ROUTING_POOL } from "../src/routing/subscription-profiles";
 import type { RoutingPoolConfig, RoutingTier } from "../src/routing/types";
 
 export type InventoryState =
@@ -35,15 +38,31 @@ export interface LaneCapability {
 	upstreamFamily: "openai" | "anthropic" | "google";
 	endpointKind: "direct" | "gateway";
 	poolId: string;
-	inferenceApiType: "openai-responses" | "anthropic-messages" | "google-vertex";
-	inventoryAdapterId: "openai-compatible" | "anthropic" | "vertex-model-garden";
+	inferenceApiType:
+		| "openai-responses"
+		| "openai-codex-responses"
+		| "anthropic-messages"
+		| "google-vertex"
+		| "google-gemini-cli";
+	inventoryAdapterId: "openai-compatible" | "anthropic" | "vertex-model-garden" | "oauth-entitlement";
 	credentialResolverId: string;
 	defaultBaseUrl?: string;
 	multimodal: boolean;
 	requireResponseModel: boolean;
 	canProveUpstreamProvider: boolean;
 	tiers: Record<RoutingTier, string>;
+	effortPolicy?: RoutingPoolConfig["effortPolicy"];
 }
+
+export type BenchmarkProfile = "canonical" | "subscription";
+export const CANONICAL_LANE_IDS = [
+	"openai",
+	"anthropic",
+	"litellm-openai",
+	"litellm-anthropic",
+	"google-vertex",
+] as const;
+export const SUBSCRIPTION_LANE_IDS = ["google-antigravity", "openai-codex"] as const;
 
 export const LANE_CAPABILITIES: Record<string, LaneCapability> = {
 	openai: {
@@ -132,9 +151,47 @@ export const LANE_CAPABILITIES: Record<string, LaneCapability> = {
 		canProveUpstreamProvider: true,
 		tiers: { utility: "gemini-2.5-flash-lite", balanced: "gemini-2.5-flash", frontier: "gemini-2.5-pro" },
 	},
+	"google-antigravity": {
+		id: "google-antigravity",
+		required: true,
+		clientProvider: "google-antigravity",
+		upstreamFamily: "google",
+		endpointKind: "gateway",
+		poolId: "google-antigravity/subscription",
+		inferenceApiType: "google-gemini-cli",
+		inventoryAdapterId: "oauth-entitlement",
+		credentialResolverId: "xcsh-auth-storage-google-antigravity",
+		multimodal: true,
+		requireResponseModel: true,
+		canProveUpstreamProvider: false,
+		// Flash handles normal operations; the planning/frontier tier uses Pro.
+		tiers: {
+			utility: "gemini-3.6-flash-high",
+			balanced: "gemini-3.6-flash-high",
+			frontier: "gemini-3.1-pro-high-vertex",
+		},
+		effortPolicy: { byTier: { utility: "high", balanced: "high", frontier: "high" } },
+	},
+	"openai-codex": {
+		id: "openai-codex",
+		required: true,
+		clientProvider: "openai-codex",
+		upstreamFamily: "openai",
+		endpointKind: "gateway",
+		poolId: OPENAI_CODEX_ROUTING_POOL.id,
+		inferenceApiType: "openai-codex-responses",
+		inventoryAdapterId: "oauth-entitlement",
+		credentialResolverId: "xcsh-auth-storage-openai-codex",
+		multimodal: true,
+		requireResponseModel: true,
+		canProveUpstreamProvider: false,
+		tiers: OPENAI_CODEX_ROUTING_POOL.tiers,
+		effortPolicy: OPENAI_CODEX_ROUTING_POOL.effortPolicy,
+	},
 };
 
 export interface BenchmarkArgs {
+	profile: BenchmarkProfile;
 	repetitions: number;
 	warmups: number;
 	lanes: string[];
@@ -152,7 +209,11 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): BenchmarkArgs
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 	const repetitions = Number(get("--repetitions") ?? process.env.ROUTING_MATRIX_REPETITIONS ?? "3");
 	const warmups = Number(get("--warmups") ?? process.env.ROUTING_MATRIX_WARMUPS ?? "1");
-	const timeoutMs = Number(get("--timeout-ms") ?? process.env.ROUTING_MATRIX_TIMEOUT_MS ?? "20000");
+	const profile = (get("--profile") ?? process.env.ROUTING_MATRIX_PROFILE ?? "canonical") as BenchmarkProfile;
+	if (profile !== "canonical" && profile !== "subscription") throw new Error(`Unknown profile: ${profile}`);
+	const timeoutMs = Number(
+		get("--timeout-ms") ?? process.env.ROUTING_MATRIX_TIMEOUT_MS ?? (profile === "subscription" ? "120000" : "20000"),
+	);
 	if (
 		!Number.isInteger(repetitions) ||
 		repetitions < 1 ||
@@ -163,7 +224,8 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): BenchmarkArgs
 	) {
 		throw new Error("Invalid benchmark counts or timeout");
 	}
-	const lanes = (get("--lanes") ?? process.env.ROUTING_MATRIX_LANES ?? Object.keys(LANE_CAPABILITIES).join(","))
+	const profileLanes = profile === "subscription" ? SUBSCRIPTION_LANE_IDS : CANONICAL_LANE_IDS;
+	const lanes = (get("--lanes") ?? process.env.ROUTING_MATRIX_LANES ?? profileLanes.join(","))
 		.split(",")
 		.map(value => value.trim().toLowerCase())
 		.filter(Boolean);
@@ -175,9 +237,10 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): BenchmarkArgs
 		.map(value => value.trim())
 		.filter(Boolean);
 	for (const scenario of scenarios) {
-		if (!BASE_SCENARIOS.some(item => item.id === scenario)) throw new Error(`Unknown scenario: ${scenario}`);
+		if (!ALL_SCENARIOS.some(item => item.id === scenario)) throw new Error(`Unknown scenario: ${scenario}`);
 	}
 	return {
+		profile,
 		repetitions,
 		warmups,
 		timeoutMs,
@@ -194,7 +257,7 @@ export function parseArgs(argv: string[] = process.argv.slice(2)): BenchmarkArgs
 
 export interface LaneCredential {
 	apiKey?: string;
-	authMechanism?: "bearer" | "api-key" | "oauth-bearer" | "google-adc";
+	authMechanism?: "bearer" | "api-key" | "oauth-bearer" | "oauth-packed" | "google-adc";
 	baseUrl?: string;
 	inventoryBaseUrl?: string;
 	project?: string;
@@ -233,6 +296,8 @@ export async function resolveLaneCredentials(): Promise<Record<string, LaneCrede
 	const anthropicUsesOAuth = Boolean(process.env.ANTHROPIC_OAUTH_TOKEN || storage?.getOAuthCredential?.("anthropic"));
 	const litellmOpenai = await key("litellm", process.env.LITELLM_OPENAI_API_KEY ?? process.env.LITELLM_API_KEY);
 	const litellmAnthropic = await key("litellm", process.env.LITELLM_ANTHROPIC_API_KEY ?? process.env.LITELLM_API_KEY);
+	const googleAntigravity = await key("google-antigravity", process.env.GOOGLE_ANTIGRAVITY_OAUTH_TOKEN);
+	const openaiCodex = await key("openai-codex", process.env.OPENAI_CODEX_OAUTH_TOKEN);
 	const adcToken = await resolveAdcAccessToken();
 	storage?.close?.();
 	const location = process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? "us-central1";
@@ -267,6 +332,14 @@ export async function resolveLaneCredentials(): Promise<Record<string, LaneCrede
 			project: process.env.GOOGLE_CLOUD_PROJECT ?? process.env.VERTEX_PROJECT_ID,
 			location,
 			baseUrl: process.env.VERTEX_BASE_URL ?? `https://${location}-aiplatform.googleapis.com/v1beta1`,
+		},
+		"google-antigravity": {
+			apiKey: googleAntigravity,
+			authMechanism: googleAntigravity ? "oauth-packed" : undefined,
+		},
+		"openai-codex": {
+			apiKey: openaiCodex,
+			authMechanism: openaiCodex ? "oauth-packed" : undefined,
 		},
 	};
 }
@@ -429,12 +502,144 @@ export async function discoverLaneInventory(
 	return { ...base, state: "AVAILABLE", models, durationMs: performance.now() - started };
 }
 
+export interface OAuthEntitlementSnapshot {
+	state?: ProviderDiscoveryState;
+	models: Model<any>[];
+}
+
+export type OAuthEntitlementResolver = (provider: string) => Promise<OAuthEntitlementSnapshot>;
+
+async function resolveOAuthEntitlements(provider: string): Promise<OAuthEntitlementSnapshot> {
+	const { discoverAuthStorage } = await import("../src/sdk");
+	const storage = await discoverAuthStorage();
+	try {
+		const registry = new ModelRegistry(storage);
+		await registry.refreshProvider(provider, "online");
+		const state = registry.getProviderDiscoveryState(provider);
+		const entitled = new Set(state?.models ?? []);
+		return {
+			state,
+			models: registry.getAvailable().filter(model => model.provider === provider && entitled.has(model.id)),
+		};
+	} finally {
+		storage.close();
+	}
+}
+
+/**
+ * Discover subscription models through the provider's authenticated entitlement endpoint.
+ * Cached or bundled models are never accepted as live discovery evidence.
+ */
+export async function discoverOAuthEntitlementInventory(
+	capability: LaneCapability,
+	credential: LaneCredential,
+	resolver: OAuthEntitlementResolver = resolveOAuthEntitlements,
+): Promise<{ inventory: InventoryResult; models: Model<any>[] }> {
+	const started = performance.now();
+	const base: InventoryResult = {
+		laneId: capability.id,
+		state: "BLOCKED_AUTH",
+		models: [],
+		endpointId: createHash("sha256")
+			.update(`oauth-entitlement:${capability.clientProvider}`)
+			.digest("hex")
+			.slice(0, 16),
+		durationMs: 0,
+		missingTiers: [],
+		eligibleCandidates: [],
+	};
+	if (!credential.apiKey || credential.authMechanism !== "oauth-packed") {
+		return {
+			inventory: { ...base, durationMs: performance.now() - started, reasonCode: "missing_oauth_credentials" },
+			models: [],
+		};
+	}
+	let snapshot: OAuthEntitlementSnapshot;
+	try {
+		snapshot = await resolver(capability.clientProvider);
+	} catch {
+		return {
+			inventory: {
+				...base,
+				state: "BLOCKED_NETWORK",
+				durationMs: performance.now() - started,
+				reasonCode: "entitlement_discovery_error",
+			},
+			models: [],
+		};
+	}
+	const state = snapshot.state;
+	if (!state) {
+		return {
+			inventory: {
+				...base,
+				state: "UNSUPPORTED_DISCOVERY",
+				durationMs: performance.now() - started,
+				reasonCode: "missing_entitlement_adapter_state",
+			},
+			models: [],
+		};
+	}
+	if (state.status === "unauthenticated") {
+		return {
+			inventory: {
+				...base,
+				state: "BLOCKED_AUTH",
+				durationMs: performance.now() - started,
+				reasonCode: "entitlement_auth_failed",
+			},
+			models: [],
+		};
+	}
+	if (state.status !== "ok" || state.stale) {
+		return {
+			inventory: {
+				...base,
+				state: "BLOCKED_NETWORK",
+				durationMs: performance.now() - started,
+				reasonCode: state.stale ? "stale_entitlement_inventory" : "entitlement_discovery_unavailable",
+			},
+			models: [],
+		};
+	}
+	const modelsById = new Map(snapshot.models.map(model => [model.id, model]));
+	const models = [...new Set(state.models)].sort();
+	if (models.length === 0) {
+		return {
+			inventory: {
+				...base,
+				state: "FAIL_EMPTY_INVENTORY",
+				durationMs: performance.now() - started,
+				reasonCode: "empty_entitlement_inventory",
+			},
+			models: [],
+		};
+	}
+	const missingRecords = models.filter(model => !modelsById.has(model));
+	if (missingRecords.length > 0) {
+		return {
+			inventory: {
+				...base,
+				state: "FAIL_SCHEMA",
+				models,
+				durationMs: performance.now() - started,
+				reasonCode: "missing_entitlement_model_metadata",
+			},
+			models: [],
+		};
+	}
+	return {
+		inventory: { ...base, state: "AVAILABLE", models, durationMs: performance.now() - started },
+		models: models.map(model => modelsById.get(model)!),
+	};
+}
+
 export function reconcileLaneInventory(
 	capability: LaneCapability,
 	models: string[],
 ): Pick<InventoryResult, "state" | "missingTiers" | "eligibleCandidates"> {
 	const available = new Set(models.map(model => model.replace(/^models\//, "")));
-	const configured = [capability.tiers.utility, capability.tiers.balanced, capability.tiers.frontier];
+	const configured = [...new Set([capability.tiers.utility, capability.tiers.balanced, capability.tiers.frontier])];
 	const missingTiers = configured.filter(model => !available.has(model));
 	const eligibleCandidates = configured
 		.filter(model => available.has(model))
@@ -449,6 +654,7 @@ export interface ScenarioDefinition {
 	prompt: string;
 	responseMarker: string;
 	hasImages?: boolean;
+	priorRejection?: boolean;
 }
 
 export const BASE_SCENARIOS: ScenarioDefinition[] = [
@@ -483,6 +689,18 @@ export const BASE_SCENARIOS: ScenarioDefinition[] = [
 		hasImages: true,
 	},
 ];
+
+export const ESCALATION_SCENARIO: ScenarioDefinition = {
+	id: "rejection-escalation",
+	name: "Frontier rejection escalation",
+	expectedTier: "frontier",
+	prompt:
+		"Re-evaluate the rejected architecture and security migration deeply. Output RESPOND_ESCALATION_OK and nothing else.",
+	responseMarker: "RESPOND_ESCALATION_OK",
+	priorRejection: true,
+};
+
+export const ALL_SCENARIOS: ScenarioDefinition[] = [...BASE_SCENARIOS, ESCALATION_SCENARIO];
 
 export interface MatrixEntry {
 	lane: string;
@@ -530,6 +748,7 @@ export interface ClassifyMeasuredRunOptions {
 	effectiveTier?: RoutingTier;
 	expectedTier: RoutingTier;
 	requestedModel: string;
+	expectedResponseModel?: string;
 	responseModel?: string;
 	clientProvider?: string;
 	expectedClientProvider: string;
@@ -549,7 +768,11 @@ export function classifyMeasuredRun(options: ClassifyMeasuredRunOptions): { stat
 		return { status: "FAIL", reasonCode: "client_provider_mismatch" };
 	if (options.requireResponseModel && !options.responseModel)
 		return { status: "FAIL", reasonCode: "missing_response_model" };
-	if (options.responseModel && normalizeModelId(options.responseModel) !== normalizeModelId(options.requestedModel)) {
+	if (
+		options.responseModel &&
+		normalizeModelId(options.responseModel) !==
+			normalizeModelId(options.expectedResponseModel ?? options.requestedModel)
+	) {
 		return { status: "FAIL", reasonCode: "response_model_mismatch" };
 	}
 	if (options.stopReason !== "stop") return { status: "FAIL", reasonCode: "invalid_stop_reason" };
@@ -644,7 +867,16 @@ export function createMultimodalMessage(prompt: string): UserMessage {
 	return { role: "user", content: [text, image], timestamp: Date.now() };
 }
 
-function constructModel(capability: LaneCapability, modelId: string, baseUrl?: string): Model<any> {
+function constructModel(
+	capability: LaneCapability,
+	modelId: string,
+	baseUrl?: string,
+	discoveredModels: readonly Model<any>[] = [],
+): Model<any> {
+	const discovered = discoveredModels.find(
+		model => model.provider === capability.clientProvider && model.id === modelId,
+	);
+	if (discovered) return baseUrl ? { ...discovered, baseUrl } : discovered;
 	const bundled = getBundledModel(capability.clientProvider as any, modelId);
 	if (bundled) return baseUrl ? { ...bundled, baseUrl } : bundled;
 	return {
@@ -662,7 +894,12 @@ function constructModel(capability: LaneCapability, modelId: string, baseUrl?: s
 }
 
 function customPool(capability: LaneCapability): RoutingPoolConfig {
-	return { id: capability.poolId, provider: capability.clientProvider, tiers: capability.tiers };
+	return {
+		id: capability.poolId,
+		provider: capability.clientProvider,
+		tiers: capability.tiers,
+		effortPolicy: capability.effortPolicy,
+	};
 }
 
 interface ReportRow {
@@ -679,6 +916,8 @@ interface ReportRow {
 	scenarioId?: string;
 	repetition: number;
 	effectiveTier?: RoutingTier;
+	requestedEffort?: string;
+	effortReason?: string;
 	stopReason?: string;
 	usage?: { input: number; output: number; totalTokens: number };
 	startedAt: string;
@@ -698,6 +937,12 @@ function responseEvidence(response: any): {
 		upstreamProvider: attribution?.upstreamProvider,
 		upstreamProviderSource: attribution?.upstreamProviderSource,
 	};
+}
+
+function expectedResponseModel(capability: LaneCapability, requestedModel: string): string {
+	return capability.id === "google-antigravity"
+		? resolveAntigravityServingModelId(normalizeModelId(requestedModel))
+		: requestedModel;
 }
 
 function normalizedUsage(response: any): { input: number; output: number; totalTokens: number } {
@@ -749,6 +994,7 @@ async function run(): Promise<number> {
 	const credentials = await resolveLaneCredentials();
 	const inventory: InventoryResult[] = [];
 	const eligibleByLane = new Map<string, string[]>();
+	const discoveredModelsByLane = new Map<string, Model<any>[]>();
 	const secrets = Object.values(credentials).flatMap(item => (item.apiKey ? [item.apiKey] : []));
 	for (const laneId of args.lanes) {
 		const capability = LANE_CAPABILITIES[laneId];
@@ -767,12 +1013,19 @@ async function run(): Promise<number> {
 			eligibleByLane.set(laneId, reconciled.eligibleCandidates);
 			continue;
 		}
-		const discovered = await discoverLaneInventory(
-			capability,
-			credentials[laneId],
-			globalThis.fetch,
-			AbortSignal.timeout(args.timeoutMs),
-		);
+		const entitlement =
+			capability.inventoryAdapterId === "oauth-entitlement"
+				? await discoverOAuthEntitlementInventory(capability, credentials[laneId])
+				: undefined;
+		const discovered = entitlement
+			? entitlement.inventory
+			: await discoverLaneInventory(
+					capability,
+					credentials[laneId],
+					globalThis.fetch,
+					AbortSignal.timeout(args.timeoutMs),
+				);
+		if (entitlement?.models.length) discoveredModelsByLane.set(laneId, entitlement.models);
 		if (discovered.state === "AVAILABLE") {
 			const reconciled = reconcileLaneInventory(capability, discovered.models);
 			discovered.state = reconciled.state;
@@ -816,16 +1069,27 @@ async function run(): Promise<number> {
 			const requestedModel = capability.tiers.utility;
 			try {
 				const response = await completeSimple(
-					constructModel(capability, requestedModel, credentials[laneId].baseUrl),
+					constructModel(
+						capability,
+						requestedModel,
+						credentials[laneId].baseUrl,
+						discoveredModelsByLane.get(laneId),
+					),
 					{ systemPrompt: "Warmup", messages: [{ role: "user", content: "Reply OK", timestamp: Date.now() }] },
-					{ apiKey: credentials[laneId].apiKey, maxTokens: 8, signal: AbortSignal.timeout(args.timeoutMs) },
+					{
+						apiKey: credentials[laneId].apiKey,
+						maxTokens: 8,
+						reasoning: capability.effortPolicy?.byTier.utility as any,
+						signal: AbortSignal.timeout(args.timeoutMs),
+					},
 				);
 				const evidence = responseEvidence(response);
 				const usage = normalizedUsage(response);
 				const responseModelValid =
 					!capability.requireResponseModel ||
 					(evidence.responseModel !== undefined &&
-						normalizeModelId(evidence.responseModel) === normalizeModelId(requestedModel));
+						normalizeModelId(evidence.responseModel) ===
+							normalizeModelId(expectedResponseModel(capability, requestedModel)));
 				const clientProviderValid = response?.provider === capability.clientProvider;
 				const status: RunStatus =
 					response?.stopReason === "stop" && usage.totalTokens > 0 && responseModelValid && clientProviderValid
@@ -837,6 +1101,7 @@ async function run(): Promise<number> {
 					status,
 					reasonCode: status === "PASS" ? undefined : "warmup_behavioral_failure",
 					requestedModel,
+					requestedEffort: capability.effortPolicy?.byTier.utility,
 					clientProvider: response?.provider,
 					...evidence,
 					stopReason: response?.stopReason,
@@ -862,7 +1127,7 @@ async function run(): Promise<number> {
 		}
 	}
 
-	const selectedScenarios = BASE_SCENARIOS.filter(item => args.scenarios.includes(item.id));
+	const selectedScenarios = ALL_SCENARIOS.filter(item => args.scenarios.includes(item.id));
 	const measuredRows: ReportRow[] = [];
 	const coordinator = new RoutingCoordinator();
 	for (const entry of expandLaneScenarios(args.lanes, args.repetitions, selectedScenarios)) {
@@ -870,19 +1135,7 @@ async function run(): Promise<number> {
 		const discovered = inventory.find(item => item.laneId === entry.lane)!;
 		const startedAt = new Date().toISOString();
 		const started = performance.now();
-		if (args.dryRun) {
-			measuredRows.push({
-				lane: entry.lane,
-				kind: "measured",
-				status: "SIMULATED",
-				scenarioId: entry.scenario.id,
-				repetition: entry.repetition,
-				startedAt,
-				durationMs: 0,
-			});
-			continue;
-		}
-		if (discovered.state !== "AVAILABLE") {
+		if (!args.dryRun && discovered.state !== "AVAILABLE") {
 			measuredRows.push({
 				lane: entry.lane,
 				kind: "measured",
@@ -902,21 +1155,49 @@ async function run(): Promise<number> {
 			mode: "auto",
 			prompt: entry.scenario.prompt,
 			hasImages: entry.scenario.hasImages,
+			priorRejection: entry.scenario.priorRejection,
 			availableModels: eligibleByLane.get(entry.lane) ?? [],
 			customPools: { [capability.poolId]: pool },
 			profilerMode: "rules",
+			tierEffort: capability.effortPolicy?.byTier as Record<string, string> | undefined,
 			signal: AbortSignal.timeout(args.timeoutMs),
 		});
 		const requestedModel = decision.selectedModel ?? entry.anchorModel;
+		if (args.dryRun) {
+			measuredRows.push({
+				lane: entry.lane,
+				kind: "measured",
+				status: "SIMULATED",
+				requestedModel,
+				requestedEffort: decision.selectedEffort,
+				effortReason: decision.effortReason,
+				scenarioId: entry.scenario.id,
+				repetition: entry.repetition,
+				effectiveTier: decision.effectiveTier,
+				startedAt,
+				durationMs: performance.now() - started,
+			});
+			continue;
+		}
 		try {
 			const modelId = normalizeModelId(requestedModel);
 			const message = entry.scenario.hasImages
 				? createMultimodalMessage(entry.scenario.prompt)
 				: { role: "user" as const, content: entry.scenario.prompt, timestamp: Date.now() };
 			const response = await completeSimple(
-				constructModel(capability, modelId, credentials[entry.lane].baseUrl),
+				constructModel(
+					capability,
+					modelId,
+					credentials[entry.lane].baseUrl,
+					discoveredModelsByLane.get(entry.lane),
+				),
 				{ systemPrompt: "Follow the exact benchmark output contract.", messages: [message] },
-				{ apiKey: credentials[entry.lane].apiKey, maxTokens: 64, signal: AbortSignal.timeout(args.timeoutMs) },
+				{
+					apiKey: credentials[entry.lane].apiKey,
+					maxTokens: 64,
+					reasoning: decision.selectedEffort as any,
+					signal: AbortSignal.timeout(args.timeoutMs),
+				},
 			);
 			const evidence = responseEvidence(response);
 			const usage = normalizedUsage(response);
@@ -924,6 +1205,7 @@ async function run(): Promise<number> {
 				effectiveTier: decision.effectiveTier,
 				expectedTier: entry.scenario.expectedTier,
 				requestedModel,
+				expectedResponseModel: expectedResponseModel(capability, requestedModel),
 				responseModel: evidence.responseModel,
 				clientProvider: response?.provider,
 				expectedClientProvider: capability.clientProvider,
@@ -939,6 +1221,8 @@ async function run(): Promise<number> {
 				status: classification.status,
 				reasonCode: classification.reasonCode,
 				requestedModel,
+				requestedEffort: decision.selectedEffort,
+				effortReason: decision.effortReason,
 				clientProvider: response?.provider,
 				...evidence,
 				scenarioId: entry.scenario.id,
@@ -958,6 +1242,8 @@ async function run(): Promise<number> {
 				status: blocked ? "BLOCKED" : "FAIL",
 				reasonCode: blocked ? "inference_external_block" : "inference_behavioral_failure",
 				requestedModel,
+				requestedEffort: decision.selectedEffort,
+				effortReason: decision.effortReason,
 				scenarioId: entry.scenario.id,
 				repetition: entry.repetition,
 				effectiveTier: decision.effectiveTier,
@@ -982,7 +1268,7 @@ async function run(): Promise<number> {
 	});
 	const report = redactSecretStrings(
 		{
-			schemaVersion: 2,
+			schemaVersion: 3,
 			startedAt: warmupRows[0]?.startedAt ?? measuredRows[0]?.startedAt ?? new Date().toISOString(),
 			finishedAt: new Date().toISOString(),
 			git,

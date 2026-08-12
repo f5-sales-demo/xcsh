@@ -1,4 +1,5 @@
 import { classifyTaskHybrid } from "./classifier";
+import { resolveRoutingEffort } from "./effort";
 import { resolveModelPool } from "./presets";
 import { resolveTierModel } from "./resolver";
 import { type RoutingState, RoutingStateMachine } from "./state-machine";
@@ -24,6 +25,7 @@ export interface EvaluateTurnOptions {
 	profilerMode?: "rules" | "hybrid";
 	disabledPresets?: readonly string[];
 	familyPolicy?: "sticky" | "configured-mixed";
+	tierEffort?: Record<string, string>;
 
 	downshiftAfterTurns?: number;
 	getModelContextWindow?: (modelId: string) => number;
@@ -169,6 +171,13 @@ export class RoutingCoordinator {
 		}
 
 		const isShadow = options.mode === "shadow";
+		const effort = resolveRoutingEffort(
+			resolved.effectiveTier ?? effectiveTier,
+			taskProfile.complexityScore,
+			Boolean(options.priorRejection),
+			pool.effortPolicy,
+			options.tierEffort,
+		);
 		if (!isShadow) {
 			// Commit state machine transition only on successful non-degraded resolution
 			this.stateMachine.restoreState(targetSm.getState());
@@ -188,6 +197,8 @@ export class RoutingCoordinator {
 			desiredTier: taskProfile.desiredTier,
 			effectiveTier: resolved.effectiveTier,
 			selectedModel: resolved.selectedModel,
+			selectedEffort: effort.effort,
+			effortReason: effort.reason,
 			source: options.profilerMode === "rules" ? "rules" : "hybrid",
 			applied,
 			reasons,

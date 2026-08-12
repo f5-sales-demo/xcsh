@@ -1260,6 +1260,7 @@ export class AgentSession {
 	 */
 	public getRoutingStatus(): {
 		mode: RoutingMode;
+		profile: string;
 		currentTier?: RoutingTier;
 		downshiftStreak: number;
 		manualPin?: string;
@@ -1269,6 +1270,7 @@ export class AgentSession {
 		const state = this.#routingCoordinator.getStateMachine().getState();
 		return {
 			mode,
+			profile: (this.settings.get("routing.profile") as string) ?? "none",
 			currentTier: state.currentTier,
 			downshiftStreak: state.downshiftStreak,
 			manualPin: state.manualPin,
@@ -1281,6 +1283,48 @@ export class AgentSession {
 	 */
 	public setRoutingMode(mode: RoutingMode): void {
 		this.settings.set("routing.mode", mode);
+	}
+
+	public async applyRoutingProfile(
+		profileId: import("../routing/subscription-profiles").SubscriptionProfileId,
+	): Promise<{ applied: boolean; missingModels: string[] }> {
+		const { applySubscriptionProfileRoles } = await import("../routing/subscription-profiles");
+		await this.#modelRegistry.refresh("online");
+		const discovery = this.#modelRegistry.getProviderDiscoveryState(profileId);
+		if (!discovery || discovery.stale || discovery.status !== "ok") {
+			return { applied: false, missingModels: [`${profileId}:authoritative-inventory`] };
+		}
+		const currentRoles = Object.fromEntries(
+			Object.entries(this.settings.getModelRoles()).filter(
+				(entry): entry is [string, string] => entry[1] !== undefined,
+			),
+		);
+		const resolved = applySubscriptionProfileRoles(
+			profileId,
+			currentRoles,
+			this.#modelRegistry.getAvailable().map(model => `${model.provider}/${model.id}`),
+		);
+		if (!resolved.applied) return { applied: false, missingModels: resolved.missingModels };
+
+		const previousProfile = this.settings.get("routing.profile");
+		const previousModel = this.model;
+		const previousThinking = this.thinkingLevel;
+		this.settings.set("modelRoles", resolved.roles);
+		this.settings.set("routing.profile", profileId);
+		const next = this.resolveRoleModelWithThinking("default");
+		try {
+			if (!next.model) throw new Error(`Default model for ${profileId} did not resolve`);
+			await this.setModelTemporary(next.model, next.thinkingLevel);
+			return { applied: true, missingModels: [] };
+		} catch (error) {
+			this.settings.set("modelRoles", { ...currentRoles });
+			this.settings.set("routing.profile", previousProfile);
+			if (previousModel) {
+				this.#setModelWithProviderSessionReset(previousModel, "runtime-switch");
+				this.setThinkingLevel(previousThinking);
+			}
+			throw error;
+		}
 	}
 
 	/**
@@ -1355,18 +1399,17 @@ export class AgentSession {
 						const previousTier = this.#routingCoordinator.getState().currentTier;
 						const previousFloor = this.#routingCoordinator.getState().escalationFloor;
 						const previousModel = this.model;
+						const previousThinkingLevel = this.thinkingLevel;
 
 						try {
-							await this.setModelRoutingSwitch(targetModel);
+							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
+							const { resolveRoutingEffort } = await import("../routing/effort");
+							const effort = resolveRoutingEffort(targetTier, 100, true, pool.effortPolicy, effortMap);
+							await this.setModelRoutingSwitch(targetModel, effort.effort as ThinkingLevel);
 							this.agent.abort();
 
 							this.#routingCoordinator.getStateMachine().setEscalationFloor(targetTier);
 							this.#routingCoordinator.restoreState({ currentTier: targetTier });
-							const effortMap = this.settings.get("routing.tierEffort") as Record<string, string> | undefined;
-							const { mapTierToEffort } = await import("../routing/effort");
-							const effort = mapTierToEffort(targetTier, effortMap);
-							this.setThinkingLevel(effort as any);
-
 							this.#emitSessionEvent(
 								sanitizeRoutingEvent({
 									type: "routing_escalated",
@@ -1376,6 +1419,8 @@ export class AgentSession {
 									effectiveTier: targetTier,
 									state: this.#routingCoordinator.getState(),
 									selectedModel: this.model ? `${this.model.provider}/${this.model.id}` : undefined,
+									selectedEffort: effort.effort,
+									effortReason: effort.reason,
 									escalated: true,
 								}),
 							).catch(() => {});
@@ -1389,6 +1434,7 @@ export class AgentSession {
 							}
 							if (previousModel) {
 								this.#setModelWithProviderSessionReset(previousModel, "runtime-switch");
+								this.setThinkingLevel(previousThinkingLevel);
 								this.sessionManager.appendModelChange(
 									`${previousModel.provider}/${previousModel.id}`,
 									"routing_switch_rollback",
@@ -2939,6 +2985,7 @@ export class AgentSession {
 			customPools: validateCustomPools(this.settings.get("routing.pools")),
 			disabledPresets: (this.settings.get("routing.disabledPresets") as readonly string[]) ?? [],
 			familyPolicy: (this.settings.get("routing.familyPolicy") as "sticky" | "configured-mixed") ?? "sticky",
+			tierEffort: this.settings.get("routing.tierEffort") as Record<string, string>,
 			profilerMode: (this.settings.get("routing.profiler") as any) ?? "hybrid",
 			contextEstimate,
 			signal: options?.signal,
@@ -2959,6 +3006,8 @@ export class AgentSession {
 			},
 			applied: decision.applied,
 			decision: decision.selectedModel,
+			selectedEffort: decision.selectedEffort,
+			effortReason: decision.effortReason,
 			delegation: decision.delegation,
 		} as any).catch(() => {});
 
@@ -2995,9 +3044,9 @@ export class AgentSession {
 					}
 				}
 
-				if (needsSwitch) {
-					await this.setModelRoutingSwitch(targetModel);
-				}
+				const selectedEffort = decision.selectedEffort as ThinkingLevel | undefined;
+				if (needsSwitch) await this.setModelRoutingSwitch(targetModel, selectedEffort);
+				else if (selectedEffort !== undefined) this.setThinkingLevel(selectedEffort);
 			}
 		}
 
@@ -4125,7 +4174,7 @@ export class AgentSession {
 	 * Temporarily set model from automated routing, preserving original manual model state.
 	 * Does NOT overwrite manual pin or retry fallback original selector.
 	 */
-	async setModelRoutingSwitch(model: Model): Promise<void> {
+	async setModelRoutingSwitch(model: Model, thinkingLevel?: ThinkingLevel): Promise<void> {
 		const previousEditMode = this.#resolveActiveEditMode();
 
 		let targetModel = model;
@@ -4153,7 +4202,7 @@ export class AgentSession {
 		this.sessionManager.appendModelChange(`${targetModel.provider}/${targetModel.id}`, "routing_switch");
 		this.settings.getStorage()?.recordModelUsage(`${targetModel.provider}/${targetModel.id}`);
 
-		this.setThinkingLevel(this.thinkingLevel);
+		this.setThinkingLevel(thinkingLevel ?? this.thinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 	}
 

@@ -53,4 +53,24 @@ describe("/route Commands (I09)", () => {
 		expect(coordinator.getStateMachine().getState().manualPin).toBeUndefined(); // Pin cleared!
 		expect(result.output).toContain("Routing mode set to auto");
 	});
+
+	it("selects only reviewed provider-sticky subscription profiles", async () => {
+		const coordinator = new RoutingCoordinator();
+		const selected = await handleRouteCommand(["profile", "openai-codex"], {
+			coordinator,
+			currentModel: "openai-codex/gpt-5.6-terra",
+			mode: "auto",
+			profile: "none",
+		});
+		expect(selected.newProfile).toBe("openai-codex");
+		expect(selected.output).toContain("openai-codex");
+
+		const invalid = await handleRouteCommand(["profile", "unknown"], {
+			coordinator,
+			currentModel: "openai-codex/gpt-5.6-terra",
+			mode: "auto",
+		});
+		expect(invalid.newProfile).toBeUndefined();
+		expect(invalid.output).toContain("Usage");
+	});
 });

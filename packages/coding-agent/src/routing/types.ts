@@ -62,11 +62,23 @@ export interface RoutingPoolTiers {
 	frontier: string;
 }
 
+export type RoutingEffort = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+export type RoutingEffortReason = "tier_default" | "complexity_escalation" | "rejection_escalation";
+
+export interface RoutingEffortPolicy {
+	byTier: Partial<Record<RoutingTier, RoutingEffort>>;
+	frontierEscalation?: {
+		effort: RoutingEffort;
+		minimumComplexityScore: number;
+	};
+}
+
 export interface RoutingPoolConfig {
 	id: string;
 	provider?: string;
 	allowMixed?: boolean;
 	tiers: RoutingPoolTiers;
+	effortPolicy?: RoutingEffortPolicy;
 }
 
 export interface RoutingDecision {
@@ -77,6 +89,8 @@ export interface RoutingDecision {
 	desiredTier?: RoutingTier;
 	effectiveTier?: RoutingTier;
 	selectedModel?: string;
+	selectedEffort?: RoutingEffort;
+	effortReason?: RoutingEffortReason;
 	source?: RoutingDecisionSource;
 	applied: boolean;
 	reasons: RoutingReasonCode[];

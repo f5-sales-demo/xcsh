@@ -1470,10 +1470,27 @@ export class ModelRegistry {
 		try {
 			const manager = createModelManager({ ...options, cacheDbPath: this.#cacheDbPath });
 			const result = await manager.refresh(strategy);
-			return result.models.map(model =>
+			const models = result.models.map(model =>
 				model.provider === options.providerId ? model : { ...model, provider: options.providerId },
 			);
+			this.#providerDiscoveryStates.set(options.providerId, {
+				provider: options.providerId,
+				status: result.stale ? "cached" : "ok",
+				optional: false,
+				stale: result.stale,
+				fetchedAt: Date.now(),
+				models: models.map(model => model.id),
+			});
+			return models;
 		} catch (error) {
+			this.#providerDiscoveryStates.set(options.providerId, {
+				provider: options.providerId,
+				status: "unavailable",
+				optional: false,
+				stale: true,
+				models: [],
+				error: error instanceof Error ? error.message : String(error),
+			});
 			logger.warn("model discovery failed for provider", {
 				provider: options.providerId,
 				error: error instanceof Error ? error.message : String(error),

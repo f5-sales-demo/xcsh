@@ -1,5 +1,6 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { canonicalizeOAuthProviderId, type Model } from "@f5-sales-demo/pi-ai";
+import { applySubscriptionProfileRoles, type SubscriptionProfileId } from "../../routing/subscription-profiles";
 
 export interface LoginModelChoice {
 	label: string;
@@ -39,6 +40,14 @@ export const GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 	thinkingLevel: ThinkingLevel.High,
 };
 
+export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
+	label: "GPT-5.6 Terra",
+	description: "Balanced OpenAI Codex subscription model with medium reasoning",
+	provider: "openai-codex",
+	modelId: "gpt-5.6-terra",
+	thinkingLevel: ThinkingLevel.Medium,
+};
+
 export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly string[]): LiteLLMLoginModelChoice[] {
 	const available = new Set(availableModelIds);
 	return LITELLM_LOGIN_MODEL_CHOICES.filter(choice => available.has(choice.modelId));
@@ -49,10 +58,23 @@ export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly
  * Kept structural so the login flow can call it without pulling in the full
  * AgentSession type, and so it stays trivially unit-testable.
  */
-interface ModelApplicableSession {
+interface BaseModelApplicableSession {
 	modelRegistry: { getAll(): Model[] };
 	setModel(model: Model, role: "default", options: { selector: string; thinkingLevel: ThinkingLevel }): Promise<void>;
 	setThinkingLevel(level: ThinkingLevel): void;
+}
+
+interface ModelApplicableSession extends BaseModelApplicableSession {
+	modelRegistry: {
+		getAll(): Model[];
+		getProviderDiscoveryState?(provider: string): { status: string; stale: boolean } | undefined;
+	};
+	settings?: {
+		getModelRoles(): Readonly<Record<string, string | undefined>>;
+		get?(key: "routing.profile"): "none" | SubscriptionProfileId;
+		set(key: "modelRoles", value: Record<string, string>): void;
+		set(key: "routing.profile", value: "none" | SubscriptionProfileId): void;
+	};
 }
 
 /**
@@ -62,7 +84,7 @@ interface ModelApplicableSession {
  * Returns true when the exact provider/model pair resolves after registry refresh.
  */
 export async function applyModelAfterLogin(
-	session: ModelApplicableSession,
+	session: BaseModelApplicableSession,
 	choice: LoginModelChoice,
 ): Promise<boolean> {
 	const resolved = session.modelRegistry
@@ -88,7 +110,52 @@ export async function applyOAuthLoginModel(
 	session: ModelApplicableSession,
 	providerId: string,
 ): Promise<LoginModelChoice | undefined> {
-	if (canonicalizeOAuthProviderId(providerId) !== GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider) return undefined;
-	const applied = await applyModelAfterLogin(session, GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE);
-	return applied ? GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE : undefined;
+	const canonicalProvider = canonicalizeOAuthProviderId(providerId);
+	const choice =
+		canonicalProvider === GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider
+			? GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE
+			: canonicalProvider === OPENAI_CODEX_LOGIN_MODEL_CHOICE.provider
+				? OPENAI_CODEX_LOGIN_MODEL_CHOICE
+				: undefined;
+	if (!choice) return undefined;
+	const discovery = session.modelRegistry.getProviderDiscoveryState?.(canonicalProvider);
+	if (session.modelRegistry.getProviderDiscoveryState && (discovery?.status !== "ok" || discovery.stale)) {
+		return undefined;
+	}
+
+	const settings = session.settings;
+	const previousProfile = settings?.get?.("routing.profile") ?? "none";
+	const previousRoles = settings
+		? Object.fromEntries(
+				Object.entries(settings.getModelRoles()).filter(
+					(entry): entry is [string, string] => entry[1] !== undefined,
+				),
+			)
+		: {};
+	if (settings) {
+		const available = session.modelRegistry.getAll().map(model => `${model.provider}/${model.id}`);
+		const profile = applySubscriptionProfileRoles(
+			canonicalProvider as SubscriptionProfileId,
+			previousRoles,
+			available,
+		);
+		if (!profile.applied) return undefined;
+		settings.set("modelRoles", profile.roles);
+		settings.set("routing.profile", canonicalProvider as SubscriptionProfileId);
+	}
+
+	try {
+		const applied = await applyModelAfterLogin(session, choice);
+		if (!applied && settings) {
+			settings.set("modelRoles", previousRoles);
+			settings.set("routing.profile", previousProfile);
+		}
+		return applied ? choice : undefined;
+	} catch (error) {
+		if (settings) {
+			settings.set("modelRoles", previousRoles);
+			settings.set("routing.profile", previousProfile);
+		}
+		throw error;
+	}
 }
