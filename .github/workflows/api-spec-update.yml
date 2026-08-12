@@ -373,7 +373,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           BRANCH: ${{ steps.delivery.outputs.branch }}
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           SPEC_VERSION: ${{ steps.delivery.outputs.version }}
         run: |
           set -euo pipefail
@@ -642,7 +641,6 @@ jobs:
           PUBLICATION_LEDGER_PATH: ${{ steps.delivery.outputs.publication_ledger_path }}
           PUBLICATION_RECEIPT_FILE: ${{ steps.publication.outputs.receipt_path }}
           SPEC_VERSION: ${{ steps.delivery.outputs.version }}
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           set -euo pipefail
           gh auth setup-git

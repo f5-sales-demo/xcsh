@@ -26,6 +26,7 @@ self-hosted-runner:
     - i18n-core
     - marketplace
     - marketplace-claude-code
+    - macos-15-intel
     - mcn
     - nginx
     - observability
