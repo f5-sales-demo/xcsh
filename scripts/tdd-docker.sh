@@ -5,27 +5,27 @@ test_platform="${XCSH_TEST_PLATFORM:-}"
 expected_machine="${XCSH_EXPECTED_MACHINE:-}"
 
 case "$test_platform" in
-  "") test_arch="native" ;;
-  linux/amd64)
-    test_arch="amd64"
-    test "${expected_machine:-x86_64}" = "x86_64" || {
-      echo "ERROR: linux/amd64 must use XCSH_EXPECTED_MACHINE=x86_64." >&2
-      exit 1
-    }
-    expected_machine="x86_64"
-    ;;
-  linux/arm64)
-    test_arch="arm64"
-    test "${expected_machine:-aarch64}" = "aarch64" || {
-      echo "ERROR: linux/arm64 must use XCSH_EXPECTED_MACHINE=aarch64." >&2
-      exit 1
-    }
-    expected_machine="aarch64"
-    ;;
-  *)
-    echo "ERROR: Unsupported XCSH_TEST_PLATFORM: $test_platform" >&2
+"") test_arch="native" ;;
+linux/amd64)
+  test_arch="amd64"
+  test "${expected_machine:-x86_64}" = "x86_64" || {
+    echo "ERROR: linux/amd64 must use XCSH_EXPECTED_MACHINE=x86_64." >&2
     exit 1
-    ;;
+  }
+  expected_machine="x86_64"
+  ;;
+linux/arm64)
+  test_arch="arm64"
+  test "${expected_machine:-aarch64}" = "aarch64" || {
+    echo "ERROR: linux/arm64 must use XCSH_EXPECTED_MACHINE=aarch64." >&2
+    exit 1
+  }
+  expected_machine="aarch64"
+  ;;
+*)
+  echo "ERROR: Unsupported XCSH_TEST_PLATFORM: $test_platform" >&2
+  exit 1
+  ;;
 esac
 
 if [[ -z "$test_platform" && -n "$expected_machine" ]]; then
