@@ -10,7 +10,8 @@ as the unprivileged `xcsh` user and includes the xcsh, Google Cloud, Azure,
 Amazon Web Services (AWS), GitHub, Salesforce, Bun, and Zig command-line
 interfaces (CLIs).
 
-The image currently supports `linux/amd64` hosts.
+The image supports `linux/amd64` and `linux/arm64` hosts. Each release tag is a
+multi-platform image, so Docker selects the matching architecture automatically.
 
 ## Prerequisites
 
@@ -133,6 +134,15 @@ fail status; it does not print tokens, account identities, tenant or subscriptio
 names, project IDs, prompts, or model responses.
 
 ## Verify
+
+Inspect a published tag to confirm that both Linux architectures are available:
+
+```bash
+docker buildx imagetools inspect ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
+```
+
+The manifest must list `linux/amd64` and `linux/arm64`. Replace `X.Y.Z` with the
+published release version.
 
 Inspect the running service directly when troubleshooting:
 

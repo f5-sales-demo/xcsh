@@ -18,6 +18,7 @@ jobs:
   container-test:
     name: container-test
     runs-on: ubuntu-22.04
+    timeout-minutes: 180
     permissions:
       contents: read
     steps:
@@ -26,10 +27,24 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        with:
+          platforms: arm64
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      - name: Test Alpine container
+      - name: Test Alpine container on amd64
+        env:
+          XCSH_EXPECTED_MACHINE: x86_64
+          XCSH_TEST_PLATFORM: linux/amd64
+        run: bash ./scripts/tdd-docker.sh
+
+      - name: Test Alpine container on arm64
+        env:
+          XCSH_EXPECTED_MACHINE: aarch64
+          XCSH_TEST_PLATFORM: linux/arm64
         run: bash ./scripts/tdd-docker.sh
 
   publish-ghcr:
@@ -37,6 +52,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [container-test]
     runs-on: ubuntu-22.04
+    timeout-minutes: 180
     permissions:
       contents: read
       packages: write
@@ -45,6 +61,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        with:
+          platforms: arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
@@ -73,7 +94,7 @@ jobs:
           context: .
           file: Dockerfile.alpine
           target: runtime
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
@@ -82,3 +103,22 @@ jobs:
             XCSH_BUILD_TAG=${{ github.ref_name }}
           provenance: mode=max
           sbom: true
+
+      - name: Verify published multi-platform image
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          manifest=$(docker buildx imagetools inspect --raw "$IMAGE")
+          platforms=$(jq -r \
+            '[.manifests[] | select(.platform.os == "linux") | .platform.architecture] | sort | join(",")' \
+            <<<"$manifest")
+          if [ "$platforms" != "amd64,arm64" ]; then
+            echo "Expected linux/amd64 and linux/arm64; found: $platforms" >&2
+            exit 1
+          fi
+
+          test "$(docker run --rm --platform linux/amd64 --entrypoint uname "$IMAGE" -m)" = "x86_64"
+          docker run --rm --platform linux/amd64 "$IMAGE" --version
+          test "$(docker run --rm --platform linux/arm64 --entrypoint uname "$IMAGE" -m)" = "aarch64"
+          docker run --rm --platform linux/arm64 "$IMAGE" --version
