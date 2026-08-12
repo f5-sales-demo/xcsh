@@ -405,8 +405,8 @@ describe("LiteLLM openai-compat discovery schema (blocks xcsh startup for proxy 
 // ─── CI verify-npm-install backoff ────────────────────────────────────────
 
 describe("CI verify-npm-install uses version-pinned install with backoff (PR #93)", () => {
-	it("ci.yml pins specific version in verify-npm-install step", async () => {
-		const src = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+	it("the verification script pins the release version instead of installing latest", async () => {
+		const src = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-npm-install.sh"), "utf8");
 		// Must install @f5-sales-demo/xcsh@<version> — specific version, not latest
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal string match against YAML content
 		expect(src).toContain('"@f5-sales-demo/xcsh@${expected}"');
@@ -478,7 +478,9 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(installer).toContain("shasum -a 256 -c");
 		expect(installer).toContain('if [[ "$EXTENSION" == "zip" ]]');
 		expect(installer).toContain('unzip -q -o "$ARCHIVE"');
-		expect(installer.match(/uses: actions\/cache@v5/g)).toHaveLength(2);
+		expect(installer.match(/uses: actions\/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0/g)).toHaveLength(
+			2,
+		);
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(installer).toContain("setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.15.2");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
@@ -554,10 +556,12 @@ describe("release artifacts run the sandbox matrix before and after publication"
 
 	it("checks the globally installed npm executable", async () => {
 		const job = await loadJob("verify-npm-install");
+		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-npm-install.sh"), "utf8");
 		expect(job).toContain("release-binaries-linux-win");
-		expect(job).toContain('binary="$(command -v xcsh)"');
-		expect(job).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
-		expect(job).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+		expect(job).toContain("run: bash scripts/ci-verify-npm-install.sh");
+		expect(script).toContain("binary=$(command -v xcsh)");
+		expect(script).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
+		expect(script).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
 	});
 });
 
