@@ -104,6 +104,7 @@ if grep -Fq '/var/run/docker.sock' <<<"$compose_config"; then
   exit 1
 fi
 grep -Fq 'container-test:' .github/workflows/container.yml
+grep -Fq 'runner: ubuntu-24.04-arm' .github/workflows/container.yml
 grep -Fq 'docker/build-push-action@' .github/workflows/container.yml
 grep -Fq 'docker/setup-qemu-action@' .github/workflows/container.yml
 grep -Fq 'platforms: linux/amd64,linux/arm64' .github/workflows/container.yml

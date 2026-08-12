@@ -15,10 +15,22 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
-  container-test:
-    name: container-test
-    runs-on: ubuntu-22.04
-    timeout-minutes: 180
+  container-build:
+    name: container-build (${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            expected_machine: x86_64
+            platform: linux/amd64
+            runner: ubuntu-22.04
+          - architecture: arm64
+            expected_machine: aarch64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
     permissions:
       contents: read
     steps:
@@ -27,25 +39,28 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
-        with:
-          platforms: arm64
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      - name: Test Alpine container on amd64
+      - name: Test Alpine container
         env:
-          XCSH_EXPECTED_MACHINE: x86_64
-          XCSH_TEST_PLATFORM: linux/amd64
-        run: bash ./scripts/tdd-docker.sh
+          XCSH_EXPECTED_MACHINE: ${{ matrix.expected_machine }}
+          XCSH_TEST_PLATFORM: ${{ matrix.platform }}
+        run: |
+          test "$(uname -m)" = "$XCSH_EXPECTED_MACHINE"
+          bash ./scripts/tdd-docker.sh
 
-      - name: Test Alpine container on arm64
+  container-test:
+    name: container-test
+    if: always()
+    needs: [container-build]
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every architecture test
         env:
-          XCSH_EXPECTED_MACHINE: aarch64
-          XCSH_TEST_PLATFORM: linux/arm64
-        run: bash ./scripts/tdd-docker.sh
+          CONTAINER_BUILD_RESULT: ${{ needs.container-build.result }}
+        run: test "$CONTAINER_BUILD_RESULT" = success
 
   publish-ghcr:
     name: publish-ghcr
