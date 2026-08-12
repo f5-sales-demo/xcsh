@@ -69,8 +69,10 @@ add_model() {
   provider=${selector%%/*}
   model_name=${selector#"$provider"/}
   [ -n "$label" ] || die "--model label cannot be empty."
-  [ -n "$provider" ] && [ -n "$model_name" ] && [ "$provider" != "$selector" ] ||
+  if [ -z "$provider" ] || [ -z "$model_name" ] || [ "$provider" = "$selector" ]; then
     die "--model selector must use PROVIDER/MODEL."
+  fi
+
   if [ "$custom_models" = false ]; then
     model_labels=()
     model_selectors=()
