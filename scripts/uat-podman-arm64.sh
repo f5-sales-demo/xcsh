@@ -292,12 +292,12 @@ run_sample() {
       '[.[] |
         if .type == "message_end" and .message.role == "assistant" then .message.provider
         elif .type == "session" then .provider
-        else empty end] | last // ""' "$stdout_file")
+        else empty end] | .[-1] // ""' "$stdout_file")
     resolved_model=$(jq -rs \
       '[.[] |
         if .type == "message_end" and .message.role == "assistant" then .message.model
         elif .type == "session" then .model
-        else empty end] | last // ""' "$stdout_file")
+        else empty end] | .[-1] // ""' "$stdout_file")
 
     if [ "$response" = "PONG" ]; then
       response_exact=true
