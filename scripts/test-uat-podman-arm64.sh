@@ -141,7 +141,9 @@ if grep -Eq -- '--tmpfs [^ ]*(uid|gid)=' "$test_root/podman.log"; then
   exit 1
 fi
 grep -Fq -- '/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=1777' "$test_root/podman.log"
-grep -Fq -- '/etc/pki/ca-trust/source/anchors/xcsh-uat.pem:/etc/xcsh/uat-ca.pem:ro' "$test_root/podman.log"
+grep -Fq -- '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/certs/ca-certificates.crt:ro' "$test_root/podman.log"
+grep -Fq -- '--entrypoint bash' "$test_root/podman.log"
+grep -Fq -- 'xcsh --list-models >/dev/null' "$test_root/podman.log"
 if grep -Fq 'test-secret-never-log' "$test_root/podman.log" "$test_root/happy.json"; then
   echo "Credential leaked into logs or report." >&2
   exit 1

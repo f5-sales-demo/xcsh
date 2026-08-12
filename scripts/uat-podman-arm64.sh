@@ -201,8 +201,7 @@ base_run_options=(
 )
 if [ "$custom_ca" = true ]; then
   base_run_options+=(
-    --volume "/etc/pki/ca-trust/source/anchors/xcsh-uat.pem:/etc/xcsh/uat-ca.pem:ro"
-    --env NODE_EXTRA_CA_CERTS=/etc/xcsh/uat-ca.pem
+    --volume "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem:/etc/ssl/certs/ca-certificates.crt:ro"
   )
 fi
 
@@ -267,8 +266,10 @@ run_sample() {
     --env LITELLM_BASE_URL \
     --env LITELLM_API_KEY \
     "$image" \
+    --entrypoint bash \
     --mode json \
     --no-session \
+    -c 'xcsh --list-models >/dev/null && exec xcsh "$@"' xcsh \
     --no-memories \
     --no-tools \
     --no-mcp \
