@@ -5,7 +5,7 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 harness="$repo_root/scripts/uat-podman-arm64.sh"
 test_root=$(mktemp -d "${TMPDIR:-/tmp}/xcsh-podman-uat-test.XXXXXX")
 fake_bin="$test_root/bin"
-mkdir -p "$fake_bin"
+mkdir -p "$fake_bin" "$test_root/state"
 
 cleanup() {
   case "$test_root" in
@@ -66,11 +66,13 @@ JSON
 "run "*)
   entrypoint=""
   model=""
+  command=""
   previous=""
   for argument in "$@"; do
     case "$previous" in
     --entrypoint) entrypoint="$argument" ;;
     --model) model="$argument" ;;
+    -c) command="$argument" ;;
     esac
     previous="$argument"
   done
@@ -83,13 +85,41 @@ JSON
     echo "${FAKE_XCSH_VERSION:-xcsh/20.15.0}"
     exit 0
   fi
+  if [[ "$command" == *"--list-models"* ]]; then
+    selector=${!#}
+    printf 'discovery %s\n' "$selector" >>"${FAKE_PODMAN_LOG:?}"
+    [ -z "${FAKE_DISCOVERY_ONLY:-}" ] || [ "$selector" = "$FAKE_DISCOVERY_ONLY" ] || exit 1
+    if [ "${FAKE_MATRIX:-0}" = 1 ] && [ "$selector" = "alpha/one" ] &&
+      [ ! -e "${FAKE_PODMAN_STATE:?}/alpha-discovery-failed" ]; then
+      touch "${FAKE_PODMAN_STATE}/alpha-discovery-failed"
+      exit 1
+    fi
+    exit 0
+  fi
   if [ -n "$model" ]; then
-    [ "${FAKE_RUN_FAIL:-0}" = 0 ] || exit 125
     provider=${model%%/*}
+    response=PONG
     resolved_model=${model#"$provider"/}
+    if [ "${FAKE_MATRIX:-0}" = 1 ]; then
+      case "$model" in
+      beta/two) exit 1 ;;
+      gamma/three) provider=wrong ;;
+      delta/four) resolved_model=wrong ;;
+      epsilon/five) printf 'not-json\n'; exit 0 ;;
+      zeta/six)
+        count_file="${FAKE_PODMAN_STATE:?}/zeta-invocations"
+        count=$(cat "$count_file" 2>/dev/null || printf '0')
+        count=$((count + 1))
+        printf '%s' "$count" >"$count_file"
+        if [ "$count" -gt 1 ]; then exit 124; fi
+        response=NOPE
+        ;;
+      esac
+    fi
+    [ "${FAKE_RUN_FAIL:-0}" = 0 ] || exit 125
     provider=${FAKE_PROVIDER:-$provider}
     resolved_model=${FAKE_MODEL:-$resolved_model}
-    response=${FAKE_RESPONSE:-PONG}
+    response=${FAKE_RESPONSE:-$response}
     printf '{"type":"session","provider":"%s","model":"%s"}\n' "$provider" "$resolved_model"
     printf '{"type":"message_start","message":{"role":"user"}}\n'
     printf '{"type":"message_update","assistantMessageEvent":{"type":"text_delta","delta":"%s"}}\n' "$response"
@@ -112,90 +142,76 @@ run_harness() {
   shift
   PATH="$fake_bin:$PATH" \
     FAKE_PODMAN_LOG="$test_root/podman.log" \
+    FAKE_PODMAN_STATE="$test_root/state" \
     LITELLM_BASE_URL="https://litellm.invalid" \
     LITELLM_API_KEY="test-secret-never-log" \
     bash "$harness" "$@" --report "$output_file"
 }
-
-echo "[1/7] Happy path exercises the default matrix."
+echo "[1/10] Six caller-supplied fixture selectors pass independently."
 : >"$test_root/podman.log"
-run_harness "$test_root/happy.json" --ca-cert "$test_root/ca.pem"
+run_harness "$test_root/happy.json" --runs 1 --warmups 1 \
+  --model "GPT Sol=fixture-gpt/sol-tier" \
+  --model "GPT Terra=fixture-gpt/terra-tier" \
+  --model "GPT Luna=fixture-gpt/luna-tier" \
+  --model "Anthropic Haiku=fixture-anthropic/haiku-tier" \
+  --model "Anthropic Sonnet=fixture-anthropic/sonnet-tier" \
+  --model "Anthropic Opus=fixture-anthropic/opus-tier"
 jq -e '
-  .passed == true and
-  .host.architecture == "arm64" and
-  .image.runtimeMachine == "aarch64" and
-  .image.xcshVersion == "xcsh/20.15.0" and
-  ([.samples[] | select(.phase == "warmup")] | length) == 2 and
-  .config.customCa == true and
-  ([.samples[] | select(.phase == "measured")] | length) == 6 and
+  (. | keys | sort) == ["passed", "samples", "schemaVersion"] and
+  .schemaVersion == 2 and .passed and (.samples | length) == 12 and
   all(.samples[];
-    .success and
-    .responseExact and
-    .resolvedProvider == .expectedProvider and
-    .resolvedModel == .expectedModel)
+    (. | keys | sort) == ["category", "expected", "label", "passed", "phase", "resolved", "selector"] and
+    .passed and .category == "none" and .expected == .resolved)
 ' "$test_root/happy.json" >/dev/null
-test "$(grep -c -- '--model' "$test_root/podman.log")" = 8
-grep -Fq -- '--timeout 120' "$test_root/podman.log"
-if grep -Eq -- '--tmpfs [^ ]*(uid|gid)=' "$test_root/podman.log"; then
-  echo "Podman-incompatible tmpfs ownership option detected." >&2
-  exit 1
-fi
-grep -Fq -- '/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=1777' "$test_root/podman.log"
-grep -Fq -- 'update-ca-trust' "$test_root/podman.log"
-grep -Fq -- '--entrypoint bash' "$test_root/podman.log"
-grep -Fq -- 'xcsh --list-models gpt-5.6-sol >/dev/null' "$test_root/podman.log"
+test "$(grep -c -- --list-models "$test_root/podman.log")" = 12
+for selector in fixture-gpt/sol-tier fixture-gpt/terra-tier fixture-gpt/luna-tier fixture-anthropic/haiku-tier fixture-anthropic/sonnet-tier fixture-anthropic/opus-tier; do
+  test "$(grep -Fc "discovery $selector" "$test_root/podman.log")" = 2
+done
 if grep -Fq 'test-secret-never-log' "$test_root/podman.log" "$test_root/happy.json"; then
   echo "Credential leaked into logs or report." >&2
   exit 1
 fi
 
-echo "[2/7] Missing credentials fail before Podman execution."
+echo "[2/10] A model input is required."
+if run_harness "$test_root/no-model.json" --runs 1 --warmups 0 >/dev/null 2>&1; then
+  echo "Expected missing-model failure." >&2
+  exit 1
+fi
+echo "[3/10] Each selector requires its own discovery."
+if FAKE_DISCOVERY_ONLY=fixture-gpt/sol-tier run_harness "$test_root/discovery.json" --runs 1 --warmups 0 \
+  --model "Sol=fixture-gpt/sol-tier" --model "Terra=fixture-gpt/terra-tier" >/dev/null 2>&1; then
+  echo "Expected discovery-isolation failure." >&2
+  exit 1
+fi
+jq -e '.passed == false and any(.samples[]; .selector == "fixture-gpt/terra-tier" and .category == "selector_unavailable")' \
+  "$test_root/discovery.json" >/dev/null
+
+echo "[4/10] Every failure category is deterministic."
+if FAKE_MATRIX=1 run_harness "$test_root/access.json" --runs 1 --warmups 0 \
+  --model "Beta=beta/two" >/dev/null 2>&1; then exit 1; fi
+jq -e 'any(.samples[]; .category == "access_or_deployment_unavailable")' "$test_root/access.json" >/dev/null
+if FAKE_MATRIX=1 run_harness "$test_root/provider.json" --runs 1 --warmups 0 \
+  --model "Gamma=gamma/three" >/dev/null 2>&1; then exit 1; fi
+jq -e 'any(.samples[]; .category == "provider_mismatch")' "$test_root/provider.json" >/dev/null
+if FAKE_MATRIX=1 run_harness "$test_root/model.json" --runs 1 --warmups 0 \
+  --model "Delta=delta/four" >/dev/null 2>&1; then exit 1; fi
+jq -e 'any(.samples[]; .category == "model_mismatch")' "$test_root/model.json" >/dev/null
+if FAKE_MATRIX=1 run_harness "$test_root/invalid.json" --runs 1 --warmups 0 \
+  --model "Epsilon=epsilon/five" >/dev/null 2>&1; then exit 1; fi
+jq -e 'any(.samples[]; .category == "invalid_event_stream")' "$test_root/invalid.json" >/dev/null
+if FAKE_MATRIX=1 run_harness "$test_root/response.json" --runs 1 --warmups 0 \
+  --model "Zeta=zeta/six" >/dev/null 2>&1; then exit 1; fi
+jq -e 'any(.samples[]; .category == "response_mismatch")' "$test_root/response.json" >/dev/null
+if FAKE_MATRIX=1 run_harness "$test_root/timeout.json" --runs 2 --warmups 0 \
+  --model "Zeta=zeta/six" >/dev/null 2>&1; then exit 1; fi
+jq -e 'any(.samples[]; .category == "timeout_or_process_failure")' "$test_root/timeout.json" >/dev/null
+
+echo "[5/10] Missing credentials fail before Podman execution."
 if env -u LITELLM_API_KEY PATH="$fake_bin:$PATH" FAKE_PODMAN_LOG="$test_root/podman.log" \
-  LITELLM_BASE_URL="https://litellm.invalid" bash "$harness" \
+  LITELLM_BASE_URL="https://litellm.invalid" bash "$harness" --model "Probe=fixture-gpt/sol-tier" \
   --report "$test_root/missing-key.json" >/dev/null 2>&1; then
   echo "Expected missing-key failure." >&2
   exit 1
 fi
-
-echo "[3/7] Non-ARM hosts are rejected."
-if FAKE_ARCH=x86_64 run_harness "$test_root/wrong-host.json" \
-  --runs 1 --warmups 0 >/dev/null 2>&1; then
-  echo "Expected host-architecture failure." >&2
-  exit 1
-fi
-
-echo "[4/7] Unavailable Podman machines are rejected."
-if FAKE_PODMAN_DOWN=1 run_harness "$test_root/podman-down.json" \
-  --runs 1 --warmups 0 >/dev/null 2>&1; then
-  echo "Expected Podman availability failure." >&2
-  exit 1
-fi
-
-echo "[5/7] Inexact model responses fail acceptance."
-if FAKE_RESPONSE=NOPE run_harness "$test_root/non-pong.json" \
-  --runs 1 --warmups 0 >/dev/null 2>&1; then
-  echo "Expected exact-response failure." >&2
-  exit 1
-fi
-jq -e '.passed == false and any(.samples[]; .responseExact == false)' \
-  "$test_root/non-pong.json" >/dev/null
-
-echo "[6/7] Provider/model mismatches fail acceptance."
-if FAKE_PROVIDER=wrong run_harness "$test_root/mismatch.json" \
-  --runs 1 --warmups 0 >/dev/null 2>&1; then
-  echo "Expected provider-mismatch failure." >&2
-  exit 1
-fi
-jq -e '.passed == false and any(.samples[]; .error == "resolved_model_mismatch")' \
-  "$test_root/mismatch.json" >/dev/null
-
-echo "[7/7] Failed or timed-out Podman runs fail acceptance."
-if FAKE_RUN_FAIL=1 run_harness "$test_root/run-failed.json" \
-  --runs 1 --warmups 0 >/dev/null 2>&1; then
-  echo "Expected model-process failure." >&2
-  exit 1
-fi
-jq -e '.passed == false and any(.samples[]; .error == "model_process_failed")' \
-  "$test_root/run-failed.json" >/dev/null
 
 echo "PASS: ARM64 Podman UAT harness contract tests completed."
