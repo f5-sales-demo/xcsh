@@ -9,6 +9,8 @@ runs=3
 warmups=1
 timeout_seconds=120
 report_path=""
+ca_cert=""
+custom_ca=false
 custom_models=false
 model_labels=()
 model_selectors=()
@@ -25,6 +27,7 @@ Options:
   --warmups N             Warmup runs per model (default: 1)
   --timeout-seconds N     Maximum seconds for each model invocation (default: 120)
   --report FILE           Secret-free JSON report path (default: $TMPDIR)
+  --ca-cert FILE         Trust an additional PEM CA in the Podman VM and test containers
   --model LABEL=SELECTOR  Add a model target; repeatable
   -h, --help              Show this help
 
@@ -99,6 +102,11 @@ while [ "$#" -gt 0 ]; do
     timeout_seconds=$2
     shift 2
     ;;
+  --ca-cert)
+    [ "$#" -ge 2 ] || die "--ca-cert requires a value."
+    ca_cert=$2
+    shift 2
+    ;;
   --report)
     [ "$#" -ge 2 ] || die "--report requires a value."
     report_path=$2
@@ -136,6 +144,13 @@ command -v jq >/dev/null 2>&1 || die "jq is unavailable."
 [ -n "${LITELLM_API_KEY:-}" ] || die "LITELLM_API_KEY is required."
 
 podman info >/dev/null 2>&1 || die "Podman machine is not running. Start it with: podman machine start"
+if [ -n "$ca_cert" ]; then
+  [ -r "$ca_cert" ] || die "CA certificate is not readable: $ca_cert"
+  podman machine ssh --username root podman-machine-default \
+    'install -d -m 0755 /etc/pki/ca-trust/source/anchors && cat > /etc/pki/ca-trust/source/anchors/xcsh-uat.pem && update-ca-trust' \
+    <"$ca_cert" || die "Unable to install the additional CA in the Podman VM."
+  custom_ca=true
+fi
 
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
 if [ -z "$report_path" ]; then
@@ -184,6 +199,12 @@ base_run_options=(
   --tmpfs "/tmp:rw,nosuid,nodev,size=1g,mode=1777"
   --tmpfs "/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=0700,uid=1000,gid=1000"
 )
+if [ "$custom_ca" = true ]; then
+  base_run_options+=(
+    --volume "$ca_cert:/etc/xcsh/uat-ca.pem:ro"
+    --env NODE_EXTRA_CA_CERTS=/etc/xcsh/uat-ca.pem
+  )
+fi
 
 runtime_machine=$(podman "${base_run_options[@]}" --entrypoint uname "$image" -m)
 [ "$runtime_machine" = "aarch64" ] ||
@@ -346,6 +367,7 @@ jq -s \
   --argjson warmups "$warmups" \
   --argjson timeoutSeconds "$timeout_seconds" \
   --argjson passed "$passed" \
+  --argjson customCa "$custom_ca" \
   '{
     schemaVersion: 1,
     createdAt: $createdAt,
@@ -366,7 +388,8 @@ jq -s \
     config: {
       runs: $runs,
       warmups: $warmups,
-      timeoutSeconds: $timeoutSeconds
+      timeoutSeconds: $timeoutSeconds,
+      customCa: $customCa
     },
     samples: .
   }' "$samples_file" >"$report_path"

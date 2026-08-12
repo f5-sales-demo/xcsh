@@ -38,6 +38,9 @@ case "${1:-} ${2:-}" in
 "info ")
   [ "${FAKE_PODMAN_DOWN:-0}" = 0 ]
   ;;
+"machine ssh")
+  exit 0
+  ;;
 "manifest inspect")
   cat <<'JSON'
 {"schemaVersion":2,"manifests":[{"digest":"sha256:arm64child","platform":{"architecture":"arm64","os":"linux"}},{"digest":"sha256:amd64child","platform":{"architecture":"amd64","os":"linux"}}]}
@@ -102,6 +105,7 @@ JSON
 esac
 FAKE_PODMAN
 chmod +x "$fake_bin/uname" "$fake_bin/podman"
+printf '%s\n' '-----BEGIN CERTIFICATE-----' 'test-ca' '-----END CERTIFICATE-----' >"$test_root/ca.pem"
 
 run_harness() {
   local output_file=$1
@@ -115,13 +119,14 @@ run_harness() {
 
 echo "[1/7] Happy path exercises the default matrix."
 : >"$test_root/podman.log"
-run_harness "$test_root/happy.json"
+run_harness "$test_root/happy.json" --ca-cert "$test_root/ca.pem"
 jq -e '
   .passed == true and
   .host.architecture == "arm64" and
   .image.runtimeMachine == "aarch64" and
   .image.xcshVersion == "xcsh/20.15.0" and
   ([.samples[] | select(.phase == "warmup")] | length) == 2 and
+  .config.customCa == true and
   ([.samples[] | select(.phase == "measured")] | length) == 6 and
   all(.samples[];
     .success and
