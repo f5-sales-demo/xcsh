@@ -1,12 +1,11 @@
 ---
-title: Run xcsh in an Alpine container
-description: Build or run the non-root xcsh Alpine image and optionally verify mounted cloud CLI sessions.
+title: Run xcsh containers with Docker and Podman
+description: Build or run the non-root xcsh Alpine image with Docker, Compose, or native ARM64 Podman UAT.
 ---
 
-Tagged xcsh releases publish an image to GitHub Container Registry (GHCR) as
-`ghcr.io/f5-sales-demo/xcsh`. The first package becomes available when a `v*`
-release tag runs the container workflow from the default branch. The image runs
-as the unprivileged `xcsh` user and includes the xcsh, Google Cloud, Azure,
+A `v*` xcsh tag triggers publication to GitHub Container Registry (GHCR) as
+`ghcr.io/f5-sales-demo/xcsh`. The image runs as the unprivileged `xcsh` user
+and includes the xcsh, Google Cloud, Azure,
 Amazon Web Services (AWS), GitHub, Salesforce, Bun, and Zig command-line
 interfaces (CLIs).
 
@@ -15,9 +14,11 @@ multi-platform image, so Docker selects the matching architecture automatically.
 
 ## Prerequisites
 
-Before you begin, install Docker Engine with the Compose plugin. To run the
-optional live tests, authenticate the Google Cloud and Azure CLIs on your host.
-Use only F5-owned labs or customer demo environments covered by an engagement.
+Install Docker Engine with the Compose plugin to use the development service.
+The optional native ARM64 Podman UAT has separate prerequisites below. To run
+the optional Compose live tests, authenticate the Google Cloud and Azure CLIs
+on your host. Use only authorized labs or customer demo environments covered by an
+engagement.
 
 Allow about 10 minutes for the first local build. The cloud CLIs make the image
 substantially larger than a minimal xcsh-only runtime.
@@ -30,10 +31,10 @@ After a tagged release finishes, pull the most recent stable image:
 docker pull ghcr.io/f5-sales-demo/xcsh:latest
 ```
 
-Releases also publish immutable `vX.Y.Z` tags and moving `X.Y` tags. Prefer a
-published immutable tag when reproducibility matters, for example
-`ghcr.io/f5-sales-demo/xcsh:vX.Y.Z` after replacing `X.Y.Z` with a release
-version.
+For stable release tags, publication creates a versioned `vX.Y.Z` tag, a moving
+`X.Y` tag, and `latest`. Registry tags can be repointed. For an immutable
+deployment reference, resolve and use the published OCI index digest in the
+form `ghcr.io/f5-sales-demo/xcsh@sha256:<digest>`.
 
 Run a non-interactive command through the image entrypoint:
 
@@ -82,10 +83,10 @@ The Compose service applies these controls:
 Read-only credentials can still be read by processes in the container. Mount
 them only into images and source trees you trust.
 
-## Configure the environment
+## Configure the Docker Compose environment
 
-The development and live user acceptance testing (UAT) scripts use these
-variables:
+The Docker Compose development and live user acceptance testing (UAT) scripts
+use these variables:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -123,7 +124,7 @@ This path builds the image, verifies the non-root identity and hardening
 settings, checks every bundled CLI, and tears down the service. It does not call
 Azure or Vertex AI.
 
-To test already-authorized F5 lab credentials, opt in explicitly:
+To test already-authorized lab credentials, opt in explicitly:
 
 ```bash
 ./scripts/e2e-user-install-test.sh --live
@@ -132,6 +133,74 @@ To test already-authorized F5 lab credentials, opt in explicitly:
 The live path verifies Azure CLI and Vertex AI access. It reports only pass or
 fail status; it does not print tokens, account identities, tenant or subscription
 names, project IDs, prompts, or model responses.
+
+## Run native ARM64 Podman UAT
+
+This optional release-acceptance workflow runs on an Apple Silicon Mac with
+Podman. It validates that the published OCI index resolves to a native ARM64
+runtime and that xcsh can make an authorized, deterministic request through an
+operator-supplied LiteLLM-compatible gateway. It is separate from the Docker
+Compose development service.
+
+Run it from a checkout that contains `scripts/uat-podman-arm64.sh`. You need a
+macOS ARM64 host, Podman, `jq`, a running Podman machine, and credentials for
+an endpoint that you are authorized to test. Do not put endpoint details or API
+keys in shell history, source control, issue reports, or the generated report.
+
+Start the machine, then collect the connection values without echoing the API
+key:
+
+```bash
+podman machine start
+read -r -p "LiteLLM base URL: " LITELLM_BASE_URL
+read -r -s -p "LiteLLM API key: " LITELLM_API_KEY
+printf '\n'
+export LITELLM_BASE_URL LITELLM_API_KEY
+```
+
+Supply a model matrix appropriate for your own implementation. Each repeatable
+`--model` value uses `LABEL=PROVIDER/MODEL`; supplying one or more values
+replaces the harness defaults:
+
+```bash
+report="${TMPDIR:-/tmp}/xcsh-podman-arm64-uat.json"
+./scripts/uat-podman-arm64.sh \
+  --report "$report" \
+  --model "Primary=provider/model" \
+  --model "Secondary=provider/model"
+```
+
+The harness uses one warmup and three measured requests per model by default.
+Use `--runs`, `--warmups`, or `--timeout-seconds` to tune that workload. Use
+`--image REF` only for an image that satisfies the repository's current release
+contract; the harness is not a general compatibility test for arbitrary image
+versions.
+
+Some environments require an additional registry CA. Pass only an approved PEM
+certificate with `--ca-cert /path/to/ca.pem`; TLS verification remains enabled.
+The certificate is installed in the default Podman VM trust store and persists
+after the run. Remove it when it is no longer needed:
+
+```bash
+podman machine ssh --username root podman-machine-default \
+  'rm -f /etc/pki/ca-trust/source/anchors/xcsh-uat.pem && update-ca-trust'
+```
+
+A passing run verifies the ARM64 manifest, native `aarch64` runtime, release
+version contract, exact acceptance response, and resolved provider/model
+attribution. The JSON report records only metadata, configuration, and pass/fail
+results; it excludes API keys, raw prompts, and raw model responses.
+
+The pull-request workflow runs native Docker container checks for both Linux
+architectures and a credential-free contract test for this harness. It does not
+run the credentialed macOS Podman request in CI.
+
+Stop the Podman machine when it is no longer needed. This preserves the image
+cache and the report file while releasing the VM resources:
+
+```bash
+podman machine stop
+```
 
 ## Verify
 
