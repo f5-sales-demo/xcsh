@@ -260,11 +260,11 @@ run_sample() {
     --timeout "$timeout_seconds" \
     --env LITELLM_BASE_URL \
     --env LITELLM_API_KEY \
-    "$image" \
     --entrypoint bash \
+    "$image" \
+    -c 'xcsh --list-models gpt-5.6-sol >/dev/null && exec xcsh "$@"' xcsh \
     --mode json \
     --no-session \
-    -c 'xcsh --list-models >/dev/null && exec xcsh "$@"' xcsh \
     --no-memories \
     --no-tools \
     --no-mcp \

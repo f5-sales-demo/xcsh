@@ -143,7 +143,7 @@ fi
 grep -Fq -- '/home/xcsh/.xcsh:rw,exec,nosuid,nodev,size=256m,mode=1777' "$test_root/podman.log"
 grep -Fq -- 'update-ca-trust' "$test_root/podman.log"
 grep -Fq -- '--entrypoint bash' "$test_root/podman.log"
-grep -Fq -- 'xcsh --list-models >/dev/null' "$test_root/podman.log"
+grep -Fq -- 'xcsh --list-models gpt-5.6-sol >/dev/null' "$test_root/podman.log"
 if grep -Fq 'test-secret-never-log' "$test_root/podman.log" "$test_root/happy.json"; then
   echo "Credential leaked into logs or report." >&2
   exit 1
