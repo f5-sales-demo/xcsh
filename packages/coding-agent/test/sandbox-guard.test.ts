@@ -17,8 +17,12 @@ let CWD: string;
 let OTHER: string;
 /** Removed after the file runs; these leaked `guard-*` directories into the OS temp dir (#2633). */
 let container: string;
+let sessionsDirCreated = false;
 
-afterAll(() => fs.rmSync(container, { recursive: true, force: true }));
+afterAll(() => {
+	fs.rmSync(container, { recursive: true, force: true });
+	if (sessionsDirCreated) fs.rmdirSync(getSessionsDir());
+});
 
 beforeAll(() => {
 	container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "xcsh-guard-")));
@@ -26,6 +30,12 @@ beforeAll(() => {
 	OTHER = path.join(container, "custB");
 	fs.mkdirSync(CWD);
 	fs.mkdirSync(OTHER);
+	// The read tool can enumerate only an existing directory; keep the fixture hermetic on clean CI homes.
+	const sessionsDir = getSessionsDir();
+	if (!fs.existsSync(sessionsDir)) {
+		fs.mkdirSync(sessionsDir, { recursive: true });
+		sessionsDirCreated = true;
+	}
 });
 
 interface ToolCallEvent {
