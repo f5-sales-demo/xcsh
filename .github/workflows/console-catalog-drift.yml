@@ -18,6 +18,10 @@ on:
     paths:
       - "packages/coding-agent/src/internal-urls/console-catalog.generated.ts"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 # Read-only: the job reads the console repo through RELEASE_TOKEN and only diffs
 # locally, so GITHUB_TOKEN needs no write scope.
 permissions:
@@ -25,9 +29,13 @@ permissions:
 
 jobs:
   drift-guard:
+    name: Console catalog drift guard
+    environment: release
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Read the console version the committed catalog records
         id: ver
@@ -58,8 +66,9 @@ jobs:
 
       - name: Check out the console repo at the recorded version
         if: steps.ver.outputs.checkable == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           repository: f5-sales-demo/console
           ref: ${{ steps.ver.outputs.ref }}
           path: console
@@ -80,6 +89,7 @@ jobs:
         working-directory: packages/coding-agent
         env:
           CONSOLE_CATALOG_DIR: ${{ github.workspace }}/console
+          WORKSPACE: ${{ github.workspace }}
           CONSOLE_CATALOG_VERSION: ${{ steps.ver.outputs.version }}
         run: |
           bun run generate-console-catalog
@@ -87,11 +97,11 @@ jobs:
           # format the regenerated file the same way before diffing (else formatting
           # noise reads as drift). Mirrors how the committed catalog is produced.
           bunx biome format --write src/internal-urls/console-catalog.generated.ts
-          if ! git -C "${{ github.workspace }}" diff --quiet -- \
+          if ! git -C "$WORKSPACE" diff --quiet -- \
               packages/coding-agent/src/internal-urls/console-catalog.generated.ts; then
             echo "::error::Committed console catalog does NOT match regenerating from console@${CONSOLE_CATALOG_VERSION}."
             echo "::error::Do not hand-edit generated files. Run: cd packages/coding-agent && bun run generate-console-catalog && bunx biome format --write src/internal-urls/console-catalog.generated.ts"
-            git -C "${{ github.workspace }}" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts
+            git -C "$WORKSPACE" --no-pager diff --stat -- packages/coding-agent/src/internal-urls/console-catalog.generated.ts
             exit 1
           fi
           echo "::notice::Console catalog is faithful to console@${CONSOLE_CATALOG_VERSION} — no drift."

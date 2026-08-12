@@ -45,7 +45,7 @@ import {
 type SearchDb = unknown;
 
 const MCP_CALL_TIMEOUT_MS = 60_000;
-const ajv = new Ajv({ allErrors: true, strict: false, logger: false });
+const ajv = new Ajv({ allErrors: false, strict: false, logger: false });
 
 /** Agent event types to forward for progress tracking. */
 const agentEventTypes = new Set<AgentEvent["type"]>([

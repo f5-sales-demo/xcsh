@@ -41,6 +41,7 @@ concurrency:
 
 jobs:
   tag:
+    environment: release
     name: Create immutable release tag
     # push path: only run when the head commit starts with the bump prefix.
     # workflow_dispatch path: always run (the extract step validates input).
@@ -51,8 +52,9 @@ jobs:
     permissions: {}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
 
@@ -144,6 +146,7 @@ jobs:
           SHA: ${{ steps.target.outputs.sha }}
         run: |
           set -euo pipefail
+          gh auth setup-git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "${TAG}" "${SHA}"

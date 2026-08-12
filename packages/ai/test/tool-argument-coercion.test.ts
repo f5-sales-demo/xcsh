@@ -587,6 +587,24 @@ describe("Tool argument coercion", () => {
 		expect(result.edits).toEqual([{ target: "fn_foo", op: "replace" }]);
 	});
 
+	it("does not coerce prototype-sensitive JSON Pointer paths", () => {
+		const schema = JSON.parse(
+			'{"type":"object","properties":{"__proto__":{"type":"number"}},"required":["__proto__"]}',
+		);
+		const tool: Tool = { name: "prototype-guard", description: "", parameters: schema };
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-prototype-guard",
+			name: "prototype-guard",
+			arguments: JSON.parse('{"__proto__":"not-a-number"}'),
+		};
+
+		const result = validateToolArguments(tool, toolCall) as Record<string, unknown>;
+		expect(Object.hasOwn(result, "__proto__")).toBe(true);
+		expect(Reflect.get(result, "__proto__")).toBe("not-a-number");
+		expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
+	});
+
 	it("does not heal deeply broken JSON strings", () => {
 		const tool: Tool = {
 			name: "heal-3",

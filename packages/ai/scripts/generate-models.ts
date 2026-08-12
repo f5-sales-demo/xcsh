@@ -92,7 +92,7 @@ async function fetchProviderModelsFromCatalog(descriptor: CatalogProviderDescrip
 		console.log(`Fetched ${models.length} models from ${descriptor.catalogDiscovery.label} model manager`);
 		return models;
 	} catch (error) {
-		console.error(`Failed to fetch ${descriptor.catalogDiscovery.label} models:`, error);
+		console.error("Failed to fetch %s models:", descriptor.catalogDiscovery.label, error);
 		return [];
 	}
 }

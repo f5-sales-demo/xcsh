@@ -24,7 +24,7 @@ export interface SubmitResultDetails {
 	error?: string;
 }
 
-const ajv = new Ajv({ allErrors: true, strict: false, logger: false });
+const ajv = new Ajv({ allErrors: false, strict: false, logger: false });
 
 function normalizeSchema(schema: unknown): { normalized?: unknown; error?: string } {
 	if (schema === undefined || schema === null) return {};

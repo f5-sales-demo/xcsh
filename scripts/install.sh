@@ -14,6 +14,7 @@ REPO="f5-sales-demo/xcsh"
 PACKAGE="@f5-sales-demo/xcsh"
 INSTALL_DIR="${PI_INSTALL_DIR:-$HOME/.local/bin}"
 MIN_BUN_VERSION="1.3.7"
+BUN_INSTALL_VERSION="1.3.14"
 
 # Parse arguments
 MODE=""
@@ -122,14 +123,70 @@ has_git() {
 
 # Install bun
 install_bun() {
-  echo "Installing bun..."
-  if command -v bash >/dev/null 2>&1; then
-    curl -fsSL https://bun.sh/install | bash
+  echo "Installing bun ${BUN_INSTALL_VERSION}..."
+
+  for command_name in curl unzip; do
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+      echo "$command_name is required to install Bun"
+      exit 1
+    fi
+  done
+
+  case "$(uname -s)" in
+  Linux) bun_platform="linux" ;;
+  Darwin) bun_platform="darwin" ;;
+  *)
+    echo "Unsupported Bun installation platform: $(uname -s)"
+    exit 1
+    ;;
+  esac
+
+  case "$(uname -m)" in
+  x86_64 | amd64) bun_arch="x64" ;;
+  arm64 | aarch64) bun_arch="aarch64" ;;
+  *)
+    echo "Unsupported Bun installation architecture: $(uname -m)"
+    exit 1
+    ;;
+  esac
+
+  bun_asset="bun-${bun_platform}-${bun_arch}.zip"
+  case "$bun_asset" in
+  bun-darwin-aarch64.zip) bun_sha256="d8b96221828ad6f97ac7ac0ab7e95872341af763001e8803e8267652c2652620" ;;
+  bun-darwin-x64.zip) bun_sha256="4183df3374623e5bab315c547cfa0974533cd457d86b73b639f7a87974cd6633" ;;
+  bun-linux-aarch64.zip) bun_sha256="a27ffb63a8310375836e0d6f668ae17fa8d8d18b88c37c821c65331973a19a3b" ;;
+  bun-linux-x64.zip) bun_sha256="951ee2aee855f08595aeec6225226a298d3fea83a3dcd6465c09cbccdf7e848f" ;;
+  *)
+    echo "No checksum configured for ${bun_asset}"
+    exit 1
+    ;;
+  esac
+
+  bun_tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "$bun_tmp_dir"' EXIT
+  bun_archive="$bun_tmp_dir/$bun_asset"
+  bun_url="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_INSTALL_VERSION}/${bun_asset}"
+  curl --proto '=https' --tlsv1.2 -fsSLo "$bun_archive" "$bun_url"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    bun_actual_sha256=$(sha256sum "$bun_archive" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    bun_actual_sha256=$(shasum -a 256 "$bun_archive" | awk '{print $1}')
   else
-    echo "bash not found; attempting install with sh..."
-    curl -fsSL https://bun.sh/install | sh
+    echo "sha256sum or shasum is required to verify Bun"
+    exit 1
   fi
-  export BUN_INSTALL="$HOME/.bun"
+
+  if [ "$bun_actual_sha256" != "$bun_sha256" ]; then
+    echo "Bun archive checksum verification failed"
+    exit 1
+  fi
+
+  unzip -q "$bun_archive" -d "$bun_tmp_dir"
+  export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+  mkdir -p "$BUN_INSTALL/bin"
+  mv "$bun_tmp_dir/bun-${bun_platform}-${bun_arch}/bun" "$BUN_INSTALL/bin/bun"
+  chmod 0755 "$BUN_INSTALL/bin/bun"
   export PATH="$BUN_INSTALL/bin:$PATH"
   require_bun_version
 }

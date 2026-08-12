@@ -122,6 +122,18 @@ describe("Settings", () => {
 		});
 	});
 
+	it("rejects prototype-sensitive runtime override paths", async () => {
+		const settings = await Settings.init({ cwd: projectDir, agentDir, inMemory: true });
+		const runtimeSettings = settings as unknown as {
+			override(path: string, value: unknown): void;
+			clearOverride(path: string): void;
+		};
+
+		expect(() => runtimeSettings.override("__proto__.polluted", true)).toThrow("Unsafe settings path");
+		expect(() => runtimeSettings.clearOverride("constructor.prototype")).toThrow("Unsafe settings path");
+		expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
+	});
+
 	describe.skipIf(process.platform === "win32")("config file permissions", () => {
 		it("restores owner-only permissions when rewriting config.yml", async () => {
 			fs.writeFileSync(getConfigPath(), "modelRoles:\n  default: anthropic/claude-opus-5\n", { mode: 0o644 });

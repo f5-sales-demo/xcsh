@@ -226,7 +226,7 @@ function loadNative() {
 			return bindings;
 		} catch (err) {
 			if (process.env.PI_DEV) {
-				console.error(`Error loading native addon from ${candidate}:`, err);
+				console.error("Error loading native addon from %s:", candidate, err);
 			}
 			const message = err instanceof Error ? err.message : String(err);
 			errors.push(`${candidate}: ${message}`);

@@ -43,14 +43,16 @@ jobs:
     name: check
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -101,8 +103,9 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - run: bun install --frozen-lockfile
@@ -119,7 +122,9 @@ jobs:
         os: [ubuntu-22.04, macos-15-intel, macos-14, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup Zig 0.15.2
         uses: ./.github/actions/setup-zig
       - name: Verify Zig
@@ -150,14 +155,16 @@ jobs:
     env:
       RUST_TARGET: ${{ matrix.target }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           lfs: true
       - uses: ./.github/actions/setup-rust
         with:
           target: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          lookup-only: true
           key: ${{ matrix.target }}${{ matrix.variants }}
           cache-workspace-crates: true
       - name: Setup Bun 1.3
@@ -165,6 +172,7 @@ jobs:
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -266,7 +274,7 @@ jobs:
         if: matrix.sandbox_check
         run: bun test packages/coding-agent/test/sandbox-check.test.ts
       - name: Upload native addon(s)
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pi-natives-${{ matrix.platform }}-${{ matrix.arch }}${{ matrix.variants && format('-{0}', matrix.variants) || '' }}
           path: packages/natives/native/pi_natives.${{ matrix.platform }}-${{ matrix.arch }}*.node
@@ -277,8 +285,9 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
           lfs: true
       - name: Setup Bun 1.3
@@ -286,6 +295,7 @@ jobs:
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -336,14 +346,16 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - uses: ./.github/actions/setup-rust
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          lookup-only: true
           cache-workspace-crates: true
       - name: Setup Zig 0.15.2
         uses: ./.github/actions/setup-zig
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - uses: taiki-e/install-action@41049aa56687c35e0afa74eed4f09cec4f9afabf # v2.85.2
@@ -381,14 +393,16 @@ jobs:
     name: Test installation methods
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           lfs: true
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -439,14 +453,16 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - uses: ./.github/actions/setup-rust
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
+          lookup-only: true
           cache-workspace-crates: true
       - name: Setup Zig 0.15.2
         uses: ./.github/actions/setup-zig
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - name: Install system deps
@@ -462,18 +478,21 @@ jobs:
   # Invalidate already-green release PRs immediately when their recorded base
   # falls behind main. Release creation remains in auto-release after full CI.
   invalidate-stale-release-prs:
+    environment: release
     name: Invalidate stale release pull requests
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     permissions: {}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Close release PRs based on stale main
         env:
@@ -481,14 +500,16 @@ jobs:
         run: bun scripts/release.ts invalidate-stale
 
   auto-release:
+    environment: release
     name: Prepare automatic release
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
     needs: [check, native, test, install_methods]
     runs-on: ubuntu-22.04
     permissions: {}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
       - name: Setup Bun 1.3
@@ -496,6 +517,7 @@ jobs:
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -546,8 +568,9 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - run: bun install --frozen-lockfile
@@ -562,13 +585,15 @@ jobs:
 
   # Build Linux + Windows binaries on Ubuntu
   build-release:
+    environment: release
     name: Build Linux and Windows release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [check, native, test, install_methods]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.3
@@ -576,6 +601,7 @@ jobs:
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -626,13 +652,14 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - run: bun install --frozen-lockfile
       - name: Download native addons
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: pi-natives-*
           path: packages/natives/native
@@ -651,7 +678,7 @@ jobs:
       - name: Stage native addons for release
         run: cp packages/natives/native/*.node packages/coding-agent/binaries/
       - name: Upload release binaries
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-binaries-linux-win
           path: packages/coding-agent/binaries/*
@@ -659,6 +686,7 @@ jobs:
 
   # Build macOS binaries natively on matching architecture, then sign and notarize
   build-sign-macos:
+    environment: release
     name: Build and sign macOS (${{ matrix.arch }})
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [check, native, test, install_methods]
@@ -674,8 +702,9 @@ jobs:
     env:
       RELEASE_ARCH: ${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.3
@@ -683,6 +712,7 @@ jobs:
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -733,8 +763,9 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ matrix.arch }}-${{ hashFiles('**/bun.lock') }}
       - name: Install dependencies
@@ -742,7 +773,7 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: "true"
       - name: Download macOS native addons
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: pi-natives-darwin-${{ matrix.arch }}*
           path: packages/natives/native
@@ -988,7 +1019,7 @@ jobs:
         run: bun test packages/coding-agent/test/sandbox-check.test.ts
 
       - name: Upload signed macOS binary
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-binaries-macos-${{ matrix.arch }}-signed
           path: packages/coding-agent/binaries/*
@@ -996,26 +1027,29 @@ jobs:
 
   # Collect all artifacts and create the GitHub Release
   create-release:
+    environment: release
     name: Publish immutable GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-release, build-sign-macos]
     runs-on: ubuntu-22.04
     permissions: {}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Download Linux/Windows binaries
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-binaries-linux-win
           path: packages/coding-agent/binaries
       - name: Download signed macOS binaries
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: release-binaries-macos-*-signed
           path: packages/coding-agent/binaries
@@ -1056,19 +1090,22 @@ jobs:
 
   # Package Homebrew archives from signed binaries and update the tap
   update-homebrew:
+    environment: release
     name: Publish Homebrew formula
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [create-release]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -1119,8 +1156,9 @@ jobs:
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - run: bun install --frozen-lockfile
@@ -1146,14 +1184,17 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
+          no-cache: true
           bun-version: "1.3"
       - run: bun install --frozen-lockfile
       - name: Download signed native addon for the live-profile harness
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-binaries-macos-arm64-signed
           path: packages/natives/native
@@ -1209,6 +1250,7 @@ jobs:
 
   # Publish to npm
   publish-npm:
+    environment: release
     name: Publish npm packages
     if: startsWith(github.ref, 'refs/tags/v') && !inputs.skip_npm
     needs: [create-release]
@@ -1218,8 +1260,9 @@ jobs:
     permissions:
       id-token: write # Required for npm trusted-publishing provenance.
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
       - name: Setup Bun 1.3
@@ -1227,6 +1270,7 @@ jobs:
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -1276,18 +1320,17 @@ jobs:
           fi
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          registry-url: "https://registry.npmjs.org"
+      - name: Verify runner Node.js
+        run: node --version && npm --version
       - name: Cache bun dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
+          lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
       - run: bun install --frozen-lockfile
       - name: Download native addon artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: pi-natives-*
           path: packages/natives/native
@@ -1321,15 +1364,17 @@ jobs:
     needs: [publish-npm]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: "24"
+          persist-credentials: false
+      - name: Verify runner Node.js
+        run: node --version && npm --version
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
         with:
+          no-cache: true
           bun-version: "1.3"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
@@ -1384,61 +1429,11 @@ jobs:
       # live-profile verification harness below.
       - run: bun install --frozen-lockfile
       - name: Download native addon for the live-profile harness
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: release-binaries-linux-win
           path: packages/natives/native
       - name: Install xcsh via npm and verify native addon loads
         env:
           EXPECTED_VERSION: ${{ github.ref_name }}
-        # zizmor: ignore[adhoc-packages]
-        run: |
-          set -euo pipefail
-
-          # Strip leading 'v' from tag to get semver (v17.0.0 -> 17.0.0)
-          expected="${EXPECTED_VERSION#v}"
-          max_attempts=8
-          delay=10
-
-          echo "Expected version: $expected"
-
-          for attempt in $(seq 1 $max_attempts); do
-            echo ""
-            echo "=== Attempt $attempt/$max_attempts (backoff: ${delay}s) ==="
-
-            # Clear any previously installed version
-            npm uninstall -g @f5-sales-demo/xcsh 2>/dev/null || true
-            npm cache clean --force 2>/dev/null || true
-
-            # Install the specific version to avoid stale CDN cache
-            if npm install -g "@f5-sales-demo/xcsh@${expected}" 2>&1; then
-              installed=$(xcsh --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
-              echo "Installed version: $installed"
-
-              if [ "$installed" = "$expected" ]; then
-                echo "Version match confirmed."
-                echo "Checking xcsh --help..."
-                xcsh --help >/dev/null
-                binary="$(command -v xcsh)"
-                XCSH_TEST_SANDBOX_CHECK_BINARY="$binary" \
-                  bun test packages/coding-agent/test/sandbox-check.test.ts
-                echo "npm install verification passed"
-                exit 0
-              fi
-
-              echo "Version mismatch: got $installed, expected $expected"
-            else
-              echo "npm install failed (exit $?)"
-            fi
-
-            if [ "$attempt" -eq "$max_attempts" ]; then
-              echo "ERROR: verification failed after $max_attempts attempts"
-              echo "Last installed version: ${installed:-none}"
-              echo "Expected version: $expected"
-              exit 1
-            fi
-
-            echo "Waiting ${delay}s for npm registry propagation..."
-            sleep $delay
-            delay=$((delay * 2))
-          done
+        run: bash scripts/ci-verify-npm-install.sh

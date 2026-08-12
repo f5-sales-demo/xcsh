@@ -13,14 +13,16 @@ permissions: {}
 
 jobs:
   update-api-specs:
+    environment: release
     name: Deliver Published API Specifications
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     permissions: {}
     steps:
       - name: Check out fresh main
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
           ref: main
@@ -301,7 +303,7 @@ jobs:
 
       - name: Cache bun dependencies
         if: steps.main_delivery.outputs.applied != 'true'
-        uses: actions/cache@v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
@@ -369,9 +371,11 @@ jobs:
         if: steps.main_delivery.outputs.applied != 'true' && steps.main_pending.outputs.pending != 'true'
         env:
           BRANCH: ${{ steps.delivery.outputs.branch }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           SPEC_VERSION: ${{ steps.delivery.outputs.version }}
         run: |
           set -euo pipefail
+          gh auth setup-git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -f packages/coding-agent/src/internal-urls/api-spec-index.generated.ts
@@ -635,8 +639,10 @@ jobs:
           PUBLICATION_LEDGER_PATH: ${{ steps.delivery.outputs.publication_ledger_path }}
           PUBLICATION_RECEIPT_FILE: ${{ steps.publication.outputs.receipt_path }}
           SPEC_VERSION: ${{ steps.delivery.outputs.version }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           set -euo pipefail
+          gh auth setup-git
           git fetch --no-tags origin main
           if git ls-remote --exit-code --heads origin "$ACK_BRANCH" >/dev/null 2>&1; then
             git fetch --no-tags origin "$ACK_BRANCH:refs/remotes/origin/$ACK_BRANCH"

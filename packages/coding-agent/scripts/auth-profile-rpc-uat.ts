@@ -179,6 +179,12 @@ function requireAssistantText(text: string | null, expected: RegExp, check: stri
 	if (!text || !expected.test(text)) throw new Error(`${check} response did not satisfy ${expected}`);
 }
 
+function requireAssistantIncludes(text: string | null, expected: string, check: string): void {
+	if (!text?.toLocaleLowerCase().includes(expected.toLocaleLowerCase())) {
+		throw new Error(`${check} response did not include the expected literal text`);
+	}
+}
+
 function requireSuccessfulTool(events: AgentEvent[], toolName: string, expectedText?: string): void {
 	const event = events.find(
 		(candidate): candidate is Extract<AgentEvent, { type: "tool_execution_end" }> =>
@@ -213,7 +219,7 @@ export async function runRpcProfileScenario(options: {
 			undefined,
 			180_000,
 		);
-		requireAssistantText(await client.getLastAssistantText(), new RegExp(nonce, "i"), "multi-turn seed");
+		requireAssistantIncludes(await client.getLastAssistantText(), nonce, "multi-turn seed");
 	});
 
 	await run("multi-turn recall", async () => {
@@ -222,7 +228,7 @@ export async function runRpcProfileScenario(options: {
 			undefined,
 			180_000,
 		);
-		requireAssistantText(await client.getLastAssistantText(), new RegExp(nonce, "i"), "multi-turn recall");
+		requireAssistantIncludes(await client.getLastAssistantText(), nonce, "multi-turn recall");
 	});
 
 	await run("host tool call", async () => {
@@ -232,7 +238,7 @@ export async function runRpcProfileScenario(options: {
 			180_000,
 		);
 		requireSuccessfulTool(events, "uat_echo", `echo:${nonce}`);
-		requireAssistantText(await client.getLastAssistantText(), new RegExp(`echo:${nonce}`, "i"), "host tool");
+		requireAssistantIncludes(await client.getLastAssistantText(), `echo:${nonce}`, "host tool");
 	});
 
 	await run("direct image input", async () => {
