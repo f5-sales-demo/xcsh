@@ -49,9 +49,11 @@ jobs:
       - name: Setup Bun 1.3
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
+          no-cache: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'release' }}
           bun-version: "1.3"
 
       - name: Cache bun dependencies
+        if: ${{ !startsWith(github.ref, 'refs/tags/') && github.event_name != 'release' }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.bun/install/cache
