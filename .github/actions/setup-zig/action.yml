@@ -22,7 +22,9 @@ runs:
       shell: bash
       env:
         ZIG_VERSION: "0.15.2"
-      run: |
+      # Environment-file values below come only from fixed runner mappings and
+      # checksum-verified Zig release metadata, never from event-controlled data.
+      run: | # zizmor: ignore[github-env]
         set -euo pipefail
 
         case "$RUNNER_OS/$RUNNER_ARCH" in
