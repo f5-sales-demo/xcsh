@@ -4,7 +4,11 @@
 
 The production router is implemented at the `AgentSession` boundary. It supports explicit provider-qualified pools, utility/balanced/frontier tiers, off/shadow/auto modes, deterministic and hybrid classification, context eligibility, hysteresis, manual pins, escalation and rollback, read-only delegation, persistence, telemetry, and route commands.
 
-The authenticated routing-matrix harness was redesigned under issue #3114 and extended for subscription routing under issue #3129. The implementation now has provider-sticky Google Antigravity and OpenAI Codex profiles, entitlement-scoped inventory discovery through xcsh's existing OAuth storage, tier-specific reasoning effort, and response-body attribution for both transports. Its deterministic and mocked-network evidence is authoritative for code paths, but this iteration is not empirically complete until a clean exact-`origin/main` report proves the two subscription lanes through real authenticated inference.
+The authenticated routing-matrix harness was redesigned under issue #3114 and extended for subscription routing under issue #3129.
+The implementation now has provider-sticky Google Antigravity and OpenAI Codex profiles, entitlement-scoped inventory discovery
+through xcsh's existing OAuth storage, tier-specific reasoning effort, and response-body attribution for both transports. Its
+deterministic and mocked-network evidence is authoritative for code paths, but this iteration is not empirically complete until
+a clean exact-`origin/main` report proves the two subscription lanes through real authenticated inference.
 
 CI, unit tests, dry runs, bundled catalog entries, missing-credential BLOCKED results, and completion-auditor statements are not live acceptance evidence.
 
@@ -12,7 +16,10 @@ CI, unit tests, dry runs, bundled catalog entries, missing-credential BLOCKED re
 
 The legacy `canonical` benchmark profile retains direct OpenAI, direct Anthropic, LiteLLM OpenAI-family, LiteLLM Anthropic-family, and explicitly configured Google Vertex lanes. The `subscription` profile is the scope of issue #3129 and contains only Google Antigravity and OpenAI Codex. LiteLLM inference is explicitly out of scope for this iteration and must not be run as part of its UAT.
 
-The Google profile maps `smol` and `default` to `google-antigravity/gemini-3.6-flash-high:high`, and `slow` and `plan` to `google-antigravity/gemini-3.1-pro-high-vertex:high`. The Codex profile maps utility to Luna/low, balanced to Terra/medium, and frontier to Sol/high, with Sol/xhigh for a prior rejection or a complexity score of at least 90. Both profiles are provider-sticky and apply atomically only when every required model appears in fresh authenticated entitlement inventory.
+The Google profile maps `smol` and `default` to `google-antigravity/gemini-3.6-flash-high:high`, and `slow` and `plan` to
+`google-antigravity/gemini-3.1-pro-high-vertex:high`. The Codex profile maps utility to Luna/low, balanced to Terra/medium,
+and frontier to Sol/high, with Sol/xhigh for a prior rejection or a complexity score of at least 90. Both profiles are
+provider-sticky and apply atomically only when every required model appears in fresh authenticated entitlement inventory.
 
 Other providers may opt in only through explicit capability and tier-pool configuration. Untiered providers remain on their selected model. Model names never imply tiers.
 
@@ -95,7 +102,10 @@ Statuses:
 - `SKIPPED_UNTIERED`: optional provider has no configured pool; illegal for canonical required lanes.
 - `SIMULATED`: dry-run row; never counted as PASS.
 
-The canonical defaults remain five warmups and 60 measured rows. The subscription profile defaults to two warmups and 24 measured rows (two lanes × four scenarios × three repetitions). `matrixComplete` requires exact counts and every live inventory, warmup, and measured row PASS. `authoritative` additionally requires non-dry execution, clean exact final HEAD, positive usage, declared response attribution, schema validation, recursive redaction, and secret-scan success.
+The canonical defaults remain five warmups and 60 measured rows. The subscription profile defaults to two warmups and
+24 measured rows (two lanes × four scenarios × three repetitions). `matrixComplete` requires exact counts and every live
+inventory, warmup, and measured row PASS. `authoritative` additionally requires non-dry execution, clean exact final HEAD,
+positive usage, declared response attribution, schema validation, recursive redaction, and secret-scan success.
 
 Exit codes are 0 for successful requested-mode execution, 1 for behavior/schema/security failure, 2 for an environmentally BLOCKED or incomplete required matrix, and 64 for invalid CLI configuration. A successful dry run may exit 0 but remains non-complete and non-authoritative.
 
