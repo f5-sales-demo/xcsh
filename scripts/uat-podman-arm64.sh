@@ -219,7 +219,7 @@ append_sample() {
   expected_provider=${selector%%/*}
   expected_model=${selector#"$expected_provider"/}
   jq -nc \
-    --arg label "$label" \
+    --arg sampleLabel "$label" \
     --arg selector "$selector" \
     --arg phase "$phase" \
     --argjson round "$round" \
@@ -231,7 +231,7 @@ append_sample() {
     --arg resolvedModel "$resolved_model" \
     --arg error "$error" \
     '{
-      label: $label,
+      "label": $sampleLabel,
       selector: $selector,
       phase: $phase,
       round: $round,
