@@ -15,6 +15,7 @@ import {
 	reconcileLaneInventory,
 	redactSecretStrings,
 	SUBSCRIPTION_LANE_IDS,
+	sanitizeDiagnostic,
 	validateContractIntegrity,
 	validateRoutingMatrixReport,
 } from "../scripts/bench-routing-matrix";
@@ -103,6 +104,9 @@ describe("routing matrix capability and scenario contract", () => {
 		const image = (message.content as any[]).find(block => block.type === "image");
 		expect(image.data.length).toBeGreaterThan(100);
 		expect(image.mimeType).toBe("image/png");
+		const png = Buffer.from(image.data, "base64");
+		expect(png.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+		expect(png[24]).toBe(8);
 	});
 });
 
@@ -358,6 +362,32 @@ describe("inventory reconciliation and evidence", () => {
 		});
 		expect(missing.status).toBe("FAIL");
 		expect(missing.reasonCode).toBe("missing_response_model");
+	});
+
+	it("reports provider behavioral errors before missing attribution", () => {
+		const failed = classifyMeasuredRun({
+			effectiveTier: "frontier",
+			expectedTier: "frontier",
+			requestedModel: "openai-codex/gpt-5.6-sol",
+			responseModel: undefined,
+			clientProvider: "openai-codex",
+			expectedClientProvider: "openai-codex",
+			responseContent: [],
+			expectedMarker: "ROUTE-7C",
+			stopReason: "error",
+			totalTokens: 0,
+			requireResponseModel: true,
+			error: "The image could not be decoded",
+		});
+		expect(failed).toEqual({ status: "FAIL", reasonCode: "behavioral_error" });
+	});
+
+	it("removes raw HTTP capture paths from provider diagnostics", () => {
+		expect(
+			sanitizeDiagnostic(
+				"Invalid image data\nraw-http-request=/home/example/.xcsh/logs/http-400-requests/request.json",
+			),
+		).toBe("Invalid image data");
 	});
 });
 
