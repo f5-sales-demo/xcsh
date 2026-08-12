@@ -69,6 +69,10 @@ const ANTIGRAVITY_VERTEX_MODELS: Readonly<Record<string, string>> = Object.freez
 	"gemini-3.1-pro-high-vertex": "gemini-3.1-pro-preview",
 });
 
+export function resolveAntigravityServingModelId(requestedModelId: string): string {
+	return ANTIGRAVITY_VERTEX_MODELS[requestedModelId] ?? requestedModelId;
+}
+
 /**
  * Build a User-Agent string that identifies as Gemini CLI to unlock higher rate limits.
  * Uses the same format as the official Gemini CLI (v0.35+):
@@ -477,6 +481,7 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 			api: "google-gemini-cli" as Api,
 			provider: model.provider,
 			model: model.id,
+			responseAttribution: { requestedModel: model.id },
 			usage: {
 				input: 0,
 				output: 0,
@@ -687,6 +692,14 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 					options?.signal,
 				)) {
 					const responseData = chunk.response ?? chunk;
+					if (responseData.modelVersion) {
+						output.responseAttribution = {
+							...(output.responseAttribution ?? { requestedModel: model.id }),
+							responseModel: responseData.modelVersion,
+							responseModelSource: "response-body",
+						};
+					}
+					if (responseData.responseId) output.responseId = responseData.responseId;
 
 					const candidate = responseData.candidates?.[0];
 					if (candidate?.content?.parts) {

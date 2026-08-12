@@ -1,15 +1,20 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import {
 	BASE_SCENARIOS,
+	CANONICAL_LANE_IDS,
 	classifyMeasuredRun,
 	computeExitCode,
 	createMultimodalMessage,
 	discoverLaneInventory,
+	discoverOAuthEntitlementInventory,
+	ESCALATION_SCENARIO,
 	expandLaneScenarios,
 	extractResponseText,
 	LANE_CAPABILITIES,
+	parseArgs,
 	reconcileLaneInventory,
 	redactSecretStrings,
+	SUBSCRIPTION_LANE_IDS,
 	validateContractIntegrity,
 	validateRoutingMatrixReport,
 } from "../scripts/bench-routing-matrix";
@@ -32,24 +37,52 @@ function capturedRequest(input: string | URL | Request, init?: RequestInit): Req
 }
 
 describe("routing matrix capability and scenario contract", () => {
-	it("declares five distinct required lanes and transports", () => {
-		expect(Object.keys(LANE_CAPABILITIES)).toEqual([
+	it("declares the canonical and subscription lane profiles independently", () => {
+		expect(CANONICAL_LANE_IDS).toEqual([
 			"openai",
 			"anthropic",
 			"litellm-openai",
 			"litellm-anthropic",
 			"google-vertex",
 		]);
+		expect(SUBSCRIPTION_LANE_IDS).toEqual(["google-antigravity", "openai-codex"]);
 		expect(LANE_CAPABILITIES.anthropic.clientProvider).toBe("anthropic");
 		expect(LANE_CAPABILITIES["litellm-anthropic"].clientProvider).toBe("anthropic");
 		expect(LANE_CAPABILITIES.anthropic.endpointKind).toBe("direct");
 		expect(LANE_CAPABILITIES["litellm-anthropic"].endpointKind).toBe("gateway");
 		expect(Object.values(LANE_CAPABILITIES).every(lane => lane.required)).toBe(true);
+		expect(parseArgs(["--profile", "subscription", "--dry-run"]).lanes).toEqual([
+			"google-antigravity",
+			"openai-codex",
+		]);
 	});
 
 	it("expands the canonical contract to 60 measured rows", () => {
-		const rows = expandLaneScenarios(Object.keys(LANE_CAPABILITIES), 3);
+		const rows = expandLaneScenarios([...CANONICAL_LANE_IDS], 3);
 		expect(rows).toHaveLength(60);
+	});
+
+	it("maps subscription tiers to the reviewed models and reasoning levels", () => {
+		expect(LANE_CAPABILITIES["google-antigravity"]).toMatchObject({
+			tiers: {
+				utility: "gemini-3.6-flash-high",
+				balanced: "gemini-3.6-flash-high",
+				frontier: "gemini-3.1-pro-high-vertex",
+			},
+			effortPolicy: { byTier: { utility: "high", balanced: "high", frontier: "high" } },
+		});
+		expect(LANE_CAPABILITIES["openai-codex"]).toMatchObject({
+			tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
+			effortPolicy: {
+				byTier: { utility: "low", balanced: "medium", frontier: "high" },
+				frontierEscalation: { effort: "xhigh", minimumComplexityScore: 90 },
+			},
+		});
+		expect(ESCALATION_SCENARIO).toMatchObject({ expectedTier: "frontier", priorRejection: true });
+		expect(
+			parseArgs(["--profile", "subscription", "--lanes", "openai-codex", "--scenarios", "rejection-escalation"])
+				.scenarios,
+		).toEqual(["rejection-escalation"]);
 	});
 
 	it("profiles every scenario to its declared tier", () => {
@@ -74,6 +107,84 @@ describe("routing matrix capability and scenario contract", () => {
 });
 
 describe("provider-specific authenticated inventory", () => {
+	it("accepts only fresh OAuth entitlement discovery and preserves runtime model metadata", async () => {
+		const model = {
+			id: "gpt-5.6-luna",
+			provider: "openai-codex",
+			api: "openai-codex-responses",
+		} as any;
+		const result = await discoverOAuthEntitlementInventory(
+			LANE_CAPABILITIES["openai-codex"],
+			{ apiKey: "packed-oauth", authMechanism: "oauth-packed" },
+			async provider => ({
+				state: {
+					provider,
+					status: "ok",
+					optional: false,
+					stale: false,
+					models: ["gpt-5.6-luna"],
+				},
+				models: [model],
+			}),
+		);
+		expect(result.inventory.state).toBe("AVAILABLE");
+		expect(result.inventory.models).toEqual(["gpt-5.6-luna"]);
+		expect(result.models).toEqual([model]);
+	});
+
+	it("rejects cached entitlement inventory instead of falling back to bundled models", async () => {
+		const result = await discoverOAuthEntitlementInventory(
+			LANE_CAPABILITIES["google-antigravity"],
+			{ apiKey: "packed-oauth", authMechanism: "oauth-packed" },
+			async provider => ({
+				state: {
+					provider,
+					status: "cached",
+					optional: false,
+					stale: true,
+					models: ["gemini-3.6-flash-high"],
+				},
+				models: [],
+			}),
+		);
+		expect(result.inventory.state).toBe("BLOCKED_NETWORK");
+		expect(result.inventory.models).toEqual([]);
+		expect(result.inventory.reasonCode).toBe("stale_entitlement_inventory");
+	});
+
+	it("fails closed for missing OAuth, adapter state, empty entitlement, and incomplete metadata", async () => {
+		const capability = LANE_CAPABILITIES["openai-codex"];
+		const missingCredential = await discoverOAuthEntitlementInventory(capability, {}, async () => {
+			throw new Error("resolver must not run");
+		});
+		const missingState = await discoverOAuthEntitlementInventory(
+			capability,
+			{ apiKey: "packed-oauth", authMechanism: "oauth-packed" },
+			async () => ({ models: [] }),
+		);
+		const empty = await discoverOAuthEntitlementInventory(
+			capability,
+			{ apiKey: "packed-oauth", authMechanism: "oauth-packed" },
+			async provider => ({
+				state: { provider, status: "ok", optional: false, stale: false, models: [] },
+				models: [],
+			}),
+		);
+		const incomplete = await discoverOAuthEntitlementInventory(
+			capability,
+			{ apiKey: "packed-oauth", authMechanism: "oauth-packed" },
+			async provider => ({
+				state: { provider, status: "ok", optional: false, stale: false, models: ["gpt-5.6-luna"] },
+				models: [],
+			}),
+		);
+
+		expect(missingCredential.inventory.state).toBe("BLOCKED_AUTH");
+		expect(missingState.inventory.state).toBe("UNSUPPORTED_DISCOVERY");
+		expect(empty.inventory.state).toBe("FAIL_EMPTY_INVENTORY");
+		expect(incomplete.inventory.state).toBe("FAIL_SCHEMA");
+	});
+
 	it("uses OpenAI bearer auth and parses data records", async () => {
 		let request: Request | undefined;
 		const result = await discoverLaneInventory(
@@ -306,9 +417,17 @@ describe("contract, schema, and recursive security", () => {
 		expect(validateRoutingMatrixReport({ schemaVersion: 1 }).valid).toBe(false);
 		expect(
 			validateRoutingMatrixReport({
-				schemaVersion: 2,
+				schemaVersion: 3,
 				git: { commit: "abc", clean: true, exactHead: true },
-				parameters: { dryRun: false, repetitions: 3, warmups: 1, lanes: Object.keys(LANE_CAPABILITIES) },
+				parameters: {
+					profile: "canonical",
+					dryRun: false,
+					repetitions: 3,
+					warmups: 1,
+					lanes: [...CANONICAL_LANE_IDS],
+					scenarios: BASE_SCENARIOS.map(item => item.id),
+					timeoutMs: 20_000,
+				},
 				inventory: [],
 				warmups: [],
 				measured: [],

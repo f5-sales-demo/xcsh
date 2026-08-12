@@ -1225,32 +1225,60 @@ export async function findSmolModel(
 	modelRegistry: ModelLookupRegistry,
 	savedModel?: string,
 ): Promise<Model<Api> | undefined> {
+	return findPriorityRoleModel(modelRegistry, "smol", savedModel);
+}
+
+export async function findPriorityRoleModel(
+	modelRegistry: ModelLookupRegistry,
+	role: "smol" | "slow",
+	savedModel?: string,
+	fallbackToFirst = true,
+): Promise<Model<Api> | undefined> {
+	return resolvePriorityRoleCandidates(modelRegistry, role, savedModel, fallbackToFirst)[0];
+}
+
+/** Shared ordered candidates for role consumers that need fallback retries. */
+export function resolvePriorityRoleCandidates(
+	modelRegistry: ModelLookupRegistry,
+	role: "smol" | "slow",
+	savedModel?: string,
+	includeAllFallbacks = true,
+): Model<Api>[] {
 	const availableModels = modelRegistry.getAvailable();
-	if (availableModels.length === 0) return undefined;
+	if (availableModels.length === 0) return [];
+	const candidates: Model<Api>[] = [];
+	const add = (model: Model<Api> | undefined): void => {
+		if (!model) return;
+		if (candidates.some(item => item.provider === model.provider && item.id === model.id)) return;
+		candidates.push(model);
+	};
 
 	// 1. Try saved model from settings
 	if (savedModel) {
 		const match = resolveModelFromString(savedModel, availableModels, undefined, modelRegistry);
-		if (match) return match;
+		add(match);
 	}
 
 	// 2. Try priority chain
-	for (const pattern of MODEL_PRIO.smol) {
+	for (const pattern of MODEL_PRIO[role]) {
 		// Try exact match with provider prefix
 		const providerMatch = availableModels.find(m => `${m.provider}/${m.id}`.toLowerCase() === pattern);
-		if (providerMatch) return providerMatch;
+		add(providerMatch);
 
 		// Try exact match first
 		const exactMatch = parseModelPattern(pattern, availableModels, undefined, { modelRegistry }).model;
-		if (exactMatch) return exactMatch;
+		add(exactMatch);
 
 		// Try fuzzy match (substring)
-		const fuzzyMatch = availableModels.find(m => m.id.toLowerCase().includes(pattern));
-		if (fuzzyMatch) return fuzzyMatch;
+		const fuzzyMatch = availableModels.find(m => m.id.toLowerCase().includes(pattern.toLowerCase()));
+		add(fuzzyMatch);
 	}
 
-	// 3. Fallback to first available (same as default)
-	return availableModels[0];
+	// 3. Optional full fallback order for retrying consumers.
+	if (includeAllFallbacks) {
+		for (const model of availableModels) add(model);
+	}
+	return candidates;
 }
 
 /**
@@ -1265,26 +1293,5 @@ export async function findSlowModel(
 	modelRegistry: ModelLookupRegistry,
 	savedModel?: string,
 ): Promise<Model<Api> | undefined> {
-	const availableModels = modelRegistry.getAvailable();
-	if (availableModels.length === 0) return undefined;
-
-	// 1. Try saved model from settings
-	if (savedModel) {
-		const match = resolveModelFromString(savedModel, availableModels, undefined, modelRegistry);
-		if (match) return match;
-	}
-
-	// 2. Try priority chain
-	for (const pattern of MODEL_PRIO.slow) {
-		// Try exact match first
-		const exactMatch = parseModelPattern(pattern, availableModels, undefined, { modelRegistry }).model;
-		if (exactMatch) return exactMatch;
-
-		// Try fuzzy match (substring)
-		const fuzzyMatch = availableModels.find(m => m.id.toLowerCase().includes(pattern.toLowerCase()));
-		if (fuzzyMatch) return fuzzyMatch;
-	}
-
-	// 3. Fallback to first available (same as default)
-	return availableModels[0];
+	return findPriorityRoleModel(modelRegistry, "slow", savedModel);
 }

@@ -1,15 +1,18 @@
 import type { RoutingCoordinator } from "./coordinator";
+import { SUBSCRIPTION_ROUTING_PROFILES, type SubscriptionProfileId } from "./subscription-profiles";
 import type { RoutingMode } from "./types";
 
 export interface CommandContext {
 	coordinator: RoutingCoordinator;
 	currentModel: string;
 	mode: RoutingMode;
+	profile?: string;
 }
 
 export interface RouteCommandResult {
 	output: string;
 	newMode?: RoutingMode;
+	newProfile?: SubscriptionProfileId;
 }
 
 export async function handleRouteCommand(args: string[], ctx: CommandContext): Promise<RouteCommandResult> {
@@ -21,6 +24,7 @@ export async function handleRouteCommand(args: string[], ctx: CommandContext): P
 		case "status": {
 			const lines = [
 				`Routing Mode: ${ctx.mode}`,
+				`Routing Profile: ${ctx.profile ?? "none"}`,
 				`Active Model: ${ctx.currentModel}`,
 				`Active Tier: ${state.currentTier ?? "balanced"}`,
 				`Downshift Streak: ${state.downshiftStreak}`,
@@ -52,9 +56,19 @@ export async function handleRouteCommand(args: string[], ctx: CommandContext): P
 			};
 		}
 
+		case "profile": {
+			const profile = args[1] as SubscriptionProfileId | undefined;
+			if (!profile || !(profile in SUBSCRIPTION_ROUTING_PROFILES)) {
+				return {
+					output: `Usage: /route profile [${Object.keys(SUBSCRIPTION_ROUTING_PROFILES).join("|")}]`,
+				};
+			}
+			return { output: `Routing profile selected: ${profile}`, newProfile: profile };
+		}
+
 		default: {
 			return {
-				output: `Unknown /route subcommand '${subcommand}'. Usage: /route [status|off|shadow|auto]`,
+				output: `Unknown /route subcommand '${subcommand}'. Usage: /route [status|off|shadow|auto|profile]`,
 			};
 		}
 	}

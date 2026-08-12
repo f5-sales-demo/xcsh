@@ -68,6 +68,7 @@ describe("openai-codex streaming", () => {
 			`data: ${JSON.stringify({
 				type: "response.completed",
 				response: {
+					model: "gpt-5.1-codex-2026-08-01",
 					status: "completed",
 					usage: {
 						input_tokens: 5,
@@ -142,6 +143,11 @@ describe("openai-codex streaming", () => {
 			if (event.type === "done") {
 				sawDone = true;
 				expect(event.message.content.find(c => c.type === "text")?.text).toBe("Hello");
+				expect(event.message.responseAttribution).toEqual({
+					requestedModel: "gpt-5.1-codex",
+					responseModel: "gpt-5.1-codex-2026-08-01",
+					responseModelSource: "response-body",
+				});
 			}
 		}
 

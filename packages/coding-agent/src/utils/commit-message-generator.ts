@@ -7,9 +7,8 @@ import type { Api, Model } from "@f5-sales-demo/pi-ai";
 import { completeSimple } from "@f5-sales-demo/pi-ai";
 import { logger, prompt } from "@f5-sales-demo/pi-utils";
 import type { ModelRegistry } from "../config/model-registry";
-import { resolveModelRoleValue } from "../config/model-resolver";
+import { resolveModelRoleValue, resolvePriorityRoleCandidates } from "../config/model-resolver";
 import type { Settings } from "../config/settings";
-import MODEL_PRIO from "../priority.json" with { type: "json" };
 import commitSystemPrompt from "../prompts/system/commit-message-system.md" with { type: "text" };
 import { toReasoningEffort } from "../thinking";
 
@@ -56,13 +55,7 @@ function getSmolModelCandidates(
 	});
 	addCandidate(configuredSmol.model, configuredSmol.thinkingLevel);
 
-	for (const pattern of MODEL_PRIO.smol) {
-		const needle = pattern.toLowerCase();
-		addCandidate(availableModels.find(m => m.id.toLowerCase() === needle));
-		addCandidate(availableModels.find(m => m.id.toLowerCase().includes(needle)));
-	}
-
-	for (const model of availableModels) {
+	for (const model of resolvePriorityRoleCandidates(registry, "smol")) {
 		addCandidate(model);
 	}
 

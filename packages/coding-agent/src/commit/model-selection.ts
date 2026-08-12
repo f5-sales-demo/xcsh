@@ -2,13 +2,12 @@ import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Api, Model } from "@f5-sales-demo/pi-ai";
 import { MODEL_ROLE_IDS } from "../config/model-registry";
 import {
+	findPriorityRoleModel,
 	type ModelLookupRegistry,
-	parseModelPattern,
 	resolveModelRoleValue,
 	resolveRoleSelection,
 } from "../config/model-resolver";
 import type { Settings } from "../config/settings";
-import MODEL_PRIO from "../priority.json" with { type: "json" };
 
 export interface ResolvedCommitModel {
 	model: Model<Api>;
@@ -54,10 +53,8 @@ export async function resolveSmolModel(
 		if (apiKey) return { model: resolvedSmol.model, apiKey, thinkingLevel: resolvedSmol.thinkingLevel };
 	}
 
-	const matchPreferences = { usageOrder: settings.getStorage()?.getModelUsageOrder() };
-	for (const pattern of MODEL_PRIO.smol) {
-		const candidate = parseModelPattern(pattern, available, matchPreferences, { modelRegistry }).model;
-		if (!candidate) continue;
+	const candidate = await findPriorityRoleModel(modelRegistry, "smol", undefined, false);
+	if (candidate) {
 		const apiKey = await modelRegistry.getApiKey(candidate);
 		if (apiKey) return { model: candidate, apiKey };
 	}

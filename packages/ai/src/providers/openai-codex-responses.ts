@@ -385,6 +385,7 @@ function createAssistantOutput(model: Model<"openai-codex-responses">): Assistan
 		api: "openai-codex-responses" as Api,
 		provider: model.provider,
 		model: model.id,
+		responseAttribution: { requestedModel: model.id },
 		usage: createEmptyUsage(),
 		stopReason: "stop",
 		timestamp: Date.now(),
@@ -816,7 +817,8 @@ function handleCodexStreamEvent(args: {
 	}
 
 	if (eventType === "response.created") {
-		return handleResponseCreated(runtime, rawEvent);
+		handleResponseCreated(model, output, runtime, rawEvent);
+		return firstTokenTime;
 	}
 
 	if (eventType === "response.completed" || eventType === "response.done" || eventType === "response.incomplete") {
@@ -1011,13 +1013,27 @@ function handleOutputItemDone(
 	void model;
 }
 
-function handleResponseCreated(runtime: CodexStreamRuntime, rawEvent: Record<string, unknown>): number | undefined {
-	const response = (rawEvent as { response?: { id?: string } }).response;
+function handleResponseCreated(
+	model: Model<"openai-codex-responses">,
+	output: AssistantMessage,
+	runtime: CodexStreamRuntime,
+	rawEvent: Record<string, unknown>,
+): void {
+	const response = (rawEvent as { response?: { id?: string; model?: string } }).response;
+	if (typeof response?.id === "string" && response.id.length > 0) {
+		output.responseId = response.id;
+	}
+	if (typeof response?.model === "string" && response.model.length > 0) {
+		output.responseAttribution = {
+			...(output.responseAttribution ?? { requestedModel: model.id }),
+			responseModel: response.model,
+			responseModelSource: "response-body",
+		};
+	}
 	const state = runtime.websocketState;
 	if (runtime.transport === "websocket" && state && typeof response?.id === "string" && response.id.length > 0) {
 		state.lastResponseId = response.id;
 	}
-	return undefined;
 }
 
 function handleResponseCompleted(
@@ -1038,6 +1054,7 @@ function handleResponseCompleted(
 					input_tokens_details?: { cached_tokens?: number };
 				};
 				status?: string;
+				model?: string;
 			};
 		}
 	).response;
@@ -1055,6 +1072,13 @@ function handleResponseCompleted(
 	}
 	if (typeof response?.id === "string" && response.id.length > 0) {
 		output.responseId = response.id;
+	}
+	if (typeof response?.model === "string" && response.model.length > 0) {
+		output.responseAttribution = {
+			...(output.responseAttribution ?? { requestedModel: model.id }),
+			responseModel: response.model,
+			responseModelSource: "response-body",
+		};
 	}
 
 	const state = runtime.websocketState;

@@ -10,4 +10,5 @@ export * from "./presets";
 export * from "./profiler";
 export * from "./resolver";
 export * from "./state-machine";
+export * from "./subscription-profiles";
 export * from "./types";
