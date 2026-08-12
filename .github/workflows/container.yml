@@ -63,7 +63,7 @@ jobs:
 
   podman-uat-harness:
     name: podman-uat-harness
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -80,7 +80,7 @@ jobs:
     name: container-test
     if: always()
     needs: [container-build-amd64, container-build-arm64, podman-uat-harness]
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     timeout-minutes: 5
     steps:
       - name: Require architecture and harness tests

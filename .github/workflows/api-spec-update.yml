@@ -15,7 +15,7 @@ jobs:
   update-api-specs:
     environment: release
     name: Deliver Published API Specifications
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-22.04]
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     timeout-minutes: 360
     permissions: {}
     steps:
