@@ -340,10 +340,13 @@ async function tryContentNegotiation(
  * Read a single HTML attribute from a tag string
  */
 function getHtmlAttribute(tag: string, attribute: string): string | null {
-	const pattern = new RegExp(`\\b${attribute}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s"'=<>]+))`, "i");
-	const match = tag.match(pattern);
-	if (!match) return null;
-	return (match[1] ?? match[2] ?? match[3] ?? "").trim();
+	const attributes = tag.matchAll(/\s([^\s"'<>/=]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>]+))/g);
+	for (const match of attributes) {
+		if (match[1]?.toLowerCase() === attribute.toLowerCase()) {
+			return (match[2] ?? match[3] ?? match[4] ?? "").trim();
+		}
+	}
+	return null;
 }
 
 /**

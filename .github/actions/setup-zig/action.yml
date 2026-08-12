@@ -6,13 +6,13 @@ runs:
   using: composite
   steps:
     - name: Restore Zig release archive
-      uses: actions/cache@v5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/zig-downloads
         key: setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.15.2
 
     - name: Restore Zig build cache
-      uses: actions/cache@v5
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ github.workspace }}/.zig-cache
         key: setup-zig-cache-v3-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-0.15.2-${{ github.sha }}
@@ -22,7 +22,9 @@ runs:
       shell: bash
       env:
         ZIG_VERSION: "0.15.2"
-      run: |
+      # Environment-file values below come only from fixed runner mappings and
+      # checksum-verified Zig release metadata, never from event-controlled data.
+      run: | # zizmor: ignore[github-env]
         set -euo pipefail
 
         case "$RUNNER_OS/$RUNNER_ARCH" in

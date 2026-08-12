@@ -37,7 +37,7 @@ for (const dir of packageDirs) {
 		versionMap[pkg.name] = pkg.version;
 	} catch (e) {
 		const error = e as Error;
-		console.error(`Failed to read ${pkgPath}:`, error.message);
+		console.error("Failed to read %s:", pkgPath, error.message);
 	}
 }
 

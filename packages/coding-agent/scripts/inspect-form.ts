@@ -107,7 +107,7 @@ async function main() {
 		await Bun.sleep(2500);
 		const dump = await server.request("javascript_tool", { code: DUMP }, 15000);
 		const inputs = unwrapJs(dump.content) as Array<Record<string, unknown>>;
-		console.log(`\n=== ${resource}: ${inputs.length} visible inputs ===`);
+		console.log("\n=== %s: %d visible inputs ===", resource, inputs.length);
 		for (const i of inputs) {
 			console.log(
 				`  ${i.vis ? "VIS" : "hid"} <${i.tag}${i.type ? ` type=${i.type}` : ""}> @${JSON.stringify(i.xy)} ` +

@@ -75,16 +75,25 @@ export interface SettingsOptions {
 // Path Utilities
 // ═══════════════════════════════════════════════════════════════════════════
 
+const UNSAFE_PATH_SEGMENTS = new Set(["__proto__", "constructor", "prototype"]);
+
+function hasUnsafePathSegment(segments: string[]): boolean {
+	return segments.some(segment => segment.length === 0 || UNSAFE_PATH_SEGMENTS.has(segment));
+}
+
 /**
  * Get a nested value from an object by path segments.
  */
 function getByPath(obj: RawSettings, segments: string[]): unknown {
+	if (hasUnsafePathSegment(segments)) return undefined;
 	let current: unknown = obj;
 	for (const segment of segments) {
 		if (current === null || current === undefined || typeof current !== "object") {
 			return undefined;
 		}
-		current = (current as Record<string, unknown>)[segment];
+		const record = current as Record<string, unknown>;
+		if (!Object.hasOwn(record, segment)) return undefined;
+		current = record[segment];
 	}
 	return current;
 }
@@ -94,15 +103,25 @@ function getByPath(obj: RawSettings, segments: string[]): unknown {
  * Creates intermediate objects as needed.
  */
 function setByPath(obj: RawSettings, segments: string[], value: unknown): void {
+	if (hasUnsafePathSegment(segments)) throw new Error("Unsafe settings path");
 	let current = obj;
 	for (let i = 0; i < segments.length - 1; i++) {
 		const segment = segments[i];
-		if (!(segment in current) || typeof current[segment] !== "object" || current[segment] === null) {
-			current[segment] = {};
+		const existing = Object.hasOwn(current, segment) ? current[segment] : undefined;
+		if (typeof existing === "object" && existing !== null) {
+			current = existing as RawSettings;
+			continue;
 		}
-		current = current[segment] as RawSettings;
+		const child: RawSettings = {};
+		Object.defineProperty(current, segment, { configurable: true, enumerable: true, value: child, writable: true });
+		current = child;
 	}
-	current[segments[segments.length - 1]] = value;
+	Object.defineProperty(current, segments[segments.length - 1], {
+		configurable: true,
+		enumerable: true,
+		value,
+		writable: true,
+	});
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -247,13 +266,14 @@ export class Settings {
 	 */
 	clearOverride(path: SettingPath): void {
 		const segments = path.split(".");
+		if (hasUnsafePathSegment(segments)) throw new Error("Unsafe settings path");
 		let current = this.#overrides;
 		for (let i = 0; i < segments.length - 1; i++) {
 			const segment = segments[i];
-			if (!(segment in current)) return;
+			if (!Object.hasOwn(current, segment)) return;
 			current = current[segment] as RawSettings;
 		}
-		delete current[segments[segments.length - 1]];
+		Reflect.deleteProperty(current, segments[segments.length - 1]);
 		this.#rebuildMerged();
 	}
 

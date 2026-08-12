@@ -131,7 +131,7 @@ describe("authentication profile RPC UAT matrix", () => {
 	it("runs multi-turn recall, host tool, direct image, and inspect_image as one reusable scenario", async () => {
 		let lastText: string | null = null;
 		const prompts: Array<{ message: string; images?: ImageContent[] }> = [];
-		const nonce = "uat-litellm-gpt";
+		const nonce = "uat-[literal].*";
 		const client = {
 			async promptAndWait(message: string, images?: ImageContent[]): Promise<AgentEvent[]> {
 				prompts.push({ message, images });

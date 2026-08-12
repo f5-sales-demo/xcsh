@@ -73,7 +73,7 @@ try {
 	await Bun.write(HTML_OUT, formHtml);
 	console.log(`wrote ${HTML_OUT} (${formHtml.length} bytes)`);
 	const json = JSON.stringify(snap);
-	const roleCount = (role: string) => (json.match(new RegExp(`"role":"${role}"`, "g")) ?? []).length;
+	const roleCount = (role: string) => json.split(`"role":"${role}"`).length - 1;
 	console.log(`wrote ${OUT} (${json.length} bytes)`);
 	console.log(`url=${page.url().slice(0, 90)}`);
 	console.log(

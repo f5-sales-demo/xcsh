@@ -355,6 +355,8 @@ function getValueAtPointer(root: unknown, pointer: string): unknown {
 function setValueAtPointer(root: unknown, pointer: string, value: unknown): unknown {
 	if (!pointer) return value;
 	const segments = decodeJsonPointer(pointer);
+	const unsafeSegments = new Set(["__proto__", "constructor", "prototype"]);
+	if (segments.some(segment => segment.length === 0 || unsafeSegments.has(segment))) return root;
 	let current: unknown = root;
 
 	// Navigate to the parent of the target location
@@ -363,25 +365,32 @@ function setValueAtPointer(root: unknown, pointer: string, value: unknown): unkn
 		if (current === null || current === undefined) return root;
 		if (Array.isArray(current)) {
 			const arrayIndex = Number(segment);
-			if (!Number.isInteger(arrayIndex)) return root;
+			if (!Number.isInteger(arrayIndex) || arrayIndex < 0 || arrayIndex >= current.length) return root;
 			current = current[arrayIndex];
 			continue;
 		}
 		if (typeof current !== "object") return root;
-		current = (current as Record<string, unknown>)[segment];
+		const record = current as Record<string, unknown>;
+		if (!Object.hasOwn(record, segment)) return root;
+		current = record[segment];
 	}
 
 	// Set the value at the final segment
 	const lastSegment = segments[segments.length - 1];
 	if (Array.isArray(current)) {
 		const arrayIndex = Number(lastSegment);
-		if (!Number.isInteger(arrayIndex)) return root;
-		current[arrayIndex] = value;
+		if (!Number.isInteger(arrayIndex) || arrayIndex < 0 || arrayIndex >= current.length) return root;
+		Reflect.set(current, arrayIndex, value);
 		return root;
 	}
 
 	if (typeof current !== "object" || current === null) return root;
-	(current as Record<string, unknown>)[lastSegment] = value;
+	Object.defineProperty(current, lastSegment, {
+		configurable: true,
+		enumerable: true,
+		value,
+		writable: true,
+	});
 	return root;
 }
 
@@ -559,7 +568,7 @@ function coerceArgsFromErrors(
 // Silent logger: MCP servers may declare non-standard format keywords (e.g. "uint")
 // which cause Ajv to emit console.warn() with strict:false — corrupting TUI output.
 const ajv = new Ajv({
-	allErrors: true,
+	allErrors: false,
 	strict: false,
 	logger: false,
 });

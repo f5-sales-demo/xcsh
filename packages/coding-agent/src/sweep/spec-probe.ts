@@ -58,16 +58,25 @@ const PROTO_POISON = new Set(["__proto__", "constructor", "prototype"]);
 
 export function setPath(root: Json, dotted: string, value: unknown): void {
 	const parts = dotted.split(".");
-	if (parts.some(k => PROTO_POISON.has(k))) return;
+	if (parts.some(k => k.length === 0 || PROTO_POISON.has(k))) return;
 	let cur: Json = root;
 	for (let i = 0; i < parts.length - 1; i++) {
 		const k = parts[i]!;
-		if (!Object.hasOwn(cur, k) || typeof cur[k] !== "object" || cur[k] === null) {
-			cur[k] = {};
+		const existing = Object.hasOwn(cur, k) ? cur[k] : undefined;
+		if (typeof existing === "object" && existing !== null) {
+			cur = existing as Json;
+			continue;
 		}
-		cur = cur[k] as Json;
+		const child: Json = {};
+		Object.defineProperty(cur, k, { configurable: true, enumerable: true, value: child, writable: true });
+		cur = child;
 	}
-	cur[parts[parts.length - 1]!] = value;
+	Object.defineProperty(cur, parts[parts.length - 1]!, {
+		configurable: true,
+		enumerable: true,
+		value,
+		writable: true,
+	});
 }
 
 export function getPath(root: Json, dotted: string): unknown {

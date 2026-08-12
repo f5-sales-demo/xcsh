@@ -27,10 +27,15 @@ interface NuGetODataResponse {
 }
 
 function extractXmlField(xml: string, fieldName: string): string | null {
-	const pattern = new RegExp(`<d:${fieldName}[^>]*>([\\s\\S]*?)</d:${fieldName}>`, "i");
-	const match = xml.match(pattern);
-	if (!match) return null;
-	return match[1].trim();
+	const lowerXml = xml.toLowerCase();
+	const qualifiedName = `d:${fieldName.toLowerCase()}`;
+	const openStart = lowerXml.indexOf(`<${qualifiedName}`);
+	if (openStart === -1) return null;
+	const valueStart = lowerXml.indexOf(">", openStart + qualifiedName.length + 1);
+	if (valueStart === -1) return null;
+	const valueEnd = lowerXml.indexOf(`</${qualifiedName}>`, valueStart + 1);
+	if (valueEnd === -1) return null;
+	return xml.slice(valueStart + 1, valueEnd).trim();
 }
 
 /**

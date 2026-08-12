@@ -55,10 +55,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function parseOptionalField(section: string, label: string): string | null | undefined {
-	const regex = new RegExp(`(?:^|\\n)${label}:\\s*([^\\n]*)`);
-	const match = section.match(regex);
-	if (!match) return undefined;
-	const value = match[1].trim();
+	const prefix = `${label}:`;
+	const line = section.split("\n").find(candidate => candidate.startsWith(prefix));
+	if (!line) return undefined;
+	const value = line.slice(prefix.length).trim();
 	return value.length > 0 ? value : null;
 }
 

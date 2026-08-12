@@ -32,10 +32,9 @@ function compareVersions(a: string, b: string): number {
 }
 
 function extractCabalField(content: string, fieldName: string): string | undefined {
-	const pattern = new RegExp(`^${fieldName}:\\s*(.*)$`, "im");
-	const match = content.match(pattern);
-	if (!match) return undefined;
-	return match[1].trim();
+	const prefix = `${fieldName.toLowerCase()}:`;
+	const line = content.split("\n").find(candidate => candidate.toLowerCase().startsWith(prefix));
+	return line?.slice(prefix.length).trim();
 }
 
 function extractCabalDescription(content: string): string | undefined {

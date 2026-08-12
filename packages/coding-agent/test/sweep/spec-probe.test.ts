@@ -8,6 +8,8 @@ describe("setPath prototype-pollution guard", () => {
 		setPath(o, "constructor.prototype.polluted", "x");
 		expect(({} as any).polluted).toBeUndefined();
 		expect(Object.hasOwn(o, "__proto__")).toBe(false);
+		setPath(o, "safe..value", "x");
+		expect(Object.hasOwn(o, "safe")).toBe(false);
 	});
 	it("still sets normal nested paths", () => {
 		const o: Record<string, unknown> = {};
