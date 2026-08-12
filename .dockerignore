@@ -6,6 +6,7 @@
 **/dist
 **/node_modules
 **/target
+packages/natives/native/*.node
 *.core
 core
 .env

@@ -7,36 +7,55 @@ FROM ${ALPINE_IMAGE} AS tools
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
+ARG TARGETARCH
 ARG BUN_VERSION=1.3.14
-ARG BUN_SHA256=951ee2aee855f08595aeec6225226a298d3fea83a3dcd6465c09cbccdf7e848f
+ARG BUN_AMD64_SHA256=a063908ae08b7852ca10939bbdc6ceed3ddabce8fb9402dce83d65d73b36e6c7
+ARG BUN_ARM64_SHA256=a27ffb63a8310375836e0d6f668ae17fa8d8d18b88c37c821c65331973a19a3b
 ARG GCLOUD_VERSION=579.0.0
-ARG GCLOUD_SHA256=a9a7fbe51cda37cf6142b1bbcff12227550e60a6c67e8cf84644fb301371c4de
+ARG GCLOUD_AMD64_SHA256=a9a7fbe51cda37cf6142b1bbcff12227550e60a6c67e8cf84644fb301371c4de
+ARG GCLOUD_ARM64_SHA256=edc914b75f8c5d50e1efc78b849d6fa636c4412346784c148c4130f5dc3eba00
 ARG ZIG_VERSION=0.15.2
-ARG ZIG_SHA256=02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239
+ARG ZIG_AMD64_SHA256=02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239
+ARG ZIG_ARM64_SHA256=958ed7d1e00d0ea76590d27666efbf7a932281b3d7ba0c6b01b0ff26498f667f
 
 # hadolint ignore=DL3018
 RUN apk add --no-cache ca-certificates curl tar unzip xz
 
 WORKDIR /tmp/downloads
 
-RUN curl --fail --silent --show-error --location \
+RUN case "${TARGETARCH}" in \
+      amd64) bun_arch=x64-baseline; bun_sha256="${BUN_AMD64_SHA256}" ;; \
+      arm64) bun_arch=aarch64; bun_sha256="${BUN_ARM64_SHA256}" ;; \
+      *) echo "Unsupported TARGETARCH for Bun: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    curl --fail --silent --show-error --location \
       --output bun.zip \
-      "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip" && \
-    echo "${BUN_SHA256}  bun.zip" | sha256sum -c - && \
+      "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-${bun_arch}.zip" && \
+    echo "${bun_sha256}  bun.zip" | sha256sum -c - && \
     unzip -q bun.zip && \
-    install -D -m 0755 bun-linux-x64/bun /opt/bun/bin/bun
+    install -D -m 0755 "bun-linux-${bun_arch}/bun" /opt/bun/bin/bun
 
-RUN curl --fail --silent --show-error --location \
+RUN case "${TARGETARCH}" in \
+      amd64) gcloud_arch=x86_64; gcloud_sha256="${GCLOUD_AMD64_SHA256}" ;; \
+      arm64) gcloud_arch=arm; gcloud_sha256="${GCLOUD_ARM64_SHA256}" ;; \
+      *) echo "Unsupported TARGETARCH for Google Cloud CLI: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    curl --fail --silent --show-error --location \
       --output gcloud.tar.gz \
-      "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_VERSION}-linux-x86_64.tar.gz" && \
-    echo "${GCLOUD_SHA256}  gcloud.tar.gz" | sha256sum -c - && \
+      "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-${GCLOUD_VERSION}-linux-${gcloud_arch}.tar.gz" && \
+    echo "${gcloud_sha256}  gcloud.tar.gz" | sha256sum -c - && \
     mkdir -p /opt && \
     tar -xzf gcloud.tar.gz -C /opt
 
-RUN curl --fail --silent --show-error --location \
+RUN case "${TARGETARCH}" in \
+      amd64) zig_arch=x86_64; zig_sha256="${ZIG_AMD64_SHA256}" ;; \
+      arm64) zig_arch=aarch64; zig_sha256="${ZIG_ARM64_SHA256}" ;; \
+      *) echo "Unsupported TARGETARCH for Zig: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    curl --fail --silent --show-error --location \
       --output zig.tar.xz \
-      "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" && \
-    echo "${ZIG_SHA256}  zig.tar.xz" | sha256sum -c - && \
+      "https://ziglang.org/download/${ZIG_VERSION}/zig-${zig_arch}-linux-${ZIG_VERSION}.tar.xz" && \
+    echo "${zig_sha256}  zig.tar.xz" | sha256sum -c - && \
     mkdir -p /opt/zig && \
     tar -xJf zig.tar.xz --strip-components=1 -C /opt/zig
 
@@ -44,22 +63,29 @@ FROM ${BUILDER_IMAGE} AS builder
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+ARG TARGETARCH
 ARG RUST_TOOLCHAIN=nightly-2026-06-06
-ARG RUSTUP_INIT_SHA256=4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10
+ARG RUSTUP_INIT_AMD64_SHA256=4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10
+ARG RUSTUP_INIT_ARM64_SHA256=9732d6c5e2a098d3521fca8145d826ae0aaa067ef2385ead08e6feac88fa5792
 
 # hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       build-essential ca-certificates curl git libstdc++6 python3 && \
     rm -rf /var/lib/apt/lists/* && \
+    case "${TARGETARCH}" in \
+      amd64) rust_host=x86_64-unknown-linux-gnu; rustup_sha256="${RUSTUP_INIT_AMD64_SHA256}" ;; \
+      arm64) rust_host=aarch64-unknown-linux-gnu; rustup_sha256="${RUSTUP_INIT_ARM64_SHA256}" ;; \
+      *) echo "Unsupported TARGETARCH for Rust: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
     curl --fail --silent --show-error --location \
       --output /tmp/rustup-init \
-      https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init && \
-    echo "${RUSTUP_INIT_SHA256}  /tmp/rustup-init" | sha256sum -c - && \
+      "https://static.rust-lang.org/rustup/dist/${rust_host}/rustup-init" && \
+    echo "${rustup_sha256}  /tmp/rustup-init" | sha256sum -c - && \
     chmod 0755 /tmp/rustup-init && \
     /tmp/rustup-init -y \
       --profile minimal \
-      --default-host x86_64-unknown-linux-gnu \
+      --default-host "${rust_host}" \
       --default-toolchain "${RUST_TOOLCHAIN}" && \
     rm /tmp/rustup-init
 
@@ -68,7 +94,7 @@ COPY --from=tools /opt/zig /opt/zig
 
 ENV CARGO_HOME=/root/.cargo \
     RUSTUP_HOME=/root/.rustup \
-    RUSTUP_TOOLCHAIN=nightly-2026-06-06-x86_64-unknown-linux-gnu \
+    RUSTUP_TOOLCHAIN=nightly-2026-06-06 \
     PATH="/root/.cargo/bin:/opt/bun/bin:/opt/zig:${PATH}"
 WORKDIR /src
 COPY . .
@@ -82,10 +108,39 @@ ENV XCSH_BUILD_COMMIT=${XCSH_BUILD_COMMIT} \
 
 RUN bun install --frozen-lockfile --ignore-scripts && \
     bun --cwd=packages/coding-agent run generate-docs-index && \
+    case "${TARGETARCH}" in \
+      amd64) export TARGET_VARIANT=baseline ;; \
+      arm64) export RUSTFLAGS="-C target-cpu=generic" ;; \
+      *) echo "Unsupported TARGETARCH for native build: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
     bun --cwd=packages/natives run build
 
 RUN bun --cwd=packages/coding-agent run build && \
     test -x packages/coding-agent/dist/xcsh
+
+# Preserve the target architecture's glibc interpreter paths while exposing a
+# single architecture-neutral copy source to the runtime stage.
+RUN case "${TARGETARCH}" in \
+      amd64) \
+        gnu_triplet=x86_64-linux-gnu; \
+        loader=ld-linux-x86-64.so.2; \
+        loader_destination=/lib64/ld-linux-x86-64.so.2 \
+        ;; \
+      arm64) \
+        gnu_triplet=aarch64-linux-gnu; \
+        loader=ld-linux-aarch64.so.1; \
+        loader_destination=/lib/ld-linux-aarch64.so.1 \
+        ;; \
+      *) echo "Unsupported TARGETARCH for glibc staging: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    install -D -m 0755 \
+      "/lib/${gnu_triplet}/${loader}" \
+      "/opt/glibc-root${loader_destination}" && \
+    for library in libc.so.6 libdl.so.2 libm.so.6 libpthread.so.0 libgcc_s.so.1; do \
+      install -D -m 0755 \
+        "/lib/${gnu_triplet}/${library}" \
+        "/opt/glibc-root/lib/${gnu_triplet}/${library}"; \
+    done
 
 FROM ${ALPINE_IMAGE} AS runtime
 
@@ -130,12 +185,7 @@ RUN apk add --no-cache \
 
 # Bun and the embedded N-API addon use glibc. Keep their pinned loader and
 # shared libraries isolated from Alpine's musl search paths.
-COPY --from=builder /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=builder /lib/x86_64-linux-gnu/libc.so.6 /lib/x86_64-linux-gnu/libc.so.6
-COPY --from=builder /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/libdl.so.2
-COPY --from=builder /lib/x86_64-linux-gnu/libm.so.6 /lib/x86_64-linux-gnu/libm.so.6
-COPY --from=builder /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
-COPY --from=builder /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/x86_64-linux-gnu/libgcc_s.so.1
+COPY --from=builder /opt/glibc-root/ /
 
 COPY --from=tools /opt/bun /opt/bun
 COPY --from=tools /opt/google-cloud-sdk /opt/google-cloud-sdk
