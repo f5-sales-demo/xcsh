@@ -50,17 +50,35 @@ jobs:
           test "$(uname -m)" = "$XCSH_EXPECTED_MACHINE"
           bash ./scripts/tdd-docker.sh
 
+  podman-uat-harness:
+    name: podman-uat-harness
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test ARM64 Podman UAT harness
+        run: bash ./scripts/test-uat-podman-arm64.sh
+
   container-test:
     name: container-test
     if: always()
-    needs: [container-build]
+    needs: [container-build, podman-uat-harness]
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     steps:
-      - name: Require every architecture test
+      - name: Require architecture and harness tests
         env:
           CONTAINER_BUILD_RESULT: ${{ needs.container-build.result }}
-        run: test "$CONTAINER_BUILD_RESULT" = success
+          PODMAN_HARNESS_RESULT: ${{ needs.podman-uat-harness.result }}
+        run: |
+          test "$CONTAINER_BUILD_RESULT" = success
+          test "$PODMAN_HARNESS_RESULT" = success
 
   publish-ghcr:
     name: publish-ghcr
