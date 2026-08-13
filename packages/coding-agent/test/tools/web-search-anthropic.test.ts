@@ -196,6 +196,19 @@ describe("searchAnthropic headers", () => {
 		expect(tools?.[0]?.allowed_domains).toEqual(["example.com", "docs.example.com"]);
 	});
 
+	it("deduplicates identical explicit allowed_domains and site: domain", async () => {
+		process.env.ANTHROPIC_SEARCH_API_KEY = "sk-ant-api-test";
+		using _hook = mockFetch(makeAnthropicResponse());
+
+		await searchAnthropic({
+			query: "site:example.com search terms",
+			allowed_domains: ["example.com", "other.com"],
+		});
+
+		const tools = capturedRequest?.body?.tools as any[];
+		expect(tools?.[0]?.allowed_domains).toEqual(["example.com", "other.com"]);
+	});
+
 	it("sends max_uses in tool definition when provided", async () => {
 		process.env.ANTHROPIC_SEARCH_API_KEY = "sk-ant-api-test";
 		using _hook = mockFetch(makeAnthropicResponse());

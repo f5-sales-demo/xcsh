@@ -287,7 +287,7 @@ export async function searchAnthropic(params: AnthropicSearchParams): Promise<Se
 	const model = getModel();
 
 	const { cleanQuery, domains: siteDomains } = extractSiteOperators(params.query);
-	const allAllowedDomains = [...(params.allowed_domains ?? []), ...siteDomains];
+	const allAllowedDomains = Array.from(new Set([...(params.allowed_domains ?? []), ...siteDomains]));
 
 	const response = await callSearch(
 		auth,
