@@ -578,6 +578,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Configure scoped GitHub Git credentials
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: gh auth setup-git
       - name: Auto-detect version and release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
