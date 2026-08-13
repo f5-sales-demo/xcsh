@@ -15,8 +15,61 @@ runs:
       shell: bash
       env:
         RUST_TARGET: ${{ inputs.target }}
-      run: |
+      # Environment-file values below come only from fixed runner mappings and
+      # checksum-verified Rustup release metadata, never from event-controlled data.
+      run: | # zizmor: ignore[github-env]
         set -euo pipefail
+
+        if ! command -v rustup >/dev/null 2>&1; then
+          if [ "${RUNNER_OS:-}" = "Linux" ] || [ "$(uname -s)" = "Linux" ]; then
+            arch="${RUNNER_ARCH:-}"
+            if [ -z "$arch" ]; then
+              case "$(uname -m)" in
+                x86_64) arch="X64" ;;
+                aarch64) arch="ARM64" ;;
+              esac
+            fi
+
+            case "$arch" in
+              X64 | amd64)
+                rust_host="x86_64-unknown-linux-gnu"
+                rustup_sha256="4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10"
+                ;;
+              ARM64 | arm64 | aarch64)
+                rust_host="aarch64-unknown-linux-gnu"
+                rustup_sha256="9732d6c5e2a098d3521fca8145d826ae0aaa067ef2385ead08e6feac88fa5792"
+                ;;
+              *)
+                echo "Unsupported Linux architecture for rustup bootstrap: $arch" >&2
+                exit 1
+                ;;
+            esac
+
+            runner_temp="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+            rustup_root="$(mktemp -d "${runner_temp%/}/rustup.XXXXXX")"
+            CARGO_HOME="${CARGO_HOME:-$rustup_root/cargo}"
+            RUSTUP_HOME="${RUSTUP_HOME:-$rustup_root/rustup}"
+            export CARGO_HOME RUSTUP_HOME
+
+            rustup_init="$rustup_root/rustup-init"
+            curl --fail --silent --show-error --location \
+              --output "$rustup_init" \
+              "https://static.rust-lang.org/rustup/dist/${rust_host}/rustup-init"
+            echo "${rustup_sha256}  ${rustup_init}" | sha256sum -c -
+            chmod 0755 "$rustup_init"
+            "$rustup_init" -y --profile minimal --default-host "$rust_host" --no-modify-path
+            rm -f "$rustup_init"
+
+            export PATH="${CARGO_HOME}/bin:${PATH}"
+            if [ -n "${GITHUB_PATH:-}" ]; then
+              echo "${CARGO_HOME}/bin" >> "$GITHUB_PATH"
+            fi
+            if [ -n "${GITHUB_ENV:-}" ]; then
+              echo "CARGO_HOME=${CARGO_HOME}" >> "$GITHUB_ENV"
+              echo "RUSTUP_HOME=${RUSTUP_HOME}" >> "$GITHUB_ENV"
+            fi
+          fi
+        fi
 
         # With no explicit channel, rustup installs the active toolchain declared by
         # rust-toolchain.toml. Target installation is deliberately unqualified so it
