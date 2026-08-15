@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:net";
 import * as os from "node:os";
 import * as path from "node:path";
 import { buildXcshCommand, shellQuote } from "../src/commands/herdr";
+import { createRetryingLazy } from "../src/extensibility/extensions/bundled/herdr-terminal";
 import { HerdrClient, HerdrProtocolError } from "../src/herdr/client";
 import { type HerdrBindingV1, HerdrController } from "../src/herdr/controller";
 
@@ -217,6 +218,7 @@ describe("conversation-owned Herdr terminals", () => {
 		const state = binding();
 		state.terminals.push({ name: "server", tabId: "w1:t2", paneId: "w1:p2", createdAt: "now" });
 		let closed = false;
+		let statusCalls = 0;
 		const fake = await fakeHerdr(request => {
 			if (request.method === "ping") return { type: "pong", protocol: 18, version: "test" };
 			if (request.method.endsWith("report_metadata")) return { type: "ok" };
@@ -234,7 +236,8 @@ describe("conversation-owned Herdr terminals", () => {
 			if (request.method === "pane.process_info")
 				return {
 					type: "pane_process_info",
-					process_info: { shell_pid: 10, foreground_processes: [{ pid: 10 }, { pid: 11 }] },
+					process_info:
+						statusCalls++ === 0 ? undefined : { shell_pid: 10, foreground_processes: [{ pid: 10 }, { pid: 11 }] },
 				};
 			if (request.method === "tab.close") {
 				closed = true;
@@ -355,5 +358,18 @@ describe("Herdr launcher", () => {
 		expect(buildXcshCommand("/opt/xcsh bin", ["--model", "openai/gpt 5", "it's safe"])).toBe(
 			`'/opt/xcsh bin' '--model' 'openai/gpt 5' 'it'"'"'s safe'`,
 		);
+	});
+});
+
+describe("Herdr terminal connection lifecycle", () => {
+	test("retries after a transient controller connection failure", async () => {
+		let attempts = 0;
+		const controller = createRetryingLazy(async () => {
+			if (++attempts === 1) throw new Error("socket starting");
+			return "connected";
+		});
+		await expect(controller()).rejects.toThrow("socket starting");
+		expect(await controller()).toBe("connected");
+		expect(attempts).toBe(2);
 	});
 });

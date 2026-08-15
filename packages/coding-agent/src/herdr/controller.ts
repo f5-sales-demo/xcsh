@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { HerdrClient, HerdrProtocolError } from "./client";
@@ -55,6 +56,7 @@ function bindingFromEnvironment(): HerdrBindingV1 | undefined {
 export class HerdrController {
 	private readonly lastInputAt = new Map<string, number>();
 	private readonly busyClosePending = new Set<string>();
+	private persistQueue: Promise<void> = Promise.resolve();
 	private constructor(
 		readonly client: HerdrClient,
 		readonly bindingPath: string | undefined,
@@ -84,12 +86,19 @@ export class HerdrController {
 		return controller;
 	}
 
-	private async persist(): Promise<void> {
-		if (!this.bindingPath) return;
-		await fs.mkdir(path.dirname(this.bindingPath), { recursive: true, mode: 0o700 });
-		const temporary = `${this.bindingPath}.${process.pid}.tmp`;
-		await fs.writeFile(temporary, `${JSON.stringify(this.binding, null, 2)}\n`, { mode: 0o600 });
-		await fs.rename(temporary, this.bindingPath);
+	private persist(): Promise<void> {
+		if (!this.bindingPath) return Promise.resolve();
+		const bindingPath = this.bindingPath;
+		const snapshot = `${JSON.stringify(this.binding, null, 2)}\n`;
+		const write = async (): Promise<void> => {
+			await fs.mkdir(path.dirname(bindingPath), { recursive: true, mode: 0o700 });
+			const temporary = `${bindingPath}.${process.pid}.${randomUUID()}.tmp`;
+			await fs.writeFile(temporary, snapshot, { mode: 0o600 });
+			await fs.rename(temporary, bindingPath);
+		};
+		const pending = this.persistQueue.then(write, write);
+		this.persistQueue = pending.catch(() => {});
+		return pending;
 	}
 
 	private async claimBinding(): Promise<void> {
@@ -257,11 +266,12 @@ export class HerdrController {
 		}
 		const status = await this.client.request<{
 			type: string;
-			process_info: { shell_pid?: number | null; foreground_processes?: Array<{ pid: number }> };
+			process_info?: { shell_pid?: number | null; foreground_processes?: Array<{ pid: number }> } | null;
 		}>("pane.process_info", { pane_id: record.paneId });
 		const info = status.process_info;
 		const recentlySent = Date.now() - (this.lastInputAt.get(record.paneId) ?? 0) < 1_000;
-		const busy = recentlySent || (info.foreground_processes ?? []).some(process => process.pid !== info.shell_pid);
+		const busy =
+			!info || recentlySent || (info.foreground_processes ?? []).some(process => process.pid !== info.shell_pid);
 		if (busy && (!force || !this.busyClosePending.has(record.paneId))) {
 			this.busyClosePending.add(record.paneId);
 			throw new HerdrProtocolError("terminal is busy; repeat close with force: true", "busy");

@@ -16,6 +16,17 @@ interface TerminalParams {
 	force?: boolean;
 }
 
+export function createRetryingLazy<T>(factory: () => Promise<T>): () => Promise<T> {
+	let pending: Promise<T> | undefined;
+	return () => {
+		pending ??= factory().catch(error => {
+			pending = undefined;
+			throw error;
+		});
+		return pending;
+	};
+}
+
 function sessionRef(ctx: ExtensionContext): string | undefined {
 	return ctx.sessionManager.getSessionFile?.() ?? ctx.sessionManager.getSessionId?.();
 }
@@ -49,8 +60,7 @@ async function dispatch(controller: HerdrController, params: TerminalParams): Pr
 
 export default function herdrTerminal(pi: ExtensionAPI): void {
 	const { Type } = pi.typebox;
-	let controllerPromise: Promise<HerdrController> | undefined;
-	const controller = (): Promise<HerdrController> => (controllerPromise ??= HerdrController.connect());
+	const controller = createRetryingLazy(() => HerdrController.connect());
 
 	pi.registerTool({
 		name: "herdr_terminal",
