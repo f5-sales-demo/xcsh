@@ -646,3 +646,58 @@ test("a chat banked before the first token reads back as a terminal message, not
 	expect(assistant.state.status).toBe("done");
 	expect(assistant.state.text).toMatch(/stopped/i);
 });
+
+
+test("chat_media fetches chunked assets and attaches browser-safe media to its assistant turn", async () => {
+	const mock = new MockTransport();
+	const originalCreate = URL.createObjectURL;
+	const originalRevoke = URL.revokeObjectURL;
+	URL.createObjectURL = () => "blob:resolved-media";
+	URL.revokeObjectURL = () => {};
+	try {
+		const { result, unmount } = renderHook(() => useChatSession(mock));
+		await act(async () => result.current.send("show it"));
+		const request = mock.sent.find((message): message is ChatRequestMsg => message.type === "chat_request")!;
+		const ref = `blob:sha256:${"a".repeat(64)}`;
+		await act(async () => {
+			mock.emit({
+				type: "chat_media",
+				id: request.id,
+				media: {
+					version: 1,
+					id: `media_${"a".repeat(24)}`,
+					kind: "image",
+					original: { ref, mimeType: "image/png", bytes: 3 },
+					provenance: { sourceType: "tool", source: "display_media" },
+					playback: { autoplay: false, loop: false, muted: true, fpsCap: 12 },
+				},
+			});
+		});
+		await waitFor(() => expect(mock.sent.some(message => message.type === "media_asset_read")).toBe(true));
+		const assetRequest = mock.sent.find(message => message.type === "media_asset_read")!;
+		if (assetRequest.type !== "media_asset_read") throw new Error("expected media request");
+		await act(async () => {
+			mock.emit({
+				type: "media_asset_chunk",
+				requestId: assetRequest.requestId,
+				chunk: {
+					ref,
+					mimeType: "image/png",
+					offset: 0,
+					nextOffset: 3,
+					eof: true,
+					bytes: 3,
+					data: "aW1n",
+				},
+			});
+		});
+		await waitFor(() => {
+			const assistant = result.current.turns.find(turn => turn.kind === "assistant");
+			expect(assistant?.kind === "assistant" ? assistant.media?.[0]?.src : undefined).toBe("blob:resolved-media");
+		});
+		unmount();
+	} finally {
+		URL.createObjectURL = originalCreate;
+		URL.revokeObjectURL = originalRevoke;
+	}
+});

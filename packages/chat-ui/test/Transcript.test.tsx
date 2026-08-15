@@ -244,3 +244,69 @@ test("a POPULATED transcript still auto-pins to the tail (the guard didn't disab
 		expect((container.querySelector(".messages") as HTMLElement).scrollTop).toBe(1000);
 	});
 });
+
+
+test("renders native muted video and disables autoplay for reduced motion", () => {
+	const original = window.matchMedia;
+	window.matchMedia = (() => ({ matches: true })) as unknown as typeof window.matchMedia;
+	try {
+		const messages: ChatMessage[] = [
+			msg({
+				id: "media-1",
+				role: "assistant",
+				media: [
+					{
+						id: "media_a",
+						kind: "video",
+						src: "blob:video",
+						posterSrc: "blob:poster",
+						caption: "Demo clip",
+						playback: { autoplay: true, loop: false, muted: true },
+					},
+				],
+			}),
+		];
+		const { container } = render(<Transcript messages={messages} streaming={false} />);
+		const video = container.querySelector("video") as HTMLVideoElement;
+		expect(video).not.toBeNull();
+		expect(video.autoplay).toBe(false);
+		expect(video.muted).toBe(true);
+		expect(screen.getByText("Demo clip")).toBeDefined();
+	} finally {
+		window.matchMedia = original;
+	}
+});
+
+test("reduced motion keeps a text timeline on its first frame", async () => {
+	const original = window.matchMedia;
+	window.matchMedia = (() => ({ matches: true })) as unknown as typeof window.matchMedia;
+	try {
+		render(
+			<Transcript
+				messages={[
+					msg({
+						id: "media-2",
+						role: "assistant",
+						media: [
+							{
+								id: "media_b",
+								kind: "text-timeline",
+								frames: [
+									{ text: "first", durationMs: 1 },
+									{ text: "second", durationMs: 1 },
+								],
+								playback: { autoplay: true, loop: true, muted: true },
+							},
+						],
+					}),
+				]}
+				streaming={false}
+			/>,
+		);
+		await new Promise(resolve => setTimeout(resolve, 5));
+		expect(screen.getByText("first")).toBeDefined();
+		expect(screen.queryByText("second")).toBeNull();
+	} finally {
+		window.matchMedia = original;
+	}
+});

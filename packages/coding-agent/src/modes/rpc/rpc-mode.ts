@@ -24,6 +24,12 @@ import {
 	normalizeHostToolDefinitions,
 	RpcHostToolBridge,
 } from "../../host-tools";
+import {
+	extractMediaDescriptorFromToolResult,
+	listMediaDescriptors,
+	projectMediaDescriptorForTransport,
+	readMediaAssetChunk,
+} from "../../media/transport";
 import { type Theme, theme } from "../../modes/theme/theme";
 import { referencesEventFor } from "../../references";
 import type { AgentSession } from "../../session/agent-session";
@@ -498,7 +504,17 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 
 	// Output all agent events as JSON
 	session.subscribe(event => {
-		output(event);
+		const isMediaTool =
+			event.type === "tool_execution_end" &&
+			(event.toolName === "display_media" || event.toolName === "display_image");
+		const descriptor = isMediaTool ? extractMediaDescriptorFromToolResult(event.result) : undefined;
+		const projected = descriptor ? projectMediaDescriptorForTransport(descriptor) : undefined;
+		if (event.type === "tool_execution_end" && projected) {
+			output({ ...event, result: { ...(event.result as object), details: { descriptor: projected } } });
+			output({ type: "chat_media", media: projected });
+		} else {
+			output(event);
+		}
 		// Citations for the host's Sources chips, mirroring `chat_done.references` on
 		// the WS bridge. The turn-boundary rule (an intermediate tool-use step also
 		// emits message_end) lives in the shared, tested `referencesEventFor` (#2420).
@@ -775,6 +791,15 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			case "export_html": {
 				const path = await session.exportToHtml(command.outputPath);
 				return success(id, "export_html", { path });
+			}
+
+			case "media_asset_read": {
+				const data = await readMediaAssetChunk(
+					session.sessionManager.getBlobStore(),
+					listMediaDescriptors(session.sessionManager.getEntries()),
+					command,
+				);
+				return success(id, "media_asset_read", data);
 			}
 
 			case "switch_session": {

@@ -41,6 +41,7 @@ import type { ExtensionUIContext } from "../../extensibility/extensions";
 import { loadSlashCommands } from "../../extensibility/slash-commands";
 import { MCPManager } from "../../mcp/manager";
 import type { MCPServerConfig } from "../../mcp/types";
+import { listMediaDescriptors, readMediaAssetChunk } from "../../media/transport";
 import { theme } from "../../modes/theme/theme";
 import type { AgentSession, AgentSessionEvent } from "../../session/agent-session";
 import {
@@ -358,8 +359,23 @@ export class AcpAgent implements Agent {
 		}
 	}
 
-	async extMethod(method: string, _params: { [key: string]: unknown }): Promise<{ [key: string]: unknown }> {
-		throw RequestError.methodNotFound(method);
+	async extMethod(method: string, params: { [key: string]: unknown }): Promise<{ [key: string]: unknown }> {
+		if (method !== "xcsh/media/read") throw RequestError.methodNotFound(method);
+		if (typeof params.sessionId !== "string" || typeof params.ref !== "string") {
+			throw RequestError.invalidParams({ method });
+		}
+		const record = this.#getSessionRecord(params.sessionId);
+		return {
+			...(await readMediaAssetChunk(
+				record.session.sessionManager.getBlobStore(),
+				listMediaDescriptors(record.session.sessionManager.getEntries()),
+				{
+					ref: params.ref,
+					offset: typeof params.offset === "number" ? params.offset : undefined,
+					length: typeof params.length === "number" ? params.length : undefined,
+				},
+			)),
+		};
 	}
 
 	async extNotification(_method: string, _params: { [key: string]: unknown }): Promise<void> {

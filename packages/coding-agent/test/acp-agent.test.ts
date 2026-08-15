@@ -534,3 +534,38 @@ describe("ACP dispatch over a real AgentSideConnection", () => {
 		expect(response.result).toBeUndefined();
 	});
 });
+
+describe("ACP media extension", () => {
+	it("serves bounded chunks only for media persisted in the requested session", async () => {
+		const harness = await createHarness();
+		const created = await harness.agent.newSession({ cwd: harness.cwdA, mcpServers: [] });
+		const session = harness.findSession(created.sessionId)!;
+		const blob = await session.sessionManager.putBlob(Buffer.from("media"));
+		session.sessionManager.appendMessage({
+			role: "media",
+			timestamp: 1,
+			media: {
+				version: 1,
+				id: `media_${blob.hash.slice(0, 24)}`,
+				kind: "image",
+				original: { ref: blob.ref, mimeType: "image/png", bytes: 5 },
+				provenance: { sourceType: "tool", source: "display_media" },
+				playback: { autoplay: false, loop: false, muted: true, fpsCap: 12 },
+			},
+		});
+		const chunk = await harness.agent.extMethod("xcsh/media/read", {
+			sessionId: created.sessionId,
+			ref: blob.ref,
+			length: 3,
+		});
+		expect(chunk.data).toBe(Buffer.from("med").toString("base64"));
+		expect(chunk.eof).toBe(false);
+		await expect(
+			harness.agent.extMethod("xcsh/media/read", {
+				sessionId: created.sessionId,
+				ref: `blob:sha256:${"f".repeat(64)}`,
+			}),
+		).rejects.toThrow("unknown media asset");
+		harness.abortController.abort();
+	});
+});

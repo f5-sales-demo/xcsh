@@ -5,6 +5,7 @@
  * The hook does not import any concrete transport — callers inject one.
  */
 
+import type { ChatMediaContent } from "@f5-sales-demo/xcsh-chat-ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -12,10 +13,14 @@ import {
 	type ChatImageMsg,
 	type InteractionMode,
 	initTurn,
+	isChatMedia,
+	isMediaAssetChunk,
+	isMediaAssetError,
 	isModelsList,
 	isPathPicked,
 	isSkillsList,
 	isSlashCommandsList,
+	type MediaAssetChunkMsg,
 	type ModelInfo,
 	type PathPickedMsg,
 	reduceChatTurn,
@@ -24,6 +29,7 @@ import {
 	type Transport,
 	type TurnState,
 } from "../core";
+import { mediaAssetRefs, type TransportMediaDescriptor, toChatMediaContent } from "./media";
 import { foldToolNotice, settleActivities, type ToolActivity } from "./tool-activity";
 
 // ---------------------------------------------------------------------------
@@ -71,6 +77,7 @@ export interface AssistantTurn {
 	/** Live tool-activity rows for this turn, folded from `chat_tool_notice`
 	 *  (both host and engine tools), in call order. */
 	activities: ToolActivity[];
+	media?: ChatMediaContent[];
 }
 
 export type Turn = UserTurn | AssistantTurn;
@@ -116,7 +123,7 @@ function settleForArchive(turns: Turn[]): Turn[] {
 		const settled: TurnState = turn.state.text
 			? { ...turn.state, status: "done" }
 			: { ...turn.state, status: "done", text: "Stopped before a response arrived." };
-		return { kind: "assistant", state: settled, activities: settleActivities(turn.activities) };
+		return { kind: "assistant", state: settled, activities: settleActivities(turn.activities), media: turn.media };
 	});
 }
 
@@ -217,6 +224,11 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	const [model, setModel] = useState<string | null>(null);
 	// Resolver for an in-flight pickPath() — settled by the next `path_picked` frame.
 	const pendingPickRef = useRef<((r: PathPickedMsg) => void) | null>(null);
+	const pendingMediaRef = useRef(
+		new Map<string, { resolve: (chunk: MediaAssetChunkMsg["chunk"]) => void; reject: () => void }>(),
+	);
+	const mediaRequestCounterRef = useRef(0);
+	const mediaObjectUrlsRef = useRef(new Set<string>());
 	const counterRef = useRef(0);
 	const activeTurnIdRef = useRef<string | null>(null);
 	const lastUserTextRef = useRef<string>("");
@@ -228,6 +240,66 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 	// Held in a ref so a changing callback identity doesn't re-run the connect effect.
 	const hooksRef = useRef(hooks);
 	hooksRef.current = hooks;
+
+	const readMediaChunk = useCallback(
+		(ref: string, offset: number): Promise<MediaAssetChunkMsg["chunk"]> => {
+			const requestId = `media-${++mediaRequestCounterRef.current}`;
+			return new Promise((resolve, reject) => {
+				const timeout = window.setTimeout(() => {
+					pendingMediaRef.current.delete(requestId);
+					reject(new Error("media unavailable"));
+				}, 30_000);
+				pendingMediaRef.current.set(requestId, {
+					resolve: chunk => {
+						window.clearTimeout(timeout);
+						resolve(chunk);
+					},
+					reject: () => {
+						window.clearTimeout(timeout);
+						reject(new Error("media unavailable"));
+					},
+				});
+				try {
+					transport.send({ type: "media_asset_read", requestId, ref, offset });
+				} catch {
+					pendingMediaRef.current.delete(requestId);
+					reject(new Error("media unavailable"));
+				}
+			});
+		},
+		[transport],
+	);
+
+	const loadMedia = useCallback(
+		async (descriptor: TransportMediaDescriptor): Promise<ChatMediaContent> => {
+			const urls = new Map<string, string>();
+			await Promise.all(
+				mediaAssetRefs(descriptor).map(async ref => {
+					const parts: BlobPart[] = [];
+					let offset = 0;
+					let mimeType = "application/octet-stream";
+					let eof = false;
+					while (!eof) {
+						const chunk = await readMediaChunk(ref, offset);
+						if (chunk.ref !== ref || chunk.offset !== offset || chunk.nextOffset <= offset) {
+							throw new Error("invalid media chunk");
+						}
+						mimeType = chunk.mimeType;
+						const binary = atob(chunk.data);
+						if (binary.length !== chunk.bytes) throw new Error("invalid media chunk size");
+						parts.push(Uint8Array.from(binary, char => char.charCodeAt(0)).buffer as ArrayBuffer);
+						offset = chunk.nextOffset;
+						eof = chunk.eof;
+					}
+					const url = URL.createObjectURL(new Blob(parts, { type: mimeType }));
+					mediaObjectUrlsRef.current.add(url);
+					urls.set(ref, url);
+				}),
+			);
+			return toChatMediaContent(descriptor, urls);
+		},
+		[readMediaChunk],
+	);
 
 	useEffect(() => {
 		let mounted = true;
@@ -277,6 +349,44 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 				}
 			});
 		const unsub = transport.onMessage(msg => {
+			if (isMediaAssetChunk(msg)) {
+				const pending = pendingMediaRef.current.get(msg.requestId);
+				pendingMediaRef.current.delete(msg.requestId);
+				pending?.resolve(msg.chunk);
+				return;
+			}
+			if (isMediaAssetError(msg)) {
+				const pending = pendingMediaRef.current.get(msg.requestId);
+				pendingMediaRef.current.delete(msg.requestId);
+				pending?.reject();
+				return;
+			}
+			if (isChatMedia(msg)) {
+				void loadMedia(msg.media)
+					.then(media => {
+						if (!mounted) return;
+						setTurns(prev =>
+							prev.map(turn =>
+								turn.kind === "assistant" && turn.state.id === msg.id
+									? { ...turn, media: [...(turn.media ?? []), media] }
+									: turn,
+							),
+						);
+					})
+					.catch(() => {
+						if (!mounted) return;
+						const media = toChatMediaContent(msg.media, new Map());
+						media.degradation = media.degradation ?? "Media asset unavailable.";
+						setTurns(prev =>
+							prev.map(turn =>
+								turn.kind === "assistant" && turn.state.id === msg.id
+									? { ...turn, media: [...(turn.media ?? []), media] }
+									: turn,
+							),
+						);
+					});
+				return;
+			}
 			// Narrow to ChatStreamMsg via the discriminated union on `type`.
 			if (msg.type === "chat_delta" || msg.type === "chat_done" || msg.type === "chat_error") {
 				const terminal = msg.type === "chat_done" || msg.type === "chat_error";
@@ -285,7 +395,12 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 						if (turn.kind === "assistant" && turn.state.id === msg.id) {
 							// A terminal frame settles any activity still marked running.
 							const activities = terminal ? settleActivities(turn.activities) : turn.activities;
-							return { kind: "assistant", state: reduceChatTurn(turn.state, msg), activities };
+							return {
+								kind: "assistant",
+								state: reduceChatTurn(turn.state, msg),
+								activities,
+								media: turn.media,
+							};
 						}
 						return turn;
 					}),
@@ -309,7 +424,12 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 				setTurns(prev =>
 					prev.map(turn =>
 						turn.kind === "assistant" && turn.state.id === msg.id
-							? { kind: "assistant", state: turn.state, activities: foldToolNotice(turn.activities, msg) }
+							? {
+									kind: "assistant",
+									state: turn.state,
+									activities: foldToolNotice(turn.activities, msg),
+									media: turn.media,
+								}
 							: turn,
 					),
 				);
@@ -319,8 +439,12 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 		return () => {
 			mounted = false;
 			unsub();
+			for (const pending of pendingMediaRef.current.values()) pending.reject();
+			pendingMediaRef.current.clear();
+			for (const url of mediaObjectUrlsRef.current) URL.revokeObjectURL(url);
+			mediaObjectUrlsRef.current.clear();
 		};
-	}, [transport]);
+	}, [loadMedia, transport]);
 
 	const setViewing = useCallback((id: string | null) => {
 		viewingIdRef.current = id;
@@ -346,7 +470,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 			activeTurnIdRef.current = id;
 
 			const userTurn: UserTurn = { kind: "user", id: `u-${counterRef.current}`, text };
-			const assistantTurn: AssistantTurn = { kind: "assistant", state: initTurn(id), activities: [] };
+			const assistantTurn: AssistantTurn = { kind: "assistant", state: initTurn(id), activities: [], media: [] };
 
 			setTurns(prev => [...prev, userTurn, assistantTurn]);
 
@@ -377,6 +501,7 @@ export function useChatSession(transport: Transport, hooks?: ChatSessionHooks): 
 									kind: "assistant",
 									state: { ...turn.state, status: "error", reason: "bridge-disconnected" },
 									activities: turn.activities,
+									media: turn.media,
 								}
 							: turn,
 					),

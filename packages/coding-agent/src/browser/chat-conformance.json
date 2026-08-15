@@ -1,9 +1,17 @@
 {
-  "contractVersion": "2.0.0",
+  "contractVersion": "2.1.0",
   "schemas": {
     "chat_request": {
       "type": "object",
-      "required": ["type", "id", "text", "context", "mode", "tabId", "sessionKey"],
+      "required": [
+        "type",
+        "id",
+        "text",
+        "context",
+        "mode",
+        "tabId",
+        "sessionKey"
+      ],
       "properties": {
         "type": {
           "const": "chat_request",
@@ -23,7 +31,17 @@
             },
             {
               "type": "object",
-              "required": ["v", "capturedAt", "tabId", "url", "path", "title", "ax", "api", "truncated"],
+              "required": [
+                "v",
+                "capturedAt",
+                "tabId",
+                "url",
+                "path",
+                "title",
+                "ax",
+                "api",
+                "truncated"
+              ],
               "properties": {
                 "v": {
                   "const": 1,
@@ -52,7 +70,9 @@
                     {
                       "additionalProperties": true,
                       "type": "object",
-                      "required": ["role"],
+                      "required": [
+                        "role"
+                      ],
                       "properties": {
                         "role": {
                           "type": "string"
@@ -68,7 +88,13 @@
                     },
                     {
                       "type": "object",
-                      "required": ["url", "status", "resourceType", "body", "truncated"],
+                      "required": [
+                        "url",
+                        "status",
+                        "resourceType",
+                        "body",
+                        "truncated"
+                      ],
                       "properties": {
                         "url": {
                           "type": "string"
@@ -139,7 +165,10 @@
     },
     "chat_stop": {
       "type": "object",
-      "required": ["type", "id"],
+      "required": [
+        "type",
+        "id"
+      ],
       "properties": {
         "type": {
           "const": "chat_stop",
@@ -153,7 +182,12 @@
     },
     "chat_delta": {
       "type": "object",
-      "required": ["type", "id", "seq", "delta"],
+      "required": [
+        "type",
+        "id",
+        "seq",
+        "delta"
+      ],
       "properties": {
         "type": {
           "const": "chat_delta",
@@ -173,7 +207,10 @@
     },
     "chat_done": {
       "type": "object",
-      "required": ["type", "id"],
+      "required": [
+        "type",
+        "id"
+      ],
       "properties": {
         "type": {
           "const": "chat_done",
@@ -187,7 +224,11 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["kind", "title", "url"],
+            "required": [
+              "kind",
+              "title",
+              "url"
+            ],
             "properties": {
               "kind": {
                 "type": "string"
@@ -205,7 +246,11 @@
     },
     "chat_error": {
       "type": "object",
-      "required": ["type", "id", "reason"],
+      "required": [
+        "type",
+        "id",
+        "reason"
+      ],
       "properties": {
         "type": {
           "const": "chat_error",
@@ -263,7 +308,12 @@
     },
     "chat_tool_notice": {
       "type": "object",
-      "required": ["type", "id", "tool", "ok"],
+      "required": [
+        "type",
+        "id",
+        "tool",
+        "ok"
+      ],
       "properties": {
         "type": {
           "const": "chat_tool_notice",
@@ -286,7 +336,10 @@
     },
     "chat_keepalive": {
       "type": "object",
-      "required": ["type", "id"],
+      "required": [
+        "type",
+        "id"
+      ],
       "properties": {
         "type": {
           "const": "chat_keepalive",
@@ -300,7 +353,10 @@
     },
     "set_host_tools": {
       "type": "object",
-      "required": ["type", "tools"],
+      "required": [
+        "type",
+        "tools"
+      ],
       "properties": {
         "type": {
           "const": "set_host_tools",
@@ -310,7 +366,11 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name", "description", "parameters"],
+            "required": [
+              "name",
+              "description",
+              "parameters"
+            ],
             "properties": {
               "name": {
                 "type": "string"
@@ -337,7 +397,10 @@
     },
     "set_host_tools_ack": {
       "type": "object",
-      "required": ["type", "toolNames"],
+      "required": [
+        "type",
+        "toolNames"
+      ],
       "properties": {
         "type": {
           "const": "set_host_tools_ack",
@@ -353,7 +416,10 @@
     },
     "set_host_tools_error": {
       "type": "object",
-      "required": ["type", "reason"],
+      "required": [
+        "type",
+        "reason"
+      ],
       "properties": {
         "type": {
           "const": "set_host_tools_error",
@@ -367,7 +433,13 @@
     },
     "host_tool_call": {
       "type": "object",
-      "required": ["type", "id", "toolCallId", "toolName", "arguments"],
+      "required": [
+        "type",
+        "id",
+        "toolCallId",
+        "toolName",
+        "arguments"
+      ],
       "properties": {
         "type": {
           "const": "host_tool_call",
@@ -392,7 +464,11 @@
     },
     "host_tool_update": {
       "type": "object",
-      "required": ["type", "id", "partialResult"],
+      "required": [
+        "type",
+        "id",
+        "partialResult"
+      ],
       "properties": {
         "type": {
           "const": "host_tool_update",
@@ -403,14 +479,18 @@
         },
         "partialResult": {
           "type": "object",
-          "required": ["content"],
+          "required": [
+            "content"
+          ],
           "properties": {
             "content": {
               "type": "array",
               "items": {
                 "additionalProperties": true,
                 "type": "object",
-                "required": ["type"],
+                "required": [
+                  "type"
+                ],
                 "properties": {
                   "type": {
                     "type": "string"
@@ -430,7 +510,11 @@
     },
     "host_tool_result": {
       "type": "object",
-      "required": ["type", "id", "result"],
+      "required": [
+        "type",
+        "id",
+        "result"
+      ],
       "properties": {
         "type": {
           "const": "host_tool_result",
@@ -441,14 +525,18 @@
         },
         "result": {
           "type": "object",
-          "required": ["content"],
+          "required": [
+            "content"
+          ],
           "properties": {
             "content": {
               "type": "array",
               "items": {
                 "additionalProperties": true,
                 "type": "object",
-                "required": ["type"],
+                "required": [
+                  "type"
+                ],
                 "properties": {
                   "type": {
                     "type": "string"
@@ -471,7 +559,11 @@
     },
     "host_tool_cancel": {
       "type": "object",
-      "required": ["type", "id", "targetId"],
+      "required": [
+        "type",
+        "id",
+        "targetId"
+      ],
       "properties": {
         "type": {
           "const": "host_tool_cancel",
@@ -487,7 +579,17 @@
     },
     "page_context_snapshot": {
       "type": "object",
-      "required": ["v", "capturedAt", "tabId", "url", "path", "title", "ax", "api", "truncated"],
+      "required": [
+        "v",
+        "capturedAt",
+        "tabId",
+        "url",
+        "path",
+        "title",
+        "ax",
+        "api",
+        "truncated"
+      ],
       "properties": {
         "v": {
           "const": 1,
@@ -516,7 +618,9 @@
             {
               "additionalProperties": true,
               "type": "object",
-              "required": ["role"],
+              "required": [
+                "role"
+              ],
               "properties": {
                 "role": {
                   "type": "string"
@@ -532,7 +636,13 @@
             },
             {
               "type": "object",
-              "required": ["url", "status", "resourceType", "body", "truncated"],
+              "required": [
+                "url",
+                "status",
+                "resourceType",
+                "body",
+                "truncated"
+              ],
               "properties": {
                 "url": {
                   "type": "string"
@@ -560,6 +670,397 @@
         },
         "truncated": {
           "type": "boolean"
+        }
+      }
+    },
+    "chat_media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id",
+        "media"
+      ],
+      "properties": {
+        "type": {
+          "const": "chat_media"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^c-"
+        },
+        "media": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "version",
+            "id",
+            "kind",
+            "provenance",
+            "playback"
+          ],
+          "anyOf": [
+            {
+              "required": [
+                "original"
+              ]
+            },
+            {
+              "required": [
+                "poster"
+              ]
+            },
+            {
+              "required": [
+                "timeline"
+              ]
+            }
+          ],
+          "properties": {
+            "version": {
+              "const": 1
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^media_[a-f0-9]{24}$"
+            },
+            "kind": {
+              "enum": [
+                "image",
+                "video",
+                "animation",
+                "raster-timeline",
+                "text-timeline"
+              ]
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "durationMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "caption": {
+              "type": "string"
+            },
+            "alt": {
+              "type": "string"
+            },
+            "original": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ref",
+                "mimeType",
+                "bytes"
+              ],
+              "properties": {
+                "ref": {
+                  "type": "string",
+                  "pattern": "^blob:sha256:[a-f0-9]{64}$"
+                },
+                "mimeType": {
+                  "enum": [
+                    "image/png",
+                    "image/jpeg",
+                    "image/gif",
+                    "image/webp",
+                    "video/mp4",
+                    "text/plain"
+                  ]
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "poster": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ref",
+                "mimeType",
+                "bytes"
+              ],
+              "properties": {
+                "ref": {
+                  "type": "string",
+                  "pattern": "^blob:sha256:[a-f0-9]{64}$"
+                },
+                "mimeType": {
+                  "enum": [
+                    "image/png",
+                    "image/jpeg",
+                    "image/gif",
+                    "image/webp",
+                    "video/mp4",
+                    "text/plain"
+                  ]
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "timeline": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "text",
+                      "durationMs"
+                    ],
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "durationMs": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "asset",
+                      "durationMs"
+                    ],
+                    "properties": {
+                      "asset": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "ref",
+                          "mimeType",
+                          "bytes"
+                        ],
+                        "properties": {
+                          "ref": {
+                            "type": "string",
+                            "pattern": "^blob:sha256:[a-f0-9]{64}$"
+                          },
+                          "mimeType": {
+                            "enum": [
+                              "image/png",
+                              "image/jpeg",
+                              "image/gif",
+                              "image/webp",
+                              "video/mp4",
+                              "text/plain"
+                            ]
+                          },
+                          "bytes": {
+                            "type": "integer",
+                            "minimum": 1
+                          }
+                        }
+                      },
+                      "durationMs": {
+                        "type": "integer",
+                        "minimum": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "provenance": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "sourceType",
+                    "source"
+                  ],
+                  "properties": {
+                    "sourceType": {
+                      "const": "tool"
+                    },
+                    "source": {
+                      "const": "display_media"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "sourceType",
+                    "source"
+                  ],
+                  "properties": {
+                    "sourceType": {
+                      "const": "url"
+                    },
+                    "source": {
+                      "type": "string",
+                      "pattern": "^https://[^?#]+$"
+                    }
+                  }
+                }
+              ]
+            },
+            "playback": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "autoplay",
+                "loop",
+                "muted",
+                "fpsCap"
+              ],
+              "properties": {
+                "autoplay": {
+                  "type": "boolean"
+                },
+                "loop": {
+                  "type": "boolean"
+                },
+                "muted": {
+                  "const": true
+                },
+                "fpsCap": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 60
+                }
+              }
+            },
+            "degradation": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "media_asset_read": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "requestId",
+        "ref"
+      ],
+      "properties": {
+        "type": {
+          "const": "media_asset_read"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ref": {
+          "type": "string",
+          "pattern": "^blob:sha256:[a-f0-9]{64}$"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "media_asset_chunk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "requestId",
+        "chunk"
+      ],
+      "properties": {
+        "type": {
+          "const": "media_asset_chunk"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "chunk": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ref",
+            "mimeType",
+            "offset",
+            "nextOffset",
+            "eof",
+            "bytes",
+            "data"
+          ],
+          "properties": {
+            "ref": {
+              "type": "string",
+              "pattern": "^blob:sha256:[a-f0-9]{64}$"
+            },
+            "mimeType": {
+              "enum": [
+                "image/png",
+                "image/jpeg",
+                "image/gif",
+                "image/webp",
+                "video/mp4",
+                "text/plain"
+              ]
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "nextOffset": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "eof": {
+              "type": "boolean"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 262144
+            },
+            "data": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "media_asset_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "requestId",
+        "error"
+      ],
+      "properties": {
+        "type": {
+          "const": "media_asset_error"
+        },
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "error": {
+          "const": "asset-unavailable"
         }
       }
     }
@@ -593,7 +1094,9 @@
               "name": "lb1"
             },
             "spec": {
-              "domains": ["lb1.example.com"]
+              "domains": [
+                "lb1.example.com"
+              ]
             }
           },
           "truncated": false
@@ -631,7 +1134,9 @@
                 "name": "lb1"
               },
               "spec": {
-                "domains": ["lb1.example.com"]
+                "domains": [
+                  "lb1.example.com"
+                ]
               }
             },
             "truncated": false
@@ -712,14 +1217,18 @@
                   "type": "string"
                 }
               },
-              "required": ["range"]
+              "required": [
+                "range"
+              ]
             }
           }
         ]
       },
       "set_host_tools_ack": {
         "type": "set_host_tools_ack",
-        "toolNames": ["office_read_range"]
+        "toolNames": [
+          "office_read_range"
+        ]
       },
       "set_host_tools_error": {
         "type": "set_host_tools_error",
@@ -762,6 +1271,55 @@
         "type": "host_tool_cancel",
         "id": "7295551234567891",
         "targetId": "7295551234567890"
+      },
+      "chat_media": {
+        "type": "chat_media",
+        "id": "c-1",
+        "media": {
+          "version": 1,
+          "id": "media_aaaaaaaaaaaaaaaaaaaaaaaa",
+          "kind": "image",
+          "original": {
+            "ref": "blob:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "mimeType": "image/png",
+            "bytes": 3
+          },
+          "provenance": {
+            "sourceType": "tool",
+            "source": "display_media"
+          },
+          "playback": {
+            "autoplay": false,
+            "loop": false,
+            "muted": true,
+            "fpsCap": 12
+          }
+        }
+      },
+      "media_asset_read": {
+        "type": "media_asset_read",
+        "requestId": "media-1",
+        "ref": "blob:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "offset": 0,
+        "length": 262144
+      },
+      "media_asset_chunk": {
+        "type": "media_asset_chunk",
+        "requestId": "media-1",
+        "chunk": {
+          "ref": "blob:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "mimeType": "image/png",
+          "offset": 0,
+          "nextOffset": 3,
+          "eof": true,
+          "bytes": 3,
+          "data": "aW1n"
+        }
+      },
+      "media_asset_error": {
+        "type": "media_asset_error",
+        "requestId": "media-1",
+        "error": "asset-unavailable"
       }
     },
     "invalid": [
@@ -799,7 +1357,9 @@
                   "name": "lb1"
                 },
                 "spec": {
-                  "domains": ["lb1.example.com"]
+                  "domains": [
+                    "lb1.example.com"
+                  ]
                 }
               },
               "truncated": false
@@ -846,7 +1406,9 @@
                   "name": "lb1"
                 },
                 "spec": {
-                  "domains": ["lb1.example.com"]
+                  "domains": [
+                    "lb1.example.com"
+                  ]
                 }
               },
               "truncated": false
@@ -905,7 +1467,9 @@
                   "name": "lb1"
                 },
                 "spec": {
-                  "domains": ["lb1.example.com"]
+                  "domains": [
+                    "lb1.example.com"
+                  ]
                 }
               },
               "truncated": false
@@ -950,7 +1514,9 @@
                   "name": "lb1"
                 },
                 "spec": {
-                  "domains": ["lb1.example.com"]
+                  "domains": [
+                    "lb1.example.com"
+                  ]
                 }
               },
               "truncated": false
@@ -1008,7 +1574,9 @@
                 "name": "lb1"
               },
               "spec": {
-                "domains": ["lb1.example.com"]
+                "domains": [
+                  "lb1.example.com"
+                ]
               }
             },
             "truncated": false
@@ -1047,6 +1615,61 @@
           "id": "1",
           "result": {
             "content": "nope"
+          }
+        }
+      },
+      {
+        "schema": "media_asset_read",
+        "why": "negative offset",
+        "value": {
+          "type": "media_asset_read",
+          "requestId": "r",
+          "ref": "blob:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "offset": -1
+        }
+      },
+      {
+        "schema": "chat_media",
+        "why": "local path provenance is not transport-safe",
+        "value": {
+          "type": "chat_media",
+          "id": "c-1",
+          "media": {
+            "version": 1,
+            "id": "media_aaaaaaaaaaaaaaaaaaaaaaaa",
+            "kind": "image",
+            "original": {
+              "ref": "blob:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "mimeType": "image/png",
+              "bytes": 3
+            },
+            "provenance": {
+              "sourceType": "path",
+              "source": "/private/image.png"
+            },
+            "playback": {
+              "autoplay": false,
+              "loop": false,
+              "muted": true,
+              "fpsCap": 12
+            }
+          }
+        }
+      },
+      {
+        "schema": "media_asset_chunk",
+        "why": "chunk exceeds the bounded transport limit",
+        "value": {
+          "type": "media_asset_chunk",
+          "requestId": "r",
+          "chunk": {
+            "ref": "blob:sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "mimeType": "image/png",
+            "offset": 0,
+            "nextOffset": 262145,
+            "eof": false,
+            "bytes": 262145,
+            "data": ""
           }
         }
       }

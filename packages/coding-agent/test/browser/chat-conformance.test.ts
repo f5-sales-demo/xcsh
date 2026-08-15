@@ -11,6 +11,7 @@ import {
 	isChatStop,
 	isHostToolResult,
 	isHostToolUpdate,
+	isMediaAssetRead,
 	isSetHostTools,
 } from "../../src/browser/chat-protocol";
 
@@ -65,6 +66,10 @@ describe("chat-conformance: xcsh parsers accept valid examples", () => {
 	it("isChatStop accepts valid chat_stop example", () => {
 		expect(isChatStop(validExamples.chat_stop as Record<string, unknown>)).toBe(true);
 	});
+
+	it("isMediaAssetRead accepts the bounded media request", () => {
+		expect(isMediaAssetRead(validExamples.media_asset_read as Record<string, unknown>)).toBe(true);
+	});
 });
 
 describe("chat-conformance: xcsh parsers reject invalid examples", () => {
@@ -77,6 +82,11 @@ describe("chat-conformance: xcsh parsers reject invalid examples", () => {
 		if (schemaKey === "chat_stop") {
 			it(`isChatStop rejects: ${why}`, () => {
 				expect(isChatStop(value as Record<string, unknown>)).toBe(false);
+			});
+		}
+		if (schemaKey === "media_asset_read") {
+			it(`isMediaAssetRead rejects: ${why}`, () => {
+				expect(isMediaAssetRead(value as Record<string, unknown>)).toBe(false);
 			});
 		}
 	}

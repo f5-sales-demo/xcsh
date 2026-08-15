@@ -1,6 +1,6 @@
 /**
  * Wire protocol types for the Chrome extension chat side window.
- * Contract source of truth: capabilities.json v2.0.0.
+ * Contract source of truth: capabilities.json v2.1.0.
  */
 
 // Import the guards + wire types from the PURE leaf modules (not the `../host-tools`
@@ -14,6 +14,8 @@ import type {
 	RpcHostToolResult,
 	RpcHostToolUpdate,
 } from "../host-tools/types";
+import type { MediaAssetChunk, MediaAssetReadRequest } from "../media/transport";
+import type { MediaDescriptorV1 } from "../media/types";
 
 // The client host announced on the `hello` handshake (contract 1.10.0). Re-exported
 // (type-only, fully erased) so browser-safe consumers — the office-pane bundle —
@@ -187,6 +189,11 @@ export interface ChatStop {
 	id: string;
 }
 
+export interface MediaAssetRead extends MediaAssetReadRequest {
+	type: "media_asset_read";
+	requestId: string;
+}
+
 // ---------------------------------------------------------------------------
 // Outbound messages (xcsh → extension)
 // ---------------------------------------------------------------------------
@@ -234,6 +241,24 @@ export interface ChatError {
 export interface ChatKeepalive {
 	type: "chat_keepalive";
 	id: string;
+}
+
+export interface ChatMedia {
+	type: "chat_media";
+	id: string;
+	media: MediaDescriptorV1;
+}
+
+export interface MediaAssetChunkMessage {
+	type: "media_asset_chunk";
+	requestId: string;
+	chunk: MediaAssetChunk;
+}
+
+export interface MediaAssetError {
+	type: "media_asset_error";
+	requestId: string;
+	error: "asset-unavailable";
 }
 
 // ---------------------------------------------------------------------------
@@ -372,6 +397,17 @@ export function isTransportChatRequest(msg: unknown): msg is TransportChatReques
 
 export function isChatStop(msg: Record<string, unknown>): boolean {
 	return msg.type === "chat_stop" && hasChatIdPrefix(msg.id);
+}
+
+export function isMediaAssetRead(msg: Record<string, unknown>): msg is Record<string, unknown> & MediaAssetRead {
+	return (
+		msg.type === "media_asset_read" &&
+		typeof msg.requestId === "string" &&
+		msg.requestId.length > 0 &&
+		typeof msg.ref === "string" &&
+		(msg.offset === undefined || (Number.isSafeInteger(msg.offset) && Number(msg.offset) >= 0)) &&
+		(msg.length === undefined || (Number.isSafeInteger(msg.length) && Number(msg.length) > 0))
+	);
 }
 
 export function isListSkills(msg: Record<string, unknown>): boolean {

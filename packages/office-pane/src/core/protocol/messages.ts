@@ -25,6 +25,7 @@ import type {
 	ChatError,
 	ChatImage,
 	ChatKeepalive,
+	ChatMedia,
 	ChatReference,
 	ChatRequest,
 	ChatStop,
@@ -39,6 +40,9 @@ import type {
 	ListCommands,
 	ListModels,
 	ListSkills,
+	MediaAssetChunkMessage,
+	MediaAssetError,
+	MediaAssetRead,
 	ModelInfo,
 	ModelsList,
 	PathPicked,
@@ -59,6 +63,7 @@ export type {
 	ChatError as ChatErrorMsg,
 	ChatImage as ChatImageMsg,
 	ChatKeepalive as ChatKeepaliveMsg,
+	ChatMedia as ChatMediaMsg,
 	ChatReference as ChatRefWire,
 	ChatRequest as ChatRequestMsg,
 	ChatStop as ChatStopMsg,
@@ -78,6 +83,9 @@ export type {
 	ListCommands as ListCommandsMsg,
 	ListModels as ListModelsMsg,
 	ListSkills as ListSkillsMsg,
+	MediaAssetChunkMessage as MediaAssetChunkMsg,
+	MediaAssetError as MediaAssetErrorMsg,
+	MediaAssetRead as MediaAssetReadMsg,
 	ModelInfo,
 	ModelsList as ModelsListMsg,
 	PathPicked as PathPickedMsg,
@@ -118,6 +126,9 @@ export type ChatStreamMsg = ChatDelta | ChatDone | ChatError;
 export type ChatInboundMsg =
 	| ChatStreamMsg
 	| ChatKeepalive
+	| ChatMedia
+	| MediaAssetChunkMessage
+	| MediaAssetError
 	| ChatToolNoticeMsg
 	| HostToolCall
 	| HostToolCancel
@@ -154,6 +165,18 @@ export function isChatError(msg: unknown): msg is ChatError {
 
 export function isChatKeepalive(msg: unknown): msg is ChatKeepalive {
 	return isObj(msg) && msg.type === "chat_keepalive";
+}
+
+export function isChatMedia(msg: unknown): msg is ChatMedia {
+	return isObj(msg) && msg.type === "chat_media" && typeof msg.id === "string" && isObj(msg.media);
+}
+
+export function isMediaAssetChunk(msg: unknown): msg is MediaAssetChunkMessage {
+	return isObj(msg) && msg.type === "media_asset_chunk" && typeof msg.requestId === "string" && isObj(msg.chunk);
+}
+
+export function isMediaAssetError(msg: unknown): msg is MediaAssetError {
+	return isObj(msg) && msg.type === "media_asset_error" && typeof msg.requestId === "string";
 }
 
 export function isChatToolNotice(msg: unknown): msg is ChatToolNoticeMsg {

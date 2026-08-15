@@ -62,3 +62,31 @@ describe("ACP event mapper", () => {
 		);
 	});
 });
+
+it("maps display_media to standard image and sanitized resource content", () => {
+	const hash = "c".repeat(64);
+	const descriptor = {
+		version: 1 as const,
+		id: `media_${"c".repeat(24)}`,
+		kind: "image" as const,
+		original: { ref: `blob:sha256:${hash}`, mimeType: "image/png", bytes: 4 },
+		provenance: { sourceType: "path" as const, source: "/home/robin/private.png" },
+		playback: { autoplay: false, loop: false, muted: true as const, fpsCap: 12 },
+	};
+	const updates = mapAgentSessionEventToAcpSessionUpdates(
+		{
+			type: "tool_execution_end",
+			toolCallId: "call-1",
+			toolName: "display_media",
+			result: {
+				content: [{ type: "image", data: "aW1n", mimeType: "image/png" }],
+				details: { descriptor },
+			},
+		} as AgentSessionEvent,
+		"session-1",
+	);
+	const update = updates[0]!.update as { content?: unknown[]; rawOutput?: unknown };
+	expect(update.content!.length).toBeGreaterThanOrEqual(2);
+	expect(JSON.stringify(update)).toContain("xcsh-media://media_");
+	expect(JSON.stringify(update)).not.toContain("/home/robin");
+});
