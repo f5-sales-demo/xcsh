@@ -28,7 +28,6 @@ import { CancelJobTool } from "./cancel-job";
 import { CatalogWorkflowRunnerTool } from "./catalog-workflow-runner";
 import { type CheckpointState, CheckpointTool, RewindTool } from "./checkpoint";
 import { DebugTool } from "./debug";
-import { DisplayImageTool } from "./display-image";
 import { DisplayMediaTool } from "./display-media";
 import { ExitPlanModeTool } from "./exit-plan-mode";
 import { FindTool } from "./find";
@@ -71,7 +70,6 @@ export * from "./cancel-job";
 export * from "./catalog-workflow-runner";
 export * from "./checkpoint";
 export * from "./debug";
-export * from "./display-image";
 export * from "./display-media";
 export * from "./exit-plan-mode";
 export * from "./find";
@@ -229,7 +227,6 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	notebook: s => new NotebookTool(s),
 	read: s => new ReadTool(s),
 	display_media: s => new DisplayMediaTool(s),
-	display_image: s => new DisplayImageTool(s),
 	inspect_image: s => new InspectImageTool(s),
 	browser: s => new BrowserTool(s),
 	catalog_workflow_runner: s => new CatalogWorkflowRunnerTool(s),

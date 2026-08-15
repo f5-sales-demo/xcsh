@@ -504,9 +504,7 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 
 	// Output all agent events as JSON
 	session.subscribe(event => {
-		const isMediaTool =
-			event.type === "tool_execution_end" &&
-			(event.toolName === "display_media" || event.toolName === "display_image");
+		const isMediaTool = event.type === "tool_execution_end" && event.toolName === "display_media";
 		const descriptor = isMediaTool ? extractMediaDescriptorFromToolResult(event.result) : undefined;
 		const projected = descriptor ? projectMediaDescriptorForTransport(descriptor) : undefined;
 		if (event.type === "tool_execution_end" && projected) {

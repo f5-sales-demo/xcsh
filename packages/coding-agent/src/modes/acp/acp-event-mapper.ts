@@ -158,9 +158,7 @@ export function mapAgentSessionEventToAcpSessionUpdates(
 		}
 		case "tool_execution_end": {
 			const descriptor =
-				event.toolName === "display_media" || event.toolName === "display_image"
-					? extractMediaDescriptorFromToolResult(event.result)
-					: undefined;
+				event.toolName === "display_media" ? extractMediaDescriptorFromToolResult(event.result) : undefined;
 			const content = descriptor
 				? extractStructuredToolCallContent(event.result)
 				: extractToolCallContent(event.result);
