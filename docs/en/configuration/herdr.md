@@ -3,8 +3,6 @@ title: Herdr terminals
 description: Run xcsh conversations with isolated, conversation-owned support terminals.
 ---
 
-# Herdr terminals
-
 xcsh can bind one conversation to one Herdr workspace and expose named support terminals as tabs. The recommended full rich-media stack is Ghostty with Kitty graphics, Herdr with `experimental.kitty_graphics=true`, and FFmpeg 6 or newer. Other terminals remain usable and receive static media fallbacks.
 
 Launch a conversation-owned workspace from outside Herdr:
