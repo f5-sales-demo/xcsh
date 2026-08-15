@@ -20,6 +20,7 @@ import { EventBus } from "../../utils/event-bus";
 import { getAllPluginExtensionPaths } from "../plugins/loader";
 import { resolvePath } from "../utils";
 import herdrReporter from "./bundled/herdr-reporter";
+import herdrTerminal from "./bundled/herdr-terminal";
 import sandboxGuard from "./bundled/sandbox-guard";
 import type {
 	Extension,
@@ -501,6 +502,7 @@ async function discoverExtensionsInDir(dir: string): Promise<string[]> {
 /** Extensions bundled with xcsh and loaded by default (before user extensions). */
 const BUNDLED_EXTENSIONS: ReadonlyArray<{ name: string; factory: ExtensionFactory }> = [
 	{ name: "herdr-reporter", factory: herdrReporter },
+	{ name: "herdr-terminal", factory: herdrTerminal },
 	{ name: "sandbox-guard", factory: sandboxGuard },
 ];
 
