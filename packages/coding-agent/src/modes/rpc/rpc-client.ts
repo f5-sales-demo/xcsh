@@ -8,6 +8,7 @@ import type { ImageContent, Model } from "@f5-sales-demo/pi-ai";
 import { isRecord, ptree, readJsonl } from "@f5-sales-demo/pi-utils";
 import { bunExecPath } from "../../bun-path";
 import type { BashResult } from "../../exec/bash-executor";
+import type { MediaAssetChunk, MediaAssetReadRequest } from "../../media/transport";
 import type { SessionStats } from "../../session/agent-session";
 import type { CompactionResult } from "../../session/compaction";
 import type {
@@ -17,6 +18,7 @@ import type {
 	RpcHostToolDefinition,
 	RpcHostToolResult,
 	RpcHostToolUpdate,
+	RpcMediaEvent,
 	RpcResponse,
 	RpcSessionState,
 } from "./rpc-types";
@@ -51,6 +53,7 @@ export interface RpcClientOptions {
 export type ModelInfo = Pick<Model, "provider" | "id" | "contextWindow" | "reasoning" | "thinking">;
 
 export type RpcEventListener = (event: AgentEvent) => void;
+export type RpcMediaEventListener = (event: RpcMediaEvent) => void;
 
 export interface RpcClientToolContext<TDetails = unknown> {
 	toolCallId: string;
@@ -110,6 +113,10 @@ function isAgentEvent(value: unknown): value is AgentEvent {
 	return agentEventTypes.has(type as AgentEvent["type"]);
 }
 
+function isRpcMediaEvent(value: unknown): value is RpcMediaEvent {
+	return isRecord(value) && value.type === "chat_media" && isRecord(value.media);
+}
+
 function isRpcHostToolCallRequest(value: unknown): value is RpcHostToolCallRequest {
 	if (!isRecord(value)) return false;
 	return (
@@ -142,6 +149,7 @@ function normalizeToolResult<TDetails>(result: RpcClientToolResult<TDetails>): A
 export class RpcClient {
 	#process: ptree.ChildProcess | null = null;
 	#eventListeners: RpcEventListener[] = [];
+	#mediaEventListeners: RpcMediaEventListener[] = [];
 	#pendingRequests: Map<string, { resolve: (response: RpcResponse) => void; reject: (error: Error) => void }> =
 		new Map();
 	#customTools: RpcClientCustomTool[] = [];
@@ -283,6 +291,14 @@ export class RpcClient {
 			if (index !== -1) {
 				this.#eventListeners.splice(index, 1);
 			}
+		};
+	}
+
+	onMediaEvent(listener: RpcMediaEventListener): () => void {
+		this.#mediaEventListeners.push(listener);
+		return () => {
+			const index = this.#mediaEventListeners.indexOf(listener);
+			if (index !== -1) this.#mediaEventListeners.splice(index, 1);
 		};
 	}
 
@@ -510,6 +526,11 @@ export class RpcClient {
 	 * Switch to a different session file.
 	 * @returns Object with `cancelled: true` if an extension cancelled the switch
 	 */
+	async readMediaAsset(request: MediaAssetReadRequest): Promise<MediaAssetChunk> {
+		const response = await this.#send({ type: "media_asset_read", ...request });
+		return this.#getData(response);
+	}
+
 	async switchSession(sessionPath: string): Promise<{ cancelled: boolean }> {
 		const response = await this.#send({ type: "switch_session", sessionPath });
 		return this.#getData(response);
@@ -658,12 +679,13 @@ export class RpcClient {
 			return;
 		}
 
+		if (isRpcMediaEvent(data)) {
+			for (const listener of this.#mediaEventListeners) listener(data);
+			return;
+		}
 		if (!isAgentEvent(data)) return;
 
-		// Otherwise it's an event
-		for (const listener of this.#eventListeners) {
-			listener(data);
-		}
+		for (const listener of this.#eventListeners) listener(data);
 	}
 
 	#send(command: RpcCommandBody): Promise<RpcResponse> {

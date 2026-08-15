@@ -18,6 +18,8 @@ import type {
 	RpcHostToolResult,
 	RpcHostToolUpdate,
 } from "../../host-tools/types";
+import type { MediaAssetChunk, MediaAssetReadRequest } from "../../media/transport";
+import type { MediaDescriptorV1 } from "../../media/types";
 import type { SessionStats } from "../../session/agent-session";
 import type { CompactionResult } from "../../session/compaction";
 import type { TodoPhase } from "../../tools/todo-write";
@@ -87,6 +89,7 @@ export type RpcCommand =
 	| { id?: string; type: "get_branch_messages" }
 	| { id?: string; type: "get_last_assistant_text" }
 	| { id?: string; type: "set_session_name"; name: string }
+	| ({ id?: string; type: "media_asset_read" } & MediaAssetReadRequest)
 
 	// Messages
 	| { id?: string; type: "get_messages" };
@@ -232,12 +235,18 @@ export type RpcResponse =
 			data: { text: string | null };
 	  }
 	| { id?: string; type: "response"; command: "set_session_name"; success: true }
+	| { id?: string; type: "response"; command: "media_asset_read"; success: true; data: MediaAssetChunk }
 
 	// Messages
 	| { id?: string; type: "response"; command: "get_messages"; success: true; data: { messages: AgentMessage[] } }
 
 	// Error response (any command can fail)
 	| { id?: string; type: "response"; command: string; success: false; error: string };
+
+export interface RpcMediaEvent {
+	type: "chat_media";
+	media: MediaDescriptorV1;
+}
 
 // ============================================================================
 // Extension UI Events (stdout)

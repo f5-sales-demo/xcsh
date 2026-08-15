@@ -18,6 +18,26 @@ export type ChatRole = "user" | "assistant" | "tool";
  * `retryText`, the prompt to resend — the Transcript enables Retry on the LAST
  * message when a retry handler + `retryText` are present).
  */
+export interface ChatMediaFrame {
+	src?: string;
+	text?: string;
+	durationMs: number;
+}
+
+export interface ChatMediaContent {
+	id: string;
+	kind: "image" | "video" | "animation" | "raster-timeline" | "text-timeline";
+	src?: string;
+	posterSrc?: string;
+	frames?: ChatMediaFrame[];
+	caption?: string;
+	alt?: string;
+	width?: number;
+	height?: number;
+	degradation?: string;
+	playback: { autoplay: boolean; loop: boolean; muted: true };
+}
+
 export interface ChatMessage {
 	id: string;
 	role: ChatRole;
@@ -33,6 +53,8 @@ export interface ChatMessage {
 	retryText?: string;
 	/** assistant rows only: cited sources, rendered as a "Sources" chip row. */
 	references?: ChatReference[];
+	/** Rich media resolved by the host into browser-safe object URLs. */
+	media?: ChatMediaContent[];
 }
 
 /** A source the assistant cited — an F5 docs page or a tenant-console deep link. */

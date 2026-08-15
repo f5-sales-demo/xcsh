@@ -12,7 +12,7 @@
         bytes[i] = binary.charCodeAt(i);
       }
       const data = JSON.parse(new TextDecoder('utf-8').decode(bytes));
-      const { header, entries, leafId: defaultLeafId, systemPrompt, tools } = data;
+      const { header, entries, leafId: defaultLeafId, systemPrompt, tools, mediaAssets = {} } = data;
 
       // ============================================================
       // URL PARAMETER HANDLING
@@ -456,7 +456,11 @@
               const content = truncate(normalize(extractContent(msg.content)));
               return labelHtml + `<span class="tree-role-user">user:</span> ${escapeHtml(content)}`;
             }
-            if (msg.role === 'assistant') {
+            if (msg.role === 'media') {
+            return `<div class="assistant-message media-message" id="${entryId}">${copyBtnHtml}${tsHtml}${renderMedia(msg.media)}</div>`;
+          }
+
+          if (msg.role === 'assistant') {
               const textContent = truncate(normalize(extractContent(msg.content)));
               if (textContent) {
                 return labelHtml + `<span class="tree-role-assistant">assistant:</span> ${escapeHtml(textContent)}`;
@@ -1392,6 +1396,66 @@
         </button>`;
       }
 
+      const mediaTimers = new Set();
+
+      function assetUrl(asset) {
+        return asset && typeof mediaAssets[asset.ref] === 'string' ? mediaAssets[asset.ref] : null;
+      }
+
+      function renderMedia(media) {
+        const caption = media.caption ? `<figcaption>${escapeHtml(media.caption)}</figcaption>` : '';
+        const notice = media.degradation ? `<div class="media-degradation">${escapeHtml(media.degradation)}</div>` : '';
+        const original = assetUrl(media.original);
+        const poster = assetUrl(media.poster);
+        let body = '';
+        if (media.kind === 'video' && original) {
+          const autoplay = media.playback && media.playback.autoplay ? ' autoplay' : '';
+          const loop = media.playback && media.playback.loop ? ' loop' : '';
+          body = `<video class="export-media-asset" src="${escapeHtml(original)}"${poster ? ` poster="${escapeHtml(poster)}"` : ''} muted controls playsinline${autoplay}${loop}></video>`;
+        } else if ((media.kind === 'image' || media.kind === 'animation') && (original || poster)) {
+          body = `<img class="export-media-asset" src="${escapeHtml(original || poster)}" alt="${escapeHtml(media.alt || '')}">`;
+        } else if (Array.isArray(media.timeline) && media.timeline.length > 0) {
+          const frames = media.timeline.map(frame => 'asset' in frame
+            ? { src: assetUrl(frame.asset), durationMs: frame.durationMs }
+            : { text: frame.text, durationMs: frame.durationMs });
+          const first = frames[0];
+          const firstHtml = first.src
+            ? `<img class="export-media-asset" src="${escapeHtml(first.src)}" alt="${escapeHtml(media.alt || '')}">`
+            : `<pre class="export-media-text">${escapeHtml(first.text || '')}</pre>`;
+          const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(frames))));
+          body = `<div class="export-media-timeline" data-frames="${encoded}" data-autoplay="${Boolean(media.playback && media.playback.autoplay)}" data-loop="${Boolean(media.playback && media.playback.loop)}">${firstHtml}</div>`;
+        } else {
+          body = '<div class="media-degradation">Media asset unavailable.</div>';
+        }
+        return `<figure class="export-media">${body}${caption}${notice}</figure>`;
+      }
+
+      function activateMedia(root) {
+        for (const timer of mediaTimers) clearTimeout(timer);
+        mediaTimers.clear();
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduced) {
+          root.querySelectorAll('video[autoplay]').forEach(video => { video.removeAttribute('autoplay'); video.pause(); });
+          return;
+        }
+        root.querySelectorAll('.export-media-timeline').forEach(timeline => {
+          if (timeline.dataset.autoplay !== 'true') return;
+          const frames = JSON.parse(decodeURIComponent(escape(atob(timeline.dataset.frames || ''))));
+          let index = 0;
+          const loop = timeline.dataset.loop === 'true';
+          const advance = () => {
+            const frame = frames[index];
+            timeline.innerHTML = frame.src
+              ? `<img class="export-media-asset" src="${escapeHtml(frame.src)}" alt="">`
+              : `<pre class="export-media-text">${escapeHtml(frame.text || '')}</pre>`;
+            if (!loop && index === frames.length - 1) return;
+            const timer = setTimeout(() => { mediaTimers.delete(timer); index = (index + 1) % frames.length; advance(); }, frame.durationMs);
+            mediaTimers.add(timer);
+          };
+          advance();
+        });
+      }
+
       function renderEntry(entry) {
         const ts = formatTimestamp(entry.timestamp);
         const tsHtml = ts ? `<div class="message-timestamp">${ts}</div>` : '';
@@ -1669,6 +1733,7 @@
 
         messagesEl.innerHTML = '';
         messagesEl.appendChild(fragment);
+        activateMedia(messagesEl);
 
         // Attach click handlers for copy-link buttons
         messagesEl.querySelectorAll('.copy-link-btn').forEach(btn => {

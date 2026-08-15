@@ -13,6 +13,7 @@ import type {
 	ListCommandsMsg,
 	ListModelsMsg,
 	ListSkillsMsg,
+	MediaAssetReadMsg,
 	PickPathMsg,
 	SetHostToolsMsg,
 } from "../protocol";
@@ -33,6 +34,7 @@ export type ChatOutbound =
 	| ListSkillsMsg
 	| ListCommandsMsg
 	| ListModelsMsg
+	| MediaAssetReadMsg
 	| PickPathMsg;
 
 /**

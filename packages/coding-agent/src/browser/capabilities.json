@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "contractVersion": "2.0.0",
+  "contractVersion": "2.1.0",
   "multiPortDiscovery": true,
   "protocol": "tool_request/result",
   "tools": [
@@ -70,7 +70,9 @@
       "category": "meta",
       "params": {
         "type": "object",
-        "required": ["port"],
+        "required": [
+          "port"
+        ],
         "properties": {
           "port": {
             "type": "number"
@@ -87,7 +89,9 @@
       "category": "navigation",
       "params": {
         "type": "object",
-        "required": ["url"],
+        "required": [
+          "url"
+        ],
         "properties": {
           "url": {
             "type": "string"
@@ -104,7 +108,9 @@
       "category": "navigation",
       "params": {
         "type": "object",
-        "required": ["ref"],
+        "required": [
+          "ref"
+        ],
         "properties": {
           "ref": {
             "type": "string"
@@ -121,7 +127,10 @@
       "category": "navigation",
       "params": {
         "type": "object",
-        "required": ["width", "height"],
+        "required": [
+          "width",
+          "height"
+        ],
         "properties": {
           "width": {
             "type": "number"
@@ -151,7 +160,9 @@
       "category": "navigation",
       "params": {
         "type": "object",
-        "required": ["url"],
+        "required": [
+          "url"
+        ],
         "properties": {
           "url": {
             "type": "string"
@@ -168,7 +179,9 @@
       "category": "navigation",
       "params": {
         "type": "object",
-        "required": ["tabId"],
+        "required": [
+          "tabId"
+        ],
         "properties": {
           "tabId": {
             "type": "number"
@@ -185,7 +198,9 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["ref"],
+        "required": [
+          "ref"
+        ],
         "properties": {
           "ref": {
             "type": "string"
@@ -202,7 +217,9 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["js"],
+        "required": [
+          "js"
+        ],
         "properties": {
           "js": {
             "type": "string"
@@ -222,7 +239,10 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["x", "y"],
+        "required": [
+          "x",
+          "y"
+        ],
         "properties": {
           "x": {
             "type": "number"
@@ -242,7 +262,9 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["text"],
+        "required": [
+          "text"
+        ],
         "properties": {
           "text": {
             "type": "string"
@@ -259,7 +281,10 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["ref", "value"],
+        "required": [
+          "ref",
+          "value"
+        ],
         "properties": {
           "ref": {
             "type": "string"
@@ -279,7 +304,9 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["key"],
+        "required": [
+          "key"
+        ],
         "properties": {
           "key": {
             "type": "string"
@@ -296,7 +323,10 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["ref", "value"],
+        "required": [
+          "ref",
+          "value"
+        ],
         "properties": {
           "ref": {
             "type": "string"
@@ -316,7 +346,10 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["selector", "value"],
+        "required": [
+          "selector",
+          "value"
+        ],
         "properties": {
           "selector": {
             "type": "string"
@@ -342,7 +375,10 @@
       "category": "interaction",
       "params": {
         "type": "object",
-        "required": ["ref", "files"],
+        "required": [
+          "ref",
+          "files"
+        ],
         "properties": {
           "ref": {
             "type": "string"
@@ -389,7 +425,9 @@
       "category": "read",
       "params": {
         "type": "object",
-        "required": ["selector"],
+        "required": [
+          "selector"
+        ],
         "properties": {
           "selector": {
             "type": "string"
@@ -406,7 +444,9 @@
       "category": "read",
       "params": {
         "type": "object",
-        "required": ["selector"],
+        "required": [
+          "selector"
+        ],
         "properties": {
           "selector": {
             "type": "string"
@@ -423,7 +463,9 @@
       "category": "read",
       "params": {
         "type": "object",
-        "required": ["selector"],
+        "required": [
+          "selector"
+        ],
         "properties": {
           "selector": {
             "type": "string"
@@ -446,7 +488,10 @@
       "category": "read",
       "params": {
         "type": "object",
-        "required": ["selector", "expected"],
+        "required": [
+          "selector",
+          "expected"
+        ],
         "properties": {
           "selector": {
             "type": "string"
@@ -584,7 +629,9 @@
       "category": "script",
       "params": {
         "type": "object",
-        "required": ["code"],
+        "required": [
+          "code"
+        ],
         "properties": {
           "code": {
             "type": "string"
@@ -601,13 +648,17 @@
       "category": "script",
       "params": {
         "type": "object",
-        "required": ["actions"],
+        "required": [
+          "actions"
+        ],
         "properties": {
           "actions": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["tool"],
+              "required": [
+                "tool"
+              ],
               "properties": {
                 "tool": {
                   "type": "string"
@@ -642,7 +693,9 @@
       "category": "annotation",
       "params": {
         "type": "object",
-        "required": ["kind"],
+        "required": [
+          "kind"
+        ],
         "properties": {
           "kind": {
             "type": "string"
@@ -679,7 +732,10 @@
       "tool": "annotate",
       "requiresExplainMode": true,
       "autoFingerprintOnClick": true,
-      "kinds": ["fingerprint", "highlight"],
+      "kinds": [
+        "fingerprint",
+        "highlight"
+      ],
       "description": "Transient annotation overlays. In explain mode, clicks auto-draw a fingerprint; `annotate` draws a named overlay by ref or coordinates."
     },
     "capture": {
@@ -693,7 +749,13 @@
     "chat": {
       "contextTool": "get_page_context",
       "transport": "websocket-bridge",
-      "modes": ["educational", "presentation", "configuration", "screenshot", "annotation"],
+      "modes": [
+        "educational",
+        "presentation",
+        "configuration",
+        "screenshot",
+        "annotation"
+      ],
       "messages": [
         "chat_request",
         "chat_delta",
@@ -707,9 +769,13 @@
         "host_tool_call",
         "host_tool_update",
         "host_tool_result",
-        "host_tool_cancel"
+        "host_tool_cancel",
+        "chat_media",
+        "media_asset_read",
+        "media_asset_chunk",
+        "media_asset_error"
       ],
-      "description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel.",
+      "description": "User ↔ xcsh chat over the bridge. The extension side panel sends chat_request (with mode and page-context snapshot); xcsh streams chat_delta tokens then a terminal chat_done (with reference links) or chat_error. Chat ids are prefixed \"c-\". Tool calls during a turn use the normal tool_request flow. chat_stop halts a streaming response. chat_tool_notice is emitted by the EXTENSION (the service worker) to the panel as a best-effort UI signal when a tool runs during a turn — it is NOT sent by xcsh; xcsh must not produce it to avoid double-rendering in the panel. Rich media uses chat_media descriptors and bounded media_asset_read/media_asset_chunk exchanges; media_asset_error reports unavailable assets.",
       "promptHints": {
         "role": "You are xcsh, the AI assistant embedded in the F5 Distributed Cloud (XC) console side panel. The user is viewing a live console page; help them drive automation and understand settings and their purpose.",
         "grounding": "Every user message carries a page-context snapshot: url/path, title, a trimmed accessibility tree, and — when available — the live XC API resource JSON the page loaded (context.api.body). Treat context.api.body as the authoritative current state of the resource and ground answers in it instead of guessing; respect the truncated flags.",

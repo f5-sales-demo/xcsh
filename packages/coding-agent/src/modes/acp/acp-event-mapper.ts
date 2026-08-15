@@ -5,6 +5,7 @@ import type {
 	ToolCallLocation,
 	ToolKind,
 } from "@agentclientprotocol/sdk";
+import { extractMediaDescriptorFromToolResult, projectMediaDescriptorForTransport } from "../../media/transport";
 import type { AgentSessionEvent } from "../../session/agent-session";
 import type { TodoStatus } from "../../tools/todo-write";
 
@@ -156,16 +157,37 @@ export function mapAgentSessionEventToAcpSessionUpdates(
 			return [toSessionNotification(sessionId, update)];
 		}
 		case "tool_execution_end": {
-			const content = extractToolCallContent(event.result);
+			const descriptor =
+				event.toolName === "display_media" || event.toolName === "display_image"
+					? extractMediaDescriptorFromToolResult(event.result)
+					: undefined;
+			const content = descriptor
+				? extractStructuredToolCallContent(event.result)
+				: extractToolCallContent(event.result);
+			const projected = descriptor ? projectMediaDescriptorForTransport(descriptor) : undefined;
+			if (projected) {
+				content.push({
+					type: "content",
+					content: {
+						type: "resource_link",
+						uri: `xcsh-media://${projected.id}`,
+						name: projected.caption ?? projected.alt ?? projected.id,
+						description: JSON.stringify(projected),
+						mimeType: projected.original?.mimeType ?? projected.poster?.mimeType,
+						size: projected.original?.bytes ?? projected.poster?.bytes,
+					},
+				});
+			}
+			const rawOutput = projected
+				? { ...(event.result as object), details: { descriptor: projected } }
+				: event.result;
 			const update: SessionUpdate = {
 				sessionUpdate: "tool_call_update",
 				toolCallId: event.toolCallId,
 				status: event.isError ? "failed" : "completed",
-				rawOutput: event.result,
+				rawOutput,
 			};
-			if (content.length > 0) {
-				update.content = content;
-			}
+			if (content.length > 0) update.content = content;
 			return [toSessionNotification(sessionId, update)];
 		}
 		case "todo_reminder": {

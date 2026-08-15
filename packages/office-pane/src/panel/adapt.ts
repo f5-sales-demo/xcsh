@@ -96,7 +96,13 @@ export function turnsToMessages(view: SessionView): ChatMessage[] {
 		const body: ChatMessage =
 			t.state.status === "error"
 				? { id: t.state.id, role: "assistant", text: errorText(t.state.reason), error: true }
-				: { id: t.state.id, role: "assistant", text: t.state.text, ...(references ? { references } : {}) };
+				: {
+						id: t.state.id,
+						role: "assistant",
+						text: t.state.text,
+						...(references ? { references } : {}),
+						...(t.media && t.media.length > 0 ? { media: t.media } : {}),
+					};
 		return [...toolRows, body];
 	});
 

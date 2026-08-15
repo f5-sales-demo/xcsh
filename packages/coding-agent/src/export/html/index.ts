@@ -1,7 +1,10 @@
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { AgentState } from "@f5-sales-demo/pi-agent-core";
 import { APP_NAME, isEnoent } from "@f5-sales-demo/pi-utils";
+import { listMediaAssets, listMediaDescriptors, projectMediaDescriptorForTransport } from "../../media/transport";
 import { getResolvedThemeColors, getThemeExportColors } from "../../modes/theme/theme";
+import { parseBlobRef } from "../../session/blob-store";
 import { type SessionEntry, type SessionHeader, SessionManager } from "../../session/session-manager";
 // Pre-generated template (created by scripts/generate-template.ts at publish time)
 import { TEMPLATE } from "./template.generated";
@@ -96,6 +99,7 @@ interface SessionData {
 	leafId: string | null;
 	systemPrompt?: string;
 	tools?: { name: string; description: string }[];
+	mediaAssets?: Record<string, string | null>;
 }
 
 /** Generate HTML from bundled template with runtime substitutions. */
@@ -109,6 +113,47 @@ async function generateHtml(sessionData: SessionData, themeName?: string): Promi
 	);
 }
 
+function projectMediaEntries(entries: SessionEntry[]): SessionEntry[] {
+	return entries.map(entry => {
+		if (entry.type !== "message" || entry.message.role !== "media") return entry;
+		return {
+			...entry,
+			message: { ...entry.message, media: projectMediaDescriptorForTransport(entry.message.media) },
+		};
+	});
+}
+
+const mediaExtension: Record<string, string> = {
+	"image/png": ".png",
+	"image/jpeg": ".jpg",
+	"image/gif": ".gif",
+	"image/webp": ".webp",
+	"video/mp4": ".mp4",
+	"text/plain": ".txt",
+};
+
+async function exportMediaAssets(sm: SessionManager, entries: SessionEntry[], outputPath: string) {
+	const descriptors = listMediaDescriptors(entries);
+	const assets = new Map(descriptors.flatMap(listMediaAssets).map(asset => [asset.ref, asset]));
+	if (assets.size === 0) return {};
+	const mediaDirName = `${path.basename(outputPath, path.extname(outputPath))}-media`;
+	const mediaDir = path.join(path.dirname(outputPath), mediaDirName);
+	const result: Record<string, string | null> = {};
+	for (const asset of assets.values()) {
+		const hash = parseBlobRef(asset.ref);
+		const blob = hash ? await sm.getBlobStore().get(hash) : null;
+		if (!hash || !blob || blob.byteLength !== asset.bytes) {
+			result[asset.ref] = null;
+			continue;
+		}
+		await fs.mkdir(mediaDir, { recursive: true });
+		const fileName = `${hash}${mediaExtension[asset.mimeType] ?? ".bin"}`;
+		await Bun.write(path.join(mediaDir, fileName), blob);
+		result[asset.ref] = `${mediaDirName}/${fileName}`;
+	}
+	return result;
+}
+
 /** Export session to HTML using SessionManager and AgentState. */
 export async function exportSessionToHtml(
 	sm: SessionManager,
@@ -120,17 +165,18 @@ export async function exportSessionToHtml(
 	const sessionFile = sm.getSessionFile();
 	if (!sessionFile) throw new Error("Cannot export in-memory session to HTML");
 
+	const outputPath = opts.outputPath || `${APP_NAME}-session-${path.basename(sessionFile, ".jsonl")}.html`;
+	const entries = sm.getEntries();
 	const sessionData: SessionData = {
 		header: sm.getHeader(),
-		entries: sm.getEntries(),
+		entries: projectMediaEntries(entries),
 		leafId: sm.getLeafId(),
 		systemPrompt: state?.systemPrompt,
 		tools: state?.tools?.map(t => ({ name: t.name, description: t.description })),
+		mediaAssets: await exportMediaAssets(sm, entries, outputPath),
 	};
 
 	const html = await generateHtml(sessionData, opts.themeName);
-	const outputPath = opts.outputPath || `${APP_NAME}-session-${path.basename(sessionFile, ".jsonl")}.html`;
-
 	await Bun.write(outputPath, html);
 	return outputPath;
 }
@@ -147,15 +193,16 @@ export async function exportFromFile(inputPath: string, options?: ExportOptions 
 		throw err;
 	}
 
+	const outputPath = opts.outputPath || `${APP_NAME}-session-${path.basename(inputPath, ".jsonl")}.html`;
+	const entries = sm.getEntries();
 	const sessionData: SessionData = {
 		header: sm.getHeader(),
-		entries: sm.getEntries(),
+		entries: projectMediaEntries(entries),
 		leafId: sm.getLeafId(),
+		mediaAssets: await exportMediaAssets(sm, entries, outputPath),
 	};
 
 	const html = await generateHtml(sessionData, opts.themeName);
-	const outputPath = opts.outputPath || `${APP_NAME}-session-${path.basename(inputPath, ".jsonl")}.html`;
-
 	await Bun.write(outputPath, html);
 	return outputPath;
 }

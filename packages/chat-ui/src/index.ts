@@ -83,6 +83,8 @@ export { toolActivityLabel } from "./tools/activity-label";
 export type {
 	ActivationGate,
 	AttachCategory,
+	ChatMediaContent,
+	ChatMediaFrame,
 	ChatMessage,
 	ChatReference,
 	ChatRole,

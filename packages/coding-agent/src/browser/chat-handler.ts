@@ -12,6 +12,12 @@ import {
 	normalizeHostToolDefinitions,
 	RpcHostToolBridge,
 } from "../host-tools";
+import {
+	extractMediaDescriptorFromToolResult,
+	listMediaDescriptors,
+	projectMediaDescriptorForTransport,
+	readMediaAssetChunk,
+} from "../media/transport";
 import { LITELLM_LOGIN_MODEL_CHOICES } from "../modes/controllers/login-model";
 import { extractReferences } from "../references";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
@@ -21,6 +27,7 @@ import {
 	type ChatError,
 	type ChatErrorReason,
 	type ChatKeepalive,
+	type ChatMedia,
 	type ChatRequest,
 	type Configure,
 	type ConfigureAck,
@@ -34,8 +41,12 @@ import {
 	isListCommands,
 	isListModels,
 	isListSkills,
+	isMediaAssetRead,
 	isSetHostTools,
 	isTransportChatRequest,
+	type MediaAssetChunkMessage,
+	type MediaAssetError,
+	type MediaAssetRead,
 	type ModelsList,
 	type PageContextSnapshot,
 	type SetHostTools,
@@ -115,6 +126,7 @@ export class ChatHandler {
 			if (this.#server.serveKind === "browser" && isBrowserChatRequest(msg)) this.#handleChatRequest(msg);
 			else if (this.#server.serveKind === "office" && isTransportChatRequest(msg)) this.#handleChatRequest(msg);
 			else if (isChatStop(msg)) this.#handleChatStop(msg as unknown as { id: string });
+			else if (isMediaAssetRead(msg)) void this.#handleMediaAssetRead(msg as unknown as MediaAssetRead);
 			// Host-tool channel (#2046): register client tools, then route the client's
 			// result/update frames back to the correlated pending call in the bridge.
 			else if (isSetHostTools(msg)) this.#handleSetHostTools(msg as unknown as SetHostTools);
@@ -152,6 +164,27 @@ export class ChatHandler {
 			}
 			this.#activeChats.clear();
 		});
+	}
+
+	async #handleMediaAssetRead(req: MediaAssetRead): Promise<void> {
+		try {
+			const chunk = await readMediaAssetChunk(
+				this.#session.sessionManager.getBlobStore(),
+				listMediaDescriptors(this.#session.sessionManager.getEntries()),
+				req,
+			);
+			this.#server.send({
+				type: "media_asset_chunk",
+				requestId: req.requestId,
+				chunk,
+			} satisfies MediaAssetChunkMessage);
+		} catch {
+			this.#server.send({
+				type: "media_asset_error",
+				requestId: req.requestId,
+				error: "asset-unavailable",
+			} satisfies MediaAssetError);
+		}
 	}
 
 	async #handleChatRequest(req: ChatRequest): Promise<void> {
@@ -301,6 +334,16 @@ export class ChatHandler {
 			return;
 		}
 		if (event.type === "tool_execution_end" && "toolName" in event) {
+			if (event.toolName === "display_media" || event.toolName === "display_image") {
+				const descriptor = extractMediaDescriptorFromToolResult(event.result);
+				if (descriptor) {
+					this.#server.send({
+						type: "chat_media",
+						id: chat.id,
+						media: projectMediaDescriptorForTransport(descriptor),
+					} satisfies ChatMedia);
+				}
+			}
 			// ToolExecutionEndEvent carries `isError` (NOT `error`) — checking the wrong
 			// field made this always ok:true, so errored tools rendered ✓ and "failed"
 			// never fired. Read the real field.

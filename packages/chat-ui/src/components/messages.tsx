@@ -3,10 +3,10 @@
  * authored in the React idiom. Each row is a 2-column grid: a terminal glyph
  * gutter + the message body (see `.row`/`.gutter` in panel.css.ts).
  */
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { GLYPHS } from "../theme/tokens";
 import { toolActivityLabel } from "../tools/activity-label";
-import type { ChatReference } from "../types";
+import type { ChatMediaContent, ChatMediaFrame, ChatReference } from "../types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { ReferenceChips } from "./ReferenceChips";
 
@@ -29,20 +29,80 @@ export interface AssistantMessageProps {
 	text: string;
 	/** Cited sources, rendered as a "Sources" chip row beneath the answer. */
 	references?: ChatReference[];
+	media?: ChatMediaContent[];
 	/** This is the live turn: render a blinking caret after the text (live-typing cue). */
 	streaming?: boolean;
 }
 
-export function AssistantMessage({ text, references, streaming }: AssistantMessageProps) {
+export function AssistantMessage({ text, references, media, streaming }: AssistantMessageProps) {
 	// renderMarkdown output is DOMPurify-sanitized (see markdown/sanitize.ts). The
 	// `markdown-root` class opts the assistant body into the block stylesheet
 	// (tables, headings, lists, code) — matching ContentBlockRenderer's text path.
 	return (
 		<GutterRow glyph={GLYPHS.assistant} glyphClass="g-assistant">
 			<MarkdownRenderer className="body markdown-root" text={text} />
+			{media?.map(item => (
+				<RichMedia key={item.id} media={item} />
+			))}
 			{streaming ? <span className="stream-caret" aria-hidden="true" /> : null}
 			{references && references.length > 0 ? <ReferenceChips references={references} /> : null}
 		</GutterRow>
+	);
+}
+
+function prefersReducedMotion(): boolean {
+	return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
+
+function Timeline({ frames, loop, autoplay }: { frames: ChatMediaFrame[]; loop: boolean; autoplay: boolean }) {
+	const reduced = prefersReducedMotion();
+	const [index, setIndex] = useState(0);
+	useEffect(() => {
+		if (reduced || !autoplay || frames.length < 2) return;
+		const frame = frames[index];
+		if (!frame) return;
+		if (!loop && index === frames.length - 1) return;
+		const timer = window.setTimeout(() => setIndex(current => (current + 1) % frames.length), frame.durationMs);
+		return () => window.clearTimeout(timer);
+	}, [autoplay, frames, index, loop, reduced]);
+	const frame = frames[index] ?? frames[0];
+	if (!frame) return null;
+	return frame.src ? (
+		<img className="chat-media-asset" src={frame.src} alt="" />
+	) : (
+		<pre className="chat-media-text">{frame.text}</pre>
+	);
+}
+
+function RichMedia({ media }: { media: ChatMediaContent }) {
+	const reduced = prefersReducedMotion();
+	let body: ReactNode;
+	if ((media.kind === "raster-timeline" || media.kind === "text-timeline") && media.frames) {
+		body = <Timeline frames={media.frames} loop={media.playback.loop} autoplay={media.playback.autoplay} />;
+	} else if (media.kind === "video" && media.src) {
+		body = (
+			<video
+				className="chat-media-asset"
+				src={media.src}
+				poster={media.posterSrc}
+				muted
+				controls
+				loop={media.playback.loop}
+				autoPlay={!reduced && media.playback.autoplay}
+				playsInline
+			/>
+		);
+	} else if (media.src || media.posterSrc) {
+		body = <img className="chat-media-asset" src={media.src ?? media.posterSrc} alt={media.alt ?? ""} />;
+	} else {
+		body = <div className="chat-media-degradation">Media asset unavailable.</div>;
+	}
+	return (
+		<figure className="chat-media">
+			{body}
+			{media.caption ? <figcaption>{media.caption}</figcaption> : null}
+			{media.degradation ? <div className="chat-media-degradation">{media.degradation}</div> : null}
+		</figure>
 	);
 }
 
