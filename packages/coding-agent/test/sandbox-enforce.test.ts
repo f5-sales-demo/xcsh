@@ -876,3 +876,11 @@ describe("display_media sandbox paths", () => {
 		).toBe(false);
 	});
 });
+
+describe("render_map sandbox paths", () => {
+	it("checks only an explicitly requested save path for write access", () => {
+		expect(check("render_map", { title: "Map", locations: [] }).block).toBe(false);
+		expect(check("render_map", { savePath: "maps/current" }).block).toBe(false);
+		expect(check("render_map", { savePath: "/work/custB/current" }).block).toBe(true);
+	});
+});

@@ -4,11 +4,10 @@ import type {
 	AgentToolResult,
 	AgentToolUpdateCallback,
 } from "@f5-sales-demo/pi-agent-core";
-import type { ImageContent, TextContent } from "@f5-sales-demo/pi-ai";
 import { getBlobsDir, prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { type DisplayMediaInput, type IngestedMedia, MediaIngestError, MediaIngestor } from "../media/ingest";
-import type { MediaDescriptorV1, MediaMessage } from "../media/types";
+import { type MediaToolResultV1, publishMedia } from "../media/publish";
 import displayMediaDescription from "../prompts/tools/display-media.md" with { type: "text" };
 import { BlobStore } from "../session/blob-store";
 import type { ToolSession } from "./index";
@@ -42,10 +41,7 @@ const displayMediaSchema = Type.Object(
 
 export type DisplayMediaParams = Static<typeof displayMediaSchema>;
 
-export interface DisplayMediaToolDetails {
-	descriptor: MediaDescriptorV1;
-	displayMethod: "inline" | "poster" | "text";
-}
+export type DisplayMediaToolDetails = MediaToolResultV1;
 
 export class DisplayMediaTool implements AgentTool<typeof displayMediaSchema, DisplayMediaToolDetails> {
 	readonly name = "display_media";
@@ -82,21 +78,7 @@ export class DisplayMediaTool implements AgentTool<typeof displayMediaSchema, Di
 			throw error;
 		}
 
-		const message: MediaMessage = { role: "media", media: ingested.descriptor, timestamp: Date.now() };
-		this.session.appendMediaMessage?.(message);
-
-		const content: Array<TextContent | ImageContent> = [];
-		let displayMethod: DisplayMediaToolDetails["displayMethod"] = "text";
-		if (ingested.posterData && ingested.posterMimeType) {
-			content.push({ type: "image", data: ingested.posterData, mimeType: ingested.posterMimeType });
-			displayMethod = ingested.descriptor.kind === "image" ? "inline" : "poster";
-		}
-		if (params.caption) content.push({ type: "text", text: params.caption });
-		if (ingested.descriptor.degradation) content.push({ type: "text", text: ingested.descriptor.degradation });
-		if (content.length === 0) {
-			content.push({ type: "text", text: `Media ready: ${ingested.descriptor.id}` });
-		}
-		return { content, details: { descriptor: ingested.descriptor, displayMethod } };
+		return publishMedia(this.session, ingested, { text: params.caption ? [params.caption] : [] });
 	}
 }
 

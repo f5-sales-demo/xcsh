@@ -45,6 +45,10 @@ export interface MediaDescriptorV1 {
 	provenance: MediaProvenanceV1;
 	playback: MediaPlaybackV1;
 	degradation?: string;
+	/** Sanitized producer-supplied filename used only as a presentation hint. */
+	filenameHint?: string;
+	/** Bounded, non-secret producer metadata retained with the durable descriptor. */
+	metadata?: Record<string, string>;
 }
 
 export interface MediaMessage {
@@ -111,8 +115,39 @@ export function validateMediaDescriptorV1(value: unknown): MediaDescriptorV1 {
 	if (descriptor.width !== undefined) assertPositiveInteger(descriptor.width, "width");
 	if (descriptor.height !== undefined) assertPositiveInteger(descriptor.height, "height");
 	if (descriptor.durationMs !== undefined) assertPositiveInteger(descriptor.durationMs, "durationMs");
-	if (!descriptor.provenance || typeof descriptor.provenance.source !== "string") {
+	if (descriptor.filenameHint !== undefined) {
+		if (
+			typeof descriptor.filenameHint !== "string" ||
+			descriptor.filenameHint.length === 0 ||
+			descriptor.filenameHint.length > 255 ||
+			descriptor.filenameHint.includes("/") ||
+			descriptor.filenameHint.includes("\\")
+		) {
+			throw new Error("filenameHint must be a basename of at most 255 characters");
+		}
+	}
+	if (descriptor.metadata !== undefined) {
+		if (!descriptor.metadata || typeof descriptor.metadata !== "object" || Array.isArray(descriptor.metadata)) {
+			throw new Error("media metadata must be an object");
+		}
+		const entries = Object.entries(descriptor.metadata);
+		if (entries.length > 16) throw new Error("media metadata is limited to 16 entries");
+		for (const [key, value] of entries) {
+			if (!/^[a-zA-Z0-9_.-]{1,64}$/u.test(key) || typeof value !== "string" || value.length > 512) {
+				throw new Error("media metadata keys or values are invalid");
+			}
+		}
+	}
+	if (
+		!descriptor.provenance ||
+		!["path", "artifact", "url", "timeline", "tool"].includes(String(descriptor.provenance.sourceType)) ||
+		typeof descriptor.provenance.source !== "string" ||
+		!descriptor.provenance.source
+	) {
 		throw new Error("media provenance is required");
+	}
+	if (descriptor.provenance.sourceType === "tool" && !/^[a-z][a-z0-9_]{0,63}$/u.test(descriptor.provenance.source)) {
+		throw new Error("media tool provenance is invalid");
 	}
 	if (descriptor.playback?.muted !== true) throw new Error("media playback must be muted");
 	if (typeof descriptor.playback.autoplay !== "boolean" || typeof descriptor.playback.loop !== "boolean") {

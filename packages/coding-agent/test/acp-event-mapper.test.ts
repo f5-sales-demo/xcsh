@@ -63,7 +63,7 @@ describe("ACP event mapper", () => {
 	});
 });
 
-it("maps display_media to standard image and sanitized resource content", () => {
+it("maps a validated media result from any producer to standard image and sanitized resource content", () => {
 	const hash = "c".repeat(64);
 	const descriptor = {
 		version: 1 as const,
@@ -77,10 +77,10 @@ it("maps display_media to standard image and sanitized resource content", () => 
 		{
 			type: "tool_execution_end",
 			toolCallId: "call-1",
-			toolName: "display_media",
+			toolName: "render_map",
 			result: {
 				content: [{ type: "image", data: "aW1n", mimeType: "image/png" }],
-				details: { descriptor },
+				details: { mediaResult: "xcsh.media/v1", descriptor, displayMethod: "inline" },
 			},
 		} as AgentSessionEvent,
 		"session-1",

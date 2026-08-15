@@ -36,6 +36,18 @@ export interface IngestedMedia {
 	posterMimeType?: string;
 }
 
+export interface GeneratedMediaInput {
+	data: Uint8Array;
+	mimeType: string;
+	width: number;
+	height: number;
+	filenameHint: string;
+	metadata?: Record<string, string>;
+	caption?: string;
+	alt?: string;
+	provenance: { sourceType: "tool"; source: string };
+}
+
 export interface MediaIngestorOptions {
 	cwd: string;
 	blobStore: BlobStore;
@@ -126,6 +138,45 @@ export class MediaIngestor {
 	async #put(data: Buffer, mimeType: string): Promise<MediaAssetRefV1> {
 		const stored = await this.#options.blobStore.put(data);
 		return asAsset(stored.ref, mimeType, data.byteLength);
+	}
+
+	/** Ingest bytes produced by a trusted built-in without creating an intermediate file. */
+	async ingestBuffer(input: GeneratedMediaInput, signal?: AbortSignal): Promise<IngestedMedia> {
+		signal?.throwIfAborted();
+		const data = Buffer.from(input.data);
+		if (data.byteLength === 0 || data.byteLength > this.#options.maxBytes) {
+			throw new MediaIngestError(`generated media must be within the ${this.#options.maxBytes} byte limit`);
+		}
+		const sniffed = sniffMedia(data);
+		if (sniffed?.kind !== "image") throw new MediaIngestError("generated media must be a valid image");
+		if (sniffed.mimeType !== input.mimeType) {
+			throw new MediaIngestError(
+				`generated media MIME mismatch: declared ${input.mimeType}, content is ${sniffed.mimeType}`,
+			);
+		}
+		if (sniffed.width !== input.width || sniffed.height !== input.height) {
+			throw new MediaIngestError("generated media dimensions do not match the encoded image");
+		}
+		if (input.provenance.sourceType !== "tool" || !input.provenance.source.trim()) {
+			throw new MediaIngestError("generated media requires tool provenance");
+		}
+		const original = await this.#put(data, sniffed.mimeType);
+		const descriptor = validateMediaDescriptorV1({
+			version: 1,
+			id: createMediaId(original.ref.slice("blob:sha256:".length)),
+			kind: "image",
+			width: input.width,
+			height: input.height,
+			caption: input.caption,
+			alt: input.alt,
+			original,
+			poster: original,
+			provenance: input.provenance,
+			playback: { autoplay: true, loop: false, muted: true, fpsCap: 12 },
+			filenameHint: path.basename(input.filenameHint),
+			metadata: input.metadata,
+		});
+		return { descriptor, posterData: data.toString("base64"), posterMimeType: sniffed.mimeType };
 	}
 
 	async #ingestTimeline(input: DisplayMediaInput, signal?: AbortSignal): Promise<IngestedMedia> {

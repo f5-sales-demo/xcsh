@@ -119,6 +119,17 @@ describe("chat-conformance: xcsh host-tool guards accept/reject the goldens", ()
 });
 
 describe("chat-conformance: xcsh outbound frames validate against schemas", () => {
+	it("chat_media accepts a validated generated-media producer", () => {
+		const frame = structuredClone(validExamples.chat_media) as {
+			media: { provenance: { source: string }; filenameHint?: string; metadata?: Record<string, string> };
+		};
+		frame.media.provenance.source = "render_map";
+		frame.media.filenameHint = "map.png";
+		frame.media.metadata = { producer: "render_map", basemap: "schematic" };
+		const validate = ajv.compile(schemas.chat_media);
+		expect(validate(frame)).toBe(true);
+	});
+
 	it("chat_delta frame validates", () => {
 		const frame = { type: "chat_delta", id: "c-test", seq: 0, delta: "hello" };
 		const validate = ajv.compile(schemas.chat_delta);

@@ -60,6 +60,7 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	lsp: lspToolRenderer as ToolRenderer,
 	notebook: notebookToolRenderer as ToolRenderer,
 	display_media: displayMediaToolRenderer as ToolRenderer,
+	render_map: displayMediaToolRenderer as ToolRenderer,
 	inspect_image: inspectImageToolRenderer as ToolRenderer,
 	read: readToolRenderer as ToolRenderer,
 	resolve: resolveToolRenderer as ToolRenderer,
