@@ -11,7 +11,7 @@
   },
   "profiles": {
     "ubuntu-24.04": {
-      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:7b1016451a59afd38d165ab72025a96fc9c5cd2303efd670d258bfb9ed4cd269",
+      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:33f152d25a5e3e072c1e37678f80cb0a860e51e64c44a73a54472ad604ca8ee1",
       "labels": ["ubuntu-24.04"],
       "memory": "8g",
       "cpus": "4",
@@ -21,7 +21,7 @@
       "docker_socket": false
     },
     "ubuntu-24.04-secondary": {
-      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:7b1016451a59afd38d165ab72025a96fc9c5cd2303efd670d258bfb9ed4cd269",
+      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:33f152d25a5e3e072c1e37678f80cb0a860e51e64c44a73a54472ad604ca8ee1",
       "labels": ["ubuntu-24.04"],
       "memory": "8g",
       "cpus": "4",
@@ -31,7 +31,7 @@
       "docker_socket": false
     },
     "automation": {
-      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:7b1016451a59afd38d165ab72025a96fc9c5cd2303efd670d258bfb9ed4cd269",
+      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:33f152d25a5e3e072c1e37678f80cb0a860e51e64c44a73a54472ad604ca8ee1",
       "labels": ["automation"],
       "memory": "8g",
       "cpus": "4",
@@ -41,7 +41,7 @@
       "docker_socket": false
     },
     "ubuntu-22.04": {
-      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:0d6fe3f995e6de7e05997c26b17b59106368da5321b7be8777890784e89fae70",
+      "image": "ghcr.io/f5-sales-demo/actions-runner@sha256:cebd0176739eda88f9afa7d9092bc418fd4b1d1d5f62437c133798c356d7fba5",
       "labels": ["ubuntu-22.04"],
       "memory": "8g",
       "cpus": "4",
@@ -51,7 +51,7 @@
       "docker_socket": false
     },
     "container-build": {
-      "image": "ghcr.io/f5-sales-demo/actions-runner-container@sha256:18bc89e50d73071641706218dcaae8fbba7a2e1628cc59cf7b557ea137ca0ed7",
+      "image": "ghcr.io/f5-sales-demo/actions-runner-container@sha256:10a5e55507d1fb682fbd9614e6a0f1463efbf6236278cf5ae7ab090836788d8d",
       "labels": ["container-build"],
       "memory": "16g",
       "cpus": "6",
@@ -110,6 +110,10 @@
           "runs_on": "ubuntu-latest",
           "reason": "dependency audit uses the GitHub-hosted Node toolchain"
         },
+        "release-eligibility": {
+          "runs_on": "ubuntu-latest",
+          "reason": "release classification is a read-only hosted check"
+        },
         "release": {
           "runs_on": "ubuntu-latest",
           "reason": "extension publication uses GitHub-hosted release credentials"
@@ -137,61 +141,7 @@
       }
     },
     "f5-sales-demo/xcsh": {
-      ".github/workflows/api-spec-update.yml": {
-        "update-api-specs": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "release dispatch uses the hosted delivery environment"
-        }
-      },
       ".github/workflows/ci.yml": {
-        "check": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "CI validation uses the hosted Bun toolchain"
-        },
-        "setup-zig": {
-          "runs_on": "matrix",
-          "reason": "Zig setup validates hosted Linux, macOS, and Windows"
-        },
-        "native": {
-          "runs_on": "matrix",
-          "reason": "native builds require hosted platform-specific toolchains"
-        },
-        "test": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "test provisioning installs an ephemeral hosted toolchain"
-        },
-        "install_methods": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "installation tests require ephemeral package provisioning"
-        },
-        "invalidate-stale-release-prs": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "release PR maintenance uses the hosted GitHub environment"
-        },
-        "auto-release": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "release planning uses the hosted GitHub environment"
-        },
-        "build-release": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "release packaging uses the hosted Linux toolchain"
-        },
-        "create-release": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "release publication uses the hosted GitHub environment"
-        },
-        "update-homebrew": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "Homebrew formula updates use the hosted release environment"
-        },
-        "publish-npm": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "npm publication uses the hosted release environment"
-        },
-        "verify-npm-install": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "npm installation verification uses the hosted environment"
-        },
         "build-sign-macos": {
           "runs_on": "matrix",
           "reason": "Apple signing and notarization require macOS"
@@ -199,60 +149,6 @@
         "verify-homebrew-install": {
           "runs_on": "macos-14",
           "reason": "Homebrew release verification requires macOS"
-        }
-      },
-      ".github/workflows/console-catalog-drift.yml": {
-        "drift-guard": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "catalog reconciliation uses the hosted GitHub environment"
-        }
-      },
-      ".github/workflows/console-catalog-update.yml": {
-        "update-console-catalog": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "catalog publishing uses the hosted GitHub environment"
-        }
-      },
-      ".github/workflows/container.yml": {
-        "container-build": {
-          "runs_on": "matrix",
-          "reason": "container builds require hosted native amd64 and arm64 runners"
-        },
-        "podman-uat-harness": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "Podman harness runs in an ephemeral hosted environment"
-        },
-        "container-test": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "container aggregation runs in the hosted test environment"
-        },
-        "publish-ghcr": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "container publication uses the hosted Docker environment"
-        }
-      },
-      ".github/workflows/deploy-office-pane.yml": {
-        "deploy": {
-          "runs_on": "ubuntu-latest",
-          "reason": "office-pane deployment uses hosted release credentials"
-        }
-      },
-      ".github/workflows/pii-guard.yml": {
-        "pii-guard": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "PII enforcement runs in an isolated hosted environment"
-        }
-      },
-      ".github/workflows/release-reconcile.yml": {
-        "reconcile": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "release reconciliation uses hosted registry access"
-        }
-      },
-      ".github/workflows/tag-on-version-bump.yml": {
-        "tag": {
-          "runs_on": "ubuntu-22.04",
-          "reason": "immutable release tagging uses hosted GitHub credentials"
         }
       },
       ".github/workflows/test-codesign.yml": {
