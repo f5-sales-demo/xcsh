@@ -1,5 +1,6 @@
 import type { BlobStore } from "../session/blob-store";
 import { parseBlobRef } from "../session/blob-store";
+import { validateMediaToolResultV1 } from "./publish";
 import type { MediaAssetRefV1, MediaDescriptorV1 } from "./types";
 import { sanitizeMediaProvenance, validateMediaDescriptorV1 } from "./types";
 
@@ -30,7 +31,7 @@ export function projectMediaDescriptorForTransport(descriptor: MediaDescriptorV1
 		} catch {
 			projected.provenance = { sourceType: "tool", source: "display_media" };
 		}
-	} else {
+	} else if (projected.provenance.sourceType !== "tool") {
 		projected.provenance = { sourceType: "tool", source: "display_media" };
 	}
 	return projected;
@@ -72,9 +73,8 @@ export function extractMediaDescriptorFromToolResult(result: unknown): MediaDesc
 	if (!result || typeof result !== "object") return undefined;
 	const details = (result as { details?: unknown }).details;
 	if (!details || typeof details !== "object") return undefined;
-	const descriptor = (details as { descriptor?: unknown }).descriptor;
 	try {
-		return descriptor ? validateMediaDescriptorV1(descriptor) : undefined;
+		return validateMediaToolResultV1(details).descriptor;
 	} catch {
 		return undefined;
 	}

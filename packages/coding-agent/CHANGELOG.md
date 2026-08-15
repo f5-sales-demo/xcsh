@@ -2,6 +2,20 @@
 
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added provenance-validated, deterministic `render_map` PNG generation with OpenStreetMap tile
+  policy compliance, schematic and text fallbacks, and optional atomic PNG/GeoJSON export
+  ([#3202](https://github.com/f5-sales-demo/xcsh/issues/3202)).
+
+### Changed
+
+- Unified generated and existing media publication behind the versioned `xcsh.media/v1` result
+  contract so TUI, Browser, Office, RPC, and ACP transports no longer identify media by tool name
+  ([#3202](https://github.com/f5-sales-demo/xcsh/issues/3202)).
+
 ## [20.6.3] - 2026-08-07
 
 ### Improved

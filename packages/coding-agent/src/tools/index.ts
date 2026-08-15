@@ -39,6 +39,7 @@ import { wrapToolWithMetaNotice } from "./output-meta";
 import { PollTool } from "./poll-tool";
 import { PythonTool } from "./python";
 import { ReadTool } from "./read";
+import { RenderMapTool } from "./render-map";
 import { RenderMermaidTool } from "./render-mermaid";
 import { createReportToolIssueTool, isAutoQaEnabled } from "./report-tool-issue";
 import { ResolveTool } from "./resolve";
@@ -80,6 +81,7 @@ export * from "./notebook";
 export * from "./poll-tool";
 export * from "./python";
 export * from "./read";
+export * from "./render-map";
 export * from "./render-mermaid";
 export * from "./report-tool-issue";
 export * from "./resolve";
@@ -227,6 +229,7 @@ export const BUILTIN_TOOLS: Record<string, ToolFactory> = {
 	notebook: s => new NotebookTool(s),
 	read: s => new ReadTool(s),
 	display_media: s => new DisplayMediaTool(s),
+	render_map: s => new RenderMapTool(s),
 	inspect_image: s => new InspectImageTool(s),
 	browser: s => new BrowserTool(s),
 	catalog_workflow_runner: s => new CatalogWorkflowRunnerTool(s),

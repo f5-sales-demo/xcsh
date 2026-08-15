@@ -65,6 +65,7 @@ const TOOL_PATHS: Record<string, PathArgSpec[]> = {
 	write: [{ keys: ["file_path", "path"], access: "write" }],
 	notebook: [{ keys: ["notebook_path"], access: "write" }],
 	inspect_image: [{ keys: ["path"], access: "read" }],
+	render_map: [{ keys: ["savePath"], access: "write" }],
 	lsp: [{ keys: ["file"], access: "read" }], // read for most actions; rename-apply writes
 	catalog_workflow_runner: [
 		{ keys: ["catalog_path"], access: "read" },

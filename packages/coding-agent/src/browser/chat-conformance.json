@@ -891,7 +891,8 @@
                       "const": "tool"
                     },
                     "source": {
-                      "const": "display_media"
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
                     }
                   }
                 },
@@ -942,6 +943,23 @@
             },
             "degradation": {
               "type": "string"
+            },
+            "filenameHint": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "pattern": "^[^/\\\\]+$"
+            },
+            "metadata": {
+              "type": "object",
+              "maxProperties": 16,
+              "propertyNames": {
+                "pattern": "^[a-zA-Z0-9_.-]{1,64}$"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "maxLength": 512
+              }
             }
           }
         }

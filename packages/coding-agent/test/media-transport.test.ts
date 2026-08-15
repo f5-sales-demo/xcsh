@@ -2,7 +2,12 @@ import { afterEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { listMediaAssets, projectMediaDescriptorForTransport, readMediaAssetChunk } from "../src/media/transport";
+import {
+	extractMediaDescriptorFromToolResult,
+	listMediaAssets,
+	projectMediaDescriptorForTransport,
+	readMediaAssetChunk,
+} from "../src/media/transport";
 import type { MediaDescriptorV1 } from "../src/media/types";
 import { BlobStore } from "../src/session/blob-store";
 
@@ -25,11 +30,35 @@ function descriptor(ref: string, bytes: number): MediaDescriptorV1 {
 }
 
 describe("media transport projection", () => {
+	test("recognizes media by its versioned result shape instead of a tool name", () => {
+		const value = descriptor(`blob:sha256:${"a".repeat(64)}`, 6);
+		expect(
+			extractMediaDescriptorFromToolResult({
+				details: { mediaResult: "xcsh.media/v1", descriptor: value, displayMethod: "inline" },
+			}),
+		).toEqual(value);
+		expect(extractMediaDescriptorFromToolResult({ details: { descriptor: value } })).toBeUndefined();
+		expect(
+			extractMediaDescriptorFromToolResult({
+				details: { mediaResult: "xcsh.media/v2", descriptor: value, displayMethod: "inline" },
+			}),
+		).toBeUndefined();
+	});
+
 	test("preserves the canonical descriptor while removing local provenance", () => {
 		const projected = projectMediaDescriptorForTransport(descriptor(`blob:sha256:${"a".repeat(64)}`, 6));
 		expect(projected.provenance).toEqual({ sourceType: "tool", source: "display_media" });
 		expect(JSON.stringify(projected)).not.toContain("/home/<user>");
 		expect(projected.playback.muted).toBe(true);
+	});
+
+	test("preserves validated generated-media producer provenance", () => {
+		const value = descriptor(`blob:sha256:${"a".repeat(64)}`, 6);
+		value.provenance = { sourceType: "tool", source: "render_map" };
+		expect(projectMediaDescriptorForTransport(value).provenance).toEqual({
+			sourceType: "tool",
+			source: "render_map",
+		});
 	});
 
 	test("sanitizes HTTPS provenance again before transport", () => {

@@ -10,15 +10,22 @@ interface DisplayMediaRenderArgs {
 	source?: string;
 	frames?: unknown[];
 	caption?: string;
+	title?: string;
+	locations?: unknown[];
 }
 
 interface DisplayMediaRendererResult {
 	content: Array<{ type: string; text?: string }>;
-	details?: { descriptor: MediaDescriptorV1; displayMethod: "inline" | "poster" | "text" };
+	details?: {
+		mediaResult: "xcsh.media/v1";
+		descriptor: MediaDescriptorV1;
+		displayMethod: "inline" | "poster" | "text";
+	};
 	isError?: boolean;
 }
 
 function description(args: DisplayMediaRenderArgs): string {
+	if (args.title) return `${args.title}${args.locations ? ` (${args.locations.length} locations)` : ""}`;
 	if (args.source) return shortenPath(args.source);
 	if (args.frames) return `${args.frames.length} timeline frame${args.frames.length === 1 ? "" : "s"}`;
 	return "media";

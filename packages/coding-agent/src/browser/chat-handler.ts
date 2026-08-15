@@ -334,15 +334,13 @@ export class ChatHandler {
 			return;
 		}
 		if (event.type === "tool_execution_end" && "toolName" in event) {
-			if (event.toolName === "display_media") {
-				const descriptor = extractMediaDescriptorFromToolResult(event.result);
-				if (descriptor) {
-					this.#server.send({
-						type: "chat_media",
-						id: chat.id,
-						media: projectMediaDescriptorForTransport(descriptor),
-					} satisfies ChatMedia);
-				}
+			const descriptor = extractMediaDescriptorFromToolResult(event.result);
+			if (descriptor) {
+				this.#server.send({
+					type: "chat_media",
+					id: chat.id,
+					media: projectMediaDescriptorForTransport(descriptor),
+				} satisfies ChatMedia);
 			}
 			// ToolExecutionEndEvent carries `isError` (NOT `error`) — checking the wrong
 			// field made this always ok:true, so errored tools rendered ✓ and "failed"

@@ -257,3 +257,52 @@ describe("chat_tool_notice ok-flag reflects tool_execution_end.isError", () => {
 		expect(String(end?.detail)).toContain("done");
 	});
 });
+
+describe("chat_media uses the versioned result contract", () => {
+	it("forwards media from render_map without a display_media tool-name special case", async () => {
+		const hash = "d".repeat(64);
+		class MediaSession {
+			isStreaming = false;
+			readonly slashCommands = [];
+			agent = { abort(): void {}, replaceMessages(): void {} };
+			#callbacks: Array<(event: unknown) => void> = [];
+			subscribe(callback: (event: unknown) => void): () => void {
+				this.#callbacks.push(callback);
+				return () => {};
+			}
+			async prompt(): Promise<void> {
+				for (const callback of this.#callbacks) {
+					callback({
+						type: "tool_execution_end",
+						toolCallId: "map-1",
+						toolName: "render_map",
+						result: {
+							content: [],
+							details: {
+								mediaResult: "xcsh.media/v1",
+								displayMethod: "inline",
+								descriptor: {
+									version: 1,
+									id: `media_${"d".repeat(24)}`,
+									kind: "image",
+									original: { ref: `blob:sha256:${hash}`, mimeType: "image/png", bytes: 4 },
+									provenance: { sourceType: "tool", source: "render_map" },
+									playback: { autoplay: true, loop: false, muted: true, fpsCap: 12 },
+								},
+							},
+						},
+					});
+				}
+			}
+			async refreshRpcHostTools(): Promise<void> {}
+		}
+		const server = new FakeBridgeServer();
+		const handler = new ChatHandler(server as unknown as BridgeServer, new MediaSession() as unknown as AgentSession);
+		handler.attach();
+		server.emit({ type: "chat_request", id: "c-map", text: "show map", context: null, mode: "configuration" });
+		for (let index = 0; index < 50 && server.ofType("chat_media").length === 0; index++) await Bun.sleep(0);
+		const media = server.ofType("chat_media");
+		expect(media).toHaveLength(1);
+		expect((media[0]!.media as { id: string }).id).toBe(`media_${"d".repeat(24)}`);
+	});
+});

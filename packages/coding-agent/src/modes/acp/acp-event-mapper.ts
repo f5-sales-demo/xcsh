@@ -157,8 +157,7 @@ export function mapAgentSessionEventToAcpSessionUpdates(
 			return [toSessionNotification(sessionId, update)];
 		}
 		case "tool_execution_end": {
-			const descriptor =
-				event.toolName === "display_media" ? extractMediaDescriptorFromToolResult(event.result) : undefined;
+			const descriptor = extractMediaDescriptorFromToolResult(event.result);
 			const content = descriptor
 				? extractStructuredToolCallContent(event.result)
 				: extractToolCallContent(event.result);
@@ -177,7 +176,13 @@ export function mapAgentSessionEventToAcpSessionUpdates(
 				});
 			}
 			const rawOutput = projected
-				? { ...(event.result as object), details: { descriptor: projected } }
+				? {
+						...(event.result as object),
+						details: {
+							...((event.result as { details?: object }).details ?? {}),
+							descriptor: projected,
+						},
+					}
 				: event.result;
 			const update: SessionUpdate = {
 				sessionUpdate: "tool_call_update",
