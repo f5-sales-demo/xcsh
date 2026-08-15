@@ -1,6 +1,6 @@
 import type { BlobStore } from "../session/blob-store";
 import { parseBlobRef } from "../session/blob-store";
-import { validateMediaToolResultV1 } from "./publish";
+import { validateMediaToolResultV1 } from "./tool-result";
 import type { MediaAssetRefV1, MediaDescriptorV1 } from "./types";
 import { sanitizeMediaProvenance, validateMediaDescriptorV1 } from "./types";
 
