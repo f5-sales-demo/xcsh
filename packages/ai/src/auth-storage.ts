@@ -51,7 +51,6 @@ import { loginMoonshot } from "./utils/oauth/moonshot";
 import { loginNanoGPT } from "./utils/oauth/nanogpt";
 import { loginNvidia } from "./utils/oauth/nvidia";
 import { loginOllama } from "./utils/oauth/ollama";
-import { loginOpenAICodex } from "./utils/oauth/openai-codex";
 import { loginOpenCode } from "./utils/oauth/opencode";
 import { loginParallel } from "./utils/oauth/parallel";
 import { loginPerplexity } from "./utils/oauth/perplexity";
@@ -175,6 +174,8 @@ const USAGE_CACHE_PREFIX = "usage_cache:";
 const USAGE_REPORT_TTL_MS = 30_000;
 const DEFAULT_USAGE_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_OAUTH_REFRESH_TIMEOUT_MS = 10_000;
+const LEGACY_OPENAI_CODEX_PROVIDER = "openai-codex";
+const LEGACY_OPENAI_CODEX_DISABLED_CAUSE = "unsupported OpenAI Codex OAuth; remove manually with logout";
 
 type UsageCacheEntry<T> = {
 	value: T;
@@ -344,7 +345,9 @@ export class AuthStorage {
 	 * Used for CLI --api-key flag.
 	 */
 	setRuntimeApiKey(provider: string, apiKey: string): void {
-		this.#runtimeOverrides.set(canonicalizeOAuthProviderId(provider), apiKey);
+		provider = canonicalizeOAuthProviderId(provider);
+		if (provider === LEGACY_OPENAI_CODEX_PROVIDER) return;
+		this.#runtimeOverrides.set(provider, apiKey);
 	}
 
 	/**
@@ -655,6 +658,13 @@ export class AuthStorage {
 	 */
 	async set(provider: string, credential: AuthCredentialEntry): Promise<void> {
 		provider = canonicalizeOAuthProviderId(provider);
+		if (provider === LEGACY_OPENAI_CODEX_PROVIDER) {
+			this.#store.replaceAuthCredentialsForProvider(provider, Array.isArray(credential) ? credential : [credential]);
+			this.#store.disableLegacyOpenAICodexCredentials();
+			this.#data.delete(provider);
+			this.#resetProviderAssignments(provider);
+			return;
+		}
 		const normalized = Array.isArray(credential) ? credential : [credential];
 		const deduped = this.#dedupeOAuthCredentials(provider, normalized);
 		const stored = this.#store.replaceAuthCredentialsForProvider(provider, deduped);
@@ -679,6 +689,12 @@ export class AuthStorage {
 	 */
 	async remove(provider: string): Promise<void> {
 		provider = canonicalizeOAuthProviderId(provider);
+		if (provider === LEGACY_OPENAI_CODEX_PROVIDER) {
+			this.#store.hardDeleteAuthCredentialsForProvider(provider);
+			this.#data.delete(provider);
+			this.#resetProviderAssignments(provider);
+			return;
+		}
 		this.#store.deleteAuthCredentialsForProvider(provider, "deleted by user");
 		this.#data.delete(provider);
 		this.#resetProviderAssignments(provider);
@@ -704,6 +720,7 @@ export class AuthStorage {
 	 */
 	hasAuth(provider: string): boolean {
 		provider = canonicalizeOAuthProviderId(provider);
+		if (provider === LEGACY_OPENAI_CODEX_PROVIDER) return false;
 		if (this.#runtimeOverrides.has(provider)) return true;
 		if (this.#getCredentialsForProvider(provider).length > 0) return true;
 		if (getEnvApiKey(provider)) return true;
@@ -812,12 +829,10 @@ export class AuthStorage {
 					},
 				);
 				break;
+			case "openai":
+				throw new Error("OpenAI uses usage-based API access. Set OPENAI_API_KEY instead of signing in.");
 			case "openai-codex":
-				credentials = await loginOpenAICodex({
-					...ctrl,
-					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
-				});
-				break;
+				throw new Error("OpenAI Codex OAuth is unsupported. Use official codex or set OPENAI_API_KEY for xcsh.");
 			case "gitlab-duo":
 				credentials = await loginGitLabDuo({
 					...ctrl,
@@ -1921,6 +1936,7 @@ export class AuthStorage {
 	 */
 	async peekApiKey(provider: string): Promise<string | undefined> {
 		provider = canonicalizeOAuthProviderId(provider);
+		if (provider === LEGACY_OPENAI_CODEX_PROVIDER) return undefined;
 		const runtimeKey = this.#runtimeOverrides.get(provider);
 		if (runtimeKey) {
 			return runtimeKey;
@@ -1963,6 +1979,7 @@ export class AuthStorage {
 	 */
 	async getApiKey(provider: string, sessionId?: string, options?: AuthApiKeyOptions): Promise<string | undefined> {
 		provider = canonicalizeOAuthProviderId(provider);
+		if (provider === LEGACY_OPENAI_CODEX_PROVIDER) return undefined;
 		// Runtime override takes highest priority
 		const runtimeKey = this.#runtimeOverrides.get(provider);
 		if (runtimeKey) {
@@ -2224,6 +2241,7 @@ export class AuthCredentialStore {
 			"INSERT INTO cache (key, value, expires_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at",
 		);
 		this.#deleteExpiredCacheStmt = this.#db.prepare(`DELETE FROM cache WHERE expires_at <= ${SQLITE_NOW_EPOCH}`);
+		this.disableLegacyOpenAICodexCredentials();
 	}
 
 	static async open(dbPath: string = getAgentDbPath()): Promise<AuthCredentialStore> {
@@ -2462,6 +2480,25 @@ export class AuthCredentialStore {
 		return results;
 	}
 
+	/**
+	 * List disabled credentials for inspection or explicit user-directed removal.
+	 * Legacy OpenAI Codex rows stay here; they are never reactivated automatically.
+	 */
+	listDisabledAuthCredentials(provider: string): StoredAuthCredential[] {
+		const rows = this.#listDisabledByProviderStmt.all(provider) as AuthRow[];
+		const results: StoredAuthCredential[] = [];
+		for (const row of rows) {
+			const credential = deserializeCredential(row);
+			if (credential) results.push(toStoredAuthCredential(row, credential));
+		}
+		return results;
+	}
+
+	/** Disable unsupported Codex OAuth rows without deleting the user's stored data. */
+	disableLegacyOpenAICodexCredentials(): void {
+		this.deleteAuthCredentialsForProvider(LEGACY_OPENAI_CODEX_PROVIDER, LEGACY_OPENAI_CODEX_DISABLED_CAUSE);
+	}
+
 	replaceAuthCredentialsForProvider(provider: string, credentials: AuthCredential[]): StoredAuthCredential[] {
 		const replace = this.#db.transaction((providerName: string, items: AuthCredential[]) => {
 			const existingRows = this.#listActiveByProviderStmt.all(providerName) as AuthRow[];
@@ -2614,6 +2651,15 @@ export class AuthCredentialStore {
 	deleteAuthCredentialsForProvider(provider: string, disabledCause: string): void {
 		try {
 			this.#deleteByProviderStmt.run(normalizeDisabledCause(disabledCause), provider);
+		} catch {
+			// Ignore delete failures
+		}
+	}
+
+	/** Permanently remove credentials only after an explicit user logout/removal request. */
+	hardDeleteAuthCredentialsForProvider(provider: string): void {
+		try {
+			this.#db.prepare("DELETE FROM auth_credentials WHERE provider = ?").run(provider);
 		} catch {
 			// Ignore delete failures
 		}

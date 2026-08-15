@@ -95,28 +95,4 @@ describe("Routing Coordinator (I01)", () => {
 		// The active state machine should remain untouched
 		expect(sm.getState().downshiftStreak).toBe(1);
 	});
-
-	it("selects the Codex tier effort and escalates frontier reasoning independently", async () => {
-		const availableCodex = ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"];
-		const normal = await new RoutingCoordinator().evaluateTurn({
-			anchorModel: "openai-codex/gpt-5.6-terra",
-			mode: "auto",
-			prompt: "Update this one configuration field",
-			availableModels: availableCodex,
-		});
-		expect(normal.selectedModel).toBe("openai-codex/gpt-5.6-terra");
-		expect(normal.selectedEffort).toBe("medium");
-		expect(normal.effortReason).toBe("tier_default");
-
-		const rejected = await new RoutingCoordinator().evaluateTurn({
-			anchorModel: "openai-codex/gpt-5.6-terra",
-			mode: "auto",
-			prompt: "Review the architecture migration and security design",
-			priorRejection: true,
-			availableModels: availableCodex,
-		});
-		expect(rejected.selectedModel).toBe("openai-codex/gpt-5.6-sol");
-		expect(rejected.selectedEffort).toBe("xhigh");
-		expect(rejected.effortReason).toBe("rejection_escalation");
-	});
 });

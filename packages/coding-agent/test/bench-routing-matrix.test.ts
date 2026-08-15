@@ -46,16 +46,13 @@ describe("routing matrix capability and scenario contract", () => {
 			"litellm-anthropic",
 			"google-vertex",
 		]);
-		expect(SUBSCRIPTION_LANE_IDS).toEqual(["google-antigravity", "openai-codex"]);
+		expect(SUBSCRIPTION_LANE_IDS).toEqual(["google-antigravity"]);
 		expect(LANE_CAPABILITIES.anthropic.clientProvider).toBe("anthropic");
 		expect(LANE_CAPABILITIES["litellm-anthropic"].clientProvider).toBe("anthropic");
 		expect(LANE_CAPABILITIES.anthropic.endpointKind).toBe("direct");
 		expect(LANE_CAPABILITIES["litellm-anthropic"].endpointKind).toBe("gateway");
 		expect(Object.values(LANE_CAPABILITIES).every(lane => lane.required)).toBe(true);
-		expect(parseArgs(["--profile", "subscription", "--dry-run"]).lanes).toEqual([
-			"google-antigravity",
-			"openai-codex",
-		]);
+		expect(parseArgs(["--profile", "subscription", "--dry-run"]).lanes).toEqual(["google-antigravity"]);
 	});
 
 	it("expands the canonical contract to 60 measured rows", () => {
@@ -72,17 +69,16 @@ describe("routing matrix capability and scenario contract", () => {
 			},
 			effortPolicy: { byTier: { utility: "high", balanced: "high", frontier: "high" } },
 		});
-		expect(LANE_CAPABILITIES["openai-codex"]).toMatchObject({
-			tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
-			effortPolicy: {
-				byTier: { utility: "low", balanced: "medium", frontier: "high" },
-				frontierEscalation: { effort: "xhigh", minimumComplexityScore: 90 },
-			},
-		});
 		expect(ESCALATION_SCENARIO).toMatchObject({ expectedTier: "frontier", priorRejection: true });
 		expect(
-			parseArgs(["--profile", "subscription", "--lanes", "openai-codex", "--scenarios", "rejection-escalation"])
-				.scenarios,
+			parseArgs([
+				"--profile",
+				"subscription",
+				"--lanes",
+				"google-antigravity",
+				"--scenarios",
+				"rejection-escalation",
+			]).scenarios,
 		).toEqual(["rejection-escalation"]);
 	});
 
@@ -112,13 +108,9 @@ describe("routing matrix capability and scenario contract", () => {
 
 describe("provider-specific authenticated inventory", () => {
 	it("accepts only fresh OAuth entitlement discovery and preserves runtime model metadata", async () => {
-		const model = {
-			id: "gpt-5.6-luna",
-			provider: "openai-codex",
-			api: "openai-codex-responses",
-		} as any;
+		const model = { id: "gemini-3.6-flash-high", provider: "google-antigravity", api: "google-gemini-cli" } as any;
 		const result = await discoverOAuthEntitlementInventory(
-			LANE_CAPABILITIES["openai-codex"],
+			LANE_CAPABILITIES["google-antigravity"],
 			{ apiKey: "packed-oauth", authMechanism: "oauth-packed" },
 			async provider => ({
 				state: {
@@ -126,13 +118,13 @@ describe("provider-specific authenticated inventory", () => {
 					status: "ok",
 					optional: false,
 					stale: false,
-					models: ["gpt-5.6-luna"],
+					models: ["gemini-3.6-flash-high"],
 				},
 				models: [model],
 			}),
 		);
 		expect(result.inventory.state).toBe("AVAILABLE");
-		expect(result.inventory.models).toEqual(["gpt-5.6-luna"]);
+		expect(result.inventory.models).toEqual(["gemini-3.6-flash-high"]);
 		expect(result.models).toEqual([model]);
 	});
 
@@ -157,7 +149,7 @@ describe("provider-specific authenticated inventory", () => {
 	});
 
 	it("fails closed for missing OAuth, adapter state, empty entitlement, and incomplete metadata", async () => {
-		const capability = LANE_CAPABILITIES["openai-codex"];
+		const capability = LANE_CAPABILITIES["google-antigravity"];
 		const missingCredential = await discoverOAuthEntitlementInventory(capability, {}, async () => {
 			throw new Error("resolver must not run");
 		});
@@ -178,7 +170,7 @@ describe("provider-specific authenticated inventory", () => {
 			capability,
 			{ apiKey: "packed-oauth", authMechanism: "oauth-packed" },
 			async provider => ({
-				state: { provider, status: "ok", optional: false, stale: false, models: ["gpt-5.6-luna"] },
+				state: { provider, status: "ok", optional: false, stale: false, models: ["gemini-3.6-flash-high"] },
 				models: [],
 			}),
 		);
@@ -368,10 +360,10 @@ describe("inventory reconciliation and evidence", () => {
 		const failed = classifyMeasuredRun({
 			effectiveTier: "frontier",
 			expectedTier: "frontier",
-			requestedModel: "openai-codex/gpt-5.6-sol",
+			requestedModel: "openai/gpt-5.6-sol",
 			responseModel: undefined,
-			clientProvider: "openai-codex",
-			expectedClientProvider: "openai-codex",
+			clientProvider: "openai",
+			expectedClientProvider: "openai",
 			responseContent: [],
 			expectedMarker: "ROUTE-7C",
 			stopReason: "error",

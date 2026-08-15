@@ -12,7 +12,6 @@ import { loginKilo } from "./utils/oauth/kilo";
 import { loginKimi } from "./utils/oauth/kimi";
 import { loginMiniMaxCode, loginMiniMaxCodeCn } from "./utils/oauth/minimax-code";
 import { loginNanoGPT } from "./utils/oauth/nanogpt";
-import { loginOpenAICodex } from "./utils/oauth/openai-codex";
 import { loginParallel } from "./utils/oauth/parallel";
 import { loginTavily } from "./utils/oauth/tavily";
 import type { OAuthCredentials, OAuthProvider } from "./utils/oauth/types";
@@ -127,20 +126,6 @@ async function login(provider: OAuthProvider): Promise<void> {
 					},
 				});
 				break;
-			case "openai-codex":
-				credentials = await loginOpenAICodex({
-					onAuth(info) {
-						const { url, instructions } = info;
-						console.log(`\nOpen this URL in your browser:\n${url}`);
-						if (instructions) console.log(instructions);
-						console.log();
-					},
-					async onPrompt(p) {
-						return await promptFn(`${p.message}${p.placeholder ? ` (${p.placeholder})` : ""}:`);
-					},
-				});
-				break;
-
 			case "kimi-code":
 				credentials = await loginKimi({
 					onAuth(info) {
@@ -336,7 +321,9 @@ Providers:
   github-copilot    GitHub Copilot
   google-gemini-cli Google Gemini CLI
   google-antigravity Antigravity (Gemini 3, Claude, GPT-OSS)
-  openai-codex      OpenAI Codex (ChatGPT Plus/Pro)
+
+OpenAI models use usage-based Platform API access. Set OPENAI_API_KEY, then select an OpenAI model.
+For ChatGPT subscription access, use the official codex CLI: codex login
   kimi-code         Kimi Code
   kilo              Kilo Gateway
   kagi              Kagi
@@ -429,6 +416,15 @@ Examples:
 				console.error("No provider selected");
 				process.exit(1);
 			}
+			if (provider === "openai-codex") {
+				if (storage.listDisabledAuthCredentials(provider).length === 0) {
+					console.error("No disabled legacy OpenAI Codex credentials found");
+					process.exit(1);
+				}
+				storage.hardDeleteAuthCredentialsForProvider(provider);
+				console.log("Removed disabled legacy OpenAI Codex credentials");
+				return;
+			}
 
 			const oauth = storage.getOAuth(provider);
 			const apiKey = storage.getApiKey(provider);
@@ -469,6 +465,13 @@ Examples:
 		if (!provider) {
 			console.error("No provider selected");
 			process.exit(1);
+		}
+		if (provider === "openai") {
+			console.log(
+				"OpenAI Responses API uses usage-based Platform API access. Set OPENAI_API_KEY, then select an OpenAI model.",
+			);
+			console.log("For ChatGPT subscription access, use the official codex CLI: codex login");
+			return;
 		}
 
 		if (!PROVIDERS.some(p => p.id === provider)) {

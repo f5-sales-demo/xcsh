@@ -40,14 +40,6 @@ export const GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 	thinkingLevel: ThinkingLevel.High,
 };
 
-export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
-	label: "GPT-5.6 Terra",
-	description: "Balanced OpenAI Codex subscription model with medium reasoning",
-	provider: "openai-codex",
-	modelId: "gpt-5.6-terra",
-	thinkingLevel: ThinkingLevel.Medium,
-};
-
 export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly string[]): LiteLLMLoginModelChoice[] {
 	const available = new Set(availableModelIds);
 	return LITELLM_LOGIN_MODEL_CHOICES.filter(choice => available.has(choice.modelId));
@@ -114,9 +106,7 @@ export async function applyOAuthLoginModel(
 	const choice =
 		canonicalProvider === GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider
 			? GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE
-			: canonicalProvider === OPENAI_CODEX_LOGIN_MODEL_CHOICE.provider
-				? OPENAI_CODEX_LOGIN_MODEL_CHOICE
-				: undefined;
+			: undefined;
 	if (!choice) return undefined;
 	const discovery = session.modelRegistry.getProviderDiscoveryState?.(canonicalProvider);
 	if (session.modelRegistry.getProviderDiscoveryState && (discovery?.status !== "ok" || discovery.stale)) {

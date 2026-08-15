@@ -71,7 +71,6 @@ import {
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
-	"openai-codex",
 	"gitlab-duo",
 	"google-gemini-cli",
 	"google-antigravity",
@@ -1053,6 +1052,10 @@ export class SelectorController {
 	}
 
 	async #handleOAuthLogin(providerId: string): Promise<void> {
+		if (providerId === "openai") {
+			this.#showOpenAIApiKeyGuidance();
+			return;
+		}
 		// LiteLLM has its own flow with config persistence
 		if (providerId === "litellm") {
 			return this.#handleLiteLLMLogin();
@@ -1172,6 +1175,24 @@ export class SelectorController {
 		}
 	}
 
+	#showOpenAIApiKeyGuidance(): void {
+		this.ctx.chatContainer.addChild(new Spacer(1));
+		this.ctx.chatContainer.addChild(
+			new Text(theme.fg("warning", "OpenAI Responses API uses usage-based Platform API access."), 1, 0),
+		);
+		this.ctx.chatContainer.addChild(
+			new Text(theme.fg("dim", "Set OPENAI_API_KEY, then select an OpenAI model with /model."), 1, 0),
+		);
+		this.ctx.chatContainer.addChild(
+			new Text(
+				theme.fg("dim", "For ChatGPT subscription access, use the official codex CLI (`codex login`)."),
+				1,
+				0,
+			),
+		);
+		this.ctx.ui.requestRender();
+	}
+
 	async #handleOAuthLogout(providerId: string): Promise<void> {
 		try {
 			await this.ctx.session.modelRegistry.authStorage.logout(providerId);
@@ -1249,11 +1270,15 @@ export class SelectorController {
 				const hostname = new URL(baseUrl).hostname.toLowerCase();
 				const providerMap: Record<string, string> = {
 					"api.anthropic.com": "anthropic",
-					"api.openai.com": "openai-codex",
+					"api.openai.com": "openai",
 					"api.together.xyz": "together",
 				};
 				const detectedProvider =
 					providerMap[hostname] ?? (hostname.endsWith(".googleapis.com") ? "google-gemini-cli" : null);
+				if (detectedProvider === "openai") {
+					this.#showOpenAIApiKeyGuidance();
+					return;
+				}
 				if (detectedProvider) {
 					this.ctx.editorContainer.clear();
 					this.ctx.editorContainer.addChild(new Spacer(1));

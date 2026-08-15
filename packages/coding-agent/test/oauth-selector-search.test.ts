@@ -40,12 +40,23 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (const character of "openai-codex") selector.handleInput(character);
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
-		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
+		expect(rendered).toContain("No matching providers");
+
+		selector.handleInput("\n");
+		expect(onSelect).not.toHaveBeenCalled();
+	});
+
+	it("offers OpenAI Responses API access as usage-based API-key onboarding", () => {
+		const { selector, onSelect } = createSelector();
+
+		for (const character of "responses api") selector.handleInput(character);
+
+		const rendered = renderText(selector);
+		expect(rendered).toContain("OpenAI Responses API (usage-based API access)");
 		expect(rendered).toContain(`1 match (${getOAuthProviders().length} total)`);
 
 		selector.handleInput("\n");
-		expect(onSelect).toHaveBeenCalledWith("openai-codex");
+		expect(onSelect).toHaveBeenCalledWith("openai");
 	});
 
 	it("shows an empty state for unmatched input and does not select", () => {

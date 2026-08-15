@@ -1,8 +1,6 @@
-import { OPENAI_CODEX_ROUTING_POOL } from "./subscription-profiles";
 import type { RoutingPoolConfig } from "./types";
 
 export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
-	[OPENAI_CODEX_ROUTING_POOL.id]: OPENAI_CODEX_ROUTING_POOL,
 	"openai/gpt-5.6": {
 		id: "openai/gpt-5.6",
 		provider: "openai",
