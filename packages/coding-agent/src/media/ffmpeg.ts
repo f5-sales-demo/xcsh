@@ -187,7 +187,11 @@ async function decodeAnimatedWebpFallback(
 		);
 		const framePaths = (await fs.readdir(framesPath))
 			.filter(name => /^frame_\d+\.pam$/u.test(name))
-			.sort()
+			.sort(
+				(left, right) =>
+					Number(left.slice("frame_".length, -".pam".length)) -
+					Number(right.slice("frame_".length, -".pam".length)),
+			)
 			.slice(0, options.maxFrames);
 		if (framePaths.length !== frameCount) return null;
 		const frames: DecodedRasterFrame[] = [];
