@@ -70,7 +70,7 @@ it("maps display_media to standard image and sanitized resource content", () => 
 		id: `media_${"c".repeat(24)}`,
 		kind: "image" as const,
 		original: { ref: `blob:sha256:${hash}`, mimeType: "image/png", bytes: 4 },
-		provenance: { sourceType: "path" as const, source: "/home/robin/private.png" },
+		provenance: { sourceType: "path" as const, source: "/home/<user>/private.png" },
 		playback: { autoplay: false, loop: false, muted: true as const, fpsCap: 12 },
 	};
 	const updates = mapAgentSessionEventToAcpSessionUpdates(
@@ -88,5 +88,5 @@ it("maps display_media to standard image and sanitized resource content", () => 
 	const update = updates[0]!.update as { content?: unknown[]; rawOutput?: unknown };
 	expect(update.content!.length).toBeGreaterThanOrEqual(2);
 	expect(JSON.stringify(update)).toContain("xcsh-media://media_");
-	expect(JSON.stringify(update)).not.toContain("/home/robin");
+	expect(JSON.stringify(update)).not.toContain("/home/<user>");
 });

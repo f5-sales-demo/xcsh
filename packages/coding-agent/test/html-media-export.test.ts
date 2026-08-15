@@ -27,7 +27,7 @@ test("HTML export copies content-addressed media and emits native playback rende
 			kind: "video",
 			original: { ref: blob.ref, mimeType: "video/mp4", bytes: bytes.length },
 			caption: "Demo clip",
-			provenance: { sourceType: "path", source: "/home/robin/private/demo.mp4" },
+			provenance: { sourceType: "path", source: "/home/<user>/private/demo.mp4" },
 			playback: { autoplay: true, loop: false, muted: true, fpsCap: 12 },
 		},
 	};
@@ -47,7 +47,7 @@ test("HTML export copies content-addressed media and emits native playback rende
 	expect(encoded).toBeDefined();
 	const data = JSON.parse(Buffer.from(encoded!, "base64").toString("utf8"));
 	expect(data.mediaAssets[blob.ref]).toBe(`share-media/${blob.hash}.mp4`);
-	expect(JSON.stringify(data)).not.toContain("/home/robin/private");
+	expect(JSON.stringify(data)).not.toContain("/home/<user>/private");
 });
 
 test("HTML export records a missing media asset without failing", async () => {

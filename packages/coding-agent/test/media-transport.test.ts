@@ -19,7 +19,7 @@ function descriptor(ref: string, bytes: number): MediaDescriptorV1 {
 		kind: "image",
 		original: { ref, mimeType: "image/png", bytes },
 		poster: { ref, mimeType: "image/png", bytes },
-		provenance: { sourceType: "path", source: "/home/robin/private/chart.png" },
+		provenance: { sourceType: "path", source: "/home/<user>/private/chart.png" },
 		playback: { autoplay: true, loop: false, muted: true, fpsCap: 12 },
 	};
 }
@@ -28,7 +28,7 @@ describe("media transport projection", () => {
 	test("preserves the canonical descriptor while removing local provenance", () => {
 		const projected = projectMediaDescriptorForTransport(descriptor(`blob:sha256:${"a".repeat(64)}`, 6));
 		expect(projected.provenance).toEqual({ sourceType: "tool", source: "display_media" });
-		expect(JSON.stringify(projected)).not.toContain("/home/robin");
+		expect(JSON.stringify(projected)).not.toContain("/home/<user>");
 		expect(projected.playback.muted).toBe(true);
 	});
 
@@ -43,7 +43,7 @@ describe("media transport projection", () => {
 
 	test("replaces malformed URL provenance instead of leaking it", () => {
 		const value = descriptor(`blob:sha256:${"a".repeat(64)}`, 6);
-		value.provenance = { sourceType: "url", source: "/home/robin/not-really-a-url" };
+		value.provenance = { sourceType: "url", source: "/home/<user>/not-really-a-url" };
 		expect(projectMediaDescriptorForTransport(value).provenance).toEqual({
 			sourceType: "tool",
 			source: "display_media",
