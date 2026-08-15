@@ -1,6 +1,6 @@
 import { marked, type Token, type Tokens } from "marked";
 import type { SymbolTheme } from "../symbols";
-import { TERMINAL } from "../terminal-capabilities";
+import { getImageDimensions, imageFallback, renderImage, stableKittyImageId, TERMINAL } from "../terminal-capabilities";
 import type { Component } from "../tui";
 import {
 	applyBackgroundToLine,
@@ -16,6 +16,21 @@ import {
  * Default text styling for markdown content.
  * Applied to all text unless overridden by markdown formatting.
  */
+export interface ResolvedMarkdownMedia {
+	id: string;
+	data: string;
+	mimeType: string;
+	filename?: string;
+}
+
+export type MarkdownMediaResolver = (request: { source: string; alt: string }) => Promise<ResolvedMarkdownMedia>;
+
+export interface MarkdownMediaOptions {
+	resolve: MarkdownMediaResolver;
+	onInvalidate?: () => void;
+}
+
+/** Default text styling for markdown content. */
 export interface DefaultTextStyle {
 	/** Foreground color function */
 	color?: (text: string) => string;
@@ -74,6 +89,16 @@ type ListToken = Token & { items: Array<{ tokens?: Token[] }>; ordered: boolean;
 type TableCellToken = { tokens?: Token[] };
 type TableToken = Token & { header: TableCellToken[]; rows: TableCellToken[][]; raw?: string };
 
+function isImageToken(token: Token): token is Tokens.Image {
+	return (
+		token.type === "image" &&
+		"href" in token &&
+		typeof token.href === "string" &&
+		"text" in token &&
+		typeof token.text === "string"
+	);
+}
+
 function formatHyperlink(text: string, target: string): string {
 	if (!TERMINAL.hyperlinks || !target) {
 		return text;
@@ -96,6 +121,11 @@ export class Markdown implements Component {
 	#defaultStylePrefix?: string;
 	/** Number of spaces used to indent code block content. */
 	#codeBlockIndent: number;
+	#mediaOptions?: MarkdownMediaOptions;
+	#mediaCache = new Map<
+		string,
+		{ status: "pending" } | { status: "loaded"; media: ResolvedMarkdownMedia } | { status: "error"; message: string }
+	>();
 
 	// Cache for rendered output
 	#cachedText?: string;
@@ -109,6 +139,7 @@ export class Markdown implements Component {
 		theme: MarkdownTheme,
 		defaultTextStyle?: DefaultTextStyle,
 		codeBlockIndent: number = 2,
+		mediaOptions?: MarkdownMediaOptions,
 	) {
 		this.#text = text;
 		this.#paddingX = paddingX;
@@ -116,6 +147,7 @@ export class Markdown implements Component {
 		this.#theme = theme;
 		this.#defaultTextStyle = defaultTextStyle;
 		this.#codeBlockIndent = Math.max(0, Math.floor(codeBlockIndent));
+		this.#mediaOptions = mediaOptions;
 	}
 
 	setText(text: string): void {
@@ -326,8 +358,12 @@ export class Markdown implements Component {
 			}
 
 			case "paragraph": {
-				const paragraphText = this.#renderInlineTokens(token.tokens || [], styleContext);
-				lines.push(paragraphText);
+				const paragraphTokens = token.tokens || [];
+				if (this.#mediaOptions && paragraphTokens.some(child => child.type === "image")) {
+					lines.push(...this.#renderParagraphWithMedia(paragraphTokens, width, styleContext));
+				} else {
+					lines.push(this.#renderInlineTokens(paragraphTokens, styleContext));
+				}
 				// Don't add spacing if next token is space or list
 				if (nextTokenType && nextTokenType !== "list" && nextTokenType !== "space") {
 					lines.push("");
@@ -474,6 +510,75 @@ export class Markdown implements Component {
 		}
 
 		return lines;
+	}
+
+	#renderParagraphWithMedia(tokens: Token[], width: number, styleContext?: InlineStyleContext): string[] {
+		const lines: string[] = [];
+		let inline: Token[] = [];
+		const flushInline = (): void => {
+			if (inline.length === 0) return;
+			const rendered = this.#renderInlineTokens(inline, styleContext);
+			lines.push(...rendered.split("\n"));
+			inline = [];
+		};
+		for (const token of tokens) {
+			if (!isImageToken(token)) {
+				inline.push(token);
+				continue;
+			}
+			flushInline();
+			lines.push(...this.#renderMarkdownMedia(token, width));
+		}
+		flushInline();
+		return lines;
+	}
+
+	#renderMarkdownMedia(token: Tokens.Image, width: number): string[] {
+		const source = token.href;
+		let state = this.#mediaCache.get(source);
+		if (!state) {
+			state = { status: "pending" };
+			this.#mediaCache.set(source, state);
+			void this.#mediaOptions
+				?.resolve({ source, alt: token.text })
+				.then(media => {
+					this.#mediaCache.set(source, { status: "loaded", media });
+				})
+				.catch(error => {
+					this.#mediaCache.set(source, {
+						status: "error",
+						message: error instanceof Error ? error.message : String(error),
+					});
+				})
+				.finally(() => {
+					this.invalidate();
+					this.#mediaOptions?.onInvalidate?.();
+				});
+		}
+		if (state.status === "pending") {
+			return [this.#theme.link(`[Loading media: ${token.text || source}]`)];
+		}
+		if (state.status === "error") {
+			return [this.#theme.linkUrl(`[Media unavailable: ${state.message}]`)];
+		}
+		const dimensions = getImageDimensions(state.media.data, state.media.mimeType) ?? undefined;
+		if (dimensions && TERMINAL.imageProtocol) {
+			const rendered = renderImage(state.media.data, dimensions, {
+				maxWidthCells: Math.max(1, width),
+				imageId: stableKittyImageId(state.media.id),
+			});
+			if (rendered) {
+				const result = Array.from({ length: Math.max(0, rendered.rows - 1) }, () => "");
+				const moveUp = rendered.rows > 1 ? `\x1b[${rendered.rows - 1}A` : "";
+				result.push(moveUp + rendered.sequence);
+				return result;
+			}
+		}
+		return [
+			this.#theme.linkUrl(
+				imageFallback(state.media.mimeType, dimensions, state.media.filename ?? token.text ?? undefined),
+			),
+		];
 	}
 
 	#renderInlineTokens(tokens: Token[], styleContext?: InlineStyleContext): string {

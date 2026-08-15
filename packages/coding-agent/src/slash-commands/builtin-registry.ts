@@ -782,6 +782,20 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 		},
 	},
 	{
+		name: "media",
+		description: "Control rich-media playback",
+		subcommands: [
+			{ name: "play", description: "Play media", usage: "<latest|id>" },
+			{ name: "pause", description: "Pause media", usage: "<latest|id>" },
+			{ name: "stop", description: "Stop and reset media", usage: "<latest|id>" },
+		],
+		allowArgs: true,
+		handle: (command, runtime) => {
+			runtime.ctx.editor.setText("");
+			runtime.ctx.handleMediaCommand(command.text);
+		},
+	},
+	{
 		name: "new",
 		description: t("commands.new.description"),
 		handle: async (_command, runtime) => {

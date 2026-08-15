@@ -22,6 +22,7 @@ import { BashExecutionComponent } from "../../modes/components/bash-execution";
 import { BorderedLoader } from "../../modes/components/bordered-loader";
 import { DynamicBorder } from "../../modes/components/dynamic-border";
 import { createToolGutter } from "../../modes/components/gutter-block";
+import { controlMediaPlayback, type MediaPlaybackAction } from "../../modes/components/media-message";
 import { PythonExecutionComponent } from "../../modes/components/python-execution";
 import { getMarkdownTheme, getSymbolTheme, theme } from "../../modes/theme/theme";
 import type { InteractiveModeContext } from "../../modes/types";
@@ -237,6 +238,22 @@ export class CommandController {
 				);
 			}
 		}
+	}
+
+	handleMediaCommand(text: string): void {
+		const [, action, target = "latest", ...extra] = text.trim().split(/\s+/u);
+		if (!["play", "pause", "stop"].includes(action ?? "") || extra.length > 0) {
+			this.ctx.showError("Usage: /media play|pause|stop <latest|media-id>");
+			return;
+		}
+		const result = controlMediaPlayback(action as MediaPlaybackAction, target);
+		if (!result) {
+			this.ctx.showError(
+				target === "latest" ? "No media is available in this transcript." : `Media not found: ${target}`,
+			);
+			return;
+		}
+		this.ctx.showStatus(`Media ${result.id}: ${result.state}`);
 	}
 
 	handleCopyCommand(sub?: string) {

@@ -1,5 +1,14 @@
 import type { AssistantMessage, ImageContent, Usage } from "@f5-sales-demo/pi-ai";
-import { Container, Image, ImageProtocol, Markdown, Spacer, TERMINAL, Text } from "@f5-sales-demo/pi-tui";
+import {
+	Container,
+	Image,
+	ImageProtocol,
+	Markdown,
+	type MarkdownMediaOptions,
+	Spacer,
+	TERMINAL,
+	Text,
+} from "@f5-sales-demo/pi-tui";
 import { formatNumber, logger } from "@f5-sales-demo/pi-utils";
 import { settings } from "../../config/settings";
 import { hasPendingMermaid, mermaidThemeSignature, prerenderMermaid } from "../../modes/theme/mermaid-cache";
@@ -19,6 +28,7 @@ export class AssistantMessageComponent extends Container {
 	constructor(
 		message?: AssistantMessage,
 		private hideThinkingBlock = false,
+		private readonly markdownMediaOptions?: MarkdownMediaOptions,
 	) {
 		super();
 
@@ -141,7 +151,9 @@ export class AssistantMessageComponent extends Container {
 			if (content.type === "text" && content.text.trim()) {
 				// Assistant text messages with no background - trim the text
 				// Set paddingY=0 to avoid extra spacing before tool executions
-				this.#contentContainer.addChild(new Markdown(content.text.trim(), 0, 0, getMarkdownTheme()));
+				this.#contentContainer.addChild(
+					new Markdown(content.text.trim(), 0, 0, getMarkdownTheme(), undefined, 2, this.markdownMediaOptions),
+				);
 			} else if (content.type === "thinking" && content.thinking.trim()) {
 				// Add spacing only when another visible assistant content block follows.
 				// This avoids a superfluous blank line before separately-rendered tool execution blocks.

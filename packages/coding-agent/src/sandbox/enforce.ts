@@ -436,6 +436,24 @@ function evaluatePuppeteer(check: ToolCallCheck): ToolCallDecision {
 	return ALLOW;
 }
 
+function evaluateDisplayMedia(check: ToolCallCheck): ToolCallDecision {
+	const sources: string[] = [];
+	if (typeof check.input.source === "string") sources.push(check.input.source);
+	if (Array.isArray(check.input.frames)) {
+		for (const frame of check.input.frames) {
+			if (frame && typeof frame === "object" && "source" in frame && typeof frame.source === "string") {
+				sources.push(frame.source);
+			}
+		}
+	}
+	for (const source of sources) {
+		if (source.startsWith("https://") || source.startsWith("artifact://")) continue;
+		const resolved = resolveToCwd(source, check.cwd);
+		if (!permits(check, resolved, "read")) return deny(check.cwd, resolved, "read");
+	}
+	return ALLOW;
+}
+
 function evaluateSearchTool(check: ToolCallCheck, spec: SearchSpec): ToolCallDecision {
 	const { input, cwd } = check;
 	const raw = typeof input[spec.key] === "string" ? (input[spec.key] as string) : "";
@@ -477,6 +495,7 @@ export function evaluateToolCall(check: ToolCallCheck): ToolCallDecision {
 	if (toolName === "read") return evaluateReadTool(check);
 	if (toolName === "generate_image") return evaluateGenerateImage(check);
 	if (toolName === "puppeteer") return evaluatePuppeteer(check);
+	if (toolName === "display_media") return evaluateDisplayMedia(check);
 
 	const searchSpec = SEARCH_TOOLS[toolName];
 	if (searchSpec) return evaluateSearchTool(check, searchSpec);

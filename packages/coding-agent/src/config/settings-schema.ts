@@ -433,6 +433,24 @@ export const SETTINGS_SCHEMA = {
 		ui: { tab: "appearance", label: "Block Images", description: "Prevent images from being sent to LLM providers" },
 	},
 
+	"media.autoplay": {
+		type: "boolean",
+		default: true,
+		ui: { tab: "appearance", label: "Autoplay Media", description: "Play rich media once when it becomes visible" },
+	},
+
+	"media.reducedMotion": {
+		type: "boolean",
+		default: false,
+		ui: { tab: "appearance", label: "Reduced Motion", description: "Disable automatic rich-media playback" },
+	},
+
+	"media.fpsCap": {
+		type: "number",
+		default: 12,
+		ui: { tab: "appearance", label: "Media FPS Cap", description: "Maximum rich-media playback frame rate" },
+	},
+
 	"images.pasteDir": {
 		type: "string",
 		default: ".",

@@ -2,6 +2,7 @@ import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent, Message } from "@f5-sales-demo/pi-ai";
 import { Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import { settings } from "../../config/settings";
+import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import { BashExecutionComponent } from "../../modes/components/bash-execution";
 import { BranchSummaryMessageComponent } from "../../modes/components/branch-summary-message";
@@ -13,6 +14,7 @@ import {
 	createToolGutter,
 	GutterBlock,
 } from "../../modes/components/gutter-block";
+import { MediaMessageComponent } from "../../modes/components/media-message";
 import { PythonExecutionComponent } from "../../modes/components/python-execution";
 import { ReadToolGroupComponent } from "../../modes/components/read-tool-group";
 import { SkillMessageComponent } from "../../modes/components/skill-message";
@@ -195,8 +197,21 @@ export class UiHelpers {
 				break;
 			}
 			case "assistant": {
-				const assistantComponent = new AssistantMessageComponent(message, this.ctx.hideThinkingBlock);
+				const assistantComponent = new AssistantMessageComponent(
+					message,
+					this.ctx.hideThinkingBlock,
+					createMarkdownMediaOptions(this.ctx.sessionManager, () => this.ctx.ui.requestRender()),
+				);
 				this.ctx.chatContainer.addChild(createTextGutter(this.ctx.ui, assistantComponent));
+				break;
+			}
+			case "media": {
+				const component = new MediaMessageComponent(message, this.ctx.sessionManager.getBlobStore(), this.ctx.ui, {
+					autoplay: this.ctx.session.settings.get("media.autoplay"),
+					reducedMotion: this.ctx.session.settings.get("media.reducedMotion"),
+					fpsCap: this.ctx.session.settings.get("media.fpsCap"),
+				});
+				this.ctx.chatContainer.addChild(createTextGutter(this.ctx.ui, component));
 				break;
 			}
 			case "toolResult": {

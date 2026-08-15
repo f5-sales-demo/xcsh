@@ -35,6 +35,7 @@ export class BlobStore {
 			},
 		};
 
+		await fs.mkdir(this.dir, { recursive: true });
 		await Bun.write(blobPath, data);
 		return result;
 	}
