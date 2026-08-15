@@ -852,3 +852,28 @@ describe("evaluateToolCall — in-place and output-naming commands (GHSA-q4hg)",
 		expect(bash("wget -O /shared/ctx/x https://example.com").block).toBe(true);
 	});
 });
+
+describe("display_media sandbox paths", () => {
+	it("checks every local raster-frame source while ignoring text frames and remote sources", () => {
+		expect(check("display_media", { source: "images/local.png" }).block).toBe(false);
+		expect(check("display_media", { source: "/work/custB/private.png" }).block).toBe(true);
+		expect(check("display_media", { source: "https://media.example/image.png" }).block).toBe(false);
+		expect(check("display_media", { source: "artifact://tool/output.png" }).block).toBe(false);
+		expect(
+			check("display_media", {
+				frames: [
+					{ source: "frames/one.png", durationMs: 100 },
+					{ source: "/work/custB/private.png", durationMs: 100 },
+				],
+			}).block,
+		).toBe(true);
+		expect(
+			check("display_media", {
+				frames: [
+					{ text: "one", durationMs: 100 },
+					{ text: "two", durationMs: 100 },
+				],
+			}).block,
+		).toBe(false);
+	});
+});

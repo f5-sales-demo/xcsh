@@ -1215,6 +1215,10 @@ export class InteractiveMode implements InteractiveModeContext {
 		return this.#commandController.handleCopyCommand(sub);
 	}
 
+	handleMediaCommand(text: string): void {
+		this.#commandController.handleMediaCommand(text);
+	}
+
 	handleSessionCommand(): Promise<void> {
 		return this.#commandController.handleSessionCommand();
 	}

@@ -15,6 +15,7 @@ export interface ImageOptions {
 	maxWidthCells?: number;
 	maxHeightCells?: number;
 	filename?: string;
+	imageId?: number;
 }
 
 export class Image implements Component {
@@ -60,6 +61,7 @@ export class Image implements Component {
 			const result = renderImage(this.#base64Data, this.#dimensions, {
 				maxWidthCells: maxWidth,
 				maxHeightCells: this.#options.maxHeightCells,
+				imageId: this.#options.imageId,
 			});
 
 			if (result) {

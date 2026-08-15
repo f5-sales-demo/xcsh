@@ -1082,6 +1082,11 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			requireSubmitResultTool: options.requireSubmitResultTool,
 			taskDepth: options.taskDepth ?? 0,
 			getSessionFile: () => sessionManager.getSessionFile() ?? null,
+			mediaBlobStore: sessionManager.getBlobStore(),
+			appendMediaMessage: message => {
+				agent.appendMessage(message);
+				sessionManager.appendMessage(message);
+			},
 			getPythonKernelOwnerId: () => pythonKernelOwnerId,
 			assertPythonExecutionAllowed: () => session?.assertPythonExecutionAllowed(),
 			trackPythonExecution: (execution, abortController) =>

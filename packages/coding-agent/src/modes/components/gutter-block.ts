@@ -151,6 +151,11 @@ export class GutterBlock<T extends Component> implements Component {
 		this.#stopSpinner();
 	}
 
+	unmount(): void {
+		this.dispose();
+		this.#child.unmount?.();
+	}
+
 	#buildGutterPrefix(): string {
 		if (this.#state === "done") {
 			const colorFn = this.#doneColorFnForOutcome();

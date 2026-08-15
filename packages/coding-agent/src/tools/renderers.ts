@@ -19,6 +19,7 @@ import { browserRenderer } from "./browser-renderer";
 import { calculatorToolRenderer } from "./calculator";
 import { debugToolRenderer } from "./debug";
 import { displayImageToolRenderer } from "./display-image-renderer";
+import { displayMediaToolRenderer } from "./display-media-renderer";
 import { findToolRenderer } from "./find";
 import { grepToolRenderer } from "./grep";
 import { inspectImageToolRenderer } from "./inspect-image-renderer";
@@ -59,6 +60,7 @@ export const toolRenderers: Record<string, ToolRenderer> = {
 	grep: grepToolRenderer as ToolRenderer,
 	lsp: lspToolRenderer as ToolRenderer,
 	notebook: notebookToolRenderer as ToolRenderer,
+	display_media: displayMediaToolRenderer as ToolRenderer,
 	display_image: displayImageToolRenderer as ToolRenderer,
 	inspect_image: inspectImageToolRenderer as ToolRenderer,
 	read: readToolRenderer as ToolRenderer,

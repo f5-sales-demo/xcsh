@@ -49,6 +49,8 @@ export {
 export * from "./keybindings";
 // Kitty keyboard protocol helpers
 export * from "./keys";
+// Media playback state machine
+export * from "./media-playback";
 // Mermaid diagram support
 // Input buffering for batch splitting
 export * from "./stdin-buffer";

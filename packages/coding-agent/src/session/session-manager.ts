@@ -26,6 +26,7 @@ import {
 	Snowflake,
 	toError,
 } from "@f5-sales-demo/pi-utils";
+import type { MediaMessage } from "../media/types";
 import { ArtifactManager } from "./artifacts";
 import {
 	type BlobPutResult,
@@ -1472,6 +1473,11 @@ export class SessionManager {
 		return this.#blobStore.put(data);
 	}
 
+	/** Returns the session's content-addressed blob store for media services. */
+	getBlobStore(): BlobStore {
+		return this.#blobStore;
+	}
+
 	captureState(): SessionManagerStateSnapshot {
 		return {
 			sessionId: this.#sessionId,
@@ -2115,7 +2121,8 @@ export class SessionManager {
 			| HookMessage
 			| BashExecutionMessage
 			| PythonExecutionMessage
-			| FileMentionMessage,
+			| FileMentionMessage
+			| MediaMessage,
 	): string {
 		const entry: SessionMessageEntry = {
 			type: "message",

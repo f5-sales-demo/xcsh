@@ -218,6 +218,7 @@ export interface ImageRenderOptions {
 	maxWidthCells?: number;
 	maxHeightCells?: number;
 	preserveAspectRatio?: boolean;
+	imageId?: number;
 }
 
 // Default cell dimensions - updated by TUI when terminal responds to query
@@ -229,6 +230,21 @@ export function getCellDimensions(): CellDimensions {
 
 export function setCellDimensions(dims: CellDimensions): void {
 	cellDimensions = dims;
+}
+
+/** Derive a deterministic Kitty image/placement id from a durable media id. */
+export function stableKittyImageId(mediaId: string): number {
+	let hash = 0x811c9dc5;
+	for (let index = 0; index < mediaId.length; index++) {
+		hash ^= mediaId.charCodeAt(index);
+		hash = Math.imul(hash, 0x01000193);
+	}
+	return ((hash >>> 0) % 2_147_483_646) + 1;
+}
+
+/** Delete a Kitty image and all placements that use its stable id. */
+export function deleteKittyImage(imageId: number): string {
+	return `\x1b_Ga=d,d=I,i=${imageId},q=2;\x1b\\`;
 }
 
 export function encodeKitty(
@@ -497,6 +513,7 @@ export function renderImage(
 		const sequence = encodeKitty(base64Data, {
 			columns: fit.columns,
 			rows: fit.rows,
+			imageId: options.imageId,
 		});
 		return { sequence, rows: fit.rows };
 	}

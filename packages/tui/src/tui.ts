@@ -41,6 +41,9 @@ export interface Component {
 	 * Called when theme changes or when component needs to re-render from scratch.
 	 */
 	invalidate(): void;
+
+	/** Release timers, subprocesses, and terminal placements when removed from a container. */
+	unmount?(): void;
 }
 
 /**
@@ -183,10 +186,12 @@ export class Container implements Component {
 		const index = this.children.indexOf(component);
 		if (index !== -1) {
 			this.children.splice(index, 1);
+			component.unmount?.();
 		}
 	}
 
 	clear(): void {
+		for (const child of this.children) child.unmount?.();
 		this.children = [];
 	}
 
@@ -239,6 +244,8 @@ export class TUI extends Container {
 	#maxLinesRendered = 0; // High-water line count used for clear-on-shrink policy
 	#fullRedrawCount = 0;
 	#stopped = false;
+	#viewportObservers = new Map<number, { callback: (visible: boolean) => void; visible: boolean }>();
+	#nextViewportObserverId = 1;
 
 	// Overlay stack for modal components rendered on top of base content
 	overlayStack: {
@@ -258,6 +265,43 @@ export class TUI extends Container {
 
 	get fullRedraws(): number {
 		return this.#fullRedrawCount;
+	}
+
+	registerViewportObserver(callback: (visible: boolean) => void): { marker: string; dispose: () => void } {
+		const id = this.#nextViewportObserverId++;
+		this.#viewportObservers.set(id, { callback, visible: false });
+		return {
+			marker: `\x1b_pi:v=${id}\x07`,
+			dispose: () => {
+				const observer = this.#viewportObservers.get(id);
+				if (observer?.visible) observer.callback(false);
+				this.#viewportObservers.delete(id);
+			},
+		};
+	}
+
+	#updateViewportObservers(lines: string[], height: number): void {
+		if (this.#viewportObservers.size === 0) return;
+		const visibleIds = new Set<number>();
+		const viewportTop = Math.max(0, lines.length - height);
+		const marker = /\x1b_pi:v=(\d+)\x07/gu;
+		for (let index = 0; index < lines.length; index++) {
+			lines[index] = lines[index].replace(marker, (_sequence, rawId: string) => {
+				const id = Number(rawId);
+				if (index >= viewportTop && this.#viewportObservers.has(id)) visibleIds.add(id);
+				return "";
+			});
+		}
+		for (const [id, observer] of this.#viewportObservers) {
+			const visible = visibleIds.has(id);
+			if (visible === observer.visible) continue;
+			observer.visible = visible;
+			try {
+				observer.callback(visible);
+			} catch {
+				// Viewport observers must not break terminal rendering.
+			}
+		}
 	}
 
 	getShowHardwareCursor(): boolean {
@@ -1022,6 +1066,7 @@ export class TUI extends Container {
 
 		// Render all components to get new lines
 		let newLines = this.render(width);
+		this.#updateViewportObservers(newLines, height);
 
 		// Clamp any oversized lines before dirty-checking so the truncated form
 		// matches what we store in #previousLines, preventing perpetual repaints.

@@ -16,6 +16,7 @@ import type {
 	ToolResultMessage,
 } from "@f5-sales-demo/pi-ai";
 import { logger, prompt } from "@f5-sales-demo/pi-utils";
+import type { MediaMessage } from "../media/types";
 import branchSummaryContextPrompt from "../prompts/compaction/branch-summary-context.md" with { type: "text" };
 import compactionSummaryContextPrompt from "../prompts/compaction/compaction-summary-context.md" with { type: "text" };
 import type { OutputMeta } from "../tools/output-meta";
@@ -148,6 +149,7 @@ declare module "@f5-sales-demo/pi-agent-core" {
 		branchSummary: BranchSummaryMessage;
 		compactionSummary: CompactionSummaryMessage;
 		fileMention: FileMentionMessage;
+		media: MediaMessage;
 	}
 }
 
@@ -461,6 +463,8 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 	const converted = messages
 		.map((m): Message | undefined => {
 			switch (m.role) {
+				case "media":
+					return undefined;
 				case "bashExecution":
 					if (m.excludeFromContext) {
 						return undefined;

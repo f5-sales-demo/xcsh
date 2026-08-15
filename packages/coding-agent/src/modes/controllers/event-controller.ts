@@ -2,6 +2,7 @@ import { INTENT_FIELD } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage, ImageContent } from "@f5-sales-demo/pi-ai";
 import { Loader, Spacer, TERMINAL } from "@f5-sales-demo/pi-tui";
 import { settings } from "../../config/settings";
+import { createMarkdownMediaOptions } from "../../media/markdown-resolver";
 import { AssistantMessageComponent } from "../../modes/components/assistant-message";
 import {
 	createStreamingAssistantGutter,
@@ -192,7 +193,11 @@ export class EventController {
 				} else if (event.message.role === "assistant") {
 					this.#lastThinkingCount = 0;
 					this.#resetReadGroup();
-					this.ctx.streamingComponent = new AssistantMessageComponent(undefined, this.ctx.hideThinkingBlock);
+					this.ctx.streamingComponent = new AssistantMessageComponent(
+						undefined,
+						this.ctx.hideThinkingBlock,
+						createMarkdownMediaOptions(this.ctx.sessionManager, () => this.ctx.ui.requestRender()),
+					);
 					this.ctx.streamingMessage = event.message;
 					this.ctx.streamingAssistantGutter = createStreamingAssistantGutter(
 						this.ctx.ui,
