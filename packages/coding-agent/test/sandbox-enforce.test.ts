@@ -403,7 +403,6 @@ describe("evaluateToolCall", () => {
 	it("gates the other filesystem tools (image/lsp/puppeteer/catalog/debug)", () => {
 		expect(check("inspect_image", { path: "/work/custB/pic.png" }).block).toBe(true);
 		expect(check("inspect_image", { path: "shot.png" }).block).toBe(false);
-		expect(check("display_image", { path: "../custB/pic.png" }).block).toBe(true);
 		expect(check("lsp", { file: "/work/custB/app.ts" }).block).toBe(true);
 		expect(check("lsp", { file: "app.ts" }).block).toBe(false);
 		expect(check("puppeteer", { action: "screenshot", path: "/work/custB/out.png" }).block).toBe(true);

@@ -334,7 +334,7 @@ export class ChatHandler {
 			return;
 		}
 		if (event.type === "tool_execution_end" && "toolName" in event) {
-			if (event.toolName === "display_media" || event.toolName === "display_image") {
+			if (event.toolName === "display_media") {
 				const descriptor = extractMediaDescriptorFromToolResult(event.result);
 				if (descriptor) {
 					this.#server.send({
