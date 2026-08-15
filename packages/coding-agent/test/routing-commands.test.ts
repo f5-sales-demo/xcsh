@@ -56,18 +56,18 @@ describe("/route Commands (I09)", () => {
 
 	it("selects only reviewed provider-sticky subscription profiles", async () => {
 		const coordinator = new RoutingCoordinator();
-		const selected = await handleRouteCommand(["profile", "openai-codex"], {
+		const selected = await handleRouteCommand(["profile", "google-antigravity"], {
 			coordinator,
-			currentModel: "openai-codex/gpt-5.6-terra",
+			currentModel: "google-antigravity/gemini-3.6-flash-high",
 			mode: "auto",
 			profile: "none",
 		});
-		expect(selected.newProfile).toBe("openai-codex");
-		expect(selected.output).toContain("openai-codex");
+		expect(selected.newProfile).toBe("google-antigravity");
+		expect(selected.output).toContain("google-antigravity");
 
 		const invalid = await handleRouteCommand(["profile", "unknown"], {
 			coordinator,
-			currentModel: "openai-codex/gpt-5.6-terra",
+			currentModel: "google-antigravity/gemini-3.6-flash-high",
 			mode: "auto",
 		});
 		expect(invalid.newProfile).toBeUndefined();

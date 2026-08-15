@@ -16,7 +16,6 @@ import {
 	type ModelRefreshStrategy,
 	type OAuthCredentials,
 	type OAuthLoginCallbacks,
-	openaiCodexModelManagerOptions,
 	PROVIDER_DESCRIPTORS,
 	readModelCache,
 	registerCustomApi,
@@ -32,7 +31,7 @@ import { type ConfigError, ConfigFile } from "../config";
 import { hasLiteLLMEnv, probeAndUpgradeLiteLLMConfig, startupHealthCheck } from "../config/auto-config";
 import { parseModelString, resolveProviderModelReference } from "../config/model-resolver";
 import { isValidThemeColor, type ThemeColor } from "../modes/theme/theme";
-import type { AuthStorage, OAuthCredential } from "../session/auth-storage";
+import type { AuthStorage } from "../session/auth-storage";
 import {
 	buildCanonicalModelIndex,
 	type CanonicalModelIndex,
@@ -551,31 +550,6 @@ function extractGoogleOAuthToken(value: string | undefined): string | undefined 
 		// OAuth values for Google providers are expected to be JSON, but custom setups may already provide raw token.
 	}
 	return value;
-}
-
-function getOAuthCredentialsForProvider(authStorage: AuthStorage, provider: string): OAuthCredential[] {
-	const providerEntry = authStorage.getAll()[provider];
-	if (!providerEntry) {
-		return [];
-	}
-	const entries = Array.isArray(providerEntry) ? providerEntry : [providerEntry];
-	return entries.filter((entry): entry is OAuthCredential => entry.type === "oauth");
-}
-
-function resolveOAuthAccountIdForAccessToken(
-	authStorage: AuthStorage,
-	provider: string,
-	accessToken: string,
-): string | undefined {
-	const oauthCredentials = getOAuthCredentialsForProvider(authStorage, provider);
-	const matchingCredential = oauthCredentials.find(credential => credential.access === accessToken);
-	if (matchingCredential) {
-		return matchingCredential.accountId;
-	}
-	if (oauthCredentials.length === 1) {
-		return oauthCredentials[0].accountId;
-	}
-	return undefined;
 }
 
 function mergeCompat(
@@ -1415,17 +1389,6 @@ export class ModelRegistry {
 						oauthToken,
 						endpoint: this.getProviderBaseUrl("google-gemini-cli"),
 					}),
-			},
-			{
-				providerId: "openai-codex",
-				resolveKey: value => value,
-				createOptions: accessToken => {
-					const accountId = resolveOAuthAccountIdForAccessToken(this.authStorage, "openai-codex", accessToken);
-					return openaiCodexModelManagerOptions({
-						accessToken,
-						accountId,
-					});
-				},
 			},
 		];
 		const peekKey = (descriptor: { providerId: string }) => this.#peekApiKeyForProvider(descriptor.providerId);

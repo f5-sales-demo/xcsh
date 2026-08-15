@@ -6,14 +6,13 @@ import {
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	getAvailableLiteLLMLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
-	OPENAI_CODEX_LOGIN_MODEL_CHOICE,
 } from "../src/modes/controllers/login-model";
 
 function makeSession(opts: { model?: { id: string; provider: string }; models: { id: string; provider: string }[] }) {
 	const setModel = vi.fn(async (_model: { id: string; provider: string }, _role: string, _opts?: unknown) => {});
 	const setThinkingLevel = vi.fn((_level: ThinkingLevel) => {});
 	let modelRoles: Record<string, string> = { vision: "google/vision" };
-	let routingProfile: "none" | "google-antigravity" | "openai-codex" = "none";
+	let routingProfile: "none" | "google-antigravity" = "none";
 	const session = {
 		model: opts.model,
 		modelRegistry: { getAll: () => opts.models },
@@ -182,31 +181,5 @@ describe("applyOAuthLoginModel", () => {
 
 		expect(applied).toBeUndefined();
 		expect(setModel).not.toHaveBeenCalled();
-	});
-
-	it("applies the complete OpenAI Codex subscription profile", async () => {
-		const { session, setModel, getModelRoles, getRoutingProfile } = makeSession({
-			model: undefined,
-			models: [
-				M("gpt-5.6-luna", "openai-codex"),
-				M("gpt-5.6-terra", "openai-codex"),
-				M("gpt-5.6-sol", "openai-codex"),
-			],
-		});
-
-		const applied = await applyOAuthLoginModel(session as never, "openai-codex");
-
-		expect(applied).toEqual(OPENAI_CODEX_LOGIN_MODEL_CHOICE);
-		expect(setModel).toHaveBeenCalledWith(M("gpt-5.6-terra", "openai-codex"), "default", {
-			selector: "openai-codex/gpt-5.6-terra",
-			thinkingLevel: ThinkingLevel.Medium,
-		});
-		expect(getModelRoles()).toMatchObject({
-			smol: "openai-codex/gpt-5.6-luna:low",
-			default: "openai-codex/gpt-5.6-terra:medium",
-			slow: "openai-codex/gpt-5.6-sol:high",
-			plan: "openai-codex/gpt-5.6-sol:high",
-		});
-		expect(getRoutingProfile()).toBe("openai-codex");
 	});
 });

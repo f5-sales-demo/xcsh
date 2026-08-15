@@ -8,7 +8,6 @@ import { refreshGitLabDuoToken } from "./gitlab-duo";
 import { refreshAntigravityToken } from "./google-antigravity";
 import { refreshGoogleCloudToken } from "./google-gemini-cli";
 import { refreshKimiToken } from "./kimi";
-import { refreshOpenAICodexToken } from "./openai-codex";
 import type {
 	OAuthCredentials,
 	OAuthProvider,
@@ -97,9 +96,6 @@ export { loginNanoGPT } from "./nanogpt";
 export { loginNvidia } from "./nvidia";
 // Ollama (optional API key)
 export { loginOllama } from "./ollama";
-export type { OpenAICodexLoginOptions } from "./openai-codex";
-// OpenAI Codex (ChatGPT OAuth)
-export { loginOpenAICodex, refreshOpenAICodexToken } from "./openai-codex";
 // OpenCode Zen / OpenCode Go (API key)
 export { loginOpenCode } from "./opencode";
 // Parallel (API key)
@@ -142,8 +138,8 @@ const builtInOAuthProviders: OAuthProviderInfo[] = [
 		available: true,
 	},
 	{
-		id: "openai-codex",
-		name: "ChatGPT Plus/Pro (Codex Subscription)",
+		id: "openai",
+		name: "OpenAI Responses API (usage-based API access)",
 		available: true,
 	},
 	{
@@ -384,8 +380,8 @@ export async function refreshOAuthToken(
 			}
 			newCredentials = await refreshAntigravityToken(credentials.refresh, credentials.projectId);
 			break;
-		case "openai-codex":
-			newCredentials = await refreshOpenAICodexToken(credentials.refresh);
+		case "openai":
+			newCredentials = credentials;
 			break;
 		case "kimi-code":
 			newCredentials = await refreshKimiToken(credentials.refresh);
@@ -461,6 +457,9 @@ export async function getOAuthApiKey(
 ): Promise<{ newCredentials: OAuthCredentials; apiKey: string } | null> {
 	let creds = credentials[provider];
 	if (!creds) {
+		return null;
+	}
+	if (provider === "openai-codex") {
 		return null;
 	}
 

@@ -15,7 +15,6 @@ import Ajv2020 from "ajv/dist/2020";
 import { GoogleAuth } from "google-auth-library";
 import { ModelRegistry, type ProviderDiscoveryState } from "../src/config/model-registry";
 import { RoutingCoordinator } from "../src/routing/coordinator";
-import { OPENAI_CODEX_ROUTING_POOL } from "../src/routing/subscription-profiles";
 import type { RoutingPoolConfig, RoutingTier } from "../src/routing/types";
 
 export type InventoryState =
@@ -38,12 +37,7 @@ export interface LaneCapability {
 	upstreamFamily: "openai" | "anthropic" | "google";
 	endpointKind: "direct" | "gateway";
 	poolId: string;
-	inferenceApiType:
-		| "openai-responses"
-		| "openai-codex-responses"
-		| "anthropic-messages"
-		| "google-vertex"
-		| "google-gemini-cli";
+	inferenceApiType: "openai-responses" | "anthropic-messages" | "google-vertex" | "google-gemini-cli";
 	inventoryAdapterId: "openai-compatible" | "anthropic" | "vertex-model-garden" | "oauth-entitlement";
 	credentialResolverId: string;
 	defaultBaseUrl?: string;
@@ -62,7 +56,7 @@ export const CANONICAL_LANE_IDS = [
 	"litellm-anthropic",
 	"google-vertex",
 ] as const;
-export const SUBSCRIPTION_LANE_IDS = ["google-antigravity", "openai-codex"] as const;
+export const SUBSCRIPTION_LANE_IDS = ["google-antigravity"] as const;
 
 export const LANE_CAPABILITIES: Record<string, LaneCapability> = {
 	openai: {
@@ -171,22 +165,6 @@ export const LANE_CAPABILITIES: Record<string, LaneCapability> = {
 			frontier: "gemini-3.1-pro-high-vertex",
 		},
 		effortPolicy: { byTier: { utility: "high", balanced: "high", frontier: "high" } },
-	},
-	"openai-codex": {
-		id: "openai-codex",
-		required: true,
-		clientProvider: "openai-codex",
-		upstreamFamily: "openai",
-		endpointKind: "gateway",
-		poolId: OPENAI_CODEX_ROUTING_POOL.id,
-		inferenceApiType: "openai-codex-responses",
-		inventoryAdapterId: "oauth-entitlement",
-		credentialResolverId: "xcsh-auth-storage-openai-codex",
-		multimodal: true,
-		requireResponseModel: true,
-		canProveUpstreamProvider: false,
-		tiers: OPENAI_CODEX_ROUTING_POOL.tiers,
-		effortPolicy: OPENAI_CODEX_ROUTING_POOL.effortPolicy,
 	},
 };
 
@@ -297,7 +275,6 @@ export async function resolveLaneCredentials(): Promise<Record<string, LaneCrede
 	const litellmOpenai = await key("litellm", process.env.LITELLM_OPENAI_API_KEY ?? process.env.LITELLM_API_KEY);
 	const litellmAnthropic = await key("litellm", process.env.LITELLM_ANTHROPIC_API_KEY ?? process.env.LITELLM_API_KEY);
 	const googleAntigravity = await key("google-antigravity", process.env.GOOGLE_ANTIGRAVITY_OAUTH_TOKEN);
-	const openaiCodex = await key("openai-codex", process.env.OPENAI_CODEX_OAUTH_TOKEN);
 	const adcToken = await resolveAdcAccessToken();
 	storage?.close?.();
 	const location = process.env.GOOGLE_CLOUD_LOCATION ?? process.env.VERTEX_LOCATION ?? "us-central1";
@@ -336,10 +313,6 @@ export async function resolveLaneCredentials(): Promise<Record<string, LaneCrede
 		"google-antigravity": {
 			apiKey: googleAntigravity,
 			authMechanism: googleAntigravity ? "oauth-packed" : undefined,
-		},
-		"openai-codex": {
-			apiKey: openaiCodex,
-			authMechanism: openaiCodex ? "oauth-packed" : undefined,
 		},
 	};
 }

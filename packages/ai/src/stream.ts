@@ -80,7 +80,6 @@ const serviceProviderMap: Record<string, KeyResolver> = {
 	"opencode-go": "OPENCODE_API_KEY",
 	"opencode-zen": "OPENCODE_API_KEY",
 	cursor: "CURSOR_ACCESS_TOKEN",
-	"openai-codex": "OPENAI_CODEX_OAUTH_TOKEN",
 	"azure-openai-responses": "AZURE_OPENAI_API_KEY",
 	exa: "EXA_API_KEY",
 	jina: "JINA_API_KEY",
@@ -164,6 +163,11 @@ export function stream<TApi extends Api>(
 	context: Context,
 	options?: OptionsForApi<TApi>,
 ): AssistantMessageEventStream {
+	if (model.provider === "openai-codex") {
+		throw new Error(
+			"OpenAI Codex subscription access is unsupported in xcsh. Use official codex or an OpenAI API-key model.",
+		);
+	}
 	// Check custom API registry first (extension-provided APIs like "vertex-claude-api")
 	const customApiProvider = getCustomApi(model.api);
 	if (customApiProvider) {
@@ -244,6 +248,11 @@ export function streamSimple<TApi extends Api>(
 	context: Context,
 	options?: SimpleStreamOptions,
 ): AssistantMessageEventStream {
+	if (model.provider === "openai-codex") {
+		throw new Error(
+			"OpenAI Codex subscription access is unsupported in xcsh. Use official codex or an OpenAI API-key model.",
+		);
+	}
 	// Check custom API registry first (extension-provided APIs)
 	const customApiProvider = getCustomApi(model.api);
 	if (customApiProvider) {
