@@ -821,6 +821,13 @@ export class AuthStorage {
 					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
 				});
 				break;
+			case "openai-codex-browser":
+				credentials = await loginOpenAICodex({
+					...ctrl,
+					method: "browser",
+					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
+				});
+				break;
 			case "openai":
 				throw new Error("OpenAI uses usage-based API access. Set OPENAI_API_KEY instead of signing in.");
 			case "gitlab-duo":

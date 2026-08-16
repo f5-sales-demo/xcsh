@@ -15,7 +15,7 @@ import { loginNanoGPT } from "./utils/oauth/nanogpt";
 import { loginOpenAICodex } from "./utils/oauth/openai-codex";
 import { loginParallel } from "./utils/oauth/parallel";
 import { loginTavily } from "./utils/oauth/tavily";
-import type { OAuthCredentials, OAuthProvider } from "./utils/oauth/types";
+import { canonicalizeOAuthProviderId, type OAuthCredentials, type OAuthProvider } from "./utils/oauth/types";
 import { loginZai } from "./utils/oauth/zai";
 import { loginZenMux } from "./utils/oauth/zenmux";
 
@@ -129,6 +129,20 @@ async function login(provider: OAuthProvider): Promise<void> {
 				break;
 			case "openai-codex":
 				credentials = await loginOpenAICodex({
+					onAuth(info) {
+						const { url, instructions } = info;
+						console.log(`\nOpen this URL in your browser:\n${url}`);
+						if (instructions) console.log(instructions);
+						console.log();
+					},
+					async onPrompt(p) {
+						return await promptFn(`${p.message}${p.placeholder ? ` (${p.placeholder})` : ""}:`);
+					},
+				});
+				break;
+			case "openai-codex-browser":
+				credentials = await loginOpenAICodex({
+					method: "browser",
 					onAuth(info) {
 						const { url, instructions } = info;
 						console.log(`\nOpen this URL in your browser:\n${url}`);
@@ -309,7 +323,7 @@ async function login(provider: OAuthProvider): Promise<void> {
 				throw new Error(`Unknown provider: ${provider}`);
 		}
 
-		storage.saveOAuth(provider, credentials);
+		storage.saveOAuth(canonicalizeOAuthProviderId(provider), credentials);
 
 		console.log(`\nCredentials saved to ~/.xcsh/agent/agent.db`);
 	} finally {
@@ -337,6 +351,7 @@ Providers:
   google-gemini-cli Google Gemini CLI
   google-antigravity Antigravity (Gemini 3, Claude, GPT-OSS)
   openai-codex      ChatGPT Plus/Pro (Codex subscription)
+  openai-codex-browser ChatGPT Plus/Pro (explicit browser callback)
   openai            OpenAI Responses API (usage-based; set OPENAI_API_KEY)
   kimi-code         Kimi Code
   kilo              Kilo Gateway
