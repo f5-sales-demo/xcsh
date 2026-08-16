@@ -1049,9 +1049,6 @@ export interface InitialModelResult {
 	fallbackMessage: string | undefined;
 }
 
-export const UNSUPPORTED_OPENAI_CODEX_RECOVERY =
-	"Saved OpenAI Codex subscription configuration is unsupported in xcsh. Use the official codex CLI for ChatGPT subscription access, set OPENAI_API_KEY for usage-based OpenAI API access in xcsh, select another provider, or remove the disabled legacy credential with /logout openai-codex.";
-
 /**
  * Find the initial model to use based on priority:
  * 1. CLI args (provider + model)
@@ -1112,8 +1109,7 @@ export async function findInitialModel(options: {
 	}
 
 	// 3. Try saved default from settings
-	const hasUnsupportedOpenAICodexDefault = defaultProvider === "openai-codex";
-	if (defaultProvider && defaultModelId && !hasUnsupportedOpenAICodexDefault) {
+	if (defaultProvider && defaultModelId) {
 		const found = modelRegistry.find(defaultProvider, defaultModelId);
 		if (found) {
 			model = found;
@@ -1131,28 +1127,16 @@ export async function findInitialModel(options: {
 			const defaultId = defaultModelPerProvider[provider];
 			const match = availableModels.find(m => m.provider === provider && m.id === defaultId);
 			if (match) {
-				return {
-					model: match,
-					thinkingLevel: undefined,
-					fallbackMessage: hasUnsupportedOpenAICodexDefault ? UNSUPPORTED_OPENAI_CODEX_RECOVERY : undefined,
-				};
+				return { model: match, thinkingLevel: undefined, fallbackMessage: undefined };
 			}
 		}
 
 		// If no default found, use first available
-		return {
-			model: availableModels[0],
-			thinkingLevel: undefined,
-			fallbackMessage: hasUnsupportedOpenAICodexDefault ? UNSUPPORTED_OPENAI_CODEX_RECOVERY : undefined,
-		};
+		return { model: availableModels[0], thinkingLevel: undefined, fallbackMessage: undefined };
 	}
 
 	// 5. No model found
-	return {
-		model: undefined,
-		thinkingLevel: undefined,
-		fallbackMessage: hasUnsupportedOpenAICodexDefault ? UNSUPPORTED_OPENAI_CODEX_RECOVERY : undefined,
-	};
+	return { model: undefined, thinkingLevel: undefined, fallbackMessage: undefined };
 }
 
 /**

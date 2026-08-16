@@ -11,6 +11,10 @@ describe("Routing Presets (R03)", () => {
 		expect(BUILTIN_ROUTING_PRESETS["anthropic/claude"]).toBeDefined();
 		expect(BUILTIN_ROUTING_PRESETS["litellm/openai"]).toBeDefined();
 		expect(BUILTIN_ROUTING_PRESETS["litellm/anthropic"]).toBeDefined();
+		expect(BUILTIN_ROUTING_PRESETS["openai-codex/gpt-5.6"]).toMatchObject({
+			provider: "openai-codex",
+			tiers: { utility: "gpt-5.6-luna", balanced: "gpt-5.6-terra", frontier: "gpt-5.6-sol" },
+		});
 	});
 
 	it("should validate all built-in preset models exist in the registry", async () => {
@@ -20,6 +24,8 @@ describe("Routing Presets (R03)", () => {
 		const available = registry.getAll().map(m => `${m.provider}/${m.id}`);
 
 		for (const pool of Object.values(BUILTIN_ROUTING_PRESETS)) {
+			// OAuth subscription models are entitlement-discovered and intentionally need not exist in the bundle.
+			if (pool.provider === "openai-codex") continue;
 			const p = pool.provider ? `${pool.provider}/` : "";
 			expect(available).toContain(`${p}${pool.tiers.utility}`);
 			expect(available).toContain(`${p}${pool.tiers.balanced}`);

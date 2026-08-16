@@ -4,7 +4,7 @@ import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { getOAuthProviders, loginLiteLLM, type OAuthPrompt, type OAuthProvider } from "@f5-sales-demo/pi-ai";
 import type { Component } from "@f5-sales-demo/pi-tui";
 import { Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
-import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir, t } from "@f5-sales-demo/pi-utils";
+import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../../capability/fs";
 import { probeLiteLLMConnection, readLiteLLMConfig } from "../../config/auto-config";
 import { getRoleInfo } from "../../config/model-registry";
@@ -64,13 +64,13 @@ import { commitLiteLLMLogin } from "./litellm-login-transaction";
 import {
 	applyOAuthLoginModel,
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
-	getAvailableLiteLLMLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
 	type LiteLLMLoginModelChoice,
 } from "./login-model";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
+	"openai-codex",
 	"gitlab-duo",
 	"google-gemini-cli",
 	"google-antigravity",
@@ -1184,11 +1184,7 @@ export class SelectorController {
 			new Text(theme.fg("dim", "Set OPENAI_API_KEY, then select an OpenAI model with /model."), 1, 0),
 		);
 		this.ctx.chatContainer.addChild(
-			new Text(
-				theme.fg("dim", "For ChatGPT subscription access, use the official codex CLI (`codex login`)."),
-				1,
-				0,
-			),
+			new Text(theme.fg("dim", "For ChatGPT subscription access, choose ChatGPT Plus/Pro in /login."), 1, 0),
 		);
 		this.ctx.ui.requestRender();
 	}
@@ -1211,162 +1207,7 @@ export class SelectorController {
 	}
 
 	async showFirstRunLogin(): Promise<void> {
-		const modelsPath = path.join(getAgentDir(), "models.yml");
-
-		// Prompt helper: renders label + hint + input together in the editor
-		// container so they're always visible below the welcome branding.
-		const promptInput = async (message: string, placeholder?: string, secret = false): Promise<string | null> => {
-			const { promise, resolve } = Promise.withResolvers<string | null>();
-			const input = createLoginPromptInput({ secret });
-			input.onSubmit = () => {
-				const raw = input.getValue();
-				const value = raw.replace(/\x1b\[\d{3}~/g, "").replace(/\x1b[[\]()][^\x1b]*/g, "");
-				this.ctx.editorContainer.clear();
-				this.ctx.editorContainer.addChild(this.ctx.editor);
-				this.ctx.ui.setFocus(this.ctx.editor);
-				resolve(value);
-			};
-			input.onEscape = () => {
-				this.ctx.editorContainer.clear();
-				this.ctx.editorContainer.addChild(this.ctx.editor);
-				this.ctx.ui.setFocus(this.ctx.editor);
-				resolve(null);
-			};
-
-			// Pack label + hint + input into the editor area as a single block
-			this.ctx.editorContainer.clear();
-			this.ctx.editorContainer.addChild(new Spacer(1));
-			this.ctx.editorContainer.addChild(new Text(theme.bold(theme.fg("text", ` ${message}`)), 0, 0));
-			if (placeholder) {
-				this.ctx.editorContainer.addChild(new Text(theme.fg("dim", `  ${placeholder}`), 0, 0));
-			}
-			this.ctx.editorContainer.addChild(new Spacer(1));
-			this.ctx.editorContainer.addChild(input);
-			this.ctx.ui.setFocus(input);
-			this.ctx.ui.requestRender();
-			return promise;
-		};
-
-		try {
-			// Step 1: URL prompt
-			let baseUrl: string | null = null;
-			while (!baseUrl) {
-				const urlInput = await promptInput(t("login.wizard.urlPrompt"), t("login.wizard.urlPlaceholder"));
-				if (urlInput === null) return; // Escape pressed
-				const trimmed = urlInput.trim();
-				if (!trimmed) continue;
-				if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-					this.ctx.chatContainer.addChild(
-						new Text(theme.fg("error", "URL must start with http:// or https://"), 1, 0),
-					);
-					this.ctx.ui.requestRender();
-					continue;
-				}
-				baseUrl = trimmed.replace(/\/+$/, "");
-			}
-
-			// Auto-detect known providers by hostname
-			try {
-				const hostname = new URL(baseUrl).hostname.toLowerCase();
-				const providerMap: Record<string, string> = {
-					"api.anthropic.com": "anthropic",
-					"api.openai.com": "openai",
-					"api.together.xyz": "together",
-				};
-				const detectedProvider =
-					providerMap[hostname] ?? (hostname.endsWith(".googleapis.com") ? "google-gemini-cli" : null);
-				if (detectedProvider === "openai") {
-					this.#showOpenAIApiKeyGuidance();
-					return;
-				}
-				if (detectedProvider) {
-					this.ctx.editorContainer.clear();
-					this.ctx.editorContainer.addChild(new Spacer(1));
-					this.ctx.editorContainer.addChild(
-						new Text(theme.fg("dim", `Detected ${detectedProvider} — launching login…`), 1, 0),
-					);
-					this.ctx.ui.requestRender();
-					await this.#handleOAuthLogin(detectedProvider);
-					return;
-				}
-			} catch {
-				// URL parse failed — continue with proxy flow
-			}
-
-			// Step 2: API Key prompt (for non-OAuth proxy)
-			let apiKey: string | null = null;
-			let probeSuccess = false;
-
-			while (!probeSuccess) {
-				if (!apiKey) {
-					const keyInput = await promptInput(
-						t("login.wizard.apiKeyPrompt"),
-						t("login.wizard.apiKeyPlaceholder"),
-						true,
-					);
-					if (keyInput === null) return;
-					const trimmedKey = keyInput.trim();
-					if (!trimmedKey) continue;
-					apiKey = trimmedKey;
-				}
-
-				// Show connection status in editor area
-				this.ctx.editorContainer.clear();
-				this.ctx.editorContainer.addChild(new Spacer(1));
-				this.ctx.editorContainer.addChild(
-					new Text(theme.fg("dim", ` ${t("login.wizard.connecting", { url: baseUrl })}`), 0, 0),
-				);
-				this.ctx.ui.requestRender();
-
-				let probe = await probeLiteLLMConnection(baseUrl, apiKey);
-
-				// Auto-retry once on network errors
-				if (!probe.reachable && probe.error && !/\b(401|403|Unauthorized|Forbidden)\b/i.test(probe.error)) {
-					await Bun.sleep(1000);
-					probe = await probeLiteLLMConnection(baseUrl, apiKey);
-				}
-
-				if (probe.reachable) {
-					const choice = await this.#showLiteLLMLoginModelSelector(
-						getAvailableLiteLLMLoginModelChoices(probe.models),
-					);
-					if (!choice) return;
-					const configPath = path.join(path.dirname(modelsPath), "config.yml");
-					await commitLiteLLMLogin({
-						modelsPath,
-						configPath,
-						credentials: { baseUrl, apiKey },
-						probe,
-						choice,
-						session: this.ctx.session,
-					});
-					await this.ctx.refreshWelcomeAfterLogin();
-					this.ctx.showStatus("LiteLLM configured. Use /model to switch models without logging in again.");
-					probeSuccess = true;
-				} else {
-					const errorMsg = probe.error ?? "connection failed";
-
-					// Classify error and re-prompt the appropriate field
-					const isAuthError = /\b(401|403|Unauthorized|Forbidden)\b/i.test(errorMsg);
-					if (isAuthError) {
-						apiKey = null;
-					} else {
-						const urlRetry = await promptInput(
-							`${theme.status.error} ${t("login.wizard.failed", { error: errorMsg })}\n\n ${t("login.wizard.urlPrompt")}`,
-							baseUrl,
-						);
-						if (urlRetry === null) return;
-						const trimmedUrl = urlRetry.trim();
-						if (trimmedUrl && (trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://"))) {
-							baseUrl = trimmedUrl.replace(/\/+$/, "");
-						}
-						apiKey = null;
-					}
-				}
-			}
-		} catch (error: unknown) {
-			this.ctx.showError(`Login failed: ${error instanceof Error ? error.message : String(error)}`);
-		}
+		await this.showOAuthSelector("login");
 	}
 
 	async showOAuthSelector(mode: "login" | "logout", providerId?: string): Promise<void> {

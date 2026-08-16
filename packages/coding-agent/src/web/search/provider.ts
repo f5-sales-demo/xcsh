@@ -1,6 +1,7 @@
 import { AnthropicProvider } from "./providers/anthropic";
 import type { SearchProvider } from "./providers/base";
 import { BraveProvider } from "./providers/brave";
+import { CodexProvider } from "./providers/codex";
 import { ExaProvider } from "./providers/exa";
 import { FirecrawlProvider } from "./providers/firecrawl";
 import { GeminiProvider } from "./providers/gemini";
@@ -26,6 +27,7 @@ const SEARCH_PROVIDERS: Record<SearchProviderId, SearchProvider> = {
 	zai: new ZaiProvider(),
 	anthropic: new AnthropicProvider(),
 	gemini: new GeminiProvider(),
+	codex: new CodexProvider(),
 	tavily: new TavilyProvider(),
 	parallel: new ParallelProvider(),
 	kagi: new KagiProvider(),
@@ -42,6 +44,7 @@ export const SEARCH_PROVIDER_ORDER: SearchProviderId[] = [
 	"kimi",
 	"anthropic",
 	"gemini",
+	"codex",
 	"zai",
 	"exa",
 	"parallel",

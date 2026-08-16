@@ -26,6 +26,28 @@ function createCodexModel(id: string): Model<"openai-codex-responses"> {
 }
 
 describe("openai-codex request transformer", () => {
+	it("removes sampling controls rejected by the Codex backend", async () => {
+		const body: RequestBody = {
+			model: "gpt-5.6-terra",
+			input: [],
+			temperature: 0.7,
+			top_p: 0.9,
+			top_k: 40,
+			min_p: 0.05,
+			presence_penalty: 0.2,
+			repetition_penalty: 1.1,
+		};
+
+		const transformed = await transformRequestBody(body, createCodexModel(body.model), {});
+
+		expect(transformed.temperature).toBeUndefined();
+		expect(transformed.top_p).toBeUndefined();
+		expect(transformed.top_k).toBeUndefined();
+		expect(transformed.min_p).toBeUndefined();
+		expect(transformed.presence_penalty).toBeUndefined();
+		expect(transformed.repetition_penalty).toBeUndefined();
+	});
+
 	it("filters item_reference and strips ids", async () => {
 		const body: RequestBody = {
 			model: "gpt-5.1-codex",

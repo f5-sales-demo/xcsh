@@ -14,6 +14,7 @@ export type SearchProviderId =
 	| "anthropic"
 	| "perplexity"
 	| "gemini"
+	| "codex"
 	| "tavily"
 	| "parallel"
 	| "kagi"
@@ -30,6 +31,7 @@ export function isSearchProviderId(value: string): value is SearchProviderId {
 		"anthropic",
 		"perplexity",
 		"gemini",
+		"codex",
 		"tavily",
 		"parallel",
 		"kagi",
