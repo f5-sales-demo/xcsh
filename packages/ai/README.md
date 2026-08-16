@@ -906,35 +906,35 @@ const response = await complete(
 
 In Node.js environments, you can set environment variables to avoid passing API keys:
 
-| Provider       | Environment Variable(s)                                                      |
-| -------------- | ---------------------------------------------------------------------------- |
-| OpenAI         | `OPENAI_API_KEY`                                                             |
-| Anthropic      | `ANTHROPIC_API_KEY` or `ANTHROPIC_OAUTH_TOKEN` (or `ANTHROPIC_FOUNDRY_API_KEY` when `CLAUDE_CODE_USE_FOUNDRY=true`) |
-| Google         | `GEMINI_API_KEY`                                                             |
-| Vertex AI      | `GOOGLE_CLOUD_PROJECT` (or `GCLOUD_PROJECT`) + `GOOGLE_CLOUD_LOCATION` + ADC |
-| Mistral        | `MISTRAL_API_KEY`                                                            |
-| Groq           | `GROQ_API_KEY`                                                               |
-| Cerebras       | `CEREBRAS_API_KEY`                                                           |
-| Together       | `TOGETHER_API_KEY`                                                           |
-| Qianfan        | `QIANFAN_API_KEY`                                                            |
-| Hugging Face   | `HUGGINGFACE_HUB_TOKEN` or `HF_TOKEN`                                        |
-| Synthetic      | `SYNTHETIC_API_KEY`                                                          |
-| NVIDIA         | `NVIDIA_API_KEY`                                                             |
-| NanoGPT        | `NANO_GPT_API_KEY`                                                          |
-| Venice         | `VENICE_API_KEY`                                                             |
-| Moonshot       | `MOONSHOT_API_KEY`                                                           |
-| xAI            | `XAI_API_KEY`                                                                |
-| OpenRouter     | `OPENROUTER_API_KEY`                                                         |
-| LiteLLM        | `LITELLM_API_KEY`                                                            |
-| Ollama         | `OLLAMA_API_KEY` (optional for local deployments)                            |
-| Qwen Portal    | `QWEN_OAUTH_TOKEN` or `QWEN_PORTAL_API_KEY`                                  |
-| zAI            | `ZAI_API_KEY`                                                                |
-| MiniMax Code   | `MINIMAX_CODE_API_KEY` (international) or `MINIMAX_CODE_CN_API_KEY` (China) |
-| Xiaomi MiMo    | `XIAOMI_API_KEY`                                                             |
-| ZenMux         | `ZENMUX_API_KEY`                                                             |
-| vLLM           | `VLLM_API_KEY`                                                               |
-| Cloudflare AI Gateway | `CLOUDFLARE_AI_GATEWAY_API_KEY`                                      |
-| GitHub Copilot | `COPILOT_GITHUB_TOKEN` or `GH_TOKEN` or `GITHUB_TOKEN`                      |
+| Provider              | Environment Variable(s)                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| OpenAI                | `OPENAI_API_KEY`                                                                                                    |
+| Anthropic             | `ANTHROPIC_API_KEY` or `ANTHROPIC_OAUTH_TOKEN` (or `ANTHROPIC_FOUNDRY_API_KEY` when `CLAUDE_CODE_USE_FOUNDRY=true`) |
+| Google                | `GEMINI_API_KEY`                                                                                                    |
+| Vertex AI             | `GOOGLE_CLOUD_PROJECT` (or `GCLOUD_PROJECT`) + `GOOGLE_CLOUD_LOCATION` + ADC                                        |
+| Mistral               | `MISTRAL_API_KEY`                                                                                                   |
+| Groq                  | `GROQ_API_KEY`                                                                                                      |
+| Cerebras              | `CEREBRAS_API_KEY`                                                                                                  |
+| Together              | `TOGETHER_API_KEY`                                                                                                  |
+| Qianfan               | `QIANFAN_API_KEY`                                                                                                   |
+| Hugging Face          | `HUGGINGFACE_HUB_TOKEN` or `HF_TOKEN`                                                                               |
+| Synthetic             | `SYNTHETIC_API_KEY`                                                                                                 |
+| NVIDIA                | `NVIDIA_API_KEY`                                                                                                    |
+| NanoGPT               | `NANO_GPT_API_KEY`                                                                                                  |
+| Venice                | `VENICE_API_KEY`                                                                                                    |
+| Moonshot              | `MOONSHOT_API_KEY`                                                                                                  |
+| xAI                   | `XAI_API_KEY`                                                                                                       |
+| OpenRouter            | `OPENROUTER_API_KEY`                                                                                                |
+| LiteLLM               | `LITELLM_API_KEY`                                                                                                   |
+| Ollama                | `OLLAMA_API_KEY` (optional for local deployments)                                                                   |
+| Qwen Portal           | `QWEN_OAUTH_TOKEN` or `QWEN_PORTAL_API_KEY`                                                                         |
+| zAI                   | `ZAI_API_KEY`                                                                                                       |
+| MiniMax Code          | `MINIMAX_CODE_API_KEY` (international) or `MINIMAX_CODE_CN_API_KEY` (China)                                         |
+| Xiaomi MiMo           | `XIAOMI_API_KEY`                                                                                                    |
+| ZenMux                | `ZENMUX_API_KEY`                                                                                                    |
+| vLLM                  | `VLLM_API_KEY`                                                                                                      |
+| Cloudflare AI Gateway | `CLOUDFLARE_AI_GATEWAY_API_KEY`                                                                                     |
+| GitHub Copilot        | `COPILOT_GITHUB_TOKEN` or `GH_TOKEN` or `GITHUB_TOKEN`                                                              |
 
 For Cloudflare AI Gateway models, use provider base URL format
 `https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic`.
