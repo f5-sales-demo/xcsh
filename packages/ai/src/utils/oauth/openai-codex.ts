@@ -17,6 +17,16 @@ const JWT_CLAIM_PATH = "https://api.openai.com/auth";
 const JWT_PROFILE_CLAIM = "https://api.openai.com/profile";
 const TOKEN_REQUEST_TIMEOUT_MS = 15_000;
 
+/** Prefer callback-free authentication when xcsh is running in a remote terminal. */
+export function shouldUseOpenAICodexDeviceFlow(
+	env: NodeJS.ProcessEnv = process.env,
+	platform: NodeJS.Platform = process.platform,
+	isInteractive = Boolean(process.stdin.isTTY),
+): boolean {
+	if (env.SSH_CONNECTION || env.SSH_CLIENT || env.SSH_TTY) return true;
+	return platform === "linux" && isInteractive && !env.DISPLAY && !env.WAYLAND_DISPLAY;
+}
+
 type JwtPayload = {
 	[JWT_CLAIM_PATH]?: {
 		chatgpt_account_id?: string;

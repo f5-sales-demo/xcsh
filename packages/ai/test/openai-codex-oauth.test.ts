@@ -3,6 +3,7 @@ import {
 	createOpenAICodexAuthorizationUrl,
 	formatOpenAICodexTokenEndpointError,
 	loginOpenAICodex,
+	shouldUseOpenAICodexDeviceFlow,
 } from "../src/utils/oauth/openai-codex";
 
 afterEach(() => {
@@ -62,5 +63,13 @@ describe("OpenAI Codex browser OAuth", () => {
 		expect(detail).not.toContain("secret-state");
 		expect(detail).not.toContain("secret-token");
 		expect(detail).toContain("[REDACTED]");
+	});
+});
+
+describe("OpenAI Codex login method", () => {
+	it("defaults SSH sessions to device authorization without treating local terminals as remote", () => {
+		expect(shouldUseOpenAICodexDeviceFlow({ SSH_CONNECTION: "client server" }, "linux", true)).toBe(true);
+		expect(shouldUseOpenAICodexDeviceFlow({ SSH_TTY: "/dev/pts/1" }, "linux", true)).toBe(true);
+		expect(shouldUseOpenAICodexDeviceFlow({}, "darwin", true)).toBe(false);
 	});
 });
