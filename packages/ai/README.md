@@ -46,8 +46,7 @@ Unified LLM API with automatic model discovery, provider configuration, token an
 
 ## Supported Providers
 
-- **OpenAI**
-- **OpenAI Codex** (ChatGPT Plus/Pro subscription, requires OAuth, see below)
+- **OpenAI** (usage-based Platform API access)
 - **Anthropic**
 - **Google**
 - **Vertex AI** (Gemini via Vertex AI)
@@ -988,7 +987,6 @@ const key = getEnvApiKey("openai"); // checks OPENAI_API_KEY
 Several providers support OAuth authentication (some also support static API keys):
 
 - **Anthropic** (Claude Pro/Max subscription)
-- **OpenAI Codex** (ChatGPT Plus/Pro subscription, access to GPT-5.x Codex models)
 - **GitHub Copilot** (Copilot subscription)
 - **Google Gemini CLI** (Gemini 2.0/2.5 via Google Cloud Code Assist; free tier or paid subscription)
 - **Antigravity** (Free Gemini 3, Claude, GPT-OSS via Google Cloud)
@@ -1047,7 +1045,8 @@ bunx @f5-sales-demo/pi-ai list               # list available providers
 
 Credentials are saved to `agent.db` in the agent directory. `/login qianfan` opens the Qianfan console and stores the pasted API key.
 
-`login` supports OAuth providers (Anthropic, OpenAI Codex, GitHub Copilot, Gemini CLI, Antigravity) and API-key onboarding flows.
+`login` supports OAuth providers (Anthropic, GitHub Copilot, Gemini CLI, Antigravity) and API-key onboarding flows.
+OpenAI uses usage-based Platform API access through `OPENAI_API_KEY`. For ChatGPT subscription access, use the official Codex CLI and run `codex login`.
 
 For the current OpenAI-compatible integrations, API-key onboarding covers Together, Moonshot, Qianfan, NVIDIA, NanoGPT, Hugging Face, Venice, Xiaomi, vLLM, LiteLLM, Cloudflare AI Gateway, and Qwen Portal. Ollama is typically local and unauthenticated; set `OLLAMA_API_KEY` only when your Ollama deployment enforces bearer auth.
 
@@ -1059,7 +1058,6 @@ The library provides login and token refresh functions. Credential storage is th
 import {
  // Login functions (return credentials, do not store)
  loginAnthropic,
- loginOpenAICodex,
  loginGitHubCopilot,
  loginGeminiCli,
  loginAntigravity,
@@ -1081,18 +1079,9 @@ import {
  getOAuthApiKey, // (provider, credentialsMap) => { newCredentials, apiKey } | null
 
  // Types
- type OAuthProvider, // includes 'anthropic', 'openai-codex', 'github-copilot', 'google-gemini-cli', 'google-antigravity', 'together', 'moonshot', 'qianfan', 'nvidia', 'nanogpt', 'huggingface', 'venice', 'xiaomi', 'vllm', 'litellm', 'cloudflare-ai-gateway', 'qwen-portal', ...
+ type OAuthProvider,
  type OAuthCredentials,
 } from "@f5-sales-demo/pi-ai";
-```
-
-`loginOpenAICodex` accepts an optional `originator` value used in the OAuth flow:
-
-```typescript
-await loginOpenAICodex({
- onAuth: ({ url }) => console.log(url),
- originator: "my-cli",
-});
 ```
 
 ### Login Flow Example
@@ -1149,7 +1138,7 @@ const response = await complete(
 
 ### Provider Notes
 
-**OpenAI Codex**: Requires a ChatGPT Plus or Pro subscription. Provides access to GPT-5.x Codex models with extended context windows and reasoning capabilities. The library automatically handles session-based prompt caching when `sessionId` is provided in stream options.
+**OpenAI**: Set `OPENAI_API_KEY` for usage-based Platform API access. ChatGPT subscription access is available through the official Codex CLI, not this library.
 
 **GitHub Copilot**: If you get "The requested model is not supported" error, enable the model manually in VS Code: open Copilot Chat, click the model selector, select the model (warning icon), and click "Enable".
 

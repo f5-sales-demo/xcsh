@@ -13,12 +13,12 @@ section() {
 }
 
 smoke_cli() {
-  local omp_bin="$1"
-  "$omp_bin" --version
-  "$omp_bin" --help >/dev/null
-  "$omp_bin" stats --summary >/dev/null
-  "$omp_bin" sandbox check >/dev/null
-  XCSH_SMOKE_TEST_SPECS=1 "$omp_bin" >/dev/null
+  local xcsh_bin="$1"
+  "$xcsh_bin" --version
+  "$xcsh_bin" --help >/dev/null
+  "$xcsh_bin" stats --summary >/dev/null
+  "$xcsh_bin" sandbox check >/dev/null
+  XCSH_SMOKE_TEST_SPECS=1 "$xcsh_bin" >/dev/null
 }
 
 find_tarball() {
@@ -35,6 +35,9 @@ find_tarball() {
 
   echo "${matches[0]}"
 }
+
+section "Source install smoke"
+bash scripts/install-tests/source-ref.sh
 
 section "Binary install smoke"
 bun --cwd=packages/natives run build
@@ -53,15 +56,6 @@ fi
 cp "${native_addons[@]}" "$BINARY_DIR/"
 
 smoke_cli "$BINARY_DIR/xcsh"
-
-section "Source install smoke"
-SOURCE_BUN_HOME="$WORK_DIR/bun-source"
-(
-  export BUN_INSTALL="$SOURCE_BUN_HOME"
-  export PATH="$BUN_INSTALL/bin:$PATH"
-  bun --cwd="$ROOT_DIR/packages/coding-agent" link
-  smoke_cli "$BUN_INSTALL/bin/xcsh"
-)
 
 section "Tarball install smoke"
 TARBALL_DIR="$WORK_DIR/tarballs"

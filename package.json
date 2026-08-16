@@ -41,6 +41,7 @@
 		"ci:test:full": "bun run test",
 		"ci:test:smoke": "bun packages/coding-agent/src/cli.ts --version && bun packages/coding-agent/src/cli.ts --help && bun packages/coding-agent/src/cli.ts stats --help && bun packages/coding-agent/src/cli.ts validate --help",
 		"ci:test:install-methods": "bash scripts/install-tests/run-ci.sh",
+		"uat:openai-subscription": "bun packages/coding-agent/scripts/openai-subscription-uat.ts",
 		"ci:release:verify-natives": "bun scripts/ci-release-verify-natives.ts",
 		"ci:release:verify-native-signing": "bun scripts/ci-release-verify-native-signing.ts",
 		"ci:release:build-binaries": "bun scripts/ci-release-build-binaries.ts",

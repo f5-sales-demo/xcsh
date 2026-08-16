@@ -1,24 +1,25 @@
 # Test --source install from local repo
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y curl ca-certificates unzip build-essential && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl ca-certificates unzip build-essential git && rm -rf /var/lib/apt/lists/*
 
 # Install bun
 RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:$PATH"
-
-# Install Rust (needed to build native addon)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain nightly
-ENV PATH="/root/.cargo/bin:$PATH"
+ENV PATH="/root/.bun/bin:/root/.local/bin:$PATH"
 
 # Copy local repo
 WORKDIR /repo
 COPY . .
 
-# Install dependencies, build native addon, and link globally
-RUN bun install --frozen-lockfile
-RUN bun --cwd=packages/natives run build
-RUN cd packages/coding-agent && bun link
+# Exercise the public installer against an exact commit in this isolated repository.
+RUN git init -q && \
+    git config user.name "xcsh installer test" && \
+    git config user.email "xcsh-installer-test@example.com" && \
+    git add . && \
+    git add -f bun.lock && \
+    git commit -qm "test: source installer fixture"
+RUN XCSH_SOURCE_REPO_URL=/repo PI_INSTALL_DIR=/root/.local/bin \
+    bash scripts/install.sh --source --ref "$(git rev-parse HEAD)"
 
 # Verify
-RUN omp --version
+RUN xcsh --version
