@@ -17,7 +17,7 @@ smoke_cli() {
   "$xcsh_bin" --version
   "$xcsh_bin" --help >/dev/null
   "$xcsh_bin" stats --summary >/dev/null
-  "$xcsh_bin" sandbox check >/dev/null
+  "$xcsh_bin" sandbox check
   XCSH_SMOKE_TEST_SPECS=1 "$xcsh_bin" >/dev/null
 }
 
@@ -36,9 +36,6 @@ find_tarball() {
   echo "${matches[0]}"
 }
 
-section "Source install smoke"
-bash scripts/install-tests/source-ref.sh
-
 section "Binary install smoke"
 bun --cwd=packages/natives run build
 bun --cwd=packages/coding-agent run build
@@ -56,6 +53,9 @@ fi
 cp "${native_addons[@]}" "$BINARY_DIR/"
 
 smoke_cli "$BINARY_DIR/xcsh"
+
+section "Source install smoke"
+bash scripts/install-tests/source-ref.sh
 
 section "Tarball install smoke"
 TARBALL_DIR="$WORK_DIR/tarballs"
