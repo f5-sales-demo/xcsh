@@ -301,18 +301,25 @@ export async function loginOpenAICodexDevice(
 			signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
 		});
 
-		if (pollResponse.status === 403 || pollResponse.status === 404) {
-			await sleep(pollIntervalMs, options.signal);
-			continue;
-		}
 		if (!pollResponse.ok) {
 			const bodyText = await pollResponse.text();
-			if (parseOAuthErrorCode(bodyText) === "slow_down") {
+			const errorCode = parseOAuthErrorCode(bodyText);
+			const detail = formatOpenAICodexTokenEndpointError(pollResponse.status, bodyText);
+			if (errorCode === "authorization_declined" || errorCode === "access_denied") {
+				throw new Error(`Device authorization denied: ${detail}`);
+			}
+			if (errorCode === "expired_token" || errorCode === "authorization_expired") {
+				throw new Error(`Device authorization expired: ${detail}`);
+			}
+			if (errorCode === "slow_down") {
 				pollIntervalMs += 5_000;
 				await sleep(pollIntervalMs, options.signal);
 				continue;
 			}
-			const detail = formatOpenAICodexTokenEndpointError(pollResponse.status, bodyText);
+			if (errorCode === "authorization_pending" || pollResponse.status === 403 || pollResponse.status === 404) {
+				await sleep(pollIntervalMs, options.signal);
+				continue;
+			}
 			throw new Error(`Device token polling failed: ${detail}`);
 		}
 

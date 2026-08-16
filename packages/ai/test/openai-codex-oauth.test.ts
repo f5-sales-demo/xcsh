@@ -167,4 +167,31 @@ describe("OpenAI Codex device OAuth", () => {
 		expect(sleepDurations).toEqual([6_000]);
 		expect(pollCount).toBe(2);
 	});
+
+	it("distinguishes denial and expiry while redacting server detail", async () => {
+		for (const testCase of [
+			{ error: "authorization_declined", expected: "Device authorization denied" },
+			{ error: "expired_token", expected: "Device authorization expired" },
+		]) {
+			const fetchImpl = (async (input: string | URL | Request) => {
+				const url = String(input);
+				if (url.endsWith("/deviceauth/usercode")) {
+					return Response.json({ device_auth_id: "device-id", user_code: "ABCD-EFGH", interval: "1" });
+				}
+				return Response.json(
+					{
+						error: testCase.error,
+						error_description:
+							"request rejected at https://auth.openai.com/codex/device?token=server-secret Bearer bearer-secret",
+					},
+					{ status: 401 },
+				);
+			}) as typeof fetch;
+
+			const result = loginOpenAICodexDevice({}, { fetch: fetchImpl, sleep: async () => {} });
+			await expect(result).rejects.toThrow(testCase.expected);
+			await expect(result).rejects.not.toThrow("server-secret");
+			await expect(result).rejects.not.toThrow("bearer-secret");
+		}
+	});
 });
