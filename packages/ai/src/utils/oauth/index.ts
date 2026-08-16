@@ -97,9 +97,19 @@ export { loginNanoGPT } from "./nanogpt";
 export { loginNvidia } from "./nvidia";
 // Ollama (optional API key)
 export { loginOllama } from "./ollama";
-export type { OpenAICodexLoginOptions } from "./openai-codex";
+export type {
+	OpenAICodexDeviceFlowDependencies,
+	OpenAICodexLoginMethod,
+	OpenAICodexLoginOptions,
+} from "./openai-codex";
 // OpenAI Codex (ChatGPT OAuth)
-export { loginOpenAICodex, refreshOpenAICodexToken } from "./openai-codex";
+export {
+	loginOpenAICodex,
+	loginOpenAICodexDevice,
+	refreshOpenAICodexToken,
+	resolveOpenAICodexLoginMethod,
+	shouldUseOpenAICodexDeviceFlow,
+} from "./openai-codex";
 // OpenCode Zen / OpenCode Go (API key)
 export { loginOpenCode } from "./opencode";
 // Parallel (API key)
@@ -145,6 +155,13 @@ const builtInOAuthProviders: OAuthProviderInfo[] = [
 		id: "openai-codex",
 		name: "ChatGPT Plus/Pro (Codex Subscription)",
 		available: true,
+	},
+	{
+		id: "openai-codex-browser",
+		name: "ChatGPT Plus/Pro (Browser callback)",
+		available: true,
+		canonicalId: "openai-codex",
+		loginOnly: true,
 	},
 	{
 		id: "openai",

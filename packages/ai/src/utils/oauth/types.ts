@@ -35,6 +35,7 @@ export type OAuthProvider =
 	| "ollama"
 	| "openai"
 	| "openai-codex"
+	| "openai-codex-browser"
 	| "opencode-go"
 	| "opencode-zen"
 	| "parallel"
@@ -78,7 +79,9 @@ export interface OAuthProviderInfo {
 
 /** Resolve login-only aliases to the provider ID used by credentials and models. */
 export function canonicalizeOAuthProviderId(provider: string): string {
-	return provider === "google-antigravity-enterprise" ? "google-antigravity" : provider;
+	if (provider === "google-antigravity-enterprise") return "google-antigravity";
+	if (provider === "openai-codex-browser") return "openai-codex";
+	return provider;
 }
 
 export interface OAuthController {

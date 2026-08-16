@@ -1,7 +1,13 @@
 import * as os from "node:os";
 import * as path from "node:path";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { getOAuthProviders, loginLiteLLM, type OAuthPrompt, type OAuthProvider } from "@f5-sales-demo/pi-ai";
+import {
+	getOAuthProviders,
+	loginLiteLLM,
+	type OAuthPrompt,
+	type OAuthProvider,
+	resolveOpenAICodexLoginMethod,
+} from "@f5-sales-demo/pi-ai";
 import type { Component } from "@f5-sales-demo/pi-tui";
 import { Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { getAgentDbPath, getAgentDir, getConfigDirName, getProjectDir } from "@f5-sales-demo/pi-utils";
@@ -70,7 +76,7 @@ import {
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
-	"openai-codex",
+	"openai-codex-browser",
 	"gitlab-duo",
 	"google-gemini-cli",
 	"google-antigravity",
@@ -1063,7 +1069,9 @@ export class SelectorController {
 
 		this.ctx.showStatus(`Logging in to ${providerId}…`);
 		const manualInput = this.ctx.oauthManualInput;
-		const useManualInput = CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider);
+		const useManualInput =
+			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) ||
+			(providerId === "openai-codex" && resolveOpenAICodexLoginMethod() === "browser");
 		const loginCallbacks = {
 			onAuth: (info: { url: string; instructions?: string }) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));

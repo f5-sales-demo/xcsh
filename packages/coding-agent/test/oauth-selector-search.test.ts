@@ -23,6 +23,14 @@ function renderText(selector: OAuthSelectorComponent): string {
 }
 
 describe("OAuthSelectorComponent provider search", () => {
+	it("offers an explicit browser-callback login alongside automatic ChatGPT login", () => {
+		expect(getOAuthProviders().find(provider => provider.id === "openai-codex-browser")).toMatchObject({
+			name: "ChatGPT Plus/Pro (Browser callback)",
+			canonicalId: "openai-codex",
+			loginOnly: true,
+		});
+	});
+
 	it("renders a bounded provider viewport with position and input guidance", () => {
 		const { selector } = createSelector();
 		const providerCount = getOAuthProviders().length;
@@ -41,8 +49,9 @@ describe("OAuthSelectorComponent provider search", () => {
 
 		const rendered = renderText(selector);
 		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
+		expect(rendered).toContain("ChatGPT Plus/Pro (Browser callback)");
 		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
-		expect(rendered).toContain(`1 match (${getOAuthProviders().length} total)`);
+		expect(rendered).toContain(`2 matches (${getOAuthProviders().length} total)`);
 
 		selector.handleInput("\n");
 		expect(onSelect).toHaveBeenCalledWith("openai-codex");
@@ -75,7 +84,7 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (let index = 0; index < 11; index += 1) selector.handleInput("\x1b[B");
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Antigravity (Gemini 3, Claude, GPT-OSS)");
+		expect(rendered).toContain("Google Cloud Code Assist (Gemini CLI)");
 		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
 		expect(rendered).toContain(`Showing 3-12 of ${getOAuthProviders().length}`);
 	});
@@ -90,6 +99,8 @@ describe("OAuthSelectorComponent provider search", () => {
 		const rendered = renderText(logout);
 		expect(rendered).toContain("Antigravity (Gemini 3, Claude, GPT-OSS)");
 		expect(rendered).not.toContain("Google Antigravity Enterprise (Gemini 3.6 Flash High)");
-		expect(rendered).toContain(`1 match (${getOAuthProviders().length - 1} total)`);
+		expect(rendered).toContain(
+			`1 match (${getOAuthProviders().filter(provider => !provider.loginOnly).length} total)`,
+		);
 	});
 });
