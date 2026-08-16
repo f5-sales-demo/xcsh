@@ -57,9 +57,30 @@ describe("unsupported OpenAI Codex OAuth removal", () => {
 			files.filter(file => file.endsWith(".ts")).map(file => fs.readFile(path.join(oauthDirectory, file), "utf8")),
 		);
 		const combined = source.join("\n");
-		expect(combined).not.toContain("auth.openai.com/oauth");
+		expect(combined).not.toContain("auth.openai.com");
 		expect(combined).not.toContain("originator");
 		expect(combined).not.toContain("app_EMoamEEZ73f0CkXaXp7hrann");
+	});
+
+	test("does not advertise the removed ChatGPT OAuth integration in package documentation", async () => {
+		const readme = await fs.readFile(path.resolve(import.meta.dir, "../README.md"), "utf8");
+		expect(readme).not.toMatch(/ChatGPT (?:Plus|Pro)/i);
+		expect(readme).not.toContain("loginOpenAICodex");
+		expect(readme).not.toContain("originator");
+	});
+
+	test("keeps live subscription acceptance behind the official credential-owning Codex CLI", async () => {
+		const uat = await fs.readFile(
+			path.resolve(import.meta.dir, "../../coding-agent/scripts/openai-subscription-uat.ts"),
+			"utf8",
+		);
+		expect(uat).toContain("PtySession");
+		expect(uat).toContain('["login", "status"]');
+		expect(uat).toContain('"gpt-5.6"');
+		expect(uat).toContain('"read-only"');
+		expect(uat).toContain('"--ephemeral"');
+		expect(uat).not.toContain("auth.json");
+		expect(uat).not.toContain("CODEX_HOME");
 	});
 
 	test("discovers an OpenAI API key and selects the standard Responses provider", async () => {

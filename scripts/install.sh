@@ -12,6 +12,7 @@ set -e
 
 REPO="f5-sales-demo/xcsh"
 PACKAGE="@f5-sales-demo/xcsh"
+SOURCE_REPO_URL="${XCSH_SOURCE_REPO_URL:-https://github.com/${REPO}.git}"
 INSTALL_DIR="${PI_INSTALL_DIR:-$HOME/.local/bin}"
 MIN_BUN_VERSION="1.3.7"
 BUN_INSTALL_VERSION="1.3.14"
@@ -189,6 +190,8 @@ install_bun() {
   chmod 0755 "$BUN_INSTALL/bin/bun"
   export PATH="$BUN_INSTALL/bin:$PATH"
   require_bun_version
+  rm -rf "$bun_tmp_dir"
+  trap - EXIT
 }
 
 # Check if git-lfs is available
@@ -205,30 +208,102 @@ install_via_bun() {
       exit 1
     fi
 
-    TMP_DIR="$(mktemp -d)"
-    trap 'rm -rf "$TMP_DIR"' EXIT
+    SOURCE_TMP_DIR="$(mktemp -d)"
+    INSTALL_STAGE_DIR=""
+    cleanup_source_install() {
+      if [ -n "$INSTALL_STAGE_DIR" ] && [ -d "$INSTALL_STAGE_DIR" ]; then
+        rm -rf "$INSTALL_STAGE_DIR"
+      fi
+      if [ -n "$SOURCE_TMP_DIR" ] && [ -d "$SOURCE_TMP_DIR" ]; then
+        rm -rf "$SOURCE_TMP_DIR"
+      fi
+    }
+    trap cleanup_source_install EXIT INT TERM
 
-    if git clone --depth 1 --branch "$REF" "https://github.com/${REPO}.git" "$TMP_DIR" >/dev/null 2>&1; then
-      :
-    else
-      git clone "https://github.com/${REPO}.git" "$TMP_DIR"
-      (cd "$TMP_DIR" && git checkout "$REF")
+    git -C "$SOURCE_TMP_DIR" init -q
+    git -C "$SOURCE_TMP_DIR" remote add origin "$SOURCE_REPO_URL"
+    if ! git -C "$SOURCE_TMP_DIR" fetch --depth 1 origin "$REF"; then
+      echo "Failed to fetch source ref: $REF"
+      exit 1
     fi
+    git -C "$SOURCE_TMP_DIR" checkout --detach -q FETCH_HEAD
 
     # Pull LFS files
     if has_git_lfs; then
-      (cd "$TMP_DIR" && git lfs pull)
+      (cd "$SOURCE_TMP_DIR" && git lfs pull)
     fi
 
-    if [ ! -d "$TMP_DIR/packages/coding-agent" ]; then
-      echo "Expected package at ${TMP_DIR}/packages/coding-agent"
+    if [ ! -d "$SOURCE_TMP_DIR/packages/coding-agent" ]; then
+      echo "Expected package at ${SOURCE_TMP_DIR}/packages/coding-agent"
       exit 1
     fi
 
-    bun install -g "$TMP_DIR/packages/coding-agent" || {
-      echo "Failed to install from source"
+    (cd "$SOURCE_TMP_DIR" && bun install --frozen-lockfile) || {
+      echo "Failed to install source workspace dependencies"
       exit 1
     }
+
+    case "$(uname -s)" in
+    Linux) native_platform="linux" ;;
+    Darwin) native_platform="darwin" ;;
+    *)
+      echo "Unsupported source installation platform: $(uname -s)"
+      exit 1
+      ;;
+    esac
+    case "$(uname -m)" in
+    x86_64 | amd64)
+      native_arch="x64"
+      native_addon_names="pi_natives.${native_platform}-${native_arch}-modern.node pi_natives.${native_platform}-${native_arch}-baseline.node"
+      ;;
+    arm64 | aarch64)
+      native_arch="arm64"
+      native_addon_names="pi_natives.${native_platform}-${native_arch}.node"
+      ;;
+    *)
+      echo "Unsupported source installation architecture: $(uname -m)"
+      exit 1
+      ;;
+    esac
+
+    mkdir -p "$SOURCE_TMP_DIR/packages/natives/native"
+    for native_addon_name in $native_addon_names; do
+      native_addon_source=$(find "$SOURCE_TMP_DIR/node_modules/.bun" -type f -name "$native_addon_name" -print -quit)
+      if [ -z "$native_addon_source" ]; then
+        echo "Installed platform package did not provide ${native_addon_name}"
+        exit 1
+      fi
+      cp "$native_addon_source" "$SOURCE_TMP_DIR/packages/natives/native/$native_addon_name"
+    done
+
+    (cd "$SOURCE_TMP_DIR" && bun --cwd=packages/coding-agent run build) || {
+      echo "Failed to compile xcsh from source"
+      exit 1
+    }
+
+    mkdir -p "$INSTALL_DIR"
+    INSTALL_STAGE_DIR="$(mktemp -d "$INSTALL_DIR/.xcsh-install.XXXXXX")"
+    cp "$SOURCE_TMP_DIR/packages/coding-agent/dist/xcsh" "$INSTALL_STAGE_DIR/xcsh"
+    chmod 0755 "$INSTALL_STAGE_DIR/xcsh"
+    for native_addon_name in $native_addon_names; do
+      cp "$SOURCE_TMP_DIR/packages/natives/native/$native_addon_name" "$INSTALL_STAGE_DIR/$native_addon_name"
+      mv -f "$INSTALL_STAGE_DIR/$native_addon_name" "$INSTALL_DIR/$native_addon_name"
+    done
+    mv -f "$INSTALL_STAGE_DIR/xcsh" "$INSTALL_DIR/xcsh"
+    rmdir "$INSTALL_STAGE_DIR"
+    INSTALL_STAGE_DIR=""
+    rm -rf "$SOURCE_TMP_DIR"
+    SOURCE_TMP_DIR=""
+    trap - EXIT INT TERM
+
+    echo ""
+    echo "✓ Installed xcsh from source to ${INSTALL_DIR}/xcsh"
+    echo "✓ Installed platform-native addons to ${INSTALL_DIR}"
+    case ":$PATH:" in
+    *":$INSTALL_DIR:"*) echo "Run 'xcsh' to get started!" ;;
+    *) echo "Add ${INSTALL_DIR} to your PATH, then run 'xcsh'" ;;
+    esac
+    return
   else
     bun install -g "$PACKAGE" || {
       echo "Failed to install $PACKAGE"
