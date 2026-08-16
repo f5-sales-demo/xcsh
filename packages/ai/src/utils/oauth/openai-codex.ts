@@ -288,6 +288,11 @@ export async function loginOpenAICodexDevice(
 		signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
 	});
 	if (!initResponse.ok) {
+		if (initResponse.status === 404) {
+			throw new Error(
+				"Device-code login is not enabled for this ChatGPT account or workspace. Enable it in ChatGPT security or workspace settings, or choose the browser callback login.",
+			);
+		}
 		const detail = formatOpenAICodexTokenEndpointError(initResponse.status, await initResponse.text());
 		throw new Error(`Device authorization initiation failed: ${detail}`);
 	}

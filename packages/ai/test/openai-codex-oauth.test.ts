@@ -211,4 +211,12 @@ describe("OpenAI Codex device OAuth", () => {
 		);
 		expect(fetchImpl).not.toHaveBeenCalled();
 	});
+
+	it("explains when device login is disabled for the ChatGPT account or workspace", async () => {
+		const fetchImpl = vi.fn(async () => new Response("Not Found", { status: 404 })) as unknown as typeof fetch;
+
+		await expect(loginOpenAICodexDevice({}, { fetch: fetchImpl })).rejects.toThrow(
+			"Device-code login is not enabled for this ChatGPT account or workspace",
+		);
+	});
 });
