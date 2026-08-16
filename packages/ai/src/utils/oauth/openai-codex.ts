@@ -113,7 +113,7 @@ function redactTokenEndpointDetail(detail: string): string {
 		.replace(/(https?:\/\/[^\s?]+)\?[^\s)]+/gi, "$1?[REDACTED]")
 		.replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [REDACTED]")
 		.replace(
-			/\b(access_token|refresh_token|id_token|authorization_code|code|token|state)\b(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+			/\b(access_token|refresh_token|id_token|authorization_code|code_verifier|device_auth_id|user_code|code|token|state)\b(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
 			"$1$2[REDACTED]",
 		)
 		.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED]")

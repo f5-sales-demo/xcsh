@@ -57,7 +57,7 @@ describe("OpenAI Codex browser OAuth", () => {
 			JSON.stringify({
 				error: "invalid_grant",
 				error_description:
-					"authorization expired; retry https://localhost/callback?code=secret-code&state=secret-state access_token=secret-token",
+					"authorization expired; retry https://localhost/callback?code=secret-code&state=secret-state access_token=secret-token code_verifier=secret-verifier device_auth_id=secret-device",
 			}),
 		);
 
@@ -65,6 +65,8 @@ describe("OpenAI Codex browser OAuth", () => {
 		expect(detail).not.toContain("secret-code");
 		expect(detail).not.toContain("secret-state");
 		expect(detail).not.toContain("secret-token");
+		expect(detail).not.toContain("secret-verifier");
+		expect(detail).not.toContain("secret-device");
 		expect(detail).toContain("[REDACTED]");
 	});
 });
