@@ -67,7 +67,11 @@ function specReleasePin(): Record<string, unknown> {
 
 function publishedRelease(): Record<string, unknown> {
 	const pin = specReleasePin() as { assets: Record<string, string> };
-	const receipt = { assets: pin.assets, commit: TARGET_COMMIT, version: VERSION };
+	const receipt = {
+		assets: Object.fromEntries(Object.entries(pin.assets).map(([name, digest]) => [name, `sha256:${digest}`])),
+		commit: TARGET_COMMIT,
+		version: VERSION,
+	};
 	return {
 		assets: Object.entries(pin.assets).map(([name, digest]) => ({ digest: `sha256:${digest}`, name })),
 		body: `notes\n<!-- publication-receipt:${JSON.stringify(receipt)} -->\n`,
@@ -392,5 +396,31 @@ describe("published release identity", () => {
 				),
 			),
 		).rejects.toThrow("API digest differs");
+	});
+
+	it("rejects unqualified and non-SHA-256 publication receipt digests", async () => {
+		for (const invalidDigest of ["1".repeat(64), `sha512:${"1".repeat(64)}`]) {
+			const invalid = publishedRelease();
+			const receipt = {
+				assets: Object.fromEntries(
+					Object.keys((specReleasePin() as { assets: Record<string, string> }).assets).map(name => [
+						name,
+						invalidDigest,
+					]),
+				),
+				commit: TARGET_COMMIT,
+				version: VERSION,
+			};
+			invalid.body = `notes\n<!-- publication-receipt:${JSON.stringify(receipt)} -->\n`;
+			await expect(
+				verifyReleasedTag(validDelivery(), undefined, async input =>
+					Response.json(
+						String(input).includes("/releases/tags/")
+							? invalid
+							: { object: { sha: TARGET_COMMIT, type: "commit" } },
+					),
+				),
+			).rejects.toThrow("sha256-qualified");
+		}
 	});
 });

@@ -11,6 +11,7 @@ const SEMVER_PATTERN = /^\d+\.\d+\.\d+$/;
 const DELIVERY_ID_PATTERN = /^[0-9a-f]{64}$/;
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
+const QUALIFIED_SHA256_PATTERN = /^sha256:([0-9a-f]{64})$/;
 const LEDGER_VERSION = 1;
 
 export const DELIVERY_LEDGER_PATH = "tools/spec-deliveries.json";
@@ -202,6 +203,29 @@ function validateDigestMap(document: unknown, expectedNames: readonly string[], 
 			throw new Error(`${field}.${name} must be a lowercase SHA-256 digest`);
 		}
 		validated[name] = value;
+	}
+	return validated;
+}
+
+function validateQualifiedDigestMap(
+	document: unknown,
+	expectedNames: readonly string[],
+	field: string,
+): Record<string, string> {
+	if (!document || typeof document !== "object" || Array.isArray(document)) {
+		throw new Error(`${field} must be an object`);
+	}
+	const digests = document as Record<string, unknown>;
+	if (JSON.stringify(sortedKeys(digests)) !== JSON.stringify([...expectedNames].sort())) {
+		throw new Error(`${field} has the wrong asset set`);
+	}
+	const validated: Record<string, string> = {};
+	for (const [name, value] of Object.entries(digests)) {
+		const match = typeof value === "string" ? QUALIFIED_SHA256_PATTERN.exec(value) : null;
+		if (!match) {
+			throw new Error(`${field}.${name} must be a sha256-qualified lowercase SHA-256 digest`);
+		}
+		validated[name] = match[1];
 	}
 	return validated;
 }
@@ -765,7 +789,11 @@ export async function verifyReleasedTag(
 	const commit = requiredString(raw.commit, "publication receipt commit");
 	const version = requiredString(raw.version, "publication receipt version");
 	const receipt: SourcePublicationReceipt = {
-		assets: validateDigestMap(raw.assets, expectedSpecAssetNames(delivery.releaseTag), "publication receipt assets"),
+		assets: validateQualifiedDigestMap(
+			raw.assets,
+			expectedSpecAssetNames(delivery.releaseTag),
+			"publication receipt assets",
+		),
 		commit,
 		version,
 	};
