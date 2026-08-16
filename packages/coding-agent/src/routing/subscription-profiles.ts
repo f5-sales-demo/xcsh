@@ -1,10 +1,27 @@
-export type SubscriptionProfileId = "google-antigravity";
+import type { RoutingPoolConfig } from "./types";
+
+export type SubscriptionProfileId = "google-antigravity" | "openai-codex";
 
 export interface SubscriptionRoutingProfile {
 	id: SubscriptionProfileId;
 	provider: string;
 	roles: Readonly<Record<"smol" | "default" | "slow" | "plan", string>>;
+	pool?: RoutingPoolConfig;
 }
+
+const OPENAI_CODEX_POOL: RoutingPoolConfig = {
+	id: "openai-codex/gpt-5.6",
+	provider: "openai-codex",
+	tiers: {
+		utility: "gpt-5.6-luna",
+		balanced: "gpt-5.6-terra",
+		frontier: "gpt-5.6-sol",
+	},
+	effortPolicy: {
+		byTier: { utility: "low", balanced: "medium", frontier: "high" },
+		frontierEscalation: { effort: "xhigh", minimumComplexityScore: 90 },
+	},
+};
 
 export const SUBSCRIPTION_ROUTING_PROFILES: Readonly<Record<SubscriptionProfileId, SubscriptionRoutingProfile>> = {
 	"google-antigravity": {
@@ -16,6 +33,17 @@ export const SUBSCRIPTION_ROUTING_PROFILES: Readonly<Record<SubscriptionProfileI
 			slow: "google-antigravity/gemini-3.1-pro-high-vertex:high",
 			plan: "google-antigravity/gemini-3.1-pro-high-vertex:high",
 		},
+	},
+	"openai-codex": {
+		id: "openai-codex",
+		provider: "openai-codex",
+		roles: {
+			smol: "openai-codex/gpt-5.6-luna:low",
+			default: "openai-codex/gpt-5.6-terra:medium",
+			slow: "openai-codex/gpt-5.6-sol:high",
+			plan: "openai-codex/gpt-5.6-sol:high",
+		},
+		pool: OPENAI_CODEX_POOL,
 	},
 };
 
@@ -50,3 +78,5 @@ export function applySubscriptionProfileRoles(
 	}
 	return { applied: true, roles: { ...currentRoles, ...profile.roles }, missingModels: [] };
 }
+
+export const OPENAI_CODEX_ROUTING_POOL = OPENAI_CODEX_POOL;

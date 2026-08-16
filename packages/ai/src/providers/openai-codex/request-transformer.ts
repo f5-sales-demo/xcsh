@@ -85,6 +85,14 @@ export async function transformRequestBody(
 ): Promise<RequestBody> {
 	body.store = false;
 	body.stream = true;
+	// The ChatGPT Codex backend rejects sampling controls with `Unsupported parameter`.
+	// Generic stream options may supply defaults, so remove them at the provider boundary.
+	delete body.temperature;
+	delete body.top_p;
+	delete body.top_k;
+	delete body.min_p;
+	delete body.presence_penalty;
+	delete body.repetition_penalty;
 
 	if (body.input && Array.isArray(body.input)) {
 		body.input = filterInput(body.input);

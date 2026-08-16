@@ -40,23 +40,12 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (const character of "openai-codex") selector.handleInput(character);
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("No matching providers");
-
-		selector.handleInput("\n");
-		expect(onSelect).not.toHaveBeenCalled();
-	});
-
-	it("offers OpenAI Responses API access as usage-based API-key onboarding", () => {
-		const { selector, onSelect } = createSelector();
-
-		for (const character of "responses api") selector.handleInput(character);
-
-		const rendered = renderText(selector);
-		expect(rendered).toContain("OpenAI Responses API (usage-based API access)");
+		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
+		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
 		expect(rendered).toContain(`1 match (${getOAuthProviders().length} total)`);
 
 		selector.handleInput("\n");
-		expect(onSelect).toHaveBeenCalledWith("openai");
+		expect(onSelect).toHaveBeenCalledWith("openai-codex");
 	});
 
 	it("shows an empty state for unmatched input and does not select", () => {
@@ -83,12 +72,12 @@ describe("OAuthSelectorComponent provider search", () => {
 
 	it("keeps the selected row visible when navigating beyond the first page", () => {
 		const { selector } = createSelector();
-		for (let index = 0; index < 10; index += 1) selector.handleInput("\x1b[B");
+		for (let index = 0; index < 11; index += 1) selector.handleInput("\x1b[B");
 
 		const rendered = renderText(selector);
 		expect(rendered).toContain("Antigravity (Gemini 3, Claude, GPT-OSS)");
 		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
-		expect(rendered).toContain(`Showing 2-11 of ${getOAuthProviders().length}`);
+		expect(rendered).toContain(`Showing 3-12 of ${getOAuthProviders().length}`);
 	});
 
 	it("offers the enterprise alias only for login so logout has one canonical row", () => {

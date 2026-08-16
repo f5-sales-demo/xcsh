@@ -34,7 +34,6 @@ export type OAuthProvider =
 	| "nanogpt"
 	| "ollama"
 	| "openai"
-	/** Legacy ID retained only so stored credentials can be explicitly removed. */
 	| "openai-codex"
 	| "opencode-go"
 	| "opencode-zen"
