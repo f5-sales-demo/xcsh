@@ -261,6 +261,7 @@ export async function loginOpenAICodexDevice(
 	const fetchImpl = dependencies.fetch ?? fetch;
 	const sleep = dependencies.sleep ?? abortableSleep;
 	const now = dependencies.now ?? Date.now;
+	if (options.signal?.aborted) throw new Error("Device authorization cancelled");
 	options.onProgress?.("Requesting a ChatGPT device code…");
 
 	const initResponse = await fetchImpl(DEVICE_USER_CODE_URL, {

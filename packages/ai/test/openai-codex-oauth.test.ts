@@ -194,4 +194,15 @@ describe("OpenAI Codex device OAuth", () => {
 			await expect(result).rejects.not.toThrow("bearer-secret");
 		}
 	});
+
+	it("cancels before making a device authorization request", async () => {
+		const abortController = new AbortController();
+		abortController.abort();
+		const fetchImpl = vi.fn(async () => Response.json({})) as unknown as typeof fetch;
+
+		await expect(loginOpenAICodexDevice({ signal: abortController.signal }, { fetch: fetchImpl })).rejects.toThrow(
+			"Device authorization cancelled",
+		);
+		expect(fetchImpl).not.toHaveBeenCalled();
+	});
 });
