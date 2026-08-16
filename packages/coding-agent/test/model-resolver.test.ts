@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { Effort, type Model } from "@f5-sales-demo/pi-ai";
 import {
 	expandRoleAlias,
-	findInitialModel,
 	parseModelPattern,
 	parseModelString,
 	resolveAgentModelPatterns,
@@ -144,25 +143,6 @@ const mockCodexOverlapModels: Model<"anthropic-messages">[] = [
 ];
 
 const allModels = [...mockModels, ...mockOpenRouterModels, ...mockProviderOverlapModels, ...mockCodexOverlapModels];
-
-describe("legacy OpenAI Codex recovery", () => {
-	test("does not select a saved openai-codex default and explains supported recovery", async () => {
-		const result = await findInitialModel({
-			scopedModels: [],
-			isContinuing: false,
-			defaultProvider: "openai-codex",
-			defaultModelId: "gpt-5.6-terra",
-			modelRegistry: {
-				find: () => mockCodexOverlapModels[0],
-				getAvailable: () => [mockModels[1]],
-			},
-		});
-
-		expect(result.model).toBe(mockModels[1]);
-		expect(result.fallbackMessage).toContain("official codex");
-		expect(result.fallbackMessage).toContain("OPENAI_API_KEY");
-	});
-});
 
 describe("parseModelPattern", () => {
 	describe("simple patterns without colons", () => {

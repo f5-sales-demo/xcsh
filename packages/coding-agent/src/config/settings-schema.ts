@@ -564,7 +564,7 @@ export const SETTINGS_SCHEMA = {
 
 	"routing.profile": {
 		type: "enum",
-		values: ["none", "google-antigravity"] as const,
+		values: ["none", "google-antigravity", "openai-codex"] as const,
 		default: "none",
 		ui: {
 			tab: "model",
@@ -1988,6 +1988,7 @@ export const SETTINGS_SCHEMA = {
 			"perplexity",
 			"anthropic",
 			"gemini",
+			"codex",
 			"tavily",
 			"kagi",
 			"synthetic",

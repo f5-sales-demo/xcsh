@@ -5,7 +5,7 @@ import { PtySession } from "@f5-sales-demo/pi-natives";
 
 interface UatTarget {
 	label: string;
-	command: string;
+	argv: string[];
 	executable?: string;
 }
 
@@ -15,9 +15,12 @@ interface CommandResult {
 	stderr: string;
 }
 
+export const OPENAI_CODEX_TERRA_MODEL = "openai-codex/gpt-5.6-terra";
+
 const ROOT_DIR = path.resolve(import.meta.dir, "../../..");
-const PTY_TIMEOUT_MS = 60_000;
-const CODEX_TIMEOUT_MS = 180_000;
+const STARTUP_TIMEOUT_MS = 60_000;
+const OAUTH_TIMEOUT_MS = 300_000;
+const SENTINEL_TIMEOUT_MS = 180_000;
 
 function shellQuote(value: string): string {
 	return `'${value.replaceAll("'", `'"'"'`)}'`;
@@ -30,16 +33,7 @@ function parseTargets(argv: string[]): UatTarget[] {
 		if (argument === "--source") {
 			targets.push({
 				label: "Bun development xcsh",
-				command: [
-					"bun",
-					"packages/coding-agent/src/cli.ts",
-					"--no-session",
-					"--no-mcp",
-					"--model",
-					"openai/gpt-5-mini",
-				]
-					.map(shellQuote)
-					.join(" "),
+				argv: ["bun", "packages/coding-agent/src/cli.ts"],
 			});
 			continue;
 		}
@@ -49,17 +43,14 @@ function parseTargets(argv: string[]): UatTarget[] {
 			index += 1;
 			targets.push({
 				label: `Installed xcsh (${executable})`,
-				command: [executable, "--no-session", "--no-mcp", "--model", "openai/gpt-5-mini"].map(shellQuote).join(" "),
+				argv: [executable],
 				executable,
 			});
 			continue;
 		}
 		throw new Error(`Unknown argument: ${argument}`);
 	}
-	if (targets.length === 0) {
-		return parseTargets(["--source"]);
-	}
-	return targets;
+	return targets.length > 0 ? targets : parseTargets(["--source"]);
 }
 
 function visibleTranscript(value: string): string {
@@ -68,76 +59,110 @@ function visibleTranscript(value: string): string {
 		.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, "");
 }
 
-async function waitForText(
+/** Redact diagnostics before any UAT failure can print OAuth or credential material. */
+export function redactSensitiveOutput(value: string): string {
+	return value
+		.replace(
+			/(https:\/\/auth\.openai\.com\/oauth\/authorize)\?[\s\S]*?(?=(?:\r?\n)+\s*(?:Click here to login|A browser window should open))/gi,
+			"$1?[REDACTED]",
+		)
+		.replace(/(https?:\/\/[^\s?]+)\?[^\s)]+/gi, "$1?[REDACTED]")
+		.replace(
+			/\b(authorization|proxy-authorization|x-api-key|api-key)\s*:\s*(?:Bearer\s+)?[^\s,;]+/gi,
+			"$1: [REDACTED]",
+		)
+		.replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [REDACTED]")
+		.replace(
+			/\b(access_token|refresh_token|id_token|authorization_code|code|token|state)\b(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+			"$1$2[REDACTED]",
+		)
+		.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED]");
+}
+
+function diagnostic(value: string): string {
+	return redactSensitiveOutput(visibleTranscript(value)).slice(-5000);
+}
+
+async function waitFor(
 	label: string,
 	getTranscript: () => string,
-	text: string,
+	predicate: (visible: string) => boolean,
+	description: string,
 	hasExited: () => boolean,
+	timeoutMs: number,
 ): Promise<void> {
-	const deadline = Date.now() + PTY_TIMEOUT_MS;
+	const deadline = Date.now() + timeoutMs;
 	while (Date.now() < deadline) {
-		const transcript = visibleTranscript(getTranscript());
-		if (transcript.includes(text)) return;
+		const visible = visibleTranscript(getTranscript());
+		if (predicate(visible)) return;
 		if (hasExited()) {
-			throw new Error(`${label} exited before rendering ${JSON.stringify(text)}\n${transcript.slice(-4000)}`);
+			throw new Error(`${label} exited before ${description}\n${diagnostic(visible)}`);
 		}
 		await Bun.sleep(50);
 	}
-	throw new Error(
-		`${label} timed out waiting for ${JSON.stringify(text)}\n${visibleTranscript(getTranscript()).slice(-4000)}`,
-	);
+	throw new Error(`${label} timed out waiting for ${description}\n${diagnostic(getTranscript())}`);
 }
 
-function assertOAuthBoundary(label: string, transcript: string): void {
-	const visible = visibleTranscript(transcript);
-	const required = [
-		"OpenAI Responses API (usage-based API access)",
-		"OpenAI Responses API uses usage-based Platform API access.",
-		"Set OPENAI_API_KEY, then select an OpenAI model with /model.",
-		"For ChatGPT subscription access, use the official codex CLI (`codex login`).",
-	];
-	for (const expected of required) {
-		if (!visible.includes(expected)) {
-			throw new Error(`${label} did not render required guidance: ${expected}`);
-		}
-	}
-
-	const forbidden: Array<[string, RegExp]> = [
-		["removed provider ID", /openai-codex/i],
-		["ChatGPT plan advertising", /ChatGPT\s+(?:Plus|Pro)\b/i],
-		["unsupported OpenAI OAuth host", /auth\.openai\.com/i],
-		["copied OpenAI OAuth client settings", /app_EMoamEEZ73f0CkXaXp7hrann/i],
-		["OpenAI OAuth originator field", /\boriginator\b/i],
-	];
-	for (const [description, pattern] of forbidden) {
-		if (pattern.test(visible)) throw new Error(`${label} exposed ${description}`);
+function countOccurrences(value: string, search: string): number {
+	let count = 0;
+	let offset = 0;
+	while (true) {
+		const next = value.indexOf(search, offset);
+		if (next < 0) return count;
+		count += 1;
+		offset = next + search.length;
 	}
 }
 
-async function runPtyBoundary(target: UatTarget): Promise<void> {
-	const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-openai-boundary-"));
+function freshEnvironment(stateDir: string): Record<string, string> {
+	const env: Record<string, string> = {
+		HOME: stateDir,
+		PI_CODING_AGENT_DIR: path.join(stateDir, "agent"),
+		XDG_CACHE_HOME: path.join(stateDir, "cache"),
+		XDG_CONFIG_HOME: path.join(stateDir, "config"),
+		XDG_DATA_HOME: path.join(stateDir, "data"),
+		XDG_STATE_HOME: path.join(stateDir, "state"),
+		TERM: "xterm-256color",
+		PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
+	};
+	for (const name of [
+		"BUN_INSTALL",
+		"COLORTERM",
+		"DBUS_SESSION_BUS_ADDRESS",
+		"DISPLAY",
+		"LANG",
+		"LC_ALL",
+		"SHELL",
+		"WAYLAND_DISPLAY",
+		"XAUTHORITY",
+		"XDG_RUNTIME_DIR",
+	]) {
+		const value = Bun.env[name];
+		if (value) env[name] = value;
+	}
+	return env;
+}
+
+function commonArgs(): string[] {
+	return ["--no-session", "--no-mcp", "--no-tools", "--no-extensions", "--no-skills", "--no-rules"];
+}
+
+async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
+	const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-openai-fresh-oauth-"));
 	const session = new PtySession();
 	let transcript = "";
 	let callbackError: Error | undefined;
 	let exited = false;
+	const command = [...target.argv, ...commonArgs()].map(shellQuote).join(" ");
 	const runPromise = session
 		.start(
 			{
-				command: target.command,
+				command,
 				cwd: ROOT_DIR,
-				env: {
-					HOME: stateDir,
-					PI_CODING_AGENT_DIR: path.join(stateDir, "agent"),
-					XDG_CACHE_HOME: path.join(stateDir, "cache"),
-					XDG_CONFIG_HOME: path.join(stateDir, "config"),
-					XDG_DATA_HOME: path.join(stateDir, "data"),
-					XDG_STATE_HOME: path.join(stateDir, "state"),
-					OPENAI_API_KEY: "sk-xcsh-boundary-uat-not-a-real-key",
-					TERM: "xterm-256color",
-				},
-				cols: 120,
-				rows: 40,
-				timeoutMs: PTY_TIMEOUT_MS,
+				env: freshEnvironment(stateDir),
+				cols: 140,
+				rows: 42,
+				timeoutMs: OAUTH_TIMEOUT_MS + SENTINEL_TIMEOUT_MS,
 			},
 			(error, chunk) => {
 				if (error) callbackError = error;
@@ -149,38 +174,69 @@ async function runPtyBoundary(target: UatTarget): Promise<void> {
 		});
 
 	try {
-		await waitForText(
+		await waitFor(
 			target.label,
 			() => transcript,
-			"xcsh v",
+			visible => visible.includes("Select provider to login:"),
+			"the provider-first selector",
 			() => exited,
+			STARTUP_TIMEOUT_MS,
 		);
-		// The welcome frame can render before the editor focus and input handlers are attached.
-		await Bun.sleep(1000);
-		session.write("/login\r");
-		await waitForText(
-			target.label,
-			() => transcript,
-			"Type to filter providers",
-			() => exited,
-		);
-		session.write("responses api");
-		await waitForText(
-			target.label,
-			() => transcript,
+		const startup = visibleTranscript(transcript);
+		for (const provider of [
+			"ChatGPT Plus/Pro (Codex Subscription)",
 			"OpenAI Responses API (usage-based API access)",
+		]) {
+			if (!startup.includes(provider)) throw new Error(`${target.label} did not list ${provider}`);
+		}
+		if (startup.includes("Model Provider URL")) {
+			throw new Error(`${target.label} entered LiteLLM URL configuration during fresh startup`);
+		}
+
+		session.write("openai-codex");
+		await waitFor(
+			target.label,
+			() => transcript,
+			visible => visible.includes("ChatGPT Plus/Pro (Codex Subscription)") && visible.includes("1 match"),
+			"the filtered ChatGPT provider",
 			() => exited,
+			STARTUP_TIMEOUT_MS,
 		);
 		session.write("\r");
-		await waitForText(
+		await waitFor(
 			target.label,
 			() => transcript,
-			"For ChatGPT subscription access, use the official codex CLI (`codex login`).",
+			visible => visible.includes("https://auth.openai.com/oauth/authorize?"),
+			"the ChatGPT browser authorization request",
 			() => exited,
+			STARTUP_TIMEOUT_MS,
+		);
+		await waitFor(
+			target.label,
+			() => transcript,
+			visible =>
+				visible.includes("Successfully logged in to openai-codex") &&
+				visible.includes(`Default model: ${OPENAI_CODEX_TERRA_MODEL}`),
+			"ChatGPT OAuth completion and Terra selection",
+			() => exited,
+			OAUTH_TIMEOUT_MS,
+		);
+
+		const sentinel = `XCSH_TERRA_UAT_${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
+		await Bun.sleep(250);
+		session.write(`Reply with exactly ${sentinel} and nothing else.\r`);
+		await waitFor(
+			target.label,
+			() => transcript,
+			visible => countOccurrences(visible, sentinel) >= 2,
+			"the exact GPT-5.6 Terra sentinel response",
+			() => exited,
+			SENTINEL_TIMEOUT_MS,
 		);
 		if (callbackError) throw callbackError;
-		assertOAuthBoundary(target.label, transcript);
-		console.log(`PASS: ${target.label} kept OpenAI subscription authentication at the official Codex boundary.`);
+		console.log(
+			`PASS: ${target.label} completed fresh xcsh ChatGPT OAuth and the ${OPENAI_CODEX_TERRA_MODEL} sentinel.`,
+		);
 	} finally {
 		if (!exited) session.kill();
 		await runPromise.catch(() => undefined);
@@ -191,23 +247,16 @@ async function runPtyBoundary(target: UatTarget): Promise<void> {
 async function runCommand(
 	command: string,
 	args: string[],
-	cwd: string,
 	timeoutMs: number,
-	stdinText?: string,
+	env: Record<string, string | undefined>,
 ): Promise<CommandResult> {
 	const process = Bun.spawn([command, ...args], {
-		cwd,
-		env: Bun.env,
-		stdin: stdinText === undefined ? "ignore" : "pipe",
+		cwd: ROOT_DIR,
+		env,
+		stdin: "ignore",
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	if (stdinText !== undefined) {
-		const stdin = process.stdin;
-		if (!stdin) throw new Error(`Failed to open stdin for ${command}`);
-		stdin.write(stdinText);
-		stdin.end();
-	}
 	const stdoutPromise = new Response(process.stdout).text();
 	const stderrPromise = new Response(process.stderr).text();
 	let timedOut = false;
@@ -218,69 +267,52 @@ async function runCommand(
 	const exitCode = await process.exited;
 	clearTimeout(timeout);
 	const [stdout, stderr] = await Promise.all([stdoutPromise, stderrPromise]);
-	if (timedOut) throw new Error(`${command} ${args[0] ?? ""} timed out after ${timeoutMs}ms`);
+	if (timedOut) throw new Error(`${command} timed out after ${timeoutMs}ms`);
 	return { exitCode, stdout, stderr };
 }
 
-async function verifyOfficialCodexSubscription(): Promise<void> {
-	const status = await runCommand("codex", ["login", "status"], ROOT_DIR, 30_000);
-	const statusOutput = `${status.stdout}\n${status.stderr}`.trim();
-	if (status.exitCode !== 0 || !/Logged in using ChatGPT/i.test(statusOutput)) {
-		throw new Error(`Official Codex CLI is not authenticated with ChatGPT: ${statusOutput}`);
-	}
-	console.log("PASS: codex login status reports ChatGPT authentication.");
-
-	const sentinel = `XCSH_CODEX_UAT_${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
-	const runDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-codex-sentinel-"));
-	try {
-		const result = await runCommand(
-			"codex",
-			[
-				"exec",
-				"--model",
-				"gpt-5.6",
-				"--sandbox",
-				"read-only",
-				"--ephemeral",
-				"--ignore-rules",
-				"--skip-git-repo-check",
-				"--json",
-			],
-			runDir,
-			CODEX_TIMEOUT_MS,
-			`Do not use tools. Reply with exactly ${sentinel} and nothing else.\n`,
+async function verifyPreservedCredential(target: UatTarget): Promise<void> {
+	const sentinel = `XCSH_PRESERVED_TERRA_${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
+	const [command, ...prefixArgs] = target.argv;
+	if (!command) throw new Error(`${target.label} has no executable`);
+	const env = { ...Bun.env };
+	delete env.OPENAI_CODEX_OAUTH_TOKEN;
+	const result = await runCommand(
+		command,
+		[
+			...prefixArgs,
+			...commonArgs(),
+			"--model",
+			OPENAI_CODEX_TERRA_MODEL,
+			"--thinking",
+			"medium",
+			"--print",
+			`Reply with exactly ${sentinel} and nothing else.`,
+		],
+		SENTINEL_TIMEOUT_MS,
+		env,
+	);
+	const output = `${result.stdout}\n${result.stderr}`;
+	if (result.exitCode !== 0 || !visibleTranscript(output).includes(sentinel)) {
+		throw new Error(
+			`${target.label} preserved-credential sentinel failed with exit ${result.exitCode}\n${diagnostic(output)}`,
 		);
-		if (result.exitCode !== 0) {
-			throw new Error(
-				`codex exec failed with exit ${result.exitCode}: ${result.stderr.trim()}\n${result.stdout.trim()}`,
-			);
-		}
-		const agentMessages: string[] = [];
-		for (const line of result.stdout.split("\n").filter(Boolean)) {
-			const event = JSON.parse(line) as { type?: string; item?: { type?: string; text?: string } };
-			if (event.type === "item.completed" && event.item?.type === "agent_message" && event.item.text) {
-				agentMessages.push(event.item.text);
-			}
-		}
-		if (agentMessages.at(-1)?.trim() !== sentinel) {
-			throw new Error(
-				`codex exec did not return the exact sentinel; received ${JSON.stringify(agentMessages.at(-1))}`,
-			);
-		}
-		console.log(`PASS: ephemeral read-only codex exec --model gpt-5.6 returned ${sentinel}.`);
-	} finally {
-		await fs.rm(runDir, { recursive: true, force: true });
 	}
+	console.log(
+		`PASS: ${target.label} migrated/refreshed the preserved credential and reached ${OPENAI_CODEX_TERRA_MODEL}.`,
+	);
 }
 
 async function main(): Promise<void> {
 	const targets = parseTargets(process.argv.slice(2));
 	for (const target of targets) {
 		if (target.executable) await fs.access(target.executable, fs.constants.X_OK);
-		await runPtyBoundary(target);
+		await runFreshOAuthRoundTrip(target);
+		await verifyPreservedCredential(target);
 	}
-	await verifyOfficialCodexSubscription();
-	console.log("PASS: OpenAI subscription acceptance completed without reading or injecting Codex credentials.");
+	console.log("PASS: xcsh-native OpenAI subscription acceptance completed without reading or copying credentials.");
 }
 
-await main();
+if (import.meta.main) {
+	await main();
+}
