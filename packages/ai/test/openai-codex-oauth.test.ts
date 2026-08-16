@@ -133,4 +133,38 @@ describe("OpenAI Codex device OAuth", () => {
 		expect(visibleProgress).not.toContain("verifier-secret");
 		expect(visibleProgress).not.toContain("refresh-secret");
 	});
+
+	it("backs off when the device endpoint asks the client to slow down", async () => {
+		const accessToken = `${Buffer.from("{}").toString("base64url")}.${Buffer.from(
+			JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "acct-slow" } }),
+		).toString("base64url")}.signature`;
+		let pollCount = 0;
+		const sleepDurations: number[] = [];
+		const fetchImpl = (async (input: string | URL | Request) => {
+			const url = String(input);
+			if (url.endsWith("/deviceauth/usercode")) {
+				return Response.json({ device_auth_id: "device-id", user_code: "SLOW-DOWN", interval: "1" });
+			}
+			if (url.endsWith("/deviceauth/token")) {
+				pollCount += 1;
+				return pollCount === 1
+					? Response.json({ error: "slow_down", error_description: "poll less often" }, { status: 429 })
+					: Response.json({ authorization_code: "code", code_verifier: "verifier" });
+			}
+			return Response.json({ access_token: accessToken, refresh_token: "refresh", expires_in: 3600 });
+		}) as typeof fetch;
+
+		await loginOpenAICodexDevice(
+			{},
+			{
+				fetch: fetchImpl,
+				sleep: async milliseconds => {
+					sleepDurations.push(milliseconds);
+				},
+			},
+		);
+
+		expect(sleepDurations).toEqual([6_000]);
+		expect(pollCount).toBe(2);
+	});
 });

@@ -85,6 +85,17 @@ function describeTokenEndpointValue(value: unknown): string | undefined {
 	return code ?? message;
 }
 
+function parseOAuthErrorCode(bodyText: string): string | undefined {
+	try {
+		const body: unknown = JSON.parse(bodyText);
+		if (!isRecord(body)) return undefined;
+		const value = body.error;
+		return typeof value === "string" ? value.trim().toLowerCase() : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
 function redactTokenEndpointDetail(detail: string): string {
 	return detail
 		.replace(/(https?:\/\/[^\s?]+)\?[^\s)]+/gi, "$1?[REDACTED]")
@@ -273,7 +284,7 @@ export async function loginOpenAICodexDevice(
 	}
 
 	const parsedInterval = Number.parseInt(String(initData.interval ?? "5"), 10);
-	const pollIntervalMs = Math.max(1_000, (Number.isFinite(parsedInterval) ? parsedInterval : 5) * 1_000);
+	let pollIntervalMs = Math.max(1_000, (Number.isFinite(parsedInterval) ? parsedInterval : 5) * 1_000);
 	const deadline = now() + DEVICE_FLOW_TIMEOUT_MS;
 	options.onAuth?.({
 		url: DEVICE_AUTH_URL,
@@ -295,7 +306,13 @@ export async function loginOpenAICodexDevice(
 			continue;
 		}
 		if (!pollResponse.ok) {
-			const detail = formatOpenAICodexTokenEndpointError(pollResponse.status, await pollResponse.text());
+			const bodyText = await pollResponse.text();
+			if (parseOAuthErrorCode(bodyText) === "slow_down") {
+				pollIntervalMs += 5_000;
+				await sleep(pollIntervalMs, options.signal);
+				continue;
+			}
+			const detail = formatOpenAICodexTokenEndpointError(pollResponse.status, bodyText);
 			throw new Error(`Device token polling failed: ${detail}`);
 		}
 
