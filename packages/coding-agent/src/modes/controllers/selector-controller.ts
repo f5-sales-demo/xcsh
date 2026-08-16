@@ -1072,6 +1072,7 @@ export class SelectorController {
 		const useManualInput =
 			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) ||
 			(providerId === "openai-codex" && resolveOpenAICodexLoginMethod() === "browser");
+		const shouldOpenBrowser = providerId !== "openai-codex" || resolveOpenAICodexLoginMethod() === "browser";
 		const loginCallbacks = {
 			onAuth: (info: { url: string; instructions?: string }) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));
@@ -1087,7 +1088,7 @@ export class SelectorController {
 					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 1, 0));
 				}
 				this.ctx.ui.requestRender();
-				this.ctx.openInBrowser(info.url);
+				if (shouldOpenBrowser) this.ctx.openInBrowser(info.url);
 			},
 			onPrompt: async (prompt: OAuthPrompt) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));

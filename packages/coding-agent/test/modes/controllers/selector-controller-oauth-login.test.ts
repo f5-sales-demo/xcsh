@@ -64,3 +64,40 @@ describe("SelectorController Google Antigravity login", () => {
 		expect(rendered).toContain("Default model: google-antigravity/gemini-3.6-flash-high");
 	});
 });
+
+describe("SelectorController ChatGPT device login", () => {
+	it("does not try to open a browser on the remote Ubuntu host", async () => {
+		const previousSshConnection = process.env.SSH_CONNECTION;
+		process.env.SSH_CONNECTION = "client server";
+		try {
+			const openInBrowser = vi.fn();
+			const login = vi.fn(async (_provider, callbacks) => {
+				callbacks.onAuth({
+					url: "https://auth.openai.com/codex/device",
+					instructions: "Enter this one-time code: ABCD-EFGH",
+				});
+			});
+			const ctx = {
+				session: {
+					modelRegistry: { authStorage: { login }, refresh: vi.fn(async () => undefined), getAll: () => [] },
+				},
+				oauthManualInput: new OAuthManualInputManager(),
+				statusLine: { invalidate: vi.fn() },
+				updateEditorBorderColor: vi.fn(),
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn() },
+				showStatus: vi.fn(),
+				showError: vi.fn(),
+				openInBrowser,
+			} as unknown as InteractiveModeContext;
+
+			await new SelectorController(ctx).showOAuthSelector("login", "openai-codex");
+
+			expect(login).toHaveBeenCalledTimes(1);
+			expect(openInBrowser).not.toHaveBeenCalled();
+		} finally {
+			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;
+			else process.env.SSH_CONNECTION = previousSshConnection;
+		}
+	});
+});
