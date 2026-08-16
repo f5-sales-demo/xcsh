@@ -73,7 +73,7 @@ export function redactSensitiveOutput(value: string): string {
 		)
 		.replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [REDACTED]")
 		.replace(
-			/\b(access_token|refresh_token|id_token|authorization_code|code|token|state)\b(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
+			/\b(access_token|refresh_token|id_token|authorization_code|code_verifier|device_auth_id|user_code|code|token|state)\b(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)/gi,
 			"$1$2[REDACTED]",
 		)
 		.replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED]");
@@ -123,6 +123,7 @@ function freshEnvironment(stateDir: string): Record<string, string> {
 		XDG_DATA_HOME: path.join(stateDir, "data"),
 		XDG_STATE_HOME: path.join(stateDir, "state"),
 		TERM: "xterm-256color",
+		SSH_CONNECTION: "uat-client uat-server",
 		PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
 	};
 	for (const name of [
@@ -185,6 +186,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		const startup = visibleTranscript(transcript);
 		for (const provider of [
 			"ChatGPT Plus/Pro (Codex Subscription)",
+			"ChatGPT Plus/Pro (Browser callback)",
 			"OpenAI Responses API (usage-based API access)",
 		]) {
 			if (!startup.includes(provider)) throw new Error(`${target.label} did not list ${provider}`);
@@ -197,7 +199,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		await waitFor(
 			target.label,
 			() => transcript,
-			visible => visible.includes("ChatGPT Plus/Pro (Codex Subscription)") && visible.includes("1 match"),
+			visible => visible.includes("ChatGPT Plus/Pro (Codex Subscription)") && visible.includes("2 matches"),
 			"the filtered ChatGPT provider",
 			() => exited,
 			STARTUP_TIMEOUT_MS,
@@ -206,8 +208,9 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		await waitFor(
 			target.label,
 			() => transcript,
-			visible => visible.includes("https://auth.openai.com/oauth/authorize?"),
-			"the ChatGPT browser authorization request",
+			visible =>
+				visible.includes("https://auth.openai.com/codex/device") && visible.includes("Enter this one-time code:"),
+			"the ChatGPT device authorization code",
 			() => exited,
 			STARTUP_TIMEOUT_MS,
 		);
