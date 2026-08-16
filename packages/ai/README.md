@@ -47,7 +47,7 @@ Unified LLM API with automatic model discovery, provider configuration, token an
 ## Supported Providers
 
 - **OpenAI** (usage-based Platform API access through `OPENAI_API_KEY`)
-- **OpenAI Codex** (ChatGPT Plus/Pro subscription through browser OAuth)
+- **OpenAI Codex** (ChatGPT Plus/Pro subscription through device-code or browser OAuth)
 - **Anthropic**
 - **Google**
 - **Vertex AI** (Gemini via Vertex AI)
@@ -1047,7 +1047,7 @@ bunx @f5-sales-demo/pi-ai list               # list available providers
 Credentials are saved to `agent.db` in the agent directory. `/login qianfan` opens the Qianfan console and stores the pasted API key.
 
 `login` supports OAuth providers (Anthropic, GitHub Copilot, Gemini CLI, Antigravity) and API-key onboarding flows.
-OpenAI has two credential paths. Use `OPENAI_API_KEY` for usage-based Platform API access. Use `login openai-codex` for ChatGPT Plus/Pro subscription OAuth; `login openai` explains the API-key path.
+OpenAI has two credential paths. Use `OPENAI_API_KEY` for usage-based Platform API access. Use `login openai-codex` for ChatGPT Plus/Pro subscription OAuth; SSH/headless terminals automatically receive a short device code, while local desktops use browser PKCE. Use `login openai-codex-browser` to force the callback flow. `login openai` explains the API-key path.
 
 For the current OpenAI-compatible integrations, API-key onboarding covers Together, Moonshot, Qianfan, NVIDIA, NanoGPT, Hugging Face, Venice, Xiaomi, vLLM, LiteLLM, Cloudflare AI Gateway, and Qwen Portal. Ollama is typically local and unauthenticated; set `OLLAMA_API_KEY` only when your Ollama deployment enforces bearer auth.
 
@@ -1139,7 +1139,7 @@ const response = await complete(
 
 ### Provider Notes
 
-**OpenAI**: Set `OPENAI_API_KEY` for usage-based Platform API access, or use the `openai-codex` OAuth provider for ChatGPT Plus/Pro subscription access.
+**OpenAI**: Set `OPENAI_API_KEY` for usage-based Platform API access, or use the `openai-codex` OAuth provider for ChatGPT Plus/Pro subscription access. Remote terminals use device-code authentication without a tunnel or localhost callback.
 
 **GitHub Copilot**: If you get "The requested model is not supported" error, enable the model manually in VS Code: open Copilot Chat, click the model selector, select the model (warning icon), and click "Enable".
 
