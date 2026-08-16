@@ -4,6 +4,7 @@ import {
 	formatOpenAICodexTokenEndpointError,
 	loginOpenAICodex,
 	loginOpenAICodexDevice,
+	resolveOpenAICodexLoginMethod,
 	shouldUseOpenAICodexDeviceFlow,
 } from "../src/utils/oauth/openai-codex";
 
@@ -40,6 +41,7 @@ describe("OpenAI Codex browser OAuth", () => {
 
 		await expect(
 			loginOpenAICodex({
+				method: "browser",
 				onAuth: vi.fn(),
 				onPrompt: async () => "",
 			}),
@@ -72,6 +74,10 @@ describe("OpenAI Codex login method", () => {
 		expect(shouldUseOpenAICodexDeviceFlow({ SSH_CONNECTION: "client server" }, "linux", true)).toBe(true);
 		expect(shouldUseOpenAICodexDeviceFlow({ SSH_TTY: "/dev/pts/1" }, "linux", true)).toBe(true);
 		expect(shouldUseOpenAICodexDeviceFlow({}, "darwin", true)).toBe(false);
+		expect(resolveOpenAICodexLoginMethod("auto", { SSH_CONNECTION: "client server" }, "linux", true)).toBe("device");
+		expect(resolveOpenAICodexLoginMethod("browser", { SSH_CONNECTION: "client server" }, "linux", true)).toBe(
+			"browser",
+		);
 	});
 });
 

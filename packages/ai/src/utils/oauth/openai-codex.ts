@@ -33,6 +33,18 @@ export function shouldUseOpenAICodexDeviceFlow(
 	return platform === "linux" && isInteractive && !env.DISPLAY && !env.WAYLAND_DISPLAY;
 }
 
+export type OpenAICodexLoginMethod = "auto" | "browser" | "device";
+
+export function resolveOpenAICodexLoginMethod(
+	method: OpenAICodexLoginMethod = "auto",
+	env: NodeJS.ProcessEnv = process.env,
+	platform: NodeJS.Platform = process.platform,
+	isInteractive = Boolean(process.stdin.isTTY),
+): Exclude<OpenAICodexLoginMethod, "auto"> {
+	if (method !== "auto") return method;
+	return shouldUseOpenAICodexDeviceFlow(env, platform, isInteractive) ? "device" : "browser";
+}
+
 type JwtPayload = {
 	[JWT_CLAIM_PATH]?: {
 		chatgpt_account_id?: string;
@@ -238,9 +250,14 @@ async function exchangeCodeForToken(
 export type OpenAICodexLoginOptions = OAuthController & {
 	/** Optional originator value. The default matches xcsh Codex request headers. */
 	originator?: string;
+	/** Automatic uses device authorization in SSH/headless terminals and browser PKCE locally. */
+	method?: OpenAICodexLoginMethod;
 };
 
 export async function loginOpenAICodex(options: OpenAICodexLoginOptions): Promise<OAuthCredentials> {
+	if (resolveOpenAICodexLoginMethod(options.method) === "device") {
+		return loginOpenAICodexDevice(options);
+	}
 	const pkce = await generatePKCE();
 	const originator = options.originator?.trim() || "pi";
 	const flow = new OpenAICodexOAuthFlow(options, pkce, originator);
