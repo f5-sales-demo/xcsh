@@ -18,8 +18,36 @@ export interface PackageJson {
 	optionalDependencies?: Record<string, string>;
 }
 
-const repoRoot = path.join(import.meta.dir, "..");
+export function resolveReleaseSourceRoot(sourceRoot?: string): string {
+	if (sourceRoot === undefined || sourceRoot.length === 0) return path.join(import.meta.dir, "..");
+	if (!path.isAbsolute(sourceRoot)) throw new Error("XCSH_RELEASE_SOURCE_ROOT must be an absolute path");
+	return path.normalize(sourceRoot);
+}
+
+function readOption(args: string[], name: string): string | undefined {
+	const index = args.indexOf(name);
+	if (index === -1) return undefined;
+	const value = args[index + 1];
+	if (value === undefined || value.startsWith("--")) throw new Error(`${name} requires a value`);
+	return value;
+}
+
+export function npmPublishArgs(distTag?: string): string[] {
+	const args = ["npm", "publish", "--access", "public"];
+	if (distTag === undefined) return args;
+	if (distTag === "latest") throw new Error("An explicit latest dist-tag is not allowed for release backfills");
+	if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(distTag)) {
+		throw new Error(`Malformed npm dist-tag: ${distTag}`);
+	}
+	return [...args, "--tag", distTag];
+}
+
+const repoRoot = resolveReleaseSourceRoot(process.env.XCSH_RELEASE_SOURCE_ROOT);
 const isDryRun = process.argv.includes("--dry-run");
+const publishTag = readOption(process.argv.slice(2), "--tag");
+// Validate once before touching any package or registry.
+npmPublishArgs(publishTag);
+
 // Platform-specific native addon packages (published first so optionalDependencies resolve)
 const platformPackageDirs: PublishPackage[] = [
 	{ dir: "packages/natives/npm/linux-x64-gnu" },
@@ -39,14 +67,13 @@ const packageDirs: PublishPackage[] = [
 	{ dir: "packages/agent" },
 	{ dir: "packages/coding-agent" },
 ];
-const alreadyPublishedPatterns = [
-	"previously published",
-	"cannot publish over",
-	"You cannot publish over",
-];
 
-function isAlreadyPublished(output: string): boolean {
-	return alreadyPublishedPatterns.some((pattern) => output.includes(pattern));
+export function isAlreadyPublished(output: string, version: string): boolean {
+	const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return [
+		new RegExp(`cannot publish over (?:the )?previously published versions?:?\\s*["']?${escapedVersion}["']?`, "i"),
+		new RegExp(`cannot publish over (?:an )?existing version:?\\s*["']?${escapedVersion}["']?`, "i"),
+	].some(pattern => pattern.test(output));
 }
 
 async function readPackageJson(packageDir: string): Promise<PackageJson> {
@@ -117,7 +144,7 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 	}
 
 	if (isDryRun) {
-		console.log(`DRY RUN npm publish --access public (${pkg.dir})`);
+		console.log(`DRY RUN ${npmPublishArgs(publishTag).join(" ")} (${pkg.dir})`);
 		return;
 	}
 
@@ -130,14 +157,15 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 		let delay = 5_000;
 		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 			console.log(`Publishing ${packageName}... (attempt ${attempt}/${maxAttempts})`);
-			const result = await $`npm publish --access public`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
+			const publishArgs = npmPublishArgs(publishTag);
+			const result = await $`${publishArgs}`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
 			const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
 			if (result.exitCode === 0) {
 				if (output) console.log(output);
 				return;
 			}
 			if (output) console.log(output);
-			if (isAlreadyPublished(output)) {
+			if (isAlreadyPublished(output, packageJson.version ?? "")) {
 				console.log("Already published, skipping");
 				return;
 			}
