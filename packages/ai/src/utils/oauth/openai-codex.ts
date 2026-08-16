@@ -1,6 +1,7 @@
 /**
  * OpenAI Codex (ChatGPT OAuth) flow.
  */
+import { abortableSleep } from "@f5-sales-demo/pi-utils";
 import { isRecord } from "../../utils";
 import { OAuthCallbackFlow, type OAuthCallbackFlowOptions } from "./callback-server";
 import { generatePKCE } from "./pkce";
@@ -16,6 +17,11 @@ const SCOPE = "openid profile email offline_access api.connectors.read api.conne
 const JWT_CLAIM_PATH = "https://api.openai.com/auth";
 const JWT_PROFILE_CLAIM = "https://api.openai.com/profile";
 const TOKEN_REQUEST_TIMEOUT_MS = 15_000;
+const DEVICE_USER_CODE_URL = "https://auth.openai.com/api/accounts/deviceauth/usercode";
+const DEVICE_TOKEN_URL = "https://auth.openai.com/api/accounts/deviceauth/token";
+const DEVICE_AUTH_URL = "https://auth.openai.com/codex/device";
+const DEVICE_REDIRECT_URI = "https://auth.openai.com/deviceauth/callback";
+const DEVICE_FLOW_TIMEOUT_MS = 15 * 60 * 1000;
 
 /** Prefer callback-free authentication when xcsh is running in a remote terminal. */
 export function shouldUseOpenAICodexDeviceFlow(
@@ -170,8 +176,13 @@ class OpenAICodexOAuthFlow extends OAuthCallbackFlow {
 	}
 }
 
-async function exchangeCodeForToken(code: string, verifier: string, redirectUri: string): Promise<OAuthCredentials> {
-	const tokenResponse = await fetch(TOKEN_URL, {
+async function exchangeCodeForToken(
+	code: string,
+	verifier: string,
+	redirectUri: string,
+	fetchImpl: typeof fetch = fetch,
+): Promise<OAuthCredentials> {
+	const tokenResponse = await fetchImpl(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
@@ -223,6 +234,83 @@ export async function loginOpenAICodex(options: OpenAICodexLoginOptions): Promis
 	const originator = options.originator?.trim() || "pi";
 	const flow = new OpenAICodexOAuthFlow(options, pkce, originator);
 	return flow.login();
+}
+
+export type OpenAICodexDeviceFlowDependencies = {
+	fetch?: typeof fetch;
+	sleep?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
+	now?: () => number;
+};
+
+/** Authenticate ChatGPT without opening a local callback listener. */
+export async function loginOpenAICodexDevice(
+	options: OAuthController,
+	dependencies: OpenAICodexDeviceFlowDependencies = {},
+): Promise<OAuthCredentials> {
+	const fetchImpl = dependencies.fetch ?? fetch;
+	const sleep = dependencies.sleep ?? abortableSleep;
+	const now = dependencies.now ?? Date.now;
+	options.onProgress?.("Requesting a ChatGPT device code…");
+
+	const initResponse = await fetchImpl(DEVICE_USER_CODE_URL, {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify({ client_id: CLIENT_ID }),
+		signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
+	});
+	if (!initResponse.ok) {
+		const detail = formatOpenAICodexTokenEndpointError(initResponse.status, await initResponse.text());
+		throw new Error(`Device authorization initiation failed: ${detail}`);
+	}
+
+	const initData = (await initResponse.json()) as {
+		device_auth_id?: string;
+		user_code?: string;
+		interval?: string | number;
+	};
+	if (!initData.device_auth_id || !initData.user_code) {
+		throw new Error("Device authorization response missing required fields");
+	}
+
+	const parsedInterval = Number.parseInt(String(initData.interval ?? "5"), 10);
+	const pollIntervalMs = Math.max(1_000, (Number.isFinite(parsedInterval) ? parsedInterval : 5) * 1_000);
+	const deadline = now() + DEVICE_FLOW_TIMEOUT_MS;
+	options.onAuth?.({
+		url: DEVICE_AUTH_URL,
+		instructions: `Enter this one-time code: ${initData.user_code} (expires in 15 minutes)`,
+	});
+	options.onProgress?.("Waiting for approval in your browser…");
+
+	while (now() < deadline) {
+		if (options.signal?.aborted) throw new Error("Device authorization cancelled");
+		const pollResponse = await fetchImpl(DEVICE_TOKEN_URL, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ device_auth_id: initData.device_auth_id, user_code: initData.user_code }),
+			signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
+		});
+
+		if (pollResponse.status === 403 || pollResponse.status === 404) {
+			await sleep(pollIntervalMs, options.signal);
+			continue;
+		}
+		if (!pollResponse.ok) {
+			const detail = formatOpenAICodexTokenEndpointError(pollResponse.status, await pollResponse.text());
+			throw new Error(`Device token polling failed: ${detail}`);
+		}
+
+		const pollData = (await pollResponse.json()) as {
+			authorization_code?: string;
+			code_verifier?: string;
+		};
+		if (!pollData.authorization_code || !pollData.code_verifier) {
+			throw new Error("Device token response missing authorization code or verifier");
+		}
+		options.onProgress?.("Completing ChatGPT authentication…");
+		return exchangeCodeForToken(pollData.authorization_code, pollData.code_verifier, DEVICE_REDIRECT_URI, fetchImpl);
+	}
+
+	throw new Error("Device authorization expired after 15 minutes");
 }
 
 export async function refreshOpenAICodexToken(refreshToken: string): Promise<OAuthCredentials> {

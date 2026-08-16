@@ -3,6 +3,7 @@ import {
 	createOpenAICodexAuthorizationUrl,
 	formatOpenAICodexTokenEndpointError,
 	loginOpenAICodex,
+	loginOpenAICodexDevice,
 	shouldUseOpenAICodexDeviceFlow,
 } from "../src/utils/oauth/openai-codex";
 
@@ -71,5 +72,65 @@ describe("OpenAI Codex login method", () => {
 		expect(shouldUseOpenAICodexDeviceFlow({ SSH_CONNECTION: "client server" }, "linux", true)).toBe(true);
 		expect(shouldUseOpenAICodexDeviceFlow({ SSH_TTY: "/dev/pts/1" }, "linux", true)).toBe(true);
 		expect(shouldUseOpenAICodexDeviceFlow({}, "darwin", true)).toBe(false);
+	});
+});
+
+describe("OpenAI Codex device OAuth", () => {
+	it("shows a short code, polls remotely, and returns normal Codex credentials without a callback listener", async () => {
+		const encodeJwtPart = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+		const accessToken = `${encodeJwtPart({ alg: "none" })}.${encodeJwtPart({
+			"https://api.openai.com/auth": { chatgpt_account_id: "acct-device" },
+			"https://api.openai.com/profile": { email: "USER@example.com" },
+		})}.signature`;
+		const requests: Array<{ url: string; body: string }> = [];
+		let pollCount = 0;
+		const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
+			const url = String(input);
+			requests.push({ url, body: String(init?.body ?? "") });
+			if (url.endsWith("/deviceauth/usercode")) {
+				return Response.json({ device_auth_id: "device-secret", user_code: "ABCD-EFGH", interval: "5" });
+			}
+			if (url.endsWith("/deviceauth/token")) {
+				pollCount += 1;
+				return pollCount === 1
+					? Response.json({ error: "authorization_pending" }, { status: 404 })
+					: Response.json({ authorization_code: "authorization-secret", code_verifier: "verifier-secret" });
+			}
+			if (url.endsWith("/oauth/token")) {
+				return Response.json({ access_token: accessToken, refresh_token: "refresh-secret", expires_in: 3600 });
+			}
+			throw new Error(`Unexpected request: ${url}`);
+		}) as typeof fetch;
+		const onAuth = vi.fn();
+		const progress: string[] = [];
+
+		const credentials = await loginOpenAICodexDevice(
+			{ onAuth, onProgress: message => progress.push(message) },
+			{ fetch: fetchImpl, sleep: async () => {} },
+		);
+
+		expect(onAuth).toHaveBeenCalledWith({
+			url: "https://auth.openai.com/codex/device",
+			instructions: "Enter this one-time code: ABCD-EFGH (expires in 15 minutes)",
+		});
+		expect(requests.map(request => request.url)).toEqual([
+			"https://auth.openai.com/api/accounts/deviceauth/usercode",
+			"https://auth.openai.com/api/accounts/deviceauth/token",
+			"https://auth.openai.com/api/accounts/deviceauth/token",
+			"https://auth.openai.com/oauth/token",
+		]);
+		expect(requests.some(request => request.url.includes("localhost:1455"))).toBe(false);
+		expect(requests[3]?.body).toContain("redirect_uri=https%3A%2F%2Fauth.openai.com%2Fdeviceauth%2Fcallback");
+		expect(credentials).toMatchObject({
+			access: accessToken,
+			refresh: "refresh-secret",
+			accountId: "acct-device",
+			email: "user@example.com",
+		});
+		const visibleProgress = progress.join("\n");
+		expect(visibleProgress).not.toContain("device-secret");
+		expect(visibleProgress).not.toContain("authorization-secret");
+		expect(visibleProgress).not.toContain("verifier-secret");
+		expect(visibleProgress).not.toContain("refresh-secret");
 	});
 });
