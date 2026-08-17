@@ -53,16 +53,16 @@ SE-specific skills, and the federated llms.txt hierarchy.
 
 ## Architecture
 
-| Package | Role |
-|---------|------|
-| `coding-agent` | System prompt, tool orchestration, agent loop |
-| `agent` | Multi-agent coordination, subagent lifecycle |
-| `ai` | LLM provider abstraction (Anthropic, OpenAI, etc.) |
-| `tui` | Terminal UI, key bindings, themes |
-| `natives` | Native Bun/Rust bindings (PTY, fs, crypto) |
-| `stats` | Token counting, cost tracking |
-| `utils` | Shared utilities, config, logging |
-| `crates/pi-natives` | Rust native addon (compiled per-platform) |
+|Package|Role|
+|---|---|
+|`coding-agent`|System prompt, tool orchestration, agent loop|
+|`agent`|Multi-agent coordination, subagent lifecycle|
+|`ai`|LLM provider abstraction (Anthropic, OpenAI, etc.)|
+|`tui`|Terminal UI, key bindings, themes|
+|`natives`|Native Bun/Rust bindings (PTY, fs, crypto)|
+|`stats`|Token counting, cost tracking|
+|`utils`|Shared utilities, config, logging|
+|`crates/pi-natives`|Rust native addon (compiled per-platform)|
 
 ## Capabilities
 
@@ -86,7 +86,7 @@ SE-specific subagents (deal-analyst, status-operator, cli-operator, github-ops).
    whether the binary is wrong or the doc is stale.
 4. Classify the report as one of: **bug**, **feature**, **docs-drift**, or **config/usage**.
 5. Offer to file it with
-   `gh issue create --repo f5-sales-demo/xcsh --title ... --body ...`, referencing the commit above.
+   `gh issue create --repo f5-sales-demo/xcsh --title … --body …`, referencing the commit above.
 
 ## Self-improvement and editable surfaces
 
