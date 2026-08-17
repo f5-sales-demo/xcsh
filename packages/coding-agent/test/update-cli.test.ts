@@ -5,29 +5,85 @@ import * as path from "node:path";
 import { renderCommandHelp } from "@f5-sales-demo/pi-utils/cli";
 import { _resolveUpdateMethodForTest, parseUpdateArgs } from "../src/cli/update-cli";
 import SelfUpdate from "../src/commands/self-update";
-import Update from "../src/commands/update";
+import Update, { parseUpdateInvocation } from "../src/commands/update";
+
+const codingAgentDir = import.meta.dir.replace(/\/test$/, "");
+const updateFetchPreload = path.join(import.meta.dir, "fixtures", "update-fetch-preload.ts");
+
+function runUpdateSubprocess(args: string[], pathValue?: string): ReturnType<typeof Bun.spawnSync> {
+	return Bun.spawnSync([process.execPath, "--preload", updateFetchPreload, "src/cli.ts", "update", ...args], {
+		cwd: codingAgentDir,
+		env: { ...process.env, PATH: pathValue ?? process.env.PATH },
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+}
+
+function processOutput(result: ReturnType<typeof Bun.spawnSync>): { stdout: string; combined: string } {
+	const stdout = result.stdout?.toString() ?? "";
+	return { stdout, combined: `${stdout}${result.stderr?.toString() ?? ""}` };
+}
 
 describe("update command boundary", () => {
-	it("recognizes only self-update as the executable updater", () => {
+	it("keeps self-update as the explicit executable updater", () => {
 		expect(parseUpdateArgs(["self-update", "--check"])).toEqual({ force: false, check: true });
 		expect(parseUpdateArgs(["self-update", "--force"])).toEqual({ force: true, check: false });
 	});
 
-	it("never interprets manifest update flags as executable updater flags", () => {
-		expect(parseUpdateArgs(["update", "-f", "manifest.yaml"])).toBeUndefined();
+	it.each([
+		["bare", [], { force: false, check: false }],
+		["long check", ["--check"], { force: false, check: true }],
+		["short check", ["-c"], { force: false, check: true }],
+		["force", ["--force"], { force: true, check: false }],
+	] as const)("routes %s update to executable updating", (_name, argv, expected) => {
+		expect(parseUpdateInvocation([...argv])).toEqual({ mode: "executable", ...expected });
 	});
 
-	it("exposes distinct public CLI contracts for update and self-update", () => {
+	it.each([
+		["short filename", ["-f", "manifest.yaml"]],
+		["filename", ["--filename", "manifest.yaml"]],
+		["inline filename", ["--filename=manifest.yaml"]],
+		["namespace", ["--namespace", "demo"]],
+		["short namespace", ["-n", "demo"]],
+		["output", ["--output", "json"]],
+		["short output", ["-o", "yaml"]],
+		["recursive", ["--recursive"]],
+		["short recursive", ["-R"]],
+		["dry run", ["--dry-run", "client"]],
+		["result file", ["--result-file", "report.json"]],
+	] as const)("routes the %s manifest flag to resource updating", (_name, argv) => {
+		expect(parseUpdateInvocation([...argv])).toMatchObject({ mode: "resource" });
+	});
+
+	it.each([
+		[["--check", "-f", "manifest.yaml"]],
+		[["-c", "--namespace", "demo"]],
+		[["--force", "--dry-run", "client"]],
+	])("rejects mixed executable and resource flags before dispatch", argv => {
+		expect(() => parseUpdateInvocation(argv)).toThrow("cannot combine executable-update and resource-update flags");
+	});
+
+	it("rejects ambiguous, unknown, and positional update syntax as usage errors", () => {
+		expect(() => parseUpdateInvocation(["-f"])).toThrow(
+			"Ambiguous -f: use 'xcsh update --force' or 'xcsh self-update -f' for executable updates",
+		);
+		expect(() => parseUpdateInvocation(["--unknown"])).toThrow();
+		expect(() => parseUpdateInvocation(["manifest.yaml"])).toThrow();
+	});
+
+	it("documents both compatibility modes and the -f distinction", () => {
 		const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
 		try {
 			renderCommandHelp("xcsh", "update", Update);
-			const manifestUpdate = write.mock.calls.map(([chunk]) => String(chunk)).join("");
+			const compatibilityUpdate = write.mock.calls.map(([chunk]) => String(chunk)).join("");
 			write.mockClear();
 			renderCommandHelp("xcsh", "self-update", SelfUpdate);
 			const executableUpdate = write.mock.calls.map(([chunk]) => String(chunk)).join("");
 
-			expect(manifestUpdate).toContain("Update existing resources from manifests");
-			expect(manifestUpdate).toContain("--filename=<value>");
+			expect(compatibilityUpdate).toContain("Update the xcsh executable or existing resources from manifests");
+			expect(compatibilityUpdate).toContain("-f, --filename=<value>");
+			expect(compatibilityUpdate).toContain("--force");
+			expect(compatibilityUpdate).toContain("xcsh self-update -f");
 			expect(executableUpdate).toContain("Check for and install xcsh executable updates");
 			expect(executableUpdate).toContain("--check");
 		} finally {
@@ -35,16 +91,70 @@ describe("update command boundary", () => {
 		}
 	});
 
-	it("directs both English update notices to self-update", () => {
+	it("directs both English update notices to the version-universal command", () => {
 		const mainSource = fs.readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
 		const messages = JSON.parse(
 			fs.readFileSync(new URL("../src/locales/en.json", import.meta.url), "utf8"),
 		) as Record<string, string>;
 
-		expect(mainSource).toContain("run: xcsh self-update");
-		expect(mainSource).not.toContain("run: xcsh update`");
-		expect(messages["welcome.updateHint"]).toBe("run: xcsh self-update");
+		expect(mainSource).toContain("run: xcsh update");
+		expect(mainSource).not.toContain("run: xcsh self-update");
+		expect(messages["welcome.updateHint"]).toBe("run: xcsh update");
 	});
+
+	it.each([
+		["bare", []],
+		["check", ["--check"]],
+		["short check", ["-c"]],
+	])("runs the %s executable form without entering onboarding", (_name, argv) => {
+		const result = runUpdateSubprocess(argv);
+		const { combined: output } = processOutput(result);
+		expect(result.exitCode).toBe(0);
+		expect(output).toContain("Current version:");
+		expect(output).toContain("Already up to date");
+		expect(output).not.toContain("Model Provider URL");
+	});
+
+	it("runs update --force through executable replacement without entering onboarding", () => {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-update-command-"));
+		const fakeBinary = path.join(tempDir, "xcsh");
+		try {
+			fs.writeFileSync(fakeBinary, "#!/bin/sh\nprintf 'xcsh/0.0.0\\n'\n", { mode: 0o755 });
+			const result = runUpdateSubprocess(["--force"], tempDir);
+			const { combined: output } = processOutput(result);
+			expect(result.exitCode).toBe(0);
+			expect(output).toContain("Forcing reinstall");
+			expect(output).toContain("Install method: binary");
+			expect(output).not.toContain("Model Provider URL");
+		} finally {
+			fs.rmSync(tempDir, { recursive: true, force: true });
+		}
+	}, 40_000);
+
+	it("returns usage exit 2 for mixed and invalid forms before fetching or resource output", () => {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-update-rejection-"));
+		const fetchMarker = path.join(tempDir, "fetch-called");
+		try {
+			for (const argv of [["--check", "-f", "test/fixtures/resource-manifest.yaml"], ["-f"], ["--unknown"]]) {
+				const result = Bun.spawnSync(
+					[process.execPath, "--preload", updateFetchPreload, "src/cli.ts", "update", ...argv],
+					{
+						cwd: codingAgentDir,
+						env: { ...process.env, XCSH_UPDATE_FETCH_MARKER: fetchMarker },
+						stdout: "pipe",
+						stderr: "pipe",
+					},
+				);
+				const { stdout, combined: output } = processOutput(result);
+				expect(result.exitCode).toBe(2);
+				expect(stdout).not.toContain('"operation":"update"');
+				expect(output).not.toContain("Model Provider URL");
+				expect(fs.existsSync(fetchMarker)).toBe(false);
+			}
+		} finally {
+			fs.rmSync(tempDir, { recursive: true, force: true });
+		}
+	}, 40_000);
 });
 
 describe("update-cli install target detection", () => {
