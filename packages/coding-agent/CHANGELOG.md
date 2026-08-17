@@ -16,6 +16,12 @@
   contract so TUI, Browser, Office, RPC, and ACP transports no longer identify media by tool name
   ([#3202](https://github.com/f5-sales-demo/xcsh/issues/3202)).
 
+### Fixed
+
+- Restored bare `xcsh update` as a backward-compatible executable updater while preserving
+  manifest-based resource updates and the explicit `xcsh self-update` command
+  ([#3249](https://github.com/f5-sales-demo/xcsh/issues/3249)).
+
 ## [20.6.3] - 2026-08-07
 
 ### Improved

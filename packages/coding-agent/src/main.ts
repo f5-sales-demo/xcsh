@@ -180,7 +180,7 @@ async function runInteractiveMode(
 	if (settings.get("startup.checkUpdate")) {
 		void versionCheckPromise
 			.then(latest => {
-				if (latest) mode.showStatus(`Update available: v${latest} — run: xcsh self-update`, { dim: true });
+				if (latest) mode.showStatus(`Update available: v${latest} — run: xcsh update`, { dim: true });
 			})
 			.catch(() => {});
 	}

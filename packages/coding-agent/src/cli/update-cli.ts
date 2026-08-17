@@ -1,7 +1,7 @@
 /**
  * Update CLI command handler.
  *
- * Handles `xcsh self-update` to check for and install executable updates.
+ * Handles executable updates for explicit `xcsh self-update` and compatible `xcsh update` forms.
  * Auto-detects the installation method (npm, brew, bun, or standalone binary)
  * and updates through the appropriate channel.
  */
@@ -439,14 +439,21 @@ export async function runUpdateCommand(opts: { force: boolean; check: boolean })
  * Print update command help.
  */
 export function printUpdateHelp(): void {
-	console.log(`${chalk.bold(`${APP_NAME} update`)} - Check for and install updates
+	console.log(`${chalk.bold(`${APP_NAME} update`)} - Update the executable or existing resources from manifests
 
 ${chalk.bold("Usage:")}
-  ${APP_NAME} update [options]
+  ${APP_NAME} update [--check | --force]
+  ${APP_NAME} update -f <manifest> [resource options]
 
-${chalk.bold("Options:")}
-  -c, --check   Check for updates without installing
-  -f, --force   Force reinstall even if up to date
+${chalk.bold("Executable options:")}
+  -c, --check   Check for executable updates without installing
+      --force   Force reinstall even if up to date
+
+${chalk.bold("Resource input:")}
+  -f, --filename <manifest>   Update resources from a manifest
+
+Short -f means --filename for xcsh update. Use xcsh self-update -f for the
+short executable force form. Executable and resource flags cannot be mixed.
 
 ${chalk.bold("Install methods (auto-detected):")}
   npm           Installed via npm install -g
@@ -458,5 +465,6 @@ ${chalk.bold("Examples:")}
   ${APP_NAME} update           Update to latest version
   ${APP_NAME} update --check   Check if updates are available
   ${APP_NAME} update --force   Force reinstall
+  ${APP_NAME} update -f manifest.yaml   Update resources
 `);
 }
