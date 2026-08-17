@@ -15,6 +15,14 @@
 - Unified generated and existing media publication behind the versioned `xcsh.media/v1` result
   contract so TUI, Browser, Office, RPC, and ACP transports no longer identify media by tool name
   ([#3202](https://github.com/f5-sales-demo/xcsh/issues/3202)).
+- Standardized documentation terminology, Handlebars prompt template rendering for `renderAboutDoc`,
+  Office add-in development test ownership, and language switcher links
+  ([#2848](https://github.com/f5-sales-demo/xcsh/issues/2848),
+   [#2999](https://github.com/f5-sales-demo/xcsh/issues/2999),
+   [#1327](https://github.com/f5-sales-demo/xcsh/issues/1327),
+   [#3001](https://github.com/f5-sales-demo/xcsh/issues/3001),
+   [#2850](https://github.com/f5-sales-demo/xcsh/issues/2850),
+   [#2514](https://github.com/f5-sales-demo/xcsh/issues/2514)).
 
 ### Fixed
 

@@ -40,6 +40,16 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 
 ---
 
+## Managed Codex Instructions & Agent Policy
+
+When developing features or refactoring codebase components using AI coding assistants (Codex, Claude Code, Antigravity):
+- **Governance Alignment:** Follow rules defined in `AGENTS.md` and repository `.claude/governance.json`.
+- **Managed Prompt Isolation:** Do not build system prompts in code. Prompts live in static `.md` files under `packages/coding-agent/src/prompts/` and are rendered using Handlebars (`prompt.render`).
+- **Codex Rigor Compliance:** All non-trivial PRs require systematic planning (`rigor-planner`), strict TDD verification, and completion auditing (`rigor-completion-auditor`).
+
+
+---
+
 ## Project Structure
 
 ### Monorepo layout
