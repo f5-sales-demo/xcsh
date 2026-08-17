@@ -13,6 +13,14 @@ hardened runtime, long-lived sessions with tree navigation and compaction,
 a Python IPython tool, full MCP support, a skills system, and platform
 packaging targeting Linux, macOS, and Windows.
 
+## Languages / Switcher
+
+Choose your language on the rendered documentation site:
+- [English (en)](https://f5-sales-demo.github.io/docs/)
+- [简体中文 (zh-cn)](https://f5-sales-demo.github.io/docs/zh-cn/)
+- [繁體中文 (zh-tw)](https://f5-sales-demo.github.io/docs/zh-tw/)
+- [Português Brasil (pt-br)](https://f5-sales-demo.github.io/docs/pt-br/)
+
 ## Where to start
 
 - **[F5 XC Contexts](runtime-tools/context-command)** — connect to F5 Distributed Cloud
