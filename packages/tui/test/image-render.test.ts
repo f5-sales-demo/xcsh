@@ -6,6 +6,7 @@ import {
 	ImageProtocol,
 	isWindowsTerminalPreviewSixelSupported,
 	renderImage,
+	resolveTerminalInfo,
 	setCellDimensions,
 	TERMINAL,
 } from "@f5-sales-demo/pi-tui/terminal-capabilities";
@@ -110,6 +111,53 @@ describe("terminal image rendering", () => {
 		expect(lines[1]).toContain("\x1b[1A");
 		expect(lines[1]).toContain("c=2");
 		expect(lines[1]).toContain("r=2");
+	});
+});
+
+describe("Herdr Kitty graphics capability", () => {
+	it("selects Kitty and emits graphics for an explicitly capable Herdr pane", () => {
+		const resolved = resolveTerminalInfo({ TERM: "xterm-256color", HERDR_ENV: "1", HERDR_KITTY_GRAPHICS: "1" }, true);
+		expect(resolved.imageProtocol).toBe(ImageProtocol.Kitty);
+
+		const originalProtocol = terminal.imageProtocol;
+		terminal.imageProtocol = resolved.imageProtocol;
+		try {
+			const result = renderImage(BASE64_DUMMY, SQUARE_DIMENSIONS);
+			expect(result?.sequence.startsWith(ImageProtocol.Kitty)).toBe(true);
+		} finally {
+			terminal.imageProtocol = originalProtocol;
+		}
+	});
+
+	it("requires exact enabled Herdr markers and TTY output", () => {
+		for (const env of [
+			{ TERM: "xterm-256color" },
+			{ TERM: "xterm-256color", HERDR_ENV: "1" },
+			{ TERM: "xterm-256color", HERDR_KITTY_GRAPHICS: "1" },
+			{ TERM: "xterm-256color", HERDR_ENV: "yes", HERDR_KITTY_GRAPHICS: "1" },
+			{ TERM: "xterm-256color", HERDR_ENV: "1", HERDR_KITTY_GRAPHICS: "0" },
+			{ TERM: "xterm-256color", HERDR_ENV: "1", HERDR_KITTY_GRAPHICS: "true" },
+		]) {
+			expect(resolveTerminalInfo(env, true).imageProtocol).toBeNull();
+		}
+		expect(
+			resolveTerminalInfo({ TERM: "xterm-256color", HERDR_ENV: "1", HERDR_KITTY_GRAPHICS: "1" }, false)
+				.imageProtocol,
+		).toBeNull();
+	});
+
+	it("preserves explicit image-protocol override precedence", () => {
+		const env = { TERM: "xterm-256color", HERDR_ENV: "1", HERDR_KITTY_GRAPHICS: "1" };
+		expect(resolveTerminalInfo({ ...env, PI_FORCE_IMAGE_PROTOCOL: "off" }, true).imageProtocol).toBeNull();
+		expect(resolveTerminalInfo({ ...env, PI_FORCE_IMAGE_PROTOCOL: "kitty" }, true).imageProtocol).toBe(
+			ImageProtocol.Kitty,
+		);
+		expect(resolveTerminalInfo({ ...env, PI_FORCE_IMAGE_PROTOCOL: "iterm2" }, true).imageProtocol).toBe(
+			ImageProtocol.Iterm2,
+		);
+		expect(resolveTerminalInfo({ ...env, PI_FORCE_IMAGE_PROTOCOL: "sixel" }, true).imageProtocol).toBe(
+			ImageProtocol.Sixel,
+		);
 	});
 });
 

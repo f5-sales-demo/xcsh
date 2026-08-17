@@ -59,8 +59,8 @@ export function isNotificationSuppressed(): boolean {
 	return value === "off" || value === "0" || value === "false";
 }
 
-function getForcedImageProtocol(): ImageProtocol | null | undefined {
-	const raw = $env.PI_FORCE_IMAGE_PROTOCOL?.trim().toLowerCase();
+function getForcedImageProtocol(env: NodeJS.ProcessEnv): ImageProtocol | null | undefined {
+	const raw = env.PI_FORCE_IMAGE_PROTOCOL?.trim().toLowerCase();
 	if (!raw) return undefined;
 	if (raw === "kitty") return ImageProtocol.Kitty;
 	if (raw === "iterm2" || raw === "iterm") return ImageProtocol.Iterm2;
@@ -97,12 +97,21 @@ export function isWindowsTerminalPreviewSixelSupported(
 	if (!version) return false;
 	return version.major > 1 || (version.major === 1 && version.minor >= 22);
 }
-function getFallbackImageProtocol(terminalId: TerminalId): ImageProtocol | null {
-	if (!process.stdout.isTTY) return null;
+function hasHerdrKittyGraphics(env: NodeJS.ProcessEnv): boolean {
+	return env.HERDR_ENV === "1" && env.HERDR_KITTY_GRAPHICS === "1";
+}
+
+function getFallbackImageProtocol(
+	terminalId: TerminalId,
+	env: NodeJS.ProcessEnv,
+	stdoutIsTTY: boolean,
+): ImageProtocol | null {
+	if (!stdoutIsTTY) return null;
+	if (hasHerdrKittyGraphics(env)) return ImageProtocol.Kitty;
 	if (terminalId === "alacritty") return null;
 	// VS Code 1.80+ supports iTerm2 inline image protocol
 	if (terminalId === "vscode") return ImageProtocol.Iterm2;
-	const term = Bun.env.TERM?.toLowerCase() ?? "";
+	const term = env.TERM?.toLowerCase() ?? "";
 	if (term.includes("screen") || term.includes("tmux") || term.includes("ghostty")) {
 		return ImageProtocol.Kitty;
 	}
@@ -121,11 +130,11 @@ const KNOWN_TERMINALS = Object.freeze({
 	alacritty: new TerminalInfo("alacritty", null, true, true, NotifyProtocol.Bell),
 });
 
-export const TERMINAL_ID: TerminalId = (() => {
-	function caseEq(a: string, b: string): boolean {
-		return a.toLowerCase() === b.toLowerCase(); // For compiler to pattern match
-	}
+function caseEq(a: string, b: string): boolean {
+	return a.toLowerCase() === b.toLowerCase(); // For compiler to pattern match
+}
 
+export function resolveTerminalId(env: NodeJS.ProcessEnv): TerminalId {
 	const {
 		KITTY_WINDOW_ID,
 		GHOSTTY_RESOURCES_DIR,
@@ -136,7 +145,7 @@ export const TERMINAL_ID: TerminalId = (() => {
 		TERM_PROGRAM,
 		TERM,
 		COLORTERM,
-	} = Bun.env;
+	} = env;
 
 	if (KITTY_WINDOW_ID) return "kitty";
 	if (GHOSTTY_RESOURCES_DIR) return "ghostty";
@@ -160,11 +169,12 @@ export const TERMINAL_ID: TerminalId = (() => {
 		if (caseEq(COLORTERM, "truecolor") || caseEq(COLORTERM, "24bit")) return "trueColor";
 	}
 	return "base";
-})();
+}
 
-export const TERMINAL = (() => {
-	const terminal = getTerminalInfo(TERMINAL_ID);
-	const forcedImageProtocol = getForcedImageProtocol();
+/** Resolve terminal capabilities from an explicit environment and stdout TTY state. */
+export function resolveTerminalInfo(env: NodeJS.ProcessEnv, stdoutIsTTY: boolean): TerminalInfo {
+	const terminal = getTerminalInfo(resolveTerminalId(env));
+	const forcedImageProtocol = getForcedImageProtocol(env);
 	if (forcedImageProtocol !== undefined) {
 		return new TerminalInfo(
 			terminal.id,
@@ -175,7 +185,7 @@ export const TERMINAL = (() => {
 		);
 	}
 	if (!terminal.imageProtocol) {
-		const fallbackImageProtocol = getFallbackImageProtocol(terminal.id);
+		const fallbackImageProtocol = getFallbackImageProtocol(terminal.id, env, stdoutIsTTY);
 		if (fallbackImageProtocol) {
 			return new TerminalInfo(
 				terminal.id,
@@ -187,7 +197,11 @@ export const TERMINAL = (() => {
 		}
 	}
 	return terminal;
-})();
+}
+
+export const TERMINAL_ID: TerminalId = resolveTerminalId(Bun.env);
+
+export const TERMINAL = resolveTerminalInfo(Bun.env, process.stdout.isTTY ?? false);
 
 type MutableTerminalInfo = {
 	imageProtocol: ImageProtocol | null;
