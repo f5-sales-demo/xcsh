@@ -34,6 +34,16 @@ const location = {
 	sources: [source],
 };
 
+function expectDeterministicMapSemantics(svg: string): void {
+	expect(svg).toContain('class="title">Current edges</text>');
+	expect(svg).toContain('class="marker">1</text>');
+	expect(svg).toContain('class="label">Toronto edge</text>');
+	expect(svg).toContain('<g class="legend">');
+	expect(svg).toContain("approximate / inferred");
+	expect(svg).toContain('class="attribution">Schematic Web Mercator • no basemap tiles</text>');
+	expect(svg).not.toContain("Unresolved edge");
+}
+
 describe("MapLocationV1", () => {
 	test("rejects coordinates without current-request provenance", () => {
 		expect(() => validateMapLocationV1({ ...location, sources: [] })).toThrow("provenance");
@@ -61,11 +71,19 @@ describe("MapLocationV1", () => {
 
 	test("builds deterministic schematic output with visible attribution and styling", () => {
 		const value = validateMapLocationV1(location);
-		const first = buildMapSvg("Current edges", [value], "schematic");
-		const second = buildMapSvg("Current edges", [value], "schematic");
+		const unresolved = validateMapLocationV1({
+			id: "unresolved-edge",
+			label: "Unresolved edge",
+			precision: "unresolved",
+			resolution: "unresolved",
+			confidence: "unknown",
+			sources: [source],
+		});
+		const first = buildMapSvg("Current edges", [value, unresolved], "schematic");
+		const second = buildMapSvg("Current edges", [value, unresolved], "schematic");
 		expect(first).toBe(second);
-		expect(first).toContain("Schematic Web Mercator");
-		expect(first).toContain("approximate / inferred");
+		expectDeterministicMapSemantics(first);
+		expect(() => expectDeterministicMapSemantics(first.replace("Toronto edge", ""))).toThrow();
 	});
 });
 
