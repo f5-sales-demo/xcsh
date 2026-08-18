@@ -6,64 +6,26 @@ sidebar:
   label: Storage & entry model
 ---
 
-# Session Storage and Entry Model
+# Session storage and entry model
 
-This document is the source of truth for how coding-agent sessions are represented, persisted, migrated, and reconstructed at runtime.
+This document defines the storage layout, serialization formats, entry taxonomy, and context reconstruction algorithms used by xcsh.
 
-## Scope
+## Storage directory structure
 
-Covers:
-
-- Session JSONL format and versioning
-- Entry taxonomy and tree semantics (`id`/`parentId` + leaf pointer)
-- Migration/compatibility behavior when loading old or malformed files
-- Context reconstruction (`buildSessionContext`)
-- Persistence guarantees, failure behavior, truncation/blob externalization
-- Storage abstractions (`FileSessionStorage`, `MemorySessionStorage`) and related utilities
-
-Does not cover `/tree` UI rendering behavior beyond semantics that affect session data.
-
-## Implementation Files
-
-- [`src/session/session-manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-manager.ts)
-- [`src/session/messages.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/messages.ts)
-- [`src/session/session-storage.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/session-storage.ts)
-- [`src/session/history-storage.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/history-storage.ts)
-- [`src/session/blob-store.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/blob-store.ts)
-
-## On-Disk Layout
-
-Default session file location:
+Sessions persist as newline-delimited JSON (`.jsonl`) files in a directory derived from the working directory:
 
 ```text
-~/.xcsh/agent/sessions/--<cwd-encoded>--/<timestamp>_<sessionId>.jsonl
+~/.xcsh/agent/sessions/--<encoded-workspace-path>--/<timestamp>_<sessionId>.jsonl
 ```
 
-`<cwd-encoded>` is derived from the working directory by stripping leading slash and replacing `/`, `\\`, and `:` with `-`.
+- **Large binary blobs**: Stored in content-addressable storage under `~/.xcsh/agent/blobs/<sha256>`.
+- **Terminal breadcrumbs**: Written to `~/.xcsh/agent/terminal-sessions/<terminal-id>` containing the current working directory and active session file path.
 
-Blob store location:
+## File format and entry schema
 
-```text
-~/.xcsh/agent/blobs/<sha256>
-```
+The first line of every `.jsonl` file contains the session header. Subsequent lines contain append-only `SessionEntry` records.
 
-Terminal breadcrumb files are written under:
-
-```text
-~/.xcsh/agent/terminal-sessions/<terminal-id>
-```
-
-Breadcrumb content is two lines: original cwd, then session file path. `continueRecent()` prefers this terminal-scoped pointer before scanning most-recent mtime.
-
-## File Format
-
-Session files are JSONL: one JSON object per line.
-
-- Line 1 is always the session header (`type: "session"`).
-- Remaining lines are `SessionEntry` values.
-- Entries are append-only at runtime; branch navigation moves a pointer (`leafId`) rather than mutating existing entries.
-
-### Header (`SessionHeader`)
+### Session header (`SessionHeader`)
 
 ```json
 {
@@ -71,375 +33,45 @@ Session files are JSONL: one JSON object per line.
   "version": 3,
   "id": "1f9d2a6b9c0d1234",
   "timestamp": "2026-02-16T10:20:30.000Z",
-  "cwd": "/work/pi",
+  "cwd": "/work/project",
   "title": "optional session title",
   "parentSession": "optional lineage marker"
 }
 ```
 
-Notes:
-
-- `version` is optional in v1 files; absence means v1.
-- `parentSession` is an opaque lineage string. Current code writes either a session id or a session path depending on flow (`fork`, `forkFrom`, `createBranchedSession`, or explicit `newSession({ parentSession })`). Treat as metadata, not a typed foreign key.
-
-### Entry Base (`SessionEntryBase`)
-
-All non-header entries include:
-
-```json
-{
-  "type": "...",
-  "id": "8-char-id",
-  "parentId": "previous-or-branch-parent",
-  "timestamp": "2026-02-16T10:20:30.000Z"
-}
-```
-
-`parentId` can be `null` for a root entry (first append, or after `resetLeaf()`).
-
-## Entry Taxonomy
-
-`SessionEntry` is the union of:
-
-- `message`
-- `thinking_level_change`
-- `model_change`
-- `compaction`
-- `branch_summary`
-- `custom`
-- `custom_message`
-- `label`
-- `ttsr_injection`
-- `session_init`
-- `mode_change`
-
-### `message`
-
-Stores an `AgentMessage` directly.
-
-```json
-{
-  "type": "message",
-  "id": "a1b2c3d4",
-  "parentId": null,
-  "timestamp": "2026-02-16T10:21:00.000Z",
-  "message": {
-    "role": "assistant",
-    "provider": "anthropic",
-    "model": "claude-sonnet-4-5",
-    "content": [{ "type": "text", "text": "Done." }],
-    "usage": { "input": 100, "output": 20, "cacheRead": 0, "cacheWrite": 0, "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 } },
-    "timestamp": 1760000000000
-  }
-}
-```
-
-### `model_change`
-
-```json
-{
-  "type": "model_change",
-  "id": "b1c2d3e4",
-  "parentId": "a1b2c3d4",
-  "timestamp": "2026-02-16T10:21:30.000Z",
-  "model": "openai/gpt-4o",
-  "role": "default"
-}
-```
-
-`role` is optional; missing is treated as `default` in context reconstruction.
-
-### `thinking_level_change`
-
-```json
-{
-  "type": "thinking_level_change",
-  "id": "c1d2e3f4",
-  "parentId": "b1c2d3e4",
-  "timestamp": "2026-02-16T10:22:00.000Z",
-  "thinkingLevel": "high"
-}
-```
-
-### `compaction`
-
-```json
-{
-  "type": "compaction",
-  "id": "d1e2f3a4",
-  "parentId": "c1d2e3f4",
-  "timestamp": "2026-02-16T10:23:00.000Z",
-  "summary": "Conversation summary",
-  "shortSummary": "Short recap",
-  "firstKeptEntryId": "a1b2c3d4",
-  "tokensBefore": 42000,
-  "details": { "readFiles": ["src/a.ts"] },
-  "preserveData": { "hookState": true },
-  "fromExtension": false
-}
-```
-
-### `branch_summary`
-
-```json
-{
-  "type": "branch_summary",
-  "id": "e1f2a3b4",
-  "parentId": "a1b2c3d4",
-  "timestamp": "2026-02-16T10:24:00.000Z",
-  "fromId": "a1b2c3d4",
-  "summary": "Summary of abandoned path",
-  "details": { "note": "optional" },
-  "fromExtension": true
-}
-```
-
-If branching from root (`branchFromId === null`), `fromId` is the literal string `"root"`.
-
-### `custom`
-
-Extension state persistence; ignored by `buildSessionContext`.
-
-```json
-{
-  "type": "custom",
-  "id": "f1a2b3c4",
-  "parentId": "e1f2a3b4",
-  "timestamp": "2026-02-16T10:25:00.000Z",
-  "customType": "my-extension",
-  "data": { "state": 1 }
-}
-```
-
-### `custom_message`
-
-Extension-provided message that does participate in LLM context.
-
-```json
-{
-  "type": "custom_message",
-  "id": "a2b3c4d5",
-  "parentId": "f1a2b3c4",
-  "timestamp": "2026-02-16T10:26:00.000Z",
-  "customType": "my-extension",
-  "content": "Injected context",
-  "display": true,
-  "details": { "debug": false }
-}
-```
-
-### `label`
-
-```json
-{
-  "type": "label",
-  "id": "b2c3d4e5",
-  "parentId": "a2b3c4d5",
-  "timestamp": "2026-02-16T10:27:00.000Z",
-  "targetId": "a1b2c3d4",
-  "label": "checkpoint"
-}
-```
-
-`label: undefined` clears a label for `targetId`.
-
-### `ttsr_injection`
-
-```json
-{
-  "type": "ttsr_injection",
-  "id": "c2d3e4f5",
-  "parentId": "b2c3d4e5",
-  "timestamp": "2026-02-16T10:28:00.000Z",
-  "injectedRules": ["ruleA", "ruleB"]
-}
-```
-
-### `session_init`
-
-```json
-{
-  "type": "session_init",
-  "id": "d2e3f4a5",
-  "parentId": "c2d3e4f5",
-  "timestamp": "2026-02-16T10:29:00.000Z",
-  "systemPrompt": "...",
-  "task": "...",
-  "tools": ["read", "edit"],
-  "outputSchema": { "type": "object" }
-}
-```
-
-### `mode_change`
-
-```json
-{
-  "type": "mode_change",
-  "id": "e2f3a4b5",
-  "parentId": "d2e3f4a5",
-  "timestamp": "2026-02-16T10:30:00.000Z",
-  "mode": "plan",
-  "data": { "planFile": "/tmp/plan.md" }
-}
-```
-
-## Versioning and Migration
-
-Current session version: `3`.
-
-### v1 -> v2
-
-Applied when header `version` is missing or `< 2`:
-
-- Adds `id` and `parentId` to each non-header entry.
-- Reconstructs a linear parent chain using file order.
-- Migrates compaction field `firstKeptEntryIndex` -> `firstKeptEntryId` when present.
-- Sets header `version = 2`.
-
-### v2 -> v3
-
-Applied when header `version < 3`:
-
-- For `message` entries: rewrites legacy `message.role === "hookMessage"` to `"custom"`.
-- Sets header `version = 3`.
-
-### Migration Trigger and Persistence
-
-- Migrations run during session load (`setSessionFile`).
-- If any migration ran, the entire file is rewritten to disk immediately.
-- Migration mutates in-memory entries first, then persists rewritten JSONL.
-
-## Load and Compatibility Behavior
-
-`loadEntriesFromFile(path)` behavior:
-
-- Missing file (`ENOENT`) -> returns `[]`.
-- Non-parseable lines are handled by lenient JSONL parser (`parseJsonlLenient`).
-- If first parsed entry is not a valid session header (`type !== "session"` or missing string `id`) -> returns `[]`.
-
-`SessionManager.setSessionFile()` behavior:
-
-- `[]` from loader is treated as empty/nonexistent session and replaced with a new initialized session file at that path.
-- Valid files are loaded, migrated if needed, blob refs resolved, then indexed.
-
-## Tree and Leaf Semantics
-
-The underlying model is append-only tree + mutable leaf pointer:
-
-- Every append method creates exactly one new entry whose `parentId` is current `leafId`.
-- The new entry becomes the new `leafId`.
-- `branch(entryId)` moves only `leafId`; existing entries remain unchanged.
-- `resetLeaf()` sets `leafId = null`; next append creates a new root entry (`parentId: null`).
-- `branchWithSummary()` sets leaf to branch target and appends a `branch_summary` entry.
-
-`getEntries()` returns all non-header entries in insertion order. Existing entries are not deleted in normal operation; rewrites preserve logical history while updating representation (migrations, move, targeted rewrite helpers).
-
-## Context Reconstruction (`buildSessionContext`)
-
-`buildSessionContext(entries, leafId, byId?)` resolves what is sent to the model.
-
-Algorithm:
-
-1. Determine leaf:
-   - `leafId === null` -> return empty context.
-   - explicit `leafId` -> use that entry if found.
-   - otherwise fallback to last entry.
-2. Walk `parentId` chain from leaf to root and reverse to root->leaf path.
-3. Derive runtime state across path:
-   - `thinkingLevel` from latest `thinking_level_change` (default `"off"`)
-   - model map from `model_change` entries (`role ?? "default"`)
-   - fallback `models.default` from assistant message provider/model if no explicit model change
-   - deduplicated `injectedTtsrRules` from all `ttsr_injection` entries
-   - mode/modeData from latest `mode_change` (default mode `"none"`)
-4. Build message list:
-   - `message` entries pass through
-   - `custom_message` entries become `custom` AgentMessages via `createCustomMessage`
-   - `branch_summary` entries become `branchSummary` AgentMessages via `createBranchSummaryMessage`
-   - if a `compaction` exists on path:
-     - emit compaction summary first (`createCompactionSummaryMessage`)
-     - emit path entries starting at `firstKeptEntryId` up to the compaction boundary
-     - emit entries after the compaction boundary
-
-`custom` and `session_init` entries do not inject model context directly.
-
-## Persistence Guarantees and Failure Model
-
-### Persist vs in-memory
-
-- `SessionManager.create/open/continueRecent/forkFrom` -> persistent mode (`persist = true`).
-- `SessionManager.inMemory` -> non-persistent mode (`persist = false`) with `MemorySessionStorage`.
-
-### Write pipeline
-
-Writes are serialized through an internal promise chain (`#persistChain`) and `NdjsonFileWriter`.
-
-- `append*` updates in-memory state immediately.
-- Persistence is deferred until at least one assistant message exists.
-  - Before first assistant: entries are retained in memory; no file append occurs.
-  - When first assistant exists: full in-memory session is flushed to file.
-  - Afterwards: new entries append incrementally.
-
-Rationale in code: avoid persisting sessions that never produced an assistant response.
-
-### Durability operations
-
-- `flush()` flushes writer and calls `fsync()`.
-- Atomic full rewrites (`#rewriteFile`) write to temp file, flush+fsync, close, then rename over target.
-- Used for migrations, `setSessionName`, `rewriteEntries`, move operations, and tool-call arg rewrites.
-
-### Error behavior
-
-- Persistence errors are latched (`#persistError`) and rethrown on subsequent operations.
-- First error is logged once with session file context.
-- Writer close is best-effort but propagates the first meaningful error.
-
-## Data Size Controls and Blob Externalization
-
-Before persisting entries:
-
-- Large strings are truncated to `MAX_PERSIST_CHARS` (500,000 chars) with notice:
-  - `"[Session persistence truncated large content]"`
-- Transient fields `partialJson` and `jsonlEvents` are removed.
-- If object has both `content` and `lineCount`, line count is recomputed after truncation.
-- Image blocks in `content` arrays with base64 length >= 1024 are externalized to blob refs:
-  - stored as `blob:sha256:<hash>`
-  - raw bytes written to blob store (`BlobStore.put`)
-
-On load, blob refs are resolved back to base64 for message/custom_message image blocks.
-
-## Storage Abstractions
-
-`SessionStorage` interface provides all filesystem operations used by `SessionManager`:
-
-- sync: `ensureDirSync`, `existsSync`, `writeTextSync`, `statSync`, `listFilesSync`
-- async: `exists`, `readText`, `readTextPrefix`, `writeText`, `rename`, `unlink`, `openWriter`
-
-Implementations:
-
-- `FileSessionStorage`: real filesystem (Bun + node fs)
-- `MemorySessionStorage`: map-backed in-memory implementation for tests/non-persistent sessions
-
-`SessionStorageWriter` exposes `writeLine`, `flush`, `fsync`, `close`, `getError`.
-
-## Session Discovery Utilities
-
-Defined in `session-manager.ts`:
-
-- `getRecentSessions(sessionDir, limit)` -> lightweight metadata for UI/session picker
-- `findMostRecentSession(sessionDir)` -> newest by mtime
-- `list(cwd, sessionDir?)` -> sessions in one project scope
-- `listAll()` -> sessions across all project scopes under `~/.xcsh/agent/sessions`
-
-Metadata extraction reads only a prefix (`readTextPrefix(..., 4096)`) where possible.
-
-## Related but Distinct: Prompt History Storage
-
-`HistoryStorage` (`history-storage.ts`) is a separate SQLite subsystem for prompt recall/search, not session replay.
-
-- DB: `~/.xcsh/agent/history.db`
-- Table: `history(id, prompt, created_at, cwd)`
-- FTS5 index: `history_fts` with trigger-maintained sync
-- Deduplicates consecutive identical prompts using in-memory last-prompt cache
-- Async insertion (`setImmediate`) so prompt capture does not block turn execution
-
-Use session files for conversation graph/state replay; use `HistoryStorage` for prompt history UX.
+### Entry taxonomy
+
+All entry records inherit base properties (`id`, `parentId`, `timestamp`):
+
+| Entry type | Description | Context impact |
+| --- | --- | --- |
+| `message` | Complete user or assistant conversation turn | Emitted directly as an `AgentMessage` |
+| `model_change` | Updates active model assignment for a role | Updates model mapping in active context |
+| `thinking_level_change` | Updates reasoning/thinking budget | Adjusts thinking parameters |
+| `compaction` | Checkpoint summarizing prior turns | Replaces preceding turns with summary text |
+| `branch_summary` | Summary of abandoned branch turns | Injected as context on the active leaf |
+| `custom_message` | Extension-injected conversational turns | Emitted as user-role context |
+| `custom` | Extension state records | Ignored during context reconstruction |
+| `label` | Human-readable tag assigned to an entry | Visible in tree selectors |
+| `ttsr_injection` | Record of rules triggered during turn generation | Restores rule evaluation state |
+| `session_init` | Initial system prompt, tools, and schema configuration | Recorded for headless transcript inspection |
+| `mode_change` | Operational mode transitions (`plan`, `none`) | Restores mode state on resume |
+
+## Context reconstruction (`buildSessionContext`)
+
+When xcsh initializes or resumes a session, `buildSessionContext()` reconstructs the LLM prompt payload:
+
+1. Resolves the active `leafId` and traces parent pointers backward to the root entry.
+2. Reverses the path to establish chronological execution order.
+3. Applies state modifiers (`thinking_level_change`, `model_change`, `mode_change`).
+4. If a `compaction` entry exists on the active branch:
+   - Prepends the compaction summary text.
+   - Appends all entries from `firstKeptEntryId` up to the compaction point.
+   - Appends all entries following the compaction point.
+
+## Related implementation files
+
+- `src/session/session-manager.ts`: Storage management, append streams, and context resolution.
+- `src/session/messages.ts`: LLM message formatting and prompt serialization.
+- `src/session/session-storage.ts`: File and in-memory storage abstractions.
+- `src/session/blob-store.ts`: Content-addressable binary blob store.

@@ -6,218 +6,181 @@ sidebar:
   label: Extension loading
 ---
 
-# Extension Loading (TypeScript/JavaScript Modules)
+# Extension loading for TypeScript and JavaScript modules
 
-This document covers how the coding agent discovers and loads **extension modules** (`.ts`/`.js`) at startup.
+This document describes how the xcsh coding agent discovers, resolves, and loads TypeScript and JavaScript extension modules (`.ts` and `.js`) during session startup.
 
-It does **not** cover `gemini-extension.json` manifest extensions (documented separately).
+For `gemini-extension.json` declarative manifest extensions, refer to the manifest extension documentation.
 
-## What this subsystem does
+## Pipeline overview
 
-Extension loading builds a list of module entry files, imports each module with Bun, executes its factory, and returns:
+The extension loading subsystem constructs a prioritized list of entry points, dynamically imports each module with Bun, executes its factory function, and returns:
 
-- loaded extension definitions
-- per-path load errors (without aborting the whole load)
-- a shared extension runtime object used later by `ExtensionRunner`
+- Successfully loaded extension definitions.
+- Structured per-path load errors that do not interrupt overall initialization.
+- A shared runtime context consumed by `ExtensionRunner`.
 
 ## Primary implementation files
 
-- `src/extensibility/extensions/loader.ts` — path discovery + import/execution
-- `src/extensibility/extensions/index.ts` — public exports
-- `src/extensibility/extensions/runner.ts` — runtime/event execution after load
-- `src/discovery/builtin.ts` — native auto-discovery provider for extension modules
-- `src/config/settings.ts` — loads merged `extensions` / `disabledExtensions` settings
+- `src/extensibility/extensions/loader.ts`: Path discovery, dynamic module importing, and factory execution.
+- `src/extensibility/extensions/index.ts`: Public exports and API surface.
+- `src/extensibility/extensions/runner.ts`: Post-load runtime lifecycle and event execution.
+- `src/discovery/builtin.ts`: Native capability auto-discovery provider.
+- `src/config/settings.ts`: Configuration merging for `extensions` and `disabledExtensions`.
 
----
+## Inputs to extension discovery
 
-## Inputs to extension loading
+### 1. Auto-discovered native extension modules
 
-### 1) Auto-discovered native extension modules
+`discoverAndLoadExtensions()` queries discovery providers for `extension-module` capabilities and extracts native items from the following locations:
 
-`discoverAndLoadExtensions()` first asks discovery providers for `extension-module` capability items, then keeps only provider `native` items.
+- **Project scope**: `<cwd>/.xcsh/extensions`
+- **User scope**: `~/.xcsh/agent/extensions`
 
-Effective native locations:
+Roots are determined by the native provider (`SOURCE_PATHS.native`).
 
-- Project: `<cwd>/.xcsh/extensions`
-- User: `~/.xcsh/agent/extensions`
+- Native auto-discovery targets `.xcsh` directories.
+- Legacy `.pi` manifest keys (`pi.extensions`) remain supported inside `package.json`, but `.pi` directory paths are no longer scanned as native roots.
 
-Path roots come from the native provider (`SOURCE_PATHS.native`).
+### 2. Explicitly configured paths
 
-Notes:
+Following auto-discovery, the loader resolves and appends explicitly configured paths from two sources in `sdk.ts`:
 
-- Native auto-discovery is currently `.xcsh` based.
-- Legacy `.pi` is still accepted in `package.json` manifest keys (`pi.extensions`), but not as a native root here.
-
-### 2) Explicitly configured paths
-
-After auto-discovery, configured paths are appended and resolved.
-
-Configured path sources in the main session startup path (`sdk.ts`):
-
-1. CLI-provided paths (`--extension/-e`, and `--hook` is also treated as an extension path)
-2. Settings `extensions` array (merged global + project settings)
-
-Global settings file:
-
-- `~/.xcsh/agent/config.yml` (or custom agent dir via `PI_CODING_AGENT_DIR`)
-
-Project settings file:
-
-- `<cwd>/.xcsh/settings.json`
+1. **CLI arguments**: Paths supplied via `--extension` (`-e`) or `--hook`.
+2. **Settings**: The `extensions` array defined in merged configuration files:
+   - Global: `~/.xcsh/agent/config.yml` (or custom paths via `PI_CODING_AGENT_DIR`).
+   - Project: `<cwd>/.xcsh/settings.json`.
 
 Examples:
 
 ```yaml
 # ~/.xcsh/agent/config.yml
 extensions:
-  - ~/my-exts/safety.ts
-  - ./local/ext-pack
+  - ~/my-extensions/safety.ts
+  - ./local/extension-pack
 ```
 
 ```json
 {
-  "extensions": ["./.xcsh/extensions/my-extra"]
+  "extensions": ["./.xcsh/extensions/custom-checks"]
 }
 ```
 
----
+## Enabling and disabling extensions
 
-## Enable/disable controls
+### Disabling discovery globally
 
-### Disable discovery
+- **CLI flag**: `--no-extensions`
+- **SDK option**: `disableExtensionDiscovery: true`
 
-- CLI: `--no-extensions`
-- SDK option: `disableExtensionDiscovery`
+Operational differences:
 
-Behavior split:
+- **SDK**: Setting `disableExtensionDiscovery: true` disables automated scanning while continuing to load paths passed through `additionalExtensionPaths`.
+- **CLI**: Specifying `--no-extensions` suppresses both auto-discovery and explicit `-e`/`--hook` arguments.
 
-- SDK: when `disableExtensionDiscovery=true`, it still loads `additionalExtensionPaths` via `loadExtensions()`.
-- CLI path building (`main.ts`) currently clears CLI extension paths when `--no-extensions` is set, so explicit `-e/--hook` are not forwarded in that mode.
+### Disabling specific extension modules
 
-### Disable specific extension modules
-
-`disabledExtensions` setting filters by extension id format:
-
-- `extension-module:<derivedName>`
-
-`derivedName` is based on entry path (`getExtensionNameFromPath`), for example:
-
-- `/x/foo.ts` -> `foo`
-- `/x/bar/index.ts` -> `bar`
-
-Example:
+Use the `disabledExtensions` setting with the canonical extension identifier:
 
 ```yaml
 disabledExtensions:
-  - extension-module:foo
+  - extension-module:guardrails
 ```
 
----
+Identifier names derive from entry paths via `getExtensionNameFromPath`:
+
+- `/path/to/guardrails.ts` maps to `extension-module:guardrails`.
+- `/path/to/audit/index.ts` maps to `extension-module:audit`.
 
 ## Path and entry resolution
 
 ### Path normalization
 
-For configured paths:
+Configured paths undergo normalization before resolution:
 
-1. Normalize unicode spaces
-2. Expand `~`
-3. If relative, resolve against current `cwd`
+1. Normalize Unicode whitespace characters.
+2. Expand home directory tildes (`~`).
+3. Resolve relative paths against the current working directory (`cwd`).
 
-### If configured path is a file
+### Resolving file paths
 
-It is used directly as a module entry candidate.
+When a configured path points directly to a file, the loader evaluates it as a module entry candidate.
 
-### If configured path is a directory
+### Resolving directory paths
 
-Resolution order:
+When a configured path targets a directory, the loader resolves entry points in the following order:
 
-1. `package.json` in that directory with `xcsh.extensions` (or legacy `pi.extensions`) -> use declared entries
-2. `index.ts`
-3. `index.js`
-4. Otherwise scan one level for extension entries:
-   - direct `*.ts` / `*.js`
-   - subdir `index.ts` / `index.js`
-   - subdir `package.json` with `xcsh.extensions` / `pi.extensions`
+1. `package.json` with an `xcsh.extensions` array (or legacy `pi.extensions`).
+2. `index.ts`.
+3. `index.js`.
+4. Single-level subdirectory scanning:
+   - Direct `*.ts` and `*.js` files.
+   - Subdirectory `index.ts` and `index.js` files.
+   - Subdirectory `package.json` manifests declaring `xcsh.extensions`.
 
-Rules and constraints:
+Resolution rules:
 
-- no recursive discovery beyond one subdirectory level
-- declared `extensions` manifest entries are resolved relative to that package directory
-- declared entries are included only if file exists/access is allowed
-- in `*/index.{ts,js}` pairs, TypeScript is preferred over JavaScript
-- symlinks are treated as eligible files/directories
+- Directory scans do not recurse beyond one subdirectory level.
+- Manifest entries resolve relative to their containing `package.json` directory.
+- Candidate files must exist and possess readable permissions.
+- When both `index.ts` and `index.js` exist in the same directory, TypeScript takes precedence.
+- Symbolic links are followed and treated as standard files or directories.
 
-### Ignore behavior differs by source
+### Ignore filter behavior
 
-- Native auto-discovery (`discoverExtensionModulePaths` in discovery helpers) uses native glob with `gitignore: true` and `hidden: false`.
-- Explicit configured directory scanning in `loader.ts` uses `readdir` rules and does **not** apply gitignore filtering.
+- Native auto-discovery (`discoverExtensionModulePaths`) enforces `.gitignore` rules (`gitignore: true`) and ignores hidden directories (`hidden: false`).
+- Direct directory scanning in `loader.ts` reads filesystem entries without `.gitignore` filtering.
 
----
+## Loading order and precedence
 
-## Load order and precedence
+`discoverAndLoadExtensions()` constructs an ordered module list:
 
-`discoverAndLoadExtensions()` builds one ordered list and then calls `loadExtensions()`.
+1. Auto-discovered native modules.
+2. Explicitly configured CLI paths.
+3. Explicitly configured settings paths.
 
-Order:
+Deduplication rules:
 
-1. Native auto-discovered modules
-2. Explicit configured paths (in provided order)
+- Deduplication operates on normalized absolute paths.
+- The first occurrence of a path takes precedence; subsequent duplicates are discarded.
+- When a module path is both auto-discovered and explicitly configured, it loads during the auto-discovery phase.
 
-In `sdk.ts`, configured order is:
+## Module imports and factory contracts
 
-1. CLI additional paths
-2. Settings `extensions`
+The loader imports candidate modules dynamically:
 
-De-duplication:
+```ts
+const imported = await import(resolvedPath);
+const factory = imported.default ?? imported;
+```
 
-- absolute path based
-- first seen path wins
-- later duplicates are ignored
+The exported factory must adhere to the `ExtensionFactory` function signature. If an export is not a function, the loader records a structured error and proceeds with subsequent modules.
 
-Implication: if the same module path is both auto-discovered and explicitly configured, it is loaded once at the first position (auto-discovered stage).
+## Error handling and execution isolation
 
----
+### Load-time failure handling
 
-## Module import and factory contract
+Failures are isolated per module path as `{ path, error }` records. A failure in one extension does not prevent other extensions from loading.
 
-Each candidate path is loaded with dynamic import:
+Common failure conditions:
 
-- `await import(resolvedPath)`
-- factory is `module.default ?? module`
-- factory must be a function (`ExtensionFactory`)
-
-If export is not a function, that path fails with a structured error and loading continues.
-
----
-
-## Failure handling and isolation
-
-### During loading
-
-Per extension path, failures are captured as `{ path, error }` and do not stop other paths from loading.
-
-Common cases:
-
-- import failure / missing file
-- invalid factory export (non-function)
-- exception thrown while executing factory
+- Missing entry files or module resolution failures.
+- Non-function exports.
+- Exceptions thrown during factory execution.
 
 ### Runtime isolation model
 
-- Extensions are **not sandboxed** (same process/runtime).
-- They share one `EventBus` and one `ExtensionRuntime` instance.
-- During load, runtime action methods intentionally throw `ExtensionRuntimeNotInitializedError`; action wiring happens later in `ExtensionRunner.initialize()`.
+- Extensions execute within the host process and share runtime memory.
+- Extensions interact through a shared `EventBus` and `ExtensionRuntime` instance.
+- Direct runtime action invocations throw `ExtensionRuntimeNotInitializedError` during load; action dispatch initializes later in `ExtensionRunner.initialize()`.
 
-### After loading
+### Post-load error propagation
 
-When events run through `ExtensionRunner`, handler exceptions are caught and emitted as extension errors instead of crashing the runner loop.
+When `ExtensionRunner` dispatches events, handler exceptions are caught and emitted as extension error events rather than crashing the agent loop.
 
----
+## Project and user directory structures
 
-## Minimal user/project layout examples
-
-### User-level
+### User-level layout
 
 ```text
 ~/.xcsh/agent/
@@ -228,19 +191,22 @@ When events run through `ExtensionRunner`, handler exceptions are caught and emi
       index.ts
 ```
 
-### Project-level
+### Project-level layout
 
 ```text
 <repo>/
   .xcsh/
     settings.json
     extensions/
+      lint-gates.ts
       checks/
         package.json
-      lint-gates.ts
+        src/
+          check-a.ts
+          check-b.js
 ```
 
-`checks/package.json`:
+`checks/package.json` declaration:
 
 ```json
 {
@@ -250,12 +216,3 @@ When events run through `ExtensionRunner`, handler exceptions are caught and emi
 }
 ```
 
-Legacy manifest key still accepted:
-
-```json
-{
-  "pi": {
-    "extensions": ["./index.ts"]
-  }
-}
-```

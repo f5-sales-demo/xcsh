@@ -6,11 +6,11 @@ sidebar:
   label: Overview
 ---
 
-# Extensions
+# Extension runtime architecture
 
-Primary guide for authoring runtime extensions in `packages/coding-agent`.
+This document details the extension system for the xcsh coding agent runtime.
 
-This document covers the current extension runtime in:
+Implementation files:
 
 - `src/extensibility/extensions/types.ts`
 - `src/extensibility/extensions/runner.ts`
@@ -18,358 +18,304 @@ This document covers the current extension runtime in:
 - `src/extensibility/extensions/index.ts`
 - `src/modes/controllers/extension-ui-controller.ts`
 
-For discovery paths and filesystem loading rules, see `docs/extension-loading.md`.
+For discovery paths and filesystem scanning rules, see [Extension loading](file:///data/robin-GIT/language-improvement/xcsh/docs/en/extensions/extension-loading.md).
 
-## What an extension is
+## Extension architecture
 
-An extension is a TS/JS module exporting a default factory:
+An extension is a TypeScript or JavaScript module that exports a default factory function:
 
 ```ts
 import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 
 export default function myExtension(pi: ExtensionAPI) {
- // register handlers/tools/commands/renderers
+  // Register event handlers, tools, commands, and renderers
 }
 ```
 
-Extensions can combine all of the following in one module:
+A single extension module can register and combine multiple capabilities:
 
-- event handlers (`pi.on(...)`)
+- Lifecycle event handlers (`pi.on(...)`)
 - LLM-callable tools (`pi.registerTool(...)`)
-- slash commands (`pi.registerCommand(...)`)
-- keyboard shortcuts and flags
-- custom message rendering
-- session/message injection APIs (`sendMessage`, `sendUserMessage`, `appendEntry`)
+- Interactive slash commands (`pi.registerCommand(...)`)
+- Keyboard shortcuts and CLI flags
+- Custom message renderers
+- Message injection APIs (`sendMessage`, `sendUserMessage`, `appendEntry`)
 
-## Runtime model
+## Runtime execution model
 
-1. Extensions are imported and their factory functions run.
-2. During that load phase, registration methods are valid; runtime action methods are not yet initialized.
-3. `ExtensionRunner.initialize(...)` wires live actions/contexts for the active mode.
-4. Session/agent/tool lifecycle events are emitted to handlers.
-5. Every tool execution is wrapped with extension interception (`tool_call` / `tool_result`).
+The extension lifecycle proceeds through the following stages:
 
-```text
-Extension lifecycle (simplified)
+1. Dynamic import: The runtime imports modules and executes their exported factory functions.
+2. Registration: Factory functions register tools, commands, and event handlers. Calling runtime action methods during this phase is disallowed.
+3. Initialization: `ExtensionRunner.initialize(...)` binds live contexts and action dispatchers for the active execution mode.
+4. Event dispatch: The runner emits lifecycle events to registered handlers.
+5. Tool interception: The runtime wraps every tool invocation with `tool_call` and `tool_result` middleware handlers.
 
-load paths
-   │
-   ▼
-import module + run factory (registration only)
-   │
-   ▼
-ExtensionRunner.initialize(mode/session/tool registry)
-   │
-   ├─ emit session/agent events to handlers
-   ├─ wrap tool execution (tool_call/tool_result)
-   └─ expose runtime actions (sendMessage, setActiveTools, ...)
-```
+Calling runtime action methods (such as `pi.sendMessage()`) during the initial loading phase throws `ExtensionRuntimeNotInitializedError`. Complete all registrations first, and perform runtime actions from within event handlers, command callbacks, or tool execution functions.
 
-Important constraint from `loader.ts`:
+## Quick start guide
 
-- calling action methods like `pi.sendMessage()` during extension load throws `ExtensionRuntimeNotInitializedError`
-- register first; perform runtime behavior from events/commands/tools
-
-## Quick start
+The following example registers an extension with event interception, a custom tool, and a slash command:
 
 ```ts
 import type { ExtensionAPI } from "@f5-sales-demo/xcsh";
 import { Type } from "@sinclair/typebox";
 
 export default function (pi: ExtensionAPI) {
- pi.setLabel("Safety + Utilities");
+  pi.setLabel("Safety and Utilities");
 
- pi.on("session_start", async (_event, ctx) => {
-  ctx.ui.notify(`Extension loaded in ${ctx.cwd}`, "info");
- });
+  pi.on("session_start", async (_event, ctx) => {
+    ctx.ui.notify(`Extension loaded in ${ctx.cwd}`, "info");
+  });
 
- pi.on("tool_call", async (event) => {
-  if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
-   return { block: true, reason: "Blocked by extension policy" };
-  }
- });
+  pi.on("tool_call", async (event) => {
+    if (event.toolName === "bash" && event.input.command?.includes("rm -rf")) {
+      return { block: true, reason: "Command blocked by security policy." };
+    }
+  });
 
- pi.registerTool({
-  name: "hello_extension",
-  label: "Hello Extension",
-  description: "Return a greeting",
-  parameters: Type.Object({ name: Type.String() }),
-  async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
-   return {
-    content: [{ type: "text", text: `Hello, ${params.name}` }],
-    details: { greeted: params.name },
-   };
-  },
- });
+  pi.registerTool({
+    name: "hello_extension",
+    label: "Hello Extension",
+    description: "Returns a friendly greeting.",
+    parameters: Type.Object({ name: Type.String() }),
+    async execute(_toolCallId, params, _signal, _onUpdate, _ctx) {
+      return {
+        content: [{ type: "text", text: `Hello, ${params.name}!` }],
+        details: { greeted: params.name },
+      };
+    },
+  });
 
- pi.registerCommand("hello-ext", {
-  description: "Show queue state",
-  handler: async (_args, ctx) => {
-   ctx.ui.notify(`pending=${ctx.hasPendingMessages()}`, "info");
-  },
- });
+  pi.registerCommand("check-queue", {
+    description: "Displays pending message queue status.",
+    handler: async (_args, ctx) => {
+      ctx.ui.notify(`Pending messages: ${ctx.hasPendingMessages()}`, "info");
+    },
+  });
 }
 ```
 
-## Extension API surfaces
+## Extension API reference
 
-## 1) Registration and actions (`ExtensionAPI`)
+### 1. Registration and action APIs (`ExtensionAPI`)
 
-Core methods:
+Core methods available on the `pi` API object:
 
-- `on(event, handler)`
-- `registerTool`, `registerCommand`, `registerShortcut`, `registerFlag`
-- `registerMessageRenderer`
-- `sendMessage`, `sendUserMessage`, `appendEntry`
-- `getActiveTools`, `getAllTools`, `setActiveTools`
-- `getSessionName`, `setSessionName`
-- `setModel`, `getThinkingLevel`, `setThinkingLevel`
-- `registerProvider`
-- `events` (shared event bus)
+- `on(event, handler)`: Subscribes to lifecycle and operational events.
+- `registerTool`, `registerCommand`, `registerShortcut`, `registerFlag`: Registers capabilities.
+- `registerMessageRenderer`: Registers custom UI component renderers.
+- `sendMessage`, `sendUserMessage`, `appendEntry`: Injects messages and custom session state entries.
+- `getActiveTools`, `getAllTools`, `setActiveTools`: Inspects and reconfigures active tools.
+- `getSessionName`, `setSessionName`: Inspects and updates session titles.
+- `setModel`, `getThinkingLevel`, `setThinkingLevel`: Reconfigures active models and reasoning levels.
+- `registerProvider`: Registers custom LLM inference providers.
+- `events`: Exposes the shared event bus.
 
-In interactive mode, `input` handlers run before the built-in first-message auto-title check. Extensions that call `await pi.setSessionName(...)` from `input` can set the persisted session name and prevent the default auto-generated title from running for that session.
+In interactive mode, `input` handlers execute prior to automatic session titling. Extensions calling `await pi.setSessionName(...)` within an `input` handler set a persistent title and bypass automatic title generation.
 
-Also exposed:
+Utility exports on the API object:
 
-- `pi.logger`
-- `pi.typebox`
-- `pi.pi` (package exports)
+- `pi.logger`: Structured logger.
+- `pi.typebox`: TypeBox schema builder.
+- `pi.pi`: Re-exported package symbols.
 
-### Message delivery semantics
+#### Message delivery semantics
 
-`pi.sendMessage(message, options)` supports:
+`pi.sendMessage(message, options)` supports the following delivery policies:
 
-- `deliverAs: "steer"` (default) — interrupts current run
-- `deliverAs: "followUp"` — queued to run after current run
-- `deliverAs: "nextTurn"` — stored and injected on the next user prompt
-- `triggerTurn: true` — starts a turn when idle (`nextTurn` ignores this)
+- `deliverAs: "steer"` (default): Interrupts the current agent run immediately.
+- `deliverAs: "followUp"`: Queues the message for execution after the current run completes.
+- `deliverAs: "nextTurn"`: Preserves the message to inject into the subsequent user turn.
+- `triggerTurn: true`: Initiates an agent turn when idle (ignored for `nextTurn`).
 
-`pi.sendUserMessage(content, { deliverAs })` always goes through prompt flow; while streaming it queues as steer/follow-up.
+`pi.sendUserMessage(content, { deliverAs })` processes input through the prompt pipeline. During streaming, it queues as a steering or follow-up turn.
 
-## 2) Handler context (`ExtensionContext`)
+### 2. Handler execution context (`ExtensionContext`)
 
-Handlers and tool `execute` receive `ctx` with:
+Event handlers and tool `execute` callbacks receive a context object containing:
 
-- `ui`
-- `hasUI`
-- `cwd`
-- `sessionManager` (read-only)
-- `modelRegistry`, `model`
-- `getContextUsage()`
-- `compact(...)`
-- `isIdle()`, `hasPendingMessages()`, `abort()`
-- `shutdown()`
-- `getSystemPrompt()`
+- `ui`: User interface controller (`ExtensionUIContext`).
+- `hasUI`: Boolean indicating interactive UI availability.
+- `cwd`: Active working directory path.
+- `sessionManager`: Read-only session management interface.
+- `modelRegistry`, `model`: Active model metadata and registry instance.
+- `getContextUsage()`: Returns context window token utilization.
+- `compact(...)`: Triggers session compaction.
+- `isIdle()`, `hasPendingMessages()`, `abort()`: Runtime status queries and cancellation.
+- `shutdown()`: Terminates the agent process.
+- `getSystemPrompt()`: Returns the active system prompt string.
 
-## 3) Command context (`ExtensionCommandContext`)
+### 3. Command execution context (`ExtensionCommandContext`)
 
-Command handlers additionally get:
+Slash command handlers receive an extended context with session-control operations:
 
-- `waitForIdle()`
-- `newSession(...)`
-- `switchSession(...)`
-- `branch(entryId)`
-- `navigateTree(targetId, { summarize })`
-- `reload()`
+- `waitForIdle()`: Waits for active streaming to complete.
+- `newSession(...)`: Initializes a fresh session.
+- `switchSession(...)`: Switches to an existing session file.
+- `branch(entryId)`: Forks a session branch from a specific history entry.
+- `navigateTree(targetId, { summarize })`: Navigates to a specific node in the session tree.
+- `reload()`: Reloads the active configuration and extension suite.
 
-Use command context for session-control flows; these methods are intentionally separated from general event handlers.
+## Event system reference
 
-## Event surface (current names and behavior)
+### Session lifecycle events
 
-Canonical event unions and payload types are in `types.ts`.
+- `session_start`: Dispatched after session initialization.
+- `session_before_switch`, `session_switch`: Dispatched prior to and following a session switch.
+- `session_before_branch`, `session_branch`: Dispatched prior to and following a branch fork.
+- `session_before_compact`, `session.compacting`, `session_compact`: Dispatched during compaction.
+- `session_before_tree`, `session_tree`: Dispatched during session tree traversal.
+- `session_shutdown`: Dispatched before process termination.
 
-### Session lifecycle
+Cancelable pre-event return structures:
 
-- `session_start`
-- `session_before_switch` / `session_switch`
-- `session_before_branch` / `session_branch`
-- `session_before_compact` / `session.compacting` / `session_compact`
-- `session_before_tree` / `session_tree`
-- `session_shutdown`
+- `session_before_switch`: Returns `{ cancel?: boolean }`.
+- `session_before_branch`: Returns `{ cancel?: boolean; skipConversationRestore?: boolean }`.
+- `session_before_compact`: Returns `{ cancel?: boolean; compaction?: CompactionResult }`.
+- `session_before_tree`: Returns `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`.
 
-Cancelable pre-events:
+### Prompt and turn lifecycle events
 
-- `session_before_switch` → `{ cancel?: boolean }`
-- `session_before_branch` → `{ cancel?: boolean; skipConversationRestore?: boolean }`
-- `session_before_compact` → `{ cancel?: boolean; compaction?: CompactionResult }`
-- `session_before_tree` → `{ cancel?: boolean; summary?: { summary: string; details?: unknown } }`
+- `input`: Dispatched when the user submits input.
+- `before_agent_start`: Dispatched before model invocation.
+- `context`: Dispatched during prompt context assembly.
+- `agent_start`, `agent_end`: Dispatched at the boundaries of an overall agent task.
+- `turn_start`, `turn_end`: Dispatched at the boundaries of a single model inference turn.
+- `message_start`, `message_update`, `message_end`: Dispatched during message generation and streaming.
 
-### Prompt and turn lifecycle
+### Tool lifecycle events
 
-- `input`
-- `before_agent_start`
-- `context`
-- `agent_start` / `agent_end`
-- `turn_start` / `turn_end`
-- `message_start` / `message_update` / `message_end`
+- `tool_call`: Dispatched before tool execution. Handlers can block execution by returning `{ block: true, reason: "..." }`.
+- `tool_result`: Dispatched after execution. Middleware handlers can modify `content`, `details`, or `isError`.
+- `tool_execution_start`, `tool_execution_update`, `tool_execution_end`: Observability events for progress tracking.
 
-### Tool lifecycle
+### Operational and reliability events
 
-- `tool_call` (pre-exec, may block)
-- `tool_result` (post-exec, may patch content/details/isError)
-- `tool_execution_start` / `tool_execution_update` / `tool_execution_end` (observability)
-
-`tool_result` is middleware-style: handlers run in extension order and each sees prior modifications.
-
-### Reliability/runtime signals
-
-- `auto_compaction_start` / `auto_compaction_end`
-- `auto_retry_start` / `auto_retry_end`
-- `ttsr_triggered`
-- `todo_reminder`
+- `auto_compaction_start`, `auto_compaction_end`: Auto-compaction boundaries.
+- `auto_retry_start`, `auto_retry_end`: Model request retry attempts.
+- `ttsr_triggered`: Test-time self-reflection event triggers.
+- `todo_reminder`: Task tracking reminders.
 
 ### User command interception
 
-- `user_bash` (override with `{ result }`)
-- `user_python` (override with `{ result }`)
+- `user_bash`: Intercepts interactive bash commands (override with `{ result }`).
+- `user_python`: Intercepts interactive Python commands (override with `{ result }`).
 
-### `resources_discover`
+## Tool implementation reference
 
-`resources_discover` exists in extension types and `ExtensionRunner`.
-Current runtime note: `ExtensionRunner.emitResourcesDiscover(...)` is implemented, but there are no `AgentSession` callsites invoking it in the current codebase.
-
-## Tool authoring details
-
-`registerTool` uses `ToolDefinition` from `types.ts`.
-
-Current `execute` signature:
-
-```ts
-execute(
- toolCallId,
- params,
- signal,
- onUpdate,
- ctx,
-): Promise<AgentToolResult>
-```
-
-Template:
+Register tools using `pi.registerTool(...)` with the following schema:
 
 ```ts
 pi.registerTool({
- name: "my_tool",
- label: "My Tool",
- description: "...",
- parameters: Type.Object({}),
- async execute(_id, _params, signal, onUpdate, ctx) {
-  if (signal?.aborted) {
-   return { content: [{ type: "text", text: "Cancelled" }] };
-  }
-  onUpdate?.({ content: [{ type: "text", text: "Working..." }] });
-  return { content: [{ type: "text", text: "Done" }], details: {} };
- },
- onSession(event, ctx) {
-  // reason: start|switch|branch|tree|shutdown
- },
- renderCall(args, theme) {
-  // optional TUI render
- },
- renderResult(result, options, theme, args) {
-  // optional TUI render
- },
+  name: "custom_analyzer",
+  label: "Custom Analyzer",
+  description: "Analyzes workspace configuration files.",
+  parameters: Type.Object({
+    targetPath: Type.String(),
+  }),
+  async execute(toolCallId, params, signal, onUpdate, ctx) {
+    if (signal?.aborted) {
+      return { content: [{ type: "text", text: "Execution cancelled." }] };
+    }
+    onUpdate?.({ content: [{ type: "text", text: "Analyzing configuration..." }] });
+    return {
+      content: [{ type: "text", text: "Analysis complete." }],
+      details: { target: params.targetPath, status: "clean" },
+    };
+  },
+  onSession(event, ctx) {
+    // Handles session lifecycle transitions (start, switch, branch, shutdown)
+  },
+  renderCall(args, theme) {
+    // Optional TUI call renderer
+  },
+  renderResult(result, options, theme, args) {
+    // Optional TUI result renderer
+  },
 });
 ```
 
-`tool_call`/`tool_result` intercept all tools once the registry is wrapped in `sdk.ts`, including built-ins and extension/custom tools.
+Tool interception via `tool_call` and `tool_result` applies globally to all registered tools, including built-in tools.
 
-## UI integration points
+## User interface integration
 
-`ctx.ui` implements the `ExtensionUIContext` interface. Support differs by mode.
+`ctx.ui` provides the `ExtensionUIContext` interface across execution modes.
 
-### Interactive mode (`extension-ui-controller.ts`)
+### Interactive terminal mode
 
-Supported:
+Supported capabilities:
 
-- dialogs: `select`, `confirm`, `input`, `editor`
-- notifications/status/editor text/terminal input/custom overlays
-- theme listing/loading by name (`setTheme` supports string names)
-- tools expanded toggle
+- Dialogs: `select`, `confirm`, `input`, `editor`.
+- Notifications, status updates, editor text replacement, and custom overlays.
+- Theme listing and switching via `setTheme`.
+- Tool display expansion toggling.
 
-Current no-op methods in this controller:
+`setFooter`, `setHeader`, and `setEditorComponent` are reserved for custom layouts and act as no-ops in standard TUI views. `setWidget` routes status text to the terminal status bar.
 
-- `setFooter`
-- `setHeader`
-- `setEditorComponent`
+### RPC mode
 
-Also note: `setWidget` currently routes to status-line text via `setHookWidget(...)`.
+In RPC mode, UI calls dispatch newline-delimited JSON frames over stdio:
 
-### RPC mode (`rpc-mode.ts`)
+- Interactive dialogs (`select`, `confirm`, `input`, `editor`) await host responses.
+- Notifications and state updates (`notify`, `setStatus`, `setWidget`, `setTitle`, `setEditorText`) emit asynchronous events.
 
-`ctx.ui` is backed by RPC `extension_ui_request` events:
+Terminal input listeners, custom overlays, and theme switching are disabled in headless RPC mode.
 
-- dialog methods (`select`, `confirm`, `input`, `editor`) round-trip to client responses
-- fire-and-forget methods emit requests (`notify`, `setStatus`, `setWidget` for string arrays, `setTitle`, `setEditorText`)
+### Headless and subagent modes
 
-Unsupported/no-op in RPC implementation:
+When running in print, subagent, or headless environments, `ctx.hasUI` evaluates to `false`, and UI methods return default fallback values immediately.
 
-- `onTerminalInput`
-- `custom`
-- `setFooter`, `setHeader`, `setEditorComponent`
-- `setWorkingMessage`
-- theme switching/loading (`setTheme` returns failure)
-- tool expansion controls are inert
+## Session state management
 
-### Print/headless/subagent paths
+To persist extension state across session switches and restarts:
 
-When no UI context is supplied to runner init, `ctx.hasUI` is `false` and methods are no-op/default-returning.
+1. Record state updates using `pi.appendEntry("custom_type", stateData)`.
+2. Restore state during `session_start`, `session_branch`, or `session_tree` by querying `ctx.sessionManager.getBranch()`.
+3. Store structured data in tool result `details` objects so state remains reconstructible from history.
 
-### Background interactive mode
-
-Background mode installs a non-interactive UI context object. In current implementation, `ctx.hasUI` may still be `true` while interactive dialogs return defaults/no-op behavior.
-
-## Session and state patterns
-
-For durable extension state:
-
-1. Persist with `pi.appendEntry(customType, data)`.
-2. Rebuild state from `ctx.sessionManager.getBranch()` on `session_start`, `session_branch`, `session_tree`.
-3. Keep tool result `details` structured when state should be visible/reconstructible from tool result history.
-
-Example reconstruction pattern:
+State reconstruction pattern:
 
 ```ts
 pi.on("session_start", async (_event, ctx) => {
- let latest;
- for (const entry of ctx.sessionManager.getBranch()) {
-  if (entry.type === "custom" && entry.customType === "my-state") {
-   latest = entry.data;
+  let restoredState: unknown = null;
+  for (const entry of ctx.sessionManager.getBranch()) {
+    if (entry.type === "custom" && entry.customType === "my-extension-state") {
+      restoredState = entry.data;
+    }
   }
- }
- // restore from latest
+  if (restoredState) {
+    // Reinitialize extension state
+  }
 });
 ```
 
-## Rendering extension points
+## Custom visual renderers
 
-## Custom message renderer
+### Custom message renderer
 
 ```ts
-pi.registerMessageRenderer("my-type", (message, { expanded }, theme) => {
- // return pi-tui Component
+pi.registerMessageRenderer("custom-result", (message, { expanded }, theme) => {
+  // Return a pi-tui Component for TUI rendering
 });
 ```
 
-Used by interactive rendering when custom messages are displayed.
+### Custom tool renderer
 
-## Tool call/result renderer
+Define `renderCall` and `renderResult` within `registerTool` to render specialized TUI widgets for tool arguments and results.
 
-Provide `renderCall` / `renderResult` on `registerTool` definitions for custom tool visualization in TUI.
+## Operational constraints
 
-## Constraints and pitfalls
+- Runtime actions are unavailable during the initial module loading phase.
+- Handlers returning `{ block: true }` in `tool_call` fail closed and prevent tool execution.
+- Command names matching existing built-in commands are ignored with diagnostic warnings.
+- Reserved keyboard shortcuts cannot be overridden (`Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+K`, `Ctrl+P`, `Ctrl+L`, `Ctrl+O`, `Ctrl+T`, `Ctrl+G`, `Shift+Tab`, `Shift+Ctrl+P`, `Alt+Enter`, `Escape`, `Enter`).
+- Invoking `ctx.reload()` terminates the active command execution frame.
 
-- Runtime actions are unavailable during extension load.
-- `tool_call` errors block execution (fail-closed).
-- Command name conflicts with built-ins are skipped with diagnostics.
-- Reserved shortcuts are ignored (`ctrl+c`, `ctrl+d`, `ctrl+z`, `ctrl+k`, `ctrl+p`, `ctrl+l`, `ctrl+o`, `ctrl+t`, `ctrl+g`, `shift+tab`, `shift+ctrl+p`, `alt+enter`, `escape`, `enter`).
-- Treat `ctx.reload()` as terminal for the current command handler frame.
+## Comparing extensions, hooks, and custom tools
 
-## Extensions vs hooks vs custom-tools
+- **Extensions** (`src/extensibility/extensions/*`): Unified extension surface supporting events, tools, slash commands, UI renderers, and custom model providers.
+- **Hooks** (`src/extensibility/hooks/*`): Dedicated event handling subsystem.
+- **Custom tools** (`src/extensibility/custom-tools/*`): Focused tool definitions adapted automatically into the extension tool registry.
 
-Use the right surface:
-
-- **Extensions** (`src/extensibility/extensions/*`): unified system (events + tools + commands + renderers + provider registration).
-- **Hooks** (`src/extensibility/hooks/*`): separate legacy event API.
-- **Custom-tools** (`src/extensibility/custom-tools/*`): tool-focused modules; when loaded alongside extensions they are adapted and still pass through extension interception wrappers.
-
-If you need one package that owns policy, tools, command UX, and rendering together, use extensions.
+When building packages that require coordinated policy enforcement, custom tools, slash commands, and user interface elements, use the unified extension system.

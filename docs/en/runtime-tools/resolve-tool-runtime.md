@@ -8,119 +8,76 @@ sidebar:
 
 # Resolve tool runtime internals
 
-This document explains how preview/apply workflows are modeled in coding-agent and how custom tools can participate via `pushPendingAction`.
+This document describes the preview and commit workflow in `packages/coding-agent` and explains how built-in tools (`ast_edit`) and custom tools participate in deferred execution via `pushPendingAction`.
 
-## Scope and key files
+## Overview of deferred actions
 
-- [`src/tools/resolve.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/resolve.ts)
-- [`src/tools/pending-action.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/pending-action.ts)
-- [`src/tools/ast-edit.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/tools/ast-edit.ts)
-- [`src/extensibility/custom-tools/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/types.ts)
-- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts)
-- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts)
+The `resolve` tool provides a confirmation and commit boundary for staged actions:
 
-## What `resolve` does
+- **`action: "apply"`**: Executes the `apply(reason)` callback on the active pending action and commits modifications to the filesystem or remote state.
+- **`action: "discard"`**: Executes the optional `reject(reason)` callback to discard staged operations and release allocated resources.
 
-`resolve` is a hidden tool that finalizes a pending preview action.
+If no action is staged when `resolve` is called, the tool returns an error indicating that no pending actions exist.
 
-- `action: "apply"` executes `apply(reason)` on the pending action and persists changes.
-- `action: "discard"` invokes `reject(reason)` if provided; otherwise drops the action with a default "Discarded" message.
+## Action stack semantics (LIFO)
 
-If no pending action exists, `resolve` fails with:
+Pending actions are managed by `PendingActionStore` as a Last-In, First-Out (LIFO) stack:
 
-- `No pending action to resolve. Nothing to apply or discard.`
+- `push(action)`: Stages a new pending action at the top of the stack.
+- `peek()`: Inspects the active pending action without modifying stack state.
+- `pop()`: Removes and returns the top action.
+- `hasPending`: Indicates whether uncommitted actions exist.
 
-## Pending actions are a stack (LIFO)
+When multiple previews are registered sequentially, `resolve` processes the most recently staged action first.
 
-Pending actions are stored in `PendingActionStore` as a push/pop stack:
+## Custom tool integration (`pushPendingAction`)
 
-- `push(action)` adds a new pending action on top.
-- `peek()` inspects the current top action.
-- `pop()` removes and returns the top action.
-- `hasPending` indicates whether the stack is non-empty.
+Custom tools register staged operations through `CustomToolAPI.pushPendingAction(...)`:
 
-`resolve` always consumes the **topmost** pending action first (`pop()`), so multiple preview-producing tools resolve in reverse order of registration.
-
-## Built-in producer example (`ast_edit`)
-
-`ast_edit` previews structural replacements first. When the preview has replacements and is not applied yet, it pushes a pending action that contains:
-
-- label (human-readable summary)
-- `sourceToolName` (`ast_edit`)
-- `apply(reason: string)` callback that reruns AST edit with `dryRun: false`
-
-`resolve(action="apply", reason="...")` passes `reason` into this callback.
-
-## Custom tools: `pushPendingAction`
-
-Custom tools can register resolve-compatible pending actions through `CustomToolAPI.pushPendingAction(...)`.
-
-`CustomToolPendingAction`:
-
-- `label: string` (required)
-- `apply(reason: string): Promise<AgentToolResult<unknown>>` (required) — invoked on apply; `reason` is the string passed to `resolve`
-- `reject?(reason: string): Promise<AgentToolResult<unknown> | undefined>` (optional) — invoked on discard; return value replaces the default "Discarded" message if provided
-- `details?: unknown` (optional)
-- `sourceToolName?: string` (optional, defaults to `"custom_tool"`)
-
-### Minimal usage example
-
-```ts
+```typescript
 import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
-const factory: CustomToolFactory = pi => ({
- name: "batch_rename_preview",
- label: "Batch Rename Preview",
- description: "Previews renames and defers commit to resolve",
- parameters: pi.typebox.Type.Object({
-  files: pi.typebox.Type.Array(pi.typebox.Type.String()),
- }),
+const factory: CustomToolFactory = (pi) => ({
+  name: "batch_rename_preview",
+  label: "Batch rename preview",
+  description: "Stages file rename operations for confirmation via resolve",
+  parameters: pi.typebox.Type.Object({
+    files: pi.typebox.Type.Array(pi.typebox.Type.String()),
+  }),
 
- async execute(_toolCallId, params) {
-  const previewSummary = `Prepared rename plan for ${params.files.length} files`;
+  async execute(_toolCallId, params) {
+    const previewSummary = `Prepared rename plan for ${params.files.length} files`;
 
-  pi.pushPendingAction({
-   label: `Batch rename: ${params.files.length} files`,
-   sourceToolName: "batch_rename_preview",
-   apply: async (reason) => {
-    // apply writes here
+    pi.pushPendingAction({
+      label: `Batch rename: ${params.files.length} files`,
+      sourceToolName: "batch_rename_preview",
+      apply: async (reason) => {
+        // Execute the atomic file rename operations here
+        return {
+          content: [{ type: "text", text: `Applied batch rename. Reason: ${reason}` }],
+        };
+      },
+      reject: async (reason) => {
+        // Optional cleanup on discard
+        return {
+          content: [{ type: "text", text: `Discarded batch rename. Reason: ${reason}` }],
+        };
+      },
+    });
+
     return {
-     content: [{ type: "text", text: `Applied batch rename. Reason: ${reason}` }],
+      content: [{ type: "text", text: `${previewSummary}. Run resolve to apply or discard.` }],
     };
-   },
-   reject: async (reason) => {
-    // optional: cleanup or notify on discard
-    return {
-     content: [{ type: "text", text: `Discarded batch rename. Reason: ${reason}` }],
-    };
-   },
-  });
-
-  return {
-   content: [{ type: "text", text: `${previewSummary}. Call resolve to apply or discard.` }],
-  };
- },
+  },
 });
 
 export default factory;
 ```
 
-## Runtime availability and failures
+## Related implementation files
 
-`pushPendingAction` is wired by the custom tool loader using the active session `PendingActionStore`.
+- `src/tools/resolve.ts`: Resolve tool implementation and action confirmation handlers.
+- `src/tools/pending-action.ts`: `PendingActionStore` stack implementation and action types.
+- `src/tools/ast-edit.ts`: AST editing tool producing preview actions.
+- `src/extensibility/custom-tools/types.ts`: Custom tool type definitions and API interfaces.
 
-If the runtime has no pending-action store, `pushPendingAction` throws:
-
-- `Pending action store unavailable for custom tools in this runtime.`
-
-## Tool-choice behavior
-
-When `PendingActionStore.hasPending` is true, the agent runtime biases tool choice to `resolve` so pending previews are explicitly finalized before normal tool flow continues.
-
-## Developer guidance
-
-- Use pending actions only for destructive or high-impact operations that should support explicit apply/discard.
-- Keep `label` concise and specific; it is shown in resolve renderer output.
-- Ensure `apply(reason)` is deterministic and idempotent enough for one-shot execution; `reason` is informational and should not change behavior.
-- Implement `reject(reason)` when the discard needs cleanup (temp state, locks, notifications); omit it for stateless previews where the default message suffices.
-- If your tool can stage multiple previews, remember LIFO semantics: latest pushed action resolves first.

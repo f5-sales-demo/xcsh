@@ -8,212 +8,128 @@ sidebar:
 
 # Skills
 
-Skills are file-backed capability packs discovered at startup and exposed to the model as:
+Skills are modular, file-backed capability packages discovered at session startup and exposed to the model through:
 
-- lightweight metadata in the system prompt (name + description)
-- on-demand content via `read skill://...`
-- optional interactive `/skill:<name>` commands
+- Summary metadata in the system prompt (`name` and `description`).
+- On-demand document retrieval via `skill://` URIs.
+- Interactive slash commands (`/skill:<NAME>`).
 
-This document covers current runtime behavior in `src/extensibility/skills.ts`, `src/discovery/builtin.ts`, `src/internal-urls/skill-protocol.ts`, and `src/discovery/agents-md.ts`.
+## Core skill data model
 
-## What a skill is in this codebase
+A discovered skill represents the following metadata:
 
-A discovered skill is represented as:
+- `name`: Unique skill identifier.
+- `description`: Functional summary used for model intent matching.
+- `filePath`: Absolute filesystem path to the `SKILL.md` entry point.
+- `baseDir`: Containing directory path for supporting reference files.
+- `_source`: Source metadata tracking provider identity, configuration level, and origin path.
 
-- `name`
-- `description`
-- `filePath` (the `SKILL.md` path)
-- `baseDir` (skill directory)
-- source metadata (`provider`, `level`, path)
+## Directory layout and file conventions
 
-The runtime only requires `name` and `path` for validity. In practice, matching quality depends on `description` being meaningful.
+### Directory structure
 
-## Required layout and SKILL.md expectations
-
-### Directory layout
-
-For provider-based discovery (native/Claude/Codex/Agents/plugin providers), skills are discovered as **one level under `skills/`**:
-
-- `<skills-root>/<skill-name>/SKILL.md`
-
-Nested patterns like `<skills-root>/group/<skill>/SKILL.md` are not discovered by provider loaders.
-
-For `skills.customDirectories`, scanning uses the same non-recursive layout (`*/SKILL.md`).
+Provider loaders scan for skills located exactly one subdirectory level below the configured root (`<ROOT>/skills/<SKILL_NAME>/SKILL.md`):
 
 ```text
-Provider-discovered layout (non-recursive under skills/):
-
-<root>/skills/
-  ├─ postgres/
-  │   └─ SKILL.md      ✅ discovered
-  ├─ pdf/
-  │   └─ SKILL.md      ✅ discovered
-  └─ team/
-      └─ internal/
-          └─ SKILL.md  ❌ not discovered by provider loaders
-
-Custom-directory scanning is also non-recursive, so nested paths are ignored unless you point `customDirectories` at that nested parent.
+skills/
+├── postgres/
+│   └── SKILL.md          # Discovered
+├── pdf/
+│   └── SKILL.md          # Discovered
+└── team/
+    └── internal/
+        └── SKILL.md      # Not discovered (nested directory)
 ```
 
-### `SKILL.md` frontmatter
+> [!NOTE]
+> Custom directory scanning (`skills.customDirectories`) also operates non-recursively. Point `customDirectories` directly to the parent folder containing individual skill directories.
 
-Supported frontmatter fields on the skill type:
+### `SKILL.md` frontmatter schema
 
-- `name?: string`
-- `description?: string`
-- `globs?: string[]`
-- `alwaysApply?: boolean`
-- additional keys are preserved as unknown metadata
+`SKILL.md` files define metadata using YAML frontmatter:
 
-Current runtime behavior:
+```yaml
+---
+name: postgres-operations
+description: PostgreSQL database query, migration, and troubleshooting procedures.
+globs:
+  - "**/*.sql"
+alwaysApply: false
+---
+```
 
-- `name` defaults to the skill directory name
-- `description` is required for:
-  - native `.xcsh` provider skill discovery (`requireDescription: true`)
-  - `skills.customDirectories` scans via `scanSkillsFromDir` in `src/discovery/helpers.ts` (non-recursive)
-- non-native providers can load skills without description
+Frontmatter parsing rules:
 
-## Discovery pipeline
+- `name`: Defaults to the containing directory name when omitted.
+- `description`: Required for the native `.xcsh` provider and custom directory scanners.
+- `globs`: Optional array of file glob patterns associated with the skill domain.
+- `alwaysApply`: Boolean flag indicating whether the skill content applies globally.
 
-`discoverSkills()` in `src/extensibility/skills.ts` does two passes:
+## Discovery pipeline and precedence
 
-1. **Capability providers** via `loadCapability("skills")`
-2. **Custom directories** via `scanSkillsFromDir(..., { requireDescription: true })` (one-level directory enumeration)
+`discoverSkills()` (`src/extensibility/skills.ts`) executes a two-phase discovery workflow:
 
-If `skills.enabled` is `false`, discovery returns no skills.
+1. Capability provider scanning via `loadCapability("skills")`.
+2. Custom directory scanning via `scanSkillsFromDir(...)`.
 
-### Built-in skill providers and precedence
+### Provider precedence
 
-Provider ordering is priority-first (higher wins), then registration order for ties.
+The discovery engine evaluates providers in descending priority order:
 
-Current registered skill providers:
-
-1. `native` (priority 100) — `.xcsh` user/project skills via `src/discovery/builtin.ts`
-2. `claude` (priority 80)
-3. priority 70 group (in registration order):
+1. `native` (Priority `100`): Native `.xcsh` skills in user and project directories.
+2. `claude` (Priority `80`): Claude Code skill locations.
+3. Priority `70` providers:
    - `claude-plugins`
    - `agents`
    - `codex`
 
-Dedup key is skill name. First item with a given name wins.
+When skill names collide, the highest-precedence provider wins, shadowing lower-priority duplicates.
 
-### Source toggles and filtering
+### Configuration filters
 
-`discoverSkills()` applies these controls:
+Skills discovery applies the following configuration filters:
 
-- source toggles: `enableCodexUser`, `enableClaudeUser`, `enableClaudeProject`, `enablePiUser`, `enablePiProject`
-- glob filters on skill name:
-  - `ignoredSkills` (exclude)
-  - `includeSkills` (include allowlist; empty means include all)
+- Provider toggles: `enableCodexUser`, `enableClaudeUser`, `enableClaudeProject`, `enablePiUser`, `enablePiProject`.
+- Name filters:
+  - `ignoredSkills`: Array of glob patterns to exclude.
+  - `includeSkills`: Optional allowlist of glob patterns to include.
 
-Filter order is:
+## Runtime interaction models
 
-1. source enabled
-2. not ignored
-3. included (if include list present)
+### System prompt integration
 
-For providers other than codex/claude/native (for example `agents`, `claude-plugins`), enablement currently falls back to: enabled if **any** built-in source toggle is enabled.
+When the `read` tool is enabled, `src/system-prompt.ts` appends a list of available skill names and descriptions to the system prompt. The model inspects this list and loads detailed instructions on demand using the `read` tool.
 
-### Collision and duplicate handling
+### Interactive slash commands (`/skill:<NAME>`)
 
-- Capability dedup already keeps first skill per name (highest-precedence provider)
-- `extensibility/skills.ts` additionally:
-  - de-duplicates identical files by `realpath` (symlink-safe)
-  - emits collision warnings when a later skill name conflicts
-  - keeps the convenience `discoverSkillsFromDir({ dir, source })` API as a thin adapter over `scanSkillsFromDir`
-- Custom-directory skills are merged after provider skills and follow the same collision behavior
+When `skills.enableSkillCommands` is enabled, the CLI registers dynamic slash commands for each discovered skill:
 
-## Runtime usage behavior
+- `/skill:<NAME> [<ARGS>]`: Reads `SKILL.md`, strips YAML frontmatter, and injects the document body into the session conversation context.
 
-### System prompt exposure
+## The `skill://` URI protocol
 
-System prompt construction (`src/system-prompt.ts`) uses discovered skills as follows:
+The `skill://` protocol handler (`src/internal-urls/skill-protocol.ts`) provides sandboxed access to skill files:
 
-- if `read` tool is available:
-  - include discovered skills list in prompt
-- otherwise:
-  - omit discovered list
+- `skill://<NAME>`: Resolves to `<BASE_DIR>/SKILL.md`.
+- `skill://<NAME>/<RELATIVE_PATH>`: Resolves to `<BASE_DIR>/<RELATIVE_PATH>`.
 
-Task tool subagents receive the session's discovered/provided skills list via normal session creation; there is no per-task skill pinning override.
+### Security boundaries
 
-### Interactive `/skill:<name>` commands
+- Paths are URL-decoded and checked against directory traversal (`..`).
+- Absolute paths and paths resolving outside `<BASE_DIR>` are rejected.
+- Missing files return standard `File not found` error responses.
 
-If `skills.enableSkillCommands` is true, interactive mode registers one slash command per discovered skill.
+## Skills compared with other extensibility mechanisms
 
-`/skill:<name> [args]` behavior:
+- **Skills vs AGENTS.md / XCSH.md**: Skills provide modular, on-demand reference workflows for specific domains. `AGENTS.md` and `XCSH.md` files provide persistent workspace instructions loaded directly into context.
+- **Skills vs custom slash commands**: Skills provide markdown documentation and domain knowledge. Slash commands define user-facing interactive actions.
+- **Skills vs custom tools**: Skills provide human-readable procedures and context. Custom tools provide executable JavaScript or TypeScript functions with typed parameter schemas.
+- **Skills vs lifecycle hooks**: Skills provide passive guidance. Hooks provide event-driven intercepts that can validate or mutate tool execution.
 
-- reads the skill file directly from `filePath`
-- strips frontmatter
-- injects skill body as a follow-up custom message
-- appends metadata (`Skill: <path>`, optional `User: <args>`)
+## Authoring best practices
 
-## `skill://` URL behavior
+- Place each skill in a dedicated directory containing a `SKILL.md` entry point.
+- Provide a clear, concise `description` in the YAML frontmatter to guide model tool selection.
+- Store reference scripts, templates, and schemas within the skill directory and link to them using `skill://<NAME>/...` URIs.
+- Ensure skill names are unique across registered providers.
 
-`src/internal-urls/skill-protocol.ts` supports:
-
-- `skill://<name>` → resolves to that skill's `SKILL.md`
-- `skill://<name>/<relative-path>` → resolves inside that skill directory
-
-```text
-skill:// URL resolution
-
-skill://pdf
-  -> <pdf-base>/SKILL.md
-
-skill://pdf/references/tables.md
-  -> <pdf-base>/references/tables.md
-
-Guards:
-- reject absolute paths
-- reject `..` traversal
-- reject any resolved path escaping <pdf-base>
-```
-
-Resolution details:
-
-- skill name must match exactly
-- relative paths are URL-decoded
-- absolute paths are rejected
-- path traversal (`..`) is rejected
-- resolved path must remain within `baseDir`
-- missing files return an explicit `File not found` error
-
-Content type:
-
-- `.md` => `text/markdown`
-- everything else => `text/plain`
-
-No fallback search is performed for missing assets.
-
-## Skills vs XCSH.md, commands, tools, hooks
-
-### Skills vs XCSH.md
-
-- **Skills**: named, optional capability packs selected by task context or explicitly requested
-- **XCSH.md/context files**: persistent instruction files loaded as context-file capability and merged by level/depth rules
-
-`src/discovery/agents-md.ts` specifically walks ancestor directories from `cwd` to discover standalone `XCSH.md` files (up to depth 20), excluding hidden-directory segments.
-
-### Skills vs slash commands
-
-- **Skills**: model-readable knowledge/workflow content
-- **Slash commands**: user-invoked command entry points
-- `/skill:<name>` is a convenience wrapper that injects skill text; it does not change skill discovery semantics
-
-### Skills vs custom tools
-
-- **Skills**: documentation/workflow content loaded through prompt context and `read`
-- **Custom tools**: executable tool APIs callable by the model with schemas and runtime side effects
-
-### Skills vs hooks
-
-- **Skills**: passive content
-- **Hooks**: event-driven runtime interceptors that can block/modify behavior during execution
-
-## Practical authoring guidance tied to discovery logic
-
-- Put each skill in its own directory: `<skills-root>/<skill-name>/SKILL.md`
-- Always include explicit `name` and `description` frontmatter
-- Keep referenced assets under the same skill directory and access with `skill://<name>/...`
-- For nested taxonomy (`team/domain/skill`), point `skills.customDirectories` to the nested parent directory; scanning itself remains non-recursive
-- Avoid duplicate skill names across sources; first match wins by provider precedence

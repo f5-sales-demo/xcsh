@@ -6,202 +6,94 @@ sidebar:
   label: Custom tools
 ---
 
-# Custom Tools
+# Custom tools
 
-Custom tools are model-callable functions that plug into the same tool execution pipeline as built-in tools.
+Custom tools are user-defined functions callable by LLMs that integrate with the native tool execution pipeline alongside built-in operations.
 
-A custom tool is a TypeScript/JavaScript module that exports a factory. The factory receives a host API (`CustomToolAPI`) and returns one tool or an array of tools.
+A custom tool is implemented as a TypeScript or JavaScript module exporting a factory function. The factory receives host capabilities (`CustomToolAPI`) and returns one or more tool definitions.
 
-## What this is (and is not)
+## Terminology boundaries
 
-- **Custom tool**: callable by the model during a turn (`execute` + TypeBox schema).
-- **Extension**: lifecycle/event framework that can register tools and intercept/modify events.
-- **Hook**: external pre/post command scripts.
-- **Skill**: static guidance/context package, not executable tool code.
+- **Custom tool**: Model-callable function defining a TypeBox schema and execution handler.
+- **Extension**: Lifecycle and event framework capable of registering tools and intercepting agent events.
+- **Hook**: External scripts executed before or after CLI commands.
+- **Skill**: Documentation and prompt guidance package providing task-specific context.
 
-If you need the model to call code directly, use a custom tool.
+## Discovery and registration workflows
 
-## Integration paths in current code
+xcsh loads custom tools through two mechanisms:
 
-There are two active integration styles:
+1. **SDK programmatic configuration**: Provided via `options.customTools` in the coding agent bootstrap configuration.
+2. **Filesystem discovery**: Discovered automatically across configuration directories:
+   - Native xcsh tools: `~/.xcsh/agent/tools/`, `.xcsh/tools/`
+   - Claude-compatible tools: `~/.claude/tools/`, `.claude/tools/`
+   - Codex-compatible tools: `~/.codex/tools/`, `.codex/tools/`
+   - Installed plugins: `~/.xcsh/plugins/node_modules/*`
 
-1. **SDK-provided custom tools** (`options.customTools`)
-   - Wrapped into agent tools via `CustomToolAdapter` or extension wrappers.
-   - Always included in the initial active tool set in SDK bootstrap.
+## Module structure and factory pattern
 
-2. **Filesystem-discovered modules via loader API** (`discoverAndLoadCustomTools` / `loadCustomTools`)
-   - Exposed as library APIs in `src/extensibility/custom-tools/loader.ts`.
-   - Host code can call these to discover and load tool modules from config/provider/plugin paths.
+A custom tool module exports a factory conforming to `CustomToolFactory`:
 
-```text
-Model tool call flow
-
-LLM tool call
-   │
-   ▼
-Tool registry (built-ins + custom tool adapters)
-   │
-   ▼
-CustomTool.execute(toolCallId, params, onUpdate, ctx, signal)
-   │
-   ├─ onUpdate(...)  -> streamed partial result
-   └─ return result  -> final tool content/details
-```
-
-## Discovery locations (loader API)
-
-`discoverAndLoadCustomTools(configuredPaths, cwd, builtInToolNames)` merges:
-
-1. Capability providers (`toolCapability`), including:
-   - Native OMP config (`~/.xcsh/agent/tools`, `.xcsh/tools`)
-   - Claude config (`~/.claude/tools`, `.claude/tools`)
-   - Codex config (`~/.codex/tools`, `.codex/tools`)
-   - Claude marketplace plugin cache provider
-2. Installed plugin manifests (`~/.xcsh/plugins/node_modules/*` via plugin loader)
-3. Explicit configured paths passed to the loader
-
-### Important behavior
-
-- Duplicate resolved paths are deduplicated.
-- Tool name conflicts are rejected against built-ins and already-loaded custom tools.
-- `.md` and `.json` files are discovered as tool metadata by some providers, but the executable module loader rejects them as runnable tools.
-- Relative configured paths are resolved from `cwd`; `~` is expanded.
-
-## Module contract
-
-A custom tool module must export a function (default export preferred):
-
-```ts
+```typescript
 import type { CustomToolFactory } from "@f5-sales-demo/xcsh";
 
 const factory: CustomToolFactory = (pi) => ({
- name: "repo_stats",
- label: "Repo Stats",
- description: "Counts tracked TypeScript files",
- parameters: pi.typebox.Type.Object({
-  glob: pi.typebox.Type.Optional(pi.typebox.Type.String({ default: "**/*.ts" })),
- }),
+  name: "repo_stats",
+  label: "Repository statistics",
+  description: "Computes file metrics across the repository",
+  parameters: pi.typebox.Type.Object({
+    glob: pi.typebox.Type.Optional(pi.typebox.Type.String({ default: "**/*.ts" })),
+  }),
 
- async execute(toolCallId, params, onUpdate, ctx, signal) {
-  onUpdate?.({
-   content: [{ type: "text", text: "Scanning files..." }],
-   details: { phase: "scan" },
-  });
+  async execute(toolCallId, params, onUpdate, ctx, signal) {
+    onUpdate?.({
+      content: [{ type: "text", text: "Scanning repository files..." }],
+      details: { phase: "scan" },
+    });
 
-  const result = await pi.exec("git", ["ls-files", params.glob ?? "**/*.ts"], { signal, cwd: pi.cwd });
-  if (result.killed) {
-   throw new Error("Scan was cancelled");
-  }
-  if (result.code !== 0) {
-   throw new Error(result.stderr || "git ls-files failed");
-  }
+    const result = await pi.exec("git", ["ls-files", params.glob ?? "**/*.ts"], {
+      signal,
+      cwd: pi.cwd,
+    });
 
-  const files = result.stdout.split("\n").filter(Boolean);
-  return {
-   content: [{ type: "text", text: `Found ${files.length} files` }],
-   details: { count: files.length, sample: files.slice(0, 10) },
-  };
- },
+    if (result.killed) {
+      throw new Error("Scan was aborted");
+    }
+    if (result.code !== 0) {
+      throw new Error(result.stderr || "Failed to list tracked files");
+    }
 
- onSession(event) {
-  if (event.reason === "shutdown") {
-   // cleanup resources if needed
-  }
- },
+    const files = result.stdout.split("\n").filter(Boolean);
+    return {
+      content: [{ type: "text", text: `Found ${files.length} matching files` }],
+      details: { count: files.length, sample: files.slice(0, 10) },
+    };
+  },
+
+  onSession(event) {
+    if (event.reason === "shutdown") {
+      // Clean up background resources
+    }
+  },
 });
 
 export default factory;
 ```
 
-Factory return type:
+## Host API surface (`CustomToolAPI`)
 
-- `CustomTool`
-- `CustomTool[]`
-- `Promise<CustomTool | CustomTool[]>`
+Factory functions receive a `CustomToolAPI` instance containing:
 
-## API surface passed to factories (`CustomToolAPI`)
+- `cwd`: Active workspace directory path.
+- `exec(command, args, options?)`: Subprocess execution utility with signal forwarding.
+- `ui`: TUI interaction context (no-op in headless environments).
+- `hasUI`: Boolean indicating interactive graphical availability.
+- `logger`: Structured logging facility.
+- `typebox`: Injected TypeBox instance for schema definitions.
 
-From `types.ts` and `loader.ts`:
+## Lifecycle and cancellation handling
 
-- `cwd`: host working directory
-- `exec(command, args, options?)`: process execution helper
-- `ui`: UI context (can be no-op in headless modes)
-- `hasUI`: `false` in non-interactive flows
-- `logger`: shared file logger
-- `typebox`: injected `@sinclair/typebox`
-- `pi`: injected `@f5-sales-demo/xcsh` exports
-- `pushPendingAction(action)`: register a preview action for hidden `resolve` tool (`docs/resolve-tool-runtime.md`)
+- **Execution validation**: Parameters are validated against the TypeBox schema prior to executing `execute()`.
+- **Cancellation propagation**: Pass `signal` to asynchronous operations to handle user interruptions cleanly.
+- **Session events**: Optional `onSession(event, ctx)` callbacks receive lifecycle notifications (`start`, `branch`, `shutdown`, `auto_compaction_start`).
 
-Loader starts with a no-op UI context and requires host code to call `setUIContext(...)` when real UI is ready.
-
-## Execution contract and typing
-
-`CustomTool.execute` signature:
-
-```ts
-execute(toolCallId, params, onUpdate, ctx, signal)
-```
-
-- `params` is statically typed from your TypeBox schema via `Static<TParams>`.
-- Runtime argument validation happens before execution in the agent loop.
-- `onUpdate` emits partial results for UI streaming.
-- `ctx` includes session/model state and an `abort()` helper.
-- `signal` carries cancellation.
-
-`CustomToolAdapter` bridges this to the agent tool interface and forwards calls in the correct argument order.
-
-## How tools are exposed to the model
-
-- Tools are wrapped into `AgentTool` instances (`CustomToolAdapter` or extension wrappers).
-- They are inserted into the session tool registry by name.
-- In SDK bootstrap, custom and extension-registered tools are force-included in the initial active set.
-- CLI `--tools` currently validates only built-in tool names; custom tool inclusion is handled through discovery/registration paths and SDK options.
-
-## Rendering hooks
-
-Optional rendering hooks:
-
-- `renderCall(args, theme)`
-- `renderResult(result, options, theme, args?)`
-
-Runtime behavior in TUI:
-
-- If hooks exist, tool output is rendered inside a `Box` container.
-- `renderResult` receives `{ expanded, isPartial, spinnerFrame? }`.
-- Renderer errors are caught and logged; UI falls back to default text rendering.
-
-## Session/state handling
-
-Optional `onSession(event, ctx)` receives session lifecycle events, including:
-
-- `start`, `switch`, `branch`, `tree`, `shutdown`
-- `auto_compaction_start`, `auto_compaction_end`
-- `auto_retry_start`, `auto_retry_end`
-- `ttsr_triggered`, `todo_reminder`
-
-Use `ctx.sessionManager` to reconstruct state from history when branch/session context changes.
-
-## Failures and cancellation semantics
-
-### Synchronous/async failures
-
-- Throwing (or rejected promises) in `execute` is treated as tool failure.
-- Agent runtime converts failures into tool result messages with `isError: true` and error text content.
-- With extension wrappers, `tool_result` handlers can further rewrite content/details and even override error status.
-
-### Cancellation
-
-- Agent abort propagates through `AbortSignal` to `execute`.
-- Forward `signal` to subprocess work (`pi.exec(..., { signal })`) for cooperative cancellation.
-- `ctx.abort()` lets a tool request abort of the current agent operation.
-
-### onSession errors
-
-- `onSession` errors are caught and logged as warnings; they do not crash the session.
-
-## Real constraints to design for
-
-- Tool names must be globally unique in the active registry.
-- Prefer deterministic, schema-shaped outputs in `details` for renderer/state reconstruction.
-- Guard UI usage with `pi.hasUI`.
-- Treat `.md`/`.json` in tool directories as metadata, not executable modules.

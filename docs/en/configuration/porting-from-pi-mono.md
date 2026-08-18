@@ -6,95 +6,95 @@ sidebar:
   label: Porting from pi-mono
 ---
 
-# Porting From pi-mono: A Practical Merge Guide
+# Porting from pi-mono: a practical merge guide
 
-This guide is a repeatable checklist for porting changes from pi-mono into this repo.
-Use it for any merge: single file, feature branch, or full release sync.
+This guide provides a repeatable procedure for porting changes from upstream `pi-mono` into this repository. Use it when executing any merge: single files, feature branches, or full release synchronizations.
 
-## Last Sync Point
+## Last sync point
 
-**Commit:** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
-**Date:** 2026-03-22
+- **Commit:** `b21b42d032919de2f2e6920a76fa9a37c3920c0a`
+- **Date:** 2026-03-22
 
-Update this section after each sync; do not reuse the previous range.
+Update this section after completing each sync operation; do not reuse previous commit ranges.
 
-When starting a new sync, generate patches from this commit forward:
+When initiating a new sync, generate patches from this commit forward:
 
 ```bash
 git format-patch b21b42d032919de2f2e6920a76fa9a37c3920c0a..HEAD --stdout > changes.patch
 ```
 
-## 0) Define the scope
+## Step 1: Define the scope
 
-- Identify the upstream reference (commit, tag, or PR).
-- List the packages or folders you plan to touch.
-- Decide which features are in-scope and which are intentionally skipped.
+- Identify the upstream reference (commit hash, tag, or pull request).
+- List the packages and directories you plan to modify.
+- Determine which features are in-scope and which are intentionally excluded.
 
-## 1) Bring code over safely
+## Step 2: Import code safely
 
-- Prefer a clean, focused diff rather than a wholesale copy.
-- Avoid copying built artifacts or generated files.
-- If upstream added new files, add them explicitly and review contents.
+- Prefer a clean, focused diff rather than wholesale file replacement.
+- Avoid copying build artifacts or generated files.
+- When upstream adds new files, add them explicitly and inspect their contents.
 
-## 2) Match import extension conventions
+## Step 3: Match import extension conventions
 
-Most runtime TypeScript sources omit `.js` in internal imports, but some test/bench entrypoints keep `.js` for ESM
-runtime compatibility. Follow the local package’s existing style; do not blanket-strip extensions.
+Most runtime TypeScript sources omit `.js` in internal imports, whereas select test and benchmark entry points retain `.js` for ESM runtime compatibility. Follow the existing style of the target package; avoid blanket stripping of extensions.
 
-- In `packages/coding-agent` runtime sources, keep internal imports extensionless unless importing non-TS assets.
-- In `packages/tui/test` and `packages/natives/bench`, keep `.js` where surrounding files already use it.
-- Keep real file extensions when required by tooling (e.g., `.json`, `.css`, `.md` text embeds).
-- Example: `import { x } from "./foo.js";` → `import { x } from "./foo";` (only when the package convention is extensionless).
+- In `packages/coding-agent` runtime sources, keep internal imports extensionless unless importing non-TypeScript assets.
+- In `packages/tui/test` and `packages/natives/bench`, retain `.js` where surrounding files already use it.
+- Keep real file extensions when required by tooling (such as `.json`, `.css`, or `.md` text embeds).
+- Example: Change `import { x } from "./foo.js";` to `import { x } from "./foo";` only when the package convention is extensionless.
 
-## 3) Replace import scopes
+## Step 4: Replace import scopes
 
-Upstream uses different package scopes. Replace them consistently.
+Upstream packages use different organizational scopes. Replace them systematically:
 
-- Replace old scopes with the local scope used here.
-- Examples (adjust to match the actual packages you are porting):
-  - `@mariozechner/pi-coding-agent` → `@f5-sales-demo/xcsh`
-  - `@mariozechner/pi-agent-core` → `@f5-sales-demo/pi-agent-core`
-  - `@mariozechner/pi-tui` → `@f5-sales-demo/pi-tui`
-  - `@mariozechner/pi-ai` → `@f5-sales-demo/pi-ai`
+- Replace upstream scopes with the corresponding local package scope.
+- Reference mapping:
+  - `@mariozechner/pi-coding-agent` —> `@f5-sales-demo/xcsh`
+  - `@mariozechner/pi-agent-core` —> `@f5-sales-demo/pi-agent-core`
+  - `@mariozechner/pi-tui` —> `@f5-sales-demo/pi-tui`
+  - `@mariozechner/pi-ai` —> `@f5-sales-demo/pi-ai`
 
-## 4) Use Bun APIs where they improve on Node
+## Step 5: Adopt Bun APIs
 
-We run on Bun. Replace Node APIs only when Bun provides a better alternative.
+This project runs on Bun. Replace Node.js APIs when Bun provides a higher-performance or cleaner alternative.
 
-**DO replace:**
+### Recommended Bun replacements
 
-- Process spawning: `child_process.spawn` → Bun Shell `$` for simple commands, `Bun.spawn`/`Bun.spawnSync` for streaming or long-running work
-- File I/O: `fs.readFileSync` → `Bun.file().text()` / `Bun.write()`
-- HTTP clients: `node-fetch`, `axios` → native `fetch`
-- Crypto hashing: `node:crypto` → Web Crypto or `Bun.hash`
-- SQLite: `better-sqlite3` → `bun:sqlite`
-- Env loading: `dotenv` → Bun loads `.env` automatically
+- Process execution: Replace `child_process.spawn` with Bun Shell `$` for basic commands, or `Bun.spawn`/`Bun.spawnSync` for streaming or long-running tasks.
+- File operations: Replace `fs.readFileSync` with `Bun.file().text()` and `Bun.write()`.
+- HTTP requests: Replace `node-fetch` and `axios` with global `fetch`.
+- Cryptographic hashing: Replace `node:crypto` with Web Crypto or `Bun.hash`.
+- Database access: Replace `better-sqlite3` with `bun:sqlite`.
+- Environment loading: Remove `dotenv` calls because Bun loads `.env` files automatically.
 
-**DO NOT replace (these work fine in Bun):**
+### Preserved Node.js APIs
 
-- `os.homedir()` — do NOT replace with `Bun.env.HOME`, `Bun.env.HOME`, or literal `"~"`
-- `os.tmpdir()` — do NOT replace with `Bun.env.TMPDIR || "/tmp"` or hardcoded paths
-- `fs.mkdtempSync()` — do NOT replace with manual path construction
-- `path.join()`, `path.resolve()`, etc. — these are fine
+Retain the following standard Node.js utilities (they execute natively in Bun):
 
-**Import style:** Use the `node:` prefix with namespace imports only (no named imports from `node:fs` or `node:path`).
+- `os.homedir()` — Do not replace with `Bun.env.HOME` or literal `"~"`.
+- `os.tmpdir()` — Do not replace with `Bun.env.TMPDIR || "/tmp"` or hardcoded paths.
+- `fs.mkdtempSync()` — Do not replace with manual path construction.
+- `path.join()`, `path.resolve()`, and related path helpers.
 
-**Additional Bun conventions:**
+**Import style:** Use the `node:` protocol prefix with namespace imports exclusively (avoid named imports from `node:fs` or `node:path`).
 
-- Prefer Bun Shell `$` for short, non-streaming commands; use `Bun.spawn` only when you need streaming I/O or process control.
-- Use `Bun.file()`/`Bun.write()` for files and `node:fs/promises` for directories.
-- Avoid `Bun.file().exists()` checks; use `isEnoent` handling in try/catch.
+### Additional Bun conventions
+
+- Prefer Bun Shell `$` for short, non-streaming commands; use `Bun.spawn` when streaming I/O or process controls are needed.
+- Use `Bun.file()` and `Bun.write()` for file operations, and `node:fs/promises` for directory manipulations.
+- Avoid `Bun.file().exists()` checks; implement `isEnoent` error checking in `try/catch` blocks instead.
 - Prefer `Bun.sleep(ms)` over `setTimeout` wrappers.
 
-**Wrong:**
+Incorrect:
 
 ```typescript
-// BROKEN: env vars may be undefined, "~" is not expanded
+// Broken: environment variables can be undefined, and "~" is not expanded
 const home = Bun.env.HOME || "~";
 const tmp = Bun.env.TMPDIR || "/tmp";
 ```
 
-**Correct:**
+Correct:
 
 ```typescript
 import * as os from "node:os";
@@ -105,164 +105,113 @@ const configDir = path.join(os.homedir(), ".config", "myapp");
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "myapp-"));
 ```
 
-## 5) Prefer Bun embeds (no copying)
+## Step 6: Use Bun embeds for assets
 
-Do not copy runtime assets or vendor files at build time.
+Do not copy runtime assets or vendor files during the build process.
 
-- If upstream copies assets into a dist folder, replace with Bun-friendly embeds.
-- Prompts are static `.md` files; use Bun text imports (`with { type: "text" }`) and Handlebars instead of inline prompt strings.
-- Use `import.meta.dir` + `Bun.file` to load adjacent non-text resources.
-- Keep assets in-repo and let the bundler include them.
-- Eliminate copy scripts unless the user explicitly requests them.
-- If upstream reads a bundled fallback file at runtime, replace filesystem reads with a Bun text embed import.
-  - Example (Codex instructions fallback):
-    - `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "codex-instructions.md");` -> removed
-    - `import FALLBACK_INSTRUCTIONS from "./codex-instructions.md" with { type: "text" };`
-    - Use `return FALLBACK_INSTRUCTIONS;` instead of `readFileSync(FALLBACK_PROMPT_PATH, "utf8")`
+- Replace dist copy steps with native Bun text embeds (`with { type: "text" }`).
+- Store prompts as static `.md` files and render them with Handlebars.
+- Use `import.meta.dir` with `Bun.file` to resolve adjacent non-text assets.
+- Keep assets inside repository packages so the bundler includes them directly.
+- Eliminate copy scripts from build configurations.
+- Example:
+  - Replace `const FALLBACK_PROMPT_PATH = join(import.meta.dir, "instructions.md"); readFileSync(FALLBACK_PROMPT_PATH, "utf8");`
+  - With `import FALLBACK_INSTRUCTIONS from "./instructions.md" with { type: "text" }; return FALLBACK_INSTRUCTIONS;`
 
-## 6) Port `package.json` carefully
+## Step 7: Update `package.json` manifests
 
-Treat `package.json` as a contract. Merge intentionally.
+Treat `package.json` as a package contract. Merge changes deliberately:
 
-- Keep existing `name`, `version`, `type`, `exports`, and `bin` unless the port requires changes.
-- Replace npm/node scripts with Bun equivalents (e.g., `bun check`, `bun test`).
-- Ensure dependencies use the correct scope.
-- Do not downgrade dependencies to fix type errors; upgrade instead.
-- Validate workspace package links and `peerDependencies`.
+- Preserve existing `name`, `version`, `type`, `exports`, and `bin` fields unless the port requires explicit changes.
+- Replace npm and Node scripts with Bun equivalents (such as `bun check` and `bun test`).
+- Ensure all workspace dependencies reference the `@f5-sales-demo/*` scope.
+- Do not downgrade dependencies to resolve type errors; upgrade dependencies instead.
+- Validate workspace links and `peerDependencies`.
 
-## 7) Align code style and tooling
+## Step 8: Align coding style and conventions
 
-- Keep existing formatting conventions.
-- Do not introduce `any` unless required.
-- Avoid dynamic imports and inline type imports; use top-level imports only.
-- Never build prompts in code; prompts are static `.md` files rendered with Handlebars.
-- In coding-agent, never use `console.log`/`console.warn`/`console.error`; use `logger` from `@f5-sales-demo/pi-utils`.
+- Maintain existing repository formatting conventions.
+- Do not introduce `any` types unless required by external interfaces.
+- Avoid dynamic imports and inline type imports; place imports at module root.
+- Never concatenate prompt strings in code; maintain prompts as static `.md` templates rendered via Handlebars.
+- In `packages/coding-agent`, use `logger` from `@f5-sales-demo/pi-utils` instead of `console.log`, `console.warn`, or `console.error`.
 - Use `Promise.withResolvers()` instead of `new Promise((resolve, reject) => ...)`.
-- **No `private`/`protected`/`public` keywords on class fields or methods.** Use ES `#` private fields for encapsulation; leave accessible members bare (no keyword).
-  The only exception is constructor parameter properties (`constructor(private readonly x: T)`), where the keyword is required by TypeScript. When porting upstream code that uses `private foo` or `protected bar`, convert to `#foo` (private) or bare `bar` (accessible).
-- Prefer existing helpers and utilities over new ad-hoc code.
-- Preserve Bun-first infrastructure changes already made in this repo:
-  - Runtime is Bun (no Node entry points).
-  - Package manager is Bun (no npm lockfiles).
-  - Heavy Node APIs (`child_process`, `readline`) are replaced with Bun equivalents.
-  - Lightweight Node APIs (`os.homedir`, `os.tmpdir`, `fs.mkdtempSync`, `path.*`) are kept.
-  - CLI shebangs use `bun` (not `node`, not `tsx`).
-  - Packages use source files directly (no TypeScript build step).
-  - CI workflows run Bun for install/check/test.
+- **Do not use `private`, `protected`, or `public` keywords on class fields or methods.** Use ECMAScript private field `#` syntax for encapsulation, and leave accessible members bare without keywords. The only exception is constructor parameter properties (`constructor(private readonly name: string)`).
+- Preserve Bun-first repository characteristics:
+  - Runtime executes under Bun without Node entry points.
+  - Package manager runs through Bun without npm lockfiles.
+  - CLI shebangs target `bun` rather than `node` or `tsx`.
+  - Packages consume source files directly without intermediate TypeScript build output.
+  - CI workflows execute Bun for installation, typechecking, and testing.
 
-## 8) Remove old compatibility layers
+## Step 9: Remove obsolete compatibility shims
 
-Unless requested, remove upstream compatibility shims.
+Unless backward compatibility is explicitly requested, eliminate legacy upstream shims:
 
-- Delete old APIs that were replaced.
-- Update all call sites to the new API directly.
-- Do not keep `*_v2` or parallel versions.
+- Delete obsolete APIs that were superseded.
+- Update callers directly to target the new API signatures.
+- Avoid retaining `*_v2` or parallel duplicate functions.
 
-## 9) Update docs and references
+## Step 10: Update documentation and references
 
-- Replace pi-mono repo links where appropriate.
-- Update examples to use Bun and correct package scopes.
-- Ensure README instructions still match the current repo behavior.
+- Update repository links and cross-references.
+- Update code samples to reflect Bun runtime commands and updated package scopes.
+- Confirm README setup instructions remain accurate.
 
-## 10) Validate the port
+## Step 11: Validate the port
 
-Run the standard checks after changes:
-
-- `bun check`
-
-If the repo already has failing checks unrelated to your changes, call that out.
-Tests use Bun's runner (not Vitest), but only run `bun test` when explicitly requested.
-
-## 11) Protect improved features (regression trap list)
-
-If you already improved behavior locally, treat those as **non‑negotiable**. Before porting, write down
-the improvements and add explicit checks so they don’t get lost in the merge.
-
-- **Freeze the expected behavior**: add a short “before/after” note for each improvement (inputs, outputs,
-  defaults, edge cases). This prevents silent rollback.
-- **Map old → new APIs**: if upstream renamed concepts (hooks → extensions, custom tools → tools, etc.),
-  ensure every old entry point still wires through. One missed flag or export equals lost functionality.
-- **Verify exports**: check `package.json` `exports`, public types, and barrel files. Upstream ports often
-  forget to re-export local additions.
-- **Cover non‑happy paths**: if you fixed error handling, timeouts, or fallback logic, add a test or at
-  least a manual checklist that exercises those paths.
-- **Check defaults and config merge order**: improvements often live in defaults. Confirm new defaults
-  didn’t revert (e.g., new config precedence, disabled features, tool lists).
-- **Audit env/shell behavior**: if you fixed execution or sandboxing, verify the new path still uses your
-  sanitized env and does not reintroduce alias/function overrides.
-- **Re-run targeted samples**: keep a minimal set of "known good" examples and run them after the port
-  (CLI flags, extension registration, tool execution).
-
-## 12) Detect and handle reworked code
-
-Before porting a file, check if upstream significantly refactored it:
+Run standard verification commands following changes:
 
 ```bash
-# Compare the file you're about to port against what you have locally
+bun check
+```
+
+If the repository contains pre-existing test failures unrelated to your changes, note them explicitly. Test execution uses Bun's test runner (`bun test`).
+
+## Step 12: Protect fork enhancements
+
+Treat local enhancements as non-negotiable requirements. Verify that upstream merges do not regress custom functionality:
+
+- **Record baseline behaviors**: Document expected inputs, outputs, and edge cases before merging to prevent silent rollbacks.
+- **Map renamed APIs**: When upstream renames concepts (such as hooks to extensions or custom tools to tools), verify that all entry points and flags wire through correctly.
+- **Verify package exports**: Check `package.json` `exports`, public types, and barrel files to ensure local exports remain available.
+- **Verify non-happy paths**: Add or execute test cases covering error handling, timeout bounds, and fallback branches.
+- **Audit configuration precedence**: Verify that default options and configuration merge hierarchies preserve custom settings.
+- **Audit environment isolation**: Ensure command execution flows continue using sanitized environment variables without alias contamination.
+
+## Step 13: Handle refactored upstream code
+
+Before porting a file, inspect upstream git diffs to detect architectural refactoring:
+
+```bash
 git diff HEAD upstream/main -- path/to/file.ts
 ```
 
-If the diff shows the file was **reworked** (not just patched):
+When upstream refactors a module (introducing new abstractions, merged files, or restructured control flows):
 
-- New abstractions, renamed concepts, merged modules, changed data flow
+1. **Review original implementation**: Understand the previous contract, options, and exported surfaces.
+2. **Review new implementation**: Understand the updated abstractions and how previous options map.
+3. **Verify feature parity**: Confirm that each previous capability is preserved or deliberately handled.
+4. **Search for legacy symbols**: Grep for deprecated names and identifiers across switch statements and UI handlers.
+5. **Test interface boundaries**: Validate CLI arguments, SDK options, event handlers, and default configurations.
 
-Then you must **read the new implementation thoroughly** before porting. Blind merging of reworked code loses functionality because:
+## Step 14: Verification checklist
 
-Note: interactive mode was recently split into controllers/utils/types. When backporting related changes, port updates into the individual files we created and ensure `interactive-mode.ts` wiring stays in sync.
+Complete the following verification checklist before finalizing a port:
 
-1. **Defaults change silently** - A new variable `defaultFoo = [a, b]` may replace an old `getAllFoo()` that returned `[a, b, c, d, e]`.
+- [ ] Import extensions conform to the package convention without blanket stripping of `.js`.
+- [ ] No Node-only APIs introduced in ported code.
+- [ ] All package scopes updated to `@f5-sales-demo/*`.
+- [ ] `package.json` scripts target Bun commands.
+- [ ] Prompts load via static `.md` text imports.
+- [ ] Logging uses `logger` instead of `console.*` in `coding-agent`.
+- [ ] Runtime assets load via Bun embeds.
+- [ ] Verification suite (`bun check`) passes cleanly.
+- [ ] Enhanced fork capabilities remain intact.
 
-2. **API options get dropped** - When systems merge (e.g., `hooks` + `customTools` → `extensions`), old options may not wire through to the new implementation.
+## Step 15: Commit message format
 
-3. **Code paths go stale** - A renamed concept (e.g., `hookMessage` → `custom`) needs updates in every switch statement, type guard, and handler—not just the definition.
-
-4. **Context/capabilities shrink** - Old APIs may have exposed `{ logger, typebox, pi }` that new APIs forgot to include.
-
-### Semantic porting process
-
-When upstream reworked a module:
-
-1. **Read the old implementation** - Understand what it did, what options it accepted, what it exposed.
-
-2. **Read the new implementation** - Understand the new abstractions and how they map to old behavior.
-
-3. **Verify feature parity** - For each capability in the old code, confirm the new code preserves it or explicitly removes it.
-
-4. **Grep for stragglers** - Search for old names/concepts that may have been missed in switch statements, handlers, UI components.
-
-5. **Test the boundaries** - CLI flags, SDK options, event handlers, default values—these are where regressions hide.
-
-### Quick checks
-
-```bash
-# Find all uses of an old concept that may need updating
-rg "oldConceptName" --type ts
-
-# Compare default values between versions
-git show upstream/main:path/to/file.ts | rg "default|DEFAULT"
-
-# Check if all enum/union values have handlers
-rg "case \"" path/to/file.ts
-```
-
-## 13) Quick audit checklist
-
-Use this as a final pass before you finish:
-
-- [ ] Import extensions follow the local package convention (no blanket `.js` stripping)
-- [ ] No Node-only APIs in new/ported code
-- [ ] All package scopes updated
-- [ ] `package.json` scripts use Bun
-- [ ] Prompts are `.md` text imports (no inline prompt strings)
-- [ ] No `console.*` in coding-agent (use `logger`)
-- [ ] Assets load via Bun embed patterns (no copy scripts)
-- [ ] Tests or checks run (or explicitly noted as blocked)
-- [ ] No functionality regressions (see sections 11-12)
-
-## 14) Commit message format
-
-When committing a backport, follow the repo format `<type>(scope): <past-tense description>` and keep the commit
-range in the title.
+When committing backported changes, format the commit header as `<type>(scope): <past-tense description>` and include the sync commit range:
 
 ```
 fix(coding-agent): backported pi-mono changes (<from>..<to>)
@@ -275,7 +224,7 @@ packages/<other-package>:
 - <type>: <description>
 ```
 
-**Example:**
+Example:
 
 ```
 fix(coding-agent): backported pi-mono changes (9f3eef65f..52532c7c0)
@@ -297,95 +246,89 @@ packages/coding-agent:
 - fix: resolve macOS NFD and curly quote variants in file paths
 ```
 
-**Rules:**
+## Intentional architectural divergences
 
-- Group changes by package
-- Use conventional commit types (`fix`, `feat`, `refactor`, `perf`, `docs`)
-- Include upstream issue/PR numbers and contributor attribution for external contributions
-- The commit range in the title helps track sync points
+This repository contains intentional design divergences from upstream. **Do not port upstream patterns in these areas:**
 
-## 15) Intentional Divergences
+### UI architecture
 
-Our fork has architectural decisions that differ from upstream. **Do not port these upstream patterns:**
+| Upstream | Local fork | Rationale |
+| --- | --- | --- |
+| `FooterDataProvider` class | `StatusLineComponent` | Integrated, simplified status line |
+| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub in non-TUI modes | Implemented in TUI, no-op in headless |
+| `ctx.ui.setEditorComponent()` | Stub in non-TUI modes | Implemented in TUI, no-op in headless |
+| `InteractiveModeOptions` object | Positional constructor arguments | Preserves stable constructor signatures |
 
-### UI Architecture
+### Component naming
 
-| Upstream                                    | Our Fork                                                  | Reason                                                                |
-| ------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| `FooterDataProvider` class                  | `StatusLineComponent`                                     | Simpler, integrated status line                                       |
-| `ctx.ui.setHeader()` / `ctx.ui.setFooter()` | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
-| `ctx.ui.setEditorComponent()`               | Stub in non-TUI modes                                     | Implemented in TUI, no-op elsewhere                                   |
-| `InteractiveModeOptions` options object     | Positional constructor args (options type still exported) | Keep constructor signature; update the type when upstream adds fields |
-
-### Component Naming
-
-| Upstream                     | Our Fork                |
-| ---------------------------- | ----------------------- |
-| `extension-input.ts`         | `hook-input.ts`         |
-| `extension-selector.ts`      | `hook-selector.ts`      |
-| `ExtensionInputComponent`    | `HookInputComponent`    |
+| Upstream | Local fork |
+| --- | --- |
+| `extension-input.ts` | `hook-input.ts` |
+| `extension-selector.ts` | `hook-selector.ts` |
+| `ExtensionInputComponent` | `HookInputComponent` |
 | `ExtensionSelectorComponent` | `HookSelectorComponent` |
 
-### API Naming
+### API naming
 
-| Upstream                                 | Our Fork                                 | Notes                                     |
-| ---------------------------------------- | ---------------------------------------- | ----------------------------------------- |
-| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)`    | We use `sessionName` throughout           |
-| `sessionManager.getSessionName()`        | `sessionManager.getSessionName()`        | Same (we unified to match upstream's RPC) |
-| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Same                                      |
+| Upstream | Local fork | Notes |
+| --- | --- | --- |
+| `sessionManager.appendSessionInfo(name)` | `sessionManager.setSessionName(name)` | Uses `sessionName` consistently |
+| `sessionManager.getSessionName()` | `sessionManager.getSessionName()` | Unified naming |
+| `agent.sessionName` / `setSessionName()` | `agent.sessionName` / `setSessionName()` | Unified naming |
 
-### File Consolidation
+### File consolidation
 
-| Upstream                                           | Our Fork                                | Reason                                  |
-| -------------------------------------------------- | --------------------------------------- | --------------------------------------- |
-| `clipboard.ts` + `clipboard-image.ts` (tool files) | `@f5-sales-demo/pi-natives` clipboard module | Merged into N-API native implementation |
+| Upstream | Local fork | Rationale |
+| --- | --- | --- |
+| `clipboard.ts` + `clipboard-image.ts` | `@f5-sales-demo/pi-natives` clipboard module | Native N-API clipboard implementation |
 
-### Test Framework
+### Test framework
 
-| Upstream                  | Our Fork                      |
-| ------------------------- | ----------------------------- |
-| `vitest` with `vi.mock()` | `bun:test` with `vi` from bun |
-| `node:test` assertions    | `expect()` matchers           |
+| Upstream | Local fork |
+| --- | --- |
+| `vitest` with `vi.mock()` | `bun:test` with `vi` from Bun |
+| `node:test` assertions | `expect()` matchers |
 
-### Tool Architecture
+### Tool architecture
 
-| Upstream                            | Our Fork                                                          | Notes                                                     |
-| ----------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------- |
-| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS` registry  | Tool factories accept `ToolSession` and can return `null` |
-| Per-tool `*Operations` interfaces   | Per-tool interfaces remain (`FindOperations`, `GrepOperations`)   | Used for SSH/remote overrides                             |
-| Node.js `fs/promises` everywhere    | `Bun.file()`/`Bun.write()` for files; `node:fs/promises` for dirs | Prefer Bun APIs when they simplify                        |
+| Upstream | Local fork | Notes |
+| --- | --- | --- |
+| `createTool(cwd: string, options?)` | `createTools(session: ToolSession)` via `BUILTIN_TOOLS` registry | Tool factories accept `ToolSession` and return `null` when disabled |
+| Per-tool `*Operations` interfaces | Per-tool interfaces retained (`FindOperations`, `GrepOperations`) | Supports remote and SSH execution overrides |
+| Node.js `fs/promises` everywhere | `Bun.file()`/`Bun.write()` for files, `node:fs/promises` for directories | Leverages high-performance Bun file I/O |
 
-### Auth Storage
+### Authentication storage
 
-| Upstream                        | Our Fork                                    | Notes                                        |
-| ------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| `proper-lockfile` + `auth.json` | `agent.db` (bun:sqlite)                     | Credentials stored exclusively in `agent.db` |
-| Single credential per provider  | Multi-credential with round-robin selection | Session affinity and backoff logic preserved |
+| Upstream | Local fork | Notes |
+| --- | --- | --- |
+| `proper-lockfile` + `auth.json` | `agent.db` (`bun:sqlite`) | Credentials persist in SQLite `agent.db` |
+| Single credential per provider | Multi-credential with round-robin selection | Session affinity and backoff logic preserved |
 
 ### Extensions
 
-| Upstream                      | Our Fork                                   |
-| ----------------------------- | ------------------------------------------ |
-| `jiti` for TypeScript loading | Native Bun `import()`                      |
-| `pkg.pi` manifest field       | `pkg.xcsh ?? pkg.pi` (prefer our namespace) |
+| Upstream | Local fork |
+| --- | --- |
+| `jiti` for TypeScript loading | Native Bun `import()` |
+| `pkg.pi` manifest field | `pkg.xcsh ?? pkg.pi` (prefers local namespace) |
 
-### Skip These Upstream Features
+### Excluded upstream features
 
-When porting, **skip** these files/features entirely:
+When porting changes, **exclude** the following files and features:
 
-- `footer-data-provider.ts` — we use StatusLineComponent
-- `clipboard-image.ts` — clipboard is in `@f5-sales-demo/pi-natives` N-API module
-- GitHub workflow files — we have our own CI
-- `models.generated.ts` — auto-generated, regenerate locally (as models.json instead)
+- `footer-data-provider.ts` — Handled via `StatusLineComponent`.
+- `clipboard-image.ts` — Handled via `@f5-sales-demo/pi-natives` N-API module.
+- GitHub workflow files — Governed by local CI workflows.
+- `models.generated.ts` — Managed locally via `models.json`.
 
-### Features We Added (Preserve These)
+### Local features to preserve
 
-These exist in our fork but not upstream. **Never overwrite:**
+Preserve all local features during merges:
 
-- `StatusLineComponent` in interactive mode
-- Multi-credential auth with session affinity
-- Capability-based discovery system (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`, etc.)
-- MCP/Exa/SSH integrations
-- LSP writethrough for format-on-save
-- Bash interception (`checkBashInterception`)
-- Fuzzy path suggestions in read tool
+- `StatusLineComponent` in interactive TUI mode.
+- Multi-credential authentication with session affinity.
+- Capability-based discovery system (`defineCapability`, `registerProvider`, `loadCapability`, `skillCapability`).
+- MCP, Exa, and SSH integrations.
+- LSP write-through integration for format-on-save.
+- Bash command interception (`checkBashInterception`).
+- Fuzzy path suggestions in the `read` tool.
+

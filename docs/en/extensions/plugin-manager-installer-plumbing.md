@@ -8,265 +8,168 @@ sidebar:
 
 # Plugin manager and installer plumbing
 
-This document describes how `xcsh plugin` operations mutate plugin state on disk and how installed plugins become runtime capabilities (tools today, hooks/commands path resolution available).
+This document describes how `xcsh plugin` operations manage plugin state on disk and how installed plugins become active runtime capabilities.
 
-## Scope and architecture
+## Architecture and scope
 
-There are two plugin-management implementations in the codebase:
+The codebase provides two plugin management modules:
 
-1. **Active path used by CLI commands**: `PluginManager` (`src/extensibility/plugins/manager.ts`)
-2. **Legacy helper module**: installer functions (`src/extensibility/plugins/installer.ts`)
+1. **Active CLI execution path**: `PluginManager` (`src/extensibility/plugins/manager.ts`).
+2. **Legacy installer module**: Functions in `src/extensibility/plugins/installer.ts`.
 
-`xcsh plugin ...` command execution goes through `PluginManager`.
+All `xcsh plugin ...` CLI commands execute through `PluginManager`.
 
-`installer.ts` still documents important safety checks and filesystem behavior, but it is not the path used by `src/commands/plugin.ts` + `src/cli/plugin-cli.ts`.
+## Lifecycle: CLI invocation to runtime capabilities
 
-## Lifecycle: from CLI invocation to runtime availability
+The following sequence illustrates how plugin commands execute and activate capabilities:
 
-```text
-xcsh plugin <action> ...
-  -> src/commands/plugin.ts
-  -> runPluginCommand(...) in src/cli/plugin-cli.ts
-  -> PluginManager method (install/list/uninstall/link/...) 
-  -> mutate ~/.xcsh/plugins/{package.json,node_modules,xcsh-plugins.lock.json}
-  -> runtime discovery: discoverAndLoadCustomTools(...)
-  -> getAllPluginToolPaths(cwd)
-  -> custom tool loader imports tool modules
-```
+1. Command entry point: `src/commands/plugin.ts` parses CLI flags and invokes `runPluginCommand(...)` in `src/cli/plugin-cli.ts`.
+2. Action dispatch: `PluginManager` executes the requested lifecycle method (`install`, `uninstall`, `list`, `link`, `doctor`, `features`, `config`, `enable`, `disable`).
+3. State mutation: The manager updates package descriptors and lockfiles in `~/.xcsh/plugins/` (`package.json`, `node_modules/`, `xcsh-plugins.lock.json`).
+4. Capability discovery: During session initialization, `discoverAndLoadCustomTools(...)` queries `getAllPluginToolPaths(cwd)`.
+5. Module loading: The custom tool loader imports tool definitions into the active runtime registry.
 
-### Command entrypoints
+> [!NOTE]
+> Package updates execute by running `install` with an updated package or version specification.
 
-- `src/commands/plugin.ts` defines command/flags and forwards to `runPluginCommand`.
-- `src/cli/plugin-cli.ts` maps subcommands to `PluginManager` methods:
-  - `install`, `uninstall`, `list`, `link`, `doctor`, `features`, `config`, `enable`, `disable`
-- No explicit `update` action exists; update is done by re-running `install` with a new package/version spec.
+## On-disk state model
 
-## On-disk model
+Global plugin state resides under `~/.xcsh/plugins/`:
 
-Global plugin state lives under `~/.xcsh/plugins`:
+- `package.json`: Dependency manifest managed by `bun install` and `bun uninstall`.
+- `node_modules/`: Directory containing installed packages and symlinks.
+- `xcsh-plugins.lock.json`: Persistent runtime state file recording:
+  - Global enablement status per plugin.
+  - Active feature configurations per plugin.
+  - Plugin-specific setting key-value pairs.
 
-- `package.json` — dependency manifest used by `bun install`/`bun uninstall`
-- `node_modules/` — installed plugin packages or symlinks
-- `xcsh-plugins.lock.json` — runtime state:
-  - enabled/disabled per plugin
-  - selected feature set per plugin
-  - persisted plugin settings
+Project-specific overrides reside at `<cwd>/.xcsh/plugin-overrides.json`. Project overrides take precedence over global lockfile settings to enable, disable, or reconfigure plugins for a specific workspace.
 
-Project-local overrides live at:
+## Package specification parsing and metadata resolution
 
-- `<cwd>/.xcsh/plugin-overrides.json`
+### Specification grammar
 
-Overrides are read-only from manager/loader perspective (no write path here) and can disable plugins or override features/settings for this project.
+The `parsePluginSpec` utility (`parser.ts`) supports the following package specification patterns:
 
-## Plugin spec parsing and metadata interpretation
+- `pkg`: Default feature selection policy (`features: null`).
+- `pkg[*]`: Enables all features declared in the package manifest.
+- `pkg[]`: Disables all optional features.
+- `pkg[feat1,feat2]`: Enables explicitly specified features.
+- `@scope/pkg@1.2.3[feat]`: Scoped, version-pinned package with explicit feature selection.
 
-## Install spec grammar
+`extractPackageName` strips version suffixes to determine on-disk module paths.
 
-`parsePluginSpec` (`parser.ts`) supports:
+### Manifest resolution order
 
-- `pkg` -> `features: null` (defaults behavior)
-- `pkg[*]` -> enable all manifest features
-- `pkg[]` -> enable no optional features
-- `pkg[a,b]` -> enable named features
-- `@scope/pkg@1.2.3[feat]` -> scoped + versioned package with explicit feature selection
+The runtime resolves plugin manifests in the following order:
 
-`extractPackageName` strips version suffix for on-disk path lookup after install.
+1. `package.json` `xcsh` block.
+2. `package.json` `pi` block (legacy fallback).
+3. Synthetic fallback manifest: `{ version: package.version }`.
 
-## Manifest source and required fields
+Operational considerations:
 
-Manifest is resolved as:
+- Packages missing `xcsh` or `pi` manifests remain installable and listable, but runtime discovery (`getEnabledPlugins`) skips them.
+- `manifest.version` syncs with the parent `package.json` `version` property.
+- Syntax errors in `package.json` result in immediate read failures.
 
-1. `package.json.xcsh`
-2. fallback `package.json.pi`
-3. fallback `{ version: package.version }`
+## Plugin lifecycle workflows
 
-Implications:
+### Installing and updating plugins (`PluginManager.install`)
 
-- There is no strict schema validation in manager/loader.
-- A package missing `xcsh`/`pi` is still installable and listable.
-- Runtime plugin loading (`getEnabledPlugins`) skips packages without `xcsh`/`pi` manifest.
-- `manifest.version` is always overwritten from package `version`.
+1. Parse feature brackets and package constraints from the specification string.
+2. Validate package identifiers against regex constraints and shell metacharacter denylists.
+3. Ensure the target `package.json` structure exists under `~/.xcsh/plugins/`.
+4. Execute `bun install <PACKAGE_SPEC>` within `~/.xcsh/plugins/`.
+5. Inspect `node_modules/<PACKAGE_NAME>/package.json`.
+6. Compute the `enabledFeatures` set:
+   - `[*]`: All declared manifest features.
+   - `[a,b]`: Explicitly requested feature array.
+   - `[]`: Empty feature list.
+   - Bare specifier: `null` (applies default features at load time).
+7. Upsert the lockfile entry: `{ version, enabledFeatures, enabled: true }`.
 
-Malformed `package.json` JSON is a hard failure at read time; malformed manifest shape may fail later only when specific fields are consumed.
+### Uninstalling plugins (`PluginManager.uninstall`)
 
-## Install/update flow (`PluginManager.install`)
-
-1. Parse feature bracket syntax from install spec.
-2. Validate package name against regex + shell-metacharacter denylist.
-3. Ensure plugin `package.json` exists (`xcsh-plugins`, private dependencies map).
-4. Run `bun install <packageSpec>` in `~/.xcsh/plugins`.
-5. Read installed package `node_modules/<name>/package.json`.
-6. Resolve manifest and compute `enabledFeatures`:
-   - `[*]`: all declared features (or `null` if no feature map)
-   - `[a,b]`: validates each feature exists in manifest features map
-   - `[]`: empty feature list
-   - bare spec: `null` (use defaults policy later in loader)
-7. Upsert lockfile runtime state: `{ version, enabledFeatures, enabled: true }`.
-
-### Update semantics
-
-Because update is install-driven:
-
-- `xcsh plugin install pkg@newVersion` updates dependency and lockfile version.
-- Existing settings are preserved; state entry is overwritten for version/features/enabled.
-- No separate “check updates” or transactional migration logic exists.
-
-## Remove flow (`PluginManager.uninstall`)
-
-1. Validate package name.
-2. Run `bun uninstall <name>` in plugin dir.
-3. Remove plugin runtime state from lockfile:
+1. Validate the target package name.
+2. Execute `bun uninstall <PACKAGE_NAME>` within `~/.xcsh/plugins/`.
+3. Remove plugin state and configuration entries from `xcsh-plugins.lock.json`:
    - `config.plugins[name]`
    - `config.settings[name]`
 
-If uninstall command fails, runtime state is not changed.
+### Listing installed plugins (`PluginManager.list`)
 
-## List flow (`PluginManager.list`)
+1. Read the dependency manifest from `~/.xcsh/plugins/package.json`.
+2. Load runtime state from `xcsh-plugins.lock.json`.
+3. Read project overrides from `<cwd>/.xcsh/plugin-overrides.json`.
+4. Construct `InstalledPlugin` records by merging base lockfile state with project overrides.
 
-1. Read plugin dependency map from `~/.xcsh/plugins/package.json`.
-2. Load lockfile runtime config (missing file -> empty defaults).
-3. Load project overrides (`<cwd>/.xcsh/plugin-overrides.json`, parse/read errors -> empty object with warning).
-4. For each dependency with a resolvable package.json:
-   - build `InstalledPlugin` record
-   - merge feature/enable state:
-     - base from lockfile (or defaults)
-     - project overrides can replace feature selection
-     - project `disabled` list masks plugin as disabled
+### Linking local development plugins (`PluginManager.link`)
 
-This is the effective state used by CLI status output and settings/features operations.
+The `link` command symlinks a local development repository into `~/.xcsh/plugins/node_modules/<PACKAGE_NAME>`:
 
-## Link flow (`PluginManager.link`)
+1. Resolve the target path relative to the current working directory.
+2. Verify that the target directory contains a valid `package.json` with a `name` property.
+3. Remove existing files or links at the destination path.
+4. Create the filesystem symlink.
+5. Record an enabled runtime entry with default features in `xcsh-plugins.lock.json`.
 
-`link` supports local plugin development by symlinking a local package into `~/.xcsh/plugins/node_modules/<pkg.name>`.
+## Runtime capability discovery
 
-Behavior:
+### Discovery filtering
 
-1. Resolve `localPath` against manager cwd.
-2. Require local `package.json` and `name` field.
-3. Ensure plugin dirs exist.
-4. For scoped names, create scope directory.
-5. Remove existing path at target link location.
-6. Create symlink.
-7. Add runtime lockfile entry enabled with default features (`null`).
+`getEnabledPlugins(cwd)` inspects installed dependencies and applies the following filters:
 
-Caveat: current `PluginManager.link` does not enforce the `cwd` path-boundary check present in legacy `installer.ts` (`normalizedPath.startsWith(normalizedCwd)`), so trust is the caller’s responsibility.
+- Skips packages missing `package.json` or manifest metadata (`xcsh`/`pi`).
+- Skips packages marked as disabled in `xcsh-plugins.lock.json`.
+- Skips packages disabled via project-level `plugin-overrides.json`.
 
-## Runtime loading: from installed plugin to callable capabilities
+### Capability path resolution
 
-## Discovery gate
+For each enabled plugin, the runtime resolves exported capability paths:
 
-`getEnabledPlugins(cwd)` (`plugins/loader.ts`) reads:
+- `resolvePluginToolPaths(plugin)`: Resolves tool entry points.
+- `resolvePluginHookPaths(plugin)`: Resolves lifecycle hook entry points.
+- `resolvePluginCommandPaths(plugin)`: Resolves custom slash command entry points.
 
-- plugin dependency manifest (`package.json`)
-- lockfile runtime state
-- project overrides via `getConfigDirPaths("plugin-overrides.json", { user: false, cwd })`
+Paths expand based on base entries and active feature selections. Missing file paths are ignored during initial resolution.
 
-Filtering:
+### Runtime integration status
 
-- skip if no plugin package.json
-- skip if manifest (`xcsh`/`pi`) absent
-- skip if globally disabled in lockfile
-- skip if project-disabled
+- **Custom tools**: Loaded and registered in runtime memory via `discoverAndLoadCustomTools` (`custom-tools/loader.ts`).
+- **Hooks and commands**: Resolvers are available for capability inspection, while primary extension execution routes through unified extension modules.
 
-## Capability path resolution
+## Security boundaries and validation
 
-For each enabled plugin:
+### Package input validation
 
-- `resolvePluginToolPaths(plugin)`
-- `resolvePluginHookPaths(plugin)`
-- `resolvePluginCommandPaths(plugin)`
+Package specifications undergo validation against regex rules and a shell metacharacter denylist (`[;&|`$(){}[]<>\\]`) before invoking Bun subprocesses.
 
-Each resolver includes base entries plus feature entries:
+### Execution trust model
 
-- explicit feature list -> only selected features
-- `enabledFeatures === null` -> enable features marked `default: true`
+Plugin modules execute in-process when imported. Installed plugins are treated as trusted code within the user environment.
 
-Missing files are silently skipped (`existsSync` guard).
+## Error handling and failure modes
 
-## Current runtime wiring differences
+Plugin state operations do not use distributed transactions:
 
-- **Tools are wired into runtime today** via `discoverAndLoadCustomTools` (`custom-tools/loader.ts`), which calls `getAllPluginToolPaths(cwd)`.
-- Paths are de-duplicated by resolved absolute path in custom tool discovery (`seen` set, first path wins).
-- **Hooks/commands resolvers exist** and are exported, but this code path does not currently wire them into a runtime registry in the same way tools are wired.
+| Step | Failure condition | Recovery action |
+|---|---|---|
+| Package installation | `bun install` returns non-zero exit code. | Command halts; on-disk state remains unmodified. |
+| Manifest parsing | Package installed, but manifest structure is invalid. | Command reports error; dependency remains in `node_modules`. |
+| State persistence | Package installed, but lockfile write fails. | Command reports error; package remains installed without lockfile entry. |
+| Uninstallation | `bun uninstall` fails. | Command halts; lockfile state is preserved. |
 
-## Lock/state management details
+Run `xcsh plugin doctor --fix` to diagnose and reconcile inconsistencies between installed packages and lockfile metadata.
 
-`PluginManager` caches runtime config in memory per instance (`#runtimeConfig`) and lazily loads once.
+## Primary implementation files
 
-Load behavior:
+- `packages/coding-agent/src/commands/plugin.ts`: CLI command definitions and flag mappings.
+- `packages/coding-agent/src/cli/plugin-cli.ts`: User-facing command action handlers.
+- `packages/coding-agent/src/extensibility/plugins/manager.ts`: Core lifecycle and state management methods.
+- `packages/coding-agent/src/extensibility/plugins/installer.ts`: Helper functions and link validation guards.
+- `packages/coding-agent/src/extensibility/plugins/loader.ts`: Plugin capability discovery and path resolution.
+- `packages/coding-agent/src/extensibility/plugins/parser.ts`: Specification parsing helpers.
+- `packages/coding-agent/src/extensibility/plugins/types.ts`: Type definitions for manifests and lockfiles.
+- `packages/coding-agent/src/extensibility/custom-tools/loader.ts`: Runtime wiring for plugin-provided tools.
 
-- lockfile missing -> `{ plugins: {}, settings: {} }`
-- lockfile read/parse failure -> warning + same empty defaults
-
-Save behavior:
-
-- writes full lockfile JSON pretty-printed each mutation
-
-No cross-process locking or merge strategy exists; concurrent writers can overwrite each other.
-
-## Safety checks and trust boundaries
-
-## Input/package validation
-
-Active manager path enforces package-name validation:
-
-- regex for scoped/unscoped package specs (optionally with version)
-- explicit shell metacharacter denylist (`[;&|`$(){}[]<>\\]`)
-
-This limits command-injection risk when invoking `bun install/uninstall`.
-
-## Filesystem trust boundary
-
-- Plugin code executes in-process when custom tool modules are imported; no sandboxing.
-- Manifest relative paths are joined against plugin package directory and only existence-checked.
-- The plugin package itself is trusted code once installed.
-
-## Legacy installer-only checks
-
-`installer.ts` includes additional link-time checks not mirrored in `PluginManager.link`:
-
-- local path must resolve inside project cwd
-- extra package name/path traversal guards for symlink target naming
-
-Because CLI uses `PluginManager`, these stricter link guards are not currently on the main path.
-
-## Failure, partial success, and rollback behavior
-
-The plugin manager is not transactional.
-
-| Operation stage | Failure behavior | Rollback |
-| --- | --- | --- |
-| `bun install` fails | install aborts with stderr | N/A (no state writes yet) |
-| Install succeeds, then manifest/feature validation fails | command fails | No uninstall rollback; dependency may remain in `node_modules`/`package.json` |
-| Install succeeds, then lockfile write fails | command fails | No rollback of installed package |
-| `bun uninstall` succeeds, lockfile write fails | command fails | Package removed, stale runtime state may remain |
-| `link` removes old target then symlink creation fails | command fails | No restoration of previous link/dir |
-
-Operationally, `doctor --fix` can repair some drift (`bun install`, orphaned config cleanup, invalid-feature cleanup), but it is best-effort.
-
-## Malformed/missing manifest behavior summary
-
-- Missing `xcsh`/`pi` field:
-  - install/list: tolerated (minimal manifest)
-  - runtime enabled-plugin discovery: skipped as non-plugin
-- Missing feature referenced by install spec or `features --set/--enable`: hard error with available feature list
-- Invalid `plugin-overrides.json`: ignored with fallback to `{}` in both manager and loader paths
-- Missing tool/hook/command file paths referenced by manifest: silently ignored during resolver expansion; flagged as errors only by `doctor`
-
-## Mode differences and precedence
-
-- `--dry-run` (install): returns synthetic install result, no filesystem/network/state writes.
-- `--json`: output formatting only, no behavior change.
-- Project overrides always take precedence over global lockfile for feature/settings view.
-- Effective enablement is `runtimeEnabled && !projectDisabled`.
-
-## Implementation files
-
-- [`src/commands/plugin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/commands/plugin.ts) — CLI command declaration and flag mapping
-- [`src/cli/plugin-cli.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/cli/plugin-cli.ts) — action dispatch, user-facing command handlers
-- [`src/extensibility/plugins/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/manager.ts) — active install/remove/list/link/state/doctor implementation
-- [`src/extensibility/plugins/installer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/installer.ts) — legacy installer helpers and additional link safety checks
-- [`src/extensibility/plugins/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/loader.ts) — enabled-plugin discovery and tool/hook/command path resolution
-- [`src/extensibility/plugins/parser.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/parser.ts) — install spec and package-name parsing helpers
-- [`src/extensibility/plugins/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/plugins/types.ts) — manifest/runtime/override type contracts
-- [`src/extensibility/custom-tools/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/custom-tools/loader.ts) — runtime wiring for plugin-provided tool modules

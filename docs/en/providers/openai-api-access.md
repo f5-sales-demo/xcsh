@@ -6,41 +6,38 @@ sidebar:
   label: OpenAI access
 ---
 
-xcsh offers two separate OpenAI providers. Start xcsh without a configured provider, or run `/login`, and choose the option that matches how you want access to be billed.
+# OpenAI access methods
 
-## ChatGPT subscription
+xcsh supports two distinct access methods for OpenAI services, depending on whether you authenticate with a ChatGPT subscription or an OpenAI Platform API key.
 
-Choose **ChatGPT Plus/Pro (Codex Subscription)**, or run `/login openai-codex`. xcsh stores the resulting credential in its credential database and discovers the models advertised for that ChatGPT account.
+## 1. ChatGPT subscription (OAuth)
 
-### SSH and headless login
+To use your ChatGPT Plus or Pro subscription, run `/login openai-codex` or select **ChatGPT Plus/Pro (Codex Subscription)** in the `/login` interactive picker. xcsh stores the OAuth credentials securely in `agent.db` and discovers advertised subscription models.
 
-In an SSH or headless terminal, `/login openai-codex` uses device-code authentication automatically:
+### Headless and SSH remote login
 
-1. xcsh prints `https://auth.openai.com/codex/device` and a short one-time code.
-2. Open that page in any ordinary browser, including a managed workstation browser, and sign in.
-3. Enter the one-time code. The xcsh process on the remote host detects approval and completes login.
+When running inside an SSH session or headless terminal, xcsh automatically initiates device-code authentication:
 
-The browser workstation does not need xcsh or Codex installed. This flow does not open port 1455, use an SSH tunnel, or require copying a redirect URL. Continue only when you initiated the displayed code from your own xcsh session.
+1. xcsh displays `https://auth.openai.com/codex/device` and a one-time verification code.
+2. Open the URL in any web browser and log in with your ChatGPT account credentials.
+3. Enter the one-time verification code.
+4. The remote xcsh process detects authorization automatically and completes authentication.
 
-Device-code login is an OpenAI beta feature. It must be enabled under ChatGPT **Settings → Security**, or by a workspace administrator under **Workspace settings → Permissions & roles**. If it is disabled, xcsh explains the setting and leaves the browser callback method available. See [OpenAI's headless authentication guidance](https://learn.chatgpt.com/docs/auth#preferred-device-code-authentication-beta).
+> [!NOTE]
+> Device-code authentication requires enabling the beta feature in ChatGPT under **Settings → Security**, or via workspace administrator settings under **Workspace settings → Permissions & roles**.
 
-### Local browser callback
+### Local desktop browser callback
 
-On a local graphical desktop, `/login openai-codex` keeps using browser PKCE. To choose that method explicitly, select **ChatGPT Plus/Pro (Browser callback)** or run `/login openai-codex-browser`.
+On local workstations with graphical desktop environments, run `/login openai-codex-browser` (or select **ChatGPT Plus/Pro (Browser callback)**). This workflow opens your default browser and receives tokens through a local loopback listener on port 1455 (`http://localhost:1455/auth/callback`).
 
-When the account advertises the complete GPT-5.6 family, xcsh selects `openai-codex/gpt-5.6-terra` with medium reasoning and configures Luna, Terra, and Sol for its subscription routing roles.
+## 2. OpenAI Platform API (usage-based billing)
 
-The browser callback uses `http://localhost:1455/auth/callback`. Port 1455 must be available while login is running. The manual `/login <redirect-url>` fallback remains available, but device-code login is the intended method when the browser and xcsh run on different hosts.
+To use pay-as-you-go OpenAI Platform access, configure the `OPENAI_API_KEY` environment variable or provide it in `models.yml`:
 
-Credentials disabled by the OpenAI OAuth regression in v20.19.1 are reactivated automatically. Credentials disabled because they were deleted, invalid, expired, or failed for another reason remain disabled.
-
-## Usage-based OpenAI Platform API
-
-Choose **OpenAI Responses API (usage-based API access)** for OpenAI Platform billing. Set `OPENAI_API_KEY` in the environment, then select an OpenAI model with `/model`.
-
-```sh
-export OPENAI_API_KEY="your-platform-api-key"
+```bash
+export OPENAI_API_KEY="<OPENAI_API_KEY>"
 xcsh
 ```
 
-The ChatGPT subscription and OpenAI Platform API choices use different credentials and billing. `/login openai` therefore explains the API-key setup; it does not start ChatGPT OAuth.
+After starting xcsh, select an OpenAI model using `/model`.
+

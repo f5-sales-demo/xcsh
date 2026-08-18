@@ -6,182 +6,138 @@ sidebar:
   label: Gemini manifest
 ---
 
-# Gemini Manifest Extensions (`gemini-extension.json`)
+# Gemini manifest extensions (`gemini-extension.json`)
 
-This document covers how the coding-agent discovers and parses Gemini-style manifest extensions (`gemini-extension.json`) into the `extensions` capability.
+This document describes how the xcsh coding agent discovers, parses, and surfaces Gemini-format manifest extensions (`gemini-extension.json`) within the capability discovery pipeline.
 
-It does **not** cover TypeScript/JavaScript extension module loading (`extensions/*.ts`, `index.ts`, `package.json xcsh.extensions`), which is documented in `extension-loading.md`.
+For executable TypeScript and JavaScript extension modules, see [Extension loading](file:///data/robin-GIT/language-improvement/xcsh/docs/en/extensions/extension-loading.md).
 
 ## Implementation files
 
-- [`../src/discovery/gemini.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/gemini.ts)
-- [`../src/discovery/builtin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/builtin.ts)
-- [`../src/discovery/helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/helpers.ts)
-- [`../src/capability/extension.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/extension.ts)
-- [`../src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
-- [`../src/extensibility/extensions/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/extensions/loader.ts)
+- `packages/coding-agent/src/discovery/gemini.ts`
+- `packages/coding-agent/src/discovery/builtin.ts`
+- `packages/coding-agent/src/discovery/helpers.ts`
+- `packages/coding-agent/src/capability/extension.ts`
+- `packages/coding-agent/src/capability/index.ts`
+- `packages/coding-agent/src/extensibility/extensions/loader.ts`
 
----
+## Discovered paths
 
-## What gets discovered
+The Gemini capability provider (`id: gemini`, priority `60`) registers an `extensions` loader that scans two fixed root directories:
 
-The Gemini provider (`id: gemini`, priority `60`) registers an `extensions` loader that scans two fixed roots:
+- **User scope**: `~/.gemini/extensions`
+- **Project scope**: `<cwd>/.gemini/extensions`
 
-- User: `~/.gemini/extensions`
-- Project: `<cwd>/.gemini/extensions`
+The loader resolves paths directly from `ctx.home` and `ctx.cwd` using `getUserPath()` and `getProjectPath()`. Project lookup is evaluated against the current working directory (`<cwd>`) only and does not traverse parent directories.
 
-Path resolution is direct from `ctx.home` and `ctx.cwd` via `getUserPath()` / `getProjectPath()`.
+## Directory scanning rules
 
-Important scope rule: project lookup is **cwd-only**. It does not walk parent directories.
+For each root directory, discovery executes the following sequence:
 
----
+1. Read child directory entries via `readDirEntries(root)`.
+2. Filter entries to retain direct child directories (`entry.isDirectory()`).
+3. For each subdirectory `<NAME>`, attempt to read `<ROOT>/<NAME>/gemini-extension.json`.
 
-## Directory scan rules
+Directory scanning does not recurse beyond the immediate child directory level.
 
-For each root (`~/.gemini/extensions` and `<cwd>/.gemini/extensions`), discovery does:
+### Hidden directory support
 
-1. `readDirEntries(root)`
-2. keep only direct child directories (`entry.isDirectory()`)
-3. for each child `<name>`, attempt to read exactly:
-   - `<root>/<name>/gemini-extension.json`
+Gemini manifest discovery does not filter out dot-prefixed directory names. If a hidden directory contains a valid `gemini-extension.json` file, the loader evaluates it.
 
-There is no recursive scan beyond one directory level.
+### Missing and unreadable files
 
-### Hidden directories
+If `gemini-extension.json` does not exist or lacks read permissions, the loader skips the directory silently.
 
-Gemini manifest discovery does **not** filter out dot-prefixed directory names. If a hidden child directory exists and contains `gemini-extension.json`, it is considered.
+## Manifest schema and normalization
 
-### Missing/unreadable files
-
-If `gemini-extension.json` is missing or unreadable, that directory is skipped silently (no warning).
-
----
-
-## Manifest shape (as implemented)
-
-The capability type defines this manifest shape:
+The capability model defines the manifest structure as follows:
 
 ```ts
 interface ExtensionManifest {
- name?: string;
- description?: string;
- mcpServers?: Record<string, Omit<MCPServer, "name" | "_source">>;
- tools?: unknown[];
- context?: unknown;
+  name?: string;
+  description?: string;
+  mcpServers?: Record<string, Omit<MCPServer, "name" | "_source">>;
+  tools?: unknown[];
+  context?: unknown;
 }
 ```
 
-Discovery-time behavior is intentionally loose:
+Discovery applies flexible validation rules:
 
-- JSON parse success is required.
-- There is no runtime schema validation for field types/content beyond JSON syntax.
-- The parsed object is stored as `manifest` on the capability item.
+- Valid JSON syntax is required.
+- The loader preserves the parsed JSON object on the capability record as `manifest`.
+- Internal fields (`mcpServers`, `tools`, `context`) are parsed without schema enforcement during discovery.
 
-### Name normalization
+### Extension name resolution
 
-`Extension.name` is set to:
+The loader determines `Extension.name` using the following fallback order:
 
-1. `manifest.name` if it is not `null`/`undefined`
-2. otherwise the extension directory name
-
-No string-type enforcement is applied here.
-
----
+1. `manifest.name` if present and defined.
+2. The containing directory name.
 
 ## Materialization into capability items
 
-A valid parsed manifest creates one `Extension` capability item:
+A valid manifest file creates an `Extension` capability item:
 
 ```ts
 {
- name: manifest.name ?? <directory-name>,
- path: <extension-directory>,
- manifest: <parsed-json>,
- level: "user" | "project",
- _source: {
-  provider: "gemini",
-  providerName: "Gemini CLI" // attached by capability registry
-  path: <absolute-manifest-path>,
-  level: "user" | "project"
- }
+  name: manifest.name ?? "<DIRECTORY_NAME>",
+  path: "<EXTENSION_DIRECTORY_PATH>",
+  manifest: parsedJson,
+  level: "user" | "project",
+  _source: {
+    provider: "gemini",
+    providerName: "Gemini CLI",
+    path: "<ABSOLUTE_MANIFEST_PATH>",
+    level: "user" | "project"
+  }
 }
 ```
 
-Notes:
+Operational details:
 
-- `_source.path` is normalized to an absolute path by `createSourceMeta()`.
-- Registry-level capability validation for `extensions` only checks presence of `name` and `path`.
-- Manifest internals (`mcpServers`, `tools`, `context`) are not validated during discovery.
+- `_source.path` normalizes to an absolute filesystem path via `createSourceMeta()`.
+- Registry-level validation requires both `name` and `path` to be present.
 
----
+## Error handling and diagnostic warnings
 
-## Error handling and warning semantics
+### Diagnostic warnings
 
-### Warned
+- Syntax errors in manifest JSON emit a warning: `Invalid JSON in <MANIFEST_PATH>`.
 
-- Invalid JSON in a manifest file:
-  - warning format: `Invalid JSON in <manifestPath>`
+### Silent fallback (no warnings)
 
-### Not warned (silent skip)
+- Missing `extensions` directory.
+- Subdirectory without `gemini-extension.json`.
+- Unreadable file permissions.
 
-- `extensions` directory missing
-- child directory has no `gemini-extension.json`
-- unreadable manifest file
-- manifest JSON is syntactically valid but semantically odd/incomplete
+## Precedence and deduplication
 
-This means partial validity is accepted: only syntactic JSON failure emits a warning.
+The capability registry aggregates `extensions` across registered providers:
 
----
+- `native` provider (`packages/coding-agent/src/discovery/builtin.ts`): Priority `100`.
+- `gemini` provider (`packages/coding-agent/src/discovery/gemini.ts`): Priority `60`.
 
-## Precedence and deduplication with other sources
-
-`extensions` capability is aggregated across providers by the capability registry.
-
-Current providers for this capability:
-
-- `native` (`packages/coding-agent/src/discovery/builtin.ts`) priority `100`
-- `gemini` (`packages/coding-agent/src/discovery/gemini.ts`) priority `60`
-
-Dedup key is `ext.name` (`extensionCapability.key = ext => ext.name`).
+Deduplication uses `ext.name` as the primary key (`extensionCapability.key = ext => ext.name`).
 
 ### Cross-provider precedence
 
-Higher-priority provider wins on duplicate extension names.
+Higher-priority providers override duplicate extension names:
 
-- If `native` and `gemini` both emit extension name `foo`, the native item is kept.
-- Lower-priority duplicate is retained only in `result.all` with `_shadowed = true`.
+- If both `native` and `gemini` define an extension named `custom-tools`, the `native` definition takes precedence.
+- The shadowed lower-priority item is preserved in `result.all` with `_shadowed: true`.
 
-### Intra-provider order effects
+### Intra-provider ordering
 
-Because dedup is “first seen wins”, provider-local item order matters.
+Within the Gemini provider, deduplication operates on a first-seen basis:
 
-- Gemini loader appends **user first**, then **project**.
-- Therefore, duplicate names between `~/.gemini/extensions` and `<cwd>/.gemini/extensions` keep the user entry and shadow the project entry.
+- The Gemini loader appends user-level extensions first, followed by project-level extensions.
+- If identical extension names exist in both `~/.gemini/extensions` and `<cwd>/.gemini/extensions`, the user-level entry takes precedence, shadowing the project entry.
 
-By contrast, native provider builds config dir order differently (`project` then `user` in `getConfigDirs()`), so native intra-provider shadowing is the opposite direction.
+## Architectural boundary between metadata and module loading
 
----
+Discovery of `gemini-extension.json` produces declarative `Extension` capability records. It does not load executable TypeScript or JavaScript extension modules into runtime memory.
 
-## User vs project behavior summary
+Runtime extension module execution (`discoverAndLoadExtensions()` and `loadExtensions()`) targets executable `extension-modules` and filters auto-discovered candidates strictly to the `native` provider.
 
-For Gemini manifests specifically:
-
-- Both user and project roots are scanned every load.
-- Project root is fixed to `<cwd>/.gemini/extensions` (no ancestor walk).
-- Duplicate names inside Gemini source resolve to user-first.
-- Duplicate names against higher-priority providers (notably native) lose by priority.
-
----
-
-## Boundary: discovery metadata vs runtime extension loading
-
-`gemini-extension.json` discovery currently feeds capability metadata (`Extension` items). It does **not** directly load runnable TS/JS extension modules.
-
-Runtime module loading (`discoverAndLoadExtensions()` / `loadExtensions()`) uses `extension-modules` and explicit paths, and currently filters auto-discovered modules to provider `native` only.
-
-Practical implication:
-
-- Gemini manifest extensions are discoverable as capability records.
-- They are not, by themselves, executed as runtime extension modules by the extension loader pipeline.
-
-This boundary is intentional in current implementation and explains why manifest discovery and executable module loading can diverge.
+This separation allows declarative tooling and compatibility metadata to be discovered without executing untrusted external code.

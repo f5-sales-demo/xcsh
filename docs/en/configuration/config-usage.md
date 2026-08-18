@@ -6,9 +6,9 @@ sidebar:
   label: Configuration
 ---
 
-# Configuration Discovery and Resolution
+# Configuration discovery and resolution
 
-This document describes how the coding-agent resolves configuration today: which roots are scanned, how precedence works, and how resolved config is consumed by settings, skills, hooks, tools, and extensions.
+This document describes how the coding agent resolves configuration: which roots are scanned, how precedence works, and how resolved settings are consumed by capabilities, skills, hooks, tools, and extensions.
 
 ## Scope
 
@@ -31,12 +31,12 @@ Key integration points:
 
 ---
 
-## Resolution flow (visual)
+## Resolution flow
 
 ```text
          Config roots (ordered)
 ┌───────────────────────────────────────┐
-│ 1) ~/.xcsh/agent + <cwd>/.xcsh          │
+│ 1) ~/.xcsh/agent + <cwd>/.xcsh        │
 │ 2) ~/.claude   + <cwd>/.claude        │
 │ 3) ~/.codex    + <cwd>/.codex         │
 │ 4) ~/.gemini   + <cwd>/.gemini        │
@@ -51,149 +51,149 @@ Key integration points:
  (native, claude, codex, gemini, agents, etc.)
                     │
                     ▼
-      priority sort + per-capability dedup
+   priority sort + per-capability deduplication
                     │
                     ▼
           subsystem-specific consumption
    (settings, skills, hooks, tools, extensions)
 ```
 
-## 1) Config roots and source order
+## Config roots and source order
 
-## Canonical roots
+### Canonical roots
 
-`src/config.ts` defines a fixed source priority list:
+`src/config.ts` defines a fixed source priority order:
 
 1. `.xcsh` (native)
 2. `.claude`
 3. `.codex`
 4. `.gemini`
 
-User-level bases:
+User-level configuration bases:
 
 - `~/.xcsh/agent`
 - `~/.claude`
 - `~/.codex`
 - `~/.gemini`
 
-Project-level bases:
+Project-level configuration bases:
 
 - `<cwd>/.xcsh`
 - `<cwd>/.claude`
 - `<cwd>/.codex`
 - `<cwd>/.gemini`
 
-`CONFIG_DIR_NAME` is `.xcsh` (`packages/utils/src/dirs.ts`).
+The default `CONFIG_DIR_NAME` constant is `.xcsh` (`packages/utils/src/dirs.ts`).
 
-## Important constraint
+### Source discovery constraints
 
-The generic helpers in `src/config.ts` do **not** include `.pi` in source discovery order.
-
----
-
-## 2) Core discovery helpers (`src/config.ts`)
-
-## `getConfigDirs(subpath, options)`
-
-Returns ordered entries:
-
-- User-level entries first (by source priority)
-- Then project-level entries (by same source priority)
-
-Options:
-
-- `user` (default `true`)
-- `project` (default `true`)
-- `cwd` (default `getProjectDir()`)
-- `existingOnly` (default `false`)
-
-This API is used for directory-based config lookups (commands, hooks, tools, agents, etc.).
-
-## `findConfigFile(subpath, options)` / `findConfigFileWithMeta(...)`
-
-Searches for the first existing file across ordered bases, returns first match (path-only or path+metadata).
-
-## `findAllNearestProjectConfigDirs(subpath, cwd)`
-
-Walks parent directories upward and returns the **nearest existing directory per source base** (`.xcsh`, `.claude`, `.codex`, `.gemini`), then sorts results by source priority.
-
-Use this when project config should be inherited from ancestor directories (monorepo/nested workspace behavior).
+The generic helpers in `src/config.ts` do not include `.pi` in automatic source discovery order.
 
 ---
 
-## 3) File config wrapper (`ConfigFile<T>` in `src/config.ts`)
+## Core discovery helpers
 
-`ConfigFile<T>` is the schema-validated loader for single config files.
+### `getConfigDirs(subpath, options)`
 
-Supported formats:
+Returns ordered directory entries:
 
-- `.yml` / `.yaml`
-- `.json` / `.jsonc`
+- User-level entries first (sorted by source priority).
+- Project-level entries second (sorted by source priority).
 
-Behavior:
+Supported options:
+
+- `user` (default: `true`)
+- `project` (default: `true`)
+- `cwd` (default: `getProjectDir()`)
+- `existingOnly` (default: `false`)
+
+This API handles directory-based configuration lookups (commands, hooks, tools, agents, and related assets).
+
+### `findConfigFile(subpath, options)` and `findConfigFileWithMeta(...)`
+
+Searches for the first existing configuration file across ordered base paths, returning the first match (as path-only or path with metadata).
+
+### `findAllNearestProjectConfigDirs(subpath, cwd)`
+
+Traverses parent directories upward and returns the nearest existing directory per source base (`.xcsh`, `.claude`, `.codex`, `.gemini`), then sorts the results by source priority.
+
+Use this helper when project configuration should be inherited from ancestor directories in monorepos or nested workspaces.
+
+---
+
+## File configuration wrapper
+
+`ConfigFile<T>` (`src/config.ts`) provides schema-validated loading for individual configuration files.
+
+Supported file formats:
+
+- `.yml` and `.yaml`
+- `.json` and `.jsonc`
+
+Runtime behavior:
 
 - Validates parsed data with AJV against a provided TypeBox schema.
-- Caches load result until `invalidate()`.
-- Returns tri-state result via `tryLoad()`:
-  - `ok`
-  - `not-found`
-  - `error` (`ConfigError` with schema/parse context)
+- Caches the load result in memory until `invalidate()` is called.
+- Returns a tri-state result from `tryLoad()`:
+  - `ok`: Valid parsed configuration data.
+  - `not-found`: Configuration file does not exist.
+  - `error`: Returns `ConfigError` containing schema validation or parse error details.
 
-Legacy migration still supported:
+Automatic migration support:
 
-- If target path is `.yml`/`.yaml`, a sibling `.json` is auto-migrated once (`migrateJsonToYml`).
+- If the target path is `.yml` or `.yaml`, a sibling `.json` file is automatically migrated once (`migrateJsonToYml`).
 
 ---
 
-## 4) Settings resolution model (`src/config/settings.ts`)
+## Settings resolution model
 
-The runtime settings model is layered:
+The runtime settings model applies layered resolution:
 
 1. Global settings: `~/.xcsh/agent/config.yml`
-2. Project settings: discovered via settings capability (`settings.json` from providers)
-3. Runtime overrides: in-memory, non-persistent
-4. Schema defaults: from `SETTINGS_SCHEMA`
+2. Project settings: Discovered via settings capability (`settings.json` from capability providers)
+3. Runtime overrides: In-memory, non-persistent overrides
+4. Schema defaults: Defined in `SETTINGS_SCHEMA`
 
-Effective read path:
+Effective resolution order:
 
-`defaults <- global <- project <- overrides`
+`defaults <— global <— project <— overrides`
 
-Write behavior:
+Persistence behavior:
 
-- `settings.set(...)` writes to the **global** layer (`config.yml`) and queues background save.
-- Project settings are read-only from capability discovery.
+- `settings.set(...)` writes to the global layer (`config.yml`) and queues an asynchronous background save.
+- Project settings discovered from capabilities are read-only at runtime.
 
-## Migration behavior still active
+### Active migration behaviors
 
 On startup, if `config.yml` is missing:
 
-1. Migrate from `~/.xcsh/agent/settings.json` (renamed to `.bak` on success)
-2. Merge with legacy DB settings from `agent.db`
-3. Write merged result to `config.yml`
+1. Migrates settings from `~/.xcsh/agent/settings.json` (renaming the original to `.bak` upon success).
+2. Merges settings with legacy database values from `agent.db`.
+3. Writes the combined result to `config.yml`.
 
-Field-level migrations in `#migrateRawSettings`:
+Field-level migrations executed in `#migrateRawSettings`:
 
-- `queueMode` -> `steeringMode`
-- `ask.timeout` milliseconds -> seconds when old value looks like ms (`> 1000`)
-- Legacy flat `theme: "..."` -> `theme.dark/theme.light` structure
+- `queueMode` to `steeringMode`
+- `ask.timeout` milliseconds converted to seconds when the existing value exceeds `1000`
+- Legacy flat `theme: "..."` converted to `{ theme: { dark, light } }` structure
 
 ---
 
-## 5) Capability/discovery integration
+## Capability and discovery integration
 
-Most non-core config loading flows through the capability registry (`src/capability/index.ts` + `src/discovery/index.ts`).
+Non-core configuration loading flows through the capability registry (`src/capability/index.ts` and `src/discovery/index.ts`).
 
-## Provider ordering
+### Provider ordering
 
-Providers are sorted by numeric priority (higher first). Example priorities:
+Providers are sorted by numeric priority in descending order (higher numeric values take precedence). Standard priority values include:
 
-- Native OMP (`builtin.ts`): `100`
+- Native provider (`builtin.ts`): `100`
 - Claude: `80`
-- Codex / agents / Claude marketplace: `70`
+- Codex, agents, and Claude marketplace: `70`
 - Gemini: `60`
 
 ```text
-Provider precedence (higher wins)
+Provider precedence (higher priority wins)
 
 native (.xcsh)          priority 100
 claude                 priority  80
@@ -201,105 +201,107 @@ codex / agents / ...   priority  70
 gemini                 priority  60
 ```
 
-## Dedup semantics
+### Deduplication semantics
 
-Capabilities define a `key(item)`:
+Capabilities define a `key(item)` function:
 
-- same key => first item wins (higher-priority/earlier-loaded item)
-- no key (`undefined`) => no dedup, all items retained
+- Matching key: The first item encountered wins (retaining the higher-priority or earlier-loaded item).
+- Undefined key: No deduplication occurs; all items are preserved.
 
-Relevant keys:
+Deduplication keys by capability:
 
-- skills: `name`
-- tools: `name`
-- hooks: `${type}:${tool}:${name}`
-- extension modules: `name`
-- extensions: `name`
-- settings: no dedup (all items preserved)
+- Skills: `name`
+- Tools: `name`
+- Hooks: `${type}:${tool}:${name}`
+- Extension modules: `name`
+- Extensions: `name`
+- Settings: No deduplication (all items are preserved)
 
 ---
 
-## 6) Native `.xcsh` provider behavior (`src/discovery/builtin.ts`)
+## Native `.xcsh` provider behavior
 
-Native provider (`id: native`) reads from:
+The native provider (`id: native`, defined in `src/discovery/builtin.ts`) reads from:
 
-- project: `<cwd>/.xcsh/...`
-- user: `~/.xcsh/agent/...`
+- Project roots: `<cwd>/.xcsh/...`
+- User roots: `~/.xcsh/agent/...`
 
 ### Directory admission rule
 
-`builtin.ts` only includes a config root if the directory exists **and is non-empty** (`ifNonEmptyDir`).
+`builtin.ts` includes a configuration root only if the directory exists and is non-empty (`ifNonEmptyDir`).
 
-### Scope-specific loading
+### Scope-specific loading paths
 
 - Skills: `skills/*/SKILL.md`
 - Slash commands: `commands/*.md`
 - Rules: `rules/*.{md,mdc}`
 - Prompts: `prompts/*.md`
 - Instructions: `instructions/*.md`
-- Hooks: `hooks/pre/*`, `hooks/post/*`
-- Tools: `tools/*.json|*.md` and `tools/<name>/index.ts`
-- Extension modules: discovered under `extensions/` (+ legacy `settings.json.extensions` string array)
+- Hooks: `hooks/pre/*` and `hooks/post/*`
+- Tools: `tools/*.json`, `tools/*.md`, and `tools/<name>/index.ts`
+- Extension modules: Discovered under `extensions/` (plus legacy `settings.json.extensions` string array)
 - Extensions: `extensions/<name>/gemini-extension.json`
 - Settings capability: `settings.json`
 
-### Nearest-project lookup nuance
+### Nearest-project lookup behavior
 
-For `SYSTEM.md` and `XCSH.md`, native provider uses nearest-ancestor project `.xcsh` directory search (walk-up) but still requires the `.xcsh` dir to be non-empty.
-
----
-
-## 7) How major subsystems consume config
-
-## Settings subsystem
-
-- `Settings.init()` loads global `config.yml` + discovered project `settings.json` capability items.
-- Only capability items with `level === "project"` are merged into project layer.
-
-## Skills subsystem
-
-- `extensibility/skills.ts` loads via `loadCapability(skillCapability.id, { cwd })`.
-- Applies source toggles and filters (`ignoredSkills`, `includeSkills`, custom dirs).
-- Legacy-named toggles still exist (`skills.enablePiUser`, `skills.enablePiProject`) but they gate the native provider (`provider === "native"`).
-
-## Hooks subsystem
-
-- `discoverAndLoadHooks()` resolves hook paths from hook capability + explicit configured paths.
-- Then loads modules via Bun import.
-
-## Tools subsystem
-
-- `discoverAndLoadCustomTools()` resolves tool paths from tool capability + plugin tool paths + explicit configured paths.
-- Declarative `.md/.json` tool files are metadata only; executable loading expects code modules.
-
-## Extensions subsystem
-
-- `discoverAndLoadExtensions()` resolves extension modules from extension-module capability plus explicit paths.
-- Current implementation intentionally keeps only capability items with `_source.provider === "native"` before loading.
+For `SYSTEM.md` and `XCSH.md`, the native provider searches parent project `.xcsh` directories upward, requiring the matched `.xcsh` directory to be non-empty.
 
 ---
 
-## 8) Precedence rules to rely on
+## How major subsystems consume configuration
 
-Use this mental model:
+### Settings subsystem
+
+- `Settings.init()` loads global `config.yml` alongside discovered project `settings.json` capability items.
+- Only capability items with `level === "project"` merge into the project layer.
+
+### Skills subsystem
+
+- `extensibility/skills.ts` loads skills using `loadCapability(skillCapability.id, { cwd })`.
+- Applies source toggles and filters (`ignoredSkills`, `includeSkills`, custom directories).
+- Legacy toggle names (`skills.enablePiUser`, `skills.enablePiProject`) gate the native provider (`provider === "native"`).
+
+### Hooks subsystem
+
+- `discoverAndLoadHooks()` resolves hook paths from the hook capability and explicitly configured paths.
+- Loads modules using dynamic Bun imports.
+
+### Tools subsystem
+
+- `discoverAndLoadCustomTools()` resolves tool paths from tool capabilities, plugin tool paths, and explicit paths.
+- Declarative `.md` and `.json` tool files provide metadata only; executable loading requires TypeScript/JavaScript modules.
+
+### Extensions subsystem
+
+- `discoverAndLoadExtensions()` resolves extension modules from extension-module capabilities and explicit paths.
+- The loader filters capability items to those with `_source.provider === "native"` before loading.
+
+---
+
+## Precedence rules and priority resolution
+
+When reasoning about configuration precedence, apply this sequence:
 
 1. Source directory ordering from `config.ts` determines candidate path order.
 2. Capability provider priority determines cross-provider precedence.
-3. Capability key dedup determines collision behavior (first wins for keyed capabilities).
-4. Subsystem-specific merge logic can further change effective precedence (especially settings).
+3. Capability key deduplication determines collision behavior (the first item encountered wins for keyed capabilities).
+4. Subsystem-specific merge logic determines the effective settings layer.
 
-### Settings-specific caveat
+### Settings merge caveat
 
-Settings capability items are not deduplicated; `Settings.#loadProjectSettings()` deep-merges project items in returned order. Because merge applies later item values over earlier values, effective override behavior depends on provider emission order, not just capability key semantics.
+Settings capability items are not deduplicated; `Settings.#loadProjectSettings()` deep-merges project items in their returned order. Because deep merge overwrites earlier values with later values, effective overrides depend on provider emission order rather than capability key semantics alone.
 
 ---
 
-## 9) Legacy/compatibility behaviors still present
+## Legacy and compatibility behaviors
 
-- `ConfigFile` JSON -> YAML migration for YAML-targeted files.
+The runtime preserves the following backward-compatibility behaviors:
+
+- `ConfigFile` JSON-to-YAML migration for YAML configuration files.
 - Settings migration from `settings.json` and `agent.db` to `config.yml`.
-- Settings key migrations (`queueMode`, `ask.timeout`, flat `theme`).
-- Extension manifest compatibility: loader accepts both `package.json.xcsh` and `package.json.pi` manifest sections.
-- Legacy setting names `skills.enablePiUser` / `skills.enablePiProject` are still active gates for native skill source.
+- Settings key migrations (`queueMode`, `ask.timeout`, and flat `theme`).
+- Extension manifest compatibility: The loader accepts both `package.json.xcsh` and `package.json.pi` manifest sections.
+- Legacy setting names `skills.enablePiUser` and `skills.enablePiProject` remain active gates for the native skill provider.
 
-If these compatibility paths are removed in code, update this document immediately; several runtime behaviors still depend on them today.
+When deprecating any compatibility path in code, update this document to maintain alignment with active runtime behavior.

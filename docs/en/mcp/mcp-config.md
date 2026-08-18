@@ -6,35 +6,36 @@ sidebar:
   label: Configuration
 ---
 
-# MCP configuration in OMP
+# Model Context Protocol (MCP) configuration
 
-This guide explains how to add, edit, and validate MCP servers for the OMP coding agent.
+This guide describes how to register, configure, and validate Model Context Protocol (MCP) servers for the xcsh coding agent runtime.
 
-Source of truth in code:
+## Implementation references
 
-- Runtime config types: `packages/coding-agent/src/mcp/types.ts`
-- Config writer: `packages/coding-agent/src/mcp/config-writer.ts`
-- Loader + validation: `packages/coding-agent/src/mcp/config.ts`
+- Runtime configuration types: `packages/coding-agent/src/mcp/types.ts`
+- Configuration writer: `packages/coding-agent/src/mcp/config-writer.ts`
+- Configuration loader and validation: `packages/coding-agent/src/mcp/config.ts`
 - Standalone `mcp.json` discovery: `packages/coding-agent/src/discovery/mcp-json.ts`
-- Schema: `packages/coding-agent/src/config/mcp-schema.json`
+- JSON Schema definition: `packages/coding-agent/src/config/mcp-schema.json`
 
-## Preferred config locations
+## Configuration file locations
 
-OMP can discover MCP servers from multiple tools (`.claude/`, `.cursor/`, `.vscode/`, `opencode.json`, and more), but for OMP-native configuration you should usually use one of these files:
+The xcsh runtime discovers MCP server definitions from multiple configuration sources. For native configuration, use one of the following locations:
 
-- Project: `.xcsh/mcp.json`
-- User: `~/.xcsh/mcp.json`
+- **Project scope**: `.xcsh/mcp.json`
+- **User scope**: `~/.xcsh/mcp.json`
 
-OMP also accepts fallback standalone files in the project root:
+The runtime also supports root-level fallback files for cross-client compatibility:
 
 - `mcp.json`
 - `.mcp.json`
 
-Use `.xcsh/mcp.json` when you want OMP to own the configuration. Use root `mcp.json` / `.mcp.json` only when you want a portable fallback file that other MCP clients may also read.
+> [!TIP]
+> Use `.xcsh/mcp.json` for repository-scoped xcsh configurations. Use root `mcp.json` or `.mcp.json` when sharing configurations with external MCP clients.
 
-## Add a schema reference
+## Schema declaration
 
-Add this line at the top of the file for editor autocomplete and validation:
+Include the `$schema` reference in your configuration file to enable validation and autocompletion in your editor:
 
 ```json
 {
@@ -43,59 +44,59 @@ Add this line at the top of the file for editor autocomplete and validation:
 }
 ```
 
-OMP now writes this automatically when `/mcp add`, `/mcp enable`, `/mcp disable`, `/mcp reauth`, or other config-writing flows create or update an OMP-managed MCP file.
+CLI management commands (`/mcp add`, `/mcp enable`, `/mcp disable`, `/mcp reauth`) insert this schema reference automatically.
 
-## File shape
+## Configuration file structure
 
-OMP supports this top-level structure:
+MCP configuration files use the following schema:
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
-    "server-name": {
+    "filesystem": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "some-mcp-server"]
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "."]
     }
   },
-  "disabledServers": ["server-name"]
+  "disabledServers": ["legacy-server"]
 }
 ```
 
-Top-level keys:
+### Top-level properties
 
-- `$schema` — optional JSON Schema URL for tooling
-- `mcpServers` — map of server name to server config
-- `disabledServers` — user-level denylist used to turn off discovered servers by name
+- `$schema`: Optional URI referencing the JSON schema.
+- `mcpServers`: Key-value map of server identifiers to server configuration objects.
+- `disabledServers`: Array of server identifiers to exclude from discovery.
 
-Server names must match `^[a-zA-Z0-9_.-]{1,100}$`.
+Server identifiers must match the regular expression `^[a-zA-Z0-9_.-]{1,100}$`.
 
-## Supported server fields
+## Server configuration properties
 
-Shared fields for every transport:
+### Shared properties
 
-- `enabled?: boolean` — skip this server when `false`
-- `timeout?: number` — connection timeout in milliseconds
-- `auth?: { ... }` — auth metadata used by OMP for OAuth/API-key flows
-- `oauth?: { ... }` — explicit OAuth client settings used during auth/reauth
+The following properties apply to all transport types:
 
-### `stdio` transport
+- `enabled`: Boolean flag indicating whether the server is active. Defaults to `true`.
+- `timeout`: Connection timeout in milliseconds.
+- `auth`: Authentication metadata for OAuth or API key token retrieval.
+- `oauth`: Explicit OAuth 2.0 client credentials and endpoint parameters.
 
-`stdio` is the default when `type` is omitted.
+### Standard input and output (`stdio`) transport
 
-Required:
+`stdio` serves as the default transport when `type` is omitted.
 
-- `command: string`
+#### Required properties
 
-Optional:
+- `command`: The executable binary or script to invoke.
 
-- `type?: "stdio"`
-- `args?: string[]`
-- `env?: Record<string, string>`
-- `cwd?: string`
+#### Optional properties
 
-Example:
+- `type`: Explicitly set to `"stdio"`.
+- `args`: Array of command-line arguments.
+- `env`: Environment variable map passed to the subprocess.
+- `cwd`: Working directory path for the subprocess.
 
 ```json
 {
@@ -106,28 +107,26 @@ Example:
       "args": [
         "-y",
         "@modelcontextprotocol/server-filesystem",
-        "/Users/alice/projects",
-        "/Users/alice/Documents"
+        "/data/projects",
+        "/data/documents"
       ]
     }
   }
 }
 ```
 
-This follows the official Filesystem MCP server package (`@modelcontextprotocol/server-filesystem`).
+### Streamable HTTP (`http`) transport
 
-### `http` transport
+Streamable HTTP connects to remote endpoints supporting HTTP POST requests with streaming responses.
 
-Required:
+#### Required properties
 
-- `type: "http"`
-- `url: string`
+- `type`: Set to `"http"`.
+- `url`: Target HTTP or HTTPS endpoint URI.
 
-Optional:
+#### Optional properties
 
-- `headers?: Record<string, string>`
-
-Example:
+- `headers`: HTTP headers sent with each request.
 
 ```json
 {
@@ -141,26 +140,25 @@ Example:
 }
 ```
 
-This matches GitHub's hosted GitHub MCP server endpoint.
+### Server-sent events (`sse`) transport
 
-### `sse` transport
+> [!NOTE]
+> The `sse` transport remains supported for legacy integrations. New hosted deployments should use Streamable HTTP (`type: "http"`).
 
-Required:
+#### Required properties
 
-- `type: "sse"`
-- `url: string`
+- `type`: Set to `"sse"`.
+- `url`: Target SSE endpoint URI.
 
-Optional:
+#### Optional properties
 
-- `headers?: Record<string, string>`
-
-Example:
+- `headers`: HTTP headers sent during connection initialization.
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
   "mcpServers": {
-    "legacy-remote": {
+    "remote-service": {
       "type": "sse",
       "url": "https://example.com/mcp/sse"
     }
@@ -168,43 +166,37 @@ Example:
 }
 ```
 
-`sse` is still supported for compatibility, but the MCP spec now prefers Streamable HTTP (`type: "http"`) for new servers.
+## Authentication configuration
 
-## Auth fields
-
-OMP understands two auth-related objects.
-
-### `auth`
+### Authentication descriptor (`auth`)
 
 ```json
 {
-  "type": "oauth" | "apikey",
-  "credentialId": "optional-stored-credential-id",
-  "tokenUrl": "optional-token-endpoint",
-  "clientId": "optional-client-id",
-  "clientSecret": "optional-client-secret"
+  "type": "oauth",
+  "credentialId": "<CREDENTIAL_ID>",
+  "tokenUrl": "https://auth.example.com/oauth/token",
+  "clientId": "<CLIENT_ID>",
+  "clientSecret": "<CLIENT_SECRET>"
 }
 ```
 
-Use this when OMP should remember how to rehydrate credentials for a server.
+Use `auth` to persist credential binding metadata across agent sessions.
 
-### `oauth`
+### OAuth client configuration (`oauth`)
 
 ```json
 {
-  "clientId": "...",
-  "clientSecret": "...",
-  "redirectUri": "...",
+  "clientId": "<CLIENT_ID>",
+  "clientSecret": "<CLIENT_SECRET>",
+  "redirectUri": "http://localhost:3334/oauth/callback",
   "callbackPort": 3334,
   "callbackPath": "/oauth/callback"
 }
 ```
 
-Use this when the MCP server requires explicit OAuth client settings.
+Use `oauth` when a server endpoint requires confidential OAuth 2.0 client authorization flows.
 
-Slack is the clearest current example. Slack's MCP server is hosted at `https://mcp.slack.com/mcp`, uses Streamable HTTP, and requires confidential OAuth with your Slack app's client credentials.
-
-Example:
+#### Slack MCP server example
 
 ```json
 {
@@ -214,62 +206,23 @@ Example:
       "type": "http",
       "url": "https://mcp.slack.com/mcp",
       "oauth": {
-        "clientId": "YOUR_SLACK_CLIENT_ID",
-        "clientSecret": "YOUR_SLACK_CLIENT_SECRET"
+        "clientId": "<SLACK_CLIENT_ID>",
+        "clientSecret": "<SLACK_CLIENT_SECRET>"
       },
       "auth": {
         "type": "oauth",
         "tokenUrl": "https://slack.com/api/oauth.v2.user.access",
-        "clientId": "YOUR_SLACK_CLIENT_ID",
-        "clientSecret": "YOUR_SLACK_CLIENT_SECRET"
+        "clientId": "<SLACK_CLIENT_ID>",
+        "clientSecret": "<SLACK_CLIENT_SECRET>"
       }
     }
   }
 }
 ```
 
-Relevant Slack endpoints from Slack's docs:
+## Configuration examples
 
-- MCP endpoint: `https://mcp.slack.com/mcp`
-- Authorization endpoint: `https://slack.com/oauth/v2_user/authorize`
-- Token endpoint: `https://slack.com/api/oauth.v2.user.access`
-
-## Common copy-paste examples
-
-### Filesystem server via stdio
-
-```json
-{
-  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/absolute/path/one",
-        "/absolute/path/two"
-      ]
-    }
-  }
-}
-```
-
-### GitHub hosted server via HTTP
-
-```json
-{
-  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
-  "mcpServers": {
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
-    }
-  }
-}
-```
-
-### GitHub local server via Docker
+### Local Docker container via `stdio`
 
 ```json
 {
@@ -293,45 +246,15 @@ Relevant Slack endpoints from Slack's docs:
 }
 ```
 
-This matches GitHub's official local Docker image `ghcr.io/github/github-mcp-server`.
+## Variable resolution and secrets management
 
-### Slack hosted server via OAuth
+### Resolution within `.xcsh/mcp.json`
 
-```json
-{
-  "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
-  "mcpServers": {
-    "slack": {
-      "type": "http",
-      "url": "https://mcp.slack.com/mcp",
-      "oauth": {
-        "clientId": "YOUR_SLACK_CLIENT_ID",
-        "clientSecret": "YOUR_SLACK_CLIENT_SECRET"
-      },
-      "auth": {
-        "type": "oauth",
-        "tokenUrl": "https://slack.com/api/oauth.v2.user.access",
-        "clientId": "YOUR_SLACK_CLIENT_ID",
-        "clientSecret": "YOUR_SLACK_CLIENT_SECRET"
-      }
-    }
-  }
-}
-```
+Before initializing a server process or issuing HTTP requests, the runtime evaluates values in `env` and `headers`:
 
-## Secrets and variable resolution
-
-This is the part that usually trips people up.
-
-### In `.xcsh/mcp.json` and `~/.xcsh/mcp.json`
-
-Before OMP launches a server or makes an HTTP request, it resolves `env` and `headers` values like this:
-
-1. If a value starts with `!`, OMP runs it as a shell command and uses trimmed stdout.
-2. Otherwise OMP first checks whether the value matches an environment variable name.
-3. If that environment variable is not set, OMP uses the string literally.
-
-Examples:
+1. **Command execution**: If a value begins with `!`, the runtime executes the string as a shell command and captures standard output.
+2. **Environment substitution**: If a value matches an active environment variable name, the runtime substitutes its value.
+3. **Literal values**: If no environment variable matches, the string is treated as a literal value.
 
 ```json
 {
@@ -339,119 +262,73 @@ Examples:
     "GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_PERSONAL_ACCESS_TOKEN"
   },
   "headers": {
-    "X-MCP-Insiders": "true"
+    "Authorization": "!printf 'Bearer %s' \"$GITHUB_TOKEN\"",
+    "X-Custom-Header": "literal-value"
   }
 }
 ```
 
-That means this is valid and convenient for local secrets:
+### Resolution within root `mcp.json` and `.mcp.json`
 
-- `"GITHUB_PERSONAL_ACCESS_TOKEN": "GITHUB_PERSONAL_ACCESS_TOKEN"` → copy from the current shell environment
-- `"Authorization": "Bearer hardcoded-token"` → use the literal value
-- `"Authorization": "!printf 'Bearer %s' \"$GITHUB_TOKEN\""` → build the header from a command
-
-### In root `mcp.json` and `.mcp.json`
-
-The standalone fallback loader also expands `${VAR}` and `${VAR:-default}` inside strings during discovery.
-
-Example:
+Fallback discovery loaders expand `${VAR}` and `${VAR:-default}` syntax during file parsing:
 
 ```json
 {
   "mcpServers": {
-    "github": {
+    "remote-api": {
       "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
+      "url": "https://api.example.com/mcp/",
       "headers": {
-        "Authorization": "Bearer ${GITHUB_TOKEN}"
+        "Authorization": "Bearer ${API_TOKEN}"
       }
     }
   }
 }
 ```
 
-If you want the least surprising OMP behavior, prefer `.xcsh/mcp.json` and use explicit env/header values.
+## Disabling discovered servers (`disabledServers`)
 
-## `disabledServers`
-
-`disabledServers` is mainly useful in the user config file (`~/.xcsh/mcp.json`) when a server is discovered from some other source and you want OMP to ignore it without editing that other tool's config.
-
-Example:
+Define `disabledServers` in `~/.xcsh/mcp.json` to prevent specific servers discovered from third-party tools from loading:
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/packages/coding-agent/src/config/mcp-schema.json",
-  "disabledServers": ["github", "slack"]
+  "disabledServers": ["unwanted-server", "legacy-endpoint"]
 }
 ```
 
-## `/mcp add` vs editing JSON directly
+## Management commands
 
-Use `/mcp add` when you want guided setup.
+- `/mcp add`: Interactive wizard for configuring new MCP servers.
+- `/mcp reload`: Re-scans configuration files and reconnects active servers.
+- `/mcp list`: Displays configured servers and origin configuration paths.
+- `/mcp test <SERVER_NAME>`: Validates connection health and retrieves tool schemas for a specific server.
 
-Use direct JSON editing when:
+## Validation rules
 
-- you need a transport or auth option the wizard does not prompt for yet
-- you want to paste a server definition from another MCP client
-- you want schema-backed validation in your editor
+`validateServerConfig` (`packages/coding-agent/src/mcp/config.ts`) enforces the following invariants:
 
-After editing, use:
-
-- `/mcp reload` to rediscover and reconnect servers in the current session
-- `/mcp list` to see which config file a server came from
-- `/mcp test <name>` to test a single server
-
-## Validation rules OMP enforces
-
-From `validateServerConfig()` in `packages/coding-agent/src/mcp/config.ts`:
-
-- `stdio` requires `command`
-- `http` and `sse` require `url`
-- a server cannot set both `command` and `url`
-- unknown `type` values are rejected
-
-Practical implications:
-
-- Omitting `type` means `stdio`
-- If you paste a remote server config and forget `"type": "http"`, OMP will treat it as `stdio` and complain that `command` is missing
-- `sse` remains valid for compatibility, but new hosted servers should usually be configured as `http`
-
-## Discovery and precedence
-
-OMP does not merge duplicate server definitions across files. Discovery providers are prioritized, and the higher-priority definition wins.
-
-In practice:
-
-- prefer `.xcsh/mcp.json` or `~/.xcsh/mcp.json` when you want an OMP-specific override
-- keep server names unique across tools when possible
-- use `disabledServers` in the user config when a third-party config keeps reintroducing a server you do not want
+- `stdio` servers require `command`.
+- `http` and `sse` servers require `url`.
+- A single server definition cannot declare both `command` and `url`.
+- Unrecognized `type` values are rejected.
 
 ## Troubleshooting
 
-### `Server "name": stdio server requires "command" field`
+### `Server "<NAME>": stdio server requires "command" field`
 
-You probably omitted `type: "http"` on a remote server.
+Remote endpoints require `"type": "http"`. When `type` is omitted, the runtime defaults to `stdio` and requires a `command` property.
 
-### `Server "name": both "command" and "url" are set`
+### `Server "<NAME>": both "command" and "url" are set`
 
-Pick one transport. OMP treats `command` as stdio and `url` as http/sse.
+Select a single transport type. Use `command` for local subprocesses or `url` for HTTP and SSE endpoints.
 
-### `/mcp add` worked but the server still does not connect
+### Server connection failures
 
-The JSON is valid, but the server may still be unreachable. Use `/mcp test <name>` and check whether:
+Run `/mcp test <SERVER_NAME>` to inspect error output and verify:
 
-- the binary or Docker image exists
-- required environment variables are set
-- the remote URL is reachable
-- the OAuth or API token is valid
+- The local binary or container image is installed and executable.
+- Required environment variables and credentials are defined.
+- Remote network endpoints are reachable without firewall blocks.
+- OAuth tokens or API keys remain valid.
 
-### The server exists in another tool's config but not in OMP
-
-Run `/mcp list`. OMP discovers many third-party MCP files, but project-level loading can also be disabled via the `mcp.enableProjectConfig` setting.
-
-## References
-
-- MCP transport spec: <https://modelcontextprotocol.io/specification/2025-03-26/basic/transports>
-- Filesystem server package: <https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem>
-- GitHub MCP server: <https://github.com/github/github-mcp-server>
-- Slack MCP server docs: <https://docs.slack.dev/ai/slack-mcp-server/>

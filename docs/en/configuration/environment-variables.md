@@ -6,361 +6,355 @@ sidebar:
   label: Environment variables
 ---
 
-# Environment Variables (Current Runtime Reference)
+# Environment variables
 
-This reference is derived from current code paths in:
+This reference documents the runtime environment variables used by the coding agent runtime, derived from code paths across:
 
 - `packages/coding-agent/src/**`
-- `packages/ai/src/**` (provider/auth resolution used by coding-agent)
-- `packages/utils/src/**` and `packages/tui/src/**` where those vars directly affect coding-agent runtime
-
-It documents only active behavior.
+- `packages/ai/src/**` (provider and authentication resolution)
+- `packages/utils/src/**` and `packages/tui/src/**` (runtime and user-interface controls)
 
 ## Resolution model and precedence
 
-Most runtime lookups use `$env` from `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`).
+Runtime lookups use the `$env` helper from `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`).
 
-`$env` loading order:
+`$env` resolves variables in the following order of precedence:
 
 1. Existing process environment (`Bun.env`)
-2. Project `.env` (`$PWD/.env`) for keys not already set
-3. Home `.env` (`~/.env`) for keys not already set
+2. Project-level `.env` file (`$PWD/.env`) for unset keys
+3. User home `.env` file (`~/.env`) for unset keys
 
-Additional rule in `.env` files: `XCSH_*` keys are mirrored to `PI_*` keys during parse.
+During `.env` parsing, keys with the `XCSH_*` prefix automatically mirror to corresponding `PI_*` keys.
 
 ---
 
-## 1) Model/provider authentication
+## Model and provider authentication
 
-These are consumed via `getEnvApiKey()` (`packages/ai/src/stream.ts`) unless noted otherwise.
+The runtime consumes these variables via `getEnvApiKey()` (`packages/ai/src/stream.ts`) unless specified otherwise.
 
 ### Core provider credentials
 
-| Variable                        | Used for | Required when                                                 | Notes / precedence                                                                                  |
-|---------------------------------|---|---------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| `ANTHROPIC_OAUTH_TOKEN`         | Anthropic API auth | Using Anthropic with OAuth token auth                         | Takes precedence over `ANTHROPIC_API_KEY` for provider auth resolution                              |
-| `ANTHROPIC_API_KEY`             | Anthropic API auth | Using Anthropic without OAuth token                           | Fallback after `ANTHROPIC_OAUTH_TOKEN`                                                              |
-| `ANTHROPIC_FOUNDRY_API_KEY`     | Anthropic via Azure Foundry / enterprise gateway | `CLAUDE_CODE_USE_FOUNDRY` enabled                             | Takes precedence over `ANTHROPIC_OAUTH_TOKEN` and `ANTHROPIC_API_KEY` when Foundry mode is enabled  |
-| `OPENAI_API_KEY`                | OpenAI auth | Using OpenAI-family providers without explicit apiKey argument | Used by OpenAI Completions/Responses providers                                                      |
-| `GEMINI_API_KEY`                | Google Gemini auth | Using `google` provider models                                | Primary key for Gemini provider mapping                                                             |
-| `GOOGLE_API_KEY`                | Gemini image tool auth fallback | Using `gemini_image` tool without `GEMINI_API_KEY`            | Used by coding-agent image tool fallback path                                                       |
-| `GROQ_API_KEY`                  | Groq auth | Using Groq models                                             |                                                                                                     |
-| `CEREBRAS_API_KEY`              | Cerebras auth | Using Cerebras models                                         |                                                                                                     |
-| `TOGETHER_API_KEY`              | Together auth | Using `together` provider                                     |                                                                                                     |
-| `HUGGINGFACE_HUB_TOKEN`         | Hugging Face auth | Using `huggingface` provider                                  | Primary Hugging Face token env var                                                                  |
-| `HF_TOKEN`                      | Hugging Face auth | Using `huggingface` provider                                  | Fallback when `HUGGINGFACE_HUB_TOKEN` is unset                                                      |
-| `SYNTHETIC_API_KEY`             | Synthetic auth | Using Synthetic models                                        |                                                                                                     |
-| `NVIDIA_API_KEY`                | NVIDIA auth | Using `nvidia` provider                                       |                                                                                                     |
-| `NANO_GPT_API_KEY`              | NanoGPT auth | Using `nanogpt` provider                                      |                                                                                                     |
-| `VENICE_API_KEY`                | Venice auth | Using `venice` provider                                       |                                                                                                     |
-| `LITELLM_API_KEY`               | LiteLLM auth | Using `litellm` provider                                      | OpenAI-compatible LiteLLM proxy key. When set with `LITELLM_BASE_URL`, enables auto-config of `models.yml` |
-| `LM_STUDIO_API_KEY`             | LM Studio auth (optional) | Using `lm-studio` provider with authenticated hosts           | Local LM Studio usually runs without auth; any non-empty token works when a key is required         |
-| `OLLAMA_API_KEY`                | Ollama auth (optional) | Using `ollama` provider with authenticated hosts              | Local Ollama usually runs without auth; any non-empty token works when a key is required            |
-| `LLAMA_CPP_API_KEY`             | Ollama auth (optional) | Using `llama-server` with `--api-key` parameter              | Local llama.cpp usually runs without auth; any non-empty token works when a key is configured       |
-| `XIAOMI_API_KEY`                | Xiaomi MiMo auth | Using `xiaomi` provider                                       |                                                                                                     |
-| `MOONSHOT_API_KEY`              | Moonshot auth | Using `moonshot` provider                                     |                                                                                                     |
-| `XAI_API_KEY`                   | xAI auth | Using xAI models                                              |                                                                                                     |
-| `OPENROUTER_API_KEY`            | OpenRouter auth | Using OpenRouter models                                       | Also used by image tool when preferred/auto provider is OpenRouter                                  |
-| `MISTRAL_API_KEY`               | Mistral auth | Using Mistral models                                          |                                                                                                     |
-| `ZAI_API_KEY`                   | z.ai auth | Using z.ai models                                             | Also used by z.ai web search provider                                                               |
-| `MINIMAX_API_KEY`               | MiniMax auth | Using `minimax` provider                                      |                                                                                                     |
-| `MINIMAX_CODE_API_KEY`          | MiniMax Code auth | Using `minimax-code` provider                                 |                                                                                                     |
-| `MINIMAX_CODE_CN_API_KEY`       | MiniMax Code CN auth | Using `minimax-code-cn` provider                              |                                                                                                     |
-| `OPENCODE_API_KEY`              | OpenCode auth | Using OpenCode models                                         |                                                                                                     |
-| `QIANFAN_API_KEY`               | Qianfan auth | Using `qianfan` provider                                      |                                                                                                     |
-| `QWEN_OAUTH_TOKEN`              | Qwen Portal auth | Using `qwen-portal` with OAuth token                          | Takes precedence over `QWEN_PORTAL_API_KEY`                                                         |
-| `QWEN_PORTAL_API_KEY`           | Qwen Portal auth | Using `qwen-portal` with API key                              | Fallback after `QWEN_OAUTH_TOKEN`                                                                   |
-| `ZENMUX_API_KEY`                | ZenMux auth | Using `zenmux` provider                                       | Used for ZenMux OpenAI and Anthropic-compatible routes                                              |
-| `VLLM_API_KEY`                  | vLLM auth/discovery opt-in | Using `vllm` provider (local OpenAI-compatible servers)       | Any non-empty value works for no-auth local servers                                                 |
-| `CURSOR_ACCESS_TOKEN`           | Cursor provider auth | Using Cursor provider                                         |                                                                                                     |
-| `AI_GATEWAY_API_KEY`            | Vercel AI Gateway auth | Using `vercel-ai-gateway` provider                            |                                                                                                     |
-| `CLOUDFLARE_AI_GATEWAY_API_KEY` | Cloudflare AI Gateway auth | Using `cloudflare-ai-gateway` provider                        | Base URL must be configured as `https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic` |
+| Variable | Used for | Required when | Notes and precedence |
+| --- | --- | --- | --- |
+| `ANTHROPIC_OAUTH_TOKEN` | Anthropic API authentication | Using Anthropic with OAuth tokens | Takes precedence over `ANTHROPIC_API_KEY` for provider authentication resolution |
+| `ANTHROPIC_API_KEY` | Anthropic API authentication | Using Anthropic without an OAuth token | Fallback credential when `ANTHROPIC_OAUTH_TOKEN` is unset |
+| `ANTHROPIC_FOUNDRY_API_KEY` | Anthropic via Azure Foundry or enterprise gateway | `CLAUDE_CODE_USE_FOUNDRY` is enabled | Takes precedence over `ANTHROPIC_OAUTH_TOKEN` and `ANTHROPIC_API_KEY` when Foundry mode is active |
+| `OPENAI_API_KEY` | OpenAI authentication | Using OpenAI-family providers without explicit `apiKey` parameters | Used by OpenAI Completions and Responses providers |
+| `GEMINI_API_KEY` | Google Gemini authentication | Using `google` provider models | Primary key for Gemini provider mapping |
+| `GOOGLE_API_KEY` | Gemini image tool authentication fallback | Using the `gemini_image` tool without `GEMINI_API_KEY` | Fallback key for image generation tools |
+| `GROQ_API_KEY` | Groq authentication | Using Groq models | |
+| `CEREBRAS_API_KEY` | Cerebras authentication | Using Cerebras models | |
+| `TOGETHER_API_KEY` | Together authentication | Using the `together` provider | |
+| `HUGGINGFACE_HUB_TOKEN` | Hugging Face authentication | Using the `huggingface` provider | Primary Hugging Face token variable |
+| `HF_TOKEN` | Hugging Face authentication | Using the `huggingface` provider | Fallback token when `HUGGINGFACE_HUB_TOKEN` is unset |
+| `SYNTHETIC_API_KEY` | Synthetic authentication | Using Synthetic models | |
+| `NVIDIA_API_KEY` | NVIDIA authentication | Using the `nvidia` provider | |
+| `NANO_GPT_API_KEY` | NanoGPT authentication | Using the `nanogpt` provider | |
+| `VENICE_API_KEY` | Venice authentication | Using the `venice` provider | |
+| `LITELLM_API_KEY` | LiteLLM authentication | Using the `litellm` provider | OpenAI-compatible LiteLLM proxy key; when set alongside `LITELLM_BASE_URL`, enables automatic configuration of `models.yml` |
+| `LM_STUDIO_API_KEY` | LM Studio authentication (optional) | Using the `lm-studio` provider with authenticated hosts | Local LM Studio instances typically run without authentication; any non-empty string works when a key is required |
+| `OLLAMA_API_KEY` | Ollama authentication (optional) | Using the `ollama` provider with authenticated hosts | Local Ollama instances typically run without authentication; any non-empty string works when a key is required |
+| `LLAMA_CPP_API_KEY` | Llama.cpp authentication (optional) | Using `llama-server` configured with `--api-key` | Local llama.cpp instances typically run without authentication; any non-empty string works when a key is configured |
+| `XIAOMI_API_KEY` | Xiaomi MiMo authentication | Using the `xiaomi` provider | |
+| `MOONSHOT_API_KEY` | Moonshot authentication | Using the `moonshot` provider | |
+| `XAI_API_KEY` | xAI authentication | Using xAI models | |
+| `OPENROUTER_API_KEY` | OpenRouter authentication | Using OpenRouter models | Also used by the image tool when the preferred provider is OpenRouter |
+| `MISTRAL_API_KEY` | Mistral authentication | Using Mistral models | |
+| `ZAI_API_KEY` | z.ai authentication | Using z.ai models | Also used by the z.ai web search provider |
+| `MINIMAX_API_KEY` | MiniMax authentication | Using the `minimax` provider | |
+| `MINIMAX_CODE_API_KEY` | MiniMax Code authentication | Using the `minimax-code` provider | |
+| `MINIMAX_CODE_CN_API_KEY` | MiniMax Code CN authentication | Using the `minimax-code-cn` provider | |
+| `OPENCODE_API_KEY` | OpenCode authentication | Using OpenCode models | |
+| `QIANFAN_API_KEY` | Qianfan authentication | Using the `qianfan` provider | |
+| `QWEN_OAUTH_TOKEN` | Qwen Portal authentication | Using `qwen-portal` with OAuth token authentication | Takes precedence over `QWEN_PORTAL_API_KEY` |
+| `QWEN_PORTAL_API_KEY` | Qwen Portal authentication | Using `qwen-portal` with API key authentication | Fallback key when `QWEN_OAUTH_TOKEN` is unset |
+| `ZENMUX_API_KEY` | ZenMux authentication | Using the `zenmux` provider | Used for ZenMux OpenAI and Anthropic-compatible routing |
+| `VLLM_API_KEY` | vLLM authentication and discovery | Using the `vllm` provider (local OpenAI-compatible endpoints) | Any non-empty string satisfies local unauthenticated servers |
+| `CURSOR_ACCESS_TOKEN` | Cursor provider authentication | Using the Cursor provider | |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway authentication | Using the `vercel-ai-gateway` provider | |
+| `CLOUDFLARE_AI_GATEWAY_API_KEY` | Cloudflare AI Gateway authentication | Using the `cloudflare-ai-gateway` provider | Requires base URL formatted as `https://gateway.ai.cloudflare.com/v1/<account>/<gateway>/anthropic` |
 
-### GitHub/Copilot token chains
+### GitHub and Copilot token chains
 
-| Variable | Used for | Chain |
-|---|---|---|
-| `COPILOT_GITHUB_TOKEN` | GitHub Copilot provider auth | `COPILOT_GITHUB_TOKEN` → `GH_TOKEN` → `GITHUB_TOKEN` |
-| `GH_TOKEN` | Copilot fallback; GitHub API auth in web scraper | In web scraper: `GITHUB_TOKEN` → `GH_TOKEN` |
-| `GITHUB_TOKEN` | Copilot fallback; GitHub API auth in web scraper | In web scraper: checked before `GH_TOKEN` |
+| Variable | Used for | Resolution chain |
+| --- | --- | --- |
+| `COPILOT_GITHUB_TOKEN` | GitHub Copilot provider authentication | `COPILOT_GITHUB_TOKEN` —> `GH_TOKEN` —> `GITHUB_TOKEN` |
+| `GH_TOKEN` | Copilot fallback; GitHub API authentication in web scraper | In web scraper: `GITHUB_TOKEN` —> `GH_TOKEN` |
+| `GITHUB_TOKEN` | Copilot fallback; GitHub API authentication in web scraper | In web scraper: Checked before `GH_TOKEN` |
 
 ---
 
-## 2) Provider-specific runtime configuration
+## Provider-specific runtime configuration
 
-### Anthropic Foundry Gateway (Azure / enterprise proxy)
+### Anthropic Foundry Gateway (Azure and enterprise proxy)
 
-When `CLAUDE_CODE_USE_FOUNDRY` is enabled, Anthropic requests switch to Foundry mode:
+When `CLAUDE_CODE_USE_FOUNDRY` is active, Anthropic requests route to Foundry mode:
 
-- Base URL resolves from `FOUNDRY_BASE_URL` (fallback remains model/default base URL if unset).
-- API key resolution for provider `anthropic` becomes:
-  `ANTHROPIC_FOUNDRY_API_KEY` → `ANTHROPIC_OAUTH_TOKEN` → `ANTHROPIC_API_KEY`.
-- `ANTHROPIC_CUSTOM_HEADERS` is parsed as comma/newline-separated `key: value` pairs and merged into request headers.
-- TLS client/server material can be injected from env values:
+- Base URL resolves from `FOUNDRY_BASE_URL` (falls back to model default if unset).
+- API key resolution order for the `anthropic` provider becomes:
+  `ANTHROPIC_FOUNDRY_API_KEY` —> `ANTHROPIC_OAUTH_TOKEN` —> `ANTHROPIC_API_KEY`.
+- `ANTHROPIC_CUSTOM_HEADERS` is parsed as comma-separated or newline-separated `key: value` pairs and merged into request headers.
+- TLS client and server credentials can be injected from environment variables:
   `NODE_EXTRA_CA_CERTS`, `CLAUDE_CODE_CLIENT_CERT`, `CLAUDE_CODE_CLIENT_KEY`.
-  Each accepts either:
-  - a filesystem path to PEM content, or
-  - inline PEM (including escaped `\n` sequences).
+  Each variable accepts either a filesystem path to a PEM file or an inline PEM string (including escaped `\n` sequences).
 
 | Variable | Value type | Behavior |
-|---|---|---|
-| `CLAUDE_CODE_USE_FOUNDRY` | Boolean-like string (`1`, `true`, `yes`, `on`) | Enables Foundry mode for Anthropic provider |
+| --- | --- | --- |
+| `CLAUDE_CODE_USE_FOUNDRY` | Boolean string (`1`, `true`, `yes`, `on`) | Enables Foundry mode for the Anthropic provider |
 | `FOUNDRY_BASE_URL` | URL string | Anthropic endpoint base URL in Foundry mode |
 | `ANTHROPIC_FOUNDRY_API_KEY` | Token string | Used for `Authorization: Bearer <token>` |
-| `ANTHROPIC_CUSTOM_HEADERS` | Header list string | Extra headers; format `header-a: value, header-b: value` or newline-separated |
-| `NODE_EXTRA_CA_CERTS` | PEM path or inline PEM | Extra CA chain for server certificate validation |
-| `CLAUDE_CODE_CLIENT_CERT` | PEM path or inline PEM | mTLS client certificate |
-| `CLAUDE_CODE_CLIENT_KEY` | PEM path or inline PEM | mTLS client private key (must be paired with cert) |
+| `ANTHROPIC_CUSTOM_HEADERS` | Header list string | Additional headers; formatted as `header-a: value, header-b: value` or newline-separated |
+| `NODE_EXTRA_CA_CERTS` | PEM path or inline PEM | Additional CA certificate bundle for server validation |
+| `CLAUDE_CODE_CLIENT_CERT` | PEM path or inline PEM | Mutual TLS (mTLS) client certificate |
+| `CLAUDE_CODE_CLIENT_KEY` | PEM path or inline PEM | Mutual TLS (mTLS) client private key (paired with client certificate) |
 
 ### Amazon Bedrock
 
-| Variable | Default / behavior |
-|---|---|
-| `AWS_REGION` | Primary region source |
-| `AWS_DEFAULT_REGION` | Fallback if `AWS_REGION` unset |
-| `AWS_PROFILE` | Enables named profile auth path |
-| `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | Enables IAM key auth path |
-| `AWS_BEARER_TOKEN_BEDROCK` | Enables bearer token auth path |
-| `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI` / `AWS_CONTAINER_CREDENTIALS_FULL_URI` | Enables ECS task credential path |
-| `AWS_WEB_IDENTITY_TOKEN_FILE` + `AWS_ROLE_ARN` | Enables web identity auth path |
-| `AWS_BEDROCK_SKIP_AUTH` | If `1`, injects dummy credentials (proxy/non-auth scenarios) |
-| `AWS_BEDROCK_FORCE_HTTP1` | If `1`, forces Node HTTP/1 request handler |
+| Variable | Default or behavior |
+| --- | --- |
+| `AWS_REGION` | Primary AWS region source |
+| `AWS_DEFAULT_REGION` | Fallback region when `AWS_REGION` is unset |
+| `AWS_PROFILE` | Named AWS profile authentication path |
+| `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` | IAM access key and secret key authentication path |
+| `AWS_BEARER_TOKEN_BEDROCK` | Bearer token authentication path |
+| `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI` / `AWS_CONTAINER_CREDENTIALS_FULL_URI` | ECS task role credential path |
+| `AWS_WEB_IDENTITY_TOKEN_FILE` + `AWS_ROLE_ARN` | Web identity token authentication path |
+| `AWS_BEDROCK_SKIP_AUTH` | When set to `1`, injects dummy credentials for proxy or non-authenticated scenarios |
+| `AWS_BEDROCK_FORCE_HTTP1` | When set to `1`, forces the Node.js HTTP/1 request handler |
 
-Region fallback in provider code: `options.region` → `AWS_REGION` → `AWS_DEFAULT_REGION` → `us-east-1`.
+Region fallback sequence: `options.region` —> `AWS_REGION` —> `AWS_DEFAULT_REGION` —> `us-east-1`.
 
 ### Azure OpenAI Responses
 
-| Variable | Default / behavior |
-|---|---|
-| `AZURE_OPENAI_API_KEY` | Required unless API key passed as option |
-| `AZURE_OPENAI_API_VERSION` | Default `v1` |
+| Variable | Default or behavior |
+| --- | --- |
+| `AZURE_OPENAI_API_KEY` | Required unless the API key is passed via options |
+| `AZURE_OPENAI_API_VERSION` | Defaults to `v1` |
 | `AZURE_OPENAI_BASE_URL` | Direct base URL override |
-| `AZURE_OPENAI_RESOURCE_NAME` | Used to construct base URL: `https://<resource>.openai.azure.com/openai/v1` |
-| `AZURE_OPENAI_DEPLOYMENT_NAME_MAP` | Optional mapping string: `modelId=deploymentName,model2=deployment2` |
+| `AZURE_OPENAI_RESOURCE_NAME` | Constructs base URL: `https://<resource>.openai.azure.com/openai/v1` |
+| `AZURE_OPENAI_DEPLOYMENT_NAME_MAP` | Deployment mapping string: `modelId=deploymentName,model2=deployment2` |
 
-Base URL resolution: option `azureBaseUrl` → env `AZURE_OPENAI_BASE_URL` → option/env resource name → `model.baseUrl`.
+Base URL resolution sequence: `options.azureBaseUrl` —> `AZURE_OPENAI_BASE_URL` —> resource name derivation —> `model.baseUrl`.
 
 ### Google Vertex AI
 
-| Variable | Required? | Notes |
-|---|---|---|
-| `GOOGLE_CLOUD_PROJECT` | Yes (unless passed in options) | Fallback: `GCLOUD_PROJECT` |
-| `GCLOUD_PROJECT` | Fallback | Used as alternate project ID source |
-| `GOOGLE_CLOUD_LOCATION` | Yes (unless passed in options) | No default in provider |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Conditional | If set, file must exist; otherwise ADC fallback path is checked (`~/.config/gcloud/application_default_credentials.json`) |
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `GOOGLE_CLOUD_PROJECT` | Yes (unless passed via options) | Fallback: `GCLOUD_PROJECT` |
+| `GCLOUD_PROJECT` | Optional fallback | Alternative project ID source |
+| `GOOGLE_CLOUD_LOCATION` | Yes (unless passed via options) | No implicit default in provider |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Conditional | File path must exist if set; otherwise application default credentials (ADC) path is checked (`~/.config/gcloud/application_default_credentials.json`) |
 
 ### Kimi
 
-| Variable | Default / behavior |
-|---|---|
+| Variable | Default or behavior |
+| --- | --- |
 | `KIMI_CODE_OAUTH_HOST` | Primary OAuth host override |
 | `KIMI_OAUTH_HOST` | Fallback OAuth host override |
-| `KIMI_CODE_BASE_URL` | Overrides Kimi usage endpoint base URL (`usage/kimi.ts`) |
+| `KIMI_CODE_BASE_URL` | Overrides the Kimi usage endpoint base URL (`usage/kimi.ts`) |
 
-OAuth host chain: `KIMI_CODE_OAUTH_HOST` → `KIMI_OAUTH_HOST` → `https://auth.kimi.com`.
+OAuth host resolution chain: `KIMI_CODE_OAUTH_HOST` —> `KIMI_OAUTH_HOST` —> `https://auth.kimi.com`.
 
-### Antigravity/Gemini image compatibility
+### Antigravity and Gemini image compatibility
 
-| Variable | Default / behavior |
-|---|---|
-| `PI_AI_ANTIGRAVITY_VERSION` | Overrides Antigravity user-agent version tag in Gemini CLI provider |
+| Variable | Default or behavior |
+| --- | --- |
+| `PI_AI_ANTIGRAVITY_VERSION` | Overrides the Antigravity user-agent version header in the Gemini CLI provider |
 
-### OpenAI Codex responses (feature/debug controls)
+### OpenAI Codex responses (feature and debug controls)
 
 | Variable | Behavior |
-|---|---|
-| `PI_CODEX_DEBUG` | `1`/`true` enables Codex provider debug logging |
-| `PI_CODEX_WEBSOCKET` | `1`/`true` enables websocket transport preference |
-| `PI_CODEX_WEBSOCKET_V2` | `1`/`true` enables websocket v2 path |
-| `PI_CODEX_WEBSOCKET_IDLE_TIMEOUT_MS` | Positive integer override (default 300000) |
-| `PI_CODEX_WEBSOCKET_RETRY_BUDGET` | Non-negative integer override (default 5) |
-| `PI_CODEX_WEBSOCKET_RETRY_DELAY_MS` | Positive integer base backoff override (default 500) |
+| --- | --- |
+| `PI_CODEX_DEBUG` | Set to `1` or `true` to enable Codex provider debug logging |
+| `PI_CODEX_WEBSOCKET` | Set to `1` or `true` to enable WebSocket transport preference |
+| `PI_CODEX_WEBSOCKET_V2` | Set to `1` or `true` to enable the WebSocket v2 path |
+| `PI_CODEX_WEBSOCKET_IDLE_TIMEOUT_MS` | Positive integer overriding idle timeout in milliseconds (default: `300000`) |
+| `PI_CODEX_WEBSOCKET_RETRY_BUDGET` | Non-negative integer overriding retry attempts (default: `5`) |
+| `PI_CODEX_WEBSOCKET_RETRY_DELAY_MS` | Positive integer overriding base backoff delay in milliseconds (default: `500`) |
 
 ### Cursor provider debug
 
 | Variable | Behavior |
-|---|---|
-| `DEBUG_CURSOR` | Enables provider debug logs; `2`/`verbose` for detailed payload snippets |
+| --- | --- |
+| `DEBUG_CURSOR` | Enables provider debug logs; set to `2` or `verbose` for detailed payload snippets |
 | `DEBUG_CURSOR_LOG` | Optional file path for JSONL debug log output |
 
-### Prompt cache compatibility switch
+### Prompt cache compatibility
 
 | Variable | Behavior |
-|---|---|
-| `PI_CACHE_RETENTION` | If `long`, enables long retention where supported (`anthropic`, `openai-responses`, Bedrock retention resolution) |
+| --- | --- |
+| `PI_CACHE_RETENTION` | When set to `long`, enables extended cache retention where supported (`anthropic`, `openai-responses`, and Bedrock) |
 
 ---
 
-## 3) Web search subsystem
+## Web search subsystem
 
 ### Search provider credentials
 
 | Variable | Used by |
-|---|---|
+| --- | --- |
 | `EXA_API_KEY` | Exa search provider and Exa MCP tools |
 | `BRAVE_API_KEY` | Brave search provider |
-| `PERPLEXITY_API_KEY` | Perplexity search provider API-key mode |
+| `PERPLEXITY_API_KEY` | Perplexity search provider in API-key mode |
 | `TAVILY_API_KEY` | Tavily search provider |
-| `ZAI_API_KEY` | z.ai search provider (also checks stored OAuth in `agent.db`) |
-| `OPENAI_API_KEY` / Codex OAuth in DB | Codex search provider availability/auth |
+| `ZAI_API_KEY` | z.ai search provider (also checks stored OAuth credentials in `agent.db`) |
+| `OPENAI_API_KEY` | Codex search provider availability and authentication (or OAuth credentials in `agent.db`) |
 
-### Anthropic web search auth chain
+### Anthropic web search authentication chain
 
-`packages/coding-agent/src/web/search/auth.ts` resolves Anthropic web-search credentials in this order:
+`packages/coding-agent/src/web/search/auth.ts` resolves Anthropic web search credentials in this order:
 
-1. `ANTHROPIC_SEARCH_API_KEY` (+ optional `ANTHROPIC_SEARCH_BASE_URL`)
+1. `ANTHROPIC_SEARCH_API_KEY` (alongside optional `ANTHROPIC_SEARCH_BASE_URL`)
 2. `models.json` provider entry with `api: "anthropic-messages"`
-3. Anthropic OAuth credentials from `agent.db` (must not expire within 5-minute buffer)
-4. Generic Anthropic env fallback: provider key (`ANTHROPIC_FOUNDRY_API_KEY`/`ANTHROPIC_OAUTH_TOKEN`/`ANTHROPIC_API_KEY`) + optional `ANTHROPIC_BASE_URL` (`FOUNDRY_BASE_URL` when Foundry mode is enabled)
+3. Anthropic OAuth credentials from `agent.db` (valid with at least a 5-minute buffer before expiry)
+4. Generic Anthropic environment variables: `ANTHROPIC_FOUNDRY_API_KEY` —> `ANTHROPIC_OAUTH_TOKEN` —> `ANTHROPIC_API_KEY`, with optional `ANTHROPIC_BASE_URL` (`FOUNDRY_BASE_URL` when Foundry mode is active)
 
-Related vars:
+Related search variables:
 
-| Variable | Default / behavior |
-|---|---|
-| `ANTHROPIC_SEARCH_API_KEY` | Highest-priority explicit search key |
+| Variable | Default or behavior |
+| --- | --- |
+| `ANTHROPIC_SEARCH_API_KEY` | Highest-priority explicit search API key |
 | `ANTHROPIC_SEARCH_BASE_URL` | Defaults to `https://api.anthropic.com` when omitted |
 | `ANTHROPIC_SEARCH_MODEL` | Defaults to `claude-haiku-4-5` |
-| `ANTHROPIC_BASE_URL` | Generic fallback base URL for tier-4 auth path |
+| `ANTHROPIC_BASE_URL` | Generic fallback base URL for tier-4 authentication |
 
-### Perplexity OAuth flow behavior flag
-
-| Variable | Behavior |
-|---|---|
-| `PI_AUTH_NO_BORROW` | If set, disables macOS native-app token borrowing path in Perplexity login flow |
-
----
-
-## 4) Python tooling and kernel runtime
-
-| Variable | Default / behavior |
-|---|---|
-| `PI_PY` | Python tool mode override: `0`/`bash`=`bash-only`, `1`/`py`=`ipy-only`, `mix`/`both`=`both`; invalid values ignored |
-| `PI_PYTHON_SKIP_CHECK` | If `1`, skips Python kernel availability checks/warm checks |
-| `PI_PYTHON_GATEWAY_URL` | If set, uses external kernel gateway instead of local shared gateway |
-| `PI_PYTHON_GATEWAY_TOKEN` | Optional auth token for external gateway (`Authorization: token <value>`) |
-| `PI_PYTHON_IPC_TRACE` | If `1`, enables low-level IPC trace path in kernel module |
-| `VIRTUAL_ENV` | Highest-priority venv path for Python runtime resolution |
-
-Extra conditional behavior:
-
-- If `BUN_ENV=test` or `NODE_ENV=test`, Python availability checks are treated as OK and warming is skipped.
-- Python env filtering denies common API keys and allows safe base vars + `LC_`, `XDG_`, `PI_` prefixes.
-
----
-
-## 5) Agent/runtime behavior toggles
-
-| Variable                   | Default / behavior                                                                           |
-|----------------------------|----------------------------------------------------------------------------------------------|
-| `PI_SMOL_MODEL`            | Ephemeral model-role override for `smol` (CLI `--smol` takes precedence)                     |
-| `PI_SLOW_MODEL`            | Ephemeral model-role override for `slow` (CLI `--slow` takes precedence)                     |
-| `PI_PLAN_MODEL`            | Ephemeral model-role override for `plan` (CLI `--plan` takes precedence)                     |
-| `PI_NO_TITLE`              | If set (any non-empty value), disables auto session title generation on first user message   |
-| `NULL_PROMPT`              | If `true`, system prompt builder returns empty string                                        |
-| `PI_BLOCKED_AGENT`         | Blocks a specific subagent type in task tool                                                 |
-| `PI_SUBPROCESS_CMD`        | Overrides subagent spawn command (`xcsh` / `xcsh.cmd` resolution bypass)                       |
-| `PI_TASK_MAX_OUTPUT_BYTES` | Max captured output bytes per subagent (default `500000`)                                    |
-| `PI_TASK_MAX_OUTPUT_LINES` | Max captured output lines per subagent (default `5000`)                                      |
-| `PI_TIMING`                | If `1`, enables startup/tool timing instrumentation logs                                     |
-| `PI_DEBUG_STARTUP`         | Enables startup stage debug prints to stderr in multiple startup paths                       |
-| `PI_PACKAGE_DIR`           | Overrides package asset base dir resolution (docs/examples/changelog path lookup)            |
-| `PI_DISABLE_LSPMUX`        | If `1`, disables lspmux detection/integration and forces direct LSP server spawning          |
-| `LITELLM_BASE_URL`         | LiteLLM proxy base URL. When set with `LITELLM_API_KEY`, triggers auto-generation of `models.yml` on first run and self-healing on every startup |
-| `LM_STUDIO_BASE_URL`       | Default implicit LM Studio discovery base URL override (`http://127.0.0.1:1234/v1` if unset) |
-| `OLLAMA_BASE_URL`          | Default implicit Ollama discovery base URL override (`http://127.0.0.1:11434` if unset)      |
-| `LLAMA_CPP_BASE_URL`       | Default implicit Llama.cpp discovery base URL override (`http://127.0.0.1:8080` if unset)    |
-| `PI_EDIT_VARIANT`          | If `hashline`, forces hashline read/grep display mode when edit tool available               |
-| `PI_NO_PTY`                | If `1`, disables interactive PTY path for bash tool                                          |
-
-`PI_NO_PTY` is also set internally when CLI `--no-pty` is used.
-
----
-
-## 6) Storage and config root paths
-
-These are consumed via `@f5-sales-demo/pi-utils/dirs` and affect where coding-agent stores data.
-
-| Variable | Default / behavior |
-|---|---|
-| `PI_CONFIG_DIR` | Config root dirname under home (default `.xcsh`) |
-| `PI_CODING_AGENT_DIR` | Full override for agent directory (default `~/<PI_CONFIG_DIR or .xcsh>/agent`) |
-| `PWD` | Used when matching canonical current working directory in path helpers |
-
----
-
-## 7) Shell/tool execution environment
-
-(From `packages/utils/src/procmgr.ts` and coding-agent bash tool integration.)
+### Perplexity OAuth flow behavior
 
 | Variable | Behavior |
-|---|---|
-| `PI_BASH_NO_CI` | Suppresses automatic `CI=true` injection into spawned shell env |
-| `CLAUDE_BASH_NO_CI` | Legacy alias fallback for `PI_BASH_NO_CI` |
-| `PI_BASH_NO_LOGIN` | Intended to disable login shell mode |
-| `CLAUDE_BASH_NO_LOGIN` | Legacy alias fallback for `PI_BASH_NO_LOGIN` |
-| `PI_SHELL_PREFIX` | Optional command prefix wrapper |
-| `CLAUDE_CODE_SHELL_PREFIX` | Legacy alias fallback for `PI_SHELL_PREFIX` |
+| --- | --- |
+| `PI_AUTH_NO_BORROW` | When set, disables the macOS native application token borrowing path during Perplexity login |
+
+---
+
+## Python tooling and kernel runtime
+
+| Variable | Default or behavior |
+| --- | --- |
+| `PI_PY` | Python tool mode override: `0` or `bash` (`bash-only`), `1` or `py` (`ipy-only`), `mix` or `both` (`both`); invalid values are ignored |
+| `PI_PYTHON_SKIP_CHECK` | When set to `1`, skips Python kernel availability and warm checks |
+| `PI_PYTHON_GATEWAY_URL` | When set, routes kernel execution to an external kernel gateway instead of the local shared gateway |
+| `PI_PYTHON_GATEWAY_TOKEN` | Optional authentication token for the external gateway (`Authorization: token <value>`) |
+| `PI_PYTHON_IPC_TRACE` | When set to `1`, enables low-level IPC trace logging in the kernel module |
+| `VIRTUAL_ENV` | Highest-priority virtual environment path for Python runtime resolution |
+
+Additional runtime rules:
+
+- When `BUN_ENV=test` or `NODE_ENV=test`, Python availability checks pass automatically and kernel warming is skipped.
+- The Python execution environment filters out common API keys while preserving safe base variables and prefixes matching `LC_*`, `XDG_*`, and `PI_*`.
+
+---
+
+## Agent and runtime behavior toggles
+
+| Variable | Default or behavior |
+| --- | --- |
+| `PI_SMOL_MODEL` | Ephemeral model role override for `smol` (CLI `--smol` takes precedence) |
+| `PI_SLOW_MODEL` | Ephemeral model role override for `slow` (CLI `--slow` takes precedence) |
+| `PI_PLAN_MODEL` | Ephemeral model role override for `plan` (CLI `--plan` takes precedence) |
+| `PI_NO_TITLE` | When set to any non-empty value, disables automatic session title generation on the first user message |
+| `NULL_PROMPT` | When set to `true`, the system prompt builder returns an empty string |
+| `PI_BLOCKED_AGENT` | Blocks a specific subagent type from being spawned by the task tool |
+| `PI_SUBPROCESS_CMD` | Overrides the subagent spawn command (bypassing `xcsh` or `xcsh.cmd` resolution) |
+| `PI_TASK_MAX_OUTPUT_BYTES` | Maximum captured output bytes per subagent (default: `500000`) |
+| `PI_TASK_MAX_OUTPUT_LINES` | Maximum captured output lines per subagent (default: `5000`) |
+| `PI_TIMING` | When set to `1`, enables startup and tool execution timing instrumentation logs |
+| `PI_DEBUG_STARTUP` | Enables startup stage debug logging to standard error |
+| `PI_PACKAGE_DIR` | Overrides package asset base directory resolution for documentation, examples, and changelogs |
+| `PI_DISABLE_LSPMUX` | When set to `1`, disables lspmux detection and forces direct LSP server spawning |
+| `LITELLM_BASE_URL` | LiteLLM proxy base URL; when set alongside `LITELLM_API_KEY`, generates `models.yml` on first run and validates configuration on startup |
+| `LM_STUDIO_BASE_URL` | Base URL override for implicit LM Studio discovery (defaults to `http://127.0.0.1:1234/v1`) |
+| `OLLAMA_BASE_URL` | Base URL override for implicit Ollama discovery (defaults to `http://127.0.0.1:11434`) |
+| `LLAMA_CPP_BASE_URL` | Base URL override for implicit Llama.cpp discovery (defaults to `http://127.0.0.1:8080`) |
+| `PI_EDIT_VARIANT` | When set to `hashline`, forces hashline read and grep display mode when the edit tool is active |
+| `PI_NO_PTY` | When set to `1`, disables the interactive PTY path for the bash tool (also set internally by `--no-pty`) |
+
+---
+
+## Storage and configuration root paths
+
+These variables are consumed via `@f5-sales-demo/pi-utils/dirs` and govern data storage locations:
+
+| Variable | Default or behavior |
+| --- | --- |
+| `PI_CONFIG_DIR` | Configuration root directory name under the user home directory (defaults to `.xcsh`) |
+| `PI_CODING_AGENT_DIR` | Full path override for the agent directory (defaults to `~/<PI_CONFIG_DIR or .xcsh>/agent`) |
+| `PWD` | Used when matching canonical current working directories in path resolution helpers |
+
+---
+
+## Shell and tool execution environment
+
+These variables govern subprocess management in `packages/utils/src/procmgr.ts` and the bash tool integration:
+
+| Variable | Behavior |
+| --- | --- |
+| `PI_BASH_NO_CI` | Suppresses automatic `CI=true` injection into spawned shell environments |
+| `CLAUDE_BASH_NO_CI` | Legacy fallback alias for `PI_BASH_NO_CI` |
+| `PI_BASH_NO_LOGIN` | Disables login shell mode when spawning bash processes |
+| `CLAUDE_BASH_NO_LOGIN` | Legacy fallback alias for `PI_BASH_NO_LOGIN` |
+| `PI_SHELL_PREFIX` | Optional command prefix wrapper for shell executions |
+| `CLAUDE_CODE_SHELL_PREFIX` | Legacy fallback alias for `PI_SHELL_PREFIX` |
 | `VISUAL` | Preferred external editor command |
 | `EDITOR` | Fallback external editor command |
 
-Current implementation note: `PI_BASH_NO_LOGIN`/`CLAUDE_BASH_NO_LOGIN` are read, but current `getShellArgs()` returns `['-l','-c']` in both branches (effectively no-op today).
-
 ---
 
-## 8) UI/theme/session detection (auto-detected env)
+## Terminal and session environment variables
 
-These are read as runtime signals; they are usually set by the terminal/OS rather than manually configured.
+The runtime detects the following environment variables automatically from the host environment:
 
 | Variable | Used for |
-|---|---|
-| `COLORTERM`, `TERM`, `WT_SESSION` | Color capability detection (theme color mode) |
-| `COLORFGBG` | Terminal background light/dark auto-detection |
-| `TERM_PROGRAM`, `TERM_PROGRAM_VERSION`, `TERMINAL_EMULATOR` | Terminal identity in system prompt/context |
-| `KDE_FULL_SESSION`, `XDG_CURRENT_DESKTOP`, `DESKTOP_SESSION`, `XDG_SESSION_DESKTOP`, `GDMSESSION`, `WINDOWMANAGER` | Desktop/window-manager detection in system prompt/context |
-| `KITTY_WINDOW_ID`, `TMUX_PANE`, `TERM_SESSION_ID`, `WT_SESSION` | Stable per-terminal session breadcrumb IDs |
-| `SHELL`, `ComSpec`, `TERM_PROGRAM`, `TERM` | System info diagnostics |
-| `APPDATA`, `XDG_CONFIG_HOME` | lspmux config path resolution |
-| `HOME` | Path shortening in MCP command UI |
+| --- | --- |
+| `COLORTERM`, `TERM`, `WT_SESSION` | Terminal color capability detection and theme selection |
+| `COLORFGBG` | Terminal background light and dark mode auto-detection |
+| `TERM_PROGRAM`, `TERM_PROGRAM_VERSION`, `TERMINAL_EMULATOR` | Terminal identity detection for system prompt context |
+| `KDE_FULL_SESSION`, `XDG_CURRENT_DESKTOP`, `DESKTOP_SESSION`, `XDG_SESSION_DESKTOP`, `GDMSESSION`, `WINDOWMANAGER` | Desktop environment and window manager detection for system prompt context |
+| `KITTY_WINDOW_ID`, `TMUX_PANE`, `TERM_SESSION_ID`, `WT_SESSION` | Stable per-terminal session breadcrumb identifiers |
+| `SHELL`, `ComSpec`, `TERM_PROGRAM`, `TERM` | System diagnostics and shell detection |
+| `APPDATA`, `XDG_CONFIG_HOME` | lspmux configuration path resolution |
+| `HOME` | Path shortening in MCP command user interface |
 
 ---
 
-## 9) Native loader/debug flags
+## Native loader and debug flags
 
 | Variable | Behavior |
-|---|---|
+| --- | --- |
 | `PI_DEV` | Enables verbose native addon load diagnostics in `packages/natives` |
 
-## 10) TUI runtime flags (shared package, affects coding-agent UX)
+---
+
+## Terminal user interface runtime flags
 
 | Variable | Behavior |
-|---|---|
-| `PI_NOTIFICATIONS` | `off` / `0` / `false` suppress desktop notifications |
-| `PI_TUI_WRITE_LOG` | If set, logs TUI writes to file |
-| `PI_HARDWARE_CURSOR` | If `1`, enables hardware cursor mode |
-| `PI_CLEAR_ON_SHRINK` | If `1`, clears empty rows when content shrinks |
-| `PI_DEBUG_REDRAW` | If `1`, enables redraw debug logging |
-| `PI_TUI_DEBUG` | If `1`, enables deep TUI debug dump path |
+| --- | --- |
+| `PI_NOTIFICATIONS` | Set to `off`, `0`, or `false` to suppress desktop notifications |
+| `PI_TUI_WRITE_LOG` | When set, logs TUI write operations to a specified file |
+| `PI_HARDWARE_CURSOR` | When set to `1`, enables hardware cursor mode |
+| `PI_CLEAR_ON_SHRINK` | When set to `1`, clears empty rows when rendered content shrinks |
+| `PI_DEBUG_REDRAW` | When set to `1`, enables redraw debug logging |
+| `PI_TUI_DEBUG` | When set to `1`, enables deep TUI debug dump logging |
 
 ---
 
-## 11) Commit generation controls
+## Commit generation controls
 
 | Variable | Behavior |
-|---|---|
-| `PI_COMMIT_TEST_FALLBACK` | If `true` (case-insensitive), force commit fallback generation path |
-| `PI_COMMIT_NO_FALLBACK` | If `true`, disables fallback when agent returns no proposal |
-| `PI_COMMIT_MAP_REDUCE` | If `false`, disables map-reduce commit analysis path |
-| `DEBUG` | If set, commit agent error stack traces are printed |
+| --- | --- |
+| `PI_COMMIT_TEST_FALLBACK` | When set to `true` (case-insensitive), forces the commit fallback generation path |
+| `PI_COMMIT_NO_FALLBACK` | When set to `true`, disables fallback when the commit agent returns no proposal |
+| `PI_COMMIT_MAP_REDUCE` | When set to `false`, disables the map-reduce commit analysis path |
+| `DEBUG` | When set, prints commit agent error stack traces to standard error |
 
 ---
 
 ## Security-sensitive variables
 
-Treat these as secrets; do not log or commit them:
+Protect the following variables as sensitive secrets; do not log or commit them:
 
-- Provider/API keys and OAuth/bearer credentials (all `*_API_KEY`, `*_TOKEN`, OAuth access/refresh tokens)
-- Cloud credentials (`AWS_*`, `GOOGLE_APPLICATION_CREDENTIALS` path may expose service-account material)
-- Search/provider auth vars (`EXA_API_KEY`, `BRAVE_API_KEY`, `PERPLEXITY_API_KEY`, Anthropic search keys)
-- Foundry mTLS material (`CLAUDE_CODE_CLIENT_CERT`, `CLAUDE_CODE_CLIENT_KEY`, `NODE_EXTRA_CA_CERTS` when it points to private CA bundles)
+- Provider API keys and OAuth tokens (`*_API_KEY`, `*_TOKEN`, OAuth access and refresh tokens).
+- Cloud credentials (`AWS_*`, `GOOGLE_APPLICATION_CREDENTIALS`).
+- Web search authentication keys (`EXA_API_KEY`, `BRAVE_API_KEY`, `PERPLEXITY_API_KEY`, Anthropic search keys).
+- Foundry mutual TLS credentials (`CLAUDE_CODE_CLIENT_CERT`, `CLAUDE_CODE_CLIENT_KEY`, `NODE_EXTRA_CA_CERTS`).
 
-Python runtime also explicitly strips many common key vars before spawning kernel subprocesses (`packages/coding-agent/src/ipy/runtime.ts`).
+The Python runtime automatically strips these sensitive keys before spawning kernel subprocesses (`packages/coding-agent/src/ipy/runtime.ts`).
