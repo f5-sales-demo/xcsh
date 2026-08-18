@@ -6,8 +6,6 @@ sidebar:
   label: Custom tools
 ---
 
-# Custom tools
-
 Custom tools are user-defined functions callable by LLMs that integrate with the native tool execution pipeline alongside built-in operations.
 
 A custom tool is implemented as a TypeScript or JavaScript module exporting a factory function. The factory receives host capabilities (`CustomToolAPI`) and returns one or more tool definitions.
@@ -96,4 +94,3 @@ Factory functions receive a `CustomToolAPI` instance containing:
 - **Execution validation**: Parameters are validated against the TypeBox schema prior to executing `execute()`.
 - **Cancellation propagation**: Pass `signal` to asynchronous operations to handle user interruptions cleanly.
 - **Session events**: Optional `onSession(event, ctx)` callbacks receive lifecycle notifications (`start`, `branch`, `shutdown`, `auto_compaction_start`).
-

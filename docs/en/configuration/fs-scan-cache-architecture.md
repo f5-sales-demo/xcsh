@@ -6,8 +6,6 @@ sidebar:
   label: Filesystem scan cache
 ---
 
-# Filesystem scan cache architecture contract
-
 This document defines the contract for the shared filesystem scan cache implemented in Rust (`crates/pi-natives/src/fs_cache.rs`) and consumed by native discovery and search APIs exposed to `packages/coding-agent`.
 
 ## Purpose and design goals
@@ -68,7 +66,7 @@ Search roots are resolved through `resolve_search_path`:
 
 ## Freshness and eviction policy
 
-Global policy configuration (overrideable via environment variables):
+Global policy configuration (overridable via environment variables):
 
 - `FS_SCAN_CACHE_TTL_MS` (default: `1000`)
 - `FS_SCAN_EMPTY_RECHECK_MS` (default: `200`)
@@ -167,4 +165,3 @@ When introducing cache usage in a new scanning or search path:
 - The cache stores directory scan entries rather than final tool evaluation results.
 - `glob`, `fuzzyFind`, and `grep` share entries only when all key dimensions (`root`, `hidden`, `gitignore`) match exactly.
 - The `.git` directory is always excluded during scan collection regardless of caller options.
-

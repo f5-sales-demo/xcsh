@@ -6,8 +6,6 @@ sidebar:
   label: Plugin manager
 ---
 
-# Plugin manager and installer plumbing
-
 This document describes how `xcsh plugin` operations manage plugin state on disk and how installed plugins become active runtime capabilities.
 
 ## Architecture and scope
@@ -154,7 +152,7 @@ Plugin modules execute in-process when imported. Installed plugins are treated a
 Plugin state operations do not use distributed transactions:
 
 | Step | Failure condition | Recovery action |
-|---|---|---|
+| --- | --- | --- |
 | Package installation | `bun install` returns non-zero exit code. | Command halts; on-disk state remains unmodified. |
 | Manifest parsing | Package installed, but manifest structure is invalid. | Command reports error; dependency remains in `node_modules`. |
 | State persistence | Package installed, but lockfile write fails. | Command reports error; package remains installed without lockfile entry. |
@@ -172,4 +170,3 @@ Run `xcsh plugin doctor --fix` to diagnose and reconcile inconsistencies between
 - `packages/coding-agent/src/extensibility/plugins/parser.ts`: Specification parsing helpers.
 - `packages/coding-agent/src/extensibility/plugins/types.ts`: Type definitions for manifests and lockfiles.
 - `packages/coding-agent/src/extensibility/custom-tools/loader.ts`: Runtime wiring for plugin-provided tools.
-

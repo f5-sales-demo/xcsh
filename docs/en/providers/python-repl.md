@@ -6,8 +6,6 @@ sidebar:
   label: Python & IPython
 ---
 
-# Python tool and IPython runtime
-
 This document describes the Python execution architecture in `packages/coding-agent`, covering tool parameters, Jupyter Kernel Gateway lifecycles, environment isolation, execution semantics, and troubleshooting procedures.
 
 ## Architecture overview
@@ -96,4 +94,3 @@ The runtime captures structured output across multiple MIME types:
 
 - Python does not support interactive standard input (`input()`). Avoid invoking interactive prompts.
 - To handle long-running workloads, increase the `timeout` parameter (up to 600 seconds).
-

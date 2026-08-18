@@ -6,8 +6,6 @@ sidebar:
   label: Streaming internals
 ---
 
-# Provider streaming internals
-
 This document describes how token and tool call streams from diverse LLM providers are normalized in `@f5-sales-demo/pi-ai` and propagated through `@f5-sales-demo/pi-agent-core` to `coding-agent` session events.
 
 ## End-to-end streaming architecture
@@ -77,4 +75,3 @@ Incremental tool arguments are parsed via `parseStreamingJson()` (`packages/ai/s
 - `packages/ai/src/providers/google.ts`: Google Gemini event transformer.
 - `packages/agent/src/agent-loop.ts`: Agent event processing loop.
 - `packages/coding-agent/src/session/agent-session.ts`: Session lifecycle, retry policies, and persistence.
-

@@ -6,8 +6,6 @@ sidebar:
   label: Marketplace
 ---
 
-# Marketplace plugin system
-
 The marketplace system enables discovery, installation, and lifecycle management of plugin packages from Git-hosted catalogs. It adheres to the Claude Code plugin registry format.
 
 ## Quick start
@@ -23,7 +21,7 @@ Run `/marketplace` without arguments to launch the interactive plugin browser.
 
 ## Core concepts
 
-- **Marketplace**: A Git repository or local directory containing a catalog manifest at `.xcsh-plugin/marketplace.json`. The catalog indexes available plugins with source locations, descriptions, and metadata.
+- **Marketplace**: A Git repository or local directory containing a catalog manifest at `.xcsh-plugin/marketplace.json`. The catalog lists available plugins with source locations, descriptions, and metadata.
 - **Plugin**: A directory containing skills, slash commands, event hooks, Model Context Protocol (MCP) servers, or Language Server Protocol (LSP) servers. Plugins use the identifier format `<PLUGIN_NAME>@<MARKETPLACE_NAME>` (for example, `code-review@f5-sales-demo-marketplace`).
 - **Installation scopes**:
   - **User scope** (default): Available across all workspace projects. Stored in `~/.xcsh/plugins/installed_plugins.json`.
@@ -36,13 +34,13 @@ Project-scoped plugin installations shadow user-scoped installations of the same
 ### Interactive commands
 
 | Command | Description |
-|---|---|
+| --- | --- |
 | `/marketplace` | Launches the interactive plugin browser and installation interface. |
 
 ### Marketplace management commands
 
 | Command | Description |
-|---|---|
+| --- | --- |
 | `/marketplace add <SOURCE>` | Registers a new marketplace source. |
 | `/marketplace remove <NAME>` | Removes a registered marketplace catalog. |
 | `/marketplace update [<NAME>]` | Re-fetches catalog metadata. Updates all catalogs when omitted. |
@@ -51,7 +49,7 @@ Project-scoped plugin installations shadow user-scoped installations of the same
 ### Plugin lifecycle commands
 
 | Command | Description |
-|---|---|
+| --- | --- |
 | `/marketplace discover [<MARKETPLACE>]` | Lists available plugins in configured marketplaces. |
 | `/marketplace install [--force] [--scope user\|project] <NAME>@<MARKETPLACE>` | Installs a designated plugin. |
 | `/marketplace uninstall [--scope user\|project] <NAME>@<MARKETPLACE>` | Removes an installed plugin. |
@@ -76,7 +74,7 @@ xcsh plugin install --scope project <NAME>@<MARKETPLACE>
 When registering a catalog using `/marketplace add <SOURCE>`, the runtime classifies the source format automatically:
 
 | Source format | Classification | Example |
-|---|---|---|
+| --- | --- | --- |
 | `owner/repo` | GitHub repository shorthand | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | Direct catalog URL | `https://example.com/marketplace.json` |
 | `https://...*.git` or `git@...` | Git repository URI | `https://github.com/org/repo.git` |
@@ -112,7 +110,7 @@ The marketplace catalog resides at `.xcsh-plugin/marketplace.json` at the root o
 ### Required manifest properties
 
 | Property | Description |
-|---|---|
+| --- | --- |
 | `name` | Canonical marketplace identifier (lowercase alphanumeric characters, hyphens, and dots; maximum 64 characters). |
 | `owner.name` | Name of the marketplace maintainer or organization. |
 | `plugins` | Array of plugin definition entries. |
@@ -120,7 +118,7 @@ The marketplace catalog resides at `.xcsh-plugin/marketplace.json` at the root o
 ### Plugin definition properties
 
 | Property | Required | Description |
-|---|---|---|
+| --- | --- | --- |
 | `name` | Yes | Plugin identifier adhering to naming constraints. |
 | `source` | Yes | Source resolution descriptor (relative path, Git URL, GitHub shorthand, npm). |
 | `description` | No | Human-readable functional description. |
@@ -217,4 +215,3 @@ Combined plugin identifiers (`<NAME>@<MARKETPLACE>`) must not exceed 128 charact
 
 - **Valid examples**: `custom-plugin`, `code-review`, `wordpress.com`, `f5-sales-demo`
 - **Invalid examples**: `-invalid`, `invalid-`, `.invalid`, `InvalidCase`, `under_score`
-

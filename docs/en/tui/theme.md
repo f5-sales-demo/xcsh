@@ -6,8 +6,6 @@ sidebar:
   label: Theming
 ---
 
-# Theming reference
-
 This document defines color token architecture, theme resolution, terminal color modes, and custom theme creation in xcsh.
 
 ## Theme system capabilities

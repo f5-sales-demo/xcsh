@@ -6,8 +6,6 @@ sidebar:
   label: SDK
 ---
 
-# SDK
-
 The SDK provides an in-process programmatic integration surface for `@f5-sales-demo/xcsh`. Use the SDK when you need direct access to agent state, event streaming, tool configuration, and session management from within your own Bun or Node.js process.
 
 If you require cross-language integration or process isolation, use RPC mode instead.

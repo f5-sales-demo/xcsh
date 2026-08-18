@@ -6,8 +6,6 @@ sidebar:
   label: Overview
 ---
 
-# Extension runtime architecture
-
 This document details the extension system for the xcsh coding agent runtime.
 
 Implementation files:

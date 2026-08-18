@@ -6,8 +6,6 @@ sidebar:
   label: Autonomous memory
 ---
 
-# Autonomous memory
-
 When enabled, the autonomous memory subsystem extracts durable technical knowledge from past sessions and injects a compact summary into each new session context. This maintains project-specific architectural decisions, recurring workflows, and resolution patterns without manual prompt construction.
 
 Enable memory persistence in `config.yml` or via `/settings`:

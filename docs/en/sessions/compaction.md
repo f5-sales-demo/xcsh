@@ -6,8 +6,6 @@ sidebar:
   label: Compaction
 ---
 
-# Compaction and branch summaries
-
 Compaction and branch summaries preserve critical context across long-running or branching sessions while fitting within LLM context windows.
 
 - **Compaction**: Replaces older turn history on the active branch with a generated summary.
@@ -84,4 +82,3 @@ Configure compaction and summarization behavior in settings:
 - `src/session/compaction/pruning.ts`: Tool output pruning heuristics.
 - `src/session/session-manager.ts`: Session entry persistence and history trees.
 - `src/session/agent-session.ts`: Compaction coordinator and runtime hooks.
-

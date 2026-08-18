@@ -6,8 +6,6 @@ sidebar:
   label: Server & tool authoring
 ---
 
-# MCP server and tool authoring
-
 This guide describes how to author Model Context Protocol (MCP) server configurations, expose server tools as agent-callable capabilities, and manage credentials and runtime lifecycle events in the xcsh coding agent.
 
 ## Architecture overview
@@ -138,4 +136,3 @@ Configuration updates are written atomically using temporary files and rename op
 - `packages/coding-agent/src/discovery/mcp-json.ts`: Standalone `mcp.json` fallback discovery provider.
 - `packages/coding-agent/src/modes/controllers/mcp-command-controller.ts`: Interactive `/mcp` command controllers.
 - `packages/coding-agent/src/mcp/manager.ts`: Connection orchestration and tool caching.
-

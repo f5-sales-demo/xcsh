@@ -6,8 +6,6 @@ sidebar:
   label: RPC protocol
 ---
 
-# RPC protocol reference
-
 RPC mode executes the coding agent using a newline-delimited JSON protocol over standard I/O (stdio):
 
 - **stdin**: Inbound commands (`RpcCommand`) and extension UI responses (`RpcExtensionUIResponse`).
@@ -480,4 +478,3 @@ The helper class in `src/modes/rpc/rpc-client.ts` provides client-side transport
 - Manages host-provided tools via `setCustomTools()` and dispatches `host_tool_call` and `host_tool_cancel` events.
 
 For low-level integrations requiring complete protocol control, send raw JSON Lines frames directly over stdio.
-

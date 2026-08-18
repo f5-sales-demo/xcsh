@@ -6,8 +6,6 @@ sidebar:
   label: Shell, PTY & process
 ---
 
-# Natives shell, PTY, process, and key internals
-
 This document describes the native execution primitives for subprocesses, interactive pseudoterminals (PTY), process tree management, and terminal key sequence parsing in `@f5-sales-demo/pi-natives`.
 
 ## Implementation files
@@ -68,7 +66,7 @@ Parses high-frequency terminal input:
 ## TypeScript API and native export mapping
 
 | TypeScript API | Native Node-API export | Description |
-|---|---|---|
+| --- | --- | --- |
 | `executeShell(options, onChunk?)` | `executeShell` | Runs a one-shot subprocess command. |
 | `new Shell(options?)` | `Shell` | Instantiates a stateful persistent shell session. |
 | `shell.run(options, onChunk?)` | `Shell::run` | Executes a command in a persistent session. |
@@ -81,4 +79,3 @@ Parses high-frequency terminal input:
 | `killTree(pid, signal)` | `killTree` | Recursively terminates a process and all descendants. |
 | `listDescendants(pid)` | `listDescendants` | Lists all descendant process IDs for a given PID. |
 | `parseKey(data, kittyProtocolActive)` | `parseKey` | Parses raw terminal input into normalized key names. |
-

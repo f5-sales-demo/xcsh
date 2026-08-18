@@ -6,8 +6,6 @@ sidebar:
   label: OpenAI access
 ---
 
-# OpenAI access methods
-
 xcsh supports two distinct access methods for OpenAI services, depending on whether you authenticate with a ChatGPT subscription or an OpenAI Platform API key.
 
 ## 1. ChatGPT subscription (OAuth)
@@ -40,4 +38,3 @@ xcsh
 ```
 
 After starting xcsh, select an OpenAI model using `/model`.
-

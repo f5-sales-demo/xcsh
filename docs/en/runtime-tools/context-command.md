@@ -6,8 +6,6 @@ sidebar:
   label: F5 XC Contexts
 ---
 
-# F5 Distributed Cloud contexts
-
 xcsh connects to F5 Distributed Cloud (F5 XC) tenants through **contexts** — named credential profiles binding a tenant endpoint URL, API token, and active namespace. Context management mimics `kubectl` and `kubectx` workflows: create contexts, switch between them by name, and use `-` to alternate between recent contexts.
 
 ## Getting started
@@ -122,4 +120,3 @@ Contexts can define custom environment variables that xcsh injects upon activati
 ## Environment variable precedence
 
 If `XCSH_API_URL` and `XCSH_API_TOKEN` are set in the host shell prior to launching xcsh, environment variables override context configurations. When running under environment overrides, `/context` displays credentials marked with `(via env vars)`.
-

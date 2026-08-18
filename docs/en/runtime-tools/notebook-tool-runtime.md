@@ -6,8 +6,6 @@ sidebar:
   label: Notebook tool
 ---
 
-# Notebook tool runtime internals
-
 This document describes the architectural differences and boundaries between the `notebook` editing tool and the kernel-backed `python` execution runtime in `packages/coding-agent`.
 
 > [!IMPORTANT]
@@ -52,4 +50,3 @@ When modifying cell content, xcsh splits incoming source text into string arrays
 - `src/ipy/executor.ts`: Jupyter kernel session pooling and execution queue manager.
 - `src/ipy/kernel.ts`: Kernel lifecycle and WebSocket protocol handler.
 - `src/session/streaming-output.ts`: Streaming output sink and artifact spillover.
-

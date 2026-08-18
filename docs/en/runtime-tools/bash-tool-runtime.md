@@ -6,8 +6,6 @@ sidebar:
   label: Bash tool
 ---
 
-# Bash tool runtime
-
 This document describes the execution pipeline of the `bash` tool in `packages/coding-agent`, covering command normalization, interception rules, process sandboxing, output truncation, and UI rendering across execution modes.
 
 ## Execution entry points
@@ -83,4 +81,3 @@ xcsh enforces filesystem containment boundaries using platform-native security p
 - `src/exec/bash-executor.ts`: Process execution engine and shell session reuse.
 - `src/tools/bash-interactive.ts`: Virtual PTY runtime and terminal input handling.
 - `src/session/streaming-output.ts`: `OutputSink` buffer management and artifact spillover.
-

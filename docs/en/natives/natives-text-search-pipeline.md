@@ -6,8 +6,6 @@ sidebar:
   label: Text & search pipeline
 ---
 
-# Natives text and search pipeline
-
 This document maps the text and search subsystems (`grep`, `glob`, `text`, and `highlight`) in `@f5-sales-demo/pi-natives` from TypeScript wrappers to Rust Node-API exports and result structures.
 
 ## Implementation files
@@ -58,7 +56,7 @@ This document maps the text and search subsystems (`grep`, `glob`, `text`, and `
 ## TypeScript API and native export mapping
 
 | TypeScript API | Native Node-API export | Rust module | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `grep(options, onMatch?)` | `grep` | `grep.rs` | Multithreaded regular expression search across files or directories. |
 | `searchContent(content, options)` | `search` | `grep.rs` | In-memory regular expression search. |
 | `hasMatch(content, pattern, opts?)` | `hasMatch` | `grep.rs` | Fast boolean regex match test. |
@@ -71,4 +69,3 @@ This document maps the text and search subsystems (`grep`, `glob`, `text`, and `
 | `highlightCode(code, lang, colors)` | `highlightCode` | `highlight.rs` | Generates ANSI-highlighted source code. |
 | `supportsLanguage(lang)` | `supportsLanguage` | `highlight.rs` | Checks syntax highlighting support for a language. |
 | `getSupportedLanguages()` | `getSupportedLanguages` | `highlight.rs` | Lists all supported syntax languages. |
-

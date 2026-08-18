@@ -6,8 +6,6 @@ sidebar:
   label: Build, release & debugging
 ---
 
-# Natives build, release, and debugging runbook
-
 This runbook describes the build, release, packaging, and debugging workflows for the `@f5-sales-demo/pi-natives` compiled Node-API addon.
 
 ## Implementation files
@@ -55,7 +53,7 @@ Following compilation, the build script copies the shared library into `packages
 ## Environment and build configuration
 
 | Environment variable | Purpose | Valid values |
-|---|---|---|
+| --- | --- | --- |
 | `PI_DEV` | Enables verbose loader diagnostics and candidate path logging. | `1` or `0` |
 | `PI_NATIVE_VARIANT` | Forces runtime loader selection on x64 systems. | `modern` or `baseline` |
 | `PI_COMPILED` | Enables standalone compiled binary extraction paths. | `1` or `0` |
@@ -86,9 +84,8 @@ bun --cwd=packages/natives run embed:native -- --reset
 ## Troubleshooting and diagnostics
 
 | Issue | Root cause | Remediation |
-|---|---|---|
+| --- | --- | --- |
 | `Native addon missing exports` | Stale `.node` binary or mismatched export symbols. | Run `bun --cwd=packages/natives run build` to recompile the native addon. |
 | `Unsupported platform: <TAG>` | Host operating system or architecture is not supported. | Verify host matches supported platform tags (`linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`). |
 | Baseline loaded on AVX2 host | `PI_NATIVE_VARIANT=baseline` is set, or the `modern` binary is missing. | Recompile the `modern` variant: `TARGET_VARIANT=modern bun --cwd=packages/natives run build`. |
 | Standalone binary fails after upgrade | Stale cached binary in `~/.xcsh/natives/<VERSION>/`. | Remove the versioned cache directory (`rm -rf ~/.xcsh/natives/<VERSION>`) and rerun. |
-

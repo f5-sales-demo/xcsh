@@ -6,8 +6,6 @@ sidebar:
   label: Binding contract
 ---
 
-# Natives binding contract
-
 This document defines the TypeScript-side contract that connects caller modules to the compiled Node-API native addon in `@f5-sales-demo/pi-natives`.
 
 ## Architecture overview
@@ -65,7 +63,7 @@ TypeScript wrappers provide convenience transformations without duplicating nati
 ## JavaScript API and native export mapping
 
 | Capability | Public TypeScript wrapper | Native binding export | Return type | Execution mode |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Grep | `grep(options, onMatch?)` | `grep` | `Promise<GrepResult>` | Asynchronous |
 | Grep | `searchContent(content, options)` | `search` | `SearchResult` | Synchronous |
 | Grep | `hasMatch(content, pattern, opts?)` | `hasMatch` | `boolean` | Synchronous |
@@ -112,4 +110,3 @@ When adding or modifying native bindings:
 3. Ensure `packages/natives/src/native.ts` imports the module type definitions.
 4. Add the required export symbol to the `validateNative` check in `packages/natives/src/native.ts`.
 5. Export the wrapper from `packages/natives/src/index.ts`.
-

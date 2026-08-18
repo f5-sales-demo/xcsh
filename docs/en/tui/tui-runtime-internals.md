@@ -6,8 +6,6 @@ sidebar:
   label: Runtime internals
 ---
 
-# TUI runtime internals
-
 This document describes the runtime execution path of the xcsh terminal interface, from raw input processing to differential terminal screen rendering.
 
 ## Architecture layers

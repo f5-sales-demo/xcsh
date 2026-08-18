@@ -3,8 +3,6 @@ title: Herdr terminals
 description: Run xcsh conversations with isolated, conversation-owned support terminals.
 ---
 
-# Herdr terminals
-
 The `xcsh` runtime binds individual conversations to dedicated Herdr workspaces and exposes named support terminals as tabs. The recommended rich-media stack consists of Ghostty with Kitty graphics support, Herdr configured with `experimental.kitty_graphics=true`, and FFmpeg 6 or later. Other terminal emulators receive static text fallbacks automatically.
 
 ## Media and graphics protocol negotiation
@@ -55,4 +53,3 @@ Session creation, resumption, switching, branching, and tree navigation retain t
 ## Socket protocol and resilience
 
 The socket client communicates using Herdr protocol 18 over newline-delimited JSON across `HERDR_SOCKET_PATH`. Each request establishes an independent connection, validates the `ping` protocol version, enforces a 4 MiB response cap, and applies bounded timeouts to prevent Herdr restarts from blocking the primary conversation process.
-

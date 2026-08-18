@@ -6,8 +6,6 @@ sidebar:
   label: Porting to pi-natives
 ---
 
-# Porting to pi-natives (Node-API) — Field notes
-
 This guide describes how to migrate performance-critical execution paths to Rust in `crates/pi-natives` and expose them through TypeScript bindings in `@f5-sales-demo/pi-natives`.
 
 ## When to port to native modules

@@ -6,8 +6,6 @@ sidebar:
   label: Retry policy
 ---
 
-# Non-compaction auto-retry policy
-
 This document describes the retry policy for transient upstream API errors (such as rate limits, connection timeouts, and 5xx server errors) in `AgentSession`.
 
 > [!NOTE]
@@ -47,4 +45,3 @@ Configure auto-retry behavior in `config.yml` or settings:
 - `src/config/settings-schema.ts`: Configuration schemas for retry policies.
 - `src/modes/controllers/event-controller.ts`: Interactive TUI retry countdown indicators and escape cancellation.
 - `src/modes/rpc/rpc-mode.ts`: RPC commands (`set_auto_retry`, `abort_retry`) and streamed lifecycle events.
-

@@ -6,9 +6,12 @@ sidebar:
   label: Overview
 ---
 
-# xcsh documentation
-
-xcsh is an AI-powered development CLI with a TypeScript coding agent and a Rust native acceleration layer (`pi-natives`). It extends the open-source `badlogic/pi-mono` foundation with a hardened runtime, long-lived sessions featuring interactive tree navigation and semantic compaction, Python IPython tooling, complete Model Context Protocol (MCP) support, an extensible skills engine, and cross-platform packaging for Linux, macOS, and Windows.
+xcsh is an AI-powered development CLI with a TypeScript coding agent and a Rust
+native acceleration layer (`pi-natives`). It extends the open-source `badlogic/pi-mono`
+foundation with a hardened runtime, long-lived sessions featuring interactive tree
+navigation and semantic compaction, Python IPython tooling, complete Model Context
+Protocol (MCP) support, an extensible skills engine, and cross-platform packaging for
+Linux, macOS, and Windows.
 
 ## Languages and localization
 

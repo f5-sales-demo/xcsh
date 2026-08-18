@@ -6,8 +6,6 @@ sidebar:
   label: Switching & recent
 ---
 
-# Session switching and recent session listing
-
 This document describes how xcsh discovers historical sessions, resolves CLI resume targets, presents interactive selection modals, and manages active session switches.
 
 ## Session discovery and storage hierarchy

@@ -6,8 +6,6 @@ sidebar:
   label: Media & system utils
 ---
 
-# Natives media and system utilities
-
 This document describes the native media processing, HTML conversion, clipboard access, and performance profiling utilities implemented in `@f5-sales-demo/pi-natives`.
 
 ## Implementation files
@@ -25,7 +23,7 @@ This document describes the native media processing, HTML conversion, clipboard 
 ## Functional capabilities and API mapping
 
 | TypeScript API | Native Node-API export | Rust module | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `PhotonImage.parse(bytes)` | `PhotonImage::parse` | `image.rs` | Decodes raw byte buffers into in-memory image handles. |
 | `PhotonImage#resize(width, height, filter)` | `PhotonImage::resize` | `image.rs` | Resizes images using high-performance filtering algorithms. |
 | `PhotonImage#encode(format, quality)` | `PhotonImage::encode` | `image.rs` | Encodes image handles to PNG, JPEG, WebP, or GIF byte buffers. |
@@ -62,4 +60,3 @@ This document describes the native media processing, HTML conversion, clipboard 
 
 - **Telemetry collection**: Instrumented asynchronous tasks record execution durations in a ring buffer (`MAX_SAMPLES = 10_000`).
 - **Telemetry export**: `getWorkProfile(lastSeconds)` generates folded stack traces, markdown tables, and optional SVG flamegraphs.
-

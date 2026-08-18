@@ -6,8 +6,6 @@ sidebar:
   label: Rulebook matching
 ---
 
-# Rulebook matching pipeline
-
 This document describes how the xcsh coding agent discovers rule files across supported configuration formats, normalizes them into canonical `Rule` objects, resolves precedence conflicts, and routes them into:
 
 - **Rulebook rules**: Contextual rules referenced in the system prompt and retrieved on demand via `rule://` URLs.
@@ -182,4 +180,3 @@ Classification conditions:
 - TTSR-only rules and rules missing descriptions are not addressable.
 - Requests for unknown rule names return an error listing valid candidates.
 - Returns the rule body (`rule.content`) as `text/markdown`.
-

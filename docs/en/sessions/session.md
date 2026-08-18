@@ -6,8 +6,6 @@ sidebar:
   label: Storage & entry model
 ---
 
-# Session storage and entry model
-
 This document defines the storage layout, serialization formats, entry taxonomy, and context reconstruction algorithms used by xcsh.
 
 ## Storage directory structure

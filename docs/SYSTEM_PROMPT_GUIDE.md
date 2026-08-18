@@ -25,7 +25,7 @@ All system prompts and agent instructions must strictly adhere to this eight-poi
 
 ### 4. Progressive context loading and modular hierarchy
 
-- **Standard**: Keep top-level system prompts concise and focused on core persona, scope, and high-level routing. Place granular tool schemas, raw API curl specifications, and detailed multi-step SOPs into dynamically loaded skills or specialized subagents.
+- **Standard**: Keep top-level system prompts concise and focused on core persona, scope, and high-level routing. Place granular tool schemas, raw API cURL specifications, and detailed multi-step SOPs into dynamically loaded skills or specialized subagents.
 - **Rationale**: Progressive context loading prevents prompt bloat, reduces token overhead, avoids recency bias degradation, and maximizes model attention on the immediate task.
 
 ### 5. Expert persona and professional confidence

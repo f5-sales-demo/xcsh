@@ -6,8 +6,6 @@ sidebar:
   label: /tree command
 ---
 
-# `/tree` command reference
-
 The `/tree` slash command launches the interactive Session Tree Navigator, allowing you to visually inspect the conversation hierarchy, jump to prior checkpoints, and fork alternate lines of investigation within the current session.
 
 ## Opening the tree navigator

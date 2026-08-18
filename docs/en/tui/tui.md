@@ -6,8 +6,6 @@ sidebar:
   label: Extension integration
 ---
 
-# TUI integration for extensions and custom tools
-
 This document defines the user interface contracts for extensions and custom tools building interactive terminal experiences in xcsh.
 
 ## Component interface contract

@@ -6,8 +6,6 @@ sidebar:
   label: Runtime lifecycle
 ---
 
-# MCP runtime lifecycle
-
 This document describes how Model Context Protocol (MCP) servers are discovered, connected, exposed as agent tools, refreshed, and terminated in the xcsh coding agent runtime.
 
 ## Lifecycle overview
@@ -107,7 +105,7 @@ Executing `/mcp reload` updates server configurations during an active session:
 ## Failure modes and recovery
 
 | Scenario | Runtime behavior | Impact |
-|---|---|---|
+| --- | --- | --- |
 | Configuration parse error | Loader returns empty tool collection with synthetic error record. | Session starts; error logged. |
 | Invalid server definition | Server is skipped with validation error. | Healthy servers continue. |
 | Handshake timeout | Connection recorded as failed. | Other servers load normally. |
@@ -123,4 +121,3 @@ Executing `/mcp reload` updates server configurations during an active session:
 - `packages/coding-agent/src/mcp/tool-bridge.ts`: `MCPTool` and `DeferredMCPTool` bridge implementations.
 - `packages/coding-agent/src/session/agent-session.ts`: Session tool registration and dynamic refresh.
 - `packages/coding-agent/src/modes/controllers/mcp-command-controller.ts`: Interactive `/mcp` command controllers.
-

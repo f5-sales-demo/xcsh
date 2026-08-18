@@ -6,8 +6,6 @@ sidebar:
   label: Configuration
 ---
 
-# Model Context Protocol (MCP) configuration
-
 This guide describes how to register, configure, and validate Model Context Protocol (MCP) servers for the xcsh coding agent runtime.
 
 ## Implementation references
@@ -87,11 +85,11 @@ The following properties apply to all transport types:
 
 `stdio` serves as the default transport when `type` is omitted.
 
-#### Required properties
+#### stdio required properties
 
 - `command`: The executable binary or script to invoke.
 
-#### Optional properties
+#### stdio optional properties
 
 - `type`: Explicitly set to `"stdio"`.
 - `args`: Array of command-line arguments.
@@ -119,12 +117,12 @@ The following properties apply to all transport types:
 
 Streamable HTTP connects to remote endpoints supporting HTTP POST requests with streaming responses.
 
-#### Required properties
+#### HTTP required properties
 
 - `type`: Set to `"http"`.
 - `url`: Target HTTP or HTTPS endpoint URI.
 
-#### Optional properties
+#### HTTP optional properties
 
 - `headers`: HTTP headers sent with each request.
 
@@ -145,12 +143,12 @@ Streamable HTTP connects to remote endpoints supporting HTTP POST requests with 
 > [!NOTE]
 > The `sse` transport remains supported for legacy integrations. New hosted deployments should use Streamable HTTP (`type: "http"`).
 
-#### Required properties
+#### SSE required properties
 
 - `type`: Set to `"sse"`.
 - `url`: Target SSE endpoint URI.
 
-#### Optional properties
+#### SSE optional properties
 
 - `headers`: HTTP headers sent during connection initialization.
 
@@ -331,4 +329,3 @@ Run `/mcp test <SERVER_NAME>` to inspect error output and verify:
 - Required environment variables and credentials are defined.
 - Remote network endpoints are reachable without firewall blocks.
 - OAuth tokens or API keys remain valid.
-

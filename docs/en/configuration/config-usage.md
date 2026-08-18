@@ -6,8 +6,6 @@ sidebar:
   label: Configuration
 ---
 
-# Configuration discovery and resolution
-
 This document describes how the coding agent resolves configuration: which roots are scanned, how precedence works, and how resolved settings are consumed by capabilities, skills, hooks, tools, and extensions.
 
 ## Scope

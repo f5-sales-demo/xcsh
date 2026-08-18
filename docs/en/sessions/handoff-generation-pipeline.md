@@ -6,8 +6,6 @@ sidebar:
   label: Handoff pipeline
 ---
 
-# Handoff generation pipeline
-
 The `/handoff` command generates a structured, portable Markdown summary of the current session and transfers active context into a newly initialized session.
 
 ## Command dispatch and validation
@@ -40,4 +38,3 @@ When you run `/handoff [instructions]`, the command controller executes the foll
 - `src/session/session-manager.ts`: Session initialization, persistence flushing, and custom message appending.
 - `src/modes/controllers/command-controller.ts`: Interactive `/handoff` command execution and UI error handling.
 - `src/extensibility/slash-commands.ts`: Built-in slash command definitions.
-

@@ -6,8 +6,6 @@ sidebar:
   label: Environment variables
 ---
 
-# Environment variables
-
 This reference documents the runtime environment variables used by the coding agent runtime, derived from code paths across:
 
 - `packages/coding-agent/src/**`

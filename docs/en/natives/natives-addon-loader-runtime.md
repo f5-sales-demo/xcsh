@@ -6,8 +6,6 @@ sidebar:
   label: Addon loader
 ---
 
-# Natives addon loader runtime
-
 This document describes the native Node-API (`.node`) addon loading and validation architecture in `@f5-sales-demo/pi-natives`, including platform resolution, embedded binary extraction, hardware variant detection (AVX2), and validation contracts.
 
 ## Primary implementation files
@@ -83,7 +81,7 @@ When running inside a compiled binary package (`isCompiledBinary === true`), `ma
 Before exposing bindings to the runtime, `validateNative` verifies that all expected functions exist on the loaded addon object:
 
 | JavaScript binding | Required native symbol | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `grep` | `grep` | Multithreaded regular expression search. |
 | `glob` | `glob` | Fast filesystem pattern matching. |
 | `highlightCode` | `highlightCode` | Syntax highlighting tokenization. |
@@ -114,4 +112,3 @@ bun --cwd=packages/natives run build
 ### Verbose loader diagnostics
 
 Set `PI_DEV=1` to enable verbose loader logging, printing each candidate path evaluated and detailed load error messages.
-

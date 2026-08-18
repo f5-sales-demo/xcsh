@@ -6,8 +6,6 @@ sidebar:
   label: Models & providers
 ---
 
-# Model and provider configuration (`models.yml`)
-
 This document describes how xcsh loads model registries, applies configuration overrides, resolves API credentials, and manages model selection at runtime.
 
 ## Core implementation architecture
@@ -148,4 +146,3 @@ When a model context window overflows during a conversation turn (`context_lengt
 1. Evaluates explicit `contextPromotionTarget` configurations.
 2. Identifies the smallest available model with a larger context window on the same provider.
 3. Switches the session model temporarily and retries the turn.
-

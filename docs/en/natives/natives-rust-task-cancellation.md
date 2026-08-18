@@ -6,8 +6,6 @@ sidebar:
   label: Task cancellation
 ---
 
-# Native Rust task execution and cancellation
-
 This document describes how `@f5-sales-demo/pi-natives` schedules asynchronous work on worker threads and bridges TypeScript cancellation primitives (`AbortSignal`, `timeoutMs`) to Rust runtimes.
 
 ## Implementation files
@@ -38,7 +36,7 @@ This document describes how `@f5-sales-demo/pi-natives` schedules asynchronous w
 
 `CancelToken` combines explicit timeout deadlines and JavaScript `AbortSignal` instances:
 
-```
+```text
 [ JavaScript AbortSignal / timeoutMs ]
                  │
                  ▼
@@ -65,7 +63,7 @@ If the cancellation token triggers due to a timeout or abort signal, `heartbeat(
 ## TypeScript API and cancellation mapping
 
 | API | Rust export | Execution primitive | Cancellation mechanism |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `grep(options, onMatch?)` | `grep` | `task::blocking` | `CancelToken::new` + `ct.heartbeat()` |
 | `glob(options, onMatch?)` | `glob` | `task::blocking` | `CancelToken::new` + `ct.heartbeat()` |
 | `fuzzyFind(options)` | `fuzzy_find` | `task::blocking` | `CancelToken::new` + `ct.heartbeat()` |
@@ -80,4 +78,3 @@ If the cancellation token triggers due to a timeout or abort signal, `heartbeat(
 2. **Include frequent heartbeats**: Never run unbounded iterations without calling `ct.heartbeat()?`.
 3. **Avoid blocking Tokio threads**: Offload CPU-bound compression or sorting to `tokio::task::spawn_blocking` or `task::blocking`.
 4. **Clean up child processes on abort**: When an execution future is cancelled, terminate child processes before returning.
-

@@ -6,8 +6,6 @@ sidebar:
   label: Slash commands
 ---
 
-# Slash command internals
-
 This document describes how slash commands are discovered, deduplicated, evaluated in interactive sessions, and expanded during prompt processing in `packages/coding-agent`.
 
 ## Capability discovery and precedence
@@ -66,4 +64,3 @@ When user input is submitted, `AgentSession.prompt()` evaluates input through th
 - `src/discovery/claude.ts`: Claude Code command discovery provider.
 - `src/discovery/codex.ts`: Codex CLI command discovery provider.
 - `src/session/agent-session.ts`: Prompt dispatch pipeline and execution interception.
-

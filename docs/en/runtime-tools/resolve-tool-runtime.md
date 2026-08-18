@@ -6,8 +6,6 @@ sidebar:
   label: Resolve tool
 ---
 
-# Resolve tool runtime internals
-
 This document describes the preview and commit workflow in `packages/coding-agent` and explains how built-in tools (`ast_edit`) and custom tools participate in deferred execution via `pushPendingAction`.
 
 ## Overview of deferred actions
@@ -80,4 +78,3 @@ export default factory;
 - `src/tools/pending-action.ts`: `PendingActionStore` stack implementation and action types.
 - `src/tools/ast-edit.ts`: AST editing tool producing preview actions.
 - `src/extensibility/custom-tools/types.ts`: Custom tool type definitions and API interfaces.
-

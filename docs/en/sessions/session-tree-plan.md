@@ -6,15 +6,13 @@ sidebar:
   label: Tree architecture
 ---
 
-# Session tree architecture
-
 This document describes the session tree architecture in xcsh: in-memory tree models, leaf pointer movement, intra-session navigation (`/tree`), and branch forking (`/branch`).
 
 ## Data model and leaf semantics
 
 Sessions persist as append-only `.jsonl` entries where each non-header entry contains an `id` and `parentId`:
 
-- **Tree projection**: `SessionManager` indexes entries into an in-memory parent-child graph (`getTree()`).
+- **Tree projection**: `SessionManager` maps entries into an in-memory parent-child graph (`getTree()`).
 - **Active leaf (`leafId`)**: Points to the most recent entry on the active conversation branch.
 - **Append behavior**: New turns append as direct children of the active `leafId`.
 - **Branching**: Moving the leaf pointer does not rewrite historical records — it redirects where subsequent entries attach.

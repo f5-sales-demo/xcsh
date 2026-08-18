@@ -6,8 +6,6 @@ sidebar:
   label: Gemini manifest
 ---
 
-# Gemini manifest extensions (`gemini-extension.json`)
-
 This document describes how the xcsh coding agent discovers, parses, and surfaces Gemini-format manifest extensions (`gemini-extension.json`) within the capability discovery pipeline.
 
 For executable TypeScript and JavaScript extension modules, see [Extension loading](file:///data/robin-GIT/language-improvement/xcsh/docs/en/extensions/extension-loading.md).

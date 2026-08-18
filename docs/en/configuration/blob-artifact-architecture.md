@@ -6,8 +6,6 @@ sidebar:
   label: Blob & artifact storage
 ---
 
-# Blob and artifact storage architecture
-
 This document describes how the coding agent stores large and binary payloads outside session JSONL files, how truncated tool output persists, and how internal URLs (`artifact://`, `agent://`) resolve back to stored data.
 
 ## Why two storage systems exist

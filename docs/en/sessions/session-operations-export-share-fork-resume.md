@@ -6,8 +6,6 @@ sidebar:
   label: Operations
 ---
 
-# Session operations: export, dump, share, fork, resume
-
 This document details session lifecycle operations in xcsh: exporting transcripts, generating shareable links, forking session trees, and resuming historical conversations.
 
 ## Operation reference matrix
@@ -71,4 +69,3 @@ Creates an independent branching session from the current conversation point:
 - `src/export/html/index.ts`: HTML export rendering engine.
 - `src/export/custom-share.ts`: Custom share script resolution and Gist fallback dispatch.
 - `src/modes/controllers/command-controller.ts`: Interactive slash command handlers.
-

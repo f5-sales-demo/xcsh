@@ -6,8 +6,6 @@ sidebar:
   label: Extension loading
 ---
 
-# Extension loading for TypeScript and JavaScript modules
-
 This document describes how the xcsh coding agent discovers, resolves, and loads TypeScript and JavaScript extension modules (`.ts` and `.js`) during session startup.
 
 For `gemini-extension.json` declarative manifest extensions, refer to the manifest extension documentation.
@@ -215,4 +213,3 @@ When `ExtensionRunner` dispatches events, handler exceptions are caught and emit
   }
 }
 ```
-

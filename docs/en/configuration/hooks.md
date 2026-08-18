@@ -6,8 +6,6 @@ sidebar:
   label: Hooks
 ---
 
-# Hooks
-
 This document describes the hook subsystem implementation located in `src/extensibility/hooks/*`.
 
 ## Current runtime status

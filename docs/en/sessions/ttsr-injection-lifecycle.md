@@ -6,8 +6,6 @@ sidebar:
   label: TTSR injection
 ---
 
-# TTSR injection lifecycle
-
 Time Traveling Stream Rules (TTSR) monitor model token streaming in real time, detecting rule violations as text deltas arrive and interrupting generation before unwanted actions execute.
 
 ## Lifecycle workflow

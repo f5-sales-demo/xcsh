@@ -6,8 +6,6 @@ sidebar:
   label: Task agent discovery
 ---
 
-# Task agent discovery and selection
-
 This document describes how the task subsystem discovers agent definitions, merges configuration sources across priority levels, and resolves agents during execution in `packages/coding-agent`.
 
 ## Agent definition schema
@@ -55,4 +53,3 @@ Even when discovered, agents may be constrained at runtime by security policies:
 - `src/task/agents.ts`: Bundled system agent definitions and cache management.
 - `src/task/types.ts`: `AgentDefinition` TypeScript interfaces and schema types.
 - `src/task/executor.ts`: Task execution engine, subprocess management, and depth limits.
-

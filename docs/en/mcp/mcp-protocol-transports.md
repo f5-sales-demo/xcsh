@@ -6,8 +6,6 @@ sidebar:
   label: Protocol & transports
 ---
 
-# MCP protocol and transport internals
-
 This document describes how the xcsh coding agent implements Model Context Protocol (MCP) JSON-RPC messaging and separates protocol semantics from physical transport layers.
 
 ## Scope and responsibilities
@@ -105,7 +103,7 @@ Transports generate unique alphanumeric correlation identifiers per request usin
 ## Error handling and failure modes
 
 | Failure scenario | Transport behavior | Recovery action |
-|---|---|---|
+| --- | --- | --- |
 | Malformed `stdio` JSON line | Drops line; logs debug trace; continues reading stdout. | Server process maintains active connection. |
 | Subprocess termination | Rejects all pending requests with `Transport closed`. | Higher-level manager must re-instantiate transport. |
 | HTTP non-2xx response | Throws formatted `HTTP <STATUS>: <TEXT>` error. | Caller handles HTTP failure code. |
@@ -116,4 +114,3 @@ Transports generate unique alphanumeric correlation identifiers per request usin
 
 - **Protocol layer**: Owns JSON-RPC schema contracts, method naming, sequence validation, and response parsing.
 - **Transport layer**: Owns stream framing, process lifecycle, HTTP connections, I/O timeouts, and network cancellation.
-

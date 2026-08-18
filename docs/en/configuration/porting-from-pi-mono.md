@@ -6,8 +6,6 @@ sidebar:
   label: Porting from pi-mono
 ---
 
-# Porting from pi-mono: a practical merge guide
-
 This guide provides a repeatable procedure for porting changes from upstream `pi-mono` into this repository. Use it when executing any merge: single files, feature branches, or full release synchronizations.
 
 ## Last sync point
@@ -213,7 +211,7 @@ Complete the following verification checklist before finalizing a port:
 
 When committing backported changes, format the commit header as `<type>(scope): <past-tense description>` and include the sync commit range:
 
-```
+```text
 fix(coding-agent): backported pi-mono changes (<from>..<to>)
 
 packages/<package>:
@@ -226,7 +224,7 @@ packages/<other-package>:
 
 Example:
 
-```
+```text
 fix(coding-agent): backported pi-mono changes (9f3eef65f..52532c7c0)
 
 packages/ai:
@@ -331,4 +329,3 @@ Preserve all local features during merges:
 - LSP write-through integration for format-on-save.
 - Bash command interception (`checkBashInterception`).
 - Fuzzy path suggestions in the `read` tool.
-

@@ -6,8 +6,6 @@ sidebar:
   label: Architecture
 ---
 
-# Natives architecture
-
 The `@f5-sales-demo/pi-natives` package provides high-performance native system operations for the xcsh coding agent through a three-layer architecture:
 
 1. **TypeScript wrapper and API layer**: Exposes typed JavaScript and TypeScript interfaces.

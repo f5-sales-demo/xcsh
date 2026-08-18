@@ -6,8 +6,6 @@ sidebar:
   label: Secrets
 ---
 
-# Secret obfuscation
-
 The secret obfuscation pipeline prevents sensitive values (such as API keys, tokens, and passwords) from being sent to LLM providers. When enabled, xcsh replaces secret strings with deterministic placeholders before outbound transmission to the model and restores original values in tool execution arguments returned by the model.
 
 ## Enabling secret obfuscation
@@ -30,7 +28,7 @@ secrets:
 Two modes control secret processing:
 
 | Mode | Behavior | Reversible |
-|---|---|---|
+| --- | --- | --- |
 | `obfuscate` (default) | Replaces secret with an indexed placeholder (`<<$env:SN>>`) | Yes (restored automatically in tool arguments) |
 | `replace` | Replaces secret with a static replacement string | No (one-way redaction) |
 
@@ -39,7 +37,7 @@ Two modes control secret processing:
 You can declare custom secret redaction rules in YAML. xcsh inspects two file locations in order:
 
 | Level | File path | Scope |
-|---|---|---|
+| --- | --- | --- |
 | Global | `~/.xcsh/agent/secrets.yml` | Applies across all projects and sessions |
 | Project | `<cwd>/.xcsh/secrets.yml` | Applies strictly to the local project |
 
@@ -50,7 +48,7 @@ Project-level entries override global entries that share the same `content`.
 Each item in the configuration array accepts the following fields:
 
 | Field | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `type` | `"plain"` or `"regex"` | Yes | Pattern matching strategy. |
 | `content` | string | Yes | Literal secret value or regular expression pattern. |
 | `mode` | `"obfuscate"` or `"replace"` | No | Processing mode. Defaults to `"obfuscate"`. |
@@ -112,4 +110,3 @@ Environment variables are always scanned and indexed first. Rules from `secrets.
 - `src/secrets/obfuscator.ts`: `SecretObfuscator` class, placeholder substitution, and argument restoration.
 - `src/secrets/regex.ts`: Regular expression literal parsing and compilation.
 - `src/config/settings-schema.ts`: Setting definition for `secrets.enabled`.
-

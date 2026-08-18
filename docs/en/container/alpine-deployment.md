@@ -70,7 +70,7 @@ The Compose development service applies the following security controls:
 The Docker Compose configuration and UAT scripts recognize the following environment variables:
 
 | Variable | Default | Purpose |
-|---|---|---|
+| --- | --- | --- |
 | `UID` | `1000` | Runtime user ID inside the container. |
 | `GID` | `1000` | Runtime group ID inside the container. |
 | `GEMINI_MODEL` | `gemini-3.1-pro-preview` | Vertex AI model targeted by live acceptance tests. |
@@ -82,7 +82,7 @@ The Docker Compose configuration and UAT scripts recognize the following environ
 Compose mounts host credentials into these read-only container paths:
 
 | CLI | Host source path | Container destination path |
-|---|---|---|
+| --- | --- | --- |
 | Google Cloud | `~/.config/gcloud` | `/home/xcsh/.config/gcloud-host` |
 | Azure | `~/.azure` | `/home/xcsh/.azure-host` |
 | AWS | `~/.aws` | `/home/xcsh/.aws-host` |
@@ -125,7 +125,7 @@ printf '\n'
 export LITELLM_BASE_URL LITELLM_API_KEY
 ```
 
-2. Execute the acceptance harness with your target model configuration:
+1. Execute the acceptance harness with your target model configuration:
 
 ```bash
 report="${TMPDIR:-/tmp}/xcsh-podman-arm64-uat.json"
@@ -144,7 +144,7 @@ podman machine ssh --username root podman-machine-default \
   'rm -f /etc/pki/ca-trust/source/anchors/xcsh-uat.pem && update-ca-trust'
 ```
 
-3. Stop the Podman virtual machine when testing concludes:
+1. Stop the Podman virtual machine when testing concludes:
 
 ```bash
 podman machine stop
@@ -182,4 +182,3 @@ Test scripts run this cleanup command automatically upon completion or interrupt
 ## Localization policy
 
 Author container documentation in English within `docs/en/`. Localized files are generated and maintained by automated translation workflows during major release cycles. Expected translation hash drift during standard English documentation updates is non-blocking.
-

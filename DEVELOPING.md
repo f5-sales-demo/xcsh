@@ -20,7 +20,7 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 8. [Commit conventions](#commit-conventions)
 9. [Pull requests](#pull-requests)
 10. [Architecture overview](#architecture-overview)
-11. [Extension playbooks](#extension-playbooks)
+11. [Evidence standards](#evidence-standards)
 
 ---
 

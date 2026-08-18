@@ -6,8 +6,6 @@ sidebar:
   label: Skills
 ---
 
-# Skills
-
 Skills are modular, file-backed capability packages discovered at session startup and exposed to the model through:
 
 - Summary metadata in the system prompt (`name` and `description`).
@@ -132,4 +130,3 @@ The `skill://` protocol handler (`src/internal-urls/skill-protocol.ts`) provides
 - Provide a clear, concise `description` in the YAML frontmatter to guide model tool selection.
 - Store reference scripts, templates, and schemas within the skill directory and link to them using `skill://<NAME>/...` URIs.
 - Ensure skill names are unique across registered providers.
-
