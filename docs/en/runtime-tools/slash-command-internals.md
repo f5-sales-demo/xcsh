@@ -6,230 +6,61 @@ sidebar:
   label: Slash commands
 ---
 
-# Slash command internals
+This document describes how slash commands are discovered, deduplicated, evaluated in interactive sessions, and expanded during prompt processing in `packages/coding-agent`.
 
-This document describes how slash commands are discovered, deduplicated, surfaced in interactive mode, and expanded at prompt time in `coding-agent`.
+## Capability discovery and precedence
 
-## Implementation files
+Slash commands are managed as an extensible capability (`id: "slash-commands"`) identified by command name.
 
-- [`src/extensibility/slash-commands.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/extensibility/slash-commands.ts)
-- [`src/capability/slash-command.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/slash-command.ts)
-- [`src/discovery/builtin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/builtin.ts)
-- [`src/discovery/claude.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/claude.ts)
-- [`src/discovery/codex.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/codex.ts)
-- [`src/discovery/claude-plugins.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/claude-plugins.ts)
-- [`src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
-- [`src/discovery/helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/helpers.ts)
-- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts)
-- [`src/modes/interactive-mode.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/interactive-mode.ts)
-- [`src/modes/controllers/input-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/input-controller.ts)
-- [`src/modes/utils/ui-helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/utils/ui-helpers.ts)
-- [`src/modes/controllers/command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/command-controller.ts)
+When scanning for available commands, the capability registry queries providers in descending priority order:
 
-## 1) Discovery model
+1. `native` (xcsh commands): Priority `100` (`<CWD>/.xcsh/commands/*.md`, `~/.xcsh/agent/commands/*.md`)
+2. `claude` (Claude Code compatibility): Priority `80` (`~/.claude/commands/*.md`, `<CWD>/.claude/commands/*.md`)
+3. `claude-plugins` (Claude marketplace plugins): Priority `70`
+4. `codex` (Codex CLI compatibility): Priority `70` (`~/.codex/commands/*.md`, `<CWD>/.codex/commands/*.md`)
 
-Slash commands are a capability (`id: "slash-commands"`) keyed by command name (`key: cmd => cmd.name`).
+### Collision resolution
 
-The capability registry loads all registered providers, sorted by provider priority descending, and deduplicates by key with **first wins** semantics.
+When multiple providers define a command with the same name, the registry retains the highest-priority command and marks duplicates as shadowed (`_shadowed: true`).
 
-### Provider precedence
+Within the `native` provider, project commands (`<CWD>/.xcsh/commands/`) take precedence over user commands (`~/.xcsh/agent/commands/`).
 
-Current slash-command providers and priorities:
+## Command template format and argument expansion
 
-1. `native` (OMP) — priority `100`
-2. `claude` — priority `80`
-3. `claude-plugins` — priority `70`
-4. `codex` — priority `70`
+File-based slash commands are Markdown files with optional YAML frontmatter:
 
-Tie behavior: equal-priority providers keep registration order. Current import order registers `claude-plugins` before `codex`, so plugin commands win over codex commands on name collisions.
+```markdown
+---
+description: Run test suites with code coverage reporting
+---
+Execute tests for $1 with coverage enabled:
 
-### Name-collision behavior
+npm test -- --coverage $ARGUMENTS
+```
 
-For `slash-commands`, collisions are resolved strictly by capability dedup:
+### Argument substitution variables
 
-- highest-precedence item is kept in `result.items`
-- lower-precedence duplicates remain only in `result.all` and are marked `_shadowed = true`
+When a user executes `/command arg1 arg2`, the prompt engine substitutes positional and aggregate tokens:
 
-This applies across providers and also within a provider if it returns duplicate names.
+- `$1`, `$2`, ...: Positional arguments (supports single `'...'` and double `"..."` quotes).
+- `$ARGUMENTS` or `$@`: Complete argument string trailing the command name.
+- Template rendering: Renders expressions using the template engine context (`{ args, ARGUMENTS, arguments }`).
 
-### File scanning behavior
+## Prompt execution pipeline
 
-Providers mostly use `loadFilesFromDir(...)`, which currently:
+When user input is submitted, `AgentSession.prompt()` evaluates input through the following stages:
 
-- defaults to non-recursive matching (`*.md`)
-- uses native glob with `gitignore: true`, `hidden: false`
-- reads each matched file and transforms it into a `SlashCommand`
+1. **Extension commands**: Synchronously executes commands registered by active extensions.
+2. **TypeScript custom commands**: Executes programmatic commands registered via `session.customCommands`.
+3. **File-based slash commands**: Expands matching Markdown command templates.
+4. **Prompt templates**: Resolves prompt template macros and variables.
+5. **Model delivery**: Dispatches the fully expanded prompt to the active LLM context or queues the message during active streaming turns.
 
-So hidden files/directories are not loaded, and ignored paths are skipped.
+## Related implementation files
 
-## 2) Provider-specific source paths and local precedence
-
-## `native` provider (`builtin.ts`)
-
-Search roots come from `.xcsh` directories:
-
-- project: `<cwd>/.xcsh/commands/*.md`
-- user: `~/.xcsh/agent/commands/*.md`
-
-`getConfigDirs()` returns project first, then user, so **project native commands beat user native commands** when names collide.
-
-## `claude` provider (`claude.ts`)
-
-Loads:
-
-- user: `~/.claude/commands/*.md`
-- project: `<cwd>/.claude/commands/*.md`
-
-The provider pushes user items before project items, so **user Claude commands beat project Claude commands** on same-name collisions inside this provider.
-
-## `codex` provider (`codex.ts`)
-
-Loads:
-
-- user: `~/.codex/commands/*.md`
-- project: `<cwd>/.codex/commands/*.md`
-
-Both sides are loaded then flattened in user-first order, so **user Codex commands beat project Codex commands** on collisions.
-
-Codex command content is parsed with frontmatter stripping (`parseFrontmatter`), and command name can be overridden by frontmatter `name`; otherwise filename is used.
-
-## `claude-plugins` provider (`claude-plugins.ts`)
-
-Loads plugin command roots from `~/.claude/plugins/installed_plugins.json`, then scans `<pluginRoot>/commands/*.md`.
-
-Ordering follows registry iteration order and per-plugin entry order from that JSON data. There is no additional sort step.
-
-## 3) Materialization to runtime `FileSlashCommand`
-
-`loadSlashCommands()` in `src/extensibility/slash-commands.ts` converts capability items into `FileSlashCommand` objects used at prompt time.
-
-For each command:
-
-1. parse frontmatter/body (`parseFrontmatter`)
-2. description source:
-   - `frontmatter.description` if present
-   - else first non-empty body line (trimmed, max 60 chars with `...`)
-3. keep parsed body as executable template content
-4. compute a display source string like `via Claude Code Project`
-
-Frontmatter parse severity is source-dependent:
-
-- `native` level -> parse errors are `fatal`
-- `user`/`project` levels -> parse errors are `warn` with fallback parsing
-
-### Bundled fallback commands
-
-After filesystem/provider commands, embedded command templates are appended (`EMBEDDED_COMMAND_TEMPLATES`) if their names are not already present.
-
-Current embedded set comes from `src/task/commands.ts` and is used as a fallback (`source: "bundled"`).
-
-## 4) Interactive mode: where command lists come from
-
-Interactive mode combines multiple command sources for autocomplete and command routing.
-
-At construction time it builds a pending command list from:
-
-- built-ins (`BUILTIN_SLASH_COMMANDS`, includes argument completion and inline hints for selected commands)
-- extension-registered slash commands (`extensionRunner.getRegisteredCommands(...)`)
-- TypeScript custom commands (`session.customCommands`), mapped to slash command labels
-- optional skill commands (`/skill:<name>`) when `skills.enableSkillCommands` is enabled
-
-Then `init()` calls `refreshSlashCommandState(...)` to load file-based commands and install one `CombinedAutocompleteProvider` containing:
-
-- pending commands above
-- discovered file-based commands
-
-`refreshSlashCommandState(...)` also updates `session.setSlashCommands(...)` so prompt expansion uses the same discovered file command set.
-
-### Refresh lifecycle
-
-Slash command state is refreshed:
-
-- during interactive init
-- after `/move` changes working directory (`handleMoveCommand` calls `resetCapabilities()` then `refreshSlashCommandState(newCwd)`)
-
-There is no continuous file watcher for command directories.
-
-### Other surfacing
-
-The Extensions dashboard also loads `slash-commands` capability and displays active/shadowed command entries, including `_shadowed` duplicates.
-
-## 5) Prompt pipeline placement
-
-`AgentSession.prompt(...)` slash handling order (when `expandPromptTemplates !== false`):
-
-1. **Extension commands** (`#tryExecuteExtensionCommand`)  
-   If `/name` matches extension-registered command, handler executes immediately and prompt returns.
-2. **TypeScript custom commands** (`#tryExecuteCustomCommand`)  
-   Boundary only: if matched, it executes and may return:
-   - `string` -> replace prompt text with that string
-   - `void/undefined` -> treated as handled; no LLM prompt
-3. **File-based slash commands** (`expandSlashCommand`)  
-   If text still starts with `/`, attempt markdown command expansion.
-4. **Prompt templates** (`expandPromptTemplate`)  
-   Applied after slash/custom processing.
-5. **Delivery**
-   - idle: prompt is sent immediately to agent
-   - streaming: prompt is queued as steer/follow-up depending on `streamingBehavior`
-
-This is why slash command expansion sits before prompt-template expansion, and why custom commands can transform away the leading slash before file-command matching.
-
-## 6) Expansion semantics for file-based slash commands
-
-`expandSlashCommand(text, fileCommands)` behavior:
-
-- only runs when text begins with `/`
-- parses command name from first token after `/`
-- parses args from remaining text via `parseCommandArgs`
-- finds exact name match in loaded `fileCommands`
-- if matched, applies:
-  - positional replacement: `$1`, `$2`, ...
-  - aggregate replacement: `$ARGUMENTS` and `$@`
-  - then template rendering via `prompt.render` with `{ args, ARGUMENTS, arguments }`
-- if no match, returns original text unchanged
-
-### `parseCommandArgs` caveats
-
-The parser is simple quote-aware splitting:
-
-- supports `'single'` and `"double"` quoting to keep spaces
-- strips quote delimiters
-- does not implement backslash escaping rules
-- unmatched quote is not an error; parser consumes until end
-
-## 7) Unknown `/...` behavior
-
-Unknown slash input is **not rejected** by core slash logic.
-
-If command is not handled by extension/custom/file layers, `expandSlashCommand` returns original text, and the literal `/...` prompt proceeds through normal prompt-template expansion and LLM delivery.
-
-Interactive mode separately hard-handles many built-ins in `InputController` (for example `/settings`, `/model`, `/mcp`, `/move`, `/exit`). Those are consumed before `session.prompt(...)` and therefore never reach file-command expansion in that path.
-
-## 8) Streaming-time differences vs idle
-
-## Idle path
-
-- `session.prompt("/x ...")` runs command pipeline and either executes command immediately or sends expanded text directly.
-
-## Streaming path (`session.isStreaming === true`)
-
-- `prompt(...)` still runs extension/custom/file/template transforms first
-- then requires `streamingBehavior`:
-  - `"steer"` -> queue interrupt message (`agent.steer`)
-  - `"followUp"` -> queue post-turn message (`agent.followUp`)
-- if `streamingBehavior` is omitted, prompt throws an error
-
-### Important command-specific streaming behavior
-
-- Extension commands are executed immediately even during streaming (not queued as text).
-- `steer(...)`/`followUp(...)` helper methods reject extension commands (`#throwIfExtensionCommand`) to avoid queuing command text for handlers that must run synchronously.
-- Compaction queue replay uses `isKnownSlashCommand(...)` to decide whether queued entries should be replayed via `session.prompt(...)` (for known slash commands) vs raw steer/follow-up methods.
-
-## 9) Error handling and failure surfaces
-
-- Provider load failures are isolated; registry collects warnings and continues with other providers.
-- Invalid slash command items (missing name/path/content or invalid level) are dropped by capability validation.
-- Frontmatter parse failures:
-  - native commands: fatal parse error bubbles
-  - non-native commands: warning + fallback key/value parse
-- Extension/custom command handler exceptions are caught and reported via extension error channel (or logger fallback for custom commands without extension runner), and treated as handled (no unintended fallback execution).
+- `src/extensibility/slash-commands.ts`: Command loader, frontmatter parsing, and argument replacement.
+- `src/capability/slash-command.ts`: Capability definition and validation schemas.
+- `src/discovery/builtin.ts`: Native xcsh command discovery provider.
+- `src/discovery/claude.ts`: Claude Code command discovery provider.
+- `src/discovery/codex.ts`: Codex CLI command discovery provider.
+- `src/session/agent-session.ts`: Prompt dispatch pipeline and execution interception.

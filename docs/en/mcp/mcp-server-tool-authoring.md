@@ -6,229 +6,133 @@ sidebar:
   label: Server & tool authoring
 ---
 
-# MCP server and tool authoring
+This guide describes how to author Model Context Protocol (MCP) server configurations, expose server tools as agent-callable capabilities, and manage credentials and runtime lifecycle events in the xcsh coding agent.
 
-This document explains how MCP server definitions become callable `mcp_*` tools in coding-agent, and what operators should expect when configs are invalid, duplicated, disabled, or auth-gated.
+## Architecture overview
 
-## Architecture at a glance
+1. **Configuration sources**: Scans `.xcsh/mcp.json`, `~/.xcsh/mcp.json`, and fallback files (`mcp.json`, `.mcp.json`).
+2. **Normalization**: Discovery providers normalize server definitions into canonical `MCPServer` objects.
+3. **Deduplication**: Resolves duplicate server names by provider priority.
+4. **Configuration parsing**: `loadAllMCPConfigs()` converts objects into `MCPServerConfig` instances and excludes disabled entries (`enabled: false`).
+5. **Connection and listing**: `MCPManager` establishes connections, injects credentials, and retrieves tool definitions via `tools/list`.
+6. **Tool bridging**: `MCPTool` and `DeferredMCPTool` wrap tool definitions into agent tools named `mcp_<SERVER>_<TOOL>`.
+7. **Session registration**: `AgentSession.refreshMCPTools()` activates tools in the running session.
 
-```text
-Config sources (.xcsh/.claude/.cursor/.vscode/mcp.json, mcp.json, etc.)
-  -> discovery providers normalize to canonical MCPServer
-  -> capability loader dedupes by server name (higher provider priority wins)
-  -> loadAllMCPConfigs converts to MCPServerConfig + skips enabled:false
-  -> MCPManager connects/listTools (with auth/header/env resolution)
-  -> MCPTool/DeferredMCPTool bridge exposes tools as mcp_<server>_<tool>
-  -> AgentSession.refreshMCPTools replaces live MCP tools immediately
-```
+## 1. Server configuration schema and validation
 
-## 1) Server config model and validation
+`packages/coding-agent/src/mcp/types.ts` defines the supported configuration properties:
 
-`src/mcp/types.ts` defines the authoring shape used by MCP config writers and runtime:
+- `stdio` (default when `type` is omitted): Requires `command`; accepts optional `args`, `env`, and `cwd`.
+- `http`: Requires `url`; accepts optional `headers`.
+- `sse`: Requires `url`; accepts optional `headers`.
+- Common properties: `enabled`, `timeout`, `auth`, `oauth`.
 
-- `stdio` (default when `type` missing): requires `command`, optional `args`, `env`, `cwd`
-- `http`: requires `url`, optional `headers`
-- `sse`: requires `url`, optional `headers` (kept for compatibility)
-- shared fields: `enabled`, `timeout`, `auth`
+### Validation rules
 
-`validateServerConfig()` (`src/mcp/config.ts`) enforces transport basics:
+`validateServerConfig()` (`packages/coding-agent/src/mcp/config.ts`) enforces the following constraints:
 
-- rejects configs that set both `command` and `url`
-- requires `command` for stdio
-- requires `url` for http/sse
-- rejects unknown `type`
+- Rejects configurations specifying both `command` and `url`.
+- Requires `command` for `stdio` transports.
+- Requires `url` for `http` and `sse` transports.
+- Rejects unrecognized `type` values.
 
-`config-writer.ts` applies this validation for add/update operations and also validates server names:
+`packages/coding-agent/src/mcp/config-writer.ts` validates server identifiers:
 
-- non-empty
-- max 100 chars
-- only `[a-zA-Z0-9_.-]`
+- Must not be empty.
+- Maximum length of 100 characters.
+- Must match the pattern `^[a-zA-Z0-9_.-]+$`.
 
-### Transport pitfalls
-
-- `type` omitted means stdio. If you intended HTTP/SSE but omitted `type`, `command` becomes mandatory.
-- `sse` is still accepted but treated as HTTP transport internally (`createHttpTransport`).
-- Validation is structural, not reachability: a syntactically valid URL can still fail at connect time.
-
-## 2) Discovery, normalization, and precedence
+## 2. Discovery, normalization, and provider precedence
 
 ### Capability-based discovery
 
-`loadAllMCPConfigs()` (`src/mcp/config.ts`) loads canonical `MCPServer` items via `loadCapability(mcpCapability.id)`.
+`loadAllMCPConfigs()` aggregates server definitions across registered capability providers:
 
-The capability layer (`src/capability/index.ts`) then:
+1. Evaluates providers in priority order.
+2. Deduplicates by `server.name` (highest-priority provider wins).
+3. Validates deduplicated items.
 
-1. loads providers in priority order
-2. dedupes by `server.name` (first win = highest priority)
-3. validates deduped items
+> [!IMPORTANT]
+> Duplicate server names across different configuration files are shadowed by priority rather than merged.
 
-Result: duplicate server names across sources are not merged. One definition wins; lower-priority duplicates are shadowed.
+### Configuration recommendations
 
-### `.mcp.json` and related files
+- Use `.xcsh/mcp.json` for repository-specific servers and `~/.xcsh/mcp.json` for personal servers.
+- Use root `mcp.json` or `.mcp.json` only when maintaining compatibility with external MCP clients.
 
-The dedicated fallback provider in `src/discovery/mcp-json.ts` reads project-root `mcp.json` and `.mcp.json` (low priority).
+## 3. Credential and variable resolution
 
-In practice MCP servers also come from higher-priority providers (for example native `.xcsh/...` and tool-specific config dirs). Authoring guidance:
-
-- Prefer `.xcsh/mcp.json` (project) or `~/.xcsh/mcp.json` (user) for explicit control.
-- Use root `mcp.json` / `.mcp.json` when you need fallback compatibility.
-- Reusing the same server name in multiple sources causes precedence shadowing, not merge.
-
-### Normalization behavior
-
-`convertToLegacyConfig()` (`src/mcp/config.ts`) maps canonical `MCPServer` to runtime `MCPServerConfig`.
-
-Key behavior:
-
-- transport inferred as `server.transport ?? (command ? "stdio" : url ? "http" : "stdio")`
-- disabled servers (`enabled === false`) are dropped before connection
-- optional fields are preserved when present
-
-### Environment expansion during discovery
-
-`mcp-json.ts` expands env placeholders in string fields with `expandEnvVarsDeep()`:
-
-- supports `${VAR}` and `${VAR:-default}`
-- unresolved values remain literal `${VAR}` strings
-
-`mcp-json.ts` also performs runtime type checks for user JSON and logs warnings for invalid `enabled`/`timeout` values instead of hard-failing the whole file.
-
-## 3) Auth and runtime value resolution
-
-`MCPManager.prepareConfig()`/`#resolveAuthConfig()` (`src/mcp/manager.ts`) is the final pre-connect pass.
+`MCPManager.prepareConfig()` (`packages/coding-agent/src/mcp/manager.ts`) performs environment variable and credential substitution prior to connection:
 
 ### OAuth credential injection
 
-If config has:
+When a server defines an OAuth credential binding (`auth: { type: "oauth", credentialId: "<CREDENTIAL_ID>" }`):
 
-```ts
-auth: { type: "oauth", credentialId: "..." }
-```
+- **HTTP / SSE transports**: Injects the `Authorization: Bearer <ACCESS_TOKEN>` request header.
+- **`stdio` transport**: Injects the `OAUTH_ACCESS_TOKEN` environment variable into the child process.
 
-and credential exists in auth storage:
+### Environment and command expansion
 
-- `http`/`sse`: injects `Authorization: Bearer <access_token>` header
-- `stdio`: injects `OAUTH_ACCESS_TOKEN` env var
+The runtime evaluates `env` and `headers` values using `resolveConfigValue()`:
 
-If credential lookup fails, manager logs a warning and continues with unresolved auth.
+- **Command execution**: Prefixing a value with `!` executes the string in a shell and uses the trimmed output.
+- **Environment substitution**: Looks up environment variable values matching the key name.
+- **Literal values**: Falls back to the raw string if no environment variable matches.
 
-### Header/env value resolution
+## 4. Tool bridging and execution
 
-Before connect, manager resolves each header/env value via `resolveConfigValue()` (`src/config/resolve-config-value.ts`):
+`packages/coding-agent/src/mcp/tool-bridge.ts` converts MCP tool definitions into `CustomTool` instances:
 
-- value starting with `!` => execute shell command, use trimmed stdout (cached)
-- otherwise, treat value as environment variable name first (`process.env[name]`), fallback to literal value
-- unresolved command/env values are omitted from final headers/env map
+### Tool naming conventions
 
-Operational caveat: this means a mistyped secret command/env key can silently remove that header/env entry, producing downstream 401/403 or server startup failures.
-
-## 4) Tool bridge: MCP -> agent-callable tools
-
-`src/mcp/tool-bridge.ts` converts MCP tool definitions into `CustomTool`s.
-
-### Naming and collision domain
-
-Tool names are generated as:
+Discovered tools are registered using the following template:
 
 ```text
-mcp_<sanitized_server_name>_<sanitized_tool_name>
+mcp_<SANITIZED_SERVER_NAME>_<SANITIZED_TOOL_NAME>
 ```
 
-Rules:
+Sanitization rules:
 
-- lowercases
-- non-`[a-z_]` chars become `_`
-- repeated underscores collapse
-- redundant `<server>_` prefix in tool name is stripped once
+- Converts all characters to lowercase.
+- Replaces non-alphanumeric characters with underscores (`_`).
+- Collapses consecutive underscores.
+- Strips redundant `<SERVER>_` prefixes if already present in the tool name.
 
-This avoids many collisions, but not all. Different raw names can still sanitize to the same identifier (for example `my-server` and `my.server` both sanitize similarly), and registry insertion is last-write-wins.
+### Execution handling
 
-### Schema mapping
+`MCPTool.execute()` and `DeferredMCPTool.execute()`:
 
-`convertSchema()` keeps MCP JSON Schema mostly as-is but patches object schemas missing `properties` with `{}` for provider compatibility.
+- Dispatch `tools/call` JSON-RPC requests to the target server.
+- Format structured response text for model consumption.
+- Catch transport and protocol errors and format them as structured tool error responses.
+- Propagate cancellation signals through `ToolAbortError`.
 
-### Execution mapping
+## 5. Management commands and dynamic reload
 
-`MCPTool.execute()` / `DeferredMCPTool.execute()`:
+The interactive CLI provides `/mcp` management commands:
 
-- calls MCP `tools/call`
-- flattens MCP content into displayable text
-- returns structured details (`serverName`, `mcpToolName`, provider metadata)
-- maps server-reported `isError` to `Error: ...` text result
-- maps thrown transport/runtime failures to `MCP error: ...`
-- preserves abort semantics by translating AbortError into `ToolAbortError`
+- `/mcp add`: Launches an interactive configuration wizard or quick-add flow.
+- `/mcp remove <SERVER_NAME>`: Deletes a server definition and updates configuration files.
+- `/mcp enable <SERVER_NAME>` / `/mcp disable <SERVER_NAME>`: Toggles server activation state.
+- `/mcp test <SERVER_NAME>`: Tests connection health and retrieves tool schemas.
+- `/mcp reload`: Re-scans configuration files and updates live session tools.
 
-## 5) Operator lifecycle: add/edit/remove and live updates
+Configuration updates are written atomically using temporary files and rename operations.
 
-Interactive mode exposes `/mcp` in `src/modes/controllers/mcp-command-controller.ts`.
+## 6. Authoring best practices
 
-Supported operations:
+1. Ensure server names are unique across all configuration files.
+2. Use alphanumeric names with hyphens or underscores to ensure clean tool identifiers.
+3. Explicitly declare transport `type` (`"http"` or `"stdio"`) rather than relying on defaults.
+4. Use `disabledServers` or `enabled: false` to deactivate servers without deleting their configuration.
+5. Store sensitive API keys in environment variables and reference them in `env` or `headers` maps.
 
-- `add` (wizard or quick-add)
-- `remove` / `rm`
-- `enable` / `disable`
-- `test`
-- `reauth` / `unauth`
-- `reload`
+## Primary implementation files
 
-Config writes are atomic (`writeMCPConfigFile`: temp file + rename).
-
-After changes, controller calls `#reloadMCP()`:
-
-1. `mcpManager.disconnectAll()`
-2. `mcpManager.discoverAndConnect()`
-3. `session.refreshMCPTools(mcpManager.getTools())`
-
-`refreshMCPTools()` replaces all `mcp_` registry entries and immediately re-activates the latest MCP tool set, so changes take effect without restarting the session.
-
-### Mode differences
-
-- **Interactive/TUI mode**: `/mcp` gives in-app UX (wizard, OAuth flow, connection status text, immediate runtime rebinding).
-- **SDK/headless integration**: `discoverAndLoadMCPTools()` (`src/mcp/loader.ts`) returns loaded tools + per-server errors; no `/mcp` command UX.
-
-## 6) User-visible error surfaces
-
-Common error strings users/operators see:
-
-- add/update validation failures:
-  - `Invalid server config: ...`
-  - `Server "<name>" already exists in <path>`
-- quick-add argument issues:
-  - `Use either --url or -- <command...>, not both.`
-  - `--token requires --url (HTTP/SSE transport).`
-- connect/test failures:
-  - `Failed to connect to "<name>": <message>`
-  - timeout help text suggests increasing timeout
-  - auth help text for `401/403`
-- auth/OAuth flows:
-  - `Authentication required ... OAuth endpoints could not be discovered`
-  - `OAuth flow timed out. Please try again.`
-  - `OAuth authentication failed: ...`
-- disabled server usage:
-  - `Server "<name>" is disabled. Run /mcp enable <name> first.`
-
-Bad source JSON in discovery is generally handled as warnings/logs; config-writer paths throw explicit errors.
-
-## 7) Practical authoring guidance
-
-For robust MCP authoring in this codebase:
-
-1. Keep server names globally unique across all MCP-capable config sources.
-2. Prefer alphanumeric/underscore names to avoid sanitized-name collisions in generated `mcp_*` tool names.
-3. Use explicit `type` to avoid accidental stdio defaults.
-4. Treat `enabled: false` as hard-off: server is omitted from runtime connect set.
-5. For OAuth configs, store a valid `credentialId`; otherwise auth injection is skipped.
-6. If using command-based secret resolution (`!cmd`), verify command output is stable and non-empty.
-
-## Implementation files
-
-- [`src/mcp/types.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/types.ts)
-- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts)
-- [`src/mcp/config-writer.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config-writer.ts)
-- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts)
-- [`src/discovery/mcp-json.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/mcp-json.ts)
-- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts)
-- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts)
-- [`src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
-- [`src/config/resolve-config-value.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/config/resolve-config-value.ts)
-- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts)
+- `packages/coding-agent/src/mcp/types.ts`: MCP configuration and message type definitions.
+- `packages/coding-agent/src/mcp/config.ts`: Configuration loading and validation routines.
+- `packages/coding-agent/src/mcp/config-writer.ts`: Atomic configuration write operations.
+- `packages/coding-agent/src/mcp/tool-bridge.ts`: Tool wrapper and execution bridges.
+- `packages/coding-agent/src/discovery/mcp-json.ts`: Standalone `mcp.json` fallback discovery provider.
+- `packages/coding-agent/src/modes/controllers/mcp-command-controller.ts`: Interactive `/mcp` command controllers.
+- `packages/coding-agent/src/mcp/manager.ts`: Connection orchestration and tool caching.

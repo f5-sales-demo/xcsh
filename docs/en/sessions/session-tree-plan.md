@@ -6,193 +6,40 @@ sidebar:
   label: Tree architecture
 ---
 
-# Session tree architecture (current)
+This document describes the session tree architecture in xcsh: in-memory tree models, leaf pointer movement, intra-session navigation (`/tree`), and branch forking (`/branch`).
 
-Reference: [session.md](../session/)
+## Data model and leaf semantics
 
-This document describes how session tree navigation works today: in-memory tree model, leaf movement rules, branching behavior, and extension/event integration.
+Sessions persist as append-only `.jsonl` entries where each non-header entry contains an `id` and `parentId`:
 
-## What this subsystem is
+- **Tree projection**: `SessionManager` maps entries into an in-memory parent-child graph (`getTree()`).
+- **Active leaf (`leafId`)**: Points to the most recent entry on the active conversation branch.
+- **Append behavior**: New turns append as direct children of the active `leafId`.
+- **Branching**: Moving the leaf pointer does not rewrite historical records — it redirects where subsequent entries attach.
 
-The session is stored as an append-only entry log, but runtime behavior is tree-based:
+## Navigation and branching commands
 
-- Every non-header entry has `id` and `parentId`.
-- The active position is `leafId` in `SessionManager`.
-- Appending an entry always creates a child of the current leaf.
-- Branching does **not** rewrite history; it only changes where the leaf points before the next append.
+### Intra-session navigation (`/tree`)
 
-Key files:
+The `/tree` command navigates conversational history within the current session file:
 
-- `src/session/session-manager.ts` — tree data model, traversal, leaf movement, branch/session extraction
-- `src/session/agent-session.ts` — `/tree` navigation flow, summarization, hook/event emission
-- `src/modes/components/tree-selector.ts` — interactive tree UI behavior and filtering
-- `src/modes/controllers/selector-controller.ts` — selector orchestration for `/tree` and `/branch`
-- `src/modes/controllers/input-controller.ts` — command routing (`/tree`, `/branch`, double-escape behavior)
-- `src/session/messages.ts` — conversion of `branch_summary`, `compaction`, and `custom_message` entries into LLM context messages
+1. **Target selection**: Presents an interactive tree modal showing turn hierarchy, labels, and timestamps.
+2. **Abandoned path collection**: Identifies turns between the previous leaf and the nearest common ancestor.
+3. **Optional summarization**: If enabled, summarizes abandoned branch context and attaches a `branch_summary` entry at the new navigation target.
+4. **Context reconstruction**: Rebuilds the LLM prompt context from the newly selected branch path (`buildSessionContext()`).
 
-## Tree data model in `SessionManager`
+### Branch forking (`/branch`)
 
-Runtime indices:
+The `/branch` command creates an independent session file branched from a historical prompt:
 
-- `#byId: Map<string, SessionEntry>` — fast lookup for any entry
-- `#leafId: string | null` — current position in the tree
-- `#labelsById: Map<string, string>` — resolved labels by target entry id
+1. Prompts you to select a prior user message.
+2. Clones the ancestral history up to the selected message's parent into a new `.jsonl` session file.
+3. Prefills the command editor with the original prompt text to allow prompt revision.
+4. Switches active execution context to the new session branch.
 
-Tree APIs:
+## Related implementation files
 
-- `getBranch(fromId?)` walks parent links to root and returns root→node path
-- `getTree()` returns `SessionTreeNode[]` (`entry`, `children`, `label`)
-  - parent links become children arrays
-  - entries with missing parents are treated as roots
-  - children are sorted oldest→newest by timestamp
-- `getChildren(parentId)` returns direct children
-- `getLabel(id)` resolves current label from `labelsById`
-
-`getTree()` is a runtime projection; persistence remains append-only JSONL entries.
-
-## Leaf movement semantics
-
-There are three leaf movement primitives:
-
-1. `branch(entryId)`
-   - Validates entry exists
-   - Sets `leafId = entryId`
-   - No new entry is written
-
-2. `resetLeaf()`
-   - Sets `leafId = null`
-   - Next append creates a new root entry (`parentId = null`)
-
-3. `branchWithSummary(branchFromId, summary, details?, fromExtension?)`
-   - Accepts `branchFromId: string | null`
-   - Sets `leafId = branchFromId`
-   - Appends a `branch_summary` entry as child of that leaf
-   - When `branchFromId` is `null`, `fromId` is persisted as `"root"`
-
-## `/tree` navigation behavior (same session file)
-
-`AgentSession.navigateTree()` is navigation, not file forking.
-
-Flow:
-
-1. Validate target and compute abandoned path (`collectEntriesForBranchSummary`)
-2. Emit `session_before_tree` with `TreePreparation`
-3. Optionally summarize abandoned entries (hook-provided summary or built-in summarizer)
-4. Compute new leaf target:
-   - selecting a **user** message: leaf moves to its parent, and message text is returned for editor prefill
-   - selecting a **custom_message**: same rule as user message (leaf = parent, text prefills editor)
-   - selecting any other entry: leaf = selected entry id
-5. Apply leaf move:
-   - with summary: `branchWithSummary(newLeafId, ...)`
-   - without summary and `newLeafId === null`: `resetLeaf()`
-   - otherwise: `branch(newLeafId)`
-6. Rebuild agent context from new leaf and emit `session_tree`
-
-Important: summary entries are attached at the **new navigation position**, not on the abandoned branch tail.
-
-## `/branch` behavior (new session file)
-
-`/branch` and `/tree` are intentionally different:
-
-- `/tree` navigates within the current session file.
-- `/branch` creates a new session branch file (or in-memory replacement for non-persistent mode).
-
-User-facing `/branch` flow (`SelectorController.showUserMessageSelector` → `AgentSession.branch`):
-
-- Branch source must be a **user message**.
-- Selected user text is extracted for editor prefill.
-- If selected user message is root (`parentId === null`): start a new session via `newSession({ parentSession: previousSessionFile })`.
-- Otherwise: `createBranchedSession(selectedEntry.parentId)` to fork history up to the selected prompt boundary.
-
-`SessionManager.createBranchedSession(leafId)` specifics:
-
-- Builds root→leaf path via `getBranch(leafId)`; throws if missing.
-- Excludes existing `label` entries from copied path.
-- Rebuilds fresh label entries from resolved `labelsById` for entries that remain in path.
-- Persistent mode: writes new JSONL file and switches manager to it; returns new file path.
-- In-memory mode: replaces in-memory entries; returns `undefined`.
-
-## Context reconstruction and summary/custom integration
-
-`buildSessionContext()` (in `session-manager.ts`) resolves the active root→leaf path and builds effective LLM context state:
-
-- Tracks latest thinking/model/mode/ttsr state on path.
-- Handles latest compaction on path:
-  - emits compaction summary first
-  - replays kept messages from `firstKeptEntryId` to compaction point
-  - then replays post-compaction messages
-- Includes `branch_summary` and `custom_message` entries as `AgentMessage` objects.
-
-`session/messages.ts` then maps these message types for model input:
-
-- `branchSummary` and `compactionSummary` become user-role templated context messages
-- `custom`/`hookMessage` become user-role content messages
-
-So tree movement changes context by changing the active leaf path, not by mutating old entries.
-
-## Labels and tree UI behavior
-
-Label persistence:
-
-- `appendLabelChange(targetId, label?)` writes `label` entries on the current leaf chain.
-- `labelsById` is updated immediately (set or delete).
-- `getTree()` resolves current label onto each returned node.
-
-Tree selector behavior (`tree-selector.ts`):
-
-- Flattens tree for navigation, keeps active-path highlighting, and prioritizes displaying the active branch first.
-- Supports filter modes: `default`, `no-tools`, `user-only`, `labeled-only`, `all`.
-- Supports free-text search over rendered semantic content.
-- `Shift+L` opens inline label editing and writes via `appendLabelChange`.
-
-Command routing:
-
-- `/tree` always opens tree selector.
-- `/branch` opens user-message selector unless `doubleEscapeAction=tree`, in which case it also uses tree selector UX.
-
-## Extension and hook touchpoints for tree operations
-
-Command-time extension API (`ExtensionCommandContext`):
-
-- `branch(entryId)` — create branched session file
-- `navigateTree(targetId, { summarize? })` — move within current tree/file
-
-Events around tree navigation:
-
-- `session_before_tree`
-  - receives `TreePreparation`:
-    - `targetId`
-    - `oldLeafId`
-    - `commonAncestorId`
-    - `entriesToSummarize`
-    - `userWantsSummary`
-  - may cancel navigation
-  - may provide summary payload used instead of built-in summarizer
-  - receives abort `signal` (Escape cancellation path)
-- `session_tree`
-  - emits `newLeafId`, `oldLeafId`
-  - includes `summaryEntry` when a summary was created
-  - `fromExtension` indicates summary origin
-
-Adjacent but related lifecycle hooks:
-
-- `session_before_branch` / `session_branch` for `/branch` flow
-- `session_before_compact`, `session.compacting`, `session_compact` for compaction entries that later affect tree-context reconstruction
-
-## Real constraints and edge conditions
-
-- `branch()` cannot target `null`; use `resetLeaf()` for root-before-first-entry state.
-- `branchWithSummary()` supports `null` target and records `fromId: "root"`.
-- Selecting current leaf in tree selector is a no-op.
-- Summarization requires an active model; if absent, summarize navigation fails fast.
-- If summarization is aborted, navigation is cancelled and leaf is unchanged.
-- In-memory sessions never return a branch file path from `createBranchedSession`.
-
-## Legacy compatibility still present
-
-Session migrations still run on load:
-
-- v1→v2 adds `id`/`parentId` and converts compaction index anchor to id anchor
-- v2→v3 migrates legacy `hookMessage` role to `custom`
-
-Current runtime behavior is version-3 tree semantics after migration.
+- `src/session/session-manager.ts`: Tree indexing, ancestry resolution, and branch session creation.
+- `src/session/agent-session.ts`: `navigateTree()`, branch summarization, and lifecycle hook dispatch.
+- `src/modes/components/tree-selector.ts`: Interactive tree visualization and keyboard navigation component.
+- `src/modes/controllers/selector-controller.ts`: Selector modal orchestration for `/tree` and `/branch`.

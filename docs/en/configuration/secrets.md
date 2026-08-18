@@ -6,111 +6,107 @@ sidebar:
   label: Secrets
 ---
 
-# Secret Obfuscation
+The secret obfuscation pipeline prevents sensitive values (such as API keys, tokens, and passwords) from being sent to LLM providers. When enabled, xcsh replaces secret strings with deterministic placeholders before outbound transmission to the model and restores original values in tool execution arguments returned by the model.
 
-Prevents sensitive values (API keys, tokens, passwords) from being sent to LLM providers. When enabled, secrets are replaced with deterministic placeholders before leaving the process, and restored in tool call arguments returned by the model.
+## Enabling secret obfuscation
 
-## Enabling
-
-Enabled by default. Toggle via `/settings` UI or directly in `config.yml`:
+Secret obfuscation is enabled by default. You can toggle this setting in the `/settings` interface or configure it directly in `config.yml`:
 
 ```yaml
 secrets:
   enabled: false
 ```
 
-## How it works
+## How obfuscation works
 
-1. On session startup, secrets are collected from two sources:
-   - **Environment variables** matching common secret patterns (`*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD`, etc.) with values >= 8 characters
-   - **`secrets.yml` files** (see below)
+1. During session initialization, xcsh collects secrets from two primary sources:
+   - **Environment variables**: Matches common secret name patterns (`*_KEY`, `*_SECRET`, `*_TOKEN`, `*_PASSWORD`) containing values with eight or more characters.
+   - **Configuration files**: Loads rules defined in `secrets.yml`.
+2. Before sending outbound messages to the LLM, the obfuscator replaces all identified secret values with indexed placeholders such as `<<$env:S0>>` and `<<$env:S1>>`.
+3. When the model returns tool call arguments, xcsh recursively traverses the arguments to restore placeholders to their original values prior to execution.
 
-2. Outbound messages to the LLM have all secret values replaced with placeholders like `<<$env:S0>>`, `<<$env:S1>>`, etc.
-
-3. Tool call arguments returned by the model are deep-walked and placeholders are restored to original values before execution.
-
-Two modes control what happens to each secret:
+Two modes control secret processing:
 
 | Mode | Behavior | Reversible |
-|---|---|---|
-| `obfuscate` (default) | Replaced with indexed placeholder `<<$env:SN>>` | Yes (deobfuscated in tool args) |
-| `replace` | Replaced with deterministic same-length string | No (one-way) |
+| --- | --- | --- |
+| `obfuscate` (default) | Replaces secret with an indexed placeholder (`<<$env:SN>>`) | Yes (restored automatically in tool arguments) |
+| `replace` | Replaces secret with a static replacement string | No (one-way redaction) |
 
-## secrets.yml
+## Defining secrets in `secrets.yml`
 
-Define custom secret entries in YAML. Two locations are checked:
+You can declare custom secret redaction rules in YAML. xcsh inspects two file locations in order:
 
-| Level | Path | Purpose |
-|---|---|---|
-| Global | `~/.xcsh/agent/secrets.yml` | Secrets across all projects |
-| Project | `<cwd>/.xcsh/secrets.yml` | Project-specific secrets |
+| Level | File path | Scope |
+| --- | --- | --- |
+| Global | `~/.xcsh/agent/secrets.yml` | Applies across all projects and sessions |
+| Project | `<cwd>/.xcsh/secrets.yml` | Applies strictly to the local project |
 
-Project entries override global entries with matching `content`.
+Project-level entries override global entries that share the same `content`.
 
-### Schema
+### Configuration schema
 
-Each entry in the array has these fields:
+Each item in the configuration array accepts the following fields:
 
 | Field | Type | Required | Description |
-|---|---|---|---|
-| `type` | `"plain"` or `"regex"` | Yes | Match strategy |
-| `content` | string | Yes | The secret value (plain) or regex pattern (regex) |
-| `mode` | `"obfuscate"` or `"replace"` | No | Default: `"obfuscate"` |
-| `replacement` | string | No | Custom replacement (replace mode only) |
-| `flags` | string | No | Regex flags (regex type only) |
+| --- | --- | --- | --- |
+| `type` | `"plain"` or `"regex"` | Yes | Pattern matching strategy. |
+| `content` | string | Yes | Literal secret value or regular expression pattern. |
+| `mode` | `"obfuscate"` or `"replace"` | No | Processing mode. Defaults to `"obfuscate"`. |
+| `replacement` | string | No | Custom replacement text (applicable only in `replace` mode). |
+| `flags` | string | No | Regular expression flags (applicable only for `regex` type). |
 
-### Examples
+### Configuration examples
 
-#### Plain secrets
+#### Plaintext matching
 
 ```yaml
-# Obfuscate a specific API key (default mode)
+# Obfuscate a specific API key (default reversible mode)
 - type: plain
-  content: sk-proj-abc123def456
+  content: <XC_API_TOKEN>
 
-# Replace a database password with a fixed string
+# Replace a database password with a static mask
 - type: plain
-  content: hunter2
+  content: database-admin-password
   mode: replace
   replacement: "********"
 ```
 
-#### Regex secrets
+#### Regular expression matching
 
 ```yaml
-# Obfuscate any AWS-style key
+# Obfuscate AWS credential patterns
 - type: regex
   content: "AKIA[0-9A-Z]{16}"
 
-# Case-insensitive match with explicit flags
+# Case-insensitive API token pattern with explicit flags
 - type: regex
   content: "api[_-]?key\\s*=\\s*\\w+"
   flags: "i"
 
-# Regex literal syntax (pattern and flags in one string)
+# Regular expression literal syntax (pattern and flags combined)
 - type: regex
   content: "/bearer\\s+[a-zA-Z0-9._~+\\/=-]+/i"
 ```
 
-Regex entries always scan globally (the `g` flag is enforced automatically). The regex literal syntax `/pattern/flags` is supported as an alternative to separate `content` + `flags` fields. Escaped slashes within the pattern (`\\/`) are handled correctly.
+Regular expression rules always execute with global matching enabled (the `g` flag is applied automatically). Regular expression literal syntax (`/pattern/flags`) is supported as an alternative to separate `content` and `flags` fields. Escaped forward slashes (`\\/`) inside patterns are parsed correctly.
 
-#### Replace mode with regex
+#### Irreversible replacement with regex
 
 ```yaml
-# One-way replace connection strings (not reversible)
+# Redact database connection strings irreversibly
 - type: regex
   content: "postgres://[^\\s]+"
   mode: replace
   replacement: "postgres://***"
 ```
 
-## Interaction with env var detection
+## Environment variable precedence
 
-Environment variables are always collected first. File-defined entries are appended after, so file entries can cover secrets that don't live in env vars (config files, hardcoded values, etc.). If the same value appears in both, the file entry's mode takes precedence.
+Environment variables are always scanned and indexed first. Rules from `secrets.yml` are appended afterward, extending coverage to hardcoded tokens or configuration values that do not reside in the environment. If the same secret value is detected in both environment variables and `secrets.yml`, the mode specified in `secrets.yml` takes precedence.
 
-## Key files
+## Key implementation files
 
-- `src/secrets/index.ts` -- loading, merging, env var collection
-- `src/secrets/obfuscator.ts` -- `SecretObfuscator` class, placeholder generation, message obfuscation
-- `src/secrets/regex.ts` -- regex literal parsing and compilation
-- `src/config/settings-schema.ts` -- `secrets.enabled` setting definition
+- `src/secrets/index.ts`: Loading, merging, and environment variable discovery.
+- `src/secrets/obfuscator.ts`: `SecretObfuscator` class, placeholder substitution, and argument restoration.
+- `src/secrets/regex.ts`: Regular expression literal parsing and compilation.
+- `src/config/settings-schema.ts`: Setting definition for `secrets.enabled`.

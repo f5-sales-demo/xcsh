@@ -6,213 +6,118 @@ sidebar:
   label: Runtime lifecycle
 ---
 
-# MCP runtime lifecycle
+This document describes how Model Context Protocol (MCP) servers are discovered, connected, exposed as agent tools, refreshed, and terminated in the xcsh coding agent runtime.
 
-This document describes how MCP servers are discovered, connected, exposed as tools, refreshed, and torn down in the coding-agent runtime.
+## Lifecycle overview
 
-## Lifecycle at a glance
+1. **Session initialization**: `createAgentSession()` invokes `discoverAndLoadMCPTools()` (unless MCP is explicitly disabled).
+2. **Discovery**: `loadAllMCPConfigs()` discovers MCP server configurations across capability sources and applies filters.
+3. **Connection phase**: `MCPManager.connectServers()` initiates concurrent connections and issues `tools/list` requests.
+4. **Fast startup gate**: Waits up to 250 milliseconds:
+   - Returns live `MCPTool` instances for completed connections.
+   - Registers error records for failed servers.
+   - Instantiates cached `DeferredMCPTool` instances for pending connections.
+5. **Tool registration**: Merges MCP tools into the runtime session tool registry under `mcp_<SERVER>_<TOOL>` identifiers.
+6. **Live session management**: `/mcp reload` re-scans configurations and updates active tools dynamically.
+7. **Session teardown**: Invokes `disconnectServer()` or `disconnectAll()` to terminate subprocesses and close connections.
 
-1. **SDK startup** calls `discoverAndLoadMCPTools()` (unless MCP is disabled).
-2. **Discovery** (`loadAllMCPConfigs`) resolves MCP server configs from capability sources, filters disabled/project/Exa entries, and preserves source metadata.
-3. **Manager connect phase** (`MCPManager.connectServers`) starts per-server connect + `tools/list` in parallel.
-4. **Fast startup gate** waits up to 250ms, then may return:
-   - fully loaded `MCPTool`s,
-   - failures per server,
-   - or cached `DeferredMCPTool`s for still-pending servers.
-5. **SDK wiring** merges MCP tools into runtime tool registry for the session.
-6. **Live session** can refresh MCP tools via `/mcp` flows (`disconnectAll` + rediscover + `session.refreshMCPTools`).
-7. **Teardown** happens when callers invoke `disconnectServer`/`disconnectAll`; manager also clears MCP tool registrations for disconnected servers.
+## Discovery and loading
 
-## Discovery and load phase
+### SDK startup integration
 
-### Entry path from SDK
+`createAgentSession()` (`packages/coding-agent/src/sdk.ts`) manages MCP initialization:
 
-`createAgentSession()` in `src/sdk.ts` performs MCP startup when `enableMCP` is true (default):
+- Calls `discoverAndLoadMCPTools(cwd, { ... })`.
+- Passes authentication storage, cache storage, and project configuration flags.
+- Isolates per-server connection errors so individual server failures do not block session startup.
+- Stores the initialized manager instance on `toolSession.mcpManager`.
 
-- calls `discoverAndLoadMCPTools(cwd, { ... })`,
-- passes `authStorage`, cache storage, and `mcp.enableProjectConfig` setting,
-- always sets `filterExa: true`,
-- logs per-server load/connect errors,
-- stores returned manager in `toolSession.mcpManager` and session result.
+### Configuration filtering
 
-If `enableMCP` is false, MCP discovery is skipped entirely.
+`loadAllMCPConfigs()` (`packages/coding-agent/src/mcp/config.ts`) applies the following filters:
 
-### Config discovery and filtering
-
-`loadAllMCPConfigs()` (`src/mcp/config.ts`) loads canonical MCP server items through capability discovery, then converts to legacy `MCPServerConfig`.
-
-Filtering behavior:
-
-- `enableProjectConfig: false` removes project-level entries (`_source.level === "project"`).
-- `enabled: false` servers are skipped before connect attempts.
-- Exa servers are filtered out by default and API keys are extracted for native Exa tool integration.
-
-Result includes both `configs` and `sources` (metadata used later for provider labeling).
-
-### Discovery-level failure behavior
-
-`discoverAndLoadMCPTools()` distinguishes two failure classes:
-
-- **Discovery hard failure** (exception from `manager.discoverAndConnect`, typically from config discovery): returns an empty tool set and one synthetic error `{ path: ".mcp.json", error }`.
-- **Per-server runtime/connect failure**: manager returns partial success with `errors` map; other servers continue.
-
-So startup does not fail the whole agent session when individual MCP servers fail.
+- `enableProjectConfig: false`: Excludes project-level configurations (`_source.level === "project"`).
+- `enabled: false`: Skips explicitly disabled server definitions.
+- Exa servers: Filtered out for direct handling by native Exa search capabilities.
 
 ## Manager state model
 
-`MCPManager` tracks runtime lifecycle with separate registries:
+`MCPManager` tracks runtime state across internal registries:
 
-- `#connections: Map<string, MCPServerConnection>` — fully connected servers.
-- `#pendingConnections: Map<string, Promise<MCPServerConnection>>` — handshake in progress.
-- `#pendingToolLoads: Map<string, Promise<{ connection, serverTools }>>` — connected but tools still loading.
-- `#tools: CustomTool[]` — current MCP tool view exposed to callers.
-- `#sources: Map<string, SourceMeta>` — provider/source metadata even before connect completes.
+- `#connections`: Map of active, fully connected `MCPServerConnection` instances.
+- `#pendingConnections`: Map of connection promises currently performing handshake negotiation.
+- `#pendingToolLoads`: Map of connected servers awaiting tool listing completion.
+- `#tools`: Array of active `CustomTool` instances exposed to the agent.
+- `#sources`: Map of source metadata tracking configuration origin.
 
-`getConnectionStatus(name)` derives status from these maps:
+`getConnectionStatus(name)` reports one of three states:
 
-- `connected` if in `#connections`,
-- `connecting` if pending connect or pending tool load,
-- `disconnected` otherwise.
+- `connected`: Active connection registered in `#connections`.
+- `connecting`: Handshake or tool listing in progress.
+- `disconnected`: Server is inactive or failed.
 
-## Connection establishment and startup timing
+## Connection establishment and caching
 
-## Per-server connect pipeline
+### Fast startup gate
 
-For each discovered server in `connectServers()`:
+To prevent slow MCP servers from delaying CLI startup, `connectServers()` races connection establishment against a 250 millisecond threshold:
 
-1. store/update source metadata,
-2. skip if already connected/pending,
-3. validate transport fields (`validateServerConfig`),
-4. resolve auth/shell substitutions (`#resolveAuthConfig`),
-5. call `connectToServer(name, resolvedConfig)`,
-6. call `listTools(connection)`,
-7. cache tool definitions (`MCPToolCache.set`) best-effort.
+- **Settled connections**: Instantiates active `MCPTool` instances immediately.
+- **Pending connections with cache hits**: Returns `DeferredMCPTool` instances populated from `MCPToolCache` without blocking startup.
+- **Pending connections without cache**: Blocks until connections establish or fail.
 
-`connectToServer()` behavior (`src/mcp/client.ts`):
+### Background completion
 
-- creates stdio or HTTP/SSE transport,
-- performs MCP `initialize` + `notifications/initialized`,
-- uses timeout (`config.timeout` or 30s default),
-- closes transport on init failure.
+Pending connection promises continue executing in the background:
 
-### Fast startup gate + deferred fallback
+- Updates the active tool collection in the manager via `#replaceServerTools`.
+- Persists discovered tool schemas to disk cache.
+- Logs late-stage connection failures.
 
-`connectServers()` waits on a race between:
+## Runtime tool invocation
 
-- all connect/tool-load tasks settled, and
-- `STARTUP_TIMEOUT_MS = 250`.
+- `MCPTool`: Invokes operations directly through established connections.
+- `DeferredMCPTool`: Awaits `waitForConnection(server)` before dispatching tool calls, ensuring tool schemas are visible to the model while connections finish establishing.
 
-After 250ms:
+Both wrapper types catch transport and tool errors and format them as structured tool error responses.
 
-- fulfilled tasks become live `MCPTool`s,
-- rejected tasks produce per-server errors,
-- still-pending tasks:
-  - use cached tool definitions if available (`MCPToolCache.get`) to create `DeferredMCPTool`s,
-  - otherwise block until those pending tasks settle.
+## Dynamic reload and refresh
 
-This is a hybrid startup model: fast return when cache is available, correctness wait when cache is not.
+Executing `/mcp reload` updates server configurations during an active session:
 
-### Background completion behavior
-
-Each pending `toolsPromise` also has a background continuation that eventually:
-
-- replaces that server’s tool slice in manager state via `#replaceServerTools`,
-- writes cache,
-- logs late failures only after startup (`allowBackgroundLogging`).
-
-## Tool exposure and live-session availability
-
-### Startup registration
-
-`discoverAndLoadMCPTools()` converts manager tools into `LoadedCustomTool[]` and decorates paths (`mcp:<server> via <providerName>` when known).
-
-`createAgentSession()` then pushes these tools into `customTools`, which are wrapped and added to the runtime tool registry with names like `mcp_<server>_<tool>`.
-
-### Tool calls
-
-- `MCPTool` calls tools through an already connected `MCPServerConnection`.
-- `DeferredMCPTool` waits for `waitForConnection(server)` before calling; this allows cached tools to exist before connection is ready.
-
-Both return structured tool output and convert transport/tool errors into `MCP error: ...` tool content (abort remains abort).
-
-## Refresh/reload paths (startup vs live reload)
-
-### Initial startup path
-
-- one-time discovery/load in `sdk.ts`,
-- tools are registered in initial session tool registry.
-
-### Interactive reload path
-
-`/mcp reload` path (`src/modes/controllers/mcp-command-controller.ts`) does:
-
-1. `mcpManager.disconnectAll()`,
-2. `mcpManager.discoverAndConnect()`,
-3. `session.refreshMCPTools(mcpManager.getTools())`.
-
-`session.refreshMCPTools()` (`src/session/agent-session.ts`) removes all `mcp_` tools, re-wraps latest MCP tools, and re-activates tool set so MCP changes apply without restarting session.
-
-There is also a follow-up path for late connections: after waiting for a specific server, if status becomes `connected`, it re-runs `session.refreshMCPTools(...)` so newly available tools are rebound in-session.
-
-## Health, reconnect, and partial failure behavior
-
-Current runtime behavior is intentionally minimal:
-
-- **No autonomous health monitor** in manager/client.
-- **No automatic reconnect loop** when a transport drops.
-- Manager does not subscribe to transport `onClose`/`onError`; status is registry-driven.
-- Reconnect is explicit: reload flow or direct `connectServers()` invocation.
-
-Operationally:
-
-- one server failing does not remove tools from healthy servers,
-- connect/list failures are isolated per server,
-- tool cache and background updates are best-effort (warnings/errors logged, no hard stop).
+1. Invokes `mcpManager.disconnectAll()`.
+2. Discovers configurations and establishes connections via `mcpManager.discoverAndConnect()`.
+3. Invokes `session.refreshMCPTools(mcpManager.getTools())` to rebind tools in the session registry without restarting the process.
 
 ## Teardown semantics
 
-### Server-level teardown
+### Server disconnection (`disconnectServer`)
 
-`disconnectServer(name)`:
+- Cancels pending connection promises and removes source metadata.
+- Closes the active transport.
+- Removes associated `mcp_` tools from the manager registry.
 
-- removes pending entries/source metadata,
-- closes transport if connected,
-- removes that server’s `mcp_` tools from manager state.
+### Global disconnection (`disconnectAll`)
 
-### Global teardown
+- Concurrently closes all active transports via `Promise.allSettled`.
+- Clears connection maps, pending promises, and registered tools.
 
-`disconnectAll()`:
+## Failure modes and recovery
 
-- closes all active transports with `Promise.allSettled`,
-- clears pending maps, sources, connections, and manager tool list.
-
-In current wiring, explicit teardown is used in MCP command flows (for reload/remove/disable). There is no separate automatic manager disposal hook in the startup path itself; callers are responsible for invoking manager disconnect methods when they need deterministic MCP shutdown.
-
-## Failure modes and guarantees
-
-| Scenario | Behavior | Hard fail vs best-effort |
+| Scenario | Runtime behavior | Impact |
 | --- | --- | --- |
-| Discovery throws (capability/config load path) | Loader returns empty tools + synthetic `.mcp.json` error | Best-effort session startup |
-| Invalid server config | Server skipped with validation error entry | Best-effort per server |
-| Connect timeout/init failure | Server error recorded; others continue | Best-effort per server |
-| `tools/list` still pending at startup with cache hit | Deferred tools returned immediately | Best-effort fast startup |
-| `tools/list` still pending at startup without cache | Startup waits for pending to settle | Hard wait for correctness |
-| Late background tool-load failure | Logged after startup gate | Best-effort logging |
-| Runtime dropped transport | No automatic reconnect; future calls fail until reconnect/reload | Best-effort recovery via manual action |
+| Configuration parse error | Loader returns empty tool collection with synthetic error record. | Session starts; error logged. |
+| Invalid server definition | Server is skipped with validation error. | Healthy servers continue. |
+| Handshake timeout | Connection recorded as failed. | Other servers load normally. |
+| Delayed tool listing (cached) | Instantiates `DeferredMCPTool` instances immediately. | Session starts without delay. |
+| Delayed tool listing (uncached) | Startup blocks until connection settles. | Guarantees tool availability. |
+| Runtime connection drop | Tool calls return errors until `/mcp reload` is executed. | Manual reload required. |
 
-## Public API surface
+## Primary implementation files
 
-`src/mcp/index.ts` re-exports loader/manager/client APIs for external callers. `src/sdk.ts` exposes `discoverMCPServers()` as a convenience wrapper returning the same loader result shape.
-
-## Implementation files
-
-- [`src/mcp/loader.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/loader.ts) — loader facade, discovery error normalization, `LoadedCustomTool` conversion.
-- [`src/mcp/manager.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/manager.ts) — lifecycle state registries, parallel connect/list flow, refresh/disconnect.
-- [`src/mcp/client.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/client.ts) — transport setup, initialize handshake, list/call/disconnect.
-- [`src/mcp/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/index.ts) — MCP module API exports.
-- [`src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts) — startup wiring into session/tool registry.
-- [`src/mcp/config.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/config.ts) — config discovery/filtering/validation used by manager.
-- [`src/mcp/tool-bridge.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/mcp/tool-bridge.ts) — `MCPTool` and `DeferredMCPTool` runtime behavior.
-- [`src/session/agent-session.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/session/agent-session.ts) — `refreshMCPTools` live rebinding.
-- [`src/modes/controllers/mcp-command-controller.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/modes/controllers/mcp-command-controller.ts) — interactive reload/reconnect flows.
-- [`src/task/executor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/task/executor.ts) — subagent MCP proxying via parent manager connections.
+- `packages/coding-agent/src/mcp/loader.ts`: Discovery normalization and `LoadedCustomTool` conversion.
+- `packages/coding-agent/src/mcp/manager.ts`: Connection lifecycle, parallel handshake orchestration, and tool caching.
+- `packages/coding-agent/src/mcp/client.ts`: Transport setup and MCP JSON-RPC protocol handling.
+- `packages/coding-agent/src/mcp/tool-bridge.ts`: `MCPTool` and `DeferredMCPTool` bridge implementations.
+- `packages/coding-agent/src/session/agent-session.ts`: Session tool registration and dynamic refresh.
+- `packages/coding-agent/src/modes/controllers/mcp-command-controller.ts`: Interactive `/mcp` command controllers.

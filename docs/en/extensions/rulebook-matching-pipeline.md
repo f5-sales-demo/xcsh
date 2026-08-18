@@ -6,33 +6,30 @@ sidebar:
   label: Rulebook matching
 ---
 
-# Rulebook Matching Pipeline
+This document describes how the xcsh coding agent discovers rule files across supported configuration formats, normalizes them into canonical `Rule` objects, resolves precedence conflicts, and routes them into:
 
-This document describes how coding-agent discovers rules from supported config formats, normalizes them into a single `Rule` shape, resolves precedence conflicts, and splits the result into:
+- **Rulebook rules**: Contextual rules referenced in the system prompt and retrieved on demand via `rule://` URLs.
+- **Always-apply rules**: Global rules injected directly into the system prompt.
+- **TTSR rules**: Test-time self-reflection rules registered with `TtsrManager`.
 
-- **Rulebook rules** (available to the model via system prompt + `rule://` URLs)
-- **TTSR rules** (time-travel stream interruption rules)
+## Primary implementation files
 
-It reflects the current implementation, including partial semantics and metadata that is parsed but not enforced.
+- `packages/coding-agent/src/capability/rule.ts`
+- `packages/coding-agent/src/capability/index.ts`
+- `packages/coding-agent/src/discovery/index.ts`
+- `packages/coding-agent/src/discovery/helpers.ts`
+- `packages/coding-agent/src/discovery/builtin.ts`
+- `packages/coding-agent/src/discovery/cursor.ts`
+- `packages/coding-agent/src/discovery/windsurf.ts`
+- `packages/coding-agent/src/discovery/cline.ts`
+- `packages/coding-agent/src/sdk.ts`
+- `packages/coding-agent/src/system-prompt.ts`
+- `packages/coding-agent/src/internal-urls/rule-protocol.ts`
+- `packages/coding-agent/src/utils/frontmatter.ts`
 
-## Implementation files
+## 1. Canonical rule data structure
 
-- [`../src/capability/rule.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/rule.ts)
-- [`../src/capability/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/capability/index.ts)
-- [`../src/discovery/index.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/index.ts)
-- [`../src/discovery/helpers.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/helpers.ts)
-- [`../src/discovery/builtin.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/builtin.ts)
-- [`../src/discovery/cursor.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/cursor.ts)
-- [`../src/discovery/windsurf.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/windsurf.ts)
-- [`../src/discovery/cline.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/discovery/cline.ts)
-- [`../src/sdk.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/sdk.ts)
-- [`../src/system-prompt.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/system-prompt.ts)
-- [`../src/internal-urls/rule-protocol.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/internal-urls/rule-protocol.ts)
-- [`../src/utils/frontmatter.ts`](https://github.com/f5-sales-demo/xcsh/blob/main/packages/coding-agent/src/utils/frontmatter.ts)
-
-## 1. Canonical rule shape
-
-All providers normalize source files into `Rule`:
+All discovery providers normalize rule definitions into the `Rule` interface:
 
 ```ts
 interface Rule {
@@ -47,209 +44,139 @@ interface Rule {
 }
 ```
 
-Capability identity is `rule.name` (`ruleCapability.key = rule => rule.name`).
+The capability registry deduplicates rules using `rule.name` as the primary key (`ruleCapability.key = rule => rule.name`). Rules from different filesystem locations sharing the same base name are treated as conflicting versions of the same rule.
 
-Consequence: precedence and deduplication are **name-based only**. Two different files with the same `name` are considered the same logical rule.
+## 2. Discovery providers and normalization rules
 
-## 2. Discovery sources and normalization
+The discovery subsystem registers four rule providers:
 
-`src/discovery/index.ts` auto-registers providers. For `rules`, current providers are:
-
-- `native` (priority `100`)
-- `cursor` (priority `50`)
-- `windsurf` (priority `50`)
-- `cline` (priority `40`)
+- `native` (Priority `100`)
+- `cursor` (Priority `50`)
+- `windsurf` (Priority `50`)
+- `cline` (Priority `40`)
 
 ### Native provider (`builtin.ts`)
 
-Loads `.xcsh` rules from:
+Discovers xcsh rule files from:
 
-- project: `<cwd>/.xcsh/rules/*.{md,mdc}`
-- user: `~/.xcsh/agent/rules/*.{md,mdc}`
+- **Project scope**: `<cwd>/.xcsh/rules/*.{md,mdc}`
+- **User scope**: `~/.xcsh/agent/rules/*.{md,mdc}`
 
-Normalization:
+Normalization behavior:
 
-- `name` = filename without `.md`/`.mdc`
-- frontmatter parsed via `parseFrontmatter`
-- `content` = body (frontmatter stripped)
-- `globs`, `alwaysApply`, `description`, `ttsr_trigger` mapped directly
-
-Important caveat: `globs` is cast as `string[] | undefined` with no element filtering in this provider.
+- Derives `name` from the filename minus the `.md` or `.mdc` extension.
+- Parses frontmatter metadata using `parseFrontmatter`.
+- Sets `content` to the markdown body with frontmatter stripped.
+- Maps `globs`, `alwaysApply`, `description`, and `ttsr_trigger` properties directly.
 
 ### Cursor provider (`cursor.ts`)
 
-Loads from:
+Discovers rules from:
 
-- user: `~/.cursor/rules/*.{mdc,md}`
-- project: `<cwd>/.cursor/rules/*.{mdc,md}`
+- **User scope**: `~/.cursor/rules/*.{mdc,md}`
+- **Project scope**: `<cwd>/.cursor/rules/*.{mdc,md}`
 
-Normalization (`transformMDCRule`):
+Normalization rules (`transformMDCRule`):
 
-- `description`: kept only if string
-- `alwaysApply`: only `true` is preserved (`false` becomes `undefined`)
-- `globs`: accepts array (string elements only) or single string
-- `ttsr_trigger`: string only
-- `name` from filename without extension
+- `description`: Retained only when supplied as a string.
+- `alwaysApply`: Preserved when explicitly `true` (`false` normalizes to `undefined`).
+- `globs`: Accepts either a string array or a single string.
+- `ttsr_trigger`: Preserved as a string.
+- Derives `name` from the filename minus the extension.
 
 ### Windsurf provider (`windsurf.ts`)
 
-Loads from:
+Discovers rules from:
 
-- user: `~/.codeium/windsurf/memories/global_rules.md` (fixed rule name `global_rules`)
-- project: `<cwd>/.windsurf/rules/*.md`
+- **User scope**: `~/.codeium/windsurf/memories/global_rules.md` (assigned the fixed name `global_rules`).
+- **Project scope**: `<cwd>/.windsurf/rules/*.md`.
 
-Normalization:
+Normalization behavior:
 
-- `globs`: array-of-string or single string
-- `alwaysApply`, `description` cast from frontmatter
-- `ttsr_trigger`: string only
-- `name` from filename for project rules
+- `globs`: Normalizes array or single string values.
+- `alwaysApply` and `description`: Parsed directly from frontmatter.
+- `ttsr_trigger`: Preserved as a string.
+- Project rule names derive from individual filenames.
 
 ### Cline provider (`cline.ts`)
 
-Searches upward from `cwd` for nearest `.clinerules`:
+Traverses upward from the current working directory to locate the nearest `.clinerules`:
 
-- if directory: loads `*.md` inside it
-- if file: loads single file as rule named `clinerules`
+- If `.clinerules` is a directory, loads all `*.md` files within it.
+- If `.clinerules` is a single file, loads the rule under the fixed name `clinerules`.
 
-Normalization:
+## 3. Frontmatter parsing and fallback handling
 
-- `globs`: array-of-string or single string
-- `alwaysApply`: only if boolean
-- `description`: string only
-- `ttsr_trigger`: string only
+Providers parse frontmatter blocks using `parseFrontmatter` (`utils/frontmatter.ts`):
 
-## 3. Frontmatter parsing behavior and ambiguity
+1. The parser identifies frontmatter delimited by opening `---` and closing `\n---` markers.
+2. The markdown body is trimmed after removing the frontmatter chunk.
+3. If YAML parsing fails:
+   - A warning is recorded.
+   - The parser falls back to simple line-based `key: value` extraction (`^(\w+):\s*(.*)$`).
 
-All providers use `parseFrontmatter` (`utils/frontmatter.ts`) with these semantics:
+Fallback characteristics:
 
-1. Frontmatter is parsed only when content starts with `---` and has a closing `\n---`.
-2. Body is trimmed after frontmatter extraction.
-3. If YAML parse fails:
-   - warning is logged,
-   - parser falls back to simple `key: value` line parsing (`^(\w+):\s*(.*)$`).
-
-Ambiguity consequences:
-
-- Fallback parser does not support arrays, nested objects, quoting rules, or hyphenated keys.
-- Fallback values become strings (for example `alwaysApply: true` becomes string `"true"`), so providers requiring boolean/string types may drop metadata.
-- `ttsr_trigger` works in fallback (underscore key); keys like `thinking-level` would not.
-- Files without valid frontmatter still load as rules with empty metadata and full content body.
+- The fallback parser does not process arrays, nested dictionaries, or quoted strings.
+- Extracted values default to strings (for example, `alwaysApply: true` parses as string `"true"`).
+- Files lacking frontmatter parse cleanly as rules with empty metadata and the entire document body as `content`.
 
 ## 4. Provider precedence and deduplication
 
-`loadCapability("rules")` (`capability/index.ts`) merges provider outputs and then deduplicates by `rule.name`.
+`loadCapability("rules")` aggregates discovered rules across providers and resolves duplicate rule names:
 
-### Precedence model
+- Providers are evaluated in descending priority order (`native` > `cursor` = `windsurf` > `cline`).
+- When priorities are equal, registration order determines precedence (`cursor` before `windsurf`).
+- Deduplication follows a first-seen policy: the highest-priority rule matching a given `name` is retained in `items`, while subsequent definitions are recorded in `all` with `_shadowed: true`.
 
-- Providers are ordered by priority descending.
-- Equal priority keeps registration order (`cursor` before `windsurf` from `discovery/index.ts`).
-- Dedup is first-wins: first encountered rule name is kept; later same-name items are marked `_shadowed` in `all` and excluded from `items`.
+## 5. Classification into Rulebook, Always-Apply, and TTSR categories
 
-Effective rule provider order is currently:
+During session initialization in `createAgentSession` (`sdk.ts`), discovered rules are partitioned into three execution buckets:
 
-1. `native` (100)
-2. `cursor` (50)
-3. `windsurf` (50)
-4. `cline` (40)
+1. **TTSR category**: Any rule declaring a `condition` (or `ttsr_trigger` / `ttsrTrigger`) registers with `TtsrManager`. TTSR classification takes precedence over all other categories.
+2. **Always-apply category**: Non-TTSR rules with `alwaysApply: true`. The full markdown body is injected directly into the system prompt.
+3. **Rulebook category**: Non-TTSR rules with a defined `description` and `alwaysApply` not set to `true`. Summarized in the system prompt rules index.
 
-### Intra-provider ordering caveat
+Classification conditions:
 
-Within a provider, item order comes from `loadFilesFromDir` glob result ordering plus explicit push order. This is deterministic enough for normal use but not explicitly sorted in code.
+- A rule defining both `condition` and `alwaysApply` is assigned exclusively to the TTSR category.
+- A rule defining both `alwaysApply` and `description` is assigned exclusively to the always-apply category.
 
-Notable source-order differences:
-
-- `native` appends project then user config dirs.
-- `cursor` appends user then project results.
-- `windsurf` appends user `global_rules` first, then project rules.
-- `cline` loads only nearest `.clinerules` source.
-
-## 5. Split into Rulebook, Always-Apply, and TTSR buckets
-
-After rule discovery in `createAgentSession` (`sdk.ts`):
-
-1. All discovered rules are scanned.
-2. Rules with `condition` (frontmatter key; `ttsr_trigger` / `ttsrTrigger` accepted as fallback) are registered into `TtsrManager`.
-3. A separate `rulebookRules` list is built with this predicate:
-
-```ts
-!registeredTtsrRuleNames.has(rule.name) && !rule.alwaysApply && !!rule.description
-```
-
-4. An `alwaysApplyRules` list is built:
-
-```ts
-!registeredTtsrRuleNames.has(rule.name) && rule.alwaysApply === true
-```
-
-### Bucket behavior
-
-- **TTSR bucket**: any rule with `condition` (description not required). Takes priority over other buckets.
-- **Always-apply bucket**: `alwaysApply === true`, not TTSR. Full content injected into system prompt. Resolvable via `rule://`.
-- **Rulebook bucket**: must have description, must not be TTSR, must not be `alwaysApply`. Listed in system prompt by name+description; content read on demand via `rule://`.
-- A rule with both `condition` and `alwaysApply` goes to TTSR only (TTSR takes priority).
-- A rule with both `alwaysApply` and `description` goes to always-apply only (not rulebook).
-
-## 6. How metadata affects runtime surfaces
+## 6. Runtime metadata utilization
 
 ### `description`
 
-- Required for inclusion in rulebook.
-- Rendered in system prompt `<rules>` block.
-- Missing description means rule is not available via `rule://` and not listed in system prompt rules.
+- Required for inclusion in the advisory rulebook index.
+- Displayed in the system prompt `<rules>` block.
+- Rules lacking a description are excluded from the rulebook index and cannot be resolved via `rule://`.
 
 ### `globs`
 
-- Carried through on `Rule`.
-- Rendered as `<glob>...</glob>` entries in the system prompt rules block.
-- Exposed in rules UI state (`extensions` mode list).
-- **Not enforced for automatic matching in this pipeline.** There is no runtime glob matcher selecting rules by current file/tool target.
+- Formatted as `<glob>...</glob>` elements within the system prompt rules block.
+- Surfaced in TUI extension management panels.
+- Serves as advisory guidance to the model; globs are not evaluated programmatically for rule selection.
 
 ### `alwaysApply`
 
-- Parsed and preserved by providers.
-- Used in UI display (`"always"` trigger label in extensions state manager).
-- Used as an exclusion condition from `rulebookRules`.
-- **Full rule content is auto-injected into the system prompt** (before the rulebook rules section).
-- Rule is also addressable via `rule://<name>` for re-reading.
+- Triggers direct injection of the rule content into the base system prompt.
+- Available for on-demand re-reading via `rule://<NAME>`.
 
 ### `ttsr_trigger`
 
-- Mapped to `rule.ttsrTrigger`.
-- If present, rule is routed to TTSR manager, not rulebook.
+- Binds the rule to the runtime stream evaluation engine in `TtsrManager`.
 
-## 7. System prompt inclusion path
+## 7. System prompt integration
 
-`buildSystemPromptInternal` receives both `rules` (rulebook) and `alwaysApplyRules`.
+`buildSystemPromptInternal` constructs the final prompt context:
 
-Always-apply rules are rendered first, injecting their raw content directly into the prompt.
+1. Always-apply rules are rendered first, inserting their full markdown content directly.
+2. Rulebook rules are listed in a `# Rules` section displaying `rule://<NAME>`, functional descriptions, and associated glob patterns.
 
-Rulebook rules are rendered in a `# Rules` section with:
+## 8. The `rule://` URI protocol handler
 
-- `Read rule://<name> when working in matching domain`
-- Each rule's `name`, `description`, and optional `<glob>` list
+`RuleProtocolHandler` resolves `rule://` URIs against combined rulebook and always-apply collections:
 
-This is advisory/contextual: prompt text asks the model to read applicable rules, but code does not enforce glob applicability.
-
-## 8. `rule://` internal URL behavior
-
-`RuleProtocolHandler` is registered with:
-
-```ts
-new RuleProtocolHandler({ getRules: () => [...rulebookRules, ...alwaysApplyRules] })
-```
-
-Implications:
-
-- `rule://<name>` resolves against both **rulebookRules** and **alwaysApplyRules**.
-- TTSR-only rules and rules with no description and no `alwaysApply` are not addressable via `rule://`.
-- Resolution is exact name match.
-- Unknown names return error listing available rule names.
-- Returned content is raw `rule.content` (frontmatter stripped), content type `text/markdown`.
-
-## 9. Known partial / non-enforced semantics
-
-1. Provider descriptions mention legacy files (`.cursorrules`, `.windsurfrules`), but current loader code paths do not actually read those files.
-2. `globs` metadata is surfaced to prompt/UI but not enforced by rule selection logic.
-3. Rule selection for `rule://` includes rulebook and always-apply rules, but not TTSR-only rules.
-4. Discovery warnings (`loadCapability("rules").warnings`) are produced but `createAgentSession` does not currently surface/log them in this path.
+- Resolves exact rule names (for example, `rule://unit-testing`).
+- TTSR-only rules and rules missing descriptions are not addressable.
+- Requests for unknown rule names return an error listing valid candidates.
+- Returns the rule body (`rule.content`) as `text/markdown`.

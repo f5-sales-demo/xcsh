@@ -1,49 +1,36 @@
 ---
 title: Run xcsh containers with Docker and Podman
-description: Build or run the non-root xcsh Alpine image with Docker, Compose, or native ARM64 Podman UAT.
+description: Build and run the non-root xcsh Alpine Linux container image with Docker, Docker Compose, or native ARM64 Podman UAT.
 ---
 
-A `v*` xcsh tag triggers publication to GitHub Container Registry (GHCR) as
-`ghcr.io/f5-sales-demo/xcsh`. The image runs as the unprivileged `xcsh` user
-and includes the xcsh, Google Cloud, Azure,
-Amazon Web Services (AWS), GitHub, Salesforce, Bun, and Zig command-line
-interfaces (CLIs).
+Release tags matching `v*` trigger automated publication to GitHub Container Registry (GHCR) at `ghcr.io/f5-sales-demo/xcsh`. The container image executes as the unprivileged `xcsh` user and includes command-line interfaces (CLIs) for xcsh, Google Cloud, Azure, Amazon Web Services (AWS), GitHub, Salesforce, Bun, and Zig.
 
-The image supports `linux/amd64` and `linux/arm64` hosts. Each release tag is a
-multi-platform image, so Docker selects the matching architecture automatically.
+The image supports `linux/amd64` and `linux/arm64` container hosts. Each published release tag is a multi-platform OCI index, allowing Docker and Podman to select the matching architecture automatically.
 
 ## Prerequisites
 
-Install Docker Engine with the Compose plugin to use the development service.
-The optional native ARM64 Podman UAT has separate prerequisites below. To run
-the optional Compose live tests, authenticate the Google Cloud and Azure CLIs
-on your host. Use only authorized labs or customer demo environments covered by an
-engagement.
+Install Docker Engine with the Docker Compose plugin to use the local development service. The optional native ARM64 Podman user acceptance testing (UAT) workflow has separate prerequisites detailed below. To execute live cloud CLI tests, authenticate the Google Cloud and Azure CLIs on your host machine. Work only with authorized labs and customer demo environments covered by an active engagement.
 
-Allow about 10 minutes for the first local build. The cloud CLIs make the image
-substantially larger than a minimal xcsh-only runtime.
+Local builds require approximately ten minutes on first run due to the bundled cloud management CLIs.
 
-## Pull a release image
+## Pulling release images
 
-After a tagged release finishes, pull the most recent stable image:
+Pull the latest stable release image from GHCR:
 
 ```bash
 docker pull ghcr.io/f5-sales-demo/xcsh:latest
 ```
 
-For stable release tags, publication creates a versioned `vX.Y.Z` tag, a moving
-`X.Y` tag, and `latest`. Registry tags can be repointed. For an immutable
-deployment reference, resolve and use the published OCI index digest in the
-form `ghcr.io/f5-sales-demo/xcsh@sha256:<digest>`.
+Tagged releases publish a versioned tag (`v<VERSION>`), a minor release tag (`<MAJOR>.<MINOR>`), and `latest`. Because registry tags can be reassigned, use the immutable OCI index digest (`ghcr.io/f5-sales-demo/xcsh@sha256:<DIGEST>`) for production deployments.
 
-Run a non-interactive command through the image entrypoint:
+Run non-interactive commands through the container entrypoint:
 
 ```bash
 docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
 docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --help
 ```
 
-Override the entrypoint when you need a shell:
+Override the entrypoint to launch an interactive bash shell:
 
 ```bash
 docker run --rm -it \
@@ -51,56 +38,50 @@ docker run --rm -it \
   ghcr.io/f5-sales-demo/xcsh:latest
 ```
 
-## Build the development service
+## Building the development service
 
-From an xcsh repository checkout, build and start the hardened development
-service:
+From a local repository clone, build and launch the hardened development service:
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-The service idles without invoking xcsh, mounts the checkout read-only at
-`/workspace`, and lets you run commands explicitly:
+The service idles without running xcsh directly, mounts the repository checkout read-only at `/workspace`, and allows you to run commands on demand:
 
 ```bash
 docker compose -f docker-compose.dev.yml exec xcsh-dev xcsh --help
 docker compose -f docker-compose.dev.yml exec xcsh-dev bash
 ```
 
-The Compose service applies these controls:
+The Compose development service applies the following security controls:
 
-- User and group IDs default to `1000`.
-- All Linux capabilities are dropped.
-- `no-new-privileges` blocks privilege escalation.
-- The image filesystem and source checkout are read-only. The `/tmp`, xcsh,
-  and Salesforce state paths use writable, ephemeral temporary filesystems.
-  The xcsh state mount permits executable mappings because xcsh extracts its
-  embedded native module there.
-- The Docker socket and static service-account keys are not mounted.
-- Host CLI configuration directories are mounted read-only under `*-host` paths.
+- User and group identifiers default to `1000:1000`.
+- All Linux kernel capabilities are dropped (`cap_drop: [ALL]`).
+- The `no-new-privileges` flag blocks privilege escalation.
+- The root filesystem and repository mount are read-only. Ephemeral directories (`/tmp`, xcsh state, Salesforce state) use writable tmpfs mounts. The xcsh state tmpfs mount allows executable mappings so xcsh can unpack native binaries.
+- The host Docker socket and service account keys are never mounted.
+- Host CLI credential directories are mounted read-only under `*-host` paths.
 
-Read-only credentials can still be read by processes in the container. Mount
-them only into images and source trees you trust.
+> [!CAUTION]
+> Processes within the container can read mounted credentials. Mount credential directories only into trusted images and environments.
 
-## Configure the Docker Compose environment
+## Configuring the Docker Compose environment
 
-The Docker Compose development and live user acceptance testing (UAT) scripts
-use these variables:
+The Docker Compose configuration and UAT scripts recognize the following environment variables:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `UID` | `1000` | Runtime user ID used by Compose. |
-| `GID` | `1000` | Runtime group ID used by Compose. |
-| `GEMINI_MODEL` | `gemini-3.1-pro-preview` | Vertex AI model tested by live UAT. |
-| `VERTEX_AI_PROJECT` | Active gcloud project | Vertex AI project tested by live UAT. |
-| `VERTEX_AI_LOCATION` | `us-central1` | Vertex AI location tested by live UAT. |
-| `AZURE_CONFIG_DIR` | `/tmp/xcsh-azure` | Writable Azure CLI session directory inside Compose. |
-| `CLOUDSDK_CONFIG` | `/tmp/xcsh-gcloud` | Writable Google Cloud CLI session directory inside Compose. |
+| `UID` | `1000` | Runtime user ID inside the container. |
+| `GID` | `1000` | Runtime group ID inside the container. |
+| `GEMINI_MODEL` | `gemini-3.1-pro-preview` | Vertex AI model targeted by live acceptance tests. |
+| `VERTEX_AI_PROJECT` | Active gcloud project | Vertex AI project ID for live acceptance tests. |
+| `VERTEX_AI_LOCATION` | `us-central1` | Vertex AI region for live acceptance tests. |
+| `AZURE_CONFIG_DIR` | `/tmp/xcsh-azure` | Writable Azure CLI working directory inside Compose. |
+| `CLOUDSDK_CONFIG` | `/tmp/xcsh-gcloud` | Writable Google Cloud CLI working directory inside Compose. |
 
-Compose mounts host configuration into these read-only source paths:
+Compose mounts host credentials into these read-only container paths:
 
-| CLI | Host path | Container source path |
+| CLI | Host source path | Container destination path |
 | --- | --- | --- |
 | Google Cloud | `~/.config/gcloud` | `/home/xcsh/.config/gcloud-host` |
 | Azure | `~/.azure` | `/home/xcsh/.azure-host` |
@@ -108,47 +89,33 @@ Compose mounts host configuration into these read-only source paths:
 | GitHub | `~/.config/gh` | `/home/xcsh/.config/gh-host` |
 | Salesforce | `~/.sfdx` | `/home/xcsh/.sfdx-host` |
 
-The live tests copy only the required Google Cloud and Azure configuration into
-private temporary directories. They delete those copies on exit and never write
-session state into the host mounts.
+Live tests copy required credentials into temporary directories on startup, clear them on exit, and never write state back to host mounts.
 
-## Run verification
+## Running verification tests
 
-Run the deterministic end-to-end test without cloud credentials:
+Run the deterministic end-to-end test suite without cloud credentials:
 
 ```bash
 ./scripts/e2e-user-install-test.sh
 ```
 
-This path builds the image, verifies the non-root identity and hardening
-settings, checks every bundled CLI, and tears down the service. It does not call
-Azure or Vertex AI.
+This script builds the container image, verifies unprivileged execution and security hardening settings, checks bundled CLIs, and tears down the container service without contacting external cloud APIs.
 
-To test already-authorized lab credentials, opt in explicitly:
+To execute tests against authorized lab credentials, supply the `--live` flag:
 
 ```bash
 ./scripts/e2e-user-install-test.sh --live
 ```
 
-The live path verifies Azure CLI and Vertex AI access. It reports only pass or
-fail status; it does not print tokens, account identities, tenant or subscription
-names, project IDs, prompts, or model responses.
+The live test suite validates Azure CLI and Vertex AI connectivity. Output is restricted to pass or fail status and does not emit tokens, account identities, subscription names, project identifiers, prompts, or model responses.
 
-## Run native ARM64 Podman UAT
+## Running native ARM64 Podman UAT
 
-This optional release-acceptance workflow runs on an Apple Silicon Mac with
-Podman. It validates that the published OCI index resolves to a native ARM64
-runtime and that xcsh can make an authorized, deterministic request through an
-operator-supplied LiteLLM-compatible gateway. It is separate from the Docker
-Compose development service.
+This release acceptance workflow runs on Apple Silicon macOS hosts with Podman. It verifies that the published OCI index resolves to a native ARM64 runtime and that xcsh communicates successfully with an authorized LiteLLM proxy gateway.
 
-Run it from a checkout that contains `scripts/uat-podman-arm64.sh`. You need a
-macOS ARM64 host, Podman, `jq`, a running Podman machine, and credentials for
-an endpoint that you are authorized to test. Do not put endpoint details or API
-keys in shell history, source control, issue reports, or the generated report.
+Prerequisites include a macOS ARM64 host, Podman, `jq`, an active Podman virtual machine, and authorized endpoint credentials.
 
-Start the machine, then collect the connection values without echoing the API
-key:
+1. Start the Podman machine and prompt for endpoint credentials:
 
 ```bash
 podman machine start
@@ -158,9 +125,7 @@ printf '\n'
 export LITELLM_BASE_URL LITELLM_API_KEY
 ```
 
-Supply a model matrix appropriate for your own implementation. Each repeatable
-`--model` value uses `LABEL=PROVIDER/MODEL`; supplying one or more values
-replaces the harness defaults:
+1. Execute the acceptance harness with your target model configuration:
 
 ```bash
 report="${TMPDIR:-/tmp}/xcsh-podman-arm64-uat.json"
@@ -170,50 +135,32 @@ report="${TMPDIR:-/tmp}/xcsh-podman-arm64-uat.json"
   --model "Secondary=provider/model"
 ```
 
-The harness uses one warmup and three measured requests per model by default.
-Use `--runs`, `--warmups`, or `--timeout-seconds` to tune that workload. Use
-`--image REF` only for an image that satisfies the repository's current release
-contract; the harness is not a general compatibility test for arbitrary image
-versions.
+The test harness executes one warmup request and three benchmarked requests per model by default. Tune execution using `--runs`, `--warmups`, or `--timeout-seconds`.
 
-Some environments require an additional registry CA. Pass only an approved PEM
-certificate with `--ca-cert /path/to/ca.pem`; TLS verification remains enabled.
-The certificate is installed in the default Podman VM trust store and persists
-after the run. Remove it when it is no longer needed:
+If your environment requires custom root certificates, pass an approved PEM certificate using `--ca-cert /path/to/ca.pem`. The certificate installs into the Podman virtual machine trust store. Remove the certificate after testing:
 
 ```bash
 podman machine ssh --username root podman-machine-default \
   'rm -f /etc/pki/ca-trust/source/anchors/xcsh-uat.pem && update-ca-trust'
 ```
 
-A passing run verifies the ARM64 manifest, native `aarch64` runtime, release
-version contract, exact acceptance response, and resolved provider/model
-attribution. The JSON report records only metadata, configuration, and pass/fail
-results; it excludes API keys, raw prompts, and raw model responses.
-
-The pull-request workflow runs native Docker container checks for both Linux
-architectures and a credential-free contract test for this harness. It does not
-run the credentialed macOS Podman request in CI.
-
-Stop the Podman machine when it is no longer needed. This preserves the image
-cache and the report file while releasing the VM resources:
+1. Stop the Podman virtual machine when testing concludes:
 
 ```bash
 podman machine stop
 ```
 
-## Verify
+## Verifying published container images
 
-Inspect a published tag to confirm that both Linux architectures are available:
+Inspect the multi-architecture manifest of a published image:
 
 ```bash
-docker buildx imagetools inspect ghcr.io/f5-sales-demo/xcsh:vX.Y.Z
+docker buildx imagetools inspect ghcr.io/f5-sales-demo/xcsh:v<VERSION>
 ```
 
-The manifest must list `linux/amd64` and `linux/arm64`. Replace `X.Y.Z` with the
-published release version.
+Verify that both `linux/amd64` and `linux/arm64` appear in the manifest list.
 
-Inspect the running service directly when troubleshooting:
+To verify a running container service directly:
 
 ```bash
 docker compose -f docker-compose.dev.yml exec xcsh-dev id
@@ -222,23 +169,16 @@ docker compose -f docker-compose.dev.yml exec xcsh-dev gcloud --version
 docker compose -f docker-compose.dev.yml exec xcsh-dev az version
 ```
 
-The identity output must show user and group ID `1000`. The xcsh and cloud CLI
-commands must exit successfully.
+## Cleaning up resources
 
-## Clean up
-
-Remove the development service and network:
+Stop and remove the development container service and associated networks:
 
 ```bash
 docker compose -f docker-compose.dev.yml down --remove-orphans
 ```
 
-The test scripts perform the same teardown automatically on success, failure,
-or interruption.
+Test scripts run this cleanup command automatically upon completion or interruption.
 
-## Localized documentation
+## Localization policy
 
-Author container documentation in English under `docs/en/`. Localized files are
-managed automation output and are refreshed only for an eligible major release
-unless an exceptional translation run is explicitly requested. Expected locale
-drift during ordinary English development is not a blocking failure.
+Author container documentation in English within `docs/en/`. Localized files are generated and maintained by automated translation workflows during major release cycles. Expected translation hash drift during standard English documentation updates is non-blocking.

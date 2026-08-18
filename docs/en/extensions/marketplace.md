@@ -6,215 +6,212 @@ sidebar:
   label: Marketplace
 ---
 
-# Marketplace plugin system
-
-The marketplace system lets you discover, install, and manage plugins from Git-hosted catalogs. It is compatible with the Claude Code plugin registry format.
+The marketplace system enables discovery, installation, and lifecycle management of plugin packages from Git-hosted catalogs. It adheres to the Claude Code plugin registry format.
 
 ## Quick start
 
-```
+Install a marketplace catalog and a targeted plugin:
+
+```bash
 /marketplace add anthropics/f5-sales-demo-marketplace
 /marketplace install wordpress.com@f5-sales-demo-marketplace
 ```
 
-Or just type `/marketplace` with no arguments to open the interactive plugin browser.
+Run `/marketplace` without arguments to launch the interactive plugin browser.
 
-## Concepts
+## Core concepts
 
-A **marketplace** is a Git repository (or local directory) containing a catalog file at `.xcsh-plugin/marketplace.json`. The catalog lists available plugins with their sources, descriptions, and metadata.
+- **Marketplace**: A Git repository or local directory containing a catalog manifest at `.xcsh-plugin/marketplace.json`. The catalog lists available plugins with source locations, descriptions, and metadata.
+- **Plugin**: A directory containing skills, slash commands, event hooks, Model Context Protocol (MCP) servers, or Language Server Protocol (LSP) servers. Plugins use the identifier format `<PLUGIN_NAME>@<MARKETPLACE_NAME>` (for example, `code-review@f5-sales-demo-marketplace`).
+- **Installation scopes**:
+  - **User scope** (default): Available across all workspace projects. Stored in `~/.xcsh/plugins/installed_plugins.json`.
+  - **Project scope**: Available exclusively within the current project repository. Stored in `.xcsh/installed_plugins.json`.
 
-A **plugin** is a directory containing skills, commands, hooks, MCP servers, or LSP servers. Plugins are identified by `name@marketplace` (e.g. `code-review@f5-sales-demo-marketplace`).
+Project-scoped plugin installations shadow user-scoped installations of the same plugin identifier.
 
-**Scopes**: plugins can be installed at two scopes:
+## Command reference
 
-- **user** (default) -- available in all projects, stored in `~/.xcsh/plugins/installed_plugins.json`
-- **project** -- available only in the current project, stored in `.xcsh/installed_plugins.json`
+### Interactive commands
 
-Project-scoped installs shadow user-scoped installs of the same plugin.
+| Command | Description |
+| --- | --- |
+| `/marketplace` | Launches the interactive plugin browser and installation interface. |
 
-## Commands
+### Marketplace management commands
 
-### Interactive mode
+| Command | Description |
+| --- | --- |
+| `/marketplace add <SOURCE>` | Registers a new marketplace source. |
+| `/marketplace remove <NAME>` | Removes a registered marketplace catalog. |
+| `/marketplace update [<NAME>]` | Re-fetches catalog metadata. Updates all catalogs when omitted. |
+| `/marketplace list` | Lists all configured marketplaces. |
 
-| Command | Effect |
-|---|---|
-| `/marketplace` | Open interactive plugin browser (install) |
+### Plugin lifecycle commands
 
-### Marketplace management
+| Command | Description |
+| --- | --- |
+| `/marketplace discover [<MARKETPLACE>]` | Lists available plugins in configured marketplaces. |
+| `/marketplace install [--force] [--scope user\|project] <NAME>@<MARKETPLACE>` | Installs a designated plugin. |
+| `/marketplace uninstall [--scope user\|project] <NAME>@<MARKETPLACE>` | Removes an installed plugin. |
+| `/marketplace installed` | Lists currently installed plugins. |
+| `/marketplace upgrade [--scope user\|project] [<NAME>@<MARKETPLACE>]` | Upgrades installed plugins to the latest catalog release. |
 
-| Command | Effect |
-|---|---|
-| `/marketplace add <source>` | Add a marketplace source |
-| `/marketplace remove <name>` | Remove a marketplace |
-| `/marketplace update [name]` | Re-fetch catalog(s); omit name to update all |
-| `/marketplace list` | List configured marketplaces |
+### Command-line interface equivalents
 
-### Plugin operations
+The preceding operations are also available through direct CLI invocations:
 
-| Command | Effect |
-|---|---|
-| `/marketplace discover [marketplace]` | Browse available plugins |
-| `/marketplace install [--force] [--scope user\|project] name@marketplace` | Install a plugin |
-| `/marketplace uninstall [--scope user\|project] name@marketplace` | Uninstall a plugin |
-| `/marketplace installed` | List installed marketplace plugins |
-| `/marketplace upgrade [--scope user\|project] [name@marketplace]` | Upgrade one or all plugins |
-
-### CLI equivalents
-
-The same operations are available from the command line:
-
-```
-xcsh plugin marketplace add <source>
-xcsh plugin marketplace remove <name>
-xcsh plugin marketplace update [name]
+```bash
+xcsh plugin marketplace add <SOURCE>
+xcsh plugin marketplace remove <NAME>
+xcsh plugin marketplace update [<NAME>]
 xcsh plugin marketplace list
-xcsh plugin discover [marketplace]
-xcsh plugin install --scope project name@marketplace
+xcsh plugin discover [<MARKETPLACE>]
+xcsh plugin install --scope project <NAME>@<MARKETPLACE>
 ```
 
-## Marketplace sources
+## Supported marketplace sources
 
-When you run `/marketplace add <source>`, the system classifies the source:
+When registering a catalog using `/marketplace add <SOURCE>`, the runtime classifies the source format automatically:
 
-| Source format | Type | Example |
-|---|---|---|
-| `owner/repo` | GitHub shorthand | `anthropics/f5-sales-demo-marketplace` |
+| Source format | Classification | Example |
+| --- | --- | --- |
+| `owner/repo` | GitHub repository shorthand | `anthropics/f5-sales-demo-marketplace` |
 | `https://...*.json` | Direct catalog URL | `https://example.com/marketplace.json` |
-| `https://...*.git` or `git@...` | Git repository | `https://github.com/org/repo.git` |
-| `./path` or `~/path` or `/path` | Local directory | `./my-marketplace` |
+| `https://...*.git` or `git@...` | Git repository URI | `https://github.com/org/repo.git` |
+| `./path`, `~/path`, `/path` | Local filesystem directory | `./my-marketplace` |
 
-The system clones the repository (or reads the local directory), locates `.xcsh-plugin/marketplace.json`, validates it, and caches the catalog locally.
+The runtime clones or reads the source, validates `.xcsh-plugin/marketplace.json`, and caches catalog metadata locally.
 
-## Catalog format (marketplace.json)
+## Catalog manifest format (`marketplace.json`)
 
-A marketplace catalog lives at `.xcsh-plugin/marketplace.json` in the repository root:
+The marketplace catalog resides at `.xcsh-plugin/marketplace.json` at the root of the source repository:
 
 ```json
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "my-marketplace",
+  "name": "custom-marketplace",
   "owner": {
-    "name": "Your Name",
-    "email": "you@example.com"
+    "name": "Operator Name",
+    "email": "operator@example.com"
   },
-  "description": "A collection of plugins",
+  "description": "Curated demonstration and utility plugins",
   "plugins": [
     {
-      "name": "my-plugin",
-      "description": "What this plugin does",
-      "source": "./plugins/my-plugin",
+      "name": "custom-plugin",
+      "description": "Provides automation tools and skills.",
+      "source": "./plugins/custom-plugin",
       "category": "development",
-      "homepage": "https://github.com/you/my-plugin"
+      "homepage": "https://github.com/example/custom-plugin"
     }
   ]
 }
 ```
 
-### Required fields
+### Required manifest properties
 
-| Field | Description |
-|---|---|
-| `name` | Marketplace name. Lowercase alphanumeric, hyphens, and dots. Must start and end with alphanumeric. Max 64 chars. |
-| `owner.name` | Marketplace owner name |
-| `plugins` | Array of plugin entries |
+| Property | Description |
+| --- | --- |
+| `name` | Canonical marketplace identifier (lowercase alphanumeric characters, hyphens, and dots; maximum 64 characters). |
+| `owner.name` | Name of the marketplace maintainer or organization. |
+| `plugins` | Array of plugin definition entries. |
 
-### Plugin entry fields
+### Plugin definition properties
 
-| Field | Required | Description |
-|---|---|---|
-| `name` | yes | Plugin name (same rules as marketplace name) |
-| `source` | yes | Where to find the plugin (see below) |
-| `description` | no | Short description |
-| `version` | no | Version string |
-| `author` | no | `{ name, email? }` |
-| `homepage` | no | URL |
-| `category` | no | Category string (e.g. `development`, `productivity`, `security`) |
-| `tags` | no | Array of string tags |
-| `strict` | no | Boolean |
-| `commands` | no | Slash commands provided |
-| `agents` | no | Agents provided |
-| `hooks` | no | Hook definitions |
-| `mcpServers` | no | MCP server definitions |
-| `lspServers` | no | LSP server definitions |
+| Property | Required | Description |
+| --- | --- | --- |
+| `name` | Yes | Plugin identifier adhering to naming constraints. |
+| `source` | Yes | Source resolution descriptor (relative path, Git URL, GitHub shorthand, npm). |
+| `description` | No | Human-readable functional description. |
+| `version` | No | Semantic version string. |
+| `author` | No | Author metadata (`{ "name": "...", "email": "..." }`). |
+| `homepage` | No | Documentation or source repository URL. |
+| `category` | No | Functional category (for example, `development`, `productivity`, `security`). |
+| `tags` | No | Array of search categorization tags. |
+| `strict` | No | Boolean enforcement flag. |
+| `commands` | No | Slash commands registered by the plugin. |
+| `agents` | No | Subagents provided by the plugin. |
+| `hooks` | No | Event hook definitions. |
+| `mcpServers` | No | Model Context Protocol server configurations. |
+| `lspServers` | No | Language Server Protocol configurations. |
 
-### Plugin source formats
+### Plugin source specifications
 
-The `source` field supports several formats:
+The `source` descriptor supports the following formats:
 
-**Relative path** (within the marketplace repo):
+#### Relative directory path within marketplace repository
 
 ```json
-"source": "./plugins/my-plugin"
+"source": "./plugins/custom-plugin"
 ```
 
-**Git repository URL**:
+#### Remote Git repository
 
 ```json
 "source": {
   "source": "url",
   "url": "https://github.com/org/repo.git",
-  "sha": "abc123..."
+  "sha": "a1b2c3d4..."
 }
 ```
 
-**GitHub shorthand**:
+#### GitHub repository shorthand
 
 ```json
 "source": {
   "source": "github",
   "repo": "org/repo",
   "ref": "main",
-  "sha": "abc123..."
+  "sha": "a1b2c3d4..."
 }
 ```
 
-**Git subdirectory** (monorepo):
+#### Monorepo subdirectory
 
 ```json
 "source": {
   "source": "git-subdir",
   "url": "https://github.com/org/monorepo.git",
-  "path": "plugins/my-plugin",
+  "path": "plugins/custom-plugin",
   "ref": "main",
-  "sha": "abc123..."
+  "sha": "a1b2c3d4..."
 }
 ```
 
-**npm package**:
+#### npm package
 
 ```json
 "source": {
   "source": "npm",
-  "package": "@scope/my-plugin",
+  "package": "@scope/custom-plugin",
   "version": "1.0.0"
 }
 ```
 
-## On-disk layout
+## Filesystem layout
 
-```
+```text
 ~/.xcsh/
   config/
-    marketplaces.json          # Registry of added marketplaces
+    marketplaces.json          # Registry of configured marketplaces
   plugins/
-    installed_plugins.json     # User-scoped installed plugins
+    installed_plugins.json     # User-scoped plugin installations
     cache/
-      marketplaces/            # Cached marketplace catalogs
-      plugins/                 # Cached plugin directories
+      marketplaces/            # Cached marketplace catalog manifests
+      plugins/                 # Cached plugin file trees
 
 <project>/.xcsh/
-  installed_plugins.json       # Project-scoped installed plugins
+  installed_plugins.json       # Project-scoped plugin installations
 ```
 
-## Naming rules
+## Identifier naming constraints
 
-Marketplace and plugin names must:
+Marketplace and plugin identifiers must comply with the following validation rules:
 
-- Start and end with a lowercase letter or digit
-- Contain only lowercase letters, digits, hyphens, and dots
-- Be at most 64 characters
+- Must begin and end with a lowercase ASCII letter or digit.
+- May contain only lowercase ASCII letters, digits, hyphens (`-`), and dots (`.`).
+- Must not exceed 64 characters in length.
 
-Plugin IDs (`name@marketplace`) must be at most 128 characters total.
+Combined plugin identifiers (`<NAME>@<MARKETPLACE>`) must not exceed 128 characters in total length.
 
-Valid examples: `my-plugin`, `code-review`, `wordpress.com`, `ai-firstify`
-Invalid examples: `-bad`, `bad-`, `.bad`, `Bad`, `under_score`
+- **Valid examples**: `custom-plugin`, `code-review`, `wordpress.com`, `f5-sales-demo`
+- **Invalid examples**: `-invalid`, `invalid-`, `.invalid`, `InvalidCase`, `under_score`

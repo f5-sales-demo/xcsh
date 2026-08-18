@@ -6,98 +6,67 @@ sidebar:
   label: Autonomous memory
 ---
 
-# Autonomous Memory
+When enabled, the autonomous memory subsystem extracts durable technical knowledge from past sessions and injects a compact summary into each new session context. This maintains project-specific architectural decisions, recurring workflows, and resolution patterns without manual prompt construction.
 
-When enabled, the agent automatically extracts durable knowledge from past sessions and injects a compact summary into each new session. Over time it builds a project-scoped memory store — technical decisions, recurring workflows, pitfalls — that carries forward without manual effort.
-
-Disabled by default. Enable via `/settings` or `config.yml`:
+Enable memory persistence in `config.yml` or via `/settings`:
 
 ```yaml
 memories:
   enabled: true
 ```
 
-## Usage
+## Memory context and URL schemes
 
-### What gets injected
+### Startup context injection
 
-At session start, if a memory summary exists for the current project, it is injected into the system prompt as a **Memory Guidance** block. The agent is instructed to:
+At session initialization, xcsh loads the consolidated memory summary for the active project and injects a **Memory Guidance** block into the LLM system prompt. The agent adheres to the following behavioral rules:
 
-- Treat memory as heuristic context — useful for process and prior decisions, not authoritative on current repo state.
-- Cite the memory artifact path when memory changes the plan, and pair it with current-repo evidence before acting.
-- Prefer repo state and user instruction when they conflict with memory; treat conflicting memory as stale.
+- Treats memory as heuristic context — authoritative for historical rationale, secondary to live repository state.
+- Cites the memory artifact path whenever memory informs a plan modification.
+- Treats conflicting memory assertions as stale when contradicted by current source code.
 
-### Reading memory artifacts
+### Reading memory artifacts (`memory://`)
 
-The agent can read memory files directly using `memory://` URLs with the `read` tool:
+Inspect memory artifacts directly using the `read` tool:
 
-| URL | Content |
-|---|---|
-| `memory://root` | Compact summary injected at startup |
-| `memory://root/MEMORY.md` | Full long-term memory document |
-| `memory://root/skills/<name>/SKILL.md` | A generated skill playbook |
+| URL scheme | Description |
+| --- | --- |
+| `memory://root` | Compact summary injected at session startup |
+| `memory://root/MEMORY.md` | Full curated long-term project memory document |
+| `memory://root/skills/<name>/SKILL.md` | Synthesized procedural skill playbook |
 
 ### `/memory` slash command
 
-| Subcommand | Effect |
-|---|---|
-| `view` | Show the current memory injection payload |
-| `clear` / `reset` | Delete all memory data and generated artifacts |
-| `enqueue` / `rebuild` | Force consolidation to run at next startup |
+Manage memory state during interactive sessions:
 
-## How it works
+| Subcommand | Description |
+| --- | --- |
+| `/memory view` | Displays the current memory injection payload. |
+| `/memory clear` | Deletes stored memory records and generated artifacts. |
+| `/memory rebuild` | Triggers immediate consolidation across past sessions. |
 
-Memories are built by a background pipeline that at startup or manually triggered via slash command.
+## Pipeline architecture
 
-**Phase 1 — per-session extraction:** For each past session that has changed since it was last processed, a model reads the session history and extracts durable signal: technical decisions, constraints, resolved failures, recurring workflows. Sessions that are too recent, too old, or currently active are skipped. Each extraction produces a raw memory block and a short synopsis for that session.
+```text
+Session histories ──► Phase 1: Extraction ──► Phase 2: Consolidation ──► MEMORY.md & skills/
+```
 
-**Phase 2 — consolidation:** After extraction, a second model pass reads all per-session extractions and produces three outputs written to disk:
+- **Phase 1 (Extraction)**: Analyzes completed sessions within the age window (`minRolloutIdleHours` to `maxRolloutAgeDays`) using the `default` model role to extract discrete facts, architectural constraints, and resolved errors.
+- **Phase 2 (Consolidation)**: Synthesizes per-session extractions using the `smol` model role to produce `MEMORY.md`, `memory_summary.md`, and reusable playbook directories (`skills/`).
 
-- `MEMORY.md` — a curated long-term memory document
-- `memory_summary.md` — the compact text injected at session start
-- `skills/` — reusable procedural playbooks, each in its own subdirectory
-
-Phase 2 uses a lease to prevent double-running when multiple processes start simultaneously. Stale skill directories from prior runs are pruned automatically.
-
-All output is scanned for secrets before being written to disk.
-
-### Extraction behavior
-
-Memory extraction and consolidation behavior is driven entirely by static prompt files in `src/prompts/memories/`.
-
-| File | Purpose | Variables |
-|---|---|---|
-| `stage_one_system.md` | System prompt for per-session extraction | — |
-| `stage_one_input.md` | User-turn template wrapping session content | `{{thread_id}}`, `{{response_items_json}}` |
-| `consolidation.md` | Prompt for cross-session consolidation | `{{raw_memories}}`, `{{rollout_summaries}}` |
-| `read_path.md` | Memory guidance injected into live sessions | `{{memory_summary}}` |
-
-### Model selection
-
-Memory piggybacks on the model role system.
-
-| Phase | Role | Purpose |
-|---|---|---|
-| Phase 1 (extraction) | `default` | Per-session knowledge extraction |
-| Phase 2 (consolidation) | `smol` | Cross-session synthesis |
-
-If `smol` is not configured, Phase 2 falls back to the `default` role.
-
-## Configuration
+## Configuration options
 
 | Setting | Default | Description |
-|---|---|---|
-| `memories.enabled` | `false` | Master switch |
-| `memories.maxRolloutAgeDays` | `30` | Sessions older than this are not processed |
-| `memories.minRolloutIdleHours` | `12` | Sessions active more recently than this are skipped |
-| `memories.maxRolloutsPerStartup` | `64` | Cap on sessions processed in a single startup |
-| `memories.summaryInjectionTokenLimit` | `5000` | Max tokens of the summary injected into the system prompt |
+| --- | --- | --- |
+| `memories.enabled` | `false` | Enables autonomous memory extraction and injection. |
+| `memories.maxRolloutAgeDays` | `30` | Maximum age in days for historical sessions evaluated during extraction. |
+| `memories.minRolloutIdleHours` | `12` | Minimum idle time in hours before an inactive session is processed. |
+| `memories.maxRolloutsPerStartup` | `64` | Maximum session batch size processed during a single startup cycle. |
+| `memories.summaryInjectionTokenLimit` | `5000` | Maximum token ceiling for startup system prompt memory injection. |
 
-Additional tuning knobs (concurrency, lease durations, token budgets) are available in config for advanced use.
+## Related implementation files
 
-## Key files
-
-- `src/memories/index.ts` — pipeline orchestration, injection, slash command handling
-- `src/memories/storage.ts` — SQLite-backed job queue and thread registry
-- `src/prompts/memories/` — memory prompt templates
-- `src/internal-urls/memory-protocol.ts` — `memory://` URL handler
+- `src/memories/index.ts`: Pipeline orchestrator, system prompt injection, and command handler.
+- `src/memories/storage.ts`: SQLite storage backend for thread tracking and consolidation jobs.
+- `src/internal-urls/memory-protocol.ts`: `memory://` protocol resolver for the `read` tool.
+- `src/prompts/memories/`: Prompt templates for extraction, consolidation, and guidance.
