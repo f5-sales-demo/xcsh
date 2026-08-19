@@ -182,6 +182,24 @@ describe("provider publication evidence gate", () => {
 		}
 	}, 60_000);
 
+	it("rejects unqualified provider publication digests", async () => {
+		const fixture = await providerEvidenceFixture();
+		try {
+			const detailed = await Bun.file(fixture.env.FIXTURE_DETAILED).json();
+			const deliveryId = Object.keys(detailed.receipts)[0];
+			const assets = detailed.receipts[deliveryId].publication.assets as Record<string, string>;
+			for (const [name, digest] of Object.entries(assets)) {
+				assets[name] = digest.replace(/^sha256:/, "");
+			}
+			await Bun.write(fixture.env.FIXTURE_DETAILED, `${JSON.stringify(detailed)}\n`);
+			const result = await runProviderEvidenceStep(fixture);
+			expect(result.exitCode).not.toBe(0);
+			expect(result.output).toContain("Provider publication ledger contains malformed evidence");
+		} finally {
+			await fs.rm(fixture.root, { force: true, recursive: true });
+		}
+	}, 60_000);
+
 	it("rejects noncanonical and mismatched provider ledgers", async () => {
 		const noncanonical = await providerEvidenceFixture();
 		try {
@@ -279,7 +297,10 @@ async function providerEvidenceFixture(falseDigest = false): Promise<ProviderEvi
 	})}\n`;
 	const pinSha = new Bun.CryptoHasher("sha256").update(pin).digest("hex");
 	const assets = Object.fromEntries(
-		providerAssetNames(providerVersion).map((name, index) => [name, (index + 1).toString(16).padStart(64, "0")]),
+		providerAssetNames(providerVersion).map((name, index) => [
+			name,
+			`sha256:${(index + 1).toString(16).padStart(64, "0")}`,
+		]),
 	);
 	const evidence = {
 		assets,
@@ -305,7 +326,7 @@ async function providerEvidenceFixture(falseDigest = false): Promise<ProviderEvi
 	};
 	const release = {
 		assets: providerAssetNames(providerVersion).map(name => ({
-			digest: `sha256:${falseDigest && name.startsWith("mcp-data-") ? "0".repeat(64) : assets[name]}`,
+			digest: falseDigest && name.startsWith("mcp-data-") ? `sha256:${"0".repeat(64)}` : assets[name],
 			name,
 		})),
 		body: `notes\n<!-- provider-publication-receipt:${JSON.stringify(evidence)} -->\n`,
