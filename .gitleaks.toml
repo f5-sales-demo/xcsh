@@ -2,3 +2,10 @@ title = "Fleet default Gitleaks rules"
 
 [extend]
 useDefault = true
+
+[[allowlists]]
+description = "Generated API-spec asset SHA-256 digests"
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)tools/spec-release\.json$''']
+regexes = ['''^[0-9a-f]{64}$''']
