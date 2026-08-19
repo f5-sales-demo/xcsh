@@ -265,7 +265,7 @@ jobs:
                   (.assets | keys | sort) == [
                     "api-catalog.json", ("f5xc-api-specs-" + $tag + ".zip"),
                     "index.json", "minimal-export-defaults.json", "openapi.json"
-                  ] and ([.assets[] | test("^[0-9a-f]{64}$")] | all)
+                  ] and ([.assets[] | test("^sha256:[0-9a-f]{64}$")] | all)
                 ' "$RUNNER_TEMP/provider-spec-release.json" >/dev/null || {
                   echo "::error::Provider release carries a malformed or mismatched spec pin"
                   exit 1
