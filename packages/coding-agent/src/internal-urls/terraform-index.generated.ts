@@ -1,4 +1,5 @@
 // AUTO-GENERATED — do not edit. Run `bun generate-terraform-index` to regenerate.
+// Source: f5-sales-demo/terraform-provider-xcsh v3.91.0 81a14ce36d74f132d0d9bbd1c8392487d4bc2b39
 
 import type { TerraformIndex } from "./terraform-types";
 
@@ -116,7 +117,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Sites",
 			slug: "sites",
 			description: "AWS/Azure/GCP VPC sites, SecureMesh, VoltStack, and site mesh groups",
-			resource_count: 12,
+			resource_count: 11,
 			resources: [
 				"aws_tgw_site",
 				"aws_vpc_site",
@@ -126,7 +127,6 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"registration",
 				"securemesh_site",
 				"securemesh_site_v2",
-				"site",
 				"site_mesh_group",
 				"virtual_site",
 				"voltstack_site",
@@ -152,12 +152,11 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Uncategorized",
 			slug: "uncategorized",
 			description: "Resources pending categorization",
-			resource_count: 8,
+			resource_count: 7,
 			resources: [
 				"application_profiles",
 				"authorization_server",
 				"bot_infrastructure",
-				"domain",
 				"mitigated_domain",
 				"protected_application",
 				"protected_domain",
@@ -168,10 +167,9 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "DNS",
 			slug: "dns",
 			description: "DNS domains, zones, compliance checks, and DNS proxy configuration",
-			resource_count: 7,
+			resource_count: 6,
 			resources: [
 				"dns_compliance_checks",
-				"dns_domain",
 				"dns_lb_health_check",
 				"dns_lb_pool",
 				"dns_load_balancer",
@@ -264,406 +262,861 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			resources: ["cminstance"],
 		},
 	],
-	resources: {
-		address_allocator: {
-			category: "cloud-resources",
-			description: "Address Allocator will create an address allocator object in 'system' namespace of the user",
-			required: ["name", "namespace", "mode"],
-			minimal_config:
-				'resource "xcsh_address_allocator" "example" {\n  name      = "example-address-allocator"\n  namespace = "staging"\n\n  address_pool = ["example-value"]\n  mode         = "LOCAL"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_address_allocator.example namespace/name",
-		},
-		advertise_policy: {
-			category: "load-balancing",
-			description:
-				"Advertise_policy object controls how and where a service represented by a given virtual_host object is advertised to consumers. configuration",
-			required: ["name", "namespace", "address", "protocol", "skip_xff_append"],
-			minimal_config:
-				'resource "xcsh_advertise_policy" "example" {\n  name      = "example-advertise-policy"\n  namespace = "staging"\n\n  address         = "example-value"\n  protocol        = "TCP"\n  skip_xff_append = true\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_advertise_policy.example namespace/name",
-		},
-		alert_gen_policy: {
-			category: "security",
-			description: "Alert Generation Policy",
-			required: ["name", "namespace", "alert_status"],
-			minimal_config:
-				'resource "xcsh_alert_gen_policy" "example" {\n  name      = "example-alert-gen-policy"\n  namespace = "staging"\n\n  alert_status = "ALERT_ACTIVE"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_alert_gen_policy.example namespace/name",
-		},
-		alert_policy: {
-			category: "security",
-			description: "New Alert Policy Object",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_alert_policy" "example" {\n  name      = "example-alert-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_alert_policy.example namespace/name",
-		},
-		alert_receiver: {
-			category: "monitoring",
-			description: "New Alert Receiver object",
-			required: ["name", "namespace", "receiver_choice"],
-			minimal_config:
-				'resource "xcsh_alert_receiver" "example" {\n  name      = "example-alert-receiver"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_alert_receiver.example namespace/name",
-		},
-		alert_template: {
-			category: "monitoring",
-			description: "Domain to protect",
-			required: ["name", "namespace", "alert_message", "alert_message_details", "alert_name", "severity"],
-			minimal_config:
-				'resource "xcsh_alert_template" "example" {\n  name      = "example-alert-template"\n  namespace = "staging"\n\n  alert_message         = "example-value"\n  alert_message_details = "example-value"\n  alert_name            = "example-value"\n  severity              = "MINOR"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_alert_template.example namespace/name",
-		},
-		allowed_domain: {
-			category: "organization",
-			description: "Allowed domain",
-			required: ["name", "namespace", "allowed_domain"],
-			minimal_config:
-				'resource "xcsh_allowed_domain" "example" {\n  name      = "example-allowed-domain"\n  namespace = "staging"\n\n  allowed_domain = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_allowed_domain.example namespace/name",
-		},
-		api_crawler: {
-			category: "api-security",
-			description: "API Crawler resource",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_api_crawler" "example" {\n  name      = "example-api-crawler"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_api_crawler.example namespace/name",
-		},
-		api_definition: {
-			category: "api-security",
-			description: "API Definition",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_api_definition" "example" {\n  name      = "example-api-definition"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: ["namespace"],
-			},
-			import_syntax: "terraform import xcsh_api_definition.example namespace/name",
-		},
-		api_discovery: {
-			category: "api-security",
-			description: "API discovery creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace", "user_defined_api_discovery_policy"],
-			minimal_config:
-				'resource "xcsh_api_discovery" "example" {\n  name      = "example-api-discovery"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_api_discovery.example namespace/name",
-		},
-		api_testing: {
-			category: "api-security",
-			description: "API Testing resource",
-			required: ["name", "namespace", "custom_header_value"],
-			minimal_config:
-				'resource "xcsh_api_testing" "example" {\n  name      = "example-api-testing"\n  namespace = "staging"\n\n  custom_header_value = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_api_testing.example namespace/name",
-		},
-		app_api_group: {
-			category: "api-security",
-			description: "App_api_group creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_app_api_group" "example" {\n  name      = "example-app-api-group"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_app_api_group.example namespace/name",
-		},
-		app_firewall: {
+	resources: [
+		{
+			name: "app_firewall",
 			category: "security",
 			description: "Application Firewall",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_app_firewall" "example" {\n  name      = "example-app-firewall"\n  namespace = "staging"\n}',
+			server_defaults: [
+				"allow_all_response_codes",
+				"default_anonymization",
+				"default_bot_setting",
+				"default_detection_settings",
+				"disable_ai_enhancements",
+				"monitoring",
+				"use_default_blocking_page",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/app_firewall.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: ["namespace"],
 			},
 			import_syntax: "terraform import xcsh_app_firewall.example namespace/name",
 		},
-		app_setting: {
-			category: "applications",
-			description: "App setting configuration in namespace metadata.namespace",
+		{
+			name: "alert_gen_policy",
+			category: "security",
+			description: "Alert Generation Policy",
+			required: ["name", "namespace", "alert_status"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/alert_gen_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_alert_gen_policy.example namespace/name",
+		},
+		{
+			name: "alert_policy",
+			category: "security",
+			description: "New Alert Policy Object",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_app_setting" "example" {\n  name      = "example-app-setting"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/alert_policy.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_app_setting.example namespace/name",
+			import_syntax: "terraform import xcsh_alert_policy.example namespace/name",
 		},
-		app_type: {
-			category: "applications",
-			description: "App type will create the configuration in namespace metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_app_type" "example" {\n  name      = "example-app-type"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_app_type.example namespace/name",
-		},
-		application_profiles: {
-			category: "uncategorized",
-			description: "Application Profiles in a given namespace. If one already exists it will give an error",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_application_profiles" "example" {\n  name      = "example-application-profiles"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_application_profiles.example namespace/name",
-		},
-		authentication: {
-			category: "authentication",
-			description: "Authentication resource",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_authentication" "example" {\n  name      = "example-authentication"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_authentication.example namespace/name",
-		},
-		authorization_server: {
-			category: "uncategorized",
-			description: "Authorization_server creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace", "jwks_uri"],
-			minimal_config:
-				'resource "xcsh_authorization_server" "example" {\n  name      = "example-authorization-server"\n  namespace = "staging"\n\n  jwks_uri = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_authorization_server.example namespace/name",
-		},
-		aws_tgw_site: {
-			category: "sites",
-			description: "Deploying F5 sites connected via AWS Transit Gateway",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_aws_tgw_site" "example" {\n  name      = "example-aws-tgw-site"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_aws_tgw_site.example namespace/name",
-		},
-		aws_vpc_site: {
-			category: "sites",
-			description: "Deploying F5 sites within AWS VPC environments",
-			required: ["name", "namespace", "address", "aws_region", "disk_size", "instance_type", "ssh_key"],
-			minimal_config:
-				'resource "xcsh_aws_vpc_site" "example" {\n  name      = "example-aws-vpc-site"\n  namespace = "staging"\n\n  aws_region    = "example-value"\n  instance_type = "example-value"\n  ssh_key       = "example-value"\n  address       = "example-value"\n  disk_size     = 1\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_aws_vpc_site.example namespace/name",
-		},
-		azure_vnet_site: {
-			category: "sites",
-			description: "Deploying F5 sites within Azure Virtual Network environments",
-			required: ["name", "namespace", "machine_type", "resource_group", "ssh_key"],
-			minimal_config:
-				'resource "xcsh_azure_vnet_site" "example" {\n  name      = "example-Azure-vnet-site"\n  namespace = "staging"\n\n  machine_type   = "example-value"\n  resource_group = "example-value"\n  ssh_key        = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_azure_vnet_site.example namespace/name",
-		},
-		bgp: {
-			category: "networking",
-			description:
-				"Bgp object is the configuration for peering with external bgp servers. it is created by users in system namespace. configuration",
-			required: ["name", "namespace"],
-			minimal_config: 'resource "xcsh_bgp" "example" {\n  name      = "example-bgp"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_bgp.example namespace/name",
-		},
-		bgp_asn_set: {
-			category: "networking",
-			description: "Bgp_asn_set creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_bgp_asn_set" "example" {\n  name      = "example-bgp-asn-set"\n  namespace = "staging"\n\n  as_numbers = [1]\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_bgp_asn_set.example namespace/name",
-		},
-		bgp_routing_policy: {
+		{
+			name: "bgp_routing_policy",
 			category: "security",
 			description:
 				"Bgp routing policy is a list of rules containing match criteria and action to be applied. these rules help control routes which are imported or exported to bgp peers. configuration",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_bgp_routing_policy" "example" {\n  name      = "example-bgp-routing-policy"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/bgp_routing_policy.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_bgp_routing_policy.example namespace/name",
 		},
-		bigip_http_proxy: {
-			category: "big-ip-integration",
-			description: "BIG-IP HTTP Proxy in a given namespace. If one already exists, it will give an error",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_bigip_http_proxy" "example" {\n  name      = "example-bigip-http-proxy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_bigip_http_proxy.example namespace/name",
-		},
-		bot_defense_app_infrastructure: {
+		{
+			name: "bot_defense_app_infrastructure",
 			category: "security",
 			description: "Bot Defense App Infrastructure in a given namespace",
 			required: ["name", "namespace", "environment_type", "traffic_type"],
-			minimal_config:
-				'resource "xcsh_bot_defense_app_infrastructure" "example" {\n  name      = "example-bot-defense-app-infrastructure"\n  namespace = "staging"\n\n  environment_type = "PRODUCTION"\n  traffic_type     = "WEB"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/bot_defense_app_infrastructure.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_bot_defense_app_infrastructure.example namespace/name",
 		},
-		bot_infrastructure: {
-			category: "uncategorized",
-			description: "Bot Infrastructure",
-			required: ["name", "namespace", "traffic_type"],
-			minimal_config:
-				'resource "xcsh_bot_infrastructure" "example" {\n  name      = "example-bot-infrastructure"\n  namespace = "staging"\n\n  traffic_type = "WEB"\n}',
+		{
+			name: "data_type",
+			category: "security",
+			description: "Data_type creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace", "is_pii", "is_sensitive_data"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/data_type.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_bot_infrastructure.example namespace/name",
+			import_syntax: "terraform import xcsh_data_type.example namespace/name",
 		},
-		cdn_cache_rule: {
-			category: "load-balancing",
-			description: "CDN loadbalancer specification. configuration",
+		{
+			name: "enhanced_firewall_policy",
+			category: "security",
+			description: "Enhanced firewall policy specification. configuration",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_cdn_cache_rule" "example" {\n  name      = "example-CDN-cache-rule"\n  namespace = "staging"\n}',
+			server_defaults: ["allow_all"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/enhanced_firewall_policy.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_cdn_cache_rule.example namespace/name",
+			import_syntax: "terraform import xcsh_enhanced_firewall_policy.example namespace/name",
 		},
-		cdn_loadbalancer: {
-			category: "load-balancing",
-			description: "Content delivery and edge caching with load balancing",
+		{
+			name: "fast_acl",
+			category: "security",
+			description:
+				"Object, object contains rules to protect site from denial of service It has destination{destination IP, destination port) and references to",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/fast_acl.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_fast_acl.example namespace/name",
+		},
+		{
+			name: "fast_acl_rule",
+			category: "security",
+			description: "New Fast ACL rule, has specification to match source IP, source port and action to apply",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/fast_acl_rule.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_fast_acl_rule.example namespace/name",
+		},
+		{
+			name: "forward_proxy_policy",
+			category: "security",
+			description: "Forward proxy policy specification. configuration",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_cdn_loadbalancer" "example" {\n  name      = "example-CDN-loadbalancer"\n  namespace = "staging"\n\n  domains = ["example-value"]\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/forward_proxy_policy.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_cdn_loadbalancer.example namespace/name",
+			import_syntax: "terraform import xcsh_forward_proxy_policy.example namespace/name",
 		},
-		cdn_purge_command: {
-			category: "load-balancing",
-			description: "CDN purge command specification. configuration",
+		{
+			name: "k8s_pod_security_policy",
+			category: "security",
+			description:
+				"K8s_pod_security_policy will create the object in the storage backend for namespace metadata.namespace",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_cdn_purge_command" "example" {\n  name      = "example-CDN-purge-command"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/k8s_pod_security_policy.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_cdn_purge_command.example namespace/name",
+			import_syntax: "terraform import xcsh_k8s_pod_security_policy.example namespace/name",
 		},
-		certificate: {
-			category: "certificates",
-			description: "Certificate. configuration",
-			required: ["name", "namespace", "certificate_url", "private_key"],
-			minimal_config:
-				'resource "xcsh_certificate" "example" {\n  name      = "example-certificate"\n  namespace = "staging"\n\n  certificate_url = "example-value"\n}',
+		{
+			name: "malicious_user_mitigation",
+			category: "security",
+			description: "Malicious_user_mitigation creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			server_defaults: ["mitigation_type"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/malicious_user_mitigation.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_malicious_user_mitigation.example namespace/name",
+		},
+		{
+			name: "nat_policy",
+			category: "security",
+			description: "Nat policy create specification configures nat policy with multiple rules,. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/nat_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_nat_policy.example namespace/name",
+		},
+		{
+			name: "network_firewall",
+			category: "security",
+			description: "Network firewall is created by users in system namespace. configuration",
+			required: ["name", "namespace"],
+			server_defaults: ["disable_fast_acl", "disable_forward_proxy_policy", "disable_network_policy"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/network_firewall.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_network_firewall.example namespace/name",
+		},
+		{
+			name: "network_policy",
+			category: "security",
+			description: "New network policy with configured parameters in specified namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/network_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_network_policy.example namespace/name",
+		},
+		{
+			name: "network_policy_rule",
+			category: "security",
+			description: "Network policy rule with configured parameters in specified namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/network_policy_rule.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_network_policy_rule.example namespace/name",
+		},
+		{
+			name: "network_policy_view",
+			category: "security",
+			description: "Network policy view specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/network_policy_view.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_network_policy_view.example namespace/name",
+		},
+		{
+			name: "protocol_inspection",
+			category: "security",
+			description:
+				"Protocol Inspection Specification in a given namespace. If one already exists it will give an error",
+			required: ["name", "namespace", "enable_disable_compliance_checks", "enable_disable_signatures"],
+			server_defaults: ["action"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/protocol_inspection.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_protocol_inspection.example namespace/name",
+		},
+		{
+			name: "protocol_policer",
+			category: "security",
+			description:
+				"Protocol_policer object, protocol_policer object contains list of L4 protocol match condition and corresponding traffic rate limits",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/protocol_policer.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_protocol_policer.example namespace/name",
+		},
+		{
+			name: "rate_limiter",
+			category: "security",
+			description: "Rate_limiter creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			server_defaults: ["user_identification"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/rate_limiter.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: ["namespace"],
 			},
-			import_syntax: "terraform import xcsh_certificate.example namespace/name",
+			import_syntax: "terraform import xcsh_rate_limiter.example namespace/name",
 		},
-		certificate_chain: {
-			category: "certificates",
-			description: "Certificate chain configuration for TLS",
-			required: ["name", "namespace", "certificate_url"],
-			minimal_config:
-				'resource "xcsh_certificate_chain" "example" {\n  name      = "example-certificate-chain"\n  namespace = "staging"\n\n  certificate_url = "example-value"\n}',
+		{
+			name: "rate_limiter_policy",
+			category: "security",
+			description: "Rate limiter policy create specification. configuration",
+			required: ["name", "namespace", "burst_size", "committed_information_rate"],
+			server_defaults: ["rules"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/rate_limiter_policy.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_certificate_chain.example namespace/name",
+			import_syntax: "terraform import xcsh_rate_limiter_policy.example namespace/name",
 		},
-		cloud_connect: {
+		{
+			name: "sensitive_data_policy",
+			category: "security",
+			description: "Sensitive_data_policy creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			server_defaults: ["compliances", "custom_data_types", "disabled_predefined_data_types"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/sensitive_data_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_sensitive_data_policy.example namespace/name",
+		},
+		{
+			name: "service_policy",
+			category: "security",
+			description: "Service_policy creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			server_defaults: ["port_matcher"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/service_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace"],
+			},
+			import_syntax: "terraform import xcsh_service_policy.example namespace/name",
+		},
+		{
+			name: "service_policy_rule",
+			category: "security",
+			description: "Service_policy_rule creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/service_policy_rule.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_service_policy_rule.example namespace/name",
+		},
+		{
+			name: "usb_policy",
+			category: "security",
+			description: "New USB policy object",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/usb_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_usb_policy.example namespace/name",
+		},
+		{
+			name: "user_identification",
+			category: "security",
+			description: "User_identification creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace", "rules"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/user_identification.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_user_identification.example namespace/name",
+		},
+		{
+			name: "waf_exclusion_policy",
+			category: "security",
+			description: "WAF exclusion policy",
+			required: ["name", "namespace", "waf_exclusion_rules"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/waf_exclusion_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_waf_exclusion_policy.example namespace/name",
+		},
+		{
+			name: "bgp",
+			category: "networking",
+			description:
+				"Bgp object is the configuration for peering with external bgp servers. it is created by users in system namespace. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/bgp.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_bgp.example namespace/name",
+		},
+		{
+			name: "bgp_asn_set",
+			category: "networking",
+			description: "Bgp_asn_set creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/bgp_asn_set.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_bgp_asn_set.example namespace/name",
+		},
+		{
+			name: "cloud_connect",
 			category: "networking",
 			description: "Establishing connectivity to cloud provider networks",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_cloud_connect" "example" {\n  name      = "example-cloud-connect"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cloud_connect.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_cloud_connect.example namespace/name",
 		},
-		cloud_credentials: {
-			category: "authentication",
-			description: "Api to create cloud_credentials object. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_cloud_credentials" "example" {\n  name      = "example-cloud-credentials"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_cloud_credentials.example namespace/name",
-		},
-		cloud_elastic_ip: {
-			category: "cloud-resources",
-			description: "Cloud Elastic IP creates Cloud Elastic IP object Object is attached to a site",
-			required: ["name", "namespace", "item_count"],
-			minimal_config:
-				'resource "xcsh_cloud_elastic_ip" "example" {\n  name      = "example-cloud-elastic-ip"\n  namespace = "staging"\n\n  item_count = 1\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_cloud_elastic_ip.example namespace/name",
-		},
-		cloud_link: {
+		{
+			name: "cloud_link",
 			category: "networking",
 			description: "New CloudLink with configured parameters",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_cloud_link" "example" {\n  name      = "example-cloud-link"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cloud_link.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_cloud_link.example namespace/name",
 		},
-		cluster: {
+		{
+			name: "dc_cluster_group",
+			category: "networking",
+			description: "DC Cluster group in given namespace",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/dc_cluster_group.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_dc_cluster_group.example namespace/name",
+		},
+		{
+			name: "external_connector",
+			category: "networking",
+			description: "External_connector configuration specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/external_connector.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_external_connector.example namespace/name",
+		},
+		{
+			name: "forwarding_class",
+			category: "networking",
+			description: "Forwarding class is created by users in system namespace. configuration",
+			required: ["name", "namespace", "queue_id_to_use", "interface_group"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/forwarding_class.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_forwarding_class.example namespace/name",
+		},
+		{
+			name: "ip_prefix_set",
+			category: "networking",
+			description: "Ip_prefix_set creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/ip_prefix_set.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_ip_prefix_set.example namespace/name",
+		},
+		{
+			name: "network_connector",
+			category: "networking",
+			description: "Network connector is created by users in system namespace. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/network_connector.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_network_connector.example namespace/name",
+		},
+		{
+			name: "network_interface",
+			category: "networking",
+			description:
+				"Network interface represents configuration of a network device. it is created by users in system namespace. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/network_interface.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_network_interface.example namespace/name",
+		},
+		{
+			name: "nfv_service",
+			category: "networking",
+			description: "New NFV service with configured parameters",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/nfv_service.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_nfv_service.example namespace/name",
+		},
+		{
+			name: "nginx_service_discovery",
+			category: "networking",
+			description:
+				"Api to create nginx service discovery object for a site or virtual site in system namespace. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/nginx_service_discovery.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_nginx_service_discovery.example namespace/name",
+		},
+		{
+			name: "policy_based_routing",
+			category: "networking",
+			description: "Network policy based routing create specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/policy_based_routing.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_policy_based_routing.example namespace/name",
+		},
+		{
+			name: "proxy",
+			category: "networking",
+			description: "Tcp loadbalancer create specification. configuration",
+			required: ["name", "namespace", "connection_timeout"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/proxy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_proxy.example namespace/name",
+		},
+		{
+			name: "segment",
+			category: "networking",
+			description: "Segment. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/segment.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_segment.example namespace/name",
+		},
+		{
+			name: "srv6_network_slice",
+			category: "networking",
+			description: "Srv6_network_slice creates a new object in the storage backend for metadata.namespace",
+			required: [
+				"name",
+				"namespace",
+				"connect_to_access_networks",
+				"connect_to_enterprise_networks",
+				"connect_to_internet",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/srv6_network_slice.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_srv6_network_slice.example namespace/name",
+		},
+		{
+			name: "subnet",
+			category: "networking",
+			description:
+				"Subnet object contains configuration for an interface of a vm/pod. it is created in user or shared namespace. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/subnet.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_subnet.example namespace/name",
+		},
+		{
+			name: "tunnel",
+			category: "networking",
+			description: "Tunnel in a given namespace. If one already exist it will give a error",
+			required: ["name", "namespace", "tunnel_type"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/tunnel.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_tunnel.example namespace/name",
+		},
+		{
+			name: "virtual_network",
+			category: "networking",
+			description: "Virtual network in given namespace",
+			required: ["name", "legacy_type"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/virtual_network.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_virtual_network.example namespace/name",
+		},
+		{
+			name: "healthcheck",
+			category: "load-balancing",
+			description:
+				"Healthcheck object defines method to determine if the given endpoint is healthy. single healthcheck object can be referred to by one or many cluster objects. configuration",
+			required: ["name", "namespace", "interval", "timeout", "healthy_threshold", "unhealthy_threshold"],
+			server_defaults: [
+				"http_health_check.expected_response",
+				"http_health_check.expected_status_codes",
+				"http_health_check.headers",
+				"http_health_check.request_headers_to_remove",
+				"http_health_check.use_http2",
+				"http_health_check.use_origin_server_name",
+				"jitter_percent",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/healthcheck.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace"],
+				used_by: ["origin_pool"],
+			},
+			import_syntax: "terraform import xcsh_healthcheck.example namespace/name",
+		},
+		{
+			name: "http_loadbalancer",
+			category: "load-balancing",
+			description: "Load balancing HTTP/HTTPS traffic with routing and security controls",
+			required: ["name", "namespace", "domains"],
+			server_defaults: [
+				"add_location",
+				"default_pool.advanced_options.auto_http_config",
+				"default_pool.advanced_options.connection_timeout",
+				"default_pool.advanced_options.default_circuit_breaker",
+				"default_pool.advanced_options.disable_outlier_detection",
+				"default_pool.advanced_options.disable_subsets",
+				"default_pool.advanced_options.http_idle_timeout",
+				"default_pool.advanced_options.no_panic_threshold",
+				"default_pool.advanced_options.no_request_limit_per_connection",
+				"default_pool.endpoint_selection",
+				"default_pool.healthcheck",
+				"default_pool.loadbalancer_algorithm",
+				"default_pool.no_tls",
+				"default_pool.same_as_endpoint_port",
+				"default_pool.use_tls.default_session_key_caching",
+				"default_pool.use_tls.no_mtls",
+				"default_pool.use_tls.use_host_header_as_sni",
+				"default_pool.use_tls.volterra_trusted_ca",
+				"default_sensitive_data_policy",
+				"disable_api_definition",
+				"disable_api_discovery",
+				"disable_api_testing",
+				"disable_bot_defense",
+				"disable_ip_reputation",
+				"disable_malicious_user_detection",
+				"disable_malware_protection",
+				"disable_rate_limit",
+				"disable_threat_mesh",
+				"disable_trust_client_ip_headers",
+				"disable_waf",
+				"https_auto_cert.add_hsts",
+				"https_auto_cert.connection_idle_timeout",
+				"https_auto_cert.enable_path_normalize",
+				"https_auto_cert.http_redirect",
+				"https_auto_cert.no_mtls",
+				"l7_ddos_protection",
+				"no_challenge",
+				"rate_limit.no_ip_allowed_list",
+				"rate_limit.no_policies",
+				"rate_limit.rate_limiter.period_multiplier",
+				"round_robin",
+				"service_policies_from_namespace",
+				"user_id_client_ip",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/http_loadbalancer.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace", "origin_pool"],
+				used_by: ["route"],
+			},
+			import_syntax: "terraform import xcsh_http_loadbalancer.example namespace/name",
+		},
+		{
+			name: "origin_pool",
+			category: "load-balancing",
+			description: "Defining backend server pools for load balancer targets",
+			required: ["name", "namespace", "origin_servers", "port"],
+			server_defaults: [
+				"advanced_options.auto_http_config",
+				"advanced_options.connection_timeout",
+				"advanced_options.default_circuit_breaker",
+				"advanced_options.disable_outlier_detection",
+				"advanced_options.disable_subsets",
+				"advanced_options.http_idle_timeout",
+				"advanced_options.no_panic_threshold",
+				"advanced_options.no_request_limit_per_connection",
+				"endpoint_selection",
+				"healthcheck",
+				"loadbalancer_algorithm",
+				"no_tls",
+				"same_as_endpoint_port",
+				"use_tls.default_session_key_caching",
+				"use_tls.no_mtls",
+				"use_tls.use_host_header_as_sni",
+				"use_tls.volterra_trusted_ca",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/origin_pool.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace", "healthcheck"],
+				used_by: ["http_loadbalancer", "tcp_loadbalancer", "udp_loadbalancer"],
+			},
+			import_syntax: "terraform import xcsh_origin_pool.example namespace/name",
+		},
+		{
+			name: "advertise_policy",
+			category: "load-balancing",
+			description:
+				"Advertise_policy object controls how and where a service represented by a given virtual_host object is advertised to consumers. configuration",
+			required: ["name", "namespace", "address", "protocol", "skip_xff_append"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/advertise_policy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_advertise_policy.example namespace/name",
+		},
+		{
+			name: "cdn_cache_rule",
+			category: "load-balancing",
+			description: "CDN loadbalancer specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cdn_cache_rule.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_cdn_cache_rule.example namespace/name",
+		},
+		{
+			name: "cdn_loadbalancer",
+			category: "load-balancing",
+			description: "Content delivery and edge caching with load balancing",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cdn_loadbalancer.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_cdn_loadbalancer.example namespace/name",
+		},
+		{
+			name: "cdn_purge_command",
+			category: "load-balancing",
+			description: "CDN purge command specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cdn_purge_command.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_cdn_purge_command.example namespace/name",
+		},
+		{
+			name: "cluster",
 			category: "load-balancing",
 			description: "Cluster will create the object in the storage backend for namespace metadata.namespace",
 			required: [
@@ -675,258 +1128,159 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"http_idle_timeout",
 				"loadbalancer_algorithm",
 			],
-			minimal_config:
-				'resource "xcsh_cluster" "example" {\n  name      = "example-cluster"\n  namespace = "staging"\n\n  connection_timeout     = 1\n  endpoint_selection     = "DISTRIBUTED"\n  fallback_policy        = "NO_FALLBACK"\n  http_idle_timeout      = 1\n  loadbalancer_algorithm = "ROUND_ROBIN"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cluster.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_cluster.example namespace/name",
 		},
-		cminstance: {
-			category: "subscriptions",
-			description: "App type will create the configuration in namespace metadata.namespace",
-			required: ["name", "namespace", "port", "username"],
-			minimal_config:
-				'resource "xcsh_cminstance" "example" {\n  name      = "example-cminstance"\n  namespace = "staging"\n\n  port     = 1\n  username = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_cminstance.example namespace/name",
-		},
-		code_base_integration: {
-			category: "integrations",
-			description: "Integration details",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_code_base_integration" "example" {\n  name      = "example-code-base-integration"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_code_base_integration.example namespace/name",
-		},
-		container_registry: {
-			category: "kubernetes",
-			description: "Container image registry configuration",
-			required: ["name", "namespace", "email", "registry", "user_name"],
-			minimal_config:
-				'resource "xcsh_container_registry" "example" {\n  name      = "example-container-registry"\n  namespace = "staging"\n\n  registry  = "example-value"\n  user_name = "example-value"\n  email     = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_container_registry.example namespace/name",
-		},
-		crl: {
-			category: "certificates",
-			description: "Api to create crl object. configuration",
-			required: ["name", "namespace", "refresh_interval", "server_address", "server_port", "timeout"],
-			minimal_config:
-				'resource "xcsh_crl" "example" {\n  name      = "example-crl"\n  namespace = "staging"\n\n  refresh_interval = 1\n  server_address   = "example-value"\n  server_port      = 1\n  timeout          = 1\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_crl.example namespace/name",
-		},
-		data_group: {
-			category: "big-ip-integration",
-			description: "Data group in a given namespace. If one already exists it will give an error",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_data_group" "example" {\n  name      = "example-data-group"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_data_group.example namespace/name",
-		},
-		data_type: {
-			category: "security",
-			description: "Data_type creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace", "is_pii", "is_sensitive_data"],
-			minimal_config:
-				'resource "xcsh_data_type" "example" {\n  name      = "example-data-type"\n  namespace = "staging"\n\n  compliances       = ["example-value"]\n  is_pii            = true\n  is_sensitive_data = true\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_data_type.example namespace/name",
-		},
-		dc_cluster_group: {
-			category: "networking",
-			description: "DC Cluster group in given namespace",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_dc_cluster_group" "example" {\n  name      = "example-dc-cluster-group"\n  namespace = "system"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dc_cluster_group.example namespace/name",
-		},
-		discovery: {
-			category: "applications",
-			description: "Api to create discovery object for a site or virtual site in system namespace. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_discovery" "example" {\n  name      = "example-discovery"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_discovery.example namespace/name",
-		},
-		dns_compliance_checks: {
-			category: "dns",
-			description:
-				"DNS Compliance Checks Specification in a given namespace. If one already exists it will give an error",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_dns_compliance_checks" "example" {\n  name      = "example-dns-compliance-checks"\n  namespace = "staging"\n\n  domain_denylist                      = ["example-value"]\n  disallowed_query_type_list           = ["example-value"]\n  disallowed_resource_record_type_list = ["example-value"]\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dns_compliance_checks.example namespace/name",
-		},
-		dns_domain: {
-			category: "dns",
-			description: "DNS Domain in a given namespace. If one already exist it will give a error",
-			required: ["name", "dnssec_mode"],
-			minimal_config:
-				'resource "xcsh_dns_domain" "example" {\n  name      = "example-dns-domain"\n  namespace = "system"\n\n  dnssec_mode = "DNSSEC_DISABLE"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dns_domain.example namespace/name",
-		},
-		dns_lb_health_check: {
-			category: "dns",
-			description: "DNS Load Balancer Health Check in a given namespace. If one already exist it will give a error",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_dns_lb_health_check" "example" {\n  name      = "example-dns-lb-health-check"\n  namespace = "system"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dns_lb_health_check.example namespace/name",
-		},
-		dns_lb_pool: {
-			category: "dns",
-			description: "DNS Load Balancer Pool in a given namespace. If one already exist it will give a error",
-			required: ["name", "load_balancing_mode"],
-			minimal_config:
-				'resource "xcsh_dns_lb_pool" "example" {\n  name      = "example-dns-lb-pool"\n  namespace = "system"\n\n  load_balancing_mode = "ROUND_ROBIN"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dns_lb_pool.example namespace/name",
-		},
-		dns_load_balancer: {
-			category: "dns",
-			description: "DNS Load Balancer in a given namespace. If one already exist it will give a error",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_dns_load_balancer" "example" {\n  name      = "example-dns-load-balancer"\n  namespace = "system"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dns_load_balancer.example namespace/name",
-		},
-		dns_proxy: {
-			category: "dns",
-			description: "DNS Proxy in a given namespace. If one already exists it will give an error",
-			required: ["name", "transport_type"],
-			minimal_config:
-				'resource "xcsh_dns_proxy" "example" {\n  name      = "example-dns-proxy"\n  namespace = "system"\n\n  transport_type = "UDP"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dns_proxy.example namespace/name",
-		},
-		dns_zone: {
-			category: "dns",
-			description: "DNS Zone in a given namespace. If one already exist it will give a error",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_dns_zone" "example" {\n  name      = "example-dns-zone"\n  namespace = "system"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_dns_zone.example namespace/name",
-		},
-		domain: {
-			category: "uncategorized",
-			description: "Allowed domain",
-			required: ["name", "namespace", "allowed_domain"],
-			minimal_config:
-				'resource "xcsh_domain" "example" {\n  name      = "example-domain"\n  namespace = "staging"\n\n  allowed_domain = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_domain.example namespace/name",
-		},
-		endpoint: {
+		{
+			name: "endpoint",
 			category: "load-balancing",
 			description: "Endpoint will create the object in the storage backend for namespace metadata.namespace",
 			required: ["name", "namespace", "health_check_port", "port", "protocol"],
-			minimal_config:
-				'resource "xcsh_endpoint" "example" {\n  name      = "example-endpoint"\n  namespace = "staging"\n\n  health_check_port = 1\n  port              = 1\n  protocol          = "TCP"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/endpoint.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_endpoint.example namespace/name",
 		},
-		enhanced_firewall_policy: {
-			category: "security",
-			description: "Enhanced firewall policy specification. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_enhanced_firewall_policy" "example" {\n  name      = "example-enhanced-firewall-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_enhanced_firewall_policy.example namespace/name",
-		},
-		external_connector: {
-			category: "networking",
-			description: "External_connector configuration specification. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_external_connector" "example" {\n  name      = "example-external-connector"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_external_connector.example namespace/name",
-		},
-		fast_acl: {
-			category: "security",
+		{
+			name: "route",
+			category: "load-balancing",
 			description:
-				"Object, object contains rules to protect site from denial of service It has destination{destination IP, destination port) and references to",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_fast_acl" "example" {\n  name      = "example-fast-acl"\n  namespace = "system"\n}',
+				"Route object in a given namespace. Route object is list of route rules. Each rule has match condition to match incoming requests and actions to take on matching requests",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/route.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace", "http_loadbalancer"],
+			},
+			import_syntax: "terraform import xcsh_route.example namespace/name",
+		},
+		{
+			name: "tcp_loadbalancer",
+			category: "load-balancing",
+			description: "Load balancing TCP traffic across origin pools",
+			required: ["name", "namespace", "origin_pools"],
+			server_defaults: [
+				"dns_volterra_managed",
+				"hash_policy_choice_round_robin",
+				"idle_timeout",
+				"no_sni",
+				"retract_cluster",
+				"service_policies_from_namespace",
+				"tcp",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/tcp_loadbalancer.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace", "origin_pool"],
+			},
+			import_syntax: "terraform import xcsh_tcp_loadbalancer.example namespace/name",
+		},
+		{
+			name: "udp_loadbalancer",
+			category: "load-balancing",
+			description: "Load balancing UDP traffic across origin pools",
+			required: ["name", "namespace", "dns_volterra_managed", "idle_timeout"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/udp_loadbalancer.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace", "origin_pool"],
+			},
+			import_syntax: "terraform import xcsh_udp_loadbalancer.example namespace/name",
+		},
+		{
+			name: "virtual_host",
+			category: "load-balancing",
+			description: "Virtual host in a given namespace",
+			required: [
+				"name",
+				"namespace",
+				"add_location",
+				"connection_idle_timeout",
+				"disable_default_error_pages",
+				"disable_dns_resolve",
+				"idle_timeout",
+				"max_request_header_size",
+				"proxy",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/virtual_host.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_fast_acl.example namespace/name",
+			import_syntax: "terraform import xcsh_virtual_host.example namespace/name",
 		},
-		fast_acl_rule: {
-			category: "security",
-			description: "New Fast ACL rule, has specification to match source IP, source port and action to apply",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_fast_acl_rule" "example" {\n  name      = "example-fast-acl-rule"\n  namespace = "system"\n}',
+		{
+			name: "aws_tgw_site",
+			category: "sites",
+			description: "Deploying F5 sites connected via AWS Transit Gateway",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/aws_tgw_site.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_fast_acl_rule.example namespace/name",
+			import_syntax: "terraform import xcsh_aws_tgw_site.example namespace/name",
 		},
-		filter_set: {
-			category: "applications",
-			description: "Specification",
-			required: ["name", "namespace", "context_key"],
-			minimal_config:
-				'resource "xcsh_filter_set" "example" {\n  name      = "example-filter-set"\n  namespace = "staging"\n\n  context_key = "example-value"\n}',
+		{
+			name: "aws_vpc_site",
+			category: "sites",
+			description: "Deploying F5 sites within AWS VPC environments",
+			required: ["name", "namespace", "address", "aws_region", "disk_size", "instance_type", "ssh_key"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/aws_vpc_site.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_filter_set.example namespace/name",
+			import_syntax: "terraform import xcsh_aws_vpc_site.example namespace/name",
 		},
-		fleet: {
+		{
+			name: "azure_vnet_site",
+			category: "sites",
+			description: "Deploying F5 sites within Azure Virtual Network environments",
+			required: ["name", "namespace", "machine_type", "resource_group", "ssh_key"],
+			server_defaults: [
+				"block_all_services",
+				"disk_size",
+				"ingress_gw.accelerated_networking",
+				"ingress_gw.performance_enhancement_mode",
+				"logs_streaming_disabled",
+				"machine_type",
+				"no_worker_nodes",
+				"tags",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/azure_vnet_site.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_azure_vnet_site.example namespace/name",
+		},
+		{
+			name: "fleet",
 			category: "sites",
 			description: "Fleet will create a fleet object in 'system' namespace of the user",
 			required: [
@@ -937,255 +1291,891 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"operating_system_version",
 				"volterra_software_version",
 			],
-			minimal_config:
-				'resource "xcsh_fleet" "example" {\n  name      = "example-fleet"\n  namespace = "staging"\n\n  fleet_label                          = "example-value"\n  enable_default_fleet_config_download = true\n  operating_system_version             = "example-value"\n  volterra_software_version            = "example-value"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/fleet.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_fleet.example namespace/name",
 		},
-		forward_proxy_policy: {
-			category: "security",
-			description: "Forward proxy policy specification. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_forward_proxy_policy" "example" {\n  name      = "example-forward-proxy-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_forward_proxy_policy.example namespace/name",
-		},
-		forwarding_class: {
-			category: "networking",
-			description: "Forwarding class is created by users in system namespace. configuration",
-			required: ["name", "namespace", "queue_id_to_use", "interface_group"],
-			minimal_config:
-				'resource "xcsh_forwarding_class" "example" {\n  name      = "example-forwarding-class"\n  namespace = "staging"\n\n  interface_group = "ANY_AVAILABLE_INTERFACE"\n  queue_id_to_use = "DSCP_BEST_EFFORT"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_forwarding_class.example namespace/name",
-		},
-		gcp_vpc_site: {
+		{
+			name: "gcp_vpc_site",
 			category: "sites",
 			description: "Deploying F5 sites within Google Cloud VPC environments",
 			required: ["name", "namespace", "address", "disk_size", "gcp_region", "instance_type", "ssh_key"],
-			minimal_config:
-				'resource "xcsh_gcp_vpc_site" "example" {\n  name      = "example-gcp-vpc-site"\n  namespace = "staging"\n\n  gcp_region    = "example-value"\n  instance_type = "example-value"\n  ssh_key       = "example-value"\n  address       = "example-value"\n  disk_size     = 1\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/gcp_vpc_site.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_gcp_vpc_site.example namespace/name",
 		},
-		geo_location_set: {
-			category: "cloud-resources",
-			description: "Geolocation Set",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_geo_location_set" "example" {\n  name      = "example-geo-location-set"\n  namespace = "system"\n}',
+		{
+			name: "registration",
+			category: "sites",
+			description: "Vpm creates registration using this message, never used by users. configuration",
+			required: ["name", "namespace", "token"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/registration.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_geo_location_set.example namespace/name",
+			import_syntax: "terraform import xcsh_registration.example namespace/name",
 		},
-		global_log_receiver: {
-			category: "monitoring",
-			description: "New Global Log Receiver object",
-			required: ["name", "namespace", "log_type", "receiver_choice"],
-			minimal_config:
-				'resource "xcsh_global_log_receiver" "example" {\n  name      = "example-global-log-receiver"\n  namespace = "staging"\n}',
+		{
+			name: "securemesh_site",
+			category: "sites",
+			description: "Deploying secure mesh edge sites with distributed security",
+			required: ["name", "namespace", "address", "volterra_certified_hw"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/securemesh_site.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_global_log_receiver.example namespace/name",
+			import_syntax: "terraform import xcsh_securemesh_site.example namespace/name",
 		},
-		healthcheck: {
-			category: "load-balancing",
-			description:
-				"Healthcheck object defines method to determine if the given endpoint is healthy. single healthcheck object can be referred to by one or many cluster objects. configuration",
-			required: ["name", "namespace", "interval", "timeout", "healthy_threshold", "unhealthy_threshold"],
-			server_defaults: ["jitter_percent", "use_http2"],
-			minimal_config:
-				'resource "xcsh_healthcheck" "example" {\n  name      = "example-healthcheck"\n  namespace = "staging"\n\n  healthy_threshold   = 1\n  interval            = 1\n  timeout             = 1\n  unhealthy_threshold = 1\n}',
-			dependencies: {
-				requires: ["namespace"],
-				used_by: ["origin_pool"],
-			},
-			import_syntax: "terraform import xcsh_healthcheck.example namespace/name",
-		},
-		http_loadbalancer: {
-			category: "load-balancing",
-			description: "Load balancing HTTP/HTTPS traffic with advanced routing and security",
-			required: ["name", "namespace", "domains"],
-			server_defaults: ["connection_timeout", "http_idle_timeout"],
-			minimal_config:
-				'resource "xcsh_http_loadbalancer" "example" {\n  name      = "example-http-loadbalancer"\n  namespace = "staging"\n\n  domains = ["example-value"]\n}',
-			dependencies: {
-				requires: ["namespace", "origin_pool"],
-				used_by: ["route"],
-			},
-			import_syntax: "terraform import xcsh_http_loadbalancer.example namespace/name",
-		},
-		ike1: {
-			category: "vpn",
-			description: "Ike phase1 profile specification. configuration",
+		{
+			name: "securemesh_site_v2",
+			category: "sites",
+			description: "Deploying secure mesh edge sites with security and networking controls",
 			required: ["name", "namespace"],
-			minimal_config: 'resource "xcsh_ike1" "example" {\n  name      = "example-ike1"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/securemesh_site_v2.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_ike1.example namespace/name",
+			import_syntax: "terraform import xcsh_securemesh_site_v2.example namespace/name",
 		},
-		ike2: {
-			category: "vpn",
-			description: "Ike phase2 profile specification. configuration",
+		{
+			name: "site_mesh_group",
+			category: "sites",
+			description: "Site Mesh Group in system namespace of user",
 			required: ["name", "namespace"],
-			minimal_config: 'resource "xcsh_ike2" "example" {\n  name      = "example-ike2"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/site_mesh_group.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_ike2.example namespace/name",
+			import_syntax: "terraform import xcsh_site_mesh_group.example namespace/name",
 		},
-		ike_phase1_profile: {
-			category: "vpn",
-			description: "Ike phase1 profile specification. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_ike_phase1_profile" "example" {\n  name      = "example-ike-phase1-profile"\n  namespace = "staging"\n\n  authentication_algos = ["example-value"]\n  dh_group             = ["example-value"]\n  encryption_algos     = ["example-value"]\n  prf                  = ["example-value"]\n}',
+		{
+			name: "virtual_site",
+			category: "sites",
+			description: "Virtual site object in given namespace",
+			required: ["name", "namespace", "site_type", "site_selector"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/virtual_site.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_ike_phase1_profile.example namespace/name",
+			import_syntax: "terraform import xcsh_virtual_site.example namespace/name",
 		},
-		ike_phase2_profile: {
-			category: "vpn",
-			description: "Ike phase2 profile specification. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_ike_phase2_profile" "example" {\n  name      = "example-ike-phase2-profile"\n  namespace = "staging"\n\n  authentication_algos = ["example-value"]\n  encryption_algos     = ["example-value"]\n}',
+		{
+			name: "voltstack_site",
+			category: "sites",
+			description: "Deploying App Stack edge computing sites",
+			required: ["name", "namespace", "address", "volterra_certified_hw"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/voltstack_site.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_ike_phase2_profile.example namespace/name",
+			import_syntax: "terraform import xcsh_voltstack_site.example namespace/name",
 		},
-		ip_prefix_set: {
-			category: "networking",
-			description: "Ip_prefix_set creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_ip_prefix_set" "example" {\n  name      = "example-ip-prefix-set"\n  namespace = "staging"\n}',
+		{
+			name: "container_registry",
+			category: "kubernetes",
+			description: "Container image registry configuration",
+			required: ["name", "namespace", "email", "registry", "user_name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/container_registry.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_ip_prefix_set.example namespace/name",
+			import_syntax: "terraform import xcsh_container_registry.example namespace/name",
 		},
-		irule: {
-			category: "big-ip-integration",
-			description: "IRule in a given namespace. If one already exists it will give an error",
-			required: ["name", "namespace", "description", "description_spec", "irule"],
-			minimal_config:
-				'resource "xcsh_irule" "example" {\n  name      = "example-irule"\n  namespace = "staging"\n\n  description_spec = "example-value"\n  irule            = "example-value"\n  description      = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_irule.example namespace/name",
-		},
-		k8s_cluster: {
+		{
+			name: "k8s_cluster",
 			category: "kubernetes",
 			description: "K8s_cluster will create the object in the storage backend for namespace metadata.namespace",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_k8s_cluster" "example" {\n  name      = "example-k8s-cluster"\n  namespace = "system"\n}',
+			server_defaults: [
+				"cluster_scoped_access_deny",
+				"no_cluster_wide_apps",
+				"no_global_access",
+				"no_insecure_registries",
+				"no_local_access",
+				"use_default_cluster_role_bindings",
+				"use_default_cluster_roles",
+				"use_default_psp",
+				"vk8s_namespace_access_deny",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/k8s_cluster.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_k8s_cluster.example namespace/name",
 		},
-		k8s_cluster_role: {
+		{
+			name: "k8s_cluster_role",
 			category: "kubernetes",
 			description: "K8s_cluster_role will create the object in the storage backend for namespace metadata.namespace",
 			required: ["name"],
-			minimal_config:
-				'resource "xcsh_k8s_cluster_role" "example" {\n  name      = "example-k8s-cluster-role"\n  namespace = "system"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/k8s_cluster_role.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_k8s_cluster_role.example namespace/name",
 		},
-		k8s_cluster_role_binding: {
+		{
+			name: "k8s_cluster_role_binding",
 			category: "kubernetes",
 			description:
 				"K8s_cluster_role_binding will create the object in the storage backend for namespace metadata.namespace",
 			required: ["name"],
-			minimal_config:
-				'resource "xcsh_k8s_cluster_role_binding" "example" {\n  name      = "example-k8s-cluster-role-binding"\n  namespace = "system"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/k8s_cluster_role_binding.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_k8s_cluster_role_binding.example namespace/name",
 		},
-		k8s_pod_security_admission: {
+		{
+			name: "k8s_pod_security_admission",
 			category: "kubernetes",
 			description: "K8s_pod_security_admission will create the object in the storage backend",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_k8s_pod_security_admission" "example" {\n  name      = "example-k8s-pod-security-admission"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/k8s_pod_security_admission.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_k8s_pod_security_admission.example namespace/name",
 		},
-		k8s_pod_security_policy: {
-			category: "security",
-			description:
-				"K8s_pod_security_policy will create the object in the storage backend for namespace metadata.namespace",
+		{
+			name: "virtual_k8s",
+			category: "kubernetes",
+			description: "Virtual_k8s will create the object in the storage backend for namespace metadata.namespace",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_k8s_pod_security_policy" "example" {\n  name      = "example-k8s-pod-security-policy"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/virtual_k8s.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_k8s_pod_security_policy.example namespace/name",
+			import_syntax: "terraform import xcsh_virtual_k8s.example namespace/name",
 		},
-		log_receiver: {
-			category: "monitoring",
-			description: "New Log Receiver object",
+		{
+			name: "workload",
+			category: "kubernetes",
+			description: "Workload. configuration",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_log_receiver" "example" {\n  name      = "example-log-receiver"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/workload.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_log_receiver.example namespace/name",
+			import_syntax: "terraform import xcsh_workload.example namespace/name",
 		},
-		malicious_user_mitigation: {
-			category: "security",
-			description: "Malicious_user_mitigation creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_malicious_user_mitigation" "example" {\n  name      = "example-malicious-user-mitigation"\n  namespace = "staging"\n}',
+		{
+			name: "workload_flavor",
+			category: "kubernetes",
+			description: "Workload_flavor",
+			required: ["name", "namespace", "ephemeral_storage", "memory", "vcpus"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/workload_flavor.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_malicious_user_mitigation.example namespace/name",
+			import_syntax: "terraform import xcsh_workload_flavor.example namespace/name",
 		},
-		mitigated_domain: {
+		{
+			name: "application_profiles",
+			category: "uncategorized",
+			description: "Application Profiles in a given namespace. If one already exists it will give an error",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/application_profiles.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_application_profiles.example namespace/name",
+		},
+		{
+			name: "authorization_server",
+			category: "uncategorized",
+			description: "Authorization_server creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace", "jwks_uri"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/authorization_server.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_authorization_server.example namespace/name",
+		},
+		{
+			name: "bot_infrastructure",
+			category: "uncategorized",
+			description: "Bot Infrastructure",
+			required: ["name", "namespace", "traffic_type"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/bot_infrastructure.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_bot_infrastructure.example namespace/name",
+		},
+		{
+			name: "mitigated_domain",
 			category: "uncategorized",
 			description: "Mitigated Domain",
 			required: ["name", "namespace", "mitigated_domain"],
-			minimal_config:
-				'resource "xcsh_mitigated_domain" "example" {\n  name      = "example-mitigated-domain"\n  namespace = "staging"\n\n  mitigated_domain = "example-value"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/mitigated_domain.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_mitigated_domain.example namespace/name",
 		},
-		namespace: {
+		{
+			name: "protected_application",
+			category: "uncategorized",
+			description: "Applications protected by Bot Defense",
+			required: ["name", "namespace", "region"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/protected_application.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_protected_application.example namespace/name",
+		},
+		{
+			name: "protected_domain",
+			category: "uncategorized",
+			description: "Domain to protect",
+			required: ["name", "namespace", "protected_domain"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/protected_domain.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_protected_domain.example namespace/name",
+		},
+		{
+			name: "registration_approval",
+			category: "uncategorized",
+			description: "Request for admission approval. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/registration_approval.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_registration_approval.example namespace/name",
+		},
+		{
+			name: "dns_compliance_checks",
+			category: "dns",
+			description:
+				"DNS Compliance Checks Specification in a given namespace. If one already exists it will give an error",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/dns_compliance_checks.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_dns_compliance_checks.example namespace/name",
+		},
+		{
+			name: "dns_lb_health_check",
+			category: "dns",
+			description: "DNS Load Balancer Health Check in a given namespace. If one already exist it will give a error",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/dns_lb_health_check.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_dns_lb_health_check.example namespace/name",
+		},
+		{
+			name: "dns_lb_pool",
+			category: "dns",
+			description: "DNS Load Balancer Pool in a given namespace. If one already exist it will give a error",
+			required: ["name", "load_balancing_mode"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/dns_lb_pool.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_dns_lb_pool.example namespace/name",
+		},
+		{
+			name: "dns_load_balancer",
+			category: "dns",
+			description: "DNS Load Balancer in a given namespace. If one already exist it will give a error",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/dns_load_balancer.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_dns_load_balancer.example namespace/name",
+		},
+		{
+			name: "dns_proxy",
+			category: "dns",
+			description: "DNS Proxy in a given namespace. If one already exists it will give an error",
+			required: ["name", "transport_type"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/dns_proxy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_dns_proxy.example namespace/name",
+		},
+		{
+			name: "dns_zone",
+			category: "dns",
+			description: "DNS Zone in a given namespace. If one already exist it will give a error",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/dns_zone.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_dns_zone.example namespace/name",
+		},
+		{
+			name: "api_crawler",
+			category: "api-security",
+			description: "API Crawler resource",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/api_crawler.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_api_crawler.example namespace/name",
+		},
+		{
+			name: "api_definition",
+			category: "api-security",
+			description: "API Definition",
+			required: ["name", "namespace"],
+			server_defaults: [
+				"api_inventory_exclusion_list",
+				"api_inventory_inclusion_list",
+				"non_api_endpoints",
+				"strict_schema_origin",
+				"swagger_specs",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/api_definition.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace"],
+			},
+			import_syntax: "terraform import xcsh_api_definition.example namespace/name",
+		},
+		{
+			name: "api_discovery",
+			category: "api-security",
+			description: "API discovery creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace", "user_defined_api_discovery_policy"],
+			server_defaults: [
+				"custom_auth_types",
+				"user_defined_api_discovery_policy.discovery_rules",
+				"user_defined_api_discovery_policy.inclusive",
+			],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/api_discovery.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_api_discovery.example namespace/name",
+		},
+		{
+			name: "api_testing",
+			category: "api-security",
+			description: "API Testing resource",
+			required: ["name", "namespace", "custom_header_value"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/api_testing.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_api_testing.example namespace/name",
+		},
+		{
+			name: "app_api_group",
+			category: "api-security",
+			description: "App_api_group creates a new object in the storage backend for metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/app_api_group.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_app_api_group.example namespace/name",
+		},
+		{
+			name: "app_setting",
+			category: "applications",
+			description: "App setting configuration in namespace metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/app_setting.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_app_setting.example namespace/name",
+		},
+		{
+			name: "app_type",
+			category: "applications",
+			description: "App type will create the configuration in namespace metadata.namespace",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/app_type.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_app_type.example namespace/name",
+		},
+		{
+			name: "discovery",
+			category: "applications",
+			description: "Api to create discovery object for a site or virtual site in system namespace. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/discovery.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_discovery.example namespace/name",
+		},
+		{
+			name: "filter_set",
+			category: "applications",
+			description: "Specification",
+			required: ["name", "namespace", "context_key"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/filter_set.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_filter_set.example namespace/name",
+		},
+		{
+			name: "authentication",
+			category: "authentication",
+			description: "Authentication resource",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/authentication.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_authentication.example namespace/name",
+		},
+		{
+			name: "cloud_credentials",
+			category: "authentication",
+			description: "Api to create cloud_credentials object. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cloud_credentials.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_cloud_credentials.example namespace/name",
+		},
+		{
+			name: "secret_management_access",
+			category: "authentication",
+			description: "Secret_management_access creates a new object in storage backend for metadata.namespace",
+			required: ["name", "namespace", "provider_name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/secret_management_access.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_secret_management_access.example namespace/name",
+		},
+		{
+			name: "token",
+			category: "authentication",
+			description:
+				"New token. Token object is used to manage site admission. User must generate token before provisioning and pass this token to site during it's registration",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/token.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_token.example namespace/name",
+		},
+		{
+			name: "certificate",
+			category: "certificates",
+			description: "Certificate. configuration",
+			required: ["name", "namespace", "certificate_url", "private_key"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/certificate.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: ["namespace"],
+			},
+			import_syntax: "terraform import xcsh_certificate.example namespace/name",
+		},
+		{
+			name: "certificate_chain",
+			category: "certificates",
+			description: "Certificate chain configuration for TLS",
+			required: ["name", "namespace", "certificate_url"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/certificate_chain.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_certificate_chain.example namespace/name",
+		},
+		{
+			name: "crl",
+			category: "certificates",
+			description: "Api to create crl object. configuration",
+			required: ["name", "namespace", "refresh_interval", "server_address", "server_port", "timeout"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/crl.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_crl.example namespace/name",
+		},
+		{
+			name: "trusted_ca_list",
+			category: "certificates",
+			description: "Trusted certificate authority list management",
+			required: ["name", "namespace", "trusted_ca_url"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/trusted_ca_list.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_trusted_ca_list.example namespace/name",
+		},
+		{
+			name: "alert_receiver",
+			category: "monitoring",
+			description: "New Alert Receiver object",
+			required: ["name", "namespace", "receiver_choice"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/alert_receiver.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_alert_receiver.example namespace/name",
+		},
+		{
+			name: "alert_template",
+			category: "monitoring",
+			description: "Domain to protect",
+			required: ["name", "namespace", "alert_message", "alert_message_details", "alert_name", "severity"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/alert_template.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_alert_template.example namespace/name",
+		},
+		{
+			name: "global_log_receiver",
+			category: "monitoring",
+			description: "New Global Log Receiver object",
+			required: ["name", "namespace", "log_type", "receiver_choice"],
+			server_defaults: ["ns_current", "request_logs.sampled"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/global_log_receiver.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_global_log_receiver.example namespace/name",
+		},
+		{
+			name: "log_receiver",
+			category: "monitoring",
+			description: "New Log Receiver object",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/log_receiver.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_log_receiver.example namespace/name",
+		},
+		{
+			name: "ike1",
+			category: "vpn",
+			description: "Ike phase1 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/ike1.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_ike1.example namespace/name",
+		},
+		{
+			name: "ike2",
+			category: "vpn",
+			description: "Ike phase2 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/ike2.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_ike2.example namespace/name",
+		},
+		{
+			name: "ike_phase1_profile",
+			category: "vpn",
+			description: "Ike phase1 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/ike_phase1_profile.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_ike_phase1_profile.example namespace/name",
+		},
+		{
+			name: "ike_phase2_profile",
+			category: "vpn",
+			description: "Ike phase2 profile specification. configuration",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/ike_phase2_profile.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_ike_phase2_profile.example namespace/name",
+		},
+		{
+			name: "bigip_http_proxy",
+			category: "big-ip-integration",
+			description: "BIG-IP HTTP Proxy in a given namespace. If one already exists, it will give an error",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/bigip_http_proxy.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_bigip_http_proxy.example namespace/name",
+		},
+		{
+			name: "data_group",
+			category: "big-ip-integration",
+			description: "Data group in a given namespace. If one already exists it will give an error",
+			required: ["name", "namespace"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/data_group.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_data_group.example namespace/name",
+		},
+		{
+			name: "irule",
+			category: "big-ip-integration",
+			description: "IRule in a given namespace. If one already exists it will give an error",
+			required: ["name", "namespace", "description", "description_spec", "irule"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/irule.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_irule.example namespace/name",
+		},
+		{
+			name: "address_allocator",
+			category: "cloud-resources",
+			description: "Address Allocator will create an address allocator object in 'system' namespace of the user",
+			required: ["name", "namespace", "mode"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/address_allocator.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_address_allocator.example namespace/name",
+		},
+		{
+			name: "cloud_elastic_ip",
+			category: "cloud-resources",
+			description: "Cloud Elastic IP creates Cloud Elastic IP object Object is attached to a site",
+			required: ["name", "namespace", "item_count"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cloud_elastic_ip.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_cloud_elastic_ip.example namespace/name",
+		},
+		{
+			name: "geo_location_set",
+			category: "cloud-resources",
+			description: "Geolocation Set",
+			required: ["name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/geo_location_set.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_geo_location_set.example namespace/name",
+		},
+		{
+			name: "allowed_domain",
+			category: "organization",
+			description: "Allowed domain",
+			required: ["name", "namespace", "allowed_domain"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/allowed_domain.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
+			import_syntax: "terraform import xcsh_allowed_domain.example namespace/name",
+		},
+		{
+			name: "namespace",
 			category: "organization",
 			description: "New namespace. Name of the object is name of the namespace",
 			required: ["name"],
-			minimal_config:
-				'resource "xcsh_namespace" "example" {\n  name      = "example-namespace"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/namespace.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 				used_by: [
@@ -1204,567 +2194,62 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			},
 			import_syntax: "terraform import xcsh_namespace.example namespace/name",
 		},
-		nat_policy: {
-			category: "security",
-			description: "Nat policy create specification configures nat policy with multiple rules,. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_nat_policy" "example" {\n  name      = "example-nat-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_nat_policy.example namespace/name",
-		},
-		network_connector: {
-			category: "networking",
-			description: "Network connector is created by users in system namespace. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_network_connector" "example" {\n  name      = "example-network-connector"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_network_connector.example namespace/name",
-		},
-		network_firewall: {
-			category: "security",
-			description: "Network firewall is created by users in system namespace. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_network_firewall" "example" {\n  name      = "example-network-firewall"\n  namespace = "system"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_network_firewall.example namespace/name",
-		},
-		network_interface: {
-			category: "networking",
-			description:
-				"Network interface represents configuration of a network device. it is created by users in system namespace. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_network_interface" "example" {\n  name      = "example-network-interface"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_network_interface.example namespace/name",
-		},
-		network_policy: {
-			category: "security",
-			description: "New network policy with configured parameters in specified namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_network_policy" "example" {\n  name      = "example-network-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_network_policy.example namespace/name",
-		},
-		network_policy_rule: {
-			category: "security",
-			description: "Network policy rule with configured parameters in specified namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_network_policy_rule" "example" {\n  name      = "example-network-policy-rule"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_network_policy_rule.example namespace/name",
-		},
-		network_policy_view: {
-			category: "security",
-			description: "Network policy view specification. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_network_policy_view" "example" {\n  name      = "example-network-policy-view"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_network_policy_view.example namespace/name",
-		},
-		nfv_service: {
-			category: "networking",
-			description: "New NFV service with configured parameters",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_nfv_service" "example" {\n  name      = "example-nfv-service"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_nfv_service.example namespace/name",
-		},
-		nginx_service_discovery: {
-			category: "networking",
-			description:
-				"Api to create nginx service discovery object for a site or virtual site in system namespace. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_nginx_service_discovery" "example" {\n  name      = "example-nginx-service-discovery"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_nginx_service_discovery.example namespace/name",
-		},
-		origin_pool: {
-			category: "load-balancing",
-			description: "Defining backend server pools for load balancer targets",
-			required: ["name", "namespace", "origin_servers", "port"],
-			server_defaults: ["connection_timeout", "http_idle_timeout"],
-			minimal_config:
-				'resource "xcsh_origin_pool" "example" {\n  name      = "example-origin-pool"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: ["namespace", "healthcheck"],
-				used_by: ["http_loadbalancer", "tcp_loadbalancer", "udp_loadbalancer"],
-			},
-			import_syntax: "terraform import xcsh_origin_pool.example namespace/name",
-		},
-		policer: {
-			category: "service-mesh",
-			description: "New policer with traffic rate limits",
-			required: ["name", "namespace", "burst_size", "committed_information_rate"],
-			minimal_config:
-				'resource "xcsh_policer" "example" {\n  name      = "example-policer"\n  namespace = "staging"\n\n  burst_size                 = 1\n  committed_information_rate = 1\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_policer.example namespace/name",
-		},
-		policy_based_routing: {
-			category: "networking",
-			description: "Network policy based routing create specification. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_policy_based_routing" "example" {\n  name      = "example-policy-based-routing"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_policy_based_routing.example namespace/name",
-		},
-		protected_application: {
-			category: "uncategorized",
-			description: "Applications protected by Bot Defense",
-			required: ["name", "namespace", "region"],
-			minimal_config:
-				'resource "xcsh_protected_application" "example" {\n  name      = "example-protected-application"\n  namespace = "staging"\n\n  region = "US"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_protected_application.example namespace/name",
-		},
-		protected_domain: {
-			category: "uncategorized",
-			description: "Domain to protect",
-			required: ["name", "namespace", "protected_domain"],
-			minimal_config:
-				'resource "xcsh_protected_domain" "example" {\n  name      = "example-protected-domain"\n  namespace = "staging"\n\n  protected_domain = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_protected_domain.example namespace/name",
-		},
-		protocol_inspection: {
-			category: "security",
-			description:
-				"Protocol Inspection Specification in a given namespace. If one already exists it will give an error",
-			required: ["name", "namespace", "enable_disable_compliance_checks", "enable_disable_signatures"],
-			minimal_config:
-				'resource "xcsh_protocol_inspection" "example" {\n  name      = "example-protocol-inspection"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_protocol_inspection.example namespace/name",
-		},
-		protocol_policer: {
-			category: "security",
-			description:
-				"Protocol_policer object, protocol_policer object contains list of L4 protocol match condition and corresponding traffic rate limits",
-			required: ["name"],
-			minimal_config:
-				'resource "xcsh_protocol_policer" "example" {\n  name      = "example-protocol-policer"\n  namespace = "system"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_protocol_policer.example namespace/name",
-		},
-		proxy: {
-			category: "networking",
-			description: "Tcp loadbalancer create specification. configuration",
-			required: ["name", "namespace", "connection_timeout"],
-			minimal_config:
-				'resource "xcsh_proxy" "example" {\n  name      = "example-proxy"\n  namespace = "staging"\n\n  connection_timeout = 1\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_proxy.example namespace/name",
-		},
-		rate_limiter: {
-			category: "security",
-			description: "Rate_limiter creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_rate_limiter" "example" {\n  name      = "example-rate-limiter"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: ["namespace"],
-			},
-			import_syntax: "terraform import xcsh_rate_limiter.example namespace/name",
-		},
-		rate_limiter_policy: {
-			category: "security",
-			description: "Rate limiter policy create specification. configuration",
-			required: ["name", "namespace", "burst_size", "committed_information_rate"],
-			minimal_config:
-				'resource "xcsh_rate_limiter_policy" "example" {\n  name      = "example-rate-limiter-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_rate_limiter_policy.example namespace/name",
-		},
-		registration: {
-			category: "sites",
-			description: "Vpm creates registration using this message, never used by users. configuration",
-			required: ["name", "namespace", "token"],
-			minimal_config:
-				'resource "xcsh_registration" "example" {\n  name      = "example-registration"\n  namespace = "staging"\n\n  token = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_registration.example namespace/name",
-		},
-		registration_approval: {
-			category: "uncategorized",
-			description: "Request for admission approval. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_registration_approval" "example" {\n  name      = "example-registration-approval"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_registration_approval.example namespace/name",
-		},
-		route: {
-			category: "load-balancing",
-			description:
-				"Route object in a given namespace. Route object is list of route rules. Each rule has match condition to match incoming requests and actions to take on matching requests",
-			required: ["name", "namespace"],
-			minimal_config: 'resource "xcsh_route" "example" {\n  name      = "example-route"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: ["namespace", "http_loadbalancer"],
-			},
-			import_syntax: "terraform import xcsh_route.example namespace/name",
-		},
-		secret_management_access: {
-			category: "authentication",
-			description: "Secret_management_access creates a new object in storage backend for metadata.namespace",
-			required: ["name", "namespace", "provider_name"],
-			minimal_config:
-				'resource "xcsh_secret_management_access" "example" {\n  name      = "example-secret-management-access"\n  namespace = "staging"\n\n  provider_name = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_secret_management_access.example namespace/name",
-		},
-		securemesh_site: {
-			category: "sites",
-			description: "Deploying secure mesh edge sites with distributed security capabilities",
-			required: ["name", "namespace", "address", "volterra_certified_hw"],
-			minimal_config:
-				'resource "xcsh_securemesh_site" "example" {\n  name      = "example-securemesh-site"\n  namespace = "staging"\n\n  volterra_certified_hw = "example-value"\n  worker_nodes          = ["example-value"]\n  address               = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_securemesh_site.example namespace/name",
-		},
-		securemesh_site_v2: {
-			category: "sites",
-			description: "Deploying secure mesh edge sites with enhanced security and networking features",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_securemesh_site_v2" "example" {\n  name      = "example-securemesh-site-v2"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_securemesh_site_v2.example namespace/name",
-		},
-		segment: {
-			category: "networking",
-			description: "Segment. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_segment" "example" {\n  name      = "example-segment"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_segment.example namespace/name",
-		},
-		sensitive_data_policy: {
-			category: "security",
-			description: "Sensitive_data_policy creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_sensitive_data_policy" "example" {\n  name      = "example-sensitive-data-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_sensitive_data_policy.example namespace/name",
-		},
-		service_policy: {
-			category: "security",
-			description: "Service_policy creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_service_policy" "example" {\n  name      = "example-service-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: ["namespace"],
-			},
-			import_syntax: "terraform import xcsh_service_policy.example namespace/name",
-		},
-		service_policy_rule: {
-			category: "security",
-			description: "Service_policy_rule creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_service_policy_rule" "example" {\n  name      = "example-service-policy-rule"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_service_policy_rule.example namespace/name",
-		},
-		site: {
-			category: "sites",
-			description: "Virtual site object in given namespace",
-			required: ["name", "namespace", "site_type"],
-			minimal_config:
-				'resource "xcsh_site" "example" {\n  name      = "example-site"\n  namespace = "staging"\n\n  site_type = "INVALID"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_site.example namespace/name",
-		},
-		site_mesh_group: {
-			category: "sites",
-			description: "Site Mesh Group in system namespace of user",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_site_mesh_group" "example" {\n  name      = "example-site-mesh-group"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_site_mesh_group.example namespace/name",
-		},
-		srv6_network_slice: {
-			category: "networking",
-			description: "Srv6_network_slice creates a new object in the storage backend for metadata.namespace",
-			required: [
-				"name",
-				"namespace",
-				"connect_to_access_networks",
-				"connect_to_enterprise_networks",
-				"connect_to_internet",
-			],
-			minimal_config:
-				'resource "xcsh_srv6_network_slice" "example" {\n  name      = "example-srv6-network-slice"\n  namespace = "staging"\n\n  sid_prefixes                   = ["example-value"]\n  connect_to_access_networks     = true\n  connect_to_enterprise_networks = true\n  connect_to_internet            = true\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_srv6_network_slice.example namespace/name",
-		},
-		subnet: {
-			category: "networking",
-			description:
-				"Subnet object contains configuration for an interface of a vm/pod. it is created in user or shared namespace. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_subnet" "example" {\n  name      = "example-subnet"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_subnet.example namespace/name",
-		},
-		tcp_loadbalancer: {
-			category: "load-balancing",
-			description: "Load balancing TCP traffic across origin pools",
-			required: ["name", "namespace", "origin_pools"],
-			minimal_config:
-				'resource "xcsh_tcp_loadbalancer" "example" {\n  name      = "example-tcp-loadbalancer"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: ["namespace", "origin_pool"],
-			},
-			import_syntax: "terraform import xcsh_tcp_loadbalancer.example namespace/name",
-		},
-		tenant_configuration: {
+		{
+			name: "tenant_configuration",
 			category: "organization",
 			description: "Tenant configuration specification. configuration",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_tenant_configuration" "example" {\n  name      = "example-tenant-configuration"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/tenant_configuration.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_tenant_configuration.example namespace/name",
 		},
-		token: {
-			category: "authentication",
-			description:
-				"New token. Token object is used to manage site admission. User must generate token before provisioning and pass this token to site during it's registration",
-			required: ["name"],
-			minimal_config: 'resource "xcsh_token" "example" {\n  name      = "example-token"\n  namespace = "system"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_token.example namespace/name",
-		},
-		trusted_ca_list: {
-			category: "certificates",
-			description: "Trusted certificate authority list management",
-			required: ["name", "namespace", "trusted_ca_url"],
-			minimal_config:
-				'resource "xcsh_trusted_ca_list" "example" {\n  name      = "example-trusted-ca-list"\n  namespace = "staging"\n\n  trusted_ca_url = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_trusted_ca_list.example namespace/name",
-		},
-		tunnel: {
-			category: "networking",
-			description: "Tunnel in a given namespace. If one already exist it will give a error",
-			required: ["name", "namespace", "tunnel_type"],
-			minimal_config:
-				'resource "xcsh_tunnel" "example" {\n  name      = "example-tunnel"\n  namespace = "staging"\n\n  tunnel_type = "IPSEC_PSK"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_tunnel.example namespace/name",
-		},
-		udp_loadbalancer: {
-			category: "load-balancing",
-			description: "Load balancing UDP traffic across origin pools",
-			required: ["name", "namespace", "dns_volterra_managed", "idle_timeout"],
-			minimal_config:
-				'resource "xcsh_udp_loadbalancer" "example" {\n  name      = "example-udp-loadbalancer"\n  namespace = "staging"\n\n  domains              = ["example-value"]\n  dns_volterra_managed = true\n  idle_timeout         = 1\n}',
-			dependencies: {
-				requires: ["namespace", "origin_pool"],
-			},
-			import_syntax: "terraform import xcsh_udp_loadbalancer.example namespace/name",
-		},
-		usb_policy: {
-			category: "security",
-			description: "New USB policy object",
+		{
+			name: "code_base_integration",
+			category: "integrations",
+			description: "Integration details",
 			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_usb_policy" "example" {\n  name      = "example-usb-policy"\n  namespace = "staging"\n}',
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/code_base_integration.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_usb_policy.example namespace/name",
+			import_syntax: "terraform import xcsh_code_base_integration.example namespace/name",
 		},
-		user_identification: {
-			category: "security",
-			description: "User_identification creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace", "rules"],
-			minimal_config:
-				'resource "xcsh_user_identification" "example" {\n  name      = "example-user-identification"\n  namespace = "staging"\n}',
+		{
+			name: "policer",
+			category: "service-mesh",
+			description: "New policer with traffic rate limits",
+			required: ["name", "namespace", "burst_size", "committed_information_rate"],
+			server_defaults: ["policer_mode", "policer_type"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/policer.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_user_identification.example namespace/name",
+			import_syntax: "terraform import xcsh_policer.example namespace/name",
 		},
-		virtual_host: {
-			category: "load-balancing",
-			description: "Virtual host in a given namespace",
-			required: [
-				"name",
-				"namespace",
-				"add_location",
-				"connection_idle_timeout",
-				"disable_default_error_pages",
-				"disable_dns_resolve",
-				"idle_timeout",
-				"max_request_header_size",
-				"proxy",
-			],
-			minimal_config:
-				'resource "xcsh_virtual_host" "example" {\n  name      = "example-virtual-host"\n  namespace = "staging"\n\n  domains                     = ["example-value"]\n  request_cookies_to_remove   = ["example-value"]\n  request_headers_to_remove   = ["example-value"]\n  response_cookies_to_remove  = ["example-value"]\n  response_headers_to_remove  = ["example-value"]\n  add_location                = true\n  connection_idle_timeout     = 1\n  disable_default_error_pages = true\n  disable_dns_resolve         = true\n  idle_timeout                = 1\n  max_request_header_size     = 1\n  proxy                       = "UDP_PROXY"\n}',
+		{
+			name: "cminstance",
+			category: "subscriptions",
+			description: "App type will create the configuration in namespace metadata.namespace",
+			required: ["name", "namespace", "port", "username"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/cminstance.txt#minimal-valid-config",
+			},
 			dependencies: {
 				requires: [],
 			},
-			import_syntax: "terraform import xcsh_virtual_host.example namespace/name",
+			import_syntax: "terraform import xcsh_cminstance.example namespace/name",
 		},
-		virtual_k8s: {
-			category: "kubernetes",
-			description: "Virtual_k8s will create the object in the storage backend for namespace metadata.namespace",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_virtual_k8s" "example" {\n  name      = "example-virtual-k8s"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_virtual_k8s.example namespace/name",
-		},
-		virtual_network: {
-			category: "networking",
-			description: "Virtual network in given namespace",
-			required: ["name", "legacy_type"],
-			minimal_config:
-				'resource "xcsh_virtual_network" "example" {\n  name      = "example-virtual-network"\n  namespace = "system"\n\n  legacy_type = "VIRTUAL_NETWORK_SITE_LOCAL"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_virtual_network.example namespace/name",
-		},
-		virtual_site: {
-			category: "sites",
-			description: "Virtual site object in given namespace",
-			required: ["name", "namespace", "site_type", "site_selector"],
-			minimal_config:
-				'resource "xcsh_virtual_site" "example" {\n  name      = "example-virtual-site"\n  namespace = "staging"\n\n  site_type = "INVALID"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_virtual_site.example namespace/name",
-		},
-		voltstack_site: {
-			category: "sites",
-			description: "Deploying Volterra stack sites for edge computing",
-			required: ["name", "namespace", "address", "volterra_certified_hw"],
-			minimal_config:
-				'resource "xcsh_voltstack_site" "example" {\n  name      = "example-voltstack-site"\n  namespace = "staging"\n\n  volterra_certified_hw = "example-value"\n  worker_nodes          = ["example-value"]\n  address               = "example-value"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_voltstack_site.example namespace/name",
-		},
-		waf_exclusion_policy: {
-			category: "security",
-			description: "WAF exclusion policy",
-			required: ["name", "namespace", "waf_exclusion_rules"],
-			minimal_config:
-				'resource "xcsh_waf_exclusion_policy" "example" {\n  name      = "example-waf-exclusion-policy"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_waf_exclusion_policy.example namespace/name",
-		},
-		workload: {
-			category: "kubernetes",
-			description: "Workload. configuration",
-			required: ["name", "namespace"],
-			minimal_config:
-				'resource "xcsh_workload" "example" {\n  name      = "example-workload"\n  namespace = "staging"\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_workload.example namespace/name",
-		},
-		workload_flavor: {
-			category: "kubernetes",
-			description: "Workload_flavor",
-			required: ["name", "namespace", "ephemeral_storage", "memory", "vcpus"],
-			minimal_config:
-				'resource "xcsh_workload_flavor" "example" {\n  name      = "example-workload-flavor"\n  namespace = "staging"\n\n  ephemeral_storage = "example-value"\n  memory            = "example-value"\n  vcpus             = 1\n}',
-			dependencies: {
-				requires: [],
-			},
-			import_syntax: "terraform import xcsh_workload_flavor.example namespace/name",
-		},
-	},
+	],
 } as const;
