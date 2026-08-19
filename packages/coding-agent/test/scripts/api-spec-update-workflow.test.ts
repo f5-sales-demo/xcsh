@@ -211,6 +211,21 @@ describe("provider publication evidence gate", () => {
 		}
 	}, 60_000);
 
+	it("rejects a provider spec pin whose underlying digest differs from the source", async () => {
+		const fixture = await providerEvidenceFixture();
+		try {
+			const sourcePin = await Bun.file(fixture.env.SOURCE_PIN_FILE).json();
+			const assetName = Object.keys(sourcePin.assets)[0];
+			sourcePin.assets[assetName] = "0".repeat(64);
+			await Bun.write(fixture.env.SOURCE_PIN_FILE, `${JSON.stringify(sourcePin)}\n`);
+			const result = await runProviderEvidenceStep(fixture);
+			expect(result.exitCode).not.toBe(0);
+			expect(result.output).toContain("Provider release consumed different spec bytes from this receiver");
+		} finally {
+			await fs.rm(fixture.root, { force: true, recursive: true });
+		}
+	}, 60_000);
+
 	it("rejects noncanonical and mismatched provider ledgers", async () => {
 		const noncanonical = await providerEvidenceFixture();
 		try {
@@ -295,7 +310,7 @@ async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = fal
 		"f5-sales-demo/terraform-provider-xcsh",
 	);
 	const pinDigest = (digit: string) => `${unqualifiedPin ? "" : "sha256:"}${digit.repeat(64)}`;
-	const pin = `${JSON.stringify({
+	const pinDocument = {
 		assets: {
 			"api-catalog.json": pinDigest("1"),
 			[`f5xc-api-specs-${specTag}.zip`]: pinDigest("2"),
@@ -306,6 +321,13 @@ async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = fal
 		release_tag: specTag,
 		target_commit: specCommit,
 		version: specVersion,
+	};
+	const pin = `${JSON.stringify(pinDocument)}\n`;
+	const sourcePin = `${JSON.stringify({
+		...pinDocument,
+		assets: Object.fromEntries(
+			Object.entries(pinDocument.assets).map(([name, digest]) => [name, digest.replace(/^sha256:/, "")]),
+		),
 	})}\n`;
 	const pinSha = new Bun.CryptoHasher("sha256").update(pin).digest("hex");
 	const assets = Object.fromEntries(
@@ -351,6 +373,7 @@ async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = fal
 	await Bun.write(path.join(root, "detailed.json"), `${JSON.stringify(detailed)}\n`);
 	await Bun.write(path.join(root, "release.json"), `${JSON.stringify(release)}\n`);
 	await Bun.write(path.join(root, "pin.json"), pin);
+	await Bun.write(path.join(root, "source-pin.json"), sourcePin);
 	await Bun.write(
 		path.join(bin, "gh"),
 		`#!/usr/bin/env bash
@@ -388,7 +411,7 @@ esac
 			GH_TOKEN: "fixture",
 			GITHUB_OUTPUT: path.join(root, "github-output"),
 			RUNNER_TEMP: root,
-			SOURCE_PIN_FILE: path.join(root, "pin.json"),
+			SOURCE_PIN_FILE: path.join(root, "source-pin.json"),
 		},
 	};
 }
