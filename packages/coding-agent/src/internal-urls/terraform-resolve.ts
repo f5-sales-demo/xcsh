@@ -6,6 +6,7 @@ export interface TerraformResolver {
 }
 
 export function createTerraformResolver(index: TerraformIndex): TerraformResolver {
+	const resources = normalizeResources(index.resources);
 	const categoryBySlug = new Map<string, TerraformCategory>();
 	for (const cat of index.categories) {
 		categoryBySlug.set(cat.slug, cat);
@@ -32,30 +33,35 @@ export function createTerraformResolver(index: TerraformIndex): TerraformResolve
 				const slug = parts[0]!;
 
 				const cat = categoryBySlug.get(slug);
-				if (cat) return makeResource(url, renderL1(cat, index.resources));
+				if (cat) return makeResource(url, renderL1(cat, resources));
 
-				const res = index.resources[slug];
+				const res = resources[slug];
 				if (res) {
 					const catSlug = resourceToCategory.get(slug) ?? "";
 					return makeResource(url, renderL2(slug, res, catSlug));
 				}
 
-				return makeResource(url, renderUnknown(slug, index));
+				return makeResource(url, renderUnknown(slug, resources));
 			}
 
 			if (parts.length === 2) {
 				const resourceName = parts[1]!;
-				const res = index.resources[resourceName];
+				const res = resources[resourceName];
 				if (res) {
 					const realCategory = resourceToCategory.get(resourceName) ?? parts[0]!;
 					return makeResource(url, renderL2(resourceName, res, realCategory));
 				}
-				return makeResource(url, renderUnknown(resourceName, index));
+				return makeResource(url, renderUnknown(resourceName, resources));
 			}
 
-			return makeResource(url, renderUnknown(pathname, index));
+			return makeResource(url, renderUnknown(pathname, resources));
 		},
 	};
+}
+
+function normalizeResources(resources: TerraformIndex["resources"]): Readonly<Record<string, TerraformResource>> {
+	if (!Array.isArray(resources)) return resources as Readonly<Record<string, TerraformResource>>;
+	return Object.fromEntries(resources.map(resource => [resource.name, resource]));
 }
 
 function makeResource(url: InternalUrl, content: string): InternalResource {
@@ -158,7 +164,12 @@ function renderL2(name: string, res: TerraformResource, _categorySlug: string): 
 	}
 
 	if (res.minimal_config) {
-		lines.push("", "## Config", "", "```terraform", res.minimal_config, "```");
+		lines.push("", "## Config", "");
+		if (typeof res.minimal_config === "string") {
+			lines.push("```terraform", res.minimal_config, "```");
+		} else {
+			lines.push(`Configuration source (${res.minimal_config.format}): \`${res.minimal_config.source}\``);
+		}
 	}
 
 	lines.push("", `Import: \`${res.import_syntax}\``);
@@ -169,8 +180,8 @@ function renderL2(name: string, res: TerraformResource, _categorySlug: string): 
 	return lines.join("\n");
 }
 
-function renderUnknown(query: string, index: TerraformIndex): string {
-	const allNames = Object.keys(index.resources);
+function renderUnknown(query: string, resources: Readonly<Record<string, TerraformResource>>): string {
+	const allNames = Object.keys(resources);
 	const matches = allNames.filter(n => n.includes(query)).slice(0, 5);
 	const suggestion =
 		matches.length > 0 ? `\nDid you mean: ${matches.join(", ")}` : "\nUse `xcsh://terraform/` to list categories.";
