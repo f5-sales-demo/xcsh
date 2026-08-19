@@ -200,6 +200,17 @@ describe("provider publication evidence gate", () => {
 		}
 	}, 60_000);
 
+	it("rejects unqualified provider spec pin digests", async () => {
+		const fixture = await providerEvidenceFixture(false, true);
+		try {
+			const result = await runProviderEvidenceStep(fixture);
+			expect(result.exitCode).not.toBe(0);
+			expect(result.output).toContain("Provider release carries a malformed or mismatched spec pin");
+		} finally {
+			await fs.rm(fixture.root, { force: true, recursive: true });
+		}
+	}, 60_000);
+
 	it("rejects noncanonical and mismatched provider ledgers", async () => {
 		const noncanonical = await providerEvidenceFixture();
 		try {
@@ -263,7 +274,7 @@ interface ProviderEvidenceFixture {
 	env: Record<string, string>;
 }
 
-async function providerEvidenceFixture(falseDigest = false): Promise<ProviderEvidenceFixture> {
+async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = false): Promise<ProviderEvidenceFixture> {
 	const root = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-provider-evidence-"));
 	const bin = path.join(root, "bin");
 	await fs.mkdir(bin);
@@ -283,13 +294,14 @@ async function providerEvidenceFixture(falseDigest = false): Promise<ProviderEvi
 		},
 		"f5-sales-demo/terraform-provider-xcsh",
 	);
+	const pinDigest = (digit: string) => `${unqualifiedPin ? "" : "sha256:"}${digit.repeat(64)}`;
 	const pin = `${JSON.stringify({
 		assets: {
-			"api-catalog.json": "1".repeat(64),
-			[`f5xc-api-specs-${specTag}.zip`]: "2".repeat(64),
-			"index.json": "3".repeat(64),
-			"minimal-export-defaults.json": "4".repeat(64),
-			"openapi.json": "5".repeat(64),
+			"api-catalog.json": pinDigest("1"),
+			[`f5xc-api-specs-${specTag}.zip`]: pinDigest("2"),
+			"index.json": pinDigest("3"),
+			"minimal-export-defaults.json": pinDigest("4"),
+			"openapi.json": pinDigest("5"),
 		},
 		release_tag: specTag,
 		target_commit: specCommit,
