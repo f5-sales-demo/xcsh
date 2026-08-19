@@ -1,0 +1,12 @@
+{
+	"assets": {
+		"api-catalog.json": "4508d97178f9539bcd3895cd2292773d566c7c3eef91bba6cb1c24693c61f38b",
+		"f5xc-api-specs-v2.1.221.zip": "40bd1d282b6987a9379852fef9d1a5833430f921369dfe49531a03daf9cfd15b",
+		"index.json": "ade4d093fe30c3552d1acaa84792112f021f6b1da42d864c09464d8f1b5d6000",
+		"minimal-export-defaults.json": "6a6874bec66edd75916f3aedd90e96a965f7d037703d547a1513862f1d99f102",
+		"openapi.json": "4a60a3b309c81500dc77818abdcd24107dd8a35e6b0027f71794e396e70e75ab"
+	},
+	"release_tag": "v2.1.221",
+	"target_commit": "6e6cfd6f135f34be22bd4d47baf9fa8bb4a1bbe0",
+	"version": "2.1.221"
+}
