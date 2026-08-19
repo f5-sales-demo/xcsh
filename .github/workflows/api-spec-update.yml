@@ -191,7 +191,7 @@ jobs:
                   ("terraform-provider-xcsh_" + .value.publication.version + "_windows_386.zip"),
                   ("terraform-provider-xcsh_" + .value.publication.version + "_windows_amd64.zip")
                 ] and
-                ([.value.publication.assets[] | test("^[0-9a-f]{64}$")] | all)
+                ([.value.publication.assets[] | test("^sha256:[0-9a-f]{64}$")] | all)
               ' >/dev/null || { echo "::error::Provider publication ledger contains malformed evidence"; exit 1; }
             done < <(printf '%s' "$PROVIDER_EVIDENCE" | jq -c '.receipts | to_entries[]')
 
@@ -243,7 +243,7 @@ jobs:
                     [.assets[] | select(.name == $name)] |
                     if length == 1 then .[0].digest else empty end')
                   RECEIPT_DIGEST=$(printf '%s' "$EVIDENCE" | jq -r --arg name "$ASSET" '.assets[$name]')
-                  [ "$API_DIGEST" = "sha256:$RECEIPT_DIGEST" ] || {
+                  [ "$API_DIGEST" = "$RECEIPT_DIGEST" ] || {
                     echo "::error::Provider release bytes differ from publication evidence for $ASSET"
                     exit 1
                   }
