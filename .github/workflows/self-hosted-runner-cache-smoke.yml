@@ -1,0 +1,65 @@
+---
+name: Self-hosted Runner Cache Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-runner-cache-smoke-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  cache-smoke:
+    name: Validate immutable image and private tool cache
+    runs-on: [self-hosted, Linux, X64, "${{ github.event.repository.name }}", ubuntu-24.04]
+    timeout-minutes: 10
+    steps:
+      - name: Assert immutable image and runtime cache boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${RUNNER_RUNTIME_DIR:?RUNNER_RUNTIME_DIR must be set}"
+          : "${RUNNER_TOOL_CACHE:?RUNNER_TOOL_CACHE must be set}"
+
+          runtime_dir="$(realpath -m -- "$RUNNER_RUNTIME_DIR")"
+          tool_cache="$(realpath -m -- "$RUNNER_TOOL_CACHE")"
+          test "$tool_cache" = "$runtime_dir/_tool"
+          test -d "$tool_cache"
+          test -f "$tool_cache/go/1.25.12/x64.complete"
+          test -f /opt/hostedtoolcache/go/1.25.12/x64.complete
+
+          if touch /.self-hosted-runner-cache-smoke; then
+            rm -f /.self-hosted-runner-cache-smoke
+            echo "the runner root filesystem must be read-only" >&2
+            exit 1
+          fi
+          if touch /opt/hostedtoolcache/.self-hosted-runner-cache-smoke; then
+            rm -f /opt/hostedtoolcache/.self-hosted-runner-cache-smoke
+            echo "the image tool cache must be read-only" >&2
+            exit 1
+          fi
+
+          printf 'runtime tool cache: %s\n' "$tool_cache"
+          stat -c '%A %U:%G %n' / /opt/hostedtoolcache "$tool_cache"
+
+      - name: Resolve catalogued Go from the private tool cache
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: 1.25.12
+          cache: false
+          check-latest: false
+
+      - name: Verify catalogued Go version
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(go env GOVERSION)" = go1.25.12
+          test -f "$RUNNER_TOOL_CACHE/go/1.25.12/x64.complete"
+
+      - name: Resolve an uncatalogued Go version into the runtime cache
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version: 1.25.11
