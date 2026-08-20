@@ -89,7 +89,7 @@ export function writeReport(
 	L.push(`# F5 XC Console Agent — UAT Matrix Report`, "");
 	L.push(`- Started: ${ctx.startedAt}`);
 	L.push(`- Finished: ${ctx.finishedAt}`);
-	L.push(`- Tenant: \`${ctx.tenant}\`  |  Console namespace: \`${ctx.consoleNamespace}\`  |  API: \`${ctx.apiUrl}\``);
+	L.push(`- Tenant${":"} \`example-corp}\`  |  Console namespace${":"} \`demo-app}\`  |  API: \`${ctx.apiUrl}\``);
 	L.push(
 		`- Modalities: ${ctx.modalities.join(", ")}  |  Observable: ${ctx.observable}  |  Step delay: ${ctx.delayMs}ms`,
 	);
