@@ -28,7 +28,8 @@ Options:
   --timeout-seconds N     Maximum seconds for each model invocation (default: 120)
   --report FILE           Secret-free JSON report path (default: $TMPDIR)
   --ca-cert FILE         Trust an additional PEM CA for registry access in the Podman VM
-  --model LABEL=SELECTOR  Add a model target; repeatable
+  --model LABEL=PROVIDER/MODEL
+                         Add a model target; repeatable and required
   -h, --help              Show this help
 
 Required environment:
@@ -133,10 +134,7 @@ require_positive_integer "$runs" "--runs"
 require_nonnegative_integer "$warmups" "--warmups"
 require_positive_integer "$timeout_seconds" "--timeout-seconds"
 
-if [ "$custom_models" = false ]; then
-  model_labels=("GPT-5.6 Sol" "Claude Opus 5")
-  model_selectors=("litellm/gpt-5.6-sol" "anthropic/claude-opus-5")
-fi
+[ "$custom_models" = true ] || die "At least one --model LABEL=PROVIDER/MODEL target is required."
 
 [ "$(uname -s)" = "Darwin" ] || die "This UAT must run on macOS."
 [ "$(uname -m)" = "arm64" ] || die "This UAT must run on an ARM64 Mac."
@@ -213,35 +211,31 @@ podman_version=$(podman --version)
 failure_count=0
 
 append_sample() {
-  local label=$1 selector=$2 phase=$3 round=$4 success=$5 response_exact=$6
-  local resolved_provider=$7 resolved_model=$8 error=$9
+  local label=$1 selector=$2 phase=$3 success=$4 resolved_provider=$5 resolved_model=$6 category=$7
   local expected_provider expected_model
   expected_provider=${selector%%/*}
   expected_model=${selector#"$expected_provider"/}
   jq -nc \
-    --arg sampleLabel "$label" \
+    --arg label "$label" \
     --arg selector "$selector" \
     --arg phase "$phase" \
-    --argjson round "$round" \
-    --argjson success "$success" \
-    --argjson responseExact "$response_exact" \
     --arg expectedProvider "$expected_provider" \
     --arg expectedModel "$expected_model" \
     --arg resolvedProvider "$resolved_provider" \
     --arg resolvedModel "$resolved_model" \
-    --arg error "$error" \
+    --argjson passed "$success" \
+    --arg category "$category" \
     '{
-      "label": $sampleLabel,
+      label: $label,
       selector: $selector,
       phase: $phase,
-      round: $round,
-      success: $success,
-      responseExact: $responseExact,
-      expectedProvider: $expectedProvider,
-      expectedModel: $expectedModel,
-      resolvedProvider: (if $resolvedProvider == "" then null else $resolvedProvider end),
-      resolvedModel: (if $resolvedModel == "" then null else $resolvedModel end),
-      error: (if $error == "" then null else $error end)
+      expected: { provider: $expectedProvider, model: $expectedModel },
+      resolved: {
+        provider: (if $resolvedProvider == "" then null else $resolvedProvider end),
+        model: (if $resolvedModel == "" then null else $resolvedModel end)
+      },
+      passed: $passed,
+      category: $category
     }' >>"$samples_file"
 }
 
@@ -251,20 +245,31 @@ run_sample() {
   local stderr_file="$run_dir/stderr.txt"
   local resolved_provider="" resolved_model="" response=""
   local expected_provider expected_model
-  local success=true response_exact=false error=""
+  local success=true category="none" invocation_status=0
 
   expected_provider=${selector%%/*}
   expected_model=${selector#"$expected_provider"/}
   : >"$stdout_file"
   : >"$stderr_file"
   echo "[$phase $round] $label ($selector)"
+
   if ! podman "${base_run_options[@]}" \
     --timeout "$timeout_seconds" \
     --env LITELLM_BASE_URL \
     --env LITELLM_API_KEY \
     --entrypoint bash \
     "$image" \
-    -c 'xcsh --list-models gpt-5.6-sol >/dev/null && exec xcsh "$@"' xcsh \
+    -c 'xcsh --list-models "$1" >/dev/null' xcsh "$selector" \
+    >/dev/null 2>"$stderr_file"; then
+    success=false
+    category="selector_unavailable"
+  elif podman "${base_run_options[@]}" \
+    --timeout "$timeout_seconds" \
+    --env LITELLM_BASE_URL \
+    --env LITELLM_API_KEY \
+    --entrypoint bash \
+    "$image" \
+    -c 'exec xcsh "$@"' xcsh \
     --mode json \
     --no-session \
     --no-memories \
@@ -279,47 +284,55 @@ run_sample() {
     --model "$selector" \
     "$PROMPT" \
     >"$stdout_file" 2>"$stderr_file"; then
-    success=false
-    error="model_process_failed"
-  elif ! jq -e -s . "$stdout_file" >/dev/null 2>&1; then
-    success=false
-    error="invalid_json_events"
-  else
-    response=$(jq -rs \
-      '[.[] | select(.type == "message_update") | .assistantMessageEvent |
+    if ! jq -e -s '
+      type == "array" and
+      any(.[]; .type == "session" and (.provider | type == "string") and (.model | type == "string")) and
+      any(.[]; .type == "message_end" and .message.role == "assistant" and
+        (.message.provider | type == "string") and (.message.model | type == "string"))
+    ' "$stdout_file" >/dev/null 2>&1; then
+      success=false
+      category="invalid_event_stream"
+    else
+      response=$(jq -r -s '[.[] | select(.type == "message_update") | .assistantMessageEvent |
         select(.type == "text_delta") | .delta] | join("")' "$stdout_file")
-    resolved_provider=$(jq -rs \
-      '[.[] |
+      resolved_provider=$(jq -r -s '[.[] |
         if .type == "message_end" and .message.role == "assistant" then .message.provider
         elif .type == "session" then .provider
-        else empty end] | .[-1] // ""' "$stdout_file")
-    resolved_model=$(jq -rs \
-      '[.[] |
+        else empty end] | .[-1] // empty' "$stdout_file")
+      resolved_model=$(jq -r -s '[.[] |
         if .type == "message_end" and .message.role == "assistant" then .message.model
         elif .type == "session" then .model
-        else empty end] | .[-1] // ""' "$stdout_file")
+        else empty end] | .[-1] // empty' "$stdout_file")
 
-    if [ "$response" = "PONG" ]; then
-      response_exact=true
-    else
-      success=false
-      error="response_not_exact"
+      if [ "$resolved_provider" != "$expected_provider" ]; then
+        success=false
+        category="provider_mismatch"
+      elif [ "$resolved_model" != "$expected_model" ]; then
+        success=false
+        category="model_mismatch"
+      elif [ "$response" != "PONG" ]; then
+        success=false
+        category="response_mismatch"
+      fi
     fi
-    if [ "$resolved_provider" != "$expected_provider" ] ||
-      [ "$resolved_model" != "$expected_model" ]; then
-      success=false
-      error="resolved_model_mismatch"
+  else
+    invocation_status=$?
+    success=false
+    if [ "$invocation_status" -eq 124 ]; then
+      category="timeout_or_process_failure"
+    else
+      category="access_or_deployment_unavailable"
     fi
   fi
 
   if [ "$success" = false ]; then
     failure_count=$((failure_count + 1))
-    echo "  FAIL: $error (provider stderr withheld to protect credentials)." >&2
+    echo "  FAIL: $category (provider stderr withheld to protect credentials)." >&2
   else
     echo "  PASS"
   fi
-  append_sample "$label" "$selector" "$phase" "$round" \
-    "$success" "$response_exact" "$resolved_provider" "$resolved_model" "$error"
+  append_sample "$label" "$selector" "$phase" \
+    "$success" "$resolved_provider" "$resolved_model" "$category"
 }
 
 if [ "$warmups" -gt 0 ]; then
@@ -353,42 +366,10 @@ else
 fi
 
 jq -s \
-  --arg createdAt "$timestamp" \
-  --arg podmanVersion "$podman_version" \
-  --arg imageReference "$image" \
-  --arg imageId "$image_id" \
-  --arg imageArchitecture "$image_architecture" \
-  --arg runtimeMachine "$runtime_machine" \
-  --arg xcshVersion "$xcsh_version" \
-  --argjson repoDigests "$repo_digests" \
-  --argjson runs "$runs" \
-  --argjson warmups "$warmups" \
-  --argjson timeoutSeconds "$timeout_seconds" \
   --argjson passed "$passed" \
-  --argjson customCa "$custom_ca" \
   '{
-    schemaVersion: 1,
-    createdAt: $createdAt,
+    schemaVersion: 2,
     passed: $passed,
-    host: {
-      os: "Darwin",
-      architecture: "arm64",
-      podmanVersion: $podmanVersion
-    },
-    image: {
-      reference: $imageReference,
-      id: $imageId,
-      architecture: $imageArchitecture,
-      repoDigests: $repoDigests,
-      runtimeMachine: $runtimeMachine,
-      xcshVersion: $xcshVersion
-    },
-    config: {
-      runs: $runs,
-      warmups: $warmups,
-      timeoutSeconds: $timeoutSeconds,
-      customCa: $customCa
-    },
     samples: .
   }' "$samples_file" >"$report_path"
 

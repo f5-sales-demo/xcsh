@@ -9,6 +9,7 @@ import {
 	resolveModelFromString,
 	resolveModelOverride,
 	resolveModelRoleValue,
+	resolveProviderModelReference,
 } from "../src/config/model-resolver";
 import { Settings } from "../src/config/settings";
 
@@ -669,5 +670,28 @@ describe("expandRoleAlias", () => {
 		settings.setModelRole("default", "anthropic/claude-sonnet-4-5");
 
 		expect(expandRoleAlias("pi/vision", settings)).toBe("pi/vision");
+	});
+});
+
+describe("six-tier fixture selectors", () => {
+	test("resolves each exact provider/model pair without crossing fixture providers", () => {
+		const fixtures = [
+			{ provider: "fixture-gpt", id: "sol-tier" },
+			{ provider: "fixture-gpt", id: "terra-tier" },
+			{ provider: "fixture-gpt", id: "luna-tier" },
+			{ provider: "fixture-anthropic", id: "haiku-tier" },
+			{ provider: "fixture-anthropic", id: "sonnet-tier" },
+			{ provider: "fixture-anthropic", id: "opus-tier" },
+		];
+		const models = fixtures.map((fixture, index) => ({
+			...mockModels[index % mockModels.length],
+			...fixture,
+			name: fixture.id,
+		}));
+
+		for (const fixture of fixtures) {
+			expect(resolveProviderModelReference(fixture.provider, fixture.id, models)).toMatchObject(fixture);
+		}
+		expect(resolveProviderModelReference("fixture-gpt", "opus-tier", models)).toBeUndefined();
 	});
 });
