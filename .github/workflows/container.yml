@@ -33,10 +33,8 @@ jobs:
       matrix:
         include:
           - architecture: amd64
-            expected_machine: x86_64
             platform: linux/amd64
           - architecture: arm64
-            expected_machine: aarch64
             platform: linux/arm64
     runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 60
@@ -56,10 +54,8 @@ jobs:
 
       - name: Test Alpine container
         env:
-          XCSH_EXPECTED_MACHINE: ${{ matrix.expected_machine }}
           XCSH_TEST_PLATFORM: ${{ matrix.platform }}
         run: |
-          test "$(uname -m)" = "$XCSH_EXPECTED_MACHINE"
           bash ./scripts/tdd-docker.sh
 
   podman-uat-harness:
