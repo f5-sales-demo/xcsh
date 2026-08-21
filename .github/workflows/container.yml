@@ -15,8 +15,19 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
+  trust-gate:
+    name: Verify same-repository trust boundary
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    permissions: {}
+    steps:
+      - name: Confirm this runner has no Docker socket
+        run: test ! -S /run/docker.sock
+
   container-build:
     name: container-build (${{ matrix.architecture }})
+    needs: trust-gate
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     strategy:
       fail-fast: false
       matrix:
@@ -24,12 +35,10 @@ jobs:
           - architecture: amd64
             expected_machine: x86_64
             platform: linux/amd64
-            runner: ubuntu-22.04
           - architecture: arm64
             expected_machine: aarch64
             platform: linux/arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 60
     permissions:
       contents: read
@@ -38,6 +47,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Set up QEMU for target-architecture execution
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
@@ -52,7 +64,9 @@ jobs:
 
   podman-uat-harness:
     name: podman-uat-harness
-    runs-on: ubuntu-22.04
+    needs: trust-gate
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -67,9 +81,9 @@ jobs:
 
   container-test:
     name: container-test
-    if: always()
-    needs: [container-build, podman-uat-harness]
-    runs-on: ubuntu-22.04
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [trust-gate, container-build, podman-uat-harness]
+    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 5
     steps:
       - name: Require architecture and harness tests
@@ -84,7 +98,7 @@ jobs:
     name: publish-ghcr
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [container-test]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 180
     permissions:
       contents: read
