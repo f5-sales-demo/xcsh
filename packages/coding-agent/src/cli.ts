@@ -118,6 +118,7 @@ function requestsHelp(args: readonly string[]): boolean {
 export function runCli(argv: string[]): Promise<void> {
 	// --help and --version are handled by run() directly, don't rewrite those.
 	// Everything else that isn't a known subcommand routes to "launch".
+	// Keeping this routing boundary explicit makes the CLI fallback easy to audit.
 	const first = argv[0];
 	if (!isSubcommand(first)) {
 		try {
