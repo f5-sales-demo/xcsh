@@ -206,6 +206,60 @@ Run the focused command in the last column, then run the package and repository 
 | Plugin discovery, commands, skills, or resources | Resolver tests, bridge enumeration, and plugin-surface UAT | `bun test --cwd packages/coding-agent test/internal-urls/plugin-resolve.test.ts test/chat-handler-list-skills.test.ts test/chat-handler-slash-commands.test.ts --max-concurrency 2` |
 | MEDDPICC scenario or worksheet output | Scenario oracle, UAT argument guards, stateful workbook, and live certification | `bun run --cwd packages/office-pane test -- test/meddpicc-scenario.test.ts test/uat-meddpicc-excel.test.ts --max-concurrency 2` |
 
+### Extend the canonical test owner
+
+Before creating a test file, inventory the existing suites and search them for the behavior or production
+symbol you are changing:
+
+```bash
+rg --files packages/office-pane/test -g '*.test.ts' -g '*.test.tsx' | sort
+rg -n 'describe\(|test\(|it\(' packages/office-pane/test
+rg -n '<production-symbol-or-behavior>' packages/office-pane/test packages/coding-agent/test
+```
+
+Extend the owning suite below when the behavior fits its production boundary. Create a new suite only for a
+new boundary or a test environment that cannot live in the owner; explain that boundary in the test and pull
+request. A cross-boundary change normally extends each affected owner. Do not create an umbrella suite that
+duplicates their assertions.
+
+| Pane responsibility | Canonical suites |
+| --- | --- |
+| Composer, transcript, attachments, menus, history, and session state | `ChatPanel.test.tsx`, `useChatSession.test.tsx`, `adapt.test.ts`, `tool-activity.test.ts` |
+| Gateway form, normalization, persistence, Office bootstrap, and transport construction | `GatewayGate.test.tsx`, `gateway-config.test.ts`, `gateway-store.test.ts`, `host-adapter.test.ts`, `transport-factory.test.ts` |
+| Shared frame schemas, configure acknowledgements, error reasons, turn reduction, and host-tool guards | `conformance.test.ts`, `configure.test.ts`, `reasons.test.ts`, `reduce.test.ts`, `host-tools.test.ts` |
+| Bridge discovery, WebSocket lifecycle, host-tool dispatch, and transport test double | `bridge-discovery.test.ts`, `loopback.test.ts`, `dispatcher.test.ts`, `mock.test.ts` |
+| Excel tools and the stateful workbook fake | `excel-tools.test.ts`, `fake-excel.test.ts` |
+| Word and PowerPoint tools, including dispatch result shape | `word-tools.test.ts`, `powerpoint-tools.test.ts` |
+| Markdown, source links, terminal shell, and responsive visual layout | `markdown-visual.test.ts`, `shell-visual.test.ts` |
+| Manifest, ribbon, icons, browser-safe build, and gzip budget | `manifest.test.ts`, `build.test.ts` |
+| Public exports, package contract version, and shared test environment | `exports.test.ts`, `version.test.ts` |
+| Automated bridge client, MEDDPICC scenario oracle, fixture guards, and evidence contract | `uat-bridge-client.test.ts`, `meddpicc-scenario.test.ts`, `uat-meddpicc-excel.test.ts` |
+
+The pane-side suite is not always the production owner. Use these coding-agent owners when a change crosses
+the bridge or affects the binary:
+
+| Engine responsibility | Canonical suites |
+| --- | --- |
+| `office` arguments, manifest output, sideload registration, working directory, serve/recycle lifecycle, and embedded-pane refusal | `office-cli.test.ts`, `commands/office.test.ts`, `browser/office-pane-server.test.ts`, `browser/office-serve-lifecycle.test.ts` |
+| TLS certificates, authenticated clients, listener ranges, origin gates, and Office bridge startup | `browser/bridge-cert.test.ts`, `browser/bridge-authenticated-client.test.ts`, `browser/bridge-port-base.test.ts`, `browser/extension-bridge.test.ts`, `headless-bridge.test.ts` |
+| Chat frames, host profiles, session contract, and Office tool advertisement | `browser/chat-protocol.test.ts`, `browser/host-profiles.test.ts`, `extension-session-contract.test.ts`, `extension-bridge-tools.test.ts` |
+| Host-tool execution, tool turns, activity forwarding, and bridge echo | `browser/chat-handler.host-tools.test.ts`, `browser/chat-handler.server-tools.test.ts`, `browser/chat-handler.tool-turn.test.ts`, `browser/host-tool-echo.e2e.test.ts` |
+| Gateway configure, attachments, context folders, model list, skills, slash commands, and web search | `browser/chat-handler.configure.test.ts`, `chat-handler-images.test.ts`, `chat-handler-context-paths.test.ts`, `chat-handler-list-models.test.ts`, `chat-handler-list-skills.test.ts`, `chat-handler-slash-commands.test.ts`, `chat-handler-web-search.test.ts`, `chat-handler-matrix.test.ts` |
+| Plugin resolution and runtime loading | `internal-urls/plugin-resolve.test.ts`, `loader-bundled-extensions.test.ts`, `skills.test.ts`, `discovery/agents-md-walk.test.ts` |
+
+Reuse the shared harnesses instead of making local substitutes:
+
+- `test/register-dom.ts` and `test/setup.ts` own the pane test environment.
+- `test/support/fake-excel.ts` owns the stateful Excel fake used by tool and scenario tests.
+- `scripts/uat/bridge-client.ts` owns real-bridge handshake, frame collection, and application readiness.
+- `scripts/uat/meddpicc-scenario.ts` owns the five presentation steps and workbook assertions.
+- `UAT.md` owns desktop acceptance rows. Add a row there when a user-visible Office behavior has no acceptance
+  oracle; do not encode a second checklist in a unit test or pull-request description.
+
+Use the lowest owning suite for the red-green-refactor loop, then move outward through the change-to-test
+matrix, package gate, automated UAT, and desktop UAT. A successful outer layer does not replace a missing
+inner regression test, and a mocked inner layer does not replace the real Office host check.
+
 Run the complete pane package after every Office change:
 
 ```bash
