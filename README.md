@@ -33,3 +33,5 @@ branch naming, and CI requirements.
 ## License
 
 See [LICENSE](LICENSE).
+
+<!-- Verify the required linked-issue check on this same-repository PR. -->
