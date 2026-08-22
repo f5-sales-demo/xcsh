@@ -98,7 +98,16 @@ FENCE=$(printf '{"allow":["%s"],"allowReadOnly":[],"allowWriteOnly":[],"deny":[]
   "$WORKSPACE" "$HOME_DIR/GIT")
 # Landlock cannot hide this one listing without also breaking every ancestor listing. Production keeps
 # this courtesy in the structured-tool/brush checks, so an external child retains normal operator rights
-# and, critically, does not inherit no_new_privs.
+# and does not add no_new_privs beyond the process baseline. Hardened runner containers set that baseline
+# to 1 globally; a local developer process normally starts at 0.
+BASE_NO_NEW_PRIVS=$("$BIN" run --cwd "$WORKSPACE" "grep -Eo '^NoNewPrivs:[[:space:]]*[01]$' /proc/self/status" | sed -n -E 's/^NoNewPrivs:[[:space:]]*([01])$/\1/p')
+case "$BASE_NO_NEW_PRIVS" in
+  0|1) ;;
+  *)
+    printf 'FAIL  unexpected NoNewPrivs baseline: %s\n' "$BASE_NO_NEW_PRIVS"
+    fail=$((fail + 1))
+    ;;
+esac
 expect "external listing keeps operator rights" ok "ls $HOME_DIR/GIT > /dev/null"
 expect "read a named sibling file" ok "cat $SIBLING/secret.txt > /dev/null && echo named-ok"
 expect "write a named sibling file" ok "printf named > $SIBLING/named.txt && test -f $SIBLING/named.txt"
@@ -106,8 +115,8 @@ expect "list below a named sibling" ok "ls $SIBLING > /dev/null && echo child-ok
 expect "operator home remains enumerable" ok "ls $HOME_DIR > /dev/null"
 expect "system temp remains enumerable" ok "ls /tmp > /dev/null"
 expect "filesystem root remains enumerable" ok "ls / > /dev/null"
-expect "discovery-only child keeps privilege capability" ok \
-  "grep -q 'NoNewPrivs:.*0' /proc/self/status"
+expect "discovery-only child preserves NoNewPrivs baseline" ok \
+  "grep -Eq '^NoNewPrivs:[[:space:]]*${BASE_NO_NEW_PRIVS}$' /proc/self/status"
 FENCE="$BASE_FENCE"
 
 printf '\n=== directional roots keep their direction ===\n'
