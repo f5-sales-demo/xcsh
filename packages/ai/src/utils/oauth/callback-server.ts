@@ -171,13 +171,21 @@ export abstract class OAuthCallbackFlow {
 		}
 	}
 
-	#createSingleServer(hostname: string, port: number, expectedState: string): Bun.Server<unknown> {
-		return Bun.serve({
+	#createSingleServer(hostname: string, port: number, expectedState: string): CallbackServer {
+		const server = Bun.serve({
 			hostname,
 			port,
 			reusePort: false,
 			fetch: req => this.#handleCallback(req, expectedState),
 		});
+		if (server.port === undefined) {
+			server.stop();
+			throw new Error(`OAuth callback server did not report a bound port for ${hostname}`);
+		}
+		return {
+			port: server.port,
+			stop: closeActiveConnections => server.stop(closeActiveConnections),
+		};
 	}
 
 	/**
