@@ -4,7 +4,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 ROOT_DIR="$(pwd)"
-WORK_DIR="$(mktemp -d)"
+TMPDIR="${TMPDIR:-/tmp}"
+if [ -n "${RUNNER_TEMP:-}" ]; then
+  RUNNER_TEMP_ROOT="${RUNNER_TEMP%/}/xcsh-install-tests"
+  mkdir -p "$RUNNER_TEMP_ROOT"
+  export TMPDIR="$RUNNER_TEMP_ROOT"
+fi
+
+WORK_DIR="$(mktemp -d "${TMPDIR%/}/xcsh-install-tests.XXXXXX")"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 section() {
