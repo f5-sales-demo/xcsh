@@ -19,6 +19,11 @@ const CALLBACK_PATH = "/callback";
 
 export type CallbackResult = { code: string; state: string };
 
+interface CallbackServer {
+	port: number;
+	stop(closeActiveConnections?: boolean): void;
+}
+
 export interface OAuthCallbackFlowOptions {
 	preferredPort: number;
 	callbackPath?: string;
@@ -117,13 +122,13 @@ export abstract class OAuthCallbackFlow {
 	/**
 	 * Start callback server, trying preferred port first, falling back to random.
 	 */
-	async #startCallbackServer(expectedState: string): Promise<{ server: Bun.Server<unknown>; redirectUri: string }> {
+	async #startCallbackServer(expectedState: string): Promise<{ server: CallbackServer; redirectUri: string }> {
 		try {
 			const server = this.#createServer(this.preferredPort, expectedState);
 			if (this.redirectUri) {
 				return { server, redirectUri: this.redirectUri };
 			}
-			const redirectUri = `http://${this.callbackHostname}:${this.preferredPort}${this.callbackPath}`;
+			const redirectUri = `http://${this.callbackHostname}:${server.port}${this.callbackPath}`;
 			return { server, redirectUri };
 		} catch {
 			if (this.redirectUri) {
@@ -142,9 +147,33 @@ export abstract class OAuthCallbackFlow {
 	/**
 	 * Create HTTP server for OAuth callback.
 	 */
-	#createServer(port: number, expectedState: string): Bun.Server<unknown> {
+	#createServer(port: number, expectedState: string): CallbackServer {
+		if (this.callbackHostname !== DEFAULT_HOSTNAME) {
+			return this.#createSingleServer(this.callbackHostname, port, expectedState);
+		}
+
+		// Bun resolves a localhost listener to IPv6 on some Linux images while clients resolve
+		// localhost to IPv4. Bind both loopback addresses, but keep localhost in the redirect URI
+		// so OAuth providers receive the conventional, portable callback host.
+		const ipv4Server = this.#createSingleServer("127.0.0.1", port, expectedState);
+		try {
+			const ipv6Server = this.#createSingleServer("::1", ipv4Server.port, expectedState);
+			return {
+				port: ipv4Server.port,
+				stop: closeActiveConnections => {
+					ipv4Server.stop(closeActiveConnections);
+					ipv6Server.stop(closeActiveConnections);
+				},
+			};
+		} catch (error) {
+			ipv4Server.stop();
+			throw error;
+		}
+	}
+
+	#createSingleServer(hostname: string, port: number, expectedState: string): Bun.Server<unknown> {
 		return Bun.serve({
-			hostname: this.callbackHostname,
+			hostname,
 			port,
 			reusePort: false,
 			fetch: req => this.#handleCallback(req, expectedState),

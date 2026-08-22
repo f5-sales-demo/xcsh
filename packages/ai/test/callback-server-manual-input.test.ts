@@ -4,7 +4,7 @@ import type { OAuthCredentials } from "../src/utils/oauth/types";
 
 class TestCallbackFlow extends OAuthCallbackFlow {
 	async generateAuthUrl(_state: string, redirectUri: string): Promise<{ url: string; instructions?: string }> {
-		return { url: `${redirectUri}?start=1` };
+		return { url: `${redirectUri}?start=1&state=${encodeURIComponent(_state)}` };
 	}
 
 	async exchangeToken(code: string, _state: string, _redirectUri: string): Promise<OAuthCredentials> {
@@ -17,6 +17,28 @@ class TestCallbackFlow extends OAuthCallbackFlow {
 }
 
 describe("OAuthCallbackFlow manual input retries", () => {
+	it("accepts an IPv4 loopback callback for the default localhost redirect URI", async () => {
+		const flow = new TestCallbackFlow(
+			{
+				onAuth: ({ url }) => {
+					const redirectUri = new URL(url);
+					const state = redirectUri.searchParams.get("state");
+					queueMicrotask(async () => {
+						await fetch(
+							`http://127.0.0.1:${redirectUri.port}/callback?code=ipv4-code&state=${encodeURIComponent(state ?? "")}`,
+						);
+					});
+				},
+				signal: AbortSignal.timeout(1_000),
+			},
+			0,
+		);
+
+		const credentials = await flow.login();
+
+		expect(credentials.access).toBe("access-ipv4-code");
+	});
+
 	it("retries manual input until a valid callback payload is provided", async () => {
 		const attempts = ["http://localhost/callback?state=missing-code", "http://localhost/callback?code=valid-code"];
 		let promptCount = 0;
