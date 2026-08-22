@@ -41,7 +41,8 @@ jobs:
   # Fast lint + type check (no Rust, no native build needed)
   check:
     name: check
-    runs-on: ubuntu-22.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -116,11 +117,20 @@ jobs:
 
   setup-zig:
     name: Verify Zig (${{ matrix.os }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, macos-15-intel, macos-14, windows-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - os: ubuntu-24.04
+            runner: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+          - os: macos-15-intel
+            runner: macos-15-intel
+          - os: macos-14
+            runner: macos-14
+          - os: windows-latest
+            runner: windows-latest
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -133,25 +143,26 @@ jobs:
 
   native:
     name: Native build (${{ matrix.os }}, ${{ matrix.arch }})
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: setup-zig
     strategy:
       fail-fast: false
       matrix:
         include: ${{ startsWith(github.ref, 'refs/tags/v') && fromJSON('[
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"modern"},
-          {"os":"ubuntu-22.04","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
+          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
+          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"modern"},
+          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"baseline"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"modern"},
           {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"baseline"},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"modern"}
           ]') || fromJSON('[
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-22.04","platform":"linux","arch":"x64","variants":"modern"},
+          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
+          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"modern"},
           {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}
           ]') }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.runner || matrix.os }}
     env:
       RUST_TARGET: ${{ matrix.target }}
     steps:
@@ -225,11 +236,6 @@ jobs:
       - name: Setup Zig 0.15.2
         uses: ./.github/actions/setup-zig
       - run: bun install --frozen-lockfile
-      - name: Install cross-compilation toolchain
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
       - name: Rust checks
         if: matrix.rust_checks
         run: bun run check:rs
@@ -282,7 +288,8 @@ jobs:
 
   test:
     name: test
-    runs-on: ubuntu-22.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -361,20 +368,15 @@ jobs:
       - uses: taiki-e/install-action@41049aa56687c35e0afa74eed4f09cec4f9afabf # v2.85.2
         with:
           tool: nextest
-      - name: Install system deps
+      - name: Verify immutable runner dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep imagemagick
-          sudo ln -s "$(which fdfind)" /usr/local/bin/fd
-          sudo ln -sf /usr/bin/convert /usr/local/bin/magick
-      # Ensure bun is on a PATH that child processes (posix_spawn, native shell
-      # addon) always inherit — setup-bun adds to $GITHUB_PATH which steps see,
-      # but spawned subprocesses may not. /usr/local/bin is always on PATH.
-      - name: Copy bun to /usr/local/bin so subprocesses always find it
-        run: |
-          sudo cp "$(which bun)" /usr/local/bin/bun
-          sudo chmod +x /usr/local/bin/bun
-          /usr/local/bin/bun --version
+          command -v fd
+          command -v rg
+          command -v magick
+          dpkg-query -W libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev >/dev/null
+      # The immutable runner image provides Bun in /usr/local/bin, which every child process inherits.
+      - name: Verify immutable Bun path
+        run: /usr/local/bin/bun --version
       - run: bun install --frozen-lockfile
       - run: bun run build:native
       - name: Verify bun binary exists before tests
@@ -391,7 +393,8 @@ jobs:
 
   install_methods:
     name: Test installation methods
-    runs-on: ubuntu-22.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -465,12 +468,12 @@ jobs:
           lookup-only: true
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
-      - name: Install system deps
+      - name: Verify immutable runner dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev fd-find ripgrep imagemagick
-          sudo ln -s "$(which fdfind)" /usr/local/bin/fd
-          sudo ln -sf /usr/bin/convert /usr/local/bin/magick
+          command -v fd
+          command -v rg
+          command -v magick
+          dpkg-query -W libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev >/dev/null
       - run: bun install --frozen-lockfile
       - name: Install method smoke tests
         run: bun run ci:test:install-methods
@@ -481,7 +484,7 @@ jobs:
     environment: release
     name: Invalidate stale release pull requests
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     timeout-minutes: 5
     permissions: {}
     steps:
@@ -504,7 +507,7 @@ jobs:
     name: Prepare automatic release
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
     needs: [check, native, test, install_methods]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -593,7 +596,7 @@ jobs:
     name: Build Linux and Windows release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [check, native, test, install_methods]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1035,7 +1038,7 @@ jobs:
     name: Publish immutable GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-release, build-sign-macos]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1098,7 +1101,7 @@ jobs:
     name: Publish Homebrew formula
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [create-release]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1258,7 +1261,7 @@ jobs:
     name: Publish npm packages
     if: startsWith(github.ref, 'refs/tags/v') && !inputs.skip_npm
     needs: [create-release]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     env:
       XCSH_BUILD_BRANCH: main
     permissions:
@@ -1366,7 +1369,7 @@ jobs:
     name: Verify npm installation
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [publish-npm]
-    runs-on: ubuntu-22.04
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

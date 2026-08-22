@@ -442,7 +442,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		const smokeJob = workflow.match(/\n {2}setup-zig:\n[\s\S]*?(?=\n {2}native:\n)/)?.[0] ?? "";
 		const nativeJob = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
 
-		expect(smokeJob).toContain("ubuntu-22.04");
+		expect(smokeJob).toContain("ubuntu-24.04");
 		expect(smokeJob).toContain("macos-15-intel");
 		expect(smokeJob).toContain("macos-14");
 		expect(smokeJob).toContain("windows-latest");

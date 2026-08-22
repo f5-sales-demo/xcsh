@@ -18,12 +18,17 @@ runs:
       run: |
         set -euo pipefail
 
-        # With no explicit channel, rustup installs the active toolchain declared by
-        # rust-toolchain.toml. Target installation is deliberately unqualified so it
-        # cannot drift onto a different sysroot from the one Cargo uses.
-        rustup toolchain install --profile minimal --no-self-update
+        RUST_TOOLCHAIN="$(sed -nE 's/^channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml)"
+        if [ -z "$RUST_TOOLCHAIN" ]; then
+          echo "rust-toolchain.toml does not declare a toolchain channel" >&2
+          exit 1
+        fi
+
+        # Recent rustup requires an explicit toolchain. Read the repository pin once
+        # and use it for both installation and optional target addition.
+        rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --no-self-update
         if [ -n "$RUST_TARGET" ]; then
-          rustup target add "$RUST_TARGET"
+          rustup target add "$RUST_TARGET" --toolchain "$RUST_TOOLCHAIN"
         fi
 
         rustup show active-toolchain

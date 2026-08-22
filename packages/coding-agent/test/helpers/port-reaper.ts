@@ -31,6 +31,11 @@ export function parseLsofPids(out: string): number[] {
 		.filter(pid => Number.isInteger(pid) && pid > 0);
 }
 
+/** PIDs from `ss -ltnp` output, de-duplicated when one process owns multiple sockets. */
+export function parseSsPids(out: string): number[] {
+	return [...new Set([...out.matchAll(/pid=(\d+)/g)].map(match => Number(match[1])).filter(pid => pid > 0))];
+}
+
 /**
  * Wall-clock budget for reclaiming the port range.
  *

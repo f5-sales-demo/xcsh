@@ -3,6 +3,7 @@ import {
 	isOwned,
 	type PortReaperDeps,
 	parseLsofPids,
+	parseSsPids,
 	pidsOnPorts,
 	portSpec,
 	REAP_BUDGET_MS,
@@ -157,6 +158,18 @@ describe("parseLsofPids", () => {
 	it("parses one PID per line and drops anything that is not one", () => {
 		expect(parseLsofPids("4242\n4243\n")).toEqual([4242, 4243]);
 		expect(parseLsofPids("4242\n\nnot-a-pid\n0\n-1\n")).toEqual([4242]);
+	});
+});
+
+describe("parseSsPids", () => {
+	it("extracts and de-duplicates listener PIDs", () => {
+		expect(
+			parseSsPids('LISTEN 0 511 127.0.0.1:24567 0.0.0.0:* users:(("bun",pid=4242,fd=11),("bun",pid=4242,fd=12))\n'),
+		).toEqual([4242]);
+	});
+
+	it("ignores output without process metadata", () => {
+		expect(parseSsPids("LISTEN 0 4096 127.0.0.1:24567 0.0.0.0:*\n")).toEqual([]);
 	});
 });
 

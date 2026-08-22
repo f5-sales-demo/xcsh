@@ -13,8 +13,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  trust-gate:
+    name: Verify same-repository trust boundary
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    permissions: {}
+    steps:
+      - name: Confirm this runner has no Docker socket
+        run: test ! -S /run/docker.sock
+
   container-build-smoke:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: trust-gate
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Validate container-build Docker route
     runs-on: [self-hosted, Linux, X64, xcsh, container-build]
     timeout-minutes: 5

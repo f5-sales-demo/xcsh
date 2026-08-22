@@ -193,14 +193,14 @@ describe("installed dependency state", () => {
 		}
 	});
 
-	it("runs workspace tests with bounded concurrency from the root script", async () => {
+	it("preserves package-specific workspace test concurrency guards", async () => {
 		const repoRoot = path.join(import.meta.dir, "../../../..");
 		const manifest = (await Bun.file(path.join(repoRoot, "package.json")).json()) as {
 			scripts?: Record<string, string>;
 		};
 
 		expect(manifest.scripts?.["test:ts"]).toBe(
-			"bun run ensure:dependencies && bun run --workspaces --if-present test -- --only-failures --max-concurrency 2",
+			"bun run ensure:dependencies && bun run --workspaces --if-present test -- --only-failures",
 		);
 	});
 });

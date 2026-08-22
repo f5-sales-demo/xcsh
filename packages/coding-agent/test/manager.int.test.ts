@@ -21,6 +21,7 @@ import { requireSpans, SURVIVAL_BUDGET_MS, SURVIVAL_PROBE_INTERVAL_MS } from "./
 import {
 	type PortReaperDeps,
 	parseLsofPids,
+	parseSsPids,
 	pidsOnPorts,
 	portSpec,
 	REAP_BUDGET_MS,
@@ -65,9 +66,25 @@ const reaperDeps: PortReaperDeps = {
 			}
 			return parseLsofPids(text);
 		} catch {
-			// lsof is not installed. Nothing here can enumerate ports, and failing every teardown would
-			// be worse than proceeding, so degrade to "no holders" as this file always has.
-			return [];
+			// Minimal runner images may omit lsof, but ss is part of iproute2 and can enumerate the
+			// same contiguous test window. Keep lsof first because it is available on macOS too.
+			try {
+				const selector = spec.includes("-")
+					? `sport >= :${spec.split("-")[0]} and sport <= :${spec.split("-")[1]}`
+					: `sport = :${spec}`;
+				const proc = Bun.spawn(["ss", "-ltnp", selector], { stdout: "pipe" });
+				const text = await Promise.race([
+					new Response(proc.stdout).text().catch(() => null),
+					Bun.sleep(SWEEP_TIMEOUT_MS).then(() => null),
+				]);
+				if (text === null) {
+					proc.kill("SIGKILL");
+					return null;
+				}
+				return parseSsPids(text);
+			} catch {
+				return [];
+			}
 		}
 	},
 	kill: (pid, signal) => process.kill(pid, signal),
