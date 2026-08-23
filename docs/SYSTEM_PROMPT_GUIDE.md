@@ -1,5 +1,7 @@
 # System prompt engineering standards
 
+<!-- Super-Linter pilot canary: validates changed-file lint routing. -->
+
 This document defines the authoritative engineering standard for authoring, refactoring, and maintaining system prompts, agent instructions, and skills across all f5-sales-demo repositories and xcsh AI assistant plugins.
 
 All system prompts and agent instructions must strictly adhere to this eight-point checklist.
