@@ -424,6 +424,13 @@ describe("system Handlebars prompt templates", () => {
 		expect(template).toContain("misconfigurations → outages");
 	});
 
+	test("system prompt requires exact Terraform Registry lookup before external sources", async () => {
+		const template = await Bun.file(path.join(systemPromptsDir, "system-prompt.md")).text();
+		expect(template).toContain("xcsh://registry/provider/<namespace>/<type>");
+		expect(template).toContain("xcsh://registry/module/<namespace>/<name>/<provider>");
+		expect(template).toContain("Never guess a namespace, provider type, module provider, or version");
+	});
+
 	test("custom-system-prompt renders the F5 XC context block when context is present", async () => {
 		const templatePath = path.join(systemPromptsDir, "custom-system-prompt.md");
 		const template = await Bun.file(templatePath).text();

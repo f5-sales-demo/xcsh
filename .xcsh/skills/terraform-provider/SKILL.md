@@ -9,6 +9,44 @@ description: |
 
 Every response MUST include a ```terraform code block. Output code first, then write it to a `.tf` file with `xcsh_write_file`.
 
+REGISTRY-FIRST: before adding any external `required_providers` entry, read
+`xcsh://registry/provider/<namespace>/<type>`. Before invoking a Registry module, read
+`xcsh://registry/module/<namespace>/<name>/<provider>`. Never guess a namespace, provider type, module provider,
+version, input, or output. Select a constraint only after reconciling Registry metadata with the caller's compatibility
+requirements and existing lock file.
+
+SENIOR TERRAFORM STRUCTURE:
+
+- Give every input in `variables.tf` an explicit `type` and `description`. Add a `validation {}` block with a useful
+  `error_message` for values constrained by naming, range, or format rules. Mark credentials and private material with
+  `sensitive = true`.
+- Put operator-relevant IDs, names, and endpoints in `outputs.tf`, with a `description` and `sensitive = true` whenever
+  the value reveals a secret.
+- Keep the root module small and split reusable concerns into focused child modules. Do not hardcode tenant URLs,
+  credentials, environment names, or environment-specific addresses.
+- For production modules, add native `*.tftest.hcl` coverage and run `terraform test` after format/init/validate. A
+  typical assertion uses `run "validate_configuration" { command = plan ... }`; tests must not apply infrastructure
+  unless the user explicitly authorizes that behavior.
+
+Example validated input and documented output:
+
+```terraform
+variable "namespace" {
+  type        = string
+  description = "Target F5 XC namespace"
+
+  validation {
+    condition     = can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", var.namespace))
+    error_message = "Namespace must use lowercase letters, digits, and hyphens."
+  }
+}
+
+output "load_balancer_domains" {
+  description = "Public domains configured on the load balancer"
+  value       = xcsh_http_loadbalancer.example.domains
+}
+```
+
 MINIMUM-SETTINGS (match the JSON/YAML export style): emit ONLY fields that change behavior — the required skeleton,
 required fields, and any value the user explicitly asks to set. OMIT fields the server applies by default unless the
 user wants a non-default value. Examples to omit at their defaults: `origin_pool` `loadbalancer_algorithm =
@@ -59,4 +97,9 @@ xcsh_namespace: resource "xcsh_namespace" "example" { name="example-staging" }
 Labels: add labels = { env="prod" }. Import: terraform import xcsh_namespace.example name
 
 Troubleshoot: "one of X must be set" = add empty block. "unsupported argument" = check template. Output corrected resource block.
+Troubleshooting detail: **Unsupported argument** means the installed provider schema and configuration disagree;
+read the relevant `xcsh://terraform/<category>/<resource>` entry and the selected provider version before changing
+HCL. A **State lock** must be investigated for an active writer first; use `terraform force-unlock <lock-id>` only
+when the user instructs it and the stale lock identity is verified. Provider installation failures require checking
+the exact source, version constraint, lock file, Registry availability, and any `dev_overrides` before retrying.
 Destroy: terraform destroy -target=xcsh_{type}.{label}

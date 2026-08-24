@@ -30,6 +30,9 @@ import type { AssistantMessageEventStream } from "./utils/event-stream";
 
 export type { AssistantMessageEventStream } from "./utils/event-stream";
 
+/** Internal credential sentinel that keeps keyless providers selectable without sending authentication. */
+export const NO_AUTH_API_KEY = "N/A";
+
 export type KnownApi =
 	| "openai-completions"
 	| "openai-responses"

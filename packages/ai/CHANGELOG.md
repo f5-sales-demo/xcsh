@@ -2,6 +2,12 @@
 
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Omit an empty OpenAI-compatible `tools` field unless prior tool-call history requires the explicit empty array, and suppress the internal no-auth credential sentinel from keyless request headers ([#2942](https://github.com/f5-sales-demo/xcsh/issues/2942), [#3361](https://github.com/f5-sales-demo/xcsh/issues/3361)).
+
 ## [20.3.0] - 2026-08-04
 
 ### Changed

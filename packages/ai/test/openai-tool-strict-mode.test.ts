@@ -94,6 +94,89 @@ describe("OpenAI tool strict mode", () => {
 		expect(payload.tools?.[0]?.function?.strict).toBeUndefined();
 	});
 
+	it("omits tools when the active tool array is empty and history has no tool calls", async () => {
+		const model: Model<"openai-completions"> = {
+			...getBundledModel("openai", "gpt-4o-mini"),
+			api: "openai-completions",
+		};
+		const payload = (await captureCompletionsPayload(model, { ...testContext, tools: [] })) as {
+			tools?: unknown[];
+		};
+		expect(payload).not.toHaveProperty("tools");
+	});
+
+	it("retains the required empty tools array when prior tool-call history exists", async () => {
+		const model: Model<"openai-completions"> = {
+			...getBundledModel("openai", "gpt-4o-mini"),
+			api: "openai-completions",
+		};
+		const payload = (await captureCompletionsPayload(model, {
+			tools: [],
+			messages: [
+				...testContext.messages,
+				{
+					role: "assistant",
+					content: [{ type: "toolCall", id: "call-1", name: "echo", arguments: { text: "hi" } }],
+					api: model.api,
+					provider: model.provider,
+					model: model.id,
+					usage: {
+						input: 0,
+						output: 0,
+						cacheRead: 0,
+						cacheWrite: 0,
+						totalTokens: 0,
+						cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+					},
+					stopReason: "toolUse",
+					timestamp: Date.now(),
+				},
+			],
+		})) as { tools?: unknown[] };
+		expect(payload.tools).toEqual([]);
+	});
+
+	it("omits Authorization when coding-agent marks an OpenAI-compatible provider as keyless", async () => {
+		const model: Model<"openai-completions"> = {
+			...getBundledModel("openai", "gpt-4o-mini"),
+			provider: "vllm",
+			baseUrl: "http://127.0.0.1:8000/v1",
+			api: "openai-completions",
+		};
+		let authorization: string | null = "not-observed";
+		global.fetch = Object.assign(
+			async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+				authorization =
+					input instanceof Request
+						? input.headers.get("Authorization")
+						: new Headers(init?.headers).get("Authorization");
+				return createSseResponse([
+					{
+						id: "chatcmpl-keyless",
+						object: "chat.completion.chunk",
+						created: 0,
+						model: model.id,
+						choices: [{ index: 0, delta: { content: "OK" } }],
+					},
+					{
+						id: "chatcmpl-keyless",
+						object: "chat.completion.chunk",
+						created: 0,
+						model: model.id,
+						choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+					},
+					"[DONE]",
+				]);
+			},
+			{ preconnect: originalFetch.preconnect },
+		);
+
+		const result = await streamOpenAICompletions(model, { ...testContext, tools: [] }, { apiKey: "N/A" }).result();
+
+		expect(result.stopReason).toBe("stop");
+		expect(authorization).toBeNull();
+	});
+
 	it("sends strict=true for openai-completions tool schemas on GitHub Copilot", async () => {
 		const model = getBundledModel("github-copilot", "gpt-4o") as Model<"openai-completions">;
 

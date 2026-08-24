@@ -6,6 +6,16 @@
 
 ### Added
 
+- Added strict `xcsh://registry/provider/<namespace>/<type>` and
+  `xcsh://registry/module/<namespace>/<name>/<provider>` Terraform Registry lookups with bounded,
+  protocol-native discovery and actionable failures
+  ([#3019](https://github.com/f5-sales-demo/xcsh/issues/3019),
+   [#3361](https://github.com/f5-sales-demo/xcsh/issues/3361)).
+- Added a transactional vLLM `/login` flow with validated HTTP(S) endpoints, masked optional keys,
+  pre-commit model probing, vLLM-only model selection, provider-only refresh, secure atomic
+  persistence, and rollback
+  ([#2947](https://github.com/f5-sales-demo/xcsh/issues/2947),
+   [#3361](https://github.com/f5-sales-demo/xcsh/issues/3361)).
 - Added provenance-validated, deterministic `render_map` PNG generation with OpenStreetMap tile
   policy compliance, schematic and text fallbacks, and optional atomic PNG/GeoJSON export
   ([#3202](https://github.com/f5-sales-demo/xcsh/issues/3202)).
@@ -26,6 +36,10 @@
 
 ### Fixed
 
+- Consumed vLLM-advertised context limits with bounded output budgets while preserving compatibility
+  fallbacks when metadata is absent
+  ([#2947](https://github.com/f5-sales-demo/xcsh/issues/2947),
+   [#3361](https://github.com/f5-sales-demo/xcsh/issues/3361)).
 - Restored bare `xcsh update` as a backward-compatible executable updater while preserving
   manifest-based resource updates and the explicit `xcsh self-update` command
   ([#3249](https://github.com/f5-sales-demo/xcsh/issues/3249)).

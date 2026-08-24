@@ -5,6 +5,7 @@ import {
 	applyOAuthLoginModel,
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	getAvailableLiteLLMLoginModelChoices,
+	getVllmLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
 	OPENAI_CODEX_LOGIN_MODEL_CHOICE,
 } from "../src/modes/controllers/login-model";
@@ -96,6 +97,27 @@ describe("getAvailableLiteLLMLoginModelChoices", () => {
 
 	it("returns no choices when neither curated model is advertised", () => {
 		expect(getAvailableLiteLLMLoginModelChoices(["gpt-5.6-terra"])).toEqual([]);
+	});
+});
+
+describe("getVllmLoginModelChoices", () => {
+	it("creates provider-scoped choices from only the discovered vLLM catalog", () => {
+		expect(getVllmLoginModelChoices([{ id: "local-tool-model", contextWindow: 32_768 }, { id: "compact" }])).toEqual([
+			{
+				label: "local-tool-model",
+				description: "32,768 token context",
+				provider: "vllm",
+				modelId: "local-tool-model",
+				thinkingLevel: ThinkingLevel.Off,
+			},
+			{
+				label: "compact",
+				description: "Context limit not advertised; using compatibility defaults",
+				provider: "vllm",
+				modelId: "compact",
+				thinkingLevel: ThinkingLevel.Off,
+			},
+		]);
 	});
 });
 

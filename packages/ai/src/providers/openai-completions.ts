@@ -18,6 +18,7 @@ import {
 	type Message,
 	type MessageAttribution,
 	type Model,
+	NO_AUTH_API_KEY,
 	type ServiceTier,
 	type StopReason,
 	type StreamFunction,
@@ -581,6 +582,7 @@ async function createClient(
 		apiKey = $env.OPENAI_API_KEY;
 	}
 	const rawApiKey = apiKey;
+	const omitAuthorization = rawApiKey === NO_AUTH_API_KEY;
 
 	let headers = { ...(model.headers ?? {}), ...(extraHeaders ?? {}) };
 	if (model.provider === "openrouter") {
@@ -609,7 +611,19 @@ async function createClient(
 	let capturedErrorResponse: CapturedHttpErrorResponse | undefined;
 	const wrappedFetch = Object.assign(
 		async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
-			const response = await fetch(input, init);
+			let fetchInput = input;
+			let fetchInit = init;
+			if (omitAuthorization) {
+				if (input instanceof Request) {
+					const headers = new Headers(input.headers);
+					headers.delete("Authorization");
+					fetchInput = new Request(input, { headers });
+				}
+				const headers = new Headers(init?.headers);
+				headers.delete("Authorization");
+				fetchInit = { ...init, headers };
+			}
+			const response = await fetch(fetchInput, fetchInit);
 			if (response.ok) {
 				capturedErrorResponse = undefined;
 				return response;
@@ -715,7 +729,7 @@ function buildParams(
 		params.service_tier = options.serviceTier;
 	}
 
-	if (context.tools) {
+	if (context.tools && context.tools.length > 0) {
 		const builtTools = convertTools(context.tools, compat, toolStrictModeOverride);
 		params.tools = builtTools.tools;
 		toolStrictMode = builtTools.toolStrictMode;
