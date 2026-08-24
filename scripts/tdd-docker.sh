@@ -108,6 +108,19 @@ grep -Fq 'runs-on: [self-hosted, Linux, X64, xcsh, container-build]' .github/wor
 grep -Fq 'docker/build-push-action@' .github/workflows/container.yml
 grep -Fq 'docker/setup-qemu-action@' .github/workflows/container.yml
 grep -Fq 'platforms: linux/amd64,linux/arm64' .github/workflows/container.yml
+grep -Fq 'docker buildx build' .github/workflows/container.yml
+grep -Fq 'index_digest="sha256:$(docker buildx imagetools inspect --raw' .github/workflows/container.yml
+grep -Fq "printf '%s\\n'" .github/workflows/container.yml
+grep -Fq '# check=skip=InvalidDefaultArgInFrom' .github/workflows/container.yml
+grep -Fq 'EXPECTED_MACHINE' .github/workflows/container.yml
+if grep -Fq "<<'DOCKERFILE'" .github/workflows/container.yml; then
+	echo "ERROR: Published image verification uses a YAML-ambiguous heredoc." >&2
+	exit 1
+fi
+if grep -Eq 'docker run .*--platform linux/(amd64|arm64)' .github/workflows/container.yml; then
+  echo "ERROR: Published multi-platform verification bypasses the isolated BuildKit emulator." >&2
+  exit 1
+fi
 grep -Fq 'ARG TARGETARCH' Dockerfile.alpine
 grep -Fq 'bun_arch=x64-baseline' Dockerfile.alpine
 grep -Fq 'export TARGET_VARIANT=baseline' Dockerfile.alpine
