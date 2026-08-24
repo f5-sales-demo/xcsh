@@ -158,7 +158,32 @@ jobs:
             exit 1
           fi
 
-          test "$(docker run --rm --platform linux/amd64 --entrypoint uname "$IMAGE" -m)" = "x86_64"
-          docker run --rm --platform linux/amd64 "$IMAGE" --version
-          test "$(docker run --rm --platform linux/arm64 --entrypoint uname "$IMAGE" -m)" = "aarch64"
-          docker run --rm --platform linux/arm64 "$IMAGE" --version
+          index_digest="sha256:$(docker buildx imagetools inspect --raw "$IMAGE" | sha256sum | awk '{print $1}')"
+          published_image="${IMAGE%:*}@${index_digest}"
+          expected_version="${GITHUB_REF_NAME#v}"
+
+          verify_platform() {
+            local platform="$1"
+            local expected_machine="$2"
+            # shellcheck disable=SC2016 # Docker expands these build arguments.
+            printf '%s\n' \
+              '# check=skip=InvalidDefaultArgInFrom' \
+              'ARG IMAGE' \
+              'FROM ${IMAGE}' \
+              'ARG EXPECTED_MACHINE' \
+              'ARG EXPECTED_VERSION' \
+              'RUN set -eux; test "$(uname -m)" = "${EXPECTED_MACHINE}"; test "$(xcsh --version)" = "xcsh/${EXPECTED_VERSION}"' | \
+              docker buildx build \
+              --platform "$platform" \
+              --pull \
+              --no-cache \
+              --progress plain \
+              --output type=cacheonly \
+              --build-arg "IMAGE=$published_image" \
+              --build-arg "EXPECTED_MACHINE=$expected_machine" \
+              --build-arg "EXPECTED_VERSION=$expected_version" \
+              -
+          }
+
+          verify_platform linux/amd64 x86_64
+          verify_platform linux/arm64 aarch64
