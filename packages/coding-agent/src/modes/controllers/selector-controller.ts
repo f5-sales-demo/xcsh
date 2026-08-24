@@ -16,6 +16,12 @@ import { probeLiteLLMConnection, readLiteLLMConfig } from "../../config/auto-con
 import { getRoleInfo } from "../../config/model-registry";
 import { formatModelSelectorValue } from "../../config/model-resolver";
 import { settings } from "../../config/settings";
+import {
+	DEFAULT_VLLM_BASE_URL,
+	normalizeVllmBaseUrl,
+	probeVllmConnection,
+	readVllmConfig,
+} from "../../config/vllm-config";
 import { DebugSelectorComponent } from "../../debug";
 import { disableProvider, enableProvider } from "../../discovery";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../discovery/helpers";
@@ -59,6 +65,7 @@ import { getPreset } from "../components/status-line/presets";
 import { ToolExecutionComponent } from "../components/tool-execution";
 import { TreeSelectorComponent } from "../components/tree-selector";
 import { UserMessageSelectorComponent } from "../components/user-message-selector";
+import { VllmModelSelectorComponent } from "../components/vllm-model-selector";
 import type { SessionObserverRegistry } from "../session-observer-registry";
 import { runEnterpriseOAuthLoginFlow } from "./enterprise-oauth-login-flow";
 import {
@@ -72,7 +79,10 @@ import {
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	LITELLM_LOGIN_MODEL_CHOICES,
 	type LiteLLMLoginModelChoice,
+	type LoginModelChoice,
 } from "./login-model";
+import { runVllmLoginFlow } from "./vllm-login-flow";
+import { commitVllmLogin } from "./vllm-login-transaction";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
@@ -526,6 +536,57 @@ export class SelectorController {
 			return { component: selector, focus: selector.getSelectList() };
 		});
 
+		return promise;
+	}
+
+	async #showVllmLoginModelSelector(choices: readonly LoginModelChoice[]): Promise<LoginModelChoice | null> {
+		const { promise, resolve } = Promise.withResolvers<LoginModelChoice | null>();
+		this.showSelector(done => {
+			const selector = new VllmModelSelectorComponent(
+				choices,
+				choice => {
+					done();
+					resolve(choice);
+					this.ctx.ui.requestRender();
+				},
+				() => {
+					done();
+					resolve(null);
+					this.ctx.ui.requestRender();
+				},
+			);
+			return { component: selector, focus: selector.getSelectList() };
+		});
+		return promise;
+	}
+
+	async #promptLoginValue(prompt: OAuthPrompt): Promise<string> {
+		this.ctx.chatContainer.addChild(new Spacer(1));
+		this.ctx.chatContainer.addChild(new Text(theme.fg("text", prompt.message), 1, 0));
+		if (prompt.placeholder) {
+			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", prompt.placeholder), 1, 0));
+		}
+		this.ctx.ui.requestRender();
+		const { promise, resolve, reject } = Promise.withResolvers<string>();
+		const input = createLoginPromptInput(prompt);
+		const closeInput = () => {
+			this.ctx.editorContainer.clear();
+			this.ctx.editorContainer.addChild(this.ctx.editor);
+			this.ctx.ui.setFocus(this.ctx.editor);
+		};
+		input.onSubmit = () => {
+			const value = input.getValue();
+			closeInput();
+			resolve(value);
+		};
+		input.onEscape = () => {
+			closeInput();
+			reject(new LoginPromptCancelled());
+		};
+		this.ctx.editorContainer.clear();
+		this.ctx.editorContainer.addChild(input);
+		this.ctx.ui.setFocus(input);
+		this.ctx.ui.requestRender();
 		return promise;
 	}
 
@@ -1057,6 +1118,97 @@ export class SelectorController {
 		}
 	}
 
+	async #handleVllmLogin(): Promise<void> {
+		this.ctx.showStatus("Configuring vLLM…");
+		const modelsPath = path.join(getAgentDir(), "models.yml");
+
+		try {
+			let defaultBaseUrl = readVllmConfig(modelsPath)?.baseUrl ?? DEFAULT_VLLM_BASE_URL;
+			const storedCredential = this.ctx.session.modelRegistry.authStorage.get("vllm");
+			const hadStoredKey = storedCredential?.type === "api_key" && storedCredential.key.length > 0;
+			const flowResult = await runVllmLoginFlow({
+				collectCredentials: async () => {
+					try {
+						let baseUrl: string;
+						while (true) {
+							const value = await this.#promptLoginValue({
+								message: `vLLM Base URL [${defaultBaseUrl}]`,
+								placeholder: DEFAULT_VLLM_BASE_URL,
+								allowEmpty: true,
+							});
+							try {
+								baseUrl = normalizeVllmBaseUrl(value.trim() || defaultBaseUrl);
+								break;
+							} catch (error) {
+								this.ctx.showError(error instanceof Error ? error.message : String(error));
+							}
+						}
+						const apiKey = await this.#promptLoginValue({
+							message: hadStoredKey
+								? "Optional vLLM API key [stored securely; leave blank to remove authentication]"
+								: "Optional vLLM API key [leave blank for keyless local service]",
+							allowEmpty: true,
+							secret: true,
+						});
+						defaultBaseUrl = baseUrl;
+						return { baseUrl, apiKey };
+					} catch (error) {
+						if (error instanceof LoginPromptCancelled) return null;
+						throw error;
+					}
+				},
+				probe: async credentials => {
+					this.ctx.chatContainer.addChild(new Spacer(1));
+					this.ctx.chatContainer.addChild(
+						new Text(theme.fg("dim", `Connecting to ${credentials.baseUrl}/models…`), 1, 0),
+					);
+					this.ctx.ui.requestRender();
+					const probe = await probeVllmConnection(credentials.baseUrl, credentials.apiKey);
+					this.ctx.chatContainer.addChild(
+						new Text(
+							theme.fg("success", `${theme.status.success} OK — ${probe.models.length} vLLM models available`),
+							1,
+							0,
+						),
+					);
+					this.ctx.ui.requestRender();
+					return probe;
+				},
+				selectModel: choices => this.#showVllmLoginModelSelector(choices),
+				commit: input =>
+					commitVllmLogin({
+						modelsPath,
+						credentials: input.credentials,
+						choice: input.choice,
+						session: this.ctx.session,
+					}),
+				recover: request => this.#showLoginRecovery(request, "vLLM"),
+			});
+
+			if (flowResult.status === "cancelled") {
+				this.ctx.showStatus("vLLM login cancelled. Existing configuration unchanged.");
+				return;
+			}
+			this.ctx.statusLine.invalidate();
+			this.ctx.updateEditorBorderColor();
+			this.ctx.chatContainer.addChild(new Spacer(1));
+			this.ctx.chatContainer.addChild(
+				new Text(theme.fg("success", `${theme.status.success} vLLM configuration saved to ${modelsPath}`), 1, 0),
+			);
+			this.ctx.chatContainer.addChild(
+				new Text(theme.fg("success", `Default model: vllm/${flowResult.choice.modelId} (thinking off)`), 1, 0),
+			);
+			if (this.ctx.session.modelRegistry.authStorage.get("vllm")) {
+				this.ctx.chatContainer.addChild(
+					new Text(theme.fg("dim", `API key saved only to ${getAgentDbPath()}`), 1, 0),
+				);
+			}
+			this.ctx.ui.requestRender();
+		} catch (error) {
+			this.ctx.showError(`vLLM login failed: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
 	async #handleOAuthLogin(providerId: string): Promise<void> {
 		if (providerId === "openai") {
 			this.#showOpenAIApiKeyGuidance();
@@ -1065,6 +1217,9 @@ export class SelectorController {
 		// LiteLLM has its own flow with config persistence
 		if (providerId === "litellm") {
 			return this.#handleLiteLLMLogin();
+		}
+		if (providerId === "vllm") {
+			return this.#handleVllmLogin();
 		}
 
 		this.ctx.showStatus(`Logging in to ${providerId}…`);

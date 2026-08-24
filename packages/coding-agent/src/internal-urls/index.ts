@@ -35,6 +35,7 @@ export * from "./mcp-protocol";
 export * from "./memory-protocol";
 export * from "./parse";
 export * from "./plugin-resolve";
+export * from "./registry-resolve";
 export * from "./router";
 export * from "./rule-protocol";
 export * from "./skill-protocol";

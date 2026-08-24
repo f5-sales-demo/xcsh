@@ -14,6 +14,7 @@ import {
 	type Model,
 	type ModelManagerOptions,
 	type ModelRefreshStrategy,
+	NO_AUTH_API_KEY,
 	type OAuthCredentials,
 	type OAuthLoginCallbacks,
 	openaiCodexModelManagerOptions,
@@ -31,6 +32,7 @@ import { type Static, Type } from "@sinclair/typebox";
 import { type ConfigError, ConfigFile } from "../config";
 import { hasLiteLLMEnv, probeAndUpgradeLiteLLMConfig, startupHealthCheck } from "../config/auto-config";
 import { parseModelString, resolveProviderModelReference } from "../config/model-resolver";
+import { parseVllmModelsPayload } from "../config/vllm-config";
 import { isValidThemeColor, type ThemeColor } from "../modes/theme/theme";
 import type { AuthStorage, OAuthCredential } from "../session/auth-storage";
 import {
@@ -45,7 +47,7 @@ import { type Settings, settings } from "./settings";
 
 export type { CanonicalModelIndex, CanonicalModelRecord, CanonicalModelVariant, ModelEquivalenceConfig };
 
-export const kNoAuth = "N/A";
+export const kNoAuth = NO_AUTH_API_KEY;
 
 export function isAuthenticated(apiKey: string | undefined | null): apiKey is string {
 	return Boolean(apiKey) && apiKey !== kNoAuth;
@@ -1737,8 +1739,11 @@ export class ModelRegistry {
 		if (!response.ok) {
 			throw new Error(`HTTP ${response.status} from ${modelsUrl}`);
 		}
-		const payload = (await response.json()) as { data?: Array<{ id: string }> };
-		const items = payload.data ?? [];
+		const payload = await response.json();
+		const items: Array<{ id: string; contextWindow?: number }> =
+			providerConfig.provider === "vllm"
+				? parseVllmModelsPayload(payload)
+				: ((payload as { data?: Array<{ id: string }> }).data ?? []);
 		const discovered: Model<Api>[] = [];
 		for (const item of items) {
 			const id = item.id;
@@ -1753,8 +1758,11 @@ export class ModelRegistry {
 					reasoning: false,
 					input: ["text"],
 					cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-					contextWindow: 128000,
-					maxTokens: 8192,
+					contextWindow: item.contextWindow ?? 128000,
+					maxTokens:
+						item.contextWindow === undefined
+							? 8192
+							: Math.max(1, Math.min(8192, Math.floor(item.contextWindow / 4))),
 					headers,
 				}),
 			);

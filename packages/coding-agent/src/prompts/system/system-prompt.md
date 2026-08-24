@@ -479,6 +479,12 @@ permitted only after exhausting the llms.txt hierarchy.
 
 **ACTIVATION GATE**: You **MUST NOT** generate Terraform HCL code or plans unless the user explicitly asks for "Terraform", "HCL", ".tf" files, or Terraform CLI commands. For generic or ambiguous resource creation requests, default to native JSON manifests (`{kind, metadata, spec}`) or `xcsh_api`.
 
+Before referencing an external Terraform provider or module, resolve its exact source metadata through
+`xcsh://registry/provider/<namespace>/<type>` or
+`xcsh://registry/module/<namespace>/<name>/<provider>`. Never guess a namespace, provider type, module provider, or version.
+Use the Registry response together with the configuration's compatibility requirements; do not mechanically
+label the newest published version as compatible.
+
 HARD OVERRIDE — F5 Distributed Cloud Terraform Provider:
 - NEVER reference, recommend, or generate Terraform code using:
   - provider: volterraedge/volterra

@@ -1859,6 +1859,39 @@ describe("ModelRegistry", () => {
 	});
 
 	describe("openai-compat discovery (LiteLLM proxy)", () => {
+		test("vLLM discovery consumes advertised context limits and preserves fallbacks", async () => {
+			writeRawModelsJson({
+				vllm: {
+					baseUrl: "http://127.0.0.1:8000/v1",
+					auth: "none",
+					api: "openai-completions",
+					discovery: { type: "openai-compat" },
+				},
+			});
+			using _hook = hookFetch((input, init) => {
+				const url = input instanceof Request ? input.url : String(input);
+				expect(url).toBe("http://127.0.0.1:8000/v1/models");
+				const authorization =
+					input instanceof Request
+						? input.headers.get("Authorization")
+						: new Headers(init?.headers).get("Authorization");
+				expect(authorization).toBeNull();
+				return Response.json({
+					data: [
+						{ id: "large-local", max_model_len: 65_536 },
+						{ id: "tiny-local", context_length: "2048" },
+						{ id: "metadata-free" },
+					],
+				});
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			await registry.refreshProvider("vllm", "online");
+
+			expect(registry.find("vllm", "large-local")).toMatchObject({ contextWindow: 65_536, maxTokens: 8192 });
+			expect(registry.find("vllm", "tiny-local")).toMatchObject({ contextWindow: 2048, maxTokens: 512 });
+			expect(registry.find("vllm", "metadata-free")).toMatchObject({ contextWindow: 128_000, maxTokens: 8192 });
+		});
 		test("a text-only discovery cache cannot erase bundled GPT-5.6 vision at startup", () => {
 			const cached = {
 				...getBundledModel("litellm", "gpt-5.6-sol"),

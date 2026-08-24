@@ -46,6 +46,7 @@ import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import extensionApiContent from "./extension-api.md" with { type: "text" };
 import { createFleetResolver, type FleetDeps, type FleetResolver } from "./fleet-resolve";
 import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
+import { createRegistryResolver, type RegistryResolver, type RegistryResolverDeps } from "./registry-resolve";
 import { createSourceResolver, type SourceResolver } from "./source-resolve";
 import { createTerraformResolver, type TerraformResolver } from "./terraform-resolve";
 import type { TerraformIndex } from "./terraform-types";
@@ -57,6 +58,7 @@ const API_SPEC_HOST = "api-spec";
 const API_CATALOG_HOST = "api-catalog";
 const BRANDING_HOST = "branding";
 const TERRAFORM_HOST = "terraform";
+const REGISTRY_HOST = "registry";
 const CONSOLE_HOST = "console";
 const EXTENSION_HOST = "extension";
 const PLUGIN_HOST = "plugin";
@@ -316,6 +318,8 @@ export interface InternalDocsProtocolOptions {
 	readonly getPluginRoots?: GetPluginRoots;
 	/** Injected so tests can classify without a git repo, a `gh` binary, or a network. */
 	readonly fleetDeps?: Partial<FleetDeps>;
+	/** Injected so Registry tests can use a protocol-faithful local server. */
+	readonly registryDeps?: Partial<RegistryResolverDeps>;
 }
 
 export class InternalDocsProtocolHandler implements ProtocolHandler {
@@ -327,12 +331,14 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 	#apiSpecResolver: ApiSpecResolver | null;
 	#apiCatalogResolver: ApiCatalogResolver | null;
 	#terraformResolver: TerraformResolver | null;
+	#registryResolver: RegistryResolver | null = null;
 	#consoleResolver: ConsoleResolver | null = null;
 	#pluginResolver: PluginResolver | null = null;
 	#changesResolver: ChangesResolver | null = null;
 	#sourceResolver: SourceResolver | null = null;
 	#fleetResolver: FleetResolver | null = null;
 	readonly #fleetDeps: Partial<FleetDeps> | undefined;
+	readonly #registryDeps: Partial<RegistryResolverDeps> | undefined;
 	readonly #getPluginRoots: GetPluginRoots | undefined;
 
 	constructor(options: InternalDocsProtocolOptions = {}) {
@@ -345,6 +351,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		this.#terraformResolver = null;
 		this.#getPluginRoots = options.getPluginRoots;
 		this.#fleetDeps = options.fleetDeps;
+		this.#registryDeps = options.registryDeps;
 	}
 
 	#getApiSpecResolver(): ApiSpecResolver {
@@ -379,6 +386,11 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			this.#terraformResolver = createTerraformResolver(loadTerraformIndex());
 		}
 		return this.#terraformResolver;
+	}
+
+	#getRegistryResolver(): RegistryResolver {
+		if (!this.#registryResolver) this.#registryResolver = createRegistryResolver(this.#registryDeps);
+		return this.#registryResolver;
 	}
 
 	#getConsoleResolver(): ConsoleResolver {
@@ -434,6 +446,10 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		if (host === TERRAFORM_HOST) {
 			return this.#getTerraformResolver().resolve(url);
+		}
+
+		if (host === REGISTRY_HOST) {
+			return this.#getRegistryResolver().resolve(url);
 		}
 
 		if (host === PLUGIN_HOST) {
@@ -504,6 +520,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		const brandingEntry = `- [${BRANDING_HOST}](${SCHEME_PREFIX}${BRANDING_HOST}) — F5 XC branding and legacy name mapping (v${branding.version})`;
 		const tf = loadTerraformIndex();
 		const terraformEntry = `- [${TERRAFORM_HOST}/](${SCHEME_PREFIX}${TERRAFORM_HOST}/) — F5 XC Terraform provider (${Object.keys(tf.resources).length} resources, v${tf.version})`;
+		const registryEntry = `- [${REGISTRY_HOST}/provider/<namespace>/<type>](${SCHEME_PREFIX}${REGISTRY_HOST}/provider/hashicorp/random) — live Terraform provider and module Registry metadata`;
 		const entries = [
 			syntheticEntry,
 			changesEntry,
@@ -513,6 +530,7 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 			apiCatalogEntry,
 			brandingEntry,
 			terraformEntry,
+			registryEntry,
 			...EMBEDDED_DOC_FILENAMES.map(f => `- [${f}](${SCHEME_PREFIX}${f})`),
 		];
 		// Derived, not hand-maintained: the advertised count used to be a magic

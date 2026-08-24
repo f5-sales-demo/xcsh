@@ -1,5 +1,6 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { canonicalizeOAuthProviderId, type Model } from "@f5-sales-demo/pi-ai";
+import type { VllmDiscoveredModel } from "../../config/vllm-config";
 import { applySubscriptionProfileRoles, type SubscriptionProfileId } from "../../routing/subscription-profiles";
 
 export interface LoginModelChoice {
@@ -51,6 +52,19 @@ export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly string[]): LiteLLMLoginModelChoice[] {
 	const available = new Set(availableModelIds);
 	return LITELLM_LOGIN_MODEL_CHOICES.filter(choice => available.has(choice.modelId));
+}
+
+export function getVllmLoginModelChoices(models: readonly VllmDiscoveredModel[]): LoginModelChoice[] {
+	return models.map(model => ({
+		label: model.id,
+		description:
+			model.contextWindow === undefined
+				? "Context limit not advertised; using compatibility defaults"
+				: `${model.contextWindow.toLocaleString("en-US")} token context`,
+		provider: "vllm",
+		modelId: model.id,
+		thinkingLevel: ThinkingLevel.Off,
+	}));
 }
 
 /**
