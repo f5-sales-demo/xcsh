@@ -114,8 +114,8 @@ grep -Fq "printf '%s\\n'" .github/workflows/container.yml
 grep -Fq '# check=skip=InvalidDefaultArgInFrom' .github/workflows/container.yml
 grep -Fq 'EXPECTED_MACHINE' .github/workflows/container.yml
 if grep -Fq "<<'DOCKERFILE'" .github/workflows/container.yml; then
-	echo "ERROR: Published image verification uses a YAML-ambiguous heredoc." >&2
-	exit 1
+  echo "ERROR: Published image verification uses a YAML-ambiguous heredoc." >&2
+  exit 1
 fi
 if grep -Eq 'docker run .*--platform linux/(amd64|arm64)' .github/workflows/container.yml; then
   echo "ERROR: Published multi-platform verification bypasses the isolated BuildKit emulator." >&2
