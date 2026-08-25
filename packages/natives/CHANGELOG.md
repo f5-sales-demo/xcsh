@@ -2,6 +2,14 @@
 
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Built Linux GNU release addons against the GLIBC 2.17 napi-rs cross-toolchain floor and added
+  artifact plus Debian 12 installation gates
+  ([#3376](https://github.com/f5-sales-demo/xcsh/issues/3376)).
+
 ## [20.3.0] - 2026-08-04
 
 ### Fixed
