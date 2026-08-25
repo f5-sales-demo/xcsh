@@ -104,6 +104,11 @@ if grep -Fq '/var/run/docker.sock' <<<"$compose_config"; then
   exit 1
 fi
 grep -Fq 'container-test:' .github/workflows/container.yml
+grep -Fq 'name: Trust Docker-capable job' .github/workflows/container.yml
+if grep -Fq 'name: Verify same-repository trust boundary' .github/workflows/container.yml; then
+  echo 'container workflow still uses the noncanonical Docker trust-gate name' >&2
+  exit 1
+fi
 grep -Fq 'runs-on: [self-hosted, Linux, X64, xcsh, container-build]' .github/workflows/container.yml
 grep -Fq 'docker/build-push-action@' .github/workflows/container.yml
 grep -Fq 'docker/setup-qemu-action@' .github/workflows/container.yml

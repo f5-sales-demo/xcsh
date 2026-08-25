@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   trust-gate:
-    name: Verify same-repository trust boundary
+    name: Trust Docker-capable job
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
     permissions: {}
