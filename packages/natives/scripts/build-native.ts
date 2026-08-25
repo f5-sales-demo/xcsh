@@ -61,8 +61,15 @@ function resolveReleaseLinuxTarget(): string | null {
 
 const releaseLinuxTarget = resolveReleaseLinuxTarget();
 if (releaseLinuxTarget === "aarch64-unknown-linux-gnu") {
-	Bun.env.TARGET_CC = "clang";
-	Bun.env.TARGET_CXX = "clang++";
+	const targetCc = Bun.which("clang");
+	const targetCxx = Bun.which("clang++");
+	if (!targetCc || !targetCxx) {
+		throw new Error(
+			"Linux ARM64 release builds require clang and clang++; install them on the build runner before invoking napi-rs.",
+		);
+	}
+	Bun.env.TARGET_CC = targetCc;
+	Bun.env.TARGET_CXX = targetCxx;
 	Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE";
 }
 
