@@ -56,12 +56,15 @@ describe("native build safety", () => {
 			expect(findGlibcRequirementsAbove(readelf, "2.17")).toEqual([]);
 		});
 
-		it("configures Linux CI builds with the napi cross toolchain and no host linker override", async () => {
+		it("configures Linux CI builds with resolved ARM64 compilers, the napi cross toolchain, and no host linker override", async () => {
 			const build = await Bun.file(new URL("../scripts/build-native.ts", import.meta.url)).text();
 			const workflow = await Bun.file(new URL("../../../.github/workflows/ci.yml", import.meta.url)).text();
 			expect(build).toContain('napiArgs.push("--target", releaseLinuxTarget, "--use-napi-cross")');
-			expect(build).toContain('Bun.env.TARGET_CC = "clang"');
-			expect(build).toContain('Bun.env.TARGET_CXX = "clang++"');
+			expect(build).toContain('const targetCc = Bun.which("clang");');
+			expect(build).toContain('const targetCxx = Bun.which("clang++");');
+			expect(build).toContain("if (!targetCc || !targetCxx)");
+			expect(build).toContain("Bun.env.TARGET_CC = targetCc;");
+			expect(build).toContain("Bun.env.TARGET_CXX = targetCxx;");
 			expect(build).toContain('Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE"');
 			expect(workflow).not.toContain("CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER");
 		});
