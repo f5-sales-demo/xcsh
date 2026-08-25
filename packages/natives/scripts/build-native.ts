@@ -12,6 +12,7 @@ const crossTarget = Bun.env.CROSS_TARGET;
 const targetPlatform = Bun.env.TARGET_PLATFORM || process.platform;
 const targetArch = Bun.env.TARGET_ARCH || process.arch;
 const configuredVariantRaw = Bun.env.TARGET_VARIANT;
+const isCI = Boolean(Bun.env.CI);
 const isCrossCompile = Boolean(crossTarget) || targetPlatform !== process.platform || targetArch !== process.arch;
 
 type X64Variant = "modern" | "baseline";
@@ -44,6 +45,26 @@ function resolveEffectiveVariant(): X64Variant | null {
 }
 const effectiveVariant = resolveEffectiveVariant();
 const variantSuffix = effectiveVariant ? `-${effectiveVariant}` : "";
+
+function resolveReleaseLinuxTarget(): string | null {
+	if (!isCI || targetPlatform !== "linux") return null;
+	const target =
+		targetArch === "x64" ? "x86_64-unknown-linux-gnu" : targetArch === "arm64" ? "aarch64-unknown-linux-gnu" : null;
+	if (!target) throw new Error(`Unsupported Linux release architecture: ${targetArch}`);
+	if (crossTarget && crossTarget !== target) {
+		throw new Error(
+			`CROSS_TARGET ${crossTarget} does not match the ${targetPlatform}-${targetArch} release target ${target}.`,
+		);
+	}
+	return target;
+}
+
+const releaseLinuxTarget = resolveReleaseLinuxTarget();
+if (releaseLinuxTarget === "aarch64-unknown-linux-gnu") {
+	Bun.env.TARGET_CC = "clang";
+	Bun.env.TARGET_CXX = "clang++";
+	Bun.env.CFLAGS_aarch64_unknown_linux_gnu = "-D_BSD_SOURCE";
+}
 
 function resolveLinuxHostZigTarget(): "x86_64-linux-gnu" | "x86_64-linux-musl" {
 	const report = process.report?.getReport?.() as { header?: { glibcVersionRuntime?: string } } | undefined;
@@ -224,7 +245,6 @@ function resolveManagedCargoTargetDir(profileLabel: string): string | null {
 	return path.join(repoRoot, "target", "napi-build", `${buildTarget}-${variantLabel}-${profileLabel}`);
 }
 
-const isCI = Boolean(Bun.env.CI);
 const useLocalProfile = !isCI && !isCrossCompile;
 const profileLabel = useLocalProfile ? "local" : "release";
 const profileSuffix = useLocalProfile ? " (local)" : "";
@@ -252,7 +272,11 @@ if (useLocalProfile) {
 	napiArgs.push("--release");
 }
 
-if (crossTarget) napiArgs.push("--target", crossTarget);
+if (releaseLinuxTarget) {
+	napiArgs.push("--target", releaseLinuxTarget, "--use-napi-cross");
+} else if (crossTarget) {
+	napiArgs.push("--target", crossTarget);
+}
 
 const canonicalAddonFilename = `pi_natives.${targetPlatform}-${targetArch}${variantSuffix}.node`;
 const canonicalAddonPath = path.join(nativeDir, canonicalAddonFilename);

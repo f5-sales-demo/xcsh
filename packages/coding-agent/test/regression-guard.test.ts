@@ -404,12 +404,20 @@ describe("LiteLLM openai-compat discovery schema (blocks xcsh startup for proxy 
 
 // ─── CI verify-npm-install backoff ────────────────────────────────────────
 
-describe("CI verify-npm-install uses version-pinned install with backoff (PR #93)", () => {
+describe("CI verify-npm-install uses an isolated version-pinned install", () => {
 	it("the verification script pins the release version instead of installing latest", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-npm-install.sh"), "utf8");
 		// Must install @f5-sales-demo/xcsh@<version> — specific version, not latest
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal string match against YAML content
 		expect(src).toContain('"@f5-sales-demo/xcsh@${expected}"');
+	});
+
+	it("uses only a job-local prefix and resolves the exact installed executable", async () => {
+		const src = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-npm-install.sh"), "utf8");
+		expect(src).toContain('npm install --global --prefix "$install_prefix"');
+		expect(src).toContain('binary="$install_prefix/bin/xcsh"');
+		expect(src).not.toContain("npm uninstall -g");
+		expect(src).not.toContain("command -v xcsh");
 	});
 
 	it("ci.yml verify step uses EXPECTED_VERSION from github.ref_name", async () => {
@@ -559,7 +567,7 @@ describe("release artifacts run the sandbox matrix before and after publication"
 		const script = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-npm-install.sh"), "utf8");
 		expect(job).toContain("release-binaries-linux-win");
 		expect(job).toContain("run: bash scripts/ci-verify-npm-install.sh");
-		expect(script).toContain("binary=$(command -v xcsh)");
+		expect(script).toContain('binary="$install_prefix/bin/xcsh"');
 		expect(script).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
 		expect(script).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
 	});

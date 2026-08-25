@@ -36,6 +36,9 @@
 
 ### Fixed
 
+- Isolated post-publication npm verification in a job-local writable prefix and failed immediately
+  for non-registry installation errors
+  ([#3375](https://github.com/f5-sales-demo/xcsh/issues/3375)).
 - Consumed vLLM-advertised context limits with bounded output budgets while preserving compatibility
   fallbacks when metadata is absent
   ([#2947](https://github.com/f5-sales-demo/xcsh/issues/2947),
