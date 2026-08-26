@@ -42,7 +42,7 @@ jobs:
   check:
     name: check
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -123,7 +123,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            runner: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+            runner: xcsh-socketless
           - os: macos-15-intel
             runner: macos-15-intel
           - os: macos-14
@@ -149,17 +149,17 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ startsWith(github.ref, 'refs/tags/v') && fromJSON('[
-          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"modern"},
-          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
+          {"os":"ubuntu-24.04","runner":"xcsh-socketless","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
+          {"os":"ubuntu-24.04","runner":"xcsh-socketless","platform":"linux","arch":"x64","variants":"modern"},
+          {"os":"ubuntu-24.04","runner":"xcsh-socketless","platform":"linux","arch":"arm64","target":"aarch64-unknown-linux-gnu"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"baseline"},
           {"os":"macos-15-intel","platform":"darwin","arch":"x64","variants":"modern"},
           {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"baseline"},
           {"os":"windows-latest","platform":"win32","arch":"x64","variants":"modern"}
           ]') || fromJSON('[
-          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
-          {"os":"ubuntu-24.04","runner":["self-hosted","Linux","X64","xcsh","ubuntu-24.04"],"platform":"linux","arch":"x64","variants":"modern"},
+          {"os":"ubuntu-24.04","runner":"xcsh-socketless","platform":"linux","arch":"x64","variants":"baseline","rust_checks":true,"sandbox_check":true},
+          {"os":"ubuntu-24.04","runner":"xcsh-socketless","platform":"linux","arch":"x64","variants":"modern"},
           {"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}
           ]') }}
     runs-on: ${{ matrix.runner || matrix.os }}
@@ -288,7 +288,7 @@ jobs:
   test:
     name: test
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -393,7 +393,7 @@ jobs:
   install_methods:
     name: Test installation methods
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -483,7 +483,7 @@ jobs:
     environment: release
     name: Invalidate stale release pull requests
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     timeout-minutes: 5
     permissions: {}
     steps:
@@ -506,7 +506,7 @@ jobs:
     name: Prepare automatic release
     if: github.ref == 'refs/heads/main' && !startsWith(github.event.head_commit.message, 'chore:')
     needs: [check, native, test, install_methods]
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -595,7 +595,7 @@ jobs:
     name: Build Linux and Windows release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [check, native, test, install_methods]
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1037,7 +1037,7 @@ jobs:
     name: Publish immutable GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-release, build-sign-macos]
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     permissions: {}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1100,7 +1100,7 @@ jobs:
     name: Publish Homebrew formula
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [create-release]
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1260,7 +1260,7 @@ jobs:
     name: Publish npm packages
     if: startsWith(github.ref, 'refs/tags/v') && !inputs.skip_npm
     needs: [create-release]
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     env:
       XCSH_BUILD_BRANCH: main
     permissions:
@@ -1368,7 +1368,7 @@ jobs:
     name: Verify npm installation
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [publish-npm]
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -1444,11 +1444,21 @@ jobs:
           EXPECTED_VERSION: ${{ github.ref_name }}
         run: bash scripts/ci-verify-npm-install.sh
 
+  trust-gate:
+    name: Trust Docker-capable job
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: verify-npm-install
+    runs-on: xcsh-socketless
+    permissions: {}
+    steps:
+      - name: Confirm this runner has no Docker socket
+        run: test ! -S /run/docker.sock
+
   verify-npm-debian:
     name: Verify npm installation on Debian 12
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [verify-npm-install]
-    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
+    needs: [verify-npm-install, trust-gate]
+    runs-on: xcsh-container-build
     permissions:
       contents: read
     steps:

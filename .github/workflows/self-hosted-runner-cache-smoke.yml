@@ -16,7 +16,7 @@ jobs:
   trust-gate:
     name: Verify same-repository trust boundary
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     permissions: {}
     steps:
       - name: Confirm this runner has no Docker socket
@@ -26,16 +26,26 @@ jobs:
     needs: trust-gate
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     name: Validate container-build Docker route
-    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
+    runs-on: xcsh-container-build
     timeout-minutes: 5
     steps:
-      - name: Build and inspect a scratch image through the Docker socket
+      - name: Build and inspect a scratch image through ARC DinD
         shell: bash
         run: |
           set -euo pipefail
-          test -S /run/docker.sock
-          : "${DOCKER_HOST:=unix:///run/docker.sock}"
-          export DOCKER_HOST
+          : "${DOCKER_HOST:?ARC DinD must provide DOCKER_HOST}"
+          case "$DOCKER_HOST" in
+            unix:///*) ;;
+            *)
+              echo "DOCKER_HOST must use a Unix socket: $DOCKER_HOST" >&2
+              exit 1
+              ;;
+          esac
+
+          docker_socket=${DOCKER_HOST#unix://}
+          test "$docker_socket" != /run/docker.sock
+          test -S "$docker_socket"
+
           docker version
           docker buildx version
           docker compose version

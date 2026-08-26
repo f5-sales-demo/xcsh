@@ -18,7 +18,7 @@ jobs:
   trust-gate:
     name: Trust Docker-capable job
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Linux, X64, xcsh, ubuntu-24.04]
+    runs-on: xcsh-socketless
     permissions: {}
     steps:
       - name: Confirm this runner has no Docker socket
@@ -28,7 +28,7 @@ jobs:
     name: container-build (native-amd64)
     needs: trust-gate
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
+    runs-on: xcsh-container-build
     timeout-minutes: 30
     permissions:
       contents: read
@@ -54,7 +54,7 @@ jobs:
     name: podman-uat-harness
     needs: trust-gate
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
+    runs-on: xcsh-container-build
     timeout-minutes: 5
     permissions:
       contents: read
@@ -71,7 +71,7 @@ jobs:
     name: container-test
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
     needs: [trust-gate, container-build, podman-uat-harness]
-    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
+    runs-on: xcsh-container-build
     timeout-minutes: 5
     steps:
       - name: Require architecture and harness tests
@@ -86,7 +86,7 @@ jobs:
     name: publish-ghcr
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [container-test]
-    runs-on: [self-hosted, Linux, X64, xcsh, container-build]
+    runs-on: xcsh-container-build
     timeout-minutes: 180
     permissions:
       contents: read
