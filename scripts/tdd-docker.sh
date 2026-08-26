@@ -52,6 +52,79 @@ cleanup() {
 }
 trap cleanup EXIT
 
+workflow_roots=(.github/workflows)
+for candidate in .github/workflows-disabled .github/disabled-workflows; do
+  if [[ -d "$candidate" ]]; then
+    workflow_roots+=("$candidate")
+  fi
+done
+mapfile -d '' workflow_files < <(
+  find "${workflow_roots[@]}" -type f \( -name '*.yml' -o -name '*.yaml' \) -print0
+)
+test "${#workflow_files[@]}" -gt 0
+
+for workflow_file in "${workflow_files[@]}"; do
+  compact=$(tr -d '[:space:]' <"$workflow_file")
+  for retired_route in '[self-hosted,Linux,X64,xcsh,ubuntu-24.04]' '["self-hosted","Linux","X64","xcsh","ubuntu-24.04"]' '[self-hosted,Linux,X64,xcsh,container-build]' '["self-hosted","Linux","X64","xcsh","container-build"]'; do
+    if [[ "$compact" == *"$retired_route"* ]]; then
+      echo "ERROR: $workflow_file contains retired runner route $retired_route" >&2
+      exit 1
+    fi
+  done
+done
+grep -Fq 'runs-on: xcsh-socketless' "${workflow_files[@]}"
+grep -Fq 'runs-on: xcsh-container-build' "${workflow_files[@]}"
+
+job_block() {
+  local workflow_file=$1
+  local job_id=$2
+  awk -v marker="  ${job_id}:" '
+    $0 == marker { capture = 1; next }
+    capture && /^  [A-Za-z0-9_-]+:/ { exit }
+    capture { print }
+  ' "$workflow_file"
+}
+
+assert_job_route() {
+  local workflow_file=$1
+  local job_id=$2
+  local expected_route=$3
+  if ! job_block "$workflow_file" "$job_id" | grep -Fxq "    runs-on: $expected_route"; then
+    echo "ERROR: $workflow_file job $job_id must use $expected_route" >&2
+    exit 1
+  fi
+}
+
+for workflow_file in .github/workflows/ci.yml .github/workflows/container.yml .github/workflows/self-hosted-runner-cache-smoke.yml; do
+  assert_job_route "$workflow_file" trust-gate xcsh-socketless
+done
+for job_id in container-build podman-uat-harness container-test publish-ghcr; do
+  assert_job_route .github/workflows/container.yml "$job_id" xcsh-container-build
+done
+assert_job_route .github/workflows/ci.yml verify-npm-debian xcsh-container-build
+assert_job_route .github/workflows/self-hosted-runner-cache-smoke.yml container-build-smoke xcsh-container-build
+assert_job_route .github/workflows/arc-compatibility.yml socketless xcsh-socketless
+assert_job_route .github/workflows/arc-compatibility.yml container xcsh-container-build
+assert_job_route .github/workflows/auto-merge.yml require-token xcsh-socketless
+assert_job_route .github/workflows/dependabot-auto-merge.yml auto-merge xcsh-socketless
+assert_job_route .github/workflows/semgrep.yml semgrep xcsh-socketless
+assert_job_route .github/workflows/super-linter.yml linked-issue xcsh-socketless
+assert_job_route .github/workflows/translation-audit.yml audit xcsh-socketless
+assert_job_route .github/workflows/workflow-security-audit.yml audit xcsh-socketless
+
+cache_smoke=.github/workflows/self-hosted-runner-cache-smoke.yml
+grep -Fq ': "${DOCKER_HOST:?ARC DinD must provide DOCKER_HOST}"' "$cache_smoke"
+grep -Fq 'docker_socket=${DOCKER_HOST#unix://}' "$cache_smoke"
+grep -Fq 'test "$docker_socket" != /run/docker.sock' "$cache_smoke"
+grep -Fq 'test -S "$docker_socket"' "$cache_smoke"
+if grep -Fq '${DOCKER_HOST:=' "$cache_smoke"; then
+  echo "ERROR: cache smoke must not synthesize a Docker endpoint" >&2
+  exit 1
+fi
+if grep -Eq 'docker/login-action|docker/build-push-action|npm publish|gh release|git tag|push:[[:space:]]*true' .github/workflows/arc-compatibility.yml; then
+  echo "ERROR: ARC compatibility workflow must not mutate a release or registry" >&2
+  exit 1
+fi
 docker info >/dev/null 2>&1 || {
   echo "ERROR: Docker is unavailable." >&2
   exit 1
@@ -109,7 +182,7 @@ if grep -Fq 'name: Verify same-repository trust boundary' .github/workflows/cont
   echo 'container workflow still uses the noncanonical Docker trust-gate name' >&2
   exit 1
 fi
-grep -Fq 'runs-on: [self-hosted, Linux, X64, xcsh, container-build]' .github/workflows/container.yml
+grep -Fq 'runs-on: xcsh-container-build' .github/workflows/container.yml
 grep -Fq 'docker/build-push-action@' .github/workflows/container.yml
 grep -Fq 'docker/setup-qemu-action@' .github/workflows/container.yml
 grep -Fq 'platforms: linux/amd64,linux/arm64' .github/workflows/container.yml
