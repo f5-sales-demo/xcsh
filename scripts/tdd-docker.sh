@@ -109,6 +109,8 @@ assert_job_route .github/workflows/auto-merge.yml require-token xcsh-socketless
 assert_job_route .github/workflows/dependabot-auto-merge.yml auto-merge xcsh-socketless
 assert_job_route .github/workflows/semgrep.yml semgrep xcsh-socketless
 assert_job_route .github/workflows/super-linter.yml linked-issue xcsh-socketless
+grep -Fq 'socketless_runner_label: xcsh-socketless' .github/workflows/super-linter.yml
+grep -Fq 'container_build_runner_label: xcsh-container-build' .github/workflows/super-linter.yml
 assert_job_route .github/workflows/translation-audit.yml audit xcsh-socketless
 assert_job_route .github/workflows/workflow-security-audit.yml audit xcsh-socketless
 
