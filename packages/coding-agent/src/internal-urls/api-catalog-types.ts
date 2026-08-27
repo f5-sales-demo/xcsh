@@ -21,6 +21,7 @@ export interface ApiCatalogMinimumPayload {
 
 export interface ApiCatalogFieldMeta {
 	readonly type: string;
+	readonly wireName?: string;
 	readonly description?: string;
 	readonly required_for?: {
 		readonly minimum_config?: boolean;
@@ -50,6 +51,7 @@ export interface ApiCatalogResponseField {
 
 export interface ApiCatalogOperation {
 	readonly name: string;
+	readonly operationAliases?: readonly string[];
 	readonly description: string;
 	readonly method: string;
 	readonly path: string;

@@ -28,11 +28,18 @@ const mockCategory: ApiCatalogCategory = {
 	operations: [
 		{
 			name: "Create test",
+			operationAliases: ["ves.io.schema.test.CustomAPI.Create"],
 			description: "Creates a test resource",
 			method: "post",
 			path: "/api/test/{namespace}/resources",
 			dangerLevel: "low",
 			parameters: [],
+			fieldMetadata: {
+				public_name: {
+					type: "string",
+					wireName: "wire_name",
+				},
+			},
 		},
 	],
 };
@@ -61,6 +68,12 @@ describe("createApiCatalogResolver — direct data (no decompression)", () => {
 	it("accepts data as Record<string, ApiCatalogCategory> instead of blobs", () => {
 		const resolver = createApiCatalogResolver(mockIndex, mockSummaries, mockData);
 		expect(resolver).toBeDefined();
+	});
+
+	it("preserves exact wire-name and operation-alias metadata without resolving aliases", () => {
+		const operation = mockCategory.operations[0];
+		expect(operation.operationAliases).toEqual(["ves.io.schema.test.CustomAPI.Create"]);
+		expect(operation.fieldMetadata?.public_name?.wireName).toBe("wire_name");
 	});
 
 	it("resolves a category from data directly", async () => {
