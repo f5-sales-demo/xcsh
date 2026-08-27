@@ -11,7 +11,7 @@
 		"tag": "v4.0.0"
 	},
 	"release_tag": "v3.0.0",
-	"spec_release_sha256": "39561a0f91b6f23ae0ab691cc8b28321fbd1e4b006ef62cd05580e5f5b70f9b5",
+	"spec_release_sha256": "9a815a9592042d670084dd8d1b31f7660a1b4468d8e42d9ab9e149bdeeb12bce",
 	"target_commit": "7543b98a6f71d979013e960bbcb32c75ce89d307",
 	"trigger_source": "f5-sales-demo/api-specs-enriched",
 	"version": "3.0.0"
