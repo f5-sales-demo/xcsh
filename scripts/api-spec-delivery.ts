@@ -236,6 +236,21 @@ function validateQualifiedDigestMap(
 	return validated;
 }
 
+function validateQualifiedSpecDigests(
+	document: unknown,
+	expectedNames: readonly string[],
+	field: string,
+): Record<string, string> {
+	const digests = validateQualifiedDigestMap(document, expectedNames, field);
+	return Object.fromEntries(Object.entries(digests).map(([name, digest]) => [name, `sha256:${digest}`]));
+}
+
+function unqualifiedSha256(digest: string): string {
+	const match = QUALIFIED_SHA256_PATTERN.exec(digest);
+	if (!match) throw new Error("Internal spec-release digest is not sha256-qualified");
+	return match[1];
+}
+
 export function parseSpecReleasePin(document: unknown, delivery?: ApiSpecDelivery): ApiSpecReleasePin {
 	if (!document || typeof document !== "object" || Array.isArray(document)) {
 		throw new Error("Spec release pin must be an object");
@@ -254,7 +269,7 @@ export function parseSpecReleasePin(document: unknown, delivery?: ApiSpecDeliver
 		throw new Error("Spec release pin disagrees with the dispatched identity");
 	}
 	return {
-		assets: validateDigestMap(pin.assets, expectedSpecAssetNames(releaseTag), "spec-release.assets"),
+		assets: validateQualifiedSpecDigests(pin.assets, expectedSpecAssetNames(releaseTag), "spec-release.assets"),
 		release_tag: releaseTag,
 		target_commit: targetCommit,
 		version,
@@ -926,7 +941,9 @@ async function main(): Promise<void> {
 		const receipt = await verifyReleasedTag(delivery, process.env.GITHUB_TOKEN);
 		const pin = parseSpecReleasePin(
 			{
-				assets: receipt.assets,
+				assets: Object.fromEntries(
+					Object.entries(receipt.assets).map(([name, digest]) => [name, `sha256:${digest}`]),
+				),
 				release_tag: delivery.releaseTag,
 				target_commit: receipt.commit,
 				version: receipt.version,
@@ -941,9 +958,9 @@ async function main(): Promise<void> {
 		await fs.appendFile(
 			outputPath,
 			[
-				`bundle_sha256=${pin.assets[bundleName]}`,
-				`catalog_sha256=${pin.assets["api-catalog.json"]}`,
-				`defaults_sha256=${pin.assets["minimal-export-defaults.json"]}`,
+				`bundle_sha256=${unqualifiedSha256(pin.assets[bundleName])}`,
+				`catalog_sha256=${unqualifiedSha256(pin.assets["api-catalog.json"])}`,
+				`defaults_sha256=${unqualifiedSha256(pin.assets["minimal-export-defaults.json"])}`,
 				`pin_path=${pinPath}`,
 			].join("\n") + "\n",
 		);
