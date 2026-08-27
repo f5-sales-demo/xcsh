@@ -3,6 +3,7 @@ import {
 	countAcmePlaceholderOccurrences,
 	sanitizeAcmePlaceholders,
 	sanitizePublicIpv4Examples,
+	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
 } from "../../scripts/sanitize-generated-content";
 
@@ -49,6 +50,14 @@ describe("generated-content sanitization", () => {
 
 		expect(countAcmePlaceholderOccurrences(source)).toBe(0);
 		expect(sanitizeAcmePlaceholders(source)).toBe(source);
+	});
+
+	it("replaces the scanner-sensitive namespace example deterministically", () => {
+		const source = 'When namespace = \\"system\\", all alerts for the tenant will be returned.';
+
+		expect(sanitizeSyntheticNamespaceExamples(source)).toBe(
+			"When namespace = demo-app, all alerts for the tenant will be returned.",
+		);
 	});
 
 	it("replaces globally routable IPv4 examples deterministically", () => {
