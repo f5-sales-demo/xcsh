@@ -773,6 +773,11 @@ jobs:
       - name: Verify acknowledgment reached main
         if: steps.main_delivery.outputs.applied != 'true'
         env:
+          DELIVERY_ID: ${{ steps.delivery.outputs.delivery_id }}
+          DELIVERY_RELEASE_TAG: ${{ steps.delivery.outputs.release_tag }}
+          DELIVERY_TARGET_COMMIT: ${{ steps.delivery.outputs.target_commit }}
+          DELIVERY_TRIGGER_SOURCE: ${{ steps.delivery.outputs.trigger_source }}
+          DELIVERY_VERSION: ${{ steps.delivery.outputs.version }}
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           LEDGER_PATH: ${{ steps.delivery.outputs.ledger_path }}
           PUBLICATION_LEDGER_PATH: ${{ steps.delivery.outputs.publication_ledger_path }}

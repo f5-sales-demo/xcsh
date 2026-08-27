@@ -863,6 +863,20 @@ async function readEventFromEnvironment(): Promise<ApiSpecDelivery> {
 	return delivery;
 }
 
+function readVerificationDeliveryFromEnvironment(): ApiSpecDelivery {
+	const delivery = {
+		deliveryId: requiredString(process.env.DELIVERY_ID, "DELIVERY_ID"),
+		releaseTag: requiredString(process.env.DELIVERY_RELEASE_TAG, "DELIVERY_RELEASE_TAG"),
+		targetCommit: requiredString(process.env.DELIVERY_TARGET_COMMIT, "DELIVERY_TARGET_COMMIT"),
+		triggerSource: requiredString(process.env.DELIVERY_TRIGGER_SOURCE, "DELIVERY_TRIGGER_SOURCE"),
+		version: requiredString(process.env.DELIVERY_VERSION, "DELIVERY_VERSION"),
+	};
+	if (!DELIVERY_ID_PATTERN.test(delivery.deliveryId) || delivery.deliveryId !== calculateDeliveryId(delivery)) {
+		throw new Error("Verification delivery identity does not match its canonical fields");
+	}
+	return delivery;
+}
+
 async function appendOutputs(delivery: ApiSpecDelivery): Promise<void> {
 	const outputPath = requiredString(process.env.GITHUB_OUTPUT, "GITHUB_OUTPUT");
 	const values = {
@@ -873,6 +887,7 @@ async function appendOutputs(delivery: ApiSpecDelivery): Promise<void> {
 		pending_path: DELIVERY_PENDING_PATH,
 		publication_ledger_path: DELIVERY_PUBLICATION_LEDGER_PATH,
 		provider_delivery_id: calculateDeliveryIdForTarget(delivery, PROVIDER_REPOSITORY),
+		trigger_source: delivery.triggerSource,
 		release_tag: delivery.releaseTag,
 		target_commit: delivery.targetCommit,
 		version: delivery.version,
@@ -887,7 +902,7 @@ async function appendOutputs(delivery: ApiSpecDelivery): Promise<void> {
 
 async function main(): Promise<void> {
 	const command = process.argv[2];
-	const delivery = await readEventFromEnvironment();
+	const delivery = command === "verify-ledger" ? readVerificationDeliveryFromEnvironment() : await readEventFromEnvironment();
 	if (command === "validate-event") {
 		await appendOutputs(delivery);
 		return;
