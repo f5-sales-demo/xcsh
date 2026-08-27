@@ -832,8 +832,8 @@ function renderSchemaAsTable(
 			const nestedOneOf = renderOneOfGroups(itemSchema, schemaRecommended);
 			if (nestedOneOf) rows.push("", nestedOneOf);
 			const nestedSource =
-				type === "array" && prop.items && typeof prop.items === "object"
-					? (prop.items as Record<string, unknown>)
+				type === "array" && fieldProp.items && typeof fieldProp.items === "object"
+					? (fieldProp.items as Record<string, unknown>)
 					: prop;
 			const nested = renderSchemaAsTable(
 				nestedSource,
