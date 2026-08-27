@@ -831,8 +831,12 @@ function renderSchemaAsTable(
 		if ((type === "object" || type === "array") && itemSchema.properties && depth < SCHEMA_RENDER_MAX_DEPTH) {
 			const nestedOneOf = renderOneOfGroups(itemSchema, schemaRecommended);
 			if (nestedOneOf) rows.push("", nestedOneOf);
+			const nestedSource =
+				type === "array" && prop.items && typeof prop.items === "object"
+					? (prop.items as Record<string, unknown>)
+					: prop;
 			const nested = renderSchemaAsTable(
-				itemSchema,
+				nestedSource,
 				spec,
 				depth + 1,
 				type === "array" ? fieldName + "[]" : fieldName,
