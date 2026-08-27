@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import {
 	type ApiSpecDelivery,
+	type ApiSpecReleasePin,
 	acknowledgePublishedDelivery,
 	calculateDeliveryId,
 	calculateDeliveryIdForTarget,
@@ -14,6 +15,7 @@ import {
 	deliveryBranch,
 	GENERATED_DELIVERY_PATHS,
 	parseDispatchEvent,
+	parseSpecReleasePin,
 	releaseIdentityFromEnvironment,
 	SPEC_RELEASE_PATH,
 	validateArtifactVersion,
@@ -50,7 +52,7 @@ const XCSH_RELEASE_ASSETS = [
 	"xcsh-windows-x64.exe",
 ] as const;
 
-function specReleasePin(): Record<string, unknown> {
+function specReleasePin(): ApiSpecReleasePin {
 	return {
 		assets: {
 			"api-catalog.json": "1".repeat(64),
@@ -68,6 +70,14 @@ function specReleasePin(): Record<string, unknown> {
 		release_tag: RELEASE_TAG,
 		target_commit: TARGET_COMMIT,
 		version: VERSION,
+	};
+}
+
+function qualifiedSpecReleasePin(): ApiSpecReleasePin {
+	const pin = specReleasePin();
+	return {
+		...pin,
+		assets: Object.fromEntries(Object.entries(pin.assets).map(([name, digest]) => [name, `sha256:${digest}`])),
 	};
 }
 
@@ -105,7 +115,7 @@ async function preparePendingDelivery(repoRoot: string): Promise<Record<string, 
 		await Bun.write(path.join(repoRoot, generatedPath), `generated ${generatedPath}\n`);
 	}
 	const pinPath = path.join(repoRoot, "source-pin.json");
-	await Bun.write(pinPath, `${JSON.stringify(specReleasePin())}\n`);
+	await Bun.write(pinPath, `${JSON.stringify(qualifiedSpecReleasePin())}\n`);
 	await writePendingDelivery(repoRoot, validDelivery(), pinPath, PROVIDER_TAG, PROVIDER_COMMIT);
 	return Bun.file(path.join(repoRoot, DELIVERY_PENDING_PATH)).json();
 }
@@ -284,7 +294,7 @@ describe("durable API spec delivery ledger", () => {
 				await Bun.write(path.join(repoRoot, generatedPath), `generated ${generatedPath}\n`);
 			}
 			const pinPath = path.join(repoRoot, "source-pin.json");
-			await Bun.write(pinPath, `${JSON.stringify(specReleasePin())}\n`);
+			await Bun.write(pinPath, `${JSON.stringify(qualifiedSpecReleasePin())}\n`);
 			await expect(
 				writePendingDelivery(repoRoot, validDelivery(), pinPath, "latest", PROVIDER_COMMIT),
 			).rejects.toThrow("Provider tag must be");
@@ -298,6 +308,25 @@ describe("durable API spec delivery ledger", () => {
 			await expect(
 				verifyGeneratedDelivery(repoRoot, validDelivery(), PROVIDER_TAG, PROVIDER_COMMIT),
 			).rejects.toThrow("differ from pending attestation");
+		} finally {
+			await fs.rm(repoRoot, { force: true, recursive: true });
+		}
+	});
+
+	it("requires and preserves sha256-qualified spec release pins", async () => {
+		expect(() => parseSpecReleasePin(specReleasePin())).toThrow("sha256-qualified");
+		const qualified = qualifiedSpecReleasePin();
+		expect(parseSpecReleasePin(qualified)).toEqual(qualified);
+
+		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-qualified-spec-pin-"));
+		try {
+			for (const generatedPath of GENERATED_DELIVERY_PATHS) {
+				await Bun.write(path.join(repoRoot, generatedPath), `generated ${generatedPath}\n`);
+			}
+			const sourcePin = path.join(repoRoot, "source-pin.json");
+			await Bun.write(sourcePin, `${JSON.stringify(qualified)}\n`);
+			await writePendingDelivery(repoRoot, validDelivery(), sourcePin, PROVIDER_TAG, PROVIDER_COMMIT);
+			expect(await Bun.file(path.join(repoRoot, SPEC_RELEASE_PATH)).json()).toEqual(qualified);
 		} finally {
 			await fs.rm(repoRoot, { force: true, recursive: true });
 		}
