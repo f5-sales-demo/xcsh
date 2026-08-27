@@ -846,7 +846,16 @@ async function readEventFromEnvironment(): Promise<ApiSpecDelivery> {
 	const repoRoot = requiredString(process.env.GITHUB_WORKSPACE, "GITHUB_WORKSPACE");
 	const pendingDocument = await readPendingDelivery(path.join(repoRoot, DELIVERY_PENDING_PATH));
 	if (!pendingDocument || typeof pendingDocument !== "object" || Array.isArray(pendingDocument)) {
-		throw new Error("Manual replay requires the pending delivery marker on main");
+		const ledger = await readDeliveryLedger(path.join(repoRoot, DELIVERY_LEDGER_PATH));
+		const entry = ledger?.deliveries[requestedDeliveryId];
+		if (!entry) throw new Error("Manual replay requires the pending delivery marker on main");
+		return {
+			deliveryId: requestedDeliveryId,
+			releaseTag: entry.release_tag,
+			targetCommit: entry.target_commit,
+			triggerSource: "acknowledged-delivery",
+			version: entry.version,
+		};
 	}
 	const pending = pendingDocument as Record<string, unknown>;
 	const delivery = {
