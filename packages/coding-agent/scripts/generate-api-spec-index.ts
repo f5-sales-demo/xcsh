@@ -13,6 +13,7 @@ import { isLocalSpecsCurrent } from "./api-specs-version";
 import {
 	sanitizeAcmePlaceholders,
 	sanitizePublicIpv4Examples,
+	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
 } from "./sanitize-generated-content";
 
@@ -614,7 +615,10 @@ const output = [
 	.filter(l => l !== undefined)
 	.join("\n");
 
-await Bun.write(outputPath, sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(output))));
+await Bun.write(
+	outputPath,
+	sanitizeSyntheticNamespaceExamples(sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(output)))),
+);
 
 const outputSize = (Buffer.byteLength(output) / 1024 / 1024).toFixed(1);
 console.log(

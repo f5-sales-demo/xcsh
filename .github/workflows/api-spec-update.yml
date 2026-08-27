@@ -2,8 +2,12 @@
 name: API Spec Update
 
 on:
-  repository_dispatch:
-    types: [enriched-specs-updated]
+  workflow_dispatch:
+    inputs:
+      delivery_id:
+        description: "Existing pending delivery ID to replay after its immutable xcsh release is available"
+        required: true
+        type: string
 
 concurrency:
   group: api-spec-update
@@ -32,7 +36,7 @@ jobs:
         with:
           bun-version: "1.3"
 
-      - name: Validate dispatch identity
+      - name: Validate manual replay identity
         id: delivery
         run: bun scripts/api-spec-delivery.ts validate-event
 
@@ -561,12 +565,24 @@ jobs:
                 packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts \
                 packages/coding-agent/src/internal-urls/api-spec-index.generated.ts \
                 packages/coding-agent/src/internal-urls/terraform-index.generated.ts \
-                packages/resource-management/src/defaults-metadata.generated.ts \
-                tools/spec-delivery-pending.json \
-                tools/spec-release.json; do
-                MERGE_BLOB=$(gh api "repos/$GITHUB_REPOSITORY/contents/$FILE?ref=$MERGE_SHA" --jq '.sha' 2>/dev/null || true)
-                TAG_BLOB=$(gh api "repos/$GITHUB_REPOSITORY/contents/$FILE?ref=$TAG_SHA" --jq '.sha' 2>/dev/null || true)
-                if [[ ! "$MERGE_BLOB" =~ ^[0-9a-f]{40}$ ]] || [ "$MERGE_BLOB" != "$TAG_BLOB" ]; then
+                packages/resource-management/src/defaults-metadata.generated.ts; do
+                TAG_FILE="$RUNNER_TEMP/tag-$(basename "$FILE")"
+                if ! gh api "repos/$GITHUB_REPOSITORY/contents/$FILE?ref=$TAG_SHA" \
+                  -H "Accept: application/vnd.github.raw+json" > "$TAG_FILE" 2>/dev/null; then
+                  CONTENT_MATCH=false
+                  break
+                fi
+                TAG_DIGEST=$(shasum -a 256 "$TAG_FILE" | awk '{print $1}')
+                EXPECTED_DIGEST=$(jq -r --arg file "$FILE" '.generated[$file] // empty' "$PENDING_PATH")
+                if [[ ! "$EXPECTED_DIGEST" =~ ^[0-9a-f]{64}$ ]] || [ "$TAG_DIGEST" != "$EXPECTED_DIGEST" ]; then
+                  CONTENT_MATCH=false
+                  break
+                fi
+              done
+              for FILE in "$PENDING_PATH" tools/spec-release.json; do
+                MAIN_BLOB=$(git rev-parse "HEAD:$FILE" 2>/dev/null || true)
+                TAG_BLOB=$(gh api "repos/$GITHUB_REPOSITORY/contents/$FILE?ref=$TAG_SHA" --jq ".sha" 2>/dev/null || true)
+                if [[ ! "$MAIN_BLOB" =~ ^[0-9a-f]{40}$ ]] || [ "$MAIN_BLOB" != "$TAG_BLOB" ]; then
                   CONTENT_MATCH=false
                   break
                 fi

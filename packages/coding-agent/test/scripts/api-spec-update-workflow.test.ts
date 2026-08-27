@@ -34,7 +34,7 @@ describe("API spec dispatch workflow contract", () => {
 	it("validates identity and the durable ledger before installing or generating", async () => {
 		const steps = await workflowSteps();
 		const names = steps.map(step => step.name ?? "");
-		const validateIndex = names.indexOf("Validate dispatch identity");
+		const validateIndex = names.indexOf("Validate manual replay identity");
 		const releaseIndex = names.indexOf("Verify exact published release");
 		const ledgerIndex = names.indexOf("Check durable delivery ledger on main");
 		const providerIndex = names.indexOf("Resolve exact published provider release");
@@ -143,7 +143,9 @@ describe("API spec dispatch workflow contract", () => {
 		expect(publication).toContain("@f5-sales-demo/pi-resource-management@$VERSION");
 		expect(publication).toContain(".gitHead == $commit");
 		expect(publication).toContain(".immutable == true");
-		expect(publication).toContain("MERGE_BLOB");
+		expect(publication).toContain("TAG_FILE");
+		expect(publication).toContain("shasum -a 256");
+		expect(publication).toContain("EXPECTED_DIGEST");
 		expect(publication).toContain("xcsh-publication-receipt.json");
 		expect(namedStep(steps, "Prepare post-publication acknowledgment").run).toContain(
 			"api-spec-delivery.ts acknowledge",

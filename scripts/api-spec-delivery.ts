@@ -830,7 +830,37 @@ export async function verifyReleasedTag(
 
 async function readEventFromEnvironment(): Promise<ApiSpecDelivery> {
 	const eventPath = requiredString(process.env.GITHUB_EVENT_PATH, "GITHUB_EVENT_PATH");
-	return parseDispatchEvent(await Bun.file(eventPath).json());
+	const event = await Bun.file(eventPath).json();
+	if (process.env.GITHUB_EVENT_NAME !== "workflow_dispatch") return parseDispatchEvent(event);
+	if (!event || typeof event !== "object" || Array.isArray(event)) {
+		throw new Error("Manual replay event must be an object");
+	}
+	const inputs = (event as Record<string, unknown>).inputs;
+	if (!inputs || typeof inputs !== "object" || Array.isArray(inputs)) {
+		throw new Error("Manual replay event has no inputs object");
+	}
+	const requestedDeliveryId = requiredString((inputs as Record<string, unknown>).delivery_id, "delivery_id");
+	if (!DELIVERY_ID_PATTERN.test(requestedDeliveryId)) {
+		throw new Error("Manual replay delivery_id must be a lowercase SHA-256 digest");
+	}
+	const repoRoot = requiredString(process.env.GITHUB_WORKSPACE, "GITHUB_WORKSPACE");
+	const pendingDocument = await readPendingDelivery(path.join(repoRoot, DELIVERY_PENDING_PATH));
+	if (!pendingDocument || typeof pendingDocument !== "object" || Array.isArray(pendingDocument)) {
+		throw new Error("Manual replay requires the pending delivery marker on main");
+	}
+	const pending = pendingDocument as Record<string, unknown>;
+	const delivery = {
+		deliveryId: requestedDeliveryId,
+		releaseTag: requiredString(pending.release_tag, "pending.release_tag"),
+		targetCommit: requiredString(pending.target_commit, "pending.target_commit"),
+		triggerSource: requiredString(pending.trigger_source, "pending.trigger_source"),
+		version: requiredString(pending.version, "pending.version"),
+	};
+	if (delivery.deliveryId !== pending.delivery_id || delivery.deliveryId !== calculateDeliveryId(delivery)) {
+		throw new Error("Manual replay delivery_id does not match the pending delivery identity");
+	}
+	verifyPendingDelivery(pendingDocument, delivery);
+	return delivery;
 }
 
 async function appendOutputs(delivery: ApiSpecDelivery): Promise<void> {
