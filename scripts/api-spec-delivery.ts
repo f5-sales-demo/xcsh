@@ -182,10 +182,16 @@ export function validateArtifactVersion(
 function expectedSpecAssetNames(releaseTag: string): string[] {
 	return [
 		"api-catalog.json",
+		"concurrency_contracts.json",
 		`f5xc-api-specs-${releaseTag}.zip`,
 		"index.json",
 		"minimal-export-defaults.json",
 		"openapi.json",
+		"smsv2-contract-manifest.json",
+		"smsv2-contract.json",
+		"smsv2-evidence-receipt.json",
+		"smsv2_parity_manifest.json",
+		"upstream-contract-removals.json",
 	].sort();
 }
 

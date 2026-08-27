@@ -106,6 +106,16 @@ describe("API spec dispatch workflow contract", () => {
 		expect(provider).toContain("Provider release consumed different spec bytes from this receiver");
 		expect(provider).toContain("Provider release receipt differs from durable publication evidence");
 		expect(provider).toContain("Provider release bytes differ from publication evidence");
+		for (const asset of [
+			"concurrency_contracts.json",
+			"smsv2-contract-manifest.json",
+			"smsv2-contract.json",
+			"smsv2-evidence-receipt.json",
+			"smsv2_parity_manifest.json",
+			"upstream-contract-removals.json",
+		]) {
+			expect(provider).toContain(asset);
+		}
 		expect(provider).not.toContain("gh release list");
 		expect(namedStep(steps, "Verify exact regenerated delivery bytes").run).toContain("verify-generated");
 	});
@@ -328,10 +338,16 @@ async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = fal
 	const pinDocument = {
 		assets: {
 			"api-catalog.json": pinDigest("1"),
+			"concurrency_contracts.json": pinDigest("6"),
 			[`f5xc-api-specs-${specTag}.zip`]: pinDigest("2"),
 			"index.json": pinDigest("3"),
 			"minimal-export-defaults.json": pinDigest("4"),
 			"openapi.json": pinDigest("5"),
+			"smsv2-contract-manifest.json": pinDigest("7"),
+			"smsv2-contract.json": pinDigest("8"),
+			"smsv2-evidence-receipt.json": pinDigest("9"),
+			"smsv2_parity_manifest.json": pinDigest("a"),
+			"upstream-contract-removals.json": pinDigest("b"),
 		},
 		release_tag: specTag,
 		target_commit: specCommit,

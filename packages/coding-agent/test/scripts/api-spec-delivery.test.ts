@@ -54,10 +54,16 @@ function specReleasePin(): Record<string, unknown> {
 	return {
 		assets: {
 			"api-catalog.json": "1".repeat(64),
+			"concurrency_contracts.json": "6".repeat(64),
 			[`f5xc-api-specs-${RELEASE_TAG}.zip`]: "2".repeat(64),
 			"index.json": "3".repeat(64),
 			"minimal-export-defaults.json": "4".repeat(64),
 			"openapi.json": "5".repeat(64),
+			"smsv2-contract-manifest.json": "7".repeat(64),
+			"smsv2-contract.json": "8".repeat(64),
+			"smsv2-evidence-receipt.json": "9".repeat(64),
+			"smsv2_parity_manifest.json": "a".repeat(64),
+			"upstream-contract-removals.json": "b".repeat(64),
 		},
 		release_tag: RELEASE_TAG,
 		target_commit: TARGET_COMMIT,
@@ -362,6 +368,31 @@ describe("published release identity", () => {
 			`https://api.github.com/repos/${TRIGGER_SOURCE}/releases/tags/${RELEASE_TAG}`,
 			`https://api.github.com/repos/${TRIGGER_SOURCE}/git/ref/tags/${RELEASE_TAG}`,
 		]);
+	});
+
+	it("rejects missing or extra assets outside the exact 11-asset release contract", async () => {
+		const missing = publishedRelease();
+		(missing.assets as Array<Record<string, string>>).pop();
+		await expect(
+			verifyReleasedTag(validDelivery(), undefined, async input =>
+				Response.json(
+					String(input).includes("/releases/tags/") ? missing : { object: { sha: TARGET_COMMIT, type: "commit" } },
+				),
+			),
+		).rejects.toThrow("wrong asset set");
+
+		const extra = publishedRelease();
+		(extra.assets as Array<Record<string, string>>).push({
+			digest: `sha256:${"c".repeat(64)}`,
+			name: "unexpected.json",
+		});
+		await expect(
+			verifyReleasedTag(validDelivery(), undefined, async input =>
+				Response.json(
+					String(input).includes("/releases/tags/") ? extra : { object: { sha: TARGET_COMMIT, type: "commit" } },
+				),
+			),
+		).rejects.toThrow("wrong asset set");
 	});
 
 	it("rejects a release tag that resolves to another commit", async () => {
