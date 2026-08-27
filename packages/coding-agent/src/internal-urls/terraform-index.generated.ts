@@ -1,5 +1,5 @@
 // AUTO-GENERATED — do not edit. Run `bun generate-terraform-index` to regenerate.
-// Source: f5-sales-demo/terraform-provider-xcsh v3.91.0 81a14ce36d74f132d0d9bbd1c8392487d4bc2b39
+// Source: f5-sales-demo/terraform-provider-xcsh v4.0.0 2df78c5d868b114044505dd88c3e00a9e37d5b79
 
 import type { TerraformIndex } from "./terraform-types";
 
@@ -290,7 +290,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "alert_gen_policy",
 			category: "security",
 			description: "Alert Generation Policy",
-			required: ["name", "namespace", "alert_status"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/alert_gen_policy.txt#minimal-valid-config",
@@ -333,7 +333,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "bot_defense_app_infrastructure",
 			category: "security",
 			description: "Bot Defense App Infrastructure in a given namespace",
-			required: ["name", "namespace", "environment_type", "traffic_type"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/bot_defense_app_infrastructure.txt#minimal-valid-config",
@@ -347,7 +347,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "data_type",
 			category: "security",
 			description: "Data_type creates a new object in the storage backend for metadata.namespace",
-			required: ["name", "namespace", "is_pii", "is_sensitive_data"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/data_type.txt#minimal-valid-config",
@@ -391,7 +391,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "fast_acl_rule",
 			category: "security",
 			description: "New Fast ACL rule, has specification to match source IP, source port and action to apply",
-			required: ["name"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/fast_acl_rule.txt#minimal-valid-config",
@@ -506,7 +506,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "network_policy_view",
 			category: "security",
 			description: "Network policy view specification. configuration",
-			required: ["name", "namespace"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/network_policy_view.txt#minimal-valid-config",
@@ -752,7 +752,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "forwarding_class",
 			category: "networking",
 			description: "Forwarding class is created by users in system namespace. configuration",
-			required: ["name", "namespace", "queue_id_to_use", "interface_group"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/forwarding_class.txt#minimal-valid-config",
@@ -852,7 +852,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "proxy",
 			category: "networking",
 			description: "Tcp loadbalancer create specification. configuration",
-			required: ["name", "namespace", "connection_timeout"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/proxy.txt#minimal-valid-config",
@@ -866,7 +866,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "segment",
 			category: "networking",
 			description: "Segment. configuration",
-			required: ["name", "namespace"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/segment.txt#minimal-valid-config",
@@ -880,13 +880,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "srv6_network_slice",
 			category: "networking",
 			description: "Srv6_network_slice creates a new object in the storage backend for metadata.namespace",
-			required: [
-				"name",
-				"namespace",
-				"connect_to_access_networks",
-				"connect_to_enterprise_networks",
-				"connect_to_internet",
-			],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/srv6_network_slice.txt#minimal-valid-config",
@@ -915,7 +909,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "tunnel",
 			category: "networking",
 			description: "Tunnel in a given namespace. If one already exist it will give a error",
-			required: ["name", "namespace", "tunnel_type"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/tunnel.txt#minimal-valid-config",
@@ -929,7 +923,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "virtual_network",
 			category: "networking",
 			description: "Virtual network in given namespace",
-			required: ["name", "legacy_type"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/virtual_network.txt#minimal-valid-config",
@@ -1063,7 +1057,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			category: "load-balancing",
 			description:
 				"Advertise_policy object controls how and where a service represented by a given virtual_host object is advertised to consumers. configuration",
-			required: ["name", "namespace", "address", "protocol", "skip_xff_append"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/advertise_policy.txt#minimal-valid-config",
@@ -1119,15 +1113,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "cluster",
 			category: "load-balancing",
 			description: "Cluster will create the object in the storage backend for namespace metadata.namespace",
-			required: [
-				"name",
-				"namespace",
-				"connection_timeout",
-				"endpoint_selection",
-				"fallback_policy",
-				"http_idle_timeout",
-				"loadbalancer_algorithm",
-			],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/cluster.txt#minimal-valid-config",
@@ -1141,7 +1127,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "endpoint",
 			category: "load-balancing",
 			description: "Endpoint will create the object in the storage backend for namespace metadata.namespace",
-			required: ["name", "namespace", "health_check_port", "port", "protocol"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/endpoint.txt#minimal-valid-config",
@@ -1193,7 +1179,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "udp_loadbalancer",
 			category: "load-balancing",
 			description: "Load balancing UDP traffic across origin pools",
-			required: ["name", "namespace", "dns_volterra_managed", "idle_timeout"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/udp_loadbalancer.txt#minimal-valid-config",
@@ -1207,17 +1193,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "virtual_host",
 			category: "load-balancing",
 			description: "Virtual host in a given namespace",
-			required: [
-				"name",
-				"namespace",
-				"add_location",
-				"connection_idle_timeout",
-				"disable_default_error_pages",
-				"disable_dns_resolve",
-				"idle_timeout",
-				"max_request_header_size",
-				"proxy",
-			],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/virtual_host.txt#minimal-valid-config",
@@ -1245,7 +1221,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "aws_vpc_site",
 			category: "sites",
 			description: "Deploying F5 sites within AWS VPC environments",
-			required: ["name", "namespace", "address", "aws_region", "disk_size", "instance_type", "ssh_key"],
+			required: ["name", "namespace", "aws_region", "instance_type", "ssh_key"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/aws_vpc_site.txt#minimal-valid-config",
@@ -1259,7 +1235,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "azure_vnet_site",
 			category: "sites",
 			description: "Deploying F5 sites within Azure Virtual Network environments",
-			required: ["name", "namespace", "machine_type", "resource_group", "ssh_key"],
+			required: ["name", "machine_type", "resource_group", "ssh_key"],
 			server_defaults: [
 				"block_all_services",
 				"disk_size",
@@ -1283,14 +1259,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "fleet",
 			category: "sites",
 			description: "Fleet will create a fleet object in 'system' namespace of the user",
-			required: [
-				"name",
-				"namespace",
-				"enable_default_fleet_config_download",
-				"fleet_label",
-				"operating_system_version",
-				"volterra_software_version",
-			],
+			required: ["name", "namespace", "fleet_label"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/fleet.txt#minimal-valid-config",
@@ -1304,7 +1273,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "gcp_vpc_site",
 			category: "sites",
 			description: "Deploying F5 sites within Google Cloud VPC environments",
-			required: ["name", "namespace", "address", "disk_size", "gcp_region", "instance_type", "ssh_key"],
+			required: ["name", "namespace", "gcp_region", "instance_type", "ssh_key"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/gcp_vpc_site.txt#minimal-valid-config",
@@ -1332,7 +1301,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "securemesh_site",
 			category: "sites",
 			description: "Deploying secure mesh edge sites with distributed security",
-			required: ["name", "namespace", "address", "volterra_certified_hw"],
+			required: ["name", "namespace", "volterra_certified_hw"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/securemesh_site.txt#minimal-valid-config",
@@ -1346,7 +1315,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "securemesh_site_v2",
 			category: "sites",
 			description: "Deploying secure mesh edge sites with security and networking controls",
-			required: ["name", "namespace"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/securemesh_site_v2.txt#minimal-valid-config",
@@ -1388,7 +1357,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "voltstack_site",
 			category: "sites",
 			description: "Deploying App Stack edge computing sites",
-			required: ["name", "namespace", "address", "volterra_certified_hw"],
+			required: ["name", "namespace", "volterra_certified_hw"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/voltstack_site.txt#minimal-valid-config",
@@ -1402,7 +1371,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "container_registry",
 			category: "kubernetes",
 			description: "Container image registry configuration",
-			required: ["name", "namespace", "email", "registry", "user_name"],
+			required: ["name", "namespace", "registry", "user_name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/container_registry.txt#minimal-valid-config",
@@ -1456,7 +1425,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			category: "kubernetes",
 			description:
 				"K8s_cluster_role_binding will create the object in the storage backend for namespace metadata.namespace",
-			required: ["name"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/k8s_cluster_role_binding.txt#minimal-valid-config",
@@ -1470,7 +1439,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "k8s_pod_security_admission",
 			category: "kubernetes",
 			description: "K8s_pod_security_admission will create the object in the storage backend",
-			required: ["name", "namespace"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/k8s_pod_security_admission.txt#minimal-valid-config",
@@ -1512,7 +1481,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "workload_flavor",
 			category: "kubernetes",
 			description: "Workload_flavor",
-			required: ["name", "namespace", "ephemeral_storage", "memory", "vcpus"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/workload_flavor.txt#minimal-valid-config",
@@ -1554,7 +1523,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "bot_infrastructure",
 			category: "uncategorized",
 			description: "Bot Infrastructure",
-			required: ["name", "namespace", "traffic_type"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/bot_infrastructure.txt#minimal-valid-config",
@@ -1582,7 +1551,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "protected_application",
 			category: "uncategorized",
 			description: "Applications protected by Bot Defense",
-			required: ["name", "namespace", "region"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/protected_application.txt#minimal-valid-config",
@@ -1653,7 +1622,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "dns_lb_pool",
 			category: "dns",
 			description: "DNS Load Balancer Pool in a given namespace. If one already exist it will give a error",
-			required: ["name", "load_balancing_mode"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/dns_lb_pool.txt#minimal-valid-config",
@@ -1681,7 +1650,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "dns_proxy",
 			category: "dns",
 			description: "DNS Proxy in a given namespace. If one already exists it will give an error",
-			required: ["name", "transport_type"],
+			required: ["name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/dns_proxy.txt#minimal-valid-config",
@@ -1763,7 +1732,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "api_testing",
 			category: "api-security",
 			description: "API Testing resource",
-			required: ["name", "namespace", "custom_header_value"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/api_testing.txt#minimal-valid-config",
@@ -1946,7 +1915,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "trusted_ca_list",
 			category: "certificates",
 			description: "Trusted certificate authority list management",
-			required: ["name", "namespace", "trusted_ca_url"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/trusted_ca_list.txt#minimal-valid-config",
@@ -1974,7 +1943,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "alert_template",
 			category: "monitoring",
 			description: "Domain to protect",
-			required: ["name", "namespace", "alert_message", "alert_message_details", "alert_name", "severity"],
+			required: ["name", "namespace", "alert_message", "alert_message_details", "alert_name"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/alert_template.txt#minimal-valid-config",
@@ -2101,7 +2070,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "irule",
 			category: "big-ip-integration",
 			description: "IRule in a given namespace. If one already exists it will give an error",
-			required: ["name", "namespace", "description", "description_spec", "irule"],
+			required: ["name", "namespace", "description_spec", "irule"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/irule.txt#minimal-valid-config",
@@ -2115,7 +2084,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "address_allocator",
 			category: "cloud-resources",
 			description: "Address Allocator will create an address allocator object in 'system' namespace of the user",
-			required: ["name", "namespace", "mode"],
+			required: ["name", "namespace"],
 			minimal_config: {
 				format: "terraform",
 				source: "_llms-txt/resources/address_allocator.txt#minimal-valid-config",
