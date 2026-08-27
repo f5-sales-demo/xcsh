@@ -110,13 +110,13 @@ describe("placeholder hygiene", () => {
 		// Both emitted artifacts must go through the sanitiser, or the next upstream sync undoes #2650.
 		// Matched loosely on purpose: sanitisers compose (#2677 wraps this one), and pinning the exact
 		// call text made this assertion fail for a correct change rather than an incorrect one.
-		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizeAcmePlaceholders\(output\)/);
+		expect(text).toMatch(/Bun\.write\(\s*outputPath,\s*[^;]*sanitizeAcmePlaceholders\(output\)/);
 		expect(text).toMatch(/Bun\.write\([^;]*catalogOutputPath,[^;]*sanitizeAcmePlaceholders\(catalogOutput\)/);
 		// Contact addresses at real domains are sanitised at the same write sites (#2677).
-		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizeEmails\(/);
+		expect(text).toMatch(/Bun\.write\(\s*outputPath,\s*[^;]*sanitizeEmails\(/);
 		expect(text).toMatch(/Bun\.write\([^;]*catalogOutputPath,[^;]*sanitizeEmails\(/);
 		// Globally routable examples are rewritten into RFC 5737 space at both write sites (#2674).
-		expect(text).toMatch(/Bun\.write\(outputPath,[^;]*sanitizePublicIpv4Examples\(/);
+		expect(text).toMatch(/Bun\.write\(\s*outputPath,\s*[^;]*sanitizePublicIpv4Examples\(/);
 		expect(text).toMatch(/Bun\.write\([^;]*catalogOutputPath,[^;]*sanitizePublicIpv4Examples\(/);
 
 		const consoleGenerator = fs.readFileSync(
