@@ -780,9 +780,11 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 					let sawEvent = false;
 					let sawMessageStart = false;
 					let sawTerminalEnvelope = false;
+					let lastEnvelopeEvent = "none";
 
 					for await (const event of markFirstStreamEvent(anthropicStream, firstEventWatchdog)) {
 						sawEvent = true;
+						lastEnvelopeEvent = event.type;
 
 						if (event.type === "message_start") {
 							if (sawMessageStart) {
@@ -1040,7 +1042,19 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 						throw createAnthropicStreamEnvelopeError("stream ended before message_start");
 					}
 					if (!sawTerminalEnvelope) {
-						throw createAnthropicStreamEnvelopeError("stream ended before terminal stop signal");
+						throw createAnthropicStreamEnvelopeError(
+							"stream ended before terminal stop signal (provider=" +
+								model.provider +
+								", model=" +
+								model.id +
+								", api=" +
+								output.api +
+								", responseId=" +
+								(output.responseId ?? "unavailable") +
+								", lastEvent=" +
+								lastEnvelopeEvent +
+								")",
+						);
 					}
 
 					if (output.stopReason === "aborted" || output.stopReason === "error") {

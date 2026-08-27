@@ -757,9 +757,14 @@ function renderSchemaAsTable(
 	depth = 0,
 	prefix = "",
 	schemaRecommended?: Readonly<Record<string, string>>,
+	visited = new Set<string>(),
 ): string {
 	if (depth > SCHEMA_RENDER_MAX_DEPTH) return "";
 
+	const schemaName = extractSchemaName(schema);
+	if (schemaName && visited.has(schemaName)) return "";
+	const nextVisited = new Set(visited);
+	if (schemaName) nextVisited.add(schemaName);
 	const resolved = resolveSchemaRef(schema, spec);
 	const properties = resolved.properties as Record<string, Record<string, unknown>> | undefined;
 	if (!properties) {
@@ -819,10 +824,21 @@ function renderSchemaAsTable(
 			}
 		}
 
-		if (type === "object" && fieldProp.properties && depth < SCHEMA_RENDER_MAX_DEPTH) {
-			const nestedOneOf = renderOneOfGroups(fieldProp, schemaRecommended);
+		const itemSchema =
+			type === "array" && fieldProp.items && typeof fieldProp.items === "object"
+				? resolveSchemaRef(fieldProp.items as Record<string, unknown>, spec)
+				: fieldProp;
+		if ((type === "object" || type === "array") && itemSchema.properties && depth < SCHEMA_RENDER_MAX_DEPTH) {
+			const nestedOneOf = renderOneOfGroups(itemSchema, schemaRecommended);
 			if (nestedOneOf) rows.push("", nestedOneOf);
-			const nested = renderSchemaAsTable(fieldProp, spec, depth + 1, fieldName, schemaRecommended);
+			const nested = renderSchemaAsTable(
+				itemSchema,
+				spec,
+				depth + 1,
+				type === "array" ? fieldName + "[]" : fieldName,
+				schemaRecommended,
+				nextVisited,
+			);
 			const nestedLines = nested.split("\n").filter(l => l.startsWith("|") && !l.startsWith("| Field"));
 			rows.push(...nestedLines);
 		}

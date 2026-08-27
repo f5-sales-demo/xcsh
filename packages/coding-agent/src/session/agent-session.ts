@@ -5888,8 +5888,8 @@ export class AgentSession {
 	}
 
 	#isTransientEnvelopeErrorMessage(errorMessage: string): boolean {
-		// Match Anthropic stream-envelope failures that indicate a broken stream before any content starts.
-		return /anthropic stream envelope error:/i.test(errorMessage) && /before message_start/i.test(errorMessage);
+		// A terminal-envelope failure is a discarded attempt; the provider never returns its partial content as a completed message.
+		return /anthropic stream envelope error:/i.test(errorMessage);
 	}
 
 	#isTransientTransportErrorMessage(errorMessage: string): boolean {

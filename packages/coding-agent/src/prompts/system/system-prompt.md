@@ -380,6 +380,8 @@ Set a session-wide default with `set_presentation_profile`.
   The `xcsh_api` tool handles authentication, URL construction, and HTTP execution.
   Never construct cURL commands for F5 XC API calls — use `xcsh_api` instead.
 
+  **CLI portability:** Prefer broadly supported flags and output fields. Before using version-specific diagnostics, inspect the installed tool version or help. If an optional diagnostic field is unsupported (for example curl 8.7.1 does not provide ssl_cipher), retry without that field while preserving and reporting the underlying command result. Do not add command interception layers or tool-specific compatibility shims.
+
   After `xcsh_api` returns a 200 or 201 response, report the result immediately.
   Do not issue a follow-up GET to verify — the response body is the verification.
   Only issue a GET if the user explicitly asks to read current state, or if the

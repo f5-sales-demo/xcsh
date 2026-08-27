@@ -392,7 +392,7 @@ describe("AgentSession retry fallback", () => {
 		expect(lastAssistant.content).toContainEqual({ type: "text", text: "Recovered after Anthropic envelope retry" });
 	});
 
-	it("does not auto-retry Anthropic stream-envelope failures before terminal stop signal", async () => {
+	it("retries Anthropic stream-envelope failures before terminal stop signal", async () => {
 		const primaryModel = getBundledModel("anthropic", "claude-sonnet-4-5");
 		const fallbackModel = getBundledModel("openai", "gpt-4o-mini");
 		if (!primaryModel || !fallbackModel) {
@@ -453,13 +453,13 @@ describe("AgentSession retry fallback", () => {
 			}
 		});
 
-		await session.prompt("Do not retry Anthropic envelope failure before terminal stop signal");
+		await session.prompt("Retry Anthropic envelope failure before terminal stop signal");
 		await session.waitForIdle();
 
-		expect(requestedModels).toEqual([`${primaryModel.provider}/${primaryModel.id}`]);
-		expect(retryStartEvents).toHaveLength(0);
-		expect(retryEndEvents).toHaveLength(0);
-		expect(fallbackAppliedEvents).toHaveLength(0);
+		expect(requestedModels).toHaveLength(2);
+		expect(retryStartEvents).toHaveLength(1);
+		expect(retryEndEvents).toHaveLength(1);
+		expect(fallbackAppliedEvents).toHaveLength(1);
 		expect(fallbackSucceededEvents).toHaveLength(0);
 		const lastAssistant = getLastAssistantMessage(session);
 		expect(lastAssistant.stopReason).toBe("error");
