@@ -757,13 +757,48 @@ function renderSchemaAsTable(
 	depth = 0,
 	prefix = "",
 	schemaRecommended?: Readonly<Record<string, string>>,
+	visited = new Set<string>(),
 ): string {
 	if (depth > SCHEMA_RENDER_MAX_DEPTH) return "";
 
+	const schemaName = extractSchemaName(schema);
+	if (schemaName && visited.has(schemaName)) return "";
+	const nextVisited = new Set(visited);
+	if (schemaName) nextVisited.add(schemaName);
 	const resolved = resolveSchemaRef(schema, spec);
 	const properties = resolved.properties as Record<string, Record<string, unknown>> | undefined;
 	if (!properties) {
 		const type = (resolved.type as string) ?? "object";
+		const items = resolved.items;
+		if (type === "array" && items && typeof items === "object" && depth < SCHEMA_RENDER_MAX_DEPTH) {
+			return renderSchemaAsTable(
+				items as Record<string, unknown>,
+				spec,
+				depth + 1,
+				`${prefix}[]`,
+				schemaRecommended,
+				nextVisited,
+			);
+		}
+		const variants = Array.isArray(resolved.oneOf)
+			? (resolved.oneOf as unknown[]).filter(
+					(variant): variant is Record<string, unknown> => typeof variant === "object" && variant !== null,
+				)
+			: [];
+		if (variants.length > 0 && depth < SCHEMA_RENDER_MAX_DEPTH) {
+			return variants
+				.map((variant, index) =>
+					renderSchemaAsTable(
+						variant,
+						spec,
+						depth + 1,
+						`${prefix}.oneOf[${index}]`,
+						schemaRecommended,
+						nextVisited,
+					),
+				)
+				.join("");
+		}
 		return `Type: ${type}\n`;
 	}
 
@@ -780,7 +815,7 @@ function renderSchemaAsTable(
 	for (const [name, prop] of Object.entries(properties)) {
 		const fieldProp = resolveSchemaRef(prop, spec);
 		const fieldName = prefix ? `${prefix}.${name}` : name;
-		const type = (fieldProp.type as string) ?? "object";
+		const type = (fieldProp.type as string) ?? (Array.isArray(fieldProp.oneOf) ? "oneOf" : "object");
 		const desc = (fieldProp.description as string) ?? "";
 		const isRequired = required.includes(name) ? "yes" : "no";
 		const constraints = formatFieldConstraints(fieldProp);
@@ -819,11 +854,34 @@ function renderSchemaAsTable(
 			}
 		}
 
-		if (type === "object" && fieldProp.properties && depth < SCHEMA_RENDER_MAX_DEPTH) {
-			const nestedOneOf = renderOneOfGroups(fieldProp, schemaRecommended);
+		const nestedSources: Array<{ source: Record<string, unknown>; prefix: string }> = [];
+		if (type === "array" && fieldProp.items && typeof fieldProp.items === "object") {
+			nestedSources.push({ source: fieldProp.items as Record<string, unknown>, prefix: `${fieldName}[]` });
+		} else if (Array.isArray(fieldProp.oneOf)) {
+			for (const [index, variant] of fieldProp.oneOf.entries()) {
+				if (typeof variant === "object" && variant !== null) {
+					nestedSources.push({
+						source: variant as Record<string, unknown>,
+						prefix: `${fieldName}.oneOf[${index}]`,
+					});
+				}
+			}
+		} else if (type === "object") {
+			nestedSources.push({ source: prop, prefix: fieldName });
+		}
+
+		for (const { source, prefix: nestedPrefix } of nestedSources) {
+			const nestedResolved = resolveSchemaRef(source, spec);
+			if (
+				depth >= SCHEMA_RENDER_MAX_DEPTH ||
+				(!nestedResolved.properties && nestedResolved.type !== "array" && !Array.isArray(nestedResolved.oneOf))
+			) {
+				continue;
+			}
+			const nestedOneOf = renderOneOfGroups(nestedResolved, schemaRecommended);
 			if (nestedOneOf) rows.push("", nestedOneOf);
-			const nested = renderSchemaAsTable(fieldProp, spec, depth + 1, fieldName, schemaRecommended);
-			const nestedLines = nested.split("\n").filter(l => l.startsWith("|") && !l.startsWith("| Field"));
+			const nested = renderSchemaAsTable(source, spec, depth + 1, nestedPrefix, schemaRecommended, nextVisited);
+			const nestedLines = nested.split("\n").filter(line => line.startsWith("|") && !line.startsWith("| Field"));
 			rows.push(...nestedLines);
 		}
 	}
