@@ -799,6 +799,23 @@ export class AgentSession {
 		}
 
 		// Deobfuscate assistant message content for display emission — the LLM echoes back
+		// A terminal-envelope error means the provider never completed the response.
+		// Persist its diagnostics, but never retain text, tool arguments, or other partial content.
+		if (
+			event.type === "message_end" &&
+			event.message.role === "assistant" &&
+			event.message.stopReason === "error" &&
+			this.#isTransientEnvelopeErrorMessage(event.message.errorMessage ?? "")
+		) {
+			const discardedMessage: AssistantMessage = { ...event.message, content: [] };
+			event = { ...event, message: discardedMessage };
+			const messages = this.agent.state.messages;
+			const lastMessage = messages.at(-1);
+			if (lastMessage?.role === "assistant" && lastMessage.timestamp === discardedMessage.timestamp) {
+				this.agent.replaceMessages([...messages.slice(0, -1), discardedMessage]);
+			}
+		}
+
 		// obfuscated placeholders, but listeners (TUI, extensions, exporters) must see real
 		// values. The original event.message stays obfuscated so the persistence path below
 		// writes `#HASH#` tokens to the session file; convertToLlm re-obfuscates outbound

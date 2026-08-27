@@ -259,6 +259,10 @@ describe("anthropic stream envelope handling", () => {
 		expect(result.stopReason).toBe("error");
 		expect(result.errorMessage).toContain("stream ended before terminal stop signal");
 
+		expect(result.errorMessage).toContain("provider=anthropic");
+		expect(result.errorMessage).toContain("model=claude-sonnet-4-5");
+		expect(result.errorMessage).toContain("responseId=msg_tool_broken");
+		expect(result.errorMessage).toContain("lastEvent=content_block_stop");
 		const toolCall = result.content[0];
 		expect(toolCall?.type).toBe("toolCall");
 		if (toolCall?.type !== "toolCall") {

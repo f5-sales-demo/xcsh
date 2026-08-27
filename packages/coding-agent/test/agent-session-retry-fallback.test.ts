@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as path from "node:path";
-import { Agent } from "@f5-sales-demo/pi-agent-core";
+import { Agent, type AgentTool } from "@f5-sales-demo/pi-agent-core";
 import { type AssistantMessage, Effort, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { TempDir } from "@f5-sales-demo/pi-utils";
+import { Type } from "@sinclair/typebox";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
 import { AgentSession, type AgentSessionEvent } from "../src/session/agent-session";
@@ -485,6 +486,146 @@ describe("AgentSession retry fallback", () => {
 		});
 		expect(session.messages.filter(message => message.role === "assistant")).toHaveLength(1);
 		expect(JSON.stringify(session.messages)).not.toContain("partial assistant content that must not persist");
+	});
+
+	it("retries a discarded post-content tool envelope without executing its partial tool", async () => {
+		const model = getBundledModel("anthropic", "claude-sonnet-4-5");
+		if (!model) {
+			throw new Error("Expected bundled Anthropic test model to exist");
+		}
+
+		const envelopeError =
+			"Anthropic stream envelope error: stream ended before terminal stop signal (provider=anthropic, model=claude-sonnet-4-5, api=anthropic-messages, responseId=msg_partial_tool, lastEvent=content_block_stop)";
+		const requestedModels: string[] = [];
+		let attemptCount = 0;
+		let toolExecutions = 0;
+		const toolStartEvents: Array<Extract<AgentSessionEvent, { type: "tool_execution_start" }>> = [];
+		const partialTool: AgentTool = {
+			name: "partial_lookup",
+			label: "Partial lookup",
+			description: "Must never execute from a discarded stream.",
+			parameters: Type.Object({}),
+			execute: async () => {
+				toolExecutions += 1;
+				return { content: [{ type: "text", text: "unexpected execution" }] };
+			},
+		};
+
+		const agent = new Agent({
+			getApiKey: provider => `${provider}-test-key`,
+			initialState: {
+				model,
+				systemPrompt: "Test",
+				tools: [partialTool],
+				messages: [],
+			},
+			streamFn: requestedModel => {
+				requestedModels.push(`${requestedModel.provider}/${requestedModel.id}`);
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					attemptCount += 1;
+					if (attemptCount === 1) {
+						const message: AssistantMessage = {
+							...createAssistantMessage(requestedModel, { stopReason: "error", errorMessage: envelopeError }),
+							content: [{ type: "toolCall", id: "tool_partial", name: "partial_lookup", arguments: {} }],
+						};
+						stream.push({ type: "start", partial: message });
+						stream.push({ type: "error", reason: "error", error: message });
+						return;
+					}
+					const message = createAssistantMessage(requestedModel, {
+						text: "Recovered without running the partial tool",
+						stopReason: "stop",
+					});
+					stream.push({ type: "start", partial: createAssistantMessage(requestedModel, { stopReason: "stop" }) });
+					stream.push({ type: "done", reason: "stop", message });
+				});
+				return stream;
+			},
+		});
+
+		const settings = Settings.isolated({
+			"compaction.enabled": false,
+			"retry.baseDelayMs": 5,
+			"retry.maxRetries": 1,
+		});
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+		const { retryStartEvents, retryEndEvents } = trackRetryEvents(session);
+		session.subscribe(event => {
+			if (event.type === "tool_execution_start") {
+				toolStartEvents.push(event);
+			}
+		});
+
+		await session.prompt("Retry a discarded post-content tool envelope");
+		await session.waitForIdle();
+
+		expect(requestedModels).toEqual([`${model.provider}/${model.id}`, `${model.provider}/${model.id}`]);
+		expect(retryStartEvents).toHaveLength(1);
+		expect(retryEndEvents).toHaveLength(1);
+		expect(toolStartEvents).toHaveLength(1); // Placeholder pairing is emitted; the handler itself must not run.
+		expect(toolExecutions).toBe(0);
+		expect(getLastAssistantMessage(session).content).toContainEqual({
+			type: "text",
+			text: "Recovered without running the partial tool",
+		});
+	});
+
+	it("surfaces terminal-envelope diagnostics after retry exhaustion", async () => {
+		const model = getBundledModel("anthropic", "claude-sonnet-4-5");
+		if (!model) {
+			throw new Error("Expected bundled Anthropic test model to exist");
+		}
+
+		const envelopeError =
+			"Anthropic stream envelope error: stream ended before terminal stop signal (provider=anthropic, model=claude-sonnet-4-5, api=anthropic-messages, responseId=msg_retry_exhausted, lastEvent=content_block_delta)";
+		const requestedModels: string[] = [];
+		const agent = new Agent({
+			getApiKey: provider => `${provider}-test-key`,
+			initialState: { model, systemPrompt: "Test", tools: [], messages: [] },
+			streamFn: requestedModel => {
+				requestedModels.push(`${requestedModel.provider}/${requestedModel.id}`);
+				const stream = new MockAssistantStream();
+				queueMicrotask(() => {
+					const message = createAssistantMessage(requestedModel, {
+						text: "discarded partial assistant text",
+						stopReason: "error",
+						errorMessage: envelopeError,
+					});
+					stream.push({ type: "start", partial: message });
+					stream.push({ type: "error", reason: "error", error: message });
+				});
+				return stream;
+			},
+		});
+		const settings = Settings.isolated({
+			"compaction.enabled": false,
+			"retry.baseDelayMs": 5,
+			"retry.maxRetries": 1,
+		});
+		settings.setModelRole("default", `${model.provider}/${model.id}`);
+		session = new AgentSession({ agent, sessionManager: SessionManager.inMemory(), settings, modelRegistry });
+		const { retryStartEvents, retryEndEvents } = trackRetryEvents(session);
+
+		await session.prompt("Retry then surface stream-envelope diagnostics");
+		await session.waitForIdle();
+
+		expect(requestedModels).toEqual([`${model.provider}/${model.id}`, `${model.provider}/${model.id}`]);
+		expect(retryStartEvents).toHaveLength(1);
+		expect(retryEndEvents).toContainEqual({
+			type: "auto_retry_end",
+			success: false,
+			attempt: 1,
+			finalError: envelopeError,
+		});
+		const lastAssistant = getLastAssistantMessage(session);
+		expect(lastAssistant.stopReason).toBe("error");
+		expect(lastAssistant.errorMessage).toBe(envelopeError);
+		expect(lastAssistant.errorMessage).toContain("responseId=msg_retry_exhausted");
+		expect(lastAssistant.errorMessage).toContain("lastEvent=content_block_delta");
+		expect(session.messages.filter(message => message.role === "assistant")).toHaveLength(1);
+		expect(JSON.stringify(session.messages)).not.toContain("discarded partial assistant text");
 	});
 
 	it("does not auto-retry generic Request was aborted. errors", async () => {
