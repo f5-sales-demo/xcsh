@@ -1,4 +1,57 @@
 {
-	"receipts": {},
+	"receipts": {
+		"194231e7507713417acc3a978e0bd9058aedf2c8b22de9f387a9201baa39cbfe": {
+			"delivery": {
+				"release_tag": "v2.1.221",
+				"target_commit": "6e6cfd6f135f34be22bd4d47baf9fa8bb4a1bbe0",
+				"version": "2.1.221"
+			},
+			"publication": {
+				"assets": {
+					"pi_natives.darwin-arm64.node": "b47013a259e9aab1342bf097ef6ff4f6a11082b077edbebe424e4614b4dc0092",
+					"pi_natives.darwin-x64-baseline.node": "0840a7e6df8894066f0cb89194eb9e94d5b345c7517e2d36d594fb44b856e164",
+					"pi_natives.darwin-x64-modern.node": "4729992467a951a7564a4eeca470d852bce3e3f729000514a3317fd253785cc8",
+					"pi_natives.linux-arm64.node": "990fb5e30963394bbea2f93d4a66bba0e1cb88411eda34a08d25947994019886",
+					"pi_natives.linux-x64-baseline.node": "205af218f6af720a1a42a57be05f9d8ea5a0ee0f93fa907eda5a5d0aaa71669b",
+					"pi_natives.linux-x64-modern.node": "dba742fd13315eafb28c3ef408bb3046a31af4e119c6e7e38272f02305a15d56",
+					"pi_natives.win32-x64-baseline.node": "ca22e6936975e393f5f0d4425854693d16eba9678f1a80aa81818deab830a8e9",
+					"pi_natives.win32-x64-modern.node": "187bc5899fc438af8f7348e7804e568c2b0cb856c733c6ec9f259eceff30328b",
+					"xcsh-darwin-arm64": "8f5eb71078df4a1b36b746e4db64e2db72c9ea3e641693b73a4ffaa89cc8623a",
+					"xcsh-darwin-arm64.zip": "185cdf44a98a8e52d79a94914f8e4e43accd696311de699642d644992142833c",
+					"xcsh-darwin-x64": "20006d4f7ec69acb6a2acc98538f1fc06f216a0278c19e598968d4d06e2f9e6f",
+					"xcsh-darwin-x64.zip": "8e4f7502fdf3e1cff64685afdc55756dc52e1755676317831bcc1e7bed74888d",
+					"xcsh-linux-arm64": "fbd7221afb0804e14a1ef1844d8cae6d0bbc46a315bb7451469eba59f90a55e1",
+					"xcsh-linux-arm64.tar.gz": "f1fb9565c24faf1ba3f10304dd5f78099abc3b335a7fb4c9b282403a649894e5",
+					"xcsh-linux-x64": "92ebc54fb465ba60f76efc0e920caa891c203593b0a61c7b30a9397846bea65c",
+					"xcsh-linux-x64.tar.gz": "600c8fbe2bad168e12b4bb0b8497c51ea46ec9947d5e9a055acbcf909666fd98",
+					"xcsh-windows-x64.exe": "25b497fc63cde0eb5e4132da55001599f7aeeee96f2ed15158201cbf99616ece"
+				},
+				"commit": "57fa717872ecf0c762c91f0e4ebf6aeb8a6fd8b1",
+				"generated": {
+					"packages/coding-agent/src/internal-urls/api-catalog-index.generated.ts": "879e1a45d024dfdd1f0367b15095908435140ac9bcb2a6ea65f5434014e066c0",
+					"packages/coding-agent/src/internal-urls/api-spec-index.generated.ts": "80ddf6b69e555f2ce7ba732dfe0ebdb4ed306bbf5605611087024ca7195a6c02",
+					"packages/coding-agent/src/internal-urls/terraform-index.generated.ts": "a6d5e689defc2b9d8342d156f23c367a334c848496f9f07e28b29d6734e569fe",
+					"packages/resource-management/src/defaults-metadata.generated.ts": "de36b31622c3528d4b4c6d2a9d405f01deaace7a54cd8bc412075d8e241d577a"
+				},
+				"npm": {
+					"@f5-sales-demo/pi-resource-management": {
+						"git_head": "57fa717872ecf0c762c91f0e4ebf6aeb8a6fd8b1",
+						"integrity": "sha512-IhEjPRjZLj94zCzwpypmeGYQTev/WAr+S3CUIkYAbvwJ8GM/7EoaG6CPbWEEd9ixlSiP20HBO+m3spqel8HZgg=="
+					},
+					"@f5-sales-demo/xcsh": {
+						"git_head": "57fa717872ecf0c762c91f0e4ebf6aeb8a6fd8b1",
+						"integrity": "sha512-sTc9QEthsy4mFrL8DcKkrEuK5py3jQlGsDP0NYBMlBEBR3LpxRh/cxh/Vk4608NTuOIV2ZGdRMUsYdzdmQjpoA=="
+					}
+				},
+				"provider": {
+					"commit": "81a14ce36d74f132d0d9bbd1c8392487d4bc2b39",
+					"tag": "v3.91.0"
+				},
+				"spec_release_sha256": "90b89dea9409e64fee1ba180cff623d3b6d41c71159d029cea2c3efb5e3129a2",
+				"tag": "v20.22.3",
+				"version": "20.22.3"
+			}
+		}
+	},
 	"version": 1
 }
