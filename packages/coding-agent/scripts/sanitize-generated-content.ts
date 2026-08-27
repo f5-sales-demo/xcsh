@@ -6,6 +6,7 @@ const RFC_8555_TERM_RE =
 	/_acme-challenge|\bAutomated Certificate Management Environment\s*\(ACME\)|\bRFC\s*8555\s*\(ACME\)|\bACME\s*\(RFC\s*8555\)|\bACME\s+(?:account|authorization|certificate|challenge|client|directory|nonce|order|protocol|server|service)\b/gi;
 const RFC_8555_TOKEN_RE = /\0RFC8555_([0-9]+)\0/g;
 const SECRET_CONTEXT_TERM_RE = /access|auth|api|credential|creds|key|passw(?:or)?d|secret|token/i;
+const SYNTHETIC_NAMESPACE_EXAMPLE_RE = /When namespace = \\"system\\", all alerts for the tenant will be returned\./g;
 
 type Ipv4Address = readonly [number, number, number, number];
 type Ipv4Range = readonly [Ipv4Address, number];
@@ -87,6 +88,14 @@ export function sanitizeAcmePlaceholders(text: string): string {
 		.replace(/Acme/g, "Example")
 		.replace(/acme/g, "example");
 	return sanitized.replace(RFC_8555_TOKEN_RE, (token, index: string) => protectedTerms.terms[Number(index)] ?? token);
+}
+
+/** Keep generated namespace examples synthetic without changing their documented behavior. */
+export function sanitizeSyntheticNamespaceExamples(text: string): string {
+	return text.replace(
+		SYNTHETIC_NAMESPACE_EXAMPLE_RE,
+		"When namespace = demo-app, all alerts for the tenant will be returned.",
+	);
 }
 
 function parseIpv4(value: string): Ipv4Address | undefined {
