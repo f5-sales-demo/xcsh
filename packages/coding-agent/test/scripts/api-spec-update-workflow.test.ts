@@ -12,6 +12,10 @@ interface WorkflowStep {
 }
 
 interface WorkflowDocument {
+	on: {
+		repository_dispatch?: { types?: string[] };
+		workflow_dispatch?: { inputs?: Record<string, { required?: boolean; type?: string }> };
+	};
 	jobs: Record<string, { steps: WorkflowStep[] }>;
 }
 
@@ -31,10 +35,19 @@ function namedStep(steps: WorkflowStep[], name: string): WorkflowStep {
 }
 
 describe("API spec dispatch workflow contract", () => {
+	it("accepts canonical upstream delivery and exact pending replay triggers", async () => {
+		const document = parseYaml(await Bun.file(workflowPath).text()) as WorkflowDocument;
+		expect(document.on.repository_dispatch?.types).toEqual(["enriched-specs-updated"]);
+		expect(document.on.workflow_dispatch?.inputs?.delivery_id).toMatchObject({
+			required: true,
+			type: "string",
+		});
+	});
+
 	it("validates identity and the durable ledger before installing or generating", async () => {
 		const steps = await workflowSteps();
 		const names = steps.map(step => step.name ?? "");
-		const validateIndex = names.indexOf("Validate manual replay identity");
+		const validateIndex = names.indexOf("Validate delivery identity");
 		const releaseIndex = names.indexOf("Verify exact published release");
 		const ledgerIndex = names.indexOf("Check durable delivery ledger on main");
 		const providerIndex = names.indexOf("Resolve exact published provider release");
