@@ -416,7 +416,20 @@ describe("AgentSession retry fallback", () => {
 				requestedModels.push(`${requestedModel.provider}/${requestedModel.id}`);
 				const stream = new MockAssistantStream();
 				queueMicrotask(() => {
+					if (requestedModel.provider === fallbackModel.provider && requestedModel.id === fallbackModel.id) {
+						const message = createAssistantMessage(requestedModel, {
+							text: "Recovered after discarded Anthropic stream",
+							stopReason: "stop",
+						});
+						stream.push({
+							type: "start",
+							partial: createAssistantMessage(requestedModel, { stopReason: "stop" }),
+						});
+						stream.push({ type: "done", reason: "stop", message });
+						return;
+					}
 					const message = createAssistantMessage(requestedModel, {
+						text: "partial assistant content that must not persist",
 						stopReason: "error",
 						errorMessage: envelopeError,
 					});
@@ -456,14 +469,22 @@ describe("AgentSession retry fallback", () => {
 		await session.prompt("Retry Anthropic envelope failure before terminal stop signal");
 		await session.waitForIdle();
 
-		expect(requestedModels).toHaveLength(2);
+		expect(requestedModels).toEqual([
+			`${primaryModel.provider}/${primaryModel.id}`,
+			`${fallbackModel.provider}/${fallbackModel.id}`,
+		]);
 		expect(retryStartEvents).toHaveLength(1);
 		expect(retryEndEvents).toHaveLength(1);
 		expect(fallbackAppliedEvents).toHaveLength(1);
-		expect(fallbackSucceededEvents).toHaveLength(0);
+		expect(fallbackSucceededEvents).toHaveLength(1);
 		const lastAssistant = getLastAssistantMessage(session);
-		expect(lastAssistant.stopReason).toBe("error");
-		expect(lastAssistant.errorMessage).toBe(envelopeError);
+		expect(lastAssistant.stopReason).toBe("stop");
+		expect(lastAssistant.content).toContainEqual({
+			type: "text",
+			text: "Recovered after discarded Anthropic stream",
+		});
+		expect(session.messages.filter(message => message.role === "assistant")).toHaveLength(1);
+		expect(JSON.stringify(session.messages)).not.toContain("partial assistant content that must not persist");
 	});
 
 	it("does not auto-retry generic Request was aborted. errors", async () => {
