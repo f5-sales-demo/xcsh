@@ -68,11 +68,11 @@ describe("system prompt API spec integration", () => {
 		expect(rendered).toContain("`xcsh://api-spec/` **MUST NOT** be read proactively");
 	});
 
-	it("preserves portable CLI diagnostics guidance for curl 8.7.1", async () => {
+	it("preserves portable CLI diagnostics guidance for cURL 8.7.1", async () => {
 		const rendered = await buildSystemPrompt({ tools: new Map() });
 		expect(rendered).toContain("CLI portability");
 		expect(rendered).toContain("inspect the installed tool version or help");
-		expect(rendered).toContain("curl 8.7.1 does not provide ssl_cipher");
+		expect(rendered).toContain("cURL 8.7.1 does not provide ssl_cipher");
 		expect(rendered).toContain("retry without that field");
 	});
 });
