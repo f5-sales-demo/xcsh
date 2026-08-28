@@ -609,7 +609,7 @@ describe("renderAboutDoc containment section", () => {
 		expect(landlock).toContain("landlock");
 		expect(landlock).toContain("ls /");
 		expect(landlock).toContain("sudo");
-		expect(landlock).toContain("without a real terminal");
+		expect(landlock).not.toContain("without a real terminal");
 
 		const seatbelt = renderAboutDoc(fakeBuildInfo(), null, null, {
 			enabled: true,
