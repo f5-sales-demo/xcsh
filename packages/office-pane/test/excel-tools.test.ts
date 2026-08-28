@@ -820,6 +820,49 @@ describe("write_cells", () => {
 		d.dispose();
 	});
 
+	for (const invalid of [
+		{ label: "missing worksheet", address: "Missing!A1" },
+		{ label: "invalid A1 syntax", address: "not-a-cell" },
+		{ label: "multi-cell range", address: "A1:B2" },
+	] as const) {
+		it(`preflights a ${invalid.label} before queueing any write`, async () => {
+			const excel = fakeExcel({}, { Sheet1: {} });
+			const tool = createExcelHostTools(excel).find(candidate => candidate.definition.name === "write_cells");
+
+			await expect(
+				tool!.handler(
+					{
+						cells: [
+							{ address: "C4", value: "must not land" },
+							{ address: invalid.address, value: "bad" },
+						],
+					},
+					dummyCtx,
+				),
+			).rejects.toThrow();
+			expect(excel.cells.C4).toBeUndefined();
+		});
+	}
+
+	it("rejects a non-anchor cell in a merged area before queueing any write", async () => {
+		const excel = fakeExcel({}, { Sheet1: {} }, { sheetMeta: { Sheet1: { mergedRanges: { E4: "D4:E4" } } } });
+		const tool = createExcelHostTools(excel).find(candidate => candidate.definition.name === "write_cells");
+
+		await expect(
+			tool!.handler(
+				{
+					cells: [
+						{ address: "C4", value: "must not land" },
+						{ address: "E4", value: "bad" },
+					],
+				},
+				dummyCtx,
+			),
+		).rejects.toThrow(/merged/i);
+		expect(excel.cells.C4).toBeUndefined();
+		expect(excel.cells.E4).toBeUndefined();
+	});
+
 	it("rejects an empty batch rather than reporting a silent success", async () => {
 		const t = new MockTransport();
 		const d = new HostToolDispatcher(t);

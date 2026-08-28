@@ -28,7 +28,7 @@ import { ChatHandler } from "./browser/chat-handler";
 import { type BridgeServer, startBridgeServer } from "./browser/extension-bridge";
 import { setSharedBridgeServer } from "./browser/provider";
 import { invalidate as invalidateFsCache } from "./capability/fs";
-import { type Args, parseArgs } from "./cli/args";
+import { type Args, resolveLaunchArgs } from "./cli/args";
 import { processFileArguments } from "./cli/file-processor";
 import { LAUNCH_FLAGS } from "./cli/flag-spec";
 import { buildInitialMessage } from "./cli/initial-message";
@@ -46,7 +46,8 @@ import {
 	resolveActiveProjectRegistryPath,
 } from "./discovery/helpers";
 import { exportFromFile } from "./export/html";
-import type { ExtensionUIContext } from "./extensibility/extensions/types";
+import { discoverAndLoadExtensions, loadExtensions } from "./extensibility/extensions";
+import type { ExtensionFlag, ExtensionUIContext, LoadExtensionsResult } from "./extensibility/extensions/types";
 import {
 	getInstalledPluginsRegistryPath,
 	getMarketplacesCacheDir,
@@ -66,7 +67,7 @@ import { resolveResumableSession, type SessionInfo, SessionManager } from "./ses
 import { profileDump, profileMark } from "./startup-profile";
 import { resolvePromptInput } from "./system-prompt";
 import type { LspStartupServerInfo } from "./tools";
-import type { EventBus } from "./utils/event-bus";
+import { EventBus } from "./utils/event-bus";
 import { fuzzyFilter } from "./utils/fuzzy";
 
 async function checkForNewVersion(currentVersion: string): Promise<string | undefined> {
@@ -314,7 +315,7 @@ async function createSessionManager(parsed: Args, cwd: string): Promise<SessionM
 	return undefined;
 }
 
-async function maybeAutoChdir(parsed: Args): Promise<void> {
+async function maybeAutoChdir(parsed: Pick<Args, "allowHome" | "cwd">): Promise<void> {
 	if (parsed.allowHome || parsed.cwd) {
 		return;
 	}
@@ -597,7 +598,23 @@ function reportUnrecognizedFlags(
 	process.exit(1);
 }
 
-export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<void> {
+function collectExtensionFlags(result: LoadExtensionsResult): {
+	flags: Map<string, ExtensionFlag>;
+	registeredNames: Map<string, string>;
+} {
+	const flags = new Map<string, ExtensionFlag>();
+	const registeredNames = new Map<string, string>();
+	for (const extension of result.extensions) {
+		for (const [registeredName, flag] of extension.flags) {
+			const cliName = registeredName.replace(/^--/, "");
+			flags.set(cliName, flag);
+			registeredNames.set(cliName, registeredName);
+		}
+	}
+	return { flags, registeredNames };
+}
+
+export async function runRootCommand(rawArgs: string[]): Promise<void> {
 	logger.startTiming();
 	profileMark("entry: runtime + module-graph loaded (pre-main)");
 
@@ -605,8 +622,60 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	// Will be re-initialized with user preferences later
 	await logger.time("initTheme:initial", initTheme);
 
-	const parsedArgs = parsed;
-	await logger.time("maybeAutoChdir", maybeAutoChdir, parsedArgs);
+	let preloadedExtensions: LoadExtensionsResult | undefined;
+	let extensionEventBus: EventBus | undefined;
+	let registeredFlagNames = new Map<string, string>();
+	const resolved = await resolveLaunchArgs(rawArgs, async bootstrap => {
+		await logger.time("maybeAutoChdir", maybeAutoChdir, bootstrap);
+		const cwd = getProjectDir();
+		const sandboxOverrides: Partial<Record<SettingPath, unknown>> = {};
+		if (bootstrap.noSandbox) sandboxOverrides["sandbox.enabled"] = false;
+		if (bootstrap.noMemories) sandboxOverrides["memories.enabled"] = false;
+		if (bootstrap.allowPath.length > 0) {
+			sandboxOverrides["sandbox.allowRead"] = bootstrap.allowPath;
+			sandboxOverrides["sandbox.allowWrite"] = bootstrap.allowPath;
+		}
+		await logger.time("settings:init", Settings.init, {
+			cwd,
+			overrides: Object.keys(sandboxOverrides).length > 0 ? sandboxOverrides : undefined,
+		});
+		initializeWithSettings(settings);
+
+		const home = os.homedir();
+		if (bootstrap.pluginDirs.length > 0) {
+			await logger.time("injectPluginDirRoots", injectPluginDirRoots, home, bootstrap.pluginDirs, cwd);
+		} else {
+			await logger.time("preloadPluginRoots", preloadPluginRoots, home, cwd);
+		}
+
+		const configuredPaths = [...bootstrap.extensions, ...bootstrap.hooks];
+		extensionEventBus = new EventBus();
+		preloadedExtensions = bootstrap.noExtensions
+			? await logger.time("loadExtensions", loadExtensions, configuredPaths, cwd, extensionEventBus)
+			: await logger.time(
+					"discoverAndLoadExtensions",
+					discoverAndLoadExtensions,
+					[...configuredPaths, ...(settings.get("extensions") ?? [])],
+					cwd,
+					extensionEventBus,
+					settings.get("disabledExtensions") ?? [],
+				);
+		for (const { path: extensionPath, error } of preloadedExtensions.errors) {
+			logger.error("Failed to load extension", { path: extensionPath, error });
+		}
+		const collected = collectExtensionFlags(preloadedExtensions);
+		registeredFlagNames = collected.registeredNames;
+		return collected.flags;
+	});
+	const parsedArgs = resolved.parsed;
+	if (resolved.bootstrap.preExtensionExit) {
+		await logger.time("maybeAutoChdir", maybeAutoChdir, parsedArgs);
+	} else {
+		reportUnrecognizedFlags(parsedArgs, resolved.extensionFlags);
+		for (const [flagName, value] of parsedArgs.unknownFlags) {
+			preloadedExtensions?.runtime.flagValues.set(registeredFlagNames.get(flagName) ?? flagName, value);
+		}
+	}
 
 	const notifs: (InteractiveModeNotify | null)[] = [];
 
@@ -655,17 +724,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	}
 
 	const cwd = getProjectDir();
-	const sandboxOverrides: Partial<Record<SettingPath, unknown>> = {};
-	if (parsedArgs.noSandbox) sandboxOverrides["sandbox.enabled"] = false;
-	if (parsedArgs.noMemories) sandboxOverrides["memories.enabled"] = false;
-	if (parsedArgs.allowPath?.length) {
-		sandboxOverrides["sandbox.allowRead"] = parsedArgs.allowPath;
-		sandboxOverrides["sandbox.allowWrite"] = parsedArgs.allowPath;
-	}
-	await logger.time("settings:init", Settings.init, {
-		cwd,
-		overrides: Object.keys(sandboxOverrides).length > 0 ? sandboxOverrides : undefined,
-	});
 
 	// F5 XC context is session-scoped: nothing loads at startup. We still init the
 	// ContextService singleton so /context commands and the session bootstrap work.
@@ -712,9 +770,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	const isInteractive = !parsedArgs.print && !autoPrint && parsedArgs.mode === undefined;
 	const mode = parsedArgs.mode || "text";
 
-	// Initialize discovery system with settings for provider persistence
-	logger.time("initializeWithSettings");
-	initializeWithSettings(settings);
 	modelRegistry.refreshInBackground();
 
 	// Apply model role overrides from CLI args or env vars (ephemeral, not persisted)
@@ -807,14 +862,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		})();
 	}
 
-	// Wire --plugin-dir and preload plugin roots for sync consumers (LSP config)
-	const home = os.homedir();
-	if (parsedArgs.pluginDirs && parsedArgs.pluginDirs.length > 0) {
-		await logger.time("injectPluginDirRoots", injectPluginDirRoots, home, parsedArgs.pluginDirs!, getProjectDir());
-	} else {
-		await logger.time("preloadPluginRoots", preloadPluginRoots, home, getProjectDir());
-	}
-
 	// Background marketplace update notification (non-blocking).
 	if (autoUpdate === "notify") {
 		void (async () => {
@@ -853,6 +900,10 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	sessionOptions.authStorage = authStorage;
 	sessionOptions.modelRegistry = modelRegistry;
 	sessionOptions.hasUI = isInteractive;
+	if (preloadedExtensions && extensionEventBus) {
+		sessionOptions.preloadedExtensions = preloadedExtensions;
+		sessionOptions.eventBus = extensionEventBus;
+	}
 
 	// Handle CLI --api-key as runtime override (not persisted)
 	if (parsedArgs.apiKey) {
@@ -980,18 +1031,6 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 		notifs.push({ kind: "error", message: modelRegistryError.message });
 	}
 
-	// Re-parse CLI args now that extension flags are known, and apply their values. The bootstrap
-	// parse recorded each unclaimed flag with any value it consumed, so this only has to hand those
-	// values over — and whatever no extension claims is a genuine unknown flag.
-	{
-		const extFlags = session.extensionRunner?.getFlags();
-		const claimed = parseArgs(rawArgs, extFlags).unknownFlags;
-		for (const [flagName, value] of claimed) {
-			session.extensionRunner?.setFlagValue(flagName, value);
-		}
-		reportUnrecognizedFlags(parsedArgs, extFlags);
-	}
-
 	if (!isInteractive && !session.model) {
 		if (modelFallbackMessage) {
 			process.stderr.write(`${chalk.red(modelFallbackMessage)}\n`);
@@ -1008,8 +1047,11 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 	const createAcpSession = async (cwd: string) => {
 		const nextSettings = await session.settings.cloneForCwd(cwd);
 		const nextSessionManager = SessionManager.create(cwd, parsedArgs.sessionDir);
+		const nextSessionOptions = { ...sessionOptions };
+		delete nextSessionOptions.preloadedExtensions;
+		delete nextSessionOptions.eventBus;
 		const { session: nextSession } = await createAgentSession({
-			...sessionOptions,
+			...nextSessionOptions,
 			cwd,
 			sessionManager: nextSessionManager,
 			settings: nextSettings,

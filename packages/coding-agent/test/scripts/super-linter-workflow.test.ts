@@ -10,10 +10,11 @@ function hasImmutableGovernedSuperLinter(source: string): boolean {
 }
 
 describe("Super-Linter workflow", () => {
-	it("pins the canonical governance workflow immutably", async () => {
+	it("pins the canonical governance workflow immutably with the workspace Rust edition", async () => {
 		const source = await Bun.file(SUPER_LINTER_WORKFLOW).text();
 
 		expect(hasImmutableGovernedSuperLinter(source)).toBe(true);
+		expect(source).toContain('rust_edition: "2024"');
 	});
 
 	it("accepts pin rolls while rejecting mutable or noncanonical references", () => {

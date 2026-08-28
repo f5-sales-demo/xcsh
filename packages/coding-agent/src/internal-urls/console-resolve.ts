@@ -121,10 +121,10 @@ function renderResource(resource: string, catalog: ConsoleCatalogData, fieldMeta
 	const doc = (parseYaml(raw) ?? {}) as Record<string, unknown>;
 	const console_ = (doc.console ?? {}) as Record<string, unknown>;
 	const lines = [`# ${(doc.label as string | undefined) ?? key}`, ""];
-	if (console_.route_pattern) {
-		const fullRoute = console_.route_prefix
-			? `${console_.route_prefix}${console_.route_pattern}`
-			: console_.route_pattern;
+	const routePattern = typeof console_.route_pattern === "string" ? console_.route_pattern : undefined;
+	if (routePattern) {
+		const routePrefix = typeof console_.route_prefix === "string" ? console_.route_prefix : undefined;
+		const fullRoute = routePrefix ? `${routePrefix}${routePattern}` : routePattern;
 		lines.push(`**Route:** \`${fullRoute}\``, "");
 	}
 	if (Array.isArray(console_.menu_path)) lines.push(`**Menu:** ${(console_.menu_path as string[]).join(" › ")}`, "");
@@ -155,8 +155,9 @@ function renderWorkflow(resource: string, operation: string, catalog: ConsoleCat
 	for (const s of steps) {
 		const sel = s.selector ? ` \`${s.selector}\`` : "";
 		const val = s.value != null ? ` = ${JSON.stringify(s.value)}` : "";
+		const action = typeof s.action === "string" ? s.action : "unknown";
 		lines.push(
-			`1. **${s.action}**${sel}${val} — ${(s.description as string | undefined) ?? (s.id as string | undefined) ?? ""}`,
+			`1. **${action}**${sel}${val} — ${(s.description as string | undefined) ?? (s.id as string | undefined) ?? ""}`,
 		);
 	}
 	return `${lines.join("\n")}\n`;

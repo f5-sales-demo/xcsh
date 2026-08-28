@@ -12,8 +12,13 @@ use std::{
 	time::{Duration, Instant},
 };
 
-#[cfg(target_os = "macos")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use brush_core::containment::ContainmentFence;
+#[cfg(target_os = "linux")]
+use brush_core::{
+	containment::RealFs,
+	sys::landlock::{Availability, availability, build_ruleset, restrict_self},
+};
 use napi::{
 	bindgen_prelude::*,
 	threadsafe_function::{ThreadsafeFunction, ThreadsafeFunctionCallMode},
@@ -77,6 +82,9 @@ struct PtyRunConfig {
 	/// reported in `xcsh://about` rather than hidden behind an unused field.
 	#[cfg(target_os = "macos")]
 	seatbelt_profile: Option<String>,
+	/// Fence compiled to a Landlock ruleset in the parent immediately before the PTY child is spawned.
+	#[cfg(target_os = "linux")]
+	landlock_fence: Option<ContainmentFence>,
 }
 
 enum ReaderEvent {
@@ -141,6 +149,8 @@ impl PtySession {
 				.fence
 				.as_ref()
 				.map(|fence| ContainmentFence::from(fence).to_seatbelt_profile()),
+			#[cfg(target_os = "linux")]
+			landlock_fence: options.fence.as_ref().map(ContainmentFence::from),
 		};
 		let ct = task::CancelToken::new(options.timeout_ms, options.signal);
 		let core = Arc::clone(&self.core);
@@ -297,7 +307,14 @@ fn run_pty_sync(
 		},
 		None => (CommandBuilder::new("sh"), true),
 	};
-	#[cfg(not(target_os = "macos"))]
+	#[cfg(target_os = "linux")]
+	let (mut cmd, login) = (
+		CommandBuilder::new("sh"),
+		!config.landlock_fence.as_ref().is_some_and(|fence| {
+			fence.requires_landlock() && matches!(availability(), Availability::Available(_))
+		}),
+	);
+	#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 	let (mut cmd, login) = (CommandBuilder::new("sh"), true);
 	cmd.arg(if login { "-lc" } else { "-c" });
 	cmd.arg(&config.command);
@@ -310,9 +327,35 @@ fn run_pty_sync(
 		}
 	}
 
-	let mut child = pair
-		.slave
-		.spawn_command(cmd)
+	#[cfg(target_os = "linux")]
+	let landlock_ruleset = match config
+		.landlock_fence
+		.as_ref()
+		.filter(|fence| fence.requires_landlock())
+	{
+		Some(fence) => match availability() {
+			Availability::Available(abi) => {
+				let plan = fence.compile_grant_plan(&RealFs);
+				let creatable = fence.allow.clone();
+				Some(build_ruleset(&plan, abi, &creatable).map_err(|err| {
+					Error::from_reason(format!("Failed to prepare PTY confinement: {err}"))
+				})?)
+			},
+			Availability::Unavailable(_) => None,
+		},
+		None => None,
+	};
+
+	#[cfg(target_os = "linux")]
+	let child_result = match landlock_ruleset {
+		Some(ruleset) => pair
+			.slave
+			.spawn_command_with_pre_exec(cmd, Box::new(move || restrict_self(&ruleset))),
+		None => pair.slave.spawn_command(cmd),
+	};
+	#[cfg(not(target_os = "linux"))]
+	let child_result = pair.slave.spawn_command(cmd);
+	let mut child = child_result
 		.map_err(|err| Error::from_reason(format!("Failed to spawn PTY command: {err}")))?;
 	drop(pair.slave);
 

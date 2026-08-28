@@ -102,6 +102,8 @@ pub struct ContainmentFenceOptions {
 	pub allow_write_only: Vec<String>,
 	/// Roots denied in both directions, winning over any allow they sit inside.
 	pub deny: Vec<String>,
+	/// Roots recursively denied only by macOS Seatbelt.
+	pub deny_on_seatbelt: Option<Vec<String>>,
 	/// Exact directories whose entries may not be enumerated.
 	pub deny_enumerate: Vec<String>,
 }
@@ -114,6 +116,13 @@ impl From<&ContainmentFenceOptions> for ContainmentFence {
 			allow_write_only: options.allow_write_only.iter().map(PathBuf::from).collect(),
 			deny: options.deny.iter().map(PathBuf::from).collect(),
 			deny_enumerate: options.deny_enumerate.iter().map(PathBuf::from).collect(),
+			deny_on_seatbelt: options
+				.deny_on_seatbelt
+				.clone()
+				.unwrap_or_default()
+				.into_iter()
+				.map(PathBuf::from)
+				.collect(),
 		}
 	}
 }

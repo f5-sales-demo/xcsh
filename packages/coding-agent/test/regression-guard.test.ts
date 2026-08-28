@@ -573,6 +573,20 @@ describe("release artifacts run the sandbox matrix before and after publication"
 	});
 });
 
+describe("protected CI enforces the macOS sibling-customer boundary", () => {
+	it("runs the real Seatbelt isolation probes after building the native addon", async () => {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const native = workflow.match(/\n {2}native:\n[\s\S]*?(?=\n {2}test:\n)/)?.[0] ?? "";
+		expect(native).toContain('{"os":"macos-14","platform":"darwin","arch":"arm64","sandbox_check":true}');
+		expect(native).toContain("name: Seatbelt sibling-customer enforcement");
+		expect(native).toContain("if: matrix.platform == 'darwin' && matrix.sandbox_check");
+		expect(native).toContain("bun test packages/coding-agent/test/sandbox-isolation.test.ts");
+		expect(native.indexOf("Build native addon(s)")).toBeLessThan(
+			native.indexOf("Seatbelt sibling-customer enforcement"),
+		);
+	});
+});
+
 describe("vim ex-command onUpdate throttle bypass (commit 8f5b630ac)", () => {
 	it("vim.ts onKbdStep forces update when engine.inputMode is command or search mode", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../src/tools/vim.ts"), "utf8");

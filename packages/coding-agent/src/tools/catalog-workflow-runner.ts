@@ -167,7 +167,12 @@ export function loadWorkflowYaml(params: { catalog_path?: string; resource: stri
 		if (file !== base && !file.startsWith(base + path.sep)) {
 			throw new ToolError(`Path traversal detected in catalog_path`);
 		}
-		return fs.readFileSync(file, "utf-8");
+		try {
+			return fs.readFileSync(file, "utf-8");
+		} catch (error) {
+			const detail = error instanceof Error ? error.message : String(error);
+			throw new ToolError(`Unable to read workflow ${params.resource}/${params.operation}: ${detail}`);
+		}
 	}
 	const key = `${params.resource}/${params.operation}`;
 	const text = CONSOLE_CATALOG_DATA.workflows[key];

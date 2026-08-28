@@ -33,14 +33,12 @@ operator. The rule of thumb is that if a file belongs to someone other than the 
 working with, it is not yours to read.
 
 {{#if containment.landlock}}
-Three things behave differently under this backend, and none is a bug to work around:
+Two things behave differently under this backend, and neither is a bug to work around:
 
 - `ls /` can fail because a kernel rule cannot expose a directory whose descendants have different
   enumeration rights. Listing a specific reachable directory works normally.
 - `sudo` and other setuid programs do not work, because confining a process requires giving up the
   ability to gain privileges.
-- Interactive terminal programs (`top`, `less`, an interactive `ssh`) run without a real terminal here,
-  so prefer their non-interactive forms — `ps`, `cat`, `ssh -T`, or a piped command.
 {{#if containment.truncationUngoverned}}
 - This kernel is too old to govern truncation, so a denied file can still be emptied even though it
   cannot be read or written. Never truncate a path outside the session directory.

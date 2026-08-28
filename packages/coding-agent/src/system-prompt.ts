@@ -616,6 +616,8 @@ export interface BuildSystemPromptOptions {
 	contextSkillDirs?: string[];
 	contextIncludeSkills?: string[];
 	contextExcludeSkills?: string[];
+	/** Transform the fully rendered default prompt before mandatory blocks are enforced again. */
+	transformPrompt?: (defaultPrompt: string) => string;
 }
 
 /** Build the system prompt with tools, guidelines, and context */
@@ -644,6 +646,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 		eagerTasks = false,
 		secretsEnabled = false,
 		context,
+		transformPrompt,
 	} = options;
 	const resolvedCwd = cwd ?? getProjectDir();
 
@@ -841,29 +844,30 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	};
 	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
 
-	// The workspace boundary is always-on for the same reason: a custom system prompt
-	// swaps in a template with no Workspace section, and the confidentiality guidance
-	// must not be what disappears when an operator customises their prompt.
+	// These blocks remain mandatory after every customization path. A transform receives the
+	// complete default prompt, then its result goes through the same replace-or-append pass as
+	// a string override so it cannot silently discard the session boundary or guardrails.
 	const workspaceBoundary = workspaceBoundaryTemplate.trimEnd();
-	rendered = rendered.includes(WORKSPACE_BOUNDARY_MARKER)
-		? rendered.replace(WORKSPACE_BOUNDARY_MARKER, workspaceBoundary)
-		: `${rendered}\n\n${workspaceBoundary}`;
-
-	// The start-folder block is always-on for the same reason, and matters more: its
-	// restrictive branch is what stops a folder of tenant secrets being offered up for
-	// publication, and that must not vanish because an operator set --system-prompt.
 	const startFolderBlock = prompt.render(startFolderTemplate, data).trimEnd();
-	rendered = rendered.includes(START_FOLDER_MARKER)
-		? rendered.replace(START_FOLDER_MARKER, startFolderBlock)
-		: `${rendered}\n\n${startFolderBlock}`;
-
-	// Deprecation guardrails are always-on: replace the section marker in the default
-	// template, or append when the active template has none (e.g. a fully custom system
-	// prompt), so the rules apply on every code path — not only when xcsh:// is consulted.
 	const deprecationGuardrails = renderDeprecationGuardrails();
-	rendered = rendered.includes(DEPRECATION_GUARDRAILS_MARKER)
-		? rendered.replace(DEPRECATION_GUARDRAILS_MARKER, deprecationGuardrails)
-		: `${rendered}\n\n## Deprecation guardrails\n\n${deprecationGuardrails}`;
+	const applyMandatoryBlocks = (candidate: string): string => {
+		let result = candidate;
+		result = result.includes(WORKSPACE_BOUNDARY_MARKER)
+			? result.replace(WORKSPACE_BOUNDARY_MARKER, workspaceBoundary)
+			: `${result}\n\n${workspaceBoundary}`;
+		result = result.includes(START_FOLDER_MARKER)
+			? result.replace(START_FOLDER_MARKER, startFolderBlock)
+			: `${result}\n\n${startFolderBlock}`;
+		result = result.includes(DEPRECATION_GUARDRAILS_MARKER)
+			? result.replace(DEPRECATION_GUARDRAILS_MARKER, deprecationGuardrails)
+			: `${result}\n\n## Deprecation guardrails\n\n${deprecationGuardrails}`;
+		return result;
+	};
+
+	rendered = applyMandatoryBlocks(rendered);
+	if (transformPrompt) {
+		rendered = applyMandatoryBlocks(transformPrompt(rendered));
+	}
 
 	// When autoqa is active the report_tool_issue tool is in the tool set — nudge the agent.
 	if (toolNames.includes("report_tool_issue")) {

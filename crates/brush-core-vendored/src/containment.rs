@@ -6,11 +6,12 @@
 //! written cannot matter.
 //!
 //! It is deliberately permissive. Anything matched by no root is outside the fence and allowed, so
-//! `/usr`, `/tmp`, package caches, the network and process execution are untouched. Cross-tenant
-//! isolation removes accidental parent enumeration while preserving named operator access. Recursive
-//! denies remain available for explicit policies, but the production session fence does not use one
-//! beneath an operator-writable parent: Landlock cannot subtract that child without preventing direct
-//! creation in its parent.
+//! `/usr`, `/tmp`, package caches, the network and process execution are untouched. Portable
+//! cross-tenant isolation removes accidental parent enumeration. Seatbelt also denies sibling customer
+//! paths while restoring the workspace and trusted grants at greater depth. Other recursive denies
+//! remain available for explicit policies, but Landlock does not apply the Seatbelt-only rule because
+//! it cannot subtract that child from an operator-writable parent without preventing direct creation
+//! in the parent.
 //!
 //! The fence is per-invocation and absent by default: only the model's `bash` tool supplies one.
 //! Host-driven shell use — credential helpers, the interactive `xcsh shell`, snapshot sourcing —
@@ -129,6 +130,9 @@ pub struct ContainmentFence {
 	pub allow_write_only: Vec<PathBuf>,
 	/// Roots denied in both directions, winning over any allow they sit inside.
 	pub deny: Vec<PathBuf>,
+	/// Roots recursively denied by macOS Seatbelt only. Deeper workspace and trusted grants win;
+	/// Landlock deliberately ignores this platform-specific sibling-container boundary.
+	pub deny_on_seatbelt: Vec<PathBuf>,
 	/// Exact directories whose entries may not be enumerated. Descendants remain reachable by name.
 	pub deny_enumerate: Vec<PathBuf>,
 }
@@ -599,6 +603,7 @@ impl ContainmentFence {
 		let mut rules: Vec<Rule<'_>> = Vec::new();
 		rules.extend(self.deny.iter().map(Rule::Deny));
 		rules.extend(self.deny.iter().map(Rule::Metadata));
+		rules.extend(self.deny_on_seatbelt.iter().map(Rule::Deny));
 		rules.extend(self.deny_enumerate.iter().map(Rule::DenyEnumerate));
 		rules.extend(self.allow.iter().map(Rule::Allow));
 		rules.extend(self.allow_read_only.iter().map(Rule::ReadOnly));

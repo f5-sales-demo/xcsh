@@ -7,8 +7,9 @@
  * profile could not even `execvp /bin/cat`.
  *
  * So the fence is gentle. It leaves `/usr`, `/tmp`, package caches, the network and process execution
- * alone. Its cross-tenant courtesy removes discovery by enumerating session, account, data, and
- * xcsh-private containers while keeping named operator access (#2931, #2952).
+ * alone. Its portable cross-tenant courtesy removes discovery by enumerating session, account, data,
+ * and xcsh-private containers (#2931, #2952). Seatbelt additionally denies a workspace's customer
+ * container recursively, then restores the workspace and explicit trusted grants at greater depth.
  *
  * Produced declaratively rather than as an ordered rule list, because the two backends disagree about
  * order: seatbelt evaluates rules in sequence with the last match winning, while Landlock only grants
@@ -39,6 +40,8 @@ export interface ContainmentFence {
 	readonly allowWriteOnly: readonly string[];
 	/** Canonical roots denied in both directions, winning over any allow they sit inside. */
 	readonly deny: readonly string[];
+	/** Recursive roots denied only by macOS Seatbelt; Landlock and portable verdicts ignore them. */
+	readonly denyOnSeatbelt: readonly string[];
 	/** Canonical directories whose own entries may not be enumerated. Descendants remain reachable by name. */
 	readonly denyEnumerate: readonly string[];
 }
@@ -430,14 +433,15 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	const allowReadOnly = new Set<string>();
 	const allowWriteOnly = new Set<string>();
 	const deny = new Set<string>();
+	const denyOnSeatbelt = new Set<string>();
 	const denyEnumerate = new Set<string>();
 
-	// The fence is a professional courtesy, not a privilege boundary. Refusing an entire parent tree
-	// withheld paths the operator is entitled to use and recreated the whole-home failure from #2637.
-	// What matters for cross-tenant context isolation is the discovery step: without a directory listing,
-	// a session cannot casually scan the container and learn which sibling workspaces exist. The exact
-	// parent therefore loses enumeration only; traversal and named reads/writes remain ordinary filesystem
-	// operations. Operational parents such as `/usr` and the system temp directory are left alone.
+	// The portable boundary removes discovery: without a directory listing, a session cannot casually scan
+	// the container and learn which sibling workspaces exist. Seatbelt can additionally deny that customer
+	// container recursively and restore the workspace and trusted grants with deeper rules. Landlock cannot
+	// express that subtraction without breaking direct creation in writable ancestors, so it keeps the exact
+	// enumeration policy (#2952). Home itself and operational parents such as `/usr` or the system temp
+	// directory are never treated as customer containers.
 	const parentToProtect = path.dirname(workspace);
 
 	// Through `resolveGrants` like the allow-lists, so a session temp dir or artifacts dir that does not
@@ -481,6 +485,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 	// containers are still protected, but the operator always retains a normal `ls ~` experience.
 	if (parentToProtect !== home && !tooBroadToDeny(parentToProtect, fsRoot) && !parentExplicitlyReadable) {
 		denyEnumerate.add(parentToProtect);
+		denyOnSeatbelt.add(parentToProtect);
 	}
 
 	if (home !== undefined) {
@@ -564,6 +569,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		allowReadOnly: [...allowReadOnly],
 		allowWriteOnly: [...allowWriteOnly],
 		deny: [...deny],
+		denyOnSeatbelt: [...denyOnSeatbelt],
 		denyEnumerate: [...denyEnumerate],
 	};
 }

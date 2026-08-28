@@ -9,10 +9,11 @@ Executes bash command in shell session for terminal operations like git, bun, ca
 - Quote variable expansions like `"$NAME"` to preserve exact content and avoid shell parsing bugs
 - PTY mode is opt-in: set `pty: true` only when command expects a real terminal (for example `sudo`, `ssh` where you need input from the user); default is `false`
 - You **MUST** use `;` only when later commands should run regardless of earlier failures
-- `skill://` URIs are auto-resolved to filesystem paths before execution
+- Whole-word internal URLs are auto-resolved to filesystem paths before execution
+  - Set `expand_urls: false` when a whole-word internal URL must reach the command literally; command text is then left byte-for-byte unchanged
   - `python skill://my-skill/scripts/init.py` runs the script from the skill directory
   - `skill://<name>/<relative-path>` resolves within the skill's base directory
-- Internal URLs are also auto-resolved to filesystem paths before execution.
+  - The default is `expand_urls: true`
 {{#if asyncEnabled}}
 - Use `async: true` for long-running commands when you don't need immediate output; the call returns a background job ID and the result is delivered automatically as a follow-up.
 {{/if}}

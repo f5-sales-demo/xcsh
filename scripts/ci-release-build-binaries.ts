@@ -2,6 +2,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import { $ } from "bun";
 
 interface BinaryTarget {
@@ -226,6 +227,13 @@ async function generateConsoleCatalog(): Promise<void> {
 		await fs.stat(consoleCatalogPath);
 	} catch {
 		throw new Error(`Console catalog generation succeeded but output file missing:\n  ${path.relative(repoRoot, consoleCatalogPath)}`);
+	}
+	const generatedCatalog = (await import(`${pathToFileURL(consoleCatalogPath).href}?generated=${Date.now()}`)) as {
+		CONSOLE_CATALOG_DATA?: { workflows?: Record<string, unknown> };
+	};
+	const workflowCount = Object.keys(generatedCatalog.CONSOLE_CATALOG_DATA?.workflows ?? {}).length;
+	if (workflowCount === 0) {
+		throw new Error("Generated console catalog contains no workflows");
 	}
 	console.log("Console catalog generated and verified.");
 }

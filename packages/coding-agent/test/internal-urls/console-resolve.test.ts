@@ -54,6 +54,27 @@ describe("createConsoleResolver", () => {
 		expect(res.content).toContain("navigate-to-list");
 		expect(res.content).toContain("Add HTTP Load Balancer");
 	});
+
+	it("does not stringify malformed route or action values", async () => {
+		const malformed = {
+			...catalog,
+			resources: {
+				broken: "id: broken\nlabel: Broken\nconsole:\n  route_pattern:\n    nested: value\n",
+			},
+			workflows: {
+				"broken/create":
+					"id: broken-create\nlabel: Broken create\nsteps:\n  - id: malformed\n    action:\n      nested: value\n    description: malformed action\n",
+			},
+		};
+		const resolver = createConsoleResolver(malformed);
+		const resource = await resolver.resolve(parseInternalUrl("xcsh://console/broken") as never);
+		const workflow = await resolver.resolve(parseInternalUrl("xcsh://console/broken/create") as never);
+
+		expect(resource.content).not.toContain("[object Object]");
+		expect(resource.content).not.toContain("**Route:**");
+		expect(workflow.content).not.toContain("[object Object]");
+		expect(workflow.content).toContain("**unknown**");
+	});
 });
 
 const has = !!CONSOLE_CATALOG_DATA.resources["health-check"];

@@ -11,18 +11,11 @@ import { buildContainmentFence, containmentStatus } from "../src/sandbox/contain
  * same reason as in the shell integration test: a skip reads as coverage, and this is the gap that must
  * not be implied to be closed.
  *
- * **Keyed on seatbelt specifically, not on `osEnforced`.** Confining this path means getting a policy onto
- * a child that `portable-pty` spawns, and only the macOS backend can — it wraps argv, needing no hook.
- * Landlock is applied in a `pre_exec` closure, and `CommandBuilder` exposes none, so a Linux box with a
- * perfectly good Landlock backend still cannot confine a PTY.
- *
- * That distinction was found by CI rather than by reasoning: once the backend probe started reporting
- * Landlock on the `ubuntu-22.04` runner, `osEnforced` became true there and these cases began demanding a
- * confinement that cannot exist on that path. The product's answer on Linux is not to use the PTY path at
- * all when a fence is present (`bash.ts`), which is where that protection is asserted; here we only test
- * the mechanism, and only where the mechanism exists.
+ * `osEnforced` is the capability contract for every command path. Seatbelt wraps argv on macOS; the
+ * vendored PTY implementation exposes a child pre-exec hook so Linux applies its Landlock ruleset before
+ * the PTY child executes. Scanner-only hosts still assert the known leak rather than claiming coverage.
  */
-const PTY_CONFINABLE = containmentStatus(true).backend === "seatbelt";
+const PTY_CONFINABLE = containmentStatus(true).osEnforced;
 
 /**
  * The bash tool has two execution paths, and containment has to cover both.
