@@ -830,6 +830,35 @@ function b() {
 			expect(output).not.toContain("xcsh:/about");
 		});
 
+		it("preserves a literal whole-word internal URL when expansion is disabled", async () => {
+			const sourcePath = path.join(testDir, "resolved-about.md");
+			const internalRouter = {
+				canHandle: (input: string) => input === "xcsh://about",
+				resolve: async (input: string) => ({
+					url: input,
+					content: "",
+					contentType: "text/markdown",
+					sourcePath,
+				}),
+			};
+			const tool = new BashTool(
+				createTestToolSession(testDir, Settings.isolated(), {
+					internalRouter: internalRouter as unknown as ToolSession["internalRouter"],
+				}),
+			);
+
+			const literal = await tool.execute("test-call-literal-url", {
+				command: "printf %s xcsh://about",
+				expand_urls: false,
+			});
+			const expanded = await tool.execute("test-call-expanded-url", {
+				command: "printf %s xcsh://about",
+			});
+
+			expect(getTextOutput(literal)).toBe("xcsh://about");
+			expect(getTextOutput(expanded)).toBe(sourcePath);
+		});
+
 		it("should block built-in interceptor commands when enabled with default patterns", async () => {
 			const interceptedBashTool = wrapToolWithMetaNotice(
 				new BashTool(createTestToolSession(testDir, Settings.isolated({ "bashInterceptor.enabled": true }))),
