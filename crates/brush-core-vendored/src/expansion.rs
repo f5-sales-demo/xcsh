@@ -646,10 +646,10 @@ impl<'a> WordExpander<'a> {
 				.expand(
 					self.shell.working_dir(),
 					Some(&|path: &std::path::Path| {
-						fence.permits(path, crate::containment::FenceAccess::Read)
+						fence.permits_for_host(path, crate::containment::FenceAccess::Read)
 					}),
 					Some(&|path: &std::path::Path| {
-						fence.permits(path, crate::containment::FenceAccess::Enumerate)
+						fence.permits_for_host(path, crate::containment::FenceAccess::Enumerate)
 					}),
 					&options,
 				)

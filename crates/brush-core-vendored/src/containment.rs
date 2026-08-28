@@ -210,6 +210,38 @@ impl ContainmentFence {
 		self.permits_resolved(&canonicalize_for_fence(candidate), access)
 	}
 
+	/// Whether this host's in-process shell may access `candidate` for `access`.
+	///
+	/// macOS must include the Seatbelt-only recursive denies because redirects, glob expansion, and
+	/// builtins execute in the agent process rather than in a `sandbox-exec` child. Other platforms
+	/// retain the portable policy: Landlock deliberately does not receive these macOS-only rules.
+	#[must_use]
+	pub fn permits_for_host(&self, candidate: &Path, access: FenceAccess) -> bool {
+		self.permits_resolved_for_host(&canonicalize_for_fence(candidate), access)
+	}
+
+	/// Host-aware variant of [`Self::permits_resolved`] for an already resolved path.
+	#[must_use]
+	pub fn permits_resolved_for_host(&self, resolved: &Path, access: FenceAccess) -> bool {
+		#[cfg(target_os = "macos")]
+		{
+			self.permits_resolved_on_seatbelt(resolved, access)
+		}
+		#[cfg(not(target_os = "macos"))]
+		{
+			self.permits_resolved(resolved, access)
+		}
+	}
+
+	/// Evaluate an already resolved path with the macOS Seatbelt-only denies included.
+	///
+	/// This is public so the pure policy can be exercised on non-macOS CI. Runtime shell callers use
+	/// [`Self::permits_resolved_for_host`] and therefore select it only on macOS.
+	#[must_use]
+	pub fn permits_resolved_on_seatbelt(&self, resolved: &Path, access: FenceAccess) -> bool {
+		self.permits_resolved_with_seatbelt_denies(resolved, access, true)
+	}
+
 	/// Whether an **already resolved** path may be accessed for `access`.
 	///
 	/// Separate from [`Self::permits`] so a caller that is about to open the path can resolve once,
@@ -224,11 +256,21 @@ impl ContainmentFence {
 	/// A boundary that holds 99% of the time is not a boundary.
 	#[must_use]
 	pub fn permits_resolved(&self, resolved: &Path, access: FenceAccess) -> bool {
+		self.permits_resolved_with_seatbelt_denies(resolved, access, false)
+	}
+
+	fn permits_resolved_with_seatbelt_denies(
+		&self,
+		resolved: &Path,
+		access: FenceAccess,
+		include_seatbelt_denies: bool,
+	) -> bool {
 		if self.allow.is_empty()
 			&& self.allow_read_only.is_empty()
 			&& self.allow_write_only.is_empty()
 			&& self.deny.is_empty()
 			&& self.deny_enumerate.is_empty()
+			&& (!include_seatbelt_denies || self.deny_on_seatbelt.is_empty())
 		{
 			return true;
 		}
@@ -244,7 +286,11 @@ impl ContainmentFence {
 			access
 		};
 
-		let denied = deepest_match(&self.deny, resolved);
+		let denied = deepest_match(&self.deny, resolved).max(if include_seatbelt_denies {
+			deepest_match(&self.deny_on_seatbelt, resolved)
+		} else {
+			None
+		});
 		let read_only = deepest_match(&self.allow_read_only, resolved);
 		let write_only = deepest_match(&self.allow_write_only, resolved);
 		let allowed = deepest_match(&self.allow, resolved);

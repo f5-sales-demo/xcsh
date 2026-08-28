@@ -476,6 +476,41 @@ fn seatbelt_customer_container_deny_is_recursive_but_deeper_grants_win() {
 	);
 }
 
+#[test]
+fn seatbelt_in_process_checks_apply_customer_deny_and_deeper_grants() {
+	let parent = PathBuf::from("/Users/alice/customers");
+	let workspace = parent.join("example-a");
+	let sibling = parent.join("example-b");
+	let trusted = parent.join("shared-handoff");
+	let fence = ContainmentFence {
+		allow: vec![workspace.clone(), trusted.clone()],
+		deny_on_seatbelt: vec![parent],
+		..ContainmentFence::default()
+	};
+
+	assert!(
+		fence.permits_resolved(&sibling.join("planted.env"), FenceAccess::Write),
+		"the portable policy deliberately ignores the Seatbelt-only customer deny"
+	);
+	#[cfg(not(target_os = "macos"))]
+	assert!(
+		fence.permits_resolved_for_host(&sibling.join("planted.env"), FenceAccess::Write),
+		"non-macOS hosts must retain the portable policy"
+	);
+	assert!(
+		!fence.permits_resolved_on_seatbelt(&sibling.join("planted.env"), FenceAccess::Write),
+		"an in-process macOS redirection must enforce the same deny as sandbox-exec"
+	);
+	assert!(
+		fence.permits_resolved_on_seatbelt(&workspace.join("notes.md"), FenceAccess::Write),
+		"the deeper workspace grant must win"
+	);
+	assert!(
+		fence.permits_resolved_on_seatbelt(&trusted.join("output.txt"), FenceAccess::Write),
+		"an explicit deeper trusted grant must win"
+	);
+}
+
 /// Two lists naming the same path must resolve the way `permits_resolved` does:
 /// deny wins.
 #[test]
