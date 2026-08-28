@@ -1,18 +1,18 @@
 {
 	"assets": {
-		"api-catalog.json": "sha256:302b6351c2ec9efe38971689c8ad87c4c13f2951cb7cb2a0b7386745e319c593",
-		"concurrency_contracts.json": "sha256:88f8be48b968eb71c988c97bc3ab2e6ceca85d8b823629b90f8b7396bec5fef9",
-		"f5xc-api-specs-v3.0.0.zip": "sha256:ac0637ec6f9d4c2db9eabc76c9b44af5d3ba893a1febcbe780441a3a2a65314f",
-		"index.json": "sha256:c8074c1ee708931bb647c9479604a5e311a67411fe391924e2df82f3b92e2af8",
-		"minimal-export-defaults.json": "sha256:daeec8253edb5c3e3fda5dc1b3f40b9f40fc6dfc563732ae49098a0a76023107",
-		"openapi.json": "sha256:b9aefb9909789849819e56b8e4bdc5044b413692b0c1c429ee764b95d3117824",
-		"smsv2-contract-manifest.json": "sha256:35ac80b118bb0a4ab790fbea01b81aff232fa8582717e49f91e02e63d7a995c5",
-		"smsv2-contract.json": "sha256:10f26956752287d5530fc13e1acbe497f9be4a997e474ad466b06d8dee7ce31b",
-		"smsv2-evidence-receipt.json": "sha256:1d4f064372663d30f52d56faacacd762824cfd72d9e34058a5579b4384cc2509",
-		"smsv2_parity_manifest.json": "sha256:ada56c1c03e0329a1268b4ba759e2a0c2978e46cff3b420b1802180c0e09beed",
+		"api-catalog.json": "sha256:4ebc2fced1b6c6c0e5bec38e93db936d90546147411272b368fb4001c0ec9751",
+		"concurrency_contracts.json": "sha256:79b0a85f8019889181bc674abe1e1cf0c4a9e7e0441965561f5746ae0ead5dd7",
+		"f5xc-api-specs-v4.0.0.zip": "sha256:08c3caab8457ded0117acbebdf5e43bf0fad8eda9a3c7c172871dacf8f3edc25",
+		"index.json": "sha256:b66950adf0c32c11976aacf813120511f243e21ac1ea9d0350957cfab1d3c299",
+		"minimal-export-defaults.json": "sha256:8d850a9767d23f02a03c9253fb3f269c6e83bb424bd3dfa0441b9fc1e0f0bfc9",
+		"openapi.json": "sha256:5e831f9721768a4c78d3543f9c90cf9ffde53b0a472d5a2a1b5bfd3ac2de7508",
+		"smsv2-contract-manifest.json": "sha256:e2ff00253f76d03a07a955ba9c0676e010257d0563991447ccb8405d4da936a4",
+		"smsv2-contract.json": "sha256:72e0eadb74387c6e6e20857894dcd1fa54bbfc9f198706a72a406018a36214d4",
+		"smsv2-evidence-receipt.json": "sha256:355e8e70a1b436f2e578fae6f2765ab5b513dc7a4dab89b0236b6f55f038a6a2",
+		"smsv2_parity_manifest.json": "sha256:13961dce7d30669fee24b12725cc3c5bc8d26e549809a31294ace39a7472a41f",
 		"upstream-contract-removals.json": "sha256:aa1674550ad10b051bf03a4b860145f8d01724bc89b438c84fc99d94aa261957"
 	},
-	"release_tag": "v3.0.0",
-	"target_commit": "7543b98a6f71d979013e960bbcb32c75ce89d307",
-	"version": "3.0.0"
+	"release_tag": "v4.0.0",
+	"target_commit": "4c49e17f42d6600d21ebd2ed4de8336ab4a4524b",
+	"version": "4.0.0"
 }
