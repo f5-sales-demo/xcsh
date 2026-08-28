@@ -368,7 +368,9 @@ impl SlavePty for UnixSlavePty {
         builder: CommandBuilder,
         pre_exec: Box<dyn FnMut() -> io::Result<()> + Send + Sync + 'static>,
     ) -> Result<Box<dyn Child + Send + Sync>, Error> {
-        Ok(Box::new(self.fd.spawn_command_with_pre_exec(builder, pre_exec)?))
+        Ok(Box::new(
+            self.fd.spawn_command_with_pre_exec(builder, pre_exec)?,
+        ))
     }
 }
 
