@@ -76,6 +76,58 @@ export function isAlreadyPublished(output: string, version: string): boolean {
 	].some(pattern => pattern.test(output));
 }
 
+export function isExactRegistryVersion(output: string, version: string): boolean {
+	try {
+		return JSON.parse(output) === version;
+	} catch {
+		return false;
+	}
+}
+
+export interface RegistryVisibilityOptions {
+	lookup?: (packageName: string, version: string) => Promise<string | null>;
+	sleep?: (delayMs: number) => Promise<void>;
+	maxAttempts?: number;
+	initialDelayMs?: number;
+	maxDelayMs?: number;
+}
+
+async function lookupRegistryVersion(packageName: string, version: string): Promise<string | null> {
+	const packageRef = `${packageName}@${version}`;
+	const result = await $`npm view ${packageRef} version --json`.cwd(repoRoot).quiet().nothrow();
+	if (result.exitCode !== 0) return null;
+	return result.stdout.toString().trim();
+}
+
+export async function waitForRegistryVisibility(
+	packageName: string,
+	version: string,
+	options: RegistryVisibilityOptions = {},
+): Promise<number> {
+	const lookup = options.lookup ?? lookupRegistryVersion;
+	const sleep = options.sleep ?? Bun.sleep;
+	const maxAttempts = options.maxAttempts ?? 16;
+	const maxDelayMs = options.maxDelayMs ?? 30_000;
+	let delayMs = Math.min(options.initialDelayMs ?? 5_000, maxDelayMs);
+
+	if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new Error("maxAttempts must be a positive integer");
+	if (delayMs < 0 || maxDelayMs < 0) throw new Error("registry visibility delays must be non-negative");
+
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		const output = await lookup(packageName, version);
+		if (output !== null && isExactRegistryVersion(output, version)) {
+			console.log(`  Registry visibility confirmed for ${packageName}@${version} (${attempt}/${maxAttempts})`);
+			return attempt;
+		}
+		if (attempt === maxAttempts) break;
+		console.log(`  Waiting ${delayMs / 1000}s for ${packageName}@${version} registry visibility...`);
+		await sleep(delayMs);
+		delayMs = Math.min(delayMs * 2, maxDelayMs);
+	}
+
+	throw new Error(`${packageName}@${version} was not readable from npm after ${maxAttempts} checks`);
+}
+
 async function readPackageJson(packageDir: string): Promise<PackageJson> {
 	return (await Bun.file(path.join(repoRoot, packageDir, "package.json")).json()) as PackageJson;
 }
@@ -142,6 +194,11 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 		console.log(`Skipping ${packageName} (private)`);
 		return;
 	}
+	if (packageJson.name === undefined || packageJson.version === undefined) {
+		throw new Error(`${pkg.dir}/package.json must declare name and version before publication`);
+	}
+	const publishedName = packageJson.name;
+	const publishedVersion = packageJson.version;
 
 	if (isDryRun) {
 		console.log(`DRY RUN ${npmPublishArgs(publishTag).join(" ")} (${pkg.dir})`);
@@ -162,11 +219,13 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 			const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
 			if (result.exitCode === 0) {
 				if (output) console.log(output);
+				await waitForRegistryVisibility(publishedName, publishedVersion);
 				return;
 			}
 			if (output) console.log(output);
 			if (isAlreadyPublished(output, packageJson.version ?? "")) {
 				console.log("Already published, skipping");
+				await waitForRegistryVisibility(publishedName, publishedVersion);
 				return;
 			}
 			if (attempt < maxAttempts) {

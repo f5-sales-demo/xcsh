@@ -1,7 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { isAlreadyPublished, npmPublishArgs, resolveReleaseSourceRoot } from "../../../../scripts/ci-release-publish";
+import {
+	isAlreadyPublished,
+	isExactRegistryVersion,
+	npmPublishArgs,
+	resolveReleaseSourceRoot,
+	waitForRegistryVisibility,
+} from "../../../../scripts/ci-release-publish";
 
 const root = path.resolve(import.meta.dir, "../../../..");
 const workflowPath = path.join(root, ".github/workflows/release-npm-backfill.yml");
@@ -32,6 +38,40 @@ describe("release npm backfill publish semantics", () => {
 	it("requires an absolute isolated release-source root", () => {
 		expect(resolveReleaseSourceRoot("/tmp/release-source")).toBe("/tmp/release-source");
 		expect(() => resolveReleaseSourceRoot("release-source")).toThrow(/absolute/);
+	});
+
+	it("accepts only the exact registry version response", () => {
+		expect(isExactRegistryVersion('"21.0.0"', "21.0.0")).toBe(true);
+		expect(isExactRegistryVersion('"20.22.3"', "21.0.0")).toBe(false);
+		expect(isExactRegistryVersion("not-json", "21.0.0")).toBe(false);
+		expect(isExactRegistryVersion('{"version":"21.0.0"}', "21.0.0")).toBe(false);
+	});
+
+	it("waits for exact registry visibility before returning", async () => {
+		const responses = [null, '"20.22.3"', '"21.0.0"'];
+		const sleeps: number[] = [];
+		const attempts = await waitForRegistryVisibility("@f5-sales-demo/pi-agent-core", "21.0.0", {
+			lookup: async () => responses.shift() ?? null,
+			sleep: async delayMs => {
+				sleeps.push(delayMs);
+			},
+			initialDelayMs: 5,
+			maxDelayMs: 10,
+			maxAttempts: 3,
+		});
+
+		expect(attempts).toBe(3);
+		expect(sleeps).toEqual([5, 10]);
+	});
+
+	it("identifies the exact package and version on registry timeout", async () => {
+		expect(
+			waitForRegistryVisibility("@f5-sales-demo/pi-agent-core", "21.0.0", {
+				lookup: async () => null,
+				sleep: async () => {},
+				maxAttempts: 2,
+			}),
+		).rejects.toThrow("@f5-sales-demo/pi-agent-core@21.0.0");
 	});
 });
 
