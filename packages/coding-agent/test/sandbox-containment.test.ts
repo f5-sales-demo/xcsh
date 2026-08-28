@@ -3,7 +3,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { getAgentDir, getConfigRootDir, getPluginsDir } from "@f5-sales-demo/pi-utils";
-import { buildContainmentFence, containmentStatus, fenceVerdict } from "../src/sandbox/containment";
+import {
+	buildContainmentFence,
+	containmentStatus,
+	fenceVerdict,
+	seatbeltFenceVerdict,
+} from "../src/sandbox/containment";
 
 /**
  * The fence is deliberately *gentle*: the only thing it prevents is the assistant wandering the
@@ -57,7 +62,9 @@ describe("buildContainmentFence", () => {
 		expect(fenceVerdict(fence, path.join(home, "GIT"), "enumerate")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(home, "GIT", "custB", "secret"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(home, "GIT", "custB", "secret"), "write")).toBe("allow");
+		expect(seatbeltFenceVerdict(fence, path.join(home, "GIT", "custB", "secret"), "read")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "read")).toBe("allow");
+		expect(seatbeltFenceVerdict(fence, path.join(workspace, "notes.md"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, workspace, "enumerate")).toBe("allow");
 	});
@@ -75,6 +82,8 @@ describe("buildContainmentFence", () => {
 		expect(fence.denyOnSeatbelt).toContain(parent);
 		expect(fence.allow).toContain(workspace);
 		expect(fence.allow).toContain(trusted);
+		expect(seatbeltFenceVerdict(fence, path.join(trusted, "handoff.txt"), "read")).toBe("allow");
+		expect(seatbeltFenceVerdict(fence, path.join(parent, "example-b", "secret.txt"), "read")).toBe("deny");
 	});
 
 	it("leaves everything outside home alone — nothing operational is restricted", () => {

@@ -18,10 +18,11 @@ import { resolveLocalRoot } from "../internal-urls/local-protocol";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
-import { type ContainmentFence, fenceVerdict } from "../sandbox/containment";
+import { type ContainmentFence, fenceVerdict, seatbeltFenceVerdict } from "../sandbox/containment";
 import {
 	resolveSessionFence,
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
+	SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV,
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
 	sandboxCheckSiblingRoot,
@@ -806,7 +807,15 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				),
 			);
 			await Bun.write(path.join(sandboxCheckSibling, "named.txt"), "sibling\n");
-			env = { ...env, [SANDBOX_CHECK_NAMED_SIBLING_ENV]: sandboxCheckSibling };
+			const namedSiblingExpectation =
+				process.platform === "darwin" && seatbeltFenceVerdict(fence, sandboxCheckSibling, "read") === "deny"
+					? "denied"
+					: "allowed";
+			env = {
+				...env,
+				[SANDBOX_CHECK_NAMED_SIBLING_ENV]: sandboxCheckSibling,
+				[SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV]: namedSiblingExpectation,
+			};
 		}
 
 		let result: BashResult | BashInteractiveResult;

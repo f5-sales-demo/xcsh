@@ -28,6 +28,7 @@ import { buildContainmentFence, type ContainmentFence } from "./containment";
 export const SANDBOX_SESSION_ROOT_ENV = "XCSH_SANDBOX_SESSION_ROOT";
 export const SANDBOX_OPERATOR_HOME_ENV = "XCSH_SANDBOX_OPERATOR_HOME";
 export const SANDBOX_CHECK_NAMED_SIBLING_ENV = "XCSH_SANDBOX_CHECK_NAMED_SIBLING";
+export const SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV = "XCSH_SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION";
 
 /** Choose a writable root for the live named-path probe without escaping an operator-home session. */
 export function sandboxCheckSiblingRoot(workspace: string, operatorHome: string): string {
