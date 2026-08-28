@@ -1,9 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import * as path from "node:path";
 import { exactProviderIndexUrl, loadTerraformIndex } from "../../scripts/generate-terraform-index";
 
 const PROVIDER_TAG = "v3.73.0";
 const PROVIDER_COMMIT = "a".repeat(40);
 const EXACT_URL = `https://raw.githubusercontent.com/f5-sales-demo/terraform-provider-xcsh/${PROVIDER_COMMIT}/docs/terraform-llms-index.json`;
+const GENERATOR_PATH = path.resolve(import.meta.dir, "../../scripts/generate-terraform-index.ts");
 
 describe("Terraform index exact provider delivery", () => {
 	it("bypasses mutable local/main sources for the immutable provider tag", async () => {
@@ -42,5 +44,12 @@ describe("Terraform index exact provider delivery", () => {
 		await expect(loadTerraformIndex({ TERRAFORM_PROVIDER_TAG: PROVIDER_TAG })).rejects.toThrow(
 			"TERRAFORM_PROVIDER_TAG and TERRAFORM_PROVIDER_COMMIT must be provided together",
 		);
+	});
+
+	it("does not backfill fields for retired provider-index contracts", async () => {
+		const source = await Bun.file(GENERATOR_PATH).text();
+		expect(source).not.toContain("DEFAULT_CONFIG_BLOCK");
+		expect(source).not.toContain("DEFAULT_AUTH_METHODS");
+		expect(source).not.toContain("normalizeProvider");
 	});
 });
