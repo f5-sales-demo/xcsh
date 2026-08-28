@@ -94,6 +94,10 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	expect(report.checks).toContainEqual({ name: "operator home remains enumerable", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "filesystem root remains enumerable", status: "PASS" });
 	expect(report.checks).toContainEqual({ name: "operator home supports direct file creation", status: "PASS" });
+	expect(report.checks).toContainEqual({
+		name: "named sibling follows the active boundary",
+		status: "PASS",
+	});
 	expect(report.checks).toContainEqual({ name: "synthetic fixtures removed", status: "PASS" });
 	if (report.osEnforced) {
 		expect(report.summary).toEqual({ passed: 17, failed: 0, errors: 0, skipped: 0 });
