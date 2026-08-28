@@ -1,5 +1,5 @@
 // AUTO-GENERATED — do not edit. Run `bun generate-terraform-index` to regenerate.
-// Source: f5-sales-demo/terraform-provider-xcsh v4.0.0 2df78c5d868b114044505dd88c3e00a9e37d5b79
+// Source: f5-sales-demo/terraform-provider-xcsh v5.0.0 b6ca39a90bb1b71cc5db45b8659dfa4400f5992b
 
 import type { TerraformIndex } from "./terraform-types";
 
@@ -152,7 +152,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 			name: "Uncategorized",
 			slug: "uncategorized",
 			description: "Resources pending categorization",
-			resource_count: 7,
+			resource_count: 8,
 			resources: [
 				"application_profiles",
 				"authorization_server",
@@ -161,6 +161,7 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				"protected_application",
 				"protected_domain",
 				"registration_approval",
+				"site_cloud_init",
 			],
 		},
 		{
@@ -1588,6 +1589,19 @@ export const TERRAFORM_INDEX: TerraformIndex = {
 				requires: [],
 			},
 			import_syntax: "terraform import xcsh_registration_approval.example namespace/name",
+		},
+		{
+			name: "site_cloud_init",
+			category: "uncategorized",
+			description: "Issue site-scoped Customer Edge cloud-init",
+			required: ["provider_ref", "site_name"],
+			minimal_config: {
+				format: "terraform",
+				source: "_llms-txt/resources/site_cloud_init.txt#minimal-valid-config",
+			},
+			dependencies: {
+				requires: [],
+			},
 		},
 		{
 			name: "dns_compliance_checks",
