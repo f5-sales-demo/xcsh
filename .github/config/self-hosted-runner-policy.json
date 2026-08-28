@@ -147,6 +147,10 @@
           "runs_on": "matrix",
           "reason": "native builds require hosted platform-specific toolchains"
         },
+        "setup-zig": {
+          "runs_on": "matrix",
+          "reason": "Zig verification requires native macOS and Windows toolchains"
+        },
         "build-sign-macos": {
           "runs_on": "matrix",
           "reason": "Apple signing and notarization require macOS"
@@ -583,6 +587,10 @@
           "container-build": {
             "label": "managed-container-build",
             "profile": "container-build"
+          },
+          "compute": {
+            "label": "api-specs-enriched-compute",
+            "profile": "ubuntu-24.04"
           }
         }
       }
@@ -1041,6 +1049,10 @@
           "container-build": {
             "label": "managed-container-build",
             "profile": "container-build"
+          },
+          "compute": {
+            "label": "terraform-provider-xcsh-compute",
+            "profile": "ubuntu-24.04"
           }
         }
       },
