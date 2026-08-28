@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell, fencePermits } from "@f5-sales-demo/pi-natives";
-import { isEnoent } from "@f5-sales-demo/pi-utils";
+import { isEnoent, pathIsWithin } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../config/settings";
 import { fenceForNative } from "../exec/bash-executor";
 import { buildContainmentFence, type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
@@ -462,7 +462,7 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 			);
 		});
 
-		await check("named sibling remains reachable", async () => {
+		await check("named sibling follows the active boundary", async () => {
 			const displayPath = "<session-parent>/<synthetic-sibling>";
 			let liveSibling = inheritedSibling;
 			if (liveSibling === undefined) {
@@ -480,13 +480,23 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					return exceptionOutcome("create named sibling fixture", displayPath, error, redactions);
 				}
 			}
+			const seatbeltDeniesSibling =
+				backend.backend === "seatbelt" && liveFence.denyOnSeatbelt.some(root => pathIsWithin(root, liveSibling));
 			const result = await shellProbe(
-				'test "$(cat named.txt)" = sibling',
-				liveSibling,
-				undefined,
+				`cd ${quote(liveSibling)} && test "$(cat named.txt)" = sibling`,
+				liveWorkspace,
+				inheritedProfile ? undefined : liveFence,
 				abortController.signal,
 			);
-			return shellOutcome(result, true, "live profile must allow a named sibling read", displayPath, redactions);
+			return shellOutcome(
+				result,
+				!seatbeltDeniesSibling,
+				seatbeltDeniesSibling
+					? "Seatbelt must deny a named sibling outside the workspace"
+					: "live profile must allow a named sibling read",
+				displayPath,
+				redactions,
+			);
 		});
 
 		if (backend.osEnforced) {
