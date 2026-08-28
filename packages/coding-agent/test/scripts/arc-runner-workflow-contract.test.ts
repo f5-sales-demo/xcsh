@@ -166,7 +166,11 @@ test("repository-specific managed callers use the socketless ARC route", async (
 	for (const [workflowName, jobIds] of Object.entries(expectedJobs)) {
 		const document = parse(await Bun.file(path.join(WORKFLOW_ROOT, workflowName)).text()) as WorkflowDocument;
 		for (const jobId of jobIds) {
-			expect(document.jobs?.[jobId]?.["runs-on"], `${workflowName}:${jobId}`).toBe("xcsh-socketless");
+			const expectedRoute =
+				workflowName === "super-linter.yml"
+					? `\${{ github.repository == 'f5-sales-demo/xcsh' && 'xcsh-socketless' || 'managed-socketless' }}`
+					: "xcsh-socketless";
+			expect(document.jobs?.[jobId]?.["runs-on"], `${workflowName}:${jobId}`).toBe(expectedRoute);
 		}
 	}
 });
