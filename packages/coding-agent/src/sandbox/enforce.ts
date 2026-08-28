@@ -20,9 +20,10 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { pathIsWithin } from "@f5-sales-demo/pi-utils";
 import { expandPath, parseFindPattern, parseSearchPath, resolveToCwd, splitTopLevel } from "../tools/path-utils";
 import { lexShellCommand, type ShellSimpleCommand } from "../tools/shell-lex";
-import { writtenOperandWords } from "./command-operands";
+import { unmodelledOperandWordsRequiringWrite, writtenOperandWords } from "./command-operands";
 import { type ContainmentFence, type FenceAccess, fenceVerdict } from "./containment";
 
 /** The two access directions, named as the fence names them. */
@@ -142,6 +143,8 @@ interface PathCandidate {
 	 * the working directory — and with it every unchecked relative path — move there.
 	 */
 	mustBeInTree?: boolean;
+	/** Conservative operand inference applies only inside an explicit read-only grant (#2598). */
+	readOnlyGrantOnly?: boolean;
 }
 
 /** Write first, so a `<>` denial names the stricter boundary the caller is most likely missing. */
@@ -281,11 +284,14 @@ function shellPathCandidates(command: string): ShellScan {
 		}
 	}
 
-	// Known program operands that are written — `tee FILE`, `dd of=FILE`, `cp SRC DST` — are as
-	// explicit as redirects. Ordinary read operands are deliberately absent: only the process that
-	// opens them can decide whether path-looking argument text is a filename, a pattern, or data.
+	// Known writers use precise direction (`cp SRC DST` checks only DST), and proven readers need no
+	// write check. Every other literal operand is a possible output and fails closed against a
+	// read-only grant (#2598). This remains an operand check, never a scan of interpreter source text.
 	for (const word of lexed.commands.flatMap(simpleCommand => writtenOperandWords(simpleCommand))) {
 		if (word.literal) candidates.push({ token: word.text, access: "write" });
+	}
+	for (const word of lexed.commands.flatMap(simpleCommand => unmodelledOperandWordsRequiringWrite(simpleCommand))) {
+		if (word.literal) candidates.push({ token: word.text, access: "write", readOnlyGrantOnly: true });
 	}
 
 	candidates.push(...directoryChangeTargets(lexed.commands));
@@ -327,7 +333,7 @@ function evaluateCodeTool(check: ToolCallCheck, shell: boolean): ToolCallDecisio
 
 	const scan = shellPathCandidates(input.command);
 	const seen = new Set<string>();
-	for (const { token, access, mustBeInTree } of scan.candidates) {
+	for (const { token, access, mustBeInTree, readOnlyGrantOnly } of scan.candidates) {
 		if (!seen.add(`${access}\0${mustBeInTree ? "cd\0" : ""}${token}`)) continue;
 		if (mustBeInTree) {
 			// `path.resolve`, not `resolveToCwd`: the latter maps an all-slashes path to the cwd,
@@ -338,6 +344,7 @@ function evaluateCodeTool(check: ToolCallCheck, shell: boolean): ToolCallDecisio
 			return { block: true, reason: describeDirectoryChange(cwd, moved) };
 		}
 		const resolved = resolveToCwd(token, base);
+		if (readOnlyGrantOnly && !check.fence.allowReadOnly.some(root => pathIsWithin(root, resolved))) continue;
 		if (permits(check, resolved, access)) continue;
 		return deny(cwd, resolved, access);
 	}

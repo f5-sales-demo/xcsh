@@ -11,6 +11,7 @@ export interface FakeExcelMeta {
 			formulas?: Record<string, unknown[][]>;
 			numberFormat?: Record<string, string[][]>;
 			valueTypes?: Record<string, unknown[][]>;
+			mergedRanges?: Record<string, string>;
 		}
 	>;
 	namedRanges?: Record<string, { address: string; values: unknown[][]; notRange?: boolean }>;
@@ -71,21 +72,38 @@ export function fakeExcel(
 			numberFormat?: string[][];
 			valueTypes?: unknown[][];
 			isNullObject?: boolean;
+			mergedAddress?: string;
 		} = {},
-	) => ({
-		address,
-		isNullObject: opts.isNullObject ?? false,
-		get values(): unknown[][] {
-			return opts.read?.() ?? [];
-		},
-		set values(value: unknown[][]) {
-			opts.write?.(value);
-		},
-		formulas: opts.formulas ?? [],
-		numberFormat: opts.numberFormat ?? [],
-		valueTypes: opts.valueTypes ?? [],
-		load(_props: string): void {},
-	});
+	) => {
+		const coordinate = address.split("!").at(-1) || (opts.isNullObject ? "A1" : "");
+		const match = coordinate.match(/^\$?([A-Z]+)\$?(\d+)(?::\$?([A-Z]+)\$?(\d+))?$/i);
+		if (!match) throw new Error(`InvalidArgument: invalid range ${address}`);
+		const columnNumber = (letters: string): number =>
+			[...letters.toUpperCase()].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0);
+		const rowCount = match[4] ? Number(match[4]) - Number(match[2]) + 1 : 1;
+		const columnCount = match[3] ? columnNumber(match[3]) - columnNumber(match[1]) + 1 : 1;
+		return {
+			address,
+			rowCount,
+			columnCount,
+			isNullObject: opts.isNullObject ?? false,
+			get values(): unknown[][] {
+				return opts.read?.() ?? [];
+			},
+			set values(value: unknown[][]) {
+				opts.write?.(value);
+			},
+			formulas: opts.formulas ?? [],
+			numberFormat: opts.numberFormat ?? [],
+			valueTypes: opts.valueTypes ?? [],
+			load(_props: string): void {},
+			getMergedAreasOrNullObject: () => ({
+				isNullObject: opts.mergedAddress === undefined,
+				address: opts.mergedAddress ?? "",
+				load(_props: string): void {},
+			}),
+		};
+	};
 
 	return {
 		cells,
@@ -110,6 +128,7 @@ export function fakeExcel(
 							formulas: sheetMeta.formulas?.[address],
 							numberFormat: sheetMeta.numberFormat?.[address],
 							valueTypes: sheetMeta.valueTypes?.[address],
+							mergedAddress: sheetMeta.mergedRanges?.[address],
 						}),
 					getUsedRangeOrNullObject: () =>
 						makeRange(sheetMeta.usedRange ?? "", {

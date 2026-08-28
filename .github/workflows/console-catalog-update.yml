@@ -94,14 +94,22 @@ jobs:
             echo "catalog_version=$(git -C console rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Configure git
+      - name: Close superseded console-catalog PR
+        id: predecessor
         if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          SUCCESSOR_BRANCH: chore/console-catalog-${{ steps.changes.outputs.catalog_version }}
+        run: bun scripts/console-catalog-predecessor.ts
+
+      - name: Configure git
+        if: steps.changes.outputs.has_changes == 'true' && steps.predecessor.outputs.successor_exists != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create issue and auto-merging PR with the refreshed catalog
-        if: steps.changes.outputs.has_changes == 'true'
+        if: steps.changes.outputs.has_changes == 'true' && steps.predecessor.outputs.successor_exists != 'true'
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           CATALOG_VERSION: ${{ steps.changes.outputs.catalog_version }}

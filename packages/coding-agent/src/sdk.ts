@@ -1290,7 +1290,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		// Load extensions (discovers from standard locations + configured paths)
 		let extensionsResult: LoadExtensionsResult;
-		if (options.disableExtensionDiscovery) {
+		if (options.preloadedExtensions) {
+			extensionsResult = options.preloadedExtensions;
+		} else if (options.disableExtensionDiscovery) {
 			const configuredPaths = options.additionalExtensionPaths ?? [];
 			extensionsResult = await logger.time(
 				"loadExtensions",
@@ -1303,8 +1305,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			for (const { path, error } of extensionsResult.errors) {
 				logger.error("Failed to load extension", { path, error });
 			}
-		} else if (options.preloadedExtensions) {
-			extensionsResult = options.preloadedExtensions;
 		} else {
 			// Merge CLI extension paths with settings extension paths
 			const configuredPaths = [...(options.additionalExtensionPaths ?? []), ...(settings.get("extensions") ?? [])];
@@ -1639,39 +1639,37 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				contextSkillDirs,
 				contextIncludeSkills,
 				contextExcludeSkills,
+				transformPrompt: typeof options.systemPrompt === "function" ? options.systemPrompt : undefined,
 			});
 
-			if (options.systemPrompt === undefined) {
+			if (options.systemPrompt === undefined || typeof options.systemPrompt === "function") {
 				return defaultPrompt;
 			}
-			if (typeof options.systemPrompt === "string") {
-				return await buildSystemPromptInternal({
-					cwd,
-					skills,
-					contextFiles,
-					agentsMdSearch,
-					tools: promptTools,
-					toolNames,
-					rules: rulebookRules,
-					alwaysApplyRules,
-					skillsSettings: settings.getGroup("skills"),
-					customPrompt: options.systemPrompt,
-					appendSystemPrompt: appendPrompt,
-					repeatToolDescriptions,
-					intentField,
-					mcpDiscoveryMode: hasDiscoverableMCPTools,
-					mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
-					eagerTasks,
-					secretsEnabled,
-					context: contextForPrompt,
-					locale: localeForPrompt,
-					knowledgeTopics,
-					contextSkillDirs,
-					contextIncludeSkills,
-					contextExcludeSkills,
-				});
-			}
-			return options.systemPrompt(defaultPrompt);
+			return await buildSystemPromptInternal({
+				cwd,
+				skills,
+				contextFiles,
+				agentsMdSearch,
+				tools: promptTools,
+				toolNames,
+				rules: rulebookRules,
+				alwaysApplyRules,
+				skillsSettings: settings.getGroup("skills"),
+				customPrompt: options.systemPrompt,
+				appendSystemPrompt: appendPrompt,
+				repeatToolDescriptions,
+				intentField,
+				mcpDiscoveryMode: hasDiscoverableMCPTools,
+				mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
+				eagerTasks,
+				secretsEnabled,
+				context: contextForPrompt,
+				locale: localeForPrompt,
+				knowledgeTopics,
+				contextSkillDirs,
+				contextIncludeSkills,
+				contextExcludeSkills,
+			});
 		};
 
 		const toolNamesFromRegistry = Array.from(toolRegistry.keys());

@@ -175,9 +175,11 @@ export function validateInlineFlagSyntax(args: readonly string[], extensionFlags
 		if (!inline) continue;
 
 		const spec = flagSpec(inline.name);
-		const isBoolean = spec?.arity === "boolean" || extensionFlags?.get(inline.name)?.type === "boolean";
-		if (isBoolean) {
+		if (spec?.arity === "boolean") {
 			throw new CliUsageError(`--${inline.name} is a boolean flag and does not take a value`);
+		}
+		if (extensionFlags?.get(inline.name)?.type === "boolean" && inline.value !== "true" && inline.value !== "false") {
+			throw new CliUsageError(`--${inline.name} is a boolean flag and expects true or false`);
 		}
 	}
 }
@@ -185,10 +187,11 @@ export function validateInlineFlagSyntax(args: readonly string[], extensionFlags
 /**
  * Rewrite `--name=value` into `["--name", "value"]` for every flag that takes a value.
  *
- * A boolean flag with `=` is an error rather than a guess: accepting `--no-sandbox=true` invites
+ * A built-in boolean flag with `=` is an error rather than a guess: accepting `--no-sandbox=true` invites
  * `--no-sandbox=false`, which the parser has no way to express, and quietly reading it as "on" would
  * be exactly the class of bug #2469 reports. Unknown names are left intact so the unknown-flag path
  * can report the token as the user wrote it.
+ * Extension boolean flags accept explicit true or false values through their runtime map.
  *
  * Short forms are untouched: no shell convention makes `-p=x` mean `-p x`.
  */
@@ -223,7 +226,11 @@ export function normalizeFlagTokens(args: readonly string[], extensionFlags?: Ex
 
 		const extension = extensionFlags?.get(name);
 		if (extension) {
-			normalized.push(`--${name}`, value);
+			if (extension.type === "boolean") {
+				normalized.push(arg);
+			} else {
+				normalized.push(`--${name}`, value);
+			}
 			continue;
 		}
 

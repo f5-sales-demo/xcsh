@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { getExtraHelpText, type Mode, parseArgs } from "../../src/cli/args";
+import { getExtraHelpText, type Mode, parseArgs, resolveLaunchArgs, scanLaunchBootstrapArgs } from "../../src/cli/args";
 import { buildCliFlags, flagSpec, LAUNCH_FLAGS, normalizeFlagTokens, takesValue } from "../../src/cli/flag-spec";
+import { buildInitialMessage } from "../../src/cli/initial-message";
 import Index from "../../src/commands/launch";
 
 const visibleNames = Object.entries(LAUNCH_FLAGS)
@@ -148,5 +149,111 @@ describe("extension flag values never become prompt text", () => {
 		const final = parseArgs(["--", "--profile", "prod"], extensions);
 		expect(final.unknownFlags.size).toBe(0);
 		expect(final.messages).toEqual(["--profile", "prod"]);
+	});
+});
+
+describe("launch parsing waits for extension flags", () => {
+	const extensionFlags = new Map([
+		["profile", { type: "string" as const }],
+		["verbose", { type: "boolean" as const }],
+	]);
+
+	for (const [label, argv, expected] of [
+		["spaced string", ["-p", "--profile", "prod", "summarise the deal"], ["profile", "prod", "summarise the deal"]],
+		["equals string", ["-p", "--profile=prod", "summarise the deal"], ["profile", "prod", "summarise the deal"]],
+		["boolean before prompt", ["-p", "--verbose", "do work"], ["verbose", true, "do work"]],
+		["equals boolean", ["-p", "--verbose=true", "do work"], ["verbose", true, "do work"]],
+	] as const) {
+		test(`binds a ${label} flag before constructing messages`, async () => {
+			let discoveries = 0;
+			const result = await resolveLaunchArgs(argv, async () => {
+				discoveries++;
+				return extensionFlags;
+			});
+
+			expect(discoveries).toBe(1);
+			expect(result.parsed.unknownFlags.get(expected[0])).toBe(expected[1]);
+			expect(result.parsed.messages).toEqual([expected[2]]);
+			expect(result.parsed.fileArgs).toEqual([]);
+		});
+	}
+
+	test("binds false from an extension boolean equals form", async () => {
+		const result = await resolveLaunchArgs(["--verbose=false", "do work"], async () => extensionFlags);
+		expect(result.parsed.unknownFlags.get("verbose")).toBe(false);
+	});
+
+	test("never includes an extension flag value in the initial model message", async () => {
+		const { parsed } = await resolveLaunchArgs(
+			["--profile", "prod", "summarise the deal"],
+			async () => extensionFlags,
+		);
+		const message = buildInitialMessage({ parsed, stdinContent: "stdin" });
+
+		expect(message.initialMessage).toBe("stdin\nsummarise the deal");
+		expect(message.initialMessage).not.toContain("prod");
+	});
+
+	test("does not reinterpret an extension string value as an RPC file argument", async () => {
+		const result = await resolveLaunchArgs(["--profile", "@payload", "--mode", "rpc"], async () => extensionFlags);
+
+		expect(result.parsed.unknownFlags.get("profile")).toBe("@payload");
+		expect(result.parsed.fileArgs).toEqual([]);
+	});
+
+	test("keeps extension-like text after -- as prompt content", async () => {
+		const result = await resolveLaunchArgs(["--", "--profile", "prod"], async () => extensionFlags);
+
+		expect(result.parsed.unknownFlags.size).toBe(0);
+		expect(result.parsed.messages).toEqual(["--profile", "prod"]);
+	});
+
+	test("does not discover extensions for pre-extension early exits", async () => {
+		for (const argv of [
+			["--version", "--bogus"],
+			["--list-models", "--bogus"],
+			["--export", "x", "--bogus"],
+		]) {
+			let discoveries = 0;
+			const result = await resolveLaunchArgs(argv, async () => {
+				discoveries++;
+				return extensionFlags;
+			});
+
+			expect(discoveries).toBe(0);
+			expect(result.parsed.unrecognizedFlags).toHaveLength(1);
+		}
+	});
+});
+
+describe("launch bootstrap scan", () => {
+	test("collects only controls required before extension discovery", () => {
+		const bootstrap = scanLaunchBootstrapArgs([
+			"--model",
+			"opus",
+			"--extension=./one.ts",
+			"--hook",
+			"./two.ts",
+			"--plugin-dir",
+			"./plugins",
+			"--no-extensions",
+			"--allow-home",
+		]);
+
+		expect(bootstrap).toMatchObject({
+			extensions: ["./one.ts"],
+			hooks: ["./two.ts"],
+			pluginDirs: ["./plugins"],
+			noExtensions: true,
+			allowHome: true,
+			preExtensionExit: false,
+		});
+	});
+
+	test("does not treat a built-in flag value or post-terminator text as a discovery control", () => {
+		const bootstrap = scanLaunchBootstrapArgs(["--system-prompt", "--extension", "--", "--plugin-dir", "./ignored"]);
+
+		expect(bootstrap.extensions).toEqual([]);
+		expect(bootstrap.pluginDirs).toEqual([]);
 	});
 });

@@ -278,6 +278,9 @@ jobs:
       - name: Sandbox self-test inside live bash profile
         if: matrix.sandbox_check
         run: bun test packages/coding-agent/test/sandbox-check.test.ts
+      - name: Seatbelt sibling-customer enforcement
+        if: matrix.platform == 'darwin' && matrix.sandbox_check
+        run: bun test packages/coding-agent/test/sandbox-isolation.test.ts
       - name: Upload native addon(s)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

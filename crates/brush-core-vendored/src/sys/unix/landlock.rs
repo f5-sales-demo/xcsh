@@ -474,23 +474,28 @@ fn open_path(path: &Path) -> Option<OwnedFd> {
 pub fn arm(cmd: &mut std::process::Command, ruleset: OwnedFd) {
 	use std::os::unix::process::CommandExt;
 
-	// SAFETY:
-	// This closure runs after `fork` in a process that is multi-threaded — a tokio runtime inside the
-	// host — so only async-signal-safe work is legal: any lock the vanished threads held is still held.
-	// It performs exactly two direct syscalls and builds `io::Error` from an errno, none of which
-	// allocate, take a lock, or can panic. `io::Error::last_os_error` is deliberate: it forwards to
-	// `from_raw_os_error`, which bit-packs the errno, whereas `io::Error::other`/`new` would box a
-	// payload and allocate here. `ruleset` is moved in so it stays open for the command's lifetime; the
-	// child never drops it, because it either `execve`s (the fd is `O_CLOEXEC`) or `_exit`s.
+	// SAFETY: `restrict_self` has been kept allocation- and lock-free specifically for this hook.
 	unsafe {
-		cmd.pre_exec(move || {
-			if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 {
-				return Err(io::Error::last_os_error());
-			}
-			if libc::syscall(libc::SYS_landlock_restrict_self, ruleset.as_raw_fd(), 0_u32) != 0 {
-				return Err(io::Error::last_os_error());
-			}
-			Ok(())
-		});
+		cmd.pre_exec(move || restrict_self(&ruleset));
 	}
+}
+
+/// Apply a prepared ruleset to the current process.
+///
+/// This is the shared child-side half used by ordinary commands and PTY commands. It performs exactly
+/// two direct syscalls and creates only errno-backed `io::Error` values, so it is safe to call from a
+/// post-fork `pre_exec` hook in a multi-threaded process. The caller must keep `ruleset` alive until
+/// this function returns.
+pub fn restrict_self(ruleset: &OwnedFd) -> io::Result<()> {
+	// SAFETY: Both calls use constant arguments plus the live ruleset descriptor. Neither allocates,
+	// takes a lock, or invokes code outside libc/the kernel.
+	unsafe {
+		if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 {
+			return Err(io::Error::last_os_error());
+		}
+		if libc::syscall(libc::SYS_landlock_restrict_self, ruleset.as_raw_fd(), 0_u32) != 0 {
+			return Err(io::Error::last_os_error());
+		}
+	}
+	Ok(())
 }

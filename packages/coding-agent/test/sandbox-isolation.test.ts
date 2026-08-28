@@ -151,26 +151,30 @@ describe("bundled registration", () => {
  * asked the scanner would have passed throughout every escape in #2542 and #2553.
  */
 describe("two-customer isolation, enforced in the shell", () => {
-	function productFenceFor(cwd: string) {
-		return buildContainmentFence({ workspace: cwd, home });
+	function productFenceFor(cwd: string, extraRoots: readonly string[] = []) {
+		return buildContainmentFence({ workspace: cwd, home, extraRoots });
 	}
 
-	function fenceFor(cwd: string) {
-		const fence = productFenceFor(cwd);
+	function fenceFor(cwd: string, extraRoots: readonly string[] = []) {
+		const fence = productFenceFor(cwd, extraRoots);
 		return {
 			allow: [...fence.allow],
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
 			deny: [...fence.deny],
+			denyOnSeatbelt: [...fence.denyOnSeatbelt],
 			denyEnumerate: [...fence.denyEnumerate],
 		};
 	}
 
-	async function shell(cwd: string, command: string, fenced = true) {
+	async function shell(cwd: string, command: string, fenced = true, extraRoots: readonly string[] = []) {
 		let out = "";
-		const result = (await executeShell({ command, cwd, fence: fenced ? fenceFor(cwd) : undefined }, (_e, c) => {
-			out += c ?? "";
-		})) as { exitCode?: number; output?: string };
+		const result = (await executeShell(
+			{ command, cwd, fence: fenced ? fenceFor(cwd, extraRoots) : undefined },
+			(_e, c) => {
+				out += c ?? "";
+			},
+		)) as { exitCode?: number; output?: string };
 		return { code: result?.exitCode ?? -1, text: out + (result?.output ?? "") };
 	}
 
@@ -183,17 +187,47 @@ describe("two-customer isolation, enforced in the shell", () => {
 		expect(text).not.toContain("custB");
 	});
 
-	it("named sibling reads, traversal, and writes remain available", async () => {
+	it("Seatbelt denies named sibling reads, traversal, and writes", async () => {
+		const backend = containmentStatus(true, process.platform, undefined, productFenceFor(custA)).backend;
 		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
 			const { text } = await shell(custA, command);
-			expect(text).toContain("TOKEN=b");
+			if (backend === "seatbelt") expect(text).not.toContain("TOKEN=b");
+			else expect(text).toContain("TOKEN=b");
 		}
 		const moved = await shell(custA, "cd ../custB && cat secret.env");
-		expect(moved.text).toContain("TOKEN=b");
+		const traversal = await shell(custA, "cd ../custB");
+		if (backend === "seatbelt") {
+			expect(moved.text).not.toContain("TOKEN=b");
+			expect(traversal.code).not.toBe(0);
+		} else {
+			expect(moved.text).toContain("TOKEN=b");
+			expect(traversal.code).toBe(0);
+		}
 		await shell(custA, `printf x > ${path.join(custB, "planted.env")}`);
-		expect(fs.readFileSync(path.join(custB, "planted.env"), "utf8")).toBe("x");
+		if (backend === "seatbelt") expect(fs.existsSync(path.join(custB, "planted.env"))).toBe(false);
+		else expect(fs.readFileSync(path.join(custB, "planted.env"), "utf8")).toBe("x");
 		await shell(custA, `cp ${path.join(custB, "secret.env")} .`);
-		expect(fs.existsSync(path.join(custA, "secret.env"))).toBe(true);
+		if (backend === "seatbelt") expect(fs.existsSync(path.join(custA, "secret.env"))).toBe(false);
+		else expect(fs.existsSync(path.join(custA, "secret.env"))).toBe(true);
+	});
+
+	it("Seatbelt denies a sibling path assembled only after the shell starts", async () => {
+		const backend = containmentStatus(true, process.platform, undefined, productFenceFor(custA)).backend;
+		const command = `p=${JSON.stringify(path.dirname(custB))}; n=custB; cat "$p/$n/secret.env"`;
+		const { text } = await shell(custA, command);
+		if (backend === "seatbelt") expect(text).not.toContain("TOKEN=b");
+		else expect(text).toContain("TOKEN=b");
+	});
+
+	it("keeps an explicitly trusted sibling readable and writable through Seatbelt", async () => {
+		const read = await shell(custA, `cat ${path.join(custB, "secret.env")}`, true, [custB]);
+		expect(read.code).toBe(0);
+		expect(read.text).toContain("TOKEN=b");
+
+		const trustedOutput = path.join(custB, "trusted-output.txt");
+		const write = await shell(custA, `printf trusted > ${trustedOutput}`, true, [custB]);
+		expect(write.code).toBe(0);
+		expect(fs.readFileSync(trustedOutput, "utf8")).toBe("trusted");
 	});
 
 	it("allows operator-owned configuration writes through the OS fence", async () => {
@@ -249,6 +283,7 @@ describe("local account discovery isolation, enforced in the shell", () => {
 			allowReadOnly: [...fence.allowReadOnly],
 			allowWriteOnly: [...fence.allowWriteOnly],
 			deny: [...fence.deny],
+			denyOnSeatbelt: [...fence.denyOnSeatbelt],
 			denyEnumerate: [...fence.denyEnumerate],
 		};
 		const run = async (command: string) => {

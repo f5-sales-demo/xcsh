@@ -4,6 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { CONSOLE_CATALOG_DATA } from "../src/internal-urls/console-catalog.generated";
 import { CatalogWorkflowRunnerTool, loadWorkflowYaml } from "../src/tools/catalog-workflow-runner";
+import { ToolError } from "../src/tools/tool-errors";
 
 const catalogIsEmpty = Object.keys(CONSOLE_CATALOG_DATA.workflows).length === 0;
 
@@ -111,6 +112,19 @@ describe("loadWorkflowYaml catalog_path branch", () => {
 		expect(() => loadWorkflowYaml({ catalog_path: base, resource: "missing", operation: "create" })).toThrow(
 			/workflow not found/i,
 		);
+	});
+
+	it("translates a workflow file read failure to ToolError", () => {
+		const base = fs.mkdtempSync(path.join(os.tmpdir(), "xcsh-catalog-read-error-"));
+		const invalidFile = path.join(base, "catalog", "workflows", "realres", "create.yaml");
+		fs.mkdirSync(invalidFile, { recursive: true });
+		try {
+			expect(() => loadWorkflowYaml({ catalog_path: base, resource: "realres", operation: "create" })).toThrow(
+				ToolError,
+			);
+		} finally {
+			fs.rmSync(base, { recursive: true, force: true });
+		}
 	});
 
 	it("detects symlink escape via realpathSync containment check", () => {

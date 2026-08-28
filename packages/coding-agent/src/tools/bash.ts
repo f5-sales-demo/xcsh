@@ -18,7 +18,7 @@ import { resolveLocalRoot } from "../internal-urls/local-protocol";
 import { truncateToVisualLines } from "../modes/components/visual-truncate";
 import type { Theme } from "../modes/theme/theme";
 import bashDescription from "../prompts/tools/bash.md" with { type: "text" };
-import { type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
+import { type ContainmentFence, fenceVerdict } from "../sandbox/containment";
 import {
 	resolveSessionFence,
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
@@ -61,6 +61,12 @@ const DEFAULT_AUTO_BACKGROUND_THRESHOLD_MS = 60_000;
 
 const bashSchemaBase = Type.Object({
 	command: Type.String({ description: "Command to execute" }),
+	expand_urls: Type.Optional(
+		Type.Boolean({
+			description: "Expand whole-word internal URLs to filesystem paths before execution (default: true)",
+			default: true,
+		}),
+	),
 	description: Type.Optional(
 		Type.String({
 			description:
@@ -97,6 +103,7 @@ type BashToolSchema = typeof bashSchemaBase | typeof bashSchemaWithAsync;
 
 export interface BashToolInput {
 	command: string;
+	expand_urls?: boolean;
 	description?: string;
 	env?: Record<string, string>;
 	timeout?: number;
@@ -593,6 +600,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		_toolCallId: string,
 		{
 			command: rawCommand,
+			expand_urls: expandUrls = true,
 			env: rawEnv,
 			timeout: rawTimeout = 300,
 			cwd,
@@ -693,7 +701,9 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				return roots;
 			},
 		};
-		command = await expandInternalUrls(command, { ...internalUrlOptions, ensureLocalParentDirs: true });
+		if (expandUrls) {
+			command = await expandInternalUrls(command, { ...internalUrlOptions, ensureLocalParentDirs: true });
+		}
 
 		// `env` values are NEVER expanded. The tool description recommends `env` for multiline,
 		// quote-heavy, or untrusted values, so that channel has to stay byte-exact — expanding it
@@ -780,22 +790,10 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		// Allocate artifact for truncated output storage
 		const { path: artifactPath, id: artifactId } = (await this.session.allocateOutputArtifact?.("bash")) ?? {};
 
-		// The PTY path can only be confined where the OS backend reaches it, and on Linux it does not:
-		// Landlock is applied in a `pre_exec` hook, and `portable-pty`'s `CommandBuilder` exposes none
-		// (its `as_command` is private, and its `Clone + Debug + PartialEq` derives preclude a closure
-		// field ever being added). Since `pty` is a parameter the *model* supplies, leaving it reachable
-		// would make containment opt-out by the very caller it constrains — the hole that was just closed
-		// on macOS. So a fenced session falls back to the non-PTY path, which is confined.
-		//
-		// The cost is real and Linux-only: `top`, `less` and `ssh` run without a terminal in a fenced
-		// session. Confining the PTY child properly is the follow-up; reporting a boundary that a flag
-		// steps around would be worse than losing interactivity.
-		// Only worth giving up when there is an OS backend for the non-PTY path to use and none for this
-		// one. Where no backend exists — Linux without Landlock, Windows — both paths are scanner-only,
-		// so disabling PTY would remove interactive terminals and improve containment by nothing.
-		const osBackend = containmentStatus(fence !== undefined, process.platform, undefined, fence);
-		const ptyConfinable = !osBackend.osEnforced || osBackend.backend === "seatbelt";
-		const usePty = pty && ptyConfinable && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;
+		// Both OS backends reach the PTY child: seatbelt wraps argv on macOS, while the vendored
+		// portable-pty hook applies Landlock immediately after fork on Linux. Scanner-only platforms keep
+		// their existing PTY behavior; disabling interactivity there would improve containment by nothing.
+		const usePty = pty && $env.PI_NO_PTY !== "1" && ctx?.hasUI === true && ctx.ui !== undefined;
 		let sandboxCheckSibling: string | undefined;
 		if (sandboxCheckInvocation) {
 			// Landlock cannot add a newly-created child to an already-applied profile. Prepare the named

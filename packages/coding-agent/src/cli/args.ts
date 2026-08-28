@@ -17,6 +17,8 @@ import {
 
 export type Mode = "text" | "json" | "rpc" | "acp";
 
+export type ExtensionFlagRegistry = ReadonlyMap<string, { type: "boolean" | "string" }>;
+
 export interface Args {
 	cwd?: string;
 	allowHome?: boolean;
@@ -224,7 +226,97 @@ function isValueToken(token: string | undefined): token is string {
 	return token !== undefined && !token.startsWith("-") && !token.startsWith("@");
 }
 
-export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "boolean" | "string" }>): Args {
+export interface LaunchBootstrapArgs {
+	allowHome?: boolean;
+	cwd?: string;
+	noSandbox?: boolean;
+	allowPath: string[];
+	noMemories?: boolean;
+	hooks: string[];
+	extensions: string[];
+	noExtensions?: boolean;
+	pluginDirs: string[];
+	preExtensionExit: boolean;
+}
+
+const BOOTSTRAP_VALUE_FLAGS = new Set(["allow-path", "hook", "extension", "plugin-dir"]);
+const PRE_EXTENSION_EXITS = new Set(["version", "list-models", "export"]);
+
+/**
+ * Read only the built-in controls needed to load extensions.
+ *
+ * This is deliberately not an argument parse: it never classifies positional input, files, or
+ * extension flags. It only follows the known built-in grammar far enough to avoid mistaking a
+ * built-in value for a discovery control. The authoritative parse happens after this scan.
+ */
+export function scanLaunchBootstrapArgs(args: readonly string[]): LaunchBootstrapArgs {
+	const result: LaunchBootstrapArgs = {
+		allowPath: [],
+		hooks: [],
+		extensions: [],
+		pluginDirs: [],
+		preExtensionExit: false,
+	};
+	const tokens = normalizeFlagTokens(args);
+
+	for (let i = 0; i < tokens.length; i++) {
+		const token = tokens[i];
+		if (token === "--") break;
+		if (!token.startsWith("-") || token === "-") continue;
+
+		const name = token.startsWith("--") ? token.slice(2) : flagNameForChar(token.slice(1));
+		if (name === undefined) continue;
+		const spec = flagSpec(name);
+		if (!spec) continue;
+
+		let value: string | true = true;
+		if (spec.arity === "optional-value") {
+			if (isValueToken(tokens[i + 1])) value = tokens[++i];
+		} else if (takesValue(spec)) {
+			if (tokens[i + 1] === undefined) continue;
+			value = tokens[++i];
+		}
+
+		if (PRE_EXTENSION_EXITS.has(name)) result.preExtensionExit = true;
+		if (name === "allow-home") result.allowHome = true;
+		if (name === "no-sandbox") result.noSandbox = true;
+		if (name === "no-memories") result.noMemories = true;
+		if (name === "no-extensions") result.noExtensions = true;
+		if (BOOTSTRAP_VALUE_FLAGS.has(name) && value !== true) {
+			if (name === "allow-path") result.allowPath.push(value);
+			if (name === "hook") result.hooks.push(value);
+			if (name === "extension") result.extensions.push(value);
+			if (name === "plugin-dir") result.pluginDirs.push(value);
+		}
+	}
+
+	return result;
+}
+
+export interface ResolvedLaunchArgs {
+	bootstrap: LaunchBootstrapArgs;
+	parsed: Args;
+	extensionFlags?: ExtensionFlagRegistry;
+}
+
+/**
+ * Resolve extension registrations before the one parse whose result drives launch behavior.
+ * Version/model-list/export retain their pre-extension fast path.
+ */
+export async function resolveLaunchArgs(
+	args: readonly string[],
+	loadExtensionFlags: (bootstrap: LaunchBootstrapArgs) => Promise<ExtensionFlagRegistry>,
+): Promise<ResolvedLaunchArgs> {
+	const bootstrap = scanLaunchBootstrapArgs(args);
+	const extensionFlags = bootstrap.preExtensionExit ? undefined : await loadExtensionFlags(bootstrap);
+	return {
+		bootstrap,
+		parsed: parseArgs([...args], extensionFlags),
+		...(extensionFlags ? { extensionFlags } : {}),
+	};
+}
+
+export function parseArgs(args: string[], extensionFlags?: ExtensionFlagRegistry): Args {
 	const result: Args = {
 		messages: [],
 		fileArgs: [],
@@ -282,23 +374,20 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			continue;
 		}
 
-		// Extension flags are only known on the second parse, once extensions have loaded.
+		// Extension registrations are loaded before this authoritative parse.
 		const extFlag = name === undefined ? undefined : extensionFlags?.get(name);
 		if (extFlag && name !== undefined) {
 			if (extFlag.type === "boolean") {
-				result.unknownFlags.set(name, true);
+				const inlineValue = token.startsWith("--") ? token.split("=", 2)[1] : undefined;
+				result.unknownFlags.set(name, inlineValue === undefined ? true : inlineValue === "true");
 			} else if (i + 1 < tokens.length) {
 				result.unknownFlags.set(name, tokens[++i]);
 			}
 			continue;
 		}
 
-		// Record the flag, but do NOT consume the token after it. The bootstrap parse runs before
-		// extensions load, so it cannot know whether an unrecognized flag takes a value: swallowing
-		// the next token silently discards the user's prompt whenever the flag turns out to be
-		// boolean (`xcsh -p --verbose "do work"`). Leaving it means a string extension flag's value
-		// still reaches `messages`, which is the pre-existing behaviour and the lesser harm — the
-		// real fix is to load extensions before the first parse, which is out of scope here.
+		// Do not consume a following token for a genuine unknown flag: it may be prompt content.
+		// Registered extension flags never reach this path because launch discovers them first.
 		result.unrecognizedFlags.push({ token, name: name ?? token.replace(/^-+/, "") });
 	}
 
