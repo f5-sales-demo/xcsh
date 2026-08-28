@@ -123,10 +123,11 @@ describe("API spec dispatch workflow contract", () => {
 		expect(namedStep(steps, "Verify exact regenerated delivery bytes").run).toContain("verify-generated");
 	});
 
-	it("compares normalized provider and source pins structurally", async () => {
+	it("compares canonical qualified provider and source pins directly", async () => {
 		const provider = namedStep(await workflowSteps(), "Resolve exact published provider release").run ?? "";
 		expect(provider).toContain('--slurpfile source "$SOURCE_PIN_FILE"');
-		expect(provider).toContain("== $source[0]");
+		expect(provider).toContain(". == $source[0]");
+		expect(provider).not.toContain('sub("^sha256:"');
 		expect(provider).not.toContain('[ "$PROVIDER_NORMALIZED_PIN" =');
 	});
 
@@ -246,12 +247,28 @@ describe("provider publication evidence gate", () => {
 		}
 	}, 60_000);
 
+	it("rejects an unqualified source pin instead of accepting a legacy encoding", async () => {
+		const fixture = await providerEvidenceFixture();
+		try {
+			const sourcePin = await Bun.file(fixture.env.SOURCE_PIN_FILE).json();
+			for (const [name, digest] of Object.entries(sourcePin.assets as Record<string, string>)) {
+				sourcePin.assets[name] = digest.replace(/^sha256:/, "");
+			}
+			await Bun.write(fixture.env.SOURCE_PIN_FILE, `${JSON.stringify(sourcePin)}\n`);
+			const result = await runProviderEvidenceStep(fixture);
+			expect(result.exitCode).not.toBe(0);
+			expect(result.output).toContain("Provider release consumed different spec bytes from this receiver");
+		} finally {
+			await fs.rm(fixture.root, { force: true, recursive: true });
+		}
+	}, 60_000);
+
 	it("rejects a provider spec pin whose underlying digest differs from the source", async () => {
 		const fixture = await providerEvidenceFixture();
 		try {
 			const sourcePin = await Bun.file(fixture.env.SOURCE_PIN_FILE).json();
 			const assetName = Object.keys(sourcePin.assets)[0];
-			sourcePin.assets[assetName] = "0".repeat(64);
+			sourcePin.assets[assetName] = `sha256:${"0".repeat(64)}`;
 			await Bun.write(fixture.env.SOURCE_PIN_FILE, `${JSON.stringify(sourcePin)}\n`);
 			const result = await runProviderEvidenceStep(fixture);
 			expect(result.exitCode).not.toBe(0);
@@ -364,12 +381,7 @@ async function providerEvidenceFixture(falseDigest = false, unqualifiedPin = fal
 		version: specVersion,
 	};
 	const pin = `${JSON.stringify(pinDocument)}\n`;
-	const sourcePin = `${JSON.stringify({
-		...pinDocument,
-		assets: Object.fromEntries(
-			Object.entries(pinDocument.assets).map(([name, digest]) => [name, digest.replace(/^sha256:/, "")]),
-		),
-	})}\n`;
+	const sourcePin = `${JSON.stringify(pinDocument)}\n`;
 	const pinSha = new Bun.CryptoHasher("sha256").update(pin).digest("hex");
 	const assets = Object.fromEntries(
 		providerAssetNames(providerVersion).map((name, index) => [
