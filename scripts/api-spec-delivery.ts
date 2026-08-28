@@ -13,10 +13,12 @@ const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/;
 const QUALIFIED_SHA256_PATTERN = /^sha256:([0-9a-f]{64})$/;
 const LEDGER_VERSION = 1;
+const SUPERSESSION_REASONS = ["invalid_source_evidence"] as const;
 
 export const DELIVERY_LEDGER_PATH = "tools/spec-deliveries.json";
 export const DELIVERY_PENDING_PATH = "tools/spec-delivery-pending.json";
 export const DELIVERY_PUBLICATION_LEDGER_PATH = "tools/xcsh-publication-receipts.json";
+export const DELIVERY_SUPERSEDED_LEDGER_PATH = "tools/spec-superseded-deliveries.json";
 export const SPEC_RELEASE_PATH = "tools/spec-release.json";
 
 export const GENERATED_DELIVERY_PATHS = [
@@ -67,6 +69,19 @@ export interface ApiSpecDeliveryLedgerEntry {
 
 export interface ApiSpecDeliveryLedger {
 	deliveries: Record<string, ApiSpecDeliveryLedgerEntry>;
+	version: 1;
+}
+
+type ApiSpecSupersessionReason = (typeof SUPERSESSION_REASONS)[number];
+
+interface ApiSpecSupersededDeliveryEntry {
+	delivery: ApiSpecDeliveryLedgerEntry;
+	reason: ApiSpecSupersessionReason;
+	replacement: ApiSpecDeliveryLedgerEntry & { delivery_id: string };
+}
+
+interface ApiSpecSupersededDeliveryLedger {
+	superseded: Record<string, ApiSpecSupersededDeliveryEntry>;
 	version: 1;
 }
 
@@ -445,6 +460,15 @@ function ledgerEntriesEqual(left: ApiSpecDeliveryLedgerEntry, right: ApiSpecDeli
 	);
 }
 
+function compareSemver(left: string, right: string): number {
+	const leftParts = left.split(".").map(Number);
+	const rightParts = right.split(".").map(Number);
+	for (let index = 0; index < 3; index += 1) {
+		if (leftParts[index] !== rightParts[index]) return leftParts[index] - rightParts[index];
+	}
+	return 0;
+}
+
 function validateLedgerEntry(deliveryId: string, document: unknown): ApiSpecDeliveryLedgerEntry {
 	if (!DELIVERY_ID_PATTERN.test(deliveryId)) {
 		throw new Error(`Delivery ledger contains an invalid delivery_id: ${deliveryId}`);
@@ -494,6 +518,64 @@ export function parseDeliveryLedger(document: unknown): ApiSpecDeliveryLedger {
 	return { deliveries, version: LEDGER_VERSION };
 }
 
+function parseSupersededDeliveryLedger(document: unknown): ApiSpecSupersededDeliveryLedger {
+	if (!document || typeof document !== "object" || Array.isArray(document)) {
+		throw new Error("Superseded delivery ledger must be an object");
+	}
+	const ledger = document as Record<string, unknown>;
+	if (JSON.stringify(sortedKeys(ledger)) !== JSON.stringify(["superseded", "version"])) {
+		throw new Error("Superseded delivery ledger has an invalid shape");
+	}
+	if (ledger.version !== LEDGER_VERSION) {
+		throw new Error(`Superseded delivery ledger version must be ${LEDGER_VERSION}`);
+	}
+	if (!ledger.superseded || typeof ledger.superseded !== "object" || Array.isArray(ledger.superseded)) {
+		throw new Error("Superseded delivery ledger entries must be an object");
+	}
+	const superseded: Record<string, ApiSpecSupersededDeliveryEntry> = {};
+	for (const [deliveryId, rawEntry] of Object.entries(ledger.superseded)) {
+		if (!rawEntry || typeof rawEntry !== "object" || Array.isArray(rawEntry)) {
+			throw new Error(`Superseded delivery entry ${deliveryId} must be an object`);
+		}
+		const entry = rawEntry as Record<string, unknown>;
+		if (JSON.stringify(sortedKeys(entry)) !== JSON.stringify(["delivery", "reason", "replacement"])) {
+			throw new Error(`Superseded delivery entry ${deliveryId} has an invalid shape`);
+		}
+		const delivery = validateLedgerEntry(deliveryId, entry.delivery);
+		if (!SUPERSESSION_REASONS.includes(entry.reason as ApiSpecSupersessionReason)) {
+			throw new Error(`Superseded delivery entry ${deliveryId} has an invalid reason`);
+		}
+		if (!entry.replacement || typeof entry.replacement !== "object" || Array.isArray(entry.replacement)) {
+			throw new Error(`Superseded delivery entry ${deliveryId} has an invalid replacement`);
+		}
+		const replacementDocument = entry.replacement as Record<string, unknown>;
+		if (
+			JSON.stringify(sortedKeys(replacementDocument)) !==
+			JSON.stringify(["delivery_id", "release_tag", "target_commit", "version"])
+		) {
+			throw new Error(`Superseded delivery entry ${deliveryId} has an invalid replacement shape`);
+		}
+		const replacementId = requiredString(
+			replacementDocument.delivery_id,
+			`superseded.${deliveryId}.replacement.delivery_id`,
+		);
+		const replacement = validateLedgerEntry(replacementId, {
+			release_tag: replacementDocument.release_tag,
+			target_commit: replacementDocument.target_commit,
+			version: replacementDocument.version,
+		});
+		if (compareSemver(replacement.version, delivery.version) <= 0) {
+			throw new Error(`Superseded delivery entry ${deliveryId} replacement must be strictly newer`);
+		}
+		superseded[deliveryId] = {
+			delivery,
+			reason: entry.reason as ApiSpecSupersessionReason,
+			replacement: { delivery_id: replacementId, ...replacement },
+		};
+	}
+	return { superseded, version: LEDGER_VERSION };
+}
+
 export function deliveryApplied(document: unknown, delivery: ApiSpecDelivery): boolean {
 	const ledger = parseDeliveryLedger(document);
 	const existing = ledger.deliveries[delivery.deliveryId];
@@ -527,6 +609,129 @@ export async function readPendingDelivery(pendingFile: string): Promise<unknown 
 		if (isEnoent(error)) return undefined;
 		throw error;
 	}
+}
+
+function deliveryFromPending(document: unknown): ApiSpecDelivery {
+	if (!document || typeof document !== "object" || Array.isArray(document)) {
+		throw new Error("Pending delivery marker must be an object");
+	}
+	const pending = document as Record<string, unknown>;
+	const delivery: ApiSpecDelivery = {
+		deliveryId: requiredString(pending.delivery_id, "pending.delivery_id"),
+		releaseTag: requiredString(pending.release_tag, "pending.release_tag"),
+		targetCommit: requiredString(pending.target_commit, "pending.target_commit"),
+		triggerSource: requiredString(pending.trigger_source, "pending.trigger_source"),
+		version: requiredString(pending.version, "pending.version"),
+	};
+	validateReleaseIdentity(delivery.version, delivery.releaseTag);
+	if (delivery.triggerSource !== SOURCE_REPOSITORY || !COMMIT_PATTERN.test(delivery.targetCommit)) {
+		throw new Error("Pending delivery marker has an invalid source identity");
+	}
+	if (!DELIVERY_ID_PATTERN.test(delivery.deliveryId) || delivery.deliveryId !== calculateDeliveryId(delivery)) {
+		throw new Error("Pending delivery marker has a noncanonical delivery_id");
+	}
+	verifyPendingDelivery(document, delivery);
+	return delivery;
+}
+
+async function readSupersededDeliveryLedger(file: string): Promise<ApiSpecSupersededDeliveryLedger> {
+	try {
+		return parseSupersededDeliveryLedger(await Bun.file(file).json());
+	} catch (error) {
+		if (isEnoent(error)) return { superseded: {}, version: LEDGER_VERSION };
+		throw error;
+	}
+}
+
+async function verifySupersededDeliveriesAreUnacknowledged(
+	commonFile: string,
+	supersededFile: string,
+): Promise<void> {
+	const common = await readDeliveryLedger(commonFile);
+	if (!common) throw new Error(`Delivery ledger is absent: ${commonFile}`);
+	const superseded = await readSupersededDeliveryLedger(supersededFile);
+	for (const deliveryId of Object.keys(superseded.superseded)) {
+		if (common.deliveries[deliveryId]) {
+			throw new Error(`Superseded delivery ${deliveryId} is also present in the applied delivery ledger`);
+		}
+	}
+}
+
+function supersessionEntriesEqual(
+	left: ApiSpecSupersededDeliveryEntry,
+	right: ApiSpecSupersededDeliveryEntry,
+): boolean {
+	return (
+		ledgerEntriesEqual(left.delivery, right.delivery) &&
+		left.reason === right.reason &&
+		left.replacement.delivery_id === right.replacement.delivery_id &&
+		ledgerEntriesEqual(left.replacement, right.replacement)
+	);
+}
+
+export async function supersedePendingDelivery(
+	repoRoot: string,
+	supersededDeliveryId: string,
+	replacement: ApiSpecDelivery,
+	reason: string,
+): Promise<void> {
+	if (!DELIVERY_ID_PATTERN.test(supersededDeliveryId)) {
+		throw new Error("Superseded delivery ID must be a lowercase SHA-256 digest");
+	}
+	validateReleaseIdentity(replacement.version, replacement.releaseTag);
+	if (replacement.triggerSource !== SOURCE_REPOSITORY || !COMMIT_PATTERN.test(replacement.targetCommit)) {
+		throw new Error("Replacement delivery has an invalid source identity");
+	}
+	if (!DELIVERY_ID_PATTERN.test(replacement.deliveryId) || replacement.deliveryId !== calculateDeliveryId(replacement)) {
+		throw new Error("Replacement delivery identity is noncanonical");
+	}
+	if (!SUPERSESSION_REASONS.includes(reason as ApiSpecSupersessionReason)) {
+		throw new Error(`Unsupported supersession reason: ${reason}`);
+	}
+	const supersededPath = path.join(repoRoot, DELIVERY_SUPERSEDED_LEDGER_PATH);
+	const ledger = await readSupersededDeliveryLedger(supersededPath);
+	const pendingPath = path.join(repoRoot, DELIVERY_PENDING_PATH);
+	const pendingDocument = await readPendingDelivery(pendingPath);
+	if (pendingDocument === undefined) {
+		const existing = ledger.superseded[supersededDeliveryId];
+		if (!existing) throw new Error(`Pending delivery marker is absent: ${DELIVERY_PENDING_PATH}`);
+		const expected: ApiSpecSupersededDeliveryEntry = {
+			delivery: existing.delivery,
+			reason: reason as ApiSpecSupersessionReason,
+			replacement: { delivery_id: replacement.deliveryId, ...ledgerEntryFor(replacement) },
+		};
+		if (!supersessionEntriesEqual(existing, expected)) {
+			throw new Error(`Superseded delivery ledger entry disagrees with ${supersededDeliveryId}`);
+		}
+		return;
+	}
+	const superseded = deliveryFromPending(pendingDocument);
+	if (superseded.deliveryId !== supersededDeliveryId) {
+		throw new Error(`Pending delivery marker does not match superseded delivery ${supersededDeliveryId}`);
+	}
+	if (compareSemver(replacement.version, superseded.version) <= 0) {
+		throw new Error(`Replacement ${replacement.version} must be strictly newer than ${superseded.version}`);
+	}
+	const common = await readDeliveryLedger(path.join(repoRoot, DELIVERY_LEDGER_PATH));
+	if (!common) throw new Error(`Delivery ledger is absent: ${DELIVERY_LEDGER_PATH}`);
+	if (deliveryApplied(common, superseded)) {
+		throw new Error(`Delivery ${superseded.deliveryId} is already acknowledged and cannot be superseded`);
+	}
+	const entry: ApiSpecSupersededDeliveryEntry = {
+		delivery: ledgerEntryFor(superseded),
+		reason: reason as ApiSpecSupersessionReason,
+		replacement: { delivery_id: replacement.deliveryId, ...ledgerEntryFor(replacement) },
+	};
+	const existing = ledger.superseded[supersededDeliveryId];
+	if (existing && !supersessionEntriesEqual(existing, entry)) {
+		throw new Error(`Superseded delivery ledger entry disagrees with ${supersededDeliveryId}`);
+	}
+	ledger.superseded[supersededDeliveryId] = entry;
+	const ordered = Object.fromEntries(
+		Object.entries(ledger.superseded).sort(([left], [right]) => left.localeCompare(right)),
+	);
+	await Bun.write(supersededPath, `${JSON.stringify({ superseded: ordered, version: LEDGER_VERSION }, null, "\t")}\n`);
+	await fs.unlink(pendingPath);
 }
 
 export async function writePendingDelivery(
@@ -916,6 +1121,7 @@ async function appendOutputs(delivery: ApiSpecDelivery): Promise<void> {
 		ledger_path: DELIVERY_LEDGER_PATH,
 		pending_path: DELIVERY_PENDING_PATH,
 		publication_ledger_path: DELIVERY_PUBLICATION_LEDGER_PATH,
+		superseded_ledger_path: DELIVERY_SUPERSEDED_LEDGER_PATH,
 		provider_delivery_id: calculateDeliveryIdForTarget(delivery, PROVIDER_REPOSITORY),
 		trigger_source: delivery.triggerSource,
 		release_tag: delivery.releaseTag,
@@ -973,6 +1179,12 @@ async function main(): Promise<void> {
 			"DELIVERY_PUBLICATION_LEDGER_FILE",
 		);
 		const applied = await verifyAcknowledgmentLedgers(ledgerFile, publicationFile, delivery);
+		if (command === "check-ledger") {
+			await verifySupersededDeliveriesAreUnacknowledged(
+				ledgerFile,
+				requiredString(process.env.DELIVERY_SUPERSEDED_LEDGER_FILE, "DELIVERY_SUPERSEDED_LEDGER_FILE"),
+			);
+		}
 		if (command === "verify-ledger" && !applied) {
 			throw new Error(`Delivery ${delivery.deliveryId} is absent from the delivery ledger`);
 		}
@@ -1022,6 +1234,16 @@ async function main(): Promise<void> {
 			repoRoot,
 			delivery,
 			requiredString(process.env.PUBLICATION_RECEIPT_FILE, "PUBLICATION_RECEIPT_FILE"),
+		);
+		return;
+	}
+	if (command === "supersede-pending") {
+		const repoRoot = requiredString(process.env.GITHUB_WORKSPACE, "GITHUB_WORKSPACE");
+		await supersedePendingDelivery(
+			repoRoot,
+			requiredString(process.env.SUPERSEDED_DELIVERY_ID, "SUPERSEDED_DELIVERY_ID"),
+			delivery,
+			requiredString(process.env.SUPERSESSION_REASON, "SUPERSESSION_REASON"),
 		);
 		return;
 	}

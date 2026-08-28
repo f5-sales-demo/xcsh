@@ -1,0 +1,19 @@
+{
+	"superseded": {
+		"18cadf59adc3b01a7f5dbf8cdfbeef66921503a0ca6fda3f083f4b74889fc6d3": {
+			"delivery": {
+				"release_tag": "v3.0.0",
+				"target_commit": "7543b98a6f71d979013e960bbcb32c75ce89d307",
+				"version": "3.0.0"
+			},
+			"reason": "invalid_source_evidence",
+			"replacement": {
+				"delivery_id": "4760901b30ebbb304079c6ea1303baf3235d4f459eab942baa7d0c5bc3eb1db6",
+				"release_tag": "v4.0.0",
+				"target_commit": "4c49e17f42d6600d21ebd2ed4de8336ab4a4524b",
+				"version": "4.0.0"
+			}
+		}
+	},
+	"version": 1
+}

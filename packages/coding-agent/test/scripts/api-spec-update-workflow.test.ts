@@ -66,6 +66,9 @@ describe("API spec dispatch workflow contract", () => {
 		expect(namedStep(steps, "Check durable delivery ledger on main").env?.DELIVERY_PUBLICATION_LEDGER_FILE).toContain(
 			"steps.delivery.outputs.publication_ledger_path",
 		);
+		expect(namedStep(steps, "Check durable delivery ledger on main").env?.DELIVERY_SUPERSEDED_LEDGER_FILE).toContain(
+			"steps.delivery.outputs.superseded_ledger_path",
+		);
 	});
 
 	it("passes the validated exact tag and version to every API-spec consumer", async () => {

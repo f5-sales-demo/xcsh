@@ -11,6 +11,7 @@ import {
 	DELIVERY_LEDGER_PATH,
 	DELIVERY_PENDING_PATH,
 	DELIVERY_PUBLICATION_LEDGER_PATH,
+	DELIVERY_SUPERSEDED_LEDGER_PATH,
 	deliveryApplied,
 	deliveryBranch,
 	GENERATED_DELIVERY_PATHS,
@@ -18,6 +19,7 @@ import {
 	parseSpecReleasePin,
 	releaseIdentityFromEnvironment,
 	SPEC_RELEASE_PATH,
+	supersedePendingDelivery,
 	validateArtifactVersion,
 	verifyAcknowledgmentLedgers,
 	verifyGeneratedDelivery,
@@ -104,6 +106,16 @@ function validDelivery(): ApiSpecDelivery {
 		targetCommit: TARGET_COMMIT,
 		triggerSource: TRIGGER_SOURCE,
 		version: VERSION,
+	};
+	return { ...identity, deliveryId: calculateDeliveryId(identity) };
+}
+
+function deliveryFor(version: string, targetCommit: string): ApiSpecDelivery {
+	const identity = {
+		releaseTag: `v${version}`,
+		targetCommit,
+		triggerSource: TRIGGER_SOURCE,
+		version,
 	};
 	return { ...identity, deliveryId: calculateDeliveryId(identity) };
 }
@@ -197,6 +209,103 @@ describe("API spec delivery identity", () => {
 });
 
 describe("durable API spec delivery ledger", () => {
+	it("durably supersedes a rejected pending delivery without acknowledging it", async () => {
+		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-supersede-"));
+		try {
+			const rejected = validDelivery();
+			const replacement = deliveryFor("3.0.0", "c".repeat(40));
+			await preparePendingDelivery(repoRoot);
+
+			await supersedePendingDelivery(repoRoot, rejected.deliveryId, replacement, "invalid_source_evidence");
+
+			expect(await Bun.file(path.join(repoRoot, DELIVERY_PENDING_PATH)).exists()).toBe(false);
+			expect(deliveryApplied(await Bun.file(path.join(repoRoot, DELIVERY_LEDGER_PATH)).json(), rejected)).toBe(
+				false,
+			);
+			expect(await Bun.file(path.join(repoRoot, DELIVERY_SUPERSEDED_LEDGER_PATH)).json()).toEqual({
+				superseded: {
+					[rejected.deliveryId]: {
+						delivery: {
+							release_tag: rejected.releaseTag,
+							target_commit: rejected.targetCommit,
+							version: rejected.version,
+						},
+						reason: "invalid_source_evidence",
+						replacement: {
+							delivery_id: replacement.deliveryId,
+							release_tag: replacement.releaseTag,
+							target_commit: replacement.targetCommit,
+							version: replacement.version,
+						},
+					},
+				},
+				version: 1,
+			});
+
+			await supersedePendingDelivery(repoRoot, rejected.deliveryId, replacement, "invalid_source_evidence");
+		} finally {
+			await fs.rm(repoRoot, { force: true, recursive: true });
+		}
+	});
+
+	it("fails closed when supersession is not strictly newer or does not match pending state", async () => {
+		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-supersede-reject-"));
+		try {
+			const rejected = validDelivery();
+			await preparePendingDelivery(repoRoot);
+			const pendingPath = path.join(repoRoot, DELIVERY_PENDING_PATH);
+			const before = await Bun.file(pendingPath).text();
+
+			await expect(
+				supersedePendingDelivery(
+					repoRoot,
+					rejected.deliveryId,
+					deliveryFor(VERSION, "c".repeat(40)),
+					"invalid_source_evidence",
+				),
+			).rejects.toThrow("strictly newer");
+			await expect(
+				supersedePendingDelivery(
+					repoRoot,
+					"0".repeat(64),
+					deliveryFor("3.0.0", "c".repeat(40)),
+					"invalid_source_evidence",
+				),
+			).rejects.toThrow("does not match");
+			const forgedReplacement = deliveryFor("3.0.0", "c".repeat(40));
+			forgedReplacement.triggerSource = "example.invalid/api-specs";
+			forgedReplacement.deliveryId = calculateDeliveryId(forgedReplacement);
+			await expect(
+				supersedePendingDelivery(repoRoot, rejected.deliveryId, forgedReplacement, "invalid_source_evidence"),
+			).rejects.toThrow("invalid source identity");
+			expect(await Bun.file(pendingPath).text()).toBe(before);
+			expect(await Bun.file(path.join(repoRoot, DELIVERY_SUPERSEDED_LEDGER_PATH)).exists()).toBe(false);
+		} finally {
+			await fs.rm(repoRoot, { force: true, recursive: true });
+		}
+	});
+
+	it("preserves pending state when the supersession ledger is malformed", async () => {
+		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-supersede-malformed-"));
+		try {
+			const rejected = validDelivery();
+			await preparePendingDelivery(repoRoot);
+			await Bun.write(path.join(repoRoot, DELIVERY_SUPERSEDED_LEDGER_PATH), '{"version":1}\n');
+
+			await expect(
+				supersedePendingDelivery(
+					repoRoot,
+					rejected.deliveryId,
+					deliveryFor("3.0.0", "c".repeat(40)),
+					"invalid_source_evidence",
+				),
+			).rejects.toThrow("invalid shape");
+			expect(await Bun.file(path.join(repoRoot, DELIVERY_PENDING_PATH)).exists()).toBe(true);
+		} finally {
+			await fs.rm(repoRoot, { force: true, recursive: true });
+		}
+	});
+
 	it("keeps pending generation separate from atomic publication acknowledgment", async () => {
 		const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-spec-pending-"));
 		try {
