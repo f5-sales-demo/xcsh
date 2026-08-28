@@ -425,6 +425,17 @@ async function handleInstall(
 		}
 
 		if (target.type === "marketplace") {
+			if (flags.dryRun) {
+				const preview = {
+					action: "install",
+					target: `${target.name}@${target.marketplace}`,
+					scope: flags.scope ?? "user",
+					dryRun: true,
+				};
+				if (flags.json) console.log(JSON.stringify(preview, null, 2));
+				else console.log(chalk.dim(`[dry-run] Would install ${preview.target} (${preview.scope})`));
+				continue;
+			}
 			try {
 				const entry = await mktMgr.installPlugin(target.name, target.marketplace, {
 					force: flags.force,
