@@ -1290,7 +1290,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		// Load extensions (discovers from standard locations + configured paths)
 		let extensionsResult: LoadExtensionsResult;
-		if (options.disableExtensionDiscovery) {
+		if (options.preloadedExtensions) {
+			extensionsResult = options.preloadedExtensions;
+		} else if (options.disableExtensionDiscovery) {
 			const configuredPaths = options.additionalExtensionPaths ?? [];
 			extensionsResult = await logger.time(
 				"loadExtensions",
@@ -1303,8 +1305,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			for (const { path, error } of extensionsResult.errors) {
 				logger.error("Failed to load extension", { path, error });
 			}
-		} else if (options.preloadedExtensions) {
-			extensionsResult = options.preloadedExtensions;
 		} else {
 			// Merge CLI extension paths with settings extension paths
 			const configuredPaths = [...(options.additionalExtensionPaths ?? []), ...(settings.get("extensions") ?? [])];

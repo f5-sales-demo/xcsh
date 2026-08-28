@@ -4,7 +4,6 @@
 
 import { APP_NAME } from "@f5-sales-demo/pi-utils";
 import { Args, Command } from "@f5-sales-demo/pi-utils/cli";
-import { parseArgs } from "../cli/args";
 import { buildCliFlags } from "../cli/flag-spec";
 import { runRootCommand } from "../main";
 
@@ -36,7 +35,6 @@ export default class Index extends Command {
 	static strict = false;
 
 	async run(): Promise<void> {
-		const parsed = parseArgs(this.argv);
-		await runRootCommand(parsed, this.argv);
+		await runRootCommand(this.argv);
 	}
 }
