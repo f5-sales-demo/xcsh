@@ -85,23 +85,27 @@ describe("model thinking metadata", () => {
 		expect(() => requireSupportedEffort(model, Effort.XHigh)).toThrow(/Supported efforts: medium, high/);
 	});
 
-	it("bundles Gemini 3.6 Flash for Vertex with its live-supported effort range", () => {
-		const model = getBundledModel("google-vertex", "gemini-3.6-flash");
+	it("replaces Vertex Gemini 3.6 Flash with GA Gemini 3.7 Flash", () => {
+		const model = getBundledModel("google-vertex", "gemini-3.7-flash");
 
 		expect(model).toMatchObject({
-			id: "gemini-3.6-flash",
+			id: "gemini-3.7-flash",
 			api: "google-vertex",
 			provider: "google-vertex",
 			reasoning: true,
+			cost: { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 },
 			contextWindow: 1_048_576,
 			maxTokens: 65_536,
 			thinking: {
 				mode: "google-level",
 				minLevel: Effort.Low,
 				maxLevel: Effort.High,
+				defaultLevel: Effort.High,
+				canDisable: false,
 			},
 		});
 		expect(getSupportedEfforts(model)).toEqual([Effort.Low, Effort.Medium, Effort.High]);
+		expect(getBundledModel("google-vertex", "gemini-3.6-flash")).toBeUndefined();
 	});
 
 	it("stores xhigh support directly in metadata for GPT-5.2", () => {
@@ -119,7 +123,7 @@ describe("model thinking metadata", () => {
 		expect(requireSupportedEffort(model, Effort.XHigh)).toBe(Effort.XHigh);
 	});
 
-	it("maps Gemini 3 Pro only for supported levels", () => {
+	it("maps every documented Gemini 3 Pro thinking level", () => {
 		const model = createModel({
 			id: "gemini-3-pro-preview",
 			api: "google-generative-ai",
@@ -132,8 +136,18 @@ describe("model thinking metadata", () => {
 			maxLevel: Effort.High,
 		});
 		expect(mapEffortToGoogleThinkingLevel(model, Effort.Low)).toBe("LOW");
+		expect(mapEffortToGoogleThinkingLevel(model, Effort.Medium)).toBe("MEDIUM");
 		expect(mapEffortToGoogleThinkingLevel(model, Effort.High)).toBe("HIGH");
-		expect(() => mapEffortToGoogleThinkingLevel(model, Effort.Medium)).toThrow(/not supported/);
+	});
+
+	it("applies HIGH defaults only to full Vertex Gemini Flash and Pro models", () => {
+		for (const id of ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview", "gemini-3-pro-preview"]) {
+			expect(getBundledModel("google-vertex", id).thinking?.defaultLevel).toBe(Effort.High);
+		}
+		expect(getBundledModel("google-vertex", "gemini-3-flash-preview").thinking?.canDisable).toBe(false);
+		expect(getBundledModel("google-vertex", "gemini-3-pro-preview").thinking?.canDisable).toBe(false);
+		expect(getBundledModel("google-vertex", "gemini-2.5-flash-lite").thinking?.defaultLevel).toBeUndefined();
+		expect(getBundledModel("google", "gemini-3-flash-preview").thinking?.defaultLevel).toBeUndefined();
 	});
 
 	it("encodes anthropic transport mode in metadata", () => {

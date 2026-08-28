@@ -187,6 +187,8 @@ const ThinkingControlModeSchema = Type.Union([
 const ModelThinkingSchema = Type.Object({
 	minLevel: EffortSchema,
 	maxLevel: EffortSchema,
+	defaultLevel: Type.Optional(EffortSchema),
+	canDisable: Type.Optional(Type.Boolean()),
 	mode: ThinkingControlModeSchema,
 });
 

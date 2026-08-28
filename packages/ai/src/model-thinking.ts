@@ -80,7 +80,7 @@ const ANTHROPIC_ADAPTIVE_EFFORTS: readonly Effort[] = [
  */
 const ANTHROPIC_EXTENDED_EFFORT_VERSIONS: ReadonlySet<string> = new Set(["5.0"]);
 
-const GEMINI_3_PRO_EFFORTS: readonly Effort[] = [Effort.Low, Effort.High];
+const GEMINI_3_PRO_EFFORTS: readonly Effort[] = [Effort.Low, Effort.Medium, Effort.High];
 const GEMINI_3_FLASH_EFFORTS: readonly Effort[] = [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High];
 const GPT_5_2_PLUS_EFFORTS: readonly Effort[] = [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh];
 const GPT_5_1_CODEX_MINI_EFFORTS: readonly Effort[] = [Effort.Medium, Effort.High];
@@ -397,11 +397,22 @@ function inferModelThinking<TApi extends Api>(model: ApiModel<TApi>): ThinkingCo
 	if (!minLevel || !maxLevel) {
 		throw new Error(`Model ${model.provider}/${model.id} resolved to an empty thinking range`);
 	}
-	return {
+	const thinking: ThinkingConfig = {
 		mode: inferThinkingControlMode(model, parsedModel),
 		minLevel,
 		maxLevel,
 	};
+	if (
+		model.provider === "google-vertex" &&
+		parsedModel.family === "gemini" &&
+		!model.id.toLowerCase().includes("lite")
+	) {
+		thinking.defaultLevel = Effort.High;
+		if (parsedModel.version.major === 3) {
+			thinking.canDisable = false;
+		}
+	}
+	return thinking;
 }
 
 function normalizeThinkingConfig(thinking: ThinkingConfig | undefined): ThinkingConfig | undefined {
@@ -414,7 +425,13 @@ function normalizeThinkingConfig(thinking: ThinkingConfig | undefined): Thinking
 function thinkingsEqual(left: ThinkingConfig | undefined, right: ThinkingConfig | undefined): boolean {
 	if (left === right) return true;
 	if (!left || !right) return false;
-	return left.mode === right.mode && left.minLevel === right.minLevel && left.maxLevel === right.maxLevel;
+	return (
+		left.mode === right.mode &&
+		left.minLevel === right.minLevel &&
+		left.maxLevel === right.maxLevel &&
+		left.defaultLevel === right.defaultLevel &&
+		left.canDisable === right.canDisable
+	);
 }
 
 function expandEffortRange(thinking: ThinkingConfig): readonly Effort[] {

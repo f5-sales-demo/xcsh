@@ -86,9 +86,9 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 		expect(() =>
 			streamSimple(createModel("gemini-3.1-pro-preview"), context, {
 				apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
-				reasoning: Effort.Medium,
+				reasoning: Effort.Minimal,
 			}),
-		).toThrow(/Supported efforts: low, high/);
+		).toThrow(/Supported efforts: low, medium, high/);
 		expect(requestBody).toBeUndefined();
 	});
 

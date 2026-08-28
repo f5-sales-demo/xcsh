@@ -4132,6 +4132,24 @@ export class AgentSession {
 	// Model Management
 	// =========================================================================
 
+	#resolveTargetThinkingLevel(
+		model: Model,
+		requested: ThinkingLevel | undefined,
+		role?: string,
+	): ThinkingLevel | undefined {
+		let target = requested;
+		if (target === undefined && role) {
+			const savedRole = this.settings.getModelRole(role);
+			if (savedRole) {
+				target = extractExplicitThinkingSelector(savedRole, this.settings);
+			}
+		}
+		if (target === undefined && model.thinking?.defaultLevel === undefined) {
+			target = this.thinkingLevel;
+		}
+		return resolveThinkingLevelForModel(model, target);
+	}
+
 	/**
 	 * Set model directly.
 	 * Validates API key, saves to session and settings.
@@ -4147,6 +4165,7 @@ export class AgentSession {
 		if (!apiKey) {
 			throw new Error(`No API key for ${model.provider}/${model.id}`);
 		}
+		const targetThinkingLevel = this.#resolveTargetThinkingLevel(model, options?.thinkingLevel, role);
 
 		this.#clearActiveRetryFallback();
 		this.#setModelWithProviderSessionReset(model);
@@ -4160,8 +4179,7 @@ export class AgentSession {
 		);
 		this.settings.getStorage()?.recordModelUsage(`${model.provider}/${model.id}`);
 
-		// Re-apply the current thinking level for the newly selected model
-		this.setThinkingLevel(this.thinkingLevel);
+		this.setThinkingLevel(targetThinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 	}
 
@@ -4176,14 +4194,14 @@ export class AgentSession {
 		if (!apiKey) {
 			throw new Error(`No API key for ${model.provider}/${model.id}`);
 		}
+		const targetThinkingLevel = this.#resolveTargetThinkingLevel(model, thinkingLevel);
 
 		this.#clearActiveRetryFallback();
 		this.#setModelWithProviderSessionReset(model);
 		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, "temporary");
 		this.settings.getStorage()?.recordModelUsage(`${model.provider}/${model.id}`);
 
-		// Apply explicit thinking level, or re-clamp current level to new model's capabilities
-		this.setThinkingLevel(thinkingLevel ?? this.thinkingLevel);
+		this.setThinkingLevel(targetThinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 	}
 
@@ -4213,13 +4231,14 @@ export class AgentSession {
 		if (!apiKey) {
 			throw new Error(`No API key for ${targetModel.provider}/${targetModel.id}`);
 		}
+		const targetThinkingLevel = this.#resolveTargetThinkingLevel(targetModel, thinkingLevel);
 
 		// DO NOT clear active retry fallback - routing is a transient optimization
 		this.#setModelWithProviderSessionReset(targetModel, "runtime-switch");
 		this.sessionManager.appendModelChange(`${targetModel.provider}/${targetModel.id}`, "routing_switch");
 		this.settings.getStorage()?.recordModelUsage(`${targetModel.provider}/${targetModel.id}`);
 
-		this.setThinkingLevel(thinkingLevel ?? this.thinkingLevel);
+		this.setThinkingLevel(targetThinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 	}
 
@@ -4296,10 +4315,9 @@ export class AgentSession {
 		if (options?.temporary) {
 			await this.setModelTemporary(next.model, next.explicitThinkingLevel ? next.thinkingLevel : undefined);
 		} else {
-			await this.setModel(next.model, next.role);
-			if (next.explicitThinkingLevel && next.thinkingLevel !== undefined) {
-				this.setThinkingLevel(next.thinkingLevel);
-			}
+			await this.setModel(next.model, next.role, {
+				thinkingLevel: next.explicitThinkingLevel ? next.thinkingLevel : undefined,
+			});
 		}
 
 		return { model: next.model, thinkingLevel: this.thinkingLevel, role: next.role };
@@ -4339,6 +4357,7 @@ export class AgentSession {
 		const len = scopedModels.length;
 		const nextIndex = direction === "forward" ? (currentIndex + 1) % len : (currentIndex - 1 + len) % len;
 		const next = scopedModels[nextIndex];
+		const targetThinkingLevel = this.#resolveTargetThinkingLevel(next.model, next.thinkingLevel);
 
 		// Apply model
 		this.#clearActiveRetryFallback();
@@ -4348,7 +4367,7 @@ export class AgentSession {
 		this.settings.getStorage()?.recordModelUsage(`${next.model.provider}/${next.model.id}`);
 
 		// Apply the scoped model's configured thinking level
-		this.setThinkingLevel(next.thinkingLevel);
+		this.setThinkingLevel(targetThinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 
 		return { model: next.model, thinkingLevel: this.thinkingLevel, isScoped: true };
@@ -4371,14 +4390,14 @@ export class AgentSession {
 		if (!apiKey) {
 			throw new Error(`No API key for ${nextModel.provider}/${nextModel.id}`);
 		}
+		const targetThinkingLevel = this.#resolveTargetThinkingLevel(nextModel, undefined, "default");
 
 		this.#clearActiveRetryFallback();
 		this.#setModelWithProviderSessionReset(nextModel);
 		this.sessionManager.appendModelChange(`${nextModel.provider}/${nextModel.id}`);
 		this.settings.setModelRole("default", this.#formatRoleModelValue("default", nextModel));
 		this.settings.getStorage()?.recordModelUsage(`${nextModel.provider}/${nextModel.id}`);
-		// Re-apply the current thinking level for the newly selected model
-		this.setThinkingLevel(this.thinkingLevel);
+		this.setThinkingLevel(targetThinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
 
 		return { model: nextModel, thinkingLevel: this.thinkingLevel, isScoped: false };
@@ -4421,7 +4440,10 @@ export class AgentSession {
 	cycleThinkingLevel(): ThinkingLevel | undefined {
 		if (!this.model?.reasoning) return undefined;
 
-		const levels = [ThinkingLevel.Off, ...this.getAvailableThinkingLevels()];
+		const levels = [
+			...(this.model.thinking?.canDisable === false ? [] : [ThinkingLevel.Off]),
+			...this.getAvailableThinkingLevels(),
+		];
 		const currentLevel = this.thinkingLevel === ThinkingLevel.Inherit ? ThinkingLevel.Off : this.thinkingLevel;
 		const currentIndex = currentLevel ? levels.indexOf(currentLevel) : -1;
 		const nextIndex = (currentIndex + 1) % levels.length;

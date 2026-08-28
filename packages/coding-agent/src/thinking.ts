@@ -76,16 +76,19 @@ export function toReasoningEffort(level: ThinkingLevel | undefined): Effort | un
 }
 
 /**
- * Resolves a selector against the current model while preserving explicit "off".
+ * Resolves a selector against the current model, including model-specific defaults.
  */
 export function resolveThinkingLevelForModel(
 	model: Model | undefined,
 	level: ThinkingLevel | undefined,
 ): ResolvedThinkingLevel | undefined {
 	if (level === undefined || level === ThinkingLevel.Inherit) {
-		return undefined;
+		return model?.thinking?.defaultLevel;
 	}
 	if (level === ThinkingLevel.Off) {
+		if (model?.thinking?.canDisable === false) {
+			throw new Error(`Cannot disable thinking for ${model.provider}/${model.id}`);
+		}
 		return ThinkingLevel.Off;
 	}
 	return clampThinkingLevelForModel(model, level);

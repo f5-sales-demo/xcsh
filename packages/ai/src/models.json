@@ -7030,9 +7030,9 @@
 		}
 	},
 	"google-vertex": {
-		"gemini-3.6-flash": {
-			"id": "gemini-3.6-flash",
-			"name": "Gemini 3.6 Flash",
+		"gemini-3.7-flash": {
+			"id": "gemini-3.7-flash",
+			"name": "Gemini 3.7 Flash",
 			"api": "google-vertex",
 			"provider": "google-vertex",
 			"baseUrl": "https://{location}-aiplatform.googleapis.com",
@@ -7042,9 +7042,9 @@
 				"image"
 			],
 			"cost": {
-				"input": 0,
-				"output": 0,
-				"cacheRead": 0,
+				"input": 0.75,
+				"output": 3.75,
+				"cacheRead": 0.075,
 				"cacheWrite": 0
 			},
 			"contextWindow": 1048576,
@@ -7052,7 +7052,9 @@
 			"thinking": {
 				"mode": "google-level",
 				"minLevel": "low",
-				"maxLevel": "high"
+				"maxLevel": "high",
+				"defaultLevel": "high",
+				"canDisable": false
 			}
 		},
 		"gemini-1.5-flash": {
@@ -7177,7 +7179,8 @@
 			"thinking": {
 				"mode": "budget",
 				"minLevel": "minimal",
-				"maxLevel": "high"
+				"maxLevel": "high",
+				"defaultLevel": "high"
 			}
 		},
 		"gemini-2.5-flash-lite": {
@@ -7252,7 +7255,8 @@
 			"thinking": {
 				"mode": "budget",
 				"minLevel": "minimal",
-				"maxLevel": "high"
+				"maxLevel": "high",
+				"defaultLevel": "high"
 			}
 		},
 		"gemini-3-flash-preview": {
@@ -7277,7 +7281,9 @@
 			"thinking": {
 				"mode": "google-level",
 				"minLevel": "minimal",
-				"maxLevel": "high"
+				"maxLevel": "high",
+				"defaultLevel": "high",
+				"canDisable": false
 			}
 		},
 		"gemini-3-pro-preview": {
@@ -7302,7 +7308,9 @@
 			"thinking": {
 				"mode": "google-level",
 				"minLevel": "low",
-				"maxLevel": "high"
+				"maxLevel": "high",
+				"defaultLevel": "high",
+				"canDisable": false
 			}
 		},
 		"gemini-3.1-pro-preview": {
@@ -7327,7 +7335,9 @@
 			"thinking": {
 				"mode": "google-level",
 				"minLevel": "low",
-				"maxLevel": "high"
+				"maxLevel": "high",
+				"defaultLevel": "high",
+				"canDisable": false
 			}
 		},
 		"gemini-3.1-pro-preview-customtools": {
@@ -7352,7 +7362,9 @@
 			"thinking": {
 				"mode": "google-level",
 				"minLevel": "low",
-				"maxLevel": "high"
+				"maxLevel": "high",
+				"defaultLevel": "high",
+				"canDisable": false
 			}
 		}
 	},

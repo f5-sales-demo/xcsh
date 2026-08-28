@@ -706,7 +706,11 @@ export class ModelSelectorComponent extends Container {
 		}
 	}
 	#getThinkingLevelsForModel(model: Model): ReadonlyArray<ThinkingLevel> {
-		return [ThinkingLevel.Inherit, ThinkingLevel.Off, ...getSupportedEfforts(model)];
+		return [
+			ThinkingLevel.Inherit,
+			...(model.thinking?.canDisable === false ? [] : [ThinkingLevel.Off]),
+			...getSupportedEfforts(model),
+		];
 	}
 
 	#getCurrentRoleThinkingLevel(role: string): ThinkingLevel {
