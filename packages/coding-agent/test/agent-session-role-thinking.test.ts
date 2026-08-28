@@ -8,6 +8,7 @@ import { Settings } from "../src/config/settings";
 import { AgentSession } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
+import { resolveThinkingLevelForModel } from "../src/thinking";
 
 describe("AgentSession role model thinking behavior", () => {
 	let tempDir: TempDir;
@@ -232,5 +233,94 @@ describe("AgentSession role model thinking behavior", () => {
 		expect(session.thinkingLevel).toBe("off");
 		expect(session.cycleThinkingLevel()).toBe(Effort.Minimal);
 		expect(session.thinkingLevel).toBe(Effort.Minimal);
+	});
+
+	it("uses HIGH by default for full Vertex Gemini and preserves supported overrides", () => {
+		const flash = getBundledModel("google-vertex", "gemini-3.7-flash");
+		const pro = getBundledModel("google-vertex", "gemini-3-pro-preview");
+		const lite = getBundledModel("google-vertex", "gemini-2.5-flash-lite");
+
+		expect(resolveThinkingLevelForModel(flash, undefined)).toBe(Effort.High);
+		expect(resolveThinkingLevelForModel(pro, undefined)).toBe(Effort.High);
+		for (const effort of [Effort.Low, Effort.Medium, Effort.High]) {
+			expect(resolveThinkingLevelForModel(flash, effort)).toBe(effort);
+			expect(resolveThinkingLevelForModel(pro, effort)).toBe(effort);
+		}
+		expect(resolveThinkingLevelForModel(lite, undefined)).toBeUndefined();
+	});
+
+	it("rejects off atomically when switching to Vertex Gemini 3", async () => {
+		const initialModel = getAnthropicModelOrThrow("claude-sonnet-4-5");
+		const targetModel = getBundledModel("google-vertex", "gemini-3.7-flash");
+		const agent = new Agent({
+			initialState: {
+				model: initialModel,
+				systemPrompt: "Test",
+				tools: [],
+				messages: [],
+				thinkingLevel: Effort.Low,
+			},
+		});
+		const authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth-vertex.db"));
+		authStorages.push(authStorage);
+		authStorage.setRuntimeApiKey("anthropic", "test-key");
+		authStorage.setRuntimeApiKey("google-vertex", "test-key");
+		const sessionManager = SessionManager.inMemory();
+		sessionSettings = Settings.isolated();
+		sessionSettings.setModelRole("default", `${initialModel.provider}/${initialModel.id}:low`);
+		session = new AgentSession({
+			agent,
+			sessionManager,
+			settings: sessionSettings,
+			modelRegistry: new ModelRegistry(authStorage, path.join(tempDir.path(), "models-vertex.yml")),
+		});
+		const entryCount = sessionManager.getEntries().length;
+		const previousThinkingLevel = session.thinkingLevel;
+
+		await expect(session.setModel(targetModel, "default", { thinkingLevel: "off" })).rejects.toThrow(
+			/cannot disable thinking.*google-vertex\/gemini-3\.7-flash/i,
+		);
+		expect(session.model?.id).toBe(initialModel.id);
+		expect(session.thinkingLevel).toBe(previousThinkingLevel);
+		expect(sessionSettings.getModelRole("default")).toBe(`${initialModel.provider}/${initialModel.id}:low`);
+		expect(sessionManager.getEntries()).toHaveLength(entryCount);
+	});
+
+	it("applies the target default before switching and lets saved effort win", async () => {
+		const initialModel = getAnthropicModelOrThrow("claude-sonnet-4-5");
+		const targetModel = getBundledModel("google-vertex", "gemini-3.7-flash");
+		const agent = new Agent({
+			initialState: {
+				model: initialModel,
+				systemPrompt: "Test",
+				tools: [],
+				messages: [],
+				thinkingLevel: Effort.Low,
+			},
+		});
+		const authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth-vertex-default.db"));
+		authStorages.push(authStorage);
+		authStorage.setRuntimeApiKey("anthropic", "test-key");
+		authStorage.setRuntimeApiKey("google-vertex", "test-key");
+		sessionSettings = Settings.isolated();
+		session = new AgentSession({
+			agent,
+			sessionManager: SessionManager.inMemory(),
+			settings: sessionSettings,
+			modelRegistry: new ModelRegistry(authStorage, path.join(tempDir.path(), "models-vertex-default.yml")),
+		});
+
+		await session.setModelTemporary(targetModel);
+		expect(session.thinkingLevel).toBe(Effort.High);
+
+		await session.setModel(initialModel);
+		sessionSettings.setModelRole("default", `${targetModel.provider}/${targetModel.id}:medium`);
+		await session.setModel(targetModel);
+		expect(session.thinkingLevel).toBe(Effort.Medium);
+	});
+
+	it("continues allowing off for models whose thinking can be disabled", () => {
+		const model = getAnthropicModelOrThrow("claude-sonnet-4-5");
+		expect(resolveThinkingLevelForModel(model, "off")).toBe("off");
 	});
 });

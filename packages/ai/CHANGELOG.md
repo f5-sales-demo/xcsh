@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Changed
+
+- Replaced Vertex Gemini 3.6 Flash with GA Gemini 3.7 Flash and made full Vertex Gemini Flash and Pro models default to HIGH thinking while preserving supported explicit effort overrides ([#3460](https://github.com/f5-sales-demo/xcsh/issues/3460)).
+
 ### Fixed
 
 - Omit an empty OpenAI-compatible `tools` field unless prior tool-call history requires the explicit empty array, and suppress the internal no-auth credential sentinel from keyless request headers ([#2942](https://github.com/f5-sales-demo/xcsh/issues/2942), [#3361](https://github.com/f5-sales-demo/xcsh/issues/3361)).

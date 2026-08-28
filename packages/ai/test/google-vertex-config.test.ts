@@ -105,8 +105,8 @@ describe("Google Vertex runtime configuration", () => {
 		try {
 			delete Bun.env.GOOGLE_CLOUD_LOCATION;
 			expect(resolveGoogleVertexLocation()).toBe("global");
-			expect(googleVertexRequestUrl("gemini-3.6-flash", "test-project", "global")).toBe(
-				"https://aiplatform.googleapis.com/v1/projects/test-project/locations/global/publishers/google/models/gemini-3.6-flash:streamGenerateContent",
+			expect(googleVertexRequestUrl("gemini-3.7-flash", "test-project", "global")).toBe(
+				"https://aiplatform.googleapis.com/v1/projects/test-project/locations/global/publishers/google/models/gemini-3.7-flash:streamGenerateContent",
 			);
 		} finally {
 			if (originalLocation === undefined) delete Bun.env.GOOGLE_CLOUD_LOCATION;

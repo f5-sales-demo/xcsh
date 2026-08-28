@@ -973,6 +973,8 @@ describe("ModelRegistry", () => {
 				mode: "anthropic-adaptive",
 				minLevel: Effort.Minimal,
 				maxLevel: Effort.High,
+				defaultLevel: Effort.Medium,
+				canDisable: false,
 			};
 
 			writeModelsJson({

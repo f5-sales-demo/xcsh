@@ -83,6 +83,10 @@ export interface ThinkingConfig {
 	minLevel: Effort;
 	/** Most intensive supported user-facing effort level. */
 	maxLevel: Effort;
+	/** Model-specific effort used when no explicit or saved effort is selected. */
+	defaultLevel?: Effort;
+	/** Whether callers may explicitly disable thinking. Defaults to true. */
+	canDisable?: boolean;
 	/** Provider-specific transport used to encode the selected effort. */
 	mode: ThinkingControlMode;
 }
