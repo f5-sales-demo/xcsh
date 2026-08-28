@@ -843,17 +843,31 @@ export async function listXcshPluginRoots(
 		roots.push(...projectRoots, ...deduped);
 	}
 
-	// Merge --plugin-dir roots (highest precedence) on every fresh load
+	// Merge --plugin-dir roots (highest precedence) on every fresh load. Local roots use
+	// an artificial marketplace ID, so identity must be matched by manifest plugin name;
+	// comparing full IDs would leave the installed copy active beside the candidate.
 	if (injectedPluginDirRoots.length > 0) {
-		const injectedIds = new Set(injectedPluginDirRoots.map(r => r.id));
-		const filtered = roots.filter(r => !injectedIds.has(r.id));
+		const merged = prioritizeInjectedPluginRoots(roots, injectedPluginDirRoots);
 		roots.length = 0;
-		roots.push(...injectedPluginDirRoots, ...filtered);
+		roots.push(...merged);
 	}
 
 	const result = { roots, warnings };
 	pluginRootsCache.set(cacheKey, result);
 	return result;
+}
+
+export function prioritizeInjectedPluginRoots(
+	installed: XcshPluginRoot[],
+	injected: XcshPluginRoot[],
+): XcshPluginRoot[] {
+	const seen = new Set<string>();
+	const winners = injected.filter(root => {
+		if (seen.has(root.plugin)) return false;
+		seen.add(root.plugin);
+		return true;
+	});
+	return [...winners, ...installed.filter(root => !seen.has(root.plugin))];
 }
 
 export interface XcshPluginSummary {
