@@ -187,21 +187,20 @@ describe("two-customer isolation, enforced in the shell", () => {
 		expect(text).not.toContain("custB");
 	});
 
-	it("Seatbelt denies named sibling reads, traversal, and writes", async () => {
+	it("Seatbelt denies named sibling reads and writes, including after traversal", async () => {
 		const backend = containmentStatus(true, process.platform, undefined, productFenceFor(custA)).backend;
 		for (const command of ["cat ../custB/secret.env", `cat ${path.join(custB, "secret.env")}`]) {
 			const { text } = await shell(custA, command);
 			if (backend === "seatbelt") expect(text).not.toContain("TOKEN=b");
 			else expect(text).toContain("TOKEN=b");
 		}
+		// Brush evaluates `cd` in-process, outside the child Seatbelt profile. The security property is
+		// that the external read spawned afterward remains denied, not that the directory change fails.
 		const moved = await shell(custA, "cd ../custB && cat secret.env");
-		const traversal = await shell(custA, "cd ../custB");
 		if (backend === "seatbelt") {
 			expect(moved.text).not.toContain("TOKEN=b");
-			expect(traversal.code).not.toBe(0);
 		} else {
 			expect(moved.text).toContain("TOKEN=b");
-			expect(traversal.code).toBe(0);
 		}
 		await shell(custA, `printf x > ${path.join(custB, "planted.env")}`);
 		if (backend === "seatbelt") expect(fs.existsSync(path.join(custB, "planted.env"))).toBe(false);
