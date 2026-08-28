@@ -42,7 +42,7 @@ function realTmp(suffix: string): string {
 }
 
 describe("buildContainmentFence", () => {
-	it("denies parent enumeration while preserving named access", () => {
+	it("denies sibling-customer access in Seatbelt while preserving the portable discovery policy", () => {
 		const home = realTmp("home");
 		const workspace = path.join(home, "GIT", "custA");
 		fs.mkdirSync(workspace, { recursive: true });
@@ -52,6 +52,7 @@ describe("buildContainmentFence", () => {
 		expect(fence.deny).not.toContain(home);
 		expect(fence.deny).not.toContain(path.join(home, "GIT"));
 		expect(fence.denyEnumerate).toContain(path.join(home, "GIT"));
+		expect(fence.denyOnSeatbelt).toContain(path.join(home, "GIT"));
 		expect(fence.allow).toContain(workspace);
 		expect(fenceVerdict(fence, path.join(home, "GIT"), "enumerate")).toBe("deny");
 		expect(fenceVerdict(fence, path.join(home, "GIT", "custB", "secret"), "read")).toBe("allow");
@@ -59,6 +60,21 @@ describe("buildContainmentFence", () => {
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "read")).toBe("allow");
 		expect(fenceVerdict(fence, path.join(workspace, "notes.md"), "write")).toBe("allow");
 		expect(fenceVerdict(fence, workspace, "enumerate")).toBe("allow");
+	});
+
+	it("keeps an explicit trusted sibling grant deeper than the Seatbelt customer-container deny", () => {
+		const home = realTmp("seatbelt-trusted-grant");
+		const parent = path.join(home, "customers");
+		const workspace = path.join(parent, "example-a");
+		const trusted = path.join(parent, "shared-handoff");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(trusted, { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, extraRoots: [trusted] });
+
+		expect(fence.denyOnSeatbelt).toContain(parent);
+		expect(fence.allow).toContain(workspace);
+		expect(fence.allow).toContain(trusted);
 	});
 
 	it("leaves everything outside home alone — nothing operational is restricted", () => {

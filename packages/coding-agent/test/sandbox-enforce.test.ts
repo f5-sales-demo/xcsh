@@ -26,6 +26,7 @@ function makeFence(): ContainmentFence {
 		allowReadOnly: ["/shared/ctx"], // shared context: readable, deliberately not writable
 		allowWriteOnly: ["/drop"], // write-only drop box, deliberately not readable
 		deny: ["/work"], // stands in for a data root or cross-session store
+		denyOnSeatbelt: [],
 		denyEnumerate: [],
 	};
 }
@@ -334,6 +335,7 @@ describe("evaluateToolCall", () => {
 			allowReadOnly: ["/shared/ctx"],
 			allowWriteOnly: [],
 			deny: [],
+			denyOnSeatbelt: [],
 			denyEnumerate: [],
 		};
 		const inRoCwd = (command: string) =>
@@ -447,6 +449,7 @@ describe("evaluateToolCall", () => {
 			allowReadOnly: [],
 			allowWriteOnly: [],
 			deny: [],
+			denyOnSeatbelt: [],
 			denyEnumerate: [],
 		};
 		expect(check("read", { file_path: "/etc/passwd" }, open).block).toBe(false);

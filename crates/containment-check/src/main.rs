@@ -31,6 +31,8 @@ struct FenceJson {
 	#[serde(default)]
 	deny: Vec<PathBuf>,
 	#[serde(default)]
+	deny_on_seatbelt: Vec<PathBuf>,
+	#[serde(default)]
 	deny_enumerate: Vec<PathBuf>,
 }
 
@@ -42,6 +44,7 @@ impl From<FenceJson> for ContainmentFence {
 			allow_write_only: json.allow_write_only,
 			deny: json.deny,
 			deny_enumerate: json.deny_enumerate,
+			deny_on_seatbelt: json.deny_on_seatbelt,
 		}
 	}
 }

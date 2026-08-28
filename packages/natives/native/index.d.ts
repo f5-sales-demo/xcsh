@@ -487,6 +487,8 @@ export interface ContainmentFenceOptions {
   allowWriteOnly: Array<string>
   /** Roots denied in both directions, winning over any allow they sit inside. */
   deny: Array<string>
+  /** Roots recursively denied only by macOS Seatbelt. */
+  denyOnSeatbelt?: Array<string>
   /** Exact directories whose entries may not be enumerated. */
   denyEnumerate: Array<string>
 }

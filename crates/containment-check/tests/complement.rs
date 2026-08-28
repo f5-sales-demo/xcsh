@@ -108,6 +108,7 @@ fn realistic() -> (FakeFs, ContainmentFence) {
 			PathBuf::from("/home/alice/GIT"),
 			PathBuf::from("/home/alice/GIT/custA/.xcsh/sessions"),
 		],
+		deny_on_seatbelt: Vec::new(),
 		deny_enumerate: Vec::new(),
 	};
 	(fs, fence)
@@ -437,6 +438,42 @@ fn discovery_only_fences_do_not_require_landlock() {
 		..ContainmentFence::default()
 	};
 	assert!(directional.requires_landlock());
+}
+
+#[test]
+fn seatbelt_customer_container_deny_is_recursive_but_deeper_grants_win() {
+	let parent = PathBuf::from("/Users/alice/customers");
+	let workspace = parent.join("example-a");
+	let trusted = parent.join("shared-handoff");
+	let fence = ContainmentFence {
+		allow: vec![workspace.clone(), trusted.clone()],
+		deny_on_seatbelt: vec![parent.clone()],
+		..ContainmentFence::default()
+	};
+
+	let profile = fence.to_seatbelt_profile();
+	let deny = format!("(deny file-read* file-write* (subpath \"{}\"))", parent.display());
+	let workspace_allow =
+		format!("(allow file-read* file-write* (subpath \"{}\"))", workspace.display());
+	let trusted_allow =
+		format!("(allow file-read* file-write* (subpath \"{}\"))", trusted.display());
+
+	let deny_at = profile
+		.find(&deny)
+		.expect("customer container must be recursively denied");
+	let workspace_at = profile
+		.find(&workspace_allow)
+		.expect("workspace must be restored");
+	let trusted_at = profile
+		.find(&trusted_allow)
+		.expect("trusted sibling grant must be restored");
+	assert!(deny_at < workspace_at);
+	assert!(deny_at < trusted_at);
+	assert!(!fence.requires_landlock(), "a Seatbelt-only rule must not arm Landlock");
+	assert!(
+		!profile.contains(&format!("(allow file-read-metadata (subpath \"{}\"))", parent.display())),
+		"the sibling container itself must not stay traversable"
+	);
 }
 
 /// Two lists naming the same path must resolve the way `permits_resolved` does:
