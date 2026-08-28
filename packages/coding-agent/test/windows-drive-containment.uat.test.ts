@@ -41,9 +41,7 @@ describe.skipIf(process.platform !== "win32")("native Windows multi-volume conta
 		const otherRoot = otherRoots[0];
 		const fence = buildContainmentFence({ workspace, home: os.homedir() });
 		const otherCanonical = canonical(otherRoot);
-		expect(fence.denyEnumerate.map(canonical).map(root => root.toLowerCase())).toContain(
-			otherCanonical.toLowerCase(),
-		);
+		expect(fence.denyEnumerate.map(root => root.toLowerCase())).toContain(otherCanonical.toLowerCase());
 		expect(fenceVerdict(fence, otherCanonical, "enumerate")).toBe("deny");
 		expect(fenceVerdict(fence, workspaceRoot, "enumerate")).toBe("allow");
 
