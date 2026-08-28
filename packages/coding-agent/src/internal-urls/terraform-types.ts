@@ -23,18 +23,15 @@ export interface TerraformMinimalConfigReference {
 }
 
 export interface TerraformResource {
+	readonly name: string;
 	readonly category: string;
 	readonly description: string;
 	readonly required: readonly string[];
 	readonly oneof_groups?: readonly TerraformOneOfGroup[];
 	readonly server_defaults?: readonly string[];
-	readonly minimal_config?: string | TerraformMinimalConfigReference;
+	readonly minimal_config?: TerraformMinimalConfigReference;
 	readonly dependencies: TerraformDependencies;
-	readonly import_syntax: string;
-}
-
-export interface TerraformNamedResource extends TerraformResource {
-	readonly name: string;
+	readonly import_syntax?: string;
 }
 
 export interface TerraformCategory {
@@ -50,5 +47,5 @@ export interface TerraformIndex {
 	readonly version: string;
 	readonly provider: TerraformProvider;
 	readonly categories: readonly TerraformCategory[];
-	readonly resources: Readonly<Record<string, TerraformResource>> | readonly TerraformNamedResource[];
+	readonly resources: readonly TerraformResource[];
 }

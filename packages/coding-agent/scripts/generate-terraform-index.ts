@@ -100,30 +100,6 @@ export async function loadTerraformIndex(
 	return { data: await response.json() };
 }
 
-// Backfill provider fields that older terraform-llms-index.json revisions lack, so the
-// generated index always satisfies TerraformProvider regardless of which provider-repo
-// revision it was fetched from (the source repo is the authority once it ships them).
-const DEFAULT_CONFIG_BLOCK = 'provider "xcsh" {}';
-const DEFAULT_AUTH_METHODS = [
-	'REQUIRED: every .tf must contain a `provider "xcsh" {}` block. Without it Terraform errors: "Provider requires explicit configuration. Add a provider block".',
-	"Configure exactly ONE auth method, via environment variables (preferred) or explicit arguments in the provider block:",
-	"api_token (env XCSH_API_TOKEN) — API token authentication.",
-	"api_p12_file + p12_password (env XCSH_P12_FILE + XCSH_P12_PASSWORD) — PKCS#12 certificate authentication.",
-	"api_cert + api_key (env XCSH_CERT + XCSH_KEY) — PEM certificate authentication.",
-	"api_url (env XCSH_API_URL) — tenant base URL without /api suffix, e.g. https://your-tenant.console.ves.volterra.io.",
-];
-
-function normalizeProvider(data: unknown): unknown {
-	if (data && typeof data === "object" && "provider" in data) {
-		const provider = (data as { provider: Record<string, unknown> }).provider;
-		if (provider && typeof provider === "object") {
-			if (typeof provider.config_block !== "string") provider.config_block = DEFAULT_CONFIG_BLOCK;
-			if (!Array.isArray(provider.auth_methods)) provider.auth_methods = DEFAULT_AUTH_METHODS;
-		}
-	}
-	return data;
-}
-
 function generateTypeScript(
 	data: unknown,
 	providerTag: string | undefined,
@@ -143,8 +119,7 @@ function generateTypeScript(
 
 async function main(): Promise<void> {
 	const loaded = await loadTerraformIndex();
-	const data = normalizeProvider(loaded.data);
-	const output = generateTypeScript(data, loaded.providerTag, loaded.providerCommit);
+	const output = generateTypeScript(loaded.data, loaded.providerTag, loaded.providerCommit);
 	await fs.writeFile(OUTPUT_FILE, output, "utf-8");
 	await Bun.$`bunx biome format --write ${OUTPUT_FILE}`.quiet();
 	console.log(`Generated ${OUTPUT_FILE}`);

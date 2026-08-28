@@ -60,7 +60,6 @@ export function createTerraformResolver(index: TerraformIndex): TerraformResolve
 }
 
 function normalizeResources(resources: TerraformIndex["resources"]): Readonly<Record<string, TerraformResource>> {
-	if (!Array.isArray(resources)) return resources as Readonly<Record<string, TerraformResource>>;
 	return Object.fromEntries(resources.map(resource => [resource.name, resource]));
 }
 
@@ -165,14 +164,10 @@ function renderL2(name: string, res: TerraformResource, _categorySlug: string): 
 
 	if (res.minimal_config) {
 		lines.push("", "## Config", "");
-		if (typeof res.minimal_config === "string") {
-			lines.push("```terraform", res.minimal_config, "```");
-		} else {
-			lines.push(`Configuration source (${res.minimal_config.format}): \`${res.minimal_config.source}\``);
-		}
+		lines.push(`Configuration source (${res.minimal_config.format}): \`${res.minimal_config.source}\``);
 	}
 
-	lines.push("", `Import: \`${res.import_syntax}\``);
+	if (res.import_syntax) lines.push("", `Import: \`${res.import_syntax}\``);
 	if (res.dependencies.requires.length > 0) {
 		lines.push(`Depends on: ${res.dependencies.requires.join(", ")}`);
 	}

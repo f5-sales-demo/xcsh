@@ -53,27 +53,39 @@ describe("createTerraformResolver", () => {
 		expect(categoryListing.content).toContain("Application Firewall");
 	});
 
-	it("preserves legacy resource maps and inline minimum configs", async () => {
+	it("renders a current non-importable resource without inventing an import command", async () => {
 		const index: TerraformIndex = {
-			categories: [category],
+			categories: [
+				{
+					...category,
+					name: "Uncategorized",
+					resources: ["site_cloud_init"],
+					slug: "uncategorized",
+				},
+			],
 			provider,
-			resources: {
-				app_firewall: {
+			resources: [
+				{
 					category: "security",
 					dependencies: { requires: [] },
-					description: "Application Firewall",
-					import_syntax: "terraform import xcsh_app_firewall.example namespace/name",
-					minimal_config: 'resource "xcsh_app_firewall" "example" {}',
-					required: ["name", "namespace"],
+					description: "Issue site-scoped Customer Edge cloud-init",
+					minimal_config: {
+						format: "terraform",
+						source: "_llms-txt/resources/site_cloud_init.txt#minimal-valid-config",
+					},
+					name: "site_cloud_init",
+					required: ["provider_ref", "site_name"],
 				},
-			},
+			],
 			version: "0.1.0",
 		};
 
 		const resource = await createTerraformResolver(index).resolve(
-			parseInternalUrl("xcsh://terraform/app_firewall") as never,
+			parseInternalUrl("xcsh://terraform/uncategorized/site_cloud_init") as never,
 		);
-		expect(resource.content).toContain('resource "xcsh_app_firewall" "example" {}');
-		expect(resource.content).toContain("```terraform");
+		expect(resource.content).toContain("site_cloud_init");
+		expect(resource.content).toContain("site_cloud_init.txt#minimal-valid-config");
+		expect(resource.content).not.toContain("Import:");
+		expect(resource.content).not.toContain("undefined");
 	});
 });
