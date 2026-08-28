@@ -123,6 +123,13 @@ describe("API spec dispatch workflow contract", () => {
 		expect(namedStep(steps, "Verify exact regenerated delivery bytes").run).toContain("verify-generated");
 	});
 
+	it("compares normalized provider and source pins structurally", async () => {
+		const provider = namedStep(await workflowSteps(), "Resolve exact published provider release").run ?? "";
+		expect(provider).toContain('--slurpfile source "$SOURCE_PIN_FILE"');
+		expect(provider).toContain("== $source[0]");
+		expect(provider).not.toContain('[ "$PROVIDER_NORMALIZED_PIN" =');
+	});
+
 	it("records pending identity only after verification and resumes an existing branch and PR", async () => {
 		const steps = await workflowSteps();
 		const names = steps.map(step => step.name ?? "");

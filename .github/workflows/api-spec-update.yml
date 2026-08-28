@@ -281,10 +281,10 @@ jobs:
                   echo "::error::Provider release carries a malformed or mismatched spec pin"
                   exit 1
                 }
-                PROVIDER_NORMALIZED_PIN=$(jq -cS '
-                  .assets |= with_entries(.value |= sub("^sha256:"; ""))
-                ' "$RUNNER_TEMP/provider-spec-release.json")
-                [ "$PROVIDER_NORMALIZED_PIN" = "$(jq -cS . "$SOURCE_PIN_FILE")" ] || {
+                jq -e --slurpfile source "$SOURCE_PIN_FILE" '
+                  ($source | length) == 1 and
+                  ((.assets |= with_entries(.value |= sub("^sha256:"; ""))) == $source[0])
+                ' "$RUNNER_TEMP/provider-spec-release.json" >/dev/null || {
                   echo "::error::Provider release consumed different spec bytes from this receiver"
                   exit 1
                 }
