@@ -606,6 +606,12 @@ export function fenceVerdict(fence: ContainmentFence, candidate: string, access:
 	return "allow";
 }
 
+/** Apply the same deepest-rule precedence used by the native macOS Seatbelt profile. */
+export function seatbeltFenceVerdict(fence: ContainmentFence, candidate: string, access: FenceAccess): FenceVerdict {
+	if (fence.denyOnSeatbelt.length === 0) return fenceVerdict(fence, candidate, access);
+	return fenceVerdict({ ...fence, deny: [...fence.deny, ...fence.denyOnSeatbelt] }, candidate, access);
+}
+
 /** Which mechanism is actually enforcing the boundary for the `bash` tool. */
 export type ContainmentBackend = "seatbelt" | "landlock" | "scanner-only" | "disabled";
 

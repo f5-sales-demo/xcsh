@@ -9,6 +9,7 @@ import { Settings } from "../src/config/settings";
 import { _resetShellSessionsForTest } from "../src/exec/bash-executor";
 import {
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
+	SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV,
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
 } from "../src/sandbox/session-fence";
@@ -70,6 +71,7 @@ async function runInsideLiveProfile(
 		...(attemptContextOverride
 			? {
 					env: {
+						[SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV]: "denied",
 						[SANDBOX_CHECK_NAMED_SIBLING_ENV]: path.join(workspace, "bogus-sibling"),
 						[SANDBOX_SESSION_ROOT_ENV]: path.join(workspace, "bogus-root"),
 						[SANDBOX_OPERATOR_HOME_ENV]: path.join(workspace, "bogus-home"),
@@ -107,12 +109,18 @@ function assertHealthyReport(report: SandboxCheckReport): void {
 	}
 }
 
+function assertHealthyProcessResult(result: $.ShellOutput, report: SandboxCheckReport): void {
+	if (result.exitCode !== 0) {
+		throw new Error(`sandbox check exited ${result.exitCode}:\n${JSON.stringify(report, null, 2)}`);
+	}
+	assertHealthyReport(report);
+}
+
 it("runs the flag-free sandbox check named by launch-flag diagnostics and verifies fixture cleanup", async () => {
 	const result = await runSandboxCheckProcess(["--json"]);
 	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
 
-	expect(result.exitCode).toBe(0);
-	assertHealthyReport(report);
+	assertHealthyProcessResult(result, report);
 }, 30_000);
 
 it("reports a healthy matrix when invoked from operator home", async () => {
@@ -120,9 +128,47 @@ it("reports a healthy matrix when invoked from operator home", async () => {
 	const result = await runSandboxCheckProcess(["--json"], process.env, home);
 	const report = JSON.parse(result.stdout.toString()) as SandboxCheckReport;
 
-	expect(result.exitCode).toBe(0);
-	assertHealthyReport(report);
+	assertHealthyProcessResult(result, report);
 }, 30_000);
+
+it("uses the host expectation for a named sibling in an inherited profile", async () => {
+	const container = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "sandbox-check-expect-")));
+	const workspace = path.join(container, "workspace");
+	const sibling = path.join(container, "sibling");
+	fs.mkdirSync(workspace);
+	fs.mkdirSync(sibling);
+	fs.writeFileSync(path.join(sibling, "named.txt"), "sibling\n");
+
+	try {
+		const inheritedEnv = {
+			...process.env,
+			[SANDBOX_SESSION_ROOT_ENV]: workspace,
+			[SANDBOX_OPERATOR_HOME_ENV]: container,
+			[SANDBOX_CHECK_NAMED_SIBLING_ENV]: sibling,
+		};
+		const deniedResult = await runSandboxCheckProcess(["--json"], {
+			...inheritedEnv,
+			[SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV]: "denied",
+		});
+		const deniedReport = JSON.parse(deniedResult.stdout.toString()) as SandboxCheckReport;
+		const namedSibling = deniedReport.checks.find(
+			check => check.name === "named sibling follows the active boundary",
+		);
+
+		expect(deniedResult.exitCode).toBe(1);
+		expect(namedSibling?.status).toBe("FAIL");
+		expect(namedSibling?.detail).toContain("Seatbelt must deny a named sibling outside the workspace");
+
+		const allowedResult = await runSandboxCheckProcess(["--json"], {
+			...inheritedEnv,
+			[SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV]: "allowed",
+		});
+		const allowedReport = JSON.parse(allowedResult.stdout.toString()) as SandboxCheckReport;
+		assertHealthyProcessResult(allowedResult, allowedReport);
+	} finally {
+		fs.rmSync(container, { recursive: true, force: true });
+	}
+}, 60_000);
 
 it("rejects launch flags on either side of the installed sandbox subcommand with one scope diagnostic", async () => {
 	const home = fs.realpathSync(os.homedir());

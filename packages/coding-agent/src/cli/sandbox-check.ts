@@ -3,13 +3,20 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { executeShell, fencePermits } from "@f5-sales-demo/pi-natives";
-import { isEnoent, pathIsWithin } from "@f5-sales-demo/pi-utils";
+import { isEnoent } from "@f5-sales-demo/pi-utils";
 import { Settings } from "../config/settings";
 import { fenceForNative } from "../exec/bash-executor";
-import { buildContainmentFence, type ContainmentFence, containmentStatus, fenceVerdict } from "../sandbox/containment";
+import {
+	buildContainmentFence,
+	type ContainmentFence,
+	containmentStatus,
+	fenceVerdict,
+	seatbeltFenceVerdict,
+} from "../sandbox/containment";
 import { evaluateToolCall } from "../sandbox/enforce";
 import {
 	SANDBOX_CHECK_NAMED_SIBLING_ENV,
+	SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV,
 	SANDBOX_OPERATOR_HOME_ENV,
 	SANDBOX_SESSION_ROOT_ENV,
 	sandboxCheckSiblingRoot,
@@ -72,6 +79,13 @@ function sanitizeDetail(value: string, redactions: readonly Redaction[]): string
 	}
 	sanitized = sanitized.replace(/\s+/gu, " ").trim();
 	return sanitized.length > 500 ? `${sanitized.slice(0, 497)}...` : sanitized;
+}
+
+function inheritedNamedSiblingDenied(value: string | undefined): boolean | undefined {
+	if (value === undefined) return undefined;
+	if (value === "denied") return true;
+	if (value === "allowed") return false;
+	throw new Error(`invalid ${SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV}: expected "allowed" or "denied"`);
 }
 
 function errnoFromOutput(output: string): string {
@@ -210,6 +224,10 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 		const inheritedHome = process.env[SANDBOX_OPERATOR_HOME_ENV];
 		const inheritedSibling = process.env[SANDBOX_CHECK_NAMED_SIBLING_ENV];
 		const inheritedProfile = inheritedWorkspace !== undefined;
+		const inheritedSiblingDenied =
+			inheritedProfile && inheritedSibling !== undefined
+				? inheritedNamedSiblingDenied(process.env[SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV])
+				: undefined;
 		const workspaceInput = inheritedWorkspace ?? process.cwd();
 		const homeInput = inheritedHome ?? os.homedir();
 		redactions.push([workspaceInput, "<workspace>"], [homeInput, "<operator-home>"]);
@@ -481,7 +499,8 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 				}
 			}
 			const seatbeltDeniesSibling =
-				backend.backend === "seatbelt" && liveFence.denyOnSeatbelt.some(root => pathIsWithin(root, liveSibling));
+				inheritedSiblingDenied ??
+				(backend.backend === "seatbelt" && seatbeltFenceVerdict(liveFence, liveSibling, "read") === "deny");
 			const result = await shellProbe(
 				`cd ${quote(liveSibling)} && test "$(cat named.txt)" = sibling`,
 				liveWorkspace,
