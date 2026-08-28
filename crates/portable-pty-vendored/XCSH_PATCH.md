@@ -1,7 +1,7 @@
 # xcsh portable-pty patch
 
 This directory vendors portable-pty 0.9.0 from crates.io (upstream repository:
-https://github.com/wezterm/wezterm, MIT license).
+<https://github.com/wezterm/wezterm>, MIT license).
 
 xcsh adds one Unix `SlavePty::spawn_command_with_pre_exec` hook. The native PTY path uses it to
 apply the same prepared Landlock ruleset as the non-PTY shell child before portable-pty performs its
