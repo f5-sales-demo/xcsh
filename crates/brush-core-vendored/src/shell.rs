@@ -1435,7 +1435,7 @@ impl Shell {
 		// paths again would just re-run the race.
 		if let Some(fence) = params.containment.as_ref() {
 			let resolved = crate::containment::canonicalize_for_fence(&path_to_open);
-			if !fence.permits_resolved(&resolved, access) {
+			if !fence.permits_resolved_for_host(&resolved, access) {
 				return Err(std::io::Error::new(
 					std::io::ErrorKind::PermissionDenied,
 					format!("{}: outside this session's boundary", path_to_open.display()),
@@ -1452,7 +1452,7 @@ impl Shell {
 			// directory-swap race still leaked 23 times in 600 attempts with only resolving and inode
 			// comparison in place.
 			let swapped = match crate::containment::path_of_handle(&opened) {
-				Some(reached) => !fence.permits_resolved(&reached, access),
+				Some(reached) => !fence.permits_resolved_for_host(&reached, access),
 				// Nothing to ask on this platform, so fall back to identity: a file that existed when
 				// it was cleared must still be that file, and one that did not can only have been
 				// created, so its directory had to be there and hold still. Weaker, and the reason the
@@ -1516,9 +1516,10 @@ impl Shell {
 			// — and every later relative path would resolve from there.
 			let destination =
 				crate::containment::canonicalize_for_fence(&self.absolute_path(target_dir.as_ref()));
-			let readable = fence.permits_resolved(&destination, crate::containment::FenceAccess::Read);
+			let readable =
+				fence.permits_resolved_for_host(&destination, crate::containment::FenceAccess::Read);
 			let writable =
-				fence.permits_resolved(&destination, crate::containment::FenceAccess::Write);
+				fence.permits_resolved_for_host(&destination, crate::containment::FenceAccess::Write);
 			if !readable || !writable {
 				return Err(error::ErrorKind::OutsideBoundary(destination).into());
 			}
