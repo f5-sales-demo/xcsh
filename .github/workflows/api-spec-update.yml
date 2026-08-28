@@ -53,6 +53,7 @@ jobs:
         env:
           DELIVERY_LEDGER_FILE: ${{ steps.delivery.outputs.ledger_path }}
           DELIVERY_PUBLICATION_LEDGER_FILE: ${{ steps.delivery.outputs.publication_ledger_path }}
+          DELIVERY_SUPERSEDED_LEDGER_FILE: ${{ steps.delivery.outputs.superseded_ledger_path }}
         run: bun scripts/api-spec-delivery.ts check-ledger
 
       - name: Check pending delivery on main
