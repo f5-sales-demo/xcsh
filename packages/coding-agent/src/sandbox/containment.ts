@@ -531,8 +531,16 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		if (resolved === fsRoot) continue; // never the root the workspace lives on
 		// A directory containing home is normally too broad to protect because it would hide unrelated
 		// operational entries. Account containers are the deliberate exception: their listing is the
-		// discovery surface, while every named account remains reachable (#2788, #2931).
-		if (home !== undefined && pathIsWithin(resolved, home) && !accountRoots.has(resolved)) continue;
+		// discovery surface, while every named account remains reachable (#2788, #2931). A separate
+		// Windows drive is also an exception: only its exact listing is hidden, so home and every named
+		// descendant retain their normal access.
+		if (
+			!rootScoped.has(resolved) &&
+			home !== undefined &&
+			pathIsWithin(resolved, home) &&
+			!accountRoots.has(resolved)
+		)
+			continue;
 		// The session workspace and explicit read/full grants retain enumeration. A write-only grant does
 		// not imply permission to learn directory entries.
 		if (resolved === workspace) continue;
