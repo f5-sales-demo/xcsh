@@ -14,7 +14,7 @@ function u(input: string): InternalUrl {
 }
 
 beforeAll(async () => {
-	root = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-resolve-"));
+	root = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-resolve-PK-"));
 	await fs.mkdir(path.join(root, ".xcsh-plugin"), { recursive: true });
 	await fs.mkdir(path.join(root, "schema"), { recursive: true });
 	await fs.mkdir(path.join(root, "engine"), { recursive: true });
@@ -119,7 +119,7 @@ describe("binary resources", () => {
 	test("the raw bytes never appear in the content", async () => {
 		const r = await resolver().resolve(u("xcsh://plugin/demo/template"));
 		// A UTF-8 read of this file yields "PK\u0003\u0004\u0000\ufffd\ufffd".
-		expect(r.content).not.toContain("PK");
+		expect(r.content.startsWith("PK")).toBe(false);
 		expect(r.content).not.toContain("\u0000");
 	});
 
