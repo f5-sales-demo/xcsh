@@ -352,12 +352,11 @@ function resolveGrants(roots: readonly string[] | undefined, home: string): Set<
  * kernel backend, so this exact-enumeration rule is enforced for structured tools but cannot confine a
  * Bash child process.
  *
- * **Unverified on Windows.** The probe below cannot run on the platforms this fleet uses, so what is
- * tested is the exact-enumeration protection, not discovery — see the test, which injects the list.
+ * Native Windows UAT exercises this production probe against a real second mounted volume.
  *
  * UNC paths (`\\server\share`) have no enumerable root and are not covered.
  */
-function otherFilesystemRoots(fsRoot: string): string[] {
+export function otherFilesystemRoots(fsRoot: string): string[] {
 	if (process.platform !== "win32") return [];
 	const roots: string[] = [];
 	for (let letter = "A".charCodeAt(0); letter <= "Z".charCodeAt(0); letter++) {
@@ -532,8 +531,16 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		if (resolved === fsRoot) continue; // never the root the workspace lives on
 		// A directory containing home is normally too broad to protect because it would hide unrelated
 		// operational entries. Account containers are the deliberate exception: their listing is the
-		// discovery surface, while every named account remains reachable (#2788, #2931).
-		if (home !== undefined && pathIsWithin(resolved, home) && !accountRoots.has(resolved)) continue;
+		// discovery surface, while every named account remains reachable (#2788, #2931). A separate
+		// Windows drive is also an exception: only its exact listing is hidden, so home and every named
+		// descendant retain their normal access.
+		if (
+			!rootScoped.has(resolved) &&
+			home !== undefined &&
+			pathIsWithin(resolved, home) &&
+			!accountRoots.has(resolved)
+		)
+			continue;
 		// The session workspace and explicit read/full grants retain enumeration. A write-only grant does
 		// not imply permission to learn directory entries.
 		if (resolved === workspace) continue;

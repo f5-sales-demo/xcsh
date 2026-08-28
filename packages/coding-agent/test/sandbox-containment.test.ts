@@ -535,6 +535,21 @@ describe("buildContainmentFence — adversarial review of #2624", () => {
 		expect(fence.denyEnumerate).toContain(otherRoot);
 	});
 
+	it("protects another filesystem root even when that root contains home", () => {
+		const workspaceContainer = realTmp("workspace-drive");
+		const workspace = path.join(workspaceContainer, "repo");
+		const otherRoot = realTmp("home-drive");
+		const home = path.join(otherRoot, "Users", "operator");
+		fs.mkdirSync(workspace, { recursive: true });
+		fs.mkdirSync(home, { recursive: true });
+
+		const fence = buildContainmentFence({ workspace, home, fsRoot: workspaceContainer, otherRoots: [otherRoot] });
+
+		expect(fence.denyEnumerate).toContain(otherRoot);
+		expect(fenceVerdict(fence, otherRoot, "enumerate")).toBe("deny");
+		expect(fenceVerdict(fence, path.join(home, "known.txt"), "read")).toBe("allow");
+	});
+
 	// …but the root the workspace actually lives on is never denied, however it arrives.
 	it("never denies the workspace's own filesystem root", () => {
 		const container = realTmp("ownroot");
