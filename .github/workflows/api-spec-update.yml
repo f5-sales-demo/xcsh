@@ -283,7 +283,7 @@ jobs:
                 }
                 jq -e --slurpfile source "$SOURCE_PIN_FILE" '
                   ($source | length) == 1 and
-                  ((.assets |= with_entries(.value |= sub("^sha256:"; ""))) == $source[0])
+                  (. == $source[0])
                 ' "$RUNNER_TEMP/provider-spec-release.json" >/dev/null || {
                   echo "::error::Provider release consumed different spec bytes from this receiver"
                   exit 1
