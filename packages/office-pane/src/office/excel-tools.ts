@@ -25,6 +25,9 @@ export interface ExcelNamedItemCollectionLike {
 export interface ExcelRangeLike {
 	/** The range's A1 address (sheet-qualified), loaded via `load("address")`. */
 	address: string;
+	/** Excel-resolved dimensions, loaded before a write is queued. */
+	rowCount: number;
+	columnCount: number;
 	/** 2D grid of cell values (rows of columns). */
 	values: unknown[][];
 	/** 2D grid of cell formulas (rows of columns), loaded via `load("formulas")`. */
@@ -35,6 +38,12 @@ export interface ExcelRangeLike {
 	valueTypes: unknown[][];
 	/** Queue a property (e.g. `"values"`) to load on the next `sync()`. */
 	load(properties: string): void;
+	/** Return the merged area containing this range, or a null object. */
+	getMergedAreasOrNullObject(): {
+		isNullObject?: boolean;
+		address: string;
+		load(properties: string): void;
+	};
 }
 
 /** A single worksheet — the subset these tools touch. */
@@ -127,6 +136,11 @@ const SHEET_NAME_ILLEGAL_CHARS = /[:\\/?*[\]]/g;
 
 function resolveWorksheet(worksheets: ExcelWorksheetCollectionLike, sheetName: string | null): ExcelWorksheetLike {
 	return sheetName ? worksheets.getItem(sheetName) : worksheets.getActiveWorksheet();
+}
+
+function firstCellCoordinate(address: string): string {
+	const rangeAddress = address.slice(address.lastIndexOf("!") + 1);
+	return (rangeAddress.split(":", 1)[0] ?? "").replace(/\$/g, "").toUpperCase();
 }
 
 /** The `Excel.run` seam — injected so the tools need no Office runtime in tests. */
@@ -367,9 +381,31 @@ export function createExcelHostTools(excel: ExcelLike = getExcel()): HostToolReg
 
 				try {
 					await excel.run(async ctx => {
-						for (const p of planned) {
-							resolveWorksheet(ctx.workbook.worksheets, p.sheet).getRange(p.range).values = [[p.value]];
+						const targets = planned.map(p => {
+							const worksheet = resolveWorksheet(ctx.workbook.worksheets, p.sheet);
+							const range = worksheet.getRange(p.range);
+							range.load("address,rowCount,columnCount");
+							const mergedAreas = range.getMergedAreasOrNullObject();
+							mergedAreas.load("isNullObject,address");
+							return { ...p, range, mergedAreas };
+						});
+						await ctx.sync();
+
+						for (const target of targets) {
+							if (target.range.rowCount !== 1 || target.range.columnCount !== 1) {
+								throw new Error(`write_cells target must resolve to one cell: ${target.range.address}`);
+							}
+							if (
+								target.mergedAreas.isNullObject === false &&
+								firstCellCoordinate(target.range.address) !== firstCellCoordinate(target.mergedAreas.address)
+							) {
+								throw new Error(
+									`write_cells target is not the anchor of its merged area: ${target.range.address}`,
+								);
+							}
 						}
+
+						for (const target of targets) target.range.values = [[target.value]];
 						await ctx.sync();
 					});
 				} catch (err) {
