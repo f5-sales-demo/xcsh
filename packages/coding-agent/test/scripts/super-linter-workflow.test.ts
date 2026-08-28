@@ -14,7 +14,7 @@ describe("Super-Linter workflow", () => {
 		const source = await Bun.file(SUPER_LINTER_WORKFLOW).text();
 
 		expect(hasImmutableGovernedSuperLinter(source)).toBe(true);
-		expect(source).toContain('rust_edition: "2024"');
+		expect(source).toContain(`rust_edition: \${{ github.repository == 'f5-sales-demo/xcsh' && '2024' || '2021' }}`);
 	});
 
 	it("accepts pin rolls while rejecting mutable or noncanonical references", () => {
