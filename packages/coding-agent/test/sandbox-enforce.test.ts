@@ -852,6 +852,52 @@ describe("evaluateToolCall — in-place and output-naming commands (GHSA-q4hg)",
 	});
 });
 
+/**
+ * The residual command-operand class from GHSA-q4hg (#2598).
+ *
+ * An allowRead root is data supplied for inspection, never an implicit output directory. Commands
+ * whose operand direction is unknown therefore fail closed. The allowlist below is deliberately the
+ * inverse: only commands whose path operands are provably read-only keep read access.
+ */
+describe("evaluateToolCall — unmodelled operands fail closed (#2598)", () => {
+	const bash = (command: string) => check("bash", { command });
+
+	it("requires write authority for literal operands of unmodelled commands", () => {
+		for (const command of [
+			"tar -xf archive.tar -C /shared/ctx",
+			"git init /shared/ctx/repo",
+			"custom-tool --input /shared/ctx/file",
+			"custom-tool --destination=/shared/ctx/output",
+		]) {
+			const decision = bash(command);
+			expect(decision.block).toBe(true);
+			expect(decision.reason).toContain("write boundary");
+		}
+	});
+
+	it("keeps explicitly modelled readers usable against a read-only root", () => {
+		for (const command of [
+			"cat /shared/ctx/file",
+			"grep needle /shared/ctx/file",
+			"head -n 2 /shared/ctx/file",
+			"tail /shared/ctx/file",
+			"wc -l /shared/ctx/file",
+			"file /shared/ctx/file",
+			"stat /shared/ctx/file",
+			"diff /shared/ctx/one /shared/ctx/two",
+			"sha256sum /shared/ctx/file",
+		]) {
+			expect(bash(command).block).toBe(false);
+		}
+	});
+
+	it("does not infer paths from program source text", () => {
+		// Source scanning was removed in #2931: it rejects inert strings and still misses computed paths.
+		// Runtime OS confinement remains authoritative for code interpreters.
+		expect(bash("python3 -c \"open('/shared/ctx/x', 'w')\"").block).toBe(false);
+	});
+});
+
 describe("display_media sandbox paths", () => {
 	it("checks every local raster-frame source while ignoring text frames and remote sources", () => {
 		expect(check("display_media", { source: "images/local.png" }).block).toBe(false);

@@ -102,11 +102,10 @@ const COPY_BOOLEAN_OPTIONS = [
  * `block: false` (GHSA-q4hg). The same misclassification refused those commands against a *write-only*
  * grant, which is the mirror-image false refusal.
  *
- * Adding to this table is monotonic. Marking an operand as a write that is really a read costs a false
- * refusal, which is the direction the surrounding code already errs in; missing one leaves today's
- * behaviour untouched. So it is safe to extend, and deliberately incomplete rather than guessed at:
- * `tar -f` is absent because whether it reads or writes depends on the mode letters, and getting that
- * wrong in the permissive direction is the bug being fixed.
+ * The table remains useful for precise direction within a known command. Unknown commands are handled
+ * conservatively by `operandWordsRequiringWrite`; adding precise entries reduces false refusals. It is
+ * deliberately incomplete rather than guessed at: `tar -f` changes direction with its mode letters,
+ * and getting that wrong in the permissive direction is the bug being fixed.
  *
  * An option this model cannot parse exactly shifts operand positions, so anything unrecognized
  * abandons the command rather than guessing at a slot.
@@ -249,6 +248,61 @@ const WRITE_OPERAND_SPECS: Record<string, WriteOperandSpec> = {
 };
 
 /**
+ * Commands whose path operands are provably inputs.
+ *
+ * This is intentionally an allowlist. The fleet surface was measured from the read-only exploration
+ * prompts, command examples, and the #2598 reproductions: file display (`cat`, `head`, `tail`, `less`),
+ * search (`grep`, `rg`), metadata (`file`, `stat`, `readlink`, `realpath`), comparison (`cmp`, `diff`),
+ * counting/checksums, and path formatting. Commands able to execute callbacks (`find`), interpreters,
+ * archives, VCS clients, and package tools are deliberately absent. Missing a reader costs a refusal
+ * only when it names a one-directional root; missing a writer would permit mutation there.
+ */
+const READ_ONLY_OPERAND_COMMANDS = new Set([
+	"basename",
+	"cat",
+	"cksum",
+	"cmp",
+	"diff",
+	"dirname",
+	"file",
+	"grep",
+	"head",
+	"less",
+	"md5sum",
+	"od",
+	"readlink",
+	"realpath",
+	"rg",
+	"sha1sum",
+	"sha224sum",
+	"sha256sum",
+	"sha384sum",
+	"sha512sum",
+	"shasum",
+	"stat",
+	"strings",
+	"tail",
+	"wc",
+]);
+
+/** Literal operand candidates for a command whose direction cannot be modelled safely. */
+function unmodelledOperandWords(cmd: ShellSimpleCommand): ShellWord[] {
+	const candidates: ShellWord[] = [];
+	for (const word of cmd.words.slice(cmd.operandStart)) {
+		if (word.redirect !== undefined || !word.literal || word.text === "--") continue;
+		const equals = word.text.indexOf("=");
+		if (word.text.startsWith("-") && equals === -1) continue;
+		if (word.text.startsWith("-") && equals !== -1) {
+			const value = word.text.slice(equals + 1);
+			if (value.length > 0) candidates.push({ ...word, text: value });
+			continue;
+		}
+		candidates.push(word);
+	}
+	return candidates;
+}
+
+/**
  * Words of `cmd` the invoked command writes to.
  *
  * Empty whenever anything is uncertain — an unknown command, an unrecognized option, a non-literal word.
@@ -348,6 +402,29 @@ export function writtenOperandWords(cmd: ShellSimpleCommand): ShellWord[] {
 	}
 
 	return written;
+}
+
+/**
+ * Words that must clear the write boundary before the command may run.
+ *
+ * Known writers retain their precise source/destination model. Proven readers need no write check.
+ * Every other literal operand fails closed as a possible output, including values attached with `=`.
+ * This inversion is limited to one-directional grants by the fence: ordinary workspace and operational
+ * paths have the same verdict in both directions.
+ */
+export function unmodelledOperandWordsRequiringWrite(cmd: ShellSimpleCommand): ShellWord[] {
+	if (cmd.name === undefined) return [];
+	const name = cmd.name.split("/").at(-1) ?? cmd.name;
+	if (READ_ONLY_OPERAND_COMMANDS.has(name)) return [];
+	if (WRITE_OPERAND_SPECS[name] !== undefined) return [];
+	return unmodelledOperandWords(cmd);
+}
+
+/** Precise known writes plus conservative possible writes, exposed together for contract tests. */
+export function operandWordsRequiringWrite(cmd: ShellSimpleCommand): ShellWord[] {
+	if (cmd.name === undefined) return [];
+	const name = cmd.name.split("/").at(-1) ?? cmd.name;
+	return [...writtenOperandWords({ ...cmd, name }), ...unmodelledOperandWordsRequiringWrite({ ...cmd, name })];
 }
 
 /**
