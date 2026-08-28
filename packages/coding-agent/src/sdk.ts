@@ -1639,39 +1639,37 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				contextSkillDirs,
 				contextIncludeSkills,
 				contextExcludeSkills,
+				transformPrompt: typeof options.systemPrompt === "function" ? options.systemPrompt : undefined,
 			});
 
-			if (options.systemPrompt === undefined) {
+			if (options.systemPrompt === undefined || typeof options.systemPrompt === "function") {
 				return defaultPrompt;
 			}
-			if (typeof options.systemPrompt === "string") {
-				return await buildSystemPromptInternal({
-					cwd,
-					skills,
-					contextFiles,
-					agentsMdSearch,
-					tools: promptTools,
-					toolNames,
-					rules: rulebookRules,
-					alwaysApplyRules,
-					skillsSettings: settings.getGroup("skills"),
-					customPrompt: options.systemPrompt,
-					appendSystemPrompt: appendPrompt,
-					repeatToolDescriptions,
-					intentField,
-					mcpDiscoveryMode: hasDiscoverableMCPTools,
-					mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
-					eagerTasks,
-					secretsEnabled,
-					context: contextForPrompt,
-					locale: localeForPrompt,
-					knowledgeTopics,
-					contextSkillDirs,
-					contextIncludeSkills,
-					contextExcludeSkills,
-				});
-			}
-			return options.systemPrompt(defaultPrompt);
+			return await buildSystemPromptInternal({
+				cwd,
+				skills,
+				contextFiles,
+				agentsMdSearch,
+				tools: promptTools,
+				toolNames,
+				rules: rulebookRules,
+				alwaysApplyRules,
+				skillsSettings: settings.getGroup("skills"),
+				customPrompt: options.systemPrompt,
+				appendSystemPrompt: appendPrompt,
+				repeatToolDescriptions,
+				intentField,
+				mcpDiscoveryMode: hasDiscoverableMCPTools,
+				mcpDiscoveryServerSummaries: discoverableMCPSummary.servers.map(formatDiscoverableMCPToolServerSummary),
+				eagerTasks,
+				secretsEnabled,
+				context: contextForPrompt,
+				locale: localeForPrompt,
+				knowledgeTopics,
+				contextSkillDirs,
+				contextIncludeSkills,
+				contextExcludeSkills,
+			});
 		};
 
 		const toolNamesFromRegistry = Array.from(toolRegistry.keys());
