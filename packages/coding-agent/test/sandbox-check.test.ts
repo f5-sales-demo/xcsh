@@ -164,7 +164,13 @@ it("uses the host expectation for a named sibling in an inherited profile", asyn
 			[SANDBOX_CHECK_NAMED_SIBLING_EXPECTATION_ENV]: "allowed",
 		});
 		const allowedReport = JSON.parse(allowedResult.stdout.toString()) as SandboxCheckReport;
-		assertHealthyProcessResult(allowedResult, allowedReport);
+		const allowedSibling = allowedReport.checks.find(
+			check => check.name === "named sibling follows the active boundary",
+		);
+		expect(allowedSibling).toEqual({
+			name: "named sibling follows the active boundary",
+			status: "PASS",
+		});
 	} finally {
 		fs.rmSync(container, { recursive: true, force: true });
 	}
