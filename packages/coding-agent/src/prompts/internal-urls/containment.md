@@ -61,6 +61,10 @@ Without a runtime backend, Bash child-process reads cannot enforce protected-con
 xcsh-private-root denial. Structured tools still enforce those rules, and ordinary work remains
 unrestricted. The persistent `python` kernel is likewise unfenced beyond its explicit `cwd` check.
 
+On Windows, mounted drive letters other than the workspace drive lose root enumeration in structured
+tools. A UNC share that is not mapped to a drive letter cannot be enumerated and is outside this
+courtesy boundary; map it to a drive or grant a known path explicitly when it belongs to the task.
+
 Treat the boundary as a statement of intent rather than a guarantee, and do not go looking for paths
 outside the session directory on the assumption that something would stop you.
 {{/if}}

@@ -1,0 +1,51 @@
+---
+name: Windows Multi-Volume Containment UAT
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/windows-containment-uat.yml"
+      - "packages/coding-agent/src/sandbox/containment.ts"
+      - "packages/coding-agent/src/prompts/internal-urls/containment.md"
+      - "packages/coding-agent/test/windows-drive-containment.uat.test.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-containment-uat-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  native-two-volume:
+    name: Native Windows two-volume containment
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Inventory native Windows volumes
+        shell: pwsh
+        run: |
+          Get-Volume |
+            Sort-Object DriveLetter |
+            Select-Object DriveLetter, DriveType, HealthStatus, OperationalStatus, Size |
+            Format-Table -AutoSize
+
+      - name: Set up Bun 1.3
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
+          bun-version: "1.3"
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: bun install --frozen-lockfile
+
+      - name: Run native multi-volume UAT
+        shell: bash
+        run: bun test packages/coding-agent/test/windows-drive-containment.uat.test.ts
