@@ -78,6 +78,8 @@ CONTAINER_ROUTE_EXPRESSION = (
     "fromJSON(format('[\"self-hosted\",\"Linux\",\"X64\",\"{0}\","
     "\"container-build\"]', github.event.repository.name)) }}"
 )
+ARC_SOCKET_EXPR = "${{ inputs.socketless_runner_label || 'managed-socketless' }}"
+BUILD_EXPR = "${{ inputs.container_build_runner_label || 'managed-container-build' }}"
 REUSABLE_RUNNER_WORKFLOWS = {
     "f5-sales-demo/docs-control/.github/workflows/github-pages-deploy.yml",
     "f5-sales-demo/docs-control/.github/workflows/super-linter.yml",
@@ -97,15 +99,15 @@ REUSABLE_DEFINITION_ROUTES = {
     ),
     (".github/workflows/super-linter.yml", "trust-gate"): (
         "ubuntu-24.04",
-        SOCKETLESS_ROUTE_EXPRESSION,
+        ARC_SOCKET_EXPR,
     ),
     (".github/workflows/super-linter.yml", "lint"): (
         "container-build",
-        CONTAINER_ROUTE_EXPRESSION,
+        BUILD_EXPR,
     ),
     (".github/workflows/super-linter.yml", "shell-unit-tests"): (
         "ubuntu-24.04",
-        SOCKETLESS_ROUTE_EXPRESSION,
+        ARC_SOCKET_EXPR,
     ),
 }
 
@@ -196,6 +198,10 @@ ARC_SHARED_CONTRACTS = (
                 "label": "xcsh-container-build",
                 "profile": "container-build",
             },
+            "compute": {
+                "label": "xcsh-compute",
+                "profile": "ubuntu-24.04",
+            },
         },
     ),
 )
@@ -206,6 +212,7 @@ RESERVED_ARC_LABELS = frozenset(
         "managed-container-build",
         "managed-socketless",
         "xcsh-container-build",
+        "xcsh-compute",
         "xcsh-socketless",
     }
 )
@@ -697,20 +704,11 @@ def secret_references(text):
 
 
 # pylint: disable-next=too-many-locals
-def validate_job(repository, workflow, job, spec, default_profile, routes):
+def validate_job(_repository, workflow, job, spec, _default_profile, _routes):
     errors = []
-    basename = repository.split("/", 1)[1]
     runs_on = job.get("runs-on")
-    default_routes = [
-        route
-        for route, profile in routes["profiles_by_route"].items()
-        if profile == default_profile
-        and (routes["kind"] == "arc" or route[3] == basename)
-    ]
-    expected_route = default_routes[0] if len(default_routes) == 1 else None
-    if isinstance(expected_route, tuple):
-        expected_route = list(expected_route)
-    if runs_on != spec["runs_on"] or runs_on != expected_route:
+    expected_route = spec["runs_on"]
+    if runs_on != expected_route:
         errors.append(f"runs-on must equal {expected_route!r}, got {runs_on!r}")
     if job.get("environment") != spec["environment"]:
         errors.append(f"environment mismatch: {job.get('environment')!r}")
