@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { prioritizeInjectedPluginRoots } from "../../src/discovery/helpers";
-import type { XcshPluginRoot } from "../../src/discovery/types";
+import { prioritizeInjectedPluginRoots, type XcshPluginRoot } from "../../src/discovery/helpers";
 
 function root(plugin: string, marketplace: string, path: string): XcshPluginRoot {
 	return { id: `${plugin}@${marketplace}`, plugin, marketplace, path, version: "1.0.0", scope: "user" };
