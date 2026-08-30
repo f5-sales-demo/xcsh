@@ -1,5 +1,53 @@
 import { describe, expect, it } from "bun:test";
-import { compareContractVersions, regressionReason } from "../../scripts/generate-extension-capabilities";
+import {
+	compareContractVersions,
+	regressionReason,
+	validateCapabilityManifest,
+} from "../../scripts/generate-extension-capabilities";
+
+const VALID_PROMPT_HINTS = {
+	role: "role",
+	grounding: "grounding",
+	referenceLinks: "references",
+	toolUse: "tools",
+	modes: {
+		educational: "educational",
+		presentation: "presentation",
+		configuration: "configuration",
+		screenshot: "screenshot",
+		annotation: "annotation",
+	},
+};
+
+function validManifest() {
+	return {
+		version: "0.1.0",
+		contractVersion: "2.1.0",
+		protocol: "tool_request/result",
+		tools: [],
+		features: { chat: { promptHints: { ...VALID_PROMPT_HINTS, modes: { ...VALID_PROMPT_HINTS.modes } } } },
+	};
+}
+
+describe("validateCapabilityManifest", () => {
+	it.each(["role", "grounding", "referenceLinks", "toolUse"] as const)(
+		"rejects a manifest missing the %s prompt hint",
+		hint => {
+			const manifest = validManifest();
+			delete manifest.features.chat.promptHints[hint];
+			expect(() => validateCapabilityManifest(manifest)).toThrow(`features.chat.promptHints.${hint}`);
+		},
+	);
+
+	it.each(["educational", "presentation", "configuration", "screenshot", "annotation"] as const)(
+		"rejects a manifest missing the %s interaction mode",
+		mode => {
+			const manifest = validManifest();
+			delete manifest.features.chat.promptHints.modes[mode];
+			expect(() => validateCapabilityManifest(manifest)).toThrow(`features.chat.promptHints.modes.${mode}`);
+		},
+	);
+});
 
 /**
  * The capability generator adopts a sibling extension checkout's manifest when one is present, and used to
