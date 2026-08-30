@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { EXTENSION_CAPABILITIES } from "../../src/browser/capabilities.generated";
 import { composeChatPrompt, KEEPALIVE_INTERVAL_MS, shouldSendKeepalive } from "../../src/browser/chat-handler";
 import type { PageContextSnapshot } from "../../src/browser/chat-protocol";
 import { classifyReferenceKind } from "../../src/references";
@@ -61,6 +62,26 @@ describe("composeChatPrompt", () => {
 			const result = composeChatPrompt("test", null, mode, null);
 			expect(result).toContain(`[Chat mode: ${mode}]`);
 		}
+	});
+
+	it("includes every published scalar hint and the exact active-mode hint", () => {
+		const hints = EXTENSION_CAPABILITIES.features.chat.promptHints;
+		for (const mode of ["educational", "presentation", "configuration", "screenshot", "annotation"] as const) {
+			const result = composeChatPrompt("test", null, mode, "chrome");
+			for (const hint of [hints.role, hints.grounding, hints.referenceLinks, hints.toolUse]) {
+				expect(result).toContain(hint);
+			}
+			expect(result).toContain(`[Chat mode: ${mode}] ${hints.modes[mode]}`);
+		}
+	});
+
+	it("publishes authoritative API grounding, truncation, markdown references, and tool-notice prohibition", () => {
+		const result = composeChatPrompt("test", null, "educational", "chrome");
+		expect(result).toContain("context.api.body");
+		expect(result).toContain("authoritative current state");
+		expect(result).toContain("respect the truncated flags");
+		expect(result).toContain("markdown link [title](url)");
+		expect(result).toContain("never emit chat_tool_notice yourself");
 	});
 
 	it("notes truncation when flags are set", () => {

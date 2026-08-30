@@ -21,6 +21,7 @@ import {
 import { LITELLM_LOGIN_MODEL_CHOICES } from "../modes/controllers/login-model";
 import { extractReferences } from "../references";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
+import { EXTENSION_CAPABILITIES } from "./capabilities.generated";
 import {
 	type ChatDelta,
 	type ChatDone,
@@ -689,14 +690,6 @@ export function classifyChatErrorReason(message: string): ChatErrorReason {
 	return "provider-5xx";
 }
 
-const MODE_INSTRUCTIONS: Record<InteractionMode, string> = {
-	educational: "Explain concepts and settings in depth. Help the user understand what they're looking at and why.",
-	presentation: "Guide a structured walkthrough. Narrate each step clearly for a live audience.",
-	configuration: "Help the user build or modify F5 XC configuration. Be precise and action-oriented.",
-	screenshot: "Focus on capturing annotated screenshots that document the current state.",
-	annotation: "Create on-page teaching annotations that highlight key elements and explain their purpose.",
-};
-
 /** Bases a user-attached context path must fall under. Confines grants to the user's
  *  own space (home, the project cwd, temp, external volumes, /opt) and thereby blocks
  *  a client from widening the sandbox to system/credential dirs (`/etc`, `/var`,
@@ -779,11 +772,22 @@ export function composeChatPrompt(
 	const profile = hostProfile(host);
 	parts.push(profile.systemPrompt);
 
+	const promptHints = EXTENSION_CAPABILITIES.features.chat.promptHints;
+
 	// Browser hosts ALSO get an interaction mode + the page-context block. Document
 	// hosts get NEITHER: Office sends no page context and has no browser modes; its
 	// tools + document state arrive at runtime via set_host_tools.
 	if (profile.kind === "browser") {
-		parts.push(`[Chat mode: ${mode}] ${MODE_INSTRUCTIONS[mode]}`);
+		parts.push(
+			[
+				"[Published extension chat contract]",
+				promptHints.role,
+				promptHints.grounding,
+				promptHints.referenceLinks,
+				promptHints.toolUse,
+			].join("\n"),
+		);
+		parts.push(`[Chat mode: ${mode}] ${promptHints.modes[mode]}`);
 		if (context) composeBrowserPageContext(parts, context);
 	}
 

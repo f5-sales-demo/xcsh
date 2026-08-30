@@ -15,13 +15,33 @@ export interface ExtensionToolDef {
 	readonly flags?: ExtensionToolFlags;
 }
 
+export type ExtensionInteractionMode =
+	| "educational"
+	| "presentation"
+	| "configuration"
+	| "screenshot"
+	| "annotation";
+
+export interface ExtensionChatPromptHints {
+	readonly role: string;
+	readonly grounding: string;
+	readonly referenceLinks: string;
+	readonly toolUse: string;
+	readonly modes: Readonly<Record<ExtensionInteractionMode, string>>;
+}
+
+export interface ExtensionFeatures {
+	readonly chat: { readonly promptHints: ExtensionChatPromptHints; readonly [key: string]: unknown };
+	readonly [key: string]: unknown;
+}
+
 export interface ExtensionCapabilities {
 	readonly version: string;
 	readonly contractVersion: string;
 	readonly multiPortDiscovery?: boolean;
 	readonly protocol: string;
 	readonly tools: readonly ExtensionToolDef[];
-	readonly features: Record<string, unknown>;
+	readonly features: ExtensionFeatures;
 }
 
 export const EXTENSION_CAPABILITIES: ExtensionCapabilities = {
