@@ -46,3 +46,65 @@ export function extractRequestedTools(source: string): string[] {
 	while ((m = re.exec(source)) !== null) out.add(m[1]);
 	return [...out];
 }
+
+interface ToolReferenceManifest {
+	readonly contractVersion: string;
+	readonly tools: readonly {
+		readonly name: string;
+		readonly summary: string;
+		readonly category: string;
+		readonly params: Readonly<Record<string, unknown>>;
+		readonly flags?: {
+			readonly readOnly?: boolean;
+			readonly mutates?: boolean;
+			readonly requiresExplainMode?: boolean;
+		};
+	}[];
+}
+
+function compareText(left: string, right: string): number {
+	return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** Stable JSON with object keys sorted recursively and array order preserved. */
+function canonicalJson(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+	if (value !== null && typeof value === "object") {
+		const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
+			compareText(left, right),
+		);
+		return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(",")}}`;
+	}
+	return JSON.stringify(value) ?? "null";
+}
+
+/** Render the complete extension tool surface as deterministic Markdown. */
+export function renderToolReference(manifest: ToolReferenceManifest): string {
+	const categories = new Map<string, ToolReferenceManifest["tools"][number][]>();
+	for (const tool of manifest.tools) {
+		const tools = categories.get(tool.category) ?? [];
+		tools.push(tool);
+		categories.set(tool.category, tools);
+	}
+
+	const lines = [
+		"# Chrome Extension Tool Signatures",
+		"",
+		`Generated from extension capability contract \`${manifest.contractVersion}\`.`,
+	];
+	for (const category of [...categories.keys()].sort(compareText)) {
+		lines.push("", `## ${category}`);
+		for (const tool of (categories.get(category) ?? []).sort((left, right) => compareText(left.name, right.name))) {
+			lines.push(
+				"",
+				`### \`${tool.name}\``,
+				"",
+				tool.summary,
+				"",
+				`- Parameters: \`${canonicalJson(tool.params)}\``,
+				`- Semantic flags: \`${canonicalJson(tool.flags ?? {})}\``,
+			);
+		}
+	}
+	return `${lines.join("\n")}\n`;
+}

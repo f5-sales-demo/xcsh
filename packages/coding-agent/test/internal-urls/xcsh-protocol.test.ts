@@ -3,6 +3,8 @@ import { InternalDocsProtocolHandler, InternalUrlRouter } from "../../src/intern
 import { createApiSpecResolver } from "../../src/internal-urls/api-spec-resolve";
 import type { RuntimeBuildInfo } from "../../src/internal-urls/build-info-runtime";
 import { EMBEDDED_DOC_FILENAMES } from "../../src/internal-urls/docs-index.generated";
+import extensionApiContent from "../../src/internal-urls/extension-api.md" with { type: "text" };
+import { EXTENSION_TOOL_REFERENCE } from "../../src/internal-urls/extension-tools.generated";
 
 function injectedInfo(overrides: Partial<RuntimeBuildInfo> = {}): RuntimeBuildInfo {
 	return {
@@ -131,6 +133,17 @@ describe("xcsh:// embedded doc routes", () => {
 		await expect(createRouter().resolve("xcsh://this-doc-does-not-exist-ever.md")).rejects.toThrow(
 			/Documentation file not found/,
 		);
+	});
+});
+
+describe("xcsh://extension", () => {
+	it("appends generated signatures to the existing operational guidance", async () => {
+		const resource = await createRouter().resolve("xcsh://extension");
+		expect(resource.contentType).toBe("text/markdown");
+		expect(resource.sourcePath).toBe("xcsh://extension");
+		expect(resource.content.startsWith(extensionApiContent.trimEnd())).toBe(true);
+		expect(resource.content).toContain(EXTENSION_TOOL_REFERENCE);
+		expect(resource.size).toBe(Buffer.byteLength(resource.content, "utf-8"));
 	});
 });
 

@@ -44,6 +44,7 @@ import { type ConsoleFieldMetadataData, EMPTY_CONSOLE_FIELD_METADATA } from "./c
 import { type ConsoleResolver, createConsoleResolver } from "./console-resolve";
 import { EMBEDDED_DOC_FILENAMES, EMBEDDED_DOCS } from "./docs-index.generated";
 import extensionApiContent from "./extension-api.md" with { type: "text" };
+import { EXTENSION_TOOL_REFERENCE } from "./extension-tools.generated";
 import { createFleetResolver, type FleetDeps, type FleetResolver } from "./fleet-resolve";
 import { createPluginResolver, type GetPluginRoots, type PluginResolver } from "./plugin-resolve";
 import { createRegistryResolver, type RegistryResolver, type RegistryResolverDeps } from "./registry-resolve";
@@ -66,6 +67,7 @@ const CHANGES_HOST = "changes";
 const SOURCE_HOST = "source";
 const FLEET_HOST = "fleet";
 const SITECLI_HOST = "sitecli";
+const EXTENSION_CONTENT = `${extensionApiContent.trimEnd()}\n\n---\n\n${EXTENSION_TOOL_REFERENCE}`;
 const EMPTY_INDEX: ApiSpecIndex = { version: "unavailable", timestamp: "", domains: [] };
 const EMPTY_CATALOG_INDEX: ApiCatalogIndex = {
 	version: "unavailable",
@@ -490,15 +492,14 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 		return this.#readDoc(filename, url);
 	}
 
-	/** Serve the Chrome extension bridge tool API reference. The hand-written
-	 * guidance (extension-api.md) is imported at compile time and served on demand
-	 * at `xcsh://extension`. */
+	/** Serve the Chrome extension bridge guidance plus generated tool signatures.
+	 * Both are imported at compile time and served on demand at `xcsh://extension`. */
 	#resolveExtension(url: InternalUrl): InternalResource {
 		return {
 			url: url.href,
-			content: extensionApiContent,
+			content: EXTENSION_CONTENT,
 			contentType: "text/markdown",
-			size: Buffer.byteLength(extensionApiContent, "utf-8"),
+			size: Buffer.byteLength(EXTENSION_CONTENT, "utf-8"),
 			sourcePath: `${SCHEME_PREFIX}${EXTENSION_HOST}`,
 		};
 	}
