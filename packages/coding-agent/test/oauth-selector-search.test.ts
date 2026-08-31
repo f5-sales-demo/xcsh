@@ -97,13 +97,13 @@ describe("OAuthSelectorComponent provider search", () => {
 	it("offers the enterprise alias only for login so logout has one canonical row", () => {
 		const login = createSelector("login", true).selector;
 		for (const character of "google-antigravity-enterprise") login.handleInput(character);
-		expect(renderText(login)).toContain("Google Antigravity Enterprise (Gemini 3.6 Flash High)");
+		expect(renderText(login)).toContain("Google Antigravity Enterprise (Advanced OAuth)");
 
 		const logout = createSelector("logout", true).selector;
 		for (const character of "antigravity") logout.handleInput(character);
 		const rendered = renderText(logout);
 		expect(rendered).toContain("Antigravity (Gemini 3, Claude, GPT-OSS)");
-		expect(rendered).not.toContain("Google Antigravity Enterprise (Gemini 3.6 Flash High)");
+		expect(rendered).not.toContain("Google Antigravity Enterprise (Advanced OAuth)");
 		expect(rendered).toContain(
 			`1 match (${getOAuthProviders().filter(provider => !provider.loginOnly).length} total)`,
 		);

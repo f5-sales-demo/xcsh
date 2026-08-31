@@ -22,7 +22,7 @@ describe("Antigravity enterprise project resolution", () => {
 
 		expect(provider).toMatchObject({
 			id: "google-antigravity-enterprise",
-			name: "Google Antigravity Enterprise (Gemini 3.6 Flash High)",
+			name: "Google Antigravity Enterprise (Advanced OAuth)",
 			available: true,
 			canonicalId: "google-antigravity",
 			loginOnly: true,
