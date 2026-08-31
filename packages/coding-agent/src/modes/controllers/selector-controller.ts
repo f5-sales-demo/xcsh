@@ -86,7 +86,6 @@ import { commitVllmLogin } from "./vllm-login-transaction";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 	"anthropic",
-	"openai-codex-browser",
 	"gitlab-duo",
 	"google-gemini-cli",
 	"google-antigravity",
@@ -1225,8 +1224,7 @@ export class SelectorController {
 		this.ctx.showStatus(`Logging in to ${providerId}…`);
 		const manualInput = this.ctx.oauthManualInput;
 		const useManualInput =
-			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) ||
-			(providerId === "openai-codex" && resolveOpenAICodexLoginMethod() === "browser");
+			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) || providerId === "openai-codex";
 		const shouldOpenBrowser = providerId !== "openai-codex" || resolveOpenAICodexLoginMethod() === "browser";
 		const loginCallbacks = {
 			onAuth: (info: { url: string; instructions?: string }) => {

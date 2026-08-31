@@ -1,5 +1,6 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { canonicalizeOAuthProviderId, type Model } from "@f5-sales-demo/pi-ai";
+import type { Settings } from "../../config/settings";
 import type { VllmDiscoveredModel } from "../../config/vllm-config";
 import { applySubscriptionProfileRoles, type SubscriptionProfileId } from "../../routing/subscription-profiles";
 
@@ -42,10 +43,10 @@ export const GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 };
 
 export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
-	label: "GPT-5.6 Terra",
-	description: "Balanced OpenAI Codex subscription model with medium reasoning",
+	label: "GPT-5.6",
+	description: "OpenAI Codex subscription model with medium reasoning",
 	provider: "openai-codex",
-	modelId: "gpt-5.6-terra",
+	modelId: "gpt-5.6-sol",
 	thinkingLevel: ThinkingLevel.Medium,
 };
 
@@ -83,12 +84,7 @@ interface ModelApplicableSession extends BaseModelApplicableSession {
 		getAll(): Model[];
 		getProviderDiscoveryState?(provider: string): { status: string; stale: boolean } | undefined;
 	};
-	settings?: {
-		getModelRoles(): Readonly<Record<string, string | undefined>>;
-		get?(key: "routing.profile"): "none" | SubscriptionProfileId;
-		set(key: "modelRoles", value: Record<string, string>): void;
-		set(key: "routing.profile", value: "none" | SubscriptionProfileId): void;
-	};
+	settings?: Pick<Settings, "getModelRoles" | "get" | "set">;
 }
 
 /**
@@ -138,7 +134,12 @@ export async function applyOAuthLoginModel(
 	}
 
 	const settings = session.settings;
-	const previousProfile = settings?.get?.("routing.profile") ?? "none";
+	const storedProfile = settings?.get("routing.profile");
+	const previousProfile: "none" | SubscriptionProfileId =
+		storedProfile === "google-antigravity" || storedProfile === "openai-codex" ? storedProfile : "none";
+	const storedRoutingMode = settings?.get("routing.mode");
+	const previousRoutingMode =
+		storedRoutingMode === "shadow" || storedRoutingMode === "auto" ? storedRoutingMode : "off";
 	const previousRoles = settings
 		? Object.fromEntries(
 				Object.entries(settings.getModelRoles()).filter(
@@ -155,6 +156,7 @@ export async function applyOAuthLoginModel(
 		);
 		if (!profile.applied) return undefined;
 		settings.set("modelRoles", profile.roles);
+		settings.set("routing.mode", "off");
 		settings.set("routing.profile", canonicalProvider as SubscriptionProfileId);
 	}
 
@@ -162,12 +164,14 @@ export async function applyOAuthLoginModel(
 		const applied = await applyModelAfterLogin(session, choice);
 		if (!applied && settings) {
 			settings.set("modelRoles", previousRoles);
+			settings.set("routing.mode", previousRoutingMode);
 			settings.set("routing.profile", previousProfile);
 		}
 		return applied ? choice : undefined;
 	} catch (error) {
 		if (settings) {
 			settings.set("modelRoles", previousRoles);
+			settings.set("routing.mode", previousRoutingMode);
 			settings.set("routing.profile", previousProfile);
 		}
 		throw error;

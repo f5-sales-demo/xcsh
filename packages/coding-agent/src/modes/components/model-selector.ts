@@ -67,6 +67,29 @@ interface ScopedModelItem {
 	thinkingLevel?: string;
 }
 
+export interface DefaultPickerModelPresentation {
+	model: Model;
+	displaySelector: string;
+	selector: string;
+}
+
+const OPENAI_CODEX_GPT56_TIERS = new Set(["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]);
+
+/** Collapse subscription tiers only in the ordinary picker; explicit --models scopes keep raw access. */
+export function presentModelsForDefaultPicker(
+	models: readonly Model[],
+	explicitlyScoped = false,
+): DefaultPickerModelPresentation[] {
+	return models.flatMap(model => {
+		const selector = `${model.provider}/${model.id}`;
+		if (explicitlyScoped || model.provider !== "openai-codex" || !OPENAI_CODEX_GPT56_TIERS.has(model.id)) {
+			return [{ model, displaySelector: selector, selector }];
+		}
+		if (model.id !== "gpt-5.6-sol") return [];
+		return [{ model, displaySelector: "openai-codex/gpt-5.6", selector }];
+	});
+}
+
 interface RoleAssignment {
 	model: Model;
 	thinkingLevel: ThinkingLevel;
@@ -359,12 +382,15 @@ export class ModelSelectorComponent extends Container {
 
 		// Use scoped models if provided via --models flag
 		if (this.#scopedModels.length > 0) {
-			models = this.#scopedModels.map(scoped => ({
+			models = presentModelsForDefaultPicker(
+				this.#scopedModels.map(scoped => scoped.model),
+				true,
+			).map(item => ({
 				kind: "provider",
-				provider: scoped.model.provider,
-				id: scoped.model.id,
-				model: scoped.model,
-				selector: `${scoped.model.provider}/${scoped.model.id}`,
+				provider: item.model.provider,
+				id: item.displaySelector.slice(item.displaySelector.indexOf("/") + 1),
+				model: item.model,
+				selector: item.selector,
 			}));
 		} else {
 			// Reload config and cached discovery state without blocking on live provider refresh
@@ -381,12 +407,12 @@ export class ModelSelectorComponent extends Container {
 			// Load available models (built-in models still work even if models.json failed)
 			try {
 				const availableModels = this.#modelRegistry.getAvailable();
-				models = availableModels.map((model: Model) => ({
+				models = presentModelsForDefaultPicker(availableModels).map(item => ({
 					kind: "provider",
-					provider: model.provider,
-					id: model.id,
-					model,
-					selector: `${model.provider}/${model.id}`,
+					provider: item.model.provider,
+					id: item.displaySelector.slice(item.displaySelector.indexOf("/") + 1),
+					model: item.model,
+					selector: item.selector,
 				}));
 			} catch (error) {
 				this.#allModels = [];
@@ -428,7 +454,28 @@ export class ModelSelectorComponent extends Container {
 					compactSearchText: compactSearchText(searchText),
 				};
 			})
-			.filter((item): item is CanonicalModelItem => item !== undefined);
+			.filter((item): item is CanonicalModelItem => item !== undefined)
+			.filter(
+				item =>
+					this.#scopedModels.length > 0 ||
+					item.model.provider !== "openai-codex" ||
+					!OPENAI_CODEX_GPT56_TIERS.has(item.model.id),
+			);
+		if (this.#scopedModels.length === 0) {
+			const friendly = models.find(item => item.provider === "openai-codex" && item.id === "gpt-5.6");
+			if (friendly) {
+				canonicalModels.push({
+					kind: "canonical",
+					id: "openai-codex/gpt-5.6",
+					model: friendly.model,
+					selector: friendly.selector,
+					variantCount: 1,
+					searchText: "openai-codex/gpt-5.6 GPT-5.6 Sol",
+					normalizedSearchText: normalizeSearchText("openai-codex/gpt-5.6 GPT-5.6 Sol"),
+					compactSearchText: compactSearchText("openai-codex/gpt-5.6 GPT-5.6 Sol"),
+				});
+			}
+		}
 
 		this.#sortModels(models);
 		this.#sortCanonicalModels(canonicalModels);

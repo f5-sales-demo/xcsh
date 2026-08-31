@@ -9,13 +9,7 @@ interface UatTarget {
 	executable?: string;
 }
 
-interface CommandResult {
-	exitCode: number;
-	stdout: string;
-	stderr: string;
-}
-
-export const OPENAI_CODEX_TERRA_MODEL = "openai-codex/gpt-5.6-terra";
+export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-5.6-sol";
 
 const ROOT_DIR = path.resolve(import.meta.dir, "../../..");
 const STARTUP_TIMEOUT_MS = 60_000;
@@ -186,10 +180,12 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		const startup = visibleTranscript(transcript);
 		for (const provider of [
 			"ChatGPT Plus/Pro (Codex Subscription)",
-			"ChatGPT Plus/Pro (Browser callback)",
 			"OpenAI Responses API (usage-based API access)",
 		]) {
 			if (!startup.includes(provider)) throw new Error(`${target.label} did not list ${provider}`);
+		}
+		if (startup.includes("ChatGPT Plus/Pro (Browser callback)")) {
+			throw new Error(`${target.label} listed the hidden browser compatibility provider`);
 		}
 		if (startup.includes("Model Provider URL")) {
 			throw new Error(`${target.label} entered LiteLLM URL configuration during fresh startup`);
@@ -199,7 +195,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		await waitFor(
 			target.label,
 			() => transcript,
-			visible => visible.includes("ChatGPT Plus/Pro (Codex Subscription)") && visible.includes("2 matches"),
+			visible => visible.includes("ChatGPT Plus/Pro (Codex Subscription)") && visible.includes("1 match"),
 			"the filtered ChatGPT provider",
 			() => exited,
 			STARTUP_TIMEOUT_MS,
@@ -219,26 +215,26 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			() => transcript,
 			visible =>
 				visible.includes("Successfully logged in to openai-codex") &&
-				visible.includes(`Default model: ${OPENAI_CODEX_TERRA_MODEL}`),
-			"ChatGPT OAuth completion and Terra selection",
+				visible.includes(`Default model: ${OPENAI_CODEX_SOL_MODEL}`),
+			"ChatGPT OAuth completion and Sol selection",
 			() => exited,
 			OAUTH_TIMEOUT_MS,
 		);
 
-		const sentinel = `XCSH_TERRA_UAT_${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
+		const sentinel = `XCSH_SOL_UAT_${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
 		await Bun.sleep(250);
 		session.write(`Reply with exactly ${sentinel} and nothing else.\r`);
 		await waitFor(
 			target.label,
 			() => transcript,
 			visible => countOccurrences(visible, sentinel) >= 2,
-			"the exact GPT-5.6 Terra sentinel response",
+			"the exact GPT-5.6 Sol sentinel response",
 			() => exited,
 			SENTINEL_TIMEOUT_MS,
 		);
 		if (callbackError) throw callbackError;
 		console.log(
-			`PASS: ${target.label} completed fresh xcsh ChatGPT OAuth and the ${OPENAI_CODEX_TERRA_MODEL} sentinel.`,
+			`PASS: ${target.label} completed fresh xcsh ChatGPT OAuth and the ${OPENAI_CODEX_SOL_MODEL} sentinel.`,
 		);
 	} finally {
 		if (!exited) session.kill();
@@ -247,73 +243,13 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 	}
 }
 
-async function runCommand(
-	command: string,
-	args: string[],
-	timeoutMs: number,
-	env: Record<string, string | undefined>,
-): Promise<CommandResult> {
-	const process = Bun.spawn([command, ...args], {
-		cwd: ROOT_DIR,
-		env,
-		stdin: "ignore",
-		stdout: "pipe",
-		stderr: "pipe",
-	});
-	const stdoutPromise = new Response(process.stdout).text();
-	const stderrPromise = new Response(process.stderr).text();
-	let timedOut = false;
-	const timeout = setTimeout(() => {
-		timedOut = true;
-		process.kill();
-	}, timeoutMs);
-	const exitCode = await process.exited;
-	clearTimeout(timeout);
-	const [stdout, stderr] = await Promise.all([stdoutPromise, stderrPromise]);
-	if (timedOut) throw new Error(`${command} timed out after ${timeoutMs}ms`);
-	return { exitCode, stdout, stderr };
-}
-
-async function verifyPreservedCredential(target: UatTarget): Promise<void> {
-	const sentinel = `XCSH_PRESERVED_TERRA_${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
-	const [command, ...prefixArgs] = target.argv;
-	if (!command) throw new Error(`${target.label} has no executable`);
-	const env = { ...Bun.env };
-	delete env.OPENAI_CODEX_OAUTH_TOKEN;
-	const result = await runCommand(
-		command,
-		[
-			...prefixArgs,
-			...commonArgs(),
-			"--model",
-			OPENAI_CODEX_TERRA_MODEL,
-			"--thinking",
-			"medium",
-			"--print",
-			`Reply with exactly ${sentinel} and nothing else.`,
-		],
-		SENTINEL_TIMEOUT_MS,
-		env,
-	);
-	const output = `${result.stdout}\n${result.stderr}`;
-	if (result.exitCode !== 0 || !visibleTranscript(output).includes(sentinel)) {
-		throw new Error(
-			`${target.label} preserved-credential sentinel failed with exit ${result.exitCode}\n${diagnostic(output)}`,
-		);
-	}
-	console.log(
-		`PASS: ${target.label} migrated/refreshed the preserved credential and reached ${OPENAI_CODEX_TERRA_MODEL}.`,
-	);
-}
-
 async function main(): Promise<void> {
 	const targets = parseTargets(process.argv.slice(2));
 	for (const target of targets) {
 		if (target.executable) await fs.access(target.executable, fs.constants.X_OK);
 		await runFreshOAuthRoundTrip(target);
-		await verifyPreservedCredential(target);
 	}
-	console.log("PASS: xcsh-native OpenAI subscription acceptance completed without reading or copying credentials.");
+	console.log("PASS: fresh-state xcsh-native OpenAI subscription acceptance completed.");
 }
 
 if (import.meta.main) {

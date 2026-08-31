@@ -157,13 +157,6 @@ const builtInOAuthProviders: OAuthProviderInfo[] = [
 		available: true,
 	},
 	{
-		id: "openai-codex-browser",
-		name: "ChatGPT Plus/Pro (Browser callback)",
-		available: true,
-		canonicalId: "openai-codex",
-		loginOnly: true,
-	},
-	{
 		id: "openai",
 		name: "OpenAI Responses API (usage-based API access)",
 		available: true,

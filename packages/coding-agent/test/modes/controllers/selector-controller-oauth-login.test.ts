@@ -71,17 +71,22 @@ describe("SelectorController ChatGPT device login", () => {
 		process.env.SSH_CONNECTION = "client server";
 		try {
 			const openInBrowser = vi.fn();
+			const manualInput = new OAuthManualInputManager();
 			const login = vi.fn(async (_provider, callbacks) => {
+				expect(callbacks.onManualCodeInput).toBeDefined();
 				callbacks.onAuth({
-					url: "https://auth.openai.com/codex/device",
-					instructions: "Enter this one-time code: ABCD-EFGH",
+					url: "https://auth.openai.com/oauth/authorize?state=redacted",
+					instructions: "Complete browser login and paste the redirect URL",
 				});
+				const redirect = callbacks.onManualCodeInput();
+				expect(manualInput.submit("http://localhost:1455/auth/callback?code=manual&state=valid")).toBe(true);
+				await expect(redirect).resolves.toContain("code=manual");
 			});
 			const ctx = {
 				session: {
 					modelRegistry: { authStorage: { login }, refresh: vi.fn(async () => undefined), getAll: () => [] },
 				},
-				oauthManualInput: new OAuthManualInputManager(),
+				oauthManualInput: manualInput,
 				statusLine: { invalidate: vi.fn() },
 				updateEditorBorderColor: vi.fn(),
 				chatContainer: { addChild: vi.fn() },

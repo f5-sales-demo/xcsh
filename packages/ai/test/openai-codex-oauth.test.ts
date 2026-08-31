@@ -4,6 +4,7 @@ import {
 	formatOpenAICodexTokenEndpointError,
 	loginOpenAICodex,
 	loginOpenAICodexDevice,
+	OpenAICodexDeviceUnavailableError,
 	resolveOpenAICodexLoginMethod,
 	shouldUseOpenAICodexDeviceFlow,
 } from "../src/utils/oauth/openai-codex";
@@ -72,14 +73,55 @@ describe("OpenAI Codex browser OAuth", () => {
 });
 
 describe("OpenAI Codex login method", () => {
-	it("defaults SSH sessions to device authorization without treating local terminals as remote", () => {
+	it("selects device authorization only for SSH and interactive headless Linux", () => {
 		expect(shouldUseOpenAICodexDeviceFlow({ SSH_CONNECTION: "client server" }, "linux", true)).toBe(true);
 		expect(shouldUseOpenAICodexDeviceFlow({ SSH_TTY: "/dev/pts/1" }, "linux", true)).toBe(true);
+		expect(shouldUseOpenAICodexDeviceFlow({}, "linux", true)).toBe(true);
+		expect(shouldUseOpenAICodexDeviceFlow({ DISPLAY: ":0" }, "linux", true)).toBe(false);
+		expect(shouldUseOpenAICodexDeviceFlow({ WAYLAND_DISPLAY: "wayland-0" }, "linux", true)).toBe(false);
 		expect(shouldUseOpenAICodexDeviceFlow({}, "darwin", true)).toBe(false);
+		expect(shouldUseOpenAICodexDeviceFlow({ SSH_CONNECTION: "client server" }, "darwin", true)).toBe(true);
 		expect(resolveOpenAICodexLoginMethod("auto", { SSH_CONNECTION: "client server" }, "linux", true)).toBe("device");
 		expect(resolveOpenAICodexLoginMethod("browser", { SSH_CONNECTION: "client server" }, "linux", true)).toBe(
 			"browser",
 		);
+	});
+
+	it("offers browser/manual redirect fallback in the same flow when device authorization is unavailable", async () => {
+		const credentials = { access: "access", refresh: "refresh", expires: 123, accountId: "acct" };
+		const deviceLogin = vi.fn(async () => {
+			throw new OpenAICodexDeviceUnavailableError();
+		});
+		const browserLogin = vi.fn(async options => {
+			expect(options.onManualCodeInput).toBeDefined();
+			return credentials;
+		});
+		const onPrompt = vi.fn(async () => "yes");
+
+		await expect(
+			loginOpenAICodex(
+				{ method: "device", onPrompt, onManualCodeInput: async () => "https://localhost/?code=x" },
+				{ deviceLogin, browserLogin },
+			),
+		).resolves.toEqual(credentials);
+		expect(onPrompt).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining("browser") }));
+		expect(browserLogin).toHaveBeenCalledTimes(1);
+	});
+
+	it("cancels device-unavailable fallback without starting browser authentication", async () => {
+		const browserLogin = vi.fn();
+		await expect(
+			loginOpenAICodex(
+				{ method: "device", onPrompt: async () => "no" },
+				{
+					deviceLogin: async () => {
+						throw new OpenAICodexDeviceUnavailableError();
+					},
+					browserLogin,
+				},
+			),
+		).rejects.toThrow("ChatGPT login cancelled");
+		expect(browserLogin).not.toHaveBeenCalled();
 	});
 });
 
