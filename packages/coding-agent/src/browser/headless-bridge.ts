@@ -1,20 +1,17 @@
 /**
- * Headless chat bridge — the no-TUI extension-bridge host used by `xcsh office
- * serve` so one command yields a working task pane (pane files + a live chat/
- * host-tool bridge). It mirrors the proven `xcsh worker` bootstrap
- * (`commands/worker.ts`) MINUS the fleet concerns (manager keepalive, pre-warm
- * IPC bind, TTFT spans): set the browser-provider env, init Settings + Context,
- * quiet startup, provision the wss cert, start the bridge, publish session info,
- * create ONE agent session scoped to the browser tools, and attach the
- * `ChatHandler`. Office document tools (Excel/Word/PPT) are advertised by the
- * pane at runtime over the bridge (`set_host_tools`), so they need no scoping here.
+ * Shared no-TUI extension-bridge bootstrap for `xcsh office serve` and `xcsh
+ * worker`: initialize the browser-provider environment, Settings, Context, and
+ * discovery; resolve TLS; bind and publish the bridge; create one profile-scoped
+ * agent session; and attach its ChatHandler. Worker fleet behavior stays in
+ * `commands/worker.ts` and is connected through the lifecycle hooks below.
+ * Office document tools are advertised by the pane at runtime over the bridge.
  *
  * The heavy / socket / network calls are injected (defaulting to the real ones)
  * so the wiring is unit-testable without opening real listeners or a session.
  *
  * NOT browser-safe (node/bun): runs inside the full xcsh binary, never the pane.
  */
-import { getProjectDir, getXCSHConfigDir } from "@f5-sales-demo/pi-utils";
+import { getProjectDir, getXCSHConfigDir, logger } from "@f5-sales-demo/pi-utils";
 import { parseModelString } from "../config/model-resolver";
 import { DEFAULT_MODEL_ROLE } from "../config/settings-schema";
 import { createAgentSession } from "../sdk";
@@ -24,8 +21,13 @@ import { SessionManager } from "../session/session-manager";
 import { resolveBridgeTls } from "./bridge-cert";
 import { ChatHandler } from "./chat-handler";
 import { isPickPath, type PathPicked } from "./chat-protocol";
-import { type BridgeServer, OFFICE_PORT_RANGE, startBridgeServer } from "./extension-bridge";
-import { OFFICE_TOOL_NAMES } from "./extension-bridge-tools";
+import { type BridgeServer, type BridgeSessionInfo, OFFICE_PORT_RANGE, startBridgeServer } from "./extension-bridge";
+import {
+	BROWSER_TOOL_NAMES,
+	createExtensionBridgeTools,
+	EXTENSION_AGENT_TOOL_NAMES,
+	OFFICE_TOOL_NAMES,
+} from "./extension-bridge-tools";
 import { pickPathNative } from "./native-picker";
 import { setSharedBridgeServer } from "./provider";
 
@@ -33,8 +35,33 @@ import { setSharedBridgeServer } from "./provider";
  *  closes the bridge (both ws + wss listeners). */
 export interface HeadlessChatBridge {
 	bridge: BridgeServer;
+	handler: ChatHandler;
 	dispose: () => Promise<void>;
 }
+
+type Session = Awaited<ReturnType<typeof createAgentSession>>["session"];
+
+export interface HeadlessBridgeLifecycleContext {
+	bridge: BridgeServer;
+	cwd: string;
+}
+
+export interface HeadlessBridgeSessionContext extends HeadlessBridgeLifecycleContext {
+	session: Session;
+}
+
+export type HeadlessBridgeOptions =
+	| {
+			kind?: "office";
+			afterBridgeBind?: (context: HeadlessBridgeLifecycleContext) => void | Promise<void>;
+			afterSessionCreate?: (context: HeadlessBridgeSessionContext) => void | Promise<void>;
+	  }
+	| {
+			kind: "worker";
+			sessionInfo: () => BridgeSessionInfo;
+			afterBridgeBind?: (context: HeadlessBridgeLifecycleContext) => void | Promise<void>;
+			afterSessionCreate?: (context: HeadlessBridgeSessionContext) => void | Promise<void>;
+	  };
 
 /**
  * Tenant identity for the `hello` handshake, contextless-friendly: the active
@@ -113,20 +140,25 @@ const defaultDeps: HeadlessBridgeDeps = {
  * can connect and chat immediately (no warm-up race). A `configure`-less pane
  * chats over xcsh's already-configured provider.
  */
-export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = defaultDeps): Promise<HeadlessChatBridge> {
+export async function startHeadlessChatBridge(
+	deps: HeadlessBridgeDeps = defaultDeps,
+	options: HeadlessBridgeOptions = { kind: "office" },
+): Promise<HeadlessChatBridge> {
 	const { cwd } = await deps.initEnv();
+	const kind = options.kind ?? "office";
 
 	// Provision the wss cert before binding (warm boot = on-disk cache hit);
 	// `undefined` (offline) → the bridge starts ws-only.
 	const tls = await deps.resolveBridgeTls();
-	// Office-serve binds the DEDICATED office range (disjoint from the Chrome worker
-	// range) so the two can never collide on a port.
-	const bridge = await deps.startBridgeServer(undefined, {
-		serveKind: "office",
-		sessionInfo: sessionInfoForOfficeServe,
-		...(tls ? { tls } : {}),
-		range: OFFICE_PORT_RANGE,
-	});
+	const start = () =>
+		deps.startBridgeServer(undefined, {
+			serveKind: kind === "worker" ? "browser" : "office",
+			sessionInfo: options.kind === "worker" ? options.sessionInfo : sessionInfoForOfficeServe,
+			...(tls ? { tls } : {}),
+			...(kind === "office" ? { range: OFFICE_PORT_RANGE } : {}),
+		});
+	const bridge = kind === "worker" ? await logger.time("session:bridgeListen", start) : await start();
+
 	// Reuse this bridge for any in-process selectProvider() (no conflicting second bridge).
 	deps.setSharedBridgeServer(bridge);
 	// Re-announce the tenant when the active context changes (best-effort).
@@ -136,72 +168,72 @@ export async function startHeadlessChatBridge(deps: HeadlessBridgeDeps = default
 		/* ContextService not initialized (tests) — the tenant is static. */
 	}
 
-	// Everything past the bind can throw (createAgentSession on a misconfigured
-	// provider, etc.). If it does, close the already-bound bridge and clear the
-	// shared-bridge global before rethrowing — otherwise the ws/wss listeners leak
-	// (keeping the event loop alive so Ctrl+C can't exit) and a later in-process
-	// selectProvider() reuses a dead bridge. The caller (startOfficeServe) treats
-	// the rethrow as a non-fatal "pane only" fallback.
+	let chatHandler: ChatHandler | undefined;
 	try {
-		const officeDefault = parseModelString(DEFAULT_MODEL_ROLE);
-		if (!officeDefault) {
-			throw new Error("Invalid baked Office default model selector");
-		}
-		// Create ONE headless Office session with the full CLI-parity builtin set
-		// (OFFICE_TOOL_NAMES: bash/read/write/edit/grep/inspect_image/… — NO browser tools, which
-		// would be hallucinated in a document task pane). The document's own tools
-		// (Excel/Word/PowerPoint) arrive at runtime via set_host_tools.
-		const { session } = await deps.createAgentSession({
-			cwd,
-			hasUI: false,
-			// Office must open on the production GPT profile regardless of a stale
-			// global/default role or resumable session. A saved pane model is applied
-			// afterward by its explicit configure frame and remains authoritative.
-			modelPattern: DEFAULT_MODEL_ROLE,
-			thinkingLevel: officeDefault.thinkingLevel,
-			// Office conversations can contain private workbook and working-directory
-			// data. Keep the entire headless session ephemeral instead of inheriting
-			// createAgentSession's file-backed default.
-			sessionManager: SessionManager.inMemory(cwd),
-			toolNames: [...OFFICE_TOOL_NAMES],
-			customTools: [],
-			// Headless: no MCP/LSP/extension discovery — lean, no network/blocking prompts.
-			enableMCP: false,
-			enableLsp: false,
-			disableExtensionDiscovery: true,
-			// …but DO load the bundled filesystem sandbox: the pane runs full CLI-parity
-			// tools (bash/read/write), so it needs the CLI's safety net confining file
-			// tools + the shell's cwd to the launch directory subtree (sandbox.enabled
-			// defaults true). Without this, a discovery-disabled session ran ungated.
-			bundledExtensions: ["sandbox-guard"],
-		});
+		await options.afterBridgeBind?.({ bridge, cwd });
 
-		const chatHandler = new deps.ChatHandlerCtor(bridge, session);
+		let session: Session;
+		if (kind === "worker") {
+			const create = () =>
+				deps.createAgentSession({
+					cwd,
+					hasUI: false,
+					toolNames: [...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])],
+					customTools: createExtensionBridgeTools(bridge),
+					enableMCP: false,
+					enableLsp: false,
+					disableExtensionDiscovery: true,
+					...(process.env.XCSH_BENCH_EXTENSION
+						? { additionalExtensionPaths: [process.env.XCSH_BENCH_EXTENSION] }
+						: {}),
+				});
+			({ session } = await logger.time("session:createAgentSession", create));
+		} else {
+			const officeDefault = parseModelString(DEFAULT_MODEL_ROLE);
+			if (!officeDefault) {
+				throw new Error("Invalid baked Office default model selector");
+			}
+			({ session } = await deps.createAgentSession({
+				cwd,
+				hasUI: false,
+				modelPattern: DEFAULT_MODEL_ROLE,
+				thinkingLevel: officeDefault.thinkingLevel,
+				sessionManager: SessionManager.inMemory(cwd),
+				toolNames: [...OFFICE_TOOL_NAMES],
+				customTools: [],
+				enableMCP: false,
+				enableLsp: false,
+				disableExtensionDiscovery: true,
+				bundledExtensions: ["sandbox-guard"],
+			}));
+		}
+
+		await options.afterSessionCreate?.({ bridge, session, cwd });
+		chatHandler = new deps.ChatHandlerCtor(bridge, session);
 		chatHandler.attach();
 
-		// Second bridge subscriber (the bridge fans out to all): serve `pick_path` by
-		// opening a native OS picker and replying `path_picked`. Pure — it only returns
-		// the chosen path; the sandbox grant + prompt note happen in ChatHandler when the
-		// path rides the next `chat_request.contextPaths` (kept atomic there). `disposed`
-		// guards against a superseded serve firing the picker on a closed bridge.
 		let disposed = false;
-		bridge.onMessage(async msg => {
-			if (disposed || !isPickPath(msg)) return;
-			const { path, canceled, unsupported } = await deps.pickPath((msg as { mode: "file" | "folder" }).mode);
-			if (disposed) return;
-			bridge.send({ type: "path_picked", path, canceled, unsupported } satisfies PathPicked);
-		});
+		if (kind === "office") {
+			bridge.onMessage(async msg => {
+				if (disposed || !isPickPath(msg)) return;
+				const { path, canceled, unsupported } = await deps.pickPath((msg as { mode: "file" | "folder" }).mode);
+				if (disposed) return;
+				bridge.send({ type: "path_picked", path, canceled, unsupported } satisfies PathPicked);
+			});
+		}
 
 		return {
 			bridge,
+			handler: chatHandler,
 			dispose: async () => {
 				disposed = true;
-				chatHandler.dispose();
+				chatHandler?.dispose();
 				deps.setSharedBridgeServer(null);
 				await bridge.close();
 			},
 		};
 	} catch (err) {
+		chatHandler?.dispose();
 		deps.setSharedBridgeServer(null);
 		await bridge.close();
 		throw err;
