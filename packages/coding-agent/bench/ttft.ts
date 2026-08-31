@@ -14,7 +14,8 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { EXTENSION_ID } from "../src/cli/chrome-cli";
+import { EXTENSION_CONTRACT_VERSION } from "../src/browser/capabilities.generated";
+import { EXTENSION_ID } from "../src/browser/extension-identity";
 import { medianByStage, parseAttrLines } from "./ttft-attr";
 import { type BenchResult, compareToBaseline, median, type ModeResult, type StageBreakdown } from "./ttft-report";
 
@@ -22,6 +23,11 @@ const CLI = path.join(import.meta.dir, "../src/cli.ts");
 const EXT = path.join(import.meta.dir, "bench-instant-extension.ts");
 const BASELINE = path.join(import.meta.dir, "ttft-baseline.json");
 const ORIGIN = `chrome-extension://${EXTENSION_ID}`;
+const BROWSER_HELLO = {
+  type: "hello",
+  contractVersion: EXTENSION_CONTRACT_VERSION,
+  extensionId: EXTENSION_ID,
+} as const;
 const CONNECT_DEADLINE_MS = 15_000;
 const TURN_DEADLINE_MS = 15_000;
 const sleep = (ms: number): Promise<void> => new Promise(r => setTimeout(r, ms));
@@ -117,7 +123,15 @@ async function connectAndMeasure(port: number, t0: number, deadlineMs: number): 
       let opened = false;
       let ttft = 0;
       let resend: ReturnType<typeof setInterval> | undefined;
-      const chatReq = JSON.stringify({ type: "chat_request", id: "c-bench", text: "ping", context: null, mode: "educational" });
+      const chatReq = JSON.stringify({
+        type: "chat_request",
+        id: "c-bench",
+        text: "ping",
+        context: null,
+        mode: "educational",
+        tabId: 1,
+        sessionKey: "example-corp|production",
+      });
       const cleanup = (): void => {
         clearTimeout(timer);
         if (resend) clearInterval(resend);
@@ -139,7 +153,7 @@ async function connectAndMeasure(port: number, t0: number, deadlineMs: number): 
       }, Math.max(0, end - Date.now()));
       ws.onopen = () => {
         opened = true;
-        ws.send(JSON.stringify({ type: "hello" }));
+        ws.send(JSON.stringify(BROWSER_HELLO));
         ws.send(chatReq);
         // On a COLD spawn, createAgentSession (hence ChatHandler.attach) completes AFTER
         // hello_ack, so an early chat_request is dropped by the not-yet-attached worker.
@@ -254,8 +268,8 @@ const runs = numArg("--runs", 5);
 const tolerance = numArg("--tolerance", 30);
 const minAbsMs = numArg("--min-abs-ms", 15);
 
-const coldRun = await runMode("0", /provisioned tab-bench .* on port (\d+)/, runs);
-const warmRun = await runMode("1", /adopted spare pid \d+ on port (\d+) as tab-bench/, runs);
+const coldRun = await runMode("0", /provisioned worker pid \d+ on port (\d+)/, runs);
+const warmRun = await runMode("1", /adopted spare pid \d+ on port (\d+)/, runs);
 const result: BenchResult = { cold: coldRun.mode, warm: warmRun.mode };
 
 /**
