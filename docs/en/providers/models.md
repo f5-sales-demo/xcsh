@@ -131,7 +131,9 @@ When resolving API keys for a provider, xcsh evaluates sources in the following 
 
 `/login` lists **Google Cloud Vertex AI (Corporate)** first. This route uses Application Default Credentials (ADC) from `gcloud`, validates the selected Google Cloud project and Gemini 3.7 Flash access in `global`, then selects `google-vertex/gemini-3.7-flash:high`.
 
-The confirmed project and `global` location are stored as non-secret xcsh provider preferences and injected into Vertex requests. The route never falls back to a Gemini API key, consumer Gemini login, or Antigravity OAuth. If ADC is missing, the wizard offers `gcloud auth application-default login` (with `--no-launch-browser` in headless terminals). Enable the service with `gcloud services enable aiplatform.googleapis.com --project PROJECT_ID`; billing, IAM, and model-access errors are reported before model state is changed.
+The confirmed project and `global` location are stored as non-secret xcsh provider preferences and injected into Vertex requests. The route never falls back to a Gemini API key, consumer Gemini login, or Antigravity OAuth.
+
+If ADC is missing, the wizard offers `gcloud auth application-default login` (with `--no-launch-browser` in headless terminals). Enable the service with `gcloud services enable aiplatform.googleapis.com --project PROJECT_ID`; billing, IAM, and model-access errors are reported before model state is changed.
 
 **Google Antigravity Enterprise (Advanced OAuth)** remains a separate route. It uses its own entitlement-discovery OAuth flow and does not assert that its discovered model is Vertex Gemini 3.7. Consumer and free-tier Google routes remain optional, but are never selected automatically.
 
