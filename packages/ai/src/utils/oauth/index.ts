@@ -142,6 +142,14 @@ export { loginZenMux } from "./zenmux";
 
 const builtInOAuthProviders: OAuthProviderInfo[] = [
 	{
+		id: "google-vertex",
+		name: "Google Cloud Vertex AI (Corporate)",
+		description: "Corporate Google Cloud account · Vertex billing/project · Gemini 3.7 Flash HIGH",
+		available: true,
+		loginOnly: true,
+		loginOrder: -100,
+	},
+	{
 		id: "anthropic",
 		name: "Anthropic (Claude Pro/Max)",
 		available: true,
@@ -199,11 +207,13 @@ const builtInOAuthProviders: OAuthProviderInfo[] = [
 	{
 		id: "google-antigravity",
 		name: "Antigravity (Gemini 3, Claude, GPT-OSS)",
+		description: "Optional consumer or non-corporate route",
 		available: true,
 	},
 	{
 		id: "google-antigravity-enterprise",
-		name: "Google Antigravity Enterprise (Gemini 3.6 Flash High)",
+		name: "Google Antigravity Enterprise (Advanced OAuth)",
+		description: "Advanced corporate OAuth route; entitlement-discovered models, not Vertex ADC",
 		available: true,
 		canonicalId: "google-antigravity",
 		loginOnly: true,

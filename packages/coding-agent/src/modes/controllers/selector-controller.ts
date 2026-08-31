@@ -75,12 +75,21 @@ import {
 import { type LoginRecoveryAction, type LoginRecoveryRequest, runLiteLLMLoginFlow } from "./litellm-login-flow";
 import { commitLiteLLMLogin } from "./litellm-login-transaction";
 import {
+	applyModelAfterLogin,
 	applyOAuthLoginModel,
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
+	GOOGLE_VERTEX_LOGIN_MODEL_CHOICE,
 	LITELLM_LOGIN_MODEL_CHOICES,
 	type LiteLLMLoginModelChoice,
 	type LoginModelChoice,
 } from "./login-model";
+import {
+	defaultVertexLoginRuntime,
+	detectVertexProject,
+	isHeadlessTerminal,
+	validateVertexLogin,
+	vertexFailureGuidance,
+} from "./vertex-login-flow";
 import { runVllmLoginFlow } from "./vllm-login-flow";
 import { commitVllmLogin } from "./vllm-login-transaction";
 
@@ -1209,6 +1218,10 @@ export class SelectorController {
 	}
 
 	async #handleOAuthLogin(providerId: string): Promise<void> {
+		if (providerId === "google-vertex") {
+			await this.#handleVertexLogin();
+			return;
+		}
 		if (providerId === "openai") {
 			this.#showOpenAIApiKeyGuidance();
 			return;
@@ -1334,6 +1347,59 @@ export class SelectorController {
 			if (useManualInput) {
 				manualInput.clear(`Manual OAuth input cleared for ${providerId}`);
 			}
+		}
+	}
+
+	/** Corporate Vertex uses local ADC, never OAuth storage or a consumer API-key fallback. */
+	async #handleVertexLogin(): Promise<void> {
+		const runtime = defaultVertexLoginRuntime;
+		try {
+			const detected = await detectVertexProject(runtime);
+			const proposed = await this.#promptLoginValue({
+				message: detected
+					? `Vertex AI project: ${detected.id} (${detected.source}). Press Enter to confirm, or type another project.`
+					: "Vertex AI project ID (required; Esc cancels):",
+				placeholder: detected?.id,
+				allowEmpty: true,
+			});
+			const project = proposed.trim() || detected?.id;
+			if (!project) {
+				this.ctx.showStatus("Vertex AI login cancelled. Existing configuration unchanged.");
+				return;
+			}
+
+			try {
+				this.ctx.showStatus("Validating Vertex AI Application Default Credentials and Gemini 3.7 Flash access…");
+				await validateVertexLogin(runtime, project);
+			} catch (error) {
+				const action = await this.#showLoginRecovery(
+					{ stage: "validation", error: vertexFailureGuidance(error, project), canEdit: true },
+					"Google Cloud Vertex AI",
+					"Sign in with gcloud",
+				);
+				if (action === "cancel") {
+					this.ctx.showStatus("Vertex AI login cancelled. Existing configuration unchanged.");
+					return;
+				}
+				if (action === "edit") {
+					await runtime.loginApplicationDefault(isHeadlessTerminal(runtime.environment));
+				}
+				await validateVertexLogin(runtime, project);
+			}
+
+			const applied = await applyModelAfterLogin(this.ctx.session, GOOGLE_VERTEX_LOGIN_MODEL_CHOICE);
+			if (!applied) throw new Error("Gemini 3.7 Flash is unavailable in the local Vertex model registry");
+			this.ctx.session.settings.set("providers.vertexProject", project);
+			this.ctx.session.settings.set("providers.vertexLocation", "global");
+			this.ctx.statusLine.invalidate();
+			this.ctx.updateEditorBorderColor();
+			this.ctx.showStatus("Vertex AI configured: google-vertex/gemini-3.7-flash:high (global)");
+		} catch (error) {
+			if (error instanceof LoginPromptCancelled) {
+				this.ctx.showStatus("Vertex AI login cancelled. Existing configuration unchanged.");
+				return;
+			}
+			this.ctx.showError(`Vertex AI login failed: ${vertexFailureGuidance(error)}`);
 		}
 	}
 

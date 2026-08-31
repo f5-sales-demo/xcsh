@@ -74,6 +74,10 @@ export interface OAuthProviderInfo {
 	canonicalId?: OAuthProvider;
 	/** Entry is offered for login but omitted from logout to avoid alias duplicates. */
 	loginOnly?: boolean;
+	/** Short secondary text displayed by interactive login pickers. */
+	description?: string;
+	/** Stable login-menu order; lower values are shown first. */
+	loginOrder?: number;
 }
 
 /** Resolve login-only aliases to the provider ID used by credentials and models. */

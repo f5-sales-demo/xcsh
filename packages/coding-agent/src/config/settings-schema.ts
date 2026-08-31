@@ -1976,6 +1976,24 @@ export const SETTINGS_SCHEMA = {
 	"sandbox.allowWrite": { type: "array", default: [] as string[] },
 
 	// Provider selection
+	"providers.vertexProject": {
+		type: "string",
+		default: undefined,
+		ui: {
+			tab: "providers",
+			label: "Vertex AI Project",
+			description: "Non-secret corporate Google Cloud project selected by /login",
+		},
+	},
+	"providers.vertexLocation": {
+		type: "string",
+		default: undefined,
+		ui: {
+			tab: "providers",
+			label: "Vertex AI Location",
+			description: "Non-secret Vertex AI location selected by /login",
+		},
+	},
 	"providers.webSearch": {
 		type: "enum",
 		values: [

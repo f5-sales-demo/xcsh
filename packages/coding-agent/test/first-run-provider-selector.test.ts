@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
+import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
 import { SelectorController } from "../src/modes/controllers/selector-controller";
 import { initTheme } from "../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../src/modes/types";
@@ -35,6 +36,15 @@ describe("first-run provider onboarding", () => {
 
 		const rendered = Bun.stripANSI(children.flatMap(component => component.render?.(120) ?? []).join("\n"));
 		expect(rendered).toContain("Select provider to login");
+		expect(rendered.indexOf("Google Cloud Vertex AI (Corporate)")).toBeLessThan(
+			rendered.indexOf("ChatGPT Plus/Pro (Codex Subscription)"),
+		);
+		expect(rendered).toContain("Corporate Google Cloud account");
+		const enterprise = getOAuthProviders().find(provider => provider.id === "google-antigravity-enterprise");
+		expect(enterprise).toMatchObject({
+			name: "Google Antigravity Enterprise (Advanced OAuth)",
+			description: expect.stringContaining("not Vertex ADC"),
+		});
 		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
 		expect(rendered).toContain("OpenAI Responses API (usage-based API access)");
 		expect(rendered).not.toContain("Model Provider URL");

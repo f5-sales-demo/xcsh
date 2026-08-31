@@ -72,6 +72,11 @@ export class OAuthSelectorComponent extends Container {
 	}
 	#loadProviders(): void {
 		this.#allProviders = getOAuthProviders().filter(provider => this.#mode === "login" || !provider.loginOnly);
+		// Keep the curated registry order stable except for explicit priorities.
+		this.#allProviders = this.#allProviders
+			.map((provider, index) => ({ provider, index }))
+			.sort((a, b) => (a.provider.loginOrder ?? 0) - (b.provider.loginOrder ?? 0) || a.index - b.index)
+			.map(({ provider }) => provider);
 		this.#filteredProviders = this.#allProviders;
 	}
 
@@ -188,6 +193,9 @@ export class OAuthSelectorComponent extends Container {
 				line = text + statusIndicator;
 			}
 			this.#listContainer.addChild(new TruncatedText(line, 0, 0));
+			if (provider.description) {
+				this.#listContainer.addChild(new TruncatedText(theme.fg("muted", `     ${provider.description}`), 0, 0));
+			}
 		}
 
 		// Show "no providers" if empty
