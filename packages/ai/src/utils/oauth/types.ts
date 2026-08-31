@@ -82,7 +82,6 @@ export interface OAuthProviderInfo {
 
 /** Resolve login-only aliases to the provider ID used by credentials and models. */
 export function canonicalizeOAuthProviderId(provider: string): string {
-	if (provider === "google-antigravity-enterprise") return "google-antigravity";
 	return provider;
 }
 

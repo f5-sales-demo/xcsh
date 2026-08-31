@@ -1,7 +1,6 @@
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
 import type { AutocompleteItem } from "@f5-sales-demo/pi-tui";
 import { getConfigDirName, isEnoent, t } from "@f5-sales-demo/pi-utils";
 import { invalidate as invalidateFsCache } from "../capability/fs";
@@ -22,6 +21,7 @@ import {
 } from "../extensibility/plugins/marketplace";
 import { parseMarketplaceCatalog } from "../extensibility/plugins/marketplace/fetcher";
 import { setupTool } from "../extensibility/plugins/marketplace/prerequisites";
+import { getLoginOptions } from "../modes/controllers/login-options";
 import type { InteractiveModeContext } from "../modes/types";
 import { ContextService } from "../services/xcsh-context";
 import { parseMarketplaceInstallArgs, parsePluginScopeArgs } from "./marketplace-install-parser";
@@ -669,7 +669,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			const manualInput = runtime.ctx.oauthManualInput;
 			const args = command.args.trim();
 			if (args.length > 0) {
-				const matchedProvider = getOAuthProviders().find(provider => provider.id === args);
+				const matchedProvider = getLoginOptions().find(provider => provider.id === args);
 				if (matchedProvider) {
 					if (manualInput.hasPending()) {
 						const pendingProvider = manualInput.pendingProviderId;

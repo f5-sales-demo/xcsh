@@ -97,15 +97,8 @@ const serviceProviderMap: Record<string, KeyResolver> = {
 			? $pickenv("ANTHROPIC_FOUNDRY_API_KEY", "ANTHROPIC_OAUTH_TOKEN", "ANTHROPIC_API_KEY")
 			: $pickenv("ANTHROPIC_OAUTH_TOKEN", "ANTHROPIC_API_KEY"),
 	"gitlab-duo": "GITLAB_TOKEN",
-	// Vertex AI supports either GOOGLE_CLOUD_API_KEY or Application Default Credentials.
-	"google-vertex": () => {
-		if ($env.GOOGLE_CLOUD_API_KEY) {
-			return $env.GOOGLE_CLOUD_API_KEY;
-		}
-		if (hasVertexAdcCredentials()) {
-			return "<authenticated>";
-		}
-	},
+	// Corporate Vertex uses Application Default Credentials only.
+	"google-vertex": () => (hasVertexAdcCredentials() ? "<authenticated>" : undefined),
 	// Amazon Bedrock supports multiple credential sources:
 	// 1. AWS_PROFILE - named profile from ~/.aws/credentials
 	// 2. AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY - standard IAM keys

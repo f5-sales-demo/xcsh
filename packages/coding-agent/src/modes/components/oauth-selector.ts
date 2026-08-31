@@ -1,8 +1,9 @@
-import { getOAuthProviders, type OAuthProviderInfo } from "@f5-sales-demo/pi-ai";
+import type { OAuthProviderInfo } from "@f5-sales-demo/pi-ai";
 import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
 import { matchesSelectCancel } from "../../modes/utils/keybinding-matchers";
 import type { AuthStorage } from "../../session/auth-storage";
+import { getLoginOptions } from "../controllers/login-options";
 import { DynamicBorder } from "./dynamic-border";
 /**
  * Component that renders an OAuth provider selector.
@@ -71,7 +72,10 @@ export class OAuthSelectorComponent extends Container {
 		this.#stopSpinner();
 	}
 	#loadProviders(): void {
-		this.#allProviders = getOAuthProviders().filter(provider => this.#mode === "login" || !provider.loginOnly);
+		this.#allProviders =
+			this.#mode === "login"
+				? getLoginOptions()
+				: getLoginOptions().filter(provider => !provider.loginOnly && provider.id !== "google-vertex");
 		// Keep the curated registry order stable except for explicit priorities.
 		this.#allProviders = this.#allProviders
 			.map((provider, index) => ({ provider, index }))

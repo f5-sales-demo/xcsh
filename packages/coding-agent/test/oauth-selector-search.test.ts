@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
 import { OAuthSelectorComponent } from "../src/modes/components/oauth-selector";
+import { getLoginOptions } from "../src/modes/controllers/login-options";
 import { initTheme } from "../src/modes/theme/theme";
 import type { AuthStorage } from "../src/session/auth-storage";
 
@@ -38,7 +39,7 @@ describe("OAuthSelectorComponent provider search", () => {
 
 	it("renders a bounded provider viewport with position and input guidance", () => {
 		const { selector } = createSelector();
-		const providerCount = getOAuthProviders().length;
+		const providerCount = getLoginOptions().length;
 		const rendered = renderText(selector);
 
 		expect(rendered).toContain(`Showing 1-10 of ${providerCount}`);
@@ -78,7 +79,7 @@ describe("OAuthSelectorComponent provider search", () => {
 
 		selector.handleInput("\x1b");
 		expect(onCancel).not.toHaveBeenCalled();
-		expect(renderText(selector)).toContain(`Showing 1-10 of ${getOAuthProviders().length}`);
+		expect(renderText(selector)).toContain(`Showing 1-10 of ${getLoginOptions().length}`);
 
 		selector.handleInput("\x1b");
 		expect(onCancel).toHaveBeenCalledTimes(1);
@@ -91,10 +92,10 @@ describe("OAuthSelectorComponent provider search", () => {
 		const rendered = renderText(selector);
 		expect(rendered).toContain("Google Cloud Code Assist (Gemini CLI)");
 		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
-		expect(rendered).toContain(`Showing 3-12 of ${getOAuthProviders().length}`);
+		expect(rendered).toContain(`Showing 3-12 of ${getLoginOptions().length}`);
 	});
 
-	it("offers the enterprise alias only for login so logout has one canonical row", () => {
+	it("keeps generic and Enterprise Antigravity credentials as distinct routes", () => {
 		const login = createSelector("login", true).selector;
 		for (const character of "google-antigravity-enterprise") login.handleInput(character);
 		expect(renderText(login)).toContain("Google Antigravity Enterprise (Advanced OAuth)");
@@ -103,9 +104,9 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (const character of "antigravity") logout.handleInput(character);
 		const rendered = renderText(logout);
 		expect(rendered).toContain("Antigravity (Gemini 3, Claude, GPT-OSS)");
-		expect(rendered).not.toContain("Google Antigravity Enterprise (Advanced OAuth)");
+		expect(rendered).toContain("Google Antigravity Enterprise (Advanced OAuth)");
 		expect(rendered).toContain(
-			`1 match (${getOAuthProviders().filter(provider => !provider.loginOnly).length} total)`,
+			`2 matches (${getOAuthProviders().filter(provider => !provider.loginOnly).length} total)`,
 		);
 	});
 });
