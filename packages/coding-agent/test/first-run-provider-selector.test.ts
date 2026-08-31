@@ -41,10 +41,8 @@ describe("first-run provider onboarding", () => {
 		);
 		expect(rendered).toContain("Corporate Google Cloud account");
 		const enterprise = getOAuthProviders().find(provider => provider.id === "google-antigravity-enterprise");
-		expect(enterprise).toMatchObject({
-			name: "Google Antigravity Enterprise (Advanced OAuth)",
-			description: expect.stringContaining("not Vertex ADC"),
-		});
+		expect(enterprise?.name).toBe("Google Antigravity Enterprise (Advanced OAuth)");
+		expect(enterprise?.description).toContain("not Vertex ADC");
 		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
 		expect(rendered).toContain("OpenAI Responses API (usage-based API access)");
 		expect(rendered).not.toContain("Model Provider URL");
