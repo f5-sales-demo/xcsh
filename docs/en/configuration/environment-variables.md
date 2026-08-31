@@ -140,7 +140,7 @@ Base URL resolution sequence: `options.azureBaseUrl` —> `AZURE_OPENAI_BASE_URL
 | --- | --- | --- |
 | `GOOGLE_CLOUD_PROJECT` | Yes (unless passed via options) | Fallback: `GCLOUD_PROJECT` |
 | `GCLOUD_PROJECT` | Optional fallback | Alternative project ID source |
-| `GOOGLE_CLOUD_LOCATION` | Yes (unless passed via options) | No implicit default in provider |
+| `GOOGLE_CLOUD_LOCATION` | Optional | Defaults to `global`; corporate `/login` persists `global` explicitly |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Conditional | File path must exist if set; otherwise application default credentials (ADC) path is checked (`~/.config/gcloud/application_default_credentials.json`) |
 
 ### Kimi

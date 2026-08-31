@@ -4,6 +4,7 @@ import {
 	applyModelAfterLogin,
 	applyOAuthLoginModel,
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
+	GOOGLE_VERTEX_LOGIN_MODEL_CHOICE,
 	getAvailableLiteLLMLoginModelChoices,
 	getVllmLoginModelChoices,
 	LITELLM_LOGIN_MODEL_CHOICES,
@@ -45,6 +46,18 @@ const GPT_CHOICE = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId ===
 const OPUS_CHOICE = LITELLM_LOGIN_MODEL_CHOICES.find(choice => choice.modelId === "claude-opus-5")!;
 
 describe("applyModelAfterLogin", () => {
+	it("persists corporate Vertex Gemini 3.7 Flash with HIGH thinking", async () => {
+		const { session, setModel, setThinkingLevel } = makeSession({
+			model: undefined,
+			models: [M("gemini-3.7-flash", "google-vertex")],
+		});
+		await expect(applyModelAfterLogin(session as never, GOOGLE_VERTEX_LOGIN_MODEL_CHOICE)).resolves.toBe(true);
+		expect(setModel).toHaveBeenCalledWith(M("gemini-3.7-flash", "google-vertex"), "default", {
+			selector: "google-vertex/gemini-3.7-flash",
+			thinkingLevel: ThinkingLevel.High,
+		});
+		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+	});
 	it("persists the selected model and high thinking", async () => {
 		const { session, setModel, setThinkingLevel } = makeSession({
 			model: undefined,

@@ -42,6 +42,14 @@ export const GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 	thinkingLevel: ThinkingLevel.High,
 };
 
+export const GOOGLE_VERTEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
+	label: "Gemini 3.7 Flash High",
+	description: "Corporate Vertex AI model with high reasoning",
+	provider: "google-vertex",
+	modelId: "gemini-3.7-flash",
+	thinkingLevel: ThinkingLevel.High,
+};
+
 export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 	label: "GPT-5.6",
 	description: "OpenAI Codex subscription model with medium reasoning",
