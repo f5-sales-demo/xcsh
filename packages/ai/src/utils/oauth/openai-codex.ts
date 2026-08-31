@@ -254,14 +254,53 @@ export type OpenAICodexLoginOptions = OAuthController & {
 	method?: OpenAICodexLoginMethod;
 };
 
-export async function loginOpenAICodex(options: OpenAICodexLoginOptions): Promise<OAuthCredentials> {
-	if (resolveOpenAICodexLoginMethod(options.method) === "device") {
-		return loginOpenAICodexDevice(options);
+export type OpenAICodexLoginDependencies = {
+	deviceLogin?: (options: OAuthController) => Promise<OAuthCredentials>;
+	browserLogin?: (options: OAuthController & { originator?: string }) => Promise<OAuthCredentials>;
+};
+
+export class OpenAICodexDeviceUnavailableError extends Error {
+	constructor() {
+		super(
+			"Device-code login is not enabled for this ChatGPT account or workspace. Enable it in ChatGPT security or workspace settings, or continue with browser/manual redirect login.",
+		);
+		this.name = "OpenAICodexDeviceUnavailableError";
 	}
+}
+
+function isDeviceAuthorizationUnavailable(error: unknown): boolean {
+	return error instanceof OpenAICodexDeviceUnavailableError;
+}
+
+async function loginOpenAICodexBrowser(options: OAuthController & { originator?: string }): Promise<OAuthCredentials> {
 	const pkce = await generatePKCE();
 	const originator = options.originator?.trim() || "pi";
 	const flow = new OpenAICodexOAuthFlow(options, pkce, originator);
 	return flow.login();
+}
+
+export async function loginOpenAICodex(
+	options: OpenAICodexLoginOptions,
+	dependencies: OpenAICodexLoginDependencies = {},
+): Promise<OAuthCredentials> {
+	const browserLogin = dependencies.browserLogin ?? loginOpenAICodexBrowser;
+	if (resolveOpenAICodexLoginMethod(options.method) !== "device") {
+		return browserLogin(options);
+	}
+
+	try {
+		return await (dependencies.deviceLogin ?? loginOpenAICodexDevice)(options);
+	} catch (error) {
+		if (!isDeviceAuthorizationUnavailable(error) || !options.onPrompt) throw error;
+		const response = await options.onPrompt({
+			message: "ChatGPT device authorization is unavailable. Continue with browser/manual redirect login? [Y/n]",
+			placeholder: "Press Enter to continue, or type no to cancel",
+			allowEmpty: true,
+		});
+		if (/^(?:n|no)$/i.test(response.trim())) throw new Error("ChatGPT login cancelled");
+		options.onProgress?.("Continuing with browser/manual redirect authentication…");
+		return browserLogin(options);
+	}
 }
 
 export type OpenAICodexDeviceFlowDependencies = {
@@ -289,9 +328,7 @@ export async function loginOpenAICodexDevice(
 	});
 	if (!initResponse.ok) {
 		if (initResponse.status === 404) {
-			throw new Error(
-				"Device-code login is not enabled for this ChatGPT account or workspace. Enable it in ChatGPT security or workspace settings, or choose the browser callback login.",
-			);
+			throw new OpenAICodexDeviceUnavailableError();
 		}
 		const detail = formatOpenAICodexTokenEndpointError(initResponse.status, await initResponse.text());
 		throw new Error(`Device authorization initiation failed: ${detail}`);

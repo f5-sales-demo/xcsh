@@ -15,7 +15,7 @@ describe("subscription routing profiles", () => {
 		const profile = SUBSCRIPTION_ROUTING_PROFILES["openai-codex"];
 		expect(profile?.roles).toEqual({
 			smol: "openai-codex/gpt-5.6-luna:low",
-			default: "openai-codex/gpt-5.6-terra:medium",
+			default: "openai-codex/gpt-5.6-sol:medium",
 			slow: "openai-codex/gpt-5.6-sol:high",
 			plan: "openai-codex/gpt-5.6-sol:high",
 		});
@@ -49,7 +49,7 @@ describe("subscription routing profiles", () => {
 		expect(result.roles).toMatchObject({
 			vision: "google/vision",
 			custom: "custom/model",
-			default: "openai-codex/gpt-5.6-terra:medium",
+			default: "openai-codex/gpt-5.6-sol:medium",
 		});
 	});
 });

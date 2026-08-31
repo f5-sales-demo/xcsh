@@ -15,15 +15,17 @@ function makeSession(opts: { model?: { id: string; provider: string }; models: {
 	const setThinkingLevel = vi.fn((_level: ThinkingLevel) => {});
 	let modelRoles: Record<string, string> = { vision: "google/vision" };
 	let routingProfile: "none" | "google-antigravity" | "openai-codex" = "none";
+	let routingMode: "off" | "shadow" | "auto" = "auto";
 	const session = {
 		model: opts.model,
 		modelRegistry: { getAll: () => opts.models },
 		settings: {
 			getModelRoles: () => modelRoles,
-			get: () => routingProfile,
+			get: (key: string) => (key === "routing.mode" ? routingMode : routingProfile),
 			set: (key: string, value: any) => {
 				if (key === "modelRoles") modelRoles = value;
 				if (key === "routing.profile") routingProfile = value;
+				if (key === "routing.mode") routingMode = value;
 			},
 		},
 		setModel,
@@ -35,6 +37,7 @@ function makeSession(opts: { model?: { id: string; provider: string }; models: {
 		setThinkingLevel,
 		getModelRoles: () => modelRoles,
 		getRoutingProfile: () => routingProfile,
+		getRoutingMode: () => routingMode,
 	};
 }
 const M = (id: string, provider = "litellm") => ({ id, provider });
@@ -207,7 +210,7 @@ describe("applyOAuthLoginModel", () => {
 	});
 
 	it("applies the complete OpenAI Codex subscription profile", async () => {
-		const { session, setModel, getModelRoles, getRoutingProfile } = makeSession({
+		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: undefined,
 			models: [
 				M("gpt-5.6-luna", "openai-codex"),
@@ -219,16 +222,32 @@ describe("applyOAuthLoginModel", () => {
 		const applied = await applyOAuthLoginModel(session as never, "openai-codex");
 
 		expect(applied).toEqual(OPENAI_CODEX_LOGIN_MODEL_CHOICE);
-		expect(setModel).toHaveBeenCalledWith(M("gpt-5.6-terra", "openai-codex"), "default", {
-			selector: "openai-codex/gpt-5.6-terra",
+		expect(setModel).toHaveBeenCalledWith(M("gpt-5.6-sol", "openai-codex"), "default", {
+			selector: "openai-codex/gpt-5.6-sol",
 			thinkingLevel: ThinkingLevel.Medium,
 		});
 		expect(getModelRoles()).toMatchObject({
 			smol: "openai-codex/gpt-5.6-luna:low",
-			default: "openai-codex/gpt-5.6-terra:medium",
+			default: "openai-codex/gpt-5.6-sol:medium",
 			slow: "openai-codex/gpt-5.6-sol:high",
 			plan: "openai-codex/gpt-5.6-sol:high",
 		});
 		expect(getRoutingProfile()).toBe("openai-codex");
+		expect(getRoutingMode()).toBe("off");
+	});
+
+	it("rolls roles and routing back when the Sol model cannot be persisted", async () => {
+		const { session, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
+			model: M("existing", "anthropic"),
+			models: [M("gpt-5.6-luna", "openai-codex"), M("gpt-5.6-sol", "openai-codex")],
+		});
+		(session as any).setModel = vi.fn(async () => {
+			throw new Error("persistence failed");
+		});
+
+		await expect(applyOAuthLoginModel(session as never, "openai-codex")).rejects.toThrow("persistence failed");
+		expect(getModelRoles()).toEqual({ vision: "google/vision" });
+		expect(getRoutingProfile()).toBe("none");
+		expect(getRoutingMode()).toBe("auto");
 	});
 });

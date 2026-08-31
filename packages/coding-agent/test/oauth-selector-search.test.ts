@@ -12,7 +12,8 @@ function createSelector(mode: "login" | "logout" = "login", authenticated = fals
 	const onSelect = vi.fn();
 	const onCancel = vi.fn();
 	const authStorage = {
-		hasAuth: (provider: string) => authenticated && provider === "google-antigravity",
+		hasAuth: (provider: string) =>
+			authenticated && (provider === "google-antigravity" || provider === "openai-codex"),
 	} as unknown as AuthStorage;
 	const selector = new OAuthSelectorComponent(mode, authStorage, onSelect, onCancel);
 	return { selector, onSelect, onCancel };
@@ -23,12 +24,16 @@ function renderText(selector: OAuthSelectorComponent): string {
 }
 
 describe("OAuthSelectorComponent provider search", () => {
-	it("offers an explicit browser-callback login alongside automatic ChatGPT login", () => {
-		expect(getOAuthProviders().find(provider => provider.id === "openai-codex-browser")).toMatchObject({
-			name: "ChatGPT Plus/Pro (Browser callback)",
-			canonicalId: "openai-codex",
-			loginOnly: true,
-		});
+	it("exposes exactly one canonical ChatGPT provider", () => {
+		expect(getOAuthProviders().filter(provider => provider.id.startsWith("openai-codex"))).toEqual([
+			expect.objectContaining({ id: "openai-codex", name: "ChatGPT Plus/Pro (Codex Subscription)" }),
+		]);
+		const selector = createSelector("login", true).selector;
+		for (const character of "openai-codex") selector.handleInput(character);
+		const rendered = renderText(selector);
+		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
+		expect(rendered).not.toContain("ChatGPT Plus/Pro (Browser callback)");
+		expect(rendered.match(/logged in/g)).toHaveLength(1);
 	});
 
 	it("renders a bounded provider viewport with position and input guidance", () => {
@@ -49,9 +54,9 @@ describe("OAuthSelectorComponent provider search", () => {
 
 		const rendered = renderText(selector);
 		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
-		expect(rendered).toContain("ChatGPT Plus/Pro (Browser callback)");
+		expect(rendered).not.toContain("ChatGPT Plus/Pro (Browser callback)");
 		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
-		expect(rendered).toContain(`2 matches (${getOAuthProviders().length} total)`);
+		expect(rendered).toContain("1 match");
 
 		selector.handleInput("\n");
 		expect(onSelect).toHaveBeenCalledWith("openai-codex");

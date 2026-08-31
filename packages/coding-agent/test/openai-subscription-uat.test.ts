@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
-import { OPENAI_CODEX_TERRA_MODEL, redactSensitiveOutput } from "../scripts/openai-subscription-uat";
+import { OPENAI_CODEX_SOL_MODEL, redactSensitiveOutput } from "../scripts/openai-subscription-uat";
 
 describe("OpenAI subscription source UAT", () => {
-	it("targets xcsh native GPT-5.6 Terra and contains no official-Codex sentinel", async () => {
-		expect(OPENAI_CODEX_TERRA_MODEL).toBe("openai-codex/gpt-5.6-terra");
+	it("targets xcsh native GPT-5.6 Sol and contains no official-Codex sentinel", async () => {
+		expect(OPENAI_CODEX_SOL_MODEL).toBe("openai-codex/gpt-5.6-sol");
 		const source = await fs.readFile(new URL("../scripts/openai-subscription-uat.ts", import.meta.url), "utf8");
 		expect(source).not.toContain('"codex", ["login", "status"]');
 		expect(source).not.toContain('"codex", [');
