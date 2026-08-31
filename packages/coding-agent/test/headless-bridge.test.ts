@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { type BridgeServer, OFFICE_PORT_RANGE } from "../src/browser/extension-bridge";
-import { BROWSER_TOOL_NAMES, OFFICE_TOOL_NAMES } from "../src/browser/extension-bridge-tools";
+import {
+	BROWSER_TOOL_NAMES,
+	EXTENSION_AGENT_TOOL_NAMES,
+	OFFICE_TOOL_NAMES,
+} from "../src/browser/extension-bridge-tools";
 import {
 	type HeadlessBridgeDeps,
 	sessionInfoForOfficeServe,
@@ -59,6 +63,7 @@ function makeDeps(opts: { tls?: unknown; sessionThrows?: boolean; pick?: PickRes
 		initEnv: async () => ({ cwd: "/tmp/office-serve" }),
 		resolveBridgeTls: (async () => opts.tls) as HeadlessBridgeDeps["resolveBridgeTls"],
 		startBridgeServer: (async (_port?: number, o?: unknown) => {
+			log.push("startBridge");
 			bridgeOpts = o;
 			return bridge;
 		}) as HeadlessBridgeDeps["startBridgeServer"],
@@ -236,5 +241,115 @@ describe("sessionInfoForOfficeServe", () => {
 			if (prev === undefined) delete process.env.XCSH_API_URL;
 			else process.env.XCSH_API_URL = prev;
 		}
+	});
+});
+
+describe("startHeadlessChatBridge worker profile", () => {
+	const workerInfo = {
+		tenant: "example-corp",
+		env: "production",
+		apiUrl: null,
+		contextBound: false,
+		sessionId: "tab-7",
+	};
+
+	test("uses the browser bridge and exact worker session/tool configuration", async () => {
+		const h = makeDeps({ tls: { key: "k", cert: "c" } });
+		const previousBenchExtension = process.env.XCSH_BENCH_EXTENSION;
+		process.env.XCSH_BENCH_EXTENSION = "/tmp/bench-extension.ts";
+		try {
+			const running = await startHeadlessChatBridge(h.deps, {
+				kind: "worker",
+				sessionInfo: () => workerInfo,
+			});
+
+			expect(h.bridgeOpts()).toEqual({
+				tls: { key: "k", cert: "c" },
+				serveKind: "browser",
+				sessionInfo: expect.any(Function),
+			});
+			expect((h.bridgeOpts() as { sessionInfo: () => unknown }).sessionInfo()).toEqual(workerInfo);
+
+			const options = h.sessionOpts();
+			expect(options).toMatchObject({
+				cwd: "/tmp/office-serve",
+				hasUI: false,
+				enableMCP: false,
+				enableLsp: false,
+				disableExtensionDiscovery: true,
+				additionalExtensionPaths: ["/tmp/bench-extension.ts"],
+			});
+			expect(options?.toolNames).toEqual([...new Set([...BROWSER_TOOL_NAMES, ...EXTENSION_AGENT_TOOL_NAMES])]);
+			expect(((options?.customTools ?? []) as Array<{ name: string }>).map(tool => tool.name)).toEqual([
+				...EXTENSION_AGENT_TOOL_NAMES,
+			]);
+			expect(options?.modelPattern).toBeUndefined();
+			expect(options?.sessionManager).toBeUndefined();
+			expect(options?.bundledExtensions).toBeUndefined();
+			expect(running.handler).toBeDefined();
+		} finally {
+			if (previousBenchExtension === undefined) delete process.env.XCSH_BENCH_EXTENSION;
+			else process.env.XCSH_BENCH_EXTENSION = previousBenchExtension;
+		}
+	});
+
+	test("runs worker lifecycle hooks after publication and session creation, before attach", async () => {
+		const h = makeDeps();
+		await startHeadlessChatBridge(h.deps, {
+			kind: "worker",
+			sessionInfo: () => workerInfo,
+			afterBridgeBind: ({ bridge, cwd }) => {
+				expect(bridge).toBe(h.bridge);
+				expect(cwd).toBe("/tmp/office-serve");
+				h.log.push("afterBridgeBind");
+			},
+			afterSessionCreate: ({ bridge, session, cwd }) => {
+				expect(bridge).toBe(h.bridge);
+				expect(session as unknown).toEqual({ id: "s" });
+				expect(cwd).toBe("/tmp/office-serve");
+				h.log.push("afterSessionCreate");
+			},
+		});
+
+		expect(h.log).toEqual([
+			"startBridge",
+			"setShared",
+			"afterBridgeBind",
+			"createSession",
+			"afterSessionCreate",
+			"attach",
+		]);
+	});
+
+	test("cleans up a published bridge when a worker lifecycle hook fails", async () => {
+		const h = makeDeps();
+		await expect(
+			startHeadlessChatBridge(h.deps, {
+				kind: "worker",
+				sessionInfo: () => workerInfo,
+				afterBridgeBind: () => {
+					throw new Error("worker bind hook failed");
+				},
+			}),
+		).rejects.toThrow("worker bind hook failed");
+		expect(h.calls).toContain("setShared:null");
+		expect(h.calls).toContain("close");
+		expect(h.log).not.toContain("createSession");
+	});
+
+	test("cleans up when the post-session worker hook fails before handler attachment", async () => {
+		const h = makeDeps();
+		await expect(
+			startHeadlessChatBridge(h.deps, {
+				kind: "worker",
+				sessionInfo: () => workerInfo,
+				afterSessionCreate: () => {
+					throw new Error("worker session hook failed");
+				},
+			}),
+		).rejects.toThrow("worker session hook failed");
+		expect(h.calls).toContain("setShared:null");
+		expect(h.calls).toContain("close");
+		expect(h.handler.attached).toBe(false);
 	});
 });
