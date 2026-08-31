@@ -100,11 +100,11 @@ describe("Google Vertex runtime configuration", () => {
 		});
 	});
 
-	it("defaults to the global Vertex location and global endpoint", async () => {
+	it("always uses the global Vertex location and global endpoint", async () => {
 		const originalLocation = Bun.env.GOOGLE_CLOUD_LOCATION;
 		try {
-			delete Bun.env.GOOGLE_CLOUD_LOCATION;
-			expect(resolveGoogleVertexLocation()).toBe("global");
+			Bun.env.GOOGLE_CLOUD_LOCATION = "us-central1";
+			expect(resolveGoogleVertexLocation({ location: "europe-west4" })).toBe("global");
 			expect(googleVertexRequestUrl("gemini-3.7-flash", "test-project", "global")).toBe(
 				"https://aiplatform.googleapis.com/v1/projects/test-project/locations/global/publishers/google/models/gemini-3.7-flash:streamGenerateContent",
 			);

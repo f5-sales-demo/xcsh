@@ -142,14 +142,6 @@ export { loginZenMux } from "./zenmux";
 
 const builtInOAuthProviders: OAuthProviderInfo[] = [
 	{
-		id: "google-vertex",
-		name: "Google Cloud Vertex AI (Corporate)",
-		description: "Corporate Google Cloud account · Vertex billing/project · Gemini 3.7 Flash HIGH",
-		available: true,
-		loginOnly: true,
-		loginOrder: -100,
-	},
-	{
 		id: "anthropic",
 		name: "Anthropic (Claude Pro/Max)",
 		available: true,
@@ -215,8 +207,6 @@ const builtInOAuthProviders: OAuthProviderInfo[] = [
 		name: "Google Antigravity Enterprise (Advanced OAuth)",
 		description: "Advanced corporate OAuth route; entitlement-discovered models, not Vertex ADC",
 		available: true,
-		canonicalId: "google-antigravity",
-		loginOnly: true,
 	},
 	{
 		id: "cursor",
@@ -519,7 +509,10 @@ export async function getOAuthApiKey(
 	}
 	// For providers that need request-time credential metadata, return JSON.
 	const needsStructuredApiKey =
-		provider === "github-copilot" || provider === "google-gemini-cli" || provider === "google-antigravity";
+		provider === "github-copilot" ||
+		provider === "google-gemini-cli" ||
+		provider === "google-antigravity" ||
+		provider === "google-antigravity-enterprise";
 	const apiKey = needsStructuredApiKey
 		? JSON.stringify({
 				token: creds.access,

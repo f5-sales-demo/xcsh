@@ -104,10 +104,11 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 		let rawRequestDump: RawHttpRequestDump | undefined;
 
 		try {
-			const apiKey = resolveApiKey(options);
-			const project = apiKey ? undefined : await resolveGoogleVertexProject(options);
-			const location = apiKey ? undefined : resolveGoogleVertexLocation(options);
-			const client = apiKey ? createClientWithApiKey(model, apiKey) : createClient(model, project!, location!);
+			// Corporate Vertex is deliberately ADC-only.  In particular, do not let the
+			// generic agent API-key plumbing turn this route into Gemini consumer auth.
+			const project = await resolveGoogleVertexProject(options);
+			const location = resolveGoogleVertexLocation(options);
+			const client = createClient(model, project, location);
 			const params = buildGoogleVertexParams(model, context, options);
 			options?.onPayload?.(params);
 			rawRequestDump = {
@@ -115,9 +116,7 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 				api: output.api,
 				model: model.id,
 				method: "POST",
-				url: apiKey
-					? `https://aiplatform.googleapis.com/${API_VERSION}/publishers/google/models/${model.id}:streamGenerateContent`
-					: googleVertexRequestUrl(model.id, project!, location!),
+				url: googleVertexRequestUrl(model.id, project, location),
 				body: params,
 			};
 			const googleStream = await client.models.generateContentStream(params);
@@ -342,23 +341,6 @@ function createClient(model: Model<"google-vertex">, project: string, location: 
 	});
 }
 
-function createClientWithApiKey(model: Model<"google-vertex">, apiKey: string): GoogleGenAI {
-	return new GoogleGenAI({
-		vertexai: true,
-		apiKey,
-		apiVersion: API_VERSION,
-		httpOptions: buildHttpOptions(model),
-	});
-}
-
-function resolveApiKey(options?: GoogleVertexOptions): string | undefined {
-	// options.apiKey may contain sentinel values like "<authenticated>" or "N/A"
-	// leaked from the agent loop — only use it if it looks like a real API key.
-	const optKey = options?.apiKey;
-	const realKey = optKey && !optKey.startsWith("<") && optKey !== "N/A" ? optKey : undefined;
-	return realKey || $env.GOOGLE_CLOUD_API_KEY;
-}
-
 const defaultProjectRuntime: GoogleVertexProjectRuntime = {
 	readAdcProject,
 	readLocalConfigProject: readConfiguredGcloudProject,
@@ -442,7 +424,10 @@ export async function resolveGoogleVertexProject(
 }
 
 export function resolveGoogleVertexLocation(options?: GoogleVertexOptions): string {
-	return options?.location || $env.GOOGLE_CLOUD_LOCATION || "global";
+	// Gemini 3.7 Flash Corporate is served through the global endpoint only.
+	// Ignore inherited provider/environment locations so a request cannot drift.
+	void options;
+	return "global";
 }
 
 async function readAdcProject(): Promise<string | undefined> {

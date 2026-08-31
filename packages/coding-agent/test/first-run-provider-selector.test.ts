@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
+import { getLoginOptions } from "../src/modes/controllers/login-options";
 import { SelectorController } from "../src/modes/controllers/selector-controller";
 import { initTheme } from "../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../src/modes/types";
@@ -41,6 +42,8 @@ describe("first-run provider onboarding", () => {
 		);
 		expect(rendered).toContain("Corporate Google Cloud account");
 		const enterprise = getOAuthProviders().find(provider => provider.id === "google-antigravity-enterprise");
+		expect(getOAuthProviders().some(provider => provider.id === "google-vertex")).toBe(false);
+		expect(getLoginOptions()[0]).toMatchObject({ id: "google-vertex", kind: "local" });
 		expect(enterprise?.name).toBe("Google Antigravity Enterprise (Advanced OAuth)");
 		expect(enterprise?.description).toContain("not Vertex ADC");
 		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
