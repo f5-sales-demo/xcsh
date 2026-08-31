@@ -26,7 +26,9 @@ When running inside an SSH session or headless terminal, xcsh automatically init
 
 ### Local desktop browser callback
 
-On local workstations with graphical desktop environments, the same `/login openai-codex` command opens your default browser and receives tokens through a local loopback listener on port 1455 (`http://localhost:1455/auth/callback`). If device authorization is unavailable in an SSH or headless session, the same login flow offers browser/manual redirect authentication; open the displayed URL locally, then paste the redirect URL into `/login <redirect URL>` on the remote host.
+On local workstations with graphical desktop environments, the same `/login openai-codex` command opens your default browser and receives tokens through a local loopback listener on port 1455 (`http://localhost:1455/auth/callback`).
+
+If device authorization is unavailable in an SSH or headless session, the same login flow offers browser/manual redirect authentication. Open the displayed URL locally, then paste the redirect URL into `/login <redirect URL>` on the remote host.
 
 ## 2. OpenAI Platform API (usage-based billing)
 
