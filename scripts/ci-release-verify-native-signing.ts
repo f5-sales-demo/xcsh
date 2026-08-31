@@ -53,8 +53,16 @@ async function verifyOne(node: string): Promise<string[]> {
 	}
 	// `-t install` is the assessment type that recognizes a notarized standalone
 	// Mach-O; `-t open`/`-t exec` return "Insufficient Context" for a bare dylib.
-	const gk = await $`spctl -a -vv -t install ${node}`.quiet().nothrow();
-	const gkText = `${gk.stdout.toString()}${gk.stderr.toString()}`;
+	// Apple can accept a notary submission before the Gatekeeper assessment
+	// service has propagated that verdict to the runner. Keep the gate strict,
+	// but tolerate that documented short propagation window.
+	let gkText = "";
+	for (let attempt = 1; attempt <= 8; attempt += 1) {
+		const gk = await $`spctl -a -vv -t install ${node}`.quiet().nothrow();
+		gkText = `${gk.stdout.toString()}${gk.stderr.toString()}`;
+		if (/source=Notarized Developer ID/.test(gkText)) break;
+		if (attempt < 8) await Bun.sleep(15_000);
+	}
 	if (!/source=Notarized Developer ID/.test(gkText)) {
 		failures.push(`not notarized (spctl: ${gkText.trim().split("\n").pop() ?? "no verdict"})`);
 	}
