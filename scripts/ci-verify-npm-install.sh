@@ -13,7 +13,10 @@ max_delay=60
 install_prefix=$(mktemp -d "$RUNNER_TEMP/xcsh-npm-verify.XXXXXX")
 install_log="$install_prefix/npm-install.log"
 binary="$install_prefix/bin/xcsh"
+release_cache="$install_prefix/release-cache"
 trap 'rm -rf -- "$install_prefix"' EXIT
+
+export XCSH_RELEASE_CACHE_DIR="$release_cache"
 
 is_retryable_registry_failure() {
   grep -Eiq \
@@ -39,6 +42,22 @@ for attempt in $(seq 1 "$max_attempts"); do
 
     if [ "$installed" = "$expected" ]; then
       echo "Version match confirmed."
+      release_binary="$release_cache/v${expected}/linux-x64/xcsh-linux-x64"
+      if [ ! -x "$release_binary" ]; then
+        echo "ERROR: npm launcher did not cache the matching compiled release binary: $release_binary" >&2
+        exit 1
+      fi
+      if grep -q '^#!/usr/bin/env bun' "$release_binary" 2>/dev/null; then
+        echo "ERROR: npm launcher cached a source script instead of a compiled release binary" >&2
+        exit 1
+      fi
+      vertex_auth_status=$(env -u XCSH_VERTEX_OAUTH_CLIENT_ID -u XCSH_VERTEX_OAUTH_CLIENT_SECRET \
+        XCSH_SMOKE_TEST_VERTEX_AUTH=1 "$binary")
+      if [ "$vertex_auth_status" != "vertex-auth: ready" ]; then
+        echo "ERROR: compiled npm command could not begin fresh Corporate Vertex authentication" >&2
+        exit 1
+      fi
+      echo "Fresh Corporate Vertex authentication bootstrap confirmed."
       echo "Checking xcsh --help..."
       "$binary" --help >/dev/null
       XCSH_TEST_SANDBOX_CHECK_BINARY="$binary" \

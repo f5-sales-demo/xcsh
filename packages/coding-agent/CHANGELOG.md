@@ -36,6 +36,9 @@
 
 ### Fixed
 
+- Made npm, Bun, and default installer commands execute the exact matching compiled release so
+  licensed Corporate Vertex authentication is available without exposing build credentials in
+  published source ([#3557](https://github.com/f5-sales-demo/xcsh/issues/3557)).
 - Isolated post-publication npm verification in a job-local writable prefix and failed immediately
   for non-registry installation errors
   ([#3375](https://github.com/f5-sales-demo/xcsh/issues/3375)).

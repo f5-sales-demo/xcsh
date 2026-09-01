@@ -124,12 +124,21 @@ function detectInstallMethod(binPath: string, bunBinDir: string | undefined): In
 	return "binary";
 }
 
-function resolveUpdateMethod(ompPath: string, bunBinDir: string | undefined): InstallMethod {
+function resolveUpdateMethod(
+	ompPath: string,
+	bunBinDir: string | undefined,
+	distributionChannel = process.env.XCSH_DISTRIBUTION_CHANNEL,
+): InstallMethod {
+	if (distributionChannel === "bun" || distributionChannel === "npm") return distributionChannel;
 	return detectInstallMethod(ompPath, bunBinDir);
 }
 
-export function _resolveUpdateMethodForTest(ompPath: string, bunBinDir: string | undefined): InstallMethod {
-	return resolveUpdateMethod(ompPath, bunBinDir);
+export function _resolveUpdateMethodForTest(
+	ompPath: string,
+	bunBinDir: string | undefined,
+	distributionChannel?: string,
+): InstallMethod {
+	return resolveUpdateMethod(ompPath, bunBinDir, distributionChannel);
 }
 async function resolveUpdateTarget(): Promise<UpdateTarget> {
 	const bunBinDir = await getBunGlobalBinDir();

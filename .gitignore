@@ -123,6 +123,8 @@ out/
 .sisyphus/*
 !.sisyphus/rules/
 packages/*/bin/
+!packages/coding-agent/bin/
+!packages/coding-agent/bin/xcsh.ts
 test-injection/
 notepad.md
 oauth-success.html

@@ -28,7 +28,7 @@
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
 	"bin": {
-		"xcsh": "src/cli.ts"
+		"xcsh": "bin/xcsh.ts"
 	},
 	"scripts": {
 		"prebuild": "bun ../../scripts/check-installed-dependencies.ts",
@@ -90,6 +90,7 @@
 		"bun": ">=1.3.7"
 	},
 	"files": [
+		"bin",
 		"src",
 		"README.md",
 		"CHANGELOG.md"

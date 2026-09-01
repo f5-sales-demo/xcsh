@@ -158,6 +158,11 @@ describe("update command boundary", () => {
 });
 
 describe("update-cli install target detection", () => {
+	it("preserves the package launcher channel for cached compiled binaries", () => {
+		expect(_resolveUpdateMethodForTest("/tmp/cache/xcsh", undefined, "bun")).toBe("bun");
+		expect(_resolveUpdateMethodForTest("/tmp/cache/xcsh", undefined, "npm")).toBe("npm");
+	});
+
 	// --- Existing tests (bun and binary) ---
 
 	it("uses bun update when prioritized xcsh is inside bun global bin", () => {

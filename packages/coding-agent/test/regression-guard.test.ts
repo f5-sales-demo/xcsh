@@ -420,6 +420,26 @@ describe("CI verify-npm-install uses an isolated version-pinned install", () => 
 		expect(src).not.toContain("command -v xcsh");
 	});
 
+	it("proves the npm command delegates to a compiled binary with fresh Vertex auth inputs", async () => {
+		const src = await fs.readFile(path.join(import.meta.dir, "../../../scripts/ci-verify-npm-install.sh"), "utf8");
+		expect(src).toContain('XCSH_RELEASE_CACHE_DIR="$release_cache"');
+		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal shell interpolation contract
+		expect(src).toContain('release_binary="$release_cache/v${expected}/linux-x64/xcsh-linux-x64"');
+		expect(src).toContain("XCSH_SMOKE_TEST_VERTEX_AUTH=1");
+		expect(src).toContain("vertex-auth: ready");
+	});
+
+	it("keeps source installs explicit and defaults both installers to compiled releases", async () => {
+		const shell = await fs.readFile(path.join(import.meta.dir, "../../../scripts/install.sh"), "utf8");
+		const powershell = await fs.readFile(path.join(import.meta.dir, "../../../scripts/install.ps1"), "utf8");
+		const shellMain = shell.slice(shell.lastIndexOf("# Main logic"), shell.indexOf("# #1874 Task 7"));
+		const shellDefault = shellMain.match(/\*\)\n([\s\S]*?)\n {2};;\n/)?.[1];
+		const powershellMain = powershell.slice(powershell.lastIndexOf("# Main logic"));
+		expect(shellDefault).toContain("install_binary");
+		expect(shellDefault).not.toContain("install_via_bun");
+		expect(powershellMain.match(/} else \{\n([\s\S]*?)\n}/)?.[1]).toContain("Install-Binary");
+	});
+
 	it("ci.yml verify step uses EXPECTED_VERSION from github.ref_name", async () => {
 		const src = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal string match against YAML content

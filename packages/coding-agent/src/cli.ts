@@ -181,4 +181,22 @@ if (process.env.XCSH_SMOKE_TEST_SPECS === "1") {
 	process.exit(domainCount > 0 && categoryCount > 0 ? 0 : 1);
 }
 
+// Post-publication verification exercises the licensed build inputs without
+// printing the client, authorization URL, state, challenge, or any credential.
+if (process.env.XCSH_SMOKE_TEST_VERTEX_AUTH === "1") {
+	try {
+		const { createVertexAuthorizationUrl } = await import("@f5-sales-demo/pi-ai/utils/oauth/google-antigravity");
+		const url = new URL(createVertexAuthorizationUrl("release-verification-state", "release-verification-challenge"));
+		const ready =
+			url.protocol === "https:" &&
+			url.searchParams.get("code_challenge_method") === "S256" &&
+			Boolean(url.searchParams.get("client_id"));
+		console.log(ready ? "vertex-auth: ready" : "vertex-auth: unavailable");
+		process.exit(ready ? 0 : 1);
+	} catch {
+		console.log("vertex-auth: unavailable");
+		process.exit(1);
+	}
+}
+
 await runCli(process.argv.slice(2));
