@@ -12,13 +12,14 @@
  * any bundle error.
  */
 import * as path from "node:path";
+import { vertexBuildDefines } from "../../../scripts/vertex-build-credentials";
 
 const cliEntry = path.resolve(import.meta.dir, "../src/cli.ts");
 
 const result = await Bun.build({
 	entrypoints: [cliEntry],
 	target: "bun",
-	define: { PI_COMPILED: "true" },
+	define: { PI_COMPILED: "true", ...vertexBuildDefines() },
 	external: ["mupdf"],
 	throw: false,
 });

@@ -29,12 +29,6 @@ const SCOPES = [
 
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-// Split the licensed public desktop identifier so secret scanners do not mistake
-// the complete client ID for a user credential.
-const VERTEX_CLIENT_ID =
-	decode("ODg0MzU0OTE5MDUyLTM2dHJjMWpqYjN0Z3VpYWMzMm92NmNvZA==") +
-	decode("MjY4YzVibGguYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20=");
-const VERTEX_CLIENT_SECRET = decode("R09DU1BYLTlZUVdwRjdS") + decode("V0RDMFFUZGotWXhLTXdSMFp0c1g=");
 const VERTEX_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 export const VERTEX_OAUTH_REDIRECT_URI = "https://antigravity.google/oauth-callback";
 const VERTEX_OAUTH_TIMEOUT_MS = 15 * 60 * 1000;
@@ -46,6 +40,23 @@ const PROJECT_ONBOARD_INTERVAL_MS = 2000;
 const PROJECT_ID_PATTERN = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
 const PROJECT_NUMBER_PATTERN = /^\d{12}$/;
 const ANTIGRAVITY_CLI_TOKEN_PATH = join(homedir(), ".gemini", "antigravity-cli", "antigravity-oauth-token");
+
+declare const PI_VERTEX_OAUTH_CLIENT_ID: string | undefined;
+declare const PI_VERTEX_OAUTH_CLIENT_SECRET: string | undefined;
+
+function resolveVertexOAuthClient(): { clientId: string; clientSecret: string } {
+	const compiledClientId = typeof PI_VERTEX_OAUTH_CLIENT_ID === "string" ? PI_VERTEX_OAUTH_CLIENT_ID.trim() : "";
+	const compiledClientSecret =
+		typeof PI_VERTEX_OAUTH_CLIENT_SECRET === "string" ? PI_VERTEX_OAUTH_CLIENT_SECRET.trim() : "";
+	const clientId = compiledClientId || Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID?.trim();
+	const clientSecret = compiledClientSecret || Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET?.trim();
+	if (!clientId || !clientSecret) {
+		throw new Error(
+			"Corporate Vertex OAuth credentials are unavailable in this build. Install an official xcsh binary or provide the licensed build credentials when running from source.",
+		);
+	}
+	return { clientId, clientSecret };
+}
 
 interface LoadCodeAssistPayload {
 	cloudaicompanionProject?: string | { id?: string };
@@ -442,12 +453,13 @@ export async function exchangeVertexOAuthCode(
 	verifier: string,
 	fetchImpl: typeof fetch = fetch,
 ): Promise<OAuthCredentials> {
+	const { clientId, clientSecret } = resolveVertexOAuthClient();
 	const tokenResponse = await fetchImpl(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
-			client_id: VERTEX_CLIENT_ID,
-			client_secret: VERTEX_CLIENT_SECRET,
+			client_id: clientId,
+			client_secret: clientSecret,
 			code,
 			code_verifier: verifier,
 			grant_type: "authorization_code",
@@ -470,9 +482,10 @@ export async function exchangeVertexOAuthCode(
 }
 
 export function createVertexAuthorizationUrl(state: string, challenge: string): string {
+	const { clientId } = resolveVertexOAuthClient();
 	const params = new URLSearchParams({
 		access_type: "offline",
-		client_id: VERTEX_CLIENT_ID,
+		client_id: clientId,
 		code_challenge: challenge,
 		code_challenge_method: "S256",
 		prompt: "consent",
@@ -539,12 +552,13 @@ export async function refreshVertexWithAntigravityOAuth(
 	refreshToken: string,
 	fetchImpl: typeof fetch = fetch,
 ): Promise<OAuthCredentials> {
+	const { clientId, clientSecret } = resolveVertexOAuthClient();
 	const response = await fetchImpl(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
-			client_id: VERTEX_CLIENT_ID,
-			client_secret: VERTEX_CLIENT_SECRET,
+			client_id: clientId,
+			client_secret: clientSecret,
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),

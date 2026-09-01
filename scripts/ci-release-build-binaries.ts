@@ -4,11 +4,17 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { $ } from "bun";
+import { vertexBuildDefines } from "./vertex-build-credentials";
 
 interface BinaryTarget {
 	platform: string;
 	arch: string;
-	target: string;
+	target:
+		| "bun-darwin-arm64"
+		| "bun-darwin-x64"
+		| "bun-linux-x64-modern"
+		| "bun-linux-arm64"
+		| "bun-windows-x64-modern";
 	outfile: string;
 }
 
@@ -81,13 +87,22 @@ async function buildBinary(target: BinaryTarget): Promise<void> {
 	console.log(`Building ${target.outfile}...`);
 	await embedNative(target);
 	if (isDryRun) {
-		console.log(`DRY RUN bun build --compile --define PI_COMPILED=true --root . --external mupdf --target=${target.target} ${entrypoint} --outfile ${target.outfile}`);
+		console.log(`DRY RUN licensed Bun compile for ${target.target} -> ${target.outfile}`);
 		return;
 	}
 
-	await $`bun build --compile --define PI_COMPILED=true --root . --external mupdf --target=${target.target} ${entrypoint} --outfile ${target.outfile}`.cwd(
-		repoRoot,
-	);
+	const result = await Bun.build({
+		entrypoints: [path.join(repoRoot, entrypoint)],
+		compile: { target: target.target, outfile: path.join(repoRoot, target.outfile) },
+		root: repoRoot,
+		external: ["mupdf"],
+		define: { PI_COMPILED: "true", ...vertexBuildDefines(Bun.env, true) },
+		throw: false,
+	});
+	if (!result.success) {
+		for (const log of result.logs) console.error(String(log));
+		throw new Error(`Failed to compile ${target.outfile}`);
+	}
 }
 
 async function generateBundle(): Promise<void> {
