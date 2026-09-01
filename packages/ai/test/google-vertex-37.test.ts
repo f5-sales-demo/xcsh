@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { Effort, getBundledModel } from "@f5-sales-demo/pi-ai";
+import type { TSchema } from "@sinclair/typebox";
 import { buildGoogleVertexParams, googleVertexRequestUrl } from "../src/providers/google-vertex";
 import type { AssistantMessage, Context, Model, ToolResultMessage } from "../src/types";
 
@@ -46,6 +47,27 @@ describe("Vertex Gemini 3.7 request contract", () => {
 		);
 		expect(String(params.config?.thinkingConfig?.thinkingLevel)).toBe(expected);
 		expect(model.thinking?.defaultLevel).toBe(Effort.High);
+	});
+
+	it("restricts forced function calling to the requested tool", () => {
+		const params = buildGoogleVertexParams(
+			model,
+			{
+				messages: [{ role: "user", content: "Use lookup", timestamp: 1 }],
+				tools: [
+					{
+						name: "lookup",
+						description: "Look up a value",
+						parameters: { type: "object", properties: {} } as unknown as TSchema,
+					},
+				],
+			},
+			{ toolChoice: { name: "lookup" } },
+		);
+
+		const functionCalling = params.config?.toolConfig?.functionCallingConfig;
+		expect(String(functionCalling?.mode)).toBe("ANY");
+		expect(functionCalling?.allowedFunctionNames).toEqual(["lookup"]);
 	});
 
 	it("keeps matching function-call and function-response IDs", () => {

@@ -41,9 +41,9 @@ describe("buildNamedToolChoice", () => {
 		expect(result).toBe("required");
 	});
 
-	it("returns required for google-vertex", () => {
+	it("returns a named tool choice for google-vertex", () => {
 		const result = buildNamedToolChoice("submit_result", mockModel("google-vertex"));
-		expect(result).toBe("required");
+		expect(result).toEqual({ type: "tool", name: "submit_result" });
 	});
 
 	it("returns required as fallback for unknown API types", () => {

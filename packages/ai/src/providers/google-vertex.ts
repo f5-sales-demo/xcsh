@@ -39,7 +39,7 @@ import {
 export interface GoogleVertexOptions extends StreamOptions {
 	/** OAuth bearer token from the isolated Vertex credential namespace. */
 	apiKey?: string;
-	toolChoice?: "auto" | "none" | "any";
+	toolChoice?: "auto" | "none" | "any" | { name: string };
 	thinking?: {
 		enabled: boolean;
 		budgetTokens?: number; // -1 for dynamic, 0 to disable
@@ -516,9 +516,11 @@ export function buildGoogleVertexParams(
 	};
 
 	if (context.tools && context.tools.length > 0 && options.toolChoice) {
+		const forcedToolName = typeof options.toolChoice === "string" ? undefined : options.toolChoice.name;
 		config.toolConfig = {
 			functionCallingConfig: {
-				mode: mapToolChoice(options.toolChoice),
+				mode: mapToolChoice(typeof options.toolChoice === "string" ? options.toolChoice : "any"),
+				...(forcedToolName && { allowedFunctionNames: [forcedToolName] }),
 			},
 		};
 	} else {

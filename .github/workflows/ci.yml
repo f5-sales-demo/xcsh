@@ -679,6 +679,8 @@ jobs:
         env:
           XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          XCSH_VERTEX_OAUTH_CLIENT_ID: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_ID }}
+          XCSH_VERTEX_OAUTH_CLIENT_SECRET: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_SECRET }}
         run: bun scripts/ci-release-build-binaries.ts --platform linux,win32
       - name: Verify compiled Linux sandbox check in a direct-home live profile
         env:
@@ -878,6 +880,8 @@ jobs:
         env:
           XCSH_BUILD_BRANCH: main # compiled binaries have no .git at runtime; pin branch at build time
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          XCSH_VERTEX_OAUTH_CLIENT_ID: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_ID }}
+          XCSH_VERTEX_OAUTH_CLIENT_SECRET: ${{ secrets.XCSH_VERTEX_OAUTH_CLIENT_SECRET }}
         run: bun scripts/ci-release-build-binaries.ts --platform darwin --arch "$RELEASE_ARCH"
       - name: Stage macOS native addons for release
         run: cp packages/natives/native/*.node packages/coding-agent/binaries/

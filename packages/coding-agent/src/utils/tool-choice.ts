@@ -20,7 +20,11 @@ export function buildNamedToolChoice(toolName: string, model?: Model<Api>): Tool
 		return { type: "function", name: toolName };
 	}
 
-	if (model.api === "google-generative-ai" || model.api === "google-gemini-cli" || model.api === "google-vertex") {
+	if (model.api === "google-vertex") {
+		return { type: "tool", name: toolName };
+	}
+
+	if (model.api === "google-generative-ai" || model.api === "google-gemini-cli") {
 		return "required";
 	}
 

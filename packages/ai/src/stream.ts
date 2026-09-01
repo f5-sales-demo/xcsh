@@ -339,9 +339,7 @@ export function mapAnthropicToolChoice(choice?: ToolChoice): AnthropicOptions["t
 	return undefined;
 }
 
-function mapGoogleToolChoice(
-	choice?: ToolChoice,
-): GoogleOptions["toolChoice"] | GoogleGeminiCliOptions["toolChoice"] | GoogleVertexOptions["toolChoice"] {
+function mapGoogleToolChoice(choice?: ToolChoice): GoogleOptions["toolChoice"] | GoogleGeminiCliOptions["toolChoice"] {
 	if (!choice) return undefined;
 	if (typeof choice === "string") {
 		if (choice === "required") return "any";
@@ -349,6 +347,17 @@ function mapGoogleToolChoice(
 		return undefined;
 	}
 	return "any";
+}
+
+function mapGoogleVertexToolChoice(choice?: ToolChoice): GoogleVertexOptions["toolChoice"] {
+	if (!choice) return undefined;
+	if (typeof choice === "string") {
+		if (choice === "required") return "any";
+		if (choice === "auto" || choice === "none" || choice === "any") return choice;
+		return undefined;
+	}
+	const name = choice.type === "function" && "function" in choice ? choice.function.name : choice.name;
+	return name ? { name } : undefined;
 }
 
 function mapOpenAiToolChoice(choice?: ToolChoice): OpenAICompletionsOptions["toolChoice"] {
@@ -637,7 +646,7 @@ export function mapOptionsForApi<TApi extends Api>(
 				return castApi<"google-vertex">({
 					...vertexBase,
 					thinking: { enabled: false },
-					toolChoice: mapGoogleToolChoice(options?.toolChoice),
+					toolChoice: mapGoogleVertexToolChoice(options?.toolChoice),
 				});
 			}
 
@@ -652,7 +661,7 @@ export function mapOptionsForApi<TApi extends Api>(
 						enabled: true,
 						level: mapEffortToGoogleThinkingLevel(geminiModel, effort),
 					},
-					toolChoice: mapGoogleToolChoice(options?.toolChoice),
+					toolChoice: mapGoogleVertexToolChoice(options?.toolChoice),
 				});
 			}
 
@@ -662,7 +671,7 @@ export function mapOptionsForApi<TApi extends Api>(
 					enabled: true,
 					budgetTokens: getGoogleBudget(geminiModel, effort, options?.thinkingBudgets),
 				},
-				toolChoice: mapGoogleToolChoice(options?.toolChoice),
+				toolChoice: mapGoogleVertexToolChoice(options?.toolChoice),
 			});
 		}
 

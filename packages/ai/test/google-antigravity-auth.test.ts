@@ -16,6 +16,13 @@ const USER_INFO_URL = "https://www.googleapis.com/oauth2/v1/userinfo?alt=json";
 const LOAD_CODE_ASSIST_URL = "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist";
 const ONBOARD_USER_URL = "https://cloudcode-pa.googleapis.com/v1internal:onboardUser";
 const originalFetch = global.fetch;
+const originalVertexClientId = Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+const originalVertexClientSecret = Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+
+function setVertexBuildCredentials(): void {
+	Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID = "test-vertex-client-id";
+	Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET = "test-vertex-client-secret";
+}
 
 interface RecordedRequest {
 	url: string;
@@ -92,6 +99,10 @@ async function runLogin(
 
 afterEach(() => {
 	global.fetch = originalFetch;
+	if (originalVertexClientId === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+	else Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID = originalVertexClientId;
+	if (originalVertexClientSecret === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+	else Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET = originalVertexClientSecret;
 	vi.restoreAllMocks();
 });
 
@@ -320,6 +331,7 @@ describe("Google Antigravity auth alignment", () => {
 	});
 
 	it("exchanges the authorized Vertex credential without Code Assist discovery or onboarding", async () => {
+		setVertexBuildCredentials();
 		const requests: Array<{ url: string; body: URLSearchParams }> = [];
 		const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
 			const url = String(input);
@@ -345,14 +357,11 @@ describe("Google Antigravity auth alignment", () => {
 			code_verifier: "pkce-verifier",
 			redirect_uri: VERTEX_OAUTH_REDIRECT_URI,
 		});
-		const exchangeSecret = requests[0]!.body.get("client_secret");
-		expect(exchangeSecret).not.toBeNull();
-		expect(new Bun.CryptoHasher("sha256").update(exchangeSecret!).digest("hex")).toBe(
-			"a2ddedc84850a9c48b7e01d61700848083bf0e10fb8d6c99c496803e8b48ced0",
-		);
+		expect(requests[0]!.body.get("client_secret")).toBe("test-vertex-client-secret");
 	});
 
 	it("builds Corporate Vertex authorization with the hosted Antigravity PKCE callback", () => {
+		setVertexBuildCredentials();
 		const url = new URL(createVertexAuthorizationUrl("csrf-state", "pkce-challenge"));
 		expect(`${url.origin}${url.pathname}`).toBe("https://accounts.google.com/o/oauth2/auth");
 		expect(url.searchParams.get("redirect_uri")).toBe(VERTEX_OAUTH_REDIRECT_URI);
@@ -360,20 +369,27 @@ describe("Google Antigravity auth alignment", () => {
 		expect(url.searchParams.get("state")).toBe("csrf-state");
 		expect(url.searchParams.get("code_challenge")).toBe("pkce-challenge");
 		expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+		expect(url.searchParams.get("client_id")).toBe("test-vertex-client-id");
+	});
+
+	it("fails closed when licensed Vertex build credentials are unavailable", () => {
+		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+
+		expect(() => createVertexAuthorizationUrl("csrf-state", "pkce-challenge")).toThrow(
+			"Corporate Vertex OAuth credentials are unavailable in this build",
+		);
 	});
 
 	it("refreshes Corporate Vertex through its isolated hosted client", async () => {
+		setVertexBuildCredentials();
 		const fetchImpl = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
 			const body = new URLSearchParams(String(init?.body));
 			expect(Object.fromEntries(body)).toMatchObject({
 				refresh_token: "vertex-refresh",
 				grant_type: "refresh_token",
 			});
-			const refreshSecret = body.get("client_secret");
-			expect(refreshSecret).not.toBeNull();
-			expect(new Bun.CryptoHasher("sha256").update(refreshSecret!).digest("hex")).toBe(
-				"a2ddedc84850a9c48b7e01d61700848083bf0e10fb8d6c99c496803e8b48ced0",
-			);
+			expect(body.get("client_secret")).toBe("test-vertex-client-secret");
 			return jsonResponse({ access_token: "refreshed-access", expires_in: 3600 });
 		}) as unknown as typeof fetch;
 
