@@ -34,8 +34,10 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const VERTEX_CLIENT_ID =
 	decode("ODg0MzU0OTE5MDUyLTM2dHJjMWpqYjN0Z3VpYWMzMm92NmNvZA==") +
 	decode("MjY4YzVibGguYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20=");
+const VERTEX_CLIENT_SECRET = decode("R09DU1BYLTlZUVdwRjdS") + decode("V0RDMFFUZGotWXhLTXdSMFp0c1g=");
 const VERTEX_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 export const VERTEX_OAUTH_REDIRECT_URI = "https://antigravity.google/oauth-callback";
+const VERTEX_OAUTH_TIMEOUT_MS = 15 * 60 * 1000;
 const CLOUD_CODE_ENDPOINT = "https://cloudcode-pa.googleapis.com";
 const TIER_LEGACY = "legacy-tier";
 const TIER_STANDARD = "standard-tier";
@@ -445,6 +447,7 @@ export async function exchangeVertexOAuthCode(
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
 			client_id: VERTEX_CLIENT_ID,
+			client_secret: VERTEX_CLIENT_SECRET,
 			code,
 			code_verifier: verifier,
 			grant_type: "authorization_code",
@@ -491,6 +494,7 @@ class VertexAntigravityOAuthFlow extends OAuthCallbackFlow {
 			preferredPort: CALLBACK_PORT,
 			redirectUri: VERTEX_OAUTH_REDIRECT_URI,
 			manualOnly: true,
+			timeoutMs: VERTEX_OAUTH_TIMEOUT_MS,
 		});
 	}
 
@@ -540,6 +544,7 @@ export async function refreshVertexWithAntigravityOAuth(
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
 			client_id: VERTEX_CLIENT_ID,
+			client_secret: VERTEX_CLIENT_SECRET,
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),

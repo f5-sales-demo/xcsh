@@ -17,6 +17,27 @@ class TestCallbackFlow extends OAuthCallbackFlow {
 }
 
 describe("OAuthCallbackFlow manual input retries", () => {
+	it("uses a provider-specific callback timeout", async () => {
+		const timeout = vi.spyOn(AbortSignal, "timeout");
+		const flow = new TestCallbackFlow(
+			{
+				onAuth: () => {},
+				onManualCodeInput: async () => "hosted-code",
+			},
+			{
+				preferredPort: 14553,
+				redirectUri: "https://example.test/oauth-callback",
+				manualOnly: true,
+				timeoutMs: 900_000,
+			},
+		);
+
+		await flow.login();
+
+		expect(timeout).toHaveBeenCalledWith(900_000);
+		timeout.mockRestore();
+	});
+
 	it("does not bind a callback listener for manual-only hosted redirects", async () => {
 		const serve = vi.spyOn(Bun, "serve");
 		const flow = new TestCallbackFlow(

@@ -32,6 +32,8 @@ export interface OAuthCallbackFlowOptions {
 	redirectUri?: string;
 	/** Hosted callback returns a code for manual entry; do not bind a local listener. */
 	manualOnly?: boolean;
+	/** Maximum time to wait for the provider callback or manual authorization code. */
+	timeoutMs?: number;
 }
 
 /**
@@ -44,6 +46,7 @@ export abstract class OAuthCallbackFlow {
 	callbackHostname: string;
 	redirectUri?: string;
 	manualOnly: boolean = false;
+	timeoutMs: number = DEFAULT_TIMEOUT;
 	#callbackResolve?: (result: CallbackResult) => void;
 	#callbackReject?: (error: string) => void;
 
@@ -65,6 +68,7 @@ export abstract class OAuthCallbackFlow {
 		this.callbackHostname = preferredPortOrOptions.callbackHostname ?? DEFAULT_HOSTNAME;
 		this.redirectUri = preferredPortOrOptions.redirectUri;
 		this.manualOnly = preferredPortOrOptions.manualOnly ?? false;
+		this.timeoutMs = preferredPortOrOptions.timeoutMs ?? DEFAULT_TIMEOUT;
 	}
 
 	/**
@@ -255,7 +259,7 @@ export abstract class OAuthCallbackFlow {
 	 * Wait for OAuth callback or manual input (whichever comes first).
 	 */
 	#waitForCallback(expectedState: string): Promise<CallbackResult> {
-		const timeoutSignal = AbortSignal.timeout(DEFAULT_TIMEOUT);
+		const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
 		const signal = this.ctrl.signal ? AbortSignal.any([this.ctrl.signal, timeoutSignal]) : timeoutSignal;
 
 		const callbackPromise = new Promise<CallbackResult>((resolve, reject) => {
