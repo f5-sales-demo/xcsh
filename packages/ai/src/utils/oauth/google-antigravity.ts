@@ -341,9 +341,9 @@ async function discoverProject(
 	}
 }
 
-async function getUserEmail(accessToken: string): Promise<string | undefined> {
+async function getUserEmail(accessToken: string, fetchImpl: typeof fetch = fetch): Promise<string | undefined> {
 	try {
-		const response = await fetch("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
+		const response = await fetchImpl("https://www.googleapis.com/oauth2/v1/userinfo?alt=json", {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		});
 
@@ -357,6 +357,19 @@ async function getUserEmail(accessToken: string): Promise<string | undefined> {
 	return undefined;
 }
 
+function googleAuthUrl(state: string, redirectUri: string): string {
+	const authParams = new URLSearchParams({
+		client_id: CLIENT_ID,
+		response_type: "code",
+		redirect_uri: redirectUri,
+		scope: SCOPES.join(" "),
+		state,
+		access_type: "offline",
+		prompt: "consent",
+	});
+	return `${AUTH_URL}?${authParams.toString()}`;
+}
+
 class AntigravityOAuthFlow extends OAuthCallbackFlow {
 	#configuredProjectId: string | undefined;
 
@@ -366,18 +379,7 @@ class AntigravityOAuthFlow extends OAuthCallbackFlow {
 	}
 
 	async generateAuthUrl(state: string, redirectUri: string): Promise<{ url: string; instructions?: string }> {
-		const authParams = new URLSearchParams({
-			client_id: CLIENT_ID,
-			response_type: "code",
-			redirect_uri: redirectUri,
-			scope: SCOPES.join(" "),
-			state,
-			access_type: "offline",
-			prompt: "consent",
-		});
-
-		const url = `${AUTH_URL}?${authParams.toString()}`;
-		return { url, instructions: "Complete the sign-in in your browser." };
+		return { url: googleAuthUrl(state, redirectUri), instructions: "Complete the sign-in in your browser." };
 	}
 
 	async exchangeToken(code: string, _state: string, redirectUri: string): Promise<OAuthCredentials> {
@@ -425,6 +427,52 @@ class AntigravityOAuthFlow extends OAuthCallbackFlow {
 	}
 }
 
+export async function exchangeVertexOAuthCode(
+	code: string,
+	redirectUri: string,
+	fetchImpl: typeof fetch = fetch,
+): Promise<OAuthCredentials> {
+	const tokenResponse = await fetchImpl(TOKEN_URL, {
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams({
+			client_id: CLIENT_ID,
+			client_secret: CLIENT_SECRET,
+			code,
+			grant_type: "authorization_code",
+			redirect_uri: redirectUri,
+		}),
+	});
+	if (!tokenResponse.ok) throw new Error(`Token exchange failed: ${await tokenResponse.text()}`);
+	const tokenData = (await tokenResponse.json()) as {
+		access_token: string;
+		refresh_token: string;
+		expires_in: number;
+	};
+	if (!tokenData.refresh_token) throw new Error("No refresh token received. Please try again.");
+	return {
+		refresh: tokenData.refresh_token,
+		access: tokenData.access_token,
+		expires: Date.now() + tokenData.expires_in * 1000 - 5 * 60 * 1000,
+		email: await getUserEmail(tokenData.access_token, fetchImpl),
+	};
+}
+
+class VertexAntigravityOAuthFlow extends OAuthCallbackFlow {
+	constructor(ctrl: OAuthController) {
+		super(ctrl, CALLBACK_PORT, CALLBACK_PATH);
+	}
+
+	async generateAuthUrl(state: string, redirectUri: string): Promise<{ url: string; instructions?: string }> {
+		return { url: googleAuthUrl(state, redirectUri), instructions: "Complete the sign-in in your browser." };
+	}
+
+	async exchangeToken(code: string, _state: string, redirectUri: string): Promise<OAuthCredentials> {
+		this.ctrl.onProgress?.("Exchanging authorization code for a Vertex credential...");
+		return exchangeVertexOAuthCode(code, redirectUri);
+	}
+}
+
 /**
  * Login with Antigravity OAuth
  */
@@ -445,9 +493,7 @@ export async function loginAntigravity(
  * credential/project state.
  */
 export async function loginVertexWithAntigravityOAuth(ctrl: OAuthController): Promise<OAuthCredentials> {
-	const flow = new AntigravityOAuthFlow(ctrl, undefined);
-	const credentials = await flow.login();
-	return { ...credentials, projectId: undefined, tierId: undefined };
+	return new VertexAntigravityOAuthFlow(ctrl).login();
 }
 
 export async function refreshVertexWithAntigravityOAuth(refreshToken: string): Promise<OAuthCredentials> {

@@ -43,7 +43,7 @@ export function vertexFailureGuidance(error: unknown, project?: string): string 
 	const message = error instanceof Error ? error.message : String(error);
 	const projectArg = project ? ` --project ${project}` : "";
 	if (/credential|unauthenticated|login|access token/i.test(message)) {
-		return "Application Default Credentials are required. Run `gcloud auth application-default login`.";
+		return "Vertex OAuth credentials are unavailable. Run `/login google-vertex` and sign in again.";
 	}
 	if (/billing/i.test(message)) return `Enable billing for the selected project:${projectArg}`;
 	if (/serviceusage|api.*disabled|not.*enabled/i.test(message)) {
