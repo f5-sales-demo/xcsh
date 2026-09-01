@@ -83,6 +83,38 @@ stats_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-xcsh-stats-*.tgz)"
 resource_mgmt_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-pi-resource-management-*.tgz)"
 coding_agent_tgz="$(find_tarball "$TARBALL_DIR"/f5-sales-demo-xcsh-[0-9]*.tgz)"
 
+# The package launcher requires the exact compiled release binary. During a
+# release-candidate run that asset does not exist on GitHub yet, so seed its
+# isolated cache with the candidate binary built above. The post-publish npm
+# verification separately exercises the real immutable GitHub download.
+candidate_version=$(node -p "require('./packages/coding-agent/package.json').version")
+case "$(uname -s)-$(uname -m)" in
+Linux-x86_64)
+  candidate_runtime="linux-x64"
+  candidate_asset="xcsh-linux-x64"
+  ;;
+Linux-aarch64 | Linux-arm64)
+  candidate_runtime="linux-arm64"
+  candidate_asset="xcsh-linux-arm64"
+  ;;
+Darwin-x86_64)
+  candidate_runtime="darwin-x64"
+  candidate_asset="xcsh-darwin-x64"
+  ;;
+Darwin-arm64)
+  candidate_runtime="darwin-arm64"
+  candidate_asset="xcsh-darwin-arm64"
+  ;;
+*)
+  echo "Unsupported candidate smoke platform: $(uname -s)/$(uname -m)" >&2
+  exit 1
+  ;;
+esac
+candidate_cache="$WORK_DIR/candidate-release-cache"
+candidate_cache_dir="$candidate_cache/v${candidate_version}/${candidate_runtime}"
+mkdir -p "$candidate_cache_dir"
+cp "$BINARY_DIR/xcsh" "$candidate_cache_dir/$candidate_asset"
+
 TARBALL_APP_DIR="$WORK_DIR/tarball-install"
 mkdir -p "$TARBALL_APP_DIR"
 (
@@ -107,7 +139,7 @@ mkdir -p "$TARBALL_APP_DIR"
 	"
 
   bun add "$utils_tgz" "$natives_tgz" "$ai_tgz" "$agent_tgz" "$tui_tgz" "$stats_tgz" "$resource_mgmt_tgz" "$coding_agent_tgz"
-  smoke_cli ./node_modules/.bin/xcsh
+  XCSH_RELEASE_CACHE_DIR="$candidate_cache" smoke_cli ./node_modules/.bin/xcsh
 )
 
 section "Platform package structure verification"
