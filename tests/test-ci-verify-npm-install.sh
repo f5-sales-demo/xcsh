@@ -72,8 +72,21 @@ cat >"$prefix/bin/xcsh" <<'XCSH'
 #!/usr/bin/env bash
 set -euo pipefail
 case "${1:-}" in
-  --version) echo "xcsh 20.22.1" ;;
+  --version)
+    release_binary="$XCSH_RELEASE_CACHE_DIR/v20.22.1/linux-x64/xcsh-linux-x64"
+    mkdir -p "$(dirname "$release_binary")"
+    printf '#!/bin/sh\nexit 0\n' >"$release_binary"
+    chmod +x "$release_binary"
+    echo "xcsh 20.22.1"
+    ;;
   --help) exit 0 ;;
+  "")
+    if [ "${XCSH_SMOKE_TEST_VERTEX_AUTH:-}" = "1" ]; then
+      echo "vertex-auth: ready"
+      exit 0
+    fi
+    exit 93
+    ;;
   *) exit 93 ;;
 esac
 XCSH
