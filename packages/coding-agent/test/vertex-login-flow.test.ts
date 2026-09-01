@@ -49,6 +49,26 @@ describe("corporate Vertex login flow", () => {
 		expect(calls).toEqual(["corporate-project/global/adc-token"]);
 	});
 
+	it("uses an explicitly supplied authorized OAuth token without invoking gcloud ADC", async () => {
+		let adcRead = false;
+		const calls: string[] = [];
+		await validateVertexLogin(
+			runtime({
+				applicationDefaultAccessToken: async () => {
+					adcRead = true;
+					return undefined;
+				},
+				validateModel: async (_project, _location, token) => {
+					calls.push(token);
+				},
+			}),
+			"corporate-project",
+			"authorized-oauth-token",
+		);
+		expect(adcRead).toBe(false);
+		expect(calls).toEqual(["authorized-oauth-token"]);
+	});
+
 	it("does not validate when ADC is missing and gives actionable remediation", async () => {
 		let called = false;
 		await expect(

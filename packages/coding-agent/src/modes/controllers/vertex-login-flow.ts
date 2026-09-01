@@ -55,8 +55,12 @@ export function vertexFailureGuidance(error: unknown, project?: string): string 
 	return `Vertex AI could not access ${VERTEX_LOGIN_MODEL} in global: ${message}`;
 }
 
-export async function validateVertexLogin(runtime: VertexLoginRuntime, project: string): Promise<void> {
-	const accessToken = await runtime.applicationDefaultAccessToken();
+export async function validateVertexLogin(
+	runtime: VertexLoginRuntime,
+	project: string,
+	oauthAccessToken?: string,
+): Promise<void> {
+	const accessToken = oauthAccessToken ?? (await runtime.applicationDefaultAccessToken());
 	if (!accessToken) throw new Error("Application Default Credentials are unavailable");
 	await runtime.validateModel(project, VERTEX_LOGIN_LOCATION, accessToken);
 }

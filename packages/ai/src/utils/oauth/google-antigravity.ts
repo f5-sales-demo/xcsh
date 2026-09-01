@@ -440,6 +440,22 @@ export async function loginAntigravity(
 }
 
 /**
+ * Authorized direct-Vertex login. This deliberately reuses only the approved
+ * Google OAuth client flow; it does not call Code Assist or share Antigravity
+ * credential/project state.
+ */
+export async function loginVertexWithAntigravityOAuth(ctrl: OAuthController): Promise<OAuthCredentials> {
+	const flow = new AntigravityOAuthFlow(ctrl, undefined);
+	const credentials = await flow.login();
+	return { ...credentials, projectId: undefined, tierId: undefined };
+}
+
+export async function refreshVertexWithAntigravityOAuth(refreshToken: string): Promise<OAuthCredentials> {
+	const credentials = await refreshAntigravityToken(refreshToken, "");
+	return { ...credentials, projectId: undefined, tierId: undefined };
+}
+
+/**
  * Refresh Antigravity token
  */
 export async function refreshAntigravityToken(refreshToken: string, projectId: string): Promise<OAuthCredentials> {

@@ -174,7 +174,7 @@ export function stream<TApi extends Api>(
 		});
 	}
 
-	// Vertex AI uses Application Default Credentials, not API keys
+	// Vertex accepts either existing ADC or the isolated OAuth bearer token.
 	if (model.api === "google-vertex") {
 		return streamGoogleVertex(model as Model<"google-vertex">, context, options as GoogleVertexOptions);
 	} else if (model.api === "bedrock-converse-stream") {
@@ -243,9 +243,10 @@ export function streamSimple<TApi extends Api>(
 		return customApiProvider.streamSimple(model, context, options);
 	}
 
-	// Vertex AI uses Application Default Credentials, not API keys
+	// Vertex receives a short-lived OAuth bearer token when available; otherwise
+	// the Google SDK performs normal ADC discovery.
 	if (model.api === "google-vertex") {
-		const providerOptions = mapOptionsForApi(model, options, undefined);
+		const providerOptions = mapOptionsForApi(model, options, options?.apiKey);
 		return stream(model, context, providerOptions);
 	} else if (model.api === "bedrock-converse-stream") {
 		// Bedrock doesn't have any API keys instead it sources credentials from standard AWS env variables or from given AWS profile.
