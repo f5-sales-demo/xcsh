@@ -307,11 +307,7 @@ if ($Source) {
 } elseif ($Binary) {
     Install-Binary
 } else {
-    # Default: use bun if available, otherwise binary
-    if (Test-BunInstalled) {
-        Assert-BunVersion $MinimumBunVersion
-        Install-ViaBun
-    } else {
-        Install-Binary
-    }
+    # Official installs must use the compiled release. Source installs remain
+    # available only through the explicit -Source development route.
+    Install-Binary
 }

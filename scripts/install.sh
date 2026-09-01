@@ -414,13 +414,9 @@ binary)
   install_binary
   ;;
 *)
-  # Default: use bun if available, otherwise binary
-  if has_bun; then
-    require_bun_version
-    install_via_bun
-  else
-    install_binary
-  fi
+  # Official installs must use the compiled release. Source installs remain
+  # available only through the explicit --source development route.
+  install_binary
   ;;
 esac
 
