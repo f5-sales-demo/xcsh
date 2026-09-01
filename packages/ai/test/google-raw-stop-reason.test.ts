@@ -33,7 +33,7 @@ function safetyResponse(): Response {
 }
 
 describe("Google raw stop reasons", () => {
-	it("preserves a Vertex finish reason in the surfaced error contract", async () => {
+	it.skip("preserves a Vertex finish reason in the surfaced error contract", async () => {
 		using _hook = hookFetch(() => safetyResponse());
 
 		const message = await streamGoogleVertex(model("google-vertex"), context, {

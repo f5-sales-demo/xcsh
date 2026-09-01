@@ -14,7 +14,7 @@ const CREDENTIALS = {
 	email: "developer@example.com",
 };
 
-describe("AuthStorage Antigravity enterprise alias", () => {
+describe("AuthStorage Antigravity enterprise credentials", () => {
 	let temporaryDirectory = "";
 	let store: AuthCredentialStore | undefined;
 	let authStorage: AuthStorage | undefined;
@@ -33,7 +33,7 @@ describe("AuthStorage Antigravity enterprise alias", () => {
 		if (temporaryDirectory) await fs.rm(temporaryDirectory, { recursive: true, force: true });
 	});
 
-	it("persists enterprise login under the canonical provider without duplicates", async () => {
+	it("persists enterprise login under its independent provider namespace", async () => {
 		if (!authStorage || !store) throw new Error("test setup failed");
 		const login = vi.spyOn(antigravityModule, "loginAntigravity").mockResolvedValue(CREDENTIALS);
 		const callbacks = { onAuth: () => {}, onPrompt: async () => "enterprise-project" };
@@ -46,14 +46,14 @@ describe("AuthStorage Antigravity enterprise alias", () => {
 			enterpriseRequired: true,
 			projectSources: { environment: {} },
 		});
-		expect(store.listAuthCredentials("google-antigravity")).toHaveLength(1);
-		expect(store.listAuthCredentials("google-antigravity")[0]?.credential).toMatchObject({
+		expect(store.listAuthCredentials("google-antigravity")).toHaveLength(0);
+		expect(store.listAuthCredentials("google-antigravity-enterprise")).toHaveLength(1);
+		expect(store.listAuthCredentials("google-antigravity-enterprise")[0]?.credential).toMatchObject({
 			type: "oauth",
 			projectId: "enterprise-project",
 			tierId: "standard-tier",
 		});
-		expect(store.listAuthCredentials("google-antigravity-enterprise")).toHaveLength(0);
-		expect(authStorage.list()).toEqual(["google-antigravity"]);
+		expect(authStorage.list()).toEqual(["google-antigravity-enterprise"]);
 		expect(authStorage.get("google-antigravity-enterprise")).toEqual({ type: "oauth", ...CREDENTIALS });
 		expect(authStorage.hasAuth("google-antigravity-enterprise")).toBe(true);
 		expect(authStorage.hasOAuth("google-antigravity-enterprise")).toBe(true);
@@ -61,7 +61,7 @@ describe("AuthStorage Antigravity enterprise alias", () => {
 		const reopened = await AuthStorage.create(path.join(temporaryDirectory, "agent.db"));
 		try {
 			await reopened.reload();
-			expect(reopened.get("google-antigravity")).toMatchObject({
+			expect(reopened.get("google-antigravity-enterprise")).toMatchObject({
 				type: "oauth",
 				projectId: "enterprise-project",
 				tierId: "standard-tier",
@@ -71,7 +71,7 @@ describe("AuthStorage Antigravity enterprise alias", () => {
 		}
 	});
 
-	it("logs out the canonical credential through the enterprise alias", async () => {
+	it("logs out the independent enterprise credential", async () => {
 		if (!authStorage || !store) throw new Error("test setup failed");
 		vi.spyOn(antigravityModule, "loginAntigravity").mockResolvedValue(CREDENTIALS);
 		await authStorage.login("google-antigravity-enterprise", {
@@ -81,7 +81,7 @@ describe("AuthStorage Antigravity enterprise alias", () => {
 
 		await authStorage.logout("google-antigravity-enterprise");
 
-		expect(store.listAuthCredentials("google-antigravity")).toHaveLength(0);
+		expect(store.listAuthCredentials("google-antigravity-enterprise")).toHaveLength(0);
 		expect(authStorage.hasAuth("google-antigravity")).toBe(false);
 		expect(authStorage.hasAuth("google-antigravity-enterprise")).toBe(false);
 	});

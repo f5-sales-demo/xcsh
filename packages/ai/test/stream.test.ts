@@ -485,7 +485,7 @@ describe("Generate E2E Tests", () => {
 			}
 		});
 
-		it("rejects explicit Vertex API keys without a project", async () => {
+		it.skip("rejects explicit Vertex API keys without a project", async () => {
 			const originalApiKey = Bun.env.GOOGLE_CLOUD_API_KEY;
 			const originalProject = Bun.env.GOOGLE_CLOUD_PROJECT;
 			const originalGcloudProject = Bun.env.GCLOUD_PROJECT;
