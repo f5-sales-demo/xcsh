@@ -345,7 +345,11 @@ describe("Google Antigravity auth alignment", () => {
 			code_verifier: "pkce-verifier",
 			redirect_uri: VERTEX_OAUTH_REDIRECT_URI,
 		});
-		expect(requests[0]!.body.has("client_secret")).toBe(false);
+		const exchangeSecret = requests[0]!.body.get("client_secret");
+		expect(exchangeSecret).not.toBeNull();
+		expect(new Bun.CryptoHasher("sha256").update(exchangeSecret!).digest("hex")).toBe(
+			"a2ddedc84850a9c48b7e01d61700848083bf0e10fb8d6c99c496803e8b48ced0",
+		);
 	});
 
 	it("builds Corporate Vertex authorization with the hosted Antigravity PKCE callback", () => {
@@ -358,14 +362,18 @@ describe("Google Antigravity auth alignment", () => {
 		expect(url.searchParams.get("code_challenge_method")).toBe("S256");
 	});
 
-	it("refreshes Corporate Vertex through its isolated PKCE public client", async () => {
+	it("refreshes Corporate Vertex through its isolated hosted client", async () => {
 		const fetchImpl = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
 			const body = new URLSearchParams(String(init?.body));
 			expect(Object.fromEntries(body)).toMatchObject({
 				refresh_token: "vertex-refresh",
 				grant_type: "refresh_token",
 			});
-			expect(body.has("client_secret")).toBe(false);
+			const refreshSecret = body.get("client_secret");
+			expect(refreshSecret).not.toBeNull();
+			expect(new Bun.CryptoHasher("sha256").update(refreshSecret!).digest("hex")).toBe(
+				"a2ddedc84850a9c48b7e01d61700848083bf0e10fb8d6c99c496803e8b48ced0",
+			);
 			return jsonResponse({ access_token: "refreshed-access", expires_in: 3600 });
 		}) as unknown as typeof fetch;
 
