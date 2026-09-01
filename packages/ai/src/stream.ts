@@ -1,6 +1,3 @@
-import * as fs from "node:fs";
-import * as os from "node:os";
-import * as path from "node:path";
 import { $env, $pickenv } from "@f5-sales-demo/pi-utils";
 import { getCustomApi } from "./api-registry";
 import type { Effort } from "./model-thinking";
@@ -36,22 +33,6 @@ import type {
 	ThinkingBudgets,
 	ToolChoice,
 } from "./types";
-
-let cachedVertexAdcCredentialsExists: boolean | null = null;
-
-function hasVertexAdcCredentials(): boolean {
-	if (cachedVertexAdcCredentialsExists === null) {
-		const gacPath = $env.GOOGLE_APPLICATION_CREDENTIALS;
-		if (gacPath) {
-			cachedVertexAdcCredentialsExists = fs.existsSync(gacPath);
-		} else {
-			cachedVertexAdcCredentialsExists = fs.existsSync(
-				path.join(os.homedir(), ".config", "gcloud", "application_default_credentials.json"),
-			);
-		}
-	}
-	return cachedVertexAdcCredentialsExists;
-}
 
 type KeyResolver = string | (() => string | undefined);
 
@@ -97,8 +78,6 @@ const serviceProviderMap: Record<string, KeyResolver> = {
 			? $pickenv("ANTHROPIC_FOUNDRY_API_KEY", "ANTHROPIC_OAUTH_TOKEN", "ANTHROPIC_API_KEY")
 			: $pickenv("ANTHROPIC_OAUTH_TOKEN", "ANTHROPIC_API_KEY"),
 	"gitlab-duo": "GITLAB_TOKEN",
-	// Corporate Vertex uses Application Default Credentials only.
-	"google-vertex": () => (hasVertexAdcCredentials() ? "<authenticated>" : undefined),
 	// Amazon Bedrock supports multiple credential sources:
 	// 1. AWS_PROFILE - named profile from ~/.aws/credentials
 	// 2. AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY - standard IAM keys
@@ -402,7 +381,7 @@ function resolveOpenAiReasoningEffort<TApi extends Api>(
 
 const castApi = <TApi extends Api>(api: OptionsForApi<TApi>): OptionsForApi<Api> => api as OptionsForApi<Api>;
 
-function mapOptionsForApi<TApi extends Api>(
+export function mapOptionsForApi<TApi extends Api>(
 	model: Model<TApi>,
 	options?: SimpleStreamOptions,
 	apiKey?: string,
@@ -647,11 +626,16 @@ function mapOptionsForApi<TApi extends Api>(
 		}
 
 		case "google-vertex": {
+			const vertexBase = {
+				...base,
+				project: options?.project,
+				location: options?.location,
+			};
 			// Explicitly disable thinking when reasoning is not specified or model doesn't support it
 			const reasoning = options?.reasoning;
 			if (!reasoning || !model.reasoning) {
 				return castApi<"google-vertex">({
-					...base,
+					...vertexBase,
 					thinking: { enabled: false },
 					toolChoice: mapGoogleToolChoice(options?.toolChoice),
 				});
@@ -663,7 +647,7 @@ function mapOptionsForApi<TApi extends Api>(
 
 			if (geminiModel.thinking?.mode === "google-level") {
 				return castApi<"google-vertex">({
-					...base,
+					...vertexBase,
 					thinking: {
 						enabled: true,
 						level: mapEffortToGoogleThinkingLevel(geminiModel, effort),
@@ -673,7 +657,7 @@ function mapOptionsForApi<TApi extends Api>(
 			}
 
 			return castApi<"google-vertex">({
-				...base,
+				...vertexBase,
 				thinking: {
 					enabled: true,
 					budgetTokens: getGoogleBudget(geminiModel, effort, options?.thinkingBudgets),

@@ -35,8 +35,8 @@ export function googleModelManagerOptions(
 export function googleVertexModelManagerOptions(
 	_config?: GoogleVertexModelManagerConfig,
 ): ModelManagerOptions<"google-vertex"> {
-	// Vertex AI uses Application Default Credentials (ADC) for authentication,
-	// which is handled at stream time rather than during model discovery.
+	// Vertex authentication is handled at stream time rather than during model
+	// discovery (standalone OAuth in xcsh, or explicit credentials for SDK users).
 	// Dynamic model discovery is not yet implemented for this provider.
 	return {
 		providerId: "google-vertex",

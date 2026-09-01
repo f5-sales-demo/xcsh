@@ -1350,7 +1350,7 @@ export class SelectorController {
 		}
 	}
 
-	/** Corporate Vertex uses local ADC, never OAuth storage or a consumer API-key fallback. */
+	/** Corporate Vertex uses isolated standalone OAuth, never consumer Google credentials or ambient ADC. */
 	async #handleVertexLogin(): Promise<void> {
 		const runtime = defaultVertexLoginRuntime;
 		try {
