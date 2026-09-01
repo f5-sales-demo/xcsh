@@ -4,8 +4,11 @@ import { getAntigravityAuthHeaders } from "../src/providers/google-gemini-cli";
 import {
 	ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA,
 	type AntigravityProjectSources,
+	createVertexAuthorizationUrl,
 	exchangeVertexOAuthCode,
 	loginAntigravity,
+	refreshVertexWithAntigravityOAuth,
+	VERTEX_OAUTH_REDIRECT_URI,
 } from "../src/utils/oauth/google-antigravity";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -317,18 +320,18 @@ describe("Google Antigravity auth alignment", () => {
 	});
 
 	it("exchanges the authorized Vertex credential without Code Assist discovery or onboarding", async () => {
-		const urls: string[] = [];
-		const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+		const requests: Array<{ url: string; body: URLSearchParams }> = [];
+		const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
 			const url = String(input);
-			urls.push(url);
 			if (url === TOKEN_URL) {
+				requests.push({ url, body: new URLSearchParams(String(init?.body)) });
 				return jsonResponse({ access_token: "vertex-access", refresh_token: "vertex-refresh", expires_in: 3600 });
 			}
 			if (url === USER_INFO_URL) return jsonResponse({ email: "enterprise@example.com" });
 			throw new Error(`unexpected request: ${url}`);
 		}) as unknown as typeof fetch;
 
-		const credential = await exchangeVertexOAuthCode("code", "http://localhost/callback", fetchImpl);
+		const credential = await exchangeVertexOAuthCode("code", "pkce-verifier", fetchImpl);
 
 		expect(credential).toMatchObject({
 			access: "vertex-access",
@@ -336,6 +339,37 @@ describe("Google Antigravity auth alignment", () => {
 			email: "enterprise@example.com",
 		});
 		expect(credential.projectId).toBeUndefined();
-		expect(urls).toEqual([TOKEN_URL, USER_INFO_URL]);
+		expect(requests).toHaveLength(1);
+		expect(Object.fromEntries(requests[0]!.body)).toMatchObject({
+			code: "code",
+			code_verifier: "pkce-verifier",
+			redirect_uri: VERTEX_OAUTH_REDIRECT_URI,
+		});
+		expect(requests[0]!.body.get("client_secret")).toBeTruthy();
+	});
+
+	it("builds Corporate Vertex authorization with the hosted Antigravity PKCE callback", () => {
+		const url = new URL(createVertexAuthorizationUrl("csrf-state", "pkce-challenge"));
+		expect(`${url.origin}${url.pathname}`).toBe("https://accounts.google.com/o/oauth2/auth");
+		expect(url.searchParams.get("redirect_uri")).toBe(VERTEX_OAUTH_REDIRECT_URI);
+		expect(url.searchParams.get("scope")).toContain("https://www.googleapis.com/auth/cloud-platform");
+		expect(url.searchParams.get("state")).toBe("csrf-state");
+		expect(url.searchParams.get("code_challenge")).toBe("pkce-challenge");
+		expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+	});
+
+	it("refreshes Corporate Vertex through its isolated licensed desktop client", async () => {
+		const fetchImpl = vi.fn(async (_input: string | URL | Request, init?: RequestInit) => {
+			const body = new URLSearchParams(String(init?.body));
+			expect(Object.fromEntries(body)).toMatchObject({
+				refresh_token: "vertex-refresh",
+				grant_type: "refresh_token",
+			});
+			expect(body.get("client_secret")).toBeTruthy();
+			return jsonResponse({ access_token: "refreshed-access", expires_in: 3600 });
+		}) as unknown as typeof fetch;
+
+		const credential = await refreshVertexWithAntigravityOAuth("vertex-refresh", fetchImpl);
+		expect(credential).toMatchObject({ access: "refreshed-access", refresh: "vertex-refresh" });
 	});
 });

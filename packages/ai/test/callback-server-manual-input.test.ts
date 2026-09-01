@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, vi } from "bun:test";
 import { OAuthCallbackFlow } from "../src/utils/oauth/callback-server";
 import type { OAuthCredentials } from "../src/utils/oauth/types";
 
@@ -17,6 +17,28 @@ class TestCallbackFlow extends OAuthCallbackFlow {
 }
 
 describe("OAuthCallbackFlow manual input retries", () => {
+	it("does not bind a callback listener for manual-only hosted redirects", async () => {
+		const serve = vi.spyOn(Bun, "serve");
+		const flow = new TestCallbackFlow(
+			{
+				onAuth: () => {},
+				onManualCodeInput: async () => "hosted-code",
+				signal: AbortSignal.timeout(1_000),
+			},
+			{
+				preferredPort: 14554,
+				redirectUri: "https://example.test/oauth-callback",
+				manualOnly: true,
+			},
+		);
+
+		const credentials = await flow.login();
+
+		expect(credentials.access).toBe("access-hosted-code");
+		expect(serve).not.toHaveBeenCalled();
+		serve.mockRestore();
+	});
+
 	it("accepts an IPv4 loopback callback for the default localhost redirect URI", async () => {
 		const flow = new TestCallbackFlow(
 			{

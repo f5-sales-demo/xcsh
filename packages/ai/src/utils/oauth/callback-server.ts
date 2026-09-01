@@ -30,6 +30,8 @@ export interface OAuthCallbackFlowOptions {
 	callbackHostname?: string;
 	/** Exact redirect URI advertised to the provider; disables port fallback. */
 	redirectUri?: string;
+	/** Hosted callback returns a code for manual entry; do not bind a local listener. */
+	manualOnly?: boolean;
 }
 
 /**
@@ -41,6 +43,7 @@ export abstract class OAuthCallbackFlow {
 	callbackPath: string;
 	callbackHostname: string;
 	redirectUri?: string;
+	manualOnly: boolean = false;
 	#callbackResolve?: (result: CallbackResult) => void;
 	#callbackReject?: (error: string) => void;
 
@@ -61,6 +64,7 @@ export abstract class OAuthCallbackFlow {
 		this.callbackPath = preferredPortOrOptions.callbackPath ?? CALLBACK_PATH;
 		this.callbackHostname = preferredPortOrOptions.callbackHostname ?? DEFAULT_HOSTNAME;
 		this.redirectUri = preferredPortOrOptions.redirectUri;
+		this.manualOnly = preferredPortOrOptions.manualOnly ?? false;
 	}
 
 	/**
@@ -95,6 +99,9 @@ export abstract class OAuthCallbackFlow {
 	 * Execute the OAuth login flow.
 	 */
 	async login(): Promise<OAuthCredentials> {
+		if (this.manualOnly && !this.ctrl.onManualCodeInput) {
+			throw new Error("Manual-only OAuth flow requires an authorization-code input handler");
+		}
 		const state = this.generateState();
 
 		// Start callback server first to get actual redirect URI
@@ -123,6 +130,13 @@ export abstract class OAuthCallbackFlow {
 	 * Start callback server, trying preferred port first, falling back to random.
 	 */
 	async #startCallbackServer(expectedState: string): Promise<{ server: CallbackServer; redirectUri: string }> {
+		if (this.manualOnly) {
+			if (!this.redirectUri) throw new Error("Manual-only OAuth flow requires an exact redirect URI");
+			return {
+				server: { port: 0, stop: () => {} },
+				redirectUri: this.redirectUri,
+			};
+		}
 		try {
 			const server = this.#createServer(this.preferredPort, expectedState);
 			if (this.redirectUri) {
