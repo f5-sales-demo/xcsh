@@ -52,6 +52,7 @@
 		"@smithy/node-http-handler": "^4.4",
 		"ajv": "^8.20",
 		"ajv-formats": "^3.0",
+		"google-auth-library": "^10.3",
 		"openai": "^6.25",
 		"partial-json": "^0.1",
 		"zod": "^4.3"

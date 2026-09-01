@@ -4,6 +4,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { getBundledModel } from "../src/models";
 import {
+	buildGoogleVertexClientOptions,
+	createGoogleVertexAuthClient,
 	type GoogleVertexProjectRuntime,
 	googleVertexRequestUrl,
 	readConfiguredGcloudProject,
@@ -11,7 +13,7 @@ import {
 	resolveGoogleVertexProject,
 } from "../src/providers/google-vertex";
 import { mapOptionsForApi } from "../src/stream";
-import type { SimpleStreamOptions } from "../src/types";
+import type { Model, SimpleStreamOptions } from "../src/types";
 
 const PROJECT_ENV_NAMES = ["GOOGLE_CLOUD_PROJECT", "GCLOUD_PROJECT"] as const;
 
@@ -33,6 +35,25 @@ async function withoutProjectEnvironment(run: () => Promise<void>): Promise<void
 }
 
 describe("Google Vertex runtime configuration", () => {
+	it("uses the standalone OAuth token through an explicit auth client", async () => {
+		const model = getBundledModel("google-vertex", "gemini-3.7-flash") as Model<"google-vertex">;
+		const clientOptions = buildGoogleVertexClientOptions(
+			model,
+			"confirmed-project",
+			"global",
+			"isolated-vertex-oauth-token",
+		);
+		const authClient = clientOptions.googleAuthOptions?.authClient;
+		expect(authClient).toBeInstanceOf(createGoogleVertexAuthClient("comparison-token").constructor);
+		if (!authClient) throw new Error("Expected an explicit Vertex OAuth auth client");
+		const headers = await authClient.getRequestHeaders(
+			"https://aiplatform.googleapis.com/v1/projects/confirmed-project/locations/global",
+		);
+
+		expect(headers.get("authorization")).toBe("Bearer isolated-vertex-oauth-token");
+		expect(clientOptions.httpOptions?.headers?.Authorization).toBeUndefined();
+	});
+
 	it("preserves standalone OAuth and confirmed project options through the simple stream mapper", () => {
 		const model = getBundledModel("google-vertex", "gemini-3.7-flash");
 		const runtimeOptions = {

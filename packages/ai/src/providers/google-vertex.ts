@@ -6,10 +6,12 @@ import {
 	type GenerateContentConfig,
 	type GenerateContentParameters,
 	GoogleGenAI,
+	type GoogleGenAIOptions,
 	type ThinkingConfig,
 	ThinkingLevel,
 } from "@google/genai";
 import { $ } from "bun";
+import { OAuth2Client } from "google-auth-library";
 import { calculateCost } from "../models";
 import type {
 	Api,
@@ -339,16 +341,30 @@ function createClient(
 	location: string,
 	accessToken?: string,
 ): GoogleGenAI {
-	return new GoogleGenAI({
+	return new GoogleGenAI(buildGoogleVertexClientOptions(model, project, location, accessToken));
+}
+
+export function buildGoogleVertexClientOptions(
+	model: Model<"google-vertex">,
+	project: string,
+	location: string,
+	accessToken?: string,
+): GoogleGenAIOptions {
+	return {
 		vertexai: true,
 		project,
 		location,
 		apiVersion: API_VERSION,
-		httpOptions: {
-			...buildHttpOptions(model),
-			...(accessToken ? { headers: { ...model.headers, Authorization: `Bearer ${accessToken}` } } : {}),
-		},
-	});
+		googleAuthOptions: accessToken ? { authClient: createGoogleVertexAuthClient(accessToken) } : undefined,
+		httpOptions: buildHttpOptions(model),
+	};
+}
+
+/** Create an explicit auth client so standalone OAuth never invokes ambient ADC discovery. */
+export function createGoogleVertexAuthClient(accessToken: string): OAuth2Client {
+	const authClient = new OAuth2Client();
+	authClient.setCredentials({ access_token: accessToken });
+	return authClient;
 }
 
 const defaultProjectRuntime: GoogleVertexProjectRuntime = {
