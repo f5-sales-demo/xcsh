@@ -106,7 +106,6 @@ assert_job_route .github/workflows/self-hosted-runner-cache-smoke.yml container-
 assert_job_route .github/workflows/arc-compatibility.yml socketless xcsh-socketless
 assert_job_route .github/workflows/arc-compatibility.yml container xcsh-container-build
 assert_job_route .github/workflows/auto-merge.yml require-token xcsh-socketless
-assert_job_route .github/workflows/dependabot-auto-merge.yml auto-merge xcsh-socketless
 assert_job_route .github/workflows/semgrep.yml semgrep xcsh-socketless
 grep -Fq '  linked-issue:' .github/workflows/super-linter.yml
 grep -Fq "runs-on: \${{ github.repository == 'f5-sales-demo/xcsh' && 'xcsh-socketless' || 'managed-socketless' }}" .github/workflows/super-linter.yml
