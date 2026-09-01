@@ -156,15 +156,19 @@ test("Docker consumers use the container pool and every trust gate is socketless
 test("repository-specific managed callers use the socketless ARC route", async () => {
 	const expectedJobs: Record<string, string[]> = {
 		"auto-merge.yml": ["require-token"],
-		"dependabot-auto-merge.yml": ["auto-merge"],
 		"semgrep.yml": ["semgrep"],
 		"super-linter.yml": ["linked-issue"],
 		"translation-audit.yml": ["audit"],
 		"workflow-security-audit.yml": ["audit"],
 	};
+	const optionalRetiredJobs: Record<string, string[]> = {
+		"dependabot-auto-merge.yml": ["auto-merge"],
+	};
 
-	for (const [workflowName, jobIds] of Object.entries(expectedJobs)) {
-		const document = parse(await Bun.file(path.join(WORKFLOW_ROOT, workflowName)).text()) as WorkflowDocument;
+	for (const [workflowName, jobIds] of Object.entries({ ...expectedJobs, ...optionalRetiredJobs })) {
+		const workflowPath = path.join(WORKFLOW_ROOT, workflowName);
+		if (optionalRetiredJobs[workflowName] && !existsSync(workflowPath)) continue;
+		const document = parse(await Bun.file(workflowPath).text()) as WorkflowDocument;
 		for (const jobId of jobIds) {
 			const expectedRoute =
 				workflowName === "super-linter.yml"
