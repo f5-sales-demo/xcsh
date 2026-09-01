@@ -163,7 +163,7 @@ describe("applyOAuthLoginModel", () => {
 		expect(getRoutingProfile()).toBe("google-antigravity");
 	});
 
-	it("applies the canonical Gemini profile after enterprise alias login", async () => {
+	it("does not apply the generic Gemini profile after enterprise login", async () => {
 		const { session, setModel, setThinkingLevel } = makeSession({
 			model: M("gpt-5.6-sol"),
 			models: [
@@ -174,12 +174,9 @@ describe("applyOAuthLoginModel", () => {
 
 		const applied = await applyOAuthLoginModel(session as never, "google-antigravity-enterprise");
 
-		expect(applied).toEqual(GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE);
-		expect(setModel).toHaveBeenCalledWith(M("gemini-3.6-flash-high", "google-antigravity"), "default", {
-			selector: "google-antigravity/gemini-3.6-flash-high",
-			thinkingLevel: ThinkingLevel.High,
-		});
-		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+		expect(applied).toBeUndefined();
+		expect(setModel).not.toHaveBeenCalled();
+		expect(setThinkingLevel).not.toHaveBeenCalled();
 	});
 
 	it("does not replace the current model when the preferred provider model is unavailable", async () => {

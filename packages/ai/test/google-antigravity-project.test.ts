@@ -17,15 +17,14 @@ const NO_PROJECT_SOURCES: AntigravityProjectSources = {
 };
 
 describe("Antigravity enterprise project resolution", () => {
-	it("registers a distinct login-only enterprise provider", () => {
+	it("registers Enterprise Antigravity as an independent provider", () => {
 		const provider = getOAuthProviders().find(item => item.id === "google-antigravity-enterprise");
 
 		expect(provider).toMatchObject({
 			id: "google-antigravity-enterprise",
 			name: "Google Antigravity Enterprise (Advanced OAuth)",
 			available: true,
-			canonicalId: "google-antigravity",
-			loginOnly: true,
+			description: expect.stringContaining("not Vertex ADC"),
 		});
 	});
 
