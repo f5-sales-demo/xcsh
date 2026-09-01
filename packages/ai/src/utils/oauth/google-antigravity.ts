@@ -445,7 +445,6 @@ export async function exchangeVertexOAuthCode(
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
 			client_id: VERTEX_CLIENT_ID,
-			client_secret: CLIENT_SECRET,
 			code,
 			code_verifier: verifier,
 			grant_type: "authorization_code",
@@ -541,7 +540,6 @@ export async function refreshVertexWithAntigravityOAuth(
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({
 			client_id: VERTEX_CLIENT_ID,
-			client_secret: CLIENT_SECRET,
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),
