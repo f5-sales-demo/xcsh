@@ -129,11 +129,11 @@ When resolving API keys for a provider, xcsh evaluates sources in the following 
 
 ## Corporate Google Cloud Vertex AI login
 
-`/login` lists **Google Cloud Vertex AI (Corporate)** first. This route uses Application Default Credentials (ADC) from `gcloud`, validates the selected Google Cloud project and Gemini 3.7 Flash access in `global`, then selects `google-vertex/gemini-3.7-flash:high`.
+`/login` lists **Google Cloud Vertex AI (Corporate)** first. This route opens the authorized standalone Google enterprise browser flow, validates the selected Google Cloud project and Gemini 3.7 Flash access in `global`, then selects `google-vertex/gemini-3.7-flash:high`. It does not require `gcloud` or an Application Default Credentials file.
 
-The confirmed project and `global` location are stored as non-secret xcsh provider preferences and injected into Vertex requests. The route never falls back to a Gemini API key, consumer Gemini login, or Antigravity OAuth.
+The short-lived credential is stored only in the isolated `google-vertex` namespace. The confirmed project and `global` location are stored as non-secret xcsh provider preferences and injected into every Vertex request. The route never falls back to ambient ADC, a Gemini API key, consumer Gemini login, or Antigravity OAuth.
 
-If ADC is missing, the wizard offers `gcloud auth application-default login` (with `--no-launch-browser` in headless terminals). Enable the service with `gcloud services enable aiplatform.googleapis.com --project PROJECT_ID`; billing, IAM, and model-access errors are reported before model state is changed.
+Headless terminals display a browser URL and accept the resulting localhost callback URL. Billing, API enablement, IAM, quota, and model-access errors are reported before model state is changed.
 
 **Google Antigravity Enterprise (Advanced OAuth)** remains a separate route. It uses its own entitlement-discovery OAuth flow and does not assert that its discovered model is Vertex Gemini 3.7. Consumer and free-tier Google routes remain optional, but are never selected automatically.
 

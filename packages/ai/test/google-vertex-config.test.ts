@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { getBundledModel } from "../src/models";
 import {
 	type GoogleVertexProjectRuntime,
 	googleVertexRequestUrl,
@@ -9,6 +10,8 @@ import {
 	resolveGoogleVertexLocation,
 	resolveGoogleVertexProject,
 } from "../src/providers/google-vertex";
+import { mapOptionsForApi } from "../src/stream";
+import type { SimpleStreamOptions } from "../src/types";
 
 const PROJECT_ENV_NAMES = ["GOOGLE_CLOUD_PROJECT", "GCLOUD_PROJECT"] as const;
 
@@ -30,6 +33,21 @@ async function withoutProjectEnvironment(run: () => Promise<void>): Promise<void
 }
 
 describe("Google Vertex runtime configuration", () => {
+	it("preserves standalone OAuth and confirmed project options through the simple stream mapper", () => {
+		const model = getBundledModel("google-vertex", "gemini-3.7-flash");
+		const runtimeOptions = {
+			apiKey: "isolated-vertex-oauth-token",
+			project: "confirmed-project",
+			location: "global",
+		} as SimpleStreamOptions;
+
+		expect(mapOptionsForApi(model, runtimeOptions, runtimeOptions.apiKey)).toMatchObject({
+			apiKey: "isolated-vertex-oauth-token",
+			project: "confirmed-project",
+			location: "global",
+		});
+	});
+
 	it("resolves the project from ADC when project environment variables are absent", async () => {
 		await withoutProjectEnvironment(async () => {
 			const originalCredentialsPath = Bun.env.GOOGLE_APPLICATION_CREDENTIALS;

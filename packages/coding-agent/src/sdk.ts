@@ -1843,9 +1843,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			preferWebsockets: preferOpenAICodexWebsockets,
 			getToolContext: tc => toolContextStore.getContext(tc),
 			getApiKey: async provider => {
-				// Vertex AI authenticates with ADC inside its provider transport; it must
-				// not borrow a Gemini API key or OAuth token from another Google route.
-				if (provider === "google-vertex") return undefined;
 				// Use the provider-facing session id for sticky credential selection so cache keys
 				// and provider auth affinity stay aligned across fresh benchmark sessions.
 				const key = await modelRegistry.getApiKeyForProvider(provider, providerSessionId);
@@ -1857,11 +1854,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			streamFn: (requestModel, context, requestOptions) => {
 				if (requestModel.provider !== "google-vertex") return streamSimple(requestModel, context, requestOptions);
 				const project = settings.get("providers.vertexProject");
-				const location = settings.get("providers.vertexLocation");
+				if (!project) {
+					throw new Error("Corporate Vertex requires a confirmed project. Run /login google-vertex.");
+				}
 				return streamSimple(requestModel, context, {
 					...requestOptions,
-					...(project ? { project } : undefined),
-					...(location ? { location } : undefined),
+					project,
+					location: "global",
 				});
 			},
 			cursorExecHandlers,

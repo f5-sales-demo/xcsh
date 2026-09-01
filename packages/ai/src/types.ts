@@ -227,6 +227,10 @@ export interface StreamOptions {
 
 // Unified options with reasoning passed to streamSimple() and completeSimple()
 export interface SimpleStreamOptions extends StreamOptions {
+	/** Confirmed Google Cloud project for the Corporate Vertex transport. */
+	project?: string;
+	/** Google Cloud location for the Corporate Vertex transport. */
+	location?: string;
 	reasoning?: Effort;
 	/** Custom token budgets for thinking levels (token-based providers only) */
 	thinkingBudgets?: ThinkingBudgets;

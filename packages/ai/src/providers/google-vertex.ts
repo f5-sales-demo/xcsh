@@ -106,8 +106,8 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 		let rawRequestDump: RawHttpRequestDump | undefined;
 
 		try {
-			// Corporate Vertex is deliberately ADC-only.  In particular, do not let the
-			// generic agent API-key plumbing turn this route into Gemini consumer auth.
+			// apiKey is an isolated, short-lived OAuth bearer token for the Corporate
+			// Vertex route. It is never sourced from Gemini consumer credentials.
 			const project = await resolveGoogleVertexProject(options);
 			const location = resolveGoogleVertexLocation(options);
 			const client = createClient(model, project, location, options?.apiKey);
