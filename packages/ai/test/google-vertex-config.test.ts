@@ -69,6 +69,17 @@ describe("Google Vertex runtime configuration", () => {
 		});
 	});
 
+	it("preserves a named tool choice for Vertex instead of widening it to unrestricted any", () => {
+		const model = getBundledModel("google-vertex", "gemini-3.7-flash");
+		const runtimeOptions = {
+			toolChoice: { type: "tool", name: "todo_write" },
+		} as SimpleStreamOptions;
+
+		expect(mapOptionsForApi(model, runtimeOptions)).toMatchObject({
+			toolChoice: { name: "todo_write" },
+		});
+	});
+
 	it("resolves the project from ADC when project environment variables are absent", async () => {
 		await withoutProjectEnvironment(async () => {
 			const originalCredentialsPath = Bun.env.GOOGLE_APPLICATION_CREDENTIALS;
