@@ -38,7 +38,7 @@ import { loginCloudflareAiGateway } from "./utils/oauth/cloudflare-ai-gateway";
 import { loginCursor } from "./utils/oauth/cursor";
 import { loginGitHubCopilot } from "./utils/oauth/github-copilot";
 import { loginGitLabDuo } from "./utils/oauth/gitlab-duo";
-import { loginAntigravity } from "./utils/oauth/google-antigravity";
+import { loginAntigravity, loginVertexWithAntigravityOAuth } from "./utils/oauth/google-antigravity";
 import { loginGeminiCli } from "./utils/oauth/google-gemini-cli";
 import { loginHuggingface } from "./utils/oauth/huggingface";
 import { loginKagi } from "./utils/oauth/kagi";
@@ -789,6 +789,12 @@ export class AuthStorage {
 				break;
 			case "google-gemini-cli":
 				credentials = await loginGeminiCli({
+					...ctrl,
+					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
+				});
+				break;
+			case "google-vertex":
+				credentials = await loginVertexWithAntigravityOAuth({
 					...ctrl,
 					onManualCodeInput: ctrl.onManualCodeInput ?? manualCodeInput,
 				});

@@ -1354,6 +1354,32 @@ export class SelectorController {
 	async #handleVertexLogin(): Promise<void> {
 		const runtime = defaultVertexLoginRuntime;
 		try {
+			const authStorage = this.ctx.session.modelRegistry.authStorage;
+			let accessToken = await authStorage.getApiKey("google-vertex");
+			if (!accessToken) {
+				this.ctx.showStatus("Authenticating Corporate Vertex with the authorized Google enterprise flow…");
+				await authStorage.login("google-vertex", {
+					onAuth: info => {
+						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", info.url), 1, 0));
+						if (isHeadlessTerminal(runtime.environment)) {
+							this.ctx.chatContainer.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 1, 0));
+						} else {
+							this.ctx.openInBrowser(info.url);
+						}
+						this.ctx.ui.requestRender();
+					},
+					onPrompt: prompt =>
+						this.#promptLoginValue({
+							message: prompt.message,
+							placeholder: prompt.placeholder,
+							allowEmpty: prompt.allowEmpty,
+						}),
+					onProgress: message => this.ctx.showStatus(message),
+					onManualCodeInput: () => this.ctx.oauthManualInput.waitForInput("google-vertex"),
+				});
+				accessToken = await authStorage.getApiKey("google-vertex");
+				if (!accessToken) throw new Error("Vertex OAuth authentication did not return an access token");
+			}
 			const detected = await detectVertexProject(runtime);
 			const proposed = await this.#promptLoginValue({
 				message: detected
@@ -1369,8 +1395,8 @@ export class SelectorController {
 			}
 
 			try {
-				this.ctx.showStatus("Validating Vertex AI Application Default Credentials and Gemini 3.7 Flash access…");
-				await validateVertexLogin(runtime, project);
+				this.ctx.showStatus("Validating Vertex AI OAuth credentials and Gemini 3.7 Flash access…");
+				await validateVertexLogin(runtime, project, accessToken);
 			} catch (error) {
 				const action = await this.#showLoginRecovery(
 					{ stage: "validation", error: vertexFailureGuidance(error, project), canEdit: true },
@@ -1381,10 +1407,8 @@ export class SelectorController {
 					this.ctx.showStatus("Vertex AI login cancelled. Existing configuration unchanged.");
 					return;
 				}
-				if (action === "edit") {
-					await runtime.loginApplicationDefault(isHeadlessTerminal(runtime.environment));
-				}
-				await validateVertexLogin(runtime, project);
+				if (action === "edit") throw new Error("Retry `/login google-vertex` to authenticate again.");
+				await validateVertexLogin(runtime, project, accessToken);
 			}
 
 			const applied = await applyModelAfterLogin(this.ctx.session, GOOGLE_VERTEX_LOGIN_MODEL_CHOICE);

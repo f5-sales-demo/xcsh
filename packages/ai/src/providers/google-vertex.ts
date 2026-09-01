@@ -35,6 +35,8 @@ import {
 } from "./google-shared";
 
 export interface GoogleVertexOptions extends StreamOptions {
+	/** OAuth bearer token from the isolated Vertex credential namespace. */
+	apiKey?: string;
 	toolChoice?: "auto" | "none" | "any";
 	thinking?: {
 		enabled: boolean;
@@ -108,7 +110,7 @@ export const streamGoogleVertex: StreamFunction<"google-vertex"> = (
 			// generic agent API-key plumbing turn this route into Gemini consumer auth.
 			const project = await resolveGoogleVertexProject(options);
 			const location = resolveGoogleVertexLocation(options);
-			const client = createClient(model, project, location);
+			const client = createClient(model, project, location, options?.apiKey);
 			const params = buildGoogleVertexParams(model, context, options);
 			options?.onPayload?.(params);
 			rawRequestDump = {
@@ -331,13 +333,21 @@ function buildHttpOptions(model: Model<"google-vertex">): { headers?: Record<str
 	return { headers: { ...model.headers } };
 }
 
-function createClient(model: Model<"google-vertex">, project: string, location: string): GoogleGenAI {
+function createClient(
+	model: Model<"google-vertex">,
+	project: string,
+	location: string,
+	accessToken?: string,
+): GoogleGenAI {
 	return new GoogleGenAI({
 		vertexai: true,
 		project,
 		location,
 		apiVersion: API_VERSION,
-		httpOptions: buildHttpOptions(model),
+		httpOptions: {
+			...buildHttpOptions(model),
+			...(accessToken ? { headers: { ...model.headers, Authorization: `Bearer ${accessToken}` } } : {}),
+		},
 	});
 }
 

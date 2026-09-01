@@ -4,6 +4,7 @@ import { getAntigravityAuthHeaders } from "../src/providers/google-gemini-cli";
 import {
 	ANTIGRAVITY_LOAD_CODE_ASSIST_METADATA,
 	type AntigravityProjectSources,
+	exchangeVertexOAuthCode,
 	loginAntigravity,
 } from "../src/utils/oauth/google-antigravity";
 
@@ -313,5 +314,28 @@ describe("Google Antigravity auth alignment", () => {
 				},
 			]);
 		});
+	});
+
+	it("exchanges the authorized Vertex credential without Code Assist discovery or onboarding", async () => {
+		const urls: string[] = [];
+		const fetchImpl = vi.fn(async (input: string | URL | Request) => {
+			const url = String(input);
+			urls.push(url);
+			if (url === TOKEN_URL) {
+				return jsonResponse({ access_token: "vertex-access", refresh_token: "vertex-refresh", expires_in: 3600 });
+			}
+			if (url === USER_INFO_URL) return jsonResponse({ email: "enterprise@example.com" });
+			throw new Error(`unexpected request: ${url}`);
+		}) as unknown as typeof fetch;
+
+		const credential = await exchangeVertexOAuthCode("code", "http://localhost/callback", fetchImpl);
+
+		expect(credential).toMatchObject({
+			access: "vertex-access",
+			refresh: "vertex-refresh",
+			email: "enterprise@example.com",
+		});
+		expect(credential.projectId).toBeUndefined();
+		expect(urls).toEqual([TOKEN_URL, USER_INFO_URL]);
 	});
 });

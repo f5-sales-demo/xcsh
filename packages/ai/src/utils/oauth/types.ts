@@ -18,6 +18,7 @@ export type OAuthProvider =
 	| "cursor"
 	| "github-copilot"
 	| "google-gemini-cli"
+	| "google-vertex"
 	| "google-antigravity"
 	| "google-antigravity-enterprise"
 	| "gitlab-duo"

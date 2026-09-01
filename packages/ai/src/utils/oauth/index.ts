@@ -5,7 +5,7 @@ import { refreshAnthropicToken } from "./anthropic";
 import { refreshCursorToken } from "./cursor";
 import { refreshGitHubCopilotToken } from "./github-copilot";
 import { refreshGitLabDuoToken } from "./gitlab-duo";
-import { refreshAntigravityToken } from "./google-antigravity";
+import { refreshAntigravityToken, refreshVertexWithAntigravityOAuth } from "./google-antigravity";
 import { refreshGoogleCloudToken } from "./google-gemini-cli";
 import { refreshKimiToken } from "./kimi";
 import { refreshOpenAICodexToken } from "./openai-codex";
@@ -66,7 +66,7 @@ export {
 // GitLab Duo
 export { loginGitLabDuo, refreshGitLabDuoToken } from "./gitlab-duo";
 // Google Antigravity
-export { loginAntigravity, refreshAntigravityToken } from "./google-antigravity";
+export { loginAntigravity, loginVertexWithAntigravityOAuth, refreshAntigravityToken } from "./google-antigravity";
 // Google Gemini CLI
 export { loginGeminiCli, refreshGoogleCloudToken } from "./google-gemini-cli";
 // Hugging Face Inference (API key)
@@ -392,6 +392,9 @@ export async function refreshOAuthToken(
 				throw new Error("Google Cloud credentials missing projectId");
 			}
 			newCredentials = await refreshGoogleCloudToken(credentials.refresh, credentials.projectId);
+			break;
+		case "google-vertex":
+			newCredentials = await refreshVertexWithAntigravityOAuth(credentials.refresh);
 			break;
 		case "google-antigravity":
 			if (!credentials.projectId) {
