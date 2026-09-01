@@ -102,6 +102,7 @@ const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
 ]);
 
 const MANUAL_LOGIN_TIP = "Tip: You can complete pairing with /login <redirect URL>.";
+const VERTEX_MANUAL_LOGIN_TIP = "Tip: After browser sign-in, complete pairing with /login <authorization code>.";
 
 class LoginPromptCancelled extends Error {}
 
@@ -1362,7 +1363,7 @@ export class SelectorController {
 					onAuth: info => {
 						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", info.url), 1, 0));
 						if (isHeadlessTerminal(runtime.environment)) {
-							this.ctx.chatContainer.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 1, 0));
+							this.ctx.chatContainer.addChild(new Text(theme.fg("dim", VERTEX_MANUAL_LOGIN_TIP), 1, 0));
 						} else {
 							this.ctx.openInBrowser(info.url);
 						}
