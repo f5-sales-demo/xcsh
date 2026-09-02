@@ -51,6 +51,8 @@ describe("validateWizardUrl", () => {
 describe("wizard credential normalization", () => {
 	it.each([
 		["raw", "token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
+		["opaque raw token ending in equals", "opaqueTokenEndingInEquals=", XCSH_API_TOKEN, "opaqueTokenEndingInEquals="],
+		["opaque raw token with embedded equals", "opaque=token=value", XCSH_API_TOKEN, "opaque=token=value"],
 		["assignment", "XCSH_API_TOKEN=token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
 		["export", "export XCSH_API_TOKEN=token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
 		["commented", "#XCSH_API_TOKEN=token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],

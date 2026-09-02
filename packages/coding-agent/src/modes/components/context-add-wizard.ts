@@ -31,13 +31,16 @@ export function normalizeWizardCredential(value: string, expectedKey: WizardCred
 	const trimmed = value.trim();
 	if (!trimmed) return "";
 	const assignment = trimmed.match(/^(?:#\s*)?(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-	if (assignment) {
+	const isShellAssignment =
+		assignment !== null &&
+		(assignment[1] === expectedKey || assignment[1].startsWith("XCSH_") || /^(?:#\s*)?(?:export\s+)/.test(trimmed));
+	if (assignment && isShellAssignment) {
 		if (assignment[1] !== expectedKey) return null;
 		return unwrapWholeValueQuotes(assignment[2].trim());
 	}
 	if (trimmed === expectedKey || trimmed === `export ${expectedKey}` || trimmed === `#${expectedKey}`) return null;
 	// A shell-style assignment for another field must not silently become a token.
-	if (/^(?:#\s*)?(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=/.test(trimmed)) return null;
+	if (/^(?:#\s*)?(?:export\s+)?XCSH_[A-Za-z0-9_]*\s*=/.test(trimmed)) return null;
 	return unwrapWholeValueQuotes(trimmed);
 }
 
