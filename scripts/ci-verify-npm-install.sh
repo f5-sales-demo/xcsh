@@ -47,7 +47,10 @@ for attempt in $(seq 1 "$max_attempts"); do
         echo "ERROR: npm launcher did not cache the matching compiled release binary: $release_binary" >&2
         exit 1
       fi
-      if grep -q '^#!/usr/bin/env bun' "$release_binary" 2>/dev/null; then
+      # Bun-compiled executables embed source strings, including the launcher's
+      # shebang. Reject only an artifact whose file prefix is the source
+      # shebang; searching the entire ELF produces a false positive.
+      if head -c 18 "$release_binary" | grep -qax '#!/usr/bin/env bun'; then
         echo "ERROR: npm launcher cached a source script instead of a compiled release binary" >&2
         exit 1
       fi
