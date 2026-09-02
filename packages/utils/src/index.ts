@@ -37,6 +37,7 @@ export * from "./tab-spacing";
 export * from "./temp";
 export * from "./type-guards";
 export * from "./which";
+export * from "./xcsh-auth";
 export * from "./xcsh-context-paths";
 export * from "./xcsh-context-resolver";
 export * from "./xcsh-env-names";

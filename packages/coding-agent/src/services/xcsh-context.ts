@@ -7,6 +7,7 @@ import {
 	RESERVED_CONTEXT_NAMES,
 	xcshContextPaths,
 } from "@f5-sales-demo/pi-utils";
+import { validateXcshApiCredentials, type XcshAuthValidationFailure } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import { Settings } from "../config/settings";
 import { SECRET_ENV_PATTERNS } from "../secrets/index";
 import { XCSHApiClient } from "./xcsh-api-client";
@@ -73,15 +74,7 @@ export interface XCSHContext {
 export type AuthStatus = "connected" | "auth_error" | "offline" | "unknown";
 
 /** Safe, actionable classification of a failed token validation request. */
-export type ValidationFailureReason =
-	| "unauthorized"
-	| "forbidden"
-	| "redirect"
-	| "non_json"
-	| "rate_limited"
-	| "server"
-	| "timeout"
-	| "network";
+export type ValidationFailureReason = XcshAuthValidationFailure;
 
 export interface TokenValidationResult {
 	status: AuthStatus;
@@ -1020,104 +1013,34 @@ export class ContextService {
 			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
 			(options?.apiToken !== undefined && options.apiToken !== activeToken);
 
-		const url = `${normalizeApiUrl(effectiveUrl)}/api/web/namespaces`;
-		const timeout = options?.timeoutMs ?? 3000;
 		const checkedAt = Date.now();
-		const start = performance.now();
-		const recordResult = (result: TokenValidationResult): TokenValidationResult => {
-			logger.debug("XCSH token validation", {
-				endpoint: url,
-				status: result.status,
-				httpStatus: result.httpStatus,
-				latencyMs: result.latencyMs,
-				failureReason: result.failureReason,
-				tokenLength: effectiveToken.length,
-			});
-			return result;
-		};
-		try {
-			const response = await fetch(url, {
-				method: "GET",
-				headers: { Authorization: `APIToken ${effectiveToken}`, Accept: "application/json" },
-				signal: AbortSignal.timeout(timeout),
-				redirect: "manual",
-			});
-			const latencyMs = Math.round(performance.now() - start);
-			if (!adHoc) {
-				this.#lastAuthLatencyMs = latencyMs;
-				this.#lastAuthCheckedAt = checkedAt;
-			}
-			if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
-				if (!adHoc) this.#authStatus = "offline";
-				return recordResult({
-					status: "offline",
-					latencyMs,
-					httpStatus: response.status || undefined,
-					failureReason: "redirect",
-					errorClass: "url_not_found",
-				});
-			}
-			if (response.status === 200) {
-				const contentType = response.headers.get("content-type") ?? "";
-				if (!contentType.includes("application/json")) {
-					if (!adHoc) this.#authStatus = "offline";
-					return recordResult({
-						status: "offline",
-						latencyMs,
-						httpStatus: response.status,
-						failureReason: "non_json",
-						errorClass: "url_not_found",
-					});
-				}
-				try {
-					await response.clone().json();
-				} catch {
-					if (!adHoc) this.#authStatus = "offline";
-					return recordResult({
-						status: "offline",
-						latencyMs,
-						httpStatus: response.status,
-						failureReason: "non_json",
-						errorClass: "url_not_found",
-					});
-				}
-				if (!adHoc) this.#authStatus = "connected";
-				return recordResult({ status: "connected", latencyMs, httpStatus: response.status });
-			}
-			if (response.status === 401 || response.status === 403) {
-				if (!adHoc) this.#authStatus = "auth_error";
-				return recordResult({
-					status: "auth_error",
-					latencyMs,
-					httpStatus: response.status,
-					failureReason: response.status === 401 ? "unauthorized" : "forbidden",
-					errorClass: "credential",
-				});
-			}
-			// 5xx, 429, etc. — server reachable but unhealthy; treat as offline so startup retry fires
-			if (!adHoc) this.#authStatus = "offline";
-			return recordResult({
-				status: "offline",
-				latencyMs,
-				httpStatus: response.status,
-				failureReason: response.status === 429 ? "rate_limited" : response.status >= 500 ? "server" : "network",
-				errorClass: "network",
-			});
-		} catch (error) {
-			const latencyMs = Math.round(performance.now() - start);
-			const isTimeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
-			if (!adHoc) {
-				this.#lastAuthLatencyMs = Date.now() - checkedAt;
-				this.#lastAuthCheckedAt = checkedAt;
-				this.#authStatus = "offline";
-			}
-			return recordResult({
-				status: "offline",
-				latencyMs,
-				failureReason: isTimeout ? "timeout" : "network",
-				errorClass: "network",
-			});
+		const shared = await validateXcshApiCredentials({
+			apiUrl: effectiveUrl,
+			apiToken: effectiveToken,
+			timeoutMs: options?.timeoutMs,
+			fetch,
+		});
+		const errorClass: TokenValidationResult["errorClass"] =
+			shared.failureReason === "unauthorized" || shared.failureReason === "forbidden"
+				? "credential"
+				: shared.failureReason === "redirect" || shared.failureReason === "non_json"
+					? "url_not_found"
+					: shared.failureReason
+						? "network"
+						: undefined;
+		const result: TokenValidationResult = { ...shared, ...(errorClass ? { errorClass } : {}) };
+		if (!adHoc) {
+			this.#lastAuthLatencyMs = shared.latencyMs;
+			this.#lastAuthCheckedAt = checkedAt;
+			this.#authStatus = shared.status;
 		}
+		logger.debug("XCSH token validation", {
+			status: result.status,
+			httpStatus: result.httpStatus,
+			latencyMs: result.latencyMs,
+			failureReason: result.failureReason,
+		});
+		return result;
 	}
 
 	/**
