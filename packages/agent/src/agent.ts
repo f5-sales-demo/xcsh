@@ -132,6 +132,8 @@ export interface AgentOptions {
 	 * Inspect or replace provider payloads before they are sent.
 	 */
 	onPayload?: SimpleStreamOptions["onPayload"];
+	/** Observe the final provider payload after all transforms. Must not retain raw content. */
+	onFinalPayload?: SimpleStreamOptions["onPayload"];
 	/**
 	 * Inspect assistant streaming events before they are emitted to subscribers.
 	 * Use this when abort decisions must happen before buffered events continue flowing.
@@ -211,9 +213,10 @@ export interface AgentPromptOptions {
 export function composeOnPayload(
 	base: SimpleStreamOptions["onPayload"] | undefined,
 	serverTools: Record<string, unknown>[] | undefined,
+	final: SimpleStreamOptions["onPayload"] | undefined = undefined,
 ): SimpleStreamOptions["onPayload"] | undefined {
 	const hasServerTools = Array.isArray(serverTools) && serverTools.length > 0;
-	if (!base && !hasServerTools) return undefined;
+	if (!base && !hasServerTools && !final) return undefined;
 	return async (payload, model) => {
 		let p = payload;
 		if (base) {
@@ -223,6 +226,10 @@ export function composeOnPayload(
 		if (hasServerTools && p && typeof p === "object") {
 			const params = p as { tools?: unknown[] };
 			params.tools = [...(params.tools ?? []), ...serverTools];
+		}
+		if (final) {
+			const replaced = await final(p, model);
+			if (replaced !== undefined) p = replaced;
 		}
 		return p;
 	};
@@ -278,6 +285,7 @@ export class Agent {
 	#intentTracing: boolean;
 	#getToolChoice?: () => ToolChoice | undefined;
 	#onPayload?: SimpleStreamOptions["onPayload"];
+	#onFinalPayload?: SimpleStreamOptions["onPayload"];
 	#onAssistantMessageEvent?: (message: AssistantMessage, event: AssistantMessageEvent) => void;
 
 	/** Buffered Cursor tool results with text length at time of call (for correct ordering) */
@@ -307,6 +315,7 @@ export class Agent {
 		this.#maxRetryDelayMs = opts.maxRetryDelayMs;
 		this.getApiKey = opts.getApiKey;
 		this.#onPayload = opts.onPayload;
+		this.#onFinalPayload = opts.onFinalPayload;
 		this.#getToolContext = opts.getToolContext;
 		this.#cursorExecHandlers = opts.cursorExecHandlers;
 		this.#cursorOnToolResult = opts.cursorOnToolResult;
@@ -798,7 +807,13 @@ export class Agent {
 				transformContext: this.#transformContext,
 				// Per-turn: compose the extension hook with any server-tool injection for
 				// THIS prompt (e.g. Office "Search the web"). No-op when neither is present.
-				onPayload: composeOnPayload(this.#onPayload, options?.serverTools),
+				onPayload: composeOnPayload(
+					this.#onPayload,
+					options?.serverTools,
+					this.#onFinalPayload
+						? (payload, payloadModel) => this.#onFinalPayload?.(payload, payloadModel ?? model)
+						: undefined,
+				),
 				getApiKey: this.getApiKey,
 				getToolContext: this.#getToolContext,
 				syncContextBeforeModelCall: async context => {

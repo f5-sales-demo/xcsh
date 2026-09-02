@@ -549,6 +549,18 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	"context.loadingMode": {
+		type: "enum",
+		values: ["eager", "progressive"] as const,
+		default: "eager",
+		ui: {
+			tab: "model",
+			label: "Context Loading",
+			description: "Load all capabilities eagerly or activate optional context progressively",
+			submenu: true,
+		},
+	},
+
 	// Dynamic routing
 	"routing.mode": {
 		type: "enum",

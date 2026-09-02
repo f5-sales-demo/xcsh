@@ -42,6 +42,7 @@ import {
 } from "./config/model-resolver";
 import { loadPromptTemplates as loadPromptTemplatesInternal, type PromptTemplate } from "./config/prompt-templates";
 import { Settings, type SkillsSettings } from "./config/settings";
+import { ContextProfileCollector } from "./context/profile";
 import { CursorExecHandlers } from "./cursor";
 import "./discovery";
 import { resolveConfigValue } from "./config/resolve-config-value";
@@ -1104,6 +1105,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			getDiscoverableMCPSearchIndex: () => session.getDiscoverableMCPSearchIndex(),
 			getSelectedMCPToolNames: () => session.getSelectedMCPToolNames(),
 			activateDiscoveredMCPTools: toolNames => session.activateDiscoveredMCPTools(toolNames),
+			getActiveTools: () => session.getActiveToolNames(),
+			getDiscoverableTools: () => session.getDiscoverableTools(),
+			getDiscoverableToolSearchIndex: () => session.getDiscoverableToolSearchIndex(),
+			activateDiscoveredTools: toolNames => session.activateDiscoveredTools(toolNames),
 			getCheckpointState: () => session.getCheckpointState(),
 			setCheckpointState: state => session.setCheckpointState(state ?? undefined),
 			getToolChoiceQueue: () => session.toolChoiceQueue,
@@ -1508,6 +1513,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		});
 
 		const repeatToolDescriptions = settings.get("repeatToolDescriptions");
+		const contextLoadingMode = settings.get("context.loadingMode");
+		const contextProfileCollector = new ContextProfileCollector(contextLoadingMode);
 		const eagerTasks = settings.get("task.eager");
 		const intentField = settings.get("tools.intentTracing") || $flag("PI_INTENT_TRACING") ? INTENT_FIELD : undefined;
 		const rebuildSystemPrompt = async (toolNames: string[], tools: Map<string, AgentTool>): Promise<string> => {
@@ -1517,7 +1524,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const hasDiscoverableMCPTools =
 				mcpDiscoveryEnabled && toolNames.includes("search_tool_bm25") && discoverableMCPTools.length > 0;
 			const promptTools = buildSystemPromptToolMetadata(tools, {
-				search_tool_bm25: { description: renderSearchToolBm25Description(discoverableMCPTools) },
+				search_tool_bm25: {
+					description: renderSearchToolBm25Description(discoverableMCPTools, contextLoadingMode === "progressive"),
+				},
 			});
 			const memoryInstructions = await buildMemoryToolDeveloperInstructions(agentDir, settings);
 
@@ -1617,6 +1626,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			const localeForPrompt = localeName ? { code: currentLocale, name: localeName } : undefined;
 
 			const defaultPrompt = await buildSystemPromptInternal({
+				loadingMode: contextLoadingMode,
+				onProfileComponents: components => contextProfileCollector.setAttributedComponents(components),
 				cwd,
 				skills,
 				contextFiles,
@@ -1646,6 +1657,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				return defaultPrompt;
 			}
 			return await buildSystemPromptInternal({
+				loadingMode: contextLoadingMode,
+				onProfileComponents: components => contextProfileCollector.setAttributedComponents(components),
 				cwd,
 				skills,
 				contextFiles,
@@ -1678,16 +1691,39 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			toolNamesFromRegistry;
 		const normalizedRequested = requestedToolNames.filter(name => toolRegistry.has(name));
 		const includeExitPlanMode = requestedToolNames.includes("exit_plan_mode");
-		const mcpDiscoveryEnabled = settings.get("mcp.discoveryMode") ?? false;
+		const progressiveLoading = contextLoadingMode === "progressive";
+		const mcpDiscoveryEnabled = (settings.get("mcp.discoveryMode") ?? false) || progressiveLoading;
 		const defaultInactiveToolNames = new Set(
 			registeredTools.filter(tool => tool.definition.defaultInactive).map(tool => tool.definition.name),
 		);
 		const requestedActiveToolNames = includeExitPlanMode
 			? normalizedRequested
 			: normalizedRequested.filter(name => name !== "exit_plan_mode");
+		const progressiveCoreToolNames = [
+			"read",
+			"grep",
+			"find",
+			"bash",
+			"python",
+			"edit",
+			"write",
+			"xcsh_api",
+			"search_tool_bm25",
+		];
 		const initialRequestedActiveToolNames = options.toolNames
 			? requestedActiveToolNames
-			: requestedActiveToolNames.filter(name => !defaultInactiveToolNames.has(name));
+			: progressiveLoading
+				? progressiveCoreToolNames.filter(name => toolRegistry.has(name))
+				: requestedActiveToolNames.filter(name => !defaultInactiveToolNames.has(name));
+		const restoredProgressiveToolNames = existingSession.hasPersistedToolSelection
+			? [
+					...progressiveCoreToolNames.filter(name => toolRegistry.has(name)),
+					...(existingSession.selectedToolNames ?? []).filter(name => toolRegistry.has(name)),
+				]
+			: [
+					...initialRequestedActiveToolNames,
+					...existingSession.selectedMCPToolNames.filter(name => toolRegistry.has(name)),
+				];
 		const explicitlyRequestedMCPToolNames = options.toolNames
 			? requestedActiveToolNames.filter(name => name.startsWith("mcp_"))
 			: [];
@@ -1702,7 +1738,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			: [];
 		let initialSelectedMCPToolNames: string[] = [];
 		let defaultSelectedMCPToolNames: string[] = [];
-		let initialToolNames = [...initialRequestedActiveToolNames];
+		let initialToolNames =
+			progressiveLoading && options.toolNames === undefined
+				? [...new Set(restoredProgressiveToolNames)]
+				: [...initialRequestedActiveToolNames];
 		if (mcpDiscoveryEnabled) {
 			const restoredSelectedMCPToolNames = existingSession.selectedMCPToolNames.filter(name =>
 				toolRegistry.has(name),
@@ -1714,17 +1753,14 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				? restoredSelectedMCPToolNames
 				: [...new Set([...restoredSelectedMCPToolNames, ...defaultSelectedMCPToolNames])];
 			initialToolNames = [
-				...new Set([
-					...initialRequestedActiveToolNames.filter(name => !name.startsWith("mcp_")),
-					...initialSelectedMCPToolNames,
-				]),
+				...new Set([...initialToolNames.filter(name => !name.startsWith("mcp_")), ...initialSelectedMCPToolNames]),
 			];
 		}
 
 		// Without an explicit scope, custom and default-active extension tools join the
 		// built-ins. When toolNames is present, it is authoritative for every tool source.
 		const alwaysInclude: string[] =
-			options.toolNames === undefined
+			options.toolNames === undefined && !progressiveLoading
 				? [
 						...(options.customTools?.map(t => (isCustomTool(t) ? t.name : t.name)) ?? []),
 						...registeredTools.filter(t => !t.definition.defaultInactive).map(t => t.definition.name),
@@ -1805,6 +1841,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const initialTools = initialToolNames
 			.map(name => toolRegistry.get(name))
 			.filter((tool): tool is AgentTool => tool !== undefined);
+		contextProfileCollector.setPrompt(systemPrompt, initialTools);
+		contextProfileCollector.setDeferredTools(
+			Array.from(toolRegistry.values()).filter(tool => !initialToolNames.includes(tool.name)),
+		);
 
 		const openaiWebsocketSetting = settings.get("providers.openaiWebsockets") ?? "off";
 		const preferOpenAICodexWebsockets =
@@ -1826,6 +1866,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			},
 			convertToLlm: convertToLlmFinal,
 			onPayload,
+			onFinalPayload: (payload, payloadModel) => {
+				if (payloadModel) contextProfileCollector.captureProviderPayload(payload, payloadModel);
+			},
 			sessionId: providerSessionId,
 			transformContext,
 			steeringMode: settings.get("steeringMode") ?? "one-at-a-time",
@@ -1922,6 +1965,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			skillWarnings,
 			skillsSettings: settings.getGroup("skills"),
 			modelRegistry,
+			contextProfileCollector,
 			toolRegistry,
 			transformContext,
 			onPayload,
