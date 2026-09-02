@@ -1,5 +1,6 @@
 // UI Components barrel export
 export * from "./assistant-message";
+export * from "./auth-link-presenter";
 export * from "./bash-execution";
 export * from "./bordered-loader";
 export * from "./branch-summary-message";
