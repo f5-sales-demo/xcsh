@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { buildWizardContext, validateWizardName, validateWizardUrl } from "../src/modes/components/context-add-wizard";
+import {
+	buildWizardContext,
+	normalizeWizardCredential,
+	normalizeWizardUrl,
+	validateWizardName,
+	validateWizardUrl,
+} from "../src/modes/components/context-add-wizard";
+import { XCSH_API_TOKEN, XCSH_CONSOLE_PASSWORD, XCSH_USERNAME } from "../src/services/xcsh-env";
 
 const BASE_STATE = {
 	url: "https://example-corp.console.ves.volterra.io",
@@ -38,6 +45,36 @@ describe("validateWizardUrl", () => {
 	it("accepts valid multi-label hostname", () => {
 		expect(validateWizardUrl("https://api.example.com")).toBeNull();
 		expect(validateWizardUrl("https://example-corp.console.ves.volterra.io")).toBeNull();
+	});
+});
+
+describe("wizard credential normalization", () => {
+	it.each([
+		["raw", "token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
+		["assignment", "XCSH_API_TOKEN=token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
+		["export", "export XCSH_API_TOKEN=token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
+		["commented", "#XCSH_API_TOKEN=token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
+		["double quoted", 'XCSH_API_TOKEN="token-with-padding="', XCSH_API_TOKEN, "token-with-padding="],
+		["single quoted", "XCSH_CONSOLE_PASSWORD='safe value='", XCSH_CONSOLE_PASSWORD, "safe value="],
+		["username assignment", "XCSH_USERNAME=user@example.test", XCSH_USERNAME, "user@example.test"],
+	])("normalizes %s input", (_name, input, key, expected) => {
+		expect(normalizeWizardCredential(input, key)).toBe(expected);
+	});
+
+	it.each([
+		["wrong key", "XCSH_API_URL=https://tenant.example.test", XCSH_API_TOKEN],
+		["wrong export key", "export XCSH_USERNAME=someone", XCSH_CONSOLE_PASSWORD],
+		["multiline", "XCSH_API_TOKEN=one\ntwo", XCSH_API_TOKEN],
+		["malformed assignment", "XCSH_API_TOKEN", XCSH_API_TOKEN],
+		["unclosed quote", 'XCSH_API_TOKEN="unfinished', XCSH_API_TOKEN],
+	])("rejects %s input", (_name, input, key) => {
+		expect(normalizeWizardCredential(input, key)).toBeNull();
+	});
+
+	it("canonicalizes accepted tenant URLs to their HTTPS origin", () => {
+		expect(normalizeWizardUrl("XCSH_API_URL=https://tenant.example.test/path?query=yes")).toBe(
+			"https://tenant.example.test",
+		);
 	});
 });
 
