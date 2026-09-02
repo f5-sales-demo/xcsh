@@ -13,7 +13,9 @@
  * background, `--pure-white` for crisp white on the F5-red fills). No color
  * literals remain in this stylesheet.
  */
-export const PANEL_CSS = `
+import { TEMML_CSS } from "../markdown/temml-css.generated";
+
+export const PANEL_CSS = `${TEMML_CSS}
 * { box-sizing: border-box; }
 html,body { margin:0; height:100%; }
 body { background: var(--charcoal); color: var(--bright-white);

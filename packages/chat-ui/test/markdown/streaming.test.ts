@@ -97,6 +97,21 @@ describe("Layer 3 — convergence", () => {
 			expect(renderMarkdown(full.slice(0, full.length))).toBe(renderMarkdown(full));
 		}
 	});
+
+	test("incomplete math remains source and converges once its delimiter closes", () => {
+		const partial = "Map $\\mathbb{C}^3";
+		const complete = `${partial}$`;
+		const before = document.createElement("div");
+		before.innerHTML = renderMarkdown(partial);
+		expect(before.textContent?.trimEnd()).toBe(partial);
+		expect(before.querySelector("math")).toBeNull();
+
+		const after = document.createElement("div");
+		after.innerHTML = renderMarkdown(complete);
+		expect(after.querySelector("math")).not.toBeNull();
+		expect(after.textContent?.trimEnd()).toBe("Map ℂ3");
+		expect(renderMarkdown(complete)).toBe(renderMarkdown(complete));
+	});
 });
 
 describe("Layer 3 — perf budget (no O(n^2) parse)", () => {

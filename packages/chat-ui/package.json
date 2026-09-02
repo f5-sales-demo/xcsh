@@ -26,6 +26,7 @@
 	"types": "./src/index.ts",
 	"scripts": {
 		"gen-tokens": "bun scripts/gen-tokens.ts",
+		"gen-temml-css": "bun scripts/generate-temml-css.ts",
 		"gen-md-goldens": "bun scripts/gen-md-goldens.ts",
 		"sync-vendor": "bun scripts/sync-vendor.ts",
 		"check": "biome check . && bun run check:types",
@@ -38,7 +39,8 @@
 	},
 	"dependencies": {
 		"dompurify": "^3",
-		"marked": "^18"
+		"marked": "^18",
+		"temml": "0.13.4"
 	},
 	"peerDependencies": {
 		"react": ">=18"

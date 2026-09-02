@@ -58,6 +58,7 @@ export { ToolUseContent, type ToolUseContentProps } from "./components/ToolUseCo
 export { Transcript, type TranscriptProps } from "./components/Transcript";
 // ── Shared hooks ──────────────────────────────────────────────────────────
 export { type UseMenuResult, useMenu } from "./components/useMenu";
+export { createMathExtensions, type MathToken, renderMath, TEMML_OPTIONS } from "./markdown/math";
 // ── Markdown ──────────────────────────────────────────────────────────────
 export { escapeHtml, isSafeUrl, renderMarkdown } from "./markdown/render";
 export { F5Logo, type F5LogoProps } from "./theme/F5Logo";

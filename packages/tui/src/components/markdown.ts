@@ -1,4 +1,5 @@
-import { marked, type Token, type Tokens } from "marked";
+import { Marked, type Token, type TokenizerExtension, type Tokens } from "marked";
+import { renderLatex } from "../latex";
 import type { SymbolTheme } from "../symbols";
 import { getImageDimensions, imageFallback, renderImage, stableKittyImageId, TERMINAL } from "../terminal-capabilities";
 import type { Component } from "../tui";
@@ -11,6 +12,140 @@ import {
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "../utils";
+
+interface LatexToken extends Tokens.Generic {
+	type: "latex" | "latexBlock";
+	text: string;
+	pending?: boolean;
+}
+
+function isEscaped(source: string, index: number): boolean {
+	let backslashes = 0;
+	for (let position = index - 1; position >= 0 && source[position] === "\\"; position--) {
+		backslashes++;
+	}
+	return backslashes % 2 === 1;
+}
+
+function findClosingDelimiter(source: string, closing: string, start: number): number {
+	let index = source.indexOf(closing, start);
+	while (index >= 0 && isEscaped(source, index)) {
+		index = source.indexOf(closing, index + closing.length);
+	}
+	return index;
+}
+
+function looksLikePendingDollarMath(source: string): boolean {
+	return /\\[A-Za-z]+|[_^=+*/<>()[\]|±≤≥≠≈∈→⇒∞∫∑√-]/.test(source);
+}
+
+function startsWithLiteralDollarToken(source: string): boolean {
+	const match = /^\$(?:\d+(?:[.,]\d+)?|[A-Z_][A-Z0-9_]*|\{[A-Za-z_][A-Za-z0-9_]*\})/.exec(source);
+	if (match === null) return false;
+	const remainder = source.slice(match[0].length);
+	return !remainder.startsWith("$") && !/^\s*[=+*<>[\]|^]/.test(remainder);
+}
+
+function tokenizeInlineLatex(source: string): LatexToken | undefined {
+	let opening = "";
+	let closing = "";
+	if (source.startsWith("$$")) {
+		opening = "$$";
+		closing = "$$";
+	} else if (source.startsWith("\\(")) {
+		opening = "\\(";
+		closing = "\\)";
+	} else if (source.startsWith("\\[")) {
+		opening = "\\[";
+		closing = "\\]";
+	} else if (source.startsWith("$") && !/^\$\s/.test(source) && !startsWithLiteralDollarToken(source)) {
+		opening = "$";
+		closing = "$";
+	} else {
+		return undefined;
+	}
+
+	const closingIndex = findClosingDelimiter(source, closing, opening.length);
+	if (
+		closingIndex >= 0 &&
+		opening === "$" &&
+		(/\s$/.test(source.slice(opening.length, closingIndex)) ||
+			/^\d/.test(source.slice(closingIndex + 1)) ||
+			(/^[A-Z_][A-Z0-9_]*(?:[^A-Za-z0-9_\s])?$/.test(source.slice(opening.length, closingIndex)) &&
+				/^[A-Za-z_][A-Za-z0-9_]*/.test(source.slice(closingIndex + 1))) ||
+			source.slice(opening.length, closingIndex).includes(String.fromCharCode(96)))
+	) {
+		return undefined;
+	}
+
+	if (closingIndex < 0) {
+		const pendingSource = source.slice(opening.length);
+		if (opening.startsWith("\\") || looksLikePendingDollarMath(pendingSource)) {
+			return { type: "latex", raw: source, text: pendingSource, pending: true };
+		}
+		return undefined;
+	}
+
+	const text = source.slice(opening.length, closingIndex);
+	if (!text || text.includes("\n")) {
+		return undefined;
+	}
+
+	return {
+		type: "latex",
+		raw: source.slice(0, closingIndex + closing.length),
+		text,
+	};
+}
+
+function tokenizeBlockLatex(source: string): LatexToken | undefined {
+	const dollarMatch = /^ {0,3}\$\$[ \t]*(?:\n)?([\s\S]*?)\$\$[ \t]*(?:\n|$)/.exec(source);
+	if (dollarMatch?.[1]) {
+		return { type: "latexBlock", raw: dollarMatch[0], text: dollarMatch[1].trim() };
+	}
+
+	const bracketMatch = /^ {0,3}\\\[[ \t]*(?:\n)?([\s\S]*?)\\\][ \t]*(?:\n|$)/.exec(source);
+	if (bracketMatch?.[1]) {
+		return { type: "latexBlock", raw: bracketMatch[0], text: bracketMatch[1].trim() };
+	}
+
+	const pendingBracket = /^ {0,3}\\\[[ \t]*(?:\n)?([\s\S]*)$/.exec(source);
+	if (pendingBracket) {
+		return { type: "latexBlock", raw: pendingBracket[0], text: pendingBracket[1], pending: true };
+	}
+	const pendingDollar = /^ {0,3}\$\$[ \t]*(?:\n)?([\s\S]*)$/.exec(source);
+	if (pendingDollar?.[1] && looksLikePendingDollarMath(pendingDollar[1])) {
+		return { type: "latexBlock", raw: pendingDollar[0], text: pendingDollar[1], pending: true };
+	}
+	return undefined;
+}
+
+const LATEX_MARKDOWN_EXTENSIONS: readonly TokenizerExtension[] = [
+	{
+		name: "latexBlock",
+		level: "block",
+		start(source) {
+			const match = /(?:^|\n) {0,3}(?:\$\$|\\\[)/.exec(source);
+			return match ? match.index + (match[0].startsWith("\n") ? 1 : 0) : undefined;
+		},
+		tokenizer: tokenizeBlockLatex,
+	},
+	{
+		name: "latex",
+		level: "inline",
+		start(source) {
+			const indices = [source.indexOf("$"), source.indexOf("\\("), source.indexOf("\\[")].filter(
+				index => index >= 0,
+			);
+			return indices.length > 0 ? Math.min(...indices) : undefined;
+		},
+		tokenizer: tokenizeInlineLatex,
+	},
+];
+
+const markdownParser = new Marked({ gfm: true, async: false }).use({
+	extensions: [...LATEX_MARKDOWN_EXTENSIONS],
+});
 
 /**
  * Default text styling for markdown content.
@@ -28,6 +163,15 @@ export type MarkdownMediaResolver = (request: { source: string; alt: string }) =
 export interface MarkdownMediaOptions {
 	resolve: MarkdownMediaResolver;
 	onInvalidate?: () => void;
+}
+
+export interface MarkdownOptions {
+	/** Render supported LaTeX expressions as Unicode text (default: true). */
+	renderLatex?: boolean;
+	/** Number of spaces used to indent fenced code content (default: 2). */
+	codeBlockIndent?: number;
+	/** Resolve and render Markdown image tokens. */
+	mediaOptions?: MarkdownMediaOptions;
 }
 
 /** Default text styling for markdown content. */
@@ -122,6 +266,7 @@ export class Markdown implements Component {
 	/** Number of spaces used to indent code block content. */
 	#codeBlockIndent: number;
 	#mediaOptions?: MarkdownMediaOptions;
+	#renderLatex: boolean;
 	#mediaCache = new Map<
 		string,
 		{ status: "pending" } | { status: "loaded"; media: ResolvedMarkdownMedia } | { status: "error"; message: string }
@@ -138,16 +283,41 @@ export class Markdown implements Component {
 		paddingY: number,
 		theme: MarkdownTheme,
 		defaultTextStyle?: DefaultTextStyle,
-		codeBlockIndent: number = 2,
+		options?: MarkdownOptions,
+	);
+	constructor(
+		text: string,
+		paddingX: number,
+		paddingY: number,
+		theme: MarkdownTheme,
+		defaultTextStyle?: DefaultTextStyle,
+		codeBlockIndent?: number,
+		mediaOptions?: MarkdownMediaOptions,
+	);
+	constructor(
+		text: string,
+		paddingX: number,
+		paddingY: number,
+		theme: MarkdownTheme,
+		defaultTextStyle?: DefaultTextStyle,
+		optionsOrCodeBlockIndent: MarkdownOptions | number = 2,
 		mediaOptions?: MarkdownMediaOptions,
 	) {
+		const options =
+			typeof optionsOrCodeBlockIndent === "number"
+				? {
+						codeBlockIndent: optionsOrCodeBlockIndent,
+						mediaOptions,
+					}
+				: optionsOrCodeBlockIndent;
 		this.#text = text;
 		this.#paddingX = paddingX;
 		this.#paddingY = paddingY;
 		this.#theme = theme;
 		this.#defaultTextStyle = defaultTextStyle;
-		this.#codeBlockIndent = Math.max(0, Math.floor(codeBlockIndent));
-		this.#mediaOptions = mediaOptions;
+		this.#codeBlockIndent = Math.max(0, Math.floor(options.codeBlockIndent ?? 2));
+		this.#mediaOptions = options.mediaOptions;
+		this.#renderLatex = options.renderLatex !== false;
 	}
 
 	setText(text: string): void {
@@ -184,7 +354,7 @@ export class Markdown implements Component {
 		const normalizedText = replaceTabs(this.#text);
 
 		// Parse markdown to HTML-like tokens
-		const tokens = marked.lexer(normalizedText);
+		const tokens = markdownParser.lexer(normalizedText);
 
 		// Convert tokens to styled terminal output
 		const renderedLines: string[] = [];
@@ -366,6 +536,21 @@ export class Markdown implements Component {
 				}
 				// Don't add spacing if next token is space or list
 				if (nextTokenType && nextTokenType !== "list" && nextTokenType !== "space") {
+					lines.push("");
+				}
+				break;
+			}
+
+			case "latexBlock": {
+				const latexToken = token as LatexToken;
+				const rendered =
+					!latexToken.pending && this.#renderLatex
+						? (renderLatex(latexToken.text, { display: true }) ?? latexToken.raw.trimEnd())
+						: latexToken.raw.trimEnd();
+				for (const line of rendered.split("\n")) {
+					lines.push(this.#applyDefaultStyle(line));
+				}
+				if (nextTokenType && nextTokenType !== "space") {
 					lines.push("");
 				}
 				break;
@@ -592,6 +777,16 @@ export class Markdown implements Component {
 
 		for (const token of tokens) {
 			switch (token.type) {
+				case "latex": {
+					const latexToken = token as LatexToken;
+					const rendered =
+						!latexToken.pending && this.#renderLatex
+							? (renderLatex(latexToken.text) ?? latexToken.raw)
+							: latexToken.raw;
+					result += applyTextWithNewlines(rendered);
+					break;
+				}
+
 				case "text":
 					// Text tokens in list items can have nested tokens for inline formatting
 					if (token.tokens && token.tokens.length > 0) {
@@ -984,7 +1179,7 @@ export class Markdown implements Component {
  * Unlike the full Markdown component, this produces a single line with no block-level elements.
  */
 export function renderInlineMarkdown(text: string, mdTheme: MarkdownTheme, baseColor?: (t: string) => string): string {
-	const tokens = marked.lexer(text);
+	const tokens = markdownParser.lexer(text);
 	const applyText = baseColor ?? ((t: string) => t);
 	let result = "";
 	for (const token of tokens) {
@@ -1010,6 +1205,13 @@ function renderInlineTokens(tokens: Token[], mdTheme: MarkdownTheme, applyText: 
 	const styleReset = applyText("");
 	for (const token of tokens) {
 		switch (token.type) {
+			case "latex": {
+				const latexToken = token as LatexToken;
+				result += applyText(
+					!latexToken.pending ? (renderLatex(latexToken.text) ?? latexToken.raw) : latexToken.raw,
+				);
+				break;
+			}
 			case "text":
 				if (token.tokens && token.tokens.length > 0) {
 					result += renderInlineTokens(token.tokens, mdTheme, applyText);

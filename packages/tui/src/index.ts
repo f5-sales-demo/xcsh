@@ -49,6 +49,8 @@ export {
 export * from "./keybindings";
 // Kitty keyboard protocol helpers
 export * from "./keys";
+// LaTeX rendering
+export { type RenderLatexOptions, renderLatex } from "./latex";
 // Media playback state machine
 export * from "./media-playback";
 // Mermaid diagram support
