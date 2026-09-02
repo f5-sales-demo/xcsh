@@ -18,6 +18,9 @@ import {
 } from "../mcp/discoverable-tool-metadata";
 import type { Theme } from "../modes/theme/theme";
 import searchToolBm25Description from "../prompts/tools/search-tool-bm25.md" with { type: "text" };
+import searchToolBm25ProgressiveDescription from "../prompts/tools/search-tool-bm25-progressive.md" with {
+	type: "text",
+};
 import { renderStatusLine, renderTreeList, truncateToWidth } from "../tui";
 import type { ToolSession } from ".";
 import { formatCount, replaceTabs } from "./render-utils";
@@ -30,7 +33,7 @@ const MATCH_LABEL_LEN = 72;
 const MATCH_DESCRIPTION_LEN = 96;
 
 const searchToolBm25Schema = Type.Object({
-	query: Type.String({ description: "Search query for hidden MCP tool metadata" }),
+	query: Type.String({ description: "Search query for deferred tool metadata" }),
 	limit: Type.Optional(
 		Type.Integer({ description: "Max matching tools to activate and return (default 8)", minimum: 1 }),
 	),
@@ -80,7 +83,9 @@ function buildSearchToolBm25Content(details: SearchToolBm25Details): string {
 
 function getDiscoverableMCPToolsForDescription(session: ToolSession): DiscoverableMCPTool[] {
 	try {
-		return session.getDiscoverableMCPTools?.() ?? [];
+		return session.settings.get("context.loadingMode") === "progressive"
+			? (session.getDiscoverableTools?.() ?? [])
+			: (session.getDiscoverableMCPTools?.() ?? []);
 	} catch {
 		return [];
 	}
@@ -88,29 +93,36 @@ function getDiscoverableMCPToolsForDescription(session: ToolSession): Discoverab
 
 function getDiscoverableMCPSearchIndexForExecution(session: ToolSession): DiscoverableMCPSearchIndex {
 	try {
-		const cached = session.getDiscoverableMCPSearchIndex?.();
+		const cached =
+			session.settings.get("context.loadingMode") === "progressive"
+				? session.getDiscoverableToolSearchIndex?.()
+				: session.getDiscoverableMCPSearchIndex?.();
 		if (cached) return cached;
 	} catch {}
 	return buildDiscoverableMCPSearchIndex(session.getDiscoverableMCPTools?.() ?? []);
 }
 
 type MCPDiscoveryExecutionSession = ToolSession & {
-	isMCPDiscoveryEnabled: () => boolean;
-	getSelectedMCPToolNames: () => string[];
-	activateDiscoveredMCPTools: (toolNames: string[]) => Promise<string[]>;
+	isMCPDiscoveryEnabled?: () => boolean;
+	getActiveTools?: () => string[];
+	activateDiscoveredTools?: (toolNames: string[]) => Promise<string[]>;
+	getSelectedMCPToolNames?: () => string[];
+	activateDiscoveredMCPTools?: (toolNames: string[]) => Promise<string[]>;
 };
 
 function supportsMCPToolDiscoveryExecution(session: ToolSession): session is MCPDiscoveryExecutionSession {
-	return (
-		typeof session.isMCPDiscoveryEnabled === "function" &&
-		typeof session.getSelectedMCPToolNames === "function" &&
-		typeof session.activateDiscoveredMCPTools === "function"
-	);
+	return session.settings.get("context.loadingMode") === "progressive"
+		? typeof session.getActiveTools === "function" && typeof session.activateDiscoveredTools === "function"
+		: typeof session.getSelectedMCPToolNames === "function" &&
+				typeof session.activateDiscoveredMCPTools === "function";
 }
 
-export function renderSearchToolBm25Description(discoverableTools: DiscoverableMCPTool[] = []): string {
+export function renderSearchToolBm25Description(
+	discoverableTools: DiscoverableMCPTool[] = [],
+	progressive = false,
+): string {
 	const summary = summarizeDiscoverableMCPTools(discoverableTools);
-	return prompt.render(searchToolBm25Description, {
+	return prompt.render(progressive ? searchToolBm25ProgressiveDescription : searchToolBm25Description, {
 		discoverableMCPToolCount: summary.toolCount,
 		discoverableMCPServerSummaries: summary.servers.map(formatDiscoverableMCPToolServerSummary),
 		hasDiscoverableMCPServers: summary.servers.length > 0,
@@ -150,7 +162,10 @@ export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema
 	readonly name = "search_tool_bm25";
 	readonly label = "SearchToolBm25";
 	get description(): string {
-		return renderSearchToolBm25Description(getDiscoverableMCPToolsForDescription(this.session));
+		return renderSearchToolBm25Description(
+			getDiscoverableMCPToolsForDescription(this.session),
+			this.session.settings.get("context.loadingMode") === "progressive",
+		);
 	}
 	readonly parameters = searchToolBm25Schema;
 	readonly strict = true;
@@ -158,7 +173,8 @@ export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema
 	constructor(private readonly session: ToolSession) {}
 
 	static createIf(session: ToolSession): SearchToolBm25Tool | null {
-		if (!session.settings.get("mcp.discoveryMode")) return null;
+		if (!session.settings.get("mcp.discoveryMode") && session.settings.get("context.loadingMode") !== "progressive")
+			return null;
 		return supportsMCPToolDiscoveryExecution(session) ? new SearchToolBm25Tool(session) : null;
 	}
 
@@ -169,13 +185,13 @@ export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema
 		_onUpdate?: AgentToolUpdateCallback<SearchToolBm25Details>,
 		_context?: AgentToolContext,
 	): Promise<AgentToolResult<SearchToolBm25Details>> {
+		const progressive = this.session.settings.get("context.loadingMode") === "progressive";
+		if (!progressive && this.session.isMCPDiscoveryEnabled?.() !== true) {
+			throw new ToolError("MCP tool discovery is disabled.");
+		}
 		if (!supportsMCPToolDiscoveryExecution(this.session)) {
 			throw new ToolError("MCP tool discovery is unavailable in this session.");
 		}
-		if (!this.session.isMCPDiscoveryEnabled()) {
-			throw new ToolError("MCP tool discovery is disabled. Enable mcp.discoveryMode to use search_tool_bm25.");
-		}
-
 		const query = params.query.trim();
 		if (query.length === 0) {
 			throw new ToolError("Query is required and must not be empty.");
@@ -186,7 +202,9 @@ export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema
 		}
 
 		const searchIndex = getDiscoverableMCPSearchIndexForExecution(this.session);
-		const selectedToolNames = new Set(this.session.getSelectedMCPToolNames());
+		const selectedToolNames = new Set(
+			progressive ? (this.session.getActiveTools?.() ?? []) : (this.session.getSelectedMCPToolNames?.() ?? []),
+		);
 		let ranked: Array<{ tool: DiscoverableMCPTool; score: number }> = [];
 		try {
 			ranked = searchDiscoverableMCPTools(searchIndex, query, searchIndex.documents.length)
@@ -199,14 +217,20 @@ export class SearchToolBm25Tool implements AgentTool<typeof searchToolBm25Schema
 			throw error;
 		}
 		const activated =
-			ranked.length > 0 ? await this.session.activateDiscoveredMCPTools(ranked.map(result => result.tool.name)) : [];
+			ranked.length === 0
+				? []
+				: progressive
+					? await this.session.activateDiscoveredTools!(ranked.map(result => result.tool.name))
+					: await this.session.activateDiscoveredMCPTools!(ranked.map(result => result.tool.name));
 
 		const details: SearchToolBm25Details = {
 			query,
 			limit,
 			total_tools: searchIndex.documents.length,
 			activated_tools: activated,
-			active_selected_tools: this.session.getSelectedMCPToolNames(),
+			active_selected_tools: progressive
+				? (this.session.getActiveTools?.() ?? [])
+				: (this.session.getSelectedMCPToolNames?.() ?? []),
 			tools: ranked.map(result => formatMatch(result.tool, result.score)),
 		};
 
@@ -264,7 +288,7 @@ export const searchToolBm25Renderer = {
 		);
 		if (details.tools.length === 0) {
 			const emptyMessage =
-				details.total_tools === 0 ? "No discoverable MCP tools are currently loaded." : "No matching tools found.";
+				details.total_tools === 0 ? "No discoverable tools are currently loaded." : "No matching tools found.";
 			return new Text(`${header}\n${uiTheme.fg("muted", emptyMessage)}`, 0, 0);
 		}
 

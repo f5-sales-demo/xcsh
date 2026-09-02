@@ -41,4 +41,17 @@ describe("composeOnPayload", () => {
 		expect(out.baseRan).toBe(true);
 		expect(out.tools).toEqual([{ name: "read" }]); // untouched
 	});
+
+	it("runs the numeric profiler last, after extension transforms and server-tool injection", async () => {
+		const seen: unknown[] = [];
+		const base = () => ({ tools: [{ name: "fromBase" }], transformed: true });
+		const final = (payload: unknown) => {
+			seen.push(structuredClone(payload));
+		};
+		const fn = composeOnPayload(base, [{ name: "serverTool" }], final);
+		const out = await fn?.({ tools: [{ name: "original" }] });
+
+		expect(seen).toEqual([out]);
+		expect(seen).toEqual([{ tools: [{ name: "fromBase" }, { name: "serverTool" }], transformed: true }]);
+	});
 });
