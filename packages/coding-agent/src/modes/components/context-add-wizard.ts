@@ -1,9 +1,9 @@
 import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
+import { normalizeXcshApiUrlInput, normalizeXcshCredentialInput } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import type { TokenValidationResult, XCSHContext } from "../../services/xcsh-context";
 import {
 	deriveTenantFromUrl,
 	isSensitiveEnvKey,
-	normalizeApiUrl,
 	XCSH_API_TOKEN,
 	XCSH_API_URL,
 	XCSH_CONSOLE_PASSWORD,
@@ -27,40 +27,13 @@ type WizardCredentialKey =
  * tokens that contain or end with `=`.
  */
 export function normalizeWizardCredential(value: string, expectedKey: WizardCredentialKey): string | null {
-	if (/\r|\n/.test(value)) return null;
-	const trimmed = value.trim();
-	if (!trimmed) return "";
-	const assignment = trimmed.match(/^(?:#\s*)?(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-	const isShellAssignment =
-		assignment !== null &&
-		(assignment[1] === expectedKey || assignment[1].startsWith("XCSH_") || /^(?:#\s*)?(?:export\s+)/.test(trimmed));
-	if (assignment && isShellAssignment) {
-		if (assignment[1] !== expectedKey) return null;
-		return unwrapWholeValueQuotes(assignment[2].trim());
-	}
-	if (trimmed === expectedKey || trimmed === `export ${expectedKey}` || trimmed === `#${expectedKey}`) return null;
-	// A shell-style assignment for another field must not silently become a token.
-	if (/^(?:#\s*)?(?:export\s+)?XCSH_[A-Za-z0-9_]*\s*=/.test(trimmed)) return null;
-	return unwrapWholeValueQuotes(trimmed);
-}
-
-function unwrapWholeValueQuotes(value: string): string | null {
-	if (value.startsWith('"') || value.endsWith('"') || value.startsWith("'") || value.endsWith("'")) {
-		if (!(value.length >= 2 && value[0] === value.at(-1))) return null;
-	}
-	if (
-		value.length >= 2 &&
-		((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
-	) {
-		return value.slice(1, -1);
-	}
-	return value;
+	return normalizeXcshCredentialInput(value, expectedKey);
 }
 
 export function normalizeWizardUrl(value: string): string | null {
-	const normalized = normalizeWizardCredential(value, XCSH_API_URL);
+	const normalized = normalizeXcshApiUrlInput(value);
 	if (normalized === null || validateWizardUrl(normalized)) return null;
-	return normalizeApiUrl(normalized);
+	return normalized;
 }
 
 export function validateWizardUrl(url: string): string | null {
