@@ -169,11 +169,13 @@ const OpenAICompatSchema = Type.Object({
 });
 
 const EffortSchema = Type.Union([
+	Type.Literal("none"),
 	Type.Literal("minimal"),
 	Type.Literal("low"),
 	Type.Literal("medium"),
 	Type.Literal("high"),
 	Type.Literal("xhigh"),
+	Type.Literal("max"),
 ]);
 
 const ThinkingControlModeSchema = Type.Union([
@@ -185,10 +187,14 @@ const ThinkingControlModeSchema = Type.Union([
 ]);
 
 const ModelThinkingSchema = Type.Object({
-	minLevel: EffortSchema,
-	maxLevel: EffortSchema,
-	defaultLevel: Type.Optional(EffortSchema),
-	canDisable: Type.Optional(Type.Boolean()),
+	supportedLevels: Type.Array(
+		Type.Object({
+			effort: EffortSchema,
+			description: Type.String({ minLength: 1 }),
+		}),
+		{ minItems: 1 },
+	),
+	defaultLevel: EffortSchema,
 	mode: ThinkingControlModeSchema,
 });
 

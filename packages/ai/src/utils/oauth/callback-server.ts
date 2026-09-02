@@ -17,6 +17,18 @@ const DEFAULT_TIMEOUT = 300_000;
 const DEFAULT_HOSTNAME = "localhost";
 const CALLBACK_PATH = "/callback";
 
+export function formatOAuthCallbackError(error: string, description = ""): string {
+	const combined = `${error} ${description}`.toLowerCase();
+	if (combined.includes("missing") && (combined.includes("entitlement") || combined.includes("workspace"))) {
+		return "This ChatGPT account or workspace does not include Codex access.";
+	}
+	const safeCode = error
+		.toLowerCase()
+		.replace(/[^a-z0-9_-]/g, "")
+		.slice(0, 64);
+	return safeCode ? `Authorization failed (${safeCode})` : "Authorization failed";
+}
+
 export type CallbackResult = { code: string; state: string };
 
 interface CallbackServer {
@@ -30,6 +42,10 @@ export interface OAuthCallbackFlowOptions {
 	callbackHostname?: string;
 	/** Exact redirect URI advertised to the provider; disables port fallback. */
 	redirectUri?: string;
+	/** Additional provider-registered loopback ports to try in order. */
+	fallbackPorts?: number[];
+	/** Whether an unregistered random port may be used after fixed ports fail. */
+	allowRandomPortFallback?: boolean;
 	/** Hosted callback returns a code for manual entry; do not bind a local listener. */
 	manualOnly?: boolean;
 	/** Maximum time to wait for the provider callback or manual authorization code. */
@@ -47,6 +63,8 @@ export abstract class OAuthCallbackFlow {
 	redirectUri?: string;
 	manualOnly: boolean = false;
 	timeoutMs: number = DEFAULT_TIMEOUT;
+	fallbackPorts: number[] = [];
+	allowRandomPortFallback: boolean = true;
 	#callbackResolve?: (result: CallbackResult) => void;
 	#callbackReject?: (error: string) => void;
 
@@ -67,6 +85,8 @@ export abstract class OAuthCallbackFlow {
 		this.callbackPath = preferredPortOrOptions.callbackPath ?? CALLBACK_PATH;
 		this.callbackHostname = preferredPortOrOptions.callbackHostname ?? DEFAULT_HOSTNAME;
 		this.redirectUri = preferredPortOrOptions.redirectUri;
+		this.fallbackPorts = preferredPortOrOptions.fallbackPorts ?? [];
+		this.allowRandomPortFallback = preferredPortOrOptions.allowRandomPortFallback ?? true;
 		this.manualOnly = preferredPortOrOptions.manualOnly ?? false;
 		this.timeoutMs = preferredPortOrOptions.timeoutMs ?? DEFAULT_TIMEOUT;
 	}
@@ -92,7 +112,7 @@ export abstract class OAuthCallbackFlow {
 	 * Generate CSRF state token. Override if provider needs custom state generation.
 	 */
 	generateState(): string {
-		const bytes = new Uint8Array(16);
+		const bytes = new Uint8Array(32);
 		crypto.getRandomValues(bytes);
 		return Array.from(bytes)
 			.map(value => value.toString(16).padStart(2, "0"))
@@ -152,6 +172,22 @@ export abstract class OAuthCallbackFlow {
 			if (this.redirectUri) {
 				throw new Error(
 					`OAuth callback port ${this.preferredPort} unavailable; cannot fall back to a random port when oauth.redirectUri is set`,
+				);
+			}
+			for (const port of this.fallbackPorts) {
+				try {
+					const server = this.#createServer(port, expectedState);
+					this.ctrl.onProgress?.(
+						`Preferred port ${this.preferredPort} unavailable, using registered port ${port}`,
+					);
+					return { server, redirectUri: `http://${this.callbackHostname}:${port}${this.callbackPath}` };
+				} catch {
+					// Continue through the provider's registered fallback list.
+				}
+			}
+			if (!this.allowRandomPortFallback) {
+				throw new Error(
+					`OAuth callback ports ${[this.preferredPort, ...this.fallbackPorts].join(", ")} are unavailable`,
 				);
 			}
 			const server = this.#createServer(0, expectedState);
@@ -226,7 +262,7 @@ export abstract class OAuthCallbackFlow {
 		let resultState: OkState | ErrorState;
 
 		if (error) {
-			resultState = { ok: false, error: `Authorization failed: ${errorDescription}` };
+			resultState = { ok: false, error: formatOAuthCallbackError(error, errorDescription) };
 		} else if (!code) {
 			resultState = { ok: false, error: "Missing authorization code" };
 		} else if (expectedState && state !== expectedState) {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
-import { Effort, getBundledModel } from "@f5-sales-demo/pi-ai";
+import { createThinkingConfig, Effort, getBundledModel, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import { TempDir } from "@f5-sales-demo/pi-utils";
 import { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
@@ -77,15 +77,15 @@ describe("AgentSession role model thinking behavior", () => {
 			initialThinkingLevel: Effort.High,
 			modelRoles: {
 				default: `${defaultModel.provider}/${defaultModel.id}`,
-				slow: `${slowModel.provider}/${slowModel.id}:off`,
+				slow: `${slowModel.provider}/${slowModel.id}:medium`,
 			},
 		});
 
 		const firstSwitch = await session.cycleRoleModels(["default", "slow"]);
 		expect(firstSwitch?.role).toBe("slow");
 		expect(firstSwitch?.model.id).toBe(slowModel.id);
-		expect(firstSwitch?.thinkingLevel).toBe("off");
-		expect(session.thinkingLevel).toBe("off");
+		expect(firstSwitch?.thinkingLevel).toBe(Effort.Medium);
+		expect(session.thinkingLevel).toBe(Effort.Medium);
 
 		session.setThinkingLevel(Effort.High);
 		expect(session.thinkingLevel).toBe(Effort.High);
@@ -93,13 +93,13 @@ describe("AgentSession role model thinking behavior", () => {
 		const secondSwitch = await session.cycleRoleModels(["default", "slow"]);
 		expect(secondSwitch?.role).toBe("default");
 		expect(secondSwitch?.model.id).toBe(defaultModel.id);
-		expect(session.thinkingLevel).toBe(Effort.High);
+		expect(session.thinkingLevel).toBeUndefined();
 
 		const thirdSwitch = await session.cycleRoleModels(["default", "slow"]);
 		expect(thirdSwitch?.role).toBe("slow");
 		expect(thirdSwitch?.model.id).toBe(slowModel.id);
-		expect(thirdSwitch?.thinkingLevel).toBe("off");
-		expect(session.thinkingLevel).toBe("off");
+		expect(thirdSwitch?.thinkingLevel).toBe(Effort.Medium);
+		expect(session.thinkingLevel).toBe(Effort.Medium);
 	});
 
 	it("preserves current thinking when switching into default/no-suffix role", async () => {
@@ -126,8 +126,8 @@ describe("AgentSession role model thinking behavior", () => {
 		const toDefault = await session.cycleRoleModels(["default", "slow"]);
 		expect(toDefault?.role).toBe("default");
 		expect(toDefault?.model.id).toBe(defaultModel.id);
-		expect(toDefault?.thinkingLevel).toBe(Effort.Minimal);
-		expect(session.thinkingLevel).toBe(Effort.Minimal);
+		expect(toDefault?.thinkingLevel).toBeUndefined();
+		expect(session.thinkingLevel).toBeUndefined();
 	});
 
 	it("applies slow role thinking even when plan shares the same model", async () => {
@@ -158,7 +158,7 @@ describe("AgentSession role model thinking behavior", () => {
 		expect(session.thinkingLevel).toBe(Effort.High);
 	});
 
-	it("preserves explicit role thinking when updating default model despite unresolved previous model", async () => {
+	it("rejects an unsupported saved role effort when updating the model", async () => {
 		const defaultModel = getAnthropicModelOrThrow("claude-sonnet-4-5");
 		const slowModel = getAnthropicModelOrThrow("claude-sonnet-4-6");
 
@@ -170,12 +170,11 @@ describe("AgentSession role model thinking behavior", () => {
 			},
 		});
 
-		await session.setModel(slowModel);
-
-		expect(sessionSettings.getModelRole("default")).toBe(`${slowModel.provider}/${slowModel.id}:off`);
+		await expect(session.setModel(slowModel)).rejects.toThrow(/cannot disable thinking/i);
+		expect(sessionSettings.getModelRole("default")).toBe("anthropic/nonexistent-model:off");
 	});
 
-	it("clamps unsupported selections from model metadata", async () => {
+	it("rejects unsupported selections from model metadata", async () => {
 		const model = getAnthropicModelOrThrow("claude-sonnet-4-6");
 		const agent = new Agent({
 			initialState: {
@@ -199,13 +198,16 @@ describe("AgentSession role model thinking behavior", () => {
 			modelRegistry,
 		});
 
-		session.setThinkingLevel(Effort.XHigh);
-		expect(session.thinkingLevel).toBe(Effort.High);
+		expect(() => session.setThinkingLevel(Effort.XHigh)).toThrow(/xhigh is not supported/i);
+		expect(session.thinkingLevel).toBeUndefined();
 		expect(session.getAvailableThinkingLevels()).not.toContain("xhigh");
 	});
 
-	it("cycles through off before returning to effort levels", async () => {
-		const model = getAnthropicModelOrThrow("claude-sonnet-4-5");
+	it("cycles through off only when the model advertises none", async () => {
+		const model = {
+			...getAnthropicModelOrThrow("claude-sonnet-4-5"),
+			thinking: createThinkingConfig([ReasoningEffort.None, Effort.Minimal, Effort.Low, Effort.Medium, Effort.High]),
+		};
 
 		const agent = new Agent({
 			initialState: {
@@ -235,13 +237,13 @@ describe("AgentSession role model thinking behavior", () => {
 		expect(session.thinkingLevel).toBe(Effort.Minimal);
 	});
 
-	it("uses HIGH by default for full Vertex Gemini and preserves supported overrides", () => {
+	it("omits inherited effort while preserving supported Vertex overrides", () => {
 		const flash = getBundledModel("google-vertex", "gemini-3.7-flash");
 		const pro = getBundledModel("google-vertex", "gemini-3-pro-preview");
 		const lite = getBundledModel("google-vertex", "gemini-2.5-flash-lite");
 
-		expect(resolveThinkingLevelForModel(flash, undefined)).toBe(Effort.High);
-		expect(resolveThinkingLevelForModel(pro, undefined)).toBe(Effort.High);
+		expect(resolveThinkingLevelForModel(flash, undefined)).toBeUndefined();
+		expect(resolveThinkingLevelForModel(pro, undefined)).toBeUndefined();
 		for (const effort of [Effort.Low, Effort.Medium, Effort.High]) {
 			expect(resolveThinkingLevelForModel(flash, effort)).toBe(effort);
 			expect(resolveThinkingLevelForModel(pro, effort)).toBe(effort);
@@ -286,7 +288,7 @@ describe("AgentSession role model thinking behavior", () => {
 		expect(sessionManager.getEntries()).toHaveLength(entryCount);
 	});
 
-	it("applies the target default before switching and lets saved effort win", async () => {
+	it("omits inherited effort when switching and lets a saved exact effort win", async () => {
 		const initialModel = getAnthropicModelOrThrow("claude-sonnet-4-5");
 		const targetModel = getBundledModel("google-vertex", "gemini-3.7-flash");
 		const agent = new Agent({
@@ -311,7 +313,7 @@ describe("AgentSession role model thinking behavior", () => {
 		});
 
 		await session.setModelTemporary(targetModel);
-		expect(session.thinkingLevel).toBe(Effort.High);
+		expect(session.thinkingLevel).toBeUndefined();
 
 		await session.setModel(initialModel);
 		sessionSettings.setModelRole("default", `${targetModel.provider}/${targetModel.id}:medium`);
@@ -319,8 +321,11 @@ describe("AgentSession role model thinking behavior", () => {
 		expect(session.thinkingLevel).toBe(Effort.Medium);
 	});
 
-	it("continues allowing off for models whose thinking can be disabled", () => {
-		const model = getAnthropicModelOrThrow("claude-sonnet-4-5");
+	it("allows off for models that explicitly advertise none", () => {
+		const model = {
+			...getAnthropicModelOrThrow("claude-sonnet-4-5"),
+			thinking: createThinkingConfig([ReasoningEffort.None, Effort.Low, Effort.Medium]),
+		};
 		expect(resolveThinkingLevelForModel(model, "off")).toBe("off");
 	});
 });

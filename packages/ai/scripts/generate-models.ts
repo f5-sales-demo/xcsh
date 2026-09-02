@@ -315,7 +315,7 @@ async function generateModels() {
 	const discoveryOnlyProviders = new Set(["ollama", "vllm"]);
 	const fetchedKeys = new Set(allModels.map(model => `${model.provider}/${model.id}`));
 
-	for (const models of Object.values(prevModelsJson as Record<string, Record<string, Model>>)) {
+	for (const models of Object.values(prevModelsJson as unknown as Record<string, Record<string, Model>>)) {
 		for (const model of Object.values(models)) {
 			if (!fetchedKeys.has(`${model.provider}/${model.id}`) && !discoveryOnlyProviders.has(model.provider)) {
 				allModels.push(model);

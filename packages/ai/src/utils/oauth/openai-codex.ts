@@ -12,10 +12,9 @@ const AUTHORIZE_URL = "https://auth.openai.com/oauth/authorize";
 const TOKEN_URL = "https://auth.openai.com/oauth/token";
 const CALLBACK_PORT = 1455;
 const CALLBACK_PATH = "/auth/callback";
-const CALLBACK_URI = `http://localhost:${CALLBACK_PORT}${CALLBACK_PATH}`;
+const CALLBACK_FALLBACK_PORT = 1457;
 const SCOPE = "openid profile email offline_access api.connectors.read api.connectors.invoke";
 const JWT_CLAIM_PATH = "https://api.openai.com/auth";
-const JWT_PROFILE_CLAIM = "https://api.openai.com/profile";
 const TOKEN_REQUEST_TIMEOUT_MS = 15_000;
 const DEVICE_USER_CODE_URL = "https://auth.openai.com/api/accounts/deviceauth/usercode";
 const DEVICE_TOKEN_URL = "https://auth.openai.com/api/accounts/deviceauth/token";
@@ -45,12 +44,20 @@ export function resolveOpenAICodexLoginMethod(
 	return shouldUseOpenAICodexDeviceFlow(env, platform, isInteractive) ? "device" : "browser";
 }
 
+/** Browser-first locally; device-code-first when a remote/headless terminal is detected. */
+export function getOpenAICodexLoginMethods(
+	env: NodeJS.ProcessEnv = process.env,
+	platform: NodeJS.Platform = process.platform,
+	isInteractive = Boolean(process.stdin.isTTY),
+): readonly ["browser" | "device", "browser" | "device"] {
+	return resolveOpenAICodexLoginMethod("auto", env, platform, isInteractive) === "device"
+		? ["device", "browser"]
+		: ["browser", "device"];
+}
+
 type JwtPayload = {
 	[JWT_CLAIM_PATH]?: {
 		chatgpt_account_id?: string;
-	};
-	[JWT_PROFILE_CLAIM]?: {
-		email?: string;
 	};
 	[key: string]: unknown;
 };
@@ -67,14 +74,12 @@ function decodeJwt(token: string): JwtPayload | null {
 	}
 }
 
-function getTokenProfile(accessToken: string): { accountId?: string; email?: string } {
+function getTokenProfile(accessToken: string): { accountId?: string } {
 	const payload = decodeJwt(accessToken);
 	const auth = payload?.[JWT_CLAIM_PATH];
 	const accountId = auth?.chatgpt_account_id;
-	const email = payload?.[JWT_PROFILE_CLAIM]?.email?.trim().toLowerCase();
 	return {
 		accountId: typeof accountId === "string" && accountId.length > 0 ? accountId : undefined,
-		email: typeof email === "string" && email.length > 0 ? email : undefined,
 	};
 }
 
@@ -178,7 +183,8 @@ class OpenAICodexOAuthFlow extends OAuthCallbackFlow {
 		super(ctrl, {
 			preferredPort: CALLBACK_PORT,
 			callbackPath: CALLBACK_PATH,
-			redirectUri: CALLBACK_URI,
+			fallbackPorts: [CALLBACK_FALLBACK_PORT],
+			allowRandomPortFallback: false,
 		} satisfies OAuthCallbackFlowOptions);
 	}
 
@@ -233,7 +239,7 @@ async function exchangeCodeForToken(
 		throw new Error("Token response missing required fields");
 	}
 
-	const { accountId, email } = getTokenProfile(tokenData.access_token);
+	const { accountId } = getTokenProfile(tokenData.access_token);
 	if (!accountId) {
 		throw new Error("Failed to extract accountId from token");
 	}
@@ -243,7 +249,6 @@ async function exchangeCodeForToken(
 		refresh: tokenData.refresh_token,
 		expires: Date.now() + tokenData.expires_in * 1000,
 		accountId,
-		email,
 	};
 }
 
@@ -348,8 +353,19 @@ export async function loginOpenAICodexDevice(
 	const deadline = now() + DEVICE_FLOW_TIMEOUT_MS;
 	options.onAuth?.({
 		url: DEVICE_AUTH_URL,
-		instructions: `Enter this one-time code: ${initData.user_code} (expires in 15 minutes)`,
+		instructions: "Enter this one-time code in the browser. Never share it with anyone.",
+		kind: "device",
+		userCode: initData.user_code,
+		expiresInSeconds: DEVICE_FLOW_TIMEOUT_MS / 1000,
 	});
+	if (options.onPrompt) {
+		await options.onPrompt({
+			message: "Press Enter after opening the verification page, or type c to copy the one-time code.",
+			placeholder: "Enter to continue; c to copy",
+			allowEmpty: true,
+			copyText: initData.user_code,
+		});
+	}
 	options.onProgress?.("Waiting for approval in your browser…");
 
 	while (now() < deadline) {
@@ -426,12 +442,11 @@ export async function refreshOpenAICodexToken(refreshToken: string): Promise<OAu
 		throw new Error("Token response missing required fields");
 	}
 
-	const { accountId, email } = getTokenProfile(tokenData.access_token);
+	const { accountId } = getTokenProfile(tokenData.access_token);
 	return {
 		access: tokenData.access_token,
 		refresh: tokenData.refresh_token || refreshToken,
 		expires: Date.now() + tokenData.expires_in * 1000,
 		accountId,
-		email,
 	};
 }

@@ -34,3 +34,13 @@ export function presentAuthLink(
 		// Clipboard access is best-effort; the OSC 8 link remains available.
 	}
 }
+
+/** Render device verification details so they remain usable without hyperlink or clipboard support. */
+export function presentDeviceCode(container: AuthLinkContainer, url: string, userCode: string): void {
+	const hyperlink = `\x1b]8;;${url}\x07${url}\x1b]8;;\x07`;
+	container.addChild(new Text(theme.fg("accent", hyperlink), 1, 0));
+	container.addChild(new Text(theme.fg("warning", `One-time code: ${theme.bold(userCode)}`), 1, 0));
+	container.addChild(
+		new Text(theme.fg("dim", "Press c at the prompt to copy; the code remains readable above."), 1, 0),
+	);
+}

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { Container } from "@f5-sales-demo/pi-tui";
-import { presentAuthLink } from "../../../src/modes/components/auth-link-presenter";
+import { presentAuthLink, presentDeviceCode } from "../../../src/modes/components/auth-link-presenter";
 import { initTheme } from "../../../src/modes/theme/theme";
 
 const LONG_URL =
@@ -11,6 +11,20 @@ const OSC_8_CLOSE = /\x1b\]8;;\x07/g;
 
 beforeAll(() => {
 	initTheme();
+});
+
+describe("presentDeviceCode", () => {
+	it("keeps the verification URL and one-time code visible in a narrow terminal", () => {
+		const container = new Container();
+		const url = "https://auth.openai.com/codex/device";
+		presentDeviceCode(container, url, "ABCD-EFGH");
+		const rendered = container.render(24).join("\n");
+		const visible = Bun.stripANSI(rendered);
+		expect(visible.replace(/\s/g, "")).toContain(url);
+		expect(visible).toContain("ABCD-EFGH");
+		expect(visible).toContain("Press c");
+		expect(rendered).toContain(`\x1b]8;;${url}\x07`);
+	});
 });
 
 describe("presentAuthLink", () => {

@@ -60,11 +60,16 @@ export type OAuthPrompt = {
 	allowEmpty?: boolean;
 	/** Render this prompt with obscured input because it collects a credential. */
 	secret?: boolean;
+	/** Non-secret device code copied only after the user explicitly requests it. */
+	copyText?: string;
 };
 
 export type OAuthAuthInfo = {
 	url: string;
 	instructions?: string;
+	kind?: "browser" | "device";
+	userCode?: string;
+	expiresInSeconds?: number;
 };
 
 export interface OAuthProviderInfo {
@@ -92,6 +97,8 @@ export interface OAuthController {
 	onManualCodeInput?(): Promise<string>;
 	onPrompt?(prompt: OAuthPrompt): Promise<string>;
 	signal?: AbortSignal;
+	/** Provider-specific ChatGPT login choice selected by an interactive client. */
+	method?: "auto" | "browser" | "device";
 }
 
 export interface OAuthLoginCallbacks extends OAuthController {

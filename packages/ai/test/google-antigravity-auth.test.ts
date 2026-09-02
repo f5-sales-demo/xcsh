@@ -132,8 +132,13 @@ describe("Google Antigravity auth alignment", () => {
 			reasoning: true,
 			thinking: {
 				mode: "google-level",
-				minLevel: "minimal",
-				maxLevel: "high",
+				defaultLevel: "medium",
+				supportedLevels: [
+					{ effort: "minimal", description: "Very brief reasoning" },
+					{ effort: "low", description: "Light reasoning" },
+					{ effort: "medium", description: "Balanced reasoning" },
+					{ effort: "high", description: "Deep reasoning" },
+				],
 			},
 		});
 	});

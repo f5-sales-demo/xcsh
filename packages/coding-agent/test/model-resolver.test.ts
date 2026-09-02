@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { Effort, type Model } from "@f5-sales-demo/pi-ai";
+import { createThinkingConfig, Effort, type Model } from "@f5-sales-demo/pi-ai";
 import {
 	expandRoleAlias,
 	parseModelPattern,
@@ -22,11 +22,7 @@ const mockModels: Model<"anthropic-messages">[] = [
 		provider: "anthropic",
 		baseUrl: "https://api.anthropic.com",
 		reasoning: true,
-		thinking: {
-			mode: "budget",
-			minLevel: Effort.Minimal,
-			maxLevel: Effort.High,
-		},
+		thinking: createThinkingConfig([Effort.Minimal, Effort.Low, Effort.Medium, Effort.High], "budget"),
 		input: ["text", "image"],
 		cost: { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 },
 		contextWindow: 200000,
@@ -55,11 +51,7 @@ const mockOpenRouterModels: Model<"anthropic-messages">[] = [
 		provider: "openrouter",
 		baseUrl: "https://openrouter.ai/api/v1",
 		reasoning: true,
-		thinking: {
-			mode: "budget",
-			minLevel: Effort.Minimal,
-			maxLevel: Effort.High,
-		},
+		thinking: createThinkingConfig([Effort.Minimal, Effort.Low, Effort.Medium, Effort.High], "budget"),
 		input: ["text"],
 		cost: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1 },
 		contextWindow: 128000,
@@ -114,11 +106,7 @@ const mockCodexOverlapModels: Model<"anthropic-messages">[] = [
 		provider: "openai-codex",
 		baseUrl: "https://api.openai.com",
 		reasoning: true,
-		thinking: {
-			mode: "effort",
-			minLevel: Effort.Low,
-			maxLevel: Effort.XHigh,
-		},
+		thinking: createThinkingConfig([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]),
 		input: ["text"],
 		cost: { input: 1.5, output: 6, cacheRead: 0.15, cacheWrite: 1.5 },
 		contextWindow: 200000,
@@ -131,11 +119,7 @@ const mockCodexOverlapModels: Model<"anthropic-messages">[] = [
 		provider: "openai-codex",
 		baseUrl: "https://api.openai.com",
 		reasoning: true,
-		thinking: {
-			mode: "effort",
-			minLevel: Effort.Low,
-			maxLevel: Effort.XHigh,
-		},
+		thinking: createThinkingConfig([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]),
 		input: ["text"],
 		cost: { input: 1, output: 4, cacheRead: 0.1, cacheWrite: 1 },
 		contextWindow: 200000,
@@ -364,13 +348,14 @@ describe("resolveModelRoleValue", () => {
 		expect(idOnly.explicitThinkingLevel).toBe(true);
 	});
 
-	test("clamps explicit thinking selectors from model metadata", () => {
+	test("surfaces unsupported explicit thinking selectors without clamping", () => {
 		const result = resolveModelRoleValue("anthropic/claude-sonnet-4-5:xhigh", allModels);
 
 		expect(result.model?.provider).toBe("anthropic");
 		expect(result.model?.id).toBe("claude-sonnet-4-5");
-		expect(result.thinkingLevel).toBe(Effort.High);
+		expect(result.thinkingLevel).toBeUndefined();
 		expect(result.explicitThinkingLevel).toBe(true);
+		expect(result.warning).toContain("not supported");
 	});
 });
 describe("resolveAgentModelPatterns", () => {
@@ -421,7 +406,7 @@ describe("resolveModelFromString", () => {
 });
 
 describe("resolveModelOverride", () => {
-	test("preserves explicit off and explicit-thinking metadata", () => {
+	test("surfaces unsupported explicit off without silently accepting it", () => {
 		const registry = {
 			getAvailable: () => allModels,
 		} as Parameters<typeof resolveModelOverride>[1];
@@ -429,8 +414,9 @@ describe("resolveModelOverride", () => {
 		const result = resolveModelOverride(["sonnet:off"], registry);
 
 		expect(result.model?.id).toBe("claude-sonnet-4-5");
-		expect(result.thinkingLevel).toBe("off");
+		expect(result.thinkingLevel).toBeUndefined();
 		expect(result.explicitThinkingLevel).toBe(true);
+		expect(result.warning).toContain("Cannot disable thinking");
 	});
 
 	test("resolves colon-containing model IDs with appended thinking suffix", () => {

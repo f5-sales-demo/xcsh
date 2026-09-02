@@ -39,11 +39,16 @@ describe.each([
 	});
 
 	it("advertises adaptive thinking up to max (the top of the API enum)", () => {
-		expect(getBundledModel("anthropic", id).thinking).toMatchObject({
-			mode: "anthropic-adaptive",
-			minLevel: "minimal",
-			maxLevel: "max",
-		});
+		const thinking = getBundledModel("anthropic", id).thinking;
+		expect(thinking?.mode).toBe("anthropic-adaptive");
+		expect(thinking?.supportedLevels.map(level => level.effort)).toEqual([
+			"minimal",
+			"low",
+			"medium",
+			"high",
+			"xhigh",
+			"max",
+		]);
 	});
 
 	it("sends the 1M beta on the wire and still composes with interleaved-thinking", () => {

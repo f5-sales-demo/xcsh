@@ -674,7 +674,9 @@ export class AcpAgent implements Agent {
 
 	#buildThinkingOptions(session: AgentSession): Array<{ value: string; name: string; description?: string }> {
 		return [
-			...(session.model?.thinking?.canDisable === false ? [] : [{ value: THINKING_OFF, name: "Off" }]),
+			...(session.model?.thinking?.supportedLevels.some(level => level.effort === "none")
+				? [{ value: THINKING_OFF, name: "Off" }]
+				: []),
 			...session.getAvailableThinkingLevels().map(level => ({
 				value: level,
 				name: level,

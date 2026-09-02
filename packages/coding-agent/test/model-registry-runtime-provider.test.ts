@@ -5,6 +5,7 @@ import * as path from "node:path";
 import {
 	type AssistantMessageEventStream,
 	clearCustomApis,
+	createThinkingConfig,
 	Effort,
 	getCustomApi,
 	getOAuthProviders,
@@ -115,11 +116,10 @@ describe("ModelRegistry runtime provider registration", () => {
 					...baseModel,
 					id: "runtime-thinking-model",
 					reasoning: true,
-					thinking: {
-						mode: "anthropic-adaptive",
-						minLevel: Effort.Minimal,
-						maxLevel: Effort.High,
-					},
+					thinking: createThinkingConfig(
+						[Effort.Minimal, Effort.Low, Effort.Medium, Effort.High],
+						"anthropic-adaptive",
+					),
 				},
 			],
 		};
@@ -127,11 +127,9 @@ describe("ModelRegistry runtime provider registration", () => {
 		registry.registerProvider("runtime-provider", config, "ext://runtime");
 		const model = registry.find("runtime-provider", "runtime-thinking-model");
 
-		expect(model?.thinking).toEqual({
-			mode: "anthropic-adaptive",
-			minLevel: Effort.Minimal,
-			maxLevel: Effort.High,
-		});
+		expect(model?.thinking).toEqual(
+			createThinkingConfig([Effort.Minimal, Effort.Low, Effort.Medium, Effort.High], "anthropic-adaptive"),
+		);
 	});
 
 	test("extension-registered models survive refresh('offline') cycle", async () => {

@@ -539,7 +539,7 @@ export function buildSessionContext(
 		// Explicitly null - return no messages (navigated to before first entry)
 		return {
 			messages: [],
-			thinkingLevel: "off",
+			thinkingLevel: undefined,
 			serviceTier: undefined,
 			models: {},
 			injectedTtsrRules: [],
@@ -562,7 +562,7 @@ export function buildSessionContext(
 	if (!leaf) {
 		return {
 			messages: [],
-			thinkingLevel: "off",
+			thinkingLevel: undefined,
 			serviceTier: undefined,
 			models: {},
 			injectedTtsrRules: [],
@@ -584,7 +584,7 @@ export function buildSessionContext(
 	}
 
 	// Extract settings and find compaction
-	let thinkingLevel: string | undefined = "off";
+	let thinkingLevel: string | undefined;
 	let serviceTier: ServiceTier | undefined;
 	const models: Record<string, string> = {};
 	let activeContextName: string | undefined;
@@ -600,7 +600,7 @@ export function buildSessionContext(
 
 	for (const entry of path) {
 		if (entry.type === "thinking_level_change") {
-			thinkingLevel = entry.thinkingLevel ?? "off";
+			thinkingLevel = entry.thinkingLevel ?? undefined;
 		} else if (entry.type === "model_change") {
 			// New format: { model: "provider/id", role?: string }
 			if (entry.model) {

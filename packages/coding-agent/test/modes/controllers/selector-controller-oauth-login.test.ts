@@ -160,6 +160,15 @@ describe("SelectorController ChatGPT device login", () => {
 		try {
 			const openInBrowser = vi.fn();
 			const manualInput = new OAuthManualInputManager();
+			const editorContainer = {
+				children: [] as Array<{ handleInput?: (key: string) => void }>,
+				clear() {
+					this.children = [];
+				},
+				addChild(child: { handleInput?: (key: string) => void }) {
+					this.children.push(child);
+				},
+			};
 			const login = vi.fn(async (_provider, callbacks) => {
 				expect(callbacks.onManualCodeInput).toBeDefined();
 				callbacks.onAuth({
@@ -171,6 +180,8 @@ describe("SelectorController ChatGPT device login", () => {
 				await expect(redirect).resolves.toContain("code=manual");
 			});
 			const ctx = {
+				editorContainer,
+				editor: {},
 				session: {
 					modelRegistry: { authStorage: { login }, refresh: vi.fn(async () => undefined), getAll: () => [] },
 				},
@@ -178,15 +189,19 @@ describe("SelectorController ChatGPT device login", () => {
 				statusLine: { invalidate: vi.fn() },
 				updateEditorBorderColor: vi.fn(),
 				chatContainer: { addChild: vi.fn() },
-				ui: { requestRender: vi.fn() },
+				ui: { requestRender: vi.fn(), setFocus: vi.fn() },
 				showStatus: vi.fn(),
 				showError: vi.fn(),
 				openInBrowser,
 			} as unknown as InteractiveModeContext;
 
-			await new SelectorController(ctx).showOAuthSelector("login", "openai-codex");
+			const loginPromise = new SelectorController(ctx).showOAuthSelector("login", "openai-codex");
+			await Bun.sleep(0);
+			editorContainer.children[0]?.handleInput?.("\n");
+			await loginPromise;
 
 			expect(login).toHaveBeenCalledTimes(1);
+			expect(login.mock.calls[0]?.[1]?.method).toBe("device");
 			expect(openInBrowser).not.toHaveBeenCalled();
 		} finally {
 			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;

@@ -78,15 +78,16 @@ export type ThinkingControlMode =
 	| "anthropic-budget-effort";
 
 /** Per-model thinking capabilities used to clamp and map user-facing effort levels. */
+export interface ReasoningEffortPreset {
+	effort: ReasoningEffort;
+	description: string;
+}
+
 export interface ThinkingConfig {
-	/** Least intensive supported user-facing effort level. */
-	minLevel: Effort;
-	/** Most intensive supported user-facing effort level. */
-	maxLevel: Effort;
-	/** Model-specific effort used when no explicit or saved effort is selected. */
-	defaultLevel?: Effort;
-	/** Whether callers may explicitly disable thinking. Defaults to true. */
-	canDisable?: boolean;
+	/** Ordered, explicit provider-supported choices and their service descriptions. */
+	supportedLevels: ReasoningEffortPreset[];
+	/** Exact provider default when the request omits reasoning effort. */
+	defaultLevel: ReasoningEffort;
 	/** Provider-specific transport used to encode the selected effort. */
 	mode: ThinkingControlMode;
 }
@@ -136,7 +137,7 @@ export type KnownProvider =
 	| "lm-studio";
 export type Provider = KnownProvider | string;
 
-import type { Effort } from "./model-thinking";
+import type { Effort, ReasoningEffort } from "./model-thinking";
 
 /** Token budgets for each thinking level (token-based providers only) */
 export type ThinkingBudgets = { [key in Effort]?: number };
@@ -620,6 +621,16 @@ export interface Model<TApi extends Api = any> {
 	contextPromotionTarget?: string;
 	/** Provider-assigned priority value (lower = higher priority). */
 	priority?: number;
+	/** Service-provided summary shown in model selection UI. */
+	description?: string;
+	/** Service-provided picker visibility. */
+	visibility?: "list" | "hide" | "none";
+	/** Model maker, distinct from the account/access provider. */
+	publisher?: string;
+	/** Human-readable model family used for catalog grouping. */
+	family?: string;
+	/** Human-readable model tier within a family. */
+	tier?: string;
 	/** Canonical thinking capability metadata for this model. */
 	thinking?: ThinkingConfig;
 	/** Compatibility overrides for openai-completions API. If not set, auto-detected from baseUrl. */

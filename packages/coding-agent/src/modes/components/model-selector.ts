@@ -1,5 +1,5 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { getSupportedEfforts, type Model, modelsAreEqual } from "@f5-sales-demo/pi-ai";
+import { getSupportedReasoningEfforts, type Model, modelsAreEqual, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import {
 	Container,
 	getKeybindings,
@@ -73,21 +73,33 @@ export interface DefaultPickerModelPresentation {
 	selector: string;
 }
 
-const OPENAI_CODEX_GPT56_TIERS = new Set(["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]);
-
-/** Collapse subscription tiers only in the ordinary picker; explicit --models scopes keep raw access. */
+/** Present every service selector exactly; access tiers are not interchangeable aliases. */
 export function presentModelsForDefaultPicker(
 	models: readonly Model[],
-	explicitlyScoped = false,
+	_explicitlyScoped = false,
 ): DefaultPickerModelPresentation[] {
-	return models.flatMap(model => {
-		const selector = `${model.provider}/${model.id}`;
-		if (explicitlyScoped || model.provider !== "openai-codex" || !OPENAI_CODEX_GPT56_TIERS.has(model.id)) {
-			return [{ model, displaySelector: selector, selector }];
-		}
-		if (model.id !== "gpt-5.6-sol") return [];
-		return [{ model, displaySelector: "openai-codex/gpt-5.6", selector }];
-	});
+	return models
+		.filter(model => model.visibility !== "hide")
+		.map(model => {
+			const selector = `${model.provider}/${model.id}`;
+			return { model, displaySelector: selector, selector };
+		});
+}
+
+export function getModelSearchText(item: DefaultPickerModelPresentation): string {
+	const { model, selector } = item;
+	return [model.provider, model.publisher, model.family, model.tier, model.name, model.description, selector]
+		.filter(Boolean)
+		.join(" ");
+}
+
+export function getProviderDisplayName(provider: string): string {
+	if (provider === "openai-codex") return "ChatGPT Subscription";
+	if (provider === "openai") return "OpenAI API Key";
+	return provider
+		.split("-")
+		.map(part => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
 }
 
 interface RoleAssignment {
@@ -102,8 +114,8 @@ interface MenuRoleAction {
 	role: string; // now accepts custom role strings
 }
 
-const ALL_TAB = "ALL";
-const CANONICAL_TAB = "CANONICAL";
+const QUICK_TAB = "QUICK";
+const ALL_TAB = "ALL MODELS";
 
 /**
  * Component that renders a model selector with provider tabs and context menu.
@@ -132,11 +144,12 @@ export class ModelSelectorComponent extends Container {
 	#tui: TUI;
 	#scopedModels: ReadonlyArray<ScopedModelItem>;
 	#temporaryOnly: boolean;
+	#currentModel: Model | undefined;
 
 	#menuRoleActions: MenuRoleAction[] = [];
 
 	// Tab state
-	#providers: string[] = [ALL_TAB];
+	#providers: string[] = [QUICK_TAB, ALL_TAB];
 	#activeTabIndex: number = 0;
 
 	// Context menu state
@@ -164,6 +177,7 @@ export class ModelSelectorComponent extends Container {
 		this.#onSelectCallback = onSelect;
 		this.#onCancelCallback = onCancel;
 		this.#temporaryOnly = options?.temporaryOnly ?? false;
+		this.#currentModel = _currentModel;
 		const initialSearchInput = options?.initialSearchInput;
 
 		// Initialize menu role actions (built-in + custom from settings)
@@ -228,7 +242,7 @@ export class ModelSelectorComponent extends Container {
 			if (currentQuery) {
 				this.#filterModels(currentQuery);
 			} else {
-				this.#updateList();
+				this.#applyTabFilter();
 			}
 			// Request re-render after models are loaded
 			this.#tui.requestRender();
@@ -258,6 +272,7 @@ export class ModelSelectorComponent extends Container {
 				matchPreferences,
 				modelRegistry: this.#modelRegistry,
 			});
+			if (resolved.warning) this.#errorMessage = resolved.warning;
 			if (resolved.model) {
 				this.#roles[role] = {
 					model: resolved.model,
@@ -400,7 +415,7 @@ export class ModelSelectorComponent extends Container {
 			const loadError = this.#modelRegistry.getError();
 			if (loadError) {
 				this.#errorMessage = loadError;
-			} else {
+			} else if (!this.#errorMessage) {
 				this.#errorMessage = undefined;
 			}
 
@@ -424,92 +439,21 @@ export class ModelSelectorComponent extends Container {
 			}
 		}
 
-		const canonicalRecords = this.#modelRegistry.getCanonicalModels({
-			availableOnly: this.#scopedModels.length === 0,
-			candidates: models.map(item => item.model),
-		});
-		const canonicalModels = canonicalRecords
-			.map(record => {
-				const selectedModel = this.#modelRegistry.resolveCanonicalModel(record.id, {
-					availableOnly: this.#scopedModels.length === 0,
-					candidates: models.map(item => item.model),
-				});
-				if (!selectedModel) return undefined;
-				const searchText = [
-					record.id,
-					record.name,
-					selectedModel.provider,
-					selectedModel.id,
-					selectedModel.name,
-					...record.variants.flatMap(variant => [variant.selector, variant.model.name]),
-				].join(" ");
-				return {
-					kind: "canonical" as const,
-					id: record.id,
-					model: selectedModel,
-					selector: record.id,
-					variantCount: record.variants.length,
-					searchText,
-					normalizedSearchText: normalizeSearchText(searchText),
-					compactSearchText: compactSearchText(searchText),
-				};
-			})
-			.filter((item): item is CanonicalModelItem => item !== undefined)
-			.filter(
-				item =>
-					this.#scopedModels.length > 0 ||
-					item.model.provider !== "openai-codex" ||
-					!OPENAI_CODEX_GPT56_TIERS.has(item.model.id),
-			);
-		if (this.#scopedModels.length === 0) {
-			const friendly = models.find(item => item.provider === "openai-codex" && item.id === "gpt-5.6");
-			if (friendly) {
-				canonicalModels.push({
-					kind: "canonical",
-					id: "openai-codex/gpt-5.6",
-					model: friendly.model,
-					selector: friendly.selector,
-					variantCount: 1,
-					searchText: "openai-codex/gpt-5.6 GPT-5.6 Sol",
-					normalizedSearchText: normalizeSearchText("openai-codex/gpt-5.6 GPT-5.6 Sol"),
-					compactSearchText: compactSearchText("openai-codex/gpt-5.6 GPT-5.6 Sol"),
-				});
-			}
-		}
-
 		this.#sortModels(models);
-		this.#sortCanonicalModels(canonicalModels);
 
 		this.#allModels = models;
 		this.#filteredModels = models;
-		this.#canonicalModels = canonicalModels;
-		this.#filteredCanonicalModels = canonicalModels;
+		this.#canonicalModels = [];
+		this.#filteredCanonicalModels = [];
 		this.#selectedIndex = Math.min(this.#selectedIndex, Math.max(0, models.length - 1));
 	}
 
 	#buildProviderTabs(): void {
-		const providerSet = new Set<string>();
-		for (const item of this.#allModels) {
-			providerSet.add(item.provider.toUpperCase());
-		}
-		for (const provider of this.#modelRegistry.getDiscoverableProviders()) {
-			providerSet.add(provider.toUpperCase());
-		}
-		const sortedProviders = Array.from(providerSet).sort();
-		this.#providers = [ALL_TAB, CANONICAL_TAB, ...sortedProviders];
+		this.#providers = [QUICK_TAB, ALL_TAB];
 	}
 
 	async #refreshSelectedProvider(): Promise<void> {
-		const activeProvider = this.#getActiveProvider();
-		if (this.#scopedModels.length > 0 || activeProvider === ALL_TAB || activeProvider === CANONICAL_TAB) {
-			return;
-		}
-		await this.#modelRegistry.refreshProvider(activeProvider.toLowerCase());
-		await this.#loadModels();
-		this.#buildProviderTabs();
-		this.#updateTabBar();
-		this.#applyTabFilter();
-		this.#tui.requestRender();
+		return;
 	}
 
 	#updateTabBar(): void {
@@ -536,27 +480,43 @@ export class ModelSelectorComponent extends Container {
 	}
 
 	#isCanonicalTab(): boolean {
-		return this.#getActiveProvider() === CANONICAL_TAB;
+		return false;
+	}
+
+	#getQuickModels(): ModelItem[] {
+		const wanted = new Set<string>();
+		if (this.#currentModel) wanted.add(`${this.#currentModel.provider}/${this.#currentModel.id}`);
+		for (const assigned of Object.values(this.#roles)) {
+			if (assigned) wanted.add(`${assigned.model.provider}/${assigned.model.id}`);
+		}
+		for (const selector of (this.#settings.getStorage()?.getModelUsageOrder() ?? []).slice(0, 5))
+			wanted.add(selector);
+		const recommended = new Map<string, ModelItem>();
+		for (const item of this.#allModels) {
+			const previous = recommended.get(item.provider);
+			if (!previous || (item.model.priority ?? Infinity) < (previous.model.priority ?? Infinity)) {
+				recommended.set(item.provider, item);
+			}
+		}
+		for (const item of recommended.values()) wanted.add(item.selector);
+		return this.#allModels.filter(item => wanted.has(item.selector));
 	}
 
 	#filterModels(query: string): void {
 		const activeProvider = this.#getActiveProvider();
-		const isCanonicalTab = activeProvider === CANONICAL_TAB;
+		const isCanonicalTab = false;
 
 		// Start with all models or filter by provider/canonical view
-		let baseModels = this.#allModels;
+		let baseModels = activeProvider === QUICK_TAB ? this.#getQuickModels() : this.#allModels;
 		const baseCanonicalModels = this.#canonicalModels;
-		if (!isCanonicalTab && activeProvider !== ALL_TAB) {
-			baseModels = this.#allModels.filter(m => m.provider.toUpperCase() === activeProvider);
-		}
 
 		// Apply fuzzy filter if query is present
 		if (query.trim()) {
 			// If user is searching from a provider tab, auto-switch to ALL to show global provider results.
 			if (activeProvider !== ALL_TAB && !isCanonicalTab) {
-				this.#activeTabIndex = 0;
-				if (this.#tabBar && this.#tabBar.getActiveIndex() !== 0) {
-					this.#tabBar.setActiveIndex(0);
+				this.#activeTabIndex = 1;
+				if (this.#tabBar && this.#tabBar.getActiveIndex() !== 1) {
+					this.#tabBar.setActiveIndex(1);
 					return;
 				}
 				this.#updateTabBar();
@@ -586,10 +546,8 @@ export class ModelSelectorComponent extends Container {
 				this.#sortCanonicalModels(fuzzyMatches);
 				this.#filteredCanonicalModels = fuzzyMatches;
 			} else {
-				const fuzzyMatches = fuzzyFilter(
-					baseModels,
-					query,
-					({ id, model, provider, selector }) => `${selector} ${id} ${provider} ${model.name}`,
+				const fuzzyMatches = fuzzyFilter(baseModels, query, ({ model, selector }) =>
+					getModelSearchText({ model, selector, displaySelector: selector }),
 				);
 				this.#sortModels(fuzzyMatches);
 				this.#filteredModels = fuzzyMatches;
@@ -623,7 +581,7 @@ export class ModelSelectorComponent extends Container {
 
 	#getProviderEmptyStateMessage(): string | undefined {
 		const activeProvider = this.#getActiveProvider();
-		if (activeProvider === ALL_TAB || activeProvider === CANONICAL_TAB || this.#searchInput.getValue().trim()) {
+		if (activeProvider === ALL_TAB || activeProvider === QUICK_TAB || this.#searchInput.getValue().trim()) {
 			return undefined;
 		}
 		const state = this.#modelRegistry.getProviderDiscoveryState(activeProvider.toLowerCase());
@@ -663,11 +621,22 @@ export class ModelSelectorComponent extends Container {
 		const showProvider = activeProvider === ALL_TAB;
 
 		// Show visible slice of filtered models
+		let previousGroup: string | undefined;
 		for (let i = startIndex; i < endIndex; i++) {
 			const item = visibleItems[i];
 			if (!item) continue;
 			const canonicalItem = isCanonicalTab ? (item as CanonicalModelItem) : undefined;
 			const providerItem = isCanonicalTab ? undefined : (item as ModelItem);
+			const group = showProvider
+				? [getProviderDisplayName(providerItem?.provider ?? ""), item.model.publisher, item.model.family]
+						.filter(Boolean)
+						.join(" › ")
+				: undefined;
+			if (group && group !== previousGroup) {
+				if (previousGroup) this.#listContainer.addChild(new Spacer(1));
+				this.#listContainer.addChild(new Text(theme.fg("muted", `  ${group}`), 0, 0));
+				previousGroup = group;
+			}
 
 			const isSelected = i === this.#selectedIndex;
 
@@ -701,8 +670,7 @@ export class ModelSelectorComponent extends Container {
 					const backing = theme.fg("dim", ` -> ${item.model.provider}/${item.model.id}`);
 					line = `${prefix}${theme.fg("accent", item.id)}${variants}${backing}${badgeText}`;
 				} else if (showProvider) {
-					const providerPrefix = theme.fg("dim", `${providerItem?.provider ?? ""}/`);
-					line = `${prefix}${providerPrefix}${theme.fg("accent", providerItem?.id ?? item.id)}${badgeText}`;
+					line = `${prefix}${theme.fg("accent", item.model.name)} ${theme.fg("dim", `[${item.selector}]`)}${badgeText}`;
 				} else {
 					line = `${prefix}${theme.fg("accent", item.id)}${badgeText}`;
 				}
@@ -713,8 +681,7 @@ export class ModelSelectorComponent extends Container {
 					const backing = theme.fg("dim", ` -> ${item.model.provider}/${item.model.id}`);
 					line = `${prefix}${item.id}${variants}${backing}${badgeText}`;
 				} else if (showProvider) {
-					const providerPrefix = theme.fg("dim", `${providerItem?.provider ?? ""}/`);
-					line = `${prefix}${providerPrefix}${providerItem?.id ?? item.id}${badgeText}`;
+					line = `${prefix}${item.model.name} ${theme.fg("dim", `[${item.selector}]`)}${badgeText}`;
 				} else {
 					line = `${prefix}${item.id}${badgeText}`;
 				}
@@ -755,8 +722,9 @@ export class ModelSelectorComponent extends Container {
 	#getThinkingLevelsForModel(model: Model): ReadonlyArray<ThinkingLevel> {
 		return [
 			ThinkingLevel.Inherit,
-			...(model.thinking?.canDisable === false ? [] : [ThinkingLevel.Off]),
-			...getSupportedEfforts(model),
+			...getSupportedReasoningEfforts(model).map(level =>
+				level === ReasoningEffort.None ? ThinkingLevel.Off : (level as ThinkingLevel),
+			),
 		];
 	}
 
@@ -787,6 +755,16 @@ export class ModelSelectorComponent extends Container {
 		this.#updateMenu();
 	}
 
+	#openThinkingMenu(role: string): void {
+		const selected = this.#getSelectedItem();
+		if (!selected) return;
+		this.#isMenuOpen = true;
+		this.#menuStep = "thinking";
+		this.#menuSelectedRole = role;
+		this.#menuSelectedIndex = this.#getThinkingPreselectIndex(role, selected.model);
+		this.#updateMenu();
+	}
+
 	#closeMenu(): void {
 		this.#isMenuOpen = false;
 		this.#menuStep = "role";
@@ -806,7 +784,12 @@ export class ModelSelectorComponent extends Container {
 			? thinkingOptions.map((thinkingLevel, index) => {
 					const prefix = index === this.#menuSelectedIndex ? `  ${theme.nav.cursor} ` : "    ";
 					const label = getThinkingLevelMetadata(thinkingLevel).label;
-					return `${prefix}${label}`;
+					const effort = thinkingLevel === ThinkingLevel.Off ? ReasoningEffort.None : thinkingLevel;
+					const description =
+						thinkingLevel === ThinkingLevel.Inherit
+							? "Use the provider default"
+							: selectedItem.model.thinking?.supportedLevels.find(level => level.effort === effort)?.description;
+					return `${prefix}${label}${description ? ` — ${description}` : ""}`;
 				})
 			: this.#menuRoleActions.map((action, index) => {
 					const prefix = index === this.#menuSelectedIndex ? `  ${theme.nav.cursor} ` : "    ";
@@ -882,17 +865,18 @@ export class ModelSelectorComponent extends Container {
 			return;
 		}
 
-		// Enter - open context menu or select directly in temporary mode
+		// Enter selects the model and opens its exact reasoning picker.
 		if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
 			const selectedItem = this.#getSelectedItem();
 			if (selectedItem) {
-				if (this.#temporaryOnly) {
-					// In temporary mode, skip menu and select directly
-					this.#handleSelect(selectedItem, null);
-				} else {
-					this.#openMenu();
-				}
+				this.#openThinkingMenu(this.#temporaryOnly ? "default" : "default");
 			}
+			return;
+		}
+
+		// Role assignment is deliberately secondary.
+		if (keyData.toLowerCase() === "r" && !this.#temporaryOnly) {
+			this.#openMenu();
 			return;
 		}
 
@@ -943,7 +927,7 @@ export class ModelSelectorComponent extends Container {
 			const thinkingOptions = this.#getThinkingLevelsForModel(selectedItem.model);
 			const thinkingLevel = thinkingOptions[this.#menuSelectedIndex];
 			if (!thinkingLevel) return;
-			this.#handleSelect(selectedItem, this.#menuSelectedRole, thinkingLevel);
+			this.#handleSelect(selectedItem, this.#temporaryOnly ? null : this.#menuSelectedRole, thinkingLevel);
 			this.#closeMenu();
 			return;
 		}
@@ -965,7 +949,7 @@ export class ModelSelectorComponent extends Container {
 	#handleSelect(item: ModelItem | CanonicalModelItem, role: string | null, thinkingLevel?: ThinkingLevel): void {
 		// For temporary role, don't save to settings - just notify caller
 		if (role === null) {
-			this.#onSelectCallback(item.model, null, undefined, item.selector);
+			this.#onSelectCallback(item.model, null, thinkingLevel, item.selector);
 			return;
 		}
 

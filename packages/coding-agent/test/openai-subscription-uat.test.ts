@@ -1,15 +1,28 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
-import { OPENAI_CODEX_SOL_MODEL, redactSensitiveOutput } from "../scripts/openai-subscription-uat";
+import {
+	OPENAI_CODEX_GPT56_MODELS,
+	OPENAI_CODEX_SOL_EFFORTS,
+	OPENAI_CODEX_SOL_MODEL,
+	redactSensitiveOutput,
+} from "../scripts/openai-subscription-uat";
 
 describe("OpenAI subscription source UAT", () => {
 	it("targets xcsh native GPT-5.6 Sol and contains no official-Codex sentinel", async () => {
 		expect(OPENAI_CODEX_SOL_MODEL).toBe("openai-codex/gpt-5.6-sol");
+		expect(OPENAI_CODEX_GPT56_MODELS).toEqual([
+			"openai-codex/gpt-5.6-luna",
+			"openai-codex/gpt-5.6-terra",
+			"openai-codex/gpt-5.6-sol",
+		]);
+		expect(OPENAI_CODEX_SOL_EFFORTS).toEqual(["none", "low", "medium", "high", "xhigh", "max"]);
 		const source = await fs.readFile(new URL("../scripts/openai-subscription-uat.ts", import.meta.url), "utf8");
 		expect(source).not.toContain('"codex", ["login", "status"]');
 		expect(source).not.toContain('"codex", [');
 		expect(source).not.toContain('"openai/gpt-5-mini"');
 		expect(source).toContain('visible.includes("https://auth.openai.com/codex/device")');
+		expect(source).toContain('PI_CODEX_DEBUG: "1"');
+		expect(source).toContain('"reasoningEffort"');
 		expect(source).toContain('SSH_CONNECTION: "uat-client uat-server"');
 		expect(source).not.toContain('"the ChatGPT browser authorization request"');
 	});

@@ -173,8 +173,8 @@ describe("generateModelsYml()", () => {
 		expect(content).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
 		expect(content).toContain('apiKey: "literal-test-key"');
 		expect(content).toContain('baseUrl: "https://proxy.example.com/api/v1"');
-		expect(content).toContain("minLevel: low");
-		expect(content).toContain("maxLevel: xhigh");
+		expect(content).toContain("defaultLevel: medium");
+		expect(content).toContain("effort: xhigh");
 	});
 
 	test("generates valid YAML with anthropic and litellm providers", () => {
@@ -1017,8 +1017,8 @@ describe("config schema versioning", () => {
 			const content = fs.readFileSync(modelsPath, "utf-8");
 			expect(content).toContain(`configVersion: ${CURRENT_CONFIG_VERSION}`);
 			expect(content).toContain("gpt-5.6-sol:");
-			expect(content).toContain("minLevel: low");
-			expect(content).toContain("maxLevel: xhigh");
+			expect(content).toContain("defaultLevel: medium");
+			expect(content).toContain("effort: xhigh");
 			expect(fs.statSync(modelsPath).mode & 0o777).toBe(0o600);
 			expect(fs.statSync(`${modelsPath}.bak`).mode & 0o777).toBe(0o600);
 		},

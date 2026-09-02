@@ -3,10 +3,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import {
+	createThinkingConfig,
 	Effort,
 	getBundledModel,
 	type Model,
 	type OpenAICompat,
+	ReasoningEffort,
 	type ThinkingConfig,
 	writeModelCache,
 } from "@f5-sales-demo/pi-ai";
@@ -969,13 +971,10 @@ describe("ModelRegistry", () => {
 
 	describe("thinking metadata normalization", () => {
 		test("custom models preserve explicit thinking", () => {
-			const thinking: ThinkingConfig = {
-				mode: "anthropic-adaptive",
-				minLevel: Effort.Minimal,
-				maxLevel: Effort.High,
-				defaultLevel: Effort.Medium,
-				canDisable: false,
-			};
+			const thinking: ThinkingConfig = createThinkingConfig(
+				[Effort.Minimal, Effort.Low, Effort.Medium, Effort.High],
+				"anthropic-adaptive",
+			);
 
 			writeModelsJson({
 				anthropic: providerConfig("https://my-proxy.example.com/v1", [
@@ -994,7 +993,7 @@ describe("ModelRegistry", () => {
 				openrouter: {
 					modelOverrides: {
 						"anthropic/claude-sonnet-4": {
-							thinking: { mode: "budget", minLevel: Effort.Low, maxLevel: Effort.Medium },
+							thinking: createThinkingConfig([Effort.Low, Effort.Medium], "budget"),
 						},
 					},
 				},
@@ -1003,11 +1002,7 @@ describe("ModelRegistry", () => {
 			const registry = new ModelRegistry(authStorage, modelsJsonPath);
 			const model = getModelsForProvider(registry, "openrouter").find(m => m.id === "anthropic/claude-sonnet-4");
 
-			expect(model?.thinking).toEqual({
-				mode: "budget",
-				minLevel: Effort.Low,
-				maxLevel: Effort.Medium,
-			});
+			expect(model?.thinking).toEqual(createThinkingConfig([Effort.Low, Effort.Medium], "budget"));
 		});
 	});
 
@@ -1580,11 +1575,7 @@ describe("ModelRegistry", () => {
 
 			const qwen = registry.find("ollama", "qwen3.5:397b-cloud");
 			expect(qwen?.reasoning).toBe(true);
-			expect(qwen?.thinking).toEqual({
-				mode: "effort",
-				minLevel: Effort.Minimal,
-				maxLevel: Effort.High,
-			});
+			expect(qwen?.thinking).toEqual(createThinkingConfig([Effort.Minimal, Effort.Low, Effort.Medium, Effort.High]));
 
 			const llama = registry.find("ollama", "llama3.2:3b");
 			expect(llama?.reasoning).toBe(false);
@@ -1972,7 +1963,14 @@ describe("ModelRegistry", () => {
 				expect(model).toMatchObject({
 					reasoning: true,
 					input: ["text", "image"],
-					thinking: { mode: "effort", minLevel: Effort.Low, maxLevel: Effort.XHigh },
+					thinking: createThinkingConfig([
+						ReasoningEffort.None,
+						Effort.Low,
+						Effort.Medium,
+						Effort.High,
+						Effort.XHigh,
+						ReasoningEffort.Max,
+					]),
 					contextWindow: 1_050_000,
 					maxTokens: 128_000,
 					compat: { supportsTemperature: false },

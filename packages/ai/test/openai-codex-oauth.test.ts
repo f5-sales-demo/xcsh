@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "bun:test";
 import {
 	createOpenAICodexAuthorizationUrl,
 	formatOpenAICodexTokenEndpointError,
+	getOpenAICodexLoginMethods,
 	loginOpenAICodex,
 	loginOpenAICodexDevice,
 	OpenAICodexDeviceUnavailableError,
@@ -34,9 +35,9 @@ describe("OpenAI Codex browser OAuth", () => {
 		expect(authorizationUrl.searchParams.get("originator")).toBe("pi");
 	});
 
-	it("fails clearly when fixed callback port 1455 is busy", async () => {
+	it("tries both registered callback ports and fails clearly when both are busy", async () => {
 		const serve = vi.spyOn(Bun, "serve").mockImplementation(options => {
-			expect(options.port).toBe(1455);
+			expect([1455, 1457]).toContain(options.port as number);
 			throw new Error("EADDRINUSE");
 		});
 
@@ -46,10 +47,8 @@ describe("OpenAI Codex browser OAuth", () => {
 				onAuth: vi.fn(),
 				onPrompt: async () => "",
 			}),
-		).rejects.toThrow(
-			"OAuth callback port 1455 unavailable; cannot fall back to a random port when oauth.redirectUri is set",
-		);
-		expect(serve).toHaveBeenCalledTimes(1);
+		).rejects.toThrow("OAuth callback ports 1455, 1457 are unavailable");
+		expect(serve).toHaveBeenCalledTimes(2);
 	});
 
 	it("retains useful token endpoint detail while redacting credentials and query strings", () => {
@@ -85,6 +84,14 @@ describe("OpenAI Codex login method", () => {
 		expect(resolveOpenAICodexLoginMethod("browser", { SSH_CONNECTION: "client server" }, "linux", true)).toBe(
 			"browser",
 		);
+	});
+
+	it("orders browser first locally and device code first over SSH", () => {
+		expect(getOpenAICodexLoginMethods({ DISPLAY: ":0" }, "linux", true)).toEqual(["browser", "device"]);
+		expect(getOpenAICodexLoginMethods({ SSH_CONNECTION: "client server" }, "linux", true)).toEqual([
+			"device",
+			"browser",
+		]);
 	});
 
 	it("offers browser/manual redirect fallback in the same flow when device authorization is unavailable", async () => {
@@ -161,7 +168,10 @@ describe("OpenAI Codex device OAuth", () => {
 
 		expect(onAuth).toHaveBeenCalledWith({
 			url: "https://auth.openai.com/codex/device",
-			instructions: "Enter this one-time code: ABCD-EFGH (expires in 15 minutes)",
+			instructions: "Enter this one-time code in the browser. Never share it with anyone.",
+			kind: "device",
+			userCode: "ABCD-EFGH",
+			expiresInSeconds: 900,
 		});
 		expect(requests.map(request => request.url)).toEqual([
 			"https://auth.openai.com/api/accounts/deviceauth/usercode",
@@ -175,8 +185,8 @@ describe("OpenAI Codex device OAuth", () => {
 			access: accessToken,
 			refresh: "refresh-secret",
 			accountId: "acct-device",
-			email: "user@example.com",
 		});
+		expect(credentials).not.toHaveProperty("email");
 		const visibleProgress = progress.join("\n");
 		expect(visibleProgress).not.toContain("device-secret");
 		expect(visibleProgress).not.toContain("authorization-secret");

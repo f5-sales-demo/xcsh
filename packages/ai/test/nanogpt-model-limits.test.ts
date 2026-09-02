@@ -57,11 +57,13 @@ describe("nanogpt model limits mapping", () => {
 		expect(model?.input).toEqual(["text", "image"]);
 		expect(model?.cost).toEqual({ input: 0.75, output: 4.5, cacheRead: 0.075, cacheWrite: 0 });
 		expect(model?.premiumMultiplier).toBeUndefined();
-		expect(model?.thinking).toEqual({
-			mode: "effort",
-			minLevel: Effort.Low,
-			maxLevel: Effort.XHigh,
-		});
+		expect(model?.thinking?.mode).toBe("effort");
+		expect(model?.thinking?.supportedLevels.map(level => level.effort)).toEqual([
+			Effort.Low,
+			Effort.Medium,
+			Effort.High,
+			Effort.XHigh,
+		]);
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 });
