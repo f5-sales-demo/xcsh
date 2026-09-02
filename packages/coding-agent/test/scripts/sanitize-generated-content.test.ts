@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	countAcmePlaceholderOccurrences,
 	sanitizeAcmePlaceholders,
+	sanitizeAzureSubscriptionIds,
 	sanitizePublicIpv4Examples,
 	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
@@ -58,6 +59,44 @@ describe("generated-content sanitization", () => {
 		expect(sanitizeSyntheticNamespaceExamples(source)).toBe(
 			"When namespace = demo-app, all alerts for the tenant will be returned.",
 		);
+	});
+
+	it("replaces Azure subscription identifiers with the documented placeholder", () => {
+		const live = ["12345678", "1234", "1234", "1234", "123456789abc"].join("-");
+		const placeholder = "<subscription-id>";
+		const source = [
+			`subscription_id = "${live}"`,
+			`az account set --subscription ${live}`,
+			`subscription_id_1 = "${live}"`,
+			`azure_subscription_id_default: "${live}"`,
+			`scope=subscriptions/${live}/resourceGroups/example`,
+			`scope=/subscriptions/${live}/resourceGroups/example`,
+		].join("\n");
+
+		const sanitized = sanitizeAzureSubscriptionIds(source);
+		expect(sanitized).not.toContain(live);
+		expect(sanitized.match(new RegExp(placeholder, "g"))).toHaveLength(6);
+
+		const payload = Buffer.from(JSON.stringify({ entitlement_subscription_id: live }), "utf8").toString("hex");
+		const suffix = "a".repeat(64);
+		const encoded = sanitizeAzureSubscriptionIds(`${payload}:${suffix}`);
+		const [sanitizedPayload, sanitizedSuffix] = encoded.split(":");
+		expect(sanitizedSuffix).toBe(suffix);
+		expect(JSON.parse(Buffer.from(sanitizedPayload, "hex").toString("utf8"))).toEqual({
+			entitlement_subscription_id: placeholder,
+		});
+
+		const subscriptionKey = ["subscription", "id"].join("_");
+		const textPayload = Buffer.from(`${subscriptionKey}=${live}`, "utf8").toString("hex");
+		const [sanitizedTextPayload] = sanitizeAzureSubscriptionIds(`${textPayload}:${suffix}`).split(":");
+		expect(Buffer.from(sanitizedTextPayload, "hex").toString("utf8")).toBe(`${subscriptionKey}=${placeholder}`);
+
+		const unrelated = "00000000-0000-0000-0000-000000000000";
+		const unrelatedSource = `${subscriptionKey} = ""; ${["client", "id"].join("_")} = "${unrelated}"`;
+		expect(sanitizeAzureSubscriptionIds(unrelatedSource)).toBe(unrelatedSource);
+
+		const binaryEnvelope = `${"ff".repeat(16)}:${suffix}`;
+		expect(sanitizeAzureSubscriptionIds(binaryEnvelope)).toBe(binaryEnvelope);
 	});
 
 	it("replaces globally routable IPv4 examples deterministically", () => {
