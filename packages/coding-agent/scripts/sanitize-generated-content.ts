@@ -7,6 +7,10 @@ const RFC_8555_TERM_RE =
 const RFC_8555_TOKEN_RE = /\0RFC8555_([0-9]+)\0/g;
 const SECRET_CONTEXT_TERM_RE = /access|auth|api|credential|creds|key|passw(?:or)?d|secret|token/i;
 const SYNTHETIC_NAMESPACE_EXAMPLE_RE = /When namespace = \\"system\\", all alerts for the tenant will be returned\./g;
+const AZURE_SUBSCRIPTION_ID_RE =
+	/((?:\b[A-Za-z0-9_-]*subscription[_-]?id(?:_[A-Za-z0-9_-]+)?\b|--subscription\b|\bsubscriptions\/)[\s\\=:"'${}]{0,32})[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+const AZURE_SUBSCRIPTION_PLACEHOLDER = "<subscription-id>";
+const HEX_ENCODED_VALUE_RE = /\b((?:[0-9a-f]{2}){16,})(:[0-9a-f]{64})\b/gi;
 
 type Ipv4Address = readonly [number, number, number, number];
 type Ipv4Range = readonly [Ipv4Address, number];
@@ -95,6 +99,29 @@ export function sanitizeSyntheticNamespaceExamples(text: string): string {
 	return text.replace(
 		SYNTHETIC_NAMESPACE_EXAMPLE_RE,
 		"When namespace = demo-app, all alerts for the tenant will be returned.",
+	);
+}
+
+/** Replace generated Azure subscription identifiers with the documented placeholder. */
+function sanitizePlainAzureSubscriptionIds(text: string): string {
+	return text.replace(
+		AZURE_SUBSCRIPTION_ID_RE,
+		(_whole, prefix: string) => `${prefix}${AZURE_SUBSCRIPTION_PLACEHOLDER}`,
+	);
+}
+
+export function sanitizeAzureSubscriptionIds(text: string): string {
+	return sanitizePlainAzureSubscriptionIds(text).replace(
+		HEX_ENCODED_VALUE_RE,
+		(whole, payload: string, suffix: string) => {
+			try {
+				const decoded = new TextDecoder("utf-8", { fatal: true }).decode(Buffer.from(payload, "hex"));
+				const sanitized = sanitizePlainAzureSubscriptionIds(decoded);
+				return decoded === sanitized ? whole : `${Buffer.from(sanitized, "utf8").toString("hex")}${suffix}`;
+			} catch {
+				return whole;
+			}
+		},
 	);
 }
 

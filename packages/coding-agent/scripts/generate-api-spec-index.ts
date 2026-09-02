@@ -12,6 +12,7 @@ import {
 import { isLocalSpecsCurrent } from "./api-specs-version";
 import {
 	sanitizeAcmePlaceholders,
+	sanitizeAzureSubscriptionIds,
 	sanitizePublicIpv4Examples,
 	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
@@ -617,7 +618,9 @@ const output = [
 
 await Bun.write(
 	outputPath,
-	sanitizeSyntheticNamespaceExamples(sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(output)))),
+	sanitizeAzureSubscriptionIds(
+		sanitizeSyntheticNamespaceExamples(sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(output)))),
+	),
 );
 
 const outputSize = (Buffer.byteLength(output) / 1024 / 1024).toFixed(1);
@@ -668,7 +671,7 @@ if (catalog) {
 
 	await Bun.write(
 		catalogOutputPath,
-		sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(catalogOutput))),
+		sanitizeAzureSubscriptionIds(sanitizePublicIpv4Examples(sanitizeEmails(sanitizeAcmePlaceholders(catalogOutput)))),
 	);
 	const catalogSize = (Buffer.byteLength(catalogOutput) / 1024 / 1024).toFixed(1);
 	console.log(
