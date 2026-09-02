@@ -170,6 +170,12 @@ export interface MCPToolSelectionEntry extends SessionEntryBase {
 	selectedToolNames: string[];
 }
 
+/** Persisted active tool set for progressive loading (all registered tool sources). */
+export interface ToolSelectionEntry extends SessionEntryBase {
+	type: "tool_selection";
+	selectedToolNames: string[];
+}
+
 /** Session init entry - captures initial context for subagent sessions (debugging/replay). */
 export interface SessionInitEntry extends SessionEntryBase {
 	type: "session_init";
@@ -228,6 +234,7 @@ export type SessionEntry =
 	| LabelEntry
 	| TtsrInjectionEntry
 	| MCPToolSelectionEntry
+	| ToolSelectionEntry
 	| SessionInitEntry
 	| ModeChangeEntry;
 
@@ -258,6 +265,10 @@ export interface SessionContext {
 	selectedMCPToolNames: string[];
 	/** Whether this branch contains an explicit persisted MCP selection entry. */
 	hasPersistedMCPToolSelection: boolean;
+	/** Active tool names restored for generalized progressive loading. */
+	selectedToolNames?: string[];
+	/** Whether this branch has a generalized tool_selection entry. */
+	hasPersistedToolSelection?: boolean;
 	/** Active mode (e.g. "plan") or "none" if no special mode is active */
 	mode: string;
 	/** Mode-specific data from the last mode_change entry */
@@ -534,6 +545,8 @@ export function buildSessionContext(
 			injectedTtsrRules: [],
 			selectedMCPToolNames: [],
 			hasPersistedMCPToolSelection: false,
+			selectedToolNames: [],
+			hasPersistedToolSelection: false,
 			mode: "none",
 			usedTokens: 0,
 		};
@@ -555,6 +568,8 @@ export function buildSessionContext(
 			injectedTtsrRules: [],
 			selectedMCPToolNames: [],
 			hasPersistedMCPToolSelection: false,
+			selectedToolNames: [],
+			hasPersistedToolSelection: false,
 			mode: "none",
 			usedTokens: 0,
 		};
@@ -578,6 +593,8 @@ export function buildSessionContext(
 	const injectedTtsrRulesSet = new Set<string>();
 	let selectedMCPToolNames: string[] = [];
 	let hasPersistedMCPToolSelection = false;
+	let selectedToolNames: string[] = [];
+	let hasPersistedToolSelection = false;
 	let mode = "none";
 	let modeData: Record<string, unknown> | undefined;
 
@@ -608,6 +625,9 @@ export function buildSessionContext(
 		} else if (entry.type === "mcp_tool_selection") {
 			selectedMCPToolNames = [...entry.selectedToolNames];
 			hasPersistedMCPToolSelection = true;
+		} else if (entry.type === "tool_selection") {
+			selectedToolNames = [...entry.selectedToolNames];
+			hasPersistedToolSelection = true;
 		} else if (entry.type === "mode_change") {
 			mode = entry.mode;
 			modeData = entry.data;
@@ -707,6 +727,8 @@ export function buildSessionContext(
 		injectedTtsrRules,
 		selectedMCPToolNames,
 		hasPersistedMCPToolSelection,
+		selectedToolNames,
+		hasPersistedToolSelection,
 		mode,
 		modeData,
 		usedTokens: 0, // Will be computed by the session object later
@@ -2322,6 +2344,18 @@ export class SessionManager {
 			parentId: this.#leafId,
 			timestamp: new Date().toISOString(),
 			selectedToolNames: [...selectedToolNames],
+		};
+		this.#appendEntry(entry);
+		return entry.id;
+	}
+
+	appendToolSelection(selectedToolNames: string[]): string {
+		const entry: ToolSelectionEntry = {
+			type: "tool_selection",
+			id: generateId(this.#byId),
+			parentId: this.#leafId,
+			timestamp: new Date().toISOString(),
+			selectedToolNames: [...new Set(selectedToolNames)],
 		};
 		this.#appendEntry(entry);
 		return entry.id;

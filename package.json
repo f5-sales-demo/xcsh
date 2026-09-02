@@ -49,6 +49,7 @@
 		"bench:gen-fixtures": "bun --cwd=packages/typescript-edit-benchmark run src/generate.ts --typescript-dir /tmp/typescript-source --count-per-type 8",
 		"bench:edit": "bun --cwd=packages/typescript-edit-benchmark run start",
 		"bench:models": "bun packages/coding-agent/bench/model-matrix.ts",
+		"bench:context": "bun packages/coding-agent/bench/context.ts",
 		"bench:model-scenarios": "bun packages/coding-agent/bench/model-scenarios.ts",
 		"bench:model-scenarios:analyze": "bun packages/coding-agent/bench/model-scenario-analysis.ts",
 		"bench:model-scenarios:regrade": "bun packages/coding-agent/bench/model-scenario-regrade.ts",

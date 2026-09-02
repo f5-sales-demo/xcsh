@@ -190,6 +190,14 @@ export interface ToolSession {
 	getSelectedMCPToolNames?: () => string[];
 	/** Merge MCP tool selections into the active session tool set. */
 	activateDiscoveredMCPTools?: (toolNames: string[]) => Promise<string[]>;
+	/** Search metadata for every deferred built-in, extension, and MCP tool. */
+	getDiscoverableTools?: () => DiscoverableMCPTool[];
+	/** Cached generalized deferred-tool search index. */
+	getDiscoverableToolSearchIndex?: () => DiscoverableMCPSearchIndex;
+	/** Activate deferred tools from any registered source. */
+	activateDiscoveredTools?: (toolNames: string[]) => Promise<string[]>;
+	/** Names currently advertised to the model. */
+	getActiveTools?: () => string[];
 	/** The tool-choice queue used to force forthcoming tool invocations and carry invocation handlers. */
 	getToolChoiceQueue?(): ToolChoiceQueue;
 	/** Build a model-provider-specific ToolChoice that targets the named tool, or undefined if unsupported. */
@@ -402,7 +410,10 @@ export async function createTools(session: ToolSession, toolNames?: string[]): P
 		if (name === "notebook") return session.settings.get("notebook.enabled");
 		if (name === "inspect_image") return session.settings.get("inspect_image.enabled");
 		if (name === "web_search") return session.settings.get("web_search.enabled");
-		if (name === "search_tool_bm25") return session.settings.get("mcp.discoveryMode");
+		if (name === "search_tool_bm25")
+			return (
+				session.settings.get("mcp.discoveryMode") || session.settings.get("context.loadingMode") === "progressive"
+			);
 		if (name === "calc") return session.settings.get("calc.enabled");
 		if (name === "browser") return session.settings.get("browser.enabled");
 		if (name === "checkpoint" || name === "rewind") return session.settings.get("checkpoint.enabled");

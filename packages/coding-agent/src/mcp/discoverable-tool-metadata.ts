@@ -96,6 +96,11 @@ function buildSearchDocument(tool: DiscoverableMCPTool): DiscoverableMCPSearchDo
 
 export function getDiscoverableMCPTool(tool: AgentTool): DiscoverableMCPTool | null {
 	if (!isMCPToolName(tool.name)) return null;
+	return getDiscoverableTool(tool);
+}
+
+/** Build safe search metadata for any registered tool source. */
+export function getDiscoverableTool(tool: AgentTool): DiscoverableMCPTool {
 	const toolRecord = tool as AgentTool & {
 		label?: string;
 		description?: string;
@@ -111,6 +116,10 @@ export function getDiscoverableMCPTool(tool: AgentTool): DiscoverableMCPTool | n
 		mcpToolName: typeof toolRecord.mcpToolName === "string" ? toolRecord.mcpToolName : undefined,
 		schemaKeys: getSchemaPropertyKeys(toolRecord.parameters),
 	};
+}
+
+export function collectDiscoverableTools(tools: Iterable<AgentTool>): DiscoverableMCPTool[] {
+	return Array.from(tools, getDiscoverableTool);
 }
 
 export function collectDiscoverableMCPTools(tools: Iterable<AgentTool>): DiscoverableMCPTool[] {

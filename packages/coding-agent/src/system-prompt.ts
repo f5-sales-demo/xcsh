@@ -20,12 +20,14 @@ import { $ } from "bun";
 import { contextFileCapability } from "./capability/context-file";
 import { systemPromptCapability } from "./capability/system-prompt";
 import type { SkillsSettings } from "./config/settings";
+import type { ContextComponentProfile } from "./context/profile";
 import { renderDeprecationGuardrails } from "./deprecations";
 import { type ContextFile, loadCapability, type SystemPrompt as SystemPromptFile } from "./discovery";
 import { listXcshPluginSummaries, type XcshPluginSummary } from "./discovery/helpers";
 import { defaultStartFolderDeps, resolveStartFolder, type StartFolder } from "./discovery/start-folder";
 import { isApplicableToContext, loadSkills, type Skill } from "./extensibility/skills";
 import customSystemPromptTemplate from "./prompts/system/custom-system-prompt.md" with { type: "text" };
+import progressiveSystemPromptTemplate from "./prompts/system/progressive-system-prompt.md" with { type: "text" };
 import startFolderTemplate from "./prompts/system/start-folder.md" with { type: "text" };
 import systemPromptTemplate from "./prompts/system/system-prompt.md" with { type: "text" };
 import workspaceBoundaryTemplate from "./prompts/system/workspace-boundary.md" with { type: "text" };
@@ -560,6 +562,8 @@ export function buildSystemPromptToolMetadata(
 }
 
 export interface BuildSystemPromptOptions {
+	/** Context-loading policy. Direct prompt-builder callers default to eager compatibility. */
+	loadingMode?: "eager" | "progressive";
 	/** Custom system prompt (replaces default). */
 	customPrompt?: string;
 	/** Tools to include in prompt. */
@@ -618,6 +622,8 @@ export interface BuildSystemPromptOptions {
 	contextExcludeSkills?: string[];
 	/** Transform the fully rendered default prompt before mandatory blocks are enforced again. */
 	transformPrompt?: (defaultPrompt: string) => string;
+	/** Numeric-only attribution sink; labels are generated categories, never source paths or content. */
+	onProfileComponents?: (components: ContextComponentProfile[]) => void;
 }
 
 /** Build the system prompt with tools, guidelines, and context */
@@ -627,6 +633,7 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	}
 
 	const {
+		loadingMode = "eager",
 		customPrompt,
 		tools,
 		appendSystemPrompt,
@@ -794,7 +801,36 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 	// contexts values match the tenant label derived from the API URL hostname (first DNS label).
 	// Example: https://example-corp.console.ves.volterra.io → tenant "example-corp" → contexts: ["example-corp"]
 	const contextName = context?.tenant;
-	const contextFilteredSkills = filteredSkills.filter(s => isApplicableToContext(s, contextName));
+	const contextFilteredSkills = filteredSkills.filter(skill => {
+		const isPluginSkill = skill._source?.provider === "xcsh-plugins" || skill.source.startsWith("xcsh-plugins:");
+		return isApplicableToContext(skill, contextName) && (loadingMode === "eager" || !isPluginSkill);
+	});
+	options.onProfileComponents?.([
+		...contextFiles.map((file, index) => ({
+			category: "context_file" as const,
+			label: `context_file_${index + 1}`,
+			bytes: Buffer.byteLength(file.content, "utf8"),
+			estimatedTokens: Math.ceil(Buffer.byteLength(file.content, "utf8") / 4),
+		})),
+		...contextFilteredSkills.map((skill, index) => ({
+			category: "skill" as const,
+			label: `skill_${index + 1}`,
+			bytes: Buffer.byteLength(skill.description ?? "", "utf8"),
+			estimatedTokens: Math.ceil(Buffer.byteLength(skill.description ?? "", "utf8") / 4),
+		})),
+		...plugins.map((plugin, index) => ({
+			category: "plugin_catalog" as const,
+			label: `plugin_${index + 1}`,
+			bytes: Buffer.byteLength(`${plugin.name}\n${plugin.description}`, "utf8"),
+			estimatedTokens: Math.ceil(Buffer.byteLength(`${plugin.name}\n${plugin.description}`, "utf8") / 4),
+		})),
+		...(rules ?? []).map((rule, index) => ({
+			category: "rule" as const,
+			label: `rule_${index + 1}`,
+			bytes: Buffer.byteLength(rule.description ?? "", "utf8"),
+			estimatedTokens: Math.ceil(Buffer.byteLength(rule.description ?? "", "utf8") / 4),
+		})),
+	]);
 
 	const effectiveSystemPromptCustomization = dedupePromptSource(systemPromptCustomization, [
 		resolvedCustomPrompt,
@@ -842,7 +878,8 @@ export async function buildSystemPrompt(options: BuildSystemPromptOptions = {}):
 			slug: startFolder.slug ?? "",
 		},
 	};
-	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : systemPromptTemplate, data);
+	const defaultTemplate = loadingMode === "progressive" ? progressiveSystemPromptTemplate : systemPromptTemplate;
+	let rendered = prompt.render(resolvedCustomPrompt ? customSystemPromptTemplate : defaultTemplate, data);
 
 	// These blocks remain mandatory after every customization path. A transform receives the
 	// complete default prompt, then its result goes through the same replace-or-append pass as

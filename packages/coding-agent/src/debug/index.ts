@@ -8,6 +8,7 @@ import * as url from "node:url";
 import { getWorkProfile } from "@f5-sales-demo/pi-natives";
 import { Container, Loader, type SelectItem, SelectList, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { getSessionsDir } from "@f5-sales-demo/pi-utils";
+import type { ContextProfile } from "../context/profile";
 import { DynamicBorder } from "../modes/components/dynamic-border";
 import { getSelectListTheme, getSymbolTheme, theme } from "../modes/theme/theme";
 import type { InteractiveModeContext } from "../modes/types";
@@ -27,6 +28,7 @@ const DEBUG_MENU_ITEMS: SelectItem[] = [
 	{ value: "memory", label: "Report: memory issue", description: "Heap snapshot + bundle" },
 	{ value: "logs", label: "View: recent logs", description: "Show last 50 log entries" },
 	{ value: "system", label: "View: system info", description: "Show environment details" },
+	{ value: "context-profile", label: "View: Context Profile", description: "Show privacy-safe context measurements" },
 	{
 		value: "transcript",
 		label: "Export: TUI transcript",
@@ -99,6 +101,9 @@ export class DebugSelectorComponent extends Container {
 				break;
 			case "system":
 				await this.#handleViewSystemInfo();
+				break;
+			case "context-profile":
+				this.#handleContextProfile();
 				break;
 			case "transcript":
 				await this.#handleTranscriptExport();
@@ -333,6 +338,14 @@ export class DebugSelectorComponent extends Container {
 		this.ctx.ui.requestRender();
 	}
 
+	#handleContextProfile(): void {
+		this.ctx.chatContainer.addChild(new Spacer(1));
+		this.ctx.chatContainer.addChild(new DynamicBorder());
+		this.ctx.chatContainer.addChild(new Text(formatContextProfile(this.ctx.session.getContextProfile()), 1, 0));
+		this.ctx.chatContainer.addChild(new DynamicBorder());
+		this.ctx.ui.requestRender();
+	}
+
 	async #handleTranscriptExport(): Promise<void> {
 		await this.ctx.handleDebugTranscriptCommand();
 	}
@@ -429,6 +442,27 @@ export class DebugSelectorComponent extends Container {
 			hideThinkingBlock: this.ctx.hideThinkingBlock,
 		};
 	}
+}
+
+export function formatContextProfile(profile: ContextProfile): string {
+	const lines = [
+		"Context Profile",
+		`Loading: ${profile.loadingMode}`,
+		`System prompt: ${profile.systemPromptBytes.toLocaleString()} bytes (~${profile.estimatedSystemPromptTokens.toLocaleString()} tokens)`,
+		`Initial tools: ${profile.initialToolBytes.toLocaleString()} bytes; deferred: ${profile.deferredToolBytes.toLocaleString()} bytes`,
+	];
+	for (const call of profile.providerCalls) {
+		const prompt = call.providerPromptTokens?.toLocaleString() ?? "pending";
+		const cacheRead = call.providerCacheReadTokens?.toLocaleString() ?? "pending";
+		const output = call.providerOutputTokens?.toLocaleString() ?? "pending";
+		const percentage = call.windowPercentage === undefined ? "pending" : `${call.windowPercentage.toFixed(3)}%`;
+		lines.push(
+			`Call ${call.call}: ${call.provider}/${call.model} — prompt ${prompt}, cache read ${cacheRead}, output ${output}, window ${percentage}`,
+			`  Payload: ${call.payloadBytes.toLocaleString()} bytes (${call.toolCount} tools, ${call.messageCount} messages)`,
+		);
+	}
+	if (profile.providerCalls.length === 0) lines.push("Provider calls: none yet");
+	return lines.join("\n");
 }
 
 /**

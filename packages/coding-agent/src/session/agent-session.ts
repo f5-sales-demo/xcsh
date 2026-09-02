@@ -72,6 +72,7 @@ import {
 } from "../config/model-resolver";
 import { expandPromptTemplate, type PromptTemplate } from "../config/prompt-templates";
 import type { Settings, SkillsSettings } from "../config/settings";
+import { type ContextProfile, ContextProfileCollector } from "../context/profile";
 import { normalizeDiff, normalizeToLF, ParseError, previewPatch, stripBom } from "../edit";
 import { type BashResult, executeBash as executeBashCommand } from "../exec/bash-executor";
 import { exportSessionToHtml } from "../export/html";
@@ -111,9 +112,11 @@ import {
 import {
 	buildDiscoverableMCPSearchIndex,
 	collectDiscoverableMCPTools,
+	collectDiscoverableTools,
 	type DiscoverableMCPSearchIndex,
 	type DiscoverableMCPTool,
 	isMCPToolName,
+	searchDiscoverableMCPTools,
 	selectDiscoverableMCPToolNamesByServer,
 } from "../mcp/discoverable-tool-metadata";
 import { getCurrentThemeName, theme } from "../modes/theme/theme";
@@ -243,6 +246,8 @@ export interface AgentSessionConfig {
 	skillsSettings?: SkillsSettings;
 	/** Model registry for API key resolution and model discovery */
 	modelRegistry: ModelRegistry;
+	/** Privacy-safe numeric context measurements for this session. */
+	contextProfileCollector?: ContextProfileCollector;
 	/** Tool registry for LSP and settings */
 	toolRegistry?: Map<string, AgentTool>;
 	/** Current session pre-LLM message transform pipeline */
@@ -517,6 +522,7 @@ export class AgentSession {
 
 	// Model registry for API key resolution
 	#modelRegistry: ModelRegistry;
+	#contextProfileCollector: ContextProfileCollector;
 
 	// Tool registry and prompt builder for extensions
 	#toolRegistry: Map<string, AgentTool>;
@@ -528,6 +534,8 @@ export class AgentSession {
 	#mcpDiscoveryEnabled = false;
 	#discoverableMCPTools = new Map<string, DiscoverableMCPTool>();
 	#discoverableMCPSearchIndex: DiscoverableMCPSearchIndex | null = null;
+	#discoverableTools = new Map<string, DiscoverableMCPTool>();
+	#discoverableToolSearchIndex: DiscoverableMCPSearchIndex | null = null;
 	#selectedMCPToolNames = new Set<string>();
 	#rpcHostToolNames = new Set<string>();
 	#defaultSelectedMCPServerNames = new Set<string>();
@@ -606,6 +614,8 @@ export class AgentSession {
 		this.#customCommands = config.customCommands ?? [];
 		this.#skillsSettings = config.skillsSettings;
 		this.#modelRegistry = config.modelRegistry;
+		this.#contextProfileCollector =
+			config.contextProfileCollector ?? new ContextProfileCollector(this.settings.get("context.loadingMode"));
 		this.#validateRetryFallbackChains();
 		this.#toolRegistry = config.toolRegistry ?? new Map();
 		this.#transformContext = config.transformContext ?? (messages => messages);
@@ -615,6 +625,7 @@ export class AgentSession {
 		this.#baseSystemPrompt = this.agent.state.systemPrompt;
 		this.#mcpDiscoveryEnabled = config.mcpDiscoveryEnabled ?? false;
 		this.#setDiscoverableMCPTools(this.#collectDiscoverableMCPToolsFromRegistry());
+		this.#setDiscoverableTools();
 		this.#selectedMCPToolNames = new Set(config.initialSelectedMCPToolNames ?? []);
 		this.#defaultSelectedMCPServerNames = new Set(config.defaultSelectedMCPServerNames ?? []);
 		this.#defaultSelectedMCPToolNames = new Set(config.defaultSelectedMCPToolNames ?? []);
@@ -779,6 +790,9 @@ export class AgentSession {
 
 	/** Internal handler for agent events - shared by subscribe and reconnect */
 	#handleAgentEvent = async (event: AgentEvent): Promise<void> => {
+		if (event.type === "message_end" && event.message.role === "assistant" && event.message.usage) {
+			this.#contextProfileCollector.recordProviderUsage(this.agent.state.model, event.message.usage);
+		}
 		// When a user message starts, check if it's from either queue and remove it BEFORE emitting
 		// This ensures the UI sees the updated queue state
 		if (event.type === "message_start" && event.message.role === "user") {
@@ -2243,6 +2257,15 @@ export class AgentSession {
 		this.#discoverableMCPSearchIndex = null;
 	}
 
+	#setDiscoverableTools(): void {
+		this.#discoverableTools = new Map(
+			collectDiscoverableTools(this.#toolRegistry.values())
+				.filter(tool => !["search_tool_bm25", "resolve", "exit_plan_mode"].includes(tool.name))
+				.map(tool => [tool.name, tool] as const),
+		);
+		this.#discoverableToolSearchIndex = null;
+	}
+
 	#filterSelectableMCPToolNames(toolNames: Iterable<string>): string[] {
 		return Array.from(toolNames).filter(name => this.#discoverableMCPTools.has(name) && this.#toolRegistry.has(name));
 	}
@@ -2302,6 +2325,15 @@ export class AgentSession {
 		return this.agent.state.tools.map(t => t.name);
 	}
 
+	/** Numeric-only prompt/tool/provider-call profile. Raw context is never retained. */
+	getContextProfile(): ContextProfile {
+		this.#contextProfileCollector.setPrompt(this.systemPrompt, this.agent.state.tools);
+		this.#contextProfileCollector.setDeferredTools(
+			Array.from(this.#toolRegistry.values()).filter(tool => !this.getActiveToolNames().includes(tool.name)),
+		);
+		return this.#contextProfileCollector.snapshot();
+	}
+
 	/** Whether the edit tool is registered in this session. */
 	get hasEditTool(): boolean {
 		return this.#toolRegistry.has("edit");
@@ -2354,6 +2386,31 @@ export class AgentSession {
 		return this.#discoverableMCPSearchIndex;
 	}
 
+	getDiscoverableTools(): DiscoverableMCPTool[] {
+		return Array.from(this.#discoverableTools.values());
+	}
+
+	getDiscoverableToolSearchIndex(): DiscoverableMCPSearchIndex {
+		if (!this.#discoverableToolSearchIndex) {
+			this.#discoverableToolSearchIndex = buildDiscoverableMCPSearchIndex(this.#discoverableTools.values());
+		}
+		return this.#discoverableToolSearchIndex;
+	}
+
+	searchDiscoverableTools(query: string, limit: number) {
+		const active = new Set(this.getActiveToolNames());
+		return searchDiscoverableMCPTools(this.getDiscoverableToolSearchIndex(), query, limit).filter(
+			result => !active.has(result.tool.name),
+		);
+	}
+
+	async activateDiscoveredTools(toolNames: string[]): Promise<string[]> {
+		const activated = toolNames.filter(name => this.#discoverableTools.has(name) && this.#toolRegistry.has(name));
+		if (activated.length === 0) return [];
+		await this.setActiveToolsByName([...this.getActiveToolNames(), ...activated]);
+		return [...new Set(activated)];
+	}
+
 	getSelectedMCPToolNames(): string[] {
 		if (!this.#mcpDiscoveryEnabled) {
 			return this.getActiveToolNames().filter(name => isMCPToolName(name) && this.#toolRegistry.has(name));
@@ -2397,6 +2454,18 @@ export class AgentSession {
 				validToolNames.push(name);
 			}
 		}
+		const needsResolve = tools.some(tool => tool.name !== "resolve" && tool.deferrable === true);
+		const resolveTool = this.#toolRegistry.get("resolve");
+		if (needsResolve && resolveTool && !validToolNames.includes("resolve")) {
+			tools.push(resolveTool);
+			validToolNames.push("resolve");
+		} else if (!needsResolve) {
+			const resolveIndex = validToolNames.indexOf("resolve");
+			if (resolveIndex >= 0) {
+				validToolNames.splice(resolveIndex, 1);
+				tools.splice(resolveIndex, 1);
+			}
+		}
 		// Auto-QA tool must survive any runtime tool-set mutation.
 		if (isAutoQaEnabled(this.settings) && !validToolNames.includes("report_tool_issue")) {
 			const qaTool = this.#toolRegistry.get("report_tool_issue");
@@ -2421,6 +2490,9 @@ export class AgentSession {
 		}
 		if (options?.persistMCPSelection !== false) {
 			this.#persistSelectedMCPToolNamesIfChanged(previousSelectedMCPToolNames);
+		}
+		if (this.settings.get("context.loadingMode") === "progressive") {
+			this.sessionManager.appendToolSelection(validToolNames);
 		}
 	}
 
@@ -2577,19 +2649,17 @@ export class AgentSession {
 
 	/** Apply session-level stream hooks to a direct side request. */
 	prepareSimpleStreamOptions(options: SimpleStreamOptions): SimpleStreamOptions {
-		if (!this.#onPayload) return options;
-		if (!options.onPayload) {
-			return { ...options, onPayload: this.#onPayload };
-		}
 		const sessionOnPayload = this.#onPayload;
 		const requestOnPayload = options.onPayload;
 		return {
 			...options,
 			onPayload: async (payload, model) => {
-				const sessionPayload = await sessionOnPayload(payload, model);
+				const sessionPayload = sessionOnPayload ? await sessionOnPayload(payload, model) : undefined;
 				const sessionResolvedPayload = sessionPayload ?? payload;
-				const requestPayload = await requestOnPayload(sessionResolvedPayload, model);
-				return requestPayload ?? sessionResolvedPayload;
+				const requestPayload = requestOnPayload ? await requestOnPayload(sessionResolvedPayload, model) : undefined;
+				const finalPayload = requestPayload ?? sessionResolvedPayload;
+				if (model) this.#contextProfileCollector.captureProviderPayload(finalPayload, model);
+				return finalPayload;
 			},
 		};
 	}
