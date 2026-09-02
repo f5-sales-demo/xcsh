@@ -56,6 +56,11 @@ export class Input implements Component, Focusable {
 		this.#cursor = Math.min(this.#cursor, value.length);
 	}
 
+	/** Position the cursor after a programmatically supplied value. */
+	setCursorToEnd(): void {
+		this.#cursor = this.#value.length;
+	}
+
 	/**
 	 * Obscure the rendered text — for secret entry such as API tokens and
 	 * passwords. `getValue()` still returns the real text; only the on-screen
