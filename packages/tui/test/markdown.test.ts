@@ -1099,6 +1099,22 @@ bar`,
 			expect(output).toContain("Limit: s → ∞");
 		});
 
+		it("renders matrices nested inside aligned environments", () => {
+			const source = [
+				"$$\\begin{aligned}",
+				"\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}^{-1} &= \\frac{1}{ad - bc} \\begin{bmatrix} d & -b \\\\ -c & a \\end{bmatrix}",
+				"\\end{aligned}$$",
+			].join("\n");
+			const output = plain(new Markdown(source, 0, 0, defaultMarkdownTheme)).join("\n");
+
+			expect(output).toContain("⎡ a │ b ⎤");
+			expect(output).toContain("⎣ c │ d ⎦");
+			expect(output).toContain("⁻¹ =");
+			expect(output).toContain("───────");
+			expect(output).toContain("│ -b ⎤");
+			expect(output).not.toContain("\\begin{aligned}");
+		});
+
 		it("converges from exact streamed source to rendered math", () => {
 			const markdown = new Markdown("Map $\\mathbb{C}^3", 0, 0, defaultMarkdownTheme);
 			expect(plain(markdown)).toEqual(["Map $\\mathbb{C}^3"]);

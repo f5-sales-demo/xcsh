@@ -1226,7 +1226,64 @@ class LatexParser {
 	}
 
 	private splitEnvironmentRows(body: string): string[] {
-		return body.split(/\\\\(?:\[[^\]\n]*\])?/);
+		return this.splitEnvironment(body, "row");
+	}
+
+	private splitEnvironmentCells(body: string): string[] {
+		return this.splitEnvironment(body, "cell");
+	}
+
+	private splitEnvironment(body: string, delimiter: "row" | "cell"): string[] {
+		const rows: string[] = [];
+		let rowStart = 0;
+		let position = 0;
+		let braceDepth = 0;
+		const environments: string[] = [];
+
+		while (position < body.length) {
+			if (body[position] === "\\") {
+				const environment = body.slice(position).match(/^\\(begin|end)\{([^}]+)\}/);
+				if (environment) {
+					const [, kind, name] = environment;
+					if (kind === "begin") {
+						environments.push(name);
+					} else if (environments.at(-1) === name) {
+						environments.pop();
+					}
+					position += environment[0].length;
+					continue;
+				}
+
+				if (delimiter === "row" && body[position + 1] === "\\" && braceDepth === 0 && environments.length === 0) {
+					let rowEnd = position + 2;
+					if (body[rowEnd] === "[") {
+						const optionalEnd = body.indexOf("]", rowEnd + 1);
+						if (optionalEnd >= 0 && !body.slice(rowEnd + 1, optionalEnd).includes("\n")) {
+							rowEnd = optionalEnd + 1;
+						}
+					}
+					rows.push(body.slice(rowStart, position));
+					rowStart = rowEnd;
+					position = rowEnd;
+					continue;
+				}
+
+				position += 2;
+				continue;
+			}
+
+			if (delimiter === "cell" && body[position] === "&" && braceDepth === 0 && environments.length === 0) {
+				rows.push(body.slice(rowStart, position));
+				rowStart = position + 1;
+			}
+
+			if (body[position] === "{") braceDepth++;
+			if (body[position] === "}" && braceDepth > 0) braceDepth--;
+			position++;
+		}
+
+		rows.push(body.slice(rowStart));
+		return rows;
 	}
 
 	private parseEnvironment(): string {
@@ -1264,7 +1321,7 @@ class LatexParser {
 			const alignedBody = alignedAt ? body.replace(/^\s*\{[^}]*\}/, "") : body;
 			return this.splitEnvironmentRows(alignedBody)
 				.map(row => {
-					const cells = row.split("&");
+					const cells = this.splitEnvironmentCells(row);
 					const source = alignedAt
 						? Array.from({ length: Math.ceil(cells.length / 2) }, (_, index) =>
 								cells.slice(index * 2, index * 2 + 2).join(""),
@@ -1278,7 +1335,7 @@ class LatexParser {
 
 		if (environment === "cases" || environment === "cases*") {
 			const rows = this.splitEnvironmentRows(body)
-				.map(row => row.split("&").map(cell => this.renderNested(cell, false).trim()))
+				.map(row => this.splitEnvironmentCells(row).map(cell => this.renderNested(cell, false).trim()))
 				.filter(row => row.some(Boolean));
 			return rows
 				.map((row, index) => {
@@ -1304,7 +1361,7 @@ class LatexParser {
 
 	private renderMatrix(environment: string, body: string): string {
 		const matrix = this.splitEnvironmentRows(body)
-			.map(row => row.split("&").map(cell => this.renderNested(cell, false).trim()))
+			.map(row => this.splitEnvironmentCells(row).map(cell => this.renderNested(cell, false).trim()))
 			.filter(row => row.some(Boolean));
 		const columnCount = Math.max(0, ...matrix.map(row => row.length));
 		const columnWidths = Array.from({ length: columnCount }, (_, column) =>
