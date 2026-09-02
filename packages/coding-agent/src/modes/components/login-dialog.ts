@@ -2,7 +2,13 @@ import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
 import { Container, getKeybindings, Input, Spacer, Text, type TUI } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
 import { openPath } from "../../utils/open";
+import { presentAuthLink } from "./auth-link-presenter";
 import { DynamicBorder } from "./dynamic-border";
+
+interface LoginDialogDependencies {
+	openUrl?: (url: string) => void;
+	presentLink?: typeof presentAuthLink;
+}
 
 /**
  * Login dialog component - replaces editor during OAuth login flow
@@ -19,6 +25,7 @@ export class LoginDialogComponent extends Container {
 		tui: TUI,
 		providerId: string,
 		private onComplete: (success: boolean, message?: string) => void,
+		private dependencies: LoginDialogDependencies = {},
 	) {
 		super();
 		this.#tui = tui;
@@ -73,11 +80,7 @@ export class LoginDialogComponent extends Container {
 	showAuth(url: string, instructions?: string): void {
 		this.#contentContainer.clear();
 		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", url), 1, 0));
-
-		const clickHint = process.platform === "darwin" ? "Cmd+click to open" : "Ctrl+click to open";
-		const hyperlink = `\x1b]8;;${url}\x07${clickHint}\x1b]8;;\x07`;
-		this.#contentContainer.addChild(new Text(theme.fg("dim", hyperlink), 1, 0));
+		(this.dependencies.presentLink ?? presentAuthLink)(this.#contentContainer, url);
 
 		if (instructions) {
 			this.#contentContainer.addChild(new Spacer(1));
@@ -85,7 +88,7 @@ export class LoginDialogComponent extends Container {
 		}
 
 		// Open browser (best-effort)
-		openPath(url);
+		(this.dependencies.openUrl ?? openPath)(url);
 
 		this.#tui.requestRender();
 	}

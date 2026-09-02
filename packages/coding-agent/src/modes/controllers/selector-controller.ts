@@ -48,6 +48,7 @@ import { isSearchProviderPreference, setPreferredImageProvider, setPreferredSear
 import { setSessionTerminalTitle } from "../../utils/title-generator";
 import { AgentDashboard } from "../components/agent-dashboard";
 import { AssistantMessageComponent } from "../components/assistant-message";
+import { presentAuthLink } from "../components/auth-link-presenter";
 import { ExtensionDashboard } from "../components/extensions";
 import { GutterBlock } from "../components/gutter-block";
 import { HistorySearchComponent } from "../components/history-search";
@@ -1243,9 +1244,7 @@ export class SelectorController {
 		const loginCallbacks = {
 			onAuth: (info: { url: string; instructions?: string }) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));
-				this.ctx.chatContainer.addChild(new Text(theme.fg("dim", info.url), 1, 0));
-				const hyperlink = `\x1b]8;;${info.url}\x07Click here to login\x1b]8;;\x07`;
-				this.ctx.chatContainer.addChild(new Text(theme.fg("accent", hyperlink), 1, 0));
+				presentAuthLink(this.ctx.chatContainer, info.url);
 				if (info.instructions) {
 					this.ctx.chatContainer.addChild(new Spacer(1));
 					this.ctx.chatContainer.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
@@ -1361,7 +1360,7 @@ export class SelectorController {
 				this.ctx.showStatus("Authenticating Corporate Vertex with the authorized Google enterprise flow…");
 				await authStorage.login("google-vertex", {
 					onAuth: info => {
-						this.ctx.chatContainer.addChild(new Text(theme.fg("dim", info.url), 1, 0));
+						presentAuthLink(this.ctx.chatContainer, info.url);
 						if (isHeadlessTerminal(runtime.environment)) {
 							this.ctx.chatContainer.addChild(new Text(theme.fg("dim", VERTEX_MANUAL_LOGIN_TIP), 1, 0));
 						} else {
