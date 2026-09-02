@@ -22,9 +22,13 @@ function assertInert(html: string): void {
 	expect(html).not.toMatch(/\son\w+\s*=/i);
 	// No dangerous URI scheme survives (decoded or literal) in any attribute.
 	expect(html).not.toMatch(/(?:href|src)\s*=\s*["']?\s*(?:javascript|data|vbscript):/i);
-	expect(html).not.toMatch(/javascript:/i);
-	// The `style` attribute is never allowed (alignment uses classes).
-	expect(html).not.toMatch(/\sstyle\s*=/i);
+	// Generated Temml layout styles may occur only inside semantic MathML.
+	const root = document.createElement("div");
+	root.innerHTML = html;
+	for (const styled of root.querySelectorAll("[style]")) {
+		expect(styled.closest("math")).not.toBeNull();
+		expect(styled.getAttribute("style")).not.toMatch(/(?:url|expression|javascript|position|z-index)/i);
+	}
 }
 
 const PAYLOADS: Record<string, string> = {
@@ -96,5 +100,40 @@ describe("Layer 2 — XSS corpus is neutralized", () => {
 		expect(a?.getAttribute("href")).toBe("https://f5.com");
 		expect(a?.getAttribute("target")).toBe("_blank");
 		expect(a?.getAttribute("rel")).toBe("noopener noreferrer");
+	});
+
+	test("untrusted or resource-hostile LaTeX falls back to exact inert source", () => {
+		const payloads = [
+			"\\includegraphics{https://evil.example/x.png}",
+			"\\class{header}{x}",
+			"\\style{position:fixed}{x}",
+			"\\href{javascript:alert(1)}{x}",
+			"\\def\\loop{\\loop}\\loop",
+		];
+		for (const latex of payloads) {
+			const source = `$${latex}$`;
+			const html = renderMarkdown(source);
+			assertInert(html);
+			const root = document.createElement("div");
+			root.innerHTML = html;
+			expect(root.textContent?.trimEnd()).toBe(source);
+			expect(root.querySelector("math")).toBeNull();
+		}
+	});
+
+	test("oversized rules are capped and raw MathML cannot inject classes or styles", () => {
+		const rendered = renderMarkdown("$\\rule{500em}{500em}$");
+		assertInert(rendered);
+		expect(rendered).not.toContain("500em");
+		expect(rendered).toContain("10em");
+
+		const root = document.createElement("div");
+		root.innerHTML = renderMarkdown(
+			'<math class="header tml-display" style="position:fixed;color:red"><mi>x</mi></math>',
+		);
+		const rawMath = root.querySelector("math");
+		expect(rawMath).toBeNull();
+		expect(root.textContent).toContain("<math");
+		expect(root.querySelector("[style]")).toBeNull();
 	});
 });

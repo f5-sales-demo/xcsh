@@ -15,6 +15,7 @@
  * and both are unit-tested as the retained, load-bearing primitives.
  */
 import { Marked, type Tokens } from "marked";
+import { createMathExtensions } from "./math";
 import { sanitizeHtml } from "./sanitize";
 import { softCloseForStreaming } from "./streaming";
 
@@ -46,13 +47,21 @@ function sanitizeLang(lang: string | undefined): string {
 	return /^[A-Za-z0-9+#._-]{1,20}$/.test(first) ? first : "";
 }
 
+const RAW_MATHML_TAG =
+	/<\/?(?:annotation|maction|math|menclose|merror|mfrac|mi|mmultiscripts|mn|mo|mover|mpadded|mphantom|mprescripts|mroot|mrow|ms|mspace|msqrt|mstyle|msub|msubsup|msup|mtable|mtd|mtext|mtr|munder|munderover|none|semantics)\b/i;
+
 /**
  * A `Marked` instance (not the global singleton, so the shared package never
  * mutates another consumer's `marked`) configured for GFM with the F5 custom
  * renderers. `mangle`/`headerIds` are gone in v17 — the defaults are correct.
  */
 const marked = new Marked({ gfm: true, async: false }).use({
+	extensions: createMathExtensions(),
 	renderer: {
+		html({ raw }: Tokens.HTML | Tokens.Tag) {
+			return RAW_MATHML_TAG.test(raw) ? escapeHtml(raw) : raw;
+		},
+
 		/**
 		 * Link: gate the protocol through `isSafeUrl` BEFORE emitting (unsafe →
 		 * link text only), then open in a new tab with safe-target rel. `this` is

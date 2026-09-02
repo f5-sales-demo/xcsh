@@ -43,6 +43,13 @@ describe(".markdown-root block model", () => {
 		expect(PANEL_CSS).toContain(".md-lang-label");
 		expect(PANEL_CSS).toContain('input[type="checkbox"]');
 	});
+
+	test("bundles scoped Temml MathML CSS and its fallback font without network URLs", () => {
+		expect(PANEL_CSS).toContain("@scope (.markdown-root)");
+		expect(PANEL_CSS).toContain("math.tml-display");
+		expect(PANEL_CSS).toContain("data:font/woff2;base64,");
+		expect(PANEL_CSS).not.toMatch(/url\(\s*["']?https?:/i);
+	});
 });
 
 describe(".xcsh-doc document surface", () => {

@@ -1065,6 +1065,91 @@ bar`,
 		});
 	});
 
+	describe("LaTeX math", () => {
+		const plain = (markdown: Markdown, width = 80): string[] =>
+			markdown.render(width).map(line => line.replace(/\x1b\[[0-9;]*m/g, "").trimEnd());
+
+		it("renders inline and display delimiters, including the reported inverse-fourth-power formula", () => {
+			expect(plain(new Markdown("Inline $x^2$ and \\(\\lambda\\).", 0, 0, defaultMarkdownTheme))).toEqual([
+				"Inline x² and λ.",
+			]);
+
+			const source = "$$\nI \\propto \\frac{1}{\\lambda^4}\n$$";
+			const expected = ["    1", "I ∝ ──", "    λ⁴"];
+			expect(plain(new Markdown(source, 0, 0, defaultMarkdownTheme), 80)).toEqual(expected);
+			expect(plain(new Markdown(source, 0, 0, defaultMarkdownTheme), 12)).toEqual(expected);
+			expect(plain(new Markdown("\\[\nI \\propto \\frac{1}{\\lambda^4}\n\\]", 0, 0, defaultMarkdownTheme))).toEqual(
+				expected,
+			);
+		});
+
+		it("renders math inside lists, tables, and blockquotes", () => {
+			const source = [
+				"- Formula: $F_1 = u^2$",
+				"",
+				"| Value |",
+				"| --- |",
+				"| $\\mathbb{C}^3$ |",
+				"",
+				"> Limit: \\(s \\to \\infty\\)",
+			].join("\n");
+			const output = plain(new Markdown(source, 0, 0, defaultMarkdownTheme)).join("\n");
+			expect(output).toContain("- Formula: F₁ = u²");
+			expect(output).toContain("ℂ³");
+			expect(output).toContain("Limit: s → ∞");
+		});
+
+		it("converges from exact streamed source to rendered math", () => {
+			const markdown = new Markdown("Map $\\mathbb{C}^3", 0, 0, defaultMarkdownTheme);
+			expect(plain(markdown)).toEqual(["Map $\\mathbb{C}^3"]);
+			markdown.setText("Map $\\mathbb{C}^3$");
+			expect(plain(markdown)).toEqual(["Map ℂ³"]);
+		});
+
+		it("keeps currency, shell variables, escaped dollars, and code literal", () => {
+			const source =
+				"Costs $5 and $10 or $8k–$12k; use $HOME, $" +
+				"{PATH}, \\$x-y\\$, and code: " +
+				String.fromCharCode(96) +
+				"$\\lambda$" +
+				String.fromCharCode(96) +
+				".";
+			expect(plain(new Markdown(source, 0, 0, defaultMarkdownTheme))).toEqual([
+				"Costs $5 and $10 or $8k–$12k; use $HOME, $" + "{PATH}, $x-y$, and code: $\\lambda$.",
+			]);
+			expect(plain(new Markdown("Pay $5; use $HOME or ${PATH}; escape \\$x$.", 0, 0, defaultMarkdownTheme))).toEqual(
+				["Pay $5; use $HOME or ${PATH}; escape $x$."],
+			);
+
+			const fence = String.fromCharCode(96).repeat(3);
+			const fenced = [`${fence}text`, "$\\lambda$", fence].join("\n");
+			expect(plain(new Markdown(fenced, 0, 0, defaultMarkdownTheme))).toEqual([
+				`${fence}text`,
+				"  $\\lambda$",
+				fence,
+			]);
+		});
+
+		it("preserves unsupported, malformed, and incomplete LaTeX source", () => {
+			const cases = ["Unknown $x + \\unknown{y}$ after", "Streaming $\\mathbb{C}^3", "\\[\n\\frac{1}{x\n\\]"];
+			for (const source of cases) {
+				expect(plain(new Markdown(source, 0, 0, defaultMarkdownTheme))).toEqual(source.split("\n"));
+			}
+		});
+
+		it("supports the options overload while retaining legacy numeric arguments", () => {
+			const disabled = new Markdown("$x^2$", 0, 0, defaultMarkdownTheme, undefined, {
+				renderLatex: false,
+				codeBlockIndent: 4,
+			});
+			expect(plain(disabled)).toEqual(["$x^2$"]);
+
+			const fence = String.fromCharCode(96).repeat(3);
+			const legacy = new Markdown([fence, "x", fence].join("\n"), 0, 0, defaultMarkdownTheme, undefined, 4);
+			expect(plain(legacy)).toEqual([fence, "    x", fence]);
+		});
+	});
+
 	describe("HTML-like tags in text", () => {
 		it("should render content with HTML-like tags as text", () => {
 			// When the model emits something like <thinking>content</thinking> in regular text,
