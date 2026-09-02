@@ -75,7 +75,11 @@ case "${1:-}" in
   --version)
     release_binary="$XCSH_RELEASE_CACHE_DIR/v20.22.1/linux-x64/xcsh-linux-x64"
     mkdir -p "$(dirname "$release_binary")"
-    printf '#!/bin/sh\nexit 0\n' >"$release_binary"
+    case "$RELEASE_BINARY_MODE" in
+      compiled) printf '#!/bin/sh\n#!/usr/bin/env bun\nexit 0\n' >"$release_binary" ;;
+      source) printf '#!/usr/bin/env bun\n' >"$release_binary" ;;
+      *) exit 97 ;;
+    esac
     chmod +x "$release_binary"
     echo "xcsh 20.22.1"
     ;;
@@ -120,6 +124,7 @@ SH
   export NPM_ATTEMPTS="$case_dir/npm-attempts"
   export SLEEP_CALLS="$case_dir/sleep-calls"
   export BUN_BINARY="$case_dir/bun-binary"
+  export RELEASE_BINARY_MODE=compiled
 }
 
 new_case success
@@ -131,6 +136,15 @@ grep -Eq '^install --global --prefix .*/xcsh-npm-verify\.[^ ]+ @f5-sales-demo/xc
 [ -s "$BUN_BINARY" ] || fail "sandbox check did not receive the exact installed binary"
 [ ! -e "$SLEEP_CALLS" ] || fail "successful verification unexpectedly slept"
 echo "[OK] uses one isolated prefix and its exact xcsh binary"
+
+new_case source
+export NPM_MODE=success
+export RELEASE_BINARY_MODE=source
+if EXPECTED_VERSION=v20.22.1 bash "$script" >"$case_dir/output" 2>&1; then
+  fail "source launcher artifact passed compiled-binary verification"
+fi
+grep -q 'cached a source script' "$case_dir/output" || fail "source launcher rejection was not explicit"
+echo "[OK] rejects only an artifact beginning with the Bun source shebang"
 
 new_case fatal
 export NPM_MODE=fatal
