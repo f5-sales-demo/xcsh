@@ -37,7 +37,7 @@ jobs:
         id: setup-bun
         continue-on-error: true
         with:
-          bun-version: "1.3"
+          bun-version: "1.4"
       - name: Retry Bun setup on failure
         if: steps.setup-bun.outcome == 'failure'
         shell: bash
