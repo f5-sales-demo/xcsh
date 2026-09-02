@@ -1352,12 +1352,14 @@ describe("ContextService", () => {
 			return fn as unknown as typeof globalThis.fetch;
 		}
 
-		it("200 response returns connected with latencyMs, no errorClass", async () => {
+		it("200 JSON response returns connected with HTTP diagnostics", async () => {
 			globalThis.fetch = makeMockResponse(200);
 			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("connected");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
+			expect(result.httpStatus).toBe(200);
+			expect(result.failureReason).toBeUndefined();
 			expect(result.errorClass).toBeUndefined();
 		});
 
@@ -1368,6 +1370,8 @@ describe("ContextService", () => {
 			expect(result.status).toBe("auth_error");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("credential");
+			expect(result.httpStatus).toBe(401);
+			expect(result.failureReason).toBe("unauthorized");
 		});
 
 		it("403 response returns auth_error with errorClass: credential", async () => {
@@ -1377,6 +1381,8 @@ describe("ContextService", () => {
 			expect(result.status).toBe("auth_error");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("credential");
+			expect(result.httpStatus).toBe(403);
+			expect(result.failureReason).toBe("forbidden");
 		});
 
 		it("500 response returns offline with errorClass: network and latencyMs (was 'connected')", async () => {
@@ -1386,6 +1392,7 @@ describe("ContextService", () => {
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("network");
+			expect(result.failureReason).toBe("server");
 		});
 
 		it("502 response returns offline with errorClass: network (was 'connected')", async () => {
@@ -1395,6 +1402,7 @@ describe("ContextService", () => {
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("network");
+			expect(result.failureReason).toBe("server");
 		});
 
 		it("429 response returns offline with errorClass: network", async () => {
@@ -1404,15 +1412,18 @@ describe("ContextService", () => {
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("network");
+			expect(result.httpStatus).toBe(429);
+			expect(result.failureReason).toBe("rate_limited");
 		});
 
-		it("network error returns offline with errorClass: network, no latencyMs", async () => {
+		it("network error returns offline with safe diagnostics", async () => {
 			globalThis.fetch = makeNetworkError();
 			const service = ContextService.init(xcshConfigDir);
 			const result = await service.validateToken({ apiUrl: "https://t.console.ves.volterra.io", apiToken: "tok" });
 			expect(result.status).toBe("offline");
-			expect(result.latencyMs).toBeUndefined();
+			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("network");
+			expect(result.failureReason).toBe("network");
 		});
 
 		it("missing credentials returns unknown with no errorClass", async () => {
@@ -1429,6 +1440,7 @@ describe("ContextService", () => {
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("url_not_found");
+			expect(result.failureReason).toBe("redirect");
 		});
 
 		it("200 with non-JSON content-type returns offline with errorClass: url_not_found", async () => {
@@ -1438,6 +1450,7 @@ describe("ContextService", () => {
 			expect(result.status).toBe("offline");
 			expect(result.latencyMs).toBeGreaterThanOrEqual(0);
 			expect(result.errorClass).toBe("url_not_found");
+			expect(result.failureReason).toBe("non_json");
 		});
 
 		it("200 with application/json charset variant returns connected", async () => {

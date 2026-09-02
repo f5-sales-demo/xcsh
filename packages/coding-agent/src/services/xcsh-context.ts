@@ -72,6 +72,28 @@ export interface XCSHContext {
 
 export type AuthStatus = "connected" | "auth_error" | "offline" | "unknown";
 
+/** Safe, actionable classification of a failed token validation request. */
+export type ValidationFailureReason =
+	| "unauthorized"
+	| "forbidden"
+	| "redirect"
+	| "non_json"
+	| "rate_limited"
+	| "server"
+	| "timeout"
+	| "network";
+
+export interface TokenValidationResult {
+	status: AuthStatus;
+	latencyMs?: number;
+	/** HTTP status, when a response was received. */
+	httpStatus?: number;
+	/** Safe failure category. No response body or credential data is included. */
+	failureReason?: ValidationFailureReason;
+	/** @deprecated Use failureReason. Retained for existing callers. */
+	errorClass?: "network" | "credential" | "url_not_found";
+}
+
 export type TokenHealth = "ok" | "expiring" | "expired";
 
 export interface ContextStatus {
@@ -976,7 +998,7 @@ export class ContextService {
 		timeoutMs?: number;
 		apiUrl?: string;
 		apiToken?: string;
-	}): Promise<{ status: AuthStatus; latencyMs?: number; errorClass?: "network" | "credential" | "url_not_found" }> {
+	}): Promise<TokenValidationResult> {
 		// Use explicit credentials if provided (for non-active contexts or env-backed sessions),
 		// otherwise fall back to effective credentials (env override > active context)
 		const effectiveUrl = options?.apiUrl ?? process.env[XCSH_API_URL] ?? this.#activeContext?.apiUrl;
@@ -998,11 +1020,22 @@ export class ContextService {
 			(options?.apiUrl !== undefined && options.apiUrl !== activeUrl) ||
 			(options?.apiToken !== undefined && options.apiToken !== activeToken);
 
-		const url = `${effectiveUrl}/api/web/namespaces`;
+		const url = `${normalizeApiUrl(effectiveUrl)}/api/web/namespaces`;
 		const timeout = options?.timeoutMs ?? 3000;
 		const checkedAt = Date.now();
+		const start = performance.now();
+		const recordResult = (result: TokenValidationResult): TokenValidationResult => {
+			logger.debug("XCSH token validation", {
+				endpoint: url,
+				status: result.status,
+				httpStatus: result.httpStatus,
+				latencyMs: result.latencyMs,
+				failureReason: result.failureReason,
+				tokenLength: effectiveToken.length,
+			});
+			return result;
+		};
 		try {
-			const start = performance.now();
 			const response = await fetch(url, {
 				method: "GET",
 				headers: { Authorization: `APIToken ${effectiveToken}`, Accept: "application/json" },
@@ -1016,31 +1049,74 @@ export class ContextService {
 			}
 			if (response.type === "opaqueredirect" || (response.status >= 300 && response.status < 400)) {
 				if (!adHoc) this.#authStatus = "offline";
-				return { status: "offline", latencyMs, errorClass: "url_not_found" };
+				return recordResult({
+					status: "offline",
+					latencyMs,
+					httpStatus: response.status || undefined,
+					failureReason: "redirect",
+					errorClass: "url_not_found",
+				});
 			}
-			if (response.ok) {
+			if (response.status === 200) {
 				const contentType = response.headers.get("content-type") ?? "";
 				if (!contentType.includes("application/json")) {
 					if (!adHoc) this.#authStatus = "offline";
-					return { status: "offline", latencyMs, errorClass: "url_not_found" };
+					return recordResult({
+						status: "offline",
+						latencyMs,
+						httpStatus: response.status,
+						failureReason: "non_json",
+						errorClass: "url_not_found",
+					});
+				}
+				try {
+					await response.clone().json();
+				} catch {
+					if (!adHoc) this.#authStatus = "offline";
+					return recordResult({
+						status: "offline",
+						latencyMs,
+						httpStatus: response.status,
+						failureReason: "non_json",
+						errorClass: "url_not_found",
+					});
 				}
 				if (!adHoc) this.#authStatus = "connected";
-				return { status: "connected", latencyMs };
+				return recordResult({ status: "connected", latencyMs, httpStatus: response.status });
 			}
 			if (response.status === 401 || response.status === 403) {
 				if (!adHoc) this.#authStatus = "auth_error";
-				return { status: "auth_error", latencyMs, errorClass: "credential" };
+				return recordResult({
+					status: "auth_error",
+					latencyMs,
+					httpStatus: response.status,
+					failureReason: response.status === 401 ? "unauthorized" : "forbidden",
+					errorClass: "credential",
+				});
 			}
 			// 5xx, 429, etc. — server reachable but unhealthy; treat as offline so startup retry fires
 			if (!adHoc) this.#authStatus = "offline";
-			return { status: "offline", latencyMs, errorClass: "network" };
-		} catch {
+			return recordResult({
+				status: "offline",
+				latencyMs,
+				httpStatus: response.status,
+				failureReason: response.status === 429 ? "rate_limited" : response.status >= 500 ? "server" : "network",
+				errorClass: "network",
+			});
+		} catch (error) {
+			const latencyMs = Math.round(performance.now() - start);
+			const isTimeout = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
 			if (!adHoc) {
 				this.#lastAuthLatencyMs = Date.now() - checkedAt;
 				this.#lastAuthCheckedAt = checkedAt;
 				this.#authStatus = "offline";
 			}
-			return { status: "offline", errorClass: "network" };
+			return recordResult({
+				status: "offline",
+				latencyMs,
+				failureReason: isTimeout ? "timeout" : "network",
+				errorClass: "network",
+			});
 		}
 	}
 

@@ -1,11 +1,64 @@
 import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
-import type { XCSHContext } from "../../services/xcsh-context";
-import { deriveTenantFromUrl, isSensitiveEnvKey, XCSH_CONSOLE_PASSWORD, XCSH_USERNAME } from "../../services/xcsh-env";
+import type { TokenValidationResult, XCSHContext } from "../../services/xcsh-context";
+import {
+	deriveTenantFromUrl,
+	isSensitiveEnvKey,
+	normalizeApiUrl,
+	XCSH_API_TOKEN,
+	XCSH_API_URL,
+	XCSH_CONSOLE_PASSWORD,
+	XCSH_USERNAME,
+} from "../../services/xcsh-env";
 import { theme } from "../theme/theme";
 import { matchesAppInterrupt } from "../utils/keybinding-matchers";
 import { DynamicBorder } from "./dynamic-border";
 
 const NAME_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
+
+type WizardCredentialKey =
+	| typeof XCSH_API_URL
+	| typeof XCSH_API_TOKEN
+	| typeof XCSH_USERNAME
+	| typeof XCSH_CONSOLE_PASSWORD;
+
+/**
+ * Normalize a credential pasted from a shell or dotenv file without ever
+ * interpreting arbitrary assignments. Raw values remain valid, including
+ * tokens that contain or end with `=`.
+ */
+export function normalizeWizardCredential(value: string, expectedKey: WizardCredentialKey): string | null {
+	if (/\r|\n/.test(value)) return null;
+	const trimmed = value.trim();
+	if (!trimmed) return "";
+	const assignment = trimmed.match(/^(?:#\s*)?(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+	if (assignment) {
+		if (assignment[1] !== expectedKey) return null;
+		return unwrapWholeValueQuotes(assignment[2].trim());
+	}
+	if (trimmed === expectedKey || trimmed === `export ${expectedKey}` || trimmed === `#${expectedKey}`) return null;
+	// A shell-style assignment for another field must not silently become a token.
+	if (/^(?:#\s*)?(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=/.test(trimmed)) return null;
+	return unwrapWholeValueQuotes(trimmed);
+}
+
+function unwrapWholeValueQuotes(value: string): string | null {
+	if (value.startsWith('"') || value.endsWith('"') || value.startsWith("'") || value.endsWith("'")) {
+		if (!(value.length >= 2 && value[0] === value.at(-1))) return null;
+	}
+	if (
+		value.length >= 2 &&
+		((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
+	) {
+		return value.slice(1, -1);
+	}
+	return value;
+}
+
+export function normalizeWizardUrl(value: string): string | null {
+	const normalized = normalizeWizardCredential(value, XCSH_API_URL);
+	if (normalized === null || validateWizardUrl(normalized)) return null;
+	return normalizeApiUrl(normalized);
+}
 
 export function validateWizardUrl(url: string): string | null {
 	if (!url.trim()) return "URL is required";
@@ -22,10 +75,43 @@ export function validateWizardUrl(url: string): string | null {
 	}
 }
 
+function prefill(input: Input, value: string): void {
+	input.setValue(value);
+	input.setCursorToEnd();
+}
+
 export function validateWizardName(name: string): string | null {
 	if (!name.trim()) return "Name is required";
 	if (!NAME_PATTERN.test(name)) return "Name must be 1-64 characters: letters, digits, hyphens, underscores";
 	return null;
+}
+
+function validationFailureMessage(reason: TokenValidationResult["failureReason"]): string {
+	switch (reason) {
+		case "unauthorized":
+			return "Authentication failed (HTTP 401) — check your token";
+		case "forbidden":
+			return "Access forbidden (HTTP 403) — check token permissions";
+		case "redirect":
+			return "The tenant redirected this request — check the tenant URL";
+		case "non_json":
+			return "The tenant returned a non-JSON response — check the tenant URL";
+		case "rate_limited":
+			return "The tenant rate-limited validation — retry shortly";
+		case "server":
+			return "The tenant server failed validation — retry shortly";
+		case "timeout":
+			return "Validation timed out — check network access and the tenant URL";
+		default:
+			return "Could not reach the tenant — check the URL and network";
+	}
+}
+
+function validationDetails(state: WizardState, httpStatus?: number, latencyMs?: number): string {
+	const maskedToken = state.token.length > 4 ? `${"*".repeat(8)}${state.token.slice(-4)}` : "****";
+	const status = httpStatus === undefined ? "n/a" : String(httpStatus);
+	const latency = latencyMs === undefined ? "n/a" : `${latencyMs}ms`;
+	return `Endpoint: ${state.url}/api/web/namespaces | HTTP: ${status} | Latency: ${latency} | Token: ${maskedToken} (${state.token.length} chars)`;
 }
 
 type WizardStep =
@@ -84,6 +170,8 @@ export class ContextAddWizard extends Container {
 	#selectedIndex = 0;
 	#validationError: string | null = null;
 	#validationFailed = false;
+	#validationInFlight = false;
+	#validationDetails: string | null = null;
 	#onCompleteCallback: (context: XCSHContext, activate: boolean) => void;
 	#onCancelCallback: () => void;
 	#onRenderCallback: () => void;
@@ -165,7 +253,7 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
-		this.#inputField.setValue(this.#state.url);
+		prefill(this.#inputField, this.#state.url);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
@@ -185,7 +273,7 @@ export class ContextAddWizard extends Container {
 
 		this.#inputField = new Input();
 		this.#inputField.setMasked(true);
-		this.#inputField.setValue(this.#state.token);
+		prefill(this.#inputField, this.#state.token);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
@@ -204,8 +292,8 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
-		const prefill = this.#state.name || deriveTenantFromUrl(this.#state.url) || "";
-		this.#inputField.setValue(prefill);
+		const initialValue = this.#state.name || deriveTenantFromUrl(this.#state.url) || "";
+		prefill(this.#inputField, initialValue);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
@@ -221,6 +309,10 @@ export class ContextAddWizard extends Container {
 		if (this.#validationFailed) {
 			this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Validation Failed")));
 			this.#contentContainer.addChild(new Spacer(1));
+			if (this.#validationDetails) {
+				this.#contentContainer.addChild(new Text(theme.fg("muted", this.#validationDetails), 0, 0));
+				this.#contentContainer.addChild(new Spacer(1));
+			}
 			this.#contentContainer.addChild(
 				new Text(theme.fg("error", `✗ ${this.#validationError ?? "Validation failed"}`), 0, 0),
 			);
@@ -243,10 +335,12 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Text("Validating credentials...", 0, 0));
 		this.#contentContainer.addChild(new Spacer(1));
 
-		void this.#runValidation();
+		if (!this.#validationInFlight) void this.#runValidation();
 	}
 
 	async #runValidation(): Promise<void> {
+		if (this.#validationInFlight) return;
+		this.#validationInFlight = true;
 		try {
 			const { ContextService } = await import("../../services/xcsh-context");
 			const service = await ContextService.getOrInit();
@@ -265,53 +359,22 @@ export class ContextAddWizard extends Container {
 				return;
 			}
 
-			// Failure — show error with Retry/Edit options
+			// Failure — show error with Retry/Edit options.
 			this.#validationFailed = true;
 			this.#selectedIndex = 0;
-			const errorMsg =
-				result.status === "auth_error"
-					? "Authentication failed — check your token"
-					: "Could not reach the server — check the URL";
-			this.#contentContainer.clear();
-			this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Validation Failed")));
-			this.#contentContainer.addChild(new Spacer(1));
-			this.#contentContainer.addChild(new Text(theme.fg("error", `✗ ${errorMsg}`), 0, 0));
-			this.#contentContainer.addChild(new Spacer(1));
-
-			const options = ["Retry", "Edit (start over)"];
-			for (let i = 0; i < options.length; i++) {
-				const isSelected = i === this.#selectedIndex;
-				const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
-				const text = isSelected ? theme.fg("contentAccent", options[i]) : options[i];
-				this.#contentContainer.addChild(new Text(prefix + text, 0, 0));
-			}
-			this.#contentContainer.addChild(new Spacer(1));
-			this.#contentContainer.addChild(
-				new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
-			);
+			this.#validationError = validationFailureMessage(result.failureReason);
+			this.#validationDetails = validationDetails(this.#state, result.httpStatus, result.latencyMs);
+			this.#renderStep();
 			this.#requestRender();
 		} catch (error) {
-			const errorMsg = error instanceof Error ? error.message : String(error);
 			this.#validationFailed = true;
 			this.#selectedIndex = 0;
-			this.#contentContainer.clear();
-			this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Validation Failed")));
-			this.#contentContainer.addChild(new Spacer(1));
-			this.#contentContainer.addChild(new Text(theme.fg("error", `✗ ${errorMsg}`), 0, 0));
-			this.#contentContainer.addChild(new Spacer(1));
-
-			const options = ["Retry", "Edit (start over)"];
-			for (let i = 0; i < options.length; i++) {
-				const isSelected = i === this.#selectedIndex;
-				const prefix = isSelected ? theme.fg("chromeAccent", `${theme.nav.cursor} `) : "  ";
-				const text = isSelected ? theme.fg("contentAccent", options[i]) : options[i];
-				this.#contentContainer.addChild(new Text(prefix + text, 0, 0));
-			}
-			this.#contentContainer.addChild(new Spacer(1));
-			this.#contentContainer.addChild(
-				new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
-			);
+			this.#validationError = error instanceof Error ? error.message : "Validation request failed";
+			this.#validationDetails = validationDetails(this.#state);
+			this.#renderStep();
 			this.#requestRender();
+		} finally {
+			this.#validationInFlight = false;
 		}
 	}
 
@@ -322,7 +385,7 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
-		this.#inputField.setValue(this.#state.namespace);
+		prefill(this.#inputField, this.#state.namespace);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
@@ -341,7 +404,7 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(new Spacer(1));
 
 		this.#inputField = new Input();
-		this.#inputField.setValue(this.#state.username);
+		prefill(this.#inputField, this.#state.username);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
@@ -358,7 +421,7 @@ export class ContextAddWizard extends Container {
 
 		this.#inputField = new Input();
 		this.#inputField.setMasked(true);
-		this.#inputField.setValue(this.#state.password);
+		prefill(this.#inputField, this.#state.password);
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
@@ -480,29 +543,44 @@ export class ContextAddWizard extends Container {
 	#saveInputAndProceed(): void {
 		if (!this.#inputField) return;
 
-		const value = this.#inputField.getValue().trim();
+		const rawValue = this.#inputField.getValue();
+		const value = rawValue.trim();
 
 		switch (this.#currentStep) {
 			case "url": {
-				const urlError = validateWizardUrl(value);
+				const normalizedUrl = normalizeWizardUrl(rawValue);
+				const urlError = normalizedUrl
+					? null
+					: validateWizardUrl(normalizeWizardCredential(rawValue, XCSH_API_URL) ?? "");
 				if (urlError) {
 					this.#validationError = urlError;
 					this.#renderStep();
 					return;
 				}
+				if (!normalizedUrl) {
+					this.#validationError = "Tenant URL must be a raw URL or XCSH_API_URL assignment";
+					this.#renderStep();
+					return;
+				}
 				this.#validationError = null;
-				this.#state.url = value;
+				this.#state.url = normalizedUrl;
 				this.#currentStep = "token";
 				break;
 			}
 			case "token": {
-				if (!value) {
+				const normalizedToken = normalizeWizardCredential(rawValue, XCSH_API_TOKEN);
+				if (normalizedToken === null) {
+					this.#validationError = "Token must be a raw value or XCSH_API_TOKEN assignment";
+					this.#renderStep();
+					return;
+				}
+				if (!normalizedToken) {
 					this.#validationError = "API token is required";
 					this.#renderStep();
 					return;
 				}
 				this.#validationError = null;
-				this.#state.token = value;
+				this.#state.token = normalizedToken;
 				this.#currentStep = "name";
 				break;
 			}
@@ -525,15 +603,24 @@ export class ContextAddWizard extends Container {
 				break;
 			}
 			case "username": {
-				// Trimmed: usernames never carry meaningful surrounding whitespace.
-				this.#state.username = value;
+				const username = normalizeWizardCredential(rawValue, XCSH_USERNAME);
+				if (username === null) {
+					this.#validationError = "Username must be a raw value or XCSH_USERNAME assignment";
+					this.#renderStep();
+					return;
+				}
+				this.#state.username = username;
 				this.#currentStep = "password";
 				break;
 			}
 			case "password": {
-				// Preserve the password exactly as typed — do NOT use the trimmed
-				// `value`, since a password may legitimately contain whitespace.
-				this.#state.password = this.#inputField.getValue();
+				const password = normalizeWizardCredential(rawValue, XCSH_CONSOLE_PASSWORD);
+				if (password === null) {
+					this.#validationError = "Password must be a raw value or XCSH_CONSOLE_PASSWORD assignment";
+					this.#renderStep();
+					return;
+				}
+				this.#state.password = password;
 				this.#currentStep = "confirm";
 				this.#selectedIndex = 0;
 				break;
@@ -550,11 +637,16 @@ export class ContextAddWizard extends Container {
 				this.#validationFailed = false;
 				if (this.#selectedIndex === 0) {
 					// Retry
+					this.#validationError = null;
+					this.#validationDetails = null;
 					this.#renderStep();
 				} else {
 					// Edit — go back to url
 					this.#currentStep = "url";
+					this.#state.token = "";
+					this.#state.password = "";
 					this.#validationError = null;
+					this.#validationDetails = null;
 					this.#selectedIndex = 0;
 					this.#renderStep();
 				}

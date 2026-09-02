@@ -66,3 +66,79 @@ test("MarkdownRenderer streaming path converges to the final render after a fram
 		expect(container.querySelector("strong")?.textContent).toBe("content");
 	});
 });
+
+test("renderMarkdown emits semantic inline and display MathML", () => {
+	const html = renderMarkdown("Inline $x^2$.\n\n$$\nI \\propto \\frac{1}{\\lambda^4}\n$$");
+	const root = document.createElement("div");
+	root.innerHTML = html;
+	const math = root.querySelectorAll("math");
+	expect(math).toHaveLength(2);
+	expect(math[0]?.getAttribute("display")).not.toBe("block");
+	expect(math[1]?.getAttribute("display")).toBe("block");
+	expect(math[1]?.querySelector("mfrac")).not.toBeNull();
+	expect(math[1]?.textContent).toContain("I");
+	expect(math[1]?.textContent).toContain("∝");
+	expect(math[1]?.textContent).toContain("λ");
+	expect(html).not.toContain("\\frac");
+});
+
+test("math renders inside lists, tables, and blockquotes", () => {
+	const markdown = [
+		"- $F_1=u^2$",
+		"",
+		"| value |",
+		"| --- |",
+		"| \\(\\mathbb{C}^3\\) |",
+		"",
+		"> $s \\to \\infty$",
+	].join("\n");
+	const root = document.createElement("div");
+	root.innerHTML = renderMarkdown(markdown);
+	expect(root.querySelector("li math")?.textContent).toContain("F");
+	expect(root.querySelector("td math")?.textContent).toContain("ℂ");
+	expect(root.querySelector("blockquote math")?.textContent).toContain("∞");
+});
+
+test("multiline matrices, cases, and aligned operators survive sanitization", () => {
+	const source =
+		"$$\\begin{aligned}A&=\\begin{matrix}a&b\\\\c&d\\end{matrix}\\\\f(x)&=\\begin{cases}x&x>0\\\\-x&x\\leq0\\end{cases}\\end{aligned}$$";
+	const root = document.createElement("div");
+	root.innerHTML = renderMarkdown(source);
+	expect(root.querySelector("math mtable")).not.toBeNull();
+	expect(root.querySelectorAll("mtr").length).toBeGreaterThanOrEqual(2);
+	expect(root.textContent).toContain("≤");
+	expect(root.textContent).not.toContain("\\begin");
+});
+
+test("incomplete and unsupported math remains exact readable source", () => {
+	const cases = [
+		"Map $\\mathbb{C}^3",
+		"Unknown $x + \\unknown{y}$ after",
+		"\\[\n\\frac{1}{x\n\\]",
+	];
+	for (const source of cases) {
+		const root = document.createElement("div");
+		root.innerHTML = renderMarkdown(source);
+		expect(root.textContent?.trimEnd()).toBe(source);
+		expect(root.querySelector("math")).toBeNull();
+	}
+});
+
+test("currency, shell variables, escaped dollars, and code remain literal", () => {
+	const source =
+		"Costs $5 and $10 or $8k–$12k; $HOME; $" +
+		"{PATH}; \\$x-y\\$; " +
+		String.fromCharCode(96) +
+		"$\\lambda$" +
+		String.fromCharCode(96);
+	const root = document.createElement("div");
+	root.innerHTML = renderMarkdown(source);
+	expect(root.querySelector("math")).toBeNull();
+	expect(root.textContent?.trimEnd()).toBe(
+		"Costs $5 and $10 or $8k–$12k; $HOME; $" + "{PATH}; $x-y$; $\\lambda$",
+	);
+	const adjacent = document.createElement("div");
+	adjacent.innerHTML = renderMarkdown("Pay $5; use $HOME or ${PATH}; escape \\$x$.");
+	expect(adjacent.querySelector("math")).toBeNull();
+	expect(adjacent.textContent?.trimEnd()).toBe("Pay $5; use $HOME or ${PATH}; escape $x$.");
+});

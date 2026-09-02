@@ -53,10 +53,162 @@ const ALLOWED_TAGS = [
 	"th",
 	"td",
 	"input",
+	"math",
+	"maction",
+	"menclose",
+	"merror",
+	"mfrac",
+	"mi",
+	"mmultiscripts",
+	"mn",
+	"mo",
+	"mover",
+	"mpadded",
+	"mphantom",
+	"mprescripts",
+	"mroot",
+	"mrow",
+	"ms",
+	"mspace",
+	"msqrt",
+	"mstyle",
+	"msub",
+	"msubsup",
+	"msup",
+	"mtable",
+	"mtd",
+	"mtext",
+	"mtr",
+	"munder",
+	"munderover",
+	"none",
+	"annotation",
+	"annotation-xml",
+	"semantics",
 ];
 
-/** Only these attributes survive; `style` is deliberately absent (dropped). */
-const ALLOWED_ATTR = ["href", "title", "class", "target", "rel", "type", "checked", "disabled"];
+/** Only these attributes survive; style is restricted to generated MathML below. */
+const ALLOWED_ATTR = [
+	"href",
+	"title",
+	"class",
+	"target",
+	"rel",
+	"type",
+	"checked",
+	"disabled",
+	"style",
+	"display",
+	"accent",
+	"accentunder",
+	"align",
+	"bevelled",
+	"columnalign",
+	"columnlines",
+	"columnspacing",
+	"columnspan",
+	"denomalign",
+	"depth",
+	"displaystyle",
+	"encoding",
+	"fence",
+	"form",
+	"frame",
+	"framespacing",
+	"height",
+	"largeop",
+	"linethickness",
+	"lspace",
+	"mathbackground",
+	"mathcolor",
+	"mathvariant",
+	"maxsize",
+	"minlabelspacing",
+	"minsize",
+	"movablelimits",
+	"notation",
+	"numalign",
+	"rowalign",
+	"rowlines",
+	"rowspacing",
+	"rowspan",
+	"rspace",
+	"scriptlevel",
+	"separator",
+	"side",
+	"stretchy",
+	"symmetric",
+	"width",
+];
+const HTML_ATTRIBUTES = new Set(["href", "title", "class", "target", "rel", "type", "checked", "disabled"]);
+const MATHML_ATTRIBUTES = new Set(["class", ...ALLOWED_ATTR.slice(8)]);
+
+const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
+const TEMML_EXACT_CLASSES = new Set([
+	"actuarial",
+	"circle-pad",
+	"downstrike",
+	"longdiv-arc",
+	"longdiv-top",
+	"mathcal",
+	"mathscr",
+	"menclose",
+	"nobreak",
+	"phasor-angle",
+	"phasor-bottom",
+	"sout",
+	"special-fraction",
+	"textcircle",
+	"upstrike",
+]);
+const TEMML_CLASS_PREFIX = /^(?:chr|ff|tml|wbk)-[a-z0-9-]+$/;
+const TEMML_STYLE_PROPERTIES = new Set([
+	"background-color",
+	"border",
+	"border-bottom",
+	"border-left",
+	"border-right",
+	"border-top",
+	"bottom",
+	"color",
+	"display",
+	"font-family",
+	"font-style",
+	"font-weight",
+	"height",
+	"justify-content",
+	"margin-left",
+	"math-depth",
+	"padding",
+	"padding-bottom",
+	"padding-left",
+	"padding-right",
+	"padding-top",
+	"position",
+	"right",
+	"text-align",
+	"transform",
+	"width",
+]);
+
+function isMathMlElement(node: Element): boolean {
+	return node.namespaceURI === MATHML_NAMESPACE;
+}
+
+function sanitizeTemmlStyle(value: string): string {
+	const declarations: string[] = [];
+	for (const declaration of value.split(";")) {
+		const separator = declaration.indexOf(":");
+		if (separator < 1) continue;
+		const property = declaration.slice(0, separator).trim().toLowerCase();
+		const propertyValue = declaration.slice(separator + 1).trim();
+		if (!TEMML_STYLE_PROPERTIES.has(property)) continue;
+		if (!propertyValue || /(?:url|expression|javascript|!important|var\s*\()/i.test(propertyValue)) continue;
+		if (!/^[A-Za-z0-9 .,%()'"+#-]+$/.test(propertyValue)) continue;
+		declarations.push(`${property}:${propertyValue}`);
+	}
+	return declarations.join(";");
+}
 
 /**
  * The ENUMERATED class allow-list. Content-supplied class names cannot collide
@@ -76,6 +228,10 @@ const EXACT_CLASSES = new Set([
 /** A class token is kept iff it is an exact allow-listed name or a `language-` code hint. */
 function isAllowedClass(token: string): boolean {
 	return EXACT_CLASSES.has(token) || token.startsWith("language-");
+}
+
+function isAllowedTemmlClass(token: string): boolean {
+	return TEMML_EXACT_CLASSES.has(token) || TEMML_CLASS_PREFIX.test(token);
 }
 
 /** DOMPurify config: tight, explicit tag/attr allow-lists, no data/aria attrs. */
@@ -115,15 +271,34 @@ function build(): Purifier {
 		throw new Error("markdown sanitize: DOMPurify reports the environment is unsupported — refusing to render");
 	}
 
-	// Hook 1 — filter `class` to the enumerated allow-list (drop UI-spoofing tokens).
-	dp.addHook("uponSanitizeAttribute", (_node, data) => {
-		if (data.attrName !== "class") return;
-		const kept = data.attrValue.split(/\s+/).filter(t => t.length > 0 && isAllowedClass(t));
-		if (kept.length === 0) {
+	// Hook 1 — keep HTML and MathML attribute policies separate. Temml classes
+	// and finite layout styles are valid only on MathML elements.
+	dp.addHook("uponSanitizeAttribute", (rawNode, data) => {
+		const node = rawNode as Element;
+		const isMathMl = isMathMlElement(node);
+		const allowedAttributes = isMathMl ? MATHML_ATTRIBUTES : HTML_ATTRIBUTES;
+		if (!allowedAttributes.has(data.attrName)) {
 			data.keepAttr = false;
 			return;
 		}
-		data.attrValue = kept.join(" ");
+		if (data.attrName === "style") {
+			const style = sanitizeTemmlStyle(data.attrValue);
+			if (!isMathMl || !style) {
+				data.keepAttr = false;
+				return;
+			}
+			data.attrValue = style;
+			return;
+		}
+		if (data.attrName === "class") {
+			const isAllowed = isMathMl ? isAllowedTemmlClass : isAllowedClass;
+			const kept = data.attrValue.split(/\s+/).filter(t => t.length > 0 && isAllowed(t));
+			if (kept.length === 0) {
+				data.keepAttr = false;
+				return;
+			}
+			data.attrValue = kept.join(" ");
+		}
 	});
 
 	// Hook 2 — anchors: drop unsafe protocols (defense-in-depth over DOMPurify's
