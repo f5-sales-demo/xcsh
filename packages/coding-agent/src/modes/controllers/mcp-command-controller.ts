@@ -21,7 +21,6 @@ import {
 	clearSmitheryApiKey,
 	createSmitheryCliAuthSession,
 	getSmitheryApiKey,
-	getSmitheryLoginUrl,
 	pollSmitheryCliAuthSession,
 	saveSmitheryApiKey,
 } from "../../mcp/smithery-auth";
@@ -36,6 +35,7 @@ import type { MCPAuthConfig, MCPServerConfig, MCPServerConnection } from "../../
 import type { OAuthCredential } from "../../session/auth-storage";
 import { shortenPath } from "../../tools/render-utils";
 import { openPath } from "../../utils/open";
+import { presentAuthLink } from "../components/auth-link-presenter";
 import { DynamicBorder } from "../components/dynamic-border";
 import { MCPAddWizard } from "../components/mcp-add-wizard";
 import { parseCommandArgs } from "../shared";
@@ -67,6 +67,42 @@ type MCPSearchParsed = {
 	semantic: boolean;
 	error?: string;
 };
+
+interface McpOAuthPresentationDependencies {
+	openUrl?: (url: string) => void;
+	presentLink?: typeof presentAuthLink;
+}
+
+/** Render the MCP controller's browser-authorization state without exposing the raw URL. */
+export function showMcpOAuthAuthorization(
+	ctx: Pick<InteractiveModeContext, "chatContainer" | "ui">,
+	info: { url: string; instructions?: string },
+	dependencies: McpOAuthPresentationDependencies = {},
+): void {
+	const showLink = dependencies.presentLink ?? presentAuthLink;
+	const openUrl = dependencies.openUrl ?? openPath;
+
+	ctx.chatContainer.addChild(new Spacer(1));
+	ctx.chatContainer.addChild(new Text(theme.fg("contentAccent", "━━━ OAuth Authorization Required ━━━"), 1, 0));
+	ctx.chatContainer.addChild(new Spacer(1));
+	showLink(ctx.chatContainer, info.url);
+	if (info.instructions) {
+		ctx.chatContainer.addChild(new Spacer(1));
+		ctx.chatContainer.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
+	}
+	ctx.chatContainer.addChild(new Spacer(1));
+	ctx.chatContainer.addChild(
+		new Text(theme.fg("muted", "Waiting for authorization... (Press Ctrl+C to cancel, 5 minute timeout)"), 1, 0),
+	);
+	ctx.chatContainer.addChild(new Spacer(1));
+	ctx.chatContainer.addChild(new Text(theme.fg("contentAccent", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"), 1, 0));
+	ctx.ui.requestRender();
+
+	openUrl(info.url);
+	ctx.chatContainer.addChild(new Spacer(1));
+	ctx.chatContainer.addChild(new Text(theme.fg("success", "→ Opening browser automatically..."), 1, 0));
+	ctx.ui.requestRender();
+}
 
 export class MCPCommandController {
 	constructor(private ctx: InteractiveModeContext) {}
@@ -518,60 +554,7 @@ export class MCPCommandController {
 					callbackPath,
 				},
 				{
-					onAuth: (info: { url: string; instructions?: string }) => {
-						// Show auth URL prominently in chat
-						this.ctx.chatContainer.addChild(new Spacer(1));
-						this.ctx.chatContainer.addChild(
-							new Text(theme.fg("contentAccent", "━━━ OAuth Authorization Required ━━━"), 1, 0),
-						);
-						this.ctx.chatContainer.addChild(new Spacer(1));
-						this.ctx.chatContainer.addChild(
-							new Text(theme.fg("muted", "Preparing browser authorization..."), 1, 0),
-						);
-						this.ctx.chatContainer.addChild(new Spacer(1));
-						this.ctx.chatContainer.addChild(
-							new Text(
-								theme.fg("muted", "Waiting for authorization... (Press Ctrl+C to cancel, 5 minute timeout)"),
-								1,
-								0,
-							),
-						);
-						this.ctx.chatContainer.addChild(new Spacer(1));
-						this.ctx.chatContainer.addChild(
-							new Text(theme.fg("contentAccent", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"), 1, 0),
-						);
-						this.ctx.ui.requestRender();
-						// Try to open browser automatically
-						try {
-							openPath(info.url);
-
-							// Show confirmation that browser should open
-							this.ctx.chatContainer.addChild(new Spacer(1));
-							this.ctx.chatContainer.addChild(
-								new Text(theme.fg("success", "→ Opening browser automatically..."), 1, 0),
-							);
-							this.ctx.chatContainer.addChild(new Spacer(1));
-							this.ctx.chatContainer.addChild(
-								new Text(theme.fg("muted", "Alternative if browser did not open:"), 1, 0),
-							);
-							this.ctx.chatContainer.addChild(
-								new Text(theme.fg("success", "Copy this exact URL in your browser:"), 1, 0),
-							);
-							this.ctx.chatContainer.addChild(new Text(theme.fg("contentAccent", info.url), 1, 0));
-							this.ctx.ui.requestRender();
-						} catch (_error) {
-							// Show error if browser doesn't open
-							this.ctx.chatContainer.addChild(new Spacer(1));
-							this.ctx.chatContainer.addChild(
-								new Text(theme.fg("warning", "→ Could not open browser automatically"), 1, 0),
-							);
-							this.ctx.chatContainer.addChild(
-								new Text(theme.fg("success", "Copy this exact URL in your browser:"), 1, 0),
-							);
-							this.ctx.chatContainer.addChild(new Text(theme.fg("contentAccent", info.url), 1, 0));
-							this.ctx.ui.requestRender();
-						}
-					},
+					onAuth: (info: { url: string; instructions?: string }) => showMcpOAuthAuthorization(this.ctx, info),
 					onProgress: (message: string) => {
 						this.ctx.chatContainer.addChild(new Spacer(1));
 						this.ctx.chatContainer.addChild(new Text(theme.fg("muted", message), 1, 0));
@@ -1678,23 +1661,22 @@ export class MCPCommandController {
 
 	async #handleSmitheryBrowserLogin(): Promise<boolean> {
 		const session = await createSmitheryCliAuthSession();
-		const fallbackLoginUrl = getSmitheryLoginUrl();
-		this.#showMessage(
-			[
-				"",
-				theme.bold("Smithery Login"),
-				theme.fg("muted", "Browser authorization started. Complete auth in your browser."),
-				theme.fg("dim", "Authorize URL:"),
-				theme.fg("contentAccent", session.authUrl),
-				theme.fg("dim", `Fallback: ${fallbackLoginUrl}`),
-				"",
-			].join("\n"),
+		this.ctx.chatContainer.addChild(new Spacer(1));
+		this.ctx.chatContainer.addChild(new DynamicBorder());
+		this.ctx.chatContainer.addChild(
+			new Text(
+				[
+					theme.bold("Smithery Login"),
+					theme.fg("muted", "Browser authorization started. Complete auth in your browser."),
+				].join("\n"),
+				1,
+				1,
+			),
 		);
-		try {
-			openPath(session.authUrl);
-		} catch {
-			// URL is already shown above.
-		}
+		presentAuthLink(this.ctx.chatContainer, session.authUrl);
+		this.ctx.chatContainer.addChild(new DynamicBorder());
+		this.ctx.ui.requestRender();
+		openPath(session.authUrl);
 
 		const apiKey = await this.#waitForSmitheryCliApiKey(session.sessionId, new AbortController().signal);
 		await this.#validateSmitheryApiKey(apiKey);
