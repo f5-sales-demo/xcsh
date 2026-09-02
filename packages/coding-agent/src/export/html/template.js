@@ -1483,7 +1483,7 @@
             const text = typeof content === 'string' ? content :
               content.filter(c => c.type === 'text').map(c => c.text).join('\n');
             if (text.trim()) {
-              html += `<div class="markdown-content">${safeMarkedParse(text)}</div>`;
+              html += `<div class="markdown-content markdown-root">${safeMarkedParse(text)}</div>`;
             }
             html += '</div>';
             return html;
@@ -1494,7 +1494,7 @@
 
             for (const block of msg.content) {
               if (block.type === 'text' && block.text.trim()) {
-                html += `<div class="assistant-text markdown-content">${safeMarkedParse(block.text)}</div>`;
+                html += `<div class="assistant-text markdown-content markdown-root">${safeMarkedParse(block.text)}</div>`;
               } else if (block.type === 'thinking' && block.thinking.trim()) {
                 html += `<div class="thinking-block">
                   <div class="thinking-text">${escapeHtml(block.thinking)}</div>
@@ -1572,14 +1572,14 @@
         if (entry.type === 'branch_summary') {
           return `<div class="branch-summary" id="${entryId}">${tsHtml}
             <div class="branch-summary-header">Branch Summary</div>
-            <div class="markdown-content">${safeMarkedParse(entry.summary)}</div>
+            <div class="markdown-content markdown-root">${safeMarkedParse(entry.summary)}</div>
           </div>`;
         }
 
         if (entry.type === 'custom_message' && entry.display) {
           return `<div class="hook-message" id="${entryId}">${tsHtml}
             <div class="hook-type">[${escapeHtml(entry.customType)}]</div>
-            <div class="markdown-content">${safeMarkedParse(typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content))}</div>
+            <div class="markdown-content markdown-root">${safeMarkedParse(typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content))}</div>
           </div>`;
         }
 
@@ -1777,6 +1777,7 @@
       marked.use({
         breaks: true,
         gfm: true,
+        extensions: xcshMath.createMathExtensions(),
         renderer: {
           // Code blocks: syntax highlight, no HTML escaping
           code(token) {
@@ -1806,6 +1807,28 @@
           // Inline code: escape HTML
           codespan(token) {
             return `<code>${escapeHtml(token.text)}</code>`;
+          },
+          // Raw HTML is source text in exports. Generated MathML arrives through
+          // the math extension renderer and is unaffected by this boundary.
+          html(token) {
+            return escapeHtml(token.raw || token.text || '');
+          },
+          link(token) {
+            const href = String(token.href || '');
+            const label = this.parser.parseInline(token.tokens);
+            if (!/^(?:https?:|mailto:|#|\/(?!\/)|\.\.?\/)/i.test(href)) {
+              return label;
+            }
+            const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
+            return `<a href="${escapeHtml(href)}"${title}>${label}</a>`;
+          },
+          image(token) {
+            const href = String(token.href || '');
+            if (!/^(?:https?:|data:image\/(?:png|gif|jpeg|webp);base64,|\/(?!\/)|\.\.?\/)/i.test(href)) {
+              return escapeHtml(token.text || href);
+            }
+            const title = token.title ? ` title="${escapeHtml(token.title)}"` : '';
+            return `<img src="${escapeHtml(href)}" alt="${escapeHtml(token.text || '')}"${title}>`;
           }
         }
       });
