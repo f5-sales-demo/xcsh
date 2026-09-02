@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
-import { type AssistantMessage, Effort } from "@f5-sales-demo/pi-ai";
+import { type AssistantMessage, createThinkingConfig, Effort, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import { Settings } from "../../src/config/settings";
 import type { LoadExtensionsResult } from "../../src/extensibility/extensions/types";
 import type { CreateAgentSessionResult } from "../../src/sdk";
@@ -235,7 +235,15 @@ describe("runSubprocess submit_result reminders", () => {
 
 		const modelRegistry = {
 			refresh: async () => {},
-			getAvailable: () => [{ provider: "openai", id: "gpt-4o", name: "GPT-4o" }],
+			getAvailable: () => [
+				{
+					provider: "openai",
+					id: "gpt-4o",
+					name: "GPT-4o",
+					reasoning: true,
+					thinking: createThinkingConfig([ReasoningEffort.None, Effort.Low, Effort.Medium, Effort.High]),
+				},
+			],
 		} as unknown as import("../../src/config/model-registry").ModelRegistry;
 
 		await runSubprocess({
@@ -254,7 +262,15 @@ describe("runSubprocess submit_result reminders", () => {
 		vi.clearAllMocks();
 		const modelRegistry = {
 			refresh: async () => {},
-			getAvailable: () => [{ provider: "openai", id: "gpt-4o", name: "GPT-4o" }],
+			getAvailable: () => [
+				{
+					provider: "openai",
+					id: "gpt-4o",
+					name: "GPT-4o",
+					reasoning: true,
+					thinking: createThinkingConfig([ReasoningEffort.None, Effort.Low, Effort.Medium, Effort.High]),
+				},
+			],
 		} as unknown as import("../../src/config/model-registry").ModelRegistry;
 
 		const cases = [

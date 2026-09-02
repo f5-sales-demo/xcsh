@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Agent, type AgentTool, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { Effort, type Model } from "@f5-sales-demo/pi-ai";
+import { createThinkingConfig, Effort, type Model } from "@f5-sales-demo/pi-ai";
 import { Type } from "@sinclair/typebox";
 import { Settings } from "../src/config/settings";
 import type { CustomTool } from "../src/extensibility/custom-tools/types";
@@ -629,7 +629,7 @@ describe("AgentSession MCP discovery", () => {
 		const reasoningModel: Model<"openai-responses"> = {
 			...createModel(),
 			reasoning: true,
-			thinking: { mode: "effort", minLevel: Effort.Medium, maxLevel: Effort.Medium },
+			thinking: createThinkingConfig([Effort.Medium, Effort.High, Effort.XHigh]),
 		};
 
 		const agent = new Agent({
@@ -672,7 +672,7 @@ describe("AgentSession MCP discovery", () => {
 
 		await session.switchSession(olderSessionFile!);
 		expect(session.sessionFile).toBe(olderSessionFile);
-		expect(session.thinkingLevel).toBe(ThinkingLevel.Medium);
+		expect(session.thinkingLevel).toBe(ThinkingLevel.XHigh);
 		expect(session.serviceTier).toBe("priority");
 		expect(session.getSelectedMCPToolNames()).toEqual([]);
 		expect(session.getActiveToolNames()).toEqual(["read"]);
@@ -682,7 +682,7 @@ describe("AgentSession MCP discovery", () => {
 
 		await session.switchSession(originalSessionFile!);
 		expect(session.sessionFile).toBe(originalSessionFile);
-		expect(session.thinkingLevel).toBe(ThinkingLevel.Medium);
+		expect(session.thinkingLevel).toBe(ThinkingLevel.High);
 		expect(session.serviceTier).toBe("flex");
 		expect(session.getSelectedMCPToolNames()).toEqual(["mcp_docs_search"]);
 		expect(session.getActiveToolNames()).toEqual(["read", "mcp_docs_search"]);

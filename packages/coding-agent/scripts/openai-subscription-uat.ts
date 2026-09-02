@@ -10,6 +10,12 @@ interface UatTarget {
 }
 
 export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-5.6-sol";
+export const OPENAI_CODEX_GPT56_MODELS = [
+	"openai-codex/gpt-5.6-luna",
+	"openai-codex/gpt-5.6-terra",
+	OPENAI_CODEX_SOL_MODEL,
+] as const;
+export const OPENAI_CODEX_SOL_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
 const ROOT_DIR = path.resolve(import.meta.dir, "../../..");
 const STARTUP_TIMEOUT_MS = 60_000;
@@ -108,6 +114,13 @@ function countOccurrences(value: string, search: string): number {
 	}
 }
 
+async function typeIntoPty(session: PtySession, value: string): Promise<void> {
+	for (const character of value) {
+		session.write(character);
+		await Bun.sleep(5);
+	}
+}
+
 function freshEnvironment(stateDir: string): Record<string, string> {
 	const env: Record<string, string> = {
 		HOME: stateDir,
@@ -118,6 +131,7 @@ function freshEnvironment(stateDir: string): Record<string, string> {
 		XDG_STATE_HOME: path.join(stateDir, "state"),
 		TERM: "xterm-256color",
 		SSH_CONNECTION: "uat-client uat-server",
+		PI_CODEX_DEBUG: "1",
 		PATH: Bun.env.PATH ?? "/usr/local/bin:/usr/bin:/bin",
 	};
 	for (const name of [
@@ -146,6 +160,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 	const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-openai-fresh-oauth-"));
 	const session = new PtySession();
 	let transcript = "";
+	const outputChunks: string[] = [];
 	let callbackError: Error | undefined;
 	let exited = false;
 	const command = [...target.argv, ...commonArgs()].map(shellQuote).join(" ");
@@ -161,7 +176,10 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			},
 			(error, chunk) => {
 				if (error) callbackError = error;
-				if (chunk) transcript += chunk;
+				if (chunk) {
+					transcript += chunk;
+					outputChunks.push(chunk);
+				}
 			},
 		)
 		.finally(() => {
@@ -169,6 +187,20 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		});
 
 	try {
+		const waitForNewOutput = async (
+			start: number,
+			predicate: (visible: string) => boolean,
+			description: string,
+			timeoutMs: number,
+		) =>
+			waitFor(
+				target.label,
+				() => transcript.slice(start),
+				predicate,
+				description,
+				() => exited,
+				timeoutMs,
+			);
 		await waitFor(
 			target.label,
 			() => transcript,
@@ -191,7 +223,8 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			throw new Error(`${target.label} entered LiteLLM URL configuration during fresh startup`);
 		}
 
-		session.write("openai-codex");
+		await Bun.sleep(150);
+		await typeIntoPty(session, "openai-codex");
 		await waitFor(
 			target.label,
 			() => transcript,
@@ -201,15 +234,30 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			STARTUP_TIMEOUT_MS,
 		);
 		session.write("\r");
+		let outputStart = transcript.length;
+		await waitForNewOutput(
+			outputStart,
+			visible =>
+				visible.includes("ChatGPT subscription sign-in method") &&
+				visible.indexOf("Device Code") < visible.indexOf("Browser Login"),
+			"the SSH-ordered ChatGPT login methods",
+			STARTUP_TIMEOUT_MS,
+		);
+		session.write("\r");
 		await waitFor(
 			target.label,
 			() => transcript,
-			visible =>
-				visible.includes("https://auth.openai.com/codex/device") && visible.includes("Enter this one-time code:"),
+			visible => visible.includes("https://auth.openai.com/codex/device") && visible.includes("One-time code:"),
 			"the ChatGPT device authorization code",
 			() => exited,
 			STARTUP_TIMEOUT_MS,
 		);
+		const deviceOutput = visibleTranscript(transcript);
+		const deviceCode = deviceOutput.match(/One-time code:\s*([A-Z0-9-]+)/)?.[1];
+		if (!deviceCode) throw new Error(`${target.label} rendered no readable device code`);
+		console.log(`AUTHORIZATION REQUIRED: open https://auth.openai.com/codex/device and enter ${deviceCode}`);
+		// One human authorization step occurs here. Enter leaves the code readable and starts polling.
+		session.write("\r");
 		await waitFor(
 			target.label,
 			() => transcript,
@@ -221,17 +269,140 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			OAUTH_TIMEOUT_MS,
 		);
 
-		const sentinel = `XCSH_SOL_UAT_${crypto.randomUUID().replaceAll("-", "").slice(0, 16).toUpperCase()}`;
-		await Bun.sleep(250);
-		session.write(`Reply with exactly ${sentinel} and nothing else.\r`);
-		await waitFor(
-			target.label,
-			() => transcript,
-			visible => countOccurrences(visible, sentinel) >= 2,
-			"the exact GPT-5.6 Sol sentinel response",
-			() => exited,
+		const selectAndVerify = async (model: string, effort: (typeof OPENAI_CODEX_SOL_EFFORTS)[number]) => {
+			outputStart = transcript.length;
+			session.write("/model\r");
+			await waitForNewOutput(
+				outputStart,
+				visible => visible.includes("QUICK") && visible.includes("ALL MODELS"),
+				"the model picker",
+				STARTUP_TIMEOUT_MS,
+			);
+			await typeIntoPty(session, model);
+			await waitForNewOutput(
+				outputStart,
+				visible => visible.includes(`[${model}]`),
+				`${model} search result`,
+				STARTUP_TIMEOUT_MS,
+			);
+			session.write("\r");
+			await waitForNewOutput(
+				outputStart,
+				visible => visible.includes("Thinking for:") && visible.includes("provider default"),
+				`${model} reasoning picker`,
+				STARTUP_TIMEOUT_MS,
+			);
+			const thinkingOrder = ["inherit", "off", "low", "medium", "high", "xhigh", "max"] as const;
+			const pickerOutput = visibleTranscript(transcript.slice(outputStart));
+			const selectedMatches = [...pickerOutput.matchAll(/[›>]\s+(inherit|off|low|medium|high|xhigh|max)\s+—/g)];
+			const selectedEffort = selectedMatches.at(-1)?.[1];
+			if (!selectedEffort) throw new Error(`${model} reasoning picker did not expose its selected effort`);
+			const targetEffort = effort === "none" ? "off" : effort;
+			const currentIndex = thinkingOrder.indexOf(selectedEffort as (typeof thinkingOrder)[number]);
+			const targetIndex = thinkingOrder.indexOf(targetEffort as (typeof thinkingOrder)[number]);
+			const downwardMoves = (targetIndex - currentIndex + thinkingOrder.length) % thinkingOrder.length;
+			for (let index = 0; index < downwardMoves; index += 1) session.write("\x1b[B");
+			session.write("\r");
+			await waitForNewOutput(
+				outputStart,
+				visible => visible.includes(`Default model: ${model}`),
+				`${model}:${effort} selection`,
+				STARTUP_TIMEOUT_MS,
+			);
+			const sentinel = `XCSH_${model.split("-").at(-1)?.toUpperCase()}_${effort.toUpperCase()}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+			session.write(`Reply with exactly ${sentinel} and nothing else.\r`);
+			await waitForNewOutput(
+				outputStart,
+				visible => countOccurrences(visible, sentinel) >= 2,
+				`${model}:${effort} streamed response`,
+				SENTINEL_TIMEOUT_MS,
+			);
+		};
+
+		for (const model of OPENAI_CODEX_GPT56_MODELS) await selectAndVerify(model, "medium");
+		for (const effort of OPENAI_CODEX_SOL_EFFORTS) await selectAndVerify(OPENAI_CODEX_SOL_MODEL, effort);
+
+		await selectAndVerify(OPENAI_CODEX_SOL_MODEL, "medium");
+		const behavioralCases = [
+			{
+				prompt: "Compute 137 * 29. Reply with exactly ARITHMETIC_3973 and nothing else.",
+				expected: "ARITHMETIC_3973",
+				description: "deterministic arithmetic",
+			},
+			{
+				prompt:
+					"Correct this JavaScript: const add = (a, b) => a - b. Reply with exactly CODE_FIX_a_plus_b and nothing else.",
+				expected: "CODE_FIX_a_plus_b",
+				description: "deterministic code correction",
+			},
+			{
+				prompt:
+					'Emit one JSON object with exactly these keys and values, without markdown: {"sentinel":"STRUCTURED_OK","count":3}',
+				expected: '{"sentinel":"STRUCTURED_OK","count":3}',
+				description: "constrained structured output",
+			},
+		];
+		for (const testCase of behavioralCases) {
+			outputStart = transcript.length;
+			session.write(`${testCase.prompt}\r`);
+			await waitForNewOutput(
+				outputStart,
+				visible => countOccurrences(visible, testCase.expected) >= 2,
+				testCase.description,
+				SENTINEL_TIMEOUT_MS,
+			);
+		}
+		const streamChunkStart = outputChunks.length;
+		outputStart = transcript.length;
+		session.write("Repeat the word STREAM exactly 80 times separated by single spaces, with nothing else.\r");
+		await waitForNewOutput(
+			outputStart,
+			visible => countOccurrences(visible, "STREAM") >= 80,
+			"multi-delta streamed output",
 			SENTINEL_TIMEOUT_MS,
 		);
+		const streamedChunks = outputChunks
+			.slice(streamChunkStart)
+			.filter(chunk => visibleTranscript(chunk).includes("STREAM")).length;
+		if (streamedChunks < 2) throw new Error("Streamed response was not observed across multiple PTY updates");
+
+		const convergenceToken = `CONVERGE_${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+		outputStart = transcript.length;
+		session.write(`Remember ${convergenceToken}. Reply with exactly STORED and nothing else.\r`);
+		await waitForNewOutput(
+			outputStart,
+			visible => countOccurrences(visible, "STORED") >= 2,
+			"multi-turn storage acknowledgement",
+			SENTINEL_TIMEOUT_MS,
+		);
+		outputStart = transcript.length;
+		session.write("Reply with exactly the token I asked you to remember and nothing else.\r");
+		await waitForNewOutput(
+			outputStart,
+			visible => visible.includes(convergenceToken),
+			"multi-turn convergence",
+			SENTINEL_TIMEOUT_MS,
+		);
+
+		// PI_CODING_AGENT_DIR selects an isolated non-default profile, so the
+		// directory resolver intentionally keeps root logs under HOME/.xcsh.
+		const logDir = path.join(stateDir, ".xcsh", "logs");
+		const logFiles = await fs.readdir(logDir);
+		const rawDiagnostics = (
+			await Promise.all(logFiles.map(file => fs.readFile(path.join(logDir, file), "utf8")))
+		).join("\n");
+		const sanitizedDiagnostics = redactSensitiveOutput(rawDiagnostics);
+		for (const model of OPENAI_CODEX_GPT56_MODELS)
+			expectDiagnostic(sanitizedDiagnostics, `"model":"${model.slice("openai-codex/".length)}"`);
+		for (const effort of OPENAI_CODEX_SOL_EFFORTS)
+			expectDiagnostic(sanitizedDiagnostics, `"reasoningEffort":"${effort}"`);
+		if (
+			/access_token|refresh_token|authorization_code|code_verifier|Bearer\s+(?!\[REDACTED\])/i.test(
+				sanitizedDiagnostics,
+			)
+		) {
+			throw new Error("Retained Codex diagnostics contain credential material");
+		}
 		if (callbackError) throw callbackError;
 		console.log(
 			`PASS: ${target.label} completed fresh xcsh ChatGPT OAuth and the ${OPENAI_CODEX_SOL_MODEL} sentinel.`,
@@ -241,6 +412,10 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		await runPromise.catch(() => undefined);
 		await fs.rm(stateDir, { recursive: true, force: true });
 	}
+}
+
+function expectDiagnostic(diagnostics: string, expected: string): void {
+	if (!diagnostics.includes(expected)) throw new Error(`Missing sanitized request diagnostic: ${expected}`);
 }
 
 async function main(): Promise<void> {

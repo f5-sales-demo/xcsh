@@ -67,7 +67,7 @@ import { encodeTextSignatureV1, mapOpenAIResponsesStopReason, parseTextSignature
 import { transformMessages } from "./transform-messages";
 
 export interface OpenAICodexResponsesOptions extends StreamOptions {
-	reasoning?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+	reasoning?: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 	reasoningSummary?: "auto" | "concise" | "detailed" | null;
 	textVerbosity?: "low" | "medium" | "high";
 	include?: string[];
@@ -1895,6 +1895,7 @@ async function openCodexSseEventStream(
 	logCodexDebug("codex request", {
 		url,
 		model: body.model,
+		reasoningEffort: body.reasoning?.effort ?? null,
 		headers: redactHeaders(headers),
 		sentTurnStateHeader: headers.has(X_CODEX_TURN_STATE_HEADER),
 		sentModelsEtagHeader: headers.has(X_MODELS_ETAG_HEADER),

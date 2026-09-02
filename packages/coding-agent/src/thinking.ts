@@ -1,5 +1,12 @@
 import { type ResolvedThinkingLevel, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { clampThinkingLevelForModel, type Effort, type Model, THINKING_EFFORTS } from "@f5-sales-demo/pi-ai";
+import {
+	clampThinkingLevelForModel,
+	type Effort,
+	getSupportedReasoningEfforts,
+	type Model,
+	ReasoningEffort,
+	THINKING_EFFORTS,
+} from "@f5-sales-demo/pi-ai";
 
 /**
  * Metadata used to render thinking selector values in the coding-agent UI.
@@ -69,9 +76,12 @@ export function getThinkingLevelMetadata(level: ThinkingLevel): ThinkingLevelMet
  * Converts an agent-local selector into the effort sent to providers.
  */
 export function toReasoningEffort(level: ThinkingLevel | undefined): Effort | undefined {
-	if (level === undefined || level === ThinkingLevel.Off || level === ThinkingLevel.Inherit) {
+	if (level === undefined || level === ThinkingLevel.Inherit) {
 		return undefined;
 	}
+	// Agent's legacy transport type predates an explicit `none`; the catalog
+	// guard below ensures this value only reaches a service that advertises it.
+	if (level === ThinkingLevel.Off) return ReasoningEffort.None as Effort;
 	return level;
 }
 
@@ -81,15 +91,22 @@ export function toReasoningEffort(level: ThinkingLevel | undefined): Effort | un
 export function resolveThinkingLevelForModel(
 	model: Model | undefined,
 	level: ThinkingLevel | undefined,
+	options: { strictUnsupported?: boolean } = { strictUnsupported: true },
 ): ResolvedThinkingLevel | undefined {
 	if (level === undefined || level === ThinkingLevel.Inherit) {
-		return model?.thinking?.defaultLevel;
+		return undefined;
 	}
 	if (level === ThinkingLevel.Off) {
-		if (model?.thinking?.canDisable === false) {
+		if (model && !getSupportedReasoningEfforts(model).includes(ReasoningEffort.None)) {
+			if (options.strictUnsupported === false) return undefined;
 			throw new Error(`Cannot disable thinking for ${model.provider}/${model.id}`);
 		}
 		return ThinkingLevel.Off;
 	}
-	return clampThinkingLevelForModel(model, level);
+	try {
+		return clampThinkingLevelForModel(model, level);
+	} catch (error) {
+		if (options.strictUnsupported === false) return undefined;
+		throw error;
+	}
 }

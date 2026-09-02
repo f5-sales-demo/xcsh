@@ -4511,7 +4511,7 @@ export class AgentSession {
 		if (!this.model?.reasoning) return undefined;
 
 		const levels = [
-			...(this.model.thinking?.canDisable === false ? [] : [ThinkingLevel.Off]),
+			...(this.model.thinking?.supportedLevels.some(level => level.effort === "none") ? [ThinkingLevel.Off] : []),
 			...this.getAvailableThinkingLevels(),
 		];
 		const currentLevel = this.thinkingLevel === ThinkingLevel.Inherit ? ThinkingLevel.Off : this.thinkingLevel;

@@ -20,7 +20,7 @@ import { hardenAgentConfigFileSync, writeAgentConfigFileSync } from "./agent-con
 import { DEFAULT_MODEL_ROLE } from "./settings-schema";
 
 /** Current config schema version. Bump when the generated format changes. */
-export const CURRENT_CONFIG_VERSION = 4;
+export const CURRENT_CONFIG_VERSION = 5;
 const LITELLM_CONFIG_DIR_MODE = 0o700;
 const LITELLM_MODELS_FILE_MODE = 0o600;
 
@@ -86,8 +86,14 @@ export function generateModelsYml(baseUrl: string, options?: GenerateModelsYmlOp
 		"          - image",
 		"        thinking:",
 		"          mode: effort",
-		"          minLevel: low",
-		"          maxLevel: xhigh",
+		"          defaultLevel: medium",
+		"          supportedLevels:",
+		"            - { effort: none, description: No reasoning }",
+		"            - { effort: low, description: Light reasoning }",
+		"            - { effort: medium, description: Balanced reasoning }",
+		"            - { effort: high, description: Deep reasoning }",
+		"            - { effort: xhigh, description: Very deep reasoning }",
+		"            - { effort: max, description: Maximum reasoning }",
 		"        contextWindow: 1050000",
 		"        maxTokens: 128000",
 		"        compat:",

@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { enrichModelThinking } from "@f5-sales-demo/pi-ai/model-thinking";
+import { Effort, enrichModelThinking } from "@f5-sales-demo/pi-ai/model-thinking";
 import {
 	type RequestBody,
 	transformRequestBody,
 } from "@f5-sales-demo/pi-ai/providers/openai-codex/request-transformer";
 import { parseCodexError } from "@f5-sales-demo/pi-ai/providers/openai-codex/response-handler";
+import { mapOptionsForApi } from "@f5-sales-demo/pi-ai/stream";
 import type { Model } from "@f5-sales-demo/pi-ai/types";
 
 const DEFAULT_PROMPT_PREFIX =
@@ -26,6 +27,14 @@ function createCodexModel(id: string): Model<"openai-codex-responses"> {
 }
 
 describe("openai-codex request transformer", () => {
+	it("preserves explicit none and max through generic stream option mapping", () => {
+		const model = createCodexModel("gpt-5.6-sol");
+		const mappedNone = mapOptionsForApi(model, { reasoning: "none" as never }) as unknown as { reasoning?: string };
+		const mappedMax = mapOptionsForApi(model, { reasoning: Effort.Max }) as unknown as { reasoning?: string };
+		expect(mappedNone.reasoning).toBe("none");
+		expect(mappedMax.reasoning).toBe("max");
+	});
+
 	it("removes sampling controls rejected by the Codex backend", async () => {
 		const body: RequestBody = {
 			model: "gpt-5.6-terra",
@@ -90,6 +99,27 @@ describe("openai-codex request transformer", () => {
 });
 
 describe("openai-codex reasoning effort validation", () => {
+	it("sends explicit none, preserves max, and omits inherited effort", async () => {
+		const model = createCodexModel("gpt-5.6-sol");
+		model.thinking = {
+			mode: "effort",
+			defaultLevel: "medium",
+			supportedLevels: [
+				{ effort: "none", description: "No reasoning" },
+				{ effort: "medium", description: "Balanced reasoning" },
+				{ effort: "max", description: "Maximum reasoning" },
+			],
+		};
+
+		const inherited = await transformRequestBody({ model: model.id, input: [] }, model, {});
+		const none = await transformRequestBody({ model: model.id, input: [] }, model, { reasoningEffort: "none" });
+		const max = await transformRequestBody({ model: model.id, input: [] }, model, { reasoningEffort: "max" });
+
+		expect(inherited.reasoning).toBeUndefined();
+		expect(none.reasoning).toEqual({ effort: "none", summary: "detailed" });
+		expect(max.reasoning).toEqual({ effort: "max", summary: "detailed" });
+	});
+
 	it("rejects gpt-5.1 xhigh when metadata does not list it", async () => {
 		const body: RequestBody = { model: "gpt-5.1", input: [] };
 		await expect(

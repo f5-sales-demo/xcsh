@@ -1,12 +1,13 @@
 import { $env, $pickenv } from "@f5-sales-demo/pi-utils";
 import { getCustomApi } from "./api-registry";
-import type { Effort } from "./model-thinking";
+import type { Effort, ReasoningEffort } from "./model-thinking";
 import {
 	clampEffortThroughXHigh,
 	type EffortThroughXHigh,
 	mapEffortToAnthropicAdaptiveEffort,
 	mapEffortToGoogleThinkingLevel,
 	requireSupportedEffort,
+	requireSupportedReasoningEffort,
 } from "./model-thinking";
 import { type BedrockOptions, streamBedrock } from "./providers/amazon-bedrock";
 import { type AnthropicOptions, streamAnthropic } from "./providers/anthropic";
@@ -385,7 +386,16 @@ function resolveOpenAiReasoningEffort<TApi extends Api>(
 	if (!reasoning || !model.reasoning) return undefined;
 	// OpenAI-compat `reasoning_effort` has no `max`; clamp rather than emit a
 	// value the provider would reject.
-	return clampEffortThroughXHigh(requireSupportedEffort(model, reasoning));
+	return clampEffortThroughXHigh(requireSupportedEffort(model, reasoning as Effort));
+}
+
+function resolveCodexReasoningEffort<TApi extends Api>(
+	model: Model<TApi>,
+	options?: SimpleStreamOptions,
+): ReasoningEffort | undefined {
+	const reasoning = options?.reasoning;
+	if (!reasoning || !model.reasoning) return undefined;
+	return requireSupportedReasoningEffort(model, reasoning as ReasoningEffort);
 }
 
 const castApi = <TApi extends Api>(api: OptionsForApi<TApi>): OptionsForApi<Api> => api as OptionsForApi<Api>;
@@ -539,7 +549,7 @@ export function mapOptionsForApi<TApi extends Api>(
 		case "openai-codex-responses":
 			return castApi<"openai-codex-responses">({
 				...base,
-				reasoning: resolveOpenAiReasoningEffort(model, options),
+				reasoning: resolveCodexReasoningEffort(model, options),
 				toolChoice: mapOpenAiToolChoice(options?.toolChoice),
 				serviceTier: options?.serviceTier,
 				preferWebsockets: options?.preferWebsockets,

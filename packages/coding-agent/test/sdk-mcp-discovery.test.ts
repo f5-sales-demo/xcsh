@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { Effort, getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
+import { createThinkingConfig, Effort, getBundledModel, type Model, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { Settings } from "../src/config/settings";
@@ -33,7 +33,7 @@ function createReasoningModel(): Model<"openai-responses"> {
 		provider: "openai",
 		baseUrl: "https://example.invalid",
 		reasoning: true,
-		thinking: { mode: "effort", minLevel: Effort.Medium, maxLevel: Effort.High },
+		thinking: createThinkingConfig([ReasoningEffort.None, Effort.Medium, Effort.High, Effort.XHigh]),
 		input: ["text"],
 		cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 		contextWindow: 8192,
@@ -281,7 +281,7 @@ describe("createAgentSession MCP discovery prompt gating", () => {
 			],
 		});
 		try {
-			expect(session.thinkingLevel).toBe(ThinkingLevel.High);
+			expect(session.thinkingLevel).toBe(ThinkingLevel.XHigh);
 			expect(session.serviceTier).toBe("priority");
 			expect(session.getSelectedMCPToolNames()).toEqual(["mcp_github_create_issue"]);
 			expect(session.getActiveToolNames()).toEqual(

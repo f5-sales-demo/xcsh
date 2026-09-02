@@ -601,11 +601,23 @@ export function resolveModelRoleValue(
 			modelRegistry: options?.modelRegistry,
 		});
 		if (resolved.model) {
+			let thinkingLevel = resolved.thinkingLevel;
+			if (resolved.explicitThinkingLevel) {
+				try {
+					thinkingLevel =
+						resolveThinkingLevelForModel(resolved.model, resolved.thinkingLevel) ?? resolved.thinkingLevel;
+				} catch (error) {
+					return {
+						model: resolved.model,
+						thinkingLevel: undefined,
+						explicitThinkingLevel: true,
+						warning: error instanceof Error ? error.message : String(error),
+					};
+				}
+			}
 			return {
 				model: resolved.model,
-				thinkingLevel: resolved.explicitThinkingLevel
-					? (resolveThinkingLevelForModel(resolved.model, resolved.thinkingLevel) ?? resolved.thinkingLevel)
-					: resolved.thinkingLevel,
+				thinkingLevel,
 				explicitThinkingLevel: resolved.explicitThinkingLevel,
 				warning: resolved.warning,
 			};
@@ -695,18 +707,18 @@ export function resolveModelOverride(
 	modelPatterns: string[],
 	modelRegistry: ModelLookupRegistry,
 	settings?: Settings,
-): { model?: Model<Api>; thinkingLevel?: ThinkingLevel; explicitThinkingLevel: boolean } {
+): { model?: Model<Api>; thinkingLevel?: ThinkingLevel; explicitThinkingLevel: boolean; warning?: string } {
 	if (modelPatterns.length === 0) return { explicitThinkingLevel: false };
 	const availableModels = modelRegistry.getAvailable();
 	const matchPreferences = { usageOrder: settings?.getStorage()?.getModelUsageOrder() };
 	for (const pattern of modelPatterns) {
-		const { model, thinkingLevel, explicitThinkingLevel } = resolveModelRoleValue(pattern, availableModels, {
+		const { model, thinkingLevel, explicitThinkingLevel, warning } = resolveModelRoleValue(pattern, availableModels, {
 			settings,
 			matchPreferences,
 			modelRegistry,
 		});
 		if (model) {
-			return { model, thinkingLevel, explicitThinkingLevel };
+			return { model, thinkingLevel, explicitThinkingLevel, warning };
 		}
 	}
 	return { explicitThinkingLevel: false };

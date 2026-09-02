@@ -1,9 +1,13 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
-import type { Model } from "@f5-sales-demo/pi-ai";
+import { createThinkingConfig, Effort, type Model, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import type { TUI } from "@f5-sales-demo/pi-tui";
 import type { ModelRegistry } from "../src/config/model-registry";
 import { Settings } from "../src/config/settings";
-import { ModelSelectorComponent, presentModelsForDefaultPicker } from "../src/modes/components/model-selector";
+import {
+	getModelSearchText,
+	ModelSelectorComponent,
+	presentModelsForDefaultPicker,
+} from "../src/modes/components/model-selector";
 import { initTheme } from "../src/modes/theme/theme";
 
 const model = (provider: string, id: string) => ({ provider, id, name: id }) as Model;
@@ -11,7 +15,7 @@ const model = (provider: string, id: string) => ({ provider, id, name: id }) as 
 beforeAll(() => initTheme());
 
 describe("default GPT-5.6 model picker presentation", () => {
-	it("collapses raw ChatGPT tiers to one friendly Sol-backed selection", () => {
+	it("keeps every ChatGPT tier as an exact selection", () => {
 		const presented = presentModelsForDefaultPicker([
 			model("openai-codex", "gpt-5.6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
@@ -20,13 +24,12 @@ describe("default GPT-5.6 model picker presentation", () => {
 		]);
 
 		expect(presented.map(item => item.displaySelector)).toEqual([
-			"openai-codex/gpt-5.6",
+			"openai-codex/gpt-5.6-luna",
+			"openai-codex/gpt-5.6-terra",
+			"openai-codex/gpt-5.6-sol",
 			"anthropic/claude-sonnet-4-6",
 		]);
-		expect(presented[0]).toMatchObject({
-			selector: "openai-codex/gpt-5.6-sol",
-			model: { provider: "openai-codex", id: "gpt-5.6-sol" },
-		});
+		expect(presented.some(item => item.selector === "openai-codex/gpt-5.6")).toBe(false);
 	});
 
 	it("preserves explicit --models scoped access to every raw tier", () => {
@@ -42,7 +45,7 @@ describe("default GPT-5.6 model picker presentation", () => {
 		]);
 	});
 
-	it("renders one friendly row in both the normal and canonical tabs", async () => {
+	it("renders all tiers in All Models without a synthetic alias", async () => {
 		const tiers = [
 			model("openai-codex", "gpt-5.6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
@@ -74,15 +77,66 @@ describe("default GPT-5.6 model picker presentation", () => {
 		);
 		await Bun.sleep(0);
 
-		const allTab = Bun.stripANSI(selector.render(180).join("\n"));
-		expect(allTab).toContain("openai-codex/gpt-5.6");
-		expect(allTab).not.toContain("gpt-5.6-luna");
-		expect(allTab).not.toContain("gpt-5.6-terra");
-
 		selector.handleInput("\t");
-		const canonicalTab = Bun.stripANSI(selector.render(180).join("\n"));
-		expect(canonicalTab).toContain("openai-codex/gpt-5.6");
-		expect(canonicalTab).not.toContain("gpt-5.6-luna");
-		expect(canonicalTab).not.toContain("gpt-5.6-terra");
+		const allModels = Bun.stripANSI(selector.render(180).join("\n"));
+		expect(allModels).toContain("ChatGPT Subscription");
+		expect(allModels).toContain("openai-codex/gpt-5.6-luna");
+		expect(allModels).toContain("openai-codex/gpt-5.6-terra");
+		expect(allModels).toContain("openai-codex/gpt-5.6-sol");
+		expect(allModels).not.toContain("openai-codex/gpt-5.6]");
+	});
+
+	it("passes the exact chosen effort through temporary selection", async () => {
+		const tier = {
+			...model("openai-codex", "gpt-5.6-sol"),
+			reasoning: true,
+			thinking: createThinkingConfig([
+				ReasoningEffort.None,
+				Effort.Low,
+				Effort.Medium,
+				Effort.High,
+				Effort.XHigh,
+				Effort.Max,
+			]),
+		};
+		const onSelect = vi.fn();
+		const registry = {
+			refresh: vi.fn(async () => undefined),
+			getError: () => undefined,
+			getAll: () => [tier],
+			getAvailable: () => [tier],
+			getDiscoverableProviders: () => [],
+			getCanonicalModels: () => [],
+			resolveCanonicalModel: () => undefined,
+		} as unknown as ModelRegistry;
+		const selector = new ModelSelectorComponent(
+			{ requestRender: vi.fn() } as unknown as TUI,
+			tier,
+			Settings.isolated(),
+			registry,
+			[],
+			onSelect,
+			() => {},
+			{ temporaryOnly: true },
+		);
+		await Bun.sleep(0);
+		selector.handleInput("\r");
+		selector.handleInput("\x1b[B");
+		selector.handleInput("\x1b[B");
+		selector.handleInput("\r");
+		expect(onSelect).toHaveBeenCalledWith(tier, null, Effort.Low, "openai-codex/gpt-5.6-sol");
+	});
+
+	it("searches presentation metadata as well as the selector", () => {
+		const presented = presentModelsForDefaultPicker([
+			{
+				...model("openai-codex", "gpt-5.6-terra"),
+				publisher: "OpenAI",
+				family: "GPT-5.6",
+				tier: "Terra",
+				name: "GPT-5.6 Terra",
+			},
+		])[0]!;
+		expect(getModelSearchText(presented)).toContain("OpenAI GPT-5.6 Terra GPT-5.6 Terra");
 	});
 });

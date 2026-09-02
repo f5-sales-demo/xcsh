@@ -3,10 +3,10 @@ import * as path from "node:path";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import {
 	getOAuthProviders,
+	getOpenAICodexLoginMethods,
 	loginLiteLLM,
 	type OAuthPrompt,
 	type OAuthProvider,
-	resolveOpenAICodexLoginMethod,
 } from "@f5-sales-demo/pi-ai";
 import type { Component } from "@f5-sales-demo/pi-tui";
 import { Loader, Spacer, Text } from "@f5-sales-demo/pi-tui";
@@ -45,10 +45,11 @@ import type { InteractiveModeContext } from "../../modes/types";
 import { type SessionInfo, SessionManager } from "../../session/session-manager";
 import { FileSessionStorage } from "../../session/session-storage";
 import { isSearchProviderPreference, setPreferredImageProvider, setPreferredSearchProvider } from "../../tools";
+import { copyToClipboard } from "../../utils/clipboard";
 import { setSessionTerminalTitle } from "../../utils/title-generator";
 import { AgentDashboard } from "../components/agent-dashboard";
 import { AssistantMessageComponent } from "../components/assistant-message";
-import { presentAuthLink } from "../components/auth-link-presenter";
+import { presentAuthLink, presentDeviceCode } from "../components/auth-link-presenter";
 import { ExtensionDashboard } from "../components/extensions";
 import { GutterBlock } from "../components/gutter-block";
 import { HistorySearchComponent } from "../components/history-search";
@@ -465,7 +466,7 @@ export class SelectorController {
 					try {
 						if (role === null) {
 							// Temporary: update agent state but don't persist to settings
-							await this.ctx.session.setModelTemporary(model);
+							await this.ctx.session.setModelTemporary(model, thinkingLevel);
 							this.ctx.statusLine.invalidate();
 							this.ctx.updateEditorBorderColor();
 							this.ctx.showStatus(`Temporary model: ${selector ?? model.id}`);
@@ -483,7 +484,7 @@ export class SelectorController {
 							this.ctx.statusLine.invalidate();
 							this.ctx.updateEditorBorderColor();
 							this.ctx.showStatus(`Default model: ${selector ?? model.id}`);
-							// Don't call done() - selector stays open for role assignment
+							done();
 						} else {
 							// Other roles (smol, slow): just update settings, not current model
 							this.ctx.settings.setModelRole(
@@ -1236,15 +1237,28 @@ export class SelectorController {
 			return this.#handleVllmLogin();
 		}
 
+		let openAICodexMethod: "browser" | "device" | undefined;
+		if (providerId === "openai-codex") {
+			openAICodexMethod = await this.#selectOpenAICodexLoginMethod();
+			if (!openAICodexMethod) {
+				this.ctx.showStatus("ChatGPT login cancelled.");
+				return;
+			}
+		}
 		this.ctx.showStatus(`Logging in to ${providerId}…`);
 		const manualInput = this.ctx.oauthManualInput;
 		const useManualInput =
 			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) || providerId === "openai-codex";
-		const shouldOpenBrowser = providerId !== "openai-codex" || resolveOpenAICodexLoginMethod() === "browser";
+		const shouldOpenBrowser = providerId !== "openai-codex" || openAICodexMethod === "browser";
 		const loginCallbacks = {
-			onAuth: (info: { url: string; instructions?: string }) => {
+			method: openAICodexMethod,
+			onAuth: (info: { url: string; instructions?: string; kind?: "browser" | "device"; userCode?: string }) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));
-				presentAuthLink(this.ctx.chatContainer, info.url);
+				if (info.kind === "device" && info.userCode) {
+					presentDeviceCode(this.ctx.chatContainer, info.url, info.userCode);
+				} else {
+					presentAuthLink(this.ctx.chatContainer, info.url);
+				}
 				if (info.instructions) {
 					this.ctx.chatContainer.addChild(new Spacer(1));
 					this.ctx.chatContainer.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
@@ -1273,6 +1287,12 @@ export class SelectorController {
 				codeInput.onSubmit = () => {
 					const code = codeInput.getValue();
 					closeInput();
+					if (prompt.copyText && /^(?:c|copy)$/i.test(code.trim())) {
+						void copyToClipboard(prompt.copyText).catch(() => undefined);
+						this.ctx.showStatus("One-time code copied when terminal clipboard support is available.");
+						resolve("");
+						return;
+					}
 					resolve(code);
 				};
 				codeInput.onEscape = () => {
@@ -1348,6 +1368,31 @@ export class SelectorController {
 				manualInput.clear(`Manual OAuth input cleared for ${providerId}`);
 			}
 		}
+	}
+
+	#selectOpenAICodexLoginMethod(): Promise<"browser" | "device" | undefined> {
+		const ordered = getOpenAICodexLoginMethods();
+		const labels = ordered.map(method =>
+			method === "browser" ? "Browser Login — local PKCE callback" : "Device Code — SSH/headless friendly",
+		);
+		return new Promise(resolve => {
+			this.showSelector(done => {
+				const selector = new HookSelectorComponent(
+					"ChatGPT subscription sign-in method",
+					labels,
+					label => {
+						done();
+						resolve(label.startsWith("Browser") ? "browser" : "device");
+					},
+					() => {
+						done();
+						resolve(undefined);
+					},
+					{ helpText: "ChatGPT subscription OAuth is separate from usage-based OpenAI API-key access." },
+				);
+				return { component: selector, focus: selector };
+			});
+		});
 	}
 
 	/** Corporate Vertex uses isolated standalone OAuth, never consumer Google credentials or ambient ADC. */

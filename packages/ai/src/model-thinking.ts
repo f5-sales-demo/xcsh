@@ -17,6 +17,18 @@ export const enum Effort {
 	Max = "max",
 }
 
+/** Public reasoning preset enum. `none` is distinct from inheriting the provider default. */
+export const ReasoningEffort = {
+	None: "none",
+	Minimal: Effort.Minimal,
+	Low: Effort.Low,
+	Medium: Effort.Medium,
+	High: Effort.High,
+	XHigh: Effort.XHigh,
+	Max: Effort.Max,
+} as const;
+export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+
 /**
  * Anthropic's `output_config.effort` enum, verbatim. Authority is the API's own
  * validation error: `Input should be 'low', 'medium', 'high', 'xhigh' or 'max'`.
@@ -47,6 +59,36 @@ export const THINKING_EFFORTS: readonly Effort[] = [
 	Effort.XHigh,
 	Effort.Max,
 ];
+
+export const REASONING_EFFORTS: readonly ReasoningEffort[] = [ReasoningEffort.None, ...THINKING_EFFORTS];
+
+const EFFORT_DESCRIPTIONS: Readonly<Record<ReasoningEffort, string>> = {
+	[ReasoningEffort.None]: "No reasoning",
+	[ReasoningEffort.Minimal]: "Very brief reasoning",
+	[ReasoningEffort.Low]: "Light reasoning",
+	[ReasoningEffort.Medium]: "Balanced reasoning",
+	[ReasoningEffort.High]: "Deep reasoning",
+	[ReasoningEffort.XHigh]: "Very deep reasoning",
+	[ReasoningEffort.Max]: "Maximum reasoning",
+};
+
+/** Build explicit metadata for custom models and programmatic registries. */
+export function createThinkingConfig(
+	supportedLevels: readonly ReasoningEffort[],
+	mode: ThinkingConfig["mode"] = "effort",
+	defaultLevel: ReasoningEffort = supportedLevels.includes(ReasoningEffort.Medium)
+		? ReasoningEffort.Medium
+		: supportedLevels[0]!,
+): ThinkingConfig {
+	if (supportedLevels.length === 0 || !supportedLevels.includes(defaultLevel)) {
+		throw new Error("Thinking metadata requires supported levels and an exact supported default");
+	}
+	return {
+		mode,
+		defaultLevel,
+		supportedLevels: supportedLevels.map(effort => ({ effort, description: EFFORT_DESCRIPTIONS[effort] })),
+	};
+}
 
 const DEFAULT_REASONING_EFFORTS: readonly Effort[] = [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High];
 const DEFAULT_REASONING_EFFORTS_WITH_XHIGH: readonly Effort[] = [
@@ -226,18 +268,31 @@ export function linkSparkPromotionTargets(models: ApiModel<Api>[]): void {
  * @throws Error when a reasoning-capable model is missing thinking metadata
  */
 export function getSupportedEfforts<TApi extends Api>(model: ApiModel<TApi>): readonly Effort[] {
+	return getSupportedReasoningEfforts(model).filter((effort): effort is Effort => effort !== ReasoningEffort.None);
+}
+
+/** Returns the exact service-advertised list, including an explicit `none` preset. */
+export function getSupportedReasoningEfforts<TApi extends Api>(model: ApiModel<TApi>): readonly ReasoningEffort[] {
 	if (!model.reasoning) {
 		return [];
 	}
 	if (!model.thinking) {
 		throw new Error(`Model ${model.provider}/${model.id} is missing thinking metadata`);
 	}
-	const configuredEfforts = expandEffortRange(model.thinking);
-	const parsedModel = parseKnownModel(model.id);
-	if (parsedModel.family === "unknown") {
-		return configuredEfforts;
+	return model.thinking.supportedLevels.map(level => level.effort);
+}
+
+export function requireSupportedReasoningEffort<TApi extends Api>(
+	model: ApiModel<TApi>,
+	effort: ReasoningEffort,
+): ReasoningEffort {
+	const levels = getSupportedReasoningEfforts(model);
+	if (!levels.includes(effort)) {
+		throw new Error(
+			`Reasoning effort ${effort} is not supported by ${model.provider}/${model.id}. Supported efforts: ${levels.join(", ")}`,
+		);
 	}
-	return intersectEfforts(configuredEfforts, inferSupportedEfforts(parsedModel, model));
+	return effort;
 }
 
 /**
@@ -261,20 +316,9 @@ export function clampThinkingLevelForModel<TApi extends Api>(
 		return requested;
 	}
 
-	const requestedIndex = THINKING_EFFORTS.indexOf(requested);
-	if (requestedIndex === -1) {
-		return undefined;
-	}
-
-	let clamped: Effort | undefined;
-	for (const effort of levels) {
-		if (THINKING_EFFORTS.indexOf(effort) > requestedIndex) {
-			break;
-		}
-		clamped = effort;
-	}
-
-	return clamped ?? levels[0];
+	throw new Error(
+		`Thinking effort ${requested} is not supported by ${model.provider}/${model.id}. Supported efforts: ${levels.join(", ")}`,
+	);
 }
 
 export function requireSupportedEffort<TApi extends Api>(model: ApiModel<TApi>, effort: Effort): Effort {
@@ -392,15 +436,13 @@ function applyOpenAICatalogPolicy(model: ApiModel<Api>, parsedModel: OpenAIModel
 function inferModelThinking<TApi extends Api>(model: ApiModel<TApi>): ThinkingConfig {
 	const parsedModel = parseKnownModel(model.id);
 	const efforts = inferSupportedEfforts(parsedModel, model);
-	const minLevel = efforts[0];
-	const maxLevel = efforts.at(-1);
-	if (!minLevel || !maxLevel) {
-		throw new Error(`Model ${model.provider}/${model.id} resolved to an empty thinking range`);
+	if (efforts.length === 0) {
+		throw new Error(`Model ${model.provider}/${model.id} resolved to no thinking presets`);
 	}
 	const thinking: ThinkingConfig = {
 		mode: inferThinkingControlMode(model, parsedModel),
-		minLevel,
-		maxLevel,
+		supportedLevels: efforts.map(effort => ({ effort, description: EFFORT_DESCRIPTIONS[effort] })),
+		defaultLevel: efforts.includes(ReasoningEffort.Medium) ? ReasoningEffort.Medium : efforts[0]!,
 	};
 	if (
 		model.provider === "google-vertex" &&
@@ -408,18 +450,22 @@ function inferModelThinking<TApi extends Api>(model: ApiModel<TApi>): ThinkingCo
 		!model.id.toLowerCase().includes("lite")
 	) {
 		thinking.defaultLevel = Effort.High;
-		if (parsedModel.version.major === 3) {
-			thinking.canDisable = false;
-		}
 	}
 	return thinking;
 }
 
 function normalizeThinkingConfig(thinking: ThinkingConfig | undefined): ThinkingConfig | undefined {
-	if (!thinking || expandEffortRange(thinking).length === 0) {
+	if (!thinking || !Array.isArray(thinking.supportedLevels) || thinking.supportedLevels.length === 0) {
 		return undefined;
 	}
-	return thinking;
+	const supportedLevels = thinking.supportedLevels.filter(
+		(level, index, levels) =>
+			REASONING_EFFORTS.includes(level.effort) && levels.findIndex(value => value.effort === level.effort) === index,
+	);
+	if (supportedLevels.length === 0 || !supportedLevels.some(level => level.effort === thinking.defaultLevel)) {
+		return undefined;
+	}
+	return { ...thinking, supportedLevels };
 }
 
 function thinkingsEqual(left: ThinkingConfig | undefined, right: ThinkingConfig | undefined): boolean {
@@ -427,30 +473,23 @@ function thinkingsEqual(left: ThinkingConfig | undefined, right: ThinkingConfig 
 	if (!left || !right) return false;
 	return (
 		left.mode === right.mode &&
-		left.minLevel === right.minLevel &&
-		left.maxLevel === right.maxLevel &&
 		left.defaultLevel === right.defaultLevel &&
-		left.canDisable === right.canDisable
+		left.supportedLevels.length === right.supportedLevels.length &&
+		left.supportedLevels.every(
+			(level, index) =>
+				level.effort === right.supportedLevels[index]?.effort &&
+				level.description === right.supportedLevels[index]?.description,
+		)
 	);
 }
 
-function expandEffortRange(thinking: ThinkingConfig): readonly Effort[] {
-	const minIndex = THINKING_EFFORTS.indexOf(thinking.minLevel);
-	const maxIndex = THINKING_EFFORTS.indexOf(thinking.maxLevel);
-	if (minIndex === -1 || maxIndex === -1 || minIndex > maxIndex) {
-		return [];
-	}
-	return THINKING_EFFORTS.slice(minIndex, maxIndex + 1);
-}
-
-function intersectEfforts(left: readonly Effort[], right: readonly Effort[]): readonly Effort[] {
-	return left.filter(effort => right.includes(effort));
-}
-
-function inferSupportedEfforts<TApi extends Api>(parsedModel: ParsedModel, model: ApiModel<TApi>): readonly Effort[] {
+function inferSupportedEfforts<TApi extends Api>(
+	parsedModel: ParsedModel,
+	model: ApiModel<TApi>,
+): readonly ReasoningEffort[] {
 	switch (parsedModel.family) {
 		case "openai":
-			return inferOpenAISupportedEfforts(parsedModel);
+			return inferOpenAISupportedEfforts(parsedModel, model);
 		case "gemini":
 			return inferGeminiSupportedEfforts(parsedModel);
 		case "anthropic":
@@ -460,7 +499,13 @@ function inferSupportedEfforts<TApi extends Api>(parsedModel: ParsedModel, model
 	}
 }
 
-function inferOpenAISupportedEfforts(model: OpenAIModel): readonly Effort[] {
+function inferOpenAISupportedEfforts<TApi extends Api>(
+	model: OpenAIModel,
+	catalogModel: ApiModel<TApi>,
+): readonly ReasoningEffort[] {
+	if (semverGte(model.version, "5.6") && catalogModel.api === "openai-codex-responses") {
+		return [ReasoningEffort.None, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max];
+	}
 	if (model.variant === "codex-mini" && semverEqual(model.version, "5.1")) {
 		return GPT_5_1_CODEX_MINI_EFFORTS;
 	}

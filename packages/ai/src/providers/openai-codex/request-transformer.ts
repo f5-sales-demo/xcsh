@@ -1,9 +1,9 @@
-import type { Effort } from "../../model-thinking";
-import { clampEffortThroughXHigh, requireSupportedEffort } from "../../model-thinking";
+import type { ReasoningEffort } from "../../model-thinking";
+import { requireSupportedReasoningEffort } from "../../model-thinking";
 import type { Api, Model } from "../../types";
 
 export interface ReasoningConfig {
-	effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+	effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 	summary: "auto" | "concise" | "detailed" | null;
 }
 
@@ -53,12 +53,7 @@ export interface RequestBody {
 
 function getReasoningConfig(model: Model<Api>, options: CodexRequestOptions): ReasoningConfig {
 	return {
-		// Codex's reasoning effort has no `max`; clamp so the ladder's top level
-		// degrades to `xhigh` instead of emitting a value Codex would reject.
-		effort:
-			options.reasoningEffort === "none"
-				? "none"
-				: clampEffortThroughXHigh(requireSupportedEffort(model, options.reasoningEffort as Effort)),
+		effort: requireSupportedReasoningEffort(model, options.reasoningEffort as ReasoningEffort),
 		summary: options.reasoningSummary ?? "detailed",
 	};
 }

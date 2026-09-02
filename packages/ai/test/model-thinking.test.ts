@@ -2,15 +2,17 @@ import { describe, expect, it } from "bun:test";
 import {
 	applyGeneratedModelPolicies,
 	clampThinkingLevelForModel,
+	createThinkingConfig,
 	Effort,
 	enrichModelThinking,
 	getSupportedEfforts,
 	linkSparkPromotionTargets,
 	mapEffortToAnthropicAdaptiveEffort,
 	mapEffortToGoogleThinkingLevel,
+	type ReasoningEffort,
 	requireSupportedEffort,
 } from "@f5-sales-demo/pi-ai/model-thinking";
-import type { Api, Model, Provider } from "@f5-sales-demo/pi-ai/types";
+import type { Api, Model, Provider, ThinkingConfig } from "@f5-sales-demo/pi-ai/types";
 import { getBundledModel } from "../src/models";
 import MODELS from "../src/models.json" with { type: "json" };
 
@@ -34,6 +36,17 @@ function createModel<TApi extends Api>(overrides: {
 	});
 }
 
+function expectThinking(
+	model: Model | undefined,
+	efforts: readonly ReasoningEffort[],
+	mode: ThinkingConfig["mode"],
+	defaultLevel: ReasoningEffort = "medium",
+) {
+	expect(model?.thinking?.mode).toBe(mode);
+	expect(model?.thinking?.defaultLevel).toBe(defaultLevel);
+	expect(model?.thinking?.supportedLevels.map(level => level.effort)).toEqual([...efforts]);
+}
+
 describe("model thinking metadata", () => {
 	it("bundles GPT-5.6 Sol for LiteLLM with the live-verified effort range", () => {
 		const model = getBundledModel("litellm", "gpt-5.6-sol");
@@ -46,11 +59,7 @@ describe("model thinking metadata", () => {
 			input: ["text", "image"],
 			contextWindow: 1050000,
 			maxTokens: 128000,
-			thinking: {
-				mode: "effort",
-				minLevel: Effort.Low,
-				maxLevel: Effort.XHigh,
-			},
+			thinking: createThinkingConfig([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]),
 		});
 		expect(getSupportedEfforts(model)).toEqual([Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]);
 	});
@@ -76,11 +85,7 @@ describe("model thinking metadata", () => {
 			provider: "openai-codex",
 		});
 
-		expect(model.thinking).toEqual({
-			mode: "effort",
-			minLevel: Effort.Medium,
-			maxLevel: Effort.High,
-		});
+		expectThinking(model, [Effort.Medium, Effort.High], "effort", Effort.Medium);
 		expect(() => requireSupportedEffort(model, Effort.Low)).toThrow(/Supported efforts: medium, high/);
 		expect(() => requireSupportedEffort(model, Effort.XHigh)).toThrow(/Supported efforts: medium, high/);
 	});
@@ -96,15 +101,13 @@ describe("model thinking metadata", () => {
 			cost: { input: 0.75, output: 3.75, cacheRead: 0.075, cacheWrite: 0 },
 			contextWindow: 1_048_576,
 			maxTokens: 65_536,
-			thinking: {
-				mode: "google-level",
-				minLevel: Effort.Low,
-				maxLevel: Effort.High,
-				defaultLevel: Effort.High,
-				canDisable: false,
-			},
+			thinking: createThinkingConfig(
+				[Effort.Minimal, Effort.Low, Effort.Medium, Effort.High],
+				"google-level",
+				Effort.High,
+			),
 		});
-		expect(getSupportedEfforts(model)).toEqual([Effort.Low, Effort.Medium, Effort.High]);
+		expect(getSupportedEfforts(model)).toEqual([Effort.Minimal, Effort.Low, Effort.Medium, Effort.High]);
 		expect(getBundledModel("google-vertex", "gemini-3.6-flash")).toBeUndefined();
 	});
 
@@ -115,11 +118,7 @@ describe("model thinking metadata", () => {
 			provider: "openai-codex",
 		});
 
-		expect(model.thinking).toEqual({
-			mode: "effort",
-			minLevel: Effort.Low,
-			maxLevel: Effort.XHigh,
-		});
+		expectThinking(model, [Effort.Low, Effort.Medium, Effort.High, Effort.XHigh], "effort");
 		expect(requireSupportedEffort(model, Effort.XHigh)).toBe(Effort.XHigh);
 	});
 
@@ -130,11 +129,7 @@ describe("model thinking metadata", () => {
 			provider: "google",
 		});
 
-		expect(model.thinking).toEqual({
-			mode: "google-level",
-			minLevel: Effort.Low,
-			maxLevel: Effort.High,
-		});
+		expectThinking(model, [Effort.Low, Effort.Medium, Effort.High], "google-level");
 		expect(mapEffortToGoogleThinkingLevel(model, Effort.Low)).toBe("LOW");
 		expect(mapEffortToGoogleThinkingLevel(model, Effort.Medium)).toBe("MEDIUM");
 		expect(mapEffortToGoogleThinkingLevel(model, Effort.High)).toBe("HIGH");
@@ -144,10 +139,10 @@ describe("model thinking metadata", () => {
 		for (const id of ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3-flash-preview", "gemini-3-pro-preview"]) {
 			expect(getBundledModel("google-vertex", id).thinking?.defaultLevel).toBe(Effort.High);
 		}
-		expect(getBundledModel("google-vertex", "gemini-3-flash-preview").thinking?.canDisable).toBe(false);
-		expect(getBundledModel("google-vertex", "gemini-3-pro-preview").thinking?.canDisable).toBe(false);
-		expect(getBundledModel("google-vertex", "gemini-2.5-flash-lite").thinking?.defaultLevel).toBeUndefined();
-		expect(getBundledModel("google", "gemini-3-flash-preview").thinking?.defaultLevel).toBeUndefined();
+		expect(getSupportedEfforts(getBundledModel("google-vertex", "gemini-3-flash-preview"))).not.toContain("none");
+		expect(getSupportedEfforts(getBundledModel("google-vertex", "gemini-3-pro-preview"))).not.toContain("none");
+		expect(getBundledModel("google-vertex", "gemini-2.5-flash-lite").thinking?.defaultLevel).toBe(Effort.Medium);
+		expect(getBundledModel("google", "gemini-3-flash-preview").thinking?.defaultLevel).toBe(Effort.Medium);
 	});
 
 	it("encodes anthropic transport mode in metadata", () => {
@@ -170,20 +165,8 @@ describe("model thinking metadata", () => {
 		expect(opus45.thinking?.mode).toBe("anthropic-budget-effort");
 		expect(opus46.thinking?.mode).toBe("anthropic-adaptive");
 		expect(sonnet46.thinking?.mode).toBe("anthropic-adaptive");
-		expect(opus46.thinking).toEqual({
-			mode: "anthropic-adaptive",
-			minLevel: Effort.Minimal,
-			// `high`, not `max` — opus 4.6 on the Messages API rejects `xhigh`, and its
-			// fallback chain (opus-4-5) rejects `max` too, so the ceiling is `high`.
-			// Measured 2026-07-30; this previously claimed `max` on an unprobed
-			// assumption and produced 400s on resumed sessions (#2630).
-			maxLevel: Effort.High,
-		});
-		expect(sonnet46.thinking).toEqual({
-			mode: "anthropic-adaptive",
-			minLevel: Effort.Minimal,
-			maxLevel: Effort.High,
-		});
+		expectThinking(opus46, [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High], "anthropic-adaptive");
+		expectThinking(sonnet46, [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High], "anthropic-adaptive");
 		// opus 4.6 now refuses xhigh/max for the same reason sonnet 4.6 always has:
 		// the Messages API rejects `xhigh` on both, and opus 4.6's fallback chain
 		// rejects `max`. Asserting the old `"xhigh"`/`"max"` here is what let #2630
@@ -232,11 +215,14 @@ describe("bundled GPT-5.4 model metadata", () => {
 		const openAiCodexNano = MODELS["openai-codex"]["gpt-5.4-nano"];
 		const copilotMini = MODELS["github-copilot"]["gpt-5.4-mini"];
 
-		expect(openAiMini?.thinking).toEqual({ mode: "effort", minLevel: "low", maxLevel: "xhigh" });
-		expect(openAiNano?.thinking).toEqual({ mode: "effort", minLevel: "low", maxLevel: "xhigh" });
-		expect(openAiCodexMini?.thinking).toEqual({ mode: "effort", minLevel: "low", maxLevel: "xhigh" });
-		expect(openAiCodexNano?.thinking).toEqual({ mode: "effort", minLevel: "low", maxLevel: "xhigh" });
-		expect(copilotMini?.thinking).toEqual({ mode: "effort", minLevel: "low", maxLevel: "xhigh" });
+		for (const candidate of [openAiMini, openAiNano, openAiCodexMini, openAiCodexNano, copilotMini]) {
+			expect(candidate?.thinking?.supportedLevels.map(level => level.effort)).toEqual([
+				"low",
+				"medium",
+				"high",
+				"xhigh",
+			]);
+		}
 		expect(openAiCodexMini?.api).toBe("openai-codex-responses");
 		expect(openAiCodexNano?.api).toBe("openai-codex-responses");
 		expect(openAiCodexMini?.contextWindow).toBe(272000);
@@ -280,11 +266,7 @@ describe("generated model policies", () => {
 				provider: "anthropic",
 				baseUrl: "https://example.com",
 				reasoning: true,
-				thinking: {
-					mode: "budget",
-					minLevel: Effort.High,
-					maxLevel: Effort.High,
-				},
+				thinking: createThinkingConfig([Effort.High], "budget", Effort.High),
 				input: ["text"],
 				cost: { input: 0, output: 0, cacheRead: 1.5, cacheWrite: 18.75 },
 				contextWindow: 1000000,
@@ -331,19 +313,18 @@ describe("generated model policies", () => {
 
 		applyGeneratedModelPolicies(models);
 
-		expect(models[0]?.thinking).toEqual({
-			mode: "anthropic-budget-effort",
-			minLevel: Effort.Minimal,
-			maxLevel: Effort.XHigh,
-		});
+		expectThinking(
+			models[0],
+			[Effort.Minimal, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh],
+			"anthropic-budget-effort",
+		);
 		expect(models[0]?.cost.cacheRead).toBe(0.5);
 		expect(models[0]?.cost.cacheWrite).toBe(6.25);
-		expect(models[1]?.thinking).toEqual({
-			mode: "anthropic-adaptive",
-			minLevel: Effort.Minimal,
-			// Bedrock keeps the xhigh ceiling — `max` is claimed only where verified.
-			maxLevel: Effort.XHigh,
-		});
+		expectThinking(
+			models[1],
+			[Effort.Minimal, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh],
+			"anthropic-adaptive",
+		);
 		expect(models[1]?.cost.cacheRead).toBe(0.5);
 		expect(models[1]?.cost.cacheWrite).toBe(6.25);
 		expect(models[1]?.contextWindow).toBe(1000000);
@@ -392,7 +373,7 @@ describe("generated model policies", () => {
 });
 
 describe("model thinking runtime helpers", () => {
-	it("clamps from explicit metadata instead of inferring from model id", () => {
+	it("rejects unsupported explicit metadata instead of inferring or clamping", () => {
 		const model: Model<"openai-codex-responses"> = {
 			id: "custom-reasoner",
 			name: "Custom Reasoner",
@@ -400,19 +381,15 @@ describe("model thinking runtime helpers", () => {
 			provider: "custom",
 			baseUrl: "https://example.com",
 			reasoning: true,
-			thinking: {
-				mode: "effort",
-				minLevel: Effort.Medium,
-				maxLevel: Effort.High,
-			},
+			thinking: createThinkingConfig([Effort.Medium, Effort.High]),
 			input: ["text"],
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 			contextWindow: 200000,
 			maxTokens: 32000,
 		};
 
-		expect(clampThinkingLevelForModel(model, Effort.Minimal)).toBe(Effort.Medium);
-		expect(clampThinkingLevelForModel(model, Effort.XHigh)).toBe(Effort.High);
+		expect(() => clampThinkingLevelForModel(model, Effort.Minimal)).toThrow(/not supported/);
+		expect(() => clampThinkingLevelForModel(model, Effort.XHigh)).toThrow(/not supported/);
 		expect(clampThinkingLevelForModel(model, Effort.High)).toBe(Effort.High);
 	});
 
@@ -435,7 +412,7 @@ describe("model thinking runtime helpers", () => {
 		});
 
 		// openai-completions should support xhigh by default
-		expect(model.thinking?.maxLevel).toBe(Effort.XHigh);
+		expect(getSupportedEfforts(model).at(-1)).toBe(Effort.XHigh);
 		expect(requireSupportedEffort(model, Effort.XHigh)).toBe(Effort.XHigh);
 	});
 
@@ -456,11 +433,7 @@ describe("model thinking runtime helpers", () => {
 			maxTokens: 32000,
 		} satisfies Model<"openai-completions">);
 
-		expect(model.thinking).toEqual({
-			mode: "effort",
-			minLevel: Effort.Minimal,
-			maxLevel: Effort.High,
-		});
+		expectThinking(model, [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High], "effort");
 		expect(requireSupportedEffort(model, Effort.High)).toBe(Effort.High);
 		expect(() => requireSupportedEffort(model, Effort.XHigh)).toThrow(
 			/Supported efforts: minimal, low, medium, high/,
@@ -484,11 +457,7 @@ describe("model thinking runtime helpers", () => {
 			maxTokens: 32000,
 		} satisfies Model<"openai-completions">);
 
-		expect(model.thinking).toEqual({
-			mode: "effort",
-			minLevel: Effort.Minimal,
-			maxLevel: Effort.High,
-		});
+		expectThinking(model, [Effort.Minimal, Effort.Low, Effort.Medium, Effort.High], "effort");
 		expect(requireSupportedEffort(model, Effort.High)).toBe(Effort.High);
 		expect(() => requireSupportedEffort(model, Effort.XHigh)).toThrow(
 			/Supported efforts: minimal, low, medium, high/,
@@ -509,8 +478,8 @@ describe("model thinking runtime helpers", () => {
 		});
 
 		// Both should support xhigh
-		expect(responsesModel.thinking?.maxLevel).toBe(Effort.XHigh);
-		expect(codexModel.thinking?.maxLevel).toBe(Effort.XHigh);
+		expect(getSupportedEfforts(responsesModel).at(-1)).toBe(Effort.XHigh);
+		expect(getSupportedEfforts(codexModel).at(-1)).toBe(Effort.XHigh);
 		expect(requireSupportedEffort(responsesModel, Effort.XHigh)).toBe(Effort.XHigh);
 		expect(requireSupportedEffort(codexModel, Effort.XHigh)).toBe(Effort.XHigh);
 	});
@@ -540,11 +509,7 @@ describe("model thinking runtime helpers", () => {
 			provider: "custom",
 			baseUrl: "https://example.com",
 			reasoning: false,
-			thinking: {
-				mode: "effort",
-				minLevel: Effort.High,
-				maxLevel: Effort.Low,
-			},
+			thinking: { mode: "effort", supportedLevels: [], defaultLevel: Effort.High },
 			input: ["text"],
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 			contextWindow: 200000,

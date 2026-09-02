@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { REASONING_EFFORTS, type ReasoningEffort } from "../../model-thinking";
 import { CODEX_BASE_URL, OPENAI_HEADER_VALUES, OPENAI_HEADERS } from "../../providers/openai-codex/constants";
-import type { Model } from "../../types";
+import type { Model, ThinkingConfig } from "../../types";
 import { isRecord } from "../../utils";
 
 const DEFAULT_MODEL_LIST_PATHS = ["/codex/models", "/models"] as const;
@@ -12,6 +13,7 @@ const NPM_CODEX_LATEST_URL = "https://registry.npmjs.org/@openai%2Fcodex/latest"
 const codexReasoningPresetSchema = z
 	.object({
 		effort: z.unknown().optional(),
+		description: z.unknown().optional(),
 	})
 	.loose();
 
@@ -20,6 +22,11 @@ const codexModelEntrySchema = z
 		slug: z.unknown().optional(),
 		id: z.unknown().optional(),
 		display_name: z.unknown().optional(),
+		description: z.unknown().optional(),
+		visibility: z.unknown().optional(),
+		publisher: z.unknown().optional(),
+		family: z.unknown().optional(),
+		tier: z.unknown().optional(),
 		context_window: z.unknown().optional(),
 		default_reasoning_level: z.unknown().optional(),
 		supported_reasoning_levels: z.unknown().optional(),
@@ -260,10 +267,13 @@ function normalizeCodexModelEntry(entry: unknown, baseUrl: string): NormalizedCo
 	const name = toNonEmptyString(payload.display_name) ?? slug;
 	const contextWindow = toPositiveInt(payload.context_window) ?? DEFAULT_CONTEXT_WINDOW;
 	const maxTokens = Math.min(DEFAULT_MAX_TOKENS, contextWindow);
-	const reasoning = supportsReasoning(payload.default_reasoning_level, payload.supported_reasoning_levels);
+	const thinking = normalizeReasoningConfig(payload.default_reasoning_level, payload.supported_reasoning_levels);
+	const reasoning = Boolean(thinking?.supportedLevels.some(level => level.effort !== "none"));
 	const input = normalizeInputModalities(payload.input_modalities);
 	const preferWebsockets = toBoolean(payload.prefer_websockets) === true;
 	const priority = toFiniteNumber(payload.priority) ?? Number.MAX_SAFE_INTEGER;
+	const visibility = normalizeVisibility(payload.visibility);
+	const presentation = inferPresentationMetadata(slug, name, payload);
 
 	return {
 		priority,
@@ -278,34 +288,52 @@ function normalizeCodexModelEntry(entry: unknown, baseUrl: string): NormalizedCo
 			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
 			contextWindow,
 			maxTokens,
+			...(toNonEmptyString(payload.description) ? { description: toNonEmptyString(payload.description)! } : {}),
+			...(visibility ? { visibility } : {}),
+			...presentation,
+			...(thinking ? { thinking } : {}),
 			...(preferWebsockets ? { preferWebsockets: true } : {}),
 			...(priority !== Number.MAX_SAFE_INTEGER ? { priority } : {}),
 		},
 	};
 }
 
-function supportsReasoning(defaultReasoningLevel: unknown, supportedReasoningLevels: unknown): boolean {
-	const defaultLevel = toNonEmptyString(defaultReasoningLevel)?.toLowerCase();
-	if (defaultLevel && defaultLevel !== "none") {
-		return true;
-	}
+function normalizeReasoningConfig(
+	defaultReasoningLevel: unknown,
+	supportedReasoningLevels: unknown,
+): ThinkingConfig | undefined {
+	if (!Array.isArray(supportedReasoningLevels)) return undefined;
+	const supportedLevels = supportedReasoningLevels.flatMap(level => {
+		const parsed = codexReasoningPresetSchema.safeParse(level);
+		if (!parsed.success) return [];
+		const effort = toNonEmptyString(parsed.data.effort)?.toLowerCase() as ReasoningEffort | undefined;
+		if (!effort || !REASONING_EFFORTS.includes(effort)) return [];
+		return [{ effort, description: toNonEmptyString(parsed.data.description) ?? effort }];
+	});
+	const defaultLevel = toNonEmptyString(defaultReasoningLevel)?.toLowerCase() as ReasoningEffort | undefined;
+	if (!defaultLevel || !supportedLevels.some(level => level.effort === defaultLevel)) return undefined;
+	return { mode: "effort", defaultLevel, supportedLevels };
+}
 
-	if (!Array.isArray(supportedReasoningLevels)) {
-		return false;
-	}
+function normalizeVisibility(value: unknown): Model["visibility"] {
+	const visibility = toNonEmptyString(value)?.toLowerCase();
+	return visibility === "list" || visibility === "hide" || visibility === "none" ? visibility : undefined;
+}
 
-	for (const level of supportedReasoningLevels) {
-		const parsedLevel = codexReasoningPresetSchema.safeParse(level);
-		if (!parsedLevel.success) {
-			continue;
-		}
-		const effort = toNonEmptyString(parsedLevel.data.effort)?.toLowerCase();
-		if (effort && effort !== "none") {
-			return true;
-		}
-	}
-
-	return false;
+function inferPresentationMetadata(
+	slug: string,
+	_name: string,
+	payload: CodexModelEntry,
+): Pick<Model, "publisher" | "family" | "tier"> {
+	const suppliedPublisher = toNonEmptyString(payload.publisher);
+	const suppliedFamily = toNonEmptyString(payload.family);
+	const suppliedTier = toNonEmptyString(payload.tier);
+	const match = /^gpt-(\d+(?:\.\d+)?)-(sol|terra|luna)$/i.exec(slug);
+	return {
+		publisher: suppliedPublisher ?? (slug.toLowerCase().startsWith("gpt-") ? "OpenAI" : undefined),
+		family: suppliedFamily ?? (match ? `GPT-${match[1]}` : undefined),
+		tier: suppliedTier ?? (match?.[2] ? match[2][0]!.toUpperCase() + match[2].slice(1).toLowerCase() : undefined),
+	};
 }
 
 function normalizeInputModalities(inputModalities: unknown): ("text" | "image")[] {

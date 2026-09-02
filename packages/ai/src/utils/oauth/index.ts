@@ -104,6 +104,7 @@ export type {
 } from "./openai-codex";
 // OpenAI Codex (ChatGPT OAuth)
 export {
+	getOpenAICodexLoginMethods,
 	loginOpenAICodex,
 	loginOpenAICodexDevice,
 	refreshOpenAICodexToken,

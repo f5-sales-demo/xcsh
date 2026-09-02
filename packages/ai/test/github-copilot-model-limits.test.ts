@@ -201,11 +201,13 @@ describe("github copilot model limits mapping", () => {
 		expect(model?.contextWindow).toBe(400_000);
 		expect(model?.maxTokens).toBe(128_000);
 		expect(model?.premiumMultiplier).toBe(0.33);
-		expect(model?.thinking).toEqual({
-			mode: "effort",
-			minLevel: Effort.Low,
-			maxLevel: Effort.XHigh,
-		});
+		expect(model?.thinking?.mode).toBe("effort");
+		expect(model?.thinking?.supportedLevels.map(level => level.effort)).toEqual([
+			Effort.Low,
+			Effort.Medium,
+			Effort.High,
+			Effort.XHigh,
+		]);
 	});
 
 	it("does not use max_context_window_tokens for contextWindow", async () => {

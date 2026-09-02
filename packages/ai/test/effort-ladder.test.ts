@@ -66,7 +66,7 @@ describe("catalog effort ranges", () => {
 	for (const id of ["claude-opus-5", "claude-sonnet-5"]) {
 		it(`${id} reaches max and can express xhigh`, () => {
 			const model = anthropic(id);
-			expect(model.thinking?.maxLevel).toBe(Effort.Max);
+			expect(getSupportedEfforts(model).at(-1)).toBe(Effort.Max);
 			// The whole point of #2342: xhigh must be reachable, not skipped.
 			expect(mapEffortToAnthropicAdaptiveEffort(model, Effort.XHigh)).toBe("xhigh");
 			expect(mapEffortToAnthropicAdaptiveEffort(model, Effort.Max)).toBe("max");
@@ -74,7 +74,7 @@ describe("catalog effort ranges", () => {
 	}
 
 	it("keeps sonnet-4-6 below xhigh (it does not support that level) — #2341", () => {
-		expect(anthropic("claude-sonnet-4-6").thinking?.maxLevel).toBe(Effort.High);
+		expect(getSupportedEfforts(anthropic("claude-sonnet-4-6")).at(-1)).toBe(Effort.High);
 	});
 });
 
@@ -109,7 +109,7 @@ describe("effort ceilings are capped to the model group AND its fallbacks — #2
 		it(`${id} never emits xhigh on the wire`, () => {
 			const model = anthropic(id);
 			expect(getSupportedEfforts(model)).not.toContain(Effort.XHigh);
-			for (const effort of THINKING_EFFORTS) {
+			for (const effort of getSupportedEfforts(model)) {
 				const wire = mapEffortToAnthropicAdaptiveEffort(
 					model,
 					clampThinkingLevelForModel(model, effort) ?? Effort.Low,
@@ -118,11 +118,8 @@ describe("effort ceilings are capped to the model group AND its fallbacks — #2
 			}
 		});
 
-		it(`${id} degrades a requested xhigh to high instead of throwing`, () => {
-			// This is the path the reported failure took: the session persisted an
-			// effort, and `requireSupportedEffort` throws while the resolver's clamp
-			// (coding-agent thinking.ts / model-resolver.ts) is what must absorb it.
-			expect(clampThinkingLevelForModel(anthropic(id), Effort.XHigh)).toBe(Effort.High);
+		it(`${id} rejects a saved xhigh instead of silently clamping`, () => {
+			expect(() => clampThinkingLevelForModel(anthropic(id), Effort.XHigh)).toThrow(/not supported/);
 		});
 	}
 
