@@ -650,4 +650,75 @@ describe("MarketplaceManager", () => {
 			}
 		});
 	});
+
+	it("refreshMarketplaces re-fetches a marketplace even when updatedAt is fresh", async () => {
+		const sourceDir = path.join(ctx.tmpDir, "fresh-source");
+		fs.cpSync(FIXTURE_DIR, sourceDir, { recursive: true });
+		await ctx.manager.addMarketplace(sourceDir);
+
+		const sourceCatalogPath = path.join(sourceDir, ".xcsh-plugin", "marketplace.json");
+		const sourceCatalog = JSON.parse(fs.readFileSync(sourceCatalogPath, "utf8")) as {
+			plugins: Array<{ version?: string }>;
+		};
+		sourceCatalog.plugins[0].version = "2.0.0";
+		fs.writeFileSync(sourceCatalogPath, `${JSON.stringify(sourceCatalog, null, 2)}\n`);
+
+		const result = await ctx.manager.refreshMarketplaces();
+
+		expect(result).toEqual({ successful: ["test-marketplace"], failed: [] });
+		const plugins = await ctx.manager.listAvailablePlugins("test-marketplace");
+		expect(plugins[0].version).toBe("2.0.0");
+	});
+
+	it("refreshMarketplaces updates successful sources independently and reports failures", async () => {
+		const healthySource = path.join(ctx.tmpDir, "healthy-source");
+		const failingSource = path.join(ctx.tmpDir, "failing-source");
+		fs.cpSync(FIXTURE_DIR, healthySource, { recursive: true });
+		fs.cpSync(FIXTURE_DIR, failingSource, { recursive: true });
+
+		const failingCatalogPath = path.join(failingSource, ".xcsh-plugin", "marketplace.json");
+		const failingCatalog = JSON.parse(fs.readFileSync(failingCatalogPath, "utf8")) as { name: string };
+		failingCatalog.name = "failing-marketplace";
+		fs.writeFileSync(failingCatalogPath, `${JSON.stringify(failingCatalog, null, 2)}\n`);
+
+		await ctx.manager.addMarketplace(healthySource);
+		await ctx.manager.addMarketplace(failingSource);
+
+		const healthyCatalogPath = path.join(healthySource, ".xcsh-plugin", "marketplace.json");
+		const healthyCatalog = JSON.parse(fs.readFileSync(healthyCatalogPath, "utf8")) as {
+			plugins: Array<{ version?: string }>;
+		};
+		healthyCatalog.plugins[0].version = "2.0.0";
+		fs.writeFileSync(healthyCatalogPath, `${JSON.stringify(healthyCatalog, null, 2)}\n`);
+		fs.rmSync(failingSource, { recursive: true, force: true });
+
+		const result = await ctx.manager.refreshMarketplaces();
+
+		expect(result).toEqual({ successful: ["test-marketplace"], failed: ["failing-marketplace"] });
+		expect((await ctx.manager.listAvailablePlugins("test-marketplace"))[0].version).toBe("2.0.0");
+		expect((await ctx.manager.listAvailablePlugins("failing-marketplace"))[0].version).toBe("1.0.0");
+	});
+
+	it("refreshMarketplaces can refresh only the selected marketplace", async () => {
+		await ctx.manager.addMarketplace(FIXTURE_DIR);
+
+		const result = await ctx.manager.refreshMarketplaces(["test-marketplace"]);
+
+		expect(result).toEqual({ successful: ["test-marketplace"], failed: [] });
+	});
+
+	it("reports a failed refresh and a clear error when no cached catalog remains", async () => {
+		const sourceDir = path.join(ctx.tmpDir, "unavailable-source");
+		fs.cpSync(FIXTURE_DIR, sourceDir, { recursive: true });
+		const entry = await ctx.manager.addMarketplace(sourceDir);
+		fs.rmSync(sourceDir, { recursive: true, force: true });
+		fs.rmSync(entry.catalogPath, { force: true });
+
+		const result = await ctx.manager.refreshMarketplaces();
+
+		expect(result).toEqual({ successful: [], failed: ["test-marketplace"] });
+		await expect(ctx.manager.listAvailablePlugins("test-marketplace")).rejects.toThrow(
+			/Marketplace catalog not found/,
+		);
+	});
 });

@@ -9,6 +9,7 @@ import chalk from "chalk";
 import { resolveOrDefaultProjectRegistryPath } from "../discovery/helpers";
 import { PluginManager, parseSettingValue, validateSetting } from "../extensibility/plugins";
 import {
+	formatMarketplaceRefreshWarning,
 	getInstalledPluginsRegistryPath,
 	getMarketplacesCacheDir,
 	getMarketplacesRegistryPath,
@@ -246,8 +247,10 @@ async function handleMarketplace(args: string[], _flags: PluginCommandArgs["flag
 					await manager.updateMarketplace(name);
 					console.log(chalk.green(`${theme.status.success} Updated marketplace: ${name}`));
 				} else {
-					const results = await manager.updateAllMarketplaces();
-					console.log(chalk.green(`${theme.status.success} Updated ${results.length} marketplace(s)`));
+					const result = await manager.refreshMarketplaces();
+					const warning = formatMarketplaceRefreshWarning(result);
+					if (warning) console.error(chalk.yellow(warning));
+					console.log(chalk.green(`${theme.status.success} Updated ${result.successful.length} marketplace(s)`));
 				}
 			} catch (err) {
 				console.error(chalk.red(`${theme.status.error} Failed to update marketplace: ${err}`));
@@ -285,6 +288,9 @@ async function handleDiscover(args: string[], _flags: PluginCommandArgs["flags"]
 	const marketplace = args[0];
 	const manager = await makeMarketplaceManager();
 	try {
+		const refresh = await manager.refreshMarketplaces(marketplace ? [marketplace] : undefined);
+		const warning = formatMarketplaceRefreshWarning(refresh);
+		if (warning) console.error(chalk.yellow(warning));
 		const plugins = await manager.listAvailablePlugins(marketplace);
 
 		if (plugins.length === 0) {
@@ -344,12 +350,16 @@ async function handleUpgrade(args: string[], flags: PluginCommandArgs["flags"]):
 			return;
 		}
 
+		const refresh = await manager.refreshMarketplaces();
+		const refreshWarning = formatMarketplaceRefreshWarning(refresh);
+		if (refreshWarning) console.error(chalk.yellow(refreshWarning));
+
 		if (pluginId) {
 			if (flags.scope) {
-				const result = await manager.upgradePlugin(pluginId, flags.scope, { refresh: true });
+				const result = await manager.upgradePlugin(pluginId, flags.scope);
 				console.log(chalk.green(`Upgraded ${pluginId} (${flags.scope}) to ${result.version}`));
 			} else {
-				const entries = await manager.upgradePluginAcrossScopes(pluginId, { refresh: true });
+				const entries = await manager.upgradePluginAcrossScopes(pluginId);
 				for (const entry of entries) {
 					console.log(chalk.green(`Upgraded ${pluginId} (${entry.scope}) to ${entry.version}`));
 				}
@@ -362,7 +372,7 @@ async function handleUpgrade(args: string[], flags: PluginCommandArgs["flags"]):
 					),
 				);
 			}
-			const results = await manager.upgradeAllPlugins({ refresh: true });
+			const results = await manager.upgradeAllPlugins();
 			if (results.length === 0) {
 				console.log("All marketplace plugins are up to date.");
 			} else {
@@ -395,20 +405,24 @@ async function handleInstall(
 	// marketplace plugin instead of a same-named public npm package.
 	const mktMgr = await makeMarketplaceManager();
 	const marketplaces = await mktMgr.listMarketplaces();
+	const preview = flags.dryRun ? await mktMgr.previewMarketplacePlugins() : undefined;
+	const refresh = preview ?? (await mktMgr.refreshMarketplaces());
+	const refreshWarning = formatMarketplaceRefreshWarning(refresh);
+	if (refreshWarning) console.error(chalk.yellow(refreshWarning));
 	const knownMarketplaces = new Set(marketplaces.map(m => m.name));
 	const catalogIndex = new Map<string, string[]>();
-	for (const mp of marketplaces) {
-		let plugins: Awaited<ReturnType<typeof mktMgr.listAvailablePlugins>>;
-		try {
-			plugins = await mktMgr.listAvailablePlugins(mp.name);
-		} catch {
-			continue; // a broken/uncloned catalog must not block installs from others
-		}
-		for (const p of plugins) {
-			const sources = catalogIndex.get(p.name) ?? [];
-			if (!sources.includes(mp.name)) sources.push(mp.name);
-			catalogIndex.set(p.name, sources);
-		}
+	const listings = preview
+		? preview.plugins
+		: await Promise.all(
+				marketplaces.map(async mp => {
+					const plugins = await mktMgr.listAvailablePlugins(mp.name).catch(() => []);
+					return plugins.map(plugin => ({ marketplace: mp.name, plugin }));
+				}),
+			).then(groups => groups.flat());
+	for (const { marketplace, plugin } of listings) {
+		const sources = catalogIndex.get(plugin.name) ?? [];
+		if (!sources.includes(marketplace)) sources.push(marketplace);
+		catalogIndex.set(plugin.name, sources);
 	}
 
 	for (const spec of packages) {

@@ -204,6 +204,7 @@ export async function refreshState(
 	mgr: MarketplaceManager,
 	npmMgr: PluginManager,
 ): Promise<PluginDashboardState> {
+	const selectedId = state.searchFiltered[state.selectedIndex]?.id;
 	const allPlugins = await loadAllPlugins(mgr, npmMgr);
 	const tabs = buildTabs(allPlugins);
 	const prevTabId = state.tabs[state.activeTabIndex]?.id ?? "installed";
@@ -215,7 +216,7 @@ export async function refreshState(
 	const tabFiltered = filterByTab(allPlugins, activeTab?.id ?? "installed");
 	const searchFiltered = applySearch(tabFiltered, state.searchQuery);
 
-	return {
+	const nextState = {
 		...state,
 		tabs,
 		activeTabIndex: nextTabIndex,
@@ -226,4 +227,15 @@ export async function refreshState(
 		loading: false,
 		loadError: null,
 	};
+	if (selectedId) {
+		const selectedIndex = searchFiltered.findIndex(plugin => plugin.id === selectedId);
+		if (selectedIndex >= 0) nextState.selectedIndex = selectedIndex;
+	}
+	if (searchFiltered.length === 0) {
+		nextState.selectedIndex = 0;
+		nextState.scrollOffset = 0;
+	} else {
+		nextState.selectedIndex = Math.max(0, Math.min(nextState.selectedIndex, searchFiltered.length - 1));
+	}
+	return nextState;
 }
