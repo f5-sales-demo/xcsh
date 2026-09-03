@@ -1,6 +1,7 @@
 import type { Model } from "@f5-sales-demo/pi-ai";
 import { validateApiKeyAgainstModelsEndpoint } from "@f5-sales-demo/pi-ai/utils/oauth/api-key-validation";
 import { logger } from "@f5-sales-demo/pi-utils";
+import type { ModelRegistry } from "../../config/model-registry";
 import { type AuthStatus, ContextService } from "../../services/xcsh-context";
 import { deriveTenantFromUrl } from "../../services/xcsh-env";
 import type { AuthStorage } from "../../session/auth-storage";
@@ -67,15 +68,25 @@ export interface WelcomeCheckResult {
 /** Providers that don't store API keys (local inference servers) */
 const KEYLESS_PROVIDERS = new Set(["ollama", "llama.cpp", "lm-studio", "llamafile", "local"]);
 
+type KeylessProviderRegistry = Pick<ModelRegistry, "isProviderKeyless">;
+
+function isKeylessProvider(provider: string, modelRegistry?: KeylessProviderRegistry): boolean {
+	return modelRegistry ? modelRegistry.isProviderKeyless(provider) : KEYLESS_PROVIDERS.has(provider);
+}
+
 /**
  * Instant, local check for whether the session has a usable LLM provider configured.
  * Zero network: a model must be resolved and either be keyless (local inference) or
  * have credentials present in the auth store. Used by the startup readiness gate to
  * decide whether natural-language input can be processed.
  */
-export function hasActiveLlmProvider(model: Model | undefined, authStorage: Pick<AuthStorage, "hasAuth">): boolean {
+export function hasActiveLlmProvider(
+	model: Model | undefined,
+	authStorage: Pick<AuthStorage, "hasAuth">,
+	modelRegistry?: KeylessProviderRegistry,
+): boolean {
 	if (!model) return false;
-	return KEYLESS_PROVIDERS.has(model.provider) || authStorage.hasAuth(model.provider);
+	return isKeylessProvider(model.provider, modelRegistry) || authStorage.hasAuth(model.provider);
 }
 
 /**
@@ -85,17 +96,18 @@ export function hasActiveLlmProvider(model: Model | undefined, authStorage: Pick
 export async function runWelcomeChecks(
 	model: Model | undefined,
 	authStorage: AuthStorage,
+	modelRegistry?: KeylessProviderRegistry,
 ): Promise<WelcomeCheckResult> {
 	const provider = model?.provider ?? "unknown";
 
 	// Step 1: Check model provider credentials exist
 	// Keyless local providers (ollama, llama.cpp, lm-studio, etc.) don't store credentials
-	if (!authStorage.hasAuth(provider) && !KEYLESS_PROVIDERS.has(provider)) {
+	if (!authStorage.hasAuth(provider) && !isKeylessProvider(provider, modelRegistry)) {
 		return { model: { state: "no_provider", provider } };
 	}
 
 	// Step 2: Live model validation — try to reach the models endpoint
-	const modelStatus = await validateModelConnection(model, authStorage);
+	const modelStatus = await validateModelConnection(model, authStorage, modelRegistry);
 	if (modelStatus.state !== "connected") {
 		return { model: modelStatus };
 	}
@@ -105,13 +117,17 @@ export async function runWelcomeChecks(
 	return { model: modelStatus, context: contextStatus };
 }
 
-async function validateModelConnection(model: Model | undefined, authStorage: AuthStorage): Promise<ModelStatus> {
+async function validateModelConnection(
+	model: Model | undefined,
+	authStorage: AuthStorage,
+	modelRegistry?: KeylessProviderRegistry,
+): Promise<ModelStatus> {
 	const provider = model?.provider ?? "unknown";
 	try {
 		const rawApiKey = await authStorage.peekApiKey(provider);
 		if (!rawApiKey) {
 			// Keyless providers skip validation
-			if (KEYLESS_PROVIDERS.has(provider)) {
+			if (isKeylessProvider(provider, modelRegistry)) {
 				return { state: "connected", provider, latencyMs: 0 };
 			}
 			return { state: "auth_error", provider };

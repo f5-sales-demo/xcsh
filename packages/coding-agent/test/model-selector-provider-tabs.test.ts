@@ -106,8 +106,9 @@ describe("authenticated provider model groups", () => {
 		expect(groups.map(group => group.id)).toEqual(["google-vertex", "openai-codex", "local-providers"]);
 		expect(groups[0]?.label).toBe("Google Vertex");
 		expect(groups[0]?.stale).toBe(true);
-		expect(groups[2]?.models.map(item => item.provider)).toEqual(["ollama"]);
-		expect(groups.flatMap(group => group.models).some(item => item.provider === "vllm")).toBe(false);
+		expect(groups[2]?.models.map(item => item.provider)).toEqual(["ollama", "vllm"]);
+		expect(groups[2]?.discoveryStatus).toBe("cached");
+		expect(groups[2]?.stale).toBe(true);
 		expect(groups.flatMap(group => group.models).some(item => item.provider === "anthropic")).toBe(false);
 		expect(groups.flatMap(group => group.models).some(item => item.provider === "google-antigravity")).toBe(false);
 	});
@@ -204,6 +205,7 @@ describe("provider-tab model selector", () => {
 		const { selector } = selectorHarness();
 		await Bun.sleep(0);
 		const rendered = Bun.stripANSI(selector.render(180).join("\n"));
+		expect(rendered).toContain("Only showing models from configured providers (see README for details)");
 		expect(rendered).toContain("ChatGPT Subscription");
 		expect(rendered).toContain("OpenAI › GPT-5.6");
 		expect(rendered.match(/OpenAI › GPT-5\.6/g)).toHaveLength(1);
