@@ -121,6 +121,7 @@ describe("authenticated provider model groups", () => {
 		];
 		const groups = buildProviderModelGroups(models, provider => state(provider), ["google-vertex"]);
 		expect(groups.map(group => group.id)).toEqual(["google-vertex", "anthropic", "openai-codex"]);
+		expect(groups[1]?.label).toBe("Anthropic / Claude");
 	});
 });
 
@@ -201,6 +202,74 @@ function selectorHarness(currentModel?: Model, options: { staleVertex?: boolean;
 }
 
 describe("provider-tab model selector", () => {
+	it("renders Claude tier labels, role badges, and canonical thinking choices", async () => {
+		const haiku = model("anthropic", "claude-haiku-4-5-20251001", {
+			name: "Claude Haiku 4.5",
+			reasoning: true,
+			thinking: createThinkingConfig([Effort.Minimal, Effort.Low, Effort.Medium, Effort.High, Effort.XHigh]),
+		});
+		const sonnet = model("anthropic", "claude-sonnet-5", {
+			name: "Claude Sonnet 5",
+			reasoning: true,
+			thinking: createThinkingConfig([
+				Effort.Minimal,
+				Effort.Low,
+				Effort.Medium,
+				Effort.High,
+				Effort.XHigh,
+				Effort.Max,
+			]),
+		});
+		const opus = model("anthropic", "claude-opus-5", { name: "Claude Opus 5" });
+		const models = [haiku, sonnet, opus];
+		const settings = Settings.isolated({
+			modelRoles: {
+				smol: "anthropic/claude-haiku-4-5-20251001:low",
+				default: "anthropic/claude-sonnet-5:medium",
+				slow: "anthropic/claude-opus-5:high",
+				plan: "anthropic/claude-opus-5:high",
+			},
+		});
+		const registry = {
+			authStorage: { hasAuth: () => true },
+			refresh: vi.fn(async () => undefined),
+			refreshProvider: vi.fn(async () => undefined),
+			getError: () => undefined,
+			getAll: () => models,
+			getAvailable: () => models,
+			getProviderDiscoveryState: () => state("anthropic"),
+		} as unknown as ModelRegistry;
+		const selector = new ModelSelectorComponent(
+			{ requestRender: vi.fn() } as unknown as TUI,
+			sonnet,
+			settings,
+			registry,
+			[],
+			vi.fn(),
+			() => {},
+			{ temporaryOnly: true },
+		);
+		await Bun.sleep(0);
+		let rendered = Bun.stripANSI(selector.render(180).join("\n"));
+		expect(rendered).toContain("Models:   Anthropic / Claude");
+		expect(rendered).toContain("Anthropic › Claude");
+		expect(rendered).toContain("Claude Haiku 4.5 [anthropic/claude-haiku-4-5-20251001]");
+		expect(rendered).toContain("Claude Sonnet 5 [anthropic/claude-sonnet-5]");
+		expect(rendered).toContain("Claude Opus 5 [anthropic/claude-opus-5]");
+		expect(rendered).toContain("SMOL");
+		expect(rendered).toContain("DEFAULT");
+		expect(rendered).toContain("SLOW");
+		expect(rendered).toContain("PLAN");
+
+		for (const character of "sonnet") selector.handleInput(character);
+		selector.handleInput("\r");
+		rendered = Bun.stripANSI(selector.render(100).join("\n"));
+		for (const effort of ["min", "low", "medium", "high", "xhigh", "max"]) {
+			expect(rendered).toContain(`${effort} —`);
+		}
+		expect(rendered).not.toContain("off —");
+	});
+
 	it("renders provider hierarchy and exact ChatGPT tier selectors without legacy tabs", async () => {
 		const { selector } = selectorHarness();
 		await Bun.sleep(0);

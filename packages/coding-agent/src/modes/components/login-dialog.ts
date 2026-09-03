@@ -77,7 +77,7 @@ export class LoginDialogComponent extends Container {
 	/**
 	 * Called by onAuth callback - show URL and optional instructions
 	 */
-	showAuth(url: string, instructions?: string): void {
+	showAuth(url: string, instructions?: string, openUrl?: string): void {
 		this.#contentContainer.clear();
 		this.#contentContainer.addChild(new Spacer(1));
 		(this.dependencies.presentLink ?? presentAuthLink)(this.#contentContainer, url);
@@ -88,7 +88,7 @@ export class LoginDialogComponent extends Container {
 		}
 
 		// Open browser (best-effort)
-		(this.dependencies.openUrl ?? openPath)(url);
+		(this.dependencies.openUrl ?? openPath)(openUrl ?? url);
 
 		this.#tui.requestRender();
 	}

@@ -21,6 +21,26 @@ describe("Routing Pool Resolver (R05)", () => {
 		expect(result.degraded).toBe(false);
 	});
 
+	it("should resolve the Anthropic Haiku alias to its advertised dated selector", () => {
+		const pool: RoutingPoolConfig = {
+			id: "anthropic/claude",
+			provider: "anthropic",
+			tiers: {
+				utility: "claude-haiku-4-5",
+				balanced: "claude-sonnet-5",
+				frontier: "claude-opus-5",
+			},
+		};
+		const result = resolveTierModel(pool, "utility", [
+			"anthropic/claude-haiku-4-5-20251001",
+			"anthropic/claude-sonnet-5",
+			"anthropic/claude-opus-5",
+		]);
+		expect(result.selectedModel).toBe("anthropic/claude-haiku-4-5-20251001");
+		expect(result.effectiveTier).toBe("utility");
+		expect(result.degraded).toBe(false);
+	});
+
 	it("should promote to next higher tier if desired tier model is missing/unavailable", () => {
 		const available = ["gpt-4o", "o3-mini"]; // utility missing!
 		const result = resolveTierModel(samplePool, "utility", available);

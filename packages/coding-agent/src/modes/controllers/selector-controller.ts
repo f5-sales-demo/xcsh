@@ -1276,7 +1276,13 @@ export class SelectorController {
 		const shouldOpenBrowser = providerId !== "openai-codex" || openAICodexMethod === "browser";
 		const loginCallbacks = {
 			method: openAICodexMethod,
-			onAuth: (info: { url: string; instructions?: string; kind?: "browser" | "device"; userCode?: string }) => {
+			onAuth: (info: {
+				url: string;
+				openUrl?: string;
+				instructions?: string;
+				kind?: "browser" | "device";
+				userCode?: string;
+			}) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));
 				if (info.kind === "device" && info.userCode) {
 					presentDeviceCode(this.ctx.chatContainer, info.url, info.userCode);
@@ -1292,7 +1298,7 @@ export class SelectorController {
 					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 1, 0));
 				}
 				this.ctx.ui.requestRender();
-				if (shouldOpenBrowser) this.ctx.openInBrowser(info.url);
+				if (shouldOpenBrowser) this.ctx.openInBrowser(info.openUrl ?? info.url);
 			},
 			onPrompt: async (prompt: OAuthPrompt) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));
@@ -1379,7 +1385,21 @@ export class SelectorController {
 			if (loginModelChoice) {
 				this.ctx.chatContainer.addChild(
 					new Text(
-						theme.fg("success", `Default model: ${loginModelChoice.provider}/${loginModelChoice.modelId}`),
+						theme.fg(
+							"success",
+							`Default model: ${loginModelChoice.provider}/${loginModelChoice.modelId}; ${formatLoginThinkingState(loginModelChoice.thinkingLevel)}`,
+						),
+						1,
+						0,
+					),
+				);
+			} else if (providerId === "anthropic") {
+				this.ctx.chatContainer.addChild(
+					new Text(
+						theme.fg(
+							"warning",
+							"Claude login is valid, but fresh Haiku 4.5, Sonnet 5, and Opus 5 entitlements are required before changing the active profile. Use /model to select an available model.",
+						),
 						1,
 						0,
 					),

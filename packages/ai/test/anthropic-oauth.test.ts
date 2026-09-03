@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { AuthCredentialStore } from "../src/auth-storage";
 import { type AnthropicAuthEnvironment, buildAnthropicUrl, findAnthropicAuth } from "../src/utils/anthropic-auth";
-import { AnthropicOAuthFlow, refreshAnthropicToken } from "../src/utils/oauth/anthropic";
+import { AnthropicOAuthFlow, loginAnthropic, refreshAnthropicToken } from "../src/utils/oauth/anthropic";
 
 const originalFetch = global.fetch;
 
@@ -21,25 +21,83 @@ afterEach(() => {
 });
 
 describe("anthropic oauth alignment", () => {
-	it("generates auth URL with expected scope set", async () => {
+	it("generates hosted and loopback URLs with shared least-privilege PKCE and state", async () => {
 		const flow = new AnthropicOAuthFlow({});
 		const state = "state-123";
-		const redirectUri = "http://localhost:54545/callback";
+		const redirectUri = "http://127.0.0.1:54545/callback";
 
-		const { url } = await flow.generateAuthUrl(state, redirectUri);
+		const { url, openUrl } = await flow.generateAuthInfo(state, redirectUri);
 		const authUrl = new URL(url);
+		const automaticUrl = new URL(openUrl);
 
-		expect(authUrl.origin + authUrl.pathname).toBe("https://claude.ai/oauth/authorize");
-		expect(authUrl.searchParams.get("scope")).toBe("org:create_api_key user:profile user:inference");
+		expect(authUrl.origin + authUrl.pathname).toBe("https://claude.com/cai/oauth/authorize");
+		expect(authUrl.searchParams.get("scope")).toBe("user:profile user:inference");
 		expect(authUrl.searchParams.get("state")).toBe(state);
-		expect(authUrl.searchParams.get("redirect_uri")).toBe(redirectUri);
+		expect(authUrl.searchParams.get("redirect_uri")).toBe("https://platform.claude.com/oauth/code/callback");
 		expect(authUrl.searchParams.get("code_challenge_method")).toBe("S256");
+		expect(automaticUrl.searchParams.get("redirect_uri")).toBe(redirectUri);
+		expect(automaticUrl.searchParams.get("state")).toBe(state);
+		expect(automaticUrl.searchParams.get("code_challenge")).toBe(authUrl.searchParams.get("code_challenge"));
 	});
 
-	it("uses api.anthropic.com token URL for code exchange", async () => {
+	it("uses platform.claude.com token URL, route redirect, timeout, and account metadata", async () => {
 		const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
-			expect(typeof input === "string" ? input : input.toString()).toBe("https://api.anthropic.com/v1/oauth/token");
+			expect(typeof input === "string" ? input : input.toString()).toBe(
+				"https://platform.claude.com/v1/oauth/token",
+			);
 			expect(init?.method).toBe("POST");
+			expect(init?.signal).toBeInstanceOf(AbortSignal);
+			return new Response(
+				JSON.stringify({
+					access_token: "access-token",
+					refresh_token: "refresh-token",
+					expires_in: 3600,
+					account: { uuid: "123456789012", email_address: "dana@example.com" },
+				}),
+				{ status: 200, headers: { "Content-Type": "application/json" } },
+			);
+		});
+		global.fetch = fetchMock as unknown as typeof fetch;
+
+		const flow = new AnthropicOAuthFlow({});
+		await flow.generateAuthInfo("state-123", "http://127.0.0.1:54545/callback");
+
+		const result = await flow.exchangeToken("code-123", "state-123", "http://127.0.0.1:54545/callback");
+
+		expect(result).toMatchObject({
+			access: "access-token",
+			refresh: "refresh-token",
+			accountId: "123456789012",
+			email: "dana@example.com",
+		});
+		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("stores top-level Anthropic account metadata", async () => {
+		global.fetch = (async () =>
+			new Response(
+				JSON.stringify({
+					access_token: "access",
+					refresh_token: "refresh",
+					expires_in: 3600,
+					account_uuid: "123456789012",
+					email_address: "dana@example.com",
+				}),
+				{ status: 200 },
+			)) as unknown as typeof fetch;
+
+		const flow = new AnthropicOAuthFlow({});
+		await flow.generateAuthUrl("state", "http://127.0.0.1/callback");
+		const credentials = await flow.exchangeToken("code", "state", "http://127.0.0.1/callback");
+		expect(credentials.accountId).toBe("123456789012");
+		expect(credentials.email).toBe("dana@example.com");
+	});
+
+	it("rejects mismatched fragment state before token exchange", async () => {
+		const fetchMock = vi.fn(async (input: string | URL, _init?: RequestInit) => {
+			expect(typeof input === "string" ? input : input.toString()).toBe(
+				"https://platform.claude.com/v1/oauth/token",
+			);
 			return new Response(
 				JSON.stringify({
 					access_token: "access-token",
@@ -52,69 +110,77 @@ describe("anthropic oauth alignment", () => {
 		global.fetch = fetchMock as unknown as typeof fetch;
 
 		const flow = new AnthropicOAuthFlow({});
-		await flow.generateAuthUrl("state-123", "http://localhost:54545/callback");
+		await flow.generateAuthInfo("state-123", "http://127.0.0.1:54545/callback");
+		await expect(
+			flow.exchangeToken("code-123#state-override", "state-123", "http://127.0.0.1:54545/callback"),
+		).rejects.toThrow("state mismatch");
 
-		const result = await flow.exchangeToken("code-123", "state-123", "http://localhost:54545/callback");
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
 
+	it("rejects manual codes without exact code#state data", async () => {
+		const onAuth = vi.fn();
+		await expect(
+			loginAnthropic({ onAuth, onManualCodeInput: async () => "code-without-state" }, { timeoutMs: 100 }),
+		).rejects.toThrow("code#state");
+		expect(onAuth.mock.calls[0]?.[0]).toMatchObject({
+			url: expect.stringContaining("platform.claude.com%2Foauth%2Fcode%2Fcallback"),
+			openUrl: expect.stringContaining("localhost"),
+		});
+	});
+
+	it("exchanges an automatic callback against its loopback redirect", async () => {
+		let exchangedRedirect = "";
+		global.fetch = vi.fn(async (_input: string | URL, init?: RequestInit) => {
+			const payload = JSON.parse(String(init?.body));
+			exchangedRedirect = payload.redirect_uri;
+			return new Response(
+				JSON.stringify({ access_token: "access-token", refresh_token: "refresh-token", expires_in: 3600 }),
+				{ status: 200, headers: { "Content-Type": "application/json" } },
+			);
+		}) as unknown as typeof fetch;
+		const result = await loginAnthropic({
+			onAuth(info) {
+				const automatic = new URL(info.openUrl!);
+				const callback = new URL(automatic.searchParams.get("redirect_uri")!);
+				callback.searchParams.set("code", "automatic-code");
+				callback.searchParams.set("state", automatic.searchParams.get("state")!);
+				void originalFetch(callback);
+			},
+		});
 		expect(result.access).toBe("access-token");
-		expect(result.refresh).toBe("refresh-token");
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		expect(exchangedRedirect).toMatch(/^http:\/\/localhost:\d+\/callback$/);
 	});
 
-	it("parses callback code fragments into token exchange code/state", async () => {
-		const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
-			expect(typeof input === "string" ? input : input.toString()).toBe("https://api.anthropic.com/v1/oauth/token");
-			const payload = JSON.parse(String(init?.body));
-			expect(payload.code).toBe("code-123");
-			expect(payload.state).toBe("state-override");
-			return new Response(
-				JSON.stringify({
-					access_token: "access-token",
-					refresh_token: "refresh-token",
-					expires_in: 3600,
-				}),
-				{ status: 200, headers: { "Content-Type": "application/json" } },
-			);
-		});
-		global.fetch = fetchMock as unknown as typeof fetch;
+	it("honors cancellation before waiting for authorization", async () => {
+		const abort = new AbortController();
+		abort.abort();
+		await expect(loginAnthropic({ signal: abort.signal }, { timeoutMs: 100 })).rejects.toThrow("cancelled");
+	});
 
+	it("does not expose provider response bodies in exchange errors", async () => {
+		global.fetch = vi.fn(
+			async () => new Response("secret provider diagnostic", { status: 400 }),
+		) as unknown as typeof fetch;
 		const flow = new AnthropicOAuthFlow({});
-		await flow.generateAuthUrl("state-123", "http://localhost:54545/callback");
-		await flow.exchangeToken("code-123#state-override", "state-123", "http://localhost:54545/callback");
-
-		expect(fetchMock).toHaveBeenCalledTimes(1);
+		await flow.generateAuthInfo("state-123", "http://127.0.0.1:54545/callback");
+		await expect(flow.exchangeToken("code-123", "state-123", "http://127.0.0.1:54545/callback")).rejects.toThrow(
+			"HTTP 400",
+		);
+		await expect(flow.exchangeToken("code-123", "state-123", "http://127.0.0.1:54545/callback")).rejects.not.toThrow(
+			"secret provider diagnostic",
+		);
 	});
 
-	it("keeps explicit state when callback code fragment state is empty", async () => {
-		const fetchMock = vi.fn(async (_input: string | URL, init?: RequestInit) => {
-			const payload = JSON.parse(String(init?.body));
-			expect(payload.code).toBe("code-123");
-			expect(payload.state).toBe("state-explicit");
-			return new Response(
-				JSON.stringify({
-					access_token: "access-token",
-					refresh_token: "refresh-token",
-					expires_in: 3600,
-				}),
-				{ status: 200, headers: { "Content-Type": "application/json" } },
-			);
-		});
-		global.fetch = fetchMock as unknown as typeof fetch;
-
-		const flow = new AnthropicOAuthFlow({});
-		await flow.generateAuthUrl("state-123", "http://localhost:54545/callback");
-		await flow.exchangeToken("code-123#", "state-explicit", "http://localhost:54545/callback");
-
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-	});
-	it("uses api.anthropic.com token URL for refresh", async () => {
+	it("uses platform.claude.com token URL for refresh and retains an omitted refresh token", async () => {
 		const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
-			expect(typeof input === "string" ? input : input.toString()).toBe("https://api.anthropic.com/v1/oauth/token");
+			expect(typeof input === "string" ? input : input.toString()).toBe(
+				"https://platform.claude.com/v1/oauth/token",
+			);
 			expect(init?.method).toBe("POST");
 			return new Response(
 				JSON.stringify({
 					access_token: "new-access-token",
-					refresh_token: "new-refresh-token",
 					expires_in: 7200,
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
@@ -125,7 +191,7 @@ describe("anthropic oauth alignment", () => {
 		const result = await refreshAnthropicToken("refresh-123");
 
 		expect(result.access).toBe("new-access-token");
-		expect(result.refresh).toBe("new-refresh-token");
+		expect(result.refresh).toBe("refresh-123");
 		expect(fetchMock).toHaveBeenCalledTimes(1);
 	});
 });
