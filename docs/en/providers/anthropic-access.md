@@ -6,8 +6,6 @@ sidebar:
   label: Anthropic access
 ---
 
-# Anthropic access
-
 xcsh supports two separate Anthropic credential paths. A Claude App Pro or Max subscription uses OAuth; an
 Anthropic Console account uses usage-based API billing and an API key. Signing in to one does not grant access to
 the other.
