@@ -73,6 +73,7 @@ export function isAlreadyPublished(output: string, version: string): boolean {
 	return [
 		new RegExp(`cannot publish over (?:the )?previously published versions?:?\\s*["']?${escapedVersion}["']?`, "i"),
 		new RegExp(`cannot publish over (?:an )?existing version:?\\s*["']?${escapedVersion}["']?`, "i"),
+		new RegExp(`cannot publish over (?:the )?previously staged version:?\\s*["']?${escapedVersion}["']?`, "i"),
 	].some(pattern => pattern.test(output));
 }
 
@@ -129,6 +130,79 @@ export async function waitForRegistryVisibility(
 	}
 
 	throw new Error(`${packageName}@${version} was not readable from npm after ${maxAttempts} checks`);
+}
+
+interface PublishAttemptResult {
+	exitCode: number;
+	output: string;
+}
+
+export interface PublishAndVisibilityOptions {
+	publish: () => Promise<PublishAttemptResult>;
+	waitForVisibility: () => Promise<unknown>;
+	sleep?: (delayMs: number) => Promise<void>;
+	maxAttempts?: number;
+	initialDelayMs?: number;
+	maxDelayMs?: number;
+}
+
+/**
+ * Retries publication and its visibility check as one bounded operation.
+ *
+ * npm can accept a large package into staging while its read API continues to
+ * return 404. A subsequent publish then reports the exact version as staged.
+ * Both responses mean the write was accepted, so keep checking visibility and
+ * safely retry the complete operation instead of stranding later packages.
+ */
+export async function publishWithVisibility(
+	packageName: string,
+	version: string,
+	options: PublishAndVisibilityOptions,
+): Promise<number> {
+	const sleep = options.sleep ?? Bun.sleep;
+	const maxAttempts = options.maxAttempts ?? 7;
+	const maxDelayMs = options.maxDelayMs ?? 30_000;
+	let delayMs = Math.min(options.initialDelayMs ?? 5_000, maxDelayMs);
+
+	if (!Number.isInteger(maxAttempts) || maxAttempts < 1) throw new Error("maxAttempts must be a positive integer");
+	if (delayMs < 0 || maxDelayMs < 0) throw new Error("publish retry delays must be non-negative");
+
+	let lastFailure: unknown;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		console.log("Publishing " + packageName + "... (attempt " + attempt + "/" + maxAttempts + ")");
+		const result = await options.publish();
+		if (result.output) console.log(result.output);
+
+		const accepted = result.exitCode === 0 || isAlreadyPublished(result.output, version);
+		if (accepted) {
+			if (result.exitCode !== 0) console.log("Exact version already published or staged; checking visibility");
+			try {
+				await options.waitForVisibility();
+				return attempt;
+			} catch (error) {
+				lastFailure = error;
+				if (attempt === maxAttempts) break;
+				console.log("  " + packageName + "@" + version + " is still processing; retrying publish and visibility");
+			}
+		} else {
+			lastFailure = new Error(result.output || "npm publish exited with " + result.exitCode);
+			if (attempt === maxAttempts) break;
+			console.log("Publish failed; retrying publish and visibility");
+		}
+
+		await sleep(delayMs);
+		delayMs = Math.min(delayMs * 2, maxDelayMs);
+	}
+
+	throw new Error(
+		packageName +
+			"@" +
+			version +
+			" did not complete publication and visibility after " +
+			maxAttempts +
+			" attempts",
+		{ cause: lastFailure },
+	);
 }
 
 async function readPackageJson(packageDir: string): Promise<PackageJson> {
@@ -213,33 +287,15 @@ async function publishPackage(pkg: PublishPackage): Promise<void> {
 	if (restore) console.log(`  Prepared publish dependencies for ${packageName}`);
 
 	try {
-		const maxAttempts = 5;
-		let delay = 5_000;
-		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-			console.log(`Publishing ${packageName}... (attempt ${attempt}/${maxAttempts})`);
-			const publishArgs = npmPublishArgs(publishTag);
-			const result = await $`${publishArgs}`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
-			const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
-			if (result.exitCode === 0) {
-				if (output) console.log(output);
-				await waitForRegistryVisibility(publishedName, publishedVersion);
-				return;
-			}
-			if (output) console.log(output);
-			if (isAlreadyPublished(output, packageJson.version ?? "")) {
-				console.log("Already published, skipping");
-				await waitForRegistryVisibility(publishedName, publishedVersion);
-				return;
-			}
-			if (attempt < maxAttempts) {
-				console.log(`Publish failed, retrying in ${delay / 1000}s...`);
-				await Bun.sleep(delay);
-				delay *= 2;
-				continue;
-			}
-			console.error(`Failed to publish ${packageName} after ${maxAttempts} attempts`);
-			process.exit(result.exitCode ?? 1);
-		}
+		await publishWithVisibility(publishedName, publishedVersion, {
+			publish: async () => {
+				const publishArgs = npmPublishArgs(publishTag);
+				const result = await $`${publishArgs}`.cwd(path.join(repoRoot, pkg.dir)).quiet().nothrow();
+				const output = `${result.stdout.toString()}${result.stderr.toString()}`.trim();
+				return { exitCode: result.exitCode, output };
+			},
+			waitForVisibility: () => waitForRegistryVisibility(publishedName, publishedVersion),
+		});
 	} finally {
 		restore?.();
 	}
