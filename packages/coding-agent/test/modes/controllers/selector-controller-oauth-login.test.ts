@@ -64,7 +64,7 @@ describe("SelectorController Google Antigravity login", () => {
 			selector: "google-antigravity/gemini-3.6-flash-high",
 			thinkingLevel: ThinkingLevel.High,
 		});
-		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+		expect(setThinkingLevel).not.toHaveBeenCalled();
 		expect(invalidate).toHaveBeenCalledTimes(1);
 		expect(updateEditorBorderColor).toHaveBeenCalledTimes(1);
 		expect(showError).not.toHaveBeenCalled();

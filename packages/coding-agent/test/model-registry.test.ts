@@ -1898,6 +1898,46 @@ describe("ModelRegistry", () => {
 			expect(registry.find("vllm", "tiny-local")).toMatchObject({ contextWindow: 2048, maxTokens: 512 });
 			expect(registry.find("vllm", "metadata-free")).toMatchObject({ contextWindow: 128_000, maxTokens: 8192 });
 		});
+
+		test("vLLM discovery preserves explicit thinking and transport compatibility overrides", async () => {
+			const thinking = createThinkingConfig([Effort.Low, Effort.High], "effort", Effort.High);
+			writeRawModelsJson({
+				vllm: {
+					baseUrl: "http://127.0.0.1:8000/v1",
+					auth: "none",
+					api: "openai-completions",
+					discovery: { type: "openai-compat" },
+					modelOverrides: {
+						"reasoning-local": {
+							reasoning: true,
+							thinking,
+							compat: {
+								thinkingFormat: "qwen-chat-template",
+								reasoningContentField: "reasoning_content",
+								supportsTemperature: false,
+							},
+						},
+					},
+				},
+			});
+			using _hook = hookFetch(input => {
+				expect(String(input)).toBe("http://127.0.0.1:8000/v1/models");
+				return Response.json({ data: [{ id: "reasoning-local", max_model_len: 65_536 }] });
+			});
+
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+			await registry.refreshProvider("vllm", "online");
+
+			expect(registry.find("vllm", "reasoning-local")).toMatchObject({
+				reasoning: true,
+				thinking,
+				compat: {
+					thinkingFormat: "qwen-chat-template",
+					reasoningContentField: "reasoning_content",
+					supportsTemperature: false,
+				},
+			});
+		});
 		test("a text-only discovery cache cannot erase bundled GPT-5.6 vision at startup", () => {
 			const cached = {
 				...getBundledModel("litellm", "gpt-5.6-sol"),

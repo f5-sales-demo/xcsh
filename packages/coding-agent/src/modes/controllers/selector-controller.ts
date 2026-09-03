@@ -79,6 +79,7 @@ import { commitLiteLLMLogin } from "./litellm-login-transaction";
 import {
 	applyModelAfterLogin,
 	applyOAuthLoginModel,
+	formatLoginThinkingState,
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	GOOGLE_VERTEX_LOGIN_MODEL_CHOICE,
 	LITELLM_LOGIN_MODEL_CHOICES,
@@ -1207,7 +1208,14 @@ export class SelectorController {
 				new Text(theme.fg("success", `${theme.status.success} vLLM configuration saved to ${modelsPath}`), 1, 0),
 			);
 			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("success", `Default model: vllm/${flowResult.choice.modelId} (thinking off)`), 1, 0),
+				new Text(
+					theme.fg(
+						"success",
+						`Default model: vllm/${flowResult.choice.modelId} (${formatLoginThinkingState(this.ctx.session.thinkingLevel)})`,
+					),
+					1,
+					0,
+				),
 			);
 			if (this.ctx.session.modelRegistry.authStorage.get("vllm")) {
 				this.ctx.chatContainer.addChild(
