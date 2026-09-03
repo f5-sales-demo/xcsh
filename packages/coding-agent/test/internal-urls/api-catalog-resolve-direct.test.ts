@@ -28,6 +28,7 @@ const mockCategory: ApiCatalogCategory = {
 	operations: [
 		{
 			name: "Create test",
+			operationId: "ves.io.schema.test.CustomAPI.Create",
 			operationAliases: ["ves.io.schema.test.CustomAPI.Create"],
 			description: "Creates a test resource",
 			method: "post",

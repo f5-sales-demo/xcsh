@@ -4,11 +4,61 @@ import type {
 	ApiCatalogIndex,
 	ApiCatalogOperation,
 } from "./api-catalog-types";
-import type { ApiSpecIndex } from "./api-spec-types";
+import type { ApiSpecDomainResource, ApiSpecIndex } from "./api-spec-types";
 import type { InternalResource, InternalUrl } from "./types";
 
 function normalizeSearchTerm(s: string): string {
-	return s.toLowerCase().replace(/_/g, "-");
+	return s.toLowerCase().replace(/[_\s]+/g, "-");
+}
+
+function normalizeApiPath(apiPath: string): string {
+	return apiPath.replace(/\{(?:metadata|system_metadata)\.(namespace|name)\}/g, "{$1}");
+}
+
+function operationTuple(op: Pick<ApiCatalogOperation, "method" | "path" | "operationId">): string {
+	return `${op.method.toUpperCase()} ${normalizeApiPath(op.path)} ${op.operationId}`;
+}
+
+interface RankedCategory {
+	category: ApiCatalogCategory;
+	exactCanonicalMatches: number;
+	crudVerbCoverage: number;
+	resourcePathCoverage: number;
+}
+
+export function rankCatalogCategoriesForResource(
+	resource: ApiSpecDomainResource,
+	data: Readonly<Record<string, ApiCatalogCategory>>,
+): RankedCategory[] {
+	const canonical = new Set((resource.canonicalCrudOperations ?? []).map(operationTuple));
+	const resourcePaths = new Set((resource.apiPaths ?? []).map(normalizeApiPath));
+	return (resource.catalogCategories ?? [])
+		.map(name => data[name])
+		.filter((category): category is ApiCatalogCategory => category !== undefined)
+		.map(category => {
+			const exact = category.operations.filter(operation => canonical.has(operationTuple(operation)));
+			return {
+				category,
+				exactCanonicalMatches: exact.length,
+				crudVerbCoverage: new Set(
+					exact
+						.map(operation => operation.operationId.match(/\.API\.(Create|List|Get|Replace|Delete)$/)?.[1])
+						.filter(Boolean),
+				).size,
+				resourcePathCoverage: new Set(
+					category.operations
+						.map(operation => normalizeApiPath(operation.path))
+						.filter(apiPath => resourcePaths.has(apiPath)),
+				).size,
+			};
+		})
+		.sort(
+			(left, right) =>
+				right.exactCanonicalMatches - left.exactCanonicalMatches ||
+				right.crudVerbCoverage - left.crudVerbCoverage ||
+				right.resourcePathCoverage - left.resourcePathCoverage ||
+				left.category.name.localeCompare(right.category.name),
+		);
 }
 
 export interface ApiCatalogResolver {
@@ -39,23 +89,20 @@ export function createApiCatalogResolver(
 				if (resourceName && specIndex) {
 					for (const domain of specIndex.domains) {
 						const res = domain.resources.find(r => r.name === resourceName);
-						if (res?.catalogCategories?.length) {
-							const catName = res.catalogCategories[0];
-							if (categorySummaries.some(c => c.name === catName)) {
-								try {
-									const cat = lookup(catName);
-									return makeResource(url, renderCatalogDetail(cat, { compact }));
-								} catch {
-									break;
-								}
+						if (res) {
+							const ranked = rankCatalogCategoriesForResource(res, data);
+							const expectsCrud = (res.canonicalCrudOperations?.length ?? 0) > 0;
+							if (ranked.length > 0 && (!expectsCrud || ranked[0].exactCanonicalMatches > 0)) {
+								return makeResource(url, renderCatalogDetail(ranked[0].category, { compact }));
 							}
+							if (expectsCrud) return makeResource(url, renderMissingCrud(domain.domain, res, ranked));
 						}
 					}
-					return makeResource(url, renderCatalogSearch(index, categorySummaries, resourceName));
+					return makeResource(url, renderCatalogSearch(index, categorySummaries, data, resourceName, specIndex));
 				}
 
 				const content = search
-					? renderCatalogSearch(index, categorySummaries, search)
+					? renderCatalogSearch(index, categorySummaries, data, search, specIndex)
 					: renderCatalogIndex(index, categorySummaries);
 				return makeResource(url, content);
 			}
@@ -114,12 +161,47 @@ function renderCatalogIndex(index: ApiCatalogIndex, summaries: readonly ApiCatal
 function renderCatalogSearch(
 	_index: ApiCatalogIndex,
 	summaries: readonly ApiCatalogCategorySummary[],
+	data: Readonly<Record<string, ApiCatalogCategory>>,
 	term: string,
+	specIndex?: ApiSpecIndex,
 ): string {
 	const normalized = normalizeSearchTerm(term);
-	const matches = summaries.filter(
-		c => normalizeSearchTerm(c.name).includes(normalized) || normalizeSearchTerm(c.displayName).includes(normalized),
+	const matchingResources = (specIndex?.domains ?? []).flatMap(domain =>
+		domain.resources
+			.filter(resource =>
+				[resource.name, resource.description, resource.descriptionShort ?? "", ...(resource.apiPaths ?? [])].some(
+					value => normalizeSearchTerm(value).includes(normalized),
+				),
+			)
+			.map(resource => ({ domain: domain.domain, resource })),
 	);
+	const resourceCategoryNames = new Set(matchingResources.flatMap(({ resource }) => resource.catalogCategories ?? []));
+	const canonicalByCategory = new Set(
+		matchingResources.flatMap(({ resource }) =>
+			rankCatalogCategoriesForResource(resource, data)
+				.filter(ranked => ranked.exactCanonicalMatches > 0)
+				.map(ranked => ranked.category.name),
+		),
+	);
+	const matches = summaries
+		.filter(summary => {
+			const category = data[summary.name];
+			return (
+				resourceCategoryNames.has(summary.name) ||
+				[summary.name, summary.displayName].some(value => normalizeSearchTerm(value).includes(normalized)) ||
+				(category?.operations ?? []).some(operation =>
+					[operation.name, operation.description, operation.path, operation.operationId].some(value =>
+						normalizeSearchTerm(value).includes(normalized),
+					),
+				)
+			);
+		})
+		.map(summary => ({ summary, kind: canonicalByCategory.has(summary.name) ? "canonical CRUD" : "ancillary" }))
+		.sort(
+			(left, right) =>
+				Number(right.kind === "canonical CRUD") - Number(left.kind === "canonical CRUD") ||
+				left.summary.name.localeCompare(right.summary.name),
+		);
 
 	if (matches.length === 0) {
 		return [
@@ -130,16 +212,37 @@ function renderCatalogSearch(
 		].join("\n");
 	}
 
-	const rows = matches.map(c => `| ${c.name} | ${c.displayName} | ${c.operationCount} |`);
+	const rows = matches.map(
+		({ summary, kind }) => `| ${summary.name} | ${summary.displayName} | ${kind} | ${summary.operationCount} |`,
+	);
 
 	return [
 		`# API Catalog — search: "${term}"`,
 		"",
 		`${matches.length} matching categories.`,
 		"",
-		"| Category | Display Name | Operations |",
-		"|----------|--------------|------------|",
+		"| Category | Display Name | Kind | Operations |",
+		"|----------|--------------|------|------------|",
 		...rows,
+		"",
+	].join("\n");
+}
+
+function renderMissingCrud(domain: string, resource: ApiSpecDomainResource, ranked: readonly RankedCategory[]): string {
+	return [
+		`# Canonical CRUD unavailable: ${resource.name}`,
+		"",
+		"The authoritative specification declares canonical CRUD operations, but no mapped catalog category contains them.",
+		"",
+		...(ranked.length > 0
+			? [
+					"Mapped ancillary categories:",
+					"",
+					...ranked.map(item => `- \`xcsh://api-catalog/${item.category.name}\``),
+					"",
+				]
+			: []),
+		`Inspect the authoritative CRUD view: \`xcsh://api-spec/${domain}?resource=${encodeURIComponent(resource.name)}&crud=true\``,
 		"",
 	].join("\n");
 }
@@ -234,6 +337,10 @@ function renderCatalogDetail(cat: ApiCatalogCategory, options?: { compact?: bool
 			sections.push("", "### Minimum Configuration", "");
 			sections.push(`Required fields: ${op.minimumPayload.requiredFields.join(", ")}`);
 			sections.push("", "```json", JSON.stringify(op.minimumPayload.json, null, 2), "```");
+		} else if (op.minimumPayloadDiagnostic) {
+			sections.push("", "### Minimum Configuration Unavailable", "");
+			sections.push(`Reason: \`${op.minimumPayloadDiagnostic.reasonCode}\``);
+			sections.push(op.minimumPayloadDiagnostic.message);
 		}
 		// Universal reference format hint — shown even in compact mode
 		if (op.method.toUpperCase() === "POST" || op.method.toUpperCase() === "PUT") {
