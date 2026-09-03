@@ -339,6 +339,7 @@ export class ModelSelectorComponent extends Container {
 	#temporaryOnly: boolean;
 	#currentModel: Model | undefined;
 	#providerGroups: ProviderModelGroup[] = [];
+	#refreshingProvider?: string;
 
 	#menuRoleActions: MenuRoleAction[] = [];
 
@@ -664,15 +665,26 @@ export class ModelSelectorComponent extends Container {
 		const activeGroup = this.#providerGroups[this.#activeTabIndex];
 		if (!activeGroup || typeof this.#modelRegistry.refreshProvider !== "function" || this.#scopedModels.length > 0)
 			return;
-		const providers = new Set(activeGroup.models.map(item => item.provider));
-		await Promise.all([...providers].map(provider => this.#modelRegistry.refreshProvider(provider, "online")));
-		const models = modelItems(this.#modelRegistry.getAvailable());
-		this.#sortModels(models);
-		this.#allModels = models;
-		this.#buildProviderTabs();
-		this.#updateTabBar();
-		this.#applyTabFilter();
+		const selectedSelector = this.#getSelectedItem()?.selector;
+		this.#refreshingProvider = activeGroup.id;
+		this.#updateList();
 		this.#tui.requestRender();
+		const providers = new Set(activeGroup.models.map(item => item.provider));
+		try {
+			await Promise.all([...providers].map(provider => this.#modelRegistry.refreshProvider(provider, "online")));
+			const models = modelItems(this.#modelRegistry.getAvailable());
+			this.#sortModels(models);
+			this.#allModels = models;
+			this.#buildProviderTabs();
+			this.#updateTabBar();
+			this.#applyTabFilter();
+			const refreshedIndex = this.#filteredModels.findIndex(item => item.selector === selectedSelector);
+			if (refreshedIndex >= 0) this.#selectedIndex = refreshedIndex;
+		} finally {
+			if (this.#refreshingProvider === activeGroup.id) this.#refreshingProvider = undefined;
+			this.#updateList();
+			this.#tui.requestRender();
+		}
 	}
 
 	#updateTabBar(): void {
@@ -680,7 +692,7 @@ export class ModelSelectorComponent extends Container {
 
 		const tabs: Tab[] = this.#providerGroups.map(group => ({
 			id: group.id,
-			label: `${group.label}${group.stale ? " (stale)" : ""}`,
+			label: group.label,
 		}));
 		const tabBar = new TabBar("Models", tabs, getTabBarTheme(), this.#activeTabIndex);
 		tabBar.onTabChange = (_tab, index) => {
@@ -828,14 +840,19 @@ export class ModelSelectorComponent extends Container {
 		const activeGroup = this.#providerGroups[this.#activeTabIndex];
 		const searching = Boolean(this.#searchInput.getValue().trim());
 		const showProvider = searching || activeGroup?.classification === "local";
-		if (!searching && activeGroup?.stale) {
+		if (!searching && activeGroup && this.#refreshingProvider === activeGroup.id) {
+			this.#listContainer.addChild(
+				new Text(theme.fg("muted", `  Refreshing ${activeGroup.label} model list…`), 0, 0),
+			);
+			this.#listContainer.addChild(new Spacer(1));
+		} else if (!searching && activeGroup?.stale) {
 			const providerState =
 				activeGroup.classification === "authenticated"
 					? this.#modelRegistry.getProviderDiscoveryState(activeGroup.id)
 					: undefined;
 			const age = this.#formatDiscoveryAge(providerState?.fetchedAt);
 			this.#listContainer.addChild(
-				new Text(theme.fg("warning", `  Stale cached catalog${age ? ` from ${age}` : ""}`), 0, 0),
+				new Text(theme.fg("muted", `  Cached model list${age ? ` from ${age}` : ""}. Ctrl+R to refresh.`), 0, 0),
 			);
 			this.#listContainer.addChild(new Spacer(1));
 		}
@@ -1064,6 +1081,15 @@ export class ModelSelectorComponent extends Container {
 
 		// Tab bar navigation
 		if (this.#tabBar?.handleInput(keyData)) {
+			return;
+		}
+
+		if (matchesKey(keyData, "ctrl+r")) {
+			void this.#refreshSelectedProvider().catch(error => {
+				this.#errorMessage = error instanceof Error ? error.message : String(error);
+				this.#updateList();
+				this.#tui.requestRender();
+			});
 			return;
 		}
 
