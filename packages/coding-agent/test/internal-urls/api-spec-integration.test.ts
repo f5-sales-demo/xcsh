@@ -1,5 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { InternalDocsProtocolHandler, InternalUrlRouter } from "../../src/internal-urls";
+import {
+	API_CATALOG_CATEGORY_SUMMARIES,
+	API_CATALOG_DATA,
+	API_CATALOG_INDEX,
+} from "../../src/internal-urls/api-catalog-index.generated";
+import { createApiCatalogResolver } from "../../src/internal-urls/api-catalog-resolve";
+import { API_SPEC_INDEX } from "../../src/internal-urls/api-spec-index.generated";
+import type { InternalUrl } from "../../src/internal-urls/types";
 
 function createRouter(): InternalUrlRouter {
 	const router = new InternalUrlRouter();
@@ -25,6 +33,14 @@ function createRouter(): InternalUrlRouter {
 		}),
 	);
 	return router;
+}
+
+function catalogUrl(value: string): InternalUrl {
+	const url = new URL(value) as InternalUrl;
+	const match = value.match(/^xcsh:\/\/([^/?#]+)(\/[^?#]*)?/);
+	url.rawHost = match?.[1] ?? "";
+	url.rawPathname = match?.[2] ?? "/";
+	return url;
 }
 
 describe("API spec integration — full traversal", () => {
@@ -114,5 +130,49 @@ describe("API catalog integration — full traversal", () => {
 	it("catalog search filters categories", async () => {
 		const result = await createRouter().resolve("xcsh://api-catalog/?search=dns");
 		expect(result.contentType).toBe("text/markdown");
+	});
+
+	it("real generated data resolves DNS Zone to its five canonical CRUD operations", async () => {
+		const resolver = createApiCatalogResolver(
+			API_CATALOG_INDEX,
+			API_CATALOG_CATEGORY_SUMMARIES,
+			API_CATALOG_DATA,
+			API_SPEC_INDEX,
+		);
+		const result = await resolver.resolve(catalogUrl("xcsh://api-catalog/?resource=dns_zone&compact=true"));
+		expect(result.content).toContain("# Dns Dns Zones");
+		for (const method of ["POST", "PUT", "DELETE"]) expect(result.content).toContain(`## ${method} `);
+		expect(result.content.match(/^## GET /gm)).toHaveLength(2);
+		expect(result.content).not.toContain("health_status");
+	});
+
+	it("real generated search labels DNS Zone CRUD ahead of ancillary operations", async () => {
+		const resolver = createApiCatalogResolver(
+			API_CATALOG_INDEX,
+			API_CATALOG_CATEGORY_SUMMARIES,
+			API_CATALOG_DATA,
+			API_SPEC_INDEX,
+		);
+		const result = await resolver.resolve(catalogUrl("xcsh://api-catalog/?search=dns%20zone"));
+		expect(result.content).toContain("dns-dns-zones | Dns Dns Zones | canonical CRUD");
+		expect(result.content.indexOf("canonical CRUD")).toBeLessThan(result.content.indexOf("ancillary"));
+	});
+
+	it("real generated RRset category contains the exact flat TXT request", () => {
+		const rrset = API_CATALOG_DATA["dns-dns-zones-rrsets"];
+		const create = rrset?.operations.find(
+			operation => operation.operationId === "ves.io.schema.dns_zone.rrset.CustomAPI.Create",
+		);
+		expect(create?.minimumPayload?.json).toEqual({
+			dns_zone_name: "example.com",
+			group_name: "github-pages-verification",
+			rrset: {
+				ttl: 300,
+				txt_record: {
+					name: "_github-pages-challenge-example",
+					values: ["verification-value"],
+				},
+			},
+		});
 	});
 });

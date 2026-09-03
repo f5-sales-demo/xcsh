@@ -19,6 +19,11 @@ export interface ApiCatalogMinimumPayload {
 	readonly description: string;
 }
 
+export interface ApiCatalogMinimumPayloadDiagnostic {
+	readonly reasonCode: "invalid-supplied-example" | "unresolved-oneof" | "unavailable-concrete-variant" | string;
+	readonly message: string;
+}
+
 export interface ApiCatalogFieldMeta {
 	readonly type: string;
 	readonly wireName?: string;
@@ -51,6 +56,7 @@ export interface ApiCatalogResponseField {
 
 export interface ApiCatalogOperation {
 	readonly name: string;
+	readonly operationId: string;
 	readonly operationAliases?: readonly string[];
 	readonly description: string;
 	readonly method: string;
@@ -60,6 +66,7 @@ export interface ApiCatalogOperation {
 	readonly bodySchema?: Record<string, unknown>;
 	readonly responseSchema?: Record<string, unknown>;
 	readonly minimumPayload?: ApiCatalogMinimumPayload;
+	readonly minimumPayloadDiagnostic?: ApiCatalogMinimumPayloadDiagnostic;
 	readonly fieldMetadata?: Readonly<Record<string, ApiCatalogFieldMeta>>;
 	readonly oneOfRecommendations?: Readonly<Record<string, string>>;
 	readonly oneOfVariants?: Readonly<Record<string, readonly string[]>>;
