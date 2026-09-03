@@ -9,6 +9,7 @@ import {
 	presentModelsForDefaultPicker,
 } from "../src/modes/components/model-selector";
 import { initTheme } from "../src/modes/theme/theme";
+import { SUBSCRIPTION_ROUTING_PROFILES } from "../src/routing/subscription-profiles";
 
 const model = (provider: string, id: string) => ({ provider, id, name: id }) as Model;
 
@@ -69,7 +70,7 @@ describe("default GPT-5.6 model picker presentation", () => {
 		const selector = new ModelSelectorComponent(
 			{ requestRender: vi.fn() } as unknown as TUI,
 			undefined,
-			Settings.isolated(),
+			Settings.isolated({ modelRoles: SUBSCRIPTION_ROUTING_PROFILES["openai-codex"].roles }),
 			registry,
 			[],
 			() => {},
@@ -78,10 +79,14 @@ describe("default GPT-5.6 model picker presentation", () => {
 		await Bun.sleep(0);
 
 		const allModels = Bun.stripANSI(selector.render(180).join("\n"));
+		const normalizedModels = allModels.replace(/\s+/g, " ");
 		expect(allModels).toContain("ChatGPT Subscription");
 		expect(allModels).toContain("openai-codex/gpt-5.6-luna");
 		expect(allModels).toContain("openai-codex/gpt-5.6-terra");
 		expect(allModels).toContain("openai-codex/gpt-5.6-sol");
+		expect(normalizedModels).toContain("gpt-5.6-luna] SMOL (low)");
+		expect(normalizedModels).toContain("gpt-5.6-terra] DEFAULT (medium)");
+		expect(normalizedModels).toContain("gpt-5.6-sol] SLOW (high) PLAN (high)");
 		expect(allModels).not.toContain("openai-codex/gpt-5.6]");
 		expect(allModels).not.toContain("ALL MODELS");
 	});

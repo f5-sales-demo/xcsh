@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import * as fs from "node:fs/promises";
 import {
+	OPENAI_CODEX_DEFAULT_MODEL,
 	OPENAI_CODEX_GPT56_MODELS,
 	OPENAI_CODEX_SOL_EFFORTS,
 	OPENAI_CODEX_SOL_MODEL,
@@ -9,6 +10,7 @@ import {
 
 describe("OpenAI subscription source UAT", () => {
 	it("targets xcsh native GPT-5.6 Sol and contains no official-Codex sentinel", async () => {
+		expect(OPENAI_CODEX_DEFAULT_MODEL).toBe("openai-codex/gpt-5.6-terra");
 		expect(OPENAI_CODEX_SOL_MODEL).toBe("openai-codex/gpt-5.6-sol");
 		expect(OPENAI_CODEX_GPT56_MODELS).toEqual([
 			"openai-codex/gpt-5.6-luna",
@@ -24,6 +26,11 @@ describe("OpenAI subscription source UAT", () => {
 		expect(source).toContain('PI_CODEX_DEBUG: "1"');
 		expect(source).toContain('"reasoningEffort"');
 		expect(source).toContain('visible.includes("ChatGPT Subscription")');
+		expect(source).toContain('normalized.includes("gpt-5.6-luna] SMOL (low)")');
+		expect(source).toContain('normalized.includes("gpt-5.6-terra] DEFAULT (medium)")');
+		expect(source).toContain('normalized.includes("gpt-5.6-sol] SLOW (high) PLAN (high)")');
+		expect(source).toContain("visible.includes(`Switched to ");
+		expect(source).toContain('"default Terra/medium role"');
 		expect(source).toContain('!visible.includes("QUICK")');
 		expect(source).toContain('!visible.includes("ALL MODELS")');
 		expect(source).toContain('SSH_CONNECTION: "uat-client uat-server"');
