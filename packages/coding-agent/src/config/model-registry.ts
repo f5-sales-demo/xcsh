@@ -11,6 +11,7 @@ import {
 	getBundledProviders,
 	googleAntigravityModelManagerOptions,
 	googleGeminiCliModelManagerOptions,
+	googleVertexModelManagerOptions,
 	type Model,
 	type ModelManagerOptions,
 	type ModelRefreshStrategy,
@@ -1409,6 +1410,11 @@ export class ModelRegistry {
 			createOptions: (key: string) => ModelManagerOptions<Api>;
 		}> = [
 			{
+				providerId: "google-vertex",
+				resolveKey: value => value,
+				createOptions: apiKey => googleVertexModelManagerOptions({ apiKey }),
+			},
+			{
 				providerId: "google-antigravity",
 				resolveKey: extractGoogleOAuthToken,
 				createOptions: oauthToken =>
@@ -1477,6 +1483,7 @@ export class ModelRegistry {
 		options: ModelManagerOptions<Api>,
 		strategy: ModelRefreshStrategy,
 	): Promise<Model<Api>[]> {
+		const previous = this.#providerDiscoveryStates.get(options.providerId);
 		try {
 			const manager = createModelManager({ ...options, cacheDbPath: this.#cacheDbPath });
 			const result = await manager.refresh(strategy);
@@ -1493,12 +1500,17 @@ export class ModelRegistry {
 			});
 			return models;
 		} catch (error) {
+			const retained =
+				previous && (previous.status === "ok" || previous.status === "cached") && previous.models.length > 0
+					? previous
+					: undefined;
 			this.#providerDiscoveryStates.set(options.providerId, {
 				provider: options.providerId,
-				status: "unavailable",
+				status: retained ? "cached" : "unavailable",
 				optional: false,
 				stale: true,
-				models: [],
+				fetchedAt: retained?.fetchedAt,
+				models: retained?.models ?? [],
 				error: error instanceof Error ? error.message : String(error),
 			});
 			logger.warn("model discovery failed for provider", {

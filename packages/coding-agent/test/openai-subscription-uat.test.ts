@@ -23,6 +23,9 @@ describe("OpenAI subscription source UAT", () => {
 		expect(source).toContain('visible.includes("https://auth.openai.com/codex/device")');
 		expect(source).toContain('PI_CODEX_DEBUG: "1"');
 		expect(source).toContain('"reasoningEffort"');
+		expect(source).toContain('visible.includes("ChatGPT Subscription")');
+		expect(source).toContain('!visible.includes("QUICK")');
+		expect(source).toContain('!visible.includes("ALL MODELS")');
 		expect(source).toContain('SSH_CONNECTION: "uat-client uat-server"');
 		expect(source).not.toContain('"the ChatGPT browser authorization request"');
 	});
