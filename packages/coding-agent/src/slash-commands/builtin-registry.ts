@@ -13,6 +13,7 @@ import {
 } from "../discovery/helpers.js";
 import { PluginManager } from "../extensibility/plugins";
 import {
+	formatMarketplaceRefreshWarning,
 	getInstalledPluginsRegistryPath,
 	getMarketplacesCacheDir,
 	getMarketplacesRegistryPath,
@@ -1008,6 +1009,13 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 			});
 
 			try {
+				const showPluginStatus = (
+					message: string,
+					refresh?: Awaited<ReturnType<typeof mgr.refreshMarketplaces>>,
+				) => {
+					const warning = refresh ? formatMarketplaceRefreshWarning(refresh) : undefined;
+					runtime.ctx.showStatus(warning ? `${warning}\n\n${message}` : message);
+				};
 				switch (sub) {
 					// ── Marketplace management (/plugin marketplace add|remove|update|list) ──
 					case "marketplace": {
@@ -1039,9 +1047,10 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 									await mgr.updateMarketplace(mktRest);
 									runtime.ctx.showStatus(t("commands.plugin.marketplace.updated", { name: mktRest }));
 								} else {
-									const results = await mgr.updateAllMarketplaces();
-									runtime.ctx.showStatus(
-										t("commands.plugin.marketplace.updatedAll", { count: results.length }),
+									const refresh = await mgr.refreshMarketplaces();
+									showPluginStatus(
+										t("commands.plugin.marketplace.updatedAll", { count: refresh.successful.length }),
+										refresh,
 									);
 								}
 								break;
@@ -1086,27 +1095,31 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 							await mgr.updateMarketplace(rest);
 							runtime.ctx.showStatus(t("commands.plugin.marketplace.updated", { name: rest }));
 						} else {
-							const results = await mgr.updateAllMarketplaces();
-							runtime.ctx.showStatus(t("commands.plugin.marketplace.updatedAll", { count: results.length }));
+							const refresh = await mgr.refreshMarketplaces();
+							showPluginStatus(
+								t("commands.plugin.marketplace.updatedAll", { count: refresh.successful.length }),
+								refresh,
+							);
 						}
 						break;
 					}
 					// ── Plugin discovery ──
 					case "discover": {
+						const refresh = await mgr.refreshMarketplaces(rest ? [rest] : undefined);
 						const plugins = await mgr.listAvailablePlugins(rest || undefined);
 						if (plugins.length === 0) {
 							const marketplaces = await mgr.listMarketplaces();
 							if (marketplaces.length === 0) {
-								runtime.ctx.showStatus(t("commands.plugin.marketplace.noneConfiguredTry"));
+								showPluginStatus(t("commands.plugin.marketplace.noneConfiguredTry"), refresh);
 							} else {
-								runtime.ctx.showStatus(t("commands.plugin.marketplace.noPluginsAvailable"));
+								showPluginStatus(t("commands.plugin.marketplace.noPluginsAvailable"), refresh);
 							}
 						} else {
 							const lines = plugins.map(
 								p =>
 									`  ${p.name}${p.version ? `@${p.version}` : ""}${p.description ? ` - ${p.description}` : ""}`,
 							);
-							runtime.ctx.showStatus(`Available plugins:\n${lines.join("\n")}`);
+							showPluginStatus(`Available plugins:\n${lines.join("\n")}`, refresh);
 						}
 						break;
 					}
@@ -1120,8 +1133,9 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						const atIdx = parsed.installSpec.lastIndexOf("@");
 						const name = parsed.installSpec.slice(0, atIdx);
 						const marketplace = parsed.installSpec.slice(atIdx + 1);
+						const refresh = await mgr.refreshMarketplaces([marketplace]);
 						await mgr.installPlugin(name, marketplace, { force: parsed.force, scope: parsed.scope });
-						runtime.ctx.showStatus(t("commands.plugin.installed", { name, marketplace }));
+						showPluginStatus(t("commands.plugin.installed", { name, marketplace }), refresh);
 						break;
 					}
 					// ── Uninstall ──
@@ -1160,6 +1174,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					}
 					// ── Upgrade ──
 					case "upgrade": {
+						const refresh = await mgr.refreshMarketplaces();
 						if (rest) {
 							const upArgs = parsePluginScopeArgs(
 								rest,
@@ -1169,18 +1184,20 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 								runtime.ctx.showStatus(upArgs.error);
 								return;
 							}
-							const result = await mgr.upgradePlugin(upArgs.pluginId, upArgs.scope, { refresh: true });
-							runtime.ctx.showStatus(
+							const result = await mgr.upgradePlugin(upArgs.pluginId, upArgs.scope);
+							showPluginStatus(
 								t("commands.plugin.upgraded", { pluginId: upArgs.pluginId, version: result.version }),
+								refresh,
 							);
 						} else {
-							const results = await mgr.upgradeAllPlugins({ refresh: true });
+							const results = await mgr.upgradeAllPlugins();
 							if (results.length === 0) {
-								runtime.ctx.showStatus(t("commands.plugin.allUpToDate"));
+								showPluginStatus(t("commands.plugin.allUpToDate"), refresh);
 							} else {
 								const lines = results.map(r => `  ${r.pluginId}: ${r.from} -> ${r.to}`);
-								runtime.ctx.showStatus(
+								showPluginStatus(
 									`${t("commands.plugin.upgradedCount", { count: results.length })}:\n${lines.join("\n")}`,
+									refresh,
 								);
 							}
 						}
@@ -1247,10 +1264,11 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 					}
 					// ── Setup (guided recommended plugin install) ──
 					case "setup": {
+						const refresh = await mgr.refreshMarketplaces();
 						const allPlugins = await mgr.listAvailablePlugins();
 						const recommended = allPlugins.filter(p => p.recommended);
 						if (recommended.length === 0) {
-							runtime.ctx.showStatus(t("commands.plugin.setup.noRecommended"));
+							showPluginStatus(t("commands.plugin.setup.noRecommended"), refresh);
 							break;
 						}
 
@@ -1261,7 +1279,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						);
 
 						if (toSetup.length === 0) {
-							runtime.ctx.showStatus(t("commands.plugin.setup.allInstalled"));
+							showPluginStatus(t("commands.plugin.setup.allInstalled"), refresh);
 							break;
 						}
 
@@ -1346,7 +1364,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 						if (skippedCount > 0) {
 							lines.push(t("commands.plugin.setup.skippedCount", { count: skippedCount }));
 						}
-						runtime.ctx.showStatus(lines.join("\n"));
+						showPluginStatus(lines.join("\n"), refresh);
 						break;
 					}
 					// ── Help ──

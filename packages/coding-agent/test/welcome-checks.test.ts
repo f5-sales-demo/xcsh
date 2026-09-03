@@ -52,6 +52,15 @@ describe("runWelcomeChecks", () => {
 		const r = await runWelcomeChecks(mockModel(), mockAuth({ hasAuth: false }));
 		expect(r.context).toBeUndefined();
 	});
+	it("accepts configured keyless vLLM without probing for a credential", async () => {
+		const registry = { isProviderKeyless: (provider: string) => provider === "vllm" };
+		const r = await runWelcomeChecks(
+			mockModel({ provider: "vllm" }),
+			mockAuth({ hasAuth: false, peekApiKey: undefined }),
+			registry,
+		);
+		expect(r.model).toEqual({ state: "connected", provider: "vllm", latencyMs: 0 });
+	});
 });
 
 describe("hasActiveLlmProvider", () => {
@@ -60,6 +69,18 @@ describe("hasActiveLlmProvider", () => {
 	});
 	it("returns true for a keyless local provider even without stored credentials", () => {
 		expect(hasActiveLlmProvider(mockModel({ provider: "ollama" }), mockAuth({ hasAuth: false }))).toBe(true);
+	});
+	it("uses configured auth mode to recognize keyless vLLM", () => {
+		const keylessRegistry = { isProviderKeyless: (provider: string) => provider === "vllm" };
+		expect(hasActiveLlmProvider(mockModel({ provider: "vllm" }), mockAuth({ hasAuth: false }), keylessRegistry)).toBe(
+			true,
+		);
+	});
+	it("does not treat authenticated vLLM as keyless", () => {
+		const authenticatedRegistry = { isProviderKeyless: () => false };
+		expect(
+			hasActiveLlmProvider(mockModel({ provider: "vllm" }), mockAuth({ hasAuth: false }), authenticatedRegistry),
+		).toBe(false);
 	});
 	it("returns true when credentials exist for the provider", () => {
 		expect(hasActiveLlmProvider(mockModel({ provider: "anthropic" }), mockAuth({ hasAuth: true }))).toBe(true);

@@ -46,6 +46,7 @@ export interface PluginDashboardState {
 	selectedIndex: number;
 	scrollOffset: number;
 	notice: string | null;
+	warning?: string | null;
 	loading: boolean;
 	loadError: string | null;
 }
