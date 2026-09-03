@@ -319,7 +319,11 @@ export class InteractiveMode implements InteractiveModeContext {
 		// LLM readiness gate: instant, local check (no network). When no provider is
 		// configured we still initialize immediately, but warn the user to /login —
 		// natural-language input is blocked until then (enforced in input-controller).
-		const needsLogin = !hasActiveLlmProvider(this.session.model, this.session.modelRegistry.authStorage);
+		const needsLogin = !hasActiveLlmProvider(
+			this.session.model,
+			this.session.modelRegistry.authStorage,
+			this.session.modelRegistry,
+		);
 
 		if (!startupQuiet) {
 			this.#welcomeComponent = new WelcomeComponent(this.#version);
@@ -1097,7 +1101,11 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	hasActiveLlmProvider(): boolean {
-		return hasActiveLlmProvider(this.session.model, this.session.modelRegistry.authStorage);
+		return hasActiveLlmProvider(
+			this.session.model,
+			this.session.modelRegistry.authStorage,
+			this.session.modelRegistry,
+		);
 	}
 
 	ensureLoadingAnimation(): void {

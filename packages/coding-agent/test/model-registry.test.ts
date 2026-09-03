@@ -1894,6 +1894,8 @@ describe("ModelRegistry", () => {
 			const registry = new ModelRegistry(authStorage, modelsJsonPath);
 			await registry.refreshProvider("vllm", "online");
 
+			expect(registry.isProviderKeyless("vllm")).toBe(true);
+			expect(registry.getAvailable().some(model => model.provider === "vllm")).toBe(true);
 			expect(registry.find("vllm", "large-local")).toMatchObject({ contextWindow: 65_536, maxTokens: 8192 });
 			expect(registry.find("vllm", "tiny-local")).toMatchObject({ contextWindow: 2048, maxTokens: 512 });
 			expect(registry.find("vllm", "metadata-free")).toMatchObject({ contextWindow: 128_000, maxTokens: 8192 });

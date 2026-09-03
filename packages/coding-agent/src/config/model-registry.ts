@@ -2060,6 +2060,11 @@ export class ModelRegistry {
 		return new Set(this.#configuredProviderIds);
 	}
 
+	/** Whether this provider is explicitly or implicitly configured to run without credentials. */
+	isProviderKeyless(provider: string): boolean {
+		return this.#keylessProviders.has(provider);
+	}
+
 	getDiscoverableProviders(): string[] {
 		const disabledProviders = getDisabledProviderIdsFromSettings();
 		return this.#discoverableProviders
