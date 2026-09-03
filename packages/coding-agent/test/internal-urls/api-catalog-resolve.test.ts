@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { createApiCatalogResolver } from "../../src/internal-urls/api-catalog-resolve";
 import type { ApiCatalogCategory, ApiCatalogIndex } from "../../src/internal-urls/api-catalog-types";
+import type { ApiSpecIndex } from "../../src/internal-urls/api-spec-types";
 import type { InternalUrl } from "../../src/internal-urls/types";
 
 const testCatalogIndex: ApiCatalogIndex = {
@@ -30,6 +31,7 @@ const testCatalogData: Record<string, ApiCatalogCategory> = {
 		operations: [
 			{
 				name: "create_dns_zone",
+				operationId: "test.create_dns_zone",
 				description: "Create a DNS zone",
 				method: "POST",
 				path: "/api/config/dns/namespaces/{namespace}/dns_zones",
@@ -39,6 +41,7 @@ const testCatalogData: Record<string, ApiCatalogCategory> = {
 			},
 			{
 				name: "list_dns_zones",
+				operationId: "test.list_dns_zones",
 				description: "List DNS zones",
 				method: "GET",
 				path: "/api/config/dns/namespaces/{namespace}/dns_zones",
@@ -53,6 +56,7 @@ const testCatalogData: Record<string, ApiCatalogCategory> = {
 		operations: [
 			{
 				name: "create_http_lb",
+				operationId: "test.create_http_lb",
 				description: "Create HTTP load balancer",
 				method: "POST",
 				path: "/api/config/namespaces/{namespace}/http_loadbalancers",
@@ -69,6 +73,26 @@ function parseUrl(urlStr: string): InternalUrl {
 	url.rawHost = match?.[1] ?? "";
 	url.rawPathname = match?.[2] ?? "/";
 	return url;
+}
+
+function specIndexForResource(resource: ApiSpecIndex["domains"][number]["resources"][number]): ApiSpecIndex {
+	return {
+		version: "test",
+		timestamp: "2026-09-03T00:00:00Z",
+		domains: [
+			{
+				domain: "dns",
+				title: "DNS",
+				description: "DNS resources",
+				descriptionShort: "DNS",
+				category: "networking",
+				pathCount: 1,
+				schemaCount: 1,
+				complexity: "medium",
+				resources: [resource],
+			},
+		],
+	};
 }
 
 describe("API Catalog Resolver", () => {
@@ -130,6 +154,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create a test",
 					method: "POST",
 					path: "/api/test/{namespace}/resources",
@@ -159,6 +184,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test",
@@ -191,6 +217,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test",
@@ -229,6 +256,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test",
@@ -256,6 +284,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test",
@@ -312,6 +341,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test/{namespace}/resources",
@@ -321,6 +351,7 @@ describe("API Catalog Resolver", () => {
 				},
 				{
 					name: "replace_test",
+					operationId: "test.replace_test",
 					description: "Replace",
 					method: "PUT",
 					path: "/api/test/{namespace}/resources/{name}",
@@ -352,6 +383,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test/{namespace}/resources",
@@ -363,6 +395,7 @@ describe("API Catalog Resolver", () => {
 				},
 				{
 					name: "replace_test",
+					operationId: "test.replace_test",
 					description: "Replace",
 					method: "PUT",
 					path: "/api/test/{namespace}/resources/{name}",
@@ -391,6 +424,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test",
@@ -428,6 +462,7 @@ describe("API Catalog Resolver", () => {
 			operations: [
 				{
 					name: "create_test",
+					operationId: "test.create_test",
 					description: "Create",
 					method: "POST",
 					path: "/api/test",
@@ -448,5 +483,172 @@ describe("API Catalog Resolver", () => {
 		const result = await resolver.resolve(parseUrl("xcsh://api-catalog/test-resources"));
 		expect(result.content).toContain("### Field Constraints");
 		expect(result.content).toContain("metadata.name");
+	});
+
+	it("selects canonical CRUD deterministically when category order is reversed", async () => {
+		const canonicalPath = "/api/config/dns/namespaces/{namespace}/dns_zones";
+		const data: Record<string, ApiCatalogCategory> = {
+			ancillary: {
+				name: "ancillary",
+				displayName: "DNS health",
+				operations: [
+					{
+						name: "get_health",
+						operationId: "ves.io.schema.dns_zone.CustomAPI.Health",
+						description: "Health status",
+						method: "GET",
+						path: "/api/data/dns_zones/health",
+						dangerLevel: "low",
+						parameters: [],
+					},
+				],
+			},
+			canonical: {
+				name: "canonical",
+				displayName: "DNS zones",
+				operations: [
+					{
+						name: "create_dns_zone",
+						operationId: "ves.io.schema.dns_zone.API.Create",
+						description: "Canonical create",
+						method: "POST",
+						path: canonicalPath,
+						dangerLevel: "medium",
+						parameters: [],
+					},
+				],
+			},
+		};
+		const specIndex = specIndexForResource({
+			name: "dns_zone",
+			description: "Authoritative DNS zone",
+			apiPaths: [canonicalPath, "/api/data/dns_zones/health"],
+			catalogCategories: ["ancillary", "canonical"],
+			canonicalCrudOperations: [
+				{ method: "POST", path: canonicalPath, operationId: "ves.io.schema.dns_zone.API.Create" },
+			],
+		});
+		const summaries = Object.values(data).map(category => ({
+			name: category.name,
+			displayName: category.displayName,
+			operationCount: category.operations.length,
+		}));
+		const result = await createApiCatalogResolver(testCatalogIndex, summaries, data, specIndex).resolve(
+			parseUrl("xcsh://api-catalog/?resource=dns_zone"),
+		);
+		expect(result.content).toContain("Canonical create");
+		expect(result.content).not.toContain("Health status");
+	});
+
+	it("renders ancillary links and authoritative fallback when expected CRUD is absent", async () => {
+		const specIndex = specIndexForResource({
+			name: "dns_zone",
+			description: "Authoritative DNS zone",
+			apiPaths: ["/api/data/dns_zones/health"],
+			catalogCategories: ["dns-zone"],
+			canonicalCrudOperations: [
+				{
+					method: "POST",
+					path: "/api/config/dns/namespaces/{namespace}/dns_zones",
+					operationId: "ves.io.schema.dns_zone.API.Create",
+				},
+			],
+		});
+		const result = await createApiCatalogResolver(
+			testCatalogIndex,
+			testCategorySummaries,
+			testCatalogData,
+			specIndex,
+		).resolve(parseUrl("xcsh://api-catalog/?resource=dns_zone"));
+		expect(result.content).toContain("Canonical CRUD unavailable");
+		expect(result.content).toContain("xcsh://api-catalog/dns-zone");
+		expect(result.content).toContain("xcsh://api-spec/dns?resource=dns_zone&crud=true");
+	});
+
+	it("selects the best path-covered category for a custom-only resource", async () => {
+		const collectionOperation = testCatalogData["dns-zone"].operations[0];
+		const actionOperation = {
+			...testCatalogData["dns-zone"].operations[1],
+			path: "/api/config/dns/namespaces/{namespace}/dns_zones/{name}/export",
+		};
+		const data: Record<string, ApiCatalogCategory> = {
+			partial: {
+				name: "partial",
+				displayName: "Partial",
+				operations: [collectionOperation],
+			},
+			complete: {
+				name: "complete",
+				displayName: "Complete",
+				operations: [collectionOperation, actionOperation],
+			},
+		};
+		const specIndex = specIndexForResource({
+			name: "custom_dns",
+			description: "Custom DNS actions",
+			apiPaths: [collectionOperation.path, actionOperation.path],
+			catalogCategories: ["partial", "complete"],
+			canonicalCrudOperations: [],
+		});
+		const summaries = Object.values(data).map(category => ({
+			name: category.name,
+			displayName: category.displayName,
+			operationCount: category.operations.length,
+		}));
+		const result = await createApiCatalogResolver(testCatalogIndex, summaries, data, specIndex).resolve(
+			parseUrl("xcsh://api-catalog/?resource=custom_dns"),
+		);
+		expect(result.content).toContain("# Complete");
+		expect(result.content).toContain("List DNS zones");
+	});
+
+	it("searches resource metadata and labels canonical results before ancillary results", async () => {
+		const canonicalPath = "/api/config/dns/namespaces/{namespace}/dns_zones";
+		const specIndex = specIndexForResource({
+			name: "dns_zone",
+			description: "Authoritative DNS zone",
+			apiPaths: [canonicalPath, "/api/data/dns_zones/health"],
+			catalogCategories: ["dns-zone", "http-loadbalancer"],
+			canonicalCrudOperations: [{ method: "POST", path: canonicalPath, operationId: "test.create_dns_zone" }],
+		});
+		const result = await createApiCatalogResolver(
+			testCatalogIndex,
+			testCategorySummaries,
+			testCatalogData,
+			specIndex,
+		).resolve(parseUrl("xcsh://api-catalog/?search=authoritative"));
+		expect(result.content).toContain("canonical CRUD");
+		expect(result.content).toContain("ancillary");
+		expect(result.content.indexOf("dns-zone")).toBeLessThan(result.content.indexOf("http-loadbalancer"));
+	});
+
+	it("renders non-executable minimum-payload diagnostics", async () => {
+		const diagnostic: ApiCatalogCategory = {
+			name: "diagnostic",
+			displayName: "Diagnostic",
+			operations: [
+				{
+					name: "create_diagnostic",
+					operationId: "test.create_diagnostic",
+					description: "Create",
+					method: "POST",
+					path: "/api/test",
+					dangerLevel: "medium",
+					parameters: [],
+					minimumPayloadDiagnostic: {
+						reasonCode: "unresolved-oneof",
+						message: "No concrete request variant is available.",
+					},
+				},
+			],
+		};
+		const result = await createApiCatalogResolver(
+			testCatalogIndex,
+			[{ name: "diagnostic", displayName: "Diagnostic", operationCount: 1 }],
+			{ diagnostic },
+		).resolve(parseUrl("xcsh://api-catalog/diagnostic"));
+		expect(result.content).toContain("Minimum Configuration Unavailable");
+		expect(result.content).toContain("unresolved-oneof");
+		expect(result.content).not.toContain("```json");
 	});
 });

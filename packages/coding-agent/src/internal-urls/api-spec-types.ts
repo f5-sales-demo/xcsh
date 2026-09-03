@@ -21,6 +21,13 @@ export interface ApiSpecDomainResource {
 	};
 	readonly relationshipHints?: readonly string[];
 	readonly catalogCategories?: readonly string[];
+	readonly canonicalCrudOperations?: readonly ApiSpecCanonicalCrudOperation[];
+}
+
+export interface ApiSpecCanonicalCrudOperation {
+	readonly method: string;
+	readonly path: string;
+	readonly operationId: string;
 }
 
 export interface ApiSpecCliMetadata {

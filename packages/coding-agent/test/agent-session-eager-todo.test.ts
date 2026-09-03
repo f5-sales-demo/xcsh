@@ -303,6 +303,35 @@ describe("AgentSession eager todo enforcement", () => {
 		});
 	});
 
+	for (const promptText of [
+		"who are you and what can you do",
+		"what can you do",
+		"how are you",
+		"why is the sky blue",
+	]) {
+		it(`skips eager todo enforcement for punctuation-free question: ${promptText}`, async () => {
+			await session.prompt(promptText);
+
+			expect(observedCalls).toHaveLength(1);
+			expect(observedCalls[0]?.toolChoice).toBeUndefined();
+			expect(observedCalls[0]?.lastMessageText).toBe(promptText);
+		});
+	}
+
+	it("still forces todo_write for a substantive punctuation-free request", async () => {
+		await session.prompt("refactor the parser module and add regression tests");
+
+		expect(observedCalls).toHaveLength(1);
+		expect(observedCalls[0]?.toolChoice).toBe("todo_write");
+	});
+
+	it("still forces todo_write when a substantive request starts conversationally", async () => {
+		await session.prompt("how should we refactor the parser and add regression tests");
+
+		expect(observedCalls).toHaveLength(1);
+		expect(observedCalls[0]?.toolChoice).toBe("todo_write");
+	});
+
 	it("skips eager todo enforcement for subsequent user messages", async () => {
 		// First prompt: eager todo fires
 		await session.prompt("refactor the parser module");

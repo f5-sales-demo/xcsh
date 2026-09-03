@@ -5,6 +5,7 @@ import {
 	isAlreadyPublished,
 	isExactRegistryVersion,
 	npmPublishArgs,
+	publishWithVisibility,
 	resolveReleaseSourceRoot,
 	waitForRegistryVisibility,
 } from "../../../../scripts/ci-release-publish";
@@ -23,6 +24,12 @@ describe("release npm backfill publish semantics", () => {
 		const output = "npm error EPUBLISHCONFLICT Cannot publish over previously published version 20.13.1.";
 		expect(isAlreadyPublished(output, "20.13.1")).toBe(true);
 		expect(isAlreadyPublished(output, "20.15.0")).toBe(false);
+	});
+
+	it("recognizes the exact version when npm reports it is still staged", () => {
+		const output = 'npm error 409 Conflict - Cannot publish over previously staged version "21.11.1".';
+		expect(isAlreadyPublished(output, "21.11.1")).toBe(true);
+		expect(isAlreadyPublished(output, "21.11.0")).toBe(false);
 	});
 
 	it("adds an explicit non-latest dist-tag for backfills", () => {
@@ -85,6 +92,69 @@ describe("release npm backfill publish semantics", () => {
 				maxAttempts: 2,
 			}),
 		).rejects.toThrow("@f5-sales-demo/pi-agent-core@21.0.0");
+	});
+
+	it("retries accepted publication and visibility as one operation", async () => {
+		let publishes = 0;
+		let visibilityChecks = 0;
+		const sleeps: number[] = [];
+		const attempt = await publishWithVisibility("@f5-sales-demo/pi-natives-linux-arm64-gnu", "21.11.1", {
+			publish: async () => {
+				publishes++;
+				return publishes === 1
+					? { exitCode: 0, output: "package accepted and processing" }
+					: { exitCode: 1, output: 'Cannot publish over previously staged version "21.11.1".' };
+			},
+			waitForVisibility: async () => {
+				visibilityChecks++;
+				if (visibilityChecks === 1) throw new Error("not visible");
+			},
+			sleep: async delayMs => {
+				sleeps.push(delayMs);
+			},
+			initialDelayMs: 5,
+			maxAttempts: 3,
+		});
+
+		expect(attempt).toBe(2);
+		expect(publishes).toBe(2);
+		expect(visibilityChecks).toBe(2);
+		expect(sleeps).toEqual([5]);
+	});
+
+	it("bounds repeated publish failures", async () => {
+		const sleeps: number[] = [];
+		await expect(
+			publishWithVisibility("@f5-sales-demo/pi-utils", "21.11.1", {
+				publish: async () => ({ exitCode: 1, output: "temporary registry failure" }),
+				waitForVisibility: async () => {
+					throw new Error("must not run");
+				},
+				sleep: async delayMs => {
+					sleeps.push(delayMs);
+				},
+				initialDelayMs: 5,
+				maxDelayMs: 10,
+				maxAttempts: 3,
+			}),
+		).rejects.toThrow("after 3 attempts");
+		expect(sleeps).toEqual([5, 10]);
+	});
+
+	it("bounds accepted publications that remain invisible", async () => {
+		let visibilityChecks = 0;
+		await expect(
+			publishWithVisibility("@f5-sales-demo/pi-natives-linux-arm64-gnu", "21.11.1", {
+				publish: async () => ({ exitCode: 0, output: "package accepted and processing" }),
+				waitForVisibility: async () => {
+					visibilityChecks++;
+					throw new Error("not visible");
+				},
+				sleep: async () => {},
+				maxAttempts: 2,
+			}),
+		).rejects.toThrow("after 2 attempts");
+		expect(visibilityChecks).toBe(2);
 	});
 });
 

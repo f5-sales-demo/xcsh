@@ -90,155 +90,6 @@ function tryParseNumberString(value: string, expectedTypes: string[]): { value: 
 	return { value: parsed, changed: true };
 }
 
-function tryParseLeadingJsonContainer(value: string): unknown | undefined {
-	const firstChar = value[0];
-	const closingChar = firstChar === "{" ? "}" : firstChar === "[" ? "]" : undefined;
-	if (!closingChar) return undefined;
-
-	let depth = 0;
-	let inString = false;
-	let escaped = false;
-
-	for (let index = 0; index < value.length; index += 1) {
-		const char = value[index];
-
-		if (inString) {
-			if (escaped) {
-				escaped = false;
-				continue;
-			}
-			if (char === "\\") {
-				escaped = true;
-				continue;
-			}
-			if (char === '"') inString = false;
-			continue;
-		}
-
-		if (char === '"') {
-			inString = true;
-			continue;
-		}
-
-		if (char === firstChar) {
-			depth += 1;
-			continue;
-		}
-
-		if (char !== closingChar) continue;
-		depth -= 1;
-		if (depth !== 0) continue;
-
-		const prefix = value.slice(0, index + 1);
-		try {
-			return JSON.parse(prefix) as unknown;
-		} catch {
-			// LLMs sometimes emit literal `\n` or `\t` between JSON tokens
-			// (e.g. `[{...}\n]`). Convert these to real whitespace and retry.
-			const cleaned = cleanLiteralEscapes(prefix);
-			if (cleaned !== prefix) {
-				try {
-					return JSON.parse(cleaned) as unknown;
-				} catch {}
-			}
-			// Also try single-char healing on the extracted prefix.
-			return tryHealMalformedJson(prefix);
-		}
-	}
-
-	return undefined;
-}
-
-/**
- * Replace literal `\n`, `\t`, `\r` sequences that appear OUTSIDE of JSON
- * strings with actual whitespace.  LLMs sometimes produce these when they
- * confuse the tool-call encoding with the content encoding.
- */
-function cleanLiteralEscapes(value: string): string {
-	let result = "";
-	let inString = false;
-	let i = 0;
-	while (i < value.length) {
-		const ch = value[i];
-		if (inString) {
-			if (ch === "\\" && i + 1 < value.length) {
-				result += ch + value[i + 1];
-				i += 2;
-				continue;
-			}
-			if (ch === '"') inString = false;
-			result += ch;
-			i += 1;
-			continue;
-		}
-		if (ch === '"') {
-			inString = true;
-			result += ch;
-			i += 1;
-			continue;
-		}
-		// Outside a string: replace literal \n, \t, \r with whitespace
-		if (ch === "\\" && i + 1 < value.length) {
-			const next = value[i + 1];
-			if (next === "n" || next === "t" || next === "r") {
-				result += " ";
-				i += 2;
-				continue;
-			}
-		}
-		result += ch;
-		i += 1;
-	}
-	return result;
-}
-
-/** Maximum single-character edits to attempt when healing malformed JSON. */
-const MAX_HEAL_DISTANCE = 3;
-const BRACKET_CHARS = ["[", "]", "{", "}"] as const;
-
-/**
- * Attempts to heal near-valid JSON by applying single-character edits near the
- * end of the string. LLMs (especially smaller ones) sometimes produce JSON with
- * a single misplaced, extra, or wrong bracket at the end — e.g. `"}]"` becomes
- * `"]}"` or gets an extra `}` appended. This function tries:
- *   1. Removing a single character from the last few positions
- *   2. Replacing a single character in the last few positions with each bracket type
- *
- * Returns the parsed value on success, undefined on failure.
- */
-function tryHealMalformedJson(value: string): unknown | undefined {
-	// Verify it actually fails to parse
-	try {
-		return JSON.parse(value) as unknown;
-	} catch {}
-
-	// Only attempt edits within the last few characters — the error is always
-	// a bracket issue at the tail for the class of LLM mistakes this targets.
-	const tailStart = Math.max(0, value.length - (MAX_HEAL_DISTANCE * 2 + 1));
-
-	// Strategy 1: remove a single character from the tail
-	for (let i = tailStart; i < value.length; i += 1) {
-		const candidate = value.slice(0, i) + value.slice(i + 1);
-		try {
-			return JSON.parse(candidate) as unknown;
-		} catch {}
-	}
-
-	// Strategy 2: replace a single character in the tail with each bracket type
-	for (let i = tailStart; i < value.length; i += 1) {
-		const original = value[i];
-		for (const replacement of BRACKET_CHARS) {
-			if (replacement === original) continue;
-			const candidate = value.slice(0, i) + replacement + value.slice(i + 1);
-			try {
-				return JSON.parse(candidate) as unknown;
-			} catch {}
-		}
-	}
-
-	return undefined;
-}
-
 /**
  * Attempts to parse a string as JSON if it looks like a JSON literal and
  * the parsed result matches one of the expected types.
@@ -285,18 +136,6 @@ function tryParseJsonForTypes(value: string, expectedTypes: string[]): { value: 
 			return { value: parsed, changed: true };
 		}
 	} catch {
-		if (looksJsonObject || looksJsonArray) {
-			// Try extracting a valid JSON prefix (handles trailing junk after balanced container)
-			const leading = tryParseLeadingJsonContainer(trimmed);
-			if (leading !== undefined && matchesExpectedType(leading, expectedTypes)) {
-				return { value: leading, changed: true };
-			}
-			// Try healing single-character bracket errors near the end of the string
-			const healed = tryHealMalformedJson(trimmed);
-			if (healed !== undefined && matchesExpectedType(healed, expectedTypes)) {
-				return { value: healed, changed: true };
-			}
-		}
 		return { value, changed: false };
 	}
 
@@ -513,6 +352,115 @@ function normalizeOptionalNullsForSchema(schema: unknown, value: unknown): { val
 	return { value: changed ? nextValue : value, changed };
 }
 
+const PROTOTYPE_SENSITIVE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+/**
+ * Strictly decodes JSON strings at schema nodes that explicitly accept an
+ * object or array, then continues normalization inside the decoded value.
+ * This schema-first pass is not limited by the number or shape of AJV errors.
+ */
+function normalizeJsonContainersForSchema(schema: unknown, value: unknown): { value: unknown; changed: boolean } {
+	if (schema === null || typeof schema !== "object" || Array.isArray(schema)) {
+		return { value, changed: false };
+	}
+
+	const schemaObject = schema as Record<string, unknown>;
+	for (const keyword of ["anyOf", "oneOf"] as const) {
+		const branches = schemaObject[keyword];
+		if (!Array.isArray(branches)) continue;
+
+		let changedCandidate: { value: unknown; changed: true } | undefined;
+		for (const branch of branches) {
+			const normalized = normalizeJsonContainersForSchema(branch, value);
+			if (!normalized.changed) continue;
+			changedCandidate ??= normalized as { value: unknown; changed: true };
+			try {
+				if (ajv.compile(branch)(normalized.value)) return normalized;
+			} catch {
+				// The full tool-schema compilation reports invalid schemas consistently.
+			}
+		}
+		if (changedCandidate) return changedCandidate;
+	}
+
+	let normalizedValue = value;
+	let changed = false;
+	const declaredTypes = normalizeExpectedTypes(schemaObject.type);
+	const containerTypes = declaredTypes.filter(type => type === "array" || type === "object");
+
+	if (typeof normalizedValue === "string" && containerTypes.length > 0) {
+		const trimmed = normalizedValue.trim();
+		const hasMatchingDelimiter =
+			(containerTypes.includes("array") && trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+			(containerTypes.includes("object") && trimmed.startsWith("{") && trimmed.endsWith("}"));
+		if (hasMatchingDelimiter) {
+			try {
+				const parsed = JSON.parse(trimmed) as unknown;
+				if (matchesExpectedType(parsed, containerTypes)) {
+					normalizedValue = parsed;
+					changed = true;
+				}
+			} catch {
+				return { value, changed: false };
+			}
+		}
+	}
+
+	if (Array.isArray(schemaObject.allOf)) {
+		for (const branch of schemaObject.allOf) {
+			const normalized = normalizeJsonContainersForSchema(branch, normalizedValue);
+			if (!normalized.changed) continue;
+			normalizedValue = normalized.value;
+			changed = true;
+		}
+	}
+
+	if (Array.isArray(normalizedValue)) {
+		const itemSchema = schemaObject.items;
+		if (itemSchema !== null && typeof itemSchema === "object" && !Array.isArray(itemSchema)) {
+			let nextValue = normalizedValue;
+			for (let index = 0; index < normalizedValue.length; index += 1) {
+				const normalized = normalizeJsonContainersForSchema(itemSchema, normalizedValue[index]);
+				if (!normalized.changed) continue;
+				if (nextValue === normalizedValue) nextValue = [...normalizedValue];
+				nextValue[index] = normalized.value;
+				changed = true;
+			}
+			normalizedValue = nextValue;
+		}
+		return { value: changed ? normalizedValue : value, changed };
+	}
+
+	if (normalizedValue === null || typeof normalizedValue !== "object") {
+		return { value: changed ? normalizedValue : value, changed };
+	}
+
+	const properties =
+		schemaObject.properties !== null &&
+		typeof schemaObject.properties === "object" &&
+		!Array.isArray(schemaObject.properties)
+			? (schemaObject.properties as Record<string, unknown>)
+			: undefined;
+	if (!properties) return { value: changed ? normalizedValue : value, changed };
+
+	let nextRecord = normalizedValue as Record<string, unknown>;
+	for (const [key, propertySchema] of Object.entries(properties)) {
+		if (PROTOTYPE_SENSITIVE_KEYS.has(key) || !Object.hasOwn(nextRecord, key)) continue;
+		const normalized = normalizeJsonContainersForSchema(propertySchema, nextRecord[key]);
+		if (!normalized.changed) continue;
+		if (nextRecord === normalizedValue) nextRecord = { ...nextRecord };
+		Object.defineProperty(nextRecord, key, {
+			configurable: true,
+			enumerable: true,
+			value: normalized.value,
+			writable: true,
+		});
+		changed = true;
+	}
+
+	return { value: changed ? nextRecord : value, changed };
+}
+
 /**
  * Attempts to fix type errors by parsing JSON-encoded strings.
  *
@@ -620,6 +568,11 @@ export function validateToolArguments(tool: Tool, toolCall: ToolCall): ToolCall[
 	// validation would pass (e.g., optional string field where "null" is a valid string).
 	let normalizedArgs: unknown = originalArgs;
 	let changed = false;
+	const containerNormalization = normalizeJsonContainersForSchema(tool.parameters, normalizedArgs);
+	if (containerNormalization.changed) {
+		normalizedArgs = containerNormalization.value;
+		changed = true;
+	}
 
 	const initialNormalization = normalizeOptionalNullsForSchema(tool.parameters, normalizedArgs);
 	if (initialNormalization.changed) {
@@ -638,6 +591,11 @@ export function validateToolArguments(tool: Tool, toolCall: ToolCall): ToolCall[
 
 		normalizedArgs = coercion.value;
 		changed = true;
+
+		const containerNormalization = normalizeJsonContainersForSchema(tool.parameters, normalizedArgs);
+		if (containerNormalization.changed) {
+			normalizedArgs = containerNormalization.value;
+		}
 
 		const nullNormalization = normalizeOptionalNullsForSchema(tool.parameters, normalizedArgs);
 		if (nullNormalization.changed) {
