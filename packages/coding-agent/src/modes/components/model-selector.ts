@@ -244,10 +244,12 @@ export function buildProviderModelGroups(
 
 	const authenticated: ProviderModelGroup[] = [];
 	const localItems: ModelItem[] = [];
+	let localStale = false;
 	for (const [provider, providerItems] of byProvider) {
 		const discovery = getDiscoveryState(provider);
 		if (LOCAL_PROVIDER_IDS.has(provider)) {
-			if (discovery?.status !== "ok") continue;
+			if (discovery?.status !== "ok" && discovery?.status !== "cached") continue;
+			localStale ||= discovery.status === "cached" || discovery.stale;
 			localItems.push(...providerItems);
 			continue;
 		}
@@ -284,8 +286,8 @@ export function buildProviderModelGroups(
 			id: LOCAL_PROVIDERS_TAB,
 			label: "Local Providers",
 			classification: "local",
-			discoveryStatus: "ok",
-			stale: false,
+			discoveryStatus: localStale ? "cached" : "ok",
+			stale: localStale,
 			models: localItems,
 		};
 		if (currentProvider && LOCAL_PROVIDER_IDS.has(currentProvider)) authenticated.unshift(localGroup);
@@ -384,7 +386,7 @@ export class ModelSelectorComponent extends Container {
 		const hintText =
 			scopedModels.length > 0
 				? "Showing models from --models scope"
-				: "Only showing models with configured API keys (see README for details)";
+				: "Only showing models from configured providers (see README for details)";
 		this.addChild(new Text(theme.fg("warning", hintText), 0, 0));
 		this.addChild(new Spacer(1));
 

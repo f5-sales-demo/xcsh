@@ -634,7 +634,11 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 			}
 
 			case "get_integrations": {
-				const welcomeResult = await runWelcomeChecks(session.model, session.modelRegistry.authStorage);
+				const welcomeResult = await runWelcomeChecks(
+					session.model,
+					session.modelRegistry.authStorage,
+					session.modelRegistry,
+				);
 
 				const services =
 					welcomeResult.model.state === "connected"
