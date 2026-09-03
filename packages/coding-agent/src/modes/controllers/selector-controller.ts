@@ -1339,7 +1339,8 @@ export class SelectorController {
 				loginModelChoice = GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE;
 			} else {
 				await this.ctx.session.modelRegistry.authStorage.login(providerId as OAuthProvider, loginCallbacks);
-				await this.ctx.session.modelRegistry.refresh();
+				// Force entitlement discovery after login so /model reflects the provider immediately.
+				await this.ctx.session.modelRegistry.refresh("online");
 				loginModelChoice = await applyOAuthLoginModel(this.ctx.session, providerId);
 			}
 			if (loginModelChoice) {
@@ -1456,6 +1457,7 @@ export class SelectorController {
 				await validateVertexLogin(runtime, project, accessToken);
 			}
 
+			await this.ctx.session.modelRegistry.refreshProvider("google-vertex", "online");
 			const applied = await applyModelAfterLogin(this.ctx.session, GOOGLE_VERTEX_LOGIN_MODEL_CHOICE);
 			if (!applied) throw new Error("Gemini 3.7 Flash is unavailable in the local Vertex model registry");
 			this.ctx.session.settings.set("providers.vertexProject", project);

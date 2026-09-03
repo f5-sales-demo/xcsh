@@ -45,7 +45,7 @@ describe("default GPT-5.6 model picker presentation", () => {
 		]);
 	});
 
-	it("renders all tiers in All Models without a synthetic alias", async () => {
+	it("renders all tiers in the ChatGPT provider tab without a synthetic alias", async () => {
 		const tiers = [
 			model("openai-codex", "gpt-5.6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
@@ -77,13 +77,13 @@ describe("default GPT-5.6 model picker presentation", () => {
 		);
 		await Bun.sleep(0);
 
-		selector.handleInput("\t");
 		const allModels = Bun.stripANSI(selector.render(180).join("\n"));
 		expect(allModels).toContain("ChatGPT Subscription");
 		expect(allModels).toContain("openai-codex/gpt-5.6-luna");
 		expect(allModels).toContain("openai-codex/gpt-5.6-terra");
 		expect(allModels).toContain("openai-codex/gpt-5.6-sol");
 		expect(allModels).not.toContain("openai-codex/gpt-5.6]");
+		expect(allModels).not.toContain("ALL MODELS");
 	});
 
 	it("passes the exact chosen effort through temporary selection", async () => {

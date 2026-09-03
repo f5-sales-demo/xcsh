@@ -12,7 +12,7 @@ import {
 	type TUI,
 	visibleWidth,
 } from "@f5-sales-demo/pi-tui";
-import type { ModelRegistry } from "../../config/model-registry";
+import type { ModelRegistry, ProviderDiscoveryState, ProviderDiscoveryStatus } from "../../config/model-registry";
 import { getKnownRoleIds, getRoleInfo, MODEL_ROLE_IDS, MODEL_ROLES } from "../../config/model-registry";
 import { resolveModelRoleValue } from "../../config/model-resolver";
 import type { Settings } from "../../config/settings";
@@ -43,7 +43,7 @@ function getAlphaSearchTokens(query: string): string[] {
 	return [...normalizeSearchText(query).matchAll(/[a-z]+/g)].map(match => match[0]).filter(token => token.length > 0);
 }
 
-interface ModelItem {
+export interface ModelItem {
 	kind: "provider";
 	provider: string;
 	id: string;
@@ -93,13 +93,205 @@ export function getModelSearchText(item: DefaultPickerModelPresentation): string
 		.join(" ");
 }
 
+function getModelDisplayName(model: Model): string {
+	const tieredName = [model.family, model.tier].filter(Boolean).join(" ");
+	if (tieredName && compactSearchText(tieredName) === compactSearchText(model.name)) return tieredName;
+	return model.name;
+}
+
+function getModelPublisher(model: Model): string {
+	if (model.publisher) return model.publisher;
+	if (model.provider.startsWith("google-")) return "Google";
+	if (model.provider === "openai" || model.provider === "openai-codex") return "OpenAI";
+	if (model.provider === "anthropic") return "Anthropic";
+	return getProviderDisplayName(model.provider);
+}
+
+function getModelFamily(model: Model): string {
+	if (model.family) return model.family;
+	return (
+		model.name.match(/^(?:Gemini\s+\d+(?:\.\d+)?|GPT-\d+(?:\.\d+)?|Claude\s+\S+(?:\s+\d+(?:\.\d+)?)?)/i)?.[0] ??
+		model.name
+	);
+}
+
+function modelHierarchyKey(item: ModelItem, includeProvider: boolean): string {
+	return [
+		includeProvider ? getProviderDisplayName(item.provider) : "",
+		getModelPublisher(item.model),
+		getModelFamily(item.model),
+	]
+		.join("\0")
+		.toLocaleLowerCase();
+}
+
+function sortModelsByHierarchy(items: ModelItem[], includeProvider: boolean): void {
+	items.sort((left, right) =>
+		modelHierarchyKey(left, includeProvider).localeCompare(modelHierarchyKey(right, includeProvider)),
+	);
+}
+
+function compareVersions(left: string, right: string): number {
+	const leftParts = left.split(".").map(Number);
+	const rightParts = right.split(".").map(Number);
+	for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+		const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+		if (difference !== 0) return difference;
+	}
+	return 0;
+}
+
+/** Keep historical catalogs authoritative while presenting only current user-facing families. */
+export function filterCurrentBrowserModels(models: readonly Model[]): Model[] {
+	const newestGeminiVersion = new Map<string, string>();
+	const newestClaudeVersion = new Map<string, string>();
+	for (const model of models) {
+		if (model.provider.startsWith("google-")) {
+			const gemini = model.id.match(/^gemini-(\d+(?:\.\d+)?)-(flash|pro)(?:-|$)/i);
+			if (gemini?.[1] && gemini[2]) {
+				const key = `${model.provider}:${gemini[2].toLowerCase()}`;
+				const previous = newestGeminiVersion.get(key);
+				if (!previous || compareVersions(gemini[1], previous) > 0) newestGeminiVersion.set(key, gemini[1]);
+			}
+		}
+		const claude = model.id.match(/^claude-(opus|sonnet|haiku)-(\d+)(?:[.-](\d+))?(?:-|$)/i);
+		if (claude?.[1] && claude[2]) {
+			const key = `${model.provider}:${claude[1].toLowerCase()}`;
+			const version = `${claude[2]}.${claude[3] ?? "0"}`;
+			const previous = newestClaudeVersion.get(key);
+			if (!previous || compareVersions(version, previous) > 0) newestClaudeVersion.set(key, version);
+		}
+	}
+
+	return models.filter(model => {
+		const gpt = model.id.match(/^gpt-(\d+(?:\.\d+)?)(?:-|$)/i);
+		if (gpt?.[1]) {
+			// Older GPT generations are still available through explicit --models scopes,
+			// but the general browser starts at the current 5.6 family.
+			if (compareVersions(gpt[1], "5.6") < 0) return false;
+			if (model.provider === "openai-codex") return /^gpt-5\.6-(?:sol|terra|luna)$/i.test(model.id);
+		}
+		const claude = model.id.match(/^claude-(opus|sonnet|haiku)-(\d+)(?:[.-](\d+))?(?:-|$)/i);
+		if (claude?.[1] && claude[2]) {
+			const version = `${claude[2]}.${claude[3] ?? "0"}`;
+			return newestClaudeVersion.get(`${model.provider}:${claude[1].toLowerCase()}`) === version;
+		}
+		if (!model.provider.startsWith("google-")) return true;
+		if (!model.id.startsWith("gemini-")) {
+			// Antigravity discovery can expose implementation-only experiment ids
+			// alongside its supported Gemini, Claude, and GPT-OSS catalog.
+			return model.provider === "google-antigravity" && /^gpt-oss-/i.test(model.id);
+		}
+		const match = model.id.match(/^gemini-(\d+(?:\.\d+)?)-(flash|pro)(?:-|$)/i);
+		if (!match?.[1] || !match[2]) return false;
+		return newestGeminiVersion.get(`${model.provider}:${match[2].toLowerCase()}`) === match[1];
+	});
+}
+
 export function getProviderDisplayName(provider: string): string {
 	if (provider === "openai-codex") return "ChatGPT Subscription";
 	if (provider === "openai") return "OpenAI API Key";
+	if (provider === "google-vertex") return "Google Vertex";
+	if (provider === "google-antigravity") return "Antigravity (Gemini, Claude, GPT-OSS)";
+	if (provider === "vllm") return "vLLM";
+	if (provider === "lm-studio") return "LM Studio";
+	if (provider === "llama.cpp") return "llama.cpp";
+	if (provider === "ollama") return "Ollama";
 	return provider
 		.split("-")
 		.map(part => part.charAt(0).toUpperCase() + part.slice(1))
 		.join(" ");
+}
+
+const LOCAL_PROVIDER_IDS = new Set(["ollama", "vllm", "lm-studio", "llama.cpp"]);
+const LOCAL_PROVIDERS_TAB = "local-providers";
+
+export interface ProviderModelGroup {
+	id: string;
+	label: string;
+	classification: "authenticated" | "local";
+	discoveryStatus: ProviderDiscoveryStatus;
+	stale: boolean;
+	models: ModelItem[];
+}
+
+function modelItems(models: readonly Model[], currentOnly = true): ModelItem[] {
+	return presentModelsForDefaultPicker(currentOnly ? filterCurrentBrowserModels(models) : models).map(item => ({
+		kind: "provider",
+		provider: item.model.provider,
+		id: item.displaySelector.slice(item.displaySelector.indexOf("/") + 1),
+		model: item.model,
+		selector: item.selector,
+	}));
+}
+
+/** Build tabs only from provider catalogs whose authenticated/local discovery produced models. */
+export function buildProviderModelGroups(
+	models: readonly Model[],
+	getDiscoveryState: (provider: string) => ProviderDiscoveryState | undefined,
+	configuredProviderOrder: readonly string[] = [],
+	currentProvider?: string,
+	hasAuth: (provider: string) => boolean = () => true,
+	currentOnly = true,
+): ProviderModelGroup[] {
+	const items = modelItems(models, currentOnly);
+	const byProvider = new Map<string, ModelItem[]>();
+	for (const item of items) {
+		const providerItems = byProvider.get(item.provider) ?? [];
+		providerItems.push(item);
+		byProvider.set(item.provider, providerItems);
+	}
+
+	const authenticated: ProviderModelGroup[] = [];
+	const localItems: ModelItem[] = [];
+	for (const [provider, providerItems] of byProvider) {
+		const discovery = getDiscoveryState(provider);
+		if (LOCAL_PROVIDER_IDS.has(provider)) {
+			if (discovery?.status !== "ok") continue;
+			localItems.push(...providerItems);
+			continue;
+		}
+		if (!hasAuth(provider)) continue;
+		if (discovery?.status !== "ok" && discovery?.status !== "cached") continue;
+		sortModelsByHierarchy(providerItems, false);
+		authenticated.push({
+			id: provider,
+			label: getProviderDisplayName(provider),
+			classification: "authenticated",
+			discoveryStatus: discovery.status,
+			stale: discovery.stale || discovery.status === "cached",
+			models: providerItems,
+		});
+	}
+
+	const configuredRank = new Map<string, number>();
+	for (const provider of configuredProviderOrder) {
+		const normalized = provider.trim().toLowerCase();
+		if (normalized && !configuredRank.has(normalized)) configuredRank.set(normalized, configuredRank.size);
+	}
+	authenticated.sort((left, right) => {
+		if (left.id === currentProvider && right.id !== currentProvider) return -1;
+		if (right.id === currentProvider && left.id !== currentProvider) return 1;
+		const leftRank = configuredRank.get(left.id.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+		const rightRank = configuredRank.get(right.id.toLowerCase()) ?? Number.MAX_SAFE_INTEGER;
+		if (leftRank !== rightRank) return leftRank - rightRank;
+		return left.label.localeCompare(right.label);
+	});
+
+	if (localItems.length > 0) {
+		sortModelsByHierarchy(localItems, true);
+		const localGroup: ProviderModelGroup = {
+			id: LOCAL_PROVIDERS_TAB,
+			label: "Local Providers",
+			classification: "local",
+			discoveryStatus: "ok",
+			stale: false,
+			models: localItems,
+		};
+		if (currentProvider && LOCAL_PROVIDER_IDS.has(currentProvider)) authenticated.unshift(localGroup);
+		else authenticated.push(localGroup);
+	}
+	return authenticated;
 }
 
 interface RoleAssignment {
@@ -113,9 +305,6 @@ interface MenuRoleAction {
 	label: string;
 	role: string; // now accepts custom role strings
 }
-
-const QUICK_TAB = "QUICK";
-const ALL_TAB = "ALL MODELS";
 
 /**
  * Component that renders a model selector with provider tabs and context menu.
@@ -145,11 +334,12 @@ export class ModelSelectorComponent extends Container {
 	#scopedModels: ReadonlyArray<ScopedModelItem>;
 	#temporaryOnly: boolean;
 	#currentModel: Model | undefined;
+	#providerGroups: ProviderModelGroup[] = [];
 
 	#menuRoleActions: MenuRoleAction[] = [];
 
 	// Tab state
-	#providers: string[] = [QUICK_TAB, ALL_TAB];
+	#providers: string[] = [];
 	#activeTabIndex: number = 0;
 
 	// Context menu state
@@ -421,14 +611,7 @@ export class ModelSelectorComponent extends Container {
 
 			// Load available models (built-in models still work even if models.json failed)
 			try {
-				const availableModels = this.#modelRegistry.getAvailable();
-				models = presentModelsForDefaultPicker(availableModels).map(item => ({
-					kind: "provider",
-					provider: item.model.provider,
-					id: item.displaySelector.slice(item.displaySelector.indexOf("/") + 1),
-					model: item.model,
-					selector: item.selector,
-				}));
+				models = modelItems(this.#modelRegistry.getAvailable());
 			} catch (error) {
 				this.#allModels = [];
 				this.#filteredModels = [];
@@ -449,17 +632,52 @@ export class ModelSelectorComponent extends Container {
 	}
 
 	#buildProviderTabs(): void {
-		this.#providers = [QUICK_TAB, ALL_TAB];
+		const previousProvider = this.#getActiveProvider();
+		const discoveryState = (provider: string): ProviderDiscoveryState | undefined => {
+			if (this.#scopedModels.length > 0 || typeof this.#modelRegistry.getProviderDiscoveryState !== "function") {
+				return { provider, status: "ok", optional: false, stale: false, models: [] };
+			}
+			return this.#modelRegistry.getProviderDiscoveryState(provider);
+		};
+		const configuredOrder = this.#settings.get("modelProviderOrder");
+		this.#providerGroups = buildProviderModelGroups(
+			this.#allModels.map(item => item.model),
+			discoveryState,
+			configuredOrder,
+			this.#currentModel?.provider,
+			provider =>
+				this.#scopedModels.length > 0 ||
+				typeof this.#modelRegistry.authStorage?.hasAuth !== "function" ||
+				this.#modelRegistry.authStorage.hasAuth(provider),
+			this.#scopedModels.length === 0,
+		);
+		this.#providers = this.#providerGroups.map(group => group.id);
+		const previousIndex = this.#providers.indexOf(previousProvider);
+		this.#activeTabIndex = previousIndex >= 0 ? previousIndex : 0;
 	}
 
 	async #refreshSelectedProvider(): Promise<void> {
-		return;
+		const activeGroup = this.#providerGroups[this.#activeTabIndex];
+		if (!activeGroup || typeof this.#modelRegistry.refreshProvider !== "function" || this.#scopedModels.length > 0)
+			return;
+		const providers = new Set(activeGroup.models.map(item => item.provider));
+		await Promise.all([...providers].map(provider => this.#modelRegistry.refreshProvider(provider, "online")));
+		const models = modelItems(this.#modelRegistry.getAvailable());
+		this.#sortModels(models);
+		this.#allModels = models;
+		this.#buildProviderTabs();
+		this.#updateTabBar();
+		this.#applyTabFilter();
+		this.#tui.requestRender();
 	}
 
 	#updateTabBar(): void {
 		this.#headerContainer.clear();
 
-		const tabs: Tab[] = this.#providers.map(provider => ({ id: provider, label: provider }));
+		const tabs: Tab[] = this.#providerGroups.map(group => ({
+			id: group.id,
+			label: `${group.label}${group.stale ? " (stale)" : ""}`,
+		}));
 		const tabBar = new TabBar("Models", tabs, getTabBarTheme(), this.#activeTabIndex);
 		tabBar.onTabChange = (_tab, index) => {
 			this.#activeTabIndex = index;
@@ -476,53 +694,25 @@ export class ModelSelectorComponent extends Container {
 	}
 
 	#getActiveProvider(): string {
-		return this.#providers[this.#activeTabIndex] ?? ALL_TAB;
+		return this.#providers[this.#activeTabIndex] ?? "";
 	}
 
 	#isCanonicalTab(): boolean {
 		return false;
 	}
 
-	#getQuickModels(): ModelItem[] {
-		const wanted = new Set<string>();
-		if (this.#currentModel) wanted.add(`${this.#currentModel.provider}/${this.#currentModel.id}`);
-		for (const assigned of Object.values(this.#roles)) {
-			if (assigned) wanted.add(`${assigned.model.provider}/${assigned.model.id}`);
-		}
-		for (const selector of (this.#settings.getStorage()?.getModelUsageOrder() ?? []).slice(0, 5))
-			wanted.add(selector);
-		const recommended = new Map<string, ModelItem>();
-		for (const item of this.#allModels) {
-			const previous = recommended.get(item.provider);
-			if (!previous || (item.model.priority ?? Infinity) < (previous.model.priority ?? Infinity)) {
-				recommended.set(item.provider, item);
-			}
-		}
-		for (const item of recommended.values()) wanted.add(item.selector);
-		return this.#allModels.filter(item => wanted.has(item.selector));
-	}
-
 	#filterModels(query: string): void {
-		const activeProvider = this.#getActiveProvider();
 		const isCanonicalTab = false;
+		const activeGroup = this.#providerGroups[this.#activeTabIndex];
 
-		// Start with all models or filter by provider/canonical view
-		let baseModels = activeProvider === QUICK_TAB ? this.#getQuickModels() : this.#allModels;
+		// Search is a temporary global grouped view; the active provider tab remains unchanged.
+		const baseModels = query.trim()
+			? this.#providerGroups.flatMap(group => group.models)
+			: (activeGroup?.models ?? []);
 		const baseCanonicalModels = this.#canonicalModels;
 
 		// Apply fuzzy filter if query is present
 		if (query.trim()) {
-			// If user is searching from a provider tab, auto-switch to ALL to show global provider results.
-			if (activeProvider !== ALL_TAB && !isCanonicalTab) {
-				this.#activeTabIndex = 1;
-				if (this.#tabBar && this.#tabBar.getActiveIndex() !== 1) {
-					this.#tabBar.setActiveIndex(1);
-					return;
-				}
-				this.#updateTabBar();
-				baseModels = this.#allModels;
-			}
-
 			if (isCanonicalTab) {
 				const alphaTokens = getAlphaSearchTokens(query);
 				const alphaFiltered =
@@ -546,10 +736,24 @@ export class ModelSelectorComponent extends Container {
 				this.#sortCanonicalModels(fuzzyMatches);
 				this.#filteredCanonicalModels = fuzzyMatches;
 			} else {
-				const fuzzyMatches = fuzzyFilter(baseModels, query, ({ model, selector }) =>
-					getModelSearchText({ model, selector, displaySelector: selector }),
+				const selectorQuery = query.trim().toLowerCase();
+				const selectorMatches = selectorQuery.includes("/")
+					? baseModels.filter(item => item.selector.toLowerCase().includes(selectorQuery))
+					: undefined;
+				const alphaTokens = getAlphaSearchTokens(query);
+				const alphaFiltered = (selectorMatches ?? baseModels).filter(item => {
+					const searchText = normalizeSearchText(
+						getModelSearchText({ model: item.model, selector: item.selector, displaySelector: item.selector }),
+					);
+					return alphaTokens.every(token => searchText.includes(token));
+				});
+				const fuzzyMatches = fuzzyFilter(
+					selectorMatches ?? (alphaFiltered.length > 0 ? alphaFiltered : baseModels),
+					query,
+					({ model, selector }) => getModelSearchText({ model, selector, displaySelector: selector }),
 				);
 				this.#sortModels(fuzzyMatches);
+				sortModelsByHierarchy(fuzzyMatches, true);
 				this.#filteredModels = fuzzyMatches;
 			}
 		} else {
@@ -580,11 +784,11 @@ export class ModelSelectorComponent extends Container {
 	}
 
 	#getProviderEmptyStateMessage(): string | undefined {
-		const activeProvider = this.#getActiveProvider();
-		if (activeProvider === ALL_TAB || activeProvider === QUICK_TAB || this.#searchInput.getValue().trim()) {
+		const activeGroup = this.#providerGroups[this.#activeTabIndex];
+		if (!activeGroup || activeGroup.classification === "local" || this.#searchInput.getValue().trim()) {
 			return undefined;
 		}
-		const state = this.#modelRegistry.getProviderDiscoveryState(activeProvider.toLowerCase());
+		const state = this.#modelRegistry.getProviderDiscoveryState(activeGroup.id);
 		if (!state) {
 			return undefined;
 		}
@@ -617,8 +821,20 @@ export class ModelSelectorComponent extends Container {
 		);
 		const endIndex = Math.min(startIndex + maxVisible, visibleItems.length);
 
-		const activeProvider = this.#getActiveProvider();
-		const showProvider = activeProvider === ALL_TAB;
+		const activeGroup = this.#providerGroups[this.#activeTabIndex];
+		const searching = Boolean(this.#searchInput.getValue().trim());
+		const showProvider = searching || activeGroup?.classification === "local";
+		if (!searching && activeGroup?.stale) {
+			const providerState =
+				activeGroup.classification === "authenticated"
+					? this.#modelRegistry.getProviderDiscoveryState(activeGroup.id)
+					: undefined;
+			const age = this.#formatDiscoveryAge(providerState?.fetchedAt);
+			this.#listContainer.addChild(
+				new Text(theme.fg("warning", `  Stale cached catalog${age ? ` from ${age}` : ""}`), 0, 0),
+			);
+			this.#listContainer.addChild(new Spacer(1));
+		}
 
 		// Show visible slice of filtered models
 		let previousGroup: string | undefined;
@@ -628,10 +844,14 @@ export class ModelSelectorComponent extends Container {
 			const canonicalItem = isCanonicalTab ? (item as CanonicalModelItem) : undefined;
 			const providerItem = isCanonicalTab ? undefined : (item as ModelItem);
 			const group = showProvider
-				? [getProviderDisplayName(providerItem?.provider ?? ""), item.model.publisher, item.model.family]
+				? [
+						getProviderDisplayName(providerItem?.provider ?? ""),
+						getModelPublisher(item.model),
+						getModelFamily(item.model),
+					]
 						.filter(Boolean)
 						.join(" › ")
-				: undefined;
+				: [getModelPublisher(item.model), getModelFamily(item.model)].filter(Boolean).join(" › ");
 			if (group && group !== previousGroup) {
 				if (previousGroup) this.#listContainer.addChild(new Spacer(1));
 				this.#listContainer.addChild(new Text(theme.fg("muted", `  ${group}`), 0, 0));
@@ -669,10 +889,8 @@ export class ModelSelectorComponent extends Container {
 					const variants = theme.fg("dim", ` [${canonicalItem?.variantCount ?? 0}]`);
 					const backing = theme.fg("dim", ` -> ${item.model.provider}/${item.model.id}`);
 					line = `${prefix}${theme.fg("accent", item.id)}${variants}${backing}${badgeText}`;
-				} else if (showProvider) {
-					line = `${prefix}${theme.fg("accent", item.model.name)} ${theme.fg("dim", `[${item.selector}]`)}${badgeText}`;
 				} else {
-					line = `${prefix}${theme.fg("accent", item.id)}${badgeText}`;
+					line = `${prefix}${theme.fg("accent", getModelDisplayName(item.model))} ${theme.fg("dim", `[${item.selector}]`)}${badgeText}`;
 				}
 			} else {
 				const prefix = "  ";
@@ -680,10 +898,8 @@ export class ModelSelectorComponent extends Container {
 					const variants = theme.fg("dim", ` [${canonicalItem?.variantCount ?? 0}]`);
 					const backing = theme.fg("dim", ` -> ${item.model.provider}/${item.model.id}`);
 					line = `${prefix}${item.id}${variants}${backing}${badgeText}`;
-				} else if (showProvider) {
-					line = `${prefix}${item.model.name} ${theme.fg("dim", `[${item.selector}]`)}${badgeText}`;
 				} else {
-					line = `${prefix}${item.id}${badgeText}`;
+					line = `${prefix}${getModelDisplayName(item.model)} ${theme.fg("dim", `[${item.selector}]`)}${badgeText}`;
 				}
 			}
 
@@ -715,7 +931,7 @@ export class ModelSelectorComponent extends Container {
 				? ` (${selected.model.provider}/${selected.model.id}, ${(selected as CanonicalModelItem).variantCount} variants)`
 				: "";
 			this.#listContainer.addChild(
-				new Text(theme.fg("muted", `  Model Name: ${selected.model.name}${suffix}`), 0, 0),
+				new Text(theme.fg("muted", `  Model Name: ${getModelDisplayName(selected.model)}${suffix}`), 0, 0),
 			);
 		}
 	}
@@ -875,7 +1091,7 @@ export class ModelSelectorComponent extends Container {
 		}
 
 		// Role assignment is deliberately secondary.
-		if (keyData.toLowerCase() === "r" && !this.#temporaryOnly) {
+		if (keyData.toLowerCase() === "r" && !this.#temporaryOnly && this.#searchInput.getValue().length === 0) {
 			this.#openMenu();
 			return;
 		}

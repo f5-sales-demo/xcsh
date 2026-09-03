@@ -58,6 +58,7 @@ describe("SelectorController Google Antigravity login", () => {
 
 		expect(login).toHaveBeenCalledTimes(1);
 		expect(refresh).toHaveBeenCalledTimes(1);
+		expect(refresh).toHaveBeenCalledWith("online");
 		expect(refresh.mock.invocationCallOrder[0]).toBeLessThan(setModel.mock.invocationCallOrder[0]);
 		expect(setModel).toHaveBeenCalledWith(model, "default", {
 			selector: "google-antigravity/gemini-3.6-flash-high",
@@ -159,6 +160,7 @@ describe("SelectorController ChatGPT device login", () => {
 		process.env.SSH_CONNECTION = "client server";
 		try {
 			const openInBrowser = vi.fn();
+			const refresh = vi.fn(async () => undefined);
 			const manualInput = new OAuthManualInputManager();
 			const editorContainer = {
 				children: [] as Array<{ handleInput?: (key: string) => void }>,
@@ -183,7 +185,7 @@ describe("SelectorController ChatGPT device login", () => {
 				editorContainer,
 				editor: {},
 				session: {
-					modelRegistry: { authStorage: { login }, refresh: vi.fn(async () => undefined), getAll: () => [] },
+					modelRegistry: { authStorage: { login }, refresh, getAll: () => [] },
 				},
 				oauthManualInput: manualInput,
 				statusLine: { invalidate: vi.fn() },
@@ -202,6 +204,7 @@ describe("SelectorController ChatGPT device login", () => {
 
 			expect(login).toHaveBeenCalledTimes(1);
 			expect(login.mock.calls[0]?.[1]?.method).toBe("device");
+			expect(refresh).toHaveBeenCalledWith("online");
 			expect(openInBrowser).not.toHaveBeenCalled();
 		} finally {
 			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;

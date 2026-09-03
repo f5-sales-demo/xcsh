@@ -35,6 +35,19 @@ describe("ModelRegistry", () => {
 		expect(MODEL_ROLES.commit.color).toBe("dim");
 	});
 
+	test("records an authenticated Google Vertex catalog as successfully discovered", async () => {
+		authStorage.setRuntimeApiKey("google-vertex", "authorized-test-token");
+		const registry = new ModelRegistry(authStorage, modelsJsonPath);
+		await registry.refreshProvider("google-vertex", "online");
+
+		expect(registry.getProviderDiscoveryState("google-vertex")).toMatchObject({
+			provider: "google-vertex",
+			status: "ok",
+			stale: false,
+		});
+		expect(registry.getProviderDiscoveryState("google-vertex")?.models).toContain("gemini-3.7-flash");
+	});
+
 	beforeEach(async () => {
 		_resetSettingsForTest();
 		tempDir = path.join(os.tmpdir(), `pi-test-model-registry-${Snowflake.next()}`);

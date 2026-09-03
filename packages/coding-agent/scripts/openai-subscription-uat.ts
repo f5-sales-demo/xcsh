@@ -274,8 +274,11 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			session.write("/model\r");
 			await waitForNewOutput(
 				outputStart,
-				visible => visible.includes("QUICK") && visible.includes("ALL MODELS"),
-				"the model picker",
+				visible =>
+					visible.includes("ChatGPT Subscription") &&
+					!visible.includes("QUICK") &&
+					!visible.includes("ALL MODELS"),
+				"the authenticated-provider model picker",
 				STARTUP_TIMEOUT_MS,
 			);
 			await typeIntoPty(session, model);
