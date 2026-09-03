@@ -97,6 +97,179 @@ describe("PluginResolver", () => {
 	});
 });
 
+describe("optional resources manifest", () => {
+	test("summarizes plugin identity when resources.json is absent", async () => {
+		const pluginRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-summary-PK-"));
+		try {
+			await fs.mkdir(path.join(pluginRoot, ".xcsh-plugin"), { recursive: true });
+			await fs.writeFile(
+				path.join(pluginRoot, ".xcsh-plugin", "plugin.json"),
+				JSON.stringify({ name: "Azure", description: "Azure cloud operations" }),
+			);
+			const summary = await createPluginResolver(async () => [
+				{ plugin: "azure", version: "3.0.0", path: pluginRoot },
+			]).resolve(u("xcsh://plugin/azure"));
+			expect(JSON.parse(summary.content)).toEqual({
+				id: "azure",
+				name: "Azure",
+				description: "Azure cloud operations",
+				version: "3.0.0",
+				hasResourcesManifest: false,
+				resourcesManifestStatus: "absent",
+				resources: [],
+			});
+		} finally {
+			await fs.rm(pluginRoot, { recursive: true, force: true });
+		}
+	});
+
+	test("reports valid resources deterministically and resolves an engine-only manifest", async () => {
+		const pluginRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-engine-PK-"));
+		try {
+			await fs.mkdir(path.join(pluginRoot, ".xcsh-plugin"), { recursive: true });
+			await fs.mkdir(path.join(pluginRoot, "engine"), { recursive: true });
+			await fs.writeFile(path.join(pluginRoot, ".xcsh-plugin", "plugin.json"), JSON.stringify({ name: "Engine" }));
+			await fs.writeFile(
+				path.join(pluginRoot, ".xcsh-plugin", "resources.json"),
+				JSON.stringify({ zeta: "z.txt", engine: { runtime: "bun", entry: "engine/main.ts" }, alpha: "a.txt" }),
+			);
+			await fs.writeFile(path.join(pluginRoot, "engine", "main.ts"), "export {};\n");
+			const resolver = createPluginResolver(async () => [{ plugin: "engine", version: "1.2.3", path: pluginRoot }]);
+			const summary = JSON.parse((await resolver.resolve(u("xcsh://plugin/engine"))).content);
+			expect(summary.hasResourcesManifest).toBe(true);
+			expect(summary.resourcesManifestStatus).toBe("valid");
+			expect(summary.resources).toEqual(["alpha", "engine", "zeta"]);
+			expect(summary).not.toHaveProperty("resourcesManifestDiagnostic");
+			await fs.writeFile(
+				path.join(pluginRoot, ".xcsh-plugin", "resources.json"),
+				JSON.stringify({ engine: { runtime: "bun", entry: "engine/main.ts" } }),
+			);
+			const engineOnlySummary = JSON.parse((await resolver.resolve(u("xcsh://plugin/engine"))).content);
+			expect(engineOnlySummary.resources).toEqual(["engine"]);
+			const engine = JSON.parse((await resolver.resolve(u("xcsh://plugin/engine/engine"))).content);
+			expect(engine.entryPath).toBe(path.join(pluginRoot, "engine", "main.ts"));
+		} finally {
+			await fs.rm(pluginRoot, { recursive: true, force: true });
+		}
+	});
+
+	test("preserves identity for a malformed manifest and sanitizes its diagnostic", async () => {
+		const pluginRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-invalid-PK-"));
+		try {
+			await fs.mkdir(path.join(pluginRoot, ".xcsh-plugin"), { recursive: true });
+			await fs.writeFile(path.join(pluginRoot, ".xcsh-plugin", "plugin.json"), JSON.stringify({ name: "GitHub" }));
+			await fs.writeFile(path.join(pluginRoot, ".xcsh-plugin", "resources.json"), '{"secret":"do-not-echo"');
+			const resolver = createPluginResolver(async () => [{ plugin: "github", version: "2.0.3", path: pluginRoot }]);
+			const content = (await resolver.resolve(u("xcsh://plugin/github"))).content;
+			const summary = JSON.parse(content);
+			expect(summary.name).toBe("GitHub");
+			expect(summary.hasResourcesManifest).toBe(true);
+			expect(summary.resourcesManifestStatus).toBe("invalid");
+			expect(summary.resources).toEqual([]);
+			expect(summary.resourcesManifestDiagnostic).toBe("Invalid .xcsh-plugin/resources.json: malformed JSON");
+			expect(content).not.toContain("do-not-echo");
+		} finally {
+			await fs.rm(pluginRoot, { recursive: true, force: true });
+		}
+	});
+
+	test("keeps contract, engine, and named-resource routes strict while file remains independent", async () => {
+		const pluginRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-strict-PK-"));
+		try {
+			await fs.mkdir(path.join(pluginRoot, ".xcsh-plugin"), { recursive: true });
+			await fs.writeFile(path.join(pluginRoot, "readme.txt"), "available without a resource manifest");
+			const resolver = createPluginResolver(async () => [{ plugin: "strict", version: "1.0.0", path: pluginRoot }]);
+			for (const route of ["contract", "engine", "schema"]) {
+				await expect(resolver.resolve(u(`xcsh://plugin/strict/${route}`))).rejects.toThrow(
+					/Plugin strict has no resources manifest/,
+				);
+			}
+			const file = await resolver.resolve(u("xcsh://plugin/strict/file/readme.txt"));
+			expect(file.content).toContain("available without");
+
+			await fs.writeFile(path.join(pluginRoot, ".xcsh-plugin", "resources.json"), "not-json");
+			for (const route of ["contract", "engine", "schema"]) {
+				await expect(resolver.resolve(u(`xcsh://plugin/strict/${route}`))).rejects.toThrow(
+					/Plugin strict has an invalid resources manifest/,
+				);
+			}
+		} finally {
+			await fs.rm(pluginRoot, { recursive: true, force: true });
+		}
+	});
+
+	test("keeps index and selected summary manifest status in agreement", async () => {
+		const absentRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-index-absent-PK-"));
+		const validRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-index-valid-PK-"));
+		const invalidRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-index-invalid-PK-"));
+		try {
+			for (const pluginRoot of [absentRoot, validRoot, invalidRoot]) {
+				await fs.mkdir(path.join(pluginRoot, ".xcsh-plugin"), { recursive: true });
+			}
+			await fs.writeFile(path.join(validRoot, ".xcsh-plugin", "resources.json"), "{}");
+			await fs.writeFile(path.join(invalidRoot, ".xcsh-plugin", "resources.json"), "[]");
+			const rootsForIndex = [
+				{ plugin: "absent", version: "1", path: absentRoot },
+				{ plugin: "valid", version: "2", path: validRoot },
+				{ plugin: "invalid", version: "3", path: invalidRoot },
+			];
+			const resolver = createPluginResolver(async () => rootsForIndex);
+			const index = JSON.parse((await resolver.resolve(u("xcsh://plugin"))).content);
+			expect(index).toEqual([
+				{ name: "absent", version: "1", hasResourcesManifest: false, resourcesManifestStatus: "absent" },
+				{ name: "valid", version: "2", hasResourcesManifest: true, resourcesManifestStatus: "valid" },
+				{ name: "invalid", version: "3", hasResourcesManifest: true, resourcesManifestStatus: "invalid" },
+			]);
+			for (const entry of index) {
+				const summary = JSON.parse((await resolver.resolve(u(`xcsh://plugin/${entry.name}`))).content);
+				expect(summary.hasResourcesManifest).toBe(entry.hasResourcesManifest);
+				expect(summary.resourcesManifestStatus).toBe(entry.resourcesManifestStatus);
+			}
+		} finally {
+			await Promise.all(
+				[absentRoot, validRoot, invalidRoot].map(pluginRoot => fs.rm(pluginRoot, { recursive: true, force: true })),
+			);
+		}
+	});
+
+	test("uses only the selected root and canonical metadata fallback", async () => {
+		const selectedRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-selected-PK-"));
+		const shadowedRoot = await fs.mkdtemp(path.join(os.tmpdir(), "plugin-shadowed-PK-"));
+		try {
+			for (const pluginRoot of [selectedRoot, shadowedRoot]) {
+				await fs.mkdir(path.join(pluginRoot, ".xcsh-plugin"), { recursive: true });
+			}
+			await fs.writeFile(path.join(selectedRoot, ".xcsh-plugin", "plugin.json"), "not-json");
+			await fs.writeFile(
+				path.join(selectedRoot, "package.json"),
+				JSON.stringify({ xcsh: { name: "Selected package", description: "fallback metadata" } }),
+			);
+			await fs.writeFile(
+				path.join(shadowedRoot, ".xcsh-plugin", "plugin.json"),
+				JSON.stringify({ name: "Shadowed root" }),
+			);
+			await fs.writeFile(path.join(shadowedRoot, ".xcsh-plugin", "resources.json"), '{"schema":"s.json"}');
+			const resolver = createPluginResolver(async () => [
+				{ plugin: "same", version: "2.0.0", path: selectedRoot },
+				{ plugin: "same", version: "1.0.0", path: shadowedRoot },
+			]);
+			const summary = JSON.parse((await resolver.resolve(u("xcsh://plugin/same"))).content);
+			expect(summary).toMatchObject({
+				id: "same",
+				name: "Selected package",
+				description: "fallback metadata",
+				version: "2.0.0",
+				hasResourcesManifest: false,
+				resourcesManifestStatus: "absent",
+			});
+		} finally {
+			await Promise.all(
+				[selectedRoot, shadowedRoot].map(pluginRoot => fs.rm(pluginRoot, { recursive: true, force: true })),
+			);
+		}
+	});
+});
+
 /**
  * A plugin may declare a binary resource — the MEDDPICC plugin ships a 91 KB .xlsx
  * template. Reading one as UTF-8 corrupts it, and no consumer wants 91 KB of mangled

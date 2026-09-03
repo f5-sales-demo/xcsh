@@ -1,9 +1,9 @@
 /**
  * Generic resolver for xcsh://plugin/<name>/... URLs.
  *
- * Framework-agnostic: it reads a plugin-declared manifest
- * (.xcsh-plugin/resources.json) and maps declared keys to files on disk. It has
- * NO knowledge of any specific plugin's domain.
+ * It combines canonical discovery identity with an optional plugin-declared
+ * resource manifest (.xcsh-plugin/resources.json), then maps declared keys to
+ * files on disk. It has no knowledge of any specific plugin's domain.
  *
  * URL forms (host = "plugin", first path segment = plugin name):
  * - xcsh://plugin                       -> list installed plugins
@@ -19,6 +19,7 @@
  */
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { readPluginSummary } from "../discovery/helpers";
 import { validateRelativePath } from "./skill-protocol";
 import type { InternalResource, InternalUrl } from "./types";
 
@@ -44,6 +45,13 @@ interface ResourcesManifest {
 	engine?: EngineBlock;
 	[key: string]: unknown;
 }
+
+export type ResourcesManifestStatus = "absent" | "valid" | "invalid";
+
+type ManifestProbe =
+	| { status: "absent"; manifest: null }
+	| { status: "valid"; manifest: ResourcesManifest }
+	| { status: "invalid"; manifest: null; diagnostic: string };
 
 function contentTypeFor(filePath: string): InternalResource["contentType"] {
 	const ext = path.extname(filePath).toLowerCase();
@@ -144,11 +152,16 @@ export class PluginResolver {
 
 		// xcsh://plugin/<name> -> summary
 		if (selector.length === 0) {
-			const manifest = await this.#readManifest(root.path);
+			const [identity, manifestProbe] = await Promise.all([readPluginSummary(root), this.#probeManifest(root.path)]);
+			const hasResourcesManifest = manifestProbe.status !== "absent";
+			const resources = manifestProbe.status === "valid" ? Object.keys(manifestProbe.manifest).sort() : [];
 			return this.#json(url, {
-				name: root.plugin,
+				...identity,
 				version: root.version,
-				resources: Object.keys(manifest),
+				hasResourcesManifest,
+				resourcesManifestStatus: manifestProbe.status,
+				resources,
+				...(manifestProbe.status === "invalid" ? { resourcesManifestDiagnostic: manifestProbe.diagnostic } : {}),
 			});
 		}
 
@@ -156,6 +169,7 @@ export class PluginResolver {
 
 		if (kind === "contract") {
 			const manifestPath = path.join(root.path, PLUGIN_MANIFEST_RELPATH);
+			await this.#readManifest(root.path, name);
 			const content = await this.#readFile(manifestPath);
 			return {
 				url: url.href,
@@ -168,7 +182,7 @@ export class PluginResolver {
 		}
 
 		if (kind === "engine") {
-			const manifest = await this.#readManifest(root.path);
+			const manifest = await this.#readManifest(root.path, name);
 			const engine = manifest.engine;
 			if (!engine?.entry) {
 				throw new Error(`Plugin ${name} declares no engine.entry in ${PLUGIN_MANIFEST_RELPATH}`);
@@ -199,7 +213,7 @@ export class PluginResolver {
 		}
 
 		// Named resource key from the manifest (e.g. "schema", "example").
-		const manifest = await this.#readManifest(root.path);
+		const manifest = await this.#readManifest(root.path, name);
 		const value = manifest[kind];
 		if (typeof value !== "string") {
 			const keys = Object.keys(manifest).filter(k => typeof manifest[k] === "string");
@@ -256,25 +270,68 @@ export class PluginResolver {
 		};
 	}
 
-	async #listPlugins(
-		roots: readonly PluginRootLike[],
-	): Promise<Array<{ name: string; version: string; hasContract: boolean }>> {
-		const out: Array<{ name: string; version: string; hasContract: boolean }> = [];
+	async #listPlugins(roots: readonly PluginRootLike[]): Promise<
+		Array<{
+			name: string;
+			version: string;
+			hasResourcesManifest: boolean;
+			resourcesManifestStatus: ResourcesManifestStatus;
+		}>
+	> {
+		const out: Array<{
+			name: string;
+			version: string;
+			hasResourcesManifest: boolean;
+			resourcesManifestStatus: ResourcesManifestStatus;
+		}> = [];
 		for (const r of roots) {
-			const manifestPath = path.join(r.path, PLUGIN_MANIFEST_RELPATH);
-			const hasContract = await Bun.file(manifestPath).exists();
-			out.push({ name: r.plugin, version: r.version, hasContract });
+			const manifestProbe = await this.#probeManifest(r.path);
+			out.push({
+				name: r.plugin,
+				version: r.version,
+				hasResourcesManifest: manifestProbe.status !== "absent",
+				resourcesManifestStatus: manifestProbe.status,
+			});
 		}
 		return out;
 	}
 
-	async #readManifest(root: string): Promise<ResourcesManifest> {
+	async #probeManifest(root: string): Promise<ManifestProbe> {
 		const manifestPath = path.join(root, PLUGIN_MANIFEST_RELPATH);
 		const file = Bun.file(manifestPath);
 		if (!(await file.exists())) {
-			throw new Error(`Plugin manifest not found: ${manifestPath} (expected ${PLUGIN_MANIFEST_RELPATH})`);
+			return { status: "absent", manifest: null };
 		}
-		return JSON.parse(await file.text()) as ResourcesManifest;
+		try {
+			const parsed = JSON.parse(await file.text()) as unknown;
+			if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+				return {
+					status: "invalid",
+					manifest: null,
+					diagnostic: `Invalid ${PLUGIN_MANIFEST_RELPATH}: expected a JSON object`,
+				};
+			}
+			return { status: "valid", manifest: parsed as ResourcesManifest };
+		} catch {
+			return {
+				status: "invalid",
+				manifest: null,
+				diagnostic: `Invalid ${PLUGIN_MANIFEST_RELPATH}: malformed JSON`,
+			};
+		}
+	}
+
+	async #readManifest(root: string, pluginName: string): Promise<ResourcesManifest> {
+		const probe = await this.#probeManifest(root);
+		if (probe.status === "absent") {
+			throw new Error(
+				`Plugin ${pluginName} has no resources manifest (required for this route at ${PLUGIN_MANIFEST_RELPATH})`,
+			);
+		}
+		if (probe.status === "invalid") {
+			throw new Error(`Plugin ${pluginName} has an invalid resources manifest: ${probe.diagnostic}`);
+		}
+		return probe.manifest;
 	}
 
 	async #readFile(absPath: string): Promise<string> {

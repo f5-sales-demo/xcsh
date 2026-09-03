@@ -71,6 +71,18 @@ Operational considerations:
 - `manifest.version` syncs with the parent `package.json` `version` property.
 - Syntax errors in `package.json` result in immediate read failures.
 
+### Identity and resolver resource manifests
+
+`.xcsh-plugin/plugin.json` supplies a plugin's display identity and description. The resolver resource
+manifest, `.xcsh-plugin/resources.json`, is optional for installation, discovery, the `xcsh://plugin`
+index, and `xcsh://plugin/<id>` identity summaries.
+
+The index and summary report both resource-manifest presence and whether a present manifest is valid.
+A missing manifest produces a successful identity summary with no declared resources. An invalid
+manifest also preserves the identity summary and includes a sanitized diagnostic. Resource-specific
+routes remain strict: `/contract`, `/engine`, and named resource routes require a valid resources
+manifest and the corresponding declaration. `/file/<path>` is independent of resource declarations.
+
 ## Plugin lifecycle workflows
 
 ### Installing and updating plugins (`PluginManager.install`)
