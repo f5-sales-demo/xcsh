@@ -30,14 +30,18 @@ export function resolveTierModel(
 		return { degraded: false, availableTiersCount: 0 };
 	}
 
-	const isAvailable = (selector: string): boolean => {
+	const resolveAvailableSelector = (selector: string): string | undefined => {
 		if (pool.provider) {
 			const qualified = selector.includes("/") ? selector : `${pool.provider}/${selector}`;
-			const inAvailable = availableModels.includes(qualified) || availableModels.includes(selector);
-			if (!inAvailable) return false;
+			const resolved =
+				availableModels.find(model => model === qualified || model === selector) ??
+				(pool.provider === "anthropic" && selector === "claude-haiku-4-5"
+					? availableModels.find(model => /^anthropic\/claude-haiku-4-5-\d{8}$/.test(model))
+					: undefined);
+			if (!resolved) return undefined;
 
 			if (options?.contextEstimate && options?.getModelContextWindow) {
-				const candidateWin = options.getModelContextWindow(qualified) || options.getModelContextWindow(selector);
+				const candidateWin = options.getModelContextWindow(resolved) || options.getModelContextWindow(selector);
 				if (
 					candidateWin > 0 &&
 					!checkCandidateContextEligible({
@@ -46,17 +50,16 @@ export function resolveTierModel(
 						reserveTokens: options.contextEstimate.reserveTokens,
 					})
 				) {
-					return false;
+					return undefined;
 				}
 			}
-			return true;
+			return resolved.includes("/") ? resolved : qualified;
 		}
 
-		const inAvailable =
-			availableModels.includes(selector) ||
-			availableModels.some(m => m === selector || (m.includes("/") && m.split("/")[1] === selector));
-
-		if (!inAvailable) return false;
+		const resolved = availableModels.find(
+			model => model === selector || (model.includes("/") && model.split("/")[1] === selector),
+		);
+		if (!resolved) return undefined;
 
 		if (options?.contextEstimate && options?.getModelContextWindow) {
 			const candidateWin = options.getModelContextWindow(selector);
@@ -68,35 +71,30 @@ export function resolveTierModel(
 					reserveTokens: options.contextEstimate.reserveTokens,
 				})
 			) {
-				return false;
+				return undefined;
 			}
 		}
 
-		return true;
+		return resolved;
 	};
 
-	const utilityAvailable = isAvailable(pool.tiers.utility);
-	const balancedAvailable = isAvailable(pool.tiers.balanced);
-	const frontierAvailable = isAvailable(pool.tiers.frontier);
+	const resolvedModels: Record<RoutingTier, string | undefined> = {
+		utility: resolveAvailableSelector(pool.tiers.utility),
+		balanced: resolveAvailableSelector(pool.tiers.balanced),
+		frontier: resolveAvailableSelector(pool.tiers.frontier),
+	};
 
 	const availableTiers: Record<RoutingTier, boolean> = {
-		utility: utilityAvailable,
-		balanced: balancedAvailable,
-		frontier: frontierAvailable,
+		utility: resolvedModels.utility !== undefined,
+		balanced: resolvedModels.balanced !== undefined,
+		frontier: resolvedModels.frontier !== undefined,
 	};
 
-	const availableCount = [utilityAvailable, balancedAvailable, frontierAvailable].filter(Boolean).length;
+	const availableCount = Object.values(availableTiers).filter(Boolean).length;
 
 	if (availableCount < 2) {
 		return { degraded: true, availableTiersCount: availableCount };
 	}
-
-	const formatModel = (selector: string): string => {
-		if (pool.provider && !selector.includes("/")) {
-			return `${pool.provider}/${selector}`;
-		}
-		return selector;
-	};
 
 	const desiredIndex = TIER_ORDER.indexOf(desiredTier);
 
@@ -105,7 +103,7 @@ export function resolveTierModel(
 		const tier = TIER_ORDER[i];
 		if (availableTiers[tier]) {
 			return {
-				selectedModel: formatModel(pool.tiers[tier]),
+				selectedModel: resolvedModels[tier],
 				effectiveTier: tier,
 				degraded: false,
 				availableTiersCount: availableCount,

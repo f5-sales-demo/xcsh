@@ -58,6 +58,14 @@ export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 	thinkingLevel: ThinkingLevel.Medium,
 };
 
+export const ANTHROPIC_LOGIN_MODEL_CHOICE: LoginModelChoice = {
+	label: "Claude Sonnet 5",
+	description: "Claude subscription default with medium thinking",
+	provider: "anthropic",
+	modelId: "claude-sonnet-5",
+	thinkingLevel: ThinkingLevel.Medium,
+};
+
 export function getAvailableLiteLLMLoginModelChoices(availableModelIds: readonly string[]): LiteLLMLoginModelChoice[] {
 	const available = new Set(availableModelIds);
 	return LITELLM_LOGIN_MODEL_CHOICES.filter(choice => available.has(choice.modelId));
@@ -103,7 +111,7 @@ interface ModelApplicableSession extends BaseModelApplicableSession {
 	thinkingLevel?: ThinkingLevel;
 	modelRegistry: {
 		getAll(): Model[];
-		getProviderDiscoveryState?(provider: string): { status: string; stale: boolean } | undefined;
+		getProviderDiscoveryState?(provider: string): { status: string; stale: boolean; models: string[] } | undefined;
 	};
 	settings?: Pick<Settings, "getModelRoles" | "get" | "set">;
 	setModelTemporary?(model: Model, thinkingLevel?: ThinkingLevel): Promise<void>;
@@ -144,11 +152,13 @@ export async function applyOAuthLoginModel(
 ): Promise<LoginModelChoice | undefined> {
 	const canonicalProvider = canonicalizeOAuthProviderId(providerId);
 	const choice =
-		canonicalProvider === GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider
-			? GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE
-			: canonicalProvider === OPENAI_CODEX_LOGIN_MODEL_CHOICE.provider
-				? OPENAI_CODEX_LOGIN_MODEL_CHOICE
-				: undefined;
+		canonicalProvider === ANTHROPIC_LOGIN_MODEL_CHOICE.provider
+			? ANTHROPIC_LOGIN_MODEL_CHOICE
+			: canonicalProvider === GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE.provider
+				? GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE
+				: canonicalProvider === OPENAI_CODEX_LOGIN_MODEL_CHOICE.provider
+					? OPENAI_CODEX_LOGIN_MODEL_CHOICE
+					: undefined;
 	if (!choice) return undefined;
 	const discovery = session.modelRegistry.getProviderDiscoveryState?.(canonicalProvider);
 	if (session.modelRegistry.getProviderDiscoveryState && (discovery?.status !== "ok" || discovery.stale)) {
@@ -158,7 +168,9 @@ export async function applyOAuthLoginModel(
 	const settings = session.settings;
 	const storedProfile = settings?.get("routing.profile");
 	const previousProfile: "none" | SubscriptionProfileId =
-		storedProfile === "google-antigravity" || storedProfile === "openai-codex" ? storedProfile : "none";
+		storedProfile === "anthropic" || storedProfile === "google-antigravity" || storedProfile === "openai-codex"
+			? storedProfile
+			: "none";
 	const storedRoutingMode = settings?.get("routing.mode");
 	const previousRoutingMode =
 		storedRoutingMode === "shadow" || storedRoutingMode === "auto" ? storedRoutingMode : "off";
@@ -171,20 +183,26 @@ export async function applyOAuthLoginModel(
 		: {};
 	const previousModel = session.model;
 	const previousThinkingLevel = session.thinkingLevel;
+	let nextRoles: Record<string, string> | undefined;
 	if (settings) {
-		const available = session.modelRegistry.getAll().map(model => `${model.provider}/${model.id}`);
+		const available = discovery
+			? discovery.models.map(modelId => `${canonicalProvider}/${modelId}`)
+			: session.modelRegistry.getAll().map(model => `${model.provider}/${model.id}`);
 		const profile = applySubscriptionProfileRoles(
 			canonicalProvider as SubscriptionProfileId,
 			previousRoles,
 			available,
 		);
 		if (!profile.applied) return undefined;
-		settings.set("modelRoles", profile.roles);
-		settings.set("routing.mode", "off");
-		settings.set("routing.profile", canonicalProvider as SubscriptionProfileId);
+		nextRoles = profile.roles;
 	}
 
 	try {
+		if (settings && nextRoles) {
+			settings.set("modelRoles", nextRoles);
+			settings.set("routing.mode", "off");
+			settings.set("routing.profile", canonicalProvider as SubscriptionProfileId);
+		}
 		const applied = await applyModelAfterLogin(session, choice);
 		if (!applied && settings) {
 			settings.set("modelRoles", previousRoles);

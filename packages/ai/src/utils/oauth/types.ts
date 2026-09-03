@@ -65,7 +65,10 @@ export type OAuthPrompt = {
 };
 
 export type OAuthAuthInfo = {
+	/** URL presented for copying (for example a hosted callback suitable for headless use). */
 	url: string;
+	/** Optional URL opened automatically when it differs from the displayed URL. */
+	openUrl?: string;
 	instructions?: string;
 	kind?: "browser" | "device";
 	userCode?: string;

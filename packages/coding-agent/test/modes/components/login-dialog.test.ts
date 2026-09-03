@@ -33,4 +33,21 @@ describe("LoginDialogComponent", () => {
 		expect(openUrl).toHaveBeenCalledWith(LONG_AUTH_URL);
 		expect(requestRender).toHaveBeenCalledTimes(1);
 	});
+
+	it("displays the hosted URL while opening the automatic loopback URL", () => {
+		const requestRender = vi.fn();
+		const openUrl = vi.fn();
+		const copy = vi.fn(async () => undefined);
+		const displayedUrl = `${LONG_AUTH_URL}&route=hosted`;
+		const automaticUrl = `${LONG_AUTH_URL}&route=loopback`;
+		const dialog = new LoginDialogComponent({ requestRender } as never, "anthropic", vi.fn(), {
+			openUrl,
+			presentLink: (container, url) => presentAuthLink(container, url, { copy, platform: "linux" }),
+		});
+
+		dialog.showAuth(displayedUrl, undefined, automaticUrl);
+
+		expect(copy).toHaveBeenCalledWith(displayedUrl);
+		expect(openUrl).toHaveBeenCalledWith(automaticUrl);
+	});
 });

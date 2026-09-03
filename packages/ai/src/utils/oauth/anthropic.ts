@@ -1,134 +1,259 @@
-/**
- * Anthropic OAuth flow (Claude Pro/Max)
- */
-import { OAuthCallbackFlow } from "./callback-server";
+/** Anthropic OAuth flow for Claude subscriptions (Claude Pro/Max). */
 import { generatePKCE } from "./pkce";
-import type { OAuthController, OAuthCredentials } from "./types";
+import type { OAuthAuthInfo, OAuthController, OAuthCredentials } from "./types";
 
-const decode = (s: string) => atob(s);
+const decode = (value: string) => atob(value);
 const CLIENT_ID = decode("OWQxYzI1MGEtZTYxYi00NGQ5LTg4ZWQtNTk0NGQxOTYyZjVl");
-const AUTHORIZE_URL = "https://claude.ai/oauth/authorize";
-const TOKEN_URL = "https://api.anthropic.com/v1/oauth/token";
-const CALLBACK_PORT = 54545;
+const AUTHORIZE_URL = "https://claude.com/cai/oauth/authorize";
+const TOKEN_URL = "https://platform.claude.com/v1/oauth/token";
+const MANUAL_REDIRECT_URL = "https://platform.claude.com/oauth/code/callback";
 const CALLBACK_PATH = "/callback";
-const SCOPES = "org:create_api_key user:profile user:inference";
+const SCOPES = "user:profile user:inference";
+const LOGIN_TIMEOUT_MS = 300_000;
+const TOKEN_TIMEOUT_MS = 30_000;
 
-export class AnthropicOAuthFlow extends OAuthCallbackFlow {
-	#verifier: string = "";
-	#challenge: string = "";
+export interface AnthropicOAuthFlowOptions {
+	timeoutMs?: number;
+}
 
-	constructor(ctrl: OAuthController) {
-		super(ctrl, CALLBACK_PORT, CALLBACK_PATH);
-	}
+interface AnthropicTokenPayload {
+	access_token?: unknown;
+	refresh_token?: unknown;
+	expires_in?: unknown;
+	account_uuid?: unknown;
+	email_address?: unknown;
+	account?: unknown;
+}
 
-	async generateAuthUrl(state: string, redirectUri: string): Promise<{ url: string; instructions?: string }> {
-		const pkce = await generatePKCE();
-		this.#verifier = pkce.verifier;
-		this.#challenge = pkce.challenge;
+function generateState(): string {
+	const bytes = new Uint8Array(32);
+	crypto.getRandomValues(bytes);
+	return Array.from(bytes, value => value.toString(16).padStart(2, "0")).join("");
+}
 
-		const authParams = new URLSearchParams({
-			code: "true",
-			client_id: CLIENT_ID,
-			response_type: "code",
-			redirect_uri: redirectUri,
-			scope: SCOPES,
-			code_challenge: this.#challenge,
-			code_challenge_method: "S256",
-			state,
-		});
+function authorizationUrl(redirectUri: string, state: string, challenge: string): string {
+	const params = new URLSearchParams({
+		code: "true",
+		client_id: CLIENT_ID,
+		response_type: "code",
+		redirect_uri: redirectUri,
+		scope: SCOPES,
+		code_challenge: challenge,
+		code_challenge_method: "S256",
+		state,
+	});
+	return `${AUTHORIZE_URL}?${params.toString()}`;
+}
 
-		const url = `${AUTHORIZE_URL}?${authParams.toString()}`;
-		return { url };
-	}
-
-	async exchangeToken(code: string, state: string, redirectUri: string): Promise<OAuthCredentials> {
-		let exchangeCode = code;
-		let exchangeState = state;
-		const codeFragmentIndex = code.indexOf("#");
-		if (codeFragmentIndex >= 0) {
-			exchangeCode = code.slice(0, codeFragmentIndex);
-			const codeFragmentState = code.slice(codeFragmentIndex + 1);
-			if (codeFragmentState.length > 0) {
-				exchangeState = codeFragmentState;
-			}
+function parseManualCode(input: string, expectedState: string): string {
+	const value = input.trim();
+	let code: string | undefined;
+	let state: string | undefined;
+	try {
+		const url = new URL(value);
+		code = url.searchParams.get("code") ?? undefined;
+		state = url.searchParams.get("state") ?? undefined;
+	} catch {
+		const separator = value.lastIndexOf("#");
+		if (separator > 0) {
+			code = value.slice(0, separator);
+			state = value.slice(separator + 1);
 		}
+	}
+	if (!code || !state) throw new Error("Manual authorization requires code#state");
+	if (state !== expectedState) throw new Error("OAuth state mismatch");
+	return code;
+}
 
-		const tokenResponse = await fetch(TOKEN_URL, {
+function tokenCredentials(payload: AnthropicTokenPayload, previousRefresh?: string): OAuthCredentials {
+	if (typeof payload.access_token !== "string" || typeof payload.expires_in !== "number") {
+		throw new Error("Anthropic token response was missing required fields");
+	}
+	const refresh =
+		typeof payload.refresh_token === "string" && payload.refresh_token ? payload.refresh_token : previousRefresh;
+	if (!refresh) throw new Error("Anthropic token response was missing a refresh token");
+	const account =
+		payload.account && typeof payload.account === "object" && !Array.isArray(payload.account)
+			? (payload.account as Record<string, unknown>)
+			: undefined;
+	const accountId =
+		typeof account?.uuid === "string"
+			? account.uuid
+			: typeof account?.id === "string"
+				? account.id
+				: typeof payload.account_uuid === "string"
+					? payload.account_uuid
+					: undefined;
+	const email =
+		typeof account?.email_address === "string"
+			? account.email_address
+			: typeof account?.email === "string"
+				? account.email
+				: typeof payload.email_address === "string"
+					? payload.email_address
+					: undefined;
+	return {
+		access: payload.access_token,
+		refresh,
+		expires: Date.now() + payload.expires_in * 1000 - 5 * 60 * 1000,
+		...(accountId && { accountId }),
+		...(email && { email }),
+	};
+}
+
+async function requestToken(body: Record<string, string>, previousRefresh?: string): Promise<OAuthCredentials> {
+	let response: Response;
+	try {
+		response = await fetch(TOKEN_URL, {
 			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			body: JSON.stringify({
-				grant_type: "authorization_code",
-				client_id: CLIENT_ID,
-				code: exchangeCode,
-				state: exchangeState,
-				redirect_uri: redirectUri,
-				code_verifier: this.#verifier,
-			}),
+			headers: { "Content-Type": "application/json", Accept: "application/json" },
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
 		});
-
-		if (!tokenResponse.ok) {
-			let error: string;
-			try {
-				error = await tokenResponse.text();
-			} catch {
-				error = `HTTP ${tokenResponse.status}`;
-			}
-			throw new Error(`Token exchange failed: ${error}`);
+	} catch (error) {
+		if (error instanceof DOMException && error.name === "TimeoutError") {
+			throw new Error("Anthropic token exchange timed out after 30 seconds");
 		}
+		throw new Error("Anthropic token exchange failed");
+	}
+	if (!response.ok) throw new Error(`Anthropic token exchange failed (HTTP ${response.status})`);
+	let payload: AnthropicTokenPayload;
+	try {
+		payload = (await response.json()) as AnthropicTokenPayload;
+	} catch {
+		throw new Error("Anthropic token response was invalid");
+	}
+	return tokenCredentials(payload, previousRefresh);
+}
 
-		const tokenData = (await tokenResponse.json()) as {
-			access_token: string;
-			refresh_token: string;
-			expires_in: number;
-		};
+export class AnthropicOAuthFlow {
+	#verifier = "";
+	#challenge = "";
+	readonly #timeoutMs: number;
 
+	constructor(
+		readonly ctrl: OAuthController,
+		options: AnthropicOAuthFlowOptions = {},
+	) {
+		this.#timeoutMs = options.timeoutMs ?? LOGIN_TIMEOUT_MS;
+	}
+
+	async generateAuthInfo(state: string, loopbackRedirectUri: string): Promise<OAuthAuthInfo & { openUrl: string }> {
+		if (!this.#verifier) {
+			const pkce = await generatePKCE();
+			this.#verifier = pkce.verifier;
+			this.#challenge = pkce.challenge;
+		}
 		return {
-			refresh: tokenData.refresh_token,
-			access: tokenData.access_token,
-			expires: Date.now() + tokenData.expires_in * 1000 - 5 * 60 * 1000,
+			url: authorizationUrl(MANUAL_REDIRECT_URL, state, this.#challenge),
+			openUrl: authorizationUrl(loopbackRedirectUri, state, this.#challenge),
+			instructions: "For a remote or headless terminal, open the displayed URL and paste the resulting code#state.",
 		};
+	}
+
+	/** Backward-compatible helper for callers that only need one redirect URL. */
+	async generateAuthUrl(state: string, redirectUri: string): Promise<{ url: string; instructions?: string }> {
+		if (!this.#verifier) {
+			const pkce = await generatePKCE();
+			this.#verifier = pkce.verifier;
+			this.#challenge = pkce.challenge;
+		}
+		return { url: authorizationUrl(redirectUri, state, this.#challenge) };
+	}
+
+	async exchangeToken(codeInput: string, expectedState: string, redirectUri: string): Promise<OAuthCredentials> {
+		if (!this.#verifier) throw new Error("Anthropic OAuth exchange started without PKCE");
+		let code = codeInput;
+		const fragment = codeInput.lastIndexOf("#");
+		if (fragment >= 0) {
+			code = codeInput.slice(0, fragment);
+			const suppliedState = codeInput.slice(fragment + 1);
+			if (!suppliedState || suppliedState !== expectedState) throw new Error("OAuth state mismatch");
+		}
+		if (!code) throw new Error("Missing authorization code");
+		return requestToken({
+			grant_type: "authorization_code",
+			client_id: CLIENT_ID,
+			code,
+			state: expectedState,
+			redirect_uri: redirectUri,
+			code_verifier: this.#verifier,
+		});
+	}
+
+	async login(): Promise<OAuthCredentials> {
+		if (this.ctrl.signal?.aborted) throw new Error("Anthropic login cancelled");
+		const state = generateState();
+		const completed = Promise.withResolvers<{ code: string; redirectUri: string }>();
+		const server = Bun.serve({
+			hostname: "127.0.0.1",
+			port: 0,
+			fetch: request => {
+				const url = new URL(request.url);
+				if (url.pathname !== CALLBACK_PATH) return new Response("Not Found", { status: 404 });
+				const code = url.searchParams.get("code");
+				const callbackState = url.searchParams.get("state");
+				if (!code || callbackState !== state) {
+					completed.reject(
+						new Error(callbackState ? "OAuth state mismatch" : "Missing authorization code or state"),
+					);
+					return new Response("Authorization failed. Return to the terminal.", { status: 400 });
+				}
+				completed.resolve({ code, redirectUri: loopbackRedirectUri });
+				return new Response("Authorization complete. Return to the terminal.");
+			},
+		});
+		// Claude's registered native-client redirect uses localhost, while the
+		// listener remains explicitly bound to 127.0.0.1.
+		const loopbackRedirectUri = `http://localhost:${server.port}${CALLBACK_PATH}`;
+		try {
+			const authInfo = await this.generateAuthInfo(state, loopbackRedirectUri);
+			this.ctrl.onAuth?.(authInfo);
+			this.ctrl.onProgress?.("Waiting for Claude subscription authorization…");
+			const attempts: Promise<{ code: string; redirectUri: string }>[] = [completed.promise];
+			if (this.ctrl.onManualCodeInput) {
+				attempts.push(
+					this.ctrl.onManualCodeInput().then(input => ({
+						code: parseManualCode(input, state),
+						redirectUri: MANUAL_REDIRECT_URL,
+					})),
+				);
+			}
+			const timeoutSignal = AbortSignal.timeout(this.#timeoutMs);
+			const signal = this.ctrl.signal ? AbortSignal.any([this.ctrl.signal, timeoutSignal]) : timeoutSignal;
+			const aborted = new Promise<never>((_resolve, reject) => {
+				signal.addEventListener(
+					"abort",
+					() =>
+						reject(
+							new Error(this.ctrl.signal?.aborted ? "Anthropic login cancelled" : "Anthropic login timed out"),
+						),
+					{ once: true },
+				);
+			});
+			const result = await Promise.race([...attempts, aborted]);
+			this.ctrl.onProgress?.("Exchanging authorization code for tokens…");
+			return await this.exchangeToken(result.code, state, result.redirectUri);
+		} finally {
+			server.stop();
+		}
 	}
 }
 
-/**
- * Login with Anthropic OAuth
- */
-export async function loginAnthropic(ctrl: OAuthController): Promise<OAuthCredentials> {
-	const flow = new AnthropicOAuthFlow(ctrl);
-	return flow.login();
+export async function loginAnthropic(
+	ctrl: OAuthController,
+	options: AnthropicOAuthFlowOptions = {},
+): Promise<OAuthCredentials> {
+	return new AnthropicOAuthFlow(ctrl, options).login();
 }
 
-/**
- * Refresh Anthropic OAuth token
- */
 export async function refreshAnthropicToken(refreshToken: string): Promise<OAuthCredentials> {
-	const response = await fetch(TOKEN_URL, {
-		method: "POST",
-		headers: { "Content-Type": "application/json", Accept: "application/json" },
-		body: JSON.stringify({
+	return requestToken(
+		{
 			grant_type: "refresh_token",
 			client_id: CLIENT_ID,
 			refresh_token: refreshToken,
-		}),
-	});
-
-	if (!response.ok) {
-		const error = await response.text();
-		throw new Error(`Anthropic token refresh failed: ${error}`);
-	}
-
-	const data = (await response.json()) as {
-		access_token: string;
-		refresh_token: string;
-		expires_in: number;
-	};
-
-	return {
-		refresh: data.refresh_token || refreshToken,
-		access: data.access_token,
-		expires: Date.now() + data.expires_in * 1000 - 5 * 60 * 1000,
-	};
+		},
+		refreshToken,
+	);
 }

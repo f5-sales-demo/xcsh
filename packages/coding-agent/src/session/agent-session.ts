@@ -1333,7 +1333,7 @@ export class AgentSession {
 		const resolved = applySubscriptionProfileRoles(
 			profileId,
 			currentRoles,
-			this.#modelRegistry.getAvailable().map(model => `${model.provider}/${model.id}`),
+			discovery.models.map(modelId => `${profileId}/${modelId}`),
 		);
 		if (!resolved.applied) return { applied: false, missingModels: resolved.missingModels };
 

@@ -1584,6 +1584,7 @@ export function anthropicModelManagerOptions(
 ): ModelManagerOptions<"anthropic-messages"> {
 	const apiKey = config?.apiKey;
 	const baseUrl = config?.baseUrl ?? ANTHROPIC_BASE_URL;
+	const discoveryBaseUrl = /\/v1\/?$/.test(baseUrl) ? baseUrl.replace(/\/$/, "") : `${baseUrl.replace(/\/$/, "")}/v1`;
 	return {
 		providerId: "anthropic",
 		modelsDev: {
@@ -1600,7 +1601,7 @@ export function anthropicModelManagerOptions(
 					fetchOpenAICompatibleModels({
 						api: "anthropic-messages",
 						provider: "anthropic",
-						baseUrl,
+						baseUrl: discoveryBaseUrl,
 						headers: buildAnthropicDiscoveryHeaders(apiKey),
 						mapModel: (
 							entry: OpenAICompatibleModelRecord,
@@ -1613,6 +1614,7 @@ export function anthropicModelManagerOptions(
 								return {
 									...defaults,
 									name: discoveredName,
+									baseUrl,
 								};
 							}
 							return {

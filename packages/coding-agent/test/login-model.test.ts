@@ -24,7 +24,7 @@ function makeSession(opts: {
 	thinkingLevel?: ThinkingLevel;
 }) {
 	let modelRoles: Record<string, string> = { vision: "google/vision" };
-	let routingProfile: "none" | "google-antigravity" | "openai-codex" = "none";
+	let routingProfile: "none" | "anthropic" | "google-antigravity" | "openai-codex" = "none";
 	let routingMode: "off" | "shadow" | "auto" = "auto";
 	const session: any = {
 		model: opts.model,
@@ -291,16 +291,60 @@ describe("applyOAuthLoginModel", () => {
 		expect(getRoutingMode()).toBe("auto");
 	});
 
-	it("does not change models for OAuth providers without a preferred login model", async () => {
-		const { session, setModel } = makeSession({
+	it("applies the complete Anthropic subscription profile with exact discovered IDs", async () => {
+		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
 			model: M("gpt-5.6-sol"),
-			models: [M("claude-opus-5", "anthropic")],
+			models: [
+				M("claude-haiku-4-5-20251001", "anthropic"),
+				M("claude-sonnet-5", "anthropic"),
+				M("claude-opus-5", "anthropic"),
+			],
+		});
+		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
+			status: "ok",
+			stale: false,
+			models: ["claude-haiku-4-5-20251001", "claude-sonnet-5", "claude-opus-5"],
 		});
 
 		const applied = await applyOAuthLoginModel(session as never, "anthropic");
 
-		expect(applied).toBeUndefined();
+		expect(applied).toMatchObject({
+			provider: "anthropic",
+			modelId: "claude-sonnet-5",
+			thinkingLevel: ThinkingLevel.Medium,
+		});
+		expect(setModel).toHaveBeenCalledWith(M("claude-sonnet-5", "anthropic"), "default", {
+			selector: "anthropic/claude-sonnet-5",
+			thinkingLevel: ThinkingLevel.Medium,
+		});
+		expect(getModelRoles()).toMatchObject({
+			smol: "anthropic/claude-haiku-4-5-20251001:low",
+			default: "anthropic/claude-sonnet-5:medium",
+			slow: "anthropic/claude-opus-5:high",
+			plan: "anthropic/claude-opus-5:high",
+			vision: "google/vision",
+		});
+		expect(getRoutingProfile()).toBe("anthropic");
+		expect(getRoutingMode()).toBe("off");
+	});
+
+	it("keeps the prior state when Anthropic inventory is stale or incomplete", async () => {
+		const previousModel = M("existing", "openai");
+		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode } = makeSession({
+			model: previousModel,
+			models: [M("claude-haiku-4-5", "anthropic"), M("claude-opus-5", "anthropic")],
+		});
+		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
+			status: "ok",
+			stale: false,
+			models: ["claude-haiku-4-5", "claude-opus-5"],
+		});
+		await expect(applyOAuthLoginModel(session as never, "anthropic")).resolves.toBeUndefined();
+		expect(session.model).toBe(previousModel);
 		expect(setModel).not.toHaveBeenCalled();
+		expect(getModelRoles()).toEqual({ vision: "google/vision" });
+		expect(getRoutingProfile()).toBe("none");
+		expect(getRoutingMode()).toBe("auto");
 	});
 
 	it("applies the complete OpenAI Codex subscription profile", async () => {
@@ -392,6 +436,41 @@ describe("applyOAuthLoginModel", () => {
 		expect(session.model).toBe(previousModel);
 		expect(getThinkingLevel()).toBe(ThinkingLevel.Low);
 		expect(setModelTemporary).toHaveBeenCalledWith(previousModel, ThinkingLevel.Low);
+		expect(getModelRoles()).toEqual({ vision: "google/vision" });
+		expect(getRoutingProfile()).toBe("none");
+		expect(getRoutingMode()).toBe("auto");
+	});
+
+	it("rolls the complete Anthropic profile back when settings persistence fails", async () => {
+		const previousModel = M("existing", "openai");
+		const { session, setModel, getModelRoles, getRoutingProfile, getRoutingMode, getThinkingLevel } = makeSession({
+			model: previousModel,
+			thinkingLevel: ThinkingLevel.Low,
+			models: [
+				M("claude-haiku-4-5", "anthropic"),
+				M("claude-sonnet-5", "anthropic"),
+				M("claude-opus-5", "anthropic"),
+			],
+		});
+		(session.modelRegistry as any).getProviderDiscoveryState = () => ({
+			status: "ok",
+			stale: false,
+			models: ["claude-haiku-4-5", "claude-sonnet-5", "claude-opus-5"],
+		});
+		const persist = session.settings.set;
+		let failed = false;
+		session.settings.set = (key: string, value: unknown) => {
+			if (key === "routing.profile" && !failed) {
+				failed = true;
+				throw new Error("settings persistence failed");
+			}
+			persist(key, value);
+		};
+
+		await expect(applyOAuthLoginModel(session as never, "anthropic")).rejects.toThrow("settings persistence failed");
+		expect(setModel).not.toHaveBeenCalled();
+		expect(session.model).toBe(previousModel);
+		expect(getThinkingLevel()).toBe(ThinkingLevel.Low);
 		expect(getModelRoles()).toEqual({ vision: "google/vision" });
 		expect(getRoutingProfile()).toBe("none");
 		expect(getRoutingMode()).toBe("auto");
