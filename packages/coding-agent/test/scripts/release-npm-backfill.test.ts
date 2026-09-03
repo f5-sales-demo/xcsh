@@ -64,6 +64,19 @@ describe("release npm backfill publish semantics", () => {
 		expect(sleeps).toEqual([5, 10]);
 	});
 
+	it("allows registry visibility after the former default retry limit", async () => {
+		let lookups = 0;
+		const attempts = await waitForRegistryVisibility("@f5-sales-demo/pi-agent-core", "21.0.0", {
+			lookup: async () => {
+				lookups++;
+				return lookups === 17 ? '"21.0.0"' : null;
+			},
+			sleep: async () => {},
+		});
+
+		expect(attempts).toBe(17);
+	});
+
 	it("identifies the exact package and version on registry timeout", async () => {
 		expect(
 			waitForRegistryVisibility("@f5-sales-demo/pi-agent-core", "21.0.0", {

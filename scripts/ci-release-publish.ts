@@ -106,7 +106,10 @@ export async function waitForRegistryVisibility(
 ): Promise<number> {
 	const lookup = options.lookup ?? lookupRegistryVersion;
 	const sleep = options.sleep ?? Bun.sleep;
-	const maxAttempts = options.maxAttempts ?? 16;
+	// npm may accept a package before every registry edge can serve it. Keep the
+	// wait bounded, but allow the normal propagation tail observed for large
+	// release packages rather than failing immediately before it becomes visible.
+	const maxAttempts = options.maxAttempts ?? 20;
 	const maxDelayMs = options.maxDelayMs ?? 30_000;
 	let delayMs = Math.min(options.initialDelayMs ?? 5_000, maxDelayMs);
 
