@@ -156,3 +156,11 @@ When a model context window overflows during a conversation turn (`context_lengt
 1. Evaluates explicit `contextPromotionTarget` configurations.
 2. Identifies the smallest available model with a larger context window on the same provider.
 3. Switches the session model temporarily and retries the turn.
+
+## Manual Model Inventory Refresh
+
+In the interactive model selector (`/model` or `Ctrl+M`), press `r` or run `/model --refresh` to trigger a manual inventory refresh. This forces a live probe of local endpoints (Ollama, LM Studio) and remote provider discovery caches without restarting the xcsh daemon.
+
+## LaTeX and Mathematical Formatting
+
+xcsh natively renders LaTeX math blocks and inline formulas (`$...$` and `$$...$$`) across the interactive TUI, markdown exports, and webviews with real-time Unicode glyph and KaTeX fallback formatting.
