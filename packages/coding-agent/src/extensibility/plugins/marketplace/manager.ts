@@ -69,6 +69,15 @@ export interface PluginUpdate {
 	to: string;
 }
 
+export interface MarketplaceRefreshResult {
+	successful: string[];
+	failed: string[];
+}
+
+export interface MarketplaceCatalogPreview extends MarketplaceRefreshResult {
+	plugins: Array<{ marketplace: string; plugin: MarketplacePluginEntry }>;
+}
+
 // ── Manager ──────────────────────────────────────────────────────────────────
 
 export class MarketplaceManager {
@@ -155,16 +164,10 @@ export class MarketplaceManager {
 			throw new Error(`Marketplace "${name}" not found`);
 		}
 
-		let fetchResult: { catalog: MarketplaceCatalog; clonePath?: string };
-		try {
-			fetchResult = await fetchMarketplace(existing.sourceUri, this.#opts.marketplacesCacheDir);
-		} catch (err) {
-			if (Bun.env.XCSH_PLUGIN_KEEP_MARKETPLACE_ON_FAILURE === "1") {
-				logger.debug("Marketplace fetch failed, preserving cached catalog", { name, error: String(err) });
-				return existing;
-			}
-			throw err;
-		}
+		const fetchResult: { catalog: MarketplaceCatalog; clonePath?: string } = await fetchMarketplace(
+			existing.sourceUri,
+			this.#opts.marketplacesCacheDir,
+		);
 		const { catalog, clonePath } = fetchResult;
 
 		// Guard against upstream catalog silently renaming itself — the registry
@@ -217,6 +220,71 @@ export class MarketplaceManager {
 		return reg.marketplaces;
 	}
 
+	/**
+	 * Best-effort interactive refresh. Unlike refreshStaleMarketplaces(), this always
+	 * fetches every selected marketplace and isolates failures so cached catalogs remain usable.
+	 */
+	async refreshMarketplaces(names?: readonly string[]): Promise<MarketplaceRefreshResult> {
+		const selected = names ?? (await this.listMarketplaces()).map(marketplace => marketplace.name);
+		const result: MarketplaceRefreshResult = { successful: [], failed: [] };
+
+		for (const name of new Set(selected)) {
+			try {
+				await this.updateMarketplace(name);
+				result.successful.push(name);
+			} catch (error) {
+				logger.debug("Interactive marketplace refresh failed; preserving cached catalog", {
+					name,
+					error: String(error),
+				});
+				result.failed.push(name);
+			}
+		}
+
+		return result;
+	}
+
+	/** Fetch current catalogs without mutating persistent state (used by dry-run workflows). */
+	async previewMarketplacePlugins(names?: readonly string[]): Promise<MarketplaceCatalogPreview> {
+		const reg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
+		const selectedNames = names ?? reg.marketplaces.map(marketplace => marketplace.name);
+		const selected = new Map(reg.marketplaces.map(marketplace => [marketplace.name, marketplace]));
+		const previewDir = await fs.mkdtemp(path.join(os.tmpdir(), "xcsh-marketplace-preview-"));
+		const result: MarketplaceCatalogPreview = { successful: [], failed: [], plugins: [] };
+
+		try {
+			for (const name of new Set(selectedNames)) {
+				const marketplace = selected.get(name);
+				if (!marketplace) {
+					result.failed.push(name);
+					continue;
+				}
+
+				let catalog: MarketplaceCatalog | undefined;
+				try {
+					const fetched = await fetchMarketplace(marketplace.sourceUri, previewDir);
+					if (fetched.catalog.name !== name) {
+						throw new Error(`Marketplace catalog name changed from "${name}" to "${fetched.catalog.name}".`);
+					}
+					catalog = fetched.catalog;
+					result.successful.push(name);
+				} catch (error) {
+					logger.debug("Marketplace preview refresh failed; using cached catalog when available", {
+						name,
+						error: String(error),
+					});
+					result.failed.push(name);
+					catalog = await this.#readCatalog(marketplace).catch(() => undefined);
+				}
+
+				for (const plugin of catalog?.plugins ?? []) result.plugins.push({ marketplace: name, plugin });
+			}
+			return result;
+		} finally {
+			await fs.rm(previewDir, { recursive: true, force: true });
+		}
+	}
+
 	// ── Plugin discovery ──────────────────────────────────────────────────────
 
 	async listAvailablePlugins(marketplace?: string): Promise<MarketplacePluginEntry[]> {
@@ -233,8 +301,12 @@ export class MarketplaceManager {
 
 		const all: MarketplacePluginEntry[] = [];
 		for (const entry of reg.marketplaces) {
-			const catalog = await this.#readCatalog(entry);
-			all.push(...catalog.plugins);
+			try {
+				const catalog = await this.#readCatalog(entry);
+				all.push(...catalog.plugins);
+			} catch (error) {
+				logger.debug("Skipping unavailable marketplace catalog", { name: entry.name, error: String(error) });
+			}
 		}
 		return all;
 	}
@@ -574,7 +646,7 @@ export class MarketplaceManager {
 		// Explicit upgrade flows pass refresh:true to re-fetch catalogs from source before
 		// comparing, so freshly-published versions are seen. Passive callers (startup notify,
 		// dashboard poll) omit it and rely on the 24h TTL (refreshStaleMarketplaces).
-		if (opts?.refresh) await this.updateAllMarketplaces();
+		if (opts?.refresh) await this.refreshMarketplaces();
 		const mktReg = await readMarketplacesRegistry(this.#opts.marketplacesRegistryPath);
 		return this.#collectUpdates(mktReg);
 	}
@@ -670,7 +742,7 @@ export class MarketplaceManager {
 		scope?: "user" | "project" | "local",
 		opts?: { refresh?: boolean },
 	): Promise<InstalledPluginEntry> {
-		if (opts?.refresh) await this.updateAllMarketplaces();
+		if (opts?.refresh) await this.refreshMarketplaces();
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID: "${pluginId}". Expected "name@marketplace".`);
@@ -707,7 +779,7 @@ export class MarketplaceManager {
 	// Upgrade a plugin across all scopes where it is installed.
 	// Returns one entry per scope upgraded (0–2 entries).
 	async upgradePluginAcrossScopes(pluginId: string, opts?: { refresh?: boolean }): Promise<InstalledPluginEntry[]> {
-		if (opts?.refresh) await this.updateAllMarketplaces();
+		if (opts?.refresh) await this.refreshMarketplaces();
 		const parsed = parsePluginId(pluginId);
 		if (!parsed) {
 			throw new Error(`Invalid plugin ID: "${pluginId}". Expected "name@marketplace".`);
