@@ -16,6 +16,7 @@ import { invalidate as invalidateFsCache } from "../../../capability/fs";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../../discovery/helpers";
 import { PluginManager } from "../../../extensibility/plugins";
 import {
+	formatMarketplaceRefreshWarning,
 	getInstalledPluginsRegistryPath,
 	getMarketplacesCacheDir,
 	getMarketplacesRegistryPath,
@@ -27,7 +28,7 @@ import { matchesAppInterrupt } from "../../utils/keybinding-matchers";
 import { DynamicBorder } from "../dynamic-border";
 import { PluginInspectorPane } from "./plugin-inspector-pane";
 import { PluginListPane } from "./plugin-list-pane";
-import { applySearch, buildTabs, createInitialState, filterByTab, loadAllPlugins } from "./state-manager";
+import { applySearch, createInitialState, filterByTab, refreshState } from "./state-manager";
 import type { DashboardPlugin, PluginDashboardState, PluginTabId } from "./types";
 
 const DEFAULT_MARKETPLACE = "f5-sales-demo/marketplace";
@@ -113,14 +114,16 @@ export class PluginDashboard extends Container {
 			// Network failure on first run is fine — continue with whatever is available
 		}
 
+		let refreshWarning: string | undefined;
 		try {
-			await this.#mgr.refreshStaleMarketplaces();
-		} catch {
-			// Network failure is fine — display whatever is cached
+			refreshWarning = formatMarketplaceRefreshWarning(await this.#mgr.refreshMarketplaces());
+		} catch (error) {
+			refreshWarning = `Warning: Marketplace refresh failed. Showing last-known catalog data where available (offline/stale): ${error instanceof Error ? error.message : String(error)}`;
 		}
 
 		try {
 			this.#state = await createInitialState(this.#mgr, this.#npmMgr);
+			this.#state.warning = refreshWarning ?? null;
 		} catch (error) {
 			this.#state = {
 				tabs: [{ id: "installed", label: "Installed", count: 0 }],
@@ -132,6 +135,7 @@ export class PluginDashboard extends Container {
 				selectedIndex: 0,
 				scrollOffset: 0,
 				notice: null,
+				warning: refreshWarning ?? null,
 				loading: false,
 				loadError: error instanceof Error ? error.message : String(error),
 			};
@@ -197,30 +201,15 @@ export class PluginDashboard extends Container {
 		this.#buildLayout();
 	}
 
-	async #reloadData(): Promise<void> {
+	async #reloadData(refreshRemote = false): Promise<void> {
 		this.#state.loading = true;
 		this.#state.loadError = null;
 		this.#buildLayout();
 
 		try {
-			const selectedId = this.#selectedPlugin()?.id;
-			const allPlugins = await loadAllPlugins(this.#mgr, this.#npmMgr);
-			const tabs = buildTabs(allPlugins);
-			const prevTabId = this.#activeTabId();
-			const nextTabIndex = Math.max(
-				0,
-				tabs.findIndex(t => t.id === prevTabId),
-			);
-
-			this.#state.allPlugins = allPlugins;
-			this.#state.tabs = tabs;
-			this.#state.activeTabIndex = nextTabIndex;
-			this.#applyFilters();
-
-			if (selectedId) {
-				const idx = this.#state.searchFiltered.findIndex(p => p.id === selectedId);
-				if (idx >= 0) this.#state.selectedIndex = idx;
-			}
+			const refresh = refreshRemote ? await this.#mgr.refreshMarketplaces() : undefined;
+			this.#state = await refreshState(this.#state, this.#mgr, this.#npmMgr);
+			if (refresh) this.#state.warning = formatMarketplaceRefreshWarning(refresh) ?? null;
 			this.#clampSelection();
 		} catch (error) {
 			this.#state.loadError = error instanceof Error ? error.message : String(error);
@@ -266,6 +255,8 @@ export class PluginDashboard extends Container {
 		this.#rebuildAndRender();
 
 		try {
+			const refresh = await this.#mgr.refreshMarketplaces([plugin.marketplace]);
+			this.#state.warning = formatMarketplaceRefreshWarning(refresh) ?? null;
 			await this.#mgr.installPlugin(plugin.name, plugin.marketplace);
 			this.#state.notice = `Installed ${plugin.name}`;
 			await this.#reloadData();
@@ -353,7 +344,9 @@ export class PluginDashboard extends Container {
 		this.#rebuildAndRender();
 
 		try {
-			await this.#mgr.upgradePlugin(plugin.id, plugin.scope, { refresh: true });
+			const refresh = await this.#mgr.refreshMarketplaces(plugin.marketplace ? [plugin.marketplace] : undefined);
+			this.#state.warning = formatMarketplaceRefreshWarning(refresh) ?? null;
+			await this.#mgr.upgradePlugin(plugin.id, plugin.scope);
 			this.#state.notice = t("plugins.dashboard.upgraded", { name: plugin.name });
 			await this.#reloadData();
 		} catch (error) {
@@ -406,6 +399,11 @@ export class PluginDashboard extends Container {
 
 		if (this.#state.notice) {
 			this.addChild(new Text(theme.fg("success", replaceTabs(this.#state.notice)), 0, 0));
+			this.addChild(new Spacer(1));
+		}
+
+		if (this.#state.warning) {
+			this.addChild(new Text(theme.fg("warning", replaceTabs(this.#state.warning)), 0, 0));
 			this.addChild(new Spacer(1));
 		}
 
@@ -498,7 +496,7 @@ export class PluginDashboard extends Container {
 		}
 
 		if (matchesKey(data, "ctrl+r")) {
-			void this.#reloadData();
+			void this.#reloadData(true);
 			return;
 		}
 

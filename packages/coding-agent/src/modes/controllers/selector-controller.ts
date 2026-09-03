@@ -26,6 +26,7 @@ import { DebugSelectorComponent } from "../../debug";
 import { disableProvider, enableProvider } from "../../discovery";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../discovery/helpers";
 import {
+	formatMarketplaceRefreshWarning,
 	getInstalledPluginsRegistryPath,
 	getMarketplacesCacheDir,
 	getMarketplacesRegistryPath,
@@ -645,6 +646,9 @@ export class SelectorController {
 			},
 		});
 
+		const refresh = mode === "install" ? await mgr.refreshMarketplaces() : undefined;
+		const refreshWarning = refresh ? formatMarketplaceRefreshWarning(refresh) : undefined;
+		if (refreshWarning) this.ctx.showStatus(refreshWarning);
 		const [marketplaces, installed] = await Promise.all([mgr.listMarketplaces(), mgr.listInstalledPlugins()]);
 		const installedIds = new Set(installed.map(p => p.id));
 
@@ -692,7 +696,15 @@ export class SelectorController {
 			marketplace: string;
 		}> = [];
 		for (const mkt of marketplaces) {
-			const plugins = await mgr.listAvailablePlugins(mkt.name);
+			let plugins: Awaited<ReturnType<typeof mgr.listAvailablePlugins>>;
+			try {
+				plugins = await mgr.listAvailablePlugins(mkt.name);
+			} catch (error) {
+				this.ctx.showStatus(
+					`${refreshWarning ? `${refreshWarning}\n` : ""}Marketplace ${mkt.name} is unavailable: ${error instanceof Error ? error.message : String(error)}`,
+				);
+				continue;
+			}
 			for (const plugin of plugins) {
 				allPlugins.push({ plugin, marketplace: mkt.name });
 			}
@@ -705,9 +717,13 @@ export class SelectorController {
 					this.ctx.showStatus(`Installing ${name} from ${marketplace}...`);
 					this.ctx.ui.requestRender();
 					try {
+						const installRefresh = await mgr.refreshMarketplaces([marketplace]);
+						const installWarning = formatMarketplaceRefreshWarning(installRefresh);
 						const force = installedIds.has(`${name}@${marketplace}`);
 						await mgr.installPlugin(name, marketplace, { force });
-						this.ctx.showStatus(`Installed ${name} from ${marketplace}`);
+						this.ctx.showStatus(
+							`${installWarning ? `${installWarning}\n` : ""}Installed ${name} from ${marketplace}`,
+						);
 					} catch (err) {
 						this.ctx.showStatus(`Install failed: ${err}`);
 					}

@@ -1,13 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import { registerLocales } from "@f5-sales-demo/pi-utils";
+import type { PluginManager } from "../../src/extensibility/plugins";
+import type { MarketplaceManager } from "../../src/extensibility/plugins/marketplace";
 import { locales } from "../../src/locales/index";
 import {
 	applySearch,
 	buildTabs,
 	filterByTab,
 	normalizePluginDisplayName,
+	refreshState,
 } from "../../src/modes/components/plugins/state-manager";
-import type { DashboardPlugin } from "../../src/modes/components/plugins/types";
+import type { DashboardPlugin, PluginDashboardState } from "../../src/modes/components/plugins/types";
 
 registerLocales(locales);
 
@@ -152,6 +155,46 @@ describe("applySearch", () => {
 			makePlugin({ id: "b@mkt", name: "b" }),
 		];
 		expect(applySearch(plugins, "")).toHaveLength(2);
+	});
+});
+
+describe("refreshState", () => {
+	it("preserves the active tab, query, and selected plugin while replacing catalog versions", async () => {
+		const alpha = makePlugin({ id: "alpha@mkt", name: "alpha", marketplace: "mkt", version: "1.0.0" });
+		const beta = makePlugin({ id: "beta@mkt", name: "beta", marketplace: "mkt", version: "1.0.0" });
+		const state: PluginDashboardState = {
+			tabs: [
+				{ id: "installed", label: "Installed", count: 0 },
+				{ id: "discover", label: "Discover", count: 2 },
+			],
+			activeTabIndex: 1,
+			allPlugins: [alpha, beta],
+			tabFiltered: [alpha, beta],
+			searchFiltered: [alpha, beta],
+			searchQuery: "a",
+			selectedIndex: 1,
+			scrollOffset: 0,
+			notice: null,
+			loading: true,
+			loadError: null,
+		};
+		const mgr = {
+			listInstalledPlugins: async () => [],
+			checkForUpdates: async () => [],
+			listMarketplaces: async () => [{ name: "mkt" }],
+			listAvailablePlugins: async () => [
+				{ name: "alpha", version: "2.0.0" },
+				{ name: "beta", version: "2.0.0" },
+			],
+		} as unknown as MarketplaceManager;
+		const npmMgr = { list: async () => [] } as unknown as PluginManager;
+
+		const refreshed = await refreshState(state, mgr, npmMgr);
+
+		expect(refreshed.tabs[refreshed.activeTabIndex]?.id).toBe("discover");
+		expect(refreshed.searchQuery).toBe("a");
+		expect(refreshed.searchFiltered[refreshed.selectedIndex]?.id).toBe("beta@mkt");
+		expect(refreshed.searchFiltered[refreshed.selectedIndex]?.version).toBe("2.0.0");
 	});
 });
 
