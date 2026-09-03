@@ -5138,8 +5138,24 @@ export class AgentSession {
 			return undefined;
 		}
 
-		const trimmedPromptText = promptText.trimEnd();
+		const trimmedPromptText = promptText.trim();
 		if (trimmedPromptText.endsWith("?") || trimmedPromptText.endsWith("!")) {
+			return undefined;
+		}
+		const normalizedPromptText = trimmedPromptText.toLowerCase();
+		const startsWithQuestionWord = /^(?:who|what|when|where|why|how)\b/.test(normalizedPromptText);
+		const startsWithConversationalQuestion = /^(?:am|are|do|have) you\b/.test(normalizedPromptText);
+		const isConversationalGreeting =
+			/^(?:hello|hi|hey|thanks|thank you|good (?:morning|afternoon|evening))\b/.test(normalizedPromptText) ||
+			/^tell me about yourself\b/.test(normalizedPromptText);
+		const hasSubstantiveAction =
+			/\b(?:add|build|change|create|debug|deploy|fix|implement|inspect|investigate|modify|refactor|remove|repair|review|run|test|update|verify|write)\b/.test(
+				normalizedPromptText,
+			);
+		if (
+			!hasSubstantiveAction &&
+			(startsWithQuestionWord || startsWithConversationalQuestion || isConversationalGreeting)
+		) {
 			return undefined;
 		}
 

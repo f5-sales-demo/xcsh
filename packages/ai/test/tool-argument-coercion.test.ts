@@ -179,7 +179,7 @@ describe("Tool argument coercion", () => {
 		expect(result.edits).toEqual([{ target: "13#cf", new_content: "..." }]);
 	});
 
-	it("coerces array strings with trailing wrapper braces from malformed nested JSON", () => {
+	it("rejects array strings with trailing wrapper braces", () => {
 		const tool: Tool = {
 			name: "t16",
 			description: "",
@@ -206,15 +206,7 @@ describe("Tool argument coercion", () => {
 			},
 		};
 
-		const result = validateToolArguments(tool, toolCall);
-		expect(result.edits).toEqual([
-			{
-				op: "replace",
-				pos: "38#BR",
-				end: "39#QY",
-				lines: ["line 1", "line 2"],
-			},
-		]);
+		expect(() => validateToolArguments(tool, toolCall)).toThrow('Validation failed for tool "t16"');
 	});
 	it("iteratively coerces nested array items that are JSON-serialized objects", () => {
 		const tool: Tool = {
@@ -243,6 +235,148 @@ describe("Tool argument coercion", () => {
 
 		const result = validateToolArguments(tool, toolCall);
 		expect(result.edits).toEqual([{ target: "13#cf", new_content: "..." }]);
+	});
+
+	it("normalizes the captured Sonnet todo payload before validating union branches", () => {
+		const todoOperation = Type.Union([
+			Type.Object({
+				op: Type.Literal("replace"),
+				phases: Type.Array(
+					Type.Object({
+						name: Type.String(),
+						tasks: Type.Optional(Type.Array(Type.Object({ content: Type.String(), status: Type.String() }))),
+					}),
+				),
+			}),
+			Type.Object({ op: Type.Literal("remove_task"), id: Type.String() }),
+		]);
+		const tool: Tool = {
+			name: "todo_write",
+			description: "",
+			parameters: Type.Object({ ops: Type.Array(todoOperation) }),
+		};
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-sonnet-todo",
+			name: "todo_write",
+			arguments: JSON.stringify({
+				ops: JSON.stringify([
+					{
+						op: "replace",
+						phases: JSON.stringify([
+							JSON.stringify({
+								name: "Answer directly",
+								tasks: JSON.stringify([
+									JSON.stringify({
+										content: "Answer the identity question",
+										status: "in_progress",
+									}),
+								]),
+							}),
+						]),
+					},
+				]),
+			}) as unknown as Record<string, unknown>,
+		};
+
+		expect(validateToolArguments(tool, toolCall)).toEqual({
+			ops: [
+				{
+					op: "replace",
+					phases: [
+						{
+							name: "Answer directly",
+							tasks: [{ content: "Answer the identity question", status: "in_progress" }],
+						},
+					],
+				},
+			],
+		});
+	});
+
+	it("normalizes schema-declared containers nested through unions and arrays", () => {
+		const tool: Tool = {
+			name: "nested-containers",
+			description: "",
+			parameters: Type.Object({
+				payload: Type.Union([
+					Type.Object({
+						rows: Type.Array(Type.Union([Type.Object({ values: Type.Array(Type.Number()) }), Type.Null()])),
+					}),
+					Type.Null(),
+				]),
+				optional: Type.Optional(Type.Array(Type.String())),
+			}),
+		};
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-nested-containers",
+			name: "nested-containers",
+			arguments: {
+				payload: '{"rows":["{\\"values\\":\\"[1,2,3]\\"}",null]}',
+			},
+		};
+
+		expect(validateToolArguments(tool, toolCall)).toEqual({
+			payload: { rows: [{ values: [1, 2, 3] }, null] },
+		});
+	});
+
+	it("rejects malformed and trailing-junk container strings", () => {
+		const tool: Tool = {
+			name: "strict-containers",
+			description: "",
+			parameters: Type.Object({ values: Type.Array(Type.Number()) }),
+		};
+
+		for (const values of ["[1,2", "[1,2] trailing", "[1,2]]"]) {
+			const toolCall: ToolCall = {
+				type: "toolCall",
+				id: "call-strict-containers",
+				name: "strict-containers",
+				arguments: { values },
+			};
+			expect(() => validateToolArguments(tool, toolCall)).toThrow('Validation failed for tool "strict-containers"');
+		}
+	});
+
+	it("does not parse JSON containers for incompatible schema branches", () => {
+		const tool: Tool = {
+			name: "conservative-containers",
+			description: "",
+			parameters: Type.Object({ value: Type.Union([Type.String(), Type.Number()]) }),
+		};
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-conservative-containers",
+			name: "conservative-containers",
+			arguments: { value: "[1,2]" },
+		};
+
+		expect(validateToolArguments(tool, toolCall)).toEqual({ value: "[1,2]" });
+	});
+
+	it("does not recurse through prototype-sensitive keys in parsed containers", () => {
+		const tool: Tool = {
+			name: "prototype-safe-containers",
+			description: "",
+			parameters: Type.Object({
+				payload: Type.Object({
+					constructor: Type.Array(Type.String()),
+				}),
+			}),
+		};
+		const toolCall: ToolCall = {
+			type: "toolCall",
+			id: "call-prototype-safe-containers",
+			name: "prototype-safe-containers",
+			arguments: { payload: '{"constructor":"[\\"polluted\\"]"}' },
+		};
+
+		expect(() => validateToolArguments(tool, toolCall)).toThrow(
+			'Validation failed for tool "prototype-safe-containers"',
+		);
+		expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
 	});
 
 	it("accepts null for optional properties by treating them as omitted", () => {
@@ -481,7 +615,7 @@ describe("Tool argument coercion", () => {
 		expect(result).toEqual({ required: "value" });
 	});
 
-	it("heals stringified array with extra bracket at end", () => {
+	it("rejects a stringified array with an extra bracket", () => {
 		const tool: Tool = {
 			name: "heal-1",
 			description: "",
@@ -507,11 +641,10 @@ describe("Tool argument coercion", () => {
 			},
 		};
 
-		const result = validateToolArguments(tool, toolCall);
-		expect(result.edits).toEqual([{ target: "fn_foo#ABCD", content: "code}" }]);
+		expect(() => validateToolArguments(tool, toolCall)).toThrow('Validation failed for tool "heal-1"');
 	});
 
-	it("heals stringified array with wrong bracket type at end", () => {
+	it("rejects a stringified array with the wrong bracket type", () => {
 		const tool: Tool = {
 			name: "heal-2",
 			description: "",
@@ -537,11 +670,10 @@ describe("Tool argument coercion", () => {
 			},
 		};
 
-		const result = validateToolArguments(tool, toolCall);
-		expect(result.edits).toEqual([{ target: "fn_bar#1234", content: "return 1}" }]);
+		expect(() => validateToolArguments(tool, toolCall)).toThrow('Validation failed for tool "heal-2"');
 	});
 
-	it("heals stringified array with literal backslash-n between tokens", () => {
+	it("rejects a stringified array with literal backslash-n between tokens", () => {
 		const tool: Tool = {
 			name: "heal-esc-1",
 			description: "",
@@ -560,11 +692,10 @@ describe("Tool argument coercion", () => {
 			},
 		};
 
-		const result = validateToolArguments(tool, toolCall);
-		expect(result.edits).toEqual([{ target: "fn_foo#ABCD~", content: "return 1;\n" }]);
+		expect(() => validateToolArguments(tool, toolCall)).toThrow('Validation failed for tool "heal-esc-1"');
 	});
 
-	it("heals stringified array with trailing junk after balanced container", () => {
+	it("rejects a stringified array with trailing junk after a balanced container", () => {
 		const tool: Tool = {
 			name: "heal-trail-1",
 			description: "",
@@ -583,8 +714,7 @@ describe("Tool argument coercion", () => {
 			},
 		};
 
-		const result = validateToolArguments(tool, toolCall);
-		expect(result.edits).toEqual([{ target: "fn_foo", op: "replace" }]);
+		expect(() => validateToolArguments(tool, toolCall)).toThrow('Validation failed for tool "heal-trail-1"');
 	});
 
 	it("does not coerce prototype-sensitive JSON Pointer paths", () => {
@@ -605,7 +735,7 @@ describe("Tool argument coercion", () => {
 		expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
 	});
 
-	it("does not heal deeply broken JSON strings", () => {
+	it("rejects deeply broken JSON strings", () => {
 		const tool: Tool = {
 			name: "heal-3",
 			description: "",
