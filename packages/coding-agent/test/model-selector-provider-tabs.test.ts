@@ -125,7 +125,10 @@ describe("authenticated provider model groups", () => {
 	});
 });
 
-function selectorHarness(currentModel?: Model, options: { staleVertex?: boolean; antigravity?: boolean } = {}) {
+function selectorHarness(
+	currentModel?: Model,
+	options: { staleVertex?: boolean; antigravity?: boolean; refreshProvider?: () => Promise<void> } = {},
+) {
 	const sol = model("openai-codex", "gpt-5.6-sol", {
 		name: "GPT-5.6-Sol",
 		publisher: "OpenAI",
@@ -177,7 +180,7 @@ function selectorHarness(currentModel?: Model, options: { staleVertex?: boolean;
 		["google-antigravity", state("google-antigravity")],
 		["ollama", state("ollama")],
 	]);
-	const refreshProvider = vi.fn(async () => undefined);
+	const refreshProvider = vi.fn(options.refreshProvider ?? (async () => undefined));
 	const registry = {
 		authStorage: { hasAuth: (provider: string) => provider !== "google-antigravity" || options.antigravity === true },
 		refresh: vi.fn(async () => undefined),
@@ -319,13 +322,31 @@ describe("provider-tab model selector", () => {
 		expect(rendered).not.toContain("google-vertex/gemini-2.5-flash");
 	});
 
-	it("visibly marks a retained stale catalog", async () => {
+	it("describes retained cached inventory and refreshes it with Ctrl+R", async () => {
 		const current = model("google-vertex", "gemini-3.7-flash");
-		const { selector } = selectorHarness(current, { staleVertex: true });
+		let finishRefresh: (() => void) | undefined;
+		const pendingRefresh = new Promise<void>(resolve => {
+			finishRefresh = resolve;
+		});
+		const { selector, refreshProvider } = selectorHarness(current, {
+			staleVertex: true,
+			refreshProvider: () => pendingRefresh,
+		});
 		await Bun.sleep(0);
-		const rendered = Bun.stripANSI(selector.render(120).join("\n"));
-		expect(rendered).toContain("Google Vertex (stale)");
-		expect(rendered).toContain("Stale cached catalog");
+		let rendered = Bun.stripANSI(selector.render(120).join("\n"));
+		expect(rendered).toContain("Google Vertex");
+		expect(rendered).not.toContain("Google Vertex (stale)");
+		expect(rendered).toContain("Cached model list");
+		expect(rendered).toContain("Ctrl+R to refresh");
+
+		selector.handleInput("\x12");
+		await Bun.sleep(0);
+		expect(refreshProvider).toHaveBeenCalledWith("google-vertex", "online");
+		rendered = Bun.stripANSI(selector.render(120).join("\n"));
+		expect(rendered).toContain("Refreshing Google Vertex model list");
+
+		finishRefresh?.();
+		await Bun.sleep(0);
 	});
 
 	it("supports keyboard tab navigation and narrow rendering", async () => {
