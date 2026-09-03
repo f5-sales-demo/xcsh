@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "bun:test";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { createThinkingConfig, Effort, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import {
 	applyModelAfterLogin,
 	applyOAuthLoginModel,
+	formatLoginThinkingState,
 	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
 	GOOGLE_VERTEX_LOGIN_MODEL_CHOICE,
 	getAvailableLiteLLMLoginModelChoices,
@@ -13,7 +15,12 @@ import {
 
 function makeSession(opts: {
 	model?: { id: string; provider: string };
-	models: { id: string; provider: string }[];
+	models: Array<{
+		id: string;
+		provider: string;
+		reasoning?: boolean;
+		thinking?: ReturnType<typeof createThinkingConfig>;
+	}>;
 	thinkingLevel?: ThinkingLevel;
 }) {
 	let modelRoles: Record<string, string> = { vision: "google/vision" };
@@ -72,7 +79,7 @@ describe("applyModelAfterLogin", () => {
 			selector: "google-vertex/gemini-3.7-flash",
 			thinkingLevel: ThinkingLevel.High,
 		});
-		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+		expect(setThinkingLevel).not.toHaveBeenCalled();
 	});
 	it("persists the selected model and high thinking", async () => {
 		const { session, setModel, setThinkingLevel } = makeSession({
@@ -88,7 +95,7 @@ describe("applyModelAfterLogin", () => {
 			selector: "litellm/gpt-5.6-sol",
 			thinkingLevel: ThinkingLevel.High,
 		});
-		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+		expect(setThinkingLevel).not.toHaveBeenCalled();
 	});
 
 	it("applies an explicit post-login choice over the existing session model", async () => {
@@ -113,6 +120,57 @@ describe("applyModelAfterLogin", () => {
 		const applied = await applyModelAfterLogin(session as never, OPUS_CHOICE);
 		expect(applied).toBe(false);
 		expect(setModel).not.toHaveBeenCalled();
+	});
+
+	it("resolves a missing vLLM choice level to provider-default thinking", async () => {
+		const model = M("metadata-free", "vllm");
+		const { session, setModel, setThinkingLevel } = makeSession({ models: [model] });
+		const [choice] = getVllmLoginModelChoices([{ id: "metadata-free" }]);
+
+		await expect(applyModelAfterLogin(session as never, choice!)).resolves.toBe(true);
+		expect(setModel).toHaveBeenCalledWith(model, "default", {
+			selector: "vllm/metadata-free",
+			thinkingLevel: ThinkingLevel.Inherit,
+		});
+		expect(setThinkingLevel).not.toHaveBeenCalled();
+	});
+
+	it("resolves a missing vLLM choice level to off only when canonical metadata supports none", async () => {
+		const model = {
+			...M("explicit-off", "vllm"),
+			reasoning: true,
+			thinking: createThinkingConfig([ReasoningEffort.None, Effort.High]),
+		};
+		const { session, setModel } = makeSession({ models: [model] });
+		const [choice] = getVllmLoginModelChoices([{ id: "explicit-off" }]);
+
+		await expect(applyModelAfterLogin(session as never, choice!)).resolves.toBe(true);
+		expect(setModel).toHaveBeenCalledWith(model, "default", {
+			selector: "vllm/explicit-off",
+			thinkingLevel: ThinkingLevel.Off,
+		});
+	});
+
+	it("preserves explicit reasoning and compatibility metadata while inheriting provider thinking", async () => {
+		const model = {
+			...M("reasoning-default", "vllm"),
+			reasoning: true,
+			thinking: createThinkingConfig([Effort.Low, Effort.High], "effort", Effort.High),
+			compat: { supportsReasoningEffort: true, supportsTemperature: false },
+		};
+		const { session, setModel } = makeSession({ models: [model] });
+		const [choice] = getVllmLoginModelChoices([{ id: "reasoning-default" }]);
+
+		await expect(applyModelAfterLogin(session as never, choice!)).resolves.toBe(true);
+		expect(setModel.mock.calls[0]?.[0]).toBe(model);
+		expect(setModel.mock.calls[0]?.[2]).toEqual({
+			selector: "vllm/reasoning-default",
+			thinkingLevel: ThinkingLevel.Inherit,
+		});
+		expect(model).toMatchObject({
+			thinking: createThinkingConfig([Effort.Low, Effort.High], "effort", Effort.High),
+			compat: { supportsReasoningEffort: true, supportsTemperature: false },
+		});
 	});
 });
 
@@ -140,16 +198,23 @@ describe("getVllmLoginModelChoices", () => {
 				description: "32,768 token context",
 				provider: "vllm",
 				modelId: "local-tool-model",
-				thinkingLevel: ThinkingLevel.Off,
 			},
 			{
 				label: "compact",
 				description: "Context limit not advertised; using compatibility defaults",
 				provider: "vllm",
 				modelId: "compact",
-				thinkingLevel: ThinkingLevel.Off,
 			},
 		]);
+	});
+});
+
+describe("formatLoginThinkingState", () => {
+	it("distinguishes provider-default, off, and explicit thinking", () => {
+		expect(formatLoginThinkingState(undefined)).toBe("provider default thinking");
+		expect(formatLoginThinkingState(ThinkingLevel.Inherit)).toBe("provider default thinking");
+		expect(formatLoginThinkingState(ThinkingLevel.Off)).toBe("thinking off");
+		expect(formatLoginThinkingState(ThinkingLevel.High)).toBe("thinking high");
 	});
 });
 
@@ -170,7 +235,7 @@ describe("applyOAuthLoginModel", () => {
 			selector: "google-antigravity/gemini-3.6-flash-high",
 			thinkingLevel: ThinkingLevel.High,
 		});
-		expect(setThinkingLevel).toHaveBeenCalledWith(ThinkingLevel.High);
+		expect(setThinkingLevel).not.toHaveBeenCalled();
 		expect(getModelRoles()).toMatchObject({
 			default: "google-antigravity/gemini-3.6-flash-high:high",
 			plan: "google-antigravity/gemini-3.1-pro-high-vertex:high",

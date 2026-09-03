@@ -1,5 +1,5 @@
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { canonicalizeOAuthProviderId, type Model } from "@f5-sales-demo/pi-ai";
+import { canonicalizeOAuthProviderId, type Model, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import type { Settings } from "../../config/settings";
 import type { VllmDiscoveredModel } from "../../config/vllm-config";
 import { applySubscriptionProfileRoles, type SubscriptionProfileId } from "../../routing/subscription-profiles";
@@ -9,7 +9,7 @@ export interface LoginModelChoice {
 	description: string;
 	provider: string;
 	modelId: string;
-	thinkingLevel: ThinkingLevel;
+	thinkingLevel?: ThinkingLevel;
 }
 
 export interface LiteLLMLoginModelChoice extends LoginModelChoice {
@@ -72,8 +72,20 @@ export function getVllmLoginModelChoices(models: readonly VllmDiscoveredModel[])
 				: `${model.contextWindow.toLocaleString("en-US")} token context`,
 		provider: "vllm",
 		modelId: model.id,
-		thinkingLevel: ThinkingLevel.Off,
 	}));
+}
+
+function resolveLoginThinkingLevel(choice: LoginModelChoice, model: Model): ThinkingLevel {
+	if (choice.thinkingLevel !== undefined) return choice.thinkingLevel;
+	return model.thinking?.supportedLevels.some(level => level.effort === ReasoningEffort.None)
+		? ThinkingLevel.Off
+		: ThinkingLevel.Inherit;
+}
+
+export function formatLoginThinkingState(level: ThinkingLevel | undefined): string {
+	if (level === undefined || level === ThinkingLevel.Inherit) return "provider default thinking";
+	if (level === ThinkingLevel.Off) return "thinking off";
+	return `thinking ${level}`;
 }
 
 /**
@@ -84,7 +96,6 @@ export function getVllmLoginModelChoices(models: readonly VllmDiscoveredModel[])
 interface BaseModelApplicableSession {
 	modelRegistry: { getAll(): Model[] };
 	setModel(model: Model, role: "default", options: { selector: string; thinkingLevel: ThinkingLevel }): Promise<void>;
-	setThinkingLevel(level: ThinkingLevel): void;
 }
 
 interface ModelApplicableSession extends BaseModelApplicableSession {
@@ -96,6 +107,7 @@ interface ModelApplicableSession extends BaseModelApplicableSession {
 	};
 	settings?: Pick<Settings, "getModelRoles" | "get" | "set">;
 	setModelTemporary?(model: Model, thinkingLevel?: ThinkingLevel): Promise<void>;
+	setThinkingLevel(level: ThinkingLevel): void;
 }
 
 /**
@@ -115,9 +127,8 @@ export async function applyModelAfterLogin(
 	const selector = `${choice.provider}/${choice.modelId}`;
 	await session.setModel(resolved, "default", {
 		selector,
-		thinkingLevel: choice.thinkingLevel,
+		thinkingLevel: resolveLoginThinkingLevel(choice, resolved),
 	});
-	session.setThinkingLevel(choice.thinkingLevel);
 	return true;
 }
 
