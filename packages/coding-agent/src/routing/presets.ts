@@ -1,4 +1,4 @@
-import { OPENAI_CODEX_ROUTING_POOL } from "./subscription-profiles";
+import { ANTHROPIC_ROUTING_POOL, OPENAI_CODEX_ROUTING_POOL } from "./subscription-profiles";
 import type { RoutingPoolConfig } from "./types";
 
 export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
@@ -12,15 +12,7 @@ export const BUILTIN_ROUTING_PRESETS: Record<string, RoutingPoolConfig> = {
 			frontier: "gpt-5.6-sol",
 		},
 	},
-	"anthropic/claude": {
-		id: "anthropic/claude",
-		provider: "anthropic",
-		tiers: {
-			utility: "claude-3-haiku-20240307",
-			balanced: "claude-3-5-sonnet-20241022",
-			frontier: "claude-opus-4-0",
-		},
-	},
+	[ANTHROPIC_ROUTING_POOL.id]: ANTHROPIC_ROUTING_POOL,
 	"litellm/openai": {
 		id: "litellm/openai",
 		provider: "litellm",

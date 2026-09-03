@@ -109,6 +109,7 @@ function getModelPublisher(model: Model): string {
 
 function getModelFamily(model: Model): string {
 	if (model.family) return model.family;
+	if (model.provider === "anthropic" && /^claude-(?:haiku|sonnet|opus)-/i.test(model.id)) return "Claude";
 	return (
 		model.name.match(/^(?:Gemini\s+\d+(?:\.\d+)?|GPT-\d+(?:\.\d+)?|Claude\s+\S+(?:\s+\d+(?:\.\d+)?)?)/i)?.[0] ??
 		model.name
@@ -189,6 +190,7 @@ export function filterCurrentBrowserModels(models: readonly Model[]): Model[] {
 }
 
 export function getProviderDisplayName(provider: string): string {
+	if (provider === "anthropic") return "Anthropic / Claude";
 	if (provider === "openai-codex") return "ChatGPT Subscription";
 	if (provider === "openai") return "OpenAI API Key";
 	if (provider === "google-vertex") return "Google Vertex";

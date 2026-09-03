@@ -755,7 +755,7 @@ export class AuthStorage {
 		provider: OAuthProviderId,
 		ctrl: OAuthController & {
 			/** onAuth is required by auth-storage but optional in OAuthController */
-			onAuth: (info: { url: string; instructions?: string }) => void;
+			onAuth: (info: { url: string; openUrl?: string; instructions?: string }) => void;
 			/** onPrompt is required for some providers (github-copilot, openai-codex) */
 			onPrompt: (prompt: OAuthPrompt) => Promise<string>;
 		},

@@ -90,6 +90,7 @@ async function login(provider: OAuthProvider): Promise<void> {
 					onProgress(message) {
 						console.log(message);
 					},
+					onManualCodeInput: () => promptFn("Paste the complete code#state from the hosted callback:"),
 				});
 				break;
 
