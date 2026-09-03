@@ -10,6 +10,7 @@ interface UatTarget {
 }
 
 export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-5.6-sol";
+export const OPENAI_CODEX_DEFAULT_MODEL = "openai-codex/gpt-5.6-terra";
 export const OPENAI_CODEX_GPT56_MODELS = [
 	"openai-codex/gpt-5.6-luna",
 	"openai-codex/gpt-5.6-terra",
@@ -263,11 +264,59 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			() => transcript,
 			visible =>
 				visible.includes("Successfully logged in to openai-codex") &&
-				visible.includes(`Default model: ${OPENAI_CODEX_SOL_MODEL}`),
-			"ChatGPT OAuth completion and Sol selection",
+				visible.includes(`Default model: ${OPENAI_CODEX_DEFAULT_MODEL}`),
+			"ChatGPT OAuth completion and Terra selection",
 			() => exited,
 			OAUTH_TIMEOUT_MS,
 		);
+
+		outputStart = transcript.length;
+		session.write("/model\r");
+		await waitForNewOutput(
+			outputStart,
+			visible => {
+				const normalized = visible.replace(/\s+/g, " ");
+				return (
+					visible.includes("ChatGPT Subscription") &&
+					normalized.includes("gpt-5.6-luna] SMOL (low)") &&
+					normalized.includes("gpt-5.6-terra] DEFAULT (medium)") &&
+					normalized.includes("gpt-5.6-sol] SLOW (high) PLAN (high)")
+				);
+			},
+			"the Luna, Terra, and Sol role badges",
+			STARTUP_TIMEOUT_MS,
+		);
+		session.write("\x1b");
+
+		const promptAndVerify = async (model: string, effort: string, description: string) => {
+			outputStart = transcript.length;
+			const sentinel = `XCSH_${model.split("-").at(-1)?.toUpperCase()}_${effort.toUpperCase()}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
+			session.write(`Reply with exactly ${sentinel} and nothing else.\r`);
+			await waitForNewOutput(
+				outputStart,
+				visible => countOccurrences(visible, sentinel) >= 2,
+				`${description} streamed response`,
+				SENTINEL_TIMEOUT_MS,
+			);
+		};
+
+		await promptAndVerify(OPENAI_CODEX_DEFAULT_MODEL, "medium", "default Terra/medium role");
+		for (const target of [
+			{ role: "slow", model: OPENAI_CODEX_SOL_MODEL, effort: "high" },
+			{ role: "smol", model: "openai-codex/gpt-5.6-luna", effort: "low" },
+			{ role: "default", model: OPENAI_CODEX_DEFAULT_MODEL, effort: "medium" },
+		] as const) {
+			outputStart = transcript.length;
+			session.write("\x10");
+			await waitForNewOutput(
+				outputStart,
+				visible =>
+					visible.includes(`Switched to ${target.role}:`) && visible.includes(`thinking: ${target.effort}`),
+				`${target.role} role selection`,
+				STARTUP_TIMEOUT_MS,
+			);
+			await promptAndVerify(target.model, target.effort, `${target.role} ${target.model}:${target.effort}`);
+		}
 
 		const selectAndVerify = async (model: string, effort: (typeof OPENAI_CODEX_SOL_EFFORTS)[number]) => {
 			outputStart = transcript.length;
@@ -312,20 +361,13 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 				`${model}:${effort} selection`,
 				STARTUP_TIMEOUT_MS,
 			);
-			const sentinel = `XCSH_${model.split("-").at(-1)?.toUpperCase()}_${effort.toUpperCase()}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
-			session.write(`Reply with exactly ${sentinel} and nothing else.\r`);
-			await waitForNewOutput(
-				outputStart,
-				visible => countOccurrences(visible, sentinel) >= 2,
-				`${model}:${effort} streamed response`,
-				SENTINEL_TIMEOUT_MS,
-			);
+			await promptAndVerify(model, effort, `${model}:${effort}`);
 		};
 
 		for (const model of OPENAI_CODEX_GPT56_MODELS) await selectAndVerify(model, "medium");
 		for (const effort of OPENAI_CODEX_SOL_EFFORTS) await selectAndVerify(OPENAI_CODEX_SOL_MODEL, effort);
 
-		await selectAndVerify(OPENAI_CODEX_SOL_MODEL, "medium");
+		await selectAndVerify(OPENAI_CODEX_DEFAULT_MODEL, "medium");
 		const behavioralCases = [
 			{
 				prompt: "Compute 137 * 29. Reply with exactly ARITHMETIC_3973 and nothing else.",
@@ -408,7 +450,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 		}
 		if (callbackError) throw callbackError;
 		console.log(
-			`PASS: ${target.label} completed fresh xcsh ChatGPT OAuth and the ${OPENAI_CODEX_SOL_MODEL} sentinel.`,
+			`PASS: ${target.label} completed fresh xcsh ChatGPT OAuth with ${OPENAI_CODEX_DEFAULT_MODEL} as default.`,
 		);
 	} finally {
 		if (!exited) session.kill();

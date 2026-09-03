@@ -12,6 +12,21 @@ xcsh supports two distinct access methods for OpenAI services, depending on whet
 
 To use your ChatGPT Plus or Pro subscription, run `/login openai-codex` or select **ChatGPT Plus/Pro (Codex Subscription)** in the `/login` interactive picker. xcsh stores the OAuth credentials securely in `agent.db` and discovers advertised subscription models.
 
+When fresh authenticated discovery advertises all three GPT-5.6 tiers, login applies this role profile atomically:
+
+| Role | Model and effort | Intended use |
+| --- | --- | --- |
+| `smol` | `openai-codex/gpt-5.6-luna:low` | Lightweight and metadata work |
+| `default` | `openai-codex/gpt-5.6-terra:medium` | Balanced everyday work |
+| `slow` | `openai-codex/gpt-5.6-sol:high` | Thorough analysis |
+| `plan` | `openai-codex/gpt-5.6-sol:high` | Architectural planning |
+
+The active post-login model is Terra at medium effort. This follows [OpenAI model guidance](https://developers.openai.com/api/docs/guides/latest-model): Luna is the efficient high-volume tier, Terra balances intelligence and cost, and Sol is the flagship for complex professional work. OpenAI recommends medium as a balanced starting point, low for latency-sensitive work, and higher efforts only where they produce a measured quality gain.
+
+Automatic routing remains off after login. If you enable it, the existing pool routes Luna/low → Terra/medium → Sol/high and uses Sol/xhigh only for rejected work or the highest-complexity requests. `max` remains available as a manual quality-first effort rather than a static role default.
+
+If Luna, Terra, or Sol is absent—or authenticated discovery is stale—the profile and active model are left unchanged.
+
 ### Headless and SSH remote login
 
 When running inside an SSH session or headless terminal, xcsh automatically initiates device-code authentication:

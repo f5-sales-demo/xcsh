@@ -39,7 +39,7 @@ export const SUBSCRIPTION_ROUTING_PROFILES: Readonly<Record<SubscriptionProfileI
 		provider: "openai-codex",
 		roles: {
 			smol: "openai-codex/gpt-5.6-luna:low",
-			default: "openai-codex/gpt-5.6-sol:medium",
+			default: "openai-codex/gpt-5.6-terra:medium",
 			slow: "openai-codex/gpt-5.6-sol:high",
 			plan: "openai-codex/gpt-5.6-sol:high",
 		},

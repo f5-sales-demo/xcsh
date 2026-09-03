@@ -51,10 +51,10 @@ export const GOOGLE_VERTEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
 };
 
 export const OPENAI_CODEX_LOGIN_MODEL_CHOICE: LoginModelChoice = {
-	label: "GPT-5.6",
+	label: "GPT-5.6 Terra",
 	description: "OpenAI Codex subscription model with medium reasoning",
 	provider: "openai-codex",
-	modelId: "gpt-5.6-sol",
+	modelId: "gpt-5.6-terra",
 	thinkingLevel: ThinkingLevel.Medium,
 };
 
@@ -88,11 +88,14 @@ interface BaseModelApplicableSession {
 }
 
 interface ModelApplicableSession extends BaseModelApplicableSession {
+	model?: Model;
+	thinkingLevel?: ThinkingLevel;
 	modelRegistry: {
 		getAll(): Model[];
 		getProviderDiscoveryState?(provider: string): { status: string; stale: boolean } | undefined;
 	};
 	settings?: Pick<Settings, "getModelRoles" | "get" | "set">;
+	setModelTemporary?(model: Model, thinkingLevel?: ThinkingLevel): Promise<void>;
 }
 
 /**
@@ -155,6 +158,8 @@ export async function applyOAuthLoginModel(
 				),
 			)
 		: {};
+	const previousModel = session.model;
+	const previousThinkingLevel = session.thinkingLevel;
 	if (settings) {
 		const available = session.modelRegistry.getAll().map(model => `${model.provider}/${model.id}`);
 		const profile = applySubscriptionProfileRoles(
@@ -177,10 +182,27 @@ export async function applyOAuthLoginModel(
 		}
 		return applied ? choice : undefined;
 	} catch (error) {
+		const rollbackErrors: unknown[] = [];
 		if (settings) {
-			settings.set("modelRoles", previousRoles);
-			settings.set("routing.mode", previousRoutingMode);
-			settings.set("routing.profile", previousProfile);
+			try {
+				settings.set("modelRoles", previousRoles);
+				settings.set("routing.mode", previousRoutingMode);
+				settings.set("routing.profile", previousProfile);
+			} catch (rollbackError) {
+				rollbackErrors.push(rollbackError);
+			}
+		}
+		try {
+			if (previousModel && session.setModelTemporary) {
+				await session.setModelTemporary(previousModel, previousThinkingLevel);
+			} else if (previousThinkingLevel !== undefined) {
+				session.setThinkingLevel(previousThinkingLevel);
+			}
+		} catch (rollbackError) {
+			rollbackErrors.push(rollbackError);
+		}
+		if (rollbackErrors.length > 0) {
+			throw new AggregateError([error, ...rollbackErrors], "OAuth login model rollback was incomplete");
 		}
 		throw error;
 	}
