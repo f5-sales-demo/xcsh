@@ -19,7 +19,7 @@
  */
 import * as fs from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { Command } from "@f5-sales-demo/pi-utils/cli";
 // Lean subpath (not the package barrel, which pulls the winston logger graph and
 // slows the manager's cold start — keep the daemon's module graph minimal).
@@ -192,9 +192,18 @@ function bridgeHello(port: number, timeoutMs = 400): Promise<Record<string, unkn
  * `bun src/cli.ts <mode>` — re-exec a genuinely working subcommand. Shared by
  * the manager (worker re-exec) and the chrome-host (manager re-exec).
  */
-export function reexecArgv(mode: "worker" | "manager"): string[] {
-	const script = process.argv[1];
-	if (script && (script.endsWith(".ts") || script.endsWith(".js") || script.endsWith(".mjs"))) {
+export function reexecArgv(
+	mode: "worker" | "manager",
+	argv: string[] = process.argv,
+	execPath: string = process.execPath,
+): string[] {
+	const script = argv[1];
+	const executable = basename(execPath).toLowerCase();
+	if (
+		executable.startsWith("bun") &&
+		script &&
+		(script.endsWith(".ts") || script.endsWith(".js") || script.endsWith(".mjs"))
+	) {
 		return [script, mode];
 	}
 	return [mode];
