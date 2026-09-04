@@ -54,10 +54,27 @@ jobs:
               rm -rf "$cache_dir"
               mkdir -p "$cache_dir"
             fi
-            /usr/bin/time -f '%e\t%M' -o "$RUNNER_TEMP/time.txt" \
-              env BUN_INSTALL_CACHE_DIR="$cache_dir" bun install --frozen-lockfile \
-                --concurrent-scripts "$CONCURRENT_SCRIPTS"
-            printf '%s\t%s\n' "$run" "$(cat "$RUNNER_TEMP/time.txt")" >> bun-install-benchmark.tsv
+            start_ns=$(date +%s%N)
+            peak_used_kib=0
+            env BUN_INSTALL_CACHE_DIR="$cache_dir" bun install --frozen-lockfile \
+              --concurrent-scripts "$CONCURRENT_SCRIPTS" &
+            install_pid=$!
+            while kill -0 "$install_pid" 2>/dev/null; do
+              read -r total_kib available_kib < <(
+                awk '/MemTotal:/ {total=$2} /MemAvailable:/ {available=$2} END {print total, available}' /proc/meminfo
+              )
+              used_kib=$((total_kib - available_kib))
+              if (( used_kib > peak_used_kib )); then
+                peak_used_kib=$used_kib
+              fi
+              sleep 0.1
+            done
+            install_status=0
+            wait "$install_pid" || install_status=$?
+            (( install_status == 0 )) || exit "$install_status"
+            end_ns=$(date +%s%N)
+            seconds=$(awk -v start="$start_ns" -v end="$end_ns" 'BEGIN {printf "%.3f", (end-start)/1000000000}')
+            printf '%s\t%s\t%s\n' "$run" "$seconds" "$peak_used_kib" >> bun-install-benchmark.tsv
             test "$(sha256sum package.json bun.lock)" = "$before"
           done
           total_kib=$(awk '/MemTotal:/ {print $2}' /proc/meminfo)
@@ -112,10 +129,27 @@ jobs:
               rm -rf "$cache_dir"
               mkdir -p "$cache_dir"
             fi
-            /usr/bin/time -f '%e\t%M' -o "$RUNNER_TEMP/time.txt" \
-              env BUN_INSTALL_CACHE_DIR="$cache_dir" bun install --frozen-lockfile \
-                --concurrent-scripts "$CONCURRENT_SCRIPTS"
-            printf '%s\t%s\n' "$run" "$(cat "$RUNNER_TEMP/time.txt")" >> bun-install-benchmark.tsv
+            start_ns=$(date +%s%N)
+            peak_used_kib=0
+            env BUN_INSTALL_CACHE_DIR="$cache_dir" bun install --frozen-lockfile \
+              --concurrent-scripts "$CONCURRENT_SCRIPTS" &
+            install_pid=$!
+            while kill -0 "$install_pid" 2>/dev/null; do
+              read -r total_kib available_kib < <(
+                awk '/MemTotal:/ {total=$2} /MemAvailable:/ {available=$2} END {print total, available}' /proc/meminfo
+              )
+              used_kib=$((total_kib - available_kib))
+              if (( used_kib > peak_used_kib )); then
+                peak_used_kib=$used_kib
+              fi
+              sleep 0.1
+            done
+            install_status=0
+            wait "$install_pid" || install_status=$?
+            (( install_status == 0 )) || exit "$install_status"
+            end_ns=$(date +%s%N)
+            seconds=$(awk -v start="$start_ns" -v end="$end_ns" 'BEGIN {printf "%.3f", (end-start)/1000000000}')
+            printf '%s\t%s\t%s\n' "$run" "$seconds" "$peak_used_kib" >> bun-install-benchmark.tsv
             test "$(sha256sum package.json bun.lock)" = "$before"
           done
           total_kib=$(awk '/MemTotal:/ {print $2}' /proc/meminfo)

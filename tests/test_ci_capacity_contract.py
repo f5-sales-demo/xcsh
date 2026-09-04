@@ -57,6 +57,7 @@ class CiCapacityContractTests(unittest.TestCase):
             "      github.event.pull_request.head.repo.full_name == github.repository"
         )
         self.assertEqual(benchmark.count(benchmark_guard), 2)
+        self.assertNotIn("/usr/bin/time", benchmark)
         self.assertNotIn('bun-version: "1.3"', workflows)
         self.assertIn("bun-1.3.14-${{ runner.os }}-${{ runner.arch }}", workflows)
         self.assertNotIn("lookup-only:", workflows)
