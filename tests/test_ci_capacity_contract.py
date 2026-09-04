@@ -49,6 +49,14 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
         self.assertIn('--concurrent-scripts "$CONCURRENT_SCRIPTS"', benchmark)
+        self.assertIn("  pull_request:\n    types: [labeled]", benchmark)
+        benchmark_guard = (
+            "github.event_name == 'pull_request' &&\n"
+            "      github.event.action == 'labeled' &&\n"
+            "      github.event.label.name == 'compute-benchmark-approved' &&\n"
+            "      github.event.pull_request.head.repo.full_name == github.repository"
+        )
+        self.assertEqual(benchmark.count(benchmark_guard), 2)
         self.assertNotIn('bun-version: "1.3"', workflows)
         self.assertIn("bun-1.3.14-${{ runner.os }}-${{ runner.arch }}", workflows)
         self.assertNotIn("lookup-only:", workflows)
