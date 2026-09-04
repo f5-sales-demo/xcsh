@@ -257,6 +257,23 @@ describe("system Handlebars prompt templates", () => {
 		expect(ruleText).toContain("Web search re-entry");
 	});
 
+	test("system-prompt requires the platform catalog before ambiguous cloud-provider routing (issues #3614, #3656)", async () => {
+		const templatePath = path.join(systemPromptsDir, "system-prompt.md");
+		const template = await Bun.file(templatePath).text();
+		const tierOne = template.indexOf("Tier 1 (FLAGSHIP DEFAULT)");
+		const platformGate = template.indexOf("<platform-self-awareness>");
+		const tierTwo = template.indexOf("Tier 2 (Declarative IaC)");
+
+		expect(platformGate).toBeGreaterThan(tierOne);
+		expect(platformGate).toBeLessThan(tierTwo);
+		expect(template).toContain("`xcsh://api-catalog/?search=<domain>`");
+		expect(template).toContain("before invoking");
+		expect(template).toContain("any AWS, Azure, or GCP tool or skill");
+		expect(template).toContain("Ambient cloud identities and credentials are not routing evidence");
+		expect(template).toContain("explicitly names a third-party provider or service");
+		expect(template).toContain("apply the platform self-awareness gate above before selecting tools or skills");
+	});
+
 	test("system-prompt and custom-system-prompt conditionally render knowledgeTopics when present", async () => {
 		const sampleTopics = "Developer Tools: xcsh, xcsh GitHub Action; Product Features: WAF";
 

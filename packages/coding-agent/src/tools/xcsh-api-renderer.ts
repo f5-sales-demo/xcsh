@@ -175,7 +175,11 @@ export const xcshApiToolRenderer = {
 
 		// --- Batch mode: simplified rendering for multi-path concurrent GETs ---
 		if (details?.batchSize) {
-			const batchDesc = `${details.batchTotalItems ?? 0} items across ${details.batchSize} paths`;
+			const countParts = [`${details.batchTotalItems ?? 0} confirmed members`];
+			if (details.batchExternalVisibleItems)
+				countParts.push(`${details.batchExternalVisibleItems} external-visible`);
+			if (details.batchUnknownScopeItems) countParts.push(`${details.batchUnknownScopeItems} unknown-scope`);
+			const batchDesc = `${countParts.join(", ")} across ${details.batchSize} paths`;
 			const batchStatus = uiTheme.fg("success", `[${details.batchSuccessCount ?? 0}/${details.batchSize} ok]`);
 			const batchHeader = renderStatusLine(
 				{

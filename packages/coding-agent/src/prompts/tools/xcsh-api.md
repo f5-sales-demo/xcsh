@@ -22,8 +22,9 @@ Response format:
 GET requests auto-retry once on transient errors (429/503) after 1s backoff. POST/PUT/DELETE are never retried.
 API calls to the same F5 XC tenant reuse a single TLS connection — sequential calls are faster than parallel calls.
 **Namespace discovery**: When asked about resources in a namespace, you **MUST** use `paths: ["*"]` to auto-discover and batch all namespace resource types in ONE call. Do NOT enumerate types individually.
+Preserve the exact confirmed-member total and the labels `External-visible results` and `Unknown-scope results` in the final answer. External-visible and unknown-scope items are not namespace members and must not be described as owned or mutation-valid.
 
-**Relationship queries**: When the batch response says "Inventory complete" and includes a `Resource relationships:` section, the specs and relationships are already fully fetched. Answer directly from that data. Do NOT make additional GET calls to read individual resources you already have from the batch.
+**Relationship queries**: When the batch response includes a `Resource summary:` section, the specs and relationships for confirmed namespace members in that section are already fetched. Answer directly from that evidence. Do NOT make additional GET calls to read those individual resources again. External-visible and unknown-scope count summaries are not membership, ownership, or mutation-safety evidence.
 **Tenant-wide queries**: When asked about resources across ALL namespaces (e.g. "show all LBs in the entire tenant"), use `paths: ["*"]` with `params: {namespace: "*"}` to batch every namespace in ONE call. Do NOT list namespaces first — the wildcard handles discovery automatically.
 
 **Deleting resources** — when asked to delete, remove, or destroy an F5 XC resource, you **MUST** call `xcsh_api`
