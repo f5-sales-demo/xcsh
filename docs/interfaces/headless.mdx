@@ -1,0 +1,40 @@
+---
+title: "Headless modes"
+description: "Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes."
+sidebar:
+  order: 5
+  label: "Headless modes"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Use `-p` for a bounded prompt that exits.
+2. Select `--mode json` when stdout must be machine-readable.
+3. Use RPC or ACP only with a client that implements the corresponding protocol.
+4. Run `manager` and `worker` as long-lived supervised processes and stop them with the supervisor.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Containers](../containers/).

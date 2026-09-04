@@ -1,0 +1,53 @@
+---
+title: "Documentation coverage matrix"
+description: "Map public capabilities to their primary source of truth and canonical documentation section."
+sidebar:
+  order: 7
+  label: "Documentation coverage matrix"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Map public capabilities to their primary source of truth and canonical documentation section.
+
+| Surface | Verified authority | Canonical docs |
+| --- | --- | --- |
+| Commands and flags | generated `xcsh --help` and subcommand help | CLI reference and F5 XC guides |
+| Slash commands | built-in registry and English locale strings | slash command reference |
+| Settings | `settings-schema.ts` and settings tests | configure and secure |
+| Providers | AI package registry, authentication code, and model listing | providers and model routing |
+| Resource behavior | resource-management types, parsers, clients, and tests | F5 Distributed Cloud |
+| Install channels | release, npm verification, Homebrew, container, and apt workflows | installation |
+| Interfaces | coding-agent, Office pane, Chrome extension, VS Code companion | interfaces |
+| Extensions | discovery loaders, plugin manager, MCP manager, and SDK exports | extend and automate |
+
+This matrix records coverage boundaries, not a frozen feature list. Installed help and the source at the matching release remain authoritative.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Check CLI commands against generated `--help` output.
+2. Check settings against `settings-schema.ts`.
+3. Check providers and integrations against packages and tests.
+4. Check installation claims against release workflows and published artifacts.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Return to the section overview and choose the next task that matches your workflow.

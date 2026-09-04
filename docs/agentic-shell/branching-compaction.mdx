@@ -1,0 +1,40 @@
+---
+title: "Branch and compact conversations"
+description: "Explore alternatives while retaining history and reclaim context when a session grows."
+sidebar:
+  order: 6
+  label: "Branch and compact conversations"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Explore alternatives while retaining history and reclaim context when a session grows.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Use `/tree` to inspect the conversation tree.
+2. Use `/branch` or `/fork` to create an alternate continuation.
+3. Run `/compact` when the context is crowded.
+4. Review the compaction summary before relying on it for later decisions.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Manage project memory](../memory/).

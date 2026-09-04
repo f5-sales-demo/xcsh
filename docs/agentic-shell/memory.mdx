@@ -1,0 +1,40 @@
+---
+title: "Manage project memory"
+description: "Load and maintain durable task context while keeping transient or sensitive data out of memory files."
+sidebar:
+  order: 7
+  label: "Manage project memory"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Load and maintain durable task context while keeping transient or sensitive data out of memory files.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Use `/memory` to inspect memory behavior.
+2. Keep durable project facts concise and verifiable.
+3. Start with `--no-memories` when a task must ignore stored memory.
+4. Review memory changes before committing project-local files.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Plan complex work](../planning/).

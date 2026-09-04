@@ -1,0 +1,40 @@
+---
+title: "Prompt with files and images"
+description: "Attach local files to a prompt and keep instructions scoped to the current task."
+sidebar:
+  order: 3
+  label: "Prompt with files and images"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Attach local files to a prompt and keep instructions scoped to the current task.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Prefix a path with `@`, for example `xcsh @README.md "Summarize the setup"`.
+2. Attach a supported image when the selected model has vision capability.
+3. State the requested output and validation criteria.
+4. Keep secrets outside prompts and repository files.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Use built-in tools](../built-in-tools/).

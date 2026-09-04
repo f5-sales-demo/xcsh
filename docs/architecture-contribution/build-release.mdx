@@ -1,0 +1,40 @@
+---
+title: "Build and release xcsh"
+description: "Set up the monorepo, run TypeScript and Rust checks, and understand signed multi-channel releases."
+sidebar:
+  order: 4
+  label: "Build and release xcsh"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Set up the monorepo, run TypeScript and Rust checks, and understand signed multi-channel releases.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Install the repository's pinned Bun version and run `bun install --frozen-lockfile`.
+2. Run focused tests, then `bun run check` and `bun run test`.
+3. Treat release workflows as the authority for binaries, npm, Homebrew, containers, and downstream apt packaging.
+4. Never publish outside the protected release workflow.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Relationship to pi](../upstream-pi/).

@@ -1,0 +1,40 @@
+---
+title: "Build extensions and custom tools"
+description: "Add TypeScript behavior, slash commands, providers, or schema-validated tools."
+sidebar:
+  order: 5
+  label: "Build extensions and custom tools"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Add TypeScript behavior, slash commands, providers, or schema-validated tools.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Place project extensions under `.xcsh/extensions/` and tools under `.xcsh/tools/`.
+2. Define clear input schemas and bounded side effects.
+3. Load an explicit file with `--extension` during development.
+4. Run with `--no-extensions` to diagnose discovery issues.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Use hooks and rules](../hooks-rules/).

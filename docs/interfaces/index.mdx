@@ -1,0 +1,32 @@
+---
+title: "Interfaces"
+description: "Run xcsh in a terminal, editor, browser, Office task pane, headless process, or container."
+sidebar:
+  order: 4
+  label: "Overview"
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Run xcsh in a terminal, editor, browser, Office task pane, headless process, or container.
+
+<CardGrid>
+  <Card title="Terminal CLI" icon="right-arrow">
+    [Choose interactive, print, resume, and deterministic subcommand modes from a shell.](./terminal-cli/)
+  </Card>
+  <Card title="VS Code" icon="right-arrow">
+    [Use the companion VS Code integration with the same xcsh model and session foundation.](./vscode/)
+  </Card>
+  <Card title="Chrome" icon="right-arrow">
+    [Use the xcsh Chrome extension and native host with an isolated automation profile.](./chrome/)
+  </Card>
+  <Card title="Microsoft Office task pane" icon="right-arrow">
+    [Serve or sideload the embedded task pane for Excel, Word, and PowerPoint.](./office/)
+  </Card>
+  <Card title="Headless modes" icon="right-arrow">
+    [Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes.](./headless/)
+  </Card>
+  <Card title="Containers" icon="right-arrow">
+    [Run the published multi-architecture Alpine image with explicit mounts and credentials.](./containers/)
+  </Card>
+</CardGrid>

@@ -1,0 +1,40 @@
+---
+title: "Microsoft Office task pane"
+description: "Serve or sideload the embedded task pane for Excel, Word, and PowerPoint."
+sidebar:
+  order: 4
+  label: "Microsoft Office task pane"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Serve or sideload the embedded task pane for Excel, Word, and PowerPoint.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Run `xcsh office serve` to start the local task-pane service.
+2. Print a manifest with `xcsh office manifest -o manifest.json` when manual deployment is needed.
+3. Use `xcsh office sideload excel`, `word`, or `powerpoint` on a supported desktop.
+4. Recycle a stale service with `xcsh office recycle`.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Headless modes](../headless/).

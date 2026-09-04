@@ -1,0 +1,40 @@
+---
+title: "Use task agents"
+description: "Run specialized agents and install editable agent definitions at user or project scope."
+sidebar:
+  order: 9
+  label: "Use task agents"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Run specialized agents and install editable agent definitions at user or project scope.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. List or invoke available agents from the interactive shell.
+2. Export bundled definitions with `xcsh agents unpack` or `xcsh agents unpack --project`.
+3. Edit project definitions under `.xcsh/agents/`.
+4. Use agents only for bounded tasks and inspect their results before acceptance.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Common agentic workflows](../common-workflows/).

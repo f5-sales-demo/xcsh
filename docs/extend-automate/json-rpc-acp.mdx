@@ -1,0 +1,40 @@
+---
+title: "Use JSON, RPC, and ACP modes"
+description: "Select a stable headless transport for scripts, process clients, or agent protocol integrations."
+sidebar:
+  order: 8
+  label: "Use JSON, RPC, and ACP modes"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Select a stable headless transport for scripts, process clients, or agent protocol integrations.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Use `xcsh --mode json -p "prompt"` for a single machine-readable run.
+2. Use `--mode rpc` for the line-oriented RPC integration.
+3. Use `--mode acp` for Agent Client Protocol clients.
+4. Keep protocol stdout separate from diagnostic stderr and test cancellation.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Operate manager and workers](../worker-manager/).

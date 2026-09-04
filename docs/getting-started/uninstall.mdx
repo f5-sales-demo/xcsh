@@ -1,0 +1,40 @@
+---
+title: "Uninstall xcsh"
+description: "Remove the executable installed by your package channel and decide whether to retain user data."
+sidebar:
+  order: 8
+  label: "Uninstall xcsh"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Remove the executable installed by your package channel and decide whether to retain user data.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Export any sessions or contexts you need to retain.
+2. Uninstall with the original package manager or remove the standalone executable.
+3. Optionally remove `~/.xcsh` only after reviewing its contexts, credentials, plugins, memories, and sessions.
+4. Confirm `xcsh` is no longer on `PATH`.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Return to the section overview and choose the next task that matches your workflow.

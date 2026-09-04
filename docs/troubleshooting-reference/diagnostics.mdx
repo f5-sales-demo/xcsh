@@ -1,0 +1,40 @@
+---
+title: "Run diagnostics"
+description: "Collect version, configuration, provider, context, and sandbox evidence without exposing secrets."
+sidebar:
+  order: 1
+  label: "Run diagnostics"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Collect version, configuration, provider, context, and sandbox evidence without exposing secrets.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Run `xcsh --version`, `xcsh config path`, and `xcsh sandbox check`.
+2. Use `/model`, `/context status`, `/mcp status`, and `xcsh plugin doctor` for the failing subsystem.
+3. Reproduce with optional discovery disabled.
+4. Share sanitized errors and the smallest reproducer.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Fix installation and provider problems](../installation-providers/).
