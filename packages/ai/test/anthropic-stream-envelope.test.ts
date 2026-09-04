@@ -253,16 +253,12 @@ describe("anthropic stream envelope handling", () => {
 		expect(attempt).toBe(1);
 		expect(countEvents(events, "toolcall_start")).toBe(1);
 		expect(countEvents(events, "toolcall_delta")).toBe(1);
-		expect(countEvents(events, "toolcall_end")).toBe(1);
+		expect(countEvents(events, "toolcall_end")).toBe(0);
 		expect(countEvents(events, "error")).toBe(1);
 		expect(countEvents(events, "done")).toBe(0);
 		expect(result.stopReason).toBe("error");
-		expect(result.errorMessage).toContain("stream ended before terminal stop signal");
-
-		expect(result.errorMessage).toContain("provider=anthropic");
-		expect(result.errorMessage).toContain("model=claude-sonnet-4-5");
-		expect(result.errorMessage).toContain("responseId=msg_tool_broken");
-		expect(result.errorMessage).toContain("lastEvent=content_block_stop");
+		expect(result.errorMessage).toContain("malformed completed tool input JSON");
+		expect(result.errorMessage).toContain("lookup_weather");
 		const toolCall = result.content[0];
 		expect(toolCall?.type).toBe("toolCall");
 		if (toolCall?.type !== "toolCall") {

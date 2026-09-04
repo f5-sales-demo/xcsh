@@ -1,0 +1,4 @@
+{
+  "_i": "Plan DNS inventory work",
+  "ops": "[{\"op\":\"replace\",\"phases\":[{\"name\":\"Inventory\",\"tasks\":[{\"content\":\"Inspect DNS inventory\",\"details\":\"Check records and ownership.\",\"status\":\"in_progress\"}]}]}"
+}
