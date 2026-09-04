@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# ruff: noqa: PT009
 from __future__ import annotations
 
 import re
@@ -25,9 +26,13 @@ class CiCapacityContractTests(unittest.TestCase):
     def test_self_hosted_jobs_verify_baked_bun(self) -> None:
         ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
         self.assertIn("Verify baked Bun 1.3.14", ci)
-        for block in re.findall(r"      - name: Setup Bun 1\.3\.14\n(?:        .*\n){1,9}", ci):
+        for block in re.findall(
+            r"      - name: Setup Bun 1\.3\.14\n(?:        .*\n){1,9}", ci
+        ):
             self.assertIn("runner.environment != 'self-hosted'", block)
-        compatibility = (WORKFLOWS / "arc-compatibility.yml").read_text(encoding="utf-8")
+        compatibility = (WORKFLOWS / "arc-compatibility.yml").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("runs-on: xcsh-compute", compatibility)
         self.assertIn("Verify baked Bun 1.3.14", compatibility)
         self.assertNotIn("oven-sh/setup-bun", compatibility)
@@ -36,10 +41,14 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertNotIn("oven-sh/setup-bun", tag)
 
     def test_installs_and_cache_keys_are_bounded_and_immutable(self) -> None:
-        workflows = "\n".join(path.read_text(encoding="utf-8") for path in WORKFLOWS.glob("*.yml") if path.name != "compute-benchmark.yml")
+        workflows = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in WORKFLOWS.glob("*.yml")
+            if path.name != "compute-benchmark.yml"
+        )
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
-        self.assertIn("--concurrent-scripts \"$CONCURRENT_SCRIPTS\"", benchmark)
+        self.assertIn('--concurrent-scripts "$CONCURRENT_SCRIPTS"', benchmark)
         self.assertNotIn('bun-version: "1.3"', workflows)
         self.assertIn("bun-1.3.14-${{ runner.os }}-${{ runner.arch }}", workflows)
         self.assertNotIn("lookup-only:", workflows)
@@ -47,16 +56,27 @@ class CiCapacityContractTests(unittest.TestCase):
         prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")
         self.assertIn("uses: actions/cache@", prime)
         self.assertNotIn("actions/cache/restore@", prime)
-        self.assertNotIn("Swatinem/rust-cache@", (WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
-        self.assertIn("key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}", prime)
+        self.assertNotIn(
+            "Swatinem/rust-cache@", (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+        )
+        self.assertIn(
+            "key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}",
+            prime,
+        )
         installer = (ROOT / "scripts/ci-bun-install.sh").read_text(encoding="utf-8")
         self.assertIn("--frozen-lockfile --concurrent-scripts 8", installer)
-        self.assertIn('git -C "$workspace" diff --exit-code -- package.json bun.lock', installer)
-        package = (ROOT / "packages/coding-agent/package.json").read_text(encoding="utf-8")
+        self.assertIn(
+            'git -C "$workspace" diff --exit-code -- package.json bun.lock', installer
+        )
+        package = (ROOT / "packages/coding-agent/package.json").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("--max-concurrency 1", package)
 
     def test_cache_smoke_is_path_scoped_or_manual(self) -> None:
-        smoke = (WORKFLOWS / "self-hosted-runner-cache-smoke.yml").read_text(encoding="utf-8")
+        smoke = (WORKFLOWS / "self-hosted-runner-cache-smoke.yml").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("workflow_dispatch:", smoke)
         self.assertIn("    paths:\n", smoke)
         self.assertIn("scripts/ci-bun-install.sh", smoke)
