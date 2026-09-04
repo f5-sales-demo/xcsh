@@ -122,8 +122,8 @@ describe("the tagging workflow is wired to the check (#2487)", () => {
 		expect(step).not.toContain("steps.guard.outputs.skip");
 	});
 
-	it("provides bun to the job, since the job is otherwise a bare checkout", async () => {
-		expect(await workflow()).toContain("oven-sh/setup-bun");
+	it("verifies the pinned baked bun used by the bare checkout job", async () => {
+		expect(await workflow()).toContain("Verify baked Bun 1.3.14");
 	});
 
 	it("no longer claims the chain will fire merely because the push exited 0", async () => {

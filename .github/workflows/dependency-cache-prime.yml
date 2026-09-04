@@ -1,0 +1,61 @@
+---
+name: Prime dependency caches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bun.lock'
+      - 'package.json'
+      - 'packages/*/package.json'
+      - 'Cargo.lock'
+      - 'Cargo.toml'
+      - 'crates/**/Cargo.toml'
+      - 'rust-toolchain.toml'
+      - 'scripts/ci-bun-install.sh'
+      - '.github/workflows/dependency-cache-prime.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-cache-prime-main
+  cancel-in-progress: false
+
+jobs:
+  prime:
+    name: Prime exact Bun and Rust caches
+    runs-on: xcsh-socketless
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify baked Bun 1.3.14
+        shell: bash
+        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.3.14
+
+      - uses: ./.github/actions/setup-rust
+
+      - name: Restore and save exact Rust cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+
+      - name: Restore and save exact Bun cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-1.3.14-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/bun.lock') }}
+
+      - name: Install dependencies without lockfile drift
+        run: bash scripts/ci-bun-install.sh
+
+      - name: Populate Rust dependency cache
+        run: cargo fetch --locked

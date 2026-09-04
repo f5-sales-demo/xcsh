@@ -103,7 +103,7 @@ for job_id in container-build podman-uat-harness container-test publish-ghcr; do
 done
 assert_job_route .github/workflows/ci.yml verify-npm-debian xcsh-container-build
 assert_job_route .github/workflows/self-hosted-runner-cache-smoke.yml container-build-smoke xcsh-container-build
-assert_job_route .github/workflows/arc-compatibility.yml socketless xcsh-socketless
+assert_job_route .github/workflows/arc-compatibility.yml compute xcsh-compute
 assert_job_route .github/workflows/arc-compatibility.yml container xcsh-container-build
 assert_job_route .github/workflows/auto-merge.yml require-token xcsh-socketless
 assert_job_route .github/workflows/semgrep.yml semgrep xcsh-socketless

@@ -112,13 +112,13 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 			const route = row.runner;
 			if (typeof route === "string" && route.startsWith("xcsh-")) observedArcRoutes.add(route);
 			for (const retiredRoute of retiredRoutes) expect(route, workflow.path).not.toEqual(retiredRoute);
-			if (row.os === "ubuntu-24.04" && route !== undefined) {
-				expect(route, workflow.path).toBe("xcsh-socketless");
+			if (row.os === "ubuntu-24.04" && typeof route === "string") {
+				expect(["xcsh-socketless", "xcsh-compute"], workflow.path).toContain(route);
 			}
 		}
 	}
 
-	expect(observedArcRoutes).toEqual(new Set(["xcsh-container-build", "xcsh-socketless"]));
+	expect(observedArcRoutes).toEqual(new Set(["xcsh-compute", "xcsh-container-build", "xcsh-socketless"]));
 });
 
 test("Docker consumers use the container pool and every trust gate is socketless", async () => {
@@ -213,9 +213,10 @@ test("manual ARC compatibility covers both profiles without publication mutation
 	const source = await Bun.file(COMPATIBILITY_WORKFLOW).text();
 	const workflow = parse(source) as WorkflowDocument;
 
-	expect(workflow.jobs?.socketless?.["runs-on"]).toBe("xcsh-socketless");
+	expect(workflow.jobs?.compute?.["runs-on"]).toBe("xcsh-compute");
 	expect(workflow.jobs?.container?.["runs-on"]).toBe("xcsh-container-build");
-	expect(source).toContain("oven-sh/setup-bun@");
+	expect(source).toContain("Verify baked Bun 1.3.14");
+	expect(source).not.toContain("oven-sh/setup-bun@");
 	expect(source).toContain("uses: ./.github/actions/setup-rust");
 	expect(source).toContain("uses: ./.github/actions/setup-zig");
 	expect(source).toContain("aarch64-unknown-linux-gnu");
