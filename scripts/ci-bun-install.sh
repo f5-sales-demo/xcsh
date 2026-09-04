@@ -7,6 +7,12 @@ expected_bun=1.3.14
   echo "Bun $expected_bun is required; found $(bun --version)" >&2
   exit 1
 }
+if ! command -v bunx >/dev/null 2>&1 && [[ -n "${RUNNER_TEMP:-}" && -n "${GITHUB_PATH:-}" ]]; then
+  bun_bin_dir="$RUNNER_TEMP/bun-bin"
+  mkdir -p "$bun_bin_dir"
+  ln -s "$(command -v bun)" "$bun_bin_dir/bunx"
+  printf '%s\n' "$bun_bin_dir" >>"$GITHUB_PATH"
+fi
 workspace=$(cd "$workspace" && pwd)
 for lock in package.json bun.lock; do
   test -f "$workspace/$lock"

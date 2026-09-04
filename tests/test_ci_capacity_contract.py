@@ -65,6 +65,7 @@ class CiCapacityContractTests(unittest.TestCase):
         )
         installer = (ROOT / "scripts/ci-bun-install.sh").read_text(encoding="utf-8")
         self.assertIn("--frozen-lockfile --concurrent-scripts 8", installer)
+        self.assertIn('printf \'%s\\n\' "$bun_bin_dir" >>"$GITHUB_PATH"', installer)
         self.assertIn(
             'git -C "$workspace" diff --exit-code -- package.json bun.lock', installer
         )
