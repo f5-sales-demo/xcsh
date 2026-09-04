@@ -1,0 +1,35 @@
+---
+title: "F5 Distributed Cloud"
+description: "Manage F5 Distributed Cloud contexts and resources through explicit, reviewable manifest operations."
+sidebar:
+  order: 2
+  label: "Overview"
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Manage F5 Distributed Cloud contexts and resources through explicit, reviewable manifest operations.
+
+<CardGrid>
+  <Card title="Manage contexts and namespaces" icon="right-arrow">
+    [Store named tenant connections, activate the intended context, and scope operations to a namespace.](./contexts-namespaces/)
+  </Card>
+  <Card title="Write resource manifests" icon="right-arrow">
+    [Represent an F5 Distributed Cloud resource with a stable kind, metadata, and specification.](./manifest-fundamentals/)
+  </Card>
+  <Card title="Validate and diff manifests" icon="right-arrow">
+    [Catch local schema errors first, then compare desired state with live state.](./validate-diff/)
+  </Card>
+  <Card title="Create, apply, and update resources" icon="right-arrow">
+    [Choose strict creation, convergent apply, or explicit update for a reviewed manifest.](./create-apply-update/)
+  </Card>
+  <Card title="Get, export, and delete resources" icon="right-arrow">
+    [Inspect live resources, produce portable manifests, and perform deliberate deletion.](./get-export-delete/)
+  </Card>
+  <Card title="Understand the API catalog" icon="right-arrow">
+    [See how xcsh resolves resource kinds and validation metadata from its packaged F5 Distributed Cloud catalog.](./api-catalog/)
+  </Card>
+  <Card title="Automate the F5 console in Chrome" icon="right-arrow">
+    [Connect xcsh to its isolated Chrome profile for browser-assisted console workflows.](./console-automation/)
+  </Card>
+</CardGrid>

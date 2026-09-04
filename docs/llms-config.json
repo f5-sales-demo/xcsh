@@ -1,46 +1,100 @@
 {
   "customSets": [
     {
-      "label": "Configuration",
-      "description": "Config discovery, environment variables, hooks, secrets, and SDK reference",
-      "paths": ["configuration/**"]
+      "label": "Getting started",
+      "description": "Install xcsh, connect a model and an F5 Distributed Cloud tenant, and complete a safe first workflow.",
+      "paths": [
+        "getting-started/**"
+      ]
     },
     {
-      "label": "Extensions",
-      "description": "Extension runtime, skills system, marketplace plugins, and rulebook matching",
-      "paths": ["extensions/**"]
+      "label": "F5 Distributed Cloud",
+      "description": "Manage F5 Distributed Cloud contexts and resources through explicit, reviewable manifest operations.",
+      "paths": [
+        "f5-distributed-cloud/**"
+      ]
     },
     {
-      "label": "MCP",
-      "description": "MCP server configuration, protocol transports, runtime lifecycle, and tool authoring",
-      "paths": ["mcp/**"]
+      "label": "Agentic shell",
+      "description": "Work with the agent loop, terminal UI, tools, sessions, memory, plans, and specialized agents.",
+      "paths": [
+        "agentic-shell/**"
+      ]
     },
     {
-      "label": "Natives",
-      "description": "Rust N-API native addon architecture, binding contract, and subsystem internals",
-      "paths": ["natives/**"]
+      "label": "Interfaces",
+      "description": "Run xcsh in a terminal, editor, browser, Office task pane, headless process, or container.",
+      "paths": [
+        "interfaces/**"
+      ]
     },
     {
-      "label": "Providers",
-      "description": "Model configuration, provider streaming, and Python REPL runtime",
-      "paths": ["providers/**"]
+      "label": "Extend and automate",
+      "description": "Add skills, plugins, MCP servers, custom tools, hooks, rules, SDK integrations, and headless workers.",
+      "paths": [
+        "extend-automate/**"
+      ]
     },
     {
-      "label": "Runtime Tools",
-      "description": "Bash, notebook, resolve tool runtimes, custom tools, and slash commands",
-      "paths": ["runtime-tools/**"]
+      "label": "Configure and secure",
+      "description": "Control settings, providers, credentials, networking, secrets, sandboxing, and enterprise deployment.",
+      "paths": [
+        "configure-secure/**"
+      ]
     },
     {
-      "label": "Sessions",
-      "description": "Session storage, compaction, memory, handoff pipeline, and tree navigation",
-      "paths": ["sessions/**"]
+      "label": "Troubleshooting and reference",
+      "description": "Diagnose installations, providers, contexts, and tools, then consult current command and configuration references.",
+      "paths": [
+        "troubleshooting-reference/**"
+      ]
     },
     {
-      "label": "TUI",
-      "description": "Terminal UI theming, tree command, extension integration, and runtime internals",
-      "paths": ["tui/**"]
+      "label": "Architecture and contribution",
+      "description": "Understand xcsh internals, its pi lineage, native layer, extension boundaries, and contribution/release process.",
+      "paths": [
+        "architecture-contribution/**"
+      ]
     }
   ],
-  "promote": ["index*", "configuration/**", "sessions/**"],
-  "demote": ["natives/**"]
+  "promote": [
+    "index*",
+    "getting-started/overview*",
+    "getting-started/installation*",
+    "getting-started/quickstart*",
+    "getting-started/model-authentication*",
+    "getting-started/f5-xc-connection*",
+    "f5-distributed-cloud/manifest-fundamentals*",
+    "f5-distributed-cloud/validate-diff*",
+    "configure-secure/authentication*",
+    "configure-secure/sandbox-filesystem*",
+    "troubleshooting-reference/diagnostics*"
+  ],
+  "demote": [
+    "architecture-contribution/native-rust-layer*",
+    "architecture-contribution/build-release*",
+    "architecture-contribution/coverage-matrix*"
+  ],
+  "exclude": [
+    "architecture-contribution/**",
+    "agentic-shell/branching-compaction*",
+    "agentic-shell/common-workflows*",
+    "agentic-shell/memory*",
+    "agentic-shell/planning*",
+    "extend-automate/extensions-custom-tools*",
+    "extend-automate/hooks-rules*",
+    "extend-automate/json-rpc-acp*",
+    "extend-automate/sdk*",
+    "extend-automate/worker-manager*",
+    "interfaces/chrome*",
+    "interfaces/office*",
+    "interfaces/vscode*",
+    "troubleshooting-reference/cli-reference*",
+    "troubleshooting-reference/configuration-schema*",
+    "troubleshooting-reference/file-locations*",
+    "troubleshooting-reference/glossary*",
+    "troubleshooting-reference/keybindings*",
+    "troubleshooting-reference/slash-commands*",
+    "troubleshooting-reference/tool-catalog*"
+  ]
 }

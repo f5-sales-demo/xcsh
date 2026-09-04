@@ -1,0 +1,40 @@
+---
+title: "Containers"
+description: "Run the published multi-architecture Alpine image with explicit mounts and credentials."
+sidebar:
+  order: 6
+  label: "Containers"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Run the published multi-architecture Alpine image with explicit mounts and credentials.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Pull `ghcr.io/f5-sales-demo/xcsh:latest` for evaluation or a version/digest for repeatable operation.
+2. Verify with `docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version`.
+3. Mount only the workspace and configuration required by the task.
+4. Pass secrets at runtime rather than baking them into an image.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Return to the section overview and choose the next task that matches your workflow.

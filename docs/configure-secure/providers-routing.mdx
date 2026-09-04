@@ -1,0 +1,40 @@
+---
+title: "Configure providers and model routing"
+description: "Select models directly or map default, smol, slow, and plan roles."
+sidebar:
+  order: 2
+  label: "Configure providers and model routing"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Select models directly or map default, smol, slow, and plan roles.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. List available models with `xcsh --list-models all`.
+2. Choose one with `--model`, `/model`, or a settings role.
+3. Use `--smol`, `--slow`, and `--plan` for role overrides.
+4. Set provider order only when multiple authenticated routes expose the same model.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Manage authentication](../authentication/).

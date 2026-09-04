@@ -1,0 +1,40 @@
+---
+title: "Install plugins and marketplaces"
+description: "Discover, install, configure, update, and diagnose xcsh plugins."
+sidebar:
+  order: 2
+  label: "Install plugins and marketplaces"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Discover, install, configure, update, and diagnose xcsh plugins.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Use `xcsh plugin marketplace add <source>` to register a catalog.
+2. Run `xcsh plugin discover` and inspect candidates.
+3. Install with `xcsh plugin install <target> --scope user|project`.
+4. Run `xcsh plugin doctor`; use `--fix` only after reviewing proposed repairs.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Connect an MCP server](../mcp-quickstart/).

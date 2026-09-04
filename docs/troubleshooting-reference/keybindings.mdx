@@ -1,0 +1,40 @@
+---
+title: "Keybinding reference"
+description: "Discover and customize the active terminal key map."
+sidebar:
+  order: 6
+  label: "Keybinding reference"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Discover and customize the active terminal key map.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Run `/hotkeys` in the interactive TUI.
+2. Check terminal-level bindings when a chord never reaches xcsh.
+3. Change only one binding at a time in settings.
+4. Restart and verify editor, navigation, interrupt, and model-cycle actions.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Tool catalog](../tool-catalog/).

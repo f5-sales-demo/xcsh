@@ -1,0 +1,38 @@
+---
+title: "Configure and secure"
+description: "Control settings, providers, credentials, networking, secrets, sandboxing, and enterprise deployment."
+sidebar:
+  order: 6
+  label: "Overview"
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Control settings, providers, credentials, networking, secrets, sandboxing, and enterprise deployment.
+
+<CardGrid>
+  <Card title="Understand settings precedence" icon="right-arrow">
+    [Predict which user, project, environment, and command-line value xcsh resolves.](./settings-precedence/)
+  </Card>
+  <Card title="Configure providers and model routing" icon="right-arrow">
+    [Select models directly or map default, smol, slow, and plan roles.](./providers-routing/)
+  </Card>
+  <Card title="Manage authentication" icon="right-arrow">
+    [Use provider API keys or supported subscription logins while keeping credentials out of source control.](./authentication/)
+  </Card>
+  <Card title="Environment variable reference" icon="right-arrow">
+    [Configure model providers, cloud routes, search tools, and xcsh runtime paths.](./environment-variables/)
+  </Card>
+  <Card title="Use proxies and LiteLLM" icon="right-arrow">
+    [Route compatible models through a controlled gateway and separate endpoint configuration from credentials.](./proxies-litellm/)
+  </Card>
+  <Card title="Resolve secrets safely" icon="right-arrow">
+    [Reference sensitive values without placing plaintext credentials in prompts, manifests, logs, or commits.](./secrets/)
+  </Card>
+  <Card title="Sandbox and filesystem boundaries" icon="right-arrow">
+    [Keep discovery and file tools inside the session workspace unless a path is explicitly granted.](./sandbox-filesystem/)
+  </Card>
+  <Card title="Plan an enterprise deployment" icon="right-arrow">
+    [Standardize packaging, model routing, policy, secrets, logging, and updates for managed environments.](./enterprise-deployment/)
+  </Card>
+</CardGrid>

@@ -1,0 +1,50 @@
+---
+title: "Write resource manifests"
+description: "Represent an F5 Distributed Cloud resource with a stable kind, metadata, and specification."
+sidebar:
+  order: 2
+  label: "Write resource manifests"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Represent an F5 Distributed Cloud resource with a stable kind, metadata, and specification.
+
+```yaml title="manifest.yaml"
+kind: origin_pool
+metadata:
+  name: example-origin-pool
+  namespace: example-namespace
+spec: {}
+```
+
+The resource kind determines the API paths and validation rules. The `spec` above is intentionally incomplete: use it to exercise offline validation, then populate fields required by the current packaged catalog.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Choose a supported kind from the packaged API catalog.
+2. Set `metadata.name` and use a documentation-safe namespace such as `example-namespace`.
+3. Define the desired API payload under `spec`.
+4. Validate the file before any tenant request.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Validate and diff manifests](../validate-diff/).
