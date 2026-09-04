@@ -6,10 +6,11 @@ import { Glob } from "bun";
 const docsDir = path.resolve(import.meta.dir, "../../../docs");
 const outputPath = path.resolve(import.meta.dir, "../src/internal-urls/docs-index.generated.ts");
 
-const glob = new Glob("**/*.md");
 const entries: string[] = [];
-for await (const relativePath of glob.scan(docsDir)) {
-	entries.push(relativePath.split(path.sep).join("/"));
+for (const pattern of ["**/*.md", "**/*.mdx"]) {
+	for await (const relativePath of new Glob(pattern).scan(docsDir)) {
+		entries.push(relativePath.split(path.sep).join("/"));
+	}
 }
 entries.sort();
 
