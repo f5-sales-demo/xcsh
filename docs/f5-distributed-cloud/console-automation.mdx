@@ -1,0 +1,40 @@
+---
+title: "Automate the F5 console in Chrome"
+description: "Connect xcsh to its isolated Chrome profile for browser-assisted console workflows."
+sidebar:
+  order: 7
+  label: "Automate the F5 console in Chrome"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Connect xcsh to its isolated Chrome profile for browser-assisted console workflows.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Run `xcsh chrome setup` and follow the native-host installation prompts.
+2. Check the bridge with `xcsh chrome status`.
+3. Start xcsh and use the browser tool for an explicitly authorized console task.
+4. Use `xcsh chrome relaunch` or `xcsh chrome recycle` when the managed profile becomes stale.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Return to the section overview and choose the next task that matches your workflow.

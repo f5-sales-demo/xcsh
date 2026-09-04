@@ -40,6 +40,7 @@ import { finalizeErrorMessage, type RawHttpRequestDump, rewriteCopilotAuthError 
 import { createFirstEventWatchdog, getStreamFirstEventTimeoutMs, markFirstStreamEvent } from "../utils/idle-iterator";
 import { parseStreamingJson } from "../utils/json-parse";
 import { parseGitHubCopilotApiKey } from "../utils/oauth/github-copilot";
+import { adaptSchemaForStrict } from "../utils/schema";
 import {
 	buildCopilotDynamicHeaders,
 	hasCopilotVisionInput,
@@ -741,7 +742,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 				| ThinkingContent
 				| RedactedThinkingContent
 				| TextContent
-				| (ToolCall & { partialJson: string })
+				| (ToolCall & { partialJson: string; hasJsonDeltas: boolean })
 			) & { index: number };
 			const blocks = output.content as Block[];
 			const firstEventTimeoutMs = options?.streamFirstEventTimeoutMs ?? getStreamFirstEventTimeoutMs();
@@ -861,6 +862,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 										: event.content_block.name,
 									arguments: (event.content_block.input as Record<string, unknown>) ?? {},
 									partialJson: "",
+									hasJsonDeltas: false,
 									index: event.index,
 								};
 								output.content.push(block);
@@ -929,6 +931,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 									const index = blocks.findIndex(b => b.index === event.index);
 									const block = blocks[index];
 									if (block && block.type === "toolCall") {
+										block.hasJsonDeltas = true;
 										block.partialJson += event.delta.partial_json;
 										block.arguments = parseStreamingJson(block.partialJson);
 										stream.push({
@@ -996,8 +999,18 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 										partial: output,
 									});
 								} else if (block.type === "toolCall") {
-									block.arguments = parseStreamingJson(block.partialJson);
+									if (block.hasJsonDeltas) {
+										try {
+											block.arguments = JSON.parse(block.partialJson) as Record<string, unknown>;
+										} catch (error) {
+											throw new Error(
+												`Anthropic returned malformed completed tool input JSON for "${block.name}"`,
+												{ cause: error },
+											);
+										}
+									}
 									delete (block as { partialJson?: string }).partialJson;
+									delete (block as { hasJsonDeltas?: boolean }).hasJsonDeltas;
 									stream.push({
 										type: "toolcall_end",
 										contentIndex: index,
@@ -1095,6 +1108,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages"> = (
 			for (const block of output.content) {
 				delete (block as { index?: number }).index;
 				delete (block as { partialJson?: string }).partialJson;
+				delete (block as { hasJsonDeltas?: boolean }).hasJsonDeltas;
 			}
 			const firstEventTimeoutError = activeAbortTracker.getLocalAbortReason();
 			output.stopReason = activeAbortTracker.wasCallerAbort() ? "aborted" : "error";
@@ -1533,7 +1547,15 @@ function buildParams(
 	}
 
 	if (context.tools) {
-		params.tools = convertTools(context.tools, isOAuthToken);
+		const toolChoice = options?.toolChoice;
+		const forcedToolName =
+			model.provider === "anthropic" &&
+			supportsAnthropicStrictToolUse(model.id) &&
+			typeof toolChoice === "object" &&
+			toolChoice.type === "tool"
+				? toolChoice.name
+				: undefined;
+		params.tools = convertTools(context.tools, isOAuthToken, forcedToolName);
 	}
 
 	if (options?.thinkingEnabled && model.reasoning) {
@@ -1761,20 +1783,88 @@ export function convertAnthropicMessages(
 	return params;
 }
 
-function convertTools(tools: Tool[], isOAuthToken: boolean): Anthropic.Messages.Tool[] {
+const ANTHROPIC_STRICT_TOOL_MODEL_IDS = new Set([
+	"claude-fable-5-1",
+	"claude-mythos-5-1",
+	"claude-fable-5",
+	"claude-mythos-5",
+	"claude-mythos-preview",
+	"claude-opus-5",
+	"claude-opus-4-8",
+	"claude-opus-4-7",
+	"claude-opus-4-6",
+	"claude-sonnet-5",
+	"claude-sonnet-4-6",
+	"claude-sonnet-4-5",
+	"claude-sonnet-4-5-20250929",
+	"claude-opus-4-5",
+	"claude-opus-4-5-20251101",
+	"claude-haiku-4-5",
+	"claude-haiku-4-5-20251001",
+]);
+
+function supportsAnthropicStrictToolUse(modelId: string): boolean {
+	return ANTHROPIC_STRICT_TOOL_MODEL_IDS.has(modelId);
+}
+
+function countAnthropicStrictSchemaParameters(schema: Record<string, unknown>): {
+	optional: number;
+	unions: number;
+} {
+	const counts = { optional: 0, unions: 0 };
+	const seen = new WeakSet<object>();
+	const visit = (node: unknown, isParameter: boolean): void => {
+		if (node === null || typeof node !== "object" || seen.has(node)) return;
+		seen.add(node);
+		if (Array.isArray(node)) {
+			for (const child of node) visit(child, false);
+			seen.delete(node);
+			return;
+		}
+		const record = node as Record<string, unknown>;
+		if (isParameter && (Array.isArray(record.anyOf) || Array.isArray(record.type))) counts.unions++;
+		if (record.type === "object" && record.properties && typeof record.properties === "object") {
+			const required = new Set(Array.isArray(record.required) ? record.required : []);
+			for (const [name, child] of Object.entries(record.properties as Record<string, unknown>)) {
+				if (!required.has(name)) counts.optional++;
+				visit(child, true);
+			}
+		}
+		for (const [key, child] of Object.entries(record)) {
+			if (key !== "properties") visit(child, false);
+		}
+		seen.delete(node);
+	};
+	visit(schema, false);
+	return counts;
+}
+
+function isWithinAnthropicStrictSchemaLimits(schema: Record<string, unknown>): boolean {
+	const counts = countAnthropicStrictSchemaParameters(schema);
+	return counts.optional <= 24 && counts.unions <= 16;
+}
+
+function convertTools(tools: Tool[], isOAuthToken: boolean, forcedStrictToolName?: string): Anthropic.Messages.Tool[] {
 	if (!tools) return [];
 
 	return tools.map(tool => {
-		const jsonSchema = tool.parameters as any; // TypeBox already generates JSON Schema
+		const jsonSchema = tool.parameters as Record<string, unknown>;
+		const wantsStrict = tool.name === forcedStrictToolName && tool.strict === true;
+		const adapted = adaptSchemaForStrict(jsonSchema, wantsStrict);
+		const useStrict = adapted.strict && isWithinAnthropicStrictSchemaLimits(adapted.schema);
+		const inputSchema = useStrict ? adapted.schema : jsonSchema;
+		const anthropicInputSchema: Anthropic.Messages.Tool.InputSchema = {
+			...inputSchema,
+			type: "object",
+			properties: (inputSchema.properties as Record<string, unknown> | undefined) ?? {},
+			required: Array.isArray(inputSchema.required) ? (inputSchema.required as string[]) : [],
+		};
 
 		return {
 			name: isOAuthToken ? applyClaudeToolPrefix(tool.name) : tool.name,
 			description: tool.description || "",
-			input_schema: {
-				type: "object" as const,
-				properties: jsonSchema.properties || {},
-				required: jsonSchema.required || [],
-			},
+			input_schema: anthropicInputSchema,
+			...(useStrict ? { strict: true } : {}),
 		};
 	});
 }

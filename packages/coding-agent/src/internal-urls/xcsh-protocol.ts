@@ -782,9 +782,9 @@ export class InternalDocsProtocolHandler implements ProtocolHandler {
 
 		const content = EMBEDDED_DOCS[normalized];
 		if (content === undefined) {
-			const lookup = normalized.replace(/\.md$/, "");
+			const lookup = normalized.replace(/\.mdx?$/, "");
 			const suggestions = EMBEDDED_DOC_FILENAMES.filter(
-				f => f.includes(lookup) || lookup.includes(f.replace(/\.md$/, "")),
+				f => f.includes(lookup) || lookup.includes(f.replace(/\.mdx?$/, "")),
 			).slice(0, 5);
 			const suffix =
 				suggestions.length > 0

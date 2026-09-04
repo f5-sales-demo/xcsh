@@ -1,0 +1,40 @@
+---
+title: "Use the interactive TUI"
+description: "Navigate the prompt editor, status line, model selector, tool output, and command palette."
+sidebar:
+  order: 2
+  label: "Use the interactive TUI"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Navigate the prompt editor, status line, model selector, tool output, and command palette.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Run `xcsh` without `--print`.
+2. Enter a prompt or type `/` to browse commands.
+3. Use `/hotkeys` for the key map active in your installed version.
+4. Use `/help` when a command or current mode is unclear.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Prompt with files and images](../prompts-files/).

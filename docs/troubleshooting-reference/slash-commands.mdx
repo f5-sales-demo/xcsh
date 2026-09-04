@@ -1,0 +1,40 @@
+---
+title: "Slash command reference"
+description: "Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state."
+sidebar:
+  order: 5
+  label: "Slash command reference"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Type `/` for completion in the TUI.
+2. Run `/help` for categorized commands.
+3. Use `/hotkeys` for keyboard bindings.
+4. Treat completion and installed help as authoritative for your version.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Keybinding reference](../keybindings/).

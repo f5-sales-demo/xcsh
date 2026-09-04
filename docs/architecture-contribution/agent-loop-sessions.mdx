@@ -1,0 +1,40 @@
+---
+title: "Agent loop and sessions"
+description: "Trace a user message through model selection, tool calls, append-only session state, compaction, and rendering."
+sidebar:
+  order: 1
+  label: "Agent loop and sessions"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Trace a user message through model selection, tool calls, append-only session state, compaction, and rendering.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Start at the CLI argument parser and SDK session factory.
+2. Follow messages through provider streaming and tool dispatch.
+3. Inspect session entries rather than relying only on rendered text.
+4. Run focused session and provider tests after changes.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Native Rust layer](../native-rust-layer/).

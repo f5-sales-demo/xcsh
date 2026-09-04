@@ -1,0 +1,40 @@
+---
+title: "Operate manager and workers"
+description: "Run the control server and headless extension bridge used by tabbed and embedded interfaces."
+sidebar:
+  order: 9
+  label: "Operate manager and workers"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Run the control server and headless extension bridge used by tabbed and embedded interfaces.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Start `xcsh manager` under a process supervisor.
+2. Point approved clients at the manager socket.
+3. Run `xcsh worker` only as part of the extension-bridge lifecycle.
+4. Recycle dependent Chrome or Office services after executable upgrades.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Return to the section overview and choose the next task that matches your workflow.
