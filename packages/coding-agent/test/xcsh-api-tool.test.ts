@@ -1,4 +1,7 @@
 import { describe, expect, it } from "bun:test";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
 import { XcshApiTool } from "../src/tools/xcsh-api";
 
 function mockSession(bashEnv?: Record<string, string>): any {
@@ -542,6 +545,213 @@ describe("XcshApiTool", () => {
 			expect(details?.status).toBe(0);
 			expect(details?.method).toBe("GET");
 		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
+		}
+	});
+
+	it("classifies mixed-scope core and secondary resources for an explicit concrete namespace", async () => {
+		const originalFetch = globalThis.fetch;
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		const scopeName = `scope-explicit-${crypto.randomUUID()}`;
+		process.env.XCSH_API_URL = "https://scope-explicit.example.test";
+		process.env.XCSH_API_TOKEN = `scope-token-${crypto.randomUUID()}`;
+		globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+			if (init?.method === "HEAD") return new Response(null, { status: 200 });
+			const pathname = new URL(String(input)).pathname;
+			if (pathname.endsWith("/http_loadbalancers")) {
+				return Response.json({
+					items: [
+						{ name: "member-lb", namespace: scopeName },
+						{ name: "external-lb", metadata: { namespace: "shared" } },
+						{ name: "missing-lb" },
+						{ name: "conflict-lb", namespace: scopeName, metadata: { namespace: "system" } },
+					],
+				});
+			}
+			if (pathname.endsWith("/api_definitions")) {
+				return Response.json({
+					items: [
+						{ name: "member-api", metadata: { namespace: scopeName } },
+						{ name: "external-api", namespace: "shared" },
+						{ name: "unknown-api" },
+					],
+				});
+			}
+			return Response.json({ spec: { domains: ["member.example.test"] } });
+		}) as typeof fetch;
+		try {
+			const tool = new XcshApiTool(mockSession({ XCSH_NAMESPACE: "wrong-default" }));
+			const result = await tool.execute("mixed-explicit", {
+				method: "GET",
+				paths: [
+					"/api/config/namespaces/{namespace}/http_loadbalancers",
+					"/api/config/namespaces/{namespace}/api_definitions",
+				],
+				params: { namespace: scopeName },
+			});
+			const text = result.content.find(content => content.type === "text")?.text ?? "";
+			const details = result.details!;
+
+			expect(text).toContain("member-lb");
+			expect(text).not.toContain("external-lb");
+			expect(text).not.toContain("missing-lb");
+			expect(text).not.toContain("conflict-lb");
+			expect(text).toContain("other types with 1 items: api definitions");
+			expect(text).toContain("External-visible results (not namespace members)");
+			expect(text).toContain("from shared: 1");
+			expect(text).toContain("Unknown-scope results (not counted as namespace members)");
+			expect(text).toContain("conflicting namespace metadata: 1");
+			expect(text).not.toContain("valid references for mutations");
+			expect(details.batchTotalItems).toBe(2);
+			expect(details.batchExternalVisibleItems).toBe(2);
+			expect(details.batchUnknownScopeItems).toBe(3);
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
+		}
+	});
+
+	it("uses the context-default concrete namespace and preserves literal wildcard routing", async () => {
+		const originalFetch = globalThis.fetch;
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
+		const scopeName = `scope-default-${crypto.randomUUID()}`;
+		const seenPaths: string[] = [];
+		globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+			if (init?.method === "HEAD") return new Response(null, { status: 200 });
+			const pathname = new URL(String(input)).pathname;
+			seenPaths.push(pathname);
+			if (pathname === "/api/web/namespaces") return Response.json({ items: [{ name: scopeName }] });
+			return Response.json({ items: [{ name: "member", namespace: scopeName }] });
+		}) as typeof fetch;
+		try {
+			const session = mockSession({
+				XCSH_API_URL: "https://scope-default.example.test",
+				XCSH_API_TOKEN: `default-token-${crypto.randomUUID()}`,
+				XCSH_NAMESPACE: scopeName,
+				XCSH_CONTEXT_NAME: `context-${crypto.randomUUID()}`,
+			});
+			const concrete = await new XcshApiTool(session).execute("context-default", {
+				method: "GET",
+				paths: ["/api/config/namespaces/{namespace}/api_definitions"],
+			});
+			expect(concrete.details?.batchTotalItems).toBe(1);
+			expect(seenPaths).toContain(`/api/config/namespaces/${scopeName}/api_definitions`);
+
+			seenPaths.length = 0;
+			const tenantWide = await new XcshApiTool(session).execute("tenant-wide", {
+				method: "GET",
+				paths: ["/api/config/namespaces/{namespace}/api_definitions"],
+				params: { namespace: "*" },
+			});
+			expect(seenPaths[0]).toBe("/api/web/namespaces");
+			expect(tenantWide.details?.batchTotalItems).toBe(1);
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
+		}
+	});
+
+	it("uses a process-environment namespace for wildcard membership classification", async () => {
+		const originalFetch = globalThis.fetch;
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		const originalNamespace = process.env.XCSH_NAMESPACE;
+		const scopeName = `scope-process-${crypto.randomUUID()}`;
+		process.env.XCSH_API_URL = "https://scope-process.example.test";
+		process.env.XCSH_API_TOKEN = `process-token-${crypto.randomUUID()}`;
+		process.env.XCSH_NAMESPACE = scopeName;
+		globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+			if (init?.method === "HEAD") return new Response(null, { status: 200 });
+			return Response.json({ items: [{ name: "process-member", namespace: scopeName }] });
+		}) as typeof fetch;
+		try {
+			const result = await new XcshApiTool(mockSession()).execute("process-default", {
+				method: "GET",
+				paths: ["/api/config/namespaces/{namespace}/http_loadbalancers"],
+			});
+			expect(result.details?.batchTotalItems).toBe(1);
+			expect(result.content.find(content => content.type === "text")?.text).toContain("process-member");
+		} finally {
+			globalThis.fetch = originalFetch;
+			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
+			else delete process.env.XCSH_API_URL;
+			if (originalToken) process.env.XCSH_API_TOKEN = originalToken;
+			else delete process.env.XCSH_API_TOKEN;
+			if (originalNamespace) process.env.XCSH_NAMESPACE = originalNamespace;
+			else delete process.env.XCSH_NAMESPACE;
+		}
+	});
+
+	it("isolates wildcard cache identities without exposing raw identity material in filenames", async () => {
+		const originalFetch = globalThis.fetch;
+		const originalUrl = process.env.XCSH_API_URL;
+		const originalToken = process.env.XCSH_API_TOKEN;
+		delete process.env.XCSH_API_URL;
+		delete process.env.XCSH_API_TOKEN;
+		const marker = crypto.randomUUID();
+		const scopeName = `namespace-${marker}`;
+		const token = `credential-${marker}`;
+		const contextName = `context-${marker}`;
+		const apiBase = `https://tenant-${marker}.example.test`;
+		const pathOne = "/api/config/namespaces/{namespace}/api_definitions";
+		const pathTwo = "/api/config/namespaces/{namespace}/api_discoverys";
+		let collectionFetches = 0;
+		globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+			if (init?.method === "HEAD") return new Response(null, { status: 200 });
+			collectionFetches++;
+			return Response.json({ items: [{ name: `member-${collectionFetches}`, namespace: scopeName }] });
+		}) as typeof fetch;
+		const cacheDir = path.join(os.tmpdir(), "xcsh", "batch-cache-v2");
+		const before = new Set(await fs.readdir(cacheDir).catch(() => []));
+		let created: string[] = [];
+		const run = async (overrides: Record<string, string>, paths: string[] = [pathOne]) => {
+			const env = {
+				XCSH_API_URL: apiBase,
+				XCSH_API_TOKEN: token,
+				XCSH_NAMESPACE: scopeName,
+				XCSH_CONTEXT_NAME: contextName,
+				...overrides,
+			};
+			return new XcshApiTool(mockSession(env)).execute("cache-isolation", { method: "GET", paths });
+		};
+		try {
+			await run({});
+			expect(collectionFetches).toBe(1);
+			await run({});
+			expect(collectionFetches).toBe(1);
+			await run({ XCSH_API_URL: `${apiBase}/alternate` });
+			await run({ XCSH_CONTEXT_NAME: `${contextName}-alternate` });
+			await run({ XCSH_API_TOKEN: `${token}-alternate` });
+			await run({ XCSH_NAMESPACE: `${scopeName}-alternate` });
+			await run({}, [pathOne, pathTwo]);
+			expect(collectionFetches).toBe(7);
+
+			const after = await fs.readdir(cacheDir);
+			created = after.filter(name => !before.has(name));
+			expect(created.length).toBe(6);
+			for (const fileName of created) {
+				expect(fileName).toMatch(/^v2-[a-f0-9]{64}\.json$/);
+				expect(fileName).not.toContain(marker);
+				expect(fileName).not.toContain("api_definitions");
+			}
+			const mode = (await fs.stat(cacheDir)).mode & 0o777;
+			expect(mode).toBe(0o700);
+		} finally {
+			await Promise.all(created.map(fileName => fs.rm(path.join(cacheDir, fileName), { force: true })));
 			globalThis.fetch = originalFetch;
 			if (originalUrl) process.env.XCSH_API_URL = originalUrl;
 			else delete process.env.XCSH_API_URL;

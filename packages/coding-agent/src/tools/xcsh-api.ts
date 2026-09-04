@@ -1,4 +1,7 @@
+import { createHash } from "node:crypto";
+import * as fs from "node:fs/promises";
 import * as os from "node:os";
+import * as path from "node:path";
 import type { AgentTool, AgentToolResult } from "@f5-sales-demo/pi-agent-core";
 import { prompt } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
@@ -105,8 +108,12 @@ export interface XcshApiToolDetails {
 	batchSize?: number;
 	/** Batch mode: paths that returned 2xx. */
 	batchSuccessCount?: number;
-	/** Batch mode: total items across all list responses. */
+	/** Batch mode: items authoritatively confirmed as members of the requested namespace. */
 	batchTotalItems?: number;
+	/** Batch mode: items whose authoritative namespace differs from the requested namespace. */
+	batchExternalVisibleItems?: number;
+	/** Batch mode: items with absent or conflicting namespace metadata. */
+	batchUnknownScopeItems?: number;
 	/** The resolved JSON body string sent to the API (after $XCSH_* expansion). */
 	resolvedPayload?: string;
 	/** Human-readable verb for mutation results. */
@@ -116,6 +123,84 @@ export interface XcshApiToolDetails {
 }
 
 type XcshApiResult = AgentToolResult<XcshApiToolDetails> & { isError?: boolean };
+
+const BATCH_CACHE_VERSION = 2;
+const BATCH_CACHE_DIR = path.join(os.tmpdir(), "xcsh", `batch-cache-v${BATCH_CACHE_VERSION}`);
+
+function sha256(value: string): string {
+	return createHash("sha256").update(value).digest("hex");
+}
+
+function normalizeApiBase(apiBase: string): string {
+	try {
+		const url = new URL(apiBase);
+		url.hash = "";
+		url.search = "";
+		url.pathname = url.pathname.replace(/\/+$/, "");
+		return url.toString().replace(/\/+$/, "");
+	} catch {
+		return apiBase.trim().replace(/\/+$/, "");
+	}
+}
+
+function batchCachePath(
+	apiBase: string,
+	contextName: string | undefined,
+	apiToken: string,
+	namespace: string,
+	paths: string[],
+): string {
+	const identity = JSON.stringify({
+		version: BATCH_CACHE_VERSION,
+		apiBase: normalizeApiBase(apiBase),
+		context: contextName ?? "",
+		credentialFingerprint: sha256(apiToken),
+		namespace,
+		paths: [...new Set(paths.map(value => value.trim()))].sort(),
+	});
+	return path.join(BATCH_CACHE_DIR, `v${BATCH_CACHE_VERSION}-${sha256(identity)}.json`);
+}
+
+async function ensurePrivateBatchCacheDir(): Promise<void> {
+	await fs.mkdir(BATCH_CACHE_DIR, { recursive: true, mode: 0o700 });
+	await fs.chmod(BATCH_CACHE_DIR, 0o700);
+}
+
+async function writeBatchCacheAtomically(cachePath: string, value: unknown): Promise<void> {
+	await ensurePrivateBatchCacheDir();
+	const temporaryPath = path.join(BATCH_CACHE_DIR, `.write-${crypto.randomUUID()}`);
+	let handle: fs.FileHandle | undefined;
+	try {
+		handle = await fs.open(temporaryPath, "wx", 0o600);
+		await handle.writeFile(JSON.stringify(value), "utf8");
+		await handle.sync();
+		await handle.close();
+		handle = undefined;
+		await fs.rename(temporaryPath, cachePath);
+	} finally {
+		await handle?.close().catch(() => {});
+		await fs.rm(temporaryPath, { force: true }).catch(() => {});
+	}
+}
+
+type ScopeClassification =
+	| { kind: "confirmed" }
+	| { kind: "external"; namespace: string }
+	| { kind: "unknown"; reason: "missing namespace metadata" | "conflicting namespace metadata" };
+
+function classifyNamespaceScope(item: Record<string, unknown>, requestedNamespace: string): ScopeClassification {
+	const direct = typeof item.namespace === "string" && item.namespace.length > 0 ? item.namespace : undefined;
+	const metadata =
+		typeof item.metadata === "object" && item.metadata !== null && !Array.isArray(item.metadata)
+			? (item.metadata as Record<string, unknown>)
+			: undefined;
+	const nested =
+		typeof metadata?.namespace === "string" && metadata.namespace.length > 0 ? metadata.namespace : undefined;
+	if (direct && nested && direct !== nested) return { kind: "unknown", reason: "conflicting namespace metadata" };
+	const authoritative = direct ?? nested;
+	if (!authoritative) return { kind: "unknown", reason: "missing namespace metadata" };
+	return authoritative === requestedNamespace ? { kind: "confirmed" } : { kind: "external", namespace: authoritative };
+}
 
 /** F5 XC gRPC error code labels for human-readable error display. */
 const XCSH_ERROR_CODES: Record<number, string> = {
@@ -254,27 +339,33 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			}
 		} catch {
 			// Fall back to default namespace only
-			const def = this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
+			const def = process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "default";
 			allNs = [def];
 		}
 
 		// Batch each namespace and combine results
 		const nsSections: string[] = [];
+		let confirmedItems = 0;
+		let externalVisibleItems = 0;
+		let unknownScopeItems = 0;
+		let successfulPaths = 0;
 		for (const ns of allNs) {
 			const nsParams = { namespace: ns };
 			this.#expandedNamespaces.add(ns);
 			const result = await this.#executeBatch(paths, nsParams, apiBase, apiToken, signal);
 			const text = result.content[0]?.type === "text" ? (result.content[0] as { text: string }).text : "";
-			if (text.includes("resource type")) {
-				nsSections.push(`\n=== Namespace: ${ns} ===\n${text}`);
-			}
+			nsSections.push(`\n=== Namespace: ${ns} ===\n${text}`);
+			confirmedItems += result.details?.batchTotalItems ?? 0;
+			externalVisibleItems += result.details?.batchExternalVisibleItems ?? 0;
+			unknownScopeItems += result.details?.batchUnknownScopeItems ?? 0;
+			successfulPaths += result.details?.batchSuccessCount ?? 0;
 		}
 
 		const durationMs = Math.round(performance.now() - startMs);
 		const combined =
 			nsSections.length > 0
 				? nsSections.join("\n") +
-					"\n\nTenant-wide inventory complete. All namespaces, specs, and relationships shown above. No further API calls needed."
+					"\n\nTenant-wide inventory request complete. Each namespace section uses authoritative membership evidence."
 				: "No resources found across accessible namespaces.";
 
 		return {
@@ -287,8 +378,10 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				durationMs,
 				contextName: this.#contextEnv.getContextName(),
 				batchSize: paths.length * allNs.length,
-				batchSuccessCount: nsSections.length,
-				batchTotalItems: 0,
+				batchSuccessCount: successfulPaths,
+				batchTotalItems: confirmedItems,
+				batchExternalVisibleItems: externalVisibleItems,
+				batchUnknownScopeItems: unknownScopeItems,
 			},
 		};
 	}
@@ -305,15 +398,19 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		// File-based cache: reuse batch results across xcsh invocations (5-minute TTL).
 		// Prevents cumulative rate limiting when the benchmark runs multiple queries.
-		const ns = params?.namespace ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "_default";
-		const cachePath = `${os.tmpdir()}/xcsh-batch-${ns}.json`;
+		const ns =
+			params?.namespace ?? process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "_default";
+		const cachePath = batchCachePath(apiBase, contextName, apiToken, ns, paths);
 		try {
-			const cached = (await Bun.file(cachePath).json()) as {
+			await ensurePrivateBatchCacheDir();
+			const cached = JSON.parse(await fs.readFile(cachePath, "utf8")) as {
 				ts: number;
 				text: string;
 				batchSize: number;
 				batchSuccessCount: number;
 				batchTotalItems: number;
+				batchExternalVisibleItems?: number;
+				batchUnknownScopeItems?: number;
 			};
 			if (cached.ts > Date.now() - 600_000) {
 				return {
@@ -328,6 +425,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 						batchSize: cached.batchSize,
 						batchSuccessCount: cached.batchSuccessCount,
 						batchTotalItems: cached.batchTotalItems,
+						batchExternalVisibleItems: cached.batchExternalVisibleItems ?? 0,
+						batchUnknownScopeItems: cached.batchUnknownScopeItems ?? 0,
 					},
 				};
 			}
@@ -421,10 +520,34 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		const durationMs = Math.round(performance.now() - startMs);
 
-		const withData = results.filter(r => (r.itemCount ?? 0) > 0);
+		type ScopedBatchEntry = BatchEntry & {
+			confirmedItems: Array<Record<string, unknown>>;
+			externalItems: Array<{ item: Record<string, unknown>; namespace: string }>;
+			unknownItems: Array<{
+				item: Record<string, unknown>;
+				reason: "missing namespace metadata" | "conflicting namespace metadata";
+			}>;
+		};
+		const scopedResults: ScopedBatchEntry[] = results.map(result => {
+			const confirmedItems: Array<Record<string, unknown>> = [];
+			const externalItems: ScopedBatchEntry["externalItems"] = [];
+			const unknownItems: ScopedBatchEntry["unknownItems"] = [];
+			const items = Array.isArray(result.parsed?.items)
+				? (result.parsed.items as Array<Record<string, unknown>>)
+				: [];
+			for (const item of items) {
+				const classification = classifyNamespaceScope(item, ns);
+				if (classification.kind === "confirmed") confirmedItems.push(item);
+				else if (classification.kind === "external")
+					externalItems.push({ item, namespace: classification.namespace });
+				else unknownItems.push({ item, reason: classification.reason });
+			}
+			return { ...result, confirmedItems, externalItems, unknownItems };
+		});
+		const withData = scopedResults.filter(r => r.confirmedItems.length > 0);
 		// Batch already filtered to app/security types by #loadListablePaths().
 		// Still filter bulk types (>25 items) as a safety net.
-		const relevantData = withData.filter(r => (r.itemCount ?? 0) <= 25);
+		const relevantData = withData.filter(r => r.confirmedItems.length <= 25);
 
 		// Phase 2: fetch individual resource specs for items in non-empty types.
 		// With 42-path batch, this is ~12 items total — adds ~3s, not 100s like the 136-path era.
@@ -438,7 +561,7 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		for (const r of relevantData) {
 			const typeName = r.path.split("/").pop() ?? "";
 			if (!SPEC_TYPES.test(typeName)) continue;
-			const items = (r.parsed?.items as Array<Record<string, unknown>> | undefined) ?? [];
+			const items = r.confirmedItems;
 			for (const item of items) {
 				const name = typeof item.name === "string" ? item.name : null;
 				if (name && items.length <= 15) specItems.push({ typePath: r.path, name });
@@ -491,9 +614,9 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			let idx = 1;
 			for (const r of coreTypes) {
 				const typeName = humanizeType(getRawTypeName(r));
-				const items = (r.parsed?.items as Array<Record<string, unknown>> | undefined) ?? [];
+				const items = r.confirmedItems;
 				if (items.length === 0) {
-					sections.push(`${idx}. ${typeName}: ${r.itemCount} item(s)`);
+					sections.push(`${idx}. ${typeName}: ${items.length} item(s)`);
 				} else {
 					sections.push(`${idx}. ${typeName} (${items.length}):`);
 					for (const item of items) {
@@ -507,10 +630,40 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 		}
 
 		if (secondaryTypes.length > 0) {
-			const secondaryCount = secondaryTypes.reduce((sum, r) => sum + (r.itemCount ?? 0), 0);
+			const secondaryCount = secondaryTypes.reduce((sum, r) => sum + r.confirmedItems.length, 0);
 			sections.push(
 				`\n(+${secondaryTypes.length} other types with ${secondaryCount} items: ${secondaryTypes.map(r => humanizeType(getRawTypeName(r))).join(", ")})`,
 			);
+		}
+
+		const externalVisibleItems = scopedResults.reduce((sum, result) => sum + result.externalItems.length, 0);
+		if (externalVisibleItems > 0) {
+			sections.push("\nExternal-visible results (not namespace members):");
+			for (const result of scopedResults.filter(entry => entry.externalItems.length > 0)) {
+				const bySource = new Map<string, number>();
+				for (const entry of result.externalItems) {
+					bySource.set(entry.namespace, (bySource.get(entry.namespace) ?? 0) + 1);
+				}
+				const sources = [...bySource.entries()]
+					.sort(([left], [right]) => left.localeCompare(right))
+					.map(([source, count]) => `from ${source}: ${count}`)
+					.join(", ");
+				sections.push(`- ${humanizeType(getRawTypeName(result))}: ${sources}`);
+			}
+		}
+
+		const unknownScopeItems = scopedResults.reduce((sum, result) => sum + result.unknownItems.length, 0);
+		if (unknownScopeItems > 0) {
+			sections.push("\nUnknown-scope results (not counted as namespace members):");
+			for (const result of scopedResults.filter(entry => entry.unknownItems.length > 0)) {
+				const byReason = new Map<string, number>();
+				for (const entry of result.unknownItems) byReason.set(entry.reason, (byReason.get(entry.reason) ?? 0) + 1);
+				const reasons = [...byReason.entries()]
+					.sort(([left], [right]) => left.localeCompare(right))
+					.map(([reason, count]) => `${reason}: ${count}`)
+					.join(", ");
+				sections.push(`- ${humanizeType(getRawTypeName(result))}: ${reasons}`);
+			}
 		}
 
 		// Semantic summary: answer-ready labels from raw specs.
@@ -594,10 +747,11 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			sections.push(`\nResource summary:\n${summaryLines.join("\n")}`);
 		}
 
+		const batchTotalItems = relevantData.reduce((sum, r) => sum + r.confirmedItems.length, 0);
+		sections.unshift(`Namespace member inventory: ${batchTotalItems} confirmed member(s) in ${ns}.\n`);
 		sections.push(
-			"\nInventory complete. All listed resources exist and are valid references for mutations. No further API calls needed.",
+			"\nInventory request complete. Membership totals and resource summaries include only items with consistent namespace metadata.",
 		);
-		const batchTotalItems = relevantData.reduce((sum, r) => sum + (r.itemCount ?? 0), 0);
 		const text = sections.join("\n");
 		const batchSize = paths.length;
 		const errorCount = results.filter(r => r.status >= 400 || r.status === 0).length;
@@ -605,10 +759,15 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 
 		// Cache for subsequent invocations
 		try {
-			await Bun.write(
-				cachePath,
-				JSON.stringify({ ts: Date.now(), text, batchSize, batchSuccessCount, batchTotalItems }),
-			);
+			await writeBatchCacheAtomically(cachePath, {
+				ts: Date.now(),
+				text,
+				batchSize,
+				batchSuccessCount,
+				batchTotalItems,
+				batchExternalVisibleItems: externalVisibleItems,
+				batchUnknownScopeItems: unknownScopeItems,
+			});
 		} catch {
 			// Cache write failure is non-fatal
 		}
@@ -625,6 +784,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 				batchSize,
 				batchSuccessCount,
 				batchTotalItems,
+				batchExternalVisibleItems: externalVisibleItems,
+				batchUnknownScopeItems: unknownScopeItems,
 			},
 		};
 	}
@@ -678,7 +839,8 @@ export class XcshApiTool implements AgentTool<typeof xcshApiSchema, XcshApiToolD
 			const isWildcard = batchPaths.length === 1 && batchPaths[0] === "*";
 			const resolved = isWildcard ? this.#loadListablePaths() : batchPaths;
 			if (resolved.length > 0) {
-				const batchNs = params.params?.namespace ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "";
+				const batchNs =
+					params.params?.namespace ?? process.env.XCSH_NAMESPACE ?? this.#contextEnv.get("XCSH_NAMESPACE") ?? "";
 				// A wildcard batches all non-system namespaces in one tool call.
 				// Reduces multi-namespace queries from N+1 batch calls to 1.
 				if (batchNs === "*") {

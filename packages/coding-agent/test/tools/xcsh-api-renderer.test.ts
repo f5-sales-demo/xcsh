@@ -189,4 +189,32 @@ describe("xcshApiToolRenderer.renderResult", () => {
 		expect(rendered).toContain("Result");
 		expect(rendered).toContain("3");
 	});
+
+	it("labels confirmed, external-visible, and unknown-scope batch counts", async () => {
+		const theme = await getThemeByName("xcsh-dark");
+		const result = {
+			content: [{ type: "text", text: "Namespace member inventory: 2 confirmed member(s)." }],
+			details: {
+				status: 200,
+				url: "https://api.example.com",
+				method: "GET",
+				requestId: "test-batch-scope",
+				batchSize: 2,
+				batchSuccessCount: 2,
+				batchTotalItems: 2,
+				batchExternalVisibleItems: 3,
+				batchUnknownScopeItems: 4,
+			},
+			isError: false,
+		};
+		const component = xcshApiToolRenderer.renderResult(result as any, { expanded: false, isPartial: false }, theme!, {
+			method: "GET",
+			paths: ["*"],
+		});
+		const rendered = stripAnsi(component.render(160).join("\n"));
+		expect(rendered).toContain("2 confirmed members");
+		expect(rendered).toContain("3 external-visible");
+		expect(rendered).toContain("4 unknown-scope");
+		expect(rendered).toContain("across 2 paths");
+	});
 });
