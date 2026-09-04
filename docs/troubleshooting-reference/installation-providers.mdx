@@ -1,0 +1,40 @@
+---
+title: "Fix installation and provider problems"
+description: "Resolve missing binaries, native-addon mismatches, authentication failures, and unavailable models."
+sidebar:
+  order: 2
+  label: "Fix installation and provider problems"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Resolve missing binaries, native-addon mismatches, authentication failures, and unavailable models.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Confirm the executable selected by the shell and its version.
+2. Reinstall through one supported channel; do not mix package-manager and standalone files.
+3. Verify the provider variable or subscription session without printing its value.
+4. Use a provider-qualified model name and retry a minimal prompt.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Fix context and tool problems](../contexts-tools/).

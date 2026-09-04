@@ -1,0 +1,35 @@
+---
+title: "Architecture and contribution"
+description: "Understand xcsh internals, its pi lineage, native layer, extension boundaries, and contribution/release process."
+sidebar:
+  order: 8
+  label: "Overview"
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Understand xcsh internals, its pi lineage, native layer, extension boundaries, and contribution/release process.
+
+<CardGrid>
+  <Card title="Agent loop and sessions" icon="right-arrow">
+    [Trace a user message through model selection, tool calls, append-only session state, compaction, and rendering.](./agent-loop-sessions/)
+  </Card>
+  <Card title="Native Rust layer" icon="right-arrow">
+    [Understand the N-API acceleration layer for PTYs, processes, search, media, and system utilities.](./native-rust-layer/)
+  </Card>
+  <Card title="Extensibility boundaries" icon="right-arrow">
+    [Choose between skills, commands, tools, hooks, extensions, plugins, MCP, and SDK embedding.](./extensibility-boundaries/)
+  </Card>
+  <Card title="Build and release xcsh" icon="right-arrow">
+    [Set up the monorepo, run TypeScript and Rust checks, and understand signed multi-channel releases.](./build-release/)
+  </Card>
+  <Card title="Relationship to pi" icon="right-arrow">
+    [Understand what xcsh inherits from pi and where the project deliberately specializes.](./upstream-pi/)
+  </Card>
+  <Card title="Contribute" icon="right-arrow">
+    [Use the repository's issue, worktree, validation, review, pull request, and release governance.](./contributing/)
+  </Card>
+  <Card title="Documentation coverage matrix" icon="right-arrow">
+    [Map public capabilities to their primary source of truth and canonical documentation section.](./coverage-matrix/)
+  </Card>
+</CardGrid>

@@ -1,0 +1,47 @@
+---
+title: "Terminal CLI"
+description: "Choose interactive, print, resume, and deterministic subcommand modes from a shell."
+sidebar:
+  order: 1
+  label: "Terminal CLI"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Choose interactive, print, resume, and deterministic subcommand modes from a shell.
+
+| Mode | Invocation | Best for |
+| --- | --- | --- |
+| Interactive | `xcsh` | Conversational work with tools |
+| Print | `xcsh -p "prompt"` | One bounded model turn |
+| Resource | `xcsh validate -f file.yaml` | Deterministic XC operations |
+| Structured | `xcsh --mode json -p "prompt"` | Scripts and process clients |
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Run `xcsh` for the TUI or `xcsh -p "prompt"` for one response.
+2. Pass files with `@path` and choose models with `--model`.
+3. Use resource subcommands for deterministic manifest work.
+4. Use `--mode json`, `rpc`, or `acp` for machine integrations.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [VS Code](../vscode/).

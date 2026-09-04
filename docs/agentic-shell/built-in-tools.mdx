@@ -1,0 +1,40 @@
+---
+title: "Use built-in tools"
+description: "Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries."
+sidebar:
+  order: 4
+  label: "Use built-in tools"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Inspect available defaults in `xcsh --help`.
+2. Restrict a run with `--tools read,grep` or disable tools with `--no-tools`.
+3. Install optional Python support with `xcsh setup python` before using Python-backed tools.
+4. Review side effects from bash, write, browser, and task tools.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Resume and export sessions](../sessions/).

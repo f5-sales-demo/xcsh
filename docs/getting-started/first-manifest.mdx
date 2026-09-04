@@ -1,0 +1,51 @@
+---
+title: "Complete your first manifest lifecycle"
+description: "Validate, compare, apply, inspect, export, and delete a resource manifest."
+sidebar:
+  order: 6
+  label: "Complete your first manifest lifecycle"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+Validate, compare, apply, inspect, export, and delete a resource manifest.
+
+```yaml title="manifest.yaml"
+kind: origin_pool
+metadata:
+  name: example-origin-pool
+  namespace: example-namespace
+spec: {}
+```
+
+The resource kind determines the API paths and validation rules. The `spec` above is intentionally incomplete: use it to exercise offline validation, then populate fields required by the current packaged catalog.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Create a YAML manifest with `kind`, `metadata.name`, `metadata.namespace`, and `spec`.
+2. Run `xcsh validate -f manifest.yaml` offline.
+3. Run `xcsh diff -f manifest.yaml` with an active context.
+4. Apply only after reviewing the target, then inspect with `get` and `export`.
+5. Use `delete --dry-run=client` before an intentional deletion.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Update xcsh](../updates/).

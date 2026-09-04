@@ -1,0 +1,44 @@
+---
+title: "Troubleshooting and reference"
+description: "Diagnose installations, providers, contexts, and tools, then consult current command and configuration references."
+sidebar:
+  order: 7
+  label: "Overview"
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+Diagnose installations, providers, contexts, and tools, then consult current command and configuration references.
+
+<CardGrid>
+  <Card title="Run diagnostics" icon="right-arrow">
+    [Collect version, configuration, provider, context, and sandbox evidence without exposing secrets.](./diagnostics/)
+  </Card>
+  <Card title="Fix installation and provider problems" icon="right-arrow">
+    [Resolve missing binaries, native-addon mismatches, authentication failures, and unavailable models.](./installation-providers/)
+  </Card>
+  <Card title="Fix context and tool problems" icon="right-arrow">
+    [Separate F5 Distributed Cloud scope errors from MCP, browser, Python, and shell-tool failures.](./contexts-tools/)
+  </Card>
+  <Card title="CLI command and flag reference" icon="right-arrow">
+    [Review the current top-level commands, global flags, and resource command patterns.](./cli-reference/)
+  </Card>
+  <Card title="Slash command reference" icon="right-arrow">
+    [Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state.](./slash-commands/)
+  </Card>
+  <Card title="Keybinding reference" icon="right-arrow">
+    [Discover and customize the active terminal key map.](./keybindings/)
+  </Card>
+  <Card title="Tool catalog" icon="right-arrow">
+    [Understand the default read, shell, edit, search, browser, notebook, image, task, todo, and question tools.](./tool-catalog/)
+  </Card>
+  <Card title="Configuration schema" icon="right-arrow">
+    [Navigate the schema-backed settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing.](./configuration-schema/)
+  </Card>
+  <Card title="File locations" icon="right-arrow">
+    [Locate user and project settings, sessions, contexts, plugins, agents, skills, tools, hooks, and memories.](./file-locations/)
+  </Card>
+  <Card title="Glossary" icon="right-arrow">
+    [Define the product, model, session, context, manifest, skill, plugin, MCP, and sandbox terms used throughout the site.](./glossary/)
+  </Card>
+</CardGrid>

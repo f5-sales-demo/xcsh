@@ -1,0 +1,40 @@
+---
+title: "Understand the API catalog"
+description: "See how xcsh resolves resource kinds and validation metadata from its packaged F5 Distributed Cloud catalog."
+sidebar:
+  order: 6
+  label: "Understand the API catalog"
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+See how xcsh resolves resource kinds and validation metadata from its packaged F5 Distributed Cloud catalog.
+
+## Prerequisites
+
+- A current xcsh release and a shell in the intended working directory.
+- Authorization for any account, tenant, repository, or file the procedure touches.
+- A backup or dry run before an operation that changes or deletes state.
+
+## Procedure
+
+<Steps>
+
+1. Use the spelling returned by kind suggestions when a kind is unknown.
+2. Treat the packaged catalog as versioned with xcsh.
+3. Update xcsh when a newly available API kind is missing.
+4. Use `validate` to distinguish catalog/schema errors from authentication and network failures.
+
+</Steps>
+
+## Expected result
+
+The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
+
+## Troubleshooting
+
+Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
+
+## Next steps
+
+Continue to [Automate the F5 console in Chrome](../console-automation/).
