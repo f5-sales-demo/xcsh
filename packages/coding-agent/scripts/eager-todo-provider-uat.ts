@@ -1,7 +1,7 @@
 interface ProviderTarget {
 	label: string;
 	model: string;
-	thinking: "medium";
+	thinking: "medium" | "high";
 }
 
 interface Scenario {
@@ -46,8 +46,13 @@ const OPENAI_CODEX: ProviderTarget = {
 	model: "openai-codex/gpt-5.6-sol",
 	thinking: "medium",
 };
-const VERTEX: ProviderTarget = {
-	label: "Google Vertex",
+const VERTEX_FLASH: ProviderTarget = {
+	label: "Google Vertex Flash",
+	model: "google-vertex/gemini-3.7-flash",
+	thinking: "high",
+};
+const VERTEX_PRO: ProviderTarget = {
+	label: "Google Vertex Pro",
 	model: "google-vertex/gemini-3.1-pro-preview",
 	thinking: "medium",
 };
@@ -240,12 +245,21 @@ const schedule: Array<{ target: ProviderTarget; scenario: Scenario; repetitions:
 	{ target: ANTHROPIC, scenario: CONVERSATIONAL, repetitions: 1 },
 	{ target: OPENAI_CODEX, scenario: CONVERSATIONAL, repetitions: 1 },
 	{ target: OPENAI_CODEX, scenario: ADVERSARIAL_SCENARIOS.at(-1)!, repetitions: 1 },
-	{ target: VERTEX, scenario: CONVERSATIONAL, repetitions: 1 },
-	{ target: VERTEX, scenario: ADVERSARIAL_SCENARIOS.at(-1)!, repetitions: 1 },
+	{ target: VERTEX_FLASH, scenario: CONVERSATIONAL, repetitions: 1 },
+	{ target: VERTEX_FLASH, scenario: ADVERSARIAL_SCENARIOS.at(-1)!, repetitions: 1 },
+	{ target: VERTEX_PRO, scenario: CONVERSATIONAL, repetitions: 1 },
+	{ target: VERTEX_PRO, scenario: ADVERSARIAL_SCENARIOS.at(-1)!, repetitions: 1 },
 ];
 
+const requestedModels = new Set(process.argv.slice(2));
+const selectedSchedule =
+	requestedModels.size === 0 ? schedule : schedule.filter(entry => requestedModels.has(entry.target.model));
+if (selectedSchedule.length === 0) {
+	throw new Error(`No UAT targets matched: ${[...requestedModels].join(", ")}`);
+}
+
 const results: RunEvidence[] = [];
-for (const entry of schedule) {
+for (const entry of selectedSchedule) {
 	for (let repetition = 1; repetition <= entry.repetitions; repetition++) {
 		const result = await runScenario(entry.target, entry.scenario, repetition);
 		results.push(result);
