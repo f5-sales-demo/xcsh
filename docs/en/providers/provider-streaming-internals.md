@@ -36,6 +36,11 @@ All provider drivers emit events conforming to the `AssistantMessageEvent` union
 - Maps `message_start` to token usage metadata.
 - Maps `content_block_start` and `content_block_delta` to unified text, thinking, and tool invocation blocks.
 - Accumulates streamed JSON fragments in `partialJson` and reparses arguments incrementally via `parseStreamingJson()`.
+- When a supported Anthropic model is explicitly forced to call one named tool, that tool opts into strict generation
+  only if its tool definition has `strict: true`, strict-schema adaptation succeeds, and the adapted schema stays within
+  Anthropic's documented complexity limits. Other tools in the same request remain non-strict. Automatic tool
+  selection, legacy or unknown models, and incompatible schemas retain the normal non-strict request shape.
+- OAuth requests apply the Claude tool-name prefix consistently to both the forced `tool_choice` and the matching strict tool definition.
 
 ### OpenAI Responses (`openai-responses`)
 
@@ -56,7 +61,12 @@ Incremental tool arguments are parsed via `parseStreamingJson()` (`packages/ai/s
 1. Attempts standard `JSON.parse`.
 2. Falls back to partial JSON parsing to evaluate incomplete streamed fragments.
 3. If partial parsing fails, returns `{}` temporarily until subsequent deltas provide valid JSON structures.
-4. Performs a final parse pass on `toolcall_end`.
+
+That tolerant parser is limited to in-progress previews. At Anthropic `content_block_stop`, a tool call that received
+JSON deltas is committed with exact `JSON.parse`; malformed completed JSON becomes a provider error and no
+`toolcall_end` is emitted. If Anthropic supplied complete inline input at `content_block_start` and sent no deltas,
+the inline input is retained. Server-tool progress parsing remains best-effort because it is display-only and is not
+dispatched as a client tool call.
 
 ## Cancellation and lifecycle boundaries
 
