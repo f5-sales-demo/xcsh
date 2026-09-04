@@ -20,7 +20,7 @@ done
 before_package=$(git -C "$workspace" hash-object package.json)
 before_lock=$(git -C "$workspace" hash-object bun.lock)
 BUN_INSTALL_CACHE_DIR=${BUN_INSTALL_CACHE_DIR:-$HOME/.bun/install/cache} \
-  bun install --cwd "$workspace" --frozen-lockfile --concurrent-scripts 8
+  bun install --cwd "$workspace" --frozen-lockfile --concurrent-scripts 16
 [[ "$(git -C "$workspace" hash-object package.json)" == "$before_package" &&
 "$(git -C "$workspace" hash-object bun.lock)" == "$before_lock" ]] || {
   echo "bun install modified package.json or bun.lock" >&2
