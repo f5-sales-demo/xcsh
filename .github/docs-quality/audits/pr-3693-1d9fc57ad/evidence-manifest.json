@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receipts": [
+    {
+      "path": "receipts/checker-challenges.txt",
+      "sha256": "f7174f5de7a0ed3ae09a5a6aa6c6b3627417761de98d6c6dbe51cba00f58bb68",
+      "commandClass": "immutable-subject-audit",
+      "outcome": "recorded"
+    },
+    {
+      "path": "receipts/subject-identity.txt",
+      "sha256": "b8892241fc609dc17ee5c894538e20be7873de83b4fb656a185057705ef47582",
+      "commandClass": "immutable-subject-audit",
+      "outcome": "recorded"
+    }
+  ]
+}

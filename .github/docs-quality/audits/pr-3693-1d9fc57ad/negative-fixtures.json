@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {"id": "missing-concept", "mutation": "remove one concept result", "expectedValidatorResult": "reject"},
+    {"id": "duplicate-concept", "mutation": "duplicate a concept ID", "expectedValidatorResult": "reject"},
+    {"id": "unfrozen-citation", "mutation": "replace a pinned commit citation", "expectedValidatorResult": "reject"},
+    {"id": "missing-authority", "mutation": "remove authority citations", "expectedValidatorResult": "reject"},
+    {"id": "missing-challenge-cleanup", "mutation": "remove a checker cleanup receipt", "expectedValidatorResult": "reject"}
+  ]
+}

@@ -1,0 +1,7 @@
+subject_commit=1d9fc57ad5c7ab5ad085b03b20f545396088c1ea
+subject_tree=8edb1635292d4051686cd5507e2e25f19bf26a8f
+legacy_commit=95c019fa60c8a8242482b18c45844ec73784ee11
+legacy_tree=89566cca8d13cd69fb8af9ee017e9860d303b2f2
+python=Python 3.12.3
+git=git version 2.43.0
+cleanup=all temporary subject worktrees removed; shallow fixture moved to local trash
