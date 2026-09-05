@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
+import type { ExtensionAPI, ExtensionContext, UserPromptKind } from "@f5-sales-demo/xcsh";
 import { HerdrClient } from "../../../herdr/client";
 
 /**
@@ -60,6 +60,18 @@ const REPORT_METHOD = "pane.report_agent";
 const SESSION_METHOD = "pane.report_agent_session";
 const RELEASE_METHOD = "pane.release_agent";
 const SOCKET_TIMEOUT_MS = 2000;
+const PROMPT_BLOCKED_REASONS = {
+	select: "selection required",
+	confirm: "confirmation required",
+	input: "text input required",
+} satisfies Record<UserPromptKind, string>;
+
+function getPromptBlockedReason(kind: unknown): string {
+	if (typeof kind === "string" && Object.hasOwn(PROMPT_BLOCKED_REASONS, kind)) {
+		return PROMPT_BLOCKED_REASONS[kind as UserPromptKind];
+	}
+	return "user input required";
+}
 
 // Reused across calls for the life of the extension so `ensureProtocol()`'s
 // `ping` validation happens at most once per socket path, not once per frame.
@@ -109,6 +121,9 @@ function toCliArgs(method: string, params: Record<string, unknown>): string[] {
 	if (params.state !== undefined) {
 		args.push("--state", String(params.state));
 	}
+	if (params.message !== undefined) {
+		args.push("--message", String(params.message));
+	}
 	args.push("--seq", String(params.seq));
 	return args;
 }
@@ -124,9 +139,9 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// process in a pane always starts above whatever the previous process reached.
 	// Matches the pi/omp reporters and stays well inside Number.MAX_SAFE_INTEGER.
 	let seq = Date.now() * 1000;
-	// Tracks whether an interactive prompt is currently awaiting the user, so an
-	// agent_end that fires while a prompt is open is reported as blocked, not idle.
-	let promptOpen = false;
+	// Retains the fixed reason while an interactive prompt awaits the user, so an
+	// agent_end duplicate cannot erase herdr's stored blocked message.
+	let promptBlockedReason: string | undefined;
 	// Last session ref already delivered, so repeated lifecycle events do not
 	// re-send an unchanged ref every turn.
 	let lastSessionRefKey: string | undefined;
@@ -162,12 +177,13 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		);
 	};
 
-	const report = (state: "idle" | "working" | "blocked"): Promise<void> =>
+	const report = (state: "idle" | "working" | "blocked", message?: string): Promise<void> =>
 		send(REPORT_METHOD, {
 			pane_id: paneId,
 			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			state,
+			...(message === undefined ? {} : { message }),
 			seq: seq++,
 		});
 
@@ -238,19 +254,19 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// This is also the first point where a lazily-created session file is certain
 	// to exist, so it is the backstop for capturing the resume ref.
 	pi.on("agent_end", async (_event, ctx) => {
-		await report(promptOpen ? "blocked" : "idle");
+		await report(promptBlockedReason ? "blocked" : "idle", promptBlockedReason);
 		await reportSession(ctx);
 	});
 
 	// An interactive prompt (permission gate, ask tool, confirm/input) is
 	// awaiting the user: that is herdr's "needs attention" (blocked) state.
-	pi.on("user_prompt_start", () => {
-		promptOpen = true;
-		void report("blocked");
+	pi.on("user_prompt_start", event => {
+		promptBlockedReason = getPromptBlockedReason(event.kind);
+		void report("blocked", promptBlockedReason);
 	});
 
 	pi.on("user_prompt_end", async (_event, ctx) => {
-		promptOpen = false;
+		promptBlockedReason = undefined;
 		await report(ctx.isIdle() ? "idle" : "working");
 		await reportSession(ctx);
 	});

@@ -141,12 +141,13 @@ async function waitFor(cond: () => boolean, timeoutMs = 2000): Promise<void> {
 
 // HerdrClient generates a fresh random id per request, so assertions compare
 // method/params rather than the full frame.
-const reportParams = (state: string, seq: number) => ({
+const reportParams = (state: string, seq: number, message?: string) => ({
 	pane_id: "w1:p1",
 	source: "herdr:xcsh",
 	agent: "xcsh",
 	state,
 	seq,
+	...(message === undefined ? {} : { message }),
 });
 
 /** seq is seeded from the wall clock, so assert offsets from the first frame. */
@@ -218,18 +219,61 @@ describe("herdr-reporter extension", () => {
 
 			herdrReporter(pi);
 
-			await handlers.get("user_prompt_start")?.({ kind: "select" }, busyCtx);
+			const privateSentinels = {
+				kind: "select",
+				title: "PRIVATE_PROMPT_TITLE",
+				question: "PRIVATE_PROMPT_QUESTION",
+				options: ["PRIVATE_PROMPT_OPTION"],
+				placeholder: "PRIVATE_PROMPT_PLACEHOLDER",
+				credential: "PRIVATE_CREDENTIAL_SENTINEL",
+			};
+			await handlers.get("user_prompt_start")?.(privateSentinels, busyCtx);
 			await handlers.get("agent_end")?.({ messages: [] }, busyCtx);
 			await handlers.get("user_prompt_end")?.({ kind: "select" }, busyCtx);
 
 			await waitFor(() => herdr.received.length >= 3);
 			const base = baseSeq(herdr);
 			expect(herdr.received[0]?.method).toBe("pane.report_agent");
-			expect(herdr.received[0]?.params).toEqual(reportParams("blocked", base));
+			expect(herdr.received[0]?.params).toEqual(reportParams("blocked", base, "selection required"));
 			expect(herdr.received[1]?.method).toBe("pane.report_agent");
-			expect(herdr.received[1]?.params).toEqual(reportParams("blocked", base + 1));
+			expect(herdr.received[1]?.params).toEqual(reportParams("blocked", base + 1, "selection required"));
 			expect(herdr.received[2]?.method).toBe("pane.report_agent");
 			expect(herdr.received[2]?.params).toEqual(reportParams("working", base + 2));
+			const capturedFrames = JSON.stringify(herdr.received);
+			for (const sentinel of [
+				privateSentinels.title,
+				privateSentinels.question,
+				privateSentinels.options[0],
+				privateSentinels.placeholder,
+				privateSentinels.credential,
+			]) {
+				expect(capturedFrames).not.toContain(sentinel);
+			}
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("maps only the closed prompt kind to fixed blocked reasons", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			for (const kind of ["select", "confirm", "input", "future-kind"]) {
+				await handlers.get("user_prompt_start")?.({ kind }, busyCtx);
+			}
+
+			await waitFor(() => herdr.received.length >= 4);
+			const base = baseSeq(herdr);
+			expect(herdr.received.map(frame => frame.params)).toEqual([
+				reportParams("blocked", base, "selection required"),
+				reportParams("blocked", base + 1, "confirmation required"),
+				reportParams("blocked", base + 2, "text input required"),
+				reportParams("blocked", base + 3, "user input required"),
+			]);
 		} finally {
 			await herdr.close();
 		}
@@ -268,8 +312,10 @@ describe("herdr-reporter extension", () => {
 
 		herdrReporter(pi);
 		await handlers.get("agent_start")?.({}, idleCtx);
+		await handlers.get("user_prompt_start")?.({ kind: "confirm" }, busyCtx);
+		await handlers.get("user_prompt_end")?.({ kind: "confirm" }, idleCtx);
 		await handlers.get("session_shutdown")?.({}, idleCtx);
-		await waitFor(() => execCalls.length >= 2);
+		await waitFor(() => execCalls.length >= 4);
 
 		const cliSeq = (call: { args: string[] }): number => Number(call.args[call.args.indexOf("--seq") + 1]);
 		const base = cliSeq(execCalls[0]!);
@@ -294,6 +340,40 @@ describe("herdr-reporter extension", () => {
 			command: "herdr",
 			args: [
 				"pane",
+				"report-agent",
+				"w1:p1",
+				"--source",
+				"herdr:xcsh",
+				"--agent",
+				"xcsh",
+				"--state",
+				"blocked",
+				"--message",
+				"confirmation required",
+				"--seq",
+				String(base + 1),
+			],
+		});
+		expect(execCalls[2]).toEqual({
+			command: "herdr",
+			args: [
+				"pane",
+				"report-agent",
+				"w1:p1",
+				"--source",
+				"herdr:xcsh",
+				"--agent",
+				"xcsh",
+				"--state",
+				"idle",
+				"--seq",
+				String(base + 2),
+			],
+		});
+		expect(execCalls[3]).toEqual({
+			command: "herdr",
+			args: [
+				"pane",
 				"release-agent",
 				"w1:p1",
 				"--source",
@@ -301,7 +381,7 @@ describe("herdr-reporter extension", () => {
 				"--agent",
 				"xcsh",
 				"--seq",
-				String(base + 1),
+				String(base + 3),
 			],
 		});
 	});
