@@ -6,35 +6,16 @@ sidebar:
   label: "Authenticate a model provider"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Model credentials belong in the provider-supported environment or subscription login, not in prompts, settings committed to a repository, or command arguments.
 
-Configure an API key or supported subscription login without placing credentials in project files.
+## Which authentication method should I choose?
 
-## Prerequisites
+Use a provider API key for service-style automation. Use a supported subscription login for an interactive user session. Run `xcsh --list-models <provider>` after authentication to confirm the credential can enumerate models.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## How do I select a model explicitly?
 
-## Procedure
+```sh
+xcsh --model p-openai/gpt-5.2 --no-tools -p "Summarize README.md"
+```
 
-<Steps>
-
-1. Choose a provider shown by `xcsh --list-models all`.
-2. Export that provider's documented environment variable or use `/login` for a supported subscription provider.
-3. Run `/model` and select a model.
-4. Send a short prompt to verify streaming.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Connect to F5 Distributed Cloud](../f5-xc-connection/).
+Replace the example with a model shown by your installed build. Provider-qualified names avoid an accidental fuzzy match when several providers expose similar model names.

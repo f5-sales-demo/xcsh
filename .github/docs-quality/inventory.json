@@ -1,0 +1,1734 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "issue-3686-manual-audit",
+  "pages": [
+    {
+      "path": "docs/en/agentic-shell/built-in-tools.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Use built-in tools: Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries.",
+      "purpose": "Answer the distinct task or decision described by Use built-in tools.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I reduce the tool boundary?",
+          "readerQuestion": "How do I reduce the tool boundary?",
+          "purpose": "Answer this question within Use built-in tools: How do I reduce the tool boundary?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "Which tools require extra care?",
+          "readerQuestion": "Which tools require extra care?",
+          "purpose": "Answer this question within Use built-in tools: Which tools require extra care?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/agentic-shell/how-it-works.mdx",
+      "classification": "concept",
+      "audience": "xcsh users",
+      "readerNeed": "How xcsh works: Understand how prompts, model turns, tool calls, results, and session entries form the agent loop.",
+      "purpose": "Answer the distinct task or decision described by How xcsh works.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Where is the durable record?",
+          "readerQuestion": "Where is the durable record?",
+          "purpose": "Answer this question within How xcsh works: Where is the durable record?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "Where are side effects introduced?",
+          "readerQuestion": "Where are side effects introduced?",
+          "purpose": "Answer this question within How xcsh works: Where are side effects introduced?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/agentic-shell/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Agentic shell: Work with the agent loop, terminal UI, tools, sessions, memory, plans, and specialized agents.",
+      "purpose": "Answer the distinct task or decision described by Agentic shell.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "What should I learn first?",
+          "readerQuestion": "What should I learn first?",
+          "purpose": "Answer this question within Agentic shell: What should I learn first?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/agentic-shell/interactive-tui.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Use the interactive TUI: Navigate the prompt editor, status line, model selector, tool output, and command palette.",
+      "purpose": "Answer the distinct task or decision described by Use the interactive TUI.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I send prompts and local files?",
+          "readerQuestion": "How do I send prompts and local files?",
+          "purpose": "Answer this question within Use the interactive TUI: How do I send prompts and local files?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I discover controls?",
+          "readerQuestion": "How do I discover controls?",
+          "purpose": "Answer this question within Use the interactive TUI: How do I discover controls?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/agentic-shell/planning.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Plan complex work: Separate exploration and decisions from implementation with xcsh planning controls.",
+      "purpose": "Answer the distinct task or decision described by Plan complex work.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "offline-configuration"
+      ],
+      "headings": [
+        {
+          "text": "What belongs in a decision-complete plan?",
+          "readerQuestion": "What belongs in a decision-complete plan?",
+          "purpose": "Answer this question within Plan complex work: What belongs in a decision-complete plan?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        },
+        {
+          "text": "When should I use a specialized agent?",
+          "readerQuestion": "When should I use a specialized agent?",
+          "purpose": "Answer this question within Plan complex work: When should I use a specialized agent?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/agentic-shell/sessions.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Resume and export sessions: Continue, locate, fork, or export persisted conversations.",
+      "purpose": "Answer the distinct task or decision described by Resume and export sessions.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I branch or compact a long conversation?",
+          "readerQuestion": "How do I branch or compact a long conversation?",
+          "purpose": "Answer this question within Resume and export sessions: How do I branch or compact a long conversation?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How does project memory differ?",
+          "readerQuestion": "How does project memory differ?",
+          "purpose": "Answer this question within Resume and export sessions: How does project memory differ?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I export a record?",
+          "readerQuestion": "How do I export a record?",
+          "purpose": "Answer this question within Resume and export sessions: How do I export a record?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/agent-loop-sessions.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Agent loop and sessions: Trace a user message through model selection, tool calls, append-only session state, compaction, and rendering.",
+      "purpose": "Answer the distinct task or decision described by Agent loop and sessions.",
+      "sourceAuthority": [
+        "DEVELOPING.md",
+        "packages/coding-agent/src",
+        "crates/pi-natives/src"
+      ],
+      "evidence": [
+        "source-authority"
+      ],
+      "headings": [
+        {
+          "text": "How do I trace a behavior?",
+          "readerQuestion": "How do I trace a behavior?",
+          "purpose": "Answer this question within Agent loop and sessions: How do I trace a behavior?.",
+          "evidence": [
+            "source-authority"
+          ]
+        },
+        {
+          "text": "Where does compaction act?",
+          "readerQuestion": "Where does compaction act?",
+          "purpose": "Answer this question within Agent loop and sessions: Where does compaction act?.",
+          "evidence": [
+            "source-authority"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/build-release.mdx",
+      "classification": "how-to",
+      "audience": "xcsh contributors",
+      "readerNeed": "Build and release xcsh: Set up the monorepo, run TypeScript and Rust checks, and understand signed multi-channel releases.",
+      "purpose": "Answer the distinct task or decision described by Build and release xcsh.",
+      "sourceAuthority": [
+        "DEVELOPING.md",
+        "packages/coding-agent/src",
+        "crates/pi-natives/src"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I prepare a contribution?",
+          "readerQuestion": "How do I prepare a contribution?",
+          "purpose": "Answer this question within Build and release xcsh: How do I prepare a contribution?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "Which checks matter before a pull request?",
+          "readerQuestion": "Which checks matter before a pull request?",
+          "purpose": "Answer this question within Build and release xcsh: Which checks matter before a pull request?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How are releases produced?",
+          "readerQuestion": "How are releases produced?",
+          "purpose": "Answer this question within Build and release xcsh: How are releases produced?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/extensibility-boundaries.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Extensibility boundaries: Choose between skills, commands, tools, hooks, extensions, plugins, MCP, and SDK embedding.",
+      "purpose": "Answer the distinct task or decision described by Extensibility boundaries.",
+      "sourceAuthority": [
+        "DEVELOPING.md",
+        "packages/coding-agent/src",
+        "crates/pi-natives/src"
+      ],
+      "evidence": [
+        "source-authority"
+      ],
+      "headings": [
+        {
+          "text": "Where should a change go?",
+          "readerQuestion": "Where should a change go?",
+          "purpose": "Answer this question within Extensibility boundaries: Where should a change go?.",
+          "evidence": [
+            "source-authority"
+          ]
+        },
+        {
+          "text": "How do I validate a boundary change?",
+          "readerQuestion": "How do I validate a boundary change?",
+          "purpose": "Answer this question within Extensibility boundaries: How do I validate a boundary change?.",
+          "evidence": [
+            "source-authority"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh contributors",
+      "readerNeed": "Architecture and contribution: Understand xcsh internals, its pi lineage, native layer, extension boundaries, and contribution/release process.",
+      "purpose": "Answer the distinct task or decision described by Architecture and contribution.",
+      "sourceAuthority": [
+        "DEVELOPING.md",
+        "packages/coding-agent/src",
+        "crates/pi-natives/src"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Which implementation boundary matters?",
+          "readerQuestion": "Which implementation boundary matters?",
+          "purpose": "Answer this question within Architecture and contribution: Which implementation boundary matters?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/upstream-pi.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Relationship to pi: Understand what xcsh inherits from pi and where the project deliberately specializes.",
+      "purpose": "Answer the distinct task or decision described by Relationship to pi.",
+      "sourceAuthority": [
+        "DEVELOPING.md",
+        "packages/coding-agent/src",
+        "crates/pi-natives/src"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I decide where a fix belongs?",
+          "readerQuestion": "How do I decide where a fix belongs?",
+          "purpose": "Answer this question within Relationship to pi: How do I decide where a fix belongs?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I preserve attribution?",
+          "readerQuestion": "How do I preserve attribution?",
+          "purpose": "Answer this question within Relationship to pi: How do I preserve attribution?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/configure-secure/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Configure and secure: Control settings, providers, credentials, networking, secrets, sandboxing, and enterprise deployment.",
+      "purpose": "Answer the distinct task or decision described by Configure and secure.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/config/settings-schema.ts",
+        "packages/coding-agent/src/services/xcsh-context.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "offline-configuration"
+      ],
+      "headings": [
+        {
+          "text": "What should I configure first?",
+          "readerQuestion": "What should I configure first?",
+          "purpose": "Answer this question within Configure and secure: What should I configure first?.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/configure-secure/providers-routing.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Configure providers and model routing: Select models directly or map default, smol, slow, and plan roles.",
+      "purpose": "Answer the distinct task or decision described by Configure providers and model routing.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/config/settings-schema.ts",
+        "packages/coding-agent/src/services/xcsh-context.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "offline-configuration"
+      ],
+      "headings": [
+        {
+          "text": "How do I confirm a route?",
+          "readerQuestion": "How do I confirm a route?",
+          "purpose": "Answer this question within Configure providers and model routing: How do I confirm a route?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        },
+        {
+          "text": "Where does LiteLLM fit?",
+          "readerQuestion": "Where does LiteLLM fit?",
+          "purpose": "Answer this question within Configure providers and model routing: Where does LiteLLM fit?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/configure-secure/secrets.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Resolve secrets safely: Reference sensitive values without placing plaintext credentials in prompts, manifests, logs, or commits.",
+      "purpose": "Answer the distinct task or decision described by Resolve secrets safely.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/config/settings-schema.ts",
+        "packages/coding-agent/src/services/xcsh-context.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "offline-configuration"
+      ],
+      "headings": [
+        {
+          "text": "How does the filesystem boundary work?",
+          "readerQuestion": "How does the filesystem boundary work?",
+          "purpose": "Answer this question within Resolve secrets safely: How does the filesystem boundary work?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        },
+        {
+          "text": "How do I inspect the boundary?",
+          "readerQuestion": "How do I inspect the boundary?",
+          "purpose": "Answer this question within Resolve secrets safely: How do I inspect the boundary?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/configure-secure/settings-precedence.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Understand settings precedence: Predict which user, project, environment, and command-line value xcsh resolves.",
+      "purpose": "Answer the distinct task or decision described by Understand settings precedence.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/config/settings-schema.ts",
+        "packages/coding-agent/src/services/xcsh-context.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "offline-configuration"
+      ],
+      "headings": [
+        {
+          "text": "Where are settings stored?",
+          "readerQuestion": "Where are settings stored?",
+          "purpose": "Answer this question within Understand settings precedence: Where are settings stored?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        },
+        {
+          "text": "How do I change one value?",
+          "readerQuestion": "How do I change one value?",
+          "purpose": "Answer this question within Understand settings precedence: How do I change one value?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/extend-automate/extensions-custom-tools.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Build extensions and custom tools: Add TypeScript behavior, slash commands, providers, or schema-validated tools.",
+      "purpose": "Answer the distinct task or decision described by Build extensions and custom tools.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I test an extension boundary?",
+          "readerQuestion": "How do I test an extension boundary?",
+          "purpose": "Answer this question within Build extensions and custom tools: How do I test an extension boundary?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "Where do hooks and rules belong?",
+          "readerQuestion": "Where do hooks and rules belong?",
+          "purpose": "Answer this question within Build extensions and custom tools: Where do hooks and rules belong?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/extend-automate/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Extend and automate: Add skills, plugins, MCP servers, custom tools, hooks, rules, SDK integrations, and headless workers.",
+      "purpose": "Answer the distinct task or decision described by Extend and automate.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Which extension mechanism fits?",
+          "readerQuestion": "Which extension mechanism fits?",
+          "purpose": "Answer this question within Extend and automate: Which extension mechanism fits?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/extend-automate/mcp-quickstart.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Connect an MCP server: Add a local stdio or remote HTTP/SSE Model Context Protocol server.",
+      "purpose": "Answer the distinct task or decision described by Connect an MCP server.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Where is MCP configured?",
+          "readerQuestion": "Where is MCP configured?",
+          "purpose": "Answer this question within Connect an MCP server: Where is MCP configured?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I isolate MCP behavior?",
+          "readerQuestion": "How do I isolate MCP behavior?",
+          "purpose": "Answer this question within Connect an MCP server: How do I isolate MCP behavior?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/extend-automate/plugins-marketplaces.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Install plugins and marketplaces: Discover, install, configure, update, and diagnose xcsh plugins.",
+      "purpose": "Answer the distinct task or decision described by Install plugins and marketplaces.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I inspect before installing?",
+          "readerQuestion": "How do I inspect before installing?",
+          "purpose": "Answer this question within Install plugins and marketplaces: How do I inspect before installing?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I diagnose a plugin?",
+          "readerQuestion": "How do I diagnose a plugin?",
+          "purpose": "Answer this question within Install plugins and marketplaces: How do I diagnose a plugin?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/extend-automate/sdk.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Embed xcsh with the SDK: Create sessions and tools programmatically through the coding-agent package.",
+      "purpose": "Answer the distinct task or decision described by Embed xcsh with the SDK.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Which automation boundary should I choose?",
+          "readerQuestion": "Which automation boundary should I choose?",
+          "purpose": "Answer this question within Embed xcsh with the SDK: Which automation boundary should I choose?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I keep the integration testable?",
+          "readerQuestion": "How do I keep the integration testable?",
+          "purpose": "Answer this question within Embed xcsh with the SDK: How do I keep the integration testable?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/extend-automate/skills.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Create and load skills: Package task-specific instructions in `SKILL.md` files at user or project scope.",
+      "purpose": "Answer the distinct task or decision described by Create and load skills.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Where do skills live?",
+          "readerQuestion": "Where do skills live?",
+          "purpose": "Answer this question within Create and load skills: Where do skills live?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I test one?",
+          "readerQuestion": "How do I test one?",
+          "purpose": "Answer this question within Create and load skills: How do I test one?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/api-catalog.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Understand the API catalog: See how xcsh resolves resource kinds and validation metadata from its packaged F5 Distributed Cloud catalog.",
+      "purpose": "Answer the distinct task or decision described by Understand the API catalog.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "How do I choose a supported kind?",
+          "readerQuestion": "How do I choose a supported kind?",
+          "purpose": "Answer this question within Understand the API catalog: How do I choose a supported kind?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "What if a kind is absent?",
+          "readerQuestion": "What if a kind is absent?",
+          "purpose": "Answer this question within Understand the API catalog: What if a kind is absent?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/console-automation.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Automate the F5 console in Chrome: Connect xcsh to its isolated Chrome profile for browser-assisted console workflows.",
+      "purpose": "Answer the distinct task or decision described by Automate the F5 console in Chrome.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "How do I inspect the Chrome session?",
+          "readerQuestion": "How do I inspect the Chrome session?",
+          "purpose": "Answer this question within Automate the F5 console in Chrome: How do I inspect the Chrome session?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "What counts as evidence?",
+          "readerQuestion": "What counts as evidence?",
+          "purpose": "Answer this question within Automate the F5 console in Chrome: What counts as evidence?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/contexts-namespaces.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Manage contexts and namespaces: Store named tenant connections, activate the intended context, and scope operations to a namespace.",
+      "purpose": "Answer the distinct task or decision described by Manage contexts and namespaces.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "How do I prevent a scope mistake?",
+          "readerQuestion": "How do I prevent a scope mistake?",
+          "purpose": "Answer this question within Manage contexts and namespaces: How do I prevent a scope mistake?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "Where is context data stored?",
+          "readerQuestion": "Where is context data stored?",
+          "purpose": "Answer this question within Manage contexts and namespaces: Where is context data stored?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/create-apply-update.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Create, apply, and update resources: Choose strict creation, convergent apply, or explicit update for a reviewed manifest.",
+      "purpose": "Answer the distinct task or decision described by Create, apply, and update resources.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "Which mutation command fits?",
+          "readerQuestion": "Which mutation command fits?",
+          "purpose": "Answer this question within Create, apply, and update resources: Which mutation command fits?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "How do I verify the mutation?",
+          "readerQuestion": "How do I verify the mutation?",
+          "purpose": "Answer this question within Create, apply, and update resources: How do I verify the mutation?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/get-export-delete.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Get, export, and delete resources: Inspect live resources, produce portable manifests, and perform deliberate deletion.",
+      "purpose": "Answer the distinct task or decision described by Get, export, and delete resources.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle",
+        "browser-build"
+      ],
+      "headings": [
+        {
+          "text": "How do I retrieve or export one resource?",
+          "readerQuestion": "How do I retrieve or export one resource?",
+          "purpose": "Answer this question within Get, export, and delete resources: How do I retrieve or export one resource?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle",
+            "browser-build"
+          ]
+        },
+        {
+          "text": "How do I delete and prove absence?",
+          "readerQuestion": "How do I delete and prove absence?",
+          "purpose": "Answer this question within Get, export, and delete resources: How do I delete and prove absence?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle",
+            "browser-build"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "F5 Distributed Cloud: Manage F5 Distributed Cloud contexts and resources through explicit, reviewable manifest operations.",
+      "purpose": "Answer the distinct task or decision described by F5 Distributed Cloud.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "Which resource task do I need?",
+          "readerQuestion": "Which resource task do I need?",
+          "purpose": "Answer this question within F5 Distributed Cloud: Which resource task do I need?.",
+          "evidence": [
+            "source-authority",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/manifest-fundamentals.mdx",
+      "classification": "concept",
+      "audience": "xcsh users",
+      "readerNeed": "Write resource manifests: Represent an F5 Distributed Cloud resource with a stable kind, metadata, and specification.",
+      "purpose": "Answer the distinct task or decision described by Write resource manifests.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "How should I create a starting manifest?",
+          "readerQuestion": "How should I create a starting manifest?",
+          "purpose": "Answer this question within Write resource manifests: How should I create a starting manifest?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "How do I keep a directory deterministic?",
+          "readerQuestion": "How do I keep a directory deterministic?",
+          "purpose": "Answer this question within Write resource manifests: How do I keep a directory deterministic?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/f5-distributed-cloud/validate-diff.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Validate and diff manifests: Catch local schema errors first, then compare desired state with live state.",
+      "purpose": "Answer the distinct task or decision described by Validate and diff manifests.",
+      "sourceAuthority": [
+        "packages/resource-management/src/resource-client.ts",
+        "packages/coding-agent/src/commands",
+        "packages/coding-agent/test/resource-management/integration"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "How do I separate local and live checks?",
+          "readerQuestion": "How do I separate local and live checks?",
+          "purpose": "Answer this question within Validate and diff manifests: How do I separate local and live checks?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "What blocks the next step?",
+          "readerQuestion": "What blocks the next step?",
+          "purpose": "Answer this question within Validate and diff manifests: What blocks the next step?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/getting-started/f5-xc-connection.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Connect to F5 Distributed Cloud: Create and activate a named F5 Distributed Cloud context, then select a namespace.",
+      "purpose": "Answer the distinct task or decision described by Connect to F5 Distributed Cloud.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "scripts/install.sh",
+        ".github/workflows/release-reconcile.yml"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "How do I select the intended context?",
+          "readerQuestion": "How do I select the intended context?",
+          "purpose": "Answer this question within Connect to F5 Distributed Cloud: How do I select the intended context?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "What is safe to test first?",
+          "readerQuestion": "What is safe to test first?",
+          "purpose": "Answer this question within Connect to F5 Distributed Cloud: What is safe to test first?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/getting-started/first-manifest.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Complete your first manifest lifecycle: Validate, compare, apply, inspect, export, and delete a resource manifest.",
+      "purpose": "Answer the distinct task or decision described by Complete your first manifest lifecycle.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "scripts/install.sh",
+        ".github/workflows/release-reconcile.yml"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "live-resource-lifecycle"
+      ],
+      "headings": [
+        {
+          "text": "How do I check a manifest without credentials?",
+          "readerQuestion": "How do I check a manifest without credentials?",
+          "purpose": "Answer this question within Complete your first manifest lifecycle: How do I check a manifest without credentials?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        },
+        {
+          "text": "How do I preview the live change?",
+          "readerQuestion": "How do I preview the live change?",
+          "purpose": "Answer this question within Complete your first manifest lifecycle: How do I preview the live change?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/getting-started/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Getting started: Install xcsh, connect a model and an F5 Distributed Cloud tenant, and complete a safe first workflow.",
+      "purpose": "Answer the distinct task or decision described by Getting started.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "scripts/install.sh",
+        ".github/workflows/release-reconcile.yml"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "What do I need before I begin?",
+          "readerQuestion": "What do I need before I begin?",
+          "purpose": "Answer this question within Getting started: What do I need before I begin?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "Which path matches my goal?",
+          "readerQuestion": "Which path matches my goal?",
+          "purpose": "Answer this question within Getting started: Which path matches my goal?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/getting-started/installation.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Install xcsh: Install a verified xcsh release with Homebrew, apt, the installer, npm or Bun, a standalone binary, or a container.",
+      "purpose": "Answer the distinct task or decision described by Install xcsh.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "scripts/install.sh",
+        ".github/workflows/release-reconcile.yml"
+      ],
+      "evidence": [
+        "source-authority",
+        "installed-release",
+        "candidate-cli",
+        "browser-build"
+      ],
+      "headings": [
+        {
+          "text": "How do I install on Ubuntu or Debian?",
+          "readerQuestion": "How do I install on Ubuntu or Debian?",
+          "purpose": "Answer this question within Install xcsh: How do I install on Ubuntu or Debian?.",
+          "evidence": [
+            "source-authority",
+            "installed-release",
+            "candidate-cli",
+            "browser-build"
+          ]
+        },
+        {
+          "text": "How do I confirm the selected executable?",
+          "readerQuestion": "How do I confirm the selected executable?",
+          "purpose": "Answer this question within Install xcsh: How do I confirm the selected executable?.",
+          "evidence": [
+            "source-authority",
+            "installed-release",
+            "candidate-cli",
+            "browser-build"
+          ]
+        },
+        {
+          "text": "How do I remove it?",
+          "readerQuestion": "How do I remove it?",
+          "purpose": "Answer this question within Install xcsh: How do I remove it?.",
+          "evidence": [
+            "source-authority",
+            "installed-release",
+            "candidate-cli",
+            "browser-build"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/getting-started/model-authentication.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Authenticate a model provider: Configure an API key or supported subscription login without placing credentials in project files.",
+      "purpose": "Answer the distinct task or decision described by Authenticate a model provider.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "scripts/install.sh",
+        ".github/workflows/release-reconcile.yml"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Which authentication method should I choose?",
+          "readerQuestion": "Which authentication method should I choose?",
+          "purpose": "Answer this question within Authenticate a model provider: Which authentication method should I choose?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I select a model explicitly?",
+          "readerQuestion": "How do I select a model explicitly?",
+          "purpose": "Answer this question within Authenticate a model provider: How do I select a model explicitly?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/getting-started/quickstart.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Quickstart: Start an interactive session, inspect the available model, and validate a manifest without tenant credentials.",
+      "purpose": "Answer the distinct task or decision described by Quickstart.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "scripts/install.sh",
+        ".github/workflows/release-reconcile.yml"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I run a bounded first prompt?",
+          "readerQuestion": "How do I run a bounded first prompt?",
+          "purpose": "Answer this question within Quickstart: How do I run a bounded first prompt?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "What should I inspect if the prompt fails?",
+          "readerQuestion": "What should I inspect if the prompt fails?",
+          "purpose": "Answer this question within Quickstart: What should I inspect if the prompt fails?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "xcsh: Independent open-source agentic shell for terminal work and F5 Distributed Cloud workflows.",
+      "purpose": "Answer the distinct task or decision described by xcsh.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "scripts/install.sh",
+        ".github/workflows/release-reconcile.yml"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "browser-build"
+      ],
+      "headings": [
+        {
+          "text": "Where should I start?",
+          "readerQuestion": "Where should I start?",
+          "purpose": "Answer this question within xcsh: Where should I start?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "browser-build"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/interfaces/chrome.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Chrome: Use the xcsh Chrome extension and native host with an isolated automation profile.",
+      "purpose": "Answer the distinct task or decision described by Chrome.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "What is the safe operating boundary?",
+          "readerQuestion": "What is the safe operating boundary?",
+          "purpose": "Answer this question within Chrome: What is the safe operating boundary?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "What is verified here?",
+          "readerQuestion": "What is verified here?",
+          "purpose": "Answer this question within Chrome: What is verified here?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/interfaces/containers.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Containers: Run the published multi-architecture Alpine image with explicit mounts and credentials.",
+      "purpose": "Answer the distinct task or decision described by Containers.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I verify an image?",
+          "readerQuestion": "How do I verify an image?",
+          "purpose": "Answer this question within Containers: How do I verify an image?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "What must remain outside the image?",
+          "readerQuestion": "What must remain outside the image?",
+          "purpose": "Answer this question within Containers: What must remain outside the image?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/interfaces/headless.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Headless modes: Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes.",
+      "purpose": "Answer the distinct task or decision described by Headless modes.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I start with the smallest surface?",
+          "readerQuestion": "How do I start with the smallest surface?",
+          "purpose": "Answer this question within Headless modes: How do I start with the smallest surface?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "When do I use the SDK instead?",
+          "readerQuestion": "When do I use the SDK instead?",
+          "purpose": "Answer this question within Headless modes: When do I use the SDK instead?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/interfaces/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Interfaces: Run xcsh in a terminal, editor, browser, Office task pane, headless process, or container.",
+      "purpose": "Answer the distinct task or decision described by Interfaces.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "browser-build"
+      ],
+      "headings": [
+        {
+          "text": "Which interface fits?",
+          "readerQuestion": "Which interface fits?",
+          "purpose": "Answer this question within Interfaces: Which interface fits?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "browser-build"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/interfaces/office.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Microsoft Office task pane: Serve or sideload the embedded task pane for Excel, Word, and PowerPoint.",
+      "purpose": "Answer the distinct task or decision described by Microsoft Office task pane.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "What must be running?",
+          "readerQuestion": "What must be running?",
+          "purpose": "Answer this question within Microsoft Office task pane: What must be running?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "What is not asserted here?",
+          "readerQuestion": "What is not asserted here?",
+          "purpose": "Answer this question within Microsoft Office task pane: What is not asserted here?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/interfaces/terminal-cli.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Terminal CLI: Choose interactive, print, resume, and deterministic subcommand modes from a shell.",
+      "purpose": "Answer the distinct task or decision described by Terminal CLI.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do the modes differ?",
+          "readerQuestion": "How do the modes differ?",
+          "purpose": "Answer this question within Terminal CLI: How do the modes differ?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/interfaces/vscode.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "VS Code: Use the companion VS Code integration with the same xcsh model and session foundation.",
+      "purpose": "Answer the distinct task or decision described by VS Code.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "What carries over from the terminal?",
+          "readerQuestion": "What carries over from the terminal?",
+          "purpose": "Answer this question within VS Code: What carries over from the terminal?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "What is not asserted here?",
+          "readerQuestion": "What is not asserted here?",
+          "purpose": "Answer this question within VS Code: What is not asserted here?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/troubleshooting-reference/cli-reference.mdx",
+      "classification": "reference",
+      "audience": "xcsh users",
+      "readerNeed": "CLI command and flag reference: Review the current top-level commands, global flags, and resource command patterns.",
+      "purpose": "Answer the distinct task or decision described by CLI command and flag reference.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/config/settings-schema.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Which top-level commands exist?",
+          "readerQuestion": "Which top-level commands exist?",
+          "purpose": "Answer this question within CLI command and flag reference: Which top-level commands exist?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "How do I script a command safely?",
+          "readerQuestion": "How do I script a command safely?",
+          "purpose": "Answer this question within CLI command and flag reference: How do I script a command safely?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/troubleshooting-reference/configuration-schema.mdx",
+      "classification": "reference",
+      "audience": "xcsh users",
+      "readerNeed": "Configuration schema: Navigate the schema-backed settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing.",
+      "purpose": "Answer the distinct task or decision described by Configuration schema.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/config/settings-schema.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "offline-configuration"
+      ],
+      "headings": [
+        {
+          "text": "How do I inspect the effective schema-backed values?",
+          "readerQuestion": "How do I inspect the effective schema-backed values?",
+          "purpose": "Answer this question within Configuration schema: How do I inspect the effective schema-backed values?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        },
+        {
+          "text": "Which source defines a setting?",
+          "readerQuestion": "Which source defines a setting?",
+          "purpose": "Answer this question within Configuration schema: Which source defines a setting?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/troubleshooting-reference/diagnostics.mdx",
+      "classification": "troubleshooting",
+      "audience": "xcsh users",
+      "readerNeed": "Run diagnostics: Collect version, configuration, provider, context, and sandbox evidence without exposing secrets.",
+      "purpose": "Answer the distinct task or decision described by Run diagnostics.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/config/settings-schema.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "The shell cannot find xcsh",
+          "readerQuestion": "What should the reader know about the shell cannot find xcsh?",
+          "purpose": "Answer this question within Run diagnostics: The shell cannot find xcsh.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "A model is unavailable or authentication fails",
+          "readerQuestion": "What should the reader know about a model is unavailable or authentication fails?",
+          "purpose": "Answer this question within Run diagnostics: A model is unavailable or authentication fails.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "A context or resource command fails",
+          "readerQuestion": "What should the reader know about a context or resource command fails?",
+          "purpose": "Answer this question within Run diagnostics: A context or resource command fails.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "A tool or extension fails during startup",
+          "readerQuestion": "What should the reader know about a tool or extension fails during startup?",
+          "purpose": "Answer this question within Run diagnostics: A tool or extension fails during startup.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/troubleshooting-reference/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Troubleshooting and reference: Diagnose installations, providers, contexts, and tools, then consult current command and configuration references.",
+      "purpose": "Answer the distinct task or decision described by Troubleshooting and reference.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/config/settings-schema.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "Where do I look?",
+          "readerQuestion": "Where do I look?",
+          "purpose": "Answer this question within Troubleshooting and reference: Where do I look?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/troubleshooting-reference/slash-commands.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Slash command reference: Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state.",
+      "purpose": "Answer the distinct task or decision described by Slash command reference.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/config/settings-schema.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli"
+      ],
+      "headings": [
+        {
+          "text": "How do I find a command or keybinding?",
+          "readerQuestion": "How do I find a command or keybinding?",
+          "purpose": "Answer this question within Slash command reference: How do I find a command or keybinding?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        },
+        {
+          "text": "Why can the list differ?",
+          "readerQuestion": "Why can the list differ?",
+          "purpose": "Answer this question within Slash command reference: Why can the list differ?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli"
+          ]
+        }
+      ]
+    }
+  ]
+}

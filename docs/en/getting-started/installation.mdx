@@ -6,21 +6,9 @@ sidebar:
   label: "Install xcsh"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Choose one installation channel and keep using that channel for upgrades. Mixing a package-manager installation with a standalone binary makes version diagnosis ambiguous.
 
-Install a verified xcsh release with Homebrew, apt, the installer, npm or Bun, a standalone binary, or a container.
-
-<Tabs syncKey="install-channel">
-  <TabItem label="Homebrew">
-
-```sh
-brew install f5-sales-demo/tap/xcsh
-```
-
-The release workflow builds platform archives, updates the tap, and verifies installation. macOS release binaries are Developer ID signed and notarized.
-
-  </TabItem>
-  <TabItem label="Ubuntu or Debian">
+## How do I install on Ubuntu or Debian?
 
 ```sh
 sudo mkdir -p /etc/apt/keyrings
@@ -29,72 +17,21 @@ curl -fsSL https://f5-sales-demo.github.io/apt-repo/f5xc-archive-keyring.gpg \
 echo "deb [arch=amd64,arm64 signed-by=/etc/apt/keyrings/f5xc-archive-keyring.gpg] https://f5-sales-demo.github.io/apt-repo stable main" \
   | sudo tee /etc/apt/sources.list.d/f5xc.list
 sudo apt-get update
-sudo apt-get install -y xcsh
+sudo apt-get install xcsh
 ```
 
-  </TabItem>
-  <TabItem label="Installer">
+macOS users can run `brew install f5-sales-demo/tap/xcsh`. Release binaries and archives are published on [GitHub Releases](https://github.com/f5-sales-demo/xcsh/releases).
+
+## How do I confirm the selected executable?
 
 ```sh
-curl --proto '=https' --tlsv1.2 -fsSL \
-  https://raw.githubusercontent.com/f5-sales-demo/xcsh/main/scripts/install.sh | sh
+command -v xcsh
+xcsh --version
+xcsh --help
 ```
 
-The default installer downloads the compiled release. Pass `--source` only for the explicit Bun-based development route.
+The version must match the channel you selected. Upgrade with that package manager, or run `xcsh update --check` for an executable release installation.
 
-  </TabItem>
-  <TabItem label="npm or Bun">
+## How do I remove it?
 
-```sh
-npm install --global @f5-sales-demo/xcsh
-# or
-bun install --global @f5-sales-demo/xcsh
-```
-
-  </TabItem>
-  <TabItem label="Release binary">
-
-Download the matching `xcsh-darwin-*`, `xcsh-linux-*`, or `xcsh-windows-x64.exe` asset from the [GitHub releases](https://github.com/f5-sales-demo/xcsh/releases). Prefer the archive when one is published, verify its release provenance, and place the executable on `PATH`.
-
-  </TabItem>
-  <TabItem label="Container">
-
-```sh
-docker pull ghcr.io/f5-sales-demo/xcsh:latest
-docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
-```
-
-Pin a version tag or OCI digest for repeatable deployments.
-
-  </TabItem>
-</Tabs>
-
-<Aside type="note" title="Independent project">xcsh is an independent open-source project. These packages are not an F5 product or an F5-supported software distribution.</Aside>
-
-## Prerequisites
-
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
-
-## Procedure
-
-<Steps>
-
-1. Choose one supported channel from the commands below.
-2. Run `xcsh --version` and `xcsh --help`.
-3. Upgrade through the same channel you used to install.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Quickstart](../quickstart/).
+Use the inverse of the installation channel: `sudo apt-get remove xcsh`, `brew uninstall xcsh`, or remove the exact standalone path returned by `command -v`. User settings and sessions remain under the path reported by `xcsh config path`; remove them separately only if you no longer need them.

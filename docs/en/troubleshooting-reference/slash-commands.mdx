@@ -6,35 +6,12 @@ sidebar:
   label: "Slash command reference"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Slash commands are interactive TUI controls, not shell subcommands. Type `/` to view the registry active in the current session.
 
-Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state.
+## How do I find a command or keybinding?
 
-## Prerequisites
+Run `/help` for categorized commands and `/hotkeys` for the resolved terminal key map. Use `/model`, `/context status`, and `/mcp status` to inspect those subsystems.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## Why can the list differ?
 
-## Procedure
-
-<Steps>
-
-1. Type `/` for completion in the TUI.
-2. Run `/help` for categorized commands.
-3. Use `/hotkeys` for keyboard bindings.
-4. Treat completion and installed help as authoritative for your version.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Keybinding reference](../keybindings/).
+The installed release, current mode, and loaded extensions can change the registry. Runtime completion is therefore canonical; this page intentionally does not freeze a complete list or key table.

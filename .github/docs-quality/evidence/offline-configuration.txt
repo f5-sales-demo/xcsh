@@ -1,0 +1,11 @@
+source_digest: 3b787eb20a910ee5dd92062e03f27ff94151a2ac
+xcsh_version: 21.11.8-candidate
+command: HOME=[disposable] xcsh config path; config list --json; agents unpack --dir [disposable]
+verification_level: executed-offline
+affected_sections: settings, agents, and configuration reference
+exit_status: path=0 config=0 agents=0
+config_path_scope: disposable-home
+config_json_type: object
+config_top_level_count: 233
+agents_written: 7
+cleanup_result: disposable-home-removed

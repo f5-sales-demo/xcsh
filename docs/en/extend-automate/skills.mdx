@@ -6,35 +6,12 @@ sidebar:
   label: "Create and load skills"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+A skill is a directory centered on `SKILL.md`. It tells an agent when and how to perform a bounded kind of work; it is not executable proof by itself.
 
-Package task-specific instructions in `SKILL.md` files at user or project scope.
+## Where do skills live?
 
-## Prerequisites
+Use project scope under `.xcsh/skills/` for repository-specific instructions and user scope under the xcsh data directory for personal skills. Project instructions should be reviewable with the repository.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## How do I test one?
 
-## Procedure
-
-<Steps>
-
-1. Create `.xcsh/skills/<name>/SKILL.md` for project scope or use the user skills directory.
-2. Give the skill a narrow trigger and executable procedure.
-3. Restart or reload xcsh, then confirm discovery.
-4. Filter startup discovery with `--skills` or disable it with `--no-skills`.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Install plugins and marketplaces](../plugins-marketplaces/).
+Start xcsh with `--skills <glob>` to narrow discovery, invoke a prompt that matches the trigger, and inspect the tools and output. Use `--no-skills` to confirm behavior without it.

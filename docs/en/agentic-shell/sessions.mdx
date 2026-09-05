@@ -6,35 +6,16 @@ sidebar:
   label: "Resume and export sessions"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Sessions persist conversation and tool events. Use `--continue` for the latest directory session, `--resume` to select one, and `--fork` to create an independent continuation.
 
-Continue, locate, fork, or export persisted conversations.
+## How do I branch or compact a long conversation?
 
-## Prerequisites
+In the TUI, `/tree` shows the conversation structure, `/branch` or `/fork` creates another path, and `/compact` replaces older context with a summary. Inspect the summary before relying on it.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## How does project memory differ?
 
-## Procedure
+Memory holds durable project facts across sessions; a session holds one conversation history. Start with `--no-memories` when stored context must not influence the run. Keep credentials and transient outputs out of memory files.
 
-<Steps>
+## How do I export a record?
 
-1. Continue the latest directory session with `xcsh --continue`.
-2. Choose a stored session with `xcsh --resume` or provide an ID prefix or path.
-3. Fork without changing the original with `xcsh --fork <session>`.
-4. Export a session file to HTML with `xcsh --export <session.jsonl>`.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Branch and compact conversations](../branching-compaction/).
+Run `xcsh --export <session.jsonl>` to create HTML from a session file. Review the export for sensitive content before sharing it.

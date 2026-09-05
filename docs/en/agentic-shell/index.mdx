@@ -6,39 +6,12 @@ sidebar:
   label: "Overview"
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+The agentic shell alternates model responses with tool calls and stores those events in a session. Start in the directory that defines the task boundary.
 
-Work with the agent loop, terminal UI, tools, sessions, memory, plans, and specialized agents.
+## What should I learn first?
 
-<CardGrid>
-  <Card title="How xcsh works" icon="right-arrow">
-    [Understand how prompts, model turns, tool calls, results, and session entries form the agent loop.](./how-it-works/)
-  </Card>
-  <Card title="Use the interactive TUI" icon="right-arrow">
-    [Navigate the prompt editor, status line, model selector, tool output, and command palette.](./interactive-tui/)
-  </Card>
-  <Card title="Prompt with files and images" icon="right-arrow">
-    [Attach local files to a prompt and keep instructions scoped to the current task.](./prompts-files/)
-  </Card>
-  <Card title="Use built-in tools" icon="right-arrow">
-    [Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries.](./built-in-tools/)
-  </Card>
-  <Card title="Resume and export sessions" icon="right-arrow">
-    [Continue, locate, fork, or export persisted conversations.](./sessions/)
-  </Card>
-  <Card title="Branch and compact conversations" icon="right-arrow">
-    [Explore alternatives while retaining history and reclaim context when a session grows.](./branching-compaction/)
-  </Card>
-  <Card title="Manage project memory" icon="right-arrow">
-    [Load and maintain durable task context while keeping transient or sensitive data out of memory files.](./memory/)
-  </Card>
-  <Card title="Plan complex work" icon="right-arrow">
-    [Separate exploration and decisions from implementation with xcsh planning controls.](./planning/)
-  </Card>
-  <Card title="Use task agents" icon="right-arrow">
-    [Run specialized agents and install editable agent definitions at user or project scope.](./agents/)
-  </Card>
-  <Card title="Common agentic workflows" icon="right-arrow">
-    [Apply repeatable patterns for code review, troubleshooting, research, and F5 Distributed Cloud changes.](./common-workflows/)
-  </Card>
-</CardGrid>
+- [How the loop works](./how-it-works/)
+- [Interactive prompts and files](./interactive-tui/)
+- [Built-in tool boundaries](./built-in-tools/)
+- [Sessions, forks, compaction, and memory](./sessions/)
+- [Planning and specialized agents](./planning/)

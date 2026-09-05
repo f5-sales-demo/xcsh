@@ -6,35 +6,18 @@ sidebar:
   label: "Understand settings precedence"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Project settings apply to one repository; user settings apply across projects; command flags override both for one invocation. Use `xcsh config list --json` to inspect effective values.
 
-Predict which user, project, environment, and command-line value xcsh resolves.
+## Where are settings stored?
 
-## Prerequisites
+Run `xcsh config path` instead of assuming a platform path. Project data uses `.xcsh/`, including `settings.json`, `mcp.json`, contexts, skills, agents, extensions, tools, hooks, commands, and `XCSH.md`. Primary user data lives under the xcsh agent directory; `PI_CODING_AGENT_DIR` can override that location.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## How do I change one value?
 
-## Procedure
+```sh
+xcsh config get <key>
+xcsh config set <key> <value>
+xcsh config reset <key>
+```
 
-<Steps>
-
-1. Inspect effective values with `xcsh config list` or `xcsh config get <key>`.
-2. Use project `.xcsh/settings.json` for shareable project behavior and user settings for personal defaults.
-3. Apply environment or CLI overrides for a single execution.
-4. Record security-relevant exceptions next to the scope that requires them.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Configure providers and model routing](../providers-routing/).
+Use environment variables for credentials and ephemeral process configuration. Do not copy an entire old settings file when only one key is needed.

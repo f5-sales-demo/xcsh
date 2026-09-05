@@ -1,0 +1,15 @@
+source_digest: 3b787eb20a910ee5dd92062e03f27ff94151a2ac
+xcsh_version: 21.11.8-candidate
+command: sha256sum selected source authorities; inspect command, schema, integration, and interface sources
+exit_status: 0
+verification_level: source-inspected
+cleanup_result: not-required
+affected_sections: all conceptual and source-verified interface sections
+f273148e548247a404ce8b588ba74273d25c480c705c74dc9c820bfda246f03b  packages/coding-agent/src/cli.ts
+f7fb1dbaecd9d79d63f597e0df4272251970f138f1f6744f5d6cf793b88372fc  packages/coding-agent/src/commands/resource-flags.ts
+f4d08eb5d2932ea8698a525b0be00f7e7962d298e31ac74844f247c2d8a9e076  packages/coding-agent/src/config/settings-schema.ts
+2d1bf590b71c078dddf0df843c90b64a2a279f5155e9ca8bdb578e9fac361046  packages/coding-agent/src/services/xcsh-context.ts
+a8019f109c1b3c0cb10f75bcb72a06e083f9416472f19d7ba5110e04b807050e  packages/resource-management/src/resource-client.ts
+3fe9ded170466c466a3c682e63c983ab469b859a614fac94c06e915cfee2a466  packages/coding-agent/test/resource-management/integration/00-healthcheck.integration.test.ts
+2b8a86b675182e24ba5d9b7a8bd13d120d5b2acf020fbe2dffa7a90d4b29583a  packages/office-pane/package.json
+eb7e9470056c47354aad0a4bdaa3b8494916a4816a6a1729ee55895b910fcd88  -

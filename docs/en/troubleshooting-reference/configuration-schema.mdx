@@ -6,39 +6,17 @@ sidebar:
   label: "Configuration schema"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+The schema groups settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing. It evolves with the executable.
 
-Navigate the schema-backed settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing.
+## How do I inspect the effective schema-backed values?
 
-The schema groups interactive settings under Appearance, Model, Interaction, Context, Editing, Tools, Tasks, Providers, and Sandbox. Important families include `theme.*`, model roles and provider order, compaction, status-line segments, tool configuration, task concurrency, and `sandbox.allowRead`/`sandbox.allowWrite`.
+```sh
+xcsh config list --json
+xcsh config get <key>
+```
 
-Because the schema evolves, generate the exact effective inventory from the installed executable instead of copying an old example wholesale.
+Use `xcsh config set <key> <value>` only for a key present in the installed schema. Reset one key with `xcsh config reset <key>` rather than copying defaults from another release.
 
-## Prerequisites
+## Which source defines a setting?
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
-
-## Procedure
-
-<Steps>
-
-1. Run `xcsh config list --json` for effective values.
-2. Read a value with `xcsh config get <key>`.
-3. Write a supported value with `xcsh config set <key> <value>`.
-4. Use `xcsh config reset <key>` to return to the schema default.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [File locations](../file-locations/).
+The settings schema and its tests in the matching source release define type, default, and validation. Effective output defines the value after precedence is applied.

@@ -6,30 +6,12 @@ sidebar:
   label: "Overview"
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+The resource commands separate local validation, live comparison, mutation, retrieval, and cleanup. Keep those stages separate so a credentialed command is deliberate.
 
-Manage F5 Distributed Cloud contexts and resources through explicit, reviewable manifest operations.
+## Which resource task do I need?
 
-<CardGrid>
-  <Card title="Manage contexts and namespaces" icon="right-arrow">
-    [Store named tenant connections, activate the intended context, and scope operations to a namespace.](./contexts-namespaces/)
-  </Card>
-  <Card title="Write resource manifests" icon="right-arrow">
-    [Represent an F5 Distributed Cloud resource with a stable kind, metadata, and specification.](./manifest-fundamentals/)
-  </Card>
-  <Card title="Validate and diff manifests" icon="right-arrow">
-    [Catch local schema errors first, then compare desired state with live state.](./validate-diff/)
-  </Card>
-  <Card title="Create, apply, and update resources" icon="right-arrow">
-    [Choose strict creation, convergent apply, or explicit update for a reviewed manifest.](./create-apply-update/)
-  </Card>
-  <Card title="Get, export, and delete resources" icon="right-arrow">
-    [Inspect live resources, produce portable manifests, and perform deliberate deletion.](./get-export-delete/)
-  </Card>
-  <Card title="Understand the API catalog" icon="right-arrow">
-    [See how xcsh resolves resource kinds and validation metadata from its packaged F5 Distributed Cloud catalog.](./api-catalog/)
-  </Card>
-  <Card title="Automate the F5 console in Chrome" icon="right-arrow">
-    [Connect xcsh to its isolated Chrome profile for browser-assisted console workflows.](./console-automation/)
-  </Card>
-</CardGrid>
+- [Choose context and namespace](./contexts-namespaces/) before a live request.
+- [Find a kind in the catalog](./api-catalog/) and build a [manifest](./manifest-fundamentals/).
+- [Validate and diff](./validate-diff/) before [create, apply, or update](./create-apply-update/).
+- [Get, export, or delete](./get-export-delete/) existing resources.
+- Use [console automation](./console-automation/) only for a supported interface task that has no resource-command equivalent.

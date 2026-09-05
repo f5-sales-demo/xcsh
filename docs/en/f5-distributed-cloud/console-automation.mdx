@@ -6,35 +6,12 @@ sidebar:
   label: "Automate the F5 console in Chrome"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Console automation drives a browser session through xcsh. Use deterministic resource commands when they cover the task; browser state and page structure make console workflows more fragile.
 
-Connect xcsh to its isolated Chrome profile for browser-assisted console workflows.
+## How do I inspect the Chrome session?
 
-## Prerequisites
+Run `xcsh chrome --help`, then use the supported session inspection or arrangement action shown by the installed version. Keep the browser profile dedicated to authorized lab work.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## What counts as evidence?
 
-## Procedure
-
-<Steps>
-
-1. Run `xcsh chrome setup` and follow the native-host installation prompts.
-2. Check the bridge with `xcsh chrome status`.
-3. Start xcsh and use the browser tool for an explicitly authorized console task.
-4. Use `xcsh chrome relaunch` or `xcsh chrome recycle` when the managed profile becomes stale.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Return to the section overview and choose the next task that matches your workflow.
+Record the page URL, visible control or result, browser action, and cleanup state without capturing tokens or tenant identifiers. If the interface cannot be exercised, document only source-verified capability and omit procedural success claims.

@@ -6,37 +6,12 @@ sidebar:
   label: "Manage contexts and namespaces"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+A context chooses the tenant endpoint and credential. A namespace chooses the resource scope inside that tenant. They are separate decisions.
 
-Store named tenant connections, activate the intended context, and scope operations to a namespace.
+## How do I prevent a scope mistake?
 
-<Aside type="caution" title="Confirm scope before mutation">A context selects credentials and an API endpoint. A namespace narrows the resource scope. Inspect both immediately before `create`, `apply`, `update`, or `delete`.</Aside>
+Launch with `xcsh --context <name>` and inspect `/context status`. For automation, pass `-n <namespace>` to the resource command instead of relying on ambient state. Stop if either value is unexpected.
 
-## Prerequisites
+## Where is context data stored?
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
-
-## Procedure
-
-<Steps>
-
-1. Use `/context create`, `/context list`, and `/context activate` in the interactive shell.
-2. Inspect the active API URL and namespace with `/context status` before mutation.
-3. Override the namespace per resource command with `-n` when necessary.
-4. Export contexts without tokens by default; treat `--include-token` output as secret material.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Write resource manifests](../manifest-fundamentals/).
+Context files live under `.xcsh/contexts/` at project scope or the xcsh user data directory. Never commit them: they can contain credentials and tenant identifiers.

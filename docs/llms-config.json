@@ -16,7 +16,7 @@
     },
     {
       "label": "Agentic shell",
-      "description": "Work with the agent loop, terminal UI, tools, sessions, memory, plans, and specialized agents.",
+      "description": "Use the agent loop, terminal UI, tools, sessions, planning, and specialized agents.",
       "paths": [
         "agentic-shell/**"
       ]
@@ -37,7 +37,7 @@
     },
     {
       "label": "Configure and secure",
-      "description": "Control settings, providers, credentials, networking, secrets, sandboxing, and enterprise deployment.",
+      "description": "Control settings, providers, credentials, networking, secrets, and filesystem boundaries.",
       "paths": [
         "configure-secure/**"
       ]
@@ -59,42 +59,31 @@
   ],
   "promote": [
     "index*",
-    "getting-started/overview*",
+    "getting-started/index*",
     "getting-started/installation*",
     "getting-started/quickstart*",
     "getting-started/model-authentication*",
     "getting-started/f5-xc-connection*",
     "f5-distributed-cloud/manifest-fundamentals*",
     "f5-distributed-cloud/validate-diff*",
-    "configure-secure/authentication*",
-    "configure-secure/sandbox-filesystem*",
+    "configure-secure/providers-routing*",
+    "configure-secure/secrets*",
     "troubleshooting-reference/diagnostics*"
   ],
   "demote": [
-    "architecture-contribution/native-rust-layer*",
     "architecture-contribution/build-release*",
-    "architecture-contribution/coverage-matrix*"
+    "architecture-contribution/upstream-pi*"
   ],
   "exclude": [
     "architecture-contribution/**",
-    "agentic-shell/branching-compaction*",
-    "agentic-shell/common-workflows*",
-    "agentic-shell/memory*",
     "agentic-shell/planning*",
     "extend-automate/extensions-custom-tools*",
-    "extend-automate/hooks-rules*",
-    "extend-automate/json-rpc-acp*",
     "extend-automate/sdk*",
-    "extend-automate/worker-manager*",
     "interfaces/chrome*",
     "interfaces/office*",
     "interfaces/vscode*",
     "troubleshooting-reference/cli-reference*",
     "troubleshooting-reference/configuration-schema*",
-    "troubleshooting-reference/file-locations*",
-    "troubleshooting-reference/glossary*",
-    "troubleshooting-reference/keybindings*",
-    "troubleshooting-reference/slash-commands*",
-    "troubleshooting-reference/tool-catalog*"
+    "troubleshooting-reference/slash-commands*"
   ]
 }

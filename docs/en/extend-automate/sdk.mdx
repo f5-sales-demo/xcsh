@@ -6,35 +6,12 @@ sidebar:
   label: "Embed xcsh with the SDK"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+The coding-agent SDK embeds session creation, provider streaming, and tool registration. Use it when a host application needs in-memory control rather than a child-process transcript.
 
-Create sessions and tools programmatically through the coding-agent package.
+## Which automation boundary should I choose?
 
-## Prerequisites
+Use `--mode json`, `rpc`, or `acp` for a process boundary. Use the SDK for direct TypeScript integration. Use `xcsh worker` for a headless extension bridge and `xcsh manager` for the detached control server that spawns and reaps workers.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## How do I keep the integration testable?
 
-## Procedure
-
-<Steps>
-
-1. Install the package version that matches your runtime.
-2. Import the public SDK surface rather than internal modules.
-3. Provide explicit working directory, model, tools, and session behavior.
-4. Dispose long-running resources and handle provider/tool errors.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Use JSON, RPC, and ACP modes](../json-rpc-acp/).
+Pin the package version, record protocol fixtures, close sessions and workers explicitly, and assert both final messages and tool events. Treat undocumented internal modules as unstable.

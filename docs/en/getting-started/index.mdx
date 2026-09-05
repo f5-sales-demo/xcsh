@@ -6,33 +6,15 @@ sidebar:
   label: "Overview"
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+Use this section to reach the first useful command without configuring every optional integration.
 
-Install xcsh, connect a model and an F5 Distributed Cloud tenant, and complete a safe first workflow.
+## What do I need before I begin?
 
-<CardGrid>
-  <Card title="Choose your xcsh workflow" icon="right-arrow">
-    [Choose an installation, interface, and first task without changing a tenant.](./overview/)
-  </Card>
-  <Card title="Install xcsh" icon="right-arrow">
-    [Install a verified xcsh release with Homebrew, apt, the installer, npm or Bun, a standalone binary, or a container.](./installation/)
-  </Card>
-  <Card title="Quickstart" icon="right-arrow">
-    [Start an interactive session, inspect the available model, and validate a manifest without tenant credentials.](./quickstart/)
-  </Card>
-  <Card title="Authenticate a model provider" icon="right-arrow">
-    [Configure an API key or supported subscription login without placing credentials in project files.](./model-authentication/)
-  </Card>
-  <Card title="Connect to F5 Distributed Cloud" icon="right-arrow">
-    [Create and activate a named F5 Distributed Cloud context, then select a namespace.](./f5-xc-connection/)
-  </Card>
-  <Card title="Complete your first manifest lifecycle" icon="right-arrow">
-    [Validate, compare, apply, inspect, export, and delete a resource manifest.](./first-manifest/)
-  </Card>
-  <Card title="Update xcsh" icon="right-arrow">
-    [Check for and install updates without confusing executable updates with resource updates.](./updates/)
-  </Card>
-  <Card title="Uninstall xcsh" icon="right-arrow">
-    [Remove the executable installed by your package channel and decide whether to retain user data.](./uninstall/)
-  </Card>
-</CardGrid>
+You need a supported xcsh build and one model provider. F5 Distributed Cloud credentials are needed only for live resource commands; local manifest validation works without them.
+
+## Which path matches my goal?
+
+1. [Install, update, or remove xcsh](./installation/).
+2. [Authenticate a model](./model-authentication/).
+3. Run the [general quickstart](./quickstart/) or connect an [F5 Distributed Cloud context](./f5-xc-connection/).
+4. Use [your first manifest](./first-manifest/) only when you intend to manage F5 Distributed Cloud resources.
