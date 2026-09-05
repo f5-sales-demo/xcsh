@@ -4,7 +4,7 @@ command: production docs-builder container; builder Chromium 152 headless screen
 exit_status: 0
 verification_level: browser-observed
 cleanup_result: temporary-browser-artifacts-removed
-affected_sections: docs/en/index.mdx; docs/en/getting-started/installation.mdx; docs/en/f5-distributed-cloud/get-export-delete.mdx; docs/en/interfaces/index.mdx
+affected_sections: docs/en/index.mdx; docs/en/getting-started/installation.mdx; docs/en/f5-distributed-cloud/get-export-delete.mdx; docs/en/integrations-deployment/index.mdx
 builder_image: ghcr.io/f5-sales-demo/docs-builder@sha256:06be6f363e32f8b78898f4f4bdcb1ef86f698073c68a77701327e78611af2bce
 build_pages: 625
 build_files: 1471

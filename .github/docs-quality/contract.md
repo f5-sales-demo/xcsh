@@ -68,6 +68,16 @@ Terminal, offline configuration, and resource commands can be procedural when th
 
 English source stays exclusively under `docs/en/`. Keep `docs/llms-config.json` at the docs root with locale-relative selectors. Do not author translated copies or change translation release policy as part of an English content correction. Use short sentences, explicit nouns, stable terminology, and examples that do not rely on wordplay.
 
+## Preserve legacy knowledge explicitly
+
+`legacy-concepts.json` freezes the pre-#3669 English corpus at commit `95c019fa60c8a8242482b18c45844ec73784ee11` and tree `89566cca8d13cd69fb8af9ee017e9860d303b2f2`. Each legacy H2 is one knowledge unit; its dependent H3 material belongs to the same unit.
+
+Inventory schema v2 assigns every stable concept ID to exactly one current page heading. A concept records its reader question, concise knowledge summary, disposition, destination, current authorities, and evidence identifiers.
+
+`corrected` and `superseded` records also explain why the legacy statement is no longer presented as current behavior. The ledger is an audit input, not published legacy prose and not a compatibility route.
+
+The checker rejects baseline drift, missing or duplicate IDs, unknown mappings, stale pages or headings, absent current authority, missing evidence, and an unexplained correction or supersession.
+
 ## Automated rejection rules
 
 Run:

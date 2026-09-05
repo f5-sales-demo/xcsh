@@ -446,7 +446,7 @@ export function getExtraHelpText(): string {
   PI_NO_PTY                  - Disable PTY-based interactive bash execution
 
   For complete environment variable reference, see:
-  ${chalk.dim("docs/environment-variables.md")}
+  ${chalk.dim("docs/en/configure-secure/environment-reference.mdx")}
 ${chalk.bold("Available Tools (default-enabled unless noted):")}
   read          - Read file contents
   bash          - Execute bash commands

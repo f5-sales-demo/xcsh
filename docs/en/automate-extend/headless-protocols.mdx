@@ -1,0 +1,21 @@
+---
+title: "Headless modes"
+description: "Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes."
+sidebar:
+  order: 1
+  label: "Headless modes"
+---
+
+Headless integrations select `json`, `rpc`, or `acp` with `--mode`. Each mode has a different framing contract; consumers must parse that protocol rather than decorated terminal text.
+
+## How do I start with the smallest surface?
+
+```sh
+xcsh --mode json --no-session --no-tools -p "Return one sentence"
+```
+
+Capture stdout as protocol data and stderr as diagnostics. Pin the xcsh version in automation and test framing against the exact release.
+
+## When do I use the SDK instead?
+
+Use the SDK when the host process needs in-memory session control, tool registration, or provider events. See [SDK automation](/xcsh/en/automate-extend/sdk/).

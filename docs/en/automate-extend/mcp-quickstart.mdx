@@ -1,0 +1,17 @@
+---
+title: "Connect an MCP server"
+description: "Add a local stdio or remote HTTP/SSE Model Context Protocol server."
+sidebar:
+  order: 7
+  label: "Connect an MCP server"
+---
+
+MCP connects xcsh to out-of-process servers that expose tools, resources, or prompts. Configure only servers you trust to receive the data sent in their calls.
+
+## Where is MCP configured?
+
+Use `.xcsh/mcp.json` for project scope. Keep credentials in referenced environment variables or a secret manager, not in the committed file.
+
+## How do I isolate MCP behavior?
+
+Start with one server, inspect `/mcp status`, and invoke one read-only operation. Run the same prompt with `--no-mcp` to distinguish MCP failure from the model or built-in tools.

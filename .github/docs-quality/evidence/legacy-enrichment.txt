@@ -1,0 +1,418 @@
+source_commit: a01c8ffb471c525088ef99296f50e958d51ae835
+source_tree_with_changes: 62045e8c5a4bdf9a98a7ff5c1c6271323e99e89b
+bun_version: 1.3.14
+installed_xcsh: xcsh/21.11.8
+
+command: bun packages/coding-agent/src/cli.ts --version
+xcsh/21.11.8
+
+command: bun packages/coding-agent/src/cli.ts --help
+xcsh v21.11.8
+
+USAGE
+  $ xcsh [COMMAND]
+
+ARGUMENTS
+  MESSAGES   Messages to send (prefix files with @)
+
+FLAGS
+      --model=<value>                 Model to use (fuzzy match: "opus", "gpt-5.2", or "p-openai/gpt-5.2")
+      --smol=<value>                  Smol/fast model for lightweight tasks (or PI_SMOL_MODEL env)
+      --slow=<value>                  Slow/reasoning model for thorough analysis (or PI_SLOW_MODEL env)
+      --plan=<value>                  Plan model for architectural planning (or PI_PLAN_MODEL env)
+      --provider=<value>              Provider to use (legacy; prefer --model)
+      --context=<value>               Bind this session to a named F5 XC context
+      --api-key=<value>               API key (defaults to env vars)
+      --system-prompt=<value>         System prompt (default: coding assistant prompt)
+      --append-system-prompt=<value>  Append text or file contents to the system prompt
+      --allow-home                    Allow starting in ~ without auto-switching to a temp dir
+      --no-sandbox                    Disable the session filesystem discovery guard
+      --allow-path=<value>            Allow directory discovery at an additional path (repeatable)
+      --mode=<value>                  Output mode: text (default), json, rpc, or acp
+  -p, --print                         Non-interactive mode: process prompt and exit
+  -c, --continue                      Continue previous session
+  -r, --resume=<value>                Resume a session (by ID prefix, path, or picker if omitted)
+      --fork=<value>                  Fork an existing session by ID prefix or path
+      --session-dir=<value>           Directory for session storage and lookup
+      --no-session                    Don't save session (ephemeral)
+      --no-memories                   Disable project memory loading and maintenance
+      --models=<value>                Comma-separated model patterns for Ctrl+P cycling
+      --no-tools                      Disable all built-in tools
+      --no-mcp                        Disable MCP server discovery and tools
+      --no-lsp                        Disable LSP tools, formatting, and diagnostics
+      --no-pty                        Disable PTY-based interactive bash execution
+      --tools=<value>                 Comma-separated list of tools to enable (default: all)
+      --thinking=<value>              Set thinking level: minimal, low, medium, high, xhigh, max
+      --hook=<value>                  Load a hook/extension file (can be used multiple times)
+  -e, --extension=<value>             Load an extension file (can be used multiple times)
+      --plugin-dir=<value>            Load plugin from directory (repeatable)
+      --no-extensions                 Disable extension discovery (explicit -e paths still work)
+      --no-skills                     Disable skills discovery and loading
+      --skills=<value>                Comma-separated glob patterns to filter skills (e.g., git-*,docker)
+      --no-rules                      Disable rules discovery and loading
+      --export=<value>                Export session file to HTML and exit
+      --list-models=<value>           List available models (with optional fuzzy search)
+      --no-title                      Disable title auto-generation
+
+EXAMPLES
+  # Interactive mode
+    xcsh
+  # Interactive mode with initial prompt
+    xcsh "List all .ts files in src/"
+  # Include files in initial message
+    xcsh @prompt.md @image.png "What color is the sky?"
+  # Non-interactive mode (process and exit)
+    xcsh -p "List all .ts files in src/"
+  # Continue previous session
+    xcsh --continue "What did we discuss?"
+  # Use different model (fuzzy matching)
+    xcsh --model opus "Help me refactor this code"
+  # Limit model cycling to specific models
+    xcsh --models claude-sonnet,claude-haiku,gpt-4o
+  # Export a session file to HTML
+    xcsh --export ~/.xcsh/agent/sessions/--path--/session.jsonl
+
+COMMANDS
+  agents       Manage bundled task agents
+  apply        Apply manifests by creating, updating, or preserving resources
+  chrome       Inspect or arrange the Chrome session xcsh drives for console automation
+  chrome-host  Native-messaging relay between Chrome and the xcsh manager socket (internal)
+  commit       Generate a commit message and update changelogs
+  config       Manage configuration settings
+  create       Create resources from manifests and fail if they already exist
+  delete       Delete resources identified by manifests or kind and name
+  diff         Compare manifests with live resources without mutation
+  export       Export live resources as manifests
+  get          Get or list live resources
+  grep         Test grep tool
+  grievances   View reported tool issues (auto-QA grievances)
+  herdr        Launch xcsh in a conversation-owned Herdr workspace
+
+command: bun packages/coding-agent/src/cli.ts config --help
+Manage configuration settings
+
+USAGE
+  $ xcsh config [ACTION] [KEY] [VALUE] [FLAGS]
+
+ARGUMENTS
+  ACTION   Config action (list|get|set|reset|path|init-xdg)
+  KEY      Setting key
+  VALUE    Value (for set/reset)
+
+FLAGS
+      --json  Output JSON
+
+command: bun packages/coding-agent/src/cli.ts mcp --help
+AI coding assistant
+
+USAGE
+  $ xcsh launch [MESSAGES] [FLAGS]
+
+ARGUMENTS
+  MESSAGES   Messages to send (prefix files with @)
+
+FLAGS
+      --model=<value>                 Model to use (fuzzy match: "opus", "gpt-5.2", or "p-openai/gpt-5.2")
+      --smol=<value>                  Smol/fast model for lightweight tasks (or PI_SMOL_MODEL env)
+      --slow=<value>                  Slow/reasoning model for thorough analysis (or PI_SLOW_MODEL env)
+      --plan=<value>                  Plan model for architectural planning (or PI_PLAN_MODEL env)
+      --provider=<value>              Provider to use (legacy; prefer --model)
+      --context=<value>               Bind this session to a named F5 XC context
+      --api-key=<value>               API key (defaults to env vars)
+      --system-prompt=<value>         System prompt (default: coding assistant prompt)
+      --append-system-prompt=<value>  Append text or file contents to the system prompt
+      --allow-home                    Allow starting in ~ without auto-switching to a temp dir
+      --no-sandbox                    Disable the session filesystem discovery guard
+      --allow-path=<value>            Allow directory discovery at an additional path (repeatable)
+      --mode=<value>                  Output mode: text (default), json, rpc, or acp
+  -p, --print                         Non-interactive mode: process prompt and exit
+  -c, --continue                      Continue previous session
+  -r, --resume=<value>                Resume a session (by ID prefix, path, or picker if omitted)
+      --fork=<value>                  Fork an existing session by ID prefix or path
+      --session-dir=<value>           Directory for session storage and lookup
+      --no-session                    Don't save session (ephemeral)
+      --no-memories                   Disable project memory loading and maintenance
+      --models=<value>                Comma-separated model patterns for Ctrl+P cycling
+      --no-tools                      Disable all built-in tools
+      --no-mcp                        Disable MCP server discovery and tools
+      --no-lsp                        Disable LSP tools, formatting, and diagnostics
+      --no-pty                        Disable PTY-based interactive bash execution
+      --tools=<value>                 Comma-separated list of tools to enable (default: all)
+      --thinking=<value>              Set thinking level: minimal, low, medium, high, xhigh, max
+      --hook=<value>                  Load a hook/extension file (can be used multiple times)
+  -e, --extension=<value>             Load an extension file (can be used multiple times)
+      --plugin-dir=<value>            Load plugin from directory (repeatable)
+      --no-extensions                 Disable extension discovery (explicit -e paths still work)
+      --no-skills                     Disable skills discovery and loading
+      --skills=<value>                Comma-separated glob patterns to filter skills (e.g., git-*,docker)
+      --no-rules                      Disable rules discovery and loading
+      --export=<value>                Export session file to HTML and exit
+      --list-models=<value>           List available models (with optional fuzzy search)
+      --no-title                      Disable title auto-generation
+
+EXAMPLES
+  # Interactive mode
+    xcsh
+  # Interactive mode with initial prompt
+    xcsh "List all .ts files in src/"
+  # Include files in initial message
+    xcsh @prompt.md @image.png "What color is the sky?"
+  # Non-interactive mode (process and exit)
+    xcsh -p "List all .ts files in src/"
+  # Continue previous session
+    xcsh --continue "What did we discuss?"
+  # Use different model (fuzzy matching)
+    xcsh --model opus "Help me refactor this code"
+  # Limit model cycling to specific models
+    xcsh --models claude-sonnet,claude-haiku,gpt-4o
+  # Export a session file to HTML
+    xcsh --export ~/.xcsh/agent/sessions/--path--/session.jsonl
+
+command: bun packages/coding-agent/src/cli.ts sessions --help
+AI coding assistant
+
+USAGE
+  $ xcsh launch [MESSAGES] [FLAGS]
+
+ARGUMENTS
+  MESSAGES   Messages to send (prefix files with @)
+
+FLAGS
+      --model=<value>                 Model to use (fuzzy match: "opus", "gpt-5.2", or "p-openai/gpt-5.2")
+      --smol=<value>                  Smol/fast model for lightweight tasks (or PI_SMOL_MODEL env)
+      --slow=<value>                  Slow/reasoning model for thorough analysis (or PI_SLOW_MODEL env)
+      --plan=<value>                  Plan model for architectural planning (or PI_PLAN_MODEL env)
+      --provider=<value>              Provider to use (legacy; prefer --model)
+      --context=<value>               Bind this session to a named F5 XC context
+      --api-key=<value>               API key (defaults to env vars)
+      --system-prompt=<value>         System prompt (default: coding assistant prompt)
+      --append-system-prompt=<value>  Append text or file contents to the system prompt
+      --allow-home                    Allow starting in ~ without auto-switching to a temp dir
+      --no-sandbox                    Disable the session filesystem discovery guard
+      --allow-path=<value>            Allow directory discovery at an additional path (repeatable)
+      --mode=<value>                  Output mode: text (default), json, rpc, or acp
+  -p, --print                         Non-interactive mode: process prompt and exit
+  -c, --continue                      Continue previous session
+  -r, --resume=<value>                Resume a session (by ID prefix, path, or picker if omitted)
+      --fork=<value>                  Fork an existing session by ID prefix or path
+      --session-dir=<value>           Directory for session storage and lookup
+      --no-session                    Don't save session (ephemeral)
+      --no-memories                   Disable project memory loading and maintenance
+      --models=<value>                Comma-separated model patterns for Ctrl+P cycling
+      --no-tools                      Disable all built-in tools
+      --no-mcp                        Disable MCP server discovery and tools
+      --no-lsp                        Disable LSP tools, formatting, and diagnostics
+      --no-pty                        Disable PTY-based interactive bash execution
+      --tools=<value>                 Comma-separated list of tools to enable (default: all)
+      --thinking=<value>              Set thinking level: minimal, low, medium, high, xhigh, max
+      --hook=<value>                  Load a hook/extension file (can be used multiple times)
+  -e, --extension=<value>             Load an extension file (can be used multiple times)
+      --plugin-dir=<value>            Load plugin from directory (repeatable)
+      --no-extensions                 Disable extension discovery (explicit -e paths still work)
+      --no-skills                     Disable skills discovery and loading
+      --skills=<value>                Comma-separated glob patterns to filter skills (e.g., git-*,docker)
+      --no-rules                      Disable rules discovery and loading
+      --export=<value>                Export session file to HTML and exit
+      --list-models=<value>           List available models (with optional fuzzy search)
+      --no-title                      Disable title auto-generation
+
+EXAMPLES
+  # Interactive mode
+    xcsh
+  # Interactive mode with initial prompt
+    xcsh "List all .ts files in src/"
+  # Include files in initial message
+    xcsh @prompt.md @image.png "What color is the sky?"
+  # Non-interactive mode (process and exit)
+    xcsh -p "List all .ts files in src/"
+  # Continue previous session
+    xcsh --continue "What did we discuss?"
+  # Use different model (fuzzy matching)
+    xcsh --model opus "Help me refactor this code"
+  # Limit model cycling to specific models
+    xcsh --models claude-sonnet,claude-haiku,gpt-4o
+  # Export a session file to HTML
+    xcsh --export ~/.xcsh/agent/sessions/--path--/session.jsonl
+
+command: focused candidate workflow tests
+bun test v1.3.14 (0d9b296a)
+
+packages/coding-agent/test/extensions-discovery.test.ts:
+(pass) extensions discovery > discovers direct .ts files in extensions/ [437.06ms]
+(pass) extensions discovery > discovers direct .js files in extensions/ [2.26ms]
+(pass) extensions discovery > discovers subdirectory with index.ts [2.11ms]
+(pass) extensions discovery > discovers subdirectory with index.js [1.74ms]
+(pass) extensions discovery > prefers index.ts over index.js [15.68ms]
+(pass) extensions discovery > discovers subdirectory with package.json pi field [1.69ms]
+(pass) extensions discovery > package.json can declare multiple extensions [1.58ms]
+(pass) extensions discovery > package.json with pi field takes precedence over index.ts [1.43ms]
+(pass) extensions discovery > ignores package.json without pi field, falls back to index.ts [1.28ms]
+(pass) extensions discovery > ignores subdirectory without index or package.json [1.01ms]
+(pass) extensions discovery > does not recurse beyond one level [1.09ms]
+(pass) extensions discovery > handles mixed direct files and subdirectories [1.87ms]
+(pass) extensions discovery > skips non-existent paths declared in package.json [1.38ms]
+(pass) extensions discovery > loads extensions and registers commands [1.08ms]
+(pass) extensions discovery > loads extensions and registers tools [3.33ms]
+(pass) extensions discovery > reports errors for invalid extension code [1.23ms]
+(pass) extensions discovery > handles explicitly configured paths [1.30ms]
+✓ chalk-logger extension loaded
+(pass) extensions discovery > resolves 3rd party npm dependencies (chalk) [1.60ms]
+(pass) extensions discovery > resolves dependencies from extension's own node_modules [1.94ms]
+(pass) extensions discovery > registers message renderers [1.13ms]
+(pass) extensions discovery > reports error when extension throws during initialization [1.15ms]
+(pass) extensions discovery > reports error when extension has no default export [0.99ms]
+(pass) extensions discovery > allows multiple extensions to register different tools [1.31ms]
+(pass) extensions discovery > loads extension with event handlers [1.04ms]
+(pass) extensions discovery > loads extension with shortcuts [3.77ms]
+(pass) extensions discovery > loads extension with flags [1.87ms]
+(pass) extensions discovery > loadExtensions only loads explicit paths without discovery [0.47ms]
+(pass) extensions discovery > loadExtensions with no paths loads nothing [0.21ms]
+
+packages/coding-agent/test/tui-tree-list-collapsed-lines.test.ts:
+(pass) renderTreeList maxCollapsedLines > skips oversized first item instead of rendering broken fragments [0.32ms]
+(pass) renderTreeList maxCollapsedLines > counts the summary row inside the collapsed line budget [0.13ms]
+(pass) renderTreeList maxCollapsedLines > does not cap lines in expanded mode [0.10ms]
+(pass) renderTreeList maxCollapsedLines > shows correct remaining count when multiple items are hidden [0.10ms]
+(pass) renderTreeList maxCollapsedLines > renders all items when total lines fit within budget [0.05ms]
+(pass) renderTreeList maxCollapsedLines > uses non-last tree branch when summary line follows [0.05ms]
+(pass) renderTreeList maxCollapsedLines > uses last tree branch when no summary follows [0.04ms]
+(pass) renderTreeList maxCollapsedLines > budget=0 renders nothing instead of exceeding the limit [0.03ms]
+(pass) renderTreeList maxCollapsedLines > budget exactly matching total lines shows no summary [0.04ms]
+(pass) renderTreeList maxCollapsedLines > empty items do not inflate remaining count [0.05ms]
+(pass) renderTreeList maxCollapsedLines > maxCollapsed limits items even when line budget has room [0.06ms]
+
+packages/coding-agent/test/model-registry-runtime-provider.test.ts:
+(pass) ModelRegistry runtime provider registration > loads built-in GitLab Duo models and OAuth provider metadata [226.20ms]
+(pass) ModelRegistry runtime provider registration > validates provider config before mutating custom API state [167.44ms]
+(pass) ModelRegistry runtime provider registration > merges provider/model headers and adds Authorization when authHeader is enabled [332.65ms]
+(pass) ModelRegistry runtime provider registration > registerProvider preserves explicit thinking on runtime models [337.92ms]
+(pass) ModelRegistry runtime provider registration > extension-registered models survive refresh('offline') cycle [520.09ms]
+(pass) ModelRegistry runtime provider registration > extension-registered models survive refresh('online') cycle [681.52ms]
+(pass) ModelRegistry runtime provider registration > extension-registered API keys survive refresh cycle for auth resolution [506.62ms]
+(pass) ModelRegistry runtime provider registration > extension-registered custom API handler survives model refresh [502.80ms]
+(pass) ModelRegistry runtime provider registration > re-registering a provider replaces previous runtime overlays [661.17ms]
+(pass) ModelRegistry runtime provider registration > multiple extension providers survive refresh independently [667.61ms]
+(pass) ModelRegistry runtime provider registration > clearSourceRegistrations and syncExtensionSources remove source-scoped API and OAuth providers [841.29ms]
+
+packages/coding-agent/test/mcp-reconnect.test.ts:
+(pass) isRetriableConnectionError > matches: ECONNREFUSED [0.11ms]
+(pass) isRetriableConnectionError > matches: ECONNRESET
+(pass) isRetriableConnectionError > matches: EPIPE
+(pass) isRetriableConnectionError > matches: ENETUNREACH
+(pass) isRetriableConnectionError > matches: EHOSTUNREACH
+(pass) isRetriableConnectionError > matches: fetch failed
+(pass) isRetriableConnectionError > matches: Transport not connected
+(pass) isRetriableConnectionError > matches: network error
+(pass) isRetriableConnectionError > matches: HTTP 404: Not Found
+(pass) isRetriableConnectionError > matches: HTTP 502: Bad Gateway
+(pass) isRetriableConnectionError > matches: HTTP 503: Service Unavailable
+(pass) isRetriableConnectionError > matches: Transport closed
+(pass) isRetriableConnectionError > does not match: MCP error -32603: Server still initializing [0.02ms]
+(pass) isRetriableConnectionError > does not match: HTTP 401: Unauthorized
+(pass) isRetriableConnectionError > does not match: HTTP 403: Forbidden
+(pass) isRetriableConnectionError > does not match: HTTP 400: Bad Request
+(pass) isRetriableConnectionError > does not match: Request timeout after 30000ms
+(pass) isRetriableConnectionError > does not match: SSE response timeout after 30000ms
+(pass) isRetriableConnectionError > does not match: Tool not found: do_stuff
+(pass) isRetriableConnectionError > returns false for non-Error values [0.03ms]
+(pass) MCPTool.execute retry on connection error > retries once on retriable error when reconnect succeeds [1.18ms]
+(pass) MCPTool.execute retry on connection error > retries on transport closed and rebinding succeeds [0.20ms]
+(pass) MCPTool.execute retry on connection error > reuses refreshed connection on later call [0.21ms]
+(pass) MCPTool.execute retry on connection error > returns error result when reconnect returns null [0.16ms]
+(pass) MCPTool.execute retry on connection error > does not retry on non-retriable error [0.12ms]
+(pass) MCPTool.execute retry on connection error > does not retry when no reconnect callback [0.11ms]
+(pass) MCPTool.execute retry on connection error > returns error from retry when retry also fails [0.16ms]
+(pass) MCPTool.execute retry on connection error > preserves provider info from new connection on successful retry [0.17ms]
+(pass) MCPTool.execute retry on connection error > falls back to original provider when new connection has no source [0.16ms]
+(pass) reconnect abort propagation > throws ToolAbortError when MCPTool reconnect is aborted [0.20ms]
+(pass) reconnect abort propagation > throws ToolAbortError when DeferredMCPTool reconnect is aborted [0.74ms]
+
+packages/coding-agent/test/config-cli.test.ts:
+(pass) config CLI schema coverage > lists non-UI schema settings in JSON output [10.39ms]
+(pass) config CLI schema coverage > gets non-UI schema settings by key [5.22ms]
+(pass) config CLI schema coverage > renders record settings as JSON and with record type in text output [8.50ms]
+(pass) config CLI schema coverage > sets and gets record settings as JSON objects [6.16ms]
+(pass) config CLI schema coverage > sets and gets array settings as JSON arrays [7.21ms]
+(pass) config CLI schema coverage > sets numeric idle compaction settings from CLI values [4.99ms]
+
+packages/coding-agent/test/session-storage.test.ts:
+(pass) FileSessionStorage.deleteSessionWithArtifacts > succeeds when the artifact directory is already absent [0.82ms]
+(pass) FileSessionStorage.deleteSessionWithArtifacts > throws when artifact cleanup fails after the session file is deleted [0.52ms]
+
+packages/coding-agent/test/agent-session-branching.test.ts:
+(skip) AgentSession branching > should allow branching from single message
+(skip) AgentSession branching > should support in-memory branching in --no-session mode
+(skip) AgentSession branching > should branch from middle of conversation
+
+packages/coding-agent/test/internal-urls/mcp-protocol.test.ts:
+(pass) McpProtocolHandler > returns error when no MCP manager is available [0.59ms]
+(pass) McpProtocolHandler > requires resource URI in mcp URL [0.12ms]
+(pass) McpProtocolHandler > returns error listing available resources when no server matches [0.31ms]
+(pass) McpProtocolHandler > reads resource by exact URI match [0.13ms]
+(pass) McpProtocolHandler > preserves query parameters in MCP resource URI [0.09ms]
+(pass) McpProtocolHandler > matches URI templates when no exact URI exists [0.38ms]
+(pass) McpProtocolHandler > matches templates when an expression expands to an empty string [0.13ms]
+(pass) McpProtocolHandler > picks the most specific matching template across overlapping schemes [0.13ms]
+(pass) McpProtocolHandler > uses connected server order when matching templates are equally specific [0.11ms]
+(pass) McpProtocolHandler > does not match template with different scheme prefix [0.10ms]
+(pass) McpProtocolHandler > returns error when readServerResource returns undefined [0.11ms]
+(pass) McpProtocolHandler > formats binary content with mime type and base64 length [0.10ms]
+(pass) McpProtocolHandler > joins mixed text and binary content with --- separator [0.10ms]
+(pass) McpProtocolHandler > returns (empty resource) when content items have neither text nor blob [0.08ms]
+(pass) McpProtocolHandler > returns error with message when readServerResource throws [0.17ms]
+(pass) McpProtocolHandler > picks the first server with a matching resource [0.10ms]
+(pass) McpProtocolHandler > shows (none) when no servers have any resources [0.07ms]
+(pass) McpProtocolHandler > uses unknown for binary content without mimeType [0.09ms]
+
+packages/coding-agent/test/tools/python-execution.test.ts:
+(pass) python tool execution > passes kernel options from settings and args [2.48ms]
+
+packages/coding-agent/test/discovery/mcp-json.test.ts:
+(pass) standalone mcp.json oauth env expansion > expands standalone auth and oauth fields alongside existing env-expanded fields [1.71ms]
+(pass) standalone mcp.json oauth env expansion > expands only the standalone oauth fields that are present [1.08ms]
+
+3 tests skipped:
+(skip) AgentSession branching > should allow branching from single message
+(skip) AgentSession branching > should support in-memory branching in --no-session mode
+(skip) AgentSession branching > should branch from middle of conversation
+
+ 110 pass
+ 3 skip
+ 0 fail
+ 287 expect() calls
+Ran 113 tests across 10 files. [6.52s]
+
+cleanup: tests use temporary directories and registered teardown; no live service mutation performed
+
+command: docker build --progress=plain -f Dockerfile.alpine -t xcsh-docs-3690:uat .
+
+#26 [runtime 4/8] COPY --from=tools /opt/bun /opt/bun
+#26 CACHED
+
+#27 [runtime 5/8] COPY --from=tools /opt/google-cloud-sdk /opt/google-cloud-sdk
+#27 CACHED
+
+#28 [runtime 3/8] COPY --from=builder /opt/glibc-root/ /
+#28 CACHED
+
+#29 [runtime 6/8] COPY --from=tools /opt/zig /opt/zig
+#29 CACHED
+
+#30 [runtime 7/8] COPY --from=builder /src/packages/coding-agent/dist/xcsh /usr/local/bin/xcsh
+#30 DONE 0.8s
+
+#31 [runtime 8/8] WORKDIR /workspace
+#31 DONE 0.3s
+
+#32 exporting to image
+#32 exporting layers
+#32 exporting layers 1.1s done
+#32 writing image sha256:94b4902b4d9305740ecf8386dbdc88ac0e38c7f50c54bee779d65ba98d4d50c0 done
+#32 naming to docker.io/library/xcsh-docs-3690:uat done
+#32 DONE 1.1s
+image_id: sha256:94b4902b4d9305740ecf8386dbdc88ac0e38c7f50c54bee779d65ba98d4d50c0
+command: docker run --rm xcsh-docs-3690:uat --version
+xcsh/21.11.8
+Untagged: xcsh-docs-3690:uat
+Deleted: sha256:94b4902b4d9305740ecf8386dbdc88ac0e38c7f50c54bee779d65ba98d4d50c0
+cleanup: candidate container image removed; build log removed

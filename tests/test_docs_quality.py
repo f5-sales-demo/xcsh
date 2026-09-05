@@ -31,8 +31,9 @@ class DocsQualityCheckerTests(unittest.TestCase):
             "command: xcsh --version\nexit_status: 0\nxcsh/21.11.7\n", encoding="utf-8"
         )
         receipt_sha = hashlib.sha256(receipt.read_bytes()).hexdigest()
+        legacy_id = "lc-fixture-concept"
         inventory = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "pages": [
                 {
                     "path": "docs/en/task.mdx",
@@ -48,6 +49,7 @@ class DocsQualityCheckerTests(unittest.TestCase):
                             "readerQuestion": "How do I do the bounded task?",
                             "purpose": "Provide the command.",
                             "evidence": ["offline-version"] if evidence else [],
+                            "legacyConceptIds": [legacy_id],
                         }
                     ],
                 }
@@ -75,6 +77,39 @@ class DocsQualityCheckerTests(unittest.TestCase):
         }
         (evidence_dir / "manifest.json").write_text(
             json.dumps(manifest), encoding="utf-8"
+        )
+        ledger = {
+            "schemaVersion": 1,
+            "baseline": {
+                "commit": "fixture",
+                "treeDigest": "b" * 40,
+                "corpusDigestSha256": "c" * 64,
+                "conceptDigestSha256": hashlib.sha256(
+                    b"docs/en/legacy.md\0Legacy task\0" + b"d" * 40 + b"\n"
+                ).hexdigest(),
+                "pageCount": 1,
+                "conceptCount": 1,
+                "headingLevel": 2,
+            },
+            "concepts": [
+                {
+                    "id": legacy_id,
+                    "legacyPath": "docs/en/legacy.md",
+                    "legacyHeading": "Legacy task",
+                    "legacyBlob": "d" * 40,
+                    "category": "configuration",
+                    "readerQuestion": "How did the legacy task work?",
+                    "knowledgeSummary": "The task resolves one configuration value.",
+                    "disposition": "retained",
+                    "destinationPage": "docs/en/task.mdx",
+                    "destinationHeading": heading,
+                    "currentSourceAuthorities": ["packages/coding-agent/src/cli.ts"],
+                    "evidenceIdentifiers": ["offline-version"],
+                }
+            ],
+        }
+        (temp / ".github" / "docs-quality" / "legacy-concepts.json").write_text(
+            json.dumps(ledger), encoding="utf-8"
         )
         return temp
 
@@ -125,6 +160,7 @@ class DocsQualityCheckerTests(unittest.TestCase):
                         "readerQuestion": "When is the other task useful?",
                         "purpose": "Explain the choice.",
                         "evidence": [],
+                        "legacyConceptIds": [],
                     }
                 ],
             }
@@ -163,6 +199,74 @@ class DocsQualityCheckerTests(unittest.TestCase):
         inventory["pages"] = []
         inventory_path.write_text(json.dumps(inventory), encoding="utf-8")
         self.assert_rejected(root, "page missing from inventory")
+
+
+    def test_rejects_unmapped_legacy_concept(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "inventory.json"
+        inventory = json.loads(path.read_text())
+        inventory["pages"][0]["headings"][0]["legacyConceptIds"] = []
+        path.write_text(json.dumps(inventory), encoding="utf-8")
+        self.assert_rejected(root, "unmapped legacy concept")
+
+    def test_rejects_unknown_legacy_concept_id(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "inventory.json"
+        inventory = json.loads(path.read_text())
+        inventory["pages"][0]["headings"][0]["legacyConceptIds"].append("lc-unknown")
+        path.write_text(json.dumps(inventory), encoding="utf-8")
+        self.assert_rejected(root, "unknown legacy concept id")
+
+    def test_rejects_duplicate_legacy_concept_id(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        ledger = json.loads(path.read_text())
+        ledger["concepts"].append(dict(ledger["concepts"][0]))
+        ledger["baseline"]["conceptCount"] = 2
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assert_rejected(root, "duplicate legacy concept id")
+
+    def test_rejects_duplicate_legacy_concept_mapping(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "inventory.json"
+        inventory = json.loads(path.read_text())
+        inventory["pages"][0]["headings"][0]["legacyConceptIds"].append(
+            "lc-fixture-concept"
+        )
+        path.write_text(json.dumps(inventory), encoding="utf-8")
+        self.assert_rejected(root, "duplicate legacy concept mapping")
+
+    def test_rejects_stale_legacy_destination(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        ledger = json.loads(path.read_text())
+        ledger["concepts"][0]["destinationHeading"] = "Removed heading"
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assert_rejected(root, "stale legacy destination")
+
+    def test_rejects_missing_current_authority(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        ledger = json.loads(path.read_text())
+        ledger["concepts"][0]["currentSourceAuthorities"] = []
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assert_rejected(root, "legacy concept field missing")
+
+    def test_rejects_generic_legacy_summary(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        ledger = json.loads(path.read_text())
+        ledger["concepts"][0]["knowledgeSummary"] = "Covers task behavior for fixture."
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assert_rejected(root, "generic legacy knowledge summary")
+
+    def test_rejects_unexplained_superseded_concept(self) -> None:
+        root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
+        path = root / ".github" / "docs-quality" / "legacy-concepts.json"
+        ledger = json.loads(path.read_text())
+        ledger["concepts"][0]["disposition"] = "superseded"
+        path.write_text(json.dumps(ledger), encoding="utf-8")
+        self.assert_rejected(root, "unexplained superseded or corrected concept")
 
 
 if __name__ == "__main__":

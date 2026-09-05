@@ -1,0 +1,27 @@
+---
+title: "Understand settings precedence"
+description: "Predict which user, project, environment, and command-line value xcsh resolves."
+sidebar:
+  order: 1
+  label: "Understand settings precedence"
+---
+
+Project settings apply to one repository; user settings apply across projects; command flags override both for one invocation. Use `xcsh config list --json` to inspect effective values.
+
+## How is configuration resolved?
+
+Discovery collects fixed user, project, environment, and command-line sources, normalizes each through the schema-backed configuration wrapper, then resolves values by explicit priority. Capability-specific discovery uses the same roots but owns its own merge and deduplication rules. Native `.xcsh` providers participate through the documented provider interface, not an implicit recursive scan.
+
+## Where are settings stored?
+
+Run `xcsh config path` instead of assuming a platform path. Project data uses `.xcsh/`, including `settings.json`, `mcp.json`, contexts, skills, agents, extensions, tools, hooks, commands, and `XCSH.md`. Primary user data lives under the xcsh agent directory; `PI_CODING_AGENT_DIR` can override that location.
+
+## How do I change one value?
+
+```sh
+xcsh config get <key>
+xcsh config set <key> <value>
+xcsh config reset <key>
+```
+
+Use environment variables for credentials and ephemeral process configuration. Do not copy an entire old settings file when only one key is needed.

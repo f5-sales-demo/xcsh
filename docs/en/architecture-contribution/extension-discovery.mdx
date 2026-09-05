@@ -1,0 +1,23 @@
+---
+title: "Extension discovery architecture"
+description: "Choose between skills, commands, tools, hooks, extensions, plugins, MCP, and SDK embedding."
+sidebar:
+  order: 5
+  label: "Extension discovery"
+---
+
+The TypeScript runtime owns the agent loop, configuration, discovery, protocols, and most tools. The native Rust addon supplies performance-sensitive terminal, filesystem, and platform operations behind typed bindings.
+
+## How are capabilities discovered?
+
+Discovery providers scan bundled, user, project, plugin, and compatible manifest roots, normalize candidates into capability items, and deduplicate stable identifiers by precedence. Extension entry resolution and dynamic module loading happen only after metadata discovery.
+
+Invalid frontmatter, manifests, or module factories produce diagnostics at their own layer so one bad optional capability does not masquerade as an empty catalog.
+
+## Where should a change go?
+
+Prefer a public extension, skill, plugin, MCP server, or SDK API for optional behavior. Change the native layer only when a measured platform or performance requirement cannot be met in TypeScript.
+
+## How do I validate a boundary change?
+
+Run focused TypeScript tests for the caller and Rust tests for the native implementation, then build the addon and exercise the public command. Do not expose a native detail as a public contract accidentally.

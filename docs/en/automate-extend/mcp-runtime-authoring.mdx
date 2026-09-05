@@ -1,0 +1,21 @@
+---
+title: "Operate and author MCP servers"
+description: "Trace MCP connection caching, tool bridging, reload, teardown, and server contracts."
+sidebar:
+  order: 9
+  label: "MCP runtime and authoring"
+---
+
+xcsh keeps MCP transport concerns below capability discovery. A connected server contributes normalized tools; the agent loop invokes those tools through the same result boundary used for built-in and extension tools.
+
+## Follow a request through the runtime
+
+The manager resolves configuration, establishes one connection per active server, caches that connection, lists capabilities, and registers bridged tools. JSON-RPC request identifiers correlate replies while notifications flow independently. Transport closure rejects outstanding work and moves the server to a reconnectable failure state.
+
+## Reload and tear down safely
+
+A refresh compares the normalized server set, closes removed or changed connections, and preserves reusable connections. Session shutdown closes transports and child processes. Server implementations must also handle client cancellation and EOF so local processes do not outlive xcsh.
+
+## Author a compatible tool server
+
+Publish stable tool names, JSON Schema input definitions, bounded results, and actionable protocol errors. Keep credentials in the server environment, not tool descriptions. Test initialization, tool listing, one successful call, invalid input, cancellation, reconnect, and shutdown against the same transport declared in `mcp.json`.

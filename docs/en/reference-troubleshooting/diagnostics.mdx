@@ -1,0 +1,25 @@
+---
+title: "Run diagnostics"
+description: "Collect version, configuration, provider, context, and sandbox evidence without exposing secrets."
+sidebar:
+  order: 4
+  label: "Run diagnostics"
+---
+
+Collect the smallest evidence set that identifies the failing layer. Never print credentials or raw context files.
+
+## The shell cannot find xcsh
+
+Run `command -v xcsh` and `xcsh --version`. If the path belongs to an old installation channel, remove that channel and reinstall once through the intended channel.
+
+## A model is unavailable or authentication fails
+
+Run `xcsh --list-models <provider>`. If no models appear, verify the relevant credential is present without echoing it. Retry with a provider-qualified `--model` name.
+
+## A context or resource command fails
+
+Confirm `/context status` and the explicit namespace. Run `validate` to separate local manifest errors from live API errors, then retry a read-only `get` or `diff`.
+
+## A tool or extension fails during startup
+
+Use `--no-mcp --no-extensions --no-rules` and, if needed, `--no-pty`. Re-enable one subsystem at a time. Check optional dependencies with `xcsh setup <component> --check --json` and plugins with `xcsh plugin doctor`.

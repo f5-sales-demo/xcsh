@@ -1,0 +1,20 @@
+---
+title: "Terminal CLI"
+description: "Choose interactive, print, resume, and deterministic subcommand modes from a shell."
+sidebar:
+  order: 2
+  label: "Terminal CLI"
+---
+
+The terminal entry point supports an interactive TUI, one-shot print mode, persisted sessions, and deterministic resource subcommands.
+
+## How do the modes differ?
+
+| Need | Invocation |
+| --- | --- |
+| Interactive conversation | `xcsh` |
+| One model turn | `xcsh -p "prompt"` |
+| Structured process stream | `xcsh --mode json -p "prompt"` |
+| Local manifest check | `xcsh validate -f manifest.yaml` |
+
+Use resource subcommands for manifest lifecycle operations; do not ask a model to imitate them.

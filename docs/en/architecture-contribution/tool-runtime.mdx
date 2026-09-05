@@ -1,0 +1,21 @@
+---
+title: "Tool runtime"
+description: "Trace Bash, notebook, deferred-action, custom-tool, context, and task-agent execution boundaries."
+sidebar:
+  order: 3
+  label: "Tool runtime"
+---
+
+The agent loop sees a common tool contract, but each runtime owns its validation, cancellation, output, and side effects.
+
+## Execute shell and notebook work
+
+The Bash tool validates the request, launches through the configured shell boundary, streams bounded output, and spills oversized results to an artifact. Notebook editing changes cell structure; kernel execution is a separate Python gateway operation with its own environment and MIME rendering.
+
+## Resolve deferred actions
+
+Deferred actions are pushed onto a last-in, first-out stack and resolved only at the runtime checkpoint that owns them. Custom tools use the host API to register actions; they must pair cancellation and cleanup with any external resource they create.
+
+## Discover commands and task agents
+
+Slash-command templates and agent definitions are discovered from normalized user, project, plugin, and bundled providers. Precedence resolves duplicate identifiers before execution. Argument expansion produces prompt input; it must not bypass tool policy or agent execution guardrails.

@@ -2,56 +2,56 @@
   "customSets": [
     {
       "label": "Getting started",
-      "description": "Install xcsh, connect a model and an F5 Distributed Cloud tenant, and complete a safe first workflow.",
+      "description": "Install xcsh, authenticate, connect F5 Distributed Cloud, and complete a first manifest workflow.",
       "paths": [
         "getting-started/**"
       ]
     },
     {
+      "label": "Use xcsh",
+      "description": "Use the agent loop, execution modes, TUI, tools, sessions, memory, planning, agents, and navigation.",
+      "paths": [
+        "use-xcsh/**"
+      ]
+    },
+    {
       "label": "F5 Distributed Cloud",
-      "description": "Manage F5 Distributed Cloud contexts and resources through explicit, reviewable manifest operations.",
+      "description": "Manage contexts, manifests, catalogs, validation, mutation, retrieval, deletion, and console workflows.",
       "paths": [
         "f5-distributed-cloud/**"
       ]
     },
     {
-      "label": "Agentic shell",
-      "description": "Use the agent loop, terminal UI, tools, sessions, planning, and specialized agents.",
+      "label": "Automate and extend",
+      "description": "Use headless protocols, the SDK, extensions, hooks, rules, skills, plugins, and MCP.",
       "paths": [
-        "agentic-shell/**"
-      ]
-    },
-    {
-      "label": "Interfaces",
-      "description": "Run xcsh in a terminal, editor, browser, Office task pane, headless process, or container.",
-      "paths": [
-        "interfaces/**"
-      ]
-    },
-    {
-      "label": "Extend and automate",
-      "description": "Add skills, plugins, MCP servers, custom tools, hooks, rules, SDK integrations, and headless workers.",
-      "paths": [
-        "extend-automate/**"
+        "automate-extend/**"
       ]
     },
     {
       "label": "Configure and secure",
-      "description": "Control settings, providers, credentials, networking, secrets, and filesystem boundaries.",
+      "description": "Control settings, environment variables, providers, models, secrets, obfuscation, and sandbox boundaries.",
       "paths": [
         "configure-secure/**"
       ]
     },
     {
-      "label": "Troubleshooting and reference",
-      "description": "Diagnose installations, providers, contexts, and tools, then consult current command and configuration references.",
+      "label": "Integrations and deployment",
+      "description": "Deploy containers and connect source-verified VS Code, Office, Chrome, and Herdr integrations.",
       "paths": [
-        "troubleshooting-reference/**"
+        "integrations-deployment/**"
+      ]
+    },
+    {
+      "label": "Reference and troubleshooting",
+      "description": "Look up CLI, slash commands, keybindings, configuration schema, and symptom-driven diagnostics.",
+      "paths": [
+        "reference-troubleshooting/**"
       ]
     },
     {
       "label": "Architecture and contribution",
-      "description": "Understand xcsh internals, its pi lineage, native layer, extension boundaries, and contribution/release process.",
+      "description": "Trace agent, storage, tool, provider, extension, native, TUI, prompt, upstream, build, and release internals.",
       "paths": [
         "architecture-contribution/**"
       ]
@@ -64,11 +64,12 @@
     "getting-started/quickstart*",
     "getting-started/model-authentication*",
     "getting-started/f5-xc-connection*",
+    "use-xcsh/agent-loop*",
     "f5-distributed-cloud/manifest-fundamentals*",
     "f5-distributed-cloud/validate-diff*",
     "configure-secure/providers-routing*",
-    "configure-secure/secrets*",
-    "troubleshooting-reference/diagnostics*"
+    "configure-secure/secrets-obfuscation*",
+    "reference-troubleshooting/diagnostics*"
   ],
   "demote": [
     "architecture-contribution/build-release*",
@@ -76,14 +77,15 @@
   ],
   "exclude": [
     "architecture-contribution/**",
-    "agentic-shell/planning*",
-    "extend-automate/extensions-custom-tools*",
-    "extend-automate/sdk*",
-    "interfaces/chrome*",
-    "interfaces/office*",
-    "interfaces/vscode*",
-    "troubleshooting-reference/cli-reference*",
-    "troubleshooting-reference/configuration-schema*",
-    "troubleshooting-reference/slash-commands*"
+    "use-xcsh/planning-agents*",
+    "automate-extend/extensions-custom-tools*",
+    "automate-extend/sdk*",
+    "integrations-deployment/chrome*",
+    "integrations-deployment/herdr*",
+    "integrations-deployment/office*",
+    "integrations-deployment/vscode*",
+    "reference-troubleshooting/cli-reference*",
+    "reference-troubleshooting/configuration-schema*",
+    "reference-troubleshooting/slash-keybindings*"
   ]
 }
