@@ -200,7 +200,6 @@ class DocsQualityCheckerTests(unittest.TestCase):
         inventory_path.write_text(json.dumps(inventory), encoding="utf-8")
         self.assert_rejected(root, "page missing from inventory")
 
-
     def test_rejects_unmapped_legacy_concept(self) -> None:
         root = self.fixture("---\ntitle: Task\n---\n## Do the task\n\nRun it.\n")
         path = root / ".github" / "docs-quality" / "inventory.json"

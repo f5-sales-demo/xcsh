@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 from collections import defaultdict
@@ -32,6 +33,8 @@ LEGACY_TREE = "89566cca8d13cd69fb8af9ee017e9860d303b2f2"
 LEGACY_PAGE_COUNT = 59
 LEGACY_CONCEPT_COUNT = 374
 LEGACY_UNIT_DIGEST = "7378b8bd45b3b0ad48864a094d97af76b212ff4ab892d8f28b80f7dd43fd012e"
+INVENTORY_SCHEMA_VERSION = 2
+GIT_EXECUTABLE = shutil.which("git")
 
 
 def _load_json(path: Path) -> dict:
@@ -167,6 +170,22 @@ def _known_sections(inventory_pages: dict) -> set[str]:
     return sections
 
 
+def _git(root: Path, *args: str) -> str:
+    """Run a fixed Git executable with repository-controlled arguments."""
+    if GIT_EXECUTABLE is None:
+        message = "git executable is unavailable"
+        raise FileNotFoundError(message)
+    return subprocess.run(  # noqa: S603
+        [GIT_EXECUTABLE, *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+
+# This function deliberately validates the complete cross-file legacy contract.
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
 def _check_legacy_coverage(
     root: Path,
     inventory: dict,
@@ -176,7 +195,7 @@ def _check_legacy_coverage(
     used_evidence: set[str],
 ) -> list[str]:
     errors: list[str] = []
-    if inventory.get("schemaVersion") != 2:
+    if inventory.get("schemaVersion") != INVENTORY_SCHEMA_VERSION:
         errors.append("inventory schema must be version 2")
 
     baseline = ledger.get("baseline", {})
@@ -209,13 +228,7 @@ def _check_legacy_coverage(
             if baseline.get(field) != value
         )
         try:
-            observed_tree = subprocess.run(
-                ["git", "rev-parse", f"{LEGACY_COMMIT}^{{tree}}"],
-                cwd=root,
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.strip()
+            observed_tree = _git(root, "rev-parse", f"{LEGACY_COMMIT}^{{tree}}").strip()
         except (OSError, subprocess.CalledProcessError):
             observed_tree = None
         if observed_tree is not None and observed_tree != LEGACY_TREE:
@@ -228,7 +241,9 @@ def _check_legacy_coverage(
         for concept_id in set(concept_ids)
         if concept_id and concept_ids.count(concept_id) > 1
     )
-    errors.extend(f"duplicate legacy concept id: {concept_id}" for concept_id in duplicates)
+    errors.extend(
+        f"duplicate legacy concept id: {concept_id}" for concept_id in duplicates
+    )
     known_concepts = {concept_id for concept_id in concept_ids if concept_id}
     ledger_digest = hashlib.sha256()
     for concept in sorted(
@@ -247,42 +262,24 @@ def _check_legacy_coverage(
         errors.append("legacy concept digest does not match baseline")
     if (root / ".git").exists():
         try:
-            source_paths = subprocess.run(
-                [
-                    "git",
-                    "ls-tree",
-                    "-r",
-                    "--name-only",
-                    LEGACY_COMMIT,
-                    "--",
-                    "docs/en",
-                    "docs/SYSTEM_PROMPT_GUIDE.md",
-                ],
-                cwd=root,
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.splitlines()
+            source_paths = _git(
+                root,
+                "ls-tree",
+                "-r",
+                "--name-only",
+                LEGACY_COMMIT,
+                "--",
+                "docs/en",
+                "docs/SYSTEM_PROMPT_GUIDE.md",
+            ).splitlines()
             source_paths = [
                 path for path in source_paths if path.endswith((".md", ".mdx"))
             ]
             source_units: set[tuple[str, str, str]] = set()
             corpus_digest = hashlib.sha256()
             for path in source_paths:
-                blob = subprocess.run(
-                    ["git", "rev-parse", f"{LEGACY_COMMIT}:{path}"],
-                    cwd=root,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout.strip()
-                text = subprocess.run(
-                    ["git", "show", f"{LEGACY_COMMIT}:{path}"],
-                    cwd=root,
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                ).stdout
+                blob = _git(root, "rev-parse", f"{LEGACY_COMMIT}:{path}").strip()
+                text = _git(root, "show", f"{LEGACY_COMMIT}:{path}")
                 corpus_digest.update(path.encode() + b"\0" + blob.encode() + b"\n")
                 source_units.update(
                     (path, heading.strip(), blob)
@@ -336,11 +333,14 @@ def _check_legacy_coverage(
             errors.append(f"generic legacy knowledge summary: {concept_id}")
         if concept.get("disposition") not in dispositions:
             errors.append(f"invalid legacy disposition: {concept_id}")
-        if concept.get("disposition") in {"corrected", "superseded"} and not str(
-            concept.get("rationale", "")
-        ).strip():
+        if (
+            concept.get("disposition") in {"corrected", "superseded"}
+            and not str(concept.get("rationale", "")).strip()
+        ):
             errors.append(f"unexplained superseded or corrected concept: {concept_id}")
-        section = f"{concept.get('destinationPage')}#{concept.get('destinationHeading')}"
+        section = (
+            f"{concept.get('destinationPage')}#{concept.get('destinationHeading')}"
+        )
         if section not in known_sections:
             errors.append(f"stale legacy destination: {concept_id} {section}")
         errors.extend(
@@ -382,6 +382,7 @@ def _check_legacy_coverage(
     if baseline.get("conceptCount") != len(concepts):
         errors.append("legacy concept count does not match baseline")
     return errors
+
 
 def _check_evidence(
     root: Path,
