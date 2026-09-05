@@ -20,6 +20,7 @@ const changelogGlob = new Glob("packages/*/CHANGELOG.md");
 const packageJsonGlob = new Glob("packages/*/package.json");
 const platformPackageJsonGlob = new Glob("packages/natives/npm/*/package.json");
 const cargoTomlGlob = new Glob("crates/*/Cargo.toml");
+const bunLauncher = "packages/coding-agent/bin/xcsh.ts";
 
 // =============================================================================
 // Shared functions
@@ -262,6 +263,7 @@ async function applyVersionBumpToFiles(version: string): Promise<void> {
 	// (e.g. tree-sitter-perl-next 0.1.0/0.1.1 are both yanked).
 	console.log("Updating lockfiles...");
 	await $`bun install`;
+	await restoreKnownBunLauncherMode();
 	await $`cargo update --workspace`;
 	console.log();
 
@@ -269,6 +271,20 @@ async function applyVersionBumpToFiles(version: string): Promise<void> {
 	console.log("Updating CHANGELOGs...");
 	await updateChangelogsForRelease(version);
 	console.log();
+}
+
+/**
+ * Bun marks package bin launchers executable during installation. This source
+ * launcher is intentionally tracked as mode 100644, so restore only the exact
+ * mode-only change before the release guard stages the version bump. Content
+ * changes and every other path stay visible to that guard.
+ */
+async function restoreKnownBunLauncherMode(): Promise<void> {
+	const summary = (await $`git diff --summary -- ${bunLauncher}`.text()).trim();
+	const numstat = (await $`git diff --numstat -- ${bunLauncher}`.text()).trim();
+	if (isKnownBunLauncherModeOnlyChange(summary, numstat)) {
+		await $`chmod 0644 ${bunLauncher}`;
+	}
 }
 
 function releasePRBody(version: string, commits: string[]): string {
@@ -723,6 +739,13 @@ if (import.meta.main) {
  */
 export function stagedPathsOutsideVersionBump(stagedPaths: readonly string[]): string[] {
 	return stagedPaths.map(entry => entry.trim()).filter(entry => entry !== "" && !isVersionBumpPath(entry));
+}
+
+export function isKnownBunLauncherModeOnlyChange(summary: string, numstat: string): boolean {
+	return (
+		summary.trim() === `mode change 100644 => 100755 ${bunLauncher}` &&
+		numstat.trim() === `0\t0\t${bunLauncher}`
+	);
 }
 
 function isVersionBumpPath(stagedPath: string): boolean {

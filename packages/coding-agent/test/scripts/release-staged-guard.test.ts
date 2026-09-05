@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { stagedPathsOutsideVersionBump } from "../../../../scripts/release";
+import { isKnownBunLauncherModeOnlyChange, stagedPathsOutsideVersionBump } from "../../../../scripts/release";
 
 /**
  * A release commit must contain the version bump and nothing else (#2578).
@@ -79,5 +79,26 @@ describe("stagedPathsOutsideVersionBump", () => {
 
 	it("normalises Windows separators", () => {
 		expect(stagedPathsOutsideVersionBump(["packages\\utils\\package.json"])).toEqual([]);
+	});
+});
+
+describe("isKnownBunLauncherModeOnlyChange", () => {
+	it("accepts only Bun's known mode-only launcher rewrite", () => {
+		expect(
+			isKnownBunLauncherModeOnlyChange(
+				" mode change 100644 => 100755 packages/coding-agent/bin/xcsh.ts",
+				"0\t0\tpackages/coding-agent/bin/xcsh.ts",
+			),
+		).toBe(true);
+	});
+
+	it("rejects content changes and unrelated paths", () => {
+		expect(
+			isKnownBunLauncherModeOnlyChange(
+				" mode change 100644 => 100755 packages/coding-agent/bin/xcsh.ts",
+				"1\t1\tpackages/coding-agent/bin/xcsh.ts",
+			),
+		).toBe(false);
+		expect(isKnownBunLauncherModeOnlyChange("mode change 100644 => 100755 README.md", "0\t0\tREADME.md")).toBe(false);
 	});
 });
