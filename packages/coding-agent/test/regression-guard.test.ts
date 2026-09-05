@@ -540,6 +540,8 @@ describe("CI verifies the published Homebrew formula end to end", () => {
 		const job = await loadVerifyHomebrewJob();
 		expect(job).toContain("brew untap f5-sales-demo/tap");
 		expect(job).toContain("brew install f5-sales-demo/tap/xcsh");
+		expect(job).toContain("brew install --cask f5-sales-demo/tap/xcsh");
+		expect(job).toContain("pkgutil --pkg-info com.f5.xcsh");
 		expect(job).toContain("max_attempts=");
 	});
 
@@ -591,6 +593,23 @@ describe("release artifacts run the sandbox matrix before and after publication"
 		expect(script).toContain('binary="$install_prefix/bin/xcsh"');
 		expect(script).toContain('XCSH_TEST_SANDBOX_CHECK_BINARY="$binary"');
 		expect(script).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
+	});
+});
+
+describe("macOS pkg release contract", () => {
+	it("signs, notarizes, staples, validates, and publishes each package", async () => {
+		const workflow = await fs.readFile(path.join(import.meta.dir, "../../../.github/workflows/ci.yml"), "utf8");
+		const match = workflow.match(/\n {2}build-sign-macos:\n[\s\S]*?(?=\n {2}create-release:\n)/);
+		expect(match).not.toBeNull();
+		const job = match?.[0] ?? "";
+
+		expect(job).toContain("APPLE_INSTALLER_CERTIFICATE_BASE64");
+		expect(job).toContain("Developer ID Installer");
+		expect(job).toContain("ci-release-macos-pkg.ts");
+		expect(job).toContain('xcrun notarytool submit "$pkg"');
+		expect(job).toContain('xcrun stapler staple "$pkg"');
+		expect(job).toContain('xcrun stapler validate "$pkg"');
+		expect(job).toContain('spctl --assess --verbose=4 --type install "$pkg"');
 	});
 });
 
