@@ -1,0 +1,11 @@
+no-git-metadata: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+shallow-history-without-legacy-commit: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+unresolvable-baseline-without-git: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+altered-legacy-h2-without-git: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+semantically-empty-summary: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+existing-unrelated-authority: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+unrelated-evidence-section: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+coordinated-many-concepts-one-prose-section: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+normalized-anchor-collision: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+coordinated-renamed-page: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification
+orphaned-llm-selector: python3 scripts/check_docs_quality.py --root <isolated-subject-fixture> -> exit 0 (accepted); temporary fixture removed; shallow clone moved to local trash after verification

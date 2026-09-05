@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "CHK-FAIL-CLOSED",
+      "class": "checker",
+      "severity": "critical",
+      "scope": "Make immutable baseline extraction mandatory and fail closed."
+    },
+    {
+      "id": "DOC-CROWDING",
+      "class": "documentation",
+      "severity": "high",
+      "scope": "Provide distinct, substantive concept prose for crowded retained mappings."
+    },
+    {
+      "id": "DOC-SEMANTICS",
+      "class": "documentation",
+      "severity": "medium",
+      "scope": "Re-evaluate low-overlap legacy-to-destination mappings with product authorities."
+    },
+    {
+      "id": "IA-CANONICAL",
+      "class": "information-architecture",
+      "severity": "medium",
+      "scope": "Validate canonical names, anchors, and LLM selectors independently of the checker."
+    },
+    {
+      "id": "PUB-REPRO",
+      "class": "publication",
+      "severity": "high",
+      "scope": "Pin and retain the shared production builder and generated-surface receipts."
+    },
+    {
+      "id": "LEGACY-UNSUPPORTED",
+      "class": "unsupported-legacy",
+      "severity": "medium",
+      "scope": "Confirm every corrected or superseded legacy unit against current product authority."
+    }
+  ]
+}
