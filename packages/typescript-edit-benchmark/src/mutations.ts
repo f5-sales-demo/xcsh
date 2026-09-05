@@ -68,57 +68,59 @@ type Parsed = {
 	code: string;
 };
 
-function parseWithPlugins(code: string, plugins: ParserPlugin[]): t.File {
+type ParserPluginSets = readonly (readonly ParserPlugin[])[];
+
+const MUTATION_PARSER_PLUGIN_SETS: ParserPluginSets = [
+	["flow", "flowComments", "jsx", "decorators-legacy"],
+	["typescript", "jsx", "decorators-legacy"],
+];
+
+function parseWithPlugins(code: string, plugins: readonly ParserPlugin[]): t.File {
 	return parse(code, {
 		sourceType: "unambiguous",
 		allowReturnOutsideFunction: true,
 		errorRecovery: true,
-		plugins,
+		plugins: [...plugins],
 	});
 }
 
-function parseCode(code: string): Parsed | null {
-	const pluginSets: ParserPlugin[][] = [
-		[
-			"flow",
-			"flowComments",
-			"jsx",
-			"importAssertions",
-			"decorators-legacy",
-			"classPrivateMethods",
-			"classPrivateProperties",
-			"classProperties",
-			"privateIn",
-			"topLevelAwait",
-			"optionalChaining",
-			"nullishCoalescingOperator",
-		],
-		[
-			"typescript",
-			"jsx",
-			"importAssertions",
-			"decorators-legacy",
-			"classPrivateMethods",
-			"classPrivateProperties",
-			"classProperties",
-			"privateIn",
-			"topLevelAwait",
-			"optionalChaining",
-			"nullishCoalescingOperator",
-		],
-	];
+function isSourceSyntaxError(error: unknown): boolean {
+	return (
+		error instanceof SyntaxError &&
+		"code" in error &&
+		(error as SyntaxError & { code?: unknown }).code === "BABEL_PARSER_SYNTAX_ERROR"
+	);
+}
 
+/**
+ * Parse mutation input as Flow first, then TypeScript.
+ *
+ * Syntax errors are expected for the wrong language parser and permit fallback.
+ * Parser configuration errors are programming errors and must remain visible;
+ * swallowing them would make every mutation silently report `canApply: false`.
+ */
+export function parseMutationAst(
+	code: string,
+	pluginSets: ParserPluginSets = MUTATION_PARSER_PLUGIN_SETS,
+): t.File | null {
 	for (const plugins of pluginSets) {
 		try {
 			const ast = parseWithPlugins(code, plugins);
 			// Normalize at the parse boundary so nothing downstream — traversal,
 			// mutation, or generation — ever meets a node @babel/types cannot model.
 			normalizeParserScratchNodes(ast);
-			return { ast, code };
-		} catch {}
+			return ast;
+		} catch (error) {
+			if (!isSourceSyntaxError(error)) throw error;
+		}
 	}
 
 	return null;
+}
+
+function parseCode(code: string): Parsed | null {
+	const ast = parseMutationAst(code);
+	return ast ? { ast, code } : null;
 }
 
 /*

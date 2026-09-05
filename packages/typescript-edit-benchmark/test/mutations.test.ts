@@ -16,7 +16,7 @@
  *     the edit would be a no-op and every AST mutation would quietly stop working.
  */
 import { describe, expect, test } from "bun:test";
-import { ALL_MUTATIONS } from "../src/mutations";
+import { ALL_MUTATIONS, parseMutationAst } from "../src/mutations";
 
 /** Deterministic rng so a mutation's random choice is reproducible. */
 function seededRng(seed: number): () => number {
@@ -65,6 +65,15 @@ const PLAIN = `function pick(a: number, b: number) {
 }
 `;
 
+const FLOW = `// @flow
+function pick(a: number, b: number): number {
+	if (a <= b) {
+		return a;
+	}
+	return b;
+}
+`;
+
 describe("snippet rendering survives nodes the generator cannot print (#2428)", () => {
 	test("a mutation over a node containing (x: T) still produces a non-empty mutated snippet", () => {
 		const swapIfElse = mutationNamed("swap-if-else");
@@ -98,6 +107,29 @@ describe("snippet rendering survives nodes the generator cannot print (#2428)", 
 		expect(mutated).toContain("function pick(a: number, b: number)"); // annotations intact
 		expect(mutated).not.toContain(" as "); // nothing spuriously rewritten
 		expect(info.lineNumber).toBeGreaterThan(0);
+	});
+});
+
+describe("Babel parser contract (#2363)", () => {
+	test("mutates representative Flow source", () => {
+		const swapComparison = mutationNamed("swap-comparison");
+		expect(swapComparison.canApply(FLOW)).toBe(true);
+
+		const [mutated, info] = swapComparison.mutate(FLOW, seededRng(3));
+
+		expect(mutated).not.toBe(FLOW);
+		expect(mutated).toContain("a < b");
+		expect(info.mutatedSnippet).toBe("a < b");
+	});
+
+	test("returns null when neither language parser accepts malformed source", () => {
+		expect(parseMutationAst("const broken = ;")).toBeNull();
+	});
+
+	test("throws parser configuration errors instead of degrading to zero mutations", () => {
+		expect(() => parseMutationAst("const value = 1;", [["flow", "typescript"]])).toThrow(
+			"Cannot combine flow and typescript plugins",
+		);
 	});
 });
 
