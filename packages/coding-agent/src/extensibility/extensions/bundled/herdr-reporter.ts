@@ -1,6 +1,6 @@
-import { connect } from "node:net";
 import * as path from "node:path";
 import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
+import { HerdrClient } from "../../../herdr/client";
 
 /**
  * herdr integration (bundled, default-on).
@@ -10,11 +10,14 @@ import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
  * blocked indicator.
  *
  * Transport: herdr injects `HERDR_SOCKET_PATH` into every pane, so state is
- * reported by writing a newline-delimited JSON-RPC request straight to that unix
- * socket. This is PATH-independent — unlike shelling out to the `herdr` CLI,
- * which silently no-ops when herdr runs as a launchd/`brew services` server and
- * spawns panes without `/opt/homebrew/bin` on PATH. If `HERDR_SOCKET_PATH` is
- * somehow unset, we fall back to the `herdr` CLI.
+ * reported over herdr's protocol-18 JSONL socket via the shared `HerdrClient`
+ * (see `../../../herdr/client`) — the same client `herdr-terminal` uses. Each
+ * request reconnects independently, validates the `ping` protocol version
+ * before the first real request, and awaits herdr's typed response before
+ * resolving. This is PATH-independent — unlike shelling out to the `herdr`
+ * CLI, which silently no-ops when herdr runs as a launchd/`brew services`
+ * server and spawns panes without `/opt/homebrew/bin` on PATH. If
+ * `HERDR_SOCKET_PATH` is somehow unset, we fall back to the `herdr` CLI.
  *
  * xcsh is a fork of pi; a user may have both installed, so this reporter always
  * identifies the agent as "xcsh" (never "pi"). It claims pane authority via the
@@ -39,8 +42,8 @@ import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
  *   1. `seq` is seeded from the wall clock, not 0, so a restarted xcsh always
  *      outranks its predecessor in the same pane. With a per-process counter from
  *      0, every frame from the second xcsh in a pane looks stale and is dropped.
- *   2. Frames go out one at a time through `enqueue`. They used to be
- *      fire-and-forget on independent sockets, so ordering was left to chance.
+ *   2. Frames go out one at a time through `enqueue`, awaiting herdr's response
+ *      before the next frame is sent, so ordering is never left to chance.
  *   3. The state frame is always sent *before* the session frame. herdr discards a
  *      `pane.report_agent_session` for a pane whose agent it does not yet own, so
  *      the state frame has to establish `herdr:xcsh` as the pane's agent first.
@@ -58,45 +61,37 @@ const SESSION_METHOD = "pane.report_agent_session";
 const RELEASE_METHOD = "pane.release_agent";
 const SOCKET_TIMEOUT_MS = 2000;
 
+// Reused across calls for the life of the extension so `ensureProtocol()`'s
+// `ping` validation happens at most once per socket path, not once per frame.
+let cachedClient: HerdrClient | undefined;
+
+function getHerdrClient(socketPath: string): HerdrClient {
+	if (!cachedClient || cachedClient.socketPath !== socketPath) {
+		cachedClient = new HerdrClient(socketPath, SOCKET_TIMEOUT_MS);
+	}
+	return cachedClient;
+}
+
 /**
- * Write one newline-delimited JSON-RPC request to herdr's unix socket and close.
- * The response is ignored and every failure path is reported via `onError`
- * without throwing, so a dead socket never disturbs the agent.
+ * Send one JSON-RPC request to herdr over its protocol-18 socket and await the
+ * typed response. Every failure path (transport error, timeout, protocol
+ * mismatch) is reported via `onError` without throwing, so a dead or
+ * incompatible herdr never disturbs the agent.
  *
- * Resolves once the frame has been flushed (or the attempt failed or timed out),
+ * Resolves once herdr has responded (or the attempt failed or timed out),
  * which is what lets callers order frames relative to one another.
  */
-function sendToHerdrSocket(
+async function sendToHerdrSocket(
 	socketPath: string,
 	method: string,
 	params: Record<string, unknown>,
 	onError: (err: unknown) => void,
 ): Promise<void> {
-	return new Promise<void>(resolve => {
-		let settled = false;
-		const settle = (): void => {
-			if (settled) {
-				return;
-			}
-			settled = true;
-			resolve();
-		};
-		const conn = connect({ path: socketPath });
-		// Never let a report keep xcsh's event loop alive.
-		conn.unref();
-		conn.once("error", err => {
-			onError(err);
-			conn.destroy();
-			settle();
-		});
-		conn.once("connect", () => {
-			conn.end(`${JSON.stringify({ id: "xcsh:herdr-reporter", method, params })}\n`, settle);
-		});
-		conn.setTimeout(SOCKET_TIMEOUT_MS, () => {
-			conn.destroy();
-			settle();
-		});
-	});
+	try {
+		await getHerdrClient(socketPath).request<Record<string, unknown>>(method, params);
+	} catch (err) {
+		onError(err);
+	}
 }
 
 /** Translate a JSON-RPC report/release into `herdr` CLI arguments (fallback). */
