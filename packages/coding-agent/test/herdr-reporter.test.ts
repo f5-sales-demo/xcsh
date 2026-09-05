@@ -210,6 +210,29 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
+	it("reconciles a settled completed turn to idle without treating an active turn as idle", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			await handlers.get("agent_start")?.({}, idleCtx);
+			handlers.get("turn_end")?.({ turnIndex: 0, message: {}, toolResults: [] }, busyCtx);
+			await new Promise(resolve => setTimeout(resolve, 35));
+			expect(herdr.received).toHaveLength(1);
+
+			handlers.get("turn_end")?.({ turnIndex: 1, message: {}, toolResults: [] }, idleCtx);
+			await waitFor(() => herdr.received.length >= 2);
+			const base = baseSeq(herdr);
+			expect(herdr.received[1]?.method).toBe("pane.report_agent");
+			expect(herdr.received[1]?.params).toEqual(reportParams("idle", base + 1));
+		} finally {
+			await herdr.close();
+		}
+	});
+
 	it("reports blocked over the socket while a prompt is open, then restores state", async () => {
 		const herdr = await startFakeHerdr();
 		try {
@@ -404,6 +427,7 @@ describe("herdr-reporter extension", () => {
 				source: "herdr:xcsh",
 				agent: "xcsh",
 				agent_session_path: file,
+				session_start_source: "startup",
 			});
 			expect(frame?.params.agent_session_id).toBeUndefined();
 
@@ -525,6 +549,34 @@ describe("herdr-reporter extension", () => {
 			await waitFor(() => herdr.received.some(r => r.method === "pane.report_agent_session"));
 			const session = herdr.received.find(r => r.method === "pane.report_agent_session");
 			expect(session?.params.agent_session_path).toBe("/tmp/x/late-session.jsonl");
+			expect(session?.params.session_start_source).toBe("startup");
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("marks only the first session reference as startup", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			let file = "/tmp/x/first-session.jsonl";
+			const changingCtx = {
+				isIdle: () => true,
+				sessionManager: { getSessionFile: () => file, getSessionId: () => "" },
+			} as unknown as ExtensionContext;
+
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, changingCtx);
+			file = "/tmp/x/second-session.jsonl";
+			await handlers.get("agent_start")?.({}, changingCtx);
+
+			await waitFor(() => herdr.received.filter(r => r.method === "pane.report_agent_session").length === 2);
+			const sessions = herdr.received.filter(r => r.method === "pane.report_agent_session");
+			expect(sessions[0]?.params.session_start_source).toBe("startup");
+			expect(sessions[1]?.params.session_start_source).toBeUndefined();
 		} finally {
 			await herdr.close();
 		}
