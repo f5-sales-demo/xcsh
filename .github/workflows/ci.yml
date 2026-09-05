@@ -767,6 +767,8 @@ jobs:
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_INSTALLER_CERTIFICATE_BASE64: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_BASE64 }}
+          APPLE_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
         run: |
           KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
@@ -795,6 +797,29 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           rm "$RUNNER_TEMP/certificate.p12"
+
+          if [ -z "$APPLE_INSTALLER_CERTIFICATE_BASE64" ] || [ -z "$APPLE_INSTALLER_CERTIFICATE_PASSWORD" ]; then
+            echo "::error::A Developer ID Installer certificate is required for the stapled macOS package"
+            exit 1
+          fi
+          echo "$APPLE_INSTALLER_CERTIFICATE_BASE64" | base64 --decode > "$RUNNER_TEMP/installer-certificate.p12"
+          openssl pkcs12 -info -in "$RUNNER_TEMP/installer-certificate.p12" -noout \
+            -passin pass:"$APPLE_INSTALLER_CERTIFICATE_PASSWORD" >/dev/null
+          security import "$RUNNER_TEMP/installer-certificate.p12" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$APPLE_INSTALLER_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/pkgbuild \
+            -T /usr/bin/productsign \
+            -T /usr/bin/security
+          rm "$RUNNER_TEMP/installer-certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          INSTALLER_SIGNING_IDENTITY=$(security find-identity -v "$KEYCHAIN_PATH" \
+            | grep "Developer ID Installer" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          if [ -z "$INSTALLER_SIGNING_IDENTITY" ]; then
+            echo "::error::No Developer ID Installer identity found"
+            exit 1
+          fi
+          echo "INSTALLER_SIGNING_IDENTITY=$INSTALLER_SIGNING_IDENTITY" >> "$GITHUB_ENV"
 
       - name: Sign and notarize native addons
         env:
@@ -994,6 +1019,47 @@ jobs:
 
           echo "All checks passed for ${RELEASE_ARCH}"
 
+      - name: Build, sign, notarize, and staple macOS package
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          binary="packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}"
+          pkg="packages/coding-agent/binaries/xcsh-darwin-${RELEASE_ARCH}.pkg"
+          bun scripts/ci-release-macos-pkg.ts \
+            --arch "$RELEASE_ARCH" \
+            --version "$version" \
+            --binary "$binary" \
+            --native-dir packages/natives/native \
+            --output "$pkg"
+
+          notary_accepted=false
+          for attempt in 1 2 3; do
+            notary_exit=0
+            notary_output=$(xcrun notarytool submit "$pkg" \
+              --apple-id "$APPLE_ID" \
+              --password "$APPLE_PASSWORD" \
+              --team-id "$APPLE_TEAM_ID" \
+              --wait) || notary_exit=$?
+            echo "$notary_output"
+            if [ "$notary_exit" -eq 0 ] && echo "$notary_output" | grep -q "status: Accepted"; then
+              notary_accepted=true
+              break
+            fi
+            [ "$attempt" -eq 3 ] || sleep $((attempt * 30))
+          done
+          if [ "$notary_accepted" != true ]; then
+            echo "::error::Package notarization was not accepted after 3 attempts"
+            exit 1
+          fi
+          xcrun stapler staple "$pkg"
+          xcrun stapler validate "$pkg"
+          pkgutil --check-signature "$pkg" | grep -q "Developer ID Installer"
+          spctl --assess --verbose=4 --type install "$pkg"
+
       - name: Verify signed macOS sandbox check in a direct-home live profile
         env:
           XCSH_TEST_SANDBOX_CHECK_BINARY: ${{ github.workspace }}/packages/coding-agent/binaries/xcsh-darwin-${{ matrix.arch }}
@@ -1151,6 +1217,7 @@ jobs:
           gh release download "$GITHUB_REF_NAME" \
             --pattern 'xcsh-*.zip' \
             --pattern 'xcsh-*.tar.gz' \
+            --pattern 'xcsh-*.pkg' \
             --dir packages/coding-agent/binaries
       - name: Update Homebrew tap
         env:
@@ -1231,6 +1298,46 @@ jobs:
             fi
 
             echo "Waiting ${delay}s for tap and release-asset propagation..."
+            sleep "$delay"
+            if [ "$delay" -lt 60 ]; then delay=$((delay * 2)); fi
+          done
+
+      - name: Install published managed macOS cask and verify native startup
+        env:
+          EXPECTED_VERSION: ${{ github.ref_name }}
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          set -euo pipefail
+          expected="${EXPECTED_VERSION#v}"
+          native="/Library/Application Support/xcsh/natives/${expected}/pi_natives.darwin-arm64.node"
+          max_attempts=8
+          delay=10
+
+          brew uninstall --formula --force f5-sales-demo/tap/xcsh 2>/dev/null || true
+          brew uninstall --cask --force f5-sales-demo/tap/xcsh 2>/dev/null || true
+          for attempt in $(seq 1 "$max_attempts"); do
+            echo "=== Homebrew cask install attempt $attempt/$max_attempts ==="
+            brew untap f5-sales-demo/tap 2>/dev/null || true
+            brew tap f5-sales-demo/tap
+            if brew install --cask f5-sales-demo/tap/xcsh; then
+              pkgutil --pkg-info com.f5.xcsh
+              test -x /usr/local/bin/xcsh
+              test -f "$native"
+              installed=$(/usr/local/bin/xcsh --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+              if [ "$installed" = "$expected" ]; then
+                codesign --verify --strict "$native"
+                PI_DEV=1 /usr/local/bin/xcsh sandbox check 2>&1 | tee "$RUNNER_TEMP/xcsh-pkg-native-load.log"
+                grep -F "Loaded native addon from $native" "$RUNNER_TEMP/xcsh-pkg-native-load.log"
+                echo "Managed Homebrew cask verification passed"
+                exit 0
+              fi
+            fi
+
+            brew uninstall --cask --force f5-sales-demo/tap/xcsh 2>/dev/null || true
+            if [ "$attempt" -eq "$max_attempts" ]; then
+              echo "::error::Managed Homebrew cask verification failed after $max_attempts attempts"
+              exit 1
+            fi
             sleep "$delay"
             if [ "$delay" -lt 60 ]; then delay=$((delay * 2)); fi
           done

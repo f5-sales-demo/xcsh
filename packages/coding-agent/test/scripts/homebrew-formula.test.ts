@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { $ } from "bun";
-import { createArchives, generateFormula } from "../../../../scripts/ci-release-homebrew";
+import { createArchives, generateCask, generateFormula } from "../../../../scripts/ci-release-homebrew";
 
 /**
  * Guard for the brew `post_install` recycle hook (#upgrade-recycle).
@@ -36,6 +36,29 @@ describe("homebrew formula post_install recycle", () => {
 	it("still installs the binary for every arch and carries the version", () => {
 		expect(formula.match(/bin\.install "xcsh"/g)?.length).toBe(4); // 2 macOS + 2 linux
 		expect(formula).toContain('version "19.99.0"');
+		expect(formula.match(/libexec\.install Dir\["pi_natives\.\*\.node"\]/g)?.length).toBe(2);
+	});
+});
+
+describe("managed macOS Homebrew cask", () => {
+	it("installs the signed pkg for both macOS architectures", () => {
+		const cask = generateCask(
+			"19.99.0",
+			"v19.99.0",
+			new Map([
+				["xcsh-darwin-x64.pkg", "pkg-x64"],
+				["xcsh-darwin-arm64.pkg", "pkg-arm64"],
+			]),
+		);
+
+		expect(cask).toContain('cask "xcsh" do');
+		expect(cask).toContain('arch arm: "arm64", intel: "x64"');
+		expect(cask).toContain('sha256 arm: "pkg-arm64", intel: "pkg-x64"');
+		expect(cask).toContain(
+			'url "https://github.com/f5-sales-demo/xcsh/releases/download/v19.99.0/xcsh-darwin-#{arch}.pkg"',
+		);
+		expect(cask).toContain('pkg "xcsh-darwin-#{arch}.pkg"');
+		expect(cask).toContain('pkgutil: "com.f5.xcsh"');
 	});
 });
 
@@ -47,6 +70,7 @@ describe("homebrew release archives", () => {
 
 		try {
 			await Bun.write(path.join(fixtureDir, "xcsh-darwin-arm64"), "synthetic xcsh binary\n");
+			await Bun.write(path.join(fixtureDir, "pi_natives.darwin-arm64.node"), "synthetic native addon\n");
 			const options = {
 				binariesDir: fixtureDir,
 				dryRun: false,
@@ -63,6 +87,8 @@ describe("homebrew release archives", () => {
 			await fs.mkdir(extractDir);
 			await $`unzip -q ${archivePath} -d ${extractDir}`.quiet();
 			const archivedBinary = await fs.stat(path.join(extractDir, "xcsh"));
+			const archivedAddon = await fs.readFile(path.join(extractDir, "pi_natives.darwin-arm64.node"), "utf8");
+			expect(archivedAddon).toBe("synthetic native addon\n");
 			expect(Math.floor(archivedBinary.mtimeMs / 1000)).toBe(epochSeconds);
 		} finally {
 			await fs.rm(fixtureDir, { recursive: true, force: true });

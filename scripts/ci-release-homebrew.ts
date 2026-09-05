@@ -17,6 +17,8 @@ interface ArchiveTarget {
 	format: "zip" | "tar.gz";
 }
 
+const macosPackageNames = ["xcsh-darwin-arm64.pkg", "xcsh-darwin-x64.pkg"];
+
 const archiveTargets: ArchiveTarget[] = [
 	{ binary: "xcsh-darwin-arm64", archive: "xcsh-darwin-arm64.zip", platform: "darwin", arch: "arm64", format: "zip" },
 	{ binary: "xcsh-darwin-x64", archive: "xcsh-darwin-x64.zip", platform: "darwin", arch: "x64", format: "zip" },
@@ -83,16 +85,28 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 		const tmpDir = await fs.mkdtemp(path.join(repoRoot, ".tmp-homebrew-"));
 		try {
 			await fs.copyFile(binaryPath, path.join(tmpDir, "xcsh"));
+			const stagedFiles = [path.join(tmpDir, "xcsh")];
+			if (target.platform === "darwin") {
+				const nativePrefix = `pi_natives.darwin-${target.arch}`;
+				const nativeNames = (await fs.readdir(outputDir))
+					.filter(name => name.startsWith(nativePrefix) && name.endsWith(".node"))
+					.sort();
+				if (nativeNames.length === 0) throw new Error(`No native addons found for darwin-${target.arch}`);
+				for (const name of nativeNames) {
+					const staged = path.join(tmpDir, name);
+					await fs.copyFile(path.join(outputDir, name), staged);
+					stagedFiles.push(staged);
+				}
+			}
 			await fs.rm(archivePath, { force: true });
-			const stagedBinary = path.join(tmpDir, "xcsh");
 
 			if (target.format === "zip") {
 				if (dryRun) {
-					console.log(`  DRY RUN: zip -X -j ${archivePath} ${tmpDir}/xcsh`);
+					console.log(`  DRY RUN: zip -X -j ${archivePath} ${stagedFiles.join(" ")}`);
 				} else {
 					if (epochSeconds === undefined) throw new Error("SOURCE_DATE_EPOCH was not resolved");
-					await fs.utimes(stagedBinary, epochSeconds, epochSeconds);
-					await $`zip -X -j ${archivePath} ${stagedBinary}`;
+					for (const stagedFile of stagedFiles) await fs.utimes(stagedFile, epochSeconds, epochSeconds);
+					await $`zip -X -j ${archivePath} ${stagedFiles}`;
 					console.log(`  Created ${target.archive}`);
 				}
 			} else {
@@ -112,8 +126,8 @@ export async function createArchives(options: CreateArchivesOptions = {}): Promi
 async function computeChecksums(): Promise<Map<string, string>> {
 	const checksums = new Map<string, string>();
 
-	for (const target of archiveTargets) {
-		const archivePath = path.join(binariesDir, target.archive);
+	for (const artifact of [...archiveTargets.map(target => target.archive), ...macosPackageNames]) {
+		const archivePath = path.join(binariesDir, artifact);
 		try {
 			await fs.stat(archivePath);
 		} catch {
@@ -121,13 +135,13 @@ async function computeChecksums(): Promise<Map<string, string>> {
 		}
 
 		if (isDryRun) {
-			checksums.set(target.archive, "DRY_RUN_SHA256_PLACEHOLDER");
-			console.log(`  DRY RUN: sha256sum ${target.archive}`);
+			checksums.set(artifact, "DRY_RUN_SHA256_PLACEHOLDER");
+			console.log(`  DRY RUN: sha256sum ${artifact}`);
 		} else {
 			const result = await $`sha256sum ${archivePath}`.text();
 			const sha = result.split(" ")[0].trim();
-			checksums.set(target.archive, sha);
-			console.log(`  ${target.archive}: ${sha}`);
+			checksums.set(artifact, sha);
+			console.log(`  ${artifact}: ${sha}`);
 		}
 	}
 
@@ -154,6 +168,7 @@ class Xcsh < Formula
 
       def install
         bin.install "xcsh"
+        libexec.install Dir["pi_natives.*.node"]
       end
     end
     if Hardware::CPU.arm?
@@ -162,6 +177,7 @@ class Xcsh < Formula
 
       def install
         bin.install "xcsh"
+        libexec.install Dir["pi_natives.*.node"]
       end
     end
   end
@@ -204,6 +220,26 @@ end
 `;
 }
 
+export function generateCask(version: string, tag: string, checksums: Map<string, string>): string {
+	const armSha = checksums.get("xcsh-darwin-arm64.pkg") || "MISSING_SHA256";
+	const intelSha = checksums.get("xcsh-darwin-x64.pkg") || "MISSING_SHA256";
+	return `cask "xcsh" do
+  version "${version}"
+  arch arm: "arm64", intel: "x64"
+  sha256 arm: "${armSha}", intel: "${intelSha}"
+
+  url "https://github.com/${repo}/releases/download/${tag}/xcsh-darwin-#{arch}.pkg"
+  name "xcsh"
+  desc "AI coding agent for the terminal"
+  homepage "https://github.com/${repo}"
+
+  pkg "xcsh-darwin-#{arch}.pkg"
+
+  uninstall pkgutil: "com.f5.xcsh"
+end
+`;
+}
+
 async function updateTap(version: string, tag: string, checksums: Map<string, string>): Promise<void> {
 	const ghToken = process.env.GH_TOKEN;
 	if (!ghToken && !isDryRun) {
@@ -211,10 +247,13 @@ async function updateTap(version: string, tag: string, checksums: Map<string, st
 	}
 
 	const formula = generateFormula(version, tag, checksums);
+	const cask = generateCask(version, tag, checksums);
 
 	if (isDryRun) {
 		console.log("\nGenerated formula:\n");
 		console.log(formula);
+		console.log("\nGenerated cask:\n");
+		console.log(cask);
 		console.log("DRY RUN: would clone, commit, and push to", tapRepo);
 		return;
 	}
@@ -228,16 +267,18 @@ async function updateTap(version: string, tag: string, checksums: Map<string, st
 	await $`git clone https://x-access-token:${ghToken}@github.com/${tapRepo}.git ${tmpDir}`;
 
 	await fs.writeFile(path.join(tmpDir, "xcsh.rb"), formula);
+	await fs.mkdir(path.join(tmpDir, "Casks"), { recursive: true });
+	await fs.writeFile(path.join(tmpDir, "Casks", "xcsh.rb"), cask);
 
-	const diff = await $`git -C ${tmpDir} diff --quiet`.nothrow();
-	if (diff.exitCode === 0) {
+	const changed = (await $`git -C ${tmpDir} status --porcelain -- xcsh.rb Casks/xcsh.rb`.text()).trim();
+	if (!changed) {
 		console.log("No changes to tap formula — skipping push");
 		return;
 	}
 
 	await $`git -C ${tmpDir} config user.name "github-actions[bot]"`;
 	await $`git -C ${tmpDir} config user.email "41898282+github-actions[bot]@users.noreply.github.com"`;
-	await $`git -C ${tmpDir} add xcsh.rb`;
+	await $`git -C ${tmpDir} add xcsh.rb Casks/xcsh.rb`;
 	await $`git -C ${tmpDir} commit -m ${"Update xcsh to " + tag}`;
 	await $`git -C ${tmpDir} push`;
 	console.log(`Pushed updated formula to ${tapRepo}`);

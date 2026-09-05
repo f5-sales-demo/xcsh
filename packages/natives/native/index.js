@@ -7,6 +7,7 @@ const fs = require("node:fs");
 const { createRequire } = require("node:module");
 const os = require("node:os");
 const path = require("node:path");
+const { getInstalledNativeCandidates, loadInstalledBeforeFallback } = require("./installed-paths");
 
 function getNativesDir() {
 	const xdgDataHome = process.env.XDG_DATA_HOME;
@@ -23,6 +24,12 @@ const platformTag = `${process.platform}-${process.arch}`;
 const packageVersion = packageJson.version;
 const nativeDir = path.join(__dirname, "..", "native");
 const execDir = path.dirname(process.execPath);
+let resolvedExecDir = execDir;
+try {
+	resolvedExecDir = path.dirname(fs.realpathSync(process.execPath));
+} catch {
+	// Keep process.execPath as the fallback when the executable cannot be resolved.
+}
 const versionedDir = path.join(getNativesDir(), packageVersion);
 const userDataDir =
 	process.platform === "win32"
@@ -118,6 +125,13 @@ const variantOverride = getVariantOverride();
 const selectedVariant = resolveCpuVariant(variantOverride);
 const addonFilenames = getAddonFilenames(platformTag, selectedVariant);
 const addonLabel = selectedVariant ? `${platformTag} (${selectedVariant})` : platformTag;
+const installedCandidates = getInstalledNativeCandidates({
+	platform: process.platform,
+	packageVersion,
+	addonFilenames,
+	execDir,
+	resolvedExecDir,
+});
 
 // Map platform tags to platform package names (optionalDependencies)
 const PLATFORM_PACKAGE_MAP = {
@@ -215,23 +229,24 @@ function maybeExtractEmbeddedAddon(errors) {
 
 function loadNative() {
 	const errors = [];
-	const embeddedCandidate = maybeExtractEmbeddedAddon(errors);
-	const runtimeCandidates = embeddedCandidate ? [embeddedCandidate, ...dedupedCandidates] : dedupedCandidates;
-	for (const candidate of runtimeCandidates) {
-		try {
-			const bindings = require_(candidate);
-			if (process.env.PI_DEV) {
-				console.log(`Loaded native addon from ${candidate}`);
-			}
-			return bindings;
-		} catch (err) {
-			if (process.env.PI_DEV) {
-				console.error("Error loading native addon from %s:", candidate, err);
-			}
-			const message = err instanceof Error ? err.message : String(err);
-			errors.push(`${candidate}: ${message}`);
-		}
-	}
+	const onLoaded = candidate => {
+		if (process.env.PI_DEV) console.log(`Loaded native addon from ${candidate}`);
+	};
+	const onError = (candidate, err) => {
+		if (process.env.PI_DEV) console.error("Error loading native addon from %s:", candidate, err);
+	};
+	const loaded = loadInstalledBeforeFallback(
+		installedCandidates,
+		require_,
+		errors,
+		() => {
+			const embeddedCandidate = maybeExtractEmbeddedAddon(errors);
+			return embeddedCandidate ? [embeddedCandidate, ...dedupedCandidates] : dedupedCandidates;
+		},
+		onLoaded,
+		onError,
+	);
+	if (loaded) return loaded;
 	// Check if this is an unsupported platform
 	if (!SUPPORTED_PLATFORMS.includes(platformTag)) {
 		throw new Error(
