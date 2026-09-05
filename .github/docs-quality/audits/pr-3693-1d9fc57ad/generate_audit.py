@@ -1,4 +1,4 @@
-# ruff: noqa
+# ruff: noqa: D103, INP001, PLR2004, PLW1510, S603, S607
 """Generate the fixed-subject PR #3693 audit from immutable Git objects."""
 
 from __future__ import annotations

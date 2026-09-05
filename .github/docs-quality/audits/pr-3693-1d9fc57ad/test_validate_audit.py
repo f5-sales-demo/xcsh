@@ -1,4 +1,4 @@
-# ruff: noqa
+# ruff: noqa: INP001, S101, S603, T201, PLW1510
 """Negative-fixture checks for the audit-result validator."""
 
 from __future__ import annotations
