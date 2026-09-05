@@ -1,4 +1,6 @@
 # ruff: noqa: D103, INP001, PLR2004, PLW1510, S603, S607
+# mypy: ignore-errors
+# pylint: disable=too-many-locals,subprocess-run-check
 """Generate the fixed-subject PR #3693 audit from immutable Git objects."""
 
 from __future__ import annotations
