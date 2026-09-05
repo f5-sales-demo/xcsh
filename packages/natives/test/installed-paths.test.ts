@@ -42,7 +42,7 @@ describe("installed native addon paths", () => {
 				platform: "linux",
 				packageVersion: "21.11.9",
 				addonFilenames: ["pi_natives.linux-x64.node"],
-				execDir: "/home/linuxbrew/.linuxbrew/Cellar/xcsh/21.11.9/bin",
+				execDir: "/home/username/.linuxbrew/Cellar/xcsh/21.11.9/bin",
 			}),
 		).toEqual([]);
 	});
@@ -73,7 +73,7 @@ describe("installed native addon paths", () => {
 			[],
 			() => {
 				preparedFallback = true;
-				return ["/home/test/.xcsh/natives/21.11.9/addon.node"];
+				return ["/home/username/.xcsh/natives/21.11.9/addon.node"];
 			},
 		);
 
