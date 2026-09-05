@@ -1,4 +1,4 @@
-# ruff: noqa: INP001, PERF401, PLR2004, T201
+# ruff: noqa: I001, INP001, PERF401, PLR2004, T201
 """Focused integrity validator for the PR #3693 audit artifact."""
 
 from __future__ import annotations
