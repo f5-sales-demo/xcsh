@@ -73,7 +73,7 @@ English source stays exclusively under `docs/en/`. Keep `docs/llms-config.json` 
 Run:
 
 ```sh
-python3 scripts/check-docs-quality.py
+python3 scripts/check_docs_quality.py
 python3 -m unittest tests.test_docs_quality
 ```
 
