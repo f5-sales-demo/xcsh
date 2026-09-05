@@ -1,0 +1,26 @@
+source_commit: a01c8ffb471c525088ef99296f50e958d51ae835
+xcsh_version: xcsh/21.11.8
+docs_builder_image: ghcr.io/f5-sales-demo/docs-builder@sha256:06be6f363e32f8b78898f4f4bdcb1ef86f698073c68a77701327e78611af2bce
+command: docker run --rm --pull=never -e DOCS_BASE=/xcsh -e DOCS_SITE=https://f5-sales-demo.github.io -v <candidate>/docs:/content/docs:ro -v <output>:/output ghcr.io/f5-sales-demo/docs-builder:latest
+exit_status: 0
+observed: 807 static pages built; Pagefind indexed 808 HTML files; 62 English MDX pages produced canonical HTML and page-level LLM documents
+command: candidate HTML internal-link and corpus verification
+exit_status: 0
+observed: 4528 internal references; 0 broken targets; 8 section files; 0 missing HTML, compact-corpus, full-corpus, or section-file entries; obsolete path groups absent
+command: Playwright with /usr/bin/google-chrome against loopback production output
+exit_status: 0
+observed: /xcsh/ redirected to /xcsh/en/; direct Pagefind query "provider streaming" returned /xcsh/en/architecture-contribution/provider-streaming/; eight mobile navigation groups visible
+observed_views: desktop light home; desktop light code-heavy quickstart; desktop dark configuration reference; desktop dark storage architecture; mobile dark TUI page; mobile dark navigation
+e4e9f584bdbe2ee2dfa23651022aa54b7708a86a8ab023e1aec0a3632771e94e  screenshot: desktop-architecture-dark.png
+27cf047166a8e8a41a638614ea019ad3729584cb2f73a5e8d0c7c7f6300d8873  screenshot: desktop-home-light.png
+6af0de5f8c2e88fb8a50f74246f6d696d86fed4e71fa65559f18063a06bb3162  screenshot: desktop-quickstart-light.png
+e31004c2ed02af6d632c5d14abe265975bd8c41cecdd02fa52e2107b49b907ac  screenshot: desktop-reference-dark.png
+192181892e60494948b04bdc64893dfaeae023f3c9927afe3785a71bec038c72  screenshot: mobile-navigation-dark.png
+a356f56c0c32a3ea7f7787809c68514bc1c74c2ce23174d4b5b6c72e6a22c55d  screenshot: mobile-tui-dark.png
+screenshot: 794fef3807be611e4c9c9ed644377d451bdc3ebddb770eea15074eed4b2ecb27  desktop-architecture-dark.png
+screenshot: 2484540221270e1b4de581e4c326aabec2cbbed8b32c57c9c9871dd392be706a  desktop-home-light.png
+screenshot: 458ead0f9a67a2d1f5493df6fe36b0bbac4c485a4e9726f398552978a11fbc5a  desktop-quickstart-light.png
+screenshot: 736829f994e14b29ac1a29972489322232140cf0030aba5749279ba577ef06dd  desktop-reference-dark.png
+screenshot: 01d898e11db69d4873e8315e0c97d9a8d15a8506b106a8ba03d46b893c5ec8ab  mobile-navigation-dark.png
+screenshot: 38e21dc02e531b8125979c5c38d8d8d4215ca4cff191bf97238634b66d1f3fcf  mobile-tui-dark.png
+cleanup: HTTP server stopped; screenshots and static output retained temporarily for review, then removed after acceptance

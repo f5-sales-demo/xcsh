@@ -1,222 +1,9 @@
 {
-  "schemaVersion": 1,
-  "generatedFrom": "issue-3686-manual-audit",
+  "schemaVersion": 2,
+  "generatedFrom": "issue-3690-legacy-concept-audit",
   "pages": [
     {
-      "path": "docs/en/agentic-shell/built-in-tools.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Use built-in tools: Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries.",
-      "purpose": "Answer the distinct task or decision described by Use built-in tools.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/coding-agent/src/session"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "How do I reduce the tool boundary?",
-          "readerQuestion": "How do I reduce the tool boundary?",
-          "purpose": "Answer this question within Use built-in tools: How do I reduce the tool boundary?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "Which tools require extra care?",
-          "readerQuestion": "Which tools require extra care?",
-          "purpose": "Answer this question within Use built-in tools: Which tools require extra care?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/agentic-shell/how-it-works.mdx",
-      "classification": "concept",
-      "audience": "xcsh users",
-      "readerNeed": "How xcsh works: Understand how prompts, model turns, tool calls, results, and session entries form the agent loop.",
-      "purpose": "Answer the distinct task or decision described by How xcsh works.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/coding-agent/src/session"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "Where is the durable record?",
-          "readerQuestion": "Where is the durable record?",
-          "purpose": "Answer this question within How xcsh works: Where is the durable record?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "Where are side effects introduced?",
-          "readerQuestion": "Where are side effects introduced?",
-          "purpose": "Answer this question within How xcsh works: Where are side effects introduced?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/agentic-shell/index.mdx",
-      "classification": "landing",
-      "audience": "xcsh users",
-      "readerNeed": "Agentic shell: Work with the agent loop, terminal UI, tools, sessions, memory, plans, and specialized agents.",
-      "purpose": "Answer the distinct task or decision described by Agentic shell.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/coding-agent/src/session"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "What should I learn first?",
-          "readerQuestion": "What should I learn first?",
-          "purpose": "Answer this question within Agentic shell: What should I learn first?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/agentic-shell/interactive-tui.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Use the interactive TUI: Navigate the prompt editor, status line, model selector, tool output, and command palette.",
-      "purpose": "Answer the distinct task or decision described by Use the interactive TUI.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/coding-agent/src/session"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "How do I send prompts and local files?",
-          "readerQuestion": "How do I send prompts and local files?",
-          "purpose": "Answer this question within Use the interactive TUI: How do I send prompts and local files?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "How do I discover controls?",
-          "readerQuestion": "How do I discover controls?",
-          "purpose": "Answer this question within Use the interactive TUI: How do I discover controls?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/agentic-shell/planning.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Plan complex work: Separate exploration and decisions from implementation with xcsh planning controls.",
-      "purpose": "Answer the distinct task or decision described by Plan complex work.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/coding-agent/src/session"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli",
-        "offline-configuration"
-      ],
-      "headings": [
-        {
-          "text": "What belongs in a decision-complete plan?",
-          "readerQuestion": "What belongs in a decision-complete plan?",
-          "purpose": "Answer this question within Plan complex work: What belongs in a decision-complete plan?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "offline-configuration"
-          ]
-        },
-        {
-          "text": "When should I use a specialized agent?",
-          "readerQuestion": "When should I use a specialized agent?",
-          "purpose": "Answer this question within Plan complex work: When should I use a specialized agent?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli",
-            "offline-configuration"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/agentic-shell/sessions.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Resume and export sessions: Continue, locate, fork, or export persisted conversations.",
-      "purpose": "Answer the distinct task or decision described by Resume and export sessions.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/coding-agent/src/session"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "How do I branch or compact a long conversation?",
-          "readerQuestion": "How do I branch or compact a long conversation?",
-          "purpose": "Answer this question within Resume and export sessions: How do I branch or compact a long conversation?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "How does project memory differ?",
-          "readerQuestion": "How does project memory differ?",
-          "purpose": "Answer this question within Resume and export sessions: How does project memory differ?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "How do I export a record?",
-          "readerQuestion": "How do I export a record?",
-          "purpose": "Answer this question within Resume and export sessions: How do I export a record?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/architecture-contribution/agent-loop-sessions.mdx",
+      "path": "docs/en/architecture-contribution/agent-session-runtime.mdx",
       "classification": "concept",
       "audience": "xcsh contributors",
       "readerNeed": "Agent loop and sessions: Trace a user message through model selection, tool calls, append-only session state, compaction, and rendering.",
@@ -227,7 +14,8 @@
         "crates/pi-natives/src"
       ],
       "evidence": [
-        "source-authority"
+        "source-authority",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -235,7 +23,18 @@
           "readerQuestion": "How do I trace a behavior?",
           "purpose": "Answer this question within Agent loop and sessions: How do I trace a behavior?.",
           "evidence": [
-            "source-authority"
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-79163e2d4655b8f1",
+            "lc-ddda81d9507d7029",
+            "lc-48b4718cfc006fcc",
+            "lc-6d7ba76398dc58ab",
+            "lc-acadacdb14d41ff3",
+            "lc-15b25d90a2dfc21b",
+            "lc-21e9fc22cbb723c5",
+            "lc-2cb94fbe12910272"
           ]
         },
         {
@@ -243,7 +42,15 @@
           "readerQuestion": "Where does compaction act?",
           "purpose": "Answer this question within Agent loop and sessions: Where does compaction act?.",
           "evidence": [
-            "source-authority"
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-441f76a0810bf5b0",
+            "lc-91efb8615be60204",
+            "lc-b9e95c492a6fa119",
+            "lc-43e60fc63a161424",
+            "lc-4cb8faf8c59e3592"
           ]
         }
       ]
@@ -261,7 +68,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -270,8 +78,10 @@
           "purpose": "Answer this question within Build and release xcsh: How do I prepare a contribution?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "Which checks matter before a pull request?",
@@ -279,8 +89,10 @@
           "purpose": "Answer this question within Build and release xcsh: Which checks matter before a pull request?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How are releases produced?",
@@ -288,13 +100,15 @@
           "purpose": "Answer this question within Build and release xcsh: How are releases produced?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/architecture-contribution/extensibility-boundaries.mdx",
+      "path": "docs/en/architecture-contribution/extension-discovery.mdx",
       "classification": "concept",
       "audience": "xcsh contributors",
       "readerNeed": "Extensibility boundaries: Choose between skills, commands, tools, hooks, extensions, plugins, MCP, and SDK embedding.",
@@ -305,24 +119,57 @@
         "crates/pi-natives/src"
       ],
       "evidence": [
-        "source-authority"
+        "source-authority",
+        "legacy-enrichment"
       ],
       "headings": [
+        {
+          "text": "How are capabilities discovered?",
+          "readerQuestion": "How are capabilities discovered?",
+          "purpose": "Discovery providers scan bundled, user, project, plugin, and compatible manifest roots, normalize candidates into capability items, and deduplicate stable identifiers by precedence.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-66b21a602f0336de",
+            "lc-6ea9cc8c7f684e3b",
+            "lc-e11139bbefbc255e",
+            "lc-81f13468f49b345b",
+            "lc-6eb70ac384edb376",
+            "lc-332249d795cd4ce3",
+            "lc-6cf554f8c17d0122",
+            "lc-6ee8e662d53478a5",
+            "lc-76d8557977e732b4",
+            "lc-1709bee6ad2c4a7f",
+            "lc-78f04c21507395ca",
+            "lc-15d5fe9dd6d924da",
+            "lc-abd50b923b70835f",
+            "lc-dcd2533331636923",
+            "lc-0a778b4a7672947c",
+            "lc-f739a470b56176eb",
+            "lc-bb72a25806a613d2"
+          ]
+        },
         {
           "text": "Where should a change go?",
           "readerQuestion": "Where should a change go?",
           "purpose": "Answer this question within Extensibility boundaries: Where should a change go?.",
           "evidence": [
-            "source-authority"
-          ]
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I validate a boundary change?",
           "readerQuestion": "How do I validate a boundary change?",
           "purpose": "Answer this question within Extensibility boundaries: How do I validate a boundary change?.",
           "evidence": [
-            "source-authority"
-          ]
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -339,7 +186,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -348,7 +196,441 @@
           "purpose": "Answer this question within Architecture and contribution: Which implementation boundary matters?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/native-development.mdx",
+      "classification": "how-to",
+      "audience": "xcsh contributors",
+      "readerNeed": "Choose native work deliberately, add a binding, build variants, test cancellation, and debug loader failures.",
+      "purpose": "Choose native work deliberately, add a binding, build variants, test cancellation, and debug loader failures.",
+      "sourceAuthority": [
+        "crates/pi-natives/src",
+        "packages/natives/native",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Add or change a native export",
+          "readerQuestion": "How does add or change a native export work?",
+          "purpose": "Define the Rust implementation and Node-API signature, expose it from the crate, update TypeScript declarations and wrappers, then extend validation and contract tests.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-6e59f393be3e7db1",
+            "lc-9b986c98ba552679",
+            "lc-8e3598f36f09dda3",
+            "lc-57d6497b17961855"
+          ]
+        },
+        {
+          "text": "Build target variants",
+          "readerQuestion": "How does build target variants work?",
+          "purpose": "The build pipeline selects target triples and optional hardware variants, compiles release artifacts, and packages names the loader can resolve.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-f0b5f3db94d4da25",
+            "lc-6fb1e580eca39e1f",
+            "lc-ec6359672e406af8",
+            "lc-92236e7ffca4af4e",
+            "lc-528bc5a12668270a",
+            "lc-ac75c97c6ae42f2b"
+          ]
+        },
+        {
+          "text": "Diagnose loading and cancellation",
+          "readerQuestion": "How does diagnose loading and cancellation work?",
+          "purpose": "Start with the resolved candidate list, platform identity, file permissions, and `validateNative` mismatch.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-0d7a2cbd805795b6",
+            "lc-c4b75d9aa92cfcdb",
+            "lc-a5682201e31ee9a4",
+            "lc-ec026261bbdb7484",
+            "lc-48700c3eee88f2db"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/native-runtime.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Understand TypeScript wrappers, addon loading, Rust Node-API exports, binary selection, and binding validation.",
+      "purpose": "Understand TypeScript wrappers, addon loading, Rust Node-API exports, binary selection, and binding validation.",
+      "sourceAuthority": [
+        "crates/pi-natives/src",
+        "packages/natives/native",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Select and validate an addon",
+          "readerQuestion": "How does select and validate an addon work?",
+          "purpose": "Resolution considers operating system, CPU architecture, and supported hardware variants before trying packaged and extracted binary candidates.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-c1132d8ea058afe9",
+            "lc-4d5366775f513cea",
+            "lc-d2ff35a50586cd6f",
+            "lc-764e20f2b427de14",
+            "lc-04fc1453040ff6fd",
+            "lc-100d40f53ffc3aa1",
+            "lc-3ff1081860dce165"
+          ]
+        },
+        {
+          "text": "Keep bindings synchronized",
+          "readerQuestion": "How does keep bindings synchronized work?",
+          "purpose": "Module augmentation describes native exports to TypeScript, wrappers translate public inputs and outputs, and Rust functions implement the Node-API boundary.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-55c13fd7d4e8188d",
+            "lc-d010761453be63f5",
+            "lc-46fdecd02d805738",
+            "lc-c70fbd3b08baf60f",
+            "lc-9f1dfbc82b5a2ea8",
+            "lc-4a9cbe2549062979",
+            "lc-3fcc8b6991a67cc9",
+            "lc-8782ee4a8c24d5ae"
+          ]
+        },
+        {
+          "text": "Map native subsystems",
+          "readerQuestion": "How does map native subsystems work?",
+          "purpose": "The addon covers terminal and PTY processes, filesystem scanning and text search, media/system utilities, and cancellable task primitives.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-7da279e75c433ac6",
+            "lc-c687c250e6f477ac",
+            "lc-b934a7528a1b7c11",
+            "lc-b32bdc765e9af2c6",
+            "lc-339c1bc798f4d313",
+            "lc-003589c617cb0c6d",
+            "lc-2943c5d47e56daa9",
+            "lc-8d2f469191801fc6",
+            "lc-0b4f64857c5f7e75",
+            "lc-c0321b3ed11bab22",
+            "lc-5c228610baeb093e",
+            "lc-2ac609b07cf82e6c",
+            "lc-36c6d11178b944d0",
+            "lc-ab4faacecd134613",
+            "lc-aaa065b9fc7ef652"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/prompt-authoring.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Apply the system-prompt checklist, progressive composition, deduplication, and audit tests.",
+      "purpose": "Apply the system-prompt checklist, progressive composition, deduplication, and audit tests.",
+      "sourceAuthority": [
+        "DEVELOPING.md",
+        "packages/coding-agent/src",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Apply the eight-point checklist",
+          "readerQuestion": "How does apply the eight-point checklist work?",
+          "purpose": "State role and scope, concrete objectives, available tools, tool-use rules, constraints, output contract, uncertainty behavior, and completion criteria.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-0b4a5e9e6d6b1446",
+            "lc-afd71d4241c64008"
+          ]
+        },
+        {
+          "text": "Compose prompts progressively",
+          "readerQuestion": "How does compose prompts progressively work?",
+          "purpose": "The runtime builds the system prompt from the core fragment plus active capabilities, workspace guidance, plan state, memory, and extension contributions.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-dc9ef701347a451f",
+            "lc-fe0f9cd4c600f92c"
+          ]
+        },
+        {
+          "text": "Audit a prompt change",
+          "readerQuestion": "How does audit a prompt change work?",
+          "purpose": "Inspect the final composed prompt for representative capability sets.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/provider-streaming.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Follow provider events through normalized assistant messages, tool JSON accumulation, cancellation, and fallback.",
+      "purpose": "Follow provider events through normalized assistant messages, tool JSON accumulation, cancellation, and fallback.",
+      "sourceAuthority": [
+        "packages/ai/src",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Normalize tool calls incrementally",
+          "readerQuestion": "How does normalize tool calls incrementally work?",
+          "purpose": "Tool arguments can arrive as JSON fragments.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-5feb37d721591493",
+            "lc-f4ffe110f23f4eb5",
+            "lc-32ae7a7a7c35f6dd",
+            "lc-10c2b38d66429a31",
+            "lc-42c02b01c8fcb680",
+            "lc-ef3308c1c93428e7"
+          ]
+        },
+        {
+          "text": "Cancel and finish exactly once",
+          "readerQuestion": "How does cancel and finish exactly once work?",
+          "purpose": "Cancellation propagates to the active provider request and prevents later deltas from reopening the turn.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/storage-artifacts.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Trace configuration roots, session JSONL, binary blobs, text artifacts, scan caches, and move semantics.",
+      "purpose": "Trace configuration roots, session JSONL, binary blobs, text artifacts, scan caches, and move semantics.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/session",
+        "packages/coding-agent/src/config.ts",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "legacy-enrichment",
+        "legacy-build-browser"
+      ],
+      "headings": [
+        {
+          "text": "Allocate and resolve stored values",
+          "readerQuestion": "How does allocate and resolve stored values work?",
+          "purpose": "Storage helpers choose user or project roots, allocate collision-resistant identifiers, and record names separately from content addresses.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-6ca08bcdfb518516",
+            "lc-5be552c0ca761281",
+            "lc-514b09c094946a41",
+            "lc-df4eb14cb6f07d49",
+            "lc-86ff868e29c7828d",
+            "lc-297e0e4cdd68ec81",
+            "lc-601e77746fcdfc14",
+            "lc-53678e0c688719f9",
+            "lc-bc115eea40223a7f"
+          ]
+        },
+        {
+          "text": "Resume, fork, and move state",
+          "readerQuestion": "How does resume, fork, and move state work?",
+          "purpose": "Resume rebuilds context from the selected session leaf.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Cache filesystem discovery",
+          "readerQuestion": "How does cache filesystem discovery work?",
+          "purpose": "The scan cache partitions keys by root and discovery options, evicts by freshness policy, and uses a short empty-result recheck so a newly created configuration file is noticed.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment",
+            "legacy-build-browser"
+          ],
+          "legacyConceptIds": [
+            "lc-bc983019490f9fc5",
+            "lc-15e6d797eca5de51",
+            "lc-1335fe2e89a0d8b8",
+            "lc-1d4af5198eae8753",
+            "lc-6f137fa3b919fdde",
+            "lc-378791dd26380fe0",
+            "lc-7792c359e01d9760",
+            "lc-33d4aa48b809e2fe",
+            "lc-7eda1389f8ae32fc",
+            "lc-f0b41bba9dff2afb",
+            "lc-632b1392b231ee68"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/tool-runtime.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Trace Bash, notebook, deferred-action, custom-tool, context, and task-agent execution boundaries.",
+      "purpose": "Trace Bash, notebook, deferred-action, custom-tool, context, and task-agent execution boundaries.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/tools",
+        "packages/coding-agent/src/capability",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Execute shell and notebook work",
+          "readerQuestion": "How does execute shell and notebook work work?",
+          "purpose": "The Bash tool validates the request, launches through the configured shell boundary, streams bounded output, and spills oversized results to an artifact.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-b11be210083acaaf",
+            "lc-5a2b3e4e9ba00875",
+            "lc-515c05a8280a0ba0",
+            "lc-dd70ca3a60c2e0a7",
+            "lc-46efd2a69b63f4d4",
+            "lc-bb9cebaaf9ad4955",
+            "lc-e000948937631a2c",
+            "lc-c58b2d4bf617890f"
+          ]
+        },
+        {
+          "text": "Resolve deferred actions",
+          "readerQuestion": "How does resolve deferred actions work?",
+          "purpose": "Deferred actions are pushed onto a last-in, first-out stack and resolved only at the runtime checkpoint that owns them.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-111ec25bfab919cd",
+            "lc-d7110a2963329e18",
+            "lc-65d36f9b51d2231e",
+            "lc-675bd5a51bc14910"
+          ]
+        },
+        {
+          "text": "Discover commands and task agents",
+          "readerQuestion": "How does discover commands and task agents work?",
+          "purpose": "Slash-command templates and agent definitions are discovered from normalized user, project, plugin, and bundled providers.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-43c242d8a16c5896",
+            "lc-93dd55c4e61ace52",
+            "lc-cae5141ae5a56288",
+            "lc-a7ccad65d24930bb"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/architecture-contribution/tui-runtime.mdx",
+      "classification": "concept",
+      "audience": "xcsh contributors",
+      "readerNeed": "Trace component contracts, differential rendering, terminal input, modal UI, and custom tool renderers.",
+      "purpose": "Trace component contracts, differential rendering, terminal input, modal UI, and custom tool renderers.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/modes/interactive-mode.ts",
+        "packages/tui/src",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Route input and render changes",
+          "readerQuestion": "How does route input and render changes work?",
+          "purpose": "Terminal decoding turns bytes and escape sequences into key events.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-74ab2eb29ee8b7c0",
+            "lc-9321002188e7211c",
+            "lc-ca927b9fc35b8d2f",
+            "lc-235e58f068c97d4e"
+          ]
+        },
+        {
+          "text": "Extend interactive surfaces",
+          "readerQuestion": "How does extend interactive surfaces work?",
+          "purpose": "Extensions can open a modal through `ctx.ui.custom` only when an interactive UI host exists.",
+          "evidence": [
+            "source-authority",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-f699c356c5bf6ff4",
+            "lc-94f545b986e8ab0c",
+            "lc-7afdf244bb09f1fa",
+            "lc-d17a0facdbe118b7"
           ]
         }
       ]
@@ -366,7 +648,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -375,7 +658,27 @@
           "purpose": "Answer this question within Relationship to pi: How do I decide where a fix belongs?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-2cca768a66e8520f",
+            "lc-0063cb85ae2aea3b",
+            "lc-971e6fcffe4ef764",
+            "lc-4a0adaf892a63e62",
+            "lc-79eafac8c1513f46",
+            "lc-6b72ef61c29c4c27",
+            "lc-2c483798229873ae",
+            "lc-5cb47d2d3669808e",
+            "lc-6075bc50df6fd4ff",
+            "lc-012a87a096d142d8",
+            "lc-0731b955bee1b7de",
+            "lc-9a8298f23dedde99",
+            "lc-74a90d846107abfb",
+            "lc-d4aab6e2af1c3baf",
+            "lc-0058518e01277fde",
+            "lc-8b33f6b844143f87",
+            "lc-4b291b0270d9094f"
           ]
         },
         {
@@ -384,7 +687,656 @@
           "purpose": "Answer this question within Relationship to pi: How do I preserve attribution?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/extensions-custom-tools.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Build extensions and custom tools: Add TypeScript behavior, slash commands, providers, or schema-validated tools.",
+      "purpose": "Answer the distinct task or decision described by Build extensions and custom tools.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "How do I test an extension boundary?",
+          "readerQuestion": "How do I test an extension boundary?",
+          "purpose": "Answer this question within Build extensions and custom tools: How do I test an extension boundary?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-2f654120321fed4f",
+            "lc-cfcb92cc4785d019",
+            "lc-2615c868fda667e3",
+            "lc-5add4e1e1e61feae",
+            "lc-1f53044b827aeb2e",
+            "lc-d95271c3abb8cf35",
+            "lc-22a3b734cb2de019",
+            "lc-55d9920be580b603",
+            "lc-e3b4fc30eedb9cd9",
+            "lc-b207b97ab69ebaab",
+            "lc-794dde32ab870ee6",
+            "lc-db746036e62b5f40",
+            "lc-85aee9df85c39254",
+            "lc-3a37cdcd717b290b",
+            "lc-998d504100f3c0cf",
+            "lc-c507429c24d372b1"
+          ]
+        },
+        {
+          "text": "Where do hooks and rules belong?",
+          "readerQuestion": "Where do hooks and rules belong?",
+          "purpose": "Answer this question within Build extensions and custom tools: Where do hooks and rules belong?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/headless-protocols.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Headless modes: Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes.",
+      "purpose": "Answer the distinct task or decision described by Headless modes.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "How do I start with the smallest surface?",
+          "readerQuestion": "How do I start with the smallest surface?",
+          "purpose": "Answer this question within Headless modes: How do I start with the smallest surface?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-a7fee165c79f153a",
+            "lc-081979a05762ffd4",
+            "lc-cd373e296faa5c69",
+            "lc-5d1ae30c94cc55d6",
+            "lc-c3253c89c76643ca",
+            "lc-6e537819ca89cb78",
+            "lc-99db233cd82ba2bd",
+            "lc-3599caeb8ac8ab13",
+            "lc-d91dca501bcdb766",
+            "lc-6010a15b9ecde8f2",
+            "lc-a595169e37acbd45",
+            "lc-27bb8b5821793fad"
+          ]
+        },
+        {
+          "text": "When do I use the SDK instead?",
+          "readerQuestion": "When do I use the SDK instead?",
+          "purpose": "Answer this question within Headless modes: When do I use the SDK instead?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/hooks-rules.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Choose event-driven mutation or declarative prompt guidance and understand discovery precedence.",
+      "purpose": "Choose event-driven mutation or declarative prompt guidance and understand discovery precedence.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/capability",
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "offline-configuration",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Discover and classify rules",
+          "readerQuestion": "How does discover and classify rules work?",
+          "purpose": "Rule providers scan project and user roots, parse frontmatter, normalize identifiers, then deduplicate by precedence.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-ab6e6363752d8705",
+            "lc-bb4d10cd93f144ab",
+            "lc-ade1177333549b21",
+            "lc-782ac363123da9d4",
+            "lc-af607648cd42c960",
+            "lc-4cc89febb53017b3",
+            "lc-690cafe3122e9f5a",
+            "lc-235ba350d282111d",
+            "lc-4c571629f6528882"
+          ]
+        },
+        {
+          "text": "Order hook execution",
+          "readerQuestion": "How does order hook execution work?",
+          "purpose": "A hook module exports handlers for supported events.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-8b6f1f9f10b74254",
+            "lc-304620d56af6ed9b",
+            "lc-424f036abbd0772c",
+            "lc-98ace5603ac8abfb",
+            "lc-8bd1ccd95789e19e",
+            "lc-caa4738fab97625f",
+            "lc-552e547e2f526f67",
+            "lc-0b0dc8b1d195a3dd",
+            "lc-14bffd628b7259ba",
+            "lc-5f8ecb52a59185b3",
+            "lc-9827f14378b7555e"
+          ]
+        },
+        {
+          "text": "Test the boundary",
+          "readerQuestion": "How does test the boundary work?",
+          "purpose": "Exercise discovery, the exact event, mutation ordering, cancellation, and a failing handler.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Extend and automate: Add skills, plugins, MCP servers, custom tools, hooks, rules, SDK integrations, and headless workers.",
+      "purpose": "Answer the distinct task or decision described by Extend and automate.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Which extension mechanism fits?",
+          "readerQuestion": "Which extension mechanism fits?",
+          "purpose": "Answer this question within Extend and automate: Which extension mechanism fits?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/mcp-configuration.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Declare transports, variables, authentication, and disabled discovered servers in mcp.json.",
+      "purpose": "Declare transports, variables, authentication, and disabled discovered servers in mcp.json.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/config.ts",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "offline-configuration",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Choose a transport and lifecycle",
+          "readerQuestion": "How does choose a transport and lifecycle work?",
+          "purpose": "A local server uses a command plus arguments and communicates over stdio.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-c0ca596493f9e44e",
+            "lc-e3af633507fd993c",
+            "lc-b6acdb637ebc3942",
+            "lc-3f5a13633f5c49d9",
+            "lc-6c5bcfeb108312ff",
+            "lc-49799863a23cf20b",
+            "lc-54149048dbe07c9b",
+            "lc-10a41173b5851932",
+            "lc-79d5d1bb23ef2789",
+            "lc-f1f9b8f02c5f2f58",
+            "lc-86788f048e67e36d",
+            "lc-b78b27ccdf2d5e84"
+          ]
+        },
+        {
+          "text": "Resolve variables without embedding secrets",
+          "readerQuestion": "How does resolve variables without embedding secrets work?",
+          "purpose": "Configuration values can reference environment-backed variables.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Disable a discovered server deliberately",
+          "readerQuestion": "How does disable a discovered server deliberately work?",
+          "purpose": "Add its normalized identifier to `disabledServers` when a higher-precedence discovery source should remain visible but inactive.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/mcp-quickstart.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Connect an MCP server: Add a local stdio or remote HTTP/SSE Model Context Protocol server.",
+      "purpose": "Answer the distinct task or decision described by Connect an MCP server.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Where is MCP configured?",
+          "readerQuestion": "Where is MCP configured?",
+          "purpose": "Answer this question within Connect an MCP server: Where is MCP configured?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I isolate MCP behavior?",
+          "readerQuestion": "How do I isolate MCP behavior?",
+          "purpose": "Answer this question within Connect an MCP server: How do I isolate MCP behavior?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Trace MCP connection caching, tool bridging, reload, teardown, and server contracts.",
+      "purpose": "Trace MCP connection caching, tool bridging, reload, teardown, and server contracts.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/config.ts",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "offline-configuration",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Follow a request through the runtime",
+          "readerQuestion": "How does follow a request through the runtime work?",
+          "purpose": "The manager resolves configuration, establishes one connection per active server, caches that connection, lists capabilities, and registers bridged tools.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-37d6901110293cfe",
+            "lc-798cbd23e32504fd",
+            "lc-0dd70e10e850a79e",
+            "lc-57f8cec06597e8ea",
+            "lc-7c1fbc34cb619229",
+            "lc-91a5e55648a8fe45",
+            "lc-bfcb9eb666fda51d",
+            "lc-a6a86351a17a209d"
+          ]
+        },
+        {
+          "text": "Reload and tear down safely",
+          "readerQuestion": "How does reload and tear down safely work?",
+          "purpose": "A refresh compares the normalized server set, closes removed or changed connections, and preserves reusable connections.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-9fbec232a0cc030c",
+            "lc-36b9cf7b5fbf6e4a",
+            "lc-60d0419b691aad77",
+            "lc-98da071f89c6cddc",
+            "lc-6ccb62ff42dc48b2",
+            "lc-0bf8e2f609eca0d3",
+            "lc-9ec4920218f44759",
+            "lc-bf3f7b758309a799",
+            "lc-eaf7538fd57bdf63"
+          ]
+        },
+        {
+          "text": "Author a compatible tool server",
+          "readerQuestion": "How does author a compatible tool server work?",
+          "purpose": "Publish stable tool names, JSON Schema input definitions, bounded results, and actionable protocol errors.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-c1d9a1b7acfdae30",
+            "lc-9b522e87789481aa",
+            "lc-4dd57fc192170472",
+            "lc-90f1fbaa7f009684",
+            "lc-28b042f027005d84",
+            "lc-199c32e4ddef92a3",
+            "lc-68f20ae39ee95c2e",
+            "lc-d6c309784afdbda9"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/plugins-marketplaces.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Install plugins and marketplaces: Discover, install, configure, update, and diagnose xcsh plugins.",
+      "purpose": "Answer the distinct task or decision described by Install plugins and marketplaces.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "How do I inspect before installing?",
+          "readerQuestion": "How do I inspect before installing?",
+          "purpose": "Answer this question within Install plugins and marketplaces: How do I inspect before installing?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-d8bacb8f587744bf",
+            "lc-a8c97165d314b190",
+            "lc-90bb1a6a60b45c40",
+            "lc-54433be682a95961",
+            "lc-7a61e4123efef937",
+            "lc-8dca5123decf808b",
+            "lc-43371f2ef065c8de"
+          ]
+        },
+        {
+          "text": "How do I diagnose a plugin?",
+          "readerQuestion": "How do I diagnose a plugin?",
+          "purpose": "Answer this question within Install plugins and marketplaces: How do I diagnose a plugin?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-3bd1ca45ddec3961",
+            "lc-284478c2d442749c",
+            "lc-f56bddc3ae3cd33f",
+            "lc-b1f662a9fa1fe699",
+            "lc-fa1aafd818623e7b",
+            "lc-9972429f8f3c2ed4",
+            "lc-ab85df21656831e6",
+            "lc-6f0b0fbe4cba57be",
+            "lc-17a2893a70f6c0a9"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/sdk.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Embed xcsh with the SDK: Create sessions and tools programmatically through the coding-agent package.",
+      "purpose": "Answer the distinct task or decision described by Embed xcsh with the SDK.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Which automation boundary should I choose?",
+          "readerQuestion": "Which automation boundary should I choose?",
+          "purpose": "Answer this question within Embed xcsh with the SDK: Which automation boundary should I choose?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-558f49eb064606f8",
+            "lc-688df75cb7dc13ce",
+            "lc-119cf318758ae731",
+            "lc-9c83c6a02ed1bf17",
+            "lc-19b73091c4925ad4",
+            "lc-5e5b060c78af845b",
+            "lc-6419c25438b16c50",
+            "lc-ef9e91c3950bf8f0",
+            "lc-bc38c675a06db767",
+            "lc-3f52a42a0f27f0db",
+            "lc-42c2d5a6699ba3cc",
+            "lc-b3222f40f2623179",
+            "lc-1afb2df5d6fdb306"
+          ]
+        },
+        {
+          "text": "How do I keep the integration testable?",
+          "readerQuestion": "How do I keep the integration testable?",
+          "purpose": "Answer this question within Embed xcsh with the SDK: How do I keep the integration testable?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/automate-extend/skills.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Create and load skills: Package task-specific instructions in `SKILL.md` files at user or project scope.",
+      "purpose": "Answer the distinct task or decision described by Create and load skills.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/extensibility/extensions",
+        "packages/coding-agent/src/mcp",
+        "packages/coding-agent/src/sdk.ts"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Where do skills live?",
+          "readerQuestion": "Where do skills live?",
+          "purpose": "Answer this question within Create and load skills: Where do skills live?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-d27f2fc5c0f567f2",
+            "lc-cdf166a40cb5a47a",
+            "lc-3260330f0ac1012d",
+            "lc-184800d8bc767820",
+            "lc-9dabfb15c0815ca8",
+            "lc-212eab0ccc5d669a",
+            "lc-e47b4d078a8b3c4a"
+          ]
+        },
+        {
+          "text": "How do I test one?",
+          "readerQuestion": "How do I test one?",
+          "purpose": "Answer this question within Create and load skills: How do I test one?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/configure-secure/environment-reference.mdx",
+      "classification": "reference",
+      "audience": "xcsh users",
+      "readerNeed": "Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior.",
+      "purpose": "Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/config.ts",
+        "packages/coding-agent/src/config/settings.ts",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "offline-configuration",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Models, providers, and search",
+          "readerQuestion": "How does models, providers, and search work?",
+          "purpose": "Provider adapters read their own API keys, base URLs, cloud project or region fields, and proxy settings.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Python, shell, and tool execution",
+          "readerQuestion": "How does python, shell, and tool execution work?",
+          "purpose": "Python gateway variables select interpreter and kernel behavior.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Storage, runtime, and diagnostics",
+          "readerQuestion": "How does storage, runtime, and diagnostics work?",
+          "purpose": "`PICODINGAGENTDIR` changes the primary agent data root; project configuration remains under `.xcsh/`.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-3dd69974b3e03fca",
+            "lc-072648b4789eef91",
+            "lc-db62fc59bf4174cd",
+            "lc-16e1571842a82d85",
+            "lc-0a2c3315ee284a2d",
+            "lc-01499034a3bb1a77",
+            "lc-68837681d72a988e",
+            "lc-4b75679a7904ef57",
+            "lc-27a301499dc30dff",
+            "lc-26da75b13fb20549",
+            "lc-e748c48441bf1889",
+            "lc-db54d8b75cf79062",
+            "lc-9dbdf3c34f0033d9"
           ]
         }
       ]
@@ -401,7 +1353,8 @@
       ],
       "evidence": [
         "source-authority",
-        "offline-configuration"
+        "offline-configuration",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -410,8 +1363,10 @@
           "purpose": "Answer this question within Configure and secure: What should I configure first?.",
           "evidence": [
             "source-authority",
-            "offline-configuration"
-          ]
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -428,7 +1383,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "offline-configuration"
+        "offline-configuration",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -438,7 +1394,23 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-a2f95043769a4b5f",
+            "lc-1336dccf5b2a2514",
+            "lc-4fb0c7e335422d3b",
+            "lc-63abc9a1d18fdd52",
+            "lc-91534f5bcb77f50e",
+            "lc-3f5a77851800b0c2",
+            "lc-07ee6fc5a7e7bd7b",
+            "lc-37970377e13ca182",
+            "lc-8487bae147454d35",
+            "lc-f02a47fe7278b759",
+            "lc-78ca4001d3ee0055",
+            "lc-4ebb7fe5353fb256",
+            "lc-5c0c278a723062ee"
           ]
         },
         {
@@ -448,13 +1420,71 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
-          ]
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/configure-secure/secrets.mdx",
+      "path": "docs/en/configure-secure/sandbox-boundaries.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them.",
+      "purpose": "Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/config.ts",
+        "packages/coding-agent/src/config/settings.ts",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "offline-configuration",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Restrict the exposed tool set",
+          "readerQuestion": "How does restrict the exposed tool set work?",
+          "purpose": "Start with `--no-tools` or an explicit `--tools` allow-list when a run needs only conversation.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Constrain files and processes",
+          "readerQuestion": "How does constrain files and processes work?",
+          "purpose": "Filesystem-aware tools resolve paths against their configured workspace boundary.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Separate local and remote authority",
+          "readerQuestion": "How does separate local and remote authority work?",
+          "purpose": "Browser, editor, Office, and remote-service integrations enforce different permission models.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/configure-secure/secrets-obfuscation.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Resolve secrets safely: Reference sensitive values without placing plaintext credentials in prompts, manifests, logs, or commits.",
@@ -466,9 +1496,28 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "offline-configuration"
+        "offline-configuration",
+        "legacy-enrichment"
       ],
       "headings": [
+        {
+          "text": "How does obfuscation work?",
+          "readerQuestion": "How does obfuscation work?",
+          "purpose": "When secret obfuscation is enabled, values declared in the protected `secrets.yml` source are resolved at runtime and replaced in observable text before it is retained or rendered.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-197e85b49a845f5c",
+            "lc-c858149a755eee01",
+            "lc-9eee005645c443be",
+            "lc-2b3922e9f09d7359",
+            "lc-c0072d024b8c140b"
+          ]
+        },
         {
           "text": "How does the filesystem boundary work?",
           "readerQuestion": "How does the filesystem boundary work?",
@@ -476,8 +1525,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
-          ]
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I inspect the boundary?",
@@ -486,13 +1537,15 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
-          ]
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/configure-secure/settings-precedence.mdx",
+      "path": "docs/en/configure-secure/settings-files.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Understand settings precedence: Predict which user, project, environment, and command-line value xcsh resolves.",
@@ -504,9 +1557,34 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "offline-configuration"
+        "offline-configuration",
+        "legacy-enrichment"
       ],
       "headings": [
+        {
+          "text": "How is configuration resolved?",
+          "readerQuestion": "How is configuration resolved?",
+          "purpose": "Discovery collects fixed user, project, environment, and command-line sources, normalizes each through the schema-backed configuration wrapper, then resolves values by explicit priority.",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-7c58ff2f74340c26",
+            "lc-59610404fc89535f",
+            "lc-1f3128e3d9f47890",
+            "lc-7dd3b13d149985a4",
+            "lc-8714baaf5dfa222d",
+            "lc-b31f4ac2a616f9f9",
+            "lc-ec4b1c79b91baaf1",
+            "lc-33ec88ff30f6649f",
+            "lc-873cb563f339cc59",
+            "lc-63c5a3bf985de960",
+            "lc-13c3b3135193667d"
+          ]
+        },
         {
           "text": "Where are settings stored?",
           "readerQuestion": "Where are settings stored?",
@@ -514,8 +1592,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
-          ]
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I change one value?",
@@ -524,215 +1604,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/extend-automate/extensions-custom-tools.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Build extensions and custom tools: Add TypeScript behavior, slash commands, providers, or schema-validated tools.",
-      "purpose": "Answer the distinct task or decision described by Build extensions and custom tools.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/mcp",
-        "packages/coding-agent/src/sdk.ts"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "How do I test an extension boundary?",
-          "readerQuestion": "How do I test an extension boundary?",
-          "purpose": "Answer this question within Build extensions and custom tools: How do I test an extension boundary?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "Where do hooks and rules belong?",
-          "readerQuestion": "Where do hooks and rules belong?",
-          "purpose": "Answer this question within Build extensions and custom tools: Where do hooks and rules belong?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/extend-automate/index.mdx",
-      "classification": "landing",
-      "audience": "xcsh users",
-      "readerNeed": "Extend and automate: Add skills, plugins, MCP servers, custom tools, hooks, rules, SDK integrations, and headless workers.",
-      "purpose": "Answer the distinct task or decision described by Extend and automate.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/mcp",
-        "packages/coding-agent/src/sdk.ts"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "Which extension mechanism fits?",
-          "readerQuestion": "Which extension mechanism fits?",
-          "purpose": "Answer this question within Extend and automate: Which extension mechanism fits?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/extend-automate/mcp-quickstart.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Connect an MCP server: Add a local stdio or remote HTTP/SSE Model Context Protocol server.",
-      "purpose": "Answer the distinct task or decision described by Connect an MCP server.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/mcp",
-        "packages/coding-agent/src/sdk.ts"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "Where is MCP configured?",
-          "readerQuestion": "Where is MCP configured?",
-          "purpose": "Answer this question within Connect an MCP server: Where is MCP configured?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "How do I isolate MCP behavior?",
-          "readerQuestion": "How do I isolate MCP behavior?",
-          "purpose": "Answer this question within Connect an MCP server: How do I isolate MCP behavior?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/extend-automate/plugins-marketplaces.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Install plugins and marketplaces: Discover, install, configure, update, and diagnose xcsh plugins.",
-      "purpose": "Answer the distinct task or decision described by Install plugins and marketplaces.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/mcp",
-        "packages/coding-agent/src/sdk.ts"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "How do I inspect before installing?",
-          "readerQuestion": "How do I inspect before installing?",
-          "purpose": "Answer this question within Install plugins and marketplaces: How do I inspect before installing?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "How do I diagnose a plugin?",
-          "readerQuestion": "How do I diagnose a plugin?",
-          "purpose": "Answer this question within Install plugins and marketplaces: How do I diagnose a plugin?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/extend-automate/sdk.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Embed xcsh with the SDK: Create sessions and tools programmatically through the coding-agent package.",
-      "purpose": "Answer the distinct task or decision described by Embed xcsh with the SDK.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/mcp",
-        "packages/coding-agent/src/sdk.ts"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "Which automation boundary should I choose?",
-          "readerQuestion": "Which automation boundary should I choose?",
-          "purpose": "Answer this question within Embed xcsh with the SDK: Which automation boundary should I choose?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "How do I keep the integration testable?",
-          "readerQuestion": "How do I keep the integration testable?",
-          "purpose": "Answer this question within Embed xcsh with the SDK: How do I keep the integration testable?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/extend-automate/skills.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Create and load skills: Package task-specific instructions in `SKILL.md` files at user or project scope.",
-      "purpose": "Answer the distinct task or decision described by Create and load skills.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/extensibility/extensions",
-        "packages/coding-agent/src/mcp",
-        "packages/coding-agent/src/sdk.ts"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "Where do skills live?",
-          "readerQuestion": "Where do skills live?",
-          "purpose": "Answer this question within Create and load skills: Where do skills live?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        },
-        {
-          "text": "How do I test one?",
-          "readerQuestion": "How do I test one?",
-          "purpose": "Answer this question within Create and load skills: How do I test one?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -750,7 +1625,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -760,8 +1636,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What if a kind is absent?",
@@ -770,8 +1648,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -789,7 +1669,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -799,8 +1680,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What counts as evidence?",
@@ -809,8 +1692,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -828,7 +1713,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -838,8 +1724,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "Where is context data stored?",
@@ -848,7 +1736,15 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-5e2355c0989f040b",
+            "lc-42a3eaa0254e3297",
+            "lc-93224762e9e6d1a4",
+            "lc-b8b2fb0a808558b7",
+            "lc-a032be6e01743bc1"
           ]
         }
       ]
@@ -867,7 +1763,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -877,8 +1774,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I verify the mutation?",
@@ -887,8 +1786,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -907,7 +1808,8 @@
         "source-authority",
         "candidate-cli",
         "live-resource-lifecycle",
-        "browser-build"
+        "browser-build",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -918,8 +1820,10 @@
             "source-authority",
             "candidate-cli",
             "live-resource-lifecycle",
-            "browser-build"
-          ]
+            "browser-build",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I delete and prove absence?",
@@ -929,8 +1833,10 @@
             "source-authority",
             "candidate-cli",
             "live-resource-lifecycle",
-            "browser-build"
-          ]
+            "browser-build",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -947,7 +1853,8 @@
       ],
       "evidence": [
         "source-authority",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -956,8 +1863,10 @@
           "purpose": "Answer this question within F5 Distributed Cloud: Which resource task do I need?.",
           "evidence": [
             "source-authority",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -975,7 +1884,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -985,8 +1895,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I keep a directory deterministic?",
@@ -995,8 +1907,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1014,7 +1928,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1024,8 +1939,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What blocks the next step?",
@@ -1034,8 +1951,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1053,7 +1972,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1063,8 +1983,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What is safe to test first?",
@@ -1073,8 +1995,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1092,7 +2016,8 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "live-resource-lifecycle"
+        "live-resource-lifecycle",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1102,8 +2027,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I preview the live change?",
@@ -1112,8 +2039,10 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "live-resource-lifecycle"
-          ]
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1130,7 +2059,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1139,8 +2069,10 @@
           "purpose": "Answer this question within Getting started: What do I need before I begin?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "Which path matches my goal?",
@@ -1148,8 +2080,10 @@
           "purpose": "Answer this question within Getting started: Which path matches my goal?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1168,7 +2102,8 @@
         "source-authority",
         "installed-release",
         "candidate-cli",
-        "browser-build"
+        "browser-build",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1179,8 +2114,10 @@
             "source-authority",
             "installed-release",
             "candidate-cli",
-            "browser-build"
-          ]
+            "browser-build",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I confirm the selected executable?",
@@ -1190,8 +2127,10 @@
             "source-authority",
             "installed-release",
             "candidate-cli",
-            "browser-build"
-          ]
+            "browser-build",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I remove it?",
@@ -1201,8 +2140,10 @@
             "source-authority",
             "installed-release",
             "candidate-cli",
-            "browser-build"
-          ]
+            "browser-build",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1219,7 +2160,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1228,7 +2170,14 @@
           "purpose": "Answer this question within Authenticate a model provider: Which authentication method should I choose?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-a482f6fd3f7bf483",
+            "lc-cf70025e4db84f42",
+            "lc-d925e179bca75142",
+            "lc-b0fe128b1f895e3e"
           ]
         },
         {
@@ -1237,8 +2186,10 @@
           "purpose": "Answer this question within Authenticate a model provider: How do I select a model explicitly?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1255,7 +2206,9 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment",
+        "legacy-build-browser"
       ],
       "headings": [
         {
@@ -1264,8 +2217,11 @@
           "purpose": "Answer this question within Quickstart: How do I run a bounded first prompt?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment",
+            "legacy-build-browser"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What should I inspect if the prompt fails?",
@@ -1273,8 +2229,10 @@
           "purpose": "Answer this question within Quickstart: What should I inspect if the prompt fails?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -1292,7 +2250,9 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "browser-build"
+        "browser-build",
+        "legacy-enrichment",
+        "legacy-build-browser"
       ],
       "headings": [
         {
@@ -1302,13 +2262,19 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "browser-build"
+            "browser-build",
+            "legacy-enrichment",
+            "legacy-build-browser"
+          ],
+          "legacyConceptIds": [
+            "lc-c7aaa3df3c68b247",
+            "lc-bd4c386fa2a16e57"
           ]
         }
       ]
     },
     {
-      "path": "docs/en/interfaces/chrome.mdx",
+      "path": "docs/en/integrations-deployment/chrome.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Chrome: Use the xcsh Chrome extension and native host with an isolated automation profile.",
@@ -1320,7 +2286,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1329,8 +2296,10 @@
           "purpose": "Answer this question within Chrome: What is the safe operating boundary?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What is verified here?",
@@ -1338,13 +2307,15 @@
           "purpose": "Answer this question within Chrome: What is verified here?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/interfaces/containers.mdx",
+      "path": "docs/en/integrations-deployment/containers.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Containers: Run the published multi-architecture Alpine image with explicit mounts and credentials.",
@@ -1356,7 +2327,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1365,7 +2337,19 @@
           "purpose": "Answer this question within Containers: How do I verify an image?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-2f4663a857e23a8a",
+            "lc-0a4c9818628936fd",
+            "lc-61a76dd3595fe570",
+            "lc-67a1879312089171",
+            "lc-b8ee0f3c341ec2da",
+            "lc-0042a1ac1bae68f3",
+            "lc-0539c4d9d0ed5aa2",
+            "lc-59c7a618a612fb60",
+            "lc-cde8c6cdc1e41664"
           ]
         },
         {
@@ -1374,49 +2358,73 @@
           "purpose": "Answer this question within Containers: What must remain outside the image?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/interfaces/headless.mdx",
+      "path": "docs/en/integrations-deployment/herdr.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
-      "readerNeed": "Headless modes: Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes.",
-      "purpose": "Answer the distinct task or decision described by Headless modes.",
+      "readerNeed": "Understand source-verified Herdr workspace launch, terminal actions, protocol negotiation, and isolation.",
+      "purpose": "Understand source-verified Herdr workspace launch, terminal actions, protocol negotiation, and isolation.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
-        "packages/coding-agent/src/browser"
+        "packages/coding-agent/test"
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
-          "text": "How do I start with the smallest surface?",
-          "readerQuestion": "How do I start with the smallest surface?",
-          "purpose": "Answer this question within Headless modes: How do I start with the smallest surface?.",
+          "text": "Negotiate the host protocol",
+          "readerQuestion": "How does negotiate the host protocol work?",
+          "purpose": "The integration checks the available socket protocol and media or graphics capabilities before it requests a workspace.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-b03b75c1ad3cb4a9",
+            "lc-1e355a06dd861533",
+            "lc-b1f433b68395d4c9",
+            "lc-fc126b63197fd31b",
+            "lc-f4497b80fc1b75ee"
           ]
         },
         {
-          "text": "When do I use the SDK instead?",
-          "readerQuestion": "When do I use the SDK instead?",
-          "purpose": "Answer this question within Headless modes: When do I use the SDK instead?.",
+          "text": "Launch a conversation-owned workspace",
+          "readerQuestion": "How does launch a conversation-owned workspace work?",
+          "purpose": "A workspace is tied to the conversation identity supplied at startup.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Recover from socket failure",
+          "readerQuestion": "How does recover from socket failure work?",
+          "purpose": "Connection and framing failures surface as integration diagnostics.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/interfaces/index.mdx",
+      "path": "docs/en/integrations-deployment/index.mdx",
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Interfaces: Run xcsh in a terminal, editor, browser, Office task pane, headless process, or container.",
@@ -1429,23 +2437,26 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "browser-build"
+        "browser-build",
+        "legacy-enrichment"
       ],
       "headings": [
         {
-          "text": "Which interface fits?",
-          "readerQuestion": "Which interface fits?",
-          "purpose": "Answer this question within Interfaces: Which interface fits?.",
+          "text": "Which integration fits?",
+          "readerQuestion": "Which integration fits?",
+          "purpose": "Answer this question within Interfaces: Which integration fits?.",
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "browser-build"
-          ]
+            "browser-build",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/interfaces/office.mdx",
+      "path": "docs/en/integrations-deployment/office.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Microsoft Office task pane: Serve or sideload the embedded task pane for Excel, Word, and PowerPoint.",
@@ -1457,17 +2468,34 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
+        {
+          "text": "Who owns the test surface?",
+          "readerQuestion": "Who owns the test surface?",
+          "purpose": "Package tests own pane components, bridge messages, and host-independent state.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-4bce21dd6d3b37ed",
+            "lc-ca15d3e733d2ebcb"
+          ]
+        },
         {
           "text": "What must be running?",
           "readerQuestion": "What must be running?",
           "purpose": "Answer this question within Microsoft Office task pane: What must be running?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What is not asserted here?",
@@ -1475,40 +2503,15 @@
           "purpose": "Answer this question within Microsoft Office task pane: What is not asserted here?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/interfaces/terminal-cli.mdx",
-      "classification": "how-to",
-      "audience": "xcsh users",
-      "readerNeed": "Terminal CLI: Choose interactive, print, resume, and deterministic subcommand modes from a shell.",
-      "purpose": "Answer the distinct task or decision described by Terminal CLI.",
-      "sourceAuthority": [
-        "packages/coding-agent/src/cli.ts",
-        "packages/office-pane",
-        "packages/coding-agent/src/browser"
-      ],
-      "evidence": [
-        "source-authority",
-        "candidate-cli"
-      ],
-      "headings": [
-        {
-          "text": "How do the modes differ?",
-          "readerQuestion": "How do the modes differ?",
-          "purpose": "Answer this question within Terminal CLI: How do the modes differ?.",
-          "evidence": [
-            "source-authority",
-            "candidate-cli"
-          ]
-        }
-      ]
-    },
-    {
-      "path": "docs/en/interfaces/vscode.mdx",
+      "path": "docs/en/integrations-deployment/vscode.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "VS Code: Use the companion VS Code integration with the same xcsh model and session foundation.",
@@ -1520,7 +2523,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1529,8 +2533,10 @@
           "purpose": "Answer this question within VS Code: What carries over from the terminal?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "What is not asserted here?",
@@ -1538,13 +2544,15 @@
           "purpose": "Answer this question within VS Code: What is not asserted here?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/troubleshooting-reference/cli-reference.mdx",
+      "path": "docs/en/reference-troubleshooting/cli-reference.mdx",
       "classification": "reference",
       "audience": "xcsh users",
       "readerNeed": "CLI command and flag reference: Review the current top-level commands, global flags, and resource command patterns.",
@@ -1555,7 +2563,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1564,8 +2573,10 @@
           "purpose": "Answer this question within CLI command and flag reference: Which top-level commands exist?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "How do I script a command safely?",
@@ -1573,13 +2584,15 @@
           "purpose": "Answer this question within CLI command and flag reference: How do I script a command safely?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/troubleshooting-reference/configuration-schema.mdx",
+      "path": "docs/en/reference-troubleshooting/configuration-schema.mdx",
       "classification": "reference",
       "audience": "xcsh users",
       "readerNeed": "Configuration schema: Navigate the schema-backed settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing.",
@@ -1591,7 +2604,9 @@
       "evidence": [
         "source-authority",
         "candidate-cli",
-        "offline-configuration"
+        "offline-configuration",
+        "legacy-enrichment",
+        "legacy-build-browser"
       ],
       "headings": [
         {
@@ -1601,8 +2616,11 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
-          ]
+            "offline-configuration",
+            "legacy-enrichment",
+            "legacy-build-browser"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "Which source defines a setting?",
@@ -1611,13 +2629,15 @@
           "evidence": [
             "source-authority",
             "candidate-cli",
-            "offline-configuration"
-          ]
+            "offline-configuration",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/troubleshooting-reference/diagnostics.mdx",
+      "path": "docs/en/reference-troubleshooting/diagnostics.mdx",
       "classification": "troubleshooting",
       "audience": "xcsh users",
       "readerNeed": "Run diagnostics: Collect version, configuration, provider, context, and sandbox evidence without exposing secrets.",
@@ -1628,7 +2648,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1637,8 +2658,10 @@
           "purpose": "Answer this question within Run diagnostics: The shell cannot find xcsh.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "A model is unavailable or authentication fails",
@@ -1646,8 +2669,10 @@
           "purpose": "Answer this question within Run diagnostics: A model is unavailable or authentication fails.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "A context or resource command fails",
@@ -1655,8 +2680,10 @@
           "purpose": "Answer this question within Run diagnostics: A context or resource command fails.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "A tool or extension fails during startup",
@@ -1664,13 +2691,15 @@
           "purpose": "Answer this question within Run diagnostics: A tool or extension fails during startup.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/troubleshooting-reference/index.mdx",
+      "path": "docs/en/reference-troubleshooting/index.mdx",
       "classification": "landing",
       "audience": "xcsh users",
       "readerNeed": "Troubleshooting and reference: Diagnose installations, providers, contexts, and tools, then consult current command and configuration references.",
@@ -1681,7 +2710,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1690,13 +2720,15 @@
           "purpose": "Answer this question within Troubleshooting and reference: Where do I look?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
     {
-      "path": "docs/en/troubleshooting-reference/slash-commands.mdx",
+      "path": "docs/en/reference-troubleshooting/slash-keybindings.mdx",
       "classification": "how-to",
       "audience": "xcsh users",
       "readerNeed": "Slash command reference: Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state.",
@@ -1707,7 +2739,8 @@
       ],
       "evidence": [
         "source-authority",
-        "candidate-cli"
+        "candidate-cli",
+        "legacy-enrichment"
       ],
       "headings": [
         {
@@ -1716,8 +2749,10 @@
           "purpose": "Answer this question within Slash command reference: How do I find a command or keybinding?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
-          ]
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         },
         {
           "text": "Why can the list differ?",
@@ -1725,7 +2760,392 @@
           "purpose": "Answer this question within Slash command reference: Why can the list differ?.",
           "evidence": [
             "source-authority",
-            "candidate-cli"
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/agent-loop.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Understand how prompts, model turns, tool calls, results, and session entries form the agent loop.",
+      "purpose": "Understand how prompts, model turns, tool calls, results, and session entries form the agent loop.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/modes/interactive-mode.ts",
+        "packages/tui/src",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "Where is the durable record?",
+          "readerQuestion": "Where is the durable record?",
+          "purpose": "Session JSONL stores messages and tool events.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Where are side effects introduced?",
+          "readerQuestion": "Where are side effects introduced?",
+          "purpose": "Model text alone does not change files or external systems.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/built-in-tools.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Use built-in tools: Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries.",
+      "purpose": "Answer the distinct task or decision described by Use built-in tools.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "How does Python execute?",
+          "readerQuestion": "How does Python execute?",
+          "purpose": "The Python tool sends code to a managed gateway and kernel, captures text plus supported MIME results, and returns normalized output to the session.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-82a8d247fb1f10df",
+            "lc-6705ddc7f84f98e5",
+            "lc-b1a29946c2cda73d",
+            "lc-c7f6aec448ac219a",
+            "lc-858c75ced326b3c8",
+            "lc-be41af333b4f9b4e"
+          ]
+        },
+        {
+          "text": "How do I reduce the tool boundary?",
+          "readerQuestion": "How do I reduce the tool boundary?",
+          "purpose": "Answer this question within Use built-in tools: How do I reduce the tool boundary?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Which tools require extra care?",
+          "readerQuestion": "Which tools require extra care?",
+          "purpose": "Answer this question within Use built-in tools: Which tools require extra care?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/execution-modes.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Terminal CLI: Choose interactive, print, resume, and deterministic subcommand modes from a shell.",
+      "purpose": "Answer the distinct task or decision described by Terminal CLI.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/office-pane",
+        "packages/coding-agent/src/browser"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "How do the modes differ?",
+          "readerQuestion": "How do the modes differ?",
+          "purpose": "Answer this question within Terminal CLI: How do the modes differ?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/index.mdx",
+      "classification": "landing",
+      "audience": "xcsh users",
+      "readerNeed": "Agentic shell: Work with the agent loop, terminal UI, tools, sessions, memory, plans, and specialized agents.",
+      "purpose": "Answer the distinct task or decision described by Agentic shell.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "What should I learn first?",
+          "readerQuestion": "What should I learn first?",
+          "purpose": "Answer this question within Agentic shell: What should I learn first?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/interactive-tui.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Use the interactive TUI: Navigate the prompt editor, status line, model selector, tool output, and command palette.",
+      "purpose": "Answer the distinct task or decision described by Use the interactive TUI.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/session"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "How do I send prompts and local files?",
+          "readerQuestion": "How do I send prompts and local files?",
+          "purpose": "Answer this question within Use the interactive TUI: How do I send prompts and local files?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I discover controls?",
+          "readerQuestion": "How do I discover controls?",
+          "purpose": "Answer this question within Use the interactive TUI: How do I discover controls?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/planning-agents.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Separate exploration and decisions from implementation with xcsh planning controls.",
+      "purpose": "Separate exploration and decisions from implementation with xcsh planning controls.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/modes/interactive-mode.ts",
+        "packages/tui/src",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "What belongs in a decision-complete plan?",
+          "readerQuestion": "What belongs in a decision-complete plan?",
+          "purpose": "State the objective, scope boundaries, exact files or systems, ordered changes, validation, rollback or cleanup, and decisions that still require a person.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "When should I use a specialized agent?",
+          "readerQuestion": "When should I use a specialized agent?",
+          "purpose": "Use a bounded agent when its definition matches one independent subtask.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-3e06c1ff6001856e",
+            "lc-7b4444969da7a780",
+            "lc-f8acfb1258948a8b",
+            "lc-b7ba73e507e70ac4"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/sessions-memory.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Continue, locate, fork, or export persisted conversations.",
+      "purpose": "Continue, locate, fork, or export persisted conversations.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/modes/interactive-mode.ts",
+        "packages/tui/src",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment"
+      ],
+      "headings": [
+        {
+          "text": "How do I branch or compact a long conversation?",
+          "readerQuestion": "How do I branch or compact a long conversation?",
+          "purpose": "In the TUI, `/tree` shows the conversation structure, `/branch` or `/fork` creates another path, and `/compact` replaces older context with a summary.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-4b86c511821c6bf6",
+            "lc-20d582d5230b0036",
+            "lc-04c8a6d13597240c",
+            "lc-0b14f37353a36a3e",
+            "lc-9949f7a59fb8d077",
+            "lc-1c3af79836c3a21e",
+            "lc-c8b77c1cb3fe0316",
+            "lc-1f5efb3f4ce29653",
+            "lc-636f0ae91fec28f5",
+            "lc-d70f4f84994f8d2c"
+          ]
+        },
+        {
+          "text": "How does project memory differ?",
+          "readerQuestion": "How does project memory differ?",
+          "purpose": "Memory holds durable project facts across sessions; a session holds one conversation history.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-3e8c15579946bac0",
+            "lc-8a3a44a43266f7c2",
+            "lc-bf5382572f028f7a",
+            "lc-b20d0cac888424cf"
+          ]
+        },
+        {
+          "text": "How do I export a record?",
+          "readerQuestion": "How do I export a record?",
+          "purpose": "Run `xcsh --export <session.jsonl>` to create HTML from a session file.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-47663273e5d67408",
+            "lc-060264aa3d26c649",
+            "lc-5f38769696df23d3"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "docs/en/use-xcsh/tui-navigation.mdx",
+      "classification": "how-to",
+      "audience": "xcsh users",
+      "readerNeed": "Use the tree, keyboard map, themes, and terminal controls without losing session state.",
+      "purpose": "Use the tree, keyboard map, themes, and terminal controls without losing session state.",
+      "sourceAuthority": [
+        "packages/coding-agent/src/modes/interactive-mode.ts",
+        "packages/tui/src",
+        "packages/coding-agent/test"
+      ],
+      "evidence": [
+        "source-authority",
+        "candidate-cli",
+        "legacy-enrichment",
+        "legacy-build-browser"
+      ],
+      "headings": [
+        {
+          "text": "Open and move through the session tree",
+          "readerQuestion": "How does open and move through the session tree work?",
+          "purpose": "Use `/tree` to open the branch navigator.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment",
+            "legacy-build-browser"
+          ],
+          "legacyConceptIds": [
+            "lc-3f0dc9acee44951a",
+            "lc-67bd6224bf91e158",
+            "lc-1be7e57d7394d49f",
+            "lc-e38ed7fc4adfd67b",
+            "lc-3d1f1b81f8d9ce71",
+            "lc-c97da639c6a42a1f",
+            "lc-b9841a03c584a199"
+          ]
+        },
+        {
+          "text": "Read the active keyboard map",
+          "readerQuestion": "How does read the active keyboard map work?",
+          "purpose": "Open `/hotkeys` for the bindings registered by the running build.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Select and customize a theme",
+          "readerQuestion": "How does select and customize a theme work?",
+          "purpose": "Use `/theme` to choose a bundled or discovered theme.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": [
+            "lc-63c52f78867bac41",
+            "lc-d1427eed6e84a095",
+            "lc-b7d7062813a3635d",
+            "lc-3cad9a3be2691bcb"
           ]
         }
       ]

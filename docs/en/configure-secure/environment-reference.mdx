@@ -1,0 +1,21 @@
+---
+title: "Environment variable reference"
+description: "Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior."
+sidebar:
+  order: 2
+  label: "Environment variables"
+---
+
+Environment variables carry credentials and process-scoped overrides. Settings and command flags still participate in their documented precedence; a similarly named variable is not automatically supported.
+
+## Models, providers, and search
+
+Provider adapters read their own API keys, base URLs, cloud project or region fields, and proxy settings. Model selection remains a model-registry decision. Web-search variables configure the search backend separately from model credentials.
+
+## Python, shell, and tool execution
+
+Python gateway variables select interpreter and kernel behavior. Shell execution inherits the launched process environment subject to sandbox and command policy. Session and terminal variables describe the current terminal but do not grant filesystem access.
+
+## Storage, runtime, and diagnostics
+
+`PI_CODING_AGENT_DIR` changes the primary agent data root; project configuration remains under `.xcsh/`. Native loader and debug variables affect binary selection and diagnostics. TUI flags affect rendering and terminal integration, while commit-generation controls affect only their named workflow. Never print security-sensitive variables in diagnostic receipts.

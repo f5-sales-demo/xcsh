@@ -1,0 +1,21 @@
+---
+title: "Author system prompts"
+description: "Apply the system-prompt checklist, progressive composition, deduplication, and audit tests."
+sidebar:
+  order: 10
+  label: "Prompt authoring"
+---
+
+System prompts are executable product policy. Edit the smallest owned prompt fragment and verify the composed result; do not paste a second copy of guidance already supplied by a capability or plugin.
+
+## Apply the eight-point checklist
+
+State role and scope, concrete objectives, available tools, tool-use rules, constraints, output contract, uncertainty behavior, and completion criteria. Use direct instructions with observable conditions. Keep provider-specific details out of shared prompts unless the adapter cannot represent them elsewhere.
+
+## Compose prompts progressively
+
+The runtime builds the system prompt from the core fragment plus active capabilities, workspace guidance, plan state, memory, and extension contributions. Ordering and deduplication tests protect mandatory boundaries. An absent optional plugin must not remove core safety or file-operation instructions.
+
+## Audit a prompt change
+
+Inspect the final composed prompt for representative capability sets. Run template, API-spec, deduplication, deprecation, workspace-boundary, start-folder, and absent-plugin tests. Record why each new sentence belongs at that layer and remove stale aliases rather than documenting both paths.

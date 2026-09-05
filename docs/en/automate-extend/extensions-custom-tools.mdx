@@ -1,0 +1,17 @@
+---
+title: "Build extensions and custom tools"
+description: "Add TypeScript behavior, slash commands, providers, or schema-validated tools."
+sidebar:
+  order: 3
+  label: "Build extensions and custom tools"
+---
+
+Extensions load TypeScript behavior with `--extension` or `--hook`; project discovery can also load extensions, tools, hooks, commands, and rules under `.xcsh/`.
+
+## How do I test an extension boundary?
+
+Load one explicit file with `-e <path>` and disable discovery with `--no-extensions`. Confirm its registered command or tool, then test shutdown and error handling.
+
+## Where do hooks and rules belong?
+
+Hooks observe or alter lifecycle events; rules add durable instructions. Keep each rule narrow and each hook deterministic. Use `--no-rules` to prove whether a rule changes the result.

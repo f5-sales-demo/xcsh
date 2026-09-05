@@ -1,0 +1,21 @@
+---
+title: "Set sandbox boundaries"
+description: "Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them."
+sidebar:
+  order: 5
+  label: "Sandbox boundaries"
+---
+
+A model instruction is not a sandbox. Enforcement belongs to the tool, host process, container, operating system, or remote service that performs the action.
+
+## Restrict the exposed tool set
+
+Start with `--no-tools` or an explicit `--tools` allow-list when a run needs only conversation. Disable MCP and extensions separately because they can register additional capabilities. Review custom tool and hook code with the same care as any locally executed module.
+
+## Constrain files and processes
+
+Filesystem-aware tools resolve paths against their configured workspace boundary. The Bash runtime applies its sandbox and output limits before returning a result; large output may spill to an artifact instead of remaining inline. Containers add process and filesystem isolation, but mounted credentials and sockets still cross that boundary.
+
+## Separate local and remote authority
+
+Browser, editor, Office, and remote-service integrations enforce different permission models. Confirm the active host, account, context, namespace, and target immediately before a mutation. A successful read proves connectivity, not authorization for a write.

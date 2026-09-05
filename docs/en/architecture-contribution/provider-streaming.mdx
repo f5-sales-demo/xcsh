@@ -1,0 +1,17 @@
+---
+title: "Provider streaming"
+description: "Follow provider events through normalized assistant messages, tool JSON accumulation, cancellation, and fallback."
+sidebar:
+  order: 4
+  label: "Provider streaming"
+---
+
+Provider adapters translate distinct wire events into one `AssistantMessageEvent` stream consumed by the agent loop. Text deltas, reasoning, tool starts, tool arguments, completion, usage, and errors retain their meaning across adapters.
+
+## Normalize tool calls incrementally
+
+Tool arguments can arrive as JSON fragments. The adapter accumulates fragments per call identifier and emits a tool request only after a complete valid value exists. Parse failure remains an error with provider context; silently truncating or inventing arguments would cross the provider boundary.
+
+## Cancel and finish exactly once
+
+Cancellation propagates to the active provider request and prevents later deltas from reopening the turn. A terminal success, cancellation, or error settles the stream once. Retry and model fallback happen above normalization so an adapter does not conceal which provider produced an event.

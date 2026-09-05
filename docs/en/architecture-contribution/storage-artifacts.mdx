@@ -1,0 +1,21 @@
+---
+title: "Storage, blobs, and artifacts"
+description: "Trace configuration roots, session JSONL, binary blobs, text artifacts, scan caches, and move semantics."
+sidebar:
+  order: 2
+  label: "Storage and artifacts"
+---
+
+xcsh separates append-only conversation state from large or generated payloads. Session JSONL preserves the event graph; blob and artifact stores keep bulky data addressable without inflating every session entry.
+
+## Allocate and resolve stored values
+
+Storage helpers choose user or project roots, allocate collision-resistant identifiers, and record names separately from content addresses. Text artifacts remain inspectable; binary blobs are externalized and referenced by URL-like identifiers. URL handlers validate the scheme and authority before opening the backing object.
+
+## Resume, fork, and move state
+
+Resume rebuilds context from the selected session leaf. Forking creates a new branch without rewriting the source branch. Moves must update the session reference and its dependent stored values as one operation or leave the original valid; partial copies are not a successful move.
+
+## Cache filesystem discovery
+
+The scan cache partitions keys by root and discovery options, evicts by freshness policy, and uses a short empty-result recheck so a newly created configuration file is noticed. Mutating code owns invalidation. A new consumer must define its cache key, freshness need, and invalidation points explicitly.

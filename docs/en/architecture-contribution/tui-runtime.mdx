@@ -1,0 +1,17 @@
+---
+title: "TUI runtime"
+description: "Trace component contracts, differential rendering, terminal input, modal UI, and custom tool renderers."
+sidebar:
+  order: 8
+  label: "TUI runtime"
+---
+
+The TUI renders session and runtime state through components. Components return terminal cells and semantic styles; the renderer computes a differential update instead of repainting unrelated rows.
+
+## Route input and render changes
+
+Terminal decoding turns bytes and escape sequences into key events. Focused overlays receive input before the prompt editor and global actions. State changes schedule a render, layout produces the next frame, and the diff layer emits only changed terminal regions.
+
+## Extend interactive surfaces
+
+Extensions can open a modal through `ctx.ui.custom` only when an interactive UI host exists. Custom tools may provide renderers for calls and results while preserving a plain-text representation for headless clients. A renderer must not become the only copy of durable tool output.

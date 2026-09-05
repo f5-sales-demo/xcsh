@@ -1,0 +1,22 @@
+---
+title: "Containers"
+description: "Run the published multi-architecture Alpine image with explicit mounts and credentials."
+sidebar:
+  order: 4
+  label: "Containers"
+---
+
+The published container packages xcsh for process isolation and repeatable deployment. It does not grant cloud credentials or filesystem access by itself.
+
+## How do I verify an image?
+
+```sh
+docker pull ghcr.io/f5-sales-demo/xcsh:latest
+docker run --rm ghcr.io/f5-sales-demo/xcsh:latest --version
+```
+
+Pin a version tag or digest for automation. Mount only the task directory and inject credentials through the runtime's secret mechanism.
+
+## What must remain outside the image?
+
+Keep user contexts, provider tokens, and writable session data in explicit mounts or secret stores. Do not bake them into a derived layer.

@@ -1,0 +1,21 @@
+---
+title: "Native runtime architecture"
+description: "Understand TypeScript wrappers, addon loading, Rust Node-API exports, binary selection, and binding validation."
+sidebar:
+  order: 6
+  label: "Native runtime"
+---
+
+The public TypeScript layer owns ergonomic types and fallbacks. The loader selects a platform-specific addon, validates its exports, and exposes Rust Node-API implementations for performance-sensitive work.
+
+## Select and validate an addon
+
+Resolution considers operating system, CPU architecture, and supported hardware variants before trying packaged and extracted binary candidates. Embedded binaries are materialized in a controlled cache. `validateNative` checks the runtime surface so a mismatched binary fails near loading instead of at an unrelated call.
+
+## Keep bindings synchronized
+
+Module augmentation describes native exports to TypeScript, wrappers translate public inputs and outputs, and Rust functions implement the Node-API boundary. Synchronous and asynchronous variants must agree on names, data conversions, error shapes, and cancellation. Update all three layers and their contract tests together.
+
+## Map native subsystems
+
+The addon covers terminal and PTY processes, filesystem scanning and text search, media/system utilities, and cancellable task primitives. Data crossing Node-API must have an explicit encoding and ownership rule; native tasks must release resources on both completion and cancellation.

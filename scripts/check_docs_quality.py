@@ -7,6 +7,8 @@ import argparse
 import hashlib
 import json
 import re
+import shutil
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -26,6 +28,13 @@ GENERIC_CLAIMS = (
 )
 OUTPUT_LANGUAGES = {"console", "output"}
 MIN_DUPLICATE_LENGTH = 120
+LEGACY_COMMIT = "95c019fa60c8a8242482b18c45844ec73784ee11"
+LEGACY_TREE = "89566cca8d13cd69fb8af9ee017e9860d303b2f2"
+LEGACY_PAGE_COUNT = 59
+LEGACY_CONCEPT_COUNT = 374
+LEGACY_UNIT_DIGEST = "7378b8bd45b3b0ad48864a094d97af76b212ff4ab892d8f28b80f7dd43fd012e"
+INVENTORY_SCHEMA_VERSION = 2
+GIT_EXECUTABLE = shutil.which("git")
 
 
 def _load_json(path: Path) -> dict:
@@ -161,6 +170,220 @@ def _known_sections(inventory_pages: dict) -> set[str]:
     return sections
 
 
+def _git(root: Path, *args: str) -> str:
+    """Run a fixed Git executable with repository-controlled arguments."""
+    if GIT_EXECUTABLE is None:
+        message = "git executable is unavailable"
+        raise FileNotFoundError(message)
+    return subprocess.run(  # noqa: S603
+        [GIT_EXECUTABLE, *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+
+
+# This function deliberately validates the complete cross-file legacy contract.
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def _check_legacy_coverage(
+    root: Path,
+    inventory: dict,
+    inventory_pages: dict,
+    ledger: dict,
+    evidence_entries: dict,
+    used_evidence: set[str],
+) -> list[str]:
+    errors: list[str] = []
+    if inventory.get("schemaVersion") != INVENTORY_SCHEMA_VERSION:
+        errors.append("inventory schema must be version 2")
+
+    baseline = ledger.get("baseline", {})
+    required_baseline = (
+        "commit",
+        "treeDigest",
+        "corpusDigestSha256",
+        "conceptDigestSha256",
+        "pageCount",
+        "conceptCount",
+        "headingLevel",
+    )
+    errors.extend(
+        f"legacy baseline field missing: {field}"
+        for field in required_baseline
+        if baseline.get(field) in (None, "")
+    )
+    if (root / ".git").exists():
+        expected = {
+            "commit": LEGACY_COMMIT,
+            "treeDigest": LEGACY_TREE,
+            "pageCount": LEGACY_PAGE_COUNT,
+            "conceptCount": LEGACY_CONCEPT_COUNT,
+            "conceptDigestSha256": LEGACY_UNIT_DIGEST,
+            "headingLevel": 2,
+        }
+        errors.extend(
+            f"legacy baseline mismatch: {field}"
+            for field, value in expected.items()
+            if baseline.get(field) != value
+        )
+        try:
+            observed_tree = _git(root, "rev-parse", f"{LEGACY_COMMIT}^{{tree}}").strip()
+        except (OSError, subprocess.CalledProcessError):
+            observed_tree = None
+        if observed_tree is not None and observed_tree != LEGACY_TREE:
+            errors.append("legacy Git tree does not match immutable baseline")
+
+    concepts = ledger.get("concepts", [])
+    concept_ids = [item.get("id") for item in concepts]
+    duplicates = sorted(
+        concept_id
+        for concept_id in set(concept_ids)
+        if concept_id and concept_ids.count(concept_id) > 1
+    )
+    errors.extend(
+        f"duplicate legacy concept id: {concept_id}" for concept_id in duplicates
+    )
+    known_concepts = {concept_id for concept_id in concept_ids if concept_id}
+    ledger_digest = hashlib.sha256()
+    for concept in sorted(
+        concepts,
+        key=lambda item: (str(item.get("legacyPath")), str(item.get("legacyHeading"))),
+    ):
+        ledger_digest.update(
+            str(concept.get("legacyPath", "")).encode()
+            + b"\0"
+            + str(concept.get("legacyHeading", "")).encode()
+            + b"\0"
+            + str(concept.get("legacyBlob", "")).encode()
+            + b"\n"
+        )
+    if ledger_digest.hexdigest() != baseline.get("conceptDigestSha256"):
+        errors.append("legacy concept digest does not match baseline")
+    if (root / ".git").exists():
+        try:
+            source_paths = _git(
+                root,
+                "ls-tree",
+                "-r",
+                "--name-only",
+                LEGACY_COMMIT,
+                "--",
+                "docs/en",
+                "docs/SYSTEM_PROMPT_GUIDE.md",
+            ).splitlines()
+            source_paths = [
+                path for path in source_paths if path.endswith((".md", ".mdx"))
+            ]
+            source_units: set[tuple[str, str, str]] = set()
+            corpus_digest = hashlib.sha256()
+            for path in source_paths:
+                blob = _git(root, "rev-parse", f"{LEGACY_COMMIT}:{path}").strip()
+                text = _git(root, "show", f"{LEGACY_COMMIT}:{path}")
+                corpus_digest.update(path.encode() + b"\0" + blob.encode() + b"\n")
+                source_units.update(
+                    (path, heading.strip(), blob)
+                    for heading in re.findall(r"^## (?!#)(.+?)\s*$", text, re.MULTILINE)
+                )
+            ledger_units = {
+                (
+                    concept.get("legacyPath"),
+                    concept.get("legacyHeading"),
+                    concept.get("legacyBlob"),
+                )
+                for concept in concepts
+            }
+            if source_units != ledger_units:
+                errors.append("legacy ledger does not match baseline H2 extraction")
+            if corpus_digest.hexdigest() != baseline.get("corpusDigestSha256"):
+                errors.append("legacy corpus digest does not match baseline")
+        except (OSError, subprocess.CalledProcessError):
+            pass
+    known_sections = _known_sections(inventory_pages)
+    required_fields = (
+        "id",
+        "legacyPath",
+        "legacyHeading",
+        "legacyBlob",
+        "category",
+        "readerQuestion",
+        "knowledgeSummary",
+        "disposition",
+        "destinationPage",
+        "destinationHeading",
+        "currentSourceAuthorities",
+        "evidenceIdentifiers",
+    )
+    dispositions = {"retained", "corrected", "superseded"}
+    for concept in concepts:
+        concept_id = concept.get("id", "<missing>")
+        errors.extend(
+            f"legacy concept field missing: {concept_id} {field}"
+            for field in required_fields
+            if concept.get(field) in (None, "", [])
+        )
+        if (root / ".git").exists():
+            errors.extend(
+                f"legacy current authority does not exist: {concept_id} {authority}"
+                for authority in concept.get("currentSourceAuthorities", [])
+                if not (root / authority).exists()
+            )
+        summary = str(concept.get("knowledgeSummary", "")).strip()
+        if re.fullmatch(r"Covers [^.]+ for [^.]+\.", summary):
+            errors.append(f"generic legacy knowledge summary: {concept_id}")
+        if concept.get("disposition") not in dispositions:
+            errors.append(f"invalid legacy disposition: {concept_id}")
+        if (
+            concept.get("disposition") in {"corrected", "superseded"}
+            and not str(concept.get("rationale", "")).strip()
+        ):
+            errors.append(f"unexplained superseded or corrected concept: {concept_id}")
+        section = (
+            f"{concept.get('destinationPage')}#{concept.get('destinationHeading')}"
+        )
+        if section not in known_sections:
+            errors.append(f"stale legacy destination: {concept_id} {section}")
+        errors.extend(
+            f"legacy concept references unknown evidence: {concept_id} {evidence_id}"
+            for evidence_id in concept.get("evidenceIdentifiers", [])
+            if evidence_id not in evidence_entries
+        )
+        used_evidence.update(concept.get("evidenceIdentifiers", []))
+
+    mapped: list[str] = []
+    mapped_destination: dict[str, tuple[str, str]] = {}
+    for path, page in inventory_pages.items():
+        for heading in page.get("headings", []):
+            for concept_id in heading.get("legacyConceptIds", []):
+                mapped.append(concept_id)
+                mapped_destination.setdefault(concept_id, (path, heading.get("text")))
+    errors.extend(
+        f"unknown legacy concept id: {concept_id}"
+        for concept_id in sorted(set(mapped) - known_concepts)
+    )
+    errors.extend(
+        f"duplicate legacy concept mapping: {concept_id}"
+        for concept_id in sorted({value for value in mapped if mapped.count(value) > 1})
+    )
+    errors.extend(
+        f"unmapped legacy concept: {concept_id}"
+        for concept_id in sorted(known_concepts - set(mapped))
+    )
+    for concept in concepts:
+        concept_id = concept.get("id")
+        if concept_id not in mapped_destination:
+            continue
+        expected_destination = (
+            concept.get("destinationPage"),
+            concept.get("destinationHeading"),
+        )
+        if mapped_destination[concept_id] != expected_destination:
+            errors.append(f"legacy destination mapping mismatch: {concept_id}")
+    if baseline.get("conceptCount") != len(concepts):
+        errors.append("legacy concept count does not match baseline")
+    return errors
+
+
 def _check_evidence(
     root: Path,
     manifest_path: Path,
@@ -228,9 +451,11 @@ def _check_evidence(
 def _check(root: Path) -> list[str]:
     inventory_path = root / ".github" / "docs-quality" / "inventory.json"
     manifest_path = root / ".github" / "docs-quality" / "evidence" / "manifest.json"
+    legacy_path = root / ".github" / "docs-quality" / "legacy-concepts.json"
     try:
         inventory = _load_json(inventory_path)
         manifest = _load_json(manifest_path)
+        ledger = _load_json(legacy_path)
     except ValueError as exc:
         return [str(exc)]
 
@@ -251,6 +476,16 @@ def _check(root: Path) -> list[str]:
         entry.get("id"): entry for entry in manifest.get("evidence", [])
     }
     used_evidence: set[str] = set()
+    errors.extend(
+        _check_legacy_coverage(
+            root,
+            inventory,
+            inventory_pages,
+            ledger,
+            evidence_entries,
+            used_evidence,
+        )
+    )
     paragraph_locations: dict[str, list[str]] = defaultdict(list)
     for page in pages:
         relative = page.relative_to(root).as_posix()
