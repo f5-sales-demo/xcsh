@@ -6,16 +6,26 @@ sidebar:
   label: "TUI navigation"
 ---
 
-The interactive terminal keeps the session model separate from its visual tree. Closing a picker or changing a theme alters the view; it does not rewrite session JSONL.
+The interactive terminal user interface (TUI) keeps the session model separate from its visual tree. Closing a picker or changing a theme alters the view; it does not rewrite the session JSON Lines (JSONL) file.
 
-## Open and move through the session tree
+## How do I move through the session tree?
 
-Use `/tree` to open the branch navigator. Arrow keys move between visible nodes, `Enter` selects a branch, and `Escape` closes the overlay. A selected historical node changes the active leaf only through the session operation exposed by the UI; it does not delete sibling branches.
+Use `/tree` to open the branch navigator. Arrow keys move between visible nodes, `Enter` selects a branch, and `Escape` closes the overlay. A selected historical node changes the active leaf only through the session operation exposed by the interface; it does not delete sibling branches.
 
-## Read the active keyboard map
+## How do I read the active keyboard map?
 
-Open `/hotkeys` for the bindings registered by the running build. The prompt editor handles text navigation before global shortcuts, while overlays receive keys while focused. Treat the displayed map as authoritative because terminal key encodings and extension-provided actions can change the available set.
+Open `/hotkeys` for the bindings registered by the running build. The prompt editor handles text navigation before global shortcuts, while overlays receive keys while focused. Treat the displayed map as current, because terminal key encodings and extension-provided actions change the available set between builds.
 
-## Select and customize a theme
+## How do I select and customize a theme?
 
-Use `/theme` to choose a bundled or discovered theme. Theme files define semantic tokens rather than terminal escape sequences, so components share colors for text, borders, status, tools, diffs, and diagnostics. Keep custom themes under the configured xcsh data roots and verify contrast in both the main transcript and modal overlays.
+Open `/settings` to reach the theme selector, or set the keys directly:
+
+```bash
+xcsh config set theme.dark <THEME_NAME>
+xcsh config set theme.light <THEME_NAME>
+xcsh config set theme.forceSlot auto|dark|light
+```
+
+`theme.dark` and `theme.light` each name one theme, defaulting to `xcsh-dark` and `xcsh-light`, and the terminal's reported background selects between them. Set `theme.forceSlot` to `dark` or `light` where that detection is unreliable, as inside tmux.
+
+Theme files define semantic tokens rather than terminal escape sequences, so components share colors for text, borders, status, tools, diffs, and diagnostics. Keep custom themes under the configured xcsh data roots and check contrast in both the main transcript and modal overlays.

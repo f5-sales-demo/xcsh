@@ -6,12 +6,14 @@ sidebar:
   label: "TUI runtime"
 ---
 
-The TUI renders session and runtime state through components. Components return terminal cells and semantic styles; the renderer computes a differential update instead of repainting unrelated rows.
+The terminal user interface (TUI) renders session and runtime state through components. Components return terminal cells and semantic styles; the renderer computes a differential update instead of repainting unrelated rows.
 
-## Route input and render changes
+## How are input and rendering routed?
 
 Terminal decoding turns bytes and escape sequences into key events. Focused overlays receive input before the prompt editor and global actions. State changes schedule a render, layout produces the next frame, and the diff layer emits only changed terminal regions.
 
-## Extend interactive surfaces
+## How do I extend interactive surfaces?
 
 Extensions can open a modal through `ctx.ui.custom` only when an interactive UI host exists. Custom tools may provide renderers for calls and results while preserving a plain-text representation for headless clients. A renderer must not become the only copy of durable tool output.
+
+Read `packages/tui/src` for the component and rendering contracts, and `packages/coding-agent/src/tui` for the session-aware components built on them.

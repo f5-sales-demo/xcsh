@@ -16,8 +16,10 @@ Invalid frontmatter, manifests, or module factories produce diagnostics at their
 
 ## Where should a change go?
 
-Prefer a public extension, skill, plugin, MCP server, or SDK API for optional behavior. Change the native layer only when a measured platform or performance requirement cannot be met in TypeScript.
+Prefer a public extension, skill, plugin, Model Context Protocol (MCP) server, or software development kit (SDK) application programming interface (API) for optional behavior. Change the native layer only when a measured platform or performance requirement cannot be met in TypeScript.
 
 ## How do I validate a boundary change?
 
 Run focused TypeScript tests for the caller and Rust tests for the native implementation, then build the addon and exercise the public command. Do not expose a native detail as a public contract accidentally.
+
+Read `packages/coding-agent/src/discovery` for the provider scan and deduplication, and `packages/coding-agent/src/capability` for the normalized capability items.

@@ -12,6 +12,12 @@ The companion VS Code extension embeds an xcsh conversation in an editor workspa
 
 Provider configuration, model selection, session concepts, and workspace file boundaries follow the xcsh runtime. Open the intended workspace before starting a conversation.
 
-## What is not asserted here?
+## Which behavior should I validate in the terminal?
 
-No editor click sequence is documented without an Extension Development Host transcript. Use the terminal CLI to validate runtime behavior independently of the editor shell.
+Editor menus and command palette entries belong to the extension host and change with its release. Reproduce runtime behavior with the command-line interface (CLI) first:
+
+1. Run the same prompt with `xcsh -p` in the workspace directory.
+2. Compare the model, provider, and tool set reported there with the editor session.
+3. Inspect the persisted session file rather than the editor transcript when an exact sequence matters.
+
+A difference between the two points at extension configuration, not at the agent loop.

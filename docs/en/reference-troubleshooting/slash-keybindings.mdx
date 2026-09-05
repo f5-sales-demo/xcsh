@@ -1,17 +1,25 @@
 ---
 title: "Slash command reference"
-description: "Find the interactive commands for models, sessions, contexts, resources, plugins, MCP, tools, and UI state."
+description: "Find the interactive commands for models, sessions, contexts, resources, plugins, Model Context Protocol servers, tools, and session state."
 sidebar:
   order: 2
   label: "Slash command reference"
 ---
 
-Slash commands are interactive TUI controls, not shell subcommands. Type `/` to view the registry active in the current session.
+Slash commands are interactive terminal user interface (TUI) controls, not shell subcommands. The registry is assembled at startup from built-in commands plus whatever the loaded plugins and extensions register.
 
 ## How do I find a command or keybinding?
 
-Run `/help` for categorized commands and `/hotkeys` for the resolved terminal key map. Use `/model`, `/context status`, and `/mcp status` to inspect those subsystems.
+Type `/` in the prompt to list the registry active in the current session, and `/hotkeys` to read the resolved terminal key map. Autocomplete narrows the list as you type, so it reports the current release, mode, and extension set rather than a published snapshot.
 
-## Why can the list differ?
+## Which subsystems have their own commands?
 
-The installed release, current mode, and loaded extensions can change the registry. Runtime completion is therefore canonical; this page intentionally does not freeze a complete list or key table.
+| Subsystem | Entry point |
+| --- | --- |
+| Models and routing | `/model` |
+| Sessions and history | `/session`, `/resume`, `/tree`, `/branch`, `/fork`, `/compact`, `/export` |
+| F5 Distributed Cloud | `/context`, `/namespace`, `/manifest`, `/validate`, `/diff`, `/apply`, `/get`, `/create`, `/delete` |
+| Capabilities | `/tools`, `/agents`, `/plugin`, `/extensions`, `/mcp` |
+| Session state | `/settings`, `/hotkeys`, `/memory`, `/usage`, `/plan` |
+
+`/context status`, `/mcp list`, and `/plugin list` report the current state of those subsystems without changing anything.

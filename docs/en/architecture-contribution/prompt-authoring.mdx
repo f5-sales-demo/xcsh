@@ -8,14 +8,18 @@ sidebar:
 
 System prompts are executable product policy. Edit the smallest owned prompt fragment and verify the composed result; do not paste a second copy of guidance already supplied by a capability or plugin.
 
-## Apply the eight-point checklist
+## What does the eight-point checklist require?
 
 State role and scope, concrete objectives, available tools, tool-use rules, constraints, output contract, uncertainty behavior, and completion criteria. Use direct instructions with observable conditions. Keep provider-specific details out of shared prompts unless the adapter cannot represent them elsewhere.
 
-## Compose prompts progressively
+## How is the system prompt composed?
 
 The runtime builds the system prompt from the core fragment plus active capabilities, workspace guidance, plan state, memory, and extension contributions. Ordering and deduplication tests protect mandatory boundaries. An absent optional plugin must not remove core safety or file-operation instructions.
 
-## Audit a prompt change
+## How do I audit a prompt change?
 
-Inspect the final composed prompt for representative capability sets. Run template, API-spec, deduplication, deprecation, workspace-boundary, start-folder, and absent-plugin tests. Record why each new sentence belongs at that layer and remove stale aliases rather than documenting both paths.
+Inspect the final composed prompt for representative capability sets, then run the template, application programming interface (API) spec, deduplication, deprecation, workspace-boundary, start-folder, and absent-plugin tests.
+
+Record why each new sentence belongs at that layer, and remove a stale alias rather than documenting both paths.
+
+Read `packages/coding-agent/src/prompts` for the composed fragments and their ordering tests.

@@ -1,23 +1,49 @@
 ---
 title: "CLI command and flag reference"
-description: "Review the current top-level commands, global flags, and resource command patterns."
+description: "Look up every top-level xcsh command and every global flag a session accepts."
 sidebar:
   order: 1
   label: "CLI command and flag reference"
 ---
 
-The installed help is the command authority for its release.
+The installed `xcsh <COMMAND> --help` output is the command-line interface (CLI) authority for its release. This page lists the command and flag names that release exposes so you can find one without starting a session.
 
 ## Which top-level commands exist?
 
 | Area | Commands |
 | --- | --- |
 | Resources | `validate`, `diff`, `create`, `apply`, `update`, `get`, `export`, `delete` |
-| Runtime | `config`, `setup`, `sandbox`, `stats`, `search`, `shell` |
+| Runtime | `config`, `setup`, `sandbox`, `shell`, `ssh`, `stats`, `search` |
+| Files and code | `read`, `grep`, `jupyter` |
 | Extensibility | `agents`, `plugin`, `worker`, `manager` |
-| Interfaces | `chrome`, `office`, `herdr` |
+| Interfaces | `chrome`, `chrome-host`, `office`, `herdr` |
+| Repository | `commit`, `grievances` |
 | Maintenance | `self-update`, `update --check` |
+
+`search` also answers to `q`. On `update`, `-f` names a resource manifest; an executable force-update uses `--force`.
+
+## Which global flags does a session accept?
+
+These flags configure an agent launch. They precede the prompt and do not apply to a subcommand.
+
+| Group | Flags |
+| --- | --- |
+| Model | `--model`, `--smol`, `--slow`, `--plan`, `--provider`, `--models`, `--thinking`, `--list-models` |
+| Credentials and context | `--api-key`, `--context` |
+| Prompt | `--system-prompt`, `--append-system-prompt`, `--no-title` |
+| Mode | `--mode` (`text`, `json`, `rpc`, `acp`), `-p`/`--print` |
+| Session | `-c`/`--continue`, `-r`/`--resume`, `--fork`, `--session-dir`, `--no-session`, `--no-memories`, `--export` |
+| Filesystem | `--allow-home`, `--allow-path`, `--no-sandbox` |
+| Capabilities | `--tools`, `--no-tools`, `--no-mcp`, `--no-lsp`, `--no-pty` |
+| Discovery | `-e`/`--extension`, `--hook`, `--plugin-dir`, `--no-extensions`, `--skills`, `--no-skills`, `--no-rules` |
+
+`packages/coding-agent/src/cli/flag-spec.ts` is the single source that renders `--help` and drives the parser, so the two cannot disagree.
 
 ## How do I script a command safely?
 
-Run `xcsh <command> --help` against the pinned executable, prefer long flags, and request `--result-file` or JSON where supported. On `update`, `-f` means a resource manifest; executable force-update uses `--force`.
+Run these steps against the pinned executable:
+
+1. Read `xcsh <COMMAND> --help` for the release you pinned.
+2. Write long flags rather than single-character aliases.
+3. Request `--result-file` or `--mode json` wherever the command supports it.
+4. Pass `--allow-path` once per additional directory; it accumulates rather than replacing.

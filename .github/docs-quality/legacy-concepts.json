@@ -20,7 +20,7 @@
       "knowledgeSummary": "Covers the eight-point system prompt checklist for SYSTEM_PROMPT_GUIDE. Key interfaces include `<role>`, `<defensive_scope>`, `<governance>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/prompt-authoring.mdx",
-      "destinationHeading": "Apply the eight-point checklist",
+      "destinationHeading": "What does the eight-point checklist require?",
       "currentSourceAuthorities": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -41,7 +41,7 @@
       "knowledgeSummary": "Covers verification and audit standard for SYSTEM_PROMPT_GUIDE. Prior to merging any new or updated prompt file (`.md` agents, system prompts, or skills), verify compliance against the eight-point checklist above. Key interfaces include `*.md`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/prompt-authoring.mdx",
-      "destinationHeading": "Apply the eight-point checklist",
+      "destinationHeading": "What does the eight-point checklist require?",
       "currentSourceAuthorities": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -62,7 +62,7 @@
       "knowledgeSummary": "Covers why two storage systems exist for blob artifact architecture. The runtime uses two distinct persistence mechanisms for different data structures: The two mechanisms serve distinct optimization goals Key interfaces include `blob:sha256:<hash>`, `<sessionFile-without-.jsonl>/`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -83,7 +83,7 @@
       "knowledgeSummary": "Covers storage boundaries and on-disk layout for blob artifact architecture. `SessionManager` constructs `BlobStore(getBlobsDir())`, which places blob files in a shared global blob directory rather than in an individual session directory. Key interfaces include `SessionManager`, `BlobStore(getBlobsDir())`, `<blobsDir>/<sha256-hex>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -104,7 +104,7 @@
       "knowledgeSummary": "Covers identifier and name allocation schemes for blob artifact architecture. `BlobStore.put()` computes a SHA-256 digest over the raw binary bytes and returns: The blob store does not use session-local counters. Key interfaces include `BlobStore.put()`, `hash`, `path`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -125,7 +125,7 @@
       "knowledgeSummary": "Covers persistence dataflow for blob artifact architecture. Before session entries are written (`#rewriteFile` or incremental persistence), `SessionManager` calls `prepareEntryForPersistence()` through `truncateForPersistence`. Key interfaces include `#rewriteFile`, `SessionManager`, `prepareEntryForPersistence()`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -146,7 +146,7 @@
       "knowledgeSummary": "Covers url access model for blob artifact architecture. The `blob:sha256:<hash>` format is an internal persistence reference within session payloads rather than a routing protocol scheme. Key interfaces include `blob:`, `blob:sha256:<hash>`, `SessionManager`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -167,7 +167,7 @@
       "knowledgeSummary": "Covers resume, fork, and move semantics for blob artifact architecture. `SessionManager.fork()` creates a new session file with a unique session ID and a `parentSession` link, returning the old and new file paths. Key interfaces include `ArtifactManager`, `{id}.*.log`, `AgentOutputManager`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -188,7 +188,7 @@
       "knowledgeSummary": "Covers failure handling and fallback paths for blob artifact architecture. Key interfaces include `blob:sha256:`, `BlobStore.get`, `null`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -209,7 +209,7 @@
       "knowledgeSummary": "Covers binary blob externalization compared to text artifacts for blob artifact architecture. Both mechanisms reduce session JSONL file size while maintaining distinct storage lifecycles and retrieval paths.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -230,7 +230,7 @@
       "knowledgeSummary": "Covers implementation files for blob artifact architecture. Key interfaces include `src/session/blob-store.ts`, `src/session/artifacts.ts`, `src/session/streaming-output.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Allocate and resolve stored values",
+      "destinationHeading": "How are stored values allocated and resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -505,7 +505,7 @@
       "knowledgeSummary": "Covers resolution model and precedence for environment variables. Runtime lookups use the `$env` helper from `@f5-sales-demo/pi-utils` (`packages/utils/src/env.ts`). Key interfaces include `$env`, `@f5-sales-demo/pi-utils`, `packages/utils/src/env.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -528,7 +528,7 @@
       "knowledgeSummary": "Covers model and provider authentication for environment variables. The runtime consumes these variables via `getEnvApiKey()` (`packages/ai/src/stream.ts`) unless specified otherwise. Key interfaces include `getEnvApiKey()`, `packages/ai/src/stream.ts`, `ANTHROPIC_OAUTH_TOKEN`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -548,10 +548,10 @@
       "legacyBlob": "02928628931a5f8aa4c389d3c0a1850664c4223b",
       "category": "configuration",
       "readerQuestion": "What should a reader know about provider-specific runtime configuration?",
-      "knowledgeSummary": "Covers provider-specific runtime configuration for environment variables. When `CLAUDECODEUSEFOUNDRY` is active, Anthropic requests route to Foundry mode: `ANTHROPICFOUNDRYAPIKEY` \u2014> `ANTHROPICOAUTHTOKEN` \u2014> `ANTHROPICAPIKEY`. Key interfaces include `CLAUDE_CODE_USE_FOUNDRY`, `FOUNDRY_BASE_URL`, `anthropic`.",
+      "knowledgeSummary": "Covers provider-specific runtime configuration for environment variables. When `CLAUDECODEUSEFOUNDRY` is active, Anthropic requests route to Foundry mode: `ANTHROPICFOUNDRYAPIKEY` —> `ANTHROPICOAUTHTOKEN` —> `ANTHROPICAPIKEY`. Key interfaces include `CLAUDE_CODE_USE_FOUNDRY`, `FOUNDRY_BASE_URL`, `anthropic`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -574,7 +574,7 @@
       "knowledgeSummary": "Covers web search subsystem for environment variables. `packages/coding-agent/src/web/search/auth.ts` resolves Anthropic web search credentials in this order: 1. Key interfaces include `EXA_API_KEY`, `BRAVE_API_KEY`, `PERPLEXITY_API_KEY`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -597,7 +597,7 @@
       "knowledgeSummary": "Covers python tooling and kernel runtime for environment variables. Additional runtime rules Key interfaces include `PI_PY`, `0`, `bash`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -620,7 +620,7 @@
       "knowledgeSummary": "Covers agent and runtime behavior toggles for environment variables. Key interfaces include `PI_SMOL_MODEL`, `smol`, `--smol`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -643,7 +643,7 @@
       "knowledgeSummary": "Covers storage and configuration root paths for environment variables. These variables are consumed via `@f5-sales-demo/pi-utils/dirs` and govern data storage locations Key interfaces include `@f5-sales-demo/pi-utils/dirs`, `PI_CONFIG_DIR`, `.xcsh`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -666,7 +666,7 @@
       "knowledgeSummary": "Covers shell and tool execution environment for environment variables. These variables govern subprocess management in `packages/utils/src/procmgr.ts` and the bash tool integration Key interfaces include `packages/utils/src/procmgr.ts`, `PI_BASH_NO_CI`, `CI=true`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -689,7 +689,7 @@
       "knowledgeSummary": "Covers terminal and session environment variables for environment variables. The runtime detects the following environment variables automatically from the host environment Key interfaces include `COLORTERM`, `TERM`, `WT_SESSION`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -712,7 +712,7 @@
       "knowledgeSummary": "Covers native loader and debug flags for environment variables. Key interfaces include `PI_DEV`, `packages/natives`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -735,7 +735,7 @@
       "knowledgeSummary": "Covers terminal user interface runtime flags for environment variables. Key interfaces include `PI_NOTIFICATIONS`, `off`, `0`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -758,7 +758,7 @@
       "knowledgeSummary": "Covers commit generation controls for environment variables. Key interfaces include `PI_COMMIT_TEST_FALLBACK`, `true`, `PI_COMMIT_NO_FALLBACK`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -781,7 +781,7 @@
       "knowledgeSummary": "Covers security-sensitive variables for environment variables. Protect the following variables as sensitive secrets; do not log or commit them: The Python runtime automatically strips these sensitive keys before spawning kernel subprocesses (`packages/coding-agent/src/ipy/runtime.ts`). Key interfaces include `*_API_KEY`, `*_TOKEN`, `AWS_*`.",
       "disposition": "retained",
       "destinationPage": "docs/en/configure-secure/environment-reference.mdx",
-      "destinationHeading": "Storage, runtime, and diagnostics",
+      "destinationHeading": "Which variables configure storage, runtime, and diagnostics?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/config.ts",
         "packages/coding-agent/src/config/settings.ts",
@@ -804,7 +804,7 @@
       "knowledgeSummary": "Covers purpose and design goals for fs scan cache architecture. The cache stores full directory-scan entry lists (`GlobMatch[]`) keyed by scan scope and traversal policy, enabling higher-level operations (such as glob filtering, fuzzy scoring, and grep candidate selection) to run against cached entries. Key interfaces include `GlobMatch[]`, `glob`, `fuzzyFind`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -826,7 +826,7 @@
       "knowledgeSummary": "Covers ownership and public surface for fs scan cache architecture. Key interfaces include `crates/pi-natives/src/fs_cache.rs`, `crates/pi-natives/src/glob.rs`, `crates/pi-natives/src/fd.rs`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -848,7 +848,7 @@
       "knowledgeSummary": "Covers cache key partitioning for fs scan cache architecture. Each entry is keyed by: Key contract implications: The cache key does not partition on `nodemodules` inclusion. Key interfaces include `root`, `include_hidden`, `use_gitignore`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -870,7 +870,7 @@
       "knowledgeSummary": "Covers scan collection behavior for fs scan cache architecture. Cache population uses a deterministic directory walker (`ignore::WalkBuilder`) configured by `includehidden` and `usegitignore`: Search roots are resolved through `resolvesearchpath` Key interfaces include `ignore::WalkBuilder`, `include_hidden`, `use_gitignore`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -892,7 +892,7 @@
       "knowledgeSummary": "Covers freshness and eviction policy for fs scan cache architecture. Global policy configuration (overridable via environment variables): Runtime behavior Key interfaces include `FS_SCAN_CACHE_TTL_MS`, `1000`, `FS_SCAN_EMPTY_RECHECK_MS`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -914,7 +914,7 @@
       "knowledgeSummary": "Covers empty-result fast recheck for fs scan cache architecture. Normal cache hit behavior: Empty-result fast recheck behavior: Active consumers Key interfaces include `ScanResult.cache_age_ms`, `empty_recheck_ms()`, `force_rescan(...)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -936,7 +936,7 @@
       "knowledgeSummary": "Covers consumer defaults and cache usage for fs scan cache architecture. Cache usage is opt-in across all exposed APIs (`cache?: boolean`, defaulting to `false`). Key interfaces include `cache?: boolean`, `false`, `glob`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -958,7 +958,7 @@
       "knowledgeSummary": "Covers invalidation contract for fs scan cache architecture. Native invalidation entrypoint: Path handling behavior Key interfaces include `invalidateFsScanCache(path?: string)`, `path`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -980,7 +980,7 @@
       "knowledgeSummary": "Covers mutation flow responsibilities for fs scan cache architecture. Coding agent execution paths must invoke invalidation helpers after successful filesystem mutations. Key interfaces include `invalidateFsScanAfterWrite(path)`, `invalidateFsScanAfterDelete(path)`, `invalidateFsScanAfterRename(oldPath, newPath)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -1002,7 +1002,7 @@
       "knowledgeSummary": "Covers adding a new cache consumer for fs scan cache architecture. When introducing cache usage in a new scanning or search path: 1. Key interfaces include `.gitignore`, `get_or_scan`, `force_rescan`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -1024,7 +1024,7 @@
       "knowledgeSummary": "Covers known boundaries for fs scan cache architecture. Key interfaces include `DashMap`, `glob`, `fuzzyFind`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/storage-artifacts.mdx",
-      "destinationHeading": "Cache filesystem discovery",
+      "destinationHeading": "How is filesystem discovery cached?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/session",
         "packages/coding-agent/src/config.ts",
@@ -1046,7 +1046,7 @@
       "knowledgeSummary": "Covers media and graphics protocol negotiation for herdr. When a released Herdr version exposes `HERDRKITTYGRAPHICS=1` alongside `HERDRENV=1`, `xcsh` enables the Kitty image protocol for TTY output even though Herdr reports `TERM=xterm-256color`. Key interfaces include `HERDR_KITTY_GRAPHICS=1`, `HERDR_ENV=1`, `xcsh`.",
       "disposition": "retained",
       "destinationPage": "docs/en/integrations-deployment/herdr.mdx",
-      "destinationHeading": "Negotiate the host protocol",
+      "destinationHeading": "How is the host protocol negotiated?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -1068,7 +1068,7 @@
       "knowledgeSummary": "Covers launching conversation-owned workspaces for herdr. Launch a conversation-owned workspace from outside Herdr: The launcher executes the following sequence: 1. Key interfaces include `0600`, `HerdrBindingV1`, `xcsh`.",
       "disposition": "retained",
       "destinationPage": "docs/en/integrations-deployment/herdr.mdx",
-      "destinationHeading": "Negotiate the host protocol",
+      "destinationHeading": "How is the host protocol negotiated?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -1090,7 +1090,7 @@
       "knowledgeSummary": "Covers terminal management actions for herdr. Within a conversation, users invoke `/terminal` and agents invoke `herdrterminal`. Key interfaces include `/terminal`, `herdr_terminal`, `list`.",
       "disposition": "retained",
       "destinationPage": "docs/en/integrations-deployment/herdr.mdx",
-      "destinationHeading": "Negotiate the host protocol",
+      "destinationHeading": "How is the host protocol negotiated?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -1112,7 +1112,7 @@
       "knowledgeSummary": "Covers security and isolation for herdr. Ownership isolation is enforced through a randomly generated `xcshowner` metadata token attached to the workspace and each managed pane. Key interfaces include `xcsh_owner`, `xcsh`.",
       "disposition": "retained",
       "destinationPage": "docs/en/integrations-deployment/herdr.mdx",
-      "destinationHeading": "Negotiate the host protocol",
+      "destinationHeading": "How is the host protocol negotiated?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -1134,7 +1134,7 @@
       "knowledgeSummary": "Covers socket protocol and resilience for herdr. The socket client communicates using Herdr protocol 18 over newline-delimited JSON across `HERDRSOCKETPATH`. Key interfaces include `HERDR_SOCKET_PATH`, `ping`.",
       "disposition": "retained",
       "destinationPage": "docs/en/integrations-deployment/herdr.mdx",
-      "destinationHeading": "Negotiate the host protocol",
+      "destinationHeading": "How is the host protocol negotiated?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/cli.ts",
         "packages/office-pane",
@@ -1156,7 +1156,7 @@
       "knowledgeSummary": "Covers current runtime status for hooks. The hook package (`src/extensibility/hooks/`) provides a public API surface, while the default CLI runtime initializes the extension runner path: This document covers the hook subsystem implementation (types, loader, runner, and wrapper), including backward-co Key interfaces include `src/extensibility/hooks/`, `--hook`, `--extension`.",
       "disposition": "corrected",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1180,7 +1180,7 @@
       "knowledgeSummary": "Covers key files for hooks. Key interfaces include `src/extensibility/hooks/types.ts`, `src/extensibility/hooks/loader.ts`, `src/extensibility/hooks/runner.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1203,7 +1203,7 @@
       "knowledgeSummary": "Covers hook module anatomy for hooks. A hook module must provide a default export of a factory function: The factory function supports the following operations Key interfaces include `pi.on(...)`, `pi.sendMessage(...)`, `pi.appendEntry(...)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1226,7 +1226,7 @@
       "knowledgeSummary": "Covers discovery and loading for hooks. `discoverAndLoadHooks(configuredPaths, cwd)` executes the following sequence: 1. Key interfaces include `discoverAndLoadHooks(configuredPaths, cwd)`, `loadCapability(\"hooks\")`, `loadHooks(allPaths, cwd)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1249,7 +1249,7 @@
       "knowledgeSummary": "Covers event surfaces for hooks. Hook events are strongly typed in `types.ts`. Key interfaces include `types.ts`, `session_start`, `session_before_switch`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1272,7 +1272,7 @@
       "knowledgeSummary": "Covers execution model and mutation semantics for hooks. `HookToolWrapper.execute()` emits `toolcall` before executing the underlying tool: The underlying tool executes normally if no handler blocks the call. Key interfaces include `tool_call`, `HookToolWrapper.execute()`, `{ block: true }`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1295,7 +1295,7 @@
       "knowledgeSummary": "Covers ordering and conflict resolution for hooks. Capability providers are sorted in descending order by numeric priority. Key interfaces include `hooks`, `${type}:${tool}:${name}`, `discoverAndLoadHooks`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1318,7 +1318,7 @@
       "knowledgeSummary": "Covers user-interface interactions for hooks. `HookUIContext` exposes the following methods: `ctx.hasUI` indicates whether interactive UI capabilities are available. Key interfaces include `HookUIContext`, `select`, `confirm`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1341,7 +1341,7 @@
       "knowledgeSummary": "Covers error handling and propagation for hooks. `HookRunner.emit(...)` catches handler errors for most event types, emits a `HookError` event (`hookPath`, `event`, `error`) to registered listeners, and continues execution. Key interfaces include `LoadHooksResult.errors`, `HookRunner.emit(...)`, `HookError`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1364,7 +1364,7 @@
       "knowledgeSummary": "Covers api examples for hooks. Key interfaces include `Allow execution: ${cmd}`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -1387,7 +1387,7 @@
       "knowledgeSummary": "Covers exported package surface for hooks. `src/extensibility/hooks/index.ts` exports: The package root (`src/index.ts`) re-exports hook TypeScript types for backward compatibility. Key interfaces include `src/extensibility/hooks/index.ts`, `discoverAndLoadHooks`, `loadHooks`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Order hook execution",
+      "destinationHeading": "What determines hook execution order?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3638,7 +3638,7 @@
       "knowledgeSummary": "Covers primary implementation files for rulebook matching pipeline. Key interfaces include `packages/coding-agent/src/capability/rule.ts`, `packages/coding-agent/src/capability/index.ts`, `packages/coding-agent/src/discovery/index.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3661,7 +3661,7 @@
       "knowledgeSummary": "Covers 1. canonical rule data structure for rulebook matching pipeline. All discovery providers normalize rule definitions into the `Rule` interface: The capability registry deduplicates rules using `rule.name` as the primary key (`ruleCapability.key = rule => rule.name`). Key interfaces include `Rule`, `rule.name`, `ruleCapability.key = rule => rule.name`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3684,7 +3684,7 @@
       "knowledgeSummary": "Covers 2. discovery providers and normalization rules for rulebook matching pipeline. The discovery subsystem registers four rule providers: Discovers xcsh rule files from: Normalization behavior: Discovers rules from: Normalization rules (`transformMDCRule`): Discovers rules from: Normalization behavior: Traverses upward from the current worki Key interfaces include `native`, `100`, `cursor`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3707,7 +3707,7 @@
       "knowledgeSummary": "Covers 3. frontmatter parsing and fallback handling for rulebook matching pipeline. Providers parse frontmatter blocks using `parseFrontmatter` (`utils/frontmatter.ts`): 1. Key interfaces include `parseFrontmatter`, `utils/frontmatter.ts`, `---`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3730,7 +3730,7 @@
       "knowledgeSummary": "Covers 4. provider precedence and deduplication for rulebook matching pipeline. `loadCapability(\"rules\")` aggregates discovered rules across providers and resolves duplicate rule names Key interfaces include `loadCapability(\"rules\")`, `native`, `cursor`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3753,7 +3753,7 @@
       "knowledgeSummary": "Covers 5. classification into rulebook, always-apply, and ttsr categories for rulebook matching pipeline. During session initialization in `createAgentSession` (`sdk.ts`), discovered rules are partitioned into three execution buckets: 1. Key interfaces include `createAgentSession`, `sdk.ts`, `condition`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3776,7 +3776,7 @@
       "knowledgeSummary": "Covers 6. runtime metadata utilization for rulebook matching pipeline. Key interfaces include `description`, `<rules>`, `rule://`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3799,7 +3799,7 @@
       "knowledgeSummary": "Covers 7. system prompt integration for rulebook matching pipeline. `buildSystemPromptInternal` constructs the final prompt context: 1. Key interfaces include `buildSystemPromptInternal`, `# Rules`, `rule://<NAME>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -3822,7 +3822,7 @@
       "knowledgeSummary": "Covers 8. the `rule://` uri protocol handler for rulebook matching pipeline. `RuleProtocolHandler` resolves `rule://` URIs against combined rulebook and always-apply collections Key interfaces include `RuleProtocolHandler`, `rule://`, `rule://unit-testing`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/hooks-rules.mdx",
-      "destinationHeading": "Discover and classify rules",
+      "destinationHeading": "How are rules discovered and classified?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/capability",
         "packages/coding-agent/src/extensibility/extensions",
@@ -4050,7 +4050,7 @@
       "knowledgeSummary": "Covers implementation references for mcp config. Key interfaces include `packages/coding-agent/src/mcp/types.ts`, `packages/coding-agent/src/mcp/config-writer.ts`, `packages/coding-agent/src/mcp/config.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4073,7 +4073,7 @@
       "knowledgeSummary": "Covers configuration file locations for mcp config. The xcsh runtime discovers MCP server definitions from multiple configuration sources. Key interfaces include `.xcsh/mcp.json`, `~/.xcsh/mcp.json`, `mcp.json`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4096,7 +4096,7 @@
       "knowledgeSummary": "Covers schema declaration for mcp config. Include the `$schema` reference in your configuration file to enable validation and autocompletion in your editor: CLI management commands (`/mcp add`, `/mcp enable`, `/mcp disable`, `/mcp reauth`) insert this schema reference automatically. Key interfaces include `$schema`, `/mcp add`, `/mcp enable`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4119,7 +4119,7 @@
       "knowledgeSummary": "Covers configuration file structure for mcp config. MCP configuration files use the following schema: Server identifiers must match the regular expression `^[a-zA-Z0-9.-]{1,100}$`. Key interfaces include `$schema`, `mcpServers`, `disabledServers`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4142,7 +4142,7 @@
       "knowledgeSummary": "Covers server configuration properties for mcp config. The following properties apply to all transport types: `stdio` serves as the default transport when `type` is omitted. Key interfaces include `enabled`, `true`, `timeout`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4165,7 +4165,7 @@
       "knowledgeSummary": "Covers authentication configuration for mcp config. Use `auth` to persist credential binding metadata across agent sessions. Key interfaces include `auth`, `oauth`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4188,7 +4188,7 @@
       "knowledgeSummary": "Covers configuration examples for mcp config. Key interfaces include `stdio`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4211,7 +4211,7 @@
       "knowledgeSummary": "Covers variable resolution and secrets management for mcp config. Before initializing a server process or issuing HTTP requests, the runtime evaluates values in `env` and `headers`: 1. Key interfaces include `.xcsh/mcp.json`, `env`, `headers`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4234,7 +4234,7 @@
       "knowledgeSummary": "Covers disabling discovered servers (`disabledservers`) for mcp config. Define `disabledServers` in `/.xcsh/mcp.json` to prevent specific servers discovered from third-party tools from loading Key interfaces include `disabledServers`, `~/.xcsh/mcp.json`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4257,7 +4257,7 @@
       "knowledgeSummary": "Covers management commands for mcp config. Key interfaces include `/mcp add`, `/mcp reload`, `/mcp list`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4280,7 +4280,7 @@
       "knowledgeSummary": "Covers validation rules for mcp config. `validateServerConfig` (`packages/coding-agent/src/mcp/config.ts`) enforces the following invariants Key interfaces include `validateServerConfig`, `packages/coding-agent/src/mcp/config.ts`, `stdio`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4303,7 +4303,7 @@
       "knowledgeSummary": "Covers troubleshooting for mcp config. Remote endpoints require `\"type\": \"http\"`. Key interfaces include `Server \"<NAME>\": stdio server requires \"command\" field`, `\"type\": \"http\"`, `type`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-configuration.mdx",
-      "destinationHeading": "Choose a transport and lifecycle",
+      "destinationHeading": "Which transport and lifecycle should I declare?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4326,7 +4326,7 @@
       "knowledgeSummary": "Covers scope and responsibilities for mcp protocol transports. Key interfaces include `stdio`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4349,7 +4349,7 @@
       "knowledgeSummary": "Covers primary implementation files for mcp protocol transports. Key interfaces include `packages/coding-agent/src/mcp/types.ts`, `packages/coding-agent/src/mcp/transports/stdio.ts`, `stdio`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4372,7 +4372,7 @@
       "knowledgeSummary": "Covers architecture and layer separation for mcp protocol transports. The protocol layer coordinates method sequencing, capability negotiation, and message schema enforcement: 1. Key interfaces include `MCPClient`, `initialize`, `notifications/initialized`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4395,7 +4395,7 @@
       "knowledgeSummary": "Covers transport selection rules for mcp protocol transports. The client factory `createTransport()` instantiates the appropriate transport based on configuration Key interfaces include `createTransport()`, `type: \"stdio\"`, `type`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4418,7 +4418,7 @@
       "knowledgeSummary": "Covers json-rpc message flow and request correlation for mcp protocol transports. Transports generate unique alphanumeric correlation identifiers per request using timestamp tokens. Key interfaces include `stdio`, `\\n`, `#pendingRequests`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4441,7 +4441,7 @@
       "knowledgeSummary": "Covers transport implementations for mcp protocol transports. `StdioTransport` manages an isolated operating system subprocess communicating via standard input and output: `HttpTransport` connects to remote endpoints over HTTP and HTTPS Key interfaces include `stdio`, `StdioTransport`, `Transport closed`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4464,7 +4464,7 @@
       "knowledgeSummary": "Covers error handling and failure modes for mcp protocol transports. Key interfaces include `stdio`, `Transport closed`, `HTTP <STATUS>: <TEXT>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4487,7 +4487,7 @@
       "knowledgeSummary": "MCP transports own process or network framing and JSON-RPC correlation; the manager owns connection lifecycle, while capability bridging owns normalized tools and resources.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Follow a request through the runtime",
+      "destinationHeading": "How does a request move through the runtime?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4510,7 +4510,7 @@
       "knowledgeSummary": "Covers lifecycle overview for mcp runtime lifecycle. 1. Key interfaces include `createAgentSession()`, `discoverAndLoadMCPTools()`, `loadAllMCPConfigs()`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4533,7 +4533,7 @@
       "knowledgeSummary": "Covers discovery and loading for mcp runtime lifecycle. `createAgentSession()` (`packages/coding-agent/src/sdk.ts`) manages MCP initialization: `loadAllMCPConfigs()` (`packages/coding-agent/src/mcp/config.ts`) applies the following filters Key interfaces include `createAgentSession()`, `packages/coding-agent/src/sdk.ts`, `discoverAndLoadMCPTools(cwd, { ... })`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4556,7 +4556,7 @@
       "knowledgeSummary": "Covers manager state model for mcp runtime lifecycle. `MCPManager` tracks runtime state across internal registries: `getConnectionStatus(name)` reports one of three states Key interfaces include `MCPManager`, `#connections`, `MCPServerConnection`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4579,7 +4579,7 @@
       "knowledgeSummary": "Covers connection establishment and caching for mcp runtime lifecycle. To prevent slow MCP servers from delaying CLI startup, `connectServers()` races connection establishment against a 250 millisecond threshold: Pending connection promises continue executing in the background Key interfaces include `connectServers()`, `MCPTool`, `DeferredMCPTool`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4602,7 +4602,7 @@
       "knowledgeSummary": "Covers runtime tool invocation for mcp runtime lifecycle. Both wrapper types catch transport and tool errors and format them as structured tool error responses. Key interfaces include `MCPTool`, `DeferredMCPTool`, `waitForConnection(server)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4625,7 +4625,7 @@
       "knowledgeSummary": "Covers dynamic reload and refresh for mcp runtime lifecycle. Executing `/mcp reload` updates server configurations during an active session: 1. Key interfaces include `/mcp reload`, `mcpManager.disconnectAll()`, `mcpManager.discoverAndConnect()`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4648,7 +4648,7 @@
       "knowledgeSummary": "Covers teardown semantics for mcp runtime lifecycle. Key interfaces include `disconnectServer`, `mcp_`, `disconnectAll`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4671,7 +4671,7 @@
       "knowledgeSummary": "Covers failure modes and recovery for mcp runtime lifecycle. Key interfaces include `DeferredMCPTool`, `/mcp reload`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4694,7 +4694,7 @@
       "knowledgeSummary": "Covers primary implementation files for mcp runtime lifecycle. Key interfaces include `packages/coding-agent/src/mcp/loader.ts`, `LoadedCustomTool`, `packages/coding-agent/src/mcp/manager.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Reload and tear down safely",
+      "destinationHeading": "How do reload and teardown work?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4717,7 +4717,7 @@
       "knowledgeSummary": "Covers architecture overview for mcp server tool authoring. 1. Key interfaces include `.xcsh/mcp.json`, `~/.xcsh/mcp.json`, `mcp.json`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4740,7 +4740,7 @@
       "knowledgeSummary": "Covers 1. server configuration schema and validation for mcp server tool authoring. `packages/coding-agent/src/mcp/types.ts` defines the supported configuration properties: `validateServerConfig()` (`packages/coding-agent/src/mcp/config.ts`) enforces the following constraints: `packages/coding-agent/src/mcp/config-writer.ts` validates server Key interfaces include `packages/coding-agent/src/mcp/types.ts`, `stdio`, `type`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4763,7 +4763,7 @@
       "knowledgeSummary": "Covers 2. discovery, normalization, and provider precedence for mcp server tool authoring. `loadAllMCPConfigs()` aggregates server definitions across registered capability providers: 1. Key interfaces include `loadAllMCPConfigs()`, `server.name`, `.xcsh/mcp.json`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4786,7 +4786,7 @@
       "knowledgeSummary": "Covers 3. credential and variable resolution for mcp server tool authoring. `MCPManager.prepareConfig()` (`packages/coding-agent/src/mcp/manager.ts`) performs environment variable and credential substitution prior to connection: When a server defines an OAuth credential binding (`auth: { type: \"oauth\", credentialId: \"<CREDENTIALID>\" } Key interfaces include `MCPManager.prepareConfig()`, `packages/coding-agent/src/mcp/manager.ts`, `Authorization: Bearer <ACCESS_TOKEN>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4809,7 +4809,7 @@
       "knowledgeSummary": "Covers 4. tool bridging and execution for mcp server tool authoring. `packages/coding-agent/src/mcp/tool-bridge.ts` converts MCP tool definitions into `CustomTool` instances: Discovered tools are registered using the following template: Sanitization rules: `MCPTool.execute()` and `DeferredMCPTool.execute()` Key interfaces include `packages/coding-agent/src/mcp/tool-bridge.ts`, `CustomTool`, `_`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4832,7 +4832,7 @@
       "knowledgeSummary": "Covers 5. management commands and dynamic reload for mcp server tool authoring. The interactive CLI provides `/mcp` management commands: Configuration updates are written atomically using temporary files and rename operations. Key interfaces include `/mcp`, `/mcp add`, `/mcp remove <SERVER_NAME>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4855,7 +4855,7 @@
       "knowledgeSummary": "Covers 6. authoring best practices for mcp server tool authoring. 1. Key interfaces include `type`, `\"http\"`, `\"stdio\"`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4878,7 +4878,7 @@
       "knowledgeSummary": "Covers primary implementation files for mcp server tool authoring. Key interfaces include `packages/coding-agent/src/mcp/types.ts`, `packages/coding-agent/src/mcp/config.ts`, `packages/coding-agent/src/mcp/config-writer.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/automate-extend/mcp-runtime-authoring.mdx",
-      "destinationHeading": "Author a compatible tool server",
+      "destinationHeading": "What makes a tool server compatible?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/mcp",
         "packages/coding-agent/src/config.ts",
@@ -4901,7 +4901,7 @@
       "knowledgeSummary": "Covers primary implementation files for natives addon loader runtime. Key interfaces include `packages/natives/native/native.ts`, `packages/natives/native/embedded-addon.ts`, `packages/natives/native/bindings.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Select and validate an addon",
+      "destinationHeading": "How is an addon selected and validated?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -4922,7 +4922,7 @@
       "knowledgeSummary": "Covers core responsibilities for natives addon loader runtime. Key interfaces include `validateNative`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Select and validate an addon",
+      "destinationHeading": "How is an addon selected and validated?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -4943,7 +4943,7 @@
       "knowledgeSummary": "Covers platform resolution and hardware variants for natives addon loader runtime. The runtime resolves the active target using standard Node.js platform and architecture strings: `<PLATFORM>-<ARCH>` (for example, `linux-x64` or `darwin-arm64`). Key interfaces include `<PLATFORM>-<ARCH>`, `linux-x64`, `darwin-arm64`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Select and validate an addon",
+      "destinationHeading": "How is an addon selected and validated?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -4964,7 +4964,7 @@
       "knowledgeSummary": "Covers binary candidate resolution sequence for natives addon loader runtime. Candidate paths are evaluated in deterministic priority order based on execution mode: 1. Key interfaces include `<PACKAGE_DIR>/native/<FILENAME>`, `<EXEC_DIR>/<FILENAME>`, `<VERSIONED_USER_DIR>/<FILENAME>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Select and validate an addon",
+      "destinationHeading": "How is an addon selected and validated?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -4985,7 +4985,7 @@
       "knowledgeSummary": "Covers embedded binary extraction for natives addon loader runtime. When running inside a compiled binary package (`isCompiledBinary === true`), `maybeExtractEmbeddedAddon` manages binary extraction: 1. Key interfaces include `isCompiledBinary === true`, `maybeExtractEmbeddedAddon`, `mkdirSync(..., { recursive: true })`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Select and validate an addon",
+      "destinationHeading": "How is an addon selected and validated?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5006,7 +5006,7 @@
       "knowledgeSummary": "Covers interface validation contract (`validatenative`) for natives addon loader runtime. Before exposing bindings to the runtime, `validateNative` verifies that all expected functions exist on the loaded addon object: If any required symbol is missing, the loader records a validation failure and advances to the next candidate path. Key interfaces include `validateNative`, `grep`, `glob`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Select and validate an addon",
+      "destinationHeading": "How is an addon selected and validated?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5027,7 +5027,7 @@
       "knowledgeSummary": "Covers troubleshooting and diagnostics for natives addon loader runtime. When all candidate paths fail and the host platform is not present in `SUPPORTEDPLATFORMS`, the loader raises an explicit `Unsupported platform: <TAG>` error listing all supported target platforms. Key interfaces include `SUPPORTED_PLATFORMS`, `Unsupported platform: <TAG>`, `PI_DEV=1`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Select and validate an addon",
+      "destinationHeading": "How is an addon selected and validated?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5048,7 +5048,7 @@
       "knowledgeSummary": "Covers primary implementation files for natives architecture. Key interfaces include `packages/natives/native/index.ts`, `packages/natives/native/native.ts`, `packages/natives/native/bindings.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5069,7 +5069,7 @@
       "knowledgeSummary": "Covers layer 1: typescript wrapper and api layer for natives architecture. `packages/natives/native/index.ts` organizes capabilities into domain-specific modules rather than exposing raw Node-API bindings: `packages/natives/native/bindings.ts` defines core contracts Key interfaces include `packages/natives/native/index.ts`, `grep`, `glob`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5090,7 +5090,7 @@
       "knowledgeSummary": "Covers layer 2: addon loading and validation for natives architecture. `packages/natives/native/native.ts` dynamically resolves and loads native addons at runtime: Following `require(candidate)`, `validateNative` validates that all required Node-API symbols are present on the loaded object. Key interfaces include `packages/natives/native/native.ts`, `${process.platform}-${process.arch}`, `linux-x64`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5111,7 +5111,7 @@
       "knowledgeSummary": "Covers layer 3: rust node-api module layer for natives architecture. `crates/pi-natives/src/lib.rs` exports performance-critical Rust modules to the JavaScript runtime Key interfaces include `crates/pi-natives/src/lib.rs`, `clipboard`, `fd`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5132,7 +5132,7 @@
       "knowledgeSummary": "Covers architectural boundaries and responsibilities for natives architecture. Key interfaces include `AbortSignal`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5153,7 +5153,7 @@
       "knowledgeSummary": "Covers runtime workflow for natives architecture. 1. Key interfaces include `@f5-sales-demo/pi-natives`, `native`, `native.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5174,7 +5174,7 @@
       "knowledgeSummary": "Covers architecture overview for natives binding contract. 1. Key interfaces include `NativeBindings`, `packages/natives/native/bindings.ts`, `types.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5195,7 +5195,7 @@
       "knowledgeSummary": "Covers primary implementation files for natives binding contract. Key interfaces include `packages/natives/native/bindings.ts`, `packages/natives/native/native.ts`, `packages/natives/native/index.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5216,7 +5216,7 @@
       "knowledgeSummary": "Covers contract model and module augmentation for natives binding contract. `packages/natives/native/bindings.ts` defines core contracts: Each functional domain augments `NativeBindings` using TypeScript declaration merging: This model provides strong compile-time type safety across modular subdirectories without requiring a single monol Key interfaces include `packages/natives/native/bindings.ts`, `NativeBindings`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5237,7 +5237,7 @@
       "knowledgeSummary": "Covers wrapper responsibilities for natives binding contract. TypeScript wrappers provide convenience transformations without duplicating native algorithmic logic Key interfaces include `(err, value)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5258,7 +5258,7 @@
       "knowledgeSummary": "Covers javascript api and native export mapping for natives binding contract. Key interfaces include `grep(options, onMatch?)`, `grep`, `Promise<GrepResult>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5279,7 +5279,7 @@
       "knowledgeSummary": "Covers synchronous and asynchronous contract guidelines for natives binding contract. The native binding layer maintains strict separation between execution models Key interfaces include `PtySession`, `Shell`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5300,7 +5300,7 @@
       "knowledgeSummary": "Covers mismatch detection and validation for natives binding contract. Drift between TypeScript contracts and compiled Rust binaries is caught at two stages: 1. Key interfaces include `NativeBindings`, `validateNative`, `.node`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5321,7 +5321,7 @@
       "knowledgeSummary": "Covers maintainer checklist for binding updates for natives binding contract. When adding or modifying native bindings: 1. Key interfaces include `packages/natives/native/<MODULE>/types.ts`, `packages/natives/native/<MODULE>/index.ts`, `packages/natives/native/native.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Keep bindings synchronized",
+      "destinationHeading": "How do I keep bindings synchronized?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5342,7 +5342,7 @@
       "knowledgeSummary": "Covers implementation files for natives build release debugging. Key interfaces include `packages/natives/scripts/build-native.ts`, `packages/natives/scripts/embed-native.ts`, `packages/natives/native/native.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Build target variants",
+      "destinationHeading": "How do I build target variants?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5363,7 +5363,7 @@
       "knowledgeSummary": "Covers build pipeline architecture for natives build release debugging. The package provides standard Bun scripts in `packages/natives/package.json`: `packages/natives/scripts/build-native.ts` executes Cargo in `crates/pi-natives`: Following compilation, the build script copies the shared library into `packages/natives/native/` us Key interfaces include `packages/natives/package.json`, `bun run build`, `crates/pi-natives`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Build target variants",
+      "destinationHeading": "How do I build target variants?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5384,7 +5384,7 @@
       "knowledgeSummary": "Covers target and hardware variant model for natives build release debugging. Key interfaces include `arm64`, `darwin-arm64`, `linux-arm64`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Build target variants",
+      "destinationHeading": "How do I build target variants?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5405,7 +5405,7 @@
       "knowledgeSummary": "Covers environment and build configuration for natives build release debugging. Key interfaces include `PI_DEV`, `1`, `0`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Build target variants",
+      "destinationHeading": "How do I build target variants?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5426,7 +5426,7 @@
       "knowledgeSummary": "Native development uses the package build script for target selection, Cargo checks for Rust correctness, binding tests for exports, and loader diagnostics for packaged binary resolution.",
       "disposition": "corrected",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Build target variants",
+      "destinationHeading": "How do I build target variants?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5448,7 +5448,7 @@
       "knowledgeSummary": "Covers troubleshooting and diagnostics for natives build release debugging. Key interfaces include `Native addon missing exports`, `.node`, `bun --cwd=packages/natives run build`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Build target variants",
+      "destinationHeading": "How do I build target variants?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5469,7 +5469,7 @@
       "knowledgeSummary": "Covers implementation files for natives media system utils. Key interfaces include `crates/pi-natives/src/image.rs`, `crates/pi-natives/src/html.rs`, `crates/pi-natives/src/clipboard.rs`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5490,7 +5490,7 @@
       "knowledgeSummary": "Covers functional capabilities and api mapping for natives media system utils. Key interfaces include `PhotonImage.parse(bytes)`, `PhotonImage::parse`, `image.rs`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5511,7 +5511,7 @@
       "knowledgeSummary": "Covers data formats and conversions for natives media system utils. Key interfaces include `image`, `Uint8Array`, `Arc<DynamicImage>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5532,7 +5532,7 @@
       "knowledgeSummary": "Covers implementation files for natives rust task cancellation. Key interfaces include `crates/pi-natives/src/task.rs`, `crates/pi-natives/src/grep.rs`, `crates/pi-natives/src/glob.rs`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Diagnose loading and cancellation",
+      "destinationHeading": "How do I diagnose loading and cancellation?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5553,7 +5553,7 @@
       "knowledgeSummary": "Covers task execution primitives for natives rust task cancellation. `crates/pi-natives/src/task.rs` provides two primary execution abstractions Key interfaces include `crates/pi-natives/src/task.rs`, `task::blocking`, `napi::AsyncTask`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Diagnose loading and cancellation",
+      "destinationHeading": "How do I diagnose loading and cancellation?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5574,7 +5574,7 @@
       "knowledgeSummary": "Covers cancellation token architecture for natives rust task cancellation. `CancelToken` combines explicit timeout deadlines and JavaScript `AbortSignal` instances: Long-running loops across arbitrary filesystem hierarchies or match lists must invoke `ct.heartbeat()?` at stable intervals: If the cancellation token triggers due to a t Key interfaces include `CancelToken`, `AbortSignal`, `ct.heartbeat()?`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Diagnose loading and cancellation",
+      "destinationHeading": "How do I diagnose loading and cancellation?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5595,7 +5595,7 @@
       "knowledgeSummary": "Covers typescript api and cancellation mapping for natives rust task cancellation. Key interfaces include `grep(options, onMatch?)`, `grep`, `task::blocking`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Diagnose loading and cancellation",
+      "destinationHeading": "How do I diagnose loading and cancellation?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5616,7 +5616,7 @@
       "knowledgeSummary": "Covers best practices for native task authors for natives rust task cancellation. 1. Key interfaces include `task::blocking`, `task::future`, `ct.heartbeat()?`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Diagnose loading and cancellation",
+      "destinationHeading": "How do I diagnose loading and cancellation?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5637,7 +5637,7 @@
       "knowledgeSummary": "Covers implementation files for natives shell pty process. Key interfaces include `crates/pi-natives/src/shell.rs`, `crates/pi-natives/src/shell/windows.rs`, `crates/pi-natives/src/pty.rs`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5658,7 +5658,7 @@
       "knowledgeSummary": "Covers subsystem architecture for natives shell pty process. The shell execution engine provides two execution modes: The PTY runtime manages interactive terminal sessions: Provides deterministic process discovery and termination without shell dependencies: Parses high-frequency terminal input Key interfaces include `shell`, `executeShell`, `Shell`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5679,7 +5679,7 @@
       "knowledgeSummary": "Covers typescript api and native export mapping for natives shell pty process. Key interfaces include `executeShell(options, onChunk?)`, `executeShell`, `new Shell(options?)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5700,7 +5700,7 @@
       "knowledgeSummary": "Covers implementation files for natives text search pipeline. Key interfaces include `packages/natives/native/grep/index.ts`, `packages/natives/native/glob/index.ts`, `packages/natives/native/text/index.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5721,7 +5721,7 @@
       "knowledgeSummary": "Covers subsystem architectures for natives text search pipeline. `fscache` accelerates repeated directory lookups Key interfaces include `grep`, `searchContent`, `hasMatch`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5742,7 +5742,7 @@
       "knowledgeSummary": "Covers typescript api and native export mapping for natives text search pipeline. Key interfaces include `grep(options, onMatch?)`, `grep`, `grep.rs`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-runtime.mdx",
-      "destinationHeading": "Map native subsystems",
+      "destinationHeading": "Which subsystems does the addon cover?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5763,7 +5763,7 @@
       "knowledgeSummary": "Covers when to port to native modules for porting to natives. Port execution paths to Rust when: Avoid porting operations that require access to JavaScript runtime state or dynamic module imports. Key interfaces include `task::blocking`, `task::future`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Add or change a native export",
+      "destinationHeading": "How do I add or change a native export?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5784,7 +5784,7 @@
       "knowledgeSummary": "Covers native export architecture for porting to natives. 1. Key interfaces include `crates/pi-natives/`, `crates/pi-natives/src/<MODULE>.rs`, `crates/pi-natives/src/lib.rs`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Add or change a native export",
+      "destinationHeading": "How do I add or change a native export?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5805,7 +5805,7 @@
       "knowledgeSummary": "Covers step-by-step porting workflow for porting to natives. 1. Key interfaces include `String`, `Vec<String>`, `Uint8Array`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Add or change a native export",
+      "destinationHeading": "How do I add or change a native export?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -5826,7 +5826,7 @@
       "knowledgeSummary": "Covers troubleshooting common issues for porting to natives. The runtime loader prioritizes platform-tagged binaries (`pinatives.<PLATFORM>-<ARCH>.node`). Key interfaces include `pi_natives.<PLATFORM>-<ARCH>.node`, `validateNative`, `#[napi]`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/native-development.mdx",
-      "destinationHeading": "Add or change a native export",
+      "destinationHeading": "How do I add or change a native export?",
       "currentSourceAuthorities": [
         "crates/pi-natives/src",
         "packages/natives/native",
@@ -6279,7 +6279,7 @@
       "knowledgeSummary": "Covers end-to-end streaming architecture for provider streaming internals. 1. Key interfaces include `streamSimple()`, `packages/ai/src/stream.ts`, `anthropic.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/provider-streaming.mdx",
-      "destinationHeading": "Normalize tool calls incrementally",
+      "destinationHeading": "How are tool calls normalized incrementally?",
       "currentSourceAuthorities": [
         "packages/ai/src",
         "packages/coding-agent/test"
@@ -6299,7 +6299,7 @@
       "knowledgeSummary": "Covers unified stream contract (`assistantmessageevent`) for provider streaming internals. All provider drivers emit events conforming to the `AssistantMessageEvent` union Key interfaces include `AssistantMessageEvent`, `start`, `text_start`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/provider-streaming.mdx",
-      "destinationHeading": "Normalize tool calls incrementally",
+      "destinationHeading": "How are tool calls normalized incrementally?",
       "currentSourceAuthorities": [
         "packages/ai/src",
         "packages/coding-agent/test"
@@ -6319,7 +6319,7 @@
       "knowledgeSummary": "Covers provider-specific normalization logic for provider streaming internals. Only if its tool definition has `strict: true`, strict-schema adaptation succeeds, and the adapted schema stays within Anthropic's documented complexity limits. Key interfaces include `anthropic-messages`, `message_start`, `content_block_start`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/provider-streaming.mdx",
-      "destinationHeading": "Normalize tool calls incrementally",
+      "destinationHeading": "How are tool calls normalized incrementally?",
       "currentSourceAuthorities": [
         "packages/ai/src",
         "packages/coding-agent/test"
@@ -6339,7 +6339,7 @@
       "knowledgeSummary": "Covers tool call json accumulation and error recovery for provider streaming internals. Incremental tool arguments are parsed via `parseStreamingJson()` (`packages/ai/src/utils/json-parse.ts`): 1. Key interfaces include `parseStreamingJson()`, `packages/ai/src/utils/json-parse.ts`, `JSON.parse`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/provider-streaming.mdx",
-      "destinationHeading": "Normalize tool calls incrementally",
+      "destinationHeading": "How are tool calls normalized incrementally?",
       "currentSourceAuthorities": [
         "packages/ai/src",
         "packages/coding-agent/test"
@@ -6359,7 +6359,7 @@
       "knowledgeSummary": "Covers cancellation and lifecycle boundaries for provider streaming internals. Key interfaces include `options.signal`, `signal.aborted`, `AgentSession.abort()`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/provider-streaming.mdx",
-      "destinationHeading": "Normalize tool calls incrementally",
+      "destinationHeading": "How are tool calls normalized incrementally?",
       "currentSourceAuthorities": [
         "packages/ai/src",
         "packages/coding-agent/test"
@@ -6379,7 +6379,7 @@
       "knowledgeSummary": "Covers related implementation files for provider streaming internals. Key interfaces include `packages/ai/src/stream.ts`, `packages/ai/src/utils/event-stream.ts`, `packages/ai/src/utils/json-parse.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/provider-streaming.mdx",
-      "destinationHeading": "Normalize tool calls incrementally",
+      "destinationHeading": "How are tool calls normalized incrementally?",
       "currentSourceAuthorities": [
         "packages/ai/src",
         "packages/coding-agent/test"
@@ -6531,7 +6531,7 @@
       "knowledgeSummary": "Covers execution entry points for bash tool runtime. Xcsh provides two distinct shell execution interfaces: 1. Key interfaces include `bash`, `BashTool.execute()`, `!cmd`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6552,7 +6552,7 @@
       "knowledgeSummary": "Covers execution pipeline for bash tool runtime. When a tool call occurs, `BashTool.execute()` normalizes command strings via `normalizeBashCommand()`: If `bashInterceptor.enabled` is active, the tool checks the command against configured regex rules before spawning processes: xcsh chooses PTY execution (`ru Key interfaces include `BashTool.execute()`, `normalizeBashCommand()`, `| head -n N`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6573,7 +6573,7 @@
       "knowledgeSummary": "Covers output streaming, truncation, and artifact spill for bash tool runtime. Output is processed through `OutputSink` in `src/session/streaming-output.ts` Key interfaces include `OutputSink`, `src/session/streaming-output.ts`, `artifact://<ID>`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6594,7 +6594,7 @@
       "knowledgeSummary": "Covers filesystem sandboxing and containment for bash tool runtime. Xcsh enforces filesystem containment boundaries using platform-native security primitives Key interfaces include `seatbelt`, `landlock`, `scanner-only`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6615,7 +6615,7 @@
       "knowledgeSummary": "Covers related implementation files for bash tool runtime. Key interfaces include `src/tools/bash.ts`, `src/tools/bash-normalize.ts`, `src/tools/bash-interceptor.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6868,7 +6868,7 @@
       "knowledgeSummary": "Covers architectural boundary: editing vs. execution for notebook tool runtime. The `notebook` tool performs atomic JSON mutations on `.ipynb` files on disk: Interactive execution of cell-style code is handled exclusively by the `python` tool Key interfaces include `src/tools/notebook.ts`, `notebook`, `.ipynb`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6889,7 +6889,7 @@
       "knowledgeSummary": "Covers cell manipulation semantics for notebook tool runtime. When modifying cell content, xcsh splits incoming source text into string arrays preserving line endings (`\\n`). Key interfaces include `\\n`, `edit`, `source`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6910,7 +6910,7 @@
       "knowledgeSummary": "Covers related implementation files for notebook tool runtime. Key interfaces include `src/tools/notebook.ts`, `src/tools/python.ts`, `src/ipy/executor.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Execute shell and notebook work",
+      "destinationHeading": "How do shell and notebook work execute?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6931,7 +6931,7 @@
       "knowledgeSummary": "Covers overview of deferred actions for resolve tool runtime. The `resolve` tool provides a confirmation and commit boundary for staged actions: If no action is staged when `resolve` is called, the tool returns an error indicating that no pending actions exist. Key interfaces include `resolve`, `action: \"apply\"`, `apply(reason)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Resolve deferred actions",
+      "destinationHeading": "How are deferred actions resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6952,7 +6952,7 @@
       "knowledgeSummary": "Covers action stack semantics (lifo) for resolve tool runtime. Pending actions are managed by `PendingActionStore` as a Last-In, First-Out (LIFO) stack: When multiple previews are registered sequentially, `resolve` processes the most recently staged action first. Key interfaces include `PendingActionStore`, `push(action)`, `peek()`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Resolve deferred actions",
+      "destinationHeading": "How are deferred actions resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6973,7 +6973,7 @@
       "knowledgeSummary": "Covers custom tool integration (`pushpendingaction`) for resolve tool runtime. Custom tools register staged operations through `CustomToolAPI.pushPendingAction(...)` Key interfaces include `CustomToolAPI.pushPendingAction(...)`, `Prepared rename plan for ${params.files.length} files`, `Batch rename: ${params.files.length} files`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Resolve deferred actions",
+      "destinationHeading": "How are deferred actions resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -6994,7 +6994,7 @@
       "knowledgeSummary": "Covers related implementation files for resolve tool runtime. Key interfaces include `src/tools/resolve.ts`, `src/tools/pending-action.ts`, `PendingActionStore`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Resolve deferred actions",
+      "destinationHeading": "How are deferred actions resolved?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -7015,7 +7015,7 @@
       "knowledgeSummary": "Covers capability discovery and precedence for slash command internals. Slash commands are managed as an extensible capability (`id: \"slash-commands\"`) identified by command name. Key interfaces include `id: \"slash-commands\"`, `native`, `100`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Discover commands and task agents",
+      "destinationHeading": "How are commands and task agents discovered?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -7036,7 +7036,7 @@
       "knowledgeSummary": "Covers command template format and argument expansion for slash command internals. File-based slash commands are Markdown files with optional YAML frontmatter: When a user executes `/command arg1 arg2`, the prompt engine substitutes positional and aggregate tokens Key interfaces include `/command arg1 arg2`, `$1`, `$2`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Discover commands and task agents",
+      "destinationHeading": "How are commands and task agents discovered?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -7057,7 +7057,7 @@
       "knowledgeSummary": "Covers prompt execution pipeline for slash command internals. When user input is submitted, `AgentSession.prompt()` evaluates input through the following stages: 1. Key interfaces include `AgentSession.prompt()`, `session.customCommands`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Discover commands and task agents",
+      "destinationHeading": "How are commands and task agents discovered?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -7078,7 +7078,7 @@
       "knowledgeSummary": "Covers related implementation files for slash command internals. Key interfaces include `src/extensibility/slash-commands.ts`, `src/capability/slash-command.ts`, `src/discovery/builtin.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tool-runtime.mdx",
-      "destinationHeading": "Discover commands and task agents",
+      "destinationHeading": "How are commands and task agents discovered?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/tools",
         "packages/coding-agent/src/capability",
@@ -7750,7 +7750,7 @@
       "knowledgeSummary": "Covers data model and leaf semantics for session tree plan. Sessions persist as append-only `.jsonl` entries where each non-header entry contains an `id` and `parentId` Key interfaces include `.jsonl`, `id`, `parentId`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Open and move through the session tree",
+      "destinationHeading": "How do I move through the session tree?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -7773,7 +7773,7 @@
       "knowledgeSummary": "Covers navigation and branching commands for session tree plan. The `/tree` command navigates conversational history within the current session file: 1. Key interfaces include `/tree`, `branch_summary`, `buildSessionContext()`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Open and move through the session tree",
+      "destinationHeading": "How do I move through the session tree?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -7796,7 +7796,7 @@
       "knowledgeSummary": "Covers related implementation files for session tree plan. Key interfaces include `src/session/session-manager.ts`, `src/session/agent-session.ts`, `navigateTree()`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Open and move through the session tree",
+      "destinationHeading": "How do I move through the session tree?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -7903,7 +7903,7 @@
       "knowledgeSummary": "Covers lifecycle workflow for ttsr injection lifecycle. 1. Key interfaces include `createAgentSession()`, `.claude/rules`, `.xcsh/rules`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/prompt-authoring.mdx",
-      "destinationHeading": "Compose prompts progressively",
+      "destinationHeading": "How is the system prompt composed?",
       "currentSourceAuthorities": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -7924,7 +7924,7 @@
       "knowledgeSummary": "Covers related implementation files for ttsr injection lifecycle. Key interfaces include `src/session/agent-session.ts`, `src/export/ttsr.ts`, `TtsrManager`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/prompt-authoring.mdx",
-      "destinationHeading": "Compose prompts progressively",
+      "destinationHeading": "How is the system prompt composed?",
       "currentSourceAuthorities": [
         "DEVELOPING.md",
         "packages/coding-agent/src",
@@ -7945,7 +7945,7 @@
       "knowledgeSummary": "Covers theme system capabilities for theme. The xcsh theming engine configures visual styling across multiple terminal subsystems Key interfaces include `getMarkdownTheme()`, `unicode`, `nerd`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Select and customize a theme",
+      "destinationHeading": "How do I select and customize a theme?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -7967,7 +7967,7 @@
       "knowledgeSummary": "Covers color token taxonomy for theme. Themes define required color tokens under the `colors` object map Key interfaces include `colors`, `accent`, `border`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Select and customize a theme",
+      "destinationHeading": "How do I select and customize a theme?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -7989,7 +7989,7 @@
       "knowledgeSummary": "Covers custom theme specification for theme. Custom theme definitions reside in `/.xcsh/agent/themes/<theme-name>.json` Key interfaces include `~/.xcsh/agent/themes/<theme-name>.json`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Select and customize a theme",
+      "destinationHeading": "How do I select and customize a theme?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8011,7 +8011,7 @@
       "knowledgeSummary": "Covers related implementation files for theme. Key interfaces include `src/modes/theme/theme.ts`, `src/modes/theme/theme-schema.json`, `src/modes/theme/defaults/xcsh-dark.json`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Select and customize a theme",
+      "destinationHeading": "How do I select and customize a theme?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8033,7 +8033,7 @@
       "knowledgeSummary": "Covers opening the tree navigator for tree. Open the tree navigator using any of the following methods Key interfaces include `/tree`, `Escape`, `doubleEscapeAction = \"tree\"`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Open and move through the session tree",
+      "destinationHeading": "How do I move through the session tree?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8053,10 +8053,10 @@
       "legacyBlob": "d9a5e3c43e15d18dec0d005b8655f5ce5075d8a1",
       "category": "tui",
       "readerQuestion": "What should a reader know about navigation and selection semantics?",
-      "knowledgeSummary": "Covers navigation and selection semantics for tree. Key interfaces include `\u2022`.",
+      "knowledgeSummary": "Covers navigation and selection semantics for tree. Key interfaces include `•`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Open and move through the session tree",
+      "destinationHeading": "How do I move through the session tree?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8079,7 +8079,7 @@
       "knowledgeSummary": "Covers keyboard shortcuts for tree. Key interfaces include `Up`, `Down`, `Left`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Open and move through the session tree",
+      "destinationHeading": "How do I move through the session tree?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8102,7 +8102,7 @@
       "knowledgeSummary": "Covers related implementation files for tree. Key interfaces include `src/modes/components/tree-selector.ts`, `src/modes/controllers/selector-controller.ts`, `src/session/agent-session.ts`.",
       "disposition": "retained",
       "destinationPage": "docs/en/use-xcsh/tui-navigation.mdx",
-      "destinationHeading": "Open and move through the session tree",
+      "destinationHeading": "How do I move through the session tree?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8125,7 +8125,7 @@
       "knowledgeSummary": "Covers architecture layers for tui runtime internals. Key interfaces include `packages/tui`, `packages/coding-agent`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Route input and render changes",
+      "destinationHeading": "How are input and rendering routed?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8146,7 +8146,7 @@
       "knowledgeSummary": "Covers rendering lifecycle and differential diffing for tui runtime internals. 1. Key interfaces include `process.nextTick`, `chatContainer`, `statusContainer`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Route input and render changes",
+      "destinationHeading": "How are input and rendering routed?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8167,7 +8167,7 @@
       "knowledgeSummary": "Covers terminal input and kitty keyboard protocol for tui runtime internals. Key interfaces include `StdinBuffer`, `Ctrl+Enter`, `Enter`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Route input and render changes",
+      "destinationHeading": "How are input and rendering routed?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8188,7 +8188,7 @@
       "knowledgeSummary": "Covers related implementation files for tui runtime internals. Key interfaces include `packages/tui/src/tui.ts`, `packages/tui/src/terminal.ts`, `ProcessTerminal`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Route input and render changes",
+      "destinationHeading": "How are input and rendering routed?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8209,7 +8209,7 @@
       "knowledgeSummary": "Covers component interface contract for tui. All custom interactive widgets implement the `Component` interface from `@f5-sales-demo/pi-tui`: 1. Key interfaces include `Component`, `@f5-sales-demo/pi-tui`, `render(width)`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Extend interactive surfaces",
+      "destinationHeading": "How do I extend interactive surfaces?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8230,7 +8230,7 @@
       "knowledgeSummary": "Covers extension interactive modals (`ctx.ui.custom`) for tui. Extensions can take over the primary editor area to render selection lists, confirmations, or wizards Key interfaces include `Selected: ${choice}`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Extend interactive surfaces",
+      "destinationHeading": "How do I extend interactive surfaces?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8251,7 +8251,7 @@
       "knowledgeSummary": "Covers custom tool renderers for tui. Custom tools customize how tool arguments and results render in the conversation stream by implementing `renderCall` and `renderResult` Key interfaces include `renderCall`, `renderResult`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Extend interactive surfaces",
+      "destinationHeading": "How do I extend interactive surfaces?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",
@@ -8272,7 +8272,7 @@
       "knowledgeSummary": "Covers related implementation files for tui. Key interfaces include `packages/tui/src/tui.ts`, `Component`, `Focusable`.",
       "disposition": "retained",
       "destinationPage": "docs/en/architecture-contribution/tui-runtime.mdx",
-      "destinationHeading": "Extend interactive surfaces",
+      "destinationHeading": "How do I extend interactive surfaces?",
       "currentSourceAuthorities": [
         "packages/coding-agent/src/modes/interactive-mode.ts",
         "packages/tui/src",

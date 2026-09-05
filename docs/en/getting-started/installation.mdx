@@ -2,7 +2,7 @@
 title: "Install xcsh"
 description: "Install a verified xcsh release with Homebrew, apt, the installer, npm or Bun, a standalone binary, or a container."
 sidebar:
-  order: 2
+  order: 1
   label: "Install xcsh"
 ---
 
@@ -10,7 +10,7 @@ Choose one installation channel and keep using that channel for upgrades. Mixing
 
 ## How do I install on Ubuntu or Debian?
 
-```sh
+```bash
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://f5-sales-demo.github.io/apt-repo/f5xc-archive-keyring.gpg \
   | sudo tee /etc/apt/keyrings/f5xc-archive-keyring.gpg >/dev/null
@@ -24,7 +24,7 @@ macOS users can run `brew install f5-sales-demo/tap/xcsh`. Release binaries and 
 
 ## How do I confirm the selected executable?
 
-```sh
+```bash
 command -v xcsh
 xcsh --version
 xcsh --help

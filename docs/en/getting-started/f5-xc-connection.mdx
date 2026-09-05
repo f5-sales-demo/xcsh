@@ -2,16 +2,16 @@
 title: "Connect to F5 Distributed Cloud"
 description: "Create and activate a named F5 Distributed Cloud context, then select a namespace."
 sidebar:
-  order: 5
+  order: 4
   label: "Connect to F5 Distributed Cloud"
 ---
 
-An F5 Distributed Cloud context binds an API endpoint, credential, and optional default namespace. Treat the context file as a secret.
+An F5 Distributed Cloud context binds an application programming interface (API) endpoint, credential, and optional default namespace. Treat the context file as a secret.
 
 ## How do I select the intended context?
 
-Start the TUI with `xcsh --context <name>`, then run `/context status`. Confirm the displayed context name and namespace before any live command. Use `-n <namespace>` on a resource command when the manifest must override the context default.
+Start the terminal user interface (TUI) with `xcsh --context <NAME>`, then run `/context status`. Confirm the displayed context name and namespace before any live command. Use `-n <NAMESPACE>` on a resource command when the manifest must override the context default.
 
 ## What is safe to test first?
 
-Run `xcsh validate -f <manifest>` before using network access. Then run `xcsh diff -f <manifest> --result-file diff.json`; inspect the report before choosing a mutation command.
+Run `xcsh validate -f <MANIFEST>` before using network access. Then run `xcsh diff -f <MANIFEST> --result-file diff.json`; inspect the report before choosing a mutation command.

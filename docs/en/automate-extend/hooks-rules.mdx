@@ -8,14 +8,22 @@ sidebar:
 
 Rules contribute normalized instructions to the prompt. Hooks execute code at named lifecycle events. Use rules for guidance that does not need side effects; use a hook only when an event must inspect, transform, or reject runtime data.
 
-## Discover and classify rules
+## How are rules discovered and classified?
 
 Rule providers scan project and user roots, parse frontmatter, normalize identifiers, then deduplicate by precedence. Classification separates ordinary rulebook entries, always-apply guidance, and time-to-self-reflect material. The `rule://` handler resolves the final normalized item rather than reading an arbitrary path.
 
-## Order hook execution
+## What determines hook execution order?
 
 A hook module exports handlers for supported events. Discovery determines the module set, and registration order determines sequential mutation when more than one handler sees the same payload. A thrown error follows the event's propagation contract; it is not converted into a successful empty result.
 
-## Test the boundary
+## How do I test the hook boundary?
 
-Exercise discovery, the exact event, mutation ordering, cancellation, and a failing handler. UI calls made by hooks require an interactive host; headless integrations should not assume a modal interface exists.
+Exercise each of these separately:
+
+1. Discovery, so the module set is the one you expect.
+2. The exact event, with a representative payload.
+3. Mutation ordering, with more than one handler registered.
+4. Cancellation.
+5. A handler that throws.
+
+Interface calls made by hooks require an interactive host, so a headless integration must not assume a modal interface exists.

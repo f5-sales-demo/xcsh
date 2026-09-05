@@ -10,19 +10,19 @@ Use `get` to inspect live state, `export` to create a reusable manifest, and `de
 
 ## How do I retrieve or export one resource?
 
-```sh
-xcsh get <kind> <name> -n <namespace> --result-file get.json
-xcsh export <kind> <name> -n <namespace> -f exported.yaml
+```bash
+xcsh get <KIND> <NAME> -n <NAMESPACE> --result-file get.json
+xcsh export <KIND> <NAME> -n <NAMESPACE> -f exported.yaml
 ```
 
 Sanitize exported server metadata and secrets before storing the file.
 
 ## How do I delete and prove absence?
 
-```sh
-xcsh delete <kind> <name> -n <namespace> --dry-run client
-xcsh delete <kind> <name> -n <namespace> --result-file delete.json
-xcsh get <kind> <name> -n <namespace>
+```bash
+xcsh delete <KIND> <NAME> -n <NAMESPACE> --dry-run client
+xcsh delete <KIND> <NAME> -n <NAMESPACE> --result-file delete.json
+xcsh get <KIND> <NAME> -n <NAMESPACE>
 ```
 
 The final `get` must return the documented not-found response for the resource kind. A successful delete request without the absence check is incomplete.

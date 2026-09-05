@@ -10,12 +10,12 @@ The Office pane packages an xcsh sidebar for supported Excel, Word, and PowerPoi
 
 ## Who owns the test surface?
 
-Package tests own pane components, bridge messages, and host-independent state. Office-host integration tests own document APIs, sideloading, and task-pane lifecycle. Changes that cross the bridge require both suites; a passing browser-style component test does not prove Word, Excel, or PowerPoint host behavior.
+Package tests own pane components, bridge messages, and host-independent state. Office-host integration tests own document application programming interfaces (APIs), sideloading, and task-pane lifecycle. A change that crosses the bridge requires both suites; a passing browser-style component test does not prove Word, Excel, or PowerPoint host behavior.
 
 ## What must be running?
 
-The pane build and its local bridge/server must match the xcsh version used for the session. One active sidebar is bound to one server session at a time.
+The pane build and its local bridge server must match the xcsh version used for the session. One active sidebar binds to one server session at a time.
 
-## What is not asserted here?
+## Which host steps vary by platform?
 
-Host-specific menu and sideload steps vary by Office platform. Without a recorded host transcript, this page describes the source-verified boundary only and does not promise a particular ribbon path.
+Ribbon placement, the sideload mechanism, and trust prompts differ across Office on Windows, Office on macOS, and Office on the web. Read the sideload action from `xcsh office --help`, then follow the Microsoft sideloading procedure for the specific host you are targeting.

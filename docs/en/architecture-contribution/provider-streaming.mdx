@@ -8,10 +8,23 @@ sidebar:
 
 Provider adapters translate distinct wire events into one `AssistantMessageEvent` stream consumed by the agent loop. Text deltas, reasoning, tool starts, tool arguments, completion, usage, and errors retain their meaning across adapters.
 
-## Normalize tool calls incrementally
+```text
+provider wire events        adapter                      agent loop
+  text delta          ->  text delta               ->  append to message
+  reasoning delta     ->  reasoning delta          ->  append to message
+  tool start          ->  buffer call id
+  tool arg fragment   ->  accumulate JSON          (no event yet)
+  tool arg complete   ->  tool request             ->  dispatch tool
+  usage               ->  usage                    ->  account tokens
+  error or cancel     ->  terminal settle (once)   ->  stop the turn
+```
 
-Tool arguments can arrive as JSON fragments. The adapter accumulates fragments per call identifier and emits a tool request only after a complete valid value exists. Parse failure remains an error with provider context; silently truncating or inventing arguments would cross the provider boundary.
+## How are tool calls normalized incrementally?
 
-## Cancel and finish exactly once
+Tool arguments can arrive as JavaScript Object Notation (JSON) fragments. The adapter accumulates fragments per call identifier and emits a tool request only after a complete valid value exists. Parse failure remains an error with provider context; silently truncating or inventing arguments would cross the provider boundary.
+
+## How does a stream cancel and finish exactly once?
 
 Cancellation propagates to the active provider request and prevents later deltas from reopening the turn. A terminal success, cancellation, or error settles the stream once. Retry and model fallback happen above normalization so an adapter does not conceal which provider produced an event.
+
+Read `packages/ai/src/stream.ts` for the normalized event stream and `packages/ai/src/providers` for the per-vendor adapters.

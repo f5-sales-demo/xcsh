@@ -10,7 +10,7 @@ sidebar:
 
 ## Which mutation command fits?
 
-```sh
+```bash
 xcsh create -f manifest.yaml --dry-run client --result-file create-preview.json
 xcsh update -f manifest.yaml --dry-run client --result-file update-preview.json
 xcsh apply -f manifest.yaml --dry-run client --result-file apply-preview.json
@@ -20,4 +20,4 @@ Review the preview, then repeat the same command without `--dry-run client`. Kee
 
 ## How do I verify the mutation?
 
-Run `xcsh get <kind> <name> -n <namespace>` and compare the returned identity and relevant fields with the manifest. Do not treat process exit alone as state verification.
+Run `xcsh get <KIND> <NAME> -n <NAMESPACE>` and compare the returned identity and relevant fields with the manifest. Do not treat process exit alone as state verification.

@@ -1,26 +1,45 @@
 ---
 title: "Complete your first manifest lifecycle"
-description: "Validate, compare, apply, inspect, export, and delete a resource manifest."
+description: "Validate, compare, apply, inspect, export, and delete one resource manifest."
 sidebar:
-  order: 6
+  order: 5
   label: "Complete your first manifest lifecycle"
 ---
 
-A manifest names one F5 Distributed Cloud resource with `kind`, `metadata`, and `spec`. Begin from an exported or catalog-backed example for the exact resource kind; do not invent schema fields.
+A manifest names one F5 Distributed Cloud resource with `kind`, `metadata`, and `spec`. Begin from an exported or catalog-backed example for the exact resource kind; do not invent schema fields. This page walks one resource from local validation to proven deletion, so run it against a lab namespace you are authorized to change.
 
 ## How do I check a manifest without credentials?
 
-```sh
+```bash
 xcsh validate -f manifest.yaml --result-file validation.json
 ```
 
-Validation reads the file locally and returns a nonzero status for malformed or unsupported input. Review the aggregate JSON report before moving to a live context.
+Validation reads the file locally and returns a nonzero status for malformed or unsupported input. Review the aggregate JavaScript Object Notation (JSON) report before moving to a live context.
 
 ## How do I preview the live change?
 
-```sh
+```bash
 xcsh diff -f manifest.yaml --result-file diff.json
 xcsh apply -f manifest.yaml --dry-run client --result-file dry-run.json
 ```
 
-A diff requires the intended context. A dry run calculates the mutation path without applying it.
+A diff requires the intended context. A dry run calculates the mutation path without applying it. Read every create, update, and preserve entry before you continue.
+
+## How do I apply and verify the resource?
+
+```bash
+xcsh apply -f manifest.yaml --result-file apply.json
+xcsh get <KIND> <NAME> -n <NAMESPACE> --result-file get.json
+```
+
+Compare the identity and the fields you set in `get.json` against the manifest. A zero exit status records that the request was accepted; only the retrieved object records the resulting state.
+
+## How do I export and remove it?
+
+```bash
+xcsh export <KIND> <NAME> -n <NAMESPACE> -f exported.yaml
+xcsh delete <KIND> <NAME> -n <NAMESPACE> --result-file delete.json
+xcsh get <KIND> <NAME> -n <NAMESPACE>
+```
+
+Sanitize server-managed metadata out of `exported.yaml` before you store it. The closing `get` must return the not-found response for that kind; a delete request without the absence check leaves the lifecycle unfinished.

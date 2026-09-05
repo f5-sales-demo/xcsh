@@ -10,7 +10,7 @@ This quickstart proves the executable, provider selection, and one non-interacti
 
 ## How do I run a bounded first prompt?
 
-```sh
+```bash
 xcsh --version
 xcsh --list-models ''
 xcsh --no-session --no-tools -p "Reply with only: xcsh is ready"
@@ -20,4 +20,4 @@ Select a provider-qualified model with `--model` if more than one provider is co
 
 ## What should I inspect if the prompt fails?
 
-Confirm the provider credential is available to the process without printing it, then run `xcsh --list-models <provider>`. A missing model points to provider configuration; a missing executable points back to [installation](../installation/).
+Confirm the provider credential is available to the process without printing it, then run `xcsh --list-models <PROVIDER>`. A missing model points to provider configuration; a missing executable points back to [installation](../installation/).

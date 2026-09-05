@@ -14,12 +14,17 @@ Run `command -v xcsh` and `xcsh --version`. If the path belongs to an old instal
 
 ## A model is unavailable or authentication fails
 
-Run `xcsh --list-models <provider>`. If no models appear, verify the relevant credential is present without echoing it. Retry with a provider-qualified `--model` name.
+Run `xcsh --list-models <PROVIDER>`. If no models appear, verify the relevant credential is present without echoing it. Retry with a provider-qualified `--model` name.
 
 ## A context or resource command fails
 
-Confirm `/context status` and the explicit namespace. Run `validate` to separate local manifest errors from live API errors, then retry a read-only `get` or `diff`.
+Confirm `/context status` and the explicit namespace. Run `validate` to separate local manifest errors from live application programming interface (API) errors, then retry a read-only `get` or `diff`.
 
 ## A tool or extension fails during startup
 
-Use `--no-mcp --no-extensions --no-rules` and, if needed, `--no-pty`. Re-enable one subsystem at a time. Check optional dependencies with `xcsh setup <component> --check --json` and plugins with `xcsh plugin doctor`.
+Start from the smallest surface, then widen it:
+
+1. Run with `--no-mcp --no-extensions --no-rules`, adding `--no-pty` if the terminal itself is suspect.
+2. Re-enable one subsystem, then repeat the failing command.
+3. Check optional dependencies with `xcsh setup <COMPONENT> --check --json`.
+4. Check plugins with `xcsh plugin doctor`.

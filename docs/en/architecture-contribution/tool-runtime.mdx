@@ -8,14 +8,16 @@ sidebar:
 
 The agent loop sees a common tool contract, but each runtime owns its validation, cancellation, output, and side effects.
 
-## Execute shell and notebook work
+## How do shell and notebook work execute?
 
-The Bash tool validates the request, launches through the configured shell boundary, streams bounded output, and spills oversized results to an artifact. Notebook editing changes cell structure; kernel execution is a separate Python gateway operation with its own environment and MIME rendering.
+The Bash tool validates the request, launches through the configured shell boundary, streams bounded output, and spills oversized results to an artifact. Notebook editing changes cell structure; kernel execution is a separate Python gateway operation with its own environment and Multipurpose Internet Mail Extensions (MIME) rendering.
 
-## Resolve deferred actions
+## How are deferred actions resolved?
 
-Deferred actions are pushed onto a last-in, first-out stack and resolved only at the runtime checkpoint that owns them. Custom tools use the host API to register actions; they must pair cancellation and cleanup with any external resource they create.
+Deferred actions are pushed onto a last-in, first-out stack and resolved only at the runtime checkpoint that owns them. Custom tools use the host application programming interface (API) to register actions; they must pair cancellation and cleanup with any external resource they create.
 
-## Discover commands and task agents
+## How are commands and task agents discovered?
 
 Slash-command templates and agent definitions are discovered from normalized user, project, plugin, and bundled providers. Precedence resolves duplicate identifiers before execution. Argument expansion produces prompt input; it must not bypass tool policy or agent execution guardrails.
+
+Read `packages/coding-agent/src/tools/bash.ts` for the shell boundary, `packages/coding-agent/src/tools/notebook.ts` for cell editing, and `packages/coding-agent/src/slash-commands/builtin-registry.ts` for command discovery.

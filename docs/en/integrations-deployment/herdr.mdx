@@ -1,21 +1,21 @@
 ---
 title: "Integrate with Herdr"
-description: "Understand source-verified Herdr workspace launch, terminal actions, protocol negotiation, and isolation."
+description: "Understand Herdr workspace launch, terminal actions, protocol negotiation, and isolation."
 sidebar:
   order: 5
   label: "Herdr"
 ---
 
-Herdr support is optional and host-dependent. This page describes the repository contract only; it does not claim an observed Herdr session.
+Herdr support is optional and host-dependent. When the host does not provide it, xcsh terminal operation is unaffected.
 
-## Negotiate the host protocol
+## How is the host protocol negotiated?
 
 The integration checks the available socket protocol and media or graphics capabilities before it requests a workspace. Missing negotiation support leaves ordinary xcsh terminal operation intact.
 
-## Launch a conversation-owned workspace
+## How is a conversation-owned workspace launched?
 
 A workspace is tied to the conversation identity supplied at startup. Terminal-management actions create or address panes within that workspace, and lifecycle reporting stays anchored to the same startup context. Do not reuse an unrelated workspace merely because its socket is reachable.
 
-## Recover from socket failure
+## How do I recover from socket failure?
 
 Connection and framing failures surface as integration diagnostics. The client must not open an inbound listener as a fallback. Close conversation-owned resources through the supported lifecycle and preserve unrelated Herdr workspaces.
