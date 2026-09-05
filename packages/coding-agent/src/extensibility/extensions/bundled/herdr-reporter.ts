@@ -56,10 +56,13 @@ const HERDR_AGENT_LABEL = "xcsh";
 // herdr keys its official lifecycle-authority and session-resume plumbing on the
 // `herdr:<agent>` source convention, so report as "herdr:xcsh" (not bare "xcsh").
 const HERDR_SOURCE = "herdr:xcsh";
+const PHASE_SOURCE = "xcsh:phase";
 const REPORT_METHOD = "pane.report_agent";
+const METADATA_METHOD = "pane.report_metadata";
 const SESSION_METHOD = "pane.report_agent_session";
 const RELEASE_METHOD = "pane.release_agent";
 const SOCKET_TIMEOUT_MS = 2000;
+const PHASE_LABEL_TTL_MS = 60_000;
 const SETTLED_TURN_RECONCILE_DELAY_MS = 25;
 const PROMPT_BLOCKED_REASONS = {
 	select: "selection required",
@@ -140,6 +143,8 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// process in a pane always starts above whatever the previous process reached.
 	// Matches the pi/omp reporters and stays well inside Number.MAX_SAFE_INTEGER.
 	let seq = Date.now() * 1000;
+	// Separate monotonic sequence for metadata frames (keyed by source in Herdr).
+	let phaseSeq = Date.now() * 1000;
 	// Retains the fixed reason while an interactive prompt awaits the user, so an
 	// agent_end duplicate cannot erase herdr's stored blocked message.
 	let promptBlockedReason: string | undefined;
@@ -195,6 +200,32 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			state,
 			...(message === undefined ? {} : { message }),
 			seq: seq++,
+		});
+
+	const reportMetadata = (params: Record<string, unknown>): Promise<void> => {
+		const socketPath = process.env.HERDR_SOCKET_PATH;
+		if (!socketPath) {
+			return Promise.resolve();
+		}
+		const frame = {
+			pane_id: paneId,
+			source: PHASE_SOURCE,
+			applies_to_source: HERDR_SOURCE,
+			seq: phaseSeq++,
+			...params,
+		};
+		return enqueue(() => sendToHerdrSocket(socketPath, METADATA_METHOD, frame, onError));
+	};
+
+	const setPhaseLabel = (label: string): Promise<void> =>
+		reportMetadata({
+			state_labels: { working: label },
+			ttl_ms: PHASE_LABEL_TTL_MS,
+		});
+
+	const clearPhaseLabel = (): Promise<void> =>
+		reportMetadata({
+			clear_state_labels: true,
 		});
 
 	// Report the current session's identity so herdr can resume this pane
@@ -304,6 +335,39 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		promptBlockedReason = undefined;
 		await report(ctx.isIdle() ? "idle" : "working");
 		await reportSession(ctx);
+	});
+
+	// Transient phase-label metadata (thinking / tool / retry / cleanup):
+	pi.on("message_update", async event => {
+		if (event.assistantMessageEvent.type === "thinking_start") {
+			await setPhaseLabel("thinking");
+		} else if (event.assistantMessageEvent.type === "thinking_end") {
+			await clearPhaseLabel();
+		}
+	});
+
+	pi.on("tool_execution_start", async () => {
+		await setPhaseLabel("tool");
+	});
+
+	pi.on("tool_execution_end", async () => {
+		await clearPhaseLabel();
+	});
+
+	pi.on("auto_retry_start", async () => {
+		await setPhaseLabel("retry");
+	});
+
+	pi.on("auto_retry_end", async () => {
+		await clearPhaseLabel();
+	});
+
+	pi.on("auto_compaction_start", async () => {
+		await setPhaseLabel("cleanup");
+	});
+
+	pi.on("auto_compaction_end", async () => {
+		await clearPhaseLabel();
 	});
 
 	// Relinquish pane authority so herdr stops showing xcsh once we exit.

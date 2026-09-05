@@ -150,6 +150,23 @@ const reportParams = (state: string, seq: number, message?: string) => ({
 	...(message === undefined ? {} : { message }),
 });
 
+const metadataParams = (
+	seq: number,
+	options: {
+		stateLabels?: Record<string, string>;
+		clearStateLabels?: boolean;
+		ttlMs?: number;
+	},
+) => ({
+	pane_id: "w1:p1",
+	source: "xcsh:phase",
+	applies_to_source: "herdr:xcsh",
+	seq,
+	...(options.stateLabels ? { state_labels: options.stateLabels } : {}),
+	...(options.clearStateLabels ? { clear_state_labels: true } : {}),
+	...(options.ttlMs !== undefined ? { ttl_ms: options.ttlMs } : {}),
+});
+
 /** seq is seeded from the wall clock, so assert offsets from the first frame. */
 const baseSeq = (herdr: FakeHerdr): number => herdr.received[0]?.params.seq as number;
 
@@ -577,6 +594,148 @@ describe("herdr-reporter extension", () => {
 			const sessions = herdr.received.filter(r => r.method === "pane.report_agent_session");
 			expect(sessions[0]?.params.session_start_source).toBe("startup");
 			expect(sessions[1]?.params.session_start_source).toBeUndefined();
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("reports transient phase-label metadata via pane.report_metadata with separate source and sequence", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+
+			// 1. thinking phase
+			await handlers.get("message_update")?.(
+				{
+					type: "message_update",
+					message: {} as never,
+					assistantMessageEvent: { type: "thinking_start", contentIndex: 0, partial: {} as never },
+				},
+				busyCtx,
+			);
+			await handlers.get("message_update")?.(
+				{
+					type: "message_update",
+					message: {} as never,
+					assistantMessageEvent: { type: "thinking_end", contentIndex: 0, content: "done", partial: {} as never },
+				},
+				busyCtx,
+			);
+
+			// 2. tool phase
+			await handlers.get("tool_execution_start")?.(
+				{ type: "tool_execution_start", toolCallId: "call-1", toolName: "read", args: {} },
+				busyCtx,
+			);
+			await handlers.get("tool_execution_end")?.(
+				{ type: "tool_execution_end", toolCallId: "call-1", toolName: "read", result: {}, isError: false },
+				busyCtx,
+			);
+
+			// 3. retry phase
+			await handlers.get("auto_retry_start")?.(
+				{ type: "auto_retry_start", attempt: 1, maxAttempts: 3, delayMs: 1000, errorMessage: "network error" },
+				busyCtx,
+			);
+			await handlers.get("auto_retry_end")?.({ type: "auto_retry_end", success: true, attempt: 1 }, busyCtx);
+
+			// 4. cleanup phase
+			await handlers.get("auto_compaction_start")?.(
+				{ type: "auto_compaction_start", reason: "threshold", action: "context-full" },
+				busyCtx,
+			);
+			await handlers.get("auto_compaction_end")?.(
+				{
+					type: "auto_compaction_end",
+					action: "context-full",
+					result: undefined,
+					aborted: false,
+					willRetry: false,
+				},
+				busyCtx,
+			);
+
+			await waitFor(() => herdr.received.filter(r => r.method === "pane.report_metadata").length >= 8);
+			const metadataFrames = herdr.received.filter(r => r.method === "pane.report_metadata");
+			const base = metadataFrames[0]?.params.seq as number;
+			expect(base).toBeGreaterThan(0);
+
+			// 1. thinking
+			expect(metadataFrames[0]?.params).toEqual(
+				metadataParams(base, { stateLabels: { working: "thinking" }, ttlMs: 60_000 }),
+			);
+			expect(metadataFrames[1]?.params).toEqual(metadataParams(base + 1, { clearStateLabels: true }));
+
+			// 2. tool
+			expect(metadataFrames[2]?.params).toEqual(
+				metadataParams(base + 2, { stateLabels: { working: "tool" }, ttlMs: 60_000 }),
+			);
+			expect(metadataFrames[3]?.params).toEqual(metadataParams(base + 3, { clearStateLabels: true }));
+
+			// 3. retry
+			expect(metadataFrames[4]?.params).toEqual(
+				metadataParams(base + 4, { stateLabels: { working: "retry" }, ttlMs: 60_000 }),
+			);
+			expect(metadataFrames[5]?.params).toEqual(metadataParams(base + 5, { clearStateLabels: true }));
+
+			// 4. cleanup
+			expect(metadataFrames[6]?.params).toEqual(
+				metadataParams(base + 6, { stateLabels: { working: "cleanup" }, ttlMs: 60_000 }),
+			);
+			expect(metadataFrames[7]?.params).toEqual(metadataParams(base + 7, { clearStateLabels: true }));
+
+			// Ensure none of the metadata frames used herdr:xcsh source or pane.report_agent
+			for (const frame of metadataFrames) {
+				expect(frame.params.source).toBe("xcsh:phase");
+				expect(frame.params.applies_to_source).toBe("herdr:xcsh");
+			}
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("preserves independent sequences for lifecycle reports and phase metadata", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+
+			await handlers.get("session_start")?.({}, idleCtx);
+			await handlers.get("agent_start")?.({}, busyCtx);
+			await handlers.get("tool_execution_start")?.(
+				{ type: "tool_execution_start", toolCallId: "call-1", toolName: "read", args: {} },
+				busyCtx,
+			);
+			await handlers.get("tool_execution_end")?.(
+				{ type: "tool_execution_end", toolCallId: "call-1", toolName: "read", result: {}, isError: false },
+				busyCtx,
+			);
+			await handlers.get("agent_end")?.({ messages: [] }, idleCtx);
+
+			await waitFor(() => herdr.received.length >= 5);
+			const agentFrames = herdr.received.filter(r => r.method === "pane.report_agent");
+			const metadataFrames = herdr.received.filter(r => r.method === "pane.report_metadata");
+
+			expect(agentFrames).toHaveLength(3); // idle, working, idle
+			expect(metadataFrames).toHaveLength(2); // tool, clear
+
+			const agentBase = agentFrames[0]?.params.seq as number;
+			expect(agentFrames[0]?.params).toEqual(reportParams("idle", agentBase));
+			expect(agentFrames[1]?.params).toEqual(reportParams("working", agentBase + 1));
+			expect(agentFrames[2]?.params).toEqual(reportParams("idle", agentBase + 2));
+
+			const metaBase = metadataFrames[0]?.params.seq as number;
+			expect(metadataFrames[0]?.params).toEqual(
+				metadataParams(metaBase, { stateLabels: { working: "tool" }, ttlMs: 60_000 }),
+			);
+			expect(metadataFrames[1]?.params).toEqual(metadataParams(metaBase + 1, { clearStateLabels: true }));
 		} finally {
 			await herdr.close();
 		}
