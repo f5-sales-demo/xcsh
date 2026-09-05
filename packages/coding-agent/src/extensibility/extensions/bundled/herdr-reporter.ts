@@ -1,6 +1,6 @@
-import { connect } from "node:net";
 import * as path from "node:path";
-import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
+import type { ExtensionAPI, ExtensionContext, UserPromptKind } from "@f5-sales-demo/xcsh";
+import { HerdrClient } from "../../../herdr/client";
 
 /**
  * herdr integration (bundled, default-on).
@@ -10,11 +10,14 @@ import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
  * blocked indicator.
  *
  * Transport: herdr injects `HERDR_SOCKET_PATH` into every pane, so state is
- * reported by writing a newline-delimited JSON-RPC request straight to that unix
- * socket. This is PATH-independent — unlike shelling out to the `herdr` CLI,
- * which silently no-ops when herdr runs as a launchd/`brew services` server and
- * spawns panes without `/opt/homebrew/bin` on PATH. If `HERDR_SOCKET_PATH` is
- * somehow unset, we fall back to the `herdr` CLI.
+ * reported over herdr's protocol-18 JSONL socket via the shared `HerdrClient`
+ * (see `../../../herdr/client`) — the same client `herdr-terminal` uses. Each
+ * request reconnects independently, validates the `ping` protocol version
+ * before the first real request, and awaits herdr's typed response before
+ * resolving. This is PATH-independent — unlike shelling out to the `herdr`
+ * CLI, which silently no-ops when herdr runs as a launchd/`brew services`
+ * server and spawns panes without `/opt/homebrew/bin` on PATH. If
+ * `HERDR_SOCKET_PATH` is somehow unset, we fall back to the `herdr` CLI.
  *
  * xcsh is a fork of pi; a user may have both installed, so this reporter always
  * identifies the agent as "xcsh" (never "pi"). It claims pane authority via the
@@ -39,8 +42,8 @@ import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
  *   1. `seq` is seeded from the wall clock, not 0, so a restarted xcsh always
  *      outranks its predecessor in the same pane. With a per-process counter from
  *      0, every frame from the second xcsh in a pane looks stale and is dropped.
- *   2. Frames go out one at a time through `enqueue`. They used to be
- *      fire-and-forget on independent sockets, so ordering was left to chance.
+ *   2. Frames go out one at a time through `enqueue`, awaiting herdr's response
+ *      before the next frame is sent, so ordering is never left to chance.
  *   3. The state frame is always sent *before* the session frame. herdr discards a
  *      `pane.report_agent_session` for a pane whose agent it does not yet own, so
  *      the state frame has to establish `herdr:xcsh` as the pane's agent first.
@@ -57,46 +60,50 @@ const REPORT_METHOD = "pane.report_agent";
 const SESSION_METHOD = "pane.report_agent_session";
 const RELEASE_METHOD = "pane.release_agent";
 const SOCKET_TIMEOUT_MS = 2000;
+const PROMPT_BLOCKED_REASONS = {
+	select: "selection required",
+	confirm: "confirmation required",
+	input: "text input required",
+} satisfies Record<UserPromptKind, string>;
+
+function getPromptBlockedReason(kind: unknown): string {
+	if (typeof kind === "string" && Object.hasOwn(PROMPT_BLOCKED_REASONS, kind)) {
+		return PROMPT_BLOCKED_REASONS[kind as UserPromptKind];
+	}
+	return "user input required";
+}
+
+// Reused across calls for the life of the extension so `ensureProtocol()`'s
+// `ping` validation happens at most once per socket path, not once per frame.
+let cachedClient: HerdrClient | undefined;
+
+function getHerdrClient(socketPath: string): HerdrClient {
+	if (!cachedClient || cachedClient.socketPath !== socketPath) {
+		cachedClient = new HerdrClient(socketPath, SOCKET_TIMEOUT_MS);
+	}
+	return cachedClient;
+}
 
 /**
- * Write one newline-delimited JSON-RPC request to herdr's unix socket and close.
- * The response is ignored and every failure path is reported via `onError`
- * without throwing, so a dead socket never disturbs the agent.
+ * Send one JSON-RPC request to herdr over its protocol-18 socket and await the
+ * typed response. Every failure path (transport error, timeout, protocol
+ * mismatch) is reported via `onError` without throwing, so a dead or
+ * incompatible herdr never disturbs the agent.
  *
- * Resolves once the frame has been flushed (or the attempt failed or timed out),
+ * Resolves once herdr has responded (or the attempt failed or timed out),
  * which is what lets callers order frames relative to one another.
  */
-function sendToHerdrSocket(
+async function sendToHerdrSocket(
 	socketPath: string,
 	method: string,
 	params: Record<string, unknown>,
 	onError: (err: unknown) => void,
 ): Promise<void> {
-	return new Promise<void>(resolve => {
-		let settled = false;
-		const settle = (): void => {
-			if (settled) {
-				return;
-			}
-			settled = true;
-			resolve();
-		};
-		const conn = connect({ path: socketPath });
-		// Never let a report keep xcsh's event loop alive.
-		conn.unref();
-		conn.once("error", err => {
-			onError(err);
-			conn.destroy();
-			settle();
-		});
-		conn.once("connect", () => {
-			conn.end(`${JSON.stringify({ id: "xcsh:herdr-reporter", method, params })}\n`, settle);
-		});
-		conn.setTimeout(SOCKET_TIMEOUT_MS, () => {
-			conn.destroy();
-			settle();
-		});
-	});
+	try {
+		await getHerdrClient(socketPath).request<Record<string, unknown>>(method, params);
+	} catch (err) {
+		onError(err);
+	}
 }
 
 /** Translate a JSON-RPC report/release into `herdr` CLI arguments (fallback). */
@@ -114,6 +121,9 @@ function toCliArgs(method: string, params: Record<string, unknown>): string[] {
 	if (params.state !== undefined) {
 		args.push("--state", String(params.state));
 	}
+	if (params.message !== undefined) {
+		args.push("--message", String(params.message));
+	}
 	args.push("--seq", String(params.seq));
 	return args;
 }
@@ -129,9 +139,9 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// process in a pane always starts above whatever the previous process reached.
 	// Matches the pi/omp reporters and stays well inside Number.MAX_SAFE_INTEGER.
 	let seq = Date.now() * 1000;
-	// Tracks whether an interactive prompt is currently awaiting the user, so an
-	// agent_end that fires while a prompt is open is reported as blocked, not idle.
-	let promptOpen = false;
+	// Retains the fixed reason while an interactive prompt awaits the user, so an
+	// agent_end duplicate cannot erase herdr's stored blocked message.
+	let promptBlockedReason: string | undefined;
 	// Last session ref already delivered, so repeated lifecycle events do not
 	// re-send an unchanged ref every turn.
 	let lastSessionRefKey: string | undefined;
@@ -167,12 +177,13 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		);
 	};
 
-	const report = (state: "idle" | "working" | "blocked"): Promise<void> =>
+	const report = (state: "idle" | "working" | "blocked", message?: string): Promise<void> =>
 		send(REPORT_METHOD, {
 			pane_id: paneId,
 			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			state,
+			...(message === undefined ? {} : { message }),
 			seq: seq++,
 		});
 
@@ -243,19 +254,19 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// This is also the first point where a lazily-created session file is certain
 	// to exist, so it is the backstop for capturing the resume ref.
 	pi.on("agent_end", async (_event, ctx) => {
-		await report(promptOpen ? "blocked" : "idle");
+		await report(promptBlockedReason ? "blocked" : "idle", promptBlockedReason);
 		await reportSession(ctx);
 	});
 
 	// An interactive prompt (permission gate, ask tool, confirm/input) is
 	// awaiting the user: that is herdr's "needs attention" (blocked) state.
-	pi.on("user_prompt_start", () => {
-		promptOpen = true;
-		void report("blocked");
+	pi.on("user_prompt_start", event => {
+		promptBlockedReason = getPromptBlockedReason(event.kind);
+		void report("blocked", promptBlockedReason);
 	});
 
 	pi.on("user_prompt_end", async (_event, ctx) => {
-		promptOpen = false;
+		promptBlockedReason = undefined;
 		await report(ctx.isIdle() ? "idle" : "working");
 		await reportSession(ctx);
 	});

@@ -53,15 +53,31 @@ const sessionCtx = (file: string | undefined, id = ""): ExtensionContext =>
 /** A throwaway unix-socket server that records the JSON-RPC requests it receives. */
 interface FakeHerdr {
 	socketPath: string;
-	received: Array<{ id: string; method: string; params: Record<string, unknown> }>;
+	received: Array<{ id: string; method: string; params: Record<string, unknown>; order: number }>;
+	/** Order index (shared with `received[].order`) of each accepted `ping` handshake. */
+	pingOrders: number[];
 	close: () => Promise<void>;
 }
 
+/**
+ * A throwaway Herdr protocol-18 socket server. Mirrors the real herdr handshake
+ * gate: the very first request on the server must be a `ping`, which is
+ * answered with a matching `pong`; every other method is rejected with a
+ * JSON-RPC error and NOT recorded until a successful ping has been observed.
+ * This lets tests prove a client performs the protocol-18 handshake before
+ * sending lifecycle frames, exactly as `HerdrClient.ensureProtocol()` does —
+ * a client that skips the handshake (e.g. the old raw-socket transport) gets
+ * every frame silently dropped by this gate and its request never appears in
+ * `received`.
+ */
 function startFakeHerdr(): Promise<FakeHerdr> {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "herdr-sock-"));
 	const socketPath = path.join(dir, "herdr.sock");
 	const received: FakeHerdr["received"] = [];
+	const pingOrders: number[] = [];
 	const sockets = new Set<net.Socket>();
+	let order = 0;
+	let handshakeDone = false;
 	const server = net.createServer(sock => {
 		sockets.add(sock);
 		sock.on("close", () => sockets.delete(sock));
@@ -73,7 +89,24 @@ function startFakeHerdr(): Promise<FakeHerdr> {
 			while (nl >= 0) {
 				const line = buf.slice(0, nl);
 				buf = buf.slice(nl + 1);
-				if (line.trim()) received.push(JSON.parse(line));
+				if (line.trim()) {
+					const request = JSON.parse(line) as { id: string; method: string; params: Record<string, unknown> };
+					if (request.method === "ping") {
+						handshakeDone = true;
+						pingOrders.push(order++);
+						sock.end(
+							`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: 18, version: "test" } })}\n`,
+						);
+					} else if (handshakeDone) {
+						received.push({ ...request, order: order++ });
+						sock.end(`${JSON.stringify({ id: request.id, result: {} })}\n`);
+					} else {
+						// Protocol-18 gate: no ping yet, so the method is refused and never recorded.
+						sock.end(
+							`${JSON.stringify({ id: request.id, error: { message: "protocol handshake required", code: "handshake_required" } })}\n`,
+						);
+					}
+				}
 				nl = buf.indexOf("\n");
 			}
 		});
@@ -83,7 +116,8 @@ function startFakeHerdr(): Promise<FakeHerdr> {
 			resolve({
 				socketPath,
 				received,
-				// Destroy any fire-and-forget client sockets so server.close() completes.
+				pingOrders,
+				// Destroy any still-open client sockets so server.close() completes.
 				close: () =>
 					new Promise<void>(res => {
 						for (const s of sockets) s.destroy();
@@ -105,10 +139,15 @@ async function waitFor(cond: () => boolean, timeoutMs = 2000): Promise<void> {
 	}
 }
 
-const reportMsg = (state: string, seq: number) => ({
-	id: "xcsh:herdr-reporter",
-	method: "pane.report_agent",
-	params: { pane_id: "w1:p1", source: "herdr:xcsh", agent: "xcsh", state, seq },
+// HerdrClient generates a fresh random id per request, so assertions compare
+// method/params rather than the full frame.
+const reportParams = (state: string, seq: number, message?: string) => ({
+	pane_id: "w1:p1",
+	source: "herdr:xcsh",
+	agent: "xcsh",
+	state,
+	seq,
+	...(message === undefined ? {} : { message }),
 });
 
 /** seq is seeded from the wall clock, so assert offsets from the first frame. */
@@ -152,9 +191,18 @@ describe("herdr-reporter extension", () => {
 
 			await waitFor(() => herdr.received.length >= 3);
 			const base = baseSeq(herdr);
-			expect(herdr.received[0]).toEqual(reportMsg("idle", base));
-			expect(herdr.received[1]).toEqual(reportMsg("working", base + 1));
-			expect(herdr.received[2]).toEqual(reportMsg("idle", base + 2));
+			expect(herdr.received[0]?.method).toBe("pane.report_agent");
+			expect(herdr.received[0]?.params).toEqual(reportParams("idle", base));
+			expect(herdr.received[1]?.method).toBe("pane.report_agent");
+			expect(herdr.received[1]?.params).toEqual(reportParams("working", base + 1));
+			expect(herdr.received[2]?.method).toBe("pane.report_agent");
+			expect(herdr.received[2]?.params).toEqual(reportParams("idle", base + 2));
+			// The protocol-18 handshake (ping) must precede every report frame — the
+			// fake server's gate refuses to record report/release methods until a
+			// ping has been observed, so any recorded frame is proof the handshake
+			// already happened.
+			expect(herdr.pingOrders.length).toBeGreaterThanOrEqual(1);
+			expect(herdr.received[0]!.order).toBeGreaterThan(herdr.pingOrders[0]!);
 			// Socket transport must not shell out to the CLI.
 			expect(execCalls).toEqual([]);
 		} finally {
@@ -171,15 +219,61 @@ describe("herdr-reporter extension", () => {
 
 			herdrReporter(pi);
 
-			await handlers.get("user_prompt_start")?.({ kind: "select" }, busyCtx);
+			const privateSentinels = {
+				kind: "select",
+				title: "PRIVATE_PROMPT_TITLE",
+				question: "PRIVATE_PROMPT_QUESTION",
+				options: ["PRIVATE_PROMPT_OPTION"],
+				placeholder: "PRIVATE_PROMPT_PLACEHOLDER",
+				credential: "PRIVATE_CREDENTIAL_SENTINEL",
+			};
+			await handlers.get("user_prompt_start")?.(privateSentinels, busyCtx);
 			await handlers.get("agent_end")?.({ messages: [] }, busyCtx);
 			await handlers.get("user_prompt_end")?.({ kind: "select" }, busyCtx);
 
 			await waitFor(() => herdr.received.length >= 3);
 			const base = baseSeq(herdr);
-			expect(herdr.received[0]).toEqual(reportMsg("blocked", base));
-			expect(herdr.received[1]).toEqual(reportMsg("blocked", base + 1));
-			expect(herdr.received[2]).toEqual(reportMsg("working", base + 2));
+			expect(herdr.received[0]?.method).toBe("pane.report_agent");
+			expect(herdr.received[0]?.params).toEqual(reportParams("blocked", base, "selection required"));
+			expect(herdr.received[1]?.method).toBe("pane.report_agent");
+			expect(herdr.received[1]?.params).toEqual(reportParams("blocked", base + 1, "selection required"));
+			expect(herdr.received[2]?.method).toBe("pane.report_agent");
+			expect(herdr.received[2]?.params).toEqual(reportParams("working", base + 2));
+			const capturedFrames = JSON.stringify(herdr.received);
+			for (const sentinel of [
+				privateSentinels.title,
+				privateSentinels.question,
+				privateSentinels.options[0],
+				privateSentinels.placeholder,
+				privateSentinels.credential,
+			]) {
+				expect(capturedFrames).not.toContain(sentinel);
+			}
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("maps only the closed prompt kind to fixed blocked reasons", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			for (const kind of ["select", "confirm", "input", "future-kind"]) {
+				await handlers.get("user_prompt_start")?.({ kind }, busyCtx);
+			}
+
+			await waitFor(() => herdr.received.length >= 4);
+			const base = baseSeq(herdr);
+			expect(herdr.received.map(frame => frame.params)).toEqual([
+				reportParams("blocked", base, "selection required"),
+				reportParams("blocked", base + 1, "confirmation required"),
+				reportParams("blocked", base + 2, "text input required"),
+				reportParams("blocked", base + 3, "user input required"),
+			]);
 		} finally {
 			await herdr.close();
 		}
@@ -196,11 +290,16 @@ describe("herdr-reporter extension", () => {
 			await handlers.get("session_shutdown")?.({}, idleCtx);
 
 			await waitFor(() => herdr.received.length >= 1);
-			expect(herdr.received[0]).toEqual({
-				id: "xcsh:herdr-reporter",
-				method: "pane.release_agent",
-				params: { pane_id: "w1:p1", source: "herdr:xcsh", agent: "xcsh", seq: baseSeq(herdr) },
+			expect(herdr.received[0]?.method).toBe("pane.release_agent");
+			expect(herdr.received[0]?.params).toEqual({
+				pane_id: "w1:p1",
+				source: "herdr:xcsh",
+				agent: "xcsh",
+				seq: baseSeq(herdr),
 			});
+			// The release frame must also be preceded by the protocol-18 handshake.
+			expect(herdr.pingOrders.length).toBeGreaterThanOrEqual(1);
+			expect(herdr.received[0]!.order).toBeGreaterThan(herdr.pingOrders[0]!);
 		} finally {
 			await herdr.close();
 		}
@@ -213,8 +312,10 @@ describe("herdr-reporter extension", () => {
 
 		herdrReporter(pi);
 		await handlers.get("agent_start")?.({}, idleCtx);
+		await handlers.get("user_prompt_start")?.({ kind: "confirm" }, busyCtx);
+		await handlers.get("user_prompt_end")?.({ kind: "confirm" }, idleCtx);
 		await handlers.get("session_shutdown")?.({}, idleCtx);
-		await waitFor(() => execCalls.length >= 2);
+		await waitFor(() => execCalls.length >= 4);
 
 		const cliSeq = (call: { args: string[] }): number => Number(call.args[call.args.indexOf("--seq") + 1]);
 		const base = cliSeq(execCalls[0]!);
@@ -239,6 +340,40 @@ describe("herdr-reporter extension", () => {
 			command: "herdr",
 			args: [
 				"pane",
+				"report-agent",
+				"w1:p1",
+				"--source",
+				"herdr:xcsh",
+				"--agent",
+				"xcsh",
+				"--state",
+				"blocked",
+				"--message",
+				"confirmation required",
+				"--seq",
+				String(base + 1),
+			],
+		});
+		expect(execCalls[2]).toEqual({
+			command: "herdr",
+			args: [
+				"pane",
+				"report-agent",
+				"w1:p1",
+				"--source",
+				"herdr:xcsh",
+				"--agent",
+				"xcsh",
+				"--state",
+				"idle",
+				"--seq",
+				String(base + 2),
+			],
+		});
+		expect(execCalls[3]).toEqual({
+			command: "herdr",
+			args: [
+				"pane",
 				"release-agent",
 				"w1:p1",
 				"--source",
@@ -246,7 +381,7 @@ describe("herdr-reporter extension", () => {
 				"--agent",
 				"xcsh",
 				"--seq",
-				String(base + 1),
+				String(base + 3),
 			],
 		});
 	});
