@@ -10,8 +10,8 @@ xcsh resolves a requested model against available providers and credentials. A p
 
 ## How do I confirm a route?
 
-Run `xcsh --list-models <provider>`, then pass one returned name to `--model`. Environment keys and supported subscription sessions authenticate providers; never store tokens in committed settings.
+Run `xcsh --list-models <PROVIDER>`, then pass one returned name to `--model`. Environment keys and supported subscription sessions authenticate providers; never store tokens in committed settings.
 
 ## Where does LiteLLM fit?
 
-LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base URL and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.
+LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base uniform resource locator (URL) and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.

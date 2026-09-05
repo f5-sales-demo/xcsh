@@ -8,14 +8,16 @@ sidebar:
 
 Port code to Rust only for measured performance, platform integration, or resource-control needs. Keep orchestration and product policy in TypeScript.
 
-## Add or change a native export
+## How do I add or change a native export?
 
-Define the Rust implementation and Node-API signature, expose it from the Rust package, update TypeScript declarations and wrappers, then extend validation and contract tests. Preserve the JavaScript fallback when the public contract requires one; otherwise fail explicitly when the addon is unavailable.
+Define the Rust implementation and Node-application programming interface (API) signature, expose it from the Rust package, update TypeScript declarations and wrappers, then extend validation and contract tests. Preserve the JavaScript fallback when the public contract requires one; otherwise fail explicitly when the addon is unavailable.
 
-## Build target variants
+## How do I build target variants?
 
 The build pipeline selects target triples and optional hardware variants, compiles release artifacts, and packages names the loader can resolve. Environment flags affect the build target or diagnostics, not the public API. Test the ordinary target plus any variant whose resolution order changed.
 
-## Diagnose loading and cancellation
+## How do I diagnose loading and cancellation?
 
 Start with the resolved candidate list, platform identity, file permissions, and `validateNative` mismatch. For asynchronous work, test cancellation before start, during execution, and after completion; a cancellation token must never resolve the same task twice.
+
+Change `crates/pi-natives/src` and `packages/natives` together; a signature that exists on only one side fails at load rather than at build.

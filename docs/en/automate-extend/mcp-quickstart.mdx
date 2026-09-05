@@ -6,7 +6,7 @@ sidebar:
   label: "Connect an MCP server"
 ---
 
-MCP connects xcsh to out-of-process servers that expose tools, resources, or prompts. Configure only servers you trust to receive the data sent in their calls.
+Model Context Protocol (MCP) connects xcsh to out-of-process servers that expose tools, resources, or prompts. Configure only servers you trust to receive the data sent in their calls.
 
 ## Where is MCP configured?
 
@@ -14,4 +14,4 @@ Use `.xcsh/mcp.json` for project scope. Keep credentials in referenced environme
 
 ## How do I isolate MCP behavior?
 
-Start with one server, inspect `/mcp status`, and invoke one read-only operation. Run the same prompt with `--no-mcp` to distinguish MCP failure from the model or built-in tools.
+Start with one server. Confirm it is connected with `/mcp list`, exercise the connection with `/mcp test`, then invoke one read-only operation. Run the same prompt with `--no-mcp` to distinguish MCP failure from the model or built-in tools.

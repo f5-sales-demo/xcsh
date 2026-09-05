@@ -6,16 +6,38 @@ sidebar:
   label: "MCP runtime and authoring"
 ---
 
-xcsh keeps MCP transport concerns below capability discovery. A connected server contributes normalized tools; the agent loop invokes those tools through the same result boundary used for built-in and extension tools.
+xcsh keeps Model Context Protocol (MCP) transport concerns below capability discovery. A connected server contributes normalized tools; the agent loop invokes those tools through the same result boundary used for built-in and extension tools.
 
-## Follow a request through the runtime
+```text
+manager                      transport                server
+  resolve configuration
+  open one connection   ->   initialize          ->   accept
+  list capabilities     ->   tools/list          ->   tool descriptors
+  register bridged tools
+  agent loop calls tool ->   tools/call (id N)   ->   result (id N)
+                             notifications       ->   (uncorrelated)
+  refresh set           ->   close removed
+  shutdown              ->   close transports    ->   child process exits
+```
 
-The manager resolves configuration, establishes one connection per active server, caches that connection, lists capabilities, and registers bridged tools. JSON-RPC request identifiers correlate replies while notifications flow independently. Transport closure rejects outstanding work and moves the server to a reconnectable failure state.
+## How does a request move through the runtime?
 
-## Reload and tear down safely
+The manager resolves configuration, establishes one connection per active server, caches that connection, lists capabilities, and registers bridged tools. JSON-remote procedure call (RPC) request identifiers correlate replies while notifications flow independently. Transport closure rejects outstanding work and moves the server to a reconnectable failure state.
+
+## How do reload and teardown work?
 
 A refresh compares the normalized server set, closes removed or changed connections, and preserves reusable connections. Session shutdown closes transports and child processes. Server implementations must also handle client cancellation and EOF so local processes do not outlive xcsh.
 
-## Author a compatible tool server
+## What makes a tool server compatible?
 
-Publish stable tool names, JSON Schema input definitions, bounded results, and actionable protocol errors. Keep credentials in the server environment, not tool descriptions. Test initialization, tool listing, one successful call, invalid input, cancellation, reconnect, and shutdown against the same transport declared in `mcp.json`.
+Publish stable tool names, JSON Schema input definitions, bounded results, and actionable protocol errors. Keep credentials in the server environment, not tool descriptions. Test each of these against the same transport declared in `mcp.json`:
+
+1. Initialization.
+2. Tool listing.
+3. One successful call.
+4. Invalid input.
+5. Cancellation.
+6. Reconnect after a dropped transport.
+7. Shutdown.
+
+Read `packages/coding-agent/src/mcp` for the manager, transport selection, and tool bridging.

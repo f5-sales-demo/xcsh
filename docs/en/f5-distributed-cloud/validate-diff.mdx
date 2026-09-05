@@ -10,12 +10,12 @@ Validation checks local structure; diff compares that desired state with the liv
 
 ## How do I separate local and live checks?
 
-```sh
+```bash
 xcsh validate -f manifests/ -R --result-file validation.json
 xcsh diff -f manifests/ -R --result-file diff.json
 ```
 
-The first command needs no API credential. Run the second only after confirming the context and namespace. Read every create, update, preserve, and error entry in `diff.json`.
+The first command needs no application programming interface (API) credential. Run the second only after confirming the context and namespace. Read every create, update, preserve, and error entry in `diff.json`.
 
 ## What blocks the next step?
 

@@ -6,11 +6,21 @@ sidebar:
   label: "Agent loop and sessions"
 ---
 
-The CLI parses arguments, resolves configuration and providers, creates a session, streams model events, dispatches tools, and renders the resulting entries.
+The command-line interface (CLI) parses arguments, resolves configuration and providers, creates a session, streams model events, dispatches tools, and renders the resulting entries.
+
+```text
+user message
+  -> cli.ts            parse argv, resolve config and providers
+  -> session factory   create or resume the session
+  -> provider stream   AssistantMessageEvent deltas
+  -> tool dispatch     execute, append result, loop
+  -> session JSONL     append-only record
+  -> renderer          view of the appended state
+```
 
 ## How do I trace a behavior?
 
-Start at `packages/coding-agent/src/cli.ts`, follow the session factory and event handlers, then inspect the persisted JSONL rather than relying only on terminal rendering. Provider and tool tests should assert the event sequence that caused the visible result.
+Start at `packages/coding-agent/src/cli.ts`, follow the session factory and event handlers, then inspect the persisted JSON Lines (JSONL) rather than relying only on terminal rendering. Provider and tool tests should assert the event sequence that caused the visible result.
 
 ## Where does compaction act?
 

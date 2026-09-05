@@ -10,8 +10,10 @@ Configuration controls provider routing, settings precedence, filesystem access,
 
 ## What should I configure first?
 
-1. Choose a [provider and model route](./providers-routing/).
-2. Inspect [settings and file locations](./settings-files/).
-3. Apply [secret and filesystem boundaries](./secrets-obfuscation/).
+1. Inspect [settings precedence and file locations](./settings-files/).
+2. Look up any [environment variable](./environment-reference/) the deployment sets.
+3. Choose a [provider and model route](./providers-routing/).
+4. Apply [secret handling and the filesystem boundary](./secrets-obfuscation/).
+5. Set the [sandbox boundaries](./sandbox-boundaries/) that enforce those decisions.
 
 Start with defaults; add project configuration only when collaborators need the same behavior.

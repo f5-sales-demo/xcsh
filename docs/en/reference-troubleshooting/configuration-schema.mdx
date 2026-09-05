@@ -1,22 +1,38 @@
 ---
 title: "Configuration schema"
-description: "Navigate the schema-backed settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing."
+description: "Look up the settings namespaces xcsh validates, and the commands that report effective values."
 sidebar:
   order: 3
   label: "Configuration schema"
 ---
 
-The schema groups settings for appearance, models, interaction, context, editing, tools, tasks, providers, and sandboxing. It evolves with the executable.
+`packages/coding-agent/src/config/settings-schema.ts` defines every recognized settings key with its type, default, and validation. It evolves with the executable, so read the key namespaces here and the values from your own installation.
+
+## Which key namespaces exist?
+
+| Area | Namespaces |
+| --- | --- |
+| Appearance | `theme`, `statusLine`, `display`, `tui`, `terminal`, `images`, `media` |
+| Model and routing | `routing`, `retry`, `thinkingBudgets`, `providers`, `exa` |
+| Interaction | `startup`, `keybindings`, `completion`, `ask`, `stt`, `marketplace` |
+| Context | `context`, `contextPromotion`, `compaction`, `branchSummary`, `memories`, `ttsr` |
+| Editing | `edit`, `read`, `lsp`, `bashInterceptor`, `python` |
+| Tools | `tools`, `todo`, `find`, `grep`, `astGrep`, `astEdit`, `notebook`, `fetch`, `browser`, `web_search`, `calc`, `checkpoint`, `debug`, `inspect_image`, `generate_image`, `renderMermaid`, `bash`, `async`, `mcp` |
+| Tasks and capabilities | `task`, `tasks`, `skills`, `commands` |
+| Security | `secrets`, `sandbox`, `xcsh` |
+| Repository workflows | `commit`, `dev` |
+
+A key is `namespace.name`, as in `compaction.thresholdPercent` or `sandbox.allowRead`. Nested groups extend that form, as in `todo.reminders.max`.
 
 ## How do I inspect the effective schema-backed values?
 
-```sh
+```bash
 xcsh config list --json
-xcsh config get <key>
+xcsh config get <KEY>
 ```
 
-Use `xcsh config set <key> <value>` only for a key present in the installed schema. Reset one key with `xcsh config reset <key>` rather than copying defaults from another release.
+Use `xcsh config set <KEY> <VALUE>` only for a key present in the installed schema. Reset one key with `xcsh config reset <KEY>` rather than copying defaults from another release.
 
 ## Which source defines a setting?
 
-The settings schema and its tests in the matching source release define type, default, and validation. Effective output defines the value after precedence is applied.
+The settings schema and its tests in the matching source release define type, default, and validation. `xcsh config list --json` reports the value after user, project, environment, and command-line precedence is applied. When the two disagree, the schema describes what is legal and the effective output describes what is active.

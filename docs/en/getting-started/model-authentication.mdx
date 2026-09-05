@@ -2,7 +2,7 @@
 title: "Authenticate a model provider"
 description: "Configure an API key or supported subscription login without placing credentials in project files."
 sidebar:
-  order: 4
+  order: 2
   label: "Authenticate a model provider"
 ---
 
@@ -10,11 +10,11 @@ Model credentials belong in the provider-supported environment or subscription l
 
 ## Which authentication method should I choose?
 
-Use a provider API key for service-style automation. Use a supported subscription login for an interactive user session. Run `xcsh --list-models <provider>` after authentication to confirm the credential can enumerate models.
+Use a provider application programming interface (API) key for service-style automation. Use a supported subscription login for an interactive user session. Run `xcsh --list-models <PROVIDER>` after authentication to confirm the credential can enumerate models.
 
 ## How do I select a model explicitly?
 
-```sh
+```bash
 xcsh --model p-openai/gpt-5.2 --no-tools -p "Summarize README.md"
 ```
 

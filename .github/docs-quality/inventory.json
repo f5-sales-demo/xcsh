@@ -220,9 +220,9 @@
       ],
       "headings": [
         {
-          "text": "Add or change a native export",
+          "text": "How do I add or change a native export?",
           "readerQuestion": "How does add or change a native export work?",
-          "purpose": "Define the Rust implementation and Node-API signature, expose it from the crate, update TypeScript declarations and wrappers, then extend validation and contract tests.",
+          "purpose": "Answer this question within Choose native work deliberately, add a binding, build variants, test cancellation, and debug loader failures.: How do I add or change a native export?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -235,9 +235,9 @@
           ]
         },
         {
-          "text": "Build target variants",
+          "text": "How do I build target variants?",
           "readerQuestion": "How does build target variants work?",
-          "purpose": "The build pipeline selects target triples and optional hardware variants, compiles release artifacts, and packages names the loader can resolve.",
+          "purpose": "Answer this question within Choose native work deliberately, add a binding, build variants, test cancellation, and debug loader failures.: How do I build target variants?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -252,9 +252,9 @@
           ]
         },
         {
-          "text": "Diagnose loading and cancellation",
+          "text": "How do I diagnose loading and cancellation?",
           "readerQuestion": "How does diagnose loading and cancellation work?",
-          "purpose": "Start with the resolved candidate list, platform identity, file permissions, and `validateNative` mismatch.",
+          "purpose": "Answer this question within Choose native work deliberately, add a binding, build variants, test cancellation, and debug loader failures.: How do I diagnose loading and cancellation?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -286,9 +286,9 @@
       ],
       "headings": [
         {
-          "text": "Select and validate an addon",
+          "text": "How is an addon selected and validated?",
           "readerQuestion": "How does select and validate an addon work?",
-          "purpose": "Resolution considers operating system, CPU architecture, and supported hardware variants before trying packaged and extracted binary candidates.",
+          "purpose": "Answer this question within Understand TypeScript wrappers, addon loading, Rust Node-API exports, binary selection, and binding validation.: How is an addon selected and validated?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -304,9 +304,9 @@
           ]
         },
         {
-          "text": "Keep bindings synchronized",
+          "text": "How do I keep bindings synchronized?",
           "readerQuestion": "How does keep bindings synchronized work?",
-          "purpose": "Module augmentation describes native exports to TypeScript, wrappers translate public inputs and outputs, and Rust functions implement the Node-API boundary.",
+          "purpose": "Answer this question within Understand TypeScript wrappers, addon loading, Rust Node-API exports, binary selection, and binding validation.: How do I keep bindings synchronized?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -323,9 +323,9 @@
           ]
         },
         {
-          "text": "Map native subsystems",
+          "text": "Which subsystems does the addon cover?",
           "readerQuestion": "How does map native subsystems work?",
-          "purpose": "The addon covers terminal and PTY processes, filesystem scanning and text search, media/system utilities, and cancellable task primitives.",
+          "purpose": "Answer this question within Understand TypeScript wrappers, addon loading, Rust Node-API exports, binary selection, and binding validation.: Which subsystems does the addon cover?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -367,9 +367,9 @@
       ],
       "headings": [
         {
-          "text": "Apply the eight-point checklist",
+          "text": "What does the eight-point checklist require?",
           "readerQuestion": "How does apply the eight-point checklist work?",
-          "purpose": "State role and scope, concrete objectives, available tools, tool-use rules, constraints, output contract, uncertainty behavior, and completion criteria.",
+          "purpose": "Answer this question within Apply the system-prompt checklist, progressive composition, deduplication, and audit tests.: What does the eight-point checklist require?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -380,9 +380,9 @@
           ]
         },
         {
-          "text": "Compose prompts progressively",
+          "text": "How is the system prompt composed?",
           "readerQuestion": "How does compose prompts progressively work?",
-          "purpose": "The runtime builds the system prompt from the core fragment plus active capabilities, workspace guidance, plan state, memory, and extension contributions.",
+          "purpose": "Answer this question within Apply the system-prompt checklist, progressive composition, deduplication, and audit tests.: How is the system prompt composed?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -393,9 +393,9 @@
           ]
         },
         {
-          "text": "Audit a prompt change",
+          "text": "How do I audit a prompt change?",
           "readerQuestion": "How does audit a prompt change work?",
-          "purpose": "Inspect the final composed prompt for representative capability sets.",
+          "purpose": "Answer this question within Apply the system-prompt checklist, progressive composition, deduplication, and audit tests.: How do I audit a prompt change?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -420,9 +420,9 @@
       ],
       "headings": [
         {
-          "text": "Normalize tool calls incrementally",
+          "text": "How are tool calls normalized incrementally?",
           "readerQuestion": "How does normalize tool calls incrementally work?",
-          "purpose": "Tool arguments can arrive as JSON fragments.",
+          "purpose": "Answer this question within Follow provider events through normalized assistant messages, tool JSON accumulation, cancellation, and fallback.: How are tool calls normalized incrementally?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -437,9 +437,9 @@
           ]
         },
         {
-          "text": "Cancel and finish exactly once",
+          "text": "How does a stream cancel and finish exactly once?",
           "readerQuestion": "How does cancel and finish exactly once work?",
-          "purpose": "Cancellation propagates to the active provider request and prevents later deltas from reopening the turn.",
+          "purpose": "Answer this question within Follow provider events through normalized assistant messages, tool JSON accumulation, cancellation, and fallback.: How does a stream cancel and finish exactly once?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -466,9 +466,9 @@
       ],
       "headings": [
         {
-          "text": "Allocate and resolve stored values",
+          "text": "How are stored values allocated and resolved?",
           "readerQuestion": "How does allocate and resolve stored values work?",
-          "purpose": "Storage helpers choose user or project roots, allocate collision-resistant identifiers, and record names separately from content addresses.",
+          "purpose": "Answer this question within Trace configuration roots, session JSONL, binary blobs, text artifacts, scan caches, and move semantics.: How are stored values allocated and resolved?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -486,9 +486,9 @@
           ]
         },
         {
-          "text": "Resume, fork, and move state",
+          "text": "How do resume, fork, and move treat state?",
           "readerQuestion": "How does resume, fork, and move state work?",
-          "purpose": "Resume rebuilds context from the selected session leaf.",
+          "purpose": "Answer this question within Trace configuration roots, session JSONL, binary blobs, text artifacts, scan caches, and move semantics.: How do resume, fork, and move treat state?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -496,9 +496,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Cache filesystem discovery",
+          "text": "How is filesystem discovery cached?",
           "readerQuestion": "How does cache filesystem discovery work?",
-          "purpose": "The scan cache partitions keys by root and discovery options, evicts by freshness policy, and uses a short empty-result recheck so a newly created configuration file is noticed.",
+          "purpose": "Answer this question within Trace configuration roots, session JSONL, binary blobs, text artifacts, scan caches, and move semantics.: How is filesystem discovery cached?",
           "evidence": [
             "source-authority",
             "legacy-enrichment",
@@ -537,9 +537,9 @@
       ],
       "headings": [
         {
-          "text": "Execute shell and notebook work",
+          "text": "How do shell and notebook work execute?",
           "readerQuestion": "How does execute shell and notebook work work?",
-          "purpose": "The Bash tool validates the request, launches through the configured shell boundary, streams bounded output, and spills oversized results to an artifact.",
+          "purpose": "Answer this question within Trace Bash, notebook, deferred-action, custom-tool, context, and task-agent execution boundaries.: How do shell and notebook work execute?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -556,9 +556,9 @@
           ]
         },
         {
-          "text": "Resolve deferred actions",
+          "text": "How are deferred actions resolved?",
           "readerQuestion": "How does resolve deferred actions work?",
-          "purpose": "Deferred actions are pushed onto a last-in, first-out stack and resolved only at the runtime checkpoint that owns them.",
+          "purpose": "Answer this question within Trace Bash, notebook, deferred-action, custom-tool, context, and task-agent execution boundaries.: How are deferred actions resolved?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -571,9 +571,9 @@
           ]
         },
         {
-          "text": "Discover commands and task agents",
+          "text": "How are commands and task agents discovered?",
           "readerQuestion": "How does discover commands and task agents work?",
-          "purpose": "Slash-command templates and agent definitions are discovered from normalized user, project, plugin, and bundled providers.",
+          "purpose": "Answer this question within Trace Bash, notebook, deferred-action, custom-tool, context, and task-agent execution boundaries.: How are commands and task agents discovered?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -604,9 +604,9 @@
       ],
       "headings": [
         {
-          "text": "Route input and render changes",
+          "text": "How are input and rendering routed?",
           "readerQuestion": "How does route input and render changes work?",
-          "purpose": "Terminal decoding turns bytes and escape sequences into key events.",
+          "purpose": "Answer this question within Trace component contracts, differential rendering, terminal input, modal UI, and custom tool renderers.: How are input and rendering routed?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -619,9 +619,9 @@
           ]
         },
         {
-          "text": "Extend interactive surfaces",
+          "text": "How do I extend interactive surfaces?",
           "readerQuestion": "How does extend interactive surfaces work?",
-          "purpose": "Extensions can open a modal through `ctx.ui.custom` only when an interactive UI host exists.",
+          "purpose": "Answer this question within Trace component contracts, differential rendering, terminal input, modal UI, and custom tool renderers.: How do I extend interactive surfaces?",
           "evidence": [
             "source-authority",
             "legacy-enrichment"
@@ -794,9 +794,9 @@
           ]
         },
         {
-          "text": "When do I use the SDK instead?",
-          "readerQuestion": "When do I use the SDK instead?",
-          "purpose": "Answer this question within Headless modes: When do I use the SDK instead?.",
+          "text": "When do I use the software development kit (SDK) instead?",
+          "readerQuestion": "When do I use the software development kit (SDK) instead?",
+          "purpose": "Answer this question within Headless modes: When do I use the software development kit (SDK) instead?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -825,9 +825,9 @@
       ],
       "headings": [
         {
-          "text": "Discover and classify rules",
+          "text": "How are rules discovered and classified?",
           "readerQuestion": "How does discover and classify rules work?",
-          "purpose": "Rule providers scan project and user roots, parse frontmatter, normalize identifiers, then deduplicate by precedence.",
+          "purpose": "Answer this question within Choose event-driven mutation or declarative prompt guidance and understand discovery precedence.: How are rules discovered and classified?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -847,9 +847,9 @@
           ]
         },
         {
-          "text": "Order hook execution",
+          "text": "What determines hook execution order?",
           "readerQuestion": "How does order hook execution work?",
-          "purpose": "A hook module exports handlers for supported events.",
+          "purpose": "Answer this question within Choose event-driven mutation or declarative prompt guidance and understand discovery precedence.: What determines hook execution order?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -871,9 +871,9 @@
           ]
         },
         {
-          "text": "Test the boundary",
+          "text": "How do I test the hook boundary?",
           "readerQuestion": "How does test the boundary work?",
-          "purpose": "Exercise discovery, the exact event, mutation ordering, cancellation, and a failing handler.",
+          "purpose": "Answer this question within Choose event-driven mutation or declarative prompt guidance and understand discovery precedence.: How do I test the hook boundary?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -933,9 +933,9 @@
       ],
       "headings": [
         {
-          "text": "Choose a transport and lifecycle",
+          "text": "Which transport and lifecycle should I declare?",
           "readerQuestion": "How does choose a transport and lifecycle work?",
-          "purpose": "A local server uses a command plus arguments and communicates over stdio.",
+          "purpose": "Answer this question within Declare transports, variables, authentication, and disabled discovered servers in mcp.json.: Which transport and lifecycle should I declare?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -958,9 +958,9 @@
           ]
         },
         {
-          "text": "Resolve variables without embedding secrets",
+          "text": "How do I resolve variables without embedding secrets?",
           "readerQuestion": "How does resolve variables without embedding secrets work?",
-          "purpose": "Configuration values can reference environment-backed variables.",
+          "purpose": "Answer this question within Declare transports, variables, authentication, and disabled discovered servers in mcp.json.: How do I resolve variables without embedding secrets?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -970,9 +970,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Disable a discovered server deliberately",
+          "text": "How do I disable a discovered server?",
           "readerQuestion": "How does disable a discovered server deliberately work?",
-          "purpose": "Add its normalized identifier to `disabledServers` when a higher-precedence discovery source should remain visible but inactive.",
+          "purpose": "Answer this question within Declare transports, variables, authentication, and disabled discovered servers in mcp.json.: How do I disable a discovered server?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1043,9 +1043,9 @@
       ],
       "headings": [
         {
-          "text": "Follow a request through the runtime",
+          "text": "How does a request move through the runtime?",
           "readerQuestion": "How does follow a request through the runtime work?",
-          "purpose": "The manager resolves configuration, establishes one connection per active server, caches that connection, lists capabilities, and registers bridged tools.",
+          "purpose": "Answer this question within Trace MCP connection caching, tool bridging, reload, teardown, and server contracts.: How does a request move through the runtime?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1064,9 +1064,9 @@
           ]
         },
         {
-          "text": "Reload and tear down safely",
+          "text": "How do reload and teardown work?",
           "readerQuestion": "How does reload and tear down safely work?",
-          "purpose": "A refresh compares the normalized server set, closes removed or changed connections, and preserves reusable connections.",
+          "purpose": "Answer this question within Trace MCP connection caching, tool bridging, reload, teardown, and server contracts.: How do reload and teardown work?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1086,9 +1086,9 @@
           ]
         },
         {
-          "text": "Author a compatible tool server",
+          "text": "What makes a tool server compatible?",
           "readerQuestion": "How does author a compatible tool server work?",
-          "purpose": "Publish stable tool names, JSON Schema input definitions, bounded results, and actionable protocol errors.",
+          "purpose": "Answer this question within Trace MCP connection caching, tool bridging, reload, teardown, and server contracts.: What makes a tool server compatible?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1290,9 +1290,9 @@
       ],
       "headings": [
         {
-          "text": "Models, providers, and search",
+          "text": "Which variables configure models, providers, and search?",
           "readerQuestion": "How does models, providers, and search work?",
-          "purpose": "Provider adapters read their own API keys, base URLs, cloud project or region fields, and proxy settings.",
+          "purpose": "Answer this question within Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior.: Which variables configure models, providers, and search?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1302,9 +1302,21 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Python, shell, and tool execution",
+          "text": "Which variables address an F5 Distributed Cloud tenant?",
+          "readerQuestion": "Which environment variables point xcsh at a tenant, and which of them are secret?",
+          "purpose": "Answer this question within Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior.: Which environment variables point xcsh at a tenant, and which of them are secret?",
+          "evidence": [
+            "source-authority",
+            "offline-configuration",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Which variables configure Python, shell, and tool execution?",
           "readerQuestion": "How does python, shell, and tool execution work?",
-          "purpose": "Python gateway variables select interpreter and kernel behavior.",
+          "purpose": "Answer this question within Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior.: Which variables configure Python, shell, and tool execution?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1314,9 +1326,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Storage, runtime, and diagnostics",
+          "text": "Which variables configure storage, runtime, and diagnostics?",
           "readerQuestion": "How does storage, runtime, and diagnostics work?",
-          "purpose": "`PICODINGAGENTDIR` changes the primary agent data root; project configuration remains under `.xcsh/`.",
+          "purpose": "Answer this question within Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior.: Which variables configure storage, runtime, and diagnostics?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1446,9 +1458,9 @@
       ],
       "headings": [
         {
-          "text": "Restrict the exposed tool set",
+          "text": "How do I restrict the exposed tool set?",
           "readerQuestion": "How does restrict the exposed tool set work?",
-          "purpose": "Start with `--no-tools` or an explicit `--tools` allow-list when a run needs only conversation.",
+          "purpose": "Answer this question within Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them.: How do I restrict the exposed tool set?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1458,9 +1470,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Constrain files and processes",
+          "text": "How do I constrain files and processes?",
           "readerQuestion": "How does constrain files and processes work?",
-          "purpose": "Filesystem-aware tools resolve paths against their configured workspace boundary.",
+          "purpose": "Answer this question within Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them.: How do I constrain files and processes?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -1470,9 +1482,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Separate local and remote authority",
+          "text": "Where does remote authority differ from local authority?",
           "readerQuestion": "How does separate local and remote authority work?",
-          "purpose": "Browser, editor, Office, and remote-service integrations enforce different permission models.",
+          "purpose": "Answer this question within Constrain filesystem, shell, native, browser, and extension effects at the layer that enforces them.: Where does remote authority differ from local authority?",
           "evidence": [
             "source-authority",
             "offline-configuration",
@@ -2043,6 +2055,30 @@
             "legacy-enrichment"
           ],
           "legacyConceptIds": []
+        },
+        {
+          "text": "How do I apply and verify the resource?",
+          "readerQuestion": "How do I apply a reviewed manifest and confirm the resulting live state?",
+          "purpose": "Answer this question within Complete your first manifest lifecycle: How do I apply a reviewed manifest and confirm the resulting live state?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I export and remove it?",
+          "readerQuestion": "How do I capture a reusable manifest and then delete the resource and prove its absence?",
+          "purpose": "Answer this question within Complete your first manifest lifecycle: How do I capture a reusable manifest and then delete the resource and prove its absence?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "live-resource-lifecycle",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
         }
       ]
     },
@@ -2302,9 +2338,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "What is verified here?",
-          "readerQuestion": "What is verified here?",
-          "purpose": "Answer this question within Chrome: What is verified here?.",
+          "text": "Which Chrome capabilities does xcsh expose?",
+          "readerQuestion": "Which Chrome capabilities does xcsh expose?",
+          "purpose": "Answer this question within Chrome: Which Chrome capabilities does xcsh expose?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -2383,9 +2419,9 @@
       ],
       "headings": [
         {
-          "text": "Negotiate the host protocol",
+          "text": "How is the host protocol negotiated?",
           "readerQuestion": "How does negotiate the host protocol work?",
-          "purpose": "The integration checks the available socket protocol and media or graphics capabilities before it requests a workspace.",
+          "purpose": "Answer this question within Understand source-verified Herdr workspace launch, terminal actions, protocol negotiation, and isolation.: How is the host protocol negotiated?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -2400,9 +2436,9 @@
           ]
         },
         {
-          "text": "Launch a conversation-owned workspace",
+          "text": "How is a conversation-owned workspace launched?",
           "readerQuestion": "How does launch a conversation-owned workspace work?",
-          "purpose": "A workspace is tied to the conversation identity supplied at startup.",
+          "purpose": "Answer this question within Understand source-verified Herdr workspace launch, terminal actions, protocol negotiation, and isolation.: How is a conversation-owned workspace launched?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -2411,9 +2447,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Recover from socket failure",
+          "text": "How do I recover from socket failure?",
           "readerQuestion": "How does recover from socket failure work?",
-          "purpose": "Connection and framing failures surface as integration diagnostics.",
+          "purpose": "Answer this question within Understand source-verified Herdr workspace launch, terminal actions, protocol negotiation, and isolation.: How do I recover from socket failure?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -2498,9 +2534,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "What is not asserted here?",
-          "readerQuestion": "What is not asserted here?",
-          "purpose": "Answer this question within Microsoft Office task pane: What is not asserted here?.",
+          "text": "Which host steps vary by platform?",
+          "readerQuestion": "Which host steps vary by platform?",
+          "purpose": "Answer this question within Microsoft Office task pane: Which host steps vary by platform?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -2539,9 +2575,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "What is not asserted here?",
-          "readerQuestion": "What is not asserted here?",
-          "purpose": "Answer this question within VS Code: What is not asserted here?.",
+          "text": "Which behavior should I validate in the terminal?",
+          "readerQuestion": "Which behavior should I validate in the terminal?",
+          "purpose": "Answer this question within VS Code: Which behavior should I validate in the terminal?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -2559,6 +2595,7 @@
       "purpose": "Answer the distinct task or decision described by CLI command and flag reference.",
       "sourceAuthority": [
         "packages/coding-agent/src/cli.ts",
+        "packages/coding-agent/src/cli/flag-spec.ts",
         "packages/coding-agent/src/config/settings-schema.ts"
       ],
       "evidence": [
@@ -2571,6 +2608,17 @@
           "text": "Which top-level commands exist?",
           "readerQuestion": "Which top-level commands exist?",
           "purpose": "Answer this question within CLI command and flag reference: Which top-level commands exist?.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Which global flags does a session accept?",
+          "readerQuestion": "Which flags configure an agent launch rather than a subcommand?",
+          "purpose": "Answer this question within CLI command and flag reference: Which flags configure an agent launch rather than a subcommand?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -2609,6 +2657,19 @@
         "legacy-build-browser"
       ],
       "headings": [
+        {
+          "text": "Which key namespaces exist?",
+          "readerQuestion": "Which settings namespaces does the schema define, so I can find the key I need?",
+          "purpose": "Answer this question within Configuration schema: Which settings namespaces does the schema define, so I can find the key I need?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration",
+            "legacy-enrichment",
+            "legacy-build-browser"
+          ],
+          "legacyConceptIds": []
+        },
         {
           "text": "How do I inspect the effective schema-backed values?",
           "readerQuestion": "How do I inspect the effective schema-backed values?",
@@ -2755,9 +2816,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Why can the list differ?",
-          "readerQuestion": "Why can the list differ?",
-          "purpose": "Answer this question within Slash command reference: Why can the list differ?.",
+          "text": "Which subsystems have their own commands?",
+          "readerQuestion": "Which subsystems have their own commands?",
+          "purpose": "Answer this question within Slash command reference: Which subsystems have their own commands?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -3102,9 +3163,9 @@
       ],
       "headings": [
         {
-          "text": "Open and move through the session tree",
+          "text": "How do I move through the session tree?",
           "readerQuestion": "How does open and move through the session tree work?",
-          "purpose": "Use `/tree` to open the branch navigator.",
+          "purpose": "Answer this question within Use the tree, keyboard map, themes, and terminal controls without losing session state.: How do I move through the session tree?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -3122,9 +3183,9 @@
           ]
         },
         {
-          "text": "Read the active keyboard map",
+          "text": "How do I read the active keyboard map?",
           "readerQuestion": "How does read the active keyboard map work?",
-          "purpose": "Open `/hotkeys` for the bindings registered by the running build.",
+          "purpose": "Answer this question within Use the tree, keyboard map, themes, and terminal controls without losing session state.: How do I read the active keyboard map?",
           "evidence": [
             "source-authority",
             "candidate-cli",
@@ -3133,9 +3194,9 @@
           "legacyConceptIds": []
         },
         {
-          "text": "Select and customize a theme",
+          "text": "How do I select and customize a theme?",
           "readerQuestion": "How does select and customize a theme work?",
-          "purpose": "Use `/theme` to choose a bundled or discovered theme.",
+          "purpose": "Answer this question within Use the tree, keyboard map, themes, and terminal controls without losing session state.: How do I select and customize a theme?",
           "evidence": [
             "source-authority",
             "candidate-cli",

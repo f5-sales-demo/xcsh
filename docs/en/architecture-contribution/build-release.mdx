@@ -14,7 +14,15 @@ Create a detailed issue, branch from current `origin/main` in an isolated worktr
 
 ## Which checks matter before a pull request?
 
-Run `bun run check`, `bun run test`, documentation checks for changed MDX, secret/PII scans, and the repository review gate. Inspect the complete diff and deliver only through a linked pull request.
+Run each gate before you open the pull request:
+
+1. `bun run check` for formatting, linting, and types.
+2. `bun run test` for the package suites.
+3. `python3 scripts/check_docs_quality.py` when an English MDX file changed.
+4. The secret and personally identifiable information (PII) scans.
+5. The repository review gate.
+
+Inspect the complete diff, then deliver only through a linked pull request.
 
 ## How are releases produced?
 

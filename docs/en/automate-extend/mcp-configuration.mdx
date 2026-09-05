@@ -6,16 +6,16 @@ sidebar:
   label: "MCP configuration"
 ---
 
-MCP configuration is discovered from user and project roots and normalized before any connection starts. Use `xcsh mcp list` to see the effective server set instead of inferring it from one file.
+Model Context Protocol (MCP) configuration is discovered from user and project roots and normalized before any connection starts. Use `xcsh mcp list` to see the effective server set instead of inferring it from one file.
 
-## Choose a transport and lifecycle
+## Which transport and lifecycle should I declare?
 
-A local server uses a command plus arguments and communicates over stdio. A remote server declares an HTTP-capable URL and the supported transport options. The runtime selects from the declared shape; it does not silently reinterpret a malformed local entry as a remote one.
+A local server uses a command plus arguments and communicates over stdio. A remote server declares an HTTP-capable uniform resource locator (URL) and the supported transport options. The runtime selects from the declared shape; it does not silently reinterpret a malformed local entry as a remote one.
 
-## Resolve variables without embedding secrets
+## How do I resolve variables without embedding secrets?
 
 Configuration values can reference environment-backed variables. Credential resolution happens before connection establishment, and unresolved required variables fail that server without printing the secret. Keep tokens outside committed `mcp.json` files.
 
-## Disable a discovered server deliberately
+## How do I disable a discovered server?
 
 Add its normalized identifier to `disabledServers` when a higher-precedence discovery source should remain visible but inactive. Validate the resulting set with `xcsh mcp list`, then use the MCP management commands to reconnect or reload after a file change.

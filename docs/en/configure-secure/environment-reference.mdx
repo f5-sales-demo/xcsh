@@ -1,21 +1,65 @@
 ---
 title: "Environment variable reference"
-description: "Locate environment-controlled provider, tool, storage, shell, TUI, and diagnostic behavior."
+description: "Look up the environment variables that select models, credentials, tenants, execution behavior, storage roots, and diagnostics."
 sidebar:
   order: 2
   label: "Environment variables"
 ---
 
-Environment variables carry credentials and process-scoped overrides. Settings and command flags still participate in their documented precedence; a similarly named variable is not automatically supported.
+Environment variables carry credentials and process-scoped overrides. Settings files and command flags keep their documented precedence; a similarly named variable is not automatically supported. Provider adapters read their own vendor key names, which the adapter defines rather than this list.
 
-## Models, providers, and search
+## Which variables configure models, providers, and search?
 
-Provider adapters read their own API keys, base URLs, cloud project or region fields, and proxy settings. Model selection remains a model-registry decision. Web-search variables configure the search backend separately from model credentials.
+| Variable | Controls |
+| --- | --- |
+| `PI_SMOL_MODEL` | Default model for the lightweight role, equivalent to `--smol` |
+| `PI_SLOW_MODEL` | Default model for the reasoning role, equivalent to `--slow` |
+| `PI_PLAN_MODEL` | Default model for the planning role, equivalent to `--plan` |
+| `XCSH_LOCALE` | Interface locale, ahead of `PI_LOCALE` and `LANG` |
 
-## Python, shell, and tool execution
+A flag beats the variable: `--smol` overrides `PI_SMOL_MODEL` for that invocation. Model selection stays a model-registry decision, so a name these variables set must still resolve through `xcsh --list-models <PROVIDER>`.
 
-Python gateway variables select interpreter and kernel behavior. Shell execution inherits the launched process environment subject to sandbox and command policy. Session and terminal variables describe the current terminal but do not grant filesystem access.
+## Which variables address an F5 Distributed Cloud tenant?
 
-## Storage, runtime, and diagnostics
+| Variable | Controls |
+| --- | --- |
+| `XCSH_API_URL` | Tenant application programming interface (API) endpoint when no named context is active |
+| `XCSH_API_TOKEN` | Tenant API credential for that endpoint |
+| `XCSH_TENANT` | Tenant identifier reported in context status |
+| `XCSH_CONTEXT_NAME` | Name of the context the session binds to |
+| `XCSH_NAMESPACE` | Namespace applied when a command does not pass `-n` |
+| `F5XC_NAMESPACE` | Namespace source recorded in resource operation records |
 
-`PI_CODING_AGENT_DIR` changes the primary agent data root; project configuration remains under `.xcsh/`. Native loader and debug variables affect binary selection and diagnostics. TUI flags affect rendering and terminal integration, while commit-generation controls affect only their named workflow. Never print security-sensitive variables in diagnostic receipts.
+Treat every value in this group as a secret. Supply them through the runtime environment or a named context, never through a committed file or a command argument that reaches shell history.
+
+## Which variables configure Python, shell, and tool execution?
+
+| Variable | Controls |
+| --- | --- |
+| `PI_PYTHON_GATEWAY_URL` | Endpoint the Python tool sends code to |
+| `PI_PYTHON_GATEWAY_TOKEN` | Credential for that gateway |
+| `PI_PYTHON_SKIP_CHECK` | Skips the gateway warm-up probe |
+| `PI_SHELL_PREFIX` | Command prefix wrapped around shell tool invocations |
+| `PI_BASH_NO_LOGIN` | Runs the shell without `-l` |
+| `PI_NO_PTY` | Disables pseudo-terminal (PTY) execution, equivalent to `--no-pty` |
+| `PI_EDIT_VARIANT` | Selects the edit tool implementation and rejects an unknown value |
+
+Shell execution inherits the launched process environment, subject to the sandbox and command policy. Restrict dependencies, working directory, and credentials at the process boundary rather than in the prompt.
+
+## Which variables configure storage, runtime, and diagnostics?
+
+| Variable | Controls |
+| --- | --- |
+| `PI_CODING_AGENT_DIR` | Primary agent data root, including session storage |
+| `PI_CONFIG_DIR` | Configuration root directory name, `.xcsh` by default |
+| `PI_PACKAGE_DIR` | Packaged asset directory the runtime resolves against |
+| `PI_SESSION_FILE` | Session file a child process attaches to |
+| `PI_NATIVE_VARIANT` | Hardware variant the native addon loader prefers |
+| `PI_CACHE_RETENTION` | Cache retention policy, `short` by default |
+| `PI_NO_TITLE` | Disables title auto-generation, equivalent to `--no-title` |
+| `PI_NOTIFICATIONS` | Desktop notification behavior |
+| `PI_DEBUG_STARTUP` | Startup phase diagnostics |
+| `PI_TIMING` | Phase timing output |
+| `PI_TUI_DEBUG` | Terminal user interface (TUI) rendering diagnostics |
+
+Project configuration stays under `.xcsh/` even when `PI_CODING_AGENT_DIR` moves the user root. Never print a credential-bearing variable into a diagnostic receipt; name the variable and state whether it was set.

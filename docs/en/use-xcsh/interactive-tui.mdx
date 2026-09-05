@@ -6,18 +6,20 @@ sidebar:
   label: "Use the interactive TUI"
 ---
 
-Run `xcsh` without `--print` to open the terminal interface. Type `/` to discover commands available in the installed build.
+Run `xcsh` without `--print` to open the terminal user interface (TUI). Type `/` to discover commands available in the installed build.
 
 ## How do I send prompts and local files?
 
-Enter text at the prompt. Prefix a file with `@`, for example:
+Enter text at the prompt and prefix a file path with `@` to attach it, as in `@README.md List only the prerequisites`. Autocomplete resolves the path as you type.
 
-```sh
+The same attachment syntax works when you start a session from the shell:
+
+```bash
 xcsh @README.md "List only the prerequisites"
 ```
 
-Images can be attached when the chosen model supports vision. Treat every attached file as prompt content and exclude secrets.
+Attach an image when the chosen model supports vision. Treat every attached file as prompt content and exclude secrets.
 
 ## How do I discover controls?
 
-Use `/help` for command groups and `/hotkeys` for the active key map. Those runtime views outrank a copied key list because extensions and releases can change the available controls.
+Type `/` to list the commands the running build registered, and `/hotkeys` to read the active key map. Those runtime views outrank a copied key list, because extensions and releases change the available controls.
