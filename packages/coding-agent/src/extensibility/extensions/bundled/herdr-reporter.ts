@@ -60,6 +60,7 @@ const REPORT_METHOD = "pane.report_agent";
 const SESSION_METHOD = "pane.report_agent_session";
 const RELEASE_METHOD = "pane.release_agent";
 const SOCKET_TIMEOUT_MS = 2000;
+const SETTLED_TURN_RECONCILE_DELAY_MS = 25;
 const PROMPT_BLOCKED_REASONS = {
 	select: "selection required",
 	confirm: "confirmation required",
@@ -145,6 +146,15 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// Last session ref already delivered, so repeated lifecycle events do not
 	// re-send an unchanged ref every turn.
 	let lastSessionRefKey: string | undefined;
+	// Herdr only anchors a new full-lifecycle authority after the first session
+	// reference identifies how the session began. XCSH creates that reference
+	// lazily, so retain the startup marker until there is a concrete ref to send.
+	let pendingSessionStartSource: "startup" | undefined = "startup";
+	// `agent_end` is the primary completion signal. Keep one deferred check from
+	// `turn_end` as well: some interactive UI paths render the completed response
+	// before their agent-end extension callback has drained. The check consults
+	// XCSH's own streaming state, so a tool boundary cannot be mistaken for idle.
+	let settledTurnReconcileTimer: ReturnType<typeof setTimeout> | undefined;
 	// Serializes frames: herdr compares `seq` across all methods for this source,
 	// so frames must reach it in the order they were generated.
 	let queue: Promise<void> = Promise.resolve();
@@ -232,9 +242,27 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			source: HERDR_SOURCE,
 			agent: HERDR_AGENT_LABEL,
 			seq: seq++,
+			...(pendingSessionStartSource === undefined ? {} : { session_start_source: pendingSessionStartSource }),
 			...sessionRef,
 		};
+		pendingSessionStartSource = undefined;
 		return enqueue(() => sendToHerdrSocket(socketPath, SESSION_METHOD, frame, onError));
+	};
+
+	const clearSettledTurnReconcile = (): void => {
+		if (settledTurnReconcileTimer !== undefined) {
+			clearTimeout(settledTurnReconcileTimer);
+			settledTurnReconcileTimer = undefined;
+		}
+	};
+
+	const scheduleSettledTurnReconcile = (ctx: ExtensionContext): void => {
+		if (settledTurnReconcileTimer !== undefined) return;
+		settledTurnReconcileTimer = setTimeout(() => {
+			settledTurnReconcileTimer = undefined;
+			if (promptBlockedReason || !ctx.isIdle()) return;
+			void report("idle").then(() => reportSession(ctx));
+		}, SETTLED_TURN_RECONCILE_DELAY_MS);
 	};
 
 	// Announce presence and session identity as soon as the session is initialized.
@@ -246,6 +274,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// Busy while the agent loop is streaming a response. Re-report session identity
 	// in case the active session file changed (e.g. after /new, /resume, or /fork).
 	pi.on("agent_start", async (_event, ctx) => {
+		clearSettledTurnReconcile();
 		await report("working");
 		await reportSession(ctx);
 	});
@@ -256,6 +285,12 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	pi.on("agent_end", async (_event, ctx) => {
 		await report(promptBlockedReason ? "blocked" : "idle", promptBlockedReason);
 		await reportSession(ctx);
+	});
+
+	// Reconcile completion after the UI has had a chance to clear its streaming
+	// flag. This is deliberately non-blocking so it cannot delay the next turn.
+	pi.on("turn_end", (_event, ctx) => {
+		scheduleSettledTurnReconcile(ctx);
 	});
 
 	// An interactive prompt (permission gate, ask tool, confirm/input) is
