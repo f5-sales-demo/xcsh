@@ -75,9 +75,9 @@ class CiCapacityContractTests(unittest.TestCase):
         installer = (ROOT / "scripts/ci-bun-install.sh").read_text(encoding="utf-8")
         self.assertIn("--frozen-lockfile --concurrent-scripts 16", installer)
         self.assertIn('printf \'%s\\n\' "$bun_bin_dir" >>"$GITHUB_PATH"', installer)
-        self.assertIn(
-            'git -C "$workspace" diff --exit-code -- package.json bun.lock', installer
-        )
+        self.assertIn('launcher="packages/coding-agent/bin/xcsh.ts"', installer)
+        self.assertIn("mode change 100644 => 100755 $launcher", installer)
+        self.assertIn('git -C "$workspace" diff --exit-code', installer)
         package = (ROOT / "packages/coding-agent/package.json").read_text(
             encoding="utf-8"
         )
