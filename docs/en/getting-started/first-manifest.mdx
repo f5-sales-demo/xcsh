@@ -6,46 +6,21 @@ sidebar:
   label: "Complete your first manifest lifecycle"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+A manifest names one F5 Distributed Cloud resource with `kind`, `metadata`, and `spec`. Begin from an exported or catalog-backed example for the exact resource kind; do not invent schema fields.
 
-Validate, compare, apply, inspect, export, and delete a resource manifest.
+## How do I check a manifest without credentials?
 
-```yaml title="manifest.yaml"
-kind: origin_pool
-metadata:
-  name: example-origin-pool
-  namespace: example-namespace
-spec: {}
+```sh
+xcsh validate -f manifest.yaml --result-file validation.json
 ```
 
-The resource kind determines the API paths and validation rules. The `spec` above is intentionally incomplete: use it to exercise offline validation, then populate fields required by the current packaged catalog.
+Validation reads the file locally and returns a nonzero status for malformed or unsupported input. Review the aggregate JSON report before moving to a live context.
 
-## Prerequisites
+## How do I preview the live change?
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+```sh
+xcsh diff -f manifest.yaml --result-file diff.json
+xcsh apply -f manifest.yaml --dry-run client --result-file dry-run.json
+```
 
-## Procedure
-
-<Steps>
-
-1. Create a YAML manifest with `kind`, `metadata.name`, `metadata.namespace`, and `spec`.
-2. Run `xcsh validate -f manifest.yaml` offline.
-3. Run `xcsh diff -f manifest.yaml` with an active context.
-4. Apply only after reviewing the target, then inspect with `get` and `export`.
-5. Use `delete --dry-run=client` before an intentional deletion.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Update xcsh](../updates/).
+A diff requires the intended context. A dry run calculates the mutation path without applying it.

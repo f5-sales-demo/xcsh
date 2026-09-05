@@ -6,35 +6,18 @@ sidebar:
   label: "Use the interactive TUI"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Run `xcsh` without `--print` to open the terminal interface. Type `/` to discover commands available in the installed build.
 
-Navigate the prompt editor, status line, model selector, tool output, and command palette.
+## How do I send prompts and local files?
 
-## Prerequisites
+Enter text at the prompt. Prefix a file with `@`, for example:
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+```sh
+xcsh @README.md "List only the prerequisites"
+```
 
-## Procedure
+Images can be attached when the chosen model supports vision. Treat every attached file as prompt content and exclude secrets.
 
-<Steps>
+## How do I discover controls?
 
-1. Run `xcsh` without `--print`.
-2. Enter a prompt or type `/` to browse commands.
-3. Use `/hotkeys` for the key map active in your installed version.
-4. Use `/help` when a command or current mode is unclear.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Prompt with files and images](../prompts-files/).
+Use `/help` for command groups and `/hotkeys` for the active key map. Those runtime views outrank a copied key list because extensions and releases can change the available controls.

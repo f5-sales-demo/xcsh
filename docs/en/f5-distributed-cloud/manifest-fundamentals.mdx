@@ -6,45 +6,12 @@ sidebar:
   label: "Write resource manifests"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Each manifest describes desired state for one resource. `metadata.name` identifies it, `metadata.namespace` selects its scope when supported, and `spec` contains kind-specific data.
 
-Represent an F5 Distributed Cloud resource with a stable kind, metadata, and specification.
+## How should I create a starting manifest?
 
-```yaml title="manifest.yaml"
-kind: origin_pool
-metadata:
-  name: example-origin-pool
-  namespace: example-namespace
-spec: {}
-```
+Prefer `xcsh export <kind> <name> -f exported.yaml` for an existing resource. For a new resource, start from a repository example tied to the current catalog. Remove server-managed fields before reuse.
 
-The resource kind determines the API paths and validation rules. The `spec` above is intentionally incomplete: use it to exercise offline validation, then populate fields required by the current packaged catalog.
+## How do I keep a directory deterministic?
 
-## Prerequisites
-
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
-
-## Procedure
-
-<Steps>
-
-1. Choose a supported kind from the packaged API catalog.
-2. Set `metadata.name` and use a documentation-safe namespace such as `example-namespace`.
-3. Define the desired API payload under `spec`.
-4. Validate the file before any tenant request.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Validate and diff manifests](../validate-diff/).
+Use one resource per YAML document, stable names, and explicit namespaces. Run `xcsh validate -f manifests/ -R` so nested files are included intentionally.

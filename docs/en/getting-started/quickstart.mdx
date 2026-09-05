@@ -6,45 +6,18 @@ sidebar:
   label: "Quickstart"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+This quickstart proves the executable, provider selection, and one non-interactive model turn without changing repository or cloud state.
 
-Start an interactive session, inspect the available model, and validate a manifest without tenant credentials.
+## How do I run a bounded first prompt?
 
-```yaml title="manifest.yaml"
-kind: http_loadbalancer
-metadata:
-  name: example-load-balancer
-  namespace: example-namespace
-spec: {}
+```sh
+xcsh --version
+xcsh --list-models ''
+xcsh --no-session --no-tools -p "Reply with only: xcsh is ready"
 ```
 
-`xcsh validate` reads the packaged catalog and performs no tenant request. An empty `spec` may still fail the selected kind's minimum configuration; that failure proves local validation is working.
+Select a provider-qualified model with `--model` if more than one provider is configured. `--no-session` prevents persistence and `--no-tools` prevents tool side effects.
 
-## Prerequisites
+## What should I inspect if the prompt fails?
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
-
-## Procedure
-
-<Steps>
-
-1. Run `xcsh` in a project directory.
-2. Enter `/model` to inspect or select a model.
-3. Save the example manifest and run `xcsh validate -f manifest.yaml` in another terminal.
-4. Review the validation report before configuring live access.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Authenticate a model provider](../model-authentication/).
+Confirm the provider credential is available to the process without printing it, then run `xcsh --list-models <provider>`. A missing model points to provider configuration; a missing executable points back to [installation](../installation/).

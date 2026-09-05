@@ -6,11 +6,11 @@ sidebar:
   label: "CLI command and flag reference"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+The installed help is the command authority for its release.
 
-Review the current top-level commands, global flags, and resource command patterns.
+## Which top-level commands exist?
 
-| Command group | Commands |
+| Area | Commands |
 | --- | --- |
 | Resources | `validate`, `diff`, `create`, `apply`, `update`, `get`, `export`, `delete` |
 | Runtime | `config`, `setup`, `sandbox`, `stats`, `search`, `shell` |
@@ -18,33 +18,6 @@ Review the current top-level commands, global flags, and resource command patter
 | Interfaces | `chrome`, `office`, `herdr` |
 | Maintenance | `self-update`, `update --check` |
 
-Resource file commands accept `-f/--filename`, `-n/--namespace`, `-o/--output`, `-R/--recursive`, and `--result-file` as shown by their individual help. Mutation commands also support `--dry-run`; `update` reserves short `-f` for a manifest, so executable force-update uses `--force`.
+## How do I script a command safely?
 
-## Prerequisites
-
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
-
-## Procedure
-
-<Steps>
-
-1. Run `xcsh --help` for the installed version.
-2. Run `xcsh <command> --help` before scripting a command.
-3. Prefer long flags in automation.
-4. Capture structured output with `--result-file`, `--json`, or `--mode json` where supported.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Slash command reference](../slash-commands/).
+Run `xcsh <command> --help` against the pinned executable, prefer long flags, and request `--result-file` or JSON where supported. On `update`, `-f` means a resource manifest; executable force-update uses `--force`.

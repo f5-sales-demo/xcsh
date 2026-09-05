@@ -6,36 +6,12 @@ sidebar:
   label: "Overview"
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+Extend xcsh only when a built-in command or tool cannot express the task.
 
-Add skills, plugins, MCP servers, custom tools, hooks, rules, SDK integrations, and headless workers.
+## Which extension mechanism fits?
 
-<CardGrid>
-  <Card title="Create and load skills" icon="right-arrow">
-    [Package task-specific instructions in `SKILL.md` files at user or project scope.](./skills/)
-  </Card>
-  <Card title="Install plugins and marketplaces" icon="right-arrow">
-    [Discover, install, configure, update, and diagnose xcsh plugins.](./plugins-marketplaces/)
-  </Card>
-  <Card title="Connect an MCP server" icon="right-arrow">
-    [Add a local stdio or remote HTTP/SSE Model Context Protocol server.](./mcp-quickstart/)
-  </Card>
-  <Card title="Configure MCP transports" icon="right-arrow">
-    [Control MCP server transport, authentication, lifecycle, roots, tools, resources, and prompts.](./mcp-configuration/)
-  </Card>
-  <Card title="Build extensions and custom tools" icon="right-arrow">
-    [Add TypeScript behavior, slash commands, providers, or schema-validated tools.](./extensions-custom-tools/)
-  </Card>
-  <Card title="Use hooks and rules" icon="right-arrow">
-    [Apply project policy before or after commands and load contextual rules without changing the core runtime.](./hooks-rules/)
-  </Card>
-  <Card title="Embed xcsh with the SDK" icon="right-arrow">
-    [Create sessions and tools programmatically through the coding-agent package.](./sdk/)
-  </Card>
-  <Card title="Use JSON, RPC, and ACP modes" icon="right-arrow">
-    [Select a stable headless transport for scripts, process clients, or agent protocol integrations.](./json-rpc-acp/)
-  </Card>
-  <Card title="Operate manager and workers" icon="right-arrow">
-    [Run the control server and headless extension bridge used by tabbed and embedded interfaces.](./worker-manager/)
-  </Card>
-</CardGrid>
+- [Skills](./skills/) add discoverable instructions.
+- [Plugins](./plugins-marketplaces/) package installable capabilities.
+- [MCP](./mcp-quickstart/) connects out-of-process tools and resources.
+- [Extensions and custom tools](./extensions-custom-tools/) run TypeScript hooks or tools.
+- [SDK automation](./sdk/) embeds sessions or uses JSON/RPC/ACP and worker processes.

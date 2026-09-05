@@ -6,35 +6,16 @@ sidebar:
   label: "Headless modes"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Headless integrations select `json`, `rpc`, or `acp` with `--mode`. Each mode has a different framing contract; consumers must parse that protocol rather than decorated terminal text.
 
-Integrate xcsh with scripts through print, JSON, RPC, ACP, manager, and worker modes.
+## How do I start with the smallest surface?
 
-## Prerequisites
+```sh
+xcsh --mode json --no-session --no-tools -p "Return one sentence"
+```
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+Capture stdout as protocol data and stderr as diagnostics. Pin the xcsh version in automation and test framing against the exact release.
 
-## Procedure
+## When do I use the SDK instead?
 
-<Steps>
-
-1. Use `-p` for a bounded prompt that exits.
-2. Select `--mode json` when stdout must be machine-readable.
-3. Use RPC or ACP only with a client that implements the corresponding protocol.
-4. Run `manager` and `worker` as long-lived supervised processes and stop them with the supervisor.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Containers](../containers/).
+Use the SDK when the host process needs in-memory session control, tool registration, or provider events. See [SDK automation](/xcsh/en/extend-automate/sdk/).

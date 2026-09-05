@@ -6,35 +6,17 @@ sidebar:
   label: "Validate and diff manifests"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Validation checks local structure; diff compares that desired state with the live resource. A passing validation does not authorize or predict a live mutation.
 
-Catch local schema errors first, then compare desired state with live state.
+## How do I separate local and live checks?
 
-## Prerequisites
+```sh
+xcsh validate -f manifests/ -R --result-file validation.json
+xcsh diff -f manifests/ -R --result-file diff.json
+```
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+The first command needs no API credential. Run the second only after confirming the context and namespace. Read every create, update, preserve, and error entry in `diff.json`.
 
-## Procedure
+## What blocks the next step?
 
-<Steps>
-
-1. Run `xcsh validate -f manifests/ -R` without credentials.
-2. Correct missing fields, unknown kinds, invalid types, and duplicate names.
-3. Activate the intended context.
-4. Run `xcsh diff -f manifests/ -R --result-file diff.json` and review every change.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Create, apply, and update resources](../create-apply-update/).
+Stop on an unknown kind, duplicate identity, unexpected namespace, destructive difference, or request against the wrong context. Correct the source manifest and rerun both commands.

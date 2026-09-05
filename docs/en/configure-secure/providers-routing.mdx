@@ -6,35 +6,12 @@ sidebar:
   label: "Configure providers and model routing"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+xcsh resolves a requested model against available providers and credentials. A provider-qualified model name is the most explicit route.
 
-Select models directly or map default, smol, slow, and plan roles.
+## How do I confirm a route?
 
-## Prerequisites
+Run `xcsh --list-models <provider>`, then pass one returned name to `--model`. Environment keys and supported subscription sessions authenticate providers; never store tokens in committed settings.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## Where does LiteLLM fit?
 
-## Procedure
-
-<Steps>
-
-1. List available models with `xcsh --list-models all`.
-2. Choose one with `--model`, `/model`, or a settings role.
-3. Use `--smol`, `--slow`, and `--plan` for role overrides.
-4. Set provider order only when multiple authenticated routes expose the same model.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Manage authentication](../authentication/).
+LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base URL and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.

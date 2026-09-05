@@ -6,35 +6,12 @@ sidebar:
   label: "VS Code"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+The companion VS Code extension embeds an xcsh conversation in an editor workspace. Its extension manifest and source repository define the supported commands and distribution channel.
 
-Use the companion VS Code integration with the same xcsh model and session foundation.
+## What carries over from the terminal?
 
-## Prerequisites
+Provider configuration, model selection, session concepts, and workspace file boundaries follow the xcsh runtime. Open the intended workspace before starting a conversation.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## What is not asserted here?
 
-## Procedure
-
-<Steps>
-
-1. Install the published vscode-xcsh extension from its supported distribution channel.
-2. Open the intended workspace before starting a conversation.
-3. Configure provider authentication in xcsh, not in source files.
-4. Use the terminal CLI when validating headless behavior.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Chrome](../chrome/).
+No editor click sequence is documented without an Extension Development Host transcript. Use the terminal CLI to validate runtime behavior independently of the editor shell.

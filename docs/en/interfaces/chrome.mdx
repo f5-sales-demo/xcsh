@@ -6,35 +6,12 @@ sidebar:
   label: "Chrome"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+The Chrome integration connects xcsh to a browser session for supported console automation. The installed `xcsh chrome --help` output is the command authority.
 
-Use the xcsh Chrome extension and native host with an isolated automation profile.
+## What is the safe operating boundary?
 
-## Prerequisites
+Use a dedicated profile and an authorized target. Confirm the visible account, URL, and object before an action that changes state. Prefer deterministic F5 Distributed Cloud resource commands whenever they cover the same operation.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## What is verified here?
 
-## Procedure
-
-<Steps>
-
-1. Install or update the companion Chrome extension.
-2. Run `xcsh chrome setup` to install the native messaging host.
-3. Verify with `xcsh chrome status`.
-4. Keep console automation inside the tenant and task you are authorized to operate.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Microsoft Office task pane](../office/).
+The repository exposes Chrome session inspection and arrangement through the `chrome` command. Interface-specific procedures require a captured browser transcript; this page does not claim an untested click path.

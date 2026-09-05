@@ -1,0 +1,12 @@
+source_digest: 3b787eb20a910ee5dd92062e03f27ff94151a2ac
+xcsh_version: 21.11.7
+command: gh release view v21.11.7; sha256sum xcsh-linux-x64; sudo install; /usr/local/bin/xcsh --version
+exit_status: 0
+verification_level: executed-offline
+cleanup_result: temporary-download-removed
+affected_sections: docs/en/getting-started/installation.mdx#How do I confirm the selected executable?
+release_tag: v21.11.7
+published_at: 2026-09-05T06:10:27Z
+asset_digest: sha256:cdc9ab0c562c0e865a0dd51a7a2d7e93333fb8281ebb33f80b74e4642a87fe29
+installed_output: xcsh/21.11.7
+owner_mode: root:root 0755

@@ -6,35 +6,18 @@ sidebar:
   label: "Create, apply, and update resources"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+`create` requires absence, `update` requires an existing resource, and `apply` chooses create or update while preserving already-matching resources.
 
-Choose strict creation, convergent apply, or explicit update for a reviewed manifest.
+## Which mutation command fits?
 
-## Prerequisites
+```sh
+xcsh create -f manifest.yaml --dry-run client --result-file create-preview.json
+xcsh update -f manifest.yaml --dry-run client --result-file update-preview.json
+xcsh apply -f manifest.yaml --dry-run client --result-file apply-preview.json
+```
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+Review the preview, then repeat the same command without `--dry-run client`. Keep `--result-file` so automation can inspect the aggregate operation record.
 
-## Procedure
+## How do I verify the mutation?
 
-<Steps>
-
-1. Use `create` when an existing resource must be an error.
-2. Use `apply` to create missing resources, update differences, and preserve matches.
-3. Use `update` when the resource must already exist.
-4. Add `--dry-run=client` before a live mutation and retain `--result-file` output in automation.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Get, export, and delete resources](../get-export-delete/).
+Run `xcsh get <kind> <name> -n <namespace>` and compare the returned identity and relevant fields with the manifest. Do not treat process exit alone as state verification.

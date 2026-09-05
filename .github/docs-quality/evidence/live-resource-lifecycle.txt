@@ -1,0 +1,22 @@
+source_digest: 3b787eb20a910ee5dd92062e03f27ff94151a2ac
+xcsh_version: 21.11.8-candidate
+installed_release: 21.11.7
+context: f5-amer-ent
+scope: configured context; scope identifier omitted
+resource: healthcheck/xcsh-docs-hc-[timestamp]
+command: validate; diff; create --dry-run client; create; get; export; diff; update; apply; delete; get
+exit_status: 0 (expected final get: nonzero not_found)
+verification_level: executed-live
+cleanup_result: deleted-and-confirmed-absent
+validate: success=true failed=0
+diff_new: success=true status=new
+dry_run: success=true status=dry-run action=create
+create: success=true status=created
+get: success=true status=fetched
+export: success=true file_nonempty=true
+diff_update: success=true status=changed
+update: success=true status=updated
+apply_idempotent: success=true status=unchanged
+delete: success=true status=deleted
+confirm_absence: success=false error=not_found
+security: raw stdout, stderr, endpoint, token, namespace, tenant identifiers, and exported manifest discarded

@@ -6,35 +6,12 @@ sidebar:
   label: "Understand the API catalog"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+The catalog maps a supported `kind` to its API path and schema handling. It is the authority for whether a resource can use deterministic commands.
 
-See how xcsh resolves resource kinds and validation metadata from its packaged F5 Distributed Cloud catalog.
+## How do I choose a supported kind?
 
-## Prerequisites
+Use catalog discovery in the interactive shell, or inspect the generated resource catalog in the matching xcsh source release. Copy the exact `kind` spelling into the manifest.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## What if a kind is absent?
 
-## Procedure
-
-<Steps>
-
-1. Use the spelling returned by kind suggestions when a kind is unknown.
-2. Treat the packaged catalog as versioned with xcsh.
-3. Update xcsh when a newly available API kind is missing.
-4. Use `validate` to distinguish catalog/schema errors from authentication and network failures.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Automate the F5 console in Chrome](../console-automation/).
+Do not substitute a similar name. Use console automation only when that interface is explicitly supported, or wait for catalog support. An absent kind cannot be made safe by adding arbitrary fields to a manifest.

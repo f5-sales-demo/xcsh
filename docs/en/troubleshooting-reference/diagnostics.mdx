@@ -6,35 +6,20 @@ sidebar:
   label: "Run diagnostics"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Collect the smallest evidence set that identifies the failing layer. Never print credentials or raw context files.
 
-Collect version, configuration, provider, context, and sandbox evidence without exposing secrets.
+## The shell cannot find xcsh
 
-## Prerequisites
+Run `command -v xcsh` and `xcsh --version`. If the path belongs to an old installation channel, remove that channel and reinstall once through the intended channel.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## A model is unavailable or authentication fails
 
-## Procedure
+Run `xcsh --list-models <provider>`. If no models appear, verify the relevant credential is present without echoing it. Retry with a provider-qualified `--model` name.
 
-<Steps>
+## A context or resource command fails
 
-1. Run `xcsh --version`, `xcsh config path`, and `xcsh sandbox check`.
-2. Use `/model`, `/context status`, `/mcp status`, and `xcsh plugin doctor` for the failing subsystem.
-3. Reproduce with optional discovery disabled.
-4. Share sanitized errors and the smallest reproducer.
+Confirm `/context status` and the explicit namespace. Run `validate` to separate local manifest errors from live API errors, then retry a read-only `get` or `diff`.
 
-</Steps>
+## A tool or extension fails during startup
 
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Fix installation and provider problems](../installation-providers/).
+Use `--no-mcp --no-extensions --no-rules` and, if needed, `--no-pty`. Re-enable one subsystem at a time. Check optional dependencies with `xcsh setup <component> --check --json` and plugins with `xcsh plugin doctor`.

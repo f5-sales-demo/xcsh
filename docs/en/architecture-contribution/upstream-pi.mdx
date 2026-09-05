@@ -6,39 +6,12 @@ sidebar:
   label: "Relationship to pi"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+xcsh is derived from the open-source pi coding agent and adds F5 Distributed Cloud resource workflows, integrations, packaging, and project-specific governance.
 
-Understand what xcsh inherits from pi and where the project deliberately specializes.
+## How do I decide where a fix belongs?
 
-xcsh descends from the open-source [pi-mono](https://github.com/badlogic/pi-mono) project. It retains the terminal-first agent loop and extension-friendly design while adding its own F5 Distributed Cloud resource workflows, packaging, native subsystems, integrations, provider behavior, and operational policy.
+Trace the affected module and compare it with the pinned upstream lineage. A generic agent-loop defect may belong upstream; an xcsh resource command, integration, or packaging change belongs here.
 
-Upstream compatibility is evaluated deliberately; xcsh does not imply endorsement or support by pi's maintainers.
+## How do I preserve attribution?
 
-## Prerequisites
-
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
-
-## Procedure
-
-<Steps>
-
-1. Preserve attribution and compatible upstream architecture.
-2. Evaluate upstream changes against xcsh sessions, tools, providers, and interfaces.
-3. Keep F5 Distributed Cloud workflows in xcsh-specific layers.
-4. Describe xcsh as an independent project, not an F5 product or supported F5 distribution.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Contribute](../contributing/).
+Keep upstream license notices and document imported changes. Avoid copying a patch blindly across diverged modules; port the behavior with tests against the current xcsh architecture.

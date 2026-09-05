@@ -1,0 +1,19 @@
+source_digest: 3b787eb20a910ee5dd92062e03f27ff94151a2ac
+xcsh_version: 21.11.8-candidate
+command: production docs-builder container; builder Chromium 152 headless screenshots and DOM; link and LLM corpus audit
+exit_status: 0
+verification_level: browser-observed
+cleanup_result: temporary-browser-artifacts-removed
+affected_sections: docs/en/index.mdx; docs/en/getting-started/installation.mdx; docs/en/f5-distributed-cloud/get-export-delete.mdx; docs/en/interfaces/index.mdx
+builder_image: ghcr.io/f5-sales-demo/docs-builder@sha256:06be6f363e32f8b78898f4f4bdcb1ef86f698073c68a77701327e78611af2bce
+build_pages: 625
+build_files: 1471
+root_locale_redirect: /xcsh/ redirects to /xcsh/en/
+navigation: F5 Distributed Cloud route present
+search: search control present
+code_block: apt install command rendered
+layouts: desktop-1440x900 and mobile-390x844
+color_schemes: light and forced-dark
+link_audit: internal_refs=34365 broken=0
+llms: root, English, section, compact, and full files present; 48 unique English source pages represented; deleted slugs absent
+screenshots: home-light=108359B install-dark=141695B mobile=54234B

@@ -6,35 +6,12 @@ sidebar:
   label: "Use built-in tools"
 ---
 
-import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+Built-in tools cover file reading, search, editing, shell execution, images, browser work, notebooks, tasks, todos, and user questions. Optional plugins and MCP servers can add more.
 
-Let the agent read, search, edit, execute, inspect images, browse, and delegate within configured boundaries.
+## How do I reduce the tool boundary?
 
-## Prerequisites
+Use `--no-tools` for a text-only turn or `--tools read,grep` for an inspection-only run. Add `--no-mcp` and `--no-extensions` when discovery must not expand the set.
 
-- A current xcsh release and a shell in the intended working directory.
-- Authorization for any account, tenant, repository, or file the procedure touches.
-- A backup or dry run before an operation that changes or deletes state.
+## Which tools require extra care?
 
-## Procedure
-
-<Steps>
-
-1. Inspect available defaults in `xcsh --help`.
-2. Restrict a run with `--tools read,grep` or disable tools with `--no-tools`.
-3. Install optional Python support with `xcsh setup python` before using Python-backed tools.
-4. Review side effects from bash, write, browser, and task tools.
-
-</Steps>
-
-## Expected result
-
-The command or interface reports completion in the selected scope. For automation, prefer its structured result instead of parsing decorated terminal output.
-
-## Troubleshooting
-
-Confirm the installed version and resolved configuration first. Retry with optional plugins, MCP servers, or extensions disabled when they could affect the path. Never print tokens while collecting diagnostics.
-
-## Next steps
-
-Continue to [Resume and export sessions](../sessions/).
+Shell and edit can change the filesystem; browser can change remote state; task agents can perform several tool calls. Read and grep are normally observational, but can still expose sensitive file contents to the selected model.
