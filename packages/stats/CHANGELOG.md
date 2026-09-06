@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Normalized partial legacy usage costs before SQLite insertion and restricted the dashboard to
+  explicit IPv4 loopback without wildcard CORS access ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).
+
 ## [20.0.0] - 2026-08-01
 
 ### Fixed

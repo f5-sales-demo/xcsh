@@ -653,6 +653,50 @@
       ],
       "headings": [
         {
+          "text": "Which upstream range was reviewed?",
+          "readerQuestion": "Which upstream range was reviewed?",
+          "purpose": "Identify the last proven sync and the frozen upstream audit tip.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Which changes were accepted?",
+          "readerQuestion": "Which upstream changes were accepted into xcsh?",
+          "purpose": "Map each semantic-port wave to its upstream sources and xcsh delivery.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "Where does xcsh deliberately diverge?",
+          "readerQuestion": "Where does xcsh deliberately diverge from upstream?",
+          "purpose": "Record the xcsh-specific architecture and clean-break public interfaces preserved by the audit.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "What remains excluded or deferred?",
+          "readerQuestion": "Which upstream areas remain excluded or deferred?",
+          "purpose": "Bound the completed campaign and identify work requiring a later audit.",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "legacy-enrichment"
+          ],
+          "legacyConceptIds": []
+        },
+        {
           "text": "How do I decide where a fix belongs?",
           "readerQuestion": "How do I decide where a fix belongs?",
           "purpose": "Answer this question within Relationship to pi: How do I decide where a fix belongs?.",
@@ -2661,6 +2705,19 @@
           "text": "Which key namespaces exist?",
           "readerQuestion": "Which settings namespaces does the schema define, so I can find the key I need?",
           "purpose": "Answer this question within Configuration schema: Which settings namespaces does the schema define, so I can find the key I need?",
+          "evidence": [
+            "source-authority",
+            "candidate-cli",
+            "offline-configuration",
+            "legacy-enrichment",
+            "legacy-build-browser"
+          ],
+          "legacyConceptIds": []
+        },
+        {
+          "text": "How do I control session sleep prevention?",
+          "readerQuestion": "How do I control session sleep prevention?",
+          "purpose": "Document the power.sleepPrevention values, default, lifetime, and platform mappings.",
           "evidence": [
             "source-authority",
             "candidate-cli",

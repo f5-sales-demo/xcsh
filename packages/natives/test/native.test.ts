@@ -12,7 +12,7 @@ import {
 	grep,
 	htmlToMarkdown,
 	invalidateFsScanCache,
-	MacOSPowerAssertion,
+	PowerAssertion,
 	PtySession,
 	sanitizeText,
 	truncateToWidth,
@@ -477,12 +477,40 @@ describe("pi-natives", () => {
 			const input = "\x1b]0;title\x07hello";
 			expect(sanitizeText(input)).toBe("hello");
 		});
-		describe("MacOSPowerAssertion", () => {
-			it("should create a stoppable power assertion handle", () => {
-				const assertion = MacOSPowerAssertion.start({ reason: "pi-natives test" });
+		describe("PowerAssertion", () => {
+			it("creates a stoppable handle or reports a platform bus/service failure", () => {
+				let assertion: PowerAssertion | undefined;
+				try {
+					assertion = PowerAssertion.start({ reason: "pi-natives test" });
+				} catch (error) {
+					const message = error instanceof Error ? error.message : String(error);
+					expect(message).toMatch(/(system|session) bus|login1|screensaver|inhibit/i);
+					return;
+				}
 				assertion.stop();
 				assertion.stop();
 			});
+
+			it.skipIf(process.platform !== "linux" || !Bun.which("systemd-inhibit"))(
+				"holds a login1 inhibitor for the handle lifetime",
+				() => {
+					const reason = `xcsh natives ${crypto.randomUUID()}`;
+					const held = (): boolean =>
+						Bun.spawnSync(["systemd-inhibit", "--list", "--no-pager"]).stdout.toString().includes(reason);
+					let assertion: PowerAssertion;
+					try {
+						assertion = PowerAssertion.start({ reason, idle: true });
+					} catch {
+						return;
+					}
+					try {
+						expect(held()).toBe(true);
+					} finally {
+						assertion.stop();
+					}
+					expect(held()).toBe(false);
+				},
+			);
 		});
 	});
 

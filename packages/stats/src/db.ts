@@ -101,6 +101,16 @@ export function setFileOffset(sessionFile: string, offset: number, lastModified:
 	stmt.run(sessionFile, offset, lastModified);
 }
 
+function normalizeUsageCost(cost: MessageStats["usage"]["cost"]): MessageStats["usage"]["cost"] {
+	const partial = cost as Partial<MessageStats["usage"]["cost"]>;
+	const input = partial.input ?? 0;
+	const output = partial.output ?? 0;
+	const cacheRead = partial.cacheRead ?? 0;
+	const cacheWrite = partial.cacheWrite ?? 0;
+	const total = partial.total ?? input + output + cacheRead + cacheWrite;
+	return { input, output, cacheRead, cacheWrite, total };
+}
+
 /**
  * Insert message stats into the database.
  */
@@ -119,6 +129,7 @@ export function insertMessageStats(stats: MessageStats[]): number {
 	let inserted = 0;
 	const insert = db.transaction(() => {
 		for (const s of stats) {
+			const cost = normalizeUsageCost(s.usage.cost);
 			const result = stmt.run(
 				s.sessionFile,
 				s.entryId,
@@ -137,11 +148,11 @@ export function insertMessageStats(stats: MessageStats[]): number {
 				s.usage.cacheWrite,
 				s.usage.totalTokens,
 				s.usage.premiumRequests ?? 0,
-				s.usage.cost.input,
-				s.usage.cost.output,
-				s.usage.cost.cacheRead,
-				s.usage.cost.cacheWrite,
-				s.usage.cost.total,
+				cost.input,
+				cost.output,
+				cost.cacheRead,
+				cost.cacheWrite,
+				cost.total,
 			);
 			if (result.changes > 0) inserted++;
 		}

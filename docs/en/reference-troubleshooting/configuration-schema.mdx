@@ -15,7 +15,7 @@ sidebar:
 | Appearance | `theme`, `statusLine`, `display`, `tui`, `terminal`, `images`, `media` |
 | Model and routing | `routing`, `retry`, `thinkingBudgets`, `providers`, `exa` |
 | Interaction | `startup`, `keybindings`, `completion`, `ask`, `stt`, `marketplace` |
-| Context | `context`, `contextPromotion`, `compaction`, `branchSummary`, `memories`, `ttsr` |
+| Context and session | `context`, `contextPromotion`, `compaction`, `branchSummary`, `memories`, `ttsr`, `power` |
 | Editing | `edit`, `read`, `lsp`, `bashInterceptor`, `python` |
 | Tools | `tools`, `todo`, `find`, `grep`, `astGrep`, `astEdit`, `notebook`, `fetch`, `browser`, `web_search`, `calc`, `checkpoint`, `debug`, `inspect_image`, `generate_image`, `renderMermaid`, `bash`, `async`, `mcp` |
 | Tasks and capabilities | `task`, `tasks`, `skills`, `commands` |
@@ -23,6 +23,12 @@ sidebar:
 | Repository workflows | `commit`, `dev` |
 
 A key is `namespace.name`, as in `compaction.thresholdPercent` or `sandbox.allowRead`. Nested groups extend that form, as in `todo.reminders.max`.
+
+## How do I control session sleep prevention?
+
+`power.sleepPrevention` defaults to `idle`. Set it to `off`, `idle`, `display`, or `system`; each
+level is cumulative and applies only while an agent session is active. xcsh maps the setting to
+IOKit on macOS, login1 and ScreenSaver on Linux, and thread-affine execution state on Windows.
 
 ## How do I inspect the effective schema-backed values?
 

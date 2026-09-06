@@ -2,6 +2,12 @@
 
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Kept `@` directory completion open after Tab or Enter without inserting a trailing space ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).
+
 ## [20.3.0] - 2026-08-04
 
 <!-- textlint-disable terminology -->
@@ -274,7 +280,7 @@
 
 ### Fixed
 
-- Fixed terminal scrolling when displaying overlays after rendering large content, preventing hundreds of blank lines from being output
+- Fixed terminal scrolling when displaying overlays after rendering large content, preventing hundreds of empty lines from being output
 
 ## [11.3.0] - 2026-02-06
 
@@ -307,7 +313,7 @@
 
 ### Fixed
 
-- Fixed rendering of extra blank lines when content shrinks by improving cursor positioning logic during line deletion
+- Fixed rendering of extra empty lines when content shrinks by improving cursor positioning logic during line deletion
 - Fixed cursor display position in Input component when scrolling horizontally through long text
 - Fixed Kitty keyboard protocol disable sequence to use safe write method, preventing potential output buffering issues
 - Fixed unnecessary full-screen redraws when changes occur in out-of-view components (e.g., spinners), reducing terminal scroll events and improving performance on slower connections
@@ -430,7 +436,7 @@
 - Improved blockquote rendering with text wrapping in Markdown component
 - Restructured terminal capabilities from interface-based to class-based model
 - Improved table column width calculation with word-aware wrapping
-- Refactored text utilities to use native WASM implementations for strings >256 chars with JS fast path
+- Refactored text utilities to use native Wasm implementations for strings >256 chars with JS fast path
 
 ### Fixed
 

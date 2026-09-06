@@ -22,6 +22,10 @@
 
 ### Changed
 
+- Added `power.sleepPrevention` with an `idle` default and cumulative `off`, `idle`, `display`, and
+  `system` modes for session-scoped sleep prevention on macOS, Linux, and Windows
+  ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).
+
 - Unified generated and existing media publication behind the versioned `xcsh.media/v1` result
   contract so TUI, Browser, Office, RPC, and ACP transports no longer identify media by tool name
   ([#3202](https://github.com/f5-sales-demo/xcsh/issues/3202)).

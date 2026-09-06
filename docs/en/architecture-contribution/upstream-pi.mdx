@@ -8,10 +8,60 @@ sidebar:
 
 xcsh is derived from the open-source pi coding agent and adds F5 Distributed Cloud resource workflows, integrations, packaging, and project-specific governance.
 
+## Which upstream range was reviewed?
+
+The last proven sync with `can1357/oh-my-pi` was `d350ea60e` on April 9, 2026. The security-first
+audit reviewed the divergent line through the frozen tip `b2f25dbfe1` on September 5, 2026.
+Because the repositories no longer share a usable linear history, accepted changes are semantic
+ports with adapted regressions rather than merges or ancestry-based cherry-picks.
+
+## Which changes were accepted?
+
+The four implementation waves accepted these upstream pull requests:
+
+| Wave | Upstream pull requests | xcsh delivery |
+| --- | --- | --- |
+| Provider and prompt security | #2147, the opaque-thinking portion of #3239, #7067, and #8727 | #3710 |
+| Configuration and execution security | #7362 and #5636 | #3720 |
+| Core runtime | #7743, #10415, #10523, #10325, and #10550 | #3723 |
+| Terminal and platform | #10613, #10997, #10492, #9233, and #7634 | #3724 |
+
+These ports protect provider-bound secrets and compaction boundaries, enforce exact-case
+environment references and complete protocol tails, repair Responses replay and shared MCP
+results, improve rate-limit and retained-string behavior, chain directory completion, extend
+power assertions across supported platforms, and harden stats persistence and network exposure.
+The source pull requests remain attributable to `can1357/oh-my-pi`; the xcsh deliveries link the
+exact commits and regression evidence.
+
+## Where does xcsh deliberately diverge?
+
+xcsh retains its own:
+
+- F5-scoped packages, prompts-as-files, tool factories, and capability discovery;
+- SQLite multi-credential storage, multi-account authentication, and provider routing;
+- MCP, SSH, F5 Distributed Cloud, Office, and browser integrations;
+- Bun-first runtime, session semantics, release pipeline, branding, and governance.
+
+Public interfaces use prerelease clean breaks. In this wave,
+`MacOSPowerAssertion`/`MacOSPowerAssertionOptions` became
+`PowerAssertion`/`PowerAssertionOptions` without aliases, and `power.sleepPrevention` was added with
+an `idle` default.
+
+## What remains excluded or deferred?
+
+Upstream workflows, branding, release machinery, generated model catalogs, compatibility shims,
+new packages, and large unrelated subsystems are excluded. The security-scan subsystem in #7048
+and the native minimizer in #2176 remain deferred. The range-dashboard optimization in #9327 and
+earendil-works/pi-only fullscreen transcript, mouse, clipboard, and renderer subsystems also remain
+outside this campaign. Commits after either frozen source tip require a later audit.
+
 ## How do I decide where a fix belongs?
 
-Trace the affected module and compare it with the pinned upstream lineage. A generic agent-loop defect may belong upstream; an xcsh resource command, integration, or packaging change belongs here.
+Trace the affected module and compare it with the pinned upstream lineage. A generic agent-loop
+defect may belong upstream; an xcsh resource command, integration, or packaging change belongs
+here.
 
 ## How do I preserve attribution?
 
-Keep upstream license notices and document imported changes. Avoid copying a patch blindly across diverged modules; port the behavior with tests against the current xcsh architecture.
+Keep upstream license notices and document imported changes. Avoid copying a patch blindly across
+diverged modules; port the behavior with tests against the current xcsh architecture.

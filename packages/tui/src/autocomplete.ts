@@ -89,6 +89,11 @@ function parsePathPrefix(prefix: string): { rawPrefix: string; isAtPrefix: boole
 	return { rawPrefix: prefix, isAtPrefix: false, isQuotedPrefix: false };
 }
 
+/** Whether a completion value represents a directory, including quoted and Windows paths. */
+export function isDirectoryCompletionValue(value: string): boolean {
+	return /[\\/]["']?$/.test(value);
+}
+
 function buildCompletionValue(
 	path: string,
 	options: { isDirectory: boolean; isAtPrefix: boolean; isQuotedPrefix: boolean },
@@ -363,15 +368,16 @@ export class CombinedAutocompleteProvider implements AutocompleteProvider {
 
 		// Check if we're completing a file attachment (prefix starts with "@")
 		if (prefix.startsWith("@")) {
-			// This is a file attachment completion
-			const newLine = `${beforePrefix + item.value} ${afterCursor}`;
+			// This is a file attachment completion. Keep directory paths open for traversal.
+			const suffix = isDirectoryCompletionValue(item.value) ? "" : " ";
+			const newLine = `${beforePrefix + item.value}${suffix}${afterCursor}`;
 			const newLines = [...lines];
 			newLines[cursorLine] = newLine;
 
 			return {
 				lines: newLines,
 				cursorLine,
-				cursorCol: beforePrefix.length + item.value.length + 1, // +1 for space
+				cursorCol: beforePrefix.length + item.value.length + suffix.length,
 			};
 		}
 

@@ -20,4 +20,9 @@ Module augmentation describes native exports to TypeScript, wrappers translate p
 
 The addon covers terminal and pseudo-terminal (PTY) processes, filesystem scanning and text search, media/system utilities, and cancellable task primitives. Data crossing Node-API must have an explicit encoding and ownership rule; native tasks must release resources on both completion and cancellation.
 
+`PowerAssertion.start(options?)` returns an idempotently stoppable session handle. Its
+`PowerAssertionOptions` fields are `reason`, `idle`, `display`, `system`, and `user`; an omitted set
+of mode flags defaults to idle-sleep prevention. The implementation uses IOKit on macOS, login1
+and best-effort ScreenSaver inhibition on Linux, and a dedicated execution-state thread on Windows.
+
 Read `packages/natives` for the TypeScript wrappers and loader, and `crates/pi-natives/src` for the Rust implementations.

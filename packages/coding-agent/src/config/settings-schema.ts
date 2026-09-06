@@ -901,6 +901,33 @@ export const SETTINGS_SCHEMA = {
 		},
 	},
 
+	// Session power management
+	"power.sleepPrevention": {
+		type: "enum",
+		values: ["off", "idle", "display", "system"] as const,
+		default: "idle",
+		ui: {
+			tab: "interaction",
+			group: "Power",
+			label: "Sleep Prevention",
+			description: "Prevent the system from sleeping while an agent session is active.",
+			options: [
+				{ value: "off", label: "Off", description: "Allow normal system and display sleep" },
+				{
+					value: "idle",
+					label: "Prevent Idle Sleep",
+					description: "Keep the system awake while a session is open",
+				},
+				{ value: "display", label: "Prevent Display Sleep", description: "Also keep the display awake" },
+				{
+					value: "system",
+					label: "Prevent System Sleep",
+					description: "Use every available sleep-prevention mode",
+				},
+			],
+		},
+	},
+
 	// Notifications
 	"completion.notify": {
 		type: "enum",
