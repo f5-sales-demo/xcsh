@@ -331,6 +331,37 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
+	it("reports normalized phases in order without prompt or tool data", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			const privateSentinels = {
+				prompt: "PRIVATE_PROMPT_TEXT",
+				toolName: "PRIVATE_TOOL_NAME",
+				toolArgs: "PRIVATE_TOOL_ARGS",
+			};
+			for (const phase of ["submitting", "thinking", "tool_call", "awaiting_user", "tool_call", "idle"]) {
+				await handlers.get("turn_phase")?.({ type: "turn_phase", phase, turnId: 7, ...privateSentinels }, busyCtx);
+			}
+
+			await waitFor(() => herdr.received.filter(frame => frame.method === "pane.report_metadata").length >= 6);
+			const metadataFrames = herdr.received.filter(frame => frame.method === "pane.report_metadata");
+			expect(
+				metadataFrames.map(frame => Object.values(frame.params.state_labels as Record<string, string>)[0]),
+			).toEqual(["submitting", "thinking", "tool_call", "awaiting_user", "tool_call", "idle"]);
+			const capturedFrames = JSON.stringify(herdr.received);
+			for (const sentinel of Object.values(privateSentinels)) {
+				expect(capturedFrames).not.toContain(sentinel);
+			}
+		} finally {
+			await herdr.close();
+		}
+	});
+
 	it("reconciles a settled completed turn to idle without treating an active turn as idle", async () => {
 		const herdr = await startFakeHerdr();
 		try {

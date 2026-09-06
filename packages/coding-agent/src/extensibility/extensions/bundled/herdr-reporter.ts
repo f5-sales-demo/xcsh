@@ -150,6 +150,9 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// Retains the fixed reason while an interactive prompt awaits the user, so an
 	// agent_end duplicate cannot erase herdr's stored blocked message.
 	let promptBlockedReason: string | undefined;
+	// Once the normalized contract is observed it is authoritative. The legacy
+	// event mappings remain only for older hosts that load this bundled extension.
+	let normalizedPhasesObserved = false;
 	// Last session ref already delivered, so repeated lifecycle events do not
 	// re-send an unchanged ref every turn.
 	let lastSessionRefKey: string | undefined;
@@ -263,9 +266,9 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		return enqueue(() => sendToHerdrSocket(socketPath, METADATA_METHOD, frame, onError));
 	};
 
-	const setPhaseLabel = (label: string): Promise<void> =>
+	const setPhaseLabel = (label: string, state: "idle" | "working" | "blocked" = "working"): Promise<void> =>
 		reportMetadata({
-			state_labels: { working: label },
+			state_labels: { [state]: label },
 			ttl_ms: PHASE_LABEL_TTL_MS,
 		});
 
@@ -353,7 +356,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// in case the active session file changed (e.g. after /new, /resume, or /fork).
 	pi.on("agent_start", async (_event, ctx) => {
 		clearSettledTurnReconcile();
-		await report("working");
+		if (!normalizedPhasesObserved) await report("working");
 		await reportSession(ctx);
 	});
 
@@ -361,35 +364,51 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// This is also the first point where a lazily-created session file is certain
 	// to exist, so it is the backstop for capturing the resume ref.
 	pi.on("agent_end", async (_event, ctx) => {
-		await report(promptBlockedReason ? "blocked" : "idle", promptBlockedReason);
+		if (!normalizedPhasesObserved) await report(promptBlockedReason ? "blocked" : "idle", promptBlockedReason);
 		await reportSession(ctx);
 	});
 
 	// Reconcile completion after the UI has had a chance to clear its streaming
 	// flag. This is deliberately non-blocking so it cannot delay the next turn.
 	pi.on("turn_end", (_event, ctx) => {
-		scheduleSettledTurnReconcile(ctx);
+		if (!normalizedPhasesObserved) scheduleSettledTurnReconcile(ctx);
 	});
 
 	// An interactive prompt (permission gate, ask tool, confirm/input) is
 	// awaiting the user: that is herdr's "needs attention" (blocked) state.
 	pi.on("user_prompt_start", async event => {
 		promptBlockedReason = getPromptBlockedReason(event.kind);
-		void report("blocked", promptBlockedReason);
-		await clearPhaseLabel();
+		if (!normalizedPhasesObserved) {
+			void report("blocked", promptBlockedReason);
+			await clearPhaseLabel();
+		}
 	});
 
 	pi.on("user_prompt_end", async (_event, ctx) => {
 		promptBlockedReason = undefined;
-		await report(ctx.isIdle() ? "idle" : "working");
+		if (!normalizedPhasesObserved) await report(ctx.isIdle() ? "idle" : "working");
 		await reportSession(ctx);
-		if (!ctx.isIdle()) {
+		if (!normalizedPhasesObserved && !ctx.isIdle()) {
 			await setPhaseLabel("tool");
 		}
 	});
 
+	pi.on("turn_phase", async (event, ctx) => {
+		normalizedPhasesObserved = true;
+		const state =
+			event.phase === "awaiting_user"
+				? "blocked"
+				: event.phase === "submitting" || event.phase === "thinking" || event.phase === "tool_call"
+					? "working"
+					: "idle";
+		await report(state, event.phase === "awaiting_user" ? "user input required" : undefined);
+		await setPhaseLabel(event.phase, state);
+		await reportSession(ctx);
+	});
+
 	// Transient phase-label metadata (thinking / tool / retry / cleanup):
 	pi.on("message_update", async event => {
+		if (normalizedPhasesObserved) return;
 		if (event.assistantMessageEvent.type === "thinking_start") {
 			await setPhaseLabel("thinking");
 		} else if (event.assistantMessageEvent.type === "thinking_end") {
@@ -398,26 +417,32 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	});
 
 	pi.on("tool_execution_start", async () => {
+		if (normalizedPhasesObserved) return;
 		await setPhaseLabel("tool");
 	});
 
 	pi.on("tool_execution_end", async () => {
+		if (normalizedPhasesObserved) return;
 		await clearPhaseLabel();
 	});
 
 	pi.on("auto_retry_start", async () => {
+		if (normalizedPhasesObserved) return;
 		await setPhaseLabel("retry");
 	});
 
 	pi.on("auto_retry_end", async () => {
+		if (normalizedPhasesObserved) return;
 		await clearPhaseLabel();
 	});
 
 	pi.on("auto_compaction_start", async () => {
+		if (normalizedPhasesObserved) return;
 		await setPhaseLabel("cleanup");
 	});
 
 	pi.on("auto_compaction_end", async () => {
+		if (normalizedPhasesObserved) return;
 		await clearPhaseLabel();
 	});
 

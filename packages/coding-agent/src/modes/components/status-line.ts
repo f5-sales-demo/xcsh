@@ -9,6 +9,7 @@ import type { StatusLinePreset, StatusLineSegmentId, StatusLineSeparatorStyle } 
 import { theme } from "../../modes/theme/theme";
 import type { AgentSession } from "../../session/agent-session";
 import { calculatePromptTokens } from "../../session/compaction/compaction";
+import type { NormalizedTurnPhase } from "../../session/turn-phase";
 import type { EventBus } from "../../utils/event-bus";
 import * as git from "../../utils/git";
 import { queryGitStatus } from "../../utils/gitstatus";
@@ -67,6 +68,7 @@ export class StatusLineComponent implements Component {
 	// chord is pending. Populated by the InputController's ChordDispatcher
 	// callbacks; rendered as a dim right-aligned segment in the top border.
 	#chordPending: string | null = null;
+	#turnPhase: NormalizedTurnPhase = "idle";
 
 	// Git status caching (1s TTL)
 	#cachedGitStatus: {
@@ -146,6 +148,12 @@ export class StatusLineComponent implements Component {
 	clearChordPending(): void {
 		if (this.#chordPending === null) return;
 		this.#chordPending = null;
+		this.#onStatusChanged?.();
+	}
+
+	setTurnPhase(phase: NormalizedTurnPhase): void {
+		if (this.#turnPhase === phase) return;
+		this.#turnPhase = phase;
 		this.#onStatusChanged?.();
 	}
 
@@ -520,6 +528,12 @@ export class StatusLineComponent implements Component {
 				fg: defaultFg,
 			});
 		}
+
+		rightParts.push({
+			content: theme.fg("dim", this.#turnPhase),
+			bg: defaultBg,
+			fg: defaultFg,
+		});
 
 		// Chord-pending indicator: rightmost segment, dim style. Appended last
 		// so it visually sits at the far right of the top border (after any

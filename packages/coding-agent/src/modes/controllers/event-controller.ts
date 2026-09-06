@@ -138,6 +138,11 @@ export class EventController {
 		this.ctx.updateEditorTopBorder();
 
 		switch (event.type) {
+			case "turn_phase":
+				this.ctx.statusLine.setTurnPhase(event.phase);
+				this.ctx.ui.requestRender();
+				break;
+
 			case "agent_start":
 				this.#lastIntent = undefined;
 				this.#readToolCallArgs.clear();

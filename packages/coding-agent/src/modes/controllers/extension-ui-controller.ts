@@ -661,7 +661,7 @@ export class ExtensionUiController {
 	 * when it resolves. Fire-and-forget: reporting must never disturb the prompt.
 	 */
 	#emitPromptSignal(type: "user_prompt_start" | "user_prompt_end", kind: UserPromptKind): void {
-		this.ctx.session.extensionRunner?.emit({ type, kind }).catch(() => {});
+		this.ctx.session.notifyUserPrompt(type === "user_prompt_start" ? "start" : "end", kind);
 	}
 
 	showHookSelector(

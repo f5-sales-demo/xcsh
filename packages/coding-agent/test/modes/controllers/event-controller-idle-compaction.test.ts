@@ -76,4 +76,20 @@ describe("EventController idle compaction teardown", () => {
 
 		expect(runIdleCompaction).not.toHaveBeenCalled();
 	});
+
+	it("renders the normalized phase without provider or tool payloads", async () => {
+		const setTurnPhase = vi.fn();
+		const context = {
+			isInitialized: true,
+			ui: { requestRender: vi.fn() },
+			statusLine: { invalidate: vi.fn(), setTurnPhase },
+			updateEditorTopBorder: vi.fn(),
+		} as unknown as InteractiveModeContext;
+		const controller = new EventController(context);
+
+		await controller.handleEvent({ type: "turn_phase", phase: "tool_call", turnId: 4 });
+
+		expect(setTurnPhase).toHaveBeenCalledWith("tool_call");
+		expect(JSON.stringify(setTurnPhase.mock.calls)).not.toContain("toolCallId");
+	});
 });

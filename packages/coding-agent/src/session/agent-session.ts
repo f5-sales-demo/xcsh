@@ -99,6 +99,7 @@ import type {
 	TreePreparation,
 	TurnEndEvent,
 	TurnStartEvent,
+	UserPromptKind,
 } from "../extensibility/extensions";
 import type { CompactOptions, ContextUsage } from "../extensibility/extensions/types";
 import { ExtensionToolWrapper } from "../extensibility/extensions/wrapper";
@@ -184,10 +185,12 @@ import type {
 } from "./session-manager";
 import { getLatestCompactionEntry } from "./session-manager";
 import { ToolChoiceQueue } from "./tool-choice-queue";
+import { TurnPhaseController, type TurnPhaseEvent } from "./turn-phase";
 
 /** Session-specific events that extend the core AgentEvent */
 export type AgentSessionEvent =
 	| AgentEvent
+	| TurnPhaseEvent
 	| RoutingEvent
 	| { type: "auto_compaction_start"; reason: "threshold" | "overflow" | "idle"; action: "context-full" | "handoff" }
 	| {
@@ -473,6 +476,7 @@ export class AgentSession {
 	// Event subscription state
 	#unsubscribeAgent?: () => void;
 	#eventListeners: AgentSessionEventListener[] = [];
+	#turnPhase = new TurnPhaseController(event => this.#publishTurnPhase(event));
 
 	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
 	// dispose() unregisters them. Prevents leaked listeners from mutating dead session state.
@@ -783,7 +787,7 @@ export class AgentSession {
 	}
 
 	async #emitSessionEvent(event: AgentSessionEvent): Promise<void> {
-		if (event.type === "message_update") {
+		if (event.type === "message_update" || event.type === "turn_phase") {
 			this.#emit(event);
 			void this.#queueExtensionEvent(event);
 			return;
@@ -808,6 +812,25 @@ export class AgentSession {
 
 	/** Internal handler for agent events - shared by subscribe and reconnect */
 	#handleAgentEvent = async (event: AgentEvent): Promise<void> => {
+		if (event.type === "agent_start") {
+			this.#turnPhase.startAgentLoop();
+		} else if (event.type === "turn_start") {
+			this.#turnPhase.startModelTurn();
+		} else if (event.type === "message_update" && event.assistantMessageEvent.type === "toolcall_start") {
+			const content =
+				event.message.role === "assistant"
+					? event.message.content[event.assistantMessageEvent.contentIndex]
+					: undefined;
+			if (content?.type === "toolCall") this.#turnPhase.startTool(content.id);
+		} else if (event.type === "message_update" && event.assistantMessageEvent.type === "server_tool_start") {
+			this.#turnPhase.startTool(`server:${event.assistantMessageEvent.toolId}`);
+		} else if (event.type === "message_update" && event.assistantMessageEvent.type === "server_tool_end") {
+			this.#turnPhase.endTool(`server:${event.assistantMessageEvent.toolId}`);
+		} else if (event.type === "tool_execution_start") {
+			this.#turnPhase.startTool(event.toolCallId);
+		} else if (event.type === "tool_execution_end") {
+			this.#turnPhase.endTool(event.toolCallId);
+		}
 		if (event.type === "message_end" && event.message.role === "assistant" && event.message.usage) {
 			this.#contextProfileCollector.recordProviderUsage(this.agent.state.model, event.message.usage);
 		}
@@ -863,6 +886,23 @@ export class AgentSession {
 		}
 
 		await this.#emitSessionEvent(displayEvent);
+
+		// `agent_end` is the provider-neutral completion boundary. Settle only
+		// after subscribers have received it, so interactive consumers can begin
+		// clearing provider/tool status before Herdr observes idle. This also
+		// covers continuations that call Agent.continue() without #promptWithMessage.
+		if (event.type === "agent_end") {
+			const lastAssistant = [...event.messages]
+				.reverse()
+				.find((message): message is AssistantMessage => message.role === "assistant");
+			this.#turnPhase.settle(
+				lastAssistant?.stopReason === "aborted"
+					? "aborted"
+					: lastAssistant?.stopReason === "error"
+						? "error"
+						: "stop",
+			);
+		}
 
 		if (event.type === "turn_start") {
 			this.#resetStreamingEditState();
@@ -1995,7 +2035,9 @@ export class AgentSession {
 	/** Emit extension events based on session events */
 	async #emitExtensionEvent(event: AgentSessionEvent): Promise<void> {
 		if (!this.#extensionRunner) return;
-		if (event.type === "agent_start") {
+		if (event.type === "turn_phase") {
+			await this.#extensionRunner.emit(event);
+		} else if (event.type === "agent_start") {
 			this.#turnIndex = 0;
 			await this.#extensionRunner.emit({ type: "agent_start" });
 		} else if (event.type === "agent_end") {
@@ -2104,6 +2146,21 @@ export class AgentSession {
 				maxAttempts: event.maxAttempts,
 			});
 		}
+	}
+
+	#publishTurnPhase(event: TurnPhaseEvent): void {
+		void this.#emitSessionEvent(event);
+	}
+
+	notifyUserPrompt(type: "start" | "end", kind: UserPromptKind): void {
+		if (type === "start") this.#turnPhase.startUserPrompt();
+		else this.#turnPhase.endUserPrompt();
+		if (!this.#extensionRunner) return;
+		const emit = async () => {
+			await this.#extensionRunner?.emit({ type: type === "start" ? "user_prompt_start" : "user_prompt_end", kind });
+		};
+		const queued = this.#queuedExtensionEvents.then(emit, emit);
+		this.#queuedExtensionEvents = queued.catch(() => {});
 	}
 
 	/**
@@ -3296,7 +3353,10 @@ export class AgentSession {
 		},
 	): Promise<void> {
 		this.#promptInFlightCount++;
+		this.#turnPhase.startTurn();
 		const generation = this.#promptGeneration;
+		let settled = false;
+		let agentLoopStarted = false;
 		try {
 			// Flush any pending bash messages before the new prompt
 			this.#flushPendingBashMessages();
@@ -3414,13 +3474,19 @@ export class AgentSession {
 				options?.toolChoice || options?.serverTools
 					? { toolChoice: options?.toolChoice, serverTools: options?.serverTools }
 					: undefined;
+			agentLoopStarted = true;
 			await logger.ttftAttr("ttft.agent-loop-total", () =>
 				this.#promptAgentWithIdleRetry(messages, agentPromptOptions),
 			);
 			if (!options?.skipPostPromptRecoveryWait) {
 				await this.#waitForPostPromptRecovery();
 			}
+		} catch (error) {
+			this.#turnPhase.settle(this.#findLastAssistantMessage()?.stopReason === "aborted" ? "aborted" : "error");
+			settled = true;
+			throw error;
 		} finally {
+			if (!agentLoopStarted && !settled) this.#turnPhase.settle("aborted");
 			this.#promptInFlightCount = Math.max(0, this.#promptInFlightCount - 1);
 		}
 	}
