@@ -15,7 +15,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { $env, isEnoent, logger, readProviderFromModelsYml } from "@f5-sales-demo/pi-utils";
+import { $env, $envExact, isEnoent, logger, readProviderFromModelsYml } from "@f5-sales-demo/pi-utils";
 import { hardenAgentConfigFileSync, writeAgentConfigFileSync } from "./agent-config-file";
 import { DEFAULT_MODEL_ROLE } from "./settings-schema";
 
@@ -143,7 +143,7 @@ export function readLiteLLMConfig(modelsPath: string): LiteLLMConfig | undefined
 	if (!apiKey) {
 		resolvedApiKey = $env.LITELLM_API_KEY;
 	} else if (apiKey.kind === "envVar") {
-		resolvedApiKey = process.env[apiKey.name] ?? $env.LITELLM_API_KEY;
+		resolvedApiKey = $envExact(apiKey.name) ?? $env.LITELLM_API_KEY;
 	} else if (apiKey.kind === "shellSecret") {
 		resolvedApiKey = $env.LITELLM_API_KEY;
 	} else {

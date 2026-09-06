@@ -5,6 +5,7 @@
  */
 
 import { executeShell } from "@f5-sales-demo/pi-natives";
+import { $envExact } from "@f5-sales-demo/pi-utils";
 
 /**
  * Matches strings that look like environment variable names: ALL_CAPS_WITH_UNDERSCORES.
@@ -33,7 +34,7 @@ export async function resolveConfigValue(config: string): Promise<string | undef
 	if (config.startsWith("!")) {
 		return await executeCommand(config);
 	}
-	const envValue = process.env[config];
+	const envValue = $envExact(config);
 	if (envValue) return envValue;
 	// Reject unresolved env var names to prevent sending literal names as API keys.
 	// Actual literal API keys (sk-ant-..., UUIDs, etc.) won't match this pattern.

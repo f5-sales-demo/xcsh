@@ -84,6 +84,29 @@ export function $pickenv(...keys: string[]): string | undefined {
 }
 
 /**
+ * Read an environment variable by its exact, case-sensitive name.
+ *
+ * Windows exposes case-insensitive getters for `process.env`, but enumerating
+ * keys preserves their real casing. Only trust a lookup when the requested
+ * spelling is present in that enumeration. This prevents a literal config
+ * value such as `public` from resolving to Windows' built-in `PUBLIC` path.
+ *
+ * @param name Environment variable name to look up.
+ * @param env Environment source; defaults to `process.env`.
+ */
+export function $envExact(
+	name: string,
+	env: Readonly<Record<string, string | undefined>> = process.env,
+): string | undefined {
+	const value = env[name];
+	if (value === undefined) return undefined;
+	for (const key in env) {
+		if (key === name) return value;
+	}
+	return undefined;
+}
+
+/**
  * Parses a positive decimal integer from `$env[name]`.
  * Empty, invalid, NaN, zero, or negative values return `defaultValue`.
  */

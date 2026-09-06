@@ -1,6 +1,18 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { clearConfigValueCache, resolveConfigValue, resolveHeaders } from "../../src/config/resolve-config-value";
 
+function windowsLikeEnv(backing: Record<string, string>): NodeJS.ProcessEnv {
+	return new Proxy(backing, {
+		get(target, prop) {
+			if (typeof prop !== "string") return Reflect.get(target, prop);
+			for (const key in target) {
+				if (key.toLowerCase() === prop.toLowerCase()) return target[key];
+			}
+			return undefined;
+		},
+	}) as NodeJS.ProcessEnv;
+}
+
 describe("resolveConfigValue", () => {
 	afterEach(() => {
 		clearConfigValueCache();
@@ -37,6 +49,16 @@ describe("resolveConfigValue", () => {
 		expect(await resolveConfigValue("sk-ant-abc123def456")).toBe("sk-ant-abc123def456");
 		expect(await resolveConfigValue("my-custom-key")).toBe("my-custom-key");
 		expect(await resolveConfigValue("f5_proxy_key_v2")).toBe("f5_proxy_key_v2"); // lowercase
+	});
+
+	it("does not replace a literal with a case-differing Windows environment value", async () => {
+		const savedEnv = process.env;
+		process.env = windowsLikeEnv({ PUBLIC: "C:\\SyntheticData\\Public" });
+		try {
+			expect(await resolveConfigValue("public")).toBe("public");
+		} finally {
+			process.env = savedEnv;
+		}
 	});
 
 	it("returns undefined for a shell command that fails", async () => {

@@ -10,6 +10,12 @@
 
 ### Fixed
 
+- Prevented case-insensitive Windows environment lookup from replacing literal stored credentials,
+  and delayed Cursor success until the HTTP/2/CONNECT protocol terminates cleanly so late stream
+  errors remain visible. Semantically ported from
+  [can1357/oh-my-pi#7362](https://github.com/can1357/oh-my-pi/pull/7362) and
+  [#5636](https://github.com/can1357/oh-my-pi/pull/5636)
+  ([#3711](https://github.com/f5-sales-demo/xcsh/issues/3711)).
 - Exported the canonical provider credential-shape matcher so xcsh can protect otherwise
   unconfigured tokens reversibly before provider submission, preserving exact-match local edits.
   Semantically ported from
