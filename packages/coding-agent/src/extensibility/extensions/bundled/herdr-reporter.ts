@@ -10,7 +10,7 @@ import { HerdrClient } from "../../../herdr/client";
  * blocked indicator.
  *
  * Transport: herdr injects `HERDR_SOCKET_PATH` into every pane, so state is
- * reported over herdr's protocol-18 JSONL socket via the shared `HerdrClient`
+ * reported over herdr's protocol-19 JSONL socket via the shared `HerdrClient`
  * (see `../../../herdr/client`) — the same client `herdr-terminal` uses. Each
  * request reconnects independently, validates the `ping` protocol version
  * before the first real request, and awaits herdr's typed response before
@@ -91,7 +91,7 @@ function getHerdrClient(socketPath: string): HerdrClient {
 }
 
 /**
- * Send one JSON-RPC request to herdr over its protocol-18 socket and await the
+ * Send one JSON-RPC request to herdr over its protocol-19 socket and await the
  * typed response. Every failure path (transport error, timeout, protocol
  * mismatch) is reported via `onError` without throwing, so a dead or
  * incompatible herdr never disturbs the agent.
