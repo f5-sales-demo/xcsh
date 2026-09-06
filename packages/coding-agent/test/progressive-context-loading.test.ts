@@ -2,12 +2,13 @@ import { afterEach, describe, expect, it } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getBundledModel } from "@f5-sales-demo/pi-ai";
+import { getBundledModel, type Model } from "@f5-sales-demo/pi-ai";
 import { Snowflake } from "@f5-sales-demo/pi-utils";
 import { Type } from "@sinclair/typebox";
 import { Settings } from "../src/config/settings";
 import type { ExtensionFactory } from "../src/extensibility/extensions";
 import { createAgentSession } from "../src/sdk";
+import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
 import { buildSystemPrompt } from "../src/system-prompt";
 
@@ -26,12 +27,14 @@ const extension: ExtensionFactory = pi => {
 
 describe("progressive context loading", () => {
 	const tempDirs: string[] = [];
+	const authStorages: AuthStorage[] = [];
 
 	it("keeps eager as the default until live token and behavior gates pass", () => {
 		expect(Settings.isolated().get("context.loadingMode")).toBe("eager");
 	});
 
 	afterEach(() => {
+		for (const authStorage of authStorages.splice(0)) authStorage.close();
 		for (const tempDir of tempDirs.splice(0)) fs.rmSync(tempDir, { recursive: true, force: true });
 	});
 
@@ -45,6 +48,38 @@ describe("progressive context loading", () => {
 			sessionManager: manager,
 			settings: Settings.isolated({ "context.loadingMode": mode }),
 			model: getBundledModel("openai", "gpt-4o-mini"),
+			disableExtensionDiscovery: true,
+			extensions: [extension],
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+			toolNames,
+		});
+	}
+
+	async function createOAuthSession(model: Model, toolNames?: string[]) {
+		const tempDir = path.join(os.tmpdir(), `xcsh-anthropic-oauth-tools-${Snowflake.next()}`);
+		tempDirs.push(tempDir);
+		fs.mkdirSync(tempDir, { recursive: true });
+		const authStorage = await AuthStorage.create(path.join(tempDir, "auth.db"));
+		authStorages.push(authStorage);
+		await authStorage.set("anthropic", {
+			type: "oauth",
+			access: "subscription-access-token",
+			refresh: "subscription-refresh-token",
+			expires: Date.now() + 60_000,
+		});
+		authStorage.setRuntimeApiKey("openai", "openai-api-key");
+		return await createAgentSession({
+			cwd: tempDir,
+			agentDir: tempDir,
+			authStorage,
+			sessionManager: SessionManager.inMemory(),
+			settings: Settings.isolated(),
+			model,
 			disableExtensionDiscovery: true,
 			extensions: [extension],
 			skills: [],
@@ -103,6 +138,62 @@ describe("progressive context loading", () => {
 			expect(session.getActiveToolNames()).toContain("task");
 		} finally {
 			await session.dispose();
+		}
+	});
+
+	it("bounds implicit tools for Anthropic OAuth and reapplies the policy when models change", async () => {
+		const anthropic = getBundledModel("anthropic", "claude-haiku-4-5");
+		const openai = getBundledModel("openai", "gpt-4o-mini");
+		const { session } = await createOAuthSession(anthropic);
+
+		try {
+			expect(session.settings.get("context.loadingMode")).toBe("eager");
+			const activeToolNames = session.getActiveToolNames();
+			expect(activeToolNames).toEqual(
+				expect.arrayContaining(["read", "grep", "find", "bash", "edit", "write", "search_tool_bm25"]),
+			);
+			expect(
+				activeToolNames.every(name =>
+					["read", "grep", "find", "bash", "python", "edit", "write", "xcsh_api", "search_tool_bm25"].includes(
+						name,
+					),
+				),
+			).toBe(true);
+			expect(activeToolNames).not.toContain("task");
+			expect(activeToolNames).not.toContain("deferred_weather");
+			expect(session.getDiscoverableTools().map(tool => tool.name)).toContain("deferred_weather");
+
+			await session.setModel(openai);
+			expect(session.getActiveToolNames()).toContain("task");
+			expect(session.getActiveToolNames()).toContain("deferred_weather");
+			expect(session.getActiveToolNames()).not.toContain("search_tool_bm25");
+
+			await session.setModel(anthropic);
+			expect(session.getActiveToolNames()).not.toContain("task");
+			expect(session.getActiveToolNames()).not.toContain("deferred_weather");
+			expect(session.getActiveToolNames()).toContain("search_tool_bm25");
+		} finally {
+			await session.dispose();
+		}
+	});
+
+	it("keeps non-Anthropic eager sessions and explicit OAuth tool scopes unchanged", async () => {
+		const anthropic = getBundledModel("anthropic", "claude-haiku-4-5");
+		const openai = getBundledModel("openai", "gpt-4o-mini");
+		const eager = await createOAuthSession(openai);
+		try {
+			expect(eager.session.getActiveToolNames()).toContain("task");
+			expect(eager.session.getActiveToolNames()).toContain("deferred_weather");
+			expect(eager.session.getActiveToolNames()).not.toContain("search_tool_bm25");
+		} finally {
+			await eager.session.dispose();
+		}
+
+		const explicit = await createOAuthSession(anthropic, ["read", "deferred_weather"]);
+		try {
+			expect(explicit.session.getActiveToolNames()).toEqual(["read", "deferred_weather"]);
+		} finally {
+			await explicit.session.dispose();
 		}
 	});
 

@@ -142,6 +142,7 @@ import {
 	ReadTool,
 	ResolveTool,
 	renderSearchToolBm25Description,
+	SearchToolBm25Tool,
 	setPreferredImageProvider,
 	setPreferredSearchProvider,
 	type Tool,
@@ -691,6 +692,13 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const modelRegistry = options.modelRegistry ?? new ModelRegistry(authStorage);
 
 	const settings = options.settings ?? (await logger.time("settings", Settings.init, { cwd, agentDir }));
+	const configuredContextLoadingMode = settings.get("context.loadingMode");
+	const resolveContextLoadingMode = (candidate: Model | undefined): "eager" | "progressive" =>
+		configuredContextLoadingMode === "progressive" ||
+		(options.toolNames === undefined && candidate?.provider === "anthropic" && modelRegistry.isUsingOAuth(candidate))
+			? "progressive"
+			: "eager";
+	let contextLoadingMode = resolveContextLoadingMode(options.model);
 	logger.time("initializeWithSettings");
 	initializeWithSettings(settings);
 	if (!options.modelRegistry) {
@@ -943,6 +951,17 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			resolveThinkingLevelForModel(resolvedModel, thinkingLevel),
 		);
 	}
+	contextLoadingMode = resolveContextLoadingMode(model);
+	const toolSettings = new Proxy(settings, {
+		get(target, property) {
+			if (property === "get") {
+				return (path: Parameters<typeof settings.get>[0]) =>
+					path === "context.loadingMode" ? contextLoadingMode : settings.get(path);
+			}
+			const value = Reflect.get(target, property, target);
+			return typeof value === "function" ? value.bind(target) : value;
+		},
+	});
 
 	let skills: Skill[];
 	let skillWarnings: SkillWarning[];
@@ -1137,7 +1156,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					return {};
 				}
 			},
-			settings,
+			settings: toolSettings,
 			authStorage,
 			modelRegistry,
 			asyncJobManager,
@@ -1214,6 +1233,15 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 		// Create built-in tools (already wrapped with meta notice formatting)
 		const builtinTools = await logger.time("createAllTools", createTools, toolSession, options.toolNames);
+		const providerToolPolicyAvailable =
+			options.toolNames === undefined &&
+			configuredContextLoadingMode === "eager" &&
+			modelRegistry.authStorage.hasOAuth("anthropic");
+		const injectedProviderDiscoveryTool =
+			providerToolPolicyAvailable && !builtinTools.some(tool => tool.name === "search_tool_bm25");
+		if (injectedProviderDiscoveryTool) {
+			builtinTools.push(new SearchToolBm25Tool(toolSession));
+		}
 
 		// Discover MCP tools from .mcp.json files
 		let mcpManager: MCPManager | undefined;
@@ -1516,7 +1544,6 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		});
 
 		const repeatToolDescriptions = settings.get("repeatToolDescriptions");
-		const contextLoadingMode = settings.get("context.loadingMode");
 		const contextProfileCollector = new ContextProfileCollector(contextLoadingMode);
 		const eagerTasks = settings.get("task.eager");
 		const intentField = settings.get("tools.intentTracing") || $flag("PI_INTENT_TRACING") ? INTENT_FIELD : undefined;
@@ -1713,11 +1740,15 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			"xcsh_api",
 			"search_tool_bm25",
 		];
+		const eagerRequestedActiveToolNames = requestedActiveToolNames.filter(
+			name => !(providerToolPolicyAvailable && !settings.get("mcp.discoveryMode") && name === "search_tool_bm25"),
+		);
+		const eagerToolNames = eagerRequestedActiveToolNames.filter(name => !defaultInactiveToolNames.has(name));
 		const initialRequestedActiveToolNames = options.toolNames
 			? requestedActiveToolNames
 			: progressiveLoading
 				? progressiveCoreToolNames.filter(name => toolRegistry.has(name))
-				: requestedActiveToolNames.filter(name => !defaultInactiveToolNames.has(name));
+				: eagerToolNames;
 		const restoredProgressiveToolNames = existingSession.hasPersistedToolSelection
 			? [
 					...progressiveCoreToolNames.filter(name => toolRegistry.has(name)),
@@ -1776,6 +1807,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			if (toolRegistry.has(name) && !initialToolNames.includes(name)) {
 				initialToolNames.push(name);
 			}
+		}
+		for (const name of alwaysInclude) {
+			if (toolRegistry.has(name) && !eagerToolNames.includes(name)) eagerToolNames.push(name);
 		}
 
 		const systemPrompt = await logger.time("buildSystemPrompt", rebuildSystemPrompt, initialToolNames, toolRegistry);
@@ -1971,6 +2005,22 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 			skillWarnings,
 			skillsSettings: settings.getGroup("skills"),
 			modelRegistry,
+			resolveToolPolicyForModel: providerToolPolicyAvailable
+				? candidate => {
+						const previousLoadingMode = contextLoadingMode;
+						contextLoadingMode = resolveContextLoadingMode(candidate);
+						const progressive = contextLoadingMode === "progressive";
+						return {
+							toolNames:
+								previousLoadingMode === contextLoadingMode
+									? undefined
+									: progressive
+										? progressiveCoreToolNames.filter(name => toolRegistry.has(name))
+										: eagerToolNames,
+							mcpDiscoveryEnabled: (settings.get("mcp.discoveryMode") ?? false) || progressive,
+						};
+					}
+				: undefined,
 			contextProfileCollector,
 			toolRegistry,
 			transformContext,
