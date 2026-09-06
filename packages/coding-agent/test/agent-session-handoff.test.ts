@@ -282,6 +282,9 @@ describe("AgentSession handoff", () => {
 		sessionManager = SessionManager.create(tempDir.path(), tempDir.path());
 		events = [];
 		let streamCallCount = 0;
+		const uiFinalizationObserved = Promise.withResolvers<void>();
+		const finishUiFinalization = Promise.withResolvers<void>();
+		const secondStreamObserved = Promise.withResolvers<void>();
 
 		sessionManager.appendMessage({
 			role: "user",
@@ -351,6 +354,7 @@ describe("AgentSession handoff", () => {
 			},
 			streamFn: () => {
 				streamCallCount++;
+				if (streamCallCount === 2) secondStreamObserved.resolve();
 				const stream = new MockAssistantStream();
 				queueMicrotask(() => {
 					const message = streamCallCount === 1 ? thresholdAssistant : handoffAssistant;
@@ -376,9 +380,26 @@ describe("AgentSession handoff", () => {
 		session.subscribe(event => {
 			events.push(event);
 		});
+		session.subscribe(
+			async event => {
+				if (event.type !== "agent_end" || streamCallCount !== 1) return;
+				uiFinalizationObserved.resolve();
+				await finishUiFinalization.promise;
+			},
+			{ waitForTurnSettlement: true },
+		);
 
-		await session.prompt("Trigger threshold handoff");
+		const originalPrompt = session.prompt("Trigger threshold handoff");
+		await uiFinalizationObserved.promise;
+		const handoffStartedDuringUiFinalization = await Promise.race([
+			secondStreamObserved.promise.then(() => true),
+			Bun.sleep(100).then(() => false),
+		]);
+		finishUiFinalization.resolve();
+		await originalPrompt;
+		await secondStreamObserved.promise;
 
+		expect(handoffStartedDuringUiFinalization).toBe(true);
 		expect(streamCallCount).toBe(2);
 		const endEvents = events.filter(event => event.type === "auto_compaction_end");
 		expect(endEvents).toHaveLength(1);

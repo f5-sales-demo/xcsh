@@ -124,9 +124,12 @@ export class EventController {
 	}
 
 	subscribeToAgent(): void {
-		this.ctx.unsubscribe = this.ctx.session.subscribe(async (event: AgentSessionEvent) => {
-			await this.handleEvent(event);
-		});
+		this.ctx.unsubscribe = this.ctx.session.subscribe(
+			async (event: AgentSessionEvent) => {
+				await this.handleEvent(event);
+			},
+			{ waitForTurnSettlement: true },
+		);
 	}
 
 	async handleEvent(event: AgentSessionEvent): Promise<void> {
