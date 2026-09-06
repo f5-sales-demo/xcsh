@@ -436,6 +436,7 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 						const endError = parseConnectEndStream(messageBytes);
 						if (endError) {
 							endStreamError = endError;
+							settleH2(endError);
 							h2Request?.close();
 						}
 						continue;

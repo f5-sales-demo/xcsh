@@ -100,7 +100,6 @@ async function startServer(): Promise<string> {
 		stream.write(Buffer.concat([textDeltaFrame("hello"), turnEndedFrame()]));
 		if (scenario === "connect-error-after-turn") {
 			stream.write(connectEndErrorFrame("unavailable", "post-turn connect failure"));
-			stream.end();
 			return;
 		}
 		if (scenario !== "hang-after-turn") stream.end();
