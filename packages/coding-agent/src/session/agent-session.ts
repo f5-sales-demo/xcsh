@@ -248,6 +248,8 @@ export interface AgentSessionConfig {
 	skillsSettings?: SkillsSettings;
 	/** Model registry for API key resolution and model discovery */
 	modelRegistry: ModelRegistry;
+	/** SDK-owned provider policy for implicit tool selection after model changes. */
+	resolveToolPolicyForModel?: (model: Model) => { toolNames?: string[]; mcpDiscoveryEnabled: boolean };
 	/** Privacy-safe numeric context measurements for this session. */
 	contextProfileCollector?: ContextProfileCollector;
 	/** Tool registry for LSP and settings */
@@ -536,6 +538,7 @@ export class AgentSession {
 
 	// Model registry for API key resolution
 	#modelRegistry: ModelRegistry;
+	#resolveToolPolicyForModel: ((model: Model) => { toolNames?: string[]; mcpDiscoveryEnabled: boolean }) | undefined;
 	#contextProfileCollector: ContextProfileCollector;
 
 	// Tool registry and prompt builder for extensions
@@ -628,6 +631,7 @@ export class AgentSession {
 		this.#customCommands = config.customCommands ?? [];
 		this.#skillsSettings = config.skillsSettings;
 		this.#modelRegistry = config.modelRegistry;
+		this.#resolveToolPolicyForModel = config.resolveToolPolicyForModel;
 		this.#contextProfileCollector =
 			config.contextProfileCollector ?? new ContextProfileCollector(this.settings.get("context.loadingMode"));
 		this.#validateRetryFallbackChains();
@@ -1365,7 +1369,7 @@ export class AgentSession {
 			this.settings.set("modelRoles", { ...currentRoles });
 			this.settings.set("routing.profile", previousProfile);
 			if (previousModel) {
-				this.#setModelWithProviderSessionReset(previousModel, "runtime-switch");
+				await this.#setModelWithProviderSessionReset(previousModel, "runtime-switch");
 				this.setThinkingLevel(previousThinking);
 			}
 			throw error;
@@ -1478,7 +1482,7 @@ export class AgentSession {
 								this.#routingCoordinator.getStateMachine().clearEscalationFloor();
 							}
 							if (previousModel) {
-								this.#setModelWithProviderSessionReset(previousModel, "runtime-switch");
+								await this.#setModelWithProviderSessionReset(previousModel, "runtime-switch");
 								this.setThinkingLevel(previousThinkingLevel);
 								this.sessionManager.appendModelChange(
 									`${previousModel.provider}/${previousModel.id}`,
@@ -4252,7 +4256,7 @@ export class AgentSession {
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(model, options?.thinkingLevel, role);
 
 		this.#clearActiveRetryFallback();
-		this.#setModelWithProviderSessionReset(model);
+		await this.#setModelWithProviderSessionReset(model);
 		if (options?.source !== "routing") {
 			this.#routingCoordinator.getStateMachine().setManualPin(`${model.provider}/${model.id}`);
 		}
@@ -4281,7 +4285,7 @@ export class AgentSession {
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(model, thinkingLevel);
 
 		this.#clearActiveRetryFallback();
-		this.#setModelWithProviderSessionReset(model);
+		await this.#setModelWithProviderSessionReset(model);
 		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, "temporary");
 		this.settings.getStorage()?.recordModelUsage(`${model.provider}/${model.id}`);
 
@@ -4318,7 +4322,7 @@ export class AgentSession {
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(targetModel, thinkingLevel);
 
 		// DO NOT clear active retry fallback - routing is a transient optimization
-		this.#setModelWithProviderSessionReset(targetModel, "runtime-switch");
+		await this.#setModelWithProviderSessionReset(targetModel, "runtime-switch");
 		this.sessionManager.appendModelChange(`${targetModel.provider}/${targetModel.id}`, "routing_switch");
 		this.settings.getStorage()?.recordModelUsage(`${targetModel.provider}/${targetModel.id}`);
 
@@ -4445,7 +4449,7 @@ export class AgentSession {
 
 		// Apply model
 		this.#clearActiveRetryFallback();
-		this.#setModelWithProviderSessionReset(next.model);
+		await this.#setModelWithProviderSessionReset(next.model);
 		this.sessionManager.appendModelChange(`${next.model.provider}/${next.model.id}`);
 		this.settings.setModelRole("default", this.#formatRoleModelValue("default", next.model));
 		this.settings.getStorage()?.recordModelUsage(`${next.model.provider}/${next.model.id}`);
@@ -4477,7 +4481,7 @@ export class AgentSession {
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(nextModel, undefined, "default");
 
 		this.#clearActiveRetryFallback();
-		this.#setModelWithProviderSessionReset(nextModel);
+		await this.#setModelWithProviderSessionReset(nextModel);
 		this.sessionManager.appendModelChange(`${nextModel.provider}/${nextModel.id}`);
 		this.settings.setModelRole("default", this.#formatRoleModelValue("default", nextModel));
 		this.settings.getStorage()?.recordModelUsage(`${nextModel.provider}/${nextModel.id}`);
@@ -5339,13 +5343,23 @@ export class AgentSession {
 		return candidate;
 	}
 
-	#setModelWithProviderSessionReset(model: Model, source: ModelResolutionSource = "runtime-switch"): void {
+	async #setModelWithProviderSessionReset(
+		model: Model,
+		source: ModelResolutionSource = "runtime-switch",
+	): Promise<void> {
 		const currentModel = this.model;
 		if (currentModel) {
 			this.#closeProviderSessionsForModelSwitch(currentModel, model);
 		}
 		this.#modelResolutionSource = source;
 		this.agent.setModel(model);
+		const toolPolicy = this.#resolveToolPolicyForModel?.(model);
+		if (toolPolicy) {
+			this.#mcpDiscoveryEnabled = toolPolicy.mcpDiscoveryEnabled;
+			if (toolPolicy.toolNames) {
+				await this.#applyActiveToolsByName(toolPolicy.toolNames, { persistMCPSelection: false });
+			}
+		}
 	}
 
 	#closeCodexProviderSessionsForHistoryRewrite(): void {
@@ -6179,7 +6193,7 @@ export class AgentSession {
 		const currentThinkingLevel = this.thinkingLevel;
 		const nextThinkingLevel = selector.thinkingLevel ?? currentThinkingLevel;
 
-		this.#setModelWithProviderSessionReset(candidate);
+		await this.#setModelWithProviderSessionReset(candidate);
 		this.sessionManager.appendModelChange(`${candidate.provider}/${candidate.id}`, "temporary");
 		this.settings.getStorage()?.recordModelUsage(`${candidate.provider}/${candidate.id}`);
 		this.setThinkingLevel(nextThinkingLevel);
@@ -6253,7 +6267,7 @@ export class AgentSession {
 		const currentThinkingLevel = this.thinkingLevel;
 		const thinkingToApply =
 			currentThinkingLevel === lastAppliedFallbackThinkingLevel ? originalThinkingLevel : currentThinkingLevel;
-		this.#setModelWithProviderSessionReset(primaryModel);
+		await this.#setModelWithProviderSessionReset(primaryModel);
 		this.sessionManager.appendModelChange(`${primaryModel.provider}/${primaryModel.id}`, "temporary");
 		this.settings.getStorage()?.recordModelUsage(`${primaryModel.provider}/${primaryModel.id}`);
 		this.setThinkingLevel(thinkingToApply);
@@ -6867,9 +6881,16 @@ export class AgentSession {
 									currentModel.id !== match.id ||
 									currentModel.api !== match.api));
 						if (shouldResetProviderState) {
-							this.#setModelWithProviderSessionReset(match, "config");
+							await this.#setModelWithProviderSessionReset(match, "config");
 						} else {
 							this.agent.setModel(match);
+							const toolPolicy = this.#resolveToolPolicyForModel?.(match);
+							if (toolPolicy) {
+								this.#mcpDiscoveryEnabled = toolPolicy.mcpDiscoveryEnabled;
+								if (toolPolicy.toolNames) {
+									await this.#applyActiveToolsByName(toolPolicy.toolNames, { persistMCPSelection: false });
+								}
+							}
 						}
 					}
 				}
