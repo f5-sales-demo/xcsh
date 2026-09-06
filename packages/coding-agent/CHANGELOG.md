@@ -36,6 +36,14 @@
 
 ### Fixed
 
+- Preserved MCP `structuredContent` through the shared tool bridge, avoided duplicate verbatim
+  payloads, and rendered every text block. Semantically ported from
+  [can1357/oh-my-pi#10523](https://github.com/can1357/oh-my-pi/pull/10523)
+  ([#3721](https://github.com/f5-sales-demo/xcsh/issues/3721)).
+- Detached retained truncated output windows from oversized JavaScriptCore backing strings while
+  preserving byte-exact output and zero-copy unchanged paths. Semantically ported from
+  [can1357/oh-my-pi#10550](https://github.com/can1357/oh-my-pi/pull/10550)
+  ([#3721](https://github.com/f5-sales-demo/xcsh/issues/3721)).
 - Resolved user-configured environment references by exact case across config values, model
   registry credentials, and LiteLLM YAML while preserving literal, command-backed, and unresolved
   all-caps behavior. Semantically ported from
