@@ -24,7 +24,7 @@ import {
 	extractFileOpsFromMessage,
 	type FileOperations,
 	SUMMARIZATION_SYSTEM_PROMPT,
-	serializeConversation,
+	serializeConversationForSummary,
 	upsertFileOperations,
 } from "./utils";
 
@@ -75,6 +75,8 @@ export interface GenerateBranchSummaryOptions {
 	customInstructions?: string;
 	/** Tokens reserved for prompt + LLM response (default 16384) */
 	reserveTokens?: number;
+	/** Protect the completed provider-bound prompt without changing local history. */
+	protectProviderText?: (text: string) => string;
 }
 
 // ============================================================================
@@ -273,11 +275,12 @@ export async function generateBranchSummary(
 	// Transform to LLM-compatible messages, then serialize to text
 	// Serialization prevents the model from treating it as a conversation to continue
 	const llmMessages = convertToLlm(messages);
-	const conversationText = serializeConversation(llmMessages);
+	const conversationText = serializeConversationForSummary(llmMessages);
 
 	// Build prompt
 	const instructions = customInstructions || BRANCH_SUMMARY_PROMPT;
-	const promptText = `<conversation>\n${conversationText}\n</conversation>\n\n${instructions}`;
+	const rawPromptText = `<conversation>\n${conversationText}\n</conversation>\n\n${instructions}`;
+	const promptText = options.protectProviderText?.(rawPromptText) ?? rawPromptText;
 
 	const summarizationMessages = [
 		{

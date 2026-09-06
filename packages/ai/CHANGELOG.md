@@ -10,6 +10,11 @@
 
 ### Fixed
 
+- Exported the canonical provider credential-shape matcher so xcsh can protect otherwise
+  unconfigured tokens reversibly before provider submission, preserving exact-match local edits.
+  Semantically ported from
+  [can1357/oh-my-pi#7067](https://github.com/can1357/oh-my-pi/pull/7067)
+  ([#3706](https://github.com/f5-sales-demo/xcsh/issues/3706)).
 - Omit an empty OpenAI-compatible `tools` field unless prior tool-call history requires the explicit empty array, and suppress the internal no-auth credential sentinel from keyless request headers ([#2942](https://github.com/f5-sales-demo/xcsh/issues/2942), [#3361](https://github.com/f5-sales-demo/xcsh/issues/3361)).
 
 ## [20.3.0] - 2026-08-04

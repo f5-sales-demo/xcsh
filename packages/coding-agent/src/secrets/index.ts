@@ -1,10 +1,19 @@
 import * as path from "node:path";
+import { SENSITIVE_TOKEN_RE } from "@f5-sales-demo/pi-ai/providers/transform-messages";
 import { isEnoent, logger, SECRET_ENV_PATTERNS } from "@f5-sales-demo/pi-utils";
 import { YAML } from "bun";
 import type { SecretEntry } from "./obfuscator";
 import { compileSecretRegex } from "./regex";
 
-export { deobfuscateSessionContext, obfuscateMessages, type SecretEntry, SecretObfuscator } from "./obfuscator";
+export {
+	deobfuscateAssistantContent,
+	deobfuscateSessionContext,
+	obfuscateMessages,
+	obfuscateProviderContext,
+	obfuscateProviderTools,
+	type SecretEntry,
+	SecretObfuscator,
+} from "./obfuscator";
 export { SECRET_ENV_PATTERNS };
 
 /**
@@ -76,6 +85,22 @@ export function collectEnvSecrets(options?: {
 	}
 
 	return entries;
+}
+
+/**
+ * Protect credential-shaped values that were not explicitly configured.
+ * These entries use reversible placeholders so provider-safe edit arguments
+ * can be restored byte-exact immediately before local tool execution.
+ */
+export function builtinCredentialSecretEntries(): SecretEntry[] {
+	return [
+		{
+			type: "regex",
+			content: SENSITIVE_TOKEN_RE.source,
+			flags: "i",
+			mode: "obfuscate",
+		},
+	];
 }
 
 async function loadSecretsFile(filePath: string): Promise<SecretEntry[]> {

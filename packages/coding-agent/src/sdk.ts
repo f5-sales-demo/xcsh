@@ -99,10 +99,12 @@ import asyncResultTemplate from "./prompts/tools/async-result.md" with { type: "
 import { containmentStatus } from "./sandbox/containment";
 import { resolveSessionFence } from "./sandbox/session-fence";
 import {
+	builtinCredentialSecretEntries,
 	collectEnvSecrets,
 	deobfuscateSessionContext,
 	loadSecrets,
 	obfuscateMessages,
+	obfuscateProviderContext,
 	SECRET_ENV_PATTERNS,
 	type SecretEntry,
 	SecretObfuscator,
@@ -761,7 +763,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		}
 		// File entries MUST come first to preserve placeholder index stability
 		// for resumed sessions that persisted #HASH# tokens from secrets.yml.
-		const allEntries = [...fileEntries, ...envEntries];
+		const builtinEntries = settings.get("secrets.enabled") ? builtinCredentialSecretEntries() : [];
+		const allEntries = [...fileEntries, ...envEntries, ...builtinEntries];
 		if (allEntries.length > 0) {
 			obfuscator = new SecretObfuscator(allEntries);
 		}
@@ -1895,12 +1898,15 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				return key;
 			},
 			streamFn: (requestModel, context, requestOptions) => {
-				if (requestModel.provider !== "google-vertex") return streamSimple(requestModel, context, requestOptions);
+				const providerContext = obfuscateProviderContext(obfuscator, context);
+				if (requestModel.provider !== "google-vertex") {
+					return streamSimple(requestModel, providerContext, requestOptions);
+				}
 				const project = settings.get("providers.vertexProject");
 				if (!project) {
 					throw new Error("Corporate Vertex requires a confirmed project. Run /login google-vertex.");
 				}
-				return streamSimple(requestModel, context, {
+				return streamSimple(requestModel, providerContext, {
 					...requestOptions,
 					project,
 					location: "global",

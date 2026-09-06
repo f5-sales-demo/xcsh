@@ -136,7 +136,7 @@ import { executeReadOnlyDelegationPlan, isDelegationAllowedTool } from "../routi
 import { type RoutingEvent, sanitizeRoutingEvent } from "../routing/events";
 import { validateCustomPools } from "../routing/presets";
 import type { RoutingMode, RoutingOutcome } from "../routing/types";
-import { deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
+import { deobfuscateAssistantContent, deobfuscateSessionContext, type SecretObfuscator } from "../secrets/obfuscator";
 import { resolveThinkingLevelForModel, toReasoningEffort } from "../thinking";
 import { assertEditableFile } from "../tools/auto-generated-guard";
 import type { CheckpointState } from "../tools/checkpoint";
@@ -833,12 +833,12 @@ export class AgentSession {
 		// obfuscated placeholders, but listeners (TUI, extensions, exporters) must see real
 		// values. The original event.message stays obfuscated so the persistence path below
 		// writes `#HASH#` tokens to the session file; convertToLlm re-obfuscates outbound
-		// traffic on the next turn. Walks text, thinking, and toolCall arguments/intent.
+		// traffic on the next turn. Opaque thinking/reasoning is never deobfuscated.
 		let displayEvent: AgentEvent = event;
 		const obfuscator = this.#obfuscator;
 		if (obfuscator && event.type === "message_end" && event.message.role === "assistant") {
 			const message = event.message;
-			const deobfuscatedContent = obfuscator.deobfuscateObject(message.content);
+			const deobfuscatedContent = deobfuscateAssistantContent(obfuscator, message.content);
 			if (deobfuscatedContent !== message.content) {
 				displayEvent = { ...event, message: { ...message, content: deobfuscatedContent } };
 			}
@@ -4697,7 +4697,12 @@ export class AgentSession {
 					apiKey,
 					customInstructions,
 					this.#compactionAbortController.signal,
-					{ promptOverride: hookPrompt, extraContext: hookContext, remoteInstructions: this.#baseSystemPrompt },
+					{
+						promptOverride: hookPrompt,
+						extraContext: hookContext,
+						remoteInstructions: this.#baseSystemPrompt,
+						protectProviderText: this.#obfuscator ? text => this.#obfuscator!.obfuscate(text) : undefined,
+					},
 				);
 				summary = result.summary;
 				shortSummary = result.shortSummary;
@@ -4904,6 +4909,9 @@ export class AgentSession {
 			}
 			if (!handoffText) {
 				return undefined;
+			}
+			if (this.#obfuscator) {
+				handoffText = this.#obfuscator.deobfuscate(handoffText);
 			}
 
 			// Start a new session
@@ -5779,6 +5787,7 @@ export class AgentSession {
 								extraContext: hookContext,
 								remoteInstructions: this.#baseSystemPrompt,
 								initiatorOverride: "agent",
+								protectProviderText: this.#obfuscator ? text => this.#obfuscator!.obfuscate(text) : undefined,
 							});
 							break;
 						} catch (error) {
@@ -7123,6 +7132,7 @@ export class AgentSession {
 				signal: this.#branchSummaryAbortController.signal,
 				customInstructions: options.customInstructions,
 				reserveTokens: branchSummarySettings.reserveTokens,
+				protectProviderText: this.#obfuscator ? text => this.#obfuscator!.obfuscate(text) : undefined,
 			});
 			this.#branchSummaryAbortController = undefined;
 			if (result.aborted) {
