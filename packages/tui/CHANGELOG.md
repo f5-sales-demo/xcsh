@@ -6,6 +6,15 @@
 
 ### Fixed
 
+- Bounded oversized ANSI-heavy render rows before width measurement while preserving visible text,
+  complete OSC 66 payloads, and reset semantics. Semantically ported from
+  [can1357/oh-my-pi#2047](https://github.com/can1357/oh-my-pi/pull/2047)
+  ([#3743](https://github.com/f5-sales-demo/xcsh/issues/3743)).
+- Stopped rendering and initiated best-effort SIGHUP teardown when terminal input or output is
+  disconnected, including revoked-PTY and throwing-handler paths. Semantically ported from
+  [can1357/oh-my-pi#5837](https://github.com/can1357/oh-my-pi/pull/5837) and
+  [#6788](https://github.com/can1357/oh-my-pi/pull/6788)
+  ([#3743](https://github.com/f5-sales-demo/xcsh/issues/3743)).
 - Kept `@` directory completion open after Tab or Enter without inserting a trailing space ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).
 
 ## [20.3.0] - 2026-08-04

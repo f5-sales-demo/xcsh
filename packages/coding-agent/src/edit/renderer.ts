@@ -92,15 +92,15 @@ export interface EditToolDetails {
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface EditRenderArgs {
-	path?: string;
-	file_path?: string;
+	path?: unknown;
+	file_path?: unknown;
 	oldText?: string;
 	newText?: string;
 	patch?: string;
 	all?: boolean;
 	// Patch mode fields
 	op?: Operation;
-	rename?: string;
+	rename?: unknown;
 	diff?: string;
 	/**
 	 * Computed preview diff (used when tool args don't include a diff, e.g. hashline mode).
@@ -154,8 +154,8 @@ interface FormattedStreamingEdit {
 }
 
 /** Extract file path from an edit entry's path (handles chunk's file:selector format). */
-function filePathFromEditEntry(p: string | undefined): string | undefined {
-	if (!p) return undefined;
+function filePathFromEditEntry(p: unknown): string | undefined {
+	if (typeof p !== "string" || !p) return undefined;
 	const ci = /^[a-zA-Z]:[/\\]/.test(p) ? p.indexOf(":", 2) : p.indexOf(":");
 	return ci === -1 ? p : p.slice(0, ci);
 }
@@ -441,8 +441,15 @@ export const editToolRenderer = {
 
 		// Extract path from first edit entry when top-level path is absent (new schema)
 		const firstEdit = Array.isArray(args.edits) && args.edits.length > 0 ? args.edits[0] : undefined;
-		const rawPath = args.file_path || args.path || (firstEdit as any)?.path || "";
-		const rename = args.rename || (firstEdit as any)?.rename;
+		const rawPath =
+			typeof args.file_path === "string"
+				? args.file_path
+				: typeof args.path === "string"
+					? args.path
+					: (filePathFromEditEntry((firstEdit as { path?: unknown } | undefined)?.path) ?? "");
+		const rename =
+			(typeof args.rename === "string" ? args.rename : undefined) ??
+			filePathFromEditEntry((firstEdit as { rename?: unknown } | undefined)?.rename);
 		const op = args.op || (firstEdit as any)?.op;
 		const { description } = formatEditDescription(rawPath, uiTheme, { rename });
 		const spinner =
@@ -498,9 +505,17 @@ function renderSingleFileResult(
 ): Component {
 	const details = result.details;
 	const isError = result.isError ?? (details && "isError" in details ? details.isError : false);
-	const rawPath = args?.file_path || args?.path || (details && "path" in details ? details.path : "") || "";
+	const detailPath = details && "path" in details && typeof details.path === "string" ? details.path : undefined;
+	const rawPath =
+		typeof args?.file_path === "string"
+			? args.file_path
+			: typeof args?.path === "string"
+				? args.path
+				: (detailPath ?? "");
 	const op = args?.op || details?.op;
-	const rename = args?.rename || details?.move;
+	const rename =
+		(typeof args?.rename === "string" ? args.rename : undefined) ??
+		(details && "move" in details && typeof details.move === "string" ? details.move : undefined);
 	const { language } = formatEditDescription(rawPath, uiTheme, { rename });
 
 	const metadataLine =

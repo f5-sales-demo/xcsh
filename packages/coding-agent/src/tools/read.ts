@@ -1451,8 +1451,8 @@ export class ReadTool implements AgentTool<typeof readSchema, ReadToolDetails> {
 // =============================================================================
 
 interface ReadRenderArgs {
-	path?: string;
-	file_path?: string;
+	path?: unknown;
+	file_path?: unknown;
 	sel?: string;
 	timeout?: number;
 	// Legacy fields from old schema — tolerated for in-flight tool calls during transition
@@ -1463,11 +1463,12 @@ interface ReadRenderArgs {
 
 export const readToolRenderer = {
 	renderCall(args: ReadRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
-		if (isReadableUrlPath(args.file_path || args.path || "")) {
-			return renderReadUrlCall(args, _options, uiTheme);
+		const rawPath =
+			typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
+		if (isReadableUrlPath(rawPath)) {
+			return renderReadUrlCall({ path: rawPath, raw: args.raw }, _options, uiTheme);
 		}
 
-		const rawPath = args.file_path || args.path || "";
 		const filePath = shortenPath(rawPath);
 		const offset = args.offset;
 		const limit = args.limit;
@@ -1490,7 +1491,9 @@ export const readToolRenderer = {
 		args?: ReadRenderArgs,
 	): Component {
 		const urlDetails = result.details as ReadUrlToolDetails | undefined;
-		if (urlDetails?.kind === "url" || isReadableUrlPath(args?.file_path || args?.path || "")) {
+		const rawPathForKind =
+			typeof args?.file_path === "string" ? args.file_path : typeof args?.path === "string" ? args.path : "";
+		if (urlDetails?.kind === "url" || isReadableUrlPath(rawPathForKind)) {
 			return renderReadUrlResult(
 				result as { content: Array<{ type: string; text?: string }>; details?: ReadUrlToolDetails },
 				_options,
@@ -1501,9 +1504,9 @@ export const readToolRenderer = {
 		const details = result.details;
 		const contentText = result.content?.find(c => c.type === "text")?.text ?? "";
 		const imageContent = result.content?.find(c => c.type === "image");
-		const rawPath = args?.file_path || args?.path || "";
+		const rawPath = rawPathForKind;
 		const filePath = shortenPath(rawPath);
-		const lang = getLanguageFromPath(rawPath);
+		const lang = rawPath ? getLanguageFromPath(rawPath) : undefined;
 
 		const warningLines: string[] = [];
 		const truncation = details?.meta?.truncation;

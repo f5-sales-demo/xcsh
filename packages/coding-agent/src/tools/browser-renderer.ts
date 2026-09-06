@@ -11,9 +11,9 @@ const TOOL_TITLE = "Browser";
 const MAX_CONTENT_LINES = 30;
 
 type BrowserRenderArgs = {
-	action?: string;
-	url?: string;
-	selector?: string;
+	action?: unknown;
+	url?: unknown;
+	selector?: unknown;
 	text?: string;
 };
 
@@ -42,12 +42,13 @@ const ACTION_COLORS: Partial<Record<string, ThemeColor>> = {
 
 export const browserRenderer = {
 	renderCall(args: BrowserRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
-		const action = args.action ?? "browse";
-		const description = args.url
-			? uiTheme.fg("muted", args.url)
-			: args.selector
-				? uiTheme.fg("dim", args.selector)
-				: undefined;
+		const action = typeof args.action === "string" ? args.action : "browse";
+		const description =
+			typeof args.url === "string" && args.url
+				? uiTheme.fg("muted", args.url)
+				: typeof args.selector === "string" && args.selector
+					? uiTheme.fg("dim", args.selector)
+					: undefined;
 		const badgeColor = ACTION_COLORS[action] ?? "muted";
 		const text = renderStatusLine(
 			{ icon: "pending", title: TOOL_TITLE, badge: { label: action, color: badgeColor }, description },
@@ -70,7 +71,12 @@ export const browserRenderer = {
 			return new Text(formatErrorMessage(errorText, uiTheme), 0, 0);
 		}
 
-		const action = details?.action ?? args?.action ?? "browse";
+		const action =
+			typeof details?.action === "string"
+				? details.action
+				: typeof args?.action === "string"
+					? args.action
+					: "browse";
 		const badgeColor = ACTION_COLORS[action] ?? "muted";
 		const sections: Array<{ label?: string; lines: string[] }> = [];
 		const meta: string[] = [];
@@ -79,16 +85,12 @@ export const browserRenderer = {
 			const errorText = result.content?.find(c => c.type === "text")?.text ?? "Unknown error";
 			addSection(sections, "Error", [uiTheme.fg("error", errorText)], uiTheme);
 		} else {
-			if (details?.url)
+			if (typeof details?.url === "string" && details.url)
 				meta.push(uiTheme.fg("dim", details.url.length > 50 ? `${details.url.slice(0, 47)}…` : details.url));
 
-			if (details?.screenshotPath) {
-				addSection(
-					sections,
-					"Screenshot",
-					[uiTheme.fg("toolOutput", `  ${shortenPath(details.screenshotPath)}`)],
-					uiTheme,
-				);
+			const screenshotPath = typeof details?.screenshotPath === "string" ? details.screenshotPath : "";
+			if (screenshotPath) {
+				addSection(sections, "Screenshot", [uiTheme.fg("toolOutput", `  ${shortenPath(screenshotPath)}`)], uiTheme);
 			}
 
 			if (details?.viewport) {

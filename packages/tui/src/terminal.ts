@@ -46,8 +46,8 @@ export function emergencyTerminalRestore(): void {
 /** Terminal-reported appearance (dark/light mode). */
 export type TerminalAppearance = "dark" | "light";
 export interface Terminal {
-	// Start the terminal with input and resize handlers
-	start(onInput: (data: string) => void, onResize: () => void): void;
+	// Start the terminal with input, resize, and host-disconnect handlers.
+	start(onInput: (data: string) => void, onResize: () => void, onDisconnect?: () => void): void;
 
 	// Stop the terminal and restore state
 	stop(): void;
@@ -108,6 +108,11 @@ export class ProcessTerminal implements Terminal {
 	#modifyOtherKeysTimeout?: ReturnType<typeof setTimeout>;
 	#stdinBuffer?: StdinBuffer;
 	#stdinDataHandler?: (data: string) => void;
+	#disconnectHandler?: () => void;
+	#stdinEndHandler = () => this.#markTerminalDisconnected("stdin ended");
+	#stdinCloseHandler = () => this.#markTerminalDisconnected("stdin closed");
+	#stdinErrorHandler = (error: Error) => this.#markTerminalDisconnected("stdin failed", error);
+	#stdoutErrorHandler = (error: Error) => this.#markTerminalDisconnected("stdout failed", error);
 	#dead = false;
 	#writeLogPath = $env.PI_TUI_WRITE_LOG || "";
 	#windowsVTInputRestore?: () => void;
@@ -142,8 +147,9 @@ export class ProcessTerminal implements Terminal {
 		this.#appearanceCallbacks.push(callback);
 	}
 
-	start(onInput: (data: string) => void, onResize: () => void): void {
+	start(onInput: (data: string) => void, onResize: () => void, onDisconnect?: () => void): void {
 		this.#resizeHandler = onResize;
+		this.#disconnectHandler = onDisconnect;
 
 		// Register for emergency cleanup
 		activeTerminal = this;
@@ -155,6 +161,10 @@ export class ProcessTerminal implements Terminal {
 			process.stdin.setRawMode(true);
 		}
 		process.stdin.setEncoding("utf8");
+		process.stdin.on("end", this.#stdinEndHandler);
+		process.stdin.on("close", this.#stdinCloseHandler);
+		process.stdin.on("error", this.#stdinErrorHandler);
+		process.stdout.on("error", this.#stdoutErrorHandler);
 		process.stdin.resume();
 
 		// Enable bracketed paste mode - terminal will wrap pastes in \x1b[200~ ... \x1b[201~
@@ -610,6 +620,11 @@ export class ProcessTerminal implements Terminal {
 			process.stdin.removeListener("data", this.#stdinDataHandler);
 			this.#stdinDataHandler = undefined;
 		}
+		process.stdin.removeListener("end", this.#stdinEndHandler);
+		process.stdin.removeListener("close", this.#stdinCloseHandler);
+		process.stdin.removeListener("error", this.#stdinErrorHandler);
+		process.stdout.removeListener("error", this.#stdoutErrorHandler);
+		this.#disconnectHandler = undefined;
 		this.#inputHandler = undefined;
 		this.#appearance = undefined;
 		if (this.#resizeHandler) {
@@ -622,9 +637,37 @@ export class ProcessTerminal implements Terminal {
 		// where Ctrl+D could close the parent shell over SSH.
 		process.stdin.pause();
 
-		// Restore raw mode state
-		if (process.stdin.setRawMode) {
-			process.stdin.setRawMode(this.#wasRaw);
+		// A revoked PTY cannot be restored. Suppress that failure only after a
+		// disconnect; normal live-terminal restoration failures must still surface.
+		try {
+			process.stdin.setRawMode?.(this.#wasRaw);
+		} catch (error) {
+			if (!this.#dead) throw error;
+		}
+	}
+
+	#markTerminalDisconnected(reason: string, error?: unknown): void {
+		if (this.#dead) return;
+		this.#dead = true;
+		logger.warn("terminal disconnected; stopping interactive rendering", { reason, error });
+
+		const disconnectHandler = this.#disconnectHandler;
+		this.#disconnectHandler = undefined;
+		if (!disconnectHandler) return;
+		try {
+			disconnectHandler();
+		} catch (handlerError) {
+			logger.error("terminal disconnect handler failed; exiting anyway", { error: handlerError });
+		}
+
+		if (process.platform === "win32") {
+			process.exit(129);
+		}
+		try {
+			process.kill(process.pid, "SIGHUP");
+		} catch (signalError) {
+			logger.error("terminal disconnect signal failed; exiting directly", { error: signalError });
+			process.exit(129);
 		}
 	}
 
@@ -644,9 +687,7 @@ export class ProcessTerminal implements Terminal {
 		try {
 			process.stdout.write(data);
 		} catch (err) {
-			// Any write failure means terminal is dead - no recovery possible
-			this.#dead = true;
-			logger.warn("terminal is dead - no recovery possible", { error: err, data });
+			this.#markTerminalDisconnected("stdout failed", err);
 		}
 	}
 

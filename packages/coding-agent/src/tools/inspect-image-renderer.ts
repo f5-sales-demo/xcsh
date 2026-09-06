@@ -10,13 +10,13 @@ const TOOL_TITLE = "Inspect Image";
 const MAX_OUTPUT_LINES = 30;
 
 interface InspectImageRenderArgs {
-	path?: string;
-	question?: string;
+	path?: unknown;
+	question?: unknown;
 }
 
 interface InspectImageRendererDetails {
 	model: string;
-	imagePath: string;
+	imagePath: unknown;
 	mimeType: string;
 }
 
@@ -28,7 +28,7 @@ interface InspectImageRendererResult {
 
 export const inspectImageToolRenderer = {
 	renderCall(args: InspectImageRenderArgs, _options: RenderResultOptions, uiTheme: Theme): Component {
-		const rawPath = args.path ?? "";
+		const rawPath = typeof args.path === "string" ? args.path : "";
 		const pathDisplay = rawPath ? shortenPath(rawPath) : "…";
 		const description = uiTheme.fg("muted", pathDisplay);
 		const text = renderStatusLine({ icon: "pending", title: TOOL_TITLE, description }, uiTheme);
@@ -49,7 +49,8 @@ export const inspectImageToolRenderer = {
 			return new Text(formatErrorMessage(errorText, uiTheme), 0, 0);
 		}
 
-		const rawPath = details?.imagePath ?? args?.path ?? "";
+		const rawPath =
+			typeof details?.imagePath === "string" ? details.imagePath : typeof args?.path === "string" ? args.path : "";
 		const pathDisplay = rawPath ? shortenPath(rawPath) : "image";
 		const sections: Array<{ label?: string; lines: string[] }> = [];
 		const meta: string[] = [];
@@ -61,7 +62,7 @@ export const inspectImageToolRenderer = {
 			const errorText = result.content?.find(c => c.type === "text")?.text ?? "Unknown error";
 			addSection(sections, "Error", [uiTheme.fg("error", errorText)], uiTheme);
 		} else {
-			if (args?.question) {
+			if (typeof args?.question === "string" && args.question) {
 				addSection(sections, "Question", [uiTheme.fg("chromeAccent", `  ${args.question}`)], uiTheme);
 			}
 
