@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, vi } from "bun:test";
 import * as fs from "node:fs";
 import * as net from "node:net";
 import * as os from "node:os";
@@ -16,12 +16,14 @@ interface MockPi {
 	handlers: Map<string, AnyHandler>;
 	execCalls: Array<{ command: string; args: string[] }>;
 	labels: string[];
+	debugCalls: Array<{ message: string; fields: Record<string, unknown> }>;
 }
 
 function makeMockPi(): MockPi {
 	const handlers = new Map<string, AnyHandler>();
 	const execCalls: Array<{ command: string; args: string[] }> = [];
 	const labels: string[] = [];
+	const debugCalls: Array<{ message: string; fields: Record<string, unknown> }> = [];
 
 	const pi = {
 		on(event: string, handler: AnyHandler) {
@@ -34,10 +36,17 @@ function makeMockPi(): MockPi {
 			execCalls.push({ command, args });
 			return Promise.resolve({ stdout: "", stderr: "", exitCode: 0 });
 		},
-		logger: { debug() {}, info() {}, warn() {}, error() {} },
+		logger: {
+			debug(message: string, fields: Record<string, unknown>) {
+				debugCalls.push({ message, fields });
+			},
+			info() {},
+			warn() {},
+			error() {},
+		},
 	} as unknown as ExtensionAPI;
 
-	return { pi, handlers, execCalls, labels };
+	return { pi, handlers, execCalls, labels, debugCalls };
 }
 
 const idleCtx = { isIdle: () => true } as unknown as ExtensionContext;
@@ -59,6 +68,11 @@ interface FakeHerdr {
 	close: () => Promise<void>;
 }
 
+interface FakeHerdrOptions {
+	/** Methods whose connected socket is closed without a response. */
+	failMethods?: ReadonlySet<string>;
+}
+
 /**
  * A throwaway Herdr protocol-18 socket server. Mirrors the real herdr handshake
  * gate: the very first request on the server must be a `ping`, which is
@@ -70,7 +84,7 @@ interface FakeHerdr {
  * every frame silently dropped by this gate and its request never appears in
  * `received`.
  */
-function startFakeHerdr(): Promise<FakeHerdr> {
+function startFakeHerdr(options: FakeHerdrOptions = {}): Promise<FakeHerdr> {
 	const dir = fs.mkdtempSync(path.join(os.tmpdir(), "herdr-sock-"));
 	const socketPath = path.join(dir, "herdr.sock");
 	const received: FakeHerdr["received"] = [];
@@ -97,6 +111,10 @@ function startFakeHerdr(): Promise<FakeHerdr> {
 						sock.end(
 							`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: 18, version: "test" } })}\n`,
 						);
+					} else if (options.failMethods?.has(request.method)) {
+						// Model a failed transport after the protocol handshake. The reporter
+						// must absorb it and keep later lifecycle reports flowing.
+						sock.destroy();
 					} else if (handshakeDone) {
 						received.push({ ...request, order: order++ });
 						sock.end(`${JSON.stringify({ id: request.id, result: {} })}\n`);
@@ -150,6 +168,13 @@ const reportParams = (state: string, seq: number, message?: string) => ({
 	...(message === undefined ? {} : { message }),
 });
 
+const heartbeatParams = (seq: number) => ({
+	pane_id: "w1:p1",
+	source: "herdr:xcsh",
+	agent: "xcsh",
+	seq,
+});
+
 const metadataParams = (
 	seq: number,
 	options: {
@@ -175,10 +200,89 @@ describe("herdr-reporter extension", () => {
 	const originalSocket = process.env.HERDR_SOCKET_PATH;
 
 	afterEach(() => {
+		vi.restoreAllMocks();
 		if (originalPaneId === undefined) delete process.env.HERDR_PANE_ID;
 		else process.env.HERDR_PANE_ID = originalPaneId;
 		if (originalSocket === undefined) delete process.env.HERDR_SOCKET_PATH;
 		else process.env.HERDR_SOCKET_PATH = originalSocket;
+	});
+
+	it("emits state-neutral heartbeats every 10 seconds and cancels them before release", async () => {
+		const herdr = await startFakeHerdr();
+		const intervalCallbacks: Array<() => void> = [];
+		const setIntervalSpy = vi.spyOn(globalThis, "setInterval").mockImplementation(((callback: () => void) => {
+			intervalCallbacks.push(callback);
+			return 1 as unknown as ReturnType<typeof setInterval>;
+		}) as typeof setInterval);
+		const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, idleCtx);
+			expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 10_000);
+			expect(intervalCallbacks).toHaveLength(1);
+
+			intervalCallbacks[0]!();
+			await waitFor(() => herdr.received.some(frame => frame.method === "pane.report_agent_heartbeat"));
+			await handlers.get("agent_start")?.({}, busyCtx);
+			intervalCallbacks[0]!();
+			await waitFor(
+				() => herdr.received.filter(frame => frame.method === "pane.report_agent_heartbeat").length === 2,
+			);
+
+			const frames = herdr.received.filter(frame => frame.params.source === "herdr:xcsh");
+			const base = frames[0]?.params.seq as number;
+			expect(frames.map(frame => [frame.method, frame.params])).toEqual([
+				["pane.report_agent", reportParams("idle", base)],
+				["pane.report_agent_heartbeat", heartbeatParams(base + 1)],
+				["pane.report_agent", reportParams("working", base + 2)],
+				["pane.report_agent_heartbeat", heartbeatParams(base + 3)],
+			]);
+
+			await handlers.get("session_shutdown")?.({}, idleCtx);
+			await waitFor(() => herdr.received.some(frame => frame.method === "pane.release_agent"));
+			expect(clearIntervalSpy).toHaveBeenCalledWith(1);
+			const frameCountAfterShutdown = herdr.received.length;
+			// A callback already queued when shutdown begins must not revive liveness.
+			intervalCallbacks[0]!();
+			await new Promise(resolve => setTimeout(resolve, 20));
+			expect(herdr.received).toHaveLength(frameCountAfterShutdown);
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("keeps heartbeat transport failures nonfatal and preserves the shared sequence", async () => {
+		const herdr = await startFakeHerdr({ failMethods: new Set(["pane.report_agent_heartbeat"]) });
+		const intervalCallbacks: Array<() => void> = [];
+		vi.spyOn(globalThis, "setInterval").mockImplementation(((callback: () => void) => {
+			intervalCallbacks.push(callback);
+			return 1 as unknown as ReturnType<typeof setInterval>;
+		}) as typeof setInterval);
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers, debugCalls } = makeMockPi();
+
+			herdrReporter(pi);
+			await handlers.get("session_start")?.({}, idleCtx);
+			intervalCallbacks[0]!();
+			await handlers.get("agent_start")?.({}, busyCtx);
+
+			await waitFor(() => herdr.received.filter(frame => frame.method === "pane.report_agent").length === 2);
+			const reports = herdr.received.filter(frame => frame.method === "pane.report_agent");
+			const base = reports[0]?.params.seq as number;
+			expect(reports[0]?.params).toEqual(reportParams("idle", base));
+			// The failed heartbeat consumes the next shared sequence slot, but cannot
+			// prevent the following state report from reaching Herdr.
+			expect(reports[1]?.params).toEqual(reportParams("working", base + 2));
+			expect(debugCalls.some(call => call.message === "herdr report failed")).toBe(true);
+		} finally {
+			await herdr.close();
+		}
 	});
 
 	it("is inert (registers nothing) when not running under herdr", () => {
