@@ -10,6 +10,18 @@ let modelsPath: string;
 const savedEnv: Record<string, string | undefined> = {};
 const ENV_KEYS = ["LITELLM_BASE_URL", "LITELLM_API_KEY"];
 
+function windowsLikeEnv(backing: Record<string, string>): NodeJS.ProcessEnv {
+	return new Proxy(backing, {
+		get(target, prop) {
+			if (typeof prop !== "string") return Reflect.get(target, prop);
+			for (const key in target) {
+				if (key.toLowerCase() === prop.toLowerCase()) return target[key];
+			}
+			return undefined;
+		},
+	}) as NodeJS.ProcessEnv;
+}
+
 beforeEach(() => {
 	// Save and unset env vars — this container has them set
 	for (const key of ENV_KEYS) {
@@ -103,6 +115,26 @@ describe("readLiteLLMConfig", () => {
 
 		const result = readLiteLLMConfig(modelsPath);
 		expect(result?.apiKey).toBe("resolved-secret-value");
+	});
+
+	test("rejects a case-differing Windows environment match for an API-key reference", () => {
+		const yml = [
+			"configVersion: 2",
+			"providers:",
+			"  anthropic:",
+			'    baseUrl: "https://proxy.example.com/anthropic"',
+			"    apiKey: PUBLIC_KEY",
+			"",
+		].join("\n");
+		fs.writeFileSync(modelsPath, yml);
+
+		const savedProcessEnv = process.env;
+		process.env = windowsLikeEnv({ public_key: "wrong-secret" });
+		try {
+			expect(readLiteLLMConfig(modelsPath)).toBeUndefined();
+		} finally {
+			process.env = savedProcessEnv;
+		}
 	});
 
 	test("returns literal apiKey when not an env var name", () => {

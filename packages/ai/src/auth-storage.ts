@@ -10,7 +10,7 @@
 import { Database, type Statement } from "bun:sqlite";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getAgentDbPath, logger } from "@f5-sales-demo/pi-utils";
+import { $envExact, getAgentDbPath, logger } from "@f5-sales-demo/pi-utils";
 import { getEnvApiKey } from "./stream";
 import type { Provider } from "./types";
 import type {
@@ -149,7 +149,7 @@ export type AuthStorageOptions = {
  * Does NOT support "!command" syntax (that requires pi-natives).
  */
 async function defaultConfigValueResolver(config: string): Promise<string | undefined> {
-	const envValue = process.env[config];
+	const envValue = $envExact(config);
 	return envValue || config;
 }
 

@@ -28,7 +28,7 @@ import {
 	unregisterCustomApis,
 	unregisterOAuthProviders,
 } from "@f5-sales-demo/pi-ai";
-import { $env, isRecord, logger } from "@f5-sales-demo/pi-utils";
+import { $env, $envExact, isRecord, logger } from "@f5-sales-demo/pi-utils";
 import { type Static, Type } from "@sinclair/typebox";
 import { type ConfigError, ConfigFile } from "../config";
 import { hasLiteLLMEnv, probeAndUpgradeLiteLLMConfig, startupHealthCheck } from "../config/auto-config";
@@ -475,7 +475,7 @@ type LlamaCppDiscoveredServerMetadata = {
  * Checks environment variable first, then treats as literal.
  */
 export function resolveApiKeyConfig(keyConfig: string): string | undefined {
-	const envValue = Bun.env[keyConfig];
+	const envValue = $envExact(keyConfig);
 	if (envValue) return envValue;
 	return keyConfig;
 }
@@ -488,7 +488,7 @@ const ENV_VAR_NAME_RE = /^[A-Z][A-Z0-9]*(?:_[A-Z][A-Z0-9]*)+$/;
  * names to prevent sending literal names like "LITELLM_API_KEY" as Bearer tokens.
  */
 export function resolveYamlApiKeyConfig(keyConfig: string): string | undefined {
-	const envValue = Bun.env[keyConfig];
+	const envValue = $envExact(keyConfig);
 	if (envValue) return envValue;
 	if (ENV_VAR_NAME_RE.test(keyConfig)) return undefined;
 	return keyConfig;

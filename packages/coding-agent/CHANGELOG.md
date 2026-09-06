@@ -36,6 +36,11 @@
 
 ### Fixed
 
+- Resolved user-configured environment references by exact case across config values, model
+  registry credentials, and LiteLLM YAML while preserving literal, command-backed, and unresolved
+  all-caps behavior. Semantically ported from
+  [can1357/oh-my-pi#7362](https://github.com/can1357/oh-my-pi/pull/7362)
+  ([#3711](https://github.com/f5-sales-demo/xcsh/issues/3711)).
 - Hardened provider and compaction boundaries by obfuscating every provider-visible string,
   preserving opaque reasoning, protecting side requests and adversarial summary tags, and restoring
   unconfigured credential-shaped values byte-exact at trusted local tool boundaries. Semantically

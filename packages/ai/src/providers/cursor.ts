@@ -325,6 +325,27 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 		let h2Client: http2.ClientHttp2Session | null = null;
 		let h2Request: http2.ClientHttp2Stream | null = null;
 		let heartbeatTimer: NodeJS.Timeout | null = null;
+		const h2Completion = Promise.withResolvers<void>();
+		let h2Settled = false;
+		let sawTurnEnded = false;
+		let endStreamError: Error | null = null;
+		const settleH2 = (error?: unknown): void => {
+			if (h2Settled) return;
+			h2Settled = true;
+			if (error !== undefined) {
+				h2Completion.reject(error);
+				return;
+			}
+			if (endStreamError) {
+				h2Completion.reject(endStreamError);
+				return;
+			}
+			if (!sawTurnEnded) {
+				h2Completion.reject(new Error("Cursor stream ended before turnEnded"));
+				return;
+			}
+			h2Completion.resolve();
+		};
 
 		try {
 			const apiKey = options?.apiKey;
@@ -346,6 +367,7 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 
 			const baseUrl = model.baseUrl || CURSOR_API_URL;
 			h2Client = http2.connect(baseUrl);
+			h2Client.on("error", error => settleH2(error));
 
 			h2Request = h2Client.request({
 				":method": "POST",
@@ -363,7 +385,6 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 			stream.push({ type: "start", partial: output });
 
 			let pendingBuffer = Buffer.alloc(0);
-			let endStreamError: Error | null = null;
 			let currentTextBlock: (TextContent & { index: number }) | null = null;
 			let currentThinkingBlock: (ThinkingContent & { index: number }) | null = null;
 			let currentToolCall: ToolCallState | null = null;
@@ -400,8 +421,6 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 				conversationStateCache.set(conversationId, checkpoint);
 			};
 
-			let resolveH2: (() => void) | undefined;
-
 			h2Request.on("data", (chunk: Buffer) => {
 				pendingBuffer = Buffer.concat([pendingBuffer, chunk]);
 
@@ -417,6 +436,7 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 						const endError = parseConnectEndStream(messageBytes);
 						if (endError) {
 							endStreamError = endError;
+							settleH2(endError);
 							h2Request?.close();
 						}
 						continue;
@@ -443,13 +463,8 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 							log("error", "handleServerMessage", { error: String(error) });
 						});
 
-						// Resolve only on explicit turnEnded. stopReason defaults to "stop"
-						// and is not a reliable signal for stream completion.
-						if (isTurnEnded && resolveH2) {
-							const r = resolveH2;
-							resolveH2 = undefined;
-							r();
-						}
+						// Application completion is not protocol success; wait for a clean HTTP/2 end.
+						if (isTurnEnded) sawTurnEnded = true;
 					} catch (e) {
 						log("error", "parseServerMessage", { error: String(e) });
 					}
@@ -471,32 +486,24 @@ export const streamCursor: StreamFunction<"cursor-agent"> = (
 
 			heartbeatTimer = setInterval(sendHeartbeat, 5000);
 
-			const h2Completion = Promise.withResolvers<void>();
-			resolveH2 = h2Completion.resolve;
-
 			h2Request!.on("trailers", trailers => {
 				const status = trailers["grpc-status"];
 				const msg = trailers["grpc-message"];
-				if (status && status !== "0") {
-					h2Completion.reject(new Error(`gRPC error ${status}: ${decodeURIComponent(String(msg || ""))}`));
+				if (status && status !== "0" && !endStreamError) {
+					endStreamError = new Error(`gRPC error ${status}: ${decodeURIComponent(String(msg || ""))}`);
 				}
 			});
 
 			h2Request!.on("end", () => {
-				resolveH2 = undefined;
-				if (endStreamError) {
-					h2Completion.reject(endStreamError);
-					return;
-				}
-				h2Completion.resolve();
+				settleH2();
 			});
 
-			h2Request!.on("error", h2Completion.reject);
+			h2Request!.on("error", error => settleH2(error));
 
 			if (options?.signal) {
 				options.signal.addEventListener("abort", () => {
 					h2Request?.close();
-					h2Completion.reject(new Error("Request was aborted"));
+					settleH2(new Error("Request was aborted"));
 				});
 			}
 			await h2Completion.promise;

@@ -7,6 +7,18 @@ import * as path from "node:path";
 import { AuthCredentialStore, AuthStorage } from "../src/auth-storage";
 import * as kagiModule from "../src/utils/oauth/kagi";
 
+function windowsLikeEnv(backing: Record<string, string>): NodeJS.ProcessEnv {
+	return new Proxy(backing, {
+		get(target, prop) {
+			if (typeof prop !== "string") return Reflect.get(target, prop);
+			for (const key in target) {
+				if (key.toLowerCase() === prop.toLowerCase()) return target[key];
+			}
+			return undefined;
+		},
+	}) as NodeJS.ProcessEnv;
+}
+
 function countCredentialRows(dbPath: string, provider: string): number {
 	const db = new Database(dbPath, { readonly: true });
 	try {
@@ -70,5 +82,18 @@ describe("AuthStorage api-key login replacement", () => {
 		expect(stored.credential.key).toBe("same-kagi-key");
 		expect(store.getApiKey("kagi")).toBe("same-kagi-key");
 		expect(await authStorage.getApiKey("kagi", "session-kagi-relogin")).toBe("same-kagi-key");
+	});
+
+	it("preserves a stored literal that differs only by case from a Windows environment key", async () => {
+		if (!authStorage) throw new Error("test setup failed");
+		await authStorage.set("opencode", { type: "api_key", key: "public" });
+
+		const savedEnv = process.env;
+		process.env = windowsLikeEnv({ PUBLIC: "C:\\SyntheticData\\Public" });
+		try {
+			expect(await authStorage.getApiKey("opencode")).toBe("public");
+		} finally {
+			process.env = savedEnv;
+		}
 	});
 });
