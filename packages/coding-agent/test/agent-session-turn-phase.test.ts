@@ -72,6 +72,8 @@ describe("AgentSession normalized turn phases", () => {
 		const finishFinalModelTurn = Promise.withResolvers<void>();
 		const uiFinalizationObserved = Promise.withResolvers<void>();
 		const finishUiFinalization = Promise.withResolvers<void>();
+		const ordinaryAgentEndObserved = Promise.withResolvers<void>();
+		const finishOrdinaryAgentEnd = Promise.withResolvers<void>();
 		const toolCall = { type: "toolCall" as const, id: "PRIVATE_CALL_ID", name: "bash", arguments: {} };
 		let modelTurn = 0;
 		const tool: AgentTool = {
@@ -120,19 +122,29 @@ describe("AgentSession normalized turn phases", () => {
 		});
 		const phases: string[] = [];
 		let uiFinalizationSettled = false;
+		let ordinaryAgentEndSettled = false;
 		let idleObservedBeforeUiFinalizationSettled = false;
-		session.subscribe(async (event: AgentSessionEvent) => {
-			if (event.type === "agent_end") {
-				uiFinalizationObserved.resolve();
-				await finishUiFinalization.promise;
-				uiFinalizationSettled = true;
-			}
-			if (event.type === "turn_phase") {
-				phases.push(event.phase);
-				if (event.phase === "idle" && !uiFinalizationSettled) {
-					idleObservedBeforeUiFinalizationSettled = true;
+		session.subscribe(
+			async (event: AgentSessionEvent) => {
+				if (event.type === "agent_end") {
+					uiFinalizationObserved.resolve();
+					await finishUiFinalization.promise;
+					uiFinalizationSettled = true;
 				}
-			}
+				if (event.type === "turn_phase") {
+					phases.push(event.phase);
+					if (event.phase === "idle" && !uiFinalizationSettled) {
+						idleObservedBeforeUiFinalizationSettled = true;
+					}
+				}
+			},
+			{ waitForTurnSettlement: true },
+		);
+		session.subscribe(async (event: AgentSessionEvent) => {
+			if (event.type !== "agent_end") return;
+			ordinaryAgentEndObserved.resolve();
+			await finishOrdinaryAgentEnd.promise;
+			ordinaryAgentEndSettled = true;
 		});
 
 		const prompt = session.prompt("PRIVATE_PROMPT");
@@ -148,13 +160,16 @@ describe("AgentSession normalized turn phases", () => {
 
 		finishFinalModelTurn.resolve();
 		await uiFinalizationObserved.promise;
+		await ordinaryAgentEndObserved.promise;
 		await Bun.sleep(0);
 		const phaseDuringUiFinalization = phases.at(-1);
 		finishUiFinalization.resolve();
-		await prompt;
 		await waitFor(() => phases.at(-1) === "idle");
 		expect(phaseDuringUiFinalization).toBe("thinking");
 		expect(idleObservedBeforeUiFinalizationSettled).toBe(false);
+		expect(ordinaryAgentEndSettled).toBe(false);
+		finishOrdinaryAgentEnd.resolve();
+		await prompt;
 		expect(JSON.stringify(phases)).not.toContain("PRIVATE_");
 	});
 });
