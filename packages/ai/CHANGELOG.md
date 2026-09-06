@@ -10,6 +10,15 @@
 
 ### Fixed
 
+- Removed output-only lifecycle statuses before replaying persisted OpenAI Responses items,
+  including remote compaction and compaction summaries. Semantically ported from
+  [can1357/oh-my-pi#7743](https://github.com/can1357/oh-my-pi/pull/7743) and
+  [#10415](https://github.com/can1357/oh-my-pi/pull/10415)
+  ([#3721](https://github.com/f5-sales-demo/xcsh/issues/3721)).
+- Extended rate-limit handling to keep API-key credentials blocked until their live usage reset
+  and to understand absolute English and Chinese reset timestamps. Semantically ported from
+  [can1357/oh-my-pi#10325](https://github.com/can1357/oh-my-pi/pull/10325)
+  ([#3721](https://github.com/f5-sales-demo/xcsh/issues/3721)).
 - Prevented case-insensitive Windows environment lookup from replacing literal stored credentials,
   and delayed Cursor success until the HTTP/2/CONNECT protocol terminates cleanly so late stream
   errors remain visible. Semantically ported from

@@ -1,6 +1,31 @@
 export type HeadersLike = Headers | Record<string, string | undefined> | undefined | null;
 
 const RETRY_AFTER_HINT = "retry-after-ms=";
+const RETRY_AFTER_MS_BODY_PATTERN = /\bretry-after-ms\s*[:=]\s*([0-9]+)\b/i;
+const WILL_RESET_AT_PATTERN =
+	/(?:will\s+)?reset at\s+([0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:?[0-9]{2})?)/i;
+const CN_RESET_AT_PATTERN = /将在\s*([0-9]{4}-[0-9]{2}-[0-9]{2}\s+[0-9]{2}:[0-9]{2}:[0-9]{2})\s*重置/;
+
+/** Parse body-level retry hints that are not represented by HTTP headers. */
+export function getRetryAfterMsFromErrorText(message: string): number | undefined {
+	const retryAfterMsMatch = RETRY_AFTER_MS_BODY_PATTERN.exec(message);
+	if (retryAfterMsMatch?.[1]) {
+		const milliseconds = Number(retryAfterMsMatch[1]);
+		if (Number.isFinite(milliseconds) && milliseconds > 0) return milliseconds;
+	}
+
+	for (const pattern of [WILL_RESET_AT_PATTERN, CN_RESET_AT_PATTERN]) {
+		const match = pattern.exec(message);
+		if (!match?.[1]) continue;
+		const normalized = match[1].replace(" ", "T");
+		const timestamp = /(?:Z|[+-][0-9]{2}:?[0-9]{2})$/i.test(normalized) ? normalized : `${normalized}Z`;
+		const resetAt = Date.parse(timestamp);
+		const delay = resetAt - Date.now();
+		if (!Number.isNaN(resetAt) && delay > 0) return delay;
+	}
+
+	return undefined;
+}
 
 export function formatErrorMessageWithRetryAfter(error: unknown, headers?: HeadersLike): string {
 	const message = error instanceof Error ? error.message : JSON.stringify(error);

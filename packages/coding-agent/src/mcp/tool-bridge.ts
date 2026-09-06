@@ -100,6 +100,31 @@ function formatMCPContent(content: MCPContent[]): string {
 	return parts.join("\n\n");
 }
 
+function formatStructuredContent(structured: Record<string, unknown>): string {
+	try {
+		const json = JSON.stringify(structured, null, 2);
+		return typeof json === "string" ? `\`\`\`json\n${json}\n\`\`\`` : "";
+	} catch {
+		return "";
+	}
+}
+
+/** Avoid duplicating a spec-compliant server's back-compatible text echo. */
+function structuredContentAlreadyInText(structured: Record<string, unknown>, content: MCPContent[]): boolean {
+	for (const item of content) {
+		if (item.type !== "text") continue;
+		const text = typeof item.text === "string" ? item.text.trim() : "";
+		if (!text) continue;
+		try {
+			const fenced = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(text);
+			if (Bun.deepEquals(JSON.parse(fenced?.[1] ?? text), structured)) return true;
+		} catch {
+			// Non-JSON acknowledgement text cannot duplicate the structured payload.
+		}
+	}
+	return false;
+}
+
 /** Build a CustomToolResult from a callTool response. */
 function buildResult(
 	result: MCPToolCallResult,
@@ -108,12 +133,19 @@ function buildResult(
 	provider?: string,
 	providerName?: string,
 ): CustomToolResult<MCPToolDetails> {
-	const text = formatMCPContent(result.content);
+	const content = result.content ?? [];
+	let text = formatMCPContent(content);
+	if (result.structuredContent !== undefined && !structuredContentAlreadyInText(result.structuredContent, content)) {
+		const structuredText = formatStructuredContent(result.structuredContent);
+		if (structuredText) {
+			text = text ? `${text}\n\n${structuredText}` : structuredText;
+		}
+	}
 	const details: MCPToolDetails = {
 		serverName,
 		mcpToolName,
 		isError: result.isError,
-		rawContent: result.content,
+		rawContent: content,
 		provider,
 		providerName,
 	};

@@ -1015,7 +1015,10 @@ export class AuthStorage {
 	// Queries provider usage endpoints to detect rate limits before they occur.
 	// ─────────────────────────────────────────────────────────────────────────────
 
-	#buildUsageCredential(credential: OAuthCredential): UsageCredential {
+	#buildUsageCredential(credential: AuthCredential): UsageCredential {
+		if (credential.type === "api_key") {
+			return { type: "api_key", apiKey: credential.key };
+		}
 		return {
 			type: "oauth",
 			accessToken: credential.access,
@@ -1417,11 +1420,11 @@ export class AuthStorage {
 
 	async #getUsageReport(
 		provider: Provider,
-		credential: OAuthCredential,
+		credential: AuthCredential,
 		options?: { baseUrl?: string; timeoutMs?: number },
 	): Promise<UsageReport | null> {
 		return this.#fetchUsageCached(
-			this.#buildUsageRequestForOauth(provider, credential, options?.baseUrl),
+			this.#buildUsageRequest(provider, this.#buildUsageCredential(credential), options?.baseUrl),
 			options?.timeoutMs ?? this.#usageRequestTimeoutMs,
 		);
 	}
@@ -1510,15 +1513,13 @@ export class AuthStorage {
 		const now = Date.now();
 		let blockedUntil = now + (options?.retryAfterMs ?? AuthStorage.#defaultBackoffMs);
 
-		if (sessionCredential.type === "oauth" && this.#rankingStrategyResolver?.(provider)) {
+		if (this.#rankingStrategyResolver?.(provider)) {
 			const credential = this.#getCredentialsForProvider(provider)[sessionCredential.index];
-			if (credential?.type === "oauth") {
+			if (credential?.type === sessionCredential.type) {
 				const report = await this.#getUsageReport(provider, credential, options);
 				if (report && this.#isUsageLimitReached(report)) {
-					const resetAtMs = this.#getUsageResetAtMs(report, Date.now());
-					if (resetAtMs && resetAtMs > blockedUntil) {
-						blockedUntil = resetAtMs;
-					}
+					const resetAtMs = this.#getUsageResetAtMs(report, now);
+					if (resetAtMs && resetAtMs > blockedUntil) blockedUntil = resetAtMs;
 				}
 			}
 		}

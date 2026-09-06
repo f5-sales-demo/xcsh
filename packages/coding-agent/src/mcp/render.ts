@@ -54,7 +54,11 @@ export function renderMCPResult(
 	theme: Theme,
 	args?: Record<string, unknown>,
 ): Component {
-	const textContent = result.content?.find(c => c.type === "text")?.text ?? "";
+	const textContent = (result.content ?? [])
+		.filter(block => block.type === "text")
+		.map(block => block.text ?? "")
+		.filter(text => text.length > 0)
+		.join("\n\n");
 	const trimmedOutput = textContent.trimEnd();
 
 	return {
