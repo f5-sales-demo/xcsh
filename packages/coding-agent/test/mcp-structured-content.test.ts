@@ -78,6 +78,15 @@ describe("MCP bridge structuredContent", () => {
 		expect(text.split("abc123")).toHaveLength(2);
 	});
 
+	test("ignores malformed text blocks while preserving structuredContent", async () => {
+		const text = await modelText({
+			content: [{ type: "text" } as never],
+			structuredContent: { status: "ready" },
+		});
+
+		expect(text).toContain('"status": "ready"');
+	});
+
 	test("leaves legacy content-only results unchanged", async () => {
 		expect(await modelText({ content: [{ type: "text", text: "plain result" }] })).toBe("plain result");
 	});

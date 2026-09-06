@@ -113,7 +113,7 @@ function formatStructuredContent(structured: Record<string, unknown>): string {
 function structuredContentAlreadyInText(structured: Record<string, unknown>, content: MCPContent[]): boolean {
 	for (const item of content) {
 		if (item.type !== "text") continue;
-		const text = item.text.trim();
+		const text = typeof item.text === "string" ? item.text.trim() : "";
 		if (!text) continue;
 		try {
 			const fenced = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(text);
