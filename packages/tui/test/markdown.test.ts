@@ -1133,9 +1133,9 @@ bar`,
 			expect(plain(new Markdown(source, 0, 0, defaultMarkdownTheme))).toEqual([
 				"Costs $5 and $10 or $8k–$12k; use $HOME, $" + "{PATH}, $x-y$, and code: $\\lambda$.",
 			]);
-			expect(plain(new Markdown("Pay $5; use $HOME or ${PATH}; escape \\$x$.", 0, 0, defaultMarkdownTheme))).toEqual(
-				["Pay $5; use $HOME or ${PATH}; escape $x$."],
-			);
+			expect(
+				plain(new Markdown(`Pay $5; use $HOME or \${PATH}; escape \\$x$.`, 0, 0, defaultMarkdownTheme)),
+			).toEqual([`Pay $5; use $HOME or \${PATH}; escape $x$.`]);
 
 			const fence = String.fromCharCode(96).repeat(3);
 			const fenced = [`${fence}text`, "$\\lambda$", fence].join("\n");
