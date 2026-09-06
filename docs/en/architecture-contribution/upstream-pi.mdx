@@ -10,8 +10,10 @@ xcsh is derived from the open-source pi coding agent and adds F5 Distributed Clo
 
 ## Which upstream range was reviewed?
 
-The last proven sync with `can1357/oh-my-pi` was `d350ea60e` on April 9, 2026. The security-first
-audit reviewed the divergent line through the frozen tip `b2f25dbfe1` on September 5, 2026.
+The last proven sync with `can1357/oh-my-pi` was `d350ea60e` on April 9, 2026. The first-pass
+security and shared-runtime audit reviewed the divergent line through `b2f25dbfe1` on September 5,
+2026. The second-pass TUI and renderer audit extends that lineage through the frozen tip
+`6d3bc569d16cd7351073eaa767caed51021befbb` on September 6, 2026.
 Because the repositories no longer share a usable linear history, accepted changes are semantic
 ports with adapted regressions rather than merges or ancestry-based cherry-picks.
 
@@ -25,6 +27,7 @@ The four implementation waves accepted these upstream pull requests:
 | Configuration and execution security | #7362 and #5636 | #3720 |
 | Core runtime | #7743, #10415, #10523, #10325, and #10550 | #3723 |
 | Terminal and platform | #10613, #10997, #10492, #9233, and #7634 | #3724 |
+| TUI and renderer crash containment | #1989, #4497, #4529, #2047, #5837, and #6788 | #3743 |
 
 These ports protect provider-bound secrets and compaction boundaries, enforce exact-case
 environment references and complete protocol tails, repair Responses replay and shared MCP
@@ -32,6 +35,11 @@ results, improve rate-limit and retained-string behavior, chain directory comple
 power assertions across supported platforms, and harden stats persistence and network exposure.
 The source pull requests remain attributable to `can1357/oh-my-pi`; the xcsh deliveries link the
 exact commits and regression evidence.
+
+The second-pass renderer work normalizes malformed task result data, accepts only strings at path
+boundaries, bounds ANSI-heavy rows before width measurement, and treats terminal disconnect
+cleanup as best effort before SIGHUP. Upstream #5438 is equivalent because `Container.render()`
+already isolates child-render exceptions; its richer fallback display remains deferred.
 
 ## Where does xcsh deliberately diverge?
 
@@ -53,7 +61,8 @@ Upstream workflows, branding, release machinery, generated model catalogs, compa
 new packages, and large unrelated subsystems are excluded. The security-scan subsystem in #7048
 and the native minimizer in #2176 remain deferred. The range-dashboard optimization in #9327 and
 earendil-works/pi-only fullscreen transcript, mouse, clipboard, and renderer subsystems also remain
-outside this campaign. Commits after either frozen source tip require a later audit.
+outside this campaign. MCP, OpenCode, Herdr, #10625, and #10491 are explicitly excluded from the
+second-pass batch. Commits after the frozen source tip require a later audit.
 
 ## How do I decide where a fix belongs?
 

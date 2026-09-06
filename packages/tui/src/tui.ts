@@ -10,6 +10,75 @@ import { ImageProtocol, setCellDimensions, setTerminalImageProtocol, TERMINAL } 
 import { extractSegments, sliceByColumn, sliceWithWidth, visibleWidth } from "./utils";
 
 const SEGMENT_RESET = "\x1b[0m";
+const LINE_FIT_MIN_SOURCE_CODE_UNITS = 4096;
+const LINE_FIT_MAX_SOURCE_CODE_UNITS = 65_536;
+const LINE_FIT_SOURCE_WIDTH_MULTIPLIER = 64;
+
+function ansiSequenceEnd(line: string, start: number): number {
+	const next = line.charCodeAt(start + 1);
+	if (next === 0x5b) {
+		let index = start + 2;
+		while (index < line.length) {
+			const final = line.charCodeAt(index);
+			if (final >= 0x40 && final <= 0x7e) return index + 1;
+			index++;
+		}
+		return -1;
+	}
+	if (next === 0x5d) {
+		let index = start + 2;
+		while (index < line.length) {
+			const code = line.charCodeAt(index);
+			if (code === 0x07) return index + 1;
+			if (code === 0x1b && line.charCodeAt(index + 1) === 0x5c) return index + 2;
+			index++;
+		}
+		return -1;
+	}
+	return start + 2 <= line.length ? start + 2 : -1;
+}
+
+function ansiSequenceHasVisiblePayload(line: string, start: number): boolean {
+	return line.startsWith("\x1b]66;", start);
+}
+
+/** Bound work before width measurement while retaining later visible text. */
+function lineFitSource(raw: string, width: number): string {
+	const safeWidth = Number.isFinite(width) ? Math.max(1, Math.trunc(width)) : 1;
+	const maxSourceLength = Math.min(
+		LINE_FIT_MAX_SOURCE_CODE_UNITS,
+		Math.max(LINE_FIT_MIN_SOURCE_CODE_UNITS, safeWidth * LINE_FIT_SOURCE_WIDTH_MULTIPLIER),
+	);
+	if (raw.length <= maxSourceLength) return raw;
+
+	const chunks: string[] = [];
+	let emitted = 0;
+	for (let index = 0; index < raw.length && emitted < maxSourceLength; ) {
+		if (raw.charCodeAt(index) === 0x1b) {
+			const end = ansiSequenceEnd(raw, index);
+			if (end === -1) break;
+			const sequenceLength = end - index;
+			if (ansiSequenceHasVisiblePayload(raw, index)) {
+				chunks.push(raw.slice(index, end));
+				emitted += sequenceLength;
+			} else if (emitted > 0 && sequenceLength <= maxSourceLength - emitted) {
+				chunks.push(raw.slice(index, end));
+				emitted += sequenceLength;
+			}
+			index = end;
+			continue;
+		}
+
+		const start = index;
+		const end = Math.min(raw.length, start + maxSourceLength - emitted);
+		while (index < end && raw.charCodeAt(index) !== 0x1b) index++;
+		if (index === start) break;
+		chunks.push(raw.slice(start, index));
+		emitted += index - start;
+	}
+
+	return chunks.join("") + SEGMENT_RESET;
+}
 
 type InputListenerResult = { consume?: boolean; data?: string } | undefined;
 type InputListener = (data: string) => InputListenerResult;
@@ -451,7 +520,9 @@ export class TUI extends Container {
 				this.#handleInput(data);
 			},
 			() => this.requestRender(),
+			() => this.stop(),
 		);
+		if (this.#stopped) return;
 		this.terminal.hideCursor();
 		this.#querySixelSupport();
 		this.#queryCellSize();
@@ -1074,11 +1145,10 @@ export class TUI extends Container {
 		// as visible chars; the marker is extracted later in #extractCursorPosition.
 		for (let i = 0; i < newLines.length; i++) {
 			if (TERMINAL.isImageLine(newLines[i])) continue;
-			const stripped = newLines[i].replaceAll(CURSOR_MARKER, "");
-			if (visibleWidth(stripped) > width) {
-				const hadMarker = newLines[i] !== stripped;
-				newLines[i] = sliceByColumn(stripped, 0, width, true) + (hadMarker ? CURSOR_MARKER : "");
-			}
+			const hadMarker = newLines[i].includes(CURSOR_MARKER);
+			let fitted = lineFitSource(newLines[i].replaceAll(CURSOR_MARKER, ""), width);
+			if (visibleWidth(fitted) > width) fitted = sliceByColumn(fitted, 0, width, true);
+			newLines[i] = fitted + (hadMarker ? CURSOR_MARKER : "");
 		}
 
 		// Composite overlays into the rendered lines (before differential compare)

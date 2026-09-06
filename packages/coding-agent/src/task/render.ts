@@ -79,6 +79,17 @@ function normalizeReportFindings(value: unknown): ReportFindingDetails[] {
 	return findings;
 }
 
+/** Normalize renderer-facing submit_result data without weakening tool schemas. */
+function normalizeSubmitResultData(value: unknown): Array<{ data: unknown }> {
+	if (Array.isArray(value)) {
+		return value.filter((item): item is { data: unknown } => item !== null && typeof item === "object");
+	}
+	if (value !== null && typeof value === "object") {
+		return [value as { data: unknown }];
+	}
+	return [];
+}
+
 function formatJsonScalar(value: unknown, _theme: Theme): string {
 	if (value === null) return "null";
 	if (typeof value === "string") {
@@ -588,12 +599,12 @@ function renderAgentProgress(
 	if (progress.extractedToolData) {
 		// For completed tasks, check for review verdict from submit_result tool
 		if (progress.status === "completed") {
-			const completeData = progress.extractedToolData.submit_result as Array<{ data: unknown }> | undefined;
+			const completeData = normalizeSubmitResultData(progress.extractedToolData.submit_result);
 			const reportFindingData = normalizeReportFindings(progress.extractedToolData.report_finding);
 			const reviewData = completeData
-				?.map(c => c.data as SubmitReviewDetails)
+				.map(c => c.data as SubmitReviewDetails)
 				.filter(d => d && typeof d === "object" && "overall_correctness" in d);
-			if (reviewData && reviewData.length > 0) {
+			if (reviewData.length > 0) {
 				const summary = reviewData[reviewData.length - 1];
 				const findings = reportFindingData;
 				lines.push(...renderReviewResult(summary, findings, continuePrefix, expanded, theme));
@@ -798,16 +809,16 @@ function renderAgentResult(result: SingleResult, isLast: boolean, expanded: bool
 		);
 	}
 	// Check for review result (submit_result with review schema + report_finding)
-	const completeData = result.extractedToolData?.submit_result as Array<{ data: unknown }> | undefined;
+	const completeData = normalizeSubmitResultData(result.extractedToolData?.submit_result);
 	const reportFindingData = normalizeReportFindings(result.extractedToolData?.report_finding);
 
 	// Extract review verdict from submit_result tool's data field if it matches SubmitReviewDetails
 	const reviewData = completeData
-		?.map(c => c.data as SubmitReviewDetails)
+		.map(c => c.data as SubmitReviewDetails)
 		.filter(d => d && typeof d === "object" && "overall_correctness" in d);
-	const submitReviewData = reviewData && reviewData.length > 0 ? reviewData : undefined;
+	const submitReviewData = reviewData.length > 0 ? reviewData : undefined;
 
-	if (submitReviewData && submitReviewData.length > 0) {
+	if (submitReviewData) {
 		// Use combined review renderer
 		const summary = submitReviewData[submitReviewData.length - 1];
 		const findings = reportFindingData;
@@ -815,7 +826,7 @@ function renderAgentResult(result: SingleResult, isLast: boolean, expanded: bool
 		return lines;
 	}
 	if (reportFindingData.length > 0) {
-		const hasCompleteData = completeData && completeData.length > 0;
+		const hasCompleteData = completeData.length > 0;
 		const message = hasCompleteData
 			? "Review verdict missing expected fields"
 			: "Review incomplete (submit_result not called)";

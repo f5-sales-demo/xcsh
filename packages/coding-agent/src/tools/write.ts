@@ -517,9 +517,9 @@ export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails
 // =============================================================================
 
 interface WriteRenderArgs {
-	path?: string;
-	file_path?: string;
-	content?: string;
+	path?: unknown;
+	file_path?: unknown;
+	content?: unknown;
 }
 
 const WRITE_PREVIEW_LINES = 6;
@@ -538,8 +538,9 @@ function formatMetadataLine(lineCount: number | null, language: string | undefin
 	return uiTheme.fg("dim", `${icon}`);
 }
 
-function normalizeDisplayText(text: string): string {
-	return text.replace(/\r/g, "");
+function normalizeDisplayText(text: unknown): string {
+	if (text === undefined || text === null) return "";
+	return String(text).replace(/\r/g, "");
 }
 
 function formatStreamingContent(content: string, uiTheme: Theme, maxWidth: number): string {
@@ -580,9 +581,10 @@ function renderContentPreview(content: string, expanded: boolean, uiTheme: Theme
 
 export const writeToolRenderer = {
 	renderCall(args: WriteRenderArgs, options: RenderResultOptions, uiTheme: Theme): Component {
-		const rawPath = args.file_path || args.path || "";
+		const rawPath =
+			typeof args.file_path === "string" ? args.file_path : typeof args.path === "string" ? args.path : "";
 		const filePath = shortenPath(rawPath);
-		const lang = getLanguageFromPath(rawPath) ?? "text";
+		const lang = rawPath ? (getLanguageFromPath(rawPath) ?? "text") : "text";
 		const langIcon = uiTheme.fg("muted", uiTheme.getLangIcon(lang));
 		const pathDisplay = filePath ? uiTheme.fg("accent", filePath) : uiTheme.fg("toolOutput", "…");
 		const spinner =
@@ -590,7 +592,8 @@ export const writeToolRenderer = {
 
 		const header = `${formatTitle("Write", uiTheme)} ${spinner ? `${spinner} ` : ""}${langIcon} ${pathDisplay}`;
 
-		if (!args.content) {
+		const content = normalizeDisplayText(args.content);
+		if (!content) {
 			return {
 				render(width: number) {
 					return [truncateToWidth(header, width, Ellipsis.Omit)];
@@ -601,7 +604,7 @@ export const writeToolRenderer = {
 
 		return {
 			render(width: number) {
-				const text = header + formatStreamingContent(args.content!, uiTheme, width);
+				const text = header + formatStreamingContent(content, uiTheme, width);
 				return text.split("\n").map(l => truncateToWidth(l, width, Ellipsis.Omit));
 			},
 			invalidate() {},
@@ -614,10 +617,11 @@ export const writeToolRenderer = {
 		uiTheme: Theme,
 		args?: WriteRenderArgs,
 	): Component {
-		const rawPath = args?.file_path || args?.path || "";
+		const rawPath =
+			typeof args?.file_path === "string" ? args.file_path : typeof args?.path === "string" ? args.path : "";
 		const filePath = shortenPath(rawPath);
-		const fileContent = args?.content || "";
-		const lang = getLanguageFromPath(rawPath);
+		const fileContent = normalizeDisplayText(args?.content);
+		const lang = rawPath ? getLanguageFromPath(rawPath) : undefined;
 		const langIcon = uiTheme.fg("muted", uiTheme.getLangIcon(lang));
 		const pathDisplay = filePath ? uiTheme.fg("accent", filePath) : uiTheme.fg("toolOutput", "…");
 		const lineCount = countLines(fileContent);

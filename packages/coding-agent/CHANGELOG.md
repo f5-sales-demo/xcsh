@@ -40,6 +40,12 @@
 
 ### Fixed
 
+- Prevented malformed task `submit_result` data, non-string write content, and invalid renderer path
+  values from crashing task, read, write, edit, inspect-image, or browser output. Semantically
+  ported from [can1357/oh-my-pi#1989](https://github.com/can1357/oh-my-pi/pull/1989),
+  [#4497](https://github.com/can1357/oh-my-pi/pull/4497), and
+  [#4529](https://github.com/can1357/oh-my-pi/pull/4529)
+  ([#3743](https://github.com/f5-sales-demo/xcsh/issues/3743)).
 - Preserved MCP `structuredContent` through the shared tool bridge, avoided duplicate verbatim
   payloads, and rendered every text block. Semantically ported from
   [can1357/oh-my-pi#10523](https://github.com/can1357/oh-my-pi/pull/10523)
