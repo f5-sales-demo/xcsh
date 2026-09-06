@@ -57,6 +57,27 @@ describe("MCP bridge structuredContent", () => {
 		expect(text.split("abc123")).toHaveLength(2);
 	});
 
+	test("supports structuredContent-only results", async () => {
+		const text = await modelText({ structuredContent: { status: "ready" } });
+
+		expect(text).toContain('"status": "ready"');
+	});
+
+	test("does not duplicate structuredContent echoed in a JSON code fence", async () => {
+		const payload = { lease_token: "abc123", expires_in: 900 };
+		const text = await modelText({
+			content: [
+				{
+					type: "text",
+					text: `\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``,
+				},
+			],
+			structuredContent: payload,
+		});
+
+		expect(text.split("abc123")).toHaveLength(2);
+	});
+
 	test("leaves legacy content-only results unchanged", async () => {
 		expect(await modelText({ content: [{ type: "text", text: "plain result" }] })).toBe("plain result");
 	});

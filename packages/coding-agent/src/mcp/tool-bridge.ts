@@ -116,7 +116,8 @@ function structuredContentAlreadyInText(structured: Record<string, unknown>, con
 		const text = item.text.trim();
 		if (!text) continue;
 		try {
-			if (Bun.deepEquals(JSON.parse(text), structured)) return true;
+			const fenced = /^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n```$/i.exec(text);
+			if (Bun.deepEquals(JSON.parse(fenced?.[1] ?? text), structured)) return true;
 		} catch {
 			// Non-JSON acknowledgement text cannot duplicate the structured payload.
 		}
@@ -132,11 +133,9 @@ function buildResult(
 	provider?: string,
 	providerName?: string,
 ): CustomToolResult<MCPToolDetails> {
-	let text = formatMCPContent(result.content);
-	if (
-		result.structuredContent !== undefined &&
-		!structuredContentAlreadyInText(result.structuredContent, result.content)
-	) {
+	const content = result.content ?? [];
+	let text = formatMCPContent(content);
+	if (result.structuredContent !== undefined && !structuredContentAlreadyInText(result.structuredContent, content)) {
 		const structuredText = formatStructuredContent(result.structuredContent);
 		if (structuredText) {
 			text = text ? `${text}\n\n${structuredText}` : structuredText;
@@ -146,7 +145,7 @@ function buildResult(
 		serverName,
 		mcpToolName,
 		isError: result.isError,
-		rawContent: result.content,
+		rawContent: content,
 		provider,
 		providerName,
 	};

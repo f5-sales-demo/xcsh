@@ -17,7 +17,8 @@ export function getRetryAfterMsFromErrorText(message: string): number | undefine
 	for (const pattern of [WILL_RESET_AT_PATTERN, CN_RESET_AT_PATTERN]) {
 		const match = pattern.exec(message);
 		if (!match?.[1]) continue;
-		const timestamp = match[1].includes("T") ? match[1] : `${match[1].replace(" ", "T")}Z`;
+		const normalized = match[1].replace(" ", "T");
+		const timestamp = /(?:Z|[+-][0-9]{2}:?[0-9]{2})$/i.test(normalized) ? normalized : `${normalized}Z`;
 		const resetAt = Date.parse(timestamp);
 		const delay = resetAt - Date.now();
 		if (!Number.isNaN(resetAt) && delay > 0) return delay;

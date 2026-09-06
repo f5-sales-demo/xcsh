@@ -16,6 +16,13 @@ describe("retry reset timestamp parsing", () => {
 		expect(getRetryAfterMsFromErrorText("您的限额将在 2026-09-06 13:30:00 重置。")).toBe(90 * 60_000);
 	});
 
+	test("preserves timezone designators on space-separated timestamps", () => {
+		vi.spyOn(Date, "now").mockReturnValue(now);
+
+		expect(getRetryAfterMsFromErrorText("Your limit will reset at 2026-09-06 13:00:00Z")).toBe(HOUR_MS);
+		expect(getRetryAfterMsFromErrorText("Your limit will reset at 2026-09-06 14:00:00+01:00")).toBe(HOUR_MS);
+	});
+
 	test("ignores invalid and expired absolute timestamps", () => {
 		vi.spyOn(Date, "now").mockReturnValue(now);
 

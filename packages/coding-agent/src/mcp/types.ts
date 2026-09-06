@@ -201,7 +201,7 @@ export type MCPContent = MCPTextContent | MCPImageContent | MCPResourceContent;
 
 /** tools/call response */
 export interface MCPToolCallResult {
-	content: MCPContent[];
+	content?: MCPContent[];
 	isError?: boolean;
 	/**
 	 * Machine-readable payload channel from the MCP 2025-06-18 tools result
