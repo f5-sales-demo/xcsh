@@ -20,6 +20,7 @@ export {
 } from "./i18n";
 export * from "./json";
 export * as logger from "./logger";
+export * from "./materialize-string";
 export * from "./mermaid-ascii";
 export * from "./mermaid-color";
 export * from "./mime";

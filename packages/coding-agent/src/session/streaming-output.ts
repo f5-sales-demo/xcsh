@@ -1,4 +1,5 @@
 import { sanitizeText } from "@f5-sales-demo/pi-natives";
+import { materializeString } from "@f5-sales-demo/pi-utils";
 import { formatBytes } from "../tools/render-utils";
 import { sanitizeWithImagePassthrough } from "../utils/image-passthrough";
 
@@ -200,7 +201,7 @@ export function truncateLine(
 	maxChars: number = DEFAULT_MAX_COLUMN,
 ): { text: string; wasTruncated: boolean } {
 	if (line.length <= maxChars) return { text: line, wasTruncated: false };
-	return { text: `${line.slice(0, maxChars)}…`, wasTruncated: true };
+	return { text: materializeString(`${line.slice(0, maxChars)}…`), wasTruncated: true };
 }
 
 // =============================================================================
@@ -308,7 +309,7 @@ export function truncateHead(content: string, options: TruncationOptions = {}): 
 	if (includedLines >= maxLines && bytesUsed <= maxBytes) truncatedBy = "lines";
 
 	return {
-		content: content.slice(0, cutIndex),
+		content: materializeString(content.slice(0, cutIndex)),
 		truncated: true,
 		truncatedBy,
 		totalLines,
@@ -414,7 +415,7 @@ export function truncateTail(content: string, options: TruncationOptions = {}): 
 	if (includedLines >= maxLines && bytesUsed <= maxBytes) truncatedBy = "lines";
 
 	return {
-		content: content.slice(startIndex),
+		content: materializeString(content.slice(startIndex)),
 		truncated: true,
 		truncatedBy,
 		totalLines,
