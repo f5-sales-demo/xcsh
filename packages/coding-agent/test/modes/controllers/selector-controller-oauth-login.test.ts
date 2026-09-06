@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { createVertexAuthorizationUrl } from "@f5-sales-demo/pi-ai/utils/oauth/google-antigravity";
 import { SelectorController } from "../../../src/modes/controllers/selector-controller";
 import { OAuthManualInputManager } from "../../../src/modes/oauth-manual-input";
 import { initTheme } from "../../../src/modes/theme/theme";
@@ -118,6 +119,97 @@ describe("SelectorController Google Antigravity login", () => {
 });
 
 describe("SelectorController Corporate Vertex login", () => {
+	it("reports the licensed build/configuration cause when OAuth fails before presenting an action", async () => {
+		const previousClientId = Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+		const previousClientSecret = Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+		try {
+			const showError = vi.fn();
+			const setSetting = vi.fn();
+			const reachedAuthAction = vi.fn();
+			const login = vi.fn(async (_provider, callbacks) => {
+				const url = createVertexAuthorizationUrl("test-state", "test-challenge");
+				reachedAuthAction();
+				callbacks.onAuth({ url });
+			});
+			const ctx = {
+				session: {
+					modelRegistry: { authStorage: { getApiKey: vi.fn(async () => undefined), login } },
+					settings: { set: setSetting },
+				},
+				oauthManualInput: new OAuthManualInputManager(),
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn() },
+				showStatus: vi.fn(),
+				showError,
+				openInBrowser: vi.fn(),
+			} as unknown as InteractiveModeContext;
+
+			await new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
+
+			expect(reachedAuthAction).not.toHaveBeenCalled();
+			expect(showError).toHaveBeenCalledWith(
+				expect.stringContaining("Corporate Vertex OAuth credentials are unavailable in this build"),
+			);
+			expect(showError).toHaveBeenCalledWith(expect.stringContaining("Install an official xcsh binary"));
+			expect(setSetting).not.toHaveBeenCalled();
+		} finally {
+			if (previousClientId === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+			else Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID = previousClientId;
+			if (previousClientSecret === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+			else Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET = previousClientSecret;
+		}
+	});
+
+	it("preserves existing Vertex settings when project confirmation is cancelled", async () => {
+		const previousProject = Bun.env.GOOGLE_CLOUD_PROJECT;
+		Bun.env.GOOGLE_CLOUD_PROJECT = "detected-project";
+		try {
+			const setSetting = vi.fn();
+			const showStatus = vi.fn();
+			const editorContainer = {
+				children: [] as Array<{ handleInput?: (key: string) => void }>,
+				clear() {
+					this.children = [];
+				},
+				addChild(child: { handleInput?: (key: string) => void }) {
+					this.children.push(child);
+				},
+			};
+			const ctx = {
+				editorContainer,
+				editor: {},
+				session: {
+					modelRegistry: {
+						authStorage: {
+							getApiKey: vi.fn(async () => "existing-vertex-token"),
+							login: vi.fn(),
+						},
+					},
+					settings: { set: setSetting },
+				},
+				oauthManualInput: new OAuthManualInputManager(),
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn(), setFocus: vi.fn() },
+				showStatus,
+				showError: vi.fn(),
+				openInBrowser: vi.fn(),
+			} as unknown as InteractiveModeContext;
+
+			const loginPromise = new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
+			await Bun.sleep(0);
+			editorContainer.children[0]?.handleInput?.("\x1b");
+			await loginPromise;
+
+			expect(setSetting).not.toHaveBeenCalled();
+			expect(showStatus).toHaveBeenLastCalledWith("Vertex AI login cancelled. Existing configuration unchanged.");
+		} finally {
+			if (previousProject === undefined) delete Bun.env.GOOGLE_CLOUD_PROJECT;
+			else Bun.env.GOOGLE_CLOUD_PROJECT = previousProject;
+		}
+	});
+
 	it("shows the shared link and manual-code guidance without opening a browser when headless", async () => {
 		const previousSshConnection = process.env.SSH_CONNECTION;
 		process.env.SSH_CONNECTION = "synthetic-client synthetic-server";

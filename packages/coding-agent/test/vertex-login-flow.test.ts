@@ -88,6 +88,16 @@ describe("corporate Vertex login flow", () => {
 		);
 	});
 
+	it("preserves only the safe missing-build-client diagnostic while keeping ordinary auth recovery generic", () => {
+		const missingBuildClient =
+			"Corporate Vertex OAuth credentials are unavailable in this build. Install an official xcsh binary or provide the licensed build credentials when running from source.";
+
+		expect(vertexFailureGuidance(new Error(missingBuildClient))).toBe(missingBuildClient);
+		expect(vertexFailureGuidance(new Error("Vertex access token expired: sensitive-provider-detail"))).toBe(
+			"Vertex OAuth credentials are unavailable. Run `/login google-vertex` and sign in again.",
+		);
+	});
+
 	it("detects Cloud Shell and display-less terminals as headless", () => {
 		expect(isHeadlessTerminal({ CLOUD_SHELL: "true" })).toBe(true);
 		expect(isHeadlessTerminal({ DISPLAY: ":0" })).toBe(false);
