@@ -57,7 +57,7 @@ describe("AgentSession normalized turn phases", () => {
 		tempDir?.removeSync();
 	});
 
-	it("covers streamed tool intent through dispatch and settles only after agent-end UI finalization starts", async () => {
+	it("keeps the turn active until delayed post-tool consumer work settles", async () => {
 		const model = getBundledModel("openai", "gpt-4o-mini");
 		if (!model) throw new Error("Expected bundled OpenAI test model");
 		tempDir = TempDir.createSync("@pi-turn-phase-");
@@ -70,6 +70,8 @@ describe("AgentSession normalized turn phases", () => {
 		const finishTool = Promise.withResolvers<void>();
 		const finalModelTurnObserved = Promise.withResolvers<void>();
 		const finishFinalModelTurn = Promise.withResolvers<void>();
+		const uiFinalizationObserved = Promise.withResolvers<void>();
+		const finishUiFinalization = Promise.withResolvers<void>();
 		const toolCall = { type: "toolCall" as const, id: "PRIVATE_CALL_ID", name: "bash", arguments: {} };
 		let modelTurn = 0;
 		const tool: AgentTool = {
@@ -117,13 +119,19 @@ describe("AgentSession normalized turn phases", () => {
 			modelRegistry: new ModelRegistry(authStorage),
 		});
 		const phases: string[] = [];
-		let uiFinalizationStarted = false;
-		let idleObservedAfterUiFinalization = false;
-		session.subscribe((event: AgentSessionEvent) => {
-			if (event.type === "agent_end") uiFinalizationStarted = true;
+		let uiFinalizationSettled = false;
+		let idleObservedBeforeUiFinalizationSettled = false;
+		session.subscribe(async (event: AgentSessionEvent) => {
+			if (event.type === "agent_end") {
+				uiFinalizationObserved.resolve();
+				await finishUiFinalization.promise;
+				uiFinalizationSettled = true;
+			}
 			if (event.type === "turn_phase") {
 				phases.push(event.phase);
-				if (event.phase === "idle") idleObservedAfterUiFinalization = uiFinalizationStarted;
+				if (event.phase === "idle" && !uiFinalizationSettled) {
+					idleObservedBeforeUiFinalizationSettled = true;
+				}
 			}
 		});
 
@@ -139,9 +147,14 @@ describe("AgentSession normalized turn phases", () => {
 		await waitFor(() => phases.at(-1) === "thinking");
 
 		finishFinalModelTurn.resolve();
+		await uiFinalizationObserved.promise;
+		await Bun.sleep(0);
+		const phaseDuringUiFinalization = phases.at(-1);
+		finishUiFinalization.resolve();
 		await prompt;
 		await waitFor(() => phases.at(-1) === "idle");
-		expect(idleObservedAfterUiFinalization).toBe(true);
+		expect(phaseDuringUiFinalization).toBe("thinking");
+		expect(idleObservedBeforeUiFinalizationSettled).toBe(false);
 		expect(JSON.stringify(phases)).not.toContain("PRIVATE_");
 	});
 });
