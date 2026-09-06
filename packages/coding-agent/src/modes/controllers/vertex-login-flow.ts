@@ -38,7 +38,9 @@ export async function detectVertexProject(runtime: VertexLoginRuntime): Promise<
 }
 
 export function isHeadlessTerminal(environment: Record<string, string | undefined>): boolean {
-	return Boolean(environment.CLOUD_SHELL || environment.SSH_CONNECTION || !environment.DISPLAY);
+	return Boolean(
+		environment.HERDR_ENV === "1" || environment.CLOUD_SHELL || environment.SSH_CONNECTION || !environment.DISPLAY,
+	);
 }
 
 export function vertexFailureGuidance(error: unknown, project?: string): string {

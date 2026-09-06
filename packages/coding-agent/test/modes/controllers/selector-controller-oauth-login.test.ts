@@ -1,6 +1,7 @@
+import { Database } from "bun:sqlite";
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
-import { createVertexAuthorizationUrl } from "@f5-sales-demo/pi-ai/utils/oauth/google-antigravity";
+import { AuthCredentialStore, AuthStorage } from "@f5-sales-demo/pi-ai";
 import { SelectorController } from "../../../src/modes/controllers/selector-controller";
 import { OAuthManualInputManager } from "../../../src/modes/oauth-manual-input";
 import { initTheme } from "../../../src/modes/theme/theme";
@@ -124,14 +125,19 @@ describe("SelectorController Corporate Vertex login", () => {
 		const previousClientSecret = Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
 		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
 		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+		const authStorage = new AuthStorage(new AuthCredentialStore(new Database(":memory:")));
 		try {
 			const showError = vi.fn();
 			const setSetting = vi.fn();
 			const reachedAuthAction = vi.fn();
 			const login = vi.fn(async (_provider, callbacks) => {
-				const url = createVertexAuthorizationUrl("test-state", "test-challenge");
-				reachedAuthAction();
-				callbacks.onAuth({ url });
+				await authStorage.login("google-vertex", {
+					...callbacks,
+					onAuth: info => {
+						reachedAuthAction();
+						callbacks.onAuth(info);
+					},
+				});
 			});
 			const ctx = {
 				session: {
@@ -148,6 +154,8 @@ describe("SelectorController Corporate Vertex login", () => {
 
 			await new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
 
+			expect(login).toHaveBeenCalledWith("google-vertex", expect.any(Object));
+			expect(authStorage.list()).toEqual([]);
 			expect(reachedAuthAction).not.toHaveBeenCalled();
 			expect(showError).toHaveBeenCalledWith(
 				expect.stringContaining("Corporate Vertex OAuth credentials are unavailable in this build"),
@@ -155,6 +163,7 @@ describe("SelectorController Corporate Vertex login", () => {
 			expect(showError).toHaveBeenCalledWith(expect.stringContaining("Install an official xcsh binary"));
 			expect(setSetting).not.toHaveBeenCalled();
 		} finally {
+			authStorage.close();
 			if (previousClientId === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
 			else Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID = previousClientId;
 			if (previousClientSecret === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
@@ -210,14 +219,25 @@ describe("SelectorController Corporate Vertex login", () => {
 		}
 	});
 
-	it("shows the shared link and manual-code guidance without opening a browser when headless", async () => {
-		const previousSshConnection = process.env.SSH_CONNECTION;
-		process.env.SSH_CONNECTION = "synthetic-client synthetic-server";
+	it.each(["SSH", "Herdr"])("shows a usable OAuth action without opening a browser in %s", async terminal => {
+		const environment = {
+			SSH_CONNECTION: terminal === "SSH" ? "synthetic-client synthetic-server" : "",
+			HERDR_ENV: terminal === "Herdr" ? "1" : "",
+			DISPLAY: ":0",
+			CLOUD_SHELL: "",
+		};
+		const previous = Object.fromEntries(Object.keys(environment).map(key => [key, process.env[key]]));
+		Object.assign(process.env, environment);
 		try {
 			const addedComponents: Array<{ render(width: number): string[] }> = [];
 			const openInBrowser = vi.fn();
+			let submitted = false;
+			let receivedCode: string | undefined;
 			const login = vi.fn(async (_provider, callbacks) => {
 				callbacks.onAuth({ url: LONG_AUTH_URL });
+				const pending = callbacks.onManualCodeInput();
+				submitted = ctx.oauthManualInput.submit("synthetic-code");
+				receivedCode = await pending;
 				throw new Error("stop after presentation");
 			});
 			const ctx = {
@@ -237,11 +257,17 @@ describe("SelectorController Corporate Vertex login", () => {
 			const visible = renderVisible(addedComponents);
 			expect(visible).toContain("Open sign-in page");
 			expect(visible).toContain("Tip: After browser sign-in, complete pairing with /login <authorization code>.");
+			expect(submitted).toBe(true);
+			expect(receivedCode).toBe("synthetic-code");
+			expect(visible).not.toContain("synthetic-code");
+			expect(addedComponents.flatMap(component => component.render(120)).join("\n")).toContain(LONG_AUTH_URL);
 			expect(visible).not.toContain(LONG_AUTH_URL);
 			expect(openInBrowser).not.toHaveBeenCalled();
 		} finally {
-			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;
-			else process.env.SSH_CONNECTION = previousSshConnection;
+			for (const [key, value] of Object.entries(previous)) {
+				if (value === undefined) delete process.env[key];
+				else process.env[key] = value;
+			}
 		}
 	});
 });
