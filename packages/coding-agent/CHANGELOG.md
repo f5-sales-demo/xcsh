@@ -36,6 +36,15 @@
 
 ### Fixed
 
+- Hardened provider and compaction boundaries by obfuscating every provider-visible string,
+  preserving opaque reasoning, protecting side requests and adversarial summary tags, and restoring
+  unconfigured credential-shaped values byte-exact at trusted local tool boundaries. Semantically
+  ported from
+  [can1357/oh-my-pi#2147](https://github.com/can1357/oh-my-pi/pull/2147),
+  [#3239](https://github.com/can1357/oh-my-pi/pull/3239),
+  [#7067](https://github.com/can1357/oh-my-pi/pull/7067), and
+  [#8727](https://github.com/can1357/oh-my-pi/pull/8727)
+  ([#3706](https://github.com/f5-sales-demo/xcsh/issues/3706)).
 - Made npm, Bun, and default installer commands execute the exact matching compiled release so
   licensed Corporate Vertex authentication is available without exposing build credentials in
   published source ([#3557](https://github.com/f5-sales-demo/xcsh/issues/3557)).
@@ -55,7 +64,6 @@
 ### Improved
 
 - System prompt optimization aligning system prompts and agent instructions with Anthropic 8-point system prompting best practice standard ([#3057](https://github.com/f5-sales-demo/xcsh/issues/3057))
-
 
 ## [20.4.0] - 2026-08-04
 

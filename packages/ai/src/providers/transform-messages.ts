@@ -1,6 +1,14 @@
 import turnAbortedGuidance from "../prompts/turn-aborted-guidance.md" with { type: "text" };
 import type { Api, AssistantMessage, DeveloperMessage, Message, Model, ToolCall, ToolResultMessage } from "../types";
 
+/**
+ * Credential-shaped tokens protected by the coding-agent's reversible secret
+ * layer. Keep the pattern in pi-ai so every provider boundary shares one
+ * definition when additional transport-level defenses are added.
+ */
+export const SENSITIVE_TOKEN_RE =
+	/(?<![a-zA-Z0-9_*-])(gh[opusr]_[a-zA-Z0-9_*]{36,}|github_pat_[a-zA-Z0-9_*]{36,}|glpat-[a-zA-Z0-9_*-]{20,}|sk-proj-[a-zA-Z0-9_*-]{36,}|sk-ant-[a-zA-Z0-9_*-]{36,}|sk-[a-zA-Z0-9_*-]{48,})(?![a-zA-Z0-9_*-])/gi;
+
 const enum ToolCallStatus {
 	/** Tool call has received a result (real or synthetic for orphan) */
 	Resolved = 1,

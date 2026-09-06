@@ -1,4 +1,5 @@
-import type { Message, TextContent } from "@f5-sales-demo/pi-ai";
+import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
+import type { AssistantMessage, Context, Message, Tool } from "@f5-sales-demo/pi-ai";
 import type { SessionContext } from "../session/session-manager";
 import { compileSecretRegex } from "./regex";
 
@@ -197,6 +198,12 @@ export class SecretObfuscator {
 		return deepWalkStrings(obj, s => this.deobfuscate(s));
 	}
 
+	/** Deep-walk an object, obfuscating every string value. */
+	obfuscateObject<T>(obj: T): T {
+		if (!this.#hasAny) return obj;
+		return deepWalkStrings(obj, s => this.obfuscate(s));
+	}
+
 	/** Find the obfuscate index for a known secret value. */
 	#findObfuscateIndex(secret: string): number | undefined {
 		// Check plain mappings first
@@ -216,33 +223,94 @@ export function deobfuscateSessionContext(
 	obfuscator: SecretObfuscator | undefined,
 ): SessionContext {
 	if (!obfuscator?.hasSecrets()) return sessionContext;
-	const messages = obfuscator.deobfuscateObject(sessionContext.messages);
+	const messages = deobfuscateAgentMessages(obfuscator, sessionContext.messages);
 	return messages === sessionContext.messages ? sessionContext : { ...sessionContext, messages };
+}
+
+export function deobfuscateAgentMessages(obfuscator: SecretObfuscator, messages: AgentMessage[]): AgentMessage[] {
+	let changed = false;
+	const result = messages.map((message): AgentMessage => {
+		if (message.role === "assistant") {
+			const content = deobfuscateAssistantContent(obfuscator, message.content);
+			if (content === message.content) return message;
+			changed = true;
+			return { ...message, content };
+		}
+		if (message.role === "branchSummary") {
+			const summary = obfuscator.deobfuscate(message.summary);
+			if (summary === message.summary) return message;
+			changed = true;
+			return { ...message, summary };
+		}
+		if (message.role === "compactionSummary") {
+			const summary = obfuscator.deobfuscate(message.summary);
+			const shortSummary = message.shortSummary && obfuscator.deobfuscate(message.shortSummary);
+			if (summary === message.summary && shortSummary === message.shortSummary) return message;
+			changed = true;
+			return { ...message, summary, shortSummary };
+		}
+		return message;
+	});
+	return changed ? result : messages;
+}
+
+/** Restore local-display fields while preserving opaque provider reasoning byte-for-byte. */
+export function deobfuscateAssistantContent(
+	obfuscator: SecretObfuscator,
+	content: AssistantMessage["content"],
+): AssistantMessage["content"] {
+	if (!obfuscator.hasSecrets()) return content;
+	let changed = false;
+	const result = content.map((block): AssistantMessage["content"][number] => {
+		if (block.type === "text") {
+			const text = obfuscator.deobfuscate(block.text);
+			if (text === block.text) return block;
+			changed = true;
+			return { ...block, text };
+		}
+		if (block.type === "toolCall") {
+			const args = obfuscator.deobfuscateObject(block.arguments);
+			const intent = block.intent === undefined ? undefined : obfuscator.deobfuscate(block.intent);
+			if (args === block.arguments && intent === block.intent) return block;
+			changed = true;
+			return { ...block, arguments: args, intent };
+		}
+		return block;
+	});
+	return changed ? result : content;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Message obfuscation (outbound to LLM)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Obfuscate all text content in LLM messages (for outbound interception). */
+/** Obfuscate every provider-visible string in outbound messages. */
 export function obfuscateMessages(obfuscator: SecretObfuscator, messages: Message[]): Message[] {
-	return messages.map(msg => {
-		if (!Array.isArray(msg.content)) return msg;
+	return obfuscator.obfuscateObject(messages);
+}
 
-		let changed = false;
-		const content = msg.content.map(block => {
-			if (block.type === "text") {
-				const obfuscated = obfuscator.obfuscate(block.text);
-				if (obfuscated !== block.text) {
-					changed = true;
-					return { ...block, text: obfuscated } as TextContent;
-				}
-			}
-			return block;
-		});
+/** Obfuscate the final provider context without mutating live agent state. */
+export function obfuscateProviderContext(obfuscator: SecretObfuscator | undefined, context: Context): Context {
+	if (!obfuscator?.hasSecrets()) return context;
+	return {
+		...context,
+		systemPrompt: context.systemPrompt === undefined ? undefined : obfuscator.obfuscate(context.systemPrompt),
+		messages: obfuscateMessages(obfuscator, context.messages),
+		tools: obfuscateProviderTools(obfuscator, context.tools),
+	};
+}
 
-		return changed ? ({ ...msg, content } as typeof msg) : msg;
-	});
+/** Clone provider tool definitions and obfuscate descriptions and JSON schemas. */
+export function obfuscateProviderTools(
+	obfuscator: SecretObfuscator | undefined,
+	tools: Tool[] | undefined,
+): Tool[] | undefined {
+	if (!tools || !obfuscator?.hasSecrets()) return tools;
+	return tools.map(tool => ({
+		...tool,
+		description: obfuscator.obfuscate(tool.description),
+		parameters: obfuscator.obfuscateObject(tool.parameters),
+	}));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -177,6 +177,21 @@ export function serializeConversation(messages: Message[]): string {
 	return parts.join("\n\n");
 }
 
+const SUMMARY_BOUNDARY_TAG_RE = /<\s*\/?\s*(?:conversation|previous-summary)\s*>/gi;
+
+/** Keep untrusted summary input from closing or impersonating harness-owned boundaries. */
+export function escapeSummaryBoundaryTags(text: string): string {
+	return text.replace(SUMMARY_BOUNDARY_TAG_RE, tag => `&lt;${tag.slice(1)}`);
+}
+
+/**
+ * Serialize LLM messages as untrusted summary input and neutralize tags owned
+ * by the summarization harness.
+ */
+export function serializeConversationForSummary(messages: Message[]): string {
+	return escapeSummaryBoundaryTags(serializeConversation(messages));
+}
+
 // ============================================================================
 // Summarization System Prompt
 // ============================================================================

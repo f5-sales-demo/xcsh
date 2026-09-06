@@ -106,7 +106,7 @@ describe("createAgentSession session storage isolation", () => {
 			await session.dispose();
 		}
 	});
-	it("shows redaction guidance only when secrets are actually loaded", async () => {
+	it("shows redaction guidance whenever secret protection is active", async () => {
 		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), `pi-sdk-secrets-${Snowflake.next()}-`));
 		tempDirs.push(tempDir);
 		const cwd = path.join(tempDir, "project");
@@ -116,7 +116,6 @@ describe("createAgentSession session storage isolation", () => {
 		const commonOptions = {
 			cwd,
 			agentDir,
-			settings: Settings.isolated({ "secrets.enabled": true }),
 			secretEnvironment: {},
 			disableExtensionDiscovery: true,
 			skills: [],
@@ -127,21 +126,37 @@ describe("createAgentSession session storage isolation", () => {
 			enableLsp: false,
 		};
 
-		const withoutSecrets = await createAgentSession(commonOptions);
+		const withoutProtection = await createAgentSession({
+			...commonOptions,
+			settings: Settings.isolated({ "secrets.enabled": false }),
+		});
 		try {
-			expect(withoutSecrets.session.systemPrompt).not.toContain("They appear as `#XXXX#` tokens");
+			expect(withoutProtection.session.systemPrompt).not.toContain("They appear as `#XXXX#` tokens");
 		} finally {
-			await withoutSecrets.session.dispose();
+			await withoutProtection.session.dispose();
+		}
+
+		const withBuiltinProtection = await createAgentSession({
+			...commonOptions,
+			settings: Settings.isolated({ "secrets.enabled": true }),
+		});
+		try {
+			expect(withBuiltinProtection.session.systemPrompt).toContain("They appear as `#XXXX#` tokens");
+		} finally {
+			await withBuiltinProtection.session.dispose();
 		}
 
 		fs.mkdirSync(path.join(cwd, ".xcsh"), { recursive: true });
 		fs.writeFileSync(path.join(cwd, ".xcsh", "secrets.yml"), "- type: plain\n  content: sdk-secret-token-123456\n");
 
-		const withSecrets = await createAgentSession(commonOptions);
+		const withConfiguredSecrets = await createAgentSession({
+			...commonOptions,
+			settings: Settings.isolated({ "secrets.enabled": true }),
+		});
 		try {
-			expect(withSecrets.session.systemPrompt).toContain("They appear as `#XXXX#` tokens");
+			expect(withConfiguredSecrets.session.systemPrompt).toContain("They appear as `#XXXX#` tokens");
 		} finally {
-			await withSecrets.session.dispose();
+			await withConfiguredSecrets.session.dispose();
 		}
 	});
 

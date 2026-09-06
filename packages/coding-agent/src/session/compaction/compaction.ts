@@ -37,10 +37,11 @@ import type { CompactionEntry, SessionEntry } from "../../session/session-manage
 import {
 	computeFileLists,
 	createFileOps,
+	escapeSummaryBoundaryTags,
 	extractFileOpsFromMessage,
 	type FileOperations,
 	SUMMARIZATION_SYSTEM_PROMPT,
-	serializeConversation,
+	serializeConversationForSummary,
 	upsertFileOperations,
 } from "./utils";
 
@@ -952,6 +953,7 @@ export interface SummaryOptions {
 	remoteEndpoint?: string;
 	remoteInstructions?: string;
 	initiatorOverride?: MessageAttribution;
+	protectProviderText?: (text: string) => string;
 }
 
 export async function generateSummary(
@@ -978,15 +980,16 @@ export async function generateSummary(
 	// Serialize conversation to text so model doesn't try to continue it
 	// Convert to LLM messages first (handles custom types like bashExecution, hookMessage, etc.)
 	const llmMessages = convertToLlm(currentMessages);
-	const conversationText = serializeConversation(llmMessages);
+	const conversationText = serializeConversationForSummary(llmMessages);
 
 	// Build the prompt with conversation wrapped in tags
 	let promptText = `<conversation>\n${conversationText}\n</conversation>\n\n`;
 	if (previousSummary) {
-		promptText += `<previous-summary>\n${previousSummary}\n</previous-summary>\n\n`;
+		promptText += `<previous-summary>\n${escapeSummaryBoundaryTags(previousSummary)}\n</previous-summary>\n\n`;
 	}
 	promptText += formatAdditionalContext(options?.extraContext);
 	promptText += basePrompt;
+	promptText = options?.protectProviderText?.(promptText) ?? promptText;
 
 	const summarizationMessages = [
 		{
@@ -1033,14 +1036,15 @@ async function generateShortSummary(
 ): Promise<string> {
 	const maxTokens = Math.min(512, Math.floor(0.2 * reserveTokens));
 	const llmMessages = convertToLlm(recentMessages);
-	const conversationText = serializeConversation(llmMessages);
+	const conversationText = serializeConversationForSummary(llmMessages);
 
 	let promptText = `<conversation>\n${conversationText}\n</conversation>\n\n`;
 	if (historySummary) {
-		promptText += `<previous-summary>\n${historySummary}\n</previous-summary>\n\n`;
+		promptText += `<previous-summary>\n${escapeSummaryBoundaryTags(historySummary)}\n</previous-summary>\n\n`;
 	}
 	promptText += formatAdditionalContext(options?.extraContext);
 	promptText += SHORT_SUMMARY_PROMPT;
+	promptText = options?.protectProviderText?.(promptText) ?? promptText;
 
 	if (options?.remoteEndpoint) {
 		const remote = await requestRemoteCompaction(options.remoteEndpoint, {
@@ -1234,8 +1238,11 @@ export async function compact(
 		promptOverride: options?.promptOverride,
 		extraContext: options?.extraContext,
 		remoteEndpoint: settings.remoteEnabled === false ? undefined : settings.remoteEndpoint,
-		remoteInstructions: options?.remoteInstructions,
+		remoteInstructions: options?.remoteInstructions
+			? (options.protectProviderText?.(options.remoteInstructions) ?? options.remoteInstructions)
+			: undefined,
 		initiatorOverride: options?.initiatorOverride,
+		protectProviderText: options?.protectProviderText,
 	};
 
 	let preserveData = withOpenAiRemoteCompactionPreserveData(previousPreserveData, undefined);
@@ -1291,6 +1298,7 @@ export async function compact(
 				apiKey,
 				signal,
 				summaryOptions.initiatorOverride,
+				summaryOptions.protectProviderText,
 			),
 		]);
 		// Merge into single summary
@@ -1357,12 +1365,14 @@ async function generateTurnPrefixSummary(
 	apiKey: string,
 	signal?: AbortSignal,
 	initiatorOverride?: MessageAttribution,
+	protectProviderText?: (text: string) => string,
 ): Promise<string> {
 	const maxTokens = Math.floor(0.5 * reserveTokens); // Smaller budget for turn prefix
 
 	const llmMessages = convertToLlm(messages);
-	const conversationText = serializeConversation(llmMessages);
-	const promptText = `<conversation>\n${conversationText}\n</conversation>\n\n${TURN_PREFIX_SUMMARIZATION_PROMPT}`;
+	const conversationText = serializeConversationForSummary(llmMessages);
+	const rawPromptText = `<conversation>\n${conversationText}\n</conversation>\n\n${TURN_PREFIX_SUMMARIZATION_PROMPT}`;
+	const promptText = protectProviderText?.(rawPromptText) ?? rawPromptText;
 	const summarizationMessages = [
 		{
 			role: "user" as const,
