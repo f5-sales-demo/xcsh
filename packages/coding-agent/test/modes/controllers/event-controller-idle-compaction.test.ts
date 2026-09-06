@@ -44,6 +44,21 @@ describe("EventController idle compaction teardown", () => {
 		_resetSettingsForTest();
 	});
 
+	it("registers UI event handling as the turn settlement boundary", () => {
+		const unsubscribe = vi.fn();
+		const subscribe = vi.fn((_listener: unknown, _options?: unknown) => unsubscribe);
+		const context = {
+			session: { subscribe },
+		} as unknown as InteractiveModeContext;
+		const controller = new EventController(context);
+
+		controller.subscribeToAgent();
+
+		expect(subscribe).toHaveBeenCalledTimes(1);
+		expect(subscribe.mock.calls[0]?.[1]).toEqual({ waitForTurnSettlement: true });
+		expect(context.unsubscribe).toBe(unsubscribe);
+	});
+
 	it("cancels scheduled idle compaction when disposed", async () => {
 		const runIdleCompaction = vi.fn();
 		const context = {

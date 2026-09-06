@@ -213,6 +213,14 @@ export type AgentSessionEvent =
 
 /** Listener function for agent session events */
 export type AgentSessionEventListener = (event: AgentSessionEvent) => unknown;
+export interface AgentSessionEventSubscriptionOptions {
+	/** Delay normalized turn settlement until this listener finishes handling agent_end. */
+	waitForTurnSettlement?: boolean;
+}
+interface AgentSessionEventSubscription {
+	listener: AgentSessionEventListener;
+	waitForTurnSettlement: boolean;
+}
 export type AsyncJobSnapshotItem = Pick<AsyncJob, "id" | "type" | "status" | "label" | "startTime">;
 
 export interface AsyncJobSnapshot {
@@ -475,7 +483,7 @@ export class AgentSession {
 
 	// Event subscription state
 	#unsubscribeAgent?: () => void;
-	#eventListeners: AgentSessionEventListener[] = [];
+	#eventListeners: AgentSessionEventSubscription[] = [];
 	#turnPhase = new TurnPhaseController(event => this.#publishTurnPhase(event));
 
 	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
@@ -767,19 +775,17 @@ export class AgentSession {
 	// =========================================================================
 
 	/** Emit an event to all listeners */
-	#emit(event: AgentSessionEvent): void {
+	#emit(event: AgentSessionEvent): Promise<unknown>[] {
 		// Copy array before iteration to avoid mutation during iteration
-		const listeners = [...this.#eventListeners];
-		for (const l of listeners) {
-			l(event);
+		const subscriptions = [...this.#eventListeners];
+		const turnSettlementListeners: Promise<unknown>[] = [];
+		for (const subscription of subscriptions) {
+			const result = subscription.listener(event);
+			if (event.type === "agent_end" && subscription.waitForTurnSettlement) {
+				turnSettlementListeners.push(Promise.resolve(result));
+			}
 		}
-	}
-
-	/** Emit a completion boundary and wait for consumer-visible finalization. */
-	async #emitAndWait(event: AgentSessionEvent): Promise<void> {
-		// Start every listener before awaiting so one consumer cannot delay another.
-		const listeners = [...this.#eventListeners];
-		await Promise.all(listeners.map(listener => listener(event)));
+		return turnSettlementListeners;
 	}
 
 	#queuedExtensionEvents: Promise<void> = Promise.resolve();
@@ -793,11 +799,11 @@ export class AgentSession {
 		return queued;
 	}
 
-	async #emitSessionEvent(event: AgentSessionEvent): Promise<void> {
+	async #emitSessionEvent(event: AgentSessionEvent): Promise<Promise<unknown>[]> {
 		if (event.type === "message_update" || event.type === "turn_phase") {
 			this.#emit(event);
 			void this.#queueExtensionEvent(event);
-			return;
+			return [];
 		}
 
 		if (
@@ -811,11 +817,7 @@ export class AgentSession {
 		}
 
 		await this.#emitExtensionEvent(event);
-		if (event.type === "agent_end") {
-			await this.#emitAndWait(event);
-		} else {
-			this.#emit(event);
-		}
+		return this.#emit(event);
 	}
 
 	// Track last assistant message for auto-compaction check
@@ -896,23 +898,33 @@ export class AgentSession {
 			}
 		}
 
-		await this.#emitSessionEvent(displayEvent);
+		const turnSettlementListeners = await this.#emitSessionEvent(displayEvent);
 
 		// `agent_end` is the provider-neutral completion boundary. Settle only
-		// after subscribers have received it, so interactive consumers can begin
-		// clearing provider/tool status before Herdr observes idle. This also
-		// covers continuations that call Agent.continue() without #promptWithMessage.
+		// after the designated lifecycle consumer has finished clearing provider/tool
+		// status before Herdr observes idle. Other subscribers and post-turn maintenance
+		// continue concurrently. This also covers Agent.continue() continuations.
 		if (event.type === "agent_end") {
 			const lastAssistant = [...event.messages]
 				.reverse()
 				.find((message): message is AssistantMessage => message.role === "assistant");
-			this.#turnPhase.settle(
-				lastAssistant?.stopReason === "aborted"
-					? "aborted"
-					: lastAssistant?.stopReason === "error"
-						? "error"
-						: "stop",
-			);
+			const settle = () => {
+				this.#turnPhase.settle(
+					lastAssistant?.stopReason === "aborted"
+						? "aborted"
+						: lastAssistant?.stopReason === "error"
+							? "error"
+							: "stop",
+				);
+			};
+			if (turnSettlementListeners.length === 0) {
+				settle();
+			} else {
+				void Promise.all(turnSettlementListeners).then(settle, error => {
+					logger.warn("Turn settlement listener failed", { error: String(error) });
+					settle();
+				});
+			}
 		}
 
 		if (event.type === "turn_start") {
@@ -2179,12 +2191,13 @@ export class AgentSession {
 	 * Session persistence is handled internally (saves messages on message_end).
 	 * Multiple listeners can be added. Returns unsubscribe function for this listener.
 	 */
-	subscribe(listener: AgentSessionEventListener): () => void {
-		this.#eventListeners.push(listener);
+	subscribe(listener: AgentSessionEventListener, options: AgentSessionEventSubscriptionOptions = {}): () => void {
+		const subscription = { listener, waitForTurnSettlement: options.waitForTurnSettlement ?? false };
+		this.#eventListeners.push(subscription);
 
 		// Return unsubscribe function for this specific listener
 		return () => {
-			const index = this.#eventListeners.indexOf(listener);
+			const index = this.#eventListeners.indexOf(subscription);
 			if (index !== -1) {
 				this.#eventListeners.splice(index, 1);
 			}
