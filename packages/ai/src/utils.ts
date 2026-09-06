@@ -65,12 +65,42 @@ export function truncateResponseItemId(id: string, prefix: string): string {
 	return `${prefix}_${Bun.hash(id).toString(36)}`;
 }
 
+/**
+ * Remove response-only lifecycle state from item types that reject it when
+ * replayed as OpenAI Responses input. The original array and untouched item
+ * identities are preserved when no change is needed.
+ */
+export function stripOpenAIResponsesOutputOnlyStatusesForReplay<TItem extends { type?: unknown; status?: unknown }>(
+	items: TItem[],
+): TItem[] {
+	let sanitized: TItem[] | undefined;
+	for (let index = 0; index < items.length; index++) {
+		const item = items[index]!;
+		const rejectsOutputStatus =
+			item.type === "message" ||
+			item.type === "function_call" ||
+			item.type === "custom_tool_call" ||
+			item.type === "compaction" ||
+			item.type === "compaction_summary";
+		if (!rejectsOutputStatus || !Object.hasOwn(item, "status")) {
+			sanitized?.push(item);
+			continue;
+		}
+		if (!sanitized) sanitized = items.slice(0, index);
+		const withoutStatus = { ...item };
+		delete withoutStatus.status;
+		sanitized.push(withoutStatus);
+	}
+	return sanitized ?? items;
+}
+
 export function sanitizeOpenAIResponsesHistoryItemsForReplay(items: Array<Record<string, unknown>>): ResponseInput {
 	const normalizedCallIds = new Map<string, string>();
-	return items.flatMap(item => {
+	const sanitized = items.flatMap(item => {
 		const sanitized = sanitizeOpenAIResponsesHistoryItemForReplay(item, normalizedCallIds);
 		return sanitized ? [sanitized] : [];
 	});
+	return stripOpenAIResponsesOutputOnlyStatusesForReplay(sanitized);
 }
 
 function sanitizeOpenAIResponsesHistoryItemForReplay(

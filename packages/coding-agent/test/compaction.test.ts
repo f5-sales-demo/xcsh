@@ -415,14 +415,20 @@ describe("remote compaction setting", () => {
 		const oldUser = createMessageEntry(createUserMessage("Older turn"));
 		const oldAssistant = createMessageEntry(createAssistantMessage("Older answer"));
 		const previousCompaction = createCompactionEntry("Previous summary", oldAssistant.id);
+		const persistedReplacementHistory = [
+			{
+				type: "message",
+				role: "user",
+				content: [{ type: "input_text", text: "Previous preserved user" }],
+				status: "completed",
+			},
+			{ type: "compaction", encrypted_content: "prior_encrypted", status: "completed" },
+		];
 		previousCompaction.preserveData = {
 			openaiRemoteCompaction: {
 				provider: "openai",
-				replacementHistory: [
-					{ type: "message", role: "user", content: [{ type: "input_text", text: "Previous preserved user" }] },
-					{ type: "compaction", encrypted_content: "prior_encrypted" },
-				],
-				compactionItem: { type: "compaction", encrypted_content: "prior_encrypted" },
+				replacementHistory: persistedReplacementHistory,
+				compactionItem: { type: "compaction", encrypted_content: "prior_encrypted", status: "completed" },
 			},
 		};
 
@@ -490,6 +496,8 @@ describe("remote compaction setting", () => {
 			content: [{ type: "input_text", text: "Previous preserved user" }],
 		});
 		expect(requestBody.input[1]).toEqual({ type: "compaction", encrypted_content: "prior_encrypted" });
+		expect(requestBody.input.some(item => Object.hasOwn(item, "status"))).toBe(false);
+		expect(persistedReplacementHistory[0]?.status).toBe("completed");
 		expect(
 			requestBody.input.some(
 				item => item.type === "reasoning" && item.encrypted_content === "encrypted_reasoning_turn_1",

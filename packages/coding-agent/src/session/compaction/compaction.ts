@@ -25,6 +25,7 @@ import {
 	getOpenAIResponsesHistoryItems,
 	getOpenAIResponsesHistoryPayload,
 	normalizeResponsesToolCallId,
+	stripOpenAIResponsesOutputOnlyStatusesForReplay,
 } from "@f5-sales-demo/pi-ai/utils";
 import { logger, prompt } from "@f5-sales-demo/pi-utils";
 import compactionShortSummaryPrompt from "../../prompts/compaction/compaction-short-summary.md" with { type: "text" };
@@ -833,7 +834,7 @@ function buildOpenAiNativeHistory(
 		msgIndex++;
 	}
 
-	return input;
+	return stripOpenAIResponsesOutputOnlyStatusesForReplay(input);
 }
 
 async function requestOpenAiRemoteCompaction(
