@@ -203,6 +203,11 @@ export type MCPContent = MCPTextContent | MCPImageContent | MCPResourceContent;
 export interface MCPToolCallResult {
 	content: MCPContent[];
 	isError?: boolean;
+	/**
+	 * Machine-readable payload channel from the MCP 2025-06-18 tools result
+	 * schema. The bridge also surfaces it through model-visible text content.
+	 */
+	structuredContent?: Record<string, unknown>;
 }
 
 // =============================================================================
