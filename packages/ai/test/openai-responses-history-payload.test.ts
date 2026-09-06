@@ -405,9 +405,9 @@ describe("OpenAI responses history payload", () => {
 		const payload = (await captureResponsesPayload(model, incrementalContext)) as { input?: unknown[] };
 		expect(payload.input).toEqual([
 			{ role: "user", content: [{ type: "input_text", text: "first question" }] },
-			...incrementalItems1.map(({ id: _id, ...item }) => item),
+			...incrementalItems1.map(({ id: _id, status: _status, ...item }) => item),
 			{ role: "user", content: [{ type: "input_text", text: "second question" }] },
-			...incrementalItems2.map(({ id: _id, ...item }) => item),
+			...incrementalItems2.map(({ id: _id, status: _status, ...item }) => item),
 			{ role: "user", content: [{ type: "input_text", text: "third question" }] },
 		]);
 	});
