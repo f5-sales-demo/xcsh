@@ -32,7 +32,9 @@ describe("OpenAI Responses replay status sanitization", () => {
 			{ type: "web_search_call", id: "ws_1", status: "completed" },
 		] satisfies Array<Record<string, unknown>>;
 
-		const replay = sanitizeOpenAIResponsesHistoryItemsForReplay(persisted) as Array<Record<string, unknown>>;
+		const replay = sanitizeOpenAIResponsesHistoryItemsForReplay(persisted) as unknown as Array<
+			Record<string, unknown>
+		>;
 
 		for (const type of ["message", "function_call", "custom_tool_call", "compaction", "compaction_summary"]) {
 			const item = replay.find(candidate => candidate.type === type);

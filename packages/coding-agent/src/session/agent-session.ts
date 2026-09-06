@@ -49,6 +49,7 @@ import {
 	modelsAreEqual,
 	parseRateLimitReason,
 } from "@f5-sales-demo/pi-ai";
+import { getRetryAfterMsFromErrorText } from "@f5-sales-demo/pi-ai/utils/retry-after";
 import { killTree, MacOSPowerAssertion } from "@f5-sales-demo/pi-natives";
 import {
 	abortableSleep,
@@ -6248,10 +6249,8 @@ export class AgentSession {
 
 	#parseRetryAfterMsFromError(errorMessage: string): number | undefined {
 		const now = Date.now();
-		const retryAfterMsMatch = /retry-after-ms\s*[:=]\s*(\d+)/i.exec(errorMessage);
-		if (retryAfterMsMatch) {
-			return Math.max(0, Number(retryAfterMsMatch[1]));
-		}
+		const bodyHint = getRetryAfterMsFromErrorText(errorMessage);
+		if (bodyHint !== undefined) return bodyHint;
 
 		const retryAfterMatch = /retry-after\s*[:=]\s*([^\s,;]+)/i.exec(errorMessage);
 		if (retryAfterMatch) {
