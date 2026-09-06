@@ -197,6 +197,47 @@ describe("progressive context loading", () => {
 		}
 	});
 
+	it("treats missing model-registry auth storage as unavailable provider policy", async () => {
+		const tempDir = path.join(os.tmpdir(), `xcsh-missing-registry-auth-${Snowflake.next()}`);
+		tempDirs.push(tempDir);
+		fs.mkdirSync(tempDir, { recursive: true });
+		const authStorage = await AuthStorage.create(path.join(tempDir, "auth.db"));
+		authStorages.push(authStorage);
+		const model = getBundledModel("openai", "gpt-4o-mini");
+		const modelRegistry = {
+			getAvailable: () => [model],
+			getApiKey: async () => "openai-api-key",
+			getApiKeyForProvider: async () => "openai-api-key",
+			syncExtensionSources: () => {},
+			clearSourceRegistrations: () => {},
+		};
+
+		const { session } = await createAgentSession({
+			cwd: tempDir,
+			agentDir: tempDir,
+			authStorage,
+			modelRegistry: modelRegistry as never,
+			sessionManager: SessionManager.inMemory(),
+			settings: Settings.isolated(),
+			model,
+			disableExtensionDiscovery: true,
+			extensions: [extension],
+			skills: [],
+			contextFiles: [],
+			promptTemplates: [],
+			slashCommands: [],
+			enableMCP: false,
+			enableLsp: false,
+		});
+
+		try {
+			expect(session.getActiveToolNames()).toContain("task");
+			expect(session.getActiveToolNames()).toContain("deferred_weather");
+		} finally {
+			await session.dispose();
+		}
+	});
+
 	it("persists activated deferred tools across resume", async () => {
 		const tempDir = path.join(os.tmpdir(), `xcsh-progressive-resume-${Snowflake.next()}`);
 		tempDirs.push(tempDir);

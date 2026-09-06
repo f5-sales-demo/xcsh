@@ -1236,7 +1236,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		const providerToolPolicyAvailable =
 			options.toolNames === undefined &&
 			configuredContextLoadingMode === "eager" &&
-			modelRegistry.authStorage.hasOAuth("anthropic");
+			(modelRegistry.authStorage?.hasOAuth("anthropic") ?? false);
 		const injectedProviderDiscoveryTool =
 			providerToolPolicyAvailable && !builtinTools.some(tool => tool.name === "search_tool_bm25");
 		if (injectedProviderDiscoveryTool) {
