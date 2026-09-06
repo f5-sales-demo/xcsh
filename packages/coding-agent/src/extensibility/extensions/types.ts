@@ -46,6 +46,7 @@ import type {
 	SessionEntry,
 	SessionManager,
 } from "../../session/session-manager";
+import type { NormalizedTurnPhase } from "../../session/turn-phase";
 import type {
 	BashToolDetails,
 	BashToolInput,
@@ -63,6 +64,7 @@ import type { SlashCommandInfo } from "../slash-commands";
 
 export type { AppKeybinding, KeybindingsManager } from "../../config/keybindings";
 export type { ExecOptions, ExecResult } from "../../exec/exec";
+export type { NormalizedTurnPhase } from "../../session/turn-phase";
 export type { AgentToolResult, AgentToolUpdateCallback };
 
 // ============================================================================
@@ -560,6 +562,13 @@ export interface UserPromptEndEvent {
 	kind: UserPromptKind;
 }
 
+/** Provider-neutral, payload-free turn status shared by the TUI and external reporters. */
+export interface TurnPhaseEvent {
+	type: "turn_phase";
+	phase: NormalizedTurnPhase;
+	turnId: number;
+}
+
 /** Fired when a tool starts executing */
 export interface ToolExecutionStartEvent {
 	type: "tool_execution_start";
@@ -838,6 +847,7 @@ export type ExtensionEvent =
 	| MessageEndEvent
 	| UserPromptStartEvent
 	| UserPromptEndEvent
+	| TurnPhaseEvent
 	| ToolExecutionStartEvent
 	| ToolExecutionUpdateEvent
 	| ToolExecutionEndEvent
@@ -1034,6 +1044,7 @@ export interface ExtensionAPI {
 	on(event: "message_end", handler: ExtensionHandler<MessageEndEvent>): void;
 	on(event: "user_prompt_start", handler: ExtensionHandler<UserPromptStartEvent>): void;
 	on(event: "user_prompt_end", handler: ExtensionHandler<UserPromptEndEvent>): void;
+	on(event: "turn_phase", handler: ExtensionHandler<TurnPhaseEvent>): void;
 	on(event: "tool_execution_start", handler: ExtensionHandler<ToolExecutionStartEvent>): void;
 	on(event: "tool_execution_update", handler: ExtensionHandler<ToolExecutionUpdateEvent>): void;
 	on(event: "tool_execution_end", handler: ExtensionHandler<ToolExecutionEndEvent>): void;
