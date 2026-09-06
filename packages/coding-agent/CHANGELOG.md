@@ -65,7 +65,6 @@
 
 - System prompt optimization aligning system prompts and agent instructions with Anthropic 8-point system prompting best practice standard ([#3057](https://github.com/f5-sales-demo/xcsh/issues/3057))
 
-
 ## [20.4.0] - 2026-08-04
 
 ### Breaking Changes
