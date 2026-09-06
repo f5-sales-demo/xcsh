@@ -326,15 +326,19 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 
 	// An interactive prompt (permission gate, ask tool, confirm/input) is
 	// awaiting the user: that is herdr's "needs attention" (blocked) state.
-	pi.on("user_prompt_start", event => {
+	pi.on("user_prompt_start", async event => {
 		promptBlockedReason = getPromptBlockedReason(event.kind);
 		void report("blocked", promptBlockedReason);
+		await clearPhaseLabel();
 	});
 
 	pi.on("user_prompt_end", async (_event, ctx) => {
 		promptBlockedReason = undefined;
 		await report(ctx.isIdle() ? "idle" : "working");
 		await reportSession(ctx);
+		if (!ctx.isIdle()) {
+			await setPhaseLabel("tool");
+		}
 	});
 
 	// Transient phase-label metadata (thinking / tool / retry / cleanup):

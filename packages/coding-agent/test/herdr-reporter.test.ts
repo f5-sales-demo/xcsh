@@ -271,14 +271,12 @@ describe("herdr-reporter extension", () => {
 			await handlers.get("agent_end")?.({ messages: [] }, busyCtx);
 			await handlers.get("user_prompt_end")?.({ kind: "select" }, busyCtx);
 
-			await waitFor(() => herdr.received.length >= 3);
-			const base = baseSeq(herdr);
-			expect(herdr.received[0]?.method).toBe("pane.report_agent");
-			expect(herdr.received[0]?.params).toEqual(reportParams("blocked", base, "selection required"));
-			expect(herdr.received[1]?.method).toBe("pane.report_agent");
-			expect(herdr.received[1]?.params).toEqual(reportParams("blocked", base + 1, "selection required"));
-			expect(herdr.received[2]?.method).toBe("pane.report_agent");
-			expect(herdr.received[2]?.params).toEqual(reportParams("working", base + 2));
+			await waitFor(() => herdr.received.filter(frame => frame.method === "pane.report_agent").length >= 3);
+			const agentFrames = herdr.received.filter(frame => frame.method === "pane.report_agent");
+			const base = agentFrames[0]?.params.seq as number;
+			expect(agentFrames[0]?.params).toEqual(reportParams("blocked", base, "selection required"));
+			expect(agentFrames[1]?.params).toEqual(reportParams("blocked", base + 1, "selection required"));
+			expect(agentFrames[2]?.params).toEqual(reportParams("working", base + 2));
 			const capturedFrames = JSON.stringify(herdr.received);
 			for (const sentinel of [
 				privateSentinels.title,
@@ -306,9 +304,10 @@ describe("herdr-reporter extension", () => {
 				await handlers.get("user_prompt_start")?.({ kind }, busyCtx);
 			}
 
-			await waitFor(() => herdr.received.length >= 4);
-			const base = baseSeq(herdr);
-			expect(herdr.received.map(frame => frame.params)).toEqual([
+			await waitFor(() => herdr.received.filter(frame => frame.method === "pane.report_agent").length >= 4);
+			const agentFrames = herdr.received.filter(frame => frame.method === "pane.report_agent");
+			const base = agentFrames[0]?.params.seq as number;
+			expect(agentFrames.map(frame => frame.params)).toEqual([
 				reportParams("blocked", base, "selection required"),
 				reportParams("blocked", base + 1, "confirmation required"),
 				reportParams("blocked", base + 2, "text input required"),
@@ -736,6 +735,54 @@ describe("herdr-reporter extension", () => {
 				metadataParams(metaBase, { stateLabels: { working: "tool" }, ttlMs: 60_000 }),
 			);
 			expect(metadataFrames[1]?.params).toEqual(metadataParams(metaBase + 1, { clearStateLabels: true }));
+		} finally {
+			await herdr.close();
+		}
+	});
+
+	it("clears working phase label when user prompt starts and restores it on prompt resolution", async () => {
+		const herdr = await startFakeHerdr();
+		try {
+			process.env.HERDR_PANE_ID = "w1:p1";
+			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+			const { pi, handlers } = makeMockPi();
+
+			herdrReporter(pi);
+
+			// 1. Tool execution begins
+			await handlers.get("tool_execution_start")?.(
+				{ type: "tool_execution_start", toolCallId: "call-1", toolName: "ask", args: {} },
+				busyCtx,
+			);
+
+			// 2. Interactive prompt opens (e.g. ask tool awaiting user choice)
+			await handlers.get("user_prompt_start")?.({ kind: "select" }, busyCtx);
+
+			// 3. User responds to prompt
+			await handlers.get("user_prompt_end")?.({ kind: "select" }, busyCtx);
+
+			// 4. Tool execution finishes
+			await handlers.get("tool_execution_end")?.(
+				{ type: "tool_execution_end", toolCallId: "call-1", toolName: "ask", result: {}, isError: false },
+				busyCtx,
+			);
+
+			await waitFor(() => herdr.received.filter(r => r.method === "pane.report_metadata").length >= 4);
+			const metadataFrames = herdr.received.filter(r => r.method === "pane.report_metadata");
+			const base = metadataFrames[0]?.params.seq as number;
+
+			// Frame 0: tool start -> sets working = "tool"
+			expect(metadataFrames[0]?.params).toEqual(
+				metadataParams(base, { stateLabels: { working: "tool" }, ttlMs: 60_000 }),
+			);
+			// Frame 1: prompt start -> clears state labels
+			expect(metadataFrames[1]?.params).toEqual(metadataParams(base + 1, { clearStateLabels: true }));
+			// Frame 2: prompt end -> restores working = "tool"
+			expect(metadataFrames[2]?.params).toEqual(
+				metadataParams(base + 2, { stateLabels: { working: "tool" }, ttlMs: 60_000 }),
+			);
+			// Frame 3: tool end -> clears state labels
+			expect(metadataFrames[3]?.params).toEqual(metadataParams(base + 3, { clearStateLabels: true }));
 		} finally {
 			await herdr.close();
 		}
