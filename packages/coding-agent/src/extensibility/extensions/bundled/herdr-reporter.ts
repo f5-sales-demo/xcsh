@@ -60,8 +60,10 @@ const PHASE_SOURCE = "xcsh:phase";
 const REPORT_METHOD = "pane.report_agent";
 const METADATA_METHOD = "pane.report_metadata";
 const SESSION_METHOD = "pane.report_agent_session";
+const HEARTBEAT_METHOD = "pane.report_agent_heartbeat";
 const RELEASE_METHOD = "pane.release_agent";
 const SOCKET_TIMEOUT_MS = 2000;
+const HEARTBEAT_INTERVAL_MS = 10_000;
 const PHASE_LABEL_TTL_MS = 60_000;
 const SETTLED_TURN_RECONCILE_DELAY_MS = 25;
 const PROMPT_BLOCKED_REASONS = {
@@ -160,6 +162,12 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// before their agent-end extension callback has drained. The check consults
 	// XCSH's own streaming state, so a tool boundary cannot be mistaken for idle.
 	let settledTurnReconcileTimer: ReturnType<typeof setTimeout> | undefined;
+	// Heartbeats are session-scoped liveness signals. They have no lifecycle state
+	// or metadata payload, so Herdr can refresh the authoritative reporter without
+	// changing the pane's lifecycle state, state_change_seq, phase labels, or
+	// session anchor.
+	let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+	let heartbeatActive = false;
 	// Serializes frames: herdr compares `seq` across all methods for this source,
 	// so frames must reach it in the order they were generated.
 	let queue: Promise<void> = Promise.resolve();
@@ -201,6 +209,44 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			...(message === undefined ? {} : { message }),
 			seq: seq++,
 		});
+
+	// Heartbeat is deliberately socket-only. Older Herdr CLIs do not expose this
+	// new typed frame, while an unavailable socket remains nonfatal just like the
+	// lifecycle socket reports above.
+	const reportHeartbeat = (): Promise<void> => {
+		const socketPath = process.env.HERDR_SOCKET_PATH;
+		if (!socketPath) return Promise.resolve();
+		// Allocate before enqueueing: another lifecycle callback can run before this
+		// task reaches the queue head, but must still receive a later sequence.
+		const frame = {
+			pane_id: paneId,
+			source: HERDR_SOURCE,
+			agent: HERDR_AGENT_LABEL,
+			seq: seq++,
+		};
+		return enqueue(() => sendToHerdrSocket(socketPath, HEARTBEAT_METHOD, frame, onError));
+	};
+
+	const startHeartbeat = (): void => {
+		if (heartbeatActive) return;
+		heartbeatActive = true;
+		heartbeatTimer = setInterval(() => {
+			// A callback already queued when shutdown starts must not report after
+			// the release frame has relinquished this authority.
+			if (heartbeatActive) void reportHeartbeat();
+		}, HEARTBEAT_INTERVAL_MS);
+		// Do not keep an otherwise completed process alive if its host skips an
+		// orderly session_shutdown callback.
+		(heartbeatTimer as { unref?: () => void }).unref?.();
+	};
+
+	const stopHeartbeat = (): void => {
+		heartbeatActive = false;
+		if (heartbeatTimer !== undefined) {
+			clearInterval(heartbeatTimer);
+			heartbeatTimer = undefined;
+		}
+	};
 
 	const reportMetadata = (params: Record<string, unknown>): Promise<void> => {
 		const socketPath = process.env.HERDR_SOCKET_PATH;
@@ -298,6 +344,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 
 	// Announce presence and session identity as soon as the session is initialized.
 	pi.on("session_start", async (_event, ctx) => {
+		startHeartbeat();
 		await report("idle");
 		await reportSession(ctx);
 	});
@@ -376,6 +423,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 
 	// Relinquish pane authority so herdr stops showing xcsh once we exit.
 	pi.on("session_shutdown", () => {
+		stopHeartbeat();
 		void send(RELEASE_METHOD, {
 			pane_id: paneId,
 			source: HERDR_SOURCE,
