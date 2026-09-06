@@ -212,7 +212,7 @@ export type AgentSessionEvent =
 	| { type: "todo_auto_clear" };
 
 /** Listener function for agent session events */
-export type AgentSessionEventListener = (event: AgentSessionEvent) => void;
+export type AgentSessionEventListener = (event: AgentSessionEvent) => unknown;
 export type AsyncJobSnapshotItem = Pick<AsyncJob, "id" | "type" | "status" | "label" | "startTime">;
 
 export interface AsyncJobSnapshot {
@@ -775,6 +775,13 @@ export class AgentSession {
 		}
 	}
 
+	/** Emit a completion boundary and wait for consumer-visible finalization. */
+	async #emitAndWait(event: AgentSessionEvent): Promise<void> {
+		// Start every listener before awaiting so one consumer cannot delay another.
+		const listeners = [...this.#eventListeners];
+		await Promise.all(listeners.map(listener => listener(event)));
+	}
+
 	#queuedExtensionEvents: Promise<void> = Promise.resolve();
 
 	#queueExtensionEvent(event: AgentSessionEvent): Promise<void> {
@@ -804,7 +811,11 @@ export class AgentSession {
 		}
 
 		await this.#emitExtensionEvent(event);
-		this.#emit(event);
+		if (event.type === "agent_end") {
+			await this.#emitAndWait(event);
+		} else {
+			this.#emit(event);
+		}
 	}
 
 	// Track last assistant message for auto-compaction check
