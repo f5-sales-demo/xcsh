@@ -4,6 +4,22 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- Renamed `MacOSPowerAssertion` and `MacOSPowerAssertionOptions` to `PowerAssertion` and
+  `PowerAssertionOptions` without compatibility aliases ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).
+
+### Added
+
+- Added Linux login1 and best-effort ScreenSaver inhibition plus Windows thread-affine execution
+  state to the cross-platform `PowerAssertion` handle
+  ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).
+
+### Changed
+
+- Made supported-platform power acquisition failures explicit while retaining a no-op handle only
+  for unsupported platforms ([#3724](https://github.com/f5-sales-demo/xcsh/issues/3724)).
+
 ### Fixed
 
 - Built Linux GNU release addons against the GLIBC 2.17 napi-rs cross-toolchain floor and added

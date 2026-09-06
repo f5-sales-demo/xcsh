@@ -82,20 +82,6 @@ export declare class MacAppearanceObserver {
   stop(): void
 }
 
-/**
- * Long-lived macOS power assertion.
- *
- * On macOS this acquires an `IOKit` assertion that prevents idle sleep until
- * the handle is stopped or dropped. On other platforms it is a no-op handle so
- * the caller can keep one cross-platform code path.
- */
-export declare class MacOSPowerAssertion {
-  /** Acquire a macOS power assertion. */
-  static start(options?: MacOSPowerAssertionOptions | undefined | null): MacOSPowerAssertion
-  /** Release the power assertion early. */
-  stop(): void
-}
-
 /** Image container for native interop. */
 export declare class PhotonImage {
   /**
@@ -122,6 +108,26 @@ export declare class PhotonImage {
    * Returns a new `PhotonImage` containing the resized image.
    */
   resize(width: number, height: number, filter: SamplingFilter): ImageTask
+}
+
+/**
+ * Long-lived cross-platform power assertion.
+ *
+ * macOS uses `IOKit`, Linux holds login1 and desktop `ScreenSaver` inhibitors,
+ * and Windows holds thread-affine execution state until the handle is stopped
+ * or dropped. Other platforms return a no-op handle.
+ */
+export declare class PowerAssertion {
+  /**
+   * Acquire a power assertion. Unsupported platforms return a no-op handle
+   * so callers can stay cross-platform.
+   */
+  static start(options?: PowerAssertionOptions | undefined | null): PowerAssertion
+  /**
+   * Release every assertion held by this handle. Safe to call multiple
+   * times; subsequent calls are a no-op.
+   */
+  stop(): void
 }
 
 /** Stateful PTY session for interactive stdin/stdout passthrough. */
@@ -1024,14 +1030,6 @@ export declare enum MacOSAppearance {
   Light = 'light'
 }
 
-/** Options for starting a macOS power assertion. */
-export interface MacOSPowerAssertionOptions {
-  /** Human-readable reason shown in macOS power diagnostics. */
-  reason?: string
-  /** Keep the display awake in addition to preventing idle system sleep. */
-  display?: boolean
-}
-
 /** A single match in the content. */
 export interface Match {
   /** 1-indexed line number. */
@@ -1095,6 +1093,30 @@ export declare function parseKey(data: string, kittyProtocolActive: boolean): st
  * Returns a structured parse result when the input is a valid Kitty sequence.
  */
 export declare function parseKittySequence(data: string): ParsedKittyResult | null
+
+/**
+ * Options for starting a power assertion.
+ *
+ * Each boolean maps to a `caffeinate(8)` flag and the closest corresponding
+ * platform capability. Multiple flags can be combined; when set, one
+ * assertion is taken per flag and all are released together when the
+ * handle is stopped or dropped.
+ *
+ * If every flag is unset (or omitted), the handle behaves as if `idle`
+ * were `true` — preserving the historical default of `caffeinate -i`.
+ */
+export interface PowerAssertionOptions {
+  /** Human-readable reason shown in platform power diagnostics. */
+  reason?: string
+  /** `caffeinate -i`: prevent the system from idle-sleeping. */
+  idle?: boolean
+  /** `caffeinate -s`: prevent the system from sleeping (AC power only). */
+  system?: boolean
+  /** `caffeinate -u`: declare the user is active (wakes the display). */
+  user?: boolean
+  /** `caffeinate -d`: prevent the display from idle-sleeping. */
+  display?: boolean
+}
 
 /** Probe whether `ProjFS` overlay virtualization can be started on this system. */
 export declare function projfsOverlayProbe(): ProjfsOverlayProbeResult

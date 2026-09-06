@@ -1,5 +1,9 @@
 import { $flag, getProjectDir, logger } from "@f5-sales-demo/pi-utils";
-import type { AutocompleteProvider, CombinedAutocompleteProvider } from "../autocomplete";
+import {
+	type AutocompleteProvider,
+	type CombinedAutocompleteProvider,
+	isDirectoryCompletionValue,
+} from "../autocomplete";
 import { BracketedPasteHandler } from "../bracketed-paste";
 import { getKeybindings, type KeybindingsManager } from "../keybindings";
 import { extractPrintableText, matchesKey } from "../keys";
@@ -1020,7 +1024,8 @@ export class Editor implements Component, Focusable {
 				if (kb.matches(data, "tui.input.tab")) {
 					const selected = this.#autocompleteList.getSelectedItem();
 					if (selected && this.#autocompleteProvider) {
-						const shouldChainSlashCommandAutocomplete = this.#isSlashCommandNameAutocompleteSelection();
+						const shouldChainAutocomplete =
+							this.#isSlashCommandNameAutocompleteSelection() || isDirectoryCompletionValue(selected.value);
 						const result = this.#autocompleteProvider.applyCompletion(
 							this.#state.lines,
 							this.#state.cursorLine,
@@ -1041,8 +1046,8 @@ export class Editor implements Component, Focusable {
 
 						result.onApplied?.();
 
-						if (shouldChainSlashCommandAutocomplete && this.#isCompletedSlashCommandAtCursor()) {
-							void this.#tryTriggerAutocomplete();
+						if (shouldChainAutocomplete) {
+							queueMicrotask(() => void this.#tryTriggerAutocomplete());
 						}
 					}
 					return;
@@ -1080,6 +1085,7 @@ export class Editor implements Component, Focusable {
 				else if (kb.matches(data, "tui.input.submit") || data === "\n") {
 					const selected = this.#autocompleteList.getSelectedItem();
 					if (selected && this.#autocompleteProvider) {
+						const shouldChainDirectoryCompletion = isDirectoryCompletionValue(selected.value);
 						const result = this.#autocompleteProvider.applyCompletion(
 							this.#state.lines,
 							this.#state.cursorLine,
@@ -1099,6 +1105,10 @@ export class Editor implements Component, Focusable {
 						}
 
 						result.onApplied?.();
+
+						if (shouldChainDirectoryCompletion) {
+							queueMicrotask(() => void this.#tryTriggerAutocomplete());
+						}
 					}
 					return;
 				}
@@ -2395,16 +2405,6 @@ export class Editor implements Component, Focusable {
 		return textBeforeCursor.startsWith("/") && !textBeforeCursor.includes(" ");
 	}
 
-	#isCompletedSlashCommandAtCursor(): boolean {
-		const currentLine = this.#state.lines[this.#state.cursorLine] || "";
-		if (this.#state.cursorCol !== currentLine.length) {
-			return false;
-		}
-
-		const textBeforeCursor = currentLine.slice(0, this.#state.cursorCol).trimStart();
-		return /^\/\S+ $/.test(textBeforeCursor);
-	}
-
 	// Autocomplete methods
 	async #tryTriggerAutocomplete(explicitTab: boolean = false): Promise<void> {
 		if (!this.#autocompleteProvider) return;
@@ -2493,6 +2493,7 @@ https://github.com/EsotericSoftware/spine-runtimes/actions/runs/19536643416/job/
 			// If there's exactly one suggestion and this was an explicit Tab press, apply it immediately
 			if (explicitTab && suggestions.items.length === 1) {
 				const item = suggestions.items[0]!;
+				const shouldChainDirectoryCompletion = isDirectoryCompletionValue(item.value);
 				const result = this.#autocompleteProvider.applyCompletion(
 					this.#state.lines,
 					this.#state.cursorLine,
@@ -2507,6 +2508,9 @@ https://github.com/EsotericSoftware/spine-runtimes/actions/runs/19536643416/job/
 
 				if (this.onChange) {
 					this.onChange(this.getText());
+				}
+				if (shouldChainDirectoryCompletion) {
+					queueMicrotask(() => void this.#tryTriggerAutocomplete());
 				}
 				return;
 			}

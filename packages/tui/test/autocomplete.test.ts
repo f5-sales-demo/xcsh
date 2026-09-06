@@ -61,6 +61,35 @@ describe("CombinedAutocompleteProvider", () => {
 		});
 	});
 
+	describe("@ completion suffixes", () => {
+		it.each([
+			["see @pack", "@packages/", "see @packages/"],
+			['see @"my fold', '@"my folder/', 'see @"my folder/'],
+			["see @packages\\", "@packages\\", "see @packages\\"],
+		])("does not append a space to directory completion %s", (line, value, expected) => {
+			const provider = new CombinedAutocompleteProvider([], "/tmp");
+			const prefix = line.slice(line.lastIndexOf("@"));
+			const result = provider.applyCompletion([line], 0, line.length, { value, label: value.slice(1) }, prefix);
+
+			expect(result.lines[0]).toBe(expected);
+			expect(result.cursorCol).toBe(expected.length);
+		});
+
+		it("retains the trailing space for a completed file", () => {
+			const provider = new CombinedAutocompleteProvider([], "/tmp");
+			const result = provider.applyCompletion(
+				["see @inde"],
+				0,
+				"see @inde".length,
+				{ value: "@index.ts", label: "index.ts" },
+				"@inde",
+			);
+
+			expect(result.lines[0]).toBe("see @index.ts ");
+			expect(result.cursorCol).toBe("see @index.ts ".length);
+		});
+	});
+
 	describe("hidden paths", () => {
 		let baseDir: string;
 

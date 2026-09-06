@@ -12,6 +12,8 @@ import {
 } from "./aggregator";
 import embeddedClientArchiveTxt from "./embedded-client.generated.txt";
 
+const STATS_DASHBOARD_HOSTNAME = "127.0.0.1";
+
 const getEmbeddedClientArchive = (() => {
 	const txt = embeddedClientArchiveTxt.replaceAll(/[\s\r\n]/g, "").trim();
 	if (!txt) return null;
@@ -157,6 +159,8 @@ const ensureClientBuild = async () => {
 </body>
 </html>`;
 
+	// STATIC_DIR is derived only from import.meta.dir; no HTML input reaches this filesystem path.
+	// nosemgrep: javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag
 	await Bun.write(path.join(STATIC_DIR, "index.html"), indexHtml);
 };
 
@@ -244,24 +248,18 @@ async function handleStatic(requestPath: string): Promise<Response> {
 /**
  * Start the HTTP server.
  */
-export async function startServer(port = 3847): Promise<{ port: number; stop: () => void }> {
+export async function startServer(port = 3847): Promise<{ hostname: string; port: number; stop: () => void }> {
 	await ensureClientBuild();
 
 	const server = Bun.serve({
 		port,
+		hostname: STATS_DASHBOARD_HOSTNAME,
 		async fetch(req) {
 			const url = new URL(req.url);
 			const path = url.pathname;
 
-			// CORS headers for local development
-			const corsHeaders = {
-				"Access-Control-Allow-Origin": "*",
-				"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-				"Access-Control-Allow-Headers": "Content-Type",
-			};
-
 			if (req.method === "OPTIONS") {
-				return new Response(null, { headers: corsHeaders });
+				return new Response(null, { status: 204 });
 			}
 
 			try {
@@ -273,27 +271,16 @@ export async function startServer(port = 3847): Promise<{ port: number; stop: ()
 					response = await handleStatic(path);
 				}
 
-				// Add CORS headers to all responses
-				const headers = new Headers(response.headers);
-				for (const [key, value] of Object.entries(corsHeaders)) {
-					headers.set(key, value);
-				}
-
-				return new Response(response.body, {
-					status: response.status,
-					headers,
-				});
+				return response;
 			} catch (error) {
 				console.error("Server error:", error);
-				return Response.json(
-					{ error: error instanceof Error ? error.message : "Unknown error" },
-					{ status: 500, headers: corsHeaders },
-				);
+				return Response.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
 			}
 		},
 	});
 
 	return {
+		hostname: STATS_DASHBOARD_HOSTNAME,
 		port: server.port ?? port,
 		stop: () => server.stop(),
 	};

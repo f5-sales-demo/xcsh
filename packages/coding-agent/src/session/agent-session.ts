@@ -50,10 +50,11 @@ import {
 	parseRateLimitReason,
 } from "@f5-sales-demo/pi-ai";
 import { getRetryAfterMsFromErrorText } from "@f5-sales-demo/pi-ai/utils/retry-after";
-import { killTree, MacOSPowerAssertion } from "@f5-sales-demo/pi-natives";
+import { killTree, PowerAssertion, type PowerAssertionOptions } from "@f5-sales-demo/pi-natives";
 import {
 	abortableSleep,
 	getAgentDbPath,
+	isBunTestRuntime,
 	isEnoent,
 	logger,
 	prompt,
@@ -430,12 +431,24 @@ const noOpUIContext: ExtensionUIContext = {
 // AgentSession Class
 // ============================================================================
 
+/** Translate the configured sleep-prevention mode into native assertion options. */
+export function powerAssertionOptions(mode: "off" | "idle" | "display" | "system"): PowerAssertionOptions | undefined {
+	if (mode === "off") return undefined;
+	return {
+		reason: "xcsh agent session",
+		idle: true,
+		display: mode === "display" || mode === "system",
+		system: mode === "system",
+		user: mode === "system",
+	};
+}
+
 export class AgentSession {
 	readonly agent: Agent;
 	readonly sessionManager: SessionManager;
 	readonly settings: Settings;
 
-	#powerAssertion: MacOSPowerAssertion | undefined;
+	#powerAssertion: PowerAssertion | undefined;
 
 	readonly configWarnings: string[] = [];
 
@@ -571,13 +584,13 @@ export class AgentSession {
 	#routingCoordinator = new RoutingCoordinator();
 
 	#startPowerAssertion(): void {
-		if (process.platform !== "darwin") {
-			return;
-		}
+		if (isBunTestRuntime()) return;
+		const options = powerAssertionOptions(this.settings.get("power.sleepPrevention"));
+		if (!options) return;
 		try {
-			this.#powerAssertion = MacOSPowerAssertion.start({ reason: "xcsh agent session" });
+			this.#powerAssertion = PowerAssertion.start(options);
 		} catch (error) {
-			logger.warn("Failed to acquire macOS power assertion", { error: String(error) });
+			logger.warn("Failed to acquire power assertion", { error: String(error) });
 		}
 	}
 
@@ -590,7 +603,7 @@ export class AgentSession {
 		try {
 			assertion.stop();
 		} catch (error) {
-			logger.warn("Failed to release macOS power assertion", { error: String(error) });
+			logger.warn("Failed to release power assertion", { error: String(error) });
 		}
 	}
 
