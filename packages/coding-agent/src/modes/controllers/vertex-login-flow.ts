@@ -4,6 +4,8 @@ import { $ } from "bun";
 
 export const VERTEX_LOGIN_MODEL = "gemini-3.7-flash";
 export const VERTEX_LOGIN_LOCATION = "global";
+const VERTEX_BUILD_CREDENTIALS_UNAVAILABLE =
+	"Corporate Vertex OAuth credentials are unavailable in this build. Install an official xcsh binary or provide the licensed build credentials when running from source.";
 
 export type VertexProjectSource = "environment" | "adc" | "gcloud";
 export interface VertexProject {
@@ -36,12 +38,15 @@ export async function detectVertexProject(runtime: VertexLoginRuntime): Promise<
 }
 
 export function isHeadlessTerminal(environment: Record<string, string | undefined>): boolean {
-	return Boolean(environment.CLOUD_SHELL || environment.SSH_CONNECTION || !environment.DISPLAY);
+	return Boolean(
+		environment.HERDR_ENV === "1" || environment.CLOUD_SHELL || environment.SSH_CONNECTION || !environment.DISPLAY,
+	);
 }
 
 export function vertexFailureGuidance(error: unknown, project?: string): string {
 	const message = error instanceof Error ? error.message : String(error);
 	const projectArg = project ? ` --project ${project}` : "";
+	if (message === VERTEX_BUILD_CREDENTIALS_UNAVAILABLE) return VERTEX_BUILD_CREDENTIALS_UNAVAILABLE;
 	if (/credential|unauthenticated|login|access token/i.test(message)) {
 		return "Vertex OAuth credentials are unavailable. Run `/login google-vertex` and sign in again.";
 	}

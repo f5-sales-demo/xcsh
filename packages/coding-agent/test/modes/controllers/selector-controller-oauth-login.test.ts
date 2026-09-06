@@ -1,5 +1,7 @@
+import { Database } from "bun:sqlite";
 import { beforeAll, describe, expect, it, vi } from "bun:test";
 import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { AuthCredentialStore, AuthStorage } from "@f5-sales-demo/pi-ai";
 import { SelectorController } from "../../../src/modes/controllers/selector-controller";
 import { OAuthManualInputManager } from "../../../src/modes/oauth-manual-input";
 import { initTheme } from "../../../src/modes/theme/theme";
@@ -16,6 +18,39 @@ function renderVisible(components: Array<{ render(width: number): string[] }>, w
 
 beforeAll(() => {
 	initTheme();
+});
+
+describe("SelectorController native login lifecycle", () => {
+	it("emits select prompt lifecycle events when the OAuth provider selector opens and is cancelled", async () => {
+		const emit = vi.fn(async (_event: unknown) => undefined);
+		const editorContainer = {
+			children: [] as Array<{ handleInput?: (key: string) => void }>,
+			clear() {
+				this.children = [];
+			},
+			addChild(child: { handleInput?: (key: string) => void }) {
+				this.children.push(child);
+			},
+		};
+		const ctx = {
+			editorContainer,
+			editor: {},
+			session: {
+				extensionRunner: { emit },
+				modelRegistry: {
+					authStorage: { hasAuth: () => false },
+					getApiKeyForProvider: vi.fn(async () => undefined),
+				},
+			},
+			ui: { requestRender: vi.fn(), setFocus: vi.fn() },
+		} as unknown as InteractiveModeContext;
+
+		await new SelectorController(ctx).showOAuthSelector("login");
+
+		expect(emit).toHaveBeenCalledWith({ type: "user_prompt_start", kind: "select" });
+		editorContainer.children[0]?.handleInput?.("\x1b");
+		expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_end", kind: "select" });
+	});
 });
 
 describe("SelectorController Google Antigravity login", () => {
@@ -118,14 +153,171 @@ describe("SelectorController Google Antigravity login", () => {
 });
 
 describe("SelectorController Corporate Vertex login", () => {
-	it("shows the shared link and manual-code guidance without opening a browser when headless", async () => {
-		const previousSshConnection = process.env.SSH_CONNECTION;
-		process.env.SSH_CONNECTION = "synthetic-client synthetic-server";
+	it("reports the licensed build/configuration cause when OAuth fails before presenting an action", async () => {
+		const previousClientId = Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+		const previousClientSecret = Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+		delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+		const authStorage = new AuthStorage(new AuthCredentialStore(new Database(":memory:")));
+		try {
+			const showError = vi.fn();
+			const setSetting = vi.fn();
+			const reachedAuthAction = vi.fn();
+			const login = vi.fn(async (_provider, callbacks) => {
+				await authStorage.login("google-vertex", {
+					...callbacks,
+					onAuth: info => {
+						reachedAuthAction();
+						callbacks.onAuth(info);
+					},
+				});
+			});
+			const ctx = {
+				session: {
+					modelRegistry: { authStorage: { getApiKey: vi.fn(async () => undefined), login } },
+					settings: { set: setSetting },
+				},
+				oauthManualInput: new OAuthManualInputManager(),
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn() },
+				showStatus: vi.fn(),
+				showError,
+				openInBrowser: vi.fn(),
+			} as unknown as InteractiveModeContext;
+
+			await new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
+
+			expect(login).toHaveBeenCalledWith("google-vertex", expect.any(Object));
+			expect(authStorage.list()).toEqual([]);
+			expect(reachedAuthAction).not.toHaveBeenCalled();
+			expect(showError).toHaveBeenCalledWith(
+				expect.stringContaining("Corporate Vertex OAuth credentials are unavailable in this build"),
+			);
+			expect(showError).toHaveBeenCalledWith(expect.stringContaining("Install an official xcsh binary"));
+			expect(setSetting).not.toHaveBeenCalled();
+		} finally {
+			authStorage.close();
+			if (previousClientId === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID;
+			else Bun.env.XCSH_VERTEX_OAUTH_CLIENT_ID = previousClientId;
+			if (previousClientSecret === undefined) delete Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET;
+			else Bun.env.XCSH_VERTEX_OAUTH_CLIENT_SECRET = previousClientSecret;
+		}
+	});
+
+	it("preserves existing Vertex settings when project confirmation is cancelled", async () => {
+		const previousProject = Bun.env.GOOGLE_CLOUD_PROJECT;
+		Bun.env.GOOGLE_CLOUD_PROJECT = "detected-project";
+		try {
+			const emit = vi.fn(async (_event: unknown) => undefined);
+			const setSetting = vi.fn();
+			const showStatus = vi.fn();
+			const editorContainer = {
+				children: [] as Array<{ handleInput?: (key: string) => void }>,
+				clear() {
+					this.children = [];
+				},
+				addChild(child: { handleInput?: (key: string) => void }) {
+					this.children.push(child);
+				},
+			};
+			const ctx = {
+				editorContainer,
+				editor: {},
+				session: {
+					extensionRunner: { emit },
+					modelRegistry: {
+						authStorage: {
+							getApiKey: vi.fn(async () => "existing-vertex-token"),
+							login: vi.fn(),
+						},
+					},
+					settings: { set: setSetting },
+				},
+				oauthManualInput: new OAuthManualInputManager(),
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn(), setFocus: vi.fn() },
+				showStatus,
+				showError: vi.fn(),
+				openInBrowser: vi.fn(),
+			} as unknown as InteractiveModeContext;
+
+			const loginPromise = new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
+			await Bun.sleep(0);
+			expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_start", kind: "input" });
+			editorContainer.children[0]?.handleInput?.("\x1b");
+			await loginPromise;
+
+			expect(emit.mock.calls).toEqual([
+				[{ type: "user_prompt_start", kind: "input" }],
+				[{ type: "user_prompt_end", kind: "input" }],
+			]);
+			expect(setSetting).not.toHaveBeenCalled();
+			expect(showStatus).toHaveBeenLastCalledWith("Vertex AI login cancelled. Existing configuration unchanged.");
+		} finally {
+			if (previousProject === undefined) delete Bun.env.GOOGLE_CLOUD_PROJECT;
+			else Bun.env.GOOGLE_CLOUD_PROJECT = previousProject;
+		}
+	});
+
+	it("emits input lifecycle events while OAuth authorization awaits a manual code", async () => {
+		const previousHerdr = process.env.HERDR_ENV;
+		process.env.HERDR_ENV = "1";
+		try {
+			const emit = vi.fn(async (_event: unknown) => undefined);
+			const manualInput = new OAuthManualInputManager();
+			const authorizationShown = Promise.withResolvers<void>();
+			const login = vi.fn(async (_provider, callbacks) => {
+				callbacks.onAuth({ url: LONG_AUTH_URL });
+				const code = callbacks.onManualCodeInput();
+				authorizationShown.resolve();
+				await code;
+				throw new Error("stop after authorization wait");
+			});
+			const ctx = {
+				session: {
+					extensionRunner: { emit },
+					modelRegistry: { authStorage: { getApiKey: vi.fn(async () => undefined), login } },
+				},
+				oauthManualInput: manualInput,
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn() },
+				showStatus: vi.fn(),
+				showError: vi.fn(),
+				openInBrowser: vi.fn(),
+			} as unknown as InteractiveModeContext;
+
+			const loginPromise = new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
+			await authorizationShown.promise;
+
+			expect(emit.mock.calls).toEqual([[{ type: "user_prompt_start", kind: "input" }]]);
+			expect(manualInput.submit("synthetic-code")).toBe(true);
+			await loginPromise;
+			expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_end", kind: "input" });
+		} finally {
+			if (previousHerdr === undefined) delete process.env.HERDR_ENV;
+			else process.env.HERDR_ENV = previousHerdr;
+		}
+	});
+
+	it.each(["SSH", "Herdr"])("shows a usable OAuth action without opening a browser in %s", async terminal => {
+		const environment = {
+			SSH_CONNECTION: terminal === "SSH" ? "synthetic-client synthetic-server" : "",
+			HERDR_ENV: terminal === "Herdr" ? "1" : "",
+			DISPLAY: ":0",
+			CLOUD_SHELL: "",
+		};
+		const previous = Object.fromEntries(Object.keys(environment).map(key => [key, process.env[key]]));
+		Object.assign(process.env, environment);
 		try {
 			const addedComponents: Array<{ render(width: number): string[] }> = [];
 			const openInBrowser = vi.fn();
+			let submitted = false;
+			let receivedCode: string | undefined;
 			const login = vi.fn(async (_provider, callbacks) => {
 				callbacks.onAuth({ url: LONG_AUTH_URL });
+				const pending = callbacks.onManualCodeInput();
+				submitted = ctx.oauthManualInput.submit("synthetic-code");
+				receivedCode = await pending;
 				throw new Error("stop after presentation");
 			});
 			const ctx = {
@@ -145,11 +337,17 @@ describe("SelectorController Corporate Vertex login", () => {
 			const visible = renderVisible(addedComponents);
 			expect(visible).toContain("Open sign-in page");
 			expect(visible).toContain("Tip: After browser sign-in, complete pairing with /login <authorization code>.");
+			expect(submitted).toBe(true);
+			expect(receivedCode).toBe("synthetic-code");
+			expect(visible).not.toContain("synthetic-code");
+			expect(addedComponents.flatMap(component => component.render(120)).join("\n")).toContain(LONG_AUTH_URL);
 			expect(visible).not.toContain(LONG_AUTH_URL);
 			expect(openInBrowser).not.toHaveBeenCalled();
 		} finally {
-			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;
-			else process.env.SSH_CONNECTION = previousSshConnection;
+			for (const [key, value] of Object.entries(previous)) {
+				if (value === undefined) delete process.env[key];
+				else process.env[key] = value;
+			}
 		}
 	});
 });
