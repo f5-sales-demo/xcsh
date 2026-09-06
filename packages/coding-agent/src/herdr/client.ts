@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { connect } from "node:net";
 
-export const HERDR_PROTOCOL_VERSION = 18;
+export const HERDR_PROTOCOL_VERSION = 19;
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
@@ -19,7 +19,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** Typed, one-request-per-connection client for Herdr's protocol-18 JSONL socket. */
+/** Typed, one-request-per-connection client for Herdr's protocol-19 JSONL socket. */
 export class HerdrClient {
 	private protocolChecked = false;
 
@@ -103,7 +103,7 @@ export class HerdrClient {
 			});
 			socket.once("end", () => {
 				if (settled) return;
-				// Protocol 18 permits the final response to be terminated by EOF. The
+				// Protocol 19 permits the final response to be terminated by EOF. The
 				// server normally emits JSONL, but older/current transports may omit the
 				// trailing newline when they close a one-shot connection.
 				try {

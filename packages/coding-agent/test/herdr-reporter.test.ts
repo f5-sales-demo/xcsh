@@ -74,11 +74,11 @@ interface FakeHerdrOptions {
 }
 
 /**
- * A throwaway Herdr protocol-18 socket server. Mirrors the real herdr handshake
+ * A throwaway Herdr protocol-19 socket server. Mirrors the real herdr handshake
  * gate: the very first request on the server must be a `ping`, which is
  * answered with a matching `pong`; every other method is rejected with a
  * JSON-RPC error and NOT recorded until a successful ping has been observed.
- * This lets tests prove a client performs the protocol-18 handshake before
+ * This lets tests prove a client performs the protocol-19 handshake before
  * sending lifecycle frames, exactly as `HerdrClient.ensureProtocol()` does —
  * a client that skips the handshake (e.g. the old raw-socket transport) gets
  * every frame silently dropped by this gate and its request never appears in
@@ -109,7 +109,7 @@ function startFakeHerdr(options: FakeHerdrOptions = {}): Promise<FakeHerdr> {
 						handshakeDone = true;
 						pingOrders.push(order++);
 						sock.end(
-							`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: 18, version: "test" } })}\n`,
+							`${JSON.stringify({ id: request.id, result: { type: "pong", protocol: 19, version: "test" } })}\n`,
 						);
 					} else if (options.failMethods?.has(request.method)) {
 						// Model a failed transport after the protocol handshake. The reporter
@@ -119,7 +119,7 @@ function startFakeHerdr(options: FakeHerdrOptions = {}): Promise<FakeHerdr> {
 						received.push({ ...request, order: order++ });
 						sock.end(`${JSON.stringify({ id: request.id, result: {} })}\n`);
 					} else {
-						// Protocol-18 gate: no ping yet, so the method is refused and never recorded.
+						// Protocol-19 gate: no ping yet, so the method is refused and never recorded.
 						sock.end(
 							`${JSON.stringify({ id: request.id, error: { message: "protocol handshake required", code: "handshake_required" } })}\n`,
 						);
@@ -318,7 +318,7 @@ describe("herdr-reporter extension", () => {
 			expect(herdr.received[1]?.params).toEqual(reportParams("working", base + 1));
 			expect(herdr.received[2]?.method).toBe("pane.report_agent");
 			expect(herdr.received[2]?.params).toEqual(reportParams("idle", base + 2));
-			// The protocol-18 handshake (ping) must precede every report frame — the
+			// The protocol-19 handshake (ping) must precede every report frame — the
 			// fake server's gate refuses to record report/release methods until a
 			// ping has been observed, so any recorded frame is proof the handshake
 			// already happened.
@@ -440,7 +440,7 @@ describe("herdr-reporter extension", () => {
 				agent: "xcsh",
 				seq: baseSeq(herdr),
 			});
-			// The release frame must also be preceded by the protocol-18 handshake.
+			// The release frame must also be preceded by the protocol-19 handshake.
 			expect(herdr.pingOrders.length).toBeGreaterThanOrEqual(1);
 			expect(herdr.received[0]!.order).toBeGreaterThan(herdr.pingOrders[0]!);
 		} finally {

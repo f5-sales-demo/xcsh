@@ -62,11 +62,11 @@ function binding(ownerToken = "owner-a"): HerdrBindingV1 {
 	};
 }
 
-describe("Herdr protocol-18 client", () => {
+describe("Herdr protocol-19 client", () => {
 	test("validates the protocol and reconnects for each request", async () => {
 		const fake = await fakeHerdr(request =>
 			request.method === "ping"
-				? { type: "pong", protocol: 18, version: "test" }
+				? { type: "pong", protocol: 19, version: "test" }
 				: { type: "workspace_list", workspaces: [] },
 		);
 		try {
@@ -94,7 +94,7 @@ describe("Herdr protocol-18 client", () => {
 		const fake = await fakeHerdr(
 			request =>
 				request.method === "ping"
-					? { type: "pong", protocol: 18, version: "test" }
+					? { type: "pong", protocol: 19, version: "test" }
 					: { type: "pane_list", panes: [] },
 			{ trailingNewline: false },
 		);
@@ -119,7 +119,7 @@ describe("conversation-owned Herdr terminals", () => {
 
 	test("does not claim an arbitrary Herdr workspace without a launcher owner token", async () => {
 		const fake = await fakeHerdr(request => {
-			if (request.method === "ping") return { type: "pong", protocol: 18, version: "test" };
+			if (request.method === "ping") return { type: "pong", protocol: 19, version: "test" };
 			if (request.method.endsWith("report_metadata")) return { type: "ok" };
 			throw new Error(`unexpected ${request.method}`);
 		});
@@ -161,7 +161,7 @@ describe("conversation-owned Herdr terminals", () => {
 			["w1:p9", { pane_id: "w1:p9", tab_id: "w1:t9", workspace_id: "w1", tokens: { xcsh_owner: "other" } }],
 		]);
 		const fake = await fakeHerdr(request => {
-			if (request.method === "ping") return { type: "pong", protocol: 18, version: "test" };
+			if (request.method === "ping") return { type: "pong", protocol: 19, version: "test" };
 			if (request.method === "pane.report_metadata") {
 				Object.assign(panes.get(String(request.params.pane_id))!, { tokens: request.params.tokens });
 				return { type: "ok" };
@@ -220,7 +220,7 @@ describe("conversation-owned Herdr terminals", () => {
 		let closed = false;
 		let statusCalls = 0;
 		const fake = await fakeHerdr(request => {
-			if (request.method === "ping") return { type: "pong", protocol: 18, version: "test" };
+			if (request.method === "ping") return { type: "pong", protocol: 19, version: "test" };
 			if (request.method.endsWith("report_metadata")) return { type: "ok" };
 			if (request.method === "pane.get")
 				return {
@@ -260,7 +260,7 @@ describe("conversation-owned Herdr terminals", () => {
 		const state = binding();
 		state.terminals.push({ name: "logs", tabId: "w1:t2", paneId: "w1:p2", createdAt: "now" });
 		const fake = await fakeHerdr(request => {
-			if (request.method === "ping") return { type: "pong", protocol: 18, version: "test" };
+			if (request.method === "ping") return { type: "pong", protocol: 19, version: "test" };
 			if (request.method.endsWith("report_metadata")) return { type: "ok" };
 			if (request.method === "pane.get")
 				return {
@@ -288,7 +288,7 @@ describe("conversation-owned Herdr terminals", () => {
 		const state = binding();
 		state.terminals.push({ name: "foreign", tabId: "w1:t9", paneId: "w1:p9", createdAt: "now" });
 		const fake = await fakeHerdr(request => {
-			if (request.method === "ping") return { type: "pong", protocol: 18, version: "test" };
+			if (request.method === "ping") return { type: "pong", protocol: 19, version: "test" };
 			if (request.method.endsWith("report_metadata")) return { type: "ok" };
 			if (request.method === "pane.get")
 				return {
@@ -330,7 +330,7 @@ describe("conversation-owned Herdr terminals", () => {
 			},
 		];
 		const fake = await fakeHerdr(request => {
-			if (request.method === "ping") return { type: "pong", protocol: 18, version: "test" };
+			if (request.method === "ping") return { type: "pong", protocol: 19, version: "test" };
 			if (request.method.endsWith("report_metadata")) return { type: "ok" };
 			if (request.method === "pane.get") return { type: "pane_info", pane: panes[0] };
 			if (request.method === "pane.list") return { type: "pane_list", panes };
