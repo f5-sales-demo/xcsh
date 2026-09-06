@@ -25,6 +25,7 @@ import {
 import { DebugSelectorComponent } from "../../debug";
 import { disableProvider, enableProvider } from "../../discovery";
 import { clearXcshPluginRootsCache, resolveActiveProjectRegistryPath } from "../../discovery/helpers";
+import type { UserPromptKind } from "../../extensibility/extensions/types";
 import {
 	formatMarketplaceRefreshWarning,
 	getInstalledPluginsRegistryPath,
@@ -113,6 +114,20 @@ class LoginPromptCancelled extends Error {}
 export class SelectorController {
 	constructor(private ctx: InteractiveModeContext) {}
 
+	#emitPromptSignal(type: "user_prompt_start" | "user_prompt_end", kind: UserPromptKind): void {
+		this.ctx.session.extensionRunner?.emit({ type, kind }).catch(() => {});
+	}
+
+	#beginPromptSignal(kind: UserPromptKind): () => void {
+		let open = true;
+		this.#emitPromptSignal("user_prompt_start", kind);
+		return () => {
+			if (!open) return;
+			open = false;
+			this.#emitPromptSignal("user_prompt_end", kind);
+		};
+	}
+
 	async #refreshOAuthProviderAuthState(): Promise<void> {
 		const oauthProviders = getOAuthProviders().filter(provider => !provider.loginOnly);
 		await Promise.all(
@@ -127,17 +142,23 @@ export class SelectorController {
 	 * Shows a selector component in place of the editor.
 	 * @param create Factory that receives a `done` callback and returns the component and focus target
 	 */
-	showSelector(create: (done: () => void) => { component: Component; focus: Component }): void {
+	showSelector(
+		create: (done: () => void) => { component: Component; focus: Component },
+		promptKind?: UserPromptKind,
+	): void {
+		let endPrompt: (() => void) | undefined;
 		const done = () => {
 			this.ctx.editorContainer.clear();
 			this.ctx.editorContainer.addChild(this.ctx.editor);
 			this.ctx.ui.setFocus(this.ctx.editor);
+			endPrompt?.();
 		};
 		const { component, focus } = create(done);
 		this.ctx.editorContainer.clear();
 		this.ctx.editorContainer.addChild(component);
 		this.ctx.ui.setFocus(focus);
 		this.ctx.ui.requestRender();
+		if (promptKind) endPrompt = this.#beginPromptSignal(promptKind);
 	}
 
 	showSettingsSelector(): void {
@@ -600,7 +621,8 @@ export class SelectorController {
 		this.ctx.editorContainer.addChild(input);
 		this.ctx.ui.setFocus(input);
 		this.ctx.ui.requestRender();
-		return promise;
+		const endPrompt = this.#beginPromptSignal("input");
+		return promise.finally(endPrompt);
 	}
 
 	async #showLoginRecovery(
@@ -1274,6 +1296,7 @@ export class SelectorController {
 		const useManualInput =
 			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) || providerId === "openai-codex";
 		const shouldOpenBrowser = providerId !== "openai-codex" || openAICodexMethod === "browser";
+		let endAuthorizationWait: (() => void) | undefined;
 		const loginCallbacks = {
 			method: openAICodexMethod,
 			onAuth: (info: {
@@ -1299,6 +1322,7 @@ export class SelectorController {
 				}
 				this.ctx.ui.requestRender();
 				if (shouldOpenBrowser) this.ctx.openInBrowser(info.openUrl ?? info.url);
+				endAuthorizationWait ??= this.#beginPromptSignal("input");
 			},
 			onPrompt: async (prompt: OAuthPrompt) => {
 				this.ctx.chatContainer.addChild(new Spacer(1));
@@ -1333,7 +1357,8 @@ export class SelectorController {
 				this.ctx.editorContainer.addChild(codeInput);
 				this.ctx.ui.setFocus(codeInput);
 				this.ctx.ui.requestRender();
-				return promise;
+				const endPrompt = this.#beginPromptSignal("input");
+				return promise.finally(endPrompt);
 			},
 			onProgress: (message: string) => {
 				this.ctx.chatContainer.addChild(new Text(theme.fg("dim", message), 1, 0));
@@ -1412,6 +1437,7 @@ export class SelectorController {
 			if (useManualInput) {
 				manualInput.clear(`Manual OAuth input cleared for ${providerId}`);
 			}
+			endAuthorizationWait?.();
 		}
 	}
 
@@ -1448,25 +1474,31 @@ export class SelectorController {
 			let accessToken = await authStorage.getApiKey("google-vertex");
 			if (!accessToken) {
 				this.ctx.showStatus("Authenticating Corporate Vertex with the authorized Google enterprise flow…");
-				await authStorage.login("google-vertex", {
-					onAuth: info => {
-						presentAuthLink(this.ctx.chatContainer, info.url);
-						if (isHeadlessTerminal(runtime.environment)) {
-							this.ctx.chatContainer.addChild(new Text(theme.fg("dim", VERTEX_MANUAL_LOGIN_TIP), 1, 0));
-						} else {
-							this.ctx.openInBrowser(info.url);
-						}
-						this.ctx.ui.requestRender();
-					},
-					onPrompt: prompt =>
-						this.#promptLoginValue({
-							message: prompt.message,
-							placeholder: prompt.placeholder,
-							allowEmpty: prompt.allowEmpty,
-						}),
-					onProgress: message => this.ctx.showStatus(message),
-					onManualCodeInput: () => this.ctx.oauthManualInput.waitForInput("google-vertex"),
-				});
+				let endAuthorizationWait: (() => void) | undefined;
+				try {
+					await authStorage.login("google-vertex", {
+						onAuth: info => {
+							presentAuthLink(this.ctx.chatContainer, info.url);
+							if (isHeadlessTerminal(runtime.environment)) {
+								this.ctx.chatContainer.addChild(new Text(theme.fg("dim", VERTEX_MANUAL_LOGIN_TIP), 1, 0));
+							} else {
+								this.ctx.openInBrowser(info.url);
+							}
+							this.ctx.ui.requestRender();
+							endAuthorizationWait ??= this.#beginPromptSignal("input");
+						},
+						onPrompt: prompt =>
+							this.#promptLoginValue({
+								message: prompt.message,
+								placeholder: prompt.placeholder,
+								allowEmpty: prompt.allowEmpty,
+							}),
+						onProgress: message => this.ctx.showStatus(message),
+						onManualCodeInput: () => this.ctx.oauthManualInput.waitForInput("google-vertex"),
+					});
+				} finally {
+					endAuthorizationWait?.();
+				}
 				accessToken = await authStorage.getApiKey("google-vertex");
 				if (!accessToken) throw new Error("Vertex OAuth authentication did not return an access token");
 			}
@@ -1575,40 +1607,43 @@ export class SelectorController {
 			}
 		}
 
-		this.showSelector(done => {
-			let selector: OAuthSelectorComponent;
-			selector = new OAuthSelectorComponent(
-				mode,
-				this.ctx.session.modelRegistry.authStorage,
-				async (selectedProviderId: string) => {
-					selector.stopValidation();
-					done();
-					if (mode === "login") {
-						await this.#handleOAuthLogin(selectedProviderId);
-					} else {
-						await this.#handleOAuthLogout(selectedProviderId);
-					}
-				},
-				() => {
-					selector.stopValidation();
-					done();
-					this.ctx.ui.requestRender();
-				},
-				{
-					validateAuth: async (selectedProviderId: string) => {
-						const apiKey = await this.ctx.session.modelRegistry.getApiKeyForProvider(
-							selectedProviderId,
-							this.ctx.session.sessionId,
-						);
-						return !!apiKey;
+		this.showSelector(
+			done => {
+				let selector: OAuthSelectorComponent;
+				selector = new OAuthSelectorComponent(
+					mode,
+					this.ctx.session.modelRegistry.authStorage,
+					async (selectedProviderId: string) => {
+						selector.stopValidation();
+						done();
+						if (mode === "login") {
+							await this.#handleOAuthLogin(selectedProviderId);
+						} else {
+							await this.#handleOAuthLogout(selectedProviderId);
+						}
 					},
-					requestRender: () => {
+					() => {
+						selector.stopValidation();
+						done();
 						this.ctx.ui.requestRender();
 					},
-				},
-			);
-			return { component: selector, focus: selector };
-		});
+					{
+						validateAuth: async (selectedProviderId: string) => {
+							const apiKey = await this.ctx.session.modelRegistry.getApiKeyForProvider(
+								selectedProviderId,
+								this.ctx.session.sessionId,
+							);
+							return !!apiKey;
+						},
+						requestRender: () => {
+							this.ctx.ui.requestRender();
+						},
+					},
+				);
+				return { component: selector, focus: selector };
+			},
+			mode === "login" ? "select" : undefined,
+		);
 	}
 
 	showDebugSelector(): void {

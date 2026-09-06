@@ -20,6 +20,39 @@ beforeAll(() => {
 	initTheme();
 });
 
+describe("SelectorController native login lifecycle", () => {
+	it("emits select prompt lifecycle events when the OAuth provider selector opens and is cancelled", async () => {
+		const emit = vi.fn(async (_event: unknown) => undefined);
+		const editorContainer = {
+			children: [] as Array<{ handleInput?: (key: string) => void }>,
+			clear() {
+				this.children = [];
+			},
+			addChild(child: { handleInput?: (key: string) => void }) {
+				this.children.push(child);
+			},
+		};
+		const ctx = {
+			editorContainer,
+			editor: {},
+			session: {
+				extensionRunner: { emit },
+				modelRegistry: {
+					authStorage: { hasAuth: () => false },
+					getApiKeyForProvider: vi.fn(async () => undefined),
+				},
+			},
+			ui: { requestRender: vi.fn(), setFocus: vi.fn() },
+		} as unknown as InteractiveModeContext;
+
+		await new SelectorController(ctx).showOAuthSelector("login");
+
+		expect(emit).toHaveBeenCalledWith({ type: "user_prompt_start", kind: "select" });
+		editorContainer.children[0]?.handleInput?.("\x1b");
+		expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_end", kind: "select" });
+	});
+});
+
 describe("SelectorController Google Antigravity login", () => {
 	it("persists and reports Gemini 3.6 Flash High after OAuth succeeds", async () => {
 		const model = {
@@ -175,6 +208,7 @@ describe("SelectorController Corporate Vertex login", () => {
 		const previousProject = Bun.env.GOOGLE_CLOUD_PROJECT;
 		Bun.env.GOOGLE_CLOUD_PROJECT = "detected-project";
 		try {
+			const emit = vi.fn(async (_event: unknown) => undefined);
 			const setSetting = vi.fn();
 			const showStatus = vi.fn();
 			const editorContainer = {
@@ -190,6 +224,7 @@ describe("SelectorController Corporate Vertex login", () => {
 				editorContainer,
 				editor: {},
 				session: {
+					extensionRunner: { emit },
 					modelRegistry: {
 						authStorage: {
 							getApiKey: vi.fn(async () => "existing-vertex-token"),
@@ -208,14 +243,59 @@ describe("SelectorController Corporate Vertex login", () => {
 
 			const loginPromise = new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
 			await Bun.sleep(0);
+			expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_start", kind: "input" });
 			editorContainer.children[0]?.handleInput?.("\x1b");
 			await loginPromise;
 
+			expect(emit.mock.calls).toEqual([
+				[{ type: "user_prompt_start", kind: "input" }],
+				[{ type: "user_prompt_end", kind: "input" }],
+			]);
 			expect(setSetting).not.toHaveBeenCalled();
 			expect(showStatus).toHaveBeenLastCalledWith("Vertex AI login cancelled. Existing configuration unchanged.");
 		} finally {
 			if (previousProject === undefined) delete Bun.env.GOOGLE_CLOUD_PROJECT;
 			else Bun.env.GOOGLE_CLOUD_PROJECT = previousProject;
+		}
+	});
+
+	it("emits input lifecycle events while OAuth authorization awaits a manual code", async () => {
+		const previousHerdr = process.env.HERDR_ENV;
+		process.env.HERDR_ENV = "1";
+		try {
+			const emit = vi.fn(async (_event: unknown) => undefined);
+			const manualInput = new OAuthManualInputManager();
+			const authorizationShown = Promise.withResolvers<void>();
+			const login = vi.fn(async (_provider, callbacks) => {
+				callbacks.onAuth({ url: LONG_AUTH_URL });
+				const code = callbacks.onManualCodeInput();
+				authorizationShown.resolve();
+				await code;
+				throw new Error("stop after authorization wait");
+			});
+			const ctx = {
+				session: {
+					extensionRunner: { emit },
+					modelRegistry: { authStorage: { getApiKey: vi.fn(async () => undefined), login } },
+				},
+				oauthManualInput: manualInput,
+				chatContainer: { addChild: vi.fn() },
+				ui: { requestRender: vi.fn() },
+				showStatus: vi.fn(),
+				showError: vi.fn(),
+				openInBrowser: vi.fn(),
+			} as unknown as InteractiveModeContext;
+
+			const loginPromise = new SelectorController(ctx).showOAuthSelector("login", "google-vertex");
+			await authorizationShown.promise;
+
+			expect(emit.mock.calls).toEqual([[{ type: "user_prompt_start", kind: "input" }]]);
+			expect(manualInput.submit("synthetic-code")).toBe(true);
+			await loginPromise;
+			expect(emit).toHaveBeenLastCalledWith({ type: "user_prompt_end", kind: "input" });
+		} finally {
+			if (previousHerdr === undefined) delete process.env.HERDR_ENV;
+			else process.env.HERDR_ENV = previousHerdr;
 		}
 	});
 
