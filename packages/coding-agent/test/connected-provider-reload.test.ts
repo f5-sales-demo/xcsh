@@ -2,6 +2,7 @@ import { expect, test, vi } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getSupportedReasoningEfforts, ReasoningEffort } from "@f5-sales-demo/pi-ai";
 import { getAgentDir, hookFetch, setAgentDir } from "@f5-sales-demo/pi-utils";
 import { ModelRegistry } from "../src/config/model-registry";
 import { SelectorController } from "../src/modes/controllers/selector-controller";
@@ -68,6 +69,10 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 		expect(Bun.stripANSI(active!.render(100).join("\n"))).toContain("Provider connected");
 		expect(registry.getConfiguredProviderIds().has("litellm")).toBe(true);
 		for (const model of fixture.models) expect(registry.find(model.provider, model.id)).toBeDefined();
+		for (const id of ["gpt-5.6-terra", "gpt-5.6-luna"]) {
+			expect(getSupportedReasoningEfforts(registry.find("litellm", id)!)).toContain(ReasoningEffort.Low);
+			expect(getSupportedReasoningEfforts(registry.find("litellm", id)!)).toContain(ReasoningEffort.Medium);
+		}
 		if (Bun.stripANSI(active!.render(100).join("\n")).includes("Use recommended model"))
 			active!.handleInput?.("\x1b[B");
 		active!.handleInput?.("\r");
