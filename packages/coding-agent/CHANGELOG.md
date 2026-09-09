@@ -48,6 +48,9 @@
 
 ### Fixed
 
+- Routed MCP and Gemini web-search OAuth refreshes through the shared durable refresh coordinator,
+  including proactive refresh and forced retry after authentication failures
+  ([#3796](https://github.com/f5-sales-demo/xcsh/issues/3796)).
 - Kept `/login` honest after live validation by reporting reachable keyless vLLM services as
   `keyless configured` and unreachable keyless services as `unreachable`
   ([#3783](https://github.com/f5-sales-demo/xcsh/issues/3783)).

@@ -302,7 +302,11 @@ export async function loginGeminiCli(ctrl: OAuthController): Promise<OAuthCreden
 /**
  * Refresh Google Cloud Code Assist token
  */
-export async function refreshGoogleCloudToken(refreshToken: string, projectId: string): Promise<OAuthCredentials> {
+export async function refreshGoogleCloudToken(
+	refreshToken: string,
+	projectId: string,
+	signal: AbortSignal,
+): Promise<OAuthCredentials> {
 	const response = await fetch(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -312,6 +316,7 @@ export async function refreshGoogleCloudToken(refreshToken: string, projectId: s
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),
+		signal,
 	});
 
 	if (!response.ok) {

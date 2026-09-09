@@ -101,22 +101,61 @@ function tokenCredentials(payload: AnthropicTokenPayload, previousRefresh?: stri
 	};
 }
 
-async function requestToken(body: Record<string, string>, previousRefresh?: string): Promise<OAuthCredentials> {
+function sanitizeOAuthErrorCode(value: unknown): string | undefined {
+	if (typeof value !== "string") return undefined;
+	const bounded = value.trim().slice(0, 64);
+	return /^[a-z][a-z0-9_.-]*$/i.test(bounded) ? bounded : undefined;
+}
+
+function sanitizeOAuthErrorDescription(value: unknown): string | undefined {
+	if (typeof value !== "string") return undefined;
+	const bounded = value
+		.replace(/[\u0000-\u001f\u007f]/g, " ")
+		.replace(/\bBearer\s+\S+/gi, "Bearer [redacted]")
+		.replace(/\b[A-Za-z0-9_-]{24,}\b/g, "[redacted]")
+		.trim()
+		.slice(0, 256);
+	return bounded || undefined;
+}
+
+async function formatAnthropicTokenError(response: Response): Promise<string> {
+	let payload: unknown;
+	try {
+		payload = await response.json();
+	} catch {
+		payload = undefined;
+	}
+	const record = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : undefined;
+	const code = sanitizeOAuthErrorCode((record as { error?: unknown } | undefined)?.error);
+	const description = sanitizeOAuthErrorDescription(
+		(record as { error_description?: unknown } | undefined)?.error_description,
+	);
+	const details = [code && `error=${code}`, description && `description=${description}`].filter(Boolean).join("; ");
+	return `Anthropic token exchange failed (HTTP ${response.status}${details ? `; ${details}` : ""})`;
+}
+
+async function requestToken(
+	body: Record<string, string>,
+	previousRefresh?: string,
+	signal?: AbortSignal,
+): Promise<OAuthCredentials> {
 	let response: Response;
+	const timeoutSignal = AbortSignal.timeout(TOKEN_TIMEOUT_MS);
 	try {
 		response = await fetch(TOKEN_URL, {
 			method: "POST",
 			headers: { "Content-Type": "application/json", Accept: "application/json" },
 			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(TOKEN_TIMEOUT_MS),
+			signal: signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal,
 		});
-	} catch (error) {
-		if (error instanceof DOMException && error.name === "TimeoutError") {
+	} catch {
+		if (signal?.aborted) throw signal.reason ?? new Error("Anthropic token exchange aborted");
+		if (timeoutSignal.aborted) {
 			throw new Error("Anthropic token exchange timed out after 30 seconds");
 		}
 		throw new Error("Anthropic token exchange failed");
 	}
-	if (!response.ok) throw new Error(`Anthropic token exchange failed (HTTP ${response.status})`);
+	if (!response.ok) throw new Error(await formatAnthropicTokenError(response));
 	let payload: AnthropicTokenPayload;
 	try {
 		payload = (await response.json()) as AnthropicTokenPayload;
@@ -247,7 +286,7 @@ export async function loginAnthropic(
 	return new AnthropicOAuthFlow(ctrl, options).login();
 }
 
-export async function refreshAnthropicToken(refreshToken: string): Promise<OAuthCredentials> {
+export async function refreshAnthropicToken(refreshToken: string, signal: AbortSignal): Promise<OAuthCredentials> {
 	return requestToken(
 		{
 			grant_type: "refresh_token",
@@ -255,5 +294,6 @@ export async function refreshAnthropicToken(refreshToken: string): Promise<OAuth
 			refresh_token: refreshToken,
 		},
 		refreshToken,
+		signal,
 	);
 }

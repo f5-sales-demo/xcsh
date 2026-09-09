@@ -108,7 +108,11 @@ async function resolveAccessToken(params: UsageFetchParams, ctx: UsageFetchConte
 	}
 	if (!credential.refreshToken || !credential.projectId) return credential.accessToken;
 	try {
-		const refreshed = await refreshGoogleCloudToken(credential.refreshToken, credential.projectId);
+		const refreshed = await refreshGoogleCloudToken(
+			credential.refreshToken,
+			credential.projectId,
+			params.signal ?? new AbortController().signal,
+		);
 		return refreshed.access;
 	} catch (error) {
 		ctx.logger?.warn("Gemini CLI token refresh failed", { error: String(error) });

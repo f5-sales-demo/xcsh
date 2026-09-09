@@ -6,6 +6,7 @@
  */
 import * as path from "node:path";
 import * as url from "node:url";
+import { isDefinitiveOAuthFailure } from "@f5-sales-demo/pi-ai";
 import { logger } from "@f5-sales-demo/pi-utils";
 import type { TSchema } from "@sinclair/typebox";
 import type { SourceMeta } from "../capability/types";
@@ -593,8 +594,8 @@ export class MCPManager {
 	/**
 	 * Resolve auth and shell-command substitutions in config before connecting.
 	 */
-	async prepareConfig(config: MCPServerConfig): Promise<MCPServerConfig> {
-		return this.#resolveAuthConfig(config);
+	async prepareConfig(config: MCPServerConfig, forceRefresh = false): Promise<MCPServerConfig> {
+		return this.#resolveAuthConfig(config, forceRefresh);
 	}
 
 	/**
@@ -1071,15 +1072,32 @@ export class MCPManager {
 						forceRefresh || (credential.expires && Date.now() >= credential.expires - REFRESH_BUFFER_MS);
 					if (shouldRefresh && credential.refresh && auth.tokenUrl) {
 						try {
-							const refreshed = await refreshMCPOAuthToken(
-								auth.tokenUrl,
-								credential.refresh,
-								auth.clientId,
-								auth.clientSecret,
-							);
-							const refreshedCredential = { type: "oauth" as const, ...refreshed };
-							await this.#authStorage.set(credentialId, refreshedCredential);
-							credential = refreshedCredential;
+							const row = this.#authStorage
+								.listStoredCredentials(credentialId)
+								.find(entry => entry.credential.type === "oauth");
+							if (row?.credential.type === "oauth") {
+								const outcome = await this.#authStorage.refreshStoredOAuthCredential(credentialId, {
+									credentialId: row.id,
+									observedCredential: credential,
+									credentialFromRow: current => current,
+									forceRefresh,
+									refreshSkewMs: REFRESH_BUFFER_MS,
+									canRefresh: current => Boolean(current.refresh && auth.tokenUrl),
+									refresh: (current, signal) =>
+										refreshMCPOAuthToken(
+											auth.tokenUrl!,
+											current.refresh,
+											auth.clientId,
+											auth.clientSecret,
+											signal,
+										),
+									isDefinitiveFailure: isDefinitiveOAuthFailure,
+									disabledCause: error =>
+										`oauth refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+									keepCredentialOnRefreshFailure: true,
+								});
+								credential = outcome.credential;
+							}
 						} catch (refreshError) {
 							logger.warn("MCP OAuth refresh failed, using existing token", {
 								credentialId,
@@ -1088,22 +1106,24 @@ export class MCPManager {
 						}
 					}
 
-					if (resolved.type === "http" || resolved.type === "sse") {
-						resolved = {
-							...resolved,
-							headers: {
-								...resolved.headers,
-								Authorization: `Bearer ${credential.access}`,
-							},
-						};
-					} else {
-						resolved = {
-							...resolved,
-							env: {
-								...resolved.env,
-								OAUTH_ACCESS_TOKEN: credential.access,
-							},
-						};
+					if (credential) {
+						if (resolved.type === "http" || resolved.type === "sse") {
+							resolved = {
+								...resolved,
+								headers: {
+									...resolved.headers,
+									Authorization: `Bearer ${credential.access}`,
+								},
+							};
+						} else {
+							resolved = {
+								...resolved,
+								env: {
+									...resolved.env,
+									OAUTH_ACCESS_TOKEN: credential.access,
+								},
+							};
+						}
 					}
 				}
 			} catch (error) {

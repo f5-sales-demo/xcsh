@@ -352,8 +352,9 @@ export class MCPOAuthFlow extends OAuthCallbackFlow {
 export async function refreshMCPOAuthToken(
 	tokenUrl: string,
 	refreshToken: string,
-	clientId?: string,
-	clientSecret?: string,
+	clientId: string | undefined,
+	clientSecret: string | undefined,
+	signal: AbortSignal,
 ): Promise<OAuthCredentials> {
 	const params = new URLSearchParams({
 		grant_type: "refresh_token",
@@ -366,11 +367,21 @@ export async function refreshMCPOAuthToken(
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: params.toString(),
+		signal,
 	});
 
 	if (!response.ok) {
-		const text = await response.text();
-		throw new Error(`MCP OAuth refresh failed: ${response.status} ${text}`);
+		let payload: unknown;
+		try {
+			payload = await response.json();
+		} catch {
+			payload = undefined;
+		}
+		const record = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : undefined;
+		const rawCode = (record as { error?: unknown } | undefined)?.error;
+		const code =
+			typeof rawCode === "string" && /^[a-z][a-z0-9_.-]{0,63}$/i.test(rawCode.trim()) ? rawCode.trim() : undefined;
+		throw new Error(`MCP OAuth refresh failed (HTTP ${response.status}${code ? `; error=${code}` : ""})`);
 	}
 
 	const data = (await response.json()) as {

@@ -177,6 +177,74 @@ const USAGE_CACHE_PREFIX = "usage_cache:";
 const USAGE_REPORT_TTL_MS = 30_000;
 const DEFAULT_USAGE_REQUEST_TIMEOUT_MS = 3_000;
 const DEFAULT_OAUTH_REFRESH_TIMEOUT_MS = 10_000;
+const DEFAULT_OAUTH_REFRESH_SKEW_MS = 0;
+const GOOGLE_OAUTH_REFRESH_SKEW_MS = 60_000;
+const OAUTH_REFRESH_LEASE_TTL_MS = 15_000;
+const OAUTH_REFRESH_LEASE_POLL_MS = 50;
+const OAUTH_REFRESH_LEASE_RENEW_MS = 5_000;
+
+export interface CredentialRefreshLeaseFence {
+	owner: string;
+	nowMs: number;
+}
+
+export interface StoredOAuthRefreshOptions<T extends OAuthCredential = OAuthCredential> {
+	credentialId?: number;
+	observedCredential?: T;
+	credentialFromRow: (credential: OAuthCredential) => T | undefined;
+	forceRefresh?: boolean;
+	canRefresh?: (credential: T) => boolean;
+	refreshSkewMs?: number;
+	signal?: AbortSignal;
+	keepCredentialOnRefreshFailure?: boolean | ((error: unknown) => boolean);
+	onRefreshFailure?: (error: unknown) => void;
+	refreshTimeoutMs?: number;
+	refresh: (credential: T, signal: AbortSignal) => Promise<OAuthCredentials>;
+	mergeRefreshedCredential?: (credential: T, refreshed: OAuthCredentials) => T;
+	isDefinitiveFailure?: (error: unknown) => boolean;
+	disabledCause?: (error: unknown) => string;
+}
+
+export interface StoredOAuthRefreshResult<T extends OAuthCredential = OAuthCredential> {
+	credential: T | undefined;
+	refreshed: boolean;
+	removed: boolean;
+	reauthenticationRequired: boolean;
+}
+
+export function isDefinitiveOAuthFailure(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error);
+	return (
+		/invalid_grant|invalid_token|revoked|unauthorized|expired.*refresh|refresh.*expired/i.test(message) ||
+		(/\b(401|403)\b/.test(message) && !/timeout|network|fetch failed|ECONNREFUSED/i.test(message))
+	);
+}
+
+function authCredentialEquals(left: AuthCredential, right: AuthCredential): boolean {
+	if (left.type !== right.type) return false;
+	if (left.type === "api_key") return right.type === "api_key" && left.key === right.key;
+	if (right.type !== "oauth") return false;
+	return (
+		left.access === right.access &&
+		left.refresh === right.refresh &&
+		left.expires === right.expires &&
+		left.enterpriseUrl === right.enterpriseUrl &&
+		left.projectId === right.projectId &&
+		left.tierId === right.tierId &&
+		left.email === right.email &&
+		left.accountId === right.accountId
+	);
+}
+
+function raceRefreshWithSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+	if (!signal) return promise;
+	if (signal.aborted) return Promise.reject(signal.reason ?? new Error("OAuth refresh aborted"));
+	return new Promise<T>((resolve, reject) => {
+		const onAbort = (): void => reject(signal.reason ?? new Error("OAuth refresh aborted"));
+		signal.addEventListener("abort", onAbort, { once: true });
+		promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+	});
+}
 
 /** Exact marker written by #3210 when valid ChatGPT credentials were regression-disabled. */
 export const OPENAI_CODEX_REGRESSION_DISABLED_CAUSE = "unsupported OpenAI Codex OAuth; remove manually with logout";
@@ -299,6 +367,7 @@ export class AuthStorage {
 	#usageCache: UsageCache;
 	#usageRequestInFlight: Map<string, Promise<UsageReport | null>> = new Map();
 	#usageReportsInFlight: Map<string, Promise<UsageReport[]>> = new Map();
+	#oauthRefreshInFlight: Map<number, Promise<StoredOAuthRefreshResult<OAuthCredential>>> = new Map();
 	#usageFetch: typeof fetch;
 	#usageRequestTimeoutMs: number;
 	#usageLogger?: UsageLogger;
@@ -623,31 +692,6 @@ export class AuthStorage {
 		}
 	}
 
-	/** Updates credential at index in-place (used for OAuth token refresh) */
-	#replaceCredentialAt(provider: string, index: number, credential: AuthCredential): void {
-		const entries = this.#getStoredCredentials(provider);
-		if (index < 0 || index >= entries.length) return;
-		const target = entries[index];
-		this.#store.updateAuthCredential(target.id, credential);
-		const updated = [...entries];
-		updated[index] = { id: target.id, credential };
-		this.#setStoredCredentials(provider, updated);
-	}
-
-	/**
-	 * Disables credential at index (used when OAuth refresh fails).
-	 * The credential remains in the database but is excluded from active queries.
-	 * Cleans up provider entry if last credential disabled.
-	 */
-	#disableCredentialAt(provider: string, index: number, disabledCause: string): void {
-		const entries = this.#getStoredCredentials(provider);
-		if (index < 0 || index >= entries.length) return;
-		this.#store.deleteAuthCredential(entries[index].id, disabledCause);
-		const updated = entries.filter((_value, idx) => idx !== index);
-		this.#setStoredCredentials(provider, updated);
-		this.#resetProviderAssignments(provider);
-	}
-
 	/**
 	 * Get credential for a provider (first entry if multiple).
 	 */
@@ -668,6 +712,233 @@ export class AuthStorage {
 			stored.map(record => ({ id: record.id, credential: record.credential })),
 		);
 		this.#resetProviderAssignments(provider);
+	}
+
+	/** List active stored credential rows, optionally scoped to one provider. */
+	listStoredCredentials(provider?: string): StoredAuthCredential[] {
+		if (provider !== undefined) {
+			const canonicalProvider = canonicalizeOAuthProviderId(provider);
+			return this.#getStoredCredentials(canonicalProvider).map(entry => ({
+				id: entry.id,
+				provider: canonicalProvider,
+				credential: entry.credential,
+				disabledCause: null,
+			}));
+		}
+		return [...this.#data.entries()].flatMap(([storedProvider, entries]) =>
+			entries.map(entry => ({
+				id: entry.id,
+				provider: storedProvider,
+				credential: entry.credential,
+				disabledCause: null,
+			})),
+		);
+	}
+
+	/** Refresh one SQLite-backed OAuth row under renewable, fenced ownership. */
+	async refreshStoredOAuthCredential<T extends OAuthCredential = OAuthCredential>(
+		provider: string,
+		options: StoredOAuthRefreshOptions<T>,
+	): Promise<StoredOAuthRefreshResult<T>> {
+		provider = canonicalizeOAuthProviderId(provider);
+		if (options.credentialId !== undefined) {
+			const existing = this.#oauthRefreshInFlight.get(options.credentialId);
+			if (existing) {
+				const outcome = (await raceRefreshWithSignal(existing, options.signal)) as StoredOAuthRefreshResult<T>;
+				const unchangedObserved =
+					outcome.credential !== undefined &&
+					(options.observedCredential === undefined ||
+						authCredentialEquals(outcome.credential, options.observedCredential));
+				if (options.forceRefresh && !outcome.refreshed && unchangedObserved) {
+					return this.refreshStoredOAuthCredential(provider, options);
+				}
+				return outcome;
+			}
+			const promise = this.#refreshStoredOAuthCredentialUnshared(provider, options).finally(() => {
+				this.#oauthRefreshInFlight.delete(options.credentialId!);
+			}) as Promise<StoredOAuthRefreshResult<OAuthCredential>>;
+			this.#oauthRefreshInFlight.set(options.credentialId, promise);
+			return raceRefreshWithSignal(promise, options.signal) as Promise<StoredOAuthRefreshResult<T>>;
+		}
+		return this.#refreshStoredOAuthCredentialUnshared(provider, options);
+	}
+
+	async #refreshStoredOAuthCredentialUnshared<T extends OAuthCredential>(
+		provider: string,
+		options: StoredOAuthRefreshOptions<T>,
+	): Promise<StoredOAuthRefreshResult<T>> {
+		const result = (
+			credential: T | undefined,
+			refreshed = false,
+			removed = false,
+			reauthenticationRequired = false,
+		): StoredOAuthRefreshResult<T> => ({ credential, refreshed, removed, reauthenticationRequired });
+		const owner = crypto.randomUUID();
+		const refreshSkewMs = options.refreshSkewMs ?? DEFAULT_OAUTH_REFRESH_SKEW_MS;
+		let leasedCredentialId: number | undefined;
+
+		const readRow = (): { id: number; credential: T } | undefined => {
+			const rows = this.#store.listAuthCredentials(provider);
+			this.#setStoredCredentials(
+				provider,
+				rows.map(row => ({ id: row.id, credential: row.credential })),
+			);
+			const row = rows.find(
+				entry =>
+					entry.credential.type === "oauth" &&
+					(options.credentialId === undefined || entry.id === options.credentialId),
+			);
+			if (row?.credential.type !== "oauth") return undefined;
+			const credential = options.credentialFromRow(row.credential);
+			return credential ? { id: row.id, credential } : undefined;
+		};
+
+		const canAdopt = (credential: T): boolean => Date.now() + refreshSkewMs < credential.expires;
+		const shouldReturn = (credential: T): boolean => {
+			if (
+				options.observedCredential &&
+				!authCredentialEquals(credential, options.observedCredential) &&
+				canAdopt(credential)
+			) {
+				return true;
+			}
+			return !options.forceRefresh && canAdopt(credential);
+		};
+
+		while (true) {
+			if (options.signal?.aborted) throw options.signal.reason ?? new Error("OAuth refresh ownership aborted");
+			const row = readRow();
+			if (!row) return result(undefined);
+			if (shouldReturn(row.credential) || (options.canRefresh && !options.canRefresh(row.credential))) {
+				return result(row.credential);
+			}
+			if (this.#store.tryAcquireCredentialRefreshLease(row.id, owner, Date.now() + OAUTH_REFRESH_LEASE_TTL_MS)) {
+				leasedCredentialId = row.id;
+				break;
+			}
+			const leaseExpiresAt = this.#store.getCredentialRefreshLeaseExpiresAt(row.id);
+			const waitMs =
+				leaseExpiresAt === undefined
+					? OAUTH_REFRESH_LEASE_POLL_MS
+					: Math.min(Math.max(leaseExpiresAt - Date.now(), OAUTH_REFRESH_LEASE_POLL_MS), 250);
+			await raceRefreshWithSignal(Bun.sleep(waitMs), options.signal);
+		}
+
+		let stopRenewal = false;
+		let leaseLost = false;
+		let renewalTimer: ReturnType<typeof setTimeout> | undefined;
+		let wakeRenewal: (() => void) | undefined;
+		const renewal = (async () => {
+			while (!stopRenewal) {
+				await new Promise<void>(resolve => {
+					wakeRenewal = resolve;
+					renewalTimer = setTimeout(resolve, OAUTH_REFRESH_LEASE_RENEW_MS);
+				});
+				if (renewalTimer) clearTimeout(renewalTimer);
+				renewalTimer = undefined;
+				wakeRenewal = undefined;
+				if (stopRenewal) return;
+				if (
+					leasedCredentialId === undefined ||
+					!this.#store.renewCredentialRefreshLease(
+						leasedCredentialId,
+						owner,
+						Date.now() + OAUTH_REFRESH_LEASE_TTL_MS,
+					)
+				) {
+					leaseLost = true;
+					return;
+				}
+			}
+		})();
+
+		const refreshAbort = new AbortController();
+		const abortFromCaller = (): void =>
+			refreshAbort.abort(options.signal?.reason ?? new Error("OAuth refresh aborted by caller"));
+		if (options.signal?.aborted) abortFromCaller();
+		else options.signal?.addEventListener("abort", abortFromCaller, { once: true });
+		const timeout = setTimeout(
+			() => refreshAbort.abort(new Error(`OAuth token refresh timed out for provider: ${provider}`)),
+			options.refreshTimeoutMs ?? DEFAULT_OAUTH_REFRESH_TIMEOUT_MS,
+		);
+
+		try {
+			const row = readRow();
+			if (!row || row.id !== leasedCredentialId) return result(undefined);
+			const current = row.credential;
+			if (shouldReturn(current) || (options.canRefresh && !options.canRefresh(current))) return result(current);
+			const serialized = serializeCredential(provider, current);
+			if (!serialized) return result(current);
+
+			let refreshed: OAuthCredentials;
+			try {
+				refreshed = await options.refresh(current, refreshAbort.signal);
+				if (refreshAbort.signal.aborted) {
+					throw refreshAbort.signal.reason ?? new Error("OAuth refresh aborted");
+				}
+			} catch (error) {
+				if (refreshAbort.signal.aborted) {
+					throw refreshAbort.signal.reason ?? error;
+				}
+				if (options.isDefinitiveFailure?.(error)) {
+					const disabledCause = options.disabledCause?.(error) ?? `oauth refresh failed: ${String(error)}`;
+					const disabled = this.#store.tryDisableAuthCredentialIfMatches(row.id, serialized.data, disabledCause, {
+						owner,
+						nowMs: Date.now(),
+					});
+					if (disabled) {
+						const latest = this.#store.listAuthCredentials(provider);
+						this.#setStoredCredentials(
+							provider,
+							latest.map(entry => ({ id: entry.id, credential: entry.credential })),
+						);
+						this.#resetProviderAssignments(provider);
+						return result(undefined, false, true, true);
+					}
+					const winner = readRow();
+					return result(winner?.credential);
+				}
+				options.onRefreshFailure?.(error);
+				const keep =
+					typeof options.keepCredentialOnRefreshFailure === "function"
+						? options.keepCredentialOnRefreshFailure(error)
+						: options.keepCredentialOnRefreshFailure === true;
+				if (keep) return result(current);
+				throw error;
+			}
+
+			if (leaseLost) return result(readRow()?.credential);
+			const merged = options.mergeRefreshedCredential
+				? options.mergeRefreshedCredential(current, refreshed)
+				: ({
+						...current,
+						...refreshed,
+						accountId: refreshed.accountId ?? current.accountId,
+						email: refreshed.email ?? current.email,
+						projectId: refreshed.projectId ?? current.projectId,
+						tierId: refreshed.tierId ?? current.tierId,
+						enterpriseUrl: refreshed.enterpriseUrl ?? current.enterpriseUrl,
+					} as T);
+			const updated = this.#store.tryUpdateAuthCredentialIfMatches(row.id, serialized.data, merged, {
+				owner,
+				nowMs: Date.now(),
+			});
+			if (!updated) return result(readRow()?.credential);
+			const rows = this.#store.listAuthCredentials(provider);
+			this.#setStoredCredentials(
+				provider,
+				rows.map(entry => ({ id: entry.id, credential: entry.credential })),
+			);
+			return result(merged, true);
+		} finally {
+			clearTimeout(timeout);
+			options.signal?.removeEventListener("abort", abortFromCaller);
+			stopRenewal = true;
+			if (renewalTimer) clearTimeout(renewalTimer);
+			wakeRenewal?.();
+			await renewal;
+			if (leasedCredentialId !== undefined) this.#store.releaseCredentialRefreshLease(leasedCredentialId, owner);
+		}
 	}
 
 	async #upsertOAuthCredential(provider: string, credential: OAuthCredential): Promise<void> {
@@ -1135,32 +1406,10 @@ export class AuthStorage {
 		};
 	}
 
-	#persistRefreshedUsageCredential(provider: Provider, previous: UsageCredential, next: UsageCredential): void {
-		const entries = this.#getStoredCredentials(provider);
-		const index = entries.findIndex(entry => {
-			if (entry.credential.type !== "oauth") return false;
-			if (previous.refreshToken && entry.credential.refresh === previous.refreshToken) return true;
-			if (previous.accessToken && entry.credential.access === previous.accessToken) return true;
-			return (
-				entry.credential.accountId === previous.accountId &&
-				entry.credential.email === previous.email &&
-				entry.credential.projectId === previous.projectId
-			);
-		});
-		if (index === -1) return;
-		const existing = entries[index]!.credential;
-		if (existing.type !== "oauth") return;
-		this.#replaceCredentialAt(provider, index, {
-			type: "oauth",
-			access: next.accessToken ?? existing.access,
-			refresh: next.refreshToken ?? existing.refresh,
-			expires: next.expiresAt ?? existing.expires,
-			accountId: next.accountId,
-			projectId: next.projectId,
-			tierId: next.tierId ?? existing.tierId,
-			email: next.email,
-			enterpriseUrl: next.enterpriseUrl,
-		});
+	#findStoredOAuthCredential(provider: Provider, observed: OAuthCredential): StoredCredential | undefined {
+		return this.#getStoredCredentials(provider).find(
+			entry => entry.credential.type === "oauth" && authCredentialEquals(entry.credential, observed),
+		);
 	}
 
 	async #fetchUsageUncached(request: UsageRequestDescriptor, timeoutMs?: number): Promise<UsageReport | null> {
@@ -1183,14 +1432,30 @@ export class AuthStorage {
 		) {
 			const refreshableCredential = this.#buildRefreshableOauthCredential(request.credential);
 			if (refreshableCredential) {
+				const stored = this.#findStoredOAuthCredential(request.provider, refreshableCredential);
 				try {
-					const refreshed = await this.#refreshOAuthCredential(request.provider, refreshableCredential);
-					const refreshedCredential = this.#mergeRefreshedUsageCredential(request.credential, refreshed);
-					this.#persistRefreshedUsageCredential(request.provider, request.credential, refreshedCredential);
-					params = {
-						...params,
-						credential: refreshedCredential,
-					};
+					if (stored) {
+						const outcome = await this.refreshStoredOAuthCredential(request.provider, {
+							credentialId: stored.id,
+							observedCredential: refreshableCredential,
+							credentialFromRow: current => current,
+							signal: timeoutSignal,
+							refresh: (current, refreshSignal) =>
+								this.#requestOAuthCredentialRefresh(request.provider, current, refreshSignal),
+							keepCredentialOnRefreshFailure: true,
+							onRefreshFailure: error =>
+								this.#usageLogger?.debug("Usage credential refresh failed, using original credential", {
+									provider: request.provider,
+									error: String(error),
+								}),
+						});
+						if (outcome.credential) {
+							params = {
+								...params,
+								credential: this.#mergeRefreshedUsageCredential(request.credential, outcome.credential),
+							};
+						}
+					}
 				} catch (error) {
 					this.#usageLogger?.debug("Usage credential refresh failed, using original credential", {
 						provider: request.provider,
@@ -1594,12 +1859,12 @@ export class AuthStorage {
 		providerKey: string;
 		provider: string;
 		order: number[];
-		credentials: Array<{ credential: OAuthCredential; index: number }>;
+		credentials: Array<{ credential: OAuthCredential; index: number; credentialId: number }>;
 		options?: AuthApiKeyOptions;
 		strategy: CredentialRankingStrategy;
 	}): Promise<
 		Array<{
-			selection: { credential: OAuthCredential; index: number };
+			selection: { credential: OAuthCredential; index: number; credentialId: number };
 			usage: UsageReport | null;
 			usageChecked: boolean;
 		}>
@@ -1607,7 +1872,7 @@ export class AuthStorage {
 		const nowMs = Date.now();
 		const { strategy } = args;
 		const ranked: Array<{
-			selection: { credential: OAuthCredential; index: number };
+			selection: { credential: OAuthCredential; index: number; credentialId: number };
 			usage: UsageReport | null;
 			usageChecked: boolean;
 			blocked: boolean;
@@ -1706,9 +1971,12 @@ export class AuthStorage {
 		sessionId?: string,
 		options?: AuthApiKeyOptions,
 	): Promise<string | undefined> {
-		const credentials = this.#getCredentialsForProvider(provider)
-			.map((credential, index) => ({ credential, index }))
-			.filter((entry): entry is { credential: OAuthCredential; index: number } => entry.credential.type === "oauth");
+		const credentials = this.#getStoredCredentials(provider)
+			.map((entry, index) => ({ credential: entry.credential, index, credentialId: entry.id }))
+			.filter(
+				(entry): entry is { credential: OAuthCredential; index: number; credentialId: number } =>
+					entry.credential.type === "oauth",
+			);
 
 		if (credentials.length === 0) return undefined;
 
@@ -1730,7 +1998,9 @@ export class AuthStorage {
 			? await this.#rankOAuthSelections({ providerKey, provider, order, credentials, options, strategy: strategy! })
 			: order
 					.map(idx => credentials[idx])
-					.filter((selection): selection is { credential: OAuthCredential; index: number } => Boolean(selection))
+					.filter((selection): selection is { credential: OAuthCredential; index: number; credentialId: number } =>
+						Boolean(selection),
+					)
 					.map(selection => ({ selection, usage: null, usageChecked: false }));
 
 		if (sessionPreferredIndex !== undefined && !requiresProModel) {
@@ -1747,7 +2017,9 @@ export class AuthStorage {
 		await Promise.all(
 			candidates.map(async candidate => {
 				if (Date.now() < candidate.selection.credential.expires) return;
-				const latestCredential = this.#getCredentialsForProvider(provider)[candidate.selection.index];
+				const latestCredential = this.#getStoredCredentials(provider).find(
+					entry => entry.id === candidate.selection.credentialId,
+				)?.credential;
 				if (latestCredential?.type === "oauth" && Date.now() < latestCredential.expires) {
 					candidate.selection.credential = latestCredential;
 					return;
@@ -1756,6 +2028,7 @@ export class AuthStorage {
 					const refreshedCredentials = await this.#refreshOAuthCredential(
 						provider,
 						candidate.selection.credential,
+						candidate.selection.credentialId,
 					);
 					candidate.selection.credential = {
 						...candidate.selection.credential,
@@ -1790,37 +2063,51 @@ export class AuthStorage {
 		return undefined;
 	}
 
-	async #refreshOAuthCredential(provider: Provider, credential: OAuthCredential): Promise<OAuthCredentials> {
-		if (Date.now() < credential.expires) return credential;
+	async #refreshOAuthCredential(
+		provider: Provider,
+		credential: OAuthCredential,
+		credentialId: number,
+		signal?: AbortSignal,
+	): Promise<OAuthCredentials> {
+		const outcome = await this.refreshStoredOAuthCredential(provider, {
+			credentialId,
+			observedCredential: credential,
+			credentialFromRow: current => current,
+			signal,
+			refreshSkewMs:
+				provider === "google-gemini-cli" || provider === "google-antigravity"
+					? GOOGLE_OAUTH_REFRESH_SKEW_MS
+					: DEFAULT_OAUTH_REFRESH_SKEW_MS,
+			refresh: (current, refreshSignal) => this.#requestOAuthCredentialRefresh(provider, current, refreshSignal),
+			isDefinitiveFailure: isDefinitiveOAuthFailure,
+			disabledCause: error => `oauth refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+		});
+		if (outcome.credential) return outcome.credential;
+		if (outcome.reauthenticationRequired) {
+			throw new Error(`OAuth reauthentication required for provider: ${provider}`);
+		}
+		throw new Error(`OAuth credential no longer exists for provider: ${provider}`);
+	}
+
+	async #requestOAuthCredentialRefresh(
+		provider: Provider,
+		credential: OAuthCredential,
+		signal: AbortSignal,
+	): Promise<OAuthCredentials> {
 		const customProvider = getOAuthProvider(provider);
-		let refreshPromise: Promise<OAuthCredentials>;
 		if (customProvider) {
 			if (!customProvider.refreshToken) {
 				throw new Error(`OAuth provider "${provider}" does not support token refresh`);
 			}
-			refreshPromise = customProvider.refreshToken(credential);
-		} else {
-			refreshPromise = refreshOAuthToken(provider as OAuthProvider, credential);
+			return customProvider.refreshToken(credential, signal);
 		}
-		// Bound the refresh so a slow/hanging token endpoint cannot stall credential selection.
-		let timeout: NodeJS.Timeout | undefined;
-		const timeoutPromise = new Promise<never>((_, reject) => {
-			timeout = setTimeout(
-				() => reject(new Error(`OAuth token refresh timed out for provider: ${provider}`)),
-				DEFAULT_OAUTH_REFRESH_TIMEOUT_MS,
-			);
-		});
-		try {
-			return await Promise.race([refreshPromise, timeoutPromise]);
-		} finally {
-			if (timeout) clearTimeout(timeout);
-		}
+		return refreshOAuthToken(provider as OAuthProvider, credential, signal);
 	}
 
 	/** Attempts to use a single OAuth credential, checking usage and refreshing token. */
 	async #tryOAuthCredential(
 		provider: Provider,
-		selection: { credential: OAuthCredential; index: number },
+		selection: { credential: OAuthCredential; index: number; credentialId: number },
 		providerKey: string,
 		sessionId: string | undefined,
 		options: AuthApiKeyOptions | undefined,
@@ -1863,18 +2150,25 @@ export class AuthStorage {
 
 		try {
 			let result: { newCredentials: OAuthCredentials; apiKey: string } | null;
+			const refreshedCredentials = await this.#refreshOAuthCredential(
+				provider,
+				selection.credential,
+				selection.credentialId,
+			);
+			if (Date.now() >= refreshedCredentials.expires) {
+				throw new Error(`OAuth refresh coordination did not yield a usable credential for provider: ${provider}`);
+			}
 			const customProvider = getOAuthProvider(provider);
 			if (customProvider) {
-				const refreshedCredentials = await this.#refreshOAuthCredential(provider, selection.credential);
 				const apiKey = customProvider.getApiKey
 					? customProvider.getApiKey(refreshedCredentials)
 					: refreshedCredentials.access;
 				result = { newCredentials: refreshedCredentials, apiKey };
 			} else {
 				const oauthCreds: Record<string, OAuthCredentials> = {
-					[provider]: selection.credential,
+					[provider]: refreshedCredentials,
 				};
-				result = await getOAuthApiKey(provider as OAuthProvider, oauthCreds);
+				result = await getOAuthApiKey(provider as OAuthProvider, oauthCreds, { refreshExpired: false });
 			}
 			if (!result) return undefined;
 			const updated: OAuthCredential = {
@@ -1888,7 +2182,7 @@ export class AuthStorage {
 				tierId: result.newCredentials.tierId ?? selection.credential.tierId,
 				enterpriseUrl: result.newCredentials.enterpriseUrl ?? selection.credential.enterpriseUrl,
 			};
-			this.#replaceCredentialAt(provider, selection.index, updated);
+			selection.credential = updated;
 			if (checkUsage && !allowBlocked) {
 				const sameAccount = selection.credential.accountId === updated.accountId;
 				if (!usageChecked || !sameAccount) {
@@ -1913,9 +2207,7 @@ export class AuthStorage {
 			const errorMsg = String(error);
 			// Only remove credentials for definitive auth failures
 			// Keep credentials for transient errors (network, 5xx) and block temporarily
-			const isDefinitiveFailure =
-				/invalid_grant|invalid_token|revoked|unauthorized|expired.*refresh|refresh.*expired/i.test(errorMsg) ||
-				(/\b(401|403)\b/.test(errorMsg) && !/timeout|network|fetch failed|ECONNREFUSED/i.test(errorMsg));
+			const isDefinitiveFailure = isDefinitiveOAuthFailure(error);
 
 			logger.warn("OAuth token refresh failed", {
 				provider,
@@ -1924,9 +2216,7 @@ export class AuthStorage {
 				isDefinitiveFailure,
 			});
 
-			if (isDefinitiveFailure) {
-				// Permanently disable invalid credentials with an explicit cause for inspection/debugging
-				this.#disableCredentialAt(provider, selection.index, `oauth refresh failed: ${errorMsg}`);
+			if (isDefinitiveFailure || /reauthentication required/i.test(errorMsg)) {
 				if (this.#getCredentialsForProvider(provider).some(credential => credential.type === "oauth")) {
 					return this.getApiKey(provider, sessionId, options);
 				}
@@ -2035,7 +2325,7 @@ type SerializedCredentialRecord = {
 	identityKey: string | null;
 };
 
-const AUTH_SCHEMA_VERSION = 4;
+const AUTH_SCHEMA_VERSION = 5;
 const SQLITE_NOW_EPOCH = "CAST(strftime('%s','now') AS INTEGER)";
 
 function normalizeStoredAccountId(accountId: string | null | undefined): string | null {
@@ -2209,12 +2499,18 @@ export class AuthCredentialStore {
 	#listDisabledByProviderStmt: Statement;
 	#insertStmt: Statement;
 	#updateStmt: Statement;
+	#updateIfMatchesWithLeaseStmt: Statement;
 	#deleteStmt: Statement;
+	#deleteIfMatchesWithLeaseStmt: Statement;
 	#deleteByProviderStmt: Statement;
 	#hardDeleteStmt: Statement;
 	#getCacheStmt: Statement;
 	#upsertCacheStmt: Statement;
 	#deleteExpiredCacheStmt: Statement;
+	#acquireCredentialRefreshLeaseStmt: Statement;
+	#getCredentialRefreshLeaseStmt: Statement;
+	#renewCredentialRefreshLeaseStmt: Statement;
+	#releaseCredentialRefreshLeaseStmt: Statement;
 	#closed = false;
 
 	constructor(db: Database) {
@@ -2236,8 +2532,26 @@ export class AuthCredentialStore {
 		this.#updateStmt = this.#db.prepare(
 			`UPDATE auth_credentials SET credential_type = ?, data = ?, identity_key = ?, updated_at = ${SQLITE_NOW_EPOCH} WHERE id = ?`,
 		);
+		this.#updateIfMatchesWithLeaseStmt = this.#db.prepare(
+			`UPDATE auth_credentials
+			SET credential_type = ?, data = ?, identity_key = ?, updated_at = ${SQLITE_NOW_EPOCH}
+			WHERE id = ? AND data = ? AND disabled_cause IS NULL
+				AND EXISTS (
+					SELECT 1 FROM auth_credential_refresh_leases
+					WHERE credential_id = ? AND owner = ? AND expires_at_ms > ?
+				)`,
+		);
 		this.#deleteStmt = this.#db.prepare(
 			`UPDATE auth_credentials SET disabled_cause = ?, updated_at = ${SQLITE_NOW_EPOCH} WHERE id = ?`,
+		);
+		this.#deleteIfMatchesWithLeaseStmt = this.#db.prepare(
+			`UPDATE auth_credentials
+			SET disabled_cause = ?, updated_at = ${SQLITE_NOW_EPOCH}
+			WHERE id = ? AND data = ? AND disabled_cause IS NULL
+				AND EXISTS (
+					SELECT 1 FROM auth_credential_refresh_leases
+					WHERE credential_id = ? AND owner = ? AND expires_at_ms > ?
+				)`,
 		);
 		this.#deleteByProviderStmt = this.#db.prepare(
 			`UPDATE auth_credentials SET disabled_cause = ?, updated_at = ${SQLITE_NOW_EPOCH} WHERE provider = ? AND disabled_cause IS NULL`,
@@ -2250,6 +2564,24 @@ export class AuthCredentialStore {
 			"INSERT INTO cache (key, value, expires_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, expires_at = excluded.expires_at",
 		);
 		this.#deleteExpiredCacheStmt = this.#db.prepare(`DELETE FROM cache WHERE expires_at <= ${SQLITE_NOW_EPOCH}`);
+		this.#acquireCredentialRefreshLeaseStmt = this.#db.prepare(
+			`INSERT INTO auth_credential_refresh_leases (credential_id, owner, expires_at_ms, updated_at)
+			VALUES (?, ?, ?, ${SQLITE_NOW_EPOCH})
+			ON CONFLICT(credential_id) DO UPDATE SET
+				owner = excluded.owner,
+				expires_at_ms = excluded.expires_at_ms,
+				updated_at = excluded.updated_at
+			WHERE auth_credential_refresh_leases.expires_at_ms <= ?`,
+		);
+		this.#getCredentialRefreshLeaseStmt = this.#db.prepare(
+			"SELECT expires_at_ms FROM auth_credential_refresh_leases WHERE credential_id = ?",
+		);
+		this.#renewCredentialRefreshLeaseStmt = this.#db.prepare(
+			`UPDATE auth_credential_refresh_leases SET expires_at_ms = ?, updated_at = ${SQLITE_NOW_EPOCH} WHERE credential_id = ? AND owner = ?`,
+		);
+		this.#releaseCredentialRefreshLeaseStmt = this.#db.prepare(
+			"DELETE FROM auth_credential_refresh_leases WHERE credential_id = ? AND owner = ?",
+		);
 		this.reactivateRegressionDisabledOpenAICodexCredentials();
 	}
 
@@ -2288,6 +2620,14 @@ export class AuthCredentialStore {
 				expires_at INTEGER NOT NULL
 			);
 			CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache(expires_at);
+			CREATE TABLE IF NOT EXISTS auth_credential_refresh_leases (
+				credential_id INTEGER PRIMARY KEY,
+				owner TEXT NOT NULL,
+				expires_at_ms INTEGER NOT NULL,
+				updated_at INTEGER NOT NULL
+			);
+			CREATE INDEX IF NOT EXISTS idx_auth_credential_refresh_leases_expires
+				ON auth_credential_refresh_leases(expires_at_ms);
 		`);
 
 		if (!this.#authCredentialsTableExists()) {
@@ -2377,6 +2717,7 @@ export class AuthCredentialStore {
 		if (fromVersion < 4) {
 			this.#migrateAuthSchemaV3ToV4();
 		}
+		// Version 5 is additive; the refresh-lease table is created before migration.
 	}
 
 	#migrateAuthSchemaV0ToV1(): void {
@@ -2684,11 +3025,82 @@ export class AuthCredentialStore {
 		}
 	}
 
+	tryUpdateAuthCredentialIfMatches(
+		id: number,
+		expectedData: string,
+		credential: AuthCredential,
+		lease: CredentialRefreshLeaseFence,
+	): boolean {
+		const providerRow = this.#db.prepare("SELECT provider FROM auth_credentials WHERE id = ?").get(id) as
+			| { provider?: string }
+			| undefined;
+		const provider = providerRow?.provider ?? "";
+		const serialized = serializeCredential(provider, credential);
+		if (!serialized) return false;
+		const outcome = this.#updateIfMatchesWithLeaseStmt.run(
+			serialized.credentialType,
+			serialized.data,
+			serialized.identityKey,
+			id,
+			expectedData,
+			id,
+			lease.owner,
+			lease.nowMs,
+		) as { changes: number };
+		if (outcome.changes === 0) return false;
+		if (provider) this.#purgeSupersededDisabledRows(provider, this.listAuthCredentials(provider));
+		return true;
+	}
+
 	deleteAuthCredential(id: number, disabledCause: string): void {
 		try {
 			this.#deleteStmt.run(normalizeDisabledCause(disabledCause), id);
 		} catch {
 			// Ignore delete failures
+		}
+	}
+
+	tryDisableAuthCredentialIfMatches(
+		id: number,
+		expectedData: string,
+		disabledCause: string,
+		lease: CredentialRefreshLeaseFence,
+	): boolean {
+		const outcome = this.#deleteIfMatchesWithLeaseStmt.run(
+			normalizeDisabledCause(disabledCause),
+			id,
+			expectedData,
+			id,
+			lease.owner,
+			lease.nowMs,
+		) as { changes: number };
+		return outcome.changes === 1;
+	}
+
+	tryAcquireCredentialRefreshLease(credentialId: number, owner: string, expiresAtMs: number): boolean {
+		const outcome = this.#acquireCredentialRefreshLeaseStmt.run(credentialId, owner, expiresAtMs, Date.now()) as {
+			changes: number;
+		};
+		return outcome.changes === 1;
+	}
+
+	getCredentialRefreshLeaseExpiresAt(credentialId: number): number | undefined {
+		const row = this.#getCredentialRefreshLeaseStmt.get(credentialId) as { expires_at_ms?: number } | undefined;
+		return typeof row?.expires_at_ms === "number" && row.expires_at_ms > Date.now() ? row.expires_at_ms : undefined;
+	}
+
+	renewCredentialRefreshLease(credentialId: number, owner: string, expiresAtMs: number): boolean {
+		const outcome = this.#renewCredentialRefreshLeaseStmt.run(expiresAtMs, credentialId, owner) as {
+			changes: number;
+		};
+		return outcome.changes === 1;
+	}
+
+	releaseCredentialRefreshLease(credentialId: number, owner: string): void {
+		try {
+			this.#releaseCredentialRefreshLeaseStmt.run(credentialId, owner);
+		} catch {
+			// Expired leases remain recoverable if best-effort release fails.
 		}
 	}
 

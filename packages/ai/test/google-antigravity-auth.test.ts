@@ -398,7 +398,11 @@ describe("Google Antigravity auth alignment", () => {
 			return jsonResponse({ access_token: "refreshed-access", expires_in: 3600 });
 		}) as unknown as typeof fetch;
 
-		const credential = await refreshVertexWithAntigravityOAuth("vertex-refresh", fetchImpl);
+		const credential = await refreshVertexWithAntigravityOAuth(
+			"vertex-refresh",
+			new AbortController().signal,
+			fetchImpl,
+		);
 		expect(credential).toMatchObject({ access: "refreshed-access", refresh: "vertex-refresh" });
 	});
 });

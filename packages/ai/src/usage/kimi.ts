@@ -234,7 +234,10 @@ export const kimiUsageProvider: UsageProvider = {
 			}
 			try {
 				ctx.logger?.debug("Kimi usage token expired, refreshing", { provider: params.provider });
-				const refreshed = await refreshKimiToken(credential.refreshToken);
+				const refreshed = await refreshKimiToken(
+					credential.refreshToken,
+					params.signal ?? new AbortController().signal,
+				);
 				accessToken = refreshed.access;
 			} catch (error) {
 				ctx.logger?.warn("Kimi usage token refresh failed", { provider: params.provider, error: String(error) });
