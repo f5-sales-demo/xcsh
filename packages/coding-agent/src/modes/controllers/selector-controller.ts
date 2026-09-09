@@ -598,10 +598,12 @@ export class SelectorController {
 		});
 	}
 
-	async #showProviderConnected(provider: string, discoveryError?: string): Promise<void> {
+	async #showProviderConnected(provider: string, discoveryError?: string, reloadConnection = false): Promise<void> {
 		this.ctx.showStatus("Credentials saved. Checking connection…");
 		try {
-			await this.ctx.session.modelRegistry.refreshProvider(provider, "online");
+			// New proxy settings and grouped routes must be loaded from disk before discovery.
+			if (reloadConnection) await this.ctx.session.modelRegistry.refresh("online");
+			else await this.ctx.session.modelRegistry.refreshProvider(provider, "online");
 		} catch (error) {
 			discoveryError = error instanceof Error ? error.message : String(error);
 		}
@@ -1193,7 +1195,7 @@ export class SelectorController {
 				return;
 			}
 
-			await this.#showProviderConnected("litellm", flowResult.discoveryError);
+			await this.#showProviderConnected("litellm", flowResult.discoveryError, true);
 		} catch (error: unknown) {
 			this.ctx.showError(`LiteLLM login failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
@@ -1269,7 +1271,7 @@ export class SelectorController {
 				this.ctx.showStatus("vLLM login cancelled. Existing configuration unchanged.");
 				return;
 			}
-			await this.#showProviderConnected("vllm", flowResult.discoveryError);
+			await this.#showProviderConnected("vllm", flowResult.discoveryError, true);
 		} catch (error) {
 			this.ctx.showError(`vLLM login failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
