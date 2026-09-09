@@ -11,16 +11,18 @@ import {
 import { initTheme } from "../src/modes/theme/theme";
 import { SUBSCRIPTION_ROUTING_PROFILES } from "../src/routing/subscription-profiles";
 
-const model = (provider: string, id: string) => ({ provider, id, name: id }) as Model;
+const model = (provider: string, id: string, metadata: Partial<Model> = {}) =>
+	({ provider, id, name: id, ...metadata }) as Model;
 
 beforeAll(() => initTheme());
 
-describe("default GPT-5.6 model picker presentation", () => {
-	it("keeps every ChatGPT tier as an exact selection", () => {
+describe("default ChatGPT subscription model picker presentation", () => {
+	it("keeps every ChatGPT tier and Astra as exact selections", () => {
 		const presented = presentModelsForDefaultPicker([
 			model("openai-codex", "gpt-5.6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
 			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-astra"),
 			model("anthropic", "claude-sonnet-4-6"),
 		]);
 
@@ -28,6 +30,7 @@ describe("default GPT-5.6 model picker presentation", () => {
 			"openai-codex/gpt-5.6-luna",
 			"openai-codex/gpt-5.6-terra",
 			"openai-codex/gpt-5.6-sol",
+			"openai-codex/gpt-6-astra",
 			"anthropic/claude-sonnet-4-6",
 		]);
 		expect(presented.some(item => item.selector === "openai-codex/gpt-5.6")).toBe(false);
@@ -38,19 +41,22 @@ describe("default GPT-5.6 model picker presentation", () => {
 			model("openai-codex", "gpt-5.6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
 			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-astra"),
 		];
 		expect(presentModelsForDefaultPicker(tiers, true).map(item => item.displaySelector)).toEqual([
 			"openai-codex/gpt-5.6-luna",
 			"openai-codex/gpt-5.6-terra",
 			"openai-codex/gpt-5.6-sol",
+			"openai-codex/gpt-6-astra",
 		]);
 	});
 
-	it("renders all tiers in the ChatGPT provider tab without a synthetic alias", async () => {
+	it("renders all tiers and unassigned Astra in the ChatGPT provider tab without a synthetic alias", async () => {
 		const tiers = [
 			model("openai-codex", "gpt-5.6-luna"),
 			model("openai-codex", "gpt-5.6-terra"),
 			model("openai-codex", "gpt-5.6-sol"),
+			model("openai-codex", "gpt-6-astra", { name: "GPT-6 Astra" }),
 		];
 		const byId = new Map(tiers.map(item => [item.id, item]));
 		const registry = {
@@ -84,9 +90,11 @@ describe("default GPT-5.6 model picker presentation", () => {
 		expect(allModels).toContain("openai-codex/gpt-5.6-luna");
 		expect(allModels).toContain("openai-codex/gpt-5.6-terra");
 		expect(allModels).toContain("openai-codex/gpt-5.6-sol");
+		expect(allModels).toContain("GPT-6 Astra [openai-codex/gpt-6-astra]");
 		expect(normalizedModels).toContain("gpt-5.6-luna] SMOL (low)");
 		expect(normalizedModels).toContain("gpt-5.6-terra] DEFAULT (medium)");
 		expect(normalizedModels).toContain("gpt-5.6-sol] SLOW (high) PLAN (high)");
+		expect(normalizedModels).not.toMatch(/gpt-6-astra\]\s+(?:SMOL|DEFAULT|SLOW|PLAN)/);
 		expect(allModels).not.toContain("openai-codex/gpt-5.6]");
 		expect(allModels).not.toContain("ALL MODELS");
 	});
