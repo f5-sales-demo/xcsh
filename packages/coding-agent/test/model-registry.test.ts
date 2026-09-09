@@ -15,6 +15,7 @@ import {
 import { hookFetch, Snowflake } from "@f5-sales-demo/pi-utils";
 import { CURRENT_CONFIG_VERSION, generateModelsYml } from "../src/config/auto-config";
 import {
+	getProviderLocalCredentialFailure,
 	kNoAuth,
 	MODEL_ROLES,
 	ModelRegistry,
@@ -163,6 +164,7 @@ describe("ModelRegistry", () => {
 			});
 			const registry = new ModelRegistry(authStorage, modelsJsonPath);
 			expect(registry.getProviderAccessState("test-cloud")).toMatchObject({
+				configured: true,
 				credentialSource: "runtime",
 				status: "configured-unverified",
 				catalogFreshness: "none",
@@ -180,6 +182,7 @@ describe("ModelRegistry", () => {
 				catalogFreshness: "fresh",
 				selectable: true,
 			});
+			expect(registry.getProviderAccessState("test-cloud").lastCheckedAt).toBeNumber();
 		});
 
 		test("identifies keyless providers without claiming they were validated", () => {
@@ -193,6 +196,7 @@ describe("ModelRegistry", () => {
 			});
 			const registry = new ModelRegistry(authStorage, modelsJsonPath);
 			expect(registry.getProviderAccessState("vllm")).toMatchObject({
+				configured: true,
 				credentialSource: "keyless",
 				status: "configured-unverified",
 				selectable: true,
@@ -240,6 +244,78 @@ describe("ModelRegistry", () => {
 			});
 		});
 
+		test("classifies a failed OAuth refresh as requiring sign-in again", async () => {
+			await authStorage.set("google-antigravity", {
+				type: "oauth",
+				access: "expired-access-token",
+				refresh: "revoked-refresh-token",
+				expires: Date.now() - 60_000,
+				projectId: "123456789012",
+			});
+			using _hook = hookFetch(input => {
+				const url = input instanceof Request ? input.url : String(input);
+				if (url === "https://oauth2.googleapis.com/token") {
+					return Response.json({ error: "invalid_grant" }, { status: 400 });
+				}
+				throw new Error(`Unexpected URL: ${url}`);
+			});
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+
+			await registry.refreshProvider("google-antigravity", "online");
+
+			expect(registry.getProviderAccessState("google-antigravity")).toMatchObject({
+				configured: true,
+				credentialSource: "stored-oauth",
+				status: "reauth-required",
+				selectable: false,
+			});
+			expect(registry.getProviderAccessState("google-antigravity").lastCheckedAt).toBeNumber();
+		});
+
+		test("classifies a Copilot 401 as requiring sign-in again", async () => {
+			await authStorage.set("github-copilot", {
+				type: "oauth",
+				access: "revoked-copilot-token",
+				refresh: "revoked-copilot-token",
+				expires: Date.now() + 60_000,
+			});
+			using _hook = hookFetch(input => {
+				const url = input instanceof Request ? input.url : String(input);
+				if (url === "https://api.githubcopilot.com/models") {
+					return new Response("Unauthorized", { status: 401 });
+				}
+				throw new Error(`Unexpected URL: ${url}`);
+			});
+			const registry = new ModelRegistry(authStorage, modelsJsonPath);
+
+			await registry.refreshProvider("github-copilot", "online");
+
+			expect(registry.getProviderAccessState("github-copilot")).toMatchObject({
+				configured: true,
+				credentialSource: "stored-oauth",
+				status: "reauth-required",
+				selectable: false,
+			});
+		});
+
+		test("keeps an unexpected ambient credential configured but unverified", () => {
+			const previous = Bun.env.OPENAI_API_KEY;
+			Bun.env.OPENAI_API_KEY = "ambient-test-key";
+			try {
+				const registry = new ModelRegistry(authStorage, modelsJsonPath);
+				expect(registry.getProviderInventory()).toContain("openai");
+				expect(registry.getProviderAccessState("openai")).toMatchObject({
+					configured: true,
+					credentialSource: "environment",
+					status: "configured-unverified",
+					selectable: true,
+				});
+			} finally {
+				if (previous === undefined) delete Bun.env.OPENAI_API_KEY;
+				else Bun.env.OPENAI_API_KEY = previous;
+			}
+		});
+
 		test("filters configured and discovered models and exposes picker metadata", () => {
 			writeRawModelsJson({
 				demo: {
@@ -261,6 +337,23 @@ describe("ModelRegistry", () => {
 			expect(sanitizeProviderFailure("401 Bearer secret-token https://x.test?api_key=secret-value")).toBe(
 				"401 Bearer [redacted] https://x.test?api_key=[redacted]",
 			);
+		});
+
+		test("classifies expired Bedrock session credentials without claiming connectivity", () => {
+			expect(
+				getProviderLocalCredentialFailure(
+					"amazon-bedrock",
+					{ AWS_CREDENTIAL_EXPIRATION: "2026-09-09T12:00:00Z" },
+					() => Date.parse("2026-09-09T12:00:01Z"),
+				),
+			).toBe("AWS credentials expired at 2026-09-09T12:00:00.000Z");
+			expect(
+				getProviderLocalCredentialFailure(
+					"amazon-bedrock",
+					{ AWS_SESSION_EXPIRATION: "2026-09-09T12:00:00Z" },
+					() => Date.parse("2026-09-09T11:59:59Z"),
+				),
+			).toBeUndefined();
 		});
 	});
 
@@ -1488,7 +1581,7 @@ describe("ModelRegistry", () => {
 				access: "expired-access-token",
 				refresh: "refresh-token",
 				expires: Date.now() - 60_000,
-				projectId: "project-id",
+				projectId: "123456789012",
 			});
 
 			const requestedUrls: string[] = [];

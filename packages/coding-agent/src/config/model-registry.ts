@@ -445,6 +445,7 @@ export interface ProviderDiscoveryState {
 	optional: boolean;
 	stale: boolean;
 	fetchedAt?: number;
+	checkedAt?: number;
 	models: string[];
 	error?: string;
 }
@@ -466,11 +467,12 @@ export type ProviderAccessStatus =
 
 export interface ProviderAccessState {
 	provider: string;
+	configured: boolean;
 	credentialSource?: ProviderCredentialSource;
 	status: ProviderAccessStatus;
 	catalogFreshness: "none" | "fresh" | "stale";
 	failureReason?: string;
-	verifiedAt?: number;
+	lastCheckedAt?: number;
 	selectable: boolean;
 }
 
@@ -494,6 +496,20 @@ function isProviderAuthenticationFailure(reason: string | undefined): boolean {
 		!!reason &&
 		/(?:\b401\b|\b403\b|unauthori[sz]ed|forbidden|invalid[_ -]grant|invalid[_ -]token|reauth)/i.test(reason)
 	);
+}
+
+/** Locally detectable credential failures that do not make a network-connectivity claim. */
+export function getProviderLocalCredentialFailure(
+	provider: string,
+	environment: Record<string, string | undefined> = $env,
+	now: () => number = Date.now,
+): string | undefined {
+	if (provider !== "amazon-bedrock") return undefined;
+	const rawExpiration = environment.AWS_CREDENTIAL_EXPIRATION ?? environment.AWS_SESSION_EXPIRATION;
+	if (!rawExpiration) return undefined;
+	const expiration = Date.parse(rawExpiration);
+	if (!Number.isFinite(expiration) || expiration > now()) return undefined;
+	return `AWS credentials expired at ${new Date(expiration).toISOString()}`;
 }
 
 export interface CanonicalModelQueryOptions {
@@ -974,6 +990,7 @@ export class ModelRegistry {
 					optional: previous?.optional ?? false,
 					stale: previous?.stale ?? true,
 					fetchedAt: previous?.fetchedAt,
+					checkedAt: previous?.checkedAt,
 					models: previous?.models ?? [],
 				});
 				for (const selector of this.#suppressedSelectors.keys()) {
@@ -1394,6 +1411,7 @@ export class ModelRegistry {
 		providerConfig: DiscoveryProviderConfig,
 		strategy: ModelRefreshStrategy,
 	): Promise<Model<Api>[]> {
+		const previous = this.#providerDiscoveryStates.get(providerConfig.provider);
 		const cached = readModelCache<Api>(providerConfig.provider, 24 * 60 * 60 * 1000, Date.now, this.#cacheDbPath);
 		const requiresAuth = !this.#keylessProviders.has(providerConfig.provider);
 		if (requiresAuth) {
@@ -1405,6 +1423,7 @@ export class ModelRegistry {
 					optional: providerConfig.optional ?? false,
 					stale: cached !== null,
 					fetchedAt: cached?.updatedAt,
+					checkedAt: Date.now(),
 					models: cached?.models.map(model => model.id) ?? [],
 				});
 				this.#lastDiscoveryWarnings.delete(providerConfig.provider);
@@ -1450,6 +1469,7 @@ export class ModelRegistry {
 			optional: providerConfig.optional ?? false,
 			stale: result.stale || status === "cached",
 			fetchedAt: discoveryError || strategy === "offline" ? cached?.updatedAt : Date.now(),
+			checkedAt: strategy === "offline" ? previous?.checkedAt : Date.now(),
 			models: result.models.map(model => model.id),
 			error: discoveryError,
 		});
@@ -1600,6 +1620,7 @@ export class ModelRegistry {
 								optional: false,
 								stale: true,
 								fetchedAt: previous?.fetchedAt,
+								checkedAt: Date.now(),
 								models: previous?.models ?? [],
 								error: error instanceof Error ? error.message : String(error),
 							});
@@ -1628,6 +1649,7 @@ export class ModelRegistry {
 					optional: false,
 					stale: true,
 					fetchedAt: previous?.fetchedAt,
+					checkedAt: Date.now(),
 					models: previous?.models ?? [],
 				});
 			}
@@ -1645,6 +1667,7 @@ export class ModelRegistry {
 						optional: false,
 						stale: true,
 						fetchedAt: previous?.fetchedAt,
+						checkedAt: Date.now(),
 						models: previous?.models ?? [],
 					});
 				}
@@ -1685,12 +1708,20 @@ export class ModelRegistry {
 			const models = result.models.map(model =>
 				model.provider === options.providerId ? model : { ...model, provider: options.providerId },
 			);
+			const status: ProviderDiscoveryStatus = discoveryError
+				? isProviderAuthenticationFailure(discoveryError)
+					? "unauthenticated"
+					: "cached"
+				: result.stale
+					? "cached"
+					: "ok";
 			this.#providerDiscoveryStates.set(options.providerId, {
 				provider: options.providerId,
-				status: result.stale ? "cached" : "ok",
+				status,
 				optional: false,
-				stale: result.stale,
-				fetchedAt: result.stale ? previous?.fetchedAt : Date.now(),
+				stale: result.stale || status !== "ok",
+				fetchedAt: discoveryError || result.stale ? previous?.fetchedAt : Date.now(),
+				checkedAt: strategy === "offline" ? previous?.checkedAt : Date.now(),
 				error: discoveryError,
 				models: models.map(model => model.id),
 			});
@@ -1711,6 +1742,7 @@ export class ModelRegistry {
 				optional: false,
 				stale: true,
 				fetchedAt: retained?.fetchedAt,
+				checkedAt: Date.now(),
 				models: retained?.models ?? [],
 				error: failureReason,
 			});
@@ -2283,7 +2315,8 @@ export class ModelRegistry {
 				...this.#configuredProviderIds,
 				...this.#discoverableProviders
 					.filter(
-						provider => !provider.optional || this.#models.some(model => model.provider === provider.provider),
+						provider =>
+							!provider.optional || this.#providerDiscoveryStates.get(provider.provider)?.status === "ok",
 					)
 					.map(provider => provider.provider),
 				...this.#models.filter(model => this.authStorage.hasAuth(model.provider)).map(model => model.provider),
@@ -2309,12 +2342,25 @@ export class ModelRegistry {
 						.map(([groupProvider]) => this.#providerDiscoveryStates.get(groupProvider))
 						.find(Boolean)
 				: undefined);
-		const credentialSource: ProviderCredentialSource | undefined = this.#keylessProviders.has(provider)
-			? "keyless"
-			: (this.authStorage.getCredentialSource(provider) ?? this.#lastCredentialSources.get(provider));
+		const explicitConfiguration = this.#configuredProviderIds.has(provider);
+		const detected = discovery?.status === "ok";
+		const observedCredentialSource =
+			this.authStorage.getCredentialSource(provider) ?? this.#lastCredentialSources.get(provider);
+		const configured =
+			explicitConfiguration || (observedCredentialSource !== undefined && observedCredentialSource !== "keyless");
+		const optionalImplicitProvider = discovery?.optional === true && !explicitConfiguration;
+		const credentialSource: ProviderCredentialSource | undefined =
+			this.#keylessProviders.has(provider) && (explicitConfiguration || detected)
+				? "keyless"
+				: observedCredentialSource === "keyless"
+					? undefined
+					: observedCredentialSource;
 		const catalogFreshness = discovery?.stale ? "stale" : discovery?.status === "ok" ? "fresh" : "none";
+		const localCredentialFailure = getProviderLocalCredentialFailure(provider);
 		let status: ProviderAccessStatus;
-		if (!credentialSource) status = "unconfigured";
+		if (localCredentialFailure) status = "reauth-required";
+		else if (optionalImplicitProvider && !configured && !detected) status = "unconfigured";
+		else if (!credentialSource && !detected) status = "unconfigured";
 		else if (discovery?.status === "checking") status = "checking";
 		else if (discovery?.status === "unauthenticated") status = "reauth-required";
 		else if (discovery?.status === "unavailable" || discovery?.status === "cached") status = "unreachable";
@@ -2322,11 +2368,12 @@ export class ModelRegistry {
 		else status = "configured-unverified";
 		return {
 			provider,
+			configured,
 			credentialSource,
 			status,
 			catalogFreshness,
-			failureReason: sanitizeProviderFailure(discovery?.error),
-			verifiedAt: discovery?.status === "ok" ? discovery.fetchedAt : undefined,
+			failureReason: localCredentialFailure ?? sanitizeProviderFailure(discovery?.error),
+			lastCheckedAt: localCredentialFailure ? Date.now() : discovery?.checkedAt,
 			selectable: (status === "connected" || status === "configured-unverified") && !discovery?.stale,
 		};
 	}

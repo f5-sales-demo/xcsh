@@ -82,6 +82,8 @@ export interface FetchOpenAICompatibleModelsOptions<TApi extends Api> {
 	signal?: AbortSignal;
 	/** Optional fetch implementation override for testing/custom runtimes. */
 	fetch?: typeof globalThis.fetch;
+	/** Surface HTTP 401 so callers can distinguish revoked credentials from connectivity failures. */
+	throwOnUnauthorized?: boolean;
 	/**
 	 * Optional post-normalization filter.
 	 * Return false to skip a model.
@@ -101,7 +103,8 @@ export interface FetchOpenAICompatibleModelsOptions<TApi extends Api> {
 /**
  * Fetches and normalizes an OpenAI-compatible `/models` catalog.
  *
- * Returns `null` on transport/protocol failures.
+ * Returns `null` on transport/protocol failures unless the caller opts into
+ * surfacing an HTTP 401 for provider-specific credential classification.
  * Returns `[]` only when the endpoint responds successfully with no usable models.
  */
 export async function fetchOpenAICompatibleModels<TApi extends Api>(
@@ -133,6 +136,9 @@ export async function fetchOpenAICompatibleModels<TApi extends Api>(
 	}
 
 	if (!response.ok) {
+		if (response.status === 401 && options.throwOnUnauthorized) {
+			throw new Error(`${options.provider} model discovery failed (HTTP 401)`);
+		}
 		return null;
 	}
 

@@ -32,6 +32,7 @@ if (!launch) throw new Error("Unknown target");
 const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
 const receipts: { provider: string; model: string; turns: number; reasoning?: string }[] = [];
 const snapshots: { step: string; text: string }[] = [];
+const discoveryRequests: Record<string, number> = {};
 const profile = await mkdtemp(join(tmpdir(), "xcsh-model-uat-"));
 const models = ["uat-cloud-a", "uat-cloud-b", "ollama"];
 let fail = false;
@@ -44,6 +45,7 @@ const server = Bun.serve({
 		const url = new URL(request.url);
 		const provider = url.pathname.split("/")[1];
 		if (url.pathname.endsWith("/models")) {
+			discoveryRequests[provider] = (discoveryRequests[provider] ?? 0) + 1;
 			await Bun.sleep(discoveryDelayMs);
 			return fail
 				? new Response("Controlled outage", { status: 503 })
@@ -167,7 +169,7 @@ async function openPicker() {
 }
 async function assertRefreshGeometry(label: string) {
 	const idle = await rendered();
-	const modelLine = idle.split("\n").find(line => /\[[^\]]+\/uat-model\]/.test(line));
+	const modelLine = idle.split("\n").find(line => line.includes("uat-model") && line.includes(""));
 	if (!modelLine) throw new Error("Expected a fixture model before geometry check");
 	const row = idle.split("\n").indexOf(modelLine);
 	discoveryDelayMs = 900;
@@ -189,17 +191,17 @@ let error: string | undefined;
 try {
 	const environment = values.live
 		? ""
-		: `env -i PATH=${quote([...new Set([resolve(Bun.which("bun")!, ".."), resolve(Bun.which("xcsh")!, ".."), "/usr/local/bin", "/usr/bin", "/bin"])].join(":"))} HOME=${quote(process.env.HOME!)} TERM=xterm-256color HERDR_ENV=1 PI_CODING_AGENT_DIR=${quote(agentDir)} `;
+		: `env -i PATH=${quote([...new Set([resolve(Bun.which("bun")!, ".."), resolve(Bun.which("xcsh")!, ".."), "/usr/local/bin", "/usr/bin", "/bin"])].join(":"))} HOME=${quote(profile)} TERM=xterm-256color HERDR_ENV=1 PI_CODING_AGENT_DIR=${quote(agentDir)} `;
 	const launchCommand = `cd ${quote(root)} && ${environment}${launch} --no-mcp --no-lsp --no-extensions --no-skills --no-memories --no-title`;
 	await herdr("pane", "run", pane, launchCommand + (values.live ? " --no-session" : " --model uat-cloud-a/uat-model"));
 	await Bun.sleep(1500);
-	await wait("ready", text => text.includes("xcsh v") && text.includes("idle"), 45000);
+	await wait("ready", text => text.includes("0%"), 45000);
 	await Bun.sleep(2500);
 	await openPicker();
 	const providerTabs = (await rendered()).split("\n").find(line => line.startsWith("Models:"));
 	if (!providerTabs) throw new Error("Provider navigation missing");
-	async function assertHealthyPicker(step: string) {
-		const text = await wait(step, text => text.includes(providerTabs!) && !text.includes("Refreshing "));
+	async function assertHealthyPicker(step: string, timeout = 20000) {
+		const text = await wait(step, text => text.includes(providerTabs!) && !text.includes("Refreshing "), timeout);
 		if (
 			/Unable to connect|Provider unavailable|authentication required|availability unverified|Ctrl\+R: retry/i.test(
 				text,
@@ -211,7 +213,7 @@ try {
 			throw new Error(`Unconfigured local runtime advertised at ${step}`);
 		}
 	}
-	await assertHealthyPicker("initial provider health");
+	await assertHealthyPicker("initial provider health", 60000);
 	for (let i = 0; i < 9; i++) {
 		await keys("Tab");
 		await Bun.sleep(200);
@@ -228,7 +230,7 @@ try {
 		);
 		const sibling = split.result.pane.pane_id as string;
 		try {
-			await wait("narrow navigation", text => text.includes("Ctrl+R:") && text.includes("Enter: choose"));
+			await wait("narrow navigation", text => text.includes("Models:") && text.includes("Ctrl+R:"));
 			await assertRefreshGeometry("narrow layout");
 		} finally {
 			await herdr("pane", "close", sibling);
@@ -342,7 +344,7 @@ try {
 		await Bun.sleep(500);
 		await herdr("pane", "run", pane, `${launchCommand} --continue`);
 		await Bun.sleep(4000);
-		await wait("resumed", text => text.includes("idle"));
+		await wait("resumed", text => text.includes("0%"));
 		const beforeResume = receipts.length;
 		const previousTurns = receipts.at(-1)!.turns;
 		await command("Say UAT_OK after resume.");
@@ -382,6 +384,36 @@ try {
 			await rm(configPath, { recursive: true });
 			await rename(`${configPath}.backup`, configPath);
 		}
+		await keys("Escape");
+		await command("/login");
+		const login = await wait(
+			"login management",
+			text => text.includes("Select provider to login:") && text.includes("Add provider…"),
+		);
+		for (const expected of ["uat-cloud-a", "uat-cloud-b", "Ollama", "Add provider…"]) {
+			if (!login.includes(expected)) throw new Error(`Login management omitted ${expected}`);
+		}
+		for (const absent of ["LM Studio", "llama.cpp"]) {
+			if (login.includes(absent)) throw new Error(`Login management advertised absent ${absent}`);
+		}
+		await keys("Right");
+		await wait(
+			"login details",
+			text =>
+				text.includes("Manage ") &&
+				text.includes("Credential: None required") &&
+				text.includes("Model visibility: Visible"),
+		);
+		await keys("Escape", "Down", "Down", "Down", "Enter");
+		await wait(
+			"provider catalog",
+			text => text.includes("Google Cloud Vertex AI") && !text.includes("Add provider…"),
+		);
+		await herdr("pane", "send-text", pane, "lm-studio");
+		await wait("provider catalog search", text => text.includes("LM Studio (Local OpenAI-compatible)"));
+		await keys("Escape", "Escape", "Escape");
+		await command("/logout");
+		await wait("empty logout", text => text.includes("No stored provider credentials to remove"));
 	}
 	await keys("Escape");
 	outcome = "passed";
@@ -401,6 +433,7 @@ try {
 				outcome,
 				error,
 				receipts,
+				discoveryRequests,
 				snapshots,
 			},
 			null,

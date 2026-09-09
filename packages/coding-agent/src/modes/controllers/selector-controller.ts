@@ -88,6 +88,7 @@ import {
 	type LiteLLMLoginModelChoice,
 	type LoginModelChoice,
 } from "./login-model";
+import { buildProviderManagementOptions, getLoginOptions } from "./login-options";
 import { applyModelSelection } from "./model-selection";
 import {
 	defaultVertexLoginRuntime,
@@ -1705,15 +1706,26 @@ export class SelectorController {
 
 		if (mode === "logout") {
 			await this.#refreshOAuthProviderAuthState();
-			const oauthProviders = getOAuthProviders().filter(provider => !provider.loginOnly);
-			const loggedInProviders = oauthProviders.filter(provider =>
-				this.ctx.session.modelRegistry.authStorage.hasAuth(provider.id),
+			const loggedInProviders = getLoginOptions().filter(
+				provider => !provider.loginOnly && this.ctx.session.modelRegistry.authStorage.has(provider.id),
 			);
 			if (loggedInProviders.length === 0) {
-				this.ctx.showStatus("No OAuth providers logged in. Use /login first.");
+				this.ctx.showStatus("No stored provider credentials to remove. Use /login first.");
 				return;
 			}
 		}
+
+		const registry = this.ctx.session.modelRegistry;
+		const providerAllowlist = this.ctx.settings?.get?.("modelProviderAllowlist") ?? [];
+		const providers = buildProviderManagementOptions({
+			mode,
+			providerInventory: registry.getProviderInventory(),
+			configuredProviderIds: registry.getConfiguredProviderIds(),
+			providerAllowlist,
+			getAccessState: selectedProviderId => registry.getProviderAccessState(selectedProviderId),
+			getPickerMetadata: selectedProviderId => registry.getProviderPickerMetadata(selectedProviderId),
+			hasStoredCredential: selectedProviderId => registry.authStorage.has(selectedProviderId),
+		});
 
 		this.showSelector(
 			done => {
@@ -1736,14 +1748,15 @@ export class SelectorController {
 						this.ctx.ui.requestRender();
 					},
 					{
+						providers,
+						catalogProviders: getLoginOptions().map(option => ({ ...option, providerIds: [option.id] })),
 						getAccessState: provider => this.ctx.session.modelRegistry.getProviderAccessState?.(provider),
 						validateAccess: async selectedProviderId => {
 							await this.ctx.session.modelRegistry.refreshProvider(selectedProviderId, "online");
 							return this.ctx.session.modelRegistry.getProviderAccessState?.(selectedProviderId);
 						},
 						isExcluded: provider => {
-							const allowlist = this.ctx.settings?.get?.("modelProviderAllowlist") ?? [];
-							return allowlist.length > 0 && !allowlist.includes(provider);
+							return providerAllowlist.length > 0 && !providerAllowlist.includes(provider);
 						},
 						requestRender: () => {
 							this.ctx.ui.requestRender();

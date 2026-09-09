@@ -131,7 +131,9 @@ describe("createAgentSession deferred model pattern resolution", () => {
 		);
 
 		expect(session.model).toBeUndefined();
-		expect(modelFallbackMessage).toBe('Model "missing-provider/missing-model" not found');
+		expect(modelFallbackMessage).toBe(
+			'Model "missing-provider/missing-model" not found. Use --list-models to see available models.',
+		);
 	});
 
 	test("does not apply default role thinking override when modelPattern is explicit", async () => {
@@ -150,7 +152,7 @@ describe("createAgentSession deferred model pattern resolution", () => {
 	});
 
 	test("selects the settings default model without synchronously validating auth", async () => {
-		const defaultModel = getBundledModel("anthropic", "claude-sonnet-4-5");
+		const defaultModel = getBundledModel("anthropic", "claude-sonnet-5");
 		if (!defaultModel) {
 			throw new Error("Expected bundled anthropic default model");
 		}
