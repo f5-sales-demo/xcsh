@@ -483,7 +483,7 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
-	it("registers protocol-22 native provenance before cooperatively cancelling at a working safe point", async () => {
+	it("registers protocol-23 native provenance before cooperatively cancelling at a working safe point", async () => {
 		let exposeCancel = false;
 		let registeredTurnId: string | undefined;
 		const action = (state: "requested" | "safe_point" | "timed_out") => ({
@@ -495,7 +495,7 @@ describe("herdr-reporter extension", () => {
 			...(state === "safe_point" ? { acknowledged_at_unix_ms: 2, turn_id: registeredTurnId } : {}),
 		});
 		const herdr = await startFakeHerdr({
-			protocol: 22,
+			protocol: 23,
 			capabilities: { agent_turn_journal: true },
 			respond: request => {
 				if (request.method === "agent.turn.report") {
