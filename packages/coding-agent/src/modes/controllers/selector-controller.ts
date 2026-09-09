@@ -612,6 +612,8 @@ export class SelectorController {
 			discoveryError ??=
 				discovery.error ?? (discovery.models.length === 0 ? "No models returned" : "Connection unavailable");
 		}
+		const discoverySummary =
+			discovery?.status === "ok" && discovery.models.length === 0 ? "no models returned" : "discovery unavailable";
 		const result: ProviderConnectedResult = {
 			provider,
 			recommendation: discoveryError ? undefined : getLoginRecommendation(this.ctx.session.modelRegistry, provider),
@@ -640,7 +642,7 @@ export class SelectorController {
 		this.showSelector(done => {
 			const selector = new ConnectionChoiceComponent(
 				discoveryError ? "Connection saved" : "Provider connected",
-				`${getProviderDisplayName(provider)} · Credentials saved${discoveryError ? "; discovery unavailable" : ""}`,
+				`${getProviderDisplayName(provider)} · Credentials saved${discoveryError ? `; ${discoverySummary}` : ""}`,
 				actions,
 				index => {
 					done();
