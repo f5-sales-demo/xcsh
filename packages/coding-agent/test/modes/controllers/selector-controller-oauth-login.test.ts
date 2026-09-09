@@ -38,8 +38,18 @@ describe("SelectorController native login lifecycle", () => {
 			session: {
 				extensionRunner: { emit },
 				modelRegistry: {
-					authStorage: { hasAuth: () => false },
+					authStorage: { has: () => false, hasAuth: () => false },
 					getApiKeyForProvider: vi.fn(async () => undefined),
+					getProviderInventory: () => [],
+					getConfiguredProviderIds: () => new Set(),
+					getProviderAccessState: (provider: string) => ({
+						provider,
+						configured: false,
+						status: "unconfigured",
+						catalogFreshness: "none",
+						selectable: false,
+					}),
+					getProviderPickerMetadata: () => undefined,
 				},
 			},
 			ui: { requestRender: vi.fn(), setFocus: vi.fn() },

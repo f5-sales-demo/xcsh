@@ -168,7 +168,9 @@ export type CanonicalModelRegistry = Partial<
 	Pick<ModelRegistry, "resolveCanonicalModel" | "getCanonicalVariants" | "getCanonicalId">
 >;
 export type ModelLookupRegistry = Pick<ModelRegistry, "getAvailable"> & Partial<CanonicalModelRegistry>;
-type CliModelRegistry = Pick<ModelRegistry, "getAll"> & Partial<CanonicalModelRegistry>;
+type CliModelRegistry = Pick<ModelRegistry, "getAll"> &
+	Partial<Pick<ModelRegistry, "getAvailable" | "getProviderAccessState">> &
+	Partial<CanonicalModelRegistry>;
 type InitialModelRegistry = Pick<ModelRegistry, "getAvailable" | "find">;
 type RestorableModelRegistry = Pick<ModelRegistry, "getAvailable" | "find" | "getApiKey">;
 
@@ -898,6 +900,13 @@ export interface ResolveCliModelResult {
 	thinkingLevel?: ThinkingLevel;
 	warning: string | undefined;
 	error: string | undefined;
+	/** Unknown bare selectors may resolve after extensions register models. */
+	deferToExtensions?: boolean;
+}
+
+function formatAmbiguousCliModel(pattern: string, models: readonly Model<Api>[]): string {
+	const choices = [...new Set(models.map(formatModelString))].sort();
+	return `Model "${pattern}" is ambiguous. Use a qualified selector: ${choices.join(", ")}.`;
 }
 
 /**
@@ -915,8 +924,11 @@ export function resolveCliModel(options: {
 		return { model: undefined, selector: undefined, warning: undefined, error: undefined };
 	}
 
-	const availableModels = modelRegistry.getAll();
-	if (availableModels.length === 0) {
+	const allModels = modelRegistry.getAll();
+	const availableModels = (modelRegistry.getAvailable?.() ?? allModels).filter(
+		model => modelRegistry.getProviderAccessState?.(model.provider).selectable !== false,
+	);
+	if (allModels.length === 0) {
 		return {
 			model: undefined,
 			selector: undefined,
@@ -926,7 +938,7 @@ export function resolveCliModel(options: {
 	}
 
 	const providerMap = new Map<string, string>();
-	for (const model of availableModels) {
+	for (const model of allModels) {
 		providerMap.set(model.provider.toLowerCase(), model.provider);
 	}
 
@@ -943,6 +955,80 @@ export function resolveCliModel(options: {
 	const trimmedModel = cliModel.trim();
 	if (!provider) {
 		const lower = trimmedModel.toLowerCase();
+		const lastColonIndex = trimmedModel.lastIndexOf(":");
+		const thinkingSuffix =
+			lastColonIndex === -1 ? undefined : parseThinkingLevel(trimmedModel.slice(lastColonIndex + 1));
+		const barePattern = thinkingSuffix ? trimmedModel.slice(0, lastColonIndex) : trimmedModel;
+		if (!barePattern.includes("/")) {
+			const exactUsable = availableModels.filter(model => model.id.toLowerCase() === barePattern.toLowerCase());
+			const canonicalUsable =
+				modelRegistry
+					.getCanonicalVariants?.(barePattern, { availableOnly: true, candidates: availableModels })
+					.map(variant => variant.model) ?? [];
+			const usableMatches = [
+				...new Map([...exactUsable, ...canonicalUsable].map(model => [formatModelString(model), model])).values(),
+			];
+			if (usableMatches.length > 1) {
+				return {
+					model: undefined,
+					selector: undefined,
+					thinkingLevel: thinkingSuffix,
+					warning: undefined,
+					error: formatAmbiguousCliModel(barePattern, usableMatches),
+				};
+			}
+			if (usableMatches.length === 1) {
+				return {
+					model: usableMatches[0],
+					selector: formatModelString(usableMatches[0]),
+					thinkingLevel: thinkingSuffix,
+					warning: undefined,
+					error: undefined,
+				};
+			}
+			const knownMatches = allModels.filter(model => model.id.toLowerCase() === barePattern.toLowerCase());
+			if (knownMatches.length > 0) {
+				return {
+					model: undefined,
+					selector: undefined,
+					thinkingLevel: thinkingSuffix,
+					warning: undefined,
+					error: `Model "${barePattern}" is unavailable. Configure or sign in to one of: ${[
+						...new Set(knownMatches.map(formatModelString)),
+					]
+						.sort()
+						.join(", ")}.`,
+				};
+			}
+
+			const usableProviders = [...new Set(availableModels.map(model => model.provider))];
+			const fuzzyUsable = usableProviders.flatMap(providerId => {
+				const providerModels = availableModels.filter(model => model.provider === providerId);
+				const match = parseModelPattern(barePattern, providerModels, preferences, {
+					allowInvalidThinkingSelectorFallback: false,
+					modelRegistry,
+				}).model;
+				return match ? [match] : [];
+			});
+			if (fuzzyUsable.length > 1) {
+				return {
+					model: undefined,
+					selector: undefined,
+					thinkingLevel: thinkingSuffix,
+					warning: undefined,
+					error: formatAmbiguousCliModel(barePattern, fuzzyUsable),
+				};
+			}
+			if (fuzzyUsable.length === 1) {
+				return {
+					model: fuzzyUsable[0],
+					selector: formatModelString(fuzzyUsable[0]),
+					thinkingLevel: thinkingSuffix,
+					warning: undefined,
+					error: undefined,
+				};
+			}
+		}
 		// When input has provider/id format (e.g. "zai/glm-5"), prefer decomposed
 		// provider+id match over flat id match. Without this, a model with id
 		// "zai/glm-5" on provider "vercel-ai-gateway" wins over provider "zai"
@@ -955,7 +1041,10 @@ export function resolveCliModel(options: {
 			exact = resolveProviderModelReference(prefix, suffix, availableModels);
 		}
 		if (!exact && !trimmedModel.includes(":")) {
-			const canonicalMatch = modelRegistry.resolveCanonicalModel?.(trimmedModel, { availableOnly: false });
+			const canonicalMatch = modelRegistry.resolveCanonicalModel?.(trimmedModel, {
+				availableOnly: true,
+				candidates: availableModels,
+			});
 			if (canonicalMatch) {
 				return {
 					model: canonicalMatch,
@@ -1022,12 +1111,23 @@ export function resolveCliModel(options: {
 
 	if (!model) {
 		const display = provider ? `${provider}/${pattern}` : cliModel;
+		const knownProviderModel = provider
+			? parseModelPattern(
+					pattern,
+					allModels.filter(model => model.provider === provider),
+					preferences,
+					{ allowInvalidThinkingSelectorFallback: false, modelRegistry },
+				).model
+			: undefined;
 		return {
 			model: undefined,
 			selector: undefined,
 			thinkingLevel: undefined,
 			warning,
-			error: `Model "${display}" not found. Use --list-models to see available models.`,
+			error: knownProviderModel
+				? `Model "${display}" is unavailable. Configure or sign in to provider "${provider}".`
+				: `Model "${display}" not found. Use --list-models to see available models.`,
+			deferToExtensions: !provider && !display.includes("/"),
 		};
 	}
 

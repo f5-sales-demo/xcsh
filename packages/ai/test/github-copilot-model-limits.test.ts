@@ -61,6 +61,13 @@ async function discoverCopilotModels(
 }
 
 describe("github copilot model limits mapping", () => {
+	it("surfaces a 401 so provider management can request sign-in again", async () => {
+		global.fetch = vi.fn(async () => new Response("Unauthorized", { status: 401 })) as unknown as typeof fetch;
+		const options = githubCopilotModelManagerOptions({ apiKey: "revoked-copilot-token" });
+
+		await expect(options.fetchDynamicModels?.()).rejects.toThrow("github-copilot model discovery failed (HTTP 401)");
+	});
+
 	it("uses configured base URL for discovery", async () => {
 		const { fetchMock } = await discoverCopilotModels(
 			{ data: [] },

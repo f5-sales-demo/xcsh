@@ -446,6 +446,7 @@ export class ModelSelectorComponent extends Container {
 		}
 		for (const [index, provider] of group.providers.entries()) {
 			const state = this.#modelRegistry.getProviderDiscoveryState?.(provider);
+			const access = this.#modelRegistry.getProviderAccessState?.(provider);
 			const label = getProviderDisplayName(provider);
 			let message = "";
 			let color: ThemeColor = "muted";
@@ -455,8 +456,15 @@ export class ModelSelectorComponent extends Container {
 			} else if (state?.status === "unauthenticated" || group.discoveryStatus === "unauthenticated") {
 				message = `${label}: authentication required · Ctrl+L: login`;
 				color = "warning";
-			} else if (!state || state.status === "idle") message = `${label}: availability unverified · Ctrl+R: refresh`;
-			else if (state.status === "ok" && state.models.length === 0)
+			} else if (!state || state.status === "idle") {
+				if (access?.status === "connected") {
+					message = `${label}: ${access.credentialSource === "keyless" ? "Available" : "Connected"}`;
+				} else if (access?.status === "configured-unverified") {
+					message = `${label}: Configured`;
+				} else {
+					message = `${label}: availability unverified · Ctrl+R: refresh`;
+				}
+			} else if (state.status === "ok" && state.models.length === 0)
 				message = `${label}: empty catalog · Ctrl+R: refresh`;
 			rows[index + 1] = theme.fg(color, message);
 		}
@@ -937,6 +945,7 @@ export class ModelSelectorComponent extends Container {
 			if (--this.#pendingRefreshes === 0) this.#stopSpinner();
 			if (this.#refreshingProvider === activeGroup.id) this.#refreshingProvider = undefined;
 			this.#updateList();
+			this.#tui.requestRender();
 		}
 	}
 

@@ -28,9 +28,9 @@ describe("InteractiveMode plan review rendering", () => {
 		await Settings.init({ inMemory: true, cwd: tempDir.path() });
 		authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth.db"));
 		const modelRegistry = new ModelRegistry(authStorage);
-		const model = modelRegistry.find("anthropic", "claude-sonnet-4-5");
+		const model = modelRegistry.find("anthropic", "claude-sonnet-5");
 		if (!model) {
-			throw new Error("Expected claude-sonnet-4-5 to exist in registry");
+			throw new Error("Expected claude-sonnet-5 to exist in registry");
 		}
 
 		session = new AgentSession({

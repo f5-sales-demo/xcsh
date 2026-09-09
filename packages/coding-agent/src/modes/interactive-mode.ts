@@ -30,6 +30,7 @@ import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slas
 import { resolveLocalUrlToPath } from "../internal-urls";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
+import type { ModelResolutionSource } from "../session/active-model";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
 import type { SessionContext, SessionManager } from "../session/session-manager";
@@ -82,6 +83,13 @@ const EDITOR_MAX_HEIGHT_MIN = 6;
 const EDITOR_MAX_HEIGHT_MAX = 18;
 const EDITOR_RESERVED_ROWS = 12;
 const EDITOR_FALLBACK_ROWS = 24;
+
+export function shouldAutoLaunchProviderLogin(
+	needsLogin: boolean,
+	modelResolutionSource: ModelResolutionSource,
+): boolean {
+	return needsLogin && modelResolutionSource !== "launch-flag";
+}
 
 /** Options for creating an InteractiveMode instance (for future API use) */
 export interface InteractiveModeOptions {
@@ -358,7 +366,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.ui.setFocus(this.editor);
 
 		// Auto-launch login wizard when model provider is missing or unreachable
-		if (needsLogin) {
+		if (shouldAutoLaunchProviderLogin(needsLogin, this.session.modelResolutionSource)) {
 			queueMicrotask(() => void this.#selectorController.showFirstRunLogin());
 		}
 

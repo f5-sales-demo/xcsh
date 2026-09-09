@@ -1490,6 +1490,7 @@ export function githubCopilotModelManagerOptions(config?: GithubCopilotModelMana
 					provider: "github-copilot",
 					baseUrl,
 					apiKey,
+					throwOnUnauthorized: true,
 					headers: OPENCODE_HEADERS,
 					mapModel: (
 						entry: OpenAICompatibleModelRecord,

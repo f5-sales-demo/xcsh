@@ -446,7 +446,7 @@ async function buildSessionOptions(
 			process.stderr.write(`${chalk.yellow(`Warning: ${resolved.warning}`)}\n`);
 		}
 		if (resolved.error) {
-			if (!parsed.provider && !parsed.model.includes(":")) {
+			if (resolved.deferToExtensions) {
 				// Model not found in built-in registry — defer resolution to after extensions load
 				// (extensions may register additional providers/models via registerProvider)
 				options.modelPattern = parsed.model;

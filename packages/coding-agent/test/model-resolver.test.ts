@@ -602,6 +602,102 @@ describe("resolveCliModel", () => {
 		expect(result.model?.provider).toBe("zai");
 		expect(result.model?.id).toBe("glm-5");
 	});
+
+	test("resolves a bare selector only when exactly one matching provider is usable", () => {
+		const anthropic = mockModels[0];
+		const litellm = { ...anthropic, provider: "litellm" };
+		const registry = {
+			getAll: () => [anthropic, litellm],
+			getAvailable: () => [anthropic],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({ cliModel: anthropic.id, modelRegistry: registry });
+
+		expect(result.error).toBeUndefined();
+		expect(result.selector).toBe(`anthropic/${anthropic.id}`);
+	});
+
+	test("rejects an ambiguous bare selector with qualified choices", () => {
+		const anthropic = mockModels[0];
+		const litellm = { ...anthropic, provider: "litellm" };
+		const registry = {
+			getAll: () => [anthropic, litellm],
+			getAvailable: () => [anthropic, litellm],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({ cliModel: anthropic.id, modelRegistry: registry });
+
+		expect(result.model).toBeUndefined();
+		expect(result.error).toContain("is ambiguous");
+		expect(result.error).toContain(`anthropic/${anthropic.id}`);
+		expect(result.error).toContain(`litellm/${anthropic.id}`);
+		expect(result.deferToExtensions).toBeFalsy();
+	});
+
+	test("does not treat a stale cached implicit runtime as a usable bare-selector match", () => {
+		const anthropic = mockModels[0];
+		const staleLocal = { ...anthropic, provider: "lm-studio" };
+		const registry = {
+			getAll: () => [anthropic, staleLocal],
+			getAvailable: () => [anthropic, staleLocal],
+			getProviderAccessState: (provider: string) => ({
+				provider,
+				configured: provider === "anthropic",
+				status: provider === "anthropic" ? "configured-unverified" : "unconfigured",
+				catalogFreshness: provider === "anthropic" ? "none" : "stale",
+				selectable: provider === "anthropic",
+			}),
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({ cliModel: anthropic.id, modelRegistry: registry });
+
+		expect(result.error).toBeUndefined();
+		expect(result.selector).toBe(`anthropic/${anthropic.id}`);
+	});
+
+	test("rejects a fuzzy bare selector when more than one usable provider matches", () => {
+		const anthropic = { ...mockModels[0], id: "claude-sonnet-4-5" };
+		const litellm = { ...anthropic, provider: "litellm", id: "claude-sonnet-4-5-proxy" };
+		const registry = {
+			getAll: () => [anthropic, litellm],
+			getAvailable: () => [anthropic, litellm],
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({ cliModel: "sonnet-4", modelRegistry: registry });
+
+		expect(result.model).toBeUndefined();
+		expect(result.error).toBe(
+			'Model "sonnet-4" is ambiguous. Use a qualified selector: anthropic/claude-sonnet-4-5, litellm/claude-sonnet-4-5-proxy.',
+		);
+		expect(result.deferToExtensions).toBeFalsy();
+	});
+
+	test("rejects a fully qualified selector when that provider is unavailable", () => {
+		const registry = {
+			getAll: () => allModels,
+			getAvailable: () => allModels.filter(model => model.provider !== "anthropic"),
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({ cliModel: "anthropic/claude-sonnet-4-5", modelRegistry: registry });
+
+		expect(result.model).toBeUndefined();
+		expect(result.error).toBe(
+			'Model "anthropic/claude-sonnet-4-5" is unavailable. Configure or sign in to provider "anthropic".',
+		);
+		expect(result.deferToExtensions).toBeFalsy();
+	});
+
+	test("defers only an unknown bare selector for extension registration", () => {
+		const registry = {
+			getAll: () => allModels,
+			getAvailable: () => allModels,
+		} as unknown as Parameters<typeof resolveCliModel>[0]["modelRegistry"];
+
+		const result = resolveCliModel({ cliModel: "extension-model", modelRegistry: registry });
+
+		expect(result.model).toBeUndefined();
+		expect(result.deferToExtensions).toBe(true);
+	});
 });
 
 describe("parseModelString", () => {

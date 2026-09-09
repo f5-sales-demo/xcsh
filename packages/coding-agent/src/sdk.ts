@@ -36,8 +36,8 @@ import { ModelRegistry } from "./config/model-registry";
 import {
 	defaultModelPerProvider,
 	formatModelString,
-	parseModelPattern,
 	parseModelString,
+	resolveCliModel,
 	resolveModelRoleValue,
 } from "./config/model-resolver";
 import { loadPromptTemplates as loadPromptTemplatesInternal, type PromptTemplate } from "./config/prompt-templates";
@@ -1394,18 +1394,19 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		// Resolve deferred --model pattern now that extension models are registered.
 		if (!model && options.modelPattern) {
 			await logger.time("awaitExplicitModelDiscovery", () => modelRegistry.awaitBackgroundRefresh());
-			const availableModels = modelRegistry.getAll();
 			const matchPreferences = {
 				usageOrder: settings.getStorage()?.getModelUsageOrder(),
 			};
-			const { model: resolved } = parseModelPattern(options.modelPattern, availableModels, matchPreferences, {
+			const resolved = resolveCliModel({
+				cliModel: options.modelPattern,
 				modelRegistry,
+				preferences: matchPreferences,
 			});
-			if (resolved) {
-				model = resolved;
+			if (resolved.model) {
+				model = resolved.model;
 				modelFallbackMessage = undefined;
 			} else {
-				modelFallbackMessage = `Model "${options.modelPattern}" not found`;
+				modelFallbackMessage = resolved.error ?? `Model "${options.modelPattern}" not found`;
 			}
 		}
 

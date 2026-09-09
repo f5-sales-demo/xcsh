@@ -46,8 +46,8 @@ describe("InteractiveMode welcome banner status checks", () => {
 		// instant local credential check. (#1903)
 		authStorage.setRuntimeApiKey("anthropic", "sk-ant-test-key");
 		const modelRegistry = new ModelRegistry(authStorage);
-		const model = modelRegistry.find("anthropic", "claude-sonnet-4-5");
-		if (!model) throw new Error("Expected claude-sonnet-4-5 to exist in registry");
+		const model = modelRegistry.find("anthropic", "claude-sonnet-5");
+		if (!model) throw new Error("Expected claude-sonnet-5 to exist in registry");
 
 		session = new AgentSession({
 			agent: new Agent({

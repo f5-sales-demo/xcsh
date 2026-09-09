@@ -46,6 +46,7 @@ describe("authenticated provider model groups", () => {
 			metadata,
 			provider => ({
 				provider,
+				configured: true,
 				credentialSource: "configuration",
 				status: "connected",
 				catalogFreshness: "fresh",
@@ -163,6 +164,7 @@ function selectorHarness(
 	options: {
 		staleVertex?: boolean;
 		antigravity?: boolean;
+		staticAnthropic?: boolean;
 		refreshProvider?: () => Promise<void>;
 		providerAllowlist?: string[];
 		ubuntuProviders?: boolean;
@@ -224,6 +226,7 @@ function selectorHarness(
 		["vllm", state("vllm")],
 		["ollama", state("ollama")],
 	]);
+	if (options.staticAnthropic) states.delete("anthropic");
 	const refreshProvider = vi.fn(options.refreshProvider ?? (async () => undefined));
 	const registry = {
 		authStorage: { hasAuth: (provider: string) => provider !== "google-antigravity" || options.antigravity === true },
@@ -235,6 +238,7 @@ function selectorHarness(
 		getProviderDiscoveryState: (provider: string) => states.get(provider),
 		getProviderAccessState: (provider: string) => ({
 			provider,
+			configured: true,
 			credentialSource: provider === "ollama" || provider === "vllm" ? "keyless" : "stored-oauth",
 			status: provider === "google-vertex" && options.staleVertex ? "unreachable" : "connected",
 			catalogFreshness: provider === "google-vertex" && options.staleVertex ? "stale" : "fresh",
@@ -256,6 +260,19 @@ function selectorHarness(
 }
 
 describe("provider-tab model selector", () => {
+	it("labels a connected static provider without suggesting an ineffective refresh", async () => {
+		const { selector } = selectorHarness(undefined, {
+			ubuntuProviders: true,
+			providerAllowlist: ["anthropic"],
+			staticAnthropic: true,
+		});
+		await Bun.sleep(0);
+
+		const rendered = Bun.stripANSI(selector.render(180).join("\n"));
+		expect(rendered).toContain("Anthropic / Claude: Connected");
+		expect(rendered).not.toContain("availability unverified");
+	});
+
 	it("renders Claude tier labels, role badges, and canonical thinking choices", async () => {
 		const haiku = model("anthropic", "claude-haiku-4-5-20251001", {
 			name: "Claude Haiku 4.5",

@@ -26,6 +26,43 @@ Choose a reasoning level supported by that exact model and press Enter to confir
 
 A manual conversation choice remains in effect under automatic routing. Entering planning mode uses the Plan assignment; exiting restores the prior conversation model and reasoning. Explicit `--models` scopes still limit the picker.
 
+Open `/login` to see providers that are configured, credential-backed, allowlisted, active, or freshly detected. Optional local runtimes do not appear merely because xcsh attempted an automatic probe. Choose `Add provider…` to search the complete built-in catalog.
+
+Provider rows use human status labels. Press Right on a row to inspect its credential source, last verification, sanitized failure reason, model visibility, and any grouped routes. `/logout` lists only providers with stored credentials that xcsh can remove; environment and configuration credentials are not presented as removable.
+
+Provider grouping in `models.yml` is also used by the management view:
+
+```yaml
+providers:
+  litellm:
+    picker:
+      groupId: litellm
+      groupLabel: LiteLLM
+      sectionLabel: OpenAI
+    modelAllowlist:
+      - gpt-5.6-sol
+      - gpt-5.6-terra
+      - gpt-5.6-luna
+  anthropic:
+    picker:
+      groupId: litellm
+      groupLabel: LiteLLM
+      sectionLabel: Anthropic
+    modelAllowlist:
+      - claude-opus-5
+      - claude-sonnet-5
+      - claude-haiku-4-5
+```
+
+`modelProviderAllowlist` is a settings key that limits normal `/model` visibility. An empty list means no picker restriction; it does not make every built-in provider relevant in `/login`. Explicit provider-qualified command-line selection and direct `/login <provider>` remain available.
+
+```bash
+xcsh config set modelProviderAllowlist '["litellm", "anthropic"]'
+xcsh config set modelProviderOrder '["litellm", "anthropic", "google-vertex"]'
+```
+
+For command-line selection, qualify the provider whenever several usable providers expose the same model ID. A bare `--model` value succeeds only when one usable provider matches; otherwise xcsh prints the qualified choices and exits nonzero in noninteractive mode.
+
 ## Where does LiteLLM fit?
 
 LiteLLM is an optional provider proxy installed or checked with `xcsh setup litellm`. Its base uniform resource locator (URL) and credential belong in the runtime environment. Successful text Responses support does not imply Realtime or audio support; test the exact endpoint your workflow uses.

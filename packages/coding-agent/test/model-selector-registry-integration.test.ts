@@ -172,6 +172,13 @@ test("absent optional local probes do not become configured inventory or picker 
 	expect(registry.getProviderDiscoveryState("llama.cpp")?.error).toBe("controlled outage");
 	expect(registry.getProviderInventory()).not.toContain("llama.cpp");
 	expect(registry.getProviderInventory()).not.toContain("lm-studio");
+	expect(registry.getProviderAccessState("lm-studio")).toMatchObject({
+		configured: false,
+		credentialSource: undefined,
+		status: "unconfigured",
+		selectable: false,
+	});
+	expect(registry.getProviderAccessState("lm-studio").lastCheckedAt).toBeNumber();
 	response.fail = false;
 	await registry.refreshProvider("ollama");
 	const selector = new ModelSelectorComponent(
@@ -191,16 +198,21 @@ test("absent optional local probes do not become configured inventory or picker 
 	expect(text).not.toContain("Cached model list");
 });
 
-test("an auto-discovered local provider remains visible with a real cached outage", async () => {
+test("a stale implicit local cache does not keep an absent runtime relevant", async () => {
 	const { registry, response } = await harness();
 	await registry.refreshProvider("lm-studio");
 	expect(registry.getProviderInventory()).toContain("lm-studio");
 	response.fail = true;
 	await registry.refreshProvider("lm-studio");
-	expect(registry.getProviderInventory()).toContain("lm-studio");
+	expect(registry.getProviderInventory()).not.toContain("lm-studio");
 	expect(registry.getProviderDiscoveryState("lm-studio")).toMatchObject({
 		status: "cached",
 		error: "controlled outage",
+	});
+	expect(registry.getProviderAccessState("lm-studio")).toMatchObject({
+		configured: false,
+		status: "unconfigured",
+		selectable: false,
 	});
 });
 

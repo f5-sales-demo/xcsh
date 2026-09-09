@@ -1,10 +1,9 @@
-import type { OAuthProviderInfo } from "@f5-sales-demo/pi-ai";
 import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
 import type { ProviderAccessState } from "../../config/model-registry";
 import { theme } from "../../modes/theme/theme";
 import { matchesSelectCancel } from "../../modes/utils/keybinding-matchers";
 import type { AuthStorage } from "../../session/auth-storage";
-import { getLoginOptions } from "../controllers/login-options";
+import { getLoginOptions, type LoginOption } from "../controllers/login-options";
 import { DynamicBorder } from "./dynamic-border";
 /**
  * Component that renders an OAuth provider selector.
@@ -13,8 +12,12 @@ export class OAuthSelectorComponent extends Container {
 	static readonly MAX_VISIBLE_PROVIDERS = 10;
 
 	#listContainer: Container;
-	#allProviders: OAuthProviderInfo[] = [];
-	#filteredProviders: OAuthProviderInfo[] = [];
+	#allProviders: LoginOption[] = [];
+	#filteredProviders: LoginOption[] = [];
+	#managementProviders: LoginOption[] = [];
+	#catalogProviders: LoginOption[] = [];
+	#catalogMode = false;
+	#detailsProvider?: LoginOption;
 	#searchInput: Input;
 	#selectedIndex: number = 0;
 	#mode: "login" | "logout";
@@ -37,6 +40,8 @@ export class OAuthSelectorComponent extends Container {
 		onSelect: (providerId: string) => void,
 		onCancel: () => void,
 		options?: {
+			providers?: LoginOption[];
+			catalogProviders?: LoginOption[];
 			validateAuth?: (providerId: string) => Promise<boolean>;
 			getAccessState?: (providerId: string) => ProviderAccessState;
 			validateAccess?: (providerId: string) => Promise<ProviderAccessState>;
@@ -55,7 +60,7 @@ export class OAuthSelectorComponent extends Container {
 		this.#isExcluded = options?.isExcluded;
 		this.#requestRenderCallback = options?.requestRender;
 		// Load all OAuth providers
-		this.#loadProviders();
+		this.#loadProviders(options?.providers, options?.catalogProviders);
 		this.addChild(new DynamicBorder());
 		this.addChild(new Spacer(1));
 		// Add title
@@ -81,17 +86,24 @@ export class OAuthSelectorComponent extends Container {
 		this.#validationGeneration += 1;
 		this.#stopSpinner();
 	}
-	#loadProviders(): void {
-		this.#allProviders =
+	#loadProviders(providers?: LoginOption[], catalogProviders?: LoginOption[]): void {
+		const defaultProviders =
 			this.#mode === "login"
 				? getLoginOptions()
 				: getLoginOptions().filter(provider => !provider.loginOnly && provider.id !== "google-vertex");
+		this.#managementProviders = providers ?? defaultProviders;
+		this.#catalogProviders = catalogProviders ?? getLoginOptions();
+		this.#allProviders = this.#managementProviders;
 		// Keep the curated registry order stable except for explicit priorities.
 		this.#allProviders = this.#allProviders
 			.map((provider, index) => ({ provider, index }))
 			.sort((a, b) => (a.provider.loginOrder ?? 0) - (b.provider.loginOrder ?? 0) || a.index - b.index)
 			.map(({ provider }) => provider);
 		this.#filteredProviders = this.#allProviders;
+	}
+
+	#providerIds(provider: LoginOption): string[] {
+		return provider.providerIds ?? [provider.id];
 	}
 
 	#filterProviders(query: string): void {
@@ -113,14 +125,16 @@ export class OAuthSelectorComponent extends Container {
 
 		let pending = 0;
 		for (const provider of this.#allProviders) {
-			const access = this.#getAccessState?.(provider.id);
-			if (!this.#authStorage.hasAuth(provider.id) && access?.credentialSource !== "keyless") {
-				this.#authState.delete(provider.id);
-				continue;
+			for (const providerId of this.#providerIds(provider)) {
+				const access = this.#getAccessState?.(providerId);
+				if (!this.#authStorage.hasAuth(providerId) && access?.credentialSource !== "keyless") {
+					this.#authState.delete(providerId);
+					continue;
+				}
+				this.#authState.set(providerId, "checking");
+				pending += 1;
+				void this.#validateProvider(providerId, generation);
 			}
-			this.#authState.set(provider.id, "checking");
-			pending += 1;
-			void this.#validateProvider(provider.id, generation);
 		}
 
 		if (pending > 0) {
@@ -174,35 +188,110 @@ export class OAuthSelectorComponent extends Container {
 		}
 	}
 
-	#getStatusIndicator(providerId: string): string {
-		const excluded = this.#isExcluded?.(providerId) ? theme.fg("muted", " · excluded from picker") : "";
-		const state = this.#authState.get(providerId);
-		if (state === "checking") {
+	#getCombinedAccess(provider: LoginOption): ProviderAccessState | undefined {
+		const states = this.#providerIds(provider).flatMap(providerId => {
+			const access = this.#getAccessState?.(providerId);
+			return access ? [access] : [];
+		});
+		if (states.length === 0) return undefined;
+		const rank: Record<ProviderAccessState["status"], number> = {
+			checking: 6,
+			"reauth-required": 5,
+			unreachable: 4,
+			connected: 3,
+			"configured-unverified": 2,
+			unconfigured: 1,
+		};
+		return [...states].sort((a, b) => rank[b.status] - rank[a.status])[0];
+	}
+
+	#getStatusText(provider: LoginOption): string {
+		if (provider.action === "add-provider") return "";
+		const providerIds = this.#providerIds(provider);
+		const state = providerIds.map(providerId => this.#authState.get(providerId));
+		if (state.includes("checking")) {
 			const frameCount = theme.spinnerFrames.length;
 			const spinner = frameCount > 0 ? `${theme.spinnerFrames[this.#spinnerFrame % frameCount]} ` : "";
-			return theme.fg("warning", ` ${spinner}checking`) + excluded;
+			return `${spinner}Checking…`;
 		}
-		const access = this.#getAccessState?.(providerId);
-		if (state === "invalid" || access?.status === "reauth-required") {
-			return theme.fg("error", ` ${theme.status.error} re-authentication required`) + excluded;
+		const access = this.#getCombinedAccess(provider);
+		if (state.includes("invalid") || access?.status === "reauth-required") {
+			return access?.credentialSource === "stored-oauth" ? "Sign in again" : "Credentials need attention";
 		}
-		if (access?.status === "unreachable") {
-			return theme.fg("warning", ` ${theme.status.warning} unreachable`) + excluded;
+		if (access?.status === "unreachable") return "Can't connect";
+		if (access?.status === "connected") {
+			return access.credentialSource === "keyless" ? "Available" : "Connected";
 		}
-		if (access?.credentialSource === "keyless") {
-			return theme.fg("success", ` ${theme.status.success} keyless configured`) + excluded;
-		}
-		if (state === "valid") {
-			return theme.fg("success", ` ${theme.status.success} connected`) + excluded;
-		}
-		let label = "";
-		if (access?.status === "configured-unverified") label = theme.fg("warning", " credential detected");
-		else if (access?.status === "connected") label = theme.fg("success", ` ${theme.status.success} connected`);
-		else if (!access && this.#authStorage.hasAuth(providerId)) label = theme.fg("warning", " credential detected");
-		return label + excluded;
+		if (state.includes("valid")) return "Connected";
+		if (access?.status === "configured-unverified") return "Configured";
+		if (providerIds.some(providerId => this.#authStorage.hasAuth(providerId))) return "Configured";
+		return "Set up";
+	}
+
+	#getStatusIndicator(provider: LoginOption): string {
+		const text = this.#getStatusText(provider);
+		if (!text) return "";
+		const access = this.#getCombinedAccess(provider);
+		const color =
+			text === "Connected" || text === "Available"
+				? "success"
+				: text === "Sign in again" || text === "Credentials need attention"
+					? "error"
+					: text === "Set up"
+						? "muted"
+						: "warning";
+		const icon =
+			access?.status === "connected"
+				? `${theme.status.success} `
+				: access?.status === "unreachable" || access?.status === "reauth-required"
+					? `${theme.status.warning} `
+					: "";
+		return theme.fg(color, ` ${icon}${text}`);
 	}
 	#updateList(): void {
 		this.#listContainer.clear();
+		if (this.#detailsProvider) {
+			const access = this.#getCombinedAccess(this.#detailsProvider);
+			const providerIds = this.#providerIds(this.#detailsProvider);
+			const credentialLabels: Record<string, string> = {
+				"stored-oauth": "Stored OAuth",
+				"stored-api-key": "Stored API key",
+				environment: "Environment",
+				runtime: "Runtime",
+				configuration: "Configuration",
+				keyless: "None required",
+			};
+			this.#listContainer.addChild(new TruncatedText(theme.bold(`  Manage ${this.#detailsProvider.name}`), 0, 0));
+			this.#listContainer.addChild(
+				new TruncatedText(`  Status: ${this.#getStatusText(this.#detailsProvider)}`, 0, 0),
+			);
+			this.#listContainer.addChild(
+				new TruncatedText(`  Credential: ${credentialLabels[access?.credentialSource ?? ""] ?? "None"}`, 0, 0),
+			);
+			this.#listContainer.addChild(
+				new TruncatedText(
+					`  Last verification: ${access?.lastCheckedAt ? new Date(access.lastCheckedAt).toISOString() : "Never"}`,
+					0,
+					0,
+				),
+			);
+			this.#listContainer.addChild(
+				new TruncatedText(
+					`  Model visibility: ${providerIds.every(providerId => this.#isExcluded?.(providerId)) ? "Hidden" : "Visible"}`,
+					0,
+					0,
+				),
+			);
+			if (providerIds.length > 1) {
+				this.#listContainer.addChild(new TruncatedText(`  Routes: ${providerIds.join(", ")}`, 0, 0));
+			}
+			if (access?.failureReason) {
+				this.#listContainer.addChild(new TruncatedText(`  Reason: ${access.failureReason}`, 0, 0));
+			}
+			this.#listContainer.addChild(new Spacer(1));
+			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", "  Esc: back"), 0, 0));
+			return;
+		}
 		const maxVisible = OAuthSelectorComponent.MAX_VISIBLE_PROVIDERS;
 		const startIndex = Math.max(
 			0,
@@ -215,7 +304,7 @@ export class OAuthSelectorComponent extends Container {
 			if (!provider) continue;
 			const isSelected = i === this.#selectedIndex;
 			const isAvailable = provider.available;
-			const statusIndicator = this.#getStatusIndicator(provider.id);
+			const statusIndicator = this.#getStatusIndicator(provider);
 
 			let line = "";
 			if (isSelected) {
@@ -233,7 +322,14 @@ export class OAuthSelectorComponent extends Container {
 		}
 
 		// Show "no providers" if empty
-		if (this.#allProviders.length === 0) {
+		if (
+			this.#mode === "login" &&
+			!this.#catalogMode &&
+			this.#allProviders.length === 1 &&
+			this.#allProviders[0]?.action === "add-provider"
+		) {
+			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", "  No providers configured"), 0, 0));
+		} else if (this.#allProviders.length === 0) {
 			const message =
 				this.#mode === "login" ? "No OAuth providers available" : "No OAuth providers logged in. Use /login first.";
 			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", `  ${message}`), 0, 0));
@@ -269,10 +365,21 @@ export class OAuthSelectorComponent extends Container {
 		}
 		this.#listContainer.addChild(new Spacer(1));
 		this.#listContainer.addChild(
-			new TruncatedText(theme.fg("muted", "  Type to filter providers · Enter: select · Esc: clear/cancel"), 0, 0),
+			new TruncatedText(
+				theme.fg("muted", "  Type to filter providers · Enter: select · Right: details · Esc: clear/back"),
+				0,
+				0,
+			),
 		);
 	}
 	handleInput(keyData: string): void {
+		if (this.#detailsProvider) {
+			if (matchesSelectCancel(keyData) || matchesKey(keyData, "left")) {
+				this.#detailsProvider = undefined;
+				this.#updateList();
+			}
+			return;
+		}
 		// Up arrow
 		if (matchesKey(keyData, "up")) {
 			if (this.#filteredProviders.length > 0) {
@@ -317,11 +424,29 @@ export class OAuthSelectorComponent extends Container {
 			this.#selectedIndex = Math.max(0, this.#filteredProviders.length - 1);
 			this.#statusMessage = undefined;
 			this.#updateList();
+		} else if (matchesKey(keyData, "right")) {
+			const selectedProvider = this.#filteredProviders[this.#selectedIndex];
+			if (selectedProvider && selectedProvider.action !== "add-provider") {
+				this.#detailsProvider = selectedProvider;
+				this.#updateList();
+			}
 		}
 		// Enter
 		else if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
 			const selectedProvider = this.#filteredProviders[this.#selectedIndex];
-			if (selectedProvider?.available) {
+			if (selectedProvider?.action === "add-provider") {
+				this.stopValidation();
+				this.#catalogMode = true;
+				this.#allProviders = this.#catalogProviders;
+				this.#filteredProviders = this.#allProviders;
+				this.#selectedIndex = 0;
+				this.#searchInput.setValue("");
+				this.#updateList();
+				this.#startValidation();
+			} else if (selectedProvider?.action === "manage-only") {
+				this.#detailsProvider = selectedProvider;
+				this.#updateList();
+			} else if (selectedProvider?.available) {
 				this.#statusMessage = undefined;
 				this.stopValidation();
 				this.#onSelectCallback(selectedProvider.id);
@@ -335,6 +460,15 @@ export class OAuthSelectorComponent extends Container {
 			if (this.#searchInput.getValue()) {
 				this.#searchInput.setValue("");
 				this.#filterProviders("");
+				return;
+			}
+			if (this.#catalogMode) {
+				this.stopValidation();
+				this.#catalogMode = false;
+				this.#allProviders = this.#managementProviders;
+				this.#filteredProviders = this.#allProviders;
+				this.#selectedIndex = 0;
+				this.#updateList();
 				return;
 			}
 			this.stopValidation();
