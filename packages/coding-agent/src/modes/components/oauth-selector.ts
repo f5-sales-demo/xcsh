@@ -285,13 +285,16 @@ export class OAuthSelectorComponent extends Container {
 				: this.#catalogMode
 					? "Connect a provider"
 					: "Your providers";
-		const details = selected
-			? [
-					`${selected.id} · ${presentation?.access}`,
-					this.#getStatusText(selected),
-					selected.description ?? presentation?.description ?? "",
-				]
-			: [];
+		const details =
+			selected?.action === "add-provider"
+				? [selected.description ?? "Search the full provider catalog"]
+				: selected
+					? [
+							`${selected.id} · ${presentation?.access}`,
+							this.#getStatusText(selected),
+							selected.description ?? presentation?.description ?? "",
+						]
+					: [];
 		let body: string[] = [];
 		if (this.#detailsProvider) {
 			body = this.#managementActions().map((label, i) => selectorRow([label], [inner], i === this.#actionIndex));
