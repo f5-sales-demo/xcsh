@@ -21,7 +21,12 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 	const configPath = join(dir, "config.yml");
 	const config = "modelRoles:\n  default: litellm/gpt-5.6-terra:medium\n  smol: litellm/gpt-5.6-luna:low\n";
 	writeFileSync(configPath, config);
-	const unhook = hookFetch(async () => Response.json({ data: fixture.models.map(model => ({ id: model.id })) }));
+	let unreachable = false;
+	let empty = false;
+	const unhook = hookFetch(async () => {
+		if (unreachable) throw new Error("synthetic unavailable gateway");
+		return Response.json({ data: (empty ? [] : fixture.models).map(model => ({ id: model.id })) });
+	});
 	try {
 		const registry = new ModelRegistry(auth, join(dir, "models.yml"));
 		expect(registry.getConfiguredProviderIds().has("litellm")).toBe(false);
@@ -29,7 +34,7 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 		const setModel = vi.fn();
 		const showError = vi.fn();
 		const ctx = {
-			editor: {},
+			editor: { render: () => [] },
 			settings: fixture.settings,
 			scopedModels: [],
 			editorContainer: {
@@ -83,6 +88,28 @@ test("new LiteLLM connection loads its six model routes before browsing without 
 		expect(rendered).toContain("gpt-5.6");
 		active!.handleInput?.("\x1b");
 		await Bun.sleep(0);
+		expect(readFileSync(configPath, "utf8")).toBe(config);
+		expect(setModel).not.toHaveBeenCalled();
+		unreachable = true;
+		const reconnect = new SelectorController(ctx).showOAuthSelector("login", "litellm");
+		await submit("");
+		await submit("");
+		await reconnect;
+		const failed = Bun.stripANSI(active!.render(100).join("\n"));
+		expect(failed).toContain("Connection saved");
+		expect(failed).toContain("discovery unavailable");
+		expect(failed).toContain("Retry connection");
+		unreachable = false;
+		active!.handleInput?.("\r");
+		for (let i = 0; i < 100 && !Bun.stripANSI(active!.render(100).join("\n")).includes("Provider connected"); i++)
+			await Bun.sleep(10);
+		expect(Bun.stripANSI(active!.render(100).join("\n"))).toContain("Provider connected");
+		empty = true;
+		const reconnectEmpty = new SelectorController(ctx).showOAuthSelector("login", "litellm");
+		await submit("");
+		await submit("");
+		await reconnectEmpty;
+		expect(Bun.stripANSI(active!.render(100).join("\n"))).toContain("no models returned");
 		expect(readFileSync(configPath, "utf8")).toBe(config);
 		expect(setModel).not.toHaveBeenCalled();
 	} finally {

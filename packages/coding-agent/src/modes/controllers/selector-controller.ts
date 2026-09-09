@@ -607,12 +607,27 @@ export class SelectorController {
 		} catch (error) {
 			discoveryError = error instanceof Error ? error.message : String(error);
 		}
+		const discovery = this.ctx.session.modelRegistry.getProviderDiscoveryState?.(provider);
+		if (discovery && (discovery.status !== "ok" || discovery.stale || discovery.models.length === 0)) {
+			discoveryError ??=
+				discovery.error ?? (discovery.models.length === 0 ? "No models returned" : "Connection unavailable");
+		}
+		const discoverySummary =
+			discovery?.status === "ok" && discovery.models.length === 0 ? "no models returned" : "discovery unavailable";
 		const result: ProviderConnectedResult = {
 			provider,
 			recommendation: discoveryError ? undefined : getLoginRecommendation(this.ctx.session.modelRegistry, provider),
 			discoveryError,
 		};
 		const actions = [
+			...(discoveryError
+				? [
+						{
+							label: "Retry connection",
+							description: "Check this saved connection again without changing model settings.",
+						},
+					]
+				: []),
 			...(result.recommendation
 				? [
 						{
@@ -626,12 +641,16 @@ export class SelectorController {
 		];
 		this.showSelector(done => {
 			const selector = new ConnectionChoiceComponent(
-				"Provider connected",
-				`${getProviderDisplayName(provider)} · Credentials saved${discoveryError ? "; discovery unavailable" : ""}`,
+				discoveryError ? "Connection saved" : "Provider connected",
+				`${getProviderDisplayName(provider)} · Credentials saved${discoveryError ? `; ${discoverySummary}` : ""}`,
 				actions,
 				index => {
 					done();
 					const action = actions[index]?.label;
+					if (action === "Retry connection") {
+						void this.#showProviderConnected(provider);
+						return;
+					}
 					if (action === "Done") {
 						this.#returnFromProviderSetup?.();
 						return;
