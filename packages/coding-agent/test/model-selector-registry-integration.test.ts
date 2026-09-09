@@ -245,7 +245,8 @@ test("explicitly configured unavailable local runtimes remain visible but disabl
 	expect(text).toContain("LM Studio: controlled outage");
 	expect(text).toContain("Ctrl+R: retry");
 	expect(text).toContain("Cached model list");
-	expect(text).toContain("[lm-studio/test-model] unavailable");
+	expect(text).toContain("lm-studio/test-model");
+	expect(text).toContain("Unavailable");
 	selector.handleInput("\r");
 	expect(onSelect).not.toHaveBeenCalled();
 });

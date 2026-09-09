@@ -1,17 +1,27 @@
-import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
+import { Container, Input, matchesKey } from "@f5-sales-demo/pi-tui";
 import type { ProviderAccessState } from "../../config/model-registry";
 import { theme } from "../../modes/theme/theme";
 import { matchesSelectCancel } from "../../modes/utils/keybinding-matchers";
 import type { AuthStorage } from "../../session/auth-storage";
 import { getLoginOptions, type LoginOption } from "../controllers/login-options";
-import { DynamicBorder } from "./dynamic-border";
+import { providerPresentation } from "../controllers/provider-presentation";
+import {
+	matchesSelectorKey,
+	selectorCancelHint,
+	selectorFrame,
+	selectorNavigationHint,
+	selectorRow,
+} from "./selector-frame";
 /**
  * Component that renders an OAuth provider selector.
  */
 export class OAuthSelectorComponent extends Container {
 	static readonly MAX_VISIBLE_PROVIDERS = 10;
 
-	#listContainer: Container;
+	#rows: () => number = () => process.stdout.rows || 24;
+	#actionIndex = 0;
+	#onChooseModel?: (provider: string) => void;
+	#directCatalog = false;
 	#allProviders: LoginOption[] = [];
 	#filteredProviders: LoginOption[] = [];
 	#managementProviders: LoginOption[] = [];
@@ -26,6 +36,7 @@ export class OAuthSelectorComponent extends Container {
 	#onCancelCallback: () => void;
 	#statusMessage: string | undefined;
 	#validateAuthCallback?: (providerId: string) => Promise<boolean>;
+	#getDiscoveryState?: (provider: string) => { status: string; models: string[] } | undefined;
 	#getAccessState?: (providerId: string) => ProviderAccessState;
 	#validateAccess?: (providerId: string) => Promise<ProviderAccessState>;
 	#isExcluded?: (providerId: string) => boolean;
@@ -40,9 +51,13 @@ export class OAuthSelectorComponent extends Container {
 		onSelect: (providerId: string) => void,
 		onCancel: () => void,
 		options?: {
+			rows?: () => number;
+			initialCatalog?: boolean;
+			onChooseModel?: (provider: string) => void;
 			providers?: LoginOption[];
 			catalogProviders?: LoginOption[];
 			validateAuth?: (providerId: string) => Promise<boolean>;
+			getDiscoveryState?: (provider: string) => { status: string; models: string[] } | undefined;
 			getAccessState?: (providerId: string) => ProviderAccessState;
 			validateAccess?: (providerId: string) => Promise<ProviderAccessState>;
 			isExcluded?: (providerId: string) => boolean;
@@ -56,29 +71,31 @@ export class OAuthSelectorComponent extends Container {
 		this.#onCancelCallback = onCancel;
 		this.#validateAuthCallback = options?.validateAuth;
 		this.#getAccessState = options?.getAccessState;
+		this.#getDiscoveryState = options?.getDiscoveryState;
 		this.#validateAccess = options?.validateAccess;
 		this.#isExcluded = options?.isExcluded;
 		this.#requestRenderCallback = options?.requestRender;
 		// Load all OAuth providers
 		this.#loadProviders(options?.providers, options?.catalogProviders);
-		this.addChild(new DynamicBorder());
-		this.addChild(new Spacer(1));
-		// Add title
-		const title = mode === "login" ? "Select provider to login:" : "Select provider to logout:";
-		this.addChild(new TruncatedText(theme.bold(title)));
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("muted", "Type to filter providers:"), 0, 0));
+		if (mode === "login" && !options?.providers) {
+			this.#catalogMode = true;
+			this.#directCatalog = true;
+			this.#allProviders = this.#catalogProviders;
+			this.#filteredProviders = this.#allProviders;
+		}
 		this.#searchInput = new Input();
-		this.addChild(this.#searchInput);
-		this.addChild(new Spacer(1));
-		// Create list container
-		this.#listContainer = new Container();
-		this.addChild(this.#listContainer);
-		this.addChild(new Spacer(1));
-		// Add bottom border
-		this.addChild(new DynamicBorder());
-		// Initial render
-		this.#updateList();
+		this.#rows = options?.rows ?? this.#rows;
+		this.#onChooseModel = options?.onChooseModel;
+		if (
+			mode === "login" &&
+			(options?.initialCatalog || this.#allProviders.every(provider => provider.action === "add-provider"))
+		) {
+			this.#directCatalog = true;
+			this.#catalogMode = true;
+			this.#allProviders = this.#catalogProviders;
+			this.#filteredProviders = this.#allProviders;
+		}
+
 		this.#startValidation();
 	}
 
@@ -92,7 +109,12 @@ export class OAuthSelectorComponent extends Container {
 				? getLoginOptions()
 				: getLoginOptions().filter(provider => !provider.loginOnly && provider.id !== "google-vertex");
 		this.#managementProviders = providers ?? defaultProviders;
-		this.#catalogProviders = catalogProviders ?? getLoginOptions();
+		const categoryOrder = ["Subscriptions", "Cloud & API", "Local & proxies", "Other services"];
+		this.#catalogProviders = [...(catalogProviders ?? getLoginOptions())].sort(
+			(a, b) =>
+				categoryOrder.indexOf(providerPresentation(a.id).category) -
+				categoryOrder.indexOf(providerPresentation(b.id).category),
+		);
 		this.#allProviders = this.#managementProviders;
 		// Keep the curated registry order stable except for explicit priorities.
 		this.#allProviders = this.#allProviders
@@ -110,7 +132,9 @@ export class OAuthSelectorComponent extends Container {
 		const normalizedQuery = query.trim().toLowerCase();
 		this.#filteredProviders = normalizedQuery
 			? this.#allProviders.filter(provider =>
-					`${provider.name} ${provider.id}`.toLowerCase().includes(normalizedQuery),
+					`${provider.name} ${provider.id} ${provider.description ?? ""} ${providerPresentation(provider.id).access} ${providerPresentation(provider.id).description}`
+						.toLowerCase()
+						.includes(normalizedQuery),
 				)
 			: this.#allProviders;
 		this.#selectedIndex = 0;
@@ -216,172 +240,148 @@ export class OAuthSelectorComponent extends Container {
 		}
 		const access = this.#getCombinedAccess(provider);
 		if (state.includes("invalid") || access?.status === "reauth-required") {
-			return access?.credentialSource === "stored-oauth" ? "Sign in again" : "Credentials need attention";
+			return access?.credentialSource === "stored-oauth" ? "Sign-in required" : "Sign-in required";
 		}
-		if (access?.status === "unreachable") return "Can't connect";
+		if (access?.status === "unreachable") return "Unreachable";
+		if (
+			providerIds.every(id => {
+				const state = this.#getDiscoveryState?.(id);
+				return state?.status === "ok" && state.models.length === 0;
+			})
+		)
+			return "No models returned";
 		if (access?.status === "connected") {
-			return access.credentialSource === "keyless" ? "Available" : "Connected";
+			return access.credentialSource === "keyless" ? "Ready" : "Ready";
 		}
-		if (state.includes("valid")) return "Connected";
-		if (access?.status === "configured-unverified") return "Configured";
-		if (providerIds.some(providerId => this.#authStorage.hasAuth(providerId))) return "Configured";
+		if (state.includes("valid")) return "Ready";
+		if (access?.status === "configured-unverified") return "Credentials saved";
+		if (providerIds.some(providerId => this.#authStorage.hasAuth(providerId))) return "Credentials saved";
 		return "Set up";
 	}
 
-	#getStatusIndicator(provider: LoginOption): string {
-		const text = this.#getStatusText(provider);
-		if (!text) return "";
-		const access = this.#getCombinedAccess(provider);
-		const color =
-			text === "Connected" || text === "Available"
-				? "success"
-				: text === "Sign in again" || text === "Credentials need attention"
-					? "error"
-					: text === "Set up"
-						? "muted"
-						: "warning";
-		const icon =
-			access?.status === "connected"
-				? `${theme.status.success} `
-				: access?.status === "unreachable" || access?.status === "reauth-required"
-					? `${theme.status.warning} `
-					: "";
-		return theme.fg(color, ` ${icon}${text}`);
+	#managementActions(): string[] {
+		const provider = this.#detailsProvider;
+		if (!provider) return [];
+		return [
+			...(this.#onChooseModel ? ["Choose model"] : []),
+			...(provider.available && provider.action !== "manage-only"
+				? [providerPresentation(provider.id).access === "Subscription" ? "Sign in again" : "Edit connection"]
+				: []),
+		];
 	}
 	#updateList(): void {
-		this.#listContainer.clear();
+		this.invalidate();
+	}
+	override render(width: number): string[] {
+		const rows = this.#rows();
+		const inner = Math.min(100, width) - 6;
+		const wide = width >= 80;
+		const selected = this.#detailsProvider ?? this.#filteredProviders[this.#selectedIndex];
+		const presentation = selected ? providerPresentation(selected.id) : undefined;
+		const title = this.#detailsProvider
+			? `Manage ${selected?.name}`
+			: this.#mode === "logout"
+				? "Disconnect a provider"
+				: this.#catalogMode
+					? "Connect a provider"
+					: "Your providers";
+		const details =
+			selected?.action === "add-provider"
+				? [selected.description ?? "Search the full provider catalog"]
+				: selected
+					? [
+							`${selected.id} · ${presentation?.access}`,
+							this.#getStatusText(selected),
+							selected.description ?? presentation?.description ?? "",
+						]
+					: [];
+		let body: string[] = [];
 		if (this.#detailsProvider) {
+			body = this.#managementActions().map((label, i) => selectorRow([label], [inner], i === this.#actionIndex));
 			const access = this.#getCombinedAccess(this.#detailsProvider);
-			const providerIds = this.#providerIds(this.#detailsProvider);
-			const credentialLabels: Record<string, string> = {
-				"stored-oauth": "Stored OAuth",
-				"stored-api-key": "Stored API key",
-				environment: "Environment",
-				runtime: "Runtime",
-				configuration: "Configuration",
-				keyless: "None required",
-			};
-			this.#listContainer.addChild(new TruncatedText(theme.bold(`  Manage ${this.#detailsProvider.name}`), 0, 0));
-			this.#listContainer.addChild(
-				new TruncatedText(`  Status: ${this.#getStatusText(this.#detailsProvider)}`, 0, 0),
+			details.push(
+				access?.failureReason ??
+					(access?.lastCheckedAt
+						? "Connection checked; refresh from model selection with Ctrl+R."
+						: "Live availability has not been verified."),
 			);
-			this.#listContainer.addChild(
-				new TruncatedText(`  Credential: ${credentialLabels[access?.credentialSource ?? ""] ?? "None"}`, 0, 0),
-			);
-			this.#listContainer.addChild(
-				new TruncatedText(
-					`  Last verification: ${access?.lastCheckedAt ? new Date(access.lastCheckedAt).toISOString() : "Never"}`,
-					0,
-					0,
-				),
-			);
-			this.#listContainer.addChild(
-				new TruncatedText(
-					`  Model visibility: ${providerIds.every(providerId => this.#isExcluded?.(providerId)) ? "Hidden" : "Visible"}`,
-					0,
-					0,
-				),
-			);
-			if (providerIds.length > 1) {
-				this.#listContainer.addChild(new TruncatedText(`  Routes: ${providerIds.join(", ")}`, 0, 0));
-			}
-			if (access?.failureReason) {
-				this.#listContainer.addChild(new TruncatedText(`  Reason: ${access.failureReason}`, 0, 0));
-			}
-			this.#listContainer.addChild(new Spacer(1));
-			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", "  Esc: back"), 0, 0));
-			return;
-		}
-		const maxVisible = OAuthSelectorComponent.MAX_VISIBLE_PROVIDERS;
-		const startIndex = Math.max(
-			0,
-			Math.min(this.#selectedIndex - maxVisible + 1, this.#filteredProviders.length - maxVisible),
-		);
-		const endIndex = Math.min(startIndex + maxVisible, this.#filteredProviders.length);
-
-		for (let i = startIndex; i < endIndex; i++) {
-			const provider = this.#filteredProviders[i];
-			if (!provider) continue;
-			const isSelected = i === this.#selectedIndex;
-			const isAvailable = provider.available;
-			const statusIndicator = this.#getStatusIndicator(provider);
-
-			let line = "";
-			if (isSelected) {
-				const prefix = theme.fg("chromeAccent", `${theme.nav.cursor} `);
-				const text = isAvailable ? theme.fg("contentAccent", provider.name) : theme.fg("dim", provider.name);
-				line = prefix + text + statusIndicator;
-			} else {
-				const text = isAvailable ? `  ${provider.name}` : theme.fg("dim", `  ${provider.name}`);
-				line = text + statusIndicator;
-			}
-			this.#listContainer.addChild(new TruncatedText(line, 0, 0));
-			if (provider.description) {
-				this.#listContainer.addChild(new TruncatedText(theme.fg("muted", `     ${provider.description}`), 0, 0));
-			}
-		}
-
-		// Show "no providers" if empty
-		if (
-			this.#mode === "login" &&
-			!this.#catalogMode &&
-			this.#allProviders.length === 1 &&
-			this.#allProviders[0]?.action === "add-provider"
-		) {
-			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", "  No providers configured"), 0, 0));
-		} else if (this.#allProviders.length === 0) {
-			const message =
-				this.#mode === "login" ? "No OAuth providers available" : "No OAuth providers logged in. Use /login first.";
-			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", `  ${message}`), 0, 0));
-		} else if (this.#filteredProviders.length === 0) {
-			this.#listContainer.addChild(new TruncatedText(theme.fg("muted", "  No matching providers"), 0, 0));
-			this.#listContainer.addChild(
-				new TruncatedText(theme.fg("muted", `  0 matches (${this.#allProviders.length} total)`), 0, 0),
-			);
-		} else if (this.#searchInput.getValue()) {
-			const matchLabel = this.#filteredProviders.length === 1 ? "match" : "matches";
-			this.#listContainer.addChild(
-				new TruncatedText(
-					theme.fg(
-						"muted",
-						`  ${this.#filteredProviders.length} ${matchLabel} (${this.#allProviders.length} total)`,
-					),
-					0,
-					0,
-				),
-			);
+			if (this.#providerIds(this.#detailsProvider).every(id => this.#isExcluded?.(id)))
+				details.push("Models hidden by the configured provider filter.");
 		} else {
-			this.#listContainer.addChild(
-				new TruncatedText(
-					theme.fg("muted", `  Showing ${startIndex + 1}-${endIndex} of ${this.#filteredProviders.length}`),
-					0,
-					0,
-				),
+			const maxVisible = Math.max(
+				1,
+				Math.min(10, Math.floor((rows - 13) / (this.#catalogMode && !this.#searchInput.getValue() ? 2 : 1))),
 			);
-		}
-		if (this.#statusMessage) {
-			this.#listContainer.addChild(new Spacer(1));
-			this.#listContainer.addChild(new TruncatedText(theme.fg("warning", `  ${this.#statusMessage}`), 0, 0));
-		}
-		this.#listContainer.addChild(new Spacer(1));
-		this.#listContainer.addChild(
-			new TruncatedText(
-				theme.fg("muted", "  Type to filter providers · Enter: select · Right: details · Esc: clear/back"),
+			const start = Math.max(
 				0,
-				0,
-			),
+				Math.min(this.#selectedIndex - maxVisible + 1, this.#filteredProviders.length - maxVisible),
+			);
+			if (wide) body.push(selectorRow(["Provider", "Access", "Status"], [inner - 40, 16, 20]));
+			let category = "";
+			for (let i = start; i < Math.min(start + maxVisible, this.#filteredProviders.length); i++) {
+				const provider = this.#filteredProviders[i];
+				const meta = providerPresentation(provider.id);
+				if (this.#catalogMode && !this.#searchInput.getValue() && meta.category !== category) {
+					category = meta.category;
+					body.push(theme.fg("muted", category));
+				}
+				body.push(
+					selectorRow(
+						wide
+							? [
+									provider.name,
+									provider.action === "add-provider" ? "" : meta.access,
+									this.#getStatusText(provider),
+								]
+							: [provider.name],
+						wide ? [inner - 40, 16, 20] : [inner],
+						i === this.#selectedIndex,
+					),
+				);
+			}
+			if (!this.#filteredProviders.length) body.push("No matching providers");
+		}
+		if (this.#statusMessage) details.push(this.#statusMessage);
+		return selectorFrame(
+			width,
+			rows,
+			title,
+			this.#detailsProvider
+				? "Choose what to do with this connection."
+				: "Connect access, then choose a model when ready.",
+			this.#detailsProvider
+				? []
+				: [
+						`Search providers (${this.#filteredProviders.length ? this.#selectedIndex + 1 : 0}/${this.#filteredProviders.length})`,
+						...this.#searchInput.render(inner),
+					],
+			body,
+			details,
+			[selectorNavigationHint(), selectorCancelHint(this.#searchInput.getValue() ? "clear search" : "back")],
 		);
 	}
+
 	handleInput(keyData: string): void {
 		if (this.#detailsProvider) {
+			const actions = this.#managementActions();
 			if (matchesSelectCancel(keyData) || matchesKey(keyData, "left")) {
 				this.#detailsProvider = undefined;
-				this.#updateList();
+				this.#actionIndex = 0;
+			} else if (matchesSelectorKey(keyData, "up") || matchesSelectorKey(keyData, "down")) {
+				this.#actionIndex =
+					(this.#actionIndex + (matchesSelectorKey(keyData, "up") ? -1 : 1) + actions.length) % actions.length;
+			} else if (matchesSelectorKey(keyData, "confirm")) {
+				const provider = this.#detailsProvider;
+				this.stopValidation();
+				if (actions[this.#actionIndex] === "Choose model") this.#onChooseModel?.(provider.id);
+				else if (actions[this.#actionIndex]) this.#onSelectCallback(provider.id);
 			}
+			this.#updateList();
 			return;
 		}
+
 		// Up arrow
-		if (matchesKey(keyData, "up")) {
+		if (matchesSelectorKey(keyData, "up")) {
 			if (this.#filteredProviders.length > 0) {
 				this.#selectedIndex =
 					this.#selectedIndex === 0 ? this.#filteredProviders.length - 1 : this.#selectedIndex - 1;
@@ -390,7 +390,7 @@ export class OAuthSelectorComponent extends Container {
 			this.#updateList();
 		}
 		// Down arrow
-		else if (matchesKey(keyData, "down")) {
+		else if (matchesSelectorKey(keyData, "down")) {
 			if (this.#filteredProviders.length > 0) {
 				this.#selectedIndex =
 					this.#selectedIndex === this.#filteredProviders.length - 1 ? 0 : this.#selectedIndex + 1;
@@ -399,13 +399,13 @@ export class OAuthSelectorComponent extends Container {
 			this.#updateList();
 		}
 		// Page up
-		else if (matchesKey(keyData, "pageUp")) {
+		else if (matchesSelectorKey(keyData, "pageUp")) {
 			this.#selectedIndex = Math.max(0, this.#selectedIndex - OAuthSelectorComponent.MAX_VISIBLE_PROVIDERS);
 			this.#statusMessage = undefined;
 			this.#updateList();
 		}
 		// Page down
-		else if (matchesKey(keyData, "pageDown")) {
+		else if (matchesSelectorKey(keyData, "pageDown")) {
 			this.#selectedIndex = Math.min(
 				Math.max(0, this.#filteredProviders.length - 1),
 				this.#selectedIndex + OAuthSelectorComponent.MAX_VISIBLE_PROVIDERS,
@@ -432,7 +432,7 @@ export class OAuthSelectorComponent extends Container {
 			}
 		}
 		// Enter
-		else if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
+		else if (matchesSelectorKey(keyData, "confirm")) {
 			const selectedProvider = this.#filteredProviders[this.#selectedIndex];
 			if (selectedProvider?.action === "add-provider") {
 				this.stopValidation();
@@ -443,7 +443,15 @@ export class OAuthSelectorComponent extends Container {
 				this.#searchInput.setValue("");
 				this.#updateList();
 				this.#startValidation();
-			} else if (selectedProvider?.action === "manage-only") {
+			} else if (
+				selectedProvider &&
+				(selectedProvider.action === "manage-only" ||
+					(this.#mode === "login" &&
+						(!this.#catalogMode ||
+							this.#providerIds(selectedProvider).some(
+								id => this.#authStorage.hasAuth(id) || this.#getAccessState?.(id)?.configured,
+							))))
+			) {
 				this.#detailsProvider = selectedProvider;
 				this.#updateList();
 			} else if (selectedProvider?.available) {
@@ -462,7 +470,7 @@ export class OAuthSelectorComponent extends Container {
 				this.#filterProviders("");
 				return;
 			}
-			if (this.#catalogMode) {
+			if (this.#catalogMode && !this.#directCatalog) {
 				this.stopValidation();
 				this.#catalogMode = false;
 				this.#allProviders = this.#managementProviders;

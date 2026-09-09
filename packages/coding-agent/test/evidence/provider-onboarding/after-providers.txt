@@ -1,0 +1,24 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│ Connect a provider                                                                               │
+│ Connect access, then choose a model when ready.                                                  │
+│ Search providers (1/40)                                                                          │
+│ >                                                                                                │
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│   Provider                                                Access            Status               │
+│ Subscriptions                                                                                    │
+│ ❯ Anthropic                                               Subscription      Set up               │
+│   ChatGPT                                                 Subscription      Set up               │
+│   GitHub Copilot                                          Subscription      Set up               │
+│   Antigravity (Gemini 3, Claude, GPT-OSS)                 Subscription      Set up               │
+│   Google Antigravity Enterprise (Advanced OAuth)          Subscription      Set up               │
+│ Cloud & API                                                                                      │
+│   Google Vertex AI                                        Cloud account     Set up               │
+│   Alibaba Coding Plan                                     API / account     Set up               │
+│   OpenAI API                                              API / account     Set up               │
+│   GitLab Duo                                              API / account     Set up               │
+│ anthropic · Subscription                                                                         │
+│ Set up                                                                                           │
+│ Sign in with a provider subscription. Model availability depends on your account.                │
+│ Up/Down: navigate · Enter: select                                                                │
+│ Esc/Ctrl+C: back                                                                                 │
+────────────────────────────────────────────────────────────────────────────────────────────────────

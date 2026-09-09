@@ -15,7 +15,7 @@ import {
 } from "@f5-sales-demo/pi-ai";
 import type { Component, SlashCommand } from "@f5-sales-demo/pi-tui";
 import { Container, Loader, Markdown, ProcessTerminal, Spacer, Text, TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
-import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt, t } from "@f5-sales-demo/pi-utils";
+import { getProjectDir, hsvToRgb, isEnoent, logger, postmortem, prompt } from "@f5-sales-demo/pi-utils";
 import chalk from "chalk";
 import { KeybindingsManager } from "../config/keybindings";
 import { type Settings, settings } from "../config/settings";
@@ -349,7 +349,23 @@ export class InteractiveMode implements InteractiveModeContext {
 			this.ui.addChild(this.#welcomeComponent);
 			this.ui.addChild(new Spacer(1));
 			if (needsLogin) {
-				this.ui.addChild(new Text(theme.fg("warning", t("gate.noProvider")), 1, 0));
+				const guidance = new Text(
+					theme.fg("muted", "Checking providers… Connect access, then choose a model."),
+					1,
+					0,
+				);
+				this.ui.addChild(guidance);
+				void this.session.modelRegistry.awaitBackgroundRefresh().then(() => {
+					guidance.setText(
+						theme.fg(
+							"muted",
+							this.session.modelRegistry.getAvailable().length > 0
+								? "Models discovered. Use /model to choose one, or connect another provider."
+								: "Connect a provider with /login, then choose a model.",
+						),
+					);
+					this.ui.requestRender();
+				});
 				this.ui.addChild(new Spacer(1));
 			}
 		}

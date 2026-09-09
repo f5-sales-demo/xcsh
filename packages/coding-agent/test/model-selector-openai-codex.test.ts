@@ -86,16 +86,18 @@ describe("default ChatGPT subscription model picker presentation", () => {
 
 		const allModels = Bun.stripANSI(selector.render(180).join("\n"));
 		const normalizedModels = allModels.replace(/\s+/g, " ");
-		expect(allModels).toContain("ChatGPT Subscription");
-		expect(allModels).toContain("openai-codex/gpt-5.6-luna");
-		expect(allModels).toContain("openai-codex/gpt-5.6-terra");
-		expect(allModels).toContain("openai-codex/gpt-5.6-sol");
-		expect(allModels).toContain("GPT-6 Astra [openai-codex/gpt-6-astra]");
-		expect(normalizedModels).toContain("gpt-5.6-luna] SMOL (low)");
-		expect(normalizedModels).toContain("gpt-5.6-terra] DEFAULT (medium)");
-		expect(normalizedModels).toContain("gpt-5.6-sol] SLOW (high) PLAN (high)");
-		expect(normalizedModels).not.toMatch(/gpt-6-astra\]\s+(?:SMOL|DEFAULT|SLOW|PLAN)/);
-		expect(allModels).not.toContain("openai-codex/gpt-5.6]");
+		expect(allModels).toContain("ChatGPT");
+		expect(normalizedModels).toContain("GPT-5.6 Luna");
+		expect(normalizedModels).toContain("GPT-5.6 Terra");
+		expect(normalizedModels).toContain("GPT-5.6 Sol");
+		expect(normalizedModels).toContain("GPT-6 Astra");
+		for (const id of ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-astra"]) {
+			selector.getSearchInput().setValue("");
+			for (const character of id) selector.handleInput(character);
+			const detail = Bun.stripANSI(selector.render(120).join("\n"));
+			expect(detail).toContain(`openai-codex/${id}`);
+			if (id === "gpt-6-astra") expect(detail).toContain("Unassigned");
+		}
 		expect(allModels).not.toContain("ALL MODELS");
 	});
 

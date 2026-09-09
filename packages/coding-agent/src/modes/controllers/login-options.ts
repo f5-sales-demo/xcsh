@@ -1,5 +1,6 @@
 import { getOAuthProviders, type OAuthProviderInfo } from "@f5-sales-demo/pi-ai";
 import type { ProviderAccessState, ProviderPickerMetadata } from "../../config/model-registry";
+import { getProviderDisplayName } from "./provider-presentation";
 
 export type LoginOption = OAuthProviderInfo & {
 	kind: "local" | "oauth";
@@ -26,7 +27,7 @@ function catalogOption(providerId: string, catalog: readonly LoginOption[]): Log
 		catalog.find(option => option.id === providerId) ?? {
 			id: providerId,
 			kind: "oauth",
-			name: providerId,
+			name: getProviderDisplayName(providerId),
 			available: true,
 			action: "manage-only",
 		}
@@ -125,11 +126,15 @@ export function getLoginOptions(): LoginOption[] {
 		{
 			id: "google-vertex",
 			kind: "local",
-			name: "Google Cloud Vertex AI (Corporate)",
-			description: "Enterprise Vertex subscription · browser sign-in · Gemini 3.8 Flash HIGH",
+			name: "Google Vertex AI",
+			description: "Enterprise cloud access with browser sign-in",
 			available: true,
 			loginOrder: -100,
 		},
-		...getOAuthProviders().map(provider => ({ ...provider, kind: "oauth" as const })),
+		...getOAuthProviders().map(provider => ({
+			...provider,
+			name: getProviderDisplayName(provider.id),
+			kind: "oauth" as const,
+		})),
 	];
 }
