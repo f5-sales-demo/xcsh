@@ -342,6 +342,7 @@ function baseChildArgs(
 	options: NativeLifecycleDriverOptions,
 	fixture: { path: string; value: string },
 	sessionPath: string,
+	interactive = true,
 ): string[] {
 	const prompt = `Use the read tool to read ${fixture.path}. Return only its exact contents without the trailing newline.`;
 	return nativeLifecycleChildArgv({
@@ -350,7 +351,7 @@ function baseChildArgs(
 		prompt,
 		tools: "read",
 		resume: sessionPath,
-		interactive: true,
+		interactive,
 	});
 }
 
@@ -396,13 +397,18 @@ export async function runNativeLifecycleAcceptance(
 		childRuns.push(probeResult);
 		const session = await readCanonicalSession(options.sessionDir);
 
-		let args = baseChildArgs(options, fixture, session.path);
+		let args = baseChildArgs(options, fixture, session.path, options.scenario !== "local-operation-failure");
 		if (
 			options.scenario === "await-continue" ||
 			options.scenario === "cancel" ||
 			options.scenario === "managed-cancel"
 		) {
-			args = [...args, NATIVE_LIFECYCLE_CONTROL_FLAG, "await-user"];
+			args = [...args, NATIVE_LIFECYCLE_CONTROL_FLAG, "await_user_v1"];
+			control.producerControl = "await_user_v1";
+		}
+		if (options.scenario === "local-operation-failure") {
+			args = [...args, NATIVE_LIFECYCLE_CONTROL_FLAG, "local_operation_failure_v1"];
+			control.producerControl = "local_operation_failure_v1";
 		}
 		if (options.scenario === "failure") args = [...args, "--api-key", "native-lifecycle-invalid-credential"];
 		active = startChild(args, path.dirname(fixture.path), environment, timeoutMs);
@@ -437,7 +443,7 @@ export async function runNativeLifecycleAcceptance(
 		const terminalAttempt = await withTimeout(transport.waitFor(terminal), timeoutMs, "terminal turn report");
 		control.terminalOrdinal = terminalAttempt.ordinal;
 		const expectedTerminal =
-			options.scenario === "failure"
+			options.scenario === "failure" || options.scenario === "local-operation-failure"
 				? "failed"
 				: options.scenario === "cancel" ||
 						options.scenario === "managed-cancel" ||

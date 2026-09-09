@@ -35,7 +35,7 @@ Protocol 22 adds producer-native controls. Herdr injects a one-time `HERDR_NATIV
 Herdr does not authorize actions until the first `starting` report has been durably journaled and bound to the owned PTY, pane, session, generation, and turn.
 
 The producer wire shapes align with [Herdr PR #49](https://github.com/f5-sales-demo/herdr/pull/49) at cancellation-settlement commit `2c838cf545ed06439b4988cedb3e044f1d436264`, starting-replay recovery commit `edd5611cfd7685c0f069f244ceee0ac6c0a0678e`, and native-argv alignment commit `3397302960593a552fb37ceb71053cf99f2619a3`.
-Those commits are an integration contract under independent review, not released-backend evidence.
+That merged source is a comparison contract, not released-backend or installed acceptance evidence.
 
 After that registration, XCSH polls `agent.turn.action.get` with the same immutable provenance. A `cancel` action dismisses an active managed UI prompt and calls the real `AgentSession` abort path. XCSH persists the requested action and local safe point before sending the exact `agent.turn.action.ack`; it emits `cancelled` only after Herdr confirms that safe point.
 A lost ACK response is retried with the same action ID and revision, including after reporter restart. A backend `timed_out` action never triggers a late abort. PTY exit alone is not semantic cancellation.
@@ -44,7 +44,7 @@ Session shutdown releases pane authority. It does not convert an unfinished turn
 
 ### Producer-native acceptance driver
 
-`xcsh lifecycle --json` prints the version 2 machine-readable producer contract. To execute a source or installed
+`xcsh lifecycle --json` prints the version 3 machine-readable producer contract. To execute a source or installed
 producer check, supply a fresh absolute session directory, a normally configured model, and one scenario:
 
 ```bash
@@ -54,16 +54,34 @@ xcsh lifecycle --json \
   --session-dir /absolute/fresh/xcsh-lifecycle-session
 ```
 
-Supported scenarios are `success`, `failure`, `await-continue`, `cancel`, `managed-cancel`, `managed-working-cancel`, and `reply-loss-replay`. The driver first
+Supported scenarios are `success`, `failure`, `await-continue`, `cancel`, `managed-cancel`, `managed-working-cancel`, `local-operation-failure`, and `reply-loss-replay`. The driver first
 uses the prompt-free JSON session contract to persist one canonical 16-character lowercase hexadecimal session
 header, then reopens that exact path in an ordinary interactive XCSH child. It generates a random mode-0600 fixture
-for successful reads. `await-continue` pauses in the real `ExtensionUiController` input surface before the configured
+for successful reads. `await-continue` selects the explicit `await_user_v1` producer control and pauses in the real
+`ExtensionUIController` input surface before the configured
 model runs; `cancel` sends SIGINT through `PtySession.interrupt()` and requires XCSH's native `cancelled` transition.
 `managed-cancel` uses a local protocol-22 control fixture to request the action and requires the executable child to
 acknowledge its safe point before its native `cancelled` report. That fixture validates the producer adapter only; it
 is not evidence for Herdr's durable action journal, manager generation replacement, or consumer deduplication.
 `managed-working-cancel` requests the same cooperative action after the real child reports `working`, without opening
 the acceptance prompt, and verifies cancellation through the active `AgentSession` path.
+`local-operation-failure` selects `local_operation_failure_v1` in a noninteractive native child. The producer creates
+a private directory under the child cwd, performs a real read of a guaranteed-missing path inside it, cleans up the
+owned directory, and propagates the resulting ENOENT through normal `AgentSession` failed settlement. It does not use
+an invalid credential, an offline model, or a fabricated lifecycle frame.
+
+The producer accepts these exact explicit argv mappings; no control is active when the flag is omitted:
+
+| Typed lifecycle mode | Producer argv | Constraint |
+| --- | --- | --- |
+| `managed_turn_v1` | no additional argv | Existing protocol-22 v3 behavior. |
+| `await_user_v1` | `--native-lifecycle-control await_user_v1` | `interactive: true`. |
+| `local_operation_failure_v1` | `--native-lifecycle-control local_operation_failure_v1` | `interactive: false`. |
+
+The current Herdr protocol-22 schema exposes only `managed_turn_v1`; the other two rows define the producer side of a
+future typed schema extension, not permission for a caller to supply arbitrary argv. XCSH does not invent action
+methods for response loss or restart. Real Herdr-bound retry and restart controls must use a committed authenticated
+backend schema and preserve the same session, generation, pane, turn, report revision, and request-only capability.
 
 The reply-loss scenario owns a temporary local protocol-20 socket that acknowledges ordinary reporter traffic but
 drops exactly one `agent.turn.report` reply. XCSH creates and persists the semantic event before transport, runs the
@@ -90,6 +108,6 @@ The verified contract is:
 | Reconnect/order | Serialized queue and persisted event revision | Exact duplicates are idempotent; stale/conflicting revisions fail; terminal state is immutable. |
 | Application exit | `session_shutdown` | Active turn becomes `interrupted`, then pane authority is released; never success. |
 
-The protocol-22 producer integration is tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791); its lifecycle foundation is tracked by [issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The complete cross-project work packages and acceptance gates are in [Herdr native signaling gap-closing plan](../architecture-contribution/herdr-gap-closing-plan).
+The protocol-22 producer integration is tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791), and the versioned managed producer modes by [issue #3794](https://github.com/f5-sales-demo/xcsh/issues/3794); its lifecycle foundation is tracked by [issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The complete cross-project work packages and acceptance gates are in [Herdr native signaling gap-closing plan](../architecture-contribution/herdr-gap-closing-plan).
 
 Herdr lifecycle reconciliation is tracked by issue #5 in the F5 Herdr fork. Current source already recognizes the exact `("herdr:xcsh", "xcsh")` resume pair; deployed build provenance and live resume/fork acceptance remain required before feature acceptance.

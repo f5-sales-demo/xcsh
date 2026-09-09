@@ -3,6 +3,8 @@ import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
 import nativeLifecycleControl, {
 	NATIVE_LIFECYCLE_CONTINUATION_TITLE,
 	NATIVE_LIFECYCLE_CONTROL_FLAG,
+	NATIVE_LIFECYCLE_CONTROL_VALUES,
+	NativeLifecycleLocalOperationError,
 	requestNativeLifecycleCancellation,
 } from "../src/extensibility/extensions/bundled/native-lifecycle-control";
 import { nativeLifecycleChildArgv, nativeLifecycleContract } from "../src/lifecycle/native-acceptance";
@@ -42,7 +44,7 @@ describe("native lifecycle acceptance contract", () => {
 
 	it("requires exact path resume and documents real process controls", () => {
 		const contract = nativeLifecycleContract();
-		expect(contract.version).toBe(2);
+		expect(contract.version).toBe(3);
 		expect(contract.session_id).toBe("^[0-9a-f]{16}$");
 		expect(contract.session_dir).toContain("absolute directory");
 		expect(contract.session_header_sha256).toContain("terminating LF byte");
@@ -52,9 +54,24 @@ describe("native lifecycle acceptance contract", () => {
 			cancel: "PtySession.interrupt() sends SIGINT to the native child process group",
 			managed_cancel:
 				"protocol 22 agent.turn.action.get/ack cooperatively aborts the active ExtensionUIController and AgentSession",
-			await_user: "--native-lifecycle-control await-user uses the interactive ExtensionUiController",
+			await_user_v1: "--native-lifecycle-control await_user_v1 uses the ordinary interactive ExtensionUIController",
+			local_operation_failure_v1:
+				"--native-lifecycle-control local_operation_failure_v1 performs an owned missing-file read and propagates its native ENOENT failure",
 			continuation: "write the continuation and Enter to the same native PTY",
 			replay: "restart --resume <exact-session-path> with the same authenticated binding",
+		});
+		expect(contract.native_launch_mapping).toEqual({
+			managed_turn_v1: { argv: [], backend_contract: "protocol-22 v3 current" },
+			await_user_v1: {
+				argv: ["--native-lifecycle-control", "await_user_v1"],
+				requires: { interactive: true },
+				backend_contract: "typed lifecycle_mode extension required",
+			},
+			local_operation_failure_v1: {
+				argv: ["--native-lifecycle-control", "local_operation_failure_v1"],
+				requires: { interactive: false },
+				backend_contract: "typed lifecycle_mode extension required",
+			},
 		});
 		expect(contract.scenarios).toEqual(NATIVE_LIFECYCLE_SCENARIOS);
 		expect(contract.reporter).toEqual({
@@ -84,6 +101,14 @@ describe("native lifecycle acceptance contract", () => {
 			interactive: true,
 		});
 		expect(resumed.slice(-4)).toEqual(["--tools", "read", "--resume", "/tmp/sessions/exact.jsonl"]);
+		const nonInteractiveResume = nativeLifecycleChildArgv({
+			model: "gpt-5.6-luna",
+			sessionDir: "/tmp/sessions",
+			tools: "read",
+			prompt: "continue",
+			resume: "/tmp/sessions/exact.jsonl",
+		});
+		expect(nonInteractiveResume.slice(-4)).toEqual(["--resume", "/tmp/sessions/exact.jsonl", "--print", "continue"]);
 	});
 
 	it("reexecutes the source CLI under Bun and the compiled binary directly", () => {
@@ -133,7 +158,7 @@ describe("native lifecycle control", () => {
 	});
 
 	it("uses the extension UI and returns the continuation to the native turn", async () => {
-		const { handlers } = loadControl("await-user");
+		const { handlers } = loadControl("await_user_v1");
 		const abort = vi.fn();
 		const input = vi.fn(async () => "approved");
 		const result = await handlers.get("before_agent_start")?.({}, {
@@ -157,7 +182,7 @@ describe("native lifecycle control", () => {
 	});
 
 	it("fails closed when the native prompt is dismissed", async () => {
-		const { handlers } = loadControl("await-user");
+		const { handlers } = loadControl("await_user_v1");
 		const abort = vi.fn();
 		await handlers.get("before_agent_start")?.({}, {
 			hasUI: true,
@@ -168,7 +193,7 @@ describe("native lifecycle control", () => {
 	});
 
 	it("exposes the active ExtensionUIController abort signal as a cooperative safe point", async () => {
-		const { handlers } = loadControl("await-user");
+		const { handlers } = loadControl("await_user_v1");
 		const abort = vi.fn();
 		let promptSignal: AbortSignal | undefined;
 		const pending = handlers.get("before_agent_start")?.({}, {
@@ -189,5 +214,30 @@ describe("native lifecycle control", () => {
 		expect(promptSignal?.aborted).toBe(true);
 		expect(requestNativeLifecycleCancellation("late action")).toBe(false);
 		expect(abort).toHaveBeenCalledTimes(1);
+	});
+
+	it("performs a real owned local operation and exposes its native failure", async () => {
+		const { handlers } = loadControl("local_operation_failure_v1");
+		const input = vi.fn();
+		const operation = handlers.get("before_agent_start")?.({}, {
+			hasUI: true,
+			cwd: process.cwd(),
+			ui: { input },
+		} as unknown as ExtensionContext);
+		await expect(operation).rejects.toBeInstanceOf(NativeLifecycleLocalOperationError);
+		await expect(operation).rejects.toMatchObject({ code: "ENOENT" });
+		expect(input).not.toHaveBeenCalled();
+	});
+
+	it("publishes only versioned producer controls and keeps the legacy await spelling compatible", async () => {
+		expect(NATIVE_LIFECYCLE_CONTROL_VALUES).toEqual(["await_user_v1", "local_operation_failure_v1"]);
+		const { handlers } = loadControl("await-user");
+		const input = vi.fn(async () => "legacy");
+		await handlers.get("before_agent_start")?.({}, {
+			hasUI: true,
+			abort: vi.fn(),
+			ui: { input },
+		} as unknown as ExtensionContext);
+		expect(input).toHaveBeenCalledTimes(1);
 	});
 });

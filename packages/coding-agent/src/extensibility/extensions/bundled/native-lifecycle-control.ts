@@ -1,10 +1,27 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { postmortem } from "@f5-sales-demo/pi-utils";
 import type { ExtensionAPI, ExtensionContext } from "@f5-sales-demo/xcsh";
 
 export const NATIVE_LIFECYCLE_CONTROL_FLAG = "--native-lifecycle-control";
 export const NATIVE_LIFECYCLE_CONTINUATION_TITLE = "Native lifecycle continuation";
+export const NATIVE_LIFECYCLE_CONTROL_VALUES = ["await_user_v1", "local_operation_failure_v1"] as const;
 
-type NativeLifecycleControl = "await-user";
+type NativeLifecycleControl = (typeof NATIVE_LIFECYCLE_CONTROL_VALUES)[number];
+
+/**
+ * Fatal only for the explicit local-operation acceptance control. Extension
+ * errors are normally isolated; the runner recognizes this type so the actual
+ * failed operation settles the ordinary AgentSession turn as failed.
+ */
+export class NativeLifecycleLocalOperationError extends Error {
+	readonly code = "ENOENT";
+
+	constructor(cause: Error) {
+		super("Native lifecycle owned local read failed with ENOENT", { cause });
+		this.name = "NativeLifecycleLocalOperationError";
+	}
+}
 
 let activeManagedCancellation: ((reason: string) => void) | undefined;
 
@@ -22,7 +39,23 @@ export function requestNativeLifecycleCancellation(reason: string): boolean {
 
 function configuredControl(pi: ExtensionAPI): NativeLifecycleControl | undefined {
 	const value = pi.getFlag(NATIVE_LIFECYCLE_CONTROL_FLAG);
-	return value === "await-user" ? value : undefined;
+	// Preserve the version-2 spelling for already published acceptance callers.
+	if (value === "await-user") return "await_user_v1";
+	return NATIVE_LIFECYCLE_CONTROL_VALUES.find(control => control === value);
+}
+
+async function failOwnedLocalOperation(cwd: string): Promise<never> {
+	const ownedDirectory = await fs.mkdtemp(path.join(cwd, ".xcsh-native-lifecycle-operation-"));
+	await fs.chmod(ownedDirectory, 0o700);
+	try {
+		await fs.readFile(path.join(ownedDirectory, "intentionally-missing"));
+		throw new Error("Native lifecycle missing-file read unexpectedly succeeded");
+	} catch (error) {
+		if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
+		throw new NativeLifecycleLocalOperationError(error);
+	} finally {
+		await fs.rm(ownedDirectory, { recursive: true, force: true });
+	}
 }
 
 /**
@@ -37,7 +70,7 @@ function configuredControl(pi: ExtensionAPI): NativeLifecycleControl | undefined
 export default function nativeLifecycleControl(pi: ExtensionAPI): void {
 	pi.registerFlag(NATIVE_LIFECYCLE_CONTROL_FLAG, {
 		type: "string",
-		description: "Acceptance-only native lifecycle control (supported: await-user)",
+		description: `Acceptance-only native lifecycle control (supported: ${NATIVE_LIFECYCLE_CONTROL_VALUES.join(", ")})`,
 	});
 
 	let activeController: AbortController | undefined;
@@ -50,10 +83,12 @@ export default function nativeLifecycleControl(pi: ExtensionAPI): void {
 	};
 
 	pi.on("before_agent_start", async (_event, ctx) => {
-		if (configuredControl(pi) !== "await-user") return;
+		const control = configuredControl(pi);
+		if (!control) return;
+		if (control === "local_operation_failure_v1") return failOwnedLocalOperation(ctx.cwd);
 		if (!ctx.hasUI) {
 			ctx.abort();
-			throw new Error("--native-lifecycle-control await-user requires interactive mode");
+			throw new Error("--native-lifecycle-control await_user_v1 requires interactive mode");
 		}
 
 		const controller = new AbortController();
