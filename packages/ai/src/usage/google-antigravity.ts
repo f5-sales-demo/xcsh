@@ -108,7 +108,11 @@ async function resolveAccessToken(params: UsageFetchParams, ctx: UsageFetchConte
 	}
 	if (!credential.refreshToken || !credential.projectId) return undefined;
 	try {
-		const refreshed = await refreshAntigravityToken(credential.refreshToken, credential.projectId);
+		const refreshed = await refreshAntigravityToken(
+			credential.refreshToken,
+			credential.projectId,
+			params.signal ?? new AbortController().signal,
+		);
 		return refreshed.access;
 	} catch (error) {
 		ctx.logger?.warn("Antigravity usage token refresh failed", { error: String(error) });

@@ -13,6 +13,14 @@
 
 ### Fixed
 
+- Coordinated stored OAuth refreshes across processes with renewable SQLite leases, canonical
+  re-reads, and fenced writes. This prevents stale refresh attempts from overwriting rotated tokens
+  or disabling a peer's winner. Adapted from the upstream Pi
+  [lease and compare-and-swap design](https://github.com/can1357/oh-my-pi/commit/591f1c5765fa42cfcd68e020f875dd56b93b8963),
+  including its later renewable-lease and fenced-write hardening, prompted by
+  [anthropics/claude-code#24317](https://github.com/anthropics/claude-code/issues/24317) and
+  [#54443](https://github.com/anthropics/claude-code/issues/54443)
+  ([#3796](https://github.com/f5-sales-demo/xcsh/issues/3796)).
 - Removed output-only lifecycle statuses before replaying persisted OpenAI Responses items,
   including remote compaction and compaction summaries. Semantically ported from
   [can1357/oh-my-pi#7743](https://github.com/can1357/oh-my-pi/pull/7743) and

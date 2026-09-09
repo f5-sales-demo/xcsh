@@ -95,7 +95,7 @@ export async function loginCursor(
 	};
 }
 
-export async function refreshCursorToken(apiKeyOrRefreshToken: string): Promise<OAuthCredentials> {
+export async function refreshCursorToken(apiKeyOrRefreshToken: string, signal: AbortSignal): Promise<OAuthCredentials> {
 	const response = await fetch(CURSOR_REFRESH_URL, {
 		method: "POST",
 		headers: {
@@ -103,6 +103,7 @@ export async function refreshCursorToken(apiKeyOrRefreshToken: string): Promise<
 			"Content-Type": "application/json",
 		},
 		body: "{}",
+		signal,
 	});
 
 	if (!response.ok) {

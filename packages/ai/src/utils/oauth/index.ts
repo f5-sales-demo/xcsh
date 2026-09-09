@@ -375,6 +375,7 @@ export function unregisterOAuthProviders(sourceId: string): void {
 export async function refreshOAuthToken(
 	provider: OAuthProvider,
 	credentials: OAuthCredentials,
+	signal: AbortSignal,
 ): Promise<OAuthCredentials> {
 	if (!credentials) {
 		throw new Error(`No OAuth credentials found for ${provider}`);
@@ -383,43 +384,43 @@ export async function refreshOAuthToken(
 	let newCredentials: OAuthCredentials;
 	switch (provider) {
 		case "anthropic":
-			newCredentials = await refreshAnthropicToken(credentials.refresh);
+			newCredentials = await refreshAnthropicToken(credentials.refresh, signal);
 			break;
 		case "github-copilot":
-			newCredentials = await refreshGitHubCopilotToken(credentials.refresh, credentials.enterpriseUrl);
+			newCredentials = await refreshGitHubCopilotToken(credentials.refresh, credentials.enterpriseUrl, signal);
 			break;
 		case "google-gemini-cli":
 			if (!credentials.projectId) {
 				throw new Error("Google Cloud credentials missing projectId");
 			}
-			newCredentials = await refreshGoogleCloudToken(credentials.refresh, credentials.projectId);
+			newCredentials = await refreshGoogleCloudToken(credentials.refresh, credentials.projectId, signal);
 			break;
 		case "google-vertex":
-			newCredentials = await refreshVertexWithAntigravityOAuth(credentials.refresh);
+			newCredentials = await refreshVertexWithAntigravityOAuth(credentials.refresh, signal);
 			break;
 		case "google-antigravity":
 			if (!credentials.projectId) {
 				throw new Error("Antigravity credentials missing projectId");
 			}
-			newCredentials = await refreshAntigravityToken(credentials.refresh, credentials.projectId);
+			newCredentials = await refreshAntigravityToken(credentials.refresh, credentials.projectId, signal);
 			break;
 		case "openai-codex":
-			newCredentials = await refreshOpenAICodexToken(credentials.refresh);
+			newCredentials = await refreshOpenAICodexToken(credentials.refresh, signal);
 			break;
 		case "openai":
 			newCredentials = credentials;
 			break;
 		case "kimi-code":
-			newCredentials = await refreshKimiToken(credentials.refresh);
+			newCredentials = await refreshKimiToken(credentials.refresh, signal);
 			break;
 		case "kilo":
 			newCredentials = credentials;
 			break;
 		case "gitlab-duo":
-			newCredentials = await refreshGitLabDuoToken(credentials);
+			newCredentials = await refreshGitLabDuoToken(credentials, signal);
 			break;
 		case "cursor":
-			newCredentials = await refreshCursorToken(credentials.refresh);
+			newCredentials = await refreshCursorToken(credentials.refresh, signal);
 			break;
 		case "perplexity":
 		case "huggingface":
@@ -474,12 +475,14 @@ function getPerplexityJwtExpiryMs(token: string): number | undefined {
  *
  * For providers that need credential metadata at request time, returns JSON-encoded credentials
  * plus refresh/expiry metadata for proactive refresh support.
+ * @param options - Set `refreshExpired` false when a durable caller already coordinated refresh.
  * @returns API key string, or null if no credentials
  * @throws Error if refresh fails
  */
 export async function getOAuthApiKey(
 	provider: OAuthProvider,
 	credentials: Record<string, OAuthCredentials>,
+	options: { refreshExpired?: boolean; signal?: AbortSignal } = {},
 ): Promise<{ newCredentials: OAuthCredentials; apiKey: string } | null> {
 	let creds = credentials[provider];
 	if (!creds) {
@@ -496,9 +499,9 @@ export async function getOAuthApiKey(
 		}
 	}
 	// Refresh if expired
-	if (Date.now() >= creds.expires) {
+	if (Date.now() >= creds.expires && options.refreshExpired !== false) {
 		try {
-			creds = await refreshOAuthToken(provider, creds);
+			creds = await refreshOAuthToken(provider, creds, options.signal ?? AbortSignal.timeout(10_000));
 		} catch (refreshError) {
 			if (provider === "perplexity") {
 				const jwtExpiry = getPerplexityJwtExpiryMs(creds.access);

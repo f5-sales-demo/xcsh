@@ -416,7 +416,11 @@ describe("AuthStorage codex oauth ranking", () => {
 
 			let nextCredential = credential;
 			if (Date.now() >= credential.expires) {
-				nextCredential = await oauthUtils.refreshOAuthToken("openai-codex", credential);
+				nextCredential = await oauthUtils.refreshOAuthToken(
+					"openai-codex",
+					credential,
+					new AbortController().signal,
+				);
 			}
 
 			if (nextCredential.accountId === "acct-first" || nextCredential.accountId === "acct-second") {

@@ -550,6 +550,7 @@ export async function loginVertexWithAntigravityOAuth(ctrl: OAuthController): Pr
 
 export async function refreshVertexWithAntigravityOAuth(
 	refreshToken: string,
+	signal: AbortSignal,
 	fetchImpl: typeof fetch = fetch,
 ): Promise<OAuthCredentials> {
 	const { clientId, clientSecret } = resolveVertexOAuthClient();
@@ -562,6 +563,7 @@ export async function refreshVertexWithAntigravityOAuth(
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),
+		signal,
 	});
 	if (!response.ok) throw new Error(`Vertex token refresh failed: ${await response.text()}`);
 	const data = (await response.json()) as {
@@ -579,7 +581,11 @@ export async function refreshVertexWithAntigravityOAuth(
 /**
  * Refresh Antigravity token
  */
-export async function refreshAntigravityToken(refreshToken: string, projectId: string): Promise<OAuthCredentials> {
+export async function refreshAntigravityToken(
+	refreshToken: string,
+	projectId: string,
+	signal: AbortSignal,
+): Promise<OAuthCredentials> {
 	const response = await fetch(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -589,6 +595,7 @@ export async function refreshAntigravityToken(refreshToken: string, projectId: s
 			refresh_token: refreshToken,
 			grant_type: "refresh_token",
 		}),
+		signal,
 	});
 
 	if (!response.ok) {

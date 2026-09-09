@@ -413,7 +413,7 @@ export async function loginOpenAICodexDevice(
 	throw new Error("Device authorization expired after 15 minutes");
 }
 
-export async function refreshOpenAICodexToken(refreshToken: string): Promise<OAuthCredentials> {
+export async function refreshOpenAICodexToken(refreshToken: string, signal: AbortSignal): Promise<OAuthCredentials> {
 	const response = await fetch(TOKEN_URL, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -422,7 +422,7 @@ export async function refreshOpenAICodexToken(refreshToken: string): Promise<OAu
 			refresh_token: refreshToken,
 			client_id: CLIENT_ID,
 		}),
-		signal: AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS),
+		signal: AbortSignal.any([signal, AbortSignal.timeout(TOKEN_REQUEST_TIMEOUT_MS)]),
 	});
 
 	if (!response.ok) {

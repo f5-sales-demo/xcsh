@@ -226,7 +226,7 @@ export async function loginKimi(options: OAuthController): Promise<OAuthCredenti
 /**
  * Refresh Kimi OAuth token.
  */
-export async function refreshKimiToken(refreshToken: string): Promise<OAuthCredentials> {
+export async function refreshKimiToken(refreshToken: string, signal: AbortSignal): Promise<OAuthCredentials> {
 	const response = await fetch(`${resolveOAuthHost()}/api/oauth/token`, {
 		method: "POST",
 		headers: {
@@ -238,6 +238,7 @@ export async function refreshKimiToken(refreshToken: string): Promise<OAuthCrede
 			refresh_token: refreshToken,
 			client_id: CLIENT_ID,
 		}),
+		signal,
 	});
 
 	if (!response.ok) {

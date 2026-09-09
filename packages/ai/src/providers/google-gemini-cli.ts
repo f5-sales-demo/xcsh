@@ -373,6 +373,7 @@ export function shouldRefreshGeminiCliCredentials(
 async function refreshGeminiCliCredentialsIfNeeded(
 	credentials: ParsedGeminiCliCredentials,
 	isAntigravity: boolean,
+	signal: AbortSignal,
 ): Promise<ParsedGeminiCliCredentials> {
 	if (!credentials.refreshToken || !shouldRefreshGeminiCliCredentials(credentials.expiresAt, isAntigravity)) {
 		return credentials;
@@ -380,8 +381,8 @@ async function refreshGeminiCliCredentialsIfNeeded(
 
 	try {
 		const refreshed = isAntigravity
-			? await refreshAntigravityToken(credentials.refreshToken, credentials.projectId)
-			: await refreshGoogleCloudToken(credentials.refreshToken, credentials.projectId);
+			? await refreshAntigravityToken(credentials.refreshToken, credentials.projectId, signal)
+			: await refreshGoogleCloudToken(credentials.refreshToken, credentials.projectId, signal);
 		return {
 			accessToken: refreshed.access,
 			projectId: credentials.projectId,
@@ -503,7 +504,11 @@ export const streamGoogleGeminiCli: StreamFunction<"google-gemini-cli"> = (
 
 			const isAntigravity = model.provider === "google-antigravity";
 			const parsedCredentials = parseGeminiCliCredentials(apiKeyRaw);
-			const activeCredentials = await refreshGeminiCliCredentialsIfNeeded(parsedCredentials, isAntigravity);
+			const activeCredentials = await refreshGeminiCliCredentialsIfNeeded(
+				parsedCredentials,
+				isAntigravity,
+				options?.signal ?? new AbortController().signal,
+			);
 			const { accessToken, projectId } = activeCredentials;
 			const vertexModelId = isAntigravity ? ANTIGRAVITY_VERTEX_MODELS[model.id] : undefined;
 			const serviceName = vertexModelId ? "Vertex AI" : "Cloud Code Assist";

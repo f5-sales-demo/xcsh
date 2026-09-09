@@ -63,7 +63,7 @@ test("the dev preload makes the client pair available to source OAuth renewal wi
 			"-e",
 			`
 		import {refreshVertexWithAntigravityOAuth} from "./packages/ai/src/utils/oauth/google-antigravity";
-		const result = await refreshVertexWithAntigravityOAuth("fixture-refresh", async (_url, options) => {
+		const result = await refreshVertexWithAntigravityOAuth("fixture-refresh", new AbortController().signal, async (_url, options) => {
 			const body = new URLSearchParams(options.body);
 			if (body.get("client_id") !== "fixture-client" || body.get("client_secret") !== "fixture-secret") throw new Error("Wrong build inputs");
 			return Response.json({access_token:"fixture-access",expires_in:3600});

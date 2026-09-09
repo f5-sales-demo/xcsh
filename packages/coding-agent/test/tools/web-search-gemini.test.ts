@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "bun:test";
+import { AuthStorage } from "@f5-sales-demo/pi-ai";
 import { hookFetch } from "@f5-sales-demo/pi-utils";
-import { AgentStorage } from "../../src/session/agent-storage";
 import { searchGemini } from "../../src/web/search/providers/gemini";
 
 type CapturedRequest = {
@@ -15,20 +15,27 @@ describe("searchGemini tools serialization", () => {
 
 	function mockGeminiFetch() {
 		capturedRequest = null;
-		vi.spyOn(AgentStorage, "open").mockResolvedValue({
-			listAuthCredentials: () => [
+		vi.spyOn(AuthStorage, "create").mockResolvedValue({
+			listStoredCredentials: () => [
 				{
 					id: 1,
 					credential: {
 						type: "oauth",
 						access: "test-access-token",
+						refresh: "test-refresh-token",
 						expires: Date.now() + 600_000,
-						projectId: "test-project",
+						projectId: "example-project",
 					},
 				},
 			],
-			updateAuthCredential: () => undefined,
-		} as unknown as AgentStorage);
+			refreshStoredOAuthCredential: async (_provider: string, options: { observedCredential?: unknown }) => ({
+				credential: options.observedCredential,
+				refreshed: false,
+				removed: false,
+				reauthenticationRequired: false,
+			}),
+			close: () => undefined,
+		} as unknown as AuthStorage);
 		return hookFetch((_url, init) => {
 			capturedRequest = {
 				body: init?.body ? (JSON.parse(init.body as string) as Record<string, unknown>) : null,

@@ -188,11 +188,69 @@ describe("anthropic oauth alignment", () => {
 		});
 		global.fetch = fetchMock as unknown as typeof fetch;
 
-		const result = await refreshAnthropicToken("refresh-123");
+		const result = await refreshAnthropicToken("refresh-123", new AbortController().signal);
 
 		expect(result.access).toBe("new-access-token");
 		expect(result.refresh).toBe("refresh-123");
 		expect(fetchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("surfaces bounded structured invalid_grant details for classification", async () => {
+		global.fetch = vi.fn(async () =>
+			Response.json({ error: "invalid_grant", error_description: `revoked ${"x".repeat(400)}` }, { status: 400 }),
+		) as unknown as typeof fetch;
+
+		let message = "";
+		try {
+			await refreshAnthropicToken("submitted-refresh", new AbortController().signal);
+		} catch (error) {
+			message = error instanceof Error ? error.message : String(error);
+		}
+		expect(message).toContain("HTTP 400; error=invalid_grant; description=revoked");
+		expect(message.length).toBeLessThan(380);
+	});
+
+	it("redacts token-like values and ignores arbitrary OAuth error fields", async () => {
+		const secret = "sk-ant-oat01-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		global.fetch = vi.fn(async () =>
+			Response.json(
+				{
+					error: "invalid_grant",
+					error_description: `Bearer ${secret}`,
+					access_token: secret,
+					refresh_token: secret,
+				},
+				{ status: 400 },
+			),
+		) as unknown as typeof fetch;
+
+		await expect(refreshAnthropicToken("submitted-refresh", new AbortController().signal)).rejects.not.toThrow(
+			secret,
+		);
+		await expect(refreshAnthropicToken("submitted-refresh", new AbortController().signal)).rejects.toThrow(
+			"Bearer [redacted]",
+		);
+	});
+
+	it("suppresses arbitrary and non-JSON token endpoint bodies", async () => {
+		const secretBody = "upstream dump with refresh_token=top-secret-value";
+		global.fetch = vi.fn(async () => new Response(secretBody, { status: 502 })) as unknown as typeof fetch;
+
+		await expect(refreshAnthropicToken("submitted-refresh", new AbortController().signal)).rejects.toThrow(
+			"Anthropic token exchange failed (HTTP 502)",
+		);
+		await expect(refreshAnthropicToken("submitted-refresh", new AbortController().signal)).rejects.not.toThrow(
+			secretBody,
+		);
+	});
+
+	it("persists a provider-rotated refresh token in the successful result", async () => {
+		global.fetch = vi.fn(async () =>
+			Response.json({ access_token: "new-access", refresh_token: "rotated-refresh", expires_in: 3600 }),
+		) as unknown as typeof fetch;
+
+		const result = await refreshAnthropicToken("submitted-refresh", new AbortController().signal);
+		expect(result).toMatchObject({ access: "new-access", refresh: "rotated-refresh" });
 	});
 });
 
