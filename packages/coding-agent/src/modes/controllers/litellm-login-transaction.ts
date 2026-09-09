@@ -36,7 +36,8 @@ interface CommitLiteLLMLoginOptions {
 	configPath: string;
 	credentials: LiteLLMLoginCredentials;
 	probe: ProbeResult;
-	choice: LiteLLMLoginModelChoice;
+	choice?: LiteLLMLoginModelChoice;
+	connectionOnly?: boolean;
 	session: TransactionSession;
 	restrictPicker?: boolean;
 }
@@ -92,6 +93,8 @@ export async function commitLiteLLMLogin(options: CommitLiteLLMLoginOptions): Pr
 		});
 		await writeLiteLLMModelsYml(modelsPath, yml);
 
+		if (options.connectionOnly) return;
+		if (!choice) throw new Error("An explicit model choice is required");
 		if (!fs.existsSync(configPath)) writeAgentConfigFileSync(configPath, generateConfigYml());
 		healConfigYmlModelRoles(configPath);
 

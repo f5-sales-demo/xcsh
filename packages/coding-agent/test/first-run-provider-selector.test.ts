@@ -17,7 +17,7 @@ describe("first-run provider onboarding", () => {
 		expect(shouldAutoLaunchProviderLogin(false, "config")).toBe(false);
 	});
 
-	it("opens the compact shared provider selector instead of the full catalog", async () => {
+	it("opens the catalog directly when no providers are configured", async () => {
 		const children: Array<{ render?(width: number): string[] }> = [];
 		const editor = { render: () => [] };
 		const ctx = {
@@ -53,9 +53,9 @@ describe("first-run provider onboarding", () => {
 		await Bun.sleep(0);
 
 		const rendered = Bun.stripANSI(children.flatMap(component => component.render?.(120) ?? []).join("\n"));
-		expect(rendered).toContain("Select provider to login");
-		expect(rendered).toContain("No providers configured");
-		expect(rendered).toContain("Add provider…");
+		expect(rendered).toContain("Connect a provider");
+		expect(rendered).toContain("Subscriptions");
+		expect(rendered).toContain("ChatGPT");
 		expect(rendered).not.toContain("Google Cloud Vertex AI (Corporate)");
 		expect(rendered).not.toContain("ChatGPT Plus/Pro (Codex Subscription)");
 		const enterprise = getOAuthProviders().find(provider => provider.id === "google-antigravity-enterprise");

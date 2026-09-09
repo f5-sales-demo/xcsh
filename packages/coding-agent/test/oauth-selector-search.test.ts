@@ -41,9 +41,9 @@ describe("OAuthSelectorComponent provider search", () => {
 		const selector = createSelector("login", true).selector;
 		for (const character of "openai-codex") selector.handleInput(character);
 		const rendered = renderText(selector);
-		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
+		expect(rendered).toContain("ChatGPT");
 		expect(rendered).not.toContain("ChatGPT Plus/Pro (Browser callback)");
-		expect(rendered.match(/Configured/g)).toHaveLength(1);
+		expect(rendered).toContain("Credentials saved");
 	});
 
 	it("renders honest normalized access and picker-scope labels", () => {
@@ -60,7 +60,7 @@ describe("OAuthSelectorComponent provider search", () => {
 		}).selector;
 		for (const character of "anthropic") selector.handleInput(character);
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Sign in again");
+		expect(rendered).toContain("Sign-in required");
 		expect(rendered).not.toContain("excluded from picker");
 		expect(rendered).not.toContain("logged in");
 	});
@@ -78,7 +78,7 @@ describe("OAuthSelectorComponent provider search", () => {
 		}).selector;
 		for (const character of "vllm") selector.handleInput(character);
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Configured");
+		expect(rendered).toContain("Credentials saved");
 		expect(rendered).not.toContain("logged in");
 	});
 
@@ -105,7 +105,7 @@ describe("OAuthSelectorComponent provider search", () => {
 		await Bun.sleep(0);
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Available");
+		expect(rendered).toContain("Ready");
 		expect(rendered).not.toContain("Connected");
 		expect(rendered).not.toContain("logged in");
 	});
@@ -124,8 +124,8 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (const character of "vllm") selector.handleInput(character);
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Can't connect");
-		expect(rendered).not.toContain("Configured");
+		expect(rendered).toContain("Unreachable");
+		expect(rendered).not.toContain("Credentials saved");
 		expect(rendered).not.toContain(" connected");
 		expect(rendered).not.toContain("logged in");
 	});
@@ -161,7 +161,7 @@ describe("OAuthSelectorComponent provider search", () => {
 		});
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Anthropic (Claude Pro/Max)");
+		expect(rendered).toContain("Anthropic");
 		expect(rendered).toContain("Add provider…");
 		expect(rendered).not.toContain("LM Studio");
 		expect(rendered).not.toContain("Ollama");
@@ -169,10 +169,10 @@ describe("OAuthSelectorComponent provider search", () => {
 		selector.handleInput("\x1b[B");
 		selector.handleInput("\n");
 		for (const character of "lm-studio") selector.handleInput(character);
-		expect(renderText(selector)).toContain("LM Studio (Local OpenAI-compatible)");
+		expect(renderText(selector)).toContain("LM Studio");
 	});
 
-	it("shows the empty-state guidance without listing absent local runtimes", () => {
+	it("opens a searchable catalog when no connections exist", () => {
 		const providers = buildProviderManagementOptions({
 			mode: "login",
 			providerInventory: [],
@@ -190,8 +190,8 @@ describe("OAuthSelectorComponent provider search", () => {
 		});
 		const { selector } = createSelector("login", false, { providers });
 		const rendered = renderText(selector);
-		expect(rendered).toContain("No providers configured");
-		expect(rendered).toContain("Add provider…");
+		expect(rendered).toContain("Connect a provider");
+		expect(rendered).toContain("Subscriptions");
 		expect(rendered).not.toContain("LM Studio");
 		expect(rendered).not.toContain("Ollama");
 	});
@@ -239,10 +239,10 @@ describe("OAuthSelectorComponent provider search", () => {
 		selector.handleInput("\x1b[C");
 		const details = renderText(selector);
 		expect(details).toContain("Manage LiteLLM");
-		expect(details).toContain("Credential: Configuration");
-		expect(details).toContain("Last verification:");
-		expect(details).toContain("Reason: 401 Bearer [redacted]");
-		expect(details).toContain("Routes: litellm, anthropic");
+		expect(details).toContain("Local / proxy");
+		expect(details).toContain("Unreachable");
+		expect(details).toContain("401 Bearer [redacted]");
+		expect(providers[0]?.providerIds).toEqual(["litellm", "anthropic"]);
 	});
 
 	it("surfaces a failed route on a grouped management entry", () => {
@@ -266,7 +266,7 @@ describe("OAuthSelectorComponent provider search", () => {
 			}),
 		});
 
-		expect(renderText(selector)).toContain("Can't connect");
+		expect(renderText(selector)).toContain("Unreachable");
 		expect(renderText(selector)).not.toContain("Connected");
 	});
 
@@ -323,10 +323,10 @@ describe("OAuthSelectorComponent provider search", () => {
 		const providerCount = getLoginOptions().length;
 		const rendered = renderText(selector);
 
-		expect(rendered).toContain(`Showing 1-10 of ${providerCount}`);
-		expect(rendered).toContain("Type to filter providers");
+		expect(rendered).toContain(`Search providers (1/${providerCount})`);
+		expect(rendered).toContain("Search providers");
 		expect(rendered).toContain("Enter: select");
-		expect(rendered).not.toContain("Antigravity (Gemini 3, Claude, GPT-OSS)");
+		expect(rendered).toContain("Subscriptions");
 	});
 
 	it("filters by provider name or ID and selects from only the visible matches", () => {
@@ -335,10 +335,10 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (const character of "openai-codex") selector.handleInput(character);
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("ChatGPT Plus/Pro (Codex Subscription)");
+		expect(rendered).toContain("ChatGPT");
 		expect(rendered).not.toContain("ChatGPT Plus/Pro (Browser callback)");
-		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
-		expect(rendered).toContain("1 match");
+		expect(rendered).not.toContain("Anthropic");
+		expect(rendered).toContain("Search providers (1/1)");
 
 		selector.handleInput("\n");
 		expect(onSelect).toHaveBeenCalledWith("openai-codex");
@@ -360,7 +360,7 @@ describe("OAuthSelectorComponent provider search", () => {
 
 		selector.handleInput("\x1b");
 		expect(onCancel).not.toHaveBeenCalled();
-		expect(renderText(selector)).toContain(`Showing 1-10 of ${getLoginOptions().length}`);
+		expect(renderText(selector)).toContain(`Search providers (1/${getLoginOptions().length})`);
 
 		selector.handleInput("\x1b");
 		expect(onCancel).toHaveBeenCalledTimes(1);
@@ -371,23 +371,21 @@ describe("OAuthSelectorComponent provider search", () => {
 		for (let index = 0; index < 11; index += 1) selector.handleInput("\x1b[B");
 
 		const rendered = renderText(selector);
-		expect(rendered).toContain("Google Cloud Code Assist (Gemini CLI)");
-		expect(rendered).not.toContain("Anthropic (Claude Pro/Max)");
-		expect(rendered).toContain(`Showing 3-12 of ${getLoginOptions().length}`);
+		expect(rendered).toContain("Enter: select");
+		expect(rendered).not.toContain("Anthropic");
+		expect(rendered).toContain(`Search providers (12/${getLoginOptions().length})`);
 	});
 
 	it("keeps generic and Enterprise Antigravity credentials as distinct routes", () => {
 		const login = createSelector("login", true).selector;
 		for (const character of "google-antigravity-enterprise") login.handleInput(character);
-		expect(renderText(login)).toContain("Google Antigravity Enterprise (Advanced OAuth)");
+		expect(renderText(login)).toContain("Google Antigravity Enterprise");
 
 		const logout = createSelector("logout", true).selector;
 		for (const character of "antigravity") logout.handleInput(character);
 		const rendered = renderText(logout);
-		expect(rendered).toContain("Antigravity (Gemini 3, Claude, GPT-OSS)");
-		expect(rendered).toContain("Google Antigravity Enterprise (Advanced OAuth)");
-		expect(rendered).toContain(
-			`2 matches (${getOAuthProviders().filter(provider => !provider.loginOnly).length} total)`,
-		);
+		expect(rendered).toContain("Antigravity");
+		expect(rendered).toContain("Google Antigravity Enterprise");
+		expect(rendered).toContain("Search providers (1/2)");
 	});
 });

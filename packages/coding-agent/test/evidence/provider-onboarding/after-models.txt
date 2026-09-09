@@ -1,0 +1,22 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│ Choose a model                                                                                   │
+│ Choose a model, scope and reasoning.                                                             │
+│ Models:   LiteLLM   (tab to cycle)                                                               │
+│ Search all providers                                                                             │
+│ >                                                                                                │
+────────────────────────────────────────────────────────────────────────────────────────────────────
+│   Model                                                                     Assignment           │
+│   Claude Opus 5                                                             Unassigned           │
+│   Claude Sonnet 5                                                           Unassigned           │
+│   Claude Haiku 4.5                                                          Unassigned           │
+│   GPT-5.6 Terra                                                             Default              │
+│   GPT-5.6 Luna                                                              Fast                 │
+│ ❯ GPT-5.6 Sol                                                               Active, Thinking, A… │
+│ litellm/gpt-5.6-sol                                                                              │
+│ Active, Thinking (High), Architect (High)                                                        │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│ Up/Down: navigate · Enter: choose · Tab: provider                                                │
+│ Ctrl+R: refresh · Esc/Ctrl+C: back                                                               │
+────────────────────────────────────────────────────────────────────────────────────────────────────

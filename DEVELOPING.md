@@ -129,6 +129,9 @@ cd ".worktrees/${BRANCH}"
 # Install dependencies with Bun
 bun install
 
+# Build the source-matched native addon before tests or direct CLI invocation
+bun run build:native
+
 # Capture test baseline
 bun run test 2>&1 | tee .worktree-test-baseline.txt
 ```

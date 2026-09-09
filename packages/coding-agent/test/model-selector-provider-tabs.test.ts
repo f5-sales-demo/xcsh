@@ -140,7 +140,7 @@ describe("authenticated provider model groups", () => {
 			provider => provider !== "google-antigravity",
 		);
 		expect(groups.map(group => group.id)).toEqual(["google-vertex", "anthropic", "openai-codex", "local-providers"]);
-		expect(groups[0]?.label).toBe("Google Vertex");
+		expect(groups[0]?.label).toBe("Google Vertex AI");
 		expect(groups[0]?.stale).toBe(true);
 		expect(groups[3]?.models.map(item => item.provider)).toEqual(["ollama", "vllm"]);
 		expect(groups[3]?.discoveryStatus).toBe("cached");
@@ -157,7 +157,7 @@ describe("authenticated provider model groups", () => {
 		];
 		const groups = buildProviderModelGroups(models, provider => state(provider), ["google-vertex"]);
 		expect(groups.map(group => group.id)).toEqual(["google-vertex", "anthropic", "openai-codex"]);
-		expect(groups[1]?.label).toBe("Anthropic / Claude");
+		expect(groups[1]?.label).toBe("Anthropic");
 	});
 });
 
@@ -278,7 +278,7 @@ describe("provider-tab model selector", () => {
 		await Bun.sleep(0);
 
 		const rendered = Bun.stripANSI(selector.render(180).join("\n"));
-		expect(rendered).toContain("Anthropic / Claude: Connected");
+		expect(rendered).toContain("Anthropic: Connected");
 		expect(rendered).not.toContain("availability unverified");
 	});
 
@@ -331,24 +331,24 @@ describe("provider-tab model selector", () => {
 		);
 		await Bun.sleep(0);
 		let rendered = Bun.stripANSI(selector.render(180).join("\n"));
-		expect(rendered).toContain("Models:   Anthropic / Claude");
-		expect(rendered).toContain("Anthropic › Claude");
-		expect(rendered).toContain("Claude Haiku 4.5 [anthropic/claude-haiku-4-5-20251001]");
-		expect(rendered).toContain("Claude Sonnet 5 [anthropic/claude-sonnet-5]");
-		expect(rendered).toContain("Claude Opus 5 [anthropic/claude-opus-5]");
-		expect(rendered).toContain("SMOL");
-		expect(rendered).toContain("DEFAULT");
-		expect(rendered).toContain("SLOW");
-		expect(rendered).toContain("PLAN");
+		expect(rendered).toContain("Models:   Anthropic");
+		expect(rendered).toContain("Assignment");
+		expect(rendered).toContain("Claude Haiku 4.5");
+		expect(rendered).toContain("Claude Sonnet 5");
+		expect(rendered).toContain("Claude Opus 5");
+		expect(rendered).toContain("Fast");
+		expect(rendered).toContain("Default");
+		expect(rendered).toContain("Thinking");
+		expect(rendered).toContain("Architect");
 
 		for (const character of "sonnet") selector.handleInput(character);
 		selector.handleInput("\r");
 		selector.handleInput("\r");
 		rendered = Bun.stripANSI(selector.render(100).join("\n"));
-		for (const effort of ["min", "low", "medium", "high", "xhigh", "max"]) {
-			expect(rendered).toContain(`${effort} —`);
+		for (const effort of ["Minimal", "Low", "Medium", "High", "Extra high", "Maximum"]) {
+			expect(rendered).toContain(effort);
 		}
-		expect(rendered).not.toContain("off —");
+		expect(rendered).not.toContain("Off");
 	});
 
 	it("renders provider hierarchy and exact ChatGPT tier selectors without legacy tabs", async () => {
@@ -356,13 +356,13 @@ describe("provider-tab model selector", () => {
 		await Bun.sleep(0);
 		const rendered = Bun.stripANSI(selector.render(180).join("\n"));
 		expect(rendered).not.toContain("Only showing models from configured providers");
-		expect(rendered).toContain("ChatGPT Subscription");
-		expect(rendered).toContain("OpenAI › GPT-5.6");
-		expect(rendered.match(/OpenAI › GPT-5\.6/g)).toHaveLength(1);
-		expect(rendered).toContain("GPT-5.6 Sol [openai-codex/gpt-5.6-sol]");
-		expect(rendered).toContain("GPT-5.6 Terra [openai-codex/gpt-5.6-terra]");
-		expect(rendered).toContain("GPT-5.6 Luna [openai-codex/gpt-5.6-luna]");
-		expect(rendered).toContain("GPT-6 Astra [openai-codex/gpt-6-astra]");
+		expect(rendered).toContain("ChatGPT");
+		expect(rendered).toContain("Assignment");
+		expect(rendered).not.toContain("OpenAI › GPT-5.6");
+		expect(rendered).toContain("GPT-5.6 Sol");
+		expect(rendered).toContain("GPT-5.6 Terra");
+		expect(rendered).toContain("GPT-5.6 Luna");
+		expect(rendered).toContain("GPT-6 Astra");
 		expect(rendered).not.toContain("QUICK");
 		expect(rendered).not.toContain("ALL MODELS");
 		expect(rendered).not.toContain("Gemini 3.8 Flash");
@@ -372,8 +372,8 @@ describe("provider-tab model selector", () => {
 		const { selector } = selectorHarness(undefined, { providerAllowlist: ["google-vertex"] });
 		await Bun.sleep(0);
 		const rendered = Bun.stripANSI(selector.render(180).join("\n"));
-		expect(rendered).toContain("Models:   Google Vertex");
-		expect(rendered).not.toContain("ChatGPT Subscription");
+		expect(rendered).toContain("Models:   Google Vertex AI");
+		expect(rendered).not.toContain("ChatGPT");
 		expect(rendered).not.toContain("Only showing models from configured providers");
 	});
 
@@ -387,11 +387,11 @@ describe("provider-tab model selector", () => {
 		let rendered = Bun.stripANSI(selector.render(180).join("\n"));
 		const header = rendered
 			.split("\n")
-			.find(line => line.startsWith("Models:"))
+			.find(line => line.includes("Models:"))
 			?.trim();
-		expect(header).toBe(
-			"Models:   ChatGPT Subscription    Anthropic / Claude    Google Vertex    Local Providers   (tab to cycle)",
-		);
+		expect(header).toContain("Models:");
+		expect(header).toContain("Google Vertex AI");
+		expect(rendered).toContain("Local Providers");
 		expect(rendered).not.toContain("Only showing models from configured providers");
 
 		selector.handleInput("\t");
@@ -400,7 +400,7 @@ describe("provider-tab model selector", () => {
 		await Bun.sleep(0);
 		rendered = Bun.stripANSI(selector.render(180).join("\n"));
 		expect(rendered).toContain("Local Providers");
-		expect(rendered).toContain("[vllm/local-tool-model]");
+		expect(rendered).toContain("vllm/local-tool-model");
 		expect(rendered).not.toContain("[ollama/");
 	});
 
@@ -409,7 +409,7 @@ describe("provider-tab model selector", () => {
 		await Bun.sleep(0);
 		for (const character of "gemini") selector.handleInput(character);
 		let rendered = Bun.stripANSI(selector.render(180).join("\n"));
-		expect(rendered).toContain("Google Vertex › Google › Gemini 3.8");
+		expect(rendered).toContain("Gemini 3.8 Flash");
 		expect(rendered).toContain("google-vertex/gemini-3.8-flash");
 		for (let index = 0; index < 6; index += 1) selector.handleInput("\x7f");
 		rendered = Bun.stripANSI(selector.render(180).join("\n"));
@@ -423,7 +423,7 @@ describe("provider-tab model selector", () => {
 		for (const character of "google-vertex/gemini-3.8-flash") selector.handleInput(character);
 		const rendered = Bun.stripANSI(selector.render(180).join("\n"));
 		expect(selector.getSearchInput().getValue()).toBe("google-vertex/gemini-3.8-flash");
-		expect(rendered).toContain("Google Vertex › Google › Gemini 3.8");
+		expect(rendered).toContain("Gemini 3.8 Flash");
 		expect(rendered).not.toContain("Action for:");
 		expect(rendered).not.toContain("google-antigravity/");
 	});
@@ -449,16 +449,16 @@ describe("provider-tab model selector", () => {
 		});
 		await Bun.sleep(0);
 		let rendered = Bun.stripANSI(selector.render(120).join("\n"));
-		expect(rendered).toContain("Google Vertex");
-		expect(rendered).not.toContain("Google Vertex (stale)");
-		expect(rendered).toContain("Refreshing Google Vertex model list");
+		expect(rendered).toContain("Google Vertex AI");
+		expect(rendered).not.toContain("Google Vertex AI (stale)");
+		expect(rendered).toContain("Refreshing Google Vertex AI model list");
 		expect(rendered).toContain("Ctrl+R: refresh");
 
 		selector.handleInput("\x12");
 		await Bun.sleep(0);
 		expect(refreshProvider).toHaveBeenCalledWith("google-vertex", "online");
 		rendered = Bun.stripANSI(selector.render(120).join("\n"));
-		expect(rendered).toContain("Refreshing Google Vertex model list");
+		expect(rendered).toContain("Refreshing Google Vertex AI model list");
 
 		finishRefresh?.();
 		await Bun.sleep(0);
@@ -470,7 +470,7 @@ describe("provider-tab model selector", () => {
 		await Bun.sleep(0);
 		const rendered = Bun.stripANSI(selector.render(120).join("\n"));
 		expect(rendered).toContain("Gemini 3.8 Flash");
-		expect(rendered).toContain("unavailable");
+		expect(rendered).toContain("Unavailable");
 
 		selector.handleInput("\r");
 		selector.handleInput("\r");
@@ -495,7 +495,7 @@ describe("provider-tab model selector", () => {
 		await Bun.sleep(0);
 		const local = Bun.stripANSI(selector.render(52).join("\n"));
 		expect(local).toContain("Local Providers");
-		expect(local).toContain("Ollama › Qwen › Qwen 3");
+		expect(local).toContain("Qwen 3");
 		expect(local).toContain("ollama/qwen3:8b");
 	});
 
@@ -507,13 +507,13 @@ describe("provider-tab model selector", () => {
 		selector.handleInput("\r");
 		selector.handleInput("\r");
 		const picker = Bun.stripANSI(selector.render(100).join("\n"));
-		expect(picker).not.toContain("min —");
-		expect(picker).toContain("low —");
-		expect(picker).toContain("medium —");
-		expect(picker).toContain("high —");
-		expect(picker).not.toContain("off —");
-		expect(picker).not.toContain("xhigh —");
-		expect(picker).not.toContain("max —");
+		expect(picker).not.toContain("Minimal");
+		expect(picker).toContain("Low");
+		expect(picker).toContain("Medium");
+		expect(picker).toContain("High");
+		expect(picker).not.toContain("Off");
+		expect(picker).not.toContain("xHigh");
+		expect(picker).not.toContain("Maximum");
 	});
 
 	it("keeps exact reasoning metadata when selecting Sol", async () => {

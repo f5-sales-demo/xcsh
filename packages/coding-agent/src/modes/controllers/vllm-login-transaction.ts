@@ -30,7 +30,8 @@ interface VllmTransactionSession {
 interface CommitVllmLoginOptions {
 	modelsPath: string;
 	credentials: VllmLoginCredentials;
-	choice: LoginModelChoice;
+	choice?: LoginModelChoice;
+	connectionOnly?: boolean;
 	session: VllmTransactionSession;
 }
 
@@ -107,6 +108,8 @@ export async function commitVllmLogin(options: CommitVllmLoginOptions): Promise<
 		if (apiKey) await session.modelRegistry.authStorage.set("vllm", { type: "api_key", key: apiKey });
 		else await session.modelRegistry.authStorage.remove("vllm");
 
+		if (options.connectionOnly) return;
+		if (!choice) throw new Error("An explicit model choice is required");
 		await session.modelRegistry.refreshProvider("vllm", "online");
 		const applied = await applyModelAfterLogin(session, choice);
 		if (!applied) throw new Error(`Model unavailable after refresh: ${choice.provider}/${choice.modelId}`);

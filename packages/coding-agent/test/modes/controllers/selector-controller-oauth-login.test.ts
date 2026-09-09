@@ -1,6 +1,5 @@
 import { Database } from "bun:sqlite";
 import { beforeAll, describe, expect, it, vi } from "bun:test";
-import { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import { AuthCredentialStore, AuthStorage } from "@f5-sales-demo/pi-ai";
 import { SelectorController } from "../../../src/modes/controllers/selector-controller";
 import { OAuthManualInputManager } from "../../../src/modes/oauth-manual-input";
@@ -64,12 +63,13 @@ describe("SelectorController native login lifecycle", () => {
 });
 
 describe("SelectorController Google Antigravity login", () => {
-	it("persists and reports Gemini 3.6 Flash High after OAuth succeeds", async () => {
+	it("saves authentication and offers a model handoff without applying a model", async () => {
 		const model = {
 			id: "gemini-3.6-flash-high",
 			provider: "google-antigravity",
 		};
 		const addedComponents: Array<{ render(width: number): string[] }> = [];
+		const selectorComponents: Array<{ render(width: number): string[]; handleInput?(key: string): void }> = [];
 		const login = vi.fn(async () => undefined);
 		const refresh = vi.fn(async () => undefined);
 		const setModel = vi.fn(async () => undefined);
@@ -81,7 +81,8 @@ describe("SelectorController Google Antigravity login", () => {
 			session: {
 				modelRegistry: {
 					authStorage: { login },
-					refresh,
+					refreshProvider: refresh,
+					getProviderDiscoveryState: () => ({ status: "ok", stale: false, models: [model.id] }),
 					getAll: () => [model],
 				},
 				setModel,
@@ -93,7 +94,12 @@ describe("SelectorController Google Antigravity login", () => {
 			chatContainer: {
 				addChild: (component: { render(width: number): string[] }) => addedComponents.push(component),
 			},
-			ui: { requestRender: vi.fn() },
+			editor: {},
+			editorContainer: {
+				clear: () => selectorComponents.splice(0),
+				addChild: (component: (typeof selectorComponents)[number]) => selectorComponents.push(component),
+			},
+			ui: { requestRender: vi.fn(), setFocus: vi.fn() },
 			showStatus: vi.fn(),
 			showError,
 			openInBrowser: vi.fn(),
@@ -103,20 +109,17 @@ describe("SelectorController Google Antigravity login", () => {
 
 		expect(login).toHaveBeenCalledTimes(1);
 		expect(refresh).toHaveBeenCalledTimes(1);
-		expect(refresh).toHaveBeenCalledWith("online");
-		expect(refresh.mock.invocationCallOrder[0]).toBeLessThan(setModel.mock.invocationCallOrder[0]);
-		expect(setModel).toHaveBeenCalledWith(model, "default", {
-			selector: "google-antigravity/gemini-3.6-flash-high",
-			thinkingLevel: ThinkingLevel.High,
-		});
+		expect(refresh).toHaveBeenCalledWith("google-antigravity", "online");
+		expect(setModel).not.toHaveBeenCalled();
 		expect(setThinkingLevel).not.toHaveBeenCalled();
-		expect(invalidate).toHaveBeenCalledTimes(1);
-		expect(updateEditorBorderColor).toHaveBeenCalledTimes(1);
+		expect(invalidate).not.toHaveBeenCalled();
+		expect(updateEditorBorderColor).not.toHaveBeenCalled();
 		expect(showError).not.toHaveBeenCalled();
-
-		const rendered = addedComponents.flatMap(component => component.render(120)).join("\n");
-		expect(rendered).toContain("Successfully logged in to google-antigravity");
-		expect(rendered).toContain("Default model: google-antigravity/gemini-3.6-flash-high");
+		const rendered = renderVisible(selectorComponents, 100);
+		expect(rendered).toContain("Provider connected");
+		expect(rendered).toContain("Use recommended model");
+		selectorComponents[0]?.handleInput?.("\x1b");
+		expect(setModel).not.toHaveBeenCalled();
 	});
 
 	it("presents the shared short link, instructions, browser policy, and manual pairing", async () => {
@@ -143,7 +146,12 @@ describe("SelectorController Google Antigravity login", () => {
 			chatContainer: {
 				addChild: (component: { render(width: number): string[] }) => addedComponents.push(component),
 			},
-			ui: { requestRender: vi.fn() },
+			editor: { render: () => [] },
+			editorContainer: {
+				clear: vi.fn(),
+				addChild: (component: (typeof addedComponents)[number]) => addedComponents.push(component),
+			},
+			ui: { requestRender: vi.fn(), setFocus: vi.fn() },
 			showStatus: vi.fn(),
 			showError: vi.fn(),
 			openInBrowser,
@@ -151,7 +159,7 @@ describe("SelectorController Google Antigravity login", () => {
 
 		await new SelectorController(ctx).showOAuthSelector("login", "google-antigravity");
 
-		const visible = renderVisible(addedComponents);
+		const visible = renderVisible(addedComponents, 100);
 		expect(visible).toContain("Open sign-in page");
 		expect(visible).toContain(process.platform === "darwin" ? "Cmd+click to open" : "Ctrl+click to open");
 		expect(visible).toContain("Finish the provider instructions.");
@@ -433,7 +441,7 @@ describe("SelectorController ChatGPT device login", () => {
 				editorContainer,
 				editor: {},
 				session: {
-					modelRegistry: { authStorage: { login }, refresh, getAll: () => [] },
+					modelRegistry: { authStorage: { login }, refreshProvider: refresh, getAll: () => [] },
 				},
 				oauthManualInput: manualInput,
 				statusLine: { invalidate: vi.fn() },
@@ -452,11 +460,47 @@ describe("SelectorController ChatGPT device login", () => {
 
 			expect(login).toHaveBeenCalledTimes(1);
 			expect(login.mock.calls[0]?.[1]?.method).toBe("device");
-			expect(refresh).toHaveBeenCalledWith("online");
+			expect(refresh).toHaveBeenCalledWith("openai-codex", "online");
 			expect(openInBrowser).not.toHaveBeenCalled();
 		} finally {
 			if (previousSshConnection === undefined) delete process.env.SSH_CONNECTION;
 			else process.env.SSH_CONNECTION = previousSshConnection;
 		}
 	});
+});
+
+it("cancels an in-flight browser wait through the provider abort signal", async () => {
+	let active: { handleInput?(data: string): void } | undefined;
+	const showStatus = vi.fn();
+	const setModel = vi.fn();
+	const login = vi.fn(async (_provider, callbacks) => {
+		callbacks.onAuth({ url: LONG_AUTH_URL });
+		await new Promise((_, reject) =>
+			callbacks.signal.addEventListener("abort", () => reject(new Error("cancelled")), { once: true }),
+		);
+	});
+	const ctx = {
+		editor: {},
+		editorContainer: {
+			clear: () => {
+				active = undefined;
+			},
+			addChild: (component: typeof active) => {
+				active = component;
+			},
+		},
+		ui: { requestRender: vi.fn(), setFocus: vi.fn() },
+		session: { modelRegistry: { authStorage: { login } }, setModel },
+		oauthManualInput: new OAuthManualInputManager(),
+		showStatus,
+		showError: vi.fn(),
+		openInBrowser: vi.fn(),
+	} as unknown as InteractiveModeContext;
+	const promise = new SelectorController(ctx).showOAuthSelector("login", "google-antigravity");
+	await Bun.sleep(0);
+	active?.handleInput?.("\x1b");
+	await promise;
+	expect(login.mock.calls[0][1].signal.aborted).toBe(true);
+	expect(showStatus).toHaveBeenCalledWith("Login cancelled.");
+	expect(setModel).not.toHaveBeenCalled();
 });

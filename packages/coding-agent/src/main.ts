@@ -1025,7 +1025,7 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 		authStorage.setRuntimeApiKey(session.model.provider, parsedArgs.apiKey);
 	}
 
-	if (modelFallbackMessage) {
+	if (modelFallbackMessage && !(isInteractive && modelFallbackMessage.startsWith("No models available."))) {
 		notifs.push({ kind: "warn", message: modelFallbackMessage });
 	}
 

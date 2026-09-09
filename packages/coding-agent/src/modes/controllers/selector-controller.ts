@@ -2,6 +2,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import {
+	canonicalizeOAuthProviderId,
 	getOAuthProviders,
 	getOpenAICodexLoginMethods,
 	loginLiteLLM,
@@ -55,13 +56,12 @@ import { CopySelectorComponent } from "../components/copy-selector";
 import { ExtensionDashboard } from "../components/extensions";
 import { GutterBlock } from "../components/gutter-block";
 import { HistorySearchComponent } from "../components/history-search";
-import { HookSelectorComponent } from "../components/hook-selector";
-import { LiteLLMModelSelectorComponent } from "../components/litellm-model-selector";
 import { createLoginPromptInput } from "../components/login-prompt-input";
 import { ModelSelectorComponent } from "../components/model-selector";
 import { OAuthSelectorComponent } from "../components/oauth-selector";
 import { PluginSelectorComponent } from "../components/plugin-selector";
 import { PluginDashboard } from "../components/plugins";
+import { ConnectionChoiceComponent, ConnectionInputComponent } from "../components/selector-frame";
 import { SessionObserverOverlayComponent } from "../components/session-observer-overlay";
 import { SessionSelectorComponent } from "../components/session-selector";
 import { SettingsSelectorComponent } from "../components/settings-selector";
@@ -69,27 +69,14 @@ import { getPreset } from "../components/status-line/presets";
 import { ToolExecutionComponent } from "../components/tool-execution";
 import { TreeSelectorComponent } from "../components/tree-selector";
 import { UserMessageSelectorComponent } from "../components/user-message-selector";
-import { VllmModelSelectorComponent } from "../components/vllm-model-selector";
 import type { SessionObserverRegistry } from "../session-observer-registry";
-import { runEnterpriseOAuthLoginFlow } from "./enterprise-oauth-login-flow";
-import {
-	captureEnterpriseOAuthLoginState,
-	restoreEnterpriseOAuthLoginState,
-} from "./enterprise-oauth-login-transaction";
-import { type LoginRecoveryAction, type LoginRecoveryRequest, runLiteLLMLoginFlow } from "./litellm-login-flow";
+import type { LoginRecoveryAction, LoginRecoveryRequest } from "./litellm-login-flow";
 import { commitLiteLLMLogin } from "./litellm-login-transaction";
-import {
-	applyModelAfterLogin,
-	applyOAuthLoginModel,
-	formatLoginThinkingState,
-	GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
-	GOOGLE_VERTEX_LOGIN_MODEL_CHOICE,
-	LITELLM_LOGIN_MODEL_CHOICES,
-	type LiteLLMLoginModelChoice,
-	type LoginModelChoice,
-} from "./login-model";
+import { getLoginRecommendation, type ProviderConnectedResult } from "./login-model";
 import { buildProviderManagementOptions, getLoginOptions } from "./login-options";
 import { applyModelSelection } from "./model-selection";
+import { runProviderConnectionFlow } from "./provider-connection-flow";
+import { getProviderDisplayName } from "./provider-presentation";
 import {
 	defaultVertexLoginRuntime,
 	detectVertexProject,
@@ -97,7 +84,6 @@ import {
 	validateVertexLogin,
 	vertexFailureGuidance,
 } from "./vertex-login-flow";
-import { runVllmLoginFlow } from "./vllm-login-flow";
 import { commitVllmLogin } from "./vllm-login-transaction";
 
 const CALLBACK_SERVER_PROVIDERS = new Set<OAuthProvider>([
@@ -114,6 +100,7 @@ const VERTEX_MANUAL_LOGIN_TIP = "Tip: After browser sign-in, complete pairing wi
 class LoginPromptCancelled extends Error {}
 
 export class SelectorController {
+	#returnFromProviderSetup?: () => void;
 	constructor(private ctx: InteractiveModeContext) {}
 
 	#launchHttpUrl(url: string): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -556,7 +543,14 @@ export class SelectorController {
 		}
 	}
 
-	showModelSelector(options?: { temporaryOnly?: boolean }): void {
+	showModelSelector(options?: {
+		temporaryOnly?: boolean;
+		initialProvider?: string;
+		initialSearchInput?: string;
+		initialSelector?: string;
+		openInitialSelection?: boolean;
+		onCancel?: () => void;
+	}): void {
 		this.showSelector(done => {
 			const selector = new ModelSelectorComponent(
 				this.ctx.ui,
@@ -575,19 +569,28 @@ export class SelectorController {
 								? "Saved default"
 								: `Role ${selection.role}`;
 					this.ctx.showStatus(`${scope}: ${selection.selector} · reasoning ${selection.thinkingLevel}`);
-					if (selection.scope !== "role") done();
+					if (selection.scope !== "role") {
+						selector.dispose();
+						done();
+					}
 					this.ctx.ui.requestRender();
 				},
 				() => {
+					selector.dispose();
 					done();
+					options?.onCancel?.();
 					this.ctx.ui.requestRender();
 				},
 				{
 					...options,
 					currentThinkingLevel: this.ctx.session.thinkingLevel,
 					onLogin: () => {
+						const context = selector.getNavigationContext();
+						selector.dispose();
 						done();
-						void this.showOAuthSelector("login");
+						void this.showOAuthSelector("login", undefined, () =>
+							this.showModelSelector({ ...options, ...context }),
+						);
 					},
 				},
 			);
@@ -595,97 +598,66 @@ export class SelectorController {
 		});
 	}
 
-	async #showLiteLLMLoginModelSelector(
-		choices: readonly LiteLLMLoginModelChoice[],
-	): Promise<LiteLLMLoginModelChoice | null> {
-		const available = new Set(choices.map(choice => choice.modelId));
-		const unavailable = LITELLM_LOGIN_MODEL_CHOICES.filter(choice => !available.has(choice.modelId));
-
-		if (unavailable.length > 0) {
-			this.ctx.chatContainer.addChild(
-				new Text(
-					theme.fg(
-						"warning",
-						`Unavailable from this proxy: ${unavailable.map(choice => choice.label).join(", ")}`,
-					),
-					1,
-					0,
-				),
-			);
+	async #showProviderConnected(provider: string, discoveryError?: string): Promise<void> {
+		this.ctx.showStatus("Credentials saved. Checking connection…");
+		try {
+			await this.ctx.session.modelRegistry.refreshProvider(provider, "online");
+		} catch (error) {
+			discoveryError = error instanceof Error ? error.message : String(error);
 		}
-
-		const { promise, resolve } = Promise.withResolvers<LiteLLMLoginModelChoice | null>();
+		const result: ProviderConnectedResult = {
+			provider,
+			recommendation: discoveryError ? undefined : getLoginRecommendation(this.ctx.session.modelRegistry, provider),
+			discoveryError,
+		};
+		const actions = [
+			...(result.recommendation
+				? [
+						{
+							label: "Use recommended model",
+							description: `${result.recommendation.label} · choose scope and reasoning next.`,
+						},
+					]
+				: []),
+			{ label: "Browse models", description: "Choose from this provider's model catalog." },
+			{ label: "Done", description: "Keep this connection and your current model settings." },
+		];
 		this.showSelector(done => {
-			const selector = new LiteLLMModelSelectorComponent(
-				choices,
-				choice => {
+			const selector = new ConnectionChoiceComponent(
+				"Provider connected",
+				`${getProviderDisplayName(provider)} · Credentials saved${discoveryError ? "; discovery unavailable" : ""}`,
+				actions,
+				index => {
 					done();
-					resolve(choice);
-					this.ctx.ui.requestRender();
+					const action = actions[index]?.label;
+					if (action === "Done") {
+						this.#returnFromProviderSetup?.();
+						return;
+					}
+					this.showModelSelector({
+						initialProvider: provider,
+						...(action === "Use recommended model" && result.recommendation
+							? {
+									initialSelector: `${result.recommendation.provider}/${result.recommendation.modelId}`,
+									openInitialSelection: true,
+								}
+							: {}),
+						onCancel: () => {
+							void this.#showProviderConnected(provider);
+						},
+					});
 				},
 				() => {
 					done();
-					resolve(null);
-					this.ctx.ui.requestRender();
+					this.#returnFromProviderSetup?.();
 				},
-			);
-			return { component: selector, focus: selector.getSelectList() };
-		});
-
-		return promise;
-	}
-
-	async #showLiteLLMPickerScopeSelector(): Promise<boolean | undefined> {
-		const { promise, resolve } = Promise.withResolvers<boolean | undefined>();
-		this.showSelector(done => {
-			const selector = new HookSelectorComponent(
-				"Restrict the normal model picker to LiteLLM?",
-				["Yes — show only LiteLLM", "No — keep all configured providers"],
-				option => {
-					done();
-					resolve(option.startsWith("Yes"));
-					this.ctx.ui.requestRender();
-				},
-				() => {
-					done();
-					resolve(undefined);
-					this.ctx.ui.requestRender();
-				},
-				{ maxVisible: 2, helpText: "up/down navigate  enter select  esc keep current scope" },
+				() => this.ctx.ui.terminal?.rows ?? 24,
 			);
 			return { component: selector, focus: selector };
 		});
-		return promise;
-	}
-
-	async #showVllmLoginModelSelector(choices: readonly LoginModelChoice[]): Promise<LoginModelChoice | null> {
-		const { promise, resolve } = Promise.withResolvers<LoginModelChoice | null>();
-		this.showSelector(done => {
-			const selector = new VllmModelSelectorComponent(
-				choices,
-				choice => {
-					done();
-					resolve(choice);
-					this.ctx.ui.requestRender();
-				},
-				() => {
-					done();
-					resolve(null);
-					this.ctx.ui.requestRender();
-				},
-			);
-			return { component: selector, focus: selector.getSelectList() };
-		});
-		return promise;
 	}
 
 	async #promptLoginValue(prompt: OAuthPrompt): Promise<string> {
-		this.ctx.chatContainer.addChild(new Spacer(1));
-		this.ctx.chatContainer.addChild(new Text(theme.fg("text", prompt.message), 1, 0));
-		if (prompt.placeholder) {
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", prompt.placeholder), 1, 0));
-		}
-		this.ctx.ui.requestRender();
 		const { promise, resolve, reject } = Promise.withResolvers<string>();
 		const input = createLoginPromptInput(prompt);
 		const closeInput = () => {
@@ -703,8 +675,14 @@ export class SelectorController {
 			reject(new LoginPromptCancelled());
 		};
 		this.ctx.editorContainer.clear();
-		this.ctx.editorContainer.addChild(input);
-		this.ctx.ui.setFocus(input);
+		const frame = new ConnectionInputComponent(
+			"Provider connection",
+			prompt.message,
+			input,
+			() => this.ctx.ui.terminal?.rows ?? 24,
+		);
+		this.ctx.editorContainer.addChild(frame);
+		this.ctx.ui.setFocus(frame);
 		this.ctx.ui.requestRender();
 		const endPrompt = this.#beginPromptSignal("input");
 		return promise.finally(endPrompt);
@@ -718,10 +696,12 @@ export class SelectorController {
 		const options = request.canEdit ? ["Retry", editLabel, "Cancel"] : ["Retry", "Cancel"];
 		const { promise, resolve } = Promise.withResolvers<LoginRecoveryAction>();
 		this.showSelector(done => {
-			const selector = new HookSelectorComponent(
-				`${flowLabel} ${request.stage} failed\n\n${request.error}`,
-				options,
-				option => {
+			const selector = new ConnectionChoiceComponent(
+				`${flowLabel}: ${request.stage} failed`,
+				request.error,
+				options.map(label => ({ label })),
+				index => {
+					const option = options[index];
 					done();
 					resolve(option === "Retry" ? "retry" : option === editLabel ? "edit" : "cancel");
 					this.ctx.ui.requestRender();
@@ -731,7 +711,7 @@ export class SelectorController {
 					resolve("cancel");
 					this.ctx.ui.requestRender();
 				},
-				{ maxVisible: 3, helpText: "up/down navigate  enter select  esc cancel" },
+				() => this.ctx.ui.terminal?.rows ?? 24,
 			);
 			return { component: selector, focus: selector };
 		});
@@ -1160,46 +1140,14 @@ export class SelectorController {
 		const modelsPath = path.join(getAgentDir(), "models.yml");
 		const configPath = path.join(path.dirname(modelsPath), "config.yml");
 		let defaults = readLiteLLMConfig(modelsPath);
-		let restrictPicker: boolean | undefined;
 
 		try {
-			const flowResult = await runLiteLLMLoginFlow({
+			const flowResult = await runProviderConnectionFlow({
 				collectCredentials: async () => {
 					try {
 						const credentials = await loginLiteLLM({
 							defaults,
-							onPrompt: async prompt => {
-								this.ctx.chatContainer.addChild(new Spacer(1));
-								this.ctx.chatContainer.addChild(new Text(theme.fg("text", prompt.message), 1, 0));
-								if (prompt.placeholder) {
-									this.ctx.chatContainer.addChild(
-										new Text(theme.fg("dim", `e.g., ${prompt.placeholder}`), 1, 0),
-									);
-								}
-								this.ctx.ui.requestRender();
-
-								const { promise, resolve, reject } = Promise.withResolvers<string>();
-								const codeInput = createLoginPromptInput(prompt);
-								const closeInput = () => {
-									this.ctx.editorContainer.clear();
-									this.ctx.editorContainer.addChild(this.ctx.editor);
-									this.ctx.ui.setFocus(this.ctx.editor);
-								};
-								codeInput.onSubmit = () => {
-									const value = codeInput.getValue();
-									closeInput();
-									resolve(value);
-								};
-								codeInput.onEscape = () => {
-									closeInput();
-									reject(new LoginPromptCancelled());
-								};
-								this.ctx.editorContainer.clear();
-								this.ctx.editorContainer.addChild(codeInput);
-								this.ctx.ui.setFocus(codeInput);
-								this.ctx.ui.requestRender();
-								return promise;
-							},
+							onPrompt: prompt => this.#promptLoginValue(prompt),
 						});
 						defaults = credentials;
 						return credentials;
@@ -1227,18 +1175,15 @@ export class SelectorController {
 					}
 					return probe;
 				},
-				selectModel: async choices => {
-					const choice = await this.#showLiteLLMLoginModelSelector(choices);
-					if (choice) restrictPicker = await this.#showLiteLLMPickerScopeSelector();
-					return choice;
-				},
+
 				commit: input =>
 					commitLiteLLMLogin({
-						...input,
+						credentials: input.credentials,
+						probe: input.probe ?? { reachable: false, models: [] },
 						modelsPath,
 						configPath,
 						session: this.ctx.session,
-						restrictPicker,
+						connectionOnly: true,
 					}),
 				recover: request => this.#showLoginRecovery(request),
 			});
@@ -1248,23 +1193,7 @@ export class SelectorController {
 				return;
 			}
 
-			this.ctx.statusLine.invalidate();
-			this.ctx.updateEditorBorderColor();
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("success", `LiteLLM configuration saved to ${modelsPath}`), 1, 0),
-			);
-			this.ctx.chatContainer.addChild(
-				new Text(
-					theme.fg("success", `Default model: ${flowResult.choice.provider}/${flowResult.choice.modelId} (high)`),
-					1,
-					0,
-				),
-			);
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("dim", "Use /model to switch models without logging in again."), 1, 0),
-			);
-			this.ctx.ui.requestRender();
+			await this.#showProviderConnected("litellm", flowResult.discoveryError);
 		} catch (error: unknown) {
 			this.ctx.showError(`LiteLLM login failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
@@ -1278,7 +1207,7 @@ export class SelectorController {
 			let defaultBaseUrl = readVllmConfig(modelsPath)?.baseUrl ?? DEFAULT_VLLM_BASE_URL;
 			const storedCredential = this.ctx.session.modelRegistry.authStorage.get("vllm");
 			const hadStoredKey = storedCredential?.type === "api_key" && storedCredential.key.length > 0;
-			const flowResult = await runVllmLoginFlow({
+			const flowResult = await runProviderConnectionFlow({
 				collectCredentials: async () => {
 					try {
 						let baseUrl: string;
@@ -1326,13 +1255,12 @@ export class SelectorController {
 					this.ctx.ui.requestRender();
 					return probe;
 				},
-				selectModel: choices => this.#showVllmLoginModelSelector(choices),
 				commit: input =>
 					commitVllmLogin({
 						modelsPath,
 						credentials: input.credentials,
-						choice: input.choice,
 						session: this.ctx.session,
+						connectionOnly: true,
 					}),
 				recover: request => this.#showLoginRecovery(request, "vLLM"),
 			});
@@ -1341,28 +1269,7 @@ export class SelectorController {
 				this.ctx.showStatus("vLLM login cancelled. Existing configuration unchanged.");
 				return;
 			}
-			this.ctx.statusLine.invalidate();
-			this.ctx.updateEditorBorderColor();
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("success", `${theme.status.success} vLLM configuration saved to ${modelsPath}`), 1, 0),
-			);
-			this.ctx.chatContainer.addChild(
-				new Text(
-					theme.fg(
-						"success",
-						`Default model: vllm/${flowResult.choice.modelId} (${formatLoginThinkingState(this.ctx.session.thinkingLevel)})`,
-					),
-					1,
-					0,
-				),
-			);
-			if (this.ctx.session.modelRegistry.authStorage.get("vllm")) {
-				this.ctx.chatContainer.addChild(
-					new Text(theme.fg("dim", `API key saved only to ${getAgentDbPath()}`), 1, 0),
-				);
-			}
-			this.ctx.ui.requestRender();
+			await this.#showProviderConnected("vllm", flowResult.discoveryError);
 		} catch (error) {
 			this.ctx.showError(`vLLM login failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
@@ -1390,6 +1297,7 @@ export class SelectorController {
 			openAICodexMethod = await this.#selectOpenAICodexLoginMethod();
 			if (!openAICodexMethod) {
 				this.ctx.showStatus("ChatGPT login cancelled.");
+				this.#returnFromProviderSetup?.();
 				return;
 			}
 		}
@@ -1399,7 +1307,48 @@ export class SelectorController {
 			CALLBACK_SERVER_PROVIDERS.has(providerId as OAuthProvider) || providerId === "openai-codex";
 		const shouldOpenBrowser = providerId !== "openai-codex" || openAICodexMethod === "browser";
 		let endAuthorizationWait: (() => void) | undefined;
+
+		const abort = new AbortController();
+		let closeAuthFrame: (() => void) | undefined;
+		let authFrame: ConnectionInputComponent | undefined;
+		const cancel = () => {
+			abort.abort();
+			manualInput.clear("Login cancelled");
+			closeAuthFrame?.();
+			closeAuthFrame = undefined;
+		};
+		const waitingInput = () => {
+			const input = createLoginPromptInput({
+				message: "Paste the redirect URL or authorization code",
+				allowEmpty: true,
+			});
+			input.onEscape = cancel;
+			input.onSubmit = () => {
+				const value = input
+					.getValue()
+					.trim()
+					.replace(/^\/login\s+/, "");
+				if (value) manualInput.submit(value);
+				input.setValue("");
+			};
+			return input;
+		};
+		const showAuthFrame = () => {
+			if (authFrame) return authFrame;
+			authFrame = new ConnectionInputComponent(
+				`Sign in to ${getProviderDisplayName(providerId)}`,
+				"Waiting for sign-in…",
+				waitingInput(),
+				() => this.ctx.ui.terminal?.rows ?? 24,
+			);
+			this.showSelector(done => {
+				closeAuthFrame = done;
+				return { component: authFrame!, focus: authFrame! };
+			});
+			return authFrame;
+		};
 		const loginCallbacks = {
+			signal: abort.signal,
 			method: openAICodexMethod,
 			onAuth: (info: {
 				url: string;
@@ -1408,139 +1357,66 @@ export class SelectorController {
 				kind?: "browser" | "device";
 				userCode?: string;
 			}) => {
-				this.ctx.chatContainer.addChild(new Spacer(1));
-				if (info.kind === "device" && info.userCode) {
-					presentDeviceCode(this.ctx.chatContainer, info.url, info.userCode);
-				} else {
-					presentAuthLink(this.ctx.chatContainer, info.url);
-				}
-				if (info.instructions) {
-					this.ctx.chatContainer.addChild(new Spacer(1));
-					this.ctx.chatContainer.addChild(new Text(theme.fg("warning", info.instructions), 1, 0));
-				}
-				if (useManualInput) {
-					this.ctx.chatContainer.addChild(new Spacer(1));
-					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 1, 0));
-				}
+				const frame = showAuthFrame();
+				frame.content.clear();
+				if (info.kind === "device" && info.userCode) presentDeviceCode(frame.content, info.url, info.userCode);
+				else presentAuthLink(frame.content, info.url);
+				if (info.instructions) frame.content.addChild(new Text(theme.fg("muted", info.instructions), 0, 0));
+				if (useManualInput) frame.content.addChild(new Text(theme.fg("dim", MANUAL_LOGIN_TIP), 0, 0));
 				this.ctx.ui.requestRender();
-				if (shouldOpenBrowser) {
-					const launch = this.#launchHttpUrl(info.openUrl ?? info.url);
-					void launch.then(result => {
+				if (shouldOpenBrowser)
+					void this.#launchHttpUrl(info.openUrl ?? info.url).then(result => {
 						if (!result.ok) this.ctx.showWarning(`Could not open the sign-in page: ${result.error}`);
 					});
-				}
 				endAuthorizationWait ??= this.#beginPromptSignal("input");
 			},
 			onPrompt: async (prompt: OAuthPrompt) => {
-				this.ctx.chatContainer.addChild(new Spacer(1));
-				this.ctx.chatContainer.addChild(new Text(theme.fg("warning", prompt.message), 1, 0));
-				if (prompt.placeholder) {
-					this.ctx.chatContainer.addChild(new Text(theme.fg("dim", prompt.placeholder), 1, 0));
-				}
-				this.ctx.ui.requestRender();
+				if (abort.signal.aborted) throw new LoginPromptCancelled();
+				const frame = showAuthFrame();
 				const { promise, resolve, reject } = Promise.withResolvers<string>();
-				const codeInput = createLoginPromptInput(prompt);
-				const closeInput = () => {
-					this.ctx.editorContainer.clear();
-					this.ctx.editorContainer.addChild(this.ctx.editor);
-					this.ctx.ui.setFocus(this.ctx.editor);
+				const input = createLoginPromptInput(prompt);
+				const restoreWaiting = () => {
+					frame.input = waitingInput();
+					frame.purpose = "Waiting for approval in your browser…";
+					this.ctx.ui.requestRender();
 				};
-				codeInput.onSubmit = () => {
-					const code = codeInput.getValue();
-					closeInput();
-					if (prompt.copyText && /^(?:c|copy)$/i.test(code.trim())) {
+				input.onSubmit = () => {
+					const value = input.getValue();
+					restoreWaiting();
+					if (prompt.copyText && /^(?:c|copy)$/i.test(value.trim())) {
 						void copyToClipboard(prompt.copyText).catch(() => undefined);
-						this.ctx.showStatus("One-time code copied when terminal clipboard support is available.");
 						resolve("");
-						return;
-					}
-					resolve(code);
+					} else resolve(value);
 				};
-				codeInput.onEscape = () => {
-					closeInput();
-					reject(new LoginPromptCancelled("Login cancelled"));
+				input.onEscape = () => {
+					cancel();
+					reject(new LoginPromptCancelled());
 				};
-				this.ctx.editorContainer.clear();
-				this.ctx.editorContainer.addChild(codeInput);
-				this.ctx.ui.setFocus(codeInput);
+				frame.purpose = prompt.message;
+				frame.input = input;
 				this.ctx.ui.requestRender();
 				const endPrompt = this.#beginPromptSignal("input");
 				return promise.finally(endPrompt);
 			},
 			onProgress: (message: string) => {
-				this.ctx.chatContainer.addChild(new Text(theme.fg("dim", message), 1, 0));
+				const frame = showAuthFrame();
+				frame.purpose = message;
 				this.ctx.ui.requestRender();
 			},
 			onManualCodeInput: useManualInput ? () => manualInput.waitForInput(providerId) : undefined,
 		};
 		try {
-			let loginModelChoice: Awaited<ReturnType<typeof applyOAuthLoginModel>>;
-			if (providerId === "google-antigravity-enterprise") {
-				const result = await runEnterpriseOAuthLoginFlow({
-					capture: () => captureEnterpriseOAuthLoginState(this.ctx.session),
-					authenticate: async action => {
-						this.ctx.showStatus(
-							action === "edit"
-								? "Editing Google Antigravity Enterprise project and sign-in…"
-								: "Authenticating Google Antigravity Enterprise…",
-						);
-						await this.ctx.session.modelRegistry.authStorage.login(providerId, loginCallbacks);
-					},
-					applyModel: async () => {
-						await this.ctx.session.modelRegistry.refresh("online");
-						return Boolean(await applyOAuthLoginModel(this.ctx.session, providerId));
-					},
-					restore: snapshot => restoreEnterpriseOAuthLoginState(this.ctx.session, snapshot),
-					recover: request =>
-						this.#showLoginRecovery(request, "Google Antigravity Enterprise", "Edit project / sign-in"),
-				});
-				if (result.status === "cancelled") {
-					this.ctx.showStatus("Google Antigravity Enterprise login cancelled. Existing configuration unchanged.");
-					return;
-				}
-				loginModelChoice = GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE;
-			} else {
-				await this.ctx.session.modelRegistry.authStorage.login(providerId as OAuthProvider, loginCallbacks);
-				// Force entitlement discovery after login so /model reflects the provider immediately.
-				await this.ctx.session.modelRegistry.refresh("online");
-				loginModelChoice = await applyOAuthLoginModel(this.ctx.session, providerId);
-			}
-			if (loginModelChoice) {
-				this.ctx.statusLine.invalidate();
-				this.ctx.updateEditorBorderColor();
-			}
-			this.ctx.chatContainer.addChild(new Spacer(1));
-			this.ctx.chatContainer.addChild(
-				new Text(theme.fg("success", `${theme.status.success} Successfully logged in to ${providerId}`), 1, 0),
-			);
-			this.ctx.chatContainer.addChild(new Text(theme.fg("dim", `Credentials saved to ${getAgentDbPath()}`), 1, 0));
-			if (loginModelChoice) {
-				this.ctx.chatContainer.addChild(
-					new Text(
-						theme.fg(
-							"success",
-							`Default model: ${loginModelChoice.provider}/${loginModelChoice.modelId}; ${formatLoginThinkingState(loginModelChoice.thinkingLevel)}`,
-						),
-						1,
-						0,
-					),
-				);
-			} else if (providerId === "anthropic") {
-				this.ctx.chatContainer.addChild(
-					new Text(
-						theme.fg(
-							"warning",
-							"Claude login is valid, but fresh Haiku 4.5, Sonnet 5, and Opus 5 entitlements are required before changing the active profile. Use /model to select an available model.",
-						),
-						1,
-						0,
-					),
-				);
-			}
-			this.ctx.ui.requestRender();
+			await this.ctx.session.modelRegistry.authStorage.login(providerId as OAuthProvider, loginCallbacks);
+			closeAuthFrame?.();
+			closeAuthFrame = undefined;
+			await this.#showProviderConnected(canonicalizeOAuthProviderId(providerId));
 		} catch (error: unknown) {
-			this.ctx.showError(`Login failed: ${error instanceof Error ? error.message : String(error)}`);
+			if (abort.signal.aborted || error instanceof LoginPromptCancelled) {
+				this.ctx.showStatus("Login cancelled.");
+				this.#returnFromProviderSetup?.();
+			} else this.ctx.showError(`Login failed: ${error instanceof Error ? error.message : String(error)}`);
 		} finally {
+			closeAuthFrame?.();
 			if (useManualInput) {
 				manualInput.clear(`Manual OAuth input cleared for ${providerId}`);
 			}
@@ -1550,23 +1426,28 @@ export class SelectorController {
 
 	#selectOpenAICodexLoginMethod(): Promise<"browser" | "device" | undefined> {
 		const ordered = getOpenAICodexLoginMethods();
-		const labels = ordered.map(method =>
-			method === "browser" ? "Browser Login — local PKCE callback" : "Device Code — SSH/headless friendly",
-		);
+		const labels = ordered.map(method => (method === "browser" ? "Browser sign-in" : "Device code"));
 		return new Promise(resolve => {
 			this.showSelector(done => {
-				const selector = new HookSelectorComponent(
-					"ChatGPT subscription sign-in method",
-					labels,
-					label => {
+				const selector = new ConnectionChoiceComponent(
+					"Sign in to ChatGPT",
+					"Use your ChatGPT subscription.",
+					labels.map((label, index) => ({
+						label,
+						description:
+							ordered[index] === "browser"
+								? "Open a browser on this computer to sign in."
+								: "Open the sign-in page on another device; works over SSH.",
+					})),
+					index => {
 						done();
-						resolve(label.startsWith("Browser") ? "browser" : "device");
+						resolve(ordered[index]);
 					},
 					() => {
 						done();
 						resolve(undefined);
 					},
-					{ helpText: "ChatGPT subscription OAuth is separate from usage-based OpenAI API-key access." },
+					() => this.ctx.ui.terminal?.rows ?? 24,
 				);
 				return { component: selector, focus: selector };
 			});
@@ -1642,14 +1523,9 @@ export class SelectorController {
 				await validateVertexLogin(runtime, project, accessToken);
 			}
 
-			await this.ctx.session.modelRegistry.refreshProvider("google-vertex", "online");
-			const applied = await applyModelAfterLogin(this.ctx.session, GOOGLE_VERTEX_LOGIN_MODEL_CHOICE);
-			if (!applied) throw new Error("Gemini 3.8 Flash is unavailable in the local Vertex model registry");
 			this.ctx.session.settings.set("providers.vertexProject", project);
 			this.ctx.session.settings.set("providers.vertexLocation", "global");
-			this.ctx.statusLine.invalidate();
-			this.ctx.updateEditorBorderColor();
-			this.ctx.showStatus("Vertex AI configured: google-vertex/gemini-3.8-flash:high (global)");
+			await this.#showProviderConnected("google-vertex");
 		} catch (error) {
 			if (error instanceof LoginPromptCancelled) {
 				this.ctx.showStatus("Vertex AI login cancelled. Existing configuration unchanged.");
@@ -1694,7 +1570,8 @@ export class SelectorController {
 		await this.showOAuthSelector("login");
 	}
 
-	async showOAuthSelector(mode: "login" | "logout", providerId?: string): Promise<void> {
+	async showOAuthSelector(mode: "login" | "logout", providerId?: string, onReturn?: () => void): Promise<void> {
+		this.#returnFromProviderSetup = onReturn;
 		if (providerId) {
 			if (mode === "login") {
 				await this.#handleOAuthLogin(providerId);
@@ -1745,12 +1622,33 @@ export class SelectorController {
 					() => {
 						selector.stopValidation();
 						done();
+						onReturn?.();
 						this.ctx.ui.requestRender();
 					},
 					{
+						rows: () => this.ctx.ui.terminal?.rows ?? 24,
+						onChooseModel: selectedProvider => {
+							done();
+							this.showModelSelector({
+								initialProvider: selectedProvider,
+								onCancel: () => {
+									void this.showOAuthSelector("login", undefined, onReturn);
+								},
+							});
+						},
+						initialCatalog:
+							mode === "login" &&
+							registry.getConfiguredProviderIds().size === 0 &&
+							providers.every(
+								option =>
+									option.action === "add-provider" ||
+									(registry.getProviderAccessState(option.id).credentialSource === "keyless" &&
+										!registry.authStorage.hasAuth(option.id)),
+							),
 						providers,
 						catalogProviders: getLoginOptions().map(option => ({ ...option, providerIds: [option.id] })),
 						getAccessState: provider => this.ctx.session.modelRegistry.getProviderAccessState?.(provider),
+						getDiscoveryState: provider => this.ctx.session.modelRegistry.getProviderDiscoveryState?.(provider),
 						validateAccess: async selectedProviderId => {
 							await this.ctx.session.modelRegistry.refreshProvider(selectedProviderId, "online");
 							return this.ctx.session.modelRegistry.getProviderAccessState?.(selectedProviderId);

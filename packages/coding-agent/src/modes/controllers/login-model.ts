@@ -258,3 +258,35 @@ export async function applyOAuthLoginModel(
 		throw error;
 	}
 }
+
+/** Read-only recommendation. Cached inventory never authorizes a recommendation. */
+export function getLoginRecommendation(
+	registry: {
+		getAll(): Model[];
+		getProviderDiscoveryState?(provider: string): { status: string; stale: boolean; models: string[] } | undefined;
+	},
+	providerId: string,
+): LoginModelChoice | undefined {
+	const provider = canonicalizeOAuthProviderId(providerId);
+	const discovery = registry.getProviderDiscoveryState?.(provider);
+	if (discovery?.status !== "ok" || discovery.stale) return undefined;
+	const choices = [
+		ANTHROPIC_LOGIN_MODEL_CHOICE,
+		OPENAI_CODEX_LOGIN_MODEL_CHOICE,
+		GOOGLE_ANTIGRAVITY_LOGIN_MODEL_CHOICE,
+		GOOGLE_VERTEX_LOGIN_MODEL_CHOICE,
+		...LITELLM_LOGIN_MODEL_CHOICES,
+	];
+	return choices.find(
+		choice =>
+			choice.provider === provider &&
+			discovery.models.includes(choice.modelId) &&
+			registry.getAll().some(model => model.provider === provider && model.id === choice.modelId),
+	);
+}
+
+export interface ProviderConnectedResult {
+	provider: string;
+	recommendation?: LoginModelChoice;
+	discoveryError?: string;
+}
