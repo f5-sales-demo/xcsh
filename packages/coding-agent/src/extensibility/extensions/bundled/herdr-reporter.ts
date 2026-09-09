@@ -171,6 +171,11 @@ function nativeCapability(): string | undefined {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
+/** Protocol 23 adds a workspace receipt without changing native action semantics. */
+function supportsNativeLifecycle(protocol: number | undefined): boolean {
+	return protocol === 22 || protocol === 23;
+}
+
 function persistedTurns(ctx: ExtensionContext): PersistedTurn[] {
 	try {
 		const entries = ctx.sessionManager?.getEntries?.() as unknown[] | undefined;
@@ -476,12 +481,12 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 				}
 				const capability = nativeCapability();
 				const frame =
-					client.protocolVersion === 22 && capability
+					supportsNativeLifecycle(client.protocolVersion) && capability
 						? { ...baseFrame, native_capability: capability }
 						: baseFrame;
 				const response = await client.request<Record<string, unknown>>(TURN_REPORT_METHOD, frame);
-				if (client.protocolVersion === 22 && response.type !== "agent_turn") {
-					throw new Error("Herdr did not confirm the protocol-22 turn journal write");
+				if (supportsNativeLifecycle(client.protocolVersion) && response.type !== "agent_turn") {
+					throw new Error("Herdr did not confirm the native turn journal write");
 				}
 				pi.appendEntry(TURN_ENTRY_TYPE, { ...event, delivered: true });
 				delivered = true;
@@ -522,7 +527,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		try {
 			const client = getHerdrClient(socketPath);
 			await client.ensureProtocol();
-			if (client.protocolVersion !== 22) return false;
+			if (!supportsNativeLifecycle(client.protocolVersion)) return false;
 			const response = await client.request<Record<string, unknown>>(TURN_ACTION_ACK_METHOD, {
 				...target,
 				action_id: action.actionId,
@@ -679,7 +684,8 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		const registered = await reportSemanticTurn("starting");
 		const socketPath = process.env.HERDR_SOCKET_PATH;
 		const client = socketPath ? getHerdrClient(socketPath) : undefined;
-		nativeActionsEnabled = registered && client?.protocolVersion === 22 && nativeCapability() !== undefined;
+		nativeActionsEnabled =
+			registered && supportsNativeLifecycle(client?.protocolVersion) && nativeCapability() !== undefined;
 		if (nativeActionsEnabled) startActionPolling(ctx);
 	};
 
