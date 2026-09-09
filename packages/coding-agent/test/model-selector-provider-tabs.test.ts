@@ -67,6 +67,7 @@ describe("authenticated provider model groups", () => {
 			model("openai-codex", "gpt-5.6-sol"),
 			model("openai-codex", "gpt-5.6-terra"),
 			model("openai-codex", "gpt-5.6-luna"),
+			model("openai-codex", "gpt-6-astra"),
 			model("google-vertex", "gemini-2.5-flash"),
 			model("google-vertex", "gemini-3.8-flash"),
 			model("google-antigravity", "gemini-3.6-flash-tiered"),
@@ -88,6 +89,7 @@ describe("authenticated provider model groups", () => {
 			"openai-codex/gpt-5.6-sol",
 			"openai-codex/gpt-5.6-terra",
 			"openai-codex/gpt-5.6-luna",
+			"openai-codex/gpt-6-astra",
 			"google-vertex/gemini-3.8-flash",
 			"google-antigravity/gemini-3.7-flash-tiered",
 			"google-antigravity/gemini-3.1-pro-high",
@@ -197,6 +199,12 @@ function selectorHarness(
 		family: "GPT-5.6",
 		tier: "Luna",
 	});
+	const astra = model("openai-codex", "gpt-6-astra", {
+		name: "GPT-6 Astra",
+		publisher: "OpenAI",
+		family: "GPT-6",
+		tier: "Astra",
+	});
 	const vertex = model("google-vertex", "gemini-3.8-flash", {
 		name: "Gemini 3.8 Flash",
 		reasoning: true,
@@ -209,6 +217,7 @@ function selectorHarness(
 		sol,
 		terra,
 		luna,
+		astra,
 		model("openai-codex", "gpt-5.5", { name: "GPT-5.5" }),
 		vertex,
 		model("google-vertex", "gemini-2.5-flash", { name: "Gemini 2.5 Flash" }),
@@ -353,6 +362,7 @@ describe("provider-tab model selector", () => {
 		expect(rendered).toContain("GPT-5.6 Sol [openai-codex/gpt-5.6-sol]");
 		expect(rendered).toContain("GPT-5.6 Terra [openai-codex/gpt-5.6-terra]");
 		expect(rendered).toContain("GPT-5.6 Luna [openai-codex/gpt-5.6-luna]");
+		expect(rendered).toContain("GPT-6 Astra [openai-codex/gpt-6-astra]");
 		expect(rendered).not.toContain("QUICK");
 		expect(rendered).not.toContain("ALL MODELS");
 		expect(rendered).not.toContain("Gemini 3.8 Flash");

@@ -11,10 +11,12 @@ interface UatTarget {
 
 export const OPENAI_CODEX_SOL_MODEL = "openai-codex/gpt-5.6-sol";
 export const OPENAI_CODEX_DEFAULT_MODEL = "openai-codex/gpt-5.6-terra";
-export const OPENAI_CODEX_GPT56_MODELS = [
+export const OPENAI_CODEX_ASTRA_MODEL = "openai-codex/gpt-6-astra";
+export const OPENAI_CODEX_PICKER_MODELS = [
 	"openai-codex/gpt-5.6-luna",
 	"openai-codex/gpt-5.6-terra",
 	OPENAI_CODEX_SOL_MODEL,
+	OPENAI_CODEX_ASTRA_MODEL,
 ] as const;
 export const OPENAI_CODEX_SOL_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
@@ -280,7 +282,12 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 					visible.includes("ChatGPT Subscription") &&
 					normalized.includes("gpt-5.6-luna] SMOL (low)") &&
 					normalized.includes("gpt-5.6-terra] DEFAULT (medium)") &&
-					normalized.includes("gpt-5.6-sol] SLOW (high) PLAN (high)")
+					normalized.includes("gpt-5.6-sol] SLOW (high) PLAN (high)") &&
+					normalized.includes("gpt-6-astra]") &&
+					!normalized.includes("gpt-6-astra] SMOL") &&
+					!normalized.includes("gpt-6-astra] DEFAULT") &&
+					!normalized.includes("gpt-6-astra] SLOW") &&
+					!normalized.includes("gpt-6-astra] PLAN")
 				);
 			},
 			"the Luna, Terra, and Sol role badges",
@@ -364,7 +371,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			await promptAndVerify(model, effort, `${model}:${effort}`);
 		};
 
-		for (const model of OPENAI_CODEX_GPT56_MODELS) await selectAndVerify(model, "medium");
+		for (const model of OPENAI_CODEX_PICKER_MODELS) await selectAndVerify(model, "medium");
 		for (const effort of OPENAI_CODEX_SOL_EFFORTS) await selectAndVerify(OPENAI_CODEX_SOL_MODEL, effort);
 
 		await selectAndVerify(OPENAI_CODEX_DEFAULT_MODEL, "medium");
@@ -437,7 +444,7 @@ async function runFreshOAuthRoundTrip(target: UatTarget): Promise<void> {
 			await Promise.all(logFiles.map(file => fs.readFile(path.join(logDir, file), "utf8")))
 		).join("\n");
 		const sanitizedDiagnostics = redactSensitiveOutput(rawDiagnostics);
-		for (const model of OPENAI_CODEX_GPT56_MODELS)
+		for (const model of OPENAI_CODEX_PICKER_MODELS)
 			expectDiagnostic(sanitizedDiagnostics, `"model":"${model.slice("openai-codex/".length)}"`);
 		for (const effort of OPENAI_CODEX_SOL_EFFORTS)
 			expectDiagnostic(sanitizedDiagnostics, `"reasoningEffort":"${effort}"`);

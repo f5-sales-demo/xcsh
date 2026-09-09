@@ -153,6 +153,8 @@ function compareVersions(left: string, right: string): number {
 }
 
 /** Keep historical catalogs authoritative while presenting only current user-facing families. */
+const DEFAULT_OPENAI_CODEX_MODEL_IDS = new Set(["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-6-astra"]);
+
 export function filterCurrentBrowserModels(models: readonly Model[]): Model[] {
 	const newestGeminiVersion = new Map<string, string>();
 	const newestClaudeVersion = new Map<string, string>();
@@ -180,7 +182,7 @@ export function filterCurrentBrowserModels(models: readonly Model[]): Model[] {
 			// Older GPT generations are still available through explicit --models scopes,
 			// but the general browser starts at the current 5.6 family.
 			if (compareVersions(gpt[1], "5.6") < 0) return false;
-			if (model.provider === "openai-codex") return /^gpt-5\.6-(?:sol|terra|luna)$/i.test(model.id);
+			if (model.provider === "openai-codex") return DEFAULT_OPENAI_CODEX_MODEL_IDS.has(model.id.toLowerCase());
 		}
 		const claude = model.id.match(/^claude-(opus|sonnet|haiku)-(\d+)(?:[.-](\d+))?(?:-|$)/i);
 		if (claude?.[1] && claude[2]) {
