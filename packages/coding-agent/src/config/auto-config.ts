@@ -119,6 +119,10 @@ export function generateModelsYml(baseUrl: string, options?: GenerateModelsYmlOp
 		"        maxTokens: 128000",
 		"        compat:",
 		"          supportsTemperature: false",
+		"      gpt-5.6-terra:",
+		"        reasoning: true",
+		"      gpt-5.6-luna:",
+		"        reasoning: true",
 	];
 
 	lines.push("");

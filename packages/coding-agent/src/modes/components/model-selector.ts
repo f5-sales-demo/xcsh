@@ -464,7 +464,7 @@ export class ModelSelectorComponent extends Container {
 				details.push(
 					[
 						"Changes only this conversation.",
-						"Saves the default for future conversations.",
+						"Uses now and saves the default for future conversations.",
 						"Changes only the selected specialist role.",
 					][this.#menuSelectedIndex],
 				);
