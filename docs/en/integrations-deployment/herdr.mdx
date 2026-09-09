@@ -108,8 +108,8 @@ The verified contract is:
 | Reconnect/order | Serialized queue and persisted event revision | Exact duplicates are idempotent; stale/conflicting revisions fail; terminal state is immutable. |
 | Application exit | `session_shutdown` | Active turn becomes `interrupted`, then pane authority is released; never success. |
 
-The protocol-22 producer integration is tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791), and the versioned managed producer modes by [issue
-#3794](https://github.com/f5-sales-demo/xcsh/issues/3794); its lifecycle foundation is tracked by [issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The complete
+The protocol-22 producer integration is tracked by [issue #3791](https://github.com/f5-sales-demo/xcsh/issues/3791), and the versioned managed producer modes by
+[issue #3794](https://github.com/f5-sales-demo/xcsh/issues/3794); its lifecycle foundation is tracked by [issue #3768](https://github.com/f5-sales-demo/xcsh/issues/3768). The complete
 cross-project work packages and acceptance gates are in [Herdr native signaling gap-closing plan](../architecture-contribution/herdr-gap-closing-plan).
 
 Herdr lifecycle reconciliation is tracked by issue #5 in the F5 Herdr fork. Current source already recognizes the exact `("herdr:xcsh", "xcsh")` resume pair; deployed build provenance and live resume/fork acceptance remain required before feature acceptance.

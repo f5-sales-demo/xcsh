@@ -171,9 +171,9 @@ function nativeCapability(): string | undefined {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-/** Protocol 23 adds a workspace receipt without changing native action semantics. */
+/** Protocols 23-24 add launch receipts/modes without changing native action semantics. */
 function supportsNativeLifecycle(protocol: number | undefined): boolean {
-	return protocol === 22 || protocol === 23;
+	return protocol === 22 || protocol === 23 || protocol === 24;
 }
 
 function persistedTurns(ctx: ExtensionContext): PersistedTurn[] {

@@ -483,100 +483,104 @@ describe("herdr-reporter extension", () => {
 		}
 	});
 
-	it("registers protocol-23 native provenance before cooperatively cancelling at a working safe point", async () => {
-		let exposeCancel = false;
-		let registeredTurnId: string | undefined;
-		const action = (state: "requested" | "safe_point" | "timed_out") => ({
-			backend_execution_id: "backend-1",
-			action_id: "cancel",
-			action_revision: 1,
-			state,
-			requested_at_unix_ms: 1,
-			...(state === "safe_point" ? { acknowledged_at_unix_ms: 2, turn_id: registeredTurnId } : {}),
-		});
-		const herdr = await startFakeHerdr({
-			protocol: 23,
-			capabilities: { agent_turn_journal: true },
-			respond: request => {
-				if (request.method === "agent.turn.report") {
-					if (request.params.state === "starting") registeredTurnId = String(request.params.turn_id);
-					return { type: "agent_turn", turn: {}, admitted: true };
-				}
-				if (request.method === "agent.turn.action.get") {
-					return { type: "agent_turn_action_list", actions: exposeCancel ? [action("requested")] : [] };
-				}
-				if (request.method === "agent.turn.action.ack") {
-					return { type: "agent_turn_action", action: action("safe_point"), admitted: true };
-				}
-				return {};
-			},
-		});
-		try {
-			process.env.HERDR_PANE_ID = "w1:p1";
-			process.env.HERDR_SOCKET_PATH = herdr.socketPath;
-			process.env.HERDR_EXECUTION_ID = "execution-1";
-			process.env.HERDR_EXECUTION_GENERATION = "7";
-			process.env.HERDR_NATIVE_CAPABILITY = "private-native-capability";
-			const { pi, handlers, entries } = makeMockPi();
-			let abortCount = 0;
-			const ctx = {
-				isIdle: () => false,
-				abort: () => abortCount++,
-				sessionManager: {
-					getSessionId: () => "0123abcd4567ef89",
-					getSessionFile: () => "/tmp/0123abcd4567ef89.jsonl",
-					getEntries: () => entries.map(({ customType, data }) => ({ type: "custom", customType, data })),
-				},
-			} as unknown as ExtensionContext;
-
-			herdrReporter(pi);
-			await handlers.get("before_agent_start")?.({ type: "before_agent_start", prompt: "private" }, ctx);
-			const starting = herdr.received.find(
-				frame => frame.method === "agent.turn.report" && frame.params.state === "starting",
-			);
-			expect(starting?.params).toMatchObject({
-				execution_id: "execution-1",
-				pane_id: "w1:p1",
-				producer: "xcsh",
-				session_id: "0123abcd4567ef89",
-				generation: 7,
-				event_revision: 1,
-				native_capability: "private-native-capability",
-			});
-
-			exposeCancel = true;
-			await handlers.get("turn_phase")?.({ type: "turn_phase", phase: "thinking", turnId: 1 }, ctx);
-			await waitFor(() => herdr.received.some(frame => frame.method === "agent.turn.action.ack"));
-			expect(abortCount).toBe(1);
-			const get = herdr.received.find(frame => frame.method === "agent.turn.action.get");
-			const ack = herdr.received.find(frame => frame.method === "agent.turn.action.ack");
-			expect(get?.params).toMatchObject({
-				execution_id: "execution-1",
-				pane_id: "w1:p1",
-				producer: "xcsh",
-				session_id: "0123abcd4567ef89",
-				generation: 7,
-				native_capability: "private-native-capability",
-				after_revision: 0,
-			});
-			expect(ack?.params).toMatchObject({
-				...get?.params,
+	for (const protocol of [22, 23, 24] as const) {
+		it(`registers protocol-${protocol} native provenance before cooperatively cancelling at a working safe point`, async () => {
+			let exposeCancel = false;
+			let registeredTurnId: string | undefined;
+			const action = (state: "requested" | "safe_point" | "timed_out") => ({
+				backend_execution_id: "backend-1",
 				action_id: "cancel",
 				action_revision: 1,
-				state: "safe_point",
+				state,
+				requested_at_unix_ms: 1,
+				...(state === "safe_point" ? { acknowledged_at_unix_ms: 2, turn_id: registeredTurnId } : {}),
 			});
+			const herdr = await startFakeHerdr({
+				protocol,
+				capabilities: { agent_turn_journal: true },
+				respond: request => {
+					if (request.method === "agent.turn.report") {
+						if (request.params.state === "starting") registeredTurnId = String(request.params.turn_id);
+						return { type: "agent_turn", turn: {}, admitted: true };
+					}
+					if (request.method === "agent.turn.action.get") {
+						return { type: "agent_turn_action_list", actions: exposeCancel ? [action("requested")] : [] };
+					}
+					if (request.method === "agent.turn.action.ack") {
+						return { type: "agent_turn_action", action: action("safe_point"), admitted: true };
+					}
+					return {};
+				},
+			});
+			try {
+				process.env.HERDR_PANE_ID = "w1:p1";
+				process.env.HERDR_SOCKET_PATH = herdr.socketPath;
+				process.env.HERDR_EXECUTION_ID = "execution-1";
+				process.env.HERDR_EXECUTION_GENERATION = "7";
+				process.env.HERDR_NATIVE_CAPABILITY = "private-native-capability";
+				const { pi, handlers, entries } = makeMockPi();
+				let abortCount = 0;
+				const ctx = {
+					isIdle: () => false,
+					abort: () => abortCount++,
+					sessionManager: {
+						getSessionId: () => "0123abcd4567ef89",
+						getSessionFile: () => "/tmp/0123abcd4567ef89.jsonl",
+						getEntries: () => entries.map(({ customType, data }) => ({ type: "custom", customType, data })),
+					},
+				} as unknown as ExtensionContext;
 
-			await handlers.get("turn_phase")?.({ type: "turn_phase", phase: "cancelled", turnId: 1 }, ctx);
-			const cancelled = herdr.received.find(
-				frame => frame.method === "agent.turn.report" && frame.params.state === "cancelled",
-			);
-			expect(cancelled?.order).toBeGreaterThan(ack?.order ?? Number.MAX_SAFE_INTEGER);
-			expect(JSON.stringify(entries)).not.toContain("private-native-capability");
-			await handlers.get("session_shutdown")?.({}, ctx);
-		} finally {
-			await herdr.close();
-		}
-	});
+				herdrReporter(pi);
+				await handlers.get("before_agent_start")?.({ type: "before_agent_start", prompt: "private" }, ctx);
+				const starting = herdr.received.find(
+					frame => frame.method === "agent.turn.report" && frame.params.state === "starting",
+				);
+				expect(starting?.params).toMatchObject({
+					execution_id: "execution-1",
+					pane_id: "w1:p1",
+					producer: "xcsh",
+					session_id: "0123abcd4567ef89",
+					generation: 7,
+					event_revision: 1,
+					native_capability: "private-native-capability",
+				});
+
+				exposeCancel = true;
+				await handlers.get("turn_phase")?.({ type: "turn_phase", phase: "thinking", turnId: 1 }, ctx);
+				await waitFor(() => herdr.received.some(frame => frame.method === "agent.turn.action.ack"));
+				expect(abortCount).toBe(1);
+				const get = herdr.received.find(frame => frame.method === "agent.turn.action.get");
+				const ack = herdr.received.find(frame => frame.method === "agent.turn.action.ack");
+				expect(get?.order).toBeGreaterThan(starting?.order ?? Number.MAX_SAFE_INTEGER);
+				expect(ack?.order).toBeGreaterThan(get?.order ?? Number.MAX_SAFE_INTEGER);
+				expect(get?.params).toMatchObject({
+					execution_id: "execution-1",
+					pane_id: "w1:p1",
+					producer: "xcsh",
+					session_id: "0123abcd4567ef89",
+					generation: 7,
+					native_capability: "private-native-capability",
+					after_revision: 0,
+				});
+				expect(ack?.params).toMatchObject({
+					...get?.params,
+					action_id: "cancel",
+					action_revision: 1,
+					state: "safe_point",
+				});
+
+				await handlers.get("turn_phase")?.({ type: "turn_phase", phase: "cancelled", turnId: 1 }, ctx);
+				const cancelled = herdr.received.find(
+					frame => frame.method === "agent.turn.report" && frame.params.state === "cancelled",
+				);
+				expect(cancelled?.order).toBeGreaterThan(ack?.order ?? Number.MAX_SAFE_INTEGER);
+				expect(JSON.stringify(entries)).not.toContain("private-native-capability");
+				await handlers.get("session_shutdown")?.({}, ctx);
+			} finally {
+				await herdr.close();
+			}
+		});
+	}
 
 	it("does not poll native actions until the protocol-22 starting report is durably admitted", async () => {
 		const herdr = await startFakeHerdr({

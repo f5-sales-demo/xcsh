@@ -79,16 +79,16 @@ describe("Herdr protocol client", () => {
 		}
 	});
 
-	test("negotiates protocol 23 and advertised capabilities", async () => {
+	test("negotiates protocol 24 and advertised capabilities", async () => {
 		const fake = await fakeHerdr(request =>
 			request.method === "ping"
-				? { type: "pong", protocol: 23, version: "test", capabilities: { agent_turn_journal: true } }
+				? { type: "pong", protocol: 24, version: "test", capabilities: { agent_turn_journal: true } }
 				: { type: "workspace_list", workspaces: [] },
 		);
 		try {
 			const client = new HerdrClient(fake.socketPath);
 			await client.ensureProtocol();
-			expect(client.protocolVersion).toBe(23);
+			expect(client.protocolVersion).toBe(24);
 			expect(client.hasCapability("agent_turn_journal")).toBe(true);
 			expect(client.hasCapability("unknown")).toBe(false);
 		} finally {
@@ -108,7 +108,7 @@ describe("Herdr protocol client", () => {
 	});
 
 	test("rejects unreviewed future protocols", async () => {
-		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 24, version: "future" }));
+		const fake = await fakeHerdr(() => ({ type: "pong", protocol: 25, version: "future" }));
 		try {
 			await expect(new HerdrClient(fake.socketPath).ensureProtocol()).rejects.toMatchObject({
 				code: "protocol_mismatch",
