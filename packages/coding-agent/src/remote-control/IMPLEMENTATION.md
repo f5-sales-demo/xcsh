@@ -95,8 +95,7 @@ Observed red: five failures; green: 88 tests / 288 assertions, plus 102 registry
 tests / 854 assertions and the coding-agent TypeScript check. Live retries returned
 Alpha's marker in 3829 ms and Beta's in 3323 ms without duplicate prompts.
 Robin subsequently confirmed “beta worked”. Both manual typed routing checks now
-pass. All native voice checks remain pending; automated checks do not substitute
-for iPhone observations. Actual phone bootstrap sends four extra skill roots;
+pass. Automated checks do not substitute for the iPhone voice observations below. Actual phone bootstrap sends four extra skill roots;
 nonempty root registration remains an explicit unsupported operation.
 
 Product labels and host names use lowercase `xcsh`. Existing `XCSH_` environment
@@ -134,21 +133,33 @@ kept separate from the terminal work model. The next phone attempt additionally 
 items, and start/end instructions. Tail flushing now preserves accepted work across
 closure and avoids replaying already delegated speech. At 2026-09-10 01:37:22 UTC,
 the native service accepted call creation and xcsh attached its sideband in 1525 ms
-using its own identity and selected subscription. Audible iPhone confirmation and
-a live delegated voice task remain pending. Earlier generic phone errors were
+using its own identity and selected subscription. Robin then reported that voice
+appeared to work and confirmed hearing completion of the spoken fixture task.
+The existing Beta session created `voice-check.txt` containing `BETA-HARBOR`; a
+read-only filesystem check confirmed the exact marker. Native voice discovery,
+connection, delegation into the existing agent, and spoken completion therefore
+pass the first manual voice gate. Robin subsequently ended and restarted voice,
+asked Beta to read the file, and confirmed the correct result. Robin also interrupted
+Beta midway through counting and confirmed it stopped speaking and listened.
+Robin also paused deliberately midway through speaking and confirmed voice waited
+for the sentence to finish. Work steering/cancellation and network recovery remain pending. Earlier generic phone errors were
 adapter contract/validation failures, not evidence of native service rejection.
 
 Current limitations: standalone WebSocket and legacy WebRTC negotiation remain unsupported. Delegation identities persist
 before submission for at-most-once recovery, with an unresolved crash gap; this is
-not a complete exactly-once transaction. Sideband reconnect/replay, timeline events,
-streamed result context, and audio appends remain pending.
+not a complete exactly-once transaction. V3 sideband reconnect now follows the pinned 200 ms–5 s backoff, refreshes selected
+authentication, buffers up to 1 MiB of unsent output, rejects stale socket events,
+and retains delegation deduplication across reconnects. Successful writes have no
+service acknowledgement and are not speculatively replayed. Expired calls end
+cleanly. Automated recovery tests pass; live transport-drop recovery remains pending.
+Timeline events, streamed result context, and audio appends remain pending.
 Nonempty skill roots remain explicit errors. Full voice acceptance must precede
 merge or release.
 
 ## Work still required
 
 1. Pairing and both Alpha/Beta typed round trips are confirmed by Robin.
-   Complete the native voice gate.
+   The first native spoken task also passes; complete the remaining voice checks.
 2. Complete history pagination and all live turn/tool event mappings, terminal
    versus remote interaction ownership, and durable retry identities.
 3. Verify native existing-call attachment, complete the remaining realtime transports,
@@ -194,3 +205,11 @@ context case finished in 1359 ms with a 15-second diagnostic limit. The earlier
 marketplace/remote CLI timeout cases passed in a separate 7-test rerun. These
 results do not describe the default-timeout full suite as clean. Staged-scope PII,
 secret scanning, and diff whitespace checks pass.
+
+Recovery checkpoint: six focused reconnect tests pass (32 assertions), following
+four observed failures before implementation. The earlier full remote run passed
+93 tests / 330 assertions before the final pending-handshake cancellation test
+was added. Workspace lint and TypeScript checks pass. Beta was idle after Robin
+ended voice and was resumed with the same session identity and explicit Astra
+model to load this change. Phone background/foreground and live recovery checks
+are in progress; do not infer them from mocked transport tests.

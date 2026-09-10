@@ -71,14 +71,20 @@ export class NativeVoice {
 	#started = false;
 	#socket?: VoiceSocket;
 	#config?: ReturnType<typeof existingCallConfig>;
-	#state: "idle" | "opening" | "open" | "closed" = "idle";
+	#state: "idle" | "opening" | "open" | "reconnecting" | "closed" = "idle";
+	#epoch = 0;
+	#connectedAt = 0;
+	#rapidDisconnects = 0;
+	#reconnectTimer?: ReturnType<typeof setTimeout>;
+	#outbound: string[] = [];
+	#outboundBytes = 0;
 	#chain = Promise.resolve();
 	#pendingBytes = 0;
 	#seen = new Set<string>();
 	#pendingDelegations = 0;
 	constructor(private readonly deps: VoiceDependencies) {}
 	get active(): boolean {
-		return this.#state === "opening" || this.#state === "open";
+		return this.#state === "opening" || this.#state === "open" || this.#state === "reconnecting";
 	}
 	async start(params: Record<string, unknown>): Promise<void> {
 		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
@@ -137,16 +143,14 @@ export class NativeVoice {
 			}
 			this.#config = config;
 			stage = "sideband-attach";
-			const socket = await (this.deps.open ?? openSocket)(config!.url, headers, {
-				message: data => this.#receive(data),
-				closed: () => this.stop("transportClosed"),
-			});
+			const socket = await this.#connect(headers);
 			if (this.#state !== "opening") {
 				socket.close();
 				throw new Error("Voice stopped while connecting");
 			}
 			this.#socket = socket;
 			this.#state = "open";
+			this.#connectedAt = Date.now();
 			if (!this.#started) {
 				this.#started = true;
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
@@ -172,6 +176,10 @@ export class NativeVoice {
 		if (this.#state === "closed" || this.#state === "idle") return;
 		const socket = this.#socket;
 		this.#state = "closed";
+		this.#epoch++;
+		clearTimeout(this.#reconnectTimer);
+		this.#outbound = [];
+		this.#outboundBytes = 0;
 		this.#abort.abort();
 		if (this.#started && this.#endInstructions)
 			void this.deps.instructions?.("end", this.#endInstructions).catch(() => {});
@@ -191,20 +199,111 @@ export class NativeVoice {
 		this.deps.emit("thread/realtime/error", { message });
 		this.stop("failed");
 	}
+	async #connect(headers: Record<string, string>): Promise<VoiceSocket> {
+		const epoch = ++this.#epoch;
+		return (this.deps.open ?? openSocket)(this.#config!.url, headers, {
+			message: data => {
+				if (this.#epoch === epoch) this.#receive(data);
+			},
+			closed: () => {
+				if (this.#epoch === epoch) this.#transportLost();
+			},
+		});
+	}
+	#transportLost(): void {
+		if (!this.active || this.#state === "reconnecting") return;
+		if (this.#state !== "open" || this.#config?.version !== "v3") {
+			this.stop("transportClosed");
+			return;
+		}
+		this.#state = "reconnecting";
+		this.#epoch++;
+		const socket = this.#socket;
+		this.#socket = undefined;
+		socket?.close();
+		// Match the pinned v3 sideband's 200 ms exponential backoff, capped at
+		// five seconds, and reset after a connection survives thirty seconds.
+		if (Date.now() - this.#connectedAt >= 30_000) this.#rapidDisconnects = 0;
+		const delay = Math.min(200 * 2 ** Math.min(this.#rapidDisconnects++, 5), 5000);
+		this.#reconnectTimer = setTimeout(() => {
+			void this.#reconnect();
+		}, delay);
+	}
+	async #reconnect(): Promise<void> {
+		if (this.#state !== "reconnecting") return;
+		const startedAt = Date.now();
+		try {
+			// Selection and refresh stay with the owning session's credential broker.
+			const auth = await this.deps.authenticate();
+			if (this.#state !== "reconnecting") return;
+			const socket = await this.#connect({
+				Authorization: `Bearer ${auth.accessToken}`,
+				"ChatGPT-Account-Id": auth.accountId,
+				originator: "xcsh",
+				"openai-alpha": "quicksilver=v2",
+				...(this.#config?.realtimeSessionId ? { "x-session-id": this.#config.realtimeSessionId } : {}),
+			});
+			if (this.#state !== "reconnecting") {
+				socket.close();
+				return;
+			}
+			this.#socket = socket;
+			this.#state = "open";
+			this.#connectedAt = Date.now();
+			this.#drain();
+			await this.deps.record({
+				kind: "voiceDiagnostic",
+				stage: "sideband-reconnect",
+				connected: true,
+				elapsedMs: Date.now() - startedAt,
+			});
+		} catch (error) {
+			if (!this.active) return;
+			const message = safeConnectionError(error);
+			const status = message.match(/HTTP (\d{3})/)?.[1];
+			await this.deps
+				.record({
+					kind: "voiceDiagnostic",
+					stage: "sideband-reconnect",
+					connected: false,
+					httpStatus: status ? Number(status) : null,
+					elapsedMs: Date.now() - startedAt,
+				})
+				.catch(() => {});
+			if (status === "404" || status === "410") this.stop("transportClosed");
+			else this.#fail(message);
+		}
+	}
 	#send(message: Record<string, unknown>): void {
-		if (this.#state !== "open" || !this.#socket) return;
-		if (this.#socket.bufferedAmount > 1_048_576) {
+		if (this.#state !== "open" && this.#state !== "reconnecting") return;
+		const data = JSON.stringify(message);
+		const bytes = Buffer.byteLength(data);
+		if (this.#outboundBytes + bytes + (this.#socket?.bufferedAmount ?? 0) > 1_048_576) {
 			this.#fail("Realtime output buffer limit reached");
 			return;
 		}
-		try {
-			this.#socket.send(JSON.stringify(message));
-		} catch {
-			this.#fail();
+		this.#outbound.push(data);
+		this.#outboundBytes += bytes;
+		this.#drain();
+	}
+	#drain(): void {
+		while (this.#state === "open" && this.#socket && this.#outbound.length) {
+			const data = this.#outbound[0];
+			try {
+				this.#socket.send(data);
+			} catch {
+				// Retry only a failed write. Successful writes have no server ACK in
+				// this protocol and must not be replayed speculatively.
+				this.#transportLost();
+				return;
+			}
+			this.#outbound.shift();
+			this.#outboundBytes -= Buffer.byteLength(data);
 		}
 	}
 	appendText(text: unknown, role: unknown = "user", speakable = false): void {
-		if (this.#state !== "open") throw new ProtocolError(-32000, "Voice is not active");
+		if (this.#state !== "open" && this.#state !== "reconnecting")
+			throw new ProtocolError(-32000, "Voice is not active");
 		if (
 			typeof text !== "string" ||
 			!text.trim() ||
