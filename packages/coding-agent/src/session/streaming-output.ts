@@ -33,7 +33,7 @@ export interface OutputSinkOptions {
 	artifactId?: string;
 	spillThreshold?: number;
 	onChunk?: (chunk: string) => void;
-	/** Minimum ms between onChunk calls. 0 = every chunk (default). */
+	/** Batch interval for onChunk. Full buffers flush early; 0 delivers every chunk. */
 	chunkThrottleMs?: number;
 	/** Mask sensitive values (e.g. env var secrets) in output chunks and final dump. */
 	maskSecrets?: (text: string) => string;
@@ -527,6 +527,10 @@ export class OutputSink {
 	#sawData = false;
 	#truncated = false;
 	#lastChunkTime = 0;
+	#pendingChunks: string[] = [];
+	#pendingChunkBytes = 0;
+	#chunkTimer?: ReturnType<typeof setTimeout>;
+	#chunkFailure?: { error: unknown };
 
 	#file?: {
 		path: string;
@@ -563,6 +567,59 @@ export class OutputSink {
 		this.#maskSecrets = maskSecrets;
 	}
 
+	#flushChunks(): void {
+		if (this.#chunkTimer) clearTimeout(this.#chunkTimer);
+		this.#chunkTimer = undefined;
+		if (this.#chunkFailure) throw this.#chunkFailure.error;
+		if (!this.#pendingChunks.length) return;
+		const chunk = this.#pendingChunks.join("");
+		this.#pendingChunks = [];
+		this.#pendingChunkBytes = 0;
+		this.#lastChunkTime = Date.now();
+		try {
+			this.#onChunk?.(chunk);
+		} catch (error) {
+			this.#chunkFailure = { error };
+			throw error;
+		}
+	}
+
+	#queueChunk(chunk: string): void {
+		if (this.#chunkFailure) throw this.#chunkFailure.error;
+		if (!this.#onChunk || !chunk) return;
+		if (this.#chunkThrottleMs <= 0) {
+			this.#onChunk(chunk);
+			return;
+		}
+		// Four bytes per code unit is a conservative UTF-8 bound. Keep surrogate pairs intact.
+		const maxUnits = Math.floor(DEFAULT_MAX_BYTES / 4);
+		for (let offset = 0; offset < chunk.length; ) {
+			let end = Math.min(chunk.length, offset + maxUnits);
+			if (end < chunk.length && chunk.charCodeAt(end - 1) >= 0xd800 && chunk.charCodeAt(end - 1) <= 0xdbff) end--;
+			const part = chunk.slice(offset, end);
+			const size = Buffer.byteLength(part);
+			if (this.#pendingChunkBytes + size > DEFAULT_MAX_BYTES) this.#flushChunks();
+			this.#pendingChunks.push(part);
+			this.#pendingChunkBytes += size;
+			if (Date.now() - this.#lastChunkTime >= this.#chunkThrottleMs || this.#pendingChunkBytes >= DEFAULT_MAX_BYTES)
+				this.#flushChunks();
+			offset = end;
+		}
+		if (this.#pendingChunks.length && !this.#chunkTimer) {
+			this.#chunkTimer = setTimeout(
+				() => {
+					try {
+						this.#flushChunks();
+					} catch (error) {
+						this.#chunkFailure = { error };
+					}
+				},
+				Math.max(0, this.#chunkThrottleMs - (Date.now() - this.#lastChunkTime)),
+			);
+			this.#chunkTimer.unref();
+		}
+	}
+
 	/**
 	 * Push a chunk of output. The buffer management and onChunk callback run
 	 * synchronously. File sink writes are deferred and serialized internally.
@@ -576,14 +633,7 @@ export class OutputSink {
 	push(chunk: string): void {
 		if (this.#maskSecrets) chunk = this.#maskSecrets(chunk);
 
-		// Throttled onChunk: only call the callback when enough time has passed.
-		if (this.#onChunk) {
-			const now = Date.now();
-			if (now - this.#lastChunkTime >= this.#chunkThrottleMs) {
-				this.#lastChunkTime = now;
-				this.#onChunk(chunk);
-			}
-		}
+		this.#queueChunk(chunk);
 
 		const dataBytes = Buffer.byteLength(chunk, "utf-8");
 		this.#totalBytes += dataBytes;
@@ -693,11 +743,14 @@ export class OutputSink {
 	}
 
 	async dump(notice?: string): Promise<OutputSummary> {
+		try {
+			this.#flushChunks();
+		} finally {
+			if (this.#file) await this.#file.sink.end();
+		}
 		const noticeLine = notice ? `[${notice}]\n` : "";
 		const outputLines = this.#buffer.length > 0 ? countNewlines(this.#buffer) + 1 : 0;
 		const totalLines = this.#sawData ? this.#totalLines + 1 : 0;
-
-		if (this.#file) await this.#file.sink.end();
 
 		// Sanitize the complete buffer in one pass so image protocol escape
 		// sequences that were split across chunks are correctly detected.

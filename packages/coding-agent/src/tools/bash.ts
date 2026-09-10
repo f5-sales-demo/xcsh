@@ -117,6 +117,8 @@ export interface BashToolInput {
 }
 
 export interface BashToolDetails {
+	/** Incremental output for this update only; absent from completed results. */
+	outputDelta?: string;
 	execution?: CommandExecutionDetails;
 	meta?: OutputMeta;
 	timeoutSeconds?: number;
@@ -511,6 +513,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 							latestText = preview;
 							void reportProgress(latestText, {
 								execution: commandExecution(options.execution, preview),
+								outputDelta: options.maskSecrets ? options.maskSecrets(chunk) : chunk,
 								async: { state: "running", jobId, type: "bash" },
 							});
 						},
@@ -911,7 +914,10 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 								const preview = maskSecrets ? maskSecrets(tailBuffer.text()) : tailBuffer.text();
 								onUpdate({
 									content: [{ type: "text", text: preview }],
-									details: { execution: commandExecution(execution, preview) },
+									details: {
+										execution: commandExecution(execution, preview),
+										outputDelta: maskSecrets ? maskSecrets(chunk) : chunk,
+									},
 								});
 							}
 						},

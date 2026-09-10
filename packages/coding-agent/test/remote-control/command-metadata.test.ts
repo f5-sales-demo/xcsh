@@ -223,3 +223,27 @@ test("foreground auto-background waiting retains execution metadata without a ba
 	});
 	expect(updates[0].details.async).toBeUndefined();
 });
+
+test.each([false, true])(
+	"command updates expose incremental output separately from the cumulative preview: auto-background=%s",
+	async autoBackground => {
+		const mock = spyOn(executor, "executeBash").mockImplementation(async (_command, options) => {
+			options?.onChunk?.("first\n");
+			options?.onChunk?.("second\n");
+			return { ...result(0), output: "first\nsecond\n" };
+		});
+		cleanup.push(() => mock.mockRestore());
+		const manager = new AsyncJobManager({ onJobComplete: async () => {} });
+		const f = await fixture(manager, autoBackground);
+		cleanup.push(async () => {
+			await manager.dispose();
+		});
+		const updates: any[] = [];
+		await f.tool.execute("output-call", { command: "fixture-command" }, undefined, update => updates.push(update));
+		expect(
+			updates
+				.filter(update => update.details.execution?.status === "inProgress")
+				.map(update => update.details.outputDelta),
+		).toEqual(["first\n", "second\n"]);
+	},
+);

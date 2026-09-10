@@ -573,6 +573,23 @@ test("late background completion updates its original command even when a newer 
 			event => event.method === "item/completed" && (event.params.item as any).type === "commandExecution",
 		),
 	).toHaveLength(0);
+	const details = {
+		execution: { ...execution, aggregatedOutput: "progress" },
+		outputDelta: "progress",
+		async: { jobId: "first-job" },
+	};
+	f.emit({ type: "async_job_update", jobId: "first-job", details });
+	f.emit({
+		type: "tool_execution_update",
+		toolCallId: "reused-command",
+		toolName: "bash",
+		args: {},
+		partialResult: { details },
+	});
+	const deltas = f.events.filter(event => event.method === "item/commandExecution/outputDelta");
+	expect(deltas).toHaveLength(1);
+	expect(deltas[0].params).toMatchObject({ turnId: original.id, itemId: originalItem.id, delta: "progress" });
+	expect(f.remote.history()[0].items.find(item => item.id === originalItem.id)?.aggregatedOutput).toBe("progress");
 	const done: AgentMessage = {
 		role: "custom",
 		customType: "async-result",
@@ -609,4 +626,55 @@ test("late background completion updates its original command even when a newer 
 	const settled = f.remote.history();
 	f.remote.dispose();
 	expect(fixture(f.manager).remote.history()).toEqual(settled);
+});
+
+test("command output deltas contain incremental output and update the active command preview", () => {
+	const f = fixture();
+	(f.target as any).getToolByName = () => ({ executionKind: "command" });
+	f.emit({ type: "agent_start" });
+	f.message(user("stream a command"));
+	const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+	call.content = [{ type: "toolCall", id: "stream-command", name: "bash", arguments: { command: "fixture" } }];
+	f.message(call);
+	const item = f.remote.history()[0].items.at(-1)!;
+	const execution = {
+		kind: "command",
+		command: "fixture",
+		cwd: "/tmp/history",
+		status: "inProgress",
+		exitCode: null,
+		durationMs: null,
+		processId: null,
+	};
+	for (const [outputDelta, aggregatedOutput] of [
+		["first\n", "first\n"],
+		["second\n", "first\nsecond\n"],
+	])
+		f.emit({
+			type: "tool_execution_update",
+			toolCallId: "stream-command",
+			toolName: "bash",
+			args: {},
+			partialResult: {
+				content: [{ type: "text", text: aggregatedOutput }],
+				details: { execution: { ...execution, aggregatedOutput }, outputDelta },
+			},
+		});
+	const deltas = f.events.filter(event => event.method === "item/commandExecution/outputDelta");
+	expect(deltas.map(event => event.params)).toEqual(
+		["first\n", "second\n"].map(delta => ({
+			threadId: "durable",
+			turnId: f.remote.history()[0].id,
+			itemId: item.id,
+			delta,
+		})),
+	);
+	expect(f.remote.history()[0].items.at(-1)).toMatchObject({
+		id: item.id,
+		aggregatedOutput: "first\nsecond\n",
+		status: "inProgress",
+	});
+	expect(
+		f.events.filter(event => event.method === "item/started" && (event.params.item as any).id === item.id),
+	).toHaveLength(1);
 });

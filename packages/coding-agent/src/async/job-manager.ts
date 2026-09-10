@@ -22,6 +22,7 @@ export interface AsyncJob {
 
 export interface AsyncJobManagerOptions {
 	onJobComplete: (jobId: string, text: string, job?: AsyncJob) => void | Promise<void>;
+	onJobProgress?: (jobId: string, details?: Record<string, unknown>) => void | Promise<void>;
 	maxRunningJobs?: number;
 	retentionMs?: number;
 }
@@ -53,6 +54,7 @@ export class AsyncJobManager {
 	readonly #watchedJobs = new Set<string>();
 	readonly #evictionTimers = new Map<string, NodeJS.Timeout>();
 	readonly #onJobComplete: AsyncJobManagerOptions["onJobComplete"];
+	readonly #onJobProgress: AsyncJobManagerOptions["onJobProgress"];
 	readonly #maxRunningJobs: number;
 	readonly #retentionMs: number;
 	#deliveryLoop: Promise<void> | undefined;
@@ -60,6 +62,7 @@ export class AsyncJobManager {
 
 	constructor(options: AsyncJobManagerOptions) {
 		this.#onJobComplete = options.onJobComplete;
+		this.#onJobProgress = options.onJobProgress;
 		this.#maxRunningJobs = Math.max(1, Math.floor(options.maxRunningJobs ?? DEFAULT_MAX_RUNNING_JOBS));
 		this.#retentionMs = Math.max(0, Math.floor(options.retentionMs ?? DEFAULT_RETENTION_MS));
 	}
@@ -101,9 +104,10 @@ export class AsyncJobManager {
 
 		const reportProgress = async (text: string, details?: Record<string, unknown>): Promise<void> => {
 			if (details) job.resultDetails = details;
-			if (!options?.onProgress) return;
 			try {
-				await options.onProgress(text, details);
+				const notified = this.#onJobProgress?.(id, details);
+				if (notified) await notified;
+				await options?.onProgress?.(text, details);
 			} catch (error) {
 				logger.warn("Async job progress callback failed", {
 					jobId: id,

@@ -10,6 +10,7 @@ import {
 	messageKey,
 	projectHistory,
 	projectHistorySnapshot,
+	updateCommandHistoryItem,
 } from "./history";
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
 import { RemoteInteractions } from "./interactions";
@@ -115,6 +116,8 @@ export class RemoteSession {
 	#itemId = "";
 	#nextId = randomUUID();
 	#startedItems = new Set<string>();
+	#commandPreviews = new Map<string, Record<string, unknown>>();
+	#forwardedBackgroundProgress = new WeakSet<object>();
 	#messageIds = new Map<string, string>();
 	#pendingClients: { text: string; id: string }[] = [];
 	#startedAtMs = 0;
@@ -182,6 +185,7 @@ export class RemoteSession {
 				this.#itemId = "";
 				this.#nextId = randomUUID();
 				this.#voiceOutputs.clear();
+				this.#commandPreviews.clear();
 				this.#restoreIdentity();
 				this.#suspended = false;
 			}
@@ -240,6 +244,7 @@ export class RemoteSession {
 		this.#unsubscribe();
 		this.#interactions?.close();
 		this.#voiceOutputs.clear();
+		this.#commandPreviews.clear();
 		this.#closing = Promise.resolve(this.#voice?.stop())
 			.then(async () => {
 				await Promise.allSettled([...this.#effects]);
@@ -256,6 +261,22 @@ export class RemoteSession {
 		for (const listener of this.#listeners)
 			listener({ method, params: { threadId: this.target.sessionId, ...params } });
 	}
+	#cacheCommandPreview(item: Record<string, unknown>): void {
+		const id = String(item.id);
+		this.#commandPreviews.delete(id);
+		this.#commandPreviews.set(id, item);
+		if (this.#commandPreviews.size > 128) this.#commandPreviews.delete(this.#commandPreviews.keys().next().value!);
+	}
+	#overlayCommandPreviews(items: Record<string, unknown>[]): void {
+		for (const item of items) {
+			if (item.type !== "commandExecution") continue;
+			const id = String(item.id);
+			const preview = this.#commandPreviews.get(id);
+			if (item.status === "inProgress" && preview) Object.assign(item, preview);
+			else if (item.status !== "inProgress") this.#commandPreviews.delete(id);
+		}
+	}
+
 	history(): Turn[] {
 		if (this.#durable) {
 			const turns = projectHistory(
@@ -271,6 +292,7 @@ export class RemoteSession {
 					else active.items[index] = item;
 				}
 			}
+			for (const value of turns) this.#overlayCommandPreviews(value.items);
 			return turns;
 		}
 		const turns: Turn[] = [];
@@ -555,6 +577,8 @@ export class RemoteSession {
 				this.target.sessionManager.getBranch(),
 				Boolean(this.#active) || this.target.isStreaming,
 			);
+			for (const row of snapshot.timeline)
+				if (row.entry.type === "item") this.#overlayCommandPreviews([row.entry.item]);
 			return timelinePage(this.target.sessionId, snapshot.timeline, params);
 		}
 
@@ -968,6 +992,48 @@ export class RemoteSession {
 				this.#itemId = "";
 			}
 		}
+		if (event.type === "async_job_update" && typeof event.details?.outputDelta === "string") {
+			const snapshot = projectHistorySnapshot(
+				this.target.sessionId,
+				this.target.sessionManager.getBranch(),
+				Boolean(this.#active),
+			);
+			const job = snapshot.jobs.get(event.jobId);
+			if (job?.item.status === "inProgress") {
+				const updated = updateCommandHistoryItem(job.item, event.details.execution);
+				if (updated && event.details.outputDelta) {
+					this.#forwardedBackgroundProgress.add(event.details);
+					this.#cacheCommandPreview(updated);
+					if (this.#active?.id === job.turnId) this.#rememberItem(updated, false);
+					this.#emit("item/commandExecution/outputDelta", {
+						turnId: job.turnId,
+						itemId: updated.id,
+						delta: event.details.outputDelta,
+					});
+				}
+			}
+		}
+		if (event.type === "tool_execution_update") {
+			const suffix = `:tool:${event.toolCallId}`;
+			const item = this.#active?.items.findLast(
+				value => value.type === "commandExecution" && String(value.id).endsWith(suffix),
+			);
+			const details = event.partialResult?.details;
+			if (details && typeof details === "object" && this.#forwardedBackgroundProgress.has(details)) return;
+			if (item?.status === "inProgress") {
+				const updated = updateCommandHistoryItem(item, details?.execution);
+				if (updated) {
+					this.#cacheCommandPreview(updated);
+					this.#rememberItem(updated, false);
+					if (typeof details?.outputDelta === "string" && details.outputDelta)
+						this.#emit("item/commandExecution/outputDelta", {
+							turnId: this.#active?.id,
+							itemId: item.id,
+							delta: details.outputDelta,
+						});
+				}
+			}
+		}
 		if (event.type === "message_end" && event.message.role === "toolResult") {
 			const suffix = `:tool:${event.message.toolCallId}`;
 			const item = this.#active?.items.findLast(
@@ -992,6 +1058,7 @@ export class RemoteSession {
 			);
 			const completion = backgroundCommandCompletion(event.message, snapshot.jobs);
 			if (completion) {
+				this.#cacheCommandPreview(completion.item);
 				if (this.#active?.id === completion.turnId) this.#rememberItem(completion.item, true);
 				else this.#emit("item/completed", { turnId: completion.turnId, item: completion.item });
 			}

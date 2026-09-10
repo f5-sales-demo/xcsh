@@ -194,6 +194,7 @@ import { UserInteractions } from "./user-interactions";
 /** Session-specific events that extend the core AgentEvent */
 export type AgentSessionEvent =
 	| AgentEvent
+	| { type: "async_job_update"; jobId: string; details?: Record<string, unknown> }
 	| TurnPhaseEvent
 	| RoutingEvent
 	| { type: "auto_compaction_start"; reason: "threshold" | "overflow" | "idle"; action: "context-full" | "handoff" }
@@ -790,6 +791,12 @@ export class AgentSession {
 	// =========================================================================
 	// Event Subscription
 	// =========================================================================
+
+	/** Forward background executor progress independently of an ended agent turn. */
+	reportAsyncJobProgress(jobId: string, details?: Record<string, unknown>): void {
+		if (this.isDisposing || this.isSessionChanging) return;
+		this.#emit({ type: "async_job_update", jobId, details });
+	}
 
 	/** Emit an event to all listeners */
 	#emit(event: AgentSessionEvent): Promise<unknown>[] {

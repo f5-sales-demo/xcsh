@@ -1055,6 +1055,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const asyncJobManager = backgroundJobsEnabled
 		? new AsyncJobManager({
 				maxRunningJobs: asyncMaxJobs,
+				onJobProgress: (jobId, details) => session?.reportAsyncJobProgress(jobId, details),
 				onJobComplete: async (jobId, result, job) => {
 					if (!session || asyncJobManager!.isDeliverySuppressed(jobId)) return;
 					const formattedResult = await formatAsyncResultForFollowUp(result);

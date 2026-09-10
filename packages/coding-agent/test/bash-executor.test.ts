@@ -29,6 +29,17 @@ describe("executeBash", () => {
 		}
 	});
 
+	it("counts UTF-8 output bytes after removing metadata from a Unicode working directory", async () => {
+		const cwd = path.join(tempDir, "é中");
+		fs.mkdirSync(cwd);
+		const chunks: string[] = [];
+		const result = await executeBash("printf 'é🦊'", { cwd, onChunk: chunk => chunks.push(chunk) });
+		expect(chunks.join("")).toBe("é🦊");
+		expect(result.output).toBe("é🦊");
+		expect(result.totalBytes).toBe(Buffer.byteLength("é🦊"));
+		expect(result.outputBytes).toBe(Buffer.byteLength("é🦊"));
+	});
+
 	it("returns non-zero exit codes without cancellation", async () => {
 		const result = await executeBash("exit 7", { cwd: tempDir, timeout: 5000 });
 		expect(result.exitCode).toBe(7);

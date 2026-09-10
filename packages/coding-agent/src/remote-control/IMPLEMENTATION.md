@@ -1368,3 +1368,39 @@ Command output delta notifications, cancelled background-job persistence, comman
 executed before remote classification was recorded, specialized file changes and
 canonical voice event integration remain unfinished. The live phone sessions continue
 using the frozen `052153363` executable.
+
+## Command output streaming
+
+The output sink now batches throttled chunks instead of dropping them. Queued output
+flushes when the producer pauses, at completion, or when the bounded batch fills.
+Batches preserve Unicode characters and remain at most 50 KiB; masking precedes
+queueing. Callback failures return to the executor, and artifact descriptors close
+when completion fails. UTF-8 byte counts remain correct after shell metadata removal.
+
+Shell bookkeeping frames now use an invocation-specific delimiter. A bounded streaming
+filter removes those frames across arbitrary chunk boundaries while preserving ordinary
+output and partial marker lookalikes. It discards incomplete bookkeeping on closure
+and rejects late output. Existing exit-code and working-directory extraction remains
+inside the native executor.
+
+Command updates carry incremental output separately from the cumulative preview.
+RemoteSession emits pinned `item/commandExecution/outputDelta` notifications with the
+original item and turn identities. A session-level background progress path continues
+after the initiating tool call ends. Shared progress objects prevent duplicate delivery
+through the background and tool-call paths. Bounded previews keep history/timeline
+refreshes current and are cleared at session transitions and adapter closure.
+
+Observed failures preceded sink batching, callback-error handling, metadata filtering,
+command delta metadata and wire mapping, actual foreground/background owner streaming,
+background history previews, artifact cleanup and Unicode accounting. The real SDK
+owner tests execute a local shell command, use a mocked model response, and verify
+complete output, correct command identity and a single completion for foreground and
+background execution. These are local integration tests, not live model or phone checks.
+
+The executor/job-manager/remote focused run passed 613 tests and 2556 assertions across
+54 files. Two subsequent cleanup/Unicode regressions failed first and then passed.
+The full package suite passed 7894 tests with 561 skips and zero failures across
+771 files (25142 assertions). Final workspace TypeScript/lint, CLI bundle, documentation,
+staged privacy and secret checks passed. Runtime/test hashes remained unchanged
+through verification.
+The live phone sessions remain on the frozen `052153363` executable.
