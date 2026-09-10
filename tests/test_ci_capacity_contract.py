@@ -98,6 +98,10 @@ class CiCapacityContractTests(unittest.TestCase):
             prime,
         )
         installer = (ROOT / "scripts/ci-bun-install.sh").read_text(encoding="utf-8")
+        self.assertIn(
+            'expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.3.14}', installer
+        )
+        self.assertIn('ln -sfn "$(command -v bun)" "$bun_bin_dir/bunx"', installer)
         self.assertIn("--frozen-lockfile --concurrent-scripts 16", installer)
         self.assertIn('printf \'%s\\n\' "$bun_bin_dir" >>"$GITHUB_PATH"', installer)
         self.assertIn('launcher="packages/coding-agent/bin/xcsh.ts"', installer)
@@ -105,6 +109,11 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn('git -C "$workspace" diff --exit-code', installer)
         profiler = (ROOT / "scripts/runner-optimization-profile.sh").read_text(
             encoding="utf-8"
+        )
+        self.assertIn(
+            "XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'baseline' && "
+            "inputs.comparison != 'hardware' && '1.3.14' || '1.4.2' }}",
+            profiler_action,
         )
         for phase in ("install", "native", "test", "release"):
             self.assertIn(f"profile_phase {phase} {phase}", profiler)

@@ -60,6 +60,7 @@ runs:
         PROFILE_COMPARISON: ${{ inputs.comparison }}
         PROFILE_CACHE_STATE: ${{ inputs.cache-state }}
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
+        XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'baseline' && inputs.comparison != 'hardware' && '1.3.14' || '1.4.2' }}
       run: |
         scripts/runner-optimization-profile.sh \
           "$PROFILE_MODE" "$PROFILE_VARIANT" "$PROFILE_COMPARISON" \
