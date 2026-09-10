@@ -517,3 +517,16 @@ bound to source commit `62def29d6`. The current remote-control suite passed 880
 tests with 3494 assertions. The recorded artifact uses synthetic
 enrollment; a service-side revoked-token exercise and final phone acceptance are
 still required.
+
+## Clean live-runtime handoff
+
+The live xcsh relay now runs the clean `62def29d6` executable used by the packaged
+crash test. A controlled host replacement preserved both accepted Alpha/Beta
+thread identities, names, directories, histories and selected Luna/Astra work
+models. The replacement relay connected before the audit completed.
+
+The same artifact also exposes new Sol and Terra top-level sessions. Both models
+completed ordinary write/read tool calls, and independent byte checks matched
+their requested marker plus newline. This verifies live model selection and tool
+execution before phone testing; it does not count as phone voice acceptance or a
+new reference/native wire comparison.

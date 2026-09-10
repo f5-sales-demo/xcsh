@@ -1928,3 +1928,25 @@ The complete remote-control suite passed 880 tests with 3494 assertions across 6
 files. Workspace formatting and TypeScript checks passed across 1776 files. This
 artifact uses synthetic enrollment and offline model output; live credential
 revocation and final phone acceptance remain separate.
+
+## Clean live-runtime handoff and four-model preflight
+
+The dedicated phone host and its Alpha/Beta terminals were moved from the first
+accepted phone build to the clean `62def29d6` artifact above. Both terminals were
+idle before shutdown and used their normal exit path. The host acknowledged its
+normal stop before replacement. On the replacement host, the live relay reached
+`connected`; Alpha and Beta registered with their unchanged thread IDs, names,
+working directories, Luna/Astra models and message counts of 18 and 52.
+
+Two new top-level terminals on the same artifact registered as `xcsh Remote Sol`
+and `xcsh Remote Terra`. Each selected its named work model and completed a real
+write/read task in its own working directory. Independent byte inspection found
+`SOL-SUNDIAL\n` and `TERRA-COPPER\n` respectively. All four terminal sessions
+then reported idle through the live host. The executable SHA-256 remains
+`8e84cdd353068ff1d30d51cb8ab3df373a976cdc16f341741573b60fc1418ead`.
+
+This is live host, subscription relay, model and tool preflight evidence. It does
+not claim that the phone has selected the two new sessions or that a fresh voice
+call on this artifact has passed. The operational capture directory contains the
+sanitized handoff record and retains its private trace configuration outside the
+repository.
