@@ -6,11 +6,15 @@ import { connectPeer } from "../src/remote-control/ipc";
 async function main(): Promise<void> {
 	if (process.argv.slice(2).join(" ") !== "--run") {
 		process.stdout.write(
-			"Usage: bun packages/coding-agent/scripts/native-remote-session-gate.ts --run\nRequires the xcsh Remote Alpha and xcsh Remote Beta fixture TUIs.\n",
+			"Usage: bun packages/coding-agent/scripts/native-remote-session-gate.ts --run\nRequires the xcsh Remote Luna and xcsh Remote Astra fixture TUIs.\n",
 		);
 		return;
 	}
 	const peer = await connectPeer(remoteSocketPath());
+	peer.handle = async method => {
+		assert.equal(method, "protocol/event");
+		return {};
+	};
 	let requestId = 0;
 	async function call(
 		method: string,
@@ -28,8 +32,8 @@ async function main(): Promise<void> {
 		await call("initialize", { clientInfo: { name: "xcsh-native-gate", version: "1" } });
 		const { data } = await call("thread/list");
 		for (const [name, marker] of [
-			["xcsh Remote Alpha", "ALPHA-ORCHARD"],
-			["xcsh Remote Beta", "BETA-HARBOR"],
+			["xcsh Remote Luna", "ALPHA-ORCHARD"],
+			["xcsh Remote Astra", "BETA-HARBOR"],
 		]) {
 			const thread = (
 				data as { id: string; name: string; model: string; cwd: string; reasoningEffort?: string | null }[]
@@ -52,9 +56,11 @@ async function main(): Promise<void> {
 			const id = `gate-${crypto.randomUUID()}`;
 			const started = Date.now();
 			await call("skills/extraRoots/set", { extraRoots: [] });
-			const result = await call("turn/start", params, id);
-			assert.deepEqual(await call("turn/start", params, id), result, "Replay response changed");
-			assert.deepEqual(await call("turn/start", params, `${id}-retry`), result, "Client message retry changed");
+			const result = (await call("turn/start", params, id)) as { turn: { id: string } };
+			const replay = (await call("turn/start", params, id)) as { turn: { id: string } };
+			assert.equal(replay.turn.id, result.turn.id, "Replay selected another turn");
+			const retried = (await call("turn/start", params, `${id}-retry`)) as { turn: { id: string } };
+			assert.equal(retried.turn.id, result.turn.id, "Client message retry selected another turn");
 			let matched = false;
 			const deadline = Date.now() + 120_000;
 			while (Date.now() < deadline) {

@@ -45,3 +45,7 @@ credentials, voice recordings or live account state.
 
 `evidence-rename-2026-09-10.json` is the clean `9fb146da9` ten-check receipt that
 also exercises remote naming, notification, host restart and name persistence.
+
+`evidence-final-head-2026-09-10.json` records the same ten checks on the
+current implementation checkpoint `4a399d39`, after the final guarded package
+suite and changed-scope privacy cleanup.

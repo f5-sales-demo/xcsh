@@ -546,3 +546,27 @@ The clean `9fb146da9` artifact passed the new live-TUI rename check and the othe
 nine isolated checks, including host restart and compiled resume. Its receipt is
 `../scripts/remote-package/evidence-rename-2026-09-10.json`; this remains offline
 integration evidence rather than a phone observation.
+
+## Current clean phone artifact
+
+The guarded coding-agent package suite now passes 8271 tests with 561 skips,
+29762 assertions and zero failures across 791 files. A clean `4a399d39` binary
+then passed the full ten-check Codex-absent container harness in 20.399 seconds;
+its SHA-256 is
+`d1cc71b2f8671dc3894bf7666387a7fb1d187fc76d8cec866cf6e2c976dc4da8`.
+The receipt is
+`../scripts/remote-package/evidence-final-head-2026-09-10.json`.
+
+That exact binary now owns the live relay and the four acceptance terminals. The
+post-restart protocol audit found the same stable IDs, working directories,
+histories and Luna/Astra/Sol/Terra selections, all idle, with the relay connected.
+The two early routing-fixture names were normalized to `xcsh Remote Luna` and
+`xcsh Remote Astra`, making all four live names correspond to their work models.
+Fresh phone voice observations and wire comparison remain pending Robin's report.
+
+The local typed gate also uses the model-aligned names now. A red run showed its
+old full-response comparison was incompatible with normal streaming because the
+same in-progress turn gained an item between retry reads. The corrected gate
+compares stable turn identity and final history cardinality. Luna and Astra each
+returned their distinct session marker, in 2.804 and 2.570 seconds, with both
+retry forms selecting the original turn and no duplicate history entry.

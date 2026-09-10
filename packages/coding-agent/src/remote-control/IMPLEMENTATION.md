@@ -1977,3 +1977,40 @@ SHA-256 is
 `638efcfb39c56d5fce78af45d98745ba739d0dabdcc27e6a92db6ec29d646a23`;
 the receipt is
 `scripts/remote-package/evidence-rename-2026-09-10.json`.
+
+## Current clean artifact and final local package suite
+
+The guarded coding-agent package suite passed 8271 tests with 561 skips, zero
+failures and 29762 assertions across 791 files in 419.20 seconds. The focused
+client-management regression passed nine tests with 36 assertions after its
+synthetic display name was changed to the scanner's explicit example form.
+Staged PII enforcement is clean. A full HEAD enforcement scan still reports the
+unchanged repository baseline of 218 findings across 13 files; this branch adds
+none.
+
+A clean executable built from `4a399d39` passed all ten isolated package checks
+in 20.399 seconds. The network-disabled Ubuntu 24.04 container had no Codex,
+standalone Bun, repository checkout or dependencies. The checks cover real
+write/read tools, remote naming, normal and SIGKILL host recovery, active-work
+continuation, exactly-once retry, compiled resume and terminal cleanup. Binary
+SHA-256:
+`d1cc71b2f8671dc3894bf7666387a7fb1d187fc76d8cec866cf6e2c976dc4da8`.
+The receipt is
+`scripts/remote-package/evidence-final-head-2026-09-10.json`.
+
+The dedicated phone runtime now uses that same binary and source checkpoint. A
+controlled idle replacement restored all four stable thread IDs, working
+directories, histories and selected Luna, Astra, Sol and Terra models. The two
+original fixture names were normalized through `thread/name/set` to `xcsh Remote
+Luna` and `xcsh Remote Astra`; Sol and Terra already used their model names. The
+host returned to `connected` with all four sessions idle. This establishes the
+exact artifact for the remaining phone voice runs; it does not claim those
+observations before Robin reports them.
+
+The typed context gate was updated to use the model-aligned Luna/Astra names and
+to accept an advancing streamed turn snapshot while requiring the same turn ID
+on both request-ID and client-message retries. Its first run exposed the stale
+full-snapshot equality check after the turn gained its user item. The corrected
+gate returned the distinct Luna and Astra session markers in 2.804 and 2.570
+seconds, respectively, with duplicate prompts suppressed and exactly one new
+history turn per request.
