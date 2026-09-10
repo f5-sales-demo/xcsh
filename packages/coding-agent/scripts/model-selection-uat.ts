@@ -134,7 +134,13 @@ async function herdr(...args: string[]): Promise<string> {
 	if (code) throw new Error(`herdr ${args[0]} ${args[1]}: ${stderr}`);
 	return stdout;
 }
-const keys = (...input: string[]) => herdr("pane", "send-keys", pane, ...input);
+async function keys(...input: string[]) {
+	for (const key of input) {
+		await herdr("pane", "send-keys", pane, key);
+		// Let each dialog transition settle before sending a key to the next view.
+		await Bun.sleep(150);
+	}
+}
 async function rendered() {
 	return Bun.stripANSI(await herdr("pane", "read", pane, "--source", "visible"));
 }
@@ -164,6 +170,11 @@ async function command(text: string) {
 	await keys("Enter");
 }
 async function openPicker() {
+	// Escape first clears a search, then closes the current picker.
+	for (let attempt = 0; attempt < 2 && (await rendered()).includes("Models:"); attempt++) {
+		await keys("Escape");
+		await Bun.sleep(150);
+	}
 	await command("/model");
 	await wait("open picker", text => text.includes("Models:") && text.includes("Ctrl+R:"));
 }
@@ -377,17 +388,34 @@ try {
 				"persistence failure",
 				text =>
 					(text.includes("EISDIR") || text.includes("directory")) &&
-					text.includes("Active: uat-cloud-b/uat-model"),
+					text.includes("Could not apply:") &&
+					text.includes("Enter to retry."),
 			);
 		} finally {
 			await rm(configPath, { recursive: true });
 			await rename(`${configPath}.backup`, configPath);
 		}
-		await keys("Escape");
+		for (let i = 0; i < 6; i++) {
+			const text = await rendered();
+			if (
+				!text.includes("Choose a model") &&
+				!text.includes("Reasoning ·") &&
+				!text.includes("Use in this conversation")
+			)
+				break;
+			await keys("Escape");
+		}
+		const beforeFailureProbe = receipts.length;
+		await command("Say UAT_OK after the failed default write.");
+		await wait(
+			"failed write preserves active model",
+			text => text.includes("UAT_OK") && receipts.length > beforeFailureProbe,
+		);
+		if (receipts.at(-1)?.provider !== "uat-cloud-b") throw new Error("Failed default write changed the active model");
 		await command("/login");
 		const login = await wait(
 			"login management",
-			text => text.includes("Select provider to login:") && text.includes("Add provider…"),
+			text => text.includes("Your providers") && text.includes("Add provider…"),
 		);
 		for (const expected of ["uat-cloud-a", "uat-cloud-b", "Ollama", "Add provider…"]) {
 			if (!login.includes(expected)) throw new Error(`Login management omitted ${expected}`);
@@ -398,18 +426,12 @@ try {
 		await keys("Right");
 		await wait(
 			"login details",
-			text =>
-				text.includes("Manage ") &&
-				text.includes("Credential: None required") &&
-				text.includes("Model visibility: Visible"),
+			text => text.includes("Manage ") && text.includes("Choose model") && text.includes("Edit connection"),
 		);
 		await keys("Escape", "Down", "Down", "Down", "Enter");
-		await wait(
-			"provider catalog",
-			text => text.includes("Google Cloud Vertex AI") && !text.includes("Add provider…"),
-		);
+		await wait("provider catalog", text => text.includes("Connect a provider") && !text.includes("Add provider…"));
 		await herdr("pane", "send-text", pane, "lm-studio");
-		await wait("provider catalog search", text => text.includes("LM Studio (Local OpenAI-compatible)"));
+		await wait("provider catalog search", text => text.includes("LM Studio") && text.includes("Local / proxy"));
 		await keys("Escape", "Escape", "Escape");
 		await command("/logout");
 		await wait("empty logout", text => text.includes("No stored provider credentials to remove"));
