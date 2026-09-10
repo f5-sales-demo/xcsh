@@ -1,6 +1,6 @@
 import { untilAborted } from "@f5-sales-demo/pi-utils";
-import type { StreamInfo } from "markit-ai";
-import { Markit } from "markit-ai";
+import type { StreamInfo } from "@shiftlabs/markit";
+import { Markit } from "@shiftlabs/markit";
 import { ToolAbortError } from "../tools/tool-errors";
 
 export interface MarkitConversionResult {

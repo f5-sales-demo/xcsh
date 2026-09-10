@@ -42,6 +42,7 @@ pub fn html_to_markdown(
 		};
 
 		convert(html.as_str(), Some(conversion_opts))
+			.map(|result| result.content.unwrap_or_default())
 			.map_err(|err| Error::from_reason(format!("Conversion error: {err}")))
 	})
 }

@@ -20,7 +20,7 @@ ARG EXPECTED_VERSION
 USER node
 RUN set -eux; \
     install_prefix="$(mktemp -d)"; \
-    npm install --global --prefix "$install_prefix" bun@1.3.14; \
+    npm install --global --prefix "$install_prefix" bun@1.4.2; \
     PATH="$install_prefix/bin:$PATH" npm install --global --prefix "$install_prefix" "@f5-sales-demo/xcsh@${EXPECTED_VERSION}"; \
     test "$(PATH="$install_prefix/bin:$PATH" "$install_prefix/bin/xcsh" --version)" = "xcsh/${EXPECTED_VERSION}"; \
     PI_NATIVE_VARIANT=baseline PATH="$install_prefix/bin:$PATH" "$install_prefix/bin/xcsh" --help >/dev/null; \

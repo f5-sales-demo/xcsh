@@ -123,7 +123,7 @@ describe("the tagging workflow is wired to the check (#2487)", () => {
 	});
 
 	it("verifies the pinned baked bun used by the bare checkout job", async () => {
-		expect(await workflow()).toContain("Verify baked Bun 1.3.14");
+		expect(await workflow()).toContain("Verify baked Bun 1.4.2");
 	});
 
 	it("no longer claims the chain will fire merely because the push exited 0", async () => {

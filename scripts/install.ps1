@@ -21,7 +21,7 @@ $Package = "@f5-sales-demo/xcsh"
 $InstallDir = if ($env:PI_INSTALL_DIR) { $env:PI_INSTALL_DIR } else { "$env:LOCALAPPDATA\xcsh" }
 $BinaryName = "xcsh-windows-x64.exe"
 $NativeAddonNames = @("pi_natives.win32-x64-modern.node", "pi_natives.win32-x64-baseline.node")
-$MinimumBunVersion = "1.3.7"
+$MinimumBunVersion = "1.4.2"
 
 function Test-BunInstalled {
     try {

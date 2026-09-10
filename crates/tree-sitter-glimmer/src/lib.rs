@@ -1,8 +1,4 @@
-//! Glimmer grammar for tree-sitter (vendored with scanner fix).
-//!
-//! The published crate (0.0.1) has a bug where `scanner.c` is not compiled
-//! by its `build.rs`, causing undefined symbol errors at runtime. This
-//! vendored copy fixes that by compiling both `parser.c` and `scanner.c`.
+//! Glimmer grammar from upstream v1.6.0-tree-sitter-glimmer.
 
 use tree_sitter::Language;
 

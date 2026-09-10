@@ -330,12 +330,6 @@ module.exports.GrepOutputMode = {
   Count: 'count',
   FilesWithMatches: 'filesWithMatches',
 };
-module.exports.ImageFormat = {
-  PNG: 0,
-  JPEG: 1,
-  WEBP: 2,
-  GIF: 3,
-};
 module.exports.KeyEventType = {
   Press: 1,
   Repeat: 2,
@@ -344,12 +338,5 @@ module.exports.KeyEventType = {
 module.exports.MacOSAppearance = {
   Dark: 'dark',
   Light: 'light',
-};
-module.exports.SamplingFilter = {
-  Nearest: 1,
-  Triangle: 2,
-  CatmullRom: 3,
-  Gaussian: 4,
-  Lanczos3: 5,
 };
 // --- end generated const enum exports ---

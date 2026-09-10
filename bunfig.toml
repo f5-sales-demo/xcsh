@@ -4,6 +4,7 @@ telemetry = false
 linker = "isolated"
 exact = true
 minimumReleaseAge = 604800
+minimumReleaseAgeExcludes = ["@types/bun", "bun-types"]
 saveTextLockfile = true
 
 [loader]

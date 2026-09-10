@@ -2,7 +2,7 @@
 set -euo pipefail
 
 workspace=${1:-.}
-expected_bun=1.3.14
+expected_bun=1.4.2
 [[ "$(bun --version)" == "$expected_bun" ]] || {
   echo "Bun $expected_bun is required; found $(bun --version)" >&2
   exit 1

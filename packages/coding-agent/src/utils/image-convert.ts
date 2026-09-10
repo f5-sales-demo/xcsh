@@ -1,4 +1,4 @@
-import { ImageFormat, PhotonImage } from "@f5-sales-demo/pi-natives";
+import { imagePipeline } from "./image-pipeline";
 
 /**
  * Convert image to PNG format for terminal display.
@@ -14,8 +14,7 @@ export async function convertToPng(
 	}
 
 	try {
-		const image = await PhotonImage.parse(new Uint8Array(Buffer.from(base64Data, "base64")));
-		const pngBuffer = await image.encode(ImageFormat.PNG, 100);
+		const pngBuffer = await imagePipeline(Buffer.from(base64Data, "base64")).png().bytes();
 		return {
 			data: Buffer.from(pngBuffer).toBase64(),
 			mimeType: "image/png",

@@ -11,9 +11,7 @@ fn main() {
 	c_config.file(&parser_path);
 	println!("cargo:rerun-if-changed={}", parser_path.to_str().unwrap());
 
-	// FIX: The published crate 0.0.1 has this block commented out, causing
-	// undefined symbol errors for the external scanner functions on platforms
-	// using single-pass linkers (e.g., GNU ld during aarch64 cross-compilation).
+	// The canonical v1.6.0 tag compiles the external scanner.
 	let scanner_path = src_dir.join("scanner.c");
 	c_config.file(&scanner_path);
 	println!("cargo:rerun-if-changed={}", scanner_path.to_str().unwrap());

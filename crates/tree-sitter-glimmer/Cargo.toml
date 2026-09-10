@@ -1,8 +1,9 @@
 [package]
 name = "tree-sitter-glimmer"
-description = "Glimmer grammar for tree-sitter (vendored with scanner fix)"
+description = "Glimmer grammar for tree-sitter"
 version = "0.0.1"
 license = "MIT"
+repository = "https://github.com/ember-tooling/tree-sitter-glimmer"
 edition = "2021"
 build = "build.rs"
 include = ["build.rs", "src/*"]

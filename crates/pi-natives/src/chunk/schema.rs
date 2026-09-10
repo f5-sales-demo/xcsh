@@ -85,7 +85,7 @@ mod tests {
 			.expect("python function_definition schema should exist");
 		assert_eq!(schema.identifier_fields, vec!["name".to_string()]);
 		assert_eq!(schema.body_fields, vec!["body".to_string()]);
-		assert!(schema.promotion_fields.is_empty());
+		assert_eq!(schema.promotion_fields, [] as [std::string::String; 0]);
 		assert!(schema.is_structural());
 	}
 

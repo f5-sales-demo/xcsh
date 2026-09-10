@@ -215,7 +215,7 @@ test("manual ARC compatibility covers both profiles without publication mutation
 
 	expect(workflow.jobs?.compute?.["runs-on"]).toBe("xcsh-compute");
 	expect(workflow.jobs?.container?.["runs-on"]).toBe("xcsh-container-build");
-	expect(source).toContain("Verify baked Bun 1.3.14");
+	expect(source).toContain("Verify baked Bun 1.4.2");
 	expect(source).not.toContain("oven-sh/setup-bun@");
 	expect(source).toContain("uses: ./.github/actions/setup-rust");
 	expect(source).toContain("uses: ./.github/actions/setup-zig");
