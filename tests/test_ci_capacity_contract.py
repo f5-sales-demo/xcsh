@@ -69,6 +69,11 @@ class CiCapacityContractTests(unittest.TestCase):
         profiler_action = (
             ROOT / ".github/actions/runner-optimization-profile/action.yml"
         ).read_text(encoding="utf-8")
+        self.assertIn(
+            "uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518",
+            profiler_action,
+        )
+        self.assertIn("tool: nextest", profiler_action)
         self.assertIn("retention-days: 30", profiler_action)
         self.assertNotIn("/usr/bin/time", benchmark)
         self.assertNotIn('bun-version: "1.3"', workflows)

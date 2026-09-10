@@ -32,6 +32,10 @@ runs:
     - uses: ./.github/actions/setup-rust
     - name: Set up Zig 0.15.2
       uses: ./.github/actions/setup-zig
+    - name: Install repository test runner
+      uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518 # v2.86.5
+      with:
+        tool: nextest
     - name: Restore exact warm Rust cache
       if: inputs.cache-state == 'warm'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
