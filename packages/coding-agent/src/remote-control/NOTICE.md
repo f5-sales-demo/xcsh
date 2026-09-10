@@ -12,6 +12,7 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `server_api.rs`: enrollment endpoint, installation header, timeout.
 - `auth.rs`: subscription bearer and selected account headers.
 - `enroll.rs`: pairing and expiry contract.
+- `clients.rs`: client listing, pagination, revocation, and one unauthorized-auth recovery retry.
 - `websocket.rs`, `client_tracker.rs`, `segment.rs`: relay headers, framing,
   sequence cursors, acknowledgements, and chunk transport.
 - `codex-rs/app-server-protocol`: initialization, thread, turn, and item wire shapes.
@@ -23,8 +24,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   existing-call URLs, 500-byte context chunks, transcript and delegation events.
 - `codex-rs/codex-api/src/endpoint/realtime_call.rs`: subscription WebRTC call creation,
   backend JSON request, AVAS query parameters, answer SDP and call identities.
-- `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs}`:
-  selected subscription sideband headers and client-owned configuration.
+- `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs,/sideband.rs}`:
+  selected subscription sideband headers, client-owned configuration, and v3
+  reconnect backoff with stable-connection reset.
 
 Source: https://github.com/openai/codex/tree/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/app-server-transport/src/transport/remote_control
 

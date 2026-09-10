@@ -4,8 +4,9 @@ import { hostname } from "node:os";
 import { join } from "node:path";
 import { AuthStorage } from "@f5-sales-demo/pi-ai";
 import { getAgentDbPath, getAgentDir, VERSION } from "@f5-sales-demo/pi-utils";
-import { loadRemoteSubscription } from "./auth";
+import { loadRemoteSubscription, recoverRemoteSubscription } from "./auth";
 import { remoteSocketPath } from "./bridge";
+import { type ClientListOptions, listRemoteClients, revokeRemoteClient } from "./clients";
 import { type Enrollment, enrollRemoteHost, refreshRemoteHost } from "./enrollment";
 import { startLocalHost } from "./host";
 import { connectPeer } from "./ipc";
@@ -72,7 +73,32 @@ export async function remoteStatus(): Promise<Record<string, unknown>> {
 		return { enabled: state?.enabled ?? false, relay: "stopped", liveSessions: 0 };
 	}
 }
-export async function runRemoteControl(action: string): Promise<unknown> {
+export interface RemoteControlOptions extends ClientListOptions {
+	clientId?: string;
+}
+export async function runRemoteControl(action: string, options: RemoteControlOptions = {}): Promise<unknown> {
+	if (action === "revoke" && !options.clientId?.trim())
+		throw new Error("An explicit remote client identity is required");
+	if (action === "clients" || action === "revoke") {
+		const state = await readState();
+		if (!state) throw new Error("Enroll an xcsh remote host before managing its clients");
+		const storage = await AuthStorage.create(getAgentDbPath());
+		try {
+			await storage.reload();
+			const sessionId = `xcsh-remote-${state.installationId}`;
+			const deps = {
+				authenticate: (previous?: import("./enrollment").SubscriptionAuth) =>
+					previous
+						? recoverRemoteSubscription(storage, sessionId, previous)
+						: loadRemoteSubscription(storage, sessionId),
+			};
+			return action === "clients"
+				? await listRemoteClients(state.enrollment.environment_id, options, deps)
+				: await revokeRemoteClient(state.enrollment.environment_id, options.clientId!, deps);
+		} finally {
+			storage.close();
+		}
+	}
 	if (action === "status") return remoteStatus();
 	if (action === "disable") {
 		const state = await readState();

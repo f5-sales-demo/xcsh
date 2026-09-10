@@ -36,3 +36,11 @@ test.each(["status", "help"] as const)(
 		}
 	},
 );
+
+test("remote client controls are discoverable and reject revoke without an explicit client identity", async () => {
+	const { default: RemoteControl } = await import("../../src/commands/remote-control");
+	expect(RemoteControl.description).toContain("clients");
+	expect(RemoteControl.description).toContain("revoke");
+	const { runRemoteControl } = await import("../../src/remote-control/control");
+	await expect(runRemoteControl("revoke")).rejects.toThrow("client identity");
+});

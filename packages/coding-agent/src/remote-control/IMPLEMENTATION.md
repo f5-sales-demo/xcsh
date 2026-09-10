@@ -18,7 +18,7 @@ or run another agent against the terminal's session file.
 ## Implemented for the first gate
 
 - Native subscription selection, enrollment, host credential refresh, and pairing.
-- Private Unix socket, background host, opt-in enable/disable/status/pair commands.
+- Private Unix socket, background host, opt-in enable/disable/status/pair/clients/revoke commands.
 - `/remote` status and registration from InteractiveMode only.
 - Existing AgentSession attachment, text turns, steering, interruption, visible
   text history, and assistant text events.
@@ -166,8 +166,8 @@ merge or release.
    durable delegation recovery, streamed context updates, interruption, and shutdown.
 4. Complete lifecycle coverage (rename/fork/resume/exit/restart), permission-state
    fidelity, and cancellation/error status reporting.
-5. Add client listing/revocation, full auth recovery/retry-after handling, and
-   exhaustive relay reconnect/buffering tests.
+5. Client listing/revocation and selected-row unauthorized recovery are implemented.
+   Complete broader auth/retry-after recovery and exhaustive relay reconnect tests.
 6. Verify packaged independence, live tasks on all four work models, and every
    iPhone acceptance checkpoint. Finish required CI/review/merge and cleanup.
 
@@ -226,8 +226,9 @@ without guessing the status or logging the call URL, response, or credentials.
 The production implementation remains Bun-native with no added dependency.
 Robin confirmed fresh-call recovery after the hard network interruption: pressing
 voice again succeeded and returned the correct file contents. This confirms recovery
-with a new call, not automatic restoration of the interrupted call. Acceptance of
-that first-release behavior is awaiting Robin's product decision.
+with a new call, not automatic restoration of the interrupted call. Robin explicitly accepted needing to restart voice after a complete network loss
+for the first release. This is an accepted limitation, not a claim of automatic
+restoration. Keep terminal work and history intact across the outage.
 
 The affected-package recovery run completed with 7327 passes, 561 skips, three
 5-second startup test timeouts, and two resulting cleanup errors across 730 files.
@@ -238,3 +239,30 @@ assertions and the same timeout. All ten cases pass (22 assertions, 12.65 second
 Full-package verification of that repair remains pending.
 
 Current focused verification: 106 remote tests / 373 assertions and workspace lint/TypeScript checks pass. Staged-scope PII, secret scanning, and whitespace checks pass.
+
+
+Client-management checkpoint: native `clients` and `revoke <clientId>` use the
+pinned environment-scoped GET/DELETE contracts and work from an existing enrollment
+even while the host is disabled. Unauthorized responses recover the exact selected
+subscription row through xcsh's fenced OAuth refresh broker and retry once;
+account changes are refused. CLI revocation requires an explicit client identity.
+A live read-only service request returned one paired client and no next page.
+Revocation is covered by HTTP fixtures; the user's active phone has not been revoked.
+119 focused tests / 418 assertions pass. The preceding voice/startup-test checkpoint
+passed the complete package suite: 7344 passes, 561 skips, zero failures, 22645
+assertions across 731 files in 356.24 seconds. Client-management package validation
+is still pending.
+
+## Additional reference-capture gate requested by Robin
+
+Record several ordinary ChatGPT-to-Codex conversations and compare the same
+workflows against xcsh using bidirectional request/response/event evidence. Build
+a parity matrix and regression fixtures for every observed mismatch. Do not claim
+identical feature parity from schemas or successful happy-path interactions alone.
+Capture manifests must include server versions: the running reference daemon is
+still 0.153.4, although the installed/managed CLI has advanced to 0.154.0. Keep
+these distinct and retain the original pinned compatibility commit. Capture relay
+framing, complete decoded thread messages, and realtime sideband events; preserve
+correlation and timing while excluding credentials and raw audio from diagnostics.
+The direct iPhone media plane requires separate acceptance evidence. Reference
+capture implementation and actual recorded conversations remain pending.
