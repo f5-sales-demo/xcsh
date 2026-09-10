@@ -459,11 +459,11 @@ test("a closed attachment cannot be reused while previous delegation results are
 
 test.each(
 	["gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-6-astra"].flatMap(model =>
-		[false, true].map(streamed => ({ model, streamed })),
+		[false, true].flatMap(streamed => ["v1", "v3"].map(version => ({ model, streamed, version }))),
 	),
 )(
-	"real $model session voice forwards streamed=$streamed output through its sole owner",
-	async ({ model, streamed }) => {
+	"owning $model adapter forwards $version streamed=$streamed output through its sole owner",
+	async ({ model, streamed, version }) => {
 		const { spyOn } = await import("bun:test");
 		const { RemoteSession } = await import("../../src/remote-control/session");
 		const { SessionManager } = await import("../../src/session/session-manager");
@@ -552,7 +552,9 @@ test.each(
 						});
 					}
 					await Bun.sleep(250);
-					expect(outputs.map(output => output.channel)).toEqual(["commentary", "speakable"]);
+					expect(outputs.map(output => output.channel)).toEqual(
+						version === "v1" ? [] : ["commentary", "speakable"],
+					);
 					expect(JSON.stringify(outputs)).not.toContain("private reasoning");
 					endMessage(partial);
 					sessionListener({ type: "agent_end" });
@@ -573,23 +575,54 @@ test.each(
 		try {
 			await remote.call("voice-start", "thread/realtime/start", {
 				...start,
+				version,
 				codexResponseHandoffMode: "bemTags",
 				threadId: target.sessionId,
 			});
-			socket.onmessage({ data: JSON.stringify(delegation) });
-			socket.onmessage({ data: JSON.stringify(delegation) });
+			const request =
+				version === "v1"
+					? {
+							type: "conversation.handoff.requested",
+							handoff_id: "h1",
+							item_id: "i1",
+							input_transcript: "change fixture",
+						}
+					: delegation;
+			socket.onmessage({ data: JSON.stringify(request) });
+			socket.onmessage({ data: JSON.stringify(request) });
 			await Bun.sleep(streamed ? 300 : 0);
 			expect(selectedSession).toBe("fixture-owner");
 			expect(prompts).toEqual(["change fixture"]);
 			expect(target.model.id).toBe(model);
-			expect(outputs).toContainEqual(
-				expect.objectContaining({
-					type: "delegation.context.append",
-					content: [
-						{ type: "input_text", text: streamed ? "[FINAL]The fixture is updated." : "The fixture is updated." },
-					],
-				}),
-			);
+			if (version === "v1") {
+				expect(outputs).toEqual([
+					...(streamed
+						? [
+								{
+									type: "conversation.handoff.append",
+									handoff_id: "h1",
+									output_text: "[COMMENTARY]Updating the fixture.",
+								},
+							]
+						: []),
+					{
+						type: "conversation.handoff.append",
+						handoff_id: "h1",
+						output_text: `"Agent Final Message":\n\n${streamed ? "[FINAL]" : ""}The fixture is updated.`,
+					},
+				]);
+			} else
+				expect(outputs).toContainEqual(
+					expect.objectContaining({
+						type: "delegation.context.append",
+						content: [
+							{
+								type: "input_text",
+								text: streamed ? "[FINAL]The fixture is updated." : "The fixture is updated.",
+							},
+						],
+					}),
+				);
 			expect(JSON.stringify(outputs)).not.toContain("private reasoning");
 			expect(
 				manager

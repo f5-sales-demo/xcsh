@@ -7,6 +7,7 @@ import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
 import { handoffOptions, VoiceHandoff, type VoiceOutputUpdate } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
+import { completedVoiceText, LegacyVoiceHandoff } from "./voice-legacy";
 import { contextChunks, decodeVoiceEvent, existingCallConfig, type VoiceEvent } from "./voice-protocol";
 
 import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-socket";
@@ -38,7 +39,7 @@ function safeConnectionError(error: unknown): string {
 	return `Native realtime connection failed${status ? ` (HTTP ${status})` : ""}`;
 }
 export class NativeVoice {
-	#handoff?: VoiceHandoff;
+	#handoff?: VoiceHandoff | LegacyVoiceHandoff;
 	#handoffOptions = handoffOptions({});
 	#history?: VoiceHistory;
 	#closing?: Promise<void>;
@@ -342,6 +343,7 @@ export class NativeVoice {
 	appendText(text: unknown, role: unknown = "user", speakable = false): void {
 		if (this.#state !== "open" && this.#state !== "reconnecting")
 			throw new ProtocolError(-32000, "Voice is not active");
+		if (speakable && typeof text === "string" && !text.trim()) return;
 		if (
 			typeof text !== "string" ||
 			!text.trim() ||
@@ -349,21 +351,23 @@ export class NativeVoice {
 			!["user", "assistant", "developer"].includes(String(role))
 		)
 			throw new ProtocolError(-32602, "Invalid realtime text input");
+		const outputText = speakable ? completedVoiceText(text) : text;
 		if (this.#config?.version === "v3") {
-			for (const chunk of contextChunks(text))
+			for (const chunk of contextChunks(outputText))
 				this.#send({
 					type: "session.context.append",
 					...(speakable ? { channel: "speakable" } : {}),
 					content: [{ type: "input_text", text: chunk }],
 				});
+		} else if (speakable) {
+			this.#send({ type: "conversation.handoff.append", handoff_id: "codex", output_text: outputText });
 		} else {
-			if (speakable) throw new ProtocolError(-32602, "Speakable context requires realtime v3");
 			this.#send({
 				type: "conversation.item.create",
 				item: {
 					type: "message",
 					role,
-					content: [{ type: role === "assistant" ? "output_text" : "input_text", text }],
+					content: [{ type: role === "assistant" ? "output_text" : "input_text", text: outputText }],
 				},
 			});
 		}
@@ -521,7 +525,11 @@ export class NativeVoice {
 								content: [{ type: "input_text", text: chunk }],
 							});
 					})
-				: undefined;
+				: this.#config?.clientManagedHandoffs
+					? undefined
+					: new LegacyVoiceHandoff(text =>
+							this.#send({ type: "conversation.handoff.append", handoff_id: event.id, output_text: text }),
+						);
 		this.#handoff = handoff;
 		void this.deps
 			.delegate(key, event.text, update => {
@@ -535,14 +543,7 @@ export class NativeVoice {
 			.then(async text => {
 				await this.deps.record({ key, kind: "delegationResult", text });
 				if (this.#config?.clientManagedHandoffs || !this.active) return;
-				if (handoff) handoff.finish(text);
-				else
-					this.#send({
-						type: "conversation.handoff.append",
-						handoff_id: event.id,
-						// Pinned methods_common.rs marks completed v1 agent output.
-						output_text: `"Agent Final Message":\n\n${text}`,
-					});
+				handoff?.finish(text);
 			})
 			.catch(() => this.#fail("The backing agent could not complete the voice request"))
 			.finally(() => {

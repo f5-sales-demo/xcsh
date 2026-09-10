@@ -60,6 +60,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   reducer; reasoning and tool-call content do not.
 - `codex-rs/core/src/realtime_history.rs`: session boundary items, separate user
   and assistant transcript segments, streamed item deltas, and closure sealing.
+- `codex-rs/core/src/realtime_context.rs` and `utils/string/src/truncate.rs`:
+  the completed-output token budget, UTF-8 boundaries and truncation marker.
+  Reference fixtures run the original pinned functions independently of xcsh.
 - `codex-rs/app-server/src/bespoke_event_handling.rs`: handoff item notification
   with request identity and the active transcript; transcript consumption follows
   `codex-api/src/endpoint/realtime_websocket/methods.rs`.

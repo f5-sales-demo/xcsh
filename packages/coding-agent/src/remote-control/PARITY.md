@@ -19,13 +19,40 @@ Completed v1 agent results include the pinned final-message marker. Tests cover
 duplicate delegation, initialization write failure, synchronous socket closure,
 early transcript ordering, and late work after closure. They use synthetic
 transport fixtures derived from the pinned Rust source, not phone recordings.
-Live v1 acceptance, legacy completed commentary, standalone WebSocket, and remaining
+Live v1 acceptance, standalone WebSocket, and remaining
 startup/response-item options are still incomplete. Recorded v3 replay remains
 part of regression validation; no additional live parity is inferred here.
 The pinned `streams_handoff_append` gate enables incremental output only for v3.
 Legacy v1 forwards completed commentary without the final-message marker and
-completed final output with it; forwarding all completed legacy items remains
-part of the output audit.
+completed final output with it. The completed-output checkpoint below verifies
+that distinction through the native adapter.
+
+## Completed voice output
+
+Legacy v1 now forwards completed commentary and final text items through the
+owning session's output callback. It ignores partial text and v3 channel-routing
+options. Repeated completion events for the same item do not resend output, and
+the final turn result does not repeat its last completed message. A distinct
+cancellation result remains visible. New handoffs retire old output handlers;
+backing work may still settle and persist its result. Ending voice suppresses
+late output without cancelling the working agent. Explicit client-managed mode
+suppresses automatic output while permitting requested speech.
+
+Explicit v1 speech uses the pinned standalone handoff ID; v3 uses the speakable
+session-context channel. Empty speech is a no-op on an active call. Completed v1
+text bodies and explicit v1/v3 speech follow the pinned 1000-token estimate, including
+the truncation marker. Five boundary/Unicode fixtures were produced by compiling
+the original pinned Rust truncator and budget loop. Native output matches their
+byte counts and SHA-256 values. The reproducible generator validates source-file
+hashes and requires Rust only for fixture regeneration.
+The legacy final-message prefix is added after budgeting its text body, matching
+the pinned writer.
+
+Sixteen work-model adapter variants cover Sol, Luna, Terra and Astra with v1/v3
+and partial/completed-only inputs. They preserve the selected model, use the
+session's ordinary delegation path and exclude reasoning content. These are
+automated source-contract tests, not live model or iPhone acceptance. Standalone
+WebSocket, response-item mode and remaining startup/control options stay open.
 
 ## First two phone conversations
 

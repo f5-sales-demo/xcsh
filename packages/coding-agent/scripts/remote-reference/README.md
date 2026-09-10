@@ -5,6 +5,23 @@ comparison with native xcsh. It is not a product dependency or a replacement
 agent. The reference is Codex 0.153.4, commit
 `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`.
 
+## Completed-output source fixtures
+
+`completed-output.ts` regenerates the completed voice-output budget fixtures by
+compiling the original pinned Rust string truncator and realtime-context budget
+loop. It validates both source files against their pinned SHA-256 values and
+accepts an extracted source archive or checkout. It does not run Codex or contact
+the service. Rust is required only to regenerate these fixtures; ordinary tests
+read the checked-in byte counts and hashes.
+
+```sh
+bun packages/coding-agent/scripts/remote-reference/completed-output.ts /path/to/pinned-codex-source
+```
+
+Set `TMPDIR` to choose where the temporary reference executable is compiled. The
+generator removes its temporary directory after completion. This is source-contract
+evidence and does not replace recorded phone conversations.
+
 ## Reference preparation
 
 Use a separate copy of the pinned source. `bun install.ts <source-directory>`

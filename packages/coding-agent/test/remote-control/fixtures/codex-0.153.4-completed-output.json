@@ -1,0 +1,53 @@
+{
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "sourceFile": "codex-rs/utils/string/src/truncate.rs",
+  "sourceSha256": "51a22c8252db01b668f312e17c87c43c1abd96fc46ac3cfca0a85d45f6dc4d71",
+  "budgetSourceFile": "codex-rs/core/src/realtime_context.rs",
+  "budgetSourceSha256": "4e140443503e80030f19b5d07d72c36238f4f50a5bed17463c11376223c40140",
+  "budgetTokens": 1000,
+  "evidence": "Original pinned Rust string truncator with the realtime_context.rs budget loop; no service or phone capture",
+  "cases": [
+    {
+      "input": {
+        "unit": "a",
+        "count": 4000
+      },
+      "bytes": 4000,
+      "sha256": "82396ec9191a22922e88923ef14b5d225e26e7fc2d1571d0d6cd51920f83880b"
+    },
+    {
+      "input": {
+        "unit": "a",
+        "count": 4001
+      },
+      "bytes": 4000,
+      "sha256": "974f3123b231eb4857611798cf807cdc47a00b9060c45edccc56500f8e970eec"
+    },
+    {
+      "input": {
+        "unit": "a",
+        "count": 6000
+      },
+      "bytes": 3998,
+      "sha256": "1141ed368b38960fcf9ca709e534d7b52624a63a8222d93102b6d2ff712e9610"
+    },
+    {
+      "input": {
+        "unit": "🌳",
+        "count": 2000
+      },
+      "bytes": 3995,
+      "sha256": "e87a3892aa708a572f7b8b8cb17f4844b17a665e7dcc744a8cc2efea23dc9440"
+    },
+    {
+      "input": {
+        "head": "HEAD",
+        "unit": "é🌳z",
+        "count": 1100,
+        "tail": "TAIL"
+      },
+      "bytes": 3997,
+      "sha256": "9923325a48933678aaa25795c20952ebe6a373636a93287fa59c3c577121e8a6"
+    }
+  ]
+}

@@ -1009,3 +1009,43 @@ replace the final run. Runtime source and tests remained unchanged throughout
 the final suite. Markdown, terminology, staged privacy, secret and whitespace
 checks passed. Required repository CI, full-history privacy findings and the
 remaining live/protocol acceptance are still open.
+
+## Completed legacy output and speech appends
+
+The native v1 output handler now forwards completed commentary unchanged and
+completed final messages with the pinned final-agent marker. Partial text remains
+buffered by the working agent. Duplicate text/message completion events do not
+repeat a spoken item, and turn completion does not resend the last completed
+message. A different cancellation result still reaches voice. Superseding a
+handoff closes its output handler without cancelling backing work; ending voice
+suppresses late output while its result remains persisted. Client-managed mode
+suppresses automatic output and still permits explicit speech.
+
+Explicit speech uses the v1 standalone handoff ID or the v3 speakable context
+channel. Empty speech is a no-op on an active call. Completed v1 text bodies and
+explicit speech use the pinned 1000-token estimate, preserving UTF-8 head/tail
+boundaries and accounting for the truncation marker. The final-agent marker is
+added afterward, as in the pinned writer. Five fixtures compare exact output
+byte counts and hashes with the original Rust string truncator and the original
+realtime-context budget loop. A Bun generator validates both source hashes,
+compiles only those reference operations, and removes its temporary executable.
+Rust and the pinned source are required only for fixture regeneration.
+
+The valid initial regression run had one pass and seven failures: missing
+completed items, repeated/stale output, rejected speech and excessive output
+size. Two additional empty-speech tests failed before the no-op repair. After
+implementation, 106 focused tests passed with zero failures and 609 assertions
+across seven files (7.69 seconds). Sixteen adapter variants exercise all four
+work models with v1/v3 and partial/completed-only inputs; they verify selected
+credentials/model, one delegation and reasoning exclusion. These remain synthetic
+adapter tests and do not claim new live model or phone acceptance. Workspace
+TypeScript, formatting and the CLI bundle check passed. The existing compiled
+package receipt predates this output checkpoint; final release-artifact
+verification remains required.
+
+Final guarded package validation passed 7679 tests with 561 skips, zero failures
+and 24293 assertions across 759 files (372.69 seconds). Runtime source and tests
+remained unchanged during that run. Markdown, terminology, staged privacy,
+secret and whitespace checks passed. Remaining start/end instruction lifecycle,
+client-created-call options, standalone WebSocket, response-item mode, live
+acceptance and the full completion audit remain open.
