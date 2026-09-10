@@ -1761,3 +1761,19 @@ failures and 29527 assertions across 789 files in 402.82 seconds. End-to-end
 NativeVoice checks cover audio forwarding, no backing-agent execution, no audio
 in stored records, and ignored frames after closure. These are synthetic wire
 checks, not new iPhone acceptance or standalone WebSocket support.
+
+## Standalone realtime credential boundary
+
+AuthStorage now exposes an API-key lookup that skips stored OAuth credentials
+and their refresh path. It retains the established precedence for runtime,
+stored API-key, provider environment and configured sources. Standalone
+realtime will use this boundary for the `openai` provider; enrollment and
+WebRTC/existing-call attachment continue to use the selected ChatGPT
+subscription independently.
+
+The two-case test failed because the boundary did not exist, then passed after
+the minimal implementation. It verifies every precedence step and confirms an
+expired OAuth credential is neither returned nor refreshed. The complete AI
+package passed 776 tests with 456 skips, zero failures and 2129 assertions
+across 105 files in 33.17 seconds; its type check also passed. The credential
+boundary is a prerequisite and does not itself implement standalone transport.
