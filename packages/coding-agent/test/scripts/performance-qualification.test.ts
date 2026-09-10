@@ -15,7 +15,7 @@ function profile(
 ): WorkloadProfile {
 	return {
 		cache_state: cacheState,
-		commit: "a".repeat(40),
+		commit: variant === "baseline" ? "a".repeat(40) : "b".repeat(40),
 		duration_seconds: durationSeconds,
 		exit: { code: 0, signal: null },
 		memory: { events: { oom: 0, oom_kill: 0 }, peak_bytes: 1024, peak_limit_ratio: 0.25 },
@@ -50,6 +50,19 @@ describe("performance qualification", () => {
 		expect(report.qualifies).toBe(true);
 		expect(report.reports).toHaveLength(REQUIRED_PHASES.length * 2);
 		expect(report.reports.every(item => item.paired_runs === 5)).toBe(true);
+	});
+
+	it("requires distinct, internally consistent frozen source identities", () => {
+		const profiles = completeMatrix();
+		const report = evaluateQualification(profiles, "baseline", "bun-1.4.2", "a".repeat(40), "b".repeat(40));
+		expect(report.qualifies).toBe(true);
+		expect(report.baseline_commit).toBe("a".repeat(40));
+		expect(report.candidate_commit).toBe("b".repeat(40));
+
+		(profiles.find(item => item.variant === "baseline") as WorkloadProfile).commit = "c".repeat(40);
+		const drifted = evaluateQualification(profiles, "baseline", "bun-1.4.2", "a".repeat(40), "b".repeat(40));
+		expect(drifted.qualifies).toBe(false);
+		expect(drifted.reports.every(item => item.source_identity_valid === false)).toBe(true);
 	});
 
 	it("rejects p95 regression, output drift, OOM, and eighty-percent memory use", () => {

@@ -38,6 +38,7 @@ interface PhaseReport {
 	max_peak_memory_bytes: number;
 	max_peak_memory_ratio: number;
 	output_equivalent: boolean;
+	source_identity_valid: boolean;
 	paired_runs: number;
 	phase: string;
 	qualifies: boolean;
@@ -45,7 +46,9 @@ interface PhaseReport {
 }
 
 export interface QualificationReport {
+	baseline_commit: string | null;
 	baseline_variant: string;
+	candidate_commit: string | null;
 	candidate_variant: string;
 	qualifies: boolean;
 	reports: PhaseReport[];
@@ -75,8 +78,20 @@ export function evaluateQualification(
 	profiles: readonly WorkloadProfile[],
 	baselineVariant = "baseline",
 	candidateVariant = "bun-1.4.2",
+	expectedBaselineCommit?: string,
+	expectedCandidateCommit?: string,
 ): QualificationReport {
 	const reports: PhaseReport[] = [];
+	const baselineCommits = new Set(profiles.filter(profile => profile.variant === baselineVariant).map(profile => profile.commit));
+	const candidateCommits = new Set(profiles.filter(profile => profile.variant === candidateVariant).map(profile => profile.commit));
+	const baselineCommit = baselineCommits.size === 1 ? ([...baselineCommits][0] ?? null) : null;
+	const candidateCommit = candidateCommits.size === 1 ? ([...candidateCommits][0] ?? null) : null;
+	const sourceIdentityValid =
+		baselineCommit !== null &&
+		candidateCommit !== null &&
+		baselineCommit !== candidateCommit &&
+		(expectedBaselineCommit === undefined || baselineCommit === expectedBaselineCommit) &&
+		(expectedCandidateCommit === undefined || candidateCommit === expectedCandidateCommit);
 	for (const phase of REQUIRED_PHASES) {
 		for (const cacheState of ["cold", "warm"] as const) {
 			const matching = profiles.filter(profile => profile.phase === phase && profile.cache_state === cacheState);
@@ -96,7 +111,6 @@ export function evaluateQualification(
 				const baselineProfile = baseline.get(pair);
 				const candidateProfile = candidate.get(pair);
 				return (
-					baselineProfile?.commit === candidateProfile?.commit &&
 					baselineProfile?.output_digest !== null &&
 					baselineProfile?.output_digest === candidateProfile?.output_digest
 				);
@@ -109,6 +123,7 @@ export function evaluateQualification(
 			const candidateP95 = nearestRankP95(candidateDurations);
 			const qualifies =
 				pairs.length >= 5 &&
+				sourceIdentityValid &&
 				outputEquivalent &&
 				stable &&
 				maxPeakMemoryRatio < 0.8 &&
@@ -122,6 +137,7 @@ export function evaluateQualification(
 				max_peak_memory_bytes: Math.max(...allProfiles.map(profile => profile.memory.peak_bytes ?? 0)),
 				max_peak_memory_ratio: maxPeakMemoryRatio,
 				output_equivalent: outputEquivalent,
+				source_identity_valid: sourceIdentityValid,
 				paired_runs: pairs.length,
 				phase,
 				qualifies,
@@ -129,7 +145,14 @@ export function evaluateQualification(
 			});
 		}
 	}
-	return { baseline_variant: baselineVariant, candidate_variant: candidateVariant, qualifies: reports.every(report => report.qualifies), reports };
+	return {
+		baseline_commit: baselineCommit,
+		baseline_variant: baselineVariant,
+		candidate_commit: candidateCommit,
+		candidate_variant: candidateVariant,
+		qualifies: reports.every(report => report.qualifies),
+		reports,
+	};
 }
 
 async function loadProfiles(inputDirectory: string): Promise<WorkloadProfile[]> {
@@ -168,14 +191,20 @@ function renderSummary(report: QualificationReport): string {
 if (import.meta.main) {
 	const inputIndex = process.argv.indexOf("--input");
 	const outputIndex = process.argv.indexOf("--out");
+	const baselineCommitIndex = process.argv.indexOf("--baseline-commit");
+	const candidateCommitIndex = process.argv.indexOf("--candidate-commit");
 	const inputDirectory = inputIndex >= 0 ? process.argv[inputIndex + 1] : undefined;
 	const outputPath = outputIndex >= 0 ? process.argv[outputIndex + 1] : undefined;
-	if (!inputDirectory || !outputPath) {
-		console.error("usage: validate-performance-qualification.ts --input <directory> --out <report.json>");
+	const baselineCommit = baselineCommitIndex >= 0 ? process.argv[baselineCommitIndex + 1] : undefined;
+	const candidateCommit = candidateCommitIndex >= 0 ? process.argv[candidateCommitIndex + 1] : undefined;
+	if (!inputDirectory || !outputPath || !baselineCommit || !candidateCommit) {
+		console.error(
+			"usage: validate-performance-qualification.ts --input <directory> --baseline-commit <sha> --candidate-commit <sha> --out <report.json>",
+		);
 		process.exit(2);
 	}
 	const profiles = await loadProfiles(inputDirectory);
-	const report = evaluateQualification(profiles);
+	const report = evaluateQualification(profiles, "baseline", "bun-1.4.2", baselineCommit, candidateCommit);
 	await Bun.write(outputPath, `${JSON.stringify(report, null, 2)}\n`);
 	const summary = renderSummary(report);
 	console.log(summary);

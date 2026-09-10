@@ -62,7 +62,7 @@ runs:
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
         XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'bun-1.4.2' && '1.4.2' || '1.3.14' }}
       run: |
-        scripts/runner-optimization-profile.sh \
+        "${{ github.action_path }}/../../../scripts/runner-optimization-profile.sh" \
           "$PROFILE_MODE" "$PROFILE_VARIANT" "$PROFILE_COMPARISON" \
           "$PROFILE_CACHE_STATE" "$PROFILE_PAIR_ID" \
           "$RUNNER_TEMP/runner-profile-evidence"

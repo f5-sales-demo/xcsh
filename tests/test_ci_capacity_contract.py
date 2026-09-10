@@ -143,8 +143,10 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn('TARGET_VARIANTS="baseline modern"', profiler)
         self.assertIn("--platform linux,win32", profiler)
         self.assertIn(
-            'SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")', profiler
+            'SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$source_commit")', profiler
         )
+        self.assertIn("4e12e53d3f6e7085c345d9426f7252b03ac6dbfd", benchmark)
+        self.assertIn("path: .qualification-harness", benchmark)
         self.assertIn("git diff --exit-code", profiler)
         self.assertIn('>"$output_dir/node-filesystem.json"', profiler)
         self.assertNotIn("actions/cache/save@", benchmark)

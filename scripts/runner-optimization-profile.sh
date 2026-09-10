@@ -22,10 +22,11 @@ case "$cache_state" in cold | warm) ;; *) usage ;; esac
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
+source_commit=$(git rev-parse HEAD)
 mkdir -p "$output_dir/manifests" "$output_dir/metrics" "$output_dir/profiles"
 output_dir=$(cd "$output_dir" && pwd)
 
-SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")
+SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$source_commit")
 [[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]] || {
   echo "unable to resolve SOURCE_DATE_EPOCH from GITHUB_SHA" >&2
   exit 1
@@ -56,7 +57,7 @@ profile_phase() {
   local phase=$1 digest_kind=$2
   shift 2
   local profile="$output_dir/profiles/${phase}.json"
-  runner-profile \
+  GITHUB_SHA="$source_commit" runner-profile \
     --name "${phase}-${comparison}" \
     --output "$profile" \
     --cache-state "$cache_state" \
@@ -66,11 +67,22 @@ profile_phase() {
 
   local manifest="$output_dir/manifests/${phase}.sha256"
   case "$digest_kind" in
-  install) tree_manifest "$manifest" bun.lock package.json node_modules ;;
-  native) tree_manifest "$manifest" packages/natives/native ;;
-  test) printf 'ci:test:full\0%s\0' "$GITHUB_SHA" | sha256sum >"$manifest" ;;
-  startup) printf 'development-startup\0%s\0' "$GITHUB_SHA" | sha256sum >"$manifest" ;;
-  ttft) printf '%s\0%s\0' "$phase" "$GITHUB_SHA" | sha256sum >"$manifest" ;;
+  install)
+    tree_manifest "$output_dir/manifests/install-files.sha256" bun.lock package.json node_modules
+    printf 'frozen-install-completed\nbun.lock\nnode_modules\n' >"$manifest"
+    ;;
+  native)
+    tree_manifest "$output_dir/manifests/native-files.sha256" packages/natives/native
+    find packages/natives/native -maxdepth 1 -type f -name '*.node' -printf '%f\n' |
+      LC_ALL=C sort >"$manifest"
+    ;;
+  test) printf 'ci:test:full completed\n' >"$manifest" ;;
+  startup)
+    bun packages/coding-agent/src/cli.ts --version >"$manifest"
+    ;;
+  ttft)
+    jq -S 'keys' "$output_dir/metrics/${phase}.json" >"$manifest"
+    ;;
   release)
     tree_manifest "$output_dir/manifests/release-binaries.sha256" packages/coding-agent/binaries
     find packages/coding-agent/binaries -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort \
