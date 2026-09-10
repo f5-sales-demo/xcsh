@@ -1620,6 +1620,7 @@ export class SelectorController {
 			providerInventory: registry.getProviderInventory(),
 			configuredProviderIds: registry.getConfiguredProviderIds(),
 			providerAllowlist,
+			excludedProviderIds: this.ctx.settings?.get?.("disabledProviders") ?? [],
 			getAccessState: selectedProviderId => registry.getProviderAccessState(selectedProviderId),
 			getPickerMetadata: selectedProviderId => registry.getProviderPickerMetadata(selectedProviderId),
 			hasStoredCredential: selectedProviderId => registry.authStorage.has(selectedProviderId),
