@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import Ajv from "ajv";
+import { messageKey } from "../../src/remote-control/history";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 import type { AgentSessionEvent } from "../../src/session/agent-session";
 import { SessionManager } from "../../src/session/session-manager";
@@ -138,6 +139,181 @@ test("one persisted turn owns steering and its stream identities survive reattac
 	expect(f.events.find(event => event.method === "turn/completed")?.params.turn).toEqual(history[0]);
 	f.remote.dispose();
 	expect(fixture(f.manager).remote.history()).toEqual(history);
+});
+
+test("accepted client message identities survive a complete adapter restart", async () => {
+	const manager = SessionManager.inMemory("/tmp/durable-retry");
+	const first = fixture(manager);
+	let prompts = 0;
+	first.target.prompt = async () => {
+		prompts++;
+		return new Promise<void>(() => {});
+	};
+	const params = {
+		threadId: "durable",
+		clientUserMessageId: "phone-crash-gap",
+		input: [{ type: "text", text: "execute this once" }],
+	};
+	const accepted = (await first.remote.call("first", "turn/start", params)) as { turn: { id: string } };
+	expect(prompts).toBe(1);
+	first.remote.dispose();
+
+	const resumed = fixture(manager);
+	resumed.target.prompt = async () => {
+		prompts++;
+	};
+	const replay = (await resumed.remote.call("retry", "turn/start", params)) as { turn: { id: string } };
+	expect(replay.turn.id).toBe(accepted.turn.id);
+	expect(prompts).toBe(1);
+	expect(resumed.remote.history()).toHaveLength(1);
+	const reordered = (await resumed.remote.call("retry-reordered", "turn/start", {
+		input: params.input,
+		clientUserMessageId: params.clientUserMessageId,
+		threadId: params.threadId,
+	})) as { turn: { id: string } };
+	expect(reordered.turn.id).toBe(accepted.turn.id);
+	await expect(
+		resumed.remote.call("changed", "turn/start", {
+			...params,
+			input: [{ type: "text", text: "different work" }],
+		}),
+	).rejects.toMatchObject({ code: -32600 });
+});
+
+test("the accepted request ledger survives closing and reopening the session file", async () => {
+	const directory = await mkdtemp(join(tmpdir(), "xcsh-remote-request-ledger-"));
+	try {
+		const manager = SessionManager.create(directory, directory);
+		const first = fixture(manager);
+		let prompts = 0;
+		first.target.prompt = async () => {
+			prompts++;
+			return new Promise<void>(() => {});
+		};
+		const params = {
+			threadId: first.target.sessionId,
+			clientUserMessageId: "phone-file-retry",
+			input: [{ type: "text", text: "persist before execution" }],
+		};
+		const accepted = (await first.remote.call("first", "turn/start", params)) as { turn: { id: string } };
+		const file = manager.getSessionFile();
+		expect(file).toBeTruthy();
+		first.remote.dispose();
+
+		const reopened = await SessionManager.open(file!);
+		const resumed = fixture(reopened);
+		resumed.target.prompt = async () => {
+			prompts++;
+		};
+		const replay = (await resumed.remote.call("retry", "turn/start", params)) as { turn: { id: string } };
+		expect(replay.turn.id).toBe(accepted.turn.id);
+		expect(prompts).toBe(1);
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+});
+
+test("completed pre-ledger client messages remain deduplicated after restart", async () => {
+	const manager = SessionManager.inMemory("/tmp/durable-legacy-retry");
+	const request = user("already executed");
+	manager.appendCustomEntry("remote-history", {
+		kind: "turnStarted",
+		id: "durable-turn-before-ledger",
+		startedAtMs: 1000,
+	});
+	manager.appendCustomEntry("remote-history", {
+		kind: "message",
+		id: "durable-user-before-ledger",
+		key: messageKey(request),
+		clientId: "phone-before-ledger",
+	});
+	manager.appendMessage(request as never);
+	manager.appendMessage(assistant("finished before restart") as never);
+	manager.appendCustomEntry("remote-history", {
+		kind: "turnCompleted",
+		id: "durable-turn-before-ledger",
+		status: "completed",
+		completedAtMs: 2000,
+	});
+	const resumed = fixture(manager);
+	let prompts = 0;
+	resumed.target.prompt = async () => {
+		prompts++;
+	};
+	const replay = (await resumed.remote.call("retry", "turn/start", {
+		threadId: "durable",
+		clientUserMessageId: "phone-before-ledger",
+		input: [{ type: "text", text: "already executed" }],
+	})) as { turn: { id: string } };
+	expect(replay.turn.id).toBe("durable-turn-before-ledger");
+	expect(prompts).toBe(0);
+});
+
+test("accepted steering identities survive a complete adapter restart", async () => {
+	const manager = SessionManager.inMemory("/tmp/durable-steer-retry");
+	const first = fixture(manager);
+	first.target.prompt = async () => new Promise<void>(() => {});
+	let steering = 0;
+	first.target.steer = async () => {
+		steering++;
+	};
+	const started = (await first.remote.call("start", "turn/start", {
+		threadId: "durable",
+		clientUserMessageId: "phone-steer-start",
+		input: [{ type: "text", text: "begin once" }],
+	})) as { turn: { id: string } };
+	const params = {
+		threadId: "durable",
+		expectedTurnId: started.turn.id,
+		clientUserMessageId: "phone-steer-crash-gap",
+		input: [{ type: "text", text: "adjust once" }],
+	};
+	expect(await first.remote.call("steer", "turn/steer", params)).toEqual({ turnId: started.turn.id });
+	expect(steering).toBe(1);
+	first.remote.dispose();
+
+	const resumed = fixture(manager);
+	resumed.target.steer = async () => {
+		steering++;
+	};
+	expect(await resumed.remote.call("steer-retry", "turn/steer", params)).toEqual({ turnId: started.turn.id });
+	expect(steering).toBe(1);
+	await expect(
+		resumed.remote.call("steer-changed", "turn/steer", {
+			...params,
+			input: [{ type: "text", text: "different adjustment" }],
+		}),
+	).rejects.toMatchObject({ code: -32600 });
+});
+
+test("a failed accepted steering request remains failed after restart", async () => {
+	const manager = SessionManager.inMemory("/tmp/durable-steer-failure");
+	const first = fixture(manager);
+	first.target.prompt = async () => new Promise<void>(() => {});
+	const started = (await first.remote.call("start", "turn/start", {
+		threadId: "durable",
+		input: [{ type: "text", text: "begin" }],
+	})) as { turn: { id: string } };
+	let steering = 0;
+	first.target.steer = async () => {
+		steering++;
+		throw new Error("fixture steer failure");
+	};
+	const params = {
+		threadId: "durable",
+		expectedTurnId: started.turn.id,
+		clientUserMessageId: "phone-failed-steer",
+		input: [{ type: "text", text: "fail once" }],
+	};
+	await expect(first.remote.call("steer", "turn/steer", params)).rejects.toThrow("fixture steer failure");
+	first.remote.dispose();
+
+	const resumed = fixture(manager);
+	resumed.target.steer = async () => {
+		steering++;
+	};
+	await expect(resumed.remote.call("steer-retry", "turn/steer", params)).rejects.toMatchObject({ code: -32000 });
+	expect(steering).toBe(1);
 });
 
 test("commentary and final content have distinct stable item ids and phases", () => {

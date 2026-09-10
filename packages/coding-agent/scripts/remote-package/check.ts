@@ -354,7 +354,10 @@ try {
 	const resumed = await rpc("thread/resume", { threadId: alphaId });
 	assert.equal(resumed.model, "model");
 	assert.equal(resumed.modelProvider, "package-fixture");
-	passed("compiled --resume preserves session identity, history and extension work model");
+	const retriedAfterTerminalRestart = await rpc("turn/start", accepted[0].params);
+	assert.equal(retriedAfterTerminalRestart.turn.id, accepted[0].turnId);
+	assert.equal((await history(alphaId)).length, 1);
+	passed("compiled --resume preserves identity, model and durable exactly-once request replay");
 	for (const terminal of terminals) await terminal.close();
 	await waitFor(async () => (await threads()).length === 0, "all terminal exits removed");
 	passed("terminal exit unregisters all owners");

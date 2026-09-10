@@ -33,8 +33,8 @@ The assertions cover default-off status, discovery of two named terminal owners,
 correct working-directory routing, native file-change facts and successful read
 results in history, clean and abrupt host restart, active terminal work surviving
 host process loss, stable-request replay without repeated turns, compiled
-`--resume` with preserved identity/history/extension model, and removal on
-terminal exit.
+`--resume` with preserved identity/history/extension model, durable replay after
+the terminal process itself restarts, and removal on terminal exit.
 
 The evidence directory retains terminal/host logs, saved sessions, history
 responses and `result.json`. The result records binary, harness and provider

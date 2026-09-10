@@ -100,6 +100,16 @@ function turn(id: string, status = "completed"): Turn {
 		durationMs: null,
 	};
 }
+function canonicalJson(value: unknown): string {
+	if (Array.isArray(value)) return `[${value.map(item => canonicalJson(item)).join(",")}]`;
+	if (value && typeof value === "object") {
+		const entries = Object.entries(value as Record<string, unknown>)
+			.filter(([, item]) => item !== undefined && typeof item !== "function" && typeof item !== "symbol")
+			.sort(([left], [right]) => left.localeCompare(right));
+		return `{${entries.map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`).join(",")}}`;
+	}
+	return JSON.stringify(value) ?? "null";
+}
 export class RemoteSession {
 	#epoch = 0;
 	#boundId = "";
@@ -488,7 +498,7 @@ export class RemoteSession {
 		// Keep accepted results when returning to a session, without colliding with
 		// requests made under another session's identity in the same terminal.
 		identity = JSON.stringify([this.#boundId, identity]);
-		const signature = JSON.stringify({ method, params });
+		const signature = canonicalJson({ method, params });
 		const existing = this.#requests.get(identity);
 		if (existing)
 			return existing.signature === signature
@@ -498,11 +508,95 @@ export class RemoteSession {
 			return Promise.reject(
 				new ProtocolError(-32000, "Session request limit reached; restart the remote attachment"),
 			);
-		const result = this.#execute(method, params);
+		try {
+			const recovered = this.#recoverAcceptedRequest(method, params, signature);
+			if (recovered) {
+				const result = Promise.resolve(recovered);
+				this.#requests.set(identity, { signature, result });
+				return result;
+			}
+		} catch (error) {
+			return Promise.reject(error);
+		}
+		const result = this.#execute(method, params, signature);
 		this.#requests.set(identity, { signature, result });
 		return result;
 	}
-	async #execute(method: string, params: Record<string, unknown>): Promise<unknown> {
+	#recoverAcceptedRequest(
+		method: string,
+		params: Record<string, unknown>,
+		signature: string,
+	): Record<string, unknown> | undefined {
+		const clientId = params.clientUserMessageId;
+		if (
+			!this.#durable ||
+			!["turn/start", "turn/steer"].includes(method) ||
+			typeof clientId !== "string" ||
+			!clientId ||
+			clientId.length > 256
+		)
+			return undefined;
+		const signatureHash = createHash("sha256").update(signature).digest("hex");
+		for (const entry of this.target.sessionManager.getBranch().toReversed()) {
+			if (entry.type !== "custom" || entry.customType !== "remote-history" || !entry.data) continue;
+			const record = entry.data as Record<string, unknown>;
+			if (
+				!["requestAccepted", "requestFailed"].includes(String(record.kind)) ||
+				record.clientUserMessageId !== clientId
+			)
+				continue;
+			if (record.method !== method || record.signatureHash !== signatureHash)
+				throw new ProtocolError(-32600, "Client message identity reused with different input");
+			const turnId = record.turnId;
+			if (typeof turnId !== "string") throw new ProtocolError(-32000, "Persisted request identity is invalid");
+			if (record.kind === "requestFailed") throw new ProtocolError(-32000, "Previously accepted request failed");
+			const accepted = this.history().find(value => value.id === turnId);
+			if (!accepted) throw new ProtocolError(-32000, "Persisted request turn is unavailable");
+			return method === "turn/start" ? { turn: accepted } : { turnId };
+		}
+
+		const text = Array.isArray(params.input)
+			? params.input
+					.map(item => (item?.type === "text" && typeof item.text === "string" ? item.text : ""))
+					.join("\n")
+			: "";
+		for (const accepted of this.history().toReversed()) {
+			const users = accepted.items.filter(item => item.type === "userMessage");
+			const index = users.findIndex(item => item.clientId === clientId);
+			if (index < 0) continue;
+			const content = (users[index].content as { type?: unknown; text?: unknown }[] | undefined) ?? [];
+			const stored = content
+				.filter(item => item.type === "text" && typeof item.text === "string")
+				.map(item => item.text)
+				.join("\n");
+			const expectedMethod = index === 0 ? "turn/start" : "turn/steer";
+			if (
+				method !== expectedMethod ||
+				stored !== text ||
+				(method === "turn/steer" && params.expectedTurnId !== accepted.id)
+			)
+				throw new ProtocolError(-32600, "Client message identity reused with different input");
+			return method === "turn/start" ? { turn: accepted } : { turnId: accepted.id };
+		}
+		return undefined;
+	}
+	#recordRequest(
+		kind: "requestAccepted" | "requestFailed",
+		method: "turn/start" | "turn/steer",
+		params: Record<string, unknown>,
+		turnId: string,
+		signature: string | undefined,
+	): void {
+		if (!this.#durable || typeof params.clientUserMessageId !== "string" || !signature) return;
+		this.target.sessionManager.appendCustomEntry("remote-history", {
+			kind,
+			method,
+			clientUserMessageId: params.clientUserMessageId,
+			turnId,
+			signatureHash: createHash("sha256").update(signature).digest("hex"),
+		});
+	}
+	async #execute(method: string, params: Record<string, unknown>, signature?: string): Promise<unknown> {
 		const epoch = this.#epoch;
 		if (params.threadId !== this.target.sessionId) throw new ProtocolError(-32602, "Thread not found");
 		if (method === "thread/name/set") {
@@ -813,9 +907,16 @@ export class RemoteSession {
 				typeof params.clientUserMessageId === "string" ? { text, id: params.clientUserMessageId } : undefined;
 			if (client) this.#pendingClients.push(client);
 			try {
-				await this.#effect(epoch, () => this.target.steer(text));
+				await this.#effect(epoch, async () => {
+					this.#recordRequest("requestAccepted", "turn/steer", params, turnId, signature);
+					if (this.#durable) await this.target.sessionManager.flush();
+					this.#assertCurrent(epoch);
+					await this.target.steer(text);
+				});
 			} catch (error) {
 				if (client) this.#pendingClients = this.#pendingClients.filter(value => value !== client);
+				this.#recordRequest("requestFailed", "turn/steer", params, turnId, signature);
+				if (this.#durable) await this.target.sessionManager.flush().catch(() => {});
 				throw error;
 			}
 			return { turnId };
@@ -826,6 +927,7 @@ export class RemoteSession {
 		const active = this.#beginTurn();
 		if (this.#durable) {
 			try {
+				this.#recordRequest("requestAccepted", "turn/start", params, active.id, signature);
 				await this.target.sessionManager.ensureOnDisk();
 				this.#assertCurrent(epoch);
 				await this.target.sessionManager.flush();
