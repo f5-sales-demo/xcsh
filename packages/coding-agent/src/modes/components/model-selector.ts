@@ -28,8 +28,10 @@ import { getProviderDisplayName } from "../controllers/provider-presentation";
 import { getTabBarTheme } from "../shared";
 import {
 	matchesSelectorKey,
+	type SelectorFrameLine,
 	selectorCancelHint,
 	selectorFrame,
+	selectorFrameContentWidth,
 	selectorKeys,
 	selectorNavigationHint,
 	selectorRow,
@@ -417,7 +419,7 @@ export class ModelSelectorComponent extends Container {
 	}
 	override render(width: number): string[] {
 		const height = this.#tui.terminal?.rows ?? 24;
-		const inner = Math.min(100, width) - 6;
+		const inner = selectorFrameContentWidth(width);
 		const selected = this.#menuItem ?? this.#getSelectedItem();
 		const wide = width >= 80;
 		const searching = Boolean(this.#searchInput.getValue().trim());
@@ -432,8 +434,11 @@ export class ModelSelectorComponent extends Container {
 						: [],
 				),
 			].join(", ") || "Unassigned";
-		let body: string[] = [];
-		const details: string[] = selected ? [selected.selector] : [];
+		let body: SelectorFrameLine[] = [];
+		let selectedBodyIndex: number | undefined;
+		let stickyBodyRows = 0;
+		let minimumDetailRows = 0;
+		const details: string[] = selected ? wrapTextWithAnsi(selected.selector, inner) : [];
 		let navigation: string[] = [];
 		let title = "Choose a model";
 		let purpose = "Choose a model, scope and reasoning.";
@@ -455,11 +460,8 @@ export class ModelSelectorComponent extends Container {
 					: this.#menuStep === "scope"
 						? "Choose where this model applies."
 						: "Choose a specialist role.";
-			const budget = Math.max(1, height - 10);
-			const start = Math.max(0, this.#menuSelectedIndex - budget + 1);
-			body = labels
-				.slice(start, start + budget)
-				.map((label, i) => selectorRow([label], [inner], start + i === this.#menuSelectedIndex));
+			body = labels.map((label, i) => selectorRow([label], [inner - 2], i === this.#menuSelectedIndex));
+			selectedBodyIndex = this.#menuSelectedIndex;
 			if (this.#menuStep === "scope")
 				details.push(
 					[
@@ -477,7 +479,7 @@ export class ModelSelectorComponent extends Container {
 			];
 		} else {
 			navigation = [
-				...(this.#tabBar?.render(Math.min(100, width) - 4) ?? []).slice(0, 2),
+				...(this.#tabBar?.render(inner) ?? []).slice(0, 2),
 				"Search all providers",
 				...this.#searchInput.render(inner),
 			];
@@ -488,27 +490,35 @@ export class ModelSelectorComponent extends Container {
 			if (selected) {
 				details.push(...wrapTextWithAnsi(assignments(selected.model, true), inner));
 				if (this.#isItemDisabled(selected)) details.push("Unavailable · reconnect or refresh this provider.");
-				else details.push(selected.model.description ?? "");
+				else if (selected.model.description) details.push(...wrapTextWithAnsi(selected.model.description, inner));
 			}
+			// Two live-status rows are intentional reserved space; spinner/error updates must not shift the table.
+			minimumDetailRows = details.length + 2;
 			const selectedStatus = selected
 				? this.#renderProviderStatus(inner).find(line =>
 						line.includes(`${getProviderDisplayName(selected.model.provider)}:`),
 					)
 				: undefined;
-			details.push(status[0] ?? "");
-			details.push(selectedStatus && selectedStatus !== status[0] ? selectedStatus : "");
+			if (status[0]) details.push(status[0]);
+			if (selectedStatus && selectedStatus !== status[0]) details.push(selectedStatus);
 			if (this.#errorMessage) details.push(String(this.#errorMessage));
-			const budget = Math.max(1, height - navigation.length - details.length - footer.length - 5 - (wide ? 1 : 0));
-			const start = Math.max(0, Math.min(this.#selectedIndex - budget + 1, this.#filteredModels.length - budget));
 			const showProvider = searching;
-			const widths = showProvider ? [inner - 40, 18, 18] : [inner - 22, 20];
-			if (wide)
+			const widths = showProvider ? [inner - 42, 18, 18] : [inner - 24, 20];
+			if (wide) {
 				body.push(
-					selectorRow(showProvider ? ["Model", "Provider", "Assignment"] : ["Model", "Assignment"], widths),
+					selectorRow(
+						showProvider ? ["Model", "Provider", "Assignment"] : ["Model", "Assignment"],
+						widths,
+						false,
+						"muted",
+					),
 				);
-			for (let i = start; i < Math.min(start + budget, this.#filteredModels.length); i++) {
+				stickyBodyRows = 1;
+			}
+			for (let i = 0; i < this.#filteredModels.length; i++) {
 				const item = this.#filteredModels[i];
 				const assignment = this.#isItemDisabled(item) ? "Unavailable" : assignments(item.model);
+				if (i === this.#selectedIndex) selectedBodyIndex = body.length;
 				body.push(
 					selectorRow(
 						wide
@@ -516,14 +526,18 @@ export class ModelSelectorComponent extends Container {
 								? [getModelDisplayName(item.model), getProviderDisplayName(item.provider), assignment]
 								: [getModelDisplayName(item.model), assignment]
 							: [getModelDisplayName(item.model)],
-						wide ? widths : [inner],
+						wide ? widths : [inner - 2],
 						i === this.#selectedIndex,
 					),
 				);
 			}
 			if (!this.#filteredModels.length) body.push(this.#getProviderEmptyStateMessage() ?? "No matching models");
 		}
-		return selectorFrame(width, height, title, purpose, navigation, body, details, footer);
+		return selectorFrame(width, height, title, purpose, navigation, body, details, footer, {
+			minimumDetailRows,
+			selectedBodyIndex,
+			stickyBodyRows,
+		});
 	}
 
 	#stopSpinner(): void {

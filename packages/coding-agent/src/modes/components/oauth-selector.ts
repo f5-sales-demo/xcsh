@@ -7,8 +7,10 @@ import { getLoginOptions, type LoginOption } from "../controllers/login-options"
 import { providerPresentation } from "../controllers/provider-presentation";
 import {
 	matchesSelectorKey,
+	type SelectorFrameLine,
 	selectorCancelHint,
 	selectorFrame,
+	selectorFrameContentWidth,
 	selectorNavigationHint,
 	selectorRow,
 } from "./selector-frame";
@@ -240,7 +242,7 @@ export class OAuthSelectorComponent extends Container {
 		}
 		const access = this.#getCombinedAccess(provider);
 		if (state.includes("invalid") || access?.status === "reauth-required") {
-			return access?.credentialSource === "stored-oauth" ? "Sign-in required" : "Sign-in required";
+			return "Sign-in required";
 		}
 		if (access?.status === "unreachable") return "Unreachable";
 		if (
@@ -251,7 +253,7 @@ export class OAuthSelectorComponent extends Container {
 		)
 			return "No models returned";
 		if (access?.status === "connected") {
-			return access.credentialSource === "keyless" ? "Ready" : "Ready";
+			return "Ready";
 		}
 		if (state.includes("valid")) return "Ready";
 		if (access?.status === "configured-unverified") return "Credentials saved";
@@ -274,7 +276,7 @@ export class OAuthSelectorComponent extends Container {
 	}
 	override render(width: number): string[] {
 		const rows = this.#rows();
-		const inner = Math.min(100, width) - 6;
+		const inner = selectorFrameContentWidth(width);
 		const wide = width >= 80;
 		const selected = this.#detailsProvider ?? this.#filteredProviders[this.#selectedIndex];
 		const presentation = selected ? providerPresentation(selected.id) : undefined;
@@ -285,46 +287,47 @@ export class OAuthSelectorComponent extends Container {
 				: this.#catalogMode
 					? "Connect a provider"
 					: "Your providers";
-		const details =
+		const details: string[] =
 			selected?.action === "add-provider"
 				? [selected.description ?? "Search the full provider catalog"]
 				: selected
 					? [
 							`${selected.id} · ${presentation?.access}`,
 							this.#getStatusText(selected),
-							selected.description ?? presentation?.description ?? "",
-						]
+							selected.description ?? presentation?.description,
+						].filter((value): value is string => Boolean(value))
 					: [];
-		let body: string[] = [];
+		let body: SelectorFrameLine[] = [];
+		let selectedBodyIndex: number | undefined;
+		let stickyBodyRows = 0;
 		if (this.#detailsProvider) {
-			body = this.#managementActions().map((label, i) => selectorRow([label], [inner], i === this.#actionIndex));
+			body = this.#managementActions().map((label, i) => selectorRow([label], [inner - 2], i === this.#actionIndex));
+			selectedBodyIndex = this.#actionIndex;
 			const access = this.#getCombinedAccess(this.#detailsProvider);
-			details.push(
+			const verification =
 				access?.failureReason ??
-					(access?.lastCheckedAt
+				(access?.status === "connected"
+					? undefined
+					: access?.lastCheckedAt
 						? "Connection checked; refresh from model selection with Ctrl+R."
-						: "Live availability has not been verified."),
-			);
+						: "Live availability has not been verified.");
+			if (verification) details.push(verification);
 			if (this.#providerIds(this.#detailsProvider).every(id => this.#isExcluded?.(id)))
 				details.push("Models hidden by the configured provider filter.");
 		} else {
-			const maxVisible = Math.max(
-				1,
-				Math.min(10, Math.floor((rows - 13) / (this.#catalogMode && !this.#searchInput.getValue() ? 2 : 1))),
-			);
-			const start = Math.max(
-				0,
-				Math.min(this.#selectedIndex - maxVisible + 1, this.#filteredProviders.length - maxVisible),
-			);
-			if (wide) body.push(selectorRow(["Provider", "Access", "Status"], [inner - 40, 16, 20]));
+			if (wide) {
+				body.push(selectorRow(["Provider", "Access", "Status"], [inner - 42, 16, 20], false, "muted"));
+				stickyBodyRows = 1;
+			}
 			let category = "";
-			for (let i = start; i < Math.min(start + maxVisible, this.#filteredProviders.length); i++) {
+			for (let i = 0; i < this.#filteredProviders.length; i++) {
 				const provider = this.#filteredProviders[i];
 				const meta = providerPresentation(provider.id);
 				if (this.#catalogMode && !this.#searchInput.getValue() && meta.category !== category) {
 					category = meta.category;
 					body.push(theme.fg("muted", category));
 				}
+				if (i === this.#selectedIndex) selectedBodyIndex = body.length;
 				body.push(
 					selectorRow(
 						wide
@@ -334,7 +337,7 @@ export class OAuthSelectorComponent extends Container {
 									this.#getStatusText(provider),
 								]
 							: [provider.name],
-						wide ? [inner - 40, 16, 20] : [inner],
+						wide ? [inner - 42, 16, 20] : [inner - 2],
 						i === this.#selectedIndex,
 					),
 				);
@@ -358,6 +361,7 @@ export class OAuthSelectorComponent extends Container {
 			body,
 			details,
 			[selectorNavigationHint(), selectorCancelHint(this.#searchInput.getValue() ? "clear search" : "back")],
+			{ selectedBodyIndex, stickyBodyRows },
 		);
 	}
 
