@@ -55,7 +55,7 @@ class CiCapacityContractTests(unittest.TestCase):
             "      github.event.label.name == 'compute-benchmark-approved' &&\n"
             "      github.event.pull_request.head.repo.full_name == github.repository"
         )
-        self.assertEqual(benchmark.count(software_guard), 2)
+        self.assertEqual(benchmark.count(software_guard), 3)
         self.assertEqual(
             benchmark.count("github.event.label.name == 'compute-hardware-approved'"),
             6,
@@ -120,6 +120,12 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn('launcher="packages/coding-agent/bin/xcsh.ts"', installer)
         self.assertIn("mode change 100644 => 100755 $launcher", installer)
         self.assertIn('git -C "$workspace" diff --exit-code', installer)
+
+    def test_runner_qualification_profiles_the_complete_workload(self) -> None:
+        benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
+        profiler_action = (
+            ROOT / ".github/actions/runner-optimization-profile/action.yml"
+        ).read_text(encoding="utf-8")
         profiler = (ROOT / "scripts/runner-optimization-profile.sh").read_text(
             encoding="utf-8"
         )

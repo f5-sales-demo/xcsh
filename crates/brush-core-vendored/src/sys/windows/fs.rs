@@ -372,23 +372,23 @@ mod tests {
 
 	#[test]
 	fn push_path_for_pattern_appends_with_forward_slash() {
-		let mut p = PathBuf::from(r"C:\Users\reuben");
+		let mut p = PathBuf::from(r"C:\Users\you");
 		push_path_for_pattern(&mut p, "foo");
 		// Forward slash is used as the appended separator, yielding mixed
 		// separators — acceptable because `normalize_path_separators` is
 		// applied downstream before display.
-		assert_eq!(p, PathBuf::from(r"C:\Users\reuben/foo"));
+		assert_eq!(p, PathBuf::from(r"C:\Users\you/foo"));
 	}
 
 	#[test]
 	fn push_path_for_pattern_no_double_separator() {
-		let mut p = PathBuf::from("C:/Users/reuben/");
+		let mut p = PathBuf::from("C:/Users/you/");
 		push_path_for_pattern(&mut p, "foo");
-		assert_eq!(p, PathBuf::from("C:/Users/reuben/foo"));
+		assert_eq!(p, PathBuf::from("C:/Users/you/foo"));
 
-		let mut p = PathBuf::from(r"C:\Users\reuben\");
+		let mut p = PathBuf::from(r"C:\Users\you\");
 		push_path_for_pattern(&mut p, "foo");
-		assert_eq!(p, PathBuf::from(r"C:\Users\reuben\foo"));
+		assert_eq!(p, PathBuf::from(r"C:\Users\you\foo"));
 	}
 
 	#[test]

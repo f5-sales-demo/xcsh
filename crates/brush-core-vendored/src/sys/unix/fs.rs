@@ -366,9 +366,9 @@ mod tests {
 
 	#[test]
 	fn push_path_for_pattern_appends_child() {
-		let mut p = PathBuf::from("/home/reuben");
+		let mut p = PathBuf::from("/home/you");
 		push_path_for_pattern(&mut p, "foo");
-		assert_eq!(p, PathBuf::from("/home/reuben/foo"));
+		assert_eq!(p, PathBuf::from("/home/you/foo"));
 	}
 
 	#[test]
