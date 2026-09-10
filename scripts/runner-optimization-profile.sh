@@ -22,7 +22,7 @@ case "$cache_state" in cold | warm) ;; *) usage ;; esac
 
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
-mkdir -p "$output_dir/manifests" "$output_dir/profiles"
+mkdir -p "$output_dir/manifests" "$output_dir/metrics" "$output_dir/profiles"
 output_dir=$(cd "$output_dir" && pwd)
 
 SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")
@@ -69,6 +69,8 @@ profile_phase() {
   install) tree_manifest "$manifest" bun.lock package.json node_modules ;;
   native) tree_manifest "$manifest" packages/natives/native ;;
   test) printf 'ci:test:full\0%s\0' "$GITHUB_SHA" | sha256sum >"$manifest" ;;
+  startup) printf 'development-startup\0%s\0' "$GITHUB_SHA" | sha256sum >"$manifest" ;;
+  ttft) printf '%s\0%s\0' "$phase" "$GITHUB_SHA" | sha256sum >"$manifest" ;;
   release)
     tree_manifest "$output_dir/manifests/release-binaries.sha256" packages/coding-agent/binaries
     find packages/coding-agent/binaries -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort \
@@ -112,6 +114,11 @@ if [[ "$mode" == full ]]; then
   export XCSH_VERTEX_OAUTH_CLIENT_ID=benchmark-nonproduction-client
   export XCSH_VERTEX_OAUTH_CLIENT_SECRET=benchmark-nonproduction-secret
   profile_phase release release bun scripts/ci-release-build-binaries.ts --platform linux,win32
+  profile_phase startup startup bun packages/coding-agent/src/cli.ts --version
+  profile_phase ttft-cold ttft bun packages/coding-agent/bench/ttft.ts \
+    --runs 1 --only cold --out "$output_dir/metrics/ttft-cold.json"
+  profile_phase ttft-warm ttft bun packages/coding-agent/bench/ttft.ts \
+    --runs 1 --only warm --out "$output_dir/metrics/ttft-warm.json"
   git diff --exit-code
 fi
 

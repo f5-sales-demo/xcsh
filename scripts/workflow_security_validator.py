@@ -104,16 +104,12 @@ BENCHMARK_TRUST_GUARD = (
 HARDWARE_BENCHMARK_TRUST_GUARD = (
     "github.event_name == 'pull_request' && "
     "github.event.action == 'labeled' && "
-    "(github.event.label.name == 'compute-benchmark-approved' || "
-    "github.event.label.name == 'compute-hardware-approved') && "
+    "github.event.label.name == 'compute-hardware-approved' && "
     "github.event.pull_request.head.repo.full_name == github.repository"
 )
 HARDWARE_AFTER_SOFTWARE_BENCHMARK_TRUST_GUARD = (
-    "always() && "
-    + HARDWARE_BENCHMARK_TRUST_GUARD
-    + " && needs.release-native-fixtures.result == 'success' && "
-    "(github.event.label.name == 'compute-hardware-approved' || "
-    "needs.d16-software-candidate.result == 'success')"
+    HARDWARE_BENCHMARK_TRUST_GUARD
+    + " && needs.release-native-fixtures.result == 'success'"
 )
 XCSH_HARDWARE_BENCHMARK_GUARDS = {
     ("xcsh-compute-bun-candidate", "d16-hardware-baseline"): (

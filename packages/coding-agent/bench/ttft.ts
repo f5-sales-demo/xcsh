@@ -9,7 +9,7 @@
  * when NO other xcsh worker/manager is live on this machine, or it will adopt/reap them.
  *
  * Run:  bun packages/coding-agent/bench/ttft.ts [--check] [--update-baseline]
- *            [--out <file>] [--tolerance <pct>] [--runs <n>]
+ *            [--out <file>] [--tolerance <pct>] [--runs <n>] [--only cold|warm]
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -267,10 +267,26 @@ const runs = numArg("--runs", 5);
 // --tolerance / --min-abs-ms; the printed diff table always shows exact Δ% for finer judgment.
 const tolerance = numArg("--tolerance", 30);
 const minAbsMs = numArg("--min-abs-ms", 15);
+const only = arg("--only");
+if (only !== undefined && only !== "cold" && only !== "warm") {
+  console.error("--only must be either cold or warm");
+  process.exit(2);
+}
+if (only !== undefined && (flag("--check") || flag("--update-baseline"))) {
+  console.error("--only cannot be combined with --check or --update-baseline");
+  process.exit(2);
+}
 
-const coldRun = await runMode("0", /provisioned worker pid \d+ on port (\d+)/, runs);
-const warmRun = await runMode("1", /adopted spare pid \d+ on port (\d+)/, runs);
-const result: BenchResult = { cold: coldRun.mode, warm: warmRun.mode };
+const coldRun = only !== "warm" ? await runMode("0", /provisioned worker pid \d+ on port (\d+)/, runs) : undefined;
+const warmRun = only !== "cold" ? await runMode("1", /adopted spare pid \d+ on port (\d+)/, runs) : undefined;
+const result: Partial<BenchResult> = {
+  ...(coldRun ? { cold: coldRun.mode } : {}),
+  ...(warmRun ? { warm: warmRun.mode } : {}),
+};
+
+function requireFullResult(value: Partial<BenchResult>): asserts value is BenchResult {
+  if (!value.cold || !value.warm) throw new Error("a full TTFT result requires both cold and warm modes");
+}
 
 /**
  * TTFT A1: print a per-mode breakdown of `provider_ttft` from the worker's `[ttft-attr]`
@@ -297,10 +313,11 @@ function printAttribution(label: string, providerTtft: number, attr: Record<stri
   console.log(row("(unattributed)", providerTtft - accounted));
 }
 
-printAttribution("cold", result.cold.stages.provider_ttft, coldRun.attribution);
-printAttribution("warm", result.warm.stages.provider_ttft, warmRun.attribution);
+if (coldRun) printAttribution("cold", coldRun.mode.stages.provider_ttft, coldRun.attribution);
+if (warmRun) printAttribution("warm", warmRun.mode.stages.provider_ttft, warmRun.attribution);
 
 if (flag("--update-baseline")) {
+  requireFullResult(result);
   fs.writeFileSync(BASELINE, `${JSON.stringify(result, null, 2)}\n`);
   console.log(`baseline updated → ${path.relative(process.cwd(), BASELINE)}`);
   process.exit(0);
@@ -310,6 +327,7 @@ const outFile = arg("--out");
 if (outFile) fs.writeFileSync(outFile, `${JSON.stringify(result, null, 2)}\n`);
 
 if (flag("--check")) {
+  requireFullResult(result);
   if (!fs.existsSync(BASELINE)) {
     console.error(`no baseline at ${path.relative(process.cwd(), BASELINE)} — run with --update-baseline first`);
     process.exit(1);
