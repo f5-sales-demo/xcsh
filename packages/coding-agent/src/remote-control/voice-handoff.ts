@@ -10,8 +10,15 @@ export interface VoiceOutputUpdate {
 interface Options {
 	mode: "thinking" | "commentary" | "bemTags";
 	prefixes: Record<string, string[]>;
+	asItems: boolean;
+	itemPrefix?: string;
 }
 export function handoffOptions(params: Record<string, unknown>): Options {
+	if (
+		(params.codexResponsesAsItems != null && typeof params.codexResponsesAsItems !== "boolean") ||
+		(params.codexResponseItemPrefix != null && typeof params.codexResponseItemPrefix !== "string")
+	)
+		throw new ProtocolError(-32602, "Invalid realtime response-item options");
 	const mode = params.codexResponseHandoffMode ?? "thinking";
 	const prefixes = params.codexResponseHandoffChannelPrefixes ?? {};
 	if (
@@ -32,7 +39,29 @@ export function handoffOptions(params: Record<string, unknown>): Options {
 		Buffer.byteLength(JSON.stringify(prefixes)) > 32768
 	)
 		throw new ProtocolError(-32602, "Invalid realtime handoff channel prefixes");
-	return { mode: mode as Options["mode"], prefixes: prefixes as Record<string, string[]> };
+	return {
+		mode: mode as Options["mode"],
+		prefixes: prefixes as Record<string, string[]>,
+		asItems: params.codexResponsesAsItems === true,
+		itemPrefix: typeof params.codexResponseItemPrefix === "string" ? params.codexResponseItemPrefix : undefined,
+	};
+}
+
+export function handoffPhase(text: string, prefixes: Options["prefixes"]): HandoffPhase | undefined {
+	for (const [name, defaultPrefix, phase] of [
+		["analysis", "[ANALYSIS]", "commentary"],
+		["commentary", "[COMMENTARY]", "commentary"],
+		["final", "[FINAL]", "final_answer"],
+	] as const) {
+		if ((prefixes[name] ?? [defaultPrefix]).some(prefix => prefix && text.startsWith(prefix))) return phase;
+	}
+}
+export function handoffChannel(options: Options, phase?: HandoffPhase): "commentary" | "speakable" | undefined {
+	return options.mode === "thinking"
+		? undefined
+		: options.mode === "commentary" || phase === "commentary"
+			? "commentary"
+			: "speakable";
 }
 const marker = "\n…output truncated…\n";
 const budget = 4000;
@@ -77,16 +106,6 @@ export class VoiceHandoff {
 		},
 		private readonly now: () => number = () => performance.now(),
 	) {}
-	#phase(text: string): HandoffPhase | undefined {
-		for (const [name, defaultPrefix, phase] of [
-			["analysis", "[ANALYSIS]", "commentary"],
-			["commentary", "[COMMENTARY]", "commentary"],
-			["final", "[FINAL]", "final_answer"],
-		] as const) {
-			if ((this.options.prefixes[name] ?? [defaultPrefix]).some(prefix => prefix && text.startsWith(prefix)))
-				return phase;
-		}
-	}
 	update(update: VoiceOutputUpdate): void {
 		if (this.#closed) return;
 		if (Buffer.byteLength(update.text) > 1_048_576 || update.id.length > 1024)
@@ -116,7 +135,7 @@ export class VoiceHandoff {
 		item.received = update.text;
 		if (this.options.mode === "bemTags" && !item.phase) {
 			item.prefix += delta;
-			item.phase = this.#phase(item.prefix);
+			item.phase = handoffPhase(item.prefix, this.options.prefixes);
 			if (!item.phase && !update.done) return;
 			item.phase ??= "final_answer";
 			delta = item.prefix;
@@ -159,12 +178,7 @@ export class VoiceHandoff {
 		} else item.buffered = item.buffered.slice(chunk.length);
 		item.sent += Buffer.byteLength(chunk);
 		item.lastFlushAt = this.now();
-		const channel =
-			this.options.mode === "thinking"
-				? undefined
-				: this.options.mode === "commentary" || item.phase === "commentary"
-					? "commentary"
-					: "speakable";
+		const channel = handoffChannel(this.options, item.phase);
 		if (item.phase !== "commentary") this.#hasFinal = true;
 		this.send(channel, chunk);
 	}

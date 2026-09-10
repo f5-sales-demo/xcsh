@@ -1937,12 +1937,14 @@ export class SessionManager {
 
 	/** Close the persistent writer after flushing all pending data. */
 	async close(): Promise<void> {
-		if (this.#persistWriter) {
-			await this.#queuePersistTask(async () => {
+		// Atomic rewrites use a temporary writer, so absence of an append writer
+		// does not mean persistence is idle. Always join the queue before closing.
+		await this.#queuePersistTask(async () => {
+			if (this.#persistWriter) {
 				await this.#closePersistWriterInternal();
 				this.#flushed = true;
-			});
-		}
+			}
+		});
 		await this.#dropDraftOnlySessionIfEmpty();
 		if (this.#persistError) throw this.#persistError;
 	}

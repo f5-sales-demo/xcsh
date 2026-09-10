@@ -12,7 +12,10 @@ compiling the original pinned Rust string truncator and realtime-context budget
 loop. It validates both source files against their pinned SHA-256 values and
 accepts an extracted source archive or checkout. It does not run Codex or contact
 the service. Rust is required only to regenerate these fixtures; ordinary tests
-read the checked-in byte counts and hashes.
+read the checked-in byte counts and hashes. The same generator also compiles the
+original `realtime_backend_item` from `realtime_conversation.rs` and verifies its
+source hash. Five response-item fixtures exercise the response budget followed by
+prefix insertion and a second budget, including empty and long Unicode prefixes.
 
 ```sh
 bun packages/coding-agent/scripts/remote-reference/completed-output.ts /path/to/pinned-codex-source

@@ -6,9 +6,9 @@ import type { RealtimeModeInstructions } from "../session/realtime-context";
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
-import { handoffOptions, VoiceHandoff, type VoiceOutputUpdate } from "./voice-handoff";
+import { handoffChannel, handoffOptions, handoffPhase, VoiceHandoff, type VoiceOutputUpdate } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
-import { completedVoiceText, LegacyVoiceHandoff } from "./voice-legacy";
+import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
 import {
 	contextChunks,
 	decodeVoiceEvent,
@@ -46,7 +46,7 @@ function safeConnectionError(error: unknown): string {
 	return `Native realtime connection failed${status ? ` (HTTP ${status})` : ""}`;
 }
 export class NativeVoice {
-	#handoff?: VoiceHandoff | LegacyVoiceHandoff;
+	#handoff?: VoiceHandoff | CompletedVoiceHandoff;
 	#handoffOptions = handoffOptions({});
 	#history?: VoiceHistory;
 	#closing?: Promise<void>;
@@ -543,22 +543,7 @@ export class NativeVoice {
 			});
 		this.#pendingDelegations++;
 		this.#handoff?.close();
-		const handoff =
-			this.#config?.version === "v3" && !this.#config.clientManagedHandoffs
-				? new VoiceHandoff(this.#handoffOptions, (channel, text) => {
-						for (const chunk of contextChunks(text))
-							this.#send({
-								type: "delegation.context.append",
-								delegation_item_id: event.id,
-								...(channel ? { channel } : {}),
-								content: [{ type: "input_text", text: chunk }],
-							});
-					})
-				: this.#config?.clientManagedHandoffs
-					? undefined
-					: new LegacyVoiceHandoff(text =>
-							this.#send({ type: "conversation.handoff.append", handoff_id: event.id, output_text: text }),
-						);
+		const handoff = this.#createHandoff(event.id);
 		this.#handoff = handoff;
 		void this.deps
 			.delegate(key, event.text, update => {
@@ -578,5 +563,48 @@ export class NativeVoice {
 			.finally(() => {
 				this.#pendingDelegations--;
 			});
+	}
+	#createHandoff(id: string): VoiceHandoff | CompletedVoiceHandoff | undefined {
+		if (this.#config?.clientManagedHandoffs) return;
+		const v3 = this.#config?.version === "v3";
+		if (this.#handoffOptions.asItems)
+			return new CompletedVoiceHandoff((text, phase) => {
+				const options = this.#handoffOptions;
+				// Pinned routing examines the original BEM envelope before truncation and prefixing.
+				if (v3 && options.mode === "bemTags") phase = handoffPhase(text, options.prefixes) ?? "final_answer";
+				const output = completedVoiceText(text);
+				const item = completedVoiceText(options.itemPrefix ? `${options.itemPrefix}\n\n${output}` : output);
+				if (v3) {
+					const channel = handoffChannel(options, phase);
+					for (const chunk of contextChunks(item))
+						this.#send({
+							type: "session.context.append",
+							...(channel ? { channel } : {}),
+							content: [{ type: "input_text", text: chunk }],
+						});
+				} else {
+					this.#send({
+						type: "conversation.item.create",
+						item: { type: "message", role: "developer", content: [{ type: "input_text", text: item }] },
+					});
+				}
+			});
+		if (v3)
+			return new VoiceHandoff(this.#handoffOptions, (channel, text) => {
+				for (const chunk of contextChunks(text))
+					this.#send({
+						type: "delegation.context.append",
+						delegation_item_id: id,
+						...(channel ? { channel } : {}),
+						content: [{ type: "input_text", text: chunk }],
+					});
+			});
+		return new CompletedVoiceHandoff((text, phase) => {
+			this.#send({
+				type: "conversation.handoff.append",
+				handoff_id: id,
+				output_text: `${phase === "commentary" ? "" : '"Agent Final Message":\n\n'}${completedVoiceText(text)}`,
+			});
+		});
 	}
 }

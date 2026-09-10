@@ -1,5 +1,6 @@
 /** Ported from Codex rust-v0.153.4 realtime protocols. See NOTICE.md and LICENSE. */
 import { ProtocolError } from "./session";
+import { handoffOptions } from "./voice-handoff";
 export type VoiceVersion = "v1" | "v3";
 export const voices = {
 	v1: ["juniper", "maple", "spruce", "ember", "vale", "breeze", "arbor", "sol", "cove"],
@@ -22,6 +23,7 @@ export function voiceInstructions(params: Record<string, unknown>) {
 }
 export function existingCallConfig(params: Record<string, unknown>) {
 	voiceInstructions(params);
+	handoffOptions(params);
 	const transport = params.transport as { type?: unknown; callId?: unknown } | undefined;
 	if (transport?.type !== "existingCall")
 		throw new ProtocolError(-32602, "This native voice gate requires a client-created call");
@@ -50,8 +52,6 @@ export function existingCallConfig(params: Record<string, unknown>) {
 			-32602,
 			"Existing-call configuration belongs to the client; startup overrides are unsupported",
 		);
-	if (params.codexResponsesAsItems === true)
-		throw new ProtocolError(-32602, "Unsupported realtime response-item option");
 	if (
 		params.realtimeSessionId != null &&
 		(typeof params.realtimeSessionId !== "string" ||

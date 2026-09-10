@@ -1181,3 +1181,51 @@ private capture window records source commit `075f9bebc` and remains open for th
 pending streaming voice test. No new voice capture or manual result was available
 at this checkpoint. The restart checks establish live host/session recovery,
 not live model execution or voice parity.
+
+## Completed response items and persistence shutdown
+
+The native host now accepts the pinned automatic response-item option and its
+optional prefix for WebRTC and existing-call v1/v3. Completed output uses a
+shared bounded reducer for item identities and duplicate suppression. V1 emits
+developer conversation items; v3 emits session context with pinned channel
+routing and 500-byte chunks. BEM classification precedes prefixing. The backing
+text is budgeted before the prefix is added, then the complete item is budgeted
+again. Five fixtures compiled from the original Rust item builder and truncator
+match native bytes/hashes for both versions. The generator checks all three
+source-file hashes. Partial text is not emitted as a completed item.
+
+The initial option tests produced 22 failures: supported requests were rejected,
+and malformed values could reach authentication. Additional red tests found
+whitespace-only v1 output being rejected and four empty-item cases being dropped.
+Those now preserve completed output, including an explicit nonempty prefix on
+empty text. Superseded or closed handoffs suppress late output while retaining
+backing results. Explicit cancellation results and client-managed speech remain
+available. All four work models are parameterized across both versions,
+partial/completed-only inputs and item/delegation output, totaling 32 variants.
+
+The first complete remote suite had 444 passing tests but three asynchronous
+persistence errors, so it was not a passing run. Investigation found that
+`SessionManager.close()` skipped the persistence queue when an atomic rewrite
+used its own temporary writer. A deterministic test held the actual rename and
+observed close resolving too early. Close now joins the queue unconditionally;
+the regression also reopens the saved file to verify retained context. The
+shutdown/real-session subset passed 11 tests with zero failures and 52 assertions.
+This fixes the observed write-after-teardown race without extending the claim
+to all outstanding lifecycle or crash-recovery requirements.
+
+A subsequent remote run exposed a five-second command-help timeout. The shared
+CLI loaded every command's dependencies before rendering one command's help.
+Five failing dependency-loading tests reproduced that behavior without a timing threshold.
+Command help now loads only the selected entry, including aliases; root help
+still loads all definitions. All six targeted cases and the complete utility
+suite passed (234 tests, zero failures, 564 assertions). The final remote suite
+passed 445 tests, zero failures and 2139 assertions across 45 files in 39.05
+seconds, including command help in 395 milliseconds. Workspace TypeScript and
+CLI bundling passed. The storage subset passed 110 tests with 323 assertions.
+
+The guarded coding-agent suite passed 7786 tests, 561 skips, zero failures and
+24876 assertions across 764 files in 375.84 seconds. All 13 changed source/test
+hashes remained unchanged during the run. Changed documentation passed Markdown
+and terminology checks; staged privacy and secret scans were clean. This is a
+source-test checkpoint; the earlier compiled receipt predates these changes.
+Live streaming/item-mode acceptance and the complete issue remain open.

@@ -459,11 +459,13 @@ test("a closed attachment cannot be reused while previous delegation results are
 
 test.each(
 	["gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-6-astra"].flatMap(model =>
-		[false, true].flatMap(streamed => ["v1", "v3"].map(version => ({ model, streamed, version }))),
+		[false, true].flatMap(streamed =>
+			["v1", "v3"].flatMap(version => [false, true].map(asItems => ({ model, streamed, version, asItems }))),
+		),
 	),
 )(
-	"owning $model adapter forwards $version streamed=$streamed output through its sole owner",
-	async ({ model, streamed, version }) => {
+	"owning $model adapter forwards $version streamed=$streamed items=$asItems output through its sole owner",
+	async ({ model, streamed, version, asItems }) => {
 		const { spyOn } = await import("bun:test");
 		const { RemoteSession } = await import("../../src/remote-control/session");
 		const { SessionManager } = await import("../../src/session/session-manager");
@@ -557,7 +559,7 @@ test.each(
 					}
 					await Bun.sleep(250);
 					expect(outputs.map(output => output.channel)).toEqual(
-						version === "v1" ? [] : ["commentary", "speakable"],
+						version === "v1" || asItems ? [] : ["commentary", "speakable"],
 					);
 					expect(JSON.stringify(outputs)).not.toContain("private reasoning");
 					endMessage(partial);
@@ -581,6 +583,7 @@ test.each(
 				...start,
 				version,
 				codexResponseHandoffMode: "bemTags",
+				codexResponsesAsItems: asItems,
 				threadId: target.sessionId,
 			});
 			const request =
@@ -599,7 +602,22 @@ test.each(
 			expect(prompts).toEqual(["change fixture"]);
 			expect(target.model.id).toBe(model);
 			expect(modes).toEqual([true]);
-			if (version === "v1") {
+			if (asItems) {
+				const expected = [
+					...(streamed ? [{ text: "[COMMENTARY]Updating the fixture.", channel: "commentary" }] : []),
+					{ text: `${streamed ? "[FINAL]" : ""}The fixture is updated.`, channel: "speakable" },
+				];
+				expect(outputs).toEqual(
+					expected.map(({ text, channel }) =>
+						version === "v1"
+							? {
+									type: "conversation.item.create",
+									item: { type: "message", role: "developer", content: [{ type: "input_text", text }] },
+								}
+							: { type: "session.context.append", channel, content: [{ type: "input_text", text }] },
+					),
+				);
+			} else if (version === "v1") {
 				expect(outputs).toEqual([
 					...(streamed
 						? [

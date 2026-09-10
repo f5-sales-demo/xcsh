@@ -11,6 +11,57 @@ import * as calls from "../../src/remote-control/voice-call";
 import { AgentSession } from "../../src/session/agent-session";
 import { AuthStorage } from "../../src/session/auth-storage";
 import { SessionManager } from "../../src/session/session-manager";
+import { FileSessionStorage } from "../../src/session/session-storage";
+
+test("closing session storage waits for an atomic rewrite even without a persistent append writer", async () => {
+	const dir = await mkdtemp("/tmp/xcsh-rewrite-shutdown-");
+	const storage = new FileSessionStorage();
+	const manager = SessionManager.create(dir, dir, storage);
+	const entered = Promise.withResolvers<void>();
+	const release = Promise.withResolvers<void>();
+	const rename = storage.rename.bind(storage);
+	const pending = spyOn(storage, "rename").mockImplementation(async (from, to) => {
+		entered.resolve();
+		await release.promise;
+		await rename(from, to);
+	});
+	manager.appendMessage({ role: "user", content: "Fixture saved context", timestamp: 1000 });
+	const writing = manager.ensureOnDisk();
+	await entered.promise;
+	let closed = false;
+	const closing = manager.close().then(() => {
+		closed = true;
+	});
+	try {
+		await Bun.sleep(10);
+		expect(closed).toBe(false);
+		release.resolve();
+		await closing;
+		await writing;
+		const reopened = await SessionManager.open(manager.getSessionFile()!);
+		try {
+			expect(
+				reopened
+					.getBranch()
+					.some(
+						entry =>
+							entry.type === "message" &&
+							entry.message.role === "user" &&
+							entry.message.content === "Fixture saved context",
+					),
+			).toBe(true);
+		} finally {
+			await reopened.close();
+		}
+	} finally {
+		release.resolve();
+		await writing;
+		await closing;
+		pending.mockRestore();
+		await manager.close();
+		await rm(dir, { recursive: true, force: true });
+	}
+});
 
 test.each(["direct", "bridge"])(
 	"disposing the terminal drains voice history before closing storage: %s",

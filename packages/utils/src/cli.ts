@@ -429,12 +429,10 @@ export async function run(opts: RunOptions): Promise<void> {
 
 	// Per-command help
 	if (commandArgv.includes("--help") || commandArgv.includes("-h")) {
-		const config = await loadAllCommands(opts);
 		// Resolve aliases for help too
 		const entry = findEntry(opts.commands, commandId);
-		const Cmd = entry ? config.commands.get(entry.name) : undefined;
-		if (Cmd) {
-			renderCommandHelp(bin, entry!.name, Cmd);
+		if (entry) {
+			renderCommandHelp(bin, entry.name, await entry.load());
 		} else {
 			process.stderr.write(`Unknown command: ${commandId}\n`);
 		}

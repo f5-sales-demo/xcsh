@@ -20,7 +20,7 @@ duplicate delegation, initialization write failure, synchronous socket closure,
 early transcript ordering, and late work after closure. They use synthetic
 transport fixtures derived from the pinned Rust source, not phone recordings.
 Live v1 acceptance, standalone WebSocket, and remaining
-startup/response-item options are still incomplete. Recorded v3 replay remains
+startup/control options are still incomplete. Recorded v3 replay remains
 part of regression validation; no additional live parity is inferred here.
 The pinned `streams_handoff_append` gate enables incremental output only for v3.
 Legacy v1 forwards completed commentary without the final-message marker and
@@ -66,7 +66,37 @@ Sixteen work-model adapter variants cover Sol, Luna, Terra and Astra with v1/v3
 and partial/completed-only inputs. They preserve the selected model, use the
 session's ordinary delegation path and exclude reasoning content. These are
 automated source-contract tests, not live model or iPhone acceptance. Standalone
-WebSocket, response-item mode and remaining startup/control options stay open.
+WebSocket and remaining startup/control options stay open. The following
+checkpoint extends automatic output to response-item mode.
+
+## Completed response-item delivery
+
+Native WebRTC and existing-call v1/v3 now accept `codexResponsesAsItems` and
+`codexResponseItemPrefix`. Malformed values fail before authentication. Automatic
+delivery waits for complete agent text items. V1 creates developer conversation
+items; v3 appends session context using the configured thinking, commentary or
+BEM channel. BEM classification examines the original text before adding a
+prefix or applying the output budget. V1 ignores BEM routing, as in the baseline.
+
+The writer budgets the backing response, adds a nonempty custom prefix and two
+newlines, then budgets the resulting item again. Five fixtures produced by the
+original pinned Rust `realtime_backend_item` and truncation functions match the
+native byte counts and hashes for both versions. Empty prefixes add no separator;
+completed empty or whitespace-only items retain their protocol meaning. V3
+splits context text at the pinned 500-byte Unicode boundaries.
+
+Completed delivery shares item identity, duplicate suppression and input bounds
+with the existing v1 path. Partial output stays out of response items; completing
+the turn does not repeat the last item. A distinct cancellation result is kept.
+Superseding a handoff or ending voice suppresses late output while allowing the
+backing result to persist. Client-managed mode suppresses automatic items and
+continues to permit explicit speech.
+
+Thirty-two adapter variants cover all four work models, both protocol versions,
+partial/completed-only model events and item/delegation output paths. These are
+automated native/source-contract checks. Canonical timeline promotions, standalone
+WebSocket, remaining control/recovery coverage and live item-mode phone acceptance
+are still outstanding.
 
 ## Explicit voice mode instructions
 

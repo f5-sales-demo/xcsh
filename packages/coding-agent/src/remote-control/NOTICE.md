@@ -77,6 +77,12 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/core/src/realtime_context.rs` and `utils/string/src/truncate.rs`:
   the completed-output token budget, UTF-8 boundaries and truncation marker.
   Reference fixtures run the original pinned functions independently of xcsh.
+- `codex-rs/core/src/realtime_conversation.rs`: completed response-item delivery,
+  BEM classification before prefixing, developer item role and double output
+  budgeting. The response-item fixtures compile its original `realtime_backend_item`
+  function with the pinned truncator/budget loop; the generator verifies all three
+  source hashes before compiling. Native completed-output reduction shares limits
+  and duplicate handling across legacy handoffs and response items.
 - `codex-rs/app-server/src/bespoke_event_handling.rs`: handoff item notification
   with request identity and the active transcript; transcript consumption follows
   `codex-api/src/endpoint/realtime_websocket/methods.rs`.

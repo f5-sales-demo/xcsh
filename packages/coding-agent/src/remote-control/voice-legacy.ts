@@ -1,5 +1,5 @@
 /** Pinned completed handoffs and realtime_context/string truncation. See NOTICE.md. */
-import type { VoiceOutputUpdate } from "./voice-handoff";
+import type { HandoffPhase, VoiceOutputUpdate } from "./voice-handoff";
 
 /** The pinned completed-output budget includes its truncation marker. */
 export function completedVoiceText(text: string): string {
@@ -19,25 +19,25 @@ export function completedVoiceText(text: string): string {
 	}
 }
 
-/** V1 forwards complete text items; partial output never becomes a spoken result. */
-export class LegacyVoiceHandoff {
+/** Completed handoffs and response-item mode ignore partial output and share duplicate/buffer limits. */
+export class CompletedVoiceHandoff {
 	#closed = false;
 	#completed = new Set<string>();
 	#lastText?: string;
 	#bytes = 0;
-	constructor(private readonly send: (text: string) => void) {}
+	constructor(private readonly send: (text: string, phase?: HandoffPhase) => void) {}
 	update(update: VoiceOutputUpdate): void {
 		if (this.#closed || !update.done || this.#completed.has(update.id)) return;
 		if (update.id.length > 1024 || this.#completed.size >= 256) throw new Error("Realtime handoff item limit");
 		this.#completed.add(update.id);
-		this.#output(update.text, update.phase === "commentary");
+		this.#output(update.text, update.phase);
 	}
-	#output(text: string, commentary = false): void {
+	#output(text: string, phase?: HandoffPhase): void {
 		const bytes = Buffer.byteLength(text);
 		if (bytes > 1_048_576 || this.#bytes + bytes > 2_097_152) throw new Error("Realtime handoff input limit");
 		this.#bytes += bytes;
 		this.#lastText = text;
-		if (text) this.send(`${commentary ? "" : '"Agent Final Message":\n\n'}${completedVoiceText(text)}`);
+		this.send(text, phase);
 	}
 	finish(result: string): void {
 		if (this.#closed) return;
