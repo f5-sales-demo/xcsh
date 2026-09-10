@@ -476,11 +476,43 @@ ten tests rechecked. Markdown/terminology, staged PII, secret and whitespace che
 passed. The pending streaming capture still has no voice file or expected fixture;
 no new manual phone acceptance is claimed.
 
-The next lifecycle defect is now reproduced with a synthetic mutable session
-target: after the target changes session identity, RemoteSession reports the new
-ID but retains the old creation time; reusing a completed voice-stop RPC ID in
-the new session returns -32600 because the old request cache remains. The bridge
-currently retains one adapter across terminal session changes. New/fork/resume
-isolation needs an implementation and regression tests; asynchronous voice
-closure/persistence must also remain bound to the correct session. Full remaining
-scope is preserved in `ACCEPTANCE.md`.
+Terminal storage transitions now have awaited before/after subscriptions. New,
+fork, resume, reload, branch, tree navigation and handoff use the shared boundary.
+The adapter stops accepting calls, closes voice, and drains accepted voice writes
+and control effects before storage changes. It then resets transient item state,
+restores the current identity and history, and rejects stale asynchronous work.
+The bridge unregisters the old identity and registers the current one before the
+terminal transition returns. Concurrent transitions fail explicitly; all after
+listeners run even if an earlier listener fails.
+
+Seventeen lifecycle tests exercise real AgentSession transitions, a local host
+socket, persisted fork/resume/branch history and native voice with synthetic
+transport/authentication. Observed failures preceded repairs for request-cache
+isolation, awaited transitions, stale prompt dispatch, bridge registration,
+listener recovery, final voice records and accepted steering. Interrupt settling
+already passed because the terminal transition waits for abort; tracking it uses
+the same mechanism as steering. A failed new-session storage operation also
+exposed disconnected persistence listeners and lost model context. The repair
+always reconnects agent events and resets the conversation only after storage
+accepts the new session. Both flush and new-session failures now retain context.
+
+Final review reproduced duplicate prompt execution after a failed switch, reload,
+or return to an earlier session: unconditional cache clearing discarded accepted
+request identities. The bounded retry cache now keys results by session identity
+and survives these transitions. All three regressions failed with two executions
+and now pass with one. This preserves retries within the surviving adapter;
+durable crash/restart reconciliation remains a separate requirement.
+
+The focused suite passes 259 tests, with three existing live-API skips, zero
+failures and 1099 assertions. Workspace TypeScript and formatting pass. These are
+automated lifecycle results; the dedicated phone sessions still run the earlier
+streaming capture build. Full host restart, exit/shutdown, implicit model resume,
+shared questions/approvals and manual lifecycle acceptance remain open in
+`ACCEPTANCE.md`.
+
+Final guarded package verification after the retry repair: 7485 passes, 561
+skips, zero failures, 23328 assertions across 743 files in 328.33 seconds. The
+runtime and tests were unchanged throughout that run. An intermediate broad run
+overlapped the new retry tests and is not final acceptance evidence. Markdown,
+terminology, staged PII, secret and whitespace checks pass. Full repository CI and
+the previously recorded full-scope PII findings remain separate delivery gates.

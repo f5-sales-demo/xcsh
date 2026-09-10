@@ -58,6 +58,10 @@ export async function startLocalHost(
 				}, 20);
 				return {};
 			}
+			if (method === "unregister") {
+				remove();
+				return {};
+			}
 			if (method === "register") {
 				const thread = params.thread as Record<string, unknown> | undefined;
 				if (!thread || typeof thread.id !== "string" || thread.id.length > 256)

@@ -32,7 +32,8 @@ export type SessionTarget = Pick<
 	| "setThinkingLevel"
 	| "modelRegistry"
 	| "sendCustomMessage"
->;
+> &
+	Partial<Pick<AgentSession, "subscribeSessionTransitions">>;
 export interface Notification {
 	method: string;
 	params: Record<string, unknown>;
@@ -78,6 +79,14 @@ function turn(id: string, status = "completed"): Turn {
 	};
 }
 export class RemoteSession {
+	#epoch = 0;
+	#boundId = "";
+	#suspended = false;
+	#disposed = false;
+	#closing?: Promise<void>;
+	#unsubscribeTransitions?: () => void;
+	#effects = new Set<Promise<unknown>>();
+	#cancelDelegations = new Set<() => void>();
 	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
 	#voice?: NativeVoice;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
@@ -100,19 +109,64 @@ export class RemoteSession {
 		readonly target: SessionTarget,
 		private readonly version = "21.22.0",
 	) {
-		const header = target.sessionManager.getHeader?.();
-		if (header) this.#createdAt = Math.floor(Date.parse(header.timestamp) / 1000);
-		const last = target.sessionManager.getBranch?.().at(-1);
+		this.#restoreIdentity();
+		this.#unsubscribe = target.subscribe(event => this.#event(event));
+		this.#unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {
+			if (phase === "before") {
+				this.#suspended = true;
+				for (const cancel of this.#cancelDelegations) cancel();
+				await this.#voice?.stop();
+				await Promise.allSettled([...this.#effects]);
+			} else {
+				this.#epoch++;
+				this.#voice = undefined;
+				this.#active = undefined;
+				this.#clientIds.clear();
+				this.#messageIds.clear();
+				this.#startedItems.clear();
+				this.#pendingClients = [];
+				this.#itemId = "";
+				this.#nextId = randomUUID();
+				this.#voiceOutputs.clear();
+				this.#restoreIdentity();
+				this.#suspended = false;
+			}
+		});
+	}
+	#restoreIdentity(): void {
+		this.#boundId = this.target.sessionId;
+		const header = this.target.sessionManager.getHeader?.();
+		this.#createdAt = header ? Math.floor(Date.parse(header.timestamp) / 1000) : Math.floor(Date.now() / 1000);
+		const last = this.target.sessionManager.getBranch?.().at(-1);
 		this.#updatedAt = last ? Math.floor(Date.parse(last.timestamp) / 1000) : this.#createdAt;
-		if (this.#durable && target.isStreaming) {
+		if (this.#durable && this.target.isStreaming) {
 			const latest = this.history().at(-1);
 			if (latest?.status === "inProgress") {
 				this.#active = latest;
 				this.#startedAtMs = (latest.startedAt ?? this.#createdAt) * 1000;
 			}
 		}
-		this.#unsubscribe = target.subscribe(event => this.#event(event));
 	}
+	#assertCurrent(epoch = this.#epoch, allowClosing = false): void {
+		if (
+			(this.#disposed && !allowClosing) ||
+			epoch !== this.#epoch ||
+			this.#boundId !== this.target.sessionId ||
+			(!allowClosing && this.#suspended)
+		)
+			throw new ProtocolError(-32000, "Session attachment is changing or closed");
+	}
+	async #effect<T>(epoch: number, action: () => Promise<T>): Promise<T> {
+		this.#assertCurrent(epoch, true);
+		const pending = action();
+		this.#effects.add(pending);
+		try {
+			return await pending;
+		} finally {
+			this.#effects.delete(pending);
+		}
+	}
+
 	subscribe(listener: (event: Notification) => void): () => void {
 		this.#listeners.add(listener);
 		return () => {
@@ -120,12 +174,28 @@ export class RemoteSession {
 		};
 	}
 	dispose(): void {
-		this.#voice?.stop();
+		void this.close();
+	}
+	close(): Promise<void> {
+		if (this.#closing) return this.#closing;
+		this.#suspended = true;
+		this.#disposed = true;
+		this.#unsubscribeTransitions?.();
+		for (const cancel of this.#cancelDelegations) cancel();
 		this.#unsubscribe();
 		this.#listeners.clear();
 		this.#voiceOutputs.clear();
+		this.#closing = Promise.resolve(this.#voice?.stop())
+			.then(async () => {
+				await Promise.allSettled([...this.#effects]);
+			})
+			.finally(() => {
+				this.#epoch++;
+			});
+		return this.#closing;
 	}
 	#emit(method: string, params: Record<string, unknown>): void {
+		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
 		this.#updatedAt = Math.floor(Date.now() / 1000);
 		for (const listener of this.#listeners)
 			listener({ method, params: { threadId: this.target.sessionId, ...params } });
@@ -236,6 +306,12 @@ export class RemoteSession {
 		};
 	}
 	call(identity: string, method: string, params: Record<string, unknown>): Promise<unknown> {
+		try {
+			this.#assertCurrent();
+			if (params.threadId !== this.#boundId) throw new ProtocolError(-32602, "Thread not found");
+		} catch (error) {
+			return Promise.reject(error);
+		}
 		// Read RPC IDs are reusable after their response and must observe current state.
 		// Reserve the deduplication budget for operations with side effects.
 		if (
@@ -252,6 +328,9 @@ export class RemoteSession {
 			return this.#execute(method, params);
 		if ((method === "turn/start" || method === "turn/steer") && typeof params.clientUserMessageId === "string")
 			identity = `client-message:${params.clientUserMessageId}`;
+		// Keep accepted results when returning to a session, without colliding with
+		// requests made under another session's identity in the same terminal.
+		identity = JSON.stringify([this.#boundId, identity]);
 		const signature = JSON.stringify({ method, params });
 		const existing = this.#requests.get(identity);
 		if (existing)
@@ -267,6 +346,7 @@ export class RemoteSession {
 		return result;
 	}
 	async #execute(method: string, params: Record<string, unknown>): Promise<unknown> {
+		const epoch = this.#epoch;
 		if (params.threadId !== this.target.sessionId) throw new ProtocolError(-32602, "Thread not found");
 		if (method === "thread/realtime/stop") {
 			await this.#voice?.stop();
@@ -275,40 +355,64 @@ export class RemoteSession {
 		if (method === "thread/realtime/start") {
 			const { NativeVoice } = await import("./voice");
 			const { loadRemoteSubscription } = await import("./auth");
+			this.#assertCurrent(epoch);
 			if (this.#voice?.active) throw new ProtocolError(-32000, "Voice is already active");
 			await this.#voice?.stop();
+			this.#assertCurrent(epoch);
 			this.#voice = new NativeVoice({
-				context: () =>
-					JSON.stringify(
+				context: () => {
+					this.#assertCurrent(epoch);
+					return JSON.stringify(
 						this.target.messages
 							.filter(message => message.role === "user" || message.role === "assistant")
 							.map(message => ({ role: message.role, text: textOf(message) }))
 							.slice(-30),
-					),
-				instructions: async (phase, text) => {
-					await this.target.sendCustomMessage(
-						{ customType: `remote-voice-${phase}`, content: text, display: false, attribution: "user" },
-						{ triggerTurn: false, deliverAs: "nextTurn" },
 					);
 				},
-				authenticate: () => loadRemoteSubscription(this.target.modelRegistry.authStorage, this.target.sessionId),
-				emit: (name, value) => this.#emit(name, value),
-				records: () =>
-					(this.target.sessionManager.getBranch?.() ?? this.target.sessionManager.getEntries()).flatMap(entry =>
-						entry.type === "custom" &&
-						entry.customType === "remote-realtime" &&
-						entry.data &&
-						typeof entry.data === "object"
-							? [entry.data as Record<string, unknown>]
-							: [],
-					),
-				record: async record => {
-					this.target.sessionManager.appendCustomEntry("remote-realtime", record);
-					await this.target.sessionManager.flush();
+				instructions: (phase, text) =>
+					this.#effect(epoch, async () => {
+						await this.target.sendCustomMessage(
+							{ customType: `remote-voice-${phase}`, content: text, display: false, attribution: "user" },
+							{ triggerTurn: false, deliverAs: "nextTurn" },
+						);
+					}),
+				authenticate: async () => {
+					this.#assertCurrent(epoch);
+					const auth = await loadRemoteSubscription(this.target.modelRegistry.authStorage, this.#boundId);
+					this.#assertCurrent(epoch);
+					return auth;
 				},
-				delegate: (id, text, output) => this.#delegateVoice(id, text, output),
+				emit: (name, value) => {
+					if (epoch === this.#epoch) this.#emit(name, value);
+				},
+				records: () => {
+					this.#assertCurrent(epoch, true);
+					return (this.target.sessionManager.getBranch?.() ?? this.target.sessionManager.getEntries()).flatMap(
+						entry =>
+							entry.type === "custom" &&
+							entry.customType === "remote-realtime" &&
+							entry.data &&
+							typeof entry.data === "object"
+								? [entry.data as Record<string, unknown>]
+								: [],
+					);
+				},
+				record: record =>
+					this.#effect(epoch, async () => {
+						this.target.sessionManager.appendCustomEntry("remote-realtime", record);
+						await this.target.sessionManager.flush();
+					}),
+				delegate: (id, text, output) => {
+					try {
+						this.#assertCurrent(epoch);
+					} catch (error) {
+						return Promise.reject(error);
+					}
+					return this.#delegateVoice(id, text, output);
+				},
 			});
 			await this.#voice.start(params);
+			this.#assertCurrent(epoch);
 			return {};
 		}
 		if (method === "thread/realtime/appendText" || method === "thread/realtime/appendSpeech") {
@@ -473,7 +577,7 @@ export class RemoteSession {
 		if (method === "turn/interrupt") {
 			if (!this.#active || params.turnId !== this.#active.id)
 				throw new ProtocolError(-32602, "Active turn mismatch");
-			await this.target.abort();
+			await this.#effect(epoch, () => this.target.abort());
 			return {};
 		}
 		if (method !== "turn/start" && method !== "turn/steer")
@@ -529,7 +633,7 @@ export class RemoteSession {
 				typeof params.clientUserMessageId === "string" ? { text, id: params.clientUserMessageId } : undefined;
 			if (client) this.#pendingClients.push(client);
 			try {
-				await this.target.steer(text);
+				await this.#effect(epoch, () => this.target.steer(text));
 			} catch (error) {
 				if (client) this.#pendingClients = this.#pendingClients.filter(value => value !== client);
 				throw error;
@@ -543,9 +647,11 @@ export class RemoteSession {
 		if (this.#durable) {
 			try {
 				await this.target.sessionManager.ensureOnDisk();
+				this.#assertCurrent(epoch);
 				await this.target.sessionManager.flush();
+				this.#assertCurrent(epoch);
 			} catch {
-				this.#active = undefined;
+				if (epoch === this.#epoch) this.#active = undefined;
 				throw new ProtocolError(-32000, "Could not persist the remote turn; task was not started");
 			}
 		}
@@ -555,8 +661,12 @@ export class RemoteSession {
 		// The existing AgentSession remains the only executor and persistence owner.
 		this.#emit("turn/started", { turn: active });
 		void this.target.prompt(text).then(
-			() => this.#finish("completed", active.id),
-			() => this.#finish("failed", active.id),
+			() => {
+				if (epoch === this.#epoch) this.#finish("completed", active.id);
+			},
+			() => {
+				if (epoch === this.#epoch) this.#finish("failed", active.id);
+			},
 		);
 		return { turn: { ...active } };
 	}
@@ -580,10 +690,18 @@ export class RemoteSession {
 			const turnId = current?.id ?? this.#nextTurnId();
 			const stream = output ? { turnId, send: output } : undefined;
 			if (stream) this.#voiceOutputs.add(stream);
+			const cancel = () => {
+				unsubscribe();
+				this.#cancelDelegations.delete(cancel);
+				if (stream) this.#voiceOutputs.delete(stream);
+				reject(new Error("Backing session changed"));
+			};
+			this.#cancelDelegations.add(cancel);
 			const unsubscribe = this.subscribe(event => {
 				const result = event.params.turn as Turn | undefined;
 				if (event.method !== "turn/completed" || result?.id !== turnId) return;
 				unsubscribe();
+				this.#cancelDelegations.delete(cancel);
 				if (stream) this.#voiceOutputs.delete(stream);
 				if (result.status === "failed") {
 					reject(new Error("Backing turn failed"));
@@ -608,12 +726,14 @@ export class RemoteSession {
 				input: [{ type: "text", text }],
 			}).catch(error => {
 				unsubscribe();
+				this.#cancelDelegations.delete(cancel);
 				if (stream) this.#voiceOutputs.delete(stream);
 				reject(error);
 			});
 		});
 	}
 	#finish(status: string, expectedId?: string): void {
+		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
 		if (!this.#active || (expectedId !== undefined && this.#active.id !== expectedId)) return;
 		if (this.#durable) {
 			const id = this.#active.id;
@@ -647,6 +767,7 @@ export class RemoteSession {
 		});
 	}
 	#event(event: AgentSessionEvent): void {
+		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
 		if (this.#durable) {
 			this.#durableEvent(event);
 			return;

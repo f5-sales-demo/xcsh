@@ -106,6 +106,22 @@ list responses also validate against the pinned schemas. These are automated
 checks, not new manual phone observations. Full experimental notification/field
 handling, lifecycle and live acceptance remain separate open requirements.
 
+Native terminal transitions now await voice closure and accepted control writes
+before changing storage. The adapter refreshes its identity, timestamps, history
+and transient item state; stale asynchronous prompts cannot execute in the next
+session. Local socket tests verify that the old owner disappears and the new
+owner is registered before the transition returns. Real AgentSession tests cover
+new/fork/resume/reload/branch, listener failure recovery, and retained conversation
+and persistence after a storage error. A synthetic native voice test verifies
+that closing records and end instructions stay with the old session and that
+late transcripts do not enter the new one. These tests do not establish reference
+wire parity or new iPhone acceptance for lifecycle behavior. Full host restart,
+exit/shutdown and the remaining interaction/control scenarios are still open.
+Accepted request results remain scoped to each session in the bounded adapter
+cache. Tests first reproduced repeated execution after failed switches, reloads,
+and returning to a previous session; retries now return the accepted result with
+one prompt execution. This does not prove durable retry recovery after a crash.
+
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
 | Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a new native Beta file-task capture also passed |

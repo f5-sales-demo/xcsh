@@ -185,6 +185,7 @@ import type {
 	SessionManager,
 } from "./session-manager";
 import { getLatestCompactionEntry } from "./session-manager";
+import { type SessionTransitionListener, SessionTransitions } from "./session-transitions";
 import { ToolChoiceQueue } from "./tool-choice-queue";
 import { TurnPhaseController, type TurnPhaseEvent } from "./turn-phase";
 
@@ -485,6 +486,7 @@ export class AgentSession {
 	// Event subscription state
 	#unsubscribeAgent?: () => void;
 	#eventListeners: AgentSessionEventSubscription[] = [];
+	#sessionTransitions = new SessionTransitions();
 	#turnPhase = new TurnPhaseController(event => this.#publishTurnPhase(event));
 
 	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
@@ -2186,6 +2188,21 @@ export class AgentSession {
 		};
 		const queued = this.#queuedExtensionEvents.then(emit, emit);
 		this.#queuedExtensionEvents = queued.catch(() => {});
+	}
+
+	#withSessionTransition<T>(change: () => Promise<T>): Promise<T> {
+		return this.#sessionTransitions.run(async () => {
+			try {
+				return await change();
+			} finally {
+				this.#reconnectToAgent();
+			}
+		});
+	}
+
+	/** Await consumers bound to the current storage before switching it. */
+	subscribeSessionTransitions(listener: SessionTransitionListener): () => void {
+		return this.#sessionTransitions.subscribe(listener);
 	}
 
 	/**
@@ -4202,48 +4219,50 @@ export class AgentSession {
 			}
 		}
 
-		this.#disconnectFromAgent();
-		await this.abort();
-		this.#asyncJobManager?.cancelAll();
-		this.#closeAllProviderSessions("new session");
-		this.agent.reset();
-		await this.sessionManager.flush();
-		await this.sessionManager.newSession(options);
-		this.setTodoPhases([]);
-		this.agent.sessionId = this.sessionManager.getSessionId();
-		this.#steeringMessages = [];
-		this.#followUpMessages = [];
-		this.#pendingNextTurnMessages = [];
-		this.#scheduledHiddenNextTurnGeneration = undefined;
+		return this.#withSessionTransition(async () => {
+			this.#disconnectFromAgent();
+			await this.abort();
+			this.#asyncJobManager?.cancelAll();
+			this.#closeAllProviderSessions("new session");
+			await this.sessionManager.flush();
+			await this.sessionManager.newSession(options);
+			this.agent.reset();
+			this.setTodoPhases([]);
+			this.agent.sessionId = this.sessionManager.getSessionId();
+			this.#steeringMessages = [];
+			this.#followUpMessages = [];
+			this.#pendingNextTurnMessages = [];
+			this.#scheduledHiddenNextTurnGeneration = undefined;
 
-		this.sessionManager.appendThinkingLevelChange(this.thinkingLevel);
-		this.sessionManager.appendServiceTierChange(this.serviceTier ?? null);
-		if (nextDiscoverySessionToolNames) {
-			await this.#applyActiveToolsByName(nextDiscoverySessionToolNames, { persistMCPSelection: false });
-			if (this.getSelectedMCPToolNames().length > 0) {
-				this.sessionManager.appendMCPToolSelection(this.getSelectedMCPToolNames());
+			this.sessionManager.appendThinkingLevelChange(this.thinkingLevel);
+			this.sessionManager.appendServiceTierChange(this.serviceTier ?? null);
+			if (nextDiscoverySessionToolNames) {
+				await this.#applyActiveToolsByName(nextDiscoverySessionToolNames, { persistMCPSelection: false });
+				if (this.getSelectedMCPToolNames().length > 0) {
+					this.sessionManager.appendMCPToolSelection(this.getSelectedMCPToolNames());
+				}
 			}
-		}
-		this.#rememberSessionDefaultSelectedMCPToolNames(
-			this.sessionFile,
-			this.#getConfiguredDefaultSelectedMCPToolNames(),
-		);
+			this.#rememberSessionDefaultSelectedMCPToolNames(
+				this.sessionFile,
+				this.#getConfiguredDefaultSelectedMCPToolNames(),
+			);
 
-		this.#todoReminderCount = 0;
-		this.#planReferenceSent = false;
-		this.#planReferencePath = "local://PLAN.md";
-		this.#reconnectToAgent();
+			this.#todoReminderCount = 0;
+			this.#planReferenceSent = false;
+			this.#planReferencePath = "local://PLAN.md";
+			this.#reconnectToAgent();
 
-		// Emit session_switch event with reason "new" to hooks
-		if (this.#extensionRunner) {
-			await this.#extensionRunner.emit({
-				type: "session_switch",
-				reason: "new",
-				previousSessionFile,
-			});
-		}
+			// Emit session_switch event with reason "new" to hooks
+			if (this.#extensionRunner) {
+				await this.#extensionRunner.emit({
+					type: "session_switch",
+					reason: "new",
+					previousSessionFile,
+				});
+			}
 
-		return true;
+			return true;
+		});
 	}
 
 	/**
@@ -4274,47 +4293,49 @@ export class AgentSession {
 			}
 		}
 
-		// Flush current session to ensure all entries are written
-		await this.sessionManager.flush();
+		return this.#withSessionTransition(async () => {
+			// Flush current session to ensure all entries are written
+			await this.sessionManager.flush();
 
-		// Fork the session (creates new session file with same entries)
-		const forkResult = await this.sessionManager.fork();
-		if (!forkResult) {
-			return false;
-		}
-
-		// Copy artifacts directory if it exists
-		const oldArtifactDir = forkResult.oldSessionFile.slice(0, -6);
-		const newArtifactDir = forkResult.newSessionFile.slice(0, -6);
-
-		try {
-			const oldDirStat = await fs.promises.stat(oldArtifactDir);
-			if (oldDirStat.isDirectory()) {
-				await fs.promises.cp(oldArtifactDir, newArtifactDir, { recursive: true });
+			// Fork the session (creates new session file with same entries)
+			const forkResult = await this.sessionManager.fork();
+			if (!forkResult) {
+				return false;
 			}
-		} catch (err) {
-			if (!isEnoent(err)) {
-				logger.warn("Failed to copy artifacts during fork", {
-					oldArtifactDir,
-					newArtifactDir,
-					error: err instanceof Error ? err.message : String(err),
+
+			// Copy artifacts directory if it exists
+			const oldArtifactDir = forkResult.oldSessionFile.slice(0, -6);
+			const newArtifactDir = forkResult.newSessionFile.slice(0, -6);
+
+			try {
+				const oldDirStat = await fs.promises.stat(oldArtifactDir);
+				if (oldDirStat.isDirectory()) {
+					await fs.promises.cp(oldArtifactDir, newArtifactDir, { recursive: true });
+				}
+			} catch (err) {
+				if (!isEnoent(err)) {
+					logger.warn("Failed to copy artifacts during fork", {
+						oldArtifactDir,
+						newArtifactDir,
+						error: err instanceof Error ? err.message : String(err),
+					});
+				}
+			}
+
+			// Update agent session ID
+			this.agent.sessionId = this.sessionManager.getSessionId();
+
+			// Emit session_switch event with reason "fork" to hooks
+			if (this.#extensionRunner) {
+				await this.#extensionRunner.emit({
+					type: "session_switch",
+					reason: "fork",
+					previousSessionFile,
 				});
 			}
-		}
 
-		// Update agent session ID
-		this.agent.sessionId = this.sessionManager.getSessionId();
-
-		// Emit session_switch event with reason "fork" to hooks
-		if (this.#extensionRunner) {
-			await this.#extensionRunner.emit({
-				type: "session_switch",
-				reason: "fork",
-				previousSessionFile,
-			});
-		}
-
-		return true;
+			return true;
+		});
 	}
 
 	// =========================================================================
@@ -5033,47 +5054,50 @@ export class AgentSession {
 				handoffText = this.#obfuscator.deobfuscate(handoffText);
 			}
 
-			// Start a new session
-			await this.sessionManager.flush();
-			this.#asyncJobManager?.cancelAll();
-			await this.sessionManager.newSession();
-			this.agent.reset();
-			this.agent.sessionId = this.sessionManager.getSessionId();
-			this.#steeringMessages = [];
-			this.#followUpMessages = [];
-			this.#pendingNextTurnMessages = [];
-			this.#scheduledHiddenNextTurnGeneration = undefined;
-			this.#todoReminderCount = 0;
+			const document = handoffText;
+			return await this.#withSessionTransition(async () => {
+				// Start a new session
+				await this.sessionManager.flush();
+				this.#asyncJobManager?.cancelAll();
+				await this.sessionManager.newSession();
+				this.agent.reset();
+				this.agent.sessionId = this.sessionManager.getSessionId();
+				this.#steeringMessages = [];
+				this.#followUpMessages = [];
+				this.#pendingNextTurnMessages = [];
+				this.#scheduledHiddenNextTurnGeneration = undefined;
+				this.#todoReminderCount = 0;
 
-			// Inject the handoff document as a custom message
-			const handoffContent = `<handoff-context>\n${handoffText}\n</handoff-context>\n\nThe above is a handoff document from a previous session. Use this context to continue the work seamlessly.`;
-			this.sessionManager.appendCustomMessageEntry("handoff", handoffContent, true, undefined, "agent");
-			let savedPath: string | undefined;
-			if (options?.autoTriggered && this.settings.get("compaction.handoffSaveToDisk")) {
-				const artifactsDir = this.sessionManager.getArtifactsDir();
-				if (artifactsDir) {
-					const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-					const handoffFilePath = path.join(artifactsDir, `handoff-${fileTimestamp}.md`);
-					try {
-						await Bun.write(handoffFilePath, `${handoffText}\n`);
-						savedPath = handoffFilePath;
-					} catch (error) {
-						logger.warn("Failed to save handoff document to disk", {
-							path: handoffFilePath,
-							error: error instanceof Error ? error.message : String(error),
-						});
+				// Inject the handoff document as a custom message
+				const handoffContent = `<handoff-context>\n${handoffText}\n</handoff-context>\n\nThe above is a handoff document from a previous session. Use this context to continue the work seamlessly.`;
+				this.sessionManager.appendCustomMessageEntry("handoff", handoffContent, true, undefined, "agent");
+				let savedPath: string | undefined;
+				if (options?.autoTriggered && this.settings.get("compaction.handoffSaveToDisk")) {
+					const artifactsDir = this.sessionManager.getArtifactsDir();
+					if (artifactsDir) {
+						const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
+						const handoffFilePath = path.join(artifactsDir, `handoff-${fileTimestamp}.md`);
+						try {
+							await Bun.write(handoffFilePath, `${handoffText}\n`);
+							savedPath = handoffFilePath;
+						} catch (error) {
+							logger.warn("Failed to save handoff document to disk", {
+								path: handoffFilePath,
+								error: error instanceof Error ? error.message : String(error),
+							});
+						}
+					} else {
+						logger.debug("Skipping handoff document save because session is not persisted");
 					}
-				} else {
-					logger.debug("Skipping handoff document save because session is not persisted");
 				}
-			}
 
-			// Rebuild agent messages from session
-			const sessionContext = this.buildDisplaySessionContext();
-			this.agent.replaceMessages(sessionContext.messages);
-			this.#syncTodoPhasesFromBranch();
+				// Rebuild agent messages from session
+				const sessionContext = this.buildDisplaySessionContext();
+				this.agent.replaceMessages(sessionContext.messages);
+				this.#syncTodoPhasesFromBranch();
 
-			return { document: handoffText, savedPath };
+				return { document, savedPath };
+			});
 		} finally {
 			unsubscribe?.();
 			handoffSignal.removeEventListener("abort", onCompletionAbort);
@@ -6903,161 +6927,165 @@ export class AgentSession {
 			}
 		}
 
-		this.#disconnectFromAgent();
-		await this.abort();
+		return this.#withSessionTransition(async () => {
+			this.#disconnectFromAgent();
+			await this.abort();
 
-		// Flush pending writes before switching so restore snapshots reflect committed state.
-		await this.sessionManager.flush();
-		const previousSessionState = this.sessionManager.captureState();
-		const previousSessionContext = this.buildDisplaySessionContext();
-		// switchSession replaces these arrays wholesale during load/rollback, so retaining
-		// the existing message objects is sufficient and avoids structured-clone failures for
-		// extension/custom metadata that is valid to persist but not cloneable.
-		const previousAgentMessages = [...this.agent.state.messages];
-		const previousSteeringMessages = [...this.#steeringMessages];
-		const previousFollowUpMessages = [...this.#followUpMessages];
-		const previousPendingNextTurnMessages = [...this.#pendingNextTurnMessages];
-		const previousScheduledHiddenNextTurnGeneration = this.#scheduledHiddenNextTurnGeneration;
-		const previousModel = this.model;
-		const previousModelResolutionSource = this.#modelResolutionSource;
-		const previousThinkingLevel = this.#thinkingLevel;
-		const previousServiceTier = this.agent.serviceTier;
-		const previousSelectedMCPToolNames = new Set(this.#selectedMCPToolNames);
-		const previousTools = [...this.agent.state.tools];
-		const previousBaseSystemPrompt = this.#baseSystemPrompt;
-		const previousSystemPrompt = this.agent.state.systemPrompt;
-		const previousFallbackSelectedMCPToolNames = previousSessionFile
-			? this.#getSessionDefaultSelectedMCPToolNames(previousSessionFile)
-			: undefined;
+			// Flush pending writes before switching so restore snapshots reflect committed state.
+			await this.sessionManager.flush();
+			const previousSessionState = this.sessionManager.captureState();
+			const previousSessionContext = this.buildDisplaySessionContext();
+			// switchSession replaces these arrays wholesale during load/rollback, so retaining
+			// the existing message objects is sufficient and avoids structured-clone failures for
+			// extension/custom metadata that is valid to persist but not cloneable.
+			const previousAgentMessages = [...this.agent.state.messages];
+			const previousSteeringMessages = [...this.#steeringMessages];
+			const previousFollowUpMessages = [...this.#followUpMessages];
+			const previousPendingNextTurnMessages = [...this.#pendingNextTurnMessages];
+			const previousScheduledHiddenNextTurnGeneration = this.#scheduledHiddenNextTurnGeneration;
+			const previousModel = this.model;
+			const previousModelResolutionSource = this.#modelResolutionSource;
+			const previousThinkingLevel = this.#thinkingLevel;
+			const previousServiceTier = this.agent.serviceTier;
+			const previousSelectedMCPToolNames = new Set(this.#selectedMCPToolNames);
+			const previousTools = [...this.agent.state.tools];
+			const previousBaseSystemPrompt = this.#baseSystemPrompt;
+			const previousSystemPrompt = this.agent.state.systemPrompt;
+			const previousFallbackSelectedMCPToolNames = previousSessionFile
+				? this.#getSessionDefaultSelectedMCPToolNames(previousSessionFile)
+				: undefined;
 
-		this.#steeringMessages = [];
-		this.#followUpMessages = [];
-		this.#pendingNextTurnMessages = [];
-		this.#scheduledHiddenNextTurnGeneration = undefined;
+			this.#steeringMessages = [];
+			this.#followUpMessages = [];
+			this.#pendingNextTurnMessages = [];
+			this.#scheduledHiddenNextTurnGeneration = undefined;
 
-		try {
-			await this.sessionManager.setSessionFile(sessionPath);
-			this.agent.sessionId = this.sessionManager.getSessionId();
+			try {
+				await this.sessionManager.setSessionFile(sessionPath);
+				this.agent.sessionId = this.sessionManager.getSessionId();
 
-			const sessionContext = this.buildDisplaySessionContext();
-			const didReloadConversationChange =
-				!switchingToDifferentSession &&
-				this.#didSessionMessagesChange(previousSessionContext.messages, sessionContext.messages);
-			const fallbackSelectedMCPToolNames = this.#getSessionDefaultSelectedMCPToolNames(sessionPath);
-			await this.#restoreMCPSelectionsForSessionContext(sessionContext, { fallbackSelectedMCPToolNames });
+				const sessionContext = this.buildDisplaySessionContext();
+				const didReloadConversationChange =
+					!switchingToDifferentSession &&
+					this.#didSessionMessagesChange(previousSessionContext.messages, sessionContext.messages);
+				const fallbackSelectedMCPToolNames = this.#getSessionDefaultSelectedMCPToolNames(sessionPath);
+				await this.#restoreMCPSelectionsForSessionContext(sessionContext, { fallbackSelectedMCPToolNames });
 
-			// Emit session_switch event to hooks
-			if (this.#extensionRunner) {
-				await this.#extensionRunner.emit({
-					type: "session_switch",
-					reason: "resume",
-					previousSessionFile,
-				});
-			}
+				// Emit session_switch event to hooks
+				if (this.#extensionRunner) {
+					await this.#extensionRunner.emit({
+						type: "session_switch",
+						reason: "resume",
+						previousSessionFile,
+					});
+				}
 
-			this.agent.replaceMessages(sessionContext.messages);
-			this.#syncTodoPhasesFromBranch();
-			this.#syncRoutingStateFromBranch();
-			if (switchingToDifferentSession) {
-				this.#closeAllProviderSessions("session switch");
-			} else if (didReloadConversationChange) {
-				this.#closeAllProviderSessions("session reload");
-			}
+				this.agent.replaceMessages(sessionContext.messages);
+				this.#syncTodoPhasesFromBranch();
+				this.#syncRoutingStateFromBranch();
+				if (switchingToDifferentSession) {
+					this.#closeAllProviderSessions("session switch");
+				} else if (didReloadConversationChange) {
+					this.#closeAllProviderSessions("session reload");
+				}
 
-			// Restore model if saved
-			const defaultModelStr = sessionContext.models.default;
-			if (defaultModelStr) {
-				const slashIdx = defaultModelStr.indexOf("/");
-				if (slashIdx > 0) {
-					const provider = defaultModelStr.slice(0, slashIdx);
-					const modelId = defaultModelStr.slice(slashIdx + 1);
-					const availableModels = this.#modelRegistry.getAvailable();
-					const match = availableModels.find(m => m.provider === provider && m.id === modelId);
-					if (match) {
-						const currentModel = this.model;
-						const shouldResetProviderState =
-							switchingToDifferentSession ||
-							(currentModel !== undefined &&
-								(currentModel.provider !== match.provider ||
-									currentModel.id !== match.id ||
-									currentModel.api !== match.api));
-						if (shouldResetProviderState) {
-							await this.#setModelWithProviderSessionReset(match, "config");
-						} else {
-							this.agent.setModel(match);
-							const toolPolicy = this.#resolveToolPolicyForModel?.(match);
-							if (toolPolicy) {
-								this.#mcpDiscoveryEnabled = toolPolicy.mcpDiscoveryEnabled;
-								if (toolPolicy.toolNames) {
-									await this.#applyActiveToolsByName(toolPolicy.toolNames, { persistMCPSelection: false });
+				// Restore model if saved
+				const defaultModelStr = sessionContext.models.default;
+				if (defaultModelStr) {
+					const slashIdx = defaultModelStr.indexOf("/");
+					if (slashIdx > 0) {
+						const provider = defaultModelStr.slice(0, slashIdx);
+						const modelId = defaultModelStr.slice(slashIdx + 1);
+						const availableModels = this.#modelRegistry.getAvailable();
+						const match = availableModels.find(m => m.provider === provider && m.id === modelId);
+						if (match) {
+							const currentModel = this.model;
+							const shouldResetProviderState =
+								switchingToDifferentSession ||
+								(currentModel !== undefined &&
+									(currentModel.provider !== match.provider ||
+										currentModel.id !== match.id ||
+										currentModel.api !== match.api));
+							if (shouldResetProviderState) {
+								await this.#setModelWithProviderSessionReset(match, "config");
+							} else {
+								this.agent.setModel(match);
+								const toolPolicy = this.#resolveToolPolicyForModel?.(match);
+								if (toolPolicy) {
+									this.#mcpDiscoveryEnabled = toolPolicy.mcpDiscoveryEnabled;
+									if (toolPolicy.toolNames) {
+										await this.#applyActiveToolsByName(toolPolicy.toolNames, { persistMCPSelection: false });
+									}
 								}
 							}
 						}
 					}
 				}
-			}
 
-			const hasThinkingEntry = this.sessionManager.getBranch().some(entry => entry.type === "thinking_level_change");
-			const hasServiceTierEntry = this.sessionManager
-				.getBranch()
-				.some(entry => entry.type === "service_tier_change");
-			const defaultThinkingLevel = this.settings.get("defaultThinkingLevel");
-			const configuredServiceTier = this.settings.get("serviceTier");
-			const nextThinkingLevel = resolveThinkingLevelForModel(
-				this.model,
-				hasThinkingEntry ? (sessionContext.thinkingLevel as ThinkingLevel | undefined) : defaultThinkingLevel,
-			);
-			this.#thinkingLevel = nextThinkingLevel;
-			this.agent.setThinkingLevel(toReasoningEffort(nextThinkingLevel));
-			this.agent.serviceTier = hasServiceTierEntry
-				? sessionContext.serviceTier
-				: configuredServiceTier === "none"
-					? undefined
-					: configuredServiceTier;
+				const hasThinkingEntry = this.sessionManager
+					.getBranch()
+					.some(entry => entry.type === "thinking_level_change");
+				const hasServiceTierEntry = this.sessionManager
+					.getBranch()
+					.some(entry => entry.type === "service_tier_change");
+				const defaultThinkingLevel = this.settings.get("defaultThinkingLevel");
+				const configuredServiceTier = this.settings.get("serviceTier");
+				const nextThinkingLevel = resolveThinkingLevelForModel(
+					this.model,
+					hasThinkingEntry ? (sessionContext.thinkingLevel as ThinkingLevel | undefined) : defaultThinkingLevel,
+				);
+				this.#thinkingLevel = nextThinkingLevel;
+				this.agent.setThinkingLevel(toReasoningEffort(nextThinkingLevel));
+				this.agent.serviceTier = hasServiceTierEntry
+					? sessionContext.serviceTier
+					: configuredServiceTier === "none"
+						? undefined
+						: configuredServiceTier;
 
-			this.#reconnectToAgent();
-			return true;
-		} catch (error) {
-			this.sessionManager.restoreState(previousSessionState);
-			this.agent.sessionId = previousSessionState.sessionId;
-			let restoreMcpError: unknown;
-			try {
-				await this.#restoreMCPSelectionsForSessionContext(previousSessionContext, {
-					fallbackSelectedMCPToolNames: previousFallbackSelectedMCPToolNames,
-				});
-			} catch (mcpError) {
-				restoreMcpError = mcpError;
-				logger.warn("Failed to restore MCP selections after switch error", {
-					previousSessionFile,
-					targetSessionFile: sessionPath,
-					error: String(mcpError),
-				});
-				this.#selectedMCPToolNames = new Set(previousSelectedMCPToolNames);
-				this.agent.setTools(previousTools);
+				this.#reconnectToAgent();
+				return true;
+			} catch (error) {
+				this.sessionManager.restoreState(previousSessionState);
+				this.agent.sessionId = previousSessionState.sessionId;
+				let restoreMcpError: unknown;
+				try {
+					await this.#restoreMCPSelectionsForSessionContext(previousSessionContext, {
+						fallbackSelectedMCPToolNames: previousFallbackSelectedMCPToolNames,
+					});
+				} catch (mcpError) {
+					restoreMcpError = mcpError;
+					logger.warn("Failed to restore MCP selections after switch error", {
+						previousSessionFile,
+						targetSessionFile: sessionPath,
+						error: String(mcpError),
+					});
+					this.#selectedMCPToolNames = new Set(previousSelectedMCPToolNames);
+					this.agent.setTools(previousTools);
+					this.#baseSystemPrompt = previousBaseSystemPrompt;
+					this.agent.setSystemPrompt(previousSystemPrompt);
+				}
 				this.#baseSystemPrompt = previousBaseSystemPrompt;
 				this.agent.setSystemPrompt(previousSystemPrompt);
+				this.agent.replaceMessages(previousAgentMessages);
+				this.#steeringMessages = previousSteeringMessages;
+				this.#followUpMessages = previousFollowUpMessages;
+				this.#pendingNextTurnMessages = previousPendingNextTurnMessages;
+				this.#scheduledHiddenNextTurnGeneration = previousScheduledHiddenNextTurnGeneration;
+				if (previousModel) {
+					this.agent.setModel(previousModel);
+					this.#modelResolutionSource = previousModelResolutionSource;
+				}
+				this.#thinkingLevel = previousThinkingLevel;
+				this.agent.setThinkingLevel(toReasoningEffort(previousThinkingLevel));
+				this.agent.serviceTier = previousServiceTier;
+				this.#syncTodoPhasesFromBranch();
+				this.#reconnectToAgent();
+				if (restoreMcpError) {
+					throw restoreMcpError;
+				}
+				throw error;
 			}
-			this.#baseSystemPrompt = previousBaseSystemPrompt;
-			this.agent.setSystemPrompt(previousSystemPrompt);
-			this.agent.replaceMessages(previousAgentMessages);
-			this.#steeringMessages = previousSteeringMessages;
-			this.#followUpMessages = previousFollowUpMessages;
-			this.#pendingNextTurnMessages = previousPendingNextTurnMessages;
-			this.#scheduledHiddenNextTurnGeneration = previousScheduledHiddenNextTurnGeneration;
-			if (previousModel) {
-				this.agent.setModel(previousModel);
-				this.#modelResolutionSource = previousModelResolutionSource;
-			}
-			this.#thinkingLevel = previousThinkingLevel;
-			this.agent.setThinkingLevel(toReasoningEffort(previousThinkingLevel));
-			this.agent.serviceTier = previousServiceTier;
-			this.#syncTodoPhasesFromBranch();
-			this.#reconnectToAgent();
-			if (restoreMcpError) {
-				throw restoreMcpError;
-			}
-			throw error;
-		}
+		});
 	}
 
 	#syncRoutingStateFromBranch() {
@@ -7134,42 +7162,44 @@ export class AgentSession {
 			skipConversationRestore = result?.skipConversationRestore ?? false;
 		}
 
-		// Clear pending messages (bound to old session state)
-		this.#pendingNextTurnMessages = [];
-		this.#scheduledHiddenNextTurnGeneration = undefined;
+		return this.#withSessionTransition(async () => {
+			// Clear pending messages (bound to old session state)
+			this.#pendingNextTurnMessages = [];
+			this.#scheduledHiddenNextTurnGeneration = undefined;
 
-		// Flush pending writes before branching
-		await this.sessionManager.flush();
-		this.#asyncJobManager?.cancelAll();
+			// Flush pending writes before branching
+			await this.sessionManager.flush();
+			this.#asyncJobManager?.cancelAll();
 
-		if (!selectedEntry.parentId) {
-			await this.sessionManager.newSession({ parentSession: previousSessionFile });
-		} else {
-			this.sessionManager.createBranchedSession(selectedEntry.parentId);
-		}
-		this.#syncTodoPhasesFromBranch();
-		this.#syncRoutingStateFromBranch();
-		this.agent.sessionId = this.sessionManager.getSessionId();
+			if (!selectedEntry.parentId) {
+				await this.sessionManager.newSession({ parentSession: previousSessionFile });
+			} else {
+				this.sessionManager.createBranchedSession(selectedEntry.parentId);
+			}
+			this.#syncTodoPhasesFromBranch();
+			this.#syncRoutingStateFromBranch();
+			this.agent.sessionId = this.sessionManager.getSessionId();
 
-		// Reload messages from entries (works for both file and in-memory mode)
-		const sessionContext = this.buildDisplaySessionContext();
+			// Reload messages from entries (works for both file and in-memory mode)
+			const sessionContext = this.buildDisplaySessionContext();
 
-		await this.#restoreMCPSelectionsForSessionContext(sessionContext);
+			await this.#restoreMCPSelectionsForSessionContext(sessionContext);
 
-		// Emit session_branch event to hooks (after branch completes)
-		if (this.#extensionRunner) {
-			await this.#extensionRunner.emit({
-				type: "session_branch",
-				previousSessionFile,
-			});
-		}
+			// Emit session_branch event to hooks (after branch completes)
+			if (this.#extensionRunner) {
+				await this.#extensionRunner.emit({
+					type: "session_branch",
+					previousSessionFile,
+				});
+			}
 
-		if (!skipConversationRestore) {
-			this.agent.replaceMessages(sessionContext.messages);
-			this.#closeCodexProviderSessionsForHistoryRewrite();
-		}
+			if (!skipConversationRestore) {
+				this.agent.replaceMessages(sessionContext.messages);
+				this.#closeCodexProviderSessionsForHistoryRewrite();
+			}
 
-		return { selectedText, cancelled: false };
+			return { selectedText, cancelled: false };
+		});
 	}
 
 	// =========================================================================
@@ -7285,64 +7315,71 @@ export class AgentSession {
 			summaryDetails = hookSummary.details;
 		}
 
-		// Determine the new leaf position based on target type
-		let newLeafId: string | null;
-		let editorText: string | undefined;
+		return this.#withSessionTransition(async () => {
+			// Determine the new leaf position based on target type
+			let newLeafId: string | null;
+			let editorText: string | undefined;
 
-		if (targetEntry.type === "message" && targetEntry.message.role === "user") {
-			// User message: leaf = parent (null if root), text goes to editor
-			newLeafId = targetEntry.parentId;
-			editorText = this.#extractUserMessageText(targetEntry.message.content);
-		} else if (targetEntry.type === "custom_message") {
-			// Custom message: leaf = parent (null if root), text goes to editor
-			newLeafId = targetEntry.parentId;
-			editorText =
-				typeof targetEntry.content === "string"
-					? targetEntry.content
-					: targetEntry.content
-							.filter((c): c is { type: "text"; text: string } => c.type === "text")
-							.map(c => c.text)
-							.join("");
-		} else {
-			// Non-user message: leaf = selected node
-			newLeafId = targetId;
-		}
+			if (targetEntry.type === "message" && targetEntry.message.role === "user") {
+				// User message: leaf = parent (null if root), text goes to editor
+				newLeafId = targetEntry.parentId;
+				editorText = this.#extractUserMessageText(targetEntry.message.content);
+			} else if (targetEntry.type === "custom_message") {
+				// Custom message: leaf = parent (null if root), text goes to editor
+				newLeafId = targetEntry.parentId;
+				editorText =
+					typeof targetEntry.content === "string"
+						? targetEntry.content
+						: targetEntry.content
+								.filter((c): c is { type: "text"; text: string } => c.type === "text")
+								.map(c => c.text)
+								.join("");
+			} else {
+				// Non-user message: leaf = selected node
+				newLeafId = targetId;
+			}
 
-		// Switch leaf (with or without summary)
-		// Summary is attached at the navigation target position (newLeafId), not the old branch
-		let summaryEntry: BranchSummaryEntry | undefined;
-		if (summaryText) {
-			// Create summary at target position (can be null for root)
-			const summaryId = this.sessionManager.branchWithSummary(newLeafId, summaryText, summaryDetails, fromExtension);
-			summaryEntry = this.sessionManager.getEntry(summaryId) as BranchSummaryEntry;
-		} else if (newLeafId === null) {
-			// No summary, navigating to root - reset leaf
-			this.sessionManager.resetLeaf();
-		} else {
-			// No summary, navigating to non-root
-			this.sessionManager.branch(newLeafId);
-		}
+			// Switch leaf (with or without summary)
+			// Summary is attached at the navigation target position (newLeafId), not the old branch
+			let summaryEntry: BranchSummaryEntry | undefined;
+			if (summaryText) {
+				// Create summary at target position (can be null for root)
+				const summaryId = this.sessionManager.branchWithSummary(
+					newLeafId,
+					summaryText,
+					summaryDetails,
+					fromExtension,
+				);
+				summaryEntry = this.sessionManager.getEntry(summaryId) as BranchSummaryEntry;
+			} else if (newLeafId === null) {
+				// No summary, navigating to root - reset leaf
+				this.sessionManager.resetLeaf();
+			} else {
+				// No summary, navigating to non-root
+				this.sessionManager.branch(newLeafId);
+			}
 
-		// Update agent state
-		const sessionContext = this.buildDisplaySessionContext();
-		await this.#restoreMCPSelectionsForSessionContext(sessionContext);
-		this.agent.replaceMessages(sessionContext.messages);
-		this.#syncTodoPhasesFromBranch();
-		this.#closeCodexProviderSessionsForHistoryRewrite();
+			// Update agent state
+			const sessionContext = this.buildDisplaySessionContext();
+			await this.#restoreMCPSelectionsForSessionContext(sessionContext);
+			this.agent.replaceMessages(sessionContext.messages);
+			this.#syncTodoPhasesFromBranch();
+			this.#closeCodexProviderSessionsForHistoryRewrite();
 
-		// Emit session_tree event
-		if (this.#extensionRunner) {
-			await this.#extensionRunner.emit({
-				type: "session_tree",
-				newLeafId: this.sessionManager.getLeafId(),
-				oldLeafId,
-				summaryEntry,
-				fromExtension: summaryText ? fromExtension : undefined,
-			});
-		}
+			// Emit session_tree event
+			if (this.#extensionRunner) {
+				await this.#extensionRunner.emit({
+					type: "session_tree",
+					newLeafId: this.sessionManager.getLeafId(),
+					oldLeafId,
+					summaryEntry,
+					fromExtension: summaryText ? fromExtension : undefined,
+				});
+			}
 
-		this.#branchSummaryAbortController = undefined;
-		return { editorText, cancelled: false, summaryEntry };
+			this.#branchSummaryAbortController = undefined;
+			return { editorText, cancelled: false, summaryEntry };
+		});
 	}
 
 	/**
