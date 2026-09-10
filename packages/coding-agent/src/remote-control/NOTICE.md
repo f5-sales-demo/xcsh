@@ -20,6 +20,6 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 
 Source: https://github.com/openai/codex/tree/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/app-server-transport/src/transport/remote_control
 
-Modifications: TypeScript/Bun implementation; XCSH identity and version; fixed
+Modifications: TypeScript/Bun implementation; xcsh identity and version; fixed
 production endpoint; response size limit; no server-body diagnostics; bounded
-relay retries; private XCSH-owned state and Unix socket session attachment.
+relay retries; private xcsh-owned state and Unix socket session attachment.

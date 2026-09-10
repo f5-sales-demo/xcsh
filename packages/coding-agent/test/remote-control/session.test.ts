@@ -138,3 +138,39 @@ test("phone turn metadata preserves the work model and deduplicates client messa
 	a.finish();
 	a.remote.dispose();
 });
+
+test("provider failure becomes a failed remote turn and a readable history error", async () => {
+	let listener: (event: any) => void = () => {};
+	const messages: any[] = [];
+	const target = {
+		sessionId: "fixture",
+		messages,
+		sessionManager: { getCwd: () => "/tmp" },
+		subscribe: (fn: any) => {
+			listener = fn;
+			return () => {};
+		},
+		prompt: async () => {
+			messages.push(
+				{ role: "user", content: "fixture" },
+				{ role: "assistant", content: [], stopReason: "error", errorMessage: "private backend detail" },
+			);
+			listener({ type: "agent_end" });
+		},
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	await remote.call("fixture", "turn/start", { threadId: "fixture", input: [{ type: "text", text: "fixture" }] });
+	await Bun.sleep(0);
+	expect(events.find(e => e.method === "turn/completed")?.params.turn).toMatchObject({
+		status: "failed",
+		error: { message: "The selected model could not complete this turn. Check the terminal for details." },
+	});
+	expect(remote.history()[0]).toMatchObject({
+		status: "failed",
+		error: { message: "The selected model could not complete this turn. Check the terminal for details." },
+	});
+	expect(JSON.stringify(events)).not.toContain("private backend detail");
+	remote.dispose();
+});

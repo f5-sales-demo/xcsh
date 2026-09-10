@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { refreshRemoteHost } from "../../src/remote-control/enrollment";
 
 const identity = {
-	name: "XCSH · fixture",
+	name: "xcsh · fixture",
 	version: "21.22.0",
 	installationId: "fixture-install",
 	os: "linux",

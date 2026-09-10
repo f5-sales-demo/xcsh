@@ -91,15 +91,16 @@ export async function runRemoteControl(action: string): Promise<unknown> {
 	}
 	if (action === "pair") {
 		const state = await readState();
-		if (!state?.enabled) throw new Error("Enable XCSH remote control first");
+		if (!state?.enabled) throw new Error("Enable xcsh remote control first");
 		if ((await remoteStatus()).relay !== "connected")
-			throw new Error("Wait for the XCSH remote relay to connect before pairing");
+			throw new Error("Wait for the xcsh remote relay to connect before pairing");
+		state.name = state.name.replace(/xcsh/gi, "xcsh");
 		if (Date.parse(state.enrollment.expires_at) < Date.now() + 60_000) await refreshState(state);
 		return startPairing(state.enrollment);
 	}
 	if (action === "host") {
 		const state = await readState();
-		if (!state?.enabled) throw new Error("XCSH remote control is disabled");
+		if (!state?.enabled) throw new Error("xcsh remote control is disabled");
 		const host = await startLocalHost(remoteSocketPath(), VERSION);
 		process.once("SIGTERM", () => {
 			void host.close();
@@ -127,13 +128,13 @@ export async function runRemoteControl(action: string): Promise<unknown> {
 					installationId: string;
 				};
 				const { installationId, ...enrollment } = gate;
-				state = { enabled: true, name: `XCSH · ${hostname()}`, installationId, enrollment };
+				state = { enabled: true, name: `xcsh · ${hostname()}`, installationId, enrollment };
 			} else {
 				const storage = await AuthStorage.create(getAgentDbPath());
 				try {
 					await storage.reload();
 					const installationId = crypto.randomUUID();
-					const name = `XCSH · ${hostname()}`;
+					const name = `xcsh · ${hostname()}`;
 					const enrollment = await enrollRemoteHost(
 						{
 							name,
@@ -150,6 +151,7 @@ export async function runRemoteControl(action: string): Promise<unknown> {
 				}
 			}
 		}
+		state.name = state.name.replace(/xcsh/gi, "xcsh");
 		if (Date.parse(state.enrollment.expires_at) < Date.now() + 60_000) await refreshState(state);
 		await writeState({ ...state, enabled: true });
 		// Refuse takeover of a responding host; remove only a confirmed stale socket.

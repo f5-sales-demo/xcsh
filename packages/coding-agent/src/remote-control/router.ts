@@ -92,7 +92,7 @@ export class RemoteRouter {
 						result = modelResponse([...this.sessions.values()].map(session => session.thread));
 						break;
 					case "configRequirements/read":
-						// XCSH has no Codex requirements.toml/MDM policy layer.
+						// xcsh has no Codex requirements.toml/MDM policy layer.
 						result = { requirements: null };
 						break;
 					case "collaborationMode/list":
@@ -108,7 +108,7 @@ export class RemoteRouter {
 						result = {};
 						break;
 					case "plugin/installed":
-						// The adapter exposes no Codex marketplace installations. XCSH tools remain
+						// The adapter exposes no Codex marketplace installations. xcsh tools remain
 						// owned by the terminal; this is not a list of the terminal's loaded tools.
 						result = { marketplaces: [], marketplaceLoadErrors: [] };
 						break;
@@ -136,14 +136,14 @@ export class RemoteRouter {
 						if (!session)
 							throw new ProtocolError(
 								-32602,
-								"Thread not found; restart the terminal with the upgraded XCSH binary",
+								"Thread not found; restart the terminal with the upgraded xcsh binary",
 							);
 						this.#clients.get(client)?.add(threadId);
 						result = await session.call(JSON.stringify([client, id]), request.method, params);
 						break;
 					}
 					default:
-						throw new ProtocolError(-32601, "Unsupported XCSH remote method");
+						throw new ProtocolError(-32601, "Unsupported xcsh remote method");
 				}
 			}
 			return { id, result };
@@ -152,7 +152,7 @@ export class RemoteRouter {
 				id,
 				error: {
 					code: error instanceof ProtocolError ? error.code : -32000,
-					message: error instanceof ProtocolError ? error.message : "XCSH remote request failed",
+					message: error instanceof ProtocolError ? error.message : "xcsh remote request failed",
 				},
 			};
 		}

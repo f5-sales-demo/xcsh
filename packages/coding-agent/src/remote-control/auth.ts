@@ -8,7 +8,7 @@ export async function loadRemoteSubscription(
 	sessionId: string,
 ): Promise<SubscriptionAuth> {
 	if (storage.getCredentialSource("openai-codex") !== "stored-oauth") {
-		throw new RemoteControlError("Remote enrollment requires a selected XCSH ChatGPT subscription", {
+		throw new RemoteControlError("Remote enrollment requires a selected xcsh ChatGPT subscription", {
 			stage: "enrollment",
 		});
 	}

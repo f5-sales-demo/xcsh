@@ -10,7 +10,7 @@ import { CODEX_PROTOCOL_COMMIT, enrollRemoteHost, RemoteControlError } from "../
 async function main(): Promise<void> {
 	if (process.argv.slice(2).join(" ") !== "--enroll") {
 		process.stdout.write(
-			"Usage: bun packages/coding-agent/scripts/native-remote-enrollment-gate.ts --enroll\nCreates an XCSH host enrollment using the selected XCSH ChatGPT subscription. No relay is started.\n",
+			"Usage: bun packages/coding-agent/scripts/native-remote-enrollment-gate.ts --enroll\nCreates an xcsh host enrollment using the selected xcsh ChatGPT subscription. No relay is started.\n",
 		);
 		process.exitCode = process.argv.length > 2 && process.argv[2] !== "--help" ? 2 : 0;
 		return;
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
 		const auth = await loadRemoteSubscription(storage, `xcsh-remote-gate-${installationId}`);
 		const enrollment = await enrollRemoteHost(
 			{
-				name: `XCSH · ${hostname()}`,
+				name: `xcsh · ${hostname()}`,
 				version: VERSION,
 				installationId,
 				os: process.platform,

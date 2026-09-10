@@ -1,7 +1,7 @@
 /** Read-only compatibility views. These never load or change Codex configuration. */
 export function configResponse(thread: Record<string, unknown> | undefined, includeLayers: boolean) {
 	// Null denotes an unset Codex-specific setting, rather than a promise about
-	// permissions or defaults in the existing XCSH terminal runtime.
+	// permissions or defaults in the existing xcsh terminal runtime.
 	const config: Record<string, unknown> = Object.fromEntries(
 		[
 			"model",
@@ -46,14 +46,14 @@ export function modelResponse(threads: Record<string, unknown>[]) {
 			id: thread.model,
 			model: thread.model,
 			displayName: thread.model,
-			description: "Model selected by a live XCSH terminal. Model changes are managed in the terminal.",
+			description: "Model selected by a live xcsh terminal. Model changes are managed in the terminal.",
 			upgrade: null,
 			upgradeInfo: null,
 			availabilityNux: null,
 			modelSpecialty: null,
 			hidden: false,
-			supportedReasoningEfforts: [],
-			defaultReasoningEffort: thread.reasoningEffort ?? "medium",
+			supportedReasoningEfforts: thread.supportedReasoningEfforts ?? [],
+			defaultReasoningEffort: thread.defaultReasoningEffort ?? thread.reasoningEffort ?? "medium",
 			inputModalities: ["text"],
 			supportsPersonality: false,
 			multiAgentVersion: null,

@@ -6,7 +6,7 @@ import { connectPeer } from "../src/remote-control/ipc";
 async function main(): Promise<void> {
 	if (process.argv.slice(2).join(" ") !== "--run") {
 		process.stdout.write(
-			"Usage: bun packages/coding-agent/scripts/native-remote-session-gate.ts --run\nRequires the XCSH Remote Alpha and XCSH Remote Beta fixture TUIs.\n",
+			"Usage: bun packages/coding-agent/scripts/native-remote-session-gate.ts --run\nRequires the xcsh Remote Alpha and xcsh Remote Beta fixture TUIs.\n",
 		);
 		return;
 	}
@@ -28,8 +28,8 @@ async function main(): Promise<void> {
 		await call("initialize", { clientInfo: { name: "xcsh-native-gate", version: "1" } });
 		const { data } = await call("thread/list");
 		for (const [name, marker] of [
-			["XCSH Remote Alpha", "ALPHA-ORCHARD"],
-			["XCSH Remote Beta", "BETA-HARBOR"],
+			["xcsh Remote Alpha", "ALPHA-ORCHARD"],
+			["xcsh Remote Beta", "BETA-HARBOR"],
 		]) {
 			const thread = (
 				data as { id: string; name: string; model: string; cwd: string; reasoningEffort?: string | null }[]

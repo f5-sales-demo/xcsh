@@ -35,7 +35,7 @@ interface Turn {
 	items: Record<string, unknown>[];
 	itemsView: string;
 	status: string;
-	error: null;
+	error: { message: string; codexErrorInfo: null; additionalDetails: null } | null;
 	startedAt: number | null;
 	completedAt: number | null;
 	durationMs: number | null;
@@ -48,6 +48,13 @@ function textOf(message: AgentMessage): string {
 				.filter(part => part.type === "text")
 				.map(part => part.text)
 				.join("\n");
+}
+function turnError() {
+	return {
+		message: "The selected model could not complete this turn. Check the terminal for details.",
+		codexErrorInfo: null,
+		additionalDetails: null,
+	};
 }
 function turn(id: string, status = "completed"): Turn {
 	return {
@@ -104,6 +111,10 @@ export class RemoteSession {
 				});
 				turns.push(current);
 			} else if (message.role === "assistant" && turns.length) {
+				if (message.stopReason === "error") {
+					turns[turns.length - 1].status = "failed";
+					turns[turns.length - 1].error = turnError();
+				} else if (message.stopReason === "aborted") turns[turns.length - 1].status = "interrupted";
 				const text = textOf(message);
 				if (text)
 					turns[turns.length - 1].items.push(this.#assistantItem(`${this.target.sessionId}-item-${index}`, text));
@@ -140,6 +151,12 @@ export class RemoteSession {
 			historyMode: "legacy",
 			modelProvider: this.target.model?.provider ?? "unknown",
 			model: this.target.model?.id ?? null,
+			supportedReasoningEfforts:
+				this.target.model?.thinking?.supportedLevels.map(level => ({
+					reasoningEffort: level.effort,
+					description: level.description,
+				})) ?? [],
+			defaultReasoningEffort: this.target.model?.thinking?.defaultLevel ?? null,
 			reasoningEffort:
 				this.target.thinkingLevel === "off"
 					? "none"
@@ -298,7 +315,7 @@ export class RemoteSession {
 			return {};
 		}
 		if (method !== "turn/start" && method !== "turn/steer")
-			throw new ProtocolError(-32601, "Unsupported XCSH remote method");
+			throw new ProtocolError(-32601, "Unsupported xcsh remote method");
 		for (const key of Object.keys(params))
 			if (
 				![
@@ -371,12 +388,16 @@ export class RemoteSession {
 	#finish(status: string): void {
 		if (!this.#active) return;
 		const active = this.#active;
+		const latest = this.history().at(-1);
+		if (status === "completed" && (latest?.status === "failed" || latest?.status === "interrupted"))
+			status = latest.status;
 		this.#active = undefined;
 		this.#emit("turn/completed", {
 			turn: {
 				...active,
 				status,
-				items: this.history().at(-1)?.items ?? [],
+				error: status === "failed" ? turnError() : null,
+				items: latest?.items ?? [],
 				completedAt: Math.floor(Date.now() / 1000),
 			},
 		});

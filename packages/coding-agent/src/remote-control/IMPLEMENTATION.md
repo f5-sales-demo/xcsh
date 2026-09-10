@@ -11,7 +11,7 @@ compatibility baseline. The port uses the production enrollment, refresh,
 pairing, and v3 relay contracts. See NOTICE.md and LICENSE. Test fixtures contain
 unmodified upstream initialization, thread-list, configuration, and model-list schemas.
 
-XCSH sends its own name, version, originator, installation identity, and selected
+xcsh sends its own name, version, originator, installation identity, and selected
 subscription credential. It does not invoke Codex, use Codex enrollment state,
 or run another agent against the terminal's session file.
 
@@ -30,7 +30,7 @@ or run another agent against the terminal's session file.
 - Registration heartbeats, owner collision rejection, and reconnecting TUI bridges.
 - Explicit errors for unsupported methods and model/input overrides.
 
-The `codexHome` wire field points to XCSH's remote directory. Its spelling is an
+The `codexHome` wire field points to xcsh's remote directory. Its spelling is an
 upstream protocol requirement, not a dependency on a Codex installation.
 
 ## Validation evidence
@@ -39,10 +39,9 @@ Observed failing tests preceded implementation for enrollment, selected auth,
 pairing, relay, sessions, IPC, routing, host registration, bridge, CLI, slash
 status, credential refresh, and local protocol dispatch.
 
-The live service accepted native XCSH enrollment (1617 ms), pairing, refresh, and
+The live service accepted native xcsh enrollment (1617 ms), pairing, refresh, and
 relay connection on 2026-09-09. Two real terminal sessions, using Luna and Astra,
-registered with distinct names and session-specific context. This establishes
-host-side behavior only. It does not establish iPhone discovery or interaction.
+registered with distinct names and session-specific context. These service checks preceded the manual iPhone confirmations below.
 
 Verification completed: 57 focused tests / 161 assertions; workspace lint and
 TypeScript checks; affected coding-agent suite (7291 passed, 561 skipped, zero
@@ -65,10 +64,10 @@ Codex-specific configuration, and the absence of Codex goals, collaboration pres
 and marketplace installations. Configuration and model responses pass pinned
 upstream schema validation. The full metadata/resume sequence passes against both
 real TUIs, including actual process output/exit delivery (19 ms Luna, 14 ms Astra).
-The latest phone retry and typed marker replies remain pending. The next relay
+Robin subsequently confirmed both Alpha and Beta typed round trips on the iPhone. The next relay
 retry confirmed successful metadata reads, isolating the remaining
 errors to the phone's non-PTY Git-status process requests. `process/spawn`, stdin,
-kill, output, and exit notifications now use native XCSH host processes with a
+kill, output, and exit notifications now use native xcsh host processes with a
 live-terminal working directory, client-scoped handles, replay suppression, timeouts,
 16 active-process limit, and bounded capture. PTY operations remain explicit errors.
 Disconnected clients lose their standalone processes, while TUI agents continue.
@@ -83,13 +82,30 @@ reasoning presentation preferences, and deduplicates client message IDs across
 request IDs. Empty extra skill-root setup is accepted; nonempty roots remain
 explicit errors. The phone-shaped typed turn passed against Luna (3551 ms) and
 Astra (3352 ms), with duplicate client-message submissions suppressed. The user
-has been asked to retry this latest deployed fix. No iPhone
-test is marked passed by automated checks.
+reported that Alpha accepted the prompt, transitioned to thinking, and replied
+`ALPHA-ORCHARD`. This establishes the first manual typed interoperability gate.
+Robin then reported Beta accepted a prompt without thinking or replying. Its
+selected Astra model rejected reasoning effort `none`. Provider discovery already
+advertised the valid effort enum, but generated model policies overwrote it with
+inferred capabilities. Discovered subscription thinking metadata is now preserved
+through registry refresh and cache load, and remote model listing exposes it.
+Provider errors now produce failed turns with a sanitized message instead of a
+silent completed turn. Regression tests cover Astra, Sol, Terra, and Luna.
+Observed red: five failures; green: 88 tests / 288 assertions, plus 102 registry
+tests / 854 assertions and the coding-agent TypeScript check. Live retries returned
+Alpha's marker in 3829 ms and Beta's in 3323 ms without duplicate prompts.
+Robin subsequently confirmed “beta worked”. Both manual typed routing checks now
+pass. All native voice checks remain pending; automated checks do not substitute
+for iPhone observations. Actual phone bootstrap sends four extra skill roots;
+nonempty root registration remains an explicit unsupported operation.
+
+Product labels and host names use lowercase `xcsh`. Existing `XCSH_` environment
+variable names retain their uppercase prefix.
 
 ## Work still required
 
-1. Pairing is confirmed; pass message loading and the first iPhone typed round trip; use sanitized method/error evidence to
-   resolve any additional phone protocol requirements.
+1. Pairing and both Alpha/Beta typed round trips are confirmed by Robin.
+   Complete the native voice gate.
 2. Complete history pagination and all live turn/tool event mappings, terminal
    versus remote interaction ownership, and durable retry identities.
 3. Implement native realtime transports, existing-call attachment, transcript
@@ -123,5 +139,5 @@ bun run --cwd packages/coding-agent test
 Pairing output is an intentional credential delivery surface. Never copy it into
 issues, PRs, fixtures, logs, or this file. The daemon's diagnostics contain method
 names, parameter names, numeric error codes, and timestamps; response bodies, session text, tokens, and raw audio
-are excluded. Enrollment/host state and credentials live in the user's XCSH
+are excluded. Enrollment/host state and credentials live in the user's xcsh
 remote directory with private directory/file permissions.

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { enrollRemoteHost, RemoteControlError } from "../../src/remote-control/enrollment";
 
 const identity = {
-	name: "XCSH · workstation",
+	name: "xcsh · workstation",
 	version: "21.22.0",
 	installationId: "fixture-installation",
 	os: "linux",
@@ -17,7 +17,7 @@ const response = {
 };
 
 describe("native remote enrollment", () => {
-	test("sends the pinned enrollment contract with XCSH identity and selected subscription", async () => {
+	test("sends the pinned enrollment contract with xcsh identity and selected subscription", async () => {
 		let observed: Request | undefined;
 		const result = await enrollRemoteHost(identity, auth, async request => {
 			observed = request;

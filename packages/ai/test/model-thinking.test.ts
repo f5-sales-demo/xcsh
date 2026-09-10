@@ -517,3 +517,22 @@ describe("model thinking runtime helpers", () => {
 		expect(model.thinking).toBeUndefined();
 	});
 });
+
+describe("discovered Codex model reasoning metadata", () => {
+	it.each(["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"])(
+		"preserves advertised effort choices for %s",
+		id => {
+			const thinking = createThinkingConfig(
+				[Effort.Low, Effort.Medium, Effort.High, Effort.XHigh, Effort.Max],
+				"effort",
+				id.endsWith("sol") ? Effort.Low : Effort.Medium,
+			);
+			const models: Model<Api>[] = [
+				{ ...createModel({ id, api: "openai-codex-responses", provider: "openai-codex" }), thinking },
+			];
+			applyGeneratedModelPolicies(models, { preserveDiscoveredThinking: true });
+			expect(models[0].thinking).toEqual(thinking);
+			expect(models[0].thinking?.supportedLevels.some(x => x.effort === "none")).toBe(false);
+		},
+	);
+});

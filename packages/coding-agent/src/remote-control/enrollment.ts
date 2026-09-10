@@ -1,7 +1,7 @@
 /**
  * Native TypeScript port of Codex remote-control enrollment (Apache-2.0).
  * Baseline: 3d2ee51ca2d5db578f328aa75e20aa22c0197c9a, protocol.rs/server_api.rs/auth.rs.
- * See NOTICE.md and LICENSE in this directory. XCSH identifies itself as XCSH.
+ * See NOTICE.md and LICENSE in this directory. xcsh identifies itself as xcsh.
  */
 export const CODEX_PROTOCOL_COMMIT = "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a";
 export const ENROLLMENT_URL = "https://chatgpt.com/backend-api/wham/remote/control/server/enroll";
