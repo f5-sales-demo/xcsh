@@ -1145,3 +1145,24 @@ The environment had no Codex, standalone Bun, repository or package dependencies
 Real tools, completed-work host restart/replay, compiled resume and cleanup
 passed. Enrollment and model output were synthetic and networking was disabled;
 this receipt does not exercise live voice or replace phone acceptance.
+
+## Realtime call identity
+
+Created WebRTC calls now use the owning thread ID when the client omits or sends
+null for `realtimeSessionId`. Existing-call attachment keeps the client's optional
+identity. Explicit empty IDs remain present in HTTP/sideband headers, matching
+the pinned Rust header builder. The same resolved identity reaches the started
+notification, persisted timeline and v3 reconnect headers. Reconnection does
+not create a second call-start event or timeline entry.
+
+Sixteen source-contract cases produced eight passes and eight failures before
+the repair, then 16 passes and 148 assertions afterward. The complete remote
+suite passed 389 tests, zero failures and 1856 assertions across 44 files
+(38.07 seconds). Workspace TypeScript, CLI bundling and the changed parity
+document's Markdown/terminology checks passed. This evidence is synthetic and
+does not establish additional iPhone or live model acceptance.
+
+The guarded coding-agent package suite passed 7730 tests, 561 skips, zero
+failures and 24593 assertions across 763 files (369.07 seconds). Runtime/test
+hashes remained unchanged. The existing compiled-artifact receipt predates this
+identity repair, so final compiled-package verification remains required.

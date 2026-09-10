@@ -27,6 +27,20 @@ Legacy v1 forwards completed commentary without the final-message marker and
 completed final output with it. The completed-output checkpoint below verifies
 that distinction through the native adapter.
 
+## Call identity source contract
+
+For WebRTC call creation, omitted or null realtime session IDs now default to
+the owning thread ID, matching the pinned `build_realtime_session_config`.
+Client-created calls preserve the client's optional identity, including null.
+Explicit strings, including the empty string, remain unchanged. The resolved
+identity is shared by call creation headers, sideband headers, the started
+notification and persisted timeline items. A v3 sideband reconnect retains it
+without creating a second started notification or history entry.
+
+Sixteen source-contract cases cover both transports, v1/v3, omitted/null/explicit/
+empty IDs and v3 reconnection. They reproduce eight failures before the repair.
+This establishes automated protocol behavior; no new phone acceptance is claimed.
+
 ## Completed voice output
 
 Legacy v1 now forwards completed commentary and final text items through the

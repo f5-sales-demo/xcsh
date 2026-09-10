@@ -101,14 +101,20 @@ export class NativeVoice {
 			const auth = await this.deps.authenticate();
 			if (this.#state !== "opening") throw new Error("Voice stopped during authentication");
 			const version = callConfig?.version ?? config!.version;
-			const sessionId = typeof params.realtimeSessionId === "string" ? params.realtimeSessionId : null;
+			// Pinned created calls default to their owning thread; existing calls retain the client's optional identity.
+			const sessionId =
+				typeof params.realtimeSessionId === "string"
+					? params.realtimeSessionId
+					: callConfig && typeof params.threadId === "string"
+						? params.threadId
+						: null;
 			const headers: Record<string, string> = {
 				Authorization: `Bearer ${auth.accessToken}`,
 				"ChatGPT-Account-Id": auth.accountId,
 				originator: "xcsh",
 				"openai-alpha": version === "v3" ? "quicksilver=v2" : "quicksilver=v1",
 			};
-			if (sessionId) headers["x-session-id"] = sessionId;
+			if (sessionId !== null) headers["x-session-id"] = sessionId;
 			if (callConfig) {
 				stage = "call-create";
 				const call = await (this.deps.createCall ?? createVoiceCall)(
@@ -295,7 +301,7 @@ export class NativeVoice {
 				"ChatGPT-Account-Id": auth.accountId,
 				originator: "xcsh",
 				"openai-alpha": "quicksilver=v2",
-				...(this.#config?.realtimeSessionId ? { "x-session-id": this.#config.realtimeSessionId } : {}),
+				...(this.#config?.realtimeSessionId != null ? { "x-session-id": this.#config.realtimeSessionId } : {}),
 			});
 			if (this.#state !== "reconnecting") {
 				socket.close();
