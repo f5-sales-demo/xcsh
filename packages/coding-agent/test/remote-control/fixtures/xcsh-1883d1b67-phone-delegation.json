@@ -1,0 +1,1965 @@
+{
+  "source": "xcsh",
+  "sourceCommit": "1883d1b6796216c31a1eceb94e65cefb0f3125cc",
+  "hostCaptureSha256": "adc4f54286db3f9e85368b3ee974ff2ee577863775278d4e2bd01f37552028f5",
+  "voiceCaptureSha256": "8f6b10ebbc8a67608cd92fec42b3153c3dcd0d8996829bba59ec045955994407",
+  "scope": "One iPhone file-create/read-back conversation, selected phone relay client. Both source capture files have complete boundaries. Sideband offsets align manifest wall-clock origins; no direct media capture.",
+  "redaction": "Private speech, paths, SDP and opaque values remain redacted; identities consistently renamed.",
+  "scenario": {
+    "name": "native-beta-delegation",
+    "workModel": "gpt-6-astra",
+    "transport": "webrtc",
+    "version": "v3",
+    "spokenReadBackConfirmed": true,
+    "fileContentsVerified": true,
+    "events": [
+      {
+        "afterStartMs": 0,
+        "direction": "in",
+        "message": {
+          "method": "thread/realtime/start",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "includeStartupContext": false,
+            "codexResponseHandoffPrefix": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 0
+            },
+            "prompt": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 7880
+            },
+            "realtimeEndInstructions": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 485
+            },
+            "model": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 16
+            },
+            "flushTranscriptTailOnSessionEnd": true,
+            "codexResponseHandoffChannelPrefixes": {
+              "commentary": [
+                {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 12
+                },
+                {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 8
+                }
+              ],
+              "final": [
+                {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 7
+                },
+                {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 10
+                }
+              ]
+            },
+            "initialItems": [
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 298
+                },
+                "role": "developer"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 473
+                },
+                "role": "user"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 13
+                },
+                "role": "assistant"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 594
+                },
+                "role": "user"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 13
+                },
+                "role": "assistant"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 29
+                },
+                "role": "user"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 11
+                },
+                "role": "assistant"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 141
+                },
+                "role": "user"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 259
+                },
+                "role": "assistant"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 1202
+                },
+                "role": "user"
+              },
+              {
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 165
+                },
+                "role": "developer"
+              }
+            ],
+            "codexResponseHandoffMode": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 7
+            },
+            "codexResponsesAsItems": false,
+            "realtimeSessionId": {
+              "$ref": "native-2"
+            },
+            "transport": {
+              "type": "webrtc",
+              "sdp": {
+                "$redacted": "sdp",
+                "valueType": "string",
+                "bytes": 1508
+              }
+            },
+            "voice": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            },
+            "realtimeStartInstructions": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 873
+            },
+            "outputModality": "audio",
+            "version": "v3"
+          },
+          "id": {
+            "$ref": "native-3"
+          }
+        }
+      },
+      {
+        "afterStartMs": 681.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/started",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-4"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "realtimeSessionStarted"
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 681.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/completed",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-4"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "realtimeSessionStarted"
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 681.9,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/started",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "realtimeSessionId": {
+              "$ref": "native-2"
+            },
+            "version": "v3"
+          }
+        }
+      },
+      {
+        "afterStartMs": 682.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/sdp",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "sdp": {
+              "$redacted": "sdp",
+              "valueType": "string",
+              "bytes": 1679
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 5730,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/started",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-5"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "transcriptSegment",
+              "role": "user",
+              "text": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 0
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 5730.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 7
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 5730.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 7
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 6329.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 6329.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 6710,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 6710.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 7325.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 6
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 7325.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 6
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 7729.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 7729.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 8314.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 6
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 8314.8,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 6
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 8714.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 4
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 8714.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 4
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 9110.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 4
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 9110.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 4
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 10186.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 10186.8,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 10311.9,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 10312,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 10937.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 10937.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 11325.3,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 11325.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 11920.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 11920.7,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 12748.3,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 12
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 12748.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 12
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 13712.8,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 13713,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 14129.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 14129.8,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 14731,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 7
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 14731.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 7
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 15374.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 15374.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 15522.9,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 15523.1,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 16153.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 16153.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 16805.8,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 6
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 16806,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 6
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 16903.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 16903.7,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 17399.3,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 17399.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 17645.1,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-5"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 17645.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 17648.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/itemAdded",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "type": "handoff_request",
+              "handoff_id": {
+                "$ref": "native-6"
+              },
+              "item_id": {
+                "$ref": "native-6"
+              },
+              "input_transcript": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 154
+              },
+              "active_transcript": [
+                {
+                  "role": "user",
+                  "text": {
+                    "$redacted": "string",
+                    "valueType": "string",
+                    "bytes": 155
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18031.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/started",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-7"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "transcriptSegment",
+              "role": "assistant",
+              "text": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 0
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18031.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-7"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 9
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18031.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 9
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18445.3,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-7"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18445.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18447.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/completed",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-5"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "transcriptSegment",
+              "role": "user",
+              "text": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 155
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18447.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/done",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "user",
+            "text": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 155
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18644.8,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-7"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 18644.9,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 19064.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-7"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 4
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 19064.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 4
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 19248.3,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-7"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 19248.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 21324.1,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/completed",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-7"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "transcriptSegment",
+              "role": "assistant",
+              "text": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 28
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 21324.3,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/done",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "text": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 28
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 37282.8,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/started",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-8"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "transcriptSegment",
+              "role": "assistant",
+              "text": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 0
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 37283,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-8"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 37283,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 8
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 37451,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-8"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 1
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 37451.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 1
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 37859.9,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-8"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 37860,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 10
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 38051.1,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-8"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 38051.2,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 5
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 38214.6,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "itemId": {
+              "$ref": "native-8"
+            },
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 38214.7,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/delta",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "delta": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 3
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 40519.9,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/completed",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-8"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "transcriptSegment",
+              "role": "assistant",
+              "text": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 27
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 40520,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/transcript/done",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "role": "assistant",
+            "text": {
+              "$redacted": "string",
+              "valueType": "string",
+              "bytes": 27
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 42356.7,
+        "direction": "in",
+        "message": {
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            }
+          },
+          "method": "thread/realtime/stop",
+          "id": {
+            "$ref": "native-9"
+          }
+        }
+      },
+      {
+        "afterStartMs": 42360.3,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/started",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-10"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "realtimeSessionClosed",
+              "outcome": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 5
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 42360.4,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/item/completed",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "item": {
+              "id": {
+                "$ref": "native-10"
+              },
+              "realtimeSessionId": {
+                "$ref": "native-2"
+              },
+              "type": "realtimeSessionClosed",
+              "outcome": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 5
+              }
+            }
+          }
+        }
+      },
+      {
+        "afterStartMs": 42360.5,
+        "direction": "out",
+        "message": {
+          "method": "thread/realtime/closed",
+          "params": {
+            "threadId": {
+              "$ref": "native-1"
+            },
+            "reason": "requested"
+          }
+        }
+      }
+    ],
+    "sideband": [
+      {
+        "afterStartMs": 17646.2,
+        "direction": "in",
+        "message": {
+          "type": "delegation.created",
+          "item": {
+            "id": {
+              "$ref": "native-6"
+            },
+            "type": "delegation",
+            "content": [
+              {
+                "type": "input_text",
+                "text": {
+                  "$redacted": "string",
+                  "valueType": "string",
+                  "bytes": 154
+                }
+              }
+            ],
+            "handoff_id": {
+              "$ref": "native-11"
+            },
+            "target": "client",
+            "user_bidi_turn_id": {
+              "$ref": "native-12"
+            }
+          },
+          "offset_ms": 15200
+        }
+      },
+      {
+        "afterStartMs": 36696.3,
+        "direction": "out",
+        "message": {
+          "type": "delegation.context.append",
+          "delegation_item_id": {
+            "$ref": "native-6"
+          },
+          "channel": "speakable",
+          "content": [
+            {
+              "type": "input_text",
+              "text": {
+                "$redacted": "string",
+                "valueType": "string",
+                "bytes": 67
+              }
+            }
+          ]
+        }
+      },
+      {
+        "afterStartMs": 36799.6,
+        "direction": "in",
+        "message": {
+          "type": "delegation.context.appended",
+          "delegation_item_id": {
+            "$ref": "native-6"
+          },
+          "end_ms": 34800,
+          "start_ms": 34600
+        }
+      }
+    ]
+  }
+}

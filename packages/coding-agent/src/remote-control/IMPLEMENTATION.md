@@ -330,6 +330,17 @@ retains pinned tool-item names and delegation routing targets.
 
 Each repair was observed failing before implementation. Final focused validation
 passes 162 tests / 610 assertions. The completed-result-only native output still
-differs from the reference's commentary/speakable streaming, and the matching
-native live capture remains pending. The full package check is running through
-the repository's guarded runner; its result will be recorded separately.
+differs from the reference's commentary/speakable streaming.
+
+The matching native Beta phone task now passes: Robin confirmed spoken read-back
+and the file contains exactly `REFERENCE-HARBOR`. One delegation and one
+acknowledged speakable result appear in the completed native captures. The host
+and voice files have verified contiguous event sequences and completion footers;
+sanitized fixtures and a comparison inventory preserve source hashes. Live
+notifications include the newly implemented handoff item and normal closure.
+The normal host was restored with both sessions connected and their models and
+histories preserved. Full package validation through the guarded runner passed
+7400 tests, 561 skips, zero failures / 22882 assertions across 736 files in 321.88
+seconds. Workspace formatting/TypeScript, staged PII and the repair commit's
+secret scan passed. The comparison's exact differences and remaining coverage
+limits are recorded in `PARITY.md`.

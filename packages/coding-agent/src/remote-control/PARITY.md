@@ -36,12 +36,12 @@ that the continuing recorder has a final completion footer.
 
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
-| Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a matching new native capture is pending |
+| Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a new native Beta file-task capture also passed |
 | Session and transcript items | Started/completed item pairs and per-item transcript deltas surround legacy voice notifications | Missing behavior implemented; replay of both recorded notification sequences passes with synthetic speech and pinned item schemas |
 | Durable speech boundaries | Start, user segment, assistant segment, close in canonical timeline | Stored as voice provenance records; exposing the complete mixed canonical timeline through `thread/timeline/list` remains pending |
 | Separate subscribers | Identical notifications can be sent to multiple relay clients | Comparison selects the phone client from relay envelopes; it does not deduplicate legitimate deliveries within that client |
 | Shutdown | Both calls closed with reason `requested` | Closure waits for accepted history writes; tests cover partial speech, repeated closure, late events, and cancellation during startup flush |
-| Work delegation | After repairing the reference setup, one phone delegation created the file and read back the correct contents; Robin confirmed the verbal result | Missing handoff notification implemented and recorded notification sequence passes in replay; matching native live capture is pending |
+| Work delegation | After repairing the reference setup, one phone delegation created the file and read back the correct contents; Robin confirmed the verbal result | Matching native phone task passed with one delegation, correct file and spoken read-back, handoff notification, and normal closure |
 | Delegated output streaming | Five commentary context chunks, then five speakable chunks; all ten acknowledged | Native currently returns the completed result as speakable context; phase-aware streaming remains a difference |
 | Discovery and history | Phone requests included skills roots/listing and file reads | These include unsupported native operations; repair and corresponding reference fixtures remain pending |
 | Protocol metadata | Initial recorder redacted some valid method and item-type names | Future recordings retain pinned method literals and canonical item types; the original redactions are not reconstructed |
@@ -106,5 +106,39 @@ Legacy v1 handoffs retain distinct handoff and item IDs. The recorded method
 sequence now passes with synthetic speech; the original private strings remain
 redacted. Additional regression tests cover the handoff payload and duplicates.
 Future recordings retain the pinned tool-item types and routing target while
-continuing to redact private contents. This repair does not establish output
-streaming parity or replace the pending matching native phone capture.
+continuing to redact private contents. The matching native phone capture below
+verifies the file task; output streaming still differs.
+
+## Matching native phone capture
+
+Robin performed the identical file task in xcsh Remote Beta and confirmed the
+spoken answer `REFERENCE-HARBOR`. The native file contains exactly that marker
+(16 bytes); Codex added a newline (17 bytes). The spoken instruction did not
+require a newline. The work models were preserved: reference Sol and native
+Astra. This is a task/protocol comparison, not a controlled same-model benchmark.
+
+The native call emitted one delegation, one speakable result, one acknowledgement,
+and a normal close event. Its finalized host trace has 937 events; its voice
+trace has 79. Both completion boundaries and contiguous event sequences were
+verified. Selecting the phone client yields 87 voice protocol events, including
+one handoff item notification. There are three completed speech transcripts
+(user, assistant, assistant), compared with two in the reference. The live
+recordings therefore have different transcript and chunk counts. Host-observed
+start notification arrived at 681.9 ms; the call lasted 42361 ms. The duration
+includes manual interaction, and neither value measures first audible audio.
+
+The derived native fixture is
+`../../test/remote-control/fixtures/xcsh-1883d1b67-phone-delegation.json`; the
+inventory and semantic review are in `phone-delegation-comparison.json` beside
+it. Both retain source-capture SHA-256 values. Strict event comparison is not
+equal and requires semantic review: speech chunking, timestamp values, old
+reference redactions, and the observed extra assistant segment differ. The
+commentary/speakable streaming difference remains implementation work. No
+complete feature-parity claim is made.
+
+After capture finalization, the normal native host was restored. Both dedicated
+terminal sessions remain connected with their existing models and histories.
+Validation: 162 focused tests / 610 assertions; guarded full package suite 7400
+passes, 561 skips, zero failures / 22882 assertions across 736 files in 321.88
+seconds. Workspace formatting and TypeScript checks, staged PII, and the repair
+commit's secret scan passed.
