@@ -137,6 +137,16 @@ not reference wire recordings or new manual iPhone acceptance. Abrupt packaged
 host loss, the remaining relay replay matrix and final phone lifecycle checks
 remain open.
 
+Native SDK model-restoration tests now preserve Sol, Luna, Terra and Astra
+identities across new sessions, explicit/implicit resume, branch and handoff.
+The repair persists the selected model without requiring an assistant response.
+A saved extension model is retried after provider registration instead of
+retaining an early settings fallback; its saved reasoning level is preserved.
+The test registries and credentials are synthetic. This verifies native
+persistence behavior, not live model capability parity or the original cause of
+Alpha's earlier fallback. Final CLI resume and delegated tasks with each actual
+model remain open.
+
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
 | Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a new native Beta file-task capture also passed |

@@ -547,3 +547,29 @@ Workspace TypeScript and formatting pass. Final guarded package verification:
 347.44 seconds. Runtime and tests stayed unchanged during the full run. Markdown,
 terminology, staged PII, secret and whitespace checks pass. The complete remaining
 objective remains tracked in `ACCEPTANCE.md`; no new phone acceptance is claimed.
+
+Model persistence tests reproduced lost work-model selection before an assistant
+response existed to infer it. New sessions, handoff storage and branches now
+record their actual selected model. SDK resume also records an explicit launch
+override, so a later implicit resume does not silently recover the prior model.
+Eight new/explicit-resume cases and eight branch/handoff cases failed before
+their repairs and now pass for Sol, Luna, Terra and Astra identities. Four tree
+navigation model checks already passed and remain regression coverage.
+
+A separate SDK test reproduced a saved extension model being replaced by a
+settings fallback because the first lookup ran before provider registration.
+Resume now retries unresolved saved selection after extensions and background
+discovery, preserves the originally requested reasoning level when restoration
+succeeds, and derives tool-loading mode from the final model. Existing explicit
+reasoning behavior remains intact after repairing a regression caught by its
+test. These cases use isolated registry definitions and synthetic credentials;
+they do not exercise the live model services or establish the exact cause of the
+earlier Alpha fixture's fallback.
+
+Focused remote/SDK/branching/handoff verification: 290 passes, three existing
+live-API skips, zero failures, 1207 assertions. Workspace TypeScript and formatting
+pass. Final guarded package run: 7511 passes, 561 skips, zero failures, 23421
+assertions across 746 files in 346.02 seconds. Runtime and tests were unchanged
+throughout that run. Markdown/terminology, staged PII, secret and whitespace checks
+pass. Packaged CLI restoration and all four live delegated model tasks remain
+acceptance gates in `ACCEPTANCE.md`.

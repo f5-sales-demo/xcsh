@@ -4251,6 +4251,7 @@ export class AgentSession {
 			this.#pendingNextTurnMessages = [];
 			this.#scheduledHiddenNextTurnGeneration = undefined;
 
+			if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
 			this.sessionManager.appendThinkingLevelChange(this.thinkingLevel);
 			this.sessionManager.appendServiceTierChange(this.serviceTier ?? null);
 			if (nextDiscoverySessionToolNames) {
@@ -5079,6 +5080,7 @@ export class AgentSession {
 				await this.sessionManager.newSession();
 				this.agent.reset();
 				this.agent.sessionId = this.sessionManager.getSessionId();
+				if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
 				this.#steeringMessages = [];
 				this.#followUpMessages = [];
 				this.#pendingNextTurnMessages = [];
@@ -7196,6 +7198,11 @@ export class AgentSession {
 			this.#syncTodoPhasesFromBranch();
 			this.#syncRoutingStateFromBranch();
 			this.agent.sessionId = this.sessionManager.getSessionId();
+			if (
+				this.model &&
+				this.sessionManager.buildSessionContext().models.default !== `${this.model.provider}/${this.model.id}`
+			)
+				this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
 
 			// Reload messages from entries (works for both file and in-memory mode)
 			const sessionContext = this.buildDisplaySessionContext();
