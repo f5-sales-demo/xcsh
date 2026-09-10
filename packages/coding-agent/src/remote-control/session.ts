@@ -165,7 +165,7 @@ export class RemoteSession {
 					if (!this.#active) return undefined;
 					const item = this.#active.items.findLast(
 						value =>
-							value.type === "dynamicToolCall" &&
+							["dynamicToolCall", "commandExecution", "fileChange"].includes(String(value.type)) &&
 							value.status === "inProgress" &&
 							String(value.id).endsWith(`:tool:${toolCallId}`),
 					);

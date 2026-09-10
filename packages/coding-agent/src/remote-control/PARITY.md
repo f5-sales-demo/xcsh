@@ -415,3 +415,9 @@ the core request_user_input event with the pinned instruction to answer in the
 app. Local adapter/transport tests cover these paths and preserve client-managed
 suppression, routing and output budgets. Dedicated execution/patch/permission
 request protocols and live input/approval acceptance remain open.
+
+Native commandExecution/fileChange items now participate in ordinary pending-input
+discovery alongside dynamicToolCall items. Real-session tests preserve one
+execution and answer owner across reattachment, decline and question cancellation;
+completed-plan provenance remains separately checked. All three item kinds feed
+the voice mirror. No additional phone decision acceptance is claimed.

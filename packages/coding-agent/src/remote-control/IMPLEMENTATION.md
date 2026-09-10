@@ -1677,14 +1677,41 @@ without changing timeout limits. Eight alternating comparisons preserved identic
 schema and rows, with measured setup reduced from 34–53 ms to 1.9–2.5 ms. The
 23 SQLite tests also passed after this fixture repair.
 
-Read-only follow-up found that ordinary interaction lookup still accepts only
-active dynamicToolCall items. Native commandExecution/fileChange prompt routing
-needs its own regression and repair; the separate completed-plan provenance rule
-must remain intact. Existing UI confirmations use the selection broker and do not
-carry dedicated command/patch permission metadata.
+Read-only follow-up found that ordinary interaction lookup accepted only active
+dynamicToolCall items. The native-tool repair below addresses that gap while
+preserving the separate completed-plan provenance rule. Existing UI confirmations
+use the selection broker and do not carry dedicated command/patch permission
+metadata.
 
 Final verification: 764 remote tests / 2935 assertions across 61 files; the package
 suite passed 8151 tests with 561 skips, zero failures and 29190 assertions across
 787 files (462.88 seconds). Workspace lint/types, CLI bundle, documentation and
 staged privacy/secret checks passed. All eight runtime/test/template source hashes
 remained unchanged through the final run. The phone runtime remains unchanged.
+
+## Native-tool input discovery
+
+Ordinary pending-input lookup now accepts active commandExecution and fileChange
+items as well as dynamicToolCall items. It still requires the same live turn,
+in-progress status and exact tool-call identity. Completed plan reviews retain
+their separate session/tool provenance checks.
+
+A real AgentSession matrix exercises all three item kinds before and after remote
+adapter reattachment. Phone answers, terminal answers, declines and cancelled
+questions resolve through the original broker. Each tool executes once; only an
+affirmative answer permits the fixture action. Late replies and new ordinary
+requests from completed tools are rejected. The fixture uses the session tool
+registry, matching production classification. Against the original predicate,
+all 16 native-tool cases failed while eight generic cases passed.
+
+The voice bridge test now covers all three item kinds. The focused run passed
+42 tests and 325 assertions across native-tool, plan-provenance and voice-mirroring
+suites. These are local execution and routing checks, not new iPhone acceptance.
+Dedicated protocol approval metadata, live decision acceptance and the other
+completion-audit requirements remain open.
+
+Final source verification passed 790 remote tests / 3205 assertions across 62
+files and 8177 package tests with 561 skips, zero failures and 29460 assertions
+across 788 files (401.15 seconds). Workspace types/lint, CLI bundle, documentation
+and staged privacy/secret checks passed. All three runtime/test source hashes
+remained unchanged through verification.

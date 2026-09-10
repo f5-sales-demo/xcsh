@@ -179,76 +179,80 @@ test.each(["thinking", "commentary", "bemTags"])(
 	},
 );
 
-test("the actual remote session forwards an input request without answering it", async () => {
-	const { spyOn } = await import("bun:test");
-	const { RemoteSession } = await import("../../src/remote-control/session");
-	const { SessionManager } = await import("../../src/session/session-manager");
-	const { UserInteractions } = await import("../../src/session/user-interactions");
-	const broker = new UserInteractions();
-	const manager = SessionManager.inMemory();
-	let listener = (_event: any) => {};
-	const mirrored: string[] = [];
-	const begin = spyOn(NativeVoice.prototype, "start").mockResolvedValue();
-	const end = spyOn(NativeVoice.prototype, "stop").mockResolvedValue();
-	const mirror = spyOn(NativeVoice.prototype, "mirrorText").mockImplementation(text => {
-		mirrored.push(text);
-	});
-	const target: any = {
-		sessionId: "fixture",
-		messages: [],
-		sessionManager: manager,
-		userInteractions: broker,
-		subscribe: (fn: typeof listener) => {
-			listener = fn;
-			return () => {};
-		},
-	};
-	const remote = new RemoteSession(target);
-	try {
-		await remote.call("voice", "thread/realtime/start", { ...start, threadId: "fixture" });
-		listener({ type: "agent_start" });
-		const message: any = {
-			role: "assistant",
-			timestamp: 1,
-			content: [{ type: "toolCall", id: "ask", name: "ask", arguments: {} }],
+test.each([undefined, "command", "fileChange"] as const)(
+	"the actual remote session forwards a %s input request without answering it",
+	async kind => {
+		const { spyOn } = await import("bun:test");
+		const { RemoteSession } = await import("../../src/remote-control/session");
+		const { SessionManager } = await import("../../src/session/session-manager");
+		const { UserInteractions } = await import("../../src/session/user-interactions");
+		const broker = new UserInteractions();
+		const manager = SessionManager.inMemory();
+		let listener = (_event: any) => {};
+		const mirrored: string[] = [];
+		const begin = spyOn(NativeVoice.prototype, "start").mockResolvedValue();
+		const end = spyOn(NativeVoice.prototype, "stop").mockResolvedValue();
+		const mirror = spyOn(NativeVoice.prototype, "mirrorText").mockImplementation(text => {
+			mirrored.push(text);
+		});
+		const target: any = {
+			sessionId: "fixture",
+			getToolByName: () => ({ executionKind: kind }),
+			messages: [],
+			sessionManager: manager,
+			userInteractions: broker,
+			subscribe: (fn: typeof listener) => {
+				listener = fn;
+				return () => {};
+			},
 		};
-		listener({ type: "message_end", message });
-		const result = broker.request(
-			{ kind: "select", title: "Choose", options: ["Alpha", "Beta"], toolCallId: "ask" },
-			() => new Promise(() => {}),
-		);
-		expect(mirrored).toHaveLength(1);
-		expect(mirrored[0]).toStartWith("I need your input. Please respond in the app.\n\n");
-		expect(JSON.parse(mirrored[0].split("\n\n")[1])).toMatchObject({
-			type: "request_user_input",
-			call_id: "ask",
-			questions: [
-				{
-					options: [
-						{ label: "Alpha", description: "" },
-						{ label: "Beta", description: "" },
-					],
-				},
-			],
-		});
-		expect(remote.pendingRequests()).toHaveLength(1);
-		const id = broker.pending()[0].id;
-		await remote.call("answer", "session/interaction/respond", {
-			threadId: "fixture",
-			requestId: id,
-			response: { answers: { [id]: { answers: ["Alpha"] } } },
-		});
-		expect(await result).toBe("Alpha");
-		expect(mirrored).toHaveLength(1);
-	} finally {
-		broker.cancelAll();
-		await remote.close();
-		begin.mockRestore();
-		end.mockRestore();
-		mirror.mockRestore();
-		await manager.close();
-	}
-});
+		const remote = new RemoteSession(target);
+		try {
+			await remote.call("voice", "thread/realtime/start", { ...start, threadId: "fixture" });
+			listener({ type: "agent_start" });
+			const message: any = {
+				role: "assistant",
+				timestamp: 1,
+				content: [{ type: "toolCall", id: "ask", name: "ask", arguments: {} }],
+			};
+			listener({ type: "message_end", message });
+			const result = broker.request(
+				{ kind: "select", title: "Choose", options: ["Alpha", "Beta"], toolCallId: "ask" },
+				() => new Promise(() => {}),
+			);
+			expect(mirrored).toHaveLength(1);
+			expect(mirrored[0]).toStartWith("I need your input. Please respond in the app.\n\n");
+			expect(JSON.parse(mirrored[0].split("\n\n")[1])).toMatchObject({
+				type: "request_user_input",
+				call_id: "ask",
+				questions: [
+					{
+						options: [
+							{ label: "Alpha", description: "" },
+							{ label: "Beta", description: "" },
+						],
+					},
+				],
+			});
+			expect(remote.pendingRequests()).toHaveLength(1);
+			const id = broker.pending()[0].id;
+			await remote.call("answer", "session/interaction/respond", {
+				threadId: "fixture",
+				requestId: id,
+				response: { answers: { [id]: { answers: ["Alpha"] } } },
+			});
+			expect(await result).toBe("Alpha");
+			expect(mirrored).toHaveLength(1);
+		} finally {
+			broker.cancelAll();
+			await remote.close();
+			begin.mockRestore();
+			end.mockRestore();
+			mirror.mockRestore();
+			await manager.close();
+		}
+	},
+);
 
 const work = (id: string) => ({
 	type: "delegation.created",
