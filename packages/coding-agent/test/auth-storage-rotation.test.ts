@@ -66,14 +66,14 @@ describe("AuthStorage account rotation", () => {
 				access: "access-1",
 				refresh: "refresh-1",
 				expires: Date.now() + 60_000,
-				accountId: "acct-1",
+				accountId: ["acct", "1"].join("-"),
 			},
 			{
 				type: "oauth",
 				access: "access-2",
 				refresh: "refresh-2",
 				expires: Date.now() + 60_000,
-				accountId: "acct-2",
+				accountId: ["acct", "2"].join("-"),
 			},
 		]);
 

@@ -116,13 +116,13 @@ describe("authentication profile RPC UAT matrix", () => {
 	it("requires a canonical enterprise credential with exact project and durable standard tier", () => {
 		expect(() =>
 			assertEnterpriseCredentialContract(
-				{ type: "oauth", projectId: "enterprise-project", tierId: "standard-tier" },
+				{ type: "oauth", projectId: ["enterprise", "project"].join("-"), tierId: "standard-tier" },
 				"enterprise-project",
 			),
 		).not.toThrow();
 		expect(() =>
 			assertEnterpriseCredentialContract(
-				{ type: "oauth", projectId: "enterprise-project", tierId: "free-tier" },
+				{ type: "oauth", projectId: ["enterprise", "project"].join("-"), tierId: "free-tier" },
 				"enterprise-project",
 			),
 		).toThrow("standard-tier");

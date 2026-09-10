@@ -9,6 +9,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { ensureEmbeddedAddon } = require("./embedded-extraction");
 const { getInstalledNativeCandidates, loadInstalledBeforeFallback, tryLoadCandidates } = require("./installed-paths");
+const { exposeNativeApi } = require("./public-api");
 
 function getNativesDir() {
 	const xdgDataHome = process.env.XDG_DATA_HOME;
@@ -273,7 +274,7 @@ function loadNative() {
 	throw new Error(`Failed to load pi_natives native addon for ${addonLabel}.\n\nTried:\n${details}\n\n${helpMessage}`);
 }
 
-module.exports = loadNative();
+module.exports = exposeNativeApi(loadNative());
 
 // --- generated const enum exports (do not edit) ---
 module.exports.AstMatchStrictness = {

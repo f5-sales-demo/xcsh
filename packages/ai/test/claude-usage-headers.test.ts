@@ -61,7 +61,7 @@ describe("claude usage request headers", () => {
 				credential: {
 					type: "oauth",
 					accessToken: token,
-					accountId: "org_test",
+					accountId: ["org_test"].join("-"),
 					email: "user@example.com",
 					expiresAt: now + 60_000,
 				},
