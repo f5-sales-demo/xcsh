@@ -1,0 +1,25 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+Models:   LiteLLM   (tab to cycle)
+Active: litellm/gpt-5.6-sol (inherit)
+Tab/Shift+Tab: provider · Enter: choose
+Ctrl+R: refresh · Ctrl+L: login · Esc: back
+
+>
+
+
+
+
+  Anthropic › Claude
+❯ Claude Opus 5 [anthropic/claude-opus-5]
+  Claude Sonnet 5 [anthropic/claude-sonnet-5]
+  Claude Haiku 4.5 [anthropic/claude-haiku-4-5]
+
+  OpenAI › GPT-5.6
+  GPT-5.6 Terra [litellm/gpt-5.6-terra]  DEFAULT  (medium)
+  GPT-5.6 Luna [litellm/gpt-5.6-luna]  SMOL  (low)
+  (1/6)
+
+  Model Name: Claude Opus 5
+
+────────────────────────────────────────────────────────────────────────────────────────────────────

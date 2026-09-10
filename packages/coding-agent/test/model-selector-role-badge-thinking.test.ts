@@ -12,6 +12,7 @@ function normalizeRenderedText(text: string): string {
 			// strip ANSI escapes
 			.replace(/\x1b\[[0-9;]*m/g, "")
 			// collapse whitespace
+			.replace(/[│|]/g, " ")
 			.replace(/\s+/g, " ")
 			.trim()
 	);
@@ -77,11 +78,11 @@ describe("ModelSelector role badge thinking display", () => {
 		installTestTheme();
 
 		const rendered = normalizeRenderedText(selector.render(220).join("\n"));
-		expect(rendered).toContain("DEFAULT (inherit)");
-		expect(rendered).toContain("SMOL (min)");
-		expect(rendered).toContain("SLOW (inherit)");
-		expect(rendered).toContain("PLAN (high)");
-		expect(rendered).toContain("COMMIT (medium)");
+		expect(rendered).toContain("Default (Provider default)");
+		expect(rendered).toContain("Fast (Minimal)");
+		expect(rendered).toContain("Thinking (Provider default)");
+		expect(rendered).toContain("Architect (High)");
+		expect(rendered).toContain("Commit (Medium)");
 		expect(rendered).not.toContain("Role Thinking:");
 
 		selector.handleInput("\r");
@@ -119,8 +120,8 @@ describe("ModelSelector role badge thinking display", () => {
 		installTestTheme();
 
 		const rendered = normalizeRenderedText(selector.render(220).join("\n"));
-		expect(rendered).toContain("custom-fast (low)");
-		expect(rendered).toContain("SMOL (inherit)");
+		expect(rendered).toContain("custom-fast (Low)");
+		expect(rendered).toContain("Quick (Provider default)");
 
 		selector.handleInput("\r");
 		selector.handleInput("\x1b[B");

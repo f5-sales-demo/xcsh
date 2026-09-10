@@ -1,0 +1,13 @@
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+Select provider to login:
+
+Type to filter providers:
+>
+
+❯ Add provider…
+  No providers configured
+
+  Type to filter providers · Enter: select · Right: details · Esc: clear/back
+
+────────────────────────────────────────────────────────────────────────────────────────────────────

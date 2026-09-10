@@ -1,5 +1,6 @@
 import { getOAuthProviders, type OAuthProviderInfo } from "@f5-sales-demo/pi-ai";
 import type { ProviderAccessState, ProviderPickerMetadata } from "../../config/model-registry";
+import { getProviderDisplayName } from "./provider-presentation";
 
 export type LoginOption = OAuthProviderInfo & {
 	kind: "local" | "oauth";
@@ -14,6 +15,7 @@ export interface ProviderManagementOptions {
 	providerInventory: Iterable<string>;
 	configuredProviderIds: Iterable<string>;
 	providerAllowlist: readonly string[];
+	excludedProviderIds?: Iterable<string>;
 	getAccessState(providerId: string): ProviderAccessState | undefined;
 	getPickerMetadata(providerId: string): ProviderPickerMetadata | undefined;
 	hasStoredCredential(providerId: string): boolean;
@@ -26,7 +28,7 @@ function catalogOption(providerId: string, catalog: readonly LoginOption[]): Log
 		catalog.find(option => option.id === providerId) ?? {
 			id: providerId,
 			kind: "oauth",
-			name: providerId,
+			name: getProviderDisplayName(providerId),
 			available: true,
 			action: "manage-only",
 		}
@@ -43,8 +45,10 @@ export function buildProviderManagementOptions(options: ProviderManagementOption
 	const inventory = new Set(options.providerInventory);
 	const configured = new Set(options.configuredProviderIds);
 	const allowlisted = new Set(options.providerAllowlist);
+	const excluded = new Set(options.excludedProviderIds ?? []);
 	const providerIds = new Set<string>([...inventory, ...configured, ...allowlisted]);
 	for (const provider of catalog) {
+		if (excluded.has(provider.id)) continue;
 		const access = options.getAccessState(provider.id);
 		if (
 			options.hasStoredCredential(provider.id) ||
@@ -63,6 +67,7 @@ export function buildProviderManagementOptions(options: ProviderManagementOption
 
 	const groups = new Map<string, { members: string[]; order: number; metadata?: ProviderPickerMetadata }>();
 	for (const providerId of providerIds) {
+		if (excluded.has(providerId)) continue;
 		const access = options.getAccessState(providerId);
 		const relevant =
 			inventory.has(providerId) ||
@@ -125,11 +130,15 @@ export function getLoginOptions(): LoginOption[] {
 		{
 			id: "google-vertex",
 			kind: "local",
-			name: "Google Cloud Vertex AI (Corporate)",
-			description: "Enterprise Vertex subscription · browser sign-in · Gemini 3.8 Flash HIGH",
+			name: "Google Vertex AI",
+			description: "Enterprise cloud access with browser sign-in",
 			available: true,
 			loginOrder: -100,
 		},
-		...getOAuthProviders().map(provider => ({ ...provider, kind: "oauth" as const })),
+		...getOAuthProviders().map(provider => ({
+			...provider,
+			name: getProviderDisplayName(provider.id),
+			kind: "oauth" as const,
+		})),
 	];
 }

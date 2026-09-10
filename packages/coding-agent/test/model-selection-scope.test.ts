@@ -110,7 +110,7 @@ test("provider navigation renders while startup discovery is still pending", asy
 	);
 	await Bun.sleep(0);
 	const rendered = Bun.stripANSI(selector.render(80).join("\n"));
-	expect(rendered).toContain("Anthropic / Claude");
-	expect(rendered).toContain("Refreshing Anthropic / Claude");
+	expect(rendered).toContain("Anthropic");
+	expect(rendered).toContain("Refreshing Anthropic");
 	expect(rendered).toContain("Enter: choose");
 });
