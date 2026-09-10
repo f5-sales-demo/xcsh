@@ -1,4 +1,5 @@
-import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
+import { createHash } from "node:crypto";
+import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 export type SessionTarget = Pick<
 	AgentSession,
@@ -13,6 +14,9 @@ export type SessionTarget = Pick<
 	| "prompt"
 	| "steer"
 	| "abort"
+	| "getQueuedMessages"
+	| "thinkingLevel"
+	| "setThinkingLevel"
 >;
 export interface Notification {
 	method: string;
@@ -59,6 +63,7 @@ function turn(id: string, status = "completed"): Turn {
 }
 export class RemoteSession {
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
+	#clientIds = new Map<string, string>();
 	#listeners = new Set<(notification: Notification) => void>();
 	#unsubscribe: () => void;
 	#active?: Turn;
@@ -94,7 +99,7 @@ export class RemoteSession {
 				current.items.push({
 					type: "userMessage",
 					id: `${this.target.sessionId}-item-${index}`,
-					clientId: null,
+					clientId: this.#clientIds.get(current.id) ?? null,
 					content: [{ type: "text", text: textOf(message), text_elements: [] }],
 				});
 				turns.push(current);
@@ -135,7 +140,12 @@ export class RemoteSession {
 			historyMode: "legacy",
 			modelProvider: this.target.model?.provider ?? "unknown",
 			model: this.target.model?.id ?? null,
-			reasoningEffort: null,
+			reasoningEffort:
+				this.target.thinkingLevel === "off"
+					? "none"
+					: this.target.thinkingLevel === "inherit"
+						? null
+						: (this.target.thinkingLevel ?? null),
 			createdAt: this.#createdAt,
 			updatedAt: this.#updatedAt,
 			recencyAt: this.#updatedAt,
@@ -153,6 +163,8 @@ export class RemoteSession {
 		};
 	}
 	call(identity: string, method: string, params: Record<string, unknown>): Promise<unknown> {
+		if ((method === "turn/start" || method === "turn/steer") && typeof params.clientUserMessageId === "string")
+			identity = `client-message:${params.clientUserMessageId}`;
 		const signature = JSON.stringify({ method, params });
 		const existing = this.#requests.get(identity);
 		if (existing)
@@ -169,6 +181,27 @@ export class RemoteSession {
 	}
 	async #execute(method: string, params: Record<string, unknown>): Promise<unknown> {
 		if (params.threadId !== this.target.sessionId) throw new ProtocolError(-32602, "Thread not found");
+		if (method === "thread/goal/get") return { goal: null };
+		if (method === "thread/queue/list") {
+			const limit = params.limit ?? 100;
+			if (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
+				throw new ProtocolError(-32602, "Invalid queue limit");
+			const queued = this.target.getQueuedMessages();
+			const counts = new Map<string, number>();
+			const data = [...queued.steering, ...queued.followUp].map(text => {
+				const hash = createHash("sha256").update(text).digest("hex").slice(0, 24);
+				const count = counts.get(hash) ?? 0;
+				counts.set(hash, count + 1);
+				const id = `${this.target.sessionId}-queued-${hash}-${count}`;
+				return { id, clientUserMessageId: id, input: [{ type: "text", text, text_elements: [] }] };
+			});
+			const start = params.cursor == null ? 0 : data.findIndex(item => item.id === params.cursor);
+			if (start < 0) throw new ProtocolError(-32602, "Invalid queue cursor");
+			return {
+				data: data.slice(start, start + (limit as number)),
+				nextCursor: data[start + (limit as number)]?.id ?? null,
+			};
+		}
 		if (method === "thread/read") return { thread: this.thread(params.includeTurns === true) };
 
 		if (method === "thread/turns/list" || method === "thread/items/list") {
@@ -248,7 +281,12 @@ export class RemoteSession {
 				approvalPolicy: "never",
 				approvalsReviewer: "user",
 				sandbox: { type: "dangerFullAccess" },
-				reasoningEffort: null,
+				reasoningEffort:
+					this.target.thinkingLevel === "off"
+						? "none"
+						: this.target.thinkingLevel === "inherit"
+							? null
+							: (this.target.thinkingLevel ?? null),
 				turnsBackwardsCursor: history.at(-1)?.id ?? null,
 				itemsBackwardsCursor: history.at(-1)?.items.at(-1)?.id ?? null,
 			};
@@ -262,7 +300,19 @@ export class RemoteSession {
 		if (method !== "turn/start" && method !== "turn/steer")
 			throw new ProtocolError(-32601, "Unsupported XCSH remote method");
 		for (const key of Object.keys(params))
-			if (!["threadId", "input", "expectedTurnId"].includes(key) && params[key] != null)
+			if (
+				![
+					"threadId",
+					"input",
+					"expectedTurnId",
+					"clientUserMessageId",
+					"model",
+					"cwd",
+					"effort",
+					"summary",
+				].includes(key) &&
+				params[key] != null
+			)
 				throw new ProtocolError(-32602, "Unsupported turn override");
 		if (
 			!Array.isArray(params.input) ||
@@ -270,6 +320,26 @@ export class RemoteSession {
 			params.input.some(item => item?.type !== "text" || typeof item.text !== "string")
 		)
 			throw new ProtocolError(-32602, "Unsupported turn input; text required");
+		if (params.model != null && params.model !== this.target.model?.id)
+			throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
+		if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())
+			throw new ProtocolError(-32602, "Unsupported working directory override");
+		if (
+			params.clientUserMessageId != null &&
+			(typeof params.clientUserMessageId !== "string" ||
+				!params.clientUserMessageId ||
+				params.clientUserMessageId.length > 256)
+		)
+			throw new ProtocolError(-32602, "Invalid client message identity");
+		if (
+			params.effort != null &&
+			!["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(params.effort))
+		)
+			throw new ProtocolError(-32602, "Unsupported reasoning effort");
+		// Summary controls reasoning presentation. This adapter exposes visible text
+		// only, so all recognized presentation preferences retain that behavior.
+		if (params.summary != null && !["auto", "concise", "detailed", "none"].includes(String(params.summary)))
+			throw new ProtocolError(-32602, "Unsupported reasoning summary");
 		const text = params.input.map(item => item.text).join("\n");
 		if (!text.trim()) throw new ProtocolError(-32602, "Empty turn input");
 		if (method === "turn/steer") {
@@ -280,7 +350,15 @@ export class RemoteSession {
 		}
 		if (this.target.isStreaming || this.#active)
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");
+		if (params.effort != null) {
+			try {
+				this.target.setThinkingLevel((params.effort === "none" ? "off" : params.effort) as ThinkingLevel);
+			} catch {
+				throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
+			}
+		}
 		const active = turn(`${this.target.sessionId}-turn-${this.history().length + 1}`, "inProgress");
+		if (typeof params.clientUserMessageId === "string") this.#clientIds.set(active.id, params.clientUserMessageId);
 		this.#active = active;
 		// The existing AgentSession remains the only executor and persistence owner.
 		this.#emit("turn/started", { turn: active });

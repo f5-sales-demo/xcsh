@@ -1,10 +1,21 @@
-import { ProtocolError } from "./session";
+import { configResponse, modelResponse } from "./metadata";
+import { RemoteProcesses } from "./process";
+import { type Notification, ProtocolError } from "./session";
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
 	call: (identity: string, method: string, params: Record<string, unknown>) => Promise<unknown>;
 }
 export class RemoteRouter {
 	sessions = new Map<string, SessionEndpoint>();
+	notify: (client: string, event: Notification) => void = () => {};
+	#processes = new RemoteProcesses(
+		(client, event) => this.notify(client, event),
+		cwd => [...this.sessions.values()].some(session => session.thread.cwd === cwd),
+	);
+	dispose(): void {
+		this.#processes.close();
+		this.#clients.clear();
+	}
 	#clients = new Map<string, Set<string>>();
 	constructor(
 		private readonly home: string,
@@ -18,6 +29,7 @@ export class RemoteRouter {
 	}
 	close(client: string): void {
 		this.#clients.delete(client);
+		this.#processes.close(client);
 	}
 	async handle(client: string, input: unknown): Promise<unknown> {
 		const request = input as { id?: string | number; method?: string; params?: Record<string, unknown> } | null;
@@ -62,6 +74,44 @@ export class RemoteRouter {
 						result = { data: data.slice(0, limit as number), nextCursor: null };
 						break;
 					}
+					case "process/spawn":
+					case "process/kill":
+					case "process/writeStdin":
+						result = await this.#processes.call(client, JSON.stringify(id), request.method, params);
+						break;
+					case "config/read": {
+						const matching = [...this.sessions.values()].filter(session => session.thread.cwd === params.cwd);
+						result = configResponse(
+							matching.length === 1 ? matching[0].thread : undefined,
+							params.includeLayers === true,
+						);
+						break;
+					}
+					case "model/list":
+						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
+						result = modelResponse([...this.sessions.values()].map(session => session.thread));
+						break;
+					case "configRequirements/read":
+						// XCSH has no Codex requirements.toml/MDM policy layer.
+						result = { requirements: null };
+						break;
+					case "collaborationMode/list":
+						// No Codex collaboration presets are exposed by this existing-session adapter.
+						result = { data: [] };
+						break;
+					case "skills/extraRoots/set":
+						if (!Array.isArray(params.extraRoots) || params.extraRoots.length !== 0)
+							throw new ProtocolError(
+								-32602,
+								"Remote skill roots are not supported; manage skills in the terminal",
+							);
+						result = {};
+						break;
+					case "plugin/installed":
+						// The adapter exposes no Codex marketplace installations. XCSH tools remain
+						// owned by the terminal; this is not a list of the terminal's loaded tools.
+						result = { marketplaces: [], marketplaceLoadErrors: [] };
+						break;
 					case "threadSection/list":
 						result = { data: [], nextCursor: null };
 						break;
@@ -72,6 +122,8 @@ export class RemoteRouter {
 						this.#clients.get(client)?.delete(String(params.threadId));
 						result = {};
 						break;
+					case "thread/goal/get":
+					case "thread/queue/list":
 					case "thread/turns/list":
 					case "thread/items/list":
 					case "thread/read":

@@ -94,3 +94,47 @@ test("phone experimental initial page rejoins live TUI while retaining its confi
 	expect(a.prompts).toEqual([]);
 	a.remote.dispose();
 });
+
+test("phone reads the actual live queue and absence of a Codex autonomous goal", async () => {
+	const a = fixture("a");
+	a.remote.target.getQueuedMessages = () => ({ steering: ["steer fixture"], followUp: ["next fixture"] });
+	expect(await a.remote.call("goal", "thread/goal/get", { threadId: "a" })).toEqual({ goal: null });
+	const queue = await a.remote.call("queue", "thread/queue/list", { threadId: "a", limit: 20 });
+	expect(queue).toMatchObject({
+		data: [{ input: [{ type: "text", text: "steer fixture" }] }, { input: [{ type: "text", text: "next fixture" }] }],
+		nextCursor: null,
+	});
+	a.remote.target.getQueuedMessages = () => ({ steering: [], followUp: [] });
+	expect(await a.remote.call("queue2", "thread/queue/list", { threadId: "a" })).toEqual({
+		data: [],
+		nextCursor: null,
+	});
+	a.remote.dispose();
+});
+
+test("phone turn metadata preserves the work model and deduplicates client message retries", async () => {
+	const a = fixture("a");
+	const efforts: unknown[] = [];
+	a.remote.target.setThinkingLevel = effort => {
+		efforts.push(effort);
+	};
+	const p = {
+		threadId: "a",
+		clientUserMessageId: "fixture-user-message",
+		model: "gpt-6-astra",
+		cwd: "/tmp",
+		effort: "high",
+		summary: "auto",
+		input: [{ type: "text", text: "fixture prompt" }],
+	};
+	const result = await a.remote.call("phone-1", "turn/start", p);
+	expect(await a.remote.call("phone-2", "turn/start", p)).toEqual(result);
+	expect(a.prompts).toEqual(["fixture prompt"]);
+	expect(efforts).toEqual(["high"]);
+	expect(a.remote.target.model?.id).toBe("gpt-6-astra");
+	await expect(
+		a.remote.call("phone-3", "turn/start", { ...p, input: [{ type: "text", text: "different" }] }),
+	).rejects.toThrow("identity");
+	a.finish();
+	a.remote.dispose();
+});

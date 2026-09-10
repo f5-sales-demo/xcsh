@@ -31,7 +31,9 @@ async function main(): Promise<void> {
 			["XCSH Remote Alpha", "ALPHA-ORCHARD"],
 			["XCSH Remote Beta", "BETA-HARBOR"],
 		]) {
-			const thread = (data as { id: string; name: string; model: string }[]).find(value => value.name === name);
+			const thread = (
+				data as { id: string; name: string; model: string; cwd: string; reasoningEffort?: string | null }[]
+			).find(value => value.name === name);
 			assert(thread, "Fixture terminal missing");
 			const read = () =>
 				call("thread/read", { threadId: thread.id, includeTurns: true }) as Promise<{
@@ -39,13 +41,20 @@ async function main(): Promise<void> {
 				}>;
 			const before = (await read()).thread.turns.length;
 			const params = {
+				clientUserMessageId: `fixture-${crypto.randomUUID()}`,
+				model: thread.model,
+				cwd: thread.cwd,
+				effort: thread.reasoningEffort ?? null,
+				summary: "auto",
 				threadId: thread.id,
 				input: [{ type: "text", text: "Reply with only this session's marker, without tools or commentary." }],
 			};
 			const id = `gate-${crypto.randomUUID()}`;
 			const started = Date.now();
+			await call("skills/extraRoots/set", { extraRoots: [] });
 			const result = await call("turn/start", params, id);
 			assert.deepEqual(await call("turn/start", params, id), result, "Replay response changed");
+			assert.deepEqual(await call("turn/start", params, `${id}-retry`), result, "Client message retry changed");
 			let matched = false;
 			const deadline = Date.now() + 120_000;
 			while (Date.now() < deadline) {

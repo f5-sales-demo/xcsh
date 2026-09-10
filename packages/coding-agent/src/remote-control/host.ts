@@ -7,6 +7,13 @@ import { type Notification, ProtocolError } from "./session";
 export async function startLocalHost(socketPath: string, version: string) {
 	const router = new RemoteRouter(dirname(socketPath), version);
 	const peers = new Set<LocalPeer>();
+	const localClients = new Map<string, LocalPeer>();
+	let publishClient = (_client: string, _event: Notification) => {};
+	router.notify = (client, event) => {
+		const peer = localClients.get(client);
+		if (peer) void peer.call("protocol/event", { event }).catch(() => peer.close());
+		else publishClient(client, event);
+	};
 	const owners = new Map<LocalPeer, { id: string; lastSeen: number }>();
 	let closed = false;
 	let relayStatus = "disconnected";
@@ -15,6 +22,7 @@ export async function startLocalHost(socketPath: string, version: string) {
 	const server = await listenLocal(socketPath, peer => {
 		peers.add(peer);
 		const localClient = `local-${crypto.randomUUID()}`;
+		localClients.set(localClient, peer);
 		const remove = () => {
 			const owner = owners.get(peer);
 			if (owner) router.sessions.delete(owner.id);
@@ -22,6 +30,7 @@ export async function startLocalHost(socketPath: string, version: string) {
 		};
 		peer.onClose = () => {
 			router.close(localClient);
+			localClients.delete(localClient);
 			remove();
 			peers.delete(peer);
 		};
@@ -77,6 +86,7 @@ export async function startLocalHost(socketPath: string, version: string) {
 	async function close(): Promise<void> {
 		if (closed) return;
 		closed = true;
+		router.dispose();
 		clearInterval(sweep);
 		stopRelay();
 		for (const peer of peers) peer.close();
@@ -152,6 +162,39 @@ export async function startLocalHost(socketPath: string, version: string) {
 					clients.set(key, { clientId, streamId });
 					// Diagnostics contain protocol method names only, never payloads or client identifiers.
 					const method = (incoming.message as { method?: string }).method;
+					const safeMethod = typeof method === "string" && /^[a-zA-Z/]{1,128}$/.test(method) ? method : "invalid";
+					if (method === "turn/start") {
+						const p = (incoming.message as { params?: Record<string, unknown> }).params ?? {};
+						const target = router.sessions.get(String(p.threadId))?.thread;
+						const effort = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(
+							String(p.effort),
+						)
+							? p.effort
+							: p.effort == null
+								? "unset"
+								: "other";
+						process.stdout.write(
+							`${JSON.stringify({ stage: "turn-shape", modelMatches: p.model == null || p.model === target?.model, cwdMatches: p.cwd == null || p.cwd === target?.cwd, effort, at: Date.now() })}\n`,
+						);
+					}
+					if (method === "skills/extraRoots/set") {
+						const p = (incoming.message as { params?: Record<string, unknown> }).params ?? {};
+						process.stdout.write(
+							`${JSON.stringify({ stage: "skills-shape", roots: Array.isArray(p.extraRoots) ? p.extraRoots.length : null, at: Date.now() })}\n`,
+						);
+					}
+					if (method === "process/spawn") {
+						const p = (incoming.message as { params?: Record<string, unknown> }).params ?? {};
+						const command = Array.isArray(p.command) ? p.command : [];
+						const executable = typeof command[0] === "string" ? (command[0].split("/").at(-1) ?? "") : "";
+						const family = ["git", "bash", "sh", "zsh", "pwd"].includes(executable) ? executable : "other";
+						const knownOperations = ["status", "rev-parse", "diff", "log", "ls-files"].filter(op =>
+							command.some(arg => typeof arg === "string" && new RegExp(`\\b${op}\\b`).test(arg)),
+						);
+						process.stdout.write(
+							`${JSON.stringify({ stage: "process-shape", family, knownOperations, argc: command.length, tty: p.tty === true, streamStdin: p.streamStdin === true, streamOutput: p.streamStdoutStderr === true, at: Date.now() })}\n`,
+						);
+					}
 					if (typeof method === "string" && /^[a-zA-Z/]+$/.test(method))
 						process.stdout.write(
 							`${JSON.stringify({ stage: "relay", method, parameterKeys: Object.keys((incoming.message as { params?: Record<string, unknown> }).params ?? {}).filter(key => /^[a-zA-Z]+$/.test(key)), at: Date.now() })}\n`,
@@ -163,7 +206,7 @@ export async function startLocalHost(socketPath: string, version: string) {
 								const error = (result as { error?: { code: number } }).error;
 								if (error)
 									process.stdout.write(
-										`${JSON.stringify({ stage: "relay", errorCode: error.code, at: Date.now() })}\n`,
+										`${JSON.stringify({ stage: "relay", method: safeMethod, errorCode: error.code, at: Date.now() })}\n`,
 									);
 								send(clientId, streamId, result);
 							}
@@ -191,6 +234,16 @@ export async function startLocalHost(socketPath: string, version: string) {
 					);
 				}
 			};
+		};
+		publishClient = (key, event) => {
+			const client = clients.get(key);
+			if (!client) return;
+			try {
+				send(client.clientId, client.streamId, event);
+			} catch {
+				relayStatus = "buffer-limit";
+				socket?.close();
+			}
 		};
 		publish = event => {
 			for (const [key, client] of clients)

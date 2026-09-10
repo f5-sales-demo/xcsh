@@ -9,7 +9,7 @@ criteria in that issue are satisfied.
 Codex rust-v0.153.4 commit `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a` is the
 compatibility baseline. The port uses the production enrollment, refresh,
 pairing, and v3 relay contracts. See NOTICE.md and LICENSE. Test fixtures contain
-unmodified upstream initialization and thread-list JSON schemas.
+unmodified upstream initialization, thread-list, configuration, and model-list schemas.
 
 XCSH sends its own name, version, originator, installation identity, and selected
 subscription credential. It does not invoke Codex, use Codex enrollment state,
@@ -23,6 +23,8 @@ or run another agent against the terminal's session file.
 - Existing AgentSession attachment, text turns, steering, interruption, visible
   text history, and assistant text events.
 - Initialization, thread list/read/resume, loaded list, and unsubscribe.
+- Phone bootstrap metadata and existing-terminal queue reads.
+- Non-PTY standalone process capture/streaming, stdin, cancellation, and exit events.
 - Relay framing, chunking, acknowledgements, replay buffers, and duplicate sequence
   suppression. Request results remain cached in the owning TUI across host reconnect.
 - Registration heartbeats, owner collision rejection, and reconnecting TUI bridges.
@@ -42,9 +44,9 @@ relay connection on 2026-09-09. Two real terminal sessions, using Luna and Astra
 registered with distinct names and session-specific context. This establishes
 host-side behavior only. It does not establish iPhone discovery or interaction.
 
-Verification completed: 47 focused tests / 121 assertions; workspace lint and
-TypeScript checks; affected coding-agent suite (7279 passed, 561 skipped, zero
-failures across 725 files); changed-scope PII enforcement and diff whitespace.
+Verification completed: 57 focused tests / 161 assertions; workspace lint and
+TypeScript checks; affected coding-agent suite (7291 passed, 561 skipped, zero
+failures across 727 files); changed-scope PII enforcement and diff whitespace.
 A live host restart preserved both TUIs. Native local-protocol prompts returned
 each session's distinct marker (2796 ms Luna, 3544 ms Astra), and repeated request
 identities did not append another prompt. State/socket permissions verified as
@@ -56,8 +58,33 @@ relay diagnostics identified experimental `initialTurnsPage` and live-resume
 configuration defaults; these are now supported using the pinned Rust source's
 loaded-thread rejoin semantics. The exact phone-shaped resume request passed
 against both resumed real TUIs, retaining their history and models. The user's
-retry and typed marker replies remain pending. No iPhone test is marked passed
-by automated checks.
+retry then showed “Codex server returned an error”. Relay evidence showed successful
+resume plus unsupported configuration/model/queue/goal/bootstrap reads. The adapter
+now provides read-only views of the live models and queued messages, unset
+Codex-specific configuration, and the absence of Codex goals, collaboration presets,
+and marketplace installations. Configuration and model responses pass pinned
+upstream schema validation. The full metadata/resume sequence passes against both
+real TUIs, including actual process output/exit delivery (19 ms Luna, 14 ms Astra).
+The latest phone retry and typed marker replies remain pending. The next relay
+retry confirmed successful metadata reads, isolating the remaining
+errors to the phone's non-PTY Git-status process requests. `process/spawn`, stdin,
+kill, output, and exit notifications now use native XCSH host processes with a
+live-terminal working directory, client-scoped handles, replay suppression, timeouts,
+16 active-process limit, and bounded capture. PTY operations remain explicit errors.
+Disconnected clients lose their standalone processes, while TUI agents continue.
+One fixture restart selected a local model through the existing CLI resume path;
+Alpha was relaunched with its original explicit Luna model and the same session ID.
+Automatic model fidelity across CLI resume remains a lifecycle acceptance item.
+Sanitized process-shape diagnostics identify known operation families without
+logging commands. A further phone retry passed process startup and reached `turn/start`, which
+rejected the phone's client message ID and turn settings. Turn submission now
+accepts matching model/cwd, applies supported effort through AgentSession, handles
+reasoning presentation preferences, and deduplicates client message IDs across
+request IDs. Empty extra skill-root setup is accepted; nonempty roots remain
+explicit errors. The phone-shaped typed turn passed against Luna (3551 ms) and
+Astra (3352 ms), with duplicate client-message submissions suppressed. The user
+has been asked to retry this latest deployed fix. No iPhone
+test is marked passed by automated checks.
 
 ## Work still required
 
