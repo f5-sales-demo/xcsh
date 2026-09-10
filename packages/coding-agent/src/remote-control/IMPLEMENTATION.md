@@ -1166,3 +1166,18 @@ The guarded coding-agent package suite passed 7730 tests, 561 skips, zero
 failures and 24593 assertions across 763 files (369.07 seconds). Runtime/test
 hashes remained unchanged. The existing compiled-artifact receipt predates this
 identity repair, so final compiled-package verification remains required.
+
+The dedicated live host and both terminal sessions were then restarted on
+`075f9bebc` (21.23.0). Each old terminal exited successfully before its replacement
+resumed, preserving a single execution owner. The relay reconnected and listed
+both original session identities. Alpha retained Luna and 18 saved messages;
+Beta retained Astra and 52. Names and working directories also matched the
+pre-restart audit. Both sessions passed initialization, configuration discovery,
+fixture-process execution and history attachment, returning six and 18 turns
+respectively. They were idle after verification.
+
+The preceding host trace closed with a complete footer and 10522 events. A fresh
+private capture window records source commit `075f9bebc` and remains open for the
+pending streaming voice test. No new voice capture or manual result was available
+at this checkpoint. The restart checks establish live host/session recovery,
+not live model execution or voice parity.
