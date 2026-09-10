@@ -39,6 +39,7 @@ import type { PythonResult } from "../../ipy/executor";
 import type { Theme } from "../../modes/theme/theme";
 import type { CompactionPreparation, CompactionResult } from "../../session/compaction";
 import type { CustomMessage } from "../../session/messages";
+import type { InteractionQuestion, QuestionAnswers } from "../../session/question-types";
 import type {
 	BranchSummaryEntry,
 	CompactionEntry,
@@ -111,6 +112,12 @@ export type ExtensionWidgetContent = string[] | ExtensionUiComponentFactory | un
  * Each mode (interactive, RPC, print) provides its own implementation.
  */
 export interface ExtensionUIContext {
+	/** Present a whole question set through one shared completion owner when supported. */
+	questions?(
+		questions: readonly InteractionQuestion[],
+		dialogOptions?: ExtensionUIDialogOptions,
+	): Promise<QuestionAnswers | undefined>;
+
 	/** Show a selector and return the user's choice. */
 	select(title: string, options: string[], dialogOptions?: ExtensionUIDialogOptions): Promise<string | undefined>;
 

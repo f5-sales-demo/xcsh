@@ -598,9 +598,9 @@ history identity. Phone disconnection and adapter closure leave terminal input
 available. This is automated local protocol evidence; iPhone question rendering
 and answers have not been manually accepted.
 
-The current mapping follows individual terminal dialog steps. Grouped questions,
-multiselect presentation, navigation, custom UI, dedicated command/file permission
-requests and live approval decision coverage remain open. Generic confirmations
+The initial mapping followed individual terminal dialog steps. The grouped-question
+checkpoint below supersedes that mapping for the ask tool. Custom UI, dedicated
+command/file permission requests and live approval decision coverage remain open. Generic confirmations
 retain their existing Yes/No behavior; this does not establish specialized Codex
 approval parity. Additional teardown, queue notification and host-bound/replay tests
 remain part of the interaction completion audit.
@@ -638,9 +638,8 @@ pinned schema. The terminal agent remains independent of client disconnection.
 Actual iPhone handling of a terminal transition and subsequent attachment remains
 a manual acceptance item.
 
-The next question/approval work must preserve whole-tool semantics. The current
-ask tool manages grouped navigation, multiselect and free text through successive
-local selectors; those individual dialogs are currently the remote requests.
+The grouped-question checkpoint below preserves whole-tool semantics across the
+ask tool's local selectors. Remaining approval work requires separate integration.
 Plan review is a separate TUI workflow: the completed `exit_plan_mode` tool causes
 the agent to stop before an approval selector is presented. It does not have an
 active tool identity at that point. Remote plan review therefore needs explicit
@@ -658,3 +657,42 @@ TypeScript/formatting, changed documentation lint and staged privacy/secret scan
 passed. An earlier package run was deliberately interrupted for the replacement
 repair and is not completion evidence. Manual phone transitions and the overall
 interaction/approval gate remain open.
+
+## Whole ask question groups
+
+The ask tool now submits its complete question set through one broker request.
+Local navigation, multiple selections and the free-text editor retain their
+existing flow; intermediate widgets do not publish separate remote questions.
+The pinned request carries original question IDs and labels, while the outer
+request ID remains stable through host restart and response retries. Answers
+validate against the full set before completion. Partial maps, duplicate choices,
+ambiguous question identities and disallowed custom input cannot resolve it.
+
+An answer from the phone aborts only the losing local form. A real AgentSession,
+AskTool, ToolContextStore and terminal-controller socket test restarts the host,
+replays the same group, answers multiple choices and free text, and verifies one
+execution, a restored terminal editor, no agent abort and a completed assistant
+response. Concurrent tool groups retain their distinct call identities;
+administrative forms remain unbound. Terminal completion and stale-widget tests
+cover local choice/editor navigation and dismissal of the losing form.
+
+The extracted local renderer preserves literal option labels, including labels
+that look like recommendation decorations or the free-text action. Closed-choice
+forms omit the free-text action. Explicit cancellation after an elapsed timeout
+remains cancellation unless the UI actually reported a timeout.
+
+These are automated protocol and terminal checks. The pinned schema has no
+multiple-selection presentation flag; its answer arrays accept multiple strings,
+but the iPhone's presentation still needs manual acceptance. Specialized secret
+entry, arbitrary custom UI and plan/dedicated permission approvals remain open.
+
+Grouped-question checkpoint validation: observed failures covered missing broker,
+terminal and wire group support, elapsed-time cancellation, literal label loss,
+closed-choice free text and ambiguous question identities. The focused run passed
+369 tests with zero failures and 1575 assertions across 42 files (33.07 seconds).
+Two parameterized test fixtures then needed TypeScript-only corrections; the
+35-test ask suite passed afterward. The final guarded package run passed 7565
+tests, with 561 skips, zero failures and 23697 assertions across 753 files
+(368.81 seconds). Workspace TypeScript/formatting, changed documentation lint,
+staged PII and staged secret scans passed. Full repository CI and the remaining
+manual and approval checks are still required.

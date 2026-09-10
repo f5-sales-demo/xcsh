@@ -364,6 +364,56 @@ describe("ExtensionUiController hook editor abort", () => {
 		expect(editorContainer.children).toEqual([editor]);
 	});
 
+	it("a grouped remote answer dismisses the terminal form without exposing intermediate dialogs", async () => {
+		const { ctx, editorContainer, editor } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		const questions = [
+			{ id: "colors", question: "Colors?", options: [{ label: "Blue" }, { label: "Green" }], multi: true },
+			{ id: "note", question: "Note?", options: [] },
+		];
+		const result = controller.showHookQuestions(questions);
+		const pending = ctx.session.userInteractions.pending();
+		expect(pending).toHaveLength(1);
+		expect(pending[0]).toMatchObject({ kind: "questions", questions });
+		const oldWidget = ctx.hookSelector!;
+		const answer = {
+			colors: { selectedOptions: ["Blue", "Green"] },
+			note: { selectedOptions: [], customInput: "Keep both" },
+		};
+		expect(ctx.session.userInteractions.respond(pending[0].id, answer)).toBe(true);
+		expect(await result).toEqual(answer);
+		const next = controller.showHookInput("Next");
+		const nextWidget = ctx.hookInput;
+		oldWidget.handleInput("\x1b");
+		expect(editorContainer.children).toEqual([nextWidget]);
+		ctx.session.userInteractions.cancelAll();
+		await next;
+		expect(editorContainer.children).toEqual([editor]);
+	});
+
+	it("the terminal completes grouped choices and free text through one request identity", async () => {
+		const { ctx, editorContainer, editor } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		const result = controller.showHookQuestions([
+			{ id: "color", question: "Color?", options: [{ label: "Blue" }] },
+			{ id: "note", question: "Note?", options: [] },
+		]);
+		const id = ctx.session.userInteractions.pending()[0].id;
+		ctx.hookSelector!.handleInput("\r");
+		await Bun.sleep(0);
+		expect(ctx.session.userInteractions.pending().map(value => value.id)).toEqual([id]);
+		ctx.hookSelector!.handleInput("\r");
+		await Bun.sleep(0);
+		ctx.hookEditor!.handleInput("Local note");
+		ctx.hookEditor!.handleInput("\r");
+		expect(await result).toEqual({
+			color: { selectedOptions: ["Blue"] },
+			note: { selectedOptions: [], customInput: "Local note" },
+		});
+		expect(ctx.session.userInteractions.pending()).toEqual([]);
+		expect(editorContainer.children).toEqual([editor]);
+	});
+
 	it("confirmation cancellation reaches the selector and never becomes consent", async () => {
 		const { ctx, editor, editorContainer } = createControllerContext();
 		const controller = new ExtensionUiController(ctx);

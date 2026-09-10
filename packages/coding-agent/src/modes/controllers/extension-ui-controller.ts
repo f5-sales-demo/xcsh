@@ -20,7 +20,9 @@ import { HookInputComponent } from "../../modes/components/hook-input";
 import { HookSelectorComponent } from "../../modes/components/hook-selector";
 import { getAvailableThemesWithPaths, getThemeByName, setTheme, type Theme, theme } from "../../modes/theme/theme";
 import type { InteractiveModeContext } from "../../modes/types";
+import type { InteractionQuestion, QuestionAnswers } from "../../session/question-types";
 import { setSessionTerminalTitle, setTerminalTitle } from "../../utils/title-generator";
+import { runQuestionGroup } from "../components/question-flow";
 
 const MAX_WIDGET_LINES = 10;
 
@@ -36,6 +38,7 @@ export class ExtensionUiController {
 	async initHooksAndCustomTools(): Promise<void> {
 		// Create and set hook & tool UI context
 		const uiContext: ExtensionUIContext = {
+			questions: (questions, options) => this.showHookQuestions(questions, options),
 			select: (title, options, dialogOptions) => this.showHookSelector(title, options, dialogOptions),
 			confirm: (title, message, dialogOptions) => this.showHookConfirm(title, message, dialogOptions),
 			input: (title, placeholder, dialogOptions) => this.showHookInput(title, placeholder, dialogOptions),
@@ -664,6 +667,28 @@ export class ExtensionUiController {
 		this.ctx.session.notifyUserPrompt(type === "user_prompt_start" ? "start" : "end", kind);
 	}
 
+	showHookQuestions(
+		questions: readonly InteractionQuestion[],
+		options?: ExtensionUIDialogOptions,
+	): Promise<QuestionAnswers | undefined> {
+		return this.ctx.session.userInteractions.requestQuestions(
+			{ title: "Questions", questions },
+			async (signal, complete) => {
+				const answers = await runQuestionGroup(
+					questions,
+					{
+						select: (title, choices, dialogOptions) => this.#showHookSelector(title, choices, dialogOptions),
+						editor: (title, prefill, dialogOptions, editorOptions) =>
+							this.#showHookEditor(title, prefill, dialogOptions, editorOptions),
+					},
+					{ signal, timeout: options?.timeout },
+				);
+				complete(answers);
+				return answers;
+			},
+			options?.signal,
+		);
+	}
 	showHookSelector(
 		title: string,
 		options: string[],

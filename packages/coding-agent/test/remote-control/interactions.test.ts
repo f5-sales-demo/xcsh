@@ -120,3 +120,76 @@ test("malformed and mismatched answers cannot resolve input; an empty answer map
 	expect(await input).toBeUndefined();
 	remote.close();
 });
+
+test("grouped questions preserve their IDs and accept multiple selections plus free text", async () => {
+	const broker = new UserInteractions();
+	const events: Notification[] = [];
+	const remote = new RemoteInteractions(
+		broker,
+		() => ({ threadId: "thread-a", turnId: "turn-a", itemId: "item-a" }),
+		event => events.push(event),
+	);
+	const questions = [
+		{
+			id: "colors",
+			question: "Choose colors",
+			options: [{ label: "Blue", description: "First color" }, { label: "Green" }],
+			multi: true,
+		},
+		{ id: "note", question: "Add a note", options: [] },
+	];
+	const result = broker.requestQuestions(
+		{ title: "Fixture", toolCallId: "ask-a", questions },
+		() => new Promise(() => {}),
+	);
+	const request = remote.pending()[0];
+	expect(request.params.questions).toEqual([
+		{
+			id: "colors",
+			header: "colors",
+			question: "Choose colors",
+			isOther: true,
+			isSecret: false,
+			options: [
+				{ label: "Blue", description: "First color" },
+				{ label: "Green", description: "" },
+			],
+		},
+		{ id: "note", header: "note", question: "Add a note", isOther: true, isSecret: false, options: null },
+	]);
+	expect(validRequest(request.params), JSON.stringify(validRequest.errors)).toBe(true);
+	expect(() => remote.respond(request.id, { answers: { colors: { answers: ["Blue"] } } })).toThrow("Invalid answer");
+	const response = { answers: { colors: { answers: ["Blue", "Green"] }, note: { answers: ["Keep both"] } } };
+	expect(validResponse(response)).toBe(true);
+	expect(remote.respond(request.id, response)).toEqual({ accepted: true });
+	expect(await result).toEqual({
+		colors: { selectedOptions: ["Blue", "Green"] },
+		note: { selectedOptions: [], customInput: "Keep both" },
+	});
+	expect(events.at(-1)).toEqual({
+		method: "serverRequest/resolved",
+		params: { threadId: "thread-a", requestId: request.id },
+	});
+	remote.close();
+});
+
+test("an empty grouped response cancels instead of producing default choices", async () => {
+	const broker = new UserInteractions();
+	const remote = new RemoteInteractions(
+		broker,
+		() => ({ threadId: "thread-a", turnId: "turn-a", itemId: "item-a" }),
+		() => {},
+	);
+	const result = broker.requestQuestions(
+		{
+			title: "Fixture",
+			toolCallId: "ask-a",
+			questions: [{ id: "choice", question: "Choose", options: [{ label: "Allow" }] }],
+		},
+		() => new Promise(() => {}),
+	);
+	const request = remote.pending()[0];
+	expect(remote.respond(request.id, { answers: { choice: { answers: [] } } })).toEqual({ accepted: true });
+	expect(await result).toBeUndefined();
+	remote.close();
+});

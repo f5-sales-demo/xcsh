@@ -4,7 +4,7 @@ import { Settings } from "../../src/config/settings";
 import { getThemeByName, initTheme } from "../../src/modes/theme/theme";
 import type { ToolSession } from "../../src/tools";
 import { AskTool, askToolRenderer } from "../../src/tools/ask";
-import { ToolAbortError } from "../../src/tools/tool-errors";
+import { ToolAbortError, ToolError } from "../../src/tools/tool-errors";
 
 function createSession(overrides: Partial<ToolSession> = {}): ToolSession {
 	return {
@@ -123,6 +123,28 @@ describe("AskTool cancellation", () => {
 		).rejects.toBeInstanceOf(ToolAbortError);
 		expect(abort).toHaveBeenCalledTimes(1);
 	});
+	it("an explicit cancellation after the deadline is not an automatic choice", async () => {
+		const tool = new AskTool(createSession({ settings: Settings.isolated({ "ask.timeout": 0.001 }) }));
+		const abort = vi.fn();
+		const context = createContext({
+			select: async () => {
+				await Bun.sleep(10);
+				return undefined;
+			},
+			abort,
+		});
+		await expect(
+			tool.execute(
+				"delayed-cancel",
+				{ questions: [{ id: "choice", question: "Continue?", options: [{ label: "Allow" }, { label: "Deny" }] }] },
+				undefined,
+				undefined,
+				context,
+			),
+		).rejects.toBeInstanceOf(ToolAbortError);
+		expect(abort).toHaveBeenCalledTimes(1);
+	});
+
 	it("auto-selects the recommended option on ask timeout", async () => {
 		const tool = new AskTool(
 			createSession({
@@ -1043,5 +1065,73 @@ describe("AskTool execute signals isWarning on fallback", () => {
 			context,
 		);
 		expect(result.isWarning).toBeFalsy();
+	});
+});
+
+describe("AskTool canonical option labels", () => {
+	it.each([{ labels: ["Blue (Recommended)"] }, { labels: ["Blue", "Blue (Recommended)"] }])(
+		"preserves labels that contain a recommendation suffix: %j",
+		async ({ labels }) => {
+			const tool = new AskTool(createSession());
+			const context = createContext({ select: async (_title, choices) => choices[labels.length - 1] });
+			const result = await tool.execute(
+				"literal-label",
+				{
+					questions: [
+						{ id: "color", question: "Choose", options: labels.map(label => ({ label })), recommended: 0 },
+					],
+				},
+				undefined,
+				undefined,
+				context,
+			);
+			expect(result.details?.selectedOptions).toEqual([labels.at(-1)!]);
+		},
+	);
+});
+
+describe("AskTool grouped UI", () => {
+	it("submits the whole question set and preserves multiple selections and custom input", async () => {
+		const tool = new AskTool(createSession({ settings: Settings.isolated({ "ask.timeout": 0 }) }));
+		const select = vi.fn(async () => {
+			throw new Error("Grouped UI must not invoke legacy selectors");
+		});
+		const context = createContext({ select });
+		const questions = [
+			{ id: "colors", question: "Colors?", options: [{ label: "Blue" }, { label: "Green" }], multi: true },
+			{ id: "note", question: "Note?", options: [] },
+		];
+		const grouped = vi.fn(async () => ({
+			colors: { selectedOptions: ["Blue", "Green"] },
+			note: { selectedOptions: [], customInput: "Keep both" },
+		}));
+		context.ui!.questions = grouped;
+		const result = await tool.execute("grouped-ask", { questions }, undefined, undefined, context);
+		expect(grouped).toHaveBeenCalledWith(questions, { signal: undefined, timeout: undefined });
+		expect(select).not.toHaveBeenCalled();
+		expect(result.details?.results).toMatchObject([
+			{ id: "colors", selectedOptions: ["Blue", "Green"] },
+			{ id: "note", customInput: "Keep both" },
+		]);
+	});
+});
+
+describe("AskTool question identity validation", () => {
+	it.each(
+		[
+			[
+				{ id: "same", question: "First", options: [] },
+				{ id: "same", question: "Second", options: [] },
+			],
+			[{ id: "", question: "Empty ID", options: [] }],
+			[{ id: "choice", question: "Ambiguous labels", options: [{ label: "Blue" }, { label: "Blue" }] }],
+		].map(questions => ({ questions })),
+	)("rejects ambiguous forms before opening the UI", async ({ questions }) => {
+		const select = vi.fn(async () => undefined);
+		const context = createContext({ select });
+		await expect(
+			new AskTool(createSession()).execute("invalid-question", { questions }, undefined, undefined, context),
+		).rejects.toBeInstanceOf(ToolError);
+		expect(select).not.toHaveBeenCalled();
 	});
 });
