@@ -285,9 +285,22 @@ try {
 		await writeFile(`${output}/${label.toLowerCase()}.history.json`, JSON.stringify(done, null, 2), { mode: 0o600 });
 	}
 	passed("remote prompts execute real write/read tools in the correct TUI and persist completed history");
+	const renamedThreadId = owners.get("Package Beta").id;
+	await rpc("thread/name/set", { threadId: renamedThreadId, name: "  Package Beta Renamed  " });
+	assert.equal((await threads()).find(item => item.id === renamedThreadId)?.name, "Package Beta Renamed");
+	assert(
+		events.some(
+			(event: any) =>
+				event.method === "thread/name/updated" &&
+				event.params?.threadId === renamedThreadId &&
+				event.params?.threadName === "Package Beta Renamed",
+		),
+	);
+	passed("remote thread naming updates live discovery and emits the pinned notification");
 	await stopHost();
 	await startHost();
 	await waitFor(async () => (await threads()).length === 2, "surviving owners after host restart");
+	assert.equal((await threads()).find(item => item.id === renamedThreadId)?.name, "Package Beta Renamed");
 	for (const { params, turnId } of accepted) {
 		assert.equal((await rpc("turn/start", params)).turn.id, turnId);
 		assert.equal((await history(String(params.threadId))).length, 1);
