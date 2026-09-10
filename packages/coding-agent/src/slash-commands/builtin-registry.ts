@@ -565,7 +565,7 @@ const BUILTIN_SLASH_COMMAND_REGISTRY: ReadonlyArray<BuiltinSlashCommandSpec> = [
 	},
 	{
 		name: "remote",
-		description: "Show native XCSH remote host status",
+		description: "Show native xcsh remote host status",
 		handle: async (_command, runtime) => {
 			const { remoteStatus } = await import("../remote-control/control");
 			const status = await remoteStatus();

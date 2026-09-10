@@ -1,9 +1,24 @@
 import { expect, spyOn, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startLocalHost } from "../../src/remote-control/host";
 import { connectPeer } from "../../src/remote-control/ipc";
+
+test("host startup refuses a live owner or non-socket path", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "xcsh-host-path-"));
+	const path = join(dir, "host.sock");
+	const host = await startLocalHost(path, "fixture");
+	try {
+		await expect(startLocalHost(path, "fixture")).rejects.toThrow("already running");
+		await host.close();
+		await writeFile(path, "fixture");
+		await expect(startLocalHost(path, "fixture")).rejects.toThrow("non-owned remote socket");
+	} finally {
+		await host.close();
+		await rm(dir, { recursive: true, force: true });
+	}
+});
 
 test("heartbeat expiry removes a stale owner while retaining a refreshed owner", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "xcsh-heartbeat-"));

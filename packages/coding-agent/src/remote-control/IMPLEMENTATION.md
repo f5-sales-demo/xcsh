@@ -1894,3 +1894,35 @@ complete remote-control suite passed 878 tests with 3471 assertions across 65
 files. Workspace formatting, prompt formatting and TypeScript checks passed
 across 1776 files. An abrupt packaged host-process test and final live phone
 recovery trace remain open; the dedicated phone runtime was not changed.
+
+## Abrupt packaged host recovery and credential replacement
+
+An errored relay connection now requests a fresh host enrollment credential
+before reconnecting, even when the rejected token's stated expiry is still in the
+future. Failed refresh remains bounded by the existing sanitized 30-second retry.
+This covers service-side token invalidation that Bun's WebSocket upgrade error
+does not expose as a reliable HTTP status. The replacement connection uses the
+fresh token while retaining its delivery cursor and unacknowledged response
+buffer.
+
+Host startup now probes the private Unix socket before binding. A responding host
+is never replaced. A failed probe permits removal only when the path is a socket
+owned by the current user; regular files and other owners are rejected. This
+makes direct host restart recover the stale filesystem socket left by SIGKILL.
+
+The packaged check first failed because the killed host's socket prevented the
+compiled successor from binding. After the recovery change, all nine checks
+passed in 20.566 seconds inside the network-disabled Ubuntu 24.04 container. The
+container had no Codex, standalone Bun, repository checkout or dependencies. The
+test killed the host while a real Beta terminal turn was `inProgress`, restarted
+the compiled host, observed both owners reconnect, waited for the real write/read
+tools to complete, and retried the stable request identity. The retry returned the
+same turn, with one matching history entry and one file result.
+
+The evidence is stored in
+`scripts/remote-package/evidence-crash-2026-09-10.json`. Binary SHA-256:
+`ebb0362564cbe4e64a282fdc487323c6095091f838043a524c2fe7da49d297ea`.
+The complete remote-control suite passed 880 tests with 3494 assertions across 65
+files. Workspace formatting and TypeScript checks passed across 1776 files. This
+artifact uses synthetic enrollment and offline model output; live credential
+revocation and final phone acceptance remain separate.

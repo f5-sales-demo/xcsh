@@ -47,13 +47,17 @@ test("relay transport errors reconnect with the delivery cursor and replay only 
 	const host = await startLocalHost(join(dir, "host.sock"), "fixture");
 	const owner = await connectPeer(join(dir, "host.sock"));
 	let executions = 0;
+	let refreshes = 0;
 	owner.handle = async (_method, params) => {
 		if (params.method === "turn/start") executions++;
 		return { turn: { id: "fixture-turn" } };
 	};
 	try {
 		await owner.call("register", { thread: { id: "fixture-thread", name: "Fixture", cwd: dir } });
-		host.connectRelay({ ...enrollment }, "fixture-installation", "fixture host");
+		host.connectRelay({ ...enrollment }, "fixture-installation", "fixture host", async () => {
+			refreshes++;
+			return { ...enrollment, remote_control_token: "fixture-refreshed-token" };
+		});
 		await Bun.sleep(0);
 		expect(sockets).toHaveLength(1);
 		const first = sockets[0];
@@ -75,6 +79,8 @@ test("relay transport errors reconnect with the delivery cursor and replay only 
 		for (let attempt = 0; attempt < 100 && sockets.length < 2; attempt++) await Bun.sleep(10);
 		expect(sockets).toHaveLength(2);
 		const second = sockets[1];
+		expect(refreshes).toBe(1);
+		expect(second.options.headers.authorization).toBe("Bearer fixture-refreshed-token");
 		expect(second.options.headers["x-codex-subscribe-cursor"]).toBe("cursor-one");
 		expect(second.sent).toEqual([pending]);
 		first.onerror?.();

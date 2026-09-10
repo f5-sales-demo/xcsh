@@ -1,0 +1,63 @@
+{
+  "binarySha256": "ebb0362564cbe4e64a282fdc487323c6095091f838043a524c2fe7da49d297ea",
+  "harnessSha256": "106f9e4c9f7d37243ecab97ffa2bd50c128f012ff5ebd9d011d4989ab9099c04",
+  "providerSha256": "64b2560296ce4416d95f880834a151149acb9561bb6dcc310b43caa4c69b3f6b",
+  "version": "xcsh/21.24.0",
+  "image": "ubuntu:24.04",
+  "imageId": "sha256:0b1ebe5dd42682bb8eda97ecf10a09f70f18d2d4af35f82b9271badac5dbeb27",
+  "checks": [
+    {
+      "description": "Codex, standalone Bun and project dependencies absent",
+      "elapsedMs": 172
+    },
+    {
+      "description": "packaged status defaults off",
+      "elapsedMs": 2366
+    },
+    {
+      "description": "two named top-level TUIs discovered with distinct identities and working directories",
+      "elapsedMs": 6553
+    },
+    {
+      "description": "remote prompts execute real write/read tools in the correct TUI and persist completed history",
+      "elapsedMs": 6805
+    },
+    {
+      "description": "host restart preserves owners/history and stable request replay does not execute twice",
+      "elapsedMs": 11515
+    },
+    {
+      "description": "abrupt packaged host loss preserves active terminal work and stable retry executes it once",
+      "elapsedMs": 16547
+    },
+    {
+      "description": "compiled --resume preserves session identity, history and extension work model",
+      "elapsedMs": 19527
+    },
+    {
+      "description": "terminal exit unregisters all owners",
+      "elapsedMs": 19751
+    },
+    {
+      "description": "disposable test container and its processes removed",
+      "elapsedMs": 20566
+    }
+  ],
+  "network": "none",
+  "enrollment": "synthetic",
+  "workModel": "package-fixture/model",
+  "phoneAcceptance": false,
+  "sourceBaseCommit": "2922139b27e561238c1a509dd3ff00157001dfa1",
+  "productionSourceChanges": [
+    {
+      "path": "packages/coding-agent/src/remote-control/host.ts",
+      "sha256": "afd1ea40597c5ba80263e30012fe5147bac7681030e6772b21365275554f2b80"
+    },
+    {
+      "path": "packages/coding-agent/src/slash-commands/builtin-registry.ts",
+      "sha256": "c8d8ff62a5ab0102004ca2aee104e1408961f087b326a2da72260ab14d63877d"
+    }
+  ],
+  "buildInfoDirty": true,
+  "evidenceKind": "offline compiled integration"
+}

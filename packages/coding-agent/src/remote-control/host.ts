@@ -1,15 +1,38 @@
+import { lstat, unlink } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Enrollment } from "./enrollment";
-import { type LocalPeer, listenLocal } from "./ipc";
+import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
 import { RelayCodec } from "./relay";
 import { RemoteRouter } from "./router";
 import { type Notification, ProtocolError } from "./session";
 import { type TraceSink, traceFromEnvironment, traceJson } from "./trace-runtime";
+
+async function prepareSocketPath(socketPath: string): Promise<void> {
+	let active = false;
+	try {
+		const peer = await connectPeer(socketPath);
+		peer.close();
+		active = true;
+	} catch (error) {
+		if (!["ECONNREFUSED", "ENOENT"].includes(String((error as NodeJS.ErrnoException).code))) throw error;
+	}
+	if (active) throw new Error("An xcsh remote host is already running");
+	try {
+		const entry = await lstat(socketPath);
+		if (!entry.isSocket() || entry.uid !== process.getuid?.())
+			throw new Error("Refusing to replace a non-owned remote socket");
+		await unlink(socketPath);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+	}
+}
+
 export async function startLocalHost(
 	socketPath: string,
 	version: string,
 	trace: TraceSink | undefined = traceFromEnvironment("host", version),
 ) {
+	await prepareSocketPath(socketPath);
 	const router = new RemoteRouter(dirname(socketPath), version);
 	const peers = new Set<LocalPeer>();
 	const localClients = new Map<string, LocalPeer>();
@@ -114,6 +137,7 @@ export async function startLocalHost(
 		let socket: WebSocket | undefined;
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		let attempts = 0;
+		let refreshBeforeConnect = false;
 		const send = (clientId: string, streamId: string, message: unknown, event?: string) => {
 			if (!event || event === "server_message") trace?.record("rpc", "out", message);
 			const frames = codec.send(clientId, streamId, message, event);
@@ -125,9 +149,10 @@ export async function startLocalHost(
 		};
 		const connect = async () => {
 			if (closed) return;
-			if (refresh && Date.parse(enrollment.expires_at) < Date.now() + 60_000) {
+			if (refresh && (refreshBeforeConnect || Date.parse(enrollment.expires_at) < Date.now() + 60_000)) {
 				try {
 					Object.assign(enrollment, await refresh());
+					refreshBeforeConnect = false;
 				} catch {
 					relayStatus = "credential-refresh-failed";
 					timer = setTimeout(() => {
@@ -254,6 +279,7 @@ export async function startLocalHost(
 			connection.onerror = () => {
 				if (socket !== connection) return;
 				relayStatus = "connection-error";
+				refreshBeforeConnect = true;
 				connection.close();
 			};
 			connection.onclose = () => {

@@ -129,10 +129,13 @@ async function connect(): Promise<void> {
 }
 async function startHost(): Promise<void> {
 	hostIndex++;
-	host = Bun.spawn(["docker", "exec", container, "xcsh", "remote-control", "host"], {
-		stdout: Bun.file(`${output}/host-${hostIndex}.log`),
-		stderr: Bun.file(`${output}/host-${hostIndex}-error.log`),
-	});
+	host = Bun.spawn(
+		["docker", "exec", container, "/bin/sh", "-c", "echo $$ > /fixture/host.pid; exec xcsh remote-control host"],
+		{
+			stdout: Bun.file(`${output}/host-${hostIndex}.log`),
+			stderr: Bun.file(`${output}/host-${hostIndex}-error.log`),
+		},
+	);
 	await connect();
 }
 async function stopHost(): Promise<void> {
@@ -140,6 +143,12 @@ async function stopHost(): Promise<void> {
 	peer!.close();
 	peer = undefined;
 	assert.equal(await host!.exited, 0);
+}
+async function crashHost(): Promise<void> {
+	await docker("/bin/sh", "-c", "kill -9 $(cat /fixture/host.pid)");
+	peer?.close();
+	peer = undefined;
+	assert.notEqual(await host!.exited, 0);
 }
 async function threads(): Promise<any[]> {
 	for (const terminal of terminals) assert(terminal.closed || !terminal.settled, "TUI exited; inspect terminal logs");
@@ -284,6 +293,45 @@ try {
 		assert.equal((await history(String(params.threadId))).length, 1);
 	}
 	passed("host restart preserves owners/history and stable request replay does not execute twice");
+	const crashThreadId = owners.get("Package Beta").id;
+	const crashParams = {
+		threadId: crashThreadId,
+		clientUserMessageId: "fixture-crash",
+		input: [{ type: "text", text: "Write PACKAGE-CRASH and read it back." }],
+	};
+	const acceptedCrash = await rpc("turn/start", crashParams);
+	await waitFor(async () => {
+		const turns = await history(crashThreadId);
+		return turns.some((turn: any) => turn.id === acceptedCrash.turn.id && turn.status === "inProgress");
+	}, "active turn before abrupt host loss");
+	await crashHost();
+	await startHost();
+	await waitFor(async () => (await threads()).length === 2, "owners after abrupt host loss");
+	const completedCrash = await waitFor(async () => {
+		const turns = await history(crashThreadId);
+		return turns
+			.filter((turn: any) =>
+				turn.items.some(
+					(item: any) => item.type === "userMessage" && item.content?.[0]?.text?.includes("PACKAGE-CRASH"),
+				),
+			)
+			.at(-1)?.status === "completed"
+			? turns
+			: undefined;
+	}, "active terminal turn after abrupt host loss");
+	const retriedCrash = await rpc("turn/start", crashParams);
+	assert.equal(retriedCrash.turn.id, acceptedCrash.turn.id);
+	assert.equal(completedCrash.at(-1).id, acceptedCrash.turn.id);
+	assert.equal(
+		completedCrash.filter((turn: any) =>
+			turn.items.some(
+				(item: any) => item.type === "userMessage" && item.content?.[0]?.text?.includes("PACKAGE-CRASH"),
+			),
+		).length,
+		1,
+	);
+	assert.equal(await Bun.file(`${output}/beta/package-check.txt`).text(), "PACKAGE-CRASH");
+	passed("abrupt packaged host loss preserves active terminal work and stable retry executes it once");
 	await terminals[0].close();
 	await waitFor(async () => (await threads()).length === 1, "closed terminal removed");
 	const alphaId = owners.get("Package Alpha").id;

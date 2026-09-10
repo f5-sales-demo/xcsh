@@ -497,3 +497,22 @@ This local host matrix passed 17 tests with 101 assertions, and the complete
 remote-control suite passed 878 tests with 3471 assertions. It is transport-level
 coverage with a real local owner and mocked remote WebSockets. Abrupt loss of a
 packaged host process and a fresh service trace remain separate acceptance work.
+
+## Abrupt host and rejected-token recovery
+
+The host now refreshes its enrollment token after a WebSocket transport error
+before reconnecting. This supplies the recovery path for a service-rejected token
+when the Bun client does not expose the upgrade's HTTP status. The existing
+selected-subscription refresh fence, account match, cursor and replay state remain
+in force.
+
+Compiled-process recovery now covers the Unix-socket residue left by SIGKILL. The
+replacement host probes for a live owner and removes only a current-user socket
+that does not answer. In a network-disabled, Codex-absent Ubuntu container, a real
+terminal turn remained active across host SIGKILL, finished its write/read tools,
+and returned the same turn on stable retry without a second history entry.
+
+All nine packaged checks passed in 20.566 seconds. The current remote-control
+suite passed 880 tests with 3494 assertions. The recorded artifact uses synthetic
+enrollment; a service-side revoked-token exercise and final phone acceptance are
+still required.
