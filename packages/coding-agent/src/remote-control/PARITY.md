@@ -464,3 +464,23 @@ xcsh advertises only `accept`, `decline` and `cancel` for command approvals.
 unsupported because the native runtime has no equivalent persistent approval
 state. Dedicated permission-profile requests and MCP elicitations also remain
 open. No phone approval acceptance is inferred from the automated coverage.
+
+## Relay recovery source parity
+
+The v3 relay codec now matches the pinned acknowledgement ordering for plain and
+chunked server envelopes, including partial chunk replay. Repeated initialization
+is forwarded to the connection tracker, closed streams may restart sequence
+numbers, and delivery cursors survive acknowledgement and closure events.
+
+Pinned segment-reassembly behavior is also covered for duplicates, stale chunks,
+newer assemblies, bad base64, metadata mismatch, ordering faults and clean replay.
+Recoverable chunk faults are dropped without closing the host relay connection.
+The xcsh byte and assembly limits remain intentionally smaller and are documented
+as a resource boundary. These are source-contract and local host tests; an abrupt
+packaged reconnect and a new live phone recovery trace are not yet claimed.
+
+The final local evidence is 16 focused relay/host tests with 89 assertions and
+877 remote-control tests with 3459 assertions. The guarded package run completed
+before the final two parser guards with 8264 passes, 561 skips and 29711
+assertions. Their focused and complete remote-control matrices were rerun
+afterward. All runs completed with zero failures.

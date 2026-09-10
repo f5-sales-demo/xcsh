@@ -13,8 +13,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `auth.rs`: subscription bearer and selected account headers.
 - `enroll.rs`: pairing and expiry contract.
 - `clients.rs`: client listing, pagination, revocation, and one unauthorized-auth recovery retry.
-- `websocket.rs`, `client_tracker.rs`, `segment.rs`: relay headers, framing,
-  sequence cursors, acknowledgements, and chunk transport.
+- `protocol.rs`, `websocket.rs`, `client_tracker.rs`, `segment.rs`: relay headers,
+  framing, sequence cursors, acknowledgements, and chunk transport. The protocol
+  and segment sources are pinned directly in the reference manifest.
 - `codex-rs/app-server-protocol`: initialization, thread, turn, and item wire shapes.
 - `codex-rs/app-server/src/request_processors/thread_processor.rs` and
   `codex-rs/thread-store/src/local/thread_history/segment_paging.rs`: history

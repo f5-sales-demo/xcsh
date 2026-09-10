@@ -1839,3 +1839,37 @@ The complete remote-control suite passed 871 tests with 3413 assertions across
 64 files. The guarded package suite passed 8258 tests with 561 skips, zero
 failures and 29668 assertions across 790 files in 404.57 seconds. Package
 formatting, prompt formatting and TypeScript checks passed across 1775 files.
+
+## Relay acknowledgement and chunk recovery parity
+
+The relay codec now follows the pinned v3 acknowledgement cursor for both plain
+and segmented server envelopes. A segment-zero acknowledgement removes a plain
+response, while a partial chunk acknowledgement retains only later chunks for
+replay. A missing segment acknowledges the complete sequence. Acknowledgement
+and client-close cursors are retained for the next subscription.
+
+Repeated `initialize` messages remain eligible so the client tracker can replace
+an existing logical connection. Other repeated or older messages remain
+deduplicated. `client_closed` clears the stream's inbound sequence and partial
+assembly, allowing a new connection on the same stream to restart its sequence.
+
+Malformed, mismatched and reordered chunk envelopes are dropped and their
+affected assembly is cleared without converting a recoverable input fault into a
+relay disconnect. Duplicate and stale chunks do not displace a newer in-progress
+assembly. A clean replay can therefore complete after rejected input. The native
+limits remain deliberately smaller than Codex's maximums for a live terminal
+host, while retaining the same bounded behavior.
+
+Tests first failed all six initial recovery cases, and a separate red test exposed
+disconnect-on-cap behavior. The focused relay/host run then passed 16 tests with
+89 assertions, and the final relay-only run passed 11 tests with 59 assertions.
+The exact pinned `protocol.rs` and `segment.rs` source hashes are recorded in the
+reference manifest. Abrupt packaged relay reconnection and live phone recovery
+remain open; the dedicated phone runtime was not changed for this checkpoint.
+
+The complete remote-control suite passed 877 tests with 3459 assertions and zero
+failures across 64 files. The guarded coding-agent package suite passed 8264
+tests with 561 skips, 29711 assertions and zero failures across 790 files in
+414.50 seconds before the final empty-payload and cursor-type guards. Their
+focused matrix and the complete remote-control suite were rerun afterward.
+Workspace formatting and TypeScript checks passed.

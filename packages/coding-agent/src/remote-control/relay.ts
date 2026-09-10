@@ -35,8 +35,9 @@ export class RelayCodec {
 			typeof frame.client_id !== "string" ||
 			typeof frame.type !== "string" ||
 			typeof frame.stream_id !== "string" ||
+			(frame.cursor !== undefined && typeof frame.cursor !== "string") ||
 			(frame.seq_id !== undefined && (!Number.isSafeInteger(frame.seq_id) || (frame.seq_id as number) < 0)) ||
-			wire.length > MAX_MESSAGE
+			Buffer.byteLength(wire) > MAX_MESSAGE
 		)
 			throw new Error("Invalid relay frame");
 		const clientId = frame.client_id;
@@ -45,16 +46,34 @@ export class RelayCodec {
 		const seq = frame.seq_id as number | undefined;
 		if (frame.type === "ack") {
 			if (seq === undefined) throw new Error("Invalid relay frame");
-			const segment = frame.segment_id === undefined ? Infinity : Number(frame.segment_id);
+			if (
+				frame.segment_id !== undefined &&
+				(!Number.isSafeInteger(frame.segment_id) || (frame.segment_id as number) < 0)
+			)
+				throw new Error("Invalid relay frame");
+			const segment = frame.segment_id === undefined ? Infinity : (frame.segment_id as number);
 			this.#pending = this.#pending.filter(
 				item => item.key !== key || item.seq > seq || (item.seq === seq && item.segment > segment),
 			);
+			if (typeof frame.cursor === "string") this.cursor = frame.cursor;
 			return null;
 		}
-		if (frame.type === "ping" || frame.type === "client_closed") return { clientId, streamId, event: frame.type };
+		if (frame.type === "ping" || frame.type === "client_closed") {
+			if (typeof frame.cursor === "string") this.cursor = frame.cursor;
+			if (frame.type === "client_closed") {
+				this.#inbound.delete(key);
+				this.#assemblies.delete(key);
+			}
+			return { clientId, streamId, event: frame.type };
+		}
 		if (!["client_message", "client_message_chunk"].includes(frame.type)) throw new Error("Invalid relay frame");
 		if (seq === undefined) throw new Error("Invalid relay frame");
-		if (seq <= (this.#inbound.get(key) ?? -1)) return null;
+		const initialize =
+			frame.type === "client_message" &&
+			frame.message != null &&
+			typeof frame.message === "object" &&
+			(frame.message as Record<string, unknown>).method === "initialize";
+		if (seq <= (this.#inbound.get(key) ?? -1) && !initialize) return null;
 		if (frame.type === "client_message_chunk") {
 			const {
 				segment_id: segment,
@@ -62,6 +81,9 @@ export class RelayCodec {
 				message_size_bytes: size,
 				message_chunk_base64: encoded,
 			} = frame;
+			const assembly = this.#assemblies.get(key);
+			if (assembly && (seq < assembly.seq || (seq === assembly.seq && (segment as number) < assembly.chunks.length)))
+				return null;
 			if (
 				!Number.isSafeInteger(segment) ||
 				!Number.isSafeInteger(count) ||
@@ -73,44 +95,54 @@ export class RelayCodec {
 				(size as number) < 1 ||
 				(size as number) > MAX_MESSAGE ||
 				typeof encoded !== "string" ||
+				encoded.length === 0 ||
 				encoded.length > 150 * 1024 ||
 				!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)
-			)
-				throw new Error("Invalid relay frame");
-			let assembly = this.#assemblies.get(key);
+			) {
+				this.#assemblies.delete(key);
+				return null;
+			}
 			if (assembly && assembly.seq !== seq) {
 				this.#assemblies.delete(key);
-				assembly = undefined;
+				return null;
 			}
-			if (!assembly) {
-				if (segment !== 0) throw new Error("Invalid relay chunk order");
-				if (this.#assemblies.size >= 16) throw new Error("Relay buffer limit");
-				assembly = { seq, count: count as number, size: size as number, chunks: [], received: 0 };
-				this.#assemblies.set(key, assembly);
+			let current = assembly;
+			if (!current) {
+				if (segment !== 0) return null;
+				if (this.#assemblies.size >= 16) {
+					const oldest = this.#assemblies.keys().next().value;
+					if (oldest !== undefined) this.#assemblies.delete(oldest);
+				}
+				current = { seq, count: count as number, size: size as number, chunks: [], received: 0 };
+				this.#assemblies.set(key, current);
 			}
-			if (assembly.count !== count || assembly.size !== size) {
+			if (current.count !== count || current.size !== size) {
 				this.#assemblies.delete(key);
-				throw new Error("Invalid relay frame");
+				return null;
 			}
-			if ((segment as number) < assembly.chunks.length) return null;
-			if (segment !== assembly.chunks.length) {
+			if ((segment as number) < current.chunks.length) return null;
+			if (segment !== current.chunks.length) {
 				this.#assemblies.delete(key);
-				throw new Error("Invalid relay chunk order");
+				return null;
 			}
 			const chunk = Buffer.from(encoded, "base64");
-			assembly.received += chunk.length;
-			if (assembly.received > assembly.size) {
+			current.received += chunk.length;
+			if (current.received > current.size) {
 				this.#assemblies.delete(key);
-				throw new Error("Relay buffer limit");
+				return null;
 			}
-			assembly.chunks.push(chunk);
-			if (assembly.chunks.length < assembly.count) return null;
+			current.chunks.push(chunk);
+			if (current.chunks.length < current.count) {
+				this.#assemblies.delete(key);
+				this.#assemblies.set(key, current);
+				return null;
+			}
 			this.#assemblies.delete(key);
-			if (assembly.received !== assembly.size) throw new Error("Invalid relay frame");
+			if (current.received !== current.size) return null;
 			try {
-				frame.message = JSON.parse(Buffer.concat(assembly.chunks).toString("utf8"));
+				frame.message = JSON.parse(Buffer.concat(current.chunks).toString("utf8"));
 			} catch {
-				throw new Error("Invalid relay frame");
+				return null;
 			}
 		}
 		if (!frame.message || typeof frame.message !== "object") throw new Error("Invalid relay frame");
@@ -155,7 +187,7 @@ export class RelayCodec {
 			throw new Error("Relay buffer limit");
 		this.#outbound.set(key, seq);
 		frames.forEach((wire, segment) => {
-			this.#pending.push({ key, seq, segment: frames.length === 1 ? Infinity : segment, wire });
+			this.#pending.push({ key, seq, segment: frames.length === 1 ? 0 : segment, wire });
 		});
 		return frames;
 	}
