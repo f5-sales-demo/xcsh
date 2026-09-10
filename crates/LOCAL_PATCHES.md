@@ -30,6 +30,8 @@ The direct stack refresh retains the Brush behavioral patch until the generic
 shell migration in #3835 preserves containment and cancellation. A formatted
 three-way rebase against canonical releases conflicted in 22 core files and 42
 builtin files, including the execution and file-access enforcement paths.
+The retained core also removes three redundant clones in completion and terminfo
+input handling required by the September 3 nightly Clippy checks; behavior is unchanged.
 
 | Source | Archive SHA-256 | Disposition |
 | --- | --- | --- |
