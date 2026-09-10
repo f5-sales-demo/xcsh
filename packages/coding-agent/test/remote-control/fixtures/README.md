@@ -5,6 +5,7 @@ Unmodified OpenAI Codex JSON schemas from commit
 
 - `codex-rs/app-server-protocol/schema/json/v1/InitializeResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadListResponse.json`
+- `codex-rs/app-server-protocol/schema/json/v2/ThreadLoadedListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/Thread{Turns,Items}ListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ConfigReadResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ModelListResponse.json`

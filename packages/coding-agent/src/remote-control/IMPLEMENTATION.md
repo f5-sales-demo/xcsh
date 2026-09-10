@@ -451,3 +451,36 @@ to 25 entries, clamps unsigned limits to 1–100 and supports reverse anchors;
 `thread/loaded/list` sorts IDs and uses exclusive cursors that tolerate departed
 anchors. These are remaining implementation requirements, alongside the complete
 control, interaction, lifecycle, recovery and model coverage in `ACCEPTANCE.md`.
+
+Discovery now pages all permitted live owners with pinned 25-row defaults,
+unsigned/clamped limits, timestamp sorting, reverse anchors, provider/source/cwd
+filters and literal name/preview search. Native keyset anchors tolerate departed
+sessions and newer registrations. Loaded discovery sorts IDs and resumes after
+removed anchors. Projects, sections, archives and spawned descendants remain
+outside this live top-level registry; corresponding filters are honored with
+empty results or explicit errors. Experimental project/ancestry filters require
+the requesting connection's capability. Omitted provider filters include all live
+xcsh providers, preserving the user-required all-session view.
+
+All ten initial discovery regressions failed before implementation and now pass.
+An actual local Unix-socket integration registers 128 owners, pages all of them
+without agent calls, then routes a last-page selection to exactly one owner.
+Actual router responses validate against pinned list and loaded-list schemas;
+the newly imported loaded-list schema remains unchanged from source.
+
+Verification: 230 focused tests / 994 assertions, zero failures. Workspace
+TypeScript and formatting passed. The guarded package suite passed 7468 tests,
+561 skips, zero failures / 23266 assertions across 742 files in 333.50 seconds.
+Fixture identifiers were standardized to documented synthetic values and their
+ten tests rechecked. Markdown/terminology, staged PII, secret and whitespace checks
+passed. The pending streaming capture still has no voice file or expected fixture;
+no new manual phone acceptance is claimed.
+
+The next lifecycle defect is now reproduced with a synthetic mutable session
+target: after the target changes session identity, RemoteSession reports the new
+ID but retains the old creation time; reusing a completed voice-stop RPC ID in
+the new session returns -32600 because the old request cache remains. The bridge
+currently retains one adapter across terminal session changes. New/fork/resume
+isolation needs an implementation and regression tests; asynchronous voice
+closure/persistence must also remain bound to the correct session. Full remaining
+scope is preserved in `ACCEPTANCE.md`.

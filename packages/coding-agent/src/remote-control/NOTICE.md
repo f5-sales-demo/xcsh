@@ -23,6 +23,11 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - Ordinary history uses the pinned `v2/item.rs` user, agent and dynamic-tool
   shapes. Its selected-branch projection and `remote-history` identity/boundary
   metadata are native xcsh code; messages remain persisted by AgentSession.
+- `codex-rs/app-server/src/request_processors/thread_processor.rs`, `filters.rs`,
+  `thread-store/src/local/list_threads.rs` and `state/src/runtime/threads.rs`:
+  discovery defaults, limits, sort/filter behavior, reverse anchors and loaded-ID
+  pagination. Native discovery includes all live providers by default; source
+  identity cursors tolerate departed terminals.
 - `codex-rs/thread-store/src/local/thread_history/realtime.rs`: mixed timeline
   ordering, backward pagination, shared-position boundaries and opening voice
   state. Native cursors bind source-entry identities. The original experimental

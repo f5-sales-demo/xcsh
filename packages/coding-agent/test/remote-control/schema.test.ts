@@ -7,6 +7,7 @@ import configSchema from "./fixtures/ConfigReadResponse.json";
 import initializeSchema from "./fixtures/InitializeResponse.json";
 import modelSchema from "./fixtures/ModelListResponse.json";
 import listSchema from "./fixtures/ThreadListResponse.json";
+import loadedListSchema from "./fixtures/ThreadLoadedListResponse.json";
 
 test("initialization and live thread payload match pinned upstream schemas", async () => {
 	const ajv = new Ajv({ strict: false });
@@ -39,9 +40,15 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 	} as unknown as SessionTarget);
 	try {
 		const validList = ajv.compile(listSchema);
-		expect(validList({ data: [remote.thread()], nextCursor: null }), JSON.stringify(validList.errors)).toBe(true);
+		router.sessions.set(remote.thread().id, { thread: remote.thread(), call: async () => ({}) });
+		const response = (await router.handle("fixture", { id: 2, method: "thread/list" })) as { result: unknown };
+		expect(validList(response.result), JSON.stringify(validList.errors)).toBe(true);
+		const loaded = (await router.handle("fixture", { id: 3, method: "thread/loaded/list" })) as { result: unknown };
+		const validLoaded = ajv.compile(loadedListSchema);
+		expect(validLoaded(loaded.result), JSON.stringify(validLoaded.errors)).toBe(true);
 	} finally {
 		remote.dispose();
+		router.dispose();
 	}
 });
 

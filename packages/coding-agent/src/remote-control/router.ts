@@ -1,3 +1,4 @@
+import { loadedThreadList, threadList } from "./discovery";
 import { configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError } from "./session";
@@ -69,18 +70,15 @@ export class RemoteRouter {
 					throw new ProtocolError(-32600, "thread/timeline/list requires experimentalApi capability");
 				switch (request.method) {
 					case "thread/list": {
-						const limit = params.limit ?? 100;
-						if (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
-							throw new ProtocolError(-32602, "Invalid list limit");
-						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported list cursor");
-						let data: Record<string, unknown>[] = [...this.sessions.values()].map(session => ({
-							...session.thread,
-							turns: [],
-						}));
-						if (params.archived === true) data = [];
-						if (typeof params.cwd === "string") data = data.filter(thread => thread.cwd === params.cwd);
-						data.sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt));
-						result = { data: data.slice(0, limit as number), nextCursor: null };
+						if (!this.#experimental.has(client)) {
+							for (const field of ["projectId", "parentThreadId", "ancestorThreadId"])
+								if (field === "projectId" ? Object.hasOwn(params, field) : params[field] != null)
+									throw new ProtocolError(-32600, `thread/list.${field} requires experimentalApi capability`);
+						}
+						result = threadList(
+							[...this.sessions.values()].map(session => session.thread),
+							params,
+						);
 						break;
 					}
 					case "process/spawn":
@@ -128,7 +126,7 @@ export class RemoteRouter {
 						result = { data: [], nextCursor: null };
 						break;
 					case "thread/loaded/list":
-						result = { data: [...this.sessions.keys()], nextCursor: null };
+						result = loadedThreadList([...this.sessions.keys()], params);
 						break;
 					case "thread/unsubscribe": {
 						const threadId = String(params.threadId);

@@ -14,8 +14,8 @@ test("host registers two live owners, routes into owner socket, and removes exit
 	const control = await connectPeer(path);
 	a.handle = async (method, params) => ({ method, owner: "a", params });
 	try {
-		await a.call("register", { thread: { id: "a", name: "A", updatedAt: 1, turns: [] } });
-		await b.call("register", { thread: { id: "b", name: "B", updatedAt: 1, turns: [] } });
+		await a.call("register", { thread: { id: "a", name: "A", createdAt: 2, updatedAt: 1, turns: [] } });
+		await b.call("register", { thread: { id: "b", name: "B", createdAt: 1, updatedAt: 1, turns: [] } });
 		expect(await control.call("status", {})).toMatchObject({ liveSessions: 2 });
 		const result = await host.router.sessions.get("a")?.call("r", "turn/start", { threadId: "a" });
 		expect(result).toMatchObject({ owner: "a", params: { identity: "r" } });
@@ -74,6 +74,54 @@ test("host sends standalone process exit back only to the requesting local proto
 		]);
 	} finally {
 		owner.close();
+		phone.close();
+		await host.close();
+		await rm(dir, { recursive: true, force: true });
+	}
+});
+
+test("local phone discovery reaches all 128 owners and routes a late page to its sole executor", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "xcsh-discovery-host-"));
+	const path = join(dir, "host.sock");
+	const host = await startLocalHost(path, "fixture");
+	const owners: Awaited<ReturnType<typeof connectPeer>>[] = [];
+	const phone = await connectPeer(path);
+	const calls: string[] = [];
+	try {
+		for (let i = 0; i < 128; i++) {
+			const owner = await connectPeer(path);
+			owners.push(owner);
+			const id = i.toString(16).padStart(16, "0");
+			owner.handle = async (_method, params) => {
+				calls.push(id);
+				return { owner: id, method: params.method };
+			};
+			await owner.call("register", { thread: { id, createdAt: i, source: "cli" } });
+		}
+		await phone.call("protocol", {
+			request: { id: 1, method: "initialize", params: { clientInfo: { name: "fixture", version: "1" } } },
+		});
+		const ids: string[] = [];
+		let cursor: string | null = null;
+		do {
+			const response = (await phone.call("protocol", {
+				request: { id: 2, method: "thread/list", params: { limit: 25, cursor } },
+			})) as { result: { data: { id: string }[]; nextCursor: string | null } };
+			ids.push(...response.result.data.map(thread => thread.id));
+			cursor = response.result.nextCursor;
+		} while (cursor);
+		expect(ids).toHaveLength(128);
+		expect(new Set(ids).size).toBe(128);
+		expect(calls).toEqual([]);
+		const threadId = ids[127];
+		expect(
+			await phone.call("protocol", {
+				request: { id: 3, method: "thread/resume", params: { threadId } },
+			}),
+		).toMatchObject({ result: { owner: threadId, method: "thread/resume" } });
+		expect(calls).toEqual([threadId]);
+	} finally {
+		for (const owner of owners) owner.close();
 		phone.close();
 		await host.close();
 		await rm(dir, { recursive: true, force: true });

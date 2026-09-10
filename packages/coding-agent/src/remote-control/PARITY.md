@@ -82,6 +82,30 @@ correct a copy's known naming mismatches explicitly, and independently compare
 boundary field names with those observed responses. Promoted-item shapes still
 rely on Rust source; no live promotion or new phone acceptance is claimed.
 
+Discovery now follows pinned 25-row defaults, unsigned limits clamped to 1–100,
+created/updated/recency ordering, exact provider/source filters, normalized cwd
+filters and literal case-sensitive name/preview search. Keyset continuation
+anchors tolerate exited sessions and newer registrations; reversing uses an
+inclusive timestamp anchor. Loaded-thread lists sort IDs, default to no limit,
+and resume after a departed anchor. Native cursors carry session IDs and timestamps,
+with an ID tie-breaker for second-resolution timestamps; cursors are opaque to clients.
+
+Unlike Codex's single configured-provider default, omitted `modelProviders`
+includes every live xcsh provider, as required by the all-session objective.
+Explicit provider filters still apply. The live top-level scope has no archived
+threads, sections, projects or spawned descendants: filters return empty sets or
+explicit errors rather than ignoring the requested constraint. Experimental
+project/ancestry filters require the connection capability. Section-position
+sorting requires a section filter and returns the empty section collection.
+`useStateDbOnly` is validated but does not change the in-memory live registry read.
+
+Ten discovery cases failed before implementation and now pass. A separate local
+Unix-socket test registers 128 owners, pages all of them without invoking their
+agents, then routes a last-page selection to exactly one owner. Actual router
+list responses also validate against the pinned schemas. These are automated
+checks, not new manual phone observations. Full experimental notification/field
+handling, lifecycle and live acceptance remain separate open requirements.
+
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
 | Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a new native Beta file-task capture also passed |
