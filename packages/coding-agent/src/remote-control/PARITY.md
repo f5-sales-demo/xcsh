@@ -57,15 +57,36 @@ execution and message persistence, late prompt settlement, retry recovery and
 interrupted turns. A first remote turn is persisted before dispatch, so a failure
 without assistant output survives disk reopen. Sol, Luna, Terra and Astra adapter
 tests now use the persisted-history path for streaming and completed-only voice.
-These are automated results, not new manual phone acceptance. The mixed realtime
-timeline, specialized command/file displays, remaining visible message types,
+These are automated results, not new manual phone acceptance. Specialized
+command/file displays, remaining visible message types,
 concurrent controls, active attachment and fork lifecycle still require work.
+
+Live attachments now advertise paginated history. The mixed `thread/timeline/list`
+implementation combines ordinary items,
+explicit/inferred turn boundaries and persisted realtime facts. Like the pinned
+store, it selects the newest page and returns that page in chronological order;
+its cursor moves to older entries. Equal-position entries use boundary/item kind
+and ID ordering. Opening voice state considers only facts before the page and on
+the selected branch. Source-entry anchors survive appends and compaction. Replayed
+voice facts update their original position. Invalid stored facts return sanitized
+errors, and unknown extra fields are excluded. The new method requires the
+requesting connection's experimental capability; this is not yet a complete audit
+of experimental methods and fields throughout the adapter.
+
+The pinned precomputed experimental JSON schema retains snake_case names on some
+variants where the Rust serializer uses camelCase. A separate read-only local
+app-server query against the pinned 0.153.4 binary confirmed the actual camelCase
+turn-boundary fields in the existing reference Alpha/Beta histories. The saved
+fixture contains field names only. Tests preserve the original schema export,
+correct a copy's known naming mismatches explicitly, and independently compare
+boundary field names with those observed responses. Promoted-item shapes still
+rely on Rust source; no live promotion or new phone acceptance is claimed.
 
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
 | Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a new native Beta file-task capture also passed |
 | Session and transcript items | Started/completed item pairs and per-item transcript deltas surround legacy voice notifications | Missing behavior implemented; replay of both recorded notification sequences passes with synthetic speech and pinned item schemas |
-| Durable speech boundaries | Start, user segment, assistant segment, close in canonical timeline | Stored as voice provenance records; exposing the complete mixed canonical timeline through `thread/timeline/list` remains pending |
+| Durable speech boundaries | Start, user segment, assistant segment, close in canonical timeline | Mixed timeline now pages ordinary/voice facts with opening call state, branch isolation and stable anchors; final phone acceptance remains pending |
 | Separate subscribers | Identical notifications can be sent to multiple relay clients | Comparison selects the phone client from relay envelopes; it does not deduplicate legitimate deliveries within that client |
 | Shutdown | Both calls closed with reason `requested` | Closure waits for accepted history writes; tests cover partial speech, repeated closure, late events, and cancellation during startup flush |
 | Work delegation | After repairing the reference setup, one phone delegation created the file and read back the correct contents; Robin confirmed the verbal result | Matching native phone task passed with one delegation, correct file and spoken read-back, handoff notification, and normal closure |

@@ -8,8 +8,10 @@ import {
 	messageHistoryItems,
 	messageKey,
 	projectHistory,
+	projectHistorySnapshot,
 } from "./history";
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
+import { timelinePage } from "./timeline";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
 export type SessionTarget = Pick<
@@ -202,7 +204,7 @@ export class RemoteSession {
 			section: null,
 			sectionEnteredAt: null,
 			projectId: null,
-			historyMode: "legacy",
+			historyMode: this.#durable ? "paginated" : "legacy",
 			modelProvider: this.target.model?.provider ?? "unknown",
 			model: this.target.model?.id ?? null,
 			supportedReasoningEfforts:
@@ -242,6 +244,7 @@ export class RemoteSession {
 				"thread/resume",
 				"thread/turns/list",
 				"thread/items/list",
+				"thread/timeline/list",
 				"thread/queue/list",
 				"thread/goal/get",
 			].includes(method)
@@ -375,6 +378,15 @@ export class RemoteSession {
 			};
 		}
 		if (method === "thread/read") return { thread: this.thread(params.includeTurns === true) };
+		if (method === "thread/timeline/list") {
+			if (!this.#durable) throw new ProtocolError(-32601, "Timeline requires persisted session history");
+			const snapshot = projectHistorySnapshot(
+				this.target.sessionId,
+				this.target.sessionManager.getBranch(),
+				Boolean(this.#active) || this.target.isStreaming,
+			);
+			return timelinePage(this.target.sessionId, snapshot.timeline, params);
+		}
 
 		if (method === "thread/turns/list" || method === "thread/items/list") {
 			const history = this.history();
@@ -512,6 +524,7 @@ export class RemoteSession {
 		if (method === "turn/steer") {
 			if (!this.#active || params.expectedTurnId !== this.#active.id)
 				throw new ProtocolError(-32602, "Active turn mismatch");
+			const turnId = this.#active.id;
 			const client =
 				typeof params.clientUserMessageId === "string" ? { text, id: params.clientUserMessageId } : undefined;
 			if (client) this.#pendingClients.push(client);
@@ -521,7 +534,7 @@ export class RemoteSession {
 				if (client) this.#pendingClients = this.#pendingClients.filter(value => value !== client);
 				throw error;
 			}
-			return { turnId: this.#active.id };
+			return { turnId };
 		}
 		if (this.target.isStreaming || this.#active)
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");

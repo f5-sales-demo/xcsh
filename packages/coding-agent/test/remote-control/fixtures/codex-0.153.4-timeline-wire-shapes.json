@@ -1,0 +1,120 @@
+{
+  "version": "0.153.4",
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "method": "thread/timeline/list",
+  "transport": "local app-server Unix WebSocket",
+  "scope": "Read existing Alpha and Beta reference histories; field names only, no speech or identity values",
+  "shapes": {
+    "item": [
+      [
+        "item",
+        "position",
+        "turnId",
+        "type"
+      ]
+    ],
+    "item:agentMessage": [
+      [
+        "delivery",
+        "id",
+        "memoryCitation",
+        "phase",
+        "questions",
+        "text",
+        "type"
+      ]
+    ],
+    "item:commandExecution": [
+      [
+        "aggregatedOutput",
+        "command",
+        "commandActions",
+        "cwd",
+        "durationMs",
+        "exitCode",
+        "id",
+        "pluginId",
+        "processId",
+        "scriptPath",
+        "source",
+        "status",
+        "type"
+      ]
+    ],
+    "item:fileChange": [
+      [
+        "changes",
+        "id",
+        "status",
+        "type"
+      ]
+    ],
+    "item:realtimeSessionClosed": [
+      [
+        "id",
+        "outcome",
+        "realtimeSessionId",
+        "type"
+      ]
+    ],
+    "item:realtimeSessionStarted": [
+      [
+        "id",
+        "realtimeSessionId",
+        "type"
+      ]
+    ],
+    "item:reasoning": [
+      [
+        "content",
+        "id",
+        "summary",
+        "type"
+      ]
+    ],
+    "item:transcriptSegment": [
+      [
+        "id",
+        "realtimeSessionId",
+        "role",
+        "text",
+        "type"
+      ]
+    ],
+    "item:userMessage": [
+      [
+        "clientId",
+        "content",
+        "id",
+        "type"
+      ]
+    ],
+    "realtime": [
+      [
+        "item",
+        "position",
+        "type"
+      ]
+    ],
+    "turnCompleted": [
+      [
+        "completedAt",
+        "durationMs",
+        "error",
+        "position",
+        "startedAt",
+        "status",
+        "turnId",
+        "type"
+      ]
+    ],
+    "turnStarted": [
+      [
+        "position",
+        "startedAt",
+        "turnId",
+        "type"
+      ]
+    ]
+  }
+}

@@ -11,6 +11,18 @@ export interface HistoryTurn {
 	completedAt: number | null;
 	durationMs: number | null;
 }
+export type TimelineEntry =
+	| { type: "item"; position: number; turnId: string; item: Record<string, unknown> }
+	| { type: "realtime"; position: number; item: Record<string, unknown> }
+	| { type: "turnStarted"; position: number; turnId: string; startedAt: number | null }
+	| ({ type: "turnCompleted"; position: number; turnId: string } & Pick<
+			HistoryTurn,
+			"status" | "error" | "startedAt" | "completedAt" | "durationMs"
+	  >);
+export interface TimelineRow {
+	sourceId: string;
+	entry: TimelineEntry;
+}
 export function historyError() {
 	return {
 		message: "The selected model could not complete this turn. Check the terminal for details.",
@@ -106,15 +118,54 @@ export function messageHistoryItems(
  * the corresponding message append (which occurs after subscriber notification).
  */
 export function projectHistory(threadId: string, entries: readonly SessionEntry[], running = false): HistoryTurn[] {
+	return projectHistorySnapshot(threadId, entries, running).turns;
+}
+export function projectHistorySnapshot(
+	threadId: string,
+	entries: readonly SessionEntry[],
+	running = false,
+): { turns: HistoryTurn[]; timeline: TimelineRow[] } {
 	const turns: HistoryTurn[] = [];
+	const timeline: TimelineRow[] = [];
+	const inferredEnds: { turn: HistoryTurn; position: number; sourceId: string }[] = [];
+	let lastMessage = { position: 0, sourceId: "" };
+	const complete = (value: HistoryTurn, position: number, sourceId: string) => {
+		timeline.push({
+			sourceId,
+			entry: {
+				type: "turnCompleted",
+				position,
+				turnId: value.id,
+				status: value.status,
+				error: value.error,
+				startedAt: value.startedAt,
+				completedAt: value.completedAt,
+				durationMs: value.durationMs,
+			},
+		});
+	};
 	const tools = new Map<string, Record<string, unknown>>();
 	let current: HistoryTurn | undefined;
 	let explicit = false;
 	let continuingTools = false;
 	let marker: { key: string; id: string; clientId: string | null } | undefined;
 	let startMs = 0;
-	for (const entry of entries) {
+	for (const [index, entry] of entries.entries()) {
+		const position = index + 1;
 		const ms = Date.parse(entry.timestamp);
+		if (
+			entry.type === "custom" &&
+			entry.customType === "remote-realtime" &&
+			entry.data &&
+			typeof entry.data === "object"
+		) {
+			const record = entry.data as Record<string, unknown>;
+			if (record.kind === "voiceTimeline")
+				timeline.push({
+					sourceId: entry.id,
+					entry: { type: "realtime", position, item: record.item as Record<string, unknown> },
+				});
+		}
 		if (
 			entry.type === "custom" &&
 			entry.customType === "remote-history" &&
@@ -123,10 +174,15 @@ export function projectHistory(threadId: string, entries: readonly SessionEntry[
 		) {
 			const record = entry.data as Record<string, unknown>;
 			if (record.kind === "turnStarted" && typeof record.id === "string") {
+				if (current && !explicit) inferredEnds.push({ turn: current, ...lastMessage });
 				current = newHistoryTurn(record.id, "inProgress");
 				startMs = typeof record.startedAtMs === "number" ? record.startedAtMs : ms;
 				current.startedAt = Math.floor(startMs / 1000);
 				turns.push(current);
+				timeline.push({
+					sourceId: entry.id,
+					entry: { type: "turnStarted", position, turnId: current.id, startedAt: current.startedAt },
+				});
 				explicit = true;
 				marker = undefined;
 			} else if (record.kind === "turnCompleted" && current && current.id === record.id) {
@@ -137,6 +193,7 @@ export function projectHistory(threadId: string, entries: readonly SessionEntry[
 				const end = typeof record.completedAtMs === "number" ? record.completedAtMs : ms;
 				current.completedAt = Math.floor(end / 1000);
 				current.durationMs = Math.max(0, end - startMs);
+				complete(current, position, entry.id);
 				current = undefined;
 				explicit = false;
 				marker = undefined;
@@ -154,15 +211,23 @@ export function projectHistory(threadId: string, entries: readonly SessionEntry[
 		marker = undefined;
 		if (message.role !== "user" && message.role !== "assistant" && message.role !== "toolResult") continue;
 		if (!current || (message.role === "user" && !explicit && !continuingTools)) {
+			if (current && !explicit) inferredEnds.push({ turn: current, ...lastMessage });
 			current = newHistoryTurn(`${threadId}-turn-${entry.id}`);
 			startMs = ms;
 			current.startedAt = Math.floor(ms / 1000);
 			turns.push(current);
+			timeline.push({
+				sourceId: entry.id,
+				entry: { type: "turnStarted", position, turnId: current.id, startedAt: current.startedAt },
+			});
 			continuingTools = false;
 		}
 		const messageId = identity?.id ?? `${threadId}-item-${entry.id}`;
 		const items = messageHistoryItems(messageId, message, identity?.clientId);
 		current.items.push(...items);
+		for (const item of items)
+			timeline.push({ sourceId: entry.id, entry: { type: "item", position, turnId: current.id, item } });
+		lastMessage = { position, sourceId: entry.id };
 		if (message.role === "assistant")
 			for (const part of message.content)
 				if (part.type === "toolCall") {
@@ -193,5 +258,7 @@ export function projectHistory(threadId: string, entries: readonly SessionEntry[
 	}
 	for (const value of turns)
 		if (value.status === "inProgress" && (!running || value !== turns.at(-1))) value.status = "interrupted";
-	return turns;
+	if (current && !explicit && current.status !== "inProgress") inferredEnds.push({ turn: current, ...lastMessage });
+	for (const value of inferredEnds) complete(value.turn, value.position, value.sourceId);
+	return { turns, timeline };
 }

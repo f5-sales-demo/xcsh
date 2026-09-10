@@ -23,6 +23,11 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - Ordinary history uses the pinned `v2/item.rs` user, agent and dynamic-tool
   shapes. Its selected-branch projection and `remote-history` identity/boundary
   metadata are native xcsh code; messages remain persisted by AgentSession.
+- `codex-rs/thread-store/src/local/thread_history/realtime.rs`: mixed timeline
+  ordering, backward pagination, shared-position boundaries and opening voice
+  state. Native cursors bind source-entry identities. The original experimental
+  schema export has documented naming discrepancies; observed wire fields follow
+  the pinned Rust serialization. See `PARITY.md`.
 - `codex-rs/app-server-protocol/src/protocol/v2/{config,model,process}.rs`:
   configuration/model discovery and standalone process requests/notifications.
 
@@ -46,7 +51,7 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/app-server-protocol/schema/json/{ClientRequest,ServerRequest,ServerNotification}.json`:
   the literal method names retained in sanitized capture metadata.
 
-Source: https://github.com/openai/codex/tree/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/app-server-transport/src/transport/remote_control
+Source: [pinned Codex remote transport](https://github.com/openai/codex/tree/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/app-server-transport/src/transport/remote_control)
 
 Modifications: TypeScript/Bun implementation; xcsh identity and version; fixed
 production endpoint; response size limit; no server-body diagnostics; bounded

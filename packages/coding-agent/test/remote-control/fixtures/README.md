@@ -18,6 +18,23 @@ Copyright 2025 OpenAI. Apache-2.0; license and port notices are in
 The unit tests use synthetic host/account/request identifiers. Live credentials,
 pairing material, and session transcripts are never fixtures.
 
+`ThreadTimelineListResponse.json` is extracted unchanged from
+`codex-rs/app-server-protocol/schema/precomputed/app-server-exports-experimental.json.zst`,
+under `json_schema["v2/ThreadTimelineListResponse.json"]`, at the same pinned commit.
+The standard schema directory omits this experimental response. Its turn-boundary
+and promoted-item variants incorrectly retain snake_case fields despite the Rust
+`serde(rename_all_fields = "camelCase")` attribute. Tests keep the fixture intact
+and apply an explicit naming correction to a copy for validation.
+
+`codex-0.153.4-timeline-wire-shapes.json` records field names observed by querying
+the existing reference Alpha/Beta histories over a separate local Unix WebSocket
+app-server listener. The actual binary reports `codex-cli 0.153.4`. These read-only
+responses confirm camelCase boundary fields; no speech or identity values are
+retained. The temporary listener ran without a remote relay and was stopped after
+the queries. Promoted-item field names follow the pinned Rust serialization and
+remain unverified in live reference voice because the recorded calls did not
+promote response items. This fixture is not a new iPhone conversation recording.
+
 `codex-0.153.4-phone-recall.json` is a separate observed-event fixture from two
 ordinary iPhone voice conversations against the pinned reference host. It selects
 the phone's relay client, preserving delivery order without counting notifications

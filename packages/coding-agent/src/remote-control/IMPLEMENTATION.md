@@ -98,7 +98,7 @@ Robin subsequently confirmed “beta worked”. Both manual typed routing checks
 pass. Automated checks do not substitute for the iPhone voice observations below. Actual phone bootstrap sends four extra skill roots;
 nonempty root registration remains an explicit unsupported operation.
 
-Product labels and host names use lowercase `xcsh`. Existing `XCSH_` environment
+Product labels and hostnames use lowercase `xcsh`. Existing `XCSH_` environment
 variable names retain their uppercase prefix.
 
 ## Native voice preparation
@@ -239,7 +239,6 @@ assertions and the same timeout. All ten cases pass (22 assertions, 12.65 second
 Full-package verification of that repair remains pending.
 
 Current focused verification: 106 remote tests / 373 assertions and workspace lint/TypeScript checks pass. Staged-scope PII, secret scanning, and whitespace checks pass.
-
 
 Client-management checkpoint: native `clients` and `revoke <clientId>` use the
 pinned environment-scoped GET/DELETE contracts and work from an existing enrollment
@@ -419,3 +418,36 @@ items and remaining visible message types, attachment during an active turn,
 session/fork lifecycle, and concurrent control/recovery. Persisting turn boundaries
 does not yet provide durable request replay deduplication or close the tool/crash
 gap. Historical turns without native boundary records use inferred boundaries.
+
+The mixed timeline checkpoint now exposes `thread/timeline/list` from the selected
+persisted branch and advertises paginated history for durable live attachments.
+Pages combine ordinary items, explicit/inferred turn boundaries and voice facts;
+they select newest entries, return chronological page order and retain opening
+voice state. Stable source anchors survive appends and compaction. Replayed voice
+facts update their original position; malformed facts return sanitized errors.
+The method checks the requesting connection's experimental capability.
+
+Observed red-to-green cases cover mixed paging, shared-position boundaries,
+branch isolation, replay identity, invalid stored facts and advertised history
+mode. A separate steering race now returns the accepted turn's captured identity
+if the owner finishes before the reply; a retry does not execute steering twice.
+The pinned experimental schema is preserved byte for byte. A read-only query of
+the pinned reference binary's existing Alpha/Beta histories confirmed camelCase
+boundary fields despite mismatches in its generated schema. The saved wire-shape
+fixture includes field names only; live promoted-item behavior remains unverified.
+
+Final verification: 219 focused tests, zero failures / 890 assertions. Workspace
+TypeScript and formatting passed. The guarded package suite passed 7457 tests,
+561 skips, zero failures / 23162 assertions across 741 files in 332.59 seconds.
+Markdown, terminology, staged PII, secret and whitespace checks passed. An earlier
+broad run overlapped the last two fixes; the final run began after both changes.
+No new phone acceptance is claimed, and the dedicated sessions remain on the
+previous streaming capture build.
+
+Further discovery audit found that `thread/list` silently truncates collections
+above 100 even though the host permits 128 live owners, ignores several pinned
+filters/sort options, and omits usable pagination. The pinned reference defaults
+to 25 entries, clamps unsigned limits to 1–100 and supports reverse anchors;
+`thread/loaded/list` sorts IDs and uses exclusive cursors that tolerate departed
+anchors. These are remaining implementation requirements, alongside the complete
+control, interaction, lifecycle, recovery and model coverage in `ACCEPTANCE.md`.

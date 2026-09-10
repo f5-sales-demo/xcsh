@@ -279,6 +279,28 @@ test("a late prompt promise cannot finish a newer active turn", async () => {
 	expect(f.events.filter(event => event.method === "turn/completed")).toHaveLength(1);
 });
 
+test("accepted steering retains its turn identity when the owner finishes before the reply", async () => {
+	const f = fixture();
+	f.emit({ type: "agent_start" });
+	f.message(user("work"));
+	const turnId = f.remote.history()[0].id;
+	let accepted = 0;
+	f.target.steer = async () => {
+		accepted++;
+		f.message(assistant("done"));
+		f.emit({ type: "agent_end" });
+	};
+	const params = {
+		threadId: "durable",
+		expectedTurnId: turnId,
+		clientUserMessageId: "steer-race",
+		input: [{ type: "text", text: "adjust" }],
+	};
+	expect(await f.remote.call("steer-race", "turn/steer", params)).toEqual({ turnId });
+	expect(await f.remote.call("steer-retry", "turn/steer", params)).toEqual({ turnId });
+	expect(accepted).toBe(1);
+});
+
 test("a crashed incomplete turn becomes interrupted when resumed idle", () => {
 	const f = fixture();
 	f.emit({ type: "agent_start" });

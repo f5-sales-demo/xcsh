@@ -11,12 +11,8 @@ export function historyCursor(scope: HistoryScope, anchor: string | undefined, i
 	return anchor === undefined ? null : JSON.stringify({ version: 1, ...scope, anchor, includeAnchor });
 }
 
-export function historyPage<T>(
-	entries: readonly { key: string; value: T }[],
-	scope: HistoryScope,
-	params: Record<string, unknown>,
-): { data: T[]; nextCursor: string | null; backwardsCursor: string | null } {
-	const requestedLimit = params.limit ?? 25;
+export function historyPageLimit(value: unknown): number {
+	const requestedLimit = value ?? 25;
 	if (
 		typeof requestedLimit !== "number" ||
 		!Number.isInteger(requestedLimit) ||
@@ -24,7 +20,14 @@ export function historyPage<T>(
 		requestedLimit > 0xffffffff
 	)
 		throw new ProtocolError(-32602, "Invalid history page size");
-	const limit = Math.max(1, Math.min(100, requestedLimit));
+	return Math.max(1, Math.min(100, requestedLimit));
+}
+export function historyPage<T>(
+	entries: readonly { key: string; value: T }[],
+	scope: HistoryScope,
+	params: Record<string, unknown>,
+): { data: T[]; nextCursor: string | null; backwardsCursor: string | null } {
+	const limit = historyPageLimit(params.limit);
 	const direction = params.sortDirection ?? (scope.collection === "turns" ? "desc" : "asc");
 	if (direction !== "asc" && direction !== "desc") throw new ProtocolError(-32602, "Invalid history sort direction");
 	let anchorIndex: number | undefined;

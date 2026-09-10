@@ -16,8 +16,10 @@ export class RemoteRouter {
 	dispose(): void {
 		this.#processes.close();
 		this.#clients.clear();
+		this.#experimental.clear();
 	}
 	#clients = new Map<string, Set<string>>();
+	#experimental = new Set<string>();
 	constructor(
 		private readonly home: string,
 		private readonly version: string,
@@ -30,6 +32,7 @@ export class RemoteRouter {
 	}
 	close(client: string): void {
 		this.#clients.delete(client);
+		this.#experimental.delete(client);
 		this.#processes.close(client);
 	}
 	async handle(client: string, input: unknown): Promise<unknown> {
@@ -51,6 +54,9 @@ export class RemoteRouter {
 				if (!this.#clients.has(client) && this.#clients.size >= 64)
 					throw new ProtocolError(-32000, "Remote client limit");
 				this.#clients.set(client, new Set());
+				this.#experimental.delete(client);
+				if ((params.capabilities as { experimentalApi?: unknown } | undefined)?.experimentalApi === true)
+					this.#experimental.add(client);
 				result = {
 					userAgent: `xcsh/${this.version}`,
 					codexHome: this.home,
@@ -59,6 +65,8 @@ export class RemoteRouter {
 				};
 			} else {
 				if (!this.#clients.has(client)) throw new ProtocolError(-32002, "Not initialized");
+				if (request.method === "thread/timeline/list" && !this.#experimental.has(client))
+					throw new ProtocolError(-32600, "thread/timeline/list requires experimentalApi capability");
 				switch (request.method) {
 					case "thread/list": {
 						const limit = params.limit ?? 100;
@@ -134,6 +142,7 @@ export class RemoteRouter {
 					case "thread/queue/list":
 					case "thread/turns/list":
 					case "thread/items/list":
+					case "thread/timeline/list":
 					case "thread/read":
 					case "thread/resume":
 					case "turn/start":
