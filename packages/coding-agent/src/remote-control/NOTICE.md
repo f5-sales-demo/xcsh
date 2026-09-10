@@ -27,6 +27,10 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs,/sideband.rs}`:
   selected subscription sideband headers, client-owned configuration, and v3
   reconnect backoff with stable-connection reset.
+- `codex-rs/core/src/realtime_conversation/bem.rs` and the streamed-item reducer
+  in `realtime_conversation.rs`: channel-prefix buffering, 200 ms flush pacing,
+  and bounded Unicode-safe head/tail output. Native text-content updates feed this
+  reducer; reasoning and tool-call content do not.
 - `codex-rs/core/src/realtime_history.rs`: session boundary items, separate user
   and assistant transcript segments, streamed item deltas, and closure sealing.
 - `codex-rs/app-server/src/bespoke_event_handling.rs`: handoff item notification

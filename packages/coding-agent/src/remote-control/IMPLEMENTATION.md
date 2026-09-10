@@ -344,3 +344,23 @@ histories preserved. Full package validation through the guarded runner passed
 seconds. Workspace formatting/TypeScript, staged PII and the repair commit's
 secret scan passed. The comparison's exact differences and remaining coverage
 limits are recorded in `PARITY.md`.
+
+The active completion audit is `ACCEPTANCE.md`; it preserves the full goal and
+lists the current evidence and remaining gates for each requirement.
+
+Native delegated-output streaming now follows the pinned handoff reducer and BEM
+channel parser. It forwards only assistant text content from the existing owner,
+routes configured prefixes to commentary/speakable context, honors the default
+thinking mode and client-managed handoffs, paces live flushes at 200 ms, and
+preserves a bounded Unicode-safe head/tail for long output. Finishing an already
+streamed result does not replay it. New handoffs suppress older queued speech;
+voice closure discards pending speech while backing work retains its normal
+lifecycle. The completed-only provider fallback remains supported.
+
+Observed failing integration tests for Sol, Luna, Terra and Astra now pass for
+streamed and completed-only output, with reasoning excluded. Recorded reference
+channel order, partial/custom headers, unknown-header fallback, timer pacing,
+aggregate buffer limits, long Unicode output, client-managed routing and handoff
+replacement are covered. Latest focused check: 183 passes / 716 assertions.
+Workspace formatting and TypeScript checks pass. The guarded package suite is
+running; this new streaming behavior still needs a fresh live phone recording.

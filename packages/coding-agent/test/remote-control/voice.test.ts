@@ -251,7 +251,7 @@ test("existing-call attachment never sends session.update or changes the work mo
 });
 test("transcripts persist with provenance but never execute; delegation executes once", async () => {
 	const f = fixture();
-	await f.voice.start(start);
+	await f.voice.start({ ...start, codexResponseHandoffMode: "bemTags" });
 	f.receive({ type: "input_transcript.added", item: { text: "change fixture" } });
 	f.receive({ type: "turn.done", turn: { id: "t1", role: "user", transcript: "change fixture" } });
 	await Bun.sleep(0);
@@ -453,98 +453,150 @@ test("a closed attachment cannot be reused while previous delegation results are
 	f.finish("old answer");
 });
 
-test("real session voice uses selected subscription and routes delegated work through its sole owner", async () => {
-	const { spyOn } = await import("bun:test");
-	const { RemoteSession } = await import("../../src/remote-control/session");
-	const records: any[] = [],
-		messages: any[] = [],
-		outputs: any[] = [],
-		prompts: string[] = [];
-	let sessionListener = (_event: any) => {};
-	let socket: any;
-	let selectedSession = "";
-	const token = `fixture.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "example-selected-account" } })).toString("base64url")}.fixture`;
-	class MockSocket {
-		bufferedAmount = 0;
-		onopen?: () => void;
-		onmessage?: (event: { data: string }) => void;
-		constructor(_url: string, options: any) {
-			expect(options.headers.Authorization).toBe(`Bearer ${token}`);
-			expect(options.headers["ChatGPT-Account-Id"]).toBe("example-selected-account");
-			socket = this;
-			queueMicrotask(() => this.onopen?.());
+test.each(
+	["gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-terra", "gpt-6-astra"].flatMap(model =>
+		[false, true].map(streamed => ({ model, streamed })),
+	),
+)(
+	"real $model session voice forwards streamed=$streamed output through its sole owner",
+	async ({ model, streamed }) => {
+		const { spyOn } = await import("bun:test");
+		const { RemoteSession } = await import("../../src/remote-control/session");
+		const records: any[] = [],
+			messages: any[] = [],
+			outputs: any[] = [],
+			prompts: string[] = [];
+		let sessionListener = (_event: any) => {};
+		let socket: any;
+		let selectedSession = "";
+		const token = `fixture.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "example-selected-account" } })).toString("base64url")}.fixture`;
+		class MockSocket {
+			bufferedAmount = 0;
+			onopen?: () => void;
+			onmessage?: (event: { data: string }) => void;
+			constructor(_url: string, options: any) {
+				expect(options.headers.Authorization).toBe(`Bearer ${token}`);
+				expect(options.headers["ChatGPT-Account-Id"]).toBe("example-selected-account");
+				socket = this;
+				queueMicrotask(() => this.onopen?.());
+			}
+			send(data: string) {
+				outputs.push(JSON.parse(data));
+			}
+			close() {}
 		}
-		send(data: string) {
-			outputs.push(JSON.parse(data));
-		}
-		close() {}
-	}
-	const mock = spyOn(globalThis as unknown as { WebSocket: (...args: any[]) => any }, "WebSocket").mockImplementation(
-		((url: string, options: any) => new MockSocket(url, options)) as any,
-	);
-	const target: any = {
-		sessionId: "fixture-owner",
-		model: { id: "gpt-6-astra", provider: "openai-codex" },
-		messages,
-		sessionManager: {
-			getCwd: () => "/tmp",
-			getEntries: () => records,
-			appendCustomEntry: (customType: string, data: any) => {
-				records.push({ type: "custom", customType, data });
+		const mock = spyOn(
+			globalThis as unknown as { WebSocket: (...args: any[]) => any },
+			"WebSocket",
+		).mockImplementation(((url: string, options: any) => new MockSocket(url, options)) as any);
+		const target: any = {
+			sessionId: "fixture-owner",
+			model: { id: model, provider: "openai-codex" },
+			messages,
+			sessionManager: {
+				getCwd: () => "/tmp",
+				getEntries: () => records,
+				appendCustomEntry: (customType: string, data: any) => {
+					records.push({ type: "custom", customType, data });
+				},
+				flush: async () => {},
 			},
-			flush: async () => {},
-		},
-		modelRegistry: {
-			authStorage: {
-				getCredentialSource: () => "stored-oauth",
-				getApiKey: async (_provider: string, session: string) => {
-					selectedSession = session;
-					return token;
+			modelRegistry: {
+				authStorage: {
+					getCredentialSource: () => "stored-oauth",
+					getApiKey: async (_provider: string, session: string) => {
+						selectedSession = session;
+						return token;
+					},
 				},
 			},
-		},
-		subscribe: (listener: any) => {
-			sessionListener = listener;
-			return () => {};
-		},
-		prompt: async (text: string) => {
-			prompts.push(text);
-			messages.push(
-				{ role: "user", content: text },
-				{
-					role: "assistant",
+			subscribe: (listener: any) => {
+				sessionListener = listener;
+				return () => {};
+			},
+			prompt: async (text: string) => {
+				prompts.push(text);
+				if (streamed) {
+					messages.push({ role: "user", content: text });
+					const partial: any = { role: "assistant", content: [], stopReason: "stop" };
+					sessionListener({ type: "message_start", message: partial });
+					partial.content.push({ type: "thinking", thinking: "private reasoning" });
+					sessionListener({
+						type: "message_update",
+						assistantMessageEvent: {
+							type: "thinking_delta",
+							contentIndex: 0,
+							delta: "private reasoning",
+							partial,
+						},
+					});
+					for (const [phase, value] of [
+						["commentary", "[COMMENTARY]Updating the fixture."],
+						["final_answer", "[FINAL]The fixture is updated."],
+					]) {
+						partial.content.push({ type: "text", phase, text: value });
+						sessionListener({
+							type: "message_update",
+							assistantMessageEvent: {
+								type: "text_delta",
+								contentIndex: partial.content.length - 1,
+								delta: value,
+								partial,
+							},
+						});
+					}
+					await Bun.sleep(250);
+					expect(outputs.map(output => output.channel)).toEqual(["commentary", "speakable"]);
+					expect(JSON.stringify(outputs)).not.toContain("private reasoning");
+					messages.push(partial);
+					sessionListener({ type: "message_end", message: partial });
+					sessionListener({ type: "agent_end" });
+					return;
+				}
+				messages.push(
+					{ role: "user", content: text },
+					{
+						role: "assistant",
+						content: [
+							{ type: "thinking", thinking: "private reasoning" },
+							{ type: "text", text: "The fixture is updated." },
+						],
+						stopReason: "stop",
+					},
+				);
+				sessionListener({ type: "agent_end" });
+			},
+		};
+		const remote = new RemoteSession(target);
+		try {
+			await remote.call("voice-start", "thread/realtime/start", {
+				...start,
+				codexResponseHandoffMode: "bemTags",
+				threadId: target.sessionId,
+			});
+			socket.onmessage({ data: JSON.stringify(delegation) });
+			socket.onmessage({ data: JSON.stringify(delegation) });
+			await Bun.sleep(streamed ? 300 : 0);
+			expect(selectedSession).toBe("fixture-owner");
+			expect(prompts).toEqual(["change fixture"]);
+			expect(target.model.id).toBe(model);
+			expect(outputs).toContainEqual(
+				expect.objectContaining({
+					type: "delegation.context.append",
 					content: [
-						{ type: "thinking", thinking: "private reasoning" },
-						{ type: "text", text: "The fixture is updated." },
+						{ type: "input_text", text: streamed ? "[FINAL]The fixture is updated." : "The fixture is updated." },
 					],
-					stopReason: "stop",
-				},
+				}),
 			);
-			sessionListener({ type: "agent_end" });
-		},
-	};
-	const remote = new RemoteSession(target);
-	try {
-		await remote.call("voice-start", "thread/realtime/start", { ...start, threadId: target.sessionId });
-		socket.onmessage({ data: JSON.stringify(delegation) });
-		socket.onmessage({ data: JSON.stringify(delegation) });
-		await Bun.sleep(0);
-		expect(selectedSession).toBe("fixture-owner");
-		expect(prompts).toEqual(["change fixture"]);
-		expect(target.model.id).toBe("gpt-6-astra");
-		expect(outputs).toContainEqual(
-			expect.objectContaining({
-				type: "delegation.context.append",
-				content: [{ type: "input_text", text: "The fixture is updated." }],
-			}),
-		);
-		expect(JSON.stringify(outputs)).not.toContain("private reasoning");
-		expect(records.some(r => r.customType === "remote-realtime" && r.data.kind === "delegation")).toBe(true);
-	} finally {
-		remote.dispose();
-		mock.mockRestore();
-	}
-});
+			expect(JSON.stringify(outputs)).not.toContain("private reasoning");
+			expect(records.some(r => r.customType === "remote-realtime" && r.data.kind === "delegation")).toBe(true);
+			if (streamed) expect(outputs).toHaveLength(2);
+		} finally {
+			remote.dispose();
+			mock.mockRestore();
+		}
+	},
+);
 
 test("WebRTC creates the native call, forwards answer SDP and attaches without overwriting its session", async () => {
 	const f = fixture();
@@ -632,3 +684,66 @@ test.each([true, false])(
 		f.finish("Updated.");
 	},
 );
+
+test("a newer handoff cancels queued speech from the older handoff without cancelling work", async () => {
+	const f = fixture();
+	const updates: ((update: import("../../src/remote-control/voice-handoff").VoiceOutputUpdate) => void)[] = [];
+	const finishes: ((text: string) => void)[] = [];
+	f.deps.delegate = async (_id, _text, output) => {
+		updates.push(output!);
+		return new Promise(resolve => finishes.push(resolve));
+	};
+	await f.voice.start({ ...start, codexResponseHandoffMode: "bemTags" });
+	f.receive(delegation);
+	await Bun.sleep(0);
+	updates[0]({ id: "old-item", text: "[FINAL]Old work", done: false });
+	f.receive({ ...delegation, item: { ...delegation.item, id: "d2" } });
+	await Bun.sleep(0);
+	updates[1]({ id: "new-item", text: "[FINAL]New work", done: false });
+	await Bun.sleep(250);
+	expect(f.sent).toEqual([
+		{
+			type: "delegation.context.append",
+			delegation_item_id: "d2",
+			channel: "speakable",
+			content: [{ type: "input_text", text: "[FINAL]New work" }],
+		},
+	]);
+	finishes[0]("Old work");
+	finishes[1]("New work");
+	await Bun.sleep(0);
+	expect(f.records.filter(record => record.kind === "delegationResult")).toHaveLength(2);
+	expect(f.sent).toHaveLength(1);
+	await f.voice.stop();
+});
+
+test("client-managed handoffs execute delegated work but suppress automatic streaming and final context", async () => {
+	const f = fixture();
+	f.deps.delegate = async (_id, _text, output) => {
+		output!({ id: "i", text: "[FINAL]Client controls speech", done: true });
+		return "Client controls speech";
+	};
+	await f.voice.start({ ...start, clientManagedHandoffs: true, codexResponseHandoffMode: "bemTags" });
+	f.receive(delegation);
+	await Bun.sleep(0);
+	expect(f.records.filter(record => record.kind === "delegationResult")).toHaveLength(1);
+	expect(f.sent).toEqual([]);
+	await f.voice.stop();
+});
+
+test("omitted routing mode uses the pinned thinking context channel without disclosing reasoning", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.receive(delegation);
+	await Bun.sleep(0);
+	f.finish("Completed result");
+	await Bun.sleep(0);
+	expect(f.sent).toEqual([
+		{
+			type: "delegation.context.append",
+			delegation_item_id: "d1",
+			content: [{ type: "input_text", text: "Completed result" }],
+		},
+	]);
+	await f.voice.stop();
+});

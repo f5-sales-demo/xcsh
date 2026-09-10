@@ -5,6 +5,7 @@ import tailTemplate from "../prompts/system/remote-voice-tail.md" with { type: "
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
+import { handoffOptions, VoiceHandoff, type VoiceOutputUpdate } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { contextChunks, decodeVoiceEvent, existingCallConfig, type VoiceEvent } from "./voice-protocol";
 
@@ -19,7 +20,7 @@ export interface VoiceDependencies {
 	emit(method: string, params: Record<string, unknown>): void;
 	records(): Record<string, unknown>[];
 	record(record: Record<string, unknown>): Promise<void>;
-	delegate(id: string, text: string): Promise<string>;
+	delegate(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string>;
 }
 function connectionFailure(error: unknown): "http" | "upgradeRejected" | "closed" | "timeout" | "transport" {
 	const message = error instanceof Error ? error.message : "";
@@ -37,6 +38,8 @@ function safeConnectionError(error: unknown): string {
 	return `Native realtime connection failed${status ? ` (HTTP ${status})` : ""}`;
 }
 export class NativeVoice {
+	#handoff?: VoiceHandoff;
+	#handoffOptions = handoffOptions({});
 	#history?: VoiceHistory;
 	#closing?: Promise<void>;
 	#ready = false;
@@ -68,6 +71,7 @@ export class NativeVoice {
 	}
 	async start(params: Record<string, unknown>): Promise<void> {
 		if (this.#state !== "idle") throw new ProtocolError(-32000, "Voice requires a new attachment after stopping");
+		this.#handoffOptions = handoffOptions(params);
 		const transport = params.transport as { type?: unknown } | undefined;
 		const callConfig =
 			transport?.type === "webrtc" ? voiceCallConfig(params, this.deps.context?.() ?? "") : undefined;
@@ -178,6 +182,7 @@ export class NativeVoice {
 		if (this.#state === "closed" || this.#state === "idle") return this.#closing ?? Promise.resolve();
 		const socket = this.#socket;
 		this.#state = "closed";
+		this.#handoff?.close();
 		this.#epoch++;
 		clearTimeout(this.#reconnectTimer);
 		this.#outbound = [];
@@ -498,19 +503,33 @@ export class NativeVoice {
 				},
 			});
 		this.#pendingDelegations++;
+		this.#handoff?.close();
+		const handoff =
+			this.#config?.version === "v3" && !this.#config.clientManagedHandoffs
+				? new VoiceHandoff(this.#handoffOptions, (channel, text) => {
+						for (const chunk of contextChunks(text))
+							this.#send({
+								type: "delegation.context.append",
+								delegation_item_id: event.id,
+								...(channel ? { channel } : {}),
+								content: [{ type: "input_text", text: chunk }],
+							});
+					})
+				: undefined;
+		this.#handoff = handoff;
 		void this.deps
-			.delegate(key, event.text)
+			.delegate(key, event.text, update => {
+				if (!this.active) return;
+				try {
+					handoff?.update(update);
+				} catch {
+					this.#fail("Could not stream the backing agent response");
+				}
+			})
 			.then(async text => {
 				await this.deps.record({ key, kind: "delegationResult", text });
 				if (this.#config?.clientManagedHandoffs || !this.active) return;
-				if (this.#config?.version === "v3")
-					for (const chunk of contextChunks(text))
-						this.#send({
-							type: "delegation.context.append",
-							delegation_item_id: event.id,
-							channel: "speakable",
-							content: [{ type: "input_text", text: chunk }],
-						});
+				if (handoff) handoff.finish(text);
 				else this.#send({ type: "conversation.handoff.append", handoff_id: event.id, output_text: text });
 			})
 			.catch(() => this.#fail("The backing agent could not complete the voice request"))

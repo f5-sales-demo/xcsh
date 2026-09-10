@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import type { NativeVoice } from "./voice";
+import type { VoiceOutputUpdate } from "./voice-handoff";
 export type SessionTarget = Pick<
 	AgentSession,
 	| "sessionId"
@@ -72,6 +73,7 @@ function turn(id: string, status = "completed"): Turn {
 	};
 }
 export class RemoteSession {
+	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
 	#voice?: NativeVoice;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
 	#clientIds = new Map<string, string>();
@@ -97,6 +99,7 @@ export class RemoteSession {
 		this.#voice?.stop();
 		this.#unsubscribe();
 		this.#listeners.clear();
+		this.#voiceOutputs.clear();
 	}
 	#emit(method: string, params: Record<string, unknown>): void {
 		this.#updatedAt = Math.floor(Date.now() / 1000);
@@ -243,7 +246,7 @@ export class RemoteSession {
 					this.target.sessionManager.appendCustomEntry("remote-realtime", record);
 					await this.target.sessionManager.flush();
 				},
-				delegate: (id, text) => this.#delegateVoice(id, text),
+				delegate: (id, text, output) => this.#delegateVoice(id, text, output),
 			});
 			await this.#voice.start(params);
 			return {};
@@ -488,14 +491,17 @@ export class RemoteSession {
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
 		}
 	}
-	#delegateVoice(id: string, text: string): Promise<string> {
+	#delegateVoice(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const current = this.#active;
 			const turnId = current?.id ?? `${this.target.sessionId}-turn-${this.history().length + 1}`;
+			const stream = output ? { turnId, send: output } : undefined;
+			if (stream) this.#voiceOutputs.add(stream);
 			const unsubscribe = this.subscribe(event => {
 				const result = event.params.turn as Turn | undefined;
 				if (event.method !== "turn/completed" || result?.id !== turnId) return;
 				unsubscribe();
+				if (stream) this.#voiceOutputs.delete(stream);
 				if (result.status === "failed") {
 					reject(new Error("Backing turn failed"));
 					return;
@@ -519,6 +525,7 @@ export class RemoteSession {
 				input: [{ type: "text", text }],
 			}).catch(error => {
 				unsubscribe();
+				if (stream) this.#voiceOutputs.delete(stream);
 				reject(error);
 			});
 		});
@@ -549,6 +556,22 @@ export class RemoteSession {
 			this.#itemId = `${this.target.sessionId}-item-${this.target.messages.length}`;
 			this.#emit("item/started", { turnId: this.#active?.id, item: this.#assistantItem(this.#itemId, "") });
 		}
+		if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") {
+			const update = event.assistantMessageEvent;
+			const part = update.partial.content[update.contentIndex];
+			if (part?.type === "text")
+				this.#voiceOutput({
+					id: `${this.#itemId}:${update.contentIndex}`,
+					text: part.text,
+					phase: part.phase,
+					done: false,
+				});
+		}
+		if (event.type === "message_end" && event.message.role === "assistant") {
+			for (const [index, part] of event.message.content.entries())
+				if (part.type === "text")
+					this.#voiceOutput({ id: `${this.#itemId}:${index}`, text: part.text, phase: part.phase, done: true });
+		}
 		if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta")
 			this.#emit("item/agentMessage/delta", {
 				turnId: this.#active?.id,
@@ -561,5 +584,8 @@ export class RemoteSession {
 				item: this.#assistantItem(this.#itemId, textOf(event.message)),
 			});
 		if (event.type === "agent_end") this.#finish("completed");
+	}
+	#voiceOutput(update: VoiceOutputUpdate): void {
+		for (const stream of this.#voiceOutputs) if (stream.turnId === this.#active?.id) stream.send(update);
 	}
 }
