@@ -7,7 +7,21 @@ export const voices = {
 	defaultV1: "cove",
 	defaultV2: "marin",
 };
+/** Pinned mode instructions are optional strings with an 8192 estimated-token cap. */
+export function voiceInstructions(params: Record<string, unknown>) {
+	for (const name of ["realtimeStartInstructions", "realtimeEndInstructions"])
+		if (
+			params[name] != null &&
+			(typeof params[name] !== "string" || Buffer.byteLength(params[name] as string) > 32768)
+		)
+			throw new ProtocolError(-32602, "Invalid realtime mode instructions");
+	return {
+		start: typeof params.realtimeStartInstructions === "string" ? params.realtimeStartInstructions : undefined,
+		end: typeof params.realtimeEndInstructions === "string" ? params.realtimeEndInstructions : undefined,
+	};
+}
 export function existingCallConfig(params: Record<string, unknown>) {
+	voiceInstructions(params);
 	const transport = params.transport as { type?: unknown; callId?: unknown } | undefined;
 	if (transport?.type !== "existingCall")
 		throw new ProtocolError(-32602, "This native voice gate requires a client-created call");
@@ -36,12 +50,8 @@ export function existingCallConfig(params: Record<string, unknown>) {
 			-32602,
 			"Existing-call configuration belongs to the client; startup overrides are unsupported",
 		);
-	if (
-		params.codexResponsesAsItems === true ||
-		params.realtimeStartInstructions != null ||
-		params.realtimeEndInstructions != null
-	)
-		throw new ProtocolError(-32602, "Unsupported realtime instruction or response-item option");
+	if (params.codexResponsesAsItems === true)
+		throw new ProtocolError(-32602, "Unsupported realtime response-item option");
 	if (
 		params.realtimeSessionId != null &&
 		(typeof params.realtimeSessionId !== "string" ||

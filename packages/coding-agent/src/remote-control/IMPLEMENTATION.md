@@ -612,7 +612,7 @@ pinned-schema assertions were then added; the final focused run passed 313 tests
 and 1332 assertions across 39 files (33.42 seconds). Runtime code was unchanged
 between these runs. Workspace TypeScript/formatting, changed documentation lint,
 staged PII and staged secret checks passed. These checks do not replace repository
-CI, the unresolved full-history PII gate or manual phone acceptance.
+CI, the unresolved full-HEAD PII gate or manual phone acceptance.
 
 ## Question retirement and recovery
 
@@ -740,7 +740,7 @@ final guarded package run passed 7577 tests, with 561 skips, zero failures and
 23748 assertions across 754 files (347.02 seconds). Workspace TypeScript and
 formatting, changed documentation lint and staged privacy/secret scans passed.
 Two early fixture setup runs did not exercise the intended scenario and are not
-passing evidence. Repository CI, full-history privacy findings and the remaining
+passing evidence. Repository CI, full-HEAD privacy findings and the remaining
 manual and approval checks are still open.
 
 ## Plan editing across terminal and phone
@@ -960,7 +960,7 @@ Package checkpoint validation: the guarded package suite passed 7646 tests with
 The final harness checks cleanup failure and writes its success receipt only after
 its container and processes are removed. Its separate final run passed with the
 same compiled binary. Runtime source and regression tests were unchanged after
-the package suite. Remaining full-history privacy findings, required CI, live
+the package suite. Remaining full-HEAD privacy findings, required CI, live
 model/voice acceptance and final release-artifact verification remain open.
 
 ## Legacy WebRTC negotiation checkpoint
@@ -1007,7 +1007,7 @@ and 24173 assertions across 758 files (365.15 seconds). The earlier package run
 passed 7655 tests before the explicit-modality regression was added; it does not
 replace the final run. Runtime source and tests remained unchanged throughout
 the final suite. Markdown, terminology, staged privacy, secret and whitespace
-checks passed. Required repository CI, full-history privacy findings and the
+checks passed. Required repository CI, full-HEAD privacy findings and the
 remaining live/protocol acceptance are still open.
 
 ## Completed legacy output and speech appends
@@ -1049,3 +1049,45 @@ remained unchanged during that run. Markdown, terminology, staged privacy,
 secret and whitespace checks passed. Remaining start/end instruction lifecycle,
 client-created-call options, standalone WebSocket, response-item mode, live
 acceptance and the full completion audit remain open.
+
+## Explicit voice instruction lifecycle
+
+Existing-call startup now accepts valid backing start/end instructions, matching
+the pinned core. Both transports share pre-authentication validation, including
+empty overrides and the 32768-byte UTF-8 limit. A failed sideband connection does
+not apply instructions. Successful attachment serializes start and end updates;
+stop waits for the end update before reporting closure. A failed update produces
+a sanitized error and cannot reopen the attachment. The backing custom messages
+now convert to developer-role instructions, with agent attribution.
+
+The initial lifecycle regression run had two passes and six failures. The final
+additional diagnostic-race test failed because a stopped attachment could return
+successful startup after an awaited diagnostic write. Restoring the active-state
+guard passed the regression. Focused voice and message-conversion validation
+passed 184 tests, zero failures and 1480 assertions across 11 files (7.13 seconds).
+
+This checkpoint does not finish mode-context parity. A deeper source audit
+corrected the earlier assumption that active voice state changes between tools:
+the pinned turn constructor snapshots activity once, and subsequent model steps
+share that turn context. The native hidden next-turn queue still records both
+start and end even when no intervening turn observed voice. Turn-scoped activity,
+default start/end templates, boolean transition snapshots, developer fragment
+markers and retained-fragment reconciliation remain implementation work. Final
+live and compiled-artifact acceptance also remain outstanding.
+
+A fresh `head` enforcement scan still reports 218 PII-shaped findings across
+13 files: authentication/configuration test fixtures and generated API catalog
+examples. The saved earlier report also used `head`, not `history`; references
+above were corrected to identify the actual scan scope. The staged change is
+clean, but that does not satisfy the repository-wide gate. Repairing synthetic
+identifiers and generated example provenance remains delivery work.
+
+The first package run had 7693 passes and one failure because Puppeteer's pinned
+Chrome binary was absent. Installing Chrome 150.0.7871.24 through the installed
+Puppeteer CLI restored the dependency; both HTML export tests then passed with
+22 assertions. The final guarded package run passed 7694 tests, 561 skips, zero
+failures and 24357 assertions across 760 files (362.38 seconds). Runtime and test
+hashes remained unchanged throughout both package runs. Workspace TypeScript,
+CLI bundling, Markdown, terminology, staged privacy and secret checks passed.
+The existing compiled-package receipt predates this checkpoint; final artifact
+verification and required repository CI remain outstanding.

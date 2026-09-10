@@ -4,8 +4,9 @@ import defaultInstructions from "../prompts/system/remote-voice.md" with { type:
 import contextTemplate from "../prompts/system/remote-voice-context.md" with { type: "text" };
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
-import { voices } from "./voice-protocol";
+import { voiceInstructions, voices } from "./voice-protocol";
 export function voiceCallConfig(params: Record<string, unknown>, context: string) {
+	voiceInstructions(params);
 	const transport = params.transport as { type?: unknown; sdp?: unknown } | undefined;
 	if (
 		transport?.type !== "webrtc" ||
@@ -39,13 +40,8 @@ export function voiceCallConfig(params: Record<string, unknown>, context: string
 		!voices.v1.includes(voice)
 	)
 		throw new ProtocolError(-32602, "Invalid realtime model or voice");
-	for (const key of ["prompt", "realtimeStartInstructions", "realtimeEndInstructions"])
-		if (
-			params[key] != null &&
-			(typeof params[key] !== "string" ||
-				Buffer.byteLength(params[key] as string) > (key === "prompt" ? 262_144 : 32768))
-		)
-			throw new ProtocolError(-32602, "Invalid realtime instructions");
+	if (params.prompt != null && (typeof params.prompt !== "string" || Buffer.byteLength(params.prompt) > 262_144))
+		throw new ProtocolError(-32602, "Invalid realtime instructions");
 	if (params.codexResponsesAsItems === true)
 		throw new ProtocolError(-32602, "Unsupported realtime response-item mode");
 	if (

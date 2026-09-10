@@ -438,7 +438,7 @@ export class RemoteSession {
 				instructions: (phase, text) =>
 					this.#effect(epoch, async () => {
 						await this.target.sendCustomMessage(
-							{ customType: `remote-voice-${phase}`, content: text, display: false, attribution: "user" },
+							{ customType: `remote-voice-${phase}`, content: text, display: false, attribution: "agent" },
 							{ triggerTurn: false, deliverAs: "nextTurn" },
 						);
 					}),

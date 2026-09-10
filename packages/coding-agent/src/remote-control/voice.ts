@@ -8,7 +8,13 @@ import { createVoiceCall, voiceCallConfig } from "./voice-call";
 import { handoffOptions, VoiceHandoff, type VoiceOutputUpdate } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { completedVoiceText, LegacyVoiceHandoff } from "./voice-legacy";
-import { contextChunks, decodeVoiceEvent, existingCallConfig, type VoiceEvent } from "./voice-protocol";
+import {
+	contextChunks,
+	decodeVoiceEvent,
+	existingCallConfig,
+	type VoiceEvent,
+	voiceInstructions,
+} from "./voice-protocol";
 
 import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-socket";
 
@@ -51,6 +57,8 @@ export class NativeVoice {
 	#flushTail = false;
 	#abort = new AbortController();
 	#endInstructions?: string;
+	#modeStarted = false;
+	#modeUpdates: Promise<void> = Promise.resolve();
 	#started = false;
 	#socket?: VoiceSocket;
 	#config?: ReturnType<typeof existingCallConfig>;
@@ -77,6 +85,7 @@ export class NativeVoice {
 		const callConfig =
 			transport?.type === "webrtc" ? voiceCallConfig(params, this.deps.context?.() ?? "") : undefined;
 		let config = callConfig ? undefined : existingCallConfig(params);
+		const instructions = voiceInstructions(params);
 		this.#state = "opening";
 		this.#flushTail = params.flushTranscriptTailOnSessionEnd === true;
 		this.#seen = new Set(
@@ -118,10 +127,6 @@ export class NativeVoice {
 					transport: { type: "existingCall", callId: call.callId },
 				});
 				this.#config = config;
-				if (typeof params.realtimeStartInstructions === "string" && params.realtimeStartInstructions)
-					await this.deps.instructions?.("start", params.realtimeStartInstructions);
-				this.#endInstructions =
-					typeof params.realtimeEndInstructions === "string" ? params.realtimeEndInstructions : undefined;
 				this.#started = true;
 				this.#history = new VoiceHistory(
 					sessionId,
@@ -162,7 +167,18 @@ export class NativeVoice {
 				if (!this.active) throw new Error("Voice stopped during history initialization");
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
 			}
+			stage = "mode-instructions";
+			this.#endInstructions = instructions.end;
+			this.#modeUpdates = Promise.resolve().then(async () => {
+				if (!this.active) return;
+				this.#modeStarted = true;
+				if (instructions.start !== undefined) await this.deps.instructions?.("start", instructions.start);
+			});
+			await this.#modeUpdates;
+			if (!this.active) throw new Error("Voice stopped during mode initialization");
+			stage = "sideband-attach";
 			await this.deps.record({ kind: "voiceDiagnostic", stage, connected: true, elapsedMs: Date.now() - startedAt });
+			if (!this.active) throw new Error("Voice stopped during connection diagnostics");
 			this.#ready = true;
 			const openingInputs = this.#openingInputs;
 			this.#openingInputs = [];
@@ -197,8 +213,15 @@ export class NativeVoice {
 		this.#openingInputs = [];
 		this.#openingBytes = 0;
 		this.#abort.abort();
-		if (this.#started && this.#endInstructions)
-			void this.deps.instructions?.("end", this.#endInstructions).catch(() => {});
+		const endInstructions = this.#modeUpdates
+			.catch(() => {})
+			.then(async () => {
+				if (this.#modeStarted && this.#endInstructions !== undefined)
+					await this.deps.instructions?.("end", this.#endInstructions);
+			})
+			.catch(() => {
+				this.deps.emit("thread/realtime/error", { message: "Could not apply voice end instructions" });
+			});
 		this.#socket = undefined;
 		if (socket) {
 			try {
@@ -207,7 +230,7 @@ export class NativeVoice {
 			} catch {}
 			socket.close();
 		}
-		this.#closing = this.#chain
+		this.#closing = Promise.all([this.#chain, endInstructions])
 			.then(async () => {
 				await this.#history?.close(reason === "failed");
 			})

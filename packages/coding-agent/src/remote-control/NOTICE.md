@@ -54,6 +54,11 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs,/sideband.rs}`:
   selected subscription sideband headers, client-owned configuration, and v3
   reconnect backoff with stable-connection reset.
+- `codex-rs/core/src/realtime_conversation.rs` and
+  `core/src/context/realtime_{start_with_instructions,end_instructions}.rs`:
+  optional backing mode instructions, UTF-8 estimated-token validation and
+  developer-role priority. Native callback serialization protects session writes;
+  pinned turn-state projection and default templates remain tracked parity work.
 - `codex-rs/core/src/realtime_conversation/bem.rs` and the streamed-item reducer
   in `realtime_conversation.rs`: channel-prefix buffering, 200 ms flush pacing,
   and bounded Unicode-safe head/tail output. Native text-content updates feed this

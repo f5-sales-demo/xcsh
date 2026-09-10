@@ -54,6 +54,29 @@ session's ordinary delegation path and exclude reasoning content. These are
 automated source-contract tests, not live model or iPhone acceptance. Standalone
 WebSocket, response-item mode and remaining startup/control options stay open.
 
+## Explicit voice mode instructions
+
+The pinned core accepts optional start/end instructions for WebRTC and
+client-created calls. Native validation now accepts both transports, preserves
+explicit empty overrides and enforces the 8192-token estimate as 32768 UTF-8
+bytes before authentication. Instructions apply only after sideband attachment.
+Failed attachment leaves them unapplied; stopping during a pending start update
+serializes the end update afterward. Closure waits for that end update and
+reports an instruction-write failure without exposing its exception contents.
+Stopping during connection diagnostics cannot later return a successful start.
+Converted backing instructions retain the pinned developer role.
+
+This verifies explicit instruction validation, priority and lifecycle only.
+The pinned `core/src/session/turn_context.rs` snapshots voice activity when a turn
+is constructed. `session/turn.rs` preserves that turn context across tool/model
+steps, while `context/world_state/realtime.rs` renders boolean state transitions,
+supplies default start/end text and recognizes retained developer fragments.
+Ending voice therefore does not switch an already-running turn to typed mode.
+Native instructions still use the hidden next-turn message path and can queue
+both start and end even when no turn observed active voice. Turn snapshots,
+default templates and retained-fragment reconciliation remain implementation
+work. No new phone acceptance is claimed for this change.
+
 ## First two phone conversations
 
 Robin ran voice recall in Codex Reference Alpha and Beta and confirmed both
