@@ -95,6 +95,13 @@ export class RemoteRouter {
 		const threadId = String(event.params.threadId);
 		const session = this.sessions.get(threadId);
 		if (!session) return;
+		if (event.method === "thread/name/updated") {
+			const name = event.params.threadName;
+			if (name !== null && typeof name !== "string") return;
+			session.thread.name = name;
+			for (const client of this.#clients.keys()) this.notify(client, event);
+			return;
+		}
 		if (event.id !== undefined) {
 			this.validateSessionRequests(threadId, [event]);
 			const request = event as InteractionRequest;
@@ -265,6 +272,7 @@ export class RemoteRouter {
 					case "thread/timeline/list":
 					case "thread/read":
 					case "thread/resume":
+					case "thread/name/set":
 					case "turn/start":
 					case "turn/steer":
 					case "thread/settings/update":

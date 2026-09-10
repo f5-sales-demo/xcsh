@@ -530,3 +530,13 @@ completed ordinary write/read tool calls, and independent byte checks matched
 their requested marker plus newline. This verifies live model selection and tool
 execution before phone testing; it does not count as phone voice acceptance or a
 new reference/native wire comparison.
+
+## Thread-name mutation parity
+
+The native host now implements the pinned `thread/name/set` request and empty
+response. It trims the requested name, rejects an empty result, persists the
+user-selected terminal name, refreshes discovery metadata, and broadcasts
+`thread/name/updated` to every initialized client as the reference WebSocket test
+does. Reload and resume retain the name. The request, response and notification
+all validate against unchanged pinned schemas. This is automated source-contract
+coverage; no new phone rename observation is claimed.

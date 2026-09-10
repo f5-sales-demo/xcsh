@@ -8,6 +8,9 @@ import initializeSchema from "./fixtures/InitializeResponse.json";
 import modelSchema from "./fixtures/ModelListResponse.json";
 import listSchema from "./fixtures/ThreadListResponse.json";
 import loadedListSchema from "./fixtures/ThreadLoadedListResponse.json";
+import threadNameUpdatedSchema from "./fixtures/ThreadNameUpdatedNotification.json";
+import threadSetNameParamsSchema from "./fixtures/ThreadSetNameParams.json";
+import threadSetNameResponseSchema from "./fixtures/ThreadSetNameResponse.json";
 
 test("initialization and live thread payload match pinned upstream schemas", async () => {
 	const ajv = new Ajv({ strict: false });
@@ -76,6 +79,39 @@ test("actual settings notification matches the pinned thread settings contract",
 		expect(events).toHaveLength(1);
 		expect(validate(events[0].params), JSON.stringify(validate.errors)).toBe(true);
 		expect(events[0].params.threadSettings.effort).toBe("high");
+	} finally {
+		remote.dispose();
+	}
+});
+
+test("actual rename request, response and notification match pinned schemas", async () => {
+	const ajv = new Ajv({ strict: false });
+	let name = "Fixture";
+	const target = {
+		sessionId: "fixture",
+		get sessionName() {
+			return name;
+		},
+		messages: [],
+		sessionManager: { getCwd: () => "/tmp" },
+		subscribe: () => () => {},
+		setSessionName: async (value: string) => {
+			name = value;
+			return true;
+		},
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	try {
+		const params = { threadId: "fixture", name: "Renamed" };
+		const validParams = ajv.compile(threadSetNameParamsSchema);
+		expect(validParams(params), JSON.stringify(validParams.errors)).toBe(true);
+		const result = await remote.call("rename-schema", "thread/name/set", params);
+		const validResponse = ajv.compile(threadSetNameResponseSchema);
+		expect(validResponse(result), JSON.stringify(validResponse.errors)).toBe(true);
+		const validNotification = ajv.compile(threadNameUpdatedSchema);
+		expect(validNotification(events[0].params), JSON.stringify(validNotification.errors)).toBe(true);
 	} finally {
 		remote.dispose();
 	}

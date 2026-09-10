@@ -10,6 +10,8 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/ConfigReadResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ModelListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSettingsUpdatedNotification.json`
+- `codex-rs/app-server-protocol/schema/json/v2/ThreadSetName{Params,Response}.json`
+- `codex-rs/app-server-protocol/schema/json/v2/ThreadNameUpdatedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtime{Started,Closed,Error,TranscriptDelta,TranscriptDone}Notification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtimeItem{Started,Completed,TranscriptDelta}Notification.json`
 

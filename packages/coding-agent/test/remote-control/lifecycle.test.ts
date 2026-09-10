@@ -361,6 +361,30 @@ test("fork, resume, reload and branch refresh the adapter against persisted owne
 	expect(remote.thread().createdAt).toBe(Math.floor(Date.parse(manager.getHeader()!.timestamp) / 1000));
 });
 
+test("phone rename persists through terminal reload and resume", async () => {
+	const { mkdtemp, rm } = await import("node:fs/promises");
+	const dir = await mkdtemp("/tmp/xcsh-remote-rename-");
+	cleanup.push(() => rm(dir, { recursive: true, force: true }));
+	const { session, manager, remote } = await fixture(SessionManager.create(dir, dir));
+	manager.appendMessage({ role: "user", content: "rename fixture", timestamp: 1000 });
+	await manager.ensureOnDisk();
+	await manager.flush();
+	const file = session.sessionFile!;
+	expect(
+		await remote.call("rename", "thread/name/set", {
+			threadId: session.sessionId,
+			name: "  xcsh Remote Persisted  ",
+		}),
+	).toEqual({});
+	expect(session.sessionName).toBe("xcsh Remote Persisted");
+	await session.reload();
+	expect(session.sessionName).toBe("xcsh Remote Persisted");
+	await session.newSession();
+	await session.switchSession(file);
+	expect(session.sessionName).toBe("xcsh Remote Persisted");
+	expect(remote.thread().name).toBe("xcsh Remote Persisted");
+});
+
 test("failed new-session storage leaves owner event persistence connected", async () => {
 	const { getBundledModel } = await import("@f5-sales-demo/pi-ai");
 	const { AssistantMessageEventStream } = await import("@f5-sales-demo/pi-ai/utils/event-stream");

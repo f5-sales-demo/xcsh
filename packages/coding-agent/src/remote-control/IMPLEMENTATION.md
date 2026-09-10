@@ -1950,3 +1950,19 @@ not claim that the phone has selected the two new sessions or that a fresh voice
 call on this artifact has passed. The operational capture directory contains the
 sanitized handoff record and retains its private trace configuration outside the
 repository.
+
+## Remote thread naming
+
+`thread/name/set` now trims and rejects empty names, updates the live
+AgentSession through its normal user-name path, and returns the pinned empty
+response. The resulting `thread/name/updated` notification is broadcast to every
+initialized discovery client, including clients that have not subscribed to the
+renamed thread. The host updates its registered metadata before the broadcast so
+the next list operation sees the new name immediately. Terminal reload and later
+resume retain the same user-selected name.
+
+The first focused run failed both the session mutation and router broadcast cases
+with `-32601`. The implemented request, response and notification validate against
+three unchanged 0.153.4 schema fixtures whose hashes are pinned in the source
+manifest. The focused session/router/schema/lifecycle matrix passes 46 tests with
+207 assertions.

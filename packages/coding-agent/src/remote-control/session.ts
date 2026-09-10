@@ -37,6 +37,7 @@ export type SessionTarget = Pick<
 	| "getQueuedMessages"
 	| "thinkingLevel"
 	| "setThinkingLevel"
+	| "setSessionName"
 	| "modelRegistry"
 	| "sendCustomMessage"
 	| "setRealtimeMode"
@@ -504,6 +505,18 @@ export class RemoteSession {
 	async #execute(method: string, params: Record<string, unknown>): Promise<unknown> {
 		const epoch = this.#epoch;
 		if (params.threadId !== this.target.sessionId) throw new ProtocolError(-32602, "Thread not found");
+		if (method === "thread/name/set") {
+			if (typeof params.name !== "string") throw new ProtocolError(-32602, "Invalid thread name");
+			const name = params.name.trim();
+			if (!name) throw new ProtocolError(-32602, "Thread name must not be empty");
+			const stored = await this.#effect(epoch, async () => {
+				const accepted = await this.target.setSessionName(name, "user");
+				if (accepted) this.#emit("thread/name/updated", { threadName: this.target.sessionName ?? name });
+				return accepted;
+			});
+			if (!stored) throw new ProtocolError(-32000, "Could not set thread name");
+			return {};
+		}
 		if (method === "thread/realtime/stop") {
 			await this.#voice?.stop();
 			return {};

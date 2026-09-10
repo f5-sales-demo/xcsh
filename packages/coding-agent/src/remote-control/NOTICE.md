@@ -48,6 +48,10 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   the pinned Rust serialization. See `PARITY.md`.
 - `codex-rs/app-server-protocol/src/protocol/v2/{config,model,process}.rs`:
   configuration/model discovery and standalone process requests/notifications.
+- `codex-rs/app-server-protocol/src/protocol/v2/thread.rs` and
+  `app-server/src/request_processors/thread_processor.rs`: trimmed thread-name
+  mutation, empty response and global name-update notification. The three
+  corresponding schema fixtures are copied unchanged from the pinned source.
 
 - `codex-rs/app-server-protocol/src/protocol/v2/realtime.rs`: voice requests and notifications.
 - `codex-rs/codex-api/src/endpoint/realtime_websocket/{methods,methods_v2,methods_frameless_bidi,protocol_common,protocol_v1,protocol_v2,protocol_frameless_bidi}.rs`:

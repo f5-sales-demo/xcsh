@@ -109,6 +109,43 @@ test("phone can clear its empty extra skill roots without changing terminal skil
 	).toMatchObject({ error: { code: -32602 } });
 });
 
+test("thread name changes are broadcast to initialized discovery clients", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const notifications: { client: string; method: string }[] = [];
+	router.notify = (client, event) => notifications.push({ client, method: event.method });
+	router.sessions.set("fixture", {
+		thread: { id: "fixture", name: "Old" },
+		call: async (_identity, method) => {
+			if (method !== "thread/name/set") return {};
+			router.sessions.get("fixture")!.thread.name = "New";
+			router.publish({ method: "thread/name/updated", params: { threadId: "fixture", threadName: "New" } });
+			return {};
+		},
+	});
+	for (const client of ["renamer", "observer"])
+		await router.handle(client, {
+			id: `init-${client}`,
+			method: "initialize",
+			params: { clientInfo: { name: client, version: "1" } },
+		});
+	await router.handle("renamer", { id: 1, method: "thread/resume", params: { threadId: "fixture" } });
+	expect(
+		await router.handle("renamer", {
+			id: 2,
+			method: "thread/name/set",
+			params: { threadId: "fixture", name: "New" },
+		}),
+	).toEqual({
+		id: 2,
+		result: {},
+	});
+	expect(notifications).toEqual([
+		{ client: "renamer", method: "thread/name/updated" },
+		{ client: "observer", method: "thread/name/updated" },
+	]);
+	router.dispose();
+});
+
 test("voice transition unsubscribe returns the pinned status and leaves the terminal alive", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "fixture");
 	router.sessions.set("fixture", { thread: { id: "fixture" }, call: async () => ({}) });

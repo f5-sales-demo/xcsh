@@ -4,9 +4,12 @@ import { RemoteSession, type SessionTarget } from "../../src/remote-control/sess
 function fixture(id: string) {
 	const prompts: string[] = [];
 	let finish = () => {};
+	let sessionName = id;
 	const target = {
 		sessionId: id,
-		sessionName: id,
+		get sessionName() {
+			return sessionName;
+		},
 		sessionFile: `/tmp/${id}.jsonl`,
 		model: { id: "gpt-6-astra", provider: "openai-codex" },
 		messages: [],
@@ -25,9 +28,28 @@ function fixture(id: string) {
 		steer: async (text: string) => {
 			prompts.push(text);
 		},
+		setSessionName: async (name: string) => {
+			sessionName = name.trim();
+			return true;
+		},
 	} as unknown as SessionTarget;
 	return { remote: new RemoteSession(target), prompts, finish: () => finish() };
 }
+
+test("phone rename follows the pinned trim, response and notification contract", async () => {
+	const a = fixture("a");
+	const events: any[] = [];
+	a.remote.subscribe(event => events.push(event));
+	expect(await a.remote.call("rename", "thread/name/set", { threadId: "a", name: "  xcsh Remote New  " })).toEqual({});
+	expect(a.remote.thread().name).toBe("xcsh Remote New");
+	expect(events).toEqual([
+		{ method: "thread/name/updated", params: { threadId: "a", threadName: "xcsh Remote New" } },
+	]);
+	await expect(
+		a.remote.call("empty-rename", "thread/name/set", { threadId: "a", name: " \n\t " }),
+	).rejects.toMatchObject({ code: -32602 });
+	a.remote.dispose();
+});
 test("two sessions preserve identity/model and route prompts to their existing owner exactly once", async () => {
 	const a = fixture("a");
 	const b = fixture("b");
