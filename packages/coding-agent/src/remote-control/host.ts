@@ -1,6 +1,5 @@
 import { dirname } from "node:path";
 import type { Enrollment } from "./enrollment";
-import type { InteractionRequest } from "./interactions";
 import { type LocalPeer, listenLocal } from "./ipc";
 import { RelayCodec } from "./relay";
 import { RemoteRouter } from "./router";
@@ -30,7 +29,7 @@ export async function startLocalHost(
 		localClients.set(localClient, peer);
 		const remove = () => {
 			const owner = owners.get(peer);
-			if (owner) router.sessions.delete(owner.id);
+			if (owner) router.removeSession(owner.id);
 			owners.delete(peer);
 		};
 		peer.onClose = () => {
@@ -69,25 +68,12 @@ export async function startLocalHost(
 				if (router.sessions.has(thread.id) && owners.get(peer)?.id !== thread.id)
 					throw new ProtocolError(-32000, "Session already has a live owner");
 				if (!owners.has(peer) && owners.size >= 128) throw new ProtocolError(-32000, "Live session limit");
-				const requests = params.requests ?? [];
-				if (
-					!Array.isArray(requests) ||
-					requests.length > 32 ||
-					requests.some(
-						request =>
-							!request ||
-							typeof request.id !== "string" ||
-							request.id.length > 256 ||
-							request.method !== "item/tool/requestUserInput" ||
-							request.params?.threadId !== thread.id,
-					)
-				)
-					throw new ProtocolError(-32602, "Invalid pending requests");
-				remove();
+				const requests = router.validateSessionRequests(thread.id, params.requests ?? []);
+				if (owners.get(peer)?.id !== thread.id) remove();
 				owners.set(peer, { id: thread.id, lastSeen: Date.now() });
-				router.sessions.set(thread.id, {
+				router.registerSession(thread.id, {
 					thread,
-					requests: requests as InteractionRequest[],
+					requests,
 					call: (identity, command, input) =>
 						peer.call("session/call", { identity, method: command, params: input }),
 				});

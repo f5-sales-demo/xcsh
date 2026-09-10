@@ -9,6 +9,71 @@ export interface InteractionRequest extends Notification {
 const record = (value: unknown): value is Record<string, unknown> =>
 	value !== null && typeof value === "object" && !Array.isArray(value);
 
+const identity = (value: unknown): value is string =>
+	typeof value === "string" && value.length > 0 && value.length <= 256;
+const optionalBoolean = (value: unknown): boolean => value === undefined || typeof value === "boolean";
+
+/** The host bounds the entire pending snapshot, including prompts received as live events. */
+export function validateInteractionRequests(threadId: string, input: unknown): InteractionRequest[] {
+	const invalid = () => new ProtocolError(-32602, "Invalid pending user requests");
+	if (!Array.isArray(input)) throw invalid();
+	if (input.length > 32) throw new ProtocolError(-32000, "Pending user request limit");
+	const seen = new Set<string>();
+	for (const request of input) {
+		if (
+			!record(request) ||
+			!identity(request.id) ||
+			request.method !== "item/tool/requestUserInput" ||
+			!record(request.params)
+		)
+			throw invalid();
+		const params = request.params;
+		if (
+			seen.has(request.id) ||
+			params.threadId !== threadId ||
+			!identity(params.turnId) ||
+			!identity(params.itemId) ||
+			!Array.isArray(params.questions) ||
+			!optionalBoolean(params.isBlocking)
+		)
+			throw invalid();
+		seen.add(request.id);
+		if (
+			params.autoResolutionMs != null &&
+			(typeof params.autoResolutionMs !== "number" ||
+				!Number.isSafeInteger(params.autoResolutionMs) ||
+				params.autoResolutionMs < 0)
+		)
+			throw invalid();
+		const questions = new Set<string>();
+		for (const question of params.questions) {
+			if (
+				!record(question) ||
+				!identity(question.id) ||
+				questions.has(question.id) ||
+				typeof question.header !== "string" ||
+				typeof question.question !== "string" ||
+				!optionalBoolean(question.isOther) ||
+				!optionalBoolean(question.isSecret)
+			)
+				throw invalid();
+			questions.add(question.id);
+			if (
+				question.options != null &&
+				(!Array.isArray(question.options) ||
+					question.options.some(
+						option =>
+							!record(option) || typeof option.label !== "string" || typeof option.description !== "string",
+					))
+			)
+				throw invalid();
+		}
+	}
+	if (Buffer.byteLength(JSON.stringify(input)) > 1024 * 1024)
+		throw new ProtocolError(-32000, "Pending user request buffer limit");
+	return input as InteractionRequest[];
+}
+
 /** Wire fields follow Codex 0.153.4 v2/item.rs; see NOTICE.md for provenance. */
 export class RemoteInteractions {
 	#requests = new Map<string, { interaction: UserInteraction; request: InteractionRequest }>();

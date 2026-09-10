@@ -11,22 +11,53 @@ test("heartbeat expiry removes a stale owner while retaining a refreshed owner",
 	const host = await startLocalHost(path, "fixture");
 	const stale = await connectPeer(path);
 	const fresh = await connectPeer(path);
+	const phone = await connectPeer(path);
+	const events: any[] = [];
+	phone.handle = async (_method, params) => {
+		events.push(params.event);
+		return {};
+	};
+	stale.handle = async () => ({});
 	let now = Date.now();
 	const time = spyOn(Date, "now").mockImplementation(() => now);
 	const closed = Promise.withResolvers<void>();
 	stale.onClose = () => closed.resolve();
 	try {
-		await stale.call("register", { thread: { id: "stale" } });
+		await stale.call("register", {
+			thread: { id: "stale" },
+			requests: [
+				{
+					id: "expired-question",
+					method: "item/tool/requestUserInput",
+					params: { threadId: "stale", turnId: "turn", itemId: "item", questions: [] },
+				},
+			],
+		});
+		await phone.call("protocol", {
+			request: {
+				id: 1,
+				method: "initialize",
+				params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+			},
+		});
+		await phone.call("protocol", { request: { id: 2, method: "thread/resume", params: { threadId: "stale" } } });
 		await fresh.call("register", { thread: { id: "fresh" } });
 		now += 31_000;
 		await fresh.call("register", { thread: { id: "fresh" } });
 		await Promise.race([closed.promise, Bun.sleep(6000)]);
 		expect(host.router.sessions.has("stale")).toBe(false);
 		expect(host.router.sessions.has("fresh")).toBe(true);
+		for (let i = 0; i < 100 && !events.some(event => event.method === "thread/closed"); i++) await Bun.sleep(5);
+		expect(events.map(event => event.method)).toEqual([
+			"item/tool/requestUserInput",
+			"serverRequest/resolved",
+			"thread/closed",
+		]);
 	} finally {
 		time.mockRestore();
 		stale.close();
 		fresh.close();
+		phone.close();
 		await host.close();
 		await rm(dir, { recursive: true, force: true });
 	}

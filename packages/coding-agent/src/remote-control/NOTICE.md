@@ -24,6 +24,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   tool-question request/answer and server-request resolution fields. Corresponding
   JSON schema fixtures are copied without changes from the pinned source. The
   terminal answer broker, tool-call binding and host routing are native xcsh code.
+- `codex-rs/app-server/src/request_processors/thread_lifecycle.rs` and
+  `app-server-protocol/src/protocol/v2/thread.rs`: pending-request retirement before
+  unload and the `thread/closed` notification. Its schema fixture is unchanged.
 - Ordinary history uses the pinned `v2/item.rs` user, agent and dynamic-tool
   shapes. Its selected-branch projection and `remote-history` identity/boundary
   metadata are native xcsh code; messages remain persisted by AgentSession.

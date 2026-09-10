@@ -1,5 +1,6 @@
+import { isDeepStrictEqual } from "node:util";
 import { loadedThreadList, threadList } from "./discovery";
-import type { InteractionRequest } from "./interactions";
+import { type InteractionRequest, validateInteractionRequests } from "./interactions";
 import { configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError } from "./session";
@@ -53,17 +54,55 @@ export class RemoteRouter {
 		delivered.set(event.id, threadId);
 		this.notify(client, event);
 	}
+	validateSessionRequests(threadId: string, input: unknown): InteractionRequest[] {
+		const requests = validateInteractionRequests(threadId, input);
+		const current = new Map(this.sessions.get(threadId)?.requests?.map(request => [request.id, request]));
+		const otherIds = new Set<string>();
+		for (const [ownerId, endpoint] of this.sessions)
+			if (ownerId !== threadId) for (const request of endpoint.requests ?? []) otherIds.add(request.id);
+		for (const request of requests) {
+			const existing = current.get(request.id);
+			if (otherIds.has(request.id) || (existing && !isDeepStrictEqual(existing, request)))
+				throw new ProtocolError(-32602, "Pending request identity changed or belongs to another session");
+		}
+		return requests;
+	}
+	registerSession(threadId: string, endpoint: SessionEndpoint): void {
+		const previous = this.sessions.get(threadId);
+		const requests = this.validateSessionRequests(threadId, endpoint.requests ?? []);
+		const nextIds = new Set(requests.map(request => request.id));
+		for (const request of previous?.requests ?? []) {
+			if (!nextIds.has(request.id))
+				this.publish({ method: "serverRequest/resolved", params: { threadId, requestId: request.id } });
+		}
+		// Heartbeats retain the same live owner, including calls already awaiting a response.
+		const current = previous ? Object.assign(previous, endpoint) : endpoint;
+		this.sessions.set(threadId, current);
+		for (const request of current.requests ?? [])
+			for (const client of this.#clients.keys()) this.#deliver(client, request);
+	}
+	removeSession(threadId: string): void {
+		if (!this.sessions.has(threadId)) return;
+		for (const request of this.sessions.get(threadId)?.requests ?? [])
+			this.publish({ method: "serverRequest/resolved", params: { threadId, requestId: request.id } });
+		this.publish({ method: "thread/closed", params: { threadId } });
+		this.sessions.delete(threadId);
+		for (const subscriptions of this.#clients.values()) subscriptions.delete(threadId);
+		for (const delivered of this.#delivered.values())
+			for (const [id, thread] of delivered) if (thread === threadId) delivered.delete(id);
+	}
 	publish(event: Notification): void {
 		const threadId = String(event.params.threadId);
 		const session = this.sessions.get(threadId);
 		if (!session) return;
 		if (event.id !== undefined) {
-			if (event.method !== "item/tool/requestUserInput") return;
+			this.validateSessionRequests(threadId, [event]);
 			const request = event as InteractionRequest;
 			session.requests ??= [];
 			const requests = session.requests;
-			if (!requests.some(value => value.id === event.id)) {
-				if (requests.length >= 32) return;
+			const existing = requests.find(value => value.id === event.id);
+			if (!existing) {
+				validateInteractionRequests(threadId, [...requests, event]);
 				requests.push(structuredClone(request));
 			}
 			for (const client of this.#clients.keys()) this.#deliver(client, request);
@@ -244,6 +283,8 @@ export class RemoteRouter {
 							);
 						this.#clients.get(client)?.add(threadId);
 						result = await session.call(JSON.stringify([client, id]), request.method, params);
+						if (this.sessions.get(threadId) !== session)
+							throw new ProtocolError(-32000, "Session attachment changed while processing request");
 						for (const event of session.requests ?? []) this.#deliver(client, event);
 						break;
 					}

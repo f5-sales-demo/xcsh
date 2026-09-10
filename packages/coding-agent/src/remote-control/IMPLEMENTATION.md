@@ -613,3 +613,48 @@ and 1332 assertions across 39 files (33.42 seconds). Runtime code was unchanged
 between these runs. Workspace TypeScript/formatting, changed documentation lint,
 staged PII and staged secret checks passed. These checks do not replace repository
 CI, the unresolved full-history PII gate or manual phone acceptance.
+
+## Question retirement and recovery
+
+Host removal now resolves every delivered question before emitting the pinned
+`thread/closed` notification and releasing subscriptions and answer eligibility.
+This applies to explicit unregister, a departed owner socket, replacement by a
+different session in the same terminal, and heartbeat expiry. Normal heartbeats
+retain the owner object so an in-flight call remains valid. Snapshot reconciliation
+retires questions no longer pending and sends newly pending requests without
+repeating questions already delivered to each client. A delayed attachment result
+from a removed owner is rejected before it can replay old questions.
+
+The host validates pending request envelopes, question fields and option types.
+Both registration and live events enforce 32 pending requests and a 1 MiB JSON
+budget per session. Duplicate IDs within a snapshot, changed content under an
+outstanding ID and ID collisions across live owners are explicit protocol errors.
+Validation precedes snapshot replacement, preserving the current state on invalid
+input. These are native resource limits, separate from the relay frame limit.
+
+Automated socket tests cover unregister, disconnect, replacement, heartbeat
+snapshot recovery and expiry. The `thread/closed` payload validates against the
+pinned schema. The terminal agent remains independent of client disconnection.
+Actual iPhone handling of a terminal transition and subsequent attachment remains
+a manual acceptance item.
+
+The next question/approval work must preserve whole-tool semantics. The current
+ask tool manages grouped navigation, multiselect and free text through successive
+local selectors; those individual dialogs are currently the remote requests.
+Plan review is a separate TUI workflow: the completed `exit_plan_mode` tool causes
+the agent to stop before an approval selector is presented. It does not have an
+active tool identity at that point. Remote plan review therefore needs explicit
+provenance and reviewable plan content, rather than inferring permission from a
+generic dialog title. Approval also starts a new execution session, so that path
+must retain model, history and voice/session lifecycle behavior.
+
+Retirement checkpoint validation: observed failures covered missing owner-removal
+and snapshot reconciliation behavior, stale attachment replay, malformed/oversized
+requests, cross-owner ID collision and loss of an existing owner on a rejected
+replacement. Final focused run: 324 passed, zero failures, 1397 assertions across
+40 files (34.29 seconds). Final guarded package run: 7548 passed, 561 skipped,
+zero failures, 23622 assertions across 752 files (366.24 seconds). Workspace
+TypeScript/formatting, changed documentation lint and staged privacy/secret scans
+passed. An earlier package run was deliberately interrupted for the replacement
+repair and is not completion evidence. Manual phone transitions and the overall
+interaction/approval gate remain open.

@@ -93,3 +93,97 @@ test("unsubscribe and protocol errors cannot answer prompts; live requests join 
 	expect(sent.slice(1).map(value => value.event.id)).toEqual(["question-a", "question-b"]);
 	router.dispose();
 });
+
+test("owner removal resolves displayed questions, closes the thread and discards answer eligibility", async () => {
+	const { router, sent, resume, calls } = await fixture();
+	await resume("phone");
+	await resume("ordinary");
+	router.removeSession("thread-a");
+	expect(sent.slice(1)).toEqual([
+		{
+			client: "phone",
+			event: { method: "serverRequest/resolved", params: { threadId: "thread-a", requestId: question.id } },
+		},
+		{ client: "phone", event: { method: "thread/closed", params: { threadId: "thread-a" } } },
+		{ client: "ordinary", event: { method: "thread/closed", params: { threadId: "thread-a" } } },
+	]);
+	expect(router.subscribed("phone", "thread-a")).toBe(false);
+	expect(router.sessions.has("thread-a")).toBe(false);
+	await router.handle("phone", { id: question.id, result: { answers: {} } });
+	expect(calls).toHaveLength(2);
+	router.dispose();
+});
+
+test("a refreshed registration reconciles lost question events without repeating existing requests", async () => {
+	const { router, sent, resume } = await fixture();
+	await resume("phone");
+	const endpoint = router.sessions.get("thread-a")!;
+	router.registerSession("thread-a", endpoint);
+	expect(sent).toHaveLength(1);
+	const next = { ...question, id: "next-question" };
+	router.registerSession("thread-a", { ...endpoint, requests: [next] });
+	expect(sent.slice(1).map(value => value.event)).toEqual([
+		{ method: "serverRequest/resolved", params: { threadId: "thread-a", requestId: question.id } },
+		next,
+	]);
+	expect(router.sessions.get("thread-a")?.requests).toEqual([next]);
+	expect(router.subscribed("phone", "thread-a")).toBe(true);
+	router.dispose();
+});
+
+test("a delayed attachment cannot replay the previous owner's pending requests", async () => {
+	const { router, sent, resume } = await fixture();
+	const finish = Promise.withResolvers<void>();
+	router.sessions.get("thread-a")!.call = () => finish.promise;
+	const attaching = resume("phone");
+	router.sessions.set("thread-a", { thread: { id: "thread-a" }, requests: [], call: async () => ({}) });
+	finish.resolve();
+	await attaching;
+	expect(sent).toEqual([]);
+	router.dispose();
+});
+
+test("request snapshots reject malformed, duplicated, conflicting and oversized entries before changing state", async () => {
+	const { router, sent, resume } = await fixture();
+	await resume("phone");
+	const original = router.sessions.get("thread-a")!;
+	const malformed = [
+		[{ ...question, id: 5 }],
+		[{ ...question, params: { ...question.params, threadId: "other" } }],
+		[{ ...question, params: { ...question.params, questions: [{}] } }],
+		[question, question],
+		[{ ...question, params: { ...question.params, itemId: "changed-item" } }],
+		Array.from({ length: 33 }, (_, i) => ({ ...question, id: `question-${i}` })),
+		[{ ...question, params: { ...question.params, extra: "x".repeat(1024 * 1024) } }],
+	];
+	for (const requests of malformed) {
+		expect(() => router.registerSession("thread-a", { ...original, requests } as never)).toThrow();
+		expect(router.sessions.get("thread-a")?.requests).toEqual([question]);
+	}
+	expect(sent).toHaveLength(1);
+	router.dispose();
+});
+
+test("live events obey snapshot limits and immutable request identities", async () => {
+	const { router, sent, resume } = await fixture();
+	await resume("phone");
+	for (let i = 1; i < 32; i++) router.publish({ ...question, id: `question-${i}` });
+	expect(sent).toHaveLength(32);
+	expect(() => router.publish({ ...question, id: "overflow" })).toThrow();
+	expect(() => router.publish({ ...question, params: { ...question.params, itemId: "changed-item" } })).toThrow();
+	expect(() => router.publish({ ...question, id: 5 } as never)).toThrow();
+	expect(router.sessions.get("thread-a")?.requests).toHaveLength(32);
+	router.dispose();
+});
+
+test("request identities cannot collide across two live session owners", async () => {
+	const { router } = await fixture();
+	const other = { ...question, params: { ...question.params, threadId: "thread-b" } };
+	expect(() =>
+		router.registerSession("thread-b", { thread: { id: "thread-b" }, requests: [other], call: async () => ({}) }),
+	).toThrow("identity");
+	router.sessions.set("thread-b", { thread: { id: "thread-b" }, requests: [], call: async () => ({}) });
+	expect(() => router.publish(other)).toThrow("identity");
+	expect(router.sessions.get("thread-b")?.requests).toEqual([]);
+	router.dispose();
+});
