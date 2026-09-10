@@ -55,7 +55,12 @@ class CiCapacityContractTests(unittest.TestCase):
             "      github.event.label.name == 'compute-benchmark-approved' &&\n"
             "      github.event.pull_request.head.repo.full_name == github.repository"
         )
-        self.assertEqual(benchmark.count(benchmark_guard), 7)
+        self.assertEqual(benchmark.count(benchmark_guard), 8)
+        self.assertIn("  release-native-fixtures:\n", benchmark)
+        self.assertIn("    needs: release-native-fixtures\n", benchmark)
+        self.assertIn("platform: linux\n            arch: arm64", benchmark)
+        self.assertEqual(benchmark.count("platform: win32"), 2)
+        self.assertIn("name: qualification-native-${{ matrix.platform }}", benchmark)
         self.assertIn("  d16-current-burst:\n", benchmark)
         self.assertIn("    runs-on: xcsh-compute\n", benchmark)
         self.assertIn("runs-on: xcsh-compute-bun-candidate", benchmark)
@@ -74,6 +79,8 @@ class CiCapacityContractTests(unittest.TestCase):
             profiler_action,
         )
         self.assertIn("tool: nextest", profiler_action)
+        self.assertIn("pattern: qualification-native-*", profiler_action)
+        self.assertIn("merge-multiple: true", profiler_action)
         self.assertIn("retention-days: 30", profiler_action)
         self.assertNotIn("/usr/bin/time", benchmark)
         self.assertNotIn('bun-version: "1.3"', workflows)

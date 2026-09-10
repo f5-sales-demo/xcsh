@@ -13,8 +13,82 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release-native-fixtures:
+    name: Release native fixture (${{ matrix.platform }}, ${{ matrix.arch }}, ${{ matrix.variant }})
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-benchmark-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+            variant: default
+            variants: ""
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            target: ""
+            variant: baseline
+            variants: baseline
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            target: ""
+            variant: modern
+            variants: modern
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    env:
+      RUST_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
+          bun-version: "1.3.14"
+      - uses: ./.github/actions/setup-rust
+        with:
+          target: ${{ matrix.target }}
+      - name: Restore exact Rust cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Set up Zig 0.15.2
+        uses: ./.github/actions/setup-zig
+      - run: bash scripts/ci-bun-install.sh
+      - name: Build release native fixture
+        shell: bash
+        env:
+          CROSS_TARGET: ${{ matrix.target }}
+          TARGET_PLATFORM: ${{ matrix.platform }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          TARGET_VARIANTS: ${{ matrix.variants }}
+        run: bun run ci:build:native
+      - name: Upload immutable release native fixture
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: qualification-native-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.variant }}
+          path: packages/natives/native/pi_natives.${{ matrix.platform }}-${{ matrix.arch }}*.node
+          if-no-files-found: error
+          retention-days: 30
+
   d16-software-baseline:
     name: D16 / Bun 1.3.14 / software / ${{ matrix.cache }} / pair-${{ matrix.pair }}
+    needs: release-native-fixtures
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action == 'labeled' &&
