@@ -120,6 +120,13 @@ static SET_OPTIONS: LazyLock<HashMap<&'static str, ShellOptionDef>> = LazyLock::
 			),
 		),
 		(
+			"c",
+			ShellOptionDef::new(
+				|options| options.command_string_mode,
+				|options, value| options.command_string_mode = value,
+			),
+		),
+		(
 			"e",
 			ShellOptionDef::new(
 				|options| options.exit_on_nonzero_command_exit,
@@ -405,8 +412,8 @@ static SET_O_OPTIONS: LazyLock<HashMap<&'static str, ShellOptionDef>> = LazyLock
 		(
 			"pipefail",
 			ShellOptionDef::new(
-				|options| options.return_first_failure_from_pipeline,
-				|options, value| options.return_first_failure_from_pipeline = value,
+				|options| options.return_last_failure_from_pipeline,
+				|options, value| options.return_last_failure_from_pipeline = value,
 			),
 		),
 		(
@@ -451,10 +458,24 @@ static SHOPT_OPTIONS: LazyLock<HashMap<&'static str, ShellOptionDef>> = LazyLock
 			ShellOptionDef::new(|options| options.auto_cd, |options, value| options.auto_cd = value),
 		),
 		(
+			"array_expand_once",
+			ShellOptionDef::new(
+				|options| options.array_expand_once,
+				|options, value| options.array_expand_once = value,
+			),
+		),
+		(
 			"assoc_expand_once",
 			ShellOptionDef::new(
 				|options| options.assoc_expand_once,
 				|options, value| options.assoc_expand_once = value,
+			),
+		),
+		(
+			"bash_source_fullpath",
+			ShellOptionDef::new(
+				|options| options.bash_source_full_path,
+				|options, value| options.bash_source_full_path = value,
 			),
 		),
 		(
@@ -609,6 +630,13 @@ static SHOPT_OPTIONS: LazyLock<HashMap<&'static str, ShellOptionDef>> = LazyLock
 			),
 		),
 		(
+			"globskipdots",
+			ShellOptionDef::new(
+				|options| options.glob_skip_dots,
+				|options, value| options.glob_skip_dots = value,
+			),
+		),
+		(
 			"globstar",
 			ShellOptionDef::new(
 				|options| options.enable_star_star_glob,
@@ -735,10 +763,24 @@ static SHOPT_OPTIONS: LazyLock<HashMap<&'static str, ShellOptionDef>> = LazyLock
 			),
 		),
 		(
+			"noexpand_translation",
+			ShellOptionDef::new(
+				|options| options.no_expand_translation,
+				|options, value| options.no_expand_translation = value,
+			),
+		),
+		(
 			"nullglob",
 			ShellOptionDef::new(
 				|options| options.expand_non_matching_patterns_to_null,
 				|options, value| options.expand_non_matching_patterns_to_null = value,
+			),
+		),
+		(
+			"patsub_replacement",
+			ShellOptionDef::new(
+				|options| options.patsub_replacement,
+				|options, value| options.patsub_replacement = value,
 			),
 		),
 		(
@@ -781,6 +823,13 @@ static SHOPT_OPTIONS: LazyLock<HashMap<&'static str, ShellOptionDef>> = LazyLock
 			ShellOptionDef::new(
 				|options| options.source_builtin_searches_path,
 				|options, value| options.source_builtin_searches_path = value,
+			),
+		),
+		(
+			"varredir_close",
+			ShellOptionDef::new(
+				|options| options.var_redir_close,
+				|options, value| options.var_redir_close = value,
 			),
 		),
 		(

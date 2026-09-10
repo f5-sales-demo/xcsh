@@ -192,6 +192,11 @@ pub fn move_self_to_foreground() -> Result<(), error::Error> {
 	move_to_foreground(pid as sys::process::ProcessId)
 }
 
+/// Windows consoles do not expose a Unix-style terminal device path.
+pub fn try_get_terminal_device_path() -> Option<std::path::PathBuf> {
+	None
+}
+
 fn console_input_handle() -> Result<HANDLE, error::Error> {
 	let handle = {
 		// SAFETY: GetStdHandle has no safety requirements.

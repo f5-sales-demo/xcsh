@@ -3,7 +3,7 @@ use clap::Parser;
 use std::{io::Write, path::PathBuf};
 
 /// Query or manipulate the shell's command history.
-// TODO: Evaluate which of the options conflict with each other.
+// TODO(history): Evaluate which of the options conflict with each other.
 #[derive(Parser)]
 #[expect(clippy::option_option)]
 pub(crate) struct HistoryCommand {
@@ -53,26 +53,24 @@ struct HistoryConfig {
 impl builtins::Command for HistoryCommand {
 	type Error = brush_core::Error;
 
-	fn execute(
+	async fn execute<SE: brush_core::ShellExtensions>(
 		&self,
-		context: brush_core::ExecutionContext<'_>,
-	) -> impl Future<Output = Result<ExecutionResult, Self::Error>> {
-		futures::future::lazy(move |_| {
-			// Retrieve the shell's history config while we still can.
-			let config = HistoryConfig {
-				default_history_file_path: context.shell.history_file_path(),
-				time_format: context.shell.history_time_format(),
-			};
+		context: brush_core::ExecutionContext<'_, SE>,
+	) -> Result<ExecutionResult, Self::Error> {
+		// Retrieve the shell's history config while we still can.
+		let config = HistoryConfig {
+			default_history_file_path: context.shell.history_file_path(),
+			time_format: context.shell.history_time_format(),
+		};
 
-			let stdout = context.stdout();
-			let stderr = context.stderr();
+		let stdout = context.stdout();
+		let stderr = context.stderr();
 
-			if let Some(history) = context.shell.history_mut() {
-				self.execute_with_history(history, config, stdout, stderr)
-			} else {
-				Err(brush_core::ErrorKind::HistoryNotEnabled.into())
-			}
-		})
+		if let Some(history) = context.shell.history_mut() {
+			self.execute_with_history(history, config, stdout, stderr)
+		} else {
+			Err(brush_core::ErrorKind::HistoryNotEnabled.into())
+		}
 	}
 }
 
@@ -125,9 +123,9 @@ impl HistoryCommand {
 			) {
 				history.flush(
 					file_path,
-					true,                         /*append?*/
-					true,                         /*unsaved items only*/
-					config.time_format.is_some(), /*write timestamps?*/
+					true,                         /* append? */
+					true,                         /* unsaved items only */
+					config.time_format.is_some(), /* write timestamps? */
 				)?;
 			}
 
@@ -148,9 +146,9 @@ impl HistoryCommand {
 			{
 				history.flush(
 					file_path,
-					false,                        /*append?*/
-					false,                        /*unsaved items only?*/
-					config.time_format.is_some(), /*write timestamps?*/
+					false,                        /* append? */
+					false,                        /* unsaved items only? */
+					config.time_format.is_some(), /* write timestamps? */
 				)?;
 			}
 
@@ -167,7 +165,7 @@ impl HistoryCommand {
 		}
 
 		let max_entries: Option<usize> = if let Some(arg) = self.args.first() {
-			Some(arg.parse()?)
+			Some(brush_core::int_utils::parse(arg.as_str(), 10)?)
 		} else {
 			None
 		};

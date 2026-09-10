@@ -165,19 +165,19 @@ async fn run_command(
 	cwd: Option<PathBuf>,
 	command: &str,
 ) -> std::process::ExitCode {
-	use brush_builtins::{BuiltinSet, default_builtins};
-	use brush_core::{CreateOptions, Shell};
+	use brush_builtins::{BuiltinSet, ShellBuilderExt};
+	use brush_core::{ProfileLoadBehavior, RcLoadBehavior, Shell, SourceInfo};
 
-	let options = CreateOptions {
-		interactive: false,
-		login: false,
-		no_profile: true,
-		no_rc: true,
-		do_not_inherit_env: true,
-		builtins: default_builtins(BuiltinSet::BashMode),
-		..Default::default()
-	};
-	let mut shell = match Shell::new(options).await {
+	let mut shell = match Shell::builder()
+		.interactive(false)
+		.login(false)
+		.profile(ProfileLoadBehavior::Skip)
+		.rc(RcLoadBehavior::Skip)
+		.do_not_inherit_env(true)
+		.default_builtins(BuiltinSet::BashMode)
+		.build()
+		.await
+	{
 		Ok(shell) => shell,
 		Err(err) => {
 			eprintln!("could not create shell: {err}");
@@ -195,7 +195,10 @@ async fn run_command(
 	// Exactly how `pi-natives` supplies the fence, so this drives the shipped path.
 	params.containment = fence.map(std::sync::Arc::new);
 
-	match shell.run_string(command, &params).await {
+	match shell
+		.run_string(command, &SourceInfo::from("containment-check"), &params)
+		.await
+	{
 		Ok(result) => {
 			let code = u8::from(result.exit_code);
 			println!("exit: {code}");

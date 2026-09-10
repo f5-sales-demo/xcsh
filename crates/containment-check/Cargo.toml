@@ -18,8 +18,8 @@ workspace = true
 # It also stays cheap on purpose: brush-core's dependency closure only, no napi and no tree-sitter, so it
 # builds inside a small container where a full `pi-natives` build would not fit.
 [dependencies]
-brush-core = { version = "0.4.0", path = "../brush-core-vendored" }
-brush-builtins = { version = "0.1.0", path = "../brush-builtins-vendored" }
+brush-core = { version = "0.5.0", path = "../brush-core-vendored" }
+brush-builtins = { version = "0.2.0", path = "../brush-builtins-vendored" }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

@@ -40,59 +40,57 @@ pub(crate) struct EnableCommand {
 impl builtins::Command for EnableCommand {
 	type Error = brush_core::Error;
 
-	fn execute(
+	async fn execute<SE: brush_core::ShellExtensions>(
 		&self,
-		context: brush_core::ExecutionContext<'_>,
-	) -> impl Future<Output = Result<ExecutionResult, Self::Error>> {
-		futures::future::lazy(move |_| {
-			let mut result = ExecutionResult::success();
+		context: brush_core::ExecutionContext<'_, SE>,
+	) -> Result<ExecutionResult, Self::Error> {
+		let mut result = ExecutionResult::success();
 
-			if self.shared_object_path.is_some() {
-				return error::unimp("enable -f");
-			}
-			if self.remove_loaded_builtin {
-				return error::unimp("enable -d");
-			}
+		if self.shared_object_path.is_some() {
+			return error::unimp("enable -f");
+		}
+		if self.remove_loaded_builtin {
+			return error::unimp("enable -d");
+		}
 
-			if !self.names.is_empty() {
-				for name in &self.names {
-					if let Some(builtin) = context.shell.builtin_mut(name) {
-						builtin.disabled = self.disable;
-					} else {
-						writeln!(context.stderr(), "{name}: not a shell builtin")?;
-						result = ExecutionResult::general_error();
-					}
+		if !self.names.is_empty() {
+			for name in &self.names {
+				if let Some(builtin) = context.shell.builtin_mut(name) {
+					builtin.disabled = self.disable;
+				} else {
+					writeln!(context.stderr(), "{name}: not a shell builtin")?;
+					result = ExecutionResult::general_error();
 				}
-			} else {
-				let builtins: Vec<_> = context
-					.shell
-					.builtins()
-					.iter()
-					.sorted_by_key(|(name, _reg)| *name)
-					.collect();
+			}
+		} else {
+			let builtins: Vec<_> = context
+				.shell
+				.builtins()
+				.iter()
+				.sorted_by_key(|(name, _reg)| *name)
+				.collect();
 
-				for (builtin_name, builtin) in builtins {
-					if self.disable {
-						if !builtin.disabled {
-							continue;
-						}
-					} else if self.print_list {
-						if builtin.disabled {
-							continue;
-						}
-					}
-
-					if self.special_only && !builtin.special_builtin {
+			for (builtin_name, builtin) in builtins {
+				if self.disable {
+					if !builtin.disabled {
 						continue;
 					}
-
-					let prefix = if builtin.disabled { "-n " } else { "" };
-
-					writeln!(context.stdout(), "enable {prefix}{builtin_name}")?;
+				} else if self.print_list {
+					if builtin.disabled {
+						continue;
+					}
 				}
-			}
 
-			Ok(result)
-		})
+				if self.special_only && !builtin.special_builtin {
+					continue;
+				}
+
+				let prefix = if builtin.disabled { "-n " } else { "" };
+
+				writeln!(context.stdout(), "enable {prefix}{builtin_name}")?;
+			}
+		}
+
+		Ok(result)
 	}
 }
