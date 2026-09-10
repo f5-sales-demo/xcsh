@@ -1229,3 +1229,15 @@ hashes remained unchanged during the run. Changed documentation passed Markdown
 and terminology checks; staged privacy and secret scans were clean. This is a
 source-test checkpoint; the earlier compiled receipt predates these changes.
 Live streaming/item-mode acceptance and the complete issue remain open.
+
+The subsequent production build from clean commit `cadf506f6` passed all eight
+isolated compiled checks in 15.780 seconds. The receipt
+`scripts/remote-package/evidence-items-2026-09-10.json` records the exact source,
+binary, harness, provider and container identities. Binary SHA-256:
+`2aa8a40e53dc4f75aa9496211b1f4069b1fb03aff566be3621ddb39bb9020343`.
+Two real terminal agents executed file tools; host restart/replay, compiled resume
+and cleanup passed without Codex, standalone Bun or source dependencies.
+Networking was disabled and enrollment/model output were synthetic. This verifies
+compiled integration, not live voice. A read-only live audit separately confirmed
+the existing Alpha/Beta owners were idle with unchanged identities, Luna/Astra
+models and 18/52 saved messages; their processes were not restarted.
