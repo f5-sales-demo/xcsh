@@ -66,6 +66,18 @@ function quote(value: string): string {
 	return JSON.stringify(value);
 }
 
+async function canonicalDirectory(value: string): Promise<string> {
+	try {
+		return await fs.realpath(value);
+	} catch {
+		return path.resolve(value);
+	}
+}
+
+function sameDirectory(actual: string, expected: string): boolean {
+	return path.relative(expected, actual) === "";
+}
+
 function errorCode(error: unknown): string | undefined {
 	if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
 	const code = (error as { code?: unknown }).code;
@@ -728,7 +740,18 @@ export async function runSandboxCheck(options: SandboxCheckOptions = {}): Promis
 					.map(part => part.text)
 					.join("")
 					.trim();
-			const passed = text(moved) === nested && text(reset) === workspace && text(explicit) === nested;
+			const [movedDirectory, resetDirectory, explicitDirectory, expectedNested, expectedWorkspace] =
+				await Promise.all([
+					canonicalDirectory(text(moved)),
+					canonicalDirectory(text(reset)),
+					canonicalDirectory(text(explicit)),
+					canonicalDirectory(nested),
+					canonicalDirectory(workspace),
+				]);
+			const passed =
+				sameDirectory(movedDirectory, expectedNested) &&
+				sameDirectory(resetDirectory, expectedWorkspace) &&
+				sameDirectory(explicitDirectory, expectedNested);
 			return passed
 				? { passed: true }
 				: {
