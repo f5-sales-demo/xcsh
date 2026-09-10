@@ -1428,6 +1428,12 @@ export declare function supportsLanguage(lang: string): boolean
 export declare function truncateToWidth(text: string, maxWidth: number, ellipsisKind: Ellipsis | undefined | null, pad: boolean | undefined | null, tabWidth: number): string
 
 /**
+ * Return an unnumbered unified diff without filename headers.
+ * Context defaults to one line. Missing final newlines retain their diff hints.
+ */
+export declare function unifiedDiff(before: string, after: string, context?: number | undefined | null): string
+
+/**
  * Inclusive 1-based line range within a source file (used for scoped chunk
  * rendering).
  */

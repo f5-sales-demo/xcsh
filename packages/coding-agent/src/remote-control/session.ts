@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { ProtocolError } from "./errors";
 import { updateFileHistoryItem } from "./file-changes";
@@ -980,12 +980,13 @@ export class RemoteSession {
 							cwd: this.target.sessionManager.getCwd(),
 							fileCallIds: message.content.flatMap(part =>
 								part.type === "toolCall" &&
-								this.target.getToolByName?.(part.name)?.executionKind === "fileChange"
+								getToolExecutionKind(this.target.getToolByName?.(part.name), part.arguments) === "fileChange"
 									? [part.id]
 									: [],
 							),
 							commandCallIds: message.content.flatMap(part =>
-								part.type === "toolCall" && this.target.getToolByName?.(part.name)?.executionKind === "command"
+								part.type === "toolCall" &&
+								getToolExecutionKind(this.target.getToolByName?.(part.name), part.arguments) === "command"
 									? [part.id]
 									: [],
 							),

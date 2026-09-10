@@ -1,3 +1,4 @@
+import { recordFileMove, recordFileMutation } from "../../tools/file-mutations";
 /**
  * Patch application logic for the edit tool.
  *
@@ -1663,7 +1664,7 @@ class LspFileSystem implements FileSystem {
 	}
 
 	async delete(path: string): Promise<void> {
-		await this.#getFile(path).unlink();
+		await recordFileMutation(path, () => this.#getFile(path).unlink());
 	}
 
 	async mkdir(path: string): Promise<void> {
@@ -1735,6 +1736,7 @@ export async function executePatchSingle(
 		allowFuzzy,
 	});
 
+	if (result.change.newPath) recordFileMove(resolvedPath, result.change.newPath);
 	if (resolvedRename) {
 		invalidateFsScanAfterRename(resolvedPath, resolvedRename);
 	} else if (result.change.type === "delete") {

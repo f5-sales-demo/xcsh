@@ -1470,8 +1470,56 @@ staged privacy and secret checks passed. The full package suite passed 7937 test
 with 561 skips and zero failures across 775 files (25272 assertions). All eight
 runtime/test/fixture source hashes remained unchanged through verification.
 
-Native edit/write tools still need to supply execution facts at their authorized
-mutation boundaries, including actual before/after content, formatting, renames and
-partial failures. Their current terminal display diffs cannot be forwarded directly.
-This checkpoint does not claim those producers or live iPhone file-change rendering
-are complete. The live executable remains on `052153363`.
+The following native producer checkpoint closes the edit/write integration gap.
+Live iPhone file-change rendering remains unverified.
+
+## Native file execution facts
+
+Native write and the replace, patch, hashline and chunk edit modes now capture
+before/after contents at the filesystem mutation boundary. An asynchronous capture
+scope belongs to one tool call, including its LSP batch flush. Multiple writes to a
+path collapse to its net change; successful renames preserve the original path and
+destination. Rename chains, return moves, recreated paths and overwritten destinations
+retain all surviving file contents. Partial failures retain actual mutations without
+turning a display diff into execution evidence. Capture skips nonregular, unreadable
+or non-UTF-8 contents; it does not invent a textual diff for them.
+
+The existing native addon exposes a generic unified-diff function through its bundled
+`similar` 3.1.1 dependency. Its output matches 140 fixtures produced with pinned
+Codex's `similar` 2.7.0: empty inputs, line endings, BOM/Unicode, final-newline hints,
+context windows, repeated lines and deterministic generated edits. The independent
+fixture generator checks the pinned source hash and library version; regeneration
+matched byte for byte. The reference crate archive matches the checksum in pinned
+Codex's lockfile; all 73 extracted source files match the archive. This adds no
+installed Codex or runtime Rust compiler dependency.
+
+Per-call execution classification distinguishes ordinary file writes from archive-entry
+and SQLite-row operations, which keep their dynamic-tool presentation. Vim also keeps
+its existing presentation. The agent loop, wrappers and remote history use the same
+classification hook. Write byte counts now use UTF-8 bytes. Native file results retain
+their existing terminal details and add structured execution facts; streamed history
+and attachment reload use those facts through the owning AgentSession.
+
+A regression test reproduced a formatter writing after cancellation settlement. LSP
+writethrough now closes its write gate before returning and joins already-started disk
+writes; late formatter output cannot change a settled file. Batch tests verify that
+formatting earlier files is attributed to the call that flushes the batch. A FIFO
+regression failed before capture was restricted to regular files, preventing metadata
+reads from blocking the requested operation.
+
+Observed failures preceded the native export, mutation recorder, native edit/write
+metadata and classification, formatter close behavior, FIFO handling and four rename
+sequence repairs. The real SDK test submits the same phone request twice, performs a
+native write and edit once, and verifies final disk content, streamed items and history
+reattachment with three mocked model responses. This is local integration evidence;
+it does not replace live work-model or phone acceptance.
+
+Before the rename-sequence repair, the broader tool/history run passed 1658 tests
+with 348 skips and 4982 assertions across 159 files. The final mutation/formatter/SDK
+run passed 22 tests and 57 assertions. Agent-core passed 40 tests and 146 assertions;
+the source-matched native addon suite passed 50 tests and 106 assertions. Workspace
+TypeScript/lint, Rust format/clippy checks, CLI bundle, documentation, staged privacy
+and secret checks passed. The final package suite passed 8100 tests with 561 skips
+and zero failures across 780 files (25470 assertions). All 22 runtime/test/fixture
+source hashes remained unchanged through verification. No phone-runtime upgrade
+was performed.

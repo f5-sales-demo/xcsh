@@ -106,3 +106,9 @@ Source: [pinned Codex remote transport](https://github.com/openai/codex/tree/3d2
 Modifications: TypeScript/Bun implementation; xcsh identity and version; fixed
 production endpoint; response size limit; no server-body diagnostics; bounded
 relay retries; private xcsh-owned state and Unix socket session attachment.
+
+- `codex-rs/apply-patch/src/file_update.rs` and its pinned `similar` 2.7.0 dependency:
+  the independent native-diff fixture generator uses the original headerless,
+  context-radius diff construction. Runtime diff generation uses xcsh's existing
+  `similar` 3.1.1 native dependency, verified against those fixtures. No Codex
+  source or executable is required at runtime.

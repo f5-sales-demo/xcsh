@@ -22,6 +22,7 @@ import type {
 	AgentToolResult,
 	StreamFn,
 } from "./types";
+import { getToolExecutionKind } from "./types";
 
 /**
  * Start an agent loop with a new prompt message.
@@ -514,13 +515,14 @@ async function executeToolCalls(
 		const normalizedResult = normalizeToolResult(result, isError);
 		const { toolCall } = record;
 		if (!record.started) {
+			const executionKind = getToolExecutionKind(record.tool, record.args);
 			stream.push({
 				type: "tool_execution_start",
 				toolCallId: toolCall.id,
 				toolName: toolCall.name,
 				args: record.args,
 				intent: toolCall.intent,
-				...(record.tool?.executionKind ? { executionKind: record.tool.executionKind } : {}),
+				...(executionKind ? { executionKind } : {}),
 			});
 		}
 		const isWarning = Boolean(normalizedResult.isWarning);
@@ -570,13 +572,14 @@ async function executeToolCalls(
 		}
 		record.args = argsForExecution;
 		record.started = true;
+		const executionKind = getToolExecutionKind(tool, argsForExecution);
 		stream.push({
 			type: "tool_execution_start",
 			toolCallId: toolCall.id,
 			toolName: toolCall.name,
 			args: argsForExecution,
 			intent: toolCall.intent,
-			...(tool?.executionKind ? { executionKind: tool.executionKind } : {}),
+			...(executionKind ? { executionKind } : {}),
 		});
 
 		let result: AgentToolResult<any>;

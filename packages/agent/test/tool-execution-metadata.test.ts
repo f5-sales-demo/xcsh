@@ -6,7 +6,11 @@ import { agentLoop } from "../src/agent-loop";
 import { AgentToolError } from "../src/tool-error";
 import type { AgentEvent, AgentTool } from "../src/types";
 
-async function execute(error: unknown, executionKind?: "command" | "fileChange") {
+async function execute(
+	error: unknown,
+	executionKind?: "command" | "fileChange",
+	getExecutionKind?: AgentTool["getExecutionKind"],
+) {
 	const model = getBundledModel("openai", "gpt-4o-mini")!;
 	const tool: AgentTool = {
 		name: "fixture",
@@ -14,6 +18,7 @@ async function execute(error: unknown, executionKind?: "command" | "fileChange")
 		description: "Fixture",
 		parameters: Type.Object({}),
 		executionKind,
+		getExecutionKind,
 		execute: async () => {
 			throw error;
 		},
@@ -86,4 +91,16 @@ test("ordinary errors keep their established text result and no invented executi
 test("arbitrary objects with a result field are not trusted as structured failures", async () => {
 	const f = await execute({ result: { details: { invented: true } } });
 	expect(f.result).toMatchObject({ details: {}, isError: true });
+});
+
+test.each(["fileChange", undefined] as const)("per-call presentation overrides static metadata: %s", async kind => {
+	let received: unknown;
+	const f = await execute(new Error("Fixture"), "command", params => {
+		received = params;
+		return kind;
+	});
+	expect(received).toEqual({});
+	const start = f.events.find(event => event.type === "tool_execution_start");
+	if (kind) expect(start).toHaveProperty("executionKind", kind);
+	else expect(start).not.toHaveProperty("executionKind");
 });

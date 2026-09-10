@@ -170,3 +170,14 @@ converter with local type adapters, and records its output for additions, deleti
 updates, renames, empty changes and Unicode path ordering. This verifies conversion
 of execution facts; it does not generate a diff from before/after file contents or
 prove native edit/write producer coverage.
+
+## Native diff fixtures
+
+From the coding-agent package, run
+`bun scripts/remote-reference/file-diffs.ts <pinned-codex-checkout> <similar-2.7.0-source>`
+to regenerate `test/remote-control/fixtures/codex-0.153.4-file-diffs.json`.
+The generator checks the original file-update source hash and dependency version,
+then compiles the reference library and a small Rust driver. Its 140 inputs include
+line-ending, Unicode, missing-newline, context and repeated-line cases. The existing
+xcsh native diff library is compared against these independently generated outputs.
+Rust and the reference checkout are used only for fixture generation.

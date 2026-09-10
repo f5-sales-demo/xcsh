@@ -8,6 +8,7 @@ import type { RenderResultOptions } from "../extensibility/custom-tools/types";
 import type { FileDiagnosticsResult } from "../lsp";
 import { renderDiff as renderDiffColored } from "../modes/components/diff";
 import { getLanguageFromPath, type Theme } from "../modes/theme/theme";
+import type { FileExecutionDetails } from "../tools/execution-metadata";
 import type { OutputMeta } from "../tools/output-meta";
 import {
 	formatDiagnostics,
@@ -71,6 +72,7 @@ export interface EditToolPerFileResult {
 }
 
 export interface EditToolDetails {
+	execution?: FileExecutionDetails;
 	/** Unified diff of the changes made */
 	diff: string;
 	/** Line number of the first change in the new file (for editor navigation) */

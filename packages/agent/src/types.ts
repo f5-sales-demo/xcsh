@@ -247,6 +247,8 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
 	label: string;
 	/** Host presentation of the actual executor; absent for ordinary dynamic tools. */
 	executionKind?: "command" | "fileChange";
+	/** Pure per-call classification; returning undefined preserves ordinary dynamic-tool presentation. */
+	getExecutionKind?: (params: unknown) => "command" | "fileChange" | undefined;
 	/** If true, tool is excluded unless explicitly listed in --tools or agent's tools field */
 	hidden?: boolean;
 	/** If true, tool can stage a pending action that requires explicit resolution via the resolve tool. */
@@ -315,3 +317,10 @@ export type AgentEvent =
 			isError?: boolean;
 			isWarning?: boolean;
 	  };
+
+export function getToolExecutionKind(
+	tool: AgentTool | undefined,
+	params: unknown,
+): "command" | "fileChange" | undefined {
+	return tool?.getExecutionKind ? tool.getExecutionKind(params) : tool?.executionKind;
+}

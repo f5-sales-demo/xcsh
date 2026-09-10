@@ -25,6 +25,7 @@ export class RegisteredToolAdapter implements AgentTool<any, any, any> {
 	declare label: string;
 	declare strict: boolean;
 	declare executionKind?: AgentTool["executionKind"];
+	declare getExecutionKind?: AgentTool["getExecutionKind"];
 
 	renderCall?: (args: any, options: any, theme: any) => any;
 	renderResult?: (result: any, options: any, theme: any, args?: any) => any;
@@ -93,6 +94,7 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 	declare label: string;
 	declare strict: boolean;
 	declare executionKind?: AgentTool["executionKind"];
+	declare getExecutionKind?: AgentTool["getExecutionKind"];
 
 	constructor(
 		private tool: AgentTool<TParameters, TDetails>,

@@ -22,6 +22,8 @@ import { Ellipsis, Hasher, type RenderCache, renderStatusLine, truncateToWidth }
 import { resolveFileDisplayMode } from "../utils/file-display-mode";
 import { parseArchivePathCandidates } from "./archive-reader";
 import { assertEditableFile } from "./auto-generated-guard";
+import type { FileExecutionDetails } from "./execution-metadata";
+import { captureFileExecution } from "./file-mutations";
 import { invalidateFsScanAfterWrite } from "./fs-cache-invalidation";
 import { type OutputMeta, outputMeta } from "./output-meta";
 import { enforcePlanModeWrite, resolvePlanPath } from "./plan-mode-guard";
@@ -56,6 +58,7 @@ export type WriteToolInput = Static<typeof writeSchema>;
 
 /** Details returned by the write tool for TUI rendering */
 export interface WriteToolDetails {
+	execution?: FileExecutionDetails;
 	diagnostics?: FileDiagnosticsResult;
 	meta?: OutputMeta;
 }
@@ -174,6 +177,16 @@ function parseSqliteWriteTarget(subPath: string, queryString: string): { table: 
  */
 export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails> {
 	readonly name = "write";
+	getExecutionKind(params: unknown): "fileChange" | undefined {
+		if (!isRecord(params) || typeof params.path !== "string") return;
+		const path = params.path;
+		if (
+			parseArchivePathCandidates(path).some(value => value.archivePath !== path) ||
+			parseSqlitePathCandidates(path).some(value => value.sqlitePath !== path)
+		)
+			return;
+		return "fileChange";
+	}
 	readonly label = "Write";
 	readonly description: string;
 	readonly parameters = writeSchema;
@@ -476,38 +489,40 @@ export class WriteTool implements AgentTool<typeof writeSchema, WriteToolDetails
 				return sqliteResult;
 			}
 
-			enforcePlanModeWrite(this.session, path, { op: "create" });
-			const absolutePath = resolvePlanPath(this.session, path);
-			const batchRequest = getLspBatchRequest(context?.toolCall);
+			return captureFileExecution<WriteToolDetails>(async () => {
+				enforcePlanModeWrite(this.session, path, { op: "create" });
+				const absolutePath = resolvePlanPath(this.session, path);
+				const batchRequest = getLspBatchRequest(context?.toolCall);
 
-			// Check if file exists and is auto-generated before overwriting
-			if (await fs.exists(absolutePath)) {
-				await assertEditableFile(absolutePath, path);
-			}
+				// Check if file exists and is auto-generated before overwriting
+				if (await fs.exists(absolutePath)) {
+					await assertEditableFile(absolutePath, path);
+				}
 
-			const diagnostics = await this.#writethrough(absolutePath, cleanContent, signal, undefined, batchRequest);
-			invalidateFsScanAfterWrite(absolutePath);
+				const diagnostics = await this.#writethrough(absolutePath, cleanContent, signal, undefined, batchRequest);
+				invalidateFsScanAfterWrite(absolutePath);
 
-			let resultText = `Successfully wrote ${cleanContent.length} bytes to ${path}`;
-			if (stripped) {
-				resultText += `\nNote: auto-stripped hashline display prefixes from content before writing.`;
-			}
-			if (!diagnostics) {
+				let resultText = `Successfully wrote ${Buffer.byteLength(cleanContent)} bytes to ${path}`;
+				if (stripped) {
+					resultText += `\nNote: auto-stripped hashline display prefixes from content before writing.`;
+				}
+				if (!diagnostics) {
+					return {
+						content: [{ type: "text", text: resultText }],
+						details: {},
+					};
+				}
+
 				return {
 					content: [{ type: "text", text: resultText }],
-					details: {},
+					details: {
+						diagnostics,
+						meta: outputMeta()
+							.diagnostics(diagnostics.summary, diagnostics.messages ?? [])
+							.get(),
+					},
 				};
-			}
-
-			return {
-				content: [{ type: "text", text: resultText }],
-				details: {
-					diagnostics,
-					meta: outputMeta()
-						.diagnostics(diagnostics.summary, diagnostics.messages ?? [])
-						.get(),
-				},
-			};
+			});
 		});
 	}
 }
