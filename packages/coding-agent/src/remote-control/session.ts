@@ -11,6 +11,7 @@ import {
 	projectHistorySnapshot,
 } from "./history";
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
+import { RemoteInteractions } from "./interactions";
 import { timelinePage } from "./timeline";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
@@ -33,8 +34,9 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 > &
-	Partial<Pick<AgentSession, "subscribeSessionTransitions" | "addBeforeDisposeHook">>;
+	Partial<Pick<AgentSession, "subscribeSessionTransitions" | "addBeforeDisposeHook" | "userInteractions">>;
 export interface Notification {
+	id?: string;
 	method: string;
 	params: Record<string, unknown>;
 }
@@ -86,6 +88,7 @@ export class RemoteSession {
 	#closing?: Promise<void>;
 	#unsubscribeTransitions?: () => void;
 	#unsubscribeDispose?: () => void;
+	#interactions?: RemoteInteractions;
 	#effects = new Set<Promise<unknown>>();
 	#cancelDelegations = new Set<() => void>();
 	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
@@ -112,9 +115,28 @@ export class RemoteSession {
 	) {
 		this.#restoreIdentity();
 		this.#unsubscribe = target.subscribe(event => this.#event(event));
+		if (target.userInteractions)
+			this.#interactions = new RemoteInteractions(
+				target.userInteractions,
+				toolCallId => {
+					if (this.#disposed || this.#suspended || this.#boundId !== target.sessionId || !this.#active)
+						return undefined;
+					const item = this.#active.items.findLast(
+						value =>
+							value.type === "dynamicToolCall" &&
+							value.status === "inProgress" &&
+							String(value.id).endsWith(`:tool:${toolCallId}`),
+					);
+					return item ? { threadId: this.#boundId, turnId: this.#active.id, itemId: String(item.id) } : undefined;
+				},
+				event => {
+					for (const listener of this.#listeners) listener(event);
+				},
+			);
 		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
 		this.#unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {
 			if (phase === "before") {
+				target.userInteractions?.cancelAll();
 				this.#suspended = true;
 				for (const cancel of this.#cancelDelegations) cancel();
 				await this.#voice?.stop();
@@ -186,6 +208,7 @@ export class RemoteSession {
 		this.#unsubscribeDispose?.();
 		for (const cancel of this.#cancelDelegations) cancel();
 		this.#unsubscribe();
+		this.#interactions?.close();
 		this.#voiceOutputs.clear();
 		this.#closing = Promise.resolve(this.#voice?.stop())
 			.then(async () => {
@@ -308,12 +331,25 @@ export class RemoteSession {
 			turns: includeTurns ? this.history() : [],
 		};
 	}
+	pendingRequests() {
+		return this.#interactions?.pending() ?? [];
+	}
 	call(identity: string, method: string, params: Record<string, unknown>): Promise<unknown> {
 		try {
 			this.#assertCurrent();
 			if (params.threadId !== this.#boundId) throw new ProtocolError(-32602, "Thread not found");
 		} catch (error) {
 			return Promise.reject(error);
+		}
+		if (method === "session/interaction/respond") {
+			try {
+				if (typeof params.requestId !== "string") throw new ProtocolError(-32602, "Invalid request identity");
+				return Promise.resolve(
+					this.#interactions?.respond(params.requestId, params.response) ?? { accepted: false },
+				);
+			} catch (error) {
+				return Promise.reject(error);
+			}
 		}
 		// Read RPC IDs are reusable after their response and must observe current state.
 		// Reserve the deduplication budget for operations with side effects.

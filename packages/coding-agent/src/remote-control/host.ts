@@ -1,5 +1,6 @@
 import { dirname } from "node:path";
 import type { Enrollment } from "./enrollment";
+import type { InteractionRequest } from "./interactions";
 import { type LocalPeer, listenLocal } from "./ipc";
 import { RelayCodec } from "./relay";
 import { RemoteRouter } from "./router";
@@ -22,7 +23,6 @@ export async function startLocalHost(
 	const owners = new Map<LocalPeer, { id: string; lastSeen: number }>();
 	let closed = false;
 	let relayStatus = "disconnected";
-	let publish = (_notification: Notification) => {};
 	let stopRelay = () => {};
 	const server = await listenLocal(socketPath, peer => {
 		peers.add(peer);
@@ -69,10 +69,25 @@ export async function startLocalHost(
 				if (router.sessions.has(thread.id) && owners.get(peer)?.id !== thread.id)
 					throw new ProtocolError(-32000, "Session already has a live owner");
 				if (!owners.has(peer) && owners.size >= 128) throw new ProtocolError(-32000, "Live session limit");
+				const requests = params.requests ?? [];
+				if (
+					!Array.isArray(requests) ||
+					requests.length > 32 ||
+					requests.some(
+						request =>
+							!request ||
+							typeof request.id !== "string" ||
+							request.id.length > 256 ||
+							request.method !== "item/tool/requestUserInput" ||
+							request.params?.threadId !== thread.id,
+					)
+				)
+					throw new ProtocolError(-32602, "Invalid pending requests");
 				remove();
 				owners.set(peer, { id: thread.id, lastSeen: Date.now() });
 				router.sessions.set(thread.id, {
 					thread,
+					requests: requests as InteractionRequest[],
 					call: (identity, command, input) =>
 						peer.call("session/call", { identity, method: command, params: input }),
 				});
@@ -83,9 +98,7 @@ export async function startLocalHost(
 				const event = params.event as Notification | undefined;
 				if (!owner || !event || event.params?.threadId !== owner.id || typeof event.method !== "string")
 					throw new ProtocolError(-32602, "Invalid session event");
-				for (const client of localClients.keys())
-					if (router.subscribed(client, owner.id)) router.notify(client, event);
-				publish(event);
+				router.publish(event);
 				return {};
 			}
 			throw new ProtocolError(-32601, "Unsupported local host method");
@@ -274,17 +287,7 @@ export async function startLocalHost(
 				socket?.close();
 			}
 		};
-		publish = event => {
-			for (const [key, client] of clients)
-				if (router.subscribed(key, String(event.params.threadId))) {
-					try {
-						send(client.clientId, client.streamId, event);
-					} catch {
-						relayStatus = "buffer-limit";
-						socket?.close();
-					}
-				}
-		};
+
 		let refreshing = false;
 		const refreshTimer = setInterval(() => {
 			if (!refresh || refreshing || closed || Date.parse(enrollment.expires_at) > Date.now() + 60_000) return;

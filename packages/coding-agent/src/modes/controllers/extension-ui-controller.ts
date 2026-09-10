@@ -37,7 +37,7 @@ export class ExtensionUiController {
 		// Create and set hook & tool UI context
 		const uiContext: ExtensionUIContext = {
 			select: (title, options, dialogOptions) => this.showHookSelector(title, options, dialogOptions),
-			confirm: (title, message, _dialogOptions) => this.showHookConfirm(title, message),
+			confirm: (title, message, dialogOptions) => this.showHookConfirm(title, message, dialogOptions),
 			input: (title, placeholder, dialogOptions) => this.showHookInput(title, placeholder, dialogOptions),
 			notify: (message, type) => this.showHookNotify(message, type),
 			onTerminalInput: handler => this.addExtensionTerminalInputListener(handler),
@@ -669,9 +669,22 @@ export class ExtensionUiController {
 		options: string[],
 		dialogOptions?: ExtensionUIDialogOptions,
 	): Promise<string | undefined> {
+		return this.ctx.session.userInteractions.request(
+			{ kind: "select", title, options },
+			(signal, complete) => this.#showHookSelector(title, options, { ...dialogOptions, signal }, complete),
+			dialogOptions?.signal,
+		);
+	}
+	#showHookSelector(
+		title: string,
+		options: string[],
+		dialogOptions?: ExtensionUIDialogOptions,
+		complete?: (value: string | undefined) => void,
+	): Promise<string | undefined> {
 		const { promise, resolve } = Promise.withResolvers<string | undefined>();
 		let settled = false;
 		const onAbort = () => {
+			if (settled) return;
 			this.hideHookSelector();
 			if (!settled) {
 				settled = true;
@@ -682,6 +695,7 @@ export class ExtensionUiController {
 			if (settled) return;
 			settled = true;
 			dialogOptions?.signal?.removeEventListener("abort", onAbort);
+			complete?.(value);
 			resolve(value);
 		};
 		const maxVisible = Math.max(4, Math.min(15, this.ctx.ui.terminal.rows - 12));
@@ -689,16 +703,19 @@ export class ExtensionUiController {
 			title,
 			options,
 			option => {
+				if (settled) return;
 				this.hideHookSelector();
 				finish(option);
 			},
 			() => {
+				if (settled) return;
 				this.hideHookSelector();
 				finish(undefined);
 			},
 			{
 				onLeft: dialogOptions?.onLeft
 					? () => {
+							if (settled) return;
 							this.hideHookSelector();
 							dialogOptions.onLeft?.();
 							finish(undefined);
@@ -706,6 +723,7 @@ export class ExtensionUiController {
 					: undefined,
 				onRight: dialogOptions?.onRight
 					? () => {
+							if (settled) return;
 							this.hideHookSelector();
 							dialogOptions.onRight?.();
 							finish(undefined);
@@ -750,8 +768,8 @@ export class ExtensionUiController {
 	/**
 	 * Show a confirmation dialog for hooks.
 	 */
-	async showHookConfirm(title: string, message: string): Promise<boolean> {
-		const result = await this.showHookSelector(`${title}\n${message}`, ["Yes", "No"]);
+	async showHookConfirm(title: string, message: string, dialogOptions?: ExtensionUIDialogOptions): Promise<boolean> {
+		const result = await this.showHookSelector(`${title}\n${message}`, ["Yes", "No"], dialogOptions);
 		return result === "Yes";
 	}
 
@@ -763,9 +781,22 @@ export class ExtensionUiController {
 		placeholder?: string,
 		dialogOptions?: ExtensionUIDialogOptions,
 	): Promise<string | undefined> {
+		return this.ctx.session.userInteractions.request(
+			{ kind: "input", title },
+			(signal, complete) => this.#showHookInput(title, placeholder, { ...dialogOptions, signal }, complete),
+			dialogOptions?.signal,
+		);
+	}
+	#showHookInput(
+		title: string,
+		placeholder?: string,
+		dialogOptions?: ExtensionUIDialogOptions,
+		complete?: (value: string | undefined) => void,
+	): Promise<string | undefined> {
 		const { promise, resolve } = Promise.withResolvers<string | undefined>();
 		let settled = false;
 		const onAbort = () => {
+			if (settled) return;
 			this.hideHookInput();
 			if (!settled) {
 				settled = true;
@@ -776,16 +807,19 @@ export class ExtensionUiController {
 			if (settled) return;
 			settled = true;
 			dialogOptions?.signal?.removeEventListener("abort", onAbort);
+			complete?.(value);
 			resolve(value);
 		};
 		this.ctx.hookInput = new HookInputComponent(
 			title,
 			placeholder,
 			value => {
+				if (settled) return;
 				this.hideHookInput();
 				finish(value);
 			},
 			() => {
+				if (settled) return;
 				this.hideHookInput();
 				finish(undefined);
 			},
@@ -831,9 +865,24 @@ export class ExtensionUiController {
 		dialogOptions?: ExtensionUIDialogOptions,
 		editorOptions?: { promptStyle?: boolean },
 	): Promise<string | undefined> {
+		return this.ctx.session.userInteractions.request(
+			{ kind: "input", title },
+			(signal, complete) =>
+				this.#showHookEditor(title, prefill, { ...dialogOptions, signal }, editorOptions, complete),
+			dialogOptions?.signal,
+		);
+	}
+	#showHookEditor(
+		title: string,
+		prefill?: string,
+		dialogOptions?: ExtensionUIDialogOptions,
+		editorOptions?: { promptStyle?: boolean },
+		complete?: (value: string | undefined) => void,
+	): Promise<string | undefined> {
 		const { promise, resolve } = Promise.withResolvers<string | undefined>();
 		let settled = false;
 		const onAbort = () => {
+			if (settled) return;
 			this.hideHookEditor();
 			if (!settled) {
 				settled = true;
@@ -844,6 +893,7 @@ export class ExtensionUiController {
 			if (settled) return;
 			settled = true;
 			dialogOptions?.signal?.removeEventListener("abort", onAbort);
+			complete?.(value);
 			resolve(value);
 		};
 		this.ctx.hookEditor = new HookEditorComponent(
@@ -851,10 +901,12 @@ export class ExtensionUiController {
 			title,
 			prefill,
 			value => {
+				if (settled) return;
 				this.hideHookEditor();
 				finish(value);
 			},
 			() => {
+				if (settled) return;
 				this.hideHookEditor();
 				finish(undefined);
 			},

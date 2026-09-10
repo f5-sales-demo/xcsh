@@ -45,7 +45,7 @@ export function startSessionBridge(
 						return remote.call(params.identity, params.method, params.params as Record<string, unknown>);
 					};
 				}
-				await peer.call("register", { thread: remote.thread() });
+				await peer.call("register", { thread: remote.thread(), requests: remote.pendingRequests() });
 			} catch {
 				peer?.close();
 				peer = undefined;

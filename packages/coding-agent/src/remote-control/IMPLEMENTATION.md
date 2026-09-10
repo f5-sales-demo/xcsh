@@ -573,3 +573,43 @@ assertions across 746 files in 346.02 seconds. Runtime and tests were unchanged
 throughout that run. Markdown/terminology, staged PII, secret and whitespace checks
 pass. Packaged CLI restoration and all four live delegated model tasks remain
 acceptance gates in `ACCEPTANCE.md`.
+
+## Shared tool questions
+
+The owning AgentSession now provides a bounded question broker for selectors,
+text inputs, editors and confirmations. It settles once, aborts the losing local
+widget, rejects invalid choices, and cancels pending input on session changes or
+shutdown. Terminal completion claims ownership synchronously. Multiple pending
+questions queue their terminal presentation while remaining individually
+answerable through the broker.
+
+ToolContextStore binds tool UI calls to their execution identity. The remote
+adapter publishes only questions belonging to an active tool item, using pinned
+`item/tool/requestUserInput` fields and the canonical thread, turn and item IDs.
+Administrative prompts have no tool binding. Subscribed clients must negotiate
+`experimentalApi` to receive these requests. JSON-RPC answers route only from
+clients that received the request; `serverRequest/resolved` dismisses it for
+all recipients. Invalid responses and transport errors leave input pending.
+
+Bridge registration carries pending requests separately from the Thread payload.
+A real AgentSession test restarts the local host while a tool awaits input,
+rejoins the same question ID, delivers a denial once and verifies the item's
+history identity. Phone disconnection and adapter closure leave terminal input
+available. This is automated local protocol evidence; iPhone question rendering
+and answers have not been manually accepted.
+
+The current mapping follows individual terminal dialog steps. Grouped questions,
+multiselect presentation, navigation, custom UI, dedicated command/file permission
+requests and live approval decision coverage remain open. Generic confirmations
+retain their existing Yes/No behavior; this does not establish specialized Codex
+approval parity. Additional teardown, queue notification and host-bound/replay tests
+remain part of the interaction completion audit.
+
+Interaction checkpoint validation: the guarded coding-agent package suite passed
+7535 tests with 561 skips, zero failures and 23543 assertions across 751 files
+(363.71 seconds). Two additional queue-bound/cancellation regressions and permanent
+pinned-schema assertions were then added; the final focused run passed 313 tests
+and 1332 assertions across 39 files (33.42 seconds). Runtime code was unchanged
+between these runs. Workspace TypeScript/formatting, changed documentation lint,
+staged PII and staged secret checks passed. These checks do not replace repository
+CI, the unresolved full-history PII gate or manual phone acceptance.

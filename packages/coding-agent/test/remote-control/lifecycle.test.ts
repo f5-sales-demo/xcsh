@@ -37,6 +37,30 @@ test("new terminal sessions scope cached RPCs and reject requests to the departe
 	expect(remote.thread().id).toBe(session.sessionId);
 });
 
+test("session transitions cancel pending input before changing storage", async () => {
+	const { session } = await fixture();
+	const oldId = session.sessionId;
+	const resolved: string[] = [];
+	session.userInteractions.subscribe(event => {
+		if (event.type === "resolved") resolved.push(session.sessionId);
+	});
+	const answer = session.userInteractions.request(
+		{ kind: "input", title: "Fixture question" },
+		() => new Promise(() => {}),
+	);
+	await session.newSession();
+	expect(await answer).toBeUndefined();
+	expect(resolved).toEqual([oldId]);
+	expect(session.userInteractions.pending()).toEqual([]);
+	const last = session.userInteractions.request(
+		{ kind: "input", title: "Fixture shutdown" },
+		() => new Promise(() => {}),
+	);
+	await session.dispose();
+	expect(await last).toBeUndefined();
+	expect(session.userInteractions.pending()).toEqual([]);
+});
+
 test("session changes await before listeners while the old storage identity is still current", async () => {
 	const { session, manager, remote } = await fixture();
 	const oldId = session.sessionId;

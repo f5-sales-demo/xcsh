@@ -5,6 +5,7 @@ import { HookEditorComponent } from "../src/modes/components/hook-editor";
 import { ExtensionUiController } from "../src/modes/controllers/extension-ui-controller";
 import { getThemeByName, setThemeInstance } from "../src/modes/theme/theme";
 import type { InteractiveModeContext } from "../src/modes/types";
+import { UserInteractions } from "../src/session/user-interactions";
 
 beforeAll(async () => {
 	const theme = await getThemeByName("xcsh-dark");
@@ -25,7 +26,7 @@ function createTui(): TUI {
 		setFocus: vi.fn(),
 		start: vi.fn(),
 		stop: vi.fn(),
-		terminal: { columns: 120 },
+		terminal: { columns: 120, rows: 24 },
 	} as unknown as TUI;
 }
 
@@ -61,12 +62,13 @@ function createControllerContext() {
 		setFocus: vi.fn(),
 		start: vi.fn(),
 		stop: vi.fn(),
-		terminal: { columns: 120 },
+		terminal: { columns: 120, rows: 24 },
 	} as unknown as TestContext["ui"] & {
 		setFocus: ReturnType<typeof vi.fn>;
 		requestRender: ReturnType<typeof vi.fn>;
 	};
 	const ctx = {
+		session: { userInteractions: new UserInteractions(), notifyUserPrompt: vi.fn() },
 		editor,
 		editorContainer,
 		ui,
@@ -282,6 +284,97 @@ describe("HookEditorComponent prompt-style mode", () => {
 });
 
 describe("ExtensionUiController hook editor abort", () => {
+	it.each(["select", "input", "editor"])("remote answers settle the actual %s widget", async kind => {
+		const { ctx, editor, editorContainer } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		const result =
+			kind === "select"
+				? controller.showHookSelector("Fixture", ["Yes", "No"])
+				: kind === "input"
+					? controller.showHookInput("Fixture")
+					: controller.showHookEditor("Fixture");
+		await Bun.sleep(0);
+		const pending = ctx.session.userInteractions.pending()[0];
+		expect(pending).toBeDefined();
+		expect(ctx.session.userInteractions.respond(pending.id, "Yes")).toBe(true);
+		expect(await result).toBe("Yes");
+		expect(editorContainer.children).toEqual([editor]);
+		expect(ctx.session.userInteractions.pending()).toEqual([]);
+	});
+
+	it.each(["select", "input", "editor"])("late %s input cannot dismiss the next prompt", async kind => {
+		const { ctx, editorContainer } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		const open = () =>
+			kind === "select"
+				? controller.showHookSelector("Fixture", ["Yes", "No"])
+				: kind === "input"
+					? controller.showHookInput("Fixture")
+					: controller.showHookEditor("Fixture");
+		const first = open();
+		const oldWidget = (kind === "select" ? ctx.hookSelector : kind === "input" ? ctx.hookInput : ctx.hookEditor)!;
+		ctx.session.userInteractions.respond(ctx.session.userInteractions.pending()[0].id, "Yes");
+		await first;
+		const second = open();
+		const nextWidget = editorContainer.children[0];
+		oldWidget.handleInput("\x1b");
+		expect(editorContainer.children).toEqual([nextWidget]);
+		expect(ctx.session.userInteractions.pending()).toHaveLength(1);
+		ctx.session.userInteractions.cancelAll();
+		expect(await second).toBeUndefined();
+	});
+
+	it.each(["select", "input", "editor"])(
+		"terminal %s cancellation wins against an immediate remote answer",
+		async kind => {
+			const { ctx } = createControllerContext();
+			const controller = new ExtensionUiController(ctx);
+			const result =
+				kind === "select"
+					? controller.showHookSelector("Fixture", ["Yes", "No"])
+					: kind === "input"
+						? controller.showHookInput("Fixture")
+						: controller.showHookEditor("Fixture");
+			const widget = (kind === "select" ? ctx.hookSelector : kind === "input" ? ctx.hookInput : ctx.hookEditor)!;
+			const id = ctx.session.userInteractions.pending()[0].id;
+			widget.handleInput("\x1b");
+			expect(ctx.session.userInteractions.respond(id, "Yes")).toBe(false);
+			expect(await result).toBeUndefined();
+		},
+	);
+
+	it("concurrent prompts queue terminal presentation while remaining answerable remotely", async () => {
+		const { ctx, editorContainer, editor } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		const first = controller.showHookSelector("First", ["Yes", "No"]);
+		const firstWidget = ctx.hookSelector;
+		const second = controller.showHookInput("Second");
+		const third = controller.showHookEditor("Third");
+		const [a, b, c] = ctx.session.userInteractions.pending();
+		expect(editorContainer.children).toEqual([firstWidget]);
+		expect(ctx.session.userInteractions.respond(b.id, "remote queued answer")).toBe(true);
+		expect(await second).toBe("remote queued answer");
+		expect(editorContainer.children).toEqual([firstWidget]);
+		ctx.session.userInteractions.respond(a.id, "No");
+		expect(await first).toBe("No");
+		expect(editorContainer.children).toEqual([ctx.hookEditor]);
+		expect(ctx.hookEditor).toBeDefined();
+		ctx.session.userInteractions.respond(c.id, "last answer");
+		expect(await third).toBe("last answer");
+		expect(editorContainer.children).toEqual([editor]);
+	});
+
+	it("confirmation cancellation reaches the selector and never becomes consent", async () => {
+		const { ctx, editor, editorContainer } = createControllerContext();
+		const controller = new ExtensionUiController(ctx);
+		const abort = new AbortController();
+		const result = controller.showHookConfirm("Fixture", "Continue?", { signal: abort.signal });
+		abort.abort();
+		expect(await Promise.race([result, Bun.sleep(20).then(() => "pending")])).toBe(false);
+		expect(editorContainer.children).toEqual([editor]);
+		expect(ctx.session.userInteractions.pending()).toEqual([]);
+	});
+
 	it("hides the hook editor and resolves undefined when the caller aborts", async () => {
 		const { ctx, editor, editorContainer, ui } = createControllerContext();
 		const controller = new ExtensionUiController(ctx);

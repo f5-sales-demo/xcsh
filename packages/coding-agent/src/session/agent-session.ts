@@ -188,6 +188,7 @@ import { getLatestCompactionEntry } from "./session-manager";
 import { type SessionTransitionListener, SessionTransitions } from "./session-transitions";
 import { ToolChoiceQueue } from "./tool-choice-queue";
 import { TurnPhaseController, type TurnPhaseEvent } from "./turn-phase";
+import { UserInteractions } from "./user-interactions";
 
 /** Session-specific events that extend the core AgentEvent */
 export type AgentSessionEvent =
@@ -487,6 +488,7 @@ export class AgentSession {
 	#unsubscribeAgent?: () => void;
 	#eventListeners: AgentSessionEventSubscription[] = [];
 	#sessionTransitions = new SessionTransitions();
+	readonly userInteractions = new UserInteractions();
 	#turnPhase = new TurnPhaseController(event => this.#publishTurnPhase(event));
 
 	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
@@ -2194,6 +2196,7 @@ export class AgentSession {
 	#withSessionTransition<T>(change: () => Promise<T>): Promise<T> {
 		return this.#sessionTransitions.run(async () => {
 			try {
+				this.userInteractions.cancelAll();
 				return await change();
 			} finally {
 				this.#reconnectToAgent();
@@ -2277,6 +2280,7 @@ export class AgentSession {
 	}
 
 	async #doDispose(): Promise<void> {
+		this.userInteractions.close();
 		for (const hook of [...this.#beforeDisposeHooks]) {
 			try {
 				await hook();

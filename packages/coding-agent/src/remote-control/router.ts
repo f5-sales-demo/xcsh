@@ -1,10 +1,12 @@
 import { loadedThreadList, threadList } from "./discovery";
+import type { InteractionRequest } from "./interactions";
 import { configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError } from "./session";
 import { voices } from "./voice-protocol";
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
+	requests?: InteractionRequest[];
 	call: (identity: string, method: string, params: Record<string, unknown>) => Promise<unknown>;
 }
 export class RemoteRouter {
@@ -18,9 +20,11 @@ export class RemoteRouter {
 		this.#processes.close();
 		this.#clients.clear();
 		this.#experimental.clear();
+		this.#delivered.clear();
 	}
 	#clients = new Map<string, Set<string>>();
 	#experimental = new Set<string>();
+	#delivered = new Map<string, Map<string, string>>();
 	constructor(
 		private readonly home: string,
 		private readonly version: string,
@@ -34,10 +38,86 @@ export class RemoteRouter {
 	close(client: string): void {
 		this.#clients.delete(client);
 		this.#experimental.delete(client);
+		this.#delivered.delete(client);
 		this.#processes.close(client);
 	}
+	#deliver(client: string, event: InteractionRequest): void {
+		const threadId = String(event.params.threadId);
+		if (!this.#experimental.has(client) || !this.subscribed(client, threadId)) return;
+		let delivered = this.#delivered.get(client);
+		if (!delivered) {
+			delivered = new Map();
+			this.#delivered.set(client, delivered);
+		}
+		if (delivered.has(event.id)) return;
+		delivered.set(event.id, threadId);
+		this.notify(client, event);
+	}
+	publish(event: Notification): void {
+		const threadId = String(event.params.threadId);
+		const session = this.sessions.get(threadId);
+		if (!session) return;
+		if (event.id !== undefined) {
+			if (event.method !== "item/tool/requestUserInput") return;
+			const request = event as InteractionRequest;
+			session.requests ??= [];
+			const requests = session.requests;
+			if (!requests.some(value => value.id === event.id)) {
+				if (requests.length >= 32) return;
+				requests.push(structuredClone(request));
+			}
+			for (const client of this.#clients.keys()) this.#deliver(client, request);
+			return;
+		}
+		if (event.method === "serverRequest/resolved") {
+			const id = String(event.params.requestId);
+			session.requests = session.requests?.filter(value => value.id !== id);
+			for (const [client, delivered] of this.#delivered) {
+				if (delivered.get(id) !== threadId) continue;
+				delivered.delete(id);
+				if (this.subscribed(client, threadId)) this.notify(client, event);
+			}
+			return;
+		}
+		for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.notify(client, event);
+	}
+	async #response(
+		client: string,
+		response: { id?: string | number; result?: unknown; error?: unknown },
+	): Promise<null> {
+		if (typeof response.id !== "string" || response.error !== undefined || !Object.hasOwn(response, "result"))
+			return null;
+		const threadId = this.#delivered.get(client)?.get(response.id);
+		if (!threadId || !this.subscribed(client, threadId) || !this.#experimental.has(client)) return null;
+		const session = this.sessions.get(threadId);
+		if (!session?.requests?.some(value => value.id === response.id)) return null;
+		try {
+			await session.call(JSON.stringify([client, "answer", response.id]), "session/interaction/respond", {
+				threadId,
+				requestId: response.id,
+				response: response.result,
+			});
+		} catch {
+			/* JSON-RPC responses have no response. Keep the question pending for a valid answer. */
+		}
+		return null;
+	}
 	async handle(client: string, input: unknown): Promise<unknown> {
-		const request = input as { id?: string | number; method?: string; params?: Record<string, unknown> } | null;
+		const request = input as {
+			id?: string | number;
+			method?: string;
+			params?: Record<string, unknown>;
+			result?: unknown;
+			error?: unknown;
+		} | null;
+		if (
+			request &&
+			typeof request === "object" &&
+			!Array.isArray(request) &&
+			request.method === undefined &&
+			(Object.hasOwn(request, "result") || Object.hasOwn(request, "error"))
+		)
+			return this.#response(client, request);
 		const id = typeof request?.id === "string" || typeof request?.id === "number" ? request.id : null;
 		try {
 			if (!request || typeof request.method !== "string" || (request.id !== undefined && id === null))
@@ -55,6 +135,7 @@ export class RemoteRouter {
 				if (!this.#clients.has(client) && this.#clients.size >= 64)
 					throw new ProtocolError(-32000, "Remote client limit");
 				this.#clients.set(client, new Set());
+				this.#delivered.delete(client);
 				this.#experimental.delete(client);
 				if ((params.capabilities as { experimentalApi?: unknown } | undefined)?.experimentalApi === true)
 					this.#experimental.add(client);
@@ -131,6 +212,8 @@ export class RemoteRouter {
 					case "thread/unsubscribe": {
 						const threadId = String(params.threadId);
 						const subscribed = this.#clients.get(client)?.delete(threadId);
+						for (const [id, thread] of this.#delivered.get(client) ?? [])
+							if (thread === threadId) this.#delivered.get(client)?.delete(id);
 						result = {
 							status: !this.sessions.has(threadId) ? "notLoaded" : subscribed ? "unsubscribed" : "notSubscribed",
 						};
@@ -161,6 +244,7 @@ export class RemoteRouter {
 							);
 						this.#clients.get(client)?.add(threadId);
 						result = await session.call(JSON.stringify([client, id]), request.method, params);
+						for (const event of session.requests ?? []) this.#deliver(client, event);
 						break;
 					}
 					default:
