@@ -512,7 +512,8 @@ that does not answer. In a network-disabled, Codex-absent Ubuntu container, a re
 terminal turn remained active across host SIGKILL, finished its write/read tools,
 and returned the same turn on stable retry without a second history entry.
 
-All nine packaged checks passed in 20.566 seconds. The current remote-control
-suite passed 880 tests with 3494 assertions. The recorded artifact uses synthetic
+All nine packaged checks passed in 20.723 seconds. The clean compiled binary is
+bound to source commit `62def29d6`. The current remote-control suite passed 880
+tests with 3494 assertions. The recorded artifact uses synthetic
 enrollment; a service-side revoked-token exercise and final phone acceptance are
 still required.

@@ -1912,7 +1912,7 @@ makes direct host restart recover the stale filesystem socket left by SIGKILL.
 
 The packaged check first failed because the killed host's socket prevented the
 compiled successor from binding. After the recovery change, all nine checks
-passed in 20.566 seconds inside the network-disabled Ubuntu 24.04 container. The
+passed in 20.723 seconds inside the network-disabled Ubuntu 24.04 container. The
 container had no Codex, standalone Bun, repository checkout or dependencies. The
 test killed the host while a real Beta terminal turn was `inProgress`, restarted
 the compiled host, observed both owners reconnect, waited for the real write/read
@@ -1921,7 +1921,9 @@ same turn, with one matching history entry and one file result.
 
 The evidence is stored in
 `scripts/remote-package/evidence-crash-2026-09-10.json`. Binary SHA-256:
-`ebb0362564cbe4e64a282fdc487323c6095091f838043a524c2fe7da49d297ea`.
+`8e84cdd353068ff1d30d51cb8ab3df373a976cdc16f341741573b60fc1418ead`.
+The clean binary identifies source commit `62def29d6` and reports no dirty build
+state.
 The complete remote-control suite passed 880 tests with 3494 assertions across 65
 files. Workspace formatting and TypeScript checks passed across 1776 files. This
 artifact uses synthetic enrollment and offline model output; live credential
