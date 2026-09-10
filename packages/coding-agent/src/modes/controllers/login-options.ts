@@ -15,6 +15,7 @@ export interface ProviderManagementOptions {
 	providerInventory: Iterable<string>;
 	configuredProviderIds: Iterable<string>;
 	providerAllowlist: readonly string[];
+	excludedProviderIds?: Iterable<string>;
 	getAccessState(providerId: string): ProviderAccessState | undefined;
 	getPickerMetadata(providerId: string): ProviderPickerMetadata | undefined;
 	hasStoredCredential(providerId: string): boolean;
@@ -44,8 +45,10 @@ export function buildProviderManagementOptions(options: ProviderManagementOption
 	const inventory = new Set(options.providerInventory);
 	const configured = new Set(options.configuredProviderIds);
 	const allowlisted = new Set(options.providerAllowlist);
+	const excluded = new Set(options.excludedProviderIds ?? []);
 	const providerIds = new Set<string>([...inventory, ...configured, ...allowlisted]);
 	for (const provider of catalog) {
+		if (excluded.has(provider.id)) continue;
 		const access = options.getAccessState(provider.id);
 		if (
 			options.hasStoredCredential(provider.id) ||
@@ -64,6 +67,7 @@ export function buildProviderManagementOptions(options: ProviderManagementOption
 
 	const groups = new Map<string, { members: string[]; order: number; metadata?: ProviderPickerMetadata }>();
 	for (const providerId of providerIds) {
+		if (excluded.has(providerId)) continue;
 		const access = options.getAccessState(providerId);
 		const relevant =
 			inventory.has(providerId) ||

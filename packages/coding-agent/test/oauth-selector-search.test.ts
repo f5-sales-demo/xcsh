@@ -133,19 +133,20 @@ describe("OAuthSelectorComponent provider search", () => {
 	it("shows only relevant providers plus Add provider in the default login view", () => {
 		const providers = buildProviderManagementOptions({
 			mode: "login",
-			providerInventory: ["anthropic"],
+			providerInventory: ["anthropic", "github-copilot"],
 			configuredProviderIds: [],
 			providerAllowlist: [],
+			excludedProviderIds: ["github-copilot"],
 			getAccessState: provider => ({
 				provider,
-				configured: provider === "anthropic",
-				credentialSource: provider === "anthropic" ? "stored-oauth" : undefined,
-				status: provider === "anthropic" ? "connected" : "unconfigured",
-				catalogFreshness: provider === "anthropic" ? "fresh" : "none",
-				selectable: provider === "anthropic",
+				configured: provider === "anthropic" || provider === "github-copilot",
+				credentialSource: provider === "anthropic" || provider === "github-copilot" ? "stored-oauth" : undefined,
+				status: provider === "anthropic" || provider === "github-copilot" ? "connected" : "unconfigured",
+				catalogFreshness: provider === "anthropic" || provider === "github-copilot" ? "fresh" : "none",
+				selectable: provider === "anthropic" || provider === "github-copilot",
 			}),
 			getPickerMetadata: () => undefined,
-			hasStoredCredential: provider => provider === "anthropic",
+			hasStoredCredential: provider => provider === "anthropic" || provider === "github-copilot",
 		});
 		const { selector } = createSelector("login", false, {
 			providers,
@@ -163,6 +164,7 @@ describe("OAuthSelectorComponent provider search", () => {
 		const rendered = renderText(selector);
 		expect(rendered).toContain("Anthropic");
 		expect(rendered).toContain("Add provider…");
+		expect(rendered).not.toContain("GitHub Copilot");
 		expect(rendered).not.toContain("LM Studio");
 		expect(rendered).not.toContain("Ollama");
 
