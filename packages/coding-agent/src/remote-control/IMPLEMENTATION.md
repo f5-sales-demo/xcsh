@@ -2014,3 +2014,33 @@ full-snapshot equality check after the turn gained its user item. The corrected
 gate returned the distinct Luna and Astra session markers in 2.804 and 2.570
 seconds, respectively, with duplicate prompts suppressed and exactly one new
 history turn per request.
+
+## Durable request identity across terminal restart
+
+Accepted `turn/start` and `turn/steer` client-message identities now persist to
+the owning session before agent execution. Each record binds the method, turn ID
+and a canonical request hash, so JSON object key order may change on retry while
+changed input or a reused identity is rejected. A failed accepted steering call
+also persists its failed outcome. Sessions created by earlier builds recover
+completed identities from their canonical user-message provenance.
+
+The first adapter-restart tests produced new turn IDs and the first compiled
+terminal-restart run reproduced the same defect in a real packaged TUI. The
+corrected focused history suite passes 29 tests with 120 assertions, and the
+complete remote-control suite passes 889 tests with 3526 assertions across 65
+files. Workspace TypeScript and formatting checks pass.
+
+The clean `fe1de706` binary then passed the enhanced ten-check container harness
+in 29.841 seconds. After completing a real write/read tool request, the harness
+exited and resumed its owning TUI and replayed the original request. The response
+retained the original turn ID, history retained one turn, and the tools did not
+execute again. The network-disabled Ubuntu environment still contained no Codex,
+standalone Bun, source checkout or dependencies. Binary SHA-256:
+`837e95eccac3b792fc5bd2b2d9051b6b3a2cbce95f496fdc979b36cf310340cf`.
+The receipt is
+`scripts/remote-package/evidence-terminal-retry-2026-09-10.json`.
+
+That same clean binary now runs the phone host and all four model-named sessions.
+A controlled idle replacement preserved their IDs, names, directories, histories
+and selected models; all four re-registered idle and the relay returned to
+`connected`. Fresh iPhone observations remain separate.

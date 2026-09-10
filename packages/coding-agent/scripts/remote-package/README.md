@@ -49,3 +49,8 @@ also exercises remote naming, notification, host restart and name persistence.
 `evidence-final-head-2026-09-10.json` records the same ten checks on the
 current implementation checkpoint `4a399d39`, after the final guarded package
 suite and changed-scope privacy cleanup.
+
+`evidence-terminal-retry-2026-09-10.json` records the clean `fe1de706` artifact
+after the harness added a full terminal-process exit/resume and replay of the
+original completed tool request. The stable turn ID and single history entry
+prove the persisted client-message ledger prevents a second execution.

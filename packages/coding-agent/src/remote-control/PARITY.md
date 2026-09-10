@@ -570,3 +570,22 @@ same in-progress turn gained an item between retry reads. The corrected gate
 compares stable turn identity and final history cardinality. Luna and Astra each
 returned their distinct session marker, in 2.804 and 2.570 seconds, with both
 retry forms selecting the original turn and no duplicate history entry.
+
+## Terminal-restart request replay
+
+Client-message identities for starts and steering are now recorded durably before
+execution, together with the owning turn, method and canonical request hash.
+After adapter or process restart, an identical retry returns the existing turn;
+changed input is rejected, and a previously failed steering request remains
+failed. Completed pre-ledger sessions recover the same behavior from persisted
+user-message provenance.
+
+The first unit and compiled runs both demonstrated the previous duplicate: the
+same request after restart received a new turn ID. The corrected history suite
+passes 29 tests, the complete remote suite passes 889 tests, and a clean
+`fe1de706` package passed all ten isolated checks. Its real TUI exit/resume test
+replayed a completed write/read request with the original turn ID, one history
+entry and no second tool execution. Receipt:
+`../scripts/remote-package/evidence-terminal-retry-2026-09-10.json`; binary
+SHA-256:
+`837e95eccac3b792fc5bd2b2d9051b6b3a2cbce95f496fdc979b36cf310340cf`.
