@@ -4,7 +4,12 @@ import { type LocalPeer, listenLocal } from "./ipc";
 import { RelayCodec } from "./relay";
 import { RemoteRouter } from "./router";
 import { type Notification, ProtocolError } from "./session";
-export async function startLocalHost(socketPath: string, version: string) {
+import { type TraceSink, traceFromEnvironment, traceJson } from "./trace-runtime";
+export async function startLocalHost(
+	socketPath: string,
+	version: string,
+	trace: TraceSink | undefined = traceFromEnvironment("host", version),
+) {
 	const router = new RemoteRouter(dirname(socketPath), version);
 	const peers = new Set<LocalPeer>();
 	const localClients = new Map<string, LocalPeer>();
@@ -91,6 +96,7 @@ export async function startLocalHost(socketPath: string, version: string) {
 		stopRelay();
 		for (const peer of peers) peer.close();
 		await new Promise<void>(resolve => server.close(() => resolve()));
+		trace?.close();
 	}
 	function connectRelay(
 		enrollment: Enrollment,
@@ -104,8 +110,13 @@ export async function startLocalHost(socketPath: string, version: string) {
 		let timer: ReturnType<typeof setTimeout> | undefined;
 		let attempts = 0;
 		const send = (clientId: string, streamId: string, message: unknown, event?: string) => {
+			if (!event || event === "server_message") trace?.record("rpc", "out", message);
 			const frames = codec.send(clientId, streamId, message, event);
-			if (socket?.readyState === WebSocket.OPEN) for (const frame of frames) socket.send(frame);
+			if (socket?.readyState === WebSocket.OPEN)
+				for (const frame of frames) {
+					traceJson(trace, "relay", "out", frame);
+					socket.send(frame);
+				}
 		};
 		const connect = async () => {
 			if (closed) return;
@@ -141,11 +152,15 @@ export async function startLocalHost(socketPath: string, version: string) {
 			socket.onopen = () => {
 				relayStatus = "connected";
 				attempts = 0;
-				for (const frame of codec.replay()) socket?.send(frame);
+				for (const frame of codec.replay()) {
+					traceJson(trace, "relay", "out", frame);
+					socket?.send(frame);
+				}
 			};
 			socket.onmessage = event => {
 				try {
 					if (typeof event.data !== "string") throw new Error();
+					traceJson(trace, "relay", "in", event.data);
 					const incoming = codec.receive(event.data);
 					if (!incoming) return;
 					const { clientId, streamId } = incoming;
@@ -160,6 +175,7 @@ export async function startLocalHost(socketPath: string, version: string) {
 						return;
 					}
 					clients.set(key, { clientId, streamId });
+					trace?.record("rpc", "in", incoming.message);
 					// Diagnostics contain protocol method names only, never payloads or client identifiers.
 					const method = (incoming.message as { method?: string }).method;
 					const safeMethod = typeof method === "string" && /^[a-zA-Z/]{1,128}$/.test(method) ? method : "invalid";

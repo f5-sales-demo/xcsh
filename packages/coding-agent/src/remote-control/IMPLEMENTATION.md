@@ -251,7 +251,8 @@ Revocation is covered by HTTP fixtures; the user's active phone has not been rev
 119 focused tests / 418 assertions pass. The preceding voice/startup-test checkpoint
 passed the complete package suite: 7344 passes, 561 skips, zero failures, 22645
 assertions across 731 files in 356.24 seconds. Client-management package validation
-is still pending.
+also passed: 7357 passes, 561 skips, zero failures, 22690 assertions across 732
+files in 317.64 seconds.
 
 ## Additional reference-capture gate requested by Robin
 
@@ -265,4 +266,24 @@ these distinct and retain the original pinned compatibility commit. Capture rela
 framing, complete decoded thread messages, and realtime sideband events; preserve
 correlation and timing while excluding credentials and raw audio from diagnostics.
 The direct iPhone media plane requires separate acceptance evidence. Reference
-capture implementation and actual recorded conversations remain pending.
+capture implementation is now available in `scripts/remote-reference/` and the
+opt-in native trace hooks. Actual recorded phone conversations and full parity
+comparison remain pending.
+
+The separate instrumented 0.153.4 build compiled successfully. Its isolated
+enrollment connected using the normal Codex credential store and a separate
+SQLite directory. Two dedicated reference threads completed marker setup turns.
+Preparatory relay capture received real messages without a producer failure or
+capture overflow; this is setup evidence, not phone conversation acceptance.
+The harness preserves request correlation and flags gaps, truncated frames,
+incomplete footers, unknown/redacted semantics, and strict structural differences.
+It has not yet covered every HTTP handshake or WebSocket control frame, nor the
+phone's direct media plane. No identical-parity claim is made.
+
+Capture checkpoint validation: 137 focused tests / 459 assertions; complete
+package suite 7375 passes, 561 skips, zero failures, 22731 assertions across 735
+files in 330.51 seconds. Workspace formatting and TypeScript checks pass. The
+observation patch applies cleanly to the pristine pinned source. The existing
+Codex daemon and the reference host both report connected, with distinct
+enrollment identities. The instrumented reference passes all 148 upstream
+app-server transport tests, including relay replay, refresh, and retry behavior.

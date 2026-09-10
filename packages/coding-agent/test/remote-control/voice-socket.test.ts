@@ -50,6 +50,7 @@ test("voice handshake does not follow redirects or forward subscription headers"
 });
 test("native voice socket delivers text frames and reports transport closure", async () => {
 	const messages: string[] = [];
+	const recorded: unknown[] = [];
 	let closed = false;
 	const server = Bun.serve({
 		hostname: "127.0.0.1",
@@ -77,11 +78,18 @@ test("native voice socket delivers text frames and reports transport closure", a
 					closed = true;
 				},
 			},
+			{
+				record: (layer, direction, message) => recorded.push({ layer, direction, message }),
+				close() {},
+				invalidate() {},
+			},
 		);
-		socket.send("fixture frame");
+		socket.send('{"type":"session.close"}');
 		const deadline = Date.now() + 1000;
 		while (!closed && Date.now() < deadline) await Bun.sleep(5);
-		expect(messages).toEqual(["fixture frame"]);
+		expect(messages).toEqual(['{"type":"session.close"}']);
+		expect(recorded).toContainEqual({ layer: "realtime", direction: "out", message: { type: "session.close" } });
+		expect(recorded).toContainEqual({ layer: "realtime", direction: "in", message: { type: "session.close" } });
 		expect(closed).toBe(true);
 		socket.close();
 	} finally {

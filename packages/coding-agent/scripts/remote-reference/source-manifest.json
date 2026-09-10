@@ -1,0 +1,11 @@
+{
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "version": "0.153.4",
+  "files": {
+    "codex-rs/app-server-transport/src/lib.rs": "6eb9939fd4755ada45e41af5bc9c259ae57531a9d80be4b7adcb1a221f76097f",
+    "codex-rs/codex-api/src/lib.rs": "ef31a528a67cfa4bd11445e5e2e2f29d147c763b1e9fb73b43d5a60003be1a29",
+    "codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs": "1f928f1fbe3ee63ca01e16352d3dd5043a856fd406e1b3d1c65cdb795ea59795",
+    "codex-rs/app-server-transport/src/transport/remote_control/websocket.rs": "5c94dc8de1effa3ff17784ed9cc710c9c1733cc289ac715b6b444eb105f6134e",
+    "codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs": "2e4f16ee5c845413e5acf4411814b57589c0dd090cd0677d7cdc26138d56ec67"
+  }
+}
