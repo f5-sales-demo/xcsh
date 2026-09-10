@@ -22,7 +22,7 @@ function result(exitCode: number | undefined, cancelled = false) {
 		outputBytes: 15,
 	};
 }
-async function fixture(asyncJobManager?: AsyncJobManager) {
+async function fixture(asyncJobManager?: AsyncJobManager, autoBackground = false) {
 	const cwd = await mkdtemp("/tmp/xcsh-command-metadata-");
 	cleanup.push(() => rm(cwd, { recursive: true, force: true }));
 	const tool = new BashTool({
@@ -31,7 +31,7 @@ async function fixture(asyncJobManager?: AsyncJobManager) {
 		getSessionFile: () => null,
 		getSessionSpawns: () => "*",
 		settings: Settings.isolated({
-			"bash.autoBackground.enabled": false,
+			"bash.autoBackground.enabled": autoBackground,
 			"bashInterceptor.enabled": false,
 			"async.enabled": true,
 		}),
@@ -166,4 +166,60 @@ test("background command streams structured execution metadata before completion
 		cwd: f.cwd,
 	});
 	expect(update.details.async.state).toBe("running");
+});
+
+test.each([false, true])(
+	"executor exceptions preserve command facts without inventing an exit code: async=%s",
+	async background => {
+		const mock = spyOn(executor, "executeBash").mockImplementation(async (_command, options) => {
+			options?.onChunk?.("Partial output\n");
+			throw new Error("Fixture executor unavailable");
+		});
+		cleanup.push(() => mock.mockRestore());
+		const delivered = Promise.withResolvers<any>();
+		const manager = new AsyncJobManager({
+			onJobComplete: async (_id, _text, job) => {
+				delivered.resolve(job);
+			},
+		});
+		const f = await fixture(manager);
+		cleanup.push(async () => {
+			await manager.dispose();
+		});
+		const outcome = await f.tool
+			.execute("failed-executor", { command: "fixture-command", async: background })
+			.catch(error => error);
+		const execution = background
+			? (await delivered.promise).resultDetails?.execution
+			: outcome.result?.details.execution;
+		expect(execution).toMatchObject({
+			kind: "command",
+			command: "fixture-command",
+			cwd: f.cwd,
+			status: "failed",
+			aggregatedOutput: "Partial output\n",
+			exitCode: null,
+		});
+	},
+);
+
+test("foreground auto-background waiting retains execution metadata without a background presentation marker", async () => {
+	const mock = spyOn(executor, "executeBash").mockImplementation(async (_command, options) => {
+		options?.onChunk?.("Fixture output\n");
+		return result(0);
+	});
+	cleanup.push(() => mock.mockRestore());
+	const manager = new AsyncJobManager({ onJobComplete: async () => {} });
+	const f = await fixture(manager, true);
+	cleanup.push(async () => {
+		await manager.dispose();
+	});
+	const updates: any[] = [];
+	await f.tool.execute("foreground-call", { command: "fixture-command" }, undefined, update => updates.push(update));
+	expect(updates[0].details.execution).toMatchObject({
+		status: "inProgress",
+		command: "fixture-command",
+		aggregatedOutput: "Fixture output\n",
+	});
+	expect(updates[0].details.async).toBeUndefined();
 });

@@ -61,7 +61,9 @@ function fixture(manager = SessionManager.inMemory("/tmp/history")) {
 		messages.push(value);
 		// AgentSession emits to subscribers before appendMessage.
 		emit({ type: "message_end", message: value });
-		manager.appendMessage(value as Parameters<SessionManager["appendMessage"]>[0]);
+		if (value.role === "custom")
+			manager.appendCustomMessageEntry(value.customType, value.content, value.display, value.details);
+		else manager.appendMessage(value as Parameters<SessionManager["appendMessage"]>[0]);
 	};
 	const events: { method: string; params: Record<string, unknown> }[] = [];
 	remote.subscribe(event => events.push(event));
@@ -410,4 +412,201 @@ test("a remote turn is on disk before dispatch, including starts that fail witho
 		await manager.close();
 		await rm(directory, { recursive: true, force: true });
 	}
+});
+
+test.each([0, 7])(
+	"command items retain their type and actual outcome across live delivery and reload: %s",
+	async exitCode => {
+		const f = fixture();
+		(f.target as any).getToolByName = () => ({ executionKind: "command" });
+		f.emit({ type: "agent_start" });
+		f.message(user("execute fixture"));
+		const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+		call.content = [
+			{ type: "toolCall", id: "command-call", name: "bash", arguments: { command: "fixture-command" } },
+		];
+		call.stopReason = "toolUse";
+		f.message(call);
+		const start = f.events.find(
+			event =>
+				event.method === "item/started" && String((event.params.item as any).id).endsWith(":tool:command-call"),
+		)?.params.item as Record<string, unknown>;
+		expect(start).toMatchObject({
+			type: "commandExecution",
+			command: "fixture-command",
+			cwd: "/tmp/history",
+			status: "inProgress",
+			exitCode: null,
+			durationMs: null,
+		});
+		const execution = {
+			kind: "command",
+			command: "resolved-command",
+			cwd: "/tmp/history/subdir",
+			status: exitCode === 0 ? "completed" : "failed",
+			aggregatedOutput: "Actual output\n",
+			exitCode,
+			durationMs: 12,
+			processId: null,
+		};
+		f.message({
+			role: "toolResult",
+			toolCallId: "command-call",
+			toolName: "bash",
+			isError: exitCode !== 0,
+			content: [{ type: "text", text: "Display summary" }],
+			details: { execution },
+			timestamp: ++timestamp,
+		});
+		f.message(assistant("Done"));
+		f.emit({ type: "agent_end" });
+		const completed = f.events.find(
+			event => event.method === "item/completed" && (event.params.item as any).id === start.id,
+		)?.params.item;
+		expect(completed).toEqual({
+			type: "commandExecution",
+			id: start.id,
+			pluginId: null,
+			scriptPath: null,
+			source: "agent",
+			commandActions: [],
+			command: execution.command,
+			cwd: execution.cwd,
+			status: execution.status,
+			aggregatedOutput: execution.aggregatedOutput,
+			exitCode,
+			durationMs: 12,
+			processId: null,
+		});
+		const history = f.remote.history();
+		expect(history[0].items.find(item => item.id === start.id)).toEqual(completed as Record<string, unknown>);
+		const response = await f.remote.call("command-items", "thread/items/list", { threadId: "durable" });
+		const validate = new Ajv({ strict: false, validateFormats: false }).compile(itemsSchema);
+		expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
+		f.remote.dispose();
+		expect(fixture(f.manager).remote.history()).toEqual(history);
+	},
+);
+
+test("an extension using the bash name remains a dynamic tool without command execution provenance", () => {
+	const f = fixture();
+	(f.target as any).getToolByName = () => ({});
+	f.emit({ type: "agent_start" });
+	f.message(user("extension call"));
+	const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+	call.content = [
+		{ type: "toolCall", id: "extension-call", name: "bash", arguments: { command: "not a shell command" } },
+	];
+	f.message(call);
+	expect(f.events.filter(event => event.method === "item/started").at(-1)?.params.item).toMatchObject({
+		type: "dynamicToolCall",
+		tool: "bash",
+	});
+});
+
+test("malformed command details cannot create invalid wire items", async () => {
+	const f = fixture();
+	(f.target as any).getToolByName = () => ({ executionKind: "command" });
+	f.emit({ type: "agent_start" });
+	f.message(user("command"));
+	const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+	call.content = [{ type: "toolCall", id: "bad-metadata", name: "bash", arguments: { command: "fixture" } }];
+	f.message(call);
+	f.message({
+		role: "toolResult",
+		toolCallId: "bad-metadata",
+		toolName: "bash",
+		isError: true,
+		content: [{ type: "text", text: "Command failed" }],
+		details: { execution: { kind: "command", cwd: null, exitCode: "7", status: "invented", durationMs: -1 } },
+		timestamp: ++timestamp,
+	});
+	f.emit({ type: "agent_end" });
+	const response = await f.remote.call("bad-items", "thread/items/list", { threadId: "durable" });
+	const validate = new Ajv({ strict: false, validateFormats: false }).compile(itemsSchema);
+	expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
+	expect(f.remote.history()[0].items.at(-1)).toMatchObject({
+		type: "commandExecution",
+		status: "failed",
+		exitCode: null,
+		durationMs: null,
+		aggregatedOutput: "Command failed",
+	});
+});
+
+test("late background completion updates its original command even when a newer turn reuses the tool call id", () => {
+	const f = fixture();
+	(f.target as any).getToolByName = () => ({ executionKind: "command" });
+	const execution = {
+		kind: "command",
+		command: "fixture",
+		cwd: "/tmp/history",
+		status: "inProgress",
+		aggregatedOutput: "",
+		exitCode: null,
+		durationMs: null,
+		processId: null,
+	};
+	const start = (jobId: string) => {
+		f.emit({ type: "agent_start" });
+		f.message(user(jobId));
+		const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+		call.content = [{ type: "toolCall", id: "reused-command", name: "bash", arguments: { command: "fixture" } }];
+		f.message(call);
+		f.message({
+			role: "toolResult",
+			toolCallId: "reused-command",
+			toolName: "bash",
+			isError: false,
+			content: [{ type: "text", text: "Running in background" }],
+			details: { execution, async: { jobId, state: "running", type: "bash" } },
+			timestamp: ++timestamp,
+		});
+	};
+	start("first-job");
+	f.emit({ type: "agent_end" });
+	const original = f.remote.history()[0];
+	const originalItem = original.items.find(item => item.type === "commandExecution")!;
+	start("second-job");
+	expect(
+		f.events.filter(
+			event => event.method === "item/completed" && (event.params.item as any).type === "commandExecution",
+		),
+	).toHaveLength(0);
+	const done: AgentMessage = {
+		role: "custom",
+		customType: "async-result",
+		content: "Background result",
+		display: true,
+		details: {
+			jobId: "first-job",
+			execution: {
+				...execution,
+				status: "completed",
+				aggregatedOutput: "Final output\n",
+				exitCode: 0,
+				durationMs: 45,
+			},
+		},
+		timestamp: ++timestamp,
+	};
+	f.message(done);
+	f.message({ ...done, timestamp: ++timestamp });
+	const completed = f.events.filter(
+		event => event.method === "item/completed" && (event.params.item as any).type === "commandExecution",
+	);
+	expect(completed).toHaveLength(1);
+	expect(completed[0].params).toMatchObject({
+		turnId: original.id,
+		item: { id: originalItem.id, status: "completed", exitCode: 0, aggregatedOutput: "Final output\n" },
+	});
+	const history = f.remote.history();
+	expect(history[0].items.find(item => item.id === originalItem.id)).toEqual(
+		completed[0].params.item as Record<string, unknown>,
+	);
+	expect(history[1].items.find(item => item.type === "commandExecution")?.status).toBe("inProgress");
+	f.emit({ type: "agent_end" });
+	const settled = f.remote.history();
+	f.remote.dispose();
+	expect(fixture(f.manager).remote.history()).toEqual(settled);
 });

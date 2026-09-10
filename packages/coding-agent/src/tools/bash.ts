@@ -447,6 +447,24 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		return result.content.find(block => block.type === "text")?.text ?? "";
 	}
 
+	#executionError(
+		error: unknown,
+		execution: CommandExecutionContext,
+		output: string,
+		mask?: (text: string) => string,
+	): ToolError | ToolAbortError {
+		if ((error instanceof ToolError || error instanceof ToolAbortError) && error.result.details?.execution)
+			return error;
+		const original = error instanceof Error ? error.message : String(error);
+		const message = mask ? mask(original) : original;
+		const details = {
+			execution: commandExecution(execution, mask ? mask(output) : output, { exitCode: undefined, failed: true }),
+		};
+		return error instanceof ToolAbortError
+			? new ToolAbortError(message, details)
+			: new ToolError(message, undefined, details);
+	}
+
 	#startManagedBashJob(options: {
 		execution: CommandExecutionContext;
 		command: string;
@@ -513,14 +531,14 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					});
 					return finalText;
 				} catch (error) {
-					const message = error instanceof Error ? error.message : String(error);
-					latestText = message;
-					completion.resolve({ kind: "failed", error });
-					await reportProgress(message, {
-						...(error instanceof ToolError || error instanceof ToolAbortError ? error.result.details : {}),
+					const failure = this.#executionError(error, options.execution, tailBuffer.text(), options.maskSecrets);
+					latestText = failure.message;
+					completion.resolve({ kind: "failed", error: failure });
+					await reportProgress(failure.message, {
+						...failure.result.details,
 						async: { state: "failed", jobId, type: "bash" },
 					});
-					throw error;
+					throw failure;
 				}
 			},
 			{
@@ -528,7 +546,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 					latestText = text;
 					await options.onUpdate?.({
 						content: [{ type: "text", text }],
-						details: backgrounded ? ((details ?? {}) as BashToolDetails) : {},
+						details: backgrounded ? ((details ?? {}) as BashToolDetails) : { ...details, async: undefined },
 					});
 				},
 			},
@@ -898,6 +916,8 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 							}
 						},
 					});
+		} catch (error) {
+			throw this.#executionError(error, execution, tailBuffer.text(), maskSecrets);
 		} finally {
 			if (sandboxCheckSibling !== undefined) {
 				await fs.promises.rm(sandboxCheckSibling, { recursive: true, force: true });

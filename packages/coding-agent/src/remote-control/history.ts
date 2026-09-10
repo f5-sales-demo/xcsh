@@ -52,10 +52,88 @@ export function messageKey(message: AgentMessage): string {
 		message.role === "toolResult" ? message.toolCallId : null,
 	]);
 }
+export interface HistoryToolContext {
+	cwd: string;
+	commandCallIds: string[];
+}
+function commandHistoryItem(id: string, command: string, cwd: string): Record<string, unknown> {
+	return {
+		type: "commandExecution",
+		id,
+		pluginId: null,
+		scriptPath: null,
+		command,
+		cwd,
+		processId: null,
+		source: "agent",
+		status: "inProgress",
+		commandActions: [],
+		aggregatedOutput: null,
+		exitCode: null,
+		durationMs: null,
+	};
+}
+export function updateCommandHistoryItem(
+	item: Record<string, unknown>,
+	value: unknown,
+): Record<string, unknown> | undefined {
+	const execution = value as Record<string, unknown> | undefined;
+	if (
+		execution?.kind === "command" &&
+		typeof execution.command === "string" &&
+		typeof execution.cwd === "string" &&
+		typeof execution.aggregatedOutput === "string" &&
+		(execution.processId === null || typeof execution.processId === "string") &&
+		(execution.exitCode === null ||
+			(typeof execution.exitCode === "number" &&
+				Number.isInteger(execution.exitCode) &&
+				execution.exitCode >= -2147483648 &&
+				execution.exitCode <= 2147483647)) &&
+		(execution.durationMs === null ||
+			(typeof execution.durationMs === "number" &&
+				Number.isSafeInteger(execution.durationMs) &&
+				execution.durationMs >= 0)) &&
+		["inProgress", "completed", "failed"].includes(String(execution.status))
+	) {
+		const result = { ...item };
+		for (const key of ["command", "cwd", "aggregatedOutput", "processId", "exitCode", "durationMs", "status"])
+			result[key] = execution[key];
+		return result;
+	}
+	return undefined;
+}
+export interface BackgroundCommand {
+	turnId: string;
+	item: Record<string, unknown>;
+}
+export function backgroundCommandCompletion(
+	message: AgentMessage,
+	jobs: Map<string, BackgroundCommand>,
+): (BackgroundCommand & { jobId: string }) | undefined {
+	if (message.role !== "custom" || message.customType !== "async-result") return;
+	const details = message.details as { jobId?: unknown; execution?: unknown } | undefined;
+	const job = typeof details?.jobId === "string" ? jobs.get(details.jobId) : undefined;
+	if (job?.item.status !== "inProgress") return;
+	const item = updateCommandHistoryItem(job.item, details?.execution);
+	if (!item || item.status === "inProgress") return;
+	return { turnId: job.turnId, item, jobId: details!.jobId as string };
+}
 export function completeToolHistoryItem(
 	item: Record<string, unknown>,
 	message: Extract<AgentMessage, { role: "toolResult" }>,
 ): Record<string, unknown> {
+	if (item.type === "commandExecution") {
+		const details = message.details as { execution?: Record<string, unknown> } | undefined;
+		const execution = details?.execution;
+		const result: Record<string, unknown> = { ...item, status: message.isError ? "failed" : "completed" };
+		const updated = updateCommandHistoryItem(item, execution);
+		if (updated) return updated;
+		result.aggregatedOutput = message.content
+			.filter(part => part.type === "text")
+			.map(part => part.text)
+			.join("\n");
+		return result;
+	}
 	return {
 		...item,
 		status: message.isError ? "failed" : "completed",
@@ -73,6 +151,7 @@ export function messageHistoryItems(
 	id: string,
 	message: AgentMessage,
 	clientId: string | null = null,
+	tools?: HistoryToolContext,
 ): Record<string, unknown>[] {
 	if (message.role === "user") {
 		const content =
@@ -95,7 +174,19 @@ export function messageHistoryItems(
 	if (message.role !== "assistant") return [];
 	return message.content.flatMap((part, index): Record<string, unknown>[] => {
 		if (part.type === "text" && part.text) return [assistantHistoryItem(`${id}:${index}`, part.text, part.phase)];
-		if (part.type === "toolCall")
+		if (part.type === "toolCall") {
+			if (
+				typeof tools?.cwd === "string" &&
+				Array.isArray(tools.commandCallIds) &&
+				tools.commandCallIds.includes(part.id)
+			)
+				return [
+					commandHistoryItem(
+						`${id}:tool:${part.id}`,
+						typeof part.arguments?.command === "string" ? part.arguments.command : "",
+						tools.cwd,
+					),
+				];
 			return [
 				{
 					type: "dynamicToolCall",
@@ -109,6 +200,7 @@ export function messageHistoryItems(
 					durationMs: null,
 				},
 			];
+		}
 		return [];
 	});
 }
@@ -124,7 +216,7 @@ export function projectHistorySnapshot(
 	threadId: string,
 	entries: readonly SessionEntry[],
 	running = false,
-): { turns: HistoryTurn[]; timeline: TimelineRow[] } {
+): { turns: HistoryTurn[]; timeline: TimelineRow[]; jobs: Map<string, BackgroundCommand> } {
 	const turns: HistoryTurn[] = [];
 	const timeline: TimelineRow[] = [];
 	const inferredEnds: { turn: HistoryTurn; position: number; sourceId: string }[] = [];
@@ -145,10 +237,12 @@ export function projectHistorySnapshot(
 		});
 	};
 	const tools = new Map<string, Record<string, unknown>>();
+	const toolTurns = new Map<string, string>();
+	const jobs = new Map<string, BackgroundCommand>();
 	let current: HistoryTurn | undefined;
 	let explicit = false;
 	let continuingTools = false;
-	let marker: { key: string; id: string; clientId: string | null } | undefined;
+	let marker: { key: string; id: string; clientId: string | null; tools?: HistoryToolContext } | undefined;
 	let startMs = 0;
 	for (const [index, entry] of entries.entries()) {
 		const position = index + 1;
@@ -202,11 +296,25 @@ export function projectHistorySnapshot(
 					id: record.id,
 					key: record.key,
 					clientId: typeof record.clientId === "string" ? record.clientId : null,
+					tools: record.tools as HistoryToolContext | undefined,
 				};
 			}
 		}
-		if (entry.type !== "message") continue;
-		const message = entry.message;
+		if (entry.type !== "message" && entry.type !== "custom_message") continue;
+		const message: AgentMessage =
+			entry.type === "message"
+				? entry.message
+				: {
+						role: "custom",
+						customType: entry.customType,
+						content: entry.content,
+						display: entry.display,
+						details: entry.details,
+						attribution: entry.attribution,
+						timestamp: ms,
+					};
+		const completion = backgroundCommandCompletion(message, jobs);
+		if (completion) Object.assign(jobs.get(completion.jobId)!.item, completion.item);
 		const identity = marker?.key === messageKey(message) ? marker : undefined;
 		marker = undefined;
 		if (message.role !== "user" && message.role !== "assistant" && message.role !== "toolResult") continue;
@@ -223,7 +331,7 @@ export function projectHistorySnapshot(
 			continuingTools = false;
 		}
 		const messageId = identity?.id ?? `${threadId}-item-${entry.id}`;
-		const items = messageHistoryItems(messageId, message, identity?.clientId);
+		const items = messageHistoryItems(messageId, message, identity?.clientId, identity?.tools);
 		current.items.push(...items);
 		for (const item of items)
 			timeline.push({ sourceId: entry.id, entry: { type: "item", position, turnId: current.id, item } });
@@ -232,11 +340,19 @@ export function projectHistorySnapshot(
 			for (const part of message.content)
 				if (part.type === "toolCall") {
 					const item = items.find(value => value.id === `${messageId}:tool:${part.id}`);
-					if (item) tools.set(part.id, item);
+					if (item) {
+						tools.set(part.id, item);
+						toolTurns.set(part.id, current.id);
+					}
 				}
 		if (message.role === "toolResult") {
 			const item = tools.get(message.toolCallId);
-			if (item) Object.assign(item, completeToolHistoryItem(item, message));
+			if (item) {
+				Object.assign(item, completeToolHistoryItem(item, message));
+				const details = message.details as { async?: { jobId?: unknown } } | undefined;
+				if (item.type === "commandExecution" && typeof details?.async?.jobId === "string")
+					jobs.set(details.async.jobId, { turnId: toolTurns.get(message.toolCallId)!, item });
+			}
 		}
 		if (message.role === "assistant") {
 			continuingTools = message.stopReason === "toolUse";
@@ -260,5 +376,5 @@ export function projectHistorySnapshot(
 		if (value.status === "inProgress" && (!running || value !== turns.at(-1))) value.status = "interrupted";
 	if (current && !explicit && current.status !== "inProgress") inferredEnds.push({ turn: current, ...lastMessage });
 	for (const value of inferredEnds) complete(value.turn, value.position, value.sourceId);
-	return { turns, timeline };
+	return { turns, timeline, jobs };
 }

@@ -1333,3 +1333,38 @@ Foreground auto-background updates, backend exceptions, asynchronous completion
 persistence and cancellation still need execution-metadata coverage. Command/file
 wire items and canonical voice timeline integration remain open. The live phone
 fixtures still run the frozen `052153363` binary and do not exercise these changes.
+
+## Command history and background completion
+
+Remote history now renders registered command tools as pinned `commandExecution`
+items. The initial classification is persisted with the message identity, so reload
+preserves item types and IDs without classifying extension tools by name. Completion
+uses validated executor facts for output, working directory, exit status and duration.
+Malformed execution metadata falls back to a schema-valid failure/result description;
+unknown process IDs and exit codes remain null. Command actions are currently empty.
+
+Background starts remain in progress until the SDK delivers a terminal result.
+The SDK persists command execution facts with the existing `async-result` custom
+message. History links job identities to the original command and turn, including
+late completion after a newer turn reuses a tool-call ID. Repeated terminal records
+do not emit another completion. The projector handles the real `custom_message`
+storage format as well as tool-result messages.
+
+Executor exceptions now preserve partial output and a failed status without inventing
+an exit code. Foreground auto-background waiting retains execution facts while
+omitting the background presentation marker. Error messages/output use the existing
+secret masking boundary.
+
+Observed failing tests preceded command items, malformed metadata handling, late
+background completion, actual custom-message storage, SDK delivery, executor exceptions
+and foreground metadata preservation. The focused tests pass (31 tests, 96 assertions),
+including a real local Bash command through the SDK. The remote suite passes 531 tests
+and 2296 assertions across 49 files. The affected package suite passed 7879 tests
+with 561 skips and zero failures across 769 files (25054 assertions). Workspace
+TypeScript, lint, CLI bundle, documentation, staged privacy and secret checks pass.
+These checks do not replace final phone or packaged-artifact acceptance.
+
+Command output delta notifications, cancelled background-job persistence, commands
+executed before remote classification was recorded, specialized file changes and
+canonical voice event integration remain unfinished. The live phone sessions continue
+using the frozen `052153363` executable.

@@ -4,6 +4,7 @@ import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { ProtocolError } from "./errors";
 import {
 	assistantHistoryItem,
+	backgroundCommandCompletion,
 	completeToolHistoryItem,
 	messageHistoryItems,
 	messageKey,
@@ -38,6 +39,7 @@ export type SessionTarget = Pick<
 	Partial<
 		Pick<
 			AgentSession,
+			| "getToolByName"
 			| "subscribeSessionTransitions"
 			| "addBeforeDisposeHook"
 			| "userInteractions"
@@ -944,10 +946,21 @@ export class RemoteSession {
 				const index = this.#pendingClients.findIndex(value => value.text === textOf(message));
 				if (index >= 0) clientId = this.#pendingClients.splice(index, 1)[0].id;
 			}
-			this.target.sessionManager.appendCustomEntry("remote-history", { kind: "message", id, key, clientId });
+			const tools =
+				message.role === "assistant"
+					? {
+							cwd: this.target.sessionManager.getCwd(),
+							commandCallIds: message.content.flatMap(part =>
+								part.type === "toolCall" && this.target.getToolByName?.(part.name)?.executionKind === "command"
+									? [part.id]
+									: [],
+							),
+						}
+					: undefined;
+			this.target.sessionManager.appendCustomEntry("remote-history", { kind: "message", id, key, clientId, tools });
 			this.#messageIds.delete(key);
-			for (const item of messageHistoryItems(id, message, clientId))
-				this.#rememberItem(item, item.type !== "dynamicToolCall");
+			for (const item of messageHistoryItems(id, message, clientId, tools))
+				this.#rememberItem(item, item.type !== "dynamicToolCall" && item.type !== "commandExecution");
 			if (message.role === "assistant") {
 				for (const [index, part] of message.content.entries())
 					if (part.type === "text")
@@ -958,9 +971,30 @@ export class RemoteSession {
 		if (event.type === "message_end" && event.message.role === "toolResult") {
 			const suffix = `:tool:${event.message.toolCallId}`;
 			const item = this.#active?.items.findLast(
-				value => value.type === "dynamicToolCall" && String(value.id).endsWith(suffix),
+				value =>
+					(value.type === "dynamicToolCall" || value.type === "commandExecution") &&
+					String(value.id).endsWith(suffix),
 			);
-			if (item) this.#rememberItem(completeToolHistoryItem(item, event.message), true);
+			if (item) {
+				const completed = completeToolHistoryItem(item, event.message);
+				this.#rememberItem(completed, completed.status !== "inProgress");
+			}
+		}
+		if (
+			event.type === "message_end" &&
+			event.message.role === "custom" &&
+			event.message.customType === "async-result"
+		) {
+			const snapshot = projectHistorySnapshot(
+				this.target.sessionId,
+				this.target.sessionManager.getBranch(),
+				Boolean(this.#active),
+			);
+			const completion = backgroundCommandCompletion(event.message, snapshot.jobs);
+			if (completion) {
+				if (this.#active?.id === completion.turnId) this.#rememberItem(completion.item, true);
+				else this.#emit("item/completed", { turnId: completion.turnId, item: completion.item });
+			}
 		}
 		if (event.type === "agent_end") {
 			this.#finish("completed");

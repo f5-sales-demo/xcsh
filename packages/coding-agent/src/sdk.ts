@@ -1073,6 +1073,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 								type: job?.type,
 								label: job?.label,
 								durationMs,
+								execution: job?.resultDetails?.execution,
 							},
 						},
 						{ deliverAs: "followUp", triggerTurn: true },
