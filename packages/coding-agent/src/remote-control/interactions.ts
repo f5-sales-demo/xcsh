@@ -80,7 +80,7 @@ export class RemoteInteractions {
 	#unsubscribe: () => void;
 	constructor(
 		private readonly broker: UserInteractions,
-		private readonly context: (toolCallId: string) => Context | undefined,
+		private readonly context: (toolCallId: string, interaction: UserInteraction) => Context | undefined,
 		private readonly notify: (event: Notification) => void,
 	) {
 		this.#unsubscribe = broker.subscribe(event => {
@@ -99,7 +99,7 @@ export class RemoteInteractions {
 	}
 	#open(interaction: UserInteraction): void {
 		if (!interaction.toolCallId) return;
-		const context = this.context(interaction.toolCallId);
+		const context = this.context(interaction.toolCallId, interaction);
 		if (!context) return;
 		const request: InteractionRequest = {
 			id: interaction.id,
@@ -126,7 +126,9 @@ export class RemoteInteractions {
 								{
 									id: interaction.id,
 									header: "Question",
-									question: interaction.title,
+									question: interaction.planReview
+										? `${interaction.title}\n\nPlan: ${interaction.planReview.planFilePath}\n\n${interaction.planReview.content}`
+										: interaction.title,
 									isOther: false,
 									isSecret: interaction.isSecret ?? false,
 									options:
@@ -148,7 +150,7 @@ export class RemoteInteractions {
 	respond(id: string, response: unknown): { accepted: boolean } {
 		const pending = this.#requests.get(id);
 		if (!pending) return { accepted: false };
-		const current = this.context(pending.interaction.toolCallId!);
+		const current = this.context(pending.interaction.toolCallId!, pending.interaction);
 		if (!current || Object.entries(current).some(([key, value]) => pending.request.params[key] !== value))
 			return { accepted: false };
 		const invalid = () => new ProtocolError(-32602, "Invalid answer to user interaction");

@@ -13,7 +13,7 @@ import type { CompactOptions } from "../extensibility/extensions/types";
 import type { MCPManager } from "../mcp";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import type { HistoryStorage } from "../session/history-storage";
-import type { SessionContext, SessionManager } from "../session/session-manager";
+import type { NewSessionOptions, SessionContext, SessionManager } from "../session/session-manager";
 import type { ExitPlanModeDetails, LspStartupServerInfo } from "../tools";
 import type { OpenHttpUrlResult } from "../utils/open";
 import type { AssistantMessageComponent } from "./components/assistant-message";
@@ -184,7 +184,7 @@ export interface InteractiveModeContext {
 	handleToolsCommand(): void;
 	handleDumpCommand(): void;
 	handleDebugTranscriptCommand(): Promise<void>;
-	handleClearCommand(): Promise<void>;
+	handleClearCommand(options?: NewSessionOptions): Promise<void>;
 	handleForkCommand(): Promise<void>;
 	handleBashCommand(command: string, excludeFromContext?: boolean): Promise<void>;
 	handlePythonCommand(code: string, excludeFromContext?: boolean): Promise<void>;
@@ -240,7 +240,7 @@ export interface InteractiveModeContext {
 	openExternalEditor(): void;
 	registerExtensionShortcuts(): void;
 	handlePlanModeCommand(initialPrompt?: string): Promise<void>;
-	handleExitPlanModeTool(details: ExitPlanModeDetails): Promise<void>;
+	handleExitPlanModeTool(details: ExitPlanModeDetails, toolCallId?: string): Promise<void>;
 
 	// Hook UI methods
 	initHooksAndCustomTools(): Promise<void>;
@@ -256,7 +256,11 @@ export interface InteractiveModeContext {
 		dialogOptions?: ExtensionUIDialogOptions,
 	): Promise<string | undefined>;
 	hideHookSelector(): void;
-	showHookInput(title: string, placeholder?: string): Promise<string | undefined>;
+	showHookInput(
+		title: string,
+		placeholder?: string,
+		dialogOptions?: ExtensionUIDialogOptions,
+	): Promise<string | undefined>;
 	hideHookInput(): void;
 	showHookEditor(
 		title: string,

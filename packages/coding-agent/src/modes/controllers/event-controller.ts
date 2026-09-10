@@ -500,7 +500,7 @@ export class EventController {
 				if (event.toolName === "exit_plan_mode" && !event.isError) {
 					const details = event.result.details as ExitPlanModeDetails | undefined;
 					if (details) {
-						await this.ctx.handleExitPlanModeTool(details);
+						await this.ctx.handleExitPlanModeTool(details, event.toolCallId);
 					}
 				}
 				break;

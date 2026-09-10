@@ -8,6 +8,18 @@ import {
 } from "./question-types";
 
 const toolCalls = new AsyncLocalStorage<string>();
+export interface PlanReviewSource {
+	sessionId: string;
+	toolCallId: string;
+	planFilePath: string;
+	content: string;
+}
+const planReviews = new AsyncLocalStorage<PlanReviewSource>();
+
+/** A completed plan tool may ask for review; ordinary completed tools may not. */
+export function withPlanReviewInteraction<T>(source: PlanReviewSource, callback: () => T): T {
+	return planReviews.run(source, () => withToolInteraction(source.toolCallId, callback));
+}
 
 /** Bind only runtime tool UI calls; terminal administration has no tool identity. */
 export function withToolInteraction<T>(toolCallId: string, callback: () => T): T {
@@ -15,6 +27,7 @@ export function withToolInteraction<T>(toolCallId: string, callback: () => T): T
 }
 
 export interface UserInteractionSpec {
+	planReview?: PlanReviewSource;
 	kind: "select" | "input" | "questions";
 	questions?: readonly InteractionQuestion[];
 	title: string;
@@ -86,7 +99,12 @@ export class UserInteractions {
 	): Promise<T | undefined> {
 		if (this.#closed || this.#cancelling || signal?.aborted) return Promise.resolve(undefined);
 		if (this.#pending.size >= 32) return Promise.reject(new Error("Too many pending user interactions"));
-		const interaction = copy({ toolCallId: toolCalls.getStore(), ...spec, id: randomUUID() });
+		const interaction = copy({
+			toolCallId: toolCalls.getStore(),
+			planReview: planReviews.getStore(),
+			...spec,
+			id: randomUUID(),
+		});
 		const abort = new AbortController();
 		return new Promise((resolve, reject) => {
 			const onAbort = () => finish(undefined, true);

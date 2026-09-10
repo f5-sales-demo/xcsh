@@ -118,9 +118,27 @@ export class RemoteSession {
 		if (target.userInteractions)
 			this.#interactions = new RemoteInteractions(
 				target.userInteractions,
-				toolCallId => {
-					if (this.#disposed || this.#suspended || this.#boundId !== target.sessionId || !this.#active)
+				(toolCallId, interaction) => {
+					if (this.#disposed || this.#suspended || this.#boundId !== target.sessionId) return undefined;
+					if (interaction.planReview) {
+						if (
+							interaction.planReview.sessionId !== this.#boundId ||
+							interaction.planReview.toolCallId !== toolCallId
+						)
+							return undefined;
+						for (const turn of this.history().toReversed()) {
+							const item = turn.items.findLast(
+								value =>
+									value.type === "dynamicToolCall" &&
+									value.tool === "exit_plan_mode" &&
+									value.status === "completed" &&
+									String(value.id).endsWith(`:tool:${toolCallId}`),
+							);
+							if (item) return { threadId: this.#boundId, turnId: turn.id, itemId: String(item.id) };
+						}
 						return undefined;
+					}
+					if (!this.#active) return undefined;
 					const item = this.#active.items.findLast(
 						value =>
 							value.type === "dynamicToolCall" &&

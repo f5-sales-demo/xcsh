@@ -642,9 +642,9 @@ The grouped-question checkpoint below preserves whole-tool semantics across the
 ask tool's local selectors. Remaining approval work requires separate integration.
 Plan review is a separate TUI workflow: the completed `exit_plan_mode` tool causes
 the agent to stop before an approval selector is presented. It does not have an
-active tool identity at that point. Remote plan review therefore needs explicit
-provenance and reviewable plan content, rather than inferring permission from a
-generic dialog title. Approval also starts a new execution session, so that path
+active tool identity at that point. The plan-review checkpoint below adds explicit provenance and reviewable plan
+content to that workflow; it does not infer permission from a generic dialog
+title. Approval also starts a new execution session, so that path
 must retain model, history and voice/session lifecycle behavior.
 
 Retirement checkpoint validation: observed failures covered missing owner-removal
@@ -696,3 +696,49 @@ tests, with 561 skips, zero failures and 23697 assertions across 753 files
 (368.81 seconds). Workspace TypeScript/formatting, changed documentation lint,
 staged PII and staged secret scans passed. Full repository CI and the remaining
 manual and approval checks are still required.
+
+## Plan review and execution lineage
+
+The terminal event controller now carries the completed `exit_plan_mode` call ID
+into plan review. Explicit review metadata binds the session, call, file and
+reviewed content. Only that completed successful plan tool can publish a review;
+ordinary completed tools, failed plans and mismatched session/call identities
+remain ineligible. The pinned user-input request includes the complete plan and
+closed choices for approval, refinement or staying in plan mode. Refinement uses
+the same source and reaches the normal terminal input path.
+
+Approval rechecks the file against the reviewed snapshot. Changed content opens
+a new review with a new request ID and cannot execute under the old decision.
+Concurrent completion callbacks share one review. New agent work or a session
+transition cancels a pending review. Starting execution releases the review guard
+so later work can enter another review before its prompt completes.
+
+Decisions persist as `plan-review` session entries containing the reviewed content
+and tool identity. The new execution session retains its parent session path and
+an entry linking the source session and decision. The selected model and exact
+reviewed plan survive the normal new-session path. If a hook cancels that switch,
+the plan remains in plan mode at its final path and no execution prompt is sent.
+The clear-command controller also stops before resetting the visible conversation
+when its session switch is refused.
+
+Tests exercise the real terminal event controller, review widgets, AgentSession,
+remote adapter, persistence reopen and execution-session creation. Pinned-schema
+checks cover the review request. A simulated phone approves an obsolete version,
+receives the replacement review, approves it once and cannot execute it again
+with a duplicate reply. These tests use local protocol calls, not an actual iPhone
+or an additional recorded Codex approval conversation. Remaining approval work
+includes external-editor overlap, concurrent controls during the execution
+handoff, dedicated permission requests, visible plan-history projection and live
+phone acceptance. The overall interaction gate remains open.
+
+Plan-review checkpoint validation: observed failing tests covered stale-content
+execution, duplicate reviews, missing remote review, a pending review surviving
+new work, missing execution lineage, a cancelled switch still executing, and a
+review guard preventing later reviews. The final focused run passed 359 tests
+with zero failures and 1546 assertions across 47 files (36.18 seconds). The
+final guarded package run passed 7577 tests, with 561 skips, zero failures and
+23748 assertions across 754 files (347.02 seconds). Workspace TypeScript and
+formatting, changed documentation lint and staged privacy/secret scans passed.
+Two early fixture setup runs did not exercise the intended scenario and are not
+passing evidence. Repository CI, full-history privacy findings and the remaining
+manual and approval checks are still open.
