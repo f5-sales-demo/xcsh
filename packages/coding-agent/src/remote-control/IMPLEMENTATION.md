@@ -2051,3 +2051,11 @@ The guarded affected-package rerun after this ledger change passed 8276 tests,
 skipped 561, and failed zero, with 29783 assertions across 791 files in 421.39
 seconds. The focused lifecycle and management matrix separately passed 10 tests
 with 45 assertions, and repository docs-quality checks passed all 14 cases.
+
+Final top-level ownership was also exercised against the live host. A temporary
+fifth TUI registered as `xcsh Remote Boundary Test` and visibly ran one
+`quick_task` subagent. During the active subagent, initialized protocol discovery
+returned exactly five names: the four model sessions and the temporary TUI. It
+never exposed a sixth subagent thread. Cancelling and exiting the temporary TUI
+returned discovery to exactly the four model sessions while the relay remained
+connected.
