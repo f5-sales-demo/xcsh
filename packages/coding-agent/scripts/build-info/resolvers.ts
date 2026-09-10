@@ -1,4 +1,5 @@
 export interface EnvLike {
+	readonly SOURCE_DATE_EPOCH?: string;
 	readonly XCSH_BUILD_COMMIT?: string;
 	readonly XCSH_BUILD_BRANCH?: string;
 	readonly XCSH_BUILD_TAG?: string;
@@ -7,6 +8,7 @@ export interface EnvLike {
 
 export type GitFn = (args: string[]) => Promise<string>;
 export type GhFn = (sha: string) => Promise<string>;
+export type ClockFn = () => Date;
 
 function pick(value: string | undefined): string {
 	return value?.trim() ?? "";
@@ -48,4 +50,21 @@ export async function resolvePrNumber(sha: string, env: EnvLike, gh: GhFn): Prom
 	if (override) return override;
 	if (!sha) return "";
 	return await gh(sha);
+}
+
+export function resolveBuildDate(env: EnvLike, now: ClockFn = () => new Date()): string {
+	const sourceDateEpoch = pick(env.SOURCE_DATE_EPOCH);
+	if (!sourceDateEpoch) return now().toISOString();
+	if (!/^\d+$/.test(sourceDateEpoch)) {
+		throw new Error("SOURCE_DATE_EPOCH must be a non-negative integer");
+	}
+	const epochMilliseconds = Number(sourceDateEpoch) * 1000;
+	if (!Number.isSafeInteger(epochMilliseconds)) {
+		throw new Error("SOURCE_DATE_EPOCH must be a safe integer");
+	}
+	const date = new Date(epochMilliseconds);
+	if (Number.isNaN(date.getTime())) {
+		throw new Error("SOURCE_DATE_EPOCH must resolve to a valid date");
+	}
+	return date.toISOString();
 }

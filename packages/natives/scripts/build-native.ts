@@ -216,10 +216,16 @@ async function resolveBuiltAddonPath(outputDir: string, canonicalFilename: strin
 	);
 }
 
-function resolveBuildOutputDirPrefix(profileLabel: string): string {
+function resolveBuildOutputDir(profileLabel: string): string {
 	const buildTarget = crossTarget ?? `${targetPlatform}-${targetArch}`;
 	const variantLabel = effectiveVariant ?? "default";
-	return path.join(nativeDir, ".build", `${buildTarget}-${variantLabel}-${profileLabel}-`);
+	return path.join(nativeDir, ".build", `${buildTarget}-${variantLabel}-${profileLabel}`);
+}
+
+function resolveConstRandomSeed(profileLabel: string): string {
+	const buildTarget = crossTarget ?? `${targetPlatform}-${targetArch}`;
+	const variantLabel = effectiveVariant ?? "default";
+	return `xcsh-pi-natives-v1:${buildTarget}:${variantLabel}:${profileLabel}`;
 }
 
 async function installGeneratedBindings(outputDir: string): Promise<void> {
@@ -256,7 +262,15 @@ const useLocalProfile = !isCI && !isCrossCompile;
 const profileLabel = useLocalProfile ? "local" : "release";
 const profileSuffix = useLocalProfile ? " (local)" : "";
 
-const buildOutputDirPrefix = resolveBuildOutputDirPrefix(profileLabel);
+const buildOutputDir = resolveBuildOutputDir(profileLabel);
+const buildLockDir = `${buildOutputDir}.lock`;
+
+// ahash uses const-random at compile time. Pin its documented seed so clean
+// builds of the same target do not embed fresh random bytes.
+const constRandomSeed = resolveConstRandomSeed(profileLabel);
+// GCC and Clang use SOURCE_DATE_EPOCH for __DATE__/__TIME__. mimalloc embeds
+// those macros in its version string, so pin a valid post-2000 epoch as well.
+const sourceDateEpoch = "946684800";
 
 // Build napi args
 const napiArgs = [
@@ -293,7 +307,6 @@ console.log(`Building pi-natives for ${targetPlatform}-${targetArch}${variantSuf
 await fs.mkdir(nativeDir, { recursive: true });
 await cleanupStaleTemps(nativeDir);
 await fs.mkdir(path.join(nativeDir, ".build"), { recursive: true });
-const buildOutputDir = await fs.mkdtemp(buildOutputDirPrefix);
 napiArgs[10] = buildOutputDir;
 
 // Resolve napi bin directly: `bunx @napi-rs/cli` can pick up the wrong bin on
@@ -323,7 +336,27 @@ if (safeHostZigBuildConfig) {
 }
 
 try {
-	const buildResult = await $`${napiBin} ${napiArgs}`.nothrow();
+	await fs.mkdir(buildLockDir);
+} catch (err) {
+	const errno = err as NodeJS.ErrnoException;
+	if (errno.code === "EEXIST") {
+		throw new Error(
+			`A native build for ${targetPlatform}-${targetArch}${variantSuffix}${profileSuffix} is already in progress (${buildLockDir}).`,
+		);
+	}
+	throw err;
+}
+
+try {
+	// napi-rs embeds its output directory in the addon. Use one stable path per
+	// target/profile so identical inputs produce byte-identical artifacts. The
+	// exclusive lock above prevents concurrent builds from sharing this path.
+	await fs.rm(buildOutputDir, { recursive: true, force: true });
+	await fs.mkdir(buildOutputDir);
+
+	const buildResult = await $`${napiBin} ${napiArgs}`
+		.env({ ...Bun.env, CONST_RANDOM_SEED: constRandomSeed, SOURCE_DATE_EPOCH: sourceDateEpoch })
+		.nothrow();
 	if (buildResult.exitCode !== 0) {
 		const stderr = buildResult.stderr?.toString("utf-8") ?? "";
 		throw new Error(`napi build failed${stderr ? `:\n${stderr}` : ""}`);
@@ -344,4 +377,5 @@ try {
 	console.log("Build complete.");
 } finally {
 	await fs.rm(buildOutputDir, { recursive: true, force: true });
+	await fs.rm(buildLockDir, { recursive: true, force: true });
 }

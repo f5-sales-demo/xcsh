@@ -5,6 +5,7 @@ import { $ } from "bun";
 import {
 	type EnvLike,
 	resolveBranch,
+	resolveBuildDate,
 	resolveCommit,
 	resolveDirty,
 	resolvePrNumber,
@@ -55,7 +56,7 @@ const tag = await resolveTag(env, git);
 const commitDate = await resolveCommitDate(commit);
 const dirty = await resolveDirty(env, git);
 const prNumber = await resolvePrNumber(commit, env, ghPrForSha);
-const buildDate = new Date().toISOString();
+const buildDate = resolveBuildDate(env);
 const releaseUrl = `${REPO_URL}/releases/tag/v${version}`;
 const commitUrl = commit ? `${REPO_URL}/commit/${commit}` : REPO_URL;
 

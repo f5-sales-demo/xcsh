@@ -47,6 +47,24 @@ describe("native build safety", () => {
 	});
 
 	describe("Linux release ABI", () => {
+		it("uses a deterministic, exclusively locked native build output directory", async () => {
+			const build = await Bun.file(new URL("../scripts/build-native.ts", import.meta.url)).text();
+			expect(build).toContain("function resolveBuildOutputDir(profileLabel: string): string");
+			expect(build).toMatch(
+				/return path\.join\(nativeDir, "\.build", `\$\{buildTarget}-\$\{variantLabel}-\$\{profileLabel}`\);/,
+			);
+			expect(build).not.toContain("fs.mkdtemp(");
+			expect(build).toContain("await fs.mkdir(buildLockDir);");
+			expect(build).toMatch(/is already in progress \(\$\{buildLockDir}\)/);
+			expect(build).toContain("await fs.rm(buildLockDir, { recursive: true, force: true });");
+			expect(build).toContain("const constRandomSeed = resolveConstRandomSeed(profileLabel);");
+			expect(build).toContain('const sourceDateEpoch = "946684800";');
+			expect(build).toContain(
+				".env({ ...Bun.env, CONST_RANDOM_SEED: constRandomSeed, SOURCE_DATE_EPOCH: sourceDateEpoch })",
+			);
+			expect(build).toContain("xcsh-pi-natives-v1:");
+		});
+
 		it("rejects glibc requirements above the 2.17 release floor", () => {
 			const readelf = [
 				"0x0010:   Name: GLIBC_2.17  Flags: none  Version: 9",

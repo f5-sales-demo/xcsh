@@ -48,15 +48,55 @@ class CiCapacityContractTests(unittest.TestCase):
         )
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
-        self.assertIn('--concurrent-scripts "$CONCURRENT_SCRIPTS"', benchmark)
         self.assertIn("  pull_request:\n    types: [labeled]", benchmark)
-        benchmark_guard = (
+        software_guard = (
             "github.event_name == 'pull_request' &&\n"
             "      github.event.action == 'labeled' &&\n"
             "      github.event.label.name == 'compute-benchmark-approved' &&\n"
             "      github.event.pull_request.head.repo.full_name == github.repository"
         )
-        self.assertEqual(benchmark.count(benchmark_guard), 2)
+        self.assertEqual(benchmark.count(software_guard), 2)
+        self.assertEqual(
+            benchmark.count("github.event.label.name == 'compute-hardware-approved'"),
+            6,
+        )
+        self.assertIn("  release-native-fixtures:\n", benchmark)
+        self.assertIn(
+            "github.event.label.name == 'compute-hardware-approved'", benchmark
+        )
+        self.assertIn("    needs: release-native-fixtures\n", benchmark)
+        self.assertIn("platform: linux\n            arch: arm64", benchmark)
+        self.assertEqual(benchmark.count("platform: win32"), 2)
+        self.assertIn("name: qualification-native-${{ matrix.platform }}", benchmark)
+        self.assertIn("  d16-current-burst:\n", benchmark)
+        self.assertIn("    runs-on: xcsh-compute\n", benchmark)
+        self.assertIn("runs-on: xcsh-compute-bun-candidate", benchmark)
+        self.assertIn("runs-on: xcsh-compute-f32-candidate", benchmark)
+        self.assertIn("max-parallel: 4", benchmark)
+        self.assertIn("pair: [1, 2, 3, 4, 5]", benchmark)
+        self.assertIn(
+            "  d16-hardware-baseline:\n"
+            "    name: D16 / Bun 1.3.14 / hardware / ${{ matrix.cache }} / pair-${{ matrix.pair }}\n"
+            "    needs: release-native-fixtures",
+            benchmark,
+        )
+        self.assertIn("needs.release-native-fixtures.result == 'success'", benchmark)
+        self.assertNotIn("needs.d16-software-candidate.result", benchmark)
+        self.assertIn("    needs: f32-hardware-candidate", benchmark)
+        self.assertIn("    needs: d16-current-burst", benchmark)
+        self.assertIn("    needs: d16-burst", benchmark)
+        self.assertIn("variant: d16-four", benchmark)
+        profiler_action = (
+            ROOT / ".github/actions/runner-optimization-profile/action.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518",
+            profiler_action,
+        )
+        self.assertIn("tool: nextest", profiler_action)
+        self.assertIn("pattern: qualification-native-*", profiler_action)
+        self.assertIn("merge-multiple: true", profiler_action)
+        self.assertIn("retention-days: 30", profiler_action)
         self.assertNotIn("/usr/bin/time", benchmark)
         self.assertNotIn('bun-version: "1.3"', workflows)
         self.assertIn("bun-1.4.2-${{ runner.os }}-${{ runner.arch }}", workflows)
@@ -73,11 +113,35 @@ class CiCapacityContractTests(unittest.TestCase):
             prime,
         )
         installer = (ROOT / "scripts/ci-bun-install.sh").read_text(encoding="utf-8")
+        self.assertIn("expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.2}", installer)
+        self.assertIn('ln -sfn "$(command -v bun)" "$bun_bin_dir/bunx"', installer)
         self.assertIn("--frozen-lockfile --concurrent-scripts 16", installer)
         self.assertIn('printf \'%s\\n\' "$bun_bin_dir" >>"$GITHUB_PATH"', installer)
         self.assertIn('launcher="packages/coding-agent/bin/xcsh.ts"', installer)
         self.assertIn("mode change 100644 => 100755 $launcher", installer)
         self.assertIn('git -C "$workspace" diff --exit-code', installer)
+        profiler = (ROOT / "scripts/runner-optimization-profile.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'bun-1.4.2' && "
+            "'1.4.2' || '1.3.14' }}",
+            profiler_action,
+        )
+        self.assertIn(
+            "EXPECTED_BUN: ${{ inputs.variant == 'bun-1.4.2' && '1.4.2' || '1.3.14' }}",
+            profiler_action,
+        )
+        for phase in ("install", "native", "test", "release"):
+            self.assertIn(f"profile_phase {phase} {phase}", profiler)
+        self.assertIn('TARGET_VARIANTS="baseline modern"', profiler)
+        self.assertIn("--platform linux,win32", profiler)
+        self.assertIn(
+            'SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")', profiler
+        )
+        self.assertIn("git diff --exit-code", profiler)
+        self.assertIn('>"$output_dir/node-filesystem.json"', profiler)
+        self.assertNotIn("actions/cache/save@", benchmark)
         package = (ROOT / "packages/coding-agent/package.json").read_text(
             encoding="utf-8"
         )

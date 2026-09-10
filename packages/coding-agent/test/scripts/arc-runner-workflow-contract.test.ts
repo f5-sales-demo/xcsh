@@ -99,13 +99,19 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 		["self-hosted", "Linux", "X64", "xcsh", "ubuntu-24.04"],
 		["self-hosted", "Linux", "X64", "xcsh", "container-build"],
 	];
+	const candidateRoutes = new Set(["xcsh-compute-bun-candidate", "xcsh-compute-f32-candidate"]);
 	const observedArcRoutes = new Set<string>();
 
 	expect(workflows.length).toBeGreaterThan(0);
 	for (const workflow of workflows) {
 		for (const job of Object.values(workflow.document.jobs ?? {})) {
 			const route = job["runs-on"];
-			if (typeof route === "string" && route.startsWith("xcsh-")) observedArcRoutes.add(route);
+			if (typeof route === "string" && route.startsWith("xcsh-")) {
+				observedArcRoutes.add(route);
+				if (candidateRoutes.has(route)) {
+					expect(workflow.path).toBe(".github/workflows/compute-benchmark.yml");
+				}
+			}
 			for (const retiredRoute of retiredRoutes) expect(route, workflow.path).not.toEqual(retiredRoute);
 		}
 		for (const row of embeddedMatrixRows(workflow.source)) {
@@ -118,7 +124,15 @@ test("all workflow inventories reject retired xcsh label arrays, including embed
 		}
 	}
 
-	expect(observedArcRoutes).toEqual(new Set(["xcsh-compute", "xcsh-container-build", "xcsh-socketless"]));
+	expect(observedArcRoutes).toEqual(
+		new Set([
+			"xcsh-compute",
+			"xcsh-compute-bun-candidate",
+			"xcsh-compute-f32-candidate",
+			"xcsh-container-build",
+			"xcsh-socketless",
+		]),
+	);
 });
 
 test("Docker consumers use the container pool and every trust gate is socketless", async () => {
