@@ -1715,3 +1715,22 @@ files and 8177 package tests with 561 skips, zero failures and 29460 assertions
 across 788 files (401.15 seconds). Workspace types/lint, CLI bundle, documentation
 and staged privacy/secret checks passed. All three runtime/test source hashes
 remained unchanged through verification.
+
+## Compiled native-input checkpoint
+
+The clean source commit `1dc0fe61a6206c1cb6e580bfb8f210483b9803e0` produced a
+standalone xcsh 21.24.0 binary with SHA-256
+`8846017613fc483e3a34802d7615b4083605e680894754e618eeca1ed1d434d3`.
+The first isolated package run exposed a stale verifier expectation: write and
+read were both expected as generic tool calls. The saved session showed the
+correct native file-change facts and successful read. The verifier now asserts
+the exact added file path/content, native item type, completion and read result.
+
+The same immutable binary then passed all eight offline container checks in
+16.010 seconds, without Codex, standalone Bun or project dependencies installed.
+Two actual TUIs ran production write/read tools; host restart/replay, compiled
+resume and cleanup passed. The receipt is
+`../../scripts/remote-package/evidence-native-input-2026-09-10.json`.
+Enrollment and model responses were synthetic, networking was disabled, and this
+check does not prove live voice or phone input decisions. The iPhone runtime
+remains on its previous frozen binary; the new artifact is prepared separately.

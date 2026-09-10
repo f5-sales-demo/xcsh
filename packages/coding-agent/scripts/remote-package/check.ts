@@ -251,12 +251,28 @@ try {
 			`PACKAGE-${label.toUpperCase()}`,
 		);
 		assert.equal(done.length, 1);
-		const toolItems = done[0].items.filter((item: any) => item.type === "dynamicToolCall");
+		const toolItems = done[0].items.filter(
+			(item: any) => item.type === "dynamicToolCall" || item.type === "fileChange",
+		);
 		assert.equal(toolItems.length, 2);
+		assert.deepEqual(
+			toolItems.map((item: any) => item.type),
+			["fileChange", "dynamicToolCall"],
+		);
 		assert(
 			toolItems.every((item: any) => item.status === "completed"),
 			JSON.stringify(toolItems),
 		);
+		assert.deepEqual(toolItems[0].changes, [
+			{
+				path: `/fixture/${label.toLowerCase()}/package-check.txt`,
+				kind: { type: "add" },
+				diff: `PACKAGE-${label.toUpperCase()}`,
+			},
+		]);
+		assert.equal(toolItems[1].tool, "read");
+		assert.equal(toolItems[1].success, true);
+		assert.deepEqual(toolItems[1].contentItems, [{ type: "inputText", text: `PACKAGE-${label.toUpperCase()}` }]);
 		await writeFile(`${output}/${label.toLowerCase()}.history.json`, JSON.stringify(done, null, 2), { mode: 0o600 });
 	}
 	passed("remote prompts execute real write/read tools in the correct TUI and persist completed history");

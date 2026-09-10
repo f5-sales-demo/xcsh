@@ -30,7 +30,8 @@ independence and session integration, not subscription enrollment, live model
 capabilities, phone behavior, voice or complete protocol parity.
 
 The assertions cover default-off status, discovery of two named terminal owners,
-correct working-directory routing, file effects and history, host restart,
+correct working-directory routing, native file-change facts and successful read
+results in history, host restart,
 stable-request replay without repeated turns, compiled `--resume` with preserved
 identity/history/extension model, and removal on terminal exit. Restart happens
 after completed work; abrupt host loss during active work is a separate gate.
