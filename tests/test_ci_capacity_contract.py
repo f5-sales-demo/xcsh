@@ -98,9 +98,7 @@ class CiCapacityContractTests(unittest.TestCase):
             prime,
         )
         installer = (ROOT / "scripts/ci-bun-install.sh").read_text(encoding="utf-8")
-        self.assertIn(
-            'expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.3.14}', installer
-        )
+        self.assertIn("expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.3.14}", installer)
         self.assertIn('ln -sfn "$(command -v bun)" "$bun_bin_dir/bunx"', installer)
         self.assertIn("--frozen-lockfile --concurrent-scripts 16", installer)
         self.assertIn('printf \'%s\\n\' "$bun_bin_dir" >>"$GITHUB_PATH"', installer)
