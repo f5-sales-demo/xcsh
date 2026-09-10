@@ -20,7 +20,7 @@ completion of another. Codex baseline: 0.153.4,
 | Questions and approvals in both interfaces | General terminal machinery exists | Remote request mapping, one answer owner, cancellation/disconnect and permission-decision preservation |
 | Native realtime transports | WebRTC v3 and existing-call paths; actual iPhone voice | Pinned remaining supported transports/options and explicit errors for deferred operations |
 | Initial context, speech boundaries and transcripts | Reference recall and native file-task recordings; replay tests | Full context update/recovery and durable canonical history audit |
-| Delegation and speakable output | Reference and native both created/read fixture; one delegation each | Stream commentary/final results with pinned routing, buffering and cancellation semantics |
+| Delegation and speakable output | Reference and native both created/read fixture; one delegation each; streaming now passes recorded-channel and four-model adapter tests | Fresh live streaming capture and remaining cancellation/response-item modes |
 | Keep reasoning/tool internals out of speech | Text-only extraction and reasoning exclusion tests | Verify all model adapters and routing modes, including malformed headers and response-item mode |
 | Deliberate pauses and spoken interruption | Robin confirmed waiting through pauses and stopping mid-count | Preserve behavior in final live acceptance |
 | Voice closure preserves agent work | Unit lifecycle checks and normal manual closure | Live voice end during ongoing work, then verify completion/history |
@@ -32,7 +32,7 @@ completion of another. Codex baseline: 0.153.4,
 | Sol, Luna, Terra and Astra fidelity | Parameterized adapter tests; native Astra voice and Luna typed tasks | One live delegated tool task with each work model; no model replacement by voice component |
 | No Codex installation or subprocess dependency | Runtime is native TypeScript/Bun; reference is isolated test tooling | Packaged native execution in a Codex-absent environment |
 | Actual Codex reference recordings and comparison | Two recall calls and successful reference/native file calls; hashed sanitized fixtures | Repair remaining differences; further control/recovery/interaction scenarios and explicit unverified coverage |
-| TDD and repository checks | Recorded red-to-green work; last committed suite 7400 pass, 561 skip | Final affected suites, TypeScript and required CI; existing full-history PII findings remain unresolved |
+| TDD and repository checks | Recorded red-to-green work; streaming suite 7421 pass, 561 skip, zero failures; TypeScript and scoped privacy checks pass | Final affected suites and required CI; existing full-history PII findings remain unresolved |
 | Manual acceptance only on Robin's report | Specific observations recorded in PARITY.md and issue comments | Obtain remaining manual checkpoints without treating simulated tests as phone acceptance |
 | Issue, PR, review, merge and cleanup | Detailed issue, feature worktree, pushed commits | Completed linked PR, review/CI repair loop, authorized squash merge, confirmed-merged cleanup |
 

@@ -362,5 +362,10 @@ streamed and completed-only output, with reasoning excluded. Recorded reference
 channel order, partial/custom headers, unknown-header fallback, timer pacing,
 aggregate buffer limits, long Unicode output, client-managed routing and handoff
 replacement are covered. Latest focused check: 183 passes / 716 assertions.
-Workspace formatting and TypeScript checks pass. The guarded package suite is
-running; this new streaming behavior still needs a fresh live phone recording.
+Workspace formatting and TypeScript checks pass. The guarded package suite
+passed 7421 tests, 561 skips, zero failures / 22988 assertions across 737 files
+in 330.19 seconds. Staged PII and the streaming commit's secret scan passed.
+Both dedicated sessions were reloaded at streaming commit `c0a0071e0`, preserving
+identity, history and Luna/Astra selections; live bootstrap checks passed and
+the relay is connected. A fresh private recording is ready for Robin's streaming
+phone task. Live streaming acceptance remains pending.
