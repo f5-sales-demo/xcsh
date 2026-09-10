@@ -102,14 +102,57 @@ nonempty root registration remains an explicit unsupported operation.
 Product labels and host names use lowercase `xcsh`. Existing `XCSH_` environment
 variable names retain their uppercase prefix.
 
+## Native voice preparation
+
+The phone exposes voice inside Beta. The user reported “Voice couldn't connect”,
+then observed several connection retries after successive bootstrap fixes. Relay
+traces first showed unsupported `thread/realtime/listVoices`, then unsupported
+`thread/settings/update`. Both now implement the pinned contracts. A further retry
+sent `thread/unsubscribe` three times before stop cleanup. Its empty response was
+incorrect: the pinned response requires `unsubscribed`, `notSubscribed`, or
+`notLoaded`. This is corrected without stopping the terminal owner.
+
+Native v3 WebRTC negotiation and v1/v3 existing-call sideband attachment are implemented with xcsh's selected
+subscription, own originator, and fixed production endpoint. Existing calls retain
+client-owned configuration. Ordinary transcripts are persisted as custom provenance entries without executing
+work. When the client explicitly requests transcript-tail flushing, closure promotes
+the remaining speech through the normal agent pipeline; previously delegated speech
+and matching late final transcripts are excluded. Delegations use the owning AgentSession's normal
+prompt/steering path; only visible final text is returned through the voice call.
+Voice closure leaves delegated work running and suppresses late events/results.
+
+Tests cover pinned URLs/events, Unicode 500-byte chunks, malformed/bounded input,
+selected account and model preservation, duplicate delegation, repeated transcript
+words, error sanitization, stopping and new-call isolation, plus settings and
+unsubscribe contracts. These are local/mocked transport checks, not service or
+phone voice acceptance. After the unsubscribe response repair, the phone sent
+`thread/realtime/start` with WebRTC v3 and startup context disabled. Native v3
+WebRTC now uses the pinned ChatGPT subscription call-creation endpoint and returns
+answer SDP before connecting the matching sideband. Initial role-bearing items,
+voice-model settings, prompt/context, and start/end work-agent instructions are
+kept separate from the terminal work model. The next phone attempt additionally requested transcript-tail flushing, 11 initial
+items, and start/end instructions. Tail flushing now preserves accepted work across
+closure and avoids replaying already delegated speech. At 2026-09-10 01:37:22 UTC,
+the native service accepted call creation and xcsh attached its sideband in 1525 ms
+using its own identity and selected subscription. Audible iPhone confirmation and
+a live delegated voice task remain pending. Earlier generic phone errors were
+adapter contract/validation failures, not evidence of native service rejection.
+
+Current limitations: standalone WebSocket and legacy WebRTC negotiation remain unsupported. Delegation identities persist
+before submission for at-most-once recovery, with an unresolved crash gap; this is
+not a complete exactly-once transaction. Sideband reconnect/replay, timeline events,
+streamed result context, and audio appends remain pending.
+Nonempty skill roots remain explicit errors. Full voice acceptance must precede
+merge or release.
+
 ## Work still required
 
 1. Pairing and both Alpha/Beta typed round trips are confirmed by Robin.
    Complete the native voice gate.
 2. Complete history pagination and all live turn/tool event mappings, terminal
    versus remote interaction ownership, and durable retry identities.
-3. Implement native realtime transports, existing-call attachment, transcript
-   provenance, exactly-once delegation, context updates, interruption, and shutdown.
+3. Verify native existing-call attachment, complete the remaining realtime transports,
+   durable delegation recovery, streamed context updates, interruption, and shutdown.
 4. Complete lifecycle coverage (rename/fork/resume/exit/restart), permission-state
    fidelity, and cancellation/error status reporting.
 5. Add client listing/revocation, full auth recovery/retry-after handling, and
@@ -141,3 +184,13 @@ issues, PRs, fixtures, logs, or this file. The daemon's diagnostics contain meth
 names, parameter names, numeric error codes, and timestamps; response bodies, session text, tokens, and raw audio
 are excluded. Enrollment/host state and credentials live in the user's xcsh
 remote directory with private directory/file permissions.
+
+Current verification checkpoint: 88 focused tests / 302 assertions pass. The
+workspace lint/TypeScript check passes for the final transcript-tail checkpoint. Two affected-package runs exposed only 5-second integration
+suite timeouts. The latest reported 7322 passes, 561 skips, and two timeouts
+(registry picker and progressive context loading) across 729 files. Registry
+and context-loading assertions passed in targeted reruns; the last isolated
+context case finished in 1359 ms with a 15-second diagnostic limit. The earlier
+marketplace/remote CLI timeout cases passed in a separate 7-test rerun. These
+results do not describe the default-timeout full suite as clean. Staged-scope PII,
+secret scanning, and diff whitespace checks pass.

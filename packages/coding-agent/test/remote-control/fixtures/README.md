@@ -7,6 +7,8 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ConfigReadResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ModelListResponse.json`
+- `codex-rs/app-server-protocol/schema/json/v2/ThreadSettingsUpdatedNotification.json`
+- `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtime{Started,Closed,Error,TranscriptDelta,TranscriptDone}Notification.json`
 
 Copyright 2025 OpenAI. Apache-2.0; license and port notices are in
 `../../../src/remote-control/`.

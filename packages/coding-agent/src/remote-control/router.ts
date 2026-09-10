@@ -1,6 +1,7 @@
 import { configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError } from "./session";
+import { voices } from "./voice-protocol";
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
 	call: (identity: string, method: string, params: Record<string, unknown>) => Promise<unknown>;
@@ -87,6 +88,9 @@ export class RemoteRouter {
 						);
 						break;
 					}
+					case "thread/realtime/listVoices":
+						result = { voices };
+						break;
 					case "model/list":
 						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
 						result = modelResponse([...this.sessions.values()].map(session => session.thread));
@@ -118,10 +122,14 @@ export class RemoteRouter {
 					case "thread/loaded/list":
 						result = { data: [...this.sessions.keys()], nextCursor: null };
 						break;
-					case "thread/unsubscribe":
-						this.#clients.get(client)?.delete(String(params.threadId));
-						result = {};
+					case "thread/unsubscribe": {
+						const threadId = String(params.threadId);
+						const subscribed = this.#clients.get(client)?.delete(threadId);
+						result = {
+							status: !this.sessions.has(threadId) ? "notLoaded" : subscribed ? "unsubscribed" : "notSubscribed",
+						};
 						break;
+					}
 					case "thread/goal/get":
 					case "thread/queue/list":
 					case "thread/turns/list":
@@ -130,6 +138,12 @@ export class RemoteRouter {
 					case "thread/resume":
 					case "turn/start":
 					case "turn/steer":
+					case "thread/settings/update":
+					case "thread/realtime/start":
+					case "thread/realtime/stop":
+					case "thread/realtime/appendText":
+					case "thread/realtime/appendSpeech":
+					case "thread/realtime/appendAudio":
 					case "turn/interrupt": {
 						const threadId = String(params.threadId);
 						const session = this.sessions.get(threadId);

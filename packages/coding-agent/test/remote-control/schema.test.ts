@@ -44,3 +44,32 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 		remote.dispose();
 	}
 });
+
+test("actual settings notification matches the pinned thread settings contract", async () => {
+	const schema = (await import("./fixtures/ThreadSettingsUpdatedNotification.json")).default;
+	const validate = new Ajv({ strict: false }).compile(schema);
+	let effort = "medium";
+	const remote = new RemoteSession({
+		sessionId: "fixture",
+		messages: [],
+		model: { id: "gpt-6-astra", provider: "openai-codex" },
+		get thinkingLevel() {
+			return effort;
+		},
+		setThinkingLevel: (next: string) => {
+			effort = next;
+		},
+		sessionManager: { getCwd: () => "/tmp" },
+		subscribe: () => () => {},
+	} as unknown as SessionTarget);
+	const events: any[] = [];
+	remote.subscribe(event => events.push(event));
+	try {
+		await remote.call("settings-fixture", "thread/settings/update", { threadId: "fixture", effort: "high" });
+		expect(events).toHaveLength(1);
+		expect(validate(events[0].params), JSON.stringify(validate.errors)).toBe(true);
+		expect(events[0].params.threadSettings.effort).toBe("high");
+	} finally {
+		remote.dispose();
+	}
+});

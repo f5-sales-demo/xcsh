@@ -38,7 +38,7 @@ test("malformed and experimental unsupported operations are explicit errors", as
 		params: { clientInfo: { name: "fixture", version: "1" } },
 	});
 	expect(
-		await router.handle("phone", { id: 2, method: "thread/realtime/start", params: { threadId: "fixture" } }),
+		await router.handle("phone", { id: 2, method: "thread/realtime/unsupported", params: { threadId: "fixture" } }),
 	).toMatchObject({ error: { code: -32601 } });
 });
 
@@ -107,4 +107,28 @@ test("phone can clear its empty extra skill roots without changing terminal skil
 			params: { extraRoots: ["/tmp/new-skills"] },
 		}),
 	).toMatchObject({ error: { code: -32602 } });
+});
+
+test("voice transition unsubscribe returns the pinned status and leaves the terminal alive", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "fixture");
+	router.sessions.set("fixture", { thread: { id: "fixture" }, call: async () => ({}) });
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	await router.handle("phone", { id: 2, method: "thread/resume", params: { threadId: "fixture" } });
+	for (const [threadId, status] of [
+		["fixture", "unsubscribed"],
+		["fixture", "notSubscribed"],
+		["missing", "notLoaded"],
+	]) {
+		expect(await router.handle("phone", { id: status, method: "thread/unsubscribe", params: { threadId } })).toEqual({
+			id: status,
+			result: { status },
+		});
+	}
+	expect(router.sessions.has("fixture")).toBe(true);
+	expect(router.subscribed("phone", "fixture")).toBe(false);
+	router.dispose();
 });

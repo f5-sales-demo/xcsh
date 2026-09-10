@@ -163,7 +163,14 @@ export async function startLocalHost(socketPath: string, version: string) {
 					// Diagnostics contain protocol method names only, never payloads or client identifiers.
 					const method = (incoming.message as { method?: string }).method;
 					const safeMethod = typeof method === "string" && /^[a-zA-Z/]{1,128}$/.test(method) ? method : "invalid";
-					if (method === "turn/start") {
+					if (method === "thread/realtime/start") {
+						const p = (incoming.message as { params?: Record<string, unknown> }).params ?? {};
+						const t = (p.transport as { type?: unknown } | undefined)?.type;
+						process.stdout.write(
+							`${JSON.stringify({ stage: "voice-shape", transport: ["existingCall", "webrtc", "websocket"].includes(String(t)) ? t : "unset", version: ["v1", "v2", "v3"].includes(String(p.version)) ? p.version : "unset", includeStartupContext: p.includeStartupContext !== false, flushTail: p.flushTranscriptTailOnSessionEnd === true, responseItems: p.codexResponsesAsItems === true, initialItems: Array.isArray(p.initialItems) ? p.initialItems.length : 0, startInstructions: typeof p.realtimeStartInstructions === "string" && p.realtimeStartInstructions.length > 0, endInstructions: typeof p.realtimeEndInstructions === "string" && p.realtimeEndInstructions.length > 0, at: Date.now() })}\n`,
+						);
+					}
+					if (method === "turn/start" || method === "thread/settings/update") {
 						const p = (incoming.message as { params?: Record<string, unknown> }).params ?? {};
 						const target = router.sessions.get(String(p.threadId))?.thread;
 						const effort = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"].includes(

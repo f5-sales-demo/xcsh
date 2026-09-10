@@ -18,6 +18,14 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/app-server-protocol/src/protocol/v2/{config,model,process}.rs`:
   configuration/model discovery and standalone process requests/notifications.
 
+- `codex-rs/app-server-protocol/src/protocol/v2/realtime.rs`: voice requests and notifications.
+- `codex-rs/codex-api/src/endpoint/realtime_websocket/{methods,methods_frameless_bidi,protocol_v1,protocol_frameless_bidi}.rs`:
+  existing-call URLs, 500-byte context chunks, transcript and delegation events.
+- `codex-rs/codex-api/src/endpoint/realtime_call.rs`: subscription WebRTC call creation,
+  backend JSON request, AVAS query parameters, answer SDP and call identities.
+- `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs}`:
+  selected subscription sideband headers and client-owned configuration.
+
 Source: https://github.com/openai/codex/tree/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/app-server-transport/src/transport/remote_control
 
 Modifications: TypeScript/Bun implementation; xcsh identity and version; fixed

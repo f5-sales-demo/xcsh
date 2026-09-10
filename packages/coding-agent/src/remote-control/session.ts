@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
+import type { NativeVoice } from "./voice";
 export type SessionTarget = Pick<
 	AgentSession,
 	| "sessionId"
@@ -17,6 +18,8 @@ export type SessionTarget = Pick<
 	| "getQueuedMessages"
 	| "thinkingLevel"
 	| "setThinkingLevel"
+	| "modelRegistry"
+	| "sendCustomMessage"
 >;
 export interface Notification {
 	method: string;
@@ -69,6 +72,7 @@ function turn(id: string, status = "completed"): Turn {
 	};
 }
 export class RemoteSession {
+	#voice?: NativeVoice;
 	#requests = new Map<string, { signature: string; result: Promise<unknown> }>();
 	#clientIds = new Map<string, string>();
 	#listeners = new Set<(notification: Notification) => void>();
@@ -90,6 +94,7 @@ export class RemoteSession {
 		};
 	}
 	dispose(): void {
+		this.#voice?.stop();
 		this.#unsubscribe();
 		this.#listeners.clear();
 	}
@@ -198,6 +203,95 @@ export class RemoteSession {
 	}
 	async #execute(method: string, params: Record<string, unknown>): Promise<unknown> {
 		if (params.threadId !== this.target.sessionId) throw new ProtocolError(-32602, "Thread not found");
+		if (method === "thread/realtime/stop") {
+			this.#voice?.stop();
+			return {};
+		}
+		if (method === "thread/realtime/start") {
+			const { NativeVoice } = await import("./voice");
+			const { loadRemoteSubscription } = await import("./auth");
+			if (this.#voice?.active) throw new ProtocolError(-32000, "Voice is already active");
+			this.#voice = new NativeVoice({
+				context: () =>
+					JSON.stringify(
+						this.target.messages
+							.filter(message => message.role === "user" || message.role === "assistant")
+							.map(message => ({ role: message.role, text: textOf(message) }))
+							.slice(-30),
+					),
+				instructions: async (phase, text) => {
+					await this.target.sendCustomMessage(
+						{ customType: `remote-voice-${phase}`, content: text, display: false, attribution: "user" },
+						{ triggerTurn: false, deliverAs: "nextTurn" },
+					);
+				},
+				authenticate: () => loadRemoteSubscription(this.target.modelRegistry.authStorage, this.target.sessionId),
+				emit: (name, value) => this.#emit(name, value),
+				records: () =>
+					this.target.sessionManager
+						.getEntries()
+						.flatMap(entry =>
+							entry.type === "custom" &&
+							entry.customType === "remote-realtime" &&
+							entry.data &&
+							typeof entry.data === "object"
+								? [entry.data as Record<string, unknown>]
+								: [],
+						),
+				record: async record => {
+					this.target.sessionManager.appendCustomEntry("remote-realtime", record);
+					await this.target.sessionManager.flush();
+				},
+				delegate: (id, text) => this.#delegateVoice(id, text),
+			});
+			await this.#voice.start(params);
+			return {};
+		}
+		if (method === "thread/realtime/appendText" || method === "thread/realtime/appendSpeech") {
+			if (!this.#voice) throw new ProtocolError(-32000, "Voice is not active");
+			this.#voice.appendText(params.text, params.role ?? "user", method.endsWith("appendSpeech"));
+			return {};
+		}
+		if (method === "thread/realtime/appendAudio")
+			throw new ProtocolError(-32602, "Existing-call audio is owned by the phone");
+		if (method === "thread/settings/update") {
+			for (const key of Object.keys(params))
+				if (!["threadId", "effort", "model", "cwd", "summary"].includes(key) && params[key] != null)
+					throw new ProtocolError(-32602, "Unsupported terminal settings override");
+			if (params.model != null && params.model !== this.target.model?.id)
+				throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
+			if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())
+				throw new ProtocolError(-32602, "Unsupported working directory override");
+			if (params.summary != null && !["auto", "concise", "detailed", "none"].includes(String(params.summary)))
+				throw new ProtocolError(-32602, "Unsupported reasoning summary");
+			this.#applyEffort(params.effort);
+			const effort = this.thread().reasoningEffort;
+			this.#emit("thread/settings/updated", {
+				threadSettings: {
+					cwd: this.target.sessionManager.getCwd(),
+					approvalPolicy: "never",
+					approvalsReviewer: "user",
+					sandboxPolicy: { type: "dangerFullAccess" },
+					activePermissionProfile: null,
+					model: this.target.model?.id ?? "",
+					modelProvider: this.target.model?.provider ?? "",
+					serviceTier: null,
+					effort,
+					summary: params.summary ?? null,
+					collaborationMode: {
+						mode: "default",
+						settings: {
+							model: this.target.model?.id ?? "",
+							reasoning_effort: effort,
+							developer_instructions: null,
+						},
+					},
+					multiAgentMode: "explicitRequestOnly",
+					personality: null,
+				},
+			});
+			return {};
+		}
 		if (method === "thread/goal/get") return { goal: null };
 		if (method === "thread/queue/list") {
 			const limit = params.limit ?? 100;
@@ -367,13 +461,7 @@ export class RemoteSession {
 		}
 		if (this.target.isStreaming || this.#active)
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");
-		if (params.effort != null) {
-			try {
-				this.target.setThinkingLevel((params.effort === "none" ? "off" : params.effort) as ThinkingLevel);
-			} catch {
-				throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
-			}
-		}
+		this.#applyEffort(params.effort);
 		const active = turn(`${this.target.sessionId}-turn-${this.history().length + 1}`, "inProgress");
 		if (typeof params.clientUserMessageId === "string") this.#clientIds.set(active.id, params.clientUserMessageId);
 		this.#active = active;
@@ -384,6 +472,55 @@ export class RemoteSession {
 			() => this.#finish("failed"),
 		);
 		return { turn: { ...active } };
+	}
+	#applyEffort(effort: unknown): void {
+		if (effort == null) return;
+		const supported = this.target.model?.thinking?.supportedLevels;
+		if (
+			!["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(effort)) ||
+			(supported && !supported.some(level => level.effort === effort))
+		)
+			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
+		try {
+			this.target.setThinkingLevel((effort === "none" ? "off" : effort) as ThinkingLevel);
+		} catch {
+			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
+		}
+	}
+	#delegateVoice(id: string, text: string): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const current = this.#active;
+			const turnId = current?.id ?? `${this.target.sessionId}-turn-${this.history().length + 1}`;
+			const unsubscribe = this.subscribe(event => {
+				const result = event.params.turn as Turn | undefined;
+				if (event.method !== "turn/completed" || result?.id !== turnId) return;
+				unsubscribe();
+				if (result.status === "failed") {
+					reject(new Error("Backing turn failed"));
+					return;
+				}
+				if (result.status === "interrupted") {
+					resolve("The task was cancelled.");
+					return;
+				}
+				resolve(
+					result.items
+						.filter(item => item.type === "agentMessage")
+						.slice(-1)
+						.map(item => String(item.text))
+						.join("\n"),
+				);
+			});
+			void this.call(`voice:${id}`, current ? "turn/steer" : "turn/start", {
+				threadId: this.target.sessionId,
+				...(current ? { expectedTurnId: current.id } : {}),
+				clientUserMessageId: `voice:${id}`,
+				input: [{ type: "text", text }],
+			}).catch(error => {
+				unsubscribe();
+				reject(error);
+			});
+		});
 	}
 	#finish(status: string): void {
 		if (!this.#active) return;

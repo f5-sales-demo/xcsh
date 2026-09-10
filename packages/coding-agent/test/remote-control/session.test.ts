@@ -174,3 +174,44 @@ test("provider failure becomes a failed remote turn and a readable history error
 	expect(JSON.stringify(events)).not.toContain("private backend detail");
 	remote.dispose();
 });
+
+test("phone settings update applies supported effort without starting a turn or changing the model", async () => {
+	const a = fixture("a");
+	const levels: unknown[] = [],
+		events: any[] = [];
+	a.remote.target.setThinkingLevel = level => {
+		levels.push(level);
+	};
+	a.remote.subscribe(event => events.push(event));
+	expect(await a.remote.call("settings", "thread/settings/update", { threadId: "a", effort: "medium" })).toEqual({});
+	expect(levels).toEqual(["medium"]);
+	expect(a.prompts).toEqual([]);
+	expect(events).toContainEqual(expect.objectContaining({ method: "thread/settings/updated" }));
+	await expect(
+		a.remote.call("settings2", "thread/settings/update", { threadId: "a", model: "different", effort: "high" }),
+	).rejects.toMatchObject({ code: -32602 });
+	expect(levels).toEqual(["medium"]);
+	expect(a.remote.target.model?.id).toBe("gpt-6-astra");
+	a.remote.dispose();
+});
+test("unsupported model effort is rejected before the runtime can silently clamp it", async () => {
+	const a = fixture("a");
+	(a.remote.target.model as any).thinking = {
+		supportedLevels: [{ effort: "medium", description: "Medium" }],
+		defaultLevel: "medium",
+	};
+	let changed = false;
+	a.remote.target.setThinkingLevel = () => {
+		changed = true;
+	};
+	await expect(
+		a.remote.call("unsupported-effort", "turn/start", {
+			threadId: "a",
+			effort: "none",
+			input: [{ type: "text", text: "fixture" }],
+		}),
+	).rejects.toMatchObject({ code: -32602 });
+	expect(changed).toBe(false);
+	expect(a.prompts).toEqual([]);
+	a.remote.dispose();
+});
