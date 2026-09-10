@@ -112,8 +112,8 @@ describe("InteractiveMode plan review rendering", () => {
 		await Bun.write(resolvedPlanPath, "# Reviewed plan");
 		mode.planModeEnabled = true;
 		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
-		vi.spyOn(mode, "handleClearCommand").mockImplementation(async options => {
-			await session.newSession(options);
+		vi.spyOn(mode, "handleClearCommand").mockImplementation(async (options, createSession) => {
+			await (createSession ? createSession(options) : session.newSession(options));
 		});
 		const choose = vi
 			.spyOn(mode, "showHookSelector")
@@ -147,8 +147,8 @@ describe("InteractiveMode plan review rendering", () => {
 		const choice = Promise.withResolvers<string | undefined>();
 		const choose = vi.spyOn(mode, "showHookSelector").mockReturnValue(choice.promise);
 		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
-		vi.spyOn(mode, "handleClearCommand").mockImplementation(async options => {
-			await session.newSession(options);
+		vi.spyOn(mode, "handleClearCommand").mockImplementation(async (options, createSession) => {
+			await (createSession ? createSession(options) : session.newSession(options));
 		});
 		const details = { planFilePath, planExists: true, title: "PLAN", finalPlanFilePath: planFilePath };
 		const first = mode.handleExitPlanModeTool(details);
@@ -665,5 +665,53 @@ await Bun.write(process.argv[2], "# Edited plan");`,
 			if (previousVisual === undefined) delete process.env.VISUAL;
 			else process.env.VISUAL = previousVisual;
 		}
+	});
+
+	it.each(["terminal", "phone", "switch"])("plan execution handoff excludes competing %s input", async origin => {
+		const planFilePath = "local://PLAN.md";
+		await Bun.write(
+			resolveLocalUrlToPath(planFilePath, {
+				getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+				getSessionId: () => session.sessionId,
+			}),
+			"# Approved plan",
+		);
+		mode.planModeEnabled = true;
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		const clear = mode.handleClearCommand.bind(mode);
+		vi.spyOn(mode, "handleClearCommand").mockImplementation(async (...args) => {
+			entered.resolve();
+			await release.promise;
+			return clear(...args);
+		});
+		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Approve and execute");
+		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
+		const remote = new RemoteSession(session);
+		const review = mode.handleExitPlanModeTool({
+			planFilePath,
+			planExists: true,
+			title: "PLAN",
+			finalPlanFilePath: planFilePath,
+		});
+		try {
+			await entered.promise;
+			if (origin === "terminal") await expect(session.steer("Competing instruction")).rejects.toThrow("transition");
+			else if (origin === "phone")
+				await expect(
+					remote.call("competing-prompt", "turn/start", {
+						threadId: session.sessionId,
+						input: [{ type: "text", text: "Competing instruction" }],
+					}),
+				).rejects.toThrow();
+			else await expect(session.newSession()).rejects.toThrow("transition");
+			expect(prompt).not.toHaveBeenCalled();
+		} finally {
+			release.resolve();
+			await review;
+			await remote.close();
+		}
+		expect(prompt).toHaveBeenCalledTimes(1);
+		expect(prompt.mock.calls[0][0]).toContain("# Approved plan");
 	});
 });

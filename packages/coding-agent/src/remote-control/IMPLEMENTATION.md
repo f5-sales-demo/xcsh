@@ -779,3 +779,43 @@ with 561 skips, zero failures and 23842 assertions across 754 files
 (363.16 seconds). Workspace TypeScript/formatting, changed documentation lint,
 staged privacy and secret checks passed. Full repository CI and remaining live
 acceptance remain open.
+
+## Plan execution handoff ownership
+
+Plan approval now holds one session transition through plan finalization, model
+restoration, owned execution-session creation, plan persistence and tool setup.
+The owner receives a scoped creation callback; unrelated operations cannot use
+it, and a retained callback expires when preparation finishes. Nested creation
+emits one before/after lifecycle pair for the whole preparation. Failure restores
+the listeners and releases the transition. The approved execution prompt starts
+after preparation releases the transition.
+
+Terminal prompts, steering and follow-ups reject while the transition is active.
+The remote adapter also checks the owner's transition state, including the time
+before its own suspension listener runs. Preflight prompts retain their original
+generation across asynchronous command and routing work. A stale routing decision
+cannot apply its model/effort or dispatch text/custom work into the replacement
+session. Routing credential lookup also rechecks that generation before applying
+the selected model. Eager todo directives are installed only after prompt
+preflight remains current.
+
+Observed failing tests accepted competing terminal steering, a phone prompt and
+an unrelated session creation while clear-command preparation was paused. Tests
+also failed when four prompt variants resumed after deferred routing, and when
+a routing model switch completed credential lookup after session replacement.
+They now exercise rejection or stale-work retirement as appropriate, one approved
+execution prompt, retained work model and history, nested transition ownership,
+expired scopes, and failure recovery. These are local automated checks, not new
+iPhone or Codex reference recordings. Disposal during preparation, lifecycle
+operations already waiting on extension hooks, dedicated approvals and final
+phone acceptance remain part of the open interaction/lifecycle audit.
+
+Handoff checkpoint validation: the broader focused run passed 511 tests with
+18 skips, zero failures and 2322 assertions across 67 files (73.37 seconds).
+After adding the credential-race repair, the focused run passed 52 tests with
+zero failures and 246 assertions across six files (10.92 seconds). The guarded
+package suite passed 7596 tests with 561 skips, zero failures and 23890 assertions
+across 755 files (354.76 seconds). A subsequent fixture typing correction uses
+the exported effort enum with the same runtime value; the affected tests and
+workspace TypeScript checks were rerun. Full repository CI, existing history
+privacy findings and remaining live acceptance are still open.

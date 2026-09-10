@@ -184,7 +184,10 @@ export interface InteractiveModeContext {
 	handleToolsCommand(): void;
 	handleDumpCommand(): void;
 	handleDebugTranscriptCommand(): Promise<void>;
-	handleClearCommand(options?: NewSessionOptions): Promise<void>;
+	handleClearCommand(
+		options?: NewSessionOptions,
+		createSession?: (options?: NewSessionOptions) => Promise<boolean>,
+	): Promise<void>;
 	handleForkCommand(): Promise<void>;
 	handleBashCommand(command: string, excludeFromContext?: boolean): Promise<void>;
 	handlePythonCommand(code: string, excludeFromContext?: boolean): Promise<void>;

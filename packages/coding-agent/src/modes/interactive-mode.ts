@@ -963,47 +963,49 @@ export class InteractiveMode implements InteractiveModeContext {
 		planContent: string,
 		options: { planFilePath: string; finalPlanFilePath: string; review?: { sessionId: string; entryId: string } },
 	): Promise<void> {
-		const parentSession = this.session.sessionFile;
-		const sourceSessionId = this.session.sessionId;
-		const workflow = this.session.getPlanModeState()?.workflow;
-		await renameApprovedPlanFile({
-			planFilePath: options.planFilePath,
-			finalPlanFilePath: options.finalPlanFilePath,
-			getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-			getSessionId: () => this.sessionManager.getSessionId(),
-		});
-		const previousTools = this.#planModePreviousTools ?? this.session.getActiveToolNames();
-		await this.#exitPlanMode({ silent: true, paused: false });
-		try {
-			await this.handleClearCommand({ parentSession });
-			if (this.session.sessionId === sourceSessionId) throw new Error("Plan execution session was not created");
-		} catch (error) {
-			if (this.session.sessionId === sourceSessionId)
-				await this.#enterPlanMode({ planFilePath: options.finalPlanFilePath, workflow });
-			throw error;
-		}
-		if (options.review)
-			this.sessionManager.appendCustomEntry("plan-review", {
-				kind: "execution",
-				sourceSessionId: options.review.sessionId,
-				sourceEntryId: options.review.entryId,
-				planFilePath: options.finalPlanFilePath,
+		const planModePrompt = await this.session.prepareSessionChange(async createSession => {
+			const parentSession = this.session.sessionFile;
+			const sourceSessionId = this.session.sessionId;
+			const workflow = this.session.getPlanModeState()?.workflow;
+			await renameApprovedPlanFile({
+				planFilePath: options.planFilePath,
+				finalPlanFilePath: options.finalPlanFilePath,
+				getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
+				getSessionId: () => this.sessionManager.getSessionId(),
 			});
-		// The new session has a fresh local:// root — persist the approved plan there
-		// so `local://<title>.md` resolves correctly in the execution session.
-		const newLocalPath = resolveLocalUrlToPath(options.finalPlanFilePath, {
-			getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
-			getSessionId: () => this.sessionManager.getSessionId(),
-		});
-		await Bun.write(newLocalPath, planContent);
-		if (previousTools.length > 0) {
-			await this.session.setActiveToolsByName(previousTools);
-		}
-		this.session.setPlanReferencePath(options.finalPlanFilePath);
-		this.session.markPlanReferenceSent();
-		const planModePrompt = prompt.render(planModeApprovedPrompt, {
-			planContent,
-			finalPlanFilePath: options.finalPlanFilePath,
+			const previousTools = this.#planModePreviousTools ?? this.session.getActiveToolNames();
+			await this.#exitPlanMode({ silent: true, paused: false });
+			try {
+				await this.handleClearCommand({ parentSession }, createSession);
+				if (this.session.sessionId === sourceSessionId) throw new Error("Plan execution session was not created");
+			} catch (error) {
+				if (this.session.sessionId === sourceSessionId)
+					await this.#enterPlanMode({ planFilePath: options.finalPlanFilePath, workflow });
+				throw error;
+			}
+			if (options.review)
+				this.sessionManager.appendCustomEntry("plan-review", {
+					kind: "execution",
+					sourceSessionId: options.review.sessionId,
+					sourceEntryId: options.review.entryId,
+					planFilePath: options.finalPlanFilePath,
+				});
+			// The new session has a fresh local:// root — persist the approved plan there
+			// so `local://<title>.md` resolves correctly in the execution session.
+			const newLocalPath = resolveLocalUrlToPath(options.finalPlanFilePath, {
+				getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
+				getSessionId: () => this.sessionManager.getSessionId(),
+			});
+			await Bun.write(newLocalPath, planContent);
+			if (previousTools.length > 0) {
+				await this.session.setActiveToolsByName(previousTools);
+			}
+			this.session.setPlanReferencePath(options.finalPlanFilePath);
+			this.session.markPlanReferenceSent();
+			return prompt.render(planModeApprovedPrompt, {
+				planContent,
+				finalPlanFilePath: options.finalPlanFilePath,
+			});
 		});
 		// The decision is complete; execution may itself enter a later plan review.
 		this.#planReviewTask = undefined;
@@ -1452,11 +1454,14 @@ export class InteractiveMode implements InteractiveModeContext {
 		this.#commandController.handleToolsCommand();
 	}
 
-	handleClearCommand(options?: NewSessionOptions): Promise<void> {
+	handleClearCommand(
+		options?: NewSessionOptions,
+		createSession?: (options?: NewSessionOptions) => Promise<boolean>,
+	): Promise<void> {
 		this.#btwController.dispose();
 		this.#extensionUiController.clearExtensionTerminalInputListeners();
 		this.#planReviewContainer = undefined;
-		return this.#commandController.handleClearCommand(options);
+		return this.#commandController.handleClearCommand(options, createSession);
 	}
 
 	handleForkCommand(): Promise<void> {

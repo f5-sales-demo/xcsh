@@ -185,7 +185,7 @@ import type {
 	SessionManager,
 } from "./session-manager";
 import { getLatestCompactionEntry } from "./session-manager";
-import { type SessionTransitionListener, SessionTransitions } from "./session-transitions";
+import { type SessionTransitionListener, type SessionTransitionScope, SessionTransitions } from "./session-transitions";
 import { ToolChoiceQueue } from "./tool-choice-queue";
 import { TurnPhaseController, type TurnPhaseEvent } from "./turn-phase";
 import { UserInteractions } from "./user-interactions";
@@ -2193,14 +2193,31 @@ export class AgentSession {
 		this.#queuedExtensionEvents = queued.catch(() => {});
 	}
 
-	#withSessionTransition<T>(change: () => Promise<T>): Promise<T> {
-		return this.#sessionTransitions.run(async () => {
+	#withSessionTransition<T>(
+		change: (scope: SessionTransitionScope) => Promise<T>,
+		scope?: SessionTransitionScope,
+	): Promise<T> {
+		return this.#sessionTransitions.run(async owner => {
 			try {
 				this.userInteractions.cancelAll();
-				return await change();
+				return await change(owner);
 			} finally {
 				this.#reconnectToAgent();
 			}
+		}, scope);
+	}
+
+	get isSessionChanging(): boolean {
+		return this.#sessionTransitions.changing;
+	}
+
+	/** Keep preparation and its owned session creation inside one lifecycle boundary. */
+	prepareSessionChange<T>(
+		prepare: (createSession: (options?: NewSessionOptions) => Promise<boolean>) => Promise<T>,
+	): Promise<T> {
+		return this.#withSessionTransition(async scope => {
+			await this.abort();
+			return prepare(options => this.newSession(options, scope));
 		});
 	}
 
@@ -3025,17 +3042,21 @@ export class AgentSession {
 	 * @throws Error if no model selected or no API key available (when not streaming)
 	 */
 	async prompt(text: string, options?: PromptOptions): Promise<void> {
+		const generation = this.#promptGeneration;
+		this.#sessionTransitions.assertAvailable();
 		const expandPromptTemplates = options?.expandPromptTemplates ?? true;
 
 		// Handle extension commands first (execute immediately, even during streaming)
 		if (expandPromptTemplates && text.startsWith("/")) {
 			const handled = await this.#tryExecuteExtensionCommand(text);
+			if (!this.#isPromptCurrent(generation)) return;
 			if (handled) {
 				return;
 			}
 
 			// Try custom commands (TypeScript slash commands)
 			const customResult = await this.#tryExecuteCustomCommand(text);
+			if (!this.#isPromptCurrent(generation)) return;
 			if (customResult !== null) {
 				if (customResult === "") {
 					return;
@@ -3081,19 +3102,15 @@ export class AgentSession {
 			? { role: "developer" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() }
 			: { role: "user" as const, content: userContent, attribution: promptAttribution, timestamp: Date.now() };
 
-		if (eagerTodoPrelude) {
-			this.#toolChoiceQueue.pushOnce(eagerTodoPrelude.toolChoice, {
-				label: "eager-todo",
-			});
-		}
-
 		await this.#maybeRestoreRetryFallbackPrimary();
+		if (!this.#isPromptCurrent(generation)) return;
 
 		const delegationOutput = await this.#evaluateAndApplyRouting(
 			expandedText,
 			options?.images ? options.images.length > 0 : false,
 			{ signal: options?.signal },
 		);
+		if (!this.#isPromptCurrent(generation)) return;
 		if (delegationOutput) {
 			expandedText += delegationOutput;
 			const textBlock = userContent.find(c => c.type === "text") as Extract<
@@ -3107,6 +3124,12 @@ export class AgentSession {
 			}
 		}
 
+		if (eagerTodoPrelude) {
+			this.#toolChoiceQueue.pushOnce(eagerTodoPrelude.toolChoice, {
+				label: "eager-todo",
+			});
+		}
+
 		try {
 			await this.#promptWithMessage(message, expandedText, {
 				...options,
@@ -3117,7 +3140,7 @@ export class AgentSession {
 			// (e.g., compaction aborted, validation failed).
 			this.#toolChoiceQueue.removeByLabel("eager-todo");
 		}
-		if (!options?.synthetic) {
+		if (!options?.synthetic && this.#isPromptCurrent(generation)) {
 			await this.#enforcePlanModeToolDecision();
 		}
 	}
@@ -3126,6 +3149,8 @@ export class AgentSession {
 		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
 		options?: Pick<PromptOptions, "streamingBehavior" | "toolChoice" | "signal">,
 	): Promise<void> {
+		const generation = this.#promptGeneration;
+		this.#sessionTransitions.assertAvailable();
 		const textContent =
 			typeof message.content === "string"
 				? message.content
@@ -3161,6 +3186,7 @@ export class AgentSession {
 			Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
 			{ signal: options?.signal },
 		);
+		if (!this.#isPromptCurrent(generation)) return;
 		if (delegationOutput) {
 			if (typeof customMessage.content === "string") {
 				customMessage.content += delegationOutput;
@@ -3182,6 +3208,7 @@ export class AgentSession {
 		hasImages: boolean,
 		options?: { signal?: AbortSignal } | any,
 	): Promise<string | undefined> {
+		const generation = this.#promptGeneration;
 		const routingMode = (this.settings.get("routing.mode") as import("../routing/types").RoutingMode) ?? "off";
 		if (routingMode === "off" || !this.model) return undefined;
 
@@ -3231,6 +3258,8 @@ export class AgentSession {
 				return m?.contextWindow ?? 128000;
 			},
 		});
+
+		if (!this.#isPromptCurrent(generation)) return undefined;
 
 		this.#emitSessionEvent({
 			type: "routing_evaluated",
@@ -3285,6 +3314,7 @@ export class AgentSession {
 			}
 		}
 
+		if (!this.#isPromptCurrent(generation)) return undefined;
 		if (
 			decision.applied &&
 			decision.delegation &&
@@ -3395,6 +3425,7 @@ export class AgentSession {
 				{ signal: options?.signal },
 			);
 
+			if (!this.#isPromptCurrent(generation)) return undefined;
 			if (results.length > 0) {
 				let resultsString = JSON.stringify(results, null, 2);
 				if (resultsString.length > 8000) {
@@ -3417,6 +3448,10 @@ export class AgentSession {
 		return undefined;
 	}
 
+	#isPromptCurrent(generation: number): boolean {
+		return generation === this.#promptGeneration && !this.isSessionChanging;
+	}
+
 	async #promptWithMessage(
 		message: AgentMessage,
 		expandedText: string,
@@ -3425,6 +3460,7 @@ export class AgentSession {
 			skipPostPromptRecoveryWait?: boolean;
 		},
 	): Promise<void> {
+		this.#sessionTransitions.assertAvailable();
 		this.#promptInFlightCount++;
 		this.#turnPhase.startTurn();
 		const generation = this.#promptGeneration;
@@ -3705,6 +3741,7 @@ export class AgentSession {
 	 * Queue a steering message to interrupt the agent mid-run.
 	 */
 	async steer(text: string, images?: ImageContent[]): Promise<void> {
+		this.#sessionTransitions.assertAvailable();
 		if (text.startsWith("/")) {
 			this.#throwIfExtensionCommand(text);
 		}
@@ -3717,6 +3754,7 @@ export class AgentSession {
 	 * Queue a follow-up message to process after the agent would otherwise stop.
 	 */
 	async followUp(text: string, images?: ImageContent[]): Promise<void> {
+		this.#sessionTransitions.assertAvailable();
 		if (text.startsWith("/")) {
 			this.#throwIfExtensionCommand(text);
 		}
@@ -3799,6 +3837,7 @@ export class AgentSession {
 	}
 
 	async #promptQueuedHiddenNextTurnMessages(): Promise<void> {
+		const generation = this.#promptGeneration;
 		if (this.#pendingNextTurnMessages.length === 0) {
 			return;
 		}
@@ -3816,6 +3855,7 @@ export class AgentSession {
 			textContent,
 			Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
 		);
+		if (!this.#isPromptCurrent(generation)) return;
 		if (delegationOutput) {
 			if (typeof message.content === "string") {
 				message.content += delegationOutput;
@@ -3835,7 +3875,8 @@ export class AgentSession {
 				skipPostPromptRecoveryWait: true,
 			});
 		} catch (error) {
-			this.#pendingNextTurnMessages = [...queuedMessages, ...this.#pendingNextTurnMessages];
+			if (this.#isPromptCurrent(generation))
+				this.#pendingNextTurnMessages = [...queuedMessages, ...this.#pendingNextTurnMessages];
 			throw error;
 		}
 	}
@@ -3879,6 +3920,8 @@ export class AgentSession {
 		message: Pick<CustomMessage<T>, "customType" | "content" | "display" | "details" | "attribution">,
 		options?: { triggerTurn?: boolean; deliverAs?: "steer" | "followUp" | "nextTurn"; signal?: AbortSignal },
 	): Promise<void> {
+		const generation = this.#promptGeneration;
+		if (options?.triggerTurn) this.#sessionTransitions.assertAvailable();
 		const clonedContent = Array.isArray(message.content)
 			? message.content.map((c: any) => ({ ...c }))
 			: message.content;
@@ -3921,6 +3964,7 @@ export class AgentSession {
 					Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
 					options,
 				);
+				if (!this.#isPromptCurrent(generation)) return;
 				if (delegationOutput) {
 					promptText += delegationOutput;
 					if (typeof appMessage.content === "string") {
@@ -3962,6 +4006,7 @@ export class AgentSession {
 				Array.isArray(message.content) && message.content.some((c: any) => c.type === "image"),
 				options,
 			);
+			if (!this.#isPromptCurrent(generation)) return;
 			if (delegationOutput) {
 				promptText += delegationOutput;
 				if (typeof appMessage.content === "string") {
@@ -4219,7 +4264,8 @@ export class AgentSession {
 	 * @param options - Optional initial messages and parent session path
 	 * @returns true if completed, false if cancelled by hook
 	 */
-	async newSession(options?: NewSessionOptions): Promise<boolean> {
+	async newSession(options?: NewSessionOptions, scope?: SessionTransitionScope): Promise<boolean> {
+		this.#sessionTransitions.assertAvailable(scope);
 		const previousSessionFile = this.sessionFile;
 		const nextDiscoverySessionToolNames = this.#mcpDiscoveryEnabled
 			? [
@@ -4284,7 +4330,7 @@ export class AgentSession {
 			}
 
 			return true;
-		});
+		}, scope);
 	}
 
 	/**
@@ -4442,6 +4488,7 @@ export class AgentSession {
 	 * Does NOT overwrite manual pin or retry fallback original selector.
 	 */
 	async setModelRoutingSwitch(model: Model, thinkingLevel?: ThinkingLevel): Promise<void> {
+		const generation = this.#promptGeneration;
 		const previousEditMode = this.#resolveActiveEditMode();
 
 		let targetModel = model;
@@ -4460,6 +4507,7 @@ export class AgentSession {
 		}
 
 		const apiKey = await this.#modelRegistry.getApiKey(targetModel, this.sessionId);
+		if (!this.#isPromptCurrent(generation)) return;
 		if (!apiKey) {
 			throw new Error(`No API key for ${targetModel.provider}/${targetModel.id}`);
 		}
@@ -4467,6 +4515,7 @@ export class AgentSession {
 
 		// DO NOT clear active retry fallback - routing is a transient optimization
 		await this.#setModelWithProviderSessionReset(targetModel, "runtime-switch");
+		if (!this.#isPromptCurrent(generation)) return;
 		this.sessionManager.appendModelChange(`${targetModel.provider}/${targetModel.id}`, "routing_switch");
 		this.settings.getStorage()?.recordModelUsage(`${targetModel.provider}/${targetModel.id}`);
 

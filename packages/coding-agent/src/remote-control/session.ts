@@ -34,7 +34,12 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 > &
-	Partial<Pick<AgentSession, "subscribeSessionTransitions" | "addBeforeDisposeHook" | "userInteractions">>;
+	Partial<
+		Pick<
+			AgentSession,
+			"subscribeSessionTransitions" | "addBeforeDisposeHook" | "userInteractions" | "isSessionChanging"
+		>
+	>;
 export interface Notification {
 	id?: string;
 	method: string;
@@ -194,7 +199,7 @@ export class RemoteSession {
 			(this.#disposed && !allowClosing) ||
 			epoch !== this.#epoch ||
 			this.#boundId !== this.target.sessionId ||
-			(!allowClosing && this.#suspended)
+			(!allowClosing && (this.#suspended || this.target.isSessionChanging))
 		)
 			throw new ProtocolError(-32000, "Session attachment is changing or closed");
 	}

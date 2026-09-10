@@ -644,7 +644,10 @@ export class CommandController {
 		this.ctx.showError(t("controller.memory.usage"));
 	}
 
-	async handleClearCommand(options?: NewSessionOptions): Promise<void> {
+	async handleClearCommand(
+		options?: NewSessionOptions,
+		createSession?: (options?: NewSessionOptions) => Promise<boolean>,
+	): Promise<void> {
 		if (this.ctx.loadingAnimation) {
 			this.ctx.loadingAnimation.stop();
 			this.ctx.loadingAnimation = undefined;
@@ -657,7 +660,7 @@ export class CommandController {
 				await Bun.sleep(10);
 			}
 		}
-		if (!(await this.ctx.session.newSession(options))) return;
+		if (!(await (createSession ? createSession(options) : this.ctx.session.newSession(options)))) return;
 		this.ctx.resetObserverRegistry();
 		setSessionTerminalTitle(
 			this.ctx.sessionManager.getSessionName(),
