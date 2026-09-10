@@ -56,6 +56,18 @@ export class UserInteractions {
 	#closed = false;
 	#cancelling = false;
 	#localActive?: string;
+	#localPauses = 0;
+	/** An external editor owns the terminal; remote answers may still settle queued requests. */
+	pauseLocalPresentation(): () => void {
+		this.#localPauses++;
+		let released = false;
+		return () => {
+			if (released) return;
+			released = true;
+			this.#localPauses--;
+			this.#presentNext();
+		};
+	}
 	pending(): UserInteraction[] {
 		return [...this.#pending.values()].map(value => copy(value.interaction));
 	}
@@ -135,7 +147,7 @@ export class UserInteractions {
 		});
 	}
 	#presentNext(): void {
-		if (this.#localActive || this.#closed || this.#cancelling) return;
+		if (this.#localActive || this.#localPauses > 0 || this.#closed || this.#cancelling) return;
 		const next = this.#pending.values().next().value;
 		if (!next) return;
 		this.#localActive = next.interaction.id;

@@ -159,3 +159,32 @@ test("grouped answers reject missing, foreign or invalid selections without comp
 	interactions.cancelAll();
 	expect(await result).toBeUndefined();
 });
+
+test("nested terminal pauses retain queued input while remote answers still complete", async () => {
+	const interactions = new UserInteractions();
+	const firstResume = interactions.pauseLocalPresentation();
+	const secondResume = interactions.pauseLocalPresentation();
+	let presentations = 0;
+	const local = async () => {
+		presentations++;
+		return "Local answer";
+	};
+	const first = interactions.request({ kind: "input", title: "First" }, local);
+	const second = interactions.request({ kind: "input", title: "Second" }, local);
+	expect(presentations).toBe(0);
+	const [a] = interactions.pending();
+	expect(interactions.respond(a.id, "Remote answer")).toBe(true);
+	expect(await first).toBe("Remote answer");
+	firstResume();
+	firstResume();
+	expect(presentations).toBe(0);
+	secondResume();
+	expect(await second).toBe("Local answer");
+	expect(presentations).toBe(1);
+	const resumeAfterClose = interactions.pauseLocalPresentation();
+	const cancelled = interactions.request({ kind: "input", title: "Closing" }, local);
+	interactions.close();
+	resumeAfterClose();
+	expect(await cancelled).toBeUndefined();
+	expect(presentations).toBe(1);
+});

@@ -727,8 +727,8 @@ checks cover the review request. A simulated phone approves an obsolete version,
 receives the replacement review, approves it once and cannot execute it again
 with a duplicate reply. These tests use local protocol calls, not an actual iPhone
 or an additional recorded Codex approval conversation. Remaining approval work
-includes external-editor overlap, concurrent controls during the execution
-handoff, dedicated permission requests, visible plan-history projection and live
+includes concurrent controls during the execution handoff, dedicated permission
+requests, visible plan-history projection and live
 phone acceptance. The overall interaction gate remains open.
 
 Plan-review checkpoint validation: observed failing tests covered stale-content
@@ -742,3 +742,40 @@ formatting, changed documentation lint and staged privacy/secret scans passed.
 Two early fixture setup runs did not exercise the intended scenario and are not
 passing evidence. Repository CI, full-history privacy findings and the remaining
 manual and approval checks are still open.
+
+## Plan editing across terminal and phone
+
+Opening the external editor retires the current review request before launching
+the editor. The shared broker pauses local presentation while the editor owns the
+terminal; remote answers can still settle queued requests. When editing finishes,
+the terminal reads the saved plan and opens a fresh review with a new identity.
+A retained callback from a dismissed review cannot launch another editor. Nested
+presentation pauses release independently and only once.
+
+The editor records the source session and original file contents. If that session
+switches, closes or changes the plan while the editor is open, the returned edit
+is saved beside the original as `PLAN.md.editor-<uuid>.md` with mode 0600. It does
+not overwrite the newer plan or populate a different session's preview. A disposed
+or stopped terminal is not restarted by a late editor exit. Cancelled review tasks
+release their guard so a later session can complete its own review while the
+original editor is still open.
+
+Tests launch a real Bun editor subprocess with controlled save timing. They cover
+normal save, a nonzero editor exit, a conflicting write, session replacement,
+session disposal and terminal stop. A deferred terminal-handle acquisition also
+checks that disposal cannot launch an editor afterward. They verify stale approval rejection, fresh content and request
+identity, remote completion of queued input, a later session's review, draft
+contents/permissions and terminal restart behavior. These are automated local
+checks; actual iPhone presentation and editor/control acceptance remain required.
+
+Editor checkpoint validation: observed failures covered acceptance of the old
+approval during editing, queued local UI taking the terminal, late saves
+replacing conflicted/switched/disposed plans, and disposal during terminal-handle
+acquisition. The broader focused run passed 365 tests with zero failures and
+1630 assertions across 46 files (38.94 seconds). The final acquisition repair
+then passed the 52-test editor/review/broker integration run with 278 assertions
+and zero failures (6.26 seconds). The final guarded package run passed 7585 tests,
+with 561 skips, zero failures and 23842 assertions across 754 files
+(363.16 seconds). Workspace TypeScript/formatting, changed documentation lint,
+staged privacy and secret checks passed. Full repository CI and remaining live
+acceptance remain open.

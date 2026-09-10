@@ -3,6 +3,7 @@
  * Handles TUI rendering and user interaction, delegating business logic to AgentSession.
  */
 
+import { randomUUID } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Agent, AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
@@ -182,6 +183,8 @@ export class InteractiveMode implements InteractiveModeContext {
 	#pendingModelSwitch: { model: Model; thinkingLevel?: ThinkingLevel } | undefined;
 	#planModeHasEntered = false;
 	#planReviewTask?: Promise<void>;
+	#planReviewAbort?: AbortController;
+	#planEditorEpoch = 0;
 	#planReviewContainer: Container | undefined;
 	lspServers?: import("../tools").LspStartupServerInfo[];
 	mcpManager?: import("../mcp").MCPManager;
@@ -879,7 +882,10 @@ export class InteractiveMode implements InteractiveModeContext {
 		return `up/down navigate  enter select  ${externalEditorKey.toLowerCase()} open in editor  esc cancel`;
 	}
 
-	async #openPlanInExternalEditor(planFilePath: string): Promise<void> {
+	async #openPlanInExternalEditor(planFilePath: string, signal: AbortSignal): Promise<void> {
+		const sessionId = this.session.sessionId;
+		const editorEpoch = this.#planEditorEpoch;
+		if (signal.aborted) return;
 		const editorCmd = getEditorCommand();
 		if (!editorCmd) {
 			this.showWarning("No editor configured. Set $VISUAL or $EDITOR environment variable.");
@@ -899,10 +905,14 @@ export class InteractiveMode implements InteractiveModeContext {
 			return;
 		}
 
+		if (signal.aborted || editorEpoch !== this.#planEditorEpoch || sessionId !== this.session.sessionId) return;
 		let ttyHandle: fs.FileHandle | null = null;
+		let stopped = false;
 		try {
 			ttyHandle = await this.#openEditorTerminalHandle();
+			if (signal.aborted || editorEpoch !== this.#planEditorEpoch || sessionId !== this.session.sessionId) return;
 			this.ui.stop();
+			stopped = true;
 
 			const stdio: [number | "inherit", number | "inherit", number | "inherit"] = ttyHandle
 				? [ttyHandle.fd, ttyHandle.fd, ttyHandle.fd]
@@ -914,9 +924,26 @@ export class InteractiveMode implements InteractiveModeContext {
 				trimTrailingNewline: false,
 			});
 			if (result !== null) {
-				await Bun.write(resolvedPath, result);
-				this.#renderPlanPreview(result);
-				this.showStatus("Plan updated in external editor.");
+				const current = await Bun.file(resolvedPath)
+					.text()
+					.catch(() => undefined);
+				if (
+					signal.aborted ||
+					editorEpoch !== this.#planEditorEpoch ||
+					sessionId !== this.session.sessionId ||
+					current !== currentText
+				) {
+					const draftPath = `${resolvedPath}.editor-${randomUUID()}.md`;
+					await fs.writeFile(draftPath, result, { flag: "wx", mode: 0o600 });
+					if (editorEpoch === this.#planEditorEpoch && !this.#isShuttingDown)
+						this.showStatus(`Edited plan saved separately: ${draftPath}`);
+				} else {
+					await Bun.write(resolvedPath, result);
+					if (!signal.aborted && editorEpoch === this.#planEditorEpoch && sessionId === this.session.sessionId) {
+						this.#renderPlanPreview(result);
+						this.showStatus("Plan updated in external editor.");
+					}
+				}
 			}
 		} catch (error) {
 			this.showWarning(`Failed to open external editor: ${error instanceof Error ? error.message : String(error)}`);
@@ -924,9 +951,11 @@ export class InteractiveMode implements InteractiveModeContext {
 			if (ttyHandle) {
 				await ttyHandle.close();
 			}
-			const clearScreen = settings.get("startup.clearScreen");
-			this.ui.start(clearScreen);
-			this.ui.requestRender(true);
+			if (stopped && editorEpoch === this.#planEditorEpoch && !this.#isShuttingDown) {
+				const clearScreen = settings.get("startup.clearScreen");
+				this.ui.start(clearScreen);
+				this.ui.requestRender(true);
+			}
 		}
 	}
 
@@ -1006,13 +1035,26 @@ export class InteractiveMode implements InteractiveModeContext {
 		const unsubscribeTransition = this.session.subscribeSessionTransitions(phase => {
 			if (phase === "before") abort.abort();
 		});
+		const unsubscribeDispose = this.session.addBeforeDisposeHook(() => {
+			abort.abort();
+			this.#planEditorEpoch++;
+		});
 		const task = this.#reviewPlan(details, abort.signal, toolCallId);
 		this.#planReviewTask = task;
+		this.#planReviewAbort = abort;
+		const retire = () => {
+			if (this.#planReviewTask === task) this.#planReviewTask = undefined;
+		};
+		abort.signal.addEventListener("abort", retire, { once: true });
+		if (abort.signal.aborted) retire();
 		try {
 			await task;
 		} finally {
 			unsubscribe();
 			unsubscribeTransition();
+			unsubscribeDispose();
+			abort.signal.removeEventListener("abort", retire);
+			if (this.#planReviewAbort === abort) this.#planReviewAbort = undefined;
 			if (this.#planReviewTask === task) this.#planReviewTask = undefined;
 		}
 	}
@@ -1044,17 +1086,46 @@ export class InteractiveMode implements InteractiveModeContext {
 			const source = { sessionId, toolCallId: toolCallId ?? "", planFilePath, content: planContent };
 			const withReview = <T>(action: () => T): T =>
 				toolCallId ? withPlanReviewInteraction(source, action) : action();
-			const choice = await withReview(() =>
-				this.showHookSelector(
-					"Plan mode - next step",
-					["Approve and execute", "Refine plan", "Stay in plan mode"],
-					{
-						signal,
-						helpText: this.#getPlanReviewHelpText(),
-						onExternalEditor: () => void this.#openPlanInExternalEditor(planFilePath),
-					},
-				),
-			);
+			const dialog = new AbortController();
+			const onAbort = () => dialog.abort();
+			signal.addEventListener("abort", onAbort, { once: true });
+			if (signal.aborted) dialog.abort();
+			let editing: Promise<void> | undefined;
+			let choice: string | undefined;
+			try {
+				choice = await withReview(() =>
+					this.showHookSelector(
+						"Plan mode - next step",
+						["Approve and execute", "Refine plan", "Stay in plan mode"],
+						{
+							signal: dialog.signal,
+							helpText: this.#getPlanReviewHelpText(),
+							onExternalEditor: () => {
+								if (editing || dialog.signal.aborted) return;
+								// Retire both interfaces before the editor can change the reviewed file.
+								const resume = this.session.userInteractions.pauseLocalPresentation();
+								editing = Promise.resolve()
+									.then(() => this.#openPlanInExternalEditor(planFilePath, signal))
+									.finally(resume);
+								dialog.abort();
+							},
+						},
+					),
+				);
+			} finally {
+				signal.removeEventListener("abort", onAbort);
+				dialog.abort();
+			}
+			if (editing) {
+				await editing;
+				if (signal.aborted || this.session.sessionId !== sessionId || !this.planModeEnabled) return;
+				planContent = await this.#readPlanFile(planFilePath);
+				if (!planContent) {
+					this.showError(`Plan file not found at ${planFilePath}`);
+					return;
+				}
+				continue;
+			}
 
 			if (signal.aborted || this.session.sessionId !== sessionId || !this.planModeEnabled) return;
 			if (choice === "Approve and execute") {
@@ -1114,6 +1185,8 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	stop(): void {
+		this.#planEditorEpoch++;
+		this.#planReviewAbort?.abort();
 		this.#stopRemoteBridge?.();
 		this.#stopRemoteBridge = undefined;
 		if (this.loadingAnimation) {

@@ -1,4 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
+import * as fs from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
@@ -477,6 +479,191 @@ describe("InteractiveMode plan review rendering", () => {
 		} finally {
 			finish.resolve();
 			await Promise.all([first, second]);
+		}
+	});
+
+	it.each(["save", "switch", "conflict", "dispose", "stop", "failure"])(
+		"external editing preserves ownership (%s)",
+		async action => {
+			const planFilePath = "local://PLAN.md";
+			const originalPath = resolveLocalUrlToPath(planFilePath, {
+				getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+				getSessionId: () => session.sessionId,
+			});
+			await Bun.write(originalPath, "# Original plan");
+			const startedPath = path.join(tempDir.path(), "editor-started");
+			const releasePath = path.join(tempDir.path(), "editor-release");
+			const editorPath = path.join(tempDir.path(), "fixture-editor.ts");
+			await Bun.write(
+				editorPath,
+				`await Bun.write(${JSON.stringify(startedPath)}, "ready");
+const deadline = Date.now() + 3000;
+while (!(await Bun.file(${JSON.stringify(releasePath)}).exists())) {
+ if (Date.now() > deadline) process.exit(1);
+ await Bun.sleep(5);
+}
+if (${JSON.stringify(action)} === "failure") process.exit(1);
+await Bun.write(process.argv[2], "# Edited plan");`,
+			);
+			const previousVisual = process.env.VISUAL;
+			process.env.VISUAL = `${process.execPath} ${editorPath}`;
+			const restarted = Promise.withResolvers<void>();
+			vi.spyOn(mode.ui, "stop").mockImplementation(() => {});
+			const start = vi.spyOn(mode.ui, "start").mockImplementation(() => {
+				restarted.resolve();
+			});
+			const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
+			mode.planModeEnabled = true;
+			let openEditor: (() => void) | undefined;
+			const show = mode.showHookSelector.bind(mode);
+			vi.spyOn(mode, "showHookSelector").mockImplementation((...args) => {
+				openEditor = args[2]?.onExternalEditor;
+				return show(...args);
+			});
+			const review = mode.handleExitPlanModeTool(
+				{ planFilePath, planExists: true, title: "PLAN", finalPlanFilePath: planFilePath },
+				"plan-call",
+			);
+			const waitFor = async (predicate: () => boolean | Promise<boolean>) => {
+				const deadline = Date.now() + 2000;
+				while (!(await predicate()) && Date.now() < deadline) await Bun.sleep(5);
+				expect(await predicate()).toBe(true);
+			};
+			try {
+				await waitFor(() => Boolean(openEditor));
+				const [original] = session.userInteractions.pending();
+				openEditor!();
+				await waitFor(() => Bun.file(startedPath).exists());
+				expect(session.userInteractions.respond(original.id, "Approve and execute")).toBe(false);
+				expect(session.userInteractions.pending()).toEqual([]);
+				const queued = mode.showHookInput("Queued while editing");
+				expect(mode.hookInput).toBeUndefined();
+				const [queuedRequest] = session.userInteractions.pending();
+				session.userInteractions.respond(queuedRequest.id, "Remote queued answer");
+				expect(await queued).toBe("Remote queued answer");
+				expect(prompt).not.toHaveBeenCalled();
+				let newPlanPath: string | undefined;
+				if (action === "switch") {
+					await session.newSession();
+					newPlanPath = resolveLocalUrlToPath(planFilePath, {
+						getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+						getSessionId: () => session.sessionId,
+					});
+					await Bun.write(newPlanPath, "# New session plan");
+					const nextReview = mode.handleExitPlanModeTool({
+						planFilePath,
+						planExists: true,
+						title: "PLAN",
+						finalPlanFilePath: planFilePath,
+					});
+					await waitFor(() => session.userInteractions.pending().length === 1);
+					expect(mode.hookSelector).toBeUndefined();
+					session.userInteractions.respond(session.userInteractions.pending()[0].id, "Stay in plan mode");
+					await nextReview;
+				} else if (action === "conflict") await Bun.write(originalPath, "# Concurrent plan");
+				else if (action === "dispose") await session.dispose();
+				else if (action === "stop") mode.stop();
+				await Bun.write(releasePath, "save");
+				if (action === "save" || action === "conflict" || action === "failure") {
+					await restarted.promise;
+					await waitFor(() => session.userInteractions.pending().length === 1);
+					const [updated] = session.userInteractions.pending();
+					expect(updated.id).not.toBe(original.id);
+					expect(updated.planReview?.content).toBe(
+						action === "save" ? "# Edited plan" : action === "failure" ? "# Original plan" : "# Concurrent plan",
+					);
+					session.userInteractions.respond(updated.id, "Stay in plan mode");
+				}
+				await review;
+				expect(prompt).not.toHaveBeenCalled();
+				if (action !== "save" && action !== "failure") {
+					expect(await Bun.file(originalPath).text()).toBe(
+						action === "conflict" ? "# Concurrent plan" : "# Original plan",
+					);
+					const drafts = (await readdir(path.dirname(originalPath))).filter(name =>
+						name.startsWith("PLAN.md.editor-"),
+					);
+					expect(drafts).toHaveLength(1);
+					const draftPath = path.join(path.dirname(originalPath), drafts[0]);
+					expect(await Bun.file(draftPath).text()).toBe("# Edited plan");
+					expect((await stat(draftPath)).mode & 0o777).toBe(0o600);
+				}
+				if (newPlanPath) expect(await Bun.file(newPlanPath).text()).toBe("# New session plan");
+				expect(start).toHaveBeenCalledTimes(action === "dispose" || action === "stop" ? 0 : 1);
+				if (action === "save") {
+					// A retained callback from the dismissed review must not take the terminal again.
+					openEditor!();
+					const after = mode.showHookInput("After review");
+					expect(mode.hookInput).toBeDefined();
+					session.userInteractions.respond(session.userInteractions.pending()[0].id, "Done");
+					await after;
+				}
+			} finally {
+				await Bun.write(releasePath, "finish");
+				if (action !== "dispose") {
+					if (action !== "stop") await Promise.race([restarted.promise, Bun.sleep(3500)]);
+					await session.newSession();
+				}
+				session.userInteractions.cancelAll();
+				await review;
+				if (previousVisual === undefined) delete process.env.VISUAL;
+				else process.env.VISUAL = previousVisual;
+			}
+		},
+	);
+
+	it("disposal during terminal acquisition cannot launch an editor afterward", async () => {
+		const planFilePath = "local://PLAN.md";
+		await Bun.write(
+			resolveLocalUrlToPath(planFilePath, {
+				getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+				getSessionId: () => session.sessionId,
+			}),
+			"# Original plan",
+		);
+		const acquiring = Promise.withResolvers<void>();
+		const acquired = Promise.withResolvers<fs.FileHandle>();
+		const close = vi.fn(async () => {});
+		const originalOpen = fs.open;
+		vi.spyOn(fs, "open").mockImplementation(((...args: Parameters<typeof fs.open>) => {
+			if (args[0] === "/dev/tty") {
+				acquiring.resolve();
+				return acquired.promise;
+			}
+			return originalOpen(...args);
+		}) as typeof fs.open);
+		const previousVisual = process.env.VISUAL;
+		process.env.VISUAL = "/does-not-exist-xcsh-fixture-editor";
+		const stop = vi.spyOn(mode.ui, "stop").mockImplementation(() => {});
+		const start = vi.spyOn(mode.ui, "start").mockImplementation(() => {});
+		mode.planModeEnabled = true;
+		const show = mode.showHookSelector.bind(mode);
+		const ready = Promise.withResolvers<() => void>();
+		vi.spyOn(mode, "showHookSelector").mockImplementation((...args) => {
+			ready.resolve(args[2]!.onExternalEditor!);
+			return show(...args);
+		});
+		const review = mode.handleExitPlanModeTool({
+			planFilePath,
+			planExists: true,
+			title: "PLAN",
+			finalPlanFilePath: planFilePath,
+		});
+		try {
+			(await ready.promise)();
+			await acquiring.promise;
+			await session.dispose();
+			acquired.resolve({ fd: -1, close } as unknown as fs.FileHandle);
+			await review;
+			expect(stop).not.toHaveBeenCalled();
+			expect(start).not.toHaveBeenCalled();
+			expect(close).toHaveBeenCalledTimes(1);
+		} finally {
+			acquired.resolve({ fd: -1, close } as unknown as fs.FileHandle);
+			session.userInteractions.cancelAll();
+			await review;
+			if (previousVisual === undefined) delete process.env.VISUAL;
+			else process.env.VISUAL = previousVisual;
 		}
 	});
 });
