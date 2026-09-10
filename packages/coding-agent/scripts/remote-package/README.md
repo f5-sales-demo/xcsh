@@ -42,3 +42,6 @@ SHA-256 values, image identity, checks and timings. Associate the binary hash wi
 its source/build evidence when recording a checkpoint; the executable's version
 alone does not prove its source revision. Fixture output contains no user
 credentials, voice recordings or live account state.
+
+`evidence-rename-2026-09-10.json` is the clean `9fb146da9` ten-check receipt that
+also exercises remote naming, notification, host restart and name persistence.

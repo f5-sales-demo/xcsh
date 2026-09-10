@@ -1966,3 +1966,14 @@ with `-32601`. The implemented request, response and notification validate again
 three unchanged 0.153.4 schema fixtures whose hashes are pinned in the source
 manifest. The focused session/router/schema/lifecycle matrix passes 46 tests with
 207 assertions.
+
+The packaged harness reproduced the missing method against the preceding clean
+binary as `-32601`. A clean build from `9fb146da9` then passed all ten isolated
+checks in 20.833 seconds. The added check renamed a real Beta terminal, observed
+the global notification and immediate discovery update, restarted the host, and
+confirmed the name remained. Codex, standalone Bun, the repository and package
+dependencies were absent from the network-disabled Ubuntu container. The binary
+SHA-256 is
+`638efcfb39c56d5fce78af45d98745ba739d0dabdcc27e6a92db6ec29d646a23`;
+the receipt is
+`scripts/remote-package/evidence-rename-2026-09-10.json`.

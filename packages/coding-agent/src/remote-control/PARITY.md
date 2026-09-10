@@ -540,3 +540,9 @@ user-selected terminal name, refreshes discovery metadata, and broadcasts
 does. Reload and resume retain the name. The request, response and notification
 all validate against unchanged pinned schemas. This is automated source-contract
 coverage; no new phone rename observation is claimed.
+
+The packaged red run against the previous clean artifact failed with `-32601`.
+The clean `9fb146da9` artifact passed the new live-TUI rename check and the other
+nine isolated checks, including host restart and compiled resume. Its receipt is
+`../scripts/remote-package/evidence-rename-2026-09-10.json`; this remains offline
+integration evidence rather than a phone observation.
