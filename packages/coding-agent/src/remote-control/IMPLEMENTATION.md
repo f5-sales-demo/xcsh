@@ -914,3 +914,51 @@ seconds). The model-resolution tests that received the earlier leaked timeout al
 passed; no unhandled error was reported. Workspace TypeScript/formatting, CLI
 bundle analysis and changed documentation checks passed. This does not replace
 required CI, packaged execution or the remaining manual acceptance.
+
+## Packaged independence and CLI extension-model startup
+
+The normal production build now runs in an isolated Ubuntu 24.04 container with
+no Codex, standalone Bun, repository checkout or package dependencies. Networking
+is disabled. A Bun harness outside the container drives the compiled host and two
+real TUIs through pseudo-terminals and native local IPC. The small provider
+fixture supplies deterministic model responses; the packaged agent runs its real
+write/read tools and verifies the read result before completing.
+
+The check passes default-off status, two named owners with separate identities
+and working directories, correctly routed file operations and persisted history,
+host restart, stable request replay without another turn, compiled resume with
+retained identity/history/extension model, and unregistering on terminal exit.
+The final run completed its assertions and verified container cleanup in 15.956 seconds. The repeatable harness,
+instructions and sanitized receipt are under `scripts/remote-package/`.
+
+The first launch needed a writable home for logs. A temporary noexec home then
+prevented the correctly extracted native addon from loading; the harness now
+provides an empty writable home on an ordinary executable filesystem. These were
+fixture setup failures, not missing embedded code. The first prototype's model
+selection then exposed a product defect: CLI provider-qualified selectors were
+resolved before the bootstrap extension's provider declarations reached the model
+registry. The CLI now registers those declarations before resolving selectors or
+scopes, retaining them for SDK source reconciliation. Two subprocess regression
+cases first failed for qualified and separate provider/model flags and now pass.
+The initial parameterized test draft expanded strings as flags and is not the
+failure evidence; the corrected cases reproduced the actual model/provider errors.
+
+The compiled binary SHA-256 is
+`ff8a503c086a5364adaa018429dd9ac60652b24674b12cf9178c77459ac68bde`.
+It was built from base commit `a9694ba9b` plus the CLI startup repair; the receipt
+records the full base commit, changed production file hash, harness/provider
+hashes and container image identity. The build identifies its source as dirty.
+This proves the tested artifact, not every future release or all voice/model
+variants. Enrollment is synthetic, host restart follows completed work, and no
+phone or live subscription/model acceptance is inferred. Abrupt loss during active
+work, all four live work models, final release packaging and voice remain separate
+gates. The latest focused run passed 158 tests with zero failures and 499 assertions
+across six files (12.25 seconds); workspace TypeScript and production build passed.
+
+Package checkpoint validation: the guarded package suite passed 7646 tests with
+561 skips, zero failures and 24100 assertions across 757 files (372.40 seconds).
+The final harness checks cleanup failure and writes its success receipt only after
+its container and processes are removed. Its separate final run passed with the
+same compiled binary. Runtime source and regression tests were unchanged after
+the package suite. Remaining full-history privacy findings, required CI, live
+model/voice acceptance and final release-artifact verification remain open.

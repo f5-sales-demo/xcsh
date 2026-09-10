@@ -685,6 +685,11 @@ export async function runRootCommand(rawArgs: string[]): Promise<void> {
 	const modelRegistry = new ModelRegistry(authStorage, undefined, {
 		getProviderOrder: () => registrySettings.get("modelProviderOrder"),
 	});
+	// Explicit CLI selectors and scopes must see providers loaded during bootstrap.
+	// Keep their declarations queued for the SDK's source reconciliation and reload.
+	for (const registration of preloadedExtensions?.runtime.pendingProviderRegistrations ?? []) {
+		modelRegistry.registerProvider(registration.name, registration.config, registration.sourceId);
+	}
 
 	// The three early exits below return before extensions load, so no extension flag could ever be
 	// legal on them: anything unrecognized on those paths is a typo and is reported now. Every other
