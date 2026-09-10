@@ -197,6 +197,48 @@ describe("AgentSession concurrent prompt guard", () => {
 		).toEqual([`${previousModel!.provider}/${previousModel!.id}`]);
 	});
 
+	it("a prompt waiting on credentials cannot start after session disposal", async () => {
+		await createSession();
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		vi.spyOn(session.modelRegistry, "getApiKey").mockImplementationOnce(async () => {
+			entered.resolve();
+			await release.promise;
+			return "test-key";
+		});
+		const prompt = vi.spyOn(session.agent, "prompt").mockResolvedValue();
+		const pending = session.prompt("Old instruction");
+		try {
+			await entered.promise;
+			await session.dispose();
+		} finally {
+			release.resolve();
+			await pending;
+		}
+		expect(prompt).not.toHaveBeenCalled();
+		expect(session.messages).toEqual([]);
+	});
+
+	it("session disposal settles active agent work before closing its storage", async () => {
+		await createSession();
+		const streamingAtClose: boolean[] = [];
+		const close = session.sessionManager.close.bind(session.sessionManager);
+		vi.spyOn(session.sessionManager, "close").mockImplementation(async () => {
+			streamingAtClose.push(session.agent.state.isStreaming);
+			await close();
+		});
+		const pending = session.prompt("Run until cancelled");
+		try {
+			await waitFor(() => session.agent.state.isStreaming);
+			await session.dispose();
+			expect(streamingAtClose).toEqual([false]);
+			expect(session.agent.state.isStreaming).toBe(false);
+		} finally {
+			await session.abort();
+			await pending;
+		}
+	});
+
 	it("a preparation failure restores session input and expires its creation callback", async () => {
 		await createSession();
 		let saved: (() => Promise<boolean>) | undefined;

@@ -51,3 +51,63 @@ test("a failed nested change restores listeners and permits the next operation",
 	expect(transitions.changing).toBe(false);
 	expect(await transitions.run(async () => "Recovered")).toBe("Recovered");
 });
+
+test.each(["before", "after"])(
+	"closing during %s listeners drains them and rejects the operation",
+	async blockedPhase => {
+		const transitions = new SessionTransitions();
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		const phases: string[] = [];
+		transitions.subscribe(async phase => {
+			phases.push(phase);
+			if (phase === blockedPhase) {
+				entered.resolve();
+				await release.promise;
+			}
+		});
+		let changed = false;
+		const changing = transitions
+			.run(async () => {
+				changed = true;
+				return "Changed";
+			})
+			.then(
+				value => ({ value }),
+				error => ({ error }),
+			);
+		await entered.promise;
+		transitions.beginClose();
+		let idle = false;
+		const drained = transitions.waitForIdle().then(() => {
+			idle = true;
+		});
+		try {
+			await Promise.resolve();
+			expect(idle).toBe(false);
+			expect(() => transitions.checkpoint()).toThrow("clos");
+			await expect(transitions.run(async () => "Late")).rejects.toThrow("clos");
+		} finally {
+			release.resolve();
+		}
+		const result = await changing;
+		await drained;
+		expect(result).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining("clos") }) });
+		expect(changed).toBe(blockedPhase === "after");
+		expect(phases).toEqual(["before", "after"]);
+		expect(transitions.changing).toBe(false);
+		await expect(transitions.run(async () => "Reopened")).rejects.toThrow("clos");
+	},
+);
+
+test("a failed transition also invalidates earlier asynchronous preparation", async () => {
+	const transitions = new SessionTransitions();
+	const check = transitions.checkpoint();
+	await expect(
+		transitions.run(async () => {
+			throw new Error("Storage failed");
+		}),
+	).rejects.toThrow("Storage failed");
+	expect(check).toThrow("superseded");
+	expect(() => transitions.checkpoint()()).not.toThrow();
+});

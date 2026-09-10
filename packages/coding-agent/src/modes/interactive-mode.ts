@@ -963,7 +963,7 @@ export class InteractiveMode implements InteractiveModeContext {
 		planContent: string,
 		options: { planFilePath: string; finalPlanFilePath: string; review?: { sessionId: string; entryId: string } },
 	): Promise<void> {
-		const planModePrompt = await this.session.prepareSessionChange(async createSession => {
+		const planModePrompt = await this.session.prepareSessionChange(async (createSession, assertCurrent) => {
 			const parentSession = this.session.sessionFile;
 			const sourceSessionId = this.session.sessionId;
 			const workflow = this.session.getPlanModeState()?.workflow;
@@ -973,13 +973,16 @@ export class InteractiveMode implements InteractiveModeContext {
 				getArtifactsDir: () => this.sessionManager.getArtifactsDir(),
 				getSessionId: () => this.sessionManager.getSessionId(),
 			});
+			assertCurrent();
 			const previousTools = this.#planModePreviousTools ?? this.session.getActiveToolNames();
 			await this.#exitPlanMode({ silent: true, paused: false });
+			assertCurrent();
 			try {
 				await this.handleClearCommand({ parentSession }, createSession);
+				assertCurrent();
 				if (this.session.sessionId === sourceSessionId) throw new Error("Plan execution session was not created");
 			} catch (error) {
-				if (this.session.sessionId === sourceSessionId)
+				if (!this.session.isDisposing && this.session.sessionId === sourceSessionId)
 					await this.#enterPlanMode({ planFilePath: options.finalPlanFilePath, workflow });
 				throw error;
 			}
@@ -997,8 +1000,10 @@ export class InteractiveMode implements InteractiveModeContext {
 				getSessionId: () => this.sessionManager.getSessionId(),
 			});
 			await Bun.write(newLocalPath, planContent);
+			assertCurrent();
 			if (previousTools.length > 0) {
 				await this.session.setActiveToolsByName(previousTools);
+				assertCurrent();
 			}
 			this.session.setPlanReferencePath(options.finalPlanFilePath);
 			this.session.markPlanReferenceSent();
@@ -1157,6 +1162,7 @@ export class InteractiveMode implements InteractiveModeContext {
 						review: { sessionId, entryId },
 					});
 				} catch (error) {
+					if (this.session.isDisposing) return;
 					this.showError(
 						`Failed to finalize approved plan: ${error instanceof Error ? error.message : String(error)}`,
 					);

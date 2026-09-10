@@ -2202,7 +2202,7 @@ export class AgentSession {
 				this.userInteractions.cancelAll();
 				return await change(owner);
 			} finally {
-				this.#reconnectToAgent();
+				if (!this.isDisposing) this.#reconnectToAgent();
 			}
 		}, scope);
 	}
@@ -2213,12 +2213,21 @@ export class AgentSession {
 
 	/** Keep preparation and its owned session creation inside one lifecycle boundary. */
 	prepareSessionChange<T>(
-		prepare: (createSession: (options?: NewSessionOptions) => Promise<boolean>) => Promise<T>,
+		prepare: (
+			createSession: (options?: NewSessionOptions) => Promise<boolean>,
+			assertCurrent: () => void,
+		) => Promise<T>,
 	): Promise<T> {
 		return this.#withSessionTransition(async scope => {
 			await this.abort();
-			return prepare(options => this.newSession(options, scope));
+			const assertCurrent = () => this.#sessionTransitions.assertAvailable(scope);
+			assertCurrent();
+			return prepare(options => this.newSession(options, scope), assertCurrent);
 		});
+	}
+
+	get isDisposing(): boolean {
+		return this.#sessionTransitions.closed;
 	}
 
 	/** Await consumers bound to the current storage before switching it. */
@@ -2261,6 +2270,7 @@ export class AgentSession {
 	 * Preserves all existing listeners.
 	 */
 	#reconnectToAgent(): void {
+		if (this.isDisposing) return;
 		if (this.#unsubscribeAgent) return; // Already connected
 		this.#unsubscribeAgent = this.agent.subscribe(this.#handleAgentEvent);
 	}
@@ -2287,7 +2297,10 @@ export class AgentSession {
 	 * Call this when completely done with the session.
 	 */
 	beginDispose(): void {
+		if (this.isDisposing) return;
+		this.#promptGeneration++;
 		this.#pythonExecutionDisposing = true;
+		this.#sessionTransitions.beginClose();
 	}
 
 	dispose(): Promise<void> {
@@ -2306,6 +2319,8 @@ export class AgentSession {
 			}
 		}
 		this.#beforeDisposeHooks.clear();
+		await this.abort();
+		await this.#sessionTransitions.waitForIdle();
 		try {
 			if (this.#extensionRunner?.hasHandlers("session_shutdown")) {
 				await this.#extensionRunner.emit({ type: "session_shutdown" });
@@ -3449,7 +3464,7 @@ export class AgentSession {
 	}
 
 	#isPromptCurrent(generation: number): boolean {
-		return generation === this.#promptGeneration && !this.isSessionChanging;
+		return generation === this.#promptGeneration && !this.isSessionChanging && !this.isDisposing;
 	}
 
 	async #promptWithMessage(
@@ -4265,7 +4280,7 @@ export class AgentSession {
 	 * @returns true if completed, false if cancelled by hook
 	 */
 	async newSession(options?: NewSessionOptions, scope?: SessionTransitionScope): Promise<boolean> {
-		this.#sessionTransitions.assertAvailable(scope);
+		const assertCurrent = this.#sessionTransitions.checkpoint(scope);
 		const previousSessionFile = this.sessionFile;
 		const nextDiscoverySessionToolNames = this.#mcpDiscoveryEnabled
 			? [
@@ -4281,11 +4296,14 @@ export class AgentSession {
 				reason: "new",
 			})) as SessionBeforeSwitchResult | undefined;
 
+			assertCurrent();
+
 			if (result?.cancel) {
 				return false;
 			}
 		}
 
+		assertCurrent();
 		return this.#withSessionTransition(async () => {
 			this.#disconnectFromAgent();
 			await this.abort();
@@ -4347,6 +4365,7 @@ export class AgentSession {
 	 * @returns true if completed, false if cancelled by hook or not persisting
 	 */
 	async fork(): Promise<boolean> {
+		const assertCurrent = this.#sessionTransitions.checkpoint();
 		const previousSessionFile = this.sessionFile;
 
 		// Emit session_before_switch event with reason "fork" (can be cancelled)
@@ -4356,11 +4375,14 @@ export class AgentSession {
 				reason: "fork",
 			})) as SessionBeforeSwitchResult | undefined;
 
+			assertCurrent();
+
 			if (result?.cancel) {
 				return false;
 			}
 		}
 
+		assertCurrent();
 		return this.#withSessionTransition(async () => {
 			// Flush current session to ensure all entries are written
 			await this.sessionManager.flush();
@@ -5022,6 +5044,7 @@ export class AgentSession {
 	 * @returns The handoff document text, or undefined if cancelled/failed
 	 */
 	async handoff(customInstructions?: string, options?: HandoffOptions): Promise<HandoffResult | undefined> {
+		const assertCurrent = this.#sessionTransitions.checkpoint();
 		const entries = this.sessionManager.getBranch();
 		const messageCount = entries.filter(e => e.type === "message").length;
 
@@ -5114,6 +5137,7 @@ export class AgentSession {
 				this.#promptInFlightCount = Math.max(0, this.#promptInFlightCount - 1);
 			}
 			await completionPromise;
+			assertCurrent();
 
 			if (handoffCancelled || handoffSignal.aborted) {
 				throw new Error("Handoff cancelled");
@@ -6982,6 +7006,7 @@ export class AgentSession {
 	 * @returns true if switch completed, false if cancelled by hook
 	 */
 	async switchSession(sessionPath: string): Promise<boolean> {
+		const assertCurrent = this.#sessionTransitions.checkpoint();
 		const previousSessionFile = this.sessionManager.getSessionFile();
 		const switchingToDifferentSession = previousSessionFile
 			? path.resolve(previousSessionFile) !== path.resolve(sessionPath)
@@ -6994,11 +7019,14 @@ export class AgentSession {
 				targetSessionFile: sessionPath,
 			})) as SessionBeforeSwitchResult | undefined;
 
+			assertCurrent();
+
 			if (result?.cancel) {
 				return false;
 			}
 		}
 
+		assertCurrent();
 		return this.#withSessionTransition(async () => {
 			this.#disconnectFromAgent();
 			await this.abort();
@@ -7210,6 +7238,7 @@ export class AgentSession {
 		selectedText: string;
 		cancelled: boolean;
 	}> {
+		const assertCurrent = this.#sessionTransitions.checkpoint();
 		const previousSessionFile = this.sessionFile;
 		const selectedEntry = this.sessionManager.getEntry(entryId);
 
@@ -7228,12 +7257,15 @@ export class AgentSession {
 				entryId,
 			})) as SessionBeforeBranchResult | undefined;
 
+			assertCurrent();
+
 			if (result?.cancel) {
 				return { selectedText, cancelled: true };
 			}
 			skipConversationRestore = result?.skipConversationRestore ?? false;
 		}
 
+		assertCurrent();
 		return this.#withSessionTransition(async () => {
 			// Clear pending messages (bound to old session state)
 			this.#pendingNextTurnMessages = [];
@@ -7301,6 +7333,7 @@ export class AgentSession {
 		aborted?: boolean;
 		summaryEntry?: BranchSummaryEntry;
 	}> {
+		const assertCurrent = this.#sessionTransitions.checkpoint();
 		const oldLeafId = this.sessionManager.getLeafId();
 
 		// No-op if already at target
@@ -7347,6 +7380,8 @@ export class AgentSession {
 				signal: this.#branchSummaryAbortController.signal,
 			})) as SessionBeforeTreeResult | undefined;
 
+			assertCurrent();
+
 			if (result?.cancel) {
 				return { cancelled: true };
 			}
@@ -7363,6 +7398,7 @@ export class AgentSession {
 		if (options.summarize && entriesToSummarize.length > 0 && !hookSummary) {
 			const model = this.model!;
 			const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+			assertCurrent();
 			if (!apiKey) {
 				throw new Error(`No API key for ${model.provider}`);
 			}
@@ -7375,6 +7411,7 @@ export class AgentSession {
 				reserveTokens: branchSummarySettings.reserveTokens,
 				protectProviderText: this.#obfuscator ? text => this.#obfuscator!.obfuscate(text) : undefined,
 			});
+			assertCurrent();
 			this.#branchSummaryAbortController = undefined;
 			if (result.aborted) {
 				return { cancelled: true, aborted: true };
@@ -7392,6 +7429,7 @@ export class AgentSession {
 			summaryDetails = hookSummary.details;
 		}
 
+		assertCurrent();
 		return this.#withSessionTransition(async () => {
 			// Determine the new leaf position based on target type
 			let newLeafId: string | null;

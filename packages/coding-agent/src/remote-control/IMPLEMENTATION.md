@@ -819,3 +819,47 @@ across 755 files (354.76 seconds). A subsequent fixture typing correction uses
 the exported effort enum with the same runtime value; the affected tests and
 workspace TypeScript checks were rerun. Full repository CI, existing history
 privacy findings and remaining live acceptance are still open.
+
+## Session closure and delayed lifecycle callbacks
+
+Owner disposal now marks the session as closing before asynchronous teardown.
+New prompts and lifecycle operations reject immediately, and pending prompt
+setup is invalidated. Disposal drains remote consumers, aborts and settles the
+agent, and waits for an active owned transition before closing storage. The
+transition stays closed afterward. Its before/after listeners drain even when
+closure occurs during a listener, and closure prevents a successful transition
+result from starting subsequent execution.
+
+Approved plan preparation rechecks ownership after file finalization, model
+restoration, session creation, plan persistence and tool setup. Closing before
+or after execution-session creation prevents the approved prompt from starting
+and avoids reopening an error panel in the closing terminal. These scenarios
+verify one storage close and no further session creation after closure begins.
+This is owner disposal; phone disconnection still detaches its remote adapter
+without disposing the owner.
+
+New, fork, resume, branch and tree operations capture a lifecycle revision before
+awaiting extension hooks. They recheck it before applying the hook result or
+changing storage. A completed or failed intervening transition invalidates the
+old preparation even if the session identity is unchanged. Tree summarization
+also rechecks after credentials/results, and handoff checks before replacing
+storage after its generated document completes.
+
+Observed failing tests covered five delayed extension-hook operations, storage
+closing ahead of owned preparation, a credential-delayed prompt starting after
+disposal, storage closing with a streaming agent, and closure during an after
+listener returning success. Additional controller tests close before and after
+execution-session creation and verify that no approved prompt or error panel
+opens. These are local automated checks; live terminal exit/phone presentation,
+remaining concurrent controls and protocol acceptance remain open.
+
+Closure checkpoint validation: 481 focused tests passed with 18 skips, zero
+failures and 2228 assertions across 65 files (78.28 seconds). The guarded package
+suite passed 7609 tests with 561 skips, zero failures and 23956 assertions across
+755 files (362.75 seconds). The final lifecycle fixtures then used real saved
+sessions for every delayed-hook case, reopening original and replacement history
+and verifying that no extra session file appeared. That final focused run passed
+67 tests with zero failures and 362 assertions across four files (16.43 seconds).
+Workspace TypeScript/formatting and changed documentation checks passed. Other
+asynchronous model/tool restoration callbacks and final packaged shutdown remain
+in the lifecycle audit; required CI and live phone acceptance are not complete.

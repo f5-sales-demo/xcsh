@@ -714,4 +714,51 @@ await Bun.write(process.argv[2], "# Edited plan");`,
 		expect(prompt).toHaveBeenCalledTimes(1);
 		expect(prompt.mock.calls[0][0]).toContain("# Approved plan");
 	});
+	it.each(["before", "after"])(
+		"disposal %s execution-session creation stops the approved plan without reopening UI",
+		async stage => {
+			const planFilePath = "local://PLAN.md";
+			await Bun.write(
+				resolveLocalUrlToPath(planFilePath, {
+					getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+					getSessionId: () => session.sessionId,
+				}),
+				"# Approved before shutdown",
+			);
+			mode.planModeEnabled = true;
+			const entered = Promise.withResolvers<void>();
+			const release = Promise.withResolvers<void>();
+			const clear = mode.handleClearCommand.bind(mode);
+			vi.spyOn(mode, "handleClearCommand").mockImplementation(async (...args) => {
+				if (stage === "after") await clear(...args);
+				entered.resolve();
+				await release.promise;
+				if (stage === "before") await clear(...args);
+			});
+			vi.spyOn(mode, "showHookSelector").mockResolvedValue("Approve and execute");
+			const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
+			const showError = vi.spyOn(mode, "showError");
+			const close = vi.spyOn(session.sessionManager, "close");
+			const review = mode.handleExitPlanModeTool({
+				planFilePath,
+				planExists: true,
+				title: "PLAN",
+				finalPlanFilePath: planFilePath,
+			});
+			await entered.promise;
+			const closingId = session.sessionId;
+			const disposed = session.dispose();
+			try {
+				await Bun.sleep(20);
+				expect(close).not.toHaveBeenCalled();
+			} finally {
+				release.resolve();
+				await Promise.all([review, disposed]);
+			}
+			expect(prompt).not.toHaveBeenCalled();
+			expect(showError).not.toHaveBeenCalled();
+			expect(close).toHaveBeenCalledTimes(1);
+			expect(session.sessionId).toBe(closingId);
+		},
+	);
 });

@@ -6,6 +6,9 @@ export type SessionTransitionListener = (phase: SessionTransitionPhase) => void 
 export class SessionTransitions {
 	#listeners = new Set<SessionTransitionListener>();
 	#scope?: SessionTransitionScope;
+	#revision = 0;
+	#closed = false;
+	#idle?: Promise<void>;
 	subscribe(listener: SessionTransitionListener): () => void {
 		this.#listeners.add(listener);
 		return () => {
@@ -16,7 +19,30 @@ export class SessionTransitions {
 		return this.#scope !== undefined;
 	}
 
+	get closed(): boolean {
+		return this.#closed;
+	}
+
+	beginClose(): void {
+		this.#closed = true;
+	}
+
+	waitForIdle(): Promise<void> {
+		return this.#idle ?? Promise.resolve();
+	}
+
+	/** Bind asynchronous preparation to the lifecycle state in which it began. */
+	checkpoint(scope?: SessionTransitionScope): () => void {
+		this.assertAvailable(scope);
+		const revision = this.#revision;
+		return () => {
+			this.assertAvailable(scope);
+			if (revision !== this.#revision) throw new Error("Session transition superseded this operation");
+		};
+	}
+
 	assertAvailable(scope?: SessionTransitionScope): void {
+		if (this.#closed) throw new Error("Session is closing or closed");
 		if (scope !== undefined) {
 			if (scope !== this.#scope) throw new Error("Session transition scope is no longer active");
 		} else if (this.changing) throw new Error("A session transition is already in progress");
@@ -27,12 +53,17 @@ export class SessionTransitions {
 		if (scope !== undefined) return change(scope);
 		const owner = Symbol("session transition");
 		this.#scope = owner;
+		this.#revision++;
+		const idle = Promise.withResolvers<void>();
+		this.#idle = idle.promise;
 		const listeners = [...this.#listeners];
 		let result: T | undefined;
 		let failure: { error: unknown } | undefined;
 		try {
 			for (const listener of listeners) await listener("before");
+			this.assertAvailable(owner);
 			result = await change(owner);
+			this.assertAvailable(owner);
 		} catch (error) {
 			failure = { error };
 		}
@@ -43,7 +74,14 @@ export class SessionTransitions {
 				failure ??= { error };
 			}
 		}
+		try {
+			this.assertAvailable(owner);
+		} catch (error) {
+			failure ??= { error };
+		}
 		this.#scope = undefined;
+		this.#idle = undefined;
+		idle.resolve();
 		if (failure) throw failure.error;
 		return result as T;
 	}

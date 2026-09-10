@@ -1,7 +1,8 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, test, vi } from "bun:test";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import { ModelRegistry } from "../../src/config/model-registry";
 import { Settings } from "../../src/config/settings";
+import type { ExtensionRunner } from "../../src/extensibility/extensions/runner";
 import { RemoteSession } from "../../src/remote-control/session";
 import { AgentSession } from "../../src/session/agent-session";
 import { AuthStorage } from "../../src/session/auth-storage";
@@ -10,8 +11,9 @@ import { SessionManager } from "../../src/session/session-manager";
 const cleanup: (() => unknown | Promise<unknown>)[] = [];
 afterEach(async () => {
 	for (const fn of cleanup.splice(0).reverse()) await fn();
+	vi.restoreAllMocks();
 });
-async function fixture(manager = SessionManager.inMemory("/tmp/lifecycle")) {
+async function fixture(manager = SessionManager.inMemory("/tmp/lifecycle"), extensionRunner?: ExtensionRunner) {
 	const auth = await AuthStorage.create(":memory:");
 	cleanup.push(() => auth.close());
 	const session = new AgentSession({
@@ -19,6 +21,7 @@ async function fixture(manager = SessionManager.inMemory("/tmp/lifecycle")) {
 		sessionManager: manager,
 		settings: Settings.isolated({ "compaction.enabled": false }),
 		modelRegistry: new ModelRegistry(auth),
+		extensionRunner,
 	});
 	cleanup.push(() => session.dispose());
 	const remote = new RemoteSession(session);
@@ -426,3 +429,132 @@ test.each(["steer", "interrupt"])(
 		expect(remote.history()).toEqual([]);
 	},
 );
+
+test.each(["new", "fork", "resume", "branch", "tree"])(
+	"a delayed %s extension hook cannot replace a newer session",
+	async operation => {
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		let hold = true;
+		const extensionRunner = {
+			hasHandlers: (name: string) =>
+				["session_before_switch", "session_before_branch", "session_before_tree"].includes(name),
+			emit: async (event: { type: string }) => {
+				if (hold && event.type.startsWith("session_before_")) {
+					hold = false;
+					entered.resolve();
+					await release.promise;
+				}
+			},
+		} as unknown as ExtensionRunner;
+		const { mkdtemp, readdir, rm } = await import("node:fs/promises");
+		const dir = await mkdtemp("/tmp/xcsh-delayed-lifecycle-");
+		cleanup.push(() => rm(dir, { recursive: true, force: true }));
+		const { session, manager, remote } = await fixture(SessionManager.create(dir, dir), extensionRunner);
+		const entryId = manager.appendMessage({ role: "user", content: "Original context", timestamp: 1000 });
+		manager.appendMessage({ role: "user", content: "Later context", timestamp: 2000 });
+		await manager.ensureOnDisk();
+		await manager.flush();
+		const oldId = session.sessionId;
+		const originalFile = session.sessionFile!;
+		const pending = (
+			operation === "new"
+				? session.newSession()
+				: operation === "fork"
+					? session.fork()
+					: operation === "resume"
+						? session.switchSession(originalFile)
+						: operation === "branch"
+							? session.branch(entryId)
+							: session.navigateTree(entryId)
+		).then(
+			value => ({ value }),
+			error => ({ error }),
+		);
+		let nextId: string | undefined;
+		try {
+			await entered.promise;
+			await session.prepareSessionChange(create => create());
+			nextId = session.sessionId;
+			manager.appendMessage({ role: "user", content: "Replacement context", timestamp: 3000 });
+		} finally {
+			release.resolve();
+		}
+		const result = await pending;
+		expect(result).toMatchObject({
+			error: expect.objectContaining({ message: expect.stringContaining("transition") }),
+		});
+		expect(nextId).not.toBe(oldId);
+		expect(session.sessionId).toBe(nextId);
+		expect(manager.getBranch().filter(entry => entry.type === "message")).toHaveLength(1);
+		expect(remote.thread().id).toBe(nextId);
+		await manager.ensureOnDisk();
+		await manager.flush();
+		const saved = await SessionManager.open(session.sessionFile!);
+		cleanup.push(() => saved.close());
+		const original = await SessionManager.open(originalFile);
+		cleanup.push(() => original.close());
+		expect(saved.getSessionId()).toBe(nextId);
+		expect(
+			saved
+				.getBranch()
+				.filter(entry => entry.type === "message")
+				.map(entry => entry.message),
+		).toMatchObject([{ role: "user", content: "Replacement context" }]);
+		expect(
+			original
+				.getBranch()
+				.filter(entry => entry.type === "message")
+				.map(entry => entry.message),
+		).toMatchObject([{ content: "Original context" }, { content: "Later context" }]);
+		expect((await readdir(dir)).filter(name => name.endsWith(".jsonl"))).toHaveLength(2);
+		expect(remote.history().flatMap(turn => turn.items)).toMatchObject([
+			{ type: "userMessage", content: [{ text: "Replacement context" }] },
+		]);
+	},
+);
+
+test("disposal rejects new input immediately and drains owned preparation before closing storage", async () => {
+	const { session, manager, remote } = await fixture();
+	const entered = Promise.withResolvers<void>();
+	const release = Promise.withResolvers<void>();
+	const closed: string[] = [];
+	const close = manager.close.bind(manager);
+	vi.spyOn(manager, "close").mockImplementation(async () => {
+		closed.push(session.sessionId);
+		await close();
+	});
+	const oldId = session.sessionId;
+	const preparation = session
+		.prepareSessionChange(async create => {
+			entered.resolve();
+			await release.promise;
+			return create();
+		})
+		.then(
+			value => ({ value }),
+			error => ({ error }),
+		);
+	await entered.promise;
+	const disposing = session.dispose();
+	try {
+		await Bun.sleep(20);
+		expect(closed).toEqual([]);
+		await expect(session.newSession()).rejects.toThrow("clos");
+		await expect(session.steer("Late instruction")).rejects.toThrow("clos");
+		await expect(
+			remote.call("late-close", "turn/start", {
+				threadId: oldId,
+				input: [{ type: "text", text: "Late instruction" }],
+			}),
+		).rejects.toThrow();
+	} finally {
+		release.resolve();
+	}
+	const result = await preparation;
+	await disposing;
+	expect(result).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining("clos") }) });
+	expect(closed).toEqual([oldId]);
+	expect(session.sessionId).toBe(oldId);
+	await expect(session.prompt("After close")).rejects.toThrow("clos");
+});
