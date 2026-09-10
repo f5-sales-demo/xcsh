@@ -48,8 +48,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   configuration/model discovery and standalone process requests/notifications.
 
 - `codex-rs/app-server-protocol/src/protocol/v2/realtime.rs`: voice requests and notifications.
-- `codex-rs/codex-api/src/endpoint/realtime_websocket/{methods,methods_frameless_bidi,protocol_v1,protocol_frameless_bidi}.rs`:
-  existing-call URLs, 500-byte context chunks, transcript and delegation events.
+- `codex-rs/codex-api/src/endpoint/realtime_websocket/{methods,methods_v2,methods_frameless_bidi,protocol_common,protocol_v1,protocol_v2,protocol_frameless_bidi}.rs`:
+  standalone and existing-call URLs, session updates, 500-byte context chunks,
+  transcript/delegation/control events, audio input, and v2 function outputs.
 - `codex-rs/codex-api/src/endpoint/realtime_call.rs`: subscription WebRTC call creation,
   backend JSON request, AVAS query parameters, answer SDP and call identities.
 - `codex-rs/codex-api/src/endpoint/realtime_websocket/{methods_v1,methods_common}.rs`:
@@ -58,6 +59,10 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs,/sideband.rs}`:
   selected subscription sideband headers, client-owned configuration, and v3
   reconnect backoff with stable-connection reset.
+- `codex-rs/core/src/realtime_conversation.rs`: standalone API-key authentication,
+  v1/v2/v3 defaults, v2 user/backend prefixes, response-create serialization,
+  background-agent completion/steering acknowledgements, silence handling, and
+  output-audio truncation when new speech begins.
 - `codex-rs/core/src/realtime_conversation.rs` and
   `core/src/context/realtime_{start_with_instructions,end_instructions}.rs`:
   optional backing mode instructions, UTF-8 estimated-token validation and

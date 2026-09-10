@@ -7,7 +7,10 @@
     "codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs": "1f928f1fbe3ee63ca01e16352d3dd5043a856fd406e1b3d1c65cdb795ea59795",
     "codex-rs/app-server-transport/src/transport/remote_control/websocket.rs": "5c94dc8de1effa3ff17784ed9cc710c9c1733cc289ac715b6b444eb105f6134e",
     "codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs": "2e4f16ee5c845413e5acf4411814b57589c0dd090cd0677d7cdc26138d56ec67",
+    "codex-rs/codex-api/src/endpoint/realtime_websocket/methods_v2.rs": "391ddf4fb4563ef780f2eacebd277920b56b8621083e228ac8ccb6f4a64d3e60",
+    "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_common.rs": "a60dfc4759b36799057e08bbb0732e83c9e144d7fb7dd4dde8826bf8b96cb416",
     "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_v1.rs": "9ee5ac9d9ddd2963bd5ab2359fa55e93d6c41d9405712ea9d8947885fba5faf1",
+    "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_v2.rs": "fd9f61fd400066e3109f0786b4d4d13c086b4813ee7aa0085e3fbc93c186f02b",
     "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_frameless_bidi.rs": "faa6826b1884ccceb564e8bb6bd60048f7900ffcc5b50fcacbd840b03a173515"
   }
 }

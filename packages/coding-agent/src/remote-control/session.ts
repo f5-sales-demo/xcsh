@@ -525,6 +525,15 @@ export class RemoteSession {
 					this.#assertCurrent(epoch);
 					return auth;
 				},
+				authenticateApiKey: async () => {
+					this.#assertCurrent(epoch);
+					const key = await this.target.modelRegistry.authStorage.getApiKeyFromNonOAuthSources(
+						"openai",
+						this.#boundId,
+					);
+					this.#assertCurrent(epoch);
+					return key;
+				},
 				emit: (name, value) => {
 					if (epoch === this.#epoch) this.#emit(name, value, true);
 				},
@@ -563,8 +572,11 @@ export class RemoteSession {
 			this.#voice.appendText(params.text, params.role ?? "user", method.endsWith("appendSpeech"));
 			return {};
 		}
-		if (method === "thread/realtime/appendAudio")
-			throw new ProtocolError(-32602, "Existing-call audio is owned by the phone");
+		if (method === "thread/realtime/appendAudio") {
+			if (!this.#voice) throw new ProtocolError(-32000, "Voice is not active");
+			this.#voice.appendAudio(params.audio);
+			return {};
+		}
 		if (method === "thread/settings/update") {
 			for (const key of Object.keys(params))
 				if (!["threadId", "effort", "model", "cwd", "summary"].includes(key) && params[key] != null)

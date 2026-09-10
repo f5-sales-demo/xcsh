@@ -25,7 +25,10 @@ export class CompletedVoiceHandoff {
 	#completed = new Set<string>();
 	#lastText?: string;
 	#bytes = 0;
-	constructor(private readonly send: (text: string, phase?: HandoffPhase) => void) {}
+	constructor(
+		private readonly send: (text: string, phase?: HandoffPhase) => void,
+		private readonly completed?: () => void,
+	) {}
 	update(update: VoiceOutputUpdate): void {
 		if (this.#closed || !update.done || this.#completed.has(update.id)) return;
 		if (update.id.length > 1024 || this.#completed.size >= 256) throw new Error("Realtime handoff item limit");
@@ -42,6 +45,7 @@ export class CompletedVoiceHandoff {
 	finish(result: string): void {
 		if (this.#closed) return;
 		if (result && result !== this.#lastText) this.#output(result);
+		this.completed?.();
 		this.close();
 	}
 	close(): void {

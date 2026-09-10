@@ -19,8 +19,8 @@ Completed v1 agent results include the pinned final-message marker. Tests cover
 duplicate delegation, initialization write failure, synchronous socket closure,
 early transcript ordering, and late work after closure. They use synthetic
 transport fixtures derived from the pinned Rust source, not phone recordings.
-Live v1 acceptance, standalone WebSocket, and remaining
-startup/control options are still incomplete. Recorded v3 replay remains
+Live v1 and standalone WebSocket acceptance and remaining startup/control options
+are still incomplete. Recorded v3 replay remains
 part of regression validation; no additional live parity is inferred here.
 The pinned `streams_handoff_append` gate enables incremental output only for v3.
 Legacy v1 forwards completed commentary without the final-message marker and
@@ -66,7 +66,7 @@ Sixteen work-model adapter variants cover Sol, Luna, Terra and Astra with v1/v3
 and partial/completed-only inputs. They preserve the selected model, use the
 session's ordinary delegation path and exclude reasoning content. These are
 automated source-contract tests, not live model or iPhone acceptance. Standalone
-WebSocket and remaining startup/control options stay open. The following
+live acceptance and remaining startup/control options stay open. The following
 checkpoint extends automatic output to response-item mode.
 
 ## Completed response-item delivery
@@ -426,5 +426,26 @@ The v1 audio boundary now retains sample counts and follows the pinned unsigned
 metadata bounds and fallback rules. Thirty-eight cases executed through the
 original Rust parser bodies matched xcsh; local NativeVoice tests also verify
 forwarding without storing audio or executing work, and ignore late frames.
-V3 continues to use its fixed audio metadata. Standalone transport, v2 response
-control and the remaining live capture/acceptance matrix remain open.
+V3 continues to use its fixed audio metadata. Standalone live acceptance and the
+remaining capture/acceptance matrix remain open.
+
+## Standalone WebSocket source contract
+
+Standalone voice uses API-key authentication and defaults to realtime v2. Explicit
+v1 and v3 select their pinned URLs, models, voices, alpha headers and session
+shapes. V3 waits for the first recognized `session.updated` event; a different
+recognized event or transport closure fails startup. App Server audio is forwarded
+with the version-specific input event and never persisted.
+
+The v2 parser covers transcripts, background-agent and silence function calls,
+response lifecycle, speech-start interruption and audio item metadata. Native
+output matches the pinned `[USER]`/`[BACKEND]` framing, completion and steering
+acknowledgements, response-create queue and item truncation duration. A steering
+call enters the same active AgentSession without replacing its output owner.
+
+Sixteen focused standalone cases pass with 72 assertions, and all 370 voice tests
+pass with 1592 assertions. The 64-file remote-control suite passes 864 tests with
+3344 assertions. The guarded package run passes 8251 tests with 561 skips, zero
+failures and 29599 assertions across 790 files. These are local source-contract checks. A live service
+connection, iPhone behavior, standalone reconnection, full v1/v3 standalone event
+matrices and release-artifact verification remain unproven.

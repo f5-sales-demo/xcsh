@@ -1,7 +1,7 @@
 /** Ported from Codex rust-v0.153.4 realtime protocols. See NOTICE.md and LICENSE. */
 import { ProtocolError } from "./session";
 import { handoffOptions } from "./voice-handoff";
-export type VoiceVersion = "v1" | "v3";
+export type VoiceVersion = "v1" | "v2" | "v3";
 export const voices = {
 	v1: ["juniper", "maple", "spruce", "ember", "vale", "breeze", "arbor", "sol", "cove"],
 	v2: ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"],
@@ -60,6 +60,7 @@ export function existingCallConfig(params: Record<string, unknown>) {
 	)
 		throw new ProtocolError(-32602, "Invalid realtime session identity");
 	return {
+		kind: "existingCall" as const,
 		version: version as VoiceVersion,
 		callId,
 		url:
@@ -90,7 +91,21 @@ export function contextChunks(text: string): string[] {
 export type VoiceEvent =
 	| { kind: "transcript"; done: boolean; role: "user" | "assistant"; text: string; id?: string }
 	| { kind: "delegation"; id: string; itemId?: string; text: string }
-	| { kind: "audio"; data: string; sampleRate: number; numChannels: number; samplesPerChannel?: number }
+	| { kind: "noop"; id: string; itemId: string }
+	| { kind: "sessionUpdated"; id: string }
+	| { kind: "responseCreated"; id?: string }
+	| { kind: "responseDone"; id?: string }
+	| { kind: "responseCancelled"; id?: string }
+	| { kind: "speechStarted"; itemId?: string }
+	| { kind: "itemAdded"; item: Record<string, unknown> }
+	| {
+			kind: "audio";
+			data: string;
+			itemId?: string;
+			sampleRate: number;
+			numChannels: number;
+			samplesPerChannel?: number;
+	  }
 	| { kind: "error" };
 function object(value: unknown): Record<string, any> | null {
 	return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
@@ -103,6 +118,10 @@ export function decodeVoiceEvent(version: VoiceVersion, input: unknown): VoiceEv
 	const p = object(input);
 	if (!p || typeof p.type !== "string") return null;
 	if (p.type === "error") return { kind: "error" };
+	if (p.type === "session.updated") {
+		const session = object(p.session);
+		return typeof session?.id === "string" ? { kind: "sessionUpdated", id: session.id } : null;
+	}
 	if (version === "v3") {
 		const item = object(p.item),
 			turn = object(p.turn);
@@ -151,11 +170,12 @@ export function decodeVoiceEvent(version: VoiceVersion, input: unknown): VoiceEv
 			"response.output_text.delta": ["assistant", false],
 			"response.output_audio_transcript.delta": ["assistant", false],
 			"response.output_audio_transcript.done": ["assistant", true],
+			"response.output_text.done": ["assistant", true],
 		};
 		const shape = transcriptTypes[p.type];
 		if (shape) {
 			const [role, done] = shape,
-				text = p[done ? "transcript" : "delta"];
+				text = p[done ? (p.type === "response.output_text.done" ? "text" : "transcript") : "delta"];
 			if (typeof text === "string")
 				return {
 					kind: "transcript",
@@ -166,6 +186,7 @@ export function decodeVoiceEvent(version: VoiceVersion, input: unknown): VoiceEv
 				};
 		}
 		if (
+			version === "v1" &&
 			p.type === "conversation.handoff.requested" &&
 			typeof p.handoff_id === "string" &&
 			p.handoff_id &&
@@ -173,7 +194,65 @@ export function decodeVoiceEvent(version: VoiceVersion, input: unknown): VoiceEv
 			typeof p.input_transcript === "string"
 		)
 			return { kind: "delegation", id: p.handoff_id, itemId: p.item_id, text: p.input_transcript };
-		if (p.type === "conversation.output_audio.delta") {
+		if (version === "v2" && p.type === "conversation.item.done") {
+			const item = object(p.item);
+			if (item?.type === "function_call" && item.name === "background_agent") {
+				const id = typeof item.call_id === "string" ? item.call_id : item.id;
+				if (typeof id !== "string" || !id) return null;
+				let text = typeof item.arguments === "string" ? item.arguments : "";
+				try {
+					const args = object(JSON.parse(text));
+					for (const key of ["input_transcript", "input", "text", "prompt", "query"])
+						if (typeof args?.[key] === "string" && args[key].trim()) {
+							text = args[key].trim();
+							break;
+						}
+				} catch {}
+				return { kind: "delegation", id, itemId: typeof item.id === "string" ? item.id : id, text };
+			}
+			if (item?.type === "function_call" && item.name === "remain_silent") {
+				const id = typeof item.call_id === "string" ? item.call_id : item.id;
+				if (typeof id !== "string" || !id) return null;
+				return { kind: "noop", id, itemId: typeof item.id === "string" ? item.id : id };
+			}
+		}
+		if (version === "v2" && ["conversation.item.added", "conversation.item.created"].includes(p.type)) {
+			const item = object(p.item);
+			return item ? { kind: "itemAdded", item } : null;
+		}
+		if (version === "v2" && p.type === "input_audio_buffer.speech_started")
+			return { kind: "speechStarted", ...(typeof p.item_id === "string" ? { itemId: p.item_id } : {}) };
+		if (version === "v2" && ["response.created", "response.done", "response.cancelled"].includes(p.type)) {
+			const response = object(p.response);
+			const id =
+				typeof response?.id === "string"
+					? response.id
+					: typeof p.response_id === "string"
+						? p.response_id
+						: undefined;
+			return {
+				kind:
+					p.type === "response.created"
+						? "responseCreated"
+						: p.type === "response.done"
+							? "responseDone"
+							: "responseCancelled",
+				...(id ? { id } : {}),
+			};
+		}
+		if (version === "v2" && ["response.output_audio.delta", "response.audio.delta"].includes(p.type)) {
+			if (typeof p.delta !== "string") return null;
+			const channels = p.channels ?? p.num_channels;
+			return {
+				kind: "audio",
+				data: p.delta,
+				...(typeof p.item_id === "string" ? { itemId: p.item_id } : {}),
+				sampleRate: unsigned(p.sample_rate, 0xffffffff) ? p.sample_rate : 24000,
+				numChannels: unsigned(channels, 0xffff) ? channels : 1,
+				...(unsigned(p.samples_per_channel, 0xffffffff) ? { samplesPerChannel: p.samples_per_channel } : {}),
+			};
+		}
+		if (version === "v1" && p.type === "conversation.output_audio.delta") {
 			const data = typeof p.delta === "string" ? p.delta : p.data;
 			// The pinned parser falls back only when the channels key is absent, not null/invalid.
 			const channels = Object.hasOwn(p, "channels") ? p.channels : p.num_channels;

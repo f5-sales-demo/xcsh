@@ -431,7 +431,7 @@ test("router advertises pinned voices and routes start/stop to the existing term
 	router.dispose();
 });
 
-test("session voice stop is idempotent and unsupported startup is rejected explicitly", async () => {
+test("session voice stop is idempotent and malformed startup is rejected explicitly", async () => {
 	const { RemoteSession } = await import("../../src/remote-control/session");
 	const remote = new RemoteSession({
 		sessionId: "fixture",
@@ -443,7 +443,7 @@ test("session voice stop is idempotent and unsupported startup is rejected expli
 		remote.call("start", "thread/realtime/start", {
 			threadId: "fixture",
 			outputModality: "audio",
-			transport: { type: "websocket" },
+			transport: { type: "unsupported" },
 		}),
 	).rejects.toMatchObject({ code: -32602 });
 	remote.dispose();

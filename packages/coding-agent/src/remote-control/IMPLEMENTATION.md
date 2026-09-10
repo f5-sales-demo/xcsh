@@ -145,14 +145,15 @@ Robin also paused deliberately midway through speaking and confirmed voice waite
 for the sentence to finish. Work steering/cancellation and network recovery remain pending. Earlier generic phone errors were
 adapter contract/validation failures, not evidence of native service rejection.
 
-Current limitations: standalone WebSocket remains unsupported; v1 WebRTC has source-contract tests but no live acceptance. Delegation identities persist
+Current limitations: standalone WebSocket has source-contract tests but no live
+service or phone acceptance; v1 WebRTC also has no live acceptance. Delegation identities persist
 before submission for at-most-once recovery, with an unresolved crash gap; this is
 not a complete exactly-once transaction. V3 sideband reconnect now follows the pinned 200 ms–5 s backoff, refreshes selected
 authentication, buffers up to 1 MiB of unsent output, rejects stale socket events,
 and retains delegation deduplication across reconnects. Successful writes have no
 service acknowledgement and are not speculatively replayed. Expired calls end
 cleanly. Automated recovery tests pass; live transport-drop recovery remains pending.
-Timeline events, streamed result context, and audio appends remain pending.
+Some timeline events and live streamed-result validation remain pending.
 Nonempty skill roots remain explicit errors. Full voice acceptance must precede
 merge or release.
 
@@ -1760,7 +1761,7 @@ guarded run with the final fixtures passed 8235 tests with 561 skips, zero
 failures and 29527 assertions across 789 files in 402.82 seconds. End-to-end
 NativeVoice checks cover audio forwarding, no backing-agent execution, no audio
 in stored records, and ignored frames after closure. These are synthetic wire
-checks, not new iPhone acceptance or standalone WebSocket support.
+checks, not new iPhone acceptance.
 
 ## Standalone realtime credential boundary
 
@@ -1776,4 +1777,34 @@ the minimal implementation. It verifies every precedence step and confirms an
 expired OAuth credential is neither returned nor refreshed. The complete AI
 package passed 776 tests with 456 skips, zero failures and 2129 assertions
 across 105 files in 33.17 seconds; its type check also passed. The credential
-boundary is a prerequisite and does not itself implement standalone transport.
+boundary is used by the standalone transport described below.
+
+## Standalone realtime WebSocket transport
+
+Native standalone voice now defaults to the pinned v2 conversation protocol and
+supports explicit v1 and v3. It uses the selected OpenAI provider's non-OAuth API
+key without entering subscription refresh, sends the pinned model URL, headers,
+voice, prompt/context and session shape, and accepts microphone audio from the App
+Server client. V3 waits for `session.updated` before announcing the call; v1/v2
+begin after their session update write, matching the pinned startup contract.
+
+The v2 adapter preserves `[USER]` and `[BACKEND]` prefixes, tool-argument priority,
+function-call identities, the `remain_silent` empty result, and fixed completion
+and steering acknowledgements. It serializes `response.create` requests while a
+default response is active. Output audio retains its item identity and accumulates
+sample duration; new input speech truncates only the matching played item. The
+terminal AgentSession remains the sole execution owner, and a second delegation
+steers its active turn without taking over the first output stream.
+
+The first standalone test failed because the module did not exist. Four v2 tests
+then failed on missing control parsing, prefixes/output framing, completion, and
+audio truncation. After implementation, 16 standalone tests passed with 72
+assertions. The complete voice suite passed 370 tests with zero failures and 1592
+assertions across 16 files; workspace formatting and TypeScript checks passed.
+The complete remote-control suite passed 864 tests with zero failures and 3344
+assertions across 64 files.
+The guarded package suite passed 8251 tests with 561 skips, zero failures and
+29599 assertions across 790 files in 428.34 seconds.
+The source manifest pins the v2 methods, parser and common event parser used by
+these tests. No live standalone service connection or iPhone acceptance is
+claimed, and the dedicated phone runtime remains on the prior immutable build.
