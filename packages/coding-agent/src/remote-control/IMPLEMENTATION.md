@@ -304,3 +304,13 @@ files in 324.80 seconds. Both recorded notification sequences pass with pinned
 item-schema validation. Coverage includes cancellation during startup persistence,
 interleaved partial speech at closure, late events, and speech arriving during
 attachment. Workspace formatting and TypeScript checks pass.
+
+The first reference voice file task exposed a reference-build omission: the
+backing agent required `codex-code-mode-host`, while only the CLI had been built.
+The failed delegation remains in the finalized recording. The pinned companion
+now builds with checksum-verified Codex V8 artifacts, and a reloaded Reference
+Beta passed a typed file create/read preflight with a completed file change,
+command exit code zero, and exact on-disk contents. The reproduction instructions
+now require both binaries and this live tool check. A fresh reference voice
+delegation recording is running; its phone result and native comparison remain
+pending. See `PARITY.md` for the evidence boundaries.

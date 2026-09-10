@@ -19,6 +19,36 @@ versions with `cargo update --workspace --offline` if needed, and verify that ev
 external dependency entry remains unchanged. No dependency upgrade belongs in the
 reference baseline. Run the upstream formatting and focused transport checks.
 
+Build **both** the CLI and its companion tool host from that same source and
+toolchain, leaving the executables together in the build output directory. First
+follow the pinned source's `.github/actions/setup-rusty-v8/action.yml`: download
+the matching Codex-built V8 archive, Rust bindings, and checksum manifest; verify
+both checksums; then set `RUSTY_V8_ARCHIVE` and `RUSTY_V8_SRC_BINDING_PATH` to the
+verified files. The ordinary upstream V8 download does not provide the required
+`ptrcomp_sandbox_release` artifact for this pinned version. Do not disable V8's
+sandbox or change dependency versions to make the build pass.
+
+```sh
+cargo build --locked -p codex-cli --bin codex -p codex-code-mode-host --bin codex-code-mode-host
+test -x target/debug/codex
+test -x target/debug/codex-code-mode-host
+```
+
+Building only `codex-cli` can produce a host that pairs, answers text, and speaks,
+but cannot perform workspace operations. In the pinned source,
+`ProcessOwnedCodeModeSessionProvider` requires the companion executable and
+`CodeModeService` caches availability when the session is created. If it was
+missing, end the test call and reload the reference sessions after installing it;
+merely retrying in an already loaded session is insufficient. Preserve the failed
+capture as a reference setup failure, not evidence of native xcsh behavior.
+
+Before requesting phone delegation tests, run a typed task through the reference
+App Server that creates and reads a disposable fixture file. Verify the file on
+disk and a completed tool item in the thread timeline. Pairing, verbal answers,
+and executable presence alone do not prove that the reference tools work. Keep
+this setup check separate from the phone capture and retain the normal tool and
+sandbox configuration.
+
 Start the recorder before the reference process:
 
 ```text

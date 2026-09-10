@@ -41,7 +41,7 @@ that the continuing recorder has a final completion footer.
 | Durable speech boundaries | Start, user segment, assistant segment, close in canonical timeline | Stored as voice provenance records; exposing the complete mixed canonical timeline through `thread/timeline/list` remains pending |
 | Separate subscribers | Identical notifications can be sent to multiple relay clients | Comparison selects the phone client from relay envelopes; it does not deduplicate legitimate deliveries within that client |
 | Shutdown | Both calls closed with reason `requested` | Closure waits for accepted history writes; tests cover partial speech, repeated closure, late events, and cancellation during startup flush |
-| Work delegation | No delegation during the two recall calls | Dedicated reference file creation/read-back conversation requested; comparison is pending |
+| Work delegation | First file task delegated once, but the reference agent reported its missing companion tool host and created no file | Reference setup repaired and a typed file create/read preflight passed; a successful phone delegation capture and native comparison remain pending |
 | Discovery and history | Phone requests included skills roots/listing and file reads | These include unsupported native operations; repair and corresponding reference fixtures remain pending |
 | Protocol metadata | Initial recorder redacted some valid method and item-type names | Future recordings retain pinned method literals and canonical item types; the original redactions are not reconstructed |
 | Network recovery | Reference airplane-mode conversation not yet recorded | Native fresh-call recovery is accepted after complete network loss; identical behavior is not established |
@@ -52,3 +52,29 @@ The recorded fixture is
 Private speech is replaced only in replay input. The observed notification order
 and schema validation are independent assertions; they do not prove identical
 spoken semantics, latency, or the remaining untested workflows.
+
+## Reference tool-host repair
+
+The first reference file-creation attempt reached the backing agent: the sideband
+recorded one `delegation.created` and 14 context appends with 14 acknowledgements.
+Robin heard that workspace tools were unavailable. The saved voice transcript
+and agent response identify a missing host, and the requested fixture did not
+exist. The isolated build had included only `codex-cli`, omitting its required
+`codex-code-mode-host` companion. This is a reference setup failure, not a native
+xcsh interoperability result.
+
+The companion was built from the same pinned source using the Codex-published
+V8 archive and bindings, with both checksums verified as required by upstream's
+`setup-rusty-v8` action. No tool mode or sandbox setting was relaxed. After the
+call closed and both threads were idle, the reference host was restarted to
+clear cached tool availability. A typed task in Reference Beta then created
+`reference-tool-preflight.txt` containing `REFERENCE-TOOLS-READY` and a newline,
+and read it back through a command tool. The file-change item completed, the
+command completed with exit code zero, the turn completed, and disk contents
+matched exactly. This is tool preflight evidence; successful phone delegation
+still requires a new recording and Robin's observation.
+
+The original phone recording was finalized with 3846 events and a complete
+footer, with no producer-failure sentinel. It retains the failed attempt. The
+typed preflight ran outside that capture. A fresh recorder and reloaded
+reference sessions are prepared for the voice delegation retry.
