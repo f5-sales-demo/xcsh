@@ -98,6 +98,20 @@ automated native/source-contract checks. Canonical timeline promotions, standalo
 WebSocket, remaining control/recovery coverage and live item-mode phone acceptance
 are still outstanding.
 
+## Canonical timeline reducer coverage
+
+Speech persistence now uses a port of the pinned history reducer with ordered
+effects, UUID v7 identities, empty continuations and bounded final-only input.
+Reducer tests also cover inline/whole-item promotion, transcript splitting, turn
+association, late output and FIFO handoffs across calls. Twenty-five presentation
+expectations run the original Rust selector and constants independently of xcsh.
+
+Ordinary backing events are not yet connected to this reducer, and the native
+session does not yet retain its history owner across calls. Correct command/file
+item mapping and before/after source-event persistence are prerequisites for that
+integration. The direct reducer/wrapper tests do not establish phone timeline or
+complete source-event ordering parity.
+
 ## Explicit voice mode instructions
 
 The pinned core accepts optional start/end instructions for WebRTC and

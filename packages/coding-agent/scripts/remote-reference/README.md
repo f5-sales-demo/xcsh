@@ -25,6 +25,22 @@ Set `TMPDIR` to choose where the temporary reference executable is compiled. The
 generator removes its temporary directory after completion. This is source-contract
 evidence and does not replace recorded phone conversations.
 
+## Timeline presentation source fixtures
+
+`timeline-presentation.ts` compiles the original pinned Rust
+`observe_assistant_message` method and constants, using small output-type adapters.
+It checks the source hash and generates 25 presentation cases covering directive
+position, optional headers, Unicode whitespace, line endings and code fences.
+The native reducer compares against these independent expectations. This does
+not establish that every native agent item is connected to the timeline.
+
+```sh
+bun packages/coding-agent/scripts/remote-reference/timeline-presentation.ts /path/to/pinned-codex-source
+```
+
+Rust is needed only for regeneration. `TMPDIR` controls the temporary build
+directory, which the generator removes afterward.
+
 ## Reference preparation
 
 Use a separate copy of the pinned source. `bun install.ts <source-directory>`

@@ -74,6 +74,14 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   reducer; reasoning and tool-call content do not.
 - `codex-rs/core/src/realtime_history.rs`: session boundary items, separate user
   and assistant transcript segments, streamed item deltas, and closure sealing.
+  The native reducer also ports speech continuations, turn/call association,
+  promotion deduplication and effect ordering. Pinned source SHA-256:
+  `b8195c1b27caa58af63b9cb66d438ba36f3c4b642324825d2164a9a1ec61e36a`.
+- `codex-rs/core/src/realtime_history/presentation.rs`: inline Markdown and
+  visualization directives, Rust whitespace/line semantics, code fences and
+  whole-item selection. The fixture generator compiles the original text selector
+  and constants after verifying source SHA-256
+  `511a037bdefd287b8dfaf965943881158d8d03a26e0e75dcfb28a172b066dd61`.
 - `codex-rs/core/src/realtime_context.rs` and `utils/string/src/truncate.rs`:
   the completed-output token budget, UTF-8 boundaries and truncation marker.
   Reference fixtures run the original pinned functions independently of xcsh.

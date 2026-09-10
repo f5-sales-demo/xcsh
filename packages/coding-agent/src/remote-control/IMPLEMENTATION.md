@@ -1241,3 +1241,44 @@ Networking was disabled and enrollment/model output were synthetic. This verifie
 compiled integration, not live voice. A read-only live audit separately confirmed
 the existing Alpha/Beta owners were idle with unchanged identities, Luna/Astra
 models and 18/52 saved messages; their processes were not restarted.
+
+## Canonical voice timeline reducer
+
+`VoiceTimeline` ports the pinned history state machine behind speech persistence.
+It preserves empty transcript continuations, splits active speech around promoted
+items, deduplicates presentations, records turn/call associations and retains
+late work's original call identity. The reducer marks typed-input effects for
+delivery before their source item and presentation effects for delivery afterward.
+Source-contract tests cover those ordering flags,
+streamed directives, FIFO handoffs, interrupted turns and whole-item eligibility.
+Generated timeline identities now use UUID v7, matching the pinned core.
+
+The existing `VoiceHistory` persistence wrapper now uses the reducer and serializes
+its effects through a single queue. Five failing wrapper tests exposed empty
+delta/final duplication, a missing final-only size bound, missing promotion input
+and closure racing a pending transcript write. The replacement preserves the
+existing transcript/start/close notification interface. Its direct API can retain
+one history owner across calls, which is verified independently of session wiring.
+
+The reducer's initial behavior tests produced 13 passes and 24 failures. A later
+empty-identity case also failed before correction. The final focused subset passed
+69 tests with 108 assertions. Twenty-five expectations come from compiling the
+original pinned Rust presentation method and constants; native selections match
+exactly for headers, line endings, code fences and Unicode whitespace, including
+NEL and BOM differences between Rust and JavaScript. The generator checks source
+hashes and removes its temporary executable. No service/phone evidence is inferred.
+
+This checkpoint does not complete backing-item timeline integration. `NativeVoice`
+still creates a history wrapper per call, and `RemoteSession` does not yet feed
+ordinary items into it. Integration must preserve source-event order and retain
+one history owner across calls and late turns. Native command/file history must
+also be mapped correctly before whole-item selection is enabled: treating every
+built-in tool as a dynamic tool would promote items the pinned core excludes.
+These remain active work, together with the broader acceptance matrix.
+
+The guarded coding-agent package suite passed 7855 tests, 561 skips, zero failures
+and 24984 assertions across 766 files in 373.33 seconds. All six source/test hashes
+remained unchanged. Workspace TypeScript, CLI bundling, changed-document Markdown
+and terminology checks passed; staged privacy and secret scans were clean. The
+complete remote suite had separately passed 512 tests before the two additional
+identity cases, which are included in the final package result.
