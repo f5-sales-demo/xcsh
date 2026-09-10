@@ -8,6 +8,68 @@ import {
 } from "@f5-sales-demo/pi-tui";
 import { theme } from "../theme/theme";
 
+export interface SelectorFrameRow {
+	content: string;
+	selected: boolean;
+}
+
+export type SelectorFrameLine = string | SelectorFrameRow;
+
+export interface SelectorFrameOptions {
+	/** Index of the selected row in `body`; used to retain it when the frame is height-constrained. */
+	selectedBodyIndex?: number;
+	/** Leading body rows, such as table headings, that remain visible while the choices scroll. */
+	stickyBodyRows?: number;
+	/** Optional upper bound for body rows in otherwise tall terminals. */
+	maxBodyRows?: number;
+	/** Intentional stable detail area for asynchronous status updates. Empty caller entries are still discarded. */
+	minimumDetailRows?: number;
+}
+
+function selectorFrameColumns(width: number): number {
+	return Math.max(4, Math.min(100, width));
+}
+
+export function selectorFramePadding(width: number): number {
+	return selectorFrameColumns(width) >= 80 ? 2 : 1;
+}
+
+/** Width available to aligned headings, rows, details and controls inside the shared gutters. */
+export function selectorFrameContentWidth(width: number): number {
+	const columns = selectorFrameColumns(width);
+	return Math.max(1, columns - 2 - selectorFramePadding(columns) * 2);
+}
+
+function hasVisibleContent(value: string): boolean {
+	return visibleWidth(value.replace(/[\r\n]+/g, "").trim()) > 0;
+}
+
+function normalizeLine(value: string): string {
+	return value.replace(/[\r\n]+/g, " · ");
+}
+
+function wrapSection(values: string[], width: number): string[] {
+	return values.flatMap(value => {
+		if (!hasVisibleContent(value)) return [];
+		return wrapTextWithAnsi(normalizeLine(value), width).filter(hasVisibleContent);
+	});
+}
+
+function windowBody(
+	body: SelectorFrameLine[],
+	visibleRows: number,
+	selectedIndex: number | undefined,
+	stickyRows: number,
+): SelectorFrameLine[] {
+	if (visibleRows <= 0) return [];
+	if (body.length <= visibleRows) return body;
+	const stickyCount = Math.min(stickyRows, visibleRows - 1, body.length);
+	const capacity = visibleRows - stickyCount;
+	const selected = Math.max(stickyCount, Math.min(selectedIndex ?? stickyCount, body.length - 1));
+	const start = Math.max(stickyCount, Math.min(selected - capacity + 1, body.length - capacity));
+	return [...body.slice(0, stickyCount), ...body.slice(start, start + capacity)];
+}
+
 /** A single bounded frame shared by provider, model and connection choices. */
 export function selectorFrame(
 	width: number,
@@ -15,45 +77,118 @@ export function selectorFrame(
 	title: string,
 	purpose: string,
 	navigation: string[],
-	body: string[],
+	body: SelectorFrameLine[],
 	details: string[],
 	footer: string[],
+	options: SelectorFrameOptions = {},
 ): string[] {
-	const columns = Math.max(4, Math.min(100, width));
-	const inner = columns - 4;
-	const box = theme.boxSharp;
-	const edge = theme.fg("border", box.vertical);
-	const horizontal = theme.fg("border", box.horizontal.repeat(columns));
-	const line = (value: string) => {
-		const fitted = truncateToWidth(value.replace(/[\r\n]+/g, " · "), inner);
-		return `${edge} ${fitted}${" ".repeat(Math.max(0, inner - visibleWidth(fitted)))} ${edge}`;
+	const columns = selectorFrameColumns(width);
+	const padding = selectorFramePadding(columns);
+	const contentWidth = selectorFrameContentWidth(columns);
+	const box = theme.boxRound;
+	const sharp = theme.boxSharp;
+	const border = (value: string) => theme.fg("border", value);
+	const edge = border(box.vertical);
+	const top = border(`${box.topLeft}${box.horizontal.repeat(columns - 2)}${box.topRight}`);
+	const divider = border(`${sharp.teeRight}${box.horizontal.repeat(columns - 2)}${sharp.teeLeft}`);
+	const bottom = border(`${box.bottomLeft}${box.horizontal.repeat(columns - 2)}${box.bottomRight}`);
+	const line = (value: SelectorFrameLine) => {
+		const row = typeof value === "string" ? undefined : value;
+		const fitted = truncateToWidth(normalizeLine(typeof value === "string" ? value : value.content), contentWidth);
+		const content = `${" ".repeat(padding)}${fitted}${" ".repeat(
+			Math.max(0, contentWidth - visibleWidth(fitted)),
+		)}${" ".repeat(padding)}`;
+		return row?.selected
+			? `${edge}${theme.bg("selectedBg", theme.fg("text", content))}${edge}`
+			: `${edge}${content}${edge}`;
 	};
-	const head = [theme.bold(title), ...(purpose ? [theme.fg("muted", purpose)] : []), ...navigation];
-	const tail = [
-		...details.slice(0, Math.max(0, height - head.length - footer.length - 5)),
-		...footer.map(value => theme.fg("muted", value)),
-	];
-	const budget = Math.max(0, height - head.length - tail.length - 3);
+
+	const heading = [theme.bold(normalizeLine(title))];
+	const purposeLines = wrapSection(purpose ? [purpose] : [], contentWidth)
+		.slice(0, 2)
+		.map(value => theme.fg("muted", value));
+	const navigationLines = navigation.filter(hasVisibleContent).map(normalizeLine);
+	const detailLines = wrapSection(details, contentWidth);
+	while (detailLines.length < (options.minimumDetailRows ?? 0)) detailLines.push("");
+	const footerLines = wrapSection(footer, contentWidth).map(value => theme.fg("muted", value));
+	const normalizedBody = body.filter(value => typeof value !== "string" || hasVisibleContent(value));
+
+	const gaps = {
+		headingToNavigation: navigationLines.length > 0,
+		bodyToDetails: normalizedBody.length > 0 && detailLines.length > 0,
+		detailsToFooter: detailLines.length > 0 && footerLines.length > 0,
+	};
+	const gapCount = () => Object.values(gaps).filter(Boolean).length;
+	const fixedRows = () =>
+		2 +
+		heading.length +
+		purposeLines.length +
+		navigationLines.length +
+		1 +
+		detailLines.length +
+		footerLines.length +
+		gapCount();
+	const preferredBodyRows = Math.min(normalizedBody.length, options.maxBodyRows ?? normalizedBody.length);
+
+	// Spacing is intentionally optional: preserve the information and controls before whitespace.
+	for (const gap of ["headingToNavigation", "bodyToDetails", "detailsToFooter"] as const) {
+		if (fixedRows() + preferredBodyRows <= height) break;
+		gaps[gap] = false;
+	}
+
+	let bodyRows = Math.min(preferredBodyRows, Math.max(0, height - fixedRows()));
+	let visibleBody = windowBody(
+		normalizedBody,
+		bodyRows,
+		options.selectedBodyIndex,
+		Math.max(0, options.stickyBodyRows ?? 0),
+	);
+
+	// Pathological tiny terminals still keep the enclosure intact. Normal supported sizes do not enter this branch.
+	const nonBodyRows = fixedRows();
+	if (nonBodyRows > height) {
+		const overflow = nonBodyRows - height;
+		detailLines.splice(Math.max(1, detailLines.length - overflow));
+		bodyRows = Math.min(preferredBodyRows, Math.max(0, height - fixedRows()));
+		visibleBody = windowBody(
+			normalizedBody,
+			bodyRows,
+			options.selectedBodyIndex,
+			Math.max(0, options.stickyBodyRows ?? 0),
+		);
+	}
+
 	return [
-		horizontal,
-		...head.map(line),
-		horizontal,
-		...body.slice(0, budget).map(line),
-		...tail.map(line),
-		horizontal,
+		top,
+		...heading.map(line),
+		...purposeLines.map(line),
+		...(gaps.headingToNavigation ? [line("")] : []),
+		...navigationLines.map(line),
+		divider,
+		...visibleBody.map(line),
+		...(gaps.bodyToDetails ? [line("")] : []),
+		...detailLines.map(line),
+		...(gaps.detailsToFooter ? [line("")] : []),
+		...footerLines.map(line),
+		bottom,
 	];
 }
 
-export function selectorRow(cells: string[], widths: number[], selected = false): string {
+export function selectorRow(
+	cells: string[],
+	widths: number[],
+	selected = false,
+	tone: "text" | "muted" = "text",
+): SelectorFrameRow {
 	const row = cells
 		.map((cell, index) => {
-			const width = widths[index];
+			const width = Math.max(0, widths[index] ?? 0);
 			const fitted = truncateToWidth(cell, width);
 			return fitted + " ".repeat(Math.max(0, width - visibleWidth(fitted)));
 		})
 		.join("  ");
 	const text = `${selected ? theme.nav.cursor : " "} ${row}`;
-	return selected ? theme.bg("selectedBg", theme.fg("text", text)) : theme.fg("text", text);
+	return { content: theme.fg(tone, text), selected };
 }
 
 type SelectorAction = "up" | "down" | "confirm" | "cancel" | "pageUp" | "pageDown";
@@ -101,21 +236,17 @@ export class ConnectionChoiceComponent extends Container {
 		super();
 	}
 	override render(width: number): string[] {
-		const available = Math.max(1, this.rows() - 10);
-		const start = Math.max(0, this.#selected - available + 1);
+		const contentWidth = selectorFrameContentWidth(width);
 		return selectorFrame(
 			width,
 			this.rows(),
 			this.title,
 			this.purpose,
 			[],
-			this.choices
-				.slice(start, start + available)
-				.map((choice, index) =>
-					selectorRow([choice.label], [Math.min(100, width) - 6], start + index === this.#selected),
-				),
+			this.choices.map((choice, index) => selectorRow([choice.label], [contentWidth - 2], index === this.#selected)),
 			[this.choices[this.#selected]?.description ?? ""],
 			[selectorNavigationHint(), selectorCancelHint()],
+			{ selectedBodyIndex: this.#selected },
 		);
 	}
 	handleInput(data: string): void {
@@ -139,7 +270,7 @@ export class ConnectionInputComponent extends Container {
 		super();
 	}
 	override render(width: number): string[] {
-		const inner = Math.max(1, Math.min(100, width) - 4);
+		const inner = selectorFrameContentWidth(width);
 		return selectorFrame(
 			width,
 			this.rows(),
