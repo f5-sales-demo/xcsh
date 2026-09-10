@@ -2,6 +2,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import { closeSync, constants, fstatSync, lstatSync, openSync, writeSync } from "node:fs";
 import { dirname } from "node:path";
+import pinnedMethods from "./protocol-methods.json";
+
+// Literal method names from the pinned ClientRequest/ServerRequest/ServerNotification schemas.
+const protocolMethods = new Set(pinnedMethods);
 
 const credentials = new Set([
 	"authorization",
@@ -33,6 +37,10 @@ const protocolKeys = new Set([
 	"architecture",
 ]);
 const protocolValues = new Set([
+	"realtimeSessionStarted",
+	"transcriptSegment",
+	"realtimeSessionClosed",
+	"bemItemPromoted",
 	"client_message",
 	"client_message_chunk",
 	"client_closed",
@@ -104,6 +112,7 @@ export function redactProtocolValue(value: unknown, salt: string): unknown {
 		if (/id$/.test(name) && (typeof value === "string" || typeof value === "number"))
 			return { $ref: createHash("sha256").update(salt).update(JSON.stringify(value)).digest("hex").slice(0, 24) };
 		if (typeof value === "string") {
+			if (name === "method" && protocolMethods.has(value)) return value;
 			if (protocolKeys.has(name) && (protocolValues.has(value) || (value.length <= 160 && protocolName.test(value))))
 				return value;
 			return {

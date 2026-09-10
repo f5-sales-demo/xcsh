@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
+import Ajv from "ajv";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
 import { contextChunks, decodeVoiceEvent, existingCallConfig } from "../../src/remote-control/voice-protocol";
+import phoneRecall from "./fixtures/codex-0.153.4-phone-recall.json";
+import itemCompletedSchema from "./fixtures/ThreadRealtimeItemCompletedNotification.json";
+import itemStartedSchema from "./fixtures/ThreadRealtimeItemStartedNotification.json";
+import itemDeltaSchema from "./fixtures/ThreadRealtimeItemTranscriptDeltaNotification.json";
 
 const start = {
 	transport: { type: "existingCall", callId: "fixture-call" },
@@ -63,6 +68,57 @@ const delegation = {
 	item: { type: "delegation", target: "client", id: "d1", content: [{ type: "input_text", text: "change fixture" }] },
 };
 
+test.each(phoneRecall.scenarios)("native voice reproduces the recorded $name notification sequence", async scenario => {
+	const f = fixture();
+	f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
+	await f.voice.start({
+		version: "v3",
+		outputModality: "audio",
+		includeStartupContext: false,
+		realtimeSessionId: "fixture-session",
+		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+	});
+	const texts = { user: "", assistant: "" };
+	for (const row of scenario.events) {
+		const event = row.message as { method: string; params: { role?: "user" | "assistant" } };
+		if (row.direction !== "out" || !event.params.role) continue;
+		const role = event.params.role;
+		if (event.method === "thread/realtime/transcript/delta") {
+			// Private speech is deliberately replaced; frame count, roles, and order come from the recording.
+			texts[role] += "fixture ";
+			f.receive({
+				type: role === "user" ? "input_transcript.added" : "output_transcript.added",
+				item: { text: "fixture " },
+			});
+		} else if (event.method === "thread/realtime/transcript/done") {
+			f.receive({ type: "turn.done", turn: { id: `fixture-${role}`, role, transcript: texts[role] } });
+		}
+		await Bun.sleep(0);
+	}
+	await f.voice.stop();
+	expect(f.events.map(event => event.method)).toEqual(
+		scenario.events.filter(row => row.direction === "out").map(row => row.message.method),
+	);
+	const completed = f.records.filter(record => record.kind === "voiceTimeline");
+	expect(completed).toHaveLength(4);
+	expect(f.delegated).toEqual([]);
+	const ajv = new Ajv({ strict: false });
+	ajv.addFormat("uint32", {
+		type: "number",
+		validate: value => Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff,
+	});
+	for (const [method, schema] of [
+		["thread/realtime/item/started", itemStartedSchema],
+		["thread/realtime/item/completed", itemCompletedSchema],
+		["thread/realtime/item/transcript/delta", itemDeltaSchema],
+	] as const) {
+		const validate = ajv.compile(schema);
+		for (const event of f.events.filter(event => event.method === method)) {
+			expect(validate({ threadId: "fixture-thread", ...event.params })).toBe(true);
+		}
+	}
+});
+
 test("pinned existing-call URL encodes one path segment and retains client-owned configuration", () => {
 	expect(existingCallConfig(start)).toMatchObject({ version: "v3", url: "wss://api.openai.com/v1/live/fixture-call" });
 	expect(existingCallConfig({ ...start, version: "v1" }).url).toBe(
@@ -122,7 +178,7 @@ test("existing-call attachment never sends session.update or changes the work mo
 	const f = fixture();
 	await f.voice.start(start);
 	expect(f.sent).toEqual([]);
-	expect(f.events[0]).toMatchObject({ method: "thread/realtime/started", params: { version: "v3" } });
+	expect(f.events[2]).toMatchObject({ method: "thread/realtime/started", params: { version: "v3" } });
 	f.voice.stop();
 	expect(f.closed()).toBe(1);
 });
@@ -169,7 +225,7 @@ test("ending voice leaves agent work running and ignores late events and output"
 	await f.voice.start(start);
 	f.receive(delegation);
 	await Bun.sleep(0);
-	f.voice.stop();
+	await f.voice.stop();
 	const count = f.events.length;
 	f.finish("late answer");
 	f.receive({ type: "output_transcript.added", item: { text: "late speech" } });
@@ -190,6 +246,73 @@ test("voice startup failures and backend errors never disclose raw credential or
 	await Bun.sleep(0);
 	expect(JSON.stringify(g.events)).not.toContain("fixture-secret");
 	expect(g.closed()).toBe(1);
+});
+
+test("stopping while startup history is flushing cannot reopen or announce a late voice session", async () => {
+	const f = fixture();
+	let release: () => void = () => {};
+	const original = f.deps.record;
+	f.deps.record = async record => {
+		await original(record);
+		if (record.kind === "voiceTimeline" && (record.item as any)?.type === "realtimeSessionStarted")
+			await new Promise<void>(resolve => {
+				release = resolve;
+			});
+	};
+	const starting = f.voice.start(start).catch(error => error);
+	await Bun.sleep(0);
+	const stopping = f.voice.stop();
+	release();
+	expect(await starting).toBeInstanceOf(Error);
+	await stopping;
+	expect(f.voice.active).toBe(false);
+	expect(f.events.some(event => event.method === "thread/realtime/started")).toBe(false);
+	expect(f.events.at(-1)?.method).toBe("thread/realtime/closed");
+});
+
+test("voice closure persists interleaved partial speech once before the final closure notification", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.receive({ type: "output_transcript.added", item: { text: "first" } });
+	f.receive({ type: "input_transcript.added", item: { text: "second" } });
+	await f.voice.stop();
+	const speech = f.records.filter(
+		record => record.kind === "voiceTimeline" && (record.item as any).type === "transcriptSegment",
+	);
+	expect(speech.map(record => [(record.item as any).role, (record.item as any).text])).toEqual([
+		["assistant", "first"],
+		["user", "second"],
+	]);
+	const count = f.events.length;
+	await f.voice.stop();
+	f.receive({ type: "turn.done", turn: { id: "late", role: "user", transcript: "second" } });
+	await Bun.sleep(0);
+	expect(f.events).toHaveLength(count);
+	expect(f.events.at(-1)?.method).toBe("thread/realtime/closed");
+});
+
+test("speech received during attachment waits for the canonical session start", async () => {
+	const f = fixture();
+	const open = f.deps.open!;
+	f.deps.open = async (url, headers, handlers) => {
+		const socket = await open(url, headers, handlers);
+		handlers.message(JSON.stringify({ type: "input_transcript.added", item: { text: "early speech" } }));
+		await Bun.sleep(0);
+		return socket;
+	};
+	await f.voice.start(start);
+	await f.voice.stop();
+	expect(f.events.slice(0, 3).map(event => event.method)).toEqual([
+		"thread/realtime/item/started",
+		"thread/realtime/item/completed",
+		"thread/realtime/started",
+	]);
+	expect(f.records).toContainEqual(
+		expect.objectContaining({
+			kind: "voiceTimeline",
+			item: expect.objectContaining({ type: "transcriptSegment", text: "early speech" }),
+		}),
+	);
 });
 test("malformed and oversized incoming frames close voice without executing work", async () => {
 	const f = fixture();
@@ -371,8 +494,13 @@ test("WebRTC creates the native call, forwards answer SDP and attaches without o
 		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
 	});
 	expect(created).toBe(true);
-	expect(f.events.map(event => event.method)).toEqual(["thread/realtime/started", "thread/realtime/sdp"]);
-	expect(f.events[1].params.sdp).toBe("v=0\r\nfixture-answer");
+	expect(f.events.map(event => event.method)).toEqual([
+		"thread/realtime/item/started",
+		"thread/realtime/item/completed",
+		"thread/realtime/started",
+		"thread/realtime/sdp",
+	]);
+	expect(f.events[3].params.sdp).toBe("v=0\r\nfixture-answer");
 	expect(f.sent).toEqual([]);
 	f.voice.stop();
 });

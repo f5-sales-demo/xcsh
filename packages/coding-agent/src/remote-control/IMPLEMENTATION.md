@@ -287,3 +287,20 @@ observation patch applies cleanly to the pristine pinned source. The existing
 Codex daemon and the reference host both report connected, with distinct
 enrollment identities. The instrumented reference passes all 148 upstream
 app-server transport tests, including relay replay, refresh, and retry behavior.
+
+Robin has now completed the two reference voice recall conversations. Both spoke
+aloud; exact marker correctness was independently verified in the saved canonical
+assistant voice transcripts. The phone-client event sequences are preserved as
+a redacted fixture. Missing native session/transcript item notifications were
+implemented from the pinned history reducer and now reproduce both recorded
+notification sequences under synthetic replay, with payload validation against
+the pinned item schemas. The detailed observations, limits, and remaining gaps
+are in `PARITY.md`. A reference delegated file task and matching native captures
+are still pending. The new timeline behavior has not yet been retested on iPhone.
+
+Reference-recall repair validation: 151 focused tests / 540 assertions; complete
+package suite 7389 passes, 561 skips, zero failures / 22812 assertions across 736
+files in 324.80 seconds. Both recorded notification sequences pass with pinned
+item-schema validation. Coverage includes cancellation during startup persistence,
+interleaved partial speech at closure, late events, and speech arriving during
+attachment. Workspace formatting and TypeScript checks pass.

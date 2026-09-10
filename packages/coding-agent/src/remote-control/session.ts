@@ -204,13 +204,14 @@ export class RemoteSession {
 	async #execute(method: string, params: Record<string, unknown>): Promise<unknown> {
 		if (params.threadId !== this.target.sessionId) throw new ProtocolError(-32602, "Thread not found");
 		if (method === "thread/realtime/stop") {
-			this.#voice?.stop();
+			await this.#voice?.stop();
 			return {};
 		}
 		if (method === "thread/realtime/start") {
 			const { NativeVoice } = await import("./voice");
 			const { loadRemoteSubscription } = await import("./auth");
 			if (this.#voice?.active) throw new ProtocolError(-32000, "Voice is already active");
+			await this.#voice?.stop();
 			this.#voice = new NativeVoice({
 				context: () =>
 					JSON.stringify(

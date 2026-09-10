@@ -5,6 +5,7 @@ import tailTemplate from "../prompts/system/remote-voice-tail.md" with { type: "
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
+import { VoiceHistory } from "./voice-history";
 import { contextChunks, decodeVoiceEvent, existingCallConfig, type VoiceEvent } from "./voice-protocol";
 
 import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-socket";
@@ -36,6 +37,11 @@ function safeConnectionError(error: unknown): string {
 	return `Native realtime connection failed${status ? ` (HTTP ${status})` : ""}`;
 }
 export class NativeVoice {
+	#history?: VoiceHistory;
+	#closing?: Promise<void>;
+	#ready = false;
+	#openingInputs: string[] = [];
+	#openingBytes = 0;
 	#tail: { role: "user" | "assistant"; text: string; done: boolean }[] = [];
 	#promotedFinal = new Map<string, string>();
 	#flushTail = false;
@@ -112,6 +118,14 @@ export class NativeVoice {
 				this.#endInstructions =
 					typeof params.realtimeEndInstructions === "string" ? params.realtimeEndInstructions : undefined;
 				this.#started = true;
+				this.#history = new VoiceHistory(
+					sessionId,
+					record => this.deps.record(record),
+					(method, params) => this.deps.emit(method, params),
+				);
+				this.#chain = this.#history.start();
+				await this.#chain;
+				if (!this.active) throw new Error("Voice stopped during history initialization");
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
 				this.deps.emit("thread/realtime/sdp", { sdp: call.sdp });
 			}
@@ -127,9 +141,22 @@ export class NativeVoice {
 			this.#connectedAt = Date.now();
 			if (!this.#started) {
 				this.#started = true;
+				this.#history = new VoiceHistory(
+					sessionId,
+					record => this.deps.record(record),
+					(method, params) => this.deps.emit(method, params),
+				);
+				this.#chain = this.#history.start();
+				await this.#chain;
+				if (!this.active) throw new Error("Voice stopped during history initialization");
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
 			}
 			await this.deps.record({ kind: "voiceDiagnostic", stage, connected: true, elapsedMs: Date.now() - startedAt });
+			this.#ready = true;
+			const openingInputs = this.#openingInputs;
+			this.#openingInputs = [];
+			this.#openingBytes = 0;
+			for (const data of openingInputs) this.#receive(data);
 		} catch (error) {
 			const message = safeConnectionError(error);
 			const status = message.match(/HTTP (\d{3})/)?.[1];
@@ -147,14 +174,16 @@ export class NativeVoice {
 			throw new ProtocolError(-32000, message);
 		}
 	}
-	stop(reason = "requested"): void {
-		if (this.#state === "closed" || this.#state === "idle") return;
+	stop(reason = "requested"): Promise<void> {
+		if (this.#state === "closed" || this.#state === "idle") return this.#closing ?? Promise.resolve();
 		const socket = this.#socket;
 		this.#state = "closed";
 		this.#epoch++;
 		clearTimeout(this.#reconnectTimer);
 		this.#outbound = [];
 		this.#outboundBytes = 0;
+		this.#openingInputs = [];
+		this.#openingBytes = 0;
 		this.#abort.abort();
 		if (this.#started && this.#endInstructions)
 			void this.deps.instructions?.("end", this.#endInstructions).catch(() => {});
@@ -166,8 +195,18 @@ export class NativeVoice {
 			} catch {}
 			socket.close();
 		}
-		this.deps.emit("thread/realtime/closed", { reason });
-		if (this.#started && this.#flushTail) void this.#chain.then(() => this.#flushTranscriptTail()).catch(() => {});
+		this.#closing = this.#chain
+			.then(async () => {
+				await this.#history?.close(reason === "failed");
+			})
+			.catch(() => {
+				this.deps.emit("thread/realtime/error", { message: "Could not persist voice history" });
+			})
+			.then(() => {
+				this.deps.emit("thread/realtime/closed", { reason });
+			});
+		if (this.#started && this.#flushTail) void this.#closing.then(() => this.#flushTranscriptTail()).catch(() => {});
+		return this.#closing;
 	}
 	#fail(message = "Native realtime transport failed"): void {
 		if (!this.active) return;
@@ -321,8 +360,13 @@ export class NativeVoice {
 	#receive(data: string): void {
 		if (!this.active) return;
 		const bytes = Buffer.byteLength(data);
-		if (this.#seen.size >= 8192 || bytes > 1_048_576 || this.#pendingBytes + bytes > 2_097_152) {
+		if (this.#seen.size >= 8192 || bytes > 1_048_576 || this.#pendingBytes + this.#openingBytes + bytes > 2_097_152) {
 			this.#fail("Realtime input buffer limit reached");
+			return;
+		}
+		if (!this.#ready) {
+			this.#openingInputs.push(data);
+			this.#openingBytes += bytes;
 			return;
 		}
 		this.#pendingBytes += bytes;
@@ -412,6 +456,7 @@ export class NativeVoice {
 				});
 			}
 			this.#trackTranscript(event);
+			await this.#history?.transcript(event.role, event.text, event.done);
 			if (!this.active) return;
 			this.deps.emit(`thread/realtime/transcript/${event.done ? "done" : "delta"}`, {
 				role: event.role,

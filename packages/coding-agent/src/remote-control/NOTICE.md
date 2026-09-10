@@ -27,6 +27,10 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs,/sideband.rs}`:
   selected subscription sideband headers, client-owned configuration, and v3
   reconnect backoff with stable-connection reset.
+- `codex-rs/core/src/realtime_history.rs`: session boundary items, separate user
+  and assistant transcript segments, streamed item deltas, and closure sealing.
+- `codex-rs/app-server-protocol/schema/json/{ClientRequest,ServerRequest,ServerNotification}.json`:
+  the literal method names retained in sanitized capture metadata.
 
 Source: https://github.com/openai/codex/tree/3d2ee51ca2d5db578f328aa75e20aa22c0197c9a/codex-rs/app-server-transport/src/transport/remote_control
 

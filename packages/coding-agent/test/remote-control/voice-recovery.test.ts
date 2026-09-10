@@ -98,7 +98,7 @@ test("v3 sideband reattaches the same call with refreshed auth and ignores stale
 		await Bun.sleep(0);
 		expect(f.delegated).toEqual(["work"]);
 		expect(f.voice.active).toBe(true);
-		expect(f.events.filter(e => /started|closed|error/.test(e.method))).toHaveLength(1);
+		expect(f.events.filter(e => /^thread\/realtime\/(started|closed|error)$/.test(e.method))).toHaveLength(1);
 		expect(f.records).toContainEqual(
 			expect.objectContaining({ kind: "voiceDiagnostic", stage: "sideband-reconnect", connected: true }),
 		);
@@ -193,7 +193,14 @@ test("stopping during a pending recovery handshake closes the late socket withou
 	await Bun.sleep(0);
 	expect(closes).toBe(1);
 	expect(voice.active).toBe(false);
-	expect(events).toEqual(["thread/realtime/started", "thread/realtime/closed"]);
+	expect(events).toEqual([
+		"thread/realtime/item/started",
+		"thread/realtime/item/completed",
+		"thread/realtime/started",
+		"thread/realtime/item/started",
+		"thread/realtime/item/completed",
+		"thread/realtime/closed",
+	]);
 });
 
 test("temporary reconnect failures retry without closing voice or losing queued work", async () => {

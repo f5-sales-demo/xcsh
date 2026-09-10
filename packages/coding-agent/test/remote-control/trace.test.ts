@@ -49,6 +49,19 @@ test("parity capture preserves identifier equality and missing versus null field
 	expect(value.params).not.toHaveProperty("model");
 });
 
+test.each(["realtimeSessionStarted", "transcriptSegment", "realtimeSessionClosed", "bemItemPromoted"])(
+	"capture retains canonical realtime item type %s",
+	type => {
+		expect(redactProtocolValue({ type }, "fixture")).toEqual({ type });
+	},
+);
+test.each(["experimentalFeature/list", "mcpServerStatus/list", "externalAgentConfig/detect"])(
+	"capture retains pinned request method %s",
+	method => {
+		expect(redactProtocolValue({ method }, "fixture")).toEqual({ method });
+	},
+);
+
 test.each([
 	"client_message",
 	"client_message_chunk",
