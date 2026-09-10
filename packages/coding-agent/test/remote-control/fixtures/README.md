@@ -16,6 +16,10 @@ Unmodified OpenAI Codex JSON schemas from commit
 Copyright 2025 OpenAI. Apache-2.0; license and port notices are in
 `../../../src/remote-control/`.
 
+The four `{CommandExecution,FileChange}RequestApproval{Params,Response}.json`
+fixtures reproduce the pinned schema JSON values. The repository copies have a
+terminal newline; the source manifest pins the exact upstream byte hashes.
+
 The unit tests use synthetic host/account/request identifiers. Live credentials,
 pairing material, and session transcripts are never fixtures.
 

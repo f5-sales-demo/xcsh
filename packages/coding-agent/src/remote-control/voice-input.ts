@@ -6,6 +6,24 @@ import type { InteractionRequest } from "./interactions";
 /** Convert the App Server request to the backing core event used as realtime context. */
 export function voiceInputText(request: InteractionRequest, callId: string): string {
 	const params = request.params;
+	if (request.method !== "item/tool/requestUserInput")
+		return prompt
+			.render(template, {
+				request: JSON.stringify({
+					type:
+						request.method === "item/commandExecution/requestApproval"
+							? "command_execution_approval"
+							: "file_change_approval",
+					call_id: callId,
+					turn_id: params.turnId,
+					item_id: params.itemId,
+					reason: params.reason,
+					...(request.method === "item/commandExecution/requestApproval"
+						? { command: params.command, cwd: params.cwd }
+						: {}),
+				}),
+			})
+			.trimEnd();
 	const questions = params.questions as Array<{
 		id: string;
 		header: string;

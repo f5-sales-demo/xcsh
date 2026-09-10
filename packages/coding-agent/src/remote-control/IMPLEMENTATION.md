@@ -1808,3 +1808,34 @@ The guarded package suite passed 8251 tests with 561 skips, zero failures and
 The source manifest pins the v2 methods, parser and common event parser used by
 these tests. No live standalone service connection or iPhone acceptance is
 claimed, and the dedicated phone runtime remains on the prior immutable build.
+
+## Native command and file approval requests
+
+Pending select prompts owned by live `commandExecution` and `fileChange` items
+now use their pinned server-request methods instead of appearing as generic tool
+questions. Command requests carry the proposed command, working directory,
+actions, reason, request time and the three decisions xcsh can honor: accept,
+decline and cancel. File requests carry the corresponding item identity, reason
+and request time. Generic dynamic-tool questions retain
+`item/tool/requestUserInput`.
+
+The terminal and phone still share the existing `UserInteractions` completion
+owner. Accept and decline select the local prompt's affirmative and negative
+choices. Cancel resolves that owner and aborts the active `AgentSession` turn.
+Session-wide and policy-amendment decisions are rejected because xcsh has no
+matching approval cache or policy mutation at this boundary. Pending native
+requests survive remote reattachment and retain their request identity.
+
+Tests first observed generic request envelopes and rejected native decision
+responses. The completed integration covers command/file accept, decline,
+terminal completion, cancellation, reattachment, late answers and voice-context
+mirroring. Four 0.153.4 request/response schema documents are included as test
+fixtures, with their exact upstream hashes pinned in the source manifest. This checkpoint does not claim a new
+iPhone approval interaction; the dedicated phone runtime remains on the earlier
+immutable build.
+
+Focused interaction and voice integration passed 58 tests with 470 assertions.
+The complete remote-control suite passed 871 tests with 3413 assertions across
+64 files. The guarded package suite passed 8258 tests with 561 skips, zero
+failures and 29668 assertions across 790 files in 404.57 seconds. Package
+formatting, prompt formatting and TypeScript checks passed across 1775 files.

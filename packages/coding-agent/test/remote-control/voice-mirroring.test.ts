@@ -222,24 +222,31 @@ test.each([undefined, "command", "fileChange"] as const)(
 			);
 			expect(mirrored).toHaveLength(1);
 			expect(mirrored[0]).toStartWith("I need your input. Please respond in the app.\n\n");
-			expect(JSON.parse(mirrored[0].split("\n\n")[1])).toMatchObject({
-				type: "request_user_input",
-				call_id: "ask",
-				questions: [
-					{
-						options: [
-							{ label: "Alpha", description: "" },
-							{ label: "Beta", description: "" },
-						],
-					},
-				],
-			});
+			const mirroredRequest = JSON.parse(mirrored[0].split("\n\n")[1]);
+			if (kind === undefined)
+				expect(mirroredRequest).toMatchObject({
+					type: "request_user_input",
+					call_id: "ask",
+					questions: [
+						{
+							options: [
+								{ label: "Alpha", description: "" },
+								{ label: "Beta", description: "" },
+							],
+						},
+					],
+				});
+			else
+				expect(mirroredRequest).toMatchObject({
+					type: kind === "command" ? "command_execution_approval" : "file_change_approval",
+					call_id: "ask",
+				});
 			expect(remote.pendingRequests()).toHaveLength(1);
 			const id = broker.pending()[0].id;
 			await remote.call("answer", "session/interaction/respond", {
 				threadId: "fixture",
 				requestId: id,
-				response: { answers: { [id]: { answers: ["Alpha"] } } },
+				response: kind === undefined ? { answers: { [id]: { answers: ["Alpha"] } } } : { decision: "accept" },
 			});
 			expect(await result).toBe("Alpha");
 			expect(mirrored).toHaveLength(1);

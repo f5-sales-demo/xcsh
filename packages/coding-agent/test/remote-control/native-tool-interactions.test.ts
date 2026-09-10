@@ -12,7 +12,9 @@ import { SessionManager } from "../../src/session/session-manager";
 
 const cases = (["command", "fileChange", undefined] as const).flatMap(kind =>
 	[false, true].flatMap(reattach =>
-		(["phone", "terminal", "cancel", "decline"] as const).map(answer => ({ kind, reattach, answer })),
+		(
+			["phone", "terminal", "cancel", "decline", ...(kind === undefined ? [] : (["phoneCancel"] as const))] as const
+		).map(answer => ({ kind, reattach, answer })),
 	),
 );
 test.each(cases)(
@@ -115,20 +117,26 @@ test.each(cases)(
 				remote.call(`answer-${answer}`, "session/interaction/respond", {
 					threadId: session.sessionId,
 					requestId: request.id,
-					response: { answers: { [request.id]: { answers: [answer === "decline" ? "No" : "Yes"] } } },
+					response:
+						kind === undefined
+							? { answers: { [request.id]: { answers: [answer === "decline" ? "No" : "Yes"] } } }
+							: { decision: answer === "decline" ? "decline" : answer === "phoneCancel" ? "cancel" : "accept" },
 				});
-			if (answer === "phone" || answer === "decline") expect(await respond()).toEqual({ accepted: true });
+			if (answer === "phone" || answer === "decline" || answer === "phoneCancel")
+				expect(await respond()).toEqual({ accepted: true });
 			else if (answer === "terminal") expect(session.userInteractions.respond(request.id, "Yes")).toBe(true);
 			else session.userInteractions.cancelAll();
 			await task;
 			expect(executions).toBe(1);
-			expect(mutations).toBe(answer === "cancel" || answer === "decline" ? 0 : 1);
+			expect(mutations).toBe(answer === "cancel" || answer === "decline" || answer === "phoneCancel" ? 0 : 1);
+			if (answer === "phoneCancel") expect(remote.history().at(-1)?.status).toBe("interrupted");
 			expect(remote.pendingRequests()).toEqual([]);
 			expect(
 				await remote.call("late-answer", "session/interaction/respond", {
 					threadId: session.sessionId,
 					requestId: request.id,
-					response: { answers: { [request.id]: { answers: ["Yes"] } } },
+					response:
+						kind === undefined ? { answers: { [request.id]: { answers: ["Yes"] } } } : { decision: "accept" },
 				}),
 			).toEqual({ accepted: false });
 			const stale = session.userInteractions.request(

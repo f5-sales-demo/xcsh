@@ -2,7 +2,13 @@ import type { UserInteraction, UserInteractions } from "../session/user-interact
 import { ProtocolError } from "./errors";
 import type { Notification } from "./session";
 
-type Context = { threadId: string; turnId: string; itemId: string };
+type Context = {
+	threadId: string;
+	turnId: string;
+	itemId: string;
+	startedAtMs?: number;
+	item?: Record<string, unknown>;
+};
 export interface InteractionRequest extends Notification {
 	id: string;
 }
@@ -20,24 +26,41 @@ export function validateInteractionRequests(threadId: string, input: unknown): I
 	if (input.length > 32) throw new ProtocolError(-32000, "Pending user request limit");
 	const seen = new Set<string>();
 	for (const request of input) {
-		if (
-			!record(request) ||
-			!identity(request.id) ||
-			request.method !== "item/tool/requestUserInput" ||
-			!record(request.params)
-		)
-			throw invalid();
+		if (!record(request) || !identity(request.id) || !record(request.params)) throw invalid();
 		const params = request.params;
+		if (seen.has(request.id) || params.threadId !== threadId || !identity(params.turnId) || !identity(params.itemId))
+			throw invalid();
+		seen.add(request.id);
+		if (request.method === "item/commandExecution/requestApproval") {
+			if (
+				params.kind !== "command" ||
+				!Number.isSafeInteger(params.startedAtMs) ||
+				(params.environmentId !== null && typeof params.environmentId !== "string") ||
+				(params.reason !== null && typeof params.reason !== "string") ||
+				(params.command !== null && typeof params.command !== "string") ||
+				(params.cwd !== null && typeof params.cwd !== "string") ||
+				!Array.isArray(params.commandActions) ||
+				!Array.isArray(params.availableDecisions) ||
+				params.availableDecisions.join("\0") !== "accept\0decline\0cancel"
+			)
+				throw invalid();
+			continue;
+		}
+		if (request.method === "item/fileChange/requestApproval") {
+			if (
+				!Number.isSafeInteger(params.startedAtMs) ||
+				(params.reason !== null && typeof params.reason !== "string") ||
+				(params.grantRoot !== undefined && params.grantRoot !== null && typeof params.grantRoot !== "string")
+			)
+				throw invalid();
+			continue;
+		}
 		if (
-			seen.has(request.id) ||
-			params.threadId !== threadId ||
-			!identity(params.turnId) ||
-			!identity(params.itemId) ||
+			request.method !== "item/tool/requestUserInput" ||
 			!Array.isArray(params.questions) ||
 			!optionalBoolean(params.isBlocking)
 		)
 			throw invalid();
-		seen.add(request.id);
 		if (
 			params.autoResolutionMs != null &&
 			(typeof params.autoResolutionMs !== "number" ||
@@ -83,6 +106,7 @@ export class RemoteInteractions {
 		private readonly context: (toolCallId: string, interaction: UserInteraction) => Context | undefined,
 		private readonly notify: (event: Notification) => void,
 		private readonly mirror?: (request: InteractionRequest, callId: string) => void,
+		private readonly cancel?: () => void,
 	) {
 		this.#unsubscribe = broker.subscribe(event => {
 			if (event.type === "opened") this.#open(event.interaction);
@@ -102,46 +126,83 @@ export class RemoteInteractions {
 		if (!interaction.toolCallId) return;
 		const context = this.context(interaction.toolCallId, interaction);
 		if (!context) return;
-		const request: InteractionRequest = {
-			id: interaction.id,
-			method: "item/tool/requestUserInput",
-			params: {
-				...context,
-				questions:
-					interaction.kind === "questions"
-						? interaction.questions?.map(question => ({
-								id: question.id,
-								header: question.header ?? question.id,
-								question: question.question,
-								isOther: question.isOther ?? true,
-								isSecret: question.isSecret ?? false,
-								options: question.options.length
-									? question.options.map((option, index) => ({
-											label: option.label,
-											description:
-												option.description ?? (index === question.recommended ? "Recommended" : ""),
-										}))
-									: null,
-							}))
-						: [
-								{
-									id: interaction.id,
-									header: "Question",
-									question: interaction.planReview
-										? `${interaction.title}\n\nPlan: ${interaction.planReview.planFilePath}\n\n${interaction.planReview.content}`
-										: interaction.title,
-									isOther: false,
-									isSecret: interaction.isSecret ?? false,
-									options:
-										interaction.kind === "select"
-											? (interaction.options?.map(label => ({ label, description: "" })) ?? [])
-											: null,
-								},
-							],
-				isBlocking: true,
-				autoResolutionMs: null,
-			},
-		};
+		const { item, startedAtMs, ...wireContext } = context;
+		let request: InteractionRequest;
+		if (
+			interaction.kind === "select" &&
+			(interaction.options?.length ?? 0) >= 2 &&
+			item?.type === "commandExecution"
+		) {
+			request = {
+				id: interaction.id,
+				method: "item/commandExecution/requestApproval",
+				params: {
+					...wireContext,
+					startedAtMs: startedAtMs ?? Date.now(),
+					kind: "command",
+					environmentId: null,
+					reason: interaction.title,
+					command: typeof item.command === "string" ? item.command : null,
+					cwd: typeof item.cwd === "string" ? item.cwd : null,
+					commandActions: Array.isArray(item.commandActions) ? item.commandActions : [],
+					availableDecisions: ["accept", "decline", "cancel"],
+				},
+			};
+		} else if (
+			interaction.kind === "select" &&
+			(interaction.options?.length ?? 0) >= 2 &&
+			item?.type === "fileChange"
+		) {
+			request = {
+				id: interaction.id,
+				method: "item/fileChange/requestApproval",
+				params: {
+					...wireContext,
+					startedAtMs: startedAtMs ?? Date.now(),
+					reason: interaction.title,
+				},
+			};
+		} else
+			request = {
+				id: interaction.id,
+				method: "item/tool/requestUserInput",
+				params: {
+					...wireContext,
+					questions:
+						interaction.kind === "questions"
+							? interaction.questions?.map(question => ({
+									id: question.id,
+									header: question.header ?? question.id,
+									question: question.question,
+									isOther: question.isOther ?? true,
+									isSecret: question.isSecret ?? false,
+									options: question.options.length
+										? question.options.map((option, index) => ({
+												label: option.label,
+												description:
+													option.description ?? (index === question.recommended ? "Recommended" : ""),
+											}))
+										: null,
+								}))
+							: [
+									{
+										id: interaction.id,
+										header: "Question",
+										question: interaction.planReview
+											? `${interaction.title}\n\nPlan: ${interaction.planReview.planFilePath}\n\n${interaction.planReview.content}`
+											: interaction.title,
+										isOther: false,
+										isSecret: interaction.isSecret ?? false,
+										options:
+											interaction.kind === "select"
+												? (interaction.options?.map(label => ({ label, description: "" })) ?? [])
+												: null,
+									},
+								],
+					isBlocking: true,
+					autoResolutionMs: null,
+				},
+			};
 		this.#requests.set(interaction.id, { interaction, request });
 		this.notify(structuredClone(request));
 		this.mirror?.(structuredClone(request), interaction.toolCallId);
@@ -153,9 +214,28 @@ export class RemoteInteractions {
 		const pending = this.#requests.get(id);
 		if (!pending) return { accepted: false };
 		const current = this.context(pending.interaction.toolCallId!, pending.interaction);
-		if (!current || Object.entries(current).some(([key, value]) => pending.request.params[key] !== value))
+		if (
+			!current ||
+			current.threadId !== pending.request.params.threadId ||
+			current.turnId !== pending.request.params.turnId ||
+			current.itemId !== pending.request.params.itemId
+		)
 			return { accepted: false };
 		const invalid = () => new ProtocolError(-32602, "Invalid answer to user interaction");
+		if (pending.request.method !== "item/tool/requestUserInput") {
+			if (!record(response) || !["accept", "decline", "cancel"].includes(String(response.decision)))
+				throw new ProtocolError(-32602, "Invalid approval decision");
+			const decision = response.decision as "accept" | "decline" | "cancel";
+			const value =
+				decision === "accept"
+					? pending.interaction.options?.[0]
+					: decision === "decline"
+						? pending.interaction.options?.[1]
+						: undefined;
+			if (!this.broker.respond(id, value)) throw invalid();
+			if (decision === "cancel") this.cancel?.();
+			return { accepted: true };
+		}
 		if (!record(response) || !record(response.answers)) throw invalid();
 		if (pending.interaction.kind === "questions") {
 			const questions = pending.interaction.questions ?? [];

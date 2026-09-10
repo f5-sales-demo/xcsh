@@ -169,12 +169,23 @@ export class RemoteSession {
 							value.status === "inProgress" &&
 							String(value.id).endsWith(`:tool:${toolCallId}`),
 					);
-					return item ? { threadId: this.#boundId, turnId: this.#active.id, itemId: String(item.id) } : undefined;
+					return item
+						? {
+								threadId: this.#boundId,
+								turnId: this.#active.id,
+								itemId: String(item.id),
+								startedAtMs: Date.now(),
+								item,
+							}
+						: undefined;
 				},
 				event => {
 					for (const listener of this.#listeners) listener(event);
 				},
 				(request, callId) => this.#voice?.mirrorText(voiceInputText(request, callId)),
+				() => {
+					void this.target.abort();
+				},
 			);
 		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
 		this.#unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {

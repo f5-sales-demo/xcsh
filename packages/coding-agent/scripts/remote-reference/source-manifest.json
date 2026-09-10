@@ -2,6 +2,10 @@
   "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
   "version": "0.153.4",
   "files": {
+    "codex-rs/app-server-protocol/schema/json/CommandExecutionRequestApprovalParams.json": "16a71816c2d66e319c2c4aa83dd636dfdc43c61e72b6d5475e421ce08d8e6558",
+    "codex-rs/app-server-protocol/schema/json/CommandExecutionRequestApprovalResponse.json": "6d0767113e22f311381809b6b236b0dde2b99b01992879c26bf7b1ea0e003cb7",
+    "codex-rs/app-server-protocol/schema/json/FileChangeRequestApprovalParams.json": "13848b26814c286ad6425a20d01c1691c86790e1f9e2529399677a8a22fe0d18",
+    "codex-rs/app-server-protocol/schema/json/FileChangeRequestApprovalResponse.json": "b95b03ee6be674e25cee2e863cc135a28620e1070addd2f34685aadee27cde08",
     "codex-rs/app-server-transport/src/lib.rs": "6eb9939fd4755ada45e41af5bc9c259ae57531a9d80be4b7adcb1a221f76097f",
     "codex-rs/codex-api/src/lib.rs": "ef31a528a67cfa4bd11445e5e2e2f29d147c763b1e9fb73b43d5a60003be1a29",
     "codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs": "1f928f1fbe3ee63ca01e16352d3dd5043a856fd406e1b3d1c65cdb795ea59795",

@@ -3,6 +3,10 @@ import Ajv from "ajv";
 import { RemoteInteractions } from "../../src/remote-control/interactions";
 import type { Notification } from "../../src/remote-control/session";
 import { UserInteractions } from "../../src/session/user-interactions";
+import commandRequestSchema from "./fixtures/CommandExecutionRequestApprovalParams.json";
+import commandResponseSchema from "./fixtures/CommandExecutionRequestApprovalResponse.json";
+import fileRequestSchema from "./fixtures/FileChangeRequestApprovalParams.json";
+import fileResponseSchema from "./fixtures/FileChangeRequestApprovalResponse.json";
 import resolvedSchema from "./fixtures/ServerRequestResolvedNotification.json";
 import requestSchema from "./fixtures/ToolRequestUserInputParams.json";
 import responseSchema from "./fixtures/ToolRequestUserInputResponse.json";
@@ -12,6 +16,10 @@ for (const name of ["uint64", "int64"]) ajv.addFormat(name, { type: "number", va
 const validRequest = ajv.compile(requestSchema);
 const validResponse = ajv.compile(responseSchema);
 const validResolved = ajv.compile(resolvedSchema);
+const validCommandRequest = ajv.compile(commandRequestSchema);
+const validCommandResponse = ajv.compile(commandResponseSchema);
+const validFileRequest = ajv.compile(fileRequestSchema);
+const validFileResponse = ajv.compile(fileResponseSchema);
 
 test("tool questions use pinned request fields and settle with one owner", async () => {
 	const broker = new UserInteractions();
@@ -192,4 +200,96 @@ test("an empty grouped response cancels instead of producing default choices", a
 	expect(remote.respond(request.id, { answers: { choice: { answers: [] } } })).toEqual({ accepted: true });
 	expect(await result).toBeUndefined();
 	remote.close();
+});
+
+test.each([
+	{
+		item: { type: "commandExecution", command: "touch fixture.txt", cwd: "/tmp", commandActions: [] },
+		method: "item/commandExecution/requestApproval",
+		params: {
+			kind: "command",
+			environmentId: null,
+			command: "touch fixture.txt",
+			cwd: "/tmp",
+			commandActions: [],
+			availableDecisions: ["accept", "decline", "cancel"],
+		},
+	},
+	{
+		item: { type: "fileChange", changes: [] },
+		method: "item/fileChange/requestApproval",
+		params: {},
+	},
+])("command and file prompts use their pinned approval requests: $method", async ({ item, method, params }) => {
+	const broker = new UserInteractions();
+	const events: Notification[] = [];
+	const remote = new RemoteInteractions(
+		broker,
+		() => ({ threadId: "thread-a", turnId: "turn-a", itemId: "item-a", startedAtMs: 1234, item }),
+		event => events.push(event),
+	);
+	const result = broker.request(
+		{ kind: "select", title: "Apply fixture change?", options: ["Yes", "No"], toolCallId: "tool-a" },
+		() => new Promise(() => {}),
+	);
+	const request = remote.pending()[0];
+	expect(request).toEqual({
+		id: broker.pending()[0].id,
+		method,
+		params: {
+			threadId: "thread-a",
+			turnId: "turn-a",
+			itemId: "item-a",
+			startedAtMs: 1234,
+			reason: "Apply fixture change?",
+			...params,
+		},
+	});
+	const validRequest = method === "item/commandExecution/requestApproval" ? validCommandRequest : validFileRequest;
+	const validResponse = method === "item/commandExecution/requestApproval" ? validCommandResponse : validFileResponse;
+	expect(validRequest(request.params), JSON.stringify(validRequest.errors)).toBe(true);
+	const response = { decision: "accept" };
+	expect(validResponse(response), JSON.stringify(validResponse.errors)).toBe(true);
+	expect(remote.respond(request.id, response)).toEqual({ accepted: true });
+	expect(await result).toBe("Yes");
+	expect(events.at(-1)).toEqual({
+		method: "serverRequest/resolved",
+		params: { threadId: "thread-a", requestId: request.id },
+	});
+	remote.close();
+});
+
+test("approval decisions preserve decline and cancellation semantics and reject unsupported grants", async () => {
+	const run = async (decision: string) => {
+		const broker = new UserInteractions();
+		let cancellations = 0;
+		const remote = new RemoteInteractions(
+			broker,
+			() => ({
+				threadId: "thread-a",
+				turnId: "turn-a",
+				itemId: "item-a",
+				startedAtMs: 1234,
+				item: { type: "commandExecution", command: "true", cwd: "/tmp", commandActions: [] },
+			}),
+			() => {},
+			undefined,
+			() => cancellations++,
+		);
+		const result = broker.request(
+			{ kind: "select", title: "Run command?", options: ["Allow", "Deny"], toolCallId: "tool-a" },
+			() => new Promise(() => {}),
+		);
+		const request = remote.pending()[0];
+		const response = () => remote.respond(request.id, { decision });
+		if (decision === "acceptForSession") {
+			expect(response).toThrow("Invalid approval decision");
+			expect(remote.pending()).toHaveLength(1);
+			broker.cancelAll();
+		} else expect(response()).toEqual({ accepted: true });
+		expect(await result).toBe(decision === "accept" ? "Allow" : decision === "decline" ? "Deny" : undefined);
+		expect(cancellations).toBe(decision === "cancel" ? 1 : 0);
+		remote.close();
+	};
+	for (const decision of ["accept", "decline", "cancel", "acceptForSession"]) await run(decision);
 });

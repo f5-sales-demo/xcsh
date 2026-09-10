@@ -21,7 +21,8 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   page defaults, summary projections, exclusive continuation and inclusive
   reverse anchors. Native cursors additionally bind the session and filter scope.
 - `codex-rs/app-server-protocol/src/protocol/v2/{item,notification}.rs`:
-  tool-question request/answer and server-request resolution fields. Corresponding
+  tool-question, command-approval and file-approval request/answer fields, plus
+  server-request resolution fields. Corresponding
   JSON schema fixtures are copied without changes from the pinned source. The
   terminal answer broker, tool-call binding and host routing are native xcsh code.
 - `codex-rs/app-server/src/request_processors/thread_lifecycle.rs` and

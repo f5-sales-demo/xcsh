@@ -449,3 +449,18 @@ pass with 1592 assertions. The 64-file remote-control suite passes 864 tests wit
 failures and 29599 assertions across 790 files. These are local source-contract checks. A live service
 connection, iPhone behavior, standalone reconnection, full v1/v3 standalone event
 matrices and release-artifact verification remain unproven.
+
+## Command and file approval parity
+
+Live command and file items now emit `item/commandExecution/requestApproval` and
+`item/fileChange/requestApproval` with 0.153.4-compatible fields. Responses map
+to the single terminal interaction owner, and `cancel` also interrupts the active
+turn. Reattachment replays the same pending request without executing the tool a
+second time. The emitted requests and accepted responses validate against four
+pinned schema documents.
+
+xcsh advertises only `accept`, `decline` and `cancel` for command approvals.
+`acceptForSession`, exec-policy amendments and network-policy amendments remain
+unsupported because the native runtime has no equivalent persistent approval
+state. Dedicated permission-profile requests and MCP elicitations also remain
+open. No phone approval acceptance is inferred from the automated coverage.
