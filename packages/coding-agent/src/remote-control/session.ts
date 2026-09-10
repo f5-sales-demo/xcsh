@@ -33,6 +33,7 @@ export type SessionTarget = Pick<
 	| "setThinkingLevel"
 	| "modelRegistry"
 	| "sendCustomMessage"
+	| "setRealtimeMode"
 > &
 	Partial<
 		Pick<
@@ -435,12 +436,9 @@ export class RemoteSession {
 							.slice(-30),
 					);
 				},
-				instructions: (phase, text) =>
+				modeChanged: (active, instructions) =>
 					this.#effect(epoch, async () => {
-						await this.target.sendCustomMessage(
-							{ customType: `remote-voice-${phase}`, content: text, display: false, attribution: "agent" },
-							{ triggerTurn: false, deliverAs: "nextTurn" },
-						);
+						this.target.setRealtimeMode(active, instructions);
 					}),
 				authenticate: async () => {
 					this.#assertCurrent(epoch);

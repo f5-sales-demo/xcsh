@@ -1,0 +1,87 @@
+{
+  "binarySha256": "b9e421b9ca268d1d9ccf35fdee79ec50deb80df9184ad866e860c606767601f4",
+  "harnessSha256": "8096d8f0427aa5f8568f4fefd85a2a75b1a8ec7f0a8caa3ae9bec0e9a951cecd",
+  "providerSha256": "566800b268ffc96feff5c67b38c944a85356e647faa8f5b7237fe1cb703a5a16",
+  "version": "xcsh/21.23.0",
+  "image": "ubuntu:24.04",
+  "imageId": "sha256:0b1ebe5dd42682bb8eda97ecf10a09f70f18d2d4af35f82b9271badac5dbeb27",
+  "checks": [
+    {
+      "description": "Codex, standalone Bun and project dependencies absent",
+      "elapsedMs": 199
+    },
+    {
+      "description": "packaged status defaults off",
+      "elapsedMs": 2715
+    },
+    {
+      "description": "two named top-level TUIs discovered with distinct identities and working directories",
+      "elapsedMs": 7589
+    },
+    {
+      "description": "remote prompts execute real write/read tools in the correct TUI and persist completed history",
+      "elapsedMs": 7863
+    },
+    {
+      "description": "host restart preserves owners/history and stable request replay does not execute twice",
+      "elapsedMs": 12565
+    },
+    {
+      "description": "compiled --resume preserves session identity, history and extension work model",
+      "elapsedMs": 15618
+    },
+    {
+      "description": "terminal exit unregisters all owners",
+      "elapsedMs": 15835
+    },
+    {
+      "description": "disposable test container and its processes removed",
+      "elapsedMs": 16738
+    }
+  ],
+  "network": "none",
+  "enrollment": "synthetic",
+  "workModel": "package-fixture/model",
+  "phoneAcceptance": false,
+  "sourceBaseCommit": "44f5e6a47edef287c588e386c7abcea26617436e",
+  "productionSourceChanges": [
+    {
+      "path": "packages/agent/src/agent-loop.ts",
+      "sha256": "2fd15a5ad31937638f0ea1713289ef2cd0ed6626f40c32884c1f05770e98653c"
+    },
+    {
+      "path": "packages/agent/src/agent.ts",
+      "sha256": "7a38c9cc103022e3ad4985201cbcc46cd73f9b2670ecf7dba801a26804021489"
+    },
+    {
+      "path": "packages/agent/src/types.ts",
+      "sha256": "4053969454fb5dd78b3c2cd4ef8f9b73faef1f804f1f7ce3d2ca4bf93ca3d84f"
+    },
+    {
+      "path": "packages/coding-agent/src/prompts/system/remote-voice-mode-end.md",
+      "sha256": "95dbde1501871117f96d45f95cb501abbbc25464eab1ae5ed689e110e1849036"
+    },
+    {
+      "path": "packages/coding-agent/src/prompts/system/remote-voice-mode-start.md",
+      "sha256": "424ebda35f115edff812596b70d7bf56431e7917b7398ccb4abb270b67a50fc2"
+    },
+    {
+      "path": "packages/coding-agent/src/remote-control/session.ts",
+      "sha256": "d9994064e02a0586cb421850f3883740de3a6210c4a2179d92adc98adcab0b62"
+    },
+    {
+      "path": "packages/coding-agent/src/remote-control/voice.ts",
+      "sha256": "1a3855b6a67bdacfa168a26e1af3865eb3932fee04cf4867ffeab8c3b6afb0ef"
+    },
+    {
+      "path": "packages/coding-agent/src/session/agent-session.ts",
+      "sha256": "f3bcaf252a8bc923796c89096c651b3b419398c89b218336975db7d53d19ae3e"
+    },
+    {
+      "path": "packages/coding-agent/src/session/realtime-context.ts",
+      "sha256": "7d3f16f83ee4a8af28f19070ad8fa892c3315e1de9e77348aa4240bf21ee3bce"
+    }
+  ],
+  "buildInfoDirty": true,
+  "evidenceKind": "offline compiled integration"
+}

@@ -1091,3 +1091,57 @@ hashes remained unchanged throughout both package runs. Workspace TypeScript,
 CLI bundling, Markdown, terminology, staged privacy and secret checks passed.
 The existing compiled-package receipt predates this checkpoint; final artifact
 verification and required repository CI remain outstanding.
+
+## Turn-scoped voice mode context
+
+Native voice now reports complete mode options on attachment and closure,
+including when no custom instructions were supplied. The session stores that
+state without calling `sendCustomMessage` or queuing a turn. Each admitted
+prompt snapshots activity; a busy executor retry leaves the running turn's
+snapshot intact. Instructions retain their owning session identity, and option
+objects are copied at the voice and session boundaries.
+
+The agent loop now accepts session-owned context messages after extension
+pruning and before model conversion. It emits and retains them through the
+ordinary message pipeline, preserving the existing persistence owner. The
+realtime context helper renders pinned default or custom developer fragments
+only for a changed observed state, or when active instructions were pruned.
+The persisted native custom-message type carries the observed boolean state.
+Cold resume defaults to an inactive call and emits default end instructions if
+retained voice context requires them. Unobserved start/end transitions add no
+messages; ending voice during tools preserves both work and the turn snapshot.
+
+Initial observed regressions: the context helper had three passes and six
+failures; the agent-loop integration had two failures; real AgentSession tests
+had two passes and five failures; mode notification tests had 15 passes and
+three failures. A proposed busy-admission test stopped at public prompt rejection
+before reaching its intended race, so it was removed and is not failure evidence.
+The existing lifecycle tests were updated to hold actual final history writes
+instead of the removed hidden-message callback. They verify old-session mode
+changes and persistence before switching or closing storage.
+
+The remote-control suite passed 372 tests with zero failures and 1706 assertions
+across 43 files (36.43 seconds). The agent package passed 34 tests, zero failures
+and 133 assertions across four files. An additional source-contract test then
+matched all ten cases from the unchanged pinned Rust realtime snapshot; its
+complete file SHA-256 is verified in the test. The default prompt files were
+copied from the same pinned source, with provenance recorded in NOTICE.md.
+No new manual phone or live work-model acceptance is claimed by these checks.
+
+Final guarded coding-agent validation passed 7714 tests with 561 skips, zero
+failures and 24445 assertions across 762 files (373.01 seconds). The 18 changed
+runtime, prompt and test artifacts retained their recorded hashes throughout
+that suite. Workspace TypeScript and CLI bundling passed after the snapshot test
+was added. The existing whole-tree privacy findings, required CI and remaining
+protocol/manual acceptance stay open.
+
+The production executable also passed all eight isolated two-terminal checks in
+16.738 seconds. The receipt
+`scripts/remote-package/evidence-context-2026-09-10.json` records base commit
+`44f5e6a47`, hashes of the nine changed production files, harness/provider hashes
+and the container image. Binary SHA-256:
+`b9e421b9ca268d1d9ccf35fdee79ec50deb80df9184ad866e860c606767601f4`.
+The environment had no Codex, standalone Bun, repository or package dependencies.
+Real tools, completed-work host restart/replay, compiled resume and cleanup
+passed. Enrollment and model output were synthetic and networking was disabled;
+this receipt does not exercise live voice or replace phone acceptance.

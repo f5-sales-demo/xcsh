@@ -257,6 +257,7 @@ export class Agent {
 	#listeners = new Set<(e: AgentEvent) => void>();
 	#abortController?: AbortController;
 	#convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
+	#contextMessages?: AgentLoopConfig["getContextMessages"];
 	#transformContext?: (messages: AgentMessage[], signal?: AbortSignal) => Promise<AgentMessage[]>;
 	#steeringQueue: AgentMessage[] = [];
 	#followUpQueue: AgentMessage[] = [];
@@ -534,6 +535,14 @@ export class Agent {
 		this.#state.messages = ms.slice();
 	}
 
+	/** Install the owning session's model-context provider. It must not start work. */
+	setContextMessagesProvider(provider?: AgentLoopConfig["getContextMessages"]): () => void {
+		this.#contextMessages = provider;
+		return () => {
+			if (this.#contextMessages === provider) this.#contextMessages = undefined;
+		};
+	}
+
 	appendMessage(m: AgentMessage) {
 		this.#state.messages = [...this.#state.messages, m];
 	}
@@ -804,6 +813,7 @@ export class Agent {
 				kimiApiFormat: this.#kimiApiFormat,
 				preferWebsockets: this.#preferWebsockets,
 				convertToLlm: this.#convertToLlm,
+				getContextMessages: messages => this.#contextMessages?.(messages) ?? [],
 				transformContext: this.#transformContext,
 				// Per-turn: compose the extension hook with any server-tool injection for
 				// THIS prompt (e.g. Office "Search the web"). No-op when neither is present.

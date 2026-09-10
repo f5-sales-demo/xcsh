@@ -80,7 +80,9 @@ function fixture(onInitialize?: (handlers: VoiceHandlers) => void) {
 				bufferedAmount: 0,
 			};
 		},
-		instructions: async (phase, text) => {
+		modeChanged: async (active, options) => {
+			const phase = active ? "start" : "end",
+				text = options[phase];
 			instructions.push(`${phase}:${text}`);
 		},
 		emit: (method, params) => {

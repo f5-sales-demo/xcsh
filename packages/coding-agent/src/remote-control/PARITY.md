@@ -72,10 +72,33 @@ is constructed. `session/turn.rs` preserves that turn context across tool/model
 steps, while `context/world_state/realtime.rs` renders boolean state transitions,
 supplies default start/end text and recognizes retained developer fragments.
 Ending voice therefore does not switch an already-running turn to typed mode.
-Native instructions still use the hidden next-turn message path and can queue
-both start and end even when no turn observed active voice. Turn snapshots,
-default templates and retained-fragment reconciliation remain implementation
-work. No new phone acceptance is claimed for this change.
+The following turn-context checkpoint replaces that hidden-message path.
+No new phone acceptance is claimed for the instruction lifecycle change.
+
+## Turn-scoped voice context
+
+Voice attachment and closure now update the owning session's call state without
+queuing model input. Each admitted prompt snapshots voice activity. Ending voice
+during a tool call leaves that turn in voice mode and does not cancel its work;
+starting voice during typed work applies to the next prompt. An attachment that
+starts and ends without an intervening agent turn leaves no mode messages.
+
+The model boundary examines retained context after extension pruning. It adds
+the pinned developer fragment for a changed observed state, or restores the start
+fragment when active context was removed. Unchanged active state does not repeat
+instructions when their text changes. Empty overrides retain the wrapper, and
+cold resume of retained voice context uses the default end text. A different
+session identity cannot inherit the old call. Native custom-message types persist
+the observed state; earlier unwrapped native instructions are recognized too.
+
+Context updates emit ordinary agent message events and persist through the
+existing AgentSession owner. They are not new user prompts or remote turns.
+Ten rendered state cases match the unchanged pinned Rust snapshot exactly.
+Real AgentSession tests exercise tool continuation, pruning, disk resume and
+new-session isolation. Transition/disposal tests hold the final history flush and
+verify mode state changes on the old owner before storage moves or closes.
+These are automated source-contract and runtime tests; the final phone/model
+acceptance and the remaining protocol matrix are still open.
 
 ## First two phone conversations
 

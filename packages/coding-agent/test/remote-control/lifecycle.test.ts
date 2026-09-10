@@ -173,7 +173,7 @@ test("a remote prompt awaiting persistence cannot execute against the next termi
 	expect(remote.history()).toEqual([]);
 });
 
-test("real voice closure and end instructions settle on old storage before switching", async () => {
+test("real voice state and history settle on the old session before switching", async () => {
 	const { spyOn } = await import("bun:test");
 	const { session, manager, remote } = await fixture();
 	const token = `fixture.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "example-lifecycle-account" } })).toString("base64url")}.fixture`;
@@ -207,11 +207,19 @@ test("real voice closure and end instructions settle on old storage before switc
 	const entered = Promise.withResolvers<void>();
 	const finish = Promise.withResolvers<void>();
 	const writes: { id: string; kind: string }[] = [];
-	session.sendCustomMessage = async () => {
-		entered.resolve();
-		await finish.promise;
-		writes.push({ id: session.sessionId, kind: "instructions" });
-		manager.appendCustomEntry("fixture-instructions", {});
+	const modeChanges: { id: string; active: boolean }[] = [];
+	const setMode = session.setRealtimeMode.bind(session);
+	session.setRealtimeMode = (active, instructions) => {
+		modeChanges.push({ id: session.sessionId, active });
+		setMode(active, instructions);
+	};
+	const flush = manager.flush.bind(manager);
+	manager.flush = async () => {
+		if (writes.some(write => write.kind === "realtimeSessionClosed")) {
+			entered.resolve();
+			await finish.promise;
+		}
+		await flush();
 	};
 	const append = manager.appendCustomEntry.bind(manager);
 	manager.appendCustomEntry = (kind, data) => {
@@ -230,22 +238,24 @@ test("real voice closure and end instructions settle on old storage before switc
 	});
 	const receive = socket.onmessage;
 	const switching = session.newSession();
-	await entered.promise;
-	await Bun.sleep(0);
-	expect(session.sessionId).toBe(oldId);
-	finish.resolve();
-	await switching;
+	try {
+		await entered.promise;
+		expect(session.sessionId).toBe(oldId);
+		expect(modeChanges).toEqual([
+			{ id: oldId, active: true },
+			{ id: oldId, active: false },
+		]);
+	} finally {
+		finish.resolve();
+		await switching;
+	}
 	expect(writes.some(write => write.kind === "realtimeSessionClosed")).toBe(true);
 	expect(writes.every(write => write.id === oldId)).toBe(true);
 	receive({ data: JSON.stringify({ type: "output_transcript.added", item: { text: "late" } }) });
 	await Bun.sleep(0);
-	expect(
-		manager
-			.getBranch()
-			.some(
-				entry => entry.type === "custom" && ["remote-realtime", "fixture-instructions"].includes(entry.customType),
-			),
-	).toBe(false);
+	expect(manager.getBranch().some(entry => entry.type === "custom" && entry.customType === "remote-realtime")).toBe(
+		false,
+	);
 	await remote.call("new-voice", "thread/realtime/start", {
 		threadId: session.sessionId,
 		version: "v3",

@@ -25,7 +25,9 @@ function fixture() {
 		},
 		createCall: async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" }),
 		open: async () => ({ send: data => sent.push(JSON.parse(data)), close: () => {}, bufferedAmount: 0 }),
-		instructions: async (phase, text) => {
+		modeChanged: async (active, options) => {
+			const phase = active ? "start" : "end",
+				text = options[phase];
 			instructions.push(`${phase}:${text}`);
 		},
 		emit: method => {
@@ -50,6 +52,35 @@ test.each(transports)("$type accepts backing instructions and applies them after
 	await f.voice.stop();
 	expect(f.instructions).toEqual(["start:Start fixture", "end:End fixture"]);
 	if (transport.type === "existingCall") expect(f.sent.some(frame => frame.type === "session.update")).toBe(false);
+});
+
+test.each(transports)("$type reports mode changes even without custom instructions", async transport => {
+	const f = fixture();
+	const modes: unknown[] = [];
+	f.deps.modeChanged = async (active, instructions) => {
+		modes.push([active, instructions]);
+	};
+	await f.voice.start({ version: "v3", outputModality: "audio", includeStartupContext: false, transport });
+	await f.voice.stop();
+	expect(modes).toEqual([
+		[true, { start: undefined, end: undefined }],
+		[false, { start: undefined, end: undefined }],
+	]);
+});
+
+test("mode initialization supplies both overrides and owns a copy", async () => {
+	const f = fixture();
+	const modes: unknown[] = [];
+	f.deps.modeChanged = async (active, instructions) => {
+		modes.push([active, { ...instructions }]);
+		instructions.end = "callback mutation";
+	};
+	await f.voice.start({ ...params, transport: transports[1] });
+	await f.voice.stop();
+	expect(modes).toEqual([
+		[true, { start: "Start fixture", end: "End fixture" }],
+		[false, { start: "Start fixture", end: "End fixture" }],
+	]);
 });
 
 test("failed sideband attachment does not apply backing mode instructions", async () => {
@@ -106,7 +137,9 @@ test("stop during connection diagnostics cannot report a successful start afterw
 test("stop drains end instructions before announcing closure", async () => {
 	const f = fixture();
 	const end = Promise.withResolvers<void>();
-	f.deps.instructions = async (phase, text) => {
+	f.deps.modeChanged = async (active, options) => {
+		const phase = active ? "start" : "end",
+			text = options[phase];
 		f.instructions.push(`${phase}:${text}`);
 		if (phase === "end") await end.promise;
 	};
@@ -132,7 +165,9 @@ test("stop during start instructions serializes the end update and cannot reopen
 	const f = fixture();
 	const started = Promise.withResolvers<void>(),
 		release = Promise.withResolvers<void>();
-	f.deps.instructions = async (phase, text) => {
+	f.deps.modeChanged = async (active, options) => {
+		const phase = active ? "start" : "end",
+			text = options[phase];
 		if (phase === "start") {
 			started.resolve();
 			await release.promise;
@@ -186,7 +221,9 @@ test.each(["v1", "v3"])("explicit empty %s mode overrides are retained", async v
 
 test("a rejected start instruction update drains its cleanup before closure", async () => {
 	const f = fixture();
-	f.deps.instructions = async (phase, text) => {
+	f.deps.modeChanged = async (active, options) => {
+		const phase = active ? "start" : "end",
+			text = options[phase];
 		f.instructions.push(`${phase}:${text}`);
 		if (phase === "start") throw new Error("fixture instruction write rejected");
 	};
@@ -201,7 +238,8 @@ test("a rejected start instruction update drains its cleanup before closure", as
 
 test("a rejected end instruction update reports failure and still closes once", async () => {
 	const f = fixture();
-	f.deps.instructions = async phase => {
+	f.deps.modeChanged = async active => {
+		const phase = active ? "start" : "end";
 		if (phase === "end") throw new Error("fixture instruction write rejected");
 	};
 	await f.voice.start({ ...params, transport: transports[1] });

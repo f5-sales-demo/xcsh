@@ -176,6 +176,7 @@ import {
 	type FileMentionMessage,
 	type PythonExecutionMessage,
 } from "./messages";
+import { RealtimeContext, type RealtimeModeInstructions } from "./realtime-context";
 import { formatSessionDumpText } from "./session-dump-format";
 import type {
 	BranchSummaryEntry,
@@ -496,6 +497,7 @@ export class AgentSession {
 	#disposeHooks: Array<() => void | Promise<void>> = [];
 	#beforeDisposeHooks = new Set<() => void | Promise<void>>();
 	#disposeCall?: Promise<void>;
+	#realtimeContext = new RealtimeContext();
 
 	/** Tracks pending steering messages for UI display. Removed when delivered. */
 	#steeringMessages: string[] = [];
@@ -703,6 +705,11 @@ export class AgentSession {
 		// Always subscribe to agent events for internal handling
 		// (session persistence, hooks, auto-compaction, retry logic)
 		this.#unsubscribeAgent = this.agent.subscribe(this.#handleAgentEvent);
+		this.addDisposeHook(
+			this.agent.setContextMessagesProvider(messages =>
+				this.isDisposing ? [] : this.#realtimeContext.messages(this.sessionId, messages),
+			),
+		);
 	}
 
 	/** Model registry for API key resolution and model discovery */
@@ -2835,6 +2842,12 @@ export class AgentSession {
 	/** Whether auto-compaction is currently running */
 	get isCompacting(): boolean {
 		return this.#autoCompactionAbortController !== undefined || this.#compactionAbortController !== undefined;
+	}
+
+	/** Update call state without queuing input or changing an already-running turn. */
+	setRealtimeMode(active: boolean, instructions: RealtimeModeInstructions): void {
+		if (active) this.#sessionTransitions.assertAvailable();
+		this.#realtimeContext.update(this.sessionId, active, instructions);
 	}
 
 	/** All messages including custom types like BashExecutionMessage */
@@ -6748,6 +6761,9 @@ export class AgentSession {
 		const deadline = Date.now() + 30_000;
 		for (;;) {
 			try {
+				// Agent.prompt acquires its streaming flag synchronously. A busy retry
+				// must leave the admitted turn's snapshot intact until it settles.
+				if (!this.agent.state.isStreaming) this.#realtimeContext.beginTurn(this.sessionId);
 				await this.agent.prompt(messages, options);
 				return;
 			} catch (err) {

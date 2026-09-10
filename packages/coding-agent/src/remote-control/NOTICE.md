@@ -57,8 +57,17 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/core/src/realtime_conversation.rs` and
   `core/src/context/realtime_{start_with_instructions,end_instructions}.rs`:
   optional backing mode instructions, UTF-8 estimated-token validation and
-  developer-role priority. Native callback serialization protects session writes;
-  pinned turn-state projection and default templates remain tracked parity work.
+  developer-role priority. Native callback serialization protects session state.
+- `codex-rs/core/src/session/turn_context.rs`, `session/turn.rs` and
+  `context/world_state/{realtime.rs,mod.rs}`: turn-scoped voice activity and
+  retained-fragment transition semantics, ported into `../session/realtime-context.ts`.
+  Default text is copied from `codex-rs/prompts/templates/realtime/realtime_{start,end}.md`
+  into `../prompts/system/remote-voice-mode-{start,end}.md`. The unchanged Rust
+  realtime section snapshot is included as `codex-0.153.4-realtime-context.snap`
+  in the test fixtures; its SHA-256 is
+  `ee2065fecd5379cfe6585afdb68364adf0afc337e8d9552330fdc6384bf8a086`.
+  Native custom-message identities retain the observed boolean state; context
+  updates use xcsh's existing agent event and persistence pipeline.
 - `codex-rs/core/src/realtime_conversation/bem.rs` and the streamed-item reducer
   in `realtime_conversation.rs`: channel-prefix buffering, 200 ms flush pacing,
   and bounded Unicode-safe head/tail output. Native text-content updates feed this

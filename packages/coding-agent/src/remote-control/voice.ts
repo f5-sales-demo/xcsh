@@ -2,6 +2,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { prompt } from "@f5-sales-demo/pi-utils";
 import tailTemplate from "../prompts/system/remote-voice-tail.md" with { type: "text" };
+import type { RealtimeModeInstructions } from "../session/realtime-context";
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
@@ -22,7 +23,7 @@ export interface VoiceDependencies {
 	authenticate(): Promise<SubscriptionAuth>;
 	createCall?: typeof createVoiceCall;
 	context?(): string;
-	instructions?(phase: "start" | "end", text: string): Promise<void>;
+	modeChanged?(active: boolean, instructions: RealtimeModeInstructions): Promise<void>;
 	open?(url: string, headers: Record<string, string>, handlers: VoiceHandlers): Promise<VoiceSocket>;
 	emit(method: string, params: Record<string, unknown>): void;
 	records(): Record<string, unknown>[];
@@ -56,7 +57,7 @@ export class NativeVoice {
 	#promotedFinal = new Map<string, string>();
 	#flushTail = false;
 	#abort = new AbortController();
-	#endInstructions?: string;
+	#modeInstructions: RealtimeModeInstructions = {};
 	#modeStarted = false;
 	#modeUpdates: Promise<void> = Promise.resolve();
 	#started = false;
@@ -168,11 +169,11 @@ export class NativeVoice {
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
 			}
 			stage = "mode-instructions";
-			this.#endInstructions = instructions.end;
+			this.#modeInstructions = instructions;
 			this.#modeUpdates = Promise.resolve().then(async () => {
 				if (!this.active) return;
 				this.#modeStarted = true;
-				if (instructions.start !== undefined) await this.deps.instructions?.("start", instructions.start);
+				await this.deps.modeChanged?.(true, { ...this.#modeInstructions });
 			});
 			await this.#modeUpdates;
 			if (!this.active) throw new Error("Voice stopped during mode initialization");
@@ -216,8 +217,7 @@ export class NativeVoice {
 		const endInstructions = this.#modeUpdates
 			.catch(() => {})
 			.then(async () => {
-				if (this.#modeStarted && this.#endInstructions !== undefined)
-					await this.deps.instructions?.("end", this.#endInstructions);
+				if (this.#modeStarted) await this.deps.modeChanged?.(false, { ...this.#modeInstructions });
 			})
 			.catch(() => {
 				this.deps.emit("thread/realtime/error", { message: "Could not apply voice end instructions" });

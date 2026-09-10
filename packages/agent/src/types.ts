@@ -64,6 +64,9 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 */
 	convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 
+	/** Session-owned context updates after pruning; emitted and retained like other messages. */
+	getContextMessages?: (messages: readonly AgentMessage[]) => AgentMessage[];
+
 	/**
 	 * Optional transform applied to the context before `convertToLlm`.
 	 *

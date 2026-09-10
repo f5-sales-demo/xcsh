@@ -471,6 +471,7 @@ test.each(
 		const messages: any[] = [],
 			outputs: any[] = [],
 			prompts: string[] = [];
+		const modes: boolean[] = [];
 		let sessionListener = (_event: any) => {};
 		const endMessage = (message: any) => {
 			message.timestamp ??= Date.now();
@@ -503,6 +504,9 @@ test.each(
 			"WebSocket",
 		).mockImplementation(((url: string, options: any) => new MockSocket(url, options)) as any);
 		const target: any = {
+			setRealtimeMode: (active: boolean) => {
+				modes.push(active);
+			},
 			sessionId: "fixture-owner",
 			model: { id: model, provider: "openai-codex" },
 			messages,
@@ -594,6 +598,7 @@ test.each(
 			expect(selectedSession).toBe("fixture-owner");
 			expect(prompts).toEqual(["change fixture"]);
 			expect(target.model.id).toBe(model);
+			expect(modes).toEqual([true]);
 			if (version === "v1") {
 				expect(outputs).toEqual([
 					...(streamed
@@ -634,7 +639,8 @@ test.each(
 			).toBe(true);
 			if (streamed) expect(outputs).toHaveLength(2);
 		} finally {
-			remote.dispose();
+			await remote.close();
+			expect(modes).toEqual([true, false]);
 			mock.mockRestore();
 		}
 	},

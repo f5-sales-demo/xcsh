@@ -43,10 +43,17 @@ test.each(["direct", "bridge"])(
 			records.push({ kind: (data as any)?.item?.type ?? kind, closed: storageClosed });
 			return append(kind, data);
 		};
-		session.sendCustomMessage = async () => {
-			await gate.promise;
-			manager.appendCustomEntry("fixture-end-instructions", {});
-			await manager.flush();
+		const modes: boolean[] = [];
+		const setMode = session.setRealtimeMode.bind(session);
+		session.setRealtimeMode = (active, instructions) => {
+			modes.push(active);
+			expect(storageClosed).toBe(false);
+			setMode(active, instructions);
+		};
+		const flush = manager.flush.bind(manager);
+		manager.flush = async () => {
+			if (records.some(record => record.kind === "realtimeSessionClosed")) await gate.promise;
+			await flush();
 		};
 		const token = `fixture.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "example-shutdown-account" } })).toString("base64url")}.fixture`;
 		const credential = spyOn(auth, "getCredentialSource").mockReturnValue("stored-oauth");
@@ -108,7 +115,7 @@ test.each(["direct", "bridge"])(
 			const delivered = Date.now() + 1000;
 			while (!notifications.includes("thread/realtime/closed") && Date.now() < delivered) await Bun.sleep(5);
 			expect(storageClosed).toBe(true);
-			expect(records.some(record => record.kind === "fixture-end-instructions")).toBe(true);
+			expect(modes).toEqual([true, false]);
 			expect(records.some(record => record.kind === "realtimeSessionClosed")).toBe(true);
 			expect(records.every(record => !record.closed)).toBe(true);
 			expect(notifications.filter(method => method === "thread/realtime/closed")).toHaveLength(1);
@@ -117,8 +124,8 @@ test.each(["direct", "bridge"])(
 				expect(
 					reopened
 						.getBranch()
-						.some(entry => entry.type === "custom" && entry.customType === "fixture-end-instructions"),
-				).toBe(true);
+						.some(entry => entry.type === "custom_message" && entry.customType.startsWith("remote-voice-")),
+				).toBe(false);
 				expect(
 					reopened
 						.getBranch()

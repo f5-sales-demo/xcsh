@@ -224,7 +224,7 @@ async function runLoop(
 			}
 
 			// Stream assistant response
-			const message = await streamAssistantResponse(currentContext, config, signal, stream, streamFn);
+			const message = await streamAssistantResponse(currentContext, newMessages, config, signal, stream, streamFn);
 			newMessages.push(message);
 			let steeringMessagesFromExecution: AgentMessage[] | undefined;
 
@@ -300,6 +300,7 @@ async function runLoop(
  */
 async function streamAssistantResponse(
 	context: AgentContext,
+	newMessages: AgentMessage[],
 	config: AgentLoopConfig,
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
@@ -310,6 +311,14 @@ async function streamAssistantResponse(
 	if (config.transformContext) {
 		messages = await logger.ttftAttr("ttft.transform-context", () => config.transformContext!(messages, signal));
 	}
+	const injected = signal?.aborted ? [] : (config.getContextMessages?.(messages) ?? []);
+	for (const message of injected) {
+		context.messages.push(message);
+		newMessages.push(message);
+		stream.push({ type: "message_start", message });
+		stream.push({ type: "message_end", message });
+	}
+	if (injected.length > 0 && messages !== context.messages) messages = [...messages, ...injected];
 
 	// Convert to LLM-compatible messages (AgentMessage[] → Message[])
 	const llmMessages = await logger.ttftAttr("ttft.convert-to-llm", () => config.convertToLlm(messages));
