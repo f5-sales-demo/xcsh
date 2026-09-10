@@ -66,9 +66,9 @@ jobs:
       # could be repointed at new code is a privileged place to accept that risk.
       # The rest of the repo pins nothing (including `@nightly` and org workflows
       # at `@main`) — that wider gap is its own problem, not one to solve here.
-      - name: Verify baked Bun 1.3.14
+      - name: Verify baked Bun 1.4.2
         shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.3.14
+        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
 
       - name: Resolve target commit SHA
         id: target

@@ -33,9 +33,9 @@ jobs:
           persist-credentials: false
           lfs: true
 
-      - name: Verify baked Bun 1.3.14
+      - name: Verify baked Bun 1.4.2
         shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.3.14
+        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
 
       - name: Benchmark five identical installs
         env:
@@ -108,9 +108,9 @@ jobs:
           persist-credentials: false
           lfs: true
 
-      - name: Verify baked Bun 1.3.14
+      - name: Verify baked Bun 1.4.2
         shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.3.14
+        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
 
       - name: Benchmark five identical installs
         env:

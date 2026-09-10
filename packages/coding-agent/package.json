@@ -79,7 +79,7 @@
 		"google-auth-library": "10.9.1",
 		"linkedom": "0.18.13",
 		"lru-cache": "11.5.2",
-		"@shiftlabs/markit": "0.6.1",
+		"markit-ai": "0.5.3",
 		"puppeteer": "25.10.0",
 		"yaml": "2.9.0"
 	},

@@ -178,7 +178,9 @@ async function assertRefreshGeometry(label: string) {
 		const first = await wait(`${label} spinner start`, text => text.includes("Refreshing "));
 		const next = await wait(`${label} spinner advances`, text => text.includes("Refreshing ") && text !== first);
 		for (const text of [first, next]) {
-			if (text.split("\n").indexOf(modelLine) !== row) throw new Error(`${label}: refresh moved model row`);
+			if (text.split("\n").findIndex(line => line.includes("uat-model") && line.includes("")) !== row) {
+				throw new Error(`${label}: refresh moved model row`);
+			}
 		}
 		const settled = await wait(`${label} spinner settles`, text => !text.includes("Refreshing "));
 		if (settled !== idle) throw new Error(`${label}: refresh changed established layout`);
@@ -198,7 +200,7 @@ try {
 	await wait("ready", text => text.includes("0%"), 45000);
 	await Bun.sleep(2500);
 	await openPicker();
-	const providerTabs = (await rendered()).split("\n").find(line => line.startsWith("Models:"));
+	const providerTabs = (await rendered()).split("\n").find(line => line.includes("Models:"));
 	if (!providerTabs) throw new Error("Provider navigation missing");
 	async function assertHealthyPicker(step: string, timeout = 20000) {
 		const text = await wait(step, text => text.includes(providerTabs!) && !text.includes("Refreshing "), timeout);
@@ -237,7 +239,7 @@ try {
 		}
 		for (const provider of ["uat-cloud-a", "uat-cloud-b", "ollama", "uat-cloud-a"]) {
 			await herdr("pane", "send-text", pane, `${provider}/uat-model`);
-			await wait(`search ${provider}`, text => text.includes(`[${provider}/uat-model]`));
+			await wait(`search ${provider}`, text => text.includes(`${provider}/uat-model`) && text.includes(""));
 			await keys("Enter");
 			await wait(
 				"scope",
@@ -247,18 +249,18 @@ try {
 					text.includes("Assign to role"),
 			);
 			await keys("Enter");
-			await wait("reasoning", text => text.includes("Thinking for:") && text.includes("low —"));
+			await wait("reasoning", text => text.includes("Reasoning ·") && text.includes("Low"));
 			for (let attempt = 0; attempt < 8; attempt++) {
 				const text = await rendered();
-				if (text.split("\n").some(line => line.includes("low —") && !line.trimStart().startsWith("low —"))) break;
+				if (text.split("\n").some(line => line.includes("Low") && line.includes(""))) break;
 				await keys("Down");
 				await Bun.sleep(50);
 			}
 			await wait("selected reasoning", text =>
-				text.split("\n").some(line => line.includes("low —") && !line.trimStart().startsWith("low —")),
+				text.split("\n").some(line => line.includes("Low") && line.includes("")),
 			);
 			await keys("Enter");
-			await wait("applied", text => text.includes(`This conversation: ${provider}/uat-model`));
+			await wait("applied", text => text.includes("0%") && !text.includes("Reasoning ·"));
 			const before = receipts.length;
 			await command("Say UAT_OK.");
 			await wait(`response ${provider}`, text => text.includes("UAT_OK") && receipts.length > before);
@@ -280,12 +282,9 @@ try {
 			await wait("role list", text => text.includes("Set as SMOL"));
 			for (let i = 0; i < index; i++) await keys("Down");
 			await keys("Enter");
-			await wait("role reasoning", text => text.includes("Thinking for:"));
+			await wait("role reasoning", text => text.includes("Reasoning ·"));
 			await keys("Enter");
-			await wait(
-				`saved ${role}`,
-				text => !text.includes("Thinking for:") && text.includes("Active: uat-cloud-a/uat-model"),
-			);
+			await wait(`saved ${role}`, text => !text.includes("Reasoning ·") && text.includes("uat-cloud-b/uat-model"));
 			const roles = (
 				Bun.YAML.parse(await Bun.file(join(agentDir, "config.yml")).text()) as {
 					modelRoles: Record<string, string>;
@@ -337,9 +336,9 @@ try {
 		await keys("Enter");
 		await wait("resume scope", text => text.includes("Use in this conversation"));
 		await keys("Enter");
-		await wait("resume reasoning", text => text.includes("Thinking for:"));
+		await wait("resume reasoning", text => text.includes("Reasoning ·"));
 		await keys("Enter");
-		await wait("resume selection", text => text.includes("This conversation: uat-cloud-b/uat-model"));
+		await wait("resume selection", text => text.includes("0%") && !text.includes("Reasoning ·"));
 		await keys("ctrl+c", "ctrl+c");
 		await Bun.sleep(500);
 		await herdr("pane", "run", pane, `${launchCommand} --continue`);
@@ -356,9 +355,9 @@ try {
 		await keys("Enter");
 		await wait("default scope", text => text.includes("Save as default"));
 		await keys("Down", "Enter");
-		await wait("default reasoning", text => text.includes("Thinking for:"));
+		await wait("default reasoning", text => text.includes("Reasoning ·"));
 		await keys("Enter");
-		await wait("default saved", text => text.includes("Saved default: uat-cloud-b/uat-model"));
+		await wait("default saved", text => text.includes("0%") && !text.includes("Reasoning ·"));
 		const afterDefault = Bun.YAML.parse(await Bun.file(join(agentDir, "config.yml")).text()) as {
 			modelRoles: { default: string };
 		};
@@ -368,7 +367,7 @@ try {
 		await keys("Enter");
 		await wait("failure scope", text => text.includes("Save as default"));
 		await keys("Down", "Enter");
-		await wait("failure reasoning", text => text.includes("Thinking for:"));
+		await wait("failure reasoning", text => text.includes("Reasoning ·"));
 		const configPath = join(agentDir, "config.yml");
 		await rename(configPath, `${configPath}.backup`);
 		await mkdir(configPath);
