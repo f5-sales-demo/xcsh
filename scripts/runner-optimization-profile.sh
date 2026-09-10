@@ -25,6 +25,13 @@ cd "$repo_root"
 mkdir -p "$output_dir/manifests" "$output_dir/profiles"
 output_dir=$(cd "$output_dir" && pwd)
 
+SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")
+[[ "$SOURCE_DATE_EPOCH" =~ ^[0-9]+$ ]] || {
+  echo "unable to resolve SOURCE_DATE_EPOCH from GITHUB_SHA" >&2
+  exit 1
+}
+export SOURCE_DATE_EPOCH
+
 tree_manifest() {
   local destination=$1
   shift

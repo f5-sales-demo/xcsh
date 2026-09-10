@@ -110,6 +110,9 @@ class CiCapacityContractTests(unittest.TestCase):
             self.assertIn(f"profile_phase {phase} {phase}", profiler)
         self.assertIn('TARGET_VARIANTS="baseline modern"', profiler)
         self.assertIn("--platform linux,win32", profiler)
+        self.assertIn(
+            'SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$GITHUB_SHA")', profiler
+        )
         self.assertIn("git diff --exit-code", profiler)
         self.assertIn('>"$output_dir/node-filesystem.json"', profiler)
         self.assertNotIn("actions/cache/save@", benchmark)
