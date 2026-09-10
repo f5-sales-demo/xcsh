@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { ProtocolError } from "./errors";
+import { updateFileHistoryItem } from "./file-changes";
 import {
 	assistantHistoryItem,
 	backgroundCommandCompletion,
@@ -977,6 +978,12 @@ export class RemoteSession {
 				message.role === "assistant"
 					? {
 							cwd: this.target.sessionManager.getCwd(),
+							fileCallIds: message.content.flatMap(part =>
+								part.type === "toolCall" &&
+								this.target.getToolByName?.(part.name)?.executionKind === "fileChange"
+									? [part.id]
+									: [],
+							),
 							commandCallIds: message.content.flatMap(part =>
 								part.type === "toolCall" && this.target.getToolByName?.(part.name)?.executionKind === "command"
 									? [part.id]
@@ -987,7 +994,10 @@ export class RemoteSession {
 			this.target.sessionManager.appendCustomEntry("remote-history", { kind: "message", id, key, clientId, tools });
 			this.#messageIds.delete(key);
 			for (const item of messageHistoryItems(id, message, clientId, tools))
-				this.#rememberItem(item, item.type !== "dynamicToolCall" && item.type !== "commandExecution");
+				this.#rememberItem(
+					item,
+					item.type !== "dynamicToolCall" && item.type !== "commandExecution" && item.type !== "fileChange",
+				);
 			if (message.role === "assistant") {
 				for (const [index, part] of message.content.entries())
 					if (part.type === "text")
@@ -1057,11 +1067,29 @@ export class RemoteSession {
 				}
 			}
 		}
+		if (event.type === "tool_execution_update") {
+			const suffix = `:tool:${event.toolCallId}`;
+			const item = this.#active?.items.findLast(
+				value => value.type === "fileChange" && value.status === "inProgress" && String(value.id).endsWith(suffix),
+			);
+			const details = event.partialResult.details as { execution?: unknown } | undefined;
+			const updated = item && updateFileHistoryItem(item, details?.execution);
+			if (updated) {
+				// Only the result message completes an item, even if a progress callback has final facts.
+				updated.status = "inProgress";
+				this.#rememberItem(updated, false);
+				this.#emit("item/fileChange/patchUpdated", {
+					turnId: this.#active?.id,
+					itemId: updated.id,
+					changes: updated.changes,
+				});
+			}
+		}
 		if (event.type === "message_end" && event.message.role === "toolResult") {
 			const suffix = `:tool:${event.message.toolCallId}`;
 			const item = this.#active?.items.findLast(
 				value =>
-					(value.type === "dynamicToolCall" || value.type === "commandExecution") &&
+					(value.type === "dynamicToolCall" || value.type === "commandExecution" || value.type === "fileChange") &&
 					String(value.id).endsWith(suffix),
 			);
 			if (item) {

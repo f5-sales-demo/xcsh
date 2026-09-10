@@ -678,3 +678,118 @@ test("command output deltas contain incremental output and update the active com
 		f.events.filter(event => event.method === "item/started" && (event.params.item as any).id === item.id),
 	).toHaveLength(1);
 });
+
+test.each(["completed", "failed", "declined"])(
+	"file items preserve execution facts through events and storage: %s",
+	status => {
+		const f = fixture();
+		(f.target as any).getToolByName = () => ({ executionKind: "fileChange" });
+		f.emit({ type: "agent_start" });
+		f.message(user("change fixture"));
+		const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+		call.content = [{ type: "toolCall", id: "file-call", name: "native-file-tool", arguments: { path: "a.txt" } }];
+		call.stopReason = "toolUse";
+		f.message(call);
+		const starts = f.events.filter(
+			event => event.method === "item/started" && (event.params.item as any).type === "fileChange",
+		);
+		expect(starts).toHaveLength(1);
+		const initial = starts[0].params.item as Record<string, unknown>;
+		expect(initial).toEqual({ type: "fileChange", id: expect.any(String), changes: [], status: "inProgress" });
+		expect(
+			f.events.filter(event => event.method === "item/completed" && (event.params.item as any).id === initial.id),
+		).toHaveLength(0);
+		const changes = [{ path: "/tmp/history/a.txt", type: "add", content: "actual contents\n" }];
+		f.message({
+			role: "toolResult",
+			toolCallId: "file-call",
+			toolName: "native-file-tool",
+			content: [{ type: "text", text: "Display summary" }],
+			details: { execution: { kind: "fileChange", status, changes } },
+			isError: status !== "completed",
+			timestamp: ++timestamp,
+		});
+		f.emit({ type: "agent_end", messages: f.messages });
+		const expected = {
+			...initial,
+			status,
+			changes: [{ path: "/tmp/history/a.txt", kind: { type: "add" }, diff: "actual contents\n" }],
+		};
+		const completions = f.events.filter(
+			event => event.method === "item/completed" && (event.params.item as any).id === initial.id,
+		);
+		expect(completions).toHaveLength(1);
+		expect(completions[0].params.item).toEqual(expected);
+		expect(f.remote.history()[0].items.find(item => item.id === initial.id)).toEqual(expected);
+		f.remote.dispose();
+		expect(
+			fixture(f.manager)
+				.remote.history()[0]
+				.items.find(item => item.id === initial.id),
+		).toEqual(expected);
+	},
+);
+
+test("file progress updates the existing item and ignores malformed and late patches", async () => {
+	const f = fixture();
+	(f.target as any).getToolByName = () => ({ executionKind: "fileChange" });
+	f.emit({ type: "agent_start" });
+	f.message(user("update fixture"));
+	const call = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+	call.content = [{ type: "toolCall", id: "progress-file", name: "native-file-tool", arguments: {} }];
+	call.stopReason = "toolUse";
+	f.message(call);
+	const execution = {
+		kind: "fileChange",
+		status: "inProgress",
+		changes: [{ path: "/tmp/history/a", type: "update", unifiedDiff: "@@ -1 +1 @@\n-old\n+new\n", movePath: null }],
+	};
+	const progress = (value: unknown) =>
+		f.emit({
+			type: "tool_execution_update",
+			toolCallId: "progress-file",
+			toolName: "native-file-tool",
+			args: {},
+			partialResult: { content: [], details: { execution: value } },
+		});
+	progress({ ...execution, changes: [{ path: "/tmp/history/a", type: "update", unifiedDiff: 42 }] });
+	expect(f.events.filter(event => event.method === "item/fileChange/patchUpdated")).toHaveLength(0);
+	progress(execution);
+	const patch = f.events.filter(event => event.method === "item/fileChange/patchUpdated");
+	expect(patch).toHaveLength(1);
+	const current = f.remote.history()[0].items.find(item => item.type === "fileChange")!;
+	expect(patch[0].params).toEqual({
+		threadId: "durable",
+		turnId: f.remote.history()[0].id,
+		itemId: current.id,
+		changes: current.changes,
+	});
+	expect(current).toMatchObject({
+		status: "inProgress",
+		changes: [
+			{ path: "/tmp/history/a", kind: { type: "update", move_path: null }, diff: execution.changes[0].unifiedDiff },
+		],
+	});
+	f.message({
+		role: "toolResult",
+		toolCallId: "progress-file",
+		toolName: "native-file-tool",
+		content: [],
+		details: { execution: { ...execution, status: "completed" } },
+		isError: false,
+		timestamp: ++timestamp,
+	});
+	progress({ ...execution, changes: [] });
+	expect(f.events.filter(event => event.method === "item/fileChange/patchUpdated")).toHaveLength(1);
+	f.emit({ type: "agent_end", messages: f.messages });
+	expect(f.remote.history()[0].items.find(item => item.id === current.id)).toMatchObject({
+		status: "completed",
+		changes: current.changes,
+	});
+	const response = await f.remote.call("phone", "thread/items/list", { threadId: "durable" });
+	const validate = new Ajv({ strict: false, validateFormats: false }).compile(itemsSchema);
+	expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
+	expect(
+		f.events.filter(event => event.method === "item/started" && (event.params.item as any).type === "fileChange"),
+	).toHaveLength(1);
+});

@@ -1,5 +1,6 @@
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
 import type { SessionEntry } from "../session/session-manager";
+import { updateFileHistoryItem } from "./file-changes";
 
 export interface HistoryTurn {
 	id: string;
@@ -55,6 +56,7 @@ export function messageKey(message: AgentMessage): string {
 export interface HistoryToolContext {
 	cwd: string;
 	commandCallIds: string[];
+	fileCallIds?: string[];
 }
 function commandHistoryItem(id: string, command: string, cwd: string): Record<string, unknown> {
 	return {
@@ -122,6 +124,15 @@ export function completeToolHistoryItem(
 	item: Record<string, unknown>,
 	message: Extract<AgentMessage, { role: "toolResult" }>,
 ): Record<string, unknown> {
+	if (item.type === "fileChange") {
+		const details = message.details as { execution?: unknown } | undefined;
+		return (
+			updateFileHistoryItem(item, details?.execution) ?? {
+				...item,
+				status: message.isError ? "failed" : "completed",
+			}
+		);
+	}
 	if (item.type === "commandExecution") {
 		const details = message.details as { execution?: Record<string, unknown> } | undefined;
 		const execution = details?.execution;
@@ -175,6 +186,8 @@ export function messageHistoryItems(
 	return message.content.flatMap((part, index): Record<string, unknown>[] => {
 		if (part.type === "text" && part.text) return [assistantHistoryItem(`${id}:${index}`, part.text, part.phase)];
 		if (part.type === "toolCall") {
+			if (Array.isArray(tools?.fileCallIds) && tools.fileCallIds.includes(part.id))
+				return [{ type: "fileChange", id: `${id}:tool:${part.id}`, changes: [], status: "inProgress" }];
 			if (
 				typeof tools?.cwd === "string" &&
 				Array.isArray(tools.commandCallIds) &&

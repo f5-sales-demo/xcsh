@@ -30,3 +30,13 @@ export function commandExecution(
 		processId: null,
 	};
 }
+
+export type FileExecutionChange =
+	| { path: string; type: "add" | "delete"; content: string }
+	| { path: string; type: "update"; unifiedDiff: string; movePath: string | null };
+
+export interface FileExecutionDetails {
+	kind: "fileChange";
+	status: "inProgress" | "completed" | "failed" | "declined";
+	changes: FileExecutionChange[];
+}

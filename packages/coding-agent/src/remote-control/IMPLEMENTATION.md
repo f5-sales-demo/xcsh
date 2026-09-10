@@ -1442,3 +1442,36 @@ across 774 files (25210 assertions). Workspace TypeScript/lint, CLI bundle, docu
 staged privacy and secret checks passed. Runtime/test hashes remained unchanged
 through verification.
 These tests do not replace remaining live iPhone task-cancellation acceptance.
+
+## File-change protocol and history
+
+File-change execution facts now have a separate type from terminal-rendered edit
+diffs. The remote converter follows the pinned Rust implementation: additions and
+deletions use raw content, updates retain the executor's unified diff, renames carry
+`move_path` and the original moved-to suffix, and paths sort by UTF-8 bytes. A
+reproducible generator executes the original hash-checked Rust converter to produce
+six independent fixtures. The regenerated fixture matched byte for byte.
+
+Tools declaring `executionKind: "fileChange"` retain that classification in persisted
+message identity metadata. They produce one started item, accept structured patch
+updates, and complete from the owning tool-result message. Reload uses the same
+identity and execution facts. Progressive callbacks do not complete the item;
+malformed facts and late callbacks after completion are ignored. Completed, failed
+and declined statuses preserve any supplied file changes. Display strings and tool
+names are never treated as file execution facts.
+
+The converter tests first failed against an empty implementation. Live-history
+fixtures then failed in all three terminal statuses before classification and result
+routing were added. A progressive-update test failed before update routing; a
+malformed array-valued status failed before strict status validation. Focused
+converter/history tests then passed. The final remote suite passed 574 tests and
+2428 assertions across 53 files. Workspace TypeScript/lint, CLI bundle, documentation,
+staged privacy and secret checks passed. The full package suite passed 7937 tests
+with 561 skips and zero failures across 775 files (25272 assertions). All eight
+runtime/test/fixture source hashes remained unchanged through verification.
+
+Native edit/write tools still need to supply execution facts at their authorized
+mutation boundaries, including actual before/after content, formatting, renames and
+partial failures. Their current terminal display diffs cannot be forwarded directly.
+This checkpoint does not claim those producers or live iPhone file-change rendering
+are complete. The live executable remains on `052153363`.

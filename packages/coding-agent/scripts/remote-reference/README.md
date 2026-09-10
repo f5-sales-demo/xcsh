@@ -160,3 +160,13 @@ hooks currently capture text frames, not every WebSocket control frame or HTTP
 handshake response. These coverage gaps, untested transports, permission flows,
 and model variants remain explicit parity work. Successful captures or an empty
 structural diff do not establish identical feature parity.
+
+## File-change converter fixtures
+
+Run `bun scripts/remote-reference/file-changes.ts <pinned-codex-checkout>` to regenerate
+`test/remote-control/fixtures/codex-0.153.4-file-changes.json` from the coding-agent
+package. The generator checks the pinned source hash, compiles the original Rust
+converter with local type adapters, and records its output for additions, deletions,
+updates, renames, empty changes and Unicode path ordering. This verifies conversion
+of execution facts; it does not generate a diff from before/after file contents or
+prove native edit/write producer coverage.
