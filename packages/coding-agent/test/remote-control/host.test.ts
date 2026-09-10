@@ -1,9 +1,36 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startLocalHost } from "../../src/remote-control/host";
 import { connectPeer } from "../../src/remote-control/ipc";
+
+test("heartbeat expiry removes a stale owner while retaining a refreshed owner", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "xcsh-heartbeat-"));
+	const path = join(dir, "host.sock");
+	const host = await startLocalHost(path, "fixture");
+	const stale = await connectPeer(path);
+	const fresh = await connectPeer(path);
+	let now = Date.now();
+	const time = spyOn(Date, "now").mockImplementation(() => now);
+	const closed = Promise.withResolvers<void>();
+	stale.onClose = () => closed.resolve();
+	try {
+		await stale.call("register", { thread: { id: "stale" } });
+		await fresh.call("register", { thread: { id: "fresh" } });
+		now += 31_000;
+		await fresh.call("register", { thread: { id: "fresh" } });
+		await Promise.race([closed.promise, Bun.sleep(6000)]);
+		expect(host.router.sessions.has("stale")).toBe(false);
+		expect(host.router.sessions.has("fresh")).toBe(true);
+	} finally {
+		time.mockRestore();
+		stale.close();
+		fresh.close();
+		await host.close();
+		await rm(dir, { recursive: true, force: true });
+	}
+}, 7500);
 
 test("host registers two live owners, routes into owner socket, and removes exited sessions", async () => {
 	const dir = await mkdtemp(join(tmpdir(), "xcsh-host-test-"));

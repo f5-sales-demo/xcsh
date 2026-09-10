@@ -492,6 +492,7 @@ export class AgentSession {
 	// Callers (e.g., SDK-level code that registers external listeners) register cleanups here so
 	// dispose() unregisters them. Prevents leaked listeners from mutating dead session state.
 	#disposeHooks: Array<() => void | Promise<void>> = [];
+	#beforeDisposeHooks = new Set<() => void | Promise<void>>();
 	#disposeCall?: Promise<void>;
 
 	/** Tracks pending steering messages for UI display. Removed when delivered. */
@@ -2253,6 +2254,14 @@ export class AgentSession {
 		this.#disposeHooks.push(hook);
 	}
 
+	/** Drain session-bound consumers while storage is still available. */
+	addBeforeDisposeHook(hook: () => void | Promise<void>): () => void {
+		this.#beforeDisposeHooks.add(hook);
+		return () => {
+			this.#beforeDisposeHooks.delete(hook);
+		};
+	}
+
 	/**
 	 * Remove all listeners, flush pending writes, and disconnect from agent.
 	 * Call this when completely done with the session.
@@ -2268,6 +2277,14 @@ export class AgentSession {
 	}
 
 	async #doDispose(): Promise<void> {
+		for (const hook of [...this.#beforeDisposeHooks]) {
+			try {
+				await hook();
+			} catch {
+				logger.warn("AgentSession before-dispose hook failed");
+			}
+		}
+		this.#beforeDisposeHooks.clear();
 		try {
 			if (this.#extensionRunner?.hasHandlers("session_shutdown")) {
 				await this.#extensionRunner.emit({ type: "session_shutdown" });

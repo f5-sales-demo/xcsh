@@ -122,6 +122,21 @@ cache. Tests first reproduced repeated execution after failed switches, reloads,
 and returning to a previous session; retries now return the accepted result with
 one prompt execution. This does not prove durable retry recovery after a crash.
 
+Local host-recovery tests now keep a real agent and pending tool alive while the
+host socket closes and a replacement host starts. The bridge reconnects after an
+EOF handling repair; it recovers the renamed owner and completed history. Retrying
+the stable client-message identity executes the tool once. Local subscribers now
+receive completion events; an initialized but unsubscribed client receives none.
+A lease-clock test verifies stale-owner removal and refreshed-owner retention.
+
+Terminal disposal now drains remote voice before closing session storage and
+unregisters the bridge before disposal completes. Direct and bridged synthetic
+voice tests reopen the persisted history to verify final voice records and end
+instructions, with one close notification. These are automated native results,
+not reference wire recordings or new manual iPhone acceptance. Abrupt packaged
+host loss, the remaining relay replay matrix and final phone lifecycle checks
+remain open.
+
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
 | Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a new native Beta file-task capture also passed |

@@ -516,3 +516,34 @@ runtime and tests were unchanged throughout that run. An intermediate broad run
 overlapped the new retry tests and is not final acceptance evidence. Markdown,
 terminology, staged PII, secret and whitespace checks pass. Full repository CI and
 the previously recorded full-scope PII findings remain separate delivery gates.
+
+Shutdown and host-recovery tests exposed three further defects. Terminal disposal
+closed storage before stopping voice; final history and end instructions were
+therefore too late. Session-bound before-dispose hooks now drain the remote
+adapter while storage remains open. Voice closure notifications remain available
+until this drain finishes. The bridge then waits for pending event submissions,
+unregisters its owner and closes the socket. Direct and bridged synthetic voice
+tests verify one close notification, no writes after storage closure, and both
+final history and end instructions after reopening the session file.
+
+A real AgentSession's pending tool survived a local host restart, but its bridge
+did not re-register: the Bun socket had reached EOF without rejecting its pending
+registration. Explicit socket destruction on EOF completes disconnect handling
+and restores registration. The same test then exposed missing events for local
+protocol subscribers. Owner events now reach subscribed local clients as well as
+the existing relay path. Unsubscribed clients receive none.
+
+The restarted local host now recovers the renamed owner, preserves its active
+tool and history, and accepts the same clientUserMessageId without a second tool
+execution. Completed events and canonical history agree afterward. A separate
+heartbeat test advances the lease clock and uses the actual sweep timer to remove
+a stale owner while retaining a refreshed owner. This is local integration
+evidence with synthetic model/voice services, not a new phone recording, abrupt
+packaged process-loss test, or proof of durable retry recovery after agent loss.
+
+The focused remote suite passes 252 tests with zero failures and 1098 assertions.
+Workspace TypeScript and formatting pass. Final guarded package verification:
+7490 passes, 561 skips, zero failures, 23370 assertions across 745 files in
+347.44 seconds. Runtime and tests stayed unchanged during the full run. Markdown,
+terminology, staged PII, secret and whitespace checks pass. The complete remaining
+objective remains tracked in `ACCEPTANCE.md`; no new phone acceptance is claimed.

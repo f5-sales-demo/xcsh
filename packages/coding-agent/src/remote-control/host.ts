@@ -83,6 +83,8 @@ export async function startLocalHost(
 				const event = params.event as Notification | undefined;
 				if (!owner || !event || event.params?.threadId !== owner.id || typeof event.method !== "string")
 					throw new ProtocolError(-32602, "Invalid session event");
+				for (const client of localClients.keys())
+					if (router.subscribed(client, owner.id)) router.notify(client, event);
 				publish(event);
 				return {};
 			}

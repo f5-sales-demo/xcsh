@@ -33,7 +33,7 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 > &
-	Partial<Pick<AgentSession, "subscribeSessionTransitions">>;
+	Partial<Pick<AgentSession, "subscribeSessionTransitions" | "addBeforeDisposeHook">>;
 export interface Notification {
 	method: string;
 	params: Record<string, unknown>;
@@ -85,6 +85,7 @@ export class RemoteSession {
 	#disposed = false;
 	#closing?: Promise<void>;
 	#unsubscribeTransitions?: () => void;
+	#unsubscribeDispose?: () => void;
 	#effects = new Set<Promise<unknown>>();
 	#cancelDelegations = new Set<() => void>();
 	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
@@ -111,6 +112,7 @@ export class RemoteSession {
 	) {
 		this.#restoreIdentity();
 		this.#unsubscribe = target.subscribe(event => this.#event(event));
+		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
 		this.#unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {
 			if (phase === "before") {
 				this.#suspended = true;
@@ -181,9 +183,9 @@ export class RemoteSession {
 		this.#suspended = true;
 		this.#disposed = true;
 		this.#unsubscribeTransitions?.();
+		this.#unsubscribeDispose?.();
 		for (const cancel of this.#cancelDelegations) cancel();
 		this.#unsubscribe();
-		this.#listeners.clear();
 		this.#voiceOutputs.clear();
 		this.#closing = Promise.resolve(this.#voice?.stop())
 			.then(async () => {
@@ -191,11 +193,12 @@ export class RemoteSession {
 			})
 			.finally(() => {
 				this.#epoch++;
+				this.#listeners.clear();
 			});
 		return this.#closing;
 	}
-	#emit(method: string, params: Record<string, unknown>): void {
-		if (this.#disposed || this.#boundId !== this.target.sessionId) return;
+	#emit(method: string, params: Record<string, unknown>, allowClosing = false): void {
+		if ((this.#disposed && !allowClosing) || this.#boundId !== this.target.sessionId) return;
 		this.#updatedAt = Math.floor(Date.now() / 1000);
 		for (const listener of this.#listeners)
 			listener({ method, params: { threadId: this.target.sessionId, ...params } });
@@ -383,7 +386,7 @@ export class RemoteSession {
 					return auth;
 				},
 				emit: (name, value) => {
-					if (epoch === this.#epoch) this.#emit(name, value);
+					if (epoch === this.#epoch) this.#emit(name, value, true);
 				},
 				records: () => {
 					this.#assertCurrent(epoch, true);

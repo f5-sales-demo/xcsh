@@ -14,6 +14,8 @@ export class LocalPeer {
 		{ resolve: (result: unknown) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }
 	>();
 	constructor(private readonly socket: Socket) {
+		// Treat EOF as disconnect even when the runtime retains a writable half.
+		socket.on("end", () => socket.destroy());
 		socket.on("data", chunk => {
 			if (this.#buffer.length + chunk.length > MAX_FRAME) {
 				socket.destroy();

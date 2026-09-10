@@ -10,12 +10,14 @@ export function startSessionBridge(
 	target: SessionTarget,
 	socketPath = remoteSocketPath(),
 	intervalMs = 5_000,
-): () => void {
+): () => Promise<void> {
 	const remote = new RemoteSession(target, VERSION);
 	let peer: LocalPeer | undefined;
 	let pending: Promise<void> | undefined;
 	let changing = false;
 	let stopped = false;
+	let closing: Promise<void> | undefined;
+	const events = new Set<Promise<void>>();
 	const update = (): Promise<void> => {
 		if (stopped || changing) return Promise.resolve();
 		if (pending) return pending;
@@ -55,8 +57,16 @@ export function startSessionBridge(
 	};
 	const unsubscribe = remote.subscribe(event => {
 		const current = peer;
-		void current?.call("event", { event }).catch(() => {
-			current.close();
+		if (!current) return;
+		const sent = current.call("event", { event }).then(
+			() => {},
+			() => {
+				current.close();
+			},
+		);
+		events.add(sent);
+		void sent.finally(() => {
+			events.delete(sent);
 		});
 	});
 	const unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {
@@ -79,12 +89,25 @@ export function startSessionBridge(
 	}, intervalMs);
 	timer.unref();
 	void update();
-	return () => {
+	const stop = (): Promise<void> => {
+		if (closing) return closing;
 		stopped = true;
 		clearInterval(timer);
-		unsubscribe();
 		unsubscribeTransitions?.();
-		remote.dispose();
-		peer?.close();
+		unsubscribeDispose?.();
+		closing = (async () => {
+			try {
+				await remote.close();
+				await pending;
+				await Promise.allSettled([...events]);
+				await peer?.call("unregister", {}).catch(() => {});
+			} finally {
+				unsubscribe();
+				peer?.close();
+			}
+		})();
+		return closing;
 	};
+	const unsubscribeDispose = target.addBeforeDisposeHook?.(stop);
+	return stop;
 }
