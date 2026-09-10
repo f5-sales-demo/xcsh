@@ -1873,3 +1873,24 @@ tests with 561 skips, 29711 assertions and zero failures across 790 files in
 414.50 seconds before the final empty-payload and cursor-type guards. Their
 focused matrix and the complete remote-control suite were rerun afterward.
 Workspace formatting and TypeScript checks passed.
+
+## Host relay reconnect ownership
+
+The host now treats a WebSocket transport error as a failed connection and closes
+that socket so its close handler schedules the bounded reconnect. Each handler is
+bound to the WebSocket generation that created it. A late error, message, close or
+asynchronous protocol failure from an old socket therefore cannot change status,
+close the replacement socket, or schedule an extra connection.
+
+The red reconnect test first showed that `onerror` left the host permanently in
+`connection-error`. After closing errored transports, the extended test exposed a
+second failure where a stale error closed the replacement socket. The final test
+drives a real local host and owner through two relay losses. It verifies the
+subscribe cursor, unacknowledged response replay, acknowledgement removal, stale
+socket isolation, and exactly one routed `turn/start` execution.
+
+The focused relay and host matrix passed 17 tests with 101 assertions. The
+complete remote-control suite passed 878 tests with 3471 assertions across 65
+files. Workspace formatting, prompt formatting and TypeScript checks passed
+across 1776 files. An abrupt packaged host-process test and final live phone
+recovery trace remain open; the dedicated phone runtime was not changed.

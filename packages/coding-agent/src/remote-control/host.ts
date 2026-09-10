@@ -142,7 +142,7 @@ export async function startLocalHost(
 				return;
 			}
 			relayStatus = "connecting";
-			socket = new WebSocket("wss://chatgpt.com/backend-api/wham/remote/control/server", {
+			const connection = new WebSocket("wss://chatgpt.com/backend-api/wham/remote/control/server", {
 				headers: {
 					authorization: `Bearer ${enrollment.remote_control_token}`,
 					"x-codex-server-id": enrollment.server_id,
@@ -154,15 +154,18 @@ export async function startLocalHost(
 					...(codec.cursor ? { "x-codex-subscribe-cursor": codec.cursor } : {}),
 				},
 			});
-			socket.onopen = () => {
+			socket = connection;
+			connection.onopen = () => {
+				if (socket !== connection) return;
 				relayStatus = "connected";
 				attempts = 0;
 				for (const frame of codec.replay()) {
 					traceJson(trace, "relay", "out", frame);
-					socket?.send(frame);
+					connection.send(frame);
 				}
 			};
-			socket.onmessage = event => {
+			connection.onmessage = event => {
+				if (socket !== connection) return;
 				try {
 					if (typeof event.data !== "string") throw new Error();
 					traceJson(trace, "relay", "in", event.data);
@@ -241,21 +244,27 @@ export async function startLocalHost(
 						})
 						.catch(() => {
 							relayStatus = "protocol-error";
-							socket?.close();
+							if (socket === connection) connection.close();
 						});
 				} catch {
 					relayStatus = "protocol-error";
-					socket?.close();
+					if (socket === connection) connection.close();
 				}
 			};
-			socket.onerror = () => {
+			connection.onerror = () => {
+				if (socket !== connection) return;
 				relayStatus = "connection-error";
+				connection.close();
 			};
-			socket.onclose = () => {
+			connection.onclose = () => {
+				if (socket !== connection) return;
+				socket = undefined;
 				if (!closed) {
 					relayStatus = "reconnecting";
+					if (timer) clearTimeout(timer);
 					timer = setTimeout(
 						() => {
+							timer = undefined;
 							void connect();
 						},
 						Math.min(30_000, 500 * 2 ** Math.min(attempts++, 6)),

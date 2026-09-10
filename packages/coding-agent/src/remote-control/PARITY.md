@@ -484,3 +484,16 @@ The final local evidence is 16 focused relay/host tests with 89 assertions and
 before the final two parser guards with 8264 passes, 561 skips and 29711
 assertions. Their focused and complete remote-control matrices were rerun
 afterward. All runs completed with zero failures.
+
+## Host reconnect parity
+
+The host transport now closes an errored WebSocket and reconnects with the last
+delivered cursor. Unacknowledged responses replay on the replacement connection;
+acknowledged responses do not. Socket-generation guards prevent late callbacks
+from an old connection from closing or mutating the active connection. A routed
+turn remains owned by one terminal executor through consecutive relay losses.
+
+This local host matrix passed 17 tests with 101 assertions, and the complete
+remote-control suite passed 878 tests with 3471 assertions. It is transport-level
+coverage with a real local owner and mocked remote WebSockets. Abrupt loss of a
+packaged host process and a fresh service trace remain separate acceptance work.
