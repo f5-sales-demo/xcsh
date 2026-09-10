@@ -388,3 +388,34 @@ the adapter must use it and establish durable turn/item identities. AgentSession
 currently emits display events before appending the corresponding message to
 storage, so stream identity and history hydration must be repaired together.
 The mixed canonical timeline, tool items and steering boundaries remain open.
+
+The durable ordinary-history checkpoint now replaces that model-context projection
+for live AgentSession attachments. It reads the selected persisted branch, keeps
+pre-compaction messages and excludes sibling branches. Native identity/boundary
+records align user/assistant item IDs and turn IDs with streamed notifications,
+keep steering in the same turn, and preserve client message IDs for matched input.
+Commentary and final content use separate items. Generic dynamic-tool history
+includes actual arguments and completed/failed results; provider call-ID reuse
+cannot alias items across messages. Voice provenance also reads the selected branch.
+
+Observed red-to-green regressions cover history loss, branch isolation, stable
+stream identities/phases, tool results, empty failed starts, live tool completion,
+late prompt settlement, duplicate initial text, repeated tool IDs, disk persistence,
+interrupted turns and successful provider retry. Before dispatching a remote turn,
+the existing SessionManager persists its boundary, including a first turn that
+fails before producing assistant output. A real AgentSession test verifies one tool
+execution, four owner-written messages, matching live/history completed items and
+stable reattachment. All four model voice adapter cases now exercise this history
+path for streamed and completed-only output.
+
+Verification: 209 focused tests, zero failures, 821 assertions. The guarded package
+suite passed 7447 tests, 561 skips, zero failures / 23093 assertions across 740 files
+in 334.64 seconds. Workspace TypeScript/formatting, staged PII, secret scanning and
+whitespace checks passed. No new phone acceptance or capture is claimed; the
+dedicated sessions remain on the earlier streaming capture build.
+
+Remaining work includes the mixed canonical timeline, specialized command/file
+items and remaining visible message types, attachment during an active turn,
+session/fork lifecycle, and concurrent control/recovery. Persisting turn boundaries
+does not yet provide durable request replay deduplication or close the tool/crash
+gap. Historical turns without native boundary records use inferred boundaries.

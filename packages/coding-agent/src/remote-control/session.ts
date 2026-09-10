@@ -1,7 +1,14 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { ProtocolError } from "./errors";
+import {
+	assistantHistoryItem,
+	completeToolHistoryItem,
+	messageHistoryItems,
+	messageKey,
+	projectHistory,
+} from "./history";
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
@@ -79,10 +86,29 @@ export class RemoteSession {
 	#createdAt = Math.floor(Date.now() / 1000);
 	#updatedAt = this.#createdAt;
 	#itemId = "";
+	#nextId = randomUUID();
+	#startedItems = new Set<string>();
+	#messageIds = new Map<string, string>();
+	#pendingClients: { text: string; id: string }[] = [];
+	#startedAtMs = 0;
+	get #durable(): boolean {
+		return typeof this.target.sessionManager.getBranch === "function";
+	}
 	constructor(
 		readonly target: SessionTarget,
 		private readonly version = "21.22.0",
 	) {
+		const header = target.sessionManager.getHeader?.();
+		if (header) this.#createdAt = Math.floor(Date.parse(header.timestamp) / 1000);
+		const last = target.sessionManager.getBranch?.().at(-1);
+		this.#updatedAt = last ? Math.floor(Date.parse(last.timestamp) / 1000) : this.#createdAt;
+		if (this.#durable && target.isStreaming) {
+			const latest = this.history().at(-1);
+			if (latest?.status === "inProgress") {
+				this.#active = latest;
+				this.#startedAtMs = (latest.startedAt ?? this.#createdAt) * 1000;
+			}
+		}
 		this.#unsubscribe = target.subscribe(event => this.#event(event));
 	}
 	subscribe(listener: (event: Notification) => void): () => void {
@@ -103,6 +129,22 @@ export class RemoteSession {
 			listener({ method, params: { threadId: this.target.sessionId, ...params } });
 	}
 	history(): Turn[] {
+		if (this.#durable) {
+			const turns = projectHistory(
+				this.target.sessionId,
+				this.target.sessionManager.getBranch(),
+				Boolean(this.#active) || this.target.isStreaming,
+			);
+			const active = turns.find(value => value.id === this.#active?.id);
+			if (active && this.#active) {
+				for (const item of this.#active.items) {
+					const index = active.items.findIndex(value => value.id === item.id);
+					if (index < 0) active.items.push(item);
+					else active.items[index] = item;
+				}
+			}
+			return turns;
+		}
 		const turns: Turn[] = [];
 		this.target.messages.forEach((message, index) => {
 			if (message.role === "user") {
@@ -143,11 +185,19 @@ export class RemoteSession {
 			sessionId: this.target.sessionId,
 			forkedFromId: null,
 			parentThreadId: null,
-			preview:
-				this.target.messages
-					.filter(m => m.role === "user")
-					.map(textOf)[0]
-					?.slice(0, 200) ?? "",
+			preview: this.#durable
+				? this.history()
+						.flatMap(value => value.items)
+						.filter(item => item.type === "userMessage")
+						.slice(0, 1)
+						.flatMap(item => item.content as { text?: string }[])
+						.map(item => item.text ?? "")
+						.join("\n")
+						.slice(0, 200)
+				: (this.target.messages
+						.filter(m => m.role === "user")
+						.map(textOf)[0]
+						?.slice(0, 200) ?? ""),
 			ephemeral: !this.target.sessionFile,
 			section: null,
 			sectionEnteredAt: null,
@@ -241,16 +291,14 @@ export class RemoteSession {
 				authenticate: () => loadRemoteSubscription(this.target.modelRegistry.authStorage, this.target.sessionId),
 				emit: (name, value) => this.#emit(name, value),
 				records: () =>
-					this.target.sessionManager
-						.getEntries()
-						.flatMap(entry =>
-							entry.type === "custom" &&
-							entry.customType === "remote-realtime" &&
-							entry.data &&
-							typeof entry.data === "object"
-								? [entry.data as Record<string, unknown>]
-								: [],
-						),
+					(this.target.sessionManager.getBranch?.() ?? this.target.sessionManager.getEntries()).flatMap(entry =>
+						entry.type === "custom" &&
+						entry.customType === "remote-realtime" &&
+						entry.data &&
+						typeof entry.data === "object"
+							? [entry.data as Record<string, unknown>]
+							: [],
+					),
 				record: async record => {
 					this.target.sessionManager.appendCustomEntry("remote-realtime", record);
 					await this.target.sessionManager.flush();
@@ -464,20 +512,38 @@ export class RemoteSession {
 		if (method === "turn/steer") {
 			if (!this.#active || params.expectedTurnId !== this.#active.id)
 				throw new ProtocolError(-32602, "Active turn mismatch");
-			await this.target.steer(text);
+			const client =
+				typeof params.clientUserMessageId === "string" ? { text, id: params.clientUserMessageId } : undefined;
+			if (client) this.#pendingClients.push(client);
+			try {
+				await this.target.steer(text);
+			} catch (error) {
+				if (client) this.#pendingClients = this.#pendingClients.filter(value => value !== client);
+				throw error;
+			}
 			return { turnId: this.#active.id };
 		}
 		if (this.target.isStreaming || this.#active)
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");
 		this.#applyEffort(params.effort);
-		const active = turn(`${this.target.sessionId}-turn-${this.history().length + 1}`, "inProgress");
+		const active = this.#beginTurn();
+		if (this.#durable) {
+			try {
+				await this.target.sessionManager.ensureOnDisk();
+				await this.target.sessionManager.flush();
+			} catch {
+				this.#active = undefined;
+				throw new ProtocolError(-32000, "Could not persist the remote turn; task was not started");
+			}
+		}
 		if (typeof params.clientUserMessageId === "string") this.#clientIds.set(active.id, params.clientUserMessageId);
-		this.#active = active;
+		if (typeof params.clientUserMessageId === "string")
+			this.#pendingClients.push({ text, id: params.clientUserMessageId });
 		// The existing AgentSession remains the only executor and persistence owner.
 		this.#emit("turn/started", { turn: active });
 		void this.target.prompt(text).then(
-			() => this.#finish("completed"),
-			() => this.#finish("failed"),
+			() => this.#finish("completed", active.id),
+			() => this.#finish("failed", active.id),
 		);
 		return { turn: { ...active } };
 	}
@@ -498,7 +564,7 @@ export class RemoteSession {
 	#delegateVoice(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string> {
 		return new Promise((resolve, reject) => {
 			const current = this.#active;
-			const turnId = current?.id ?? `${this.target.sessionId}-turn-${this.history().length + 1}`;
+			const turnId = current?.id ?? this.#nextTurnId();
 			const stream = output ? { turnId, send: output } : undefined;
 			if (stream) this.#voiceOutputs.add(stream);
 			const unsubscribe = this.subscribe(event => {
@@ -534,8 +600,24 @@ export class RemoteSession {
 			});
 		});
 	}
-	#finish(status: string): void {
-		if (!this.#active) return;
+	#finish(status: string, expectedId?: string): void {
+		if (!this.#active || (expectedId !== undefined && this.#active.id !== expectedId)) return;
+		if (this.#durable) {
+			const id = this.#active.id;
+			const latest = this.history().find(value => value.id === id);
+			if (status === "completed" && (latest?.status === "failed" || latest?.status === "interrupted"))
+				status = latest.status;
+			this.target.sessionManager.appendCustomEntry("remote-history", {
+				kind: "turnCompleted",
+				id,
+				status,
+				completedAtMs: Date.now(),
+			});
+			this.#active = undefined;
+			this.#pendingClients = [];
+			this.#emit("turn/completed", { turn: this.history().find(value => value.id === id) });
+			return;
+		}
 		const active = this.#active;
 		const latest = this.history().at(-1);
 		if (status === "completed" && (latest?.status === "failed" || latest?.status === "interrupted"))
@@ -552,6 +634,10 @@ export class RemoteSession {
 		});
 	}
 	#event(event: AgentSessionEvent): void {
+		if (this.#durable) {
+			this.#durableEvent(event);
+			return;
+		}
 		if (event.type === "agent_start" && !this.#active) {
 			this.#active = turn(`${this.target.sessionId}-turn-${this.history().length + 1}`, "inProgress");
 			this.#emit("turn/started", { turn: this.#active });
@@ -591,5 +677,97 @@ export class RemoteSession {
 	}
 	#voiceOutput(update: VoiceOutputUpdate): void {
 		for (const stream of this.#voiceOutputs) if (stream.turnId === this.#active?.id) stream.send(update);
+	}
+	#nextTurnId(): string {
+		return this.#durable
+			? `${this.target.sessionId}-turn-${this.#nextId}`
+			: `${this.target.sessionId}-turn-${this.history().length + 1}`;
+	}
+	#beginTurn(): Turn {
+		const active = turn(this.#nextTurnId(), "inProgress");
+		this.#active = active;
+		if (this.#durable) {
+			this.#nextId = randomUUID();
+			this.#startedAtMs = Date.now();
+			active.startedAt = Math.floor(this.#startedAtMs / 1000);
+			this.target.sessionManager.appendCustomEntry("remote-history", {
+				kind: "turnStarted",
+				id: active.id,
+				startedAtMs: this.#startedAtMs,
+			});
+		}
+		return active;
+	}
+	#rememberItem(item: Record<string, unknown>, done: boolean): void {
+		if (!this.#active) return;
+		const id = String(item.id);
+		if (!this.#startedItems.has(id)) {
+			this.#startedItems.add(id);
+			this.#emit("item/started", {
+				turnId: this.#active.id,
+				item: item.type === "agentMessage" ? { ...item, text: "" } : { ...item },
+			});
+		}
+		const index = this.#active.items.findIndex(value => value.id === id);
+		if (index < 0) this.#active.items.push(item);
+		else this.#active.items[index] = item;
+		if (done) this.#emit("item/completed", { turnId: this.#active.id, item });
+	}
+	#durableEvent(event: AgentSessionEvent): void {
+		if (event.type === "agent_start" && !this.#active) this.#emit("turn/started", { turn: this.#beginTurn() });
+		if (event.type === "message_start" && (event.message.role === "user" || event.message.role === "assistant")) {
+			const id = `${this.target.sessionId}-item-${randomUUID()}`;
+			this.#messageIds.set(messageKey(event.message), id);
+			if (event.message.role === "assistant") this.#itemId = id;
+		}
+		if (
+			event.type === "message_update" &&
+			(event.assistantMessageEvent.type === "text_delta" || event.assistantMessageEvent.type === "text_end")
+		) {
+			const update = event.assistantMessageEvent;
+			const part = update.partial.content[update.contentIndex];
+			if (part?.type === "text") {
+				if (!this.#itemId) this.#itemId = `${this.target.sessionId}-item-${randomUUID()}`;
+				const id = `${this.#itemId}:${update.contentIndex}`;
+				this.#rememberItem(assistantHistoryItem(id, part.text, part.phase), false);
+				if (update.type === "text_delta")
+					this.#emit("item/agentMessage/delta", { turnId: this.#active?.id, itemId: id, delta: update.delta });
+				this.#voiceOutput({ id, text: part.text, phase: part.phase, done: update.type === "text_end" });
+			}
+		}
+		if (event.type === "message_end" && (event.message.role === "user" || event.message.role === "assistant")) {
+			const message = event.message;
+			const key = messageKey(message);
+			const id =
+				(message.role === "assistant" ? this.#itemId : this.#messageIds.get(key)) ||
+				`${this.target.sessionId}-item-${randomUUID()}`;
+			let clientId: string | null = null;
+			if (message.role === "user") {
+				const index = this.#pendingClients.findIndex(value => value.text === textOf(message));
+				if (index >= 0) clientId = this.#pendingClients.splice(index, 1)[0].id;
+			}
+			this.target.sessionManager.appendCustomEntry("remote-history", { kind: "message", id, key, clientId });
+			this.#messageIds.delete(key);
+			for (const item of messageHistoryItems(id, message, clientId))
+				this.#rememberItem(item, item.type !== "dynamicToolCall");
+			if (message.role === "assistant") {
+				for (const [index, part] of message.content.entries())
+					if (part.type === "text")
+						this.#voiceOutput({ id: `${id}:${index}`, text: part.text, phase: part.phase, done: true });
+				this.#itemId = "";
+			}
+		}
+		if (event.type === "message_end" && event.message.role === "toolResult") {
+			const suffix = `:tool:${event.message.toolCallId}`;
+			const item = this.#active?.items.findLast(
+				value => value.type === "dynamicToolCall" && String(value.id).endsWith(suffix),
+			);
+			if (item) this.#rememberItem(completeToolHistoryItem(item, event.message), true);
+		}
+		if (event.type === "agent_end") {
+			this.#finish("completed");
+			this.#startedItems.clear();
+			this.#messageIds.clear();
+		}
 	}
 }

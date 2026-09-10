@@ -420,7 +420,11 @@ test("router advertises pinned voices and routes start/stop to the existing term
 
 test("session voice stop is idempotent and unsupported startup is rejected explicitly", async () => {
 	const { RemoteSession } = await import("../../src/remote-control/session");
-	const remote = new RemoteSession({ sessionId: "fixture", subscribe: () => () => {} } as any);
+	const remote = new RemoteSession({
+		sessionId: "fixture",
+		sessionManager: { getCwd: () => "/tmp" },
+		subscribe: () => () => {},
+	} as any);
 	expect(await remote.call("stop", "thread/realtime/stop", { threadId: "fixture" })).toEqual({});
 	await expect(
 		remote.call("start", "thread/realtime/start", {
@@ -462,11 +466,20 @@ test.each(
 	async ({ model, streamed }) => {
 		const { spyOn } = await import("bun:test");
 		const { RemoteSession } = await import("../../src/remote-control/session");
-		const records: any[] = [],
-			messages: any[] = [],
+		const { SessionManager } = await import("../../src/session/session-manager");
+		const manager = SessionManager.inMemory("/tmp");
+		const messages: any[] = [],
 			outputs: any[] = [],
 			prompts: string[] = [];
 		let sessionListener = (_event: any) => {};
+		const endMessage = (message: any) => {
+			message.timestamp ??= Date.now();
+			if (message.role === "assistant")
+				message.usage ??= { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { total: 0 } };
+			messages.push(message);
+			sessionListener({ type: "message_end", message });
+			manager.appendMessage(message);
+		};
 		let socket: any;
 		let selectedSession = "";
 		const token = `fixture.${Buffer.from(JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "example-selected-account" } })).toString("base64url")}.fixture`;
@@ -493,14 +506,7 @@ test.each(
 			sessionId: "fixture-owner",
 			model: { id: model, provider: "openai-codex" },
 			messages,
-			sessionManager: {
-				getCwd: () => "/tmp",
-				getEntries: () => records,
-				appendCustomEntry: (customType: string, data: any) => {
-					records.push({ type: "custom", customType, data });
-				},
-				flush: async () => {},
-			},
+			sessionManager: manager,
 			modelRegistry: {
 				authStorage: {
 					getCredentialSource: () => "stored-oauth",
@@ -516,8 +522,8 @@ test.each(
 			},
 			prompt: async (text: string) => {
 				prompts.push(text);
+				endMessage({ role: "user", content: text });
 				if (streamed) {
-					messages.push({ role: "user", content: text });
 					const partial: any = { role: "assistant", content: [], stopReason: "stop" };
 					sessionListener({ type: "message_start", message: partial });
 					partial.content.push({ type: "thinking", thinking: "private reasoning" });
@@ -548,22 +554,18 @@ test.each(
 					await Bun.sleep(250);
 					expect(outputs.map(output => output.channel)).toEqual(["commentary", "speakable"]);
 					expect(JSON.stringify(outputs)).not.toContain("private reasoning");
-					messages.push(partial);
-					sessionListener({ type: "message_end", message: partial });
+					endMessage(partial);
 					sessionListener({ type: "agent_end" });
 					return;
 				}
-				messages.push(
-					{ role: "user", content: text },
-					{
-						role: "assistant",
-						content: [
-							{ type: "thinking", thinking: "private reasoning" },
-							{ type: "text", text: "The fixture is updated." },
-						],
-						stopReason: "stop",
-					},
-				);
+				endMessage({
+					role: "assistant",
+					content: [
+						{ type: "thinking", thinking: "private reasoning" },
+						{ type: "text", text: "The fixture is updated." },
+					],
+					stopReason: "stop",
+				});
 				sessionListener({ type: "agent_end" });
 			},
 		};
@@ -589,7 +591,14 @@ test.each(
 				}),
 			);
 			expect(JSON.stringify(outputs)).not.toContain("private reasoning");
-			expect(records.some(r => r.customType === "remote-realtime" && r.data.kind === "delegation")).toBe(true);
+			expect(
+				manager
+					.getEntries()
+					.some(
+						r =>
+							r.type === "custom" && r.customType === "remote-realtime" && (r.data as any).kind === "delegation",
+					),
+			).toBe(true);
 			if (streamed) expect(outputs).toHaveLength(2);
 		} finally {
 			remote.dispose();

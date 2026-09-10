@@ -20,6 +20,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   `codex-rs/thread-store/src/local/thread_history/segment_paging.rs`: history
   page defaults, summary projections, exclusive continuation and inclusive
   reverse anchors. Native cursors additionally bind the session and filter scope.
+- Ordinary history uses the pinned `v2/item.rs` user, agent and dynamic-tool
+  shapes. Its selected-branch projection and `remote-history` identity/boundary
+  metadata are native xcsh code; messages remain persisted by AgentSession.
 - `codex-rs/app-server-protocol/src/protocol/v2/{config,model,process}.rs`:
   configuration/model discovery and standalone process requests/notifications.
 

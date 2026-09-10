@@ -44,11 +44,22 @@ longer consume the mutation deduplication cache or return stale history when an
 RPC identity is reused. Tests validate actual adapter responses against the two
 unmodified upstream page schemas.
 
-This verifies page behavior over the current history projection. That projection
-still uses model-context messages: complete history through compaction, accurate
-steering boundaries, tool items, durable item identities and the mixed realtime
-timeline remain incomplete. The pagination tests do not establish those properties
-or a new manual phone acceptance result.
+The following history repair replaces the live adapter's model-context projection
+with the persisted selected branch. Ordinary messages before compaction remain
+visible. Identity/boundary metadata keeps steering in the same turn and aligns
+live text/tool items with later reads. Commentary and final content remain separate;
+reasoning content is excluded. Generic dynamic-tool items preserve arguments and
+completed/failed results, with distinct identities even when a provider reuses its
+tool-call id. Voice provenance reads also follow the selected branch.
+
+Tests cover attachment restart, branch isolation, a real AgentSession's sole tool
+execution and message persistence, late prompt settlement, retry recovery and
+interrupted turns. A first remote turn is persisted before dispatch, so a failure
+without assistant output survives disk reopen. Sol, Luna, Terra and Astra adapter
+tests now use the persisted-history path for streaming and completed-only voice.
+These are automated results, not new manual phone acceptance. The mixed realtime
+timeline, specialized command/file displays, remaining visible message types,
+concurrent controls, active attachment and fork lifecycle still require work.
 
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
