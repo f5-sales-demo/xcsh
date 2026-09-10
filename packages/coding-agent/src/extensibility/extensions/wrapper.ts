@@ -2,7 +2,12 @@
  * Tool wrappers for extensions.
  */
 
-import type { AgentTool, AgentToolContext, AgentToolUpdateCallback } from "@f5-sales-demo/pi-agent-core";
+import {
+	type AgentTool,
+	type AgentToolContext,
+	AgentToolError,
+	type AgentToolUpdateCallback,
+} from "@f5-sales-demo/pi-agent-core";
 import type { ImageContent, TextContent } from "@f5-sales-demo/pi-ai";
 import type { Static, TSchema } from "@sinclair/typebox";
 import type { Theme } from "../../modes/theme/theme";
@@ -19,6 +24,7 @@ export class RegisteredToolAdapter implements AgentTool<any, any, any> {
 	declare parameters: any;
 	declare label: string;
 	declare strict: boolean;
+	declare executionKind?: AgentTool["executionKind"];
 
 	renderCall?: (args: any, options: any, theme: any) => any;
 	renderResult?: (result: any, options: any, theme: any, args?: any) => any;
@@ -86,6 +92,7 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 	declare parameters: TParameters;
 	declare label: string;
 	declare strict: boolean;
+	declare executionKind?: AgentTool["executionKind"];
 
 	constructor(
 		private tool: AgentTool<TParameters, TDetails>,
@@ -140,10 +147,13 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 			result = await this.tool.execute(toolCallId, params, signal, onUpdate, context);
 		} catch (err) {
 			executionError = err instanceof Error ? err : new Error(String(err));
-			result = {
-				content: [{ type: "text", text: executionError.message }],
-				details: undefined as TDetails,
-			};
+			result =
+				err instanceof AgentToolError
+					? err.result
+					: {
+							content: [{ type: "text", text: executionError.message }],
+							details: undefined as TDetails,
+						};
 		}
 
 		// Emit tool_result event - extensions can modify the result and error status
@@ -167,7 +177,7 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 					// Extension marks a successful result as error
 					const textBlocks = (modifiedContent ?? []).filter((c): c is TextContent => c.type === "text");
 					const errorText = textBlocks.map(t => t.text).join("\n") || "Tool result marked as error by extension";
-					throw new Error(errorText);
+					throw new AgentToolError(errorText, { content: modifiedContent, details: modifiedDetails });
 				}
 				if (resultResult.isError === false && executionError) {
 					// Extension clears the error - return success
@@ -176,6 +186,11 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 
 				// Error status unchanged, but content/details may be modified
 				if (executionError) {
+					if (modifiedContent !== result.content || modifiedDetails !== result.details)
+						throw new AgentToolError(executionError.message, {
+							content: modifiedContent,
+							details: modifiedDetails,
+						});
 					throw executionError;
 				}
 				return { content: modifiedContent, details: modifiedDetails };

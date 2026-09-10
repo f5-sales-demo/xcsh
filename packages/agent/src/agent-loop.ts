@@ -12,6 +12,7 @@ import {
 } from "@f5-sales-demo/pi-ai";
 import { logger } from "@f5-sales-demo/pi-utils";
 import emptyToolSuccess from "./prompts/empty-tool-success.md" with { type: "text" };
+import { AgentToolError } from "./tool-error";
 import type {
 	AgentContext,
 	AgentEvent,
@@ -519,6 +520,7 @@ async function executeToolCalls(
 				toolName: toolCall.name,
 				args: record.args,
 				intent: toolCall.intent,
+				...(record.tool?.executionKind ? { executionKind: record.tool.executionKind } : {}),
 			});
 		}
 		const isWarning = Boolean(normalizedResult.isWarning);
@@ -574,6 +576,7 @@ async function executeToolCalls(
 			toolName: toolCall.name,
 			args: argsForExecution,
 			intent: toolCall.intent,
+			...(tool?.executionKind ? { executionKind: tool.executionKind } : {}),
 		});
 
 		let result: AgentToolResult<any>;
@@ -616,10 +619,13 @@ async function executeToolCalls(
 				toolContext,
 			);
 		} catch (e) {
-			result = {
-				content: [{ type: "text", text: e instanceof Error ? e.message : String(e) }],
-				details: {},
-			};
+			result =
+				e instanceof AgentToolError
+					? e.result
+					: {
+							content: [{ type: "text", text: e instanceof Error ? e.message : String(e) }],
+							details: {},
+						};
 			isError = true;
 		}
 

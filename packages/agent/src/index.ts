@@ -6,5 +6,7 @@ export * from "./agent-loop";
 export * from "./proxy";
 // Thinking selectors
 export * from "./thinking";
+// Structured execution failures
+export * from "./tool-error";
 // Types
 export * from "./types";

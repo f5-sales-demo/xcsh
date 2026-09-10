@@ -15,6 +15,8 @@ export interface AsyncJob {
 	abortController: AbortController;
 	promise: Promise<void>;
 	resultText?: string;
+	/** Latest structured executor facts, retained for the durable completion message. */
+	resultDetails?: Record<string, unknown>;
 	errorText?: string;
 }
 
@@ -98,6 +100,7 @@ export class AsyncJobManager {
 		};
 
 		const reportProgress = async (text: string, details?: Record<string, unknown>): Promise<void> => {
+			if (details) job.resultDetails = details;
 			if (!options?.onProgress) return;
 			try {
 				await options.onProgress(text, details);

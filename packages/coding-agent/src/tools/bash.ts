@@ -37,6 +37,7 @@ import { type BashInteractiveResult, runInteractiveBashPty } from "./bash-intera
 import { checkBashInterception } from "./bash-interceptor";
 import { applyHeadTail } from "./bash-normalize";
 import { expandInternalUrls, type InternalUrlExpansionOptions } from "./bash-skill-urls";
+import { type CommandExecutionContext, type CommandExecutionDetails, commandExecution } from "./execution-metadata";
 import { formatStyledTruncationWarning, type OutputMeta } from "./output-meta";
 import { resolveToCwd } from "./path-utils";
 import { formatToolWorkingDirectory, replaceTabs, truncateToWidth } from "./render-utils";
@@ -116,6 +117,7 @@ export interface BashToolInput {
 }
 
 export interface BashToolDetails {
+	execution?: CommandExecutionDetails;
 	meta?: OutputMeta;
 	timeoutSeconds?: number;
 	async?: {
@@ -323,6 +325,7 @@ function getBashEnvForDisplay(args: BashRenderArgs): Record<string, string> | un
 export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	readonly name = "bash";
 	readonly label = "Bash";
+	readonly executionKind = "command" as const;
 	readonly description: string;
 	readonly parameters: BashToolSchema;
 	readonly concurrency = "exclusive";
@@ -365,18 +368,30 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		return outputText;
 	}
 
-	#buildResultText(result: BashResult | BashInteractiveResult, timeoutSec: number, outputText: string): string {
+	#buildResultText(
+		result: BashResult | BashInteractiveResult,
+		timeoutSec: number,
+		outputText: string,
+		details: BashToolDetails,
+		aborted = false,
+	): string {
 		if (result.cancelled) {
-			throw new ToolError(normalizeResultOutput(result) || "Command aborted");
+			const message = normalizeResultOutput(result) || "Command aborted";
+			if (aborted) throw new ToolAbortError(message, { ...details });
+			throw new ToolError(message, undefined, { ...details });
 		}
 		if (isInteractiveResult(result) && result.timedOut) {
-			throw new ToolError(normalizeResultOutput(result) || `Command timed out after ${timeoutSec} seconds`);
+			throw new ToolError(
+				normalizeResultOutput(result) || `Command timed out after ${timeoutSec} seconds`,
+				undefined,
+				{ ...details },
+			);
 		}
 		if (result.exitCode === undefined) {
-			throw new ToolError(`${outputText}\n\nCommand failed: missing exit status`);
+			throw new ToolError(`${outputText}\n\nCommand failed: missing exit status`, undefined, { ...details });
 		}
 		if (result.exitCode !== 0) {
-			throw new ToolError(`${outputText}\n\nCommand exited with code ${result.exitCode}`);
+			throw new ToolError(`${outputText}\n\nCommand exited with code ${result.exitCode}`, undefined, { ...details });
 		}
 		return outputText;
 	}
@@ -384,13 +399,21 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	#buildCompletedResult(
 		result: BashResult | BashInteractiveResult,
 		timeoutSec: number,
+		execution: CommandExecutionContext,
 		headLines?: number,
 		tailLines?: number,
+		aborted = false,
 	): AgentToolResult<BashToolDetails> {
 		const outputText = this.#formatResultOutput(result, headLines, tailLines);
-		const details: BashToolDetails = { timeoutSeconds: timeoutSec };
+		const details: BashToolDetails = {
+			timeoutSeconds: timeoutSec,
+			execution: commandExecution(execution, normalizeResultOutput(result), {
+				exitCode: result.exitCode,
+				failed: result.cancelled || (isInteractiveResult(result) && result.timedOut) || result.exitCode !== 0,
+			}),
+		};
 		const resultBuilder = toolResult(details).text(outputText).truncationFromSummary(result, { direction: "tail" });
-		this.#buildResultText(result, timeoutSec, outputText);
+		this.#buildResultText(result, timeoutSec, outputText, details, aborted);
 		return resultBuilder.done();
 	}
 
@@ -399,8 +422,10 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		label: string,
 		previewText: string,
 		timeoutSec: number,
+		execution: CommandExecutionContext,
 	): AgentToolResult<BashToolDetails> {
 		const details: BashToolDetails = {
+			execution: commandExecution(execution, previewText),
 			timeoutSeconds: timeoutSec,
 			async: { state: "running", jobId, type: "bash" },
 		};
@@ -423,6 +448,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 	}
 
 	#startManagedBashJob(options: {
+		execution: CommandExecutionContext;
 		command: string;
 		commandCwd: string;
 		timeoutMs: number;
@@ -465,25 +491,35 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 							tailBuffer.append(chunk);
 							const preview = options.maskSecrets ? options.maskSecrets(tailBuffer.text()) : tailBuffer.text();
 							latestText = preview;
-							void reportProgress(latestText, { async: { state: "running", jobId, type: "bash" } });
+							void reportProgress(latestText, {
+								execution: commandExecution(options.execution, preview),
+								async: { state: "running", jobId, type: "bash" },
+							});
 						},
 					});
 					const finalResult = this.#buildCompletedResult(
 						result,
 						options.timeoutSec,
+						options.execution,
 						options.headLines,
 						options.tailLines,
 					);
 					const finalText = this.#extractTextResult(finalResult);
 					latestText = finalText;
 					completion.resolve({ kind: "completed", result: finalResult });
-					await reportProgress(finalText, { async: { state: "completed", jobId, type: "bash" } });
+					await reportProgress(finalText, {
+						...finalResult.details,
+						async: { state: "completed", jobId, type: "bash" },
+					});
 					return finalText;
 				} catch (error) {
 					const message = error instanceof Error ? error.message : String(error);
 					latestText = message;
 					completion.resolve({ kind: "failed", error });
-					await reportProgress(message, { async: { state: "failed", jobId, type: "bash" } });
+					await reportProgress(message, {
+						...(error instanceof ToolError || error instanceof ToolAbortError ? error.result.details : {}),
+						async: { state: "failed", jobId, type: "bash" },
+					});
 					throw error;
 				}
 			},
@@ -726,6 +762,11 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 		const obfuscator = this.session.obfuscator;
 		_sessionObfuscator = obfuscator; // Keep module-level ref fresh for renderer
 		const maskSecrets = obfuscator?.hasSecrets() ? (t: string) => obfuscator.obfuscate(t) : undefined;
+		const execution: CommandExecutionContext = {
+			command: maskSecrets ? maskSecrets(command) : command,
+			cwd: commandCwd,
+			startedAt: performance.now(),
+		};
 		if (asyncRequested && sandboxCheckInvocation) {
 			throw new ToolError("Sandbox check must run synchronously so its synthetic fixtures can be removed.");
 		}
@@ -735,6 +776,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				throw new ToolError("Async job manager unavailable for this session.");
 			}
 			const job = this.#startManagedBashJob({
+				execution,
 				command,
 				commandCwd,
 				timeoutMs,
@@ -746,13 +788,14 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				onUpdate,
 				startBackgrounded: true,
 			});
-			return this.#buildBackgroundStartResult(job.jobId, job.label, "", timeoutSec);
+			return this.#buildBackgroundStartResult(job.jobId, job.label, "", timeoutSec, execution);
 		}
 
 		if (this.#autoBackgroundEnabled && !pty && this.session.asyncJobManager && !sandboxCheckInvocation) {
 			const autoBackgroundWaitMs = this.#resolveAutoBackgroundWaitMs(timeoutMs);
 			const startBackgrounded = autoBackgroundWaitMs === 0;
 			const job = this.#startManagedBashJob({
+				execution,
 				command,
 				commandCwd,
 				timeoutMs,
@@ -765,7 +808,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				startBackgrounded,
 			});
 			if (startBackgrounded) {
-				return this.#buildBackgroundStartResult(job.jobId, job.label, "", timeoutSec);
+				return this.#buildBackgroundStartResult(job.jobId, job.label, "", timeoutSec, execution);
 			}
 			const waitResult = await this.#waitForManagedBashJob(job, autoBackgroundWaitMs, signal);
 			if (waitResult.kind === "completed") {
@@ -782,7 +825,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				throw new ToolAbortError(job.getLatestText() || "Command aborted");
 			}
 			job.setBackgrounded(true);
-			return this.#buildBackgroundStartResult(job.jobId, job.label, job.getLatestText(), timeoutSec);
+			return this.#buildBackgroundStartResult(job.jobId, job.label, job.getLatestText(), timeoutSec, execution);
 		}
 
 		// Track output for streaming updates (tail only)
@@ -850,7 +893,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 								const preview = maskSecrets ? maskSecrets(tailBuffer.text()) : tailBuffer.text();
 								onUpdate({
 									content: [{ type: "text", text: preview }],
-									details: {},
+									details: { execution: commandExecution(execution, preview) },
 								});
 							}
 						},
@@ -860,16 +903,7 @@ export class BashTool implements AgentTool<BashToolSchema, BashToolDetails> {
 				await fs.promises.rm(sandboxCheckSibling, { recursive: true, force: true });
 			}
 		}
-		if (result.cancelled) {
-			if (signal?.aborted) {
-				throw new ToolAbortError(normalizeResultOutput(result) || "Command aborted");
-			}
-			throw new ToolError(normalizeResultOutput(result) || "Command aborted");
-		}
-		if (isInteractiveResult(result) && result.timedOut) {
-			throw new ToolError(normalizeResultOutput(result) || `Command timed out after ${timeoutSec} seconds`);
-		}
-		return this.#buildCompletedResult(result, timeoutSec, headLines, tailLines);
+		return this.#buildCompletedResult(result, timeoutSec, execution, headLines, tailLines, signal?.aborted);
 	}
 }
 

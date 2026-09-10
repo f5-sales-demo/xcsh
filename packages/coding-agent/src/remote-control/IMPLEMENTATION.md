@@ -1306,3 +1306,30 @@ passed initialization, configuration discovery, fixture-process execution and
 history attachment in 21/17 milliseconds. These checks do not add live delegated
 model tasks or manual phone acceptance.
 The host's live status also confirmed its relay connection was restored.
+
+## Structured command execution preparation
+
+Tool failures now carry an explicit structured result through the agent loop and
+extension result hooks. Error diagnostics remain separate: only explicitly supplied
+result details enter conversation history. Tool-start events carry the resolved
+tool's execution kind, including through wrappers, so extensions overriding a name
+do not force classification by name alone.
+
+Bash results retain the executed command, resolved working directory, output,
+actual exit status and elapsed duration. Unknown exit codes and process identifiers
+remain null. Background starts and streaming updates retain running metadata;
+the job manager retains final details for subsequent delivery integration.
+
+Observed failing tests preceded the agent boundary, extension wrapper, command
+result and background stream changes. Validation: 38 agent-core tests and 15 focused
+coding-agent tests passed; the affected package suite passed 7870 tests with 561
+skips and zero failures across 768 files. Two optional-argument test type errors
+were corrected after that run; the focused tests passed again. Workspace TypeScript
+and lint checks, CLI bundle validation, documentation checks, staged PII enforcement
+and the staged secret scan also passed.
+
+This prepares specialized remote history; it does not complete that mapping.
+Foreground auto-background updates, backend exceptions, asynchronous completion
+persistence and cancellation still need execution-metadata coverage. Command/file
+wire items and canonical voice timeline integration remain open. The live phone
+fixtures still run the frozen `052153363` binary and do not exercise these changes.
