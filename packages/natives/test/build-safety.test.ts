@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { findGlibcRequirementsAbove, hasAvx512Markers } from "../../../scripts/ci-release-verify-natives";
+import {
+	findGlibcRequirementsAbove,
+	hasAvx512Markers,
+	nativeSymbolCommand,
+	undefinedScannerSymbols,
+} from "../../../scripts/ci-release-verify-natives";
 import { buildZigArgs } from "../scripts/zig-safe-wrapper";
 
 describe("native build safety", () => {
@@ -78,5 +83,25 @@ describe("native build safety", () => {
 			expect(verifier).toContain("PI_NATIVE_VARIANT=baseline");
 			expect(verifier).not.toContain("|| true");
 		});
+	});
+});
+
+describe("native scanner symbol inspection", () => {
+	it("rejects failed symbol inspection instead of treating empty stdout as clean", () => {
+		expect(() => undefinedScannerSymbols("", 1, "file format not recognized")).toThrow("nm failed");
+	});
+
+	it("recognizes undefined scanner names from Darwin and GNU nm", () => {
+		expect(undefinedScannerSymbols("_tree_sitter_glimmer_external_scanner_scan\n", 0, "")).toHaveLength(1);
+		expect(undefinedScannerSymbols(" U tree_sitter_glimmer_external_scanner_scan\n", 0, "")).toHaveLength(1);
+		expect(undefinedScannerSymbols(" U napi_create_object\n", 0, "")).toEqual([]);
+	});
+
+	it("requires a Mach-O capable inspector for foreign addons", () => {
+		expect(
+			nativeSymbolCommand("darwin-arm64", "linux", name => (name === "llvm-nm-18" ? "/usr/bin/llvm-nm-18" : null)),
+		).toEqual(["/usr/bin/llvm-nm-18", "--undefined-only"]);
+		expect(() => nativeSymbolCommand("darwin-arm64", "linux", () => null)).toThrow("requires llvm-nm");
+		expect(nativeSymbolCommand("darwin-arm64", "darwin", () => null)).toEqual(["nm", "-u"]);
 	});
 });
