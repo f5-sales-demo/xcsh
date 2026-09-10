@@ -82,10 +82,10 @@ jobs:
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           cache-workspace-crates: true
-      - name: Install Zig 0.15.2
+      - name: Install Zig 0.16.0
         shell: bash
         run: |
-          ZIG_VERSION=0.15.2
+          ZIG_VERSION=0.16.0
           case "$RUNNER_OS" in
             Linux)  ZIG_OS=linux;  EXT=tar.xz ;;
             macOS)  ZIG_OS=macos;  EXT=tar.xz ;;

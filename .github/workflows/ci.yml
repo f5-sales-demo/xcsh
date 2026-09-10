@@ -203,11 +203,11 @@ jobs:
           fi
           echo "$BUN_DIR" >> "$GITHUB_PATH"
           bun --version
-      - name: Setup Zig 0.15.2
+      - name: Setup Zig 0.16.0
         uses: ./.github/actions/setup-zig
-      - name: Verify Zig 0.15.2
+      - name: Verify Zig 0.16.0
         shell: bash
-        run: test "$(zig version)" = 0.15.2
+        run: test "$(zig version)" = 0.16.0
       - run: bash scripts/ci-bun-install.sh
       - name: Rust checks
         if: matrix.rust_checks
@@ -334,7 +334,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Setup Zig 0.15.2
+      - name: Setup Zig 0.16.0
         uses: ./.github/actions/setup-zig
       - name: Cache bun dependencies
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -438,7 +438,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Setup Zig 0.15.2
+      - name: Setup Zig 0.16.0
         uses: ./.github/actions/setup-zig
       - name: Cache bun dependencies
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

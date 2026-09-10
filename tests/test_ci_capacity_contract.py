@@ -21,23 +21,23 @@ class CiCapacityContractTests(unittest.TestCase):
             self.assertIn("runs-on: xcsh-compute", block)
         self.assertIn('"os":"macos-14"', workflow)
         self.assertIn('"os":"windows-latest"', workflow)
-        self.assertIn('run: test "$(zig version)" = 0.15.2', workflow)
+        self.assertIn('run: test "$(zig version)" = 0.16.0', workflow)
 
     def test_self_hosted_jobs_verify_baked_bun(self) -> None:
         ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
-        self.assertIn("Verify baked Bun 1.3.14", ci)
+        self.assertIn("Verify baked Bun 1.4.2", ci)
         for block in re.findall(
-            r"      - name: Setup Bun 1\.3\.14\n(?:        .*\n){1,9}", ci
+            r"      - name: Setup Bun 1\.4\.2\n(?:        .*\n){1,9}", ci
         ):
             self.assertIn("runner.environment != 'self-hosted'", block)
         compatibility = (WORKFLOWS / "arc-compatibility.yml").read_text(
             encoding="utf-8"
         )
         self.assertIn("runs-on: xcsh-compute", compatibility)
-        self.assertIn("Verify baked Bun 1.3.14", compatibility)
+        self.assertIn("Verify baked Bun 1.4.2", compatibility)
         self.assertNotIn("oven-sh/setup-bun", compatibility)
         tag = (WORKFLOWS / "tag-on-version-bump.yml").read_text(encoding="utf-8")
-        self.assertIn("Verify baked Bun 1.3.14", tag)
+        self.assertIn("Verify baked Bun 1.4.2", tag)
         self.assertNotIn("oven-sh/setup-bun", tag)
 
     def test_installs_and_cache_keys_are_bounded_and_immutable(self) -> None:
@@ -59,7 +59,7 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertEqual(benchmark.count(benchmark_guard), 2)
         self.assertNotIn("/usr/bin/time", benchmark)
         self.assertNotIn('bun-version: "1.3"', workflows)
-        self.assertIn("bun-1.3.14-${{ runner.os }}-${{ runner.arch }}", workflows)
+        self.assertIn("bun-1.4.2-${{ runner.os }}-${{ runner.arch }}", workflows)
         self.assertNotIn("lookup-only:", workflows)
         self.assertIn("actions/cache/restore@", workflows)
         prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")

@@ -44,7 +44,7 @@ jobs:
         with:
           target: aarch64-unknown-linux-gnu
 
-      - name: Set up Zig 0.15.2
+      - name: Set up Zig 0.16.0
         uses: ./.github/actions/setup-zig
 
       - name: Install workspace dependencies
