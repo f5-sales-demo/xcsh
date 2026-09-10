@@ -30,6 +30,7 @@ import { BUILTIN_SLASH_COMMANDS, loadSlashCommands } from "../extensibility/slas
 import { resolveLocalUrlToPath } from "../internal-urls";
 import { renameApprovedPlanFile } from "../plan-mode/approved-plan";
 import planModeApprovedPrompt from "../prompts/system/plan-mode-approved.md" with { type: "text" };
+import { startSessionBridge } from "../remote-control/bridge";
 import type { ModelResolutionSource } from "../session/active-model";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { HistoryStorage } from "../session/history-storage";
@@ -186,6 +187,7 @@ export class InteractiveMode implements InteractiveModeContext {
 	readonly #btwController: BtwController;
 	readonly #commandController: CommandController;
 	readonly #eventController: EventController;
+	#stopRemoteBridge?: () => void;
 	readonly #extensionUiController: ExtensionUiController;
 	readonly #inputController: InputController;
 	readonly #selectorController: SelectorController;
@@ -1032,6 +1034,8 @@ export class InteractiveMode implements InteractiveModeContext {
 	}
 
 	stop(): void {
+		this.#stopRemoteBridge?.();
+		this.#stopRemoteBridge = undefined;
 		if (this.loadingAnimation) {
 			this.loadingAnimation.stop();
 			this.loadingAnimation = undefined;
@@ -1694,5 +1698,6 @@ export class InteractiveMode implements InteractiveModeContext {
 
 	#subscribeToAgent(): void {
 		this.#eventController.subscribeToAgent();
+		this.#stopRemoteBridge ??= startSessionBridge(this.session);
 	}
 }
