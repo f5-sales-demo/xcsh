@@ -181,3 +181,17 @@ then compiles the reference library and a small Rust driver. Its 140 inputs incl
 line-ending, Unicode, missing-newline, context and repeated-line cases. The existing
 xcsh native diff library is compared against these independently generated outputs.
 Rust and the reference checkout are used only for fixture generation.
+
+## Audio parser fixtures
+
+From the coding-agent package, run
+`bun scripts/remote-reference/audio.ts <pinned-codex-root> <serde_json-rlib> [matching-rustc]`
+to regenerate `test/remote-control/fixtures/codex-0.153.4-audio.json`.
+The generator verifies both source hashes and executes the original v1/v3 Rust
+audio parsing bodies against 38 cases. Supply the serde_json rlib from a built
+pinned reference checkout and the compiler used to build it; its sibling
+dependency directory is passed to rustc. Generation needs the reference build,
+but ordinary tests and packaged xcsh use the saved JSON fixture independently.
+The cases cover unsigned bounds, absent/null metadata, string fallback and the
+fixed v3 format. They contain synthetic audio only and prove parser behavior,
+not phone playback or standalone transport acceptance.

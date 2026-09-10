@@ -6,6 +6,8 @@
     "codex-rs/codex-api/src/lib.rs": "ef31a528a67cfa4bd11445e5e2e2f29d147c763b1e9fb73b43d5a60003be1a29",
     "codex-rs/app-server-transport/src/transport/remote_control/client_tracker.rs": "1f928f1fbe3ee63ca01e16352d3dd5043a856fd406e1b3d1c65cdb795ea59795",
     "codex-rs/app-server-transport/src/transport/remote_control/websocket.rs": "5c94dc8de1effa3ff17784ed9cc710c9c1733cc289ac715b6b444eb105f6134e",
-    "codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs": "2e4f16ee5c845413e5acf4411814b57589c0dd090cd0677d7cdc26138d56ec67"
+    "codex-rs/codex-api/src/endpoint/realtime_websocket/methods.rs": "2e4f16ee5c845413e5acf4411814b57589c0dd090cd0677d7cdc26138d56ec67",
+    "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_v1.rs": "9ee5ac9d9ddd2963bd5ab2359fa55e93d6c41d9405712ea9d8947885fba5faf1",
+    "codex-rs/codex-api/src/endpoint/realtime_websocket/protocol_frameless_bidi.rs": "faa6826b1884ccceb564e8bb6bd60048f7900ffcc5b50fcacbd840b03a173515"
   }
 }

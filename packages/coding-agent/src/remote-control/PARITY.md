@@ -421,3 +421,10 @@ discovery alongside dynamicToolCall items. Real-session tests preserve one
 execution and answer owner across reattachment, decline and question cancellation;
 completed-plan provenance remains separately checked. All three item kinds feed
 the voice mirror. No additional phone decision acceptance is claimed.
+
+The v1 audio boundary now retains sample counts and follows the pinned unsigned
+metadata bounds and fallback rules. Thirty-eight cases executed through the
+original Rust parser bodies matched xcsh; local NativeVoice tests also verify
+forwarding without storing audio or executing work, and ignore late frames.
+V3 continues to use its fixed audio metadata. Standalone transport, v2 response
+control and the remaining live capture/acceptance matrix remain open.

@@ -502,7 +502,7 @@ export class NativeVoice {
 					data: event.data,
 					sampleRate: event.sampleRate,
 					numChannels: event.numChannels,
-					samplesPerChannel: null,
+					samplesPerChannel: event.samplesPerChannel ?? null,
 					itemId: null,
 				},
 			});

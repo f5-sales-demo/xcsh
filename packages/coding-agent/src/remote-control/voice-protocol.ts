@@ -90,10 +90,14 @@ export function contextChunks(text: string): string[] {
 export type VoiceEvent =
 	| { kind: "transcript"; done: boolean; role: "user" | "assistant"; text: string; id?: string }
 	| { kind: "delegation"; id: string; itemId?: string; text: string }
-	| { kind: "audio"; data: string; sampleRate: number; numChannels: number }
+	| { kind: "audio"; data: string; sampleRate: number; numChannels: number; samplesPerChannel?: number }
 	| { kind: "error" };
 function object(value: unknown): Record<string, any> | null {
 	return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+/** Match serde_json's unsigned integer conversion followed by Rust's checked narrowing. */
+function unsigned(value: unknown, maximum: number): value is number {
+	return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= maximum;
 }
 export function decodeVoiceEvent(version: VoiceVersion, input: unknown): VoiceEvent | null {
 	const p = object(input);
@@ -169,18 +173,19 @@ export function decodeVoiceEvent(version: VoiceVersion, input: unknown): VoiceEv
 			typeof p.input_transcript === "string"
 		)
 			return { kind: "delegation", id: p.handoff_id, itemId: p.item_id, text: p.input_transcript };
-		if (
-			p.type === "conversation.output_audio.delta" &&
-			typeof (p.delta ?? p.data) === "string" &&
-			Number.isInteger(p.sample_rate) &&
-			Number.isInteger(p.channels ?? p.num_channels)
-		)
-			return {
-				kind: "audio",
-				data: p.delta ?? p.data,
-				sampleRate: p.sample_rate,
-				numChannels: p.channels ?? p.num_channels,
-			};
+		if (p.type === "conversation.output_audio.delta") {
+			const data = typeof p.delta === "string" ? p.delta : p.data;
+			// The pinned parser falls back only when the channels key is absent, not null/invalid.
+			const channels = Object.hasOwn(p, "channels") ? p.channels : p.num_channels;
+			if (typeof data === "string" && unsigned(p.sample_rate, 0xffffffff) && unsigned(channels, 0xffff))
+				return {
+					kind: "audio",
+					data,
+					sampleRate: p.sample_rate,
+					numChannels: channels,
+					...(unsigned(p.samples_per_channel, 0xffffffff) ? { samplesPerChannel: p.samples_per_channel } : {}),
+				};
+		}
 	}
 	return null;
 }

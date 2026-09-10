@@ -1732,5 +1732,32 @@ Two actual TUIs ran production write/read tools; host restart/replay, compiled
 resume and cleanup passed. The receipt is
 `../../scripts/remote-package/evidence-native-input-2026-09-10.json`.
 Enrollment and model responses were synthetic, networking was disabled, and this
-check does not prove live voice or phone input decisions. The iPhone runtime
-remains on its previous frozen binary; the new artifact is prepared separately.
+check does not prove live voice or phone input decisions. On September 10, the
+dedicated host and both idle TUIs were upgraded to this immutable artifact.
+Normal shutdown and resume preserved their session IDs, names, working
+directories, Luna/Astra models and message counts (18/52). The relay connected;
+new phone acceptance remains pending. The previous binary remains available
+for rollback, and the independent Codex host was untouched.
+
+## Audio frame metadata parity
+
+The v1 audio parser now preserves optional unsigned sample counts through the
+phone notification and checks sample rates/channels against the pinned u32/u16
+bounds. Missing channel keys can fall back to num_channels; present null or
+invalid channel values cannot. A non-string delta can still fall back to string
+data. V1 intentionally ignores item identity, while v3 retains its fixed 24 kHz
+mono format with no sample-count override. Audio payloads are not persisted.
+
+The corrected test fixture reproduced ten failures before implementation. All
+82 focused voice tests and 810 remote tests then passed; workspace types/lint
+and bundle checks passed. Executing the original pinned Rust audio parsing
+bodies against 38 boundary cases produced matching xcsh results. The generator
+now verifies the source hashes, and the saved fixtures run in ordinary tests
+without Rust or Codex. The expanded focused suite passed 120 tests and 805
+assertions. The first full package run ended on SIGTERM without a test summary;
+it does not count as passing validation. Its cause remains unconfirmed. A fresh
+guarded run with the final fixtures passed 8235 tests with 561 skips, zero
+failures and 29527 assertions across 789 files in 402.82 seconds. End-to-end
+NativeVoice checks cover audio forwarding, no backing-agent execution, no audio
+in stored records, and ignored frames after closure. These are synthetic wire
+checks, not new iPhone acceptance or standalone WebSocket support.
