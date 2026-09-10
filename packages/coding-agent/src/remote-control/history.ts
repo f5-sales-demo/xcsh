@@ -120,9 +120,8 @@ export function backgroundCommandCompletion(
 	if (!item || item.status === "inProgress") return;
 	return { turnId: job.turnId, item, jobId: details!.jobId as string };
 }
-export function completeToolHistoryItem(
+function classifiedToolHistoryItem(
 	item: Record<string, unknown>,
-	message: Extract<AgentMessage, { role: "toolResult" }>,
 	toolExecution?: SessionToolExecution,
 ): Record<string, unknown> {
 	if (item.type === "dynamicToolCall" && typeof toolExecution?.cwd === "string") {
@@ -137,6 +136,29 @@ export function completeToolHistoryItem(
 			);
 		}
 	}
+	return item;
+}
+
+export function activeToolHistoryItem(
+	item: Record<string, unknown>,
+	toolExecution: SessionToolExecution & { execution?: unknown },
+): Record<string, unknown> {
+	const classified = classifiedToolHistoryItem(item, toolExecution);
+	const updated =
+		classified.type === "commandExecution"
+			? updateCommandHistoryItem(classified, toolExecution.execution)
+			: classified.type === "fileChange"
+				? updateFileHistoryItem(classified, toolExecution.execution)
+				: undefined;
+	// Only the core result message settles the tool, even if a progress snapshot carries final facts.
+	return { ...(updated ?? classified), status: "inProgress" };
+}
+export function completeToolHistoryItem(
+	item: Record<string, unknown>,
+	message: Extract<AgentMessage, { role: "toolResult" }>,
+	toolExecution?: SessionToolExecution,
+): Record<string, unknown> {
+	item = classifiedToolHistoryItem(item, toolExecution);
 	if (item.type === "fileChange") {
 		const details = message.details as { execution?: unknown } | undefined;
 		return (

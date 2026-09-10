@@ -871,7 +871,17 @@ export class AgentSession {
 		return this.#emit(event);
 	}
 
-	readonly #toolExecutions = new Map<string, SessionToolExecution>();
+	readonly #toolExecutions = new Map<string, SessionToolExecution & { execution?: unknown }>();
+
+	/** Snapshot of core-owned executions for clients attaching during a tool call. */
+	getActiveToolExecutions(): {
+		toolCallId: string;
+		kind: SessionToolExecution["kind"];
+		cwd: string;
+		execution?: unknown;
+	}[] {
+		return [...this.#toolExecutions].map(([toolCallId, value]) => ({ toolCallId, ...value }));
+	}
 
 	// Track last assistant message for auto-compaction check
 	#lastAssistantMessage: AssistantMessage | undefined = undefined;
@@ -893,6 +903,14 @@ export class AgentSession {
 					cwd: this.sessionManager.getCwd(),
 				});
 			else this.#toolExecutions.delete(event.toolCallId);
+		}
+		if (event.type === "tool_execution_update") {
+			const current = this.#toolExecutions.get(event.toolCallId);
+			if (current)
+				this.#toolExecutions.set(event.toolCallId, {
+					...current,
+					execution: event.partialResult.details?.execution,
+				});
 		}
 		if (event.type === "agent_start") {
 			this.#turnPhase.startAgentLoop();

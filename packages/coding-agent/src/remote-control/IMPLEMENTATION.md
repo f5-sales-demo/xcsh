@@ -1552,3 +1552,33 @@ across 782 files (28881 assertions, 395.99 seconds). All seven runtime/test sour
 hashes remained unchanged. Documentation, staged privacy and secret checks passed.
 Current main merged cleanly at version 21.24.0 and its native addon rebuilt before
 verification. The repository-wide existing privacy findings remain unresolved.
+
+## Attachment during tool execution
+
+AgentSession exposes a core-owned snapshot of active native executors and their
+latest structured progress. A remote adapter joining before output or midway through
+a tool call restores the native item type, existing progress and stable item identity.
+Subsequent deltas and the sole completion remain on the same running AgentSession.
+Thread history and timeline pages apply the same live overlay to persisted items.
+The snapshot is transient; the result wrapper retains durable provenance after work
+settles. No additional agent or tool execution is created by attachment.
+
+Real AgentSession tests first reproduced missing command/file items on attachment.
+The synchronized regression also failed against the previous committed implementation.
+Further tests exposed premature command completion from final-looking progress and
+a timeline endpoint still showing generic items. Commands now remain in progress
+until their result message or background receipt settles them; timeline rows share
+the live history overlay. Four scenarios cover command/file calls, ordinary/final
+progress, attachment before first output, reattachment during work, subsequent updates,
+one completion, cleared active state and unchanged history after reattachment.
+
+The focused owner and timeline suite passed 21 tests and 185 assertions across four
+files. Workspace TypeScript/lint and the CLI bundle passed. This is integration
+evidence with simulated tools and model responses, not a new iPhone acceptance
+result. Attachment during an unfinished model response, broader fork/recovery
+lifecycle and session-owned voice timeline integration remain unfinished.
+
+The remote suite passed 727 tests and 2686 assertions across 57 files. The full
+package suite passed 8114 tests, 561 skips and zero failures across 783 files
+(28937 assertions, 387.09 seconds). All four source/test hashes stayed unchanged
+through verification. Documentation and staged privacy/secret checks passed.

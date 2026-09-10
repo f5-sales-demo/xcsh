@@ -4,6 +4,7 @@ import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { ProtocolError } from "./errors";
 import { updateFileHistoryItem } from "./file-changes";
 import {
+	activeToolHistoryItem,
 	assistantHistoryItem,
 	backgroundCommandCompletion,
 	completeToolHistoryItem,
@@ -42,6 +43,7 @@ export type SessionTarget = Pick<
 		Pick<
 			AgentSession,
 			| "getToolByName"
+			| "getActiveToolExecutions"
 			| "subscribeSessionTransitions"
 			| "addBeforeDisposeHook"
 			| "userInteractions"
@@ -281,6 +283,34 @@ export class RemoteSession {
 		}
 	}
 
+	#replaceItem(target: Record<string, unknown>, source: Record<string, unknown>): void {
+		if (target === source) return;
+		for (const key of Object.keys(target)) delete target[key];
+		Object.assign(target, source);
+	}
+	#overlayLiveHistory(turns: Turn[]): void {
+		const active = turns.find(value => value.id === this.#active?.id);
+		if (active && this.#active) {
+			for (const item of this.#active.items) {
+				const index = active.items.findIndex(value => value.id === item.id);
+				if (index < 0) active.items.push(item);
+				else this.#replaceItem(active.items[index], item);
+			}
+		}
+		for (const execution of this.target.getActiveToolExecutions?.() ?? []) {
+			const suffix = `:tool:${execution.toolCallId}`;
+			const owner = turns.findLast(turn =>
+				turn.items.some(item => item.status === "inProgress" && String(item.id).endsWith(suffix)),
+			);
+			const index = owner?.items.findLastIndex(
+				item => item.status === "inProgress" && String(item.id).endsWith(suffix),
+			);
+			if (owner && index !== undefined && index >= 0)
+				this.#replaceItem(owner.items[index], activeToolHistoryItem(owner.items[index], execution));
+		}
+		for (const value of turns) this.#overlayCommandPreviews(value.items);
+	}
+
 	history(): Turn[] {
 		if (this.#durable) {
 			const turns = projectHistory(
@@ -288,15 +318,7 @@ export class RemoteSession {
 				this.target.sessionManager.getBranch(),
 				Boolean(this.#active) || this.target.isStreaming,
 			);
-			const active = turns.find(value => value.id === this.#active?.id);
-			if (active && this.#active) {
-				for (const item of this.#active.items) {
-					const index = active.items.findIndex(value => value.id === item.id);
-					if (index < 0) active.items.push(item);
-					else active.items[index] = item;
-				}
-			}
-			for (const value of turns) this.#overlayCommandPreviews(value.items);
+			this.#overlayLiveHistory(turns);
 			return turns;
 		}
 		const turns: Turn[] = [];
@@ -581,8 +603,7 @@ export class RemoteSession {
 				this.target.sessionManager.getBranch(),
 				Boolean(this.#active) || this.target.isStreaming,
 			);
-			for (const row of snapshot.timeline)
-				if (row.entry.type === "item") this.#overlayCommandPreviews([row.entry.item]);
+			this.#overlayLiveHistory(snapshot.turns);
 			return timelinePage(this.target.sessionId, snapshot.timeline, params);
 		}
 
@@ -1036,6 +1057,7 @@ export class RemoteSession {
 			if (job?.item.status === "inProgress") {
 				const updated = updateCommandHistoryItem(job.item, event.details.execution);
 				if (updated && event.details.outputDelta) {
+					updated.status = "inProgress";
 					this.#forwardedBackgroundProgress.add(event.details);
 					this.#cacheCommandPreview(updated);
 					if (this.#active?.id === job.turnId) this.#rememberItem(updated, false);
@@ -1057,6 +1079,7 @@ export class RemoteSession {
 			if (item?.status === "inProgress") {
 				const updated = updateCommandHistoryItem(item, details?.execution);
 				if (updated) {
+					updated.status = "inProgress";
 					this.#cacheCommandPreview(updated);
 					this.#rememberItem(updated, false);
 					if (typeof details?.outputDelta === "string" && details.outputDelta)
