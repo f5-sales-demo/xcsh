@@ -22,7 +22,7 @@ runs:
     - name: Verify immutable candidate identity
       shell: bash
       env:
-        EXPECTED_BUN: ${{ inputs.variant == 'baseline' && inputs.comparison != 'hardware' && '1.3.14' || '1.4.2' }}
+        EXPECTED_BUN: ${{ inputs.variant == 'bun-1.4.2' && '1.4.2' || '1.3.14' }}
       run: |
         set -euo pipefail
         test "$(command -v runner-profile)" = /usr/local/bin/runner-profile
@@ -60,7 +60,7 @@ runs:
         PROFILE_COMPARISON: ${{ inputs.comparison }}
         PROFILE_CACHE_STATE: ${{ inputs.cache-state }}
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
-        XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'baseline' && inputs.comparison != 'hardware' && '1.3.14' || '1.4.2' }}
+        XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'bun-1.4.2' && '1.4.2' || '1.3.14' }}
       run: |
         scripts/runner-optimization-profile.sh \
           "$PROFILE_MODE" "$PROFILE_VARIANT" "$PROFILE_COMPARISON" \

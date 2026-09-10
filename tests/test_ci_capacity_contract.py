@@ -49,14 +49,22 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
         self.assertIn("  pull_request:\n    types: [labeled]", benchmark)
-        benchmark_guard = (
+        software_guard = (
             "github.event_name == 'pull_request' &&\n"
             "      github.event.action == 'labeled' &&\n"
             "      github.event.label.name == 'compute-benchmark-approved' &&\n"
             "      github.event.pull_request.head.repo.full_name == github.repository"
         )
-        self.assertEqual(benchmark.count(benchmark_guard), 8)
+        hardware_label_guard = (
+            "(github.event.label.name == 'compute-benchmark-approved' || "
+            "github.event.label.name == 'compute-hardware-approved')"
+        )
+        self.assertEqual(benchmark.count(software_guard), 2)
+        self.assertEqual(benchmark.count(hardware_label_guard), 6)
         self.assertIn("  release-native-fixtures:\n", benchmark)
+        self.assertIn(
+            "github.event.label.name == 'compute-hardware-approved'", benchmark
+        )
         self.assertIn("    needs: release-native-fixtures\n", benchmark)
         self.assertIn("platform: linux\n            arch: arm64", benchmark)
         self.assertEqual(benchmark.count("platform: win32"), 2)
@@ -67,6 +75,12 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("runs-on: xcsh-compute-f32-candidate", benchmark)
         self.assertIn("max-parallel: 4", benchmark)
         self.assertIn("pair: [1, 2, 3, 4, 5]", benchmark)
+        self.assertIn(
+            "needs: [release-native-fixtures, d16-software-candidate]", benchmark
+        )
+        self.assertIn("      always() &&", benchmark)
+        self.assertIn("needs.release-native-fixtures.result == 'success'", benchmark)
+        self.assertIn("needs.d16-software-candidate.result == 'success'", benchmark)
         self.assertIn("    needs: f32-hardware-candidate", benchmark)
         self.assertIn("    needs: d16-current-burst", benchmark)
         self.assertIn("    needs: d16-burst", benchmark)
@@ -109,8 +123,12 @@ class CiCapacityContractTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn(
-            "XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'baseline' && "
-            "inputs.comparison != 'hardware' && '1.3.14' || '1.4.2' }}",
+            "XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'bun-1.4.2' && "
+            "'1.4.2' || '1.3.14' }}",
+            profiler_action,
+        )
+        self.assertIn(
+            "EXPECTED_BUN: ${{ inputs.variant == 'bun-1.4.2' && '1.4.2' || '1.3.14' }}",
             profiler_action,
         )
         for phase in ("install", "native", "test", "release"):
