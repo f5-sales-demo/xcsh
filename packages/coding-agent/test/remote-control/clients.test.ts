@@ -22,7 +22,7 @@ test("native client listing uses selected subscription and pinned pagination and
 					items: [
 						{
 							client_id: "example-client",
-							display_name: "Example Phone",
+							display_name: "example-phone",
 							device_type: "phone",
 							platform: "ios",
 							last_seen_at: "2026-01-01T00:00:00Z",
@@ -37,7 +37,7 @@ test("native client listing uses selected subscription and pinned pagination and
 		data: [
 			{
 				clientId: "example-client",
-				displayName: "Example Phone",
+				displayName: "example-phone",
 				deviceType: "phone",
 				platform: "ios",
 				osVersion: null,
