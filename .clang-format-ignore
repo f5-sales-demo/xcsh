@@ -6,3 +6,6 @@
 # not the ecosystem's default clang-format style.
 crates/tree-sitter-glimmer/src/parser.c
 crates/tree-sitter-glimmer/src/scanner.c
+
+# Canonical tree-sitter support headers shipped with the generated parser.
+crates/tree-sitter-glimmer/src/tree_sitter/*.h

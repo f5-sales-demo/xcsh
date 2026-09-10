@@ -44,10 +44,10 @@ bun run check
 
 ## Architecture
 
-```
+```text
 crates/pi-natives/       # Rust source (workspace member)
   src/lib.rs             # N-API exports
-  src/image.rs           # Image processing (photon-rs)
+  src/image.rs           # SIXEL image decoding and encoding
   Cargo.toml             # Rust dependencies
 native/                  # Native addon binaries
   pi_natives.<platform>-<arch>-modern.node   # x64 modern ISA (AVX2)

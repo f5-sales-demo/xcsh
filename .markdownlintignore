@@ -6,3 +6,7 @@ packages/coding-agent/bench/fixtures/model-benchmark-plugin/skills/**/proof.md
 
 # Preserve verbatim third-party license text in the vendored PTY crate.
 crates/portable-pty-vendored/LICENSE.md
+
+# Preserve canonical upstream Glimmer documentation and license text.
+crates/tree-sitter-glimmer/LICENSE.md
+crates/tree-sitter-glimmer/README.md
