@@ -211,5 +211,30 @@ four observed failures before implementation. The earlier full remote run passed
 93 tests / 330 assertions before the final pending-handshake cancellation test
 was added. Workspace lint and TypeScript checks pass. Beta was idle after Robin
 ended voice and was resumed with the same session identity and explicit Astra
-model to load this change. Phone background/foreground and live recovery checks
-are in progress; do not infer them from mocked transport tests.
+model to load this change. Robin confirmed phone background/foreground recovery and correct file contents.
+Airplane Mode did not recover automatically: the phone returned to text. At
+01:53:06 UTC, the first sideband reconnect failed after 5430 ms without an exposed
+HTTP status. Bounded retries were added after two further failing tests. The next
+manual Airplane Mode attempt also failed, with three failed sideband attempts at
+01:58:07, 01:58:12, and 01:58:19 UTC (5385, 5420, and 5465 ms). The terminal session
+remained available. Do not mark automatic hard-offline voice recovery as passing.
+
+The native Bun WebSocket client reports rejected upgrades without the HTTP status;
+controlled local 401/403/404/410/429/503 fixtures reproduce this limitation. A
+separate socket adapter now retains an explicit `upgradeRejected` classification
+without guessing the status or logging the call URL, response, or credentials.
+The production implementation remains Bun-native with no added dependency.
+Robin confirmed fresh-call recovery after the hard network interruption: pressing
+voice again succeeded and returned the correct file contents. This confirms recovery
+with a new call, not automatic restoration of the interrupted call. Acceptance of
+that first-release behavior is awaiting Robin's product decision.
+
+The affected-package recovery run completed with 7327 passes, 561 skips, three
+5-second startup test timeouts, and two resulting cleanup errors across 730 files.
+The timeouts reproduced in a seven-test isolated run. The marketplace cases each
+ran two independent startup scenarios inside one timeout; the remote CLI combined
+status and help. These are now separate parameterized cases with identical behavior
+assertions and the same timeout. All ten cases pass (22 assertions, 12.65 seconds).
+Full-package verification of that repair remains pending.
+
+Current focused verification: 106 remote tests / 373 assertions and workspace lint/TypeScript checks pass. Staged-scope PII, secret scanning, and whitespace checks pass.

@@ -57,7 +57,7 @@ function fixture() {
 		records,
 		delegated,
 		authorization,
-		reject: (error: Error) => {
+		reject: (error: Error | undefined) => {
 			rejectOpen = error;
 		},
 	};
@@ -194,4 +194,48 @@ test("stopping during a pending recovery handshake closes the late socket withou
 	expect(closes).toBe(1);
 	expect(voice.active).toBe(false);
 	expect(events).toEqual(["thread/realtime/started", "thread/realtime/closed"]);
+});
+
+test("temporary reconnect failures retry without closing voice or losing queued work", async () => {
+	const f = fixture();
+	try {
+		await f.voice.start(start);
+		f.reject(new Error("Realtime connection closed"));
+		f.connections[0].handlers.closed();
+		await Bun.sleep(300);
+		expect(f.voice.active).toBe(true);
+		f.voice.appendText("retained during outage");
+		f.reject(undefined);
+		await reconnected(f);
+		expect(f.authorization).toHaveLength(3);
+		expect(f.connections[1].sent[0].content[0].text).toBe("retained during outage");
+		expect(f.events.filter(e => /closed|error/.test(e.method))).toEqual([]);
+	} finally {
+		f.voice.stop();
+	}
+});
+test("permanent reconnect rejection fails once with sanitized status evidence", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.reject(new Error("HTTP 403 private fixture-token"));
+	f.connections[0].handlers.closed();
+	await Bun.sleep(300);
+	expect(f.voice.active).toBe(false);
+	expect(f.authorization).toHaveLength(2);
+	expect(f.records).toContainEqual(
+		expect.objectContaining({ stage: "sideband-reconnect", failure: "http", httpStatus: 403 }),
+	);
+	expect(JSON.stringify(f.records)).not.toContain("private");
+});
+
+test("temporary reconnect failures have a finite retry budget", async () => {
+	const f = fixture();
+	await f.voice.start(start);
+	f.reject(new Error("Realtime connection closed"));
+	f.connections[0].handlers.closed();
+	await Bun.sleep(1600);
+	expect(f.voice.active).toBe(false);
+	expect(f.authorization).toHaveLength(4);
+	expect(f.events.filter(e => e.method === "thread/realtime/error")).toHaveLength(1);
+	expect(f.records.filter(e => e.stage === "sideband-reconnect").map(e => e.attempt)).toEqual([1, 2, 3]);
 });

@@ -95,57 +95,59 @@ describe("interactive marketplace refresh surfaces", () => {
 		expect(offline.stderr).toContain("last-known catalog data");
 	});
 
-	it("CLI and slash direct installs fetch a newly published version", async () => {
-		for (const command of ["cli", "slash"] as const) {
+	it.each(["cli", "slash"] as const)(
+		"CLI and slash direct installs fetch a newly published version (%s)",
+		async command => {
 			const { home, source } = makeEnvironment();
 			expect((await runScript(ADD_MARKETPLACE, home, source)).code).toBe(0);
 			setSourceVersion(source, "2.0.0");
 			const code =
 				command === "cli"
 					? `import { runPluginCommand } from "./src/cli/plugin-cli";
-					   await runPluginCommand({ action: "install", args: ["hello-plugin@test-marketplace"], flags: {} });`
+				   await runPluginCommand({ action: "install", args: ["hello-plugin@test-marketplace"], flags: {} });`
 					: `import { registerLocales } from "@f5-sales-demo/pi-utils";
-					   import { locales } from "./src/locales/index";
-					   import { executeBuiltinSlashCommand } from "./src/slash-commands/builtin-registry";
-					   registerLocales(locales);
-					   const statuses = [];
-					   const ctx = { editor: { setText() {} }, sessionManager: { getCwd: () => process.cwd() }, showStatus: value => statuses.push(value) };
-					   await executeBuiltinSlashCommand("/plugin install hello-plugin@test-marketplace", { ctx, handleBackgroundCommand() {} });
-					   console.log(JSON.stringify(statuses));`;
+				   import { locales } from "./src/locales/index";
+				   import { executeBuiltinSlashCommand } from "./src/slash-commands/builtin-registry";
+				   registerLocales(locales);
+				   const statuses = [];
+				   const ctx = { editor: { setText() {} }, sessionManager: { getCwd: () => process.cwd() }, showStatus: value => statuses.push(value) };
+				   await executeBuiltinSlashCommand("/plugin install hello-plugin@test-marketplace", { ctx, handleBackgroundCommand() {} });
+				   console.log(JSON.stringify(statuses));`;
 			const result = await runScript(code, home, source);
 			if (result.code !== 0) throw new Error(result.stderr || result.stdout);
 			const registry = JSON.parse(
 				fs.readFileSync(path.join(home, ".xcsh", "plugins", "installed_plugins.json"), "utf8"),
 			) as { plugins: Record<string, Array<{ version: string }>> };
 			expect(registry.plugins["hello-plugin@test-marketplace"]?.[0]?.version).toBe("2.0.0");
-		}
-	});
+		},
+	);
 
-	it("slash discovery and the install selector refresh a fresh marketplace snapshot", async () => {
-		for (const surface of ["slash-discover", "install-selector"] as const) {
+	it.each(["slash-discover", "install-selector"] as const)(
+		"slash discovery and the install selector refresh a fresh marketplace snapshot (%s)",
+		async surface => {
 			const { home, source } = makeEnvironment();
 			expect((await runScript(ADD_MARKETPLACE, home, source)).code).toBe(0);
 			setSourceVersion(source, "2.0.0");
 			const code =
 				surface === "slash-discover"
 					? `import { registerLocales } from "@f5-sales-demo/pi-utils";
-					   import { locales } from "./src/locales/index";
-					   import { executeBuiltinSlashCommand } from "./src/slash-commands/builtin-registry";
-					   registerLocales(locales);
-					   const statuses = [];
-					   const ctx = { editor: { setText() {} }, sessionManager: { getCwd: () => process.cwd() }, showStatus: value => statuses.push(value) };
-					   await executeBuiltinSlashCommand("/plugin discover test-marketplace", { ctx, handleBackgroundCommand() {} });
-					   if (!statuses.some(value => value.includes("hello-plugin@2.0.0"))) throw new Error(JSON.stringify(statuses));`
+				   import { locales } from "./src/locales/index";
+				   import { executeBuiltinSlashCommand } from "./src/slash-commands/builtin-registry";
+				   registerLocales(locales);
+				   const statuses = [];
+				   const ctx = { editor: { setText() {} }, sessionManager: { getCwd: () => process.cwd() }, showStatus: value => statuses.push(value) };
+				   await executeBuiltinSlashCommand("/plugin discover test-marketplace", { ctx, handleBackgroundCommand() {} });
+				   if (!statuses.some(value => value.includes("hello-plugin@2.0.0"))) throw new Error(JSON.stringify(statuses));`
 					: `import { SelectorController } from "./src/modes/controllers/selector-controller";
-					   const sink = { clear() {}, addChild() {} };
-					   const ctx = { editorContainer: sink, editor: {}, ui: { setFocus() {}, requestRender() {} }, showStatus() {} };
-					   await new SelectorController(ctx).showPluginSelector("install");
-					   const cached = JSON.parse(await Bun.file(process.env.HOME + "/.xcsh/plugins/cache/marketplaces/test-marketplace/marketplace.json").text());
-					   if (cached.plugins[0].version !== "2.0.0") throw new Error("install selector did not refresh");`;
+				   const sink = { clear() {}, addChild() {} };
+				   const ctx = { editorContainer: sink, editor: {}, ui: { setFocus() {}, requestRender() {} }, showStatus() {} };
+				   await new SelectorController(ctx).showPluginSelector("install");
+				   const cached = JSON.parse(await Bun.file(process.env.HOME + "/.xcsh/plugins/cache/marketplaces/test-marketplace/marketplace.json").text());
+				   if (cached.plugins[0].version !== "2.0.0") throw new Error("install selector did not refresh");`;
 			const result = await runScript(code, home, source);
 			if (result.code !== 0) throw new Error(result.stderr || result.stdout);
-		}
-	});
+		},
+	);
 
 	it("installed-only CLI operations stay offline", async () => {
 		const { home, source } = makeEnvironment();

@@ -7,15 +7,8 @@ import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
 import { contextChunks, decodeVoiceEvent, existingCallConfig, type VoiceEvent } from "./voice-protocol";
 
-interface VoiceSocket {
-	send(data: string): unknown;
-	close(): void;
-	readonly bufferedAmount: number;
-}
-interface VoiceHandlers {
-	message(data: string): void;
-	closed(): void;
-}
+import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-socket";
+
 export interface VoiceDependencies {
 	authenticate(): Promise<SubscriptionAuth>;
 	createCall?: typeof createVoiceCall;
@@ -27,40 +20,20 @@ export interface VoiceDependencies {
 	record(record: Record<string, unknown>): Promise<void>;
 	delegate(id: string, text: string): Promise<string>;
 }
+function connectionFailure(error: unknown): "http" | "upgradeRejected" | "closed" | "timeout" | "transport" {
+	const message = error instanceof Error ? error.message : "";
+	if (/upgrade rejected/i.test(message)) return "upgradeRejected";
+	if (/\b(400|401|403|404|408|410|429|500|502|503|504)\b/.test(message)) return "http";
+	if (/timeout|timed out/i.test(message)) return "timeout";
+	if (/closed/i.test(message)) return "closed";
+	return "transport";
+}
 function safeConnectionError(error: unknown): string {
 	const status =
 		error instanceof Error
 			? error.message.match(/\b(400|401|403|404|408|410|429|500|502|503|504)\b/)?.[1]
 			: undefined;
 	return `Native realtime connection failed${status ? ` (HTTP ${status})` : ""}`;
-}
-async function openSocket(url: string, headers: Record<string, string>, handlers: VoiceHandlers): Promise<VoiceSocket> {
-	return new Promise((resolve, reject) => {
-		const socket = new WebSocket(url, { headers });
-		let opened = false;
-		const timeout = setTimeout(() => {
-			socket.close();
-			reject(new Error("Realtime connection timeout"));
-		}, 15_000);
-		socket.onopen = () => {
-			clearTimeout(timeout);
-			opened = true;
-			resolve(socket);
-		};
-		socket.onmessage = event => {
-			handlers.message(typeof event.data === "string" ? event.data : "");
-		};
-		socket.onerror = event => {
-			clearTimeout(timeout);
-			if (!opened) reject(new Error(safeConnectionError(new Error(String((event as ErrorEvent).message)))));
-			else handlers.closed();
-		};
-		socket.onclose = () => {
-			clearTimeout(timeout);
-			if (!opened) reject(new Error("Realtime connection closed"));
-			else handlers.closed();
-		};
-	});
 }
 export class NativeVoice {
 	#tail: { role: "user" | "assistant"; text: string; done: boolean }[] = [];
@@ -75,6 +48,7 @@ export class NativeVoice {
 	#epoch = 0;
 	#connectedAt = 0;
 	#rapidDisconnects = 0;
+	#reconnectAttempts = 0;
 	#reconnectTimer?: ReturnType<typeof setTimeout>;
 	#outbound: string[] = [];
 	#outboundBytes = 0;
@@ -164,6 +138,7 @@ export class NativeVoice {
 					kind: "voiceDiagnostic",
 					stage,
 					connected: false,
+					failure: connectionFailure(error),
 					httpStatus: status ? Number(status) : null,
 					elapsedMs: Date.now() - startedAt,
 				})
@@ -201,7 +176,7 @@ export class NativeVoice {
 	}
 	async #connect(headers: Record<string, string>): Promise<VoiceSocket> {
 		const epoch = ++this.#epoch;
-		return (this.deps.open ?? openSocket)(this.#config!.url, headers, {
+		return (this.deps.open ?? openVoiceSocket)(this.#config!.url, headers, {
 			message: data => {
 				if (this.#epoch === epoch) this.#receive(data);
 			},
@@ -224,6 +199,10 @@ export class NativeVoice {
 		// Match the pinned v3 sideband's 200 ms exponential backoff, capped at
 		// five seconds, and reset after a connection survives thirty seconds.
 		if (Date.now() - this.#connectedAt >= 30_000) this.#rapidDisconnects = 0;
+		this.#reconnectAttempts = 0;
+		this.#scheduleReconnect();
+	}
+	#scheduleReconnect(): void {
 		const delay = Math.min(200 * 2 ** Math.min(this.#rapidDisconnects++, 5), 5000);
 		this.#reconnectTimer = setTimeout(() => {
 			void this.#reconnect();
@@ -231,6 +210,7 @@ export class NativeVoice {
 	}
 	async #reconnect(): Promise<void> {
 		if (this.#state !== "reconnecting") return;
+		this.#reconnectAttempts++;
 		const startedAt = Date.now();
 		try {
 			// Selection and refresh stay with the owning session's credential broker.
@@ -265,12 +245,20 @@ export class NativeVoice {
 				.record({
 					kind: "voiceDiagnostic",
 					stage: "sideband-reconnect",
+					attempt: this.#reconnectAttempts,
 					connected: false,
+					failure: connectionFailure(error),
 					httpStatus: status ? Number(status) : null,
 					elapsedMs: Date.now() - startedAt,
 				})
 				.catch(() => {});
+			if (!this.active) return;
 			if (status === "404" || status === "410") this.stop("transportClosed");
+			else if (
+				(!status || ["408", "429", "500", "502", "503", "504"].includes(status)) &&
+				this.#reconnectAttempts < 3
+			)
+				this.#scheduleReconnect();
 			else this.#fail(message);
 		}
 	}
