@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
 import { createVoiceCall, voiceCallConfig } from "../../src/remote-control/voice-call";
+import { voiceDelegation } from "../../src/remote-control/voice-delegation";
 import type { VoiceHandlers } from "../../src/remote-control/voice-socket";
 
 // Derived from pinned methods_v1.rs/session_update_session and realtime_call.rs.
@@ -143,7 +144,7 @@ test("created v1 WebRTC initializes its sideband once and keeps delegation on th
 			input_transcript: "Do fixture work",
 		});
 		await Bun.sleep(0);
-		expect(f.delegated).toEqual(["Do fixture work"]);
+		expect(f.delegated).toEqual([voiceDelegation("Do fixture work", "user: Do fixture work")]);
 		expect(f.sent.filter(frame => frame.type === "conversation.handoff.append")).toEqual([
 			{
 				type: "conversation.handoff.append",

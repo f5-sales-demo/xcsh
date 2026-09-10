@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
+import { voiceDelegation } from "../../src/remote-control/voice-delegation";
 
 const start = {
 	transport: { type: "existingCall", callId: "fixture-call" },
@@ -96,7 +97,7 @@ test("v3 sideband reattaches the same call with refreshed auth and ignores stale
 		f.connections[0].handlers.message(JSON.stringify({ type: "error" }));
 		f.connections[1].handlers.message(JSON.stringify(delegation));
 		await Bun.sleep(0);
-		expect(f.delegated).toEqual(["work"]);
+		expect(f.delegated).toEqual([voiceDelegation("work", "user: work")]);
 		expect(f.voice.active).toBe(true);
 		expect(f.events.filter(e => /^thread\/realtime\/(started|closed|error)$/.test(e.method))).toHaveLength(1);
 		expect(f.records).toContainEqual(

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import Ajv from "ajv";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
+import { voiceDelegation } from "../../src/remote-control/voice-delegation";
 import { contextChunks, decodeVoiceEvent, existingCallConfig } from "../../src/remote-control/voice-protocol";
 import phoneDelegation from "./fixtures/codex-0.153.4-phone-delegation.json";
 import phoneRecall from "./fixtures/codex-0.153.4-phone-recall.json";
@@ -114,7 +115,19 @@ test.each([...phoneRecall.scenarios, phoneDelegation.scenario])(
 		);
 		const completed = f.records.filter(record => record.kind === "voiceTimeline");
 		expect(completed).toHaveLength(4);
-		expect(f.delegated).toEqual(scenario.name === "beta-delegation" ? [texts.user] : []);
+		const handoff = f.events.find(event => event.method === "thread/realtime/itemAdded")?.params.item as
+			| { active_transcript: { role: string; text: string }[] }
+			| undefined;
+		expect(f.delegated).toEqual(
+			scenario.name === "beta-delegation"
+				? [
+						voiceDelegation(
+							texts.user,
+							handoff!.active_transcript.map(entry => `${entry.role}: ${entry.text}`).join("\n"),
+						),
+					]
+				: [],
+		);
 		const ajv = new Ajv({ strict: false });
 		ajv.addFormat("uint32", {
 			type: "number",
@@ -157,7 +170,7 @@ test("handoff notification retains active speech once and appends missing reques
 			},
 		},
 	]);
-	expect(f.delegated).toEqual(["change fixture"]);
+	expect(f.delegated).toEqual([voiceDelegation("change fixture", "assistant: How can I help?\nuser: change fixture")]);
 	f.finish("Done.");
 	await f.voice.stop();
 });
@@ -262,7 +275,7 @@ test("transcripts persist with provenance but never execute; delegation executes
 	f.receive(delegation);
 	f.receive(delegation);
 	await Bun.sleep(0);
-	expect(f.delegated).toEqual(["change fixture"]);
+	expect(f.delegated).toEqual([voiceDelegation("change fixture", "user: change fixture")]);
 	f.finish("Updated the fixture.");
 	await Bun.sleep(0);
 	expect(f.sent).toContainEqual({
@@ -599,7 +612,7 @@ test.each(
 			socket.onmessage({ data: JSON.stringify(request) });
 			await Bun.sleep(streamed ? 300 : 0);
 			expect(selectedSession).toBe("fixture-owner");
-			expect(prompts).toEqual(["change fixture"]);
+			expect(prompts).toEqual([voiceDelegation("change fixture", "user: change fixture")]);
 			expect(target.model.id).toBe(model);
 			expect(modes).toEqual([true]);
 			if (asItems) {
@@ -726,6 +739,7 @@ test("requested transcript-tail flushing submits unpromoted speech once after vo
 	await Bun.sleep(0);
 	expect(f.delegated).toHaveLength(1);
 	expect(f.delegated[0]).toContain("Please update the fixture.");
+	expect(f.delegated[0]).toContain("<source>transcript_tail_flush</source>");
 	expect(f.records.some(r => r.kind === "transcriptTail")).toBe(true);
 	f.finish("Updated.");
 });
@@ -746,7 +760,7 @@ test.each([true, false])(
 		f.receive({ type: "turn.done", turn: { role: "user", transcript: "change fixture" } });
 		f.voice.stop();
 		await Bun.sleep(0);
-		expect(f.delegated).toEqual(["change fixture"]);
+		expect(f.delegated).toEqual([voiceDelegation("change fixture", "user: change fixture")]);
 		f.finish("Updated.");
 	},
 );

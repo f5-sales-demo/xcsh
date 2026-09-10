@@ -94,7 +94,7 @@ continues to permit explicit speech.
 
 Thirty-two adapter variants cover all four work models, both protocol versions,
 partial/completed-only model events and item/delegation output paths. These are
-automated native/source-contract checks. Canonical timeline promotions, standalone
+automated native/source-contract checks. Live canonical timeline promotions, standalone
 WebSocket, remaining control/recovery coverage and live item-mode phone acceptance
 are still outstanding.
 

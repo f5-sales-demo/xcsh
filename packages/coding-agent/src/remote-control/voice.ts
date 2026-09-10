@@ -6,6 +6,7 @@ import type { RealtimeModeInstructions } from "../session/realtime-context";
 import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
+import { voiceDelegation } from "./voice-delegation";
 import { handoffChannel, handoffOptions, handoffPhase, VoiceHandoff, type VoiceOutputUpdate } from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
@@ -20,6 +21,8 @@ import {
 import { openVoiceSocket, type VoiceHandlers, type VoiceSocket } from "./voice-socket";
 
 export interface VoiceDependencies {
+	/** Shared by successive calls attached to one backing session. */
+	history?: VoiceHistory;
 	authenticate(): Promise<SubscriptionAuth>;
 	createCall?: typeof createVoiceCall;
 	context?(): string;
@@ -135,12 +138,14 @@ export class NativeVoice {
 				});
 				this.#config = config;
 				this.#started = true;
-				this.#history = new VoiceHistory(
-					sessionId,
-					record => this.deps.record(record),
-					(method, params) => this.deps.emit(method, params),
-				);
-				this.#chain = this.#history.start();
+				this.#history =
+					this.deps.history ??
+					new VoiceHistory(
+						sessionId,
+						record => this.deps.record(record),
+						(method, params) => this.deps.emit(method, params),
+					);
+				this.#chain = this.#history.start(sessionId);
 				await this.#chain;
 				if (!this.active) throw new Error("Voice stopped during history initialization");
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
@@ -164,12 +169,14 @@ export class NativeVoice {
 			}
 			if (!this.#started) {
 				this.#started = true;
-				this.#history = new VoiceHistory(
-					sessionId,
-					record => this.deps.record(record),
-					(method, params) => this.deps.emit(method, params),
-				);
-				this.#chain = this.#history.start();
+				this.#history =
+					this.deps.history ??
+					new VoiceHistory(
+						sessionId,
+						record => this.deps.record(record),
+						(method, params) => this.deps.emit(method, params),
+					);
+				this.#chain = this.#history.start(sessionId);
 				await this.#chain;
 				if (!this.active) throw new Error("Voice stopped during history initialization");
 				this.deps.emit("thread/realtime/started", { realtimeSessionId: sessionId, version });
@@ -464,7 +471,14 @@ export class NativeVoice {
 		if (this.#seen.has(key)) return;
 		this.#seen.add(key);
 		await this.deps.record({ key, kind: "transcriptTail", transcript });
-		const text = await this.deps.delegate(key, prompt.render(tailTemplate, { transcript }));
+		const text = await this.deps.delegate(
+			key,
+			voiceDelegation(
+				prompt.render(tailTemplate).trimEnd(),
+				tail.map(entry => `${entry.role}: ${entry.text}`).join("\n"),
+				true,
+			),
+		);
 		await this.deps.record({ key, kind: "transcriptTailResult", text });
 	}
 
@@ -515,6 +529,7 @@ export class NativeVoice {
 			return;
 		}
 		this.#seen.add(key);
+		await this.#history?.observe({ type: "handoff" });
 		// Pinned methods.rs appends a missing handoff input before consuming the active transcript.
 		const activeTranscript = this.#tail.map(({ role, text }) => ({ role, text }));
 		const input = event.text.trim();
@@ -546,14 +561,18 @@ export class NativeVoice {
 		const handoff = this.#createHandoff(event.id);
 		this.#handoff = handoff;
 		void this.deps
-			.delegate(key, event.text, update => {
-				if (!this.active) return;
-				try {
-					handoff?.update(update);
-				} catch {
-					this.#fail("Could not stream the backing agent response");
-				}
-			})
+			.delegate(
+				key,
+				voiceDelegation(event.text, activeTranscript.map(entry => `${entry.role}: ${entry.text}`).join("\n")),
+				update => {
+					if (!this.active) return;
+					try {
+						handoff?.update(update);
+					} catch {
+						this.#fail("Could not stream the backing agent response");
+					}
+				},
+			)
 			.then(async text => {
 				await this.deps.record({ key, kind: "delegationResult", text });
 				if (this.#config?.clientManagedHandoffs || !this.active) return;

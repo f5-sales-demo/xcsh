@@ -112,3 +112,10 @@ relay retries; private xcsh-owned state and Unix socket session attachment.
   context-radius diff construction. Runtime diff generation uses xcsh's existing
   `similar` 3.1.1 native dependency, verified against those fixtures. No Codex
   source or executable is required at runtime.
+
+- `codex-rs/core/src/context/realtime_delegation.rs` and
+  `codex-rs/context-fragments/src/fragment.rs`: marked delegation rendering, XML
+  escaping, 4096-byte field budgets, UTF-8 boundaries and transcript-tail source.
+  The fixture generator verifies both source hashes and executes the original
+  delegation implementation and default render method with local type adapters.
+  The session-ended handoff instruction comes from `core/src/realtime_conversation.rs`.

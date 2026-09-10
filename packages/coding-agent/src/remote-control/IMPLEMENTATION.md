@@ -1576,9 +1576,64 @@ The focused owner and timeline suite passed 21 tests and 185 assertions across f
 files. Workspace TypeScript/lint and the CLI bundle passed. This is integration
 evidence with simulated tools and model responses, not a new iPhone acceptance
 result. Attachment during an unfinished model response, broader fork/recovery
-lifecycle and session-owned voice timeline integration remain unfinished.
+lifecycle remained unfinished at that checkpoint. The following checkpoint connects
+the session-owned voice timeline.
 
 The remote suite passed 727 tests and 2686 assertions across 57 files. The full
 package suite passed 8114 tests, 561 skips and zero failures across 783 files
 (28937 assertions, 387.09 seconds). All four source/test hashes stayed unchanged
 through verification. Documentation and staged privacy/secret checks passed.
+
+## Session-owned voice timeline and delegation input
+
+A terminal session now owns one voice-history reducer across successive calls and
+adapter reattachment. NativeVoice accepts that owner and records handoff boundaries
+before delegation. RemoteSession routes backing turn, item and text events through
+the reducer; speech effects appear before typed input events and promotions appear
+after their backing events. Queued notifications retain captured payloads. Closure
+and storage transitions drain pending effects, and a new session identity receives
+a separate owner with the old input hook retired.
+
+The pinned source deliberately distinguishes two cases: late results after closure
+retain their prior call association, while starting a new call during a still-running
+turn reassigns that turn to the new call. Real AgentSession tests cover both cases,
+inline and whole-item promotions, sole tool execution, notification order and owner
+reuse after reattachment. They supplement the earlier standalone reducer fixtures.
+Review exposed the shared owner retaining its default call identity; explicit IDs
+now reach history initialization for both created and attached calls. Both
+transport regressions failed before the repair and passed afterward.
+
+A blocked-write test reproduced terminal input overtaking pending speech in stored
+history. AgentSession now joins session-bound input preparation before admitting
+user prompts, steering and follow-ups. The owner seals speech through this hook;
+abort, disposal and lifecycle changes reject stale prepared input. Tests verify both
+the notification sequence and stored speech boundary, including blocked persistence.
+Delegated input keeps the speech segment open, matching the pinned fragment rule.
+
+Native handoffs now wrap input and transcript context in the pinned delegation
+fragment. Static prompt templates preserve its markers and tail-flush instruction.
+Each field has a 4096-byte budget after XML escaping; input retains its beginning
+and transcript context retains its end, without splitting UTF-8. Fourteen fixtures
+execute the original Rust delegation implementation and default fragment renderer
+after checking both source hashes. Regeneration matched byte for byte. This does
+not add a Codex executable or runtime Rust dependency.
+
+Observed failures preceded effect ordering, shared call ownership, queued payload
+capture, stored speech ordering and native delegation formatting. The final focused
+voice/owner run passed 91 tests and 699 assertions across five files; the additional
+input/formatter run passed 17 tests and 41 assertions. The integrated remote suite
+passed 753 tests and 2764 assertions across 60 files. Workspace lint/TypeScript,
+bundle and documentation checks passed. The first full package run reported four
+marketplace/plugin subprocess timeouts and two resulting unhandled errors, with
+8135 passes and 561 skips. All affected tests passed on a focused rerun without
+changing their timeout limits (18 tests, 48 assertions, including voice history).
+After the call-identity repair, the final package run passed 8140 tests with 561
+skips, zero failures and 29017 assertions across 786 files (487.28 seconds). All
+previously timed-out marketplace cases passed with their original limits. All 17
+runtime/test/fixture hashes matched the frozen source. Staged privacy and secret
+checks passed. These are local checks, not new iPhone acceptance.
+
+Remaining gates include live timeline/promotion and streaming captures, late events
+across abrupt process recovery, remaining supported item kinds and interactions,
+all-model live work, and final release verification. The dedicated phone runtime
+remains unchanged.

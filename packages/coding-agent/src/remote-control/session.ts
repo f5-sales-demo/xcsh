@@ -16,6 +16,7 @@ import {
 } from "./history";
 import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
 import { RemoteInteractions } from "./interactions";
+import { getSessionVoiceHistory, type SessionVoiceHistory } from "./session-voice-history";
 import { timelinePage } from "./timeline";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
@@ -46,6 +47,7 @@ export type SessionTarget = Pick<
 			| "getActiveToolExecutions"
 			| "subscribeSessionTransitions"
 			| "addBeforeDisposeHook"
+			| "addBeforeUserInputHook"
 			| "userInteractions"
 			| "isSessionChanging"
 			| "isDisposing"
@@ -106,6 +108,8 @@ export class RemoteSession {
 	#unsubscribeDispose?: () => void;
 	#interactions?: RemoteInteractions;
 	#effects = new Set<Promise<unknown>>();
+	#voiceHistoryOwner!: SessionVoiceHistory;
+	#unsubscribeVoiceHistory?: () => void;
 	#cancelDelegations = new Set<() => void>();
 	#voiceOutputs = new Set<{ turnId: string; send: (update: VoiceOutputUpdate) => void }>();
 	#voice?: NativeVoice;
@@ -178,6 +182,7 @@ export class RemoteSession {
 				for (const cancel of this.#cancelDelegations) cancel();
 				await this.#voice?.stop();
 				await Promise.allSettled([...this.#effects]);
+				await this.#voiceHistoryOwner.history.drain();
 			} else {
 				this.#epoch++;
 				this.#voice = undefined;
@@ -198,6 +203,11 @@ export class RemoteSession {
 	}
 	#restoreIdentity(): void {
 		this.#boundId = this.target.sessionId;
+		this.#unsubscribeVoiceHistory?.();
+		this.#voiceHistoryOwner = getSessionVoiceHistory(this.target);
+		this.#unsubscribeVoiceHistory = this.#voiceHistoryOwner.subscribe((method, params) =>
+			this.#emitDirect(method, params, true),
+		);
 		const header = this.target.sessionManager.getHeader?.();
 		this.#createdAt = header ? Math.floor(Date.parse(header.timestamp) / 1000) : Math.floor(Date.now() / 1000);
 		const last = this.target.sessionManager.getBranch?.().at(-1);
@@ -254,14 +264,30 @@ export class RemoteSession {
 		this.#closing = Promise.resolve(this.#voice?.stop())
 			.then(async () => {
 				await Promise.allSettled([...this.#effects]);
+				await this.#voiceHistoryOwner.history.drain();
 			})
 			.finally(() => {
 				this.#epoch++;
 				this.#listeners.clear();
+				this.#unsubscribeVoiceHistory?.();
 			});
 		return this.#closing;
 	}
 	#emit(method: string, params: Record<string, unknown>, allowClosing = false): void {
+		if ((this.#disposed && !allowClosing) || this.#boundId !== this.target.sessionId) return;
+		const pending = this.#voiceHistoryOwner.dispatch(method, params, captured =>
+			this.#emitDirect(method, captured, allowClosing),
+		);
+		if (pending) {
+			this.#effects.add(pending);
+			void pending
+				.catch(() =>
+					this.#emitDirect("thread/realtime/error", { message: "Could not persist backing voice history" }, true),
+				)
+				.finally(() => this.#effects.delete(pending));
+		}
+	}
+	#emitDirect(method: string, params: Record<string, unknown>, allowClosing = false): void {
 		if ((this.#disposed && !allowClosing) || this.#boundId !== this.target.sessionId) return;
 		this.#updatedAt = Math.floor(Date.now() / 1000);
 		for (const listener of this.#listeners)
@@ -477,6 +503,7 @@ export class RemoteSession {
 			await this.#voice?.stop();
 			this.#assertCurrent(epoch);
 			this.#voice = new NativeVoice({
+				history: this.#voiceHistoryOwner.history,
 				context: () => {
 					this.#assertCurrent(epoch);
 					return JSON.stringify(

@@ -2422,6 +2422,7 @@ export class AgentSession {
 			}
 		}
 		this.#beforeDisposeHooks.clear();
+		this.#beforeUserInputHooks.clear();
 		await this.abort();
 		await this.#sessionTransitions.waitForIdle();
 		try {
@@ -3901,6 +3902,28 @@ export class AgentSession {
 		}
 	}
 
+	readonly #beforeUserInputHooks = new Set<
+		(message: Extract<AgentMessage, { role: "user" }>) => void | Promise<void>
+	>();
+	/** Join session-bound preparation before admitting user input to the agent. */
+	addBeforeUserInputHook(
+		hook: (message: Extract<AgentMessage, { role: "user" }>) => void | Promise<void>,
+	): () => void {
+		this.#beforeUserInputHooks.add(hook);
+		return () => {
+			this.#beforeUserInputHooks.delete(hook);
+		};
+	}
+	async #prepareUserInput(message: Extract<AgentMessage, { role: "user" }>): Promise<void> {
+		const assertCurrent = this.#sessionTransitions.checkpoint();
+		const generation = this.#promptGeneration;
+		for (const hook of [...this.#beforeUserInputHooks]) {
+			await hook(message);
+			assertCurrent();
+			if (generation !== this.#promptGeneration) throw new Error("User input cancelled during preparation");
+		}
+	}
+
 	/**
 	 * Queue a steering message to interrupt the agent mid-run.
 	 */
@@ -3932,17 +3955,19 @@ export class AgentSession {
 	 */
 	async #queueSteer(text: string, images?: ImageContent[]): Promise<void> {
 		const displayText = text || (images && images.length > 0 ? "[Image]" : "");
-		this.#steeringMessages.push(displayText);
 		const content: (TextContent | ImageContent)[] = [{ type: "text", text }];
 		if (images && images.length > 0) {
 			content.push(...images);
 		}
-		this.agent.steer({
-			role: "user",
+		const message = {
+			role: "user" as const,
 			content,
-			attribution: "user",
+			attribution: "user" as const,
 			timestamp: Date.now(),
-		});
+		};
+		if (this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
+		this.#steeringMessages.push(displayText);
+		this.agent.steer(message);
 	}
 
 	/**
@@ -3950,17 +3975,19 @@ export class AgentSession {
 	 */
 	async #queueFollowUp(text: string, images?: ImageContent[]): Promise<void> {
 		const displayText = text || (images && images.length > 0 ? "[Image]" : "");
-		this.#followUpMessages.push(displayText);
 		const content: (TextContent | ImageContent)[] = [{ type: "text", text }];
 		if (images && images.length > 0) {
 			content.push(...images);
 		}
-		this.agent.followUp({
-			role: "user",
+		const message = {
+			role: "user" as const,
 			content,
-			attribution: "user",
+			attribution: "user" as const,
 			timestamp: Date.now(),
-		});
+		};
+		if (this.#beforeUserInputHooks.size) await this.#prepareUserInput(message);
+		this.#followUpMessages.push(displayText);
+		this.agent.followUp(message);
 	}
 
 	queueDeferredMessage(message: CustomMessage): void {
@@ -6856,6 +6883,9 @@ export class AgentSession {
 		const deadline = Date.now() + 30_000;
 		for (;;) {
 			try {
+				if (this.#beforeUserInputHooks.size && !this.agent.state.isStreaming) {
+					for (const message of messages) if (message.role === "user") await this.#prepareUserInput(message);
+				}
 				// Agent.prompt acquires its streaming flag synchronously. A busy retry
 				// must leave the admitted turn's snapshot intact until it settles.
 				if (!this.agent.state.isStreaming) this.#realtimeContext.beginTurn(this.sessionId);
