@@ -246,7 +246,9 @@ pinned environment-scoped GET/DELETE contracts and work from an existing enrollm
 even while the host is disabled. Unauthorized responses recover the exact selected
 subscription row through xcsh's fenced OAuth refresh broker and retry once;
 account changes are refused. CLI revocation requires an explicit client identity.
-A live read-only service request returned one paired client and no next page.
+A live read-only service request from the clean `fe1de706` artifact returned one
+paired iOS phone and no next page. The raw response remains in an owner-only
+temporary file; repository evidence records no client identifier.
 Revocation is covered by HTTP fixtures; the user's active phone has not been revoked.
 119 focused tests / 418 assertions pass. The preceding voice/startup-test checkpoint
 passed the complete package suite: 7344 passes, 561 skips, zero failures, 22645
@@ -2044,3 +2046,8 @@ That same clean binary now runs the phone host and all four model-named sessions
 A controlled idle replacement preserved their IDs, names, directories, histories
 and selected models; all four re-registered idle and the relay returned to
 `connected`. Fresh iPhone observations remain separate.
+
+The guarded affected-package rerun after this ledger change passed 8276 tests,
+skipped 561, and failed zero, with 29783 assertions across 791 files in 421.39
+seconds. The focused lifecycle and management matrix separately passed 10 tests
+with 45 assertions, and repository docs-quality checks passed all 14 cases.
