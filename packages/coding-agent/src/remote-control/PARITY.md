@@ -34,6 +34,22 @@ that the continuing recorder has a final completion footer.
 
 ## Comparison and remaining work
 
+History pagination now follows the pinned source contracts: turns default to
+descending summaries, items to ascending order, and pages to 25 rows with the
+upstream 1–100 clamp after unsigned-integer validation. Item queries honor their
+turn filter. Continuation excludes the last returned row; reverse cursors include
+their anchor to refresh it. Native opaque cursors bind the thread, collection and
+turn filter. Resume returns compatible reverse anchors, and read requests no
+longer consume the mutation deduplication cache or return stale history when an
+RPC identity is reused. Tests validate actual adapter responses against the two
+unmodified upstream page schemas.
+
+This verifies page behavior over the current history projection. That projection
+still uses model-context messages: complete history through compaction, accurate
+steering boundaries, tool items, durable item identities and the mixed realtime
+timeline remain incomplete. The pagination tests do not establish those properties
+or a new manual phone acceptance result.
+
 | Behavior | Reference observation | Native evidence or remaining difference |
 | --- | --- | --- |
 | Voice recall and routing | Two correct saved voice answers in distinct threads | Earlier native phone recall worked; a new native Beta file-task capture also passed |

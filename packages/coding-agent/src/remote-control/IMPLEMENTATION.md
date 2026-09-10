@@ -369,3 +369,22 @@ Both dedicated sessions were reloaded at streaming commit `c0a0071e0`, preservin
 identity, history and Luna/Astra selections; live bootstrap checks passed and
 the relay is connected. A fresh private recording is ready for Robin's streaming
 phone task. Live streaming acceptance remains pending.
+
+History pagination now uses the pinned default order, 25-row page size and
+unsigned-integer/clamping behavior. Turn filters, summary/full/unloaded views,
+scoped exclusive continuation cursors, inclusive reverse anchors and resume
+anchors are covered. Reads and rejoining the existing owner return current state
+when RPC identities are reused, without filling the mutation deduplication cache.
+Eight original regression cases failed before the repair; a separate stale-resume
+case also failed before its fix. All 12 new tests pass, including validation against
+two unmodified pinned response schemas. Focused verification: 195 passes / 769
+assertions. The guarded package suite passed 7433 tests, 561 skips, zero failures /
+23041 assertions across 738 files in 331.00 seconds. Workspace TypeScript,
+formatting, staged privacy/secret scans and whitespace checks passed.
+
+This checkpoint does not yet replace the model-context history projection.
+`SessionManager.getBranch()` retains selected-branch messages before compaction;
+the adapter must use it and establish durable turn/item identities. AgentSession
+currently emits display events before appending the corresponding message to
+storage, so stream identity and history hydration must be repaired together.
+The mixed canonical timeline, tool items and steering boundaries remain open.

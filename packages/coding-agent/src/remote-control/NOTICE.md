@@ -16,6 +16,10 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `websocket.rs`, `client_tracker.rs`, `segment.rs`: relay headers, framing,
   sequence cursors, acknowledgements, and chunk transport.
 - `codex-rs/app-server-protocol`: initialization, thread, turn, and item wire shapes.
+- `codex-rs/app-server/src/request_processors/thread_processor.rs` and
+  `codex-rs/thread-store/src/local/thread_history/segment_paging.rs`: history
+  page defaults, summary projections, exclusive continuation and inclusive
+  reverse anchors. Native cursors additionally bind the session and filter scope.
 - `codex-rs/app-server-protocol/src/protocol/v2/{config,model,process}.rs`:
   configuration/model discovery and standalone process requests/notifications.
 

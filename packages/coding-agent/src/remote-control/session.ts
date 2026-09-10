@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import type { AgentMessage, ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
+import { ProtocolError } from "./errors";
+import { historyCursor, historyItemsView, historyPage, turnItemsView } from "./history-page";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
 export type SessionTarget = Pick<
@@ -26,14 +28,8 @@ export interface Notification {
 	method: string;
 	params: Record<string, unknown>;
 }
-export class ProtocolError extends Error {
-	constructor(
-		readonly code: number,
-		message: string,
-	) {
-		super(message);
-	}
-}
+export { ProtocolError } from "./errors";
+
 interface Turn {
 	id: string;
 	items: Record<string, unknown>[];
@@ -188,6 +184,19 @@ export class RemoteSession {
 		};
 	}
 	call(identity: string, method: string, params: Record<string, unknown>): Promise<unknown> {
+		// Read RPC IDs are reusable after their response and must observe current state.
+		// Reserve the deduplication budget for operations with side effects.
+		if (
+			[
+				"thread/read",
+				"thread/resume",
+				"thread/turns/list",
+				"thread/items/list",
+				"thread/queue/list",
+				"thread/goal/get",
+			].includes(method)
+		)
+			return this.#execute(method, params);
 		if ((method === "turn/start" || method === "turn/steer") && typeof params.clientUserMessageId === "string")
 			identity = `client-message:${params.clientUserMessageId}`;
 		const signature = JSON.stringify({ method, params });
@@ -320,31 +329,20 @@ export class RemoteSession {
 		if (method === "thread/read") return { thread: this.thread(params.includeTurns === true) };
 
 		if (method === "thread/turns/list" || method === "thread/items/list") {
-			const limit = params.limit ?? 20;
-			if (!Number.isInteger(limit) || (limit as number) < 1 || (limit as number) > 100)
-				throw new ProtocolError(-32602, "Invalid history page size");
-			const direction = params.sortDirection ?? "desc";
-			if (direction !== "asc" && direction !== "desc")
-				throw new ProtocolError(-32602, "Invalid history sort direction");
 			const history = this.history();
-			const entries: { key: string; value: unknown }[] =
-				method === "thread/turns/list"
-					? history.map(value => ({
-							key: value.id,
-							value: params.itemsView === "notLoaded" ? { ...value, items: [], itemsView: "notLoaded" } : value,
-						}))
-					: history.flatMap(value =>
-							value.items.map(item => ({ key: String(item.id), value: { turnId: value.id, item } })),
-						);
-			if (direction === "desc") entries.reverse();
-			const start = params.cursor == null ? 0 : entries.findIndex(entry => entry.key === params.cursor);
-			if (start < 0) throw new ProtocolError(-32602, "Invalid history cursor");
-			const page = entries.slice(start, start + (limit as number));
-			return {
-				data: page.map(entry => entry.value),
-				nextCursor: entries[start + (limit as number)]?.key ?? null,
-				backwardsCursor: page[0]?.key ?? null,
-			};
+			const threadId = this.target.sessionId;
+			if (method === "thread/turns/list") {
+				const view = historyItemsView(params.itemsView);
+				const entries = history.map(value => ({ key: value.id, value: turnItemsView(value, view) }));
+				return historyPage(entries, { threadId, collection: "turns", turnId: null }, params);
+			}
+			if (params.turnId != null && typeof params.turnId !== "string")
+				throw new ProtocolError(-32602, "Invalid history turn filter");
+			const turnId = (params.turnId as string | null | undefined) ?? null;
+			const entries = history
+				.filter(value => turnId === null || value.id === turnId)
+				.flatMap(value => value.items.map(item => ({ key: String(item.id), value: { turnId: value.id, item } })));
+			return historyPage(entries, { threadId, collection: "items", turnId }, params);
 		}
 		if (method === "thread/resume") {
 			for (const key of Object.keys(params))
@@ -402,8 +400,14 @@ export class RemoteSession {
 						: this.target.thinkingLevel === "inherit"
 							? null
 							: (this.target.thinkingLevel ?? null),
-				turnsBackwardsCursor: history.at(-1)?.id ?? null,
-				itemsBackwardsCursor: history.at(-1)?.items.at(-1)?.id ?? null,
+				turnsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "turns", turnId: null },
+					history.at(-1)?.id,
+				),
+				itemsBackwardsCursor: historyCursor(
+					{ threadId: this.target.sessionId, collection: "items", turnId: null },
+					history.flatMap(value => value.items).at(-1)?.id as string | undefined,
+				),
 			};
 		}
 		if (method === "turn/interrupt") {
