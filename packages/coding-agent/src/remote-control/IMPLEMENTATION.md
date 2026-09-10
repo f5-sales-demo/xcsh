@@ -2059,3 +2059,11 @@ returned exactly five names: the four model sessions and the temporary TUI. It
 never exposed a sixth subagent thread. Cancelling and exiting the temporary TUI
 returned discovery to exactly the four model sessions while the relay remained
 connected.
+
+A second disposable top-level TUI exercised live work control through the same
+initialized protocol path used by relay clients. `turn/steer` retained the
+accepted Sol turn ID and the completed history contained the steered marker. A
+separate `turn/interrupt` completed with persisted `interrupted` status and its
+delayed fixture file was absent. Notifications covered turn and item start and
+completion. The disposable owner then exited cleanly, leaving the four phone
+sessions unchanged.
