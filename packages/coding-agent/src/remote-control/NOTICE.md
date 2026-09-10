@@ -48,6 +48,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   existing-call URLs, 500-byte context chunks, transcript and delegation events.
 - `codex-rs/codex-api/src/endpoint/realtime_call.rs`: subscription WebRTC call creation,
   backend JSON request, AVAS query parameters, answer SDP and call identities.
+- `codex-rs/codex-api/src/endpoint/realtime_websocket/{methods_v1,methods_common}.rs`:
+  v1 call and sideband session shapes and completed agent-message prefix. Native
+  WebRTC version defaults follow `core/src/realtime_conversation.rs`.
 - `codex-rs/core/src/realtime_conversation{.rs,/existing_call.rs,/sideband.rs}`:
   selected subscription sideband headers, client-owned configuration, and v3
   reconnect backoff with stable-connection reset.

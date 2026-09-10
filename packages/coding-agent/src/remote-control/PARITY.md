@@ -5,6 +5,28 @@ Reference: instrumented Codex 0.153.4, source commit
 recordings are separate processes and enrollments. This is an evidence matrix,
 not a declaration of complete feature parity.
 
+## Legacy WebRTC source contract
+
+WebRTC now accepts v1 and v3; an omitted or null version defaults to v1. The
+pinned App Server requires explicit audio output. The v1 HTTP body follows the
+pinned quicksilver session shape, with `gpt-realtime-1.5`, PCM input at 24000 Hz,
+and the selected voice. Its request uses `quicksilver=v1`. Internal version
+metadata is excluded from the HTTP body. Nonempty initial items remain v3-only.
+
+A newly created v1 call sends one sideband `session.update`, excluding the HTTP
+model field. Attaching a client-created call leaves its configuration intact.
+Completed v1 agent results include the pinned final-message marker. Tests cover
+duplicate delegation, initialization write failure, synchronous socket closure,
+early transcript ordering, and late work after closure. They use synthetic
+transport fixtures derived from the pinned Rust source, not phone recordings.
+Live v1 acceptance, legacy completed commentary, standalone WebSocket, and remaining
+startup/response-item options are still incomplete. Recorded v3 replay remains
+part of regression validation; no additional live parity is inferred here.
+The pinned `streams_handoff_append` gate enables incremental output only for v3.
+Legacy v1 forwards completed commentary without the final-message marker and
+completed final output with it; forwarding all completed legacy items remains
+part of the output audit.
+
 ## First two phone conversations
 
 Robin ran voice recall in Codex Reference Alpha and Beta and confirmed both

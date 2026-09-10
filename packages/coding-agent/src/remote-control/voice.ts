@@ -89,7 +89,7 @@ export class NativeVoice {
 		try {
 			const auth = await this.deps.authenticate();
 			if (this.#state !== "opening") throw new Error("Voice stopped during authentication");
-			const version = callConfig ? "v3" : config!.version;
+			const version = callConfig?.version ?? config!.version;
 			const sessionId = typeof params.realtimeSessionId === "string" ? params.realtimeSessionId : null;
 			const headers: Record<string, string> = {
 				Authorization: `Bearer ${auth.accessToken}`,
@@ -143,6 +143,12 @@ export class NativeVoice {
 			this.#socket = socket;
 			this.#state = "open";
 			this.#connectedAt = Date.now();
+			if (callConfig?.version === "v1") {
+				// Created legacy calls configure their sideband; client-created calls do not.
+				const { model: _model, ...session } = callConfig.session;
+				socket.send(JSON.stringify({ type: "session.update", session }));
+				if (!this.active) throw new Error("Voice stopped during sideband initialization");
+			}
 			if (!this.#started) {
 				this.#started = true;
 				this.#history = new VoiceHistory(
@@ -530,7 +536,13 @@ export class NativeVoice {
 				await this.deps.record({ key, kind: "delegationResult", text });
 				if (this.#config?.clientManagedHandoffs || !this.active) return;
 				if (handoff) handoff.finish(text);
-				else this.#send({ type: "conversation.handoff.append", handoff_id: event.id, output_text: text });
+				else
+					this.#send({
+						type: "conversation.handoff.append",
+						handoff_id: event.id,
+						// Pinned methods_common.rs marks completed v1 agent output.
+						output_text: `"Agent Final Message":\n\n${text}`,
+					});
 			})
 			.catch(() => this.#fail("The backing agent could not complete the voice request"))
 			.finally(() => {

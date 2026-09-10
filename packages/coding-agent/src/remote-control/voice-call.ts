@@ -14,8 +14,9 @@ export function voiceCallConfig(params: Record<string, unknown>, context: string
 		Buffer.byteLength(transport.sdp) > 262_144
 	)
 		throw new ProtocolError(-32602, "Invalid realtime SDP offer");
-	if (params.version !== "v3" || params.outputModality !== "audio")
-		throw new ProtocolError(-32602, "Native WebRTC currently requires realtime v3 audio");
+	const version = params.version ?? "v1";
+	if ((version !== "v1" && version !== "v3") || params.outputModality !== "audio")
+		throw new ProtocolError(-32602, "WebRTC requires realtime v1 or v3 audio");
 	const initialItems = params.initialItems ?? [];
 	if (
 		!Array.isArray(initialItems) ||
@@ -26,7 +27,9 @@ export function voiceCallConfig(params: Record<string, unknown>, context: string
 		initialItems.reduce((bytes, item) => bytes + Buffer.byteLength(item.text), 0) > 32768
 	)
 		throw new ProtocolError(-32602, "Invalid or excessive realtime initial history");
-	const model = params.model ?? "gpt-live-1-codex",
+	if (version === "v1" && initialItems.length)
+		throw new ProtocolError(-32602, "Initial realtime items require realtime v3");
+	const model = params.model ?? (version === "v1" ? "gpt-realtime-1.5" : "gpt-live-1-codex"),
 		voice = params.voice ?? "cove";
 	if (
 		typeof model !== "string" ||
@@ -52,31 +55,45 @@ export function voiceCallConfig(params: Record<string, unknown>, context: string
 			/[\r\n]/.test(params.realtimeSessionId))
 	)
 		throw new ProtocolError(-32602, "Invalid realtime session identity");
+	const instructions = prompt
+		.render(contextTemplate, {
+			instructions: params.prompt === undefined ? prompt.render(defaultInstructions) : (params.prompt ?? ""),
+			context: params.includeStartupContext === false ? "" : context.slice(-32768),
+		})
+		.trim();
 	return {
+		version,
 		sdp: transport.sdp,
-		session: {
-			model,
-			instructions: prompt
-				.render(contextTemplate, {
-					instructions: params.prompt === undefined ? prompt.render(defaultInstructions) : (params.prompt ?? ""),
-					context: params.includeStartupContext === false ? "" : context.slice(-32768),
-				})
-				.trim(),
-			audio: { output: { voice } },
-			delegation: {
-				type: "client",
-				...(typeof params.delegationAckFiller === "boolean" ? { ack_filler: params.delegationAckFiller } : {}),
-			},
-			...(initialItems.length
+		session:
+			version === "v1"
 				? {
-						initial_items: initialItems.map(item => ({
-							type: "message",
-							role: item.role,
-							content: [{ type: item.role === "assistant" ? "output_text" : "input_text", text: item.text }],
-						})),
+						type: "quicksilver",
+						model,
+						instructions,
+						audio: { input: { format: { type: "audio/pcm", rate: 24000 } }, output: { voice } },
 					}
-				: {}),
-		},
+				: {
+						model,
+						instructions,
+						audio: { output: { voice } },
+						delegation: {
+							type: "client",
+							...(typeof params.delegationAckFiller === "boolean"
+								? { ack_filler: params.delegationAckFiller }
+								: {}),
+						},
+						...(initialItems.length
+							? {
+									initial_items: initialItems.map(item => ({
+										type: "message",
+										role: item.role,
+										content: [
+											{ type: item.role === "assistant" ? "output_text" : "input_text", text: item.text },
+										],
+									})),
+								}
+							: {}),
+					},
 	};
 }
 export async function createVoiceCall(
@@ -100,9 +117,9 @@ export async function createVoiceCall(
 					"ChatGPT-Account-Id": auth.accountId,
 					originator: "xcsh",
 					"Content-Type": "application/json",
-					"openai-alpha": "quicksilver=v2",
+					"openai-alpha": config.version === "v1" ? "quicksilver=v1" : "quicksilver=v2",
 				},
-				body: JSON.stringify(config),
+				body: JSON.stringify({ sdp: config.sdp, session: config.session }),
 			},
 		);
 	} catch {

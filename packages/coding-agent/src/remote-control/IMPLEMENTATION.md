@@ -111,7 +111,7 @@ sent `thread/unsubscribe` three times before stop cleanup. Its empty response wa
 incorrect: the pinned response requires `unsubscribed`, `notSubscribed`, or
 `notLoaded`. This is corrected without stopping the terminal owner.
 
-Native v3 WebRTC negotiation and v1/v3 existing-call sideband attachment are implemented with xcsh's selected
+Native v1/v3 WebRTC negotiation and existing-call sideband attachment are implemented with xcsh's selected
 subscription, own originator, and fixed production endpoint. Existing calls retain
 client-owned configuration. Ordinary transcripts are persisted as custom provenance entries without executing
 work. When the client explicitly requests transcript-tail flushing, closure promotes
@@ -145,7 +145,7 @@ Robin also paused deliberately midway through speaking and confirmed voice waite
 for the sentence to finish. Work steering/cancellation and network recovery remain pending. Earlier generic phone errors were
 adapter contract/validation failures, not evidence of native service rejection.
 
-Current limitations: standalone WebSocket and legacy WebRTC negotiation remain unsupported. Delegation identities persist
+Current limitations: standalone WebSocket remains unsupported; v1 WebRTC has source-contract tests but no live acceptance. Delegation identities persist
 before submission for at-most-once recovery, with an unresolved crash gap; this is
 not a complete exactly-once transaction. V3 sideband reconnect now follows the pinned 200 ms–5 s backoff, refreshes selected
 authentication, buffers up to 1 MiB of unsent output, rejects stale socket events,
@@ -962,3 +962,50 @@ its container and processes are removed. Its separate final run passed with the
 same compiled binary. Runtime source and regression tests were unchanged after
 the package suite. Remaining full-history privacy findings, required CI, live
 model/voice acceptance and final release-artifact verification remain open.
+
+## Legacy WebRTC negotiation checkpoint
+
+The current upstream main was merged through `868cf386c`, including v21.23.0 and
+authentication discovery repairs. The merge had no conflicts; 26 focused
+authentication/model tests passed with 113 assertions across four files.
+
+Pinned `realtime_conversation.rs` defaults WebRTC to v1 when version is omitted
+or null. Native call creation now implements that default, accepts explicit v1,
+requires audio output, and retains explicit v3. The v1 request includes the
+quicksilver type, its own realtime model default, instructions, PCM input format
+and selected voice. The call creation header and sideband use quicksilver v1.
+HTTP serialization excludes internal version metadata. New v1 calls initialize
+their sideband once without the HTTP model field; existing calls do not overwrite
+the client's configuration. Completed legacy handoffs use the pinned final-agent
+message prefix. Work still executes in the existing AgentSession.
+
+Observed initial tests failed four cases because WebRTC required explicit v3.
+After implementing negotiation, one test exposed the missing completed-message
+prefix. The prefix repair passed all 51 initial voice tests. Additional lifecycle
+coverage verifies initialization write failures and synchronous closure cannot
+leave an active attachment, late delegation cannot execute, and early transcripts
+follow history startup. A final App Server schema review corrected an overly
+permissive output-modality default: the pinned request requires explicit output.
+Both version tests failed before restoring that validation. The final focused
+voice suite passed 84 tests, zero failures, 490 assertions across six files
+(5.89 seconds). These are source-contract fixtures and recorded v3 regression tests, not
+new live v1 service or iPhone acceptance. Legacy completed commentary, standalone WebSocket,
+remaining options, and the full completion audit remain open.
+
+The production build and final workspace TypeScript check passed. The compiled
+v21.23.0 artifact also passed the isolated two-TUI harness, including real file
+tools, completed-work host restart, request replay, resume and cleanup in
+19.015 seconds. Its SHA-256 is
+`8dabd0f50c200c19b4e76733a6627b60d6328c5e6903c07313ea5491b6c1a318`.
+The receipt `scripts/remote-package/evidence-webrtc-v1-2026-09-10.json` records
+base commit `214e461cd`, the two changed production file hashes, harness/provider
+hashes and the container image. Networking and enrollment are synthetic; this
+artifact check proves packaging/session independence and does not exercise voice.
+
+Final guarded package validation passed 7657 tests with 561 skips, zero failures
+and 24173 assertions across 758 files (365.15 seconds). The earlier package run
+passed 7655 tests before the explicit-modality regression was added; it does not
+replace the final run. Runtime source and tests remained unchanged throughout
+the final suite. Markdown, terminology, staged privacy, secret and whitespace
+checks passed. Required repository CI, full-history privacy findings and the
+remaining live/protocol acceptance are still open.
