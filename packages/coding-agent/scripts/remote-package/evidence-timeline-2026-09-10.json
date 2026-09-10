@@ -1,0 +1,49 @@
+{
+  "binarySha256": "d0084873ab1d2768c2f07e2e781e1b6063273170a6f587480523f71bb60407cf",
+  "harnessSha256": "8096d8f0427aa5f8568f4fefd85a2a75b1a8ec7f0a8caa3ae9bec0e9a951cecd",
+  "providerSha256": "566800b268ffc96feff5c67b38c944a85356e647faa8f5b7237fe1cb703a5a16",
+  "version": "xcsh/21.23.0",
+  "image": "ubuntu:24.04",
+  "imageId": "sha256:0b1ebe5dd42682bb8eda97ecf10a09f70f18d2d4af35f82b9271badac5dbeb27",
+  "checks": [
+    {
+      "description": "Codex, standalone Bun and project dependencies absent",
+      "elapsedMs": 265
+    },
+    {
+      "description": "packaged status defaults off",
+      "elapsedMs": 2490
+    },
+    {
+      "description": "two named top-level TUIs discovered with distinct identities and working directories",
+      "elapsedMs": 6649
+    },
+    {
+      "description": "remote prompts execute real write/read tools in the correct TUI and persist completed history",
+      "elapsedMs": 6904
+    },
+    {
+      "description": "host restart preserves owners/history and stable request replay does not execute twice",
+      "elapsedMs": 11699
+    },
+    {
+      "description": "compiled --resume preserves session identity, history and extension work model",
+      "elapsedMs": 14668
+    },
+    {
+      "description": "terminal exit unregisters all owners",
+      "elapsedMs": 14884
+    },
+    {
+      "description": "disposable test container and its processes removed",
+      "elapsedMs": 15709
+    }
+  ],
+  "network": "none",
+  "enrollment": "synthetic",
+  "workModel": "package-fixture/model",
+  "phoneAcceptance": false,
+  "sourceCommit": "052153363bfe85fde83e83ac0790b4a7f0ddf8dc",
+  "buildInfoDirty": false,
+  "evidenceKind": "offline compiled integration"
+}

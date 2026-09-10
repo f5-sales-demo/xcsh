@@ -1282,3 +1282,27 @@ remained unchanged. Workspace TypeScript, CLI bundling, changed-document Markdow
 and terminology checks passed; staged privacy and secret scans were clean. The
 complete remote suite had separately passed 512 tests before the two additional
 identity cases, which are included in the final package result.
+
+The clean production build from `052153363` passed all eight isolated compiled
+checks in 15.709 seconds. Receipt:
+`scripts/remote-package/evidence-timeline-2026-09-10.json`. Binary SHA-256:
+`d0084873ab1d2768c2f07e2e781e1b6063273170a6f587480523f71bb60407cf`.
+The integration harness ran the same immutable executable subsequently used by
+the dedicated live host and terminal sessions. Its network/enrollment/model
+conditions remain synthetic; it does not establish live voice acceptance.
+
+The test host and Alpha/Beta were moved from source launches to that immutable
+executable after confirming both agents were idle and voice was closed. Each old
+process exited successfully before replacement. This prevents lazy imports from
+the changing worktree from invalidating capture source provenance. The launcher
+verifies the executable hash before every start; new captures name its exact
+source commit. The previous host trace finalized with 1132 events and a complete
+footer; no new voice trace was present in that window.
+
+All three live processes resolve to the same immutable executable. Alpha retained
+its identity, Luna, 18 messages and six history turns; Beta retained its identity,
+Astra, 52 messages and 18 turns. Names and working directories matched. Both
+passed initialization, configuration discovery, fixture-process execution and
+history attachment in 21/17 milliseconds. These checks do not add live delegated
+model tasks or manual phone acceptance.
+The host's live status also confirmed its relay connection was restored.
