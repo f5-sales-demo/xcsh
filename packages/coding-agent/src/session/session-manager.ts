@@ -77,9 +77,16 @@ export interface SessionEntryBase {
 	timestamp: string;
 }
 
+export interface SessionToolExecution {
+	kind: "command" | "fileChange";
+	cwd: string;
+}
+
 export interface SessionMessageEntry extends SessionEntryBase {
 	type: "message";
 	message: AgentMessage;
+	/** Runtime provenance; deliberately separate from provider-visible message content. */
+	toolExecution?: SessionToolExecution;
 }
 
 export interface ThinkingLevelChangeEntry extends SessionEntryBase {
@@ -2245,6 +2252,7 @@ export class SessionManager {
 			| PythonExecutionMessage
 			| FileMentionMessage
 			| MediaMessage,
+		toolExecution?: SessionToolExecution,
 	): string {
 		const entry: SessionMessageEntry = {
 			type: "message",
@@ -2252,6 +2260,9 @@ export class SessionManager {
 			parentId: this.#leafId,
 			timestamp: new Date().toISOString(),
 			message,
+			...(message.role === "toolResult" && toolExecution
+				? { toolExecution: { kind: toolExecution.kind, cwd: toolExecution.cwd } }
+				: {}),
 		};
 		this.#appendEntry(entry);
 		return entry.id;

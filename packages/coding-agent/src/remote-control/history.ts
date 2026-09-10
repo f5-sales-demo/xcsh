@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@f5-sales-demo/pi-agent-core";
-import type { SessionEntry } from "../session/session-manager";
+import type { SessionEntry, SessionToolExecution } from "../session/session-manager";
 import { updateFileHistoryItem } from "./file-changes";
 
 export interface HistoryTurn {
@@ -123,7 +123,20 @@ export function backgroundCommandCompletion(
 export function completeToolHistoryItem(
 	item: Record<string, unknown>,
 	message: Extract<AgentMessage, { role: "toolResult" }>,
+	toolExecution?: SessionToolExecution,
 ): Record<string, unknown> {
+	if (item.type === "dynamicToolCall" && typeof toolExecution?.cwd === "string") {
+		if (toolExecution.kind === "fileChange")
+			item = { type: "fileChange", id: item.id, changes: [], status: "inProgress" };
+		else if (toolExecution.kind === "command") {
+			const args = item.arguments as { command?: unknown } | undefined;
+			item = commandHistoryItem(
+				String(item.id),
+				typeof args?.command === "string" ? args.command : "",
+				toolExecution.cwd,
+			);
+		}
+	}
 	if (item.type === "fileChange") {
 		const details = message.details as { execution?: unknown } | undefined;
 		return (
@@ -370,7 +383,13 @@ export function projectHistorySnapshot(
 		if (message.role === "toolResult") {
 			const item = tools.get(message.toolCallId);
 			if (item) {
-				Object.assign(item, completeToolHistoryItem(item, message));
+				const completed = completeToolHistoryItem(
+					item,
+					message,
+					entry.type === "message" ? entry.toolExecution : undefined,
+				);
+				for (const key of Object.keys(item)) delete item[key];
+				Object.assign(item, completed);
 				const details = message.details as { async?: { jobId?: unknown } } | undefined;
 				if (item.type === "commandExecution" && typeof details?.async?.jobId === "string")
 					jobs.set(details.async.jobId, { turnId: toolTurns.get(message.toolCallId)!, item });

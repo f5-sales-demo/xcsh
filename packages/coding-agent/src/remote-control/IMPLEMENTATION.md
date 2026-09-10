@@ -1523,3 +1523,32 @@ and secret checks passed. The final package suite passed 8100 tests with 561 ski
 and zero failures across 780 files (25470 assertions). All 22 runtime/test/fixture
 source hashes remained unchanged through verification. No phone-runtime upgrade
 was performed.
+
+## Executor provenance before attachment
+
+AgentSession now records the actual core executor classification and working directory
+on persisted tool-result entry wrappers. These fields remain outside provider-visible
+messages. Completed command and file history can therefore be restored when work
+ran before any remote adapter attached. Historical names or arbitrary result details
+alone still cannot change a dynamic tool into a native execution item. Reopening the
+JSONL file preserves both execution facts and stable history identities.
+
+The file-owner regression first failed for missing provenance with an attached adapter
+and missing file items without one. Both cases now pass. Expanded real SDK command
+tests cover foreground and background success, detached nonzero exits, and persisted
+completion after reopening. They exposed a shared output wrapper replacing structured
+failures with plain errors. The wrapper now retains execution results while preserving
+custom error rendering. Two focused wrapper tests failed before that repair.
+
+The combined SDK/wrapper run passed 10 tests and 69 assertions. The remote suite
+passed 723 tests and 2630 assertions across 56 files. The CLI bundle passed. These
+checks use mocked model responses with actual native tools; they do not constitute
+new live-model or iPhone acceptance. Attachment during already-running work remains
+a separate lifecycle requirement. The dedicated phone runtime remains unchanged.
+
+After correcting a test-only TypeScript narrowing error, workspace TypeScript/lint
+passed. The full package run passed 8110 tests with 561 skips and zero failures
+across 782 files (28881 assertions, 395.99 seconds). All seven runtime/test source
+hashes remained unchanged. Documentation, staged privacy and secret checks passed.
+Current main merged cleanly at version 21.24.0 and its native addon rebuilt before
+verification. The repository-wide existing privacy findings remain unresolved.

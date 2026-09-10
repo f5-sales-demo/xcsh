@@ -185,7 +185,7 @@ import type {
 	SessionContext,
 	SessionManager,
 } from "./session-manager";
-import { getLatestCompactionEntry } from "./session-manager";
+import { getLatestCompactionEntry, type SessionToolExecution } from "./session-manager";
 import { type SessionTransitionListener, type SessionTransitionScope, SessionTransitions } from "./session-transitions";
 import { ToolChoiceQueue } from "./tool-choice-queue";
 import { TurnPhaseController, type TurnPhaseEvent } from "./turn-phase";
@@ -871,11 +871,29 @@ export class AgentSession {
 		return this.#emit(event);
 	}
 
+	readonly #toolExecutions = new Map<string, SessionToolExecution>();
+
 	// Track last assistant message for auto-compaction check
 	#lastAssistantMessage: AssistantMessage | undefined = undefined;
 
 	/** Internal handler for agent events - shared by subscribe and reconnect */
 	#handleAgentEvent = async (event: AgentEvent): Promise<void> => {
+		// Capture synchronously before extension/subscriber awaits or a later reused call ID.
+		const toolExecution =
+			event.type === "message_end" && event.message.role === "toolResult"
+				? this.#toolExecutions.get(event.message.toolCallId)
+				: undefined;
+		if (event.type === "message_end" && event.message.role === "toolResult")
+			this.#toolExecutions.delete(event.message.toolCallId);
+		if (event.type === "agent_start" || event.type === "agent_end") this.#toolExecutions.clear();
+		if (event.type === "tool_execution_start") {
+			if (event.executionKind === "command" || event.executionKind === "fileChange")
+				this.#toolExecutions.set(event.toolCallId, {
+					kind: event.executionKind,
+					cwd: this.sessionManager.getCwd(),
+				});
+			else this.#toolExecutions.delete(event.toolCallId);
+		}
 		if (event.type === "agent_start") {
 			this.#turnPhase.startAgentLoop();
 		} else if (event.type === "turn_start") {
@@ -1154,7 +1172,7 @@ export class AgentSession {
 				event.message.role === "fileMention"
 			) {
 				// Regular LLM message - persist as SessionMessageEntry
-				this.sessionManager.appendMessage(event.message);
+				this.sessionManager.appendMessage(event.message, toolExecution);
 			}
 			// Other message types (bashExecution, compactionSummary, branchSummary) are persisted elsewhere
 
