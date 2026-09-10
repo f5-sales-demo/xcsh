@@ -29,6 +29,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   reconnect backoff with stable-connection reset.
 - `codex-rs/core/src/realtime_history.rs`: session boundary items, separate user
   and assistant transcript segments, streamed item deltas, and closure sealing.
+- `codex-rs/app-server/src/bespoke_event_handling.rs`: handoff item notification
+  with request identity and the active transcript; transcript consumption follows
+  `codex-api/src/endpoint/realtime_websocket/methods.rs`.
 - `codex-rs/app-server-protocol/schema/json/{ClientRequest,ServerRequest,ServerNotification}.json`:
   the literal method names retained in sanitized capture metadata.
 

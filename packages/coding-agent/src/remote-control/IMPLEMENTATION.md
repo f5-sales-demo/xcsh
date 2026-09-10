@@ -314,3 +314,22 @@ command exit code zero, and exact on-disk contents. The reproduction instruction
 now require both binaries and this live tool check. A fresh reference voice
 delegation recording is running; its phone result and native comparison remain
 pending. See `PARITY.md` for the evidence boundaries.
+
+Reference phone delegation now passes: Robin confirmed creation and spoken
+read-back, and the fixture contains exactly the requested marker and newline.
+The finalized recording contains 2108 events, including one delegation and ten
+acknowledged context updates, followed by the manually requested closure. A
+sanitized fixture retains the phone's 92 voice notifications/requests and the 21
+delegation sideband events. It exposed a missing handoff item notification;
+native replay now matches the observed notification sequence. Handoff payload
+tests cover distinct legacy identities, active transcript consumption, and
+duplicate delivery. A further regression exposed repeated tail submission when
+delegation precedes transcript delivery; marking the handoff input as consumed
+prevents a late matching final from resubmitting it. Future recorder output also
+retains pinned tool-item names and delegation routing targets.
+
+Each repair was observed failing before implementation. Final focused validation
+passes 162 tests / 610 assertions. The completed-result-only native output still
+differs from the reference's commentary/speakable streaming, and the matching
+native live capture remains pending. The full package check is running through
+the repository's guarded runner; its result will be recorded separately.

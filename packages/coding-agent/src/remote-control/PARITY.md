@@ -41,7 +41,8 @@ that the continuing recorder has a final completion footer.
 | Durable speech boundaries | Start, user segment, assistant segment, close in canonical timeline | Stored as voice provenance records; exposing the complete mixed canonical timeline through `thread/timeline/list` remains pending |
 | Separate subscribers | Identical notifications can be sent to multiple relay clients | Comparison selects the phone client from relay envelopes; it does not deduplicate legitimate deliveries within that client |
 | Shutdown | Both calls closed with reason `requested` | Closure waits for accepted history writes; tests cover partial speech, repeated closure, late events, and cancellation during startup flush |
-| Work delegation | First file task delegated once, but the reference agent reported its missing companion tool host and created no file | Reference setup repaired and a typed file create/read preflight passed; a successful phone delegation capture and native comparison remain pending |
+| Work delegation | After repairing the reference setup, one phone delegation created the file and read back the correct contents; Robin confirmed the verbal result | Missing handoff notification implemented and recorded notification sequence passes in replay; matching native live capture is pending |
+| Delegated output streaming | Five commentary context chunks, then five speakable chunks; all ten acknowledged | Native currently returns the completed result as speakable context; phase-aware streaming remains a difference |
 | Discovery and history | Phone requests included skills roots/listing and file reads | These include unsupported native operations; repair and corresponding reference fixtures remain pending |
 | Protocol metadata | Initial recorder redacted some valid method and item-type names | Future recordings retain pinned method literals and canonical item types; the original redactions are not reconstructed |
 | Network recovery | Reference airplane-mode conversation not yet recorded | Native fresh-call recovery is accepted after complete network loss; identical behavior is not established |
@@ -76,5 +77,34 @@ still requires a new recording and Robin's observation.
 
 The original phone recording was finalized with 3846 events and a complete
 footer, with no producer-failure sentinel. It retains the failed attempt. The
-typed preflight ran outside that capture. A fresh recorder and reloaded
-reference sessions are prepared for the voice delegation retry.
+typed preflight ran outside that capture.
+
+## Successful reference voice delegation
+
+Robin repeated the requested file task in Reference Beta and confirmed that voice
+created the file and read its contents aloud. Independent disk verification found
+exactly `REFERENCE-HARBOR` followed by a newline in `reference-voice-check.txt`.
+The capture records one delegation, five commentary context appends, five
+speakable context appends, and ten matching acknowledgements. Some tool-item
+type literals were redacted; their original values are not reconstructed.
+
+Robin tapped End; the normal close event arrived before the isolated reference
+host and recorder were stopped. The finalized capture has 2108 events, a complete
+footer, and no producer-failure sentinel. Its derived fixture selects the phone
+relay client and preserves 92 voice protocol events plus the 21 delegation
+sideband events, with the full capture SHA-256. The host observed `started` at
+1063.6 ms and delegation at 17958.9 ms after the start request. The full call was
+149474 ms, including the time waiting for manual closure; these are not audio
+latency measurements.
+
+The fixture is `../../test/remote-control/fixtures/codex-0.153.4-phone-delegation.json`.
+Replay exposed the missing native `thread/realtime/itemAdded` handoff notification.
+The implementation now includes the delegation and item identities, spoken input,
+and consumed active transcript. It appends missing handoff input without repeating
+an existing transcript entry and emits only once for a repeated delegation.
+Legacy v1 handoffs retain distinct handoff and item IDs. The recorded method
+sequence now passes with synthetic speech; the original private strings remain
+redacted. Additional regression tests cover the handoff payload and duplicates.
+Future recordings retain the pinned tool-item types and routing target while
+continuing to redact private contents. This repair does not establish output
+streaming parity or replace the pending matching native phone capture.

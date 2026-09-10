@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import Ajv from "ajv";
 import { NativeVoice, type VoiceDependencies } from "../../src/remote-control/voice";
 import { contextChunks, decodeVoiceEvent, existingCallConfig } from "../../src/remote-control/voice-protocol";
+import phoneDelegation from "./fixtures/codex-0.153.4-phone-delegation.json";
 import phoneRecall from "./fixtures/codex-0.153.4-phone-recall.json";
 import itemCompletedSchema from "./fixtures/ThreadRealtimeItemCompletedNotification.json";
 import itemStartedSchema from "./fixtures/ThreadRealtimeItemStartedNotification.json";
@@ -68,55 +69,121 @@ const delegation = {
 	item: { type: "delegation", target: "client", id: "d1", content: [{ type: "input_text", text: "change fixture" }] },
 };
 
-test.each(phoneRecall.scenarios)("native voice reproduces the recorded $name notification sequence", async scenario => {
+test.each([...phoneRecall.scenarios, phoneDelegation.scenario])(
+	"native voice reproduces the recorded $name notification sequence",
+	async scenario => {
+		const f = fixture();
+		f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
+		await f.voice.start({
+			version: "v3",
+			outputModality: "audio",
+			includeStartupContext: false,
+			realtimeSessionId: "fixture-session",
+			transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+		});
+		const texts = { user: "", assistant: "" };
+		for (const row of scenario.events) {
+			const event = row.message as { method: string; params: { role?: "user" | "assistant" } };
+			if (row.direction !== "out") continue;
+			if (event.method === "thread/realtime/itemAdded") {
+				f.receive({
+					...delegation,
+					item: { ...delegation.item, content: [{ type: "input_text", text: texts.user }] },
+				});
+				await Bun.sleep(0);
+				f.finish("Fixture created and read back.");
+				continue;
+			}
+			if (!event.params.role) continue;
+			const role = event.params.role;
+			if (event.method === "thread/realtime/transcript/delta") {
+				// Private speech is deliberately replaced; frame count, roles, and order come from the recording.
+				texts[role] += "fixture ";
+				f.receive({
+					type: role === "user" ? "input_transcript.added" : "output_transcript.added",
+					item: { text: "fixture " },
+				});
+			} else if (event.method === "thread/realtime/transcript/done") {
+				f.receive({ type: "turn.done", turn: { id: `fixture-${role}`, role, transcript: texts[role] } });
+			}
+			await Bun.sleep(0);
+		}
+		await f.voice.stop();
+		expect(f.events.map(event => event.method)).toEqual(
+			scenario.events.filter(row => row.direction === "out").map(row => row.message.method),
+		);
+		const completed = f.records.filter(record => record.kind === "voiceTimeline");
+		expect(completed).toHaveLength(4);
+		expect(f.delegated).toEqual(scenario.name === "beta-delegation" ? [texts.user] : []);
+		const ajv = new Ajv({ strict: false });
+		ajv.addFormat("uint32", {
+			type: "number",
+			validate: value => Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff,
+		});
+		for (const [method, schema] of [
+			["thread/realtime/item/started", itemStartedSchema],
+			["thread/realtime/item/completed", itemCompletedSchema],
+			["thread/realtime/item/transcript/delta", itemDeltaSchema],
+		] as const) {
+			const validate = ajv.compile(schema);
+			for (const event of f.events.filter(event => event.method === method)) {
+				expect(validate({ threadId: "fixture-thread", ...event.params })).toBe(true);
+			}
+		}
+	},
+);
+
+test("handoff notification retains active speech once and appends missing request text", async () => {
 	const f = fixture();
-	f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
-	await f.voice.start({
-		version: "v3",
-		outputModality: "audio",
-		includeStartupContext: false,
-		realtimeSessionId: "fixture-session",
-		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
-	});
-	const texts = { user: "", assistant: "" };
-	for (const row of scenario.events) {
-		const event = row.message as { method: string; params: { role?: "user" | "assistant" } };
-		if (row.direction !== "out" || !event.params.role) continue;
-		const role = event.params.role;
-		if (event.method === "thread/realtime/transcript/delta") {
-			// Private speech is deliberately replaced; frame count, roles, and order come from the recording.
-			texts[role] += "fixture ";
-			f.receive({
-				type: role === "user" ? "input_transcript.added" : "output_transcript.added",
-				item: { text: "fixture " },
-			});
-		} else if (event.method === "thread/realtime/transcript/done") {
-			f.receive({ type: "turn.done", turn: { id: `fixture-${role}`, role, transcript: texts[role] } });
-		}
-		await Bun.sleep(0);
-	}
+	await f.voice.start(start);
+	f.receive({ type: "output_transcript.added", item: { text: "How can I help?" } });
+	f.receive(delegation);
+	f.receive(delegation);
+	await Bun.sleep(0);
+	expect(f.events.filter(event => event.method === "thread/realtime/itemAdded")).toEqual([
+		{
+			method: "thread/realtime/itemAdded",
+			params: {
+				item: {
+					type: "handoff_request",
+					handoff_id: "d1",
+					item_id: "d1",
+					input_transcript: "change fixture",
+					active_transcript: [
+						{ role: "assistant", text: "How can I help?" },
+						{ role: "user", text: "change fixture" },
+					],
+				},
+			},
+		},
+	]);
+	expect(f.delegated).toEqual(["change fixture"]);
+	f.finish("Done.");
 	await f.voice.stop();
-	expect(f.events.map(event => event.method)).toEqual(
-		scenario.events.filter(row => row.direction === "out").map(row => row.message.method),
-	);
-	const completed = f.records.filter(record => record.kind === "voiceTimeline");
-	expect(completed).toHaveLength(4);
-	expect(f.delegated).toEqual([]);
-	const ajv = new Ajv({ strict: false });
-	ajv.addFormat("uint32", {
-		type: "number",
-		validate: value => Number.isInteger(value) && value >= 0 && value <= 0xffff_ffff,
+});
+
+test("legacy handoff notification preserves distinct handoff and item identities", async () => {
+	const f = fixture();
+	f.deps.open = async (_url, _headers, handlers) => {
+		queueMicrotask(() =>
+			handlers.message(
+				JSON.stringify({
+					type: "conversation.handoff.requested",
+					handoff_id: "h1",
+					item_id: "i1",
+					input_transcript: "legacy work",
+				}),
+			),
+		);
+		return { send: () => {}, close: () => {}, bufferedAmount: 0 };
+	};
+	await f.voice.start({ ...start, version: "v1" });
+	await Bun.sleep(0);
+	expect(f.events.find(event => event.method === "thread/realtime/itemAdded")?.params).toMatchObject({
+		item: { type: "handoff_request", handoff_id: "h1", item_id: "i1", input_transcript: "legacy work" },
 	});
-	for (const [method, schema] of [
-		["thread/realtime/item/started", itemStartedSchema],
-		["thread/realtime/item/completed", itemCompletedSchema],
-		["thread/realtime/item/transcript/delta", itemDeltaSchema],
-	] as const) {
-		const validate = ajv.compile(schema);
-		for (const event of f.events.filter(event => event.method === method)) {
-			expect(validate({ threadId: "fixture-thread", ...event.params })).toBe(true);
-		}
-	}
+	f.finish("Done.");
+	await f.voice.stop();
 });
 
 test("pinned existing-call URL encodes one path segment and retains client-owned configuration", () => {
@@ -544,21 +611,24 @@ test("requested transcript-tail flushing submits unpromoted speech once after vo
 	expect(f.records.some(r => r.kind === "transcriptTail")).toBe(true);
 	f.finish("Updated.");
 });
-test("delegated transcript is cleared from the tail and a late matching final does not execute it again", async () => {
-	const f = fixture();
-	f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
-	await f.voice.start({
-		version: "v3",
-		outputModality: "audio",
-		includeStartupContext: false,
-		flushTranscriptTailOnSessionEnd: true,
-		transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
-	});
-	f.receive({ type: "input_transcript.added", item: { text: "change fixture" } });
-	f.receive(delegation);
-	f.receive({ type: "turn.done", turn: { role: "user", transcript: "change fixture" } });
-	f.voice.stop();
-	await Bun.sleep(0);
-	expect(f.delegated).toEqual(["change fixture"]);
-	f.finish("Updated.");
-});
+test.each([true, false])(
+	"delegated input with preceding transcript %s is not resubmitted by a late final",
+	async hasTranscript => {
+		const f = fixture();
+		f.deps.createCall = async () => ({ callId: "fixture-call", sdp: "v=0\r\nfixture-answer" });
+		await f.voice.start({
+			version: "v3",
+			outputModality: "audio",
+			includeStartupContext: false,
+			flushTranscriptTailOnSessionEnd: true,
+			transport: { type: "webrtc", sdp: "v=0\r\nfixture-offer" },
+		});
+		if (hasTranscript) f.receive({ type: "input_transcript.added", item: { text: "change fixture" } });
+		f.receive(delegation);
+		f.receive({ type: "turn.done", turn: { role: "user", transcript: "change fixture" } });
+		f.voice.stop();
+		await Bun.sleep(0);
+		expect(f.delegated).toEqual(["change fixture"]);
+		f.finish("Updated.");
+	},
+);

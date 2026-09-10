@@ -79,7 +79,7 @@ export function contextChunks(text: string): string[] {
 }
 export type VoiceEvent =
 	| { kind: "transcript"; done: boolean; role: "user" | "assistant"; text: string; id?: string }
-	| { kind: "delegation"; id: string; text: string }
+	| { kind: "delegation"; id: string; itemId?: string; text: string }
 	| { kind: "audio"; data: string; sampleRate: number; numChannels: number }
 	| { kind: "error" };
 function object(value: unknown): Record<string, any> | null {
@@ -158,7 +158,7 @@ export function decodeVoiceEvent(version: VoiceVersion, input: unknown): VoiceEv
 			typeof p.item_id === "string" &&
 			typeof p.input_transcript === "string"
 		)
-			return { kind: "delegation", id: p.handoff_id, text: p.input_transcript };
+			return { kind: "delegation", id: p.handoff_id, itemId: p.item_id, text: p.input_transcript };
 		if (
 			p.type === "conversation.output_audio.delta" &&
 			typeof (p.delta ?? p.data) === "string" &&

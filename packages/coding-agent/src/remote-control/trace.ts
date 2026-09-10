@@ -37,6 +37,12 @@ const protocolKeys = new Set([
 	"architecture",
 ]);
 const protocolValues = new Set([
+	"handoff_request",
+	"userMessage",
+	"agentMessage",
+	"reasoning",
+	"fileChange",
+	"commandExecution",
 	"realtimeSessionStarted",
 	"transcriptSegment",
 	"realtimeSessionClosed",
@@ -112,6 +118,7 @@ export function redactProtocolValue(value: unknown, salt: string): unknown {
 		if (/id$/.test(name) && (typeof value === "string" || typeof value === "number"))
 			return { $ref: createHash("sha256").update(salt).update(JSON.stringify(value)).digest("hex").slice(0, 24) };
 		if (typeof value === "string") {
+			if (name === "target" && (value === "client" || value === "server")) return value;
 			if (name === "method" && protocolMethods.has(value)) return value;
 			if (protocolKeys.has(name) && (protocolValues.has(value) || (value.length <= 160 && protocolName.test(value))))
 				return value;

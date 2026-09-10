@@ -55,6 +55,22 @@ test.each(["realtimeSessionStarted", "transcriptSegment", "realtimeSessionClosed
 		expect(redactProtocolValue({ type }, "fixture")).toEqual({ type });
 	},
 );
+test.each(["handoff_request", "userMessage", "agentMessage", "reasoning", "fileChange", "commandExecution"])(
+	"capture retains pinned delegation/tool item type %s without retaining private contents",
+	type => {
+		expect(redactProtocolValue({ type, text: "private fixture data" }, "fixture")).toMatchObject({
+			type,
+			text: { $redacted: "string" },
+		});
+	},
+);
+test("capture retains the delegation routing target but redacts unknown targets", () => {
+	expect(redactProtocolValue({ target: "client" }, "fixture")).toEqual({ target: "client" });
+	expect(redactProtocolValue({ target: "private workspace" }, "fixture")).toMatchObject({
+		target: { $redacted: "string" },
+	});
+});
+
 test.each(["experimentalFeature/list", "mcpServerStatus/list", "externalAgentConfig/detect"])(
 	"capture retains pinned request method %s",
 	method => {

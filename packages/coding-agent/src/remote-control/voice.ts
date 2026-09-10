@@ -471,7 +471,12 @@ export class NativeVoice {
 			return;
 		}
 		this.#seen.add(key);
-		for (const entry of this.#tail) this.#promotedFinal.set(entry.role, entry.text);
+		// Pinned methods.rs appends a missing handoff input before consuming the active transcript.
+		const activeTranscript = this.#tail.map(({ role, text }) => ({ role, text }));
+		const input = event.text.trim();
+		if (input && !activeTranscript.some(entry => entry.role === "user" && entry.text.trim() === input))
+			activeTranscript.push({ role: "user", text: input });
+		for (const entry of activeTranscript) this.#promotedFinal.set(entry.role, entry.text);
 		this.#tail = [];
 		// Persist before submission: recovery suppresses repeats, including ambiguous
 		// interrupted submissions. This is at-most-once; crash-gap reconciliation remains a gate.
@@ -482,6 +487,16 @@ export class NativeVoice {
 			realtimeSessionId: this.#config?.realtimeSessionId,
 			text: event.text,
 		});
+		if (this.active)
+			this.deps.emit("thread/realtime/itemAdded", {
+				item: {
+					type: "handoff_request",
+					handoff_id: event.id,
+					item_id: event.itemId ?? event.id,
+					input_transcript: event.text,
+					active_transcript: activeTranscript,
+				},
+			});
 		this.#pendingDelegations++;
 		void this.deps
 			.delegate(key, event.text)
