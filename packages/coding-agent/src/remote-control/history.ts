@@ -300,6 +300,15 @@ export function projectHistorySnapshot(
 				};
 			}
 		}
+		if (entry.type === "custom" && entry.customType === "async-execution") {
+			const data = entry.data as { jobId?: unknown; execution?: unknown } | undefined;
+			const job = typeof data?.jobId === "string" ? jobs.get(data.jobId) : undefined;
+			if (job?.item.status === "inProgress") {
+				const item = updateCommandHistoryItem(job.item, data?.execution);
+				if (item) Object.assign(job.item, item);
+			}
+		}
+
 		if (entry.type !== "message" && entry.type !== "custom_message") continue;
 		const message: AgentMessage =
 			entry.type === "message"

@@ -195,6 +195,7 @@ import { UserInteractions } from "./user-interactions";
 export type AgentSessionEvent =
 	| AgentEvent
 	| { type: "async_job_update"; jobId: string; details?: Record<string, unknown> }
+	| { type: "async_job_settled"; jobId: string; receiptId: string }
 	| TurnPhaseEvent
 	| RoutingEvent
 	| { type: "auto_compaction_start"; reason: "threshold" | "overflow" | "idle"; action: "context-full" | "handoff" }
@@ -791,6 +792,32 @@ export class AgentSession {
 	// =========================================================================
 	// Event Subscription
 	// =========================================================================
+
+	#notifiedCancelledJobs = new WeakSet<AsyncJob>();
+	/** Persist cancellation as an execution fact, without submitting another model prompt. */
+	async recordCancelledAsyncJob(job: AsyncJob): Promise<void> {
+		if (job.type !== "bash" || job.status !== "cancelled" || !job.resultDetails?.execution) return;
+		if (job.ownerId !== this.sessionId) throw new Error("Cancelled job belongs to a different session");
+		const existing = this.sessionManager.getBranch().find(entry => {
+			if (entry.type !== "custom" || entry.customType !== "async-execution") return false;
+			const data = entry.data as { jobId?: unknown; startedAt?: unknown } | undefined;
+			return data?.jobId === job.id && data?.startedAt === job.startTime;
+		});
+		const receiptId =
+			existing?.id ??
+			this.sessionManager.appendCustomEntry("async-execution", {
+				jobId: job.id,
+				ownerId: job.ownerId,
+				startedAt: job.startTime,
+				status: job.status,
+				execution: job.resultDetails.execution,
+			});
+		await this.sessionManager.flush();
+		if (!this.#notifiedCancelledJobs.has(job)) {
+			this.#notifiedCancelledJobs.add(job);
+			this.#emit({ type: "async_job_settled", jobId: job.id, receiptId });
+		}
+	}
 
 	/** Forward background executor progress independently of an ended agent turn. */
 	reportAsyncJobProgress(jobId: string, details?: Record<string, unknown>): void {
@@ -2210,6 +2237,28 @@ export class AgentSession {
 		this.#queuedExtensionEvents = queued.catch(() => {});
 	}
 
+	async #settleBackgroundJobsForTransition(): Promise<void> {
+		const manager = this.#asyncJobManager;
+		if (!manager) return;
+		manager.acknowledgeDeliveries([
+			...manager.getAllJobs().map(job => job.id),
+			...manager.getDeliveryState().pendingJobIds,
+		]);
+		manager.cancelAll();
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const stopped = await Promise.race([
+			manager.waitForAll().then(() => true),
+			new Promise<boolean>(resolve => {
+				timer = setTimeout(() => resolve(false), 3000);
+			}),
+		]).finally(() => {
+			if (timer) clearTimeout(timer);
+		});
+		if (!stopped) throw new Error("Background execution is still stopping; retry the session change");
+		if (!(await manager.drainDeliveries({ timeoutMs: 3000 })))
+			throw new Error("Background execution settlement is not yet persisted; retry the session change");
+	}
+
 	#withSessionTransition<T>(
 		change: (scope: SessionTransitionScope) => Promise<T>,
 		scope?: SessionTransitionScope,
@@ -2217,6 +2266,7 @@ export class AgentSession {
 		return this.#sessionTransitions.run(async owner => {
 			try {
 				this.userInteractions.cancelAll();
+				await this.#settleBackgroundJobsForTransition();
 				return await change(owner);
 			} finally {
 				if (!this.isDisposing) this.#reconnectToAgent();
@@ -4370,7 +4420,7 @@ export class AgentSession {
 		return this.#withSessionTransition(async () => {
 			this.#disconnectFromAgent();
 			await this.abort();
-			this.#asyncJobManager?.cancelAll();
+			await this.#settleBackgroundJobsForTransition();
 			this.#closeAllProviderSessions("new session");
 			await this.sessionManager.flush();
 			await this.sessionManager.newSession(options);
@@ -4447,6 +4497,8 @@ export class AgentSession {
 
 		assertCurrent();
 		return this.#withSessionTransition(async () => {
+			await this.abort();
+			await this.#settleBackgroundJobsForTransition();
 			// Flush current session to ensure all entries are written
 			await this.sessionManager.flush();
 
@@ -5235,7 +5287,7 @@ export class AgentSession {
 			return await this.#withSessionTransition(async () => {
 				// Start a new session
 				await this.sessionManager.flush();
-				this.#asyncJobManager?.cancelAll();
+				await this.#settleBackgroundJobsForTransition();
 				await this.sessionManager.newSession();
 				this.agent.reset();
 				this.agent.sessionId = this.sessionManager.getSessionId();
@@ -7134,6 +7186,7 @@ export class AgentSession {
 		return this.#withSessionTransition(async () => {
 			this.#disconnectFromAgent();
 			await this.abort();
+			await this.#settleBackgroundJobsForTransition();
 
 			// Flush pending writes before switching so restore snapshots reflect committed state.
 			await this.sessionManager.flush();
@@ -7371,13 +7424,14 @@ export class AgentSession {
 
 		assertCurrent();
 		return this.#withSessionTransition(async () => {
+			await this.abort();
 			// Clear pending messages (bound to old session state)
 			this.#pendingNextTurnMessages = [];
 			this.#scheduledHiddenNextTurnGeneration = undefined;
 
 			// Flush pending writes before branching
 			await this.sessionManager.flush();
-			this.#asyncJobManager?.cancelAll();
+			await this.#settleBackgroundJobsForTransition();
 
 			if (!selectedEntry.parentId) {
 				await this.sessionManager.newSession({ parentSession: previousSessionFile });
@@ -7535,6 +7589,8 @@ export class AgentSession {
 
 		assertCurrent();
 		return this.#withSessionTransition(async () => {
+			await this.abort();
+			await this.#settleBackgroundJobsForTransition();
 			// Determine the new leaf position based on target type
 			let newLeafId: string | null;
 			let editorText: string | undefined;

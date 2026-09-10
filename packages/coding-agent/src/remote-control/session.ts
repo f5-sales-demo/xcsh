@@ -117,6 +117,7 @@ export class RemoteSession {
 	#nextId = randomUUID();
 	#startedItems = new Set<string>();
 	#commandPreviews = new Map<string, Record<string, unknown>>();
+	#commandSettlements = new Set<string>();
 	#forwardedBackgroundProgress = new WeakSet<object>();
 	#messageIds = new Map<string, string>();
 	#pendingClients: { text: string; id: string }[] = [];
@@ -186,6 +187,7 @@ export class RemoteSession {
 				this.#nextId = randomUUID();
 				this.#voiceOutputs.clear();
 				this.#commandPreviews.clear();
+				this.#commandSettlements.clear();
 				this.#restoreIdentity();
 				this.#suspended = false;
 			}
@@ -245,6 +247,7 @@ export class RemoteSession {
 		this.#interactions?.close();
 		this.#voiceOutputs.clear();
 		this.#commandPreviews.clear();
+		this.#commandSettlements.clear();
 		this.#closing = Promise.resolve(this.#voice?.stop())
 			.then(async () => {
 				await Promise.allSettled([...this.#effects]);
@@ -992,6 +995,26 @@ export class RemoteSession {
 				this.#itemId = "";
 			}
 		}
+		if (event.type === "async_job_settled" && !this.#commandSettlements.has(event.receiptId)) {
+			const branch = this.target.sessionManager.getBranch();
+			const receipt = branch.find(
+				entry => entry.id === event.receiptId && entry.type === "custom" && entry.customType === "async-execution",
+			);
+			if (receipt) {
+				const job = projectHistorySnapshot(this.target.sessionId, branch, Boolean(this.#active)).jobs.get(
+					event.jobId,
+				);
+				if (job && job.item.status !== "inProgress") {
+					this.#commandSettlements.add(event.receiptId);
+					if (this.#commandSettlements.size > 128)
+						this.#commandSettlements.delete(this.#commandSettlements.values().next().value!);
+					this.#cacheCommandPreview(job.item);
+					if (this.#active?.id === job.turnId) this.#rememberItem(job.item, true);
+					else this.#emit("item/completed", { turnId: job.turnId, item: job.item });
+				}
+			}
+		}
+
 		if (event.type === "async_job_update" && typeof event.details?.outputDelta === "string") {
 			const snapshot = projectHistorySnapshot(
 				this.target.sessionId,

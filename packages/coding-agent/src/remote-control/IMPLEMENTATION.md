@@ -1404,3 +1404,41 @@ The full package suite passed 7894 tests with 561 skips and zero failures across
 staged privacy and secret checks passed. Runtime/test hashes remained unchanged
 through verification.
 The live phone sessions remain on the frozen `052153363` executable.
+
+## Cancelled background execution
+
+Cancelled jobs remain tracked until their executor settles. Cancellation settlement
+uses a separate delivery callback, so watch/acknowledgement suppression of normal
+follow-up prompts does not discard execution facts. Deliveries retain their original
+job object across display-retention expiry and retries; queued delivery IDs cannot be
+reused. Removing an acknowledged in-flight delivery now uses its identity, preventing
+it from accidentally removing the next cancellation receipt.
+
+The SDK captures the owning session identity when a job starts. Cancelled Bash jobs
+persist an `async-execution` fact through that same AgentSession and flush storage
+before emitting settlement. The fact is not a model prompt. Retries reuse the receipt;
+remote history updates the original command and emits one completion. A mismatched
+session owner is rejected rather than writing into the currently selected session.
+
+Session transitions suppress old follow-up deliveries, cancel background execution,
+and wait for execution and persistence before changing storage. New-session/resume
+boundaries also wait after agent shutdown, covering tools that register jobs during
+shutdown. Fork and tree navigation stop the active agent before the final settlement
+check. A three-second execution or persistence wait failure leaves the session change
+unfinished so the operator can retry; it does not move the job into another session.
+Disposal flushes cancellation receipts before closing storage.
+
+Observed failing tests preceded retention/settlement tracking, cancelled delivery and
+retry, pending-ID reuse, SDK cancellation history, new/fork storage ownership, late
+registration and acknowledged-delivery queue handling. Further integration tests cover
+resume, disposal, a timed-out transition followed by successful retry, and receipt
+persistence failure followed by retry. The real SDK cancellation test executes a local
+shell command with mocked model responses and verifies no extra model turn.
+
+The remote/job-manager run passed 558 tests and 2408 assertions across 54 files before
+the final queue regression. The final queue/job-manager run passed 15 tests and 44
+assertions. The final package suite passed 7907 tests with 561 skips and zero failures
+across 774 files (25210 assertions). Workspace TypeScript/lint, CLI bundle, documentation,
+staged privacy and secret checks passed. Runtime/test hashes remained unchanged
+through verification.
+These tests do not replace remaining live iPhone task-cancellation acceptance.

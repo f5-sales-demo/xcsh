@@ -1055,6 +1055,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 	const asyncJobManager = backgroundJobsEnabled
 		? new AsyncJobManager({
 				maxRunningJobs: asyncMaxJobs,
+				getOwnerId: () => session?.sessionId,
+				onJobCancelled: job => session?.recordCancelledAsyncJob(job),
 				onJobProgress: (jobId, details) => session?.reportAsyncJobProgress(jobId, details),
 				onJobComplete: async (jobId, result, job) => {
 					if (!session || asyncJobManager!.isDeliverySuppressed(jobId)) return;
