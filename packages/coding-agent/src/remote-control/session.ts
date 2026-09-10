@@ -20,6 +20,7 @@ import { getSessionVoiceHistory, type SessionVoiceHistory } from "./session-voic
 import { timelinePage } from "./timeline";
 import type { NativeVoice } from "./voice";
 import type { VoiceOutputUpdate } from "./voice-handoff";
+import { voiceInputText } from "./voice-input";
 export type SessionTarget = Pick<
 	AgentSession,
 	| "sessionId"
@@ -173,6 +174,7 @@ export class RemoteSession {
 				event => {
 					for (const listener of this.#listeners) listener(event);
 				},
+				(request, callId) => this.#voice?.mirrorText(voiceInputText(request, callId)),
 			);
 		this.#unsubscribeDispose = target.addBeforeDisposeHook?.(() => this.close());
 		this.#unsubscribeTransitions = target.subscribeSessionTransitions?.(async phase => {
@@ -952,7 +954,13 @@ export class RemoteSession {
 		if (event.type === "agent_end") this.#finish("completed");
 	}
 	#voiceOutput(update: VoiceOutputUpdate): void {
-		for (const stream of this.#voiceOutputs) if (stream.turnId === this.#active?.id) stream.send(update);
+		let delegated = false;
+		for (const stream of this.#voiceOutputs)
+			if (stream.turnId === this.#active?.id) {
+				delegated = true;
+				stream.send(update);
+			}
+		if (!delegated && update.done) this.#voice?.mirrorText(update.text, update.phase);
 	}
 	#nextTurnId(): string {
 		return this.#durable

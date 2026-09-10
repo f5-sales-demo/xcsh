@@ -408,3 +408,10 @@ Validation: 162 focused tests / 610 assertions; guarded full package suite 7400
 passes, 561 skips, zero failures / 22882 assertions across 736 files in 321.88
 seconds. Workspace formatting and TypeScript checks, staged PII, and the repair
 commit's secret scan passed.
+
+Completed terminal-initiated replies now use the pinned standalone handoff path,
+while delegated streaming keeps one output owner. App input requests also mirror
+the core request_user_input event with the pinned instruction to answer in the
+app. Local adapter/transport tests cover these paths and preserve client-managed
+suppression, routing and output budgets. Dedicated execution/patch/permission
+request protocols and live input/approval acceptance remain open.

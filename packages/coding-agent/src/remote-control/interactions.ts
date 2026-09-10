@@ -82,6 +82,7 @@ export class RemoteInteractions {
 		private readonly broker: UserInteractions,
 		private readonly context: (toolCallId: string, interaction: UserInteraction) => Context | undefined,
 		private readonly notify: (event: Notification) => void,
+		private readonly mirror?: (request: InteractionRequest, callId: string) => void,
 	) {
 		this.#unsubscribe = broker.subscribe(event => {
 			if (event.type === "opened") this.#open(event.interaction);
@@ -143,6 +144,7 @@ export class RemoteInteractions {
 		};
 		this.#requests.set(interaction.id, { interaction, request });
 		this.notify(structuredClone(request));
+		this.mirror?.(structuredClone(request), interaction.toolCallId);
 	}
 	pending(): InteractionRequest[] {
 		return [...this.#requests.values()].map(value => structuredClone(value.request));

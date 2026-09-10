@@ -119,3 +119,10 @@ relay retries; private xcsh-owned state and Unix socket session attachment.
   The fixture generator verifies both source hashes and executes the original
   delegation implementation and default render method with local type adapters.
   The session-ended handoff instruction comes from `core/src/realtime_conversation.rs`.
+
+- `codex-rs/core/src/session/turn.rs` and `core/src/session/mod.rs`: completed
+  backing-message mirroring and the request-for-input context instruction.
+  `codex-rs/protocol/src/request_user_input.rs` supplies the core event envelope,
+  field names and omitted optional fields. `core/src/realtime_conversation.rs`
+  and `codex-api/src/endpoint/realtime_websocket/methods_common.rs` supply
+  standalone versus active handoff routing, including the v1 final-message prefix.

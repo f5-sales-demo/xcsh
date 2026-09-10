@@ -487,6 +487,7 @@ test.each(
 			outputs: any[] = [],
 			prompts: string[] = [];
 		const modes: boolean[] = [];
+		let terminalInitiated = false;
 		let sessionListener = (_event: any) => {};
 		const endMessage = (message: any) => {
 			message.timestamp ??= Date.now();
@@ -572,7 +573,7 @@ test.each(
 					}
 					await Bun.sleep(250);
 					expect(outputs.map(output => output.channel)).toEqual(
-						version === "v1" || asItems ? [] : ["commentary", "speakable"],
+						terminalInitiated || version === "v1" || asItems ? [] : ["commentary", "speakable"],
 					);
 					expect(JSON.stringify(outputs)).not.toContain("private reasoning");
 					endMessage(partial);
@@ -669,6 +670,21 @@ test.each(
 					),
 			).toBe(true);
 			if (streamed) expect(outputs).toHaveLength(2);
+			await Bun.sleep(0);
+			const standalone = outputs.map(output => {
+				if (output.type === "delegation.context.append") {
+					const { delegation_item_id: _id, ...rest } = output;
+					return { ...rest, type: "session.context.append" };
+				}
+				if (output.type === "conversation.handoff.append") return { ...output, handoff_id: "codex" };
+				return output;
+			});
+			outputs.length = 0;
+			terminalInitiated = true;
+			await target.prompt("Terminal follow-up");
+			expect(outputs).toEqual(standalone);
+			expect(prompts.at(-1)).toBe("Terminal follow-up");
+			expect(JSON.stringify(outputs)).not.toContain("private reasoning");
 		} finally {
 			await remote.close();
 			expect(modes).toEqual([true, false]);

@@ -7,7 +7,14 @@ import type { SubscriptionAuth } from "./enrollment";
 import { ProtocolError } from "./session";
 import { createVoiceCall, voiceCallConfig } from "./voice-call";
 import { voiceDelegation } from "./voice-delegation";
-import { handoffChannel, handoffOptions, handoffPhase, VoiceHandoff, type VoiceOutputUpdate } from "./voice-handoff";
+import {
+	type HandoffPhase,
+	handoffChannel,
+	handoffOptions,
+	handoffPhase,
+	VoiceHandoff,
+	type VoiceOutputUpdate,
+} from "./voice-handoff";
 import { VoiceHistory } from "./voice-history";
 import { CompletedVoiceHandoff, completedVoiceText } from "./voice-legacy";
 import {
@@ -50,6 +57,7 @@ function safeConnectionError(error: unknown): string {
 }
 export class NativeVoice {
 	#handoff?: VoiceHandoff | CompletedVoiceHandoff;
+	#activeHandoffId?: string;
 	#handoffOptions = handoffOptions({});
 	#history?: VoiceHistory;
 	#closing?: Promise<void>;
@@ -560,6 +568,7 @@ export class NativeVoice {
 		this.#handoff?.close();
 		const handoff = this.#createHandoff(event.id);
 		this.#handoff = handoff;
+		this.#activeHandoffId = event.id;
 		void this.deps
 			.delegate(
 				key,
@@ -574,12 +583,14 @@ export class NativeVoice {
 				},
 			)
 			.then(async text => {
+				if (this.#activeHandoffId === event.id) this.#activeHandoffId = undefined;
 				await this.deps.record({ key, kind: "delegationResult", text });
 				if (this.#config?.clientManagedHandoffs || !this.active) return;
 				handoff?.finish(text);
 			})
 			.catch(() => this.#fail("The backing agent could not complete the voice request"))
 			.finally(() => {
+				if (this.#activeHandoffId === event.id) this.#activeHandoffId = undefined;
 				this.#pendingDelegations--;
 			});
 	}
@@ -587,27 +598,7 @@ export class NativeVoice {
 		if (this.#config?.clientManagedHandoffs) return;
 		const v3 = this.#config?.version === "v3";
 		if (this.#handoffOptions.asItems)
-			return new CompletedVoiceHandoff((text, phase) => {
-				const options = this.#handoffOptions;
-				// Pinned routing examines the original BEM envelope before truncation and prefixing.
-				if (v3 && options.mode === "bemTags") phase = handoffPhase(text, options.prefixes) ?? "final_answer";
-				const output = completedVoiceText(text);
-				const item = completedVoiceText(options.itemPrefix ? `${options.itemPrefix}\n\n${output}` : output);
-				if (v3) {
-					const channel = handoffChannel(options, phase);
-					for (const chunk of contextChunks(item))
-						this.#send({
-							type: "session.context.append",
-							...(channel ? { channel } : {}),
-							content: [{ type: "input_text", text: chunk }],
-						});
-				} else {
-					this.#send({
-						type: "conversation.item.create",
-						item: { type: "message", role: "developer", content: [{ type: "input_text", text: item }] },
-					});
-				}
-			});
+			return new CompletedVoiceHandoff((text, phase) => this.#sendCompletedOutput(text, phase, id));
 		if (v3)
 			return new VoiceHandoff(this.#handoffOptions, (channel, text) => {
 				for (const chunk of contextChunks(text))
@@ -618,12 +609,45 @@ export class NativeVoice {
 						content: [{ type: "input_text", text: chunk }],
 					});
 			});
-		return new CompletedVoiceHandoff((text, phase) => {
+		return new CompletedVoiceHandoff((text, phase) => this.#sendCompletedOutput(text, phase, id));
+	}
+	/** Mirror completed backing events; streaming delegation updates retain their existing owner. */
+	mirrorText(text: string, phase?: HandoffPhase): void {
+		if ((this.#state !== "open" && this.#state !== "reconnecting") || this.#config?.clientManagedHandoffs) return;
+		if (!this.#activeHandoffId && !text.trim()) return;
+		if (Buffer.byteLength(text) > 1_048_576) {
+			this.#fail("Realtime handoff input limit");
+			return;
+		}
+		this.#sendCompletedOutput(text, phase, this.#activeHandoffId);
+	}
+	#sendCompletedOutput(text: string, phase?: HandoffPhase, handoffId?: string): void {
+		const v3 = this.#config?.version === "v3";
+		const options = this.#handoffOptions;
+		if (v3 && options.mode === "bemTags") phase = handoffPhase(text, options.prefixes) ?? "final_answer";
+		let output = completedVoiceText(text);
+		if (options.asItems && options.itemPrefix) output = completedVoiceText(`${options.itemPrefix}\n\n${output}`);
+		if (v3) {
+			const channel = handoffChannel(options, phase);
+			for (const chunk of contextChunks(output))
+				this.#send({
+					type:
+						options.asItems || handoffId === undefined ? "session.context.append" : "delegation.context.append",
+					...(!options.asItems && handoffId !== undefined ? { delegation_item_id: handoffId } : {}),
+					...(channel ? { channel } : {}),
+					content: [{ type: "input_text", text: chunk }],
+				});
+		} else if (options.asItems) {
+			this.#send({
+				type: "conversation.item.create",
+				item: { type: "message", role: "developer", content: [{ type: "input_text", text: output }] },
+			});
+		} else {
 			this.#send({
 				type: "conversation.handoff.append",
-				handoff_id: id,
-				output_text: `${phase === "commentary" ? "" : '"Agent Final Message":\n\n'}${completedVoiceText(text)}`,
+				handoff_id: handoffId ?? "codex",
+				output_text: `${phase === "commentary" ? "" : '"Agent Final Message":\n\n'}${output}`,
 			});
-		});
+		}
 	}
 }
