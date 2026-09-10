@@ -863,3 +863,54 @@ and verifying that no extra session file appeared. That final focused run passed
 Workspace TypeScript/formatting and changed documentation checks passed. Other
 asynchronous model/tool restoration callbacks and final packaged shutdown remain
 in the lifecycle audit; required CI and live phone acceptance are not complete.
+
+## Model and tool configuration ownership
+
+Asynchronous model selection now retains both the session lifecycle revision and
+the identity of its model-change request. Manual, temporary, routing and cycled
+model choices recheck ownership after credential lookup and provider tool-policy
+setup. Initial retry fallback and later cooldown restoration use the same check.
+Those superseded callbacks cannot append their model choice or settings to the
+current session. A retry with no fallback candidate leaves a pending manual choice intact.
+Configuration performed inside an owned session transition remains supported.
+
+Tool selection builds its new system prompt before committing the active tools,
+MCP selection, prompt and selection history. A failed build leaves the previous
+selection intact. Older builds cannot overwrite a later selection or another
+session. Direct prompt refreshes also recheck lifecycle, model, tool and refresh
+identity. A refresh does not cancel an explicit tool selection already building;
+when that selection commits, it invalidates refreshes of the earlier active set.
+
+Tests hold actual credential/rebuild promises across new sessions, disposal and
+newer selections. They cover both model-cycle paths, initial fallback, cooldown
+restoration, failed tool builds, competing refreshes and retained manual choices.
+The initial fallback fixture captures and awaits the owner's actual agent-end
+callback because abort can resolve the public prompt sooner. Its first version
+returned too early and is not failure evidence. With that correction, the earlier
+implementation reproduced a model replacement after new-session creation and a
+model-history append after closure; restoring the guards prevents both.
+
+Changing only the selected model keeps a pending prompt in the same conversation:
+it can continue once under the newer model. A session transition or disposal
+retires that prompt. These are local automated checks, not live delegation tests
+with all four work models. Remaining asynchronous maintenance, interaction and
+final packaged/live acceptance stay in the completion audit.
+
+Automatic routing, initial retry fallback and cooldown restoration also retain the
+prompt generation. Cancellation retires their pending credential lookups while a
+manual model selection remains independent of task cancellation. The new abort
+matrix first failed in all three automatic paths; all three pass with generation
+checks, and the manual-selection control remains passing.
+
+The first package run exposed an unrelated unawaited browser host-tool test call:
+its 60-second idle timer rejected while a later model-resolution test was running.
+The frame test now supplies the matching host result and awaits settlement. The
+focused configuration, browser host-tool and model-resolution run passed 51 tests
+with zero failures and 163 assertions across four files (8.03 seconds).
+
+Configuration checkpoint validation: the guarded package suite passed 7644 tests
+with 561 skips, zero failures and 24096 assertions across 756 files (368.79
+seconds). The model-resolution tests that received the earlier leaked timeout all
+passed; no unhandled error was reported. Workspace TypeScript/formatting, CLI
+bundle analysis and changed documentation checks passed. This does not replace
+required CI, packaged execution or the remaining manual acceptance.

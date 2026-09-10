@@ -31,6 +31,12 @@ export class SessionTransitions {
 		return this.#idle ?? Promise.resolve();
 	}
 
+	/** Observe the current lifecycle, including configuration owned by an active transition. */
+	observe(): () => boolean {
+		const revision = this.#revision;
+		return () => !this.#closed && revision === this.#revision;
+	}
+
 	/** Bind asynchronous preparation to the lifecycle state in which it began. */
 	checkpoint(scope?: SessionTransitionScope): () => void {
 		this.assertAvailable(scope);

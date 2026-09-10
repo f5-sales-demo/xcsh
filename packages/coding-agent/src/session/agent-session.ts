@@ -602,6 +602,9 @@ export class AgentSession {
 	#checkpointState: CheckpointState | undefined = undefined;
 	#pendingRewindReport: string | undefined = undefined;
 	#promptGeneration = 0;
+	#modelChangeRevision = 0;
+	#toolChangeRevision = 0;
+	#promptBuildRevision = 0;
 	#providerSessionState = new Map<string, ProviderSessionState>();
 	#routingCoordinator = new RoutingCoordinator();
 
@@ -2621,8 +2624,13 @@ export class AgentSession {
 
 	async #applyActiveToolsByName(
 		toolNames: string[],
-		options?: { persistMCPSelection?: boolean; previousSelectedMCPToolNames?: string[] },
+		options?: { persistMCPSelection?: boolean; previousSelectedMCPToolNames?: string[]; isCurrent?: () => boolean },
 	): Promise<void> {
+		const revision = ++this.#toolChangeRevision;
+		const configurationCurrent = this.#configurationGuard();
+		const isCurrent = () =>
+			revision === this.#toolChangeRevision && configurationCurrent() && (options?.isCurrent?.() ?? true);
+		if (!isCurrent()) return;
 		toolNames = [...new Set(toolNames.map(name => name.toLowerCase()))];
 		const previousSelectedMCPToolNames = options?.previousSelectedMCPToolNames ?? this.getSelectedMCPToolNames();
 		const tools: AgentTool[] = [];
@@ -2654,6 +2662,11 @@ export class AgentSession {
 				validToolNames.push("report_tool_issue");
 			}
 		}
+		const rebuiltPrompt = this.#rebuildSystemPrompt
+			? await this.#rebuildSystemPrompt(validToolNames, this.#toolRegistry)
+			: undefined;
+		if (!isCurrent()) return;
+
 		if (this.#mcpDiscoveryEnabled) {
 			this.#selectedMCPToolNames = new Set(
 				validToolNames.filter(
@@ -2661,11 +2674,12 @@ export class AgentSession {
 				),
 			);
 		}
+		this.#promptBuildRevision++;
 		this.agent.setTools(tools);
 
-		// Rebuild base system prompt with new tool set
-		if (this.#rebuildSystemPrompt) {
-			this.#baseSystemPrompt = await this.#rebuildSystemPrompt(validToolNames, this.#toolRegistry);
+		// Commit the matching rebuilt prompt with the new tool set
+		if (rebuiltPrompt !== undefined) {
+			this.#baseSystemPrompt = rebuiltPrompt;
 			this.agent.setSystemPrompt(this.#baseSystemPrompt);
 		}
 		if (options?.persistMCPSelection !== false) {
@@ -2708,9 +2722,22 @@ export class AgentSession {
 	/** Rebuild the base system prompt using the current active tool set. */
 	async refreshBaseSystemPrompt(): Promise<void> {
 		if (!this.#rebuildSystemPrompt) return;
+		const configurationCurrent = this.#configurationGuard();
+		if (!configurationCurrent()) return;
+		const revision = ++this.#promptBuildRevision;
+		const toolRevision = this.#toolChangeRevision;
+		const modelRevision = this.#modelChangeRevision;
 		const activeToolNames = this.getActiveToolNames();
-		this.#baseSystemPrompt = await this.#rebuildSystemPrompt(activeToolNames, this.#toolRegistry);
-		this.agent.setSystemPrompt(this.#baseSystemPrompt);
+		const rebuiltPrompt = await this.#rebuildSystemPrompt(activeToolNames, this.#toolRegistry);
+		if (
+			!configurationCurrent() ||
+			revision !== this.#promptBuildRevision ||
+			toolRevision !== this.#toolChangeRevision ||
+			modelRevision !== this.#modelChangeRevision
+		)
+			return;
+		this.#baseSystemPrompt = rebuiltPrompt;
+		this.agent.setSystemPrompt(rebuiltPrompt);
 	}
 
 	/**
@@ -3461,6 +3488,22 @@ export class AgentSession {
 		}
 
 		return undefined;
+	}
+
+	#configurationGuard(): () => boolean {
+		const lifecycleCurrent = this.#sessionTransitions.observe();
+		const sessionId = this.sessionId;
+		return () => lifecycleCurrent() && this.sessionId === sessionId;
+	}
+
+	#modelChangeGuard(cancelOnAbort = false): () => boolean {
+		const revision = ++this.#modelChangeRevision;
+		const configurationCurrent = this.#configurationGuard();
+		const generation = this.#promptGeneration;
+		return () =>
+			revision === this.#modelChangeRevision &&
+			configurationCurrent() &&
+			(!cancelOnAbort || generation === this.#promptGeneration);
 	}
 
 	#isPromptCurrent(generation: number): boolean {
@@ -4460,15 +4503,19 @@ export class AgentSession {
 		role: string = "default",
 		options?: { selector?: string; thinkingLevel?: ThinkingLevel; source?: "user" | "routing" },
 	): Promise<void> {
+		const isCurrent = this.#modelChangeGuard();
+		if (!isCurrent()) throw new Error("Session is closing or closed");
 		const previousEditMode = this.#resolveActiveEditMode();
 		const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+		if (!isCurrent()) return;
 		if (!apiKey) {
 			throw new Error(`No API key for ${model.provider}/${model.id}`);
 		}
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(model, options?.thinkingLevel, role);
 
 		this.#clearActiveRetryFallback();
-		await this.#setModelWithProviderSessionReset(model);
+		await this.#setModelWithProviderSessionReset(model, "runtime-switch", isCurrent);
+		if (!isCurrent()) return;
 		if (options?.source !== "routing") {
 			this.#routingCoordinator.getStateMachine().setManualPin(`${model.provider}/${model.id}`);
 		}
@@ -4489,15 +4536,19 @@ export class AgentSession {
 	 * @throws Error if no API key available for the model
 	 */
 	async setModelTemporary(model: Model, thinkingLevel?: ThinkingLevel): Promise<void> {
+		const isCurrent = this.#modelChangeGuard();
+		if (!isCurrent()) throw new Error("Session is closing or closed");
 		const previousEditMode = this.#resolveActiveEditMode();
 		const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+		if (!isCurrent()) return;
 		if (!apiKey) {
 			throw new Error(`No API key for ${model.provider}/${model.id}`);
 		}
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(model, thinkingLevel);
 
 		this.#clearActiveRetryFallback();
-		await this.#setModelWithProviderSessionReset(model);
+		await this.#setModelWithProviderSessionReset(model, "runtime-switch", isCurrent);
+		if (!isCurrent()) return;
 		this.sessionManager.appendModelChange(`${model.provider}/${model.id}`, "temporary");
 		this.settings.getStorage()?.recordModelUsage(`${model.provider}/${model.id}`);
 
@@ -4510,7 +4561,8 @@ export class AgentSession {
 	 * Does NOT overwrite manual pin or retry fallback original selector.
 	 */
 	async setModelRoutingSwitch(model: Model, thinkingLevel?: ThinkingLevel): Promise<void> {
-		const generation = this.#promptGeneration;
+		const isCurrent = this.#modelChangeGuard(true);
+		if (!isCurrent()) throw new Error("Session is closing or closed");
 		const previousEditMode = this.#resolveActiveEditMode();
 
 		let targetModel = model;
@@ -4529,15 +4581,15 @@ export class AgentSession {
 		}
 
 		const apiKey = await this.#modelRegistry.getApiKey(targetModel, this.sessionId);
-		if (!this.#isPromptCurrent(generation)) return;
+		if (!isCurrent()) return;
 		if (!apiKey) {
 			throw new Error(`No API key for ${targetModel.provider}/${targetModel.id}`);
 		}
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(targetModel, thinkingLevel);
 
 		// DO NOT clear active retry fallback - routing is a transient optimization
-		await this.#setModelWithProviderSessionReset(targetModel, "runtime-switch");
-		if (!this.#isPromptCurrent(generation)) return;
+		await this.#setModelWithProviderSessionReset(targetModel, "runtime-switch", isCurrent);
+		if (!isCurrent()) return;
 		this.sessionManager.appendModelChange(`${targetModel.provider}/${targetModel.id}`, "routing_switch");
 		this.settings.getStorage()?.recordModelUsage(`${targetModel.provider}/${targetModel.id}`);
 
@@ -4649,8 +4701,11 @@ export class AgentSession {
 	}
 
 	async #cycleScopedModel(direction: "forward" | "backward"): Promise<ModelCycleResult | undefined> {
+		const isCurrent = this.#modelChangeGuard();
+		if (!isCurrent()) return undefined;
 		const previousEditMode = this.#resolveActiveEditMode();
 		const scopedModels = await this.#getScopedModelsWithApiKey();
+		if (!isCurrent()) return undefined;
 		if (scopedModels.length <= 1) return undefined;
 
 		const currentModel = this.model;
@@ -4664,7 +4719,8 @@ export class AgentSession {
 
 		// Apply model
 		this.#clearActiveRetryFallback();
-		await this.#setModelWithProviderSessionReset(next.model);
+		await this.#setModelWithProviderSessionReset(next.model, "runtime-switch", isCurrent);
+		if (!isCurrent()) return undefined;
 		this.sessionManager.appendModelChange(`${next.model.provider}/${next.model.id}`);
 		this.settings.setModelRole("default", this.#formatRoleModelValue("default", next.model));
 		this.settings.getStorage()?.recordModelUsage(`${next.model.provider}/${next.model.id}`);
@@ -4672,11 +4728,14 @@ export class AgentSession {
 		// Apply the scoped model's configured thinking level
 		this.setThinkingLevel(targetThinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
+		if (!isCurrent()) return undefined;
 
 		return { model: next.model, thinkingLevel: this.thinkingLevel, isScoped: true };
 	}
 
 	async #cycleAvailableModel(direction: "forward" | "backward"): Promise<ModelCycleResult | undefined> {
+		const isCurrent = this.#modelChangeGuard();
+		if (!isCurrent()) return undefined;
 		const previousEditMode = this.#resolveActiveEditMode();
 		const availableModels = this.#modelRegistry.getAvailable();
 		if (availableModels.length <= 1) return undefined;
@@ -4690,18 +4749,21 @@ export class AgentSession {
 		const nextModel = availableModels[nextIndex];
 
 		const apiKey = await this.#modelRegistry.getApiKey(nextModel, this.sessionId);
+		if (!isCurrent()) return undefined;
 		if (!apiKey) {
 			throw new Error(`No API key for ${nextModel.provider}/${nextModel.id}`);
 		}
 		const targetThinkingLevel = this.#resolveTargetThinkingLevel(nextModel, undefined, "default");
 
 		this.#clearActiveRetryFallback();
-		await this.#setModelWithProviderSessionReset(nextModel);
+		await this.#setModelWithProviderSessionReset(nextModel, "runtime-switch", isCurrent);
+		if (!isCurrent()) return undefined;
 		this.sessionManager.appendModelChange(`${nextModel.provider}/${nextModel.id}`);
 		this.settings.setModelRole("default", this.#formatRoleModelValue("default", nextModel));
 		this.settings.getStorage()?.recordModelUsage(`${nextModel.provider}/${nextModel.id}`);
 		this.setThinkingLevel(targetThinkingLevel);
 		await this.#syncEditToolModeAfterModelChange(previousEditMode);
+		if (!isCurrent()) return undefined;
 
 		return { model: nextModel, thinkingLevel: this.thinkingLevel, isScoped: false };
 	}
@@ -5567,7 +5629,9 @@ export class AgentSession {
 	async #setModelWithProviderSessionReset(
 		model: Model,
 		source: ModelResolutionSource = "runtime-switch",
+		isCurrent: () => boolean = this.#configurationGuard(),
 	): Promise<void> {
+		if (!isCurrent()) return;
 		const currentModel = this.model;
 		if (currentModel) {
 			this.#closeProviderSessionsForModelSwitch(currentModel, model);
@@ -5578,7 +5642,7 @@ export class AgentSession {
 		if (toolPolicy) {
 			this.#mcpDiscoveryEnabled = toolPolicy.mcpDiscoveryEnabled;
 			if (toolPolicy.toolNames) {
-				await this.#applyActiveToolsByName(toolPolicy.toolNames, { persistMCPSelection: false });
+				await this.#applyActiveToolsByName(toolPolicy.toolNames, { persistMCPSelection: false, isCurrent });
 			}
 		}
 	}
@@ -6401,12 +6465,14 @@ export class AgentSession {
 		role: string,
 		selector: RetryFallbackSelector,
 		currentSelector: string,
+		isCurrent: () => boolean,
 	): Promise<void> {
 		const candidate = this.#modelRegistry.find(selector.provider, selector.id);
 		if (!candidate) {
 			throw new Error(`Retry fallback model not found: ${selector.raw}`);
 		}
 		const apiKey = await this.#modelRegistry.getApiKey(candidate, this.sessionId);
+		if (!isCurrent()) return;
 		if (!apiKey) {
 			throw new Error(`No API key for retry fallback ${selector.raw}`);
 		}
@@ -6414,7 +6480,8 @@ export class AgentSession {
 		const currentThinkingLevel = this.thinkingLevel;
 		const nextThinkingLevel = selector.thinkingLevel ?? currentThinkingLevel;
 
-		await this.#setModelWithProviderSessionReset(candidate);
+		await this.#setModelWithProviderSessionReset(candidate, "runtime-switch", isCurrent);
+		if (!isCurrent()) return;
 		this.sessionManager.appendModelChange(`${candidate.provider}/${candidate.id}`, "temporary");
 		this.settings.getStorage()?.recordModelUsage(`${candidate.provider}/${candidate.id}`);
 		this.setThinkingLevel(nextThinkingLevel);
@@ -6441,14 +6508,21 @@ export class AgentSession {
 		const role = this.#activeRetryFallback?.role ?? this.#resolveRetryFallbackRole(currentSelector);
 		if (!role) return false;
 
-		for (const selector of this.#findRetryFallbackCandidates(role, currentSelector)) {
-			if (this.#isRetryFallbackSelectorSuppressed(selector)) continue;
+		const candidates = this.#findRetryFallbackCandidates(role, currentSelector).filter(
+			selector =>
+				!this.#isRetryFallbackSelectorSuppressed(selector) &&
+				this.#modelRegistry.find(selector.provider, selector.id),
+		);
+		if (candidates.length === 0) return false;
+		const isCurrent = this.#modelChangeGuard(true);
+		for (const selector of candidates) {
 			const candidate = this.#modelRegistry.find(selector.provider, selector.id);
 			if (!candidate) continue;
 			const apiKey = await this.#modelRegistry.getApiKey(candidate, this.sessionId);
+			if (!isCurrent()) return false;
 			if (!apiKey) continue;
-			await this.#applyRetryFallbackCandidate(role, selector, currentSelector);
-			return true;
+			await this.#applyRetryFallbackCandidate(role, selector, currentSelector, isCurrent);
+			return isCurrent();
 		}
 
 		return false;
@@ -6482,13 +6556,15 @@ export class AgentSession {
 
 		const primaryModel = this.#modelRegistry.find(originalSelector.provider, originalSelector.id);
 		if (!primaryModel) return;
+		const isCurrent = this.#modelChangeGuard(true);
 		const apiKey = await this.#modelRegistry.getApiKey(primaryModel, this.sessionId);
-		if (!apiKey) return;
+		if (!isCurrent() || !apiKey) return;
 
 		const currentThinkingLevel = this.thinkingLevel;
 		const thinkingToApply =
 			currentThinkingLevel === lastAppliedFallbackThinkingLevel ? originalThinkingLevel : currentThinkingLevel;
-		await this.#setModelWithProviderSessionReset(primaryModel);
+		await this.#setModelWithProviderSessionReset(primaryModel, "runtime-switch", isCurrent);
+		if (!isCurrent()) return;
 		this.sessionManager.appendModelChange(`${primaryModel.provider}/${primaryModel.id}`, "temporary");
 		this.settings.getStorage()?.recordModelUsage(`${primaryModel.provider}/${primaryModel.id}`);
 		this.setThinkingLevel(thinkingToApply);
@@ -6548,6 +6624,7 @@ export class AgentSession {
 		if (!retrySettings.enabled) return false;
 
 		const generation = this.#promptGeneration;
+		if (!this.#isPromptCurrent(generation)) return false;
 		this.#retryAttempt++;
 
 		// Create retry promise on first attempt so waitForRetry() can await it
@@ -6587,6 +6664,7 @@ export class AgentSession {
 					baseUrl: this.model.baseUrl,
 				},
 			);
+			if (!this.#isPromptCurrent(generation)) return false;
 			if (switched) {
 				switchedCredential = true;
 				delayMs = 0;
@@ -6600,6 +6678,7 @@ export class AgentSession {
 		if (!switchedCredential && currentSelector) {
 			this.#noteRetryFallbackCooldown(currentSelector, parsedRetryAfterMs, errorMessage);
 			switchedModel = await this.#tryRetryModelFallback(currentSelector);
+			if (!this.#isPromptCurrent(generation)) return false;
 			if (switchedModel) {
 				delayMs = 0;
 			} else if (parsedRetryAfterMs && parsedRetryAfterMs > delayMs) {
@@ -6614,6 +6693,8 @@ export class AgentSession {
 			delayMs,
 			errorMessage,
 		});
+
+		if (!this.#isPromptCurrent(generation)) return false;
 
 		// Remove error message from agent state (keep in session for history)
 		const messages = this.agent.state.messages;
