@@ -262,7 +262,9 @@ handling, lifecycle and live acceptance remain separate open requirements.
 Native terminal transitions now await voice closure and accepted control writes
 before changing storage. The adapter refreshes its identity, timestamps, history
 and transient item state; stale asynchronous prompts cannot execute in the next
-session. Local socket tests verify that the old owner disappears and the new
+session. A forked terminal reports the persisted source session through canonical
+`forkedFromId`; file-based branch ancestry remains distinct and does not populate
+that field. Local socket tests verify that the old owner disappears and the new
 owner is registered before the transition returns. Real AgentSession tests cover
 new/fork/resume/reload/branch, listener failure recovery, and retained conversation
 and persistence after a storage error. A synthetic native voice test verifies

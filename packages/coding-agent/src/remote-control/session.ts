@@ -444,10 +444,20 @@ export class RemoteSession {
 		};
 	}
 	thread(includeTurns = false) {
+		const parentSession = this.target.sessionManager.getHeader?.()?.parentSession;
+		const forkedFromId =
+			typeof parentSession === "string" &&
+			parentSession.length > 0 &&
+			parentSession.length <= 256 &&
+			!isAbsolute(parentSession) &&
+			!parentSession.includes("/") &&
+			!parentSession.includes("\\")
+				? parentSession
+				: null;
 		return {
 			id: this.target.sessionId,
 			sessionId: this.target.sessionId,
-			forkedFromId: null,
+			forkedFromId,
 			parentThreadId: null,
 			preview: this.#durable
 				? this.history()

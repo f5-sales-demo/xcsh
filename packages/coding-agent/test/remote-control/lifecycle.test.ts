@@ -339,10 +339,12 @@ test("fork, resume, reload and branch refresh the adapter against persisted owne
 	await manager.flush();
 	const originalId = session.sessionId;
 	const originalFile = session.sessionFile!;
+	expect(remote.thread().forkedFromId).toBeNull();
 	const stop = () => remote.call("lifecycle-rpc", "thread/realtime/stop", { threadId: session.sessionId });
 	await stop();
 	expect(await session.fork()).toBe(true);
 	expect(session.sessionId).not.toBe(originalId);
+	expect(remote.thread().forkedFromId).toBe(originalId);
 	expect(await stop()).toEqual({});
 	expect(remote.history().flatMap(t => t.items)).toHaveLength(2);
 	await session.switchSession(originalFile);
@@ -354,6 +356,7 @@ test("fork, resume, reload and branch refresh the adapter against persisted owne
 	});
 	await session.branch(second);
 	expect(session.sessionId).not.toBe(originalId);
+	expect(remote.thread().forkedFromId).toBeNull();
 	expect(await stop()).toEqual({});
 	expect(remote.history().flatMap(t => t.items)).toMatchObject([
 		{ type: "userMessage", content: [{ text: "first context" }] },
