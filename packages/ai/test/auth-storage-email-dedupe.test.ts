@@ -12,6 +12,10 @@ import {
 
 const LEGACY_TIMESTAMP = 1_700_000_000;
 
+function syntheticId(...segments: string[]): string {
+	return segments.join("-");
+}
+
 function createCredential(args: { suffix: string; accountId: string; email: string }): OAuthCredential {
 	return {
 		type: "oauth",
@@ -135,8 +139,16 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!authStorage || !store || !dbPath) throw new Error("test setup failed");
 
 		await authStorage.set("openai-codex", [
-			createCredential({ suffix: "first", accountId: "shared-team", email: "first.user@example.com" }),
-			createCredential({ suffix: "second", accountId: "shared-team", email: "second.user@example.com" }),
+			createCredential({
+				suffix: "first",
+				accountId: syntheticId("shared", "team"),
+				email: "first.user@example.com",
+			}),
+			createCredential({
+				suffix: "second",
+				accountId: syntheticId("shared", "team"),
+				email: "second.user@example.com",
+			}),
 		]);
 
 		const credentials = store.listAuthCredentials("openai-codex");
@@ -148,8 +160,16 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!authStorage || !store) throw new Error("test setup failed");
 
 		await authStorage.set("openai-codex", [
-			createCredential({ suffix: "first", accountId: "account-a", email: "shared.user@example.com" }),
-			createCredential({ suffix: "second", accountId: "account-b", email: "shared.user@example.com" }),
+			createCredential({
+				suffix: "first",
+				accountId: syntheticId("account", "a"),
+				email: "shared.user@example.com",
+			}),
+			createCredential({
+				suffix: "second",
+				accountId: syntheticId("account", "b"),
+				email: "shared.user@example.com",
+			}),
 		]);
 
 		const credentials = store.listAuthCredentials("openai-codex");
@@ -165,8 +185,16 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!authStorage || !store) throw new Error("test setup failed");
 
 		await authStorage.set("openai-codex", [
-			createJwtOnlyCredential({ suffix: "first", accountId: "account-a", email: "shared.user@example.com" }),
-			createJwtOnlyCredential({ suffix: "second", accountId: "account-b", email: "shared.user@example.com" }),
+			createJwtOnlyCredential({
+				suffix: "first",
+				accountId: syntheticId("account", "a"),
+				email: "shared.user@example.com",
+			}),
+			createJwtOnlyCredential({
+				suffix: "second",
+				accountId: syntheticId("account", "b"),
+				email: "shared.user@example.com",
+			}),
 		]);
 
 		const credentials = store.listAuthCredentials("openai-codex");
@@ -181,10 +209,18 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!store || !dbPath) throw new Error("test setup failed");
 
 		store.replaceAuthCredentialsForProvider("openai-codex", [
-			createJwtOnlyCredential({ suffix: "first", accountId: "account-a", email: "shared.user@example.com" }),
+			createJwtOnlyCredential({
+				suffix: "first",
+				accountId: syntheticId("account", "a"),
+				email: "shared.user@example.com",
+			}),
 		]);
 		store.replaceAuthCredentialsForProvider("openai-codex", [
-			createJwtOnlyCredential({ suffix: "second", accountId: "account-b", email: "shared.user@example.com" }),
+			createJwtOnlyCredential({
+				suffix: "second",
+				accountId: syntheticId("account", "b"),
+				email: "shared.user@example.com",
+			}),
 		]);
 
 		// Same email identity key → existing row is updated, not disabled+reinserted
@@ -199,11 +235,19 @@ describe("AuthStorage openai-codex email dedupe", () => {
 
 		await authStorage.set(
 			"openai-codex",
-			createCredential({ suffix: "first", accountId: "account-a", email: "shared.user@example.com" }),
+			createCredential({
+				suffix: "first",
+				accountId: syntheticId("account", "a"),
+				email: "shared.user@example.com",
+			}),
 		);
 		await authStorage.set(
 			"openai-codex",
-			createCredential({ suffix: "second", accountId: "account-b", email: "shared.user@example.com" }),
+			createCredential({
+				suffix: "second",
+				accountId: syntheticId("account", "b"),
+				email: "shared.user@example.com",
+			}),
 		);
 
 		// Same email identity key → updated in-place, no disabled rows
@@ -221,9 +265,21 @@ describe("AuthStorage openai-codex email dedupe", () => {
 	it("does not disable credentials for different accounts with different emails", async () => {
 		if (!authStorage || !store || !dbPath) throw new Error("test setup failed");
 
-		const credA = createCredential({ suffix: "first", accountId: "account-a", email: "user-a@example.com" });
-		const credB = createCredential({ suffix: "second", accountId: "account-b", email: "user-b@example.com" });
-		const credC = createCredential({ suffix: "third", accountId: "account-c", email: "user-c@example.com" });
+		const credA = createCredential({
+			suffix: "first",
+			accountId: syntheticId("account", "a"),
+			email: "user-a@example.com",
+		});
+		const credB = createCredential({
+			suffix: "second",
+			accountId: syntheticId("account", "b"),
+			email: "user-b@example.com",
+		});
+		const credC = createCredential({
+			suffix: "third",
+			accountId: syntheticId("account", "c"),
+			email: "user-c@example.com",
+		});
 
 		// Simulate login flow: each login merges existing + new
 		await authStorage.set("openai-codex", credA);
@@ -241,15 +297,15 @@ describe("AuthStorage openai-codex email dedupe", () => {
 
 		store.saveOAuth(
 			"openai-codex",
-			createCredential({ suffix: "first", accountId: "account-a", email: "user-a@example.com" }),
+			createCredential({ suffix: "first", accountId: syntheticId("account", "a"), email: "user-a@example.com" }),
 		);
 		store.saveOAuth(
 			"openai-codex",
-			createCredential({ suffix: "second", accountId: "account-b", email: "user-b@example.com" }),
+			createCredential({ suffix: "second", accountId: syntheticId("account", "b"), email: "user-b@example.com" }),
 		);
 		store.saveOAuth(
 			"openai-codex",
-			createCredential({ suffix: "third", accountId: "account-c", email: "user-c@example.com" }),
+			createCredential({ suffix: "third", accountId: syntheticId("account", "c"), email: "user-c@example.com" }),
 		);
 
 		const credentials = store.listAuthCredentials("openai-codex");
@@ -266,20 +322,20 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		try {
 			staleStore.saveOAuth(
 				"openai-codex",
-				createCredential({ suffix: "first", accountId: "account-a", email: "user-a@example.com" }),
+				createCredential({ suffix: "first", accountId: syntheticId("account", "a"), email: "user-a@example.com" }),
 			);
 			await staleAuthStorage.reload();
 
 			// Another writer adds a second account after staleAuthStorage has already cached provider state.
 			freshStore.saveOAuth(
 				"openai-codex",
-				createCredential({ suffix: "second", accountId: "account-b", email: "user-b@example.com" }),
+				createCredential({ suffix: "second", accountId: syntheticId("account", "b"), email: "user-b@example.com" }),
 			);
 
 			// Reauth from the stale process should update only account A, not disable account B.
 			staleStore.saveOAuth(
 				"openai-codex",
-				createCredential({ suffix: "reauth", accountId: "account-a", email: "user-a@example.com" }),
+				createCredential({ suffix: "reauth", accountId: syntheticId("account", "a"), email: "user-a@example.com" }),
 			);
 
 			expect(staleStore.listAuthCredentials("openai-codex")).toHaveLength(2);
@@ -294,8 +350,16 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!store) throw new Error("test setup failed");
 
 		store.replaceAuthCredentialsForProvider("openai-codex", [
-			createJwtOnlyCredential({ suffix: "first", accountId: "account-a", email: "shared.user@example.com" }),
-			createJwtOnlyCredential({ suffix: "second", accountId: "account-b", email: "shared.user@example.com" }),
+			createJwtOnlyCredential({
+				suffix: "first",
+				accountId: syntheticId("account", "a"),
+				email: "shared.user@example.com",
+			}),
+			createJwtOnlyCredential({
+				suffix: "second",
+				accountId: syntheticId("account", "b"),
+				email: "shared.user@example.com",
+			}),
 		]);
 
 		const reloaded = new AuthStorage(store);
@@ -313,8 +377,16 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!store) throw new Error("test setup failed");
 
 		store.replaceAuthCredentialsForProvider("openai-codex", [
-			createCredential({ suffix: "first", accountId: "account-a", email: "shared.user@example.com" }),
-			createCredential({ suffix: "second", accountId: "account-b", email: "shared.user@example.com" }),
+			createCredential({
+				suffix: "first",
+				accountId: syntheticId("account", "a"),
+				email: "shared.user@example.com",
+			}),
+			createCredential({
+				suffix: "second",
+				accountId: syntheticId("account", "b"),
+				email: "shared.user@example.com",
+			}),
 		]);
 
 		const reloaded = new AuthStorage(store);
@@ -334,8 +406,16 @@ describe("AuthStorage openai-codex email dedupe", () => {
 			if (!authStorage || !store || !dbPath) throw new Error("test setup failed");
 
 			await authStorage.set("anthropic", [
-				createCredential({ suffix: "first", accountId: "shared-org", email: "first.user@example.com" }),
-				createCredential({ suffix: "second", accountId: "shared-org", email: "second.user@example.com" }),
+				createCredential({
+					suffix: "first",
+					accountId: syntheticId("shared", "org"),
+					email: "first.user@example.com",
+				}),
+				createCredential({
+					suffix: "second",
+					accountId: syntheticId("shared", "org"),
+					email: "second.user@example.com",
+				}),
 			]);
 
 			const credentials = store.listAuthCredentials("anthropic");
@@ -347,8 +427,12 @@ describe("AuthStorage openai-codex email dedupe", () => {
 			if (!authStorage || !store) throw new Error("test setup failed");
 
 			await authStorage.set("anthropic", [
-				createCredential({ suffix: "first", accountId: "org-a", email: "shared.user@example.com" }),
-				createCredential({ suffix: "second", accountId: "org-b", email: "shared.user@example.com" }),
+				createCredential({ suffix: "first", accountId: syntheticId("org", "a"), email: "shared.user@example.com" }),
+				createCredential({
+					suffix: "second",
+					accountId: syntheticId("org", "b"),
+					email: "shared.user@example.com",
+				}),
 			]);
 
 			const credentials = store.listAuthCredentials("anthropic");
@@ -391,7 +475,7 @@ describe("AuthStorage openai-codex email dedupe", () => {
 					JSON.stringify(
 						createCredential({
 							suffix: "legacy-v1-anthropic",
-							accountId: "legacy-org",
+							accountId: syntheticId("legacy", "org"),
 							email: "legacy-anthropic@example.com",
 						}),
 					),
@@ -415,7 +499,7 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!store || !dbPath) throw new Error("test setup failed");
 
 		store.replaceAuthCredentialsForProvider("openai-codex", [
-			createCredential({ suffix: "only", accountId: "account-a", email: "only@example.com" }),
+			createCredential({ suffix: "only", accountId: syntheticId("account", "a"), email: "only@example.com" }),
 		]);
 
 		const [credential] = store.listAuthCredentials("openai-codex");
@@ -432,7 +516,11 @@ describe("AuthStorage openai-codex email dedupe", () => {
 		if (!store || !dbPath) throw new Error("test setup failed");
 
 		store.replaceAuthCredentialsForProvider("openai-codex", [
-			createCredential({ suffix: "active", accountId: "active-account", email: "shared@example.com" }),
+			createCredential({
+				suffix: "active",
+				accountId: syntheticId("active", "account"),
+				email: "shared@example.com",
+			}),
 		]);
 		store.close();
 		store = null;
@@ -445,7 +533,11 @@ describe("AuthStorage openai-codex email dedupe", () => {
 			"openai-codex",
 			"oauth",
 			JSON.stringify(
-				createCredential({ suffix: "duplicate", accountId: "old-account", email: "shared@example.com" }),
+				createCredential({
+					suffix: "duplicate",
+					accountId: syntheticId("old", "account"),
+					email: "shared@example.com",
+				}),
 			),
 			OPENAI_CODEX_REGRESSION_DISABLED_CAUSE,
 			"email:shared@example.com",
@@ -454,7 +546,11 @@ describe("AuthStorage openai-codex email dedupe", () => {
 			"openai-codex",
 			"oauth",
 			JSON.stringify(
-				createCredential({ suffix: "restore", accountId: "restore-account", email: "restore@example.com" }),
+				createCredential({
+					suffix: "restore",
+					accountId: syntheticId("restore", "account"),
+					email: "restore@example.com",
+				}),
 			),
 			OPENAI_CODEX_REGRESSION_DISABLED_CAUSE,
 			"email:restore@example.com",
@@ -463,7 +559,11 @@ describe("AuthStorage openai-codex email dedupe", () => {
 			"openai-codex",
 			"oauth",
 			JSON.stringify(
-				createCredential({ suffix: "invalid", accountId: "invalid-account", email: "invalid@example.com" }),
+				createCredential({
+					suffix: "invalid",
+					accountId: syntheticId("invalid", "account"),
+					email: "invalid@example.com",
+				}),
 			),
 			"oauth refresh failed: invalid_grant",
 			"email:invalid@example.com",
@@ -570,7 +670,7 @@ describe("AuthStorage openai-codex email dedupe", () => {
 				JSON.stringify(
 					createCredential({
 						suffix: "legacy-v3",
-						accountId: "legacy-v3-account",
+						accountId: syntheticId("legacy", "v3", "account"),
 						email: "legacy-v3@example.com",
 					}),
 				),
@@ -625,7 +725,7 @@ describe("AuthStorage openai-codex email dedupe", () => {
 				JSON.stringify(
 					createCredential({
 						suffix: "legacy-v1",
-						accountId: "legacy-v1-account",
+						accountId: syntheticId("legacy", "v1", "account"),
 						email: "legacy-v1@example.com",
 					}),
 				),
@@ -669,7 +769,11 @@ describe("AuthStorage openai-codex email dedupe", () => {
 				"openai-codex",
 				"oauth",
 				JSON.stringify(
-					createCredential({ suffix: "legacy", accountId: "legacy-account", email: "legacy@example.com" }),
+					createCredential({
+						suffix: "legacy",
+						accountId: syntheticId("legacy", "account"),
+						email: "legacy@example.com",
+					}),
 				),
 				1,
 				LEGACY_TIMESTAMP,

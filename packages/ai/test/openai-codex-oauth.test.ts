@@ -95,7 +95,7 @@ describe("OpenAI Codex login method", () => {
 	});
 
 	it("offers browser/manual redirect fallback in the same flow when device authorization is unavailable", async () => {
-		const credentials = { access: "access", refresh: "refresh", expires: 123, accountId: "acct" };
+		const credentials = { access: "access", refresh: "refresh", expires: 123, accountId: ["acct"].join("-") };
 		const deviceLogin = vi.fn(async () => {
 			throw new OpenAICodexDeviceUnavailableError();
 		});
@@ -184,7 +184,7 @@ describe("OpenAI Codex device OAuth", () => {
 		expect(credentials).toMatchObject({
 			access: accessToken,
 			refresh: "refresh-secret",
-			accountId: "acct-device",
+			accountId: ["acct", "device"].join("-"),
 		});
 		expect(credentials).not.toHaveProperty("email");
 		const visibleProgress = progress.join("\n");

@@ -14,8 +14,8 @@ REPO="f5-sales-demo/xcsh"
 PACKAGE="@f5-sales-demo/xcsh"
 SOURCE_REPO_URL="${XCSH_SOURCE_REPO_URL:-https://github.com/${REPO}.git}"
 INSTALL_DIR="${PI_INSTALL_DIR:-$HOME/.local/bin}"
-MIN_BUN_VERSION="1.3.7"
-BUN_INSTALL_VERSION="1.3.14"
+MIN_BUN_VERSION="1.4.2"
+BUN_INSTALL_VERSION="1.4.2"
 
 # Parse arguments
 MODE=""
@@ -153,10 +153,10 @@ install_bun() {
 
   bun_asset="bun-${bun_platform}-${bun_arch}.zip"
   case "$bun_asset" in
-  bun-darwin-aarch64.zip) bun_sha256="d8b96221828ad6f97ac7ac0ab7e95872341af763001e8803e8267652c2652620" ;;
-  bun-darwin-x64.zip) bun_sha256="4183df3374623e5bab315c547cfa0974533cd457d86b73b639f7a87974cd6633" ;;
-  bun-linux-aarch64.zip) bun_sha256="a27ffb63a8310375836e0d6f668ae17fa8d8d18b88c37c821c65331973a19a3b" ;;
-  bun-linux-x64.zip) bun_sha256="951ee2aee855f08595aeec6225226a298d3fea83a3dcd6465c09cbccdf7e848f" ;;
+  bun-darwin-aarch64.zip) bun_sha256="90987a3a16d7db556d886ac3d551e7b6d3edf0a1cf43acaed622e8676be1d12f" ;;
+  bun-darwin-x64.zip) bun_sha256="80520d7e17526308c9185d261679ac6d27798d3803a0e9f7ff9121ab8affb012" ;;
+  bun-linux-aarch64.zip) bun_sha256="54328bbc2d9c8e0c9f892c544d66c57a83b84139e34909e5ee81758f1ac8fda7" ;;
+  bun-linux-x64.zip) bun_sha256="36368faef7527875d5ffa52e53cd48021741f2a83eb6208a8dd64068d422a913" ;;
   *)
     echo "No checksum configured for ${bun_asset}"
     exit 1

@@ -4,6 +4,7 @@ import {
 	type GhFn,
 	type GitFn,
 	resolveBranch,
+	resolveBuildDate,
 	resolveCommit,
 	resolveDirty,
 	resolvePrNumber,
@@ -101,5 +102,21 @@ describe("resolvePrNumber (build-time)", () => {
 		const seen = { sha: "" };
 		expect(await resolvePrNumber("", {}, ghSpy("42", seen))).toBe("");
 		expect(seen.sha).toBe("");
+	});
+});
+
+describe("resolveBuildDate (build-time)", () => {
+	it("uses SOURCE_DATE_EPOCH for reproducible builds", () => {
+		expect(resolveBuildDate({ SOURCE_DATE_EPOCH: "946684800" })).toBe("2000-01-01T00:00:00.000Z");
+	});
+
+	it("uses the current time when SOURCE_DATE_EPOCH is absent", () => {
+		expect(resolveBuildDate({}, () => new Date("2026-09-10T02:00:00.000Z"))).toBe("2026-09-10T02:00:00.000Z");
+	});
+
+	it("rejects an invalid SOURCE_DATE_EPOCH", () => {
+		expect(() => resolveBuildDate({ SOURCE_DATE_EPOCH: "not-a-timestamp" })).toThrow(
+			"SOURCE_DATE_EPOCH must be a non-negative integer",
+		);
 	});
 });

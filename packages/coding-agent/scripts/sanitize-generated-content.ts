@@ -11,6 +11,9 @@ const AZURE_SUBSCRIPTION_ID_RE =
 	/((?:\b[A-Za-z0-9_-]*subscription[_-]?id(?:_[A-Za-z0-9_-]+)?\b|--subscription\b|\bsubscriptions\/)[\s\\=:"'${}]{0,32})[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
 const AZURE_SUBSCRIPTION_PLACEHOLDER = "<subscription-id>";
 const HEX_ENCODED_VALUE_RE = /\b((?:[0-9a-f]{2}){16,})(:[0-9a-f]{64})\b/gi;
+const GENERATED_IDENTITY_RE = /("(namespace|tenant|first_name|last_name)"\s*:\s*)"([^"\n]*)"/g;
+const SAFE_GENERATED_NAMESPACES = new Set(["*", "$F5XC_NAMESPACE", "demo-app", "shared", "system"]);
+const SAFE_GENERATED_TENANTS = new Set(["$F5XC_TENANT", "example-corp"]);
 
 type Ipv4Address = readonly [number, number, number, number];
 type Ipv4Range = readonly [Ipv4Address, number];
@@ -100,6 +103,28 @@ export function sanitizeSyntheticNamespaceExamples(text: string): string {
 		SYNTHETIC_NAMESPACE_EXAMPLE_RE,
 		"When namespace = demo-app, all alerts for the tenant will be returned.",
 	);
+}
+
+/** Replace identity-bearing generated examples without changing wildcard or configured-source semantics. */
+export function sanitizeIdentityExamples(text: string): string {
+	return text.replace(GENERATED_IDENTITY_RE, (_whole, prefix: string, key: string, value: string) => {
+		switch (key) {
+			case "namespace":
+				return SAFE_GENERATED_NAMESPACES.has(value) || /^<[^>]+>$/.test(value)
+					? `${prefix}${JSON.stringify(value)}`
+					: `${prefix}"demo-app"`;
+			case "tenant":
+				return SAFE_GENERATED_TENANTS.has(value) || /^<[^>]+>$/.test(value)
+					? `${prefix}${JSON.stringify(value)}`
+					: `${prefix}"example-corp"`;
+			case "first_name":
+				return `${prefix}"<given-name>"`;
+			case "last_name":
+				return `${prefix}"<surname-initial>"`;
+			default:
+				return `${prefix}${JSON.stringify(value)}`;
+		}
+	});
 }
 
 /** Replace generated Azure subscription identifiers with the documented placeholder. */

@@ -376,7 +376,7 @@ fn inject_pending_conflicts(
 			group: false,
 		});
 		tree.chunks.push(ChunkNode {
-			path: ours_path.clone(),
+			path: ours_path,
 			identifier: None,
 			kind: ChunkKind::Ours,
 			leaf: true,
@@ -405,7 +405,7 @@ fn inject_pending_conflicts(
 			group: false,
 		});
 		tree.chunks.push(ChunkNode {
-			path: theirs_path.clone(),
+			path: theirs_path,
 			identifier: None,
 			kind: ChunkKind::Theirs,
 			leaf: true,

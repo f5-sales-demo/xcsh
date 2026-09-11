@@ -29,7 +29,7 @@ impl builtins::Command for EchoCommand {
 
 	/// Override the default [`builtins::Command::new`] function to handle clap's limitation related
 	/// to `--`. See [`builtins::parse_known`] for more information
-	/// TODO: we can safely remove this after the issue is resolved
+	/// TODO(echo): we can safely remove this after the issue is resolved
 	fn new<I>(args: I) -> Result<Self, clap::Error>
 	where
 		I: IntoIterator<Item = String>,
@@ -41,43 +41,41 @@ impl builtins::Command for EchoCommand {
 		Ok(this)
 	}
 
-	fn execute(
+	async fn execute<SE: brush_core::ShellExtensions>(
 		&self,
-		context: brush_core::ExecutionContext<'_>,
-	) -> impl Future<Output = Result<brush_core::ExecutionResult, Self::Error>> {
-		futures::future::lazy(move |_| {
-			let mut trailing_newline = !self.no_trailing_newline;
-			let mut s;
-			if self.interpret_backslash_escapes {
-				s = String::new();
-				for (i, arg) in self.args.iter().enumerate() {
-					if i > 0 {
-						s.push(' ');
-					}
-
-					let (expanded_arg, keep_going) = escape::expand_backslash_escapes(
-						arg.as_str(),
-						escape::EscapeExpansionMode::EchoBuiltin,
-					)?;
-					s.push_str(&String::from_utf8_lossy(expanded_arg.as_slice()));
-
-					if !keep_going {
-						trailing_newline = false;
-						break;
-					}
+		context: brush_core::ExecutionContext<'_, SE>,
+	) -> Result<brush_core::ExecutionResult, Self::Error> {
+		let mut trailing_newline = !self.no_trailing_newline;
+		let mut s;
+		if self.interpret_backslash_escapes {
+			s = String::new();
+			for (i, arg) in self.args.iter().enumerate() {
+				if i > 0 {
+					s.push(' ');
 				}
-			} else {
-				s = self.args.join(" ");
+
+				let (expanded_arg, keep_going) = escape::expand_backslash_escapes(
+					arg.as_str(),
+					escape::EscapeExpansionMode::EchoBuiltin,
+				)?;
+				s.push_str(&String::from_utf8_lossy(expanded_arg.as_slice()));
+
+				if !keep_going {
+					trailing_newline = false;
+					break;
+				}
 			}
+		} else {
+			s = self.args.join(" ");
+		}
 
-			if trailing_newline {
-				s.push('\n');
-			}
+		if trailing_newline {
+			s.push('\n');
+		}
 
-			write!(context.stdout(), "{s}")?;
-			context.stdout().flush()?;
+		write!(context.stdout(), "{s}")?;
+		context.stdout().flush()?;
 
-			Ok(ExecutionResult::success())
-		})
+		Ok(ExecutionResult::success())
 	}
 }

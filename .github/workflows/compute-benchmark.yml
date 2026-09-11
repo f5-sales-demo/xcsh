@@ -1,5 +1,5 @@
 ---
-name: Compute Runner Benchmark
+name: Compute Runner Qualification
 
 on:
   pull_request:
@@ -9,87 +9,87 @@ permissions:
   contents: read
 
 concurrency:
-  group: compute-runner-benchmark-${{ github.ref }}
+  group: compute-runner-qualification-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  socketless-install-benchmark:
-    name: D8 socketless / scripts-${{ matrix.concurrent_scripts }} / ${{ matrix.cache }}
+  release-native-fixtures:
+    name: Release native fixture (${{ matrix.platform }}, ${{ matrix.arch }}, ${{ matrix.variant }})
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action == 'labeled' &&
-      github.event.label.name == 'compute-benchmark-approved' &&
+      (github.event.label.name == 'compute-benchmark-approved' || github.event.label.name == 'compute-hardware-approved') &&
       github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
       matrix:
-        concurrent_scripts: [4, 8, 16]
-        cache: [cold, warm]
-    runs-on: xcsh-socketless
+        include:
+          - os: ubuntu-24.04
+            platform: linux
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+            variant: default
+            variants: ""
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            target: ""
+            variant: baseline
+            variants: baseline
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            target: ""
+            variant: modern
+            variants: modern
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    env:
+      RUST_TARGET: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
           lfs: true
-
-      - name: Verify baked Bun 1.3.14
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
+          bun-version: "1.4.2"
+      - uses: ./.github/actions/setup-rust
+        with:
+          target: ${{ matrix.target }}
+      - name: Restore exact Rust cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
+      - name: Set up Zig 0.16.0
+        uses: ./.github/actions/setup-zig
+      - run: bash scripts/ci-bun-install.sh
+      - name: Build release native fixture
         shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.3.14
-
-      - name: Benchmark five identical installs
         env:
-          CACHE_MODE: ${{ matrix.cache }}
-          CONCURRENT_SCRIPTS: ${{ matrix.concurrent_scripts }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          before=$(sha256sum package.json bun.lock)
-          cache_dir="$RUNNER_TEMP/bun-cache"
-          mkdir -p "$cache_dir"
-          printf 'run\tseconds\tmax_rss_kib\n' > bun-install-benchmark.tsv
-          for run in 1 2 3 4 5; do
-            rm -rf node_modules
-            if [[ "$CACHE_MODE" == cold ]]; then
-              rm -rf "$cache_dir"
-              mkdir -p "$cache_dir"
-            fi
-            start_ns=$(date +%s%N)
-            peak_used_kib=0
-            env BUN_INSTALL_CACHE_DIR="$cache_dir" bun install --frozen-lockfile \
-              --concurrent-scripts "$CONCURRENT_SCRIPTS" &
-            install_pid=$!
-            while kill -0 "$install_pid" 2>/dev/null; do
-              read -r total_kib available_kib < <(
-                awk '/MemTotal:/ {total=$2} /MemAvailable:/ {available=$2} END {print total, available}' /proc/meminfo
-              )
-              used_kib=$((total_kib - available_kib))
-              if (( used_kib > peak_used_kib )); then
-                peak_used_kib=$used_kib
-              fi
-              sleep 0.1
-            done
-            install_status=0
-            wait "$install_pid" || install_status=$?
-            (( install_status == 0 )) || exit "$install_status"
-            end_ns=$(date +%s%N)
-            seconds=$(awk -v start="$start_ns" -v end="$end_ns" 'BEGIN {printf "%.3f", (end-start)/1000000000}')
-            printf '%s\t%s\t%s\n' "$run" "$seconds" "$peak_used_kib" >> bun-install-benchmark.tsv
-            test "$(sha256sum package.json bun.lock)" = "$before"
-          done
-          total_kib=$(awk '/MemTotal:/ {print $2}' /proc/meminfo)
-          awk -F '\t' -v total="$total_kib" 'NR > 1 { times[++n]=$2; if ($3 > max) max=$3 } END { for (i=1;i<=n;i++) for(j=i+1;j<=n;j++) if(times[i]>times[j]) {t=times[i];times[i]=times[j];times[j]=t}; printf "median_seconds=%s\npeak_memory_ratio=%.4f\n", times[3], max/total; if (max/total >= 0.8) exit 1 }' bun-install-benchmark.tsv | tee bun-install-summary.txt
-
-      - name: Upload benchmark evidence
+          CROSS_TARGET: ${{ matrix.target }}
+          TARGET_PLATFORM: ${{ matrix.platform }}
+          TARGET_ARCH: ${{ matrix.arch }}
+          TARGET_VARIANTS: ${{ matrix.variants }}
+        run: bun run ci:build:native
+      - name: Upload immutable release native fixture
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: bun-install-xcsh-socketless-${{ matrix.concurrent_scripts }}-${{ matrix.cache }}
-          path: |
-            bun-install-benchmark.tsv
-            bun-install-summary.txt
+          name: qualification-native-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.variant }}
+          path: packages/natives/native/pi_natives.${{ matrix.platform }}-${{ matrix.arch }}*.node
           if-no-files-found: error
-  compute-install-benchmark:
-    name: D16 compute / scripts-${{ matrix.concurrent_scripts }} / ${{ matrix.cache }}
+          retention-days: 30
+
+  d16-software-baseline:
+    name: D16 / Bun 1.3.14 / software / ${{ matrix.cache }} / pair-${{ matrix.pair }}
+    needs: release-native-fixtures
     if: >-
       github.event_name == 'pull_request' &&
       github.event.action == 'labeled' &&
@@ -97,69 +97,249 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
-        concurrent_scripts: [4, 8, 16]
         cache: [cold, warm]
+        pair: [1, 2, 3, 4, 5]
     runs-on: xcsh-compute
-    timeout-minutes: 45
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Frozen pre-refresh main. The refreshed tree intentionally requires Bun
+          # 1.4.2 and therefore cannot be a valid Bun 1.3.14 baseline.
+          ref: 4e12e53d3f6e7085c345d9426f7252b03ac6dbfd
+          persist-credentials: false
+          lfs: true
+      - name: Check out the candidate qualification harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          path: .qualification-harness
+          sparse-checkout: |
+            .github/actions/runner-optimization-profile
+            scripts/runner-optimization-profile.sh
+          sparse-checkout-cone-mode: false
+      - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
+        with:
+          mode: full
+          variant: baseline
+          comparison: software
+          cache-state: ${{ matrix.cache }}
+          pair-id: ${{ matrix.pair }}
+
+  d16-software-candidate:
+    name: D16 / Bun 1.4.2 / software / ${{ matrix.cache }} / pair-${{ matrix.pair }}
+    needs: d16-software-baseline
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-benchmark-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        cache: [cold, warm]
+        pair: [1, 2, 3, 4, 5]
+    runs-on: xcsh-compute-bun-candidate
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          lfs: true
+      - uses: ./.github/actions/runner-optimization-profile
+        with:
+          mode: full
+          variant: bun-1.4.2
+          comparison: software
+          cache-state: ${{ matrix.cache }}
+          pair-id: ${{ matrix.pair }}
+
+  software-acceptance:
+    name: Bun 1.4.2 performance acceptance
+    needs: d16-software-candidate
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-benchmark-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: xcsh-socketless
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
+          bun-version: "1.4.2"
+      - name: Download matched workload evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: workload-profile-software-*
+          path: qualification-evidence
+      - name: Enforce matched performance gates
+        env:
+          CANDIDATE_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p qualification-report
+          bun scripts/validate-performance-qualification.ts \
+            --input qualification-evidence \
+            --baseline-commit 4e12e53d3f6e7085c345d9426f7252b03ac6dbfd \
+            --candidate-commit "$CANDIDATE_COMMIT" \
+            --out qualification-report/performance-qualification.json
+      - name: Upload acceptance report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bun-1.4.2-performance-qualification
+          path: qualification-report
+          if-no-files-found: error
+          retention-days: 30
+
+  d16-hardware-baseline:
+    name: D16 / Bun 1.3.14 / hardware / ${{ matrix.cache }} / pair-${{ matrix.pair }}
+    needs: release-native-fixtures
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-hardware-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.release-native-fixtures.result == 'success'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        cache: [cold, warm]
+        pair: [1, 2, 3, 4, 5]
+    runs-on: xcsh-compute-bun-candidate
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           lfs: true
-
-      - name: Verify baked Bun 1.3.14
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.3.14
-
-      - name: Benchmark five identical installs
-        env:
-          CACHE_MODE: ${{ matrix.cache }}
-          CONCURRENT_SCRIPTS: ${{ matrix.concurrent_scripts }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          before=$(sha256sum package.json bun.lock)
-          cache_dir="$RUNNER_TEMP/bun-cache"
-          mkdir -p "$cache_dir"
-          printf 'run\tseconds\tmax_rss_kib\n' > bun-install-benchmark.tsv
-          for run in 1 2 3 4 5; do
-            rm -rf node_modules
-            if [[ "$CACHE_MODE" == cold ]]; then
-              rm -rf "$cache_dir"
-              mkdir -p "$cache_dir"
-            fi
-            start_ns=$(date +%s%N)
-            peak_used_kib=0
-            env BUN_INSTALL_CACHE_DIR="$cache_dir" bun install --frozen-lockfile \
-              --concurrent-scripts "$CONCURRENT_SCRIPTS" &
-            install_pid=$!
-            while kill -0 "$install_pid" 2>/dev/null; do
-              read -r total_kib available_kib < <(
-                awk '/MemTotal:/ {total=$2} /MemAvailable:/ {available=$2} END {print total, available}' /proc/meminfo
-              )
-              used_kib=$((total_kib - available_kib))
-              if (( used_kib > peak_used_kib )); then
-                peak_used_kib=$used_kib
-              fi
-              sleep 0.1
-            done
-            install_status=0
-            wait "$install_pid" || install_status=$?
-            (( install_status == 0 )) || exit "$install_status"
-            end_ns=$(date +%s%N)
-            seconds=$(awk -v start="$start_ns" -v end="$end_ns" 'BEGIN {printf "%.3f", (end-start)/1000000000}')
-            printf '%s\t%s\t%s\n' "$run" "$seconds" "$peak_used_kib" >> bun-install-benchmark.tsv
-            test "$(sha256sum package.json bun.lock)" = "$before"
-          done
-          total_kib=$(awk '/MemTotal:/ {print $2}' /proc/meminfo)
-          awk -F '\t' -v total="$total_kib" 'NR > 1 { times[++n]=$2; if ($3 > max) max=$3 } END { for (i=1;i<=n;i++) for(j=i+1;j<=n;j++) if(times[i]>times[j]) {t=times[i];times[i]=times[j];times[j]=t}; printf "median_seconds=%s\npeak_memory_ratio=%.4f\n", times[3], max/total; if (max/total >= 0.8) exit 1 }' bun-install-benchmark.tsv | tee bun-install-summary.txt
-
-      - name: Upload benchmark evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: ./.github/actions/runner-optimization-profile
         with:
-          name: bun-install-xcsh-compute-${{ matrix.concurrent_scripts }}-${{ matrix.cache }}
-          path: |
-            bun-install-benchmark.tsv
-            bun-install-summary.txt
-          if-no-files-found: error
+          mode: full
+          variant: baseline
+          comparison: hardware
+          cache-state: ${{ matrix.cache }}
+          pair-id: ${{ matrix.pair }}
+
+  f32-hardware-candidate:
+    name: F32 / Bun 1.3.14 / hardware / ${{ matrix.cache }} / pair-${{ matrix.pair }}
+    needs: d16-hardware-baseline
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-hardware-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        cache: [cold, warm]
+        pair: [1, 2, 3, 4, 5]
+    runs-on: xcsh-compute-f32-candidate
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: ./.github/actions/runner-optimization-profile
+        with:
+          mode: full
+          variant: f32
+          comparison: hardware
+          cache-state: ${{ matrix.cache }}
+          pair-id: ${{ matrix.pair }}
+
+  d16-current-burst:
+    name: Current D16 two-slot burst / slot-${{ matrix.slot }}
+    needs: f32-hardware-candidate
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-hardware-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        slot: [1, 2, 3, 4]
+    runs-on: xcsh-compute
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: ./.github/actions/runner-optimization-profile
+        with:
+          mode: pr
+          variant: baseline
+          comparison: burst
+          cache-state: cold
+          pair-id: slot-${{ matrix.slot }}
+
+  d16-burst:
+    name: Candidate D16 four-slot burst / slot-${{ matrix.slot }}
+    needs: d16-current-burst
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-hardware-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        slot: [1, 2, 3, 4]
+    runs-on: xcsh-compute-bun-candidate
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: ./.github/actions/runner-optimization-profile
+        with:
+          mode: pr
+          variant: d16-four
+          comparison: burst
+          cache-state: cold
+          pair-id: slot-${{ matrix.slot }}
+
+  f32-burst:
+    name: F32 four-job burst / slot-${{ matrix.slot }}
+    needs: d16-burst
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'compute-hardware-approved' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        slot: [1, 2, 3, 4]
+    runs-on: xcsh-compute-f32-candidate
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          lfs: true
+      - uses: ./.github/actions/runner-optimization-profile
+        with:
+          mode: pr
+          variant: f32
+          comparison: burst
+          cache-state: cold
+          pair-id: slot-${{ matrix.slot }}

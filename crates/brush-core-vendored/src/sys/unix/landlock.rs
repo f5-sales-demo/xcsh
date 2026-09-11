@@ -485,15 +485,13 @@ pub fn arm(cmd: &mut std::process::Command, ruleset: OwnedFd) {
 /// post-fork `pre_exec` hook in a multi-threaded process. The caller must keep `ruleset` alive until
 /// this function returns.
 pub fn restrict_self(ruleset: &OwnedFd) -> io::Result<()> {
-	// SAFETY: Both calls use constant arguments plus the live ruleset descriptor. Neither allocates,
-	// takes a lock, or invokes code outside libc/the kernel.
-	unsafe {
-		if libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0 {
-			return Err(io::Error::last_os_error());
-		}
-		if libc::syscall(libc::SYS_landlock_restrict_self, ruleset.as_raw_fd(), 0_u32) != 0 {
-			return Err(io::Error::last_os_error());
-		}
+	// SAFETY: This call uses constant arguments and neither allocates nor takes a lock.
+	if unsafe { libc::prctl(libc::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) } != 0 {
+		return Err(io::Error::last_os_error());
+	}
+	// SAFETY: This call uses the live ruleset descriptor and neither allocates nor takes a lock.
+	if unsafe { libc::syscall(libc::SYS_landlock_restrict_self, ruleset.as_raw_fd(), 0_u32) } != 0 {
+		return Err(io::Error::last_os_error());
 	}
 	Ok(())
 }

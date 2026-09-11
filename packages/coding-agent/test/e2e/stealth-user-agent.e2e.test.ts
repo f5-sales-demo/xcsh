@@ -9,13 +9,9 @@
  * `Emulation.setUserAgentOverride` is silently rejected or ignored, leaving the
  * page with no client hints at all — which is itself a strong automation tell.
  *
- * Measured baseline (Chrome 150.0.7871.24, bundled by puppeteer 25.3.0): a page
- * with NO override reports `navigator.userAgentData.brands === []`, an empty
- * platform, and an empty uaFullVersion — verified on Chrome-for-Testing headless
- * and headful, on system Google Chrome 150.0.7871.187 headful, and on a Chrome
- * launched with none of puppeteer's default flags. So "brands is empty" is the
- * before state, and a populated, correctly-ordered brand list is the after
- * state. That gap is what makes this assertion meaningful rather than tautological.
+ * The control case explicitly clears client hints before applying the derived
+ * override. This exercises recovery without depending on Puppeteer's default
+ * metadata, which differs between releases.
  *
  * `navigator.userAgentData` is only exposed in a secure context, so the fixture
  * is served from 127.0.0.1 (a trustworthy origin) rather than about:blank —
@@ -125,14 +121,25 @@ describe.skipIf(isCI)("Stealth user-agent override (real Chrome via Puppeteer)",
 		}
 	});
 
-	it("reports an EMPTY brand list without the override — the baseline this fixes", async () => {
+	it("restores client hints after an explicit empty-metadata override", async () => {
 		const page = await browser.newPage();
 		try {
+			const override = deriveUserAgentOverride(rawUserAgent, browserVersion);
+			await applyOverride(page, {
+				...override,
+				userAgentMetadata: { ...override.userAgentMetadata, brands: [], platform: "", fullVersion: "" },
+			});
 			await page.goto(fixtureUrl);
 			const snapshot = await readUaData(page);
 			expect(snapshot.brands).toEqual([]);
 			expect(snapshot.platform).toBe("");
 			expect(snapshot.uaFullVersion).toBe("");
+			await applyOverride(page, override);
+			await page.reload();
+			const restored = await readUaData(page);
+			expect(restored.brands).toEqual(override.userAgentMetadata.brands);
+			expect(restored.platform).toBe(override.userAgentMetadata.platform);
+			expect(restored.uaFullVersion).toBe(override.userAgentMetadata.fullVersion);
 		} finally {
 			await page.close();
 		}

@@ -28,7 +28,7 @@ Fork: `@f5-sales-demo/xcsh` | Upstream: `can1357/oh-my-pi`
 
 | Tool | Minimum version | Verify |
 | --- | --- | --- |
-| `bun` | 1.3.12 | `bun --version` |
+| `bun` | 1.4.2 | `bun --version` |
 | `git` | 2.x | `git --version` |
 | `gh` | 2.x | `gh auth status` |
 | `cargo` | nightly | `cargo --version` |

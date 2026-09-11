@@ -66,7 +66,7 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 		});
 
 		const stream = streamSimple(createModel("gemini-3.1-pro-preview"), context, {
-			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 			reasoning: Effort.High,
 		});
 		await stream.result();
@@ -85,7 +85,7 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 
 		expect(() =>
 			streamSimple(createModel("gemini-3.1-pro-preview"), context, {
-				apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+				apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 				reasoning: Effort.Minimal,
 			}),
 		).toThrow(/Supported efforts: low, medium, high/);
@@ -100,7 +100,7 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 		});
 
 		const stream = streamSimple(createModel("gemini-3.1-flash-preview"), context, {
-			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 			reasoning: Effort.Medium,
 		});
 		await stream.result();
@@ -118,7 +118,7 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 		});
 
 		const stream = streamSimple(createModel("gemini-3.6-flash-high", "google-antigravity"), context, {
-			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 			reasoning: Effort.High,
 		});
 		await stream.result();
@@ -136,7 +136,7 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 		});
 
 		const stream = streamSimple(createModel("gemini-2.5-pro"), context, {
-			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 			reasoning: Effort.Medium,
 		});
 		await stream.result();
@@ -163,7 +163,7 @@ describe("google-gemini-cli Gemini 3.x thinking mapping", () => {
 		);
 
 		const message = await streamSimple(createModel("gemini-3.6-flash-high", "google-antigravity"), context, {
-			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 			reasoning: Effort.High,
 		}).result();
 

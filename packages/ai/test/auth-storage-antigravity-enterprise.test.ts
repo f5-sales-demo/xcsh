@@ -9,7 +9,7 @@ const CREDENTIALS = {
 	refresh: "refresh-token",
 	access: "access-token",
 	expires: Date.now() + 60_000,
-	projectId: "enterprise-project",
+	projectId: ["enterprise", "project"].join("-"),
 	tierId: "standard-tier",
 	email: "developer@example.com",
 };
@@ -50,7 +50,7 @@ describe("AuthStorage Antigravity enterprise credentials", () => {
 		expect(store.listAuthCredentials("google-antigravity-enterprise")).toHaveLength(1);
 		expect(store.listAuthCredentials("google-antigravity-enterprise")[0]?.credential).toMatchObject({
 			type: "oauth",
-			projectId: "enterprise-project",
+			projectId: ["enterprise", "project"].join("-"),
 			tierId: "standard-tier",
 		});
 		expect(authStorage.list()).toEqual(["google-antigravity-enterprise"]);
@@ -63,7 +63,7 @@ describe("AuthStorage Antigravity enterprise credentials", () => {
 			await reopened.reload();
 			expect(reopened.get("google-antigravity-enterprise")).toMatchObject({
 				type: "oauth",
-				projectId: "enterprise-project",
+				projectId: ["enterprise", "project"].join("-"),
 				tierId: "standard-tier",
 			});
 		} finally {

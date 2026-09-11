@@ -1,5 +1,5 @@
 import type { ImageContent } from "@f5-sales-demo/pi-ai";
-import { ImageFormat, PhotonImage, SamplingFilter } from "@f5-sales-demo/pi-natives";
+import { imagePipeline } from "./image-pipeline";
 
 export interface ImageResizeOptions {
 	maxWidth?: number; // Default: 1568
@@ -68,7 +68,7 @@ export async function resizeImage(img: ImageContent, options?: ImageResizeOption
 	const inputBuffer = Buffer.from(img.data, "base64");
 
 	try {
-		const image = await PhotonImage.parse(inputBuffer);
+		const image = await imagePipeline(inputBuffer).metadata();
 
 		const originalWidth = image.width;
 		const originalHeight = image.height;
@@ -82,6 +82,8 @@ export async function resizeImage(img: ImageContent, options?: ImageResizeOption
 		// still get JPEG-compressed.
 		const comfortableSize = opts.maxBytes / 4;
 		if (originalWidth <= opts.maxWidth && originalHeight <= opts.maxHeight && originalSize <= comfortableSize) {
+			// Metadata alone does not validate the encoded pixel stream.
+			await imagePipeline(inputBuffer).png().bytes();
 			return {
 				buffer: inputBuffer,
 				mimeType: img.mimeType ?? `image/${format}`,
@@ -117,12 +119,12 @@ export async function resizeImage(img: ImageContent, options?: ImageResizeOption
 			height: number,
 			quality: number,
 		): Promise<{ buffer: Uint8Array; mimeType: string }> {
-			const resized = await image.resize(width, height, SamplingFilter.Lanczos3);
+			const resized = () => imagePipeline(inputBuffer).resize(width, height, { filter: "lanczos3" });
 
 			const [pngBuffer, jpegBuffer, webpBuffer] = await Promise.all([
-				resized.encode(ImageFormat.PNG, quality),
-				resized.encode(ImageFormat.JPEG, quality),
-				resized.encode(ImageFormat.WEBP, quality),
+				resized().png().bytes(),
+				resized().jpeg({ quality }).bytes(),
+				resized().webp({ quality }).bytes(),
 			]);
 
 			return pickSmallest(
@@ -140,10 +142,10 @@ export async function resizeImage(img: ImageContent, options?: ImageResizeOption
 			height: number,
 			quality: number,
 		): Promise<{ buffer: Uint8Array; mimeType: string }> {
-			const resized = await image.resize(width, height, SamplingFilter.Lanczos3);
+			const resized = () => imagePipeline(inputBuffer).resize(width, height, { filter: "lanczos3" });
 			const [jpegBuffer, webpBuffer] = await Promise.all([
-				resized.encode(ImageFormat.JPEG, quality),
-				resized.encode(ImageFormat.WEBP, quality),
+				resized().jpeg({ quality }).bytes(),
+				resized().webp({ quality }).bytes(),
 			]);
 			return pickSmallest(
 				{ buffer: jpegBuffer, mimeType: "image/jpeg" },

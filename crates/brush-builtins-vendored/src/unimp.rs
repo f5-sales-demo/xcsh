@@ -15,18 +15,16 @@ pub(crate) struct UnimplementedCommand {
 impl builtins::Command for UnimplementedCommand {
 	type Error = brush_core::Error;
 
-	fn execute(
+	async fn execute<SE: brush_core::ShellExtensions>(
 		&self,
-		context: brush_core::ExecutionContext<'_>,
-	) -> impl Future<Output = Result<brush_core::ExecutionResult, Self::Error>> {
-		futures::future::lazy(move |_| {
-			tracing::warn!(target: trace_categories::UNIMPLEMENTED,
-				 "unimplemented built-in: {} {}",
-				 context.command_name,
-				 self.args.join(" ")
-			);
-			Ok(ExecutionExitCode::Unimplemented.into())
-		})
+		context: brush_core::ExecutionContext<'_, SE>,
+	) -> Result<brush_core::ExecutionResult, Self::Error> {
+		tracing::warn!(target: trace_categories::UNIMPLEMENTED,
+			 "unimplemented built-in: {} {}",
+			 context.command_name,
+			 self.args.join(" ")
+		);
+		Ok(ExecutionExitCode::Unimplemented.into())
 	}
 }
 

@@ -1,5 +1,5 @@
 use crate::{
-	ExecutionParameters, error, expansion,
+	ExecutionParameters, error, expansion, extensions,
 	shell::Shell,
 	sys::{self, users},
 };
@@ -10,7 +10,7 @@ const VERSION_MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
 const VERSION_PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
 
 pub(crate) async fn expand_prompt(
-	shell: &mut Shell,
+	shell: &mut Shell<impl extensions::ShellExtensions>,
 	params: &ExecutionParameters,
 	spec: String,
 ) -> Result<String, error::Error> {
@@ -28,16 +28,19 @@ pub(crate) async fn expand_prompt(
 
 		let formatted_piece = format_prompt_piece(shell, piece)?;
 
-		if shell.options.expand_prompt_strings && needs_escaping {
+		if shell.options().expand_prompt_strings && needs_escaping {
 			formatted_prompt.push('\\');
 		}
 
 		formatted_prompt.push_str(&formatted_piece);
 	}
 
-	if shell.options.expand_prompt_strings {
-		// Now expand any remaining escape sequences.
-		formatted_prompt = expansion::basic_expand_str(shell, params, &formatted_prompt).await?;
+	if shell.options().expand_prompt_strings {
+		// Now expand any remaining escape sequences, but without tilde-expansion.
+		let options = expansion::ExpanderOptions { tilde_expand: false, ..Default::default() };
+		formatted_prompt =
+			expansion::basic_expand_word_with_options(shell, params, &formatted_prompt, &options)
+				.await?;
 	}
 
 	Ok(formatted_prompt)
@@ -51,7 +54,7 @@ fn parse_prompt(
 }
 
 fn format_prompt_piece(
-	shell: &Shell,
+	shell: &Shell<impl extensions::ShellExtensions>,
 	piece: brush_parser::prompt::PromptPiece,
 ) -> Result<String, error::Error> {
 	let formatted = match piece {
@@ -83,25 +86,34 @@ fn format_prompt_piece(
 				"$".to_owned()
 			}
 		},
-		brush_parser::prompt::PromptPiece::EndNonPrintingSequence => String::new(),
+		// NOTE: We mimic bash and convert \[ into \001, a.k.a. RL_PROMPT_START_IGNORE.
+		// It will need to get removed before it's actually displayed. While present it
+		// also has the important (compatible) side effect of ensuring the text on either
+		// side of it is not concatenated together, potentially resulting in incompatible
+		// variable expansions. Also, we *only* do this if the shell is interactive.
+		brush_parser::prompt::PromptPiece::EndNonPrintingSequence => {
+			if shell.options().interactive {
+				"\x02".to_owned()
+			} else {
+				String::new()
+			}
+		},
 		brush_parser::prompt::PromptPiece::EscapeCharacter => "\x1b".to_owned(),
 		brush_parser::prompt::PromptPiece::Hostname { only_up_to_first_dot } => {
 			let hn = sys::network::get_hostname()
 				.unwrap_or_default()
 				.to_string_lossy()
 				.to_string();
-			if only_up_to_first_dot {
-				if let Some((first, _)) = hn.split_once('.') {
-					return Ok(first.to_owned());
-				}
+			if only_up_to_first_dot && let Some((first, _)) = hn.split_once('.') {
+				return Ok(first.to_owned());
 			}
 			hn
 		},
 		brush_parser::prompt::PromptPiece::Newline => "\n".to_owned(),
-		brush_parser::prompt::PromptPiece::NumberOfManagedJobs => shell.jobs.jobs.len().to_string(),
+		brush_parser::prompt::PromptPiece::NumberOfManagedJobs => shell.jobs().jobs.len().to_string(),
 		brush_parser::prompt::PromptPiece::ShellBaseName => {
-			if let Some(shell_name) = &shell.shell_name {
-				Path::new(shell_name)
+			if let Some(shell_name) = shell.current_shell_name() {
+				Path::new(shell_name.as_ref())
 					.file_name()
 					.map(|name| name.to_string_lossy().to_string())
 					.unwrap_or_default()
@@ -115,9 +127,18 @@ fn format_prompt_piece(
 		brush_parser::prompt::PromptPiece::ShellVersion => {
 			std::format!("{VERSION_MAJOR}.{VERSION_MINOR}")
 		},
-		brush_parser::prompt::PromptPiece::StartNonPrintingSequence => String::new(),
+		// NOTE: See above note for EndNonPrintingSequence
+		brush_parser::prompt::PromptPiece::StartNonPrintingSequence => {
+			if shell.options().interactive {
+				"\x01".to_owned()
+			} else {
+				String::new()
+			}
+		},
 		brush_parser::prompt::PromptPiece::TerminalDeviceBaseName => {
-			return error::unimp("prompt: terminal device base name");
+			sys::terminal::try_get_terminal_device_path()
+				.and_then(|p| p.file_name().map(|s| s.to_string_lossy().to_string()))
+				.unwrap_or_default()
 		},
 		brush_parser::prompt::PromptPiece::Time(time_fmt) => {
 			format_time(&chrono::Local::now(), &time_fmt)
@@ -127,17 +148,19 @@ fn format_prompt_piece(
 	Ok(formatted)
 }
 
-fn format_current_working_directory(shell: &Shell, tilde_replaced: bool, basename: bool) -> String {
+fn format_current_working_directory(
+	shell: &Shell<impl extensions::ShellExtensions>,
+	tilde_replaced: bool,
+	basename: bool,
+) -> String {
 	let mut working_dir_str = shell.working_dir().to_string_lossy().to_string();
 
 	if tilde_replaced {
 		working_dir_str = shell.tilde_shorten(working_dir_str);
 	}
 
-	if basename {
-		if let Some(filename) = Path::new(&working_dir_str).file_name() {
-			working_dir_str = filename.to_string_lossy().to_string();
-		}
+	if basename && let Some(filename) = Path::new(&working_dir_str).file_name() {
+		working_dir_str = filename.to_string_lossy().to_string();
 	}
 
 	if cfg!(windows) {
@@ -187,6 +210,7 @@ mod tests {
 	use super::*;
 
 	#[test]
+	#[allow(clippy::unwrap_used, reason = "the RFC 3339 test fixture is a constant")]
 	fn test_format_time() {
 		// Create a well-known test date/time.
 		let dt = chrono::DateTime::parse_from_rfc3339("2024-12-25T13:34:56.789Z").unwrap();
@@ -208,6 +232,7 @@ mod tests {
 	}
 
 	#[test]
+	#[allow(clippy::unwrap_used, reason = "the RFC 3339 test fixture is a constant")]
 	fn test_format_date() {
 		// Create a well-known test date/time.
 		let dt = chrono::DateTime::parse_from_rfc3339("2024-12-25T12:34:56.789Z").unwrap();

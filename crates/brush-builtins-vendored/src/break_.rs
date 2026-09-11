@@ -13,24 +13,22 @@ pub(crate) struct BreakCommand {
 impl builtins::Command for BreakCommand {
 	type Error = brush_core::Error;
 
-	fn execute(
+	async fn execute<SE: brush_core::ShellExtensions>(
 		&self,
-		_context: brush_core::ExecutionContext<'_>,
-	) -> impl Future<Output = Result<brush_core::ExecutionResult, Self::Error>> {
-		futures::future::lazy(move |_| {
-			// If specified, which_loop needs to be positive.
-			if self.which_loop <= 0 {
-				return Ok(ExecutionExitCode::InvalidUsage.into());
-			}
+		_context: brush_core::ExecutionContext<'_, SE>,
+	) -> Result<brush_core::ExecutionResult, Self::Error> {
+		// If specified, which_loop needs to be positive.
+		if self.which_loop <= 0 {
+			return Ok(ExecutionExitCode::InvalidUsage.into());
+		}
 
-			let mut result = ExecutionResult::success();
+		let mut result = ExecutionResult::success();
 
-			result.next_control_flow = ExecutionControlFlow::BreakLoop {
-				#[expect(clippy::cast_sign_loss)]
-				levels: (self.which_loop - 1) as usize,
-			};
+		result.next_control_flow = ExecutionControlFlow::BreakLoop {
+			#[expect(clippy::cast_sign_loss)]
+			levels: (self.which_loop - 1) as usize,
+		};
 
-			Ok(result)
-		})
+		Ok(result)
 	}
 }

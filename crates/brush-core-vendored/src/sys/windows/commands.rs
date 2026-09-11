@@ -89,10 +89,16 @@ impl CommandFdInjectionExt for std::process::Command {
 pub trait CommandFgControlExt {
 	/// Arranges for the command to take the foreground when it is executed.
 	fn take_foreground(&mut self);
+	/// Arranges for the command to become a session leader.
+	fn lead_session(&mut self);
 }
 
 impl CommandFgControlExt for std::process::Command {
 	fn take_foreground(&mut self) {
+		self.creation_flags(CREATE_NEW_PROCESS_GROUP);
+	}
+
+	fn lead_session(&mut self) {
 		self.creation_flags(CREATE_NEW_PROCESS_GROUP);
 	}
 }

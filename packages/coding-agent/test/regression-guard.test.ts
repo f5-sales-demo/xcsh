@@ -476,7 +476,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(nativeJob).toContain("macos-14");
 		expect(nativeJob).toContain("windows-latest");
 		expect(nativeJob).toContain("uses: ./.github/actions/setup-zig");
-		expect(nativeJob).toContain('run: test "$(zig version)" = 0.15.2');
+		expect(nativeJob).toContain('run: test "$(zig version)" = 0.16.0');
 		expect(nativeJob).not.toContain("needs: setup-zig");
 	});
 
@@ -488,12 +488,12 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 		expect(workflow).not.toContain("mlugg/setup-zig");
 		expect(workflow.match(/uses: \.\/\.github\/actions\/setup-zig/g)).toHaveLength(3);
 		expect(installer).toContain("using: composite");
-		expect(installer).toContain('ZIG_VERSION: "0.15.2"');
+		expect(installer).toContain('ZIG_VERSION: "0.16.0"');
 		const releases = [
-			["Linux/X64", "x86_64-linux", "tar.xz", "02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239"],
-			["macOS/X64", "x86_64-macos", "tar.xz", "375b6909fc1495d16fc2c7db9538f707456bfc3373b14ee83fdd3e22b3d43f7f"],
-			["macOS/ARM64", "aarch64-macos", "tar.xz", "3cc2bab367e185cdfb27501c4b30b1b0653c28d9f73df8dc91488e66ece5fa6b"],
-			["Windows/X64", "x86_64-windows", "zip", "3a0ed1e8799a2f8ce2a6e6290a9ff22e6906f8227865911fb7ddedc3cc14cb0c"],
+			["Linux/X64", "x86_64-linux", "tar.xz", "70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00"],
+			["macOS/X64", "x86_64-macos", "tar.xz", "0387557ed1877bc6a2e1802c8391953baddba76081876301c522f52977b52ba7"],
+			["macOS/ARM64", "aarch64-macos", "tar.xz", "b23d70deaa879b5c2d486ed3316f7eaa53e84acf6fc9cc747de152450d401489"],
+			["Windows/X64", "x86_64-windows", "zip", "68659eb5f1e4eb1437a722f1dd889c5a322c9954607f5edcf337bc3684a75a7e"],
 		] as const;
 		for (const [runner, platform, extension, checksum] of releases) {
 			expect(installer).toContain(`${runner})`);
@@ -511,7 +511,7 @@ describe("CI installs Zig without a deprecated JavaScript action", () => {
 			2,
 		);
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
-		expect(installer).toContain("setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.15.2");
+		expect(installer).toContain("setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.16.0");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
 		expect(installer).toContain("setup-zig-cache-v3-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}");
 		expect(installer).toContain("ZIG_GLOBAL_CACHE_DIR");
