@@ -268,7 +268,7 @@ test("real voice state and history settle on the old session before switching", 
 	expect(writes.some(write => write.id === session.sessionId && write.kind === "realtimeSessionClosed")).toBe(true);
 });
 
-test("the bridge announces a forked replacement before closing its source identity", async () => {
+test("the bridge announces a forked replacement, carries subscriptions, then closes its source", async () => {
 	const { mkdtemp, rm } = await import("node:fs/promises");
 	const { connectPeer } = await import("../../src/remote-control/ipc");
 	const { startLocalHost } = await import("../../src/remote-control/host");
@@ -308,9 +308,13 @@ test("the bridge announces a forked replacement before closing its source identi
 	expect(host.router.sessions.has(oldId)).toBe(false);
 	expect(host.router.sessions.has(session.sessionId)).toBe(true);
 	expect(host.router.sessions.size).toBe(1);
+	host.router.publish({ method: "turn/started", params: { threadId: session.sessionId, turn: { id: "turn" } } });
+	const streamDeadline = Date.now() + 1000;
+	while (events.length < 3 && Date.now() < streamDeadline) await Bun.sleep(5);
 	expect(events).toMatchObject([
 		{ method: "thread/started", params: { thread: { id: session.sessionId, forkedFromId: oldId } } },
 		{ method: "thread/closed", params: { threadId: oldId } },
+		{ method: "turn/started", params: { threadId: session.sessionId, turn: { id: "turn" } } },
 	]);
 });
 

@@ -161,7 +161,7 @@ export class RemoteRouter {
 		}
 		return requests;
 	}
-	registerSession(threadId: string, endpoint: SessionEndpoint): void {
+	registerSession(threadId: string, endpoint: SessionEndpoint, replacedThreadId?: string): void {
 		const previous = this.sessions.get(threadId);
 		const requests = this.validateSessionRequests(threadId, endpoint.requests ?? []);
 		const nextIds = new Set(requests.map(request => request.id));
@@ -173,11 +173,13 @@ export class RemoteRouter {
 		const current = previous ? Object.assign(previous, endpoint) : endpoint;
 		this.sessions.set(threadId, current);
 		if (!previous) {
-			for (const client of this.#clients.keys())
+			for (const [client, subscriptions] of this.#clients) {
+				if (replacedThreadId && subscriptions.has(replacedThreadId)) subscriptions.add(threadId);
 				this.#emit(client, {
 					method: "thread/started",
 					params: { thread: threadWireView(current.thread, this.#experimental.has(client), true) },
 				});
+			}
 		}
 		for (const request of current.requests ?? [])
 			for (const client of this.#clients.keys()) this.#deliver(client, request);

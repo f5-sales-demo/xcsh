@@ -138,14 +138,18 @@ export async function startLocalHost(
 				const requests = router.validateSessionRequests(thread.id, params.requests ?? []);
 				const skills = registrationSkills(params.skills);
 				const skillErrors = registrationSkillErrors(params.skillErrors);
-				router.registerSession(thread.id, {
-					thread,
-					requests,
-					skills,
-					skillErrors,
-					call: (identity, command, input) =>
-						peer.call("session/call", { identity, method: command, params: input }),
-				});
+				router.registerSession(
+					thread.id,
+					{
+						thread,
+						requests,
+						skills,
+						skillErrors,
+						call: (identity, command, input) =>
+							peer.call("session/call", { identity, method: command, params: input }),
+					},
+					previous?.id !== thread.id ? previous?.id : undefined,
+				);
 				owners.set(peer, { id: thread.id, lastSeen: Date.now() });
 				if (previous && previous.id !== thread.id) router.removeSession(previous.id);
 				return {};

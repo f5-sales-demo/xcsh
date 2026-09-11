@@ -873,3 +873,30 @@ matrix passes 91 tests with 553 assertions, the complete 65-file remote-control
 suite passes 904 tests with 3680 assertions, and the guarded coding-agent suite
 passes 8310 tests with 561 skips and 30003 assertions across 795 files under Bun
 1.4.2.
+
+The next phone checkpoint used committed ordering artifact `e02bb0f` and source
+`157ba16225238f97`. Robin approved once and observed the Plan pill clear, but no
+implementation appeared in the transcript. The terminal created replacement
+`157ba8d39989966c` once and wrote `plan-order-luna-e02bb0f-7a4d2.txt` as exactly
+`LUNA-ORDER-E02BB0F-7A4D2` (24 bytes, no newline, SHA-256
+`9625f96acf06063a2298863a35b50b9fd7f6a7e49e0d657e743283c0c25bb594`).
+Its persisted header points `forkedFromId` to the source, retains file-backed
+`parentSession`, and the remote Thread continues to expose
+`parentThreadId: null`.
+
+Sanitized trace sequence 300 carries the approval response, 302/303 resolve it,
+305-312 announce the replacement before 313/314 close the source, and 318 is
+the approving phone stream's acknowledgement. Ordering and lineage therefore
+passed, but the router did not move that stream's subscription from source to
+replacement, and the phone sent no second `thread/resume`; subsequent execution
+events had no eligible phone subscriber. A bridge/host regression reproduced the
+missing first replacement `turn/started` (24 pass, one fail, 135 assertions).
+The repair migrates subscriptions only across a same-owner identity replacement,
+before `thread/started`, while unrelated new registrations and historical forks
+remain unsubscribed. The repaired lifecycle file passes 25 tests with 135
+assertions and the four-file focused matrix passes 50 tests with 297 assertions
+under Bun 1.4.2. The seven-file Plan matrix passes 82 tests with 500 assertions,
+the complete remote-control suite passes 904 tests with 3680 assertions, and the
+guarded package suite passes 8310 tests with 561 skips and 30003 assertions
+across 795 files. This is automated evidence only; visible phone streaming still
+requires a rebuilt artifact and controlled retry.

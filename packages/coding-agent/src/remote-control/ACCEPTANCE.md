@@ -133,6 +133,34 @@ assertions, and the guarded coding-agent suite passes 8310 tests with 561 skips
 and 30003 assertions across 795 files. A newly built artifact and one controlled
 retry are still required.
 
+The ordering-enabled checkpoint used committed artifact `e02bb0f`, source
+`157ba16225238f97` and one approval. Robin reported that the Plan pill cleared,
+but no implementation activity appeared in the phone transcript. The terminal
+transitioned once to replacement `157ba8d39989966c` and created
+`plan-order-luna-e02bb0f-7a4d2.txt` with exactly the 24 bytes
+`LUNA-ORDER-E02BB0F-7A4D2`, no trailing newline and SHA-256
+`9625f96acf06063a2298863a35b50b9fd7f6a7e49e0d657e743283c0c25bb594`.
+The replacement header persists `forkedFromId: 157ba16225238f97` and retains
+the source file as `parentSession`; its remote Thread keeps
+`parentThreadId: null`.
+
+Sanitized trace sequence 300 is the phone approval response, 302/303 resolve
+the request, 305-312 announce the replacement to all four initialized clients
+(312 is the approving phone stream), 313/314 close the source, and 318
+acknowledges those deliveries. The phone remained subscribed only to the source,
+however, and issued no replacement `thread/resume`, so later replacement events
+were filtered by the router. The focused regression first passed the ordered
+start/close pair but timed out waiting for the replacement's first
+`turn/started` (24 tests passed, one failed, 135 assertions). The repair transfers
+only subscriptions owned by the local session being replaced before announcing
+the new Thread. It then passes 25 tests with 135 assertions; the four-file
+lifecycle/router/host/interaction set passes 50 tests with 297 assertions. This
+is automated repair evidence, not phone acceptance. The seven-file Plan matrix
+passes 82 tests with 500 assertions, the complete remote-control suite passes
+904 tests with 3680 assertions, and the guarded coding-agent suite passes 8310
+tests with 561 skips and 30003 assertions across 795 files. A newly committed
+artifact and one controlled retry remain required.
+
 ## Accepted first-release boundaries
 
 Ubuntu workstation and live terminal sessions; phone-created headless sessions

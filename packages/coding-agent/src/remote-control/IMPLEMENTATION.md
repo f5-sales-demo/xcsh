@@ -2377,3 +2377,37 @@ The expanded nine-file matrix passes 91 tests with 553 assertions, the complete
 65-file remote-control suite passes 904 tests with 3680 assertions, and the
 guarded coding-agent suite passes 8310 tests with 561 skips and 30003 assertions
 across 795 files under Bun 1.4.2.
+
+The ordering artifact `e02bb0f` exposed the next boundary. Robin approved the
+Plan once from source `157ba16225238f97`; the Plan pill disappeared, but the
+phone transcript showed no implementation. The terminal transitioned once to
+`157ba8d39989966c`, whose header contains the source as `forkedFromId` and its
+file path as `parentSession`, while the wire Thread keeps
+`parentThreadId: null`. It wrote the exact 24-byte, no-newline marker
+`LUNA-ORDER-E02BB0F-7A4D2` to `plan-order-luna-e02bb0f-7a4d2.txt`; the fixture
+SHA-256 is
+`9625f96acf06063a2298863a35b50b9fd7f6a7e49e0d657e743283c0c25bb594`.
+
+The sanitized trace shows the approving phone response at sequence 300,
+resolution at 302/303, replacement `thread/started` broadcasts at 305-312
+(including that phone stream at 312), source `thread/closed` at 313/314, and the
+phone acknowledgement at 318. `RemoteRouter` had added only the source ID when
+the phone called `thread/resume`. Announcing a lineage-bearing replacement did
+not add its ID to that subscription set, and the phone did not resume again, so
+the router correctly filtered every later replacement event under its existing
+rules.
+
+Host registration now supplies the prior identity only when the same local peer
+changes IDs. Before emitting the replacement `thread/started`, `RemoteRouter`
+copies that peer's source subscriptions to the replacement ID; removing the
+source then deletes only the old ID. This confines transfer to the atomic owner
+transition and does not subscribe discovery-only clients, unrelated owners or
+ordinary historical forks. The end-to-end regression first timed out after the
+ordered start/close pair without receiving a synthetic replacement
+`turn/started` (24 pass, one fail, 135 assertions). With the repair it passes all
+25 tests and 135 assertions; the lifecycle/router/host/interaction set passes 50
+tests with 297 assertions under Bun 1.4.2. The seven-file Plan matrix passes 82
+tests with 500 assertions, all 65 remote-control files pass 904 tests with 3680
+assertions, and the guarded coding-agent package passes 8310 tests with 561 skips
+and 30003 assertions across 795 files. This does not establish phone acceptance;
+a committed artifact and Robin-observed retry are still required.
