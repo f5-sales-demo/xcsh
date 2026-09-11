@@ -33,8 +33,8 @@ on:
         required: true
 
 permissions:
-  actions: read
-  contents: read
+  actions: read # Required to inspect DAG job timings and download benchmark artifacts.
+  contents: read # Required to check out the frozen source and qualification harness.
 
 concurrency:
   group: compute-qualification-${{ inputs.experiment }}-${{ inputs.cache_state }}-${{ inputs.pair_id }}
@@ -220,9 +220,11 @@ jobs:
           phase-set: native
           evidence-suffix: native
       - name: Create source-bound native manifest
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: >-
           bun .qualification-harness/scripts/ci-native-manifest.ts create
-          --source-sha "${{ inputs.source_sha }}" --root "$GITHUB_WORKSPACE"
+          --source-sha "$SOURCE_SHA" --root "$GITHUB_WORKSPACE"
       - name: Upload source-bound native artifacts
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -307,9 +309,11 @@ jobs:
           name: dag-native-${{ inputs.cache_state }}-${{ inputs.pair_id }}
           path: packages/natives/native
       - name: Verify source-bound native manifest before profiling
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: >-
           bun .qualification-harness/scripts/ci-native-manifest.ts verify
-          --source-sha "${{ inputs.source_sha }}" --root "$GITHUB_WORKSPACE"
+          --source-sha "$SOURCE_SHA" --root "$GITHUB_WORKSPACE"
       - uses: ./.qualification-harness/.github/actions/runner-optimization-profile
         with:
           experiment: dag-candidate
@@ -348,7 +352,10 @@ jobs:
           path: dag-evidence
       - name: Collect workflow critical-path evidence
         env:
+          CACHE_STATE: ${{ inputs.cache_state }}
           GH_TOKEN: ${{ github.token }}
+          PAIR_ID: ${{ inputs.pair_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
           curl --fail --silent --show-error \
@@ -359,8 +366,8 @@ jobs:
           mkdir -p dag-summary/profiles
           bun scripts/collect-dag-profile.ts \
             --input dag-evidence --jobs dag-jobs.json --variant dag-control \
-            --source-sha "${{ inputs.source_sha }}" --cache-state "${{ inputs.cache_state }}" \
-            --pair-id "${{ inputs.pair_id }}" --out dag-summary/profiles/workflow-critical-path.json
+            --source-sha "$SOURCE_SHA" --cache-state "$CACHE_STATE" \
+            --pair-id "$PAIR_ID" --out dag-summary/profiles/workflow-critical-path.json
       - name: Upload control critical-path evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -389,7 +396,10 @@ jobs:
           path: dag-evidence
       - name: Collect workflow critical-path evidence
         env:
+          CACHE_STATE: ${{ inputs.cache_state }}
           GH_TOKEN: ${{ github.token }}
+          PAIR_ID: ${{ inputs.pair_id }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
           curl --fail --silent --show-error \
@@ -400,8 +410,8 @@ jobs:
           mkdir -p dag-summary/profiles
           bun scripts/collect-dag-profile.ts \
             --input dag-evidence --jobs dag-jobs.json --variant dag-candidate \
-            --source-sha "${{ inputs.source_sha }}" --cache-state "${{ inputs.cache_state }}" \
-            --pair-id "${{ inputs.pair_id }}" --out dag-summary/profiles/workflow-critical-path.json
+            --source-sha "$SOURCE_SHA" --cache-state "$CACHE_STATE" \
+            --pair-id "$PAIR_ID" --out dag-summary/profiles/workflow-critical-path.json
       - name: Upload candidate critical-path evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
