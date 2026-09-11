@@ -63,6 +63,9 @@ class CiCapacityContractTests(unittest.TestCase):
         action = (
             ROOT / ".github/actions/runner-optimization-profile/action.yml"
         ).read_text(encoding="utf-8")
+        legacy_setup = (
+            ROOT / "scripts/prepare-runner-optimization-toolchain.sh"
+        ).read_text(encoding="utf-8")
         runner = (ROOT / "scripts/run-ts-tests.ts").read_text(encoding="utf-8")
         self.assertIn("  workflow_dispatch:\n", benchmark)
         for input_name in ("source_sha", "experiment", "cache_state", "pair_id"):
@@ -75,6 +78,25 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("max_parallel=2", benchmark)
         self.assertIn('test "${RUNNER_IMAGE_DIGEST:', action)
         self.assertNotIn("taiki-e/install-action@", action)
+        self.assertIn("Profile legacy setup or baked verification", action)
+        self.assertIn('if [[ "$experiment" == image-control ]]', legacy_setup)
+        self.assertIn("--name setup", legacy_setup)
+        self.assertIn(
+            'REQUIRED_PHASES = ["setup", "install", "native", "test-typescript", "test-rust"]',
+            (ROOT / "scripts/validate-performance-qualification.ts").read_text(
+                encoding="utf-8"
+            ),
+        )
+        for pinned_value in (
+            "BUN_VERSION=1.4.2",
+            "BUN_SHA256=36368faef7527875d5ffa52e53cd48021741f2a83eb6208a8dd64068d422a913",
+            "ZIG_VERSION=0.16.0",
+            "ZIG_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00",
+            "RUST_TOOLCHAIN=nightly-2026-09-03",
+            "CARGO_NEXTEST_VERSION=0.9.143",
+            "CARGO_NEXTEST_SHA256=66786b9abe23920d022a182d1416b1bbc8130dd4872a9553d76985a1708dcd1e",
+        ):
+            self.assertIn(pinned_value, legacy_setup)
         self.assertIn('flags.push("--parallel=2")', runner)
         self.assertIn('"--max-concurrency=2"', runner)
         self.assertNotIn("--concurrent", benchmark + action + runner)

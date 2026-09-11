@@ -135,6 +135,7 @@ jobs:
           sparse-checkout: |
             .github/actions/runner-optimization-profile
             scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
@@ -169,6 +170,7 @@ jobs:
           sparse-checkout: |
             .github/actions/runner-optimization-profile
             scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
@@ -204,6 +206,7 @@ jobs:
             .github/actions/runner-optimization-profile
             scripts/ci-native-manifest.ts
             scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
@@ -253,6 +256,7 @@ jobs:
           sparse-checkout: |
             .github/actions/runner-optimization-profile
             scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false
@@ -293,6 +297,7 @@ jobs:
             .github/actions/runner-optimization-profile
             scripts/ci-native-manifest.ts
             scripts/runner-optimization-profile.sh
+            scripts/prepare-runner-optimization-toolchain.sh
             scripts/run-ts-tests.ts
             scripts/verify-self-hosted-tools.sh
           sparse-checkout-cone-mode: false

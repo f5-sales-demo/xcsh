@@ -3,7 +3,7 @@
 import { appendFileSync } from "node:fs";
 import * as path from "node:path";
 
-export const REQUIRED_PHASES = ["install", "native", "test-typescript", "test-rust"] as const;
+export const REQUIRED_PHASES = ["setup", "install", "native", "test-typescript", "test-rust"] as const;
 
 export interface WorkloadProfile {
 	cache_state: "cold" | "warm" | "unknown";

@@ -27,7 +27,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Verify immutable candidate identity and baked toolchain
+    - name: Verify immutable runner identity
       shell: bash
       env:
         EXPECTED_IMAGE_DIGEST: ${{ inputs.expected-image-digest }}
@@ -35,7 +35,17 @@ runs:
         set -euo pipefail
         test "${RUNNER_IMAGE_DIGEST:?RUNNER_IMAGE_DIGEST is required}" = "$EXPECTED_IMAGE_DIGEST"
         test "$(command -v runner-profile)" = /usr/local/bin/runner-profile
-        bash "${{ github.action_path }}/../../../scripts/verify-self-hosted-tools.sh" full
+    - name: Profile legacy setup or baked verification
+      shell: bash
+      env:
+        PROFILE_CACHE_STATE: ${{ inputs.cache-state }}
+        PROFILE_EXPERIMENT: ${{ inputs.experiment }}
+        PROFILE_PAIR_ID: ${{ inputs.pair-id }}
+      run: |
+        "${{ github.action_path }}/../../../scripts/prepare-runner-optimization-toolchain.sh" \
+          "$PROFILE_EXPERIMENT" "$PROFILE_CACHE_STATE" "$PROFILE_PAIR_ID" \
+          "$RUNNER_TEMP/runner-profile-evidence" \
+          "${{ github.action_path }}/../../../scripts/verify-self-hosted-tools.sh"
     - name: Restore exact warm Rust cache
       if: inputs.cache-state == 'warm'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
