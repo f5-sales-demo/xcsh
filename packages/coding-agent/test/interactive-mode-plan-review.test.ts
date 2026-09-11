@@ -21,6 +21,7 @@ import { SessionManager } from "../src/session/session-manager";
 describe("InteractiveMode plan review rendering", () => {
 	let tempDir: TempDir;
 	let authStorage: AuthStorage;
+	let modelRegistry: ModelRegistry;
 	let session: AgentSession;
 	let mode: InteractiveMode;
 
@@ -33,7 +34,7 @@ describe("InteractiveMode plan review rendering", () => {
 		tempDir = TempDir.createSync("@pi-plan-review-");
 		await Settings.init({ inMemory: true, cwd: tempDir.path() });
 		authStorage = await AuthStorage.create(path.join(tempDir.path(), "testauth.db"));
-		const modelRegistry = new ModelRegistry(authStorage);
+		modelRegistry = new ModelRegistry(authStorage);
 		const model = modelRegistry.find("anthropic", "claude-sonnet-5");
 		if (!model) {
 			throw new Error("Expected claude-sonnet-5 to exist in registry");
@@ -66,10 +67,22 @@ describe("InteractiveMode plan review rendering", () => {
 
 	it("applies remote Plan and Default through the idempotent terminal mode lifecycle", async () => {
 		const appendModeChange = vi.spyOn(session.sessionManager, "appendModeChange");
+		const workModel = session.model;
+		const planModel = modelRegistry.find("anthropic", "claude-opus-5");
+		if (!planModel) throw new Error("Expected claude-opus-5 to exist in registry");
+		vi.spyOn(session, "resolveRoleModelWithThinking").mockReturnValue({
+			model: planModel,
+			thinkingLevel: undefined,
+			explicitThinkingLevel: false,
+			warning: undefined,
+		});
+		const setModelTemporary = vi.spyOn(session, "setModelTemporary");
 		expect(mode.getRemoteCollaborationMode()).toBe("default");
 		await mode.setRemoteCollaborationMode("plan");
 		expect(mode.getRemoteCollaborationMode()).toBe("plan");
 		expect(mode.planModeEnabled).toBe(true);
+		expect(session.model).toBe(workModel);
+		expect(setModelTemporary).not.toHaveBeenCalled();
 		expect(session.getPlanModeState()).toMatchObject({ enabled: true, planFilePath: "local://PLAN.md" });
 		await mode.setRemoteCollaborationMode("plan");
 		expect(appendModeChange.mock.calls.filter(([value]) => value === "plan")).toHaveLength(1);
@@ -77,6 +90,7 @@ describe("InteractiveMode plan review rendering", () => {
 		await mode.setRemoteCollaborationMode("default");
 		expect(mode.getRemoteCollaborationMode()).toBe("default");
 		expect(mode.planModeEnabled).toBe(false);
+		expect(session.model).toBe(workModel);
 		expect(session.getPlanModeState()).toBeUndefined();
 		await mode.setRemoteCollaborationMode("default");
 		expect(appendModeChange.mock.calls.filter(([value]) => value === "none")).toHaveLength(1);

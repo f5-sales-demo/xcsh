@@ -746,3 +746,26 @@ across 65 files, all passing under Bun 1.4.2. The guarded package suite passed
 8307 tests with 561 skips and 29981 assertions across 795 files in 376.95
 seconds. This automated parity evidence does not substitute for Robin retrying
 the repaired package.
+
+## Four-session hydration and remote Plan model failure
+
+Robin confirmed that Astra, Terra, Sol and Luna each display the correct session
+header and previous messages after the cursor repair. The sanitized native trace
+records four turn-list requests, fourteen per-turn item-list requests and zero
+protocol errors. This closes the phone history-load failure, but not the remaining
+fork, interaction, recovery or voice gates.
+
+On the next checkpoint, Luna displayed Plan after selection but the exact no-tool
+turn failed with `The scheduled model could not complete this turn. Check the
+terminal for details.` The request carried the expected Plan override; terminal
+history then showed that InteractiveMode had replaced `gpt-5.6-luna` with the
+configured `anthropic/claude-opus-5` plan-role model. The existing protocol probe
+had observed only reported thread metadata and therefore did not exercise this
+provider call.
+
+The repaired remote-only Plan path retains the attached work model and still
+uses the real idempotent InteractiveMode lifecycle. Ordinary terminal Plan entry
+continues to honor its configured plan role. A regression with deliberately
+different work and plan models was red on the unwanted temporary model switch;
+the focused three-file set now passes 35 tests and 236 assertions under Bun
+1.4.2. No successful phone Plan turn is claimed until a new artifact is retried.

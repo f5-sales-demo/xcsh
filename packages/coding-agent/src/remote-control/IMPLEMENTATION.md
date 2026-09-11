@@ -2235,3 +2235,27 @@ zero failures under Bun 1.4.2. The guarded coding-agent suite passed 8307 tests,
 561 skips and 29981 assertions across 795 files in 376.95 seconds. A new
 committed package and a successful iPhone retry are still required; no phone
 success is claimed by this repair evidence.
+
+## Four-session reload and remote Plan model preservation
+
+After the committed cursor repair replaced the live host, Robin confirmed the
+correct header and visible prior messages in `xcsh Remote Astra`, `xcsh Remote
+Terra`, `xcsh Remote Sol` and `xcsh Remote Luna`. The sanitized host trace
+contains four `thread/turns/list` requests and fourteen per-turn
+`thread/items/list` requests with zero protocol errors. This is manual acceptance
+for discovery, names and history hydration only.
+
+The next iPhone checkpoint selected Plan in Luna and the UI displayed Plan. The
+exact no-tool prompt then failed with `The scheduled model could not complete
+this turn. Check the terminal for details.` The trace shows a valid experimental
+`turn/start` and a failed completion. Durable terminal history identified the
+cause: remote Plan entry changed the live work model from `gpt-5.6-luna` to the
+configured `anthropic/claude-opus-5` plan role before execution.
+
+Remote Plan entry now preserves the attached terminal's selected work model
+while retaining the ordinary terminal-only behavior that may select a configured
+plan-role model. The regression uses a deliberately different available plan
+model and first observed the unwanted `setModelTemporary` call. The corrected
+interactive-mode, remote-session and bridge subset passes 35 tests and 236
+assertions under Bun 1.4.2. A new committed package and iPhone Plan retry remain
+required; the failed phone turn is not acceptance.

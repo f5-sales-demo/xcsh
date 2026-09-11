@@ -754,7 +754,11 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
-	async #enterPlanMode(options?: { planFilePath?: string; workflow?: "parallel" | "iterative" }): Promise<void> {
+	async #enterPlanMode(options?: {
+		planFilePath?: string;
+		workflow?: "parallel" | "iterative";
+		preserveModel?: boolean;
+	}): Promise<void> {
 		if (this.planModeEnabled) {
 			return;
 		}
@@ -782,7 +786,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			await this.session.sendPlanModeContext({ deliverAs: "steer" });
 		}
 		this.#planModeHasEntered = true;
-		await this.#applyPlanModeModel();
+		if (!options?.preserveModel) await this.#applyPlanModeModel();
 		this.#updatePlanModeStatus();
 		this.sessionManager.appendModeChange("plan", { planFilePath });
 		this.showStatus(`Plan mode enabled. Plan file: ${planFilePath}`);
@@ -1039,7 +1043,7 @@ export class InteractiveMode implements InteractiveModeContext {
 
 	async setRemoteCollaborationMode(mode: "plan" | "default"): Promise<void> {
 		if (mode === "plan") {
-			await this.#enterPlanMode();
+			await this.#enterPlanMode({ preserveModel: true });
 			return;
 		}
 		if (this.planModePaused && !this.planModeEnabled) {

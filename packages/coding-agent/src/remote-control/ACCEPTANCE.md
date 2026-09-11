@@ -40,10 +40,18 @@ completion of another. Codex baseline: 0.153.4,
 
 Robin's first current-artifact iPhone attempt failed before message hydration in
 all four canonical sessions. Astra displayed `Error loading messages.` with a
-`Retry` action; Terra, Sol and Luna also failed. The native trace identified an
-item-cursor scope mismatch, and the phone-shaped regression is now green, but
-this is not phone acceptance. Rebuild and replace the host, retry Astra alone,
-then proceed through Terra, Sol and Luna only after message loading succeeds.
+`Retry` action; Terra, Sol and Luna also failed. After the item-cursor repair and
+host replacement, Robin confirmed the correct header and prior messages in all
+four sessions; the trace recorded four turn lists and fourteen per-turn item
+lists with zero protocol errors.
+
+The next Luna checkpoint displayed Plan but its no-tool turn failed with `The
+scheduled model could not complete this turn. Check the terminal for details.`
+Terminal history showed an unintended switch from Luna to the configured
+Anthropic plan-role model. A red-to-green regression now makes remote Plan entry
+preserve the attached work model while retaining the real InteractiveMode
+lifecycle. Rebuild and repeat Plan/Default on the iPhone before claiming that
+row; the failed turn remains part of the manual evidence.
 
 ## Accepted first-release boundaries
 
