@@ -2259,3 +2259,30 @@ model and first observed the unwanted `setModelTemporary` call. The corrected
 interactive-mode, remote-session and bridge subset passes 35 tests and 236
 assertions under Bun 1.4.2. A new committed package and iPhone Plan retry remain
 required; the failed phone turn is not acceptance.
+
+## Rotate relay transport after credential refresh
+
+The next phone observation exposed a distinct long-idle recovery defect. The iOS
+Remote selector reported the native xcsh host offline and last seen six hours ago,
+while `remote-control status --json` still reported a connected relay and four
+live sessions. The host process and its TCP socket were alive, but the sanitized
+trace had not received a relay frame for more than five hours. Restarting only
+the native host restored an initialized stream and active pings; Robin confirmed
+the xcsh indicator turned green and all four named sessions reappeared without
+re-pairing.
+
+The enrollment refresh timer previously replaced only the in-memory credential.
+It left an existing `WebSocket.OPEN` connection untouched, even when the service
+had ceased advertising that socket. The timer now closes the old socket after a
+successful refresh. Its existing generation guard, reconnect backoff, cursor and
+unacknowledged-response replay then establish the replacement with the refreshed
+credential. Refresh failure behavior remains unchanged: an unexpired socket can
+continue, while an expired credential closes it.
+
+The regression captures both host timers, advances the credential boundary and
+first observed that refresh left exactly one apparently open socket. After the
+repair it observes the old socket close, a second socket connect, and the new
+Authorization header use the rotated fixture token. The focused file passes two
+tests with 19 assertions; the complete 65-file remote-control suite passes 902
+tests with 3670 assertions under Bun 1.4.2. A new compiled package and live
+credential-rotation observation remain required.

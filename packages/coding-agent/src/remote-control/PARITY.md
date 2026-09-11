@@ -769,3 +769,29 @@ continues to honor its configured plan role. A regression with deliberately
 different work and plan models was red on the unwanted temporary model switch;
 the focused three-file set now passes 35 tests and 236 assertions under Bun
 1.4.2. No successful phone Plan turn is claimed until a new artifact is retried.
+
+## Live stale-relay observation and credential rotation
+
+During the next iPhone checkpoint, the Remote host selector showed the native
+xcsh entry red with `Offline • Last seen 6 hours ago`. A separate reference
+Codex `workstation` entry remained green. On Ubuntu, xcsh incorrectly reported
+`relay: connected` with all four owners, and the TCP socket remained established,
+but its sanitized trace had received no frame for more than five hours. This is
+manual evidence of a service-stale, locally open WebSocket and a false-positive
+status, not a lost pairing or lost terminal session.
+
+A controlled restart of only the native host closed its old trace with a complete
+4125-event footer, established a fresh initialized stream and answered the next
+relay ping as active. Robin then confirmed that the xcsh entry was green and
+Luna, Astra, Sol and Terra all reappeared. The paired iPhone identity and all four
+session identities survived; the retained reference recorder and host were not
+stopped.
+
+The transport now rotates an apparently open relay socket after every successful
+host-credential refresh. The replacement connection uses the refreshed token and
+the existing delivery cursor/replay machinery, preventing an indefinitely stale
+socket from continuing to report connected. The focused regression failed with
+one socket before the repair and now passes two tests with 19 assertions. The
+complete remote-control suite passes 902 tests with 3670 assertions under Bun
+1.4.2. A fresh compiled artifact still has to prove this behavior across a real
+credential rotation; the host restart observation alone does not claim that gate.

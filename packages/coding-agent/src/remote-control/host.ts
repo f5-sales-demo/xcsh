@@ -364,6 +364,10 @@ export async function startLocalHost(
 				.then(
 					next => {
 						Object.assign(enrollment, next);
+						// A WebSocket can remain locally OPEN after the relay has stopped
+						// advertising it. Rotate the connection with each credential so
+						// the service observes both the refreshed token and host liveness.
+						if (socket?.readyState === WebSocket.OPEN) socket.close();
 					},
 					() => {
 						if (Date.parse(enrollment.expires_at) <= Date.now()) socket?.close();
