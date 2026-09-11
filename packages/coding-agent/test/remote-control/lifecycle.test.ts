@@ -268,13 +268,12 @@ test("real voice state and history settle on the old session before switching", 
 	expect(writes.some(write => write.id === session.sessionId && write.kind === "realtimeSessionClosed")).toBe(true);
 });
 
-test("the bridge announces a forked replacement, carries subscriptions, then closes its source", async () => {
+test("the bridge keeps the subscribed remote thread across a Plan execution session", async () => {
 	const { mkdtemp, rm } = await import("node:fs/promises");
 	const { connectPeer } = await import("../../src/remote-control/ipc");
 	const { startLocalHost } = await import("../../src/remote-control/host");
 	const { startSessionBridge } = await import("../../src/remote-control/bridge");
 	const { session, remote } = await fixture();
-	remote.dispose();
 	const dir = await mkdtemp("/tmp/xcsh-lifecycle-");
 	const host = await startLocalHost(`${dir}/host.sock`, "fixture");
 	const stop = startSessionBridge(session, `${dir}/host.sock`, 60_000);
@@ -302,20 +301,61 @@ test("the bridge announces a forked replacement, carries subscriptions, then clo
 		},
 	});
 	await phone.call("protocol", { request: { id: 2, method: "thread/resume", params: { threadId: oldId } } });
-	await session.newSession({ forkedFromId: oldId });
-	const eventDeadline = Date.now() + 1000;
-	while (events.length < 2 && Date.now() < eventDeadline) await Bun.sleep(5);
-	expect(host.router.sessions.has(oldId)).toBe(false);
-	expect(host.router.sessions.has(session.sessionId)).toBe(true);
+	await session.newSession({ forkedFromId: oldId, remoteThreadId: oldId });
+	const executionSessionId = session.sessionId;
+	expect(executionSessionId).not.toBe(oldId);
+	expect(session.sessionManager.getHeader()).toMatchObject({
+		id: executionSessionId,
+		forkedFromId: oldId,
+		remoteThreadId: oldId,
+	});
+	expect(remote.thread()).toMatchObject({ id: oldId, sessionId: oldId, forkedFromId: null });
+	expect(host.router.sessions.has(oldId)).toBe(true);
+	expect(host.router.sessions.has(executionSessionId)).toBe(false);
 	expect(host.router.sessions.size).toBe(1);
-	host.router.publish({ method: "turn/started", params: { threadId: session.sessionId, turn: { id: "turn" } } });
+	expect(
+		await phone.call("protocol", { request: { id: 3, method: "thread/read", params: { threadId: oldId } } }),
+	).toMatchObject({ id: 3, result: { thread: { id: oldId, sessionId: oldId, forkedFromId: null } } });
+	session.prompt = async () => {};
+	expect(
+		await phone.call("protocol", {
+			request: {
+				id: 4,
+				method: "turn/start",
+				params: {
+					threadId: oldId,
+					clientUserMessageId: "continued-plan",
+					input: [{ type: "text", text: "continue in this transcript" }],
+				},
+			},
+		}),
+	).toMatchObject({ id: 4, result: { turn: { status: "inProgress" } } });
 	const streamDeadline = Date.now() + 1000;
-	while (events.length < 3 && Date.now() < streamDeadline) await Bun.sleep(5);
+	while (events.length < 2 && Date.now() < streamDeadline) await Bun.sleep(5);
 	expect(events).toMatchObject([
-		{ method: "thread/started", params: { thread: { id: session.sessionId, forkedFromId: oldId } } },
-		{ method: "thread/closed", params: { threadId: oldId } },
-		{ method: "turn/started", params: { threadId: session.sessionId, turn: { id: "turn" } } },
+		{ method: "turn/started", params: { threadId: oldId, turn: { status: "inProgress" } } },
+		{ method: "turn/completed", params: { threadId: oldId, turn: { status: "completed" } } },
 	]);
+});
+
+test("the persisted Plan continuity identity survives terminal resume", async () => {
+	const { mkdtemp, rm } = await import("node:fs/promises");
+	const dir = await mkdtemp("/tmp/xcsh-plan-continuity-");
+	cleanup.push(() => rm(dir, { recursive: true, force: true }));
+	const { session, manager } = await fixture(SessionManager.create(dir, dir));
+	const sourceId = session.sessionId;
+	await session.newSession({ forkedFromId: sourceId, remoteThreadId: sourceId });
+	const executionSessionId = session.sessionId;
+	manager.appendMessage({ role: "user", content: "approved execution", timestamp: 1000 });
+	await manager.ensureOnDisk();
+	await manager.flush();
+	const executionFile = session.sessionFile!;
+
+	const resumedManager = await SessionManager.open(executionFile);
+	const { session: resumed, remote } = await fixture(resumedManager);
+	expect(resumed.sessionId).toBe(executionSessionId);
+	expect(remote.thread()).toMatchObject({ id: sourceId, sessionId: sourceId, forkedFromId: null });
+	expect(await remote.call("resumed", "thread/realtime/stop", { threadId: sourceId })).toEqual({});
 });
 
 test("all transition listeners recover even when an earlier after listener fails", async () => {

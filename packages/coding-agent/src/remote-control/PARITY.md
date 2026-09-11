@@ -900,3 +900,40 @@ the complete remote-control suite passes 904 tests with 3680 assertions, and the
 guarded package suite passes 8310 tests with 561 skips and 30003 assertions
 across 795 files. This is automated evidence only; visible phone streaming still
 requires a rebuilt artifact and controlled retry.
+
+Artifact `35472ad` then proved that subscription transfer was insufficient.
+Robin approved once from `157ba8d39989966c`; the active transcript remained
+blank while an in-app notification reported that `xcsh Remote Luna` completed a
+task outside that transcript. Replacement `157bb2886973a597` executed exactly
+once and created the exact 25-byte, no-newline
+`LUNA-STREAM-35472AD-B6C8E` fixture (SHA-256
+`ce157d5c71ad68250272a9e9044be55deaa339f2868cf1971607b5b3dd5d9b92`).
+Its persisted header has the expected direct `forkedFromId`, file-backed
+`parentSession`, title and model.
+
+Sanitized sequences 306, 308/309, 310-315, 316/317, 318-321 and 474-477 show
+approval, resolution, replacement announcement, source closure, turn start and
+turn completion respectively. The approving phone client and stream received
+the replacement at 315, closure at 317, turn start at 321, intervening item/text
+events and completion at 477. The iPhone nevertheless treated the unsolicited
+`thread/started` as discovery and did not navigate; its completion notification
+is consistent with delivery under a different thread identity.
+
+Native Codex Plan execution continues on the active protocol thread. XCSH still
+needs a fresh local AgentSession for the approved execution, so the adapter now
+persists a separate phone-facing continuity ID. Direct local lineage remains in
+`forkedFromId` and `parentSession`; the wire view is not a fork and therefore
+retains its original `id`/`sessionId` with `forkedFromId: null` and
+`parentThreadId: null`. Registration, calls, interactions and notifications use
+that durable wire ID while local storage and execution use the replacement ID.
+The red lifecycle run passed 24 cases and failed the continuity case with 133
+assertions; the repaired file passes 26 cases with 143 assertions, including a
+persisted terminal-resume check. The seven-file Plan matrix passes 83 tests with
+509 assertions under Bun 1.4.2. This is not phone acceptance; it requires a new
+committed artifact and one controlled Robin-observed attempt.
+
+All 65 remote-control files pass 905 tests with 3,688 assertions. The guarded
+coding-agent package passes 8,311 tests with 561 skips and 30,013 assertions
+across 795 files in a persistent Herdr pane whose piped streams match the
+headless CI contract. This distinction matters because a direct Herdr TTY
+intentionally advertises OSC-52 clipboard support and terminal viewport state.

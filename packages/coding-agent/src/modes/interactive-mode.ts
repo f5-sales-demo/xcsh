@@ -972,6 +972,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			const sourceTitle = this.session.sessionName;
 			const sourceTitleSource = this.session.sessionManager.titleSource;
 			const sourceSessionId = this.session.sessionId;
+			const remoteThreadId = this.session.sessionManager.getHeader()?.remoteThreadId ?? sourceSessionId;
 			const workflow = this.session.getPlanModeState()?.workflow;
 			await renameApprovedPlanFile({
 				planFilePath: options.planFilePath,
@@ -985,7 +986,13 @@ export class InteractiveMode implements InteractiveModeContext {
 			assertCurrent();
 			try {
 				await this.handleClearCommand(
-					{ parentSession, forkedFromId: sourceSessionId, title: sourceTitle, titleSource: sourceTitleSource },
+					{
+						parentSession,
+						forkedFromId: sourceSessionId,
+						remoteThreadId,
+						title: sourceTitle,
+						titleSource: sourceTitleSource,
+					},
 					createSession,
 				);
 				assertCurrent();

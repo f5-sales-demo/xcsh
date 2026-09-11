@@ -2411,3 +2411,56 @@ tests with 500 assertions, all 65 remote-control files pass 904 tests with 3680
 assertions, and the guarded coding-agent package passes 8310 tests with 561 skips
 and 30003 assertions across 795 files. This does not establish phone acceptance;
 a committed artifact and Robin-observed retry are still required.
+
+## Preserve the phone-facing thread across Plan execution
+
+The subscription-enabled artifact `35472ad` isolated the next failure. Robin
+approved once from source `157ba8d39989966c`. No implementation appeared in the
+active transcript, although the app showed a notification that `xcsh Remote
+Luna` completed a task outside that transcript. The terminal created execution
+session `157bb2886973a597` once and wrote
+`plan-stream-luna-35472ad-b6c8e.txt` with exactly the 25 bytes
+`LUNA-STREAM-35472AD-B6C8E`, no trailing newline and SHA-256
+`ce157d5c71ad68250272a9e9044be55deaa339f2868cf1971607b5b3dd5d9b92`.
+The replacement header retained direct `forkedFromId: 157ba8d39989966c`, its
+source file in `parentSession`, and the expected title/model.
+
+Sanitized trace sequence 306 contains the phone approval, 308/309 resolve it,
+310-315 announce the lineage-bearing replacement, 316/317 close the source,
+318-321 deliver its `turn/started`, and 474-477 deliver `turn/completed`.
+Sequences 315, 317, 321 and 477 use the same approving phone client and stream;
+its item and text stream is also present between them. Transport ordering,
+lineage and subscription therefore all worked. The remaining assumption was
+wrong: an unsolicited `thread/started` advert a new thread for discovery but does
+not instruct the phone to replace its active transcript. The completion
+notification proves the app knew about the new thread while correctly keeping
+the source transcript selected.
+
+Plan execution still creates a fresh local AgentSession to separate the approved
+implementation context. `SessionHeader` and `NewSessionOptions` now also carry a
+`remoteThreadId`. The first approved transition stores its source ID; later Plan
+transitions propagate that durable value. `RemoteSession` validates and restores
+the phone-facing ID independently of its current local storage ID, projects that
+ID as both wire `id` and `sessionId`, and translates calls, interactions and
+notifications back to the current local owner. Because the wire thread never
+forks, its `forkedFromId` and `parentThreadId` are null; the execution file still
+records the immediate local `forkedFromId` and `parentSession` ancestry. The host
+therefore refreshes one registration, never closes the phone's subscribed thread,
+and preserves the identity across a terminal resume.
+
+The lifecycle regression was red with 24 passes, one failure and 133 assertions:
+the source registration disappeared after the local session switch. After the
+repair, the phone-shaped client reads and starts a turn on the same wire ID,
+receives start/completion there, and a separately reopened execution file restores
+that ID. The lifecycle file passes 26 tests with 143 assertions; the seven-file
+Plan/lifecycle/router/schema/session matrix passes 83 tests with 509 assertions
+under Bun 1.4.2. These are automated results, not iPhone acceptance. A clean
+commit, immutable binary, package harness and one controlled phone attempt remain
+required.
+
+The complete remote-control verification passes 905 tests across all 65 files
+with 3,688 assertions. The guarded coding-agent package passes 8,311 tests with
+561 skips and 30,013 assertions across 795 files when run with CI-shaped
+non-TTY streams inside its persistent Herdr pane. Direct TTY output correctly
+exposes OSC-52 clipboard and terminal viewport behavior, so it is not the
+headless environment those two package tests specify.

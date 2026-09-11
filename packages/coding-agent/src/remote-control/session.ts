@@ -123,9 +123,20 @@ function canonicalJson(value: unknown): string {
 	}
 	return JSON.stringify(value) ?? "null";
 }
+function validSessionId(value: unknown): string | undefined {
+	return typeof value === "string" &&
+		value.length > 0 &&
+		value.length <= 256 &&
+		!isAbsolute(value) &&
+		!value.includes("/") &&
+		!value.includes("\\")
+		? value
+		: undefined;
+}
 export class RemoteSession {
 	#epoch = 0;
 	#boundId = "";
+	#threadId = "";
 	#suspended = false;
 	#disposed = false;
 	#closing?: Promise<void>;
@@ -183,7 +194,7 @@ export class RemoteSession {
 									value.status === "completed" &&
 									String(value.id).endsWith(`:tool:${toolCallId}`),
 							);
-							if (item) return { threadId: this.#boundId, turnId: turn.id, itemId: String(item.id) };
+							if (item) return { threadId: this.#threadId, turnId: turn.id, itemId: String(item.id) };
 						}
 						return undefined;
 					}
@@ -196,7 +207,7 @@ export class RemoteSession {
 					);
 					return item
 						? {
-								threadId: this.#boundId,
+								threadId: this.#threadId,
 								turnId: this.#active.id,
 								itemId: String(item.id),
 								startedAtMs: Date.now(),
@@ -241,6 +252,8 @@ export class RemoteSession {
 	}
 	#restoreIdentity(): void {
 		this.#boundId = this.target.sessionId;
+		const remoteThreadId = this.target.sessionManager.getHeader?.()?.remoteThreadId;
+		this.#threadId = validSessionId(remoteThreadId) ?? this.#boundId;
 		this.#unsubscribeVoiceHistory?.();
 		this.#voiceHistoryOwner = getSessionVoiceHistory(this.target);
 		this.#unsubscribeVoiceHistory = this.#voiceHistoryOwner.subscribe((method, params) =>
@@ -359,8 +372,7 @@ export class RemoteSession {
 	#emitDirect(method: string, params: Record<string, unknown>, allowClosing = false): void {
 		if ((this.#disposed && !allowClosing) || this.#boundId !== this.target.sessionId) return;
 		this.#updatedAt = Math.floor(Date.now() / 1000);
-		for (const listener of this.#listeners)
-			listener({ method, params: { threadId: this.target.sessionId, ...params } });
+		for (const listener of this.#listeners) listener({ method, params: { ...params, threadId: this.#threadId } });
 	}
 	#cacheCommandPreview(item: Record<string, unknown>): void {
 		const id = String(item.id);
@@ -487,26 +499,11 @@ export class RemoteSession {
 		const header = this.target.sessionManager.getHeader?.();
 		const explicitFork = header?.forkedFromId;
 		const parentSession = header?.parentSession;
-		const forkedFromId =
-			typeof explicitFork === "string" &&
-			explicitFork.length > 0 &&
-			explicitFork.length <= 256 &&
-			!isAbsolute(explicitFork) &&
-			!explicitFork.includes("/") &&
-			!explicitFork.includes("\\")
-				? explicitFork
-				: typeof parentSession === "string" &&
-						parentSession.length > 0 &&
-						parentSession.length <= 256 &&
-						!isAbsolute(parentSession) &&
-						!parentSession.includes("/") &&
-						!parentSession.includes("\\")
-					? parentSession
-					: null;
+		const forkedFromId = validSessionId(explicitFork) ?? validSessionId(parentSession) ?? null;
 		return {
-			id: this.target.sessionId,
-			sessionId: this.target.sessionId,
-			forkedFromId,
+			id: this.#threadId,
+			sessionId: this.#threadId,
+			forkedFromId: this.#threadId === this.#boundId ? forkedFromId : null,
 			parentThreadId: null,
 			preview: this.#durable
 				? this.history()
@@ -562,10 +559,12 @@ export class RemoteSession {
 	call(identity: string, method: string, params: Record<string, unknown>): Promise<unknown> {
 		try {
 			this.#assertCurrent();
-			if (params.threadId !== this.#boundId) throw new ProtocolError(-32602, "Thread not found");
+			if (params.threadId !== this.#threadId && params.threadId !== this.#boundId)
+				throw new ProtocolError(-32602, "Thread not found");
 		} catch (error) {
 			return Promise.reject(error);
 		}
+		params = params.threadId === this.#boundId ? params : { ...params, threadId: this.#boundId };
 		if (method === "session/interaction/respond") {
 			try {
 				if (typeof params.requestId !== "string") throw new ProtocolError(-32602, "Invalid request identity");

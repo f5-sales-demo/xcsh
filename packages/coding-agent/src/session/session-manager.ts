@@ -65,11 +65,13 @@ export interface SessionHeader {
 	cwd: string;
 	parentSession?: string;
 	forkedFromId?: string;
+	remoteThreadId?: string;
 }
 
 export interface NewSessionOptions {
 	parentSession?: string;
 	forkedFromId?: string;
+	remoteThreadId?: string;
 	title?: string;
 	titleSource?: "auto" | "user";
 }
@@ -1765,6 +1767,7 @@ export class SessionManager {
 			titleSource: this.#titleSource,
 			parentSession: options?.parentSession,
 			forkedFromId: options?.forkedFromId,
+			remoteThreadId: options?.remoteThreadId,
 		};
 		this.#fileEntries = [header];
 		this.#byId.clear();

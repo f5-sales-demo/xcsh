@@ -362,7 +362,12 @@ describe("InteractiveMode plan review rendering", () => {
 			expect(session.model).toEqual(previousModel);
 			expect(session.sessionManager.getHeader()?.parentSession).toBe(previousSessionFile!);
 			expect(session.sessionManager.getHeader()?.forkedFromId).toBe(previousSessionId);
-			expect(remote.thread().forkedFromId).toBe(previousSessionId);
+			expect(session.sessionManager.getHeader()?.remoteThreadId).toBe(previousSessionId);
+			expect(remote.thread()).toMatchObject({
+				id: previousSessionId,
+				sessionId: previousSessionId,
+				forkedFromId: null,
+			});
 			expect(session.sessionName).toBe("xcsh Remote Luna");
 			expect(session.sessionManager.titleSource).toBe("user");
 			const source = await SessionManager.open(previousSessionFile!);

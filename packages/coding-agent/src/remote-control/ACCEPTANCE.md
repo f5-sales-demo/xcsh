@@ -161,6 +161,47 @@ passes 82 tests with 500 assertions, the complete remote-control suite passes
 tests with 561 skips and 30003 assertions across 795 files. A newly committed
 artifact and one controlled retry remain required.
 
+The subscription-enabled checkpoint used committed artifact `35472ad`, source
+`157ba8d39989966c` and one approval. Robin saw no implementation in the active
+transcript, but did receive an in-app notification that `xcsh Remote Luna`
+completed a task which was not associated with that transcript. The terminal
+created replacement `157bb2886973a597` once and wrote
+`plan-stream-luna-35472ad-b6c8e.txt` as exactly the 25 bytes
+`LUNA-STREAM-35472AD-B6C8E`, with no trailing newline and SHA-256
+`ce157d5c71ad68250272a9e9044be55deaa339f2868cf1971607b5b3dd5d9b92`.
+Its header retains source-file `parentSession`, direct
+`forkedFromId: 157ba8d39989966c`, title and model.
+
+The sanitized trace proves transport delivery was no longer the failure:
+sequence 306 is the phone approval, 308/309 resolve it, 310-315 announce the
+replacement with correct lineage, 316/317 close the source, 318-321 deliver
+`turn/started`, and 474-477 deliver `turn/completed`. Sequences 315, 317, 321 and
+477 all target the same active phone client and stream as the approval; the
+intervening item and text events are also delivered there. `thread/started` is
+a discovery notification, however, not a client-navigation command. The phone
+therefore treated the execution session as a detached thread even after it had
+received the complete replacement stream.
+
+The new repair preserves the fresh local Plan execution session and its direct
+persisted lineage while assigning it the source's durable phone-facing thread
+identity. The host refreshes the existing registration instead of announcing a
+new remote fork or closing the subscribed thread; reads, turns, interactions and
+notifications translate to the current local owner while retaining the existing
+wire thread ID. The continuity ID is persisted for terminal resume and propagated
+through later Plan executions. The red lifecycle regression passed 24 tests and
+failed this case at the removed source registration (133 assertions). It now
+passes 26 tests with 143 assertions, including same-thread read, execution events
+and persisted resume, and the seven-file Plan matrix passes 83 tests with 509
+assertions under Bun 1.4.2. This is automated repair evidence only; a rebuilt
+artifact and one Robin-observed phone attempt remain required.
+
+The complete 65-file remote-control suite passes 905 tests with 3,688
+assertions. The CI-shaped guarded coding-agent package run passes 8,311 tests
+with 561 skips and 30,013 assertions across 795 files. The package run was
+hosted in a persistent Herdr pane with its streams piped to reproduce the
+non-TTY CI environment; this avoids treating the pane's real OSC-52 clipboard
+and viewport as headless test conditions.
+
 ## Accepted first-release boundaries
 
 Ubuntu workstation and live terminal sessions; phone-created headless sessions
