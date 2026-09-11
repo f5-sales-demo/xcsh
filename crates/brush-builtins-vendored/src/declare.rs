@@ -6,6 +6,7 @@ use brush_core::{
 	ErrorKind, ExecutionResult, builtins,
 	env::{self, EnvironmentLookup, EnvironmentScope},
 	error,
+	parser::ast,
 	variables::{
 		self, ArrayLiteral, ShellValue, ShellValueLiteral, ShellValueUnsetType, ShellVariable,
 		ShellVariableUpdateTransform,
@@ -115,62 +116,60 @@ impl builtins::Command for DeclareCommand {
 
 	type Error = brush_core::Error;
 
-	fn execute(
+	async fn execute<SE: brush_core::ShellExtensions>(
 		&self,
-		mut context: brush_core::ExecutionContext<'_>,
-	) -> impl Future<Output = Result<brush_core::ExecutionResult, Self::Error>> {
-		futures::future::lazy(move |_| {
-			let verb = match context.command_name.as_str() {
-				"local" => DeclareVerb::Local,
-				"readonly" => DeclareVerb::Readonly,
-				_ => DeclareVerb::Declare,
-			};
+		mut context: brush_core::ExecutionContext<'_, SE>,
+	) -> Result<brush_core::ExecutionResult, Self::Error> {
+		let verb = match context.command_name.as_str() {
+			"local" => DeclareVerb::Local,
+			"readonly" => DeclareVerb::Readonly,
+			_ => DeclareVerb::Declare,
+		};
 
-			if matches!(verb, DeclareVerb::Local) && !context.shell.in_function() {
-				writeln!(context.stderr(), "can only be used in a function")?;
-				return Ok(ExecutionResult::general_error());
-			}
+		if matches!(verb, DeclareVerb::Local) && !context.shell.in_function() {
+			writeln!(context.stderr(), "can only be used in a function")?;
+			return Ok(ExecutionResult::general_error());
+		}
 
-			if self.locals_inherit_from_prev_scope {
-				return error::unimp("declare -I");
-			}
+		if self.locals_inherit_from_prev_scope {
+			return error::unimp("declare -I");
+		}
 
-			let mut result = ExecutionResult::success();
-			if !self.declarations.is_empty() {
-				for declaration in &self.declarations {
-					if self.print && !matches!(verb, DeclareVerb::Readonly) {
-						if !self.try_display_declaration(&context, declaration, verb)? {
-							result = ExecutionResult::general_error();
-						}
-					} else {
-						if !self.process_declaration(&mut context, declaration, verb)? {
-							result = ExecutionResult::general_error();
-						}
+		let mut result = ExecutionResult::success();
+		if !self.declarations.is_empty() {
+			for declaration in &self.declarations {
+				if self.print && !matches!(verb, DeclareVerb::Readonly) {
+					if !self.try_display_declaration(&context, declaration, verb)? {
+						result = ExecutionResult::general_error();
+					}
+				} else {
+					if !self.process_declaration(&mut context, declaration, verb)? {
+						result = ExecutionResult::general_error();
 					}
 				}
-			} else {
-				// Display matching declarations from the variable environment.
-				if !self.function_names_only && !self.function_names_or_defs_only {
-					self.display_matching_env_declarations(&context, verb)?;
-				}
-
-				// Do the same for functions.
-				if !matches!(verb, DeclareVerb::Local | DeclareVerb::Readonly)
-					&& (!self.print || self.function_names_only || self.function_names_or_defs_only)
-				{
-					self.display_matching_functions(&context)?;
-				}
+			}
+		} else {
+			// Display matching declarations from the variable environment.
+			if !self.function_names_only && !self.function_names_or_defs_only {
+				self.display_matching_env_declarations(&context, verb)?;
 			}
 
-			Ok(result)
-		})
+			// Do the same for functions.
+			if !matches!(verb, DeclareVerb::Local | DeclareVerb::Readonly)
+				&& (!self.print || self.function_names_only || self.function_names_or_defs_only)
+			{
+				self.display_matching_functions(&context)?;
+			}
+		}
+
+		Ok(result)
 	}
 }
 
 impl DeclareCommand {
 	fn try_display_declaration(
 		&self,
-		context: &brush_core::ExecutionContext<'_>,
+		context: &brush_core::ExecutionContext<'_, impl brush_core::ShellExtensions>,
 		declaration: &brush_core::CommandArg,
 		verb: DeclareVerb,
 	) -> Result<bool, brush_core::Error> {
@@ -204,7 +203,7 @@ impl DeclareCommand {
 				// For some reason, bash does not print an error message in this case.
 				Ok(false)
 			}
-		} else if let Some(variable) = context.shell.env.get_using_policy(name, lookup) {
+		} else if let Some(variable) = context.shell.env().get_using_policy(name, lookup) {
 			let mut cs = variable.attribute_flags(context.shell);
 			if cs.is_empty() {
 				cs.push('-');
@@ -232,12 +231,14 @@ impl DeclareCommand {
 
 	fn process_declaration(
 		&self,
-		context: &mut brush_core::ExecutionContext<'_>,
+		context: &mut brush_core::ExecutionContext<'_, impl brush_core::ShellExtensions>,
 		declaration: &brush_core::CommandArg,
 		verb: DeclareVerb,
 	) -> Result<bool, brush_core::Error> {
-		let create_var_local =
-			matches!(verb, DeclareVerb::Local) || (context.shell.in_function() && !self.create_global);
+		let create_var_local = matches!(verb, DeclareVerb::Local)
+			|| (matches!(verb, DeclareVerb::Declare)
+				&& context.shell.in_function()
+				&& !self.create_global);
 
 		if self.function_names_or_defs_only || self.function_names_only {
 			return self.try_display_declaration(context, declaration, verb);
@@ -249,7 +250,7 @@ impl DeclareCommand {
 
 		// Special-case: `local -`
 		if name == "-" && matches!(verb, DeclareVerb::Local) {
-			// TODO: `local -` allows shadowing the current `set` options (i.e., $-), with
+			// TODO(local): `local -` allows shadowing the current `set` options (i.e., $-), with
 			// subsequent updates getting discarded when the current local scope is popped.
 			tracing::warn!("not yet implemented: local -");
 			return Ok(true);
@@ -271,7 +272,7 @@ impl DeclareCommand {
 		// Look up the variable.
 		if let Some(var) = context
 			.shell
-			.env
+			.env_mut()
 			.get_mut_using_policy(name.as_str(), lookup)
 		{
 			if self.make_associative_array.is_some() {
@@ -308,7 +309,7 @@ impl DeclareCommand {
 				var.assign(initial_value, false)?;
 			}
 
-			if context.shell.options.export_variables_on_modification && !var.value().is_array() {
+			if context.shell.options().export_variables_on_modification && !var.value().is_array() {
 				var.export();
 			}
 
@@ -320,13 +321,12 @@ impl DeclareCommand {
 				EnvironmentScope::Global
 			};
 
-			context.shell.env.add(name, var, scope)?;
+			context.shell.env_mut().add(name, var, scope)?;
 		}
 
 		Ok(true)
 	}
 
-	#[allow(clippy::unwrap_in_result)]
 	fn declaration_to_name_and_value(
 		declaration: &brush_core::CommandArg,
 	) -> Result<(String, Option<String>, Option<ShellValueLiteral>, bool), brush_core::Error> {
@@ -340,11 +340,24 @@ impl DeclareCommand {
 				// We need to handle the case of someone invoking `declare array[index]`.
 				// In such case, we ignore the index and treat it as a declaration of
 				// the array.
+				#[allow(
+					clippy::unwrap_in_result,
+					clippy::unwrap_used,
+					reason = "regex is valid and should not fail"
+				)]
 				static ARRAY_AND_INDEX_RE: LazyLock<fancy_regex::Regex> =
 					LazyLock::new(|| fancy_regex::Regex::new(r"^(.*?)\[(.*?)\]$").unwrap());
+
 				if let Some(captures) = ARRAY_AND_INDEX_RE.captures(s)? {
-					name = captures.get(1).unwrap().as_str().to_owned();
-					assigned_index = Some(captures.get(2).unwrap().as_str().to_owned());
+					name = captures
+						.get(1)
+						.ok_or_else(|| {
+							brush_core::ErrorKind::InternalError("declaration parse error".into())
+						})?
+						.as_str()
+						.to_owned();
+
+					assigned_index = captures.get(2).map(|m| m.as_str().to_owned());
 					name_is_array = true;
 				} else {
 					name = s.clone();
@@ -355,12 +368,12 @@ impl DeclareCommand {
 			},
 			brush_core::CommandArg::Assignment(assignment) => {
 				match &assignment.name {
-					brush_parser::ast::AssignmentName::VariableName(var_name) => {
+					ast::AssignmentName::VariableName(var_name) => {
 						name = var_name.to_owned();
 						assigned_index = None;
 					},
-					brush_parser::ast::AssignmentName::ArrayElementName(var_name, index) => {
-						if matches!(assignment.value, brush_parser::ast::AssignmentValue::Array(_)) {
+					ast::AssignmentName::ArrayElementName(var_name, index) => {
+						if matches!(assignment.value, ast::AssignmentValue::Array(_)) {
 							return Err(ErrorKind::AssigningListToArrayMember.into());
 						}
 
@@ -370,7 +383,7 @@ impl DeclareCommand {
 				}
 
 				match &assignment.value {
-					brush_parser::ast::AssignmentValue::Scalar(s) => {
+					ast::AssignmentValue::Scalar(s) => {
 						if let Some(index) = &assigned_index {
 							initial_value = Some(ShellValueLiteral::Array(ArrayLiteral(vec![(
 								Some(index.to_owned()),
@@ -382,7 +395,7 @@ impl DeclareCommand {
 							name_is_array = false;
 						}
 					},
-					brush_parser::ast::AssignmentValue::Array(a) => {
+					ast::AssignmentValue::Array(a) => {
 						initial_value = Some(ShellValueLiteral::Array(ArrayLiteral(
 							a.iter()
 								.map(|(i, v)| (i.as_ref().map(|w| w.value.clone()), v.value.clone()))
@@ -399,7 +412,7 @@ impl DeclareCommand {
 
 	fn display_matching_env_declarations(
 		&self,
-		context: &brush_core::ExecutionContext<'_>,
+		context: &brush_core::ExecutionContext<'_, impl brush_core::ShellExtensions>,
 		verb: DeclareVerb,
 	) -> Result<(), brush_core::Error> {
 		//
@@ -468,7 +481,7 @@ impl DeclareCommand {
 		// environment.
 		for (name, variable) in context
 			.shell
-			.env
+			.env()
 			.iter_using_policy(iter_policy)
 			.filter(|pair| filters.iter().all(|f| f(*pair)))
 			.sorted_by_key(|v| v.0)
@@ -508,7 +521,7 @@ impl DeclareCommand {
 
 	fn display_matching_functions(
 		&self,
-		context: &brush_core::ExecutionContext<'_>,
+		context: &brush_core::ExecutionContext<'_, impl brush_core::ShellExtensions>,
 	) -> Result<(), brush_core::Error> {
 		for (name, registration) in context.shell.funcs().iter().sorted_by_key(|v| v.0) {
 			if self.function_names_only {

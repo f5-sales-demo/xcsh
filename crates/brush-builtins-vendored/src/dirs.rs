@@ -44,60 +44,58 @@ pub(crate) struct DirsCommand {
 	#[arg(short = 'v')]
 	print_one_per_line_with_index: bool,
 	//
-	// TODO: implement +N and -N
+	// TODO(dirs): implement +N and -N
 }
 
 impl builtins::Command for DirsCommand {
 	type Error = brush_core::Error;
 
-	fn execute(
+	async fn execute<SE: brush_core::ShellExtensions>(
 		&self,
-		context: brush_core::ExecutionContext<'_>,
-	) -> impl Future<Output = Result<brush_core::ExecutionResult, Self::Error>> {
-		futures::future::lazy(move |_| {
-			if self.clear {
-				context.shell.directory_stack.clear();
-			} else {
-				let dirs = vec![context.shell.working_dir()]
-					.into_iter()
-					.chain(
-						context
-							.shell
-							.directory_stack
-							.iter()
-							.rev()
-							.map(|p| p.as_path()),
-					)
-					.collect::<Vec<_>>();
+		context: brush_core::ExecutionContext<'_, SE>,
+	) -> Result<brush_core::ExecutionResult, Self::Error> {
+		if self.clear {
+			context.shell.directory_stack_mut().clear();
+		} else {
+			let dirs = vec![context.shell.working_dir()]
+				.into_iter()
+				.chain(
+					context
+						.shell
+						.directory_stack()
+						.iter()
+						.rev()
+						.map(|p| p.as_path()),
+				)
+				.collect::<Vec<_>>();
 
-				let one_per_line = self.print_one_per_line || self.print_one_per_line_with_index;
+			let one_per_line = self.print_one_per_line || self.print_one_per_line_with_index;
 
-				for (i, dir) in dirs.iter().enumerate() {
-					if !one_per_line && i > 0 {
-						write!(context.stdout(), " ")?;
-					}
-
-					if self.print_one_per_line_with_index {
-						write!(context.stdout(), "{i:2}  ")?;
-					}
-
-					let mut dir_str = dir.to_string_lossy().to_string();
-
-					if !self.tilde_long {
-						dir_str = context.shell.tilde_shorten(dir_str);
-					}
-
-					write!(context.stdout(), "{dir_str}")?;
-
-					if one_per_line || i == dirs.len() - 1 {
-						writeln!(context.stdout())?;
-					}
+			for (i, dir) in dirs.iter().enumerate() {
+				if !one_per_line && i > 0 {
+					write!(context.stdout(), " ")?;
 				}
 
-				return Ok(ExecutionResult::success());
+				if self.print_one_per_line_with_index {
+					write!(context.stdout(), "{i:2}  ")?;
+				}
+
+				let mut dir_str = dir.to_string_lossy().to_string();
+
+				if !self.tilde_long {
+					dir_str = context.shell.tilde_shorten(dir_str);
+				}
+
+				write!(context.stdout(), "{dir_str}")?;
+
+				if one_per_line || i == dirs.len() - 1 {
+					writeln!(context.stdout())?;
+				}
 			}
 
-			Ok(ExecutionResult::success())
-		})
+			return Ok(ExecutionResult::success());
+		}
+
+		Ok(ExecutionResult::success())
 	}
 }

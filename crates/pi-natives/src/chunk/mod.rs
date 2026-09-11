@@ -266,7 +266,7 @@ fn build_blank_line_tree(
 		root_children.push(name.clone());
 		chunks.push(ChunkNode {
 			path: name.clone(),
-			identifier: Some(name.clone()),
+			identifier: Some(name),
 			kind: ChunkKind::Chunk,
 			leaf: true,
 			virtual_content: None,
@@ -870,7 +870,7 @@ pub(crate) fn line_start_offsets(source: &str) -> Vec<usize> {
 	starts
 }
 
-fn line_end_offset(source: &str, line_starts: &[usize], line_index: usize) -> usize {
+const fn line_end_offset(source: &str, line_starts: &[usize], line_index: usize) -> usize {
 	if line_index + 1 < line_starts.len() {
 		line_starts[line_index + 1]
 	} else {

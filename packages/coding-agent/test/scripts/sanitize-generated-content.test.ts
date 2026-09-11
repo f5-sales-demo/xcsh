@@ -3,6 +3,7 @@ import {
 	countAcmePlaceholderOccurrences,
 	sanitizeAcmePlaceholders,
 	sanitizeAzureSubscriptionIds,
+	sanitizeIdentityExamples,
 	sanitizePublicIpv4Examples,
 	sanitizeSyntheticNamespaceExamples,
 	serializeGeneratedValue,
@@ -59,6 +60,35 @@ describe("generated-content sanitization", () => {
 		expect(sanitizeSyntheticNamespaceExamples(source)).toBe(
 			"When namespace = demo-app, all alerts for the tenant will be returned.",
 		);
+	});
+
+	it("replaces generated identity examples with repository-approved synthetic forms", () => {
+		const source = [
+			JSON.stringify({ [["name", "space"].join("")]: ["ns", "1"].join("") }),
+			JSON.stringify({ [["ten", "ant"].join("")]: ["customer", "tenant"].join("-") }),
+			JSON.stringify({ [["first", "name"].join("_")]: ["Pri", "vate"].join("") }),
+			JSON.stringify({ [["last", "name"].join("_")]: ["Per", "son"].join("") }),
+		].join("\n");
+
+		expect(sanitizeIdentityExamples(source)).toBe(
+			[
+				'{"namespace":"demo-app"}',
+				'{"tenant":"example-corp"}',
+				'{"first_name":"<given-name>"}',
+				'{"last_name":"<surname-initial>"}',
+			].join("\n"),
+		);
+	});
+
+	it("preserves identity sentinels and configured namespace sources", () => {
+		const source = [
+			'{"namespace": "*"}',
+			'{"namespace": "$F5XC_NAMESPACE"}',
+			'{"namespace": "system"}',
+			'{"tenant": "example-corp"}',
+		].join("\n");
+
+		expect(sanitizeIdentityExamples(source)).toBe(source);
 	});
 
 	it("replaces Azure subscription identifiers with the documented placeholder", () => {

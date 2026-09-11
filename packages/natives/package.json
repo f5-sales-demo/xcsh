@@ -1,6 +1,6 @@
 {
 	"name": "@f5-sales-demo/pi-natives",
-	"version": "21.24.0",
+	"version": "21.24.1",
 	"description": "Native Rust bindings for grep, clipboard, image processing, syntax highlighting, PTY, and shell operations via N-API",
 	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Can Boluk",
@@ -39,11 +39,11 @@
 		"bench": "bun bench/grep.ts"
 	},
 	"devDependencies": {
-		"@napi-rs/cli": "3.7.4",
-		"@types/bun": "^1.3"
+		"@napi-rs/cli": "3.9.0",
+		"@types/bun": "1.4.2"
 	},
 	"engines": {
-		"bun": ">=1.3.7"
+		"bun": ">=1.4.2"
 	},
 	"napi": {
 		"binaryName": "pi_natives",
@@ -56,11 +56,11 @@
 		}
 	},
 	"optionalDependencies": {
-		"@f5-sales-demo/pi-natives-linux-x64-gnu": "20.3.1",
-		"@f5-sales-demo/pi-natives-linux-arm64-gnu": "20.3.1",
-		"@f5-sales-demo/pi-natives-darwin-x64": "20.3.1",
-		"@f5-sales-demo/pi-natives-darwin-arm64": "20.3.1",
-		"@f5-sales-demo/pi-natives-win32-x64-msvc": "20.3.1"
+		"@f5-sales-demo/pi-natives-linux-x64-gnu": "21.10.1",
+		"@f5-sales-demo/pi-natives-linux-arm64-gnu": "21.10.1",
+		"@f5-sales-demo/pi-natives-darwin-x64": "21.10.1",
+		"@f5-sales-demo/pi-natives-darwin-arm64": "21.10.1",
+		"@f5-sales-demo/pi-natives-win32-x64-msvc": "21.10.1"
 	},
 	"files": [
 		"native",

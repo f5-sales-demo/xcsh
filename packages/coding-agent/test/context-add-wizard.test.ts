@@ -58,7 +58,7 @@ describe("wizard credential normalization", () => {
 		["commented", "#XCSH_API_TOKEN=token-with-padding=", XCSH_API_TOKEN, "token-with-padding="],
 		["double quoted", 'XCSH_API_TOKEN="token-with-padding="', XCSH_API_TOKEN, "token-with-padding="],
 		["single quoted", "XCSH_CONSOLE_PASSWORD='safe value='", XCSH_CONSOLE_PASSWORD, "safe value="],
-		["username assignment", "XCSH_USERNAME=user@example.test", XCSH_USERNAME, "user@example.test"],
+		["username assignment", "XCSH_USERNAME=user@example.com", XCSH_USERNAME, "user@example.com"],
 	])("normalizes %s input", (_name, input, key, expected) => {
 		expect(normalizeWizardCredential(input, key)).toBe(expected);
 	});

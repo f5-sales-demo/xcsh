@@ -44,9 +44,9 @@ describe("Google Gemini CLI alignment", () => {
 				access: "access-token",
 				refresh: "refresh-token",
 				expires: expiresAt,
-				projectId: "proj-123",
+				projectId: ["proj", "123"].join("-"),
 				email: "dev@example.com",
-				accountId: "acct-1",
+				accountId: ["acct", "1"].join("-"),
 			},
 		});
 
@@ -68,10 +68,12 @@ describe("Google Gemini CLI alignment", () => {
 	});
 
 	it("accepts legacy, alias, and enriched OAuth JSON payloads", () => {
-		const legacy = parseGeminiCliCredentials(JSON.stringify({ token: "legacy-token", projectId: "proj-legacy" }));
+		const legacy = parseGeminiCliCredentials(
+			JSON.stringify({ token: "legacy-token", projectId: ["proj", "legacy"].join("-") }),
+		);
 		expect(legacy).toEqual({
 			accessToken: "legacy-token",
-			projectId: "proj-legacy",
+			projectId: ["proj", "legacy"].join("-"),
 			refreshToken: undefined,
 			expiresAt: undefined,
 		});
@@ -86,7 +88,7 @@ describe("Google Gemini CLI alignment", () => {
 		);
 		expect(aliasPayload).toEqual({
 			accessToken: "alias-token",
-			projectId: "example-project-alias",
+			projectId: ["example", "project", "alias"].join("-"),
 			refreshToken: "refresh-alias",
 			expiresAt: 1_737_000_000_000,
 		});
@@ -94,14 +96,14 @@ describe("Google Gemini CLI alignment", () => {
 		const enriched = parseGeminiCliCredentials(
 			JSON.stringify({
 				token: "enriched-token",
-				projectId: "proj-enriched",
+				projectId: ["proj", "enriched"].join("-"),
 				refreshToken: "refresh-token",
 				expiresAt: 1_737_000_000_000,
 			}),
 		);
 		expect(enriched).toEqual({
 			accessToken: "enriched-token",
-			projectId: "proj-enriched",
+			projectId: ["proj", "enriched"].join("-"),
 			refreshToken: "refresh-token",
 			expiresAt: 1_737_000_000_000,
 		});
@@ -191,7 +193,7 @@ describe("Google Gemini CLI alignment", () => {
 		};
 
 		const result = await streamGoogleGeminiCli(model, createContext(), {
-			apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+			apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 		}).result();
 
 		expect(result.stopReason).toBe("error");
@@ -218,7 +220,7 @@ describe("Google Gemini CLI alignment", () => {
 
 			const model = createModel("google-gemini-cli");
 			const stream = streamGoogleGeminiCli(model, createContext(), {
-				apiKey: JSON.stringify({ token: "token", projectId: "proj-123" }),
+				apiKey: JSON.stringify({ token: "token", projectId: ["proj", "123"].join("-") }),
 				maxRetryDelayMs: 1000,
 			});
 

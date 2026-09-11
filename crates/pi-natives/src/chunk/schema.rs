@@ -85,7 +85,7 @@ mod tests {
 			.expect("python function_definition schema should exist");
 		assert_eq!(schema.identifier_fields, vec!["name".to_string()]);
 		assert_eq!(schema.body_fields, vec!["body".to_string()]);
-		assert!(schema.promotion_fields.is_empty());
+		assert_eq!(schema.promotion_fields, [] as [std::string::String; 0]);
 		assert!(schema.is_structural());
 	}
 
@@ -123,7 +123,7 @@ mod tests {
 
 	#[test]
 	fn generated_schema_covers_expected_languages() {
-		for language in ["python", "nix", "toml", "typescript", "rust", "yaml"] {
+		for language in ["python", "nix", "toml", "typescript", "rust", "yaml", "perl"] {
 			assert!(has_schema(language), "{language} should have generated schema data");
 		}
 	}

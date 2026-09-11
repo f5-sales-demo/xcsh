@@ -41,6 +41,29 @@ const expectedAddons: readonly string[] = Bun.env.PI_NATIVE_EXPECTED_ADDONS
 	? Bun.env.PI_NATIVE_EXPECTED_ADDONS.split(" ").filter(Boolean)
 	: ALL_ADDONS;
 
+export function nativeSymbolCommand(
+  platform: string,
+  hostPlatform: string = process.platform,
+  which: (name: string) => string | null = Bun.which,
+): string[] {
+  if (!platform.startsWith("darwin-")) return ["nm", "-D", "--undefined-only"];
+  if (hostPlatform === "darwin") return ["nm", "-u"];
+  // Linux release jobs inspect downloaded Mach-O addons too. GNU nm cannot
+  // read them; distribution LLVM packages may expose only a versioned binary.
+  const candidates = ["llvm-nm", ...Array.from({ length: 11 }, (_, index) => `llvm-nm-${22 - index}`)];
+  for (const candidate of candidates) {
+    const executable = which(candidate);
+    if (executable) return [executable, "--undefined-only"];
+  }
+  throw new Error("Mach-O verification requires llvm-nm on PATH");
+}
+
+export function undefinedScannerSymbols(stdout: string, exitCode: number, stderr: string): string[] {
+  if (exitCode !== 0) throw new Error(`nm failed (${exitCode}): ${stderr.trim()}`);
+  // nm -u emits bare names on macOS and U-prefixed names with GNU/LLVM nm.
+  return stdout.split("\n").filter(line => /\b_?tree_sitter_\w+_external_scanner_/.test(line));
+}
+
 async function main(): Promise<void> {
 	const entries = await fs.readdir(nativeDir);
 
@@ -99,17 +122,18 @@ async function main(): Promise<void> {
 
 	for (const platform of nonWindowsAddons) {
 		const addonPath = path.join(nativeDir, `pi_natives.${platform}.node`);
-		const nmProc = Bun.spawn(["nm", "-D", addonPath], { stdout: "pipe", stderr: "pipe" });
-		const output = await new Response(nmProc.stdout).text();
-		await nmProc.exited;
+		const command = nativeSymbolCommand(platform);
+		const nmProc = Bun.spawn([...command, addonPath], { stdout: "pipe", stderr: "pipe" });
+		const [output, errorOutput, exitCode] = await Promise.all([
+			new Response(nmProc.stdout).text(),
+			new Response(nmProc.stderr).text(),
+			nmProc.exited,
+		]);
+		const unresolvedScanners = undefinedScannerSymbols(output, exitCode, errorOutput);
 
-		const undefinedScannerSymbols = output
-			.split("\n")
-			.filter((line) => /\bU\b.*tree_sitter_\w+_external_scanner_/.test(line));
-
-		if (undefinedScannerSymbols.length > 0) {
-			console.error(`SYMBOL ERROR pi_natives.${platform}.node: ${undefinedScannerSymbols.length} undefined tree-sitter scanner symbol(s)`);
-			for (const sym of undefinedScannerSymbols) {
+		if (unresolvedScanners.length > 0) {
+			console.error(`SYMBOL ERROR pi_natives.${platform}.node: ${unresolvedScanners.length} undefined tree-sitter scanner symbol(s)`);
+			for (const sym of unresolvedScanners) {
 				console.error(`  ${sym.trim()}`);
 			}
 			symbolErrors++;

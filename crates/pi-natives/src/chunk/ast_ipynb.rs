@@ -460,7 +460,7 @@ pub fn build_notebook_tree_from_virtual(
 					.saturating_add(region.content_start as u32);
 				let line_shift = region.content_line.saturating_sub(1);
 				chunks.push(ChunkNode {
-					path: translated_path.clone(),
+					path: translated_path,
 					identifier: sub_chunk.identifier,
 					kind: sub_chunk.kind,
 					leaf: sub_chunk.leaf,
@@ -913,6 +913,6 @@ mod tests {
 		let json = r#"{"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}"#;
 		let state = ChunkStateInner::parse(json.to_string(), "ipynb".to_string())
 			.expect("empty notebook should parse");
-		assert!(state.tree().root_children.is_empty());
+		assert_eq!(state.tree().root_children, [] as [std::string::String; 0]);
 	}
 }

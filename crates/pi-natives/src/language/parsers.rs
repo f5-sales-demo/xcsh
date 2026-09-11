@@ -99,7 +99,7 @@ pub fn language_odin() -> TSLanguage {
 	tree_sitter_odin::LANGUAGE.into()
 }
 pub fn language_perl() -> TSLanguage {
-	tree_sitter_perl::LANGUAGE.into()
+	ts_parser_perl::LANGUAGE.into()
 }
 pub fn language_php() -> TSLanguage {
 	tree_sitter_php::LANGUAGE_PHP_ONLY.into()

@@ -225,7 +225,7 @@ const GRAMMARS: &[GrammarSpec] = &[
 	},
 	GrammarSpec {
 		language: "perl",
-		package: "tree-sitter-perl-next",
+		package: "ts-parser-perl",
 		node_types_rel: "src/node-types.json",
 	},
 	GrammarSpec {

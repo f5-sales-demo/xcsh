@@ -1,8 +1,11 @@
+pub use crate::sys::stubs::async_pipe;
 pub mod commands;
+pub(crate) mod env;
 pub mod fd;
 pub mod fs;
 pub use crate::sys::stubs::input;
 pub(crate) mod network;
+pub use crate::sys::stubs::poll;
 pub use crate::sys::stubs::resource;
 
 /// Signal processing utilities

@@ -21,23 +21,23 @@ class CiCapacityContractTests(unittest.TestCase):
             self.assertIn("runs-on: xcsh-compute", block)
         self.assertIn('"os":"macos-14"', workflow)
         self.assertIn('"os":"windows-latest"', workflow)
-        self.assertIn('run: test "$(zig version)" = 0.15.2', workflow)
+        self.assertIn('run: test "$(zig version)" = 0.16.0', workflow)
 
     def test_self_hosted_jobs_verify_baked_bun(self) -> None:
         ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
-        self.assertIn("Verify baked Bun 1.3.14", ci)
+        self.assertIn("Verify baked Bun 1.4.2", ci)
         for block in re.findall(
-            r"      - name: Setup Bun 1\.3\.14\n(?:        .*\n){1,9}", ci
+            r"      - name: Setup Bun 1\.4\.2\n(?:        .*\n){1,9}", ci
         ):
             self.assertIn("runner.environment != 'self-hosted'", block)
         compatibility = (WORKFLOWS / "arc-compatibility.yml").read_text(
             encoding="utf-8"
         )
         self.assertIn("runs-on: xcsh-compute", compatibility)
-        self.assertIn("Verify baked Bun 1.3.14", compatibility)
+        self.assertIn("Verify baked Bun 1.4.2", compatibility)
         self.assertNotIn("oven-sh/setup-bun", compatibility)
         tag = (WORKFLOWS / "tag-on-version-bump.yml").read_text(encoding="utf-8")
-        self.assertIn("Verify baked Bun 1.3.14", tag)
+        self.assertIn("Verify baked Bun 1.4.2", tag)
         self.assertNotIn("oven-sh/setup-bun", tag)
 
     def test_installs_and_cache_keys_are_bounded_and_immutable(self) -> None:
@@ -48,18 +48,58 @@ class CiCapacityContractTests(unittest.TestCase):
         )
         self.assertNotIn("bun install --frozen-lockfile", workflows)
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
-        self.assertIn('--concurrent-scripts "$CONCURRENT_SCRIPTS"', benchmark)
         self.assertIn("  pull_request:\n    types: [labeled]", benchmark)
-        benchmark_guard = (
+        software_guard = (
             "github.event_name == 'pull_request' &&\n"
             "      github.event.action == 'labeled' &&\n"
             "      github.event.label.name == 'compute-benchmark-approved' &&\n"
             "      github.event.pull_request.head.repo.full_name == github.repository"
         )
-        self.assertEqual(benchmark.count(benchmark_guard), 2)
+        self.assertEqual(benchmark.count(software_guard), 3)
+        self.assertEqual(
+            benchmark.count("github.event.label.name == 'compute-hardware-approved'"),
+            6,
+        )
+        self.assertIn("  release-native-fixtures:\n", benchmark)
+        self.assertIn(
+            "github.event.label.name == 'compute-hardware-approved'", benchmark
+        )
+        self.assertIn("    needs: release-native-fixtures\n", benchmark)
+        self.assertIn("platform: linux\n            arch: arm64", benchmark)
+        self.assertEqual(benchmark.count("platform: win32"), 2)
+        self.assertIn("name: qualification-native-${{ matrix.platform }}", benchmark)
+        self.assertIn("  d16-current-burst:\n", benchmark)
+        self.assertIn("    runs-on: xcsh-compute\n", benchmark)
+        self.assertIn("runs-on: xcsh-compute-bun-candidate", benchmark)
+        self.assertIn("runs-on: xcsh-compute-f32-candidate", benchmark)
+        self.assertIn("max-parallel: 4", benchmark)
+        self.assertIn("pair: [1, 2, 3, 4, 5]", benchmark)
+        self.assertIn(
+            "  d16-hardware-baseline:\n"
+            "    name: D16 / Bun 1.3.14 / hardware / ${{ matrix.cache }} / pair-${{ matrix.pair }}\n"
+            "    needs: release-native-fixtures",
+            benchmark,
+        )
+        self.assertIn("needs.release-native-fixtures.result == 'success'", benchmark)
+        self.assertNotIn("needs.d16-software-candidate.result", benchmark)
+        self.assertIn("    needs: f32-hardware-candidate", benchmark)
+        self.assertIn("    needs: d16-current-burst", benchmark)
+        self.assertIn("    needs: d16-burst", benchmark)
+        self.assertIn("variant: d16-four", benchmark)
+        profiler_action = (
+            ROOT / ".github/actions/runner-optimization-profile/action.yml"
+        ).read_text(encoding="utf-8")
+        self.assertIn(
+            "uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518",
+            profiler_action,
+        )
+        self.assertIn("tool: nextest", profiler_action)
+        self.assertIn("pattern: qualification-native-*", profiler_action)
+        self.assertIn("merge-multiple: true", profiler_action)
+        self.assertIn("retention-days: 30", profiler_action)
         self.assertNotIn("/usr/bin/time", benchmark)
         self.assertNotIn('bun-version: "1.3"', workflows)
-        self.assertIn("bun-1.3.14-${{ runner.os }}-${{ runner.arch }}", workflows)
+        self.assertIn("bun-1.4.2-${{ runner.os }}-${{ runner.arch }}", workflows)
         self.assertNotIn("lookup-only:", workflows)
         self.assertIn("actions/cache/restore@", workflows)
         prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")
@@ -73,11 +113,43 @@ class CiCapacityContractTests(unittest.TestCase):
             prime,
         )
         installer = (ROOT / "scripts/ci-bun-install.sh").read_text(encoding="utf-8")
+        self.assertIn("expected_bun=${XCSH_EXPECTED_BUN_VERSION:-1.4.2}", installer)
+        self.assertIn('ln -sfn "$(command -v bun)" "$bun_bin_dir/bunx"', installer)
         self.assertIn("--frozen-lockfile --concurrent-scripts 16", installer)
         self.assertIn('printf \'%s\\n\' "$bun_bin_dir" >>"$GITHUB_PATH"', installer)
         self.assertIn('launcher="packages/coding-agent/bin/xcsh.ts"', installer)
         self.assertIn("mode change 100644 => 100755 $launcher", installer)
         self.assertIn('git -C "$workspace" diff --exit-code', installer)
+
+    def test_runner_qualification_profiles_the_complete_workload(self) -> None:
+        benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
+        profiler_action = (
+            ROOT / ".github/actions/runner-optimization-profile/action.yml"
+        ).read_text(encoding="utf-8")
+        profiler = (ROOT / "scripts/runner-optimization-profile.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            "XCSH_EXPECTED_BUN_VERSION: ${{ inputs.variant == 'bun-1.4.2' && "
+            "'1.4.2' || '1.3.14' }}",
+            profiler_action,
+        )
+        self.assertIn(
+            "EXPECTED_BUN: ${{ inputs.variant == 'bun-1.4.2' && '1.4.2' || '1.3.14' }}",
+            profiler_action,
+        )
+        for phase in ("install", "native", "test", "release"):
+            self.assertIn(f"profile_phase {phase} {phase}", profiler)
+        self.assertIn('TARGET_VARIANTS="baseline modern"', profiler)
+        self.assertIn("--platform linux,win32", profiler)
+        self.assertIn(
+            'SOURCE_DATE_EPOCH=$(git show -s --format=%ct "$source_commit")', profiler
+        )
+        self.assertIn("4e12e53d3f6e7085c345d9426f7252b03ac6dbfd", benchmark)
+        self.assertIn("path: .qualification-harness", benchmark)
+        self.assertIn("git diff --exit-code", profiler)
+        self.assertIn('>"$output_dir/node-filesystem.json"', profiler)
+        self.assertNotIn("actions/cache/save@", benchmark)
         package = (ROOT / "packages/coding-agent/package.json").read_text(
             encoding="utf-8"
         )

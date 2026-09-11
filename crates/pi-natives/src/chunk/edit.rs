@@ -1793,7 +1793,7 @@ fn compute_insert_spacing(
 	}
 }
 
-fn count_trailing_newlines_before_offset(text: &str, offset: usize) -> usize {
+const fn count_trailing_newlines_before_offset(text: &str, offset: usize) -> usize {
 	let mut count = 0usize;
 	let bytes = text.as_bytes();
 	let mut index = offset;
@@ -1804,7 +1804,7 @@ fn count_trailing_newlines_before_offset(text: &str, offset: usize) -> usize {
 	count
 }
 
-fn count_leading_newlines_after_offset(text: &str, offset: usize) -> usize {
+const fn count_leading_newlines_after_offset(text: &str, offset: usize) -> usize {
 	let mut count = 0usize;
 	let bytes = text.as_bytes();
 	let mut index = offset;

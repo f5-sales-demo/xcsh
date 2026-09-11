@@ -20,7 +20,7 @@ export interface InputItem {
 	role?: string;
 	content?: unknown;
 	call_id?: string | null;
-	name?: string;
+	name?: string | null;
 	output?: unknown;
 	arguments?: unknown;
 }

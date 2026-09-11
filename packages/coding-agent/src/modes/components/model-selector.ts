@@ -489,8 +489,9 @@ export class ModelSelectorComponent extends Container {
 				.slice(0, 1);
 			if (selected) {
 				details.push(...wrapTextWithAnsi(assignments(selected.model, true), inner));
-				if (this.#isItemDisabled(selected)) details.push("Unavailable · reconnect or refresh this provider.");
-				else if (selected.model.description) details.push(...wrapTextWithAnsi(selected.model.description, inner));
+				if (this.#isItemDisabled(selected) && !this.#refreshingProvider) {
+					details.push("Unavailable · reconnect or refresh this provider.");
+				} else if (selected.model.description) details.push(...wrapTextWithAnsi(selected.model.description, inner));
 			}
 			// Two live-status rows are intentional reserved space; spinner/error updates must not shift the table.
 			minimumDetailRows = details.length + 2;

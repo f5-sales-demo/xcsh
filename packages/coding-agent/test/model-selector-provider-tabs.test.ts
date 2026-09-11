@@ -452,6 +452,7 @@ describe("provider-tab model selector", () => {
 		expect(rendered).toContain("Google Vertex AI");
 		expect(rendered).not.toContain("Google Vertex AI (stale)");
 		expect(rendered).toContain("Refreshing Google Vertex AI model list");
+		expect(rendered).not.toContain("Unavailable · reconnect");
 		expect(rendered).toContain("Ctrl+R: refresh");
 
 		selector.handleInput("\x12");
@@ -459,6 +460,7 @@ describe("provider-tab model selector", () => {
 		expect(refreshProvider).toHaveBeenCalledWith("google-vertex", "online");
 		rendered = Bun.stripANSI(selector.render(120).join("\n"));
 		expect(rendered).toContain("Refreshing Google Vertex AI model list");
+		expect(rendered).not.toContain("Unavailable · reconnect");
 
 		finishRefresh?.();
 		await Bun.sleep(0);

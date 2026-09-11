@@ -12,6 +12,10 @@ const HOUR_MS = 60 * 60 * 1000;
 
 const FIVE_HOUR_MS = 5 * HOUR_MS;
 
+function syntheticId(...segments: string[]): string {
+	return segments.join("-");
+}
+
 type UsageWindowSpec = {
 	usedFraction: number;
 	resetInMs: number;
@@ -157,7 +161,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-near",
 			createCodexUsageReport({
-				accountId: "acct-near",
+				accountId: syntheticId("acct", "near"),
 				primary: { usedFraction: 0.4, resetInMs: 10 * 60 * 1000 },
 				secondary: { usedFraction: 0.92, resetInMs: 15 * 60 * 1000 },
 			}),
@@ -165,7 +169,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-far",
 			createCodexUsageReport({
-				accountId: "acct-far",
+				accountId: syntheticId("acct", "far"),
 				primary: { usedFraction: 0.3, resetInMs: 40 * 60 * 1000 },
 				secondary: { usedFraction: 0.55, resetInMs: 6 * 24 * 60 * 60 * 1000 },
 			}),
@@ -192,7 +196,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-zero",
 			createCodexUsageReport({
-				accountId: "acct-zero",
+				accountId: syntheticId("acct", "zero"),
 				primary: { usedFraction: 0, resetInMs: FIVE_HOUR_MS },
 				secondary: { usedFraction: 0.8, resetInMs: 2 * HOUR_MS },
 				primaryWindow: fiveHourWindow,
@@ -201,7 +205,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-progress",
 			createCodexUsageReport({
-				accountId: "acct-progress",
+				accountId: syntheticId("acct", "progress"),
 				primary: { usedFraction: 0.05, resetInMs: 4 * HOUR_MS },
 				secondary: { usedFraction: 0.1, resetInMs: 6 * 24 * HOUR_MS },
 				primaryWindow: fiveHourWindow,
@@ -222,7 +226,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-exhausted",
 			createCodexUsageReport({
-				accountId: "acct-exhausted",
+				accountId: syntheticId("acct", "exhausted"),
 				primary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 				secondary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 			}),
@@ -230,7 +234,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-healthy",
 			createCodexUsageReport({
-				accountId: "acct-healthy",
+				accountId: syntheticId("acct", "healthy"),
 				primary: { usedFraction: 0.5, resetInMs: 20 * 60 * 1000 },
 				secondary: { usedFraction: 0.4, resetInMs: 3 * 24 * 60 * 60 * 1000 },
 			}),
@@ -251,7 +255,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-soon",
 			createCodexUsageReport({
-				accountId: "acct-soon",
+				accountId: syntheticId("acct", "soon"),
 				primary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 				secondary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 			}),
@@ -259,7 +263,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-later",
 			createCodexUsageReport({
-				accountId: "acct-later",
+				accountId: syntheticId("acct", "later"),
 				primary: { usedFraction: 1, resetInMs: 30 * 60 * 1000 },
 				secondary: { usedFraction: 1, resetInMs: 30 * 60 * 1000 },
 			}),
@@ -277,7 +281,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-solo",
 			createCodexUsageReport({
-				accountId: "acct-solo",
+				accountId: syntheticId("acct", "solo"),
 				primary: { usedFraction: 0.3, resetInMs: 20 * 60 * 1000 },
 				secondary: { usedFraction: 0.2, resetInMs: 5 * 24 * 60 * 60 * 1000 },
 			}),
@@ -296,7 +300,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		]);
 
 		const plusReport = createCodexUsageReport({
-			accountId: "acct-plus",
+			accountId: syntheticId("acct", "plus"),
 			primary: { usedFraction: 0.05, resetInMs: 30 * 60 * 1000 },
 			secondary: { usedFraction: 0.05, resetInMs: 6 * 24 * 60 * 60 * 1000 },
 		});
@@ -304,7 +308,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set("acct-plus", plusReport);
 
 		const proReport = createCodexUsageReport({
-			accountId: "acct-pro",
+			accountId: syntheticId("acct", "pro"),
 			primary: { usedFraction: 0.2, resetInMs: 30 * 60 * 1000 },
 			secondary: { usedFraction: 0.2, resetInMs: 6 * 24 * 60 * 60 * 1000 },
 		});
@@ -360,7 +364,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-slow",
 			createCodexUsageReport({
-				accountId: "acct-slow",
+				accountId: syntheticId("acct", "slow"),
 				primary: { usedFraction: 0.2, resetInMs: 30 * 60 * 1000 },
 				secondary: { usedFraction: 0.1, resetInMs: 6 * 24 * 60 * 60 * 1000 },
 			}),
@@ -368,7 +372,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-medium",
 			createCodexUsageReport({
-				accountId: "acct-medium",
+				accountId: syntheticId("acct", "medium"),
 				primary: { usedFraction: 0.2, resetInMs: 30 * 60 * 1000 },
 				secondary: { usedFraction: 0.3, resetInMs: 5 * 24 * 60 * 60 * 1000 },
 			}),
@@ -376,7 +380,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-fast",
 			createCodexUsageReport({
-				accountId: "acct-fast",
+				accountId: syntheticId("acct", "fast"),
 				primary: { usedFraction: 0.2, resetInMs: 30 * 60 * 1000 },
 				secondary: { usedFraction: 0.7, resetInMs: 3 * 24 * 60 * 60 * 1000 },
 			}),
@@ -398,7 +402,7 @@ describe("AuthStorage codex oauth ranking", () => {
 		usageByAccount.set(
 			"acct-known",
 			createCodexUsageReport({
-				accountId: "acct-known",
+				accountId: syntheticId("acct", "known"),
 				primary: { usedFraction: 0.2, resetInMs: 30 * 60 * 1000 },
 				secondary: { usedFraction: 0.3, resetInMs: 5 * 24 * 60 * 60 * 1000 },
 			}),
@@ -587,7 +591,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-near",
 			createClaudeUsageReport({
-				accountId: "acct-near",
+				accountId: syntheticId("acct", "near"),
 				primary: { usedFraction: 0.4, resetInMs: 2 * HOUR_MS },
 				secondary: { usedFraction: 0.92, resetInMs: 15 * 60 * 1000 },
 			}),
@@ -595,7 +599,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-far",
 			createClaudeUsageReport({
-				accountId: "acct-far",
+				accountId: syntheticId("acct", "far"),
 				primary: { usedFraction: 0.3, resetInMs: 4 * HOUR_MS },
 				secondary: { usedFraction: 0.55, resetInMs: 6 * 24 * HOUR_MS },
 			}),
@@ -616,7 +620,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-exhausted",
 			createClaudeUsageReport({
-				accountId: "acct-exhausted",
+				accountId: syntheticId("acct", "exhausted"),
 				primary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 				secondary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 			}),
@@ -624,7 +628,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-healthy",
 			createClaudeUsageReport({
-				accountId: "acct-healthy",
+				accountId: syntheticId("acct", "healthy"),
 				primary: { usedFraction: 0.5, resetInMs: 3 * HOUR_MS },
 				secondary: { usedFraction: 0.4, resetInMs: 3 * 24 * HOUR_MS },
 			}),
@@ -645,7 +649,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-soon",
 			createClaudeUsageReport({
-				accountId: "acct-soon",
+				accountId: syntheticId("acct", "soon"),
 				primary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 				secondary: { usedFraction: 1, resetInMs: 5 * 60 * 1000 },
 			}),
@@ -653,7 +657,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-later",
 			createClaudeUsageReport({
-				accountId: "acct-later",
+				accountId: syntheticId("acct", "later"),
 				primary: { usedFraction: 1, resetInMs: 30 * 60 * 1000 },
 				secondary: { usedFraction: 1, resetInMs: 30 * 60 * 1000 },
 			}),
@@ -675,7 +679,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-slow",
 			createClaudeUsageReport({
-				accountId: "acct-slow",
+				accountId: syntheticId("acct", "slow"),
 				primary: { usedFraction: 0.2, resetInMs: 4 * HOUR_MS },
 				secondary: { usedFraction: 0.1, resetInMs: 6 * 24 * HOUR_MS },
 			}),
@@ -683,7 +687,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-medium",
 			createClaudeUsageReport({
-				accountId: "acct-medium",
+				accountId: syntheticId("acct", "medium"),
 				primary: { usedFraction: 0.2, resetInMs: 4 * HOUR_MS },
 				secondary: { usedFraction: 0.3, resetInMs: 5 * 24 * HOUR_MS },
 			}),
@@ -691,7 +695,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-fast",
 			createClaudeUsageReport({
-				accountId: "acct-fast",
+				accountId: syntheticId("acct", "fast"),
 				primary: { usedFraction: 0.2, resetInMs: 4 * HOUR_MS },
 				secondary: { usedFraction: 0.7, resetInMs: 3 * 24 * HOUR_MS },
 			}),
@@ -709,7 +713,7 @@ describe("AuthStorage claude oauth ranking", () => {
 		usageByAccount.set(
 			"acct-solo",
 			createClaudeUsageReport({
-				accountId: "acct-solo",
+				accountId: syntheticId("acct", "solo"),
 				primary: { usedFraction: 0.3, resetInMs: 3 * HOUR_MS },
 				secondary: { usedFraction: 0.2, resetInMs: 5 * 24 * HOUR_MS },
 			}),

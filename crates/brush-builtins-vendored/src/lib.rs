@@ -1,5 +1,9 @@
 //! Standard builtins.
 
+// The generic builtin trait is asynchronous so implementations can await when necessary. Most
+// shell builtins are intentionally synchronous but must retain the trait's async signature.
+#![allow(clippy::unused_async_trait_impl)]
+
 #[cfg(feature = "builtin.alias")]
 mod alias;
 #[cfg(feature = "builtin.bg")]
@@ -8,10 +12,10 @@ mod bg;
 mod bind;
 #[cfg(feature = "builtin.break")]
 mod break_;
-#[cfg(feature = "builtin.brushinfo")]
-mod brushinfo;
 #[cfg(feature = "builtin.builtin")]
 mod builtin_;
+#[cfg(feature = "builtin.caller")]
+mod caller;
 #[cfg(feature = "builtin.cd")]
 mod cd;
 #[cfg(feature = "builtin.colon")]

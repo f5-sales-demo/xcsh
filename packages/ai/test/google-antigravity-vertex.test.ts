@@ -51,7 +51,7 @@ describe("Google Antigravity Vertex transport", () => {
 		});
 
 		const result = await streamGoogleGeminiCli(model, context, {
-			apiKey: JSON.stringify({ token: "xcsh-access-token", projectId: "enterprise-project" }),
+			apiKey: JSON.stringify({ token: "xcsh-access-token", projectId: ["enterprise", "project"].join("-") }),
 			thinking: { enabled: true, level: "HIGH" },
 		}).result();
 

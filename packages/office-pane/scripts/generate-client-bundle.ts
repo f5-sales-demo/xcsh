@@ -16,10 +16,9 @@
  *  - `--reset` (post-compile): restore the committed empty placeholder.
  */
 
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
 import * as path from "node:path";
 import { $ } from "bun";
+import { buildDeterministicArchiveBase64 } from "../../../scripts/deterministic-tar-gzip";
 
 // packages/office-pane/scripts → repo/packages → coding-agent target file.
 const PACKAGES_DIR = path.resolve(import.meta.dir, "..", "..");
@@ -35,42 +34,6 @@ function placeholderContent(): string {
 	return "";
 }
 
-async function collectFiles(dir: string): Promise<string[]> {
-	const entries = await fs.readdir(dir, { withFileTypes: true });
-	const files: string[] = [];
-	for (const entry of entries) {
-		const fullPath = path.join(dir, entry.name);
-		if (entry.isDirectory()) {
-			files.push(...(await collectFiles(fullPath)));
-		} else if (entry.isFile()) {
-			files.push(fullPath);
-		}
-	}
-	files.sort((a, b) => a.localeCompare(b));
-	return files;
-}
-
-async function buildArchiveBase64(dir: string): Promise<string> {
-	const files = await collectFiles(dir);
-	const entries: Record<string, Uint8Array> = {};
-	for (const filePath of files) {
-		const relativePath = path.relative(dir, filePath).split(path.sep).join("/");
-		entries[relativePath] = await fs.readFile(filePath);
-	}
-
-	const tempArchivePath = path.join(
-		os.tmpdir(),
-		`xcsh-office-pane-${Bun.hash(Date.now().toString() + Math.random().toString(16)).toString(16)}.tar.gz`,
-	);
-	try {
-		await Bun.Archive.write(tempArchivePath, entries, { compress: "gzip" });
-		const archiveBytes = await Bun.file(tempArchivePath).bytes();
-		return Buffer.from(archiveBytes).toString("base64");
-	} finally {
-		await fs.rm(tempArchivePath, { force: true });
-	}
-}
-
 async function main(): Promise<void> {
 	if (process.argv.includes(RESET_FLAG)) {
 		await Bun.write(GENERATED_FILE, placeholderContent());
@@ -84,7 +47,7 @@ async function main(): Promise<void> {
 	}
 
 	await $`bun run build`.cwd(OFFICE_PANE_DIR);
-	const archiveBase64 = await buildArchiveBase64(DIST_DIR);
+	const archiveBase64 = await buildDeterministicArchiveBase64(DIST_DIR);
 	await Bun.write(GENERATED_FILE, archiveBase64);
 	console.log(`Generated ${GENERATED_FILE} (${archiveBase64.length} base64 chars)`);
 }

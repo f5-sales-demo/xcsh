@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { findGlibcRequirementsAbove, hasAvx512Markers } from "../../../scripts/ci-release-verify-natives";
+import {
+	findGlibcRequirementsAbove,
+	hasAvx512Markers,
+	nativeSymbolCommand,
+	undefinedScannerSymbols,
+} from "../../../scripts/ci-release-verify-natives";
 import { buildZigArgs } from "../scripts/zig-safe-wrapper";
 
 describe("native build safety", () => {
@@ -42,6 +47,24 @@ describe("native build safety", () => {
 	});
 
 	describe("Linux release ABI", () => {
+		it("uses a deterministic, exclusively locked native build output directory", async () => {
+			const build = await Bun.file(new URL("../scripts/build-native.ts", import.meta.url)).text();
+			expect(build).toContain("function resolveBuildOutputDir(profileLabel: string): string");
+			expect(build).toMatch(
+				/return path\.join\(nativeDir, "\.build", `\$\{buildTarget}-\$\{variantLabel}-\$\{profileLabel}`\);/,
+			);
+			expect(build).not.toContain("fs.mkdtemp(");
+			expect(build).toContain("await fs.mkdir(buildLockDir);");
+			expect(build).toMatch(/is already in progress \(\$\{buildLockDir}\)/);
+			expect(build).toContain("await fs.rm(buildLockDir, { recursive: true, force: true });");
+			expect(build).toContain("const constRandomSeed = resolveConstRandomSeed(profileLabel);");
+			expect(build).toContain('const sourceDateEpoch = "946684800";');
+			expect(build).toContain(
+				".env({ ...Bun.env, CONST_RANDOM_SEED: constRandomSeed, SOURCE_DATE_EPOCH: sourceDateEpoch })",
+			);
+			expect(build).toContain("xcsh-pi-natives-v1:");
+		});
+
 		it("rejects glibc requirements above the 2.17 release floor", () => {
 			const readelf = [
 				"0x0010:   Name: GLIBC_2.17  Flags: none  Version: 9",
@@ -78,5 +101,25 @@ describe("native build safety", () => {
 			expect(verifier).toContain("PI_NATIVE_VARIANT=baseline");
 			expect(verifier).not.toContain("|| true");
 		});
+	});
+});
+
+describe("native scanner symbol inspection", () => {
+	it("rejects failed symbol inspection instead of treating empty stdout as clean", () => {
+		expect(() => undefinedScannerSymbols("", 1, "file format not recognized")).toThrow("nm failed");
+	});
+
+	it("recognizes undefined scanner names from Darwin and GNU nm", () => {
+		expect(undefinedScannerSymbols("_tree_sitter_glimmer_external_scanner_scan\n", 0, "")).toHaveLength(1);
+		expect(undefinedScannerSymbols(" U tree_sitter_glimmer_external_scanner_scan\n", 0, "")).toHaveLength(1);
+		expect(undefinedScannerSymbols(" U napi_create_object\n", 0, "")).toEqual([]);
+	});
+
+	it("requires a Mach-O capable inspector for foreign addons", () => {
+		expect(
+			nativeSymbolCommand("darwin-arm64", "linux", name => (name === "llvm-nm-18" ? "/usr/bin/llvm-nm-18" : null)),
+		).toEqual(["/usr/bin/llvm-nm-18", "--undefined-only"]);
+		expect(() => nativeSymbolCommand("darwin-arm64", "linux", () => null)).toThrow("requires llvm-nm");
+		expect(nativeSymbolCommand("darwin-arm64", "darwin", () => null)).toEqual(["nm", "-u"]);
 	});
 });

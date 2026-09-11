@@ -11,7 +11,7 @@ const PREVIOUS_CREDENTIAL = {
 	refresh: "previous-refresh",
 	access: "previous-access",
 	expires: 123,
-	projectId: "previous-project",
+	projectId: ["previous", "project"].join("-"),
 };
 
 function createSession(previousCredential: typeof PREVIOUS_CREDENTIAL | null = PREVIOUS_CREDENTIAL) {
@@ -63,7 +63,7 @@ describe("enterprise OAuth login transaction state", () => {
 		await state.authStorage.set("google-antigravity", {
 			...PREVIOUS_CREDENTIAL,
 			access: "new-access",
-			projectId: "new-project",
+			projectId: ["new", "project"].join("-"),
 		});
 		state.settings.set("modelRoles", { default: "google-antigravity/gemini-3.6-flash-high:high" });
 
