@@ -2147,3 +2147,26 @@ guarded coding-agent suite passes 8305 tests with 561 skips, zero failures and
 29976 assertions across 795 files in 411.28 seconds. Workspace TypeScript/Biome,
 TypeScript lint and documentation quality checks pass. This is automated contract
 evidence and does not claim an iPhone presentation result.
+
+## Current permission-boundary artifact and live bootstrap
+
+A clean executable built from `b3953eecc` under Bun 1.4.2 passed the ten-check
+package-independence harness in 18.560 seconds. The network-disabled Ubuntu 24.04
+container contained no Codex, standalone Bun, source checkout or project
+dependencies. Real packaged TUIs completed write/read tools, naming, normal and
+SIGKILL host recovery, active-work continuation, exactly-once retry, compiled
+resume and terminal cleanup. Binary SHA-256:
+`3c9852d83b9b29679860a6e80d86a9b16c083f18909ea983398e5428e1ec402e`.
+The receipt is
+`scripts/remote-package/evidence-permission-boundary-2026-09-10.json`.
+
+That same binary now runs the trace-bound live host. The relay is connected and
+the four resumed top-level sessions are `xcsh Remote Luna`, `xcsh Remote Astra`,
+`xcsh Remote Sol` and `xcsh Remote Terra`, retaining their expected
+`gpt-5.6-luna`, `gpt-6-astra`, `gpt-5.6-sol` and `gpt-5.6-terra` models. A live
+stable/experimental audit verified the exact Thread key projections, attached
+read capability, all four model-catalog entries, Plan/Default ordering and the
+empty permission-profile result. The state directory remains owner `0700`; the
+host state and socket remain owner `0600`. These are automated and operational
+checks only. The requested iPhone observations remain unclaimed until Robin
+reports them.

@@ -682,3 +682,20 @@ across 65 files, and the guarded coding-agent suite passes 8305 tests with 561
 skips, zero failures and 29976 assertions across 795 files in 411.28 seconds. A
 phone observation of the empty permission catalog remains separate; there is no
 applicable MCP elicitation flow in the current terminal runtime.
+
+## Current-head package and live bootstrap
+
+The clean `b3953eecc` executable, built with Bun 1.4.2, passed the complete
+ten-check package-independence harness in 18.560 seconds. Its network-disabled
+Ubuntu 24.04 container had no Codex, standalone Bun, source checkout or project
+dependencies. The binary SHA-256 is
+`3c9852d83b9b29679860a6e80d86a9b16c083f18909ea983398e5428e1ec402e`;
+the committed receipt records the harness/provider hashes and container image.
+
+The exact binary now owns a connected trace-bound live host and four idle resumed
+sessions named `xcsh Remote Luna`, `xcsh Remote Astra`, `xcsh Remote Sol` and
+`xcsh Remote Terra`. A local protocol audit verified their four expected models,
+stable and experimental list/read field order, Plan/Default order, model-catalog
+presence, pinned voice defaults and the empty permission-profile catalog. State
+directory and host file/socket modes remain `0700` and `0600`. No new phone or
+voice acceptance is inferred from these checks.

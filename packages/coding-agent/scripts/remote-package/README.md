@@ -54,3 +54,8 @@ suite and changed-scope privacy cleanup.
 after the harness added a full terminal-process exit/resume and replay of the
 original completed tool request. The stable turn ID and single history entry
 prove the persisted client-message ledger prevents a second execution.
+
+`evidence-permission-boundary-2026-09-10.json` records the clean `b3953eecc`
+artifact after permission-profile discovery and explicit unowned permission/MCP
+request rejection. It passed all ten checks under Bun 1.4.2 before that exact
+binary started the four-session trace-bound live checkpoint.

@@ -1,0 +1,57 @@
+{
+  "binarySha256": "3c9852d83b9b29679860a6e80d86a9b16c083f18909ea983398e5428e1ec402e",
+  "harnessSha256": "f1189d5c5d311586b3d751a6b49f55e60f5d87e821fe480cd4dfceb5f36225db",
+  "providerSha256": "64b2560296ce4416d95f880834a151149acb9561bb6dcc310b43caa4c69b3f6b",
+  "version": "xcsh/21.24.1",
+  "image": "ubuntu:24.04",
+  "imageId": "sha256:0b1ebe5dd42682bb8eda97ecf10a09f70f18d2d4af35f82b9271badac5dbeb27",
+  "checks": [
+    {
+      "description": "Codex, standalone Bun and project dependencies absent",
+      "elapsedMs": 194
+    },
+    {
+      "description": "packaged status defaults off",
+      "elapsedMs": 1922
+    },
+    {
+      "description": "two named top-level TUIs discovered with distinct identities and working directories",
+      "elapsedMs": 5173
+    },
+    {
+      "description": "remote prompts execute real write/read tools in the correct TUI and persist completed history",
+      "elapsedMs": 5428
+    },
+    {
+      "description": "remote thread naming updates live discovery and emits the pinned notification",
+      "elapsedMs": 5435
+    },
+    {
+      "description": "host restart preserves owners/history and stable request replay does not execute twice",
+      "elapsedMs": 10216
+    },
+    {
+      "description": "abrupt packaged host loss preserves active terminal work and stable retry executes it once",
+      "elapsedMs": 15227
+    },
+    {
+      "description": "compiled --resume preserves identity, model and durable exactly-once request replay",
+      "elapsedMs": 17564
+    },
+    {
+      "description": "terminal exit unregisters all owners",
+      "elapsedMs": 17758
+    },
+    {
+      "description": "disposable test container and its processes removed",
+      "elapsedMs": 18560
+    }
+  ],
+  "network": "none",
+  "enrollment": "synthetic",
+  "workModel": "package-fixture/model",
+  "phoneAcceptance": false,
+  "sourceCommit": "b3953eecccdc3c7ca47810000fc7be4ef254a1e2",
+  "buildInfoDirty": false,
+  "evidenceKind": "offline compiled integration"
+}
