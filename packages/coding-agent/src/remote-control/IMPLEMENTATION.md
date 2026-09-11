@@ -2346,3 +2346,34 @@ artifact and Robin-observed automatic replacement navigation are still required.
 The current complete remote-control suite passes 904 tests with 3679 assertions,
 and the guarded coding-agent suite passes 8310 tests with 561 skips and 30002
 assertions across 795 files.
+
+The committed lineage artifact `91353d9` established the next failure boundary.
+Robin approved one Luna Plan request from source `157b91c88d4750ea`. The phone
+cleared the Plan pill and continued to show `Exit plan mode`, but displayed no
+implementation activity. The terminal transitioned exactly once to
+`157ba16225238f97`, wrote the exact 26-byte, no-newline marker
+`LUNA-LINEAGE-91353D9-2F7C1`, and returned idle. The resulting fixture SHA-256 is
+`dc533173b26217f61e2a79dc211e5884ccb4686da448cf1eec16ca1240e64b71`.
+
+The owner-only sanitized trace proves that the lineage fix worked: sequence 450
+contains the phone approval, 453 resolves it, 455 closes the source on the same
+phone stream and 465 delivers replacement `157ba16225238f97` with
+`forkedFromId` bound to the source and `parentThreadId: null`. The remaining
+defect was lifecycle order. `startSessionBridge` used to unregister during the
+`before` phase, causing `thread/closed` to arrive while the source was still the
+phone's active thread and only then registering the related replacement.
+
+The bridge now remains registered during storage transition while rejecting
+incoming session calls with a transition error. In the `after` phase it
+registers the current identity before becoming callable. Host replacement is
+atomic: registration validation and `thread/started` happen before ownership is
+moved and the previous session is resolved and closed. Failed transitions simply
+refresh the unchanged identity, and rejected replacements preserve the old
+owner. The focused regression first received `thread/closed` before
+`thread/started`; after repair, the bridge/host/lifecycle/teardown set passed 36
+tests with 191 assertions. No phone acceptance is claimed until a fresh artifact
+shows automatic replacement navigation and visible implementation streaming.
+The expanded nine-file matrix passes 91 tests with 553 assertions, the complete
+65-file remote-control suite passes 904 tests with 3680 assertions, and the
+guarded coding-agent suite passes 8310 tests with 561 skips and 30003 assertions
+across 795 files under Bun 1.4.2.

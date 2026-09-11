@@ -19,14 +19,14 @@ export function startSessionBridge(
 	let stopped = false;
 	let closing: Promise<void> | undefined;
 	const events = new Set<Promise<void>>();
-	const update = (): Promise<void> => {
-		if (stopped || changing) return Promise.resolve();
+	const update = (duringTransition = false): Promise<void> => {
+		if (stopped || (changing && !duringTransition)) return Promise.resolve();
 		if (pending) return pending;
 		pending = (async () => {
 			try {
 				if (!peer) {
 					const connected = await connectPeer(socketPath);
-					if (stopped || changing) {
+					if (stopped || (changing && !duringTransition)) {
 						connected.close();
 						return;
 					}
@@ -43,6 +43,7 @@ export function startSessionBridge(
 							typeof params.params !== "object"
 						)
 							throw new ProtocolError(-32602, "Invalid session request");
+						if (changing) throw new ProtocolError(-32000, "Session is changing");
 						return remote.call(params.identity, params.method, params.params as Record<string, unknown>);
 					};
 				}
@@ -80,15 +81,12 @@ export function startSessionBridge(
 		if (phase === "before") {
 			changing = true;
 			await pending;
-			try {
-				await peer?.call("unregister", {});
-			} catch {
-				peer?.close();
-				peer = undefined;
-			}
 		} else {
-			changing = false;
-			await update();
+			try {
+				await update(true);
+			} finally {
+				changing = false;
+			}
 		}
 	});
 	const timer = setInterval(() => {

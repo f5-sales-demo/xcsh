@@ -848,3 +848,28 @@ navigation, Plan-pill clearing or visible implementation streaming. The current
 complete remote-control suite also passes 904 tests with 3679 assertions, and the
 guarded coding-agent suite passes 8310 tests with 561 skips and 30002 assertions
 across 795 files.
+
+The first lineage-enabled phone checkpoint used artifact `91353d9` and Luna
+source `157b91c88d4750ea`. After Robin tapped `Approve and execute` exactly once,
+the Plan pill cleared and `Exit plan mode` remained visible, but the phone
+transcript showed no implementation activity. The terminal transitioned once to
+`157ba16225238f97` and created
+`plan-lineage-luna-91353d9-2f7c1.txt` with exactly the 26 bytes
+`LUNA-LINEAGE-91353D9-2F7C1`, no trailing newline and SHA-256
+`dc533173b26217f61e2a79dc211e5884ccb4686da448cf1eec16ca1240e64b71`.
+
+Sanitized trace sequence 450 is the phone approval response, 453 is its
+`serverRequest/resolved`, 455 closes the source on the same phone stream and 465
+delivers the replacement there. The replacement now correctly projects the
+source as `forkedFromId` and keeps `parentThreadId: null`; lineage therefore
+passed while phone navigation did not. The trace and bridge lifecycle show that
+the source was removed before the replacement announcement. A focused
+regression reproduced that event order, then passed after the bridge retained a
+temporarily non-callable source until the host atomically announced the forked
+replacement and closed the source. The bridge, host, lifecycle and teardown set
+passes 36 tests with 191 assertions. This is automated evidence only; a rebuilt
+artifact and Robin-observed navigation remain required. The expanded nine-file
+matrix passes 91 tests with 553 assertions, the complete 65-file remote-control
+suite passes 904 tests with 3680 assertions, and the guarded coding-agent suite
+passes 8310 tests with 561 skips and 30003 assertions across 795 files under Bun
+1.4.2.

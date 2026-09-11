@@ -131,14 +131,13 @@ export async function startLocalHost(
 				const thread = params.thread as Record<string, unknown> | undefined;
 				if (!thread || typeof thread.id !== "string" || thread.id.length > 256)
 					throw new ProtocolError(-32602, "Invalid registration");
-				if (router.sessions.has(thread.id) && owners.get(peer)?.id !== thread.id)
+				const previous = owners.get(peer);
+				if (router.sessions.has(thread.id) && previous?.id !== thread.id)
 					throw new ProtocolError(-32000, "Session already has a live owner");
 				if (!owners.has(peer) && owners.size >= 128) throw new ProtocolError(-32000, "Live session limit");
 				const requests = router.validateSessionRequests(thread.id, params.requests ?? []);
 				const skills = registrationSkills(params.skills);
 				const skillErrors = registrationSkillErrors(params.skillErrors);
-				if (owners.get(peer)?.id !== thread.id) remove();
-				owners.set(peer, { id: thread.id, lastSeen: Date.now() });
 				router.registerSession(thread.id, {
 					thread,
 					requests,
@@ -147,6 +146,8 @@ export async function startLocalHost(
 					call: (identity, command, input) =>
 						peer.call("session/call", { identity, method: command, params: input }),
 				});
+				owners.set(peer, { id: thread.id, lastSeen: Date.now() });
+				if (previous && previous.id !== thread.id) router.removeSession(previous.id);
 				return {};
 			}
 			if (method === "event") {

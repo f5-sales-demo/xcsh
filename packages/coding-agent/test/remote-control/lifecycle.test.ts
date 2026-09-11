@@ -268,8 +268,9 @@ test("real voice state and history settle on the old session before switching", 
 	expect(writes.some(write => write.id === session.sessionId && write.kind === "realtimeSessionClosed")).toBe(true);
 });
 
-test("the bridge replaces its registered identity before a terminal switch returns", async () => {
+test("the bridge announces a forked replacement before closing its source identity", async () => {
 	const { mkdtemp, rm } = await import("node:fs/promises");
+	const { connectPeer } = await import("../../src/remote-control/ipc");
 	const { startLocalHost } = await import("../../src/remote-control/host");
 	const { startSessionBridge } = await import("../../src/remote-control/bridge");
 	const { session, remote } = await fixture();
@@ -277,7 +278,14 @@ test("the bridge replaces its registered identity before a terminal switch retur
 	const dir = await mkdtemp("/tmp/xcsh-lifecycle-");
 	const host = await startLocalHost(`${dir}/host.sock`, "fixture");
 	const stop = startSessionBridge(session, `${dir}/host.sock`, 60_000);
+	const phone = await connectPeer(`${dir}/host.sock`);
+	const events: any[] = [];
+	phone.handle = async (_method, params) => {
+		events.push(params.event);
+		return {};
+	};
 	cleanup.push(async () => {
+		phone.close();
 		stop();
 		await host.close();
 		await rm(dir, { recursive: true, force: true });
@@ -286,10 +294,24 @@ test("the bridge replaces its registered identity before a terminal switch retur
 	const deadline = Date.now() + 1000;
 	while (!host.router.sessions.has(oldId) && Date.now() < deadline) await Bun.sleep(5);
 	expect(host.router.sessions.has(oldId)).toBe(true);
-	await session.newSession();
+	await phone.call("protocol", {
+		request: {
+			id: 1,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+		},
+	});
+	await phone.call("protocol", { request: { id: 2, method: "thread/resume", params: { threadId: oldId } } });
+	await session.newSession({ forkedFromId: oldId });
+	const eventDeadline = Date.now() + 1000;
+	while (events.length < 2 && Date.now() < eventDeadline) await Bun.sleep(5);
 	expect(host.router.sessions.has(oldId)).toBe(false);
 	expect(host.router.sessions.has(session.sessionId)).toBe(true);
 	expect(host.router.sessions.size).toBe(1);
+	expect(events).toMatchObject([
+		{ method: "thread/started", params: { thread: { id: session.sessionId, forkedFromId: oldId } } },
+		{ method: "thread/closed", params: { threadId: oldId } },
+	]);
 });
 
 test("all transition listeners recover even when an earlier after listener fails", async () => {

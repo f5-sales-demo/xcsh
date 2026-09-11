@@ -32,7 +32,7 @@ completion of another. Codex baseline: 0.153.4,
 | Sol, Luna, Terra and Astra fidelity | Parameterized adapter tests; the current clean `b3953eecc` live runtime exposes four distinct Luna/Astra/Sol/Terra sessions with preserved IDs, names, directories and histories; all four concurrently completed distinct real write/read tool tasks in 19.920 seconds with exact file bytes and exactly-once request replay; isolated model-registry SDK tests preserve all four identities on resume | Final phone voice task in each clean-build session; no model replacement by voice component |
 | No Codex installation or subprocess dependency | The current `b3953eecc` artifact and two real TUIs pass ten isolated Ubuntu checks without Codex, standalone Bun or source dependencies; real file tools, remote rename, clean and SIGKILL host recovery, active-work continuation, host replay, compiled resume and durable terminal-restart replay verified | Preserve this check after final upstream reconciliation; live subscription/voice evidence remains separate |
 | Actual Codex reference recordings and comparison | Two recall calls and successful reference/native file calls; hashed sanitized fixtures | Repair remaining differences; further control/recovery/interaction scenarios and explicit unverified coverage |
-| TDD and repository checks | Recorded red-to-green work; the execution-lineage repair passes the guarded package suite with 8310 tests, 561 skips, 30002 assertions and zero failures across 795 files, plus 904 remote tests with 3679 expectations under Bun 1.4.2; workspace TypeScript/Biome, docs quality, changed-scope PII, diff gitleaks and whitespace checks pass, while the prior bundle and enhanced ten-check compiled artifact pass remain recorded; the branch-added audit finding was removed, and all 24 pinned source hashes verified | Rebuild and rerun the package-independence artifact gate. The unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
+| TDD and repository checks | Recorded red-to-green work; the replacement-order repair passes the guarded package suite with 8310 tests, 561 skips, 30003 assertions and zero failures across 795 files, plus 904 remote tests with 3680 expectations under Bun 1.4.2; workspace TypeScript/Biome, docs quality and changed-scope PII checks pass, while the prior diff gitleaks, whitespace, bundle and enhanced ten-check compiled artifact passes remain recorded; the branch-added audit finding was removed, and all 24 pinned source hashes verified | Rebuild and rerun the package-independence artifact gate. The unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
 | Manual acceptance only on Robin's report | Specific observations recorded in PARITY.md and issue comments | Obtain remaining manual checkpoints without treating simulated tests as phone acceptance |
 | Issue, PR, review, merge and cleanup | Detailed issue, feature worktree, pushed commits | Completed linked PR, review/CI repair loop, authorized squash merge, confirmed-merged cleanup |
 
@@ -104,6 +104,34 @@ not phone acceptance. The complete 65-file remote-control suite passed 904 tests
 with 3679 assertions, and the guarded coding-agent suite passed 8310 tests with
 561 skips and 30002 assertions across 795 files. A committed artifact and one
 controlled iPhone retry remain required before closing the navigation row.
+
+That retry used committed artifact `91353d9` and source thread
+`157b91c88d4750ea`. Robin tapped `Approve and execute` once; the Plan pill
+cleared and the phone continued to show `Exit plan mode`, but no implementation
+activity appeared in its transcript. The terminal moved once to replacement
+`157ba16225238f97`, created
+`plan-lineage-luna-91353d9-2f7c1.txt` with exactly the 26 bytes
+`LUNA-LINEAGE-91353D9-2F7C1` and no trailing newline, and returned idle. The
+fixture SHA-256 is
+`dc533173b26217f61e2a79dc211e5884ccb4686da448cf1eec16ca1240e64b71`.
+Sanitized trace sequences 450, 453, 455 and 465 show the phone approval,
+resolution, source closure and replacement delivery on the same phone stream.
+The replacement correctly carried `forkedFromId` for the approved source and
+`parentThreadId: null`, proving the lineage repair while leaving phone
+navigation failed.
+
+Trace review identified the remaining ordering fault: the bridge unregistered
+the active source before registering its replacement, so the phone received
+`thread/closed` before the related `thread/started`. The new regression first
+failed with that order. The repair keeps the old registration discoverable but
+rejects calls while storage changes, atomically announces the forked replacement
+afterward, then retires the source. The four-file focused bridge/host/lifecycle
+set passes 36 tests with 191 assertions. This remains automated repair evidence,
+not phone acceptance. The expanded nine-file matrix passes 91 tests with 553
+assertions, the complete remote-control suite passes 904 tests with 3680
+assertions, and the guarded coding-agent suite passes 8310 tests with 561 skips
+and 30003 assertions across 795 files. A newly built artifact and one controlled
+retry are still required.
 
 ## Accepted first-release boundaries
 
