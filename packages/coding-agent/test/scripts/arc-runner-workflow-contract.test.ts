@@ -147,6 +147,9 @@ test("compute qualification is manual, frozen-source, and derives bounded worker
 	expect(`${source}\n${runnerSource}`).not.toContain("--concurrent");
 	expect(runnerSource).toContain('flags.push("--parallel=2")');
 	expect(actionSource).toContain("EXPECTED_IMAGE_DIGEST");
+	expect(source).toContain("'{include:[{\"sample\":$pair}]}'");
+	expect(source).toContain("'{include:[range(1;5) | {sample:($pair + \"-slot-\" + tostring)}]}'");
+	expect(source).toContain("'{include:[range(1;3) | {sample:($pair + \"-slot-\" + tostring)}]}'");
 });
 
 test("DAG qualification holds image and hardware constant while measuring the real dependency graph", async () => {
