@@ -8,6 +8,7 @@ import { logger } from "@f5-sales-demo/pi-utils";
 import type { ModelRegistry } from "../../config/model-registry";
 import { type Theme, theme } from "../../modes/theme/theme";
 import type { SessionManager } from "../../session/session-manager";
+import { NativeLifecycleLocalOperationError } from "./bundled/native-lifecycle-control";
 import type {
 	BeforeAgentStartEvent,
 	BeforeAgentStartEventResult,
@@ -824,6 +825,7 @@ export class ExtensionRunner {
 						}
 					}
 				} catch (err) {
+					if (err instanceof NativeLifecycleLocalOperationError) throw err;
 					const message = err instanceof Error ? err.message : String(err);
 					const stack = err instanceof Error ? err.stack : undefined;
 					this.emitError({

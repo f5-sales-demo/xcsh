@@ -3519,6 +3519,11 @@ export class AgentSession {
 		} catch (error) {
 			this.#turnPhase.settle(this.#findLastAssistantMessage()?.stopReason === "aborted" ? "aborted" : "error");
 			settled = true;
+			// A prompt failure is not externally settled until lifecycle consumers
+			// have observed its terminal phase. In print mode the caller exits on the
+			// rejection, so returning first can strand the durable reporter at
+			// `working` even though the native operation already failed.
+			await this.#queuedExtensionEvents;
 			throw error;
 		} finally {
 			if (!agentLoopStarted && !settled) this.#turnPhase.settle("aborted");
