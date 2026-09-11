@@ -45,6 +45,12 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - Ordinary history uses the pinned `v2/item.rs` user, agent and dynamic-tool
   shapes. Its selected-branch projection and `remote-history` identity/boundary
   metadata are native xcsh code; messages remain persisted by AgentSession.
+  Developer and displayed extension messages use the pinned hook-prompt shape;
+  user shell/Python entries use command-execution; path-backed images use
+  image-view; compaction emits only its structural marker. File-mention contents,
+  hidden extension context and private compaction text are intentionally excluded.
+  A client attaching during an active provider stream receives the existing text
+  and executor progress with the same identities later used by durable history.
 - `codex-rs/app-server/src/request_processors/thread_processor.rs`, `filters.rs`,
   `thread-store/src/local/list_threads.rs` and `state/src/runtime/threads.rs`:
   discovery defaults, limits, sort/filter behavior, reverse anchors and loaded-ID

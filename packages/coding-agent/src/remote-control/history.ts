@@ -48,7 +48,7 @@ export function assistantHistoryItem(id: string, text: string, phase: string | u
 }
 export function messageKey(message: AgentMessage): string {
 	return JSON.stringify([
-		message.role,
+		message.role === "hookMessage" ? "custom" : message.role,
 		"timestamp" in message ? message.timestamp : null,
 		message.role === "toolResult" ? message.toolCallId : null,
 	]);
@@ -74,6 +74,34 @@ function commandHistoryItem(id: string, command: string, cwd: string): Record<st
 		exitCode: null,
 		durationMs: null,
 	};
+}
+function completedUserCommandHistoryItem(
+	id: string,
+	command: string,
+	output: string,
+	exitCode: number | undefined,
+	cancelled: boolean,
+	cwd: string,
+): Record<string, unknown> {
+	return {
+		...commandHistoryItem(id, command, cwd),
+		source: "userShell",
+		status: cancelled || (exitCode !== undefined && exitCode !== 0) ? "failed" : "completed",
+		aggregatedOutput: output || null,
+		exitCode: exitCode ?? null,
+	};
+}
+function textContent(content: string | readonly { type: string; text?: string }[]): string[] {
+	return typeof content === "string"
+		? [content]
+		: content.flatMap(part => (part.type === "text" && typeof part.text === "string" ? [part.text] : []));
+}
+function hookHistoryItem(id: string, hookRunId: string, content: string[]): Record<string, unknown>[] {
+	const fragments = content.filter(text => text.length > 0).map(text => ({ text, hookRunId }));
+	return fragments.length > 0 ? [{ type: "hookPrompt", id, fragments }] : [];
+}
+function fileName(path: string): string {
+	return path.split(/[\\/]/u).filter(Boolean).at(-1) ?? path;
 }
 export function updateCommandHistoryItem(
 	item: Record<string, unknown>,
@@ -199,9 +227,15 @@ export function messageHistoryItems(
 	clientId: string | null = null,
 	tools?: HistoryToolContext,
 ): Record<string, unknown>[] {
-	if (message.role === "user") {
+	if (message.role === "user" || message.role === "developer") {
 		const content =
 			typeof message.content === "string" ? [{ type: "text" as const, text: message.content }] : message.content;
+		if (message.role === "developer")
+			return hookHistoryItem(
+				id,
+				id,
+				content.flatMap(part => (part.type === "text" ? [part.text] : [])),
+			);
 		return [
 			{
 				type: "userMessage",
@@ -216,6 +250,50 @@ export function messageHistoryItems(
 				),
 			},
 		];
+	}
+	if (message.role === "bashExecution")
+		return [
+			completedUserCommandHistoryItem(
+				id,
+				message.command,
+				message.output,
+				message.exitCode,
+				message.cancelled,
+				tools?.cwd ?? "",
+			),
+		];
+	if (message.role === "pythonExecution")
+		return [
+			completedUserCommandHistoryItem(
+				id,
+				message.code,
+				message.output,
+				message.exitCode,
+				message.cancelled,
+				tools?.cwd ?? "",
+			),
+		];
+	if (message.role === "custom" || message.role === "hookMessage") {
+		if (!message.display || message.customType === "async-result") return [];
+		return hookHistoryItem(id, message.customType, textContent(message.content));
+	}
+	if (message.role === "branchSummary")
+		return hookHistoryItem(id, `branch-summary:${message.fromId}`, [message.summary]);
+	if (message.role === "compactionSummary") return [{ type: "contextCompaction", id }];
+	if (message.role === "fileMention")
+		return [
+			{
+				type: "userMessage",
+				id,
+				clientId: null,
+				content: message.files.map(file => ({ type: "mention", name: fileName(file.path), path: file.path })),
+			},
+		];
+	if (message.role === "media") {
+		if (message.media.kind === "image" && message.media.provenance.sourceType === "path")
+			return [{ type: "imageView", id, path: message.media.provenance.source }];
+		const label = message.media.caption || message.media.alt || `[${message.media.kind} media]`;
+		return hookHistoryItem(id, message.media.id, [label]);
 	}
 	if (message.role !== "assistant") return [];
 	return message.content.flatMap((part, index): Record<string, unknown>[] => {
@@ -257,13 +335,19 @@ export function messageHistoryItems(
  * Metadata records contain identities/boundaries only; AgentSession still owns
  * the corresponding message append (which occurs after subscriber notification).
  */
-export function projectHistory(threadId: string, entries: readonly SessionEntry[], running = false): HistoryTurn[] {
-	return projectHistorySnapshot(threadId, entries, running).turns;
+export function projectHistory(
+	threadId: string,
+	entries: readonly SessionEntry[],
+	running = false,
+	cwd = "",
+): HistoryTurn[] {
+	return projectHistorySnapshot(threadId, entries, running, cwd).turns;
 }
 export function projectHistorySnapshot(
 	threadId: string,
 	entries: readonly SessionEntry[],
 	running = false,
+	cwd = "",
 ): { turns: HistoryTurn[]; timeline: TimelineRow[]; jobs: Map<string, BackgroundCommand> } {
 	const turns: HistoryTurn[] = [];
 	const timeline: TimelineRow[] = [];
@@ -356,6 +440,32 @@ export function projectHistorySnapshot(
 				if (item) Object.assign(job.item, item);
 			}
 		}
+		if (entry.type === "branch_summary" || entry.type === "compaction") {
+			if (!current) {
+				current = newHistoryTurn(`${threadId}-turn-${entry.id}`);
+				startMs = ms;
+				current.startedAt = Math.floor(ms / 1000);
+				turns.push(current);
+				timeline.push({
+					sourceId: entry.id,
+					entry: { type: "turnStarted", position, turnId: current.id, startedAt: current.startedAt },
+				});
+			}
+			const item =
+				entry.type === "compaction"
+					? { type: "contextCompaction", id: `${threadId}-item-${entry.id}` }
+					: hookHistoryItem(`${threadId}-item-${entry.id}`, `branch-summary:${entry.fromId}`, [entry.summary])[0];
+			if (item) {
+				current.items.push(item);
+				timeline.push({ sourceId: entry.id, entry: { type: "item", position, turnId: current.id, item } });
+				lastMessage = { position, sourceId: entry.id };
+				if (!explicit) {
+					current.completedAt = Math.floor(ms / 1000);
+					current.durationMs = Math.max(0, ms - startMs);
+				}
+			}
+			continue;
+		}
 
 		if (entry.type !== "message" && entry.type !== "custom_message") continue;
 		const message: AgentMessage =
@@ -374,8 +484,16 @@ export function projectHistorySnapshot(
 		if (completion) Object.assign(jobs.get(completion.jobId)!.item, completion.item);
 		const identity = marker?.key === messageKey(message) ? marker : undefined;
 		marker = undefined;
-		if (message.role !== "user" && message.role !== "assistant" && message.role !== "toolResult") continue;
-		if (!current || (message.role === "user" && !explicit && !continuingTools)) {
+		const messageId = identity?.id ?? `${threadId}-item-${entry.id}`;
+		const projectedItems = messageHistoryItems(messageId, message, identity?.clientId, {
+			cwd: identity?.tools?.cwd ?? (entry.type === "message" ? entry.toolExecution?.cwd : undefined) ?? cwd,
+			commandCallIds: identity?.tools?.commandCallIds ?? [],
+			fileCallIds: identity?.tools?.fileCallIds,
+		});
+		if (projectedItems.length === 0 && message.role !== "assistant" && message.role !== "toolResult") continue;
+		const opensTurn =
+			message.role === "user" || message.role === "bashExecution" || message.role === "pythonExecution";
+		if (!current || (opensTurn && !explicit && !continuingTools)) {
 			if (current && !explicit) inferredEnds.push({ turn: current, ...lastMessage });
 			current = newHistoryTurn(`${threadId}-turn-${entry.id}`);
 			startMs = ms;
@@ -387,16 +505,14 @@ export function projectHistorySnapshot(
 			});
 			continuingTools = false;
 		}
-		const messageId = identity?.id ?? `${threadId}-item-${entry.id}`;
-		const items = messageHistoryItems(messageId, message, identity?.clientId, identity?.tools);
-		current.items.push(...items);
-		for (const item of items)
+		current.items.push(...projectedItems);
+		for (const item of projectedItems)
 			timeline.push({ sourceId: entry.id, entry: { type: "item", position, turnId: current.id, item } });
 		lastMessage = { position, sourceId: entry.id };
 		if (message.role === "assistant")
 			for (const part of message.content)
 				if (part.type === "toolCall") {
-					const item = items.find(value => value.id === `${messageId}:tool:${part.id}`);
+					const item = projectedItems.find(value => value.id === `${messageId}:tool:${part.id}`);
 					if (item) {
 						tools.set(part.id, item);
 						toolTurns.set(part.id, current.id);

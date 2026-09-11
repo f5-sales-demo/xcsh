@@ -2085,3 +2085,37 @@ the selected answer, observed exactly one `serverRequest/resolved`, and the same
 turn completed with the expected answer marker. An earlier unrestricted probe
 was discarded because its model answered directly instead of invoking `ask`.
 The deterministic TUI then exited cleanly.
+
+## Complete persisted history and active model-stream attachment
+
+The selected-branch projection now maps every persisted AgentSession message role
+that is visible to a user. Developer and displayed extension/legacy-hook messages
+become bounded `hookPrompt` items. User shell and Python entries become completed
+`commandExecution` items with the persisted result and the session's actual working
+directory. File mentions expose paths without their automatically read contents;
+path-backed images become `imageView` items. Other media uses a bounded visible
+label. Branch summaries remain visible, while compaction contributes only the
+structural `contextCompaction` marker and never its private model summary. Hidden
+custom messages and the presentation-only `async-result` duplicate stay excluded.
+
+Live message identities now survive their write to durable history for all of
+those projections. Legacy `hookMessage` keys normalize to the persisted `custom`
+form, and custom-message persistence retains the event's original timestamp. A
+new remote adapter attaching during an assistant stream hydrates the partial
+commentary/final text and active command/file state from the existing AgentSession.
+The eventual durable message and tool results update those same item IDs; no new
+agent or executor is created.
+
+The new projection cases were observed failing before implementation. The focused
+durable-history suite passes 32 tests with 146 assertions. The adjacent
+history/session/bridge matrix passes 68 tests with 343 assertions. The complete
+remote-control suite passes 897 tests with 3647 assertions across 65 files, and
+the guarded coding-agent suite passes 8285 tests with 561 skips, zero failures and
+29912 assertions across 791 files. Workspace TypeScript/Biome, TypeScript lint,
+documentation quality, the 24-file source-hash manifest, staged PII/gitleaks and
+whitespace checks pass. The compaction regression intentionally keeps all ordinary
+pre-compaction items byte-equivalent and appends one structural marker.
+
+This is automated source and integration evidence only. It does not claim a new
+iPhone history observation. The remaining live gates are tracked independently in
+`ACCEPTANCE.md`.

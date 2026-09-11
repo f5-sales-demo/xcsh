@@ -2415,6 +2415,7 @@ export class SessionManager {
 	 * @param display Whether to show in TUI (true = styled display, false = hidden)
 	 * @param details Optional extension-specific metadata (not sent to LLM)
 	 * @param attribution Who initiated this message for billing/attribution semantics
+	 * @param timestamp Original message timestamp in milliseconds, when preserving a streamed identity
 	 * @returns Entry id
 	 */
 	appendCustomMessageEntry<T = unknown>(
@@ -2423,6 +2424,7 @@ export class SessionManager {
 		display: boolean,
 		details?: T,
 		attribution: MessageAttribution = "agent",
+		timestamp = Date.now(),
 	): string {
 		const entry: CustomMessageEntry<T> = {
 			type: "custom_message",
@@ -2433,7 +2435,7 @@ export class SessionManager {
 			attribution,
 			id: generateId(this.#byId),
 			parentId: this.#leafId,
-			timestamp: new Date().toISOString(),
+			timestamp: new Date(timestamp).toISOString(),
 		};
 		this.#appendEntry(entry);
 		return entry.id;

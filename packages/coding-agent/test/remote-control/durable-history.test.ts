@@ -63,7 +63,14 @@ function fixture(manager = SessionManager.inMemory("/tmp/history")) {
 		// AgentSession emits to subscribers before appendMessage.
 		emit({ type: "message_end", message: value });
 		if (value.role === "custom")
-			manager.appendCustomMessageEntry(value.customType, value.content, value.display, value.details);
+			manager.appendCustomMessageEntry(
+				value.customType,
+				value.content,
+				value.display,
+				value.details,
+				"agent",
+				value.timestamp,
+			);
 		else manager.appendMessage(value as Parameters<SessionManager["appendMessage"]>[0]);
 	};
 	const events: { method: string; params: Record<string, unknown> }[] = [];
@@ -81,12 +88,16 @@ test("persisted branch history survives compaction and attachment restart", asyn
 	expect(before).toHaveLength(2);
 	f.manager.appendCompaction("model summary", undefined, kept, 10000);
 	f.messages.push(user("model summary only"));
-	expect(f.remote.history()).toEqual(before);
+	const after = f.remote.history();
+	expect(after).toHaveLength(2);
+	expect(after[0]).toEqual(before[0]);
+	expect(after[1].items.slice(0, -1)).toEqual(before[1].items);
+	expect(after[1].items.at(-1)).toMatchObject({ type: "contextCompaction" });
 	expect(f.remote.thread().preview).toBe("old remembered context");
 	expect(f.remote.thread().createdAt).toBe(Math.floor(Date.parse(f.manager.getHeader()!.timestamp) / 1000));
 	f.remote.dispose();
 	const resumed = fixture(f.manager);
-	expect(resumed.remote.history()).toEqual(before);
+	expect(resumed.remote.history()).toEqual(after);
 	expect(JSON.stringify(before)).toContain(first);
 });
 
@@ -358,6 +369,145 @@ test("commentary and final content have distinct stable item ids and phases", ()
 			.map(event => (event.params.item as { text: string }).text),
 	).toEqual(["", ""]);
 	expect(JSON.stringify(f.remote.history())).not.toContain("private reasoning");
+});
+
+test("every visible persisted session message has a bounded wire projection", async () => {
+	const f = fixture();
+	f.emit({ type: "agent_start" });
+	f.message(user("show the session transcript"));
+	for (const message of [
+		{
+			role: "developer",
+			content: "Visible developer guidance",
+			timestamp: ++timestamp,
+		},
+		{
+			role: "bashExecution",
+			command: "printf shell",
+			output: "shell",
+			exitCode: 0,
+			cancelled: false,
+			truncated: false,
+			timestamp: ++timestamp,
+		},
+		{
+			role: "pythonExecution",
+			code: "print('python')",
+			output: "python\n",
+			exitCode: 0,
+			cancelled: false,
+			truncated: false,
+			timestamp: ++timestamp,
+		},
+		{
+			role: "fileMention",
+			files: [{ path: "src/fixture.ts", content: "private file contents", lineCount: 1 }],
+			timestamp: ++timestamp,
+		},
+		{
+			role: "custom",
+			customType: "visible-hook",
+			content: "Visible extension guidance",
+			display: true,
+			details: { privateValue: "do-not-project-details" },
+			timestamp: ++timestamp,
+		},
+		{
+			role: "custom",
+			customType: "hidden-hook",
+			content: "hidden private context",
+			display: false,
+			timestamp: ++timestamp,
+		},
+		{
+			role: "media",
+			media: {
+				version: 1,
+				id: `media_${"a".repeat(24)}`,
+				kind: "image",
+				original: {
+					ref: `blob:sha256:${"b".repeat(64)}`,
+					mimeType: "image/png",
+					bytes: 1,
+				},
+				provenance: { sourceType: "path", source: "/tmp/history/fixture.png" },
+				playback: { autoplay: false, loop: false, muted: true, fpsCap: 1 },
+			},
+			timestamp: ++timestamp,
+		},
+	] as AgentMessage[]) {
+		f.message(message);
+	}
+	f.emit({ type: "agent_end" });
+
+	const history = f.remote.history();
+	expect(history).toHaveLength(1);
+	expect(history[0].items.map(item => item.type)).toEqual([
+		"userMessage",
+		"hookPrompt",
+		"commandExecution",
+		"commandExecution",
+		"userMessage",
+		"hookPrompt",
+		"imageView",
+	]);
+	expect(history[0].items[1]).toMatchObject({
+		fragments: [{ text: "Visible developer guidance" }],
+	});
+	expect(history[0].items[2]).toMatchObject({
+		command: "printf shell",
+		source: "userShell",
+		status: "completed",
+		aggregatedOutput: "shell",
+		exitCode: 0,
+	});
+	expect(history[0].items[3]).toMatchObject({
+		command: "print('python')",
+		source: "userShell",
+		status: "completed",
+		aggregatedOutput: "python\n",
+		exitCode: 0,
+	});
+	expect(history[0].items[4]).toMatchObject({
+		content: [{ type: "mention", name: "fixture.ts", path: "src/fixture.ts" }],
+	});
+	expect(history[0].items[5]).toMatchObject({
+		fragments: [{ text: "Visible extension guidance", hookRunId: "visible-hook" }],
+	});
+	expect(history[0].items[6]).toEqual({
+		type: "imageView",
+		id: expect.any(String),
+		path: "/tmp/history/fixture.png",
+	});
+	const serialized = JSON.stringify(history);
+	expect(serialized).not.toContain("hidden private context");
+	expect(serialized).not.toContain("do-not-project-details");
+	expect(serialized).not.toContain("private file contents");
+	const historyIds = history[0].items.map(item => item.id);
+	expect(
+		f.events.filter(event => event.method === "item/started").map(event => (event.params.item as { id: unknown }).id),
+	).toEqual(historyIds);
+	expect(
+		f.events
+			.filter(event => event.method === "item/completed")
+			.map(event => (event.params.item as { id: unknown }).id),
+	).toEqual(historyIds);
+
+	const response = await f.remote.call("visible-items", "thread/items/list", { threadId: "durable" });
+	const validate = new Ajv({ strict: false, validateFormats: false }).compile(itemsSchema);
+	expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
+});
+
+test("branch summaries and compactions retain visible structural history without private compaction text", () => {
+	const f = fixture();
+	f.manager.appendMessage(user("root") as never);
+	const root = f.manager.appendMessage(assistant("root answer") as never);
+	f.manager.branchWithSummary(root, "Visible branch summary");
+	f.manager.appendCompaction("private model summary", "Short summary", root, 4096);
+	const serialized = JSON.stringify(f.remote.history());
+	expect(serialized).toContain("Visible branch summary");
+	expect(serialized).toContain("contextCompaction");
+	expect(serialized).not.toContain("private model summary");
 });
 
 test("persisted tool calls expose actual arguments, results and failure status", async () => {
@@ -968,4 +1118,65 @@ test("file progress updates the existing item and ignores malformed and late pat
 	expect(
 		f.events.filter(event => event.method === "item/started" && (event.params.item as any).type === "fileChange"),
 	).toHaveLength(1);
+});
+
+test("attachment during an active assistant stream hydrates one live item and keeps its durable identity", () => {
+	const manager = SessionManager.inMemory("/tmp/active-attachment");
+	manager.appendCustomEntry("remote-history", {
+		kind: "turnStarted",
+		id: "durable-active-turn",
+		startedAtMs: 1000,
+	});
+	const partial = assistant("") as Extract<AgentMessage, { role: "assistant" }>;
+	partial.content = [
+		{ type: "text", text: "Working", phase: "commentary" },
+		{ type: "toolCall", id: "active-command", name: "bash", arguments: { command: "printf active" } },
+	];
+	const listeners = new Set<(event: AgentSessionEvent) => unknown>();
+	const messages: AgentMessage[] = [];
+	const target = {
+		sessionId: "durable",
+		sessionName: "Active fixture",
+		messages,
+		sessionManager: manager,
+		isStreaming: true,
+		activeStreamMessage: partial,
+		getToolByName: () => ({ executionKind: "command" }),
+		getActiveToolExecutions: () => [
+			{
+				toolCallId: "active-command",
+				kind: "command" as const,
+				cwd: "/tmp/active-attachment",
+				execution: {
+					kind: "command",
+					command: "printf active",
+					cwd: "/tmp/active-attachment",
+					status: "inProgress",
+					aggregatedOutput: "act",
+					processId: "fixture-process",
+					exitCode: null,
+					durationMs: null,
+				},
+			},
+		],
+		subscribe: (listener: (event: AgentSessionEvent) => unknown) => {
+			listeners.add(listener);
+			return () => listeners.delete(listener);
+		},
+		prompt: async () => {},
+		steer: async () => {},
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	remotes.push(remote);
+	const initial = remote.history()[0];
+	expect(initial).toMatchObject({ id: "durable-active-turn", status: "inProgress" });
+	expect(initial.items.map(item => item.type)).toEqual(["agentMessage", "commandExecution"]);
+	expect(initial.items[0]).toMatchObject({ text: "Working", phase: "commentary" });
+	expect(initial.items[1]).toMatchObject({ aggregatedOutput: "act", processId: "fixture-process" });
+
+	for (const listener of listeners) listener({ type: "message_end", message: partial });
+	manager.appendMessage(partial);
+	const after = remote.history()[0];
+	expect(after.items.map(item => item.id)).toEqual(initial.items.map(item => item.id));
+	expect(after.items.filter(item => item.type === "agentMessage")).toHaveLength(1);
 });

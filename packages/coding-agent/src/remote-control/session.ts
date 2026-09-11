@@ -11,6 +11,7 @@ import {
 	assistantHistoryItem,
 	backgroundCommandCompletion,
 	completeToolHistoryItem,
+	type HistoryToolContext,
 	messageHistoryItems,
 	messageKey,
 	projectHistory,
@@ -32,6 +33,7 @@ export type SessionTarget = Pick<
 	| "model"
 	| "messages"
 	| "isStreaming"
+	| "activeStreamMessage"
 	| "sessionManager"
 	| "subscribe"
 	| "prompt"
@@ -253,8 +255,39 @@ export class RemoteSession {
 			if (latest?.status === "inProgress") {
 				this.#active = latest;
 				this.#startedAtMs = (latest.startedAt ?? this.#createdAt) * 1000;
+				this.#hydrateActiveStream();
 			}
 		}
+	}
+	#historyToolContext(message: AgentMessage): HistoryToolContext | undefined {
+		if (message.role === "bashExecution" || message.role === "pythonExecution")
+			return { cwd: this.target.sessionManager.getCwd(), commandCallIds: [] };
+		if (message.role !== "assistant") return undefined;
+		return {
+			cwd: this.target.sessionManager.getCwd(),
+			fileCallIds: message.content.flatMap(part =>
+				part.type === "toolCall" &&
+				getToolExecutionKind(this.target.getToolByName?.(part.name), part.arguments) === "fileChange"
+					? [part.id]
+					: [],
+			),
+			commandCallIds: message.content.flatMap(part =>
+				part.type === "toolCall" &&
+				getToolExecutionKind(this.target.getToolByName?.(part.name), part.arguments) === "command"
+					? [part.id]
+					: [],
+			),
+		};
+	}
+	#hydrateActiveStream(): void {
+		const message = this.target.activeStreamMessage;
+		if (!this.#active || message?.role !== "assistant") return;
+		const id = `${this.target.sessionId}-item-${randomUUID()}`;
+		this.#itemId = id;
+		this.#messageIds.set(messageKey(message), id);
+		for (const item of messageHistoryItems(id, message, null, this.#historyToolContext(message)))
+			this.#rememberItem(item, false);
+		this.#overlayLiveHistory([this.#active]);
 	}
 	#assertCurrent(epoch = this.#epoch, allowClosing = false): void {
 		if (
@@ -379,6 +412,7 @@ export class RemoteSession {
 				this.target.sessionId,
 				this.target.sessionManager.getBranch(),
 				Boolean(this.#active) || this.target.isStreaming,
+				this.target.sessionManager.getCwd(),
 			);
 			this.#overlayLiveHistory(turns);
 			return turns;
@@ -850,6 +884,7 @@ export class RemoteSession {
 				this.target.sessionId,
 				this.target.sessionManager.getBranch(),
 				Boolean(this.#active) || this.target.isStreaming,
+				this.target.sessionManager.getCwd(),
 			);
 			this.#overlayLiveHistory(snapshot.turns);
 			return timelinePage(this.target.sessionId, snapshot.timeline, params);
@@ -1271,7 +1306,7 @@ export class RemoteSession {
 	}
 	#durableEvent(event: AgentSessionEvent): void {
 		if (event.type === "agent_start" && !this.#active) this.#emit("turn/started", { turn: this.#beginTurn() });
-		if (event.type === "message_start" && (event.message.role === "user" || event.message.role === "assistant")) {
+		if (event.type === "message_start" && event.message.role !== "toolResult") {
 			const id = `${this.target.sessionId}-item-${randomUUID()}`;
 			this.#messageIds.set(messageKey(event.message), id);
 			if (event.message.role === "assistant") this.#itemId = id;
@@ -1291,7 +1326,7 @@ export class RemoteSession {
 				this.#voiceOutput({ id, text: part.text, phase: part.phase, done: update.type === "text_end" });
 			}
 		}
-		if (event.type === "message_end" && (event.message.role === "user" || event.message.role === "assistant")) {
+		if (event.type === "message_end" && event.message.role !== "toolResult") {
 			const message = event.message;
 			const key = messageKey(message);
 			const id =
@@ -1302,31 +1337,18 @@ export class RemoteSession {
 				const index = this.#pendingClients.findIndex(value => value.text === textOf(message));
 				if (index >= 0) clientId = this.#pendingClients.splice(index, 1)[0].id;
 			}
-			const tools =
-				message.role === "assistant"
-					? {
-							cwd: this.target.sessionManager.getCwd(),
-							fileCallIds: message.content.flatMap(part =>
-								part.type === "toolCall" &&
-								getToolExecutionKind(this.target.getToolByName?.(part.name), part.arguments) === "fileChange"
-									? [part.id]
-									: [],
-							),
-							commandCallIds: message.content.flatMap(part =>
-								part.type === "toolCall" &&
-								getToolExecutionKind(this.target.getToolByName?.(part.name), part.arguments) === "command"
-									? [part.id]
-									: [],
-							),
-						}
-					: undefined;
-			this.target.sessionManager.appendCustomEntry("remote-history", { kind: "message", id, key, clientId, tools });
+			const tools = this.#historyToolContext(message);
+			const items = messageHistoryItems(id, message, clientId, tools);
+			if (items.length > 0)
+				this.target.sessionManager.appendCustomEntry("remote-history", {
+					kind: "message",
+					id,
+					key,
+					clientId,
+					tools,
+				});
 			this.#messageIds.delete(key);
-			for (const item of messageHistoryItems(id, message, clientId, tools))
-				this.#rememberItem(
-					item,
-					item.type !== "dynamicToolCall" && item.type !== "commandExecution" && item.type !== "fileChange",
-				);
+			for (const item of items) this.#rememberItem(item, item.status !== "inProgress");
 			if (message.role === "assistant") {
 				for (const [index, part] of message.content.entries())
 					if (part.type === "text")
@@ -1340,9 +1362,12 @@ export class RemoteSession {
 				entry => entry.id === event.receiptId && entry.type === "custom" && entry.customType === "async-execution",
 			);
 			if (receipt) {
-				const job = projectHistorySnapshot(this.target.sessionId, branch, Boolean(this.#active)).jobs.get(
-					event.jobId,
-				);
+				const job = projectHistorySnapshot(
+					this.target.sessionId,
+					branch,
+					Boolean(this.#active),
+					this.target.sessionManager.getCwd(),
+				).jobs.get(event.jobId);
 				if (job && job.item.status !== "inProgress") {
 					this.#commandSettlements.add(event.receiptId);
 					if (this.#commandSettlements.size > 128)
@@ -1359,6 +1384,7 @@ export class RemoteSession {
 				this.target.sessionId,
 				this.target.sessionManager.getBranch(),
 				Boolean(this.#active),
+				this.target.sessionManager.getCwd(),
 			);
 			const job = snapshot.jobs.get(event.jobId);
 			if (job?.item.status === "inProgress") {
@@ -1437,6 +1463,7 @@ export class RemoteSession {
 				this.target.sessionId,
 				this.target.sessionManager.getBranch(),
 				Boolean(this.#active),
+				this.target.sessionManager.getCwd(),
 			);
 			const completion = backgroundCommandCompletion(event.message, snapshot.jobs);
 			if (completion) {

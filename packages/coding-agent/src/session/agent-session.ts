@@ -1178,6 +1178,7 @@ export class AgentSession {
 					event.message.display,
 					event.message.details,
 					event.message.attribution ?? "agent",
+					event.message.timestamp,
 				);
 				if (event.message.role === "custom" && event.message.customType === "ttsr-injection") {
 					this.#markTtsrInjected(this.#extractTtsrRuleNames(event.message.details));
@@ -2510,6 +2511,11 @@ export class AgentSession {
 	/** Whether agent is currently streaming a response */
 	get isStreaming(): boolean {
 		return this.agent.state.isStreaming || this.#promptInFlightCount > 0;
+	}
+
+	/** Current provider-owned message, used to hydrate clients that attach mid-stream. */
+	get activeStreamMessage(): AgentMessage | null {
+		return this.agent.state.streamMessage;
 	}
 
 	/** Wait until streaming and deferred recovery work are fully settled. */

@@ -629,3 +629,32 @@ entry and no second tool execution. Receipt:
 `../scripts/remote-package/evidence-terminal-retry-2026-09-10.json`; binary
 SHA-256:
 `837e95eccac3b792fc5bd2b2d9051b6b3a2cbce95f496fdc979b36cf310340cf`.
+
+## Persisted visible-item and active-stream parity
+
+Native selected-branch history now has a bounded projection for every visible
+AgentSession message role: ordinary user/assistant/tool items, developer and
+displayed custom/legacy-hook prompts, user shell and Python executions, file
+mentions, media, branch summaries and compaction boundaries. Private file
+contents, compaction summaries, custom details, hidden messages and duplicate
+`async-result` presentation records do not cross the wire.
+
+The command, hook and structural shapes use the pinned 0.153.4 item contracts
+already recorded in `NOTICE.md`. xcsh-specific identity metadata continues to be
+stored beside, rather than inside, provider-visible messages. Custom and legacy
+hook timestamps are preserved through the live-to-durable transition so a reload
+selects the same item identity.
+
+Attaching while the provider is still streaming now exposes the existing partial
+assistant text and active command/file progress immediately. Completion reuses the
+same IDs in notifications and durable history. The regression proves one live
+item per projection and no duplicate executor; it does not reproduce a private
+phone capture or establish a new manual observation.
+
+Automated evidence: 32 durable-history tests / 146 assertions, 68 adjacent
+history/session/bridge tests / 343 assertions, and 897 complete remote-control
+tests / 3647 assertions, all with zero failures. The guarded coding-agent suite
+passes 8285 tests with 561 skips, zero failures and 29912 assertions across 791
+files. Workspace TypeScript/Biome, lint, documentation, provenance and staged
+privacy/secret checks also pass. Phone history, fork, catalog and mid-stream
+presentation remain separate manual acceptance work.
