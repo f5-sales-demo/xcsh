@@ -233,6 +233,7 @@ test("phone turn metadata preserves the work model and deduplicates client messa
 		cwd: "/tmp",
 		effort: "high",
 		summary: "auto",
+		turnTrigger: "user",
 		input: [{ type: "text", text: "fixture prompt" }],
 	};
 	const result = await a.remote.call("phone-1", "turn/start", p);

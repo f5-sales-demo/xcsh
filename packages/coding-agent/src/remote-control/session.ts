@@ -991,6 +991,7 @@ export class RemoteSession {
 					"threadId",
 					"input",
 					"expectedTurnId",
+					"turnTrigger",
 					"clientUserMessageId",
 					"model",
 					"cwd",
