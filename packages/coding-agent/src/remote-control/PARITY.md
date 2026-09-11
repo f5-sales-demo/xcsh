@@ -715,3 +715,8 @@ an invalid custom mode was rejected without mutation, and Default was restored
 while preserving the terminal's actual provider-qualified work model. The
 disposable sessions exited, leaving the four phone sessions unchanged. These
 local-protocol observations do not claim iPhone presentation or input.
+
+The same current artifact also passed a controlled live host replacement. The
+first trace closed complete with 301 events; the replacement relay connected and
+all four idle terminal owners re-registered with unchanged names, models,
+histories and wire projections. Phone-side recovery remains unclaimed.

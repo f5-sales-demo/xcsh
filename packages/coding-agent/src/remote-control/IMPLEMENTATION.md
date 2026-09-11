@@ -2194,3 +2194,12 @@ and restored Default. The probe derived and preserved the terminal's actual
 provider-qualified selected model. Each disposable TUI exited afterward, leaving
 the four canonical sessions and connected relay unchanged. These are direct
 current-artifact protocol observations, not iPhone observations.
+
+With all four canonical sessions idle, the current live host was then stopped and
+replaced by the same immutable binary. Its first sanitized trace closed with a
+complete footer after 301 events (SHA-256
+`c5748689f35d7fb41ada64841b93a853b8c56a6148f81bc0c4a801c29d62abef`).
+The replacement reconnected to the live relay and all four owners re-registered
+with their names, models, histories and exact stable/experimental projections
+unchanged. This is host-side recovery evidence; phone reconnection remains a
+manual observation.

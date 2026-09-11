@@ -10,7 +10,7 @@ Build the executable through the normal package build, then run from the reposit
 root with a new evidence directory outside the checkout:
 
 ```sh
-bun --cwd packages/coding-agent run build
+bun --cwd=packages/coding-agent run build
 bun packages/coding-agent/scripts/remote-package/check.ts \
   packages/coding-agent/dist/xcsh /path/to/new-evidence-directory
 ```
