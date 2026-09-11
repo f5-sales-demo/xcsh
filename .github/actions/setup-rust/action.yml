@@ -12,6 +12,7 @@ runs:
   using: composite
   steps:
     - name: Install repository Rust toolchain
+      if: runner.environment != 'self-hosted' || runner.os != 'Linux'
       shell: bash
       env:
         RUST_TARGET: ${{ inputs.target }}
@@ -33,3 +34,15 @@ runs:
 
         rustup show active-toolchain
         rustc --version --verbose
+    - name: Verify baked repository Rust toolchain
+      if: runner.environment == 'self-hosted' && runner.os == 'Linux'
+      shell: bash
+      env:
+        RUST_TARGET: ${{ inputs.target }}
+      run: |
+        set -euo pipefail
+        bash scripts/verify-self-hosted-tools.sh full
+        if [ -n "$RUST_TARGET" ]; then
+          rustup target list --installed --toolchain nightly-2026-09-03-x86_64-unknown-linux-gnu |
+            grep -Fxq "$RUST_TARGET"
+        fi

@@ -5,13 +5,22 @@ description: Install the repository-pinned Zig toolchain from the official relea
 runs:
   using: composite
   steps:
+    - name: Verify baked Zig 0.16.0
+      if: runner.environment == 'self-hosted' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        test "$(command -v zig)" = /usr/local/bin/zig
+        test "$(zig version)" = 0.16.0
     - name: Restore Zig release archive
+      if: runner.environment != 'self-hosted' || runner.os != 'Linux'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ runner.temp }}/zig-downloads
         key: setup-zig-archive-${{ runner.os }}-${{ runner.arch }}-0.16.0
 
     - name: Restore Zig build cache
+      if: runner.environment != 'self-hosted' || runner.os != 'Linux'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ github.workspace }}/.zig-cache
@@ -19,6 +28,7 @@ runs:
         restore-keys: setup-zig-cache-v3-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-0.16.0-
 
     - name: Install Zig 0.16.0
+      if: runner.environment != 'self-hosted' || runner.os != 'Linux'
       shell: bash
       env:
         ZIG_VERSION: "0.16.0"
