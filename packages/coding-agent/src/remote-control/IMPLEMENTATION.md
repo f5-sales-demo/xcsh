@@ -102,6 +102,12 @@ catalog remains the exact set already loaded by each live terminal. The host rea
 only an advertised `SKILL.md`, and the owning terminal revalidates the path and a
 1 MiB bound before returning it. This preserves the existing agent as capability
 owner instead of mutating its tools from the phone.
+The clean compiled `157855114` artifact then replaced the host and resumed the
+same four Luna, Astra, Sol and Terra session IDs. Its relay returned connected.
+A temporary fifth TUI with one real project skill passed the recorded bootstrap
+shape: nine roots accepted, one change notification, one repo-scoped skill and no
+catalog errors, followed by an owner-validated base64 read. The temporary TUI was
+closed and discovery returned to the four acceptance sessions.
 
 Product labels and hostnames use lowercase `xcsh`. Existing `XCSH_` environment
 variable names retain their uppercase prefix.
