@@ -239,9 +239,15 @@ The finalized phone capture also requests the experimental collaboration-mode
 catalog. Its two rows preserve the pinned Plan-then-Default order, nullable model
 and reasoning mask fields, and captured medium Plan effort. The recorder redacted
 the mode names and literals; the fixture fills those four strings from the pinned
-builtin-preset source, with matching byte lengths and order. Native routing now
+builtin-preset source, with matching byte lengths and order. Native routing
 requires the requesting connection's experimental capability and returns this
-catalog exactly. Applying a remote mode to a live terminal remains separate.
+catalog exactly. `thread/settings/update` and `turn/start` now carry Plan/Default
+selection into the existing InteractiveMode entry and exit lifecycle. Repeated
+selections are idempotent; Plan retains its tool, persisted-mode, status and plan
+model semantics, while Default restores them. Validation rejects non-experimental,
+malformed, custom-instruction and incompatible-model requests before changing
+mode, effort or starting a prompt. Router, session, bridge and real InteractiveMode
+tests cover this path. These are automated results, not phone acceptance.
 
 The same phone initialization advertises 56 exact notification-method opt-outs.
 Those method strings remain redacted in the sanitized recording, so they are not

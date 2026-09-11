@@ -63,7 +63,9 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   already loaded by a live terminal session.
 - `codex-rs/models-manager/src/collaboration_mode_presets.rs` and
   `app-server-protocol/src/protocol/v2/collaboration_mode.rs`: experimental
-  collaboration-mode catalog order, names and nullable mask fields.
+  collaboration-mode catalog order, names and nullable mask fields. Native
+  selection delegates the two advertised presets to xcsh InteractiveMode; custom
+  instructions and incompatible model overrides are intentionally rejected.
 - `codex-rs/app-server-protocol/src/protocol/v2/thread.rs` and
   `app-server/src/request_processors/thread_processor.rs`: trimmed thread-name
   mutation, empty response and global name-update notification. The three

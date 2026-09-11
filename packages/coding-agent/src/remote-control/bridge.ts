@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { getAgentDir, VERSION } from "@f5-sales-demo/pi-utils";
 import { connectPeer, type LocalPeer } from "./ipc";
-import { ProtocolError, RemoteSession, type SessionTarget } from "./session";
+import { ProtocolError, RemoteSession, type RemoteSessionControls, type SessionTarget } from "./session";
 export function remoteSocketPath(): string {
 	return join(getAgentDir(), "remote-control", "host.sock");
 }
@@ -10,8 +10,9 @@ export function startSessionBridge(
 	target: SessionTarget,
 	socketPath = remoteSocketPath(),
 	intervalMs = 5_000,
+	controls: RemoteSessionControls = {},
 ): () => Promise<void> {
-	const remote = new RemoteSession(target, VERSION);
+	const remote = new RemoteSession(target, VERSION, controls);
 	let peer: LocalPeer | undefined;
 	let pending: Promise<void> | undefined;
 	let changing = false;

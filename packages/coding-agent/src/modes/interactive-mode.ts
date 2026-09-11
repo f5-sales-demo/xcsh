@@ -1033,6 +1033,25 @@ export class InteractiveMode implements InteractiveModeContext {
 		}
 	}
 
+	getRemoteCollaborationMode(): "plan" | "default" {
+		return this.planModeEnabled ? "plan" : "default";
+	}
+
+	async setRemoteCollaborationMode(mode: "plan" | "default"): Promise<void> {
+		if (mode === "plan") {
+			await this.#enterPlanMode();
+			return;
+		}
+		if (this.planModePaused && !this.planModeEnabled) {
+			this.planModePaused = false;
+			this.#updatePlanModeStatus();
+			this.sessionManager.appendModeChange("none");
+			this.showStatus("Plan mode disabled.");
+			return;
+		}
+		await this.#exitPlanMode();
+	}
+
 	async handleExitPlanModeTool(details: ExitPlanModeDetails, toolCallId?: string): Promise<void> {
 		if (this.#planReviewTask) return this.#planReviewTask;
 		const abort = new AbortController();
@@ -1866,6 +1885,9 @@ export class InteractiveMode implements InteractiveModeContext {
 
 	#subscribeToAgent(): void {
 		this.#eventController.subscribeToAgent();
-		this.#stopRemoteBridge ??= startSessionBridge(this.session);
+		this.#stopRemoteBridge ??= startSessionBridge(this.session, undefined, undefined, {
+			getCollaborationMode: () => this.getRemoteCollaborationMode(),
+			setCollaborationMode: mode => this.setRemoteCollaborationMode(mode),
+		});
 	}
 }

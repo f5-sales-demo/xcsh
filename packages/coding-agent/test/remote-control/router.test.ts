@@ -32,6 +32,14 @@ test("initialization is per phone stream; lists and attaches registered terminal
 });
 test("malformed and experimental unsupported operations are explicit errors", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	let calls = 0;
+	router.sessions.set("fixture", {
+		thread: { id: "fixture" },
+		call: async () => {
+			calls++;
+			return {};
+		},
+	});
 	expect(await router.handle("phone", null)).toMatchObject({ error: { code: -32600 } });
 	await router.handle("phone", {
 		id: 1,
@@ -44,6 +52,28 @@ test("malformed and experimental unsupported operations are explicit errors", as
 	expect(
 		await router.handle("phone", { id: 3, method: "thread/realtime/unsupported", params: { threadId: "fixture" } }),
 	).toMatchObject({ error: { code: -32601 } });
+	expect(
+		await router.handle("phone", {
+			id: 4,
+			method: "thread/settings/update",
+			params: {
+				threadId: "fixture",
+				collaborationMode: { mode: "plan", settings: { model: "gpt-6-astra" } },
+			},
+		}),
+	).toMatchObject({ error: { code: -32600 } });
+	expect(
+		await router.handle("phone", {
+			id: 5,
+			method: "turn/start",
+			params: {
+				threadId: "fixture",
+				input: [{ type: "text", text: "fixture" }],
+				collaborationMode: { mode: "default", settings: { model: "gpt-6-astra" } },
+			},
+		}),
+	).toMatchObject({ error: { code: -32600 } });
+	expect(calls).toBe(0);
 });
 
 test("initialize notification opt-outs suppress exact methods for only that client", async () => {

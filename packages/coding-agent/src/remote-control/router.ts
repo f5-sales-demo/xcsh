@@ -447,6 +447,15 @@ export class RemoteRouter {
 					case "thread/realtime/appendSpeech":
 					case "thread/realtime/appendAudio":
 					case "turn/interrupt": {
+						if (
+							(request.method === "thread/settings/update" || request.method === "turn/start") &&
+							params.collaborationMode != null &&
+							!this.#experimental.has(client)
+						)
+							throw new ProtocolError(
+								-32600,
+								`${request.method}.collaborationMode requires experimentalApi capability`,
+							);
 						const threadId = String(params.threadId);
 						const session = this.sessions.get(threadId);
 						if (!session)

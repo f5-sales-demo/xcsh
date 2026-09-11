@@ -64,6 +64,24 @@ describe("InteractiveMode plan review rendering", () => {
 		_resetSettingsForTest();
 	});
 
+	it("applies remote Plan and Default through the idempotent terminal mode lifecycle", async () => {
+		const appendModeChange = vi.spyOn(session.sessionManager, "appendModeChange");
+		expect(mode.getRemoteCollaborationMode()).toBe("default");
+		await mode.setRemoteCollaborationMode("plan");
+		expect(mode.getRemoteCollaborationMode()).toBe("plan");
+		expect(mode.planModeEnabled).toBe(true);
+		expect(session.getPlanModeState()).toMatchObject({ enabled: true, planFilePath: "local://PLAN.md" });
+		await mode.setRemoteCollaborationMode("plan");
+		expect(appendModeChange.mock.calls.filter(([value]) => value === "plan")).toHaveLength(1);
+
+		await mode.setRemoteCollaborationMode("default");
+		expect(mode.getRemoteCollaborationMode()).toBe("default");
+		expect(mode.planModeEnabled).toBe(false);
+		expect(session.getPlanModeState()).toBeUndefined();
+		await mode.setRemoteCollaborationMode("default");
+		expect(appendModeChange.mock.calls.filter(([value]) => value === "none")).toHaveLength(1);
+	});
+
 	it("re-appends refreshed plan review previews at the chat tail", async () => {
 		const planFilePath = "local://PLAN.md";
 		const resolvedPlanPath = resolveLocalUrlToPath(planFilePath, {

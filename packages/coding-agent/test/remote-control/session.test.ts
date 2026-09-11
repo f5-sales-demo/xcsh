@@ -4,7 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 
-function fixture(id: string) {
+function fixture(
+	id: string,
+	controls: {
+		getCollaborationMode?: () => "plan" | "default";
+		setCollaborationMode?: (mode: "plan" | "default") => Promise<void>;
+	} = {},
+) {
 	const prompts: string[] = [];
 	let finish = () => {};
 	let sessionName = id;
@@ -36,7 +42,7 @@ function fixture(id: string) {
 			return true;
 		},
 	} as unknown as SessionTarget;
-	return { remote: new RemoteSession(target), prompts, finish: () => finish() };
+	return { remote: new RemoteSession(target, "21.22.0", controls), prompts, finish: () => finish() };
 }
 
 test("phone rename follows the pinned trim, response and notification contract", async () => {
@@ -295,6 +301,75 @@ test("phone settings update applies supported effort without starting a turn or 
 	expect(levels).toEqual(["medium"]);
 	expect(a.remote.target.model?.id).toBe("gpt-6-astra");
 	a.remote.dispose();
+});
+test("phone collaboration modes validate before applying and precede turn execution", async () => {
+	const applied: string[] = [];
+	let current: "plan" | "default" = "default";
+	const a = fixture("a", {
+		getCollaborationMode: () => current,
+		setCollaborationMode: async mode => {
+			applied.push(mode);
+			current = mode;
+		},
+	});
+	const levels: unknown[] = [];
+	a.remote.target.setThinkingLevel = level => levels.push(level);
+	const events: any[] = [];
+	a.remote.subscribe(event => events.push(event));
+	const plan = {
+		mode: "plan",
+		settings: { model: "gpt-6-astra", reasoning_effort: "medium", developer_instructions: null },
+	};
+	expect(
+		await a.remote.call("settings-plan", "thread/settings/update", {
+			threadId: "a",
+			collaborationMode: plan,
+		}),
+	).toEqual({});
+	expect(applied).toEqual(["plan"]);
+	expect(levels).toEqual(["medium"]);
+	expect(events.at(-1)?.params.threadSettings.collaborationMode.mode).toBe("plan");
+	const started = await a.remote.call("turn-default", "turn/start", {
+		threadId: "a",
+		input: [{ type: "text", text: "execute" }],
+		collaborationMode: {
+			mode: "default",
+			settings: { model: "gpt-6-astra", reasoning_effort: "high", developer_instructions: null },
+		},
+	});
+	expect(started).toMatchObject({ turn: { status: "inProgress" } });
+	expect(applied).toEqual(["plan", "default"]);
+	expect(levels).toEqual(["medium", "high"]);
+	expect(a.prompts).toEqual(["execute"]);
+	a.finish();
+	a.remote.dispose();
+
+	for (const collaborationMode of [
+		{ mode: "custom", settings: { model: "gpt-6-astra" } },
+		{ mode: "plan", settings: null },
+		{ mode: "plan", settings: { model: "other" } },
+		{ mode: "plan", settings: { model: "gpt-6-astra", developer_instructions: "custom" } },
+	]) {
+		const changed: string[] = [];
+		const levelsBeforeFailure: unknown[] = [];
+		const invalid = fixture("invalid", {
+			setCollaborationMode: async mode => {
+				changed.push(mode);
+			},
+		});
+		invalid.remote.target.setThinkingLevel = level => levelsBeforeFailure.push(level);
+		await expect(
+			invalid.remote.call("invalid", "thread/settings/update", {
+				threadId: "invalid",
+				effort: "medium",
+				collaborationMode,
+			}),
+		).rejects.toMatchObject({ code: -32602 });
+		expect(changed).toEqual([]);
+		expect(levelsBeforeFailure).toEqual([]);
+		expect(invalid.prompts).toEqual([]);
+		invalid.remote.dispose();
+	}
 });
 test("unsupported model effort is rejected before the runtime can silently clamp it", async () => {
 	const a = fixture("a");

@@ -60,6 +60,11 @@ export type SessionTarget = Pick<
 			| "isDisposing"
 		>
 	>;
+export type RemoteCollaborationMode = "plan" | "default";
+export interface RemoteSessionControls {
+	getCollaborationMode?: () => RemoteCollaborationMode;
+	setCollaborationMode?: (mode: RemoteCollaborationMode) => Promise<void>;
+}
 export interface Notification {
 	id?: string;
 	method: string;
@@ -153,6 +158,7 @@ export class RemoteSession {
 	constructor(
 		readonly target: SessionTarget,
 		private readonly version = "21.22.0",
+		private readonly controls: RemoteSessionControls = {},
 	) {
 		this.#restoreIdentity();
 		this.#unsubscribe = target.subscribe(event => this.#event(event));
@@ -774,7 +780,10 @@ export class RemoteSession {
 		}
 		if (method === "thread/settings/update") {
 			for (const key of Object.keys(params))
-				if (!["threadId", "effort", "model", "cwd", "summary"].includes(key) && params[key] != null)
+				if (
+					!["threadId", "effort", "model", "cwd", "summary", "collaborationMode"].includes(key) &&
+					params[key] != null
+				)
 					throw new ProtocolError(-32602, "Unsupported terminal settings override");
 			if (params.model != null && params.model !== this.target.model?.id)
 				throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
@@ -782,7 +791,10 @@ export class RemoteSession {
 				throw new ProtocolError(-32602, "Unsupported working directory override");
 			if (params.summary != null && !["auto", "concise", "detailed", "none"].includes(String(params.summary)))
 				throw new ProtocolError(-32602, "Unsupported reasoning summary");
-			this.#applyEffort(params.effort);
+			const collaborationMode = this.#parseCollaborationMode(params.collaborationMode);
+			this.#validateEffort(params.effort);
+			if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
+			else this.#applyEffort(params.effort);
 			const effort = this.thread().reasoningEffort;
 			this.#emit("thread/settings/updated", {
 				threadSettings: {
@@ -797,7 +809,7 @@ export class RemoteSession {
 					effort,
 					summary: params.summary ?? null,
 					collaborationMode: {
-						mode: "default",
+						mode: this.controls.getCollaborationMode?.() ?? collaborationMode?.mode ?? "default",
 						settings: {
 							model: this.target.model?.id ?? "",
 							reasoning_effort: effort,
@@ -944,6 +956,7 @@ export class RemoteSession {
 					"cwd",
 					"effort",
 					"summary",
+					"collaborationMode",
 				].includes(key) &&
 				params[key] != null
 			)
@@ -974,6 +987,10 @@ export class RemoteSession {
 		// only, so all recognized presentation preferences retain that behavior.
 		if (params.summary != null && !["auto", "concise", "detailed", "none"].includes(String(params.summary)))
 			throw new ProtocolError(-32602, "Unsupported reasoning summary");
+		if (method === "turn/steer" && params.collaborationMode != null)
+			throw new ProtocolError(-32602, "Collaboration mode can only be selected when starting a turn");
+		const collaborationMode = this.#parseCollaborationMode(params.collaborationMode);
+		this.#validateEffort(params.effort);
 		const text = params.input.map(item => item.text).join("\n");
 		if (!text.trim()) throw new ProtocolError(-32602, "Empty turn input");
 		if (method === "turn/steer") {
@@ -1000,7 +1017,8 @@ export class RemoteSession {
 		}
 		if (this.target.isStreaming || this.#active)
 			throw new ProtocolError(-32000, "Session already running; use turn/steer");
-		this.#applyEffort(params.effort);
+		if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
+		else this.#applyEffort(params.effort);
 		const active = this.#beginTurn();
 		if (this.#durable) {
 			try {
@@ -1029,19 +1047,58 @@ export class RemoteSession {
 		);
 		return { turn: { ...active } };
 	}
-	#applyEffort(effort: unknown): void {
-		if (effort == null) return;
+	#validateEffort(effort: unknown): ThinkingLevel | undefined {
+		if (effort == null) return undefined;
 		const supported = this.target.model?.thinking?.supportedLevels;
 		if (
 			!["none", "minimal", "low", "medium", "high", "xhigh", "max"].includes(String(effort)) ||
 			(supported && !supported.some(level => level.effort === effort))
 		)
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
+		return (effort === "none" ? "off" : effort) as ThinkingLevel;
+	}
+	#applyEffort(effort: unknown): void {
+		const level = this.#validateEffort(effort);
+		if (level === undefined) return;
 		try {
-			this.target.setThinkingLevel((effort === "none" ? "off" : effort) as ThinkingLevel);
+			this.target.setThinkingLevel(level);
 		} catch {
 			throw new ProtocolError(-32602, "Selected model does not support that reasoning effort");
 		}
+	}
+	#parseCollaborationMode(value: unknown): { mode: RemoteCollaborationMode; reasoningEffort: unknown } | undefined {
+		if (value == null) return undefined;
+		if (typeof value !== "object" || Array.isArray(value))
+			throw new ProtocolError(-32602, "Invalid collaboration mode");
+		const collaboration = value as Record<string, unknown>;
+		if (Object.keys(collaboration).some(key => !["mode", "settings"].includes(key)))
+			throw new ProtocolError(-32602, "Unsupported custom collaboration mode");
+		if (collaboration.mode !== "plan" && collaboration.mode !== "default")
+			throw new ProtocolError(-32602, "Unsupported collaboration mode");
+		if (
+			!collaboration.settings ||
+			typeof collaboration.settings !== "object" ||
+			Array.isArray(collaboration.settings)
+		)
+			throw new ProtocolError(-32602, "Invalid collaboration mode settings");
+		const settings = collaboration.settings as Record<string, unknown>;
+		if (Object.keys(settings).some(key => !["model", "reasoning_effort", "developer_instructions"].includes(key)))
+			throw new ProtocolError(-32602, "Unsupported custom collaboration mode settings");
+		if (typeof settings.model !== "string" || settings.model !== this.target.model?.id)
+			throw new ProtocolError(-32602, "Collaboration mode must preserve the terminal's selected model");
+		if (settings.developer_instructions != null)
+			throw new ProtocolError(-32602, "Custom collaboration instructions are not supported");
+		this.#validateEffort(settings.reasoning_effort);
+		return { mode: collaboration.mode, reasoningEffort: settings.reasoning_effort };
+	}
+	async #applyCollaborationMode(
+		epoch: number,
+		selection: { mode: RemoteCollaborationMode; reasoningEffort: unknown },
+	): Promise<void> {
+		if (!this.controls.setCollaborationMode)
+			throw new ProtocolError(-32602, "The terminal cannot change collaboration mode");
+		await this.#effect(epoch, () => this.controls.setCollaborationMode!(selection.mode));
+		this.#applyEffort(selection.reasoningEffort);
 	}
 	#delegateVoice(id: string, text: string, output?: (update: VoiceOutputUpdate) => void): Promise<string> {
 		return new Promise((resolve, reject) => {
