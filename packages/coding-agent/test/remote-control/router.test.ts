@@ -171,6 +171,133 @@ test("initialize notification opt-outs suppress exact methods for only that clie
 		).toMatchObject({ error: { code: -32602 } });
 });
 
+test("a newly registered live thread is announced once with capability-specific wire fields", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const notifications: Array<{ client: string; event: any }> = [];
+	router.notify = (client, event) => notifications.push({ client, event });
+	await router.handle("stable", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "stable", version: "1" }, capabilities: {} },
+	});
+	await router.handle("experimental", {
+		id: 2,
+		method: "initialize",
+		params: { clientInfo: { name: "experimental", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	await router.handle("quiet", {
+		id: 3,
+		method: "initialize",
+		params: {
+			clientInfo: { name: "quiet", version: "1" },
+			capabilities: { experimentalApi: true, optOutNotificationMethods: ["thread/started"] },
+		},
+	});
+	const thread = {
+		id: "replacement",
+		sessionId: "replacement",
+		forkedFromId: null,
+		parentThreadId: "departed",
+		preview: "Execute the approved plan",
+		ephemeral: false,
+		section: null,
+		sectionEnteredAt: null,
+		projectId: null,
+		historyMode: "paginated",
+		modelProvider: "openai-codex",
+		model: "gpt-5.6-luna",
+		reasoningEffort: "medium",
+		createdAt: 1,
+		updatedAt: 2,
+		recencyAt: 2,
+		status: { type: "idle" },
+		path: "/tmp/replacement.jsonl",
+		cwd: "/tmp/luna",
+		cliVersion: "21.22.0",
+		source: "cli",
+		threadSource: null,
+		agentNickname: null,
+		agentRole: null,
+		gitInfo: null,
+		name: "xcsh Remote Luna",
+		turns: [],
+		futurePrivate: "must-not-leak",
+	};
+	const endpoint = { thread, call: async () => ({}) };
+	router.registerSession(thread.id, endpoint);
+	expect(notifications.map(value => value.client)).toEqual(["stable", "experimental"]);
+	expect(notifications.every(value => value.event.method === "thread/started")).toBe(true);
+	expect(Object.keys(notifications[0].event.params.thread)).toEqual([
+		"id",
+		"sessionId",
+		"forkedFromId",
+		"parentThreadId",
+		"preview",
+		"ephemeral",
+		"section",
+		"sectionEnteredAt",
+		"projectId",
+		"historyMode",
+		"modelProvider",
+		"model",
+		"reasoningEffort",
+		"createdAt",
+		"updatedAt",
+		"recencyAt",
+		"status",
+		"path",
+		"cwd",
+		"cliVersion",
+		"source",
+		"threadSource",
+		"agentNickname",
+		"agentRole",
+		"gitInfo",
+		"name",
+		"turns",
+	]);
+	expect(Object.keys(notifications[1].event.params.thread)).toEqual([
+		"id",
+		"extra",
+		"sessionId",
+		"forkedFromId",
+		"parentThreadId",
+		"preview",
+		"ephemeral",
+		"section",
+		"sectionEnteredAt",
+		"projectId",
+		"historyMode",
+		"modelProvider",
+		"model",
+		"reasoningEffort",
+		"createdAt",
+		"updatedAt",
+		"recencyAt",
+		"status",
+		"path",
+		"cwd",
+		"cliVersion",
+		"source",
+		"canAcceptDirectInput",
+		"threadSource",
+		"agentNickname",
+		"agentRole",
+		"gitInfo",
+		"name",
+		"turns",
+	]);
+	expect(notifications[1].event.params.thread).toMatchObject({
+		extra: null,
+		canAcceptDirectInput: true,
+		name: "xcsh Remote Luna",
+	});
+	expect(notifications[1].event.params.thread).not.toHaveProperty("futurePrivate");
+	router.registerSession(thread.id, endpoint);
+	expect(notifications).toHaveLength(2);
+	router.dispose();
+});
+
 test("phone discovery can list the empty native thread section collection", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	await router.handle("phone", {

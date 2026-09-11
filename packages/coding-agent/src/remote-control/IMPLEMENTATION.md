@@ -2286,3 +2286,31 @@ Authorization header use the rotated fixture token. The focused file passes two
 tests with 19 assertions; the complete 65-file remote-control suite passes 902
 tests with 3670 assertions under Bun 1.4.2. A new compiled package and live
 credential-rotation observation remain required.
+
+## Preserve Plan execution identity in phone discovery
+
+Robin's corrected iPhone Plan flow returned `PLAN-LUNA-READY`, and the Default
+flow returned `DEFAULT-LUNA-READY` exactly once. A later complete Plan displayed
+the three review actions and `Approve and execute` created the exact 18-byte
+`LUNA-PLAN-ACCEPTED` fixture. Execution therefore succeeded, but the phone stayed
+on the closed source thread. Discovery then displayed `New chat` under the
+historical `alpha` working-directory group. Host status identified the new Luna
+session as `157b779de9ee4d80`, still using `gpt-5.6-luna`, but with `name:null`.
+
+`InteractiveMode` now captures the source session title and title source before
+leaving Plan and passes them through `handleClearCommand`. `SessionManager`
+sanitizes and writes that metadata into the replacement session header. When its
+owner first registers the new identity, `RemoteRouter` emits the pinned
+`thread/started` notification using the same stable or experimental Thread wire
+projection as list/read/resume. Repeated heartbeats do not emit another start,
+private fields remain excluded, and per-client notification opt-outs still
+apply. The added upstream fixture is byte-identical with SHA-256
+`d66a9b4563471c5fe99de18cb2bd3c83e7b6aac8deb0b0579406b3b7c74d7b35`.
+
+Focused interactive-mode, router, schema, host and teardown coverage passes 48
+tests with 347 assertions. The complete remote-control suite passes 904 tests
+with 3679 assertions across 65 files, and the guarded coding-agent suite passes
+8310 tests with 561 skips and 30001 assertions across 795 files under Bun 1.4.2.
+Robin's report that the visible `alpha` and `beta` labels regressed remains open
+manual evidence until a fresh artifact proves the model-aligned chat name and
+replacement navigation.

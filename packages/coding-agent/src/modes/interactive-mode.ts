@@ -969,6 +969,8 @@ export class InteractiveMode implements InteractiveModeContext {
 	): Promise<void> {
 		const planModePrompt = await this.session.prepareSessionChange(async (createSession, assertCurrent) => {
 			const parentSession = this.session.sessionFile;
+			const sourceTitle = this.session.sessionName;
+			const sourceTitleSource = this.session.sessionManager.titleSource;
 			const sourceSessionId = this.session.sessionId;
 			const workflow = this.session.getPlanModeState()?.workflow;
 			await renameApprovedPlanFile({
@@ -982,7 +984,10 @@ export class InteractiveMode implements InteractiveModeContext {
 			await this.#exitPlanMode({ silent: true, paused: false });
 			assertCurrent();
 			try {
-				await this.handleClearCommand({ parentSession }, createSession);
+				await this.handleClearCommand(
+					{ parentSession, title: sourceTitle, titleSource: sourceTitleSource },
+					createSession,
+				);
 				assertCurrent();
 				if (this.session.sessionId === sourceSessionId) throw new Error("Plan execution session was not created");
 			} catch (error) {

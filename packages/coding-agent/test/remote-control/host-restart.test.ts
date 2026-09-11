@@ -117,7 +117,14 @@ test("a host restart preserves ongoing owner work, retry identity, history and s
 			return {};
 		};
 		await observer.call("protocol", {
-			request: { id: 1, method: "initialize", params: { clientInfo: { name: "observer", version: "1" } } },
+			request: {
+				id: 1,
+				method: "initialize",
+				params: {
+					clientInfo: { name: "observer", version: "1" },
+					capabilities: { optOutNotificationMethods: ["thread/started"] },
+				},
+			},
 		});
 		phone.handle = async (_method, params) => {
 			events.push(params.event);

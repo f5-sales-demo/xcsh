@@ -18,6 +18,7 @@ import readSchema from "./fixtures/ThreadReadResponse.json";
 import resumeSchema from "./fixtures/ThreadResumeResponse.json";
 import threadSetNameParamsSchema from "./fixtures/ThreadSetNameParams.json";
 import threadSetNameResponseSchema from "./fixtures/ThreadSetNameResponse.json";
+import threadStartedSchema from "./fixtures/ThreadStartedNotification.json";
 
 test("initialization and live thread payload match pinned upstream schemas", async () => {
 	const ajv = new Ajv({ strict: false });
@@ -88,6 +89,41 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 		})) as { result: unknown };
 		const validResume = ajv.compile(resumeSchema);
 		expect(validResume(resumed.result), JSON.stringify(validResume.errors)).toBe(true);
+	} finally {
+		remote.dispose();
+		router.dispose();
+	}
+});
+
+test("a live replacement thread notification matches the pinned upstream schema", async () => {
+	const ajv = new Ajv({ strict: false });
+	for (const name of ["int32", "int64", "uint", "uint16", "uint32", "uint64"])
+		ajv.addFormat(name, {
+			type: "number",
+			validate: (value: number) => Number.isSafeInteger(value) && (!name.startsWith("u") || value >= 0),
+		});
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const notifications: any[] = [];
+	router.notify = (_client, event) => notifications.push(event);
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	const remote = new RemoteSession({
+		sessionId: "replacement",
+		sessionName: "xcsh Remote Luna",
+		messages: [],
+		model: { id: "gpt-5.6-luna", provider: "openai-codex" },
+		sessionManager: { getCwd: () => "/tmp/luna" },
+		subscribe: () => () => {},
+	} as unknown as SessionTarget);
+	try {
+		router.registerSession("replacement", { thread: remote.thread(), call: async () => ({}) });
+		const started = notifications.find(event => event.method === "thread/started");
+		expect(started).toBeDefined();
+		const validate = ajv.compile(threadStartedSchema);
+		expect(validate(started.params), JSON.stringify(validate.errors)).toBe(true);
 	} finally {
 		remote.dispose();
 		router.dispose();

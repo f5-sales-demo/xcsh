@@ -795,3 +795,32 @@ one socket before the repair and now passes two tests with 19 assertions. The
 complete remote-control suite passes 902 tests with 3670 assertions under Bun
 1.4.2. A fresh compiled artifact still has to prove this behavior across a real
 credential rotation; the host restart observation alone does not claim that gate.
+
+## iPhone Plan approval and replacement-thread discovery
+
+Robin identified the labeled mode path as `+` then `Plan mode`; the earlier iOS
+PhotosPicker authorization sheets came from the adjacent photo action and did
+not exercise the protocol. With the Plan pill visible, Luna returned
+`PLAN-LUNA-READY`. Removing the pill and resending the corrected Default prompt
+returned `DEFAULT-LUNA-READY` exactly once, with the `gpt-5.6-luna` work model
+retained.
+
+The complete Plan review exposed all three expected choices: `Approve and
+execute`, `Refine plan`, and `Stay in plan mode`. After Robin tapped approval,
+the existing owner executed the reviewed plan once and created the 18-byte
+`LUNA-PLAN-ACCEPTED` target. The phone stayed on the closed source thread instead
+of navigating to the replacement execution thread. Returning to discovery
+showed `New chat` under `alpha`; host status found the new Luna thread
+`157b779de9ee4d80` with model `gpt-5.6-luna` and `name:null`. Robin also reported
+the visible `alpha` and `beta` labels as a regression from Luna/Astra naming.
+
+The missing title came from execution-session creation resetting session name
+metadata. The repaired handoff copies the sanitized source title and source into
+the new session header. A genuinely new registration now emits exactly one
+capability-projected `thread/started`, while heartbeat registrations emit none
+and explicit notification opt-outs remain effective. The focused six-file set
+passes 48 tests with 347 assertions; the complete remote-control suite passes
+904 tests with 3679 assertions under Bun 1.4.2. The guarded coding-agent suite
+passes 8310 tests with 561 skips and 30001 assertions across 795 files. This is
+automated repair evidence only; the phone naming and navigation result awaits a
+rebuilt runtime.

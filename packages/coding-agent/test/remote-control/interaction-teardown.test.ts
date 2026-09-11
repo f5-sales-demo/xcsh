@@ -38,7 +38,10 @@ async function fixture() {
 		request: {
 			id: 1,
 			method: "initialize",
-			params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+			params: {
+				clientInfo: { name: "fixture", version: "1" },
+				capabilities: { experimentalApi: true, optOutNotificationMethods: ["thread/started"] },
+			},
 		},
 	});
 	await phone.call("protocol", { request: { id: 2, method: "thread/resume", params: { threadId: "thread-a" } } });

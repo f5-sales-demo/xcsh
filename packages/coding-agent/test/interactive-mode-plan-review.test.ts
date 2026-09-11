@@ -317,6 +317,7 @@ describe("InteractiveMode plan review rendering", () => {
 		});
 		const previousSessionId = session.sessionId;
 		const previousSessionFile = session.sessionFile;
+		await session.setSessionName("xcsh Remote Luna", "user");
 		const previousModel = session.model;
 		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
 		const remote = new RemoteSession(session);
@@ -360,6 +361,8 @@ describe("InteractiveMode plan review rendering", () => {
 			expect(session.sessionId).not.toBe(previousSessionId);
 			expect(session.model).toEqual(previousModel);
 			expect(session.sessionManager.getHeader()?.parentSession).toBe(previousSessionFile!);
+			expect(session.sessionName).toBe("xcsh Remote Luna");
+			expect(session.sessionManager.titleSource).toBe("user");
 			const source = await SessionManager.open(previousSessionFile!);
 			const decision = source
 				.getEntries()

@@ -68,6 +68,8 @@ export interface SessionHeader {
 
 export interface NewSessionOptions {
 	parentSession?: string;
+	title?: string;
+	titleSource?: "auto" | "user";
 }
 
 export interface SessionEntryBase {
@@ -1748,8 +1750,8 @@ export class SessionManager {
 		this.#persistError = undefined;
 		this.#persistErrorReported = false;
 		this.#sessionId = Snowflake.next();
-		this.#sessionName = undefined;
-		this.#titleSource = undefined;
+		this.#sessionName = options?.title ? SessionManager.#sanitizeName(options.title) || undefined : undefined;
+		this.#titleSource = this.#sessionName ? options?.titleSource : undefined;
 		const timestamp = new Date().toISOString();
 		const header: SessionHeader = {
 			type: "session",
@@ -1757,6 +1759,8 @@ export class SessionManager {
 			id: this.#sessionId,
 			timestamp,
 			cwd: this.cwd,
+			title: this.#sessionName,
+			titleSource: this.#titleSource,
 			parentSession: options?.parentSession,
 		};
 		this.#fileEntries = [header];

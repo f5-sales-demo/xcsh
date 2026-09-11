@@ -172,6 +172,13 @@ export class RemoteRouter {
 		// Heartbeats retain the same live owner, including calls already awaiting a response.
 		const current = previous ? Object.assign(previous, endpoint) : endpoint;
 		this.sessions.set(threadId, current);
+		if (!previous) {
+			for (const client of this.#clients.keys())
+				this.#emit(client, {
+					method: "thread/started",
+					params: { thread: threadWireView(current.thread, this.#experimental.has(client), true) },
+				});
+		}
 		for (const request of current.requests ?? [])
 			for (const client of this.#clients.keys()) this.#deliver(client, request);
 	}

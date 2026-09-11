@@ -14,6 +14,7 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSettingsUpdatedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSetName{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadNameUpdatedNotification.json`
+- `codex-rs/app-server-protocol/schema/json/v2/ThreadStartedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtime{Started,Closed,Error,TranscriptDelta,TranscriptDone}Notification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadRealtimeItem{Started,Completed,TranscriptDelta}Notification.json`
 
@@ -28,6 +29,10 @@ terminal newline; the source manifest pins the exact upstream byte hashes.
 copies of the pinned source. Their SHA-256 values are
 `a76583d07f6096fee33045da2dc9caed84d858f8f2d39b37bb38528dbaf32511` and
 `a553d6b1eb66111ca556e22138017ec54fd07c3257dbd2d5ad97ad7660786345`.
+
+`ThreadStartedNotification.json` is also a byte-for-byte copy. Its SHA-256 is
+`d66a9b4563471c5fe99de18cb2bd3c83e7b6aac8deb0b0579406b3b7c74d7b35`.
+It validates the replacement-thread announcement after a terminal session change.
 
 `PermissionProfileListParams.json` and `PermissionProfileListResponse.json` are
 also byte-for-byte copies. Their SHA-256 values are
