@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import Ajv from "ajv";
-import { RemoteInteractions } from "../../src/remote-control/interactions";
+import { RemoteInteractions, validateInteractionRequests } from "../../src/remote-control/interactions";
 import type { Notification } from "../../src/remote-control/session";
 import { UserInteractions } from "../../src/session/user-interactions";
 import commandRequestSchema from "./fixtures/CommandExecutionRequestApprovalParams.json";
@@ -292,4 +292,18 @@ test("approval decisions preserve decline and cancellation semantics and reject 
 		remote.close();
 	};
 	for (const decision of ["accept", "decline", "cancel", "acceptForSession"]) await run(decision);
+});
+
+test("unowned permission and MCP requests are rejected explicitly before registration", () => {
+	for (const method of ["item/permissions/requestApproval", "mcpServer/elicitation/request"]) {
+		expect(() =>
+			validateInteractionRequests("thread-a", [
+				{
+					id: "request-a",
+					method,
+					params: { threadId: "thread-a", turnId: "turn-a", itemId: "item-a" },
+				},
+			]),
+		).toThrow(`Unsupported terminal interaction request: ${method}`);
+	}
 });

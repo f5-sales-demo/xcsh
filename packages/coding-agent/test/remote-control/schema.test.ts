@@ -8,6 +8,8 @@ import fsReadFileSchema from "./fixtures/FsReadFileResponse.json";
 import initializeParamsSchema from "./fixtures/InitializeParams.json";
 import initializeSchema from "./fixtures/InitializeResponse.json";
 import modelSchema from "./fixtures/ModelListResponse.json";
+import permissionProfileListParamsSchema from "./fixtures/PermissionProfileListParams.json";
+import permissionProfileListSchema from "./fixtures/PermissionProfileListResponse.json";
 import skillsListSchema from "./fixtures/SkillsListResponse.json";
 import listSchema from "./fixtures/ThreadListResponse.json";
 import loadedListSchema from "./fixtures/ThreadLoadedListResponse.json";
@@ -27,6 +29,7 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 	for (const [schema, response] of [
 		[configSchema, configResponse({ model: "gpt-6-astra", modelProvider: "openai-codex" }, true)],
 		[modelSchema, modelResponse([{ model: "gpt-6-astra" }])],
+		[permissionProfileListSchema, { data: [], nextCursor: null }],
 	] as const) {
 		const validate = ajv.compile(schema);
 		expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
@@ -41,6 +44,11 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 	};
 	const validInitializeParams = ajv.compile(initializeParamsSchema);
 	expect(validInitializeParams(initializeParams), JSON.stringify(validInitializeParams.errors)).toBe(true);
+	const validPermissionProfileListParams = ajv.compile(permissionProfileListParamsSchema);
+	expect(
+		validPermissionProfileListParams({ cursor: "0", limit: 0, cwd: "/tmp" }),
+		JSON.stringify(validPermissionProfileListParams.errors),
+	).toBe(true);
 	const initialized = (await router.handle("fixture", {
 		id: 1,
 		method: "initialize",

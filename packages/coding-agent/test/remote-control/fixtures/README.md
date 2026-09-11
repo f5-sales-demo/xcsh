@@ -9,6 +9,7 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/Thread{Turns,Items}ListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ConfigReadResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ModelListResponse.json`
+- `codex-rs/app-server-protocol/schema/json/v2/PermissionProfileList{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/{SkillsList,FsReadFile}Response.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSettingsUpdatedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSetName{Params,Response}.json`
@@ -27,6 +28,11 @@ terminal newline; the source manifest pins the exact upstream byte hashes.
 copies of the pinned source. Their SHA-256 values are
 `a76583d07f6096fee33045da2dc9caed84d858f8f2d39b37bb38528dbaf32511` and
 `a553d6b1eb66111ca556e22138017ec54fd07c3257dbd2d5ad97ad7660786345`.
+
+`PermissionProfileListParams.json` and `PermissionProfileListResponse.json` are
+also byte-for-byte copies. Their SHA-256 values are
+`576d405f6c94cbde982a9f65c9301717043683b83ca35d564247907feb16b1b4` and
+`4a290b5b9d47c2fc671033e22754671161bc563027ba387e861bd935398f0def`.
 
 The unit tests use synthetic host/account/request identifiers. Live credentials,
 pairing material, and session transcripts are never fixtures.

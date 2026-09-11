@@ -76,6 +76,40 @@ test("malformed and experimental unsupported operations are explicit errors", as
 	expect(calls).toBe(0);
 });
 
+test("permission profile discovery is an empty non-mutating native catalog", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	let calls = 0;
+	router.sessions.set("fixture", {
+		thread: { id: "fixture", cwd: "/tmp/project" },
+		call: async () => {
+			calls++;
+			return {};
+		},
+	});
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	expect(await router.handle("phone", { id: 2, method: "permissionProfile/list", params: {} })).toEqual({
+		id: 2,
+		result: { data: [], nextCursor: null },
+	});
+	expect(
+		await router.handle("phone", {
+			id: 3,
+			method: "permissionProfile/list",
+			params: { cursor: "0", limit: 0, cwd: "/tmp/project" },
+		}),
+	).toEqual({ id: 3, result: { data: [], nextCursor: null } });
+	for (const params of [{ cursor: "1" }, { cursor: "bad" }, { limit: -1 }, { limit: 1.5 }, { cwd: 1 }])
+		expect(await router.handle("phone", { id: 4, method: "permissionProfile/list", params })).toMatchObject({
+			error: { code: -32602 },
+		});
+	expect(calls).toBe(0);
+	router.dispose();
+});
+
 test("initialize notification opt-outs suppress exact methods for only that client", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	const notifications: Array<{ client: string; method: string }> = [];

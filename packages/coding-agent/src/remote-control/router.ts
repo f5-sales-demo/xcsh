@@ -333,6 +333,28 @@ export class RemoteRouter {
 						if (params.cursor != null) throw new ProtocolError(-32602, "Unsupported model cursor");
 						result = modelResponse([...this.sessions.values()].map(session => session.thread));
 						break;
+					case "permissionProfile/list": {
+						if (
+							params.limit != null &&
+							(!Number.isInteger(params.limit) ||
+								(params.limit as number) < 0 ||
+								(params.limit as number) > 0xffff_ffff)
+						)
+							throw new ProtocolError(-32602, "Invalid permission profile limit");
+						if (params.cwd != null && typeof params.cwd !== "string")
+							throw new ProtocolError(-32602, "Invalid permission profile working directory");
+						if (params.cursor != null) {
+							if (typeof params.cursor !== "string" || !/^\d+$/.test(params.cursor))
+								throw new ProtocolError(-32602, "Invalid permission profile cursor");
+							const cursor = Number(params.cursor);
+							if (!Number.isSafeInteger(cursor) || cursor > 0)
+								throw new ProtocolError(-32602, `Permission profile cursor ${params.cursor} exceeds catalog`);
+						}
+						// xcsh does not implement Codex permission profiles. Returning an empty
+						// catalog is truthful and cannot mutate the running terminal sandbox.
+						result = { data: [], nextCursor: null };
+						break;
+					}
 					case "configRequirements/read":
 						// xcsh has no Codex requirements.toml/MDM policy layer.
 						result = { requirements: null };

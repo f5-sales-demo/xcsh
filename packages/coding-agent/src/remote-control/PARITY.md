@@ -658,3 +658,27 @@ passes 8285 tests with 561 skips, zero failures and 29912 assertions across 791
 files. Workspace TypeScript/Biome, lint, documentation, provenance and staged
 privacy/secret checks also pass. Phone history, fork, catalog and mid-stream
 presentation remain separate manual acceptance work.
+
+## Permission-profile discovery and interaction applicability
+
+The pinned client method `permissionProfile/list` is now supported for stable and
+experimental clients. Because xcsh has no Codex permission-profile selection or
+policy stack, its truthful catalog is empty and paginates as `{ data: [],
+nextCursor: null }`. It validates the pinned cursor, unsigned limit and cwd input
+types before touching a session. The request and response fixtures are unchanged
+copies of the 0.153.4 schemas.
+
+Dedicated permission grants are not interchangeable with xcsh's existing
+command/file approval choices: there is no native grant cache, scope, or
+additional-filesystem/network policy to mutate. Likewise, xcsh's MCP 2025-03-26
+client does not negotiate elicitation and rejects server requests other than
+`ping` and `roots/list`. Pending `item/permissions/requestApproval` and
+`mcpServer/elicitation/request` envelopes are therefore rejected explicitly
+before registration. No synthetic approval is presented as product support.
+
+Focused automated evidence is 23 passing tests and 168 assertions under Bun
+1.4.2. The complete remote-control suite passes 899 tests with 3659 assertions
+across 65 files, and the guarded coding-agent suite passes 8305 tests with 561
+skips, zero failures and 29976 assertions across 795 files in 411.28 seconds. A
+phone observation of the empty permission catalog remains separate; there is no
+applicable MCP elicitation flow in the current terminal runtime.

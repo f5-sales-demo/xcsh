@@ -2119,3 +2119,31 @@ pre-compaction items byte-equivalent and appends one structural marker.
 This is automated source and integration evidence only. It does not claim a new
 iPhone history observation. The remaining live gates are tracked independently in
 `ACCEPTANCE.md`.
+
+## Permission-profile and unowned-request boundary
+
+`permissionProfile/list` now implements the pinned 0.153.4 pagination shape. xcsh
+has no selectable Codex permission-profile layer, so it returns an empty catalog
+with `nextCursor: null` instead of inventing profiles or changing the running
+terminal's `dangerFullAccess` execution policy. Cursor, limit and cwd inputs are
+validated before the router can call or attach a live session. The checked-in
+parameter and response schemas are byte-identical to the pinned source.
+
+The native runtime also has no producer or settlement model for Codex
+`item/permissions/requestApproval`. Its MCP client negotiates the 2025-03-26
+protocol and accepts only the server requests it owns (`ping` and `roots/list`),
+so `mcpServer/elicitation/request` is not applicable to this runtime. Neither
+request kind may be inserted into a pending-session snapshot; the adapter rejects
+them explicitly before registration or terminal state mutation. This preserves
+the existing single-owner behavior without fabricating grants or structured MCP
+answers.
+
+The red router test first received `-32601` for permission-profile discovery, and
+the red interaction test received the generic malformed-request error for both
+unowned server-request kinds. The focused router, schema and interaction matrix
+now passes 23 tests with 168 assertions under Bun 1.4.2. The complete
+remote-control suite passes 899 tests with 3659 assertions across 65 files. The
+guarded coding-agent suite passes 8305 tests with 561 skips, zero failures and
+29976 assertions across 795 files in 411.28 seconds. Workspace TypeScript/Biome,
+TypeScript lint and documentation quality checks pass. This is automated contract
+evidence and does not claim an iPhone presentation result.

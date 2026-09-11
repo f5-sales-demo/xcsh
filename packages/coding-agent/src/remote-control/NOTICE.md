@@ -161,3 +161,17 @@ relay retries; private xcsh-owned state and Unix socket session attachment.
   field names and omitted optional fields. `core/src/realtime_conversation.rs`
   and `codex-api/src/endpoint/realtime_websocket/methods_common.rs` supply
   standalone versus active handoff routing, including the v1 final-message prefix.
+
+- `codex-rs/app-server-protocol/src/protocol/v2/permissions.rs` and
+  `app-server/src/request_processors/catalog_processor.rs`: permission-profile
+  list fields, pagination and catalog behavior. Native xcsh returns an empty
+  catalog because it has no selectable Codex permission profiles. The unchanged
+  request and response schema hashes are
+  `576d405f6c94cbde982a9f65c9301717043683b83ca35d564247907feb16b1b4`
+  and `4a290b5b9d47c2fc671033e22754671161bc563027ba387e861bd935398f0def`.
+- `codex-rs/app-server-protocol/src/protocol/v2/{permissions,mcp}.rs` and
+  `app-server/src/bespoke_event_handling.rs`: dedicated permission and MCP
+  elicitation request/response contracts. xcsh does not port these mutation
+  paths: it has no permission-profile grant owner, and its MCP 2025-03-26 client
+  does not negotiate elicitation. Such pending envelopes are rejected before
+  registration rather than converted into generic prompts.
