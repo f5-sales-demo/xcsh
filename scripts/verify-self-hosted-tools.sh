@@ -19,12 +19,12 @@ test "$(bun --version)" = 1.4.2
 
 test "$(command -v zig)" = "$tool_root/bin/zig"
 test "$(zig version)" = 0.16.0
-rustc --version | grep -F 'nightly-2026-09-03'
+rustc --version >/dev/null
 test "$(rustup show active-toolchain | awk '{print $1}')" = nightly-2026-09-03-x86_64-unknown-linux-gnu
 
 installed_components=$(rustup component list --installed --toolchain nightly-2026-09-03-x86_64-unknown-linux-gnu)
 for component in rustfmt clippy rust-analyzer; do
-  grep -Eq "^${component}(-x86_64-unknown-linux-gnu)? " <<<"$installed_components"
+  grep -Eq "^${component}(-x86_64-unknown-linux-gnu)?( |$)" <<<"$installed_components"
 done
 
 installed_targets=$(rustup target list --installed --toolchain nightly-2026-09-03-x86_64-unknown-linux-gnu)
@@ -32,7 +32,7 @@ for target in x86_64-unknown-linux-gnu x86_64-pc-windows-msvc aarch64-unknown-li
   grep -Fxq "$target" <<<"$installed_targets"
 done
 
-test "$(cargo nextest --version | awk '{print $2}')" = 0.9.143
+test "$(cargo nextest --version | awk 'NR == 1 {print $2}')" = 0.9.143
 command -v llvm-nm
 llvm-nm --version >/dev/null
 command -v fd

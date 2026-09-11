@@ -63,6 +63,9 @@ class CiCapacityContractTests(unittest.TestCase):
             "command -v rg",
         ):
             self.assertIn(expected, verifier)
+        self.assertNotIn("rustc --version | grep", verifier)
+        self.assertIn('(-x86_64-unknown-linux-gnu)?( |$)', verifier)
+        self.assertIn("awk 'NR == 1 {print $2}'", verifier)
 
     def test_manual_benchmark_is_frozen_and_bounded(self) -> None:
         benchmark = (WORKFLOWS / "compute-benchmark.yml").read_text(encoding="utf-8")
