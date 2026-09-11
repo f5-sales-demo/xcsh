@@ -699,3 +699,9 @@ stable and experimental list/read field order, Plan/Default order, model-catalog
 presence, pinned voice defaults and the empty permission-profile catalog. State
 directory and host file/socket modes remain `0700` and `0600`. No new phone or
 voice acceptance is inferred from these checks.
+
+A concurrent current-build text preflight then exercised all four live owners.
+Each model created and read its own distinct marker file, completed once, and
+returned the same durable turn on an identical client-message retry. Luna, Astra,
+Sol and Terra all passed in 19.920 seconds. The iPhone voice variants remain a
+separate manual gate.

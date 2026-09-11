@@ -2170,3 +2170,12 @@ empty permission-profile result. The state directory remains owner `0700`; the
 host state and socket remain owner `0600`. These are automated and operational
 checks only. The requested iPhone observations remain unclaimed until Robin
 reports them.
+
+The same live artifact then ran a concurrent text preflight through all four
+existing AgentSession owners. Luna, Astra, Sol and Terra each used their real
+write and read tools in their own working directory, persisted one completed turn
+with a distinct expected marker, and returned the original turn identity when the
+same client message was retried. All four completed in 19.920 seconds with no
+duplicate history turn or tool execution. This proves current-build work-model
+routing and retry behavior; it does not replace the corresponding phone voice
+tasks.
