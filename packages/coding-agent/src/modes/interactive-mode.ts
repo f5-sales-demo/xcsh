@@ -985,7 +985,7 @@ export class InteractiveMode implements InteractiveModeContext {
 			assertCurrent();
 			try {
 				await this.handleClearCommand(
-					{ parentSession, title: sourceTitle, titleSource: sourceTitleSource },
+					{ parentSession, forkedFromId: sourceSessionId, title: sourceTitle, titleSource: sourceTitleSource },
 					createSession,
 				);
 				assertCurrent();

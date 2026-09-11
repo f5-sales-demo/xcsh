@@ -824,3 +824,27 @@ passes 48 tests with 347 assertions; the complete remote-control suite passes
 passes 8310 tests with 561 skips and 30001 assertions across 795 files. This is
 automated repair evidence only; the phone naming and navigation result awaits a
 rebuilt runtime.
+
+A later controlled Luna attempt used the exact Plan request for
+`plan-discovery-luna.txt`. Robin saw all three actions and tapped `Approve and
+execute` once, but the phone then showed `Exit plan mode`, retained the Plan pill
+on a blank composer and did not visibly move to or stream from the implementation
+thread. Disk inspection proves the terminal still performed one requested write:
+the file contains exactly `LUNA-DISCOVERY-REPAIRED`, 23 bytes with no trailing
+newline. The `alpha` and `beta` labels were working-directory groups rather than
+regressed model-session names.
+
+The owner-only sanitized trace orders the approval response, request resolution,
+source `thread/closed` and replacement `thread/started` at sequences 1266, 1268,
+1270 and 1272. The replacement advertised the expected Luna model and `xcsh
+Remote Luna` name, but `forkedFromId` and `parentThreadId` were both null. The
+automated repair adds a distinct persisted `forkedFromId` carrying the approved
+source session ID, preserves `parentSession` as file ancestry, and projects the
+validated explicit ID before the existing safe fallback; `parentThreadId`
+remains null. The test first failed on the null wire lineage, then the Plan review
+file passed 21 tests with 167 assertions and the seven-file affected matrix passed
+62 tests with 417 assertions under Bun 1.4.2. This does not establish iPhone
+navigation, Plan-pill clearing or visible implementation streaming. The current
+complete remote-control suite also passes 904 tests with 3679 assertions, and the
+guarded coding-agent suite passes 8310 tests with 561 skips and 30002 assertions
+across 795 files.

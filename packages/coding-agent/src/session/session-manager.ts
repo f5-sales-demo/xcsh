@@ -64,10 +64,12 @@ export interface SessionHeader {
 	timestamp: string;
 	cwd: string;
 	parentSession?: string;
+	forkedFromId?: string;
 }
 
 export interface NewSessionOptions {
 	parentSession?: string;
+	forkedFromId?: string;
 	title?: string;
 	titleSource?: "auto" | "user";
 }
@@ -1762,6 +1764,7 @@ export class SessionManager {
 			title: this.#sessionName,
 			titleSource: this.#titleSource,
 			parentSession: options?.parentSession,
+			forkedFromId: options?.forkedFromId,
 		};
 		this.#fileEntries = [header];
 		this.#byId.clear();

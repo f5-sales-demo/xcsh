@@ -484,16 +484,25 @@ export class RemoteSession {
 		};
 	}
 	thread(includeTurns = false) {
-		const parentSession = this.target.sessionManager.getHeader?.()?.parentSession;
+		const header = this.target.sessionManager.getHeader?.();
+		const explicitFork = header?.forkedFromId;
+		const parentSession = header?.parentSession;
 		const forkedFromId =
-			typeof parentSession === "string" &&
-			parentSession.length > 0 &&
-			parentSession.length <= 256 &&
-			!isAbsolute(parentSession) &&
-			!parentSession.includes("/") &&
-			!parentSession.includes("\\")
-				? parentSession
-				: null;
+			typeof explicitFork === "string" &&
+			explicitFork.length > 0 &&
+			explicitFork.length <= 256 &&
+			!isAbsolute(explicitFork) &&
+			!explicitFork.includes("/") &&
+			!explicitFork.includes("\\")
+				? explicitFork
+				: typeof parentSession === "string" &&
+						parentSession.length > 0 &&
+						parentSession.length <= 256 &&
+						!isAbsolute(parentSession) &&
+						!parentSession.includes("/") &&
+						!parentSession.includes("\\")
+					? parentSession
+					: null;
 		return {
 			id: this.target.sessionId,
 			sessionId: this.target.sessionId,

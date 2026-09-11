@@ -2311,6 +2311,38 @@ Focused interactive-mode, router, schema, host and teardown coverage passes 48
 tests with 347 assertions. The complete remote-control suite passes 904 tests
 with 3679 assertions across 65 files, and the guarded coding-agent suite passes
 8310 tests with 561 skips and 30001 assertions across 795 files under Bun 1.4.2.
-Robin's report that the visible `alpha` and `beta` labels regressed remains open
-manual evidence until a fresh artifact proves the model-aligned chat name and
-replacement navigation.
+The later checkpoint below distinguishes working-directory grouping from the
+model-aligned chat title; replacement navigation still requires fresh manual
+evidence.
+
+The next controlled Luna checkpoint separated execution success from navigation.
+Robin sent the exact Plan request for `plan-discovery-luna.txt`, saw all three
+review actions and tapped `Approve and execute` once. The phone then displayed
+`Exit plan mode`, kept the Plan pill on a blank composer and showed no visible
+implementation. The terminal created the file with exactly the 23 bytes
+`LUNA-DISCOVERY-REPAIRED` and no trailing newline, so execution occurred but the
+phone acceptance gate did not pass. Robin subsequently clarified that `alpha` and
+`beta` were working-directory groups rather than model-session labels.
+
+Sanitized trace sequences 1266, 1268, 1270 and 1272 contain, in order, the phone
+approval response, `serverRequest/resolved`, closure of the Plan source thread and
+start of its execution replacement. The replacement carried the correct
+`gpt-5.6-luna` model and `xcsh Remote Luna` title, but projected
+`forkedFromId: null` and `parentThreadId: null`. Without wire lineage, the phone
+had no advertised relationship from its closed Plan thread to the new execution
+thread.
+
+`SessionHeader` and `NewSessionOptions` now carry an optional `forkedFromId`.
+Plan approval supplies the approved source session ID while continuing to store
+the source file path in `parentSession`. `RemoteSession.thread()` validates and
+projects the explicit session ID first, with the safe legacy `parentSession`
+fallback retained, and continues to report `parentThreadId: null`. The regression
+asserts both the replacement header and Thread identify the approved source
+session. Before implementation, the Plan review file failed one test because it
+received null lineage; afterward it passed 21 tests with 167 assertions, and the
+seven-file Plan/lifecycle/router/schema/session matrix passed 62 tests with 417
+assertions under Bun 1.4.2. These are automated repair results only. A rebuilt
+artifact and Robin-observed automatic replacement navigation are still required.
+The current complete remote-control suite passes 904 tests with 3679 assertions,
+and the guarded coding-agent suite passes 8310 tests with 561 skips and 30002
+assertions across 795 files.

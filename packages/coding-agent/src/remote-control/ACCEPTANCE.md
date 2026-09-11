@@ -32,7 +32,7 @@ completion of another. Codex baseline: 0.153.4,
 | Sol, Luna, Terra and Astra fidelity | Parameterized adapter tests; the current clean `b3953eecc` live runtime exposes four distinct Luna/Astra/Sol/Terra sessions with preserved IDs, names, directories and histories; all four concurrently completed distinct real write/read tool tasks in 19.920 seconds with exact file bytes and exactly-once request replay; isolated model-registry SDK tests preserve all four identities on resume | Final phone voice task in each clean-build session; no model replacement by voice component |
 | No Codex installation or subprocess dependency | The current `b3953eecc` artifact and two real TUIs pass ten isolated Ubuntu checks without Codex, standalone Bun or source dependencies; real file tools, remote rename, clean and SIGKILL host recovery, active-work continuation, host replay, compiled resume and durable terminal-restart replay verified | Preserve this check after final upstream reconciliation; live subscription/voice evidence remains separate |
 | Actual Codex reference recordings and comparison | Two recall calls and successful reference/native file calls; hashed sanitized fixtures | Repair remaining differences; further control/recovery/interaction scenarios and explicit unverified coverage |
-| TDD and repository checks | Recorded red-to-green work; the replacement-thread repair passes the guarded package suite with 8310 tests, 561 skips, 30001 assertions and zero failures across 795 files, plus 904 remote tests with 3679 expectations under Bun 1.4.2; workspace TypeScript/Biome, docs quality, changed-scope PII, diff gitleaks and whitespace checks pass, while the prior bundle and enhanced ten-check compiled artifact pass remain recorded; the branch-added audit finding was removed, and all 24 pinned source hashes verified | Rebuild and rerun the package-independence artifact gate. The unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
+| TDD and repository checks | Recorded red-to-green work; the execution-lineage repair passes the guarded package suite with 8310 tests, 561 skips, 30002 assertions and zero failures across 795 files, plus 904 remote tests with 3679 expectations under Bun 1.4.2; workspace TypeScript/Biome, docs quality, changed-scope PII, diff gitleaks and whitespace checks pass, while the prior bundle and enhanced ten-check compiled artifact pass remain recorded; the branch-added audit finding was removed, and all 24 pinned source hashes verified | Rebuild and rerun the package-independence artifact gate. The unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
 | Manual acceptance only on Robin's report | Specific observations recorded in PARITY.md and issue comments | Obtain remaining manual checkpoints without treating simulated tests as phone acceptance |
 | Issue, PR, review, merge and cleanup | Detailed issue, feature worktree, pushed commits | Completed linked PR, review/CI repair loop, authorized squash merge, confirmed-merged cleanup |
 
@@ -80,6 +80,30 @@ not repeat it and notification opt-outs remain honored. Focused coverage passes
 48 tests with 347 assertions; the complete remote-control suite passes 904 tests
 with 3679 assertions under Bun 1.4.2. A fresh binary and controlled iPhone retry
 remain required.
+
+The latest controlled Luna attempt is still a partial failure. Remote Plan state
+made the Plan pill appear, Robin sent the exact Plan request, saw all three review
+choices and tapped `Approve and execute` once. The phone then showed `Exit plan
+mode`, retained the Plan pill on a blank composer and did not visibly follow or
+stream the implementation. The terminal nevertheless created
+`/tmp/xcsh-3818-acceptance/alpha/plan-discovery-luna.txt` with exactly the 23 bytes
+`LUNA-DISCOVERY-REPAIRED` and no trailing newline. Sanitized trace sequences 1266,
+1268, 1270 and 1272 respectively record the approval response, resolved request,
+source `thread/closed` and replacement `thread/started`; that replacement had the
+correct Luna model and `xcsh Remote Luna` name, but both `forkedFromId` and
+`parentThreadId` were null. The `alpha` and `beta` labels were subsequently
+identified as working-directory groups, not model-session names.
+
+The lineage repair persists the approved source session ID separately from the
+file-backed `parentSession` ancestry and projects the validated explicit value as
+`forkedFromId` while keeping `parentThreadId: null`. Its red test first received
+`forkedFromId: null`; afterward the Plan review test passed 21 tests with 167
+assertions and the seven-file Plan/lifecycle/router/schema/session matrix passed
+62 tests with 417 assertions under Bun 1.4.2. This is automated repair evidence,
+not phone acceptance. The complete 65-file remote-control suite passed 904 tests
+with 3679 assertions, and the guarded coding-agent suite passed 8310 tests with
+561 skips and 30002 assertions across 795 files. A committed artifact and one
+controlled iPhone retry remain required before closing the navigation row.
 
 ## Accepted first-release boundaries
 
