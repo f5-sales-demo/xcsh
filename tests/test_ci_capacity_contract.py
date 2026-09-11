@@ -15,14 +15,20 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("  native-linux-x64:\n", workflow)
         self.assertIn("TARGET_VARIANTS: baseline modern", workflow)
         self.assertIn("native-manifest.json", workflow)
-        self.assertIn('ci-native-manifest.ts create --source-sha "$GITHUB_SHA"', workflow)
+        self.assertIn(
+            'ci-native-manifest.ts create --source-sha "$GITHUB_SHA"', workflow
+        )
         self.assertIn("  test-rust:\n", workflow)
         self.assertIn("  test-typescript:\n", workflow)
         self.assertIn("    needs: native-linux-x64\n", workflow)
         self.assertIn("    needs: [test-typescript, test-rust]\n", workflow)
         self.assertIn("bun scripts/ci-native-manifest.ts verify", workflow)
         self.assertIn('XCSH_TEST_FILE_WORKERS: "0"', workflow)
-        for platform in ('"platform":"linux","arch":"arm64"', '"platform":"win32"', '"platform":"darwin"'):
+        for platform in (
+            '"platform":"linux","arch":"arm64"',
+            '"platform":"win32"',
+            '"platform":"darwin"',
+        ):
             self.assertIn(platform, workflow)
 
     def test_self_hosted_linux_setup_is_verification_only(self) -> None:
@@ -102,13 +108,15 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn('"--max-concurrency=2"', runner)
         self.assertNotIn("--concurrent", benchmark + action + runner)
 
-    def test_runner_qualification_records_real_output_and_resource_evidence(self) -> None:
+    def test_runner_qualification_records_real_output_and_resource_evidence(
+        self,
+    ) -> None:
         profiler = (ROOT / "scripts/runner-optimization-profile.sh").read_text(
             encoding="utf-8"
         )
-        validator = (
-            ROOT / "scripts/validate-performance-qualification.ts"
-        ).read_text(encoding="utf-8")
+        validator = (ROOT / "scripts/validate-performance-qualification.ts").read_text(
+            encoding="utf-8"
+        )
         for phase_function in (
             "profile_install()",
             "profile_native()",
@@ -135,7 +143,9 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("  dag-candidate-native:\n", benchmark)
         self.assertIn("  dag-candidate-rust:\n", benchmark)
         self.assertIn("    needs: [prepare, dag-candidate-native]\n", benchmark)
-        self.assertIn("    needs: [dag-candidate-typescript, dag-candidate-rust]\n", benchmark)
+        self.assertIn(
+            "    needs: [dag-candidate-typescript, dag-candidate-rust]\n", benchmark
+        )
         self.assertIn("ci-native-manifest.ts verify", benchmark)
         self.assertIn("collect-dag-profile.ts", benchmark)
 
@@ -150,9 +160,7 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertIn("bun-1.4.2-${{ runner.os }}-${{ runner.arch }}", workflows)
         self.assertNotIn("lookup-only:", workflows)
         self.assertIn("actions/cache/restore@", workflows)
-        prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(
-            encoding="utf-8"
-        )
+        prime = (WORKFLOWS / "dependency-cache-prime.yml").read_text(encoding="utf-8")
         self.assertIn("uses: actions/cache@", prime)
         self.assertNotIn("actions/cache/restore@", prime)
         self.assertIn(

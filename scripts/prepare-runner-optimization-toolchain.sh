@@ -126,9 +126,9 @@ if [[ ${1:-} == __run ]]; then
   tool_root=$5
   verify_source_pins
   case "$mode" in
-    legacy) install_legacy_toolchain "$verifier" "$manifest" "$tool_root" ;;
-    baked) verify_baked_toolchain "$verifier" "$manifest" ;;
-    *) usage ;;
+  legacy) install_legacy_toolchain "$verifier" "$manifest" "$tool_root" ;;
+  baked) verify_baked_toolchain "$verifier" "$manifest" ;;
+  *) usage ;;
   esac
   exit 0
 fi
@@ -141,8 +141,8 @@ output_dir=$4
 verifier=$5
 phase_set=$6
 case "$experiment" in
-  image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
-  *) usage ;;
+image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
+*) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
 case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
