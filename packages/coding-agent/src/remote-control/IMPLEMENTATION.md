@@ -2067,3 +2067,11 @@ separate `turn/interrupt` completed with persisted `interrupted` status and its
 delayed fixture file was absent. Notifications covered turn and item start and
 completion. The disposable owner then exited cleanly, leaving the four phone
 sessions unchanged.
+
+Live general-question routing used a disposable Sol TUI with only the built-in
+`ask` tool enabled so model tool choice could not bypass the interaction. The
+remote protocol subscriber received one `item/tool/requestUserInput`, supplied
+the selected answer, observed exactly one `serverRequest/resolved`, and the same
+turn completed with the expected answer marker. An earlier unrestricted probe
+was discarded because its model answered directly instead of invoking `ask`.
+The deterministic TUI then exited cleanly.
