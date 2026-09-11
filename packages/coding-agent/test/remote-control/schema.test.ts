@@ -12,6 +12,8 @@ import skillsListSchema from "./fixtures/SkillsListResponse.json";
 import listSchema from "./fixtures/ThreadListResponse.json";
 import loadedListSchema from "./fixtures/ThreadLoadedListResponse.json";
 import threadNameUpdatedSchema from "./fixtures/ThreadNameUpdatedNotification.json";
+import readSchema from "./fixtures/ThreadReadResponse.json";
+import resumeSchema from "./fixtures/ThreadResumeResponse.json";
 import threadSetNameParamsSchema from "./fixtures/ThreadSetNameParams.json";
 import threadSetNameResponseSchema from "./fixtures/ThreadSetNameResponse.json";
 
@@ -55,12 +57,29 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 	} as unknown as SessionTarget);
 	try {
 		const validList = ajv.compile(listSchema);
-		router.sessions.set(remote.thread().id, { thread: remote.thread(), call: async () => ({}) });
+		router.sessions.set(remote.thread().id, {
+			thread: remote.thread(),
+			call: (identity, method, params) => remote.call(identity, method, params),
+		});
 		const response = (await router.handle("fixture", { id: 2, method: "thread/list" })) as { result: unknown };
 		expect(validList(response.result), JSON.stringify(validList.errors)).toBe(true);
 		const loaded = (await router.handle("fixture", { id: 3, method: "thread/loaded/list" })) as { result: unknown };
 		const validLoaded = ajv.compile(loadedListSchema);
 		expect(validLoaded(loaded.result), JSON.stringify(validLoaded.errors)).toBe(true);
+		const read = (await router.handle("fixture", {
+			id: 4,
+			method: "thread/read",
+			params: { threadId: "fixture", includeTurns: true },
+		})) as { result: unknown };
+		const validRead = ajv.compile(readSchema);
+		expect(validRead(read.result), JSON.stringify(validRead.errors)).toBe(true);
+		const resumed = (await router.handle("fixture", {
+			id: 5,
+			method: "thread/resume",
+			params: { threadId: "fixture", excludeTurns: false },
+		})) as { result: unknown };
+		const validResume = ajv.compile(resumeSchema);
+		expect(validResume(resumed.result), JSON.stringify(validResume.errors)).toBe(true);
 	} finally {
 		remote.dispose();
 		router.dispose();

@@ -14,6 +14,61 @@ interface InitializeCapabilities {
 	extensions?: Record<string, unknown> | null;
 	optOutNotificationMethods?: string[] | null;
 }
+
+const threadWireFields = [
+	"id",
+	"sessionId",
+	"forkedFromId",
+	"parentThreadId",
+	"preview",
+	"ephemeral",
+	"section",
+	"sectionEnteredAt",
+	"projectId",
+	"historyMode",
+	"modelProvider",
+	"model",
+	"reasoningEffort",
+	"createdAt",
+	"updatedAt",
+	"recencyAt",
+	"status",
+	"path",
+	"cwd",
+	"cliVersion",
+	"source",
+	"threadSource",
+	"agentNickname",
+	"agentRole",
+	"gitInfo",
+	"name",
+	"turns",
+] as const;
+
+/** Project an internal session descriptor onto the pinned App Server Thread wire type. */
+function threadWireView(
+	thread: Record<string, unknown>,
+	experimental: boolean,
+	canAcceptDirectInput: boolean | null,
+): Record<string, unknown> {
+	const wire: Record<string, unknown> = {};
+	for (const field of threadWireFields) {
+		if (field === "sessionId" && experimental) wire.extra = null;
+		if (field === "threadSource" && experimental) wire.canAcceptDirectInput = canAcceptDirectInput;
+		if (Object.hasOwn(thread, field)) wire[field] = thread[field];
+	}
+	return wire;
+}
+
+function projectThreadResult(result: unknown, experimental: boolean): unknown {
+	if (!result || typeof result !== "object" || Array.isArray(result)) return result;
+	const response = result as Record<string, unknown>;
+	if (!response.thread || typeof response.thread !== "object" || Array.isArray(response.thread)) return result;
+	return {
+		...response,
+		thread: threadWireView(response.thread as Record<string, unknown>, experimental, true),
+	};
+}
 function initializeCapabilities(value: unknown): InitializeCapabilities {
 	if (value == null) return {};
 	if (typeof value !== "object" || Array.isArray(value)) throw new ProtocolError(-32602, "Invalid capabilities");
@@ -248,10 +303,14 @@ export class RemoteRouter {
 								if (field === "projectId" ? Object.hasOwn(params, field) : params[field] != null)
 									throw new ProtocolError(-32600, `thread/list.${field} requires experimentalApi capability`);
 						}
-						result = threadList(
+						const page = threadList(
 							[...this.sessions.values()].map(session => session.thread),
 							params,
 						);
+						result = {
+							...page,
+							data: page.data.map(thread => threadWireView(thread, this.#experimental.has(client), null)),
+						};
 						break;
 					}
 					case "process/spawn":
@@ -399,6 +458,8 @@ export class RemoteRouter {
 						result = await session.call(JSON.stringify([client, id]), request.method, params);
 						if (this.sessions.get(threadId) !== session)
 							throw new ProtocolError(-32000, "Session attachment changed while processing request");
+						if (request.method === "thread/read" || request.method === "thread/resume")
+							result = projectThreadResult(result, this.#experimental.has(client));
 						for (const event of session.requests ?? []) this.#deliver(client, event);
 						break;
 					}

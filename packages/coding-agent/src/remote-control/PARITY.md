@@ -254,6 +254,19 @@ opted-out client stays quiet while another subscriber receives the same event.
 This is source-contract and replay-metadata evidence; the complete experimental
 method and field audit remains open.
 
+The captured experimental `thread/list` and `thread/resume` responses establish
+the full Thread field order. Native list, read and resume responses now pass
+through one allowlisted projection: stable clients omit `extra` and
+`canAcceptDirectInput`; experimental list summaries return both as `null`, while
+attached read and resume responses report direct input as `true`. The projection
+preserves requested turns and response wrapper fields without mutating the live
+session descriptor. Exact-key tests cover stable and experimental clients, reject
+future private fields, and prove that internal reasoning metadata remains
+available to `model/list`. The router audit found no other supported full-Thread
+response or notification; unsupported lifecycle methods remain protocol errors.
+Actual read and resume results validate against byte-identical pinned schemas.
+This is automated evidence only and adds no phone acceptance.
+
 Discovery now follows pinned 25-row defaults, unsigned limits clamped to 1–100,
 created/updated/recency ordering, exact provider/source filters, normalized cwd
 filters and literal case-sensitive name/preview search. Keyset continuation

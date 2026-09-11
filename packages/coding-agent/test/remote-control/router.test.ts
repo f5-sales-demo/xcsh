@@ -120,6 +120,149 @@ test("phone discovery can list the empty native thread section collection", asyn
 	});
 });
 
+test("thread wire views gate experimental fields and never expose internal model metadata", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const turns = [{ id: "turn-1", status: "completed", items: [], error: null }];
+	const thread = {
+		id: "fixture-thread",
+		sessionId: "fixture-thread",
+		forkedFromId: null,
+		parentThreadId: null,
+		preview: "Fixture preview",
+		ephemeral: false,
+		section: null,
+		sectionEnteredAt: null,
+		projectId: null,
+		historyMode: "paginated",
+		modelProvider: "openai-codex",
+		model: "gpt-6-astra",
+		supportedReasoningEfforts: [{ reasoningEffort: "high", description: "High" }],
+		defaultReasoningEffort: "high",
+		reasoningEffort: "high",
+		createdAt: 1,
+		updatedAt: 2,
+		recencyAt: 2,
+		status: { type: "idle" },
+		path: "/tmp/fixture/session.jsonl",
+		cwd: "/tmp/fixture",
+		cliVersion: "21.22.0",
+		source: "cli",
+		threadSource: null,
+		agentNickname: null,
+		agentRole: null,
+		gitInfo: null,
+		name: "Fixture terminal",
+		turns,
+		futurePrivateField: "never-wire",
+	};
+	const original = structuredClone(thread);
+	router.sessions.set(thread.id, {
+		thread,
+		call: async (_identity, method, params) => ({
+			wrapper: method,
+			thread: {
+				...thread,
+				turns: params.includeTurns === true || params.excludeTurns !== true ? turns : [],
+			},
+		}),
+	});
+	await router.handle("stable", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	await router.handle("experimental", {
+		id: 2,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
+	});
+	const stableList = (await router.handle("stable", { id: 3, method: "thread/list", params: {} })) as any;
+	const experimentalList = (await router.handle("experimental", {
+		id: 4,
+		method: "thread/list",
+		params: {},
+	})) as any;
+	const stableRead = (await router.handle("stable", {
+		id: 5,
+		method: "thread/read",
+		params: { threadId: thread.id, includeTurns: true },
+	})) as any;
+	const experimentalRead = (await router.handle("experimental", {
+		id: 6,
+		method: "thread/read",
+		params: { threadId: thread.id, includeTurns: true },
+	})) as any;
+	const stableResume = (await router.handle("stable", {
+		id: 7,
+		method: "thread/resume",
+		params: { threadId: thread.id, excludeTurns: false },
+	})) as any;
+	const experimentalResume = (await router.handle("experimental", {
+		id: 8,
+		method: "thread/resume",
+		params: { threadId: thread.id, excludeTurns: false },
+	})) as any;
+	const stableKeys = [
+		"id",
+		"sessionId",
+		"forkedFromId",
+		"parentThreadId",
+		"preview",
+		"ephemeral",
+		"section",
+		"sectionEnteredAt",
+		"projectId",
+		"historyMode",
+		"modelProvider",
+		"model",
+		"reasoningEffort",
+		"createdAt",
+		"updatedAt",
+		"recencyAt",
+		"status",
+		"path",
+		"cwd",
+		"cliVersion",
+		"source",
+		"threadSource",
+		"agentNickname",
+		"agentRole",
+		"gitInfo",
+		"name",
+		"turns",
+	];
+	const experimentalKeys = [...stableKeys];
+	experimentalKeys.splice(1, 0, "extra");
+	experimentalKeys.splice(experimentalKeys.indexOf("threadSource"), 0, "canAcceptDirectInput");
+	const stableViews = [stableList.result.data[0], stableRead.result.thread, stableResume.result.thread];
+	const experimentalViews = [
+		experimentalList.result.data[0],
+		experimentalRead.result.thread,
+		experimentalResume.result.thread,
+	];
+	for (const value of stableViews) expect(Object.keys(value)).toEqual(stableKeys);
+	for (const value of experimentalViews) expect(Object.keys(value)).toEqual(experimentalKeys);
+	expect(experimentalList.result.data[0].canAcceptDirectInput).toBeNull();
+	for (const value of experimentalViews.slice(1)) expect(value.canAcceptDirectInput).toBe(true);
+	for (const value of [...stableViews, ...experimentalViews]) {
+		expect(value).not.toHaveProperty("supportedReasoningEfforts");
+		expect(value).not.toHaveProperty("defaultReasoningEffort");
+		expect(value).not.toHaveProperty("futurePrivateField");
+	}
+	for (const response of [stableRead, experimentalRead]) expect(response.result.wrapper).toBe("thread/read");
+	for (const response of [stableResume, experimentalResume]) expect(response.result.wrapper).toBe("thread/resume");
+	for (const value of [...stableViews.slice(1), ...experimentalViews.slice(1)]) expect(value.turns).toEqual(turns);
+	expect(thread).toEqual(original);
+	const models = (await router.handle("stable", { id: 9, method: "model/list", params: {} })) as any;
+	expect(models.result.data[0]).toMatchObject({
+		supportedReasoningEfforts: thread.supportedReasoningEfforts,
+		defaultReasoningEffort: thread.defaultReasoningEffort,
+	});
+	expect(
+		await router.handle("experimental", { id: 10, method: "thread/fork", params: { threadId: thread.id } }),
+	).toMatchObject({ error: { code: -32601 } });
+});
+
 test("phone bootstrap metadata describes the attached live runtime", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	router.sessions.set("alpha", {

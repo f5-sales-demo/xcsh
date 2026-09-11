@@ -4,7 +4,7 @@ Unmodified OpenAI Codex JSON schemas from commit
 `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a` (rust-v0.153.4):
 
 - `codex-rs/app-server-protocol/schema/json/v1/Initialize{Params,Response}.json`
-- `codex-rs/app-server-protocol/schema/json/v2/ThreadListResponse.json`
+- `codex-rs/app-server-protocol/schema/json/v2/Thread{List,Read,Resume}Response.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadLoadedListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/Thread{Turns,Items}ListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ConfigReadResponse.json`
@@ -22,6 +22,11 @@ Copyright 2025 OpenAI. Apache-2.0; license and port notices are in
 The four `{CommandExecution,FileChange}RequestApproval{Params,Response}.json`
 fixtures reproduce the pinned schema JSON values. The repository copies have a
 terminal newline; the source manifest pins the exact upstream byte hashes.
+
+`ThreadReadResponse.json` and `ThreadResumeResponse.json` are byte-for-byte
+copies of the pinned source. Their SHA-256 values are
+`a76583d07f6096fee33045da2dc9caed84d858f8f2d39b37bb38528dbaf32511` and
+`a553d6b1eb66111ca556e22138017ec54fd07c3257dbd2d5ad97ad7660786345`.
 
 The unit tests use synthetic host/account/request identifiers. Live credentials,
 pairing material, and session transcripts are never fixtures.
