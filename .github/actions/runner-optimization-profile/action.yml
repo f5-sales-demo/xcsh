@@ -41,11 +41,13 @@ runs:
         PROFILE_CACHE_STATE: ${{ inputs.cache-state }}
         PROFILE_EXPERIMENT: ${{ inputs.experiment }}
         PROFILE_PAIR_ID: ${{ inputs.pair-id }}
+        PROFILE_PHASE_SET: ${{ inputs.phase-set }}
       run: |
         "${{ github.action_path }}/../../../scripts/prepare-runner-optimization-toolchain.sh" \
           "$PROFILE_EXPERIMENT" "$PROFILE_CACHE_STATE" "$PROFILE_PAIR_ID" \
           "$RUNNER_TEMP/runner-profile-evidence" \
-          "${{ github.action_path }}/../../../scripts/verify-self-hosted-tools.sh"
+          "${{ github.action_path }}/../../../scripts/verify-self-hosted-tools.sh" \
+          "$PROFILE_PHASE_SET"
     - name: Restore exact warm Rust cache
       if: inputs.cache-state == 'warm'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

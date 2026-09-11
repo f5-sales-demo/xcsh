@@ -80,7 +80,8 @@ class CiCapacityContractTests(unittest.TestCase):
         self.assertNotIn("taiki-e/install-action@", action)
         self.assertIn("Profile legacy setup or baked verification", action)
         self.assertIn('if [[ "$experiment" == image-control ]]', legacy_setup)
-        self.assertIn("--name setup", legacy_setup)
+        self.assertIn("profile_phase=setup", legacy_setup)
+        self.assertIn('profile_phase="setup-$phase_set"', legacy_setup)
         self.assertIn(
             'REQUIRED_PHASES = ["setup", "install", "native", "test-typescript", "test-rust"]',
             (ROOT / "scripts/validate-performance-qualification.ts").read_text(

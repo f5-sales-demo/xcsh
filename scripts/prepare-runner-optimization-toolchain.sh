@@ -12,7 +12,7 @@ readonly CARGO_NEXTEST_VERSION=0.9.143
 readonly CARGO_NEXTEST_SHA256=66786b9abe23920d022a182d1416b1bbc8130dd4872a9553d76985a1708dcd1e
 
 usage() {
-  echo "usage: $0 <experiment> <cold|warm> <pair-id> <output-dir> <verifier>" >&2
+  echo "usage: $0 <experiment> <cold|warm> <pair-id> <output-dir> <verifier> <all|native|rust|typescript>" >&2
   exit 2
 }
 
@@ -133,13 +133,19 @@ if [[ ${1:-} == __run ]]; then
   exit 0
 fi
 
-[[ $# -eq 5 ]] || usage
+[[ $# -eq 6 ]] || usage
 experiment=$1
 cache_state=$2
 pair_id=$3
 output_dir=$4
 verifier=$5
+phase_set=$6
+case "$experiment" in
+  image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
+  *) usage ;;
+esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
+case "$phase_set" in all | native | rust | typescript) ;; *) usage ;; esac
 [[ "$pair_id" =~ ^[1-5](-slot-[1-4])?$ ]] || usage
 test -f "$verifier"
 
@@ -150,7 +156,11 @@ output_dir=$(cd "$output_dir" && pwd)
 verifier=$(cd "$(dirname "$verifier")" && pwd)/$(basename "$verifier")
 script_path=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
 manifest="$output_dir/manifests/setup.sha256"
-profile="$output_dir/profiles/setup.json"
+profile_phase=setup
+if [[ "$experiment" == dag-candidate && "$phase_set" != native ]]; then
+  profile_phase="setup-$phase_set"
+fi
+profile="$output_dir/profiles/${profile_phase}.json"
 tool_root="${RUNNER_TEMP:?RUNNER_TEMP is required}/xcsh-legacy-toolchain"
 
 mode=baked
@@ -159,7 +169,7 @@ if [[ "$experiment" == image-control ]]; then
 fi
 
 GITHUB_SHA="$source_commit" runner-profile \
-  --name setup \
+  --name "$profile_phase" \
   --output "$profile" \
   --cache-state "$cache_state" \
   --variant "$experiment" \
