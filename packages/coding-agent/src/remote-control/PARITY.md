@@ -937,3 +937,32 @@ coding-agent package passes 8,311 tests with 561 skips and 30,013 assertions
 across 795 files in a persistent Herdr pane whose piped streams match the
 headless CI contract. This distinction matters because a direct Herdr TTY
 intentionally advertises OSC-52 clipboard support and terminal viewport state.
+
+## iPhone Plan transcript continuity passes
+
+The immutable `acfa258` artifact passed the controlled retry. Robin approved the
+displayed Plan exactly once and saw “I'm executing the approved plan in order”
+stream in the existing phone transcript, followed by the completed task and no
+Plan pill. The header remained `xcsh Remote Luna`. The one local execution wrote
+`plan-continuity-luna-acfa258-9c4e2.txt` with exactly the 29 bytes
+`LUNA-CONTINUITY-ACFA258-9C4E2`, no newline and SHA-256
+`66b13c326f1a286a62247520cb03c6efd58b51ab88c77fd6e64025c13cbb335c`.
+The persisted log contains one Bash, one Write and one Read.
+
+Local execution moved from `157bb2886973a597` to `157bbf7b53f2c244`; the latter
+records the former as both its direct `forkedFromId` and file-backed
+`parentSession`, plus `remoteThreadId: 157ba8d39989966c` and the retained title.
+The phone-facing Thread remained `157ba8d39989966c`, with matching `id` and
+`sessionId`, `forkedFromId: null` and `parentThreadId: null`. Sanitized trace
+sequences 223/224 are the single phone/RPC approval response, 225/226 resolve it,
+230 is the phone stream's only `turn/started`, and 404 its only
+`turn/completed`. No `thread/started` or `thread/closed` occurs during execution.
+The trace's other start/completion pair is delivered once to a distinct hashed
+terminal subscriber and does not represent a second turn or tool execution.
+
+The live source execution file originated on `35472ad` and therefore predated
+the new header field. Before the checkpoint, a reversible header-only migration
+added its already-established phone ID; its post-header records remained
+byte-identical and a private backup was retained. This was cutover compatibility,
+not an additional product behavior. New Plan executions persist the continuity
+ID natively, as confirmed by the new session header and resume regression.

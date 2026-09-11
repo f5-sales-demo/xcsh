@@ -2464,3 +2464,28 @@ with 3,688 assertions. The guarded coding-agent package passes 8,311 tests with
 non-TTY streams inside its persistent Herdr pane. Direct TTY output correctly
 exposes OSC-52 clipboard and terminal viewport behavior, so it is not the
 headless environment those two package tests specify.
+
+## Live continuity checkpoint
+
+Artifact `acfa258` validated the dual-identity design on the iPhone. One Plan
+approval created local session `157bbf7b53f2c244` with immediate local
+`forkedFromId: 157bb2886973a597`, file-backed `parentSession`, and durable
+`remoteThreadId: 157ba8d39989966c`. The remote projection retained
+`157ba8d39989966c` as both `id` and `sessionId`, with null wire lineage fields.
+No replacement start or source close was emitted, so the existing subscriber
+received the single implementation turn directly.
+
+Sanitized trace sequences 223-226 contain the single approval response and
+resolution, 230 is the phone delivery of `turn/started`, and 404 is its
+`turn/completed`. Robin observed the retained `xcsh Remote Luna` header,
+implementation stream, completion and cleared Plan pill in the existing
+transcript. Independent disk verification found one 29-byte, no-newline fixture
+and one Bash/Write/Read sequence. The second trace subscriber received its own
+single lifecycle pair; execution did not duplicate.
+
+The retained live source file had been produced by pre-field artifact `35472ad`.
+A reversible header-only cutover migration seeded its established remote ID,
+preserving every later record byte-for-byte and retaining a private mode-`0600`
+backup. This migration is unnecessary for sessions created by the repaired
+code, which persist `remoteThreadId` at each approved transition and restore it
+on terminal resume.
