@@ -2203,3 +2203,35 @@ The replacement reconnected to the live relay and all four owners re-registered
 with their names, models, histories and exact stable/experimental projections
 unchanged. This is host-side recovery evidence; phone reconnection remains a
 manual observation.
+
+## Phone history hydration repair
+
+Robin's first current-artifact iPhone check did not load any of the four
+canonical sessions. Astra displayed `Error loading messages.` with a `Retry`
+action; Robin reported that Terra, Sol and Luna also failed. This is a recorded
+manual failure, not acceptance, and the phone remained on the retry screen while
+the host was repaired.
+
+The owner-only native trace shows `thread/resume` succeeding before the phone
+requests `thread/turns/list`, then reuses the resume-level
+`itemsBackwardsCursor` in separate `thread/items/list` requests for each turn.
+Sequences 1412--1441 rejected those requests with `-32602 Invalid history
+cursor` because the native cursor incorrectly included the optional turn filter
+in its scope. Reference sequences 263--302 complete the same flow. The pinned
+`segment_paging.rs` implementation positions the cursor in the thread-wide item
+collection and applies the turn filter independently.
+
+Native item cursors now bind only the thread and item collection. Paging locates
+their anchors against the complete item sequence and filters the requested turn
+afterward; existing cursors that contain an extra `turnId` remain readable.
+Resume cursors can therefore hydrate every returned turn exactly as the phone
+does without weakening thread or collection isolation.
+
+The phone-shaped regression first failed with `Invalid history cursor`, then
+the focused history suite passed 14 tests and 59 assertions. Expanded
+history/durable/router coverage passed 56 tests and 293 assertions. The complete
+remote-control suite passed 901 tests and 3665 assertions across 65 files with
+zero failures under Bun 1.4.2. The guarded coding-agent suite passed 8307 tests,
+561 skips and 29981 assertions across 795 files in 376.95 seconds. A new
+committed package and a successful iPhone retry are still required; no phone
+success is claimed by this repair evidence.

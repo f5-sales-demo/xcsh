@@ -29,7 +29,8 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
 - `codex-rs/app-server/src/request_processors/thread_processor.rs` and
   `codex-rs/thread-store/src/local/thread_history/segment_paging.rs`: history
   page defaults, summary projections, exclusive continuation and inclusive
-  reverse anchors. Native cursors additionally bind the session and filter scope.
+  reverse anchors. Item cursors bind the session and collection; the optional
+  turn filter is applied independently after locating the global item anchor.
 - `codex-rs/app-server-protocol/src/protocol/v2/{item,notification}.rs`:
   tool-question, command-approval and file-approval request/answer fields, plus
   server-request resolution fields. Corresponding

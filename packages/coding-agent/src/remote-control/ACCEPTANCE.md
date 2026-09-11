@@ -32,9 +32,18 @@ completion of another. Codex baseline: 0.153.4,
 | Sol, Luna, Terra and Astra fidelity | Parameterized adapter tests; the current clean `b3953eecc` live runtime exposes four distinct Luna/Astra/Sol/Terra sessions with preserved IDs, names, directories and histories; all four concurrently completed distinct real write/read tool tasks in 19.920 seconds with exact file bytes and exactly-once request replay; isolated model-registry SDK tests preserve all four identities on resume | Final phone voice task in each clean-build session; no model replacement by voice component |
 | No Codex installation or subprocess dependency | The current `b3953eecc` artifact and two real TUIs pass ten isolated Ubuntu checks without Codex, standalone Bun or source dependencies; real file tools, remote rename, clean and SIGKILL host recovery, active-work continuation, host replay, compiled resume and durable terminal-restart replay verified | Preserve this check after final upstream reconciliation; live subscription/voice evidence remains separate |
 | Actual Codex reference recordings and comparison | Two recall calls and successful reference/native file calls; hashed sanitized fixtures | Repair remaining differences; further control/recovery/interaction scenarios and explicit unverified coverage |
-| TDD and repository checks | Recorded red-to-green work; the current guarded package suite passed 8305 tests with 561 skips, 29976 assertions and zero failures across 795 files in 411.28 seconds; 899 current remote tests with 3659 expectations and zero failures, workspace types/lint, docs quality, bundle and the enhanced ten-check compiled artifact pass; staged PII enforcement and gitleaks are clean, the branch-added audit finding was removed, and all 24 pinned source hashes verified | Complete required repository CI. The unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
+| TDD and repository checks | Recorded red-to-green work; the current guarded package suite passed 8307 tests with 561 skips, 29981 assertions and zero failures across 795 files in 376.95 seconds; 901 current remote tests with 3665 expectations and zero failures, workspace types/lint, docs quality, bundle and the enhanced ten-check compiled artifact pass; staged PII enforcement and gitleaks are clean, the branch-added audit finding was removed, and all 24 pinned source hashes verified | Complete required repository CI. The unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
 | Manual acceptance only on Robin's report | Specific observations recorded in PARITY.md and issue comments | Obtain remaining manual checkpoints without treating simulated tests as phone acceptance |
 | Issue, PR, review, merge and cleanup | Detailed issue, feature worktree, pushed commits | Completed linked PR, review/CI repair loop, authorized squash merge, confirmed-merged cleanup |
+
+## Current manual checkpoint
+
+Robin's first current-artifact iPhone attempt failed before message hydration in
+all four canonical sessions. Astra displayed `Error loading messages.` with a
+`Retry` action; Terra, Sol and Luna also failed. The native trace identified an
+item-cursor scope mismatch, and the phone-shaped regression is now green, but
+this is not phone acceptance. Rebuild and replace the host, retry Astra alone,
+then proceed through Terra, Sol and Luna only after message loading succeeds.
 
 ## Accepted first-release boundaries
 

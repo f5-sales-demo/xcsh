@@ -99,6 +99,17 @@ test("item pages respect turn filters and do not bleed into other turns", async 
 	expect((await page("items", { turnId: "missing" })).data).toEqual([]);
 });
 
+test("turn-filtered item cursors remain valid for whole-thread paging", async () => {
+	const { page } = fixture();
+	const turn = await page("items", { turnId: "history-turn-2", limit: 2, sortDirection: "desc" });
+	expect(turn.data.map(row => row.item.id)).toEqual(["history-item-5", "history-item-4"]);
+	expect(
+		(await page("items", { cursor: turn.backwardsCursor, limit: 2, sortDirection: "desc" })).data.map(
+			row => row.item.id,
+		),
+	).toEqual(["history-item-5", "history-item-4"]);
+});
+
 test.each(["turns", "items"] as const)("%s cursors resume exclusively and reverse inclusively", async kind => {
 	const { page } = fixture();
 	const first = await page(kind, { limit: 2, sortDirection: "asc" });
@@ -109,16 +120,16 @@ test.each(["turns", "items"] as const)("%s cursors resume exclusively and revers
 	expect(reversed.data.map(key)).toEqual([key(second.data[0]), key(first.data[1])]);
 });
 
-test("cursors are scoped to thread, collection and turn filter", async () => {
+test("cursors are scoped to thread and collection but remain reusable across turn filters", async () => {
 	const a = fixture("a");
 	const b = fixture("b");
 	const { nextCursor } = await a.page("items", { limit: 1 });
-	for (const run of [
-		() => b.page("items", { cursor: nextCursor }),
-		() => a.page("turns", { cursor: nextCursor }),
-		() => a.page("items", { cursor: nextCursor, turnId: "a-turn-1" }),
-	])
+	for (const run of [() => b.page("items", { cursor: nextCursor }), () => a.page("turns", { cursor: nextCursor })])
 		await expect(run()).rejects.toMatchObject({ code: -32602 });
+	expect((await a.page("items", { cursor: nextCursor, turnId: "a-turn-1" })).data.map(row => row.item.id)).toEqual([
+		"a-item-1",
+		"a-item-2",
+	]);
 });
 
 test("summary and unloaded views preserve full history for later hydration", async () => {
@@ -166,6 +177,37 @@ test("resume backwards cursors anchor the latest row and catch appended history"
 		"history-item-10",
 		"history-item-11",
 	]);
+});
+
+test("resume item cursor hydrates each turn like the phone client", async () => {
+	const { remote, page } = fixture();
+	const resumed = (await remote.call("resume-phone", "thread/resume", {
+		threadId: "history",
+		excludeTurns: true,
+	})) as {
+		turnsBackwardsCursor: string;
+		itemsBackwardsCursor: string;
+	};
+	const turns = await page("turns", {
+		cursor: resumed.turnsBackwardsCursor,
+		sortDirection: "desc",
+		itemsView: "notLoaded",
+		limit: 5,
+	});
+	expect(turns.data.map(turn => turn.id)).toEqual(["history-turn-3", "history-turn-2", "history-turn-1"]);
+	for (const [turnId, expectedItems] of [
+		["history-turn-3", ["history-item-8", "history-item-7", "history-item-6"]],
+		["history-turn-2", ["history-item-5", "history-item-4", "history-item-3"]],
+		["history-turn-1", ["history-item-2", "history-item-1", "history-item-0"]],
+	] as const) {
+		const items = await page("items", {
+			cursor: resumed.itemsBackwardsCursor,
+			turnId,
+			sortDirection: "desc",
+			limit: 100,
+		});
+		expect(items.data.map(row => row.item.id)).toEqual([...expectedItems]);
+	}
 });
 
 test("read-only request identities can be reused without returning stale history or consuming mutation dedup capacity", async () => {

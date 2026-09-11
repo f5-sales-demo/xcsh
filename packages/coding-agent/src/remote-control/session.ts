@@ -896,15 +896,20 @@ export class RemoteSession {
 			if (method === "thread/turns/list") {
 				const view = historyItemsView(params.itemsView);
 				const entries = history.map(value => ({ key: value.id, value: turnItemsView(value, view) }));
-				return historyPage(entries, { threadId, collection: "turns", turnId: null }, params);
+				return historyPage(entries, { threadId, collection: "turns" }, params);
 			}
 			if (params.turnId != null && typeof params.turnId !== "string")
 				throw new ProtocolError(-32602, "Invalid history turn filter");
 			const turnId = (params.turnId as string | null | undefined) ?? null;
-			const entries = history
-				.filter(value => turnId === null || value.id === turnId)
-				.flatMap(value => value.items.map(item => ({ key: String(item.id), value: { turnId: value.id, item } })));
-			return historyPage(entries, { threadId, collection: "items", turnId }, params);
+			const entries = history.flatMap(value =>
+				value.items.map(item => ({ key: String(item.id), value: { turnId: value.id, item } })),
+			);
+			return historyPage(
+				entries,
+				{ threadId, collection: "items" },
+				params,
+				entry => turnId === null || entry.value.turnId === turnId,
+			);
 		}
 		if (method === "thread/resume") {
 			for (const key of Object.keys(params))
@@ -963,11 +968,11 @@ export class RemoteSession {
 							? null
 							: (this.target.thinkingLevel ?? null),
 				turnsBackwardsCursor: historyCursor(
-					{ threadId: this.target.sessionId, collection: "turns", turnId: null },
+					{ threadId: this.target.sessionId, collection: "turns" },
 					history.at(-1)?.id,
 				),
 				itemsBackwardsCursor: historyCursor(
-					{ threadId: this.target.sessionId, collection: "items", turnId: null },
+					{ threadId: this.target.sessionId, collection: "items" },
 					history.flatMap(value => value.items).at(-1)?.id as string | undefined,
 				),
 			};

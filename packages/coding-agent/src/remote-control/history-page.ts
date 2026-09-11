@@ -5,7 +5,6 @@ import { ProtocolError } from "./errors";
 export interface HistoryScope {
 	threadId: string;
 	collection: "turns" | "items";
-	turnId: string | null;
 }
 export function historyCursor(scope: HistoryScope, anchor: string | undefined, includeAnchor = true): string | null {
 	return anchor === undefined ? null : JSON.stringify({ version: 1, ...scope, anchor, includeAnchor });
@@ -26,6 +25,7 @@ export function historyPage<T>(
 	entries: readonly { key: string; value: T }[],
 	scope: HistoryScope,
 	params: Record<string, unknown>,
+	include: (entry: { key: string; value: T }) => boolean = () => true,
 ): { data: T[]; nextCursor: string | null; backwardsCursor: string | null } {
 	const limit = historyPageLimit(params.limit);
 	const direction = params.sortDirection ?? (scope.collection === "turns" ? "desc" : "asc");
@@ -40,7 +40,6 @@ export function historyPage<T>(
 				cursor?.version !== 1 ||
 				cursor.threadId !== scope.threadId ||
 				cursor.collection !== scope.collection ||
-				cursor.turnId !== scope.turnId ||
 				typeof cursor.anchor !== "string" ||
 				typeof cursor.includeAnchor !== "boolean"
 			)
@@ -57,7 +56,9 @@ export function historyPage<T>(
 		anchorIndex === undefined ? (step === 1 ? 0 : entries.length - 1) : anchorIndex + (inclusive ? 0 : step);
 	const page: { key: string; value: T }[] = [];
 	let index = start;
-	for (; index >= 0 && index < entries.length && page.length < limit; index += step) page.push(entries[index]);
+	for (; index >= 0 && index < entries.length && page.length < limit; index += step)
+		if (include(entries[index])) page.push(entries[index]);
+	while (index >= 0 && index < entries.length && !include(entries[index])) index += step;
 	return {
 		data: page.map(entry => entry.value),
 		nextCursor: index >= 0 && index < entries.length ? historyCursor(scope, page.at(-1)?.key, false) : null,

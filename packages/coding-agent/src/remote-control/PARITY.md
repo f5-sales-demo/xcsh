@@ -720,3 +720,29 @@ The same current artifact also passed a controlled live host replacement. The
 first trace closed complete with 301 events; the replacement relay connected and
 all four idle terminal owners re-registered with unchanged names, models,
 histories and wire projections. Phone-side recovery remains unclaimed.
+
+## Current iPhone history-load failure and cursor parity
+
+Robin reported that Astra displayed `Error loading messages.` with `Retry`, and
+that Terra, Sol and Luna also failed on the first current-artifact iPhone check.
+This remains a failed manual observation until a newly packaged host passes the
+same phone flow.
+
+Native trace sequences 1412--1441 show the phone successfully resuming the
+thread, listing turns, and then reusing the resume item cursor while requesting
+items for each individual turn. Native code rejected every reuse as an invalid
+history cursor because it scoped item cursors to the optional turn filter.
+Pinned reference sequences 263--302 succeed with the same request pattern, and
+the pinned `segment_paging.rs` source locates the cursor in the global item
+sequence before applying its independent turn predicate.
+
+Item cursors now match that reference behavior: they remain isolated by thread
+and collection, are reusable across turn filters, and retain the pinned global
+ordering and reverse-anchor semantics. The phone-shaped test was observed red,
+then passed with the repair. Focused history evidence is 14 tests and 59
+assertions; the expanded history/durable/router set is 56 tests and 293
+assertions; the complete remote-control suite is 901 tests and 3665 assertions
+across 65 files, all passing under Bun 1.4.2. The guarded package suite passed
+8307 tests with 561 skips and 29981 assertions across 795 files in 376.95
+seconds. This automated parity evidence does not substitute for Robin retrying
+the repaired package.
