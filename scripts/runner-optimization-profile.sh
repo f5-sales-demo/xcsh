@@ -15,8 +15,8 @@ output_dir=$5
 phase_set=$6
 
 case "$experiment" in
-  image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
-  *) usage ;;
+image-control | image-candidate | d16-serial | d16-parallel-2 | d16-hardware | f32-hardware | d16-burst | f32-burst | dag-control | dag-candidate) ;;
+*) usage ;;
 esac
 case "$cache_state" in cold | warm) ;; *) usage ;; esac
 case "$file_workers" in 0 | 2) ;; *) usage ;; esac
@@ -119,25 +119,25 @@ profile_rust() {
 }
 
 case "$phase_set" in
-  all)
-    profile_install
-    profile_native
-    profile_typescript
-    profile_rust
-    ;;
-  native)
-    profile_install
-    profile_native
-    ;;
-  rust)
-    profile_install install-rust
-    profile_rust
-    ;;
-  typescript)
-    test -n "${XCSH_VERIFIED_NATIVE_MANIFEST:-}"
-    profile_install install-typescript
-    profile_typescript
-    ;;
+all)
+  profile_install
+  profile_native
+  profile_typescript
+  profile_rust
+  ;;
+native)
+  profile_install
+  profile_native
+  ;;
+rust)
+  profile_install install-rust
+  profile_rust
+  ;;
+typescript)
+  test -n "${XCSH_VERIFIED_NATIVE_MANIFEST:-}"
+  profile_install install-typescript
+  profile_typescript
+  ;;
 esac
 
 read -r filesystem_bytes used_bytes available_bytes used_percent < <(
@@ -153,7 +153,7 @@ job_started_at=$(curl --fail --silent --show-error \
   "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" |
   jq -er --arg runner "$RUNNER_NAME" '.jobs[] | select(.runner_name == $runner and .status == "in_progress") | .started_at' |
   head -1)
-assignment_seconds=$(( $(date -u -d "$job_started_at" +%s) - $(date -u -d "$run_created_at" +%s) ))
+assignment_seconds=$(($(date -u -d "$job_started_at" +%s) - $(date -u -d "$run_created_at" +%s)))
 profiled_node_seconds=$(jq -s 'map(.duration_seconds) | add' "$output_dir"/profiles/*.json)
 jq -n \
   --arg experiment "$experiment" \
