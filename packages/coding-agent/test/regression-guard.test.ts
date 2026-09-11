@@ -576,7 +576,8 @@ describe("release artifacts run the sandbox matrix before and after publication"
 		const linux = await loadJob("build-release");
 		const macos = await loadJob("build-sign-macos");
 		expect(linux).toContain("Install LLVM Mach-O inspection tools");
-		expect(linux).toContain("apt-get download llvm-18 libllvm18");
+		expect(linux).toContain("archive.ubuntu.com/ubuntu/pool/universe/l/llvm-toolchain-18");
+		expect(linux).toContain("sha256sum --check --strict");
 		expect(linux).toContain("GITHUB_PATH");
 		expect(linux).toContain("LD_LIBRARY_PATH");
 		expect(linux).toContain("llvm-nm");
