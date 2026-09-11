@@ -636,9 +636,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends llvm
-          compgen -G '/usr/bin/llvm-nm*' >/dev/null
+          # This release runner intentionally has no privilege escalation.  Stage
+          # just the LLVM executable and its shared library beneath RUNNER_TEMP
+          # instead of attempting a system package installation.
+          tool_root="${RUNNER_TEMP}/xcsh-llvm"
+          mkdir -p "$tool_root/packages" "$tool_root/root"
+          (
+            cd "$tool_root/packages"
+            apt-get download llvm-18 libllvm18
+            for package in ./*.deb; do
+              dpkg-deb -x "$package" "$tool_root/root"
+            done
+          )
+          llvm_bin="$tool_root/root/usr/lib/llvm-18/bin"
+          llvm_lib="$tool_root/root/usr/lib/x86_64-linux-gnu"
+          test -x "$llvm_bin/llvm-nm"
+          echo "$llvm_bin" >> "$GITHUB_PATH"
+          echo "LD_LIBRARY_PATH=$llvm_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          LD_LIBRARY_PATH="$llvm_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$llvm_bin/llvm-nm" --version
       - name: Verify native addons
         run: bun run ci:release:verify-natives
       - name: Build Linux and Windows binaries
