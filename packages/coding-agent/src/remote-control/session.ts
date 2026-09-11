@@ -1,4 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
+import { constants } from "node:fs";
+import { open, realpath } from "node:fs/promises";
+import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { ProtocolError } from "./errors";
@@ -41,6 +44,8 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 	| "setRealtimeMode"
+	| "skills"
+	| "skillWarnings"
 > &
 	Partial<
 		Pick<
@@ -72,6 +77,7 @@ interface Turn {
 	completedAt: number | null;
 	durationMs: number | null;
 }
+const MAX_REMOTE_SKILL_BYTES = 1024 * 1024;
 function textOf(message: AgentMessage): string {
 	if (!("content" in message)) return "";
 	return typeof message.content === "string"
@@ -394,6 +400,38 @@ export class RemoteSession {
 		});
 		return turns;
 	}
+
+	skills(): {
+		skills: Array<{
+			name: string;
+			description: string;
+			path: string;
+			scope: "user" | "repo" | "system";
+			enabled: true;
+			pluginId: null;
+		}>;
+		errors: Array<{ path: string; message: string }>;
+	} {
+		return {
+			skills: [...(this.target.skills ?? [])].slice(0, 512).map(skill => ({
+				name: skill.name,
+				description: skill.description,
+				path: skill.filePath,
+				scope:
+					skill._source?.level === "project"
+						? "repo"
+						: skill._source?.level === "native" || skill.source.startsWith("builtin:")
+							? "system"
+							: "user",
+				enabled: true,
+				pluginId: null,
+			})),
+			errors: [...(this.target.skillWarnings ?? [])].slice(0, 512).map(warning => ({
+				path: warning.skillPath,
+				message: warning.message,
+			})),
+		};
+	}
 	#assistantItem(id: string, text: string) {
 		return {
 			type: "agentMessage",
@@ -483,6 +521,7 @@ export class RemoteSession {
 		// Reserve the deduplication budget for operations with side effects.
 		if (
 			[
+				"session/skills/read",
 				"thread/read",
 				"thread/resume",
 				"thread/turns/list",
@@ -599,6 +638,34 @@ export class RemoteSession {
 	async #execute(method: string, params: Record<string, unknown>, signature?: string): Promise<unknown> {
 		const epoch = this.#epoch;
 		if (params.threadId !== this.target.sessionId) throw new ProtocolError(-32602, "Thread not found");
+		if (method === "session/skills/read") {
+			if (typeof params.path !== "string" || !isAbsolute(params.path) || normalize(params.path) !== params.path)
+				throw new ProtocolError(-32602, "Skill path must be absolute and normalized");
+			const skill = (this.target.skills ?? []).find(value => value.filePath === params.path);
+			if (!skill) throw new ProtocolError(-32602, "File is not an advertised skill");
+			let handle: Awaited<ReturnType<typeof open>> | undefined;
+			try {
+				const [requested, advertised] = await Promise.all([realpath(params.path), realpath(skill.filePath)]);
+				if (requested !== advertised) throw new ProtocolError(-32602, "Skill path changed");
+				handle = await open(advertised, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+				const stat = await handle.stat();
+				if (!stat.isFile() || stat.size > MAX_REMOTE_SKILL_BYTES)
+					throw new ProtocolError(-32602, "Skill file is unavailable or too large");
+				const bytes = Buffer.alloc(stat.size);
+				let offset = 0;
+				while (offset < bytes.length) {
+					const read = await handle.read(bytes, offset, bytes.length - offset, offset);
+					if (read.bytesRead === 0) break;
+					offset += read.bytesRead;
+				}
+				return { dataBase64: bytes.subarray(0, offset).toString("base64") };
+			} catch (error) {
+				if (error instanceof ProtocolError) throw error;
+				throw new ProtocolError(-32000, "Could not read advertised skill");
+			} finally {
+				await handle?.close().catch(() => {});
+			}
+		}
 		if (method === "thread/name/set") {
 			if (typeof params.name !== "string") throw new ProtocolError(-32602, "Invalid thread name");
 			const name = params.name.trim();

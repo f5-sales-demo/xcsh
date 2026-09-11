@@ -79,8 +79,7 @@ logging commands. A further phone retry passed process startup and reached `turn
 rejected the phone's client message ID and turn settings. Turn submission now
 accepts matching model/cwd, applies supported effort through AgentSession, handles
 reasoning presentation preferences, and deduplicates client message IDs across
-request IDs. Empty extra skill-root setup is accepted; nonempty roots remain
-explicit errors. The phone-shaped typed turn passed against Luna (3551 ms) and
+request IDs. The phone-shaped typed turn passed against Luna (3551 ms) and
 Astra (3352 ms), with duplicate client-message submissions suppressed. The user
 reported that Alpha accepted the prompt, transitioned to thinking, and replied
 `ALPHA-ORCHARD`. This establishes the first manual typed interoperability gate.
@@ -95,8 +94,14 @@ Observed red: five failures; green: 88 tests / 288 assertions, plus 102 registry
 tests / 854 assertions and the coding-agent TypeScript check. Live retries returned
 Alpha's marker in 3829 ms and Beta's in 3323 ms without duplicate prompts.
 Robin subsequently confirmed “beta worked”. Both manual typed routing checks now
-pass. Automated checks do not substitute for the iPhone voice observations below. Actual phone bootstrap sends four extra skill roots;
-nonempty root registration remains an explicit unsupported operation.
+pass. Automated checks do not substitute for the iPhone voice observations below.
+The reference phone bootstrap registers nonempty extra skill roots, lists skills
+for the selected cwd, and reads a selected skill file as base64. Native bootstrap
+now acknowledges validated absolute roots and emits `skills/changed`, while the
+catalog remains the exact set already loaded by each live terminal. The host reads
+only an advertised `SKILL.md`, and the owning terminal revalidates the path and a
+1 MiB bound before returning it. This preserves the existing agent as capability
+owner instead of mutating its tools from the phone.
 
 Product labels and hostnames use lowercase `xcsh`. Existing `XCSH_` environment
 variable names retain their uppercase prefix.
@@ -154,8 +159,7 @@ and retains delegation deduplication across reconnects. Successful writes have n
 service acknowledgement and are not speculatively replayed. Expired calls end
 cleanly. Automated recovery tests pass; live transport-drop recovery remains pending.
 Some timeline events and live streamed-result validation remain pending.
-Nonempty skill roots remain explicit errors. Full voice acceptance must precede
-merge or release.
+Full voice acceptance must precede merge or release.
 
 ## Work still required
 

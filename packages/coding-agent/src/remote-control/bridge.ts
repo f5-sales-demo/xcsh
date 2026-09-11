@@ -45,7 +45,13 @@ export function startSessionBridge(
 						return remote.call(params.identity, params.method, params.params as Record<string, unknown>);
 					};
 				}
-				await peer.call("register", { thread: remote.thread(), requests: remote.pendingRequests() });
+				const catalog = remote.skills();
+				await peer.call("register", {
+					thread: remote.thread(),
+					requests: remote.pendingRequests(),
+					skills: catalog.skills,
+					skillErrors: catalog.errors,
+				});
 			} catch {
 				peer?.close();
 				peer = undefined;

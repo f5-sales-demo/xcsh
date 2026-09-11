@@ -14,6 +14,17 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 		sessionId: "fixture",
 		sessionName: "Fixture",
 		messages: [],
+		skills: [
+			{
+				name: "fixture",
+				description: "Fixture",
+				filePath: join(dir, "SKILL.md"),
+				baseDir: dir,
+				source: "agents:project",
+				_source: { provider: "agents", providerName: "Agents", path: join(dir, "SKILL.md"), level: "project" },
+			},
+		],
+		skillWarnings: [],
 		sessionManager: { getCwd: () => dir },
 		subscribe: () => () => {},
 	} as unknown as SessionTarget;
@@ -22,6 +33,9 @@ test("a running session reconnects to the host and unregisters on bridge shutdow
 		const deadline = Date.now() + 1000;
 		while (!host.router.sessions.has("fixture") && Date.now() < deadline) await Bun.sleep(10);
 		expect(host.router.sessions.has("fixture")).toBe(true);
+		expect(host.router.sessions.get("fixture")?.skills).toMatchObject([
+			{ name: "fixture", path: join(dir, "SKILL.md"), scope: "repo", enabled: true },
+		]);
 		stop();
 		await Bun.sleep(20);
 		expect(host.router.sessions.has("fixture")).toBe(false);

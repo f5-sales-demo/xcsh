@@ -4,8 +4,10 @@ import { configResponse, modelResponse } from "../../src/remote-control/metadata
 import { RemoteRouter } from "../../src/remote-control/router";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 import configSchema from "./fixtures/ConfigReadResponse.json";
+import fsReadFileSchema from "./fixtures/FsReadFileResponse.json";
 import initializeSchema from "./fixtures/InitializeResponse.json";
 import modelSchema from "./fixtures/ModelListResponse.json";
+import skillsListSchema from "./fixtures/SkillsListResponse.json";
 import listSchema from "./fixtures/ThreadListResponse.json";
 import loadedListSchema from "./fixtures/ThreadLoadedListResponse.json";
 import threadNameUpdatedSchema from "./fixtures/ThreadNameUpdatedNotification.json";
@@ -81,6 +83,49 @@ test("actual settings notification matches the pinned thread settings contract",
 		expect(events[0].params.threadSettings.effort).toBe("high");
 	} finally {
 		remote.dispose();
+	}
+});
+
+test("phone skill catalog and file payload match pinned upstream schemas", async () => {
+	const ajv = new Ajv({ strict: false });
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	router.sessions.set("fixture", {
+		thread: { id: "fixture", cwd: "/tmp/project" },
+		skills: [
+			{
+				name: "fixture",
+				description: "Fixture",
+				path: "/tmp/skills/fixture/SKILL.md",
+				scope: "repo",
+				enabled: true,
+				pluginId: null,
+			},
+		],
+		skillErrors: [],
+		call: async () => ({ dataBase64: "Zml4dHVyZQ==" }),
+	});
+	await router.handle("phone", {
+		id: 1,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" } },
+	});
+	try {
+		const listed = (await router.handle("phone", {
+			id: 2,
+			method: "skills/list",
+			params: { cwds: ["/tmp/project"] },
+		})) as { result: unknown };
+		const validList = ajv.compile(skillsListSchema);
+		expect(validList(listed.result), JSON.stringify(validList.errors)).toBe(true);
+		const read = (await router.handle("phone", {
+			id: 3,
+			method: "fs/readFile",
+			params: { path: "/tmp/skills/fixture/SKILL.md" },
+		})) as { result: unknown };
+		const validRead = ajv.compile(fsReadFileSchema);
+		expect(validRead(read.result), JSON.stringify(validRead.errors)).toBe(true);
+	} finally {
+		router.dispose();
 	}
 });
 

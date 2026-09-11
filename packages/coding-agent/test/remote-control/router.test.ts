@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { RemoteRouter } from "../../src/remote-control/router";
+import bootstrapReference from "./fixtures/codex-0.153.4-phone-bootstrap.json";
 
 test("initialization is per phone stream; lists and attaches registered terminal only", async () => {
 	const calls: unknown[] = [];
@@ -90,22 +91,82 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 	expect(await call("thread/goal/get", { threadId: "missing" })).toMatchObject({ error: { code: -32602 } });
 });
 
-test("phone can clear its empty extra skill roots without changing terminal skills", async () => {
+test("phone skill bootstrap exposes the live terminal catalog and acknowledges presentation roots", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const notifications: unknown[] = [];
+	router.notify = (client, event) => notifications.push({ client, event });
+	router.sessions.set("alpha", {
+		thread: { id: "alpha", cwd: "/tmp/alpha" },
+		skills: [
+			{
+				name: "fixture-skill",
+				description: "Fixture skill",
+				path: "/tmp/skills/fixture-skill/SKILL.md",
+				scope: "user",
+				enabled: true,
+				pluginId: null,
+			},
+		],
+		skillErrors: [],
+		call: async (_identity, method, params) => {
+			if (method === "session/skills/read" && params.path === "/tmp/skills/fixture-skill/SKILL.md")
+				return { dataBase64: "Zml4dHVyZQ==" };
+			throw new Error("unexpected owner call");
+		},
+	});
 	await router.handle("phone", {
 		id: 1,
 		method: "initialize",
 		params: { clientInfo: { name: "fixture", version: "1" } },
 	});
-	expect(await router.handle("phone", { id: 2, method: "skills/extraRoots/set", params: { extraRoots: [] } })).toEqual(
-		{ id: 2, result: {} },
-	);
 	expect(
 		await router.handle("phone", {
-			id: 3,
+			id: 2,
 			method: "skills/extraRoots/set",
-			params: { extraRoots: ["/tmp/new-skills"] },
+			params: {
+				extraRoots: Array.from(
+					{ length: bootstrapReference.events[0].rootCount! },
+					(_, index) => `/tmp/skills-${index}`,
+				),
+			},
 		}),
+	).toEqual({ id: 2, result: {} });
+	expect(notifications).toEqual([{ client: "phone", event: { method: "skills/changed", params: {} } }]);
+	expect(await router.handle("phone", { id: 3, method: "skills/list", params: { cwds: ["/tmp/alpha"] } })).toEqual({
+		id: 3,
+		result: {
+			data: [
+				{
+					cwd: "/tmp/alpha",
+					errors: [],
+					skills: [
+						{
+							name: "fixture-skill",
+							description: "Fixture skill",
+							path: "/tmp/skills/fixture-skill/SKILL.md",
+							scope: "user",
+							enabled: true,
+							pluginId: null,
+						},
+					],
+				},
+			],
+		},
+	});
+	expect(
+		await router.handle("phone", {
+			id: 4,
+			method: "fs/readFile",
+			params: { path: "/tmp/skills/fixture-skill/SKILL.md" },
+		}),
+	).toEqual({ id: 4, result: { dataBase64: "Zml4dHVyZQ==" } });
+	expect(
+		await router.handle("phone", { id: 5, method: "fs/readFile", params: { path: "/tmp/private" } }),
+	).toMatchObject({
+		error: { code: -32602 },
+	});
+	expect(
+		await router.handle("phone", { id: 6, method: "skills/extraRoots/set", params: { extraRoots: ["relative"] } }),
 	).toMatchObject({ error: { code: -32602 } });
 });
 

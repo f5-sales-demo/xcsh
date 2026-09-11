@@ -1,9 +1,9 @@
 import { lstat, unlink } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, isAbsolute, normalize } from "node:path";
 import type { Enrollment } from "./enrollment";
 import { connectPeer, type LocalPeer, listenLocal } from "./ipc";
 import { RelayCodec } from "./relay";
-import { RemoteRouter } from "./router";
+import { RemoteRouter, type SessionEndpoint } from "./router";
 import { type Notification, ProtocolError } from "./session";
 import { type TraceSink, traceFromEnvironment, traceJson } from "./trace-runtime";
 
@@ -25,6 +25,49 @@ async function prepareSocketPath(socketPath: string): Promise<void> {
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 	}
+}
+
+function registrationSkills(value: unknown): NonNullable<SessionEndpoint["skills"]> {
+	if (value == null) return [];
+	if (!Array.isArray(value) || value.length > 512) throw new ProtocolError(-32602, "Invalid skill registration");
+	for (const skill of value) {
+		if (
+			!skill ||
+			typeof skill !== "object" ||
+			typeof skill.name !== "string" ||
+			skill.name.length > 256 ||
+			typeof skill.description !== "string" ||
+			skill.description.length > 32_768 ||
+			typeof skill.path !== "string" ||
+			skill.path.length > 4096 ||
+			!isAbsolute(skill.path) ||
+			normalize(skill.path) !== skill.path ||
+			!(["user", "repo", "system", "admin"] as unknown[]).includes(skill.scope) ||
+			typeof skill.enabled !== "boolean" ||
+			(skill.pluginId !== null && (typeof skill.pluginId !== "string" || skill.pluginId.length > 256))
+		)
+			throw new ProtocolError(-32602, "Invalid skill registration");
+	}
+	return value as NonNullable<SessionEndpoint["skills"]>;
+}
+
+function registrationSkillErrors(value: unknown): NonNullable<SessionEndpoint["skillErrors"]> {
+	if (value == null) return [];
+	if (
+		!Array.isArray(value) ||
+		value.length > 512 ||
+		value.some(
+			error =>
+				!error ||
+				typeof error !== "object" ||
+				typeof error.path !== "string" ||
+				error.path.length > 4096 ||
+				typeof error.message !== "string" ||
+				error.message.length > 32_768,
+		)
+	)
+		throw new ProtocolError(-32602, "Invalid skill error registration");
+	return value as NonNullable<SessionEndpoint["skillErrors"]>;
 }
 
 export async function startLocalHost(
@@ -92,11 +135,15 @@ export async function startLocalHost(
 					throw new ProtocolError(-32000, "Session already has a live owner");
 				if (!owners.has(peer) && owners.size >= 128) throw new ProtocolError(-32000, "Live session limit");
 				const requests = router.validateSessionRequests(thread.id, params.requests ?? []);
+				const skills = registrationSkills(params.skills);
+				const skillErrors = registrationSkillErrors(params.skillErrors);
 				if (owners.get(peer)?.id !== thread.id) remove();
 				owners.set(peer, { id: thread.id, lastSeen: Date.now() });
 				router.registerSession(thread.id, {
 					thread,
 					requests,
+					skills,
+					skillErrors,
 					call: (identity, command, input) =>
 						peer.call("session/call", { identity, method: command, params: input }),
 				});

@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 
 function fixture(id: string) {
@@ -79,6 +82,83 @@ test("unsupported methods return explicit protocol errors", async () => {
 	const a = fixture("a");
 	await expect(a.remote.call("r", "thread/delete", { threadId: "a" })).rejects.toMatchObject({ code: -32601 });
 	a.remote.dispose();
+});
+
+test("live skill metadata and reads stay bound to the terminal's loaded skill files", async () => {
+	const dir = await mkdtemp(join(tmpdir(), "xcsh-remote-skill-"));
+	const skillPath = join(dir, "SKILL.md");
+	const otherPath = join(dir, "other.md");
+	const largePath = join(dir, "large.md");
+	await writeFile(skillPath, "---\nname: fixture\ndescription: Fixture\n---\n\n# Fixture\n");
+	await writeFile(otherPath, "private");
+	await writeFile(largePath, Buffer.alloc(1024 * 1024 + 1));
+	const target = {
+		...fixture("skills").remote.target,
+		skills: [
+			{
+				name: "fixture",
+				description: "Fixture",
+				filePath: skillPath,
+				baseDir: dir,
+				source: "agents:project",
+				_source: { provider: "agents", providerName: "Agents", path: skillPath, level: "project" },
+			},
+			{
+				name: "large",
+				description: "Large",
+				filePath: largePath,
+				baseDir: dir,
+				source: "agents:user",
+				_source: { provider: "agents", providerName: "Agents", path: largePath, level: "user" },
+			},
+		],
+		skillWarnings: [{ skillPath: dir, message: "fixture warning" }],
+	} as unknown as SessionTarget;
+	const remote = new RemoteSession(target);
+	try {
+		expect(remote.skills()).toEqual({
+			skills: [
+				{
+					name: "fixture",
+					description: "Fixture",
+					path: skillPath,
+					scope: "repo",
+					enabled: true,
+					pluginId: null,
+				},
+				{
+					name: "large",
+					description: "Large",
+					path: largePath,
+					scope: "user",
+					enabled: true,
+					pluginId: null,
+				},
+			],
+			errors: [{ path: dir, message: "fixture warning" }],
+		});
+		expect(await remote.call("read", "session/skills/read", { threadId: "skills", path: skillPath })).toEqual({
+			dataBase64: Buffer.from(await Bun.file(skillPath).arrayBuffer()).toString("base64"),
+		});
+		await expect(
+			remote.call("other", "session/skills/read", { threadId: "skills", path: otherPath }),
+		).rejects.toMatchObject({
+			code: -32602,
+		});
+		await expect(
+			remote.call("relative", "session/skills/read", { threadId: "skills", path: "SKILL.md" }),
+		).rejects.toMatchObject({
+			code: -32602,
+		});
+		await expect(
+			remote.call("large", "session/skills/read", { threadId: "skills", path: largePath }),
+		).rejects.toMatchObject({
+			code: -32602,
+		});
+	} finally {
+		remote.dispose();
+		await rm(dir, { recursive: true, force: true });
+	}
 });
 
 test("phone can resume metadata and then hydrate paginated turns", async () => {

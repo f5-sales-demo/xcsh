@@ -1,3 +1,4 @@
+import { isAbsolute, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
@@ -8,6 +9,15 @@ import { voices } from "./voice-protocol";
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
 	requests?: InteractionRequest[];
+	skills?: Array<{
+		name: string;
+		description: string;
+		path: string;
+		scope: "user" | "repo" | "system" | "admin";
+		enabled: boolean;
+		pluginId: string | null;
+	}>;
+	skillErrors?: Array<{ path: string; message: string }>;
 	call: (identity: string, method: string, params: Record<string, unknown>) => Promise<unknown>;
 }
 export class RemoteRouter {
@@ -237,13 +247,74 @@ export class RemoteRouter {
 						result = { data: [] };
 						break;
 					case "skills/extraRoots/set":
-						if (!Array.isArray(params.extraRoots) || params.extraRoots.length !== 0)
-							throw new ProtocolError(
-								-32602,
-								"Remote skill roots are not supported; manage skills in the terminal",
-							);
+						if (
+							!Array.isArray(params.extraRoots) ||
+							params.extraRoots.length > 128 ||
+							params.extraRoots.some(
+								root =>
+									typeof root !== "string" ||
+									root.length > 4096 ||
+									!isAbsolute(root) ||
+									normalize(root) !== root,
+							)
+						)
+							throw new ProtocolError(-32602, "Skill roots must be normalized absolute paths");
+						// Existing terminal sessions retain their loaded catalog. The roots are a
+						// phone presentation hint and cannot change an already-running agent.
+						for (const initialized of this.#clients.keys())
+							this.notify(initialized, { method: "skills/changed", params: {} });
 						result = {};
 						break;
+					case "skills/list": {
+						if (params.forceReload != null && typeof params.forceReload !== "boolean")
+							throw new ProtocolError(-32602, "Invalid skill reload setting");
+						const requested = params.cwds ?? [];
+						if (
+							!Array.isArray(requested) ||
+							requested.length > 128 ||
+							requested.some(cwd => typeof cwd !== "string" || cwd.length > 4096)
+						)
+							throw new ProtocolError(-32602, "Invalid skill working directories");
+						const cwds =
+							requested.length > 0
+								? (requested as string[])
+								: ([
+										...new Set([...this.sessions.values()].map(session => session.thread.cwd).filter(String)),
+									] as string[]);
+						result = {
+							data: cwds.map(cwd => {
+								const matches = [...this.sessions.values()].filter(session => session.thread.cwd === cwd);
+								const skills = new Map<string, NonNullable<SessionEndpoint["skills"]>[number]>();
+								const errors: Array<{ path: string; message: string }> = [];
+								for (const session of matches) {
+									for (const skill of session.skills ?? [])
+										if (!skills.has(skill.path)) skills.set(skill.path, skill);
+									errors.push(...(session.skillErrors ?? []));
+								}
+								if (matches.length === 0)
+									errors.push({ path: cwd, message: "No live xcsh session for this directory" });
+								return { cwd, skills: [...skills.values()], errors };
+							}),
+						};
+						break;
+					}
+					case "fs/readFile": {
+						if (
+							typeof params.path !== "string" ||
+							!isAbsolute(params.path) ||
+							normalize(params.path) !== params.path
+						)
+							throw new ProtocolError(-32602, "File path must be absolute and normalized");
+						const owner = [...this.sessions.values()].find(session =>
+							session.skills?.some(skill => skill.path === params.path),
+						);
+						if (!owner) throw new ProtocolError(-32602, "File is not an advertised live-session skill");
+						result = await owner.call(JSON.stringify([client, "skill-read", id]), "session/skills/read", {
+							threadId: owner.thread.id,
+							path: params.path,
+						});
+						break;
+					}
 					case "plugin/installed":
 						// The adapter exposes no Codex marketplace installations. xcsh tools remain
 						// owned by the terminal; this is not a list of the terminal's loaded tools.

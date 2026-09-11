@@ -48,6 +48,10 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   the pinned Rust serialization. See `PARITY.md`.
 - `codex-rs/app-server-protocol/src/protocol/v2/{config,model,process}.rs`:
   configuration/model discovery and standalone process requests/notifications.
+- `codex-rs/app-server/src/request_processors/{catalog_processor,fs_processor}.rs`
+  and `app-server-protocol` v2 skill/file schemas: skill-root change signaling,
+  per-cwd catalogs and base64 file reads. Native reads are confined to skills
+  already loaded by a live terminal session.
 - `codex-rs/app-server-protocol/src/protocol/v2/thread.rs` and
   `app-server/src/request_processors/thread_processor.rs`: trimmed thread-name
   mutation, empty response and global name-update notification. The three

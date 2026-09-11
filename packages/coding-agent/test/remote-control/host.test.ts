@@ -87,6 +87,15 @@ test("host registers two live owners, routes into owner socket, and removes exit
 	const control = await connectPeer(path);
 	a.handle = async (method, params) => ({ method, owner: "a", params });
 	try {
+		await expect(
+			a.call("register", {
+				thread: { id: "invalid" },
+				skills: [
+					{ name: "bad", description: "bad", path: "relative", scope: "user", enabled: true, pluginId: null },
+				],
+			}),
+		).rejects.toMatchObject({ code: -32602 });
+		expect(await control.call("status", {})).toMatchObject({ liveSessions: 0 });
 		await a.call("register", { thread: { id: "a", name: "A", createdAt: 2, updatedAt: 1, turns: [] } });
 		await b.call("register", { thread: { id: "b", name: "B", createdAt: 1, updatedAt: 1, turns: [] } });
 		expect(await control.call("status", {})).toMatchObject({ liveSessions: 2 });

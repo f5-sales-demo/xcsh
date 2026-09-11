@@ -9,6 +9,7 @@ Unmodified OpenAI Codex JSON schemas from commit
 - `codex-rs/app-server-protocol/schema/json/v2/Thread{Turns,Items}ListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ConfigReadResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ModelListResponse.json`
+- `codex-rs/app-server-protocol/schema/json/v2/{SkillsList,FsReadFile}Response.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSettingsUpdatedNotification.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadSetName{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadNameUpdatedNotification.json`
@@ -50,3 +51,9 @@ redacted; identifiers are consistently renamed. The fixture records its source
 snapshot SHA-256 and scope. Replay tests substitute synthetic speech chunks and
 assert notification order against the recording and payloads against the upstream
 schemas. They do not claim an exact replay of private speech or complete parity.
+
+`codex-0.153.4-phone-bootstrap.json` extracts the ordered skill-root, catalog and
+skill-file read sequence from the finalized reference host capture. It retains
+only counts and field names for redacted paths and catalog entries. Router tests
+use its observed nonempty root count; pinned response schemas validate the native
+catalog and base64 payload separately.

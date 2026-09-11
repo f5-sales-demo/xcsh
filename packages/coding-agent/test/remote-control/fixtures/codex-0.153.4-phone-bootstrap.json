@@ -1,0 +1,26 @@
+{
+  "source": "Codex 0.153.4",
+  "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
+  "captureSha256": "f3ddb1f634c47cf2ab45e7fdc3b965cecf99dd164081e418119134aa1b0a7229",
+  "scope": "One iPhone selected-thread bootstrap from the finalized reference host capture; duplicate relay envelope observations are excluded.",
+  "redaction": "Paths and opaque identities were redacted by the recorder. Counts, method names, response field names and ordering are retained.",
+  "events": [
+    { "direction": "in", "method": "skills/extraRoots/set", "rootCount": 9 },
+    { "direction": "out", "method": "skills/changed" },
+    { "direction": "out", "response": "empty" },
+    { "direction": "in", "method": "skills/list", "cwdCount": 1 },
+    {
+      "direction": "out",
+      "response": "skills/list",
+      "entryCount": 1,
+      "skillCount": 40,
+      "errorCount": 0,
+      "skillFields": ["description", "enabled", "name", "path", "pluginId", "scope"]
+    },
+    { "direction": "in", "method": "skills/extraRoots/set", "rootCount": 0 },
+    { "direction": "out", "method": "skills/changed" },
+    { "direction": "out", "response": "empty" },
+    { "direction": "in", "method": "fs/readFile", "pathBytes": 98 },
+    { "direction": "out", "response": "fs/readFile", "redactedDataBase64Bytes": 2292 }
+  ]
+}
