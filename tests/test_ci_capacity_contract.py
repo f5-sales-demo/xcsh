@@ -102,8 +102,13 @@ class CiCapacityContractTests(unittest.TestCase):
             "RUST_TOOLCHAIN=nightly-2026-09-03",
             "CARGO_NEXTEST_VERSION=0.9.143",
             "CARGO_NEXTEST_SHA256=66786b9abe23920d022a182d1416b1bbc8130dd4872a9553d76985a1708dcd1e",
+            "LLVM_DEB_VERSION=18.1.3-1ubuntu1",
+            "LLVM_DEB_SHA256=139cb82e16e75fcdd4a56562804ff9bfb482b65d0929580d621d28088075a27e",
+            "UBUNTU_SNAPSHOT=20260810T000000Z",
         ):
             self.assertIn(pinned_value, legacy_setup)
+        self.assertNotIn("sudo apt-get", legacy_setup)
+        self.assertIn("dpkg-deb --extract", legacy_setup)
         self.assertIn('flags.push("--parallel=2")', runner)
         self.assertIn('"--max-concurrency=2"', runner)
         self.assertNotIn("--concurrent", benchmark + action + runner)

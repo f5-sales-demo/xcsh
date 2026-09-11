@@ -10,6 +10,9 @@ readonly RUST_TOOLCHAIN=nightly-2026-09-03
 readonly RUST_DIST_MANIFEST_SHA256=df7a2f1a117645520b1019cf2f23d75411be359d431a09e28c31ab97ff710094
 readonly CARGO_NEXTEST_VERSION=0.9.143
 readonly CARGO_NEXTEST_SHA256=66786b9abe23920d022a182d1416b1bbc8130dd4872a9553d76985a1708dcd1e
+readonly LLVM_DEB_VERSION=18.1.3-1ubuntu1
+readonly LLVM_DEB_SHA256=139cb82e16e75fcdd4a56562804ff9bfb482b65d0929580d621d28088075a27e
+readonly UBUNTU_SNAPSHOT=20260810T000000Z
 
 usage() {
   echo "usage: $0 <experiment> <cold|warm> <pair-id> <output-dir> <verifier> <all|native|rust|typescript>" >&2
@@ -89,13 +92,13 @@ install_legacy_toolchain() {
     --directory "$bin_dir" cargo-nextest
   chmod 0555 "$bin_dir/cargo-nextest"
 
-  if ! command -v llvm-nm >/dev/null 2>&1 && ! compgen -G '/usr/bin/llvm-nm*' >/dev/null; then
-    sudo apt-get update
-    sudo apt-get install --yes --no-install-recommends llvm
-  fi
-  if ! command -v llvm-nm >/dev/null 2>&1; then
-    ln -s "$(compgen -G '/usr/bin/llvm-nm*' | LC_ALL=C sort -V | tail -1)" "$bin_dir/llvm-nm"
-  fi
+  download \
+    "https://snapshot.ubuntu.com/ubuntu/${UBUNTU_SNAPSHOT}/pool/universe/l/llvm-toolchain-18/llvm-18_${LLVM_DEB_VERSION}_amd64.deb" \
+    "$download_dir/llvm-18.deb"
+  printf '%s  %s\n' "$LLVM_DEB_SHA256" "$download_dir/llvm-18.deb" |
+    sha256sum --check --strict
+  dpkg-deb --extract "$download_dir/llvm-18.deb" "$tool_root/llvm"
+  ln -s "$tool_root/llvm/usr/lib/llvm-18/bin/llvm-nm" "$bin_dir/llvm-nm"
   if ! command -v fd >/dev/null 2>&1 && command -v fdfind >/dev/null 2>&1; then
     ln -s "$(command -v fdfind)" "$bin_dir/fd"
   fi

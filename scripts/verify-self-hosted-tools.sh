@@ -34,6 +34,7 @@ done
 
 test "$(cargo nextest --version | awk '{print $2}')" = 0.9.143
 command -v llvm-nm
+llvm-nm --version >/dev/null
 command -v fd
 command -v rg
 command -v magick
