@@ -6,6 +6,29 @@ import { collaborationModeResponse, configResponse, modelResponse } from "./meta
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError } from "./session";
 import { voices } from "./voice-protocol";
+
+interface InitializeCapabilities {
+	experimentalApi?: boolean;
+	requestAttestation?: boolean;
+	mcpServerOpenaiFormElicitation?: boolean;
+	extensions?: Record<string, unknown> | null;
+	optOutNotificationMethods?: string[] | null;
+}
+function initializeCapabilities(value: unknown): InitializeCapabilities {
+	if (value == null) return {};
+	if (typeof value !== "object" || Array.isArray(value)) throw new ProtocolError(-32602, "Invalid capabilities");
+	const capabilities = value as Record<string, unknown>;
+	for (const field of ["experimentalApi", "requestAttestation", "mcpServerOpenaiFormElicitation"])
+		if (capabilities[field] != null && typeof capabilities[field] !== "boolean")
+			throw new ProtocolError(-32602, `Invalid ${field} capability`);
+	const extensions = capabilities.extensions;
+	if (extensions != null && (typeof extensions !== "object" || Array.isArray(extensions)))
+		throw new ProtocolError(-32602, "Invalid extensions capability");
+	const optOut = capabilities.optOutNotificationMethods;
+	if (optOut != null && (!Array.isArray(optOut) || optOut.some(method => typeof method !== "string")))
+		throw new ProtocolError(-32602, "Invalid notification opt-outs");
+	return capabilities as InitializeCapabilities;
+}
 export interface SessionEndpoint {
 	thread: Record<string, unknown>;
 	requests?: InteractionRequest[];
@@ -24,17 +47,19 @@ export class RemoteRouter {
 	sessions = new Map<string, SessionEndpoint>();
 	notify: (client: string, event: Notification) => void = () => {};
 	#processes = new RemoteProcesses(
-		(client, event) => this.notify(client, event),
+		(client, event) => this.#emit(client, event),
 		cwd => [...this.sessions.values()].some(session => session.thread.cwd === cwd),
 	);
 	dispose(): void {
 		this.#processes.close();
 		this.#clients.clear();
 		this.#experimental.clear();
+		this.#notificationOptOuts.clear();
 		this.#delivered.clear();
 	}
 	#clients = new Map<string, Set<string>>();
 	#experimental = new Set<string>();
+	#notificationOptOuts = new Map<string, Set<string>>();
 	#delivered = new Map<string, Map<string, string>>();
 	constructor(
 		private readonly home: string,
@@ -46,9 +71,13 @@ export class RemoteRouter {
 	subscribed(client: string, threadId: string): boolean {
 		return this.#clients.get(client)?.has(threadId) ?? false;
 	}
+	#emit(client: string, event: Notification): void {
+		if (!this.#notificationOptOuts.get(client)?.has(event.method)) this.notify(client, event);
+	}
 	close(client: string): void {
 		this.#clients.delete(client);
 		this.#experimental.delete(client);
+		this.#notificationOptOuts.delete(client);
 		this.#delivered.delete(client);
 		this.#processes.close(client);
 	}
@@ -62,7 +91,7 @@ export class RemoteRouter {
 		}
 		if (delivered.has(event.id)) return;
 		delivered.set(event.id, threadId);
-		this.notify(client, event);
+		this.#emit(client, event);
 	}
 	validateSessionRequests(threadId: string, input: unknown): InteractionRequest[] {
 		const requests = validateInteractionRequests(threadId, input);
@@ -109,7 +138,7 @@ export class RemoteRouter {
 			const name = event.params.threadName;
 			if (name !== null && typeof name !== "string") return;
 			session.thread.name = name;
-			for (const client of this.#clients.keys()) this.notify(client, event);
+			for (const client of this.#clients.keys()) this.#emit(client, event);
 			return;
 		}
 		if (event.id !== undefined) {
@@ -131,11 +160,11 @@ export class RemoteRouter {
 			for (const [client, delivered] of this.#delivered) {
 				if (delivered.get(id) !== threadId) continue;
 				delivered.delete(id);
-				if (this.subscribed(client, threadId)) this.notify(client, event);
+				if (this.subscribed(client, threadId)) this.#emit(client, event);
 			}
 			return;
 		}
-		for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.notify(client, event);
+		for (const client of this.#clients.keys()) if (this.subscribed(client, threadId)) this.#emit(client, event);
 	}
 	async #response(
 		client: string,
@@ -185,16 +214,20 @@ export class RemoteRouter {
 			if (request.id === undefined) return null;
 			let result: unknown;
 			if (request.method === "initialize") {
-				const info = params.clientInfo as { name?: unknown; version?: unknown } | undefined;
+				const info = params.clientInfo as { name?: unknown; title?: unknown; version?: unknown } | undefined;
 				if (!info || typeof info.name !== "string" || typeof info.version !== "string")
 					throw new ProtocolError(-32602, "clientInfo required");
-				if (!this.#clients.has(client) && this.#clients.size >= 64)
-					throw new ProtocolError(-32000, "Remote client limit");
+				if (info.title != null && typeof info.title !== "string")
+					throw new ProtocolError(-32602, "Invalid clientInfo.title");
+				const capabilities = initializeCapabilities(params.capabilities);
+				const optOut = capabilities?.optOutNotificationMethods;
+				if (this.#clients.has(client)) throw new ProtocolError(-32600, "Already initialized");
+				if (this.#clients.size >= 64) throw new ProtocolError(-32000, "Remote client limit");
 				this.#clients.set(client, new Set());
 				this.#delivered.delete(client);
 				this.#experimental.delete(client);
-				if ((params.capabilities as { experimentalApi?: unknown } | undefined)?.experimentalApi === true)
-					this.#experimental.add(client);
+				this.#notificationOptOuts.set(client, new Set((optOut ?? []) as string[]));
+				if (capabilities?.experimentalApi === true) this.#experimental.add(client);
 				result = {
 					userAgent: `xcsh/${this.version}`,
 					codexHome: this.home,
@@ -264,7 +297,7 @@ export class RemoteRouter {
 						// Existing terminal sessions retain their loaded catalog. The roots are a
 						// phone presentation hint and cannot change an already-running agent.
 						for (const initialized of this.#clients.keys())
-							this.notify(initialized, { method: "skills/changed", params: {} });
+							this.#emit(initialized, { method: "skills/changed", params: {} });
 						result = {};
 						break;
 					case "skills/list": {

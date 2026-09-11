@@ -243,6 +243,17 @@ builtin-preset source, with matching byte lengths and order. Native routing now
 requires the requesting connection's experimental capability and returns this
 catalog exactly. Applying a remote mode to a live terminal remains separate.
 
+The same phone initialization advertises 56 exact notification-method opt-outs.
+Those method strings remain redacted in the sanitized recording, so they are not
+reconstructed. Native initialization now validates the pinned capability shape,
+stores opt-outs per relay stream, and suppresses an event only when its complete
+method name matches. Unknown names are accepted and ignored, a second initialize
+on the same stream is rejected, and disconnect removes the stream's filter.
+Router tests first reproduced cross-client over-delivery, then verified that an
+opted-out client stays quiet while another subscriber receives the same event.
+This is source-contract and replay-metadata evidence; the complete experimental
+method and field audit remains open.
+
 Discovery now follows pinned 25-row defaults, unsigned limits clamped to 1–100,
 created/updated/recency ordering, exact provider/source filters, normalized cwd
 filters and literal case-sensitive name/preview search. Keyset continuation

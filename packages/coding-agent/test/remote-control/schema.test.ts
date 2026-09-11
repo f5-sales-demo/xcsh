@@ -5,6 +5,7 @@ import { RemoteRouter } from "../../src/remote-control/router";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 import configSchema from "./fixtures/ConfigReadResponse.json";
 import fsReadFileSchema from "./fixtures/FsReadFileResponse.json";
+import initializeParamsSchema from "./fixtures/InitializeParams.json";
 import initializeSchema from "./fixtures/InitializeResponse.json";
 import modelSchema from "./fixtures/ModelListResponse.json";
 import skillsListSchema from "./fixtures/SkillsListResponse.json";
@@ -29,10 +30,19 @@ test("initialization and live thread payload match pinned upstream schemas", asy
 		expect(validate(response), JSON.stringify(validate.errors)).toBe(true);
 	}
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const initializeParams = {
+		clientInfo: { name: "fixture", title: "Fixture phone", version: "1" },
+		capabilities: {
+			experimentalApi: true,
+			optOutNotificationMethods: ["thread/started", "unknown/notification"],
+		},
+	};
+	const validInitializeParams = ajv.compile(initializeParamsSchema);
+	expect(validInitializeParams(initializeParams), JSON.stringify(validInitializeParams.errors)).toBe(true);
 	const initialized = (await router.handle("fixture", {
 		id: 1,
 		method: "initialize",
-		params: { clientInfo: { name: "fixture", version: "1" } },
+		params: initializeParams,
 	})) as { result: unknown };
 	const validInit = ajv.compile(initializeSchema);
 	expect(validInit(initialized.result), JSON.stringify(validInit.errors)).toBe(true);

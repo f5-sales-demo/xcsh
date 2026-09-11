@@ -17,6 +17,10 @@ Source files under `codex-rs/app-server-transport/src/transport/remote_control/`
   framing, sequence cursors, acknowledgements, and chunk transport. The protocol
   and segment sources are pinned directly in the reference manifest.
 - `codex-rs/app-server-protocol`: initialization, thread, turn, and item wire shapes.
+- `codex-rs/app-server/src/request_processors/initialize_processor.rs` and
+  `app-server-protocol/schema/json/v1/InitializeParams.json`: per-connection
+  experimental capability negotiation, exact notification-method opt-outs and
+  repeated-initialize rejection. Unknown opt-out names remain accepted.
 - `codex-rs/app-server/src/request_processors/thread_processor.rs` and
   `codex-rs/thread-store/src/local/thread_history/segment_paging.rs`: history
   page defaults, summary projections, exclusive continuation and inclusive

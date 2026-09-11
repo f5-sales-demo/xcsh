@@ -2,6 +2,7 @@
   "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
   "version": "0.153.4",
   "files": {
+    "codex-rs/app-server-protocol/schema/json/v1/InitializeParams.json": "6f0094be9a65242ec779a40794cbd4fdfa32fca1e45084a16adfb50501d33ea2",
     "codex-rs/app-server-protocol/schema/json/CommandExecutionRequestApprovalParams.json": "16a71816c2d66e319c2c4aa83dd636dfdc43c61e72b6d5475e421ce08d8e6558",
     "codex-rs/app-server-protocol/schema/json/CommandExecutionRequestApprovalResponse.json": "6d0767113e22f311381809b6b236b0dde2b99b01992879c26bf7b1ea0e003cb7",
     "codex-rs/app-server-protocol/schema/json/FileChangeRequestApprovalParams.json": "13848b26814c286ad6425a20d01c1691c86790e1f9e2529399677a8a22fe0d18",

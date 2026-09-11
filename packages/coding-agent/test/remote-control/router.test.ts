@@ -46,6 +46,67 @@ test("malformed and experimental unsupported operations are explicit errors", as
 	).toMatchObject({ error: { code: -32601 } });
 });
 
+test("initialize notification opt-outs suppress exact methods for only that client", async () => {
+	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const notifications: Array<{ client: string; method: string }> = [];
+	router.notify = (client, event) => notifications.push({ client, method: event.method });
+	router.sessions.set("fixture-thread", {
+		thread: { id: "fixture-thread", name: "Fixture terminal", turns: [], updatedAt: 1 },
+		call: async () => ({}),
+	});
+	await router.handle("quiet", {
+		id: 1,
+		method: "initialize",
+		params: {
+			clientInfo: { name: "fixture", version: "1" },
+			capabilities: { optOutNotificationMethods: ["thread/name/updated", "unknown/notification"] },
+		},
+	});
+	await router.handle("loud", {
+		id: 2,
+		method: "initialize",
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: {} },
+	});
+	await router.handle("quiet", { id: 3, method: "thread/resume", params: { threadId: "fixture-thread" } });
+	await router.handle("loud", { id: 4, method: "thread/resume", params: { threadId: "fixture-thread" } });
+
+	router.publish({ method: "thread/name/updated", params: { threadId: "fixture-thread", threadName: "Renamed" } });
+	router.publish({ method: "turn/completed", params: { threadId: "fixture-thread", turn: { id: "turn-1" } } });
+	expect(notifications).toEqual([
+		{ client: "loud", method: "thread/name/updated" },
+		{ client: "quiet", method: "turn/completed" },
+		{ client: "loud", method: "turn/completed" },
+	]);
+	expect(
+		await router.handle("quiet", {
+			id: 5,
+			method: "initialize",
+			params: { clientInfo: { name: "fixture", version: "1" }, capabilities: {} },
+		}),
+	).toMatchObject({ error: { code: -32600 } });
+	router.publish({ method: "thread/name/updated", params: { threadId: "fixture-thread", threadName: "Again" } });
+	expect(notifications.at(-1)).toEqual({ client: "loud", method: "thread/name/updated" });
+
+	expect(
+		await router.handle("invalid", {
+			id: 6,
+			method: "initialize",
+			params: {
+				clientInfo: { name: "fixture", version: "1" },
+				capabilities: { optOutNotificationMethods: ["thread/started", 1] },
+			},
+		}),
+	).toMatchObject({ error: { code: -32602 } });
+	for (const capabilities of [[], { experimentalApi: "yes" }, { requestAttestation: 1 }])
+		expect(
+			await router.handle("invalid", {
+				id: 7,
+				method: "initialize",
+				params: { clientInfo: { name: "fixture", version: "1" }, capabilities },
+			}),
+		).toMatchObject({ error: { code: -32602 } });
+});
+
 test("phone discovery can list the empty native thread section collection", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
 	await router.handle("phone", {
@@ -100,6 +161,7 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 
 test("phone skill bootstrap exposes the live terminal catalog and acknowledges presentation roots", async () => {
 	const router = new RemoteRouter("/tmp/xcsh", "21.22.0");
+	const rootBootstrap = bootstrapReference.events.find(event => event.method === "skills/extraRoots/set")!;
 	const notifications: unknown[] = [];
 	router.notify = (client, event) => notifications.push({ client, event });
 	router.sessions.set("alpha", {
@@ -131,10 +193,7 @@ test("phone skill bootstrap exposes the live terminal catalog and acknowledges p
 			id: 2,
 			method: "skills/extraRoots/set",
 			params: {
-				extraRoots: Array.from(
-					{ length: bootstrapReference.events[0].rootCount! },
-					(_, index) => `/tmp/skills-${index}`,
-				),
+				extraRoots: Array.from({ length: rootBootstrap.rootCount! }, (_, index) => `/tmp/skills-${index}`),
 			},
 		}),
 	).toEqual({ id: 2, result: {} });

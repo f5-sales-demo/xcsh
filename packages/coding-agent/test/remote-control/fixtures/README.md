@@ -3,7 +3,7 @@
 Unmodified OpenAI Codex JSON schemas from commit
 `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a` (rust-v0.153.4):
 
-- `codex-rs/app-server-protocol/schema/json/v1/InitializeResponse.json`
+- `codex-rs/app-server-protocol/schema/json/v1/Initialize{Params,Response}.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/ThreadLoadedListResponse.json`
 - `codex-rs/app-server-protocol/schema/json/v2/Thread{Turns,Items}ListResponse.json`
@@ -56,4 +56,7 @@ schemas. They do not claim an exact replay of private speech or complete parity.
 skill-file read sequence from the finalized reference host capture. It retains
 only counts and field names for redacted paths and catalog entries. Router tests
 use its observed nonempty root count; pinned response schemas validate the native
-catalog and base64 payload separately.
+catalog and base64 payload separately. The fixture also retains the phone's
+experimental capability and 56 exact notification opt-outs without reconstructing
+their redacted method names. The pinned initialize schema validates the native
+request shape independently.
