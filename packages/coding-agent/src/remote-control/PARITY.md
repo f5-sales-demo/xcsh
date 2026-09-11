@@ -705,3 +705,13 @@ Each model created and read its own distinct marker file, completed once, and
 returned the same durable turn on an identical client-message retry. Luna, Astra,
 Sol and Terra all passed in 19.920 seconds. The iPhone voice variants remain a
 separate manual gate.
+
+Disposable current-artifact sessions also passed live control checks. Steering
+kept the original turn identity and produced the replacement result; interruption
+persisted the active turn as interrupted and prevented its file write. A real
+`ask` invocation emitted one request, accepted one remote answer, emitted one
+resolution and completed with the expected marker. Plan entry was idempotent,
+an invalid custom mode was rejected without mutation, and Default was restored
+while preserving the terminal's actual provider-qualified work model. The
+disposable sessions exited, leaving the four phone sessions unchanged. These
+local-protocol observations do not claim iPhone presentation or input.

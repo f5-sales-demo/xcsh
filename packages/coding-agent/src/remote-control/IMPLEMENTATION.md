@@ -2179,3 +2179,18 @@ same client message was retried. All four completed in 19.920 seconds with no
 duplicate history turn or tool execution. This proves current-build work-model
 routing and retry behavior; it does not replace the corresponding phone voice
 tasks.
+
+Two disposable sessions then exercised the current binary's remaining live
+control boundaries without changing the four phone acceptance sessions. A Sol
+turn was steered while active and completed under its original turn identity with
+the replacement marker. A separate long-running turn was interrupted, persisted
+as `interrupted` and never created its prohibited file. Another Sol session,
+restricted to the `ask` tool, emitted one `item/tool/requestUserInput`; the remote
+answer resolved that owner once and the turn completed with the expected marker.
+
+Finally, a live experimental client selected Plan twice, observed both idempotent
+settings notifications, received the expected validation error for a custom mode,
+and restored Default. The probe derived and preserved the terminal's actual
+provider-qualified selected model. Each disposable TUI exited afterward, leaving
+the four canonical sessions and connected relay unchanged. These are direct
+current-artifact protocol observations, not iPhone observations.
