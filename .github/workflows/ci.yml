@@ -72,12 +72,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -85,7 +80,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -175,12 +170,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -188,7 +178,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -296,12 +286,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           lfs: true
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -309,7 +294,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -374,18 +359,16 @@ jobs:
           command -v rg
           command -v magick
           dpkg-query -W libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev >/dev/null
-      # The immutable runner image provides Bun in /usr/local/bin, which every child process inherits.
-      - name: Verify immutable Bun path
-        run: /usr/local/bin/bun --version
+      - name: Verify configured Bun version
+        run: test "$(bun --version)" = 1.4.2
       - run: bash scripts/ci-bun-install.sh
       - run: bun run build:native
       - name: Verify bun binary exists before tests
         run: |
           echo "which bun: $(which bun)"
-          echo "file type: $(file /usr/local/bin/bun)"
-          echo "ls -la: $(ls -la /usr/local/bin/bun)"
-          echo "bun.path.ts resolves to: $(bun -e "const{existsSync}=require('fs');console.log(existsSync('/usr/local/bin/bun')?'/usr/local/bin/bun':'fallback')")"
-          /usr/local/bin/bun --version
+          echo "file type: $(file "$(command -v bun)")"
+          echo "ls -la: $(ls -la "$(command -v bun)")"
+          bun --version
       - name: Test workspace
         run: bun run ci:test:full
       - name: CLI smoke test
@@ -400,12 +383,7 @@ jobs:
         with:
           persist-credentials: false
           lfs: true
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -413,7 +391,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -493,12 +471,7 @@ jobs:
         with:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           no-cache: true
@@ -521,12 +494,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           fetch-depth: 0
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -534,7 +502,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -605,12 +573,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -618,7 +581,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -714,12 +677,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -727,7 +685,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -1109,12 +1067,7 @@ jobs:
         with:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           no-cache: true
@@ -1176,12 +1129,7 @@ jobs:
         with:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -1189,7 +1137,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -1260,12 +1208,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           no-cache: true
@@ -1383,12 +1326,7 @@ jobs:
           persist-credentials: false
           token: ${{ secrets.RELEASE_TOKEN }}
           lfs: true
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -1396,7 +1334,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
@@ -1483,12 +1421,7 @@ jobs:
           persist-credentials: false
       - name: Verify runner Node.js
         run: node --version && npm --version
-      - name: Verify baked Bun 1.4.2
-        if: runner.environment == 'self-hosted'
-        shell: bash
-        run: test "$(command -v bun)" = /usr/local/bin/bun && test "$(bun --version)" = 1.4.2
       - name: Setup Bun 1.4.2
-        if: runner.environment != 'self-hosted'
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         id: setup-bun
         continue-on-error: true
@@ -1496,7 +1429,7 @@ jobs:
           no-cache: true
           bun-version: "1.4.2"
       - name: Retry Bun setup on failure
-        if: runner.environment != 'self-hosted' && steps.setup-bun.outcome == 'failure'
+        if: steps.setup-bun.outcome == 'failure'
         shell: bash
         run: |
           BUN_VERSION=1.4.2
