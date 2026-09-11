@@ -632,6 +632,13 @@ jobs:
           pattern: pi-natives-*
           path: packages/natives/native
           merge-multiple: true
+      - name: Install LLVM Mach-O inspection tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends llvm
+          compgen -G '/usr/bin/llvm-nm*' >/dev/null
       - name: Verify native addons
         run: bun run ci:release:verify-natives
       - name: Build Linux and Windows binaries

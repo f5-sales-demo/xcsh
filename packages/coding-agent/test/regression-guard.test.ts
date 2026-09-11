@@ -575,6 +575,9 @@ describe("release artifacts run the sandbox matrix before and after publication"
 	it("checks the compiled Linux and signed macOS executables", async () => {
 		const linux = await loadJob("build-release");
 		const macos = await loadJob("build-sign-macos");
+		expect(linux).toContain("Install LLVM Mach-O inspection tools");
+		expect(linux).toContain("apt-get install --yes --no-install-recommends llvm");
+		expect(linux).toContain("llvm-nm");
 		expect(linux).toContain("packages/coding-agent/binaries/xcsh-linux-x64");
 		expect(linux).toContain("bun test packages/coding-agent/test/sandbox-check.test.ts");
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: literal GitHub Actions expression
