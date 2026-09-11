@@ -235,6 +235,14 @@ correct a copy's known naming mismatches explicitly, and independently compare
 boundary field names with those observed responses. Promoted-item shapes still
 rely on Rust source; no live promotion or new phone acceptance is claimed.
 
+The finalized phone capture also requests the experimental collaboration-mode
+catalog. Its two rows preserve the pinned Plan-then-Default order, nullable model
+and reasoning mask fields, and captured medium Plan effort. The recorder redacted
+the mode names and literals; the fixture fills those four strings from the pinned
+builtin-preset source, with matching byte lengths and order. Native routing now
+requires the requesting connection's experimental capability and returns this
+catalog exactly. Applying a remote mode to a live terminal remains separate.
+
 Discovery now follows pinned 25-row defaults, unsigned limits clamped to 1–100,
 created/updated/recency ordering, exact provider/source filters, normalized cwd
 filters and literal case-sensitive name/preview search. Keyset continuation

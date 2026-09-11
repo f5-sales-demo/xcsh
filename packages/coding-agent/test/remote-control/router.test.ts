@@ -38,8 +38,11 @@ test("malformed and experimental unsupported operations are explicit errors", as
 		method: "initialize",
 		params: { clientInfo: { name: "fixture", version: "1" } },
 	});
+	expect(await router.handle("phone", { id: 2, method: "collaborationMode/list", params: {} })).toMatchObject({
+		error: { code: -32600 },
+	});
 	expect(
-		await router.handle("phone", { id: 2, method: "thread/realtime/unsupported", params: { threadId: "fixture" } }),
+		await router.handle("phone", { id: 3, method: "thread/realtime/unsupported", params: { threadId: "fixture" } }),
 	).toMatchObject({ error: { code: -32601 } });
 });
 
@@ -69,7 +72,7 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 	await router.handle("phone", {
 		id: 1,
 		method: "initialize",
-		params: { clientInfo: { name: "fixture", version: "1" } },
+		params: { clientInfo: { name: "fixture", version: "1" }, capabilities: { experimentalApi: true } },
 	});
 	const call = (method: string, params: Record<string, unknown> = {}) =>
 		router.handle("phone", { id: method, method, params });
@@ -80,7 +83,11 @@ test("phone bootstrap metadata describes the attached live runtime", async () =>
 		result: { config: { model: "gpt-6-astra" } },
 	});
 	expect(await call("configRequirements/read")).toMatchObject({ result: { requirements: null } });
-	expect(await call("collaborationMode/list")).toMatchObject({ result: { data: [] } });
+	const collaborationModes = bootstrapReference.events.find(event => event.response === "collaborationMode/list")!;
+	expect(await call("collaborationMode/list")).toEqual({
+		id: "collaborationMode/list",
+		result: { data: collaborationModes.data },
+	});
 	expect(await call("plugin/installed", { cwds: ["/tmp/alpha"] })).toMatchObject({
 		result: { marketplaces: [], marketplaceLoadErrors: [] },
 	});

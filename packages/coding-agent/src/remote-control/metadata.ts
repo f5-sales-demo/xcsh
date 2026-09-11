@@ -65,3 +65,13 @@ export function modelResponse(threads: Record<string, unknown>[]) {
 	}
 	return { data: [...models.values()], nextCursor: null };
 }
+
+/** Pinned Codex 0.153.4 catalog order and wire fields. */
+export function collaborationModeResponse() {
+	return {
+		data: [
+			{ name: "Plan", mode: "plan", model: null, reasoning_effort: "medium" },
+			{ name: "Default", mode: "default", model: null, reasoning_effort: null },
+		],
+	};
+}

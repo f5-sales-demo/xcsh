@@ -3,7 +3,7 @@
   "sourceCommit": "3d2ee51ca2d5db578f328aa75e20aa22c0197c9a",
   "captureSha256": "f3ddb1f634c47cf2ab45e7fdc3b965cecf99dd164081e418119134aa1b0a7229",
   "scope": "One iPhone selected-thread bootstrap from the finalized reference host capture; duplicate relay envelope observations are excluded.",
-  "redaction": "Paths and opaque identities were redacted by the recorder. Counts, method names, response field names and ordering are retained.",
+  "redaction": "Paths and opaque identities were redacted by the recorder. Counts, method names, response field names and ordering are retained. Collaboration-mode names and mode literals were redacted on the wire; their values are filled from the pinned builtin preset source, whose byte lengths and order match the capture.",
   "events": [
     { "direction": "in", "method": "skills/extraRoots/set", "rootCount": 9 },
     { "direction": "out", "method": "skills/changed" },
@@ -21,6 +21,15 @@
     { "direction": "out", "method": "skills/changed" },
     { "direction": "out", "response": "empty" },
     { "direction": "in", "method": "fs/readFile", "pathBytes": 98 },
-    { "direction": "out", "response": "fs/readFile", "redactedDataBase64Bytes": 2292 }
+    { "direction": "out", "response": "fs/readFile", "redactedDataBase64Bytes": 2292 },
+    { "direction": "in", "method": "collaborationMode/list" },
+    {
+      "direction": "out",
+      "response": "collaborationMode/list",
+      "data": [
+        { "name": "Plan", "mode": "plan", "model": null, "reasoning_effort": "medium" },
+        { "name": "Default", "mode": "default", "model": null, "reasoning_effort": null }
+      ]
+    }
   ]
 }

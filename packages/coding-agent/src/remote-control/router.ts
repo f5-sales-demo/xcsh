@@ -2,7 +2,7 @@ import { isAbsolute, normalize } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { loadedThreadList, threadList } from "./discovery";
 import { type InteractionRequest, validateInteractionRequests } from "./interactions";
-import { configResponse, modelResponse } from "./metadata";
+import { collaborationModeResponse, configResponse, modelResponse } from "./metadata";
 import { RemoteProcesses } from "./process";
 import { type Notification, ProtocolError } from "./session";
 import { voices } from "./voice-protocol";
@@ -203,8 +203,11 @@ export class RemoteRouter {
 				};
 			} else {
 				if (!this.#clients.has(client)) throw new ProtocolError(-32002, "Not initialized");
-				if (request.method === "thread/timeline/list" && !this.#experimental.has(client))
-					throw new ProtocolError(-32600, "thread/timeline/list requires experimentalApi capability");
+				if (
+					(request.method === "thread/timeline/list" || request.method === "collaborationMode/list") &&
+					!this.#experimental.has(client)
+				)
+					throw new ProtocolError(-32600, `${request.method} requires experimentalApi capability`);
 				switch (request.method) {
 					case "thread/list": {
 						if (!this.#experimental.has(client)) {
@@ -243,8 +246,7 @@ export class RemoteRouter {
 						result = { requirements: null };
 						break;
 					case "collaborationMode/list":
-						// No Codex collaboration presets are exposed by this existing-session adapter.
-						result = { data: [] };
+						result = collaborationModeResponse();
 						break;
 					case "skills/extraRoots/set":
 						if (
