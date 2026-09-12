@@ -1135,3 +1135,9 @@ is transmitted to the authenticated OpenAI voice service as requested; it is not
 logged, traced, persisted in diagnostics, or included in errors. WebRTC v3 and
 standalone configurations consume the same persona assembler without changing
 their wire fields.
+
+The first live 64 KiB candidate proved that the service-size rejection was
+resolved, but failed the identity gate by answering as ChatGPT. It was rolled
+back. The corrected envelope ends with a highest-priority xcsh/F5 identity
+anchor after client preferences and history, explicitly preserving the attached
+agent's tool-execution boundary and truthful user-knowledge limit.

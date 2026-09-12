@@ -443,3 +443,11 @@ space. The focused voice matrix passes 104 tests with 927 assertions and the
 complete remote-control suite passes 915 tests with 3,738 assertions under Bun
 1.4.2. A newly qualified runtime and a fresh Robin-observed Sol call remain
 required; these automated results do not claim spoken acceptance.
+
+The first 64 KiB candidate connected successfully on Sol, closing the transport
+failure, but Robin reported that its answer presented itself as ChatGPT rather
+than xcsh. That candidate failed persona acceptance and was rolled back. The
+replacement source appends an authoritative xcsh/F5 identity and delegation
+anchor after all client preferences and history; a hostile-client-prompt
+regression verifies that the final anchor wins. A fresh spoken observation is
+still required.

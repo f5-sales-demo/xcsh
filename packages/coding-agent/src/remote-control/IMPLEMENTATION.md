@@ -2703,3 +2703,9 @@ with 927 assertions; the full remote-control directory passes 915 cases with
 3,738 assertions. Package TypeScript and targeted Biome checks also pass under
 Bun 1.4.2. Immutable packaging, network-disabled qualification, cutover, and the
 fresh physical Sol observation are recorded separately after they occur.
+
+The first bounded candidate connected on Sol but failed the human identity
+probe by responding as ChatGPT. All five processes were rolled back before the
+next edit. The follow-up adds a final authoritative identity anchor after every
+variable section and verifies that even client text explicitly demanding a
+generic ChatGPT introduction cannot occupy the final instruction position.
