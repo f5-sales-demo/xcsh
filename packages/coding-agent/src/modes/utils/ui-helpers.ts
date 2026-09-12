@@ -60,8 +60,8 @@ export class UiHelpers {
 		const children = this.ctx.chatContainer.children;
 		const last = children.length > 0 ? children[children.length - 1] : undefined;
 		const secondLast = children.length > 1 ? children[children.length - 2] : undefined;
-		const useDim = options?.dim ?? true;
-		const rendered = useDim ? theme.fg("dim", message) : message;
+		// User-facing results must remain legible; only explicitly secondary diagnostics are dimmed.
+		const rendered = theme.fg(options?.dim ? "dim" : "text", message);
 
 		if (last && secondLast && last === this.ctx.lastStatusText && secondLast === this.ctx.lastStatusSpacer) {
 			this.ctx.lastStatusText.setText(rendered);

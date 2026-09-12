@@ -39,7 +39,11 @@ export interface CustomCommandAPI {
  *	  description: "Deploy current branch to staging",
  *	  async execute(args, ctx) {
  *		 const env = args[0] || "staging";
- *		 const confirmed = await ctx.ui.confirm("Deploy", `Deploy to ${env}?`);
+ *		 // confirm() uses the shared frame, starts on No, and returns false on Escape.
+ *		 const confirmed = await ctx.ui.confirm(
+ *		   "Deploy",
+ *		   `Target: ${env}\nScope: deployment\nState: pending → deployed\nConsequence: remote traffic may change.`,
+ *		 );
  *		 if (!confirmed) return;
  *
  *		 const result = await pi.exec("./deploy.sh", [env]);

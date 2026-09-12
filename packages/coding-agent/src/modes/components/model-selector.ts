@@ -368,7 +368,7 @@ export interface ModelSelection {
 	thinkingLevel: ThinkingLevel;
 	role?: string;
 }
-type RoleSelectCallback = (selection: ModelSelection) => void | Promise<void>;
+type RoleSelectCallback = (selection: ModelSelection) => boolean | undefined | Promise<boolean | undefined>;
 type CancelCallback = () => void;
 interface MenuRoleAction {
 	label: string;
@@ -441,9 +441,9 @@ export class ModelSelectorComponent extends Container {
 		const details: string[] = selected ? wrapTextWithAnsi(selected.selector, inner) : [];
 		let navigation: string[] = [];
 		let title = "Choose a model";
-		let purpose = "Choose a model, scope and reasoning.";
+		let purpose = "";
 		let footer = [
-			`${selectorNavigationHint("choose")} · Tab: provider`,
+			[selectorNavigationHint("choose"), "Tab: provider"].filter(Boolean).join(" · "),
 			`Ctrl+R: refresh${this.#onLogin ? " · Ctrl+L: providers" : ""} · ${selectorCancelHint(searching ? "clear search" : "back")}`,
 		];
 		if (this.#isMenuOpen && selected) {
@@ -1421,8 +1421,8 @@ export class ModelSelectorComponent extends Container {
 		};
 		this.#applying = true;
 		try {
-			await this.#onSelectCallback(selection);
-			if (selection.scope !== "conversation") {
+			const applied = await this.#onSelectCallback(selection);
+			if (applied !== false && selection.scope !== "conversation") {
 				const role = selection.scope === "default" ? "default" : selection.role!;
 				this.#roles[role] = { model: item.model, thinkingLevel };
 			}

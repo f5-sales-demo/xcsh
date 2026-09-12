@@ -32,6 +32,7 @@ export class EventController {
 	#readToolCallAssistantComponents = new Map<string, AssistantMessageComponent>();
 	#lastAssistantComponent: AssistantMessageComponent | undefined = undefined;
 	#idleCompactionTimer?: NodeJS.Timeout;
+	#backgroundCompletionPending = false;
 	#pendingGutters = new Map<string, GutterBlock<any>>();
 	#readGroupAggregator = new ReadGroupOutcomeAggregator();
 	// streamingAssistantGutter is stored on ctx for cross-controller access (e.g. thinking toggle)
@@ -120,7 +121,7 @@ export class EventController {
 		const trimmed = intent?.trim();
 		if (!trimmed || trimmed === this.#lastIntent) return;
 		this.#lastIntent = trimmed;
-		this.ctx.setWorkingMessage(`${trimmed} (esc to interrupt)`);
+		this.ctx.setWorkingMessage(`${trimmed} (${appInterruptHint()})`);
 	}
 
 	subscribeToAgent(): void {
@@ -575,7 +576,7 @@ export class EventController {
 					this.ctx.ui,
 					spinner => theme.fg("spinnerAccent", spinner),
 					text => theme.fg("muted", text),
-					`${reasonText}${actionLabel}… (esc to cancel)`,
+					`${reasonText}${actionLabel}… (${appInterruptHint()})`,
 					getSymbolTheme().spinnerFrames,
 				);
 				this.ctx.statusContainer.addChild(this.ctx.autoCompactionLoader);
@@ -634,7 +635,7 @@ export class EventController {
 					this.ctx.ui,
 					spinner => theme.fg("warning", spinner),
 					text => theme.fg("muted", text),
-					`Retrying (${event.attempt}/${event.maxAttempts}) in ${delaySeconds}s… (esc to cancel)`,
+					`Retrying (${event.attempt}/${event.maxAttempts}) in ${delaySeconds}s… (${appInterruptHint()})`,
 					getSymbolTheme().spinnerFrames,
 				);
 				this.ctx.statusContainer.addChild(this.ctx.retryLoader);
@@ -742,6 +743,10 @@ export class EventController {
 
 	sendCompletionNotification(event?: Extract<AgentSessionEvent, { type: "agent_end" }>): void {
 		if (this.ctx.isBackgrounded === false) return;
+		// A direct POSIX shell stops a detached job that writes even a bell to
+		// its controlling terminal. Herdr has an out-of-band notification path;
+		// plain shell backgrounding must finish without terminal output.
+		if (process.env.HERDR_ENV !== "1") return;
 		const notify = settings.get("completion.notify");
 		if (notify === "off") return;
 		const title = this.ctx.sessionManager.getSessionName();
@@ -757,13 +762,33 @@ export class EventController {
 	}
 
 	async handleBackgroundEvent(event: AgentSessionEvent): Promise<void> {
-		if (event.type !== "agent_end") {
-			return;
-		}
-		if (this.ctx.session.queuedMessageCount > 0 || this.ctx.session.isStreaming) {
-			return;
-		}
-		this.sendCompletionNotification(event);
-		await this.ctx.shutdown();
+		if (event.type !== "agent_end") return;
+		this.beginBackgroundCompletionTracking(event);
+	}
+
+	beginBackgroundCompletionTracking(event?: Extract<AgentSessionEvent, { type: "agent_end" }>): void {
+		if (this.#backgroundCompletionPending) return;
+		this.#backgroundCompletionPending = true;
+		// Return from the agent_end listener before waiting: the agent loop must
+		// finish its own streaming/prompt bookkeeping for waitForIdle to settle.
+		void Bun.sleep(0)
+			.then(async () => {
+				await this.ctx.session.waitForIdle();
+				if (this.ctx.session.queuedMessageCount > 0) return;
+				// Agent idle precedes the outer prompt() finally block. Yield until
+				// its in-flight counter clears before disposing the session.
+				while (this.ctx.session.isStreaming) await Bun.sleep(1);
+				if (this.ctx.session.queuedMessageCount > 0) return;
+				this.sendCompletionNotification(event);
+				await this.ctx.shutdown();
+			})
+			.catch(async () => {
+				await this.ctx.shutdown();
+			})
+			.finally(() => {
+				this.#backgroundCompletionPending = false;
+			});
 	}
 }
+
+import { appInterruptHint } from "../utils/keybinding-matchers";

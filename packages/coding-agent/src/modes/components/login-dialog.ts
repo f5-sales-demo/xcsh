@@ -2,8 +2,15 @@ import { getOAuthProviders } from "@f5-sales-demo/pi-ai";
 import { Container, getKeybindings, Input, Spacer, Text, type TUI } from "@f5-sales-demo/pi-tui";
 import { theme } from "../../modes/theme/theme";
 import { type OpenHttpUrlResult, openHttpUrl } from "../../utils/open";
+import { appInterruptHint, matchesAppInterrupt } from "../utils/keybinding-matchers";
 import { presentAuthLink } from "./auth-link-presenter";
-import { DynamicBorder } from "./dynamic-border";
+import {
+	matchesSelectorKey,
+	selectorCancelHint,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorKeys,
+} from "./selector-frame";
 
 interface LoginDialogDependencies {
 	openUrl?: (url: string) => undefined | OpenHttpUrlResult | Promise<OpenHttpUrlResult>;
@@ -20,6 +27,10 @@ export class LoginDialogComponent extends Container {
 	#abortController = new AbortController();
 	#inputResolver?: (value: string) => void;
 	#inputRejecter?: (error: Error) => void;
+	#providerName: string;
+	#offset = 0;
+	#capacity = 1;
+	#length = 0;
 
 	constructor(
 		tui: TUI,
@@ -31,13 +42,7 @@ export class LoginDialogComponent extends Container {
 		this.#tui = tui;
 
 		const providerInfo = getOAuthProviders().find(p => p.id === providerId);
-		const providerName = providerInfo?.name || providerId;
-
-		// Top border
-		this.addChild(new DynamicBorder());
-
-		// Title
-		this.addChild(new Text(theme.fg("warning", `Login to ${providerName}`), 1, 0));
+		this.#providerName = providerInfo?.name || providerId;
 
 		// Dynamic content area
 		this.#contentContainer = new Container();
@@ -53,11 +58,35 @@ export class LoginDialogComponent extends Container {
 			}
 		};
 		this.#input.onEscape = () => {
-			this.#cancel();
+			// The configured selector Back binding is handled by the dialog.
 		};
+	}
 
-		// Bottom border
-		this.addChild(new DynamicBorder());
+	override render(width: number): string[] {
+		const rows = this.#tui.terminal?.rows || process.stdout.rows || 24;
+		const inner = selectorFrameContentWidth(width);
+		const content = this.#contentContainer
+			.render(inner)
+			.filter(line => !/^\s*(?:Esc: cancel|\(Escape to cancel\))\s*$/u.test(Bun.stripANSI(line)));
+		this.#length = content.length;
+		this.#capacity = Math.max(1, rows - 10);
+		this.#offset = Math.max(0, Math.min(this.#offset, Math.max(0, this.#length - this.#capacity)));
+		return selectorFrame(
+			width,
+			rows,
+			`Login to ${this.#providerName}`,
+			"Complete provider authentication; credentials are handled by the provider flow and are never displayed here.",
+			[],
+			content.slice(this.#offset, this.#offset + this.#capacity),
+			[],
+			[
+				...(this.#length > this.#capacity
+					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: authentication details`]
+					: []),
+				appInterruptHint(),
+				selectorCancelHint("cancel login"),
+			],
+		);
 	}
 
 	get signal(): AbortSignal {
@@ -131,7 +160,7 @@ export class LoginDialogComponent extends Container {
 		if (!this.#contentContainer.children.includes(this.#input)) {
 			this.#contentContainer.addChild(this.#input);
 		}
-		this.#contentContainer.addChild(new Text(theme.fg("dim", "(Escape to cancel, Enter to submit)"), 1, 0));
+		this.#contentContainer.addChild(new Text(theme.fg("dim", "Esc: cancel"), 1, 0));
 
 		this.#input.setValue("");
 		this.#tui.requestRender();
@@ -163,6 +192,20 @@ export class LoginDialogComponent extends Container {
 	handleInput(data: string): void {
 		const kb = getKeybindings();
 
+		if (matchesAppInterrupt(data)) {
+			this.#cancel();
+			return;
+		}
+		if (matchesSelectorKey(data, "pageUp") || matchesSelectorKey(data, "pageDown")) {
+			this.#offset = Math.max(
+				0,
+				Math.min(
+					Math.max(0, this.#length - this.#capacity),
+					this.#offset + (matchesSelectorKey(data, "pageUp") ? -this.#capacity : this.#capacity),
+				),
+			);
+			return;
+		}
 		if (kb.matches(data, "tui.select.cancel")) {
 			this.#cancel();
 			return;

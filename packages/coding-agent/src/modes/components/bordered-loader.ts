@@ -1,12 +1,18 @@
 import { CancellableLoader, Container, Spacer, Text, type TUI } from "@f5-sales-demo/pi-tui";
 import type { Theme } from "../../modes/theme/theme";
+import { appInterruptHint } from "../utils/keybinding-matchers";
 import { DynamicBorder } from "./dynamic-border";
 
 /** Loader wrapped with borders for hook UI */
 export class BorderedLoader extends Container {
 	#loader: CancellableLoader;
 
-	constructor(tui: TUI, theme: Theme, message: string) {
+	constructor(
+		tui: TUI,
+		theme: Theme,
+		message: string,
+		private cancellable = true,
+	) {
 		super();
 		const borderColor = (s: string) => theme.fg("border", s);
 		this.addChild(new DynamicBorder(borderColor));
@@ -18,7 +24,9 @@ export class BorderedLoader extends Container {
 		);
 		this.addChild(this.#loader);
 		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("muted", "esc cancel"), 1, 0));
+		this.addChild(
+			new Text(theme.fg("muted", cancellable ? appInterruptHint() : "This operation cannot be interrupted."), 1, 0),
+		);
 		this.addChild(new Spacer(1));
 		this.addChild(new DynamicBorder(borderColor));
 	}
@@ -32,7 +40,7 @@ export class BorderedLoader extends Container {
 	}
 
 	handleInput(data: string): void {
-		this.#loader.handleInput(data);
+		if (this.cancellable) this.#loader.handleInput(data);
 	}
 
 	dispose(): void {

@@ -10,6 +10,24 @@ function createEditor() {
 	return new CustomEditor(defaultEditorTheme);
 }
 
+it("Ctrl+C interrupts by default while Escape only navigates", () => {
+	const editor = createEditor();
+	const interrupt = vi.fn();
+	const navigate = vi.fn();
+	editor.onEscape = interrupt;
+	editor.onNavigateBack = navigate;
+	editor.handleInput("\x1b");
+	expect(interrupt).not.toHaveBeenCalled();
+	expect(navigate).toHaveBeenCalledTimes(1);
+	editor.handleInput(ctrl("c"));
+	expect(interrupt).toHaveBeenCalledTimes(1);
+	editor.setActionKeys("app.interrupt", ["alt+x"]);
+	editor.handleInput(ctrl("c"));
+	expect(interrupt).toHaveBeenCalledTimes(1);
+	editor.handleInput("\x1bx");
+	expect(interrupt).toHaveBeenCalledTimes(2);
+});
+
 describe("CustomEditor temporary model selector keybinding", () => {
 	it("triggers the temporary selector from a remapped action key instead of Alt+P", () => {
 		const editor = createEditor();

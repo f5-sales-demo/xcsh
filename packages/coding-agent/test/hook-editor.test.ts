@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "bun:test";
-import { setKeybindings, type TUI } from "@f5-sales-demo/pi-tui";
+import { setKeybindings, type TUI, visibleWidth } from "@f5-sales-demo/pi-tui";
 import { KeybindingsManager } from "../src/config/keybindings";
 import { HookEditorComponent } from "../src/modes/components/hook-editor";
 import { ExtensionUiController } from "../src/modes/controllers/extension-ui-controller";
@@ -47,9 +47,10 @@ type TestContext = InteractiveModeContext & {
 };
 
 function createControllerContext() {
+	const notifyUserPrompt = vi.fn();
 	const editor = { id: "core-editor" };
 	const editorContainer = {
-		children: [] as unknown[],
+		children: [editor] as unknown[],
 		clear() {
 			this.children = [];
 		},
@@ -63,22 +64,77 @@ function createControllerContext() {
 		start: vi.fn(),
 		stop: vi.fn(),
 		terminal: { columns: 120, rows: 24 },
+		showOverlay(component: unknown) {
+			const previous = [...editorContainer.children];
+			editorContainer.clear();
+			editorContainer.addChild(component);
+			let hidden = false;
+			return {
+				hide() {
+					if (hidden) return;
+					hidden = true;
+					editorContainer.clear();
+					for (const child of previous) editorContainer.addChild(child);
+				},
+			};
+		},
 	} as unknown as TestContext["ui"] & {
 		setFocus: ReturnType<typeof vi.fn>;
 		requestRender: ReturnType<typeof vi.fn>;
 	};
 	const ctx = {
-		session: { userInteractions: new UserInteractions(), notifyUserPrompt: vi.fn() },
+		session: { userInteractions: new UserInteractions(), notifyUserPrompt },
 		editor,
 		editorContainer,
 		ui,
 		hookEditor: undefined,
 	} as unknown as TestContext;
 
-	return { ctx, editor, editorContainer, ui };
+	return { ctx, editor, editorContainer, notifyUserPrompt, ui };
 }
 
 describe("HookEditorComponent default (hook) mode", () => {
+	it("bounds long drafts at all supported sizes without losing their submitted text", () => {
+		const text = Array.from({ length: 60 }, (_, index) => `Synthetic draft line ${index}`).join("\n");
+		for (const [columns, rows] of [
+			[60, 20],
+			[80, 24],
+			[100, 32],
+			[140, 40],
+		]) {
+			const tui = createTui();
+			Object.assign(tui.terminal, { columns, rows });
+			const submitted = vi.fn();
+			const component = new HookEditorComponent(tui, "Edit synthetic draft", text, submitted, vi.fn());
+			const lines = component.render(columns);
+			expect(lines.length).toBeLessThanOrEqual(rows);
+			expect(lines.every(line => visibleWidth(line) <= Math.min(columns, 100))).toBe(true);
+			component.handleInput("\x1b[13;5u");
+			component.handleInput("\x1b[13;5u");
+			expect(submitted).toHaveBeenCalledTimes(1);
+			expect(submitted).toHaveBeenCalledWith(text);
+		}
+	});
+	it("Escape returns from question details before closing and preserves the draft", () => {
+		const cancelled = vi.fn();
+		const submitted = vi.fn();
+		const tui = createTui();
+		Object.assign(tui.terminal, { rows: 20 });
+		const component = new HookEditorComponent(
+			tui,
+			"Long synthetic question. ".repeat(40),
+			"draft",
+			submitted,
+			cancelled,
+		);
+		component.render(60);
+		component.handleInput("\t");
+		component.handleInput("\x1b[6~");
+		component.handleInput("\x1b");
+		expect(cancelled).not.toHaveBeenCalled();
+		component.handleInput("\x1b[13;5u");
+		expect(submitted).toHaveBeenCalledWith("draft");
+	});
 	it("inserts a newline on Enter instead of submitting immediately", () => {
 		const onSubmit = vi.fn();
 		const onCancel = vi.fn();
@@ -210,7 +266,7 @@ describe("HookEditorComponent prompt-style mode", () => {
 		expect(onSubmit).toHaveBeenCalledWith("x\ny");
 	});
 
-	it("renders prompt-style editor with legacy ask chrome", () => {
+	it("renders prompt-style editor in the shared bounded frame", () => {
 		const component = new HookEditorComponent(createTui(), "Prompt", undefined, vi.fn(), vi.fn(), {
 			promptStyle: true,
 		});
@@ -218,12 +274,13 @@ describe("HookEditorComponent prompt-style mode", () => {
 		const rendered = renderText(component);
 		const lines = renderLines(component);
 
-		expect(lines[0]).toMatch(/^─+$/);
-		expect(lines.at(-1)).toMatch(/^─+$/);
-		expect(lines[4]?.startsWith("> ")).toBe(true);
-		expect(rendered).toContain(" enter submit  esc cancel");
-		expect(rendered).not.toContain("shift+enter newline");
-		expect(rendered).toContain("ctrl+g external editor");
+		expect(lines[0]).toMatch(/^╭─+╮$/);
+		expect(lines.at(-1)).toMatch(/^╰─+╯$/);
+		expect(lines.some(line => line.includes("> "))).toBe(true);
+		expect(rendered).not.toContain("enter submit");
+		expect(rendered).toContain("Shift+Enter: newline");
+		expect(rendered).toContain("Ctrl+G: external editor");
+		expect(lines.every(line => visibleWidth(line) <= 100)).toBe(true);
 	});
 
 	it("keeps the prompt gutter visible after typing in prompt-style mode", () => {
@@ -236,8 +293,7 @@ describe("HookEditorComponent prompt-style mode", () => {
 		}
 
 		const lines = renderLines(component);
-		expect(lines[4]?.startsWith("> hello")).toBe(true);
-		expect(lines[4]?.startsWith("hello")).toBe(false);
+		expect(lines.some(line => line.includes("> hello"))).toBe(true);
 	});
 
 	it("aligns wrapped prompt-style continuation rows under the text column", () => {
@@ -246,9 +302,9 @@ describe("HookEditorComponent prompt-style mode", () => {
 		});
 
 		const lines = renderLines(component, 12);
-		expect(lines[4]).toBe("> abcdefghij");
-		expect(lines[5]?.startsWith("  klm")).toBe(true);
-		expect(lines[5]?.startsWith(">")).toBe(false);
+		expect(lines[4]).toBe("│ > abcdef │");
+		expect(lines[5]).toBe("│   ghijkl │");
+		expect(lines[6]).toMatch(/^│ {3}m. *│$/);
 	});
 
 	it("cancels on Escape", () => {
@@ -264,10 +320,11 @@ describe("HookEditorComponent prompt-style mode", () => {
 		expect(onSubmit).not.toHaveBeenCalled();
 	});
 
-	it("cancels on app.interrupt in prompt-style mode even when remapped", () => {
+	it("uses remapped navigation, not app.interrupt, to close prompt-style input", () => {
 		setKeybindings(
 			KeybindingsManager.inMemory({
 				"app.interrupt": "ctrl+c",
+				"tui.select.cancel": "alt+x",
 			}),
 		);
 		const onSubmit = vi.fn();
@@ -277,6 +334,9 @@ describe("HookEditorComponent prompt-style mode", () => {
 		});
 
 		component.handleInput("\x03");
+		component.handleInput("\x1b");
+		expect(onCancel).not.toHaveBeenCalled();
+		component.handleInput("\x1bx");
 
 		expect(onCancel).toHaveBeenCalledTimes(1);
 		expect(onSubmit).not.toHaveBeenCalled();
@@ -426,7 +486,7 @@ describe("ExtensionUiController hook editor abort", () => {
 	});
 
 	it("hides the hook editor and resolves undefined when the caller aborts", async () => {
-		const { ctx, editor, editorContainer, ui } = createControllerContext();
+		const { ctx, editor, editorContainer, notifyUserPrompt, ui } = createControllerContext();
 		const controller = new ExtensionUiController(ctx);
 		const abortController = new AbortController();
 		const controllerWithAbort = controller as unknown as {
@@ -453,6 +513,10 @@ describe("ExtensionUiController hook editor abort", () => {
 		const pending = Symbol("pending");
 		const result = await Promise.race([promise, Bun.sleep(20).then(() => pending)]);
 		expect(result).toBeUndefined();
+		expect(notifyUserPrompt.mock.calls).toEqual([
+			["start", "input"],
+			["end", "input"],
+		]);
 	});
 
 	it("forwards editorOptions to HookEditorComponent", async () => {

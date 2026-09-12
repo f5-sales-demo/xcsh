@@ -70,6 +70,8 @@ export interface HookUIContext {
 
 	/**
 	 * Show a custom component with keyboard focus.
+	 * Custom rendering remains hook-owned. Use shared input and keybinding helpers inside the component,
+	 * keep Escape as navigation, and call done() only after the displayed outcome is true.
 	 * The factory receives TUI, theme, and a done() callback to close the component.
 	 * Can be async for fire-and-forget work (don't await the work, just start it).
 	 *
@@ -77,17 +79,17 @@ export interface HookUIContext {
 	 * @returns Promise that resolves with the value passed to done()
 	 *
 	 * @example
-	 * // Sync factory
+	 * // Sync factory. The harness preserves the caller's draft and restores focus when this settles.
 	 * const result = await ctx.ui.custom((tui, theme, done) => {
 	 *   const component = new MyComponent(tui, theme);
 	 *   component.onFinish = (value) => done(value);
 	 *   return component;
 	 * });
 	 *
-	 * // Async factory with fire-and-forget work
+	 * // Async factory with fire-and-forget work. Keep failures visible until retry or dismissal.
 	 * const result = await ctx.ui.custom(async (tui, theme, done) => {
 	 *   const loader = new CancellableLoader(tui, theme.fg("contentAccent"), theme.fg("muted"), "Working...");
-	 *   loader.onAbort = () => done(null);
+	 *   // onAbort is only a request: keep the view until work has stopped or completed.
 	 *   doWork(loader.signal).then(done);  // Don't await - fire and forget
 	 *   return loader;
 	 * });

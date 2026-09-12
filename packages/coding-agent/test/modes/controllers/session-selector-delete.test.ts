@@ -47,18 +47,21 @@ describe("SessionSelectorComponent delete confirmation", () => {
 		const selector = createSelector(onDelete);
 
 		selector.handleInput("\x1b[3~");
-		expect(renderText(selector)).toContain("Delete session?");
+		expect(renderText(selector)).toContain("Review session deletion");
+		expect(renderText(selector)).toContain("Cancel");
 		expect(renderText(selector)).toContain("Alpha");
 
+		selector.handleInput("\x1b[B");
 		selector.handleInput("\n");
 		await Bun.sleep(0);
 
 		const rendered = renderText(selector);
 		expect(onDelete).toHaveBeenCalledTimes(1);
-		expect(rendered).toContain("Error: disk failed");
+		expect(rendered).toContain("disk failed");
 		expect(rendered).toContain("Alpha");
-		expect(rendered).toContain("Beta");
-		expect(rendered).not.toContain("Delete session?");
+		expect(rendered).toContain("Retry change");
+		selector.handleInput("\n");
+		expect(renderText(selector)).toContain("Beta");
 	});
 
 	it("keeps the session visible when delete is canceled upstream", async () => {
@@ -66,14 +69,16 @@ describe("SessionSelectorComponent delete confirmation", () => {
 		const selector = createSelector(onDelete);
 
 		selector.handleInput("\x1b[3~");
+		selector.handleInput("\x1b[B");
 		selector.handleInput("\n");
 		await Bun.sleep(0);
 
 		const rendered = renderText(selector);
 		expect(onDelete).toHaveBeenCalledTimes(1);
 		expect(rendered).toContain("Alpha");
-		expect(rendered).toContain("Beta");
-		expect(rendered).not.toContain("Error:");
+		expect(rendered).toContain("Session deletion was not completed");
+		selector.handleInput("\n");
+		expect(renderText(selector)).toContain("Beta");
 	});
 
 	it("removes the session row after a successful delete", async () => {
@@ -81,6 +86,7 @@ describe("SessionSelectorComponent delete confirmation", () => {
 		const selector = createSelector(onDelete);
 
 		selector.handleInput("\x1b[3~");
+		selector.handleInput("\x1b[B");
 		selector.handleInput("\n");
 		await Bun.sleep(0);
 

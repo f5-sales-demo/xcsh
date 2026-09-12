@@ -4,6 +4,7 @@ import type { InteractiveModeContext, SubmittedUserInput } from "../src/modes/ty
 
 type FakeEditor = {
 	onEscape?: () => void;
+	onNavigateBack?: () => void;
 	onSubmit?: (text: string) => Promise<void>;
 	shouldBypassAutocompleteOnEscape?: () => boolean;
 	onClear?: () => void;
@@ -56,6 +57,7 @@ function createContext(): {
 		ensureLoadingAnimation: ReturnType<typeof vi.fn>;
 		handleBtwCommand: ReturnType<typeof vi.fn>;
 		handleBtwEscape: ReturnType<typeof vi.fn>;
+		handleBtwInterrupt: ReturnType<typeof vi.fn>;
 		hasActiveBtw: ReturnType<typeof vi.fn>;
 		onInputCallback: ReturnType<typeof vi.fn>;
 		prompt: ReturnType<typeof vi.fn>;
@@ -75,6 +77,7 @@ function createContext(): {
 	const requestRender = vi.fn();
 	const handleBtwCommand = vi.fn(async () => {});
 	const handleBtwEscape = vi.fn(() => true);
+	const handleBtwInterrupt = vi.fn(() => true);
 	const hasActiveBtw = vi.fn(() => false);
 	const startPendingSubmission = vi.fn((input: { text: string; images?: InteractiveModeContext["pendingImages"] }) => {
 		ensureLoadingAnimation();
@@ -147,6 +150,7 @@ function createContext(): {
 		handleHotkeysCommand: vi.fn(),
 		handleSTTToggle: vi.fn(),
 		handleBtwEscape,
+		handleBtwInterrupt,
 		handleBtwCommand,
 		hasActiveBtw,
 		showTreeSelector: vi.fn(),
@@ -167,6 +171,7 @@ function createContext(): {
 			ensureLoadingAnimation,
 			handleBtwCommand,
 			handleBtwEscape,
+			handleBtwInterrupt,
 			hasActiveBtw,
 			onInputCallback,
 			prompt,
@@ -177,6 +182,21 @@ function createContext(): {
 }
 
 describe("InputController escape behavior", () => {
+	it("navigation does not abort active work and idle interrupt retains draft clearing", () => {
+		const { ctx, editor, spies } = createContext();
+		const clear = vi.fn();
+		ctx.clearEditor = clear;
+		ctx.lastSigintTime = 0;
+		const controller = new InputController(ctx);
+		controller.setupKeyHandlers();
+		(ctx.session as { isStreaming: boolean }).isStreaming = true;
+		editor.onNavigateBack?.();
+		expect(spies.abort).not.toHaveBeenCalled();
+		(ctx.session as { isStreaming: boolean }).isStreaming = false;
+		editor.setText("retained draft");
+		editor.onEscape?.();
+		expect(clear).toHaveBeenCalledTimes(1);
+	});
 	it("prefers canceling a pending optimistic submission before aborting the session", async () => {
 		const { ctx, editor, spies } = createContext();
 		const submission = createSubmission({ text: "hello" });
@@ -253,7 +273,7 @@ describe("InputController escape behavior", () => {
 		expect(spies.abort).not.toHaveBeenCalled();
 	});
 
-	it("dismisses an active /btw panel before aborting the main stream", () => {
+	it("interrupts an active /btw request before aborting the main stream", () => {
 		const { ctx, editor, spies } = createContext();
 		(ctx.session as { isStreaming: boolean }).isStreaming = true;
 		spies.hasActiveBtw.mockReturnValue(true);
@@ -263,11 +283,24 @@ describe("InputController escape behavior", () => {
 		expect(editor.shouldBypassAutocompleteOnEscape?.()).toBe(true);
 		editor.onEscape?.();
 
-		expect(spies.handleBtwEscape).toHaveBeenCalledTimes(1);
+		expect(spies.handleBtwInterrupt).toHaveBeenCalledTimes(1);
 		expect(spies.abort).not.toHaveBeenCalled();
 	});
 
-	it("dismisses an active /btw panel before canceling a pending optimistic submission", () => {
+	it("routes literal Escape to /btw navigation without invoking interruption", () => {
+		const { ctx, editor, spies } = createContext();
+		spies.hasActiveBtw.mockReturnValue(true);
+		const controller = new InputController(ctx);
+
+		controller.setupKeyHandlers();
+		editor.onNavigateBack?.();
+
+		expect(spies.handleBtwEscape).toHaveBeenCalledTimes(1);
+		expect(spies.handleBtwInterrupt).not.toHaveBeenCalled();
+		expect(spies.abort).not.toHaveBeenCalled();
+	});
+
+	it("interrupts an active /btw request before canceling a pending optimistic submission", () => {
 		const { ctx, editor, spies } = createContext();
 		ctx.loadingAnimation = {} as InteractiveModeContext["loadingAnimation"];
 		spies.hasActiveBtw.mockReturnValue(true);
@@ -277,13 +310,13 @@ describe("InputController escape behavior", () => {
 		expect(editor.shouldBypassAutocompleteOnEscape?.()).toBe(true);
 		editor.onEscape?.();
 
-		expect(spies.handleBtwEscape).toHaveBeenCalledTimes(1);
+		expect(spies.handleBtwInterrupt).toHaveBeenCalledTimes(1);
 		expect(spies.cancelPendingSubmission).not.toHaveBeenCalled();
 		expect(spies.clearQueue).not.toHaveBeenCalled();
 		expect(spies.abort).not.toHaveBeenCalled();
 	});
 
-	it("dismisses an active /btw panel before aborting bash", () => {
+	it("interrupts an active /btw request before aborting bash", () => {
 		const { ctx, editor, spies } = createContext();
 		(ctx.session as { isBashRunning: boolean }).isBashRunning = true;
 		spies.hasActiveBtw.mockReturnValue(true);
@@ -293,7 +326,7 @@ describe("InputController escape behavior", () => {
 		expect(editor.shouldBypassAutocompleteOnEscape?.()).toBe(true);
 		editor.onEscape?.();
 
-		expect(spies.handleBtwEscape).toHaveBeenCalledTimes(1);
+		expect(spies.handleBtwInterrupt).toHaveBeenCalledTimes(1);
 		expect(spies.abortBash).not.toHaveBeenCalled();
 		expect(spies.abort).not.toHaveBeenCalled();
 	});

@@ -14,8 +14,11 @@
  * allow-by-default with targeted denies, so the effective boundary was their intersection and the
  * intersection refused ordinary work. One object means the pre-check and the kernel cannot disagree.
  */
+
+import * as os from "node:os";
 import * as path from "node:path";
 import { buildContainmentFence, type ContainmentFence } from "./containment";
+import { isRemoteAsk } from "./remote-permissions";
 
 /**
  * Trusted context added to commands launched by the fenced model bash tool.
@@ -84,8 +87,10 @@ export function resolveSessionFence(
 
 	const allowRead = readSetting<string[]>(settings, "sandbox.allowRead", []);
 	const allowWrite = readSetting<string[]>(settings, "sandbox.allowWrite", []);
+	const ask = isRemoteAsk(settings as import("./remote-permissions").RuntimeSandboxSettings);
 	const signature = [
 		workspace,
+		ask ? "remote-ask" : "operator-rights",
 		JSON.stringify(allowRead),
 		JSON.stringify(allowWrite),
 		extras.sessionTmp ?? "",
@@ -103,7 +108,11 @@ export function resolveSessionFence(
 	const fence = buildContainmentFence({
 		workspace,
 		sessionTmp: extras.sessionTmp,
-		extraRoots: [...(extras.extraRoots ?? []), ...allowRead, ...allowWrite],
+		extraRoots: ask
+			? [...(extras.extraRoots ?? []), os.tmpdir(), ...allowWrite]
+			: [...(extras.extraRoots ?? []), ...allowRead, ...allowWrite],
+		readOnlyRoots: ask ? [path.parse(workspace).root, ...allowRead] : undefined,
+		strictWorkspaceWrite: ask,
 	});
 	if (cache.size >= CACHE_LIMIT) {
 		const oldest = cache.keys().next();

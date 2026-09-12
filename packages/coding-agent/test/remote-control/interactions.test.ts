@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import Ajv from "ajv";
+import { ExtensionToolWrapper } from "../../src/extensibility/extensions/wrapper";
 import { RemoteInteractions, validateInteractionRequests } from "../../src/remote-control/interactions";
 import type { Notification } from "../../src/remote-control/session";
 import { UserInteractions } from "../../src/session/user-interactions";
@@ -20,6 +21,60 @@ const validCommandRequest = ajv.compile(commandRequestSchema);
 const validCommandResponse = ajv.compile(commandResponseSchema);
 const validFileRequest = ajv.compile(fileRequestSchema);
 const validFileResponse = ajv.compile(fileResponseSchema);
+
+test.each([
+	{
+		toolName: "bash",
+		item: { type: "commandExecution", command: "touch fixture.txt", cwd: "/tmp", commandActions: [] },
+		method: "item/commandExecution/requestApproval",
+	},
+	{
+		toolName: "write",
+		item: { type: "fileChange", changes: [] },
+		method: "item/fileChange/requestApproval",
+	},
+])("extension approvals retain tool identity for remote $method", async ({ toolName, item, method }) => {
+	const broker = new UserInteractions();
+	const remote = new RemoteInteractions(
+		broker,
+		toolCallId =>
+			toolCallId === "tool-a"
+				? { threadId: "thread-a", turnId: "turn-a", itemId: "item-a", startedAtMs: 1234, item }
+				: undefined,
+		() => {},
+	);
+	const runner = {
+		hasHandlers: (event: string) => event === "tool_call",
+		emitToolCall: async () => {
+			const answer = await broker.request(
+				{ kind: "select", title: "Allow this operation?", options: ["Allow once", "Decline"] },
+				() => new Promise(() => {}),
+			);
+			return answer === "Allow once" ? undefined : { block: true, reason: "Declined" };
+		},
+		emitToolResult: async () => undefined,
+	};
+	const tool = {
+		name: toolName,
+		label: toolName,
+		description: "fixture",
+		parameters: { type: "object" },
+		execute: async () => ({ content: [{ type: "text", text: "executed" }] }),
+	};
+	const execution = new ExtensionToolWrapper(tool as never, runner as never)
+		.execute("tool-a", {} as never)
+		.catch(error => error);
+	await Bun.sleep(0);
+	try {
+		const request = remote.pending()[0];
+		expect(request?.method).toBe(method);
+		expect(remote.respond(request.id, { decision: "accept" })).toEqual({ accepted: true });
+		expect(await execution).toMatchObject({ content: [{ type: "text", text: "executed" }] });
+	} finally {
+		broker.cancelAll();
+		remote.close();
+	}
+});
 
 test("tool questions use pinned request fields and settle with one owner", async () => {
 	const broker = new UserInteractions();

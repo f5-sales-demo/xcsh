@@ -11,6 +11,7 @@ import {
 import type { ImageContent, TextContent } from "@f5-sales-demo/pi-ai";
 import type { Static, TSchema } from "@sinclair/typebox";
 import type { Theme } from "../../modes/theme/theme";
+import { withToolInteraction } from "../../session/user-interactions";
 import { applyToolProxy } from "../tool-proxy";
 import type { ExtensionRunner } from "./runner";
 import type { RegisteredTool, ToolCallEventResult } from "./types";
@@ -121,12 +122,14 @@ export class ExtensionToolWrapper<TParameters extends TSchema = TSchema, TDetail
 		// Emit tool_call event - extensions can block execution
 		if (this.runner.hasHandlers("tool_call")) {
 			try {
-				const callResult = (await this.runner.emitToolCall({
-					type: "tool_call",
-					toolName: this.tool.name,
-					toolCallId,
-					input: params as Record<string, unknown>,
-				})) as ToolCallEventResult | undefined;
+				const callResult = (await withToolInteraction(toolCallId, () =>
+					this.runner.emitToolCall({
+						type: "tool_call",
+						toolName: this.tool.name,
+						toolCallId,
+						input: params as Record<string, unknown>,
+					}),
+				)) as ToolCallEventResult | undefined;
 
 				if (callResult?.block) {
 					const reason = callResult.reason || "Tool execution was blocked by an extension";

@@ -1,0 +1,550 @@
+{
+  "fixture": "reviewed-exit",
+  "runs": [
+    {
+      "name": "60x20-dark-unicode",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-R7LjAT/sessions/2026-09-12T07-33-16-969Z_157c6f8f8a518128.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-unicode/walkthrough.json",
+        "terminalEvents": "60x20-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-dark-ascii",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-ebJOmI/sessions/2026-09-12T07-33-20-958Z_157c6f936fb162d2.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-ascii/walkthrough.json",
+        "terminalEvents": "60x20-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-unicode",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-33Ubg3/sessions/2026-09-12T07-33-24-927Z_157c6f974fe88511.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-unicode/walkthrough.json",
+        "terminalEvents": "60x20-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-ascii",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-ZX6Qya/sessions/2026-09-12T07-33-28-910Z_157c6f9b33aa2202.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-ascii/walkthrough.json",
+        "terminalEvents": "60x20-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-unicode",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-875c25/sessions/2026-09-12T07-33-32-836Z_157c6f9f092b4f19.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-unicode/walkthrough.json",
+        "terminalEvents": "80x24-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-ascii",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-dVbf0r/sessions/2026-09-12T07-33-36-893Z_157c6fa2ff407ee4.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-ascii/walkthrough.json",
+        "terminalEvents": "80x24-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-unicode",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-ii3uGG/sessions/2026-09-12T07-33-40-913Z_157c6fa6ec72a8e7.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-unicode/walkthrough.json",
+        "terminalEvents": "80x24-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-ascii",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-BKh29P/sessions/2026-09-12T07-33-44-991Z_157c6faae7df2e73.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-ascii/walkthrough.json",
+        "terminalEvents": "80x24-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-unicode",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-2MBGRE/sessions/2026-09-12T07-33-49-012Z_157c6faed532100c.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-unicode/walkthrough.json",
+        "terminalEvents": "100x32-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-ascii",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-r7l4ZB/sessions/2026-09-12T07-33-53-183Z_157c6fb2e7d863c5.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-ascii/walkthrough.json",
+        "terminalEvents": "100x32-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-unicode",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-WJKd90/sessions/2026-09-12T07-33-57-351Z_157c6fb6f9cc8180.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-unicode/walkthrough.json",
+        "terminalEvents": "100x32-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-ascii",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-pq5Xxl/sessions/2026-09-12T07-34-01-584Z_157c6fbb1be786da.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-ascii/walkthrough.json",
+        "terminalEvents": "100x32-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-unicode",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-3H84yt/sessions/2026-09-12T07-34-05-821Z_157c6fbf3f69cfe6.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-unicode/walkthrough.json",
+        "terminalEvents": "140x40-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-ascii",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-aHomp8/sessions/2026-09-12T07-34-10-331Z_157c6fc3a6e750ec.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-ascii/walkthrough.json",
+        "terminalEvents": "140x40-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-unicode",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-unicode/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-XfPCxu/sessions/2026-09-12T07-34-14-775Z_157c6fc7fdd0c3e5.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-unicode/walkthrough.json",
+        "terminalEvents": "140x40-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-ascii",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-ascii/evidence",
+        "persistence": {
+          "sessionFile": "/tmp/xcsh-terminal-uat-M4tS51/sessions/2026-09-12T07-34-19-238Z_157c6fcc59ad8c5a.jsonl",
+          "providerPosts": 1,
+          "noWriteBeforeReview": true,
+          "cancelLeftBytesUnchanged": true,
+          "exitAndQuitSharedReview": true,
+          "confirmedExitCode": 0,
+          "reopenedSubmittedMessage": true,
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            },
+            {
+              "method": "POST",
+              "path": "/v1/messages"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-ascii/walkthrough.json",
+        "terminalEvents": "140x40-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    }
+  ],
+  "complete": true
+}

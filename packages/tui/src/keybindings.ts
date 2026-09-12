@@ -139,7 +139,7 @@ export const TUI_KEYBINDINGS = {
 	},
 	"tui.select.confirm": { defaultKeys: "enter", description: "Confirm selection" },
 	"tui.select.cancel": {
-		defaultKeys: ["escape", "ctrl+c"],
+		defaultKeys: "escape",
 		description: "Cancel selection",
 	},
 } as const satisfies KeybindingDefinitions;

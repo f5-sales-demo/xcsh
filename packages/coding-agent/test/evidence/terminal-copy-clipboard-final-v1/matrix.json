@@ -1,0 +1,646 @@
+{
+  "fixture": "copy-clipboard",
+  "runs": [
+    {
+      "name": "60x20-dark-unicode",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "8309d7485dfd27bd9387f120656af6d93e3ac4d3641d95aa8ae72018eeadbab2"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-unicode/walkthrough.json",
+        "terminalEvents": "60x20-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-dark-ascii",
+      "size": "60x20",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-dark-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "44c2527e89103360c0070b7870f1b545c88558c29b9969463a93c40fc34b5ca2"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "60x20-dark-ascii/walkthrough.json",
+        "terminalEvents": "60x20-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-unicode",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "358fc8ec5f300829608e2e245ea608bbca9ec2efa74a8a9afaa5435cc42aabd0"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-unicode/walkthrough.json",
+        "terminalEvents": "60x20-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "60x20-light-ascii",
+      "size": "60x20",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "60x20-light-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "ed103b818898a5acf76ce04dd4812b0ac2be571e3fd8a3518b1efb8c3090a3de"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "60x20-light-ascii/walkthrough.json",
+        "terminalEvents": "60x20-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-unicode",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "b596cb14eafd0e7c876ffb749e79167ddf5d1cd5d38d9529c697b6749172dab1"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-unicode/walkthrough.json",
+        "terminalEvents": "80x24-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-dark-ascii",
+      "size": "80x24",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-dark-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "c74d0fe59fdaa0ad0421d48523426b5c16933f7c8094af5c3f62ceefa683d2ac"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "80x24-dark-ascii/walkthrough.json",
+        "terminalEvents": "80x24-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-unicode",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "8cc36330188d6880c5628ab8993ec56488c00a4199599a133e49a755bc5e710b"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-unicode/walkthrough.json",
+        "terminalEvents": "80x24-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "80x24-light-ascii",
+      "size": "80x24",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "80x24-light-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "93d25a9617257bbdeb6b1e993284306ebde6de6a38f8501893e24c74fa878510"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "80x24-light-ascii/walkthrough.json",
+        "terminalEvents": "80x24-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-unicode",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "ce67be680d10f668c57d733a7cc62e03dd0c9beaa7a2ca604c44f0765b7dbaee"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-unicode/walkthrough.json",
+        "terminalEvents": "100x32-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-dark-ascii",
+      "size": "100x32",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-dark-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "05f09fba88e3ab2be3411925c961fc5214c509cf208d397e0464b542ff9f53e0"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "100x32-dark-ascii/walkthrough.json",
+        "terminalEvents": "100x32-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-unicode",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "6d541d66713bbaedc47e06211eb463e2b5c4861da5166510323e95e5711928c8"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-unicode/walkthrough.json",
+        "terminalEvents": "100x32-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "100x32-light-ascii",
+      "size": "100x32",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "100x32-light-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "dc6d514141f427b62795f705ae21b54de4111aac2b5053ee1a7574e6884cea2a"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "100x32-light-ascii/walkthrough.json",
+        "terminalEvents": "100x32-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-unicode",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "da75c19b7823ac2f1e55d21020745ef95d2c97894a2597aa5112695cb8224e41"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-unicode/walkthrough.json",
+        "terminalEvents": "140x40-dark-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-dark-ascii",
+      "size": "140x40",
+      "theme": "dark",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-dark-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "be338ceafc7e58015a129b6c98b8e1607496c4e462b2c652cbc016822a732b74"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "140x40-dark-ascii/walkthrough.json",
+        "terminalEvents": "140x40-dark-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-unicode",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "unicode",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-unicode/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "a58bf55a9f8042a05dbf6264a468e9741171d226ad4bb2bb42a5e805bd29da35"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-unicode/walkthrough.json",
+        "terminalEvents": "140x40-light-unicode/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    },
+    {
+      "name": "140x40-light-ascii",
+      "size": "140x40",
+      "theme": "light",
+      "symbols": "ascii",
+      "exitCode": 0,
+      "passed": true,
+      "receipt": {
+        "profile": "isolated disposable profile not preserved",
+        "output": "140x40-light-ascii/evidence",
+        "persistence": {
+          "isolatedXvfb": true,
+          "independentReader": "xclip -selection clipboard -out",
+          "cancelledLastUnchanged": true,
+          "cancelledSelectorUnchanged": true,
+          "cancelledDumpUnchanged": true,
+          "noMutationBeforeReview": true,
+          "sessionBytesUnchanged": true,
+          "reopenedSessionTextUnchanged": true,
+          "clipboardReads": {
+            "copy-last": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "copy-code": "second copied block",
+            "copy-all": "first copied block\n\nsecond copied block",
+            "copy-cmd": "printf synthetic-clipboard-command",
+            "copy-link": "https://example.test/copy-target",
+            "copy-selector": "Synthetic clipboard assistant response\n\n```text\nfirst copied block\n```\n\n```text\nsecond copied block\n```\n\n[Synthetic clipboard link](https://example.test/copy-target)",
+            "dump": "e1130e2e3603a4304e9f3a03acef564195a9de5acab022355bb438629167eb4e"
+          },
+          "providerRequests": [
+            {
+              "method": "GET",
+              "path": "/v1/models"
+            }
+          ]
+        },
+        "walkthrough": "140x40-light-ascii/walkthrough.json",
+        "terminalEvents": "140x40-light-ascii/terminal-events.ansi"
+      },
+      "visualVerdict": "pass-actual-terminal"
+    }
+  ],
+  "complete": true
+}

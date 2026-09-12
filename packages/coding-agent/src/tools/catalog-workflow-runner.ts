@@ -43,7 +43,7 @@ const catalogWorkflowRunnerSchema = Type.Object({
 	),
 	pace_ms: Type.Optional(Type.Number({ description: "Override the profile's inter-step delay (ms)." })),
 	screenshot_dir: Type.Optional(Type.String({ description: "Directory to save screenshots" })),
-	base_url: Type.Optional(Type.String({ description: "XCSH console base URL; falls back to XCSH_API_URL env var" })),
+	base_url: Type.Optional(Type.String({ description: "xcsh console base URL; falls back to XCSH_API_URL env var" })),
 	idempotency: Type.Optional(
 		Type.Union(
 			["skip", "recreate", "error"].map(m => Type.Literal(m)),

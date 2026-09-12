@@ -665,4 +665,31 @@ describe("AgentSession handoff", () => {
 		expect(promptSpy).toHaveBeenCalledTimes(1);
 		expect(abortSpy).toHaveBeenCalled();
 	});
+
+	it("retries only the local tail of an already-applied tree navigation", async () => {
+		const target = sessionManager
+			.getEntries()
+			.find(entry => entry.type === "message" && entry.message.role === "user");
+		if (!target) throw new Error("Expected user target");
+		const entryCount = sessionManager.getEntries().length;
+		const retry = sessionManager.retryPersistence.bind(sessionManager);
+		let failed = false;
+		vi.spyOn(sessionManager, "retryPersistence").mockImplementation(async () => {
+			if (!failed) {
+				failed = true;
+				throw new Error("Fixture persistence failure");
+			}
+			await retry();
+		});
+
+		await expect(session.navigateTree(target.id, { summarize: false })).rejects.toThrow(
+			"Fixture persistence failure",
+		);
+		expect(session.hasPendingReviewedTreeNavigation(target.id)).toBe(true);
+		expect(sessionManager.getLeafId()).toBeNull();
+		const result = await session.navigateTree(target.id, { summarize: false });
+		expect(result.cancelled).toBe(false);
+		expect(session.hasPendingReviewedTreeNavigation(target.id)).toBe(false);
+		expect(sessionManager.getEntries()).toHaveLength(entryCount);
+	});
 });

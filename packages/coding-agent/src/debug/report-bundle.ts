@@ -3,6 +3,7 @@
  *
  * Creates a .tar.gz archive with session data, logs, system info, and optional profiling data.
  */
+import type { Dirent } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { WorkProfile } from "@f5-sales-demo/pi-natives";
@@ -45,6 +46,8 @@ export interface ReportBundleOptions {
 	heapSnapshot?: HeapSnapshot;
 	/** Work profile (for work scheduling reports) */
 	workProfile?: WorkProfile;
+	/** Exact destination chosen by a reviewed interactive action. */
+	outputPath?: string;
 }
 
 export interface ReportBundleResult {
@@ -81,7 +84,9 @@ export async function createReportBundle(options: ReportBundleOptions): Promise<
 	await fs.mkdir(reportsDir, { recursive: true });
 
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-	const outputPath = path.join(reportsDir, `xcsh-report-${timestamp}.tar.gz`);
+	const outputPath = options.outputPath ?? path.join(reportsDir, `xcsh-report-${timestamp}.tar.gz`);
+	if (path.dirname(outputPath) !== reportsDir)
+		throw new Error(`Debug report destination must be inside the reports directory: ${reportsDir}`);
 
 	const data: Record<string, string> = {};
 	const files: string[] = [];
@@ -332,6 +337,78 @@ export async function getArtifactCacheStats(
 	}
 
 	return { count, totalSize, oldestDate };
+}
+
+export interface ArtifactCacheTarget {
+	path: string;
+	size: number;
+	fileCount: number;
+	mtimeMs: number;
+	identity: string;
+}
+
+/** Resolve the exact old artifact directories eligible for a reviewed cache clear. */
+export async function getArtifactCacheTargets(sessionsDir: string, daysOld = 30): Promise<ArtifactCacheTarget[]> {
+	const cutoff = Date.now() - daysOld * 24 * 60 * 60 * 1000;
+	let entries: Dirent<string>[];
+	try {
+		entries = await fs.readdir(sessionsDir, { withFileTypes: true });
+	} catch (error) {
+		if (isEnoent(error)) return [];
+		throw error;
+	}
+	const targets: ArtifactCacheTarget[] = [];
+	for (const entry of entries) {
+		if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+		const targetPath = path.join(sessionsDir, entry.name);
+		try {
+			const stat = await fs.lstat(targetPath);
+			if (!stat.isDirectory() || stat.isSymbolicLink() || stat.mtimeMs >= cutoff) continue;
+			let size = 0;
+			let fileCount = 0;
+			for (const child of await fs.readdir(targetPath, { withFileTypes: true })) {
+				if (!child.isFile() || child.isSymbolicLink()) continue;
+				const childStat = await fs.lstat(path.join(targetPath, child.name));
+				size += childStat.size;
+				fileCount++;
+			}
+			targets.push({
+				path: targetPath,
+				size,
+				fileCount,
+				mtimeMs: stat.mtimeMs,
+				identity: `${stat.dev}:${stat.ino}`,
+			});
+		} catch (error) {
+			if (!isEnoent(error)) throw error;
+		}
+	}
+	return targets.sort((left, right) => left.path.localeCompare(right.path));
+}
+
+/** Delete only exact, revalidated targets from a reviewed cache-clear proposal. */
+export async function clearArtifactCacheTargets(
+	sessionsDir: string,
+	targets: readonly ArtifactCacheTarget[],
+): Promise<{ removed: string[]; failed: Array<{ path: string; error: string }> }> {
+	const base = path.resolve(sessionsDir);
+	const removed: string[] = [];
+	const failed: Array<{ path: string; error: string }> = [];
+	for (const target of targets) {
+		try {
+			const resolved = path.resolve(target.path);
+			if (path.dirname(resolved) !== base) throw new Error("Target is outside the sessions directory");
+			const stat = await fs.lstat(resolved);
+			if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Target is no longer a regular directory");
+			if (`${stat.dev}:${stat.ino}` !== target.identity || stat.mtimeMs !== target.mtimeMs)
+				throw new Error("Target changed after review");
+			await fs.rm(resolved, { recursive: true, force: false });
+			removed.push(resolved);
+		} catch (error) {
+			failed.push({ path: target.path, error: error instanceof Error ? error.message : String(error) });
+		}
+	}
+	return { removed, failed };
 }
 
 /** Clear artifact cache older than N days */

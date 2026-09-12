@@ -845,7 +845,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 					await activateTenantContext(tenantKey, bound);
 				} catch (err) {
 					// Context deleted since last use, or auth failed → surface, never block.
-					logger.warn("XCSH: session context bootstrap could not fully activate", {
+					logger.warn("xcsh: session context bootstrap could not fully activate", {
 						tenantKey,
 						error: String(err),
 					});
@@ -862,7 +862,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 						await svc.validateToken(); // authenticate; non-blocking
 					} catch (err) {
 						// Context deleted since last use, or auth failed → surface, never block.
-						logger.warn("XCSH: session context bootstrap could not fully activate", {
+						logger.warn("xcsh: session context bootstrap could not fully activate", {
 							context: choice.activate,
 							error: String(err),
 						});
@@ -1489,6 +1489,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				cwd,
 				sessionManager,
 				modelRegistry,
+				settings,
 			);
 		}
 

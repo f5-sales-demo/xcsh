@@ -16,7 +16,7 @@
     },
     "packages/agent": {
       "name": "@f5-sales-demo/pi-agent-core",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "dependencies": {
         "@f5-sales-demo/pi-ai": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -28,7 +28,7 @@
     },
     "packages/ai": {
       "name": "@f5-sales-demo/pi-ai",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "bin": {
         "pi-ai": "./src/cli.ts",
       },
@@ -76,7 +76,7 @@
     },
     "packages/coding-agent": {
       "name": "@f5-sales-demo/xcsh",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "bin": {
         "xcsh": "bin/xcsh.ts",
       },
@@ -105,12 +105,13 @@
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
+        "@xterm/addon-unicode11": "0.9.0",
         "handlebars": "^4.7",
       },
     },
     "packages/natives": {
       "name": "@f5-sales-demo/pi-natives",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "devDependencies": {
         "@napi-rs/cli": "3.9.0",
         "@types/bun": "1.4.2",
@@ -147,7 +148,7 @@
     },
     "packages/resource-management": {
       "name": "@f5-sales-demo/pi-resource-management",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "dependencies": {
         "yaml": "2.9.0",
       },
@@ -157,7 +158,7 @@
     },
     "packages/stats": {
       "name": "@f5-sales-demo/xcsh-stats",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "bin": {
         "xcsh-stats": "./src/index.ts",
       },
@@ -182,7 +183,7 @@
     },
     "packages/tui": {
       "name": "@f5-sales-demo/pi-tui",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "dependencies": {
         "@f5-sales-demo/pi-natives": "workspace:*",
         "@f5-sales-demo/pi-utils": "workspace:*",
@@ -219,7 +220,7 @@
     },
     "packages/utils": {
       "name": "@f5-sales-demo/pi-utils",
-      "version": "21.24.4",
+      "version": "21.25.0",
       "dependencies": {
         "@f5-sales-demo/i18n-core": "1.0.59",
         "beautiful-mermaid": "^1.1",
@@ -681,6 +682,8 @@
     "@typescript/vfs": ["@typescript/vfs@1.6.4", "", { "dependencies": { "debug": "^4.4.3" }, "peerDependencies": { "typescript": "*" } }, "sha512-PJFXFS4ZJKiJ9Qiuix6Dz/OwEIqHD7Dme1UwZhTK11vR+5dqW2ACbdndWQexBzCx+CPuMe5WBYQWCsFyGlQLlQ=="],
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.8.15", "", {}, "sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA=="],
+
+    "@xterm/addon-unicode11": ["@xterm/addon-unicode11@0.9.0", "", {}, "sha512-FxDnYcyuXhNl+XSqGZL/t0U9eiNb/q3EWT5rYkQT/zuig8Gz/VagnQANKHdDWFM2lTMk9ly0EFQxxxtZUoRetw=="],
 
     "@xterm/headless": ["@xterm/headless@6.0.0", "", {}, "sha512-5Yj1QINYCyzrZtf8OFIHi47iQtI+0qYFPHmouEfG8dHNxbZ9Tb9YGSuLcsEwj9Z+OL75GJqPyJbyoFer80a2Hw=="],
 

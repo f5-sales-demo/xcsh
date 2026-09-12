@@ -1,0 +1,291 @@
+---
+title: "TUI interaction style guide"
+description: "Build predictable selectors with shared structure, navigation, semantics, and feedback."
+sidebar:
+  order: 9
+  label: "TUI interaction style"
+---
+
+Use this guide for interactive terminal user interface (TUI) selectors and managers. It defines a
+shared interaction contract and adaptable presentation defaults. It does not require unrelated
+screens to be redesigned in the same change.
+
+## What flow should an interactive manager use?
+
+Prefer one stable, single-column flow:
+
+```text
+browse → inspect → choose an explicitly labeled action → see its outcome
+```
+
+Give the frame a clear title. Add a purpose only when the title and choices do not explain the task.
+Keep navigation in a stable position, make the choices searchable, summarize the selected choice
+briefly, and show contextual keyboard hints.
+Put long descriptions and secondary metadata in a detail view rather than beside the list.
+
+The `/login` provider list follows this pattern by opening connection management before changing a
+saved connection. `/model` separates model selection from scope and reasoning choices. `/plugin`
+uses the same pattern for install, update, enable, disable, and removal actions.
+
+## How should a selector look?
+
+Use `selectorFrame` and its adaptive gutters. The shared frame provides rounded Unicode borders,
+an ASCII fallback, joined section dividers, and a maximum width of 100 columns. Keep every rendered
+row the same width so selection highlighting reaches both inside edges without breaking the border.
+
+Use two spaces between aligned columns. Keep headings subdued and reserve emphasis for selection,
+state, and outcomes. Color may reinforce meaning, but plain text must carry it:
+
+```text
+Plugin                         Status              Scope
+› source-control               Enabled             project
+  observability                Update 2.1.0        user
+  cloud-tools                  Available           —
+```
+
+At narrow widths, keep the name in the row and move status, scope, version, and other secondary
+columns into the selected summary. Remove optional blank rows before hiding choices, controls, or
+selected information.
+
+## How should input and navigation behave?
+
+Treat familiar terminal conventions as the default interaction vocabulary. Avoid "captain obvious"
+indicators: instructions that merely repeat what a recognizable control already communicates.
+Make the layout self-descriptive before adding instructional copy. Removing a hint is appropriate
+only when the control, its state, and its outcome remain discoverable.
+
+The following manifest defines the expectations xcsh should consistently support. These are design
+commitments for this interface, not a claim that every person has identical experience. Preserve
+accessible labels and provide help for unfamiliar or remapped controls.
+
+| Visible situation | Expected human intuition | Interface commitment | Hint policy |
+| --- | --- | --- | --- |
+| A highlighted menu item | Arrows move selection; Enter opens or activates it. | Show one clear selection and make the label predict the result. | Omit `Up/Down: navigate` and `Enter: choose action`. |
+| An item naming a plugin, provider, or other object | Opening it reveals information or choices about that object. | Open details before a management mutation. | Let the object label and detail title explain the transition. |
+| An action naming a verb and target | Activating it performs that named action or opens its clearly labeled review. | Use `Disable plugin`, `Review installation`, or `Remove from project scope`; avoid ambiguous `Select` or `Continue`. | Explain consequences or scope when they affect the decision, not how to press Enter. |
+| A search field | Typing searches; normal editing and paste work. | Keep search visibly associated with its list and preserve editor behavior. | Use a field label; omit `Type to search` when the field already says Search. |
+| A nested menu | Escape returns to the parent. | Return one level and retain the parent's query and selection. | A compact `Esc: back` can clarify the hierarchy; never advertise Ctrl+C as Back. |
+| An active search in a list | Escape clears the search before leaving the list. | Clear the query on the first Escape, then return on the next. | Show `Esc: clear search` only while a query exists. |
+| Section tabs | Changing sections preserves a stable navigation structure. | Keep tab order and selected section visible; use Tab and Shift+Tab consistently here. | A compact section-switching hint is useful because Tab behavior varies between interfaces. |
+| Content longer than the viewport | Navigation reveals the remaining content. | Use available space first; keep selection visible and make all details reachable. | Show paging controls only during overflow, especially when arrows move actions instead of details. |
+| A destructive confirmation | Cancel is safe; the destructive choice names the effect. | Select Cancel initially and show the exact target and scope. | Keep consequence text; omit instructions to select a choice. |
+| An operation underway | Work is proceeding, and another activation should not duplicate it. | Show progress, prevent duplicate submission, and report whether interruption is supported. | Reserve Ctrl+C for interruption; never imply cancellation unless work actually stopped. |
+| An operation completes or fails | The state reflects the outcome and recovery is apparent. | Update the affected item; keep failure context and a usable retry path. | Report the result and any remaining work, not `Action selected` or `Press Enter to continue`. |
+
+Use the shared `Input` component for search. Forward ordinary input to it so spaces, Unicode,
+bracketed paste, cursor movement, deletion, undo, and configured editor bindings work together.
+Do not reserve printable letters as hidden actions while search is active.
+
+- Typing edits the active search; Up and Down move through the filtered choices.
+- Enter inspects a choice, or activates the action whose label is visibly selected.
+- Escape returns one level. In a list it clears an active search before closing the selector.
+- Ctrl+C is reserved for interruption; it must not act as Back or close a menu.
+
+First-party extension select/input dialogs use the shared frame and editable input. Selection search
+accepts printable letters; Tab/Shift+Tab changes supplied sections while arrows edit search. Escape
+clears search before closing. Selection timeout closes without activating an option; explicit caller
+timeout policies remain separate. Confirmation starts on No, and plan approval starts on Stay in plan
+mode. Callback signatures and return types are unchanged.
+
+Choosing `Approve and execute` is an action request, not final consent. Follow it with one Cancel-first
+review that names the planning session, new execution-session destination, draft and finalized plan
+paths, restored tool scope, prompt submission, and execution consequences. Revalidate plan bytes,
+session identity, and destination before committing. Extension veto happens before old-session mutation;
+partial session persistence retries the same identity. Do not open a nested `/new` review or continue
+execution when any approval review is cancelled.
+
+A typed `/plan <prompt>` uses the same review and lifecycle adapters. When planning is already active,
+review the prompt without toggling or pausing the mode; persist outstanding session state before
+queueing it, then distinguish queued/model-pending from completion. If an enable save is unresolved,
+show prompt replacement as old→new. If a pause save is unresolved, review the combined recovery,
+persist the pause, re-enable and persist plan mode, and only then queue the prompt. Never silently drop
+an argument because a prior mode transition is awaiting persistence.
+
+The application and standalone editor now default `app.interrupt` to Ctrl+C. Idle Ctrl+C retains
+draft clearing, while double-Escape navigation remains separate from execution. Existing explicit
+interrupt remaps (including disabled bindings) are respected; there is no configuration migration.
+Active-work hints must display the configured key, not hardcode Escape. Cooperative actions receive
+an abort signal, but an interrupt request alone does not establish cancellation: keep the operation
+visible until it acknowledges interruption or completes. Normal completion after an interrupt request
+is still success. Unaccounted-for partial failures remain unresolved rather than being labelled cancelled.
+
+- Tab and Shift+Tab move through stable categories when a manager has categories.
+- Page Up and Page Down make long detail content reachable.
+
+Hints should explain non-obvious controls, not narrate familiar interaction. Omit `Enter: choose
+action`, `Up/Down: navigate`, and purpose text such as `Browse, inspect, choose an action, and review
+its outcome`. Keep compact hints for section switching, refresh or retry, and the Escape hierarchy.
+Show a paging hint only when content actually exceeds the available space; use the terminal's
+available height before introducing scrolling. A short detail view needs no scroll instructions.
+
+Document an exception beside the component when its task genuinely requires different behavior.
+Remapped selector bindings must continue to work; do not hardcode only one escape sequence.
+
+Review each proposed hint against three questions: does it reveal a control that is otherwise
+undiscoverable, explain an exception to these conventions, or clarify a consequence or recovery
+step? If none applies, remove it. If a conventional interaction needs a paragraph of instructions,
+first repair the label, grouping, focus, or navigation behavior. Do not use explanatory copy to
+compensate for an inconsistent menu.
+
+Read the screen without its keyboard footer. Its title should identify the current task or object;
+highlighting should identify the active choice; action labels should identify what happens next;
+grouping should distinguish navigation, actions, facts, and outcomes. Use the same words and order
+for the same concepts across screens. Keep the affected object identifiable after an operation,
+and explain a change of section when an item moves out of the current list.
+
+## Which states must the copy distinguish?
+
+Availability, installation, enabled state, scope, and update availability are separate facts. Use
+specific phrases such as `Available`, `Installed · Disabled`, `project scope`, and
+`Update 2.1.0`. Avoid unexplained symbols and avoid treating an item that exists in a catalog as an
+installed or enabled item.
+
+Feedback also needs distinct language and styling:
+
+| State | Copy pattern | Required next step |
+| --- | --- | --- |
+| Loading | `Refreshing plugin catalogs…` | Keep navigation and cached data visible. |
+| Progress | `Installation in progress…` | Prevent duplicate submission. |
+| Success | `Installation completed.` | Show the updated state. |
+| Warning | `Installed 2 of 3 plugins. 1 failed.` | Name remaining work. |
+| Failure | `Refresh failed: catalog unavailable.` | Offer Retry and retain context. |
+| Empty | `No plugins match “trace”.` | Explain how to clear or broaden the search. |
+
+Closing a view does not mean an asynchronous operation was cancelled. Ignore stale completions from
+superseded refreshes, keep retry context after failure, and describe continuing work accurately.
+
+Dialog creation and teardown are part of this lifecycle contract. A synchronous factory exception,
+rejected asynchronous factory, or failed presentation must settle the caller with an error and
+release duplicate-operation guards. Do not replace the draft before a component is ready. Attempt
+remaining cleanup even if one disposal step fails, and report that failure rather than leaving a
+hidden command pending. These internal safeguards must preserve extension callback signatures.
+
+## How do confirmation and review screens work?
+
+Enter from a browse list opens details; it must not install, remove, or toggle the selected item.
+Details list only actions backed by a persistent manager operation.
+
+Installation review identifies the source, destination scope, and declared prerequisites before an
+install action is available. Removal confirmation starts on `Cancel removal`, not on the destructive
+choice. A bulk action is a visible row such as `Review recommended setup…`; its review lists every
+affected plugin, the destination scope, prerequisite commands, and partial failures.
+
+Clipboard reviews identify the source and replacement effect without reading existing clipboard data.
+Explain that clipboard-history services may retain the text. Wait for the backing copy operation;
+an OSC 52 terminal request has no delivery acknowledgement and must be described as unverified,
+not as a confirmed copy. On Linux without a clipboard manager, clipboard text may disappear when
+xcsh exits. `/dump`, typed `/copy` subcommands and transcript-selector picks share this review
+and feedback adapter. Other clipboard surfaces must adopt it before candidate acceptance.
+
+## What should reviewers check?
+
+- The title, purpose, choices, selected summary, and controls remain understandable without color.
+- With keyboard hints hidden, the task, selection, action consequences, and current state are clear.
+- Every remaining hint reveals a non-obvious control, an exception, a consequence, or recovery;
+  none merely narrates Enter, arrows, selection, or an already labeled search field.
+- The intuition manifest holds across parent and child menus: consistent labels, stable focus,
+  Escape hierarchy, retained context, and feedback tied to the affected object.
+- Scrolling hints disappear when content fits; Ctrl+C never substitutes for Back.
+- The frame is continuous in Unicode and ASCII, each row has equal width, and highlighting stays
+  inside both borders.
+- Width never exceeds 100 columns; 60×20 still keeps the selected choice and recovery controls.
+- Search handles spaces, Unicode, paste, cursor edits, and no-match results.
+- Enter opens details before mutation; destructive confirmation starts on Cancel.
+- Selection uses the full stable identity, including source, identifier, and scope.
+- Empty, loading, progress, success, warning, failure, retry, and partial failure are
+  distinguishable.
+- Refresh and resize retain tab, query, selection, and available data.
+- Duplicate operations and stale asynchronous updates cannot produce a second or misleading outcome.
+- Long details remain reachable and exceptions to the shared contract are documented.
+
+## Where should the guide be adopted next?
+
+Use focused improvement passes rather than a repository-wide redesign:
+
+1. Keep `/login`, `/model`, and `/plugin` as the reference implementations and regression baseline.
+2. Move settings and extension management to the shared frame and escape hierarchy.
+3. Align session, tree, and agent dashboards where they contain inspectable choices and actions.
+4. Review one-off confirmation and input dialogs for explicit labels, outcome feedback, and narrow
+   terminal behavior.
+5. Document intentional exceptions after usability evidence shows the shared contract is unsuitable.
+
+## What did the slash-command library review identify?
+
+This inventory covers every built-in entry in `src/slash-commands/builtin-registry.ts`, its
+registered subcommands, and the extension-command discovery surfaces. The coverage regression
+requires new built-ins to receive an entry here. It is a source review, not a claim that every
+command has received live visual acceptance. Do not exercise cloud mutations, credential removal,
+publication, or session deletion merely to review presentation; use isolated fixtures.
+
+Priorities: P0 protects consequential actions and truthful outcomes; P1 improves everyday navigation;
+P2 improves discovery and presentation. “Next” means proposed work, not completed adoption.
+
+| Command | Surface and enhancement opportunity | Priority / adoption |
+| --- | --- | --- |
+| `/settings` | Tabbed settings and nested editors: shared Escape default and concise hints applied; next, shared frame, retained submenu context, and saved-value feedback. | P1 / partial |
+| `/plan` | Enable, pause, typed prompts, and approval use session-qualified Cancel-first review, fresh plan and destination validation, veto-before-mutation, same-identity save retry, and truthful queued or completed outcomes. | Focused tests and the 16-variant terminal matrix pass. |
+| `/model` | Browse with stable tabs, editable search, exact identity, explicit scope, and reasoning steps. Mutations use Cancel-first review, fresh catalog resolution, persistence-before-success, and exact no-op handling; `/models` shares this path. | Focused tests and the 16-variant terminal matrix pass. |
+| `/fast` | Offer Cancel, Enable, and Disable. Typed `on`, `off`, and `toggle` use the same session-scoped review; `status` is read-only. Persist before success; cancellation, status, and unchanged requests do not write. | Focused tests and the 16-variant terminal matrix pass. |
+| `/export` | Transcript export: show destination, format, overwrite implications, and an actionable failure. | P1 / next |
+| `/dump` | Cancel-first conversation-to-clipboard review; session/content revalidation; awaited delivery, duplicate rejection, unresolved retry. Distinguish completed local copy from an unverified terminal clipboard request. | Adapter and 16-variant actual-terminal visual/readback/persistence matrix pass; complete-candidate gate pending |
+| `/share` | Publication: review destination, visibility, and content before external submission. | P0 / next |
+| `/browser` | Cancel, headless, visible, and typed paths share a saved-default and effective-state review. Status and no-op are read-only; save precedes optional reset, and retry repeats only unresolved work. | Focused tests and the 16-variant terminal matrix pass. |
+| `/chrome` | Status probes the selected loopback endpoint. Relaunch review identifies endpoint, executable, profiles, authentication uncertainty, and restart impact; stale targets renew review and failures remain unresolved. | Focused tests and the 16-variant terminal matrix pass. |
+| `/copy` | Typed and selector copies share Cancel-first review, fresh source resolution, and delivery feedback. Framed search preserves identity and parent context while history loading and details paging remain explicit. | Focused tests and the 16-variant terminal matrix pass. |
+| `/open` | External opener: identify selected artifact and recovery when no suitable opener exists. | P2 / next |
+| `/remote` | Read-only native remote-host status: report relay reachability and the current live terminal-session count without changing runtime state. | Focused remote-control tests pass; full terminal UAT pending. |
+| `/session` | Info/delete: retain target identity through cancellation and show the actual deletion outcome. | P0 / next |
+| `/jobs` | Current-session queued/running/completed/failed work uses the bounded report frame, with distinct unavailable and empty states, overflow-only paging, Escape closure, and Ctrl+C kept separate from Back. | Focused state regressions and a directly judged 16-variant actual-terminal empty-state matrix pass; complete-candidate job integration remains pending |
+| `/usage` | Non-cancellable provider refresh rejects duplicates, retains cached data after failure, distinguishes empty/unavailable/error states, and renders complete account identities in responsive one/two-column layouts. | Focused lifecycle regressions and a directly judged 16-variant local-provider/unchanged-credential matrix pass; complete-candidate gate pending |
+| `/changelog` | Recent and explicit `full` reports use responsive Markdown in the bounded pager; unrelated arguments fail, long content remains complete, and paging narration appears only during overflow. | Focused paging/parser regressions and a directly judged 16-variant actual-terminal recent/full/invalid matrix pass; complete-candidate gate pending |
+| `/hotkeys` | The intentional instructional exception now uses the shared bounded pager, reports configured/disabled bindings, groups controls by context, and only shows paging controls on overflow. | Focused binding regressions and a directly judged 16-variant first/final-page matrix pass; complete-candidate gate pending |
+| `/tools` | The active-model tool inventory uses bounded responsive Markdown and paging while keeping availability, enabled state, provenance, and configuration requirements explicit. | Focused tests and the 16-variant terminal matrix pass. |
+| `/extensions` | Split inventory/inspector: Ctrl+C no longer closes; next, shared search without j/k/space collisions, inspect-before-toggle, stable tabs, and single-column details. | P1 / partial |
+| `/agents` | Dashboard: redundant arrow hint removed; next, replace letter shortcuts that collide with search and label persistent actions. | P1 / partial |
+| `/branch` | Tree or message selector: explain branch destination and distinguish navigation from creating a fork. | P1 / next |
+| `/fork` | Session mutation: identify source and new session, preserving a clear route back. | P1 / next |
+| `/tree` | Tree navigation: Ctrl+C no longer closes; next, show page controls only for overflow and preserve node identity. | P1 / partial |
+| `/login` | Configured providers and the full catalog use framed identity-qualified search with retained parent context. Typed and menu setup share masked Cancel-first review and distinguish saved configuration, authentication, validation, and catalog readiness. | Focused tests and the 16-variant terminal matrix pass. |
+| `/logout` | Stored-credential removal names provider and credential-store scope, masks the old value, starts on Cancel and refreshes only after deletion. A failed refresh warns without denying completed removal; empty storage is explicit. | Focused review/outcome tests and a directly judged 16-variant actual-terminal database-reopen matrix pass; complete-candidate gate pending |
+| `/mcp` | Add/list/authentication/configuration/resource commands: wizard hints simplified; next, consistent server identity, retry, connection state, and removal review. | P0 / partial |
+| `/ssh` | Connection add/list/remove: scope-qualified identity, removal review, and clear distinction between saved configuration and a tested connection. | P0 / next |
+| `/media` | Play/pause/stop: identify the media target and report unsupported or unavailable playback. | P2 / next |
+| `/new` | Cancel-first review identifies old session, destination, queued prompts and interruption consequences. UI resets only after confirmed persistence; veto preserves view; in-dialog partial-save retry retains the created identity. | P1 / full UAT pending |
+| `/compact` | Default and typed instructions share a stale-checked session review. Escape navigates and Ctrl+C requests interruption; completed output survives persistence failure for save-only retry. Too-small and unchanged requests do not write. | Focused tests and the 16-variant terminal matrix pass. |
+| `/handoff` | Context transfer: preview destination and report what was transferred or omitted. | P1 / next |
+| `/resume` | Session picker: Ctrl+C no longer exits; retain deletion hint; next, contextual search-clear and stable selected identity. | P1 / partial |
+| `/btw` | Side question: make its separation from the main conversation and completion state visible. | P2 / next |
+| `/background` | Transfer running work without review: identify stable session/work, state non-cancellation, stop UI activity, and detach streams before suspension. `bg` continues, `fg` waits, reopen returns, and `/jobs` inspects work. | Focused tests and the 16-variant terminal matrix pass. |
+| `/debug` | Diagnostic selector: concise choices and safe export boundaries; shared cancel default applies. | P2 / partial |
+| `/memory` | Read-only view is pageable and distinguishes populated, empty, and unavailable states. Clear/reset and enqueue/rebuild use stale-checked reviews with exact project/database scope and report persisted requests rather than worker completion. | Focused tests and the 16-variant terminal matrix pass. |
+| `/rename` | Prefilled editor when omitted; typed/editor names share cancel-first review, session identity revalidation, unchanged no-write, persistence-before-success and retry tracking. Disposable session cancel/reopen tests pass. | P2 / full UAT pending |
+| `/move` | Required destination: offer destination review, collision feedback, and resulting session location. | P1 / next |
+| `/exit` | Clean sessions exit immediately. Outstanding work opens one session-qualified Cancel-first review; confirmation interrupts supported work, waits for settlement, flushes state, clears transient UI, and returns the shell. | Focused tests and the 16-variant terminal matrix pass. |
+| `/plugin` | Canonical commands and aliases share one framed dashboard. Mutations use exact-version Cancel-first review, fresh catalog/target validation, duplicate and stale guards, explicit partial/offline outcomes, and unresolved-only retry. `--force` is replacement, not consent. | Focused tests and the 16-variant terminal matrix pass. |
+| `/reload-plugins` | Clear capability and plugin-root caches, refresh command/skill/hook/tool/agent/MCP metadata in the current process, reject duplicates, and distinguish completion from restart. | Focused lifecycle tests and a directly judged 16-variant actual-terminal refreshed-command discovery matrix pass; complete-candidate gate pending |
+| `/force` | Argument-free use opens searchable active-tool actions with Cancel first. Typed colon/space syntax remains supported. Feedback describes one forced tool call followed by no tools, queued behind any earlier directives—not immediate execution. No persistent setting is changed; stale session choices, removed tools and duplicate selectors are rejected. | P1 / full UAT pending |
+| `/quit` | Exact alias of the `/exit` review, revalidation, settlement, persistence, and shell-return contract. | Shared focused and actual-terminal evidence passes; complete-candidate gate pending |
+| `/apply` | Resource mutation: review tenant, namespace, target, and diff; separate dry-run from applied results. | P0 / next |
+| `/create` | Resource mutation: identify target and scope, distinguish validation from creation and existing-resource conflicts. | P0 / next |
+| `/delete` | Resource deletion: cancel-first target review, explicit force semantics, and partial-result feedback. | P0 / next |
+| `/describe` | Resource details: scrollable long output, stable identity, and actionable missing-context errors. | P1 / next |
+| `/diff` | Change preview: distinguish no changes from unavailable comparison and prevent preview implying application. | P0 / next |
+| `/get` | Resource inventory: aligned responsive columns, readable empty results, and distinct failure styling. | P1 / next |
+| `/manifest` | Resource export: destination/overwrite review, partial-export warning, and error styling instead of ordinary status. | P0 / next |
+| `/context` | Context list/activation/wizard and configuration subcommands: concise wizard hints applied; next, masked identity, scope, confirmation, and retained validation failures. | P0 / partial |
+| `/route` | Strict paths distinguish saved, project, runtime, and effective policy. Mutations use stale-checked reviews, bounded preparation, exact no-op handling, unresolved-save retry, and unavailable-catalog recovery. | Focused tests and the 16-variant terminal matrix pass. |
+
+Aliases share their canonical command's review: `models` → `model`, `status` → `extensions`,
+`bg` → `background`, and `marketplace`/`plugins` → `plugin`. Keep explicit-argument paths efficient:
+the browse → inspect → act contract applies to menus, not an extra mandatory menu for every typed verb.
+
+The library is also extensible. `extensibility/slash-commands.ts`, `capability/slash-command.ts`,
+and embedded task templates contribute extension, prompt, skill, and file-based commands. Review
+their discovery contract: show source and user/project scope, explain shadowed names, preserve
+argument completion, and distinguish a prompt expansion from an immediately executable action.
+Their installed contents vary by workspace; do not claim an exhaustive live inventory from the
+built-in registry alone. Apply this checklist when each command is introduced or changed.
+
+The complete source-derived inventory is verified by focused regressions and current-source terminal
+matrices. Keep simple text reports simple; enrich them only where inspection, recovery, or
+decision-making benefits from interaction, and require the same evidence whenever a surface changes.

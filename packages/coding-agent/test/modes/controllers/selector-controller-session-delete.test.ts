@@ -1,4 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
+import type { Component } from "@f5-sales-demo/pi-tui";
 import { SessionSelectorComponent } from "../../../src/modes/components/session-selector";
 import { SelectorController } from "../../../src/modes/controllers/selector-controller";
 import { initTheme } from "../../../src/modes/theme/theme";
@@ -42,6 +43,7 @@ function createContext(currentSessionFile: string): {
 	const shownOverlays: unknown[] = [];
 	const overlayOptions: unknown[] = [];
 	let sessionFile = currentSessionFile;
+	let sessionId = "active-id";
 	const editorContainer = {
 		children: [] as unknown[],
 		clear() {
@@ -57,6 +59,7 @@ function createContext(currentSessionFile: string): {
 	const newSession = vi.fn(async () => {
 		calls.push("session.newSession");
 		sessionFile = "/tmp/project/sessions/detached.jsonl";
+		sessionId = "detached-id";
 		return true;
 	});
 	const ctx = {
@@ -83,6 +86,9 @@ function createContext(currentSessionFile: string): {
 			getCwd: () => "/tmp/project",
 			getSessionDir: () => "/tmp/project/sessions",
 			getSessionFile: () => sessionFile,
+			getSessionId: () => sessionId,
+			getSessionName: () => "Active session",
+			retryPersistence: vi.fn(async () => calls.push("session.retryPersistence")),
 		},
 		statusContainer: {
 			clear: vi.fn(() => {
@@ -159,6 +165,7 @@ beforeAll(() => {
 describe("SelectorController session deletion", () => {
 	beforeEach(() => {
 		vi.spyOn(SessionManager, "list").mockResolvedValue([]);
+		vi.spyOn(SessionManager, "listAll").mockResolvedValue([]);
 	});
 
 	afterEach(() => {
@@ -187,33 +194,20 @@ describe("SelectorController session deletion", () => {
 			width: "100%",
 			maxHeight: "100%",
 			margin: 0,
+			mouseTracking: true,
 		});
 
 		const sessionList = selector.getSessionList() as unknown as {
 			onDeleteRequest?: (session: SessionInfo) => void;
 		};
 		sessionList.onDeleteRequest?.(activeSession);
+		selector.handleInput("\x1b[B");
 		selector.handleInput("\n");
 		await Bun.sleep(0);
 
 		expect(deleteSessionWithArtifacts).toHaveBeenCalledWith(activeSession.path);
-		expect(calls).toEqual([
-			"ui.showOverlay",
-			"session.newSession",
-			"loadingAnimation.stop",
-			"statusContainer.clear",
-			"pendingMessagesContainer.clear",
-			"pendingTools.clear",
-			"statusLine.invalidate",
-			"statusLine.setSessionStartTime",
-			"updateEditorTopBorder",
-			"updateEditorBorderColor",
-			"renderInitialMessages",
-			"reloadTodos",
-			"ui.requestRender",
-			`delete:${activeSession.path}`,
-			"ui.requestRender",
-		]);
+		expect(calls.indexOf("session.newSession")).toBeLessThan(calls.indexOf(`delete:${activeSession.path}`));
+		expect(calls.indexOf("session.retryPersistence")).toBeLessThan(calls.indexOf(`delete:${activeSession.path}`));
 		expect(ctx.sessionManager.getSessionFile()).toBe("/tmp/project/sessions/detached.jsonl");
 	});
 
@@ -236,6 +230,7 @@ describe("SelectorController session deletion", () => {
 			onDeleteRequest?: (session: SessionInfo) => void;
 		};
 		sessionList.onDeleteRequest?.(activeSession);
+		selector.handleInput("\x1b[B");
 		selector.handleInput("\n");
 		await Bun.sleep(0);
 
@@ -243,46 +238,47 @@ describe("SelectorController session deletion", () => {
 		expect(deleteSessionWithArtifacts).toHaveBeenCalledWith(activeSession.path);
 		expect(ctx.showError).not.toHaveBeenCalled();
 		expect(ctx.sessionManager.getSessionFile()).toBe("/tmp/project/sessions/detached.jsonl");
-		expect(renderText(selector)).toContain("Error: Failed to delete session: disk failed");
+		expect(renderText(selector)).toContain("Failed to delete session: disk failed");
 		expect(renderText(selector)).toContain("Active session");
 	});
 
 	it("creates a fresh session before deleting via slash command and then shows the selector", async () => {
 		const activeSessionPath = "/tmp/project/sessions/active.jsonl";
 		const { ctx, calls, showHookConfirm, newSession } = createContext(activeSessionPath);
+		(
+			ctx as unknown as {
+				showHookCustom: (
+					factory: (ui: unknown, theme: unknown, keys: unknown, done: (value: unknown) => void) => Component,
+				) => Promise<unknown>;
+			}
+		).showHookCustom = factory =>
+			new Promise(resolve => {
+				const component = factory(ctx.ui, {}, {}, resolve);
+				component.handleInput?.("\x1b[B");
+				component.handleInput?.("\n");
+			});
 		const deleteSessionWithArtifacts = vi
 			.spyOn(FileSessionStorage.prototype, "deleteSessionWithArtifacts")
 			.mockImplementation(async sessionPath => {
 				calls.push(`delete:${sessionPath}`);
 			});
-		const exists = vi.spyOn(FileSessionStorage.prototype, "exists").mockResolvedValue(true);
+		const exists = vi
+			.spyOn(FileSessionStorage.prototype, "exists")
+			.mockResolvedValueOnce(true)
+			.mockResolvedValueOnce(true)
+			.mockResolvedValueOnce(true)
+			.mockResolvedValue(false);
 		const controller = new SelectorController(ctx);
 
 		await controller.handleSessionDeleteCommand();
 
 		expect(exists).toHaveBeenCalledWith(activeSessionPath);
-		expect(showHookConfirm).toHaveBeenCalledWith(
-			"Delete Session",
-			"This will permanently delete the current session.\nYou will be returned to the session selector.",
-		);
+		expect(showHookConfirm).not.toHaveBeenCalled();
 		expect(newSession).toHaveBeenCalledTimes(1);
 		expect(deleteSessionWithArtifacts).toHaveBeenCalledWith(activeSessionPath);
-		expect(calls).toEqual([
-			"session.newSession",
-			"loadingAnimation.stop",
-			"statusContainer.clear",
-			"pendingMessagesContainer.clear",
-			"pendingTools.clear",
-			"statusLine.invalidate",
-			"statusLine.setSessionStartTime",
-			"updateEditorTopBorder",
-			"updateEditorBorderColor",
-			"renderInitialMessages",
-			"reloadTodos",
-			"ui.requestRender",
-			`delete:${activeSessionPath}`,
-			"showStatus:Session deleted",
-			"ui.showOverlay",
-		]);
+		expect(calls.indexOf("session.newSession")).toBeLessThan(calls.indexOf(`delete:${activeSessionPath}`));
+		expect(calls.indexOf("session.retryPersistence")).toBeLessThan(calls.indexOf(`delete:${activeSessionPath}`));
+		expect(calls).toContain("showStatus:Session active-id and its artifacts were deleted.");
+		expect(calls.at(-1)).toBe("ui.showOverlay");
 	});
 });

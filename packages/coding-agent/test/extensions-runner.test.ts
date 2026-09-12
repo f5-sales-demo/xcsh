@@ -244,6 +244,18 @@ describe("ExtensionRunner", () => {
 			expect(commands).toHaveLength(1);
 			expect(commands[0]?.description).toBe("Explicit deploy");
 
+			const entries = runner.getRegisteredCommandEntries();
+			expect(entries).toHaveLength(2);
+			expect(entries[0]).toMatchObject({
+				extensionPath: explicitExtensionPath,
+				shadowed: false,
+			});
+			expect(entries[1]).toMatchObject({
+				extensionPath: expect.stringContaining("discovered-deploy.ts"),
+				shadowed: true,
+				shadowedBy: explicitExtensionPath,
+			});
+
 			const command = runner.getCommand("deploy");
 			expect(command?.description).toBe("Explicit deploy");
 		});

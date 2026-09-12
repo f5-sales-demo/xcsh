@@ -204,7 +204,7 @@ export class AssistantMessageComponent extends Container {
 				} else {
 					this.#contentContainer.addChild(new Spacer(1));
 				}
-				this.#contentContainer.addChild(new Text(theme.fg("error", abortMessage), 0, 0));
+				this.#contentContainer.addChild(new Text(theme.fg("warning", abortMessage), 0, 0));
 			} else if (message.stopReason === "error") {
 				const errorMsg = message.errorMessage || "Unknown error";
 				this.#contentContainer.addChild(new Spacer(1));

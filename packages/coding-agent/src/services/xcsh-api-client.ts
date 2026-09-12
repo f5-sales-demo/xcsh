@@ -91,11 +91,11 @@ export class XCSHApiClient {
 					signal: AbortSignal.timeout(this.#timeoutMs),
 				});
 				const latencyMs = Math.round(performance.now() - start);
-				logger.debug("XCSH API response", { path, status: response.status, latencyMs });
+				logger.debug("xcsh API response", { path, status: response.status, latencyMs });
 			} catch (err) {
 				if (attempt < this.#maxRetries) {
 					const delayMs = this.#backoffDelay(attempt);
-					logger.debug("XCSH API retry (network)", {
+					logger.debug("xcsh API retry (network)", {
 						path,
 						attempt: attempt + 1,
 						maxRetries: this.#maxRetries,
@@ -136,7 +136,7 @@ export class XCSHApiClient {
 					} else {
 						delayMs = this.#backoffDelay(attempt);
 					}
-					logger.debug("XCSH API retry", {
+					logger.debug("xcsh API retry", {
 						path,
 						attempt: attempt + 1,
 						maxRetries: this.#maxRetries,

@@ -1,158 +1,138 @@
-import {
-	type Component,
-	Container,
-	Ellipsis,
-	Input,
-	matchesKey,
-	padding,
-	Spacer,
-	Text,
-	truncateToWidth,
-	visibleWidth,
-} from "@f5-sales-demo/pi-tui";
-import { theme } from "../../modes/theme/theme";
-import { matchesAppInterrupt } from "../../modes/utils/keybinding-matchers";
+import { Container, Input, type SgrMouseEvent, truncateToWidth } from "@f5-sales-demo/pi-tui";
 import type { HistoryEntry, HistoryStorage } from "../../session/history-storage";
-import { DynamicBorder } from "./dynamic-border";
-
-class HistoryResultsList implements Component {
-	#results: HistoryEntry[] = [];
-	#selectedIndex = 0;
-	#maxVisible = 10;
-
-	setResults(results: HistoryEntry[], selectedIndex: number): void {
-		this.#results = results;
-		this.#selectedIndex = selectedIndex;
-	}
-
-	setSelectedIndex(selectedIndex: number): void {
-		this.#selectedIndex = selectedIndex;
-	}
-
-	invalidate(): void {
-		// No cached state to invalidate currently
-	}
-
-	render(width: number): string[] {
-		const lines: string[] = [];
-
-		if (this.#results.length === 0) {
-			lines.push(theme.fg("muted", "  No matching history"));
-			return lines;
-		}
-
-		const startIndex = Math.max(
-			0,
-			Math.min(this.#selectedIndex - Math.floor(this.#maxVisible / 2), this.#results.length - this.#maxVisible),
-		);
-		const endIndex = Math.min(startIndex + this.#maxVisible, this.#results.length);
-
-		for (let i = startIndex; i < endIndex; i++) {
-			const entry = this.#results[i];
-			const isSelected = i === this.#selectedIndex;
-
-			const cursorSymbol = `${theme.nav.cursor} `;
-			const cursorWidth = visibleWidth(cursorSymbol);
-			const cursor = isSelected ? theme.fg("chromeAccent", cursorSymbol) : padding(cursorWidth);
-			const maxWidth = width - cursorWidth;
-
-			const normalized = entry.prompt.replace(/\s+/g, " ").trim();
-			const truncated = truncateToWidth(normalized, maxWidth);
-			lines.push(cursor + (isSelected ? theme.bold(truncated) : truncated));
-		}
-
-		if (startIndex > 0 || endIndex < this.#results.length) {
-			const scrollText = `  (${this.#selectedIndex + 1}/${this.#results.length})`;
-			lines.push(theme.fg("muted", truncateToWidth(scrollText, width, Ellipsis.Omit)));
-		}
-
-		return lines;
-	}
-}
+import { matchesAppInterrupt } from "../utils/keybinding-matchers";
+import {
+	matchesSelectorKey,
+	selectorCancelHint,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorKeys,
+	selectorNavigationHint,
+	selectorRow,
+} from "./selector-frame";
 
 export class HistorySearchComponent extends Container {
-	#historyStorage: HistoryStorage;
-	#searchInput: Input;
+	readonly #searchInput = new Input();
 	#results: HistoryEntry[] = [];
 	#selectedIndex = 0;
-	#resultsList: HistoryResultsList;
-	#onSelect: (prompt: string) => void;
-	#onCancel: () => void;
-	#resultLimit = 100;
+	#searchOrigin = 0;
+	#visible = 1;
+	#hitRows = new Map<number, number>();
+	readonly #resultLimit = 100;
 
-	constructor(historyStorage: HistoryStorage, onSelect: (prompt: string) => void, onCancel: () => void) {
+	constructor(
+		private readonly historyStorage: HistoryStorage,
+		private readonly onSelect: (prompt: string) => void,
+		private readonly onCancel: () => void,
+	) {
 		super();
-		this.#historyStorage = historyStorage;
-		this.#onSelect = onSelect;
-		this.#onCancel = onCancel;
-
-		this.#searchInput = new Input();
-		this.#searchInput.onSubmit = () => {
-			const selected = this.#results[this.#selectedIndex];
-			if (selected) {
-				this.#onSelect(selected.prompt);
-			}
-		};
-		this.#searchInput.onEscape = () => {
-			this.#onCancel();
-		};
-
-		this.#resultsList = new HistoryResultsList();
-
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.bold("Search History (Ctrl+R)"), 1, 0));
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
-		this.addChild(new Spacer(1));
-		this.addChild(this.#searchInput);
-		this.addChild(new Spacer(1));
-		this.addChild(this.#resultsList);
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("muted", "up/down navigate  enter select  esc cancel"), 1, 0));
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder());
-
 		this.#updateResults();
+	}
+
+	override render(width: number): string[] {
+		const rows = process.stdout.rows || 24;
+		const inner = selectorFrameContentWidth(width);
+		this.#visible = Math.max(1, Math.min(12, rows - 13));
+		const start = Math.max(
+			0,
+			Math.min(this.#selectedIndex - Math.floor(this.#visible / 2), this.#results.length - this.#visible),
+		);
+		const visible = this.#results.slice(start, start + this.#visible);
+		const selected = this.#results[this.#selectedIndex];
+		const lines = selectorFrame(
+			width,
+			rows,
+			"Search history",
+			"Find a previous prompt and return it to the editor without submitting it.",
+			[`${this.#results.length} result${this.#results.length === 1 ? "" : "s"}`, ...this.#searchInput.render(inner)],
+			visible.length
+				? visible.map((entry, index) =>
+						selectorRow(
+							[entry.prompt.replace(/\s+/gu, " ").trim()],
+							[inner - 2],
+							start + index === this.#selectedIndex,
+						),
+					)
+				: ["No matching history."],
+			selected
+				? [
+						selected.prompt,
+						selected.cwd ? `Working directory: ${selected.cwd}` : "",
+						`Saved: ${new Date(selected.created_at * 1000).toISOString()}`,
+					]
+				: [],
+			[
+				selectorNavigationHint("restore prompt"),
+				selectorCancelHint(this.#searchInput.getValue() ? "clear search" : "back"),
+				...(this.#results.length > this.#visible
+					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: results`]
+					: []),
+			],
+			{ selectedBodyIndex: this.#selectedIndex - start },
+		);
+		this.#hitRows.clear();
+		let cursor = 0;
+		for (let index = 0; index < visible.length; index++) {
+			const label = truncateToWidth(visible[index]!.prompt.replace(/\s+/gu, " ").trim(), inner - 2);
+			const row = lines.findIndex((line, candidate) => candidate >= cursor && Bun.stripANSI(line).includes(label));
+			if (row >= 0) {
+				this.#hitRows.set(row, start + index);
+				cursor = row + 1;
+			}
+		}
+		return lines;
+	}
+
+	#move(delta: number): void {
+		if (!this.#results.length) return;
+		this.#selectedIndex = Math.max(0, Math.min(this.#results.length - 1, this.#selectedIndex + delta));
 	}
 
 	handleInput(keyData: string): void {
-		if (matchesKey(keyData, "up")) {
-			if (this.#results.length === 0) return;
-			this.#selectedIndex = Math.max(0, this.#selectedIndex - 1);
-			this.#resultsList.setSelectedIndex(this.#selectedIndex);
+		if (matchesSelectorKey(keyData, "up") || matchesSelectorKey(keyData, "down")) {
+			this.#move(matchesSelectorKey(keyData, "up") ? -1 : 1);
 			return;
 		}
-
-		if (matchesKey(keyData, "down")) {
-			if (this.#results.length === 0) return;
-			this.#selectedIndex = Math.min(this.#results.length - 1, this.#selectedIndex + 1);
-			this.#resultsList.setSelectedIndex(this.#selectedIndex);
+		if (matchesSelectorKey(keyData, "pageUp") || matchesSelectorKey(keyData, "pageDown")) {
+			this.#move((matchesSelectorKey(keyData, "pageUp") ? -1 : 1) * this.#visible);
 			return;
 		}
-
-		if (matchesKey(keyData, "enter") || matchesKey(keyData, "return") || keyData === "\n") {
+		if (matchesSelectorKey(keyData, "confirm")) {
 			const selected = this.#results[this.#selectedIndex];
-			if (selected) {
-				this.#onSelect(selected.prompt);
-			}
+			if (selected) this.onSelect(selected.prompt);
 			return;
 		}
-
-		if (matchesAppInterrupt(keyData)) {
-			this.#onCancel();
+		if (matchesSelectorKey(keyData, "cancel")) {
+			if (this.#searchInput.getValue()) {
+				this.#searchInput.setValue("");
+				this.#updateResults(this.#searchOrigin);
+			} else this.onCancel();
 			return;
 		}
-
+		if (matchesAppInterrupt(keyData)) return;
+		const hadQuery = Boolean(this.#searchInput.getValue());
 		this.#searchInput.handleInput(keyData);
+		if (!hadQuery && this.#searchInput.getValue()) this.#searchOrigin = this.#selectedIndex;
 		this.#updateResults();
 	}
 
-	#updateResults(): void {
+	routeMouse(event: SgrMouseEvent, line: number): void {
+		if (event.release) return;
+		if (event.wheel !== null) this.#move(event.wheel);
+		else if (event.leftClick) {
+			const index = this.#hitRows.get(line);
+			if (index !== undefined) {
+				if (index === this.#selectedIndex) this.onSelect(this.#results[index]!.prompt);
+				else this.#selectedIndex = index;
+			}
+		}
+	}
+
+	#updateResults(selectedIndex = 0): void {
 		const query = this.#searchInput.getValue().trim();
 		this.#results = query
-			? this.#historyStorage.search(query, this.#resultLimit)
-			: this.#historyStorage.getRecent(this.#resultLimit);
-		this.#selectedIndex = 0;
-		this.#resultsList.setResults(this.#results, this.#selectedIndex);
+			? this.historyStorage.search(query, this.#resultLimit)
+			: this.historyStorage.getRecent(this.#resultLimit);
+		this.#selectedIndex = Math.max(0, Math.min(selectedIndex, this.#results.length - 1));
 	}
 }

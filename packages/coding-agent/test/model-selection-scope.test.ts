@@ -112,5 +112,6 @@ test("provider navigation renders while startup discovery is still pending", asy
 	const rendered = Bun.stripANSI(selector.render(80).join("\n"));
 	expect(rendered).toContain("Anthropic");
 	expect(rendered).toContain("Refreshing Anthropic");
-	expect(rendered).toContain("Enter: choose");
+	expect(rendered).toContain("Tab: provider");
+	expect(rendered).not.toContain("Enter: choose");
 });

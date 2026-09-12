@@ -26,7 +26,7 @@ function configuredControl(pi: ExtensionAPI): NativeLifecycleControl | undefined
 }
 
 /**
- * Explicit acceptance-only control loaded from the compiled XCSH bundle.
+ * Explicit acceptance-only control loaded from the compiled xcsh bundle.
  *
  * The extension is inert unless its registered flag is present.  It asks through
  * the ordinary interactive ExtensionUiController, so TurnPhaseController and the

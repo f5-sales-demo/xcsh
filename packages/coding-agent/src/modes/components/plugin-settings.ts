@@ -7,26 +7,25 @@
  *     - Feature toggles
  *     - Config value editor
  */
-import {
-	Container,
-	Input,
-	type SelectItem,
-	SelectList,
-	type SettingItem,
-	SettingsList,
-	Spacer,
-	Text,
-} from "@f5-sales-demo/pi-tui";
+import { Container, type SettingItem, Text } from "@f5-sales-demo/pi-tui";
 import { PluginManager } from "../../extensibility/plugins/manager";
 import type { InstalledPlugin, PluginSettingSchema } from "../../extensibility/plugins/types";
-import { getSelectListTheme, getSettingsListTheme, theme } from "../../modes/theme/theme";
-import { DynamicBorder } from "./dynamic-border";
+import {
+	PluginSettingsDrafts,
+	type PluginSettingsSnapshot,
+	type PluginSettingsStorage,
+	pluginSettingsStorage,
+} from "./plugin-settings-drafts";
+import { matchesSelectorKey, selectorFrame } from "./selector-frame";
+import { SettingsBrowser } from "./settings-browser";
+import { SettingsChoiceEditor, SettingsTextEditor } from "./settings-editors";
 
 // =============================================================================
 // Plugin List Component
 // =============================================================================
 
 export interface PluginListCallbacks {
+	getDraftSummary?: () => string[];
 	onPluginSelect: (plugin: InstalledPlugin) => void;
 	onCancel: () => void;
 }
@@ -36,70 +35,43 @@ export interface PluginListCallbacks {
  * Selecting a plugin opens its detail view.
  */
 export class PluginListComponent extends Container {
-	readonly #selectList: SelectList;
-
+	#browser: SettingsBrowser;
 	constructor(
-		private readonly plugins: InstalledPlugin[],
+		private plugins: InstalledPlugin[],
 		callbacks: PluginListCallbacks,
 	) {
 		super();
-
-		// Title
-		this.addChild(new DynamicBorder());
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", "  Plugins")), 0, 0));
-		this.addChild(new Spacer(1));
-
-		if (plugins.length === 0) {
-			this.addChild(new Text(theme.fg("muted", "  No plugins installed"), 0, 0));
-			this.addChild(new Spacer(1));
-			this.addChild(new Text(theme.fg("dim", "  Install with: xcsh plugin install <package>"), 0, 0));
-			this.addChild(new Spacer(1));
-			this.addChild(new DynamicBorder());
-
-			// Create empty list that just handles escape
-			this.#selectList = new SelectList([], 1, getSelectListTheme());
-			this.#selectList.onCancel = callbacks.onCancel;
-			return;
-		}
-
-		const items: SelectItem[] = plugins.map(p => {
-			const status = p.enabled
-				? theme.fg("success", theme.status.enabled)
-				: theme.fg("muted", theme.status.disabled);
-			const featureCount = p.manifest.features ? Object.keys(p.manifest.features).length : 0;
-			const enabledCount = p.enabledFeatures?.length ?? featureCount;
-
-			let details = `v${p.version}`;
-			if (featureCount > 0) {
-				details += ` ${theme.sep.dot} ${enabledCount}/${featureCount} features`;
-			}
-
-			return {
-				value: p.name,
-				label: `${status} ${p.name}`,
-				description: details,
-			};
-		});
-
-		this.#selectList = new SelectList(items, Math.min(items.length, 8), getSelectListTheme());
-
-		this.#selectList.onSelect = item => {
-			const plugin = this.plugins.find(p => p.name === item.value);
-			if (plugin) {
-				callbacks.onPluginSelect(plugin);
-			}
-		};
-
-		this.#selectList.onCancel = callbacks.onCancel;
-
-		this.addChild(this.#selectList);
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", "  Enter to configure · Esc to go back"), 0, 0));
-		this.addChild(new DynamicBorder());
+		this.#browser = new SettingsBrowser(
+			this.#items(),
+			() => callbacks.getDraftSummary?.() ?? [],
+			() => {},
+			callbacks.onCancel,
+			{
+				title: "Plugin settings",
+				purpose: "User defaults · Project overrides may remain effective",
+				details: item => `${item.label} · ${item.description ?? ""}`,
+				open: item => {
+					const plugin = this.plugins.find(plugin => JSON.stringify([plugin.name, plugin.path]) === item.id);
+					if (plugin) callbacks.onPluginSelect(plugin);
+				},
+			},
+		);
+		this.addChild(this.#browser);
 	}
-
+	#items(): SettingItem[] {
+		return this.plugins.map(plugin => ({
+			id: JSON.stringify([plugin.name, plugin.path]),
+			label: plugin.name,
+			currentValue: plugin.enabled ? "Enabled" : "Disabled",
+			description: `v${plugin.version} · ${plugin.path} · ${plugin.manifest.description ?? ""}`,
+		}));
+	}
+	updatePlugins(plugins: InstalledPlugin[]): void {
+		this.plugins = plugins;
+		this.#browser.updateItems(this.#items());
+	}
 	handleInput(data: string): void {
-		this.#selectList.handleInput(data);
+		this.#browser.handleInput(data);
 	}
 }
 
@@ -108,6 +80,7 @@ export class PluginListComponent extends Container {
 // =============================================================================
 
 export interface PluginDetailCallbacks {
+	getDraftSummary?: () => string[];
 	onEnabledChange: (enabled: boolean) => void;
 	onFeatureChange: (feature: string, enabled: boolean) => void;
 	onConfigChange: (key: string, value: unknown) => void;
@@ -121,12 +94,17 @@ export interface PluginDetailCallbacks {
  * - Config settings
  */
 export class PluginDetailComponent extends Container {
-	#settingsList!: SettingsList;
+	#settingsList!: SettingsBrowser;
+	#editing = false;
+	get editing(): boolean {
+		return this.#editing;
+	}
 
 	constructor(
 		private plugin: InstalledPlugin,
 		private readonly manager: PluginManager,
 		private readonly callbacks: PluginDetailCallbacks,
+		private readonly draftSettings?: Record<string, unknown>,
 	) {
 		super();
 
@@ -140,12 +118,6 @@ export class PluginDetailComponent extends Container {
 		const manifest = plugin.manifest;
 
 		// Header
-		this.addChild(new DynamicBorder());
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", `  ${plugin.name}`)), 0, 0));
-		if (manifest.description) {
-			this.addChild(new Text(theme.fg("muted", `  ${manifest.description}`), 0, 0));
-		}
-		this.addChild(new Spacer(1));
 
 		const items: SettingItem[] = [];
 
@@ -182,7 +154,7 @@ export class PluginDetailComponent extends Container {
 
 		// Config settings
 		if (manifest.settings && Object.keys(manifest.settings).length > 0) {
-			const settings = await this.manager.getPluginSettings(plugin.name);
+			const settings = this.draftSettings ?? (await this.manager.getPluginSettings(plugin.name));
 
 			for (const [key, schema] of Object.entries(manifest.settings)) {
 				const currentValue = settings[key] ?? schema.default;
@@ -230,7 +202,7 @@ export class PluginDetailComponent extends Container {
 								value => {
 									const parsed = schema.type === "number" ? Number(value) : value;
 									this.callbacks.onConfigChange(key, parsed);
-									done(String(value));
+									done(schema.secret ? "••••••••" : String(value));
 								},
 								() => done(),
 							),
@@ -239,10 +211,34 @@ export class PluginDetailComponent extends Container {
 			}
 		}
 
-		this.#settingsList = new SettingsList(
+		for (const item of items) {
+			if (!item.values) continue;
+			const values = item.values;
+			item.submenu = (current, done) =>
+				new SettingsChoiceEditor(
+					item.label,
+					item.description ?? "",
+					values.map(value => ({ value, label: value })),
+					current,
+					done,
+					() => done(),
+				);
+			delete item.values;
+		}
+		for (const item of items) {
+			const submenu = item.submenu;
+			if (!submenu) continue;
+			item.submenu = (current, done) => {
+				this.#editing = true;
+				return submenu(current, value => {
+					done(value);
+					this.#editing = false;
+				});
+			};
+		}
+		this.#settingsList = new SettingsBrowser(
 			items,
-			Math.min(items.length, 10),
-			getSettingsListTheme(),
+			() => this.callbacks.getDraftSummary?.() ?? [],
 			(id, newValue) => {
 				if (id === "__enabled__") {
 					this.callbacks.onEnabledChange(newValue === "true");
@@ -267,12 +263,15 @@ export class PluginDetailComponent extends Container {
 				}
 			},
 			this.callbacks.onBack,
+			{
+				title: plugin.name,
+				purpose: `User defaults · v${plugin.version} · ${plugin.path}`,
+				footer: [],
+				details: item => `${item.label.trim()}: ${item.description ?? ""}`,
+			},
 		);
 
 		this.addChild(this.#settingsList);
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", "  Enter to edit · Esc to go back"), 0, 0));
-		this.addChild(new DynamicBorder());
 	}
 
 	handleInput(data: string): void {
@@ -288,106 +287,56 @@ export class PluginDetailComponent extends Container {
 /**
  * Submenu for enum config values.
  */
-class ConfigEnumSubmenu extends Container {
-	#selectList: SelectList;
-
+class ConfigEnumSubmenu extends SettingsChoiceEditor {
 	constructor(
 		key: string,
 		description: string,
 		values: string[],
-		currentValue: string,
+		current: string,
 		onSelect: (value: string) => void,
 		onCancel: () => void,
 	) {
-		super();
-
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", key)), 0, 0));
-		if (description) {
-			this.addChild(new Spacer(1));
-			this.addChild(new Text(theme.fg("muted", description), 0, 0));
-		}
-		this.addChild(new Spacer(1));
-
-		const items: SelectItem[] = values.map(v => ({ value: v, label: v }));
-		this.#selectList = new SelectList(items, Math.min(items.length, 8), getSelectListTheme());
-
-		const currentIndex = values.indexOf(currentValue);
-		if (currentIndex !== -1) {
-			this.#selectList.setSelectedIndex(currentIndex);
-		}
-
-		this.#selectList.onSelect = item => onSelect(item.value);
-		this.#selectList.onCancel = onCancel;
-
-		this.addChild(this.#selectList);
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", "  Enter to select · Esc to cancel"), 0, 0));
-	}
-
-	handleInput(data: string): void {
-		this.#selectList.handleInput(data);
+		super(
+			key,
+			description,
+			values.map(value => ({ value, label: value })),
+			current,
+			onSelect,
+			onCancel,
+		);
 	}
 }
 
-/**
- * Submenu for string/number config values with text input.
- */
-class ConfigInputSubmenu extends Container {
-	#input: Input;
-
+class ConfigInputSubmenu extends SettingsTextEditor {
 	constructor(
 		key: string,
 		schema: PluginSettingSchema,
-		currentValue: string,
-		private readonly onSubmit: (value: string) => void,
-		private readonly onCancel: () => void,
+		current: string,
+		onSubmit: (value: string) => void,
+		onCancel: () => void,
 	) {
-		super();
-
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", key)), 0, 0));
-		if (schema.description) {
-			this.addChild(new Spacer(1));
-			this.addChild(new Text(theme.fg("muted", schema.description), 0, 0));
-		}
-
-		// Type hint
-		let hint = `Type: ${schema.type}`;
-		if (schema.type === "number") {
-			const numSchema = schema as { min?: number; max?: number };
-			if (numSchema.min !== undefined || numSchema.max !== undefined) {
-				hint += ` (${numSchema.min ?? ""}..${numSchema.max ?? ""})`;
-			}
-		}
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", hint), 0, 0));
-
-		this.addChild(new Spacer(1));
-
-		// Input field
-		this.#input = new Input();
-		if (!schema.secret && currentValue) {
-			this.#input.setValue(currentValue);
-		}
-
-		this.#input.onSubmit = value => {
-			if (value.trim()) {
-				this.onSubmit(value);
-			} else {
-				this.onCancel();
-			}
-		};
-
-		this.addChild(this.#input);
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", "  Enter to save · Esc to cancel"), 0, 0));
-	}
-
-	handleInput(data: string): void {
-		if (data === "\x1b" || data === "\x1b\x1b") {
-			this.onCancel();
-			return;
-		}
-		this.#input.handleInput(data);
+		const range =
+			schema.type === "number" ? ` · Range: ${schema.min ?? "unbounded"}..${schema.max ?? "unbounded"}` : "";
+		super(
+			key,
+			`${schema.description ?? ""} · Type: ${schema.type}${range}`,
+			schema.secret ? "" : current,
+			value => {
+				if (schema.secret && !value) {
+					onCancel();
+					return;
+				}
+				if (schema.type === "number" && !value.trim()) throw new Error("Enter a number.");
+				onSubmit(value);
+			},
+			onCancel,
+			{
+				masked: schema.secret,
+				purpose: schema.secret
+					? "Replace secret draft · Empty keeps current value"
+					: "Edit draft · Saved after combined review",
+			},
+		);
 	}
 }
 
@@ -396,8 +345,10 @@ class ConfigInputSubmenu extends Container {
 // =============================================================================
 
 export interface PluginSettingsCallbacks {
+	getDraftSummary?: () => string[];
 	onClose: () => void;
 	onPluginChanged: () => void;
+	onDraftChanged?: () => void;
 }
 
 /** Component with handleInput method */
@@ -411,6 +362,28 @@ interface InputHandler {
  */
 export class PluginSettingsComponent extends Container {
 	#manager: PluginManager;
+	#snapshot: PluginSettingsSnapshot | null = null;
+	#loadGeneration = 0;
+	#listComponent: PluginListComponent | null = null;
+	#loadError = "";
+	override render(width: number): string[] {
+		return (
+			this.#viewComponent?.render(width) ??
+			selectorFrame(
+				width,
+				process.stdout.rows || 24,
+				"Plugin settings",
+				"User defaults",
+				[],
+				[this.#loadError || "Loading plugin settings…"],
+				[],
+				this.#loadError ? ["Ctrl+R: retry · Esc: back"] : [],
+			)
+		);
+	}
+	get editing(): boolean {
+		return this.#viewComponent instanceof PluginDetailComponent && this.#viewComponent.editing;
+	}
 	#viewComponent: (Container & InputHandler) | null = null;
 	// biome-ignore lint/correctness/noUnusedPrivateClassMembers: state tracking for view management
 	#currentView: "list" | "detail" = "list";
@@ -420,6 +393,8 @@ export class PluginSettingsComponent extends Container {
 	constructor(
 		cwd: string,
 		private readonly callbacks: PluginSettingsCallbacks,
+		private readonly drafts: PluginSettingsDrafts = new PluginSettingsDrafts(),
+		private readonly storage: PluginSettingsStorage = pluginSettingsStorage(cwd),
 	) {
 		super();
 		this.#manager = new PluginManager(cwd);
@@ -427,51 +402,111 @@ export class PluginSettingsComponent extends Container {
 	}
 
 	async #showPluginList(): Promise<void> {
+		this.#loadError = "";
+		const generation = ++this.#loadGeneration;
 		this.#currentView = "list";
 		this.#currentPlugin = null;
 		this.clear();
+		this.#viewComponent = null;
+		this.addChild(new Text("Loading plugin settings…", 0, 0));
 
-		const plugins = await this.#manager.list();
+		try {
+			const snapshot = await this.storage.load();
+			if (generation !== this.#loadGeneration) return;
+			this.#snapshot = snapshot;
+			this.clear();
+			const plugins = this.#snapshot.plugins.map(plugin => ({
+				...plugin,
+				enabled: this.drafts.value(this.#snapshot!, plugin, "enabled") as boolean,
+				enabledFeatures: this.drafts.value(this.#snapshot!, plugin, "enabledFeatures") as string[] | null,
+			}));
 
-		this.#viewComponent = new PluginListComponent(plugins, {
-			onPluginSelect: plugin => this.#showPluginDetail(plugin),
-			onCancel: () => this.callbacks.onClose(),
-		});
+			if (this.#listComponent) this.#listComponent.updatePlugins(plugins);
+			else
+				this.#listComponent = new PluginListComponent(plugins, {
+					getDraftSummary: this.callbacks.getDraftSummary,
+					onPluginSelect: plugin => this.#showPluginDetail(plugin),
+					onCancel: () => this.callbacks.onClose(),
+				});
+			this.#viewComponent = this.#listComponent;
 
-		this.addChild(this.#viewComponent);
+			this.addChild(this.#viewComponent);
+		} catch (error) {
+			if (generation !== this.#loadGeneration) return;
+			this.clear();
+			this.#viewComponent = null;
+			this.#loadError = `Plugin settings unavailable: ${error instanceof Error ? error.message : String(error)}`;
+			this.addChild(
+				new Text(
+					`Plugin settings unavailable: ${error instanceof Error ? error.message : String(error)} · Ctrl+R: retry · Esc: back`,
+					0,
+					0,
+				),
+			);
+		}
+		this.callbacks.onDraftChanged?.();
 	}
 
 	#showPluginDetail(plugin: InstalledPlugin): void {
+		++this.#loadGeneration;
+		const snapshot = this.#snapshot;
+		if (!snapshot) return;
 		this.#currentView = "detail";
 		this.#currentPlugin = plugin;
 		this.clear();
 
-		this.#viewComponent = new PluginDetailComponent(plugin, this.#manager, {
-			onEnabledChange: async enabled => {
-				await this.#manager.setEnabled(plugin.name, enabled);
-				this.callbacks.onPluginChanged();
+		this.#viewComponent = new PluginDetailComponent(
+			plugin,
+			this.#manager,
+			{
+				getDraftSummary: this.callbacks.getDraftSummary,
+				onEnabledChange: enabled => {
+					this.drafts.stage(snapshot, plugin, "enabled", enabled);
+					this.callbacks.onDraftChanged?.();
+				},
+				onFeatureChange: (feature, enabled) => {
+					const saved = this.drafts.value(snapshot, plugin, "enabledFeatures") as string[] | null;
+					const current = new Set(
+						saved ??
+							Object.entries(plugin.manifest.features ?? {})
+								.filter(([, def]) => def.default)
+								.map(([name]) => name),
+					);
+					if (enabled) {
+						current.add(feature);
+					} else {
+						current.delete(feature);
+					}
+					this.drafts.stage(snapshot, plugin, "enabledFeatures", [...current]);
+					this.callbacks.onDraftChanged?.();
+				},
+				onConfigChange: (key, value) => {
+					this.drafts.stage(snapshot, plugin, `config:${key}`, value);
+					this.callbacks.onDraftChanged?.();
+				},
+				onBack: () => this.#showPluginList(),
 			},
-			onFeatureChange: async (feature, enabled) => {
-				const current = new Set((await this.#manager.getEnabledFeatures(plugin.name)) ?? []);
-				if (enabled) {
-					current.add(feature);
-				} else {
-					current.delete(feature);
-				}
-				await this.#manager.setEnabledFeatures(plugin.name, [...current]);
-				this.callbacks.onPluginChanged();
-			},
-			onConfigChange: async (key, value) => {
-				await this.#manager.setPluginSetting(plugin.name, key, value);
-				this.callbacks.onPluginChanged();
-			},
-			onBack: () => this.#showPluginList(),
-		});
+			Object.fromEntries(
+				Object.keys(plugin.manifest.settings ?? {}).map(key => [
+					key,
+					this.drafts.value(snapshot, plugin, `config:${key}`),
+				]),
+			),
+		);
 
 		this.addChild(this.#viewComponent);
 	}
 
 	handleInput(data: string): void {
+		if (!this.#viewComponent && matchesSelectorKey(data, "cancel")) {
+			++this.#loadGeneration;
+			this.callbacks.onClose();
+			return;
+		}
+		if (!this.#viewComponent && data === "\x12") {
+			void this.#showPluginList();
+			return;
+		}
 		this.#viewComponent?.handleInput(data);
 	}
 }

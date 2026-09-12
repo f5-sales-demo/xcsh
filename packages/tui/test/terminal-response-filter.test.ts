@@ -190,6 +190,19 @@ describe("Terminal response filtering — no gibberish in editor", () => {
 			terminal.stop();
 		});
 
+		it("delivers a user Escape adjacent to DA1 without leaking the response tail", () => {
+			const { terminal, received } = setupTerminal();
+
+			vi.advanceTimersByTime(60);
+			process.stdin.emit("data", "\x1b\x1b[?1;2c");
+			vi.advanceTimersByTime(60);
+
+			expect(received).toEqual(["\x1b"]);
+			expect(received).not.toContain("[?1;2c");
+
+			terminal.stop();
+		});
+
 		it("OSC 11 with ST terminator (ESC backslash) is swallowed", () => {
 			const { terminal, received } = setupTerminal();
 

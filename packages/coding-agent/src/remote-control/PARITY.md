@@ -929,7 +929,7 @@ events and completion at 477. The iPhone nevertheless treated the unsolicited
 `thread/started` as discovery and did not navigate; its completion notification
 is consistent with delivery under a different thread identity.
 
-Native Codex Plan execution continues on the active protocol thread. XCSH still
+Native Codex Plan execution continues on the active protocol thread. xcsh still
 needs a fresh local AgentSession for the approved execution, so the adapter now
 persists a separate phone-facing continuity ID. Direct local lineage remains in
 `forkedFromId` and `parentSession`; the wire view is not a fork and therefore

@@ -62,7 +62,7 @@ declare module "@f5-sales-demo/pi-tui" {
 export const KEYBINDINGS = {
 	...TUI_KEYBINDINGS,
 	"app.interrupt": {
-		defaultKeys: "escape",
+		defaultKeys: "ctrl+c",
 		description: "Interrupt current operation",
 	},
 	"app.clear": {

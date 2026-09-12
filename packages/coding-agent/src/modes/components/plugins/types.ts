@@ -50,3 +50,21 @@ export interface PluginDashboardState {
 	loading: boolean;
 	loadError: string | null;
 }
+
+export interface PluginBulkResult {
+	installed: number;
+	failed: number;
+	total: number;
+	authenticationNeeded: string[];
+}
+
+/** Persistent operations exposed by the plugin backends to the interactive manager. */
+export interface PluginDashboardOperations {
+	refresh: () => Promise<DashboardPlugin[]>;
+	load: () => Promise<DashboardPlugin[]>;
+	install: (plugin: DashboardPlugin, scope: "user" | "project") => Promise<void>;
+	remove: (plugin: DashboardPlugin) => Promise<void>;
+	setEnabled: (plugin: DashboardPlugin, enabled: boolean) => Promise<void>;
+	upgrade: (plugin: DashboardPlugin) => Promise<void>;
+	installRecommended: (plugins: DashboardPlugin[]) => Promise<PluginBulkResult>;
+}

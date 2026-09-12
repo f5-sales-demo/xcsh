@@ -27,6 +27,7 @@ import { runQuestionGroup } from "../components/question-flow";
 const MAX_WIDGET_LINES = 10;
 
 export class ExtensionUiController {
+	#closeHookSelector?: () => void;
 	#extensionTerminalInputUnsubscribers = new Set<() => void>();
 	#hookWidgetsAbove = new Map<string, ExtensionUiComponent>();
 	#hookWidgetsBelow = new Map<string, ExtensionUiComponent>();
@@ -693,10 +694,12 @@ export class ExtensionUiController {
 		title: string,
 		options: string[],
 		dialogOptions?: ExtensionUIDialogOptions,
+		promptKind: UserPromptKind = "select",
 	): Promise<string | undefined> {
 		return this.ctx.session.userInteractions.request(
 			{ kind: "select", title, options },
-			(signal, complete) => this.#showHookSelector(title, options, { ...dialogOptions, signal }, complete),
+			(signal, complete) =>
+				this.#showHookSelector(title, options, { ...dialogOptions, signal }, promptKind, complete),
 			dialogOptions?.signal,
 		);
 	}
@@ -704,57 +707,53 @@ export class ExtensionUiController {
 		title: string,
 		options: string[],
 		dialogOptions?: ExtensionUIDialogOptions,
+		promptKind: UserPromptKind = "select",
 		complete?: (value: string | undefined) => void,
 	): Promise<string | undefined> {
+		if (this.ctx.hookSelector || dialogOptions?.signal?.aborted) return Promise.resolve(undefined);
 		const { promise, resolve } = Promise.withResolvers<string | undefined>();
 		let settled = false;
-		const onAbort = () => {
-			if (settled) return;
-			this.hideHookSelector();
-			if (!settled) {
-				settled = true;
-				resolve(undefined);
-			}
-		};
+		let overlay: OverlayHandle | undefined;
+		const onAbort = () => finish(undefined);
 		const finish = (value: string | undefined) => {
 			if (settled) return;
 			settled = true;
 			dialogOptions?.signal?.removeEventListener("abort", onAbort);
+			component.dispose();
+			overlay?.hide();
+			if (this.ctx.hookSelector === component) {
+				this.ctx.hookSelector = undefined;
+				this.#closeHookSelector = undefined;
+			}
+			this.ctx.ui.requestRender();
 			complete?.(value);
 			resolve(value);
 		};
 		const maxVisible = Math.max(4, Math.min(15, this.ctx.ui.terminal.rows - 12));
-		this.ctx.hookSelector = new HookSelectorComponent(
+		const component = new HookSelectorComponent(
 			title,
 			options,
-			option => {
-				if (settled) return;
-				this.hideHookSelector();
-				finish(option);
-			},
-			() => {
-				if (settled) return;
-				this.hideHookSelector();
-				finish(undefined);
-			},
+			option => finish(option),
+			() => finish(undefined),
 			{
 				onLeft: dialogOptions?.onLeft
 					? () => {
-							if (settled) return;
-							this.hideHookSelector();
-							dialogOptions.onLeft?.();
 							finish(undefined);
+							dialogOptions.onLeft?.();
 						}
 					: undefined,
 				onRight: dialogOptions?.onRight
 					? () => {
-							if (settled) return;
-							this.hideHookSelector();
-							dialogOptions.onRight?.();
 							finish(undefined);
+							dialogOptions.onRight?.();
 						}
 					: undefined,
-				onExternalEditor: dialogOptions?.onExternalEditor,
+				onExternalEditor: dialogOptions?.onExternalEditor
+					? () => {
+							finish(undefined);
+							dialogOptions.onExternalEditor?.();
+						}
+					: undefined,
 				helpText: dialogOptions?.helpText,
 				initialIndex: dialogOptions?.initialIndex,
 				timeout: dialogOptions?.timeout,
@@ -764,11 +763,15 @@ export class ExtensionUiController {
 				maxVisible,
 			},
 		);
-		this.ctx.editorContainer.clear();
-		this.ctx.editorContainer.addChild(this.ctx.hookSelector);
-		this.ctx.ui.setFocus(this.ctx.hookSelector);
-		this.ctx.ui.requestRender();
-		this.#emitPromptSignal("user_prompt_start", "select");
+		this.ctx.hookSelector = component;
+		this.#closeHookSelector = onAbort;
+		try {
+			overlay = this.ctx.ui.showOverlay(component, { fullscreen: true, mouseTracking: true });
+		} catch (error) {
+			finish(undefined);
+			throw error;
+		}
+		this.#emitPromptSignal("user_prompt_start", promptKind);
 		if (dialogOptions?.signal) {
 			if (dialogOptions.signal.aborted) {
 				onAbort();
@@ -776,25 +779,20 @@ export class ExtensionUiController {
 				dialogOptions.signal.addEventListener("abort", onAbort, { once: true });
 			}
 		}
-		return promise.finally(() => this.#emitPromptSignal("user_prompt_end", "select"));
+		return promise.finally(() => this.#emitPromptSignal("user_prompt_end", promptKind));
 	}
 	/**
 	 * Hide the hook selector.
 	 */
 	hideHookSelector(): void {
-		this.ctx.hookSelector?.dispose();
-		this.ctx.editorContainer.clear();
-		this.ctx.editorContainer.addChild(this.ctx.editor);
-		this.ctx.hookSelector = undefined;
-		this.ctx.ui.setFocus(this.ctx.editor);
-		this.ctx.ui.requestRender();
+		this.#closeHookSelector?.();
 	}
 
 	/**
 	 * Show a confirmation dialog for hooks.
 	 */
 	async showHookConfirm(title: string, message: string, dialogOptions?: ExtensionUIDialogOptions): Promise<boolean> {
-		const result = await this.showHookSelector(`${title}\n${message}`, ["Yes", "No"], dialogOptions);
+		const result = await this.showHookSelector(`${title}\n${message}`, ["No", "Yes"], dialogOptions, "confirm");
 		return result === "Yes";
 	}
 
@@ -904,6 +902,7 @@ export class ExtensionUiController {
 		editorOptions?: { promptStyle?: boolean },
 		complete?: (value: string | undefined) => void,
 	): Promise<string | undefined> {
+		if (dialogOptions?.signal?.aborted) return Promise.resolve(undefined);
 		const { promise, resolve } = Promise.withResolvers<string | undefined>();
 		let settled = false;
 		const onAbort = () => {
@@ -942,6 +941,7 @@ export class ExtensionUiController {
 		this.ctx.editorContainer.addChild(this.ctx.hookEditor);
 		this.ctx.ui.setFocus(this.ctx.hookEditor);
 		this.ctx.ui.requestRender();
+		this.#emitPromptSignal("user_prompt_start", "input");
 		if (dialogOptions?.signal) {
 			if (dialogOptions.signal.aborted) {
 				onAbort();
@@ -949,7 +949,7 @@ export class ExtensionUiController {
 				dialogOptions.signal.addEventListener("abort", onAbort, { once: true });
 			}
 		}
-		return promise;
+		return promise.finally(() => this.#emitPromptSignal("user_prompt_end", "input"));
 	}
 
 	/**
@@ -986,52 +986,71 @@ export class ExtensionUiController {
 			keybindings: KeybindingsManager,
 			done: (result: T) => void,
 		) => (Component & { dispose?(): void }) | Promise<Component & { dispose?(): void }>,
-		options?: { overlay?: boolean },
+		options?: { overlay?: boolean; fullscreen?: boolean },
 	): Promise<T> {
 		const savedText = this.ctx.editor.getText();
 		const keybindings = KeybindingsManager.inMemory();
 
-		const { promise, resolve } = Promise.withResolvers<T>();
+		const { promise, resolve, reject } = Promise.withResolvers<T>();
 		let component: (Component & { dispose?(): void }) | undefined;
 		let overlayHandle: OverlayHandle | undefined;
 		let closed = false;
+		let embedded = false;
 
-		const close = (result: T) => {
+		const settle = (outcome: { value: T } | { error: unknown }) => {
 			if (closed) return;
 			closed = true;
-			component?.dispose?.();
-			overlayHandle?.hide();
+			// One failed cleanup must not strand an overlay or the command's promise.
+			const attempt = (cleanup: () => void) => {
+				try {
+					cleanup();
+				} catch (error) {
+					if (!("error" in outcome)) outcome = { error };
+				}
+			};
+			attempt(() => component?.dispose?.());
+			attempt(() => overlayHandle?.hide());
 			overlayHandle = undefined;
-			if (!options?.overlay) {
-				this.ctx.editorContainer.clear();
-				this.ctx.editorContainer.addChild(this.ctx.editor);
-				this.ctx.editor.setText(savedText);
+			if (embedded) {
+				attempt(() => this.ctx.editorContainer.clear());
+				attempt(() => this.ctx.editorContainer.addChild(this.ctx.editor));
+				attempt(() => this.ctx.editor.setText(savedText));
 			}
-			this.ctx.ui.setFocus(this.ctx.editor);
-			this.ctx.ui.requestRender();
-			resolve(result);
+			if (component && !options?.fullscreen) attempt(() => this.ctx.ui.setFocus(this.ctx.editor));
+			attempt(() => this.ctx.ui.requestRender());
+			if ("error" in outcome) reject(outcome.error);
+			else resolve(outcome.value);
 		};
+		const close = (result: T) => settle({ value: result });
 
-		Promise.try(() => factory(this.ctx.ui, theme, keybindings, close)).then(c => {
-			if (closed) {
-				c.dispose?.();
-				return;
-			}
-			component = c;
-			if (options?.overlay) {
-				overlayHandle = this.ctx.ui.showOverlay(component, {
-					anchor: "bottom-center",
-					width: "100%",
-					maxHeight: "100%",
-					margin: 0,
-				});
-				return;
-			}
-			this.ctx.editorContainer.clear();
-			this.ctx.editorContainer.addChild(component);
-			this.ctx.ui.setFocus(component);
-			this.ctx.ui.requestRender();
-		});
+		Promise.try(() => factory(this.ctx.ui, theme, keybindings, close))
+			.then(c => {
+				if (closed) {
+					c.dispose?.();
+					return;
+				}
+				component = c;
+				if (options?.overlay) {
+					overlayHandle = this.ctx.ui.showOverlay(
+						component,
+						options.fullscreen
+							? { fullscreen: true }
+							: {
+									anchor: "bottom-center",
+									width: "100%",
+									maxHeight: "100%",
+									margin: 0,
+								},
+					);
+					return;
+				}
+				embedded = true;
+				this.ctx.editorContainer.clear();
+				this.ctx.editorContainer.addChild(component);
+				this.ctx.ui.setFocus(component);
+				this.ctx.ui.requestRender();
+			})
+			.catch(error => settle({ error }));
 		return promise;
 	}
 

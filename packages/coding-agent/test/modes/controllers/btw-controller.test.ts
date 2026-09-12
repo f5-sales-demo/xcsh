@@ -201,7 +201,7 @@ describe("BtwController", () => {
 		expect(appendedQuestion.content[0]?.text).toContain("Why?");
 	});
 
-	it("replaces an existing request by aborting the previous btw stream and keeping one panel", async () => {
+	it("rejects a duplicate request without aborting or replacing the active btw stream", async () => {
 		const model = getBundledModel("anthropic", "claude-sonnet-4-5")!;
 		const firstStream = new AssistantMessageEventStream();
 		const secondStream = new AssistantMessageEventStream();
@@ -236,6 +236,7 @@ describe("BtwController", () => {
 			streamingMessage: undefined,
 			extractAssistantText: vi.fn(),
 			showStatus: vi.fn(),
+			showWarning: vi.fn(),
 			showError: vi.fn(),
 		} as unknown as InteractiveModeContext;
 		const controller = new BtwController(ctx, { streamFn });
@@ -245,13 +246,14 @@ describe("BtwController", () => {
 		await Bun.sleep(0);
 
 		const firstOptions = streamFn.mock.calls[0]?.[2] as { signal: AbortSignal };
-		expect(firstOptions.signal.aborted).toBe(true);
-		expect(streamFn).toHaveBeenCalledTimes(2);
+		expect(firstOptions.signal.aborted).toBe(false);
+		expect(streamFn).toHaveBeenCalledTimes(1);
 		expect(btwContainer.children).toHaveLength(1);
 		expect(controller.hasActiveRequest()).toBe(true);
+		expect(ctx.showWarning).toHaveBeenCalledWith(expect.stringContaining("already answering"));
 	});
 
-	it("clears the btw panel when the active request is dismissed", async () => {
+	it("keeps running work on Escape, interrupts only on execution control, then dismisses", async () => {
 		const model = getBundledModel("anthropic", "claude-sonnet-4-5")!;
 		const btwContainer = new Container();
 		const streamFn = vi.fn((_model, _context, _options) => new AssistantMessageEventStream());
@@ -276,6 +278,7 @@ describe("BtwController", () => {
 			streamingMessage: undefined,
 			extractAssistantText: vi.fn(),
 			showStatus: vi.fn(),
+			showWarning: vi.fn(),
 			showError: vi.fn(),
 		} as unknown as InteractiveModeContext;
 		const controller = new BtwController(ctx, { streamFn });
@@ -284,6 +287,15 @@ describe("BtwController", () => {
 
 		expect(btwContainer.children).toHaveLength(1);
 		expect(controller.handleEscape()).toBe(true);
+		expect(btwContainer.children).toHaveLength(1);
+		expect(controller.hasActiveRequest()).toBe(true);
+		expect(ctx.showStatus).toHaveBeenCalledWith(expect.stringContaining("still running"));
+		expect(controller.prepareForBackground()).toBe(false);
+		expect(btwContainer.children).toHaveLength(1);
+		expect(ctx.showWarning).toHaveBeenCalledWith(expect.stringContaining("before backgrounding"));
+		expect(controller.handleInterrupt()).toBe(true);
+		expect(controller.handleInterrupt()).toBe(false);
+		expect(controller.prepareForBackground()).toBe(true);
 		expect(btwContainer.children).toHaveLength(0);
 		expect(controller.hasActiveRequest()).toBe(false);
 	});

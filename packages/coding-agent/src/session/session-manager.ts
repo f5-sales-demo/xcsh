@@ -76,6 +76,16 @@ export interface NewSessionOptions {
 	titleSource?: "auto" | "user";
 }
 
+/** Stable destination selected before a new-session transition is reviewed. */
+export interface SessionNewPreview {
+	sourceSessionId: string;
+	sourceSessionFile: string | undefined;
+	targetSessionId: string;
+	targetSessionFile: string | undefined;
+	timestamp: string;
+	parentSession: string | undefined;
+}
+
 export interface SessionEntryBase {
 	type: string;
 	id: string;
@@ -304,6 +314,27 @@ export interface SessionInfo {
 	messageCount: number;
 	firstMessage: string;
 	allMessagesText: string;
+}
+
+/** Stable, exact fork destination reserved for review before any mutation. */
+export interface SessionForkPreview {
+	sourceSessionId: string;
+	sourceSessionFile: string;
+	targetSessionId: string;
+	targetSessionFile: string;
+	timestamp: string;
+	sourceArtifactDir: string;
+	targetArtifactDir: string;
+}
+
+/** Stable branch destination reviewed before extracting a conversation path. */
+export interface SessionBranchPreview {
+	sourceSessionId: string;
+	sourceSessionFile: string;
+	branchLeafId: string | null;
+	targetSessionId: string;
+	targetSessionFile: string;
+	timestamp: string;
 }
 
 export type ReadonlySessionManager = Pick<
@@ -1597,9 +1628,47 @@ export class SessionManager {
 	}
 
 	/** Start a new session. Closes any existing writer first. */
-	async newSession(options?: NewSessionOptions): Promise<string | undefined> {
+	async newSession(options?: NewSessionOptions, preview?: SessionNewPreview): Promise<string | undefined> {
 		await this.#closePersistWriter();
-		return this.#newSessionSync(options);
+		return this.#newSessionSync(options, preview);
+	}
+
+	/** Resolve the exact identity and file that a reviewed new-session action will create. */
+	previewNewSession(options?: NewSessionOptions): SessionNewPreview {
+		const timestamp = new Date().toISOString();
+		const targetSessionId = Snowflake.next();
+		const targetSessionFile = this.persist
+			? path.join(this.getSessionDir(), `${timestamp.replace(/[:.]/g, "-")}_${targetSessionId}.jsonl`)
+			: undefined;
+		return {
+			sourceSessionId: this.#sessionId,
+			sourceSessionFile: this.#sessionFile,
+			targetSessionId,
+			targetSessionFile,
+			timestamp,
+			parentSession: options?.parentSession,
+		};
+	}
+
+	/** Revalidate a reviewed destination immediately before any costly or mutating work. */
+	validateNewSessionPreview(preview: SessionNewPreview, options?: NewSessionOptions): void {
+		const expectedFile = this.persist
+			? path.join(
+					this.getSessionDir(),
+					`${preview.timestamp.replace(/[:.]/g, "-")}_${preview.targetSessionId}.jsonl`,
+				)
+			: undefined;
+		if (
+			preview.sourceSessionId !== this.#sessionId ||
+			preview.sourceSessionFile !== this.#sessionFile ||
+			preview.parentSession !== options?.parentSession ||
+			preview.targetSessionFile !== expectedFile
+		)
+			throw new Error("New-session destination changed since review.");
+		if (preview.targetSessionFile && this.storage.existsSync(preview.targetSessionFile))
+			throw new Error(
+				`New-session destination already exists; no overwrite is allowed: ${preview.targetSessionFile}`,
+			);
 	}
 
 	/**
@@ -1607,13 +1676,46 @@ export class SessionManager {
 	 * Returns both the old and new session file paths for artifact copying.
 	 * @returns { oldSessionFile, newSessionFile } or undefined if not persisting
 	 */
-	async fork(): Promise<{ oldSessionFile: string; newSessionFile: string } | undefined> {
+	previewFork(): SessionForkPreview | undefined {
 		if (!this.persist || !this.#sessionFile) {
 			return undefined;
 		}
+		const timestamp = new Date().toISOString();
+		const targetSessionId = Snowflake.next();
+		const fileTimestamp = timestamp.replace(/[:.]/g, "-");
+		const targetSessionFile = path.join(this.getSessionDir(), `${fileTimestamp}_${targetSessionId}.jsonl`);
+		return {
+			sourceSessionId: this.#sessionId,
+			sourceSessionFile: this.#sessionFile,
+			targetSessionId,
+			targetSessionFile,
+			timestamp,
+			sourceArtifactDir: this.#sessionFile.slice(0, -6),
+			targetArtifactDir: targetSessionFile.slice(0, -6),
+		};
+	}
 
-		const oldSessionFile = this.#sessionFile;
-		const oldSessionId = this.#sessionId;
+	async fork(
+		preview: SessionForkPreview | undefined = this.previewFork(),
+	): Promise<{ oldSessionFile: string; newSessionFile: string } | undefined> {
+		if (!preview || !this.persist || !this.#sessionFile) return undefined;
+		const expectedFile = path.join(
+			this.getSessionDir(),
+			`${preview.timestamp.replace(/[:.]/g, "-")}_${preview.targetSessionId}.jsonl`,
+		);
+		if (
+			preview.sourceSessionId !== this.#sessionId ||
+			path.resolve(preview.sourceSessionFile) !== path.resolve(this.#sessionFile) ||
+			path.resolve(preview.targetSessionFile) !== path.resolve(expectedFile) ||
+			preview.sourceArtifactDir !== preview.sourceSessionFile.slice(0, -6) ||
+			preview.targetArtifactDir !== preview.targetSessionFile.slice(0, -6)
+		)
+			throw new Error("Fork target changed since review.");
+		if (await this.storage.exists(preview.targetSessionFile))
+			throw new Error(`Fork destination already exists; no overwrite is allowed: ${preview.targetSessionFile}`);
+
+		const oldSessionFile = preview.sourceSessionFile;
+		const oldSessionId = preview.sourceSessionId;
 
 		// Close the current writer
 		await this.#closePersistWriter();
@@ -1622,10 +1724,9 @@ export class SessionManager {
 		this.#persistErrorReported = false;
 
 		// Create new session ID and header
-		this.#sessionId = Snowflake.next();
-		const timestamp = new Date().toISOString();
-		const fileTimestamp = timestamp.replace(/[:.]/g, "-");
-		this.#sessionFile = path.join(this.getSessionDir(), `${fileTimestamp}_${this.#sessionId}.jsonl`);
+		this.#sessionId = preview.targetSessionId;
+		const timestamp = preview.timestamp;
+		this.#sessionFile = preview.targetSessionFile;
 
 		// Update the header with new ID but keep all entries
 		const oldHeader = this.#fileEntries.find(e => e.type === "session") as SessionHeader | undefined;
@@ -1658,7 +1759,42 @@ export class SessionManager {
 	 * Moves session files and artifacts on disk, updates all internal references,
 	 * and rewrites the session header with the new cwd.
 	 */
+	/** Read-only interactive preview; unlike directory initialization, this performs no migrations or writes. */
+	previewMoveTo(newCwd: string): {
+		cwd: string;
+		sessionDir: string;
+		sessionFile: string | undefined;
+		artifactDir: string | undefined;
+	} {
+		const cwd = path.resolve(newCwd);
+		const root = resolveManagedSessionRoot(this.sessionDir, this.cwd) ?? getSessionsDir();
+		const sessionDir = path.join(root, getDefaultSessionDirName(cwd).encodedDirName);
+		const sessionFile =
+			this.persist && this.#sessionFile ? path.join(sessionDir, path.basename(this.#sessionFile)) : undefined;
+		return { cwd, sessionDir, sessionFile, artifactDir: sessionFile?.slice(0, -6) };
+	}
+
+	/** Interactive adapter only: retain existing CLI/RPC move behavior while enforcing its reviewed destination. */
+	async moveToReviewed(newCwd: string, expected: ReturnType<SessionManager["previewMoveTo"]>): Promise<void> {
+		if (JSON.stringify(this.previewMoveTo(newCwd)) !== JSON.stringify(expected))
+			throw new Error("Session move destination changed. Review the move again.");
+		for (const destination of [expected.sessionFile, expected.artifactDir]) {
+			if (!destination) continue;
+			try {
+				await fs.promises.lstat(destination);
+			} catch (error) {
+				if (isEnoent(error)) continue;
+				throw error;
+			}
+			throw new Error(`Move destination already exists; nothing overwritten: ${destination}`);
+		}
+		await this.#moveTo(newCwd, true);
+	}
+
 	async moveTo(newCwd: string): Promise<void> {
+		await this.#moveTo(newCwd);
+	}
+	async #moveTo(newCwd: string, noOverwrite = false): Promise<void> {
 		const resolvedCwd = path.resolve(newCwd);
 		if (resolvedCwd === this.cwd) return;
 
@@ -1686,7 +1822,16 @@ export class SessionManager {
 			try {
 				// Guard: session file may not exist yet (no assistant messages persisted)
 				if (hadSessionFile) {
-					await fs.promises.rename(oldSessionFile, newSessionFile);
+					if (noOverwrite) {
+						// link fails atomically if another session appeared after review.
+						await fs.promises.link(oldSessionFile, newSessionFile);
+						try {
+							await fs.promises.unlink(oldSessionFile);
+						} catch (error) {
+							await fs.promises.unlink(newSessionFile);
+							throw error;
+						}
+					} else await fs.promises.rename(oldSessionFile, newSessionFile);
 					movedSessionFile = true;
 				}
 
@@ -1749,14 +1894,15 @@ export class SessionManager {
 	}
 
 	/** Sync version for initial creation (no existing writer to close) */
-	#newSessionSync(options?: NewSessionOptions): string | undefined {
+	#newSessionSync(options?: NewSessionOptions, preview?: SessionNewPreview): string | undefined {
+		if (preview) this.validateNewSessionPreview(preview, options);
 		this.#persistChain = Promise.resolve();
 		this.#persistError = undefined;
 		this.#persistErrorReported = false;
-		this.#sessionId = Snowflake.next();
+		this.#sessionId = preview?.targetSessionId ?? Snowflake.next();
 		this.#sessionName = options?.title ? SessionManager.#sanitizeName(options.title) || undefined : undefined;
 		this.#titleSource = this.#sessionName ? options?.titleSource : undefined;
-		const timestamp = new Date().toISOString();
+		const timestamp = preview?.timestamp ?? new Date().toISOString();
 		const header: SessionHeader = {
 			type: "session",
 			version: CURRENT_SESSION_VERSION,
@@ -1783,7 +1929,8 @@ export class SessionManager {
 
 		if (this.persist) {
 			const fileTimestamp = timestamp.replace(/[:.]/g, "-");
-			this.#sessionFile = path.join(this.getSessionDir(), `${fileTimestamp}_${this.#sessionId}.jsonl`);
+			this.#sessionFile =
+				preview?.targetSessionFile ?? path.join(this.getSessionDir(), `${fileTimestamp}_${this.#sessionId}.jsonl`);
 			writeTerminalBreadcrumb(this.cwd, this.#sessionFile);
 		}
 		return this.#sessionFile;
@@ -1939,6 +2086,39 @@ export class SessionManager {
 		if (this.#flushed && !this.#needsFullRewriteOnNextPersist) return;
 		await this.#rewriteFile();
 		this.#ensuredOnDisk = true;
+	}
+
+	/** Explicit interactive retry. Ordinary flush remains fail-closed after a writer error. */
+	async retryPersistence(): Promise<void> {
+		if (!this.persist || !this.#sessionFile) return;
+		if (!this.#persistError) {
+			await this.ensureOnDisk();
+			await this.flush();
+			return;
+		}
+		await this.#queuePersistTask(
+			async () => {
+				const writer = this.#persistWriter;
+				try {
+					await writer?.close();
+				} catch (error) {
+					// close drains pending writes even when reporting the already-latched writer error.
+					if (error !== this.#persistError && error !== writer?.getError()) throw error;
+				}
+				this.#persistWriter = undefined;
+				this.#persistWriterPath = undefined;
+				const entries = await Promise.all(
+					this.#fileEntries.map(entry => prepareEntryForPersistence(entry, this.#blobStore)),
+				);
+				await this.#writeEntriesAtomically(entries);
+				this.#needsFullRewriteOnNextPersist = false;
+				this.#flushed = true;
+				this.#ensuredOnDisk = true;
+				this.#persistError = undefined;
+				this.#persistErrorReported = false;
+			},
+			{ ignoreError: true },
+		);
 	}
 
 	/** Flush pending writes to disk. Call before switching sessions or on shutdown. */
@@ -2769,20 +2949,53 @@ export class SessionManager {
 	 * Useful for extracting a single conversation path from a branched session.
 	 * Returns the new session file path, or undefined if not persisting.
 	 */
-	createBranchedSession(leafId: string): string | undefined {
+	previewBranchedSession(leafId: string | null): SessionBranchPreview | undefined {
+		if (!this.persist || !this.#sessionFile) return undefined;
+		if (leafId !== null && !this.#byId.has(leafId)) throw new Error(`Entry ${leafId} not found`);
+		const timestamp = new Date().toISOString();
+		const targetSessionId = Snowflake.next();
+		const targetSessionFile = path.join(
+			this.getSessionDir(),
+			`${timestamp.replace(/[:.]/g, "-")}_${targetSessionId}.jsonl`,
+		);
+		return {
+			sourceSessionId: this.#sessionId,
+			sourceSessionFile: this.#sessionFile,
+			branchLeafId: leafId,
+			targetSessionId,
+			targetSessionFile,
+			timestamp,
+		};
+	}
+
+	createBranchedSession(leafId: string | null, preview?: SessionBranchPreview): string | undefined {
 		const previousSessionFile = this.#sessionFile;
-		const branchPath = this.getBranch(leafId);
-		if (branchPath.length === 0) {
+		const branchPath = leafId === null ? [] : this.getBranch(leafId);
+		if (leafId !== null && branchPath.length === 0) {
 			throw new Error(`Entry ${leafId} not found`);
 		}
 
 		// Filter out LabelEntry from path - we'll recreate them from the resolved map
 		const pathWithoutLabels = branchPath.filter(e => e.type !== "label");
 
-		const newSessionId = Snowflake.next();
-		const timestamp = new Date().toISOString();
+		const generated = preview ?? this.previewBranchedSession(leafId);
+		const newSessionId = generated?.targetSessionId ?? Snowflake.next();
+		const timestamp = generated?.timestamp ?? new Date().toISOString();
 		const fileTimestamp = timestamp.replace(/[:.]/g, "-");
-		const newSessionFile = path.join(this.getSessionDir(), `${fileTimestamp}_${newSessionId}.jsonl`);
+		const newSessionFile =
+			generated?.targetSessionFile ?? path.join(this.getSessionDir(), `${fileTimestamp}_${newSessionId}.jsonl`);
+		if (generated) {
+			const expectedFile = path.join(this.getSessionDir(), `${fileTimestamp}_${newSessionId}.jsonl`);
+			if (
+				generated.sourceSessionId !== this.#sessionId ||
+				generated.sourceSessionFile !== this.#sessionFile ||
+				generated.branchLeafId !== leafId ||
+				path.resolve(newSessionFile) !== path.resolve(expectedFile)
+			)
+				throw new Error("Branch destination changed since review.");
+			if (this.storage.existsSync(newSessionFile))
+				throw new Error(`Branch destination already exists; no overwrite is allowed: ${newSessionFile}`);
+		}
 
 		const header: SessionHeader = {
 			type: "session",

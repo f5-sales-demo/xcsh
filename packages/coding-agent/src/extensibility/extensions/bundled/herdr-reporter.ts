@@ -362,13 +362,13 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	// re-send an unchanged ref every turn.
 	let lastSessionRefKey: string | undefined;
 	// Herdr only anchors a new full-lifecycle authority after the first session
-	// reference identifies how the session began. XCSH creates that reference
+	// reference identifies how the session began. xcsh creates that reference
 	// lazily, so retain the startup marker until there is a concrete ref to send.
 	let pendingSessionStartSource: "startup" | "new" | "resume" | "fork" | undefined = "startup";
 	// `agent_end` is the primary completion signal. Keep one deferred check from
 	// `turn_end` as well: some interactive UI paths render the completed response
 	// before their agent-end extension callback has drained. The check consults
-	// XCSH's own streaming state, so a tool boundary cannot be mistaken for idle.
+	// xcsh's own streaming state, so a tool boundary cannot be mistaken for idle.
 	let settledTurnReconcileTimer: ReturnType<typeof setTimeout> | undefined;
 	// Heartbeats are session-scoped liveness signals. They have no lifecycle state
 	// or metadata payload, so Herdr can refresh the authoritative reporter without
@@ -699,7 +699,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 			const acknowledged = cancelAckGate ? await cancelAckGate : false;
 			if (!acknowledged) {
 				state = "interrupted";
-				options = { reason: "XCSH cancelled outside an authenticated Herdr safe point" };
+				options = { reason: "xcsh cancelled outside an authenticated Herdr safe point" };
 			}
 		}
 		await reportSemanticTurn(state, options);
@@ -903,7 +903,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		if (last && !terminal) {
 			activeSemanticTurn = last;
 			semanticRevision = last.eventRevision ?? 0;
-			await finishSemanticTurn("interrupted", { reason: "XCSH restarted before semantic settlement" });
+			await finishSemanticTurn("interrupted", { reason: "xcsh restarted before semantic settlement" });
 		}
 	});
 
@@ -913,11 +913,11 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	});
 
 	pi.on("session_before_switch", async () => {
-		await finishSemanticTurn("interrupted", { reason: "XCSH switched sessions before semantic settlement" });
+		await finishSemanticTurn("interrupted", { reason: "xcsh switched sessions before semantic settlement" });
 	});
 
 	pi.on("session_before_branch", async () => {
-		await finishSemanticTurn("interrupted", { reason: "XCSH forked before semantic settlement" });
+		await finishSemanticTurn("interrupted", { reason: "xcsh forked before semantic settlement" });
 	});
 
 	pi.on("session_switch", async (event, ctx) => {
@@ -1020,9 +1020,9 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 		if (event.phase === "idle") {
 			await finishSemanticTurn("completed", { result: pendingSemanticResult });
 		} else if (event.phase === "error") {
-			await finishSemanticTurn("failed", { reason: "XCSH turn failed" });
+			await finishSemanticTurn("failed", { reason: "xcsh turn failed" });
 		} else if (event.phase === "cancelled") {
-			await finishSemanticTurn("cancelled", { reason: "XCSH turn cancelled" });
+			await finishSemanticTurn("cancelled", { reason: "xcsh turn cancelled" });
 		} else if (event.phase === "awaiting_user") {
 			await reportSemanticTurn("waiting_input", { reason: "user input required" });
 		} else {
@@ -1078,7 +1078,7 @@ export default function herdrReporter(pi: ExtensionAPI): void {
 	pi.on("session_shutdown", async () => {
 		stopHeartbeat();
 		stopActionPolling();
-		await finishSemanticTurn("interrupted", { reason: "XCSH shut down before semantic settlement" });
+		await finishSemanticTurn("interrupted", { reason: "xcsh shut down before semantic settlement" });
 		await send(RELEASE_METHOD, {
 			pane_id: paneId,
 			source: HERDR_SOURCE,

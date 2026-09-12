@@ -1,6 +1,6 @@
-import { Container, type SelectItem, SelectList } from "@f5-sales-demo/pi-tui";
+import { Container, type SelectItem, type SelectList } from "@f5-sales-demo/pi-tui";
 import { getSelectListTheme } from "../../modes/theme/theme";
-import { DynamicBorder } from "./dynamic-border";
+import { SearchableSelectList } from "./searchable-select-list";
 
 /**
  * Component that renders a queue mode selector with borders
@@ -24,11 +24,13 @@ export class QueueModeSelectorComponent extends Container {
 			{ value: "all", label: "all", description: "Process all queued messages at once" },
 		];
 
-		// Add top border
-		this.addChild(new DynamicBorder());
-
-		// Create selector
-		this.#selectList = new SelectList(queueModes, 2, getSelectListTheme());
+		this.#selectList = new SearchableSelectList(
+			"Choose queue mode",
+			"Choose how queued prompts are delivered to the active session.",
+			queueModes,
+			2,
+			getSelectListTheme(),
+		);
 
 		// Preselect current mode
 		const currentIndex = queueModes.findIndex(item => item.value === currentMode);
@@ -45,9 +47,6 @@ export class QueueModeSelectorComponent extends Container {
 		};
 
 		this.addChild(this.#selectList);
-
-		// Add bottom border
-		this.addChild(new DynamicBorder());
 	}
 
 	getSelectList(): SelectList {

@@ -63,6 +63,8 @@ describe("HookInputComponent timeout", () => {
 		component.handleInput("h");
 		component.handleInput("i");
 		component.handleInput("\n");
+		component.handleInput("\n");
+		vi.advanceTimersByTime(2000);
 
 		expect(onSubmit).toHaveBeenCalledTimes(1);
 		expect(onSubmit).toHaveBeenCalledWith("hi");
@@ -70,5 +72,13 @@ describe("HookInputComponent timeout", () => {
 		expect(onTimeout).not.toHaveBeenCalled();
 
 		component.dispose();
+	});
+	it("Escape cancels input but Ctrl+C does not close it", () => {
+		const cancelled = vi.fn();
+		const component = new HookInputComponent("Prompt", "Example", vi.fn(), cancelled);
+		component.handleInput("\x03");
+		expect(cancelled).not.toHaveBeenCalled();
+		component.handleInput("\x1b");
+		expect(cancelled).toHaveBeenCalledTimes(1);
 	});
 });

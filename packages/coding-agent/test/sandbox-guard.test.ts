@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { getSessionsDir } from "@f5-sales-demo/pi-utils";
 import { _resetSettingsForTest, Settings, settings } from "../src/config/settings";
 import sandboxGuard from "../src/extensibility/extensions/bundled/sandbox-guard";
+import { applyRemotePermissionProfile } from "../src/sandbox/remote-permissions";
 
 /**
  * Real directories, because the guard now resolves a `ContainmentFence` and a fence refuses to build on
@@ -44,7 +45,14 @@ interface ToolCallEvent {
 	toolCallId: string;
 	input: Record<string, unknown>;
 }
-type Handler = (event: ToolCallEvent, ctx: { cwd: string }) => unknown;
+type Handler = (
+	event: ToolCallEvent,
+	ctx: {
+		cwd: string;
+		settings?: Settings;
+		ui?: { select(title: string, options: string[]): Promise<string | undefined> };
+	},
+) => unknown;
 
 /** Invoke the factory with a stub `pi` and capture its tool_call handler. */
 function captureHandler(): Handler | undefined {
@@ -63,8 +71,13 @@ async function initSandbox(enabled: boolean): Promise<void> {
 	await Settings.init({ inMemory: true, cwd: CWD, overrides: { "sandbox.enabled": enabled } });
 }
 
-function call(handler: Handler, toolName: string, input: Record<string, unknown>): unknown {
-	return handler({ type: "tool_call", toolName, toolCallId: "1", input }, { cwd: CWD });
+function call(
+	handler: Handler,
+	toolName: string,
+	input: Record<string, unknown>,
+	ctx: Parameters<Handler>[1] = { cwd: CWD },
+): unknown {
+	return handler({ type: "tool_call", toolName, toolCallId: "1", input }, ctx);
 }
 
 describe("sandbox-guard bundled extension", () => {
@@ -104,6 +117,111 @@ describe("sandbox-guard bundled extension", () => {
 		// Revoking it re-blocks (cache tracks the current allow-list, not a one-way widen).
 		settings.override("sandbox.allowRead", []);
 		expect(await call(handler, "read", { file_path: container })).toMatchObject({ block: true });
+	});
+
+	it("Ask blocks an out-of-workspace write until the user grants its exact path", async () => {
+		const sessionSettings = Settings.isolated({ "sandbox.enabled": false });
+		applyRemotePermissionProfile(sessionSettings, {
+			approvalPolicy: "on-request",
+			approvalsReviewer: "user",
+			sandboxPolicy: {
+				type: "workspaceWrite",
+				writableRoots: [],
+				networkAccess: false,
+				excludeTmpdirEnvVar: false,
+				excludeSlashTmp: false,
+			},
+			activePermissionProfile: { id: ":workspace" },
+		});
+		const handler = captureHandler()!;
+		const target = path.join(os.homedir(), "xcsh-ask-outside", "approved.txt");
+		const prompts: string[] = [];
+		const decline = await call(
+			handler,
+			"write",
+			{ file_path: target },
+			{
+				cwd: CWD,
+				settings: sessionSettings,
+				ui: {
+					select: async title => {
+						prompts.push(title);
+						return "Decline";
+					},
+				},
+			},
+		);
+		expect(decline).toMatchObject({ block: true });
+		expect(prompts[0]).toContain(target);
+
+		const approve = await call(
+			handler,
+			"write",
+			{ file_path: target },
+			{
+				cwd: CWD,
+				settings: sessionSettings,
+				ui: {
+					select: async title => {
+						prompts.push(title);
+						return "Allow for session";
+					},
+				},
+			},
+		);
+		expect(approve).toBeUndefined();
+		expect(sessionSettings.get("sandbox.allowWrite")).toEqual([target]);
+		expect(
+			await call(
+				handler,
+				"write",
+				{ file_path: target },
+				{
+					cwd: CWD,
+					settings: sessionSettings,
+					ui: {
+						select: async () => {
+							prompts.push("unexpected");
+							return "Decline";
+						},
+					},
+				},
+			),
+		).toBeUndefined();
+		expect(prompts).toHaveLength(2);
+	});
+
+	it("Ask requires a one-call approval for shell execution even inside the workspace", async () => {
+		const sessionSettings = Settings.isolated({ "sandbox.enabled": false });
+		applyRemotePermissionProfile(sessionSettings, {
+			approvalPolicy: "on-request",
+			approvalsReviewer: "user",
+			sandboxPolicy: {
+				type: "workspaceWrite",
+				writableRoots: [],
+				networkAccess: false,
+				excludeTmpdirEnvVar: false,
+				excludeSlashTmp: false,
+			},
+			activePermissionProfile: { id: ":workspace" },
+		});
+		const handler = captureHandler()!;
+		for (const [answer, blocked] of [
+			["Decline", true],
+			["Allow once", false],
+		] as const) {
+			const result = await call(
+				handler,
+				"bash",
+				{ command: "pwd" },
+				{
+					cwd: CWD,
+					settings: sessionSettings,
+					ui: { select: async () => answer },
+				},
+			);
+			expect(Boolean((result as { block?: boolean } | undefined)?.block)).toBe(blocked);
+		}
 	});
 
 	/**

@@ -81,7 +81,7 @@ export class PythonExecutionComponent extends Container {
 			ui,
 			spinner => theme.fg(colorKey, spinner),
 			text => theme.fg("muted", text),
-			`Running… (esc to cancel)`,
+			`Running… (${appInterruptHint()})`,
 			getSymbolTheme().spinnerFrames,
 		);
 		this.#contentContainer.addChild(this.#loader);
@@ -242,3 +242,5 @@ export class PythonExecutionComponent extends Container {
 		return this.code;
 	}
 }
+
+import { appInterruptHint } from "../utils/keybinding-matchers";

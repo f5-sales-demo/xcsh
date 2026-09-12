@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it, vi } from "bun:test";
 import {
 	buildLogCopyPayload,
 	DebugLogViewerComponent,
@@ -6,6 +6,9 @@ import {
 	LOAD_OLDER_LABEL,
 	SESSION_BOUNDARY_WARNING,
 } from "../../src/debug/log-viewer";
+import { getThemeByName, setThemeInstance } from "../../src/modes/theme/theme";
+
+beforeAll(async () => setThemeInstance((await getThemeByName("xcsh-dark"))!));
 
 describe("DebugLogViewerModel", () => {
 	const describeRow = (row: { kind: string; logIndex?: number }): string => {
@@ -260,6 +263,19 @@ describe("DebugLogViewerComponent mouse", () => {
 		expect(updates).toBe(1);
 		expect(after).not.toBe(before);
 	});
+});
+
+it("DebugLogViewerComponent never copies without the reviewed-copy callback", async () => {
+	const onError = vi.fn();
+	const viewer = new DebugLogViewerComponent({
+		logs: "synthetic log entry",
+		terminalRows: 12,
+		onExit: () => {},
+		onError,
+	});
+	viewer.handleInput("\x03");
+	await Bun.sleep(0);
+	expect(onError).toHaveBeenCalledWith("Copy review is unavailable; reopen Debug tools and try again");
 });
 
 describe("buildLogCopyPayload", () => {

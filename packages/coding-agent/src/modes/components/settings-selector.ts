@@ -1,19 +1,8 @@
+import { isDeepStrictEqual } from "node:util";
 import type { ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
 import type { Effort } from "@f5-sales-demo/pi-ai";
-import {
-	Container,
-	Input,
-	matchesKey,
-	type SelectItem,
-	SelectList,
-	type SettingItem,
-	SettingsList,
-	Spacer,
-	type Tab,
-	TabBar,
-	Text,
-} from "@f5-sales-demo/pi-tui";
-import { type SettingPath, settings } from "../../config/settings";
+import { Container, matchesKey, type SettingItem, type Tab, TabBar, wrapTextWithAnsi } from "@f5-sales-demo/pi-tui";
+import { type SettingPath, type Settings, settings } from "../../config/settings";
 import type {
 	SettingTab,
 	StatusLinePreset,
@@ -21,150 +10,15 @@ import type {
 	StatusLineSeparatorStyle,
 } from "../../config/settings-schema";
 import { SETTING_TABS, TAB_METADATA } from "../../config/settings-schema";
-import { getCurrentThemeName, getSelectListTheme, getSettingsListTheme, theme } from "../../modes/theme/theme";
-import { matchesAppInterrupt } from "../../modes/utils/keybinding-matchers";
+import { getCurrentThemeName, theme } from "../../modes/theme/theme";
 import { getTabBarTheme } from "../shared";
-import { DynamicBorder } from "./dynamic-border";
 import { PluginSettingsComponent } from "./plugin-settings";
+import { PluginSettingsDrafts, type PluginSettingsStorage, pluginSettingsStorage } from "./plugin-settings-drafts";
+import { matchesSelectorKey, selectorFrame, selectorFrameContentWidth, selectorRow } from "./selector-frame";
+import { SettingsBrowser } from "./settings-browser";
 import { getSettingsForTab, type SettingDef } from "./settings-defs";
+import { SettingsChoiceEditor, SettingsTextEditor } from "./settings-editors";
 import { getPreset } from "./status-line/presets";
-
-/**
- * A submenu component for selecting from a list of options.
- */
-/**
- * Submenu component for free-text string settings.
- * Mirrors the ConfigInputSubmenu pattern from plugin-settings.ts.
- */
-class TextInputSubmenu extends Container {
-	#input: Input;
-
-	constructor(
-		label: string,
-		description: string,
-		currentValue: string,
-		private readonly onSubmit: (value: string) => void,
-		private readonly onCancel: () => void,
-	) {
-		super();
-
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", label)), 0, 0));
-		if (description) {
-			this.addChild(new Spacer(1));
-			this.addChild(new Text(theme.fg("muted", description), 0, 0));
-		}
-		this.addChild(new Spacer(1));
-
-		this.#input = new Input();
-		if (currentValue) {
-			this.#input.setValue(currentValue);
-			// Move cursor to end of pre-filled value (ctrl+e = cursorLineEnd).
-			this.#input.handleInput("\x05");
-		}
-		this.#input.onSubmit = value => {
-			this.onSubmit(value); // empty string clears the setting
-		};
-		this.addChild(this.#input);
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", "  Enter to save · Esc to cancel · Clear field to unset"), 0, 0));
-	}
-
-	handleInput(data: string): void {
-		if (data === "\x1b" || data === "\x1b\x1b") {
-			this.onCancel();
-			return;
-		}
-		this.#input.handleInput(data);
-	}
-}
-
-class SelectSubmenu extends Container {
-	#selectList: SelectList;
-	#previewText: Text | null = null;
-	#previewUpdateRequestId: number = 0;
-
-	constructor(
-		title: string,
-		description: string,
-		options: ReadonlyArray<SelectItem>,
-		currentValue: string,
-		onSelect: (value: string) => void,
-		onCancel: () => void,
-		onSelectionChange?: (value: string) => void | Promise<void>,
-		private readonly getPreview?: () => string,
-	) {
-		super();
-
-		// Title
-		this.addChild(new Text(theme.bold(theme.fg("contentAccent", title)), 0, 0));
-
-		// Description
-		if (description) {
-			this.addChild(new Spacer(1));
-			this.addChild(new Text(theme.fg("muted", description), 0, 0));
-		}
-
-		// Preview (if provided)
-		if (getPreview) {
-			this.addChild(new Spacer(1));
-			this.addChild(new Text(theme.fg("muted", "Preview:"), 0, 0));
-			this.#previewText = new Text(getPreview(), 0, 0);
-			this.addChild(this.#previewText);
-		}
-
-		// Spacer
-		this.addChild(new Spacer(1));
-
-		// Select list
-		this.#selectList = new SelectList(options, Math.min(options.length, 10), getSelectListTheme());
-
-		// Pre-select current value
-		const currentIndex = options.findIndex(o => o.value === currentValue);
-		if (currentIndex !== -1) {
-			this.#selectList.setSelectedIndex(currentIndex);
-		}
-
-		this.#selectList.onSelect = item => {
-			onSelect(item.value);
-		};
-
-		this.#selectList.onCancel = onCancel;
-
-		if (onSelectionChange) {
-			this.#selectList.onSelectionChange = item => {
-				const requestId = ++this.#previewUpdateRequestId;
-				const result = onSelectionChange(item.value);
-				if (result && typeof (result as Promise<void>).then === "function") {
-					void (result as Promise<void>).finally(() => {
-						if (requestId === this.#previewUpdateRequestId) {
-							this.#updatePreview();
-						}
-					});
-					return;
-				}
-				if (requestId === this.#previewUpdateRequestId) {
-					this.#updatePreview();
-				}
-			};
-		}
-
-		this.addChild(this.#selectList);
-
-		// Hint
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("dim", "  Enter to select · Esc to go back"), 0, 0));
-	}
-
-	#updatePreview(): void {
-		if (this.#previewText && this.getPreview) {
-			this.#previewText.setText(this.getPreview());
-		}
-	}
-
-	handleInput(data: string): void {
-		this.#selectList.handleInput(data);
-	}
-}
 
 /**
  * Format the displayed value for a submenu-type setting row.
@@ -214,6 +68,9 @@ export interface SettingsRuntimeContext {
 	availableThemes: string[];
 	/** Working directory for plugins tab */
 	cwd: string;
+	/** Optional isolated backing store for deterministic scenarios. */
+	settings?: Settings;
+	pluginStorage?: PluginSettingsStorage;
 }
 
 /** Status line settings subset for preview */
@@ -235,8 +92,12 @@ export interface SettingsCallbacks {
 	getStatusLinePreview?: () => string;
 	/** Called when plugins change */
 	onPluginsChanged?: () => void;
+	/** Called only after every reviewed backing save succeeds. */
+	onSaved?: (changeCount: number, kind: "settings" | "plugin" | "combined") => void;
 	/** Called when settings panel is closed */
 	onCancel: () => void;
+	/** Refresh asynchronous save/recovery state. */
+	onRequestRender?: () => void;
 }
 
 /**
@@ -245,13 +106,149 @@ export interface SettingsCallbacks {
  */
 export class SettingsSelectorComponent extends Container {
 	#tabBar: TabBar;
-	#currentList: SettingsList | null = null;
-	#currentSubmenu: Container | null = null;
+	#currentList: SettingsBrowser | null = null;
+	#browsers = new Map<SettingTab, SettingsBrowser>();
 	#pluginComponent: PluginSettingsComponent | null = null;
-	#statusPreviewContainer: Container | null = null;
-	#statusPreviewText: Text | null = null;
+	#cachedPluginComponent: PluginSettingsComponent | null = null;
 	#currentTabId: SettingTab | "plugins" = "appearance";
-	#textInputActive = false;
+	#drafts = new Map<SettingPath, { before: unknown; after: unknown }>();
+	#pluginDrafts = new PluginSettingsDrafts();
+	get #pluginStorage(): PluginSettingsStorage {
+		return this.context.pluginStorage ?? pluginSettingsStorage(this.context.cwd);
+	}
+	get #draftCount(): number {
+		return this.#drafts.size + this.#pluginDrafts.size;
+	}
+	#review: "save" | "leave" | null = null;
+	#reviewIndex = 0;
+	#reviewOffset = 0;
+	#saving = false;
+	#pendingPersistence = false;
+	#saveError = "";
+	#initialTheme = getCurrentThemeName();
+	#submenuActive = false;
+
+	get #store(): Settings {
+		return this.context.settings ?? settings;
+	}
+	#value(path: SettingPath): unknown {
+		return this.#drafts.has(path) ? this.#drafts.get(path)!.after : this.#store.get(path);
+	}
+	#stage(path: SettingPath, after: unknown): void {
+		const before = this.#drafts.get(path)?.before ?? this.#store.get(path);
+		if (isDeepStrictEqual(before, after)) this.#drafts.delete(path);
+		else this.#drafts.set(path, { before: structuredClone(before), after: structuredClone(after) });
+	}
+	#leave(): void {
+		if (this.#draftCount) {
+			this.#review = "leave";
+			this.#reviewIndex = 0;
+		} else this.callbacks.onCancel();
+	}
+	async #discard(): Promise<void> {
+		if (this.#saving) return;
+		this.#saving = true;
+		this.#saveError = "";
+		try {
+			if (this.#initialTheme) await this.callbacks.onThemePreview?.(this.#initialTheme);
+			this.#triggerStatusLinePreview(true);
+			this.#drafts.clear();
+			this.#pluginDrafts.clear();
+			this.callbacks.onCancel();
+		} catch (error) {
+			this.#saveError = `Could not restore previews: ${error instanceof Error ? error.message : String(error)}`;
+		} finally {
+			this.#saving = false;
+			this.callbacks.onRequestRender?.();
+		}
+	}
+	async #save(): Promise<void> {
+		if (this.#saving) return;
+		this.#saving = true;
+		this.#saveError = "";
+		const reviewedChangeCount = this.#draftCount;
+		const reviewedSettingsCount = this.#drafts.size;
+		const reviewedPluginCount = this.#pluginDrafts.size;
+		try {
+			if (this.#pluginDrafts.size) this.#pluginDrafts.validate(await this.#pluginStorage.load());
+			for (const [path, draft] of this.#drafts) {
+				const current = this.#store.get(path);
+				if (!isDeepStrictEqual(current, draft.before) && !isDeepStrictEqual(current, draft.after)) {
+					draft.before = structuredClone(current);
+					this.#reviewIndex = 0;
+					throw new Error(`${path} changed. Review the updated values before saving.`);
+				}
+			}
+			this.#pendingPersistence = true;
+			for (const [path, draft] of this.#drafts) {
+				if (!isDeepStrictEqual(this.#store.get(path), draft.after)) this.#store.set(path, draft.after as never);
+			}
+			await this.#store.flush({ throwOnError: true });
+			for (const [path, draft] of this.#drafts) {
+				this.callbacks.onChange(path, draft.after);
+				this.#drafts.delete(path);
+			}
+			if (this.#pluginDrafts.size) {
+				const storage = this.#pluginStorage;
+				await this.#pluginDrafts.save(
+					() => storage.load(),
+					(next, reviewed) => storage.write(next, reviewed),
+				);
+				this.callbacks.onPluginsChanged?.();
+			}
+			this.#pendingPersistence = false;
+			this.#review = null;
+			this.callbacks.onSaved?.(
+				reviewedChangeCount,
+				reviewedSettingsCount && reviewedPluginCount ? "combined" : reviewedPluginCount ? "plugin" : "settings",
+			);
+			this.callbacks.onCancel();
+		} catch (error) {
+			this.#saveError = error instanceof Error ? error.message : String(error);
+			if (this.#pendingPersistence)
+				this.#saveError += " Some changes may already be applied; retry unresolved saves before leaving.";
+		} finally {
+			this.#saving = false;
+			this.callbacks.onRequestRender?.();
+		}
+	}
+
+	override render(width: number): string[] {
+		if (!this.#review)
+			return this.#currentList?.render(width) ?? this.#pluginComponent?.render(width) ?? super.render(width);
+		const rows = process.stdout.rows || 24;
+		const inner = selectorFrameContentWidth(width);
+		const actions = this.#pendingPersistence
+			? ["Keep reviewing", "Retry save"]
+			: this.#review === "leave"
+				? ["Keep editing", "Discard changes"]
+				: ["Cancel save", "Save changes"];
+		const changes = [...this.#drafts].flatMap(([path, value]) =>
+			wrapTextWithAnsi(
+				`${path}: ${/secret|token|password|credential|api.?key/i.test(path) ? "[masked] → [masked]" : `${JSON.stringify(value.before)} → ${JSON.stringify(value.after)}`}`,
+				inner,
+			),
+		);
+		const capacity = Math.max(1, rows - 13);
+		changes.push(...this.#pluginDrafts.reviewLines().flatMap(line => wrapTextWithAnsi(line, inner)));
+		this.#reviewOffset = Math.min(this.#reviewOffset, Math.max(0, changes.length - capacity));
+		return selectorFrame(
+			width,
+			rows,
+			this.#review === "leave" ? "Unsaved settings" : "Review settings",
+			"Scope: user settings · Applies across future sessions",
+			[],
+			this.#saving
+				? [this.#review === "leave" ? "Restoring settings…" : "Saving settings…"]
+				: actions.map((label, i) => selectorRow([label], [inner - 2], i === this.#reviewIndex)),
+			[...changes.slice(this.#reviewOffset, this.#reviewOffset + capacity), this.#saveError],
+			[
+				...(changes.length > capacity ? ["PgUp/PgDn: more changes"] : []),
+				this.#pendingPersistence ? "Pending save must be resolved before leaving" : "Esc: keep editing",
+			],
+			{ selectedBodyIndex: this.#reviewIndex },
+		);
+	}
 
 	constructor(
 		private readonly context: SettingsRuntimeContext,
@@ -259,24 +256,13 @@ export class SettingsSelectorComponent extends Container {
 	) {
 		super();
 
-		// Add top border
-		this.addChild(new DynamicBorder());
-
 		// Tab bar
 		this.#tabBar = new TabBar("Settings", getSettingsTabs(), getTabBarTheme());
 		this.#tabBar.onTabChange = () => {
 			this.#switchToTab(this.#tabBar.getActiveTab().id as SettingTab | "plugins");
 		};
-		this.addChild(this.#tabBar);
-
-		// Spacer after tab bar
-		this.addChild(new Spacer(1));
-
 		// Initialize with first tab
 		this.#switchToTab("appearance");
-
-		// Add bottom border
-		this.addChild(new DynamicBorder());
 	}
 
 	#switchToTab(tabId: SettingTab | "plugins"): void {
@@ -291,24 +277,11 @@ export class SettingsSelectorComponent extends Container {
 			this.removeChild(this.#pluginComponent);
 			this.#pluginComponent = null;
 		}
-		if (this.#statusPreviewContainer) {
-			this.removeChild(this.#statusPreviewContainer);
-			this.#statusPreviewContainer = null;
-			this.#statusPreviewText = null;
-		}
-
-		// Remove bottom border temporarily
-		const bottomBorder = this.children[this.children.length - 1];
-		this.removeChild(bottomBorder);
-
 		if (tabId === "plugins") {
 			this.#showPluginsTab();
 		} else {
 			this.#showSettingsTab(tabId);
 		}
-
-		// Re-add bottom border
-		this.addChild(bottomBorder);
 	}
 
 	/**
@@ -329,7 +302,7 @@ export class SettingsSelectorComponent extends Container {
 					label: def.label,
 					description: def.description,
 					currentValue: currentValue ? "true" : "false",
-					values: ["true", "false"],
+					submenu: (cv, done) => this.#createChoice(def, ["true", "false"], cv, done),
 				};
 
 			case "enum":
@@ -338,7 +311,7 @@ export class SettingsSelectorComponent extends Container {
 					label: def.label,
 					description: def.description,
 					currentValue: currentValue as string,
-					values: [...def.values],
+					submenu: (cv, done) => this.#createChoice(def, def.values, cv, done),
 				};
 
 			case "submenu":
@@ -347,7 +320,14 @@ export class SettingsSelectorComponent extends Container {
 					label: def.label,
 					description: def.description,
 					currentValue: this.#getSubmenuCurrentValue(def.path, currentValue),
-					submenu: (cv, done) => this.#createSubmenu(def, cv, done),
+					submenu: (_cv, done) =>
+						this.#createSubmenu(
+							def,
+							def.path.startsWith("compaction.threshold") && this.#value(def.path) === -1
+								? "default"
+								: String(this.#value(def.path) ?? ""),
+							done,
+						),
 				};
 
 			case "text":
@@ -365,7 +345,28 @@ export class SettingsSelectorComponent extends Container {
 	 * Get the current value for a setting.
 	 */
 	#getCurrentValue(def: SettingDef): unknown {
-		return settings.get(def.path);
+		return this.#value(def.path);
+	}
+
+	#createChoice(
+		def: SettingDef,
+		values: readonly string[],
+		current: string,
+		done: (value?: string) => void,
+	): Container {
+		this.#submenuActive = true;
+		const finish = (value?: string) => {
+			this.#submenuActive = false;
+			done(value);
+		};
+		return new SettingsChoiceEditor(
+			def.label,
+			def.description,
+			values.map(value => ({ value, label: value })),
+			current,
+			finish,
+			() => finish(),
+		);
 	}
 
 	#getSubmenuCurrentValue(path: SettingPath, value: unknown): string {
@@ -380,6 +381,12 @@ export class SettingsSelectorComponent extends Container {
 		currentValue: string,
 		done: (value?: string) => void,
 	): Container {
+		this.#submenuActive = true;
+		const originalDone = done;
+		done = value => {
+			this.#submenuActive = false;
+			originalDone(value);
+		};
 		let options = def.options;
 
 		// Special case: inject runtime options for thinking level
@@ -394,7 +401,7 @@ export class SettingsSelectorComponent extends Container {
 
 		// Preview handlers
 		let onPreview: ((value: string) => void | Promise<void>) | undefined;
-		let onPreviewCancel: (() => void) | undefined;
+		let onPreviewCancel: (() => void | Promise<void>) | undefined;
 
 		const activeThemeBeforePreview = getCurrentThemeName() ?? currentValue;
 		if (def.path === "theme.dark" || def.path === "theme.light") {
@@ -402,7 +409,7 @@ export class SettingsSelectorComponent extends Container {
 				return this.callbacks.onThemePreview?.(value);
 			};
 			onPreviewCancel = () => {
-				this.callbacks.onThemePreview?.(activeThemeBeforePreview);
+				return this.callbacks.onThemePreview?.(activeThemeBeforePreview);
 			};
 		} else if (def.path === "statusLine.preset") {
 			onPreview = value => {
@@ -418,7 +425,7 @@ export class SettingsSelectorComponent extends Container {
 				this.#updateStatusPreview();
 			};
 			onPreviewCancel = () => {
-				const currentPreset = settings.get("statusLine.preset");
+				const currentPreset = this.#value("statusLine.preset") as StatusLinePreset;
 				const presetDef = getPreset(currentPreset);
 				this.callbacks.onStatusLinePreview?.({
 					preset: currentPreset,
@@ -434,7 +441,7 @@ export class SettingsSelectorComponent extends Container {
 				this.#updateStatusPreview();
 			};
 			onPreviewCancel = () => {
-				const separator = settings.get("statusLine.separator");
+				const separator = this.#value("statusLine.separator") as StatusLineSeparatorStyle;
 				this.callbacks.onStatusLinePreview?.({ separator });
 				this.#updateStatusPreview();
 			};
@@ -444,22 +451,22 @@ export class SettingsSelectorComponent extends Container {
 		const isThemeSetting = def.path === "theme.dark" || def.path === "theme.light";
 		const getPreview = isThemeSetting ? this.callbacks.getStatusLinePreview : undefined;
 
-		return new SelectSubmenu(
+		return new SettingsChoiceEditor(
 			def.label,
 			def.description,
 			options,
 			currentValue,
 			value => {
 				this.#setSettingValue(def.path, value);
-				this.callbacks.onChange(def.path, value);
 				done(value);
 			},
-			() => {
-				onPreviewCancel?.();
+			async () => {
+				await onPreviewCancel?.();
 				done();
 			},
 			onPreview,
 			getPreview,
+			this.callbacks.onRequestRender,
 		);
 	}
 
@@ -471,12 +478,12 @@ export class SettingsSelectorComponent extends Container {
 		currentValue: string,
 		done: (value?: string) => void,
 	): Container {
-		this.#textInputActive = true;
+		this.#submenuActive = true;
 		const wrappedDone = (value?: string) => {
-			this.#textInputActive = false;
+			this.#submenuActive = false;
 			done(value);
 		};
-		return new TextInputSubmenu(
+		return new SettingsTextEditor(
 			def.label,
 			def.description,
 			currentValue,
@@ -484,7 +491,6 @@ export class SettingsSelectorComponent extends Container {
 				// Empty string clears the setting; undefined-typed string settings
 				// store "" which the browser.ts expandPath ignores (no-op fallback).
 				this.#setSettingValue(def.path, value);
-				this.callbacks.onChange(def.path, value);
 				wrappedDone(value);
 			},
 			() => wrappedDone(),
@@ -496,17 +502,17 @@ export class SettingsSelectorComponent extends Container {
 	 */
 	#setSettingValue(path: SettingPath, value: string): void {
 		// Handle number conversions
-		const currentValue = settings.get(path);
+		const currentValue = this.#store.get(path);
 		if (path === "compaction.thresholdPercent" && value === "default") {
-			settings.set(path, -1 as never);
+			this.#stage(path, -1);
 		} else if (path === "compaction.thresholdTokens" && value === "default") {
-			settings.set(path, -1 as never);
+			this.#stage(path, -1);
 		} else if (typeof currentValue === "number") {
-			settings.set(path, Number(value) as never);
+			this.#stage(path, Number(value));
 		} else if (typeof currentValue === "boolean") {
-			settings.set(path, (value === "true") as never);
+			this.#stage(path, value === "true");
 		} else {
-			settings.set(path, value as never);
+			this.#stage(path, value);
 		}
 	}
 
@@ -514,6 +520,12 @@ export class SettingsSelectorComponent extends Container {
 	 * Show a settings tab using definitions.
 	 */
 	#showSettingsTab(tabId: SettingTab): void {
+		const existing = this.#browsers.get(tabId);
+		if (existing) {
+			this.#currentList = existing;
+			this.addChild(existing);
+			return;
+		}
 		const defs = getSettingsForTab(tabId);
 		const items: SettingItem[] = [];
 
@@ -524,21 +536,13 @@ export class SettingsSelectorComponent extends Container {
 			}
 		}
 
-		// Add status line preview for appearance tab
-		if (tabId === "appearance") {
-			this.#statusPreviewContainer = new Container();
-			this.#statusPreviewContainer.addChild(new Spacer(1));
-			this.#statusPreviewContainer.addChild(new Text(theme.fg("muted", "Preview:"), 0, 0));
-			this.#statusPreviewText = new Text(this.#getStatusPreviewString(), 0, 0);
-			this.#statusPreviewContainer.addChild(this.#statusPreviewText);
-			this.#statusPreviewContainer.addChild(new Spacer(1));
-			this.addChild(this.#statusPreviewContainer);
-		}
-
-		this.#currentList = new SettingsList(
+		this.#currentList = new SettingsBrowser(
 			items,
-			10,
-			getSettingsListTheme(),
+			() => [
+				getSettingsTabs().find(tab => tab.id === this.#currentTabId)!.label,
+				...(tabId === "appearance" ? [`Preview: ${this.#getStatusPreviewString()}`] : []),
+				...(this.#draftCount ? [`${this.#draftCount} unsaved changes · Ctrl+S: review changes`] : []),
+			],
 			(id, newValue) => {
 				const def = defs.find(d => d.path === id);
 				if (!def) return;
@@ -547,21 +551,19 @@ export class SettingsSelectorComponent extends Container {
 
 				if (def.type === "boolean") {
 					const boolValue = newValue === "true";
-					settings.set(path, boolValue as never);
-					this.callbacks.onChange(path, boolValue);
+					this.#stage(path, boolValue);
 
 					if (tabId === "appearance") {
 						this.#triggerStatusLinePreview();
 					}
 				} else if (def.type === "enum") {
-					settings.set(path, newValue as never);
-					this.callbacks.onChange(path, newValue);
+					this.#stage(path, newValue);
 				}
 				// Submenu types are handled in createSubmenu
 			},
-			() => this.callbacks.onCancel(),
+			() => this.#leave(),
 		);
-
+		this.#browsers.set(tabId, this.#currentList);
 		this.addChild(this.#currentList);
 	}
 
@@ -578,12 +580,13 @@ export class SettingsSelectorComponent extends Container {
 	/**
 	 * Trigger status line preview with current settings.
 	 */
-	#triggerStatusLinePreview(): void {
+	#triggerStatusLinePreview(saved = false): void {
+		const value = (path: SettingPath) => (saved ? this.#store.get(path) : this.#value(path));
 		const statusLineSettings: StatusLinePreviewSettings = {
-			preset: settings.get("statusLine.preset"),
-			leftSegments: settings.get("statusLine.leftSegments"),
-			rightSegments: settings.get("statusLine.rightSegments"),
-			separator: settings.get("statusLine.separator"),
+			preset: value("statusLine.preset") as StatusLinePreset,
+			leftSegments: value("statusLine.leftSegments") as StatusLineSegmentId[],
+			rightSegments: value("statusLine.rightSegments") as StatusLineSegmentId[],
+			separator: value("statusLine.separator") as StatusLineSeparatorStyle,
 		};
 		this.callbacks.onStatusLinePreview?.(statusLineSettings);
 		this.#updateStatusPreview();
@@ -593,41 +596,60 @@ export class SettingsSelectorComponent extends Container {
 	 * Update the inline status preview text.
 	 */
 	#updateStatusPreview(): void {
-		if (this.#statusPreviewText && this.#currentTabId === "appearance") {
-			this.#statusPreviewText.setText(this.#getStatusPreviewString());
-		}
+		if (this.#currentTabId === "appearance") this.callbacks.onRequestRender?.();
 	}
 
 	#showPluginsTab(): void {
-		this.#pluginComponent = new PluginSettingsComponent(this.context.cwd, {
-			onClose: () => this.callbacks.onCancel(),
-			onPluginChanged: () => this.callbacks.onPluginsChanged?.(),
-		});
+		this.#pluginComponent =
+			this.#cachedPluginComponent ??
+			new PluginSettingsComponent(
+				this.context.cwd,
+				{
+					onClose: () => this.#leave(),
+					onPluginChanged: () => this.callbacks.onPluginsChanged?.(),
+					onDraftChanged: () => this.callbacks.onRequestRender?.(),
+					getDraftSummary: () =>
+						this.#draftCount ? [`${this.#draftCount} unsaved changes · Ctrl+S: review changes`] : [],
+				},
+				this.#pluginDrafts,
+				this.#pluginStorage,
+			);
+		this.#cachedPluginComponent = this.#pluginComponent;
 		this.addChild(this.#pluginComponent);
 	}
 
-	getFocusComponent(): SettingsList | PluginSettingsComponent {
+	getFocusComponent(): SettingsBrowser | PluginSettingsComponent {
 		// Return the current focusable component - one of these will always be set
 		return (this.#currentList || this.#pluginComponent)!;
 	}
 
 	handleInput(data: string): void {
-		// Handle tab switching — but NOT when a text input is active, since
-		// arrow keys must reach the cursor and Tab must not switch tabs.
-		if (
-			!this.#textInputActive &&
-			(matchesKey(data, "tab") ||
-				matchesKey(data, "shift+tab") ||
-				matchesKey(data, "left") ||
-				matchesKey(data, "right"))
-		) {
-			this.#tabBar.handleInput(data);
+		if (this.#saving) return;
+		if (this.#review) {
+			if (matchesSelectorKey(data, "cancel") && !this.#pendingPersistence) this.#review = null;
+			else if (matchesSelectorKey(data, "up") || matchesSelectorKey(data, "down"))
+				this.#reviewIndex = 1 - this.#reviewIndex;
+			else if (matchesSelectorKey(data, "pageDown")) this.#reviewOffset += 3;
+			else if (matchesSelectorKey(data, "pageUp")) this.#reviewOffset = Math.max(0, this.#reviewOffset - 3);
+			else if (matchesSelectorKey(data, "confirm")) {
+				if (this.#reviewIndex === 0) {
+					if (!this.#pendingPersistence) this.#review = null;
+				} else if (this.#review === "save") void this.#save();
+				else void this.#discard();
+			}
 			return;
 		}
-
-		// Escape at top level cancels
-		if (matchesAppInterrupt(data) && !this.#currentSubmenu) {
-			this.callbacks.onCancel();
+		const editing = this.#submenuActive || this.#pluginComponent?.editing;
+		if (!editing && matchesKey(data, "ctrl+s") && this.#draftCount) {
+			this.#review = "save";
+			this.#reviewIndex = 0;
+			this.#reviewOffset = 0;
+			return;
+		}
+		// Handle tab switching — but NOT when a text input is active, since
+		// arrow keys must reach the cursor and Tab must not switch tabs.
+		if (!editing && (matchesKey(data, "tab") || matchesKey(data, "shift+tab"))) {
+			this.#tabBar.handleInput(data);
 			return;
 		}
 

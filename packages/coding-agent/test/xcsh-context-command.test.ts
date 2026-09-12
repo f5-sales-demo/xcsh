@@ -190,7 +190,7 @@ describe("/context slash command handler", () => {
 	beforeEach(async () => {
 		_resetSettingsForTest();
 		ContextService._resetForTest();
-		// Ensure XCSH env vars don't leak from system environment
+		// Ensure xcsh env vars don't leak from system environment
 		for (const key of Object.keys(process.env)) {
 			if (key.startsWith("XCSH_")) delete process.env[key];
 		}

@@ -71,6 +71,8 @@ export interface ContainmentOptions {
 	 * letters. Overridable for tests, which cannot mount a second volume.
 	 */
 	otherRoots?: readonly string[];
+	/** Enforce workspace-write semantics instead of the normal operator-rights courtesy. */
+	strictWorkspaceWrite?: boolean;
 	/**
 	 * The filesystem root whose immediate entries are classified as operational or data — see
 	 * DATA_ROOTS. Overridable for tests; defaults to the real root.
@@ -485,7 +487,7 @@ export function buildContainmentFence(options: ContainmentOptions): ContainmentF
 		denyEnumerate.add(parentToProtect);
 	}
 
-	if (home !== undefined) {
+	if (home !== undefined && !options.strictWorkspaceWrite) {
 		// The account container is a data root, but this operator's whole home belongs to them (#2637).
 		// A deeper full allow preserves their normal filesystem rights. The account container loses only
 		// enumeration, and cross-session stores are denied again at still greater depth below.

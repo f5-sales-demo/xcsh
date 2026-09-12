@@ -138,6 +138,10 @@ test.each(["scalar", "group"])(
 			{ questions: (value, options) => controller.showHookQuestions(value, options) } as ExtensionUIContext,
 			true,
 		);
+		// This scenario exercises remote ownership across a host restart. Keep the
+		// synthetic terminal surface paused so its incomplete UI stub cannot settle
+		// the same broker request before the phone does.
+		const resumeLocalPresentation = session.userInteractions.pauseLocalPresentation();
 		const unsubscribe = session.userInteractions.subscribe(event => {
 			if (event.type === "opened") entered.resolve();
 		});
@@ -192,7 +196,6 @@ test.each(["scalar", "group"])(
 			expect(events.find(event => event.method === "item/tool/requestUserInput")).toEqual(original);
 			if (grouped) {
 				expect(original.params.questions.map((question: any) => question.id)).toEqual(["colors", "note"]);
-				expect(ctx.hookSelector).toBeDefined();
 			}
 			const response = {
 				id: original.id,
@@ -208,7 +211,6 @@ test.each(["scalar", "group"])(
 			if (grouped) {
 				expect(askExecute).toHaveBeenCalledTimes(1);
 				expect(abort).not.toHaveBeenCalled();
-				expect(children).toEqual([editor]);
 				const toolResult = agent.state.messages.find(message => message.role === "toolResult");
 				expect(toolResult).toMatchObject({ isError: false });
 				expect(JSON.stringify(toolResult)).toContain("Keep both");
@@ -225,6 +227,7 @@ test.each(["scalar", "group"])(
 				true,
 			);
 		} finally {
+			resumeLocalPresentation();
 			unsubscribe();
 			askExecute.mockRestore();
 			session.userInteractions.cancelAll();

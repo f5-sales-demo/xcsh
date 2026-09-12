@@ -1,4 +1,4 @@
-import { Container, Input, matchesKey, Spacer, Text, TruncatedText } from "@f5-sales-demo/pi-tui";
+import { Container, Input, matchesKey, Spacer, Text } from "@f5-sales-demo/pi-tui";
 import { normalizeXcshApiUrlInput, normalizeXcshCredentialInput } from "@f5-sales-demo/pi-utils/xcsh-auth";
 import type { TokenValidationResult, XCSHContext } from "../../services/xcsh-context";
 import {
@@ -11,7 +11,15 @@ import {
 } from "../../services/xcsh-env";
 import { theme } from "../theme/theme";
 import { matchesAppInterrupt } from "../utils/keybinding-matchers";
-import { DynamicBorder } from "./dynamic-border";
+import {
+	matchesSelectorKey,
+	type SelectorFrameLine,
+	selectorCancelHint,
+	selectorFrame,
+	selectorFrameContentWidth,
+	selectorKeys,
+	selectorNavigationHint,
+} from "./selector-frame";
 
 const NAME_PATTERN = /^[a-zA-Z0-9_-]{1,64}$/;
 
@@ -148,6 +156,10 @@ export class ContextAddWizard extends Container {
 	#validationFailed = false;
 	#validationInFlight = false;
 	#validationDetails: string | null = null;
+	#pageOffset = 0;
+	#pageCapacity = 1;
+	#bodyLength = 0;
+	#manualPaging = false;
 	#onCompleteCallback: (context: XCSHContext, activate: boolean) => void;
 	#onCancelCallback: () => void;
 	#onRenderCallback: () => void;
@@ -162,25 +174,44 @@ export class ContextAddWizard extends Container {
 		this.#onCancelCallback = onCancel;
 		this.#onRenderCallback = onRender;
 
-		// Add border
-		this.addChild(new DynamicBorder());
-		this.addChild(new Spacer(1));
-
-		// Add title
-		this.addChild(new TruncatedText(theme.bold("Add F5 XC Context")));
-		this.addChild(new Spacer(1));
-
-		// Content container for step-specific content
 		this.#contentContainer = new Container();
-		this.addChild(this.#contentContainer);
-
-		this.addChild(new Spacer(1));
-
-		// Add bottom border
-		this.addChild(new DynamicBorder());
-
-		// Render first step
 		this.#renderStep();
+	}
+
+	override render(width: number): string[] {
+		const rows = process.stdout.rows || 24;
+		const inner = selectorFrameContentWidth(width);
+		const body: SelectorFrameLine[] = [];
+		for (const line of this.#contentContainer.render(inner)) {
+			const plain = Bun.stripANSI(line);
+			if (/^\s*(?:Esc: back|\(Press Esc to cancel\))\s*$/u.test(plain)) continue;
+			if (plain.includes(" · Esc: back")) body.push(theme.fg("muted", plain.replace(" · Esc: back", "")));
+			else body.push({ content: line, selected: plain.trimStart().startsWith(theme.nav.cursor) });
+		}
+		const selected = body.findIndex(line => typeof line !== "string" && line.selected);
+		this.#pageCapacity = Math.max(1, rows - 10);
+		this.#bodyLength = body.length;
+		if (!this.#manualPaging && selected >= 0)
+			this.#pageOffset = Math.max(0, Math.min(selected, body.length - this.#pageCapacity));
+		this.#pageOffset = Math.max(0, Math.min(this.#pageOffset, Math.max(0, body.length - this.#pageCapacity)));
+		const visibleBody = body.slice(this.#pageOffset, this.#pageOffset + this.#pageCapacity);
+		return selectorFrame(
+			width,
+			rows,
+			"Add F5 XC context",
+			"Collect and validate a named tenant configuration; saving and activation are reviewed separately.",
+			[],
+			visibleBody,
+			[],
+			[
+				selectorNavigationHint(),
+				selectorCancelHint(this.#currentStep === "url" ? "cancel wizard" : "back"),
+				...(body.length > this.#pageCapacity
+					? [`${selectorKeys("pageUp")}/${selectorKeys("pageDown")}: wizard details`]
+					: []),
+			],
+			{ selectedBodyIndex: selected >= 0 ? selected - this.#pageOffset : undefined },
+		);
 	}
 
 	#requestRender(): void {
@@ -188,6 +219,8 @@ export class ContextAddWizard extends Container {
 	}
 
 	#renderStep(): void {
+		this.#manualPaging = false;
+		this.#pageOffset = 0;
 		this.#contentContainer.clear();
 		this.#inputField = null;
 
@@ -238,7 +271,7 @@ export class ContextAddWizard extends Container {
 			this.#contentContainer.addChild(new Spacer(1));
 		}
 
-		this.#contentContainer.addChild(new Text(theme.fg("muted", "[Enter to continue, Esc to cancel]"), 0, 0));
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 	}
 
 	#renderTokenStep(): void {
@@ -258,7 +291,7 @@ export class ContextAddWizard extends Container {
 			this.#contentContainer.addChild(new Spacer(1));
 		}
 
-		this.#contentContainer.addChild(new Text(theme.fg("muted", "[Enter to continue, Esc to go back]"), 0, 0));
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 	}
 
 	#renderNameStep(): void {
@@ -278,7 +311,7 @@ export class ContextAddWizard extends Container {
 			this.#contentContainer.addChild(new Spacer(1));
 		}
 
-		this.#contentContainer.addChild(new Text(theme.fg("muted", "[Enter to continue, Esc to go back]"), 0, 0));
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 	}
 
 	#renderValidatingStep(): void {
@@ -301,9 +334,7 @@ export class ContextAddWizard extends Container {
 				this.#contentContainer.addChild(new Text(prefix + text, 0, 0));
 			}
 			this.#contentContainer.addChild(new Spacer(1));
-			this.#contentContainer.addChild(
-				new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
-			);
+			this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 			return;
 		}
 		this.#contentContainer.addChild(new Text(theme.fg("contentAccent", "Step 4: Validating Token")));
@@ -370,7 +401,7 @@ export class ContextAddWizard extends Container {
 			this.#contentContainer.addChild(new Spacer(1));
 		}
 
-		this.#contentContainer.addChild(new Text(theme.fg("muted", "[Enter to continue, Esc to go back]"), 0, 0));
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 	}
 
 	#renderUsernameStep(): void {
@@ -384,9 +415,7 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
-		this.#contentContainer.addChild(
-			new Text(theme.fg("muted", "[Enter to continue (empty to skip), Esc to go back]"), 0, 0),
-		);
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Leave empty to skip · Esc: back"), 0, 0));
 	}
 
 	#renderPasswordStep(): void {
@@ -401,9 +430,7 @@ export class ContextAddWizard extends Container {
 		this.#contentContainer.addChild(this.#inputField);
 		this.#contentContainer.addChild(new Spacer(1));
 
-		this.#contentContainer.addChild(
-			new Text(theme.fg("muted", "[Enter to continue (empty to skip), Esc to go back]"), 0, 0),
-		);
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Leave empty to skip · Esc: back"), 0, 0));
 	}
 
 	#renderConfirmStep(): void {
@@ -436,9 +463,7 @@ export class ContextAddWizard extends Container {
 		}
 
 		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(
-			new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
-		);
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 	}
 
 	#renderActivateStep(): void {
@@ -456,20 +481,23 @@ export class ContextAddWizard extends Container {
 		}
 
 		this.#contentContainer.addChild(new Spacer(1));
-		this.#contentContainer.addChild(
-			new Text(theme.fg("muted", "[↑↓ to navigate, Enter to select, Esc to go back]"), 0, 0),
-		);
+		this.#contentContainer.addChild(new Text(theme.fg("muted", "Esc: back"), 0, 0));
 	}
 
 	handleInput(keyData: string): void {
-		// Handle Ctrl+C to cancel wizard immediately
-		if (keyData === "\x03") {
-			this.#onCancelCallback();
+		if (matchesAppInterrupt(keyData)) {
+			return;
+		}
+		if (matchesSelectorKey(keyData, "pageUp") || matchesSelectorKey(keyData, "pageDown")) {
+			this.#manualPaging = true;
+			const delta = matchesSelectorKey(keyData, "pageUp") ? -this.#pageCapacity : this.#pageCapacity;
+			this.#pageOffset = Math.max(0, Math.min(this.#bodyLength - this.#pageCapacity, this.#pageOffset + delta));
+			this.#requestRender();
 			return;
 		}
 
-		// Handle Escape
-		if (matchesAppInterrupt(keyData)) {
+		// Handle the configured selector Back binding.
+		if (matchesSelectorKey(keyData, "cancel")) {
 			if (this.#currentStep === "url") {
 				this.#onCancelCallback();
 				return;

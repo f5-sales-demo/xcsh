@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Settings } from "../../src/config/settings";
 import { RemoteSession, type SessionTarget } from "../../src/remote-control/session";
 
 function fixture(
@@ -14,6 +15,7 @@ function fixture(
 	const prompts: string[] = [];
 	let finish = () => {};
 	let sessionName = id;
+	const settings = Settings.isolated({ "sandbox.enabled": false });
 	const target = {
 		sessionId: id,
 		get sessionName() {
@@ -23,6 +25,7 @@ function fixture(
 		model: { id: "gpt-6-astra", provider: "openai-codex" },
 		messages: [],
 		isStreaming: false,
+		settings,
 		sessionManager: { getCwd: () => "/tmp" },
 		subscribe: () => () => {},
 		prompt: async (text: string) => {
@@ -42,7 +45,7 @@ function fixture(
 			return true;
 		},
 	} as unknown as SessionTarget;
-	return { remote: new RemoteSession(target, "21.22.0", controls), prompts, finish: () => finish() };
+	return { remote: new RemoteSession(target, "21.22.0", controls), prompts, finish: () => finish(), settings };
 }
 
 test("phone rename follows the pinned trim, response and notification contract", async () => {
@@ -284,7 +287,7 @@ test("provider failure becomes a failed remote turn and a readable history error
 	remote.dispose();
 });
 
-test("phone settings update applies supported effort without starting a turn or changing the model", async () => {
+test("phone settings update applies effort and truthful Ask or Full permission profiles", async () => {
 	const a = fixture("a");
 	const levels: unknown[] = [],
 		events: any[] = [];
@@ -304,14 +307,47 @@ test("phone settings update applies supported effort without starting a turn or 
 			sandboxPolicy: { type: "dangerFullAccess" },
 		}),
 	).toEqual({});
-	await expect(
-		a.remote.call("settings-policy-mismatch", "thread/settings/update", {
+	expect(
+		await a.remote.call("settings-policy-ask", "thread/settings/update", {
 			threadId: "a",
 			approvalPolicy: "on-request",
 			approvalsReviewer: "user",
-			sandboxPolicy: { type: "workspaceWrite" },
+			sandboxPolicy: {
+				type: "workspaceWrite",
+				writableRoots: [],
+				networkAccess: false,
+				excludeTmpdirEnvVar: false,
+				excludeSlashTmp: false,
+			},
 		}),
-	).rejects.toMatchObject({ code: -32602 });
+	).toEqual({});
+	expect(a.settings.get("sandbox.enabled")).toBe(true);
+	expect(events.at(-1)).toMatchObject({
+		method: "thread/settings/updated",
+		params: {
+			threadSettings: {
+				approvalPolicy: "on-request",
+				approvalsReviewer: "user",
+				sandboxPolicy: { type: "workspaceWrite", writableRoots: [], networkAccess: false },
+				activePermissionProfile: { id: ":workspace" },
+			},
+		},
+	});
+	expect(await a.remote.call("resume-ask", "thread/resume", { threadId: "a", excludeTurns: true })).toMatchObject({
+		approvalPolicy: "on-request",
+		approvalsReviewer: "user",
+		sandbox: { type: "workspaceWrite", writableRoots: [], networkAccess: false },
+		activePermissionProfile: { id: ":workspace" },
+	});
+	expect(
+		await a.remote.call("settings-policy-full-again", "thread/settings/update", {
+			threadId: "a",
+			approvalPolicy: "never",
+			approvalsReviewer: "user",
+			sandboxPolicy: { type: "dangerFullAccess" },
+		}),
+	).toEqual({});
+	expect(a.settings.get("sandbox.enabled")).toBe(false);
 	await expect(
 		a.remote.call("settings2", "thread/settings/update", { threadId: "a", model: "different", effort: "high" }),
 	).rejects.toMatchObject({ code: -32602 });

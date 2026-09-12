@@ -1,12 +1,14 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "bun:test";
+import { readFileSync } from "node:fs";
 import * as fs from "node:fs/promises";
-import { readdir, stat } from "node:fs/promises";
+import { mkdir, rmdir } from "node:fs/promises";
 import * as path from "node:path";
 import { Agent } from "@f5-sales-demo/pi-agent-core";
 import type { AssistantMessage } from "@f5-sales-demo/pi-ai";
 import { AssistantMessageEventStream } from "@f5-sales-demo/pi-ai/utils/event-stream";
 import { Text } from "@f5-sales-demo/pi-tui";
 import { TempDir } from "@f5-sales-demo/pi-utils";
+import { Type } from "@sinclair/typebox";
 import { ModelRegistry } from "../src/config/model-registry";
 import { _resetSettingsForTest, Settings } from "../src/config/settings";
 import { resolveLocalUrlToPath } from "../src/internal-urls";
@@ -17,6 +19,7 @@ import { RemoteSession } from "../src/remote-control/session";
 import { AgentSession } from "../src/session/agent-session";
 import { AuthStorage } from "../src/session/auth-storage";
 import { SessionManager } from "../src/session/session-manager";
+import * as externalEditor from "../src/utils/external-editor";
 
 describe("InteractiveMode plan review rendering", () => {
 	let tempDir: TempDir;
@@ -52,6 +55,18 @@ describe("InteractiveMode plan review rendering", () => {
 			sessionManager: SessionManager.create(tempDir.path(), tempDir.path()),
 			settings: Settings.isolated(),
 			modelRegistry,
+			toolRegistry: new Map([
+				[
+					"exit_plan_mode",
+					{
+						name: "exit_plan_mode",
+						label: "Exit plan mode",
+						description: "Synthetic plan approval tool",
+						parameters: Type.Object({}),
+						execute: async () => ({ content: [], details: {} }),
+					},
+				],
+			]),
 		});
 		mode = new InteractiveMode(session, "test");
 	});
@@ -469,7 +484,7 @@ describe("InteractiveMode plan review rendering", () => {
 		mode.planModeEnabled = true;
 		const previousId = session.sessionId;
 		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Approve and execute");
-		vi.spyOn(session, "newSession").mockResolvedValue(false);
+		vi.spyOn(session, "newSessionWithReviewedPreparation").mockResolvedValue(false);
 		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
 		await mode.handleExitPlanModeTool({
 			planFilePath,
@@ -480,7 +495,7 @@ describe("InteractiveMode plan review rendering", () => {
 		expect(prompt).not.toHaveBeenCalled();
 		expect(session.sessionId).toBe(previousId);
 		expect(mode.planModeEnabled).toBe(true);
-		expect(mode.planModePlanFilePath).toBe("local://APPROVED.md");
+		expect(mode.planModePlanFilePath).toBe("local://PLAN.md");
 		expect(
 			session.sessionManager
 				.getEntries()
@@ -523,136 +538,6 @@ describe("InteractiveMode plan review rendering", () => {
 			await Promise.all([first, second]);
 		}
 	});
-
-	it.each(["save", "switch", "conflict", "dispose", "stop", "failure"])(
-		"external editing preserves ownership (%s)",
-		async action => {
-			const planFilePath = "local://PLAN.md";
-			const originalPath = resolveLocalUrlToPath(planFilePath, {
-				getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
-				getSessionId: () => session.sessionId,
-			});
-			await Bun.write(originalPath, "# Original plan");
-			const startedPath = path.join(tempDir.path(), "editor-started");
-			const releasePath = path.join(tempDir.path(), "editor-release");
-			const editorPath = path.join(tempDir.path(), "fixture-editor.ts");
-			await Bun.write(
-				editorPath,
-				`await Bun.write(${JSON.stringify(startedPath)}, "ready");
-const deadline = Date.now() + 3000;
-while (!(await Bun.file(${JSON.stringify(releasePath)}).exists())) {
- if (Date.now() > deadline) process.exit(1);
- await Bun.sleep(5);
-}
-if (${JSON.stringify(action)} === "failure") process.exit(1);
-await Bun.write(process.argv[2], "# Edited plan");`,
-			);
-			const previousVisual = process.env.VISUAL;
-			process.env.VISUAL = `${process.execPath} ${editorPath}`;
-			const restarted = Promise.withResolvers<void>();
-			vi.spyOn(mode.ui, "stop").mockImplementation(() => {});
-			const start = vi.spyOn(mode.ui, "start").mockImplementation(() => {
-				restarted.resolve();
-			});
-			const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
-			mode.planModeEnabled = true;
-			let openEditor: (() => void) | undefined;
-			const show = mode.showHookSelector.bind(mode);
-			vi.spyOn(mode, "showHookSelector").mockImplementation((...args) => {
-				openEditor = args[2]?.onExternalEditor;
-				return show(...args);
-			});
-			const review = mode.handleExitPlanModeTool(
-				{ planFilePath, planExists: true, title: "PLAN", finalPlanFilePath: planFilePath },
-				"plan-call",
-			);
-			const waitFor = async (predicate: () => boolean | Promise<boolean>) => {
-				const deadline = Date.now() + 2000;
-				while (!(await predicate()) && Date.now() < deadline) await Bun.sleep(5);
-				expect(await predicate()).toBe(true);
-			};
-			try {
-				await waitFor(() => Boolean(openEditor));
-				const [original] = session.userInteractions.pending();
-				openEditor!();
-				await waitFor(() => Bun.file(startedPath).exists());
-				expect(session.userInteractions.respond(original.id, "Approve and execute")).toBe(false);
-				expect(session.userInteractions.pending()).toEqual([]);
-				const queued = mode.showHookInput("Queued while editing");
-				expect(mode.hookInput).toBeUndefined();
-				const [queuedRequest] = session.userInteractions.pending();
-				session.userInteractions.respond(queuedRequest.id, "Remote queued answer");
-				expect(await queued).toBe("Remote queued answer");
-				expect(prompt).not.toHaveBeenCalled();
-				let newPlanPath: string | undefined;
-				if (action === "switch") {
-					await session.newSession();
-					newPlanPath = resolveLocalUrlToPath(planFilePath, {
-						getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
-						getSessionId: () => session.sessionId,
-					});
-					await Bun.write(newPlanPath, "# New session plan");
-					const nextReview = mode.handleExitPlanModeTool({
-						planFilePath,
-						planExists: true,
-						title: "PLAN",
-						finalPlanFilePath: planFilePath,
-					});
-					await waitFor(() => session.userInteractions.pending().length === 1);
-					expect(mode.hookSelector).toBeUndefined();
-					session.userInteractions.respond(session.userInteractions.pending()[0].id, "Stay in plan mode");
-					await nextReview;
-				} else if (action === "conflict") await Bun.write(originalPath, "# Concurrent plan");
-				else if (action === "dispose") await session.dispose();
-				else if (action === "stop") mode.stop();
-				await Bun.write(releasePath, "save");
-				if (action === "save" || action === "conflict" || action === "failure") {
-					await restarted.promise;
-					await waitFor(() => session.userInteractions.pending().length === 1);
-					const [updated] = session.userInteractions.pending();
-					expect(updated.id).not.toBe(original.id);
-					expect(updated.planReview?.content).toBe(
-						action === "save" ? "# Edited plan" : action === "failure" ? "# Original plan" : "# Concurrent plan",
-					);
-					session.userInteractions.respond(updated.id, "Stay in plan mode");
-				}
-				await review;
-				expect(prompt).not.toHaveBeenCalled();
-				if (action !== "save" && action !== "failure") {
-					expect(await Bun.file(originalPath).text()).toBe(
-						action === "conflict" ? "# Concurrent plan" : "# Original plan",
-					);
-					const drafts = (await readdir(path.dirname(originalPath))).filter(name =>
-						name.startsWith("PLAN.md.editor-"),
-					);
-					expect(drafts).toHaveLength(1);
-					const draftPath = path.join(path.dirname(originalPath), drafts[0]);
-					expect(await Bun.file(draftPath).text()).toBe("# Edited plan");
-					expect((await stat(draftPath)).mode & 0o777).toBe(0o600);
-				}
-				if (newPlanPath) expect(await Bun.file(newPlanPath).text()).toBe("# New session plan");
-				expect(start).toHaveBeenCalledTimes(action === "dispose" || action === "stop" ? 0 : 1);
-				if (action === "save") {
-					// A retained callback from the dismissed review must not take the terminal again.
-					openEditor!();
-					const after = mode.showHookInput("After review");
-					expect(mode.hookInput).toBeDefined();
-					session.userInteractions.respond(session.userInteractions.pending()[0].id, "Done");
-					await after;
-				}
-			} finally {
-				await Bun.write(releasePath, "finish");
-				if (action !== "dispose") {
-					if (action !== "stop") await Promise.race([restarted.promise, Bun.sleep(3500)]);
-					await session.newSession();
-				}
-				session.userInteractions.cancelAll();
-				await review;
-				if (previousVisual === undefined) delete process.env.VISUAL;
-				else process.env.VISUAL = previousVisual;
-			}
-		},
-	);
 
 	it("disposal during terminal acquisition cannot launch an editor afterward", async () => {
 		const planFilePath = "local://PLAN.md";
@@ -697,6 +582,7 @@ await Bun.write(process.argv[2], "# Edited plan");`,
 			await session.dispose();
 			acquired.resolve({ fd: -1, close } as unknown as fs.FileHandle);
 			await review;
+			for (let i = 0; i < 100 && close.mock.calls.length === 0; i++) await Bun.sleep(5);
 			expect(stop).not.toHaveBeenCalled();
 			expect(start).not.toHaveBeenCalled();
 			expect(close).toHaveBeenCalledTimes(1);
@@ -721,12 +607,20 @@ await Bun.write(process.argv[2], "# Edited plan");`,
 		mode.planModeEnabled = true;
 		const entered = Promise.withResolvers<void>();
 		const release = Promise.withResolvers<void>();
-		const clear = mode.handleClearCommand.bind(mode);
-		vi.spyOn(mode, "handleClearCommand").mockImplementation(async (...args) => {
-			entered.resolve();
-			await release.promise;
-			return clear(...args);
-		});
+		const createSession = session.newSessionWithReviewedPreparation.bind(session);
+		vi.spyOn(session, "newSessionWithReviewedPreparation").mockImplementation(
+			(preparation, options, preview, scope) =>
+				createSession(
+					async () => {
+						entered.resolve();
+						await release.promise;
+						await preparation();
+					},
+					options,
+					preview,
+					scope,
+				),
+		);
 		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Approve and execute");
 		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
 		const remote = new RemoteSession(session);
@@ -756,51 +650,693 @@ await Bun.write(process.argv[2], "# Edited plan");`,
 		expect(prompt).toHaveBeenCalledTimes(1);
 		expect(prompt.mock.calls[0][0]).toContain("# Approved plan");
 	});
-	it.each(["before", "after"])(
-		"disposal %s execution-session creation stops the approved plan without reopening UI",
-		async stage => {
-			const planFilePath = "local://PLAN.md";
-			await Bun.write(
-				resolveLocalUrlToPath(planFilePath, {
-					getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
-					getSessionId: () => session.sessionId,
-				}),
-				"# Approved before shutdown",
-			);
+	it("disposal during execution-session preparation waits and never submits the approved plan", async () => {
+		const planFilePath = "local://PLAN.md";
+		await Bun.write(
+			resolveLocalUrlToPath(planFilePath, {
+				getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+				getSessionId: () => session.sessionId,
+			}),
+			"# Approved before shutdown",
+		);
+		mode.planModeEnabled = true;
+		const entered = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		const createSession = session.newSessionWithReviewedPreparation.bind(session);
+		vi.spyOn(session, "newSessionWithReviewedPreparation").mockImplementation(
+			(preparation, options, preview, scope) =>
+				createSession(
+					async () => {
+						await preparation();
+						entered.resolve();
+						await release.promise;
+					},
+					options,
+					preview,
+					scope,
+				),
+		);
+		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Approve and execute");
+		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
+		const close = vi.spyOn(session.sessionManager, "close");
+		const review = mode.handleExitPlanModeTool({
+			planFilePath,
+			planExists: true,
+			title: "PLAN",
+			finalPlanFilePath: planFilePath,
+		});
+		await entered.promise;
+		const disposed = session.dispose();
+		try {
+			await Bun.sleep(20);
+			expect(close).not.toHaveBeenCalled();
+		} finally {
+			release.resolve();
+			await Promise.all([review, disposed]);
+		}
+		expect(prompt).not.toHaveBeenCalled();
+		expect(close).toHaveBeenCalledTimes(1);
+	});
+	it.each(["Approve and execute", "Refine plan"])("session changes invalidate plan action %s", async choice => {
+		const planFilePath = path.join(tempDir.path(), "review-plan.md");
+		await Bun.write(planFilePath, "# Session-specific plan");
+		mode.planModeEnabled = true;
+		const clear = vi.spyOn(mode, "handleClearCommand").mockResolvedValue();
+		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
+		const input = vi.spyOn(mode, "showHookInput").mockResolvedValue("Unreviewed refinement");
+		const warning = vi.spyOn(mode, "showWarning");
+		vi.spyOn(mode, "showHookSelector").mockImplementation(async () => {
+			await session.sessionManager.newSession();
+			return choice;
+		});
+		await mode.handleExitPlanModeTool({
+			planFilePath,
+			finalPlanFilePath: planFilePath,
+			planExists: true,
+			title: "PLAN",
+		});
+		expect(warning).toHaveBeenCalledWith("The plan review session changed. Open a new review before continuing.");
+		expect(clear).not.toHaveBeenCalled();
+		expect(prompt).not.toHaveBeenCalled();
+		expect(input).not.toHaveBeenCalled();
+	});
+	it.each([false, true])(
+		"external editor avoids unchanged or stale-session writes (session changed: %s)",
+		async changed => {
+			const planFilePath = path.join(tempDir.path(), "editor-plan.md");
+			await Bun.write(planFilePath, "Original plan");
 			mode.planModeEnabled = true;
-			const entered = Promise.withResolvers<void>();
-			const release = Promise.withResolvers<void>();
-			const clear = mode.handleClearCommand.bind(mode);
-			vi.spyOn(mode, "handleClearCommand").mockImplementation(async (...args) => {
-				if (stage === "after") await clear(...args);
-				entered.resolve();
-				await release.promise;
-				if (stage === "before") await clear(...args);
+			vi.spyOn(externalEditor, "getEditorCommand").mockReturnValue("synthetic-editor");
+			vi.spyOn(externalEditor, "openInEditor").mockImplementation(async () => {
+				if (changed) await session.sessionManager.newSession();
+				return changed ? "Stale edit" : "Original plan";
 			});
-			vi.spyOn(mode, "showHookSelector").mockResolvedValue("Approve and execute");
-			const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
-			const showError = vi.spyOn(mode, "showError");
-			const close = vi.spyOn(session.sessionManager, "close");
-			const review = mode.handleExitPlanModeTool({
+			const finished = Promise.withResolvers<void>();
+			vi.spyOn(mode.ui, "stop").mockImplementation(() => {});
+			vi.spyOn(mode.ui, "start").mockImplementation(() => {
+				finished.resolve();
+			});
+			const write = vi.spyOn(Bun, "write");
+			vi.spyOn(mode, "showHookSelector").mockImplementation(async (_title, _choices, options) => {
+				options?.onExternalEditor?.();
+				await finished.promise;
+				return "Stay in plan mode";
+			});
+			await mode.handleExitPlanModeTool({
 				planFilePath,
+				finalPlanFilePath: planFilePath,
 				planExists: true,
 				title: "PLAN",
-				finalPlanFilePath: planFilePath,
 			});
-			await entered.promise;
-			const closingId = session.sessionId;
-			const disposed = session.dispose();
-			try {
-				await Bun.sleep(20);
-				expect(close).not.toHaveBeenCalled();
-			} finally {
-				release.resolve();
-				await Promise.all([review, disposed]);
-			}
-			expect(prompt).not.toHaveBeenCalled();
-			expect(showError).not.toHaveBeenCalled();
-			expect(close).toHaveBeenCalledTimes(1);
-			expect(session.sessionId).toBe(closingId);
+			expect(write).not.toHaveBeenCalled();
+			expect(await Bun.file(planFilePath).text()).toBe("Original plan");
 		},
 	);
+	it.each(["cancel", "confirm", "file-drift"])(
+		"changed external-editor text requires review before saving (%s)",
+		async action => {
+			const planFilePath = path.join(tempDir.path(), "edited-plan.md");
+			await Bun.write(planFilePath, "Original plan");
+			mode.planModeEnabled = true;
+			vi.spyOn(externalEditor, "getEditorCommand").mockReturnValue("synthetic-editor");
+			vi.spyOn(externalEditor, "openInEditor").mockResolvedValue("Edited plan");
+			const resumed = Promise.withResolvers<void>();
+			vi.spyOn(mode.ui, "stop").mockImplementation(() => {});
+			vi.spyOn(mode.ui, "start").mockImplementation(() => {
+				resumed.resolve();
+			});
+			let reviewFinished: Promise<unknown> | undefined;
+			let rendered = "";
+			vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+				expect(await Bun.file(planFilePath).text()).toBe("Original plan");
+				const completed = Promise.withResolvers<any>();
+				reviewFinished = completed.promise;
+				const component = await factory(
+					{ terminal: { rows: 32 }, requestRender() {} },
+					undefined,
+					undefined,
+					completed.resolve,
+				);
+				rendered = Bun.stripANSI(component.render(100).join("\n"));
+				if (action === "file-drift") await Bun.write(planFilePath, "Concurrent plan");
+				if (action !== "cancel") component.handleInput("\x1b[B");
+				component.handleInput("\r");
+				if (action === "file-drift") {
+					for (
+						let i = 0;
+						i < 100 && !Bun.stripANSI(component.render(100).join("\n")).includes("proposal changed");
+						i++
+					)
+						await Bun.sleep(5);
+					const refreshed = Bun.stripANSI(component.render(100).join("\n"));
+					expect(refreshed).toContain("proposal changed");
+					expect(refreshed).toContain("Concurrent plan → Edited plan");
+					expect(await Bun.file(planFilePath).text()).toBe("Concurrent plan");
+					component.handleInput("\r"); // Renewed review resets to Cancel.
+				}
+				return completed.promise;
+			});
+			vi.spyOn(mode, "showHookSelector").mockImplementation(async (_title, _choices, options) => {
+				options?.onExternalEditor?.();
+				await resumed.promise;
+				await Bun.sleep(5);
+				await reviewFinished;
+				return "Stay in plan mode";
+			});
+			await mode.handleExitPlanModeTool({
+				planFilePath,
+				finalPlanFilePath: planFilePath,
+				planExists: true,
+				title: "PLAN",
+			});
+			expect(rendered).toContain("Original plan → Edited plan");
+			expect(await Bun.file(planFilePath).text()).toBe(
+				action === "confirm" ? "Edited plan" : action === "file-drift" ? "Concurrent plan" : "Original plan",
+			);
+		},
+	);
+	it("changed plan content is shown for renewed approval instead of executing", async () => {
+		const planFilePath = "local://PLAN.md";
+		const resolved = resolveLocalUrlToPath(planFilePath, {
+			getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+			getSessionId: () => session.sessionManager.getSessionId(),
+		});
+		await Bun.write(resolved, "# Reviewed plan");
+		mode.planModeEnabled = true;
+		mode.planModePlanFilePath = planFilePath;
+		const clear = vi.spyOn(mode, "handleClearCommand").mockResolvedValue();
+		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
+		let choices = 0;
+		vi.spyOn(mode, "showHookSelector").mockImplementation(async () => {
+			if (choices++ === 0) {
+				await Bun.write(resolved, "# Changed plan");
+				return "Approve and execute";
+			}
+			return "Stay in plan mode";
+		});
+		await mode.handleExitPlanModeTool({
+			planFilePath,
+			finalPlanFilePath: planFilePath,
+			planExists: true,
+			title: "PLAN",
+		});
+		expect(choices).toBe(2);
+		expect(clear).not.toHaveBeenCalled();
+		expect(prompt).not.toHaveBeenCalled();
+		expect(mode.planModeEnabled).toBe(true);
+		expect(mode.chatContainer.children.at(-1)!.render(100).join("\n")).toContain("Changed plan");
+	});
+	it.each(["veto", "accept"] as const)(
+		"reviewed new-session preparation runs only beyond the extension boundary (%s)",
+		async decision => {
+			const manager = SessionManager.create(tempDir.path(), tempDir.path());
+			const sequence: string[] = [];
+			const extensionRunner = {
+				hasHandlers: (name: string) => name === "session_before_switch",
+				emit: async (event: { type: string }) => {
+					sequence.push(event.type === "session_before_switch" ? "before" : "switch");
+					return event.type === "session_before_switch" && decision === "veto" ? { cancel: true } : undefined;
+				},
+			};
+			const reviewedSession = new AgentSession({
+				agent: new Agent({
+					initialState: { model: session.model, systemPrompt: "Test", tools: [], messages: [] },
+				}),
+				sessionManager: manager,
+				settings: Settings.isolated(),
+				modelRegistry: session.modelRegistry,
+				extensionRunner: extensionRunner as any,
+			});
+			const originalId = manager.getSessionId();
+			try {
+				const switched = await reviewedSession.newSessionWithReviewedPreparation(async () => {
+					sequence.push("prepare");
+				});
+				expect(switched).toBe(decision === "accept");
+				expect(sequence).toEqual(decision === "accept" ? ["before", "prepare", "switch"] : ["before"]);
+				expect(manager.getSessionId() === originalId).toBe(decision === "veto");
+			} finally {
+				await reviewedSession.dispose();
+			}
+		},
+	);
+	it("approval persistence retries once in the same execution-session identity", async () => {
+		const planFilePath = "local://PLAN.md";
+		const finalPlanFilePath = "local://RETRIED_PLAN.md";
+		const content = "Plan whose execution session save is retried";
+		const originalSessionId = session.sessionManager.getSessionId();
+		const source = resolveLocalUrlToPath(planFilePath, {
+			getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+			getSessionId: () => originalSessionId,
+		});
+		await Bun.write(source, content);
+		mode.planModeEnabled = true;
+		mode.planModePlanFilePath = planFilePath;
+		session.setPlanModeState({ enabled: true, planFilePath });
+		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Approve and execute");
+		const newSession = vi.spyOn(session, "newSessionWithReviewedPreparation");
+		const retryPersistence = session.sessionManager.retryPersistence.bind(session.sessionManager);
+		let failed = false;
+		vi.spyOn(session.sessionManager, "retryPersistence").mockImplementation(async () => {
+			if (!failed && session.sessionManager.getSessionId() !== originalSessionId) {
+				failed = true;
+				throw new Error("Synthetic execution-session persistence failure");
+			}
+			await retryPersistence();
+		});
+		const prompt = vi.spyOn(session, "prompt").mockResolvedValue();
+
+		await mode.handleExitPlanModeTool({
+			planFilePath,
+			finalPlanFilePath,
+			planExists: true,
+			title: "RETRIED_PLAN",
+		});
+
+		const executionSessionId = session.sessionManager.getSessionId();
+		expect(failed).toBe(true);
+		expect(executionSessionId).not.toBe(originalSessionId);
+		expect(newSession).toHaveBeenCalledTimes(1);
+		expect(prompt).toHaveBeenCalledTimes(1);
+		const executionCopy = resolveLocalUrlToPath(finalPlanFilePath, {
+			getArtifactsDir: () => session.sessionManager.getArtifactsDir(),
+			getSessionId: () => executionSessionId,
+		});
+		expect(await Bun.file(executionCopy).text()).toBe(content);
+		expect((await SessionManager.open(session.sessionManager.getSessionFile()!)).getSessionId()).toBe(
+			executionSessionId,
+		);
+	});
+	it.each([false, true])(
+		"typed planning prompt is reviewed and submitted only after saving (confirm: %s)",
+		async confirm => {
+			const text = "Plan the synthetic fixture change";
+			const submit = vi.fn(() => {
+				const entries = readFileSync(session.sessionManager.getSessionFile()!, "utf8")
+					.trim()
+					.split("\n")
+					.map(line => JSON.parse(line));
+				expect(entries.some(entry => entry.type === "mode_change" && entry.mode === "plan")).toBe(true);
+			});
+			mode.onInputCallback = submit;
+			let rendered = "";
+			vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+				const completed = Promise.withResolvers<any>();
+				const component = await factory(
+					{ terminal: { rows: 40 }, requestRender() {} },
+					undefined,
+					undefined,
+					completed.resolve,
+				);
+				rendered = Bun.stripANSI(component.render(100).join("\n"));
+				if (confirm) component.handleInput("\x1b[B");
+				component.handleInput("\r");
+				return completed.promise;
+			});
+			await mode.handlePlanModeCommand(text);
+			expect(rendered).toContain(text);
+			expect(submit).toHaveBeenCalledTimes(confirm ? 1 : 0);
+			expect(mode.planModeEnabled).toBe(confirm);
+		},
+	);
+	it("typed planning prompt keeps an already-active plan mode enabled", async () => {
+		const text = "Continue planning the active synthetic session";
+		mode.planModeEnabled = true;
+		mode.planModePlanFilePath = "local://PLAN.md";
+		session.setPlanModeState({ enabled: true, planFilePath: "local://PLAN.md" });
+		const before = JSON.stringify(session.sessionManager.getEntries());
+		const submit = vi.fn();
+		mode.onInputCallback = submit;
+		let rendered = "";
+		vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+			const completed = Promise.withResolvers<any>();
+			const component = await factory(
+				{ terminal: { rows: 32 }, requestRender() {} },
+				undefined,
+				undefined,
+				completed.resolve,
+			);
+			rendered = Bun.stripANSI(component.render(100).join("\n"));
+			component.handleInput("\x1b[B");
+			component.handleInput("\r");
+			return completed.promise;
+		});
+
+		await mode.handlePlanModeCommand(text);
+
+		expect(rendered).toContain("Review planning prompt");
+		expect(rendered).toContain("Plan mode: on → on");
+		expect(rendered).toContain(text);
+		expect(mode.planModeEnabled).toBe(true);
+		expect(mode.planModePaused).toBe(false);
+		expect(submit).toHaveBeenCalledTimes(1);
+		expect(JSON.stringify(session.sessionManager.getEntries())).toBe(before);
+	});
+	it("typed retry reviews replacement of a prompt waiting on plan-mode persistence", async () => {
+		const originalPrompt = "Original planning prompt waiting for persistence";
+		const replacementPrompt = "Replacement planning prompt after persistence recovery";
+		vi.spyOn(session.sessionManager, "flush").mockRejectedValueOnce(new Error("Synthetic plan save failure"));
+		const submitted: string[] = [];
+		mode.onInputCallback = input => submitted.push(input.text);
+		let attempt = 0;
+		let retryReview = "";
+		vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+			const completed = Promise.withResolvers<any>();
+			const component = await factory(
+				{ terminal: { rows: 32 }, requestRender() {} },
+				undefined,
+				undefined,
+				completed.resolve,
+			);
+			if (attempt++ > 0) retryReview = Bun.stripANSI(component.render(100).join("\n"));
+			component.handleInput("\x1b[B");
+			component.handleInput("\r");
+			if (attempt === 1) {
+				for (
+					let i = 0;
+					i < 100 && !Bun.stripANSI(component.render(100).join("\n")).includes("Synthetic plan save failure");
+					i++
+				)
+					await Bun.sleep(5);
+				component.handleInput("\x1b");
+			}
+			return completed.promise;
+		});
+
+		await mode.handlePlanModeCommand(originalPrompt);
+		expect(mode.planModeEnabled).toBe(true);
+		expect(submitted).toEqual([]);
+		await mode.handlePlanModeCommand(replacementPrompt);
+
+		expect(retryReview).toContain("Retry saving only");
+		expect(retryReview).toContain("Pending planning prompt");
+		expect(retryReview).toContain(originalPrompt);
+		expect(retryReview).toContain("Replacement");
+		expect(retryReview).toContain("planning prompt after persistence recovery");
+		expect(submitted).toEqual([replacementPrompt]);
+	});
+	it("typed prompt recovers an unresolved pause, re-enables plan mode, and then submits", async () => {
+		const prompt = "Resume planning after saving the pending pause";
+		mode.planModeEnabled = true;
+		mode.planModePlanFilePath = "local://PLAN.md";
+		session.setPlanModeState({ enabled: true, planFilePath: "local://PLAN.md" });
+		vi.spyOn(session.sessionManager, "flush").mockRejectedValueOnce(new Error("Synthetic paused-state save failure"));
+		vi.spyOn(mode, "showHookSelector").mockImplementation(async (_title, choices) => choices[1]);
+		const submitted: string[] = [];
+		mode.onInputCallback = input => submitted.push(input.text);
+		let attempt = 0;
+		let recoveryReview = "";
+		vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+			const completed = Promise.withResolvers<any>();
+			const component = await factory(
+				{ terminal: { rows: 32 }, requestRender() {} },
+				undefined,
+				undefined,
+				completed.resolve,
+			);
+			if (attempt++ > 0) recoveryReview = Bun.stripANSI(component.render(100).join("\n"));
+			component.handleInput("\x1b[B");
+			component.handleInput("\r");
+			if (attempt === 1) {
+				for (
+					let i = 0;
+					i < 100 &&
+					!Bun.stripANSI(component.render(100).join("\n")).includes("Synthetic paused-state save failure");
+					i++
+				)
+					await Bun.sleep(5);
+				component.handleInput("\x1b");
+			}
+			return completed.promise;
+		});
+
+		await mode.handlePlanModeCommand();
+		expect(mode.planModeEnabled).toBe(false);
+		expect(mode.planModePaused).toBe(true);
+		expect(submitted).toEqual([]);
+
+		await mode.handlePlanModeCommand(prompt);
+
+		expect(recoveryReview).toContain("Save pending pause, then re-enable");
+		expect(recoveryReview).toContain("Plan mode: paused → on");
+		expect(recoveryReview).toContain(prompt);
+		expect(mode.planModeEnabled).toBe(true);
+		expect(mode.planModePaused).toBe(false);
+		expect(submitted).toEqual([prompt]);
+		const reopened = await SessionManager.open(session.sessionManager.getSessionFile()!);
+		expect(reopened.buildSessionContext().mode).toBe("plan");
+		await reopened.close();
+	});
+	it("argument-free plan offers explicit choices without changing session state", async () => {
+		const before = JSON.stringify(session.sessionManager.getEntries());
+		const chooser = vi.spyOn(mode, "showHookSelector").mockResolvedValue(undefined);
+		await mode.handlePlanModeCommand();
+		expect(chooser).toHaveBeenCalledWith("Plan mode", ["Cancel", "Enable plan mode"]);
+		expect(mode.planModeEnabled).toBe(false);
+		expect(JSON.stringify(session.sessionManager.getEntries())).toBe(before);
+	});
+	it("prompt preparation failure leaves actual active tools and prompt unchanged", async () => {
+		const tool = {
+			name: "fixture",
+			label: "Fixture",
+			description: "Synthetic tool",
+			parameters: Type.Object({}),
+			execute: async () => ({ content: [], details: {} }),
+		};
+		const agent = new Agent({
+			initialState: { model: session.model, systemPrompt: "Original prompt", tools: [tool], messages: [] },
+		});
+		const manager = SessionManager.inMemory(tempDir.path());
+		const rebuild = vi.fn(async () => {
+			throw new Error("prompt preparation failed");
+		});
+		const isolated = new AgentSession({
+			agent,
+			sessionManager: manager,
+			settings: Settings.isolated(),
+			modelRegistry: session.modelRegistry,
+			toolRegistry: new Map([[tool.name, tool]]),
+			rebuildSystemPrompt: rebuild,
+		});
+		try {
+			const before = JSON.stringify(manager.getEntries());
+			await expect(isolated.setActiveToolsByName([])).rejects.toThrow("prompt preparation failed");
+			expect(isolated.getActiveToolNames()).toEqual(["fixture"]);
+			expect(agent.state.systemPrompt).toBe("Original prompt");
+			expect(JSON.stringify(manager.getEntries())).toBe(before);
+		} finally {
+			await isolated.dispose();
+		}
+	});
+	it.each(["selection", "session"])("an older prepared tool update cannot overwrite a changed %s", async change => {
+		const tool = {
+			name: "fixture",
+			label: "Fixture",
+			description: "Synthetic",
+			parameters: Type.Object({}),
+			execute: async () => ({ content: [], details: {} }),
+		};
+		const agent = new Agent({
+			initialState: { model: session.model, tools: [tool], systemPrompt: "Original", messages: [] },
+		});
+		const slow = Promise.withResolvers<string>();
+		const isolated = new AgentSession({
+			agent,
+			sessionManager: SessionManager.inMemory(tempDir.path()),
+			settings: Settings.isolated(),
+			modelRegistry: session.modelRegistry,
+			toolRegistry: new Map([[tool.name, tool]]),
+			rebuildSystemPrompt: async names => (names.length ? "Latest prompt" : slow.promise),
+		});
+		try {
+			const older = isolated.setActiveToolsByName([]).then(
+				() => undefined,
+				error => error,
+			);
+			if (change === "session") await isolated.sessionManager.newSession();
+			else await isolated.setActiveToolsByName(["fixture"]);
+			const entries = JSON.stringify(isolated.sessionManager.getEntries());
+			slow.resolve("Stale prompt");
+			expect(await older).toBeInstanceOf(Error);
+			expect(isolated.getActiveToolNames()).toEqual(["fixture"]);
+			expect(agent.state.systemPrompt).toBe(change === "session" ? "Original" : "Latest prompt");
+			expect(JSON.stringify(isolated.sessionManager.getEntries())).toBe(entries);
+		} finally {
+			slow.resolve("Stale prompt");
+			await isolated.dispose();
+		}
+	});
+	it("failed tool activation leaves plan mode disabled and retryable", async () => {
+		const activate = vi
+			.spyOn(session, "setActiveToolsByName")
+			.mockRejectedValueOnce(new Error("tool activation failed"));
+		const before = JSON.stringify(session.sessionManager.getEntries());
+		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Enable plan mode");
+		vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+			const completed = Promise.withResolvers<any>();
+			const component = await factory(
+				{ terminal: { rows: 32 }, requestRender() {} },
+				undefined,
+				undefined,
+				completed.resolve,
+			);
+			component.handleInput("\x1b[B");
+			component.handleInput("\r");
+			for (
+				let i = 0;
+				i < 100 && !Bun.stripANSI(component.render(100).join("\n")).includes("tool activation failed");
+				i++
+			)
+				await Bun.sleep(5);
+			expect(Bun.stripANSI(component.render(100).join("\n"))).toContain("tool activation failed");
+			component.handleInput("\x1b");
+			return completed.promise;
+		});
+		await mode.handlePlanModeCommand();
+		expect(activate).toHaveBeenCalledTimes(1);
+		expect(mode.planModeEnabled).toBe(false);
+		expect(mode.planModePlanFilePath).toBeUndefined();
+		expect(session.getPlanModeState()).toBeUndefined();
+		expect(JSON.stringify(session.sessionManager.getEntries())).toBe(before);
+	});
+	it.each([false, true])(
+		"failed plan save retries persistence without applying the mode again (disk failure: %s)",
+		async realDiskFailure => {
+			const file = session.sessionManager.getSessionFile()!;
+			if (realDiskFailure) await mkdir(file, { recursive: true });
+			else vi.spyOn(session.sessionManager, "flush").mockRejectedValueOnce(new Error("fixture save failed"));
+			const status = vi.spyOn(mode, "showStatus");
+			const apply = vi.spyOn(session, "setPlanModeState");
+			vi.spyOn(mode, "showHookSelector").mockImplementation(async (_title, choices) => choices[1]);
+			let attempt = 0;
+			let retryText = "";
+			vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+				const completed = Promise.withResolvers<any>();
+				const component = await factory(
+					{ terminal: { rows: 32 }, requestRender() {} },
+					undefined,
+					undefined,
+					completed.resolve,
+				);
+				if (attempt++ > 0) retryText = Bun.stripANSI(component.render(100).join("\n"));
+				component.handleInput("\x1b[B");
+				component.handleInput("\r");
+				if (attempt === 1) {
+					for (
+						let i = 0;
+						i < 100 && !Bun.stripANSI(component.render(100).join("\n")).includes("Unresolved plan mode");
+						i++
+					)
+						await Bun.sleep(5);
+					expect(Bun.stripANSI(component.render(100).join("\n"))).toContain("Unresolved plan mode");
+					component.handleInput("\x1b");
+				}
+				return completed.promise;
+			});
+			await mode.handlePlanModeCommand();
+			expect(status).not.toHaveBeenCalled();
+			if (realDiskFailure) await rmdir(file);
+			await mode.handlePlanModeCommand();
+			expect(retryText).toContain("Retry saving only");
+			expect(apply).toHaveBeenCalledTimes(1);
+			expect(mode.planModeEnabled).toBe(true);
+			expect(status).toHaveBeenCalledTimes(1);
+			const reopened = await SessionManager.open(file);
+			expect(reopened.buildSessionContext().mode).toBe("plan");
+			expect(reopened.getEntries().filter(entry => entry.type === "mode_change")).toHaveLength(1);
+			await reopened.close();
+		},
+	);
+	it("confirmed enable and pause persist mode state for a newly reopened session", async () => {
+		expect(session.getActiveToolNames()).toEqual([]);
+		vi.spyOn(mode, "showHookSelector").mockImplementation(async (_title, choices) => choices[1]);
+		vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+			const completed = Promise.withResolvers<any>();
+			const component = await factory(
+				{ terminal: { rows: 32 }, requestRender() {} },
+				undefined,
+				undefined,
+				completed.resolve,
+			);
+			component.handleInput("\x1b[B");
+			component.handleInput("\r");
+			return completed.promise;
+		});
+		await mode.handlePlanModeCommand();
+		const file = session.sessionManager.getSessionFile()!;
+		expect(session.getActiveToolNames()).toEqual(["exit_plan_mode"]);
+		expect(await Bun.file(file).exists()).toBe(true);
+		let entries = (await Bun.file(file).text())
+			.trim()
+			.split("\n")
+			.map(line => JSON.parse(line));
+		expect(entries.filter(entry => entry.type === "mode_change").map(entry => entry.mode)).toEqual(["plan"]);
+		let reopened = await SessionManager.open(file);
+		expect(reopened.buildSessionContext().mode).toBe("plan");
+		await reopened.close();
+		await mode.handlePlanModeCommand();
+		entries = (await Bun.file(file).text())
+			.trim()
+			.split("\n")
+			.map(line => JSON.parse(line));
+		expect(entries.filter(entry => entry.type === "mode_change").map(entry => entry.mode)).toEqual([
+			"plan",
+			"plan_paused",
+		]);
+		reopened = await SessionManager.open(file);
+		expect(reopened.buildSessionContext().mode).toBe("plan_paused");
+		await reopened.close();
+		expect(mode.planModeEnabled).toBe(false);
+		expect(mode.planModePaused).toBe(true);
+		expect(session.getActiveToolNames()).toEqual([]);
+	});
+
+	it("plan entry confirmation starts on Cancel and preserves session entries", async () => {
+		const before = JSON.stringify(session.sessionManager.getEntries());
+		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Enable plan mode");
+		let rendered = "";
+		vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+			const completed = Promise.withResolvers<any>();
+			const component = await factory(
+				{ terminal: { rows: 24 }, requestRender() {} },
+				undefined,
+				undefined,
+				completed.resolve,
+			);
+			rendered = Bun.stripANSI(component.render(80).join("\n"));
+			component.handleInput("\r");
+			return completed.promise;
+		});
+		await mode.handlePlanModeCommand();
+		expect(rendered).toContain("Review plan mode");
+		expect(rendered).toContain("Plan mode: off → on");
+		expect(mode.planModeEnabled).toBe(false);
+		expect(JSON.stringify(session.sessionManager.getEntries())).toBe(before);
+	});
+
+	it("a session identity change invalidates plan confirmation before mutation", async () => {
+		const before = JSON.stringify(session.sessionManager.getEntries());
+		vi.spyOn(mode, "showHookSelector").mockResolvedValue("Enable plan mode");
+		let rendered = "";
+		vi.spyOn(mode, "showHookCustom").mockImplementation(async (factory: any) => {
+			const completed = Promise.withResolvers<any>();
+			const component = await factory(
+				{ terminal: { rows: 24 }, requestRender() {} },
+				undefined,
+				undefined,
+				completed.resolve,
+			);
+			vi.spyOn(session.sessionManager, "getSessionId").mockReturnValue("different-session");
+			component.handleInput("\x1b[B");
+			component.handleInput("\r");
+			await Bun.sleep(0);
+			rendered = Bun.stripANSI(component.render(80).join("\n"));
+			component.handleInput("\x1b");
+			return completed.promise;
+		});
+		await mode.handlePlanModeCommand();
+		expect(rendered).toContain("changed");
+		expect(mode.planModeEnabled).toBe(false);
+		expect(JSON.stringify(session.sessionManager.getEntries())).toBe(before);
+	});
 });

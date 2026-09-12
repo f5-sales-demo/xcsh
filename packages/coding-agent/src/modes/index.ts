@@ -1,5 +1,4 @@
-import { emergencyTerminalRestore } from "@f5-sales-demo/pi-tui";
-import { postmortem } from "@f5-sales-demo/pi-utils";
+import "./terminal-restore";
 
 /**
  * Run modes for the coding agent.
@@ -28,7 +27,3 @@ export type {
 	RpcResponse,
 	RpcSessionState,
 } from "./rpc/rpc-types";
-
-postmortem.register("terminal-restore", () => {
-	emergencyTerminalRestore();
-});

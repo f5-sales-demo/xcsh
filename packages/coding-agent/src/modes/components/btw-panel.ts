@@ -1,7 +1,8 @@
-import { type Component, Container, Markdown, Spacer, Text, type TUI } from "@f5-sales-demo/pi-tui";
+import { Container, Markdown, type TUI } from "@f5-sales-demo/pi-tui";
 import { replaceTabs } from "../../tools/render-utils";
 import { getMarkdownTheme, theme } from "../theme/theme";
-import { DynamicBorder } from "./dynamic-border";
+import { appInterruptHint } from "../utils/keybinding-matchers";
+import { selectorCancelHint, selectorFrame, selectorFrameContentWidth } from "./selector-frame";
 
 type BtwPanelState = "running" | "complete" | "aborted" | "error";
 
@@ -22,82 +23,87 @@ export class BtwPanelComponent extends Container {
 		super();
 		this.#question = options.question;
 		this.#tui = options.tui;
-		this.#rebuild();
 	}
 
 	appendText(delta: string): void {
 		if (!delta || this.#closed) return;
 		this.#answer += delta;
-		this.#rebuild();
+		this.#tui.requestRender();
 	}
 
 	setAnswer(text: string): void {
 		if (this.#closed) return;
 		this.#answer = text;
-		this.#rebuild();
+		this.#tui.requestRender();
 	}
 
 	markComplete(): void {
 		if (this.#closed) return;
 		this.#state = "complete";
 		this.#errorMessage = undefined;
-		this.#rebuild();
+		this.#tui.requestRender();
 	}
 
 	markAborted(): void {
 		if (this.#closed) return;
 		this.#state = "aborted";
 		this.#errorMessage = undefined;
-		this.#rebuild();
+		this.#tui.requestRender();
 	}
 
 	markError(message: string): void {
 		if (this.#closed) return;
 		this.#state = "error";
 		this.#errorMessage = message;
-		this.#rebuild();
+		this.#tui.requestRender();
 	}
 
 	close(): void {
 		this.#closed = true;
 	}
 
-	#rebuild(): void {
-		this.clear();
-		this.addChild(new DynamicBorder(str => theme.fg("dim", str)));
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(theme.fg("contentAccent", replaceTabs(this.#question)), 1, 0));
-		this.addChild(new Spacer(1));
-		this.addChild(this.#contentComponent());
-		this.addChild(new Spacer(1));
-		this.addChild(new Text(this.#footerLine(), 1, 0));
-		this.addChild(new Spacer(1));
-		this.addChild(new DynamicBorder(str => theme.fg("dim", str)));
-		this.#tui.requestRender();
+	override render(width: number): string[] {
+		const innerWidth = selectorFrameContentWidth(width);
+		const answer = replaceTabs(this.#answer).trim();
+		const body = answer
+			? new Markdown(answer, 0, 0, getMarkdownTheme()).render(innerWidth)
+			: [theme.fg("dim", this.#state === "running" ? "Waiting for response…" : "No text returned.")];
+		const state = this.#stateLine();
+		return selectorFrame(
+			width,
+			body.length + 12,
+			"BTW",
+			"Ephemeral side answer from a snapshot of the current session; it is not added to the transcript.",
+			[],
+			[theme.fg("contentAccent", replaceTabs(this.#question)), "", ...body],
+			state ? [state] : [],
+			[this.#footerLine()],
+		);
 	}
 
 	#footerLine(): string {
 		switch (this.#state) {
 			case "running":
-				return theme.fg("muted", "Esc cancel /btw");
+				return `${appInterruptHint()} · Esc keeps this request running`;
 			case "complete":
-				return theme.fg("muted", "Esc dismiss");
+				return selectorCancelHint("dismiss");
 			case "aborted":
-				return theme.fg("warning", `${theme.status.warning} Cancelled · Esc dismiss`);
+				return selectorCancelHint("dismiss");
 			case "error":
-				return theme.fg("error", `${theme.status.error} Error · Esc dismiss`);
+				return selectorCancelHint("dismiss");
 		}
 	}
 
-	#contentComponent(): Component {
-		if (this.#state === "error") {
-			return new Text(theme.fg("error", replaceTabs(this.#errorMessage ?? "Unknown error")), 1, 0);
+	#stateLine(): string {
+		switch (this.#state) {
+			case "running":
+				return theme.fg("muted", "Loading side answer…");
+			case "complete":
+				return theme.fg("success", `${theme.status.success} Answer complete`);
+			case "aborted":
+				return theme.fg("warning", `${theme.status.warning} Interrupted`);
+			case "error":
+				return theme.fg("error", `${theme.status.error} ${replaceTabs(this.#errorMessage ?? "Unknown error")}`);
 		}
-		const text = replaceTabs(this.#answer).trim();
-		if (!text) {
-			const waiting = this.#state === "running" ? "Waiting for response…" : "No text returned.";
-			return new Text(theme.fg("dim", waiting), 1, 0);
-		}
-		return new Markdown(text, 1, 0, getMarkdownTheme());
 	}
 }

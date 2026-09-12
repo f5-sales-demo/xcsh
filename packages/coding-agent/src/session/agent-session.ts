@@ -15,6 +15,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import {
 	type Agent,
@@ -182,8 +183,11 @@ import type {
 	BranchSummaryEntry,
 	CompactionEntry,
 	NewSessionOptions,
+	SessionBranchPreview,
 	SessionContext,
+	SessionForkPreview,
 	SessionManager,
+	SessionNewPreview,
 } from "./session-manager";
 import { getLatestCompactionEntry, type SessionToolExecution } from "./session-manager";
 import { type SessionTransitionListener, type SessionTransitionScope, SessionTransitions } from "./session-transitions";
@@ -367,6 +371,8 @@ export interface HandoffResult {
 interface HandoffOptions {
 	autoTriggered?: boolean;
 	signal?: AbortSignal;
+	/** Internal exact destination supplied by the reviewed terminal adapter. */
+	newSessionPreview?: SessionNewPreview;
 }
 
 /** Internal marker for hook messages queued through the agent loop */
@@ -463,6 +469,33 @@ export function powerAssertionOptions(mode: "off" | "idle" | "display" | "system
 }
 
 export class AgentSession {
+	#pendingReviewedBranchCompletion:
+		| {
+				preview: SessionBranchPreview | undefined;
+				previousSessionFile: string | undefined;
+				skipConversationRestore: boolean;
+		  }
+		| undefined;
+	#pendingReviewedHandoffCompletion:
+		| {
+				preview: SessionNewPreview;
+				document: string;
+				autoTriggered: boolean;
+				injectedEntryId?: string;
+				savedPath?: string;
+		  }
+		| undefined;
+	#pendingReviewedTreeNavigation:
+		| {
+				targetId: string;
+				oldLeafId: string | null;
+				newLeafId: string | null;
+				editorText?: string;
+				summaryEntry?: BranchSummaryEntry;
+				fromExtension?: boolean;
+				hookEmitted: boolean;
+		  }
+		| undefined;
 	readonly agent: Agent;
 	readonly sessionManager: SessionManager;
 	readonly settings: Settings;
@@ -570,6 +603,7 @@ export class AgentSession {
 	#onPayload: SimpleStreamOptions["onPayload"] | undefined;
 	#convertToLlm: (messages: AgentMessage[]) => Message[] | Promise<Message[]>;
 	#rebuildSystemPrompt: ((toolNames: string[], tools: Map<string, AgentTool>) => Promise<string>) | undefined;
+	#toolSelectionRevision = 0;
 	#baseSystemPrompt: string;
 	#mcpDiscoveryEnabled = false;
 	#discoverableMCPTools = new Map<string, DiscoverableMCPTool>();
@@ -872,6 +906,8 @@ export class AgentSession {
 	}
 
 	readonly #toolExecutions = new Map<string, SessionToolExecution & { execution?: unknown }>();
+	readonly #activeToolExecutions = new Set<string>();
+	readonly #toolExecutionIdleWaiters = new Set<() => void>();
 
 	/** Snapshot of core-owned executions for clients attaching during a tool call. */
 	getActiveToolExecutions(): {
@@ -897,6 +933,7 @@ export class AgentSession {
 			this.#toolExecutions.delete(event.message.toolCallId);
 		if (event.type === "agent_start" || event.type === "agent_end") this.#toolExecutions.clear();
 		if (event.type === "tool_execution_start") {
+			this.#activeToolExecutions.add(event.toolCallId);
 			if (event.executionKind === "command" || event.executionKind === "fileChange")
 				this.#toolExecutions.set(event.toolCallId, {
 					kind: event.executionKind,
@@ -911,6 +948,13 @@ export class AgentSession {
 					...current,
 					execution: event.partialResult.details?.execution,
 				});
+		}
+		if (event.type === "tool_execution_end") {
+			this.#activeToolExecutions.delete(event.toolCallId);
+			if (this.#activeToolExecutions.size === 0) {
+				for (const resolve of this.#toolExecutionIdleWaiters) resolve();
+				this.#toolExecutionIdleWaiters.clear();
+			}
 		}
 		if (event.type === "agent_start") {
 			this.#turnPhase.startAgentLoop();
@@ -1485,34 +1529,56 @@ export class AgentSession {
 		this.settings.set("routing.mode", mode);
 	}
 
-	public async applyRoutingProfile(
+	/** Resolve exact entitled role selectors without saving settings or switching the active model. */
+	public async prepareRoutingProfile(
 		profileId: import("../routing/subscription-profiles").SubscriptionProfileId,
-	): Promise<{ applied: boolean; missingModels: string[] }> {
+	): Promise<import("../routing/subscription-profiles").ApplySubscriptionProfileResult> {
 		const { applySubscriptionProfileRoles } = await import("../routing/subscription-profiles");
 		await this.#modelRegistry.refresh("online");
 		const discovery = this.#modelRegistry.getProviderDiscoveryState(profileId);
-		if (!discovery || discovery.stale || discovery.status !== "ok") {
-			return { applied: false, missingModels: [`${profileId}:authoritative-inventory`] };
-		}
 		const currentRoles = Object.fromEntries(
-			Object.entries(this.settings.getModelRoles()).filter(
+			Object.entries(this.settings.inspectScopes("modelRoles").userValue ?? {}).filter(
 				(entry): entry is [string, string] => entry[1] !== undefined,
 			),
 		);
-		const resolved = applySubscriptionProfileRoles(
+		if (!discovery || discovery.stale || discovery.status !== "ok") {
+			return { applied: false, roles: currentRoles, missingModels: [`${profileId}:authoritative-inventory`] };
+		}
+		return applySubscriptionProfileRoles(
 			profileId,
 			currentRoles,
 			discovery.models.map(modelId => `${profileId}/${modelId}`),
 		);
-		if (!resolved.applied) return { applied: false, missingModels: resolved.missingModels };
+	}
 
-		const previousProfile = this.settings.get("routing.profile");
+	public async applyRoutingProfile(
+		profileId: import("../routing/subscription-profiles").SubscriptionProfileId,
+		reviewedRoles?: Readonly<Record<string, string>>,
+		isReviewedTargetCurrent?: () => boolean,
+	): Promise<{ applied: boolean; missingModels: string[] }> {
+		const resolved = await this.prepareRoutingProfile(profileId);
+		if (isReviewedTargetCurrent && !isReviewedTargetCurrent())
+			throw new Error(
+				"Routing profile reviewed target changed. Open the profile again to review its current state.",
+			);
+		if (!resolved.applied) return { applied: false, missingModels: resolved.missingModels };
+		if (reviewedRoles) {
+			if (!isDeepStrictEqual(reviewedRoles, resolved.roles))
+				throw new Error("Routing profile proposal changed. Review the current role assignments again.");
+		}
+		const currentRoles = Object.fromEntries(
+			Object.entries(this.settings.inspectScopes("modelRoles").userValue ?? {}).filter(
+				(entry): entry is [string, string] => entry[1] !== undefined,
+			),
+		);
+
+		const previousProfile = this.settings.inspectScopes("routing.profile").userValue;
 		const previousModel = this.model;
 		const previousThinking = this.thinkingLevel;
 		this.settings.set("modelRoles", resolved.roles);
 		this.settings.set("routing.profile", profileId);
-		const next = this.resolveRoleModelWithThinking("default");
 		try {
+			const next = this.resolveRoleModelWithThinking("default");
 			if (!next.model) throw new Error(`Default model for ${profileId} did not resolve`);
 			await this.setModelTemporary(next.model, next.thinkingLevel);
 			return { applied: true, missingModels: [] };
@@ -2296,6 +2362,26 @@ export class AgentSession {
 			throw new Error("Background execution settlement is not yet persisted; retry the session change");
 	}
 
+	async #settleToolExecutionsForTransition(): Promise<void> {
+		if (this.#activeToolExecutions.size === 0) return;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		let resolveIdle: (() => void) | undefined;
+		const idle = new Promise<void>(resolve => {
+			resolveIdle = resolve;
+			this.#toolExecutionIdleWaiters.add(resolve);
+		});
+		const stopped = await Promise.race([
+			idle.then(() => true),
+			new Promise<boolean>(resolve => {
+				timer = setTimeout(() => resolve(false), 3000);
+			}),
+		]).finally(() => {
+			if (timer) clearTimeout(timer);
+			if (resolveIdle) this.#toolExecutionIdleWaiters.delete(resolveIdle);
+		});
+		if (!stopped) throw new Error("Tool execution is still stopping; retry the session change");
+	}
+
 	#withSessionTransition<T>(
 		change: (scope: SessionTransitionScope) => Promise<T>,
 		scope?: SessionTransitionScope,
@@ -2303,6 +2389,8 @@ export class AgentSession {
 		return this.#sessionTransitions.run(async owner => {
 			try {
 				this.userInteractions.cancelAll();
+				await this.abort();
+				await this.#settleToolExecutionsForTransition();
 				await this.#settleBackgroundJobsForTransition();
 				return await change(owner);
 			} finally {
@@ -2326,7 +2414,7 @@ export class AgentSession {
 			await this.abort();
 			const assertCurrent = () => this.#sessionTransitions.assertAvailable(scope);
 			assertCurrent();
-			return prepare(options => this.newSession(options, scope), assertCurrent);
+			return prepare(options => this.newSession(options, undefined, scope), assertCurrent);
 		});
 	}
 
@@ -2733,11 +2821,9 @@ export class AgentSession {
 		toolNames: string[],
 		options?: { persistMCPSelection?: boolean; previousSelectedMCPToolNames?: string[]; isCurrent?: () => boolean },
 	): Promise<void> {
-		const revision = ++this.#toolChangeRevision;
-		const configurationCurrent = this.#configurationGuard();
-		const isCurrent = () =>
-			revision === this.#toolChangeRevision && configurationCurrent() && (options?.isCurrent?.() ?? true);
-		if (!isCurrent()) return;
+		const configurationCurrent = options?.isCurrent ?? this.#configurationGuard();
+		const selectionRevision = ++this.#toolSelectionRevision;
+		const sessionId = this.sessionManager.getSessionId();
 		toolNames = [...new Set(toolNames.map(name => name.toLowerCase()))];
 		const previousSelectedMCPToolNames = options?.previousSelectedMCPToolNames ?? this.getSelectedMCPToolNames();
 		const tools: AgentTool[] = [];
@@ -2769,11 +2855,16 @@ export class AgentSession {
 				validToolNames.push("report_tool_issue");
 			}
 		}
-		const rebuiltPrompt = this.#rebuildSystemPrompt
+		const preparedPrompt = this.#rebuildSystemPrompt
 			? await this.#rebuildSystemPrompt(validToolNames, this.#toolRegistry)
 			: undefined;
-		if (!isCurrent()) return;
-
+		if (
+			!configurationCurrent() ||
+			selectionRevision !== this.#toolSelectionRevision ||
+			sessionId !== this.sessionManager.getSessionId()
+		) {
+			throw new Error("Tool selection changed while preparing its prompt. Review the current selection and retry.");
+		}
 		if (this.#mcpDiscoveryEnabled) {
 			this.#selectedMCPToolNames = new Set(
 				validToolNames.filter(
@@ -2784,9 +2875,9 @@ export class AgentSession {
 		this.#promptBuildRevision++;
 		this.agent.setTools(tools);
 
-		// Commit the matching rebuilt prompt with the new tool set
-		if (rebuiltPrompt !== undefined) {
-			this.#baseSystemPrompt = rebuiltPrompt;
+		// Commit the prepared prompt only after preparation succeeds, alongside the tool set.
+		if (preparedPrompt !== undefined) {
+			this.#baseSystemPrompt = preparedPrompt;
 			this.agent.setSystemPrompt(this.#baseSystemPrompt);
 		}
 		if (options?.persistMCPSelection !== false) {
@@ -4461,7 +4552,37 @@ export class AgentSession {
 	 * @param options - Optional initial messages and parent session path
 	 * @returns true if completed, false if cancelled by hook
 	 */
-	async newSession(options?: NewSessionOptions, scope?: SessionTransitionScope): Promise<boolean> {
+	async newSession(
+		options?: NewSessionOptions,
+		preview?: SessionNewPreview,
+		scope?: SessionTransitionScope,
+	): Promise<boolean> {
+		return this.#newSession(options, undefined, preview, scope);
+	}
+
+	/**
+	 * Internal reviewed-transition hook. The preparation runs only after every
+	 * session_before_switch handler has accepted the switch and immediately before
+	 * the existing session is disconnected. This lets a composite reviewed action
+	 * commit old-session state without mutating anything when an extension vetoes.
+	 * Extension callback signatures and the public newSession() contract are unchanged.
+	 */
+	async newSessionWithReviewedPreparation(
+		prepare: () => Promise<void>,
+		options?: NewSessionOptions,
+		preview?: SessionNewPreview,
+		scope?: SessionTransitionScope,
+	): Promise<boolean> {
+		return this.#newSession(options, prepare, preview, scope);
+	}
+
+	async #newSession(
+		options?: NewSessionOptions,
+		prepare?: () => Promise<void>,
+		preview?: SessionNewPreview,
+		scope?: SessionTransitionScope,
+	): Promise<boolean> {
+		if (preview) this.sessionManager.validateNewSessionPreview(preview, options);
 		const assertCurrent = this.#sessionTransitions.checkpoint(scope);
 		const previousSessionFile = this.sessionFile;
 		const nextDiscoverySessionToolNames = this.#mcpDiscoveryEnabled
@@ -4487,12 +4608,11 @@ export class AgentSession {
 
 		assertCurrent();
 		return this.#withSessionTransition(async () => {
+			await prepare?.();
 			this.#disconnectFromAgent();
-			await this.abort();
-			await this.#settleBackgroundJobsForTransition();
 			this.#closeAllProviderSessions("new session");
 			await this.sessionManager.flush();
-			await this.sessionManager.newSession(options);
+			await this.sessionManager.newSession(options, preview);
 			this.agent.reset();
 			this.setTodoPhases([]);
 			this.agent.sessionId = this.sessionManager.getSessionId();
@@ -4546,7 +4666,8 @@ export class AgentSession {
 	 * Unlike newSession(), this preserves all messages in the agent state.
 	 * @returns true if completed, false if cancelled by hook or not persisting
 	 */
-	async fork(): Promise<boolean> {
+	async fork(preview: SessionForkPreview | undefined = this.sessionManager.previewFork()): Promise<boolean> {
+		if (!preview) return false;
 		const assertCurrent = this.#sessionTransitions.checkpoint();
 		const previousSessionFile = this.sessionFile;
 
@@ -4566,50 +4687,63 @@ export class AgentSession {
 
 		assertCurrent();
 		return this.#withSessionTransition(async () => {
-			await this.abort();
-			await this.#settleBackgroundJobsForTransition();
 			// Flush current session to ensure all entries are written
 			await this.sessionManager.flush();
+			try {
+				await fs.promises.lstat(preview.targetArtifactDir);
+				throw new Error(`Fork artifact destination already exists: ${preview.targetArtifactDir}`);
+			} catch (error) {
+				if (!isEnoent(error)) throw error;
+			}
 
 			// Fork the session (creates new session file with same entries)
-			const forkResult = await this.sessionManager.fork();
-			if (!forkResult) {
-				return false;
-			}
-
-			// Copy artifacts directory if it exists
-			const oldArtifactDir = forkResult.oldSessionFile.slice(0, -6);
-			const newArtifactDir = forkResult.newSessionFile.slice(0, -6);
-
-			try {
-				const oldDirStat = await fs.promises.stat(oldArtifactDir);
-				if (oldDirStat.isDirectory()) {
-					await fs.promises.cp(oldArtifactDir, newArtifactDir, { recursive: true });
-				}
-			} catch (err) {
-				if (!isEnoent(err)) {
-					logger.warn("Failed to copy artifacts during fork", {
-						oldArtifactDir,
-						newArtifactDir,
-						error: err instanceof Error ? err.message : String(err),
-					});
-				}
-			}
-
-			// Update agent session ID
-			this.agent.sessionId = this.sessionManager.getSessionId();
-
-			// Emit session_switch event with reason "fork" to hooks
-			if (this.#extensionRunner) {
-				await this.#extensionRunner.emit({
-					type: "session_switch",
-					reason: "fork",
-					previousSessionFile,
-				});
-			}
-
+			const forkResult = await this.sessionManager.fork(preview);
+			if (!forkResult) return false;
+			await this.completeReviewedFork(preview, false, previousSessionFile);
 			return true;
 		});
+	}
+
+	/** Complete only the unresolved persistence/artifact/switch tail of an already-created fork. */
+	async completeReviewedFork(
+		preview: SessionForkPreview,
+		allowExistingArtifactDestination = true,
+		previousSessionFile: string | undefined = preview.sourceSessionFile,
+	): Promise<void> {
+		if (
+			this.sessionManager.getSessionId() !== preview.targetSessionId ||
+			this.sessionManager.getSessionFile() !== preview.targetSessionFile
+		)
+			throw new Error("The active session is not the reviewed fork target.");
+		await this.sessionManager.retryPersistence();
+		try {
+			const oldDirStat = await fs.promises.stat(preview.sourceArtifactDir);
+			if (oldDirStat.isDirectory()) {
+				if (!allowExistingArtifactDestination) {
+					try {
+						await fs.promises.lstat(preview.targetArtifactDir);
+						throw new Error(`Fork artifact destination already exists: ${preview.targetArtifactDir}`);
+					} catch (error) {
+						if (!isEnoent(error)) throw error;
+					}
+				}
+				await fs.promises.cp(preview.sourceArtifactDir, preview.targetArtifactDir, { recursive: true });
+			}
+		} catch (err) {
+			if (!isEnoent(err)) throw err;
+		}
+
+		// Update agent session ID
+		this.agent.sessionId = this.sessionManager.getSessionId();
+
+		// Emit session_switch event with reason "fork" to hooks
+		if (this.#extensionRunner) {
+			await this.#extensionRunner.emit({
+				type: "session_switch",
+				reason: "fork",
+				previousSessionFile,
+			});
+		}
 	}
 
 	// =========================================================================
@@ -5248,6 +5382,16 @@ export class AgentSession {
 	 */
 	async handoff(customInstructions?: string, options?: HandoffOptions): Promise<HandoffResult | undefined> {
 		const assertCurrent = this.#sessionTransitions.checkpoint();
+		if (this.#pendingReviewedHandoffCompletion) {
+			const pending = this.#pendingReviewedHandoffCompletion;
+			if (
+				!options?.newSessionPreview ||
+				pending.preview.targetSessionId !== options.newSessionPreview.targetSessionId
+			)
+				throw new Error("A different handoff completion remains unresolved.");
+			return this.retryReviewedHandoffCompletion(options.newSessionPreview);
+		}
+		if (options?.newSessionPreview) this.sessionManager.validateNewSessionPreview(options.newSessionPreview);
 		const entries = this.sessionManager.getBranch();
 		const messageCount = entries.filter(e => e.type === "message").length;
 
@@ -5352,51 +5496,13 @@ export class AgentSession {
 				handoffText = this.#obfuscator.deobfuscate(handoffText);
 			}
 
-			const document = handoffText;
-			return await this.#withSessionTransition(async () => {
-				// Start a new session
-				await this.sessionManager.flush();
-				await this.#settleBackgroundJobsForTransition();
-				await this.sessionManager.newSession();
-				this.agent.reset();
-				this.agent.sessionId = this.sessionManager.getSessionId();
-				if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
-				this.#steeringMessages = [];
-				this.#followUpMessages = [];
-				this.#pendingNextTurnMessages = [];
-				this.#scheduledHiddenNextTurnGeneration = undefined;
-				this.#todoReminderCount = 0;
-
-				// Inject the handoff document as a custom message
-				const handoffContent = `<handoff-context>\n${handoffText}\n</handoff-context>\n\nThe above is a handoff document from a previous session. Use this context to continue the work seamlessly.`;
-				this.sessionManager.appendCustomMessageEntry("handoff", handoffContent, true, undefined, "agent");
-				let savedPath: string | undefined;
-				if (options?.autoTriggered && this.settings.get("compaction.handoffSaveToDisk")) {
-					const artifactsDir = this.sessionManager.getArtifactsDir();
-					if (artifactsDir) {
-						const fileTimestamp = new Date().toISOString().replace(/[:.]/g, "-");
-						const handoffFilePath = path.join(artifactsDir, `handoff-${fileTimestamp}.md`);
-						try {
-							await Bun.write(handoffFilePath, `${handoffText}\n`);
-							savedPath = handoffFilePath;
-						} catch (error) {
-							logger.warn("Failed to save handoff document to disk", {
-								path: handoffFilePath,
-								error: error instanceof Error ? error.message : String(error),
-							});
-						}
-					} else {
-						logger.debug("Skipping handoff document save because session is not persisted");
-					}
-				}
-
-				// Rebuild agent messages from session
-				const sessionContext = this.buildDisplaySessionContext();
-				this.agent.replaceMessages(sessionContext.messages);
-				this.#syncTodoPhasesFromBranch();
-
-				return { document, savedPath };
-			});
+			const preview = options?.newSessionPreview ?? this.sessionManager.previewNewSession();
+			this.#pendingReviewedHandoffCompletion = {
+				preview,
+				document: handoffText,
+				autoTriggered: options?.autoTriggered === true,
+			};
+			return await this.retryReviewedHandoffCompletion(preview);
 		} finally {
 			unsubscribe?.();
 			handoffSignal.removeEventListener("abort", onCompletionAbort);
@@ -5404,6 +5510,76 @@ export class AgentSession {
 			sourceSignal?.removeEventListener("abort", onSourceAbort);
 			this.#handoffAbortController = undefined;
 		}
+	}
+
+	/** Finish only the unresolved local transition after a handoff document has been generated. */
+	async retryReviewedHandoffCompletion(preview: SessionNewPreview): Promise<HandoffResult> {
+		const pending = this.#pendingReviewedHandoffCompletion;
+		if (!pending || pending.preview.targetSessionId !== preview.targetSessionId)
+			throw new Error("No matching generated handoff is available for recovery.");
+		if (this.sessionManager.getSessionId() === preview.sourceSessionId) {
+			await this.sessionManager.flush();
+			this.#asyncJobManager?.cancelAll();
+			await this.sessionManager.newSession(undefined, preview);
+			this.agent.reset();
+			this.agent.sessionId = this.sessionManager.getSessionId();
+			if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
+			this.#steeringMessages = [];
+			this.#followUpMessages = [];
+			this.#pendingNextTurnMessages = [];
+			this.#scheduledHiddenNextTurnGeneration = undefined;
+			this.#todoReminderCount = 0;
+		} else if (
+			this.sessionManager.getSessionId() !== preview.targetSessionId ||
+			this.sessionManager.getSessionFile() !== preview.targetSessionFile
+		) {
+			throw new Error("The active session no longer matches the reviewed handoff transition.");
+		}
+
+		if (!pending.injectedEntryId) {
+			const handoffContent = `<handoff-context>\n${pending.document}\n</handoff-context>\n\nThe above is a handoff document from a previous session. Use this context to continue the work seamlessly.`;
+			pending.injectedEntryId = this.sessionManager.appendCustomMessageEntry(
+				"handoff",
+				handoffContent,
+				true,
+				undefined,
+				"agent",
+			);
+		}
+
+		if (pending.autoTriggered && this.settings.get("compaction.handoffSaveToDisk") && !pending.savedPath) {
+			const artifactsDir = this.sessionManager.getArtifactsDir();
+			if (artifactsDir) {
+				const fileTimestamp = preview.timestamp.replace(/[:.]/g, "-");
+				const handoffFilePath = path.join(artifactsDir, `handoff-${fileTimestamp}.md`);
+				try {
+					await Bun.write(handoffFilePath, `${pending.document}\n`);
+					pending.savedPath = handoffFilePath;
+				} catch (error) {
+					logger.warn("Failed to save handoff document to disk", {
+						path: handoffFilePath,
+						error: error instanceof Error ? error.message : String(error),
+					});
+				}
+			} else logger.debug("Skipping handoff document save because session is not persisted");
+		}
+
+		await this.sessionManager.retryPersistence();
+		const sessionContext = this.buildDisplaySessionContext();
+		this.agent.replaceMessages(sessionContext.messages);
+		this.#syncTodoPhasesFromBranch();
+		const result = { document: pending.document, savedPath: pending.savedPath };
+		this.#pendingReviewedHandoffCompletion = undefined;
+		return result;
+	}
+
+	hasPendingReviewedHandoff(preview: SessionNewPreview): boolean {
+		return this.#pendingReviewedHandoffCompletion?.preview.targetSessionId === preview.targetSessionId;
+	}
+
+	getPendingReviewedHandoffPreview(): SessionNewPreview | undefined {
+		const preview = this.#pendingReviewedHandoffCompletion?.preview;
+		return preview ? { ...preview } : undefined;
 	}
 
 	/**
@@ -7463,7 +7639,10 @@ export class AgentSession {
 	 *   - selectedText: The text of the selected user message (for editor pre-fill)
 	 *   - cancelled: True if a hook cancelled the branch
 	 */
-	async branch(entryId: string): Promise<{
+	async branch(
+		entryId: string,
+		preview?: SessionBranchPreview,
+	): Promise<{
 		selectedText: string;
 		cancelled: boolean;
 	}> {
@@ -7505,40 +7684,61 @@ export class AgentSession {
 			await this.sessionManager.flush();
 			await this.#settleBackgroundJobsForTransition();
 
-			if (!selectedEntry.parentId) {
-				await this.sessionManager.newSession({ parentSession: previousSessionFile });
-			} else {
-				this.sessionManager.createBranchedSession(selectedEntry.parentId);
-			}
-			this.#syncTodoPhasesFromBranch();
-			this.#syncRoutingStateFromBranch();
-			this.agent.sessionId = this.sessionManager.getSessionId();
-			if (
-				this.model &&
-				this.sessionManager.buildSessionContext().models.default !== `${this.model.provider}/${this.model.id}`
-			)
-				this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
-
-			// Reload messages from entries (works for both file and in-memory mode)
-			const sessionContext = this.buildDisplaySessionContext();
-
-			await this.#restoreMCPSelectionsForSessionContext(sessionContext);
-
-			// Emit session_branch event to hooks (after branch completes)
-			if (this.#extensionRunner) {
-				await this.#extensionRunner.emit({
-					type: "session_branch",
-					previousSessionFile,
-				});
-			}
-
-			if (!skipConversationRestore) {
-				this.agent.replaceMessages(sessionContext.messages);
-				this.#closeCodexProviderSessionsForHistoryRewrite();
-			}
+			this.sessionManager.createBranchedSession(selectedEntry.parentId, preview);
+			if (this.model) this.sessionManager.appendModelChange(`${this.model.provider}/${this.model.id}`);
+			this.#pendingReviewedBranchCompletion = { preview, previousSessionFile, skipConversationRestore };
+			await this.retryReviewedBranchCompletion(preview);
 
 			return { selectedText, cancelled: false };
 		});
+	}
+
+	/** Complete only the unresolved state-restoration tail of an already-created branch. */
+	async completeReviewedBranch(
+		preview: SessionBranchPreview | undefined,
+		previousSessionFile: string | undefined,
+		skipConversationRestore = false,
+	): Promise<void> {
+		if (
+			preview &&
+			(this.sessionManager.getSessionId() !== preview.targetSessionId ||
+				this.sessionManager.getSessionFile() !== preview.targetSessionFile)
+		)
+			throw new Error("The active session is not the reviewed branch target.");
+		await this.sessionManager.retryPersistence();
+		this.#syncTodoPhasesFromBranch();
+		this.#syncRoutingStateFromBranch();
+		this.agent.sessionId = this.sessionManager.getSessionId();
+
+		// Reload messages from entries (works for both file and in-memory mode)
+		const sessionContext = this.buildDisplaySessionContext();
+
+		await this.#restoreMCPSelectionsForSessionContext(sessionContext);
+
+		// Emit session_branch event to hooks (after branch completes)
+		if (this.#extensionRunner) {
+			await this.#extensionRunner.emit({
+				type: "session_branch",
+				previousSessionFile,
+			});
+		}
+
+		if (!skipConversationRestore) {
+			this.agent.replaceMessages(sessionContext.messages);
+			this.#closeCodexProviderSessionsForHistoryRewrite();
+		}
+	}
+
+	async retryReviewedBranchCompletion(preview: SessionBranchPreview | undefined): Promise<void> {
+		const pending = this.#pendingReviewedBranchCompletion;
+		if (pending && pending.preview?.targetSessionId !== preview?.targetSessionId)
+			throw new Error("A different branch completion remains unresolved.");
+		await this.completeReviewedBranch(
+			preview,
+			pending?.previousSessionFile ?? preview?.sourceSessionFile,
+			pending?.skipConversationRestore ?? false,
+		);
+		this.#pendingReviewedBranchCompletion = undefined;
 	}
 
 	// =========================================================================
@@ -7556,7 +7756,7 @@ export class AgentSession {
 	 */
 	async navigateTree(
 		targetId: string,
-		options: { summarize?: boolean; customInstructions?: string } = {},
+		options: { summarize?: boolean; customInstructions?: string; signal?: AbortSignal } = {},
 	): Promise<{
 		editorText?: string;
 		cancelled: boolean;
@@ -7564,6 +7764,11 @@ export class AgentSession {
 		summaryEntry?: BranchSummaryEntry;
 	}> {
 		const assertCurrent = this.#sessionTransitions.checkpoint();
+		if (this.#pendingReviewedTreeNavigation) {
+			if (this.#pendingReviewedTreeNavigation.targetId !== targetId)
+				throw new Error("A different tree navigation remains unresolved.");
+			return this.retryReviewedTreeNavigation(targetId);
+		}
 		const oldLeafId = this.sessionManager.getLeafId();
 
 		// No-op if already at target
@@ -7599,70 +7804,70 @@ export class AgentSession {
 
 		// Set up abort controller for summarization
 		this.#branchSummaryAbortController = new AbortController();
-		let hookSummary: { summary: string; details?: unknown } | undefined;
-		let fromExtension = false;
+		const branchSummaryAbortController = this.#branchSummaryAbortController;
+		const onSourceAbort = () => branchSummaryAbortController.abort();
+		options.signal?.addEventListener("abort", onSourceAbort, { once: true });
+		if (options.signal?.aborted) onSourceAbort();
+		try {
+			let hookSummary: { summary: string; details?: unknown } | undefined;
+			let fromExtension = false;
 
-		// Emit session_before_tree event
-		if (this.#extensionRunner?.hasHandlers("session_before_tree")) {
-			const result = (await this.#extensionRunner.emit({
-				type: "session_before_tree",
-				preparation,
-				signal: this.#branchSummaryAbortController.signal,
-			})) as SessionBeforeTreeResult | undefined;
+			// Emit session_before_tree event
+			if (this.#extensionRunner?.hasHandlers("session_before_tree")) {
+				const result = (await this.#extensionRunner.emit({
+					type: "session_before_tree",
+					preparation,
+					signal: branchSummaryAbortController.signal,
+				})) as SessionBeforeTreeResult | undefined;
+				assertCurrent();
 
+				if (result?.cancel) {
+					return { cancelled: true };
+				}
+
+				if (result?.summary && options.summarize) {
+					hookSummary = result.summary;
+					fromExtension = true;
+				}
+			}
+
+			// Run default summarizer if needed
+			let summaryText: string | undefined;
+			let summaryDetails: unknown;
+			if (options.summarize && entriesToSummarize.length > 0 && !hookSummary) {
+				const model = this.model!;
+				const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
+				if (!apiKey) {
+					throw new Error(`No API key for ${model.provider}`);
+				}
+				const branchSummarySettings = this.settings.getGroup("branchSummary");
+				const result = await generateBranchSummary(entriesToSummarize, {
+					model,
+					apiKey,
+					signal: branchSummaryAbortController.signal,
+					customInstructions: options.customInstructions,
+					reserveTokens: branchSummarySettings.reserveTokens,
+					protectProviderText: this.#obfuscator ? text => this.#obfuscator!.obfuscate(text) : undefined,
+				});
+				if (result.aborted) {
+					options.signal?.removeEventListener("abort", onSourceAbort);
+					this.#branchSummaryAbortController = undefined;
+					return { cancelled: true, aborted: true };
+				}
+				if (result.error) {
+					throw new Error(result.error);
+				}
+				summaryText = result.summary;
+				summaryDetails = {
+					readFiles: result.readFiles || [],
+					modifiedFiles: result.modifiedFiles || [],
+				};
+			} else if (hookSummary) {
+				summaryText = hookSummary.summary;
+				summaryDetails = hookSummary.details;
+			}
 			assertCurrent();
 
-			if (result?.cancel) {
-				return { cancelled: true };
-			}
-
-			if (result?.summary && options.summarize) {
-				hookSummary = result.summary;
-				fromExtension = true;
-			}
-		}
-
-		// Run default summarizer if needed
-		let summaryText: string | undefined;
-		let summaryDetails: unknown;
-		if (options.summarize && entriesToSummarize.length > 0 && !hookSummary) {
-			const model = this.model!;
-			const apiKey = await this.#modelRegistry.getApiKey(model, this.sessionId);
-			assertCurrent();
-			if (!apiKey) {
-				throw new Error(`No API key for ${model.provider}`);
-			}
-			const branchSummarySettings = this.settings.getGroup("branchSummary");
-			const result = await generateBranchSummary(entriesToSummarize, {
-				model,
-				apiKey,
-				signal: this.#branchSummaryAbortController.signal,
-				customInstructions: options.customInstructions,
-				reserveTokens: branchSummarySettings.reserveTokens,
-				protectProviderText: this.#obfuscator ? text => this.#obfuscator!.obfuscate(text) : undefined,
-			});
-			assertCurrent();
-			this.#branchSummaryAbortController = undefined;
-			if (result.aborted) {
-				return { cancelled: true, aborted: true };
-			}
-			if (result.error) {
-				throw new Error(result.error);
-			}
-			summaryText = result.summary;
-			summaryDetails = {
-				readFiles: result.readFiles || [],
-				modifiedFiles: result.modifiedFiles || [],
-			};
-		} else if (hookSummary) {
-			summaryText = hookSummary.summary;
-			summaryDetails = hookSummary.details;
-		}
-
-		assertCurrent();
-		return this.#withSessionTransition(async () => {
-			await this.abort();
-			await this.#settleBackgroundJobsForTransition();
 			// Determine the new leaf position based on target type
 			let newLeafId: string | null;
 			let editorText: string | undefined;
@@ -7706,27 +7911,59 @@ export class AgentSession {
 				this.sessionManager.branch(newLeafId);
 			}
 
-			// Update agent state
-			const sessionContext = this.buildDisplaySessionContext();
-			await this.#restoreMCPSelectionsForSessionContext(sessionContext);
-			this.agent.replaceMessages(sessionContext.messages);
-			this.#syncTodoPhasesFromBranch();
-			this.#closeCodexProviderSessionsForHistoryRewrite();
-
-			// Emit session_tree event
-			if (this.#extensionRunner) {
-				await this.#extensionRunner.emit({
-					type: "session_tree",
-					newLeafId: this.sessionManager.getLeafId(),
-					oldLeafId,
-					summaryEntry,
-					fromExtension: summaryText ? fromExtension : undefined,
-				});
-			}
-
+			this.#pendingReviewedTreeNavigation = {
+				targetId,
+				oldLeafId,
+				newLeafId: this.sessionManager.getLeafId(),
+				editorText,
+				summaryEntry,
+				fromExtension: summaryText ? fromExtension : undefined,
+				hookEmitted: false,
+			};
+			options.signal?.removeEventListener("abort", onSourceAbort);
 			this.#branchSummaryAbortController = undefined;
-			return { editorText, cancelled: false, summaryEntry };
-		});
+			return this.retryReviewedTreeNavigation(targetId);
+		} finally {
+			options.signal?.removeEventListener("abort", onSourceAbort);
+			if (this.#branchSummaryAbortController === branchSummaryAbortController)
+				this.#branchSummaryAbortController = undefined;
+		}
+	}
+
+	/** Complete only the unresolved persistence/UI tail of an already-applied tree navigation. */
+	async retryReviewedTreeNavigation(targetId: string): Promise<{
+		editorText?: string;
+		cancelled: boolean;
+		summaryEntry?: BranchSummaryEntry;
+	}> {
+		const pending = this.#pendingReviewedTreeNavigation;
+		if (!pending || pending.targetId !== targetId)
+			throw new Error("No matching tree navigation is available for recovery.");
+		if (this.sessionManager.getLeafId() !== pending.newLeafId)
+			throw new Error("The active tree position no longer matches the reviewed navigation.");
+		await this.sessionManager.retryPersistence();
+		const sessionContext = this.buildDisplaySessionContext();
+		await this.#restoreMCPSelectionsForSessionContext(sessionContext);
+		this.agent.replaceMessages(sessionContext.messages);
+		this.#syncTodoPhasesFromBranch();
+		this.#closeCodexProviderSessionsForHistoryRewrite();
+		if (this.#extensionRunner && !pending.hookEmitted) {
+			pending.hookEmitted = true;
+			await this.#extensionRunner.emit({
+				type: "session_tree",
+				newLeafId: this.sessionManager.getLeafId(),
+				oldLeafId: pending.oldLeafId,
+				summaryEntry: pending.summaryEntry,
+				fromExtension: pending.fromExtension,
+			});
+		}
+		const result = { editorText: pending.editorText, cancelled: false, summaryEntry: pending.summaryEntry };
+		this.#pendingReviewedTreeNavigation = undefined;
+		return result;
+	}
+
+	hasPendingReviewedTreeNavigation(targetId: string): boolean {
+		return this.#pendingReviewedTreeNavigation?.targetId === targetId;
 	}
 
 	/**

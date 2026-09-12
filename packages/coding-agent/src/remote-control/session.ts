@@ -3,6 +3,12 @@ import { constants } from "node:fs";
 import { open, realpath } from "node:fs/promises";
 import { isAbsolute, normalize } from "node:path";
 import { type AgentMessage, getToolExecutionKind, type ThinkingLevel } from "@f5-sales-demo/pi-agent-core";
+import {
+	applyRemotePermissionProfile,
+	initializeRemotePermissionProfile,
+	type RemotePermissionProfile,
+	remotePermissionProfile,
+} from "../sandbox/remote-permissions";
 import type { AgentSession, AgentSessionEvent } from "../session/agent-session";
 import { ProtocolError } from "./errors";
 import { updateFileHistoryItem } from "./file-changes";
@@ -46,6 +52,7 @@ export type SessionTarget = Pick<
 	| "modelRegistry"
 	| "sendCustomMessage"
 	| "setRealtimeMode"
+	| "settings"
 	| "skills"
 	| "skillWarnings"
 > &
@@ -168,11 +175,59 @@ export class RemoteSession {
 	get #durable(): boolean {
 		return typeof this.target.sessionManager.getBranch === "function";
 	}
+	#parsePermissionProfile(params: Record<string, unknown>): RemotePermissionProfile {
+		const current = remotePermissionProfile(this.target.settings);
+		const approvalPolicy = params.approvalPolicy ?? current.approvalPolicy;
+		const approvalsReviewer = params.approvalsReviewer ?? current.approvalsReviewer;
+		const sandboxPolicy = params.sandboxPolicy ?? current.sandboxPolicy;
+		if (approvalsReviewer !== "user") throw new ProtocolError(-32602, "Unsupported approvals reviewer override");
+		if (!sandboxPolicy || typeof sandboxPolicy !== "object" || Array.isArray(sandboxPolicy))
+			throw new ProtocolError(-32602, "Unsupported sandbox policy override");
+		const sandbox = sandboxPolicy as Record<string, unknown>;
+		if (approvalPolicy === "never" && sandbox.type === "dangerFullAccess") {
+			if (Object.keys(sandbox).some(key => key !== "type"))
+				throw new ProtocolError(-32602, "Unsupported sandbox policy override");
+			return {
+				approvalPolicy: "never",
+				approvalsReviewer: "user",
+				sandboxPolicy: { type: "dangerFullAccess" },
+				activePermissionProfile: null,
+			};
+		}
+		if (approvalPolicy === "on-request" && sandbox.type === "workspaceWrite") {
+			const allowed = new Set(["type", "writableRoots", "networkAccess", "excludeTmpdirEnvVar", "excludeSlashTmp"]);
+			if (Object.keys(sandbox).some(key => !allowed.has(key)))
+				throw new ProtocolError(-32602, "Unsupported sandbox policy override");
+			const writableRoots = sandbox.writableRoots ?? [];
+			if (!Array.isArray(writableRoots) || writableRoots.some(root => typeof root !== "string" || !isAbsolute(root)))
+				throw new ProtocolError(-32602, "Invalid workspace writable roots");
+			if (
+				![undefined, false].includes(sandbox.networkAccess as undefined | false) ||
+				![undefined, false].includes(sandbox.excludeTmpdirEnvVar as undefined | false) ||
+				![undefined, false].includes(sandbox.excludeSlashTmp as undefined | false)
+			)
+				throw new ProtocolError(-32602, "Unsupported workspace sandbox option");
+			return {
+				approvalPolicy: "on-request",
+				approvalsReviewer: "user",
+				sandboxPolicy: {
+					type: "workspaceWrite",
+					writableRoots: [...writableRoots],
+					networkAccess: false,
+					excludeTmpdirEnvVar: false,
+					excludeSlashTmp: false,
+				},
+				activePermissionProfile: { id: ":workspace" },
+			};
+		}
+		throw new ProtocolError(-32602, "Unsupported approval and sandbox policy combination");
+	}
 	constructor(
 		readonly target: SessionTarget,
 		private readonly version = "21.22.0",
 		private readonly controls: RemoteSessionControls = {},
 	) {
+		initializeRemotePermissionProfile(target.settings);
 		this.#restoreIdentity();
 		this.#unsubscribe = target.subscribe(event => this.#event(event));
 		if (target.userInteractions)
@@ -837,20 +892,7 @@ export class RemoteSession {
 					params[key] != null
 				)
 					throw new ProtocolError(-32602, "Unsupported terminal settings override");
-			if (params.approvalPolicy != null && params.approvalPolicy !== "never")
-				throw new ProtocolError(-32602, "Unsupported approval policy override");
-			if (params.approvalsReviewer != null && params.approvalsReviewer !== "user")
-				throw new ProtocolError(-32602, "Unsupported approvals reviewer override");
-			if (params.sandboxPolicy != null) {
-				const sandbox = params.sandboxPolicy;
-				if (
-					typeof sandbox !== "object" ||
-					Array.isArray(sandbox) ||
-					(sandbox as Record<string, unknown>).type !== "dangerFullAccess" ||
-					Object.keys(sandbox).some(key => key !== "type")
-				)
-					throw new ProtocolError(-32602, "Unsupported sandbox policy override");
-			}
+			const permissionProfile = this.#parsePermissionProfile(params);
 			if (params.model != null && params.model !== this.target.model?.id)
 				throw new ProtocolError(-32602, "Unsupported model override; use the terminal's selected model");
 			if (params.cwd != null && params.cwd !== this.target.sessionManager.getCwd())
@@ -861,14 +903,14 @@ export class RemoteSession {
 			this.#validateEffort(params.effort);
 			if (collaborationMode) await this.#applyCollaborationMode(epoch, collaborationMode);
 			else this.#applyEffort(params.effort);
+			if (params.approvalPolicy != null || params.approvalsReviewer != null || params.sandboxPolicy != null)
+				applyRemotePermissionProfile(this.target.settings, permissionProfile);
 			const effort = this.thread().reasoningEffort;
+			const activePermission = remotePermissionProfile(this.target.settings);
 			this.#emit("thread/settings/updated", {
 				threadSettings: {
 					cwd: this.target.sessionManager.getCwd(),
-					approvalPolicy: "never",
-					approvalsReviewer: "user",
-					sandboxPolicy: { type: "dangerFullAccess" },
-					activePermissionProfile: null,
+					...activePermission,
 					model: this.target.model?.id ?? "",
 					modelProvider: this.target.model?.provider ?? "",
 					serviceTier: null,
@@ -979,9 +1021,10 @@ export class RemoteSession {
 							...(params.initialTurnsPage as Record<string, unknown>),
 							threadId: this.target.sessionId,
 						});
+			const activePermission = remotePermissionProfile(this.target.settings);
 			return {
 				runtimeWorkspaceRoots: [this.target.sessionManager.getCwd()],
-				activePermissionProfile: null,
+				activePermissionProfile: activePermission.activePermissionProfile,
 				multiAgentMode: "explicitRequestOnly",
 				initialTurnsPage,
 				thread: this.thread(params.excludeTurns !== true),
@@ -990,9 +1033,9 @@ export class RemoteSession {
 				serviceTier: null,
 				cwd: this.target.sessionManager.getCwd(),
 				instructionSources: [],
-				approvalPolicy: "never",
-				approvalsReviewer: "user",
-				sandbox: { type: "dangerFullAccess" },
+				approvalPolicy: activePermission.approvalPolicy,
+				approvalsReviewer: activePermission.approvalsReviewer,
+				sandbox: activePermission.sandboxPolicy,
 				reasoningEffort:
 					this.target.thinkingLevel === "off"
 						? "none"

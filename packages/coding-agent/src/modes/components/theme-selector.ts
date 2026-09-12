@@ -1,6 +1,6 @@
-import { Container, type SelectItem, SelectList } from "@f5-sales-demo/pi-tui";
+import { Container, type SelectItem, type SelectList } from "@f5-sales-demo/pi-tui";
 import { getSelectListTheme } from "../../modes/theme/theme";
-import { DynamicBorder } from "./dynamic-border";
+import { SearchableSelectList } from "./searchable-select-list";
 
 /**
  * Component that renders a theme selector.
@@ -27,11 +27,13 @@ export class ThemeSelectorComponent extends Container {
 			description: name === currentTheme ? "(current)" : undefined,
 		}));
 
-		// Add top border
-		this.addChild(new DynamicBorder());
-
-		// Create selector
-		this.#selectList = new SelectList(themeItems, 10, getSelectListTheme());
+		this.#selectList = new SearchableSelectList(
+			"Choose theme",
+			"Preview a terminal theme; selecting it keeps the choice for this settings draft.",
+			themeItems,
+			10,
+			getSelectListTheme(),
+		);
 
 		// Preselect current theme
 		const currentIndex = themes.indexOf(currentTheme);
@@ -52,9 +54,6 @@ export class ThemeSelectorComponent extends Container {
 		};
 
 		this.addChild(this.#selectList);
-
-		// Add bottom border
-		this.addChild(new DynamicBorder());
 	}
 
 	getSelectList(): SelectList {

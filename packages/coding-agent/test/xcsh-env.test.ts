@@ -32,7 +32,7 @@ describe("xcsh-env", () => {
 	});
 
 	describe("hasEnvOverride", () => {
-		it("returns false when no XCSH env vars are set", () => {
+		it("returns false when no xcsh env vars are set", () => {
 			expect(hasEnvOverride()).toBe(false);
 		});
 

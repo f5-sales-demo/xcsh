@@ -1,7 +1,7 @@
 {
 	"type": "module",
 	"name": "@f5-sales-demo/xcsh",
-	"version": "21.24.4",
+	"version": "21.25.0",
 	"description": "Coding agent CLI with read, bash, edit, write tools and session management",
 	"homepage": "https://github.com/f5-sales-demo/xcsh",
 	"author": "Can Boluk",
@@ -38,7 +38,7 @@
 		"check:types": "bun run generate-build-info && tsgo -p tsconfig.json --noEmit",
 		"lint": "biome lint .",
 		"check:bundle": "bun scripts/check-bundle.ts",
-		"pretest": "bun ../../scripts/check-installed-dependencies.ts",
+		"pretest": "bun ../../scripts/check-installed-dependencies.ts && bun ../../scripts/ensure-dev-native.ts",
 		"test": "bun run generate-build-info && bun scripts/bun-test-guarded.ts --max-concurrency 1",
 		"bench:routing-matrix": "bun scripts/bench-routing-matrix.ts",
 		"bench:copy-selector": "bun scripts/bench-copy-selector.ts",
@@ -85,6 +85,7 @@
 	},
 	"devDependencies": {
 		"@types/bun": "1.4.2",
+		"@xterm/addon-unicode11": "0.9.0",
 		"handlebars": "^4.7"
 	},
 	"engines": {

@@ -32,6 +32,38 @@ test("discovery failure retains submitted connection and exposes the failure for
 	expect(result).toEqual({ status: "completed", discoveryError: "unreachable" });
 	expect(commit).toHaveBeenCalledTimes(1);
 });
+test("connection review cancellation prevents persistence", async () => {
+	const commit = vi.fn(async () => {});
+	const review = vi.fn(async () => false);
+	const result = await runProviderConnectionFlow({
+		collectCredentials: async () => ({ baseUrl: "https://gateway.example.test", apiKey: "synthetic" }),
+		probe: async () => ["fixture/model"],
+		review,
+		commit,
+		recover: async () => "retry",
+	});
+	expect(result).toEqual({ status: "cancelled" });
+	expect(review).toHaveBeenCalledWith({
+		credentials: { baseUrl: "https://gateway.example.test", apiKey: "synthetic" },
+		probe: ["fixture/model"],
+	});
+	expect(commit).not.toHaveBeenCalled();
+});
+
+test("a failed connection commit is reviewed again before retry", async () => {
+	const review = vi.fn(async () => true);
+	const commit = vi.fn(async () => {}).mockRejectedValueOnce(new Error("synthetic write failure"));
+	const result = await runProviderConnectionFlow({
+		collectCredentials: async () => ({ baseUrl: "https://gateway.example.test", apiKey: "synthetic" }),
+		probe: async () => ["fixture/model"],
+		review,
+		commit,
+		recover: async () => "retry",
+	});
+	expect(result).toEqual({ status: "completed", discoveryError: undefined });
+	expect(review).toHaveBeenCalledTimes(2);
+	expect(commit).toHaveBeenCalledTimes(2);
+});
 for (const provider of ["litellm", "vllm"])
 	test(`${provider} connection-only persistence never applies models, roles or routing`, async () => {
 		const root = await mkdtemp(join(tmpdir(), "xcsh-connection-test-"));

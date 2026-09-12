@@ -48,7 +48,7 @@ export function leafValue(pathName: string): unknown {
 	if (/timeout|interval|wait/.test(p)) return 10;
 	if (/threshold|priority|ratio|batch/.test(p)) return 1;
 	if (/asn|number|count|weight|ttl/.test(p)) return 1;
-	if (/password|secret|key/.test(p)) return "Xcsh-Sweep-Pw-2026!";
+	if (/password|secret|key/.test(p)) return "xcsh-Sweep-Pw-2026!";
 	return "xcsh-sweep";
 }
 
