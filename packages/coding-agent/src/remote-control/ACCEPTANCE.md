@@ -6,6 +6,8 @@ This audit preserves the full user objective. Passing one row does not imply
 completion of another. Codex baseline: 0.153.4,
 `3d2ee51ca2d5db578f328aa75e20aa22c0197c9a`.
 
+<!-- markdownlint-disable MD013 -->
+
 | Requirement | Current evidence | Remaining completion evidence |
 | --- | --- | --- |
 | Own enrollment and pairing | Robin paired xcsh; live relay and two terminal sessions verified | Retain passing enrollment/pairing regression coverage through release |
@@ -35,6 +37,8 @@ completion of another. Codex baseline: 0.153.4,
 | TDD and repository checks | The v1 repair passes 11 focused tests/61 assertions, the 34-test transport matrix/150 assertions, all 905 remote tests/3688 assertions and 8311 guarded package tests/30019 assertions with 561 skips across 795 files under Bun 1.4.2. TypeScript, Biome, package, docs, textlint, whitespace, staged PII, staged/postcommit gitleaks, all 24 pinned hashes and the final ten-check harness pass | Retain these gates through PR CI; the unchanged repository baseline has 218 HEAD enforcement findings across 13 files |
 | Manual acceptance only on Robin's report | Specific observations recorded in PARITY.md and issue comments | Obtain remaining manual checkpoints without treating simulated tests as phone acceptance |
 | Issue, PR, review, merge and cleanup | Detailed issue, feature worktree, pushed commits | Completed linked PR, review/CI repair loop, authorized squash merge, confirmed-merged cleanup |
+
+<!-- markdownlint-enable MD013 -->
 
 ## Current manual checkpoint
 

@@ -643,8 +643,8 @@ test("disposal rejects new input immediately and drains owned preparation before
 	try {
 		await Bun.sleep(20);
 		expect(closed).toEqual([]);
-		await expect(session.newSession()).rejects.toThrow("clos");
-		await expect(session.steer("Late instruction")).rejects.toThrow("clos");
+		await expect(session.newSession()).rejects.toThrow("closing");
+		await expect(session.steer("Late instruction")).rejects.toThrow("closing");
 		await expect(
 			remote.call("late-close", "turn/start", {
 				threadId: oldId,
@@ -656,8 +656,8 @@ test("disposal rejects new input immediately and drains owned preparation before
 	}
 	const result = await preparation;
 	await disposing;
-	expect(result).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining("clos") }) });
+	expect(result).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining("closing") }) });
 	expect(closed).toEqual([oldId]);
 	expect(session.sessionId).toBe(oldId);
-	await expect(session.prompt("After close")).rejects.toThrow("clos");
+	await expect(session.prompt("After close")).rejects.toThrow("closing");
 });

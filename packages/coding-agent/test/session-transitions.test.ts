@@ -85,18 +85,18 @@ test.each(["before", "after"])(
 		try {
 			await Promise.resolve();
 			expect(idle).toBe(false);
-			expect(() => transitions.checkpoint()).toThrow("clos");
-			await expect(transitions.run(async () => "Late")).rejects.toThrow("clos");
+			expect(() => transitions.checkpoint()).toThrow("closing");
+			await expect(transitions.run(async () => "Late")).rejects.toThrow("closing");
 		} finally {
 			release.resolve();
 		}
 		const result = await changing;
 		await drained;
-		expect(result).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining("clos") }) });
+		expect(result).toMatchObject({ error: expect.objectContaining({ message: expect.stringContaining("closing") }) });
 		expect(changed).toBe(blockedPhase === "after");
 		expect(phases).toEqual(["before", "after"]);
 		expect(transitions.changing).toBe(false);
-		await expect(transitions.run(async () => "Reopened")).rejects.toThrow("clos");
+		await expect(transitions.run(async () => "Reopened")).rejects.toThrow("closing");
 	},
 );
 

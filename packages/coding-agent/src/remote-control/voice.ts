@@ -93,7 +93,7 @@ export class NativeVoice {
 	#outputAudio?: { itemId: string; audioEndMs: number };
 	#awaitingV3Session = false;
 	#v3SessionReady?: { resolve: () => void; reject: (error: Error) => void };
-	#persona: VoicePersonaSnapshot = { systemPrompt: "", tools: [], history: "" };
+	#persona: VoicePersonaSnapshot | string = "";
 	constructor(private readonly deps: VoiceDependencies) {}
 	get active(): boolean {
 		return this.#state === "opening" || this.#state === "open" || this.#state === "reconnecting";
@@ -104,8 +104,10 @@ export class NativeVoice {
 		const transport = params.transport as { type?: unknown } | undefined;
 		const standalone = transport == null || transport.type === "websocket";
 		this.#persona = this.deps.persona?.() ?? this.#persona;
-		Object.freeze(this.#persona);
-		Object.freeze(this.#persona.tools);
+		if (typeof this.#persona !== "string") {
+			Object.freeze(this.#persona);
+			Object.freeze(this.#persona.tools);
+		}
 		const callConfig = transport?.type === "webrtc" ? voiceCallConfig(params, this.#persona) : undefined;
 		let config = callConfig
 			? undefined
