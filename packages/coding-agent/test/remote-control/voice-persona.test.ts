@@ -30,7 +30,7 @@ test("client voice text cannot supersede the final authoritative xcsh identity",
 	expect(instructions.slice(identityOffset)).toContain("I'm xcsh, F5's sales-engineering assistant.");
 	expect(instructions.slice(identityOffset)).toContain("Never identify or introduce yourself as ChatGPT");
 	expect(instructions.slice(identityOffset)).toContain("persisted xcsh project-memory section");
-	expect(instructions.slice(identityOffset)).toContain("do not claim your knowledge is limited to the current chat");
+	expect(instructions.slice(identityOffset)).toContain("Never answer only that you lack stored information");
 	expect(instructions.lastIndexOf(snapshot.userKnowledge)).toBeGreaterThan(identityOffset);
 	expect(Buffer.byteLength(instructions)).toBeLessThanOrEqual(64 * 1024);
 });
@@ -43,7 +43,7 @@ test("persisted user knowledge remains available to the voice surface with hones
 		},
 	);
 	expect(instructions).toContain("The user works on F5 Distributed Cloud");
-	expect(instructions).toContain("Persisted xcsh project memory about the user:");
+	expect(instructions).toContain("Persisted xcsh project memory about the user");
 	expect(instructions).toContain("durable knowledge learned across conversations");
 	expect(instructions).toContain("stored or inferred and potentially stale");
 	expect(instructions).toContain("Never invent user facts");
