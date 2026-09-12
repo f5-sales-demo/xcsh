@@ -1117,3 +1117,21 @@ the physical paired device and are deliberately last. The subsequent
 unrestricted package-wide exploratory command was stopped without a pass
 receipt after an abnormally long outbound-network-bound run; it is not used as
 parity evidence.
+
+## Bounded xcsh voice persona
+
+New xcsh-owned WebRTC v3 and standalone calls derive one immutable persona from
+the effective terminal system prompt, active tool metadata, additive phone voice
+preferences, and optional recent history. Empty or null client prompts cannot
+erase xcsh identity. Voice states its real boundary: it speaks and coordinates,
+while the attached xcsh agent executes tools. Existing client-created calls keep
+client ownership and receive no `session.update`.
+
+The final instruction string is capped at 64 KiB. The assembler retains the
+voice directive, a UTF-8-safe prompt prefix and suffix, every sorted tool name,
+and bounded phone preferences before optional tool descriptions and history.
+Diagnostics contain byte counts and truncation flags only. The effective prompt
+is transmitted to the authenticated OpenAI voice service as requested; it is not
+logged, traced, persisted in diagnostics, or included in errors. WebRTC v3 and
+standalone configurations consume the same persona assembler without changing
+their wire fields.
